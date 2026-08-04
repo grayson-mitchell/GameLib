@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Spike 022 — programmatic AutoFill trigger</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 18px 22px 40px;
+             font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+             background: #0e1116; color: #d7dde5; }
+      h1 { font-size: 15px; margin: 0 0 2px; }
+      h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .09em;
+           color: #7d8899; margin: 20px 0 8px; font-weight: 600; }
+      .sub { color: #6b7686; font-size: 11.5px; margin-bottom: 12px; }
+      .row { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 8px; align-items: center; }
+      button { font: inherit; font-size: 12px; padding: 6px 11px; border-radius: 6px;
+               border: 1px solid #2b3442; background: #171d26; color: #cfd8e3; cursor: pointer; }
+      button:hover { background: #1e2732; border-color: #3a4657; }
+      button.p { background: #1b3a5c; border-color: #2d5c8f; color: #d7e9ff; }
+      button.g { background: #1c3d2a; border-color: #2c6141; color: #d3f2df; }
+      pre { background: #0b0f14; border: 1px solid #232c38; border-radius: 8px;
+            padding: 9px 11px; font-size: 11px; max-height: 300px; overflow: auto;
+            white-space: pre-wrap; color: #b9c4d4; }
+      #log { height: 200px; overflow: auto; border: 1px solid #232c38; border-radius: 8px;
+             background: #0b0f14; padding: 8px 10px; font-size: 11px; }
+      .ev { white-space: pre-wrap; word-break: break-word; padding: 1px 0; }
+      .c-menu { color: #ffd39b; } .c-probe { color: #9fe6bd; } .c-window { color: #c9a7ff; }
+      .c-app, .c-env { color: #6f7b8c; } .c-observation { color: #ff9ecb; }
+      code { background: #1a212c; padding: 1px 5px; border-radius: 4px; color: #9fd6ff; }
+      .ladder { border: 1px solid #2b3442; border-radius: 8px; padding: 10px 12px;
+                font-size: 12px; color: #a9b4c4; margin-bottom: 12px; }
+    </style>
+  </head>
+  <body>
+    <h1>Spike 022 — can the AutoFill/Passwords panel be triggered programmatically?</h1>
+    <div class="sub" id="env">loading…</div>
+
+    <div class="ladder">
+      <b>L3</b> a call opens the Passwords panel → browser parity ·
+      <b>L2</b> a synthesized event pops the real menu at the field → one extra click ·
+      <b>L1</b> neither → fall back to spike 020's hint text
+    </div>
+
+    <h2>0 · Setup</h2>
+    <div class="row">
+      <button class="g" onclick="openPristine()">Open DummyStore login (subclassed WKWebView)</button>
+      <button onclick="probe('probe_introspect', {}, 'A · runtime introspection')">A · introspect selectors</button>
+    </div>
+    <div class="sub">
+      Then <b>right-click the password field manually once</b> — that fires
+      <code>willOpenMenu:</code> and captures the real AutoFill item (probe B).
+    </div>
+
+    <h2>1 · Probes</h2>
+    <div class="row">
+      <button class="p" onclick="probe('probe_menu_for_event', {}, 'C · menuForEvent:')">C · menuForEvent:</button>
+      <button class="p" onclick="probe('probe_popup_menu', {}, 'C2 · popUpContextMenu')">C2 · pop up menu at field</button>
+      <button class="p" onclick="probe('probe_synth_right_click', {}, 'D · synthesized right-click')">D · synthesize right-click</button>
+      <button class="g" onclick="probe('probe_invoke_captured', { mode: 'sendAction' }, 'E1 · sendAction')">E1 · re-fire via sendAction</button>
+      <button class="g" onclick="probe('probe_invoke_captured', { mode: 'performItem' }, 'E2 · performActionForItemAtIndex')">E2 · re-fire via menu item</button>
+      <button class="p" onclick="probe('probe_redump_menu', {}, 'B2 · re-dump retained menu')">B2 · re-dump last menu</button>
+      <button onclick="exportLog()">Export log</button>
+    </div>
+    <pre id="result">(no probe run yet)</pre>
+
+    <h2>2 · Record the outcome</h2>
+    <div class="row">
+      <button onclick="record('L3', 'Passwords panel opened programmatically')">L3 · panel opened</button>
+      <button onclick="record('L2', 'real context menu appeared at the field')">L2 · menu appeared</button>
+      <button onclick="record('L1', 'nothing appeared')">L1 · nothing</button>
+    </div>
+
+    <h2>Event log</h2>
+    <div id="log"></div>
+
+    <script>
+      const invoke = window.__TAURI__.core.invoke;
+      const listen = window.__TAURI__.event.listen;
+      let STORE = 'http://127.0.0.1:17940';
+
+      const logEl = document.getElementById('log');
+      listen('spike-log', (e) => {
+        const p = e.payload;
+        const div = document.createElement('div');
+        div.className = 'ev c-' + p.category;
+        const d = JSON.stringify(p.data);
+        div.textContent = `${String(p.ms).padStart(6)}ms [${p.category}] ${p.message} ${d.length > 400 ? d.slice(0,400)+'…' : d}`;
+        logEl.appendChild(div);
+        logEl.scrollTop = logEl.scrollHeight;
+      });
+      const uiLog = (category, message, data = {}) =>
+        invoke('log_from_ui', { category, message, data }).catch(() => {});
+
+      const show = (v) => document.getElementById('result').textContent =
+        typeof v === 'string' ? v : JSON.stringify(v, null, 2);
+
+      window.openPristine = () =>
+        invoke('open_pristine', { url: STORE + '/login' }).then(() => show('pristine window opened')).catch(show);
+
+      window.probe = async (cmd, args, label) => {
+        show('running ' + label + '…');
+        try { show(await invoke(cmd, args)); }
+        catch (e) { show('✗ ' + e); uiLog('probe', label + ' FAILED', { error: String(e) }); }
+      };
+      window.record = (level, what) => {
+        uiLog('observation', 'OUTCOME ' + level, { what });
+        show('recorded: ' + level + ' — ' + what);
+      };
+      window.exportLog = async () => show('exported: ' + await invoke('export_log'));
+
+      (async () => {
+        STORE = await invoke('store_origin');
+        const env = await invoke('env_report');
+        document.getElementById('env').textContent = `store: ${env.storeOrigin} · macos: ${env.macos}`;
+      })();
+    </script>
+  </body>
+</html>

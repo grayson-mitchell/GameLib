@@ -1,8 +1,8 @@
 # Spike Wrap-Up Summary
 
-**Date:** 2026-08-03 (updated — embedded store browser 016–018 wrapped)
-**Spikes processed:** 23
-**Feature areas:** Steam native install; macOS native Steam bridge; Tauri/Rust rearchitecture; Tauri login webview + cookies; Tauri embedded store browser
+**Date:** 2026-08-04 (updated — login-window UX 019–022 wrapped)
+**Spikes processed:** 27
+**Feature areas:** Steam native install; macOS native Steam bridge; Tauri/Rust rearchitecture; Tauri login webview + cookies; Tauri embedded store browser; login-window UX on macOS; OAuth login test harness
 **Skill output:** `./.claude/skills/spike-findings-gamelib/`
 
 ## Processed Spikes
@@ -32,6 +32,10 @@
 | 016 | embedded-child-webview-basic | standard | ✓ VALIDATED | Tauri embedded store browser |
 | 017 | child-webview-bounds-sync | standard | ✓ VALIDATED | Tauri embedded store browser |
 | 018 | child-webview-coexistence | standard | ✓ VALIDATED | Tauri embedded store browser |
+| 019 | dummy-oauth-store | standard | ✓ VALIDATED | OAuth login test harness |
+| 020 | keychain-autofill-login-webview | standard | ⚠ PARTIAL | Login-window UX on macOS |
+| 021 | modal-login-window | standard | ✓ VALIDATED | Login-window UX on macOS |
+| 022 | programmatic-autofill-trigger | standard | ⚠ PARTIAL | Login-window UX on macOS |
 
 ## Key Findings
 
@@ -117,3 +121,20 @@ latency, Windows/Linux backends, Epic anti-bot inside an embed.
 (`references/steam-native-install.md`, `references/macos-steam-bridge.md`,
 `references/tauri-rearchitecture.md`, `references/tauri-login-webview-cookies.md`,
 `references/tauri-embedded-store-browser.md`, `sources/`).
+
+**Login-window UX on macOS (019–022, 2026-08-04):** Both UX goals are met. A **local OAuth 2.0
+code-grant store** (019, zero deps, port 17940, PKCE + replay enforcement + an `/events` oracle)
+gives login/form work an offline fixture, and proved the production capture pattern: watching
+navigation delivers `code`+`state` **before the redirect page paints** (713 ms of a 727 ms flow).
+**Modal (021):** attaching the login as an AppKit **child window** makes it un-losable and keeps
+typing, paste and autofill working — re-raise it after the parent restores from the Dock; sheets
+work too but **trap the user** (the sheet blocks the window holding any cancel control, and a
+store's login page has none). **Autofill (020/022):** inline Password AutoFill and save-prompts
+are **platform-blocked** in both login surfaces on HTTP *and* real HTTPS, so no credential store
+should be built — but the system **right-click → AutoFill → Passwords** panel fills in both
+surfaces, Cmd+V paste works in both, and an **in-field key glyph that posts a synthesized
+right-click pops that real menu with AutoFill in it** (screenshot-proven, public API only). The
+panel can never be opened *directly*: the AutoFill item is injected at menu **display** time and
+is absent from the NSMenu even for a genuine user right-click (proven by subclassing `WKWebView`
+and hooking `willOpenMenu:`, plus a post-display re-dump), and `WKWebView` exposes no autofill
+selector — only the W3C digital-credentials picker.

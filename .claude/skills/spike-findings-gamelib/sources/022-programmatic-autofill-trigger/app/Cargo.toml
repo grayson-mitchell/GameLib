@@ -1,0 +1,52 @@
+[package]
+name = "spike-022-autofill-trigger"
+version = "0.0.0"
+description = "Spike 022 harness — can the macOS AutoFill/Passwords panel be invoked programmatically from an in-field affordance in WKWebView?"
+edition = "2021"
+rust-version = "1.77.2"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png", "unstable"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# src-tauri's pinned versions; feature list extended with the menu/event/graphics
+# types this spike needs (NSMenu, NSMenuItem, NSGraphicsContext for NSEvent
+# synthesis, NSUserInterfaceItemIdentification for menu-item identifiers).
+block2 = "0.6.2"
+objc2 = "0.6.4"
+objc2-app-kit = { version = "0.3.2", default-features = false, features = [
+    "NSView",
+    "NSWindow",
+    "NSAlert",
+    "NSApplication",
+    "NSButton",
+    "NSControl",
+    "NSEvent",
+    "NSResponder",
+    "NSTextField",
+    "NSMenu",
+    "NSMenuItem",
+    "NSGraphicsContext",
+    "NSScreen",
+    "NSUserInterfaceItemIdentification",
+    "block2",
+] }
+objc2-foundation = "0.3.2"
+objc2-web-kit = { version = "0.3.2", default-features = false, features = [
+    "WKWebsiteDataRecord",
+    "WKWebView",
+    "WKWebViewConfiguration",
+    "WKNavigation",
+    "WKNavigationDelegate",
+    "WKNavigationAction",
+    "WKUIDelegate",
+    "WKFrameInfo",
+    "WKWindowFeatures",
+    "WKHTTPCookieStore",
+    "objc2-app-kit",
+] }

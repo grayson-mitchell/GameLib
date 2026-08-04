@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Spike 021 — modal login window probes</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; padding: 18px 22px 40px;
+        font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+        background: #0e1116; color: #d7dde5;
+      }
+      h1 { font-size: 15px; margin: 0 0 2px; letter-spacing: .02em; }
+      h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .09em;
+           color: #7d8899; margin: 22px 0 8px; font-weight: 600; }
+      .sub { color: #6b7686; font-size: 11.5px; margin-bottom: 14px; }
+      .row { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 8px; align-items: center; }
+      button {
+        font: inherit; font-size: 12px; padding: 6px 11px; border-radius: 6px;
+        border: 1px solid #2b3442; background: #171d26; color: #cfd8e3; cursor: pointer;
+      }
+      button:hover { background: #1e2732; border-color: #3a4657; }
+      button.p { background: #1b3a5c; border-color: #2d5c8f; color: #d7e9ff; }
+      button.g { background: #1c3d2a; border-color: #2c6141; color: #d3f2df; }
+      button.w { background: #46351a; border-color: #6e5426; color: #ffd166; }
+      table { border-collapse: collapse; width: 100%; margin-top: 6px; font-size: 12px; }
+      th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #1e2732; vertical-align: top; }
+      th { color: #6f7b8c; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: .07em; }
+      td.probe { width: 46%; }
+      .seg { display: inline-flex; border: 1px solid #2b3442; border-radius: 6px; overflow: hidden; }
+      .seg button { border: 0; border-radius: 0; padding: 4px 10px; }
+      .seg button.sel-yes { background: #1c3d2a; color: #63d992; }
+      .seg button.sel-no { background: #3a1c22; color: #ff8f6b; }
+      .seg button.sel-na { background: #2a2f3a; color: #9aa5b5; }
+      td input { width: 95%; font: inherit; font-size: 11.5px; padding: 3px 6px;
+                 background: #0f131d; border: 1px solid #232c38; border-radius: 5px; color: #cfd8e3; }
+      #log { height: 220px; overflow: auto; border: 1px solid #232c38; border-radius: 8px;
+             background: #0b0f14; padding: 8px 10px; font-size: 11px; margin-top: 8px; }
+      .ev { white-space: pre-wrap; word-break: break-word; padding: 1px 0; }
+      .c-navigation { color: #8fb8ff; } .c-observation { color: #ffd39b; }
+      .c-window { color: #c9a7ff; } .c-modal { color: #9fe6bd; } .c-oracle { color: #ff9ecb; }
+      .c-app, .c-env, .c-autorun { color: #6f7b8c; }
+      code { background: #1a212c; padding: 1px 5px; border-radius: 4px; color: #9fd6ff; }
+    </style>
+  </head>
+  <body>
+    <h1>Spike 021 — modal login window (child-window vs sheet vs free)</h1>
+    <div class="sub" id="env">loading env…</div>
+
+    <h2>1 · Drive the modes</h2>
+    <div class="row">
+      <button class="g" onclick="run('open_login', { label: 'login', url: STORE + '/login' })">Open login (free)</button>
+      <button class="p" onclick="run('attach_child', { label: 'login' })">Attach as CHILD of main</button>
+      <button onclick="run('detach_child', { label: 'login' })">Detach child</button>
+      <button class="p" onclick="run('begin_sheet', { label: 'login' })">Present as SHEET</button>
+      <button onclick="run('end_sheet', { label: 'login' })">End sheet</button>
+      <button onclick="run('close_window', { label: 'login' })">Close login</button>
+    </div>
+    <div class="row">
+      <button class="w" onclick="run('raise_window', { label: 'main' })">Raise MAIN over login</button>
+      <button onclick="run('miniaturize_window', { label: 'main', un: false })">Minimize main</button>
+      <button onclick="run('miniaturize_window', { label: 'main', un: true })">Restore main</button>
+      <button class="g" onclick="run('order_report', { note: 'manual check' })">Layering oracle report</button>
+      <button onclick="exportAll()">Export observations + log</button>
+    </div>
+
+    <h2>2 · Feel-check (record what you experience)</h2>
+    <table id="probes"></table>
+
+    <h2>Event log</h2>
+    <div id="log"></div>
+
+    <script>
+      const invoke = window.__TAURI__.core.invoke;
+      const listen = window.__TAURI__.event.listen;
+      let STORE = 'http://127.0.0.1:17940';
+
+      const logEl = document.getElementById('log');
+      function push(e) {
+        const div = document.createElement('div');
+        div.className = 'ev c-' + e.category;
+        div.textContent = `${String(e.ms).padStart(6)}ms [${e.category}] ${e.message} ${JSON.stringify(e.data)}`;
+        logEl.appendChild(div);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+      listen('spike-log', (e) => push(e.payload));
+      const uiLog = (category, message, data = {}) =>
+        invoke('log_from_ui', { category, message, data }).catch(() => {});
+
+      window.run = (cmd, args) => invoke(cmd, args).catch((e) => uiLog('modal', cmd + ' FAILED', { error: String(e) }));
+
+      const PROBES = [
+        ['M1', 'CHILD mode: click around the main window — can you get the login to go BEHIND main at all?'],
+        ['M2', 'CHILD mode: drag the MAIN window — does the login window move with it?'],
+        ['M3', 'CHILD mode: typing + Cmd+V paste in the login form still work?'],
+        ['M4', 'CHILD mode: right-click → AutoFill → Passwords panel still reachable and fills?'],
+        ['M5', 'SHEET mode: does the login render attached to the main window (slides from title bar)?'],
+        ['M6', 'SHEET mode: is the main window blocked from interaction while the sheet is up?'],
+        ['M7', 'SHEET mode: typing + paste + AutoFill panel still work inside the sheet?'],
+        ['M8', 'SHEET mode: is the sheet big enough / does the login form render acceptably?'],
+        ['M9', 'Which mode FEELS right for GameLib login? (note: child / sheet / other + why)']
+      ];
+      const results = {};
+      function renderProbes() {
+        document.getElementById('probes').innerHTML =
+          '<tr><th>#</th><th class="probe">probe</th><th>observed</th><th>note</th></tr>' +
+          PROBES.map(([id, text]) => `
+            <tr>
+              <td><b>${id}</b></td>
+              <td class="probe">${text}</td>
+              <td><span class="seg">
+                <button id="${id}-yes" onclick="setResult('${id}','yes')">yes</button>
+                <button id="${id}-no" onclick="setResult('${id}','no')">no</button>
+                <button id="${id}-na" onclick="setResult('${id}','n/a')">n/a</button>
+              </span></td>
+              <td><input id="${id}-note" placeholder="notes" onchange="noteChanged('${id}')" /></td>
+            </tr>`).join('');
+      }
+      renderProbes();
+      window.setResult = (id, val) => {
+        results[id] = { ...(results[id] || {}), observed: val };
+        for (const v of ['yes', 'no', 'na']) {
+          const b = document.getElementById(`${id}-${v}`);
+          b.className = (v === val || (val === 'n/a' && v === 'na')) ? `sel-${v}` : '';
+        }
+        uiLog('observation', `${id} = ${val}`, { probe: PROBES.find(p => p[0] === id)[1], note: results[id].note || '' });
+      };
+      window.noteChanged = (id) => {
+        const note = document.getElementById(`${id}-note`).value;
+        results[id] = { ...(results[id] || {}), note };
+        uiLog('observation', `${id} note`, { note });
+      };
+
+      window.exportAll = async () => {
+        uiLog('observation', 'FINAL RESULTS TABLE', { results });
+        const p = await invoke('export_log');
+        uiLog('app', 'exported', { path: p });
+      };
+
+      (async () => {
+        STORE = await invoke('store_origin');
+        const env = await invoke('env_report');
+        document.getElementById('env').textContent =
+          `store: ${env.storeOrigin} · macos: ${env.macos} · autorun: ${env.autorun ?? 'off'}`;
+        try {
+          await fetch(STORE + '/events');
+          uiLog('app', 'store server reachable', {});
+        } catch {
+          uiLog('app', 'store server UNREACHABLE — start node ../../019-dummy-oauth-store/store-server.mjs', {});
+        }
+      })();
+    </script>
+  </body>
+</html>

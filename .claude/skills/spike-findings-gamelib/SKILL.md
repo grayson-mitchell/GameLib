@@ -1,6 +1,6 @@
 ---
 name: spike-findings-gamelib
-description: Implementation blueprint from GameLib spike experiments — verified patterns, requirements, and gotchas for (a) Steam native depot install + ACF adoption, (b) the macOS native Steam bridge, and (c) the Rust/Tauri v2 rearchitecture (Node sidecar, Electron-API parity, preload seam, the login webview / cookie-read surface, and the embedded in-app store browser via the unstable multiwebview API). Auto-loaded during Steam, macOS, or Tauri implementation work.
+description: Implementation blueprint from GameLib spike experiments — verified patterns, requirements, and gotchas for (a) Steam native depot install + ACF adoption, (b) the macOS native Steam bridge, (c) the Rust/Tauri v2 rearchitecture (Node sidecar, Electron-API parity, preload seam, the login webview / cookie-read surface, and the embedded in-app store browser via the unstable multiwebview API), and (d) login-window UX on macOS (modal child-window attachment, Keychain/password-manager autofill channels, and a local OAuth test store). Auto-loaded during Steam, macOS, Tauri, or login/auth implementation work.
 ---
 
 <context>
@@ -14,9 +14,12 @@ out-of-process `steam_api` proxy, instead of bottling a full Windows Steam per C
 and the **Rust/Tauri v2 rearchitecture** (Idea C — swap the Electron shell for Tauri + a Rust
 platform seam + a bundled Node sidecar, keeping the React UI and the Steam stack).
 
+A fourth line, **login-window UX** (Idea D), was spiked against a local OAuth store so form and
+window work could proceed without real stores' anti-bot surfaces.
+
 Spike sessions wrapped: 2026-07-14 → 2026-07-18 (bridge line through 008), 2026-07-20 (Tauri
 feasibility 009–012), 2026-07-27 (Tauri login webview + cookies 013–015), 2026-08-03
-(embedded in-app store browser 016–018).
+(embedded in-app store browser 016–018), 2026-08-04 (login-window UX 019–022).
 </context>
 
 <requirements>
@@ -80,6 +83,24 @@ feasibility 009–012), 2026-07-27 (Tauri login webview + cookies 013–015), 20
   Secure-over-`http://localhost` cookies (contra 014a's note, they didn't surface in 016–018).
 - Unverified: input/scroll feel, retina, drag-resize latency, Windows/Linux backends, Epic
   anti-bot inside an embed.
+
+**Login-window UX on macOS (019–022):**
+- **Attach the login window as an AppKit CHILD window** (`addChildWindow:ordered:Above`), not via
+  Tauri `.parent()` — one runtime-switchable path covers the wry window AND the pristine
+  `WKWebView` shell. It becomes un-losable; **re-raise it after the parent deminiaturizes**.
+- **Sheets are forbidden without self-dismissal** — a sheet blocks the window holding any cancel
+  control, and the store's page has none (live-observed user trap).
+- **Inline password autofill and save-prompts do not exist** in either login surface, on HTTP or
+  real HTTPS. Do **not** build a credential store for store logins.
+- **The two working Keychain channels are system-provided**: right-click → AutoFill → Passwords
+  (fills in both surfaces) and Cmd+V paste from the Passwords app.
+- **An in-field affordance IS shippable**: a key glyph that posts a **synthesized right-click**
+  pops the real menu *with AutoFill in it* (screenshot-proven, all public API). The panel itself
+  cannot be opened directly — the AutoFill item is injected at menu *display* time and is absent
+  from the NSMenu even for a real click.
+- **Capture OAuth codes by navigation observation** (`on_page_load` Started / pristine's
+  `decidePolicyForNavigationAction`), never a callback server or remote-page IPC.
+- **Scripted login tests need a logout preamble** — the jar is sticky across restarts.
 </requirements>
 
 <findings_index>
@@ -92,6 +113,8 @@ feasibility 009–012), 2026-07-27 (Tauri login webview + cookies 013–015), 20
 | Tauri/Rust rearchitecture | references/tauri-rearchitecture.md | Feasible reshape, no idea-killer: 80% of backend files are Electron-free, Steam comes along free as a Node sidecar, 13/16 Electron APIs have full Tauri parity, and the frontend port is 3 factory functions. Cost is the 220-endpoint IPC re-plumb + `electron-store` swap |
 | Tauri login webview + cookies | references/tauri-login-webview-cookies.md | The Rust cookie API is sound on macOS (HttpOnly+Secure values, 2–4 ms, any thread) — **but `cookies_for_url()` does string `==` on the domain and silently drops `_simpleauth_sess` for `www.humblebundle.com`**, and `document.cookie` can never see it |
 | Tauri embedded store browser | references/tauri-embedded-store-browser.md | In-app store browser VALIDATED: `add_child` embeds a child webview in the config-created main window (real Steam store composited, screenshot-proven); renderer must be the sole bounds owner; one shared jar per process across all windows/children |
+| Login-window UX on macOS | references/login-window-ux-macos.md | Child-window attachment makes the login un-losable (sheets trap the user); inline Keychain autofill is platform-blocked, but a **synthesized right-click from an in-field key glyph pops the real AutoFill menu** — the panel can never be opened directly |
+| OAuth login test harness | references/oauth-login-test-harness.md | **DummyStore**: a zero-dep local OAuth 2.0 code-grant provider (port 17940) with a hot-editable login form, PKCE + replay enforcement and an `/events` oracle — the offline fixture for all login/form work |
 
 ## Source Files
 
@@ -100,7 +123,10 @@ Original spike source is preserved in `sources/` (001–003 = Node `.mjs`; 005 =
 probes; 011 = Rust `keyring` parity probe; 012 = preload bridge-shim demo; 013 = a full runnable
 Tauri cookie-probe app with `SPIKE_AUTORUN=1|2`; 014a = raw JSONL evidence logs; 016 = a full
 runnable Tauri multiwebview harness with `SPIKE_AUTORUN=1`, JSONL run.log, and window-targeted
-screenshot evidence, shared by 017/018).
+screenshot evidence, shared by 017/018; 019 = the runnable **DummyStore** OAuth server +
+login-flow harness, reused as the fixture by 020–022; 021 = runtime child/sheet attachment with
+an `NSApp.orderedWindows` layering oracle; 022 = a `WKWebView` subclass hooking
+`willOpenMenu:` + event synthesis, incl. `menu-with-autofill.png`).
 </findings_index>
 
 <metadata>
@@ -129,4 +155,8 @@ screenshot evidence, shared by 017/018).
 - 016-embedded-child-webview-basic
 - 017-child-webview-bounds-sync
 - 018-child-webview-coexistence
+- 019-dummy-oauth-store
+- 020-keychain-autofill-login-webview
+- 021-modal-login-window
+- 022-programmatic-autofill-trigger
 </metadata>

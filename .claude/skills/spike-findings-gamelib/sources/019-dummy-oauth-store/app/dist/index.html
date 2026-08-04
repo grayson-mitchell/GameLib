@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Spike 019 — DummyStore OAuth login harness</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; padding: 18px 22px 40px;
+        font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+        background: #0e1116; color: #d7dde5;
+      }
+      h1 { font-size: 15px; margin: 0 0 2px; letter-spacing: .02em; }
+      h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .09em;
+           color: #7d8899; margin: 22px 0 8px; font-weight: 600; }
+      .sub { color: #6b7686; font-size: 11.5px; margin-bottom: 14px; }
+      .row { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 8px; align-items: center; }
+      button {
+        font: inherit; font-size: 12px; padding: 6px 11px; border-radius: 6px;
+        border: 1px solid #2b3442; background: #171d26; color: #cfd8e3; cursor: pointer;
+      }
+      button:hover { background: #1e2732; border-color: #3a4657; }
+      button.p { background: #1b3a5c; border-color: #2d5c8f; color: #d7e9ff; }
+      button.g { background: #1c3d2a; border-color: #2c6141; color: #d3f2df; }
+      .card { border: 1px solid #232c38; border-radius: 8px; background: #131922; padding: 12px 14px; margin-bottom: 10px; }
+      .step { padding: 2px 0; }
+      .s-pending { color: #4d5765; }
+      .s-active { color: #ffd166; }
+      .s-done { color: #57d98a; }
+      .s-fail { color: #ff8f6b; }
+      .note { color: #97a3b4; font-size: 12px; margin-top: 5px; }
+      #log { height: 300px; overflow: auto; border: 1px solid #232c38; border-radius: 8px;
+             background: #0b0f14; padding: 8px 10px; font-size: 11px; }
+      .ev { white-space: pre-wrap; word-break: break-word; padding: 1px 0; }
+      .c-navigation { color: #8fb8ff; } .c-oauth { color: #ffd39b; }
+      .c-window { color: #c9a7ff; } .c-flow { color: #9fe6bd; }
+      .c-app, .c-env, .c-autorun { color: #6f7b8c; }
+      code { background: #1a212c; padding: 1px 5px; border-radius: 4px; color: #9fd6ff; }
+      .ok { color: #57d98a; } .bad { color: #ff8f6b; }
+      pre { margin: 6px 0 0; font-size: 11px; color: #b9c4d4; white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <h1>Spike 019 — DummyStore OAuth 2.0 auth-code-grant login harness</h1>
+    <div class="sub" id="env">loading env…</div>
+
+    <h2>Flow</h2>
+    <div class="sub">
+      Start <code>node ../store-server.mjs</code> first. "Interactive" leaves the typing to you
+      (demo / dummy-store-pw) — that is the form-iteration surface. "Autologin" self-submits for
+      scripted runs. The Rust side captures the code by watching navigation for the redirect_uri.
+    </div>
+    <div class="row">
+      <button class="g" onclick="startFlow({ autologin: false })">▶ Start login flow (interactive)</button>
+      <button class="p" onclick="startFlow({ autologin: true })">▶ Start with autologin</button>
+      <button onclick="replayProbe()">⚠ Replay last code (expect rejection)</button>
+      <button onclick="logoutStore()">Logout store session</button>
+      <button onclick="exportLog()">Export run log</button>
+    </div>
+
+    <div class="card">
+      <div id="steps"></div>
+      <pre id="result"></pre>
+    </div>
+
+    <h2>Event log</h2>
+    <div id="log"></div>
+
+    <script>
+      const invoke = window.__TAURI__.core.invoke;
+      const listen = window.__TAURI__.event.listen;
+      const CLIENT_ID = 'gamelib-dummy';
+      let STORE = 'http://127.0.0.1:17940';
+      let lastExchange = null; // kept for the replay probe
+
+      // ── logging ──
+      const logEl = document.getElementById('log');
+      function push(e) {
+        const div = document.createElement('div');
+        div.className = 'ev c-' + e.category;
+        div.textContent = `${String(e.ms).padStart(6)}ms [${e.category}] ${e.message} ${JSON.stringify(e.data)}`;
+        logEl.appendChild(div);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+      listen('spike-log', (e) => push(e.payload));
+      const flowLog = (message, data = {}) =>
+        invoke('log_from_ui', { category: 'flow', message, data }).catch(() => {});
+
+      // ── step display ──
+      const STEP_NAMES = ['build authorize URL', 'open login window', 'receive code',
+                          'verify state', 'exchange token', 'fetch /me', 'close window'];
+      function renderSteps(states) {
+        document.getElementById('steps').innerHTML = STEP_NAMES.map((n, i) => {
+          const s = states[i] || 'pending';
+          const mark = { pending: '○', active: '◆', done: '✓', fail: '✗' }[s];
+          return `<div class="step s-${s}">${mark} ${n}</div>`;
+        }).join('');
+      }
+      renderSteps([]);
+
+      // ── PKCE ──
+      const b64url = (bytes) =>
+        btoa(String.fromCharCode(...new Uint8Array(bytes)))
+          .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const randString = (n) => b64url(crypto.getRandomValues(new Uint8Array(n)));
+
+      async function pkcePair() {
+        const verifier = randString(32); // 43 chars base64url — RFC 7636 minimum met
+        if (crypto.subtle && crypto.subtle.digest) {
+          const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+          return { verifier, challenge: b64url(digest), method: 'S256' };
+        }
+        // Finding-in-waiting: is crypto.subtle available on the tauri:// origin at all?
+        return { verifier, challenge: verifier, method: 'plain' };
+      }
+
+      // ── code arrival (emitted by Rust's on_page_load observer) ──
+      let codeWaiter = null;
+      listen('oauth-code', (e) => {
+        if (codeWaiter) { codeWaiter.resolve(e.payload); codeWaiter = null; }
+      });
+      const waitForCode = (timeoutMs) =>
+        new Promise((resolve, reject) => {
+          const t = setTimeout(() => { codeWaiter = null; reject(new Error(`no code within ${timeoutMs}ms`)); }, timeoutMs);
+          codeWaiter = { resolve: (v) => { clearTimeout(t); resolve(v); } };
+        });
+
+      // ── the flow ──
+      async function startFlow({ autologin, tamperVerifier = false }) {
+        const states = [];
+        const setStep = (i, s) => { states[i] = s; renderSteps(states); };
+        const resultEl = document.getElementById('result');
+        resultEl.textContent = '';
+        const t0 = performance.now();
+        try {
+          setStep(0, 'active');
+          const { verifier, challenge, method } = await pkcePair();
+          const state = randString(16);
+          const url = STORE + '/authorize?' + new URLSearchParams({
+            response_type: 'code',
+            client_id: CLIENT_ID,
+            redirect_uri: STORE + '/callback',
+            scope: 'profile',
+            state,
+            code_challenge: challenge,
+            code_challenge_method: method,
+            ...(autologin ? { autologin: '1' } : {})
+          }).toString();
+          flowLog('authorize URL built', { pkceMethod: method, autologin, state });
+          setStep(0, 'done'); setStep(1, 'active');
+
+          await invoke('open_login', { label: 'login-dummystore', url, spoofUa: true });
+          setStep(1, 'done'); setStep(2, 'active');
+
+          const payload = await waitForCode(autologin ? 30000 : 120000);
+          if (payload.error) throw new Error('authorize returned error: ' + payload.error);
+          const codeMs = Math.round(performance.now() - t0);
+          flowLog('code received', { elapsedMs: codeMs });
+          setStep(2, 'done'); setStep(3, 'active');
+
+          if (payload.state !== state) {
+            flowLog('STATE MISMATCH', { expected: state, got: payload.state });
+            throw new Error('state mismatch — aborting (CSRF check failed)');
+          }
+          setStep(3, 'done'); setStep(4, 'active');
+
+          lastExchange = {
+            grant_type: 'authorization_code',
+            code: payload.code,
+            redirect_uri: STORE + '/callback',
+            client_id: CLIENT_ID,
+            code_verifier: verifier
+          };
+          let tamperResult = null;
+          if (tamperVerifier) {
+            // PKCE probe: a corrupted verifier must be rejected before the real exchange.
+            const badRes = await fetch(STORE + '/token', {
+              method: 'POST',
+              headers: { 'content-type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({ ...lastExchange, code_verifier: verifier.slice(1) + 'X' }).toString()
+            });
+            const badBody = await badRes.json();
+            tamperResult = { rejected: !badRes.ok && badBody.error === 'invalid_grant', status: badRes.status, body: badBody };
+            flowLog('PKCE tamper probe', tamperResult);
+            if (!tamperResult.rejected) throw new Error('tampered PKCE verifier was ACCEPTED: ' + JSON.stringify(badBody));
+          }
+          const tokenRes = await fetch(STORE + '/token', {
+            method: 'POST',
+            headers: { 'content-type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams(lastExchange).toString()
+          });
+          const token = await tokenRes.json();
+          if (!tokenRes.ok) throw new Error('token exchange failed: ' + JSON.stringify(token));
+          flowLog('token exchanged', { tokenType: token.token_type, expiresIn: token.expires_in });
+          setStep(4, 'done'); setStep(5, 'active');
+
+          const meRes = await fetch(STORE + '/me', {
+            headers: { authorization: 'Bearer ' + token.access_token }
+          });
+          const me = await meRes.json();
+          if (!meRes.ok) throw new Error('/me failed: ' + JSON.stringify(me));
+          setStep(5, 'done'); setStep(6, 'active');
+
+          await invoke('close_login', { label: 'login-dummystore' });
+          setStep(6, 'done');
+
+          const totalMs = Math.round(performance.now() - t0);
+          flowLog('FLOW COMPLETE', { totalMs, user: me.username, pkceMethod: method });
+          resultEl.innerHTML = `<span class="ok">✓ signed in as ${me.displayName} (@${me.username}) — ` +
+            `${totalMs}ms total, PKCE ${method}</span>\n` + JSON.stringify(me, null, 2);
+          return { ok: true, totalMs, codeMs, pkceMethod: method, user: me.username,
+                   ...(tamperResult ? { pkceTamperRejected: tamperResult.rejected } : {}) };
+        } catch (e) {
+          const i = states.findIndex((s) => s === 'active');
+          if (i >= 0) setStep(i, 'fail');
+          flowLog('FLOW FAILED', { error: String(e) });
+          resultEl.innerHTML = `<span class="bad">✗ ${e}</span>`;
+          invoke('close_login', { label: 'login-dummystore' }).catch(() => {});
+          return { ok: false, error: String(e) };
+        }
+      }
+
+      // ── replay probe: the same code must be rejected the second time ──
+      async function replayProbe() {
+        const resultEl = document.getElementById('result');
+        if (!lastExchange) { resultEl.textContent = 'run a flow first'; return { ok: false, error: 'no prior exchange' }; }
+        const res = await fetch(STORE + '/token', {
+          method: 'POST',
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams(lastExchange).toString()
+        });
+        const body = await res.json();
+        const rejected = !res.ok && body.error === 'invalid_grant';
+        flowLog('replay probe', { rejected, status: res.status, body });
+        resultEl.innerHTML = rejected
+          ? `<span class="ok">✓ replay REJECTED (${res.status} ${body.error}: ${body.error_description})</span>`
+          : `<span class="bad">✗ replay was NOT rejected — ${res.status} ${JSON.stringify(body)}</span>`;
+        return { ok: rejected, status: res.status };
+      }
+
+      // fetch() from tauri:// can't send the store's cookie (CORS creds), so logout
+      // goes through a short-lived login window navigation instead.
+      async function logoutStore() {
+        await invoke('open_login', { label: 'login-dummystore', url: STORE + '/logout', spoofUa: true });
+        setTimeout(() => invoke('close_login', { label: 'login-dummystore' }).catch(() => {}), 1500);
+        flowLog('logout requested', {});
+      }
+
+      async function exportLog() {
+        const p = await invoke('export_log');
+        flowLog('log exported', { path: p });
+      }
+
+      // ── scripted run (SPIKE_AUTORUN=1) ──
+      listen('autorun-start', async () => {
+        const summary = { flows: [] };
+        try {
+          // Preamble: kill any session left by a previous run (the client jar
+          // persists across app restarts — spike 015 — so without this, a
+          // back-to-back run against the same server skips the form and the
+          // formServes oracle below would falsely fail).
+          flowLog('scripted: logout preamble', {});
+          await logoutStore();
+          await new Promise((r) => setTimeout(r, 2000));
+          // Baseline the store oracle AFTER the preamble, not at zero.
+          const ev0 = await (await fetch(STORE + '/events')).json();
+          const count = (ev, msg) => ev.events.filter((e) => e.message === msg).length;
+          const base = { formServes: count(ev0, 'login form served'),
+                         codesIssued: count(ev0, 'authorization code ISSUED') };
+
+          flowLog('scripted: FLOW A (autologin, cold session)', {});
+          const a = await startFlow({ autologin: true });
+          summary.flows.push({ name: 'A cold+autologin', ...a });
+
+          flowLog('scripted: replay probe with flow A code', {});
+          const r = await replayProbe();
+          summary.flows.push({ name: 'replay probe', ...r });
+
+          flowLog('scripted: FLOW B (no autologin — session cookie should skip the form)', {});
+          const b = await startFlow({ autologin: false });
+          summary.flows.push({ name: 'B warm session', ...b });
+
+          flowLog('scripted: FLOW C (warm session + PKCE tamper probe)', {});
+          const c = await startFlow({ autologin: false, tamperVerifier: true });
+          summary.flows.push({ name: 'C pkce tamper', ...c });
+
+          // Cross-oracle: ask the STORE how many times it actually served the form.
+          const ev = await (await fetch(STORE + '/events')).json();
+          const formServes = count(ev, 'login form served') - base.formServes;
+          const codesIssued = count(ev, 'authorization code ISSUED') - base.codesIssued;
+          summary.storeOracle = { formServes, codesIssued, expectation: 'formServes=1, codesIssued=3' };
+
+          const ok = summary.flows.every((f) => f.ok) && formServes === 1 && codesIssued === 3;
+          await invoke('autorun_complete', { success: ok, summary });
+        } catch (e) {
+          summary.error = String(e);
+          await invoke('autorun_complete', { success: false, summary });
+        }
+      });
+
+      (async () => {
+        STORE = await invoke('store_origin');
+        const env = await invoke('env_report');
+        document.getElementById('env').textContent =
+          `store: ${env.storeOrigin} · callback: ${env.callbackPrefix} · autorun: ${env.autorun ?? 'off'}`;
+        // Liveness check on the store server so a dead server fails loudly, not silently.
+        try {
+          await fetch(STORE + '/events');
+          flowLog('store server reachable', { store: STORE });
+        } catch (e) {
+          document.getElementById('result').innerHTML =
+            `<span class="bad">✗ store server NOT reachable at ${STORE} — run: node ../store-server.mjs</span>`;
+          flowLog('store server UNREACHABLE', { store: STORE, error: String(e) });
+        }
+      })();
+    </script>
+  </body>
+</html>
