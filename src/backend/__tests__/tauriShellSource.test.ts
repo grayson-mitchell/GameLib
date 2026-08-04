@@ -677,8 +677,13 @@ describe('F-34.5-G6-05 (Plan 27) login window requests a light interface style',
 // plan inventing its own version of it.
 const PHASE_34_4_2_NEW_SYMBOLS = [
   'login_window_ns_window',
-  'login_window_wk_webview'
-  // Plans 02, 03, 04: append your own new symbol names here.
+  'login_window_wk_webview',
+  // Plan 02 (AppKit child-window attachment):
+  'attach_login_window_as_child',
+  'detach_login_window_from_parent',
+  'ATTACHED_LOGIN_CHILDREN',
+  'MAIN_WINDOW_LABEL'
+  // Plans 03, 04: append your own new symbol names here.
 ]
 
 // Tests 3 and 4 below encode a LOCKED USER SCOPE DECISION (2026-08-04): Epic is implemented
@@ -752,5 +757,164 @@ describe('Phase 34.4.2 Plan 01 — login-window handle resolvers and the Epic sc
     const code = loadMainRsCode()
     expect(code).not.toContain('beginSheet')
     expect(code).not.toContain('endSheet')
+  })
+})
+
+// Phase 34.4.2 Plan 02 (REQ-34.4.2-01/02/03/04/05/08/10): AppKit child-window attach/detach
+// for the Tauri-managed login surface (Humble/GOG/Amazon -- REQ-34.4.2-10's locked scope,
+// unchanged from Plan 01), the deminiaturize re-raise observer, and the permanent negatives
+// that keep sheets, Tauri's own `.parent(` builder call, and a focus-driven re-raise out.
+// PHASE_34_4_2_NEW_SYMBOLS (above) already carries this plan's four new symbol names, so
+// Plan 01's own Test 3/Test 4 scope guard covers them without any change to that describe
+// block; Test 9 below re-asserts the same absence directly, scoped to this plan's own file
+// section, so deleting either describe block still leaves a guard in place.
+describe('Phase 34.4.2 Plan 02 — AppKit child-window attachment', () => {
+  /**
+   * Scans forward from `openMarker`'s FIRST `{` and returns the full brace-matched block
+   * (inclusive of both braces), counting depth rather than relying on a second string
+   * marker. Mirrors the identical helper the WR-07 describe block (above) already uses --
+   * kept as a local copy rather than a shared export since neither block currently imports
+   * from the other.
+   */
+  function extractBracedBlock(code: string, openMarker: string): string {
+    const markerIdx = code.indexOf(openMarker)
+    expect(markerIdx).toBeGreaterThan(-1)
+    const braceStart = code.indexOf('{', markerIdx)
+    expect(braceStart).toBeGreaterThan(-1)
+    let depth = 0
+    let i = braceStart
+    for (; i < code.length; i++) {
+      if (code[i] === '{') depth++
+      else if (code[i] === '}') {
+        depth--
+        if (depth === 0) break
+      }
+    }
+    expect(depth).toBe(0)
+    return code.slice(markerIdx, i + 1)
+  }
+
+  function extractHumbleLoginOpenArmBody(code: string): string {
+    const armStart = code.indexOf('"humble_login_open" => {')
+    expect(armStart).toBeGreaterThan(-1)
+    const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
+    expect(armEnd).toBeGreaterThan(armStart)
+    return code.slice(armStart, armEnd)
+  }
+
+  test('Test 1: attach_login_window_as_child( is CALLED exactly once in the file, and that call site is inside the humble_login_open arm -- catches a future caller landing in (or being dropped from) the wrong arm', () => {
+    const code = loadMainRsCode()
+    // Negative lookbehind excludes the `fn attach_login_window_as_child(` definition
+    // itself, which also ends in a trailing `(` -- this counts CALL sites only.
+    const fileCallSites = code.match(/(?<!fn )attach_login_window_as_child\(/g) ?? []
+    expect(fileCallSites.length).toBe(1)
+
+    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armCallSites = armBody.match(/(?<!fn )attach_login_window_as_child\(/g) ?? []
+    expect(armCallSites.length).toBe(1)
+  })
+
+  test("Test 2: detach_login_window_from_parent( is CALLED exactly once in the file, inside the humble_login_open arm's WindowEvent::Destroyed branch -- catches the detach call being dropped from the close hook", () => {
+    const code = loadMainRsCode()
+    const fileCallSites =
+      code.match(/(?<!fn )detach_login_window_from_parent\(/g) ?? []
+    expect(fileCallSites.length).toBe(1)
+
+    const armBody = extractHumbleLoginOpenArmBody(code)
+    const destroyedBlock = extractBracedBlock(
+      armBody,
+      'if matches!(event, tauri::WindowEvent::Destroyed) {'
+    )
+    expect(destroyedBlock).toContain('detach_login_window_from_parent(')
+  })
+
+  test('Test 3: the attach call site sits inside an if-visible guard -- hidden reveal/clear windows must never be attached', () => {
+    const code = loadMainRsCode()
+    const visibleAttachBlock = extractBracedBlock(
+      code,
+      'let child_attached = if visible {'
+    )
+    expect(visibleAttachBlock).toContain('attach_login_window_as_child(')
+  })
+
+  test('Test 4: addChildWindow_ordered and removeChildWindow each appear exactly once in the file, each inside its own named helper', () => {
+    const code = loadMainRsCode()
+    expect((code.match(/addChildWindow_ordered\(/g) ?? []).length).toBe(1)
+    expect((code.match(/removeChildWindow\(/g) ?? []).length).toBe(1)
+
+    const attachStart = code.indexOf('fn attach_login_window_as_child(')
+    expect(attachStart).toBeGreaterThan(-1)
+    const attachEnd = code.indexOf(
+      'fn detach_login_window_from_parent(',
+      attachStart
+    )
+    expect(attachEnd).toBeGreaterThan(attachStart)
+    expect(code.slice(attachStart, attachEnd)).toContain('addChildWindow_ordered(')
+
+    const detachStart = code.indexOf('fn detach_login_window_from_parent(')
+    expect(detachStart).toBeGreaterThan(-1)
+    const detachEnd = code.indexOf(
+      'fn clear_default_data_store_cookies_for_domain(',
+      detachStart
+    )
+    expect(detachEnd).toBeGreaterThan(detachStart)
+    expect(code.slice(detachStart, detachEnd)).toContain('removeChildWindow(')
+  })
+
+  test('Test 5: NSWindowDidDeminiaturizeNotification appears exactly once, and makeKeyAndOrderFront appears inside the same sliced deminiaturize-observer handler', () => {
+    const code = loadMainRsCode()
+    expect(
+      (code.match(/NSWindowDidDeminiaturizeNotification/g) ?? []).length
+    ).toBe(1)
+
+    const observerStart = code.indexOf(
+      'match login_window_ns_window(app.handle(), MAIN_WINDOW_LABEL) {'
+    )
+    expect(observerStart).toBeGreaterThan(-1)
+    const observerEnd = code.indexOf(
+      'match app.get_webview_window(MAIN_WINDOW_LABEL) {',
+      observerStart
+    )
+    expect(observerEnd).toBeGreaterThan(observerStart)
+    const observerBlock = code.slice(observerStart, observerEnd)
+    expect(observerBlock).toContain('NSWindowDidDeminiaturizeNotification')
+    expect(observerBlock).toContain('makeKeyAndOrderFront(')
+  })
+
+  test('Test 6 (NEGATIVE, REQ-34.4.2-03): the comment-stripped source contains no beginSheet and no endSheet anywhere -- re-asserted here (Plan 01 already added this guard, above) so deleting either describe block still leaves it in place', () => {
+    const code = loadMainRsCode()
+    expect(code).not.toContain('beginSheet')
+    expect(code).not.toContain('endSheet')
+  })
+
+  test("Test 7 (NEGATIVE): no Tauri builder .parent(window) call appears anywhere in the comment-stripped source -- Tauri's builder .parent() cannot re-attach at runtime, which is exactly why AppKit-layer attachment was chosen instead. Scoped to exclude std::path::Path::parent() (a pre-existing, argument-less, unrelated call in this same file)", () => {
+    const code = loadMainRsCode()
+    // `.parent(` followed by anything other than an immediate `)` is a call WITH an
+    // argument -- Tauri's `WindowBuilder`/`WebviewWindowBuilder::parent(&window)` always
+    // takes one. `Path::parent()` (used twice elsewhere in this file, unrelated to
+    // windows) always has empty parens and is deliberately excluded.
+    expect(code).not.toMatch(/\.parent\([^)]/)
+  })
+
+  test('Test 8 (NEGATIVE): no window-focus-gained re-raise exists -- a focus-driven re-raise would steal key focus back to the login window every time the user clicks the main window', () => {
+    const code = loadMainRsCode()
+    expect(code).not.toContain('WindowEvent::Focused')
+  })
+
+  test("Test 9 (SCOPE GUARD, REQ-34.4.2-10): the PHASE_34_4_2_NEW_SYMBOLS-driven guard still passes with this plan's four symbols appended -- none of them is referenced from open_pristine_epic_login_window's sliced body", () => {
+    const code = loadMainRsCode()
+    const start = code.indexOf('fn open_pristine_epic_login_window(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    expect(end).toBeGreaterThan(start)
+    const pristineBody = code.slice(start, end)
+    for (const symbol of [
+      'attach_login_window_as_child',
+      'detach_login_window_from_parent',
+      'ATTACHED_LOGIN_CHILDREN',
+      'MAIN_WINDOW_LABEL'
+    ]) {
+      expect(pristineBody).not.toContain(symbol)
+    }
   })
 })
