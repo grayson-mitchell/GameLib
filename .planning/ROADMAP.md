@@ -1301,6 +1301,7 @@ Plans:
 **Plans:** 8/8 plans complete
 
 Plans:
+
 - [x] 34.1-01-PLAN.md — D-04 capability grants (12 explicit window/webview commands, `core:window:default` composition verified) + D-14 IPC-PORT-INVENTORY correction (34.1: 34→33, 34.5: 55→56)
 - [x] 34.1-02-PLAN.md — D-07/D-08 handler-body extraction into Electron-free `src/backend/appshell/*`, `main.ts` reduced to one-line delegations
 - [x] 34.1-03-PLAN.md — D-01/D-02 ten window-chrome channels renderer-side via Tauri JS + D-05/D-06 frameless runtime (pre-paint `setDecorations`, on-toggle re-apply, working drag region)
@@ -1318,6 +1319,7 @@ Plans:
 **Plans:** 30/30 plans complete
 
 Plans:
+
 - [x] 34.2-01-PLAN.md — D-02/D-07 the two sidecar bootstrap wirings (i18next init, `fetchLastestReleases()` + the re-homed `releasesInfoReady` anticheat listener) with NON-MOCKED proof
 - [x] 34.2-02-PLAN.md — D-03 extraction of the 19 `main.ts` handler bodies into Electron-free `src/backend/gamedetails/{dispatch,overrides}.ts`, `main.ts` reduced to one-line delegations
 - [x] 34.2-03-PLAN.md — D-05/D-06 extraction of `readKnownFixes` out of `launcher.ts` and `buildCrossoverRatingMap` out of `crossover_index/ipc_handler.ts` (D-16 three-state contract preserved)
@@ -1329,6 +1331,7 @@ Plans:
 **Gap cycle 1** *(planned 2026-07-25 — `34.2-VERIFICATION.md` returned `gaps_found`, 11/14: REQ-34.2-03, -07 and -12 failed, plus the blocker-severity CR-03 anti-pattern)*
 
 Wave 1 *(no `files_modified` overlap — all five may run in parallel)*
+
 - [x] 34.2-08-PLAN.md — gap #1 / CR-01: add `repair` + `readConfig` to `LONG_RUNNING_CHANNELS`, update the exact-set pin, catch the repair rejection at `onRepairYesClick`
 - [x] 34.2-09-PLAN.md — gap #2 / CR-02: `.catch()` the anticheat download inside the listener body + a log-only `unhandledRejection` guard, proven by a rejecting-download survival test
 - [x] 34.2-10-PLAN.md — CR-03 (blocker) + WR-08: redirect both destructive suites through a `pathShim` mock with a `resolve`+`relative` containment tripwire; re-arm the `online_monitor` mock
@@ -1336,50 +1339,61 @@ Wave 1 *(no `files_modified` overlap — all five may run in parallel)*
 - [x] 34.2-12-PLAN.md — WR-01 + WR-04: replace the tautological HEAD-comparison gates with sha256 + semantic pins, and the vacuous i18next assertion with a real translation
 
 Wave 2 *(blocked on Wave 1 — shares `enrichmentFlowRegistration.ts` with 34.2-11)*
+
 - [x] 34.2-13-PLAN.md — WR-09: extract `storeSearch/handlers.ts` so the Phase 20 D-14 rethrow contract has one implementation, gated against re-inlining
 
 Wave 3 *(blocked on Waves 1–2 — documents their outcome)*
+
 - [x] 34.2-14-PLAN.md — bring `34.2-PORTED-CHANNELS.md` current for the whole gap cycle, including what remains open
 
 **Gap cycle 2** *(planned 2026-07-26 — the re-verification returned `gaps_found` again: all 14 requirement-level truths pass, but gap cycle 1's own closure code introduced 3 NEW blockers)*
 
 Wave 1 *(no `files_modified` overlap — all three may run in parallel)*
+
 - [x] 34.2-15-PLAN.md — CR-02 regression: move `String(reason)` inside the guard's own try with a hardcoded fallback, proven by three hostile-reason cases (null prototype, throwing `toString`, throwing `Symbol.toPrimitive`)
 - [x] 34.2-16-PLAN.md — CR-01 sidecar half: curated `loggerFlowRegistration.ts` registering `logError` (a slice-6 channel ported early, declared in both ledgers), proven by a positive log-file side effect over the real transport
 - [x] 34.2-17-PLAN.md — CR-01 renderer half: extract `reportRepairFailure` (console.error + logError + ERROR dialog) and reduce `onRepairYesClick`'s catch to a delegation, unit-tested directly
 
 Wave 2 *(blocked on Wave 1 — shares `sidecarRejectionGuard.test.ts` with 34.2-15 and gates 34.2-16's new suite)*
+
 - [x] 34.2-18-PLAN.md — CR-03 + WR-01: apply the `pathShim`/`logger-paths` containment kit to `sidecarRejectionGuard.test.ts`, extend every tripwire to the log path, and prove containment with an env-simulating test plus a declared-list gate
 
 **Gap cycle 3** *(planned 2026-07-26 — the THIRD verification returned `gaps_found`: all 14 requirement-level truths still pass, but gap cycle 2's own closure work introduced 1 new BLOCKER — `testContainment.test.ts` declared an 11-suite containment hole as accepted debt, and `bootstrap.test.ts` was reproduced LIVE 3x destroying the developer's real `~/Library/Logs/GameLib/gamelib.log` — plus 3 warnings)*
 
 Wave 1 *(no `files_modified` overlap — all four may run in parallel; 34.2-19 is the proven-data-loss fix and does not depend on the gate work)*
+
 - [x] 34.2-19-PLAN.md — BLOCKER: make test containment STRUCTURAL via a backend-project `setupFiles` entry (`jest.setupContainment.ts`) instead of a per-suite kit that rotted, proven by a mock-free suite + a live `stat` before/after on the real log file
 - [x] 34.2-20-PLAN.md — WR-02 + IN-05: catch the `logError` listener's floating promise AT THE CALL SITE with a stderr diagnostic, proven by asserting the ABSENCE of `processGuards.ts`'s generic absorption text
 - [x] 34.2-21-PLAN.md — WR-03: defensively stringify `repairFailure.ts`'s `unknown` error so the ERROR dialog is unconditional, proven by `Object.create(null)` / throwing-`toString` / throwing-`Symbol.toPrimitive` cases that fail against today's code
 - [x] 34.2-22-PLAN.md — carried-forward warning: a Rust `#[cfg(test)]` module proving `timeout_for()` actually consults `LONG_RUNNING_CHANNELS` (fails under BOTH the unconditional-`Some` and unconditional-`None` mutation), pinned from the jest side because CI runs no cargo step
 
 Wave 2 *(blocked on Wave 1 — reads `loggerFlows.test.ts` and gates the new `setupFiles` entry)*
+
 - [x] 34.2-23-PLAN.md — WR-01 + WR-04 + WR-07 + WR-08: move the anti-claim gate to RAW source, correct the mislabelled load-bearing mock, scope the platform mutation to its own tests, and replace the 11-suite debt list with a `readdirSync`-derived set-equality tripwire over all 25 suites
 
 Wave 3 *(blocked on Waves 1–2 — documents their outcome)*
+
 - [x] 34.2-24-PLAN.md — REQ-34.2-13 currency: gap cycle 3 reconciliation in `34.2-PORTED-CHANNELS.md`, reasoned deferrals for WR-05/WR-06/IN-01/IN-03/IN-06 in `deferred-items.md`, VALIDATION rows, plus a committed `currency-gate.py` that turns staleness into a non-zero exit
 
 **Gap cycle 4** *(planned 2026-07-26 — the cycle-3 CODE REVIEW (`34.2-REVIEW-GAP-CYCLE-3.md`, 2 critical / 12 warnings) empirically DISPROVED two of gap cycle 3's three claims. `34.2-VERIFICATION.md` on disk is STALE (cycle 2's round); the review is the authoritative gap source. Meta-finding this cycle answers: each of the last three cycles fixed its named gap and introduced a new one, and in each case the cycle's own new tests were structurally incapable of detecting the shortfall — so every plan here writes its proof FIRST and records the RED observed against the then-current code.)*
 
 Wave 1 *(no `files_modified` overlap — all four may run in parallel)*
+
 - [x] 34.2-25-PLAN.md — CR-02 (BLOCKER) + WR-07/WR-09/WR-10/WR-11/WR-12: containment is specifier-dependent (`jest.mock('os')` leaves `node:os.homedir()` returning the real `$HOME`, measured live; `userInfo().homedir` unredirected). Dual-specifier factory, `mkdtempSync`+`chmodSync 0o700` root, a `setupFiles`-time precondition that ABORTS rather than detects, and a portable anti-vacuity check anchored on the per-run root
 - [x] 34.2-26-PLAN.md — CR-01 (BLOCKER) + WR-03/WR-10: the WR-02 `.catch` guard is INERT (`logger/index.ts:25-27` block-body arrows return `undefined`, so `Promise.resolve(undefined).catch` can never fire) and its four tests only pass because they `jest.spyOn` a promise shape that never occurs at runtime. Adds a promise-returning `logErrorSettled`, guards the sync-throw path, and replaces the fabricated proof with a stub-free `ENOTDIR` one
 - [x] 34.2-27-PLAN.md — WR-06 + WR-03: `repairFailure.ts` swallows a missing `window.api.logError` in an empty catch — the exact silent-void class this phase exists to close — and signal 3's `t`/`showDialogModal` are unguarded contrary to the docstring's T-34.2-53 claim
 - [x] 34.2-28-PLAN.md — WR-04 + WR-08: the Rust-test presence gate counts `timeout_for` in COMMENTS (a zero-assertion module satisfies it), and `loadMainRsCode()`'s `//` stripper will truncate a future `"steam://…"` literal
 
 Wave 2 *(blocked on Wave 1 — asserts on 34.2-25's containment shape and classifies 34.2-26's new suite)*
+
 - [x] 34.2-29-PLAN.md — WR-01 + WR-02 + WR-05 + CR-02 secondary + WR-10: Block D's HOME gate self-satisfies from a docblock and never gates the mock the module itself calls load-bearing; Block C's self-tests emit two misleading noise failures the moment the real gate fires; `jest.config.js`'s backend-only scope claim becomes an enforced cross-project gate
 
 Wave 3 *(blocked on Waves 1–2 — documents their outcome)*
+
 - [x] 34.2-30-PLAN.md — REQ-34.2-13 currency: gap cycle 4 reconciliation in `34.2-PORTED-CHANNELS.md` naming all 14 findings with evidence (incl. the three places the remedy diverged from the review's literal prescription), `currency-gate.py` extended with cycle-4 constants and a newest-section-last ordering rule, VALIDATION rows, and `D4-DEF-01`/`D4-DEF-02` reasoned deferrals
 
 Cross-cutting constraints:
+
 - `npx tsc --noEmit` and `cd src-tauri && cargo check --quiet` stay clean
 - Backend suite baseline is 108/109 suites, 2237/2238 tests (measured 2026-07-26 during re-verification; was 105/106 · 2211/2212 before gap cycle 1) — the sole failure (`rustInvokeChannel.test.ts`) is pre-existing since Phase 34.1 and explicitly out of scope
 - Additive and reversible: the Electron build keeps working unchanged (REQ-34.2-14)
@@ -1394,6 +1408,7 @@ Cross-cutting constraints:
 **Plans:** 9/9 plans complete
 
 Plans:
+
 - [x] 34.3-01-PLAN.md — REQ-34.3-01/02: new `shellFilesFlowRegistration.ts` registering the 14 `main.ts` link/reveal openers + the 4 filesystem/diagnostics channels, wired into `handlers.ts`, with `shellFilesFlows.test.ts` (wave 1)
 - [x] 34.3-02-PLAN.md — REQ-34.3-05/06: `clearCache` (dialog + `refreshLibrary` push), `clearAchievementCache`, and `resetHeroic` added to the same module at parity, `utils.ts` untouched (wave 2)
 - [x] 34.3-03-PLAN.md — REQ-34.3-03/06/08: `tauri-plugin-clipboard-manager` + 2 new `dispatch_rust_channel` arms called Rust-side with ZERO capability grant, 2 pure helpers with hand-RED-proved `#[cfg(test)]` tests, the 2 transport constants, and D-05's verified-no-fix comment (wave 1)
@@ -1405,6 +1420,7 @@ Plans:
 - [x] 34.3-09-PLAN.md — REQ-34.3-11: the BLOCKING 5-item live gate — items 1/2/3/5 under `tauri:dev`, item 4 on a PACKAGED build (wave 6)
 
 Cross-cutting constraints:
+
 - Every registration's `send`-vs-`handle` kind is cross-checked against `main.ts`/`logger/ipc_handler.ts` — a mismatch fails 100% silently
 - Curated imports only: never side-effect-import `logger/ipc_handler.ts` or `utils/ipc_handler.ts`; `logError` must NOT be registered a second time
 - Zero `clipboard-manager:*` capability grants; zero `state.shutdown_child()` added to `app_relaunch` (both settled by research)
@@ -1429,6 +1445,7 @@ Re-scoped by `34.4-CONTEXT.md` on 2026-07-27: **38 → 31.** `isLoggedIn` → Ph
 Planning also corrected two RESEARCH.md claims against source: `settingsFlowRegistration.ts` and `steamAuthFlowRegistration.ts` are **not** already `electronReachLedger.test.ts` entry points (plan 09 adds them), and RESEARCH Open Question 1 is resolved — neither `main.rs` sidecar spawn path passes an env var, but `node:sea`'s `isSea()` is a genuine Node-only packaged signal (the packaged sidecar is a SEA binary), so `humbleRunValidation`'s `isPackaged` divergence can be resolved rather than only declared.
 
 Plans:
+
 - [x] 34.4-01-PLAN.md — Steam credential/SteamGuard trio + session/identity trio incl. `logoutSteam` as a send (wave 1)
 - [x] 34.4-02-PLAN.md — Bottle trio, client-setup pair, `redeemSteamKey`/`getSteamInstallSize` (wave 2)
 - [x] 34.4-03-PLAN.md — The two **GOG** private-branch password channels via `libraryManagerMap` (wave 1)
@@ -1483,6 +1500,7 @@ Also carries: `humbleDisconnect` must be revisited here to clear the new browser
 (Phase 34.4 **D-05**).
 
 Plans:
+
 - [x] 34.4.1-01-PLAN.md — Rust login-window arms (open/cookies/nav-events/close/clear) + channel consts + cargo tests + the blocking gate contract (wave 1)
 - [x] 34.4.1-02-PLAN.md — Dual-build login seam + curated registration of all 6 channels + humbleLoginFlows transport-shape test + A4 off-main-thread smoke checkpoint (wave 2, non-autonomous)
 - [x] 34.4.1-03-PLAN.md — watchForLogin drives the seam: liveness discriminator, on_page_load relay, csrf capture (wave 3)
@@ -1617,6 +1635,7 @@ menu-display time; it is absent from the NSMenu object graph even while the scre
 plan may attempt it; Cmd+V paste must keep working in both surfaces.
 
 Plans:
+
 - [x] 34.4.2-01-PLAN.md — Mint REQ-34.4.2-01..10 + Tauri-managed `NSWindow`/`WKWebView` handle resolvers + the EPIC-UNTOUCHED source guard (`PHASE_34_4_2_NEW_SYMBOLS`) (wave 1)
 - [x] 34.4.2-02-PLAN.md — AppKit child-window attach/detach on the Tauri-managed surface + deminiaturize re-raise; permanent anti-sheet / anti-`.parent()` / anti-focus-re-raise negatives (wave 2)
 - [x] 34.4.2-03-PLAN.md — In-field glyph script + path-discriminated cancelled-navigation request channel on the Tauri-managed surface (no `WKUserScript`, no Cargo change); retightens the `on_navigation` negative rather than deleting it (wave 3)
@@ -1624,7 +1643,12 @@ Plans:
 - [x] 34.4.2-05-PLAN.md — DummyStore-never-ships containment guard + `34.4.2-PLATFORM-SCOPE.md` (per-symbol Windows/Linux declaration, EPIC-DEFERRED record, Electron-unchanged evidence) + phase `deferred-items.md` + the 6-item gate contract with `verdict: null` (wave 5)
 - [x] 34.4.2-06-PLAN.md — **BLOCKING live gate** on real macOS hardware; records the measured verdict and propagates it (wave 6, non-autonomous) — **RAN 2026-08-04, VERDICT FAIL 0/6** (item 1 child-window attachment FAIL: unresponsive login window after minimize/restore, F-34.4.2-01; item 2 dismissability FAIL: cannot close in that state, F-34.4.2-02; items 3-6 NOT ATTEMPTED, gate aborted). Operator's binding design decision: switch to sheet presentation with a mandated close affordance, superseding child-window attachment. See `34.4.2-LIVE-GATE.md` and `34.4.2-06-SUMMARY.md`. **Phase 34.4.2 DOES NOT CLOSE** — gap cycle required, `/gsd-plan-phase 34.4.2 --gaps`.
 
+**Cross-cutting constraints:**
+
+- The phase closes only on a genuine 6/6; anything less routes to another gap cycle
+
 **Gap cycle (planned 2026-08-04, implementing the BINDING sheet decision — 4 plans, 4 waves):**
+
 - [x] 34.4.2-07-PLAN.md — Replace AppKit child-window attachment with SHEET presentation (`beginSheet:`/`endSheet:`), re-home the poster's authorization gate onto `PRESENTED_LOGIN_SHEETS`, retire the deminiaturize re-raise observer, invert the superseded anti-sheet negatives, restate REQ-34.4.2-01/-02/-03 (wave 1)
 - [x] 34.4.2-08-PLAN.md — The mandated explicit close affordance, via two independent routes: a non-kill-switchable in-page "Cancel sign-in" strip on a `/login-cancel` sentinel, and a page-independent bare-Esc monitor scoped to presented sheets; both end the sheet then close the window, preserving `status=cancelled reason=window-closed` (wave 2)
 - [x] 34.4.2-09-PLAN.md — Rewritten six-item blocking gate contract `34.4.2-LIVE-GATE-RERUN.md` (`verdict: null`): items 1/2 restated in sheet semantics with a mandatory post-minimize/restore INTERACTIVITY sub-check, items 3-6 carried over intact; platform-scope + threat roll-up updated (T-34.4.2-33/-34/-35); premature requirement checkmarks corrected (wave 3)
@@ -1704,17 +1728,20 @@ with the parked pre-auth defect as its cause), `items_not_attempted: 2` (items 3
 counters reconcile to 5. Per D-08, **the phase still does not close.**
 
 What the third run nevertheless earned, stated without inflation:
+
 - **F-34.5-G6-02 is CLOSED, live-proven.** GOG's full backend chain — capture → `gogdl auth` →
   `refreshLibrary complete runner=gog managers=1` → 7 titles persisted to
   `store_cache/gog_library.json` — ran end to end, and
   `[useTauriOAuthLogin] runner=gog phase=idle (login completed, library refresh triggered)` fired
   **twice** where run 2 produced six backend terminal outcomes and zero such lines. The failure
   moved again, to a frontend-render layer: the data lands and the UI shows nothing.
+
 - **Items 4 and 5 carry a result for the first time in this phase's history**, after being
   silently skipped by both prior runs. Item 4 FAIL, with three named root causes (a dead
   `nativeImage` sidecar stub, `addToSteam` returning `undefined`, and Electron-shaped Steam
   LaunchOptions the Tauri shell ignores). Item 5 NOT ATTEMPTED — but as an explicit, recorded
   refusal naming its blocking prerequisite, not a drift.
+
 - **Ledger row `U-34.5-09` retired**, live-proven twice.
 
 ⚠ **A Phase 35 precondition surfaced that is larger than this gate**: `getInstallInfo` is unported
@@ -1727,6 +1754,7 @@ See `34.5-LIVE-GATE-RERUN-2.md` for the third run's full evidence, `34.5-CYCLE5-
 `34.5-42-SUMMARY.md` for this propagation pass.
 
 Plans:
+
 - [x] 34.5-01-PLAN.md — Wave-1 seam 1: pathShim desktop/exe/documents + GAMELIB_SHELL_EXE on both Rust spawn paths + pathShim.test.ts (wave 1)
 - [x] 34.5-02-PLAN.md — Wave-1 seam 2: host-anchor nile's redirect match on www.amazon.com, closing T-34.4.1-44b (wave 1)
 - [x] 34.5-03-PLAN.md — 34.5-LIVE-GATE.md written empty + Phase 34.6 inserted into ROADMAP + inventory reconciled 38/3/16 (wave 1)
@@ -1744,6 +1772,7 @@ Plans:
 - [x] 34.5-15-PLAN.md — Blocking 5-item live gate under tauri:dev, results recorded and propagated (wave 6, non-autonomous) — **RAN 2026-08-01, VERDICT FAIL 0/5** (items 1/2/3 FAIL: `legendary`/`gogdl`/`nile` binaries `spawn ENOENT` at sidecar startup — wrong `publicDir` under `getAppPath()`/`process.cwd()`; item 4 NOT ATTEMPTED; item 5 FAIL by blockage). Root cause fully diagnosed (`34.5-LIVE-GATE.md` § Root cause) — 4th recurrence of the publicdir-getapppath-chunking family. **Phase 34.5 DOES NOT CLOSE** — gap cycle required.
 
 Gap cycle (planned 2026-08-01 via `/gsd-plan-phase 34.5 --gaps`; waves restart at 1 for this cycle):
+
 - [x] 34.5-16-PLAN.md — App-root consumer sweep + `GAMELIB_APP_ROOT` handed down from both Rust spawn paths + `electronStub.getAppPath()` consumes it (gap wave 1)
 - [x] 34.5-17-PLAN.md — Existence-checked `archSpecificBinary` x64 fallback + real-filesystem coverage under sidecar-like cwd (`src-tauri/`) (gap wave 2)
 - [x] 34.5-18-PLAN.md — Sidecar boot logging of the `GAMELIB_SHELL_EXE` it actually received + asset-root self-check, closing the precondition-5 gate-contract defect (gap wave 2)
@@ -1757,6 +1786,7 @@ both prior runs. Planning established a **second defect layer the RE-RUN did not
 capture never reaching the renderer, `useTauriOAuthLogin` calls the RAW auth channels rather than
 `GlobalState.tsx`'s wrappers, so `handleSuccessfulLogin` → `refreshLibrary` never runs — fixing only
 the transport would have produced a third FAIL for a different reason (F-34.5-G6-03).
+
 - [x] 34.5-22-PLAN.md — Preserve the gate-run log off the rotation path; diagnose F-34.5-G6-02 to one of three named gap shapes, from source (gap wave 1)
 - [x] 34.5-23-PLAN.md — F-G6-02 layer 1: exempt `oauthCaptureLogin` from the 60 s `INVOKE_TIMEOUT`, make the transport failure loud, add the self-tested standing guard (gap wave 2)
 - [x] 34.5-24-PLAN.md — F-G6-01 instrumentation: hostname-only nav logging + `GAMELIB_OAUTH_UA_LEGENDARY` override + the discriminator contract, `verdict: null` (gap wave 2)
@@ -1832,6 +1862,7 @@ the three dedicated IPC channels above, not about making winetricks work at all.
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 34.6 to break down)
 
 ### Phase 35: Electron cutover — remove the Electron build
