@@ -158,3 +158,75 @@ describe('SidebarLinks', () => {
     expect(handleRedeemKeyDialog).toHaveBeenCalledWith(true)
   })
 })
+
+describe('SidebarLinks account item', () => {
+  function labelsOf(tree: ReactNode): string[] {
+    return collectElements(tree)
+      .map((el) => el.props?.label)
+      .filter((l): l is string => typeof l === 'string')
+  }
+
+  it('renders "Manage Accounts" and never "Login" when logged out', () => {
+    contextValue = makeContextValue()
+
+    const tree = SidebarLinks() as unknown as ReactElement
+    const labels = labelsOf(tree)
+
+    expect(labels).toContain('Manage Accounts')
+    expect(labels).not.toContain('Login')
+  })
+
+  it('does not promote any item above the GameLib library link when logged out', () => {
+    contextValue = makeContextValue()
+
+    const tree = SidebarLinks() as unknown as ReactElement
+    const labels = labelsOf(tree)
+
+    expect(labels[0]).toBe('GameLib')
+  })
+
+  it('places Manage Accounts immediately before Accessibility when logged out', () => {
+    contextValue = makeContextValue()
+
+    const tree = SidebarLinks() as unknown as ReactElement
+    const labels = labelsOf(tree)
+
+    expect(labels.indexOf('Manage Accounts')).toBe(
+      labels.indexOf('Accessibility') - 1
+    )
+  })
+
+  it('renders the same label, position, and no promotion when logged in', () => {
+    contextValue = makeContextValue({
+      gog: { username: 'TestUser', library: [] }
+    })
+
+    const tree = SidebarLinks() as unknown as ReactElement
+    const labels = labelsOf(tree)
+
+    expect(labels).toContain('Manage Accounts')
+    expect(labels).not.toContain('Login')
+    expect(labels[0]).toBe('GameLib')
+    expect(labels.indexOf('Manage Accounts')).toBe(
+      labels.indexOf('Accessibility') - 1
+    )
+  })
+
+  it('points Manage Accounts at /login in both logged-out and logged-in states', () => {
+    contextValue = makeContextValue()
+    const loggedOutTree = SidebarLinks() as unknown as ReactElement
+    const loggedOutItem = collectElements(loggedOutTree).find(
+      (el) => el.props?.label === 'Manage Accounts'
+    )
+    expect(loggedOutItem?.props.url).toBe('/login')
+
+    contextValue = makeContextValue({
+      gog: { username: 'TestUser', library: [] }
+    })
+    const loggedInTree = SidebarLinks() as unknown as ReactElement
+    const loggedInItem = collectElements(loggedInTree).find(
+      (el) => el.props?.label === 'Manage Accounts'
+    )
+    expect(loggedInItem?.props.url).toBe('/login')
+  })
+})
