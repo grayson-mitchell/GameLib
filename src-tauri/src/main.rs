@@ -4988,6 +4988,129 @@ fn main() {
             // minimize/restore cycle INTERACTIVE is exactly what the rewritten live gate's
             // item 1 must measure, not something to pre-emptively paper over here.
 
+            // Page-independent Esc backstop for presented login sheets (Phase 34.4.2 Plan 08,
+            // REQ-34.4.2-03/04/06/07/08/10, T-34.4.2-33/-35): installs ONE process-wide
+            // `NSEvent` local key-down monitor here -- the EXACT site the retirement comment,
+            // immediately above, names as where the deminiaturize re-raise observer used to
+            // live. A sheet renders no titlebar close button and, unlike the injected cancel
+            // strip (above), this route works even when the login page renders nothing at all
+            // -- a blank page, a network error page, or a bot-management interstitial, exactly
+            // the states a login window reaches most often when something is already wrong.
+            //
+            // Reimplemented here rather than refactored out of
+            // `open_pristine_epic_login_window`'s own local monitor (read-only reference,
+            // above): that region is byte-frozen by REQ-34.4.2-10, and its monitor
+            // legitimately reads `charactersIgnoringModifiers()` to route Cmd+V/C/X/A/Z, which
+            // this monitor must never do (T-34.4.2-35, immediately below).
+            //
+            // PRIVACY IS A HARD CONSTRAINT, NOT A STYLE PREFERENCE (T-34.4.2-35): this handler
+            // reads ONLY `keyCode()` and `modifierFlags()` -- never `characters()` or
+            // `charactersIgnoringModifiers()`, and never logs the event or any field derived
+            // from it. This monitor sees every keystroke the app receives, including the
+            // password being typed into the login sheet.
+            //
+            // Epic non-interference is STRUCTURAL, not conditional: the pristine Epic login
+            // window is never registered in `PRESENTED_LOGIN_SHEETS` (Plan 07 registers only
+            // `present_login_window_as_sheet` callers, and Epic is never one -- REQ-34.4.2-10),
+            // so the window-membership check below can never match it. No explicit Epic label
+            // check is added -- a structural guarantee is stronger than a name-based one.
+            //
+            // Leaked for the process lifetime via `std::mem::forget`, matching the retired
+            // deminiaturize observer's own precedent (and the pristine arm's own monitor-leak
+            // shape for its navigation delegate): this is ONE monitor, registered ONCE, here --
+            // not a per-open monitor that would need its own teardown.
+            //
+            // Failure to install is NON-FATAL (T-34.1-22 discipline, matching this closure's
+            // own tray-build convention immediately above): logs one
+            // `[shell] WARN: login-sheet esc monitor: ...` line and lets the app start. The
+            // cancel strip (above) remains the primary route.
+            #[cfg(target_os = "macos")]
+            {
+                let esc_app_handle = app.handle().clone();
+                let esc_monitor_handler = block2::RcBlock::new(
+                    move |event: std::ptr::NonNull<objc2_app_kit::NSEvent>|
+                          -> *mut objc2_app_kit::NSEvent {
+                        // SAFETY: AppKit hands local monitor handlers a valid, live `NSEvent`
+                        // for the duration of this call.
+                        let event_ref = unsafe { event.as_ref() };
+
+                        // 1. Cheapest possible check first (T-34.4.2-35's "does no work at
+                        // all" guarantee): no presented sheet at all, return untouched with no
+                        // window resolution and no further AppKit calls.
+                        let presented: Vec<String> = match PRESENTED_LOGIN_SHEETS.lock() {
+                            Ok(guard) => guard.as_ref().cloned().unwrap_or_default(),
+                            Err(_) => Vec::new(),
+                        };
+                        if presented.is_empty() {
+                            return event.as_ptr();
+                        }
+
+                        // 2. Bare Esc only -- macOS virtual keyCode 53 is Esc.
+                        if event_ref.keyCode() != 53 {
+                            return event.as_ptr();
+                        }
+
+                        // 3. Only a BARE Esc dismisses -- Command/Option/Control held means
+                        // this is some other chord (e.g. a devtools shortcut); never consume
+                        // those.
+                        let flags = event_ref.modifierFlags();
+                        if flags.intersects(
+                            objc2_app_kit::NSEventModifierFlags::Command
+                                | objc2_app_kit::NSEventModifierFlags::Option
+                                | objc2_app_kit::NSEventModifierFlags::Control,
+                        ) {
+                            return event.as_ptr();
+                        }
+
+                        // 4. Resolve the event's own window and compare against every
+                        // currently presented sheet's `NSWindow` address. No match -> return
+                        // untouched.
+                        let Some(mtm) = objc2::MainThreadMarker::new() else {
+                            return event.as_ptr();
+                        };
+                        let Some(event_window) = event_ref.window(mtm) else {
+                            return event.as_ptr();
+                        };
+                        let event_window_addr =
+                            (&*event_window) as *const objc2_app_kit::NSWindow as usize;
+
+                        for label in &presented {
+                            if login_window_ns_window(&esc_app_handle, label)
+                                == Some(event_window_addr)
+                            {
+                                // 5. Match: dismiss and consume -- the page never also sees
+                                // this Esc.
+                                request_login_sheet_cancel(&esc_app_handle, label, "esc");
+                                return std::ptr::null_mut();
+                            }
+                        }
+                        event.as_ptr()
+                    },
+                );
+                // SAFETY: `esc_monitor_handler` is a valid block; AppKit copies it internally
+                // when registering the monitor, so it outliving this call is not required --
+                // the SAME convention the pristine arm's own monitor registration (above,
+                // read-only reference) already documents.
+                let esc_monitor_token = unsafe {
+                    objc2_app_kit::NSEvent::addLocalMonitorForEventsMatchingMask_handler(
+                        objc2_app_kit::NSEventMask::KeyDown,
+                        &esc_monitor_handler,
+                    )
+                };
+                match esc_monitor_token {
+                    Some(token) => {
+                        // Intentional leak for the process lifetime -- see this block's own
+                        // doc comment above.
+                        std::mem::forget(token);
+                    }
+                    None => {
+                        eprintln!(
+                            "[shell] WARN: login-sheet esc monitor: addLocalMonitorForEventsMatchingMask failed -- continuing without it"
+                        );
+                    }
+                }
+            }
+
             // Dev-only: force the webview devtools open (the dev webview exposes no
             // right-click inspect on macOS) so renderer errors are inspectable, and
             // confirm the webview window actually exists.
