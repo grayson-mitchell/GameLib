@@ -1238,6 +1238,7 @@ name = "gamelib-shell"
 version = "0.7.0"
 dependencies = [
  "block2",
+ "dispatch2",
  "keyring",
  "objc2",
  "objc2-app-kit",

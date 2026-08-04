@@ -2685,6 +2685,55 @@ static PRESENTED_LOGIN_SHEETS: Mutex<Option<Vec<String>>> = Mutex::new(None);
 #[cfg(target_os = "macos")]
 const LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT: Duration = Duration::from_secs(15);
 
+/// F-34.4.2-05 (checkpoint response round 2, 2026-08-04, commit 56d4986f8's live run): the
+/// operator captured `[shell]` diagnostics this time and they isolate the wedge precisely --
+/// `main-thread closure entered` printed, then NOTHING further from inside that closure for
+/// the full 10s bound (the WARN that follows is `present_login_window_as_sheet`'s OWN
+/// `rx.recv_timeout` giving up, not a log line the closure itself produced). The only AppKit
+/// call between those two log lines is `parent.beginSheet_completionHandler(child, None)`
+/// itself -- so the main thread is wedged inside (or immediately around) that single call,
+/// not in this file's own recv/dispatch plumbing (F-34.4.2-04 already traced every
+/// `rx.recv`/`rx.recv_timeout` in this path to a spawned worker thread, main.rs:4901, which
+/// directly falsified the checkpoint response's own leading "self-deadlock on the main
+/// thread" theory -- see the Eliminated section of this bug's debug session).
+///
+/// Independent third-party reports of the same class of failure -- a `WKWebView`-backed
+/// `NSWindow` that has never completed an on-screen display/layout pass wedging AppKit when
+/// asked to participate in a sheet/modal transition immediately after creation -- exist for
+/// unrelated Rust/Go webview stacks hitting the identical native layer (Apple Developer
+/// Forums "WKWebView in a modal window" thread: "WKWebView needs a certain NSRunLoop to do
+/// its work on... rearranging things to avoid [calling from inside a dispatch_async block]
+/// solved the problem"; `wailsapp/wails#4226` "Deadlock in webview_window_darwin";
+/// `r0x0r/pywebview#138` "Deadlock while closing the window with persistent threads
+/// running"). The common thread: WebKit's content-process handshake needs real run-loop
+/// turns to complete, and this file was calling `beginSheet:` synchronously, in the SAME
+/// run-loop turn as `.build()`'s own window-creation work (both dispatched via
+/// `run_on_main_thread`/`send_user_message`'s queued-message path, but processed back to
+/// back once the main thread picks them up), giving WebKit none.
+///
+/// This is a REAL, bounded wall-clock deferral via `dispatch2::DispatchQueue::main().after()`
+/// -- not a race against another thread (the standing constraint from the checkpoint
+/// response: "the hang itself must be prevented, not bounded/raced" is about NOT trying to
+/// out-run an unbounded stall from a second thread; this is the opposite shape -- a
+/// deterministic, single-threaded delay that runs strictly BEFORE the AppKit call it
+/// protects, on the same main thread, giving that thread's own run loop the turns it needs).
+/// A second `run_on_main_thread` call from inside the first closure would NOT achieve this:
+/// `send_user_message` (tauri-runtime-wry-2.11.4/src/lib.rs:239-248, confirmed by direct
+/// read) executes synchronously inline, with zero run-loop yield, whenever the caller is
+/// already on the main thread -- which this closure always is. GCD's main queue, serviced by
+/// a dedicated run-loop source `NSApplication` registers automatically, is independent of
+/// tao's own event-proxy pipeline and is guaranteed to run on a LATER iteration of the real
+/// run loop.
+///
+/// 250ms is chosen conservatively: imperceptible against both this function's own 10s bound
+/// and `LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT`'s 15s bound, and against the multi-second (in
+/// the reported case, indefinite) hang this fix targets -- but long enough to span several
+/// real run-loop turns, not just the single queue-drain a bare `exec_async` (zero delay)
+/// would provide, matching the shape of the fix multiple third-party reports above converged
+/// on independently.
+#[cfg(target_os = "macos")]
+const SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY: Duration = Duration::from_millis(250);
+
 /// Presents a VISIBLE Tauri-managed login window (Humble/GOG/Amazon -- REQ-34.4.2-10's
 /// locked scope; see `open_pristine_epic_login_window`'s own module-level scope note, above,
 /// for the full boundary) as an AppKit SHEET on the app's `main` window (REQ-34.4.2-01/02),
@@ -2782,40 +2831,76 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
         eprintln!(
             "[shell] login-window sheet: main-thread closure entered for '{closure_label}'"
         );
-        // SAFETY: both addresses were resolved moments ago via `login_window_ns_window`,
-        // which only returns `Some` for a live Tauri-managed `NSWindow`; reconstructed into
-        // live references only here, on the main thread.
-        let parent: &objc2_app_kit::NSWindow =
-            unsafe { &*(parent_ptr.0 as *const objc2_app_kit::NSWindow) };
-        let child: &objc2_app_kit::NSWindow =
-            unsafe { &*(child_ptr.0 as *const objc2_app_kit::NSWindow) };
-        // `beginSheet:completionHandler:` is a safe binding (no `unsafe fn` in the
-        // generated bindings) -- `parent`/`child` are both live `NSWindow`s reconstructed
-        // above via the `unsafe` pointer casts, but the call itself needs no further
-        // `unsafe` block.
-        parent.beginSheet_completionHandler(child, None);
-        // Live-evidence gap: proves the AppKit sheet-begin call itself RETURNED (as opposed
-        // to blocking the main thread inside AppKit, which would mean this line -- and
-        // every other main-thread message queued behind it, including the visible-fallback
-        // `humble_login_open` queues further down -- never runs).
+        // F-34.4.2-05 fix (see `SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY`'s own doc comment for
+        // the full live-evidence mechanism): the actual `beginSheet:completionHandler:`
+        // call and its read-back are deferred onto GCD's main queue, `WARMUP_DELAY` in the
+        // future, rather than invoked synchronously right here. This is deliberately NOT a
+        // second `run_on_main_thread` call -- `send_user_message` executes synchronously
+        // inline when already on the main thread (confirmed by direct read of
+        // tauri-runtime-wry's vendored source), so it would not yield a single run-loop
+        // turn and would reproduce exactly the wedge this fix targets.
         eprintln!(
-            "[shell] login-window sheet: beginSheet dispatch call returned for '{closure_label}'"
+            "[shell] login-window sheet: deferring beginSheet dispatch by {SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY:?} via DispatchQueue::main().after() for '{closure_label}'"
         );
-        // CR-02 read-back: two independent AppKit-owned signals, both required. `isSheet()`
-        // confirms the child itself now believes it is presented as a sheet; `attachedSheet()`
-        // on the parent is compared by POINTER identity (not `==`, which `NSWindow` does not
-        // implement) to confirm the parent's sheet is specifically THIS child, not some other
-        // sheet already queued/presented on it. Either alone could be a false positive (e.g. a
-        // stale `isSheet()` from a previous presentation); both together are the strongest
-        // falsifiable signal this binding exposes.
-        let attached = child.isSheet()
-            && parent
-                .attachedSheet()
-                .is_some_and(|sheet| std::ptr::eq(&*sheet as *const _, child as *const _));
-        eprintln!(
-            "[shell] login-window sheet: read-back attached={attached} for '{closure_label}'"
-        );
-        let _ = tx.send(attached);
+        let deferred_label = closure_label.clone();
+        let deferred_started = std::time::Instant::now();
+        let when = dispatch2::DispatchTime::NOW
+            .time(SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY.as_nanos() as i64);
+        let _ = dispatch2::DispatchQueue::main().after(when, move || {
+            // Forces Rust 2021 disjoint closure capture to move in the WHOLE `SendPtr`
+            // wrapper for each address (same discipline as the outer closure, above) --
+            // this closure's own field access below (`parent_ptr.0`/`child_ptr.0`) would
+            // otherwise let disjoint capture pull in only the bare `*mut c_void` field,
+            // bypassing `SendPtr`'s `Send` impl and failing `DispatchQueue::after`'s own
+            // `F: Send` bound (confirmed by a real `cargo check` E0277 before this line was
+            // added).
+            let parent_ptr = parent_ptr;
+            let child_ptr = child_ptr;
+            // Live-evidence gap: proves the deferred closure actually ran (as opposed to
+            // GCD silently dropping/never scheduling it), and how much real wall-clock
+            // time elapsed since it was scheduled -- should be >= WARMUP_DELAY, confirming
+            // a genuine run-loop deferral took place rather than an inline no-op.
+            eprintln!(
+                "[shell] login-window sheet: deferred beginSheet closure entered for '{deferred_label}' (deferred_elapsed={:?})",
+                deferred_started.elapsed()
+            );
+            // SAFETY: both addresses were resolved moments ago via `login_window_ns_window`,
+            // which only returns `Some` for a live Tauri-managed `NSWindow`; reconstructed
+            // into live references only here, on the main thread (GCD's main queue always
+            // runs work on the OS main thread, same as `run_on_main_thread`'s own closures).
+            let parent: &objc2_app_kit::NSWindow =
+                unsafe { &*(parent_ptr.0 as *const objc2_app_kit::NSWindow) };
+            let child: &objc2_app_kit::NSWindow =
+                unsafe { &*(child_ptr.0 as *const objc2_app_kit::NSWindow) };
+            // `beginSheet:completionHandler:` is a safe binding (no `unsafe fn` in the
+            // generated bindings) -- `parent`/`child` are both live `NSWindow`s
+            // reconstructed above via the `unsafe` pointer casts, but the call itself needs
+            // no further `unsafe` block.
+            parent.beginSheet_completionHandler(child, None);
+            // Live-evidence gap: proves the AppKit sheet-begin call itself RETURNED (as
+            // opposed to blocking the main thread inside AppKit, which would mean this
+            // line -- and every other main-thread message queued behind it, including the
+            // visible-fallback `humble_login_open` queues further down -- never runs).
+            eprintln!(
+                "[shell] login-window sheet: beginSheet dispatch call returned for '{deferred_label}'"
+            );
+            // CR-02 read-back: two independent AppKit-owned signals, both required.
+            // `isSheet()` confirms the child itself now believes it is presented as a
+            // sheet; `attachedSheet()` on the parent is compared by POINTER identity (not
+            // `==`, which `NSWindow` does not implement) to confirm the parent's sheet is
+            // specifically THIS child, not some other sheet already queued/presented on
+            // it. Either alone could be a false positive (e.g. a stale `isSheet()` from a
+            // previous presentation); both together are the strongest falsifiable signal
+            // this binding exposes.
+            let attached = child.isSheet()
+                && parent
+                    .attachedSheet()
+                    .is_some_and(|sheet| std::ptr::eq(&*sheet as *const _, child as *const _));
+            eprintln!(
+                "[shell] login-window sheet: read-back attached={attached} for '{deferred_label}'"
+            );
+            let _ = tx.send(attached);
+        });
     }) {
         eprintln!(
             "[shell] WARN: login-window sheet: main-thread dispatch failed for '{label}' ({e})"

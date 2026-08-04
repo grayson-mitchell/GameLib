@@ -131,6 +131,25 @@ objc2-app-kit = { version = "0.3.2", default-features = false, features = [
     "block2",
 ] }
 objc2-foundation = "0.3.2"
+# `dispatch2` added (F-34.4.2-05, checkpoint response round 2, 2026-08-04):
+# `present_login_window_as_sheet`'s `beginSheet:completionHandler:` call was live-CONFIRMED
+# to wedge the OS main thread forever (F-34.4.2-05's own doc comment on
+# `SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY`, main.rs, has the full mechanism) when invoked
+# synchronously in the same run-loop turn as the sheet-candidate window's own creation.
+# `DispatchQueue::main().after(...)` defers that call by a bounded wall-clock delay so
+# WebKit's content-process handshake gets real run-loop turns to complete first -- NOT
+# `run_on_main_thread` again, which `tauri-runtime-wry`'s `send_user_message` executes
+# synchronously inline when already on the main thread (confirmed by direct read of that
+# crate's vendored source), so it cannot yield a run-loop turn by itself. Already resolved
+# in this workspace's own dependency tree at this exact version (a transitive dependency of
+# `tao`, `objc2-core-foundation`, `objc2-core-graphics`, and `rfd`) -- this line only
+# declares what this file's own code directly calls, matching the discipline the
+# `NSGraphicsContext` feature comment above already established; `git diff --exit-code
+# Cargo.lock` stays 0, no new crate enters the dependency tree. Default features (`std`,
+# `block2`, `libc`, `objc2`) are kept -- `DispatchQueue::main()`/`.after()` needs no
+# narrower feature subset than what `tao`'s own request into this same crate already
+# resolves.
+dispatch2 = "0.3.1"
 objc2-web-kit = { version = "0.3.2", default-features = false, features = [
     "WKWebsiteDataRecord",
     "WKWebView",
