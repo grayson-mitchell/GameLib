@@ -1865,10 +1865,39 @@ Plans:
 
 - [ ] TBD (run /gsd-plan-phase 34.6 to break down)
 
+### Phase 34.7: Epic device-auth single sign-in path (INSERTED)
+
+**Goal:** Make device-auth bootstrap the **single** Epic sign-in path. Delete the interactive
+legendary-login UI (already marked red in the UI as deletion-pending); keep legendary purely as
+the download/library backend, seeded via exchange code from the device-auth session; the bootstrap
+doubles as the recovery flow. Deliberately **one** path — the interactive legendary login is NOT
+retained as a fallback ("one robust path beats one robust + one flaky", operator decision
+2026-08-05 after the alt-login 403 research concluded).
+
+**Permanently out of scope:** any further work on the alt-login 403 issue. It stays parked —
+no additional investigation time is to be spent on it (operator decision 2026-08-05; see the
+`epic-login-tauri-connection-anomaly` record).
+
+**Verification note:** confirm cloud-save and EOS-overlay flows still work when the session is
+seeded via exchange code rather than minted by legendary itself — it is the same launcher-client
+token either way, but any Heroic/legendary flow that assumes it minted the session must be
+checked, not assumed.
+
+*Inserted 2026-08-05 per operator decision: scheduled as the last thing before Phase 35.*
+
+**Requirements:** TBD — mint at `/gsd-plan-phase 34.7`
+**Depends on:** Phases 34.5 and 34.6 (runs LAST before Phase 35 — operator-scheduled)
+**Blocks:** Phase 35
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 34.7 to break down)
+
 ### Phase 35: Electron cutover — remove the Electron build
 
 **Goal:** Retire the Electron build: delete `electron-vite`/`electron-builder` config, the preload contextBridge path, and the `isTauri()` branches, leaving Tauri as the only shell. This is the one phase that deliberately breaks the additive/reversible invariant every prior phase preserved — so it runs last, and only once the `session`/`powerSaveBlocker` parity gaps are resolved or explicitly accepted, and the parked Electron-renderer bugs (see `debug-uninstall-game-vanishes-parked`) have been re-tested against Tauri rather than fixed in Electron.
-**Depends on:** Phase 34 (all three platforms shipping on Tauri first) **and Phases 34.1–34.6** (the IPC re-plumb must be complete — see `.planning/IPC-PORT-INVENTORY.md`). As of 2026-07-25 only 27 of 210 IPC channels are on the sidecar; cutting over before the port finishes would strand ~183 channels. Also blocked on migrating the renderer off `electron-vite` onto plain Vite, since `tauri:dev` currently shells out to `electron-vite build` and `tauri.conf.json` serves its `build/` output as `frontendDist`.
+**Depends on:** Phase 34 (all three platforms shipping on Tauri first) **and Phases 34.1–34.7** (the IPC re-plumb must be complete, plus the Epic device-auth single-path consolidation — see `.planning/IPC-PORT-INVENTORY.md`). As of 2026-07-25 only 27 of 210 IPC channels are on the sidecar; cutting over before the port finishes would strand ~183 channels. Also blocked on migrating the renderer off `electron-vite` onto plain Vite, since `tauri:dev` currently shells out to `electron-vite build` and `tauri.conf.json` serves its `build/` output as `frontendDist`.
 **Requirements:** TBD — mint at `/gsd-plan-phase 35`
 **Plans:** 0 plans
 
