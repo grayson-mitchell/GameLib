@@ -1528,6 +1528,50 @@ F-10 ∥ F-9 ∥ housekeeping → sweeps → THIRD blocking live gate.**
 - [x] 34.4.1-28-PLAN.md — Sweeps: `seam-parity-sweep.py` staleness (S-07/S-10/S-11), regression guard re-verification (wave 6)
 - [x] 34.4.1-29-PLAN.md — **THIRD BLOCKING live gate**: full 4-item re-run, owns the GATED `IPC-PORT-INVENTORY.md`/`34.4.1-PORTED-CHANNELS.md` updates via plan 19's 13-row checklist (wave 7, non-autonomous) — **DONE 2026-07-31: VERDICT 4/4 PASS.** F-6 CLOSED live-proven (census 34/34/0 with the reported count agreeing with an independent re-read, and a genuinely fresh re-login: 68 `session_expired` rejections over 6m17s vs run 2's 3s and zero poll lines). WR-07, F-4, F-10 and GAP-13 also closed. Gated set applied. **NOT closed:** domain-scoping is UNTESTED (the contract's own precondition 6 struck the planted cookie, making a required PASS condition unsatisfiable on a single-origin jar), Epic logout is unobserved (→ 34.5), F-9 stays open. 10 findings filed in `deferred-items.md`.
 
+### Phase 34.4.2: macOS login-window UX — modal child-window attachment + in-field autofill affordance (INSERTED)
+
+**Goal:** Ship the two spike-validated (019–022, 2026-08-04) login-window UX behaviors onto the
+34.4.1 login seam on macOS. **(1) Modal attachment (spike 021):** the login `WebviewWindow` attaches
+to the main window as an AppKit **child window** — un-losable, with typing, paste and system
+autofill all still working — and is **re-raised after the parent restores from the Dock**. Sheets
+are explicitly rejected: a sheet blocks the window holding any cancel control, and a store's login
+page has none. **(2) In-field autofill affordance (spikes 020/022):** an in-field key glyph that
+posts a **synthesized right-click** to pop the real system context menu with the AutoFill →
+Passwords item in it (L2, screenshot-proven, public API only), with Cmd+V paste kept working as the
+fallback. **No credential store is built** — inline Password AutoFill and save-prompts are
+platform-blocked in both login surfaces on HTTP and real HTTPS, and the AutoFill panel can never be
+opened directly (the menu item is injected at menu-display time and absent from the NSMenu).
+Verification can run offline against the spike-019 local OAuth DummyStore harness (port 17940,
+PKCE + replay enforcement + `/events` oracle) where a live store login isn't required.
+**Requirements**: REQ-34.4.2-01, REQ-34.4.2-02, REQ-34.4.2-03, REQ-34.4.2-04, REQ-34.4.2-05, REQ-34.4.2-06, REQ-34.4.2-07, REQ-34.4.2-08, REQ-34.4.2-09 (minted by plan 34.4.2-01; the ID rows themselves land in `REQUIREMENTS.md` when that plan executes)
+**Depends on:** Phase 34.4.1 (the login-window seam these behaviors attach to — COMPLETE)
+**Plans:** 6 plans in 6 waves (all sequential — every implementing plan edits the single-file Rust shell `src-tauri/src/main.rs`, so no two may share a wave)
+
+**No CONTEXT.md, no RESEARCH.md, no PATTERNS.md, no UI-SPEC.md** — all four skipped by explicit
+developer decision. Spikes 019/020/021/022 (validated 2026-08-04) ARE the research and locked the
+design; `.claude/skills/spike-findings-gamelib/references/login-window-ux-macos.md` is the
+authoritative design source, with `oauth-login-test-harness.md` (the spike-019 DummyStore fixture,
+port 17940) as the offline verification fixture and `tauri-login-webview-cookies.md` describing the
+34.4.1 seam these behaviors attach to. Glyph visual styling is executor discretion.
+
+**Locked, do not re-litigate:** AppKit `addChildWindow:ordered:` attachment (never Tauri's builder
+`.parent()`, which cannot cover the pristine `WKWebView` shell or re-attach at runtime); sheets
+REJECTED (a sheet blocks the very window that would hold a cancel control, and a store login page has
+none — spike 021's operator could not dismiss one at all); NO credential store (inline Password
+AutoFill and save-prompts are platform-blocked in both surfaces on loopback HTTP *and* real HTTPS);
+the affordance is an in-field key glyph posting a **synthesized right-click** (L2, public API only) —
+opening the AutoFill panel directly is platform-IMPOSSIBLE (macOS injects the menu item at
+menu-display time; it is absent from the NSMenu object graph even while the screen shows it), so no
+plan may attempt it; Cmd+V paste must keep working in both surfaces.
+
+Plans:
+- [ ] 34.4.2-01-PLAN.md — Mint REQ-34.4.2-01..09 + cross-surface `NSWindow`/`WKWebView` handle resolvers and the pristine-webview registry (wave 1)
+- [ ] 34.4.2-02-PLAN.md — AppKit child-window attach/detach on both surfaces + deminiaturize re-raise; permanent anti-sheet / anti-`.parent()` negatives (wave 2)
+- [ ] 34.4.2-03-PLAN.md — In-field glyph script + path-discriminated cancelled-navigation request channel on both surfaces; retightens the `on_navigation` negative rather than deleting it (wave 3)
+- [ ] 34.4.2-04-PLAN.md — Synthesized `RightMouseDown`/`RightMouseUp` poster: webview-bounds coordinate flip, out-of-bounds refusal, server-side debounce, Cmd+V regression guard (wave 4)
+- [ ] 34.4.2-05-PLAN.md — DummyStore-never-ships containment guard + `34.4.2-PLATFORM-SCOPE.md` (per-symbol Windows/Linux declaration + Electron-unchanged evidence) + the 6-item gate contract with `verdict: null` (wave 5)
+- [ ] 34.4.2-06-PLAN.md — **BLOCKING live gate** on real macOS hardware; records the measured verdict and propagates it (wave 6, non-autonomous)
+
 ### Phase 34.5: Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts (INSERTED)
 
 **Goal:** Port the **inherited non-Steam runner surface** (**57 channels** — the largest slice): Epic/GOG/Amazon/Zoom auth, sign-out, saves sync and CLI versions; the EOS overlay cluster; Wine version/runtime management and tooling (DXVK, VKD3D, winetricks); desktop shortcuts, add-to-Steam and SteamGridDB artwork. Carried across rather than dropped per the Phase 35 discussion — the keep/drop call is deliberately deferred to this phase own discuss-phase. Additive and reversible — the Electron build keeps working unchanged.
