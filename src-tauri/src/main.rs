@@ -1538,6 +1538,56 @@ fn autofill_glyph_script(exfil_host: &str) -> String {
     template.replace("@@EXFIL_HOST@@", &exfil_host_js)
 }
 
+// ---- Synthesized right-click poster: pure coordinate helpers (Phase 34.4.2 Plan 04,
+// REQ-34.4.2-05/06/07/08/10, T-34.4.2-17) ----
+//
+// Spike 022 (`login-window-ux-macos.md` S4) measured the CSS-px -> view-point flip and the
+// bounds-refusal these two helpers implement. Both are deliberately AppKit-free (plain `f64`
+// in, plain `f64`/`Option` out) so their behavior is provable by `cargo test` alone, without a
+// live main-thread/`WKWebView` session -- `post_autofill_right_click` (below) is the only piece
+// of this section that actually touches AppKit.
+
+/// Maps `req`'s CSS rect (top-left origin, the browser's own coordinate system) to its centre
+/// in VIEW coordinates (bottom-left origin, AppKit's) for a view of the given height. `x + w/2`
+/// is unaffected by the flip; `y` becomes `view_height - (y + h/2)`. `view_height` must be the
+/// WEBVIEW's OWN `bounds().size.height` -- never the window's content view
+/// (`login_window_wk_webview`'s own doc comment: a title-bar-sized error there silently probes
+/// the wrong element).
+///
+/// `#[allow(dead_code)]`: no caller in this task -- `post_autofill_right_click` (Task 2, below)
+/// is the caller, mirroring `login_window_wk_webview`'s own identical convention.
+#[cfg(target_os = "macos")]
+#[allow(dead_code)]
+fn css_rect_center_in_view(req: &AutofillRequest, view_height: f64) -> (f64, f64) {
+    (req.x + req.w / 2.0, view_height - (req.y + req.h / 2.0))
+}
+
+/// Validates -- despite the name, this REFUSES rather than clamps -- `point` against `bounds`:
+/// `Some(point)` only when every value is finite, both bounds are strictly positive, and
+/// `0.0 <= x < width && 0.0 <= y < height`. Otherwise `None`. Refusing beats edge-clamping
+/// because a clamped point lands on a DIFFERENT element than the one the page measured, and the
+/// resulting context menu would be misread as evidence about a password field it never actually
+/// touched (`login-window-ux-macos.md`'s mandatory `document.elementFromPoint` warning).
+///
+/// `#[allow(dead_code)]`: no caller in this task -- `post_autofill_right_click` (Task 2, below)
+/// is the caller, mirroring `login_window_wk_webview`'s own identical convention.
+#[cfg(target_os = "macos")]
+#[allow(dead_code)]
+fn clamp_point_to_view_bounds(point: (f64, f64), bounds: (f64, f64)) -> Option<(f64, f64)> {
+    let (x, y) = point;
+    let (width, height) = bounds;
+    if !x.is_finite() || !y.is_finite() || !width.is_finite() || !height.is_finite() {
+        return None;
+    }
+    if width <= 0.0 || height <= 0.0 {
+        return None;
+    }
+    if x < 0.0 || x >= width || y < 0.0 || y >= height {
+        return None;
+    }
+    Some((x, y))
+}
+
 /// Host this arm uses to decide whether the window it is about to open is Epic's --
 /// the ONLY signal available here, since `LoginWindowSeam.open()` (`loginWindowSeam.ts`)
 /// takes no `runner` argument and `humble_login_open` is runner-agnostic by design. Mirrors
@@ -5614,6 +5664,84 @@ mod tests {
             autofill_glyph_script(REVEAL_EXFIL_HOST).matches("try {").count(),
             1
         );
+    }
+
+    // ---- css_rect_center_in_view / clamp_point_to_view_bounds (Phase 34.4.2 Plan 04,
+    // REQ-34.4.2-05/06/07/08, T-34.4.2-17) ----
+    //
+    // RED direction: an implementation that flips the wrong axis, edge-clamps instead of
+    // refusing, or coerces a non-finite/zero-sized input into a default would flip one of the
+    // cases below.
+
+    fn autofill_req(x: f64, y: f64, w: f64, h: f64) -> AutofillRequest {
+        AutofillRequest {
+            x,
+            y,
+            w,
+            h,
+            hit_id: None,
+            hit_tag: None,
+            hit_type: None,
+        }
+    }
+
+    #[test]
+    fn css_rect_center_in_view_flips_the_vertical_axis_top_left_to_bottom_left_origin() {
+        // A 1000px-tall view: a rect pinned to the TOP (y=0) must land near the view's own
+        // bottom-left-origin MAX (990.0), and a rect pinned to the BOTTOM (y=980) must land
+        // near view-origin MIN (10.0) -- the two ends of the flip.
+        let (_, y_top) = css_rect_center_in_view(&autofill_req(0.0, 0.0, 10.0, 20.0), 1000.0);
+        assert_eq!(y_top, 990.0);
+        let (_, y_bottom) = css_rect_center_in_view(&autofill_req(0.0, 980.0, 10.0, 20.0), 1000.0);
+        assert_eq!(y_bottom, 10.0);
+    }
+
+    #[test]
+    fn css_rect_center_in_view_leaves_the_horizontal_centre_unchanged_by_the_flip() {
+        let (x, _) = css_rect_center_in_view(&autofill_req(100.0, 0.0, 200.0, 20.0), 1000.0);
+        assert_eq!(x, 200.0);
+    }
+
+    #[test]
+    fn clamp_point_to_view_bounds_accepts_a_point_strictly_inside_the_bounds() {
+        assert_eq!(
+            clamp_point_to_view_bounds((50.0, 50.0), (100.0, 100.0)),
+            Some((50.0, 50.0))
+        );
+    }
+
+    #[test]
+    fn clamp_point_to_view_bounds_refuses_negative_or_out_of_bounds_points_rather_than_clamping() {
+        // Negative coordinates.
+        assert_eq!(clamp_point_to_view_bounds((-1.0, 50.0), (100.0, 100.0)), None);
+        assert_eq!(clamp_point_to_view_bounds((50.0, -1.0), (100.0, 100.0)), None);
+        // At or beyond width/height -- a request whose field lies outside the webview is
+        // refused outright, never pulled to the nearest edge.
+        assert_eq!(clamp_point_to_view_bounds((100.0, 50.0), (100.0, 100.0)), None);
+        assert_eq!(clamp_point_to_view_bounds((50.0, 100.0), (100.0, 100.0)), None);
+        assert_eq!(clamp_point_to_view_bounds((150.0, 50.0), (100.0, 100.0)), None);
+    }
+
+    #[test]
+    fn clamp_point_to_view_bounds_refuses_a_non_finite_point_or_non_finite_bounds() {
+        assert_eq!(clamp_point_to_view_bounds((f64::NAN, 50.0), (100.0, 100.0)), None);
+        assert_eq!(
+            clamp_point_to_view_bounds((f64::INFINITY, 50.0), (100.0, 100.0)),
+            None
+        );
+        assert_eq!(clamp_point_to_view_bounds((50.0, 50.0), (f64::NAN, 100.0)), None);
+        assert_eq!(
+            clamp_point_to_view_bounds((50.0, 50.0), (f64::INFINITY, 100.0)),
+            None
+        );
+    }
+
+    #[test]
+    fn clamp_point_to_view_bounds_refuses_zero_sized_view_bounds() {
+        // A webview that has not laid out yet reports a zero-sized bounds().
+        assert_eq!(clamp_point_to_view_bounds((0.0, 0.0), (0.0, 0.0)), None);
+        assert_eq!(clamp_point_to_view_bounds((0.0, 0.0), (100.0, 0.0)), None);
+        assert_eq!(clamp_point_to_view_bounds((0.0, 0.0), (0.0, 100.0)), None);
     }
 
     // ---- shell_exe_env_value (Phase 34.5 Plan 01, REQ-34.5-01, D-10) ----
