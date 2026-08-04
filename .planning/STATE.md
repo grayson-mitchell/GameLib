@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.2-05-PLAN.md
-last_updated: "2026-08-04T03:46:34.522Z"
+stopped_at: Completed 34.4.2-06-PLAN.md — LIVE GATE FAILED 0/6, phase does not close, gap cycle needed
+last_updated: "2026-08-04T05:10:00.000Z"
 last_activity: 2026-08-04
 progress:
   total_phases: 18
   completed_phases: 13
   total_plans: 197
-  completed_plans: 185
+  completed_plans: 186
   percent: 94
 ---
 
@@ -3236,6 +3236,7 @@ Closed/parked native-install phases:
 | Phase 34.4.2 P03 | 30min | 3 tasks | 2 files |
 | Phase 34.4.2 P04 | 60min | 3 tasks | 4 files |
 | Phase 34.4.2 P05 | 23min | 3 tasks | 4 files |
+| Phase 34.4.2 P06 | ~25min | 3 tasks (Task 2 human checkpoint) | 5 files |
 
 ## Accumulated Context
 
@@ -3646,6 +3647,8 @@ Recent decisions affecting current work:
 - [Phase 34.4.2-04]: clamp_point_to_view_bounds REFUSES (never edge-clamps) a point outside the webview's own bounds -- an edge-clamped point lands on a different element and the resulting AutoFill menu would be misread as evidence about a field it never touched
 - [Phase 34.4.2-04]: ATTACHED_LOGIN_CHILDREN (plan 02's re-raise list) reused as post_autofill_right_click's authorization gate -- a label absent from it was never a visible, attached login window, so hidden reveal/clear windows are structurally unreachable from the poster
 - [Phase ?]: REQ-34.4.2-09 deliberately withheld from mark-complete: its own REQUIREMENTS.md row says it stays UNCHECKED until plan 06's live gate runs, not plan 05's contract
+- [Phase 34.4.2-06]: **Live gate RAN 2026-08-04, VERDICT FAIL 0/6.** Item 1 (child-window attachment) FAILED live: after the main window minimizes and restores from the Dock, the attached child login window becomes unresponsive — cannot close, password field will not accept input (F-34.4.2-01). Item 2 (dismissability) also FAILED, observed against that same broken window (F-34.4.2-02). Items 3-6 NOT ATTEMPTED — operator ended the session at the item-1/2 blocking failure. D-08's no-partial-pass rule applies; Phase 34.4.2 does not close.
+- [Phase 34.4.2-06, BINDING, operator, 2026-08-04]: **Login-window presentation switches from AppKit child-window attachment to SHEET presentation. The sheet MUST have an explicit close affordance — that is the sole required addition.** Supersedes the spike-019-021 ship choice of child-window attachment (ROADMAP.md's Phase 34.4.2 "Locked, do not re-litigate" sheet-rejection clause). The known sheet trap (no self-dismissal, spike 021) is addressed by the mandated close affordance. The gap cycle's fix direction is the sheet switch, not debugging the child-window unresponsiveness. Full record: `34.4.2-LIVE-GATE.md` § Binding Design Decision.
 
 ### Pending Todos
 
@@ -3724,8 +3727,48 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-04T03:45:46.840Z
-Stopped at: Completed 34.4.2-04-PLAN.md
+Last session: 2026-08-04T05:10:00.000Z
+Stopped at: Completed 34.4.2-06-PLAN.md — LIVE GATE FAILED
+  This session (continuation executor, resumed after the Task 2 human checkpoint): transcribed
+  the operator's live-gate run into `34.4.2-LIVE-GATE.md`. Task 1 (prior session, commit
+  `b2542a56a`) had already discharged preflight: harness live (port 17940), binary
+  string-verified fresh, baselines `npm run test:ci` 191/191 suites (3722/3722 tests) and
+  `cargo test` 117 passed/1 ignored. Task 2 was the operator driving the gate on real macOS
+  hardware (no commit) -- verbatim report: "running app, opened gog login, is a child window,
+  expected behavior... minimised and maximised. however the form is now unresponsive, cant close
+  or enter in the password field." Task 3 (this session): filled the gate document --
+  **VERDICT FAIL, 0/6 items_passed.** Item 1 (child-window attachment) FAIL: sub-checks (c)/(d)
+  (minimize-into-Dock, restore-in-front) appear to have mechanically succeeded, but the window
+  entered an unresponsive state after the restore cycle (F-34.4.2-01, BLOCKING). Item 2
+  (dismissability) FAIL against that same broken window -- close button unresponsive
+  (F-34.4.2-02, BLOCKING). Items 3-6 NOT ATTEMPTED, gate aborted at the item-1/2 failure. Neither
+  finding is diagnosed to a root cause -- only what was observed is recorded, per this project's
+  own F-10 lesson (correlation shipped as cause cost nine live runs). Recorded the operator's
+  BINDING design decision (sheet presentation + mandated close affordance, superseding
+  child-window attachment) in the gate doc, in this file's Decisions section, and in
+  `ROADMAP.md`'s Phase 34.4.2 block (which also got its "Locked, do not re-litigate" sheet-
+  rejection clause marked superseded, not deleted). Updated `34.4.2-PLATFORM-SCOPE.md` §5's
+  threat roll-up: T-34.4.2-05/-07 moved from OPEN-pending-gate to OPEN-CONFIRMED (live-broken, not
+  merely unproven); T-34.4.2-15 (residual)/-17/-21/-22 stay OPEN-pending-gate (their items were
+  NOT ATTEMPTED); T-34.4.2-32 stays CLOSED by source (never gate-dependent). Stopped the
+  DummyStore harness (`kill 23847`); confirmed port 17940 released (`lsof` returns nothing).
+  `.planning/REQUIREMENTS.md`'s REQ-34.4.2-01/02/03/06 rows remain stale `[x]` from before this
+  gate ran (already flagged as a known issue in this phase's own `deferred-items.md`, Plan 05
+  entry) -- left uncorrected, out of this plan's `files_modified` scope; the next plan
+  (`/gsd-plan-phase 34.4.2 --gaps`) should fix them alongside the sheet-switch implementation.
+  No source code touched -- this plan only records a measured result. SUMMARY:
+  `34.4.2-06-SUMMARY.md`.
+Next: `/gsd-plan-phase 34.4.2 --gaps` — gap cycle scoped around the operator's binding sheet-switch
+  decision (replace AppKit child-window attachment with sheet presentation + mandated close
+  affordance) and a re-run of the full 6-item gate once that lands, since items 3-6 were never
+  reached this run. `.planning/REQUIREMENTS.md`'s REQ-34.4.2-01/02/03/06 premature `[x]` rows are
+  carried forward as a fix-alongside item. Separately, still on the critical path elsewhere:
+  Phase 34.5's gap cycle 6 (`/gsd-plan-phase 34.5 --gaps`, named in the "Current Position" banner
+  above) is unrelated to this phase and remains its own next action.
+
+Prior session context, retained for history:
+Last session (superseded): 2026-08-04T03:45:46.840Z
+Stopped at (superseded): Completed 34.4.2-04-PLAN.md
   This session (sequential executor): executed 34.5-40 (gap cycle 5, wave 3 -- author the third
   blocking gate contract). Task 1 (docs, commit `1f4932a43`): frontmatter (`verdict: null`), a
   "why this run exists" recap naming every fix landed since run 2 by plan number (34.5-23, -26,

@@ -1545,7 +1545,26 @@ Verification can run offline against the spike-019 local OAuth DummyStore harnes
 PKCE + replay enforcement + `/events` oracle) where a live store login isn't required.
 **Requirements**: REQ-34.4.2-01, REQ-34.4.2-02, REQ-34.4.2-03, REQ-34.4.2-04, REQ-34.4.2-05, REQ-34.4.2-06, REQ-34.4.2-07, REQ-34.4.2-08, REQ-34.4.2-09, REQ-34.4.2-10 (minted by plan 34.4.2-01; the ID rows themselves land in `REQUIREMENTS.md` when that plan executes. **REQ-34.4.2-10 is the Epic descope**, minted so the exclusion is machine-enforceable rather than a comment; 01/04/06 were narrowed from "both login surfaces" to the Tauri-managed surface. No ID was deleted or renumbered.)
 **Depends on:** Phase 34.4.1 (the login-window seam these behaviors attach to — COMPLETE)
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans executed
+
+**Status: LIVE GATE FAILED 2026-08-04 (0/6, items 3-6 NOT ATTEMPTED) — PHASE DOES NOT CLOSE.**
+`34.4.2-06-PLAN.md`'s blocking gate ran on real macOS hardware. Item 1 (child-window attachment)
+surfaced a NEW blocking defect: the login window becomes unresponsive (cannot close, password
+field will not accept input) after the main window minimizes and restores from the Dock.
+Item 2 (dismissability) consequently also FAILED against that same broken window. The operator
+stopped the session there — items 3-6 (the glyph/AutoFill menu, Cmd+V, kill-switch efficacy,
+hidden-window/Epic non-interference) are NOT ATTEMPTED, not passed and not failed. D-08's
+no-partial-pass rule applies: **the phase does not close on this result.** Next step:
+`/gsd-plan-phase 34.4.2 --gaps`. Full record: `34.4.2-LIVE-GATE.md` (findings F-34.4.2-01/-02).
+
+**Binding design decision (2026-08-04, operator, supersedes this block's own "Locked, do not
+re-litigate" sheet-rejection clause below):** login-window presentation switches from AppKit
+child-window attachment to SHEET presentation, with a mandated explicit close affordance as the
+sole required addition. This is the gap cycle's fix direction — the child-window unresponsiveness
+is routed around, not debugged. The sheet-rejection reasoning below was correct about the sheet's
+own known weakness (no self-dismissal) but did not anticipate child-window attachment's own live
+defect; the mandated close affordance addresses the sheet's weakness directly. Recorded in full in
+`34.4.2-LIVE-GATE.md`'s "Binding Design Decision" section and `.planning/STATE.md`'s Decisions.
 
 **No CONTEXT.md, no RESEARCH.md, no PATTERNS.md, no UI-SPEC.md** — all four skipped by explicit
 developer decision. Spikes 019/020/021/022 (validated 2026-08-04) ARE the research and locked the
@@ -1567,7 +1586,8 @@ builder, pure parser and right-click poster are all runner-agnostic, so **Epic's
 call sites plus a `get_window` fallback, not a redesign.** Recorded in
 `34.4.2-PLATFORM-SCOPE.md` § EPIC-DEFERRED and the phase-local `deferred-items.md`.
 
-**Locked, do not re-litigate:** AppKit `addChildWindow:ordered:` attachment (never Tauri's builder
+**Locked, do not re-litigate (ORIGINAL, PARTIALLY SUPERSEDED 2026-08-04 — see the Status block
+above):** AppKit `addChildWindow:ordered:` attachment (never Tauri's builder
 `.parent()`, which cannot cover the pristine `WKWebView` shell or re-attach at runtime); sheets
 REJECTED (a sheet blocks the very window that would hold a cancel control, and a store login page has
 none — spike 021's operator could not dismiss one at all); NO credential store (inline Password
@@ -1583,7 +1603,7 @@ Plans:
 - [x] 34.4.2-03-PLAN.md — In-field glyph script + path-discriminated cancelled-navigation request channel on the Tauri-managed surface (no `WKUserScript`, no Cargo change); retightens the `on_navigation` negative rather than deleting it (wave 3)
 - [x] 34.4.2-04-PLAN.md — Synthesized `RightMouseDown`/`RightMouseUp` poster: webview-bounds coordinate flip, out-of-bounds refusal, server-side debounce, single call site (wave 4)
 - [x] 34.4.2-05-PLAN.md — DummyStore-never-ships containment guard + `34.4.2-PLATFORM-SCOPE.md` (per-symbol Windows/Linux declaration, EPIC-DEFERRED record, Electron-unchanged evidence) + phase `deferred-items.md` + the 6-item gate contract with `verdict: null` (wave 5)
-- [ ] 34.4.2-06-PLAN.md — **BLOCKING live gate** on real macOS hardware; records the measured verdict and propagates it (wave 6, non-autonomous)
+- [x] 34.4.2-06-PLAN.md — **BLOCKING live gate** on real macOS hardware; records the measured verdict and propagates it (wave 6, non-autonomous) — **RAN 2026-08-04, VERDICT FAIL 0/6** (item 1 child-window attachment FAIL: unresponsive login window after minimize/restore, F-34.4.2-01; item 2 dismissability FAIL: cannot close in that state, F-34.4.2-02; items 3-6 NOT ATTEMPTED, gate aborted). Operator's binding design decision: switch to sheet presentation with a mandated close affordance, superseding child-window attachment. See `34.4.2-LIVE-GATE.md` and `34.4.2-06-SUMMARY.md`. **Phase 34.4.2 DOES NOT CLOSE** — gap cycle required, `/gsd-plan-phase 34.4.2 --gaps`.
 
 ### Phase 34.5: Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts (INSERTED)
 
