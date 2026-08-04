@@ -1545,7 +1545,7 @@ Verification can run offline against the spike-019 local OAuth DummyStore harnes
 PKCE + replay enforcement + `/events` oracle) where a live store login isn't required.
 **Requirements**: REQ-34.4.2-01, REQ-34.4.2-02, REQ-34.4.2-03, REQ-34.4.2-04, REQ-34.4.2-05, REQ-34.4.2-06, REQ-34.4.2-07, REQ-34.4.2-08, REQ-34.4.2-09, REQ-34.4.2-10 (minted by plan 34.4.2-01; the ID rows themselves land in `REQUIREMENTS.md` when that plan executes. **REQ-34.4.2-10 is the Epic descope**, minted so the exclusion is machine-enforceable rather than a comment; 01/04/06 were narrowed from "both login surfaces" to the Tauri-managed surface. No ID was deleted or renumbered.)
 **Depends on:** Phase 34.4.1 (the login-window seam these behaviors attach to — COMPLETE)
-**Plans:** 10/10 plans executed
+**Plans:** 12 plans — 10 executed, 2 planned (gap cycle 2: 34.4.2-11, 34.4.2-12)
 
 **Status: SHEET-DESIGN LIVE GATE RE-RUN FAILED 2026-08-04 (0/6, items 2-6 NOT ATTEMPTED) — PHASE
 STILL DOES NOT CLOSE.** `34.4.2-10-PLAN.md`'s blocking gate ran on real macOS hardware against the
@@ -1631,6 +1631,41 @@ Plans:
 - [x] 34.4.2-10-PLAN.md — **BLOCKING live gate re-run** on real macOS hardware; records the measured verdict and propagates it (wave 4, non-autonomous) — **RAN 2026-08-04, VERDICT FAIL 0/6** (item 1 sheet presentation FAIL: presented window was an ordinary titled macOS window, blank content, neither sheet nor attachment, could go behind the main window, F-34.4.2-03; items 2-6 NOT ATTEMPTED, gate aborted at item 1). See `34.4.2-LIVE-GATE-RERUN.md` and `34.4.2-10-SUMMARY.md`. **Phase 34.4.2 STILL DOES NOT CLOSE** — a second gap cycle is required, `/gsd-plan-phase 34.4.2 --gaps`.
 
 **Gap-cycle scope note (plans 07-10, closed):** the fix direction was the presentation switch, per the binding decision — no plan diagnosed or repaired F-34.4.2-01's root cause inside the child-window mechanism, because that mechanism was removed. Plan 07 alone would have shipped a sheet the user cannot dismiss (T-34.4.2-33); plan 08 was a hard prerequisite and no gate ran between them. Epic remained byte-untouched throughout (REQ-34.4.2-10). **This gap cycle's own fix did not produce a working sheet at gate time (F-34.4.2-03) — the next gap cycle must diagnose why**, starting from the candidate layers F-34.4.2-03 names (stale/mismatched binary despite the preflight's own passing symbol check; a runtime path not reaching `present_login_window_as_sheet`; something specific to the surface tested) without preferring any one of them in advance.
+
+**Gap cycle 2 (planned 2026-08-04, after the debug arc closed F-34.4.2-03/-04/-05 — 2 plans, 2 waves):**
+
+**The sheet ATTACHES. Live-proven, not inferred.** A `/gsd-debug` session closed the whole
+F-34.4.2-03/-04/-05 arc across three rounds on real macOS hardware: `751521663` (CR-01 — the
+sheet-candidate window is built `.visible(false)` so `beginSheet:` performs the reveal; CR-02 — the
+`attachedSheet()`/`isSheet()` read-back, with `PRESENTED_LOGIN_SHEETS` registration and the
+`sheet_presented=` line emitted ONLY on confirmed attachment, plus a visible-fallback), `56d4986f8`
+(F-34.4.2-04 — timed `eprintln!` diagnostics plus a 15s `LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT` race
+so the fallback is guaranteed to run), and `8b2fdb315` (F-34.4.2-05, the terminal root cause —
+`parent.beginSheet_completionHandler(child, None)` **wedges the OS main thread forever** when
+invoked in the same run-loop turn as a just-created WKWebView-backed `NSWindow`; fixed by deferring
+that one call 250ms via `dispatch2::DispatchQueue::main().after()`, nested INSIDE the existing
+`run_on_main_thread` closure so Test 6's single-call-site guard still holds). The operator's own
+round-3 run logged `deferred beginSheet closure entered (deferred_elapsed=260.328417ms)` →
+`beginSheet dispatch call returned` → `read-back attached=true` — a falsifiable signal produced by
+CR-02's own read-back, not a repeat of CR-02's original unfalsifiable "the dispatch didn't time out".
+**CR-01/CR-02 must not be re-fixed, and the sheet-vs-child-window decision must not be
+re-litigated** (child windows are permanently off the table).
+
+**What that does NOT close, and what this cycle is therefore for:** item 1's un-losability,
+cannot-be-ordered-behind-parent and survives-minimize/restore-**and-stays-INTERACTIVE** sub-checks
+are all still UNMEASURED, and gate **items 2, 3, 4, 5 and 6 have never been attempted in any of the
+four gate runs to date.** That — not the sheet mechanism — is this cycle's real gap. The debug arc
+also landed as raw commits with no phase plan documenting them and no propagation into
+REQUIREMENTS/PLATFORM-SCOPE/ROADMAP/STATE; that bookkeeping debt is in scope here.
+
+- [ ] 34.4.2-11-PLAN.md — Fix the five `34.4.2-REVIEW.md` findings that sit directly on the paths gate items 2/3/5 must traverse (WR-07 the poster no longer re-orders a presented sheet; WR-03 top-frame-only cancel strip; WR-04 retry listener + MutationObserver registered before anything that can throw; WR-01 a failed `endSheet:` hop re-registers the label so both cancel routes stay reachable; IN-02 no advertised keyboard activation the strip cannot deliver), propagate the debug arc's bookkeeping, and author the fresh contract `34.4.2-LIVE-GATE-RERUN-2.md` (`verdict: null`). **Forbidden from running any gate item or writing any verdict.** (wave 1)
+- [ ] 34.4.2-12-PLAN.md — **BLOCKING live gate re-run** on real macOS hardware against `34.4.2-LIVE-GATE-RERUN-2.md`; sole writer of `verdict`/`run_date`/`items_passed`, filled from a measured run and never from expectation (T-34.4.2-25). Mandatory evidence capture: `npm run tauri:dev 2>&1 | tee /tmp/gamelib-dev.log` — `gamelib.log` carries no `[shell]`-prefixed Rust lines, which is what made rounds 2/3 of the debug arc diagnosable. (wave 2, non-autonomous)
+
+**Gap-cycle-2 scope note:** findings WR-02, WR-05, WR-06, WR-08, IN-01, IN-03 and IN-04 are
+deliberately OUT of scope and are recorded in `deferred-items.md`, not fixed — this cycle is scoped
+to the five findings that can block or corrupt items 2/3/5. Epic stays byte-untouched throughout
+(REQ-34.4.2-10, `PHASE_34_4_2_NEW_SYMBOLS` guard); Epic's own login UX is deferred until every other
+runner is proven. No new REQ ID is minted: this cycle closes REQ-34.4.2-01/-02/-03/-04/-05/-06/-09.
 
 ### Phase 34.5: Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts (INSERTED)
 
