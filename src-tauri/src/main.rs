@@ -1900,6 +1900,74 @@ fn open_pristine_epic_login_window(
 #[cfg(target_os = "macos")]
 const EPIC_COOKIE_DOMAIN: &str = "epicgames.com";
 
+/// Resolves the `NSWindow` handle for a Tauri-managed login window (Humble/GOG/Amazon --
+/// REQ-34.4.2-10's locked scope; see this file's module-level scope note on
+/// `open_pristine_epic_login_window`, above, for the full boundary). Returns the raw address as
+/// `usize` rather than a live `Retained<NSWindow>` so the value is `Send`: callers reconstruct
+/// it inside their own main-thread closure using this file's existing `SendPtr` convention (see
+/// that struct's own doc comment on `open_pristine_epic_login_window`, above). `None` when no
+/// Tauri-managed window carries `label` -- a missing window is never an error in this file (the
+/// `humble_login_close` "already closed is healthy" convention).
+///
+/// Deliberately resolves ONLY through `app.get_webview_window(label)`. A future Epic phase
+/// would extend this with an `app.get_window(label)` fallback -- the pristine shell
+/// (`open_pristine_epic_login_window`, above) is a plain `tauri::Window`, reachable only that
+/// way, and the `unstable` tauri feature that enables it is already on. **That fallback is
+/// deliberately NOT written here**: REQ-34.4.2-10 (the locked user decision, 2026-08-04) is that
+/// no code path in this phase resolves the pristine window, and an unused branch that resolves
+/// it is still a code path that does. This comment is the whole Epic-readiness deliverable.
+///
+/// Side-effect free: never logs a label's URL or any page content.
+///
+/// `#[allow(dead_code)]`: no caller in this plan -- plans 34.4.2-02/04 are the callers.
+#[cfg(target_os = "macos")]
+#[allow(dead_code)]
+fn login_window_ns_window(app: &AppHandle, label: &str) -> Option<usize> {
+    app.get_webview_window(label)
+        .and_then(|w| w.ns_window().ok())
+        .map(|ptr| ptr as usize)
+}
+
+/// Resolves the live `WKWebView` handle for a Tauri-managed login window (same scope as
+/// `login_window_ns_window`, above -- REQ-34.4.2-10). Returns the raw address as `usize` for the
+/// same `Send`-across-`run_on_main_thread` rationale documented on `login_window_ns_window`,
+/// above: callers reconstruct it inside their own main-thread closure.
+///
+/// `with_webview`'s closure runs synchronously inline when invoked on the OS main thread (spike
+/// 016 Q1, already relied on by other call sites in this file -- see
+/// `clear_default_data_store_cookies_for_domain`'s and `humble_login_clear_cookies`'s own doc
+/// comments on that distinction), so the address is captured out through an `Option` in the
+/// enclosing scope rather than a channel -- a channel is this file's convention for the
+/// WORKER-thread case, which does not apply to this resolver's expected (main-thread) caller.
+/// The closure itself must still be `Send + 'static` (tauri's own `with_webview` bound), so the
+/// enclosing `Option` is wrapped in `Arc<Mutex<..>>` -- the same wrapper shape
+/// `open_pristine_epic_login_window`'s `monitor_slot` above already uses for an identical
+/// capture-out-of-a-main-thread-closure need.
+///
+/// Plan 34.4.2-04 needs this specifically because the coordinate flip for the synthesized
+/// right-click must use the WEBVIEW's own `bounds()`, never the window's content view -- a
+/// title-bar-sized error there silently probes the wrong element (`login-window-ux-macos.md`'s
+/// own "Always log `document.elementFromPoint`" warning).
+///
+/// Side-effect free: never logs a label's URL or any page content.
+///
+/// `#[allow(dead_code)]`: no caller in this plan -- plan 34.4.2-04 is the caller.
+#[cfg(target_os = "macos")]
+#[allow(dead_code)]
+fn login_window_wk_webview(app: &AppHandle, label: &str) -> Option<usize> {
+    let window = app.get_webview_window(label)?;
+    let addr: Arc<Mutex<Option<usize>>> = Arc::new(Mutex::new(None));
+    let addr_for_closure = Arc::clone(&addr);
+    match window.with_webview(move |platform| {
+        if let Ok(mut guard) = addr_for_closure.lock() {
+            *guard = Some(platform.inner() as usize);
+        }
+    }) {
+        Ok(()) => addr.lock().ok().and_then(|guard| *guard),
+        Err(_) => None,
+    }
+}
+
 /// Fixes the live-observed Epic logout defect (`humble_login_clear_cookies` rejecting with
 /// `humble_login:no-window:{label}` on EVERY Epic logout, `gamelib.log`, 2026-08-03): Epic's
 /// login window is ALWAYS the pristine, webview-less `WindowBuilder` window
