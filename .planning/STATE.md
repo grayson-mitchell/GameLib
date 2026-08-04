@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.2-03-PLAN.md
-last_updated: "2026-08-04T02:56:06.310Z"
+stopped_at: Completed 34.4.2-04-PLAN.md
+last_updated: "2026-08-04T03:21:09.905Z"
 last_activity: 2026-08-04
 progress:
   total_phases: 18
   completed_phases: 13
   total_plans: 197
-  completed_plans: 183
-  percent: 72
+  completed_plans: 184
+  percent: 93
 ---
 
 # Project State
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 
 **Next action:** `/gsd-plan-phase 34.5 --gaps` — gap cycle 6. Named here once, deliberately nowhere else. Scope it around: the GOG frontend-render defect (F-34.5-G6-12 / U-34.5-07, where 7 titles persist to disk and the Library UI shows none); the dead `nativeImage` sidecar stub that structurally blocks every macOS `.app` shortcut (F-34.5-G6-07 / U-34.5-12); the Electron-shaped Steam LaunchOptions the Tauri shell ignores (F-34.5-G6-09 / U-34.5-13); **an audit of the real preload channel surface against `IPC-PORT-INVENTORY.md`, which is a Phase 35 precondition and whose incompleteness is of unknown extent** (F-34.5-G6-10 / U-34.5-14); `addToSteam` dropping its return value (F-34.5-G6-08 / U-34.5-15); the still-unattempted items 3 and 5; and the `REQUIREMENTS.md` inconsistency where REQ-34.5-01/02/03/04/05/12 sit checked `[x]` while carrying gate conditions that have now failed three times (deferred-items item 22). Epic (item 1) stays parked by explicit developer decision and is NOT this cycle's blocker.
 
@@ -3234,6 +3234,7 @@ Closed/parked native-install phases:
 | Phase 34.4.2 P01 | 25min | 3 tasks | 3 files |
 | Phase 34.4.2 P02 | 55min | 3 tasks | 2 files |
 | Phase 34.4.2 P03 | 30min | 3 tasks | 2 files |
+| Phase 34.4.2 P04 | 60min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -3640,6 +3641,9 @@ Recent decisions affecting current work:
 - [Phase 34.4.2]: Renamed JS idempotency marker to __GAMELIB_LOGIN_GLYPH__ and dropped the env-var name from the kill-switch log line to fix a substring collision with GAMELIB_AUTOFILL_GLYPH caught by Task 3's own exactly-once source assertion
 - [Phase 34.4.2]: Scoped 'called exactly once' jest assertions for autofill_glyph_script/parse_autofill_request to production code only (before mod tests), since both are pure cargo-tested helpers with intentionally many call sites in the test module
 - [Phase 34.4.2]: Generalized Plan 01's PHASE_34_4_2_NEW_SYMBOLS scope guard to check both open_pristine_epic_login_window AND EpicPristineNavDelegate for every current/future symbol, confirmed load-bearing in both places by a single live mutation
+- [Phase 34.4.2-04]: NSGraphicsContext feature added to objc2-app-kit only after a real cargo build produced E0599 for the ungated mouseEvent constructor -- not unioned in by wry's own request (wry requests the different 'NSGraphics' feature); resolves within already-resolved objc2-foundation features, zero new crates
+- [Phase 34.4.2-04]: clamp_point_to_view_bounds REFUSES (never edge-clamps) a point outside the webview's own bounds -- an edge-clamped point lands on a different element and the resulting AutoFill menu would be misread as evidence about a field it never touched
+- [Phase 34.4.2-04]: ATTACHED_LOGIN_CHILDREN (plan 02's re-raise list) reused as post_autofill_right_click's authorization gate -- a label absent from it was never a visible, attached login window, so hidden reveal/clear windows are structurally unreachable from the poster
 
 ### Pending Todos
 
@@ -3718,8 +3722,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-04T02:56:06.286Z
-Stopped at: Completed 34.4.2-03-PLAN.md
+Last session: 2026-08-04T03:21:09.893Z
+Stopped at: Completed 34.4.2-04-PLAN.md
   This session (sequential executor): executed 34.5-40 (gap cycle 5, wave 3 -- author the third
   blocking gate contract). Task 1 (docs, commit `1f4932a43`): frontmatter (`verdict: null`), a
   "why this run exists" recap naming every fix landed since run 2 by plan number (34.5-23, -26,
