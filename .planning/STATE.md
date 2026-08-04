@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.2-09-PLAN.md
-last_updated: "2026-08-04T07:45:55.627Z"
+stopped_at: Completed 34.4.2-10-PLAN.md (BLOCKING LIVE GATE RE-RUN FAILED 0/6, F-34.4.2-03 -- phase still does not close)
+last_updated: "2026-08-04T08:58:00.000Z"
 last_activity: 2026-08-04
 progress:
   total_phases: 18
   completed_phases: 13
   total_plans: 201
-  completed_plans: 189
+  completed_plans: 190
   percent: 72
 ---
 
@@ -478,20 +478,40 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — EXECUTING
-Plan: 10 of 10 (09 done -- 34.4.2-LIVE-GATE-RERUN.md written: six-item blocking contract for the
-sheet mechanism, verdict/run_date/items_passed all null, items 1-2 rewritten for sheet semantics
-(item 1 folds F-34.4.2-01 into a PASS sub-check), items 3-6 carried over intact.
-34.4.2-PLATFORM-SCOPE.md reconciled: retired-symbol history subsection, nine new symbol rows with
-source-verified cfg gates, T-34.4.2-05/-07 reset to OPEN-pending-gate, T-34.4.2-33/-34/-35 entered.
-REQ-34.4.2-04/05/06/09 corrected to unchecked, each naming its rerun-item precondition;
-REQ-34.4.2-01/02/03 verified byte-identical to plan 07's output. deferred-items.md's Plan 05
-premature-[x] entry CLOSED. See 34.4.2-09-SUMMARY.md. Phase remains NOT CLOSED -- no gate item was
-run.)
+Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — EXECUTING, GATE FAILED
+Plan: 10 of 10 (10 done -- BLOCKING LIVE GATE RE-RUN executed on real macOS hardware.
+**VERDICT FAIL, 0/6 items_passed.** Preflight (Task 1): cargo build clean, all four new
+sheet/cancel-strip log literals FOUND in the binary via `strings|grep`, retired re-raise literal
+CONFIRMED ABSENT, DummyStore harness live (PID 49907), baselines npm test:ci 191/191 suites
+(3735/3735 tests), cargo test 131/0/1-ignored. Task 2 (operator, no commit): reported "white
+window (NOT a sheet, has usual macOS buttons)... is not a child, can go behind main form" when
+opening a login. Task 3 (this session): filled `34.4.2-LIVE-GATE-RERUN.md` -- **item 1 FAIL**:
+the presented window was neither an AppKit sheet (plan 07's mechanism) nor an attached child
+window (plan 02's retired mechanism) -- an ordinary titled window with blank content, orderable
+behind the main window (F-34.4.2-03, BLOCKING, NOT diagnosed to a root cause). `gamelib.log`
+showed normal bootstrap then repeating Humble login-window cookie-read timeouts starting
+immediately after the login window opened; no `[shell]`-prefixed line appears anywhere in that log
+(confirmed across every archived `gamelib.log*`), so the `sheet_presented=` absence there is
+INCONCLUSIVE, not confirmatory -- the `tauri:dev` process's own stdout/stderr (where `[shell]`
+lines actually surface per every prior gate) was not captured this run. Items 2-6 NOT ATTEMPTED
+(blocking defect at item 1). Propagated: `34.4.2-PLATFORM-SCOPE.md` §5 third update table
+(T-34.4.2-05 back to OPEN-CONFIRMED against the sheet mechanism; -07/-15/-17/-21/-22/-33 stay
+OPEN-pending-gate, unreached; -32/-34/-35 unchanged, CLOSED by source); `REQUIREMENTS.md`
+REQ-34.4.2-01..06/-09 each carry a new correction note, all boxes stay UNCHECKED;
+`ROADMAP.md`'s Phase 34.4.2 block superseded (not deleted) with the rerun's own status banner,
+plan 10 checked. Stopped the DummyStore harness (`kill 49907`); confirmed port 17940 released.
+See `34.4.2-10-SUMMARY.md`. Phase remains NOT CLOSED -- 0/6 items passed.)
 
-**Next action:** `/gsd-execute-phase 34.4.2` — plan 10 (run `34.4.2-LIVE-GATE-RERUN.md` on real
-macOS hardware, the only plan permitted to fill any Observed/Verdict field). Separately outstanding:
-`/gsd-plan-phase 34.5 --gaps` — gap cycle 6. Named here once, deliberately nowhere else. Scope it around: the GOG frontend-render defect (F-34.5-G6-12 / U-34.5-07, where 7 titles persist to disk and the Library UI shows none); the dead `nativeImage` sidecar stub that structurally blocks every macOS `.app` shortcut (F-34.5-G6-07 / U-34.5-12); the Electron-shaped Steam LaunchOptions the Tauri shell ignores (F-34.5-G6-09 / U-34.5-13); **an audit of the real preload channel surface against `IPC-PORT-INVENTORY.md`, which is a Phase 35 precondition and whose incompleteness is of unknown extent** (F-34.5-G6-10 / U-34.5-14); `addToSteam` dropping its return value (F-34.5-G6-08 / U-34.5-15); the still-unattempted items 3 and 5; and the `REQUIREMENTS.md` inconsistency where REQ-34.5-01/02/03/04/05/12 sit checked `[x]` while carrying gate conditions that have now failed three times (deferred-items item 22). Epic (item 1) stays parked by explicit developer decision and is NOT this cycle's blocker.
+**Next action:** `/gsd-plan-phase 34.4.2 --gaps` — a SECOND gap cycle inside this phase (the first,
+plans 07-10, replaced child-window attachment with sheet presentation but did not produce a
+working sheet at gate time). Scope around F-34.4.2-03's candidate layers (named without
+preference): a stale/mismatched binary despite the preflight's own passing symbol check against
+the on-disk artifact before `tauri:dev`'s own build step re-ran; a runtime path that does not
+reach `present_login_window_as_sheet` for this window at all; something specific to the Humble
+surface vs. the mechanism itself. Also carry forward the evidence-gap finding: capture the
+`tauri:dev` process's own stdout/stderr directly next time (that is where `[shell]` lines actually
+surface, not `gamelib.log`, which does not capture them in this environment at all). Separately
+outstanding: `/gsd-plan-phase 34.5 --gaps` — gap cycle 6. Named here once, deliberately nowhere else. Scope it around: the GOG frontend-render defect (F-34.5-G6-12 / U-34.5-07, where 7 titles persist to disk and the Library UI shows none); the dead `nativeImage` sidecar stub that structurally blocks every macOS `.app` shortcut (F-34.5-G6-07 / U-34.5-12); the Electron-shaped Steam LaunchOptions the Tauri shell ignores (F-34.5-G6-09 / U-34.5-13); **an audit of the real preload channel surface against `IPC-PORT-INVENTORY.md`, which is a Phase 35 precondition and whose incompleteness is of unknown extent** (F-34.5-G6-10 / U-34.5-14); `addToSteam` dropping its return value (F-34.5-G6-08 / U-34.5-15); the still-unattempted items 3 and 5; and the `REQUIREMENTS.md` inconsistency where REQ-34.5-01/02/03/04/05/12 sit checked `[x]` while carrying gate conditions that have now failed three times (deferred-items item 22). Epic (item 1) stays parked by explicit developer decision and is NOT this cycle's blocker.
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -3271,6 +3291,7 @@ Closed/parked native-install phases:
 | Phase 34.4.2 P07 | 50min | 3 tasks | 3 files |
 | Phase 34.4.2 P08 | 35min | 3 tasks | 3 files |
 | Phase 34.4.2 P09 | 40min | 3 tasks | 4 files |
+| Phase 34.4.2 P10 | ~70min | 3 tasks (Task 2 human checkpoint) | 5 files (`34.4.2-LIVE-GATE-RERUN.md`, `34.4.2-PLATFORM-SCOPE.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`) |
 
 ## Accumulated Context
 
@@ -3690,6 +3711,8 @@ Recent decisions affecting current work:
 - [Phase 34.4.2-08]: REQ-34.4.2-03's checkbox stays UNCHECKED even though this plan lands both dismissal routes source-complete -- neither route has been observed on real macOS hardware; live discharge belongs to the rewritten gate's item 2 (plans 34.4.2-09/-10)
 - [Phase 34.4.2]: Item 1 of the rewritten live-gate contract folds F-34.4.2-01 (child window unresponsive after minimize/restore) directly into a PASS condition for the sheet mechanism — type into the password field and activate the cancel strip immediately after the Dock restore
 - [Phase 34.4.2]: T-34.4.2-05 and T-34.4.2-07 reset to OPEN-pending-gate rather than carried forward as CONFIRMED broken — the child-window mechanism they were confirmed broken against was retired by plan 07; a new mechanism does not inherit an old mechanism's fix
+- [Phase 34.4.2-10]: **Rewritten sheet-design live gate RAN 2026-08-04, VERDICT FAIL 0/6.** Item 1 (sheet presentation) FAILED live with a DIFFERENT symptom than the first gate: the presented login window was an ordinary titled macOS window with standard traffic-light buttons and blank white content — neither an AppKit sheet (plan 07's mechanism) nor an attached child window (plan 02's retired mechanism) — and could be ordered behind the main window (F-34.4.2-03, BLOCKING). No root cause asserted. Items 2-6 NOT ATTEMPTED — operator ended the session at item 1's failure. `gamelib.log` contains no `[shell]`-prefixed line at all in this or any archived session (confirmed by inspecting every `gamelib.log*` in `~/Library/Logs/GameLib/`), so the log-based absence of `sheet_presented=` is inconclusive, not confirmatory — the `tauri:dev` process's own stdout/stderr was not captured this run. D-08's no-partial-pass rule applies; Phase 34.4.2 STILL DOES NOT CLOSE — a second gap cycle is required.
+- [Phase 34.4.2-10]: T-34.4.2-05 moved back from "reset-unproven against the sheet mechanism" to "live-confirmed-broken against the sheet mechanism, again" — an honest statement that the first gap cycle's fix direction has not yet produced working live behaviour on this hardware, not a claim about which layer is at fault. T-34.4.2-07/-15(residual)/-17/-21/-22/-33 stay OPEN-pending-gate (unreached, no new evidence); T-34.4.2-32/-34/-35 unchanged, still CLOSED by source (never gate-dependent).
 
 ### Pending Todos
 
@@ -3769,8 +3792,55 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-04T07:45:55.615Z
-Stopped at: Completed 34.4.2-09-PLAN.md
+Last session: 2026-08-04T08:58:00.000Z
+Stopped at: Completed 34.4.2-10-PLAN.md
+  This session (sequential executor): ran the rewritten sheet-design blocking live gate
+  (`34.4.2-LIVE-GATE-RERUN.md`) on real macOS hardware. Task 1 (commit `5d3f1360a`): preflight --
+  `cargo build` clean, all four new literals (`sheet_presented=`, cancel-strip injected, cancel
+  requested, `/login-cancel`) FOUND via `strings|grep` against the debug binary, the retired
+  re-raise literal CONFIRMED ABSENT; DummyStore harness started (PID 49907), liveness confirmed;
+  baselines captured `npm run test:ci` 191/191 suites (3735/3735 tests), `cargo test` 131
+  passed/0 failed/1 ignored (matches plan 08's own baseline exactly). Task 2 (operator, no
+  commit): reported, verbatim, in two messages: "well, that all seems broken, now when i click on
+  any login i get a white window (NOT a sheet, has usual macOS buttons)" then "and is not a child,
+  can go behind main form". Task 3 (this session): filled `34.4.2-LIVE-GATE-RERUN.md` --
+  **VERDICT FAIL, 0/6 items_passed.** Item 1 (sheet presentation) FAIL: the presented window was
+  neither an AppKit sheet (plan 07's mechanism) nor an attached child window (plan 02's retired
+  mechanism) -- ordinary titled window, blank white content, orderable behind the main window.
+  New finding F-34.4.2-03 (BLOCKING), NOT diagnosed to a root cause. Captured machine evidence:
+  `gamelib.log` showed normal bootstrap then repeating `Humble login-window cookie read` timeouts
+  starting immediately after the login window opened (20:47:43-20:48:42); no `[shell]`-prefixed
+  line appears in that log at all -- confirmed across every archived `gamelib.log*` in
+  `~/Library/Logs/GameLib/` -- so the log-based absence of `sheet_presented=` is INCONCLUSIVE, not
+  confirmatory (recorded as a process/evidence-gap finding, non-blocking); the `tauri:dev`
+  process's own stdout/stderr, where `[shell]` lines actually surface per every prior gate, was
+  not captured this run (operator's own interactive terminal, unredirected). DummyStore `/events`
+  showed no delta attributable to the operator's attempt (only my own curl checks) -- consistent
+  with the attempt being against Humble, not the fixture. Items 2-6 NOT ATTEMPTED, reason: blocking
+  defect at item 1. Applied the no-partial-pass rule at the item level. Propagated:
+  `34.4.2-PLATFORM-SCOPE.md` §5 third update table (T-34.4.2-05 back to OPEN-CONFIRMED against the
+  sheet mechanism; -07/-15(residual)/-17/-21/-22/-33 stay OPEN-pending-gate, unreached; -32/-34/-35
+  unchanged, CLOSED by source); `REQUIREMENTS.md` REQ-34.4.2-01..06/-09 each carry a fresh
+  correction note, all boxes stay UNCHECKED (no box ticked on the strength of a NOT ATTEMPTED
+  item); `ROADMAP.md`'s Phase 34.4.2 block superseded (not deleted) with the rerun's own status
+  banner, plan 10 checked `[x]`. Stopped the DummyStore harness (`kill 49907`); confirmed port
+  17940 released (`lsof` returns nothing, `ps -p 49907` returns no process). No source code
+  touched -- `git diff --stat -- src src-tauri/src` empty; this plan only records a measured
+  result. SUMMARY: `34.4.2-10-SUMMARY.md`.
+Next: `/gsd-plan-phase 34.4.2 --gaps` -- a SECOND gap cycle inside this phase. Scope around
+  F-34.4.2-03's candidate layers (named without preference): a stale/mismatched binary despite the
+  preflight's own passing symbol check against the on-disk artifact before `tauri:dev`'s own build
+  step re-ran; a runtime path that does not reach `present_login_window_as_sheet` for this window
+  at all; something specific to the Humble surface vs. the mechanism itself. Also carry forward
+  the evidence-gap finding: capture the `tauri:dev` process's own stdout/stderr directly next
+  time -- that is where `[shell]` lines actually surface, not `gamelib.log`, which does not
+  capture them in this environment at all. Separately, still on the critical path elsewhere: Phase
+  34.5's gap cycle 6 (`/gsd-plan-phase 34.5 --gaps`, named in the "Current Position" banner above)
+  is unrelated to this phase and remains its own next action.
+
+Prior session context, retained for history:
+Last session (superseded): 2026-08-04T07:45:55.615Z
+Stopped at (superseded): Completed 34.4.2-09-PLAN.md
   This session (continuation executor, resumed after the Task 2 human checkpoint): transcribed
   the operator's live-gate run into `34.4.2-LIVE-GATE.md`. Task 1 (prior session, commit
   `b2542a56a`) had already discharged preflight: harness live (port 17940), binary

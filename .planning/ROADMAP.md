@@ -1545,17 +1545,36 @@ Verification can run offline against the spike-019 local OAuth DummyStore harnes
 PKCE + replay enforcement + `/events` oracle) where a live store login isn't required.
 **Requirements**: REQ-34.4.2-01, REQ-34.4.2-02, REQ-34.4.2-03, REQ-34.4.2-04, REQ-34.4.2-05, REQ-34.4.2-06, REQ-34.4.2-07, REQ-34.4.2-08, REQ-34.4.2-09, REQ-34.4.2-10 (minted by plan 34.4.2-01; the ID rows themselves land in `REQUIREMENTS.md` when that plan executes. **REQ-34.4.2-10 is the Epic descope**, minted so the exclusion is machine-enforceable rather than a comment; 01/04/06 were narrowed from "both login surfaces" to the Tauri-managed surface. No ID was deleted or renumbered.)
 **Depends on:** Phase 34.4.1 (the login-window seam these behaviors attach to — COMPLETE)
-**Plans:** 9/10 plans executed
+**Plans:** 10/10 plans executed
 
-**Status: LIVE GATE FAILED 2026-08-04 (0/6, items 3-6 NOT ATTEMPTED) — PHASE DOES NOT CLOSE.**
-`34.4.2-06-PLAN.md`'s blocking gate ran on real macOS hardware. Item 1 (child-window attachment)
-surfaced a NEW blocking defect: the login window becomes unresponsive (cannot close, password
-field will not accept input) after the main window minimizes and restores from the Dock.
-Item 2 (dismissability) consequently also FAILED against that same broken window. The operator
-stopped the session there — items 3-6 (the glyph/AutoFill menu, Cmd+V, kill-switch efficacy,
-hidden-window/Epic non-interference) are NOT ATTEMPTED, not passed and not failed. D-08's
-no-partial-pass rule applies: **the phase does not close on this result.** Next step:
-`/gsd-plan-phase 34.4.2 --gaps`. Full record: `34.4.2-LIVE-GATE.md` (findings F-34.4.2-01/-02).
+**Status: SHEET-DESIGN LIVE GATE RE-RUN FAILED 2026-08-04 (0/6, items 2-6 NOT ATTEMPTED) — PHASE
+STILL DOES NOT CLOSE.** `34.4.2-10-PLAN.md`'s blocking gate ran on real macOS hardware against the
+rewritten sheet-design contract (`34.4.2-LIVE-GATE-RERUN.md`). Item 1 (sheet presentation and
+minimize/restore survival) FAILED with a NEW symptom, not the first gate's: the presented login
+window was an ordinary titled macOS window with standard traffic-light buttons and blank white
+content — **neither an AppKit sheet nor an attachment of any kind** — and could be ordered behind
+the main window (F-34.4.2-03). This is not the F-34.4.2-01/-02 unresponsive-child-window defect
+recurring; it is a different, undiagnosed failure in a mechanism that, per plans 07-08's own
+source-level proof, should have presented a sheet. The operator stopped at item 1 — items 2-6
+(dismissability, the glyph/AutoFill menu, Cmd+V, kill-switch efficacy, hidden-window/Epic
+non-interference) are NOT ATTEMPTED, not passed and not failed. D-08's no-partial-pass rule
+applies unchanged: **the phase does not close on this result.** Next step:
+`/gsd-plan-phase 34.4.2 --gaps` (a second gap cycle inside this phase). Full record:
+`34.4.2-LIVE-GATE-RERUN.md` (finding F-34.4.2-03), `34.4.2-PLATFORM-SCOPE.md` §5's third update.
+
+> --- historical: the first gate's own status banner follows, preserved as the record of that run,
+> now itself superseded by the rerun above ---
+>
+> **⛔ [SUPERSEDED] Status: LIVE GATE FAILED 2026-08-04 (0/6, items 3-6 NOT ATTEMPTED) — PHASE DOES
+> NOT CLOSE.** `34.4.2-06-PLAN.md`'s blocking gate ran on real macOS hardware. Item 1 (child-window
+> attachment) surfaced a NEW blocking defect: the login window becomes unresponsive (cannot close,
+> password field will not accept input) after the main window minimizes and restores from the
+> Dock. Item 2 (dismissability) consequently also FAILED against that same broken window. The
+> operator stopped the session there — items 3-6 (the glyph/AutoFill menu, Cmd+V, kill-switch
+> efficacy, hidden-window/Epic non-interference) are NOT ATTEMPTED, not passed and not failed.
+> D-08's no-partial-pass rule applies: **the phase does not close on this result.** This led to the
+> sheet-switch gap cycle (plans 07-10) whose own rerun is recorded above. Full record:
+> `34.4.2-LIVE-GATE.md` (findings F-34.4.2-01/-02).
 
 **Binding design decision (2026-08-04, operator, supersedes this block's own "Locked, do not
 re-litigate" sheet-rejection clause below):** login-window presentation switches from AppKit
@@ -1609,9 +1628,9 @@ Plans:
 - [x] 34.4.2-07-PLAN.md — Replace AppKit child-window attachment with SHEET presentation (`beginSheet:`/`endSheet:`), re-home the poster's authorization gate onto `PRESENTED_LOGIN_SHEETS`, retire the deminiaturize re-raise observer, invert the superseded anti-sheet negatives, restate REQ-34.4.2-01/-02/-03 (wave 1)
 - [x] 34.4.2-08-PLAN.md — The mandated explicit close affordance, via two independent routes: a non-kill-switchable in-page "Cancel sign-in" strip on a `/login-cancel` sentinel, and a page-independent bare-Esc monitor scoped to presented sheets; both end the sheet then close the window, preserving `status=cancelled reason=window-closed` (wave 2)
 - [x] 34.4.2-09-PLAN.md — Rewritten six-item blocking gate contract `34.4.2-LIVE-GATE-RERUN.md` (`verdict: null`): items 1/2 restated in sheet semantics with a mandatory post-minimize/restore INTERACTIVITY sub-check, items 3-6 carried over intact; platform-scope + threat roll-up updated (T-34.4.2-33/-34/-35); premature requirement checkmarks corrected (wave 3)
-- [ ] 34.4.2-10-PLAN.md — **BLOCKING live gate re-run** on real macOS hardware; records the measured verdict and propagates it (wave 4, non-autonomous)
+- [x] 34.4.2-10-PLAN.md — **BLOCKING live gate re-run** on real macOS hardware; records the measured verdict and propagates it (wave 4, non-autonomous) — **RAN 2026-08-04, VERDICT FAIL 0/6** (item 1 sheet presentation FAIL: presented window was an ordinary titled macOS window, blank content, neither sheet nor attachment, could go behind the main window, F-34.4.2-03; items 2-6 NOT ATTEMPTED, gate aborted at item 1). See `34.4.2-LIVE-GATE-RERUN.md` and `34.4.2-10-SUMMARY.md`. **Phase 34.4.2 STILL DOES NOT CLOSE** — a second gap cycle is required, `/gsd-plan-phase 34.4.2 --gaps`.
 
-**Gap-cycle scope note:** the fix direction is the presentation switch, per the binding decision — **no plan diagnoses or repairs F-34.4.2-01's root cause inside the child-window mechanism, because that mechanism is removed.** Plan 07 alone ships a sheet the user cannot dismiss (T-34.4.2-33); **plan 08 is a hard prerequisite and no gate may run between them.** Epic remains byte-untouched throughout (REQ-34.4.2-10).
+**Gap-cycle scope note (plans 07-10, closed):** the fix direction was the presentation switch, per the binding decision — no plan diagnosed or repaired F-34.4.2-01's root cause inside the child-window mechanism, because that mechanism was removed. Plan 07 alone would have shipped a sheet the user cannot dismiss (T-34.4.2-33); plan 08 was a hard prerequisite and no gate ran between them. Epic remained byte-untouched throughout (REQ-34.4.2-10). **This gap cycle's own fix did not produce a working sheet at gate time (F-34.4.2-03) — the next gap cycle must diagnose why**, starting from the candidate layers F-34.4.2-03 names (stale/mismatched binary despite the preflight's own passing symbol check; a runtime path not reaching `present_login_window_as_sheet`; something specific to the surface tested) without preferring any one of them in advance.
 
 ### Phase 34.5: Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts (INSERTED)
 
