@@ -1543,7 +1543,7 @@ platform-blocked in both login surfaces on HTTP and real HTTPS, and the AutoFill
 opened directly (the menu item is injected at menu-display time and absent from the NSMenu).
 Verification can run offline against the spike-019 local OAuth DummyStore harness (port 17940,
 PKCE + replay enforcement + `/events` oracle) where a live store login isn't required.
-**Requirements**: REQ-34.4.2-01, REQ-34.4.2-02, REQ-34.4.2-03, REQ-34.4.2-04, REQ-34.4.2-05, REQ-34.4.2-06, REQ-34.4.2-07, REQ-34.4.2-08, REQ-34.4.2-09 (minted by plan 34.4.2-01; the ID rows themselves land in `REQUIREMENTS.md` when that plan executes)
+**Requirements**: REQ-34.4.2-01, REQ-34.4.2-02, REQ-34.4.2-03, REQ-34.4.2-04, REQ-34.4.2-05, REQ-34.4.2-06, REQ-34.4.2-07, REQ-34.4.2-08, REQ-34.4.2-09, REQ-34.4.2-10 (minted by plan 34.4.2-01; the ID rows themselves land in `REQUIREMENTS.md` when that plan executes. **REQ-34.4.2-10 is the Epic descope**, minted so the exclusion is machine-enforceable rather than a comment; 01/04/06 were narrowed from "both login surfaces" to the Tauri-managed surface. No ID was deleted or renumbered.)
 **Depends on:** Phase 34.4.1 (the login-window seam these behaviors attach to — COMPLETE)
 **Plans:** 6 plans in 6 waves (all sequential — every implementing plan edits the single-file Rust shell `src-tauri/src/main.rs`, so no two may share a wave)
 
@@ -1554,22 +1554,35 @@ authoritative design source, with `oauth-login-test-harness.md` (the spike-019 D
 port 17940) as the offline verification fixture and `tauri-login-webview-cookies.md` describing the
 34.4.1 seam these behaviors attach to. Glyph visual styling is executor discretion.
 
+**SCOPE — Epic is OUT (locked user decision, 2026-08-04).** Epic is implemented **LAST**, after all
+other accounts/runners are ported and proven. Epic has been problematic — the parked deterministic
+pre-auth 403 (anti-bot), the zero-injection constraint the pristine `WKWebView` surface exists
+specifically to satisfy, and the standing hCaptcha/UA constraint — and the user wants it left alone
+until those are resolved. **No code path in this phase may attach to, inject into, resolve, or
+exercise the pristine Epic login window** (`open_pristine_epic_login_window` + `EpicPristineNavDelegate`);
+both must be byte-unchanged, enforced by REQ-34.4.2-10 and the `PHASE_34_4_2_NEW_SYMBOLS` source
+guard. This phase targets the **Tauri-managed `WebviewWindow`** surface only: Humble plus the
+GOG/Amazon OAuth runners. The Rust architecture stays Epic-*ready* — the attach/detach pair, glyph
+builder, pure parser and right-click poster are all runner-agnostic, so **Epic's follow-up phase adds
+call sites plus a `get_window` fallback, not a redesign.** Recorded in
+`34.4.2-PLATFORM-SCOPE.md` § EPIC-DEFERRED and the phase-local `deferred-items.md`.
+
 **Locked, do not re-litigate:** AppKit `addChildWindow:ordered:` attachment (never Tauri's builder
 `.parent()`, which cannot cover the pristine `WKWebView` shell or re-attach at runtime); sheets
 REJECTED (a sheet blocks the very window that would hold a cancel control, and a store login page has
 none — spike 021's operator could not dismiss one at all); NO credential store (inline Password
-AutoFill and save-prompts are platform-blocked in both surfaces on loopback HTTP *and* real HTTPS);
+AutoFill and save-prompts are platform-blocked on loopback HTTP *and* real HTTPS);
 the affordance is an in-field key glyph posting a **synthesized right-click** (L2, public API only) —
 opening the AutoFill panel directly is platform-IMPOSSIBLE (macOS injects the menu item at
 menu-display time; it is absent from the NSMenu object graph even while the screen shows it), so no
 plan may attempt it; Cmd+V paste must keep working in both surfaces.
 
 Plans:
-- [ ] 34.4.2-01-PLAN.md — Mint REQ-34.4.2-01..09 + cross-surface `NSWindow`/`WKWebView` handle resolvers and the pristine-webview registry (wave 1)
-- [ ] 34.4.2-02-PLAN.md — AppKit child-window attach/detach on both surfaces + deminiaturize re-raise; permanent anti-sheet / anti-`.parent()` negatives (wave 2)
-- [ ] 34.4.2-03-PLAN.md — In-field glyph script + path-discriminated cancelled-navigation request channel on both surfaces; retightens the `on_navigation` negative rather than deleting it (wave 3)
-- [ ] 34.4.2-04-PLAN.md — Synthesized `RightMouseDown`/`RightMouseUp` poster: webview-bounds coordinate flip, out-of-bounds refusal, server-side debounce, Cmd+V regression guard (wave 4)
-- [ ] 34.4.2-05-PLAN.md — DummyStore-never-ships containment guard + `34.4.2-PLATFORM-SCOPE.md` (per-symbol Windows/Linux declaration + Electron-unchanged evidence) + the 6-item gate contract with `verdict: null` (wave 5)
+- [ ] 34.4.2-01-PLAN.md — Mint REQ-34.4.2-01..10 + Tauri-managed `NSWindow`/`WKWebView` handle resolvers + the EPIC-UNTOUCHED source guard (`PHASE_34_4_2_NEW_SYMBOLS`) (wave 1)
+- [ ] 34.4.2-02-PLAN.md — AppKit child-window attach/detach on the Tauri-managed surface + deminiaturize re-raise; permanent anti-sheet / anti-`.parent()` / anti-focus-re-raise negatives (wave 2)
+- [ ] 34.4.2-03-PLAN.md — In-field glyph script + path-discriminated cancelled-navigation request channel on the Tauri-managed surface (no `WKUserScript`, no Cargo change); retightens the `on_navigation` negative rather than deleting it (wave 3)
+- [ ] 34.4.2-04-PLAN.md — Synthesized `RightMouseDown`/`RightMouseUp` poster: webview-bounds coordinate flip, out-of-bounds refusal, server-side debounce, single call site (wave 4)
+- [ ] 34.4.2-05-PLAN.md — DummyStore-never-ships containment guard + `34.4.2-PLATFORM-SCOPE.md` (per-symbol Windows/Linux declaration, EPIC-DEFERRED record, Electron-unchanged evidence) + phase `deferred-items.md` + the 6-item gate contract with `verdict: null` (wave 5)
 - [ ] 34.4.2-06-PLAN.md — **BLOCKING live gate** on real macOS hardware; records the measured verdict and propagates it (wave 6, non-autonomous)
 
 ### Phase 34.5: Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts (INSERTED)
