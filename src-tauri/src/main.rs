@@ -3099,6 +3099,11 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 .ok_or_else(|| "humble_login_open:bad-args".to_string())?;
             let label = next_login_window_label();
             let event_label = label.clone();
+            // Cloned separately from `event_label` (Phase 34.4.2 Plan 03,
+            // REQ-34.4.2-04/08): the autofill sentinel's `.on_navigation(` closure below
+            // needs its own owned label for its log line, and moves it independently of
+            // the `.on_page_load(` closure's own `event_label` capture.
+            let nav_sentinel_label = label.clone();
             // Bounded pristine-webview attempt (checkpoint response, 2026-08-03T18:00:00
             // superseding cycle; F-34.5-G6-01): route Epic's login window through a
             // Tauri-injection-free WKWebView on macOS instead of this arm's own
@@ -3155,6 +3160,36 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                             title.len()
                         );
                     });
+                // In-field autofill glyph injection (Phase 34.4.2 Plan 03,
+                // REQ-34.4.2-04/06/07/08). Gated on `visible` (this whole block already
+                // is) so the hidden reveal/clear windows this arm also builds never
+                // receive it -- those windows run their own exfil scripts and a second
+                // injected script there is pure risk, not a benefit. The pristine Epic
+                // surface (`open_pristine_epic_login_window`, above) is unreachable from
+                // here entirely -- REQ-34.4.2-10, locked user decision.
+                //
+                // Kill switch DEFAULTS ON, and unlike `GAMELIB_LOGIN_DIAG` above is NOT
+                // `#[cfg(debug_assertions)]`-gated -- it must work in a packaged build.
+                // Re-earned here (its original justification was the Epic arm, now
+                // descoped) because `initialization_script()` runs before any page
+                // script, in every frame, on live third-party login pages that sit
+                // behind real bot management (Humble is behind Cloudflare), and this
+                // repo has already had an injected `initialization_script` become the
+                // PRIME SUSPECT for causing a deterministic 403
+                // (`DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`, which is why that one now
+                // defaults OFF). If injection ever trips a store's detection, the
+                // failure mode is a user locked out of their own library with no
+                // workaround short of a rebuild -- three lines of Rust against that is
+                // a trade worth making.
+                if std::env::var("GAMELIB_AUTOFILL_GLYPH").as_deref() == Ok("0") {
+                    eprintln!(
+                        "[shell] humble_login_open: autofill glyph injection SKIPPED for '{label}' (GAMELIB_AUTOFILL_GLYPH=0)"
+                    );
+                } else {
+                    builder =
+                        builder.initialization_script(&autofill_glyph_script(REVEAL_EXFIL_HOST));
+                    eprintln!("[shell] humble_login_open: autofill glyph injected for '{label}'");
+                }
                 // F-4 machine record (Phase 34.4.1 Plan 24): `.focused(true)` above is
                 // a ONE-SHOT raise-on-creation with no persistent state to inspect
                 // afterwards, so without this line there is no record of what
@@ -3231,6 +3266,27 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                         }
                         let _ = window.set_title(&login_window_title(&new_origin, None));
                     }
+                })
+                .on_navigation(move |url| {
+                    // Autofill sentinel interception ONLY (Phase 34.4.2 Plan 03,
+                    // REQ-34.4.2-04/08). This closure is deliberately separate from the
+                    // `.on_page_load(` hook above and preserves this arm's own
+                    // F-34.5-G6-04 invariant (spike 013: 5 of 8 `on_navigation` events on
+                    // Humble's real login page were third-party iframes -- letting a
+                    // subframe drive the login-watch relay lets an ad frame re-arm its
+                    // deadline forever): it never calls `push_login_window_event`, never
+                    // touches `current_origin`, and never calls `set_title`. It parses
+                    // and cancels exactly one reserved-host, reserved-path sentinel;
+                    // every other navigation (including the real login page's own) is
+                    // untouched.
+                    if let Some(req) = parse_autofill_request(&url) {
+                        eprintln!(
+                            "[shell] humble_login_open: autofill sentinel intercepted for '{nav_sentinel_label}' x={} y={} w={} h={} hit_id={:?} hit_tag={:?} hit_type={:?}",
+                            req.x, req.y, req.w, req.h, req.hit_id, req.hit_tag, req.hit_type
+                        );
+                        return false;
+                    }
+                    true
                 })
                 .build()
                 .map_err(|e| format!("humble_login_open:build-failed:{e}"))?;

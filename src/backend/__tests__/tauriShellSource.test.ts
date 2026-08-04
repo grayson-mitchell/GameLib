@@ -633,9 +633,34 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
     expect(pageLoadBlock).toContain('set_title(')
   })
 
-  test('NEGATIVE: the humble_login_open arm contains no .on_navigation( call anywhere in its own body', () => {
+  // RETIGHTENED (Phase 34.4.2 Plan 03, REQ-34.4.2-04/08), not deleted: this used to be a
+  // blanket "no .on_navigation( at all" guard. Plan 03 adds exactly one sentinel-only,
+  // cancel-only .on_navigation( arm to intercept the in-field autofill glyph's request --
+  // that does NOT violate the invariant this guard protects, because the invariant is "no
+  // on_navigation-driven login-watch relay" (spike 013: 5 of 8 on_navigation events on
+  // Humble's real login page were third-party iframes; letting a subframe re-arm
+  // notifyLoginNavigated()'s deadline via on_navigation would defeat WR-03's timeout), not
+  // "no on_navigation call of any kind". The assertions below enforce that narrower invariant
+  // precisely: at most one on_navigation call exists, its closure parses the autofill
+  // sentinel and nothing else, and it never touches the login-watch relay's own state
+  // (push_login_window_event/set_title/current_origin/login_event_value) -- those stay
+  // exclusively owned by the .on_page_load( hook, per the POSITIVE test above.
+  test('NEGATIVE/RETIGHTENED: the humble_login_open arm has at most one .on_navigation( call, and that closure ONLY parses the autofill sentinel -- it never drives the login-watch relay', () => {
     const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
-    expect(armBody).not.toContain('.on_navigation(')
+    const onNavCount = (armBody.match(/\.on_navigation\(/g) ?? []).length
+    expect(onNavCount).toBeLessThanOrEqual(1)
+
+    const onNavStart = armBody.indexOf('.on_navigation(')
+    expect(onNavStart).toBeGreaterThan(-1)
+    const onNavEnd = armBody.indexOf('.build()', onNavStart)
+    expect(onNavEnd).toBeGreaterThan(onNavStart)
+    const onNavBody = armBody.slice(onNavStart, onNavEnd)
+
+    expect(onNavBody).toContain('parse_autofill_request')
+    expect(onNavBody).not.toContain('push_login_window_event')
+    expect(onNavBody).not.toContain('set_title')
+    expect(onNavBody).not.toContain('current_origin')
+    expect(onNavBody).not.toContain('login_event_value')
   })
 
   test('the login_window_title pure helper exists (AppHandle-free, mirrors clipboard_text_arg/login_window_url_arg)', () => {
@@ -682,8 +707,13 @@ const PHASE_34_4_2_NEW_SYMBOLS = [
   'attach_login_window_as_child',
   'detach_login_window_from_parent',
   'ATTACHED_LOGIN_CHILDREN',
-  'MAIN_WINDOW_LABEL'
-  // Plans 03, 04: append your own new symbol names here.
+  'MAIN_WINDOW_LABEL',
+  // Plan 03 (in-field autofill glyph + cancelled-navigation request channel):
+  'AUTOFILL_EXFIL_PATH',
+  'AutofillRequest',
+  'parse_autofill_request',
+  'autofill_glyph_script'
+  // Plan 04: append your own new symbol names here.
 ]
 
 // Tests 3 and 4 below encode a LOCKED USER SCOPE DECISION (2026-08-04): Epic is implemented
