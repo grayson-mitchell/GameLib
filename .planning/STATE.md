@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.2-02-PLAN.md
-last_updated: "2026-08-04T02:25:46.064Z"
-last_activity: 2026-08-04 -- Phase 34.4.2 plan 02 complete (AppKit child-window attach/detach + deminiaturize re-raise observer); next plan 03
+stopped_at: Completed 34.4.2-03-PLAN.md
+last_updated: "2026-08-04T02:56:06.310Z"
+last_activity: 2026-08-04
 progress:
   total_phases: 18
   completed_phases: 13
   total_plans: 197
-  completed_plans: 182
-  percent: 92
+  completed_plans: 183
+  percent: 72
 ---
 
 # Project State
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 
 **Next action:** `/gsd-plan-phase 34.5 --gaps` — gap cycle 6. Named here once, deliberately nowhere else. Scope it around: the GOG frontend-render defect (F-34.5-G6-12 / U-34.5-07, where 7 titles persist to disk and the Library UI shows none); the dead `nativeImage` sidecar stub that structurally blocks every macOS `.app` shortcut (F-34.5-G6-07 / U-34.5-12); the Electron-shaped Steam LaunchOptions the Tauri shell ignores (F-34.5-G6-09 / U-34.5-13); **an audit of the real preload channel surface against `IPC-PORT-INVENTORY.md`, which is a Phase 35 precondition and whose incompleteness is of unknown extent** (F-34.5-G6-10 / U-34.5-14); `addToSteam` dropping its return value (F-34.5-G6-08 / U-34.5-15); the still-unattempted items 3 and 5; and the `REQUIREMENTS.md` inconsistency where REQ-34.5-01/02/03/04/05/12 sit checked `[x]` while carrying gate conditions that have now failed three times (deferred-items item 22). Epic (item 1) stays parked by explicit developer decision and is NOT this cycle's blocker.
 
@@ -2300,7 +2300,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 94%
+trusted blindly. The recurring `**Progress:**[█████████░] 93%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.2-02): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2588,7 +2588,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-04 -- Phase 34.4.2 plan 02 complete (AppKit child-window attach/detach + deminiaturize re-raise observer); next plan 03
+Last activity: 2026-08-04
 Prior activity: 2026-08-03 - **F-34.5-G6-01 CLOSED and the embedded Epic login WORKS under Tauri.** Debug session epic-login-non-interactive RESOLVED and archived to .planning/debug/resolved/. The pre-auth 403 was Talon fingerprinting Tauri's injected globals (window.isTauri et al, non-configurable AND non-writable, correctly proven unmaskable from JS) — fixed not by hiding them but by not creating them: Epic's login window is now a webview-less tauri::WindowBuilder window with a raw WKWebView attached, zero initialization scripts, own WKNavigationDelegate (03b75211a, macOS+Epic only). The separate post-auth defect fell out of the same change — decidePolicyForNavigationAction sees the localhost redirect WKWebView silently refuses to LOAD — so the OAuth code is captured natively and NO JavaScript is injected into Epic's page anywhere; the old observer/shim/on_navigation trio was deleted (da529ca86, -400 lines). Four supporting defects found only by live hardware testing: WKUIDelegate (post-password hang), windowless WKWebsiteDataStore cookie clear (logout was silently leaving session cookies, so every "login" was a re-auth against a blank in-transit page), an NSEvent key monitor for Cmd+V (tao swallows the key equivalent; the Edit menu's paste: always worked), and humble_login_close falling back to get_window (the window never closed on success and every logout leaked an invisible window) — b76d58ee6, b8e73e437. Live-proven 20:26-20:28: the FIRST genuinely logged-out Epic login ever driven under Tauri, nav host=www.epicgames.com → nav host=localhost → status=captured → 15 games & DLCs, operator-confirmed in the UI; window self-close confirmed 22:03. Ledger rows U-34.5-06 (properly retired) and U-34.5-11 (retired as SUBJECT DELETED, never exercised — not a pass) updated (fe8a0ca2b). CARRIED FORWARD, unproven: a UA of Safari engine tokens + " EpicGamesLauncher" satisfies both Epic's launcher routing and hCaptcha's engine check, but the run that passed auto-logged-in and never rendered a captcha, so it was deliberately NOT defaulted. STANDING CONSTRAINT: Epic can demand a captcha at any time and the launcher UA its OAuth flow requires is one hCaptcha cannot initialize under, so the embedded window has a failure mode SIDLogin structurally does not — keep SIDLogin as Epic's PRIMARY tile. Phase 34.5 closure UNAFFECTED and still open. Prior same-day activity: shipped two live-verified debug fixes to fork PR #3: steam-refresh-hung-on-startup (22a9a328d, mount-time refresh gate now includes Steam) and login-logout-wipes-library (6f194fabe, per-runner scoped refresh, logout no longer reloads the app; Steam sync cache-hydration deferred into the IPC-port effort)
 ("Finalizing sign-in with <Runner>…" + spinner through the 5-27s token exchange) plus the
 cancel-path fix all the way down to Rust window-close detection — a user-closed OAuth popup now
@@ -3233,6 +3233,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P36 | 45min | 3 tasks | 6 files |
 | Phase 34.4.2 P01 | 25min | 3 tasks | 3 files |
 | Phase 34.4.2 P02 | 55min | 3 tasks | 2 files |
+| Phase 34.4.2 P03 | 30min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -3636,6 +3637,9 @@ Recent decisions affecting current work:
 - [Phase 34.4.2]: objc2-app-kit's addChildWindow_ordered/removeChildWindow require the crate's NSGraphics feature, not explicitly declared by this project but supplied via wry's own already-enabled request (Cargo feature unification) -- zero Cargo.toml change needed
 - [Phase 34.4.2]: Presentation-record eprintln! relocated from before-.build() to after-.build()/attach so it can report child_attached=true/false alongside the pre-existing focus_once/persistent_pin fields
 - [Phase 34.4.2]: Task 1/Task 2 both touch main.rs at adjacent locations; implemented together then split into two atomic commits via extract-to-scratch-file, commit, reinsert, commit
+- [Phase 34.4.2]: Renamed JS idempotency marker to __GAMELIB_LOGIN_GLYPH__ and dropped the env-var name from the kill-switch log line to fix a substring collision with GAMELIB_AUTOFILL_GLYPH caught by Task 3's own exactly-once source assertion
+- [Phase 34.4.2]: Scoped 'called exactly once' jest assertions for autofill_glyph_script/parse_autofill_request to production code only (before mod tests), since both are pure cargo-tested helpers with intentionally many call sites in the test module
+- [Phase 34.4.2]: Generalized Plan 01's PHASE_34_4_2_NEW_SYMBOLS scope guard to check both open_pristine_epic_login_window AND EpicPristineNavDelegate for every current/future symbol, confirmed load-bearing in both places by a single live mutation
 
 ### Pending Todos
 
@@ -3714,8 +3718,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-04T02:25:46.051Z
-Stopped at: Completed 34.4.2-02-PLAN.md
+Last session: 2026-08-04T02:56:06.286Z
+Stopped at: Completed 34.4.2-03-PLAN.md
   This session (sequential executor): executed 34.5-40 (gap cycle 5, wave 3 -- author the third
   blocking gate contract). Task 1 (docs, commit `1f4932a43`): frontmatter (`verdict: null`), a
   "why this run exists" recap naming every fix landed since run 2 by plan number (34.5-23, -26,
