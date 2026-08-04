@@ -726,7 +726,12 @@ const PHASE_34_4_2_NEW_SYMBOLS = [
   'synth_autofill_mouse_event',
   'post_autofill_right_click',
   'LAST_AUTOFILL_POST',
-  'AUTOFILL_POST_DEBOUNCE'
+  'AUTOFILL_POST_DEBOUNCE',
+  // Plan 08 (mandated close affordance -- cancel strip + Esc backstop, REQ-34.4.2-03):
+  'LOGIN_CANCEL_EXFIL_PATH',
+  'is_login_cancel_request',
+  'login_cancel_strip_script',
+  'request_login_sheet_cancel'
 ]
 
 // Tests 3 and 4 below encode a LOCKED USER SCOPE DECISION (2026-08-04): Epic is implemented
@@ -891,11 +896,11 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
     expect(armCallSites.length).toBe(1)
   })
 
-  test("Test 2 (INVERTED 2026-08-04): dismiss_login_window_sheet( is CALLED exactly once in the file, inside the humble_login_open arm's WindowEvent::Destroyed branch -- catches the dismiss call being dropped from the close hook", () => {
+  test("Test 2 (INVERTED 2026-08-04, updated 2026-08-04 by Plan 08): dismiss_login_window_sheet( is CALLED exactly TWICE in the file -- once directly inside the humble_login_open arm's WindowEvent::Destroyed branch (this test's original assertion), and once inside Plan 08's request_login_sheet_cancel, the shared dismissal entry point both close-affordance routes call -- catches either call site being dropped", () => {
     const code = loadMainRsCode()
     const fileCallSites =
       code.match(/(?<!fn )dismiss_login_window_sheet\(/g) ?? []
-    expect(fileCallSites.length).toBe(1)
+    expect(fileCallSites.length).toBe(2)
 
     const armBody = extractHumbleLoginOpenArmBody(code)
     const destroyedBlock = extractBracedBlock(
@@ -903,6 +908,17 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
       'if matches!(event, tauri::WindowEvent::Destroyed) {'
     )
     expect(destroyedBlock).toContain('dismiss_login_window_sheet(')
+
+    const cancelStart = code.indexOf('fn request_login_sheet_cancel(')
+    expect(cancelStart).toBeGreaterThan(-1)
+    const cancelEnd = code.indexOf(
+      '#[cfg(target_os = "macos")]',
+      cancelStart
+    )
+    expect(cancelEnd).toBeGreaterThan(cancelStart)
+    expect(code.slice(cancelStart, cancelEnd)).toContain(
+      'dismiss_login_window_sheet('
+    )
   })
 
   test('Test 3 (INVERTED 2026-08-04): the present call site sits inside an if-visible guard -- hidden reveal/clear windows must never be presented', () => {
@@ -1298,5 +1314,231 @@ describe('Phase 34.4.2 Plan 04 — synthesized right-click poster', () => {
     expect(code.slice(start, end)).toContain(
       'mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure'
     )
+  })
+})
+
+// Phase 34.4.2 Plan 08 (REQ-34.4.2-03/04/06/07/08/10, T-34.4.2-33/-34/-35): the mandated close
+// affordance for a presented login sheet -- an injected, self-re-appending cancel strip
+// (primary, visible) plus a page-independent bare-Esc monitor (backstop, works on a blank/
+// error/interstitial page), both funnelled through request_login_sheet_cancel, the single
+// dismissal entry point. PHASE_34_4_2_NEW_SYMBOLS (above) already carries this plan's four new
+// symbol names, so Plan 01's own generalized Test 3 (both pristine regions) covers them
+// without any change to that describe block; this block's own Test 8 below re-asserts the
+// same absence directly, scoped to this plan's own file section, so deleting either describe
+// block still leaves a guard in place (mirrors Plan 02's Test 9 / Plan 03's Test 4 / Plan 04's
+// Test 7 precedent).
+describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc backstop)', () => {
+  function extractHumbleLoginOpenArmBody(code: string): string {
+    const armStart = code.indexOf('"humble_login_open" => {')
+    expect(armStart).toBeGreaterThan(-1)
+    const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
+    expect(armEnd).toBeGreaterThan(armStart)
+    return code.slice(armStart, armEnd)
+  }
+
+  function extractPristineLoginFnBody(code: string): string {
+    const start = code.indexOf('fn open_pristine_epic_login_window(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    expect(end).toBeGreaterThan(start)
+    return code.slice(start, end)
+  }
+
+  function extractEpicPristineNavDelegateBody(code: string): string {
+    const start = code.indexOf('define_class!(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('impl EpicPristineNavDelegate {', start)
+    expect(end).toBeGreaterThan(start)
+    return code.slice(start, end)
+  }
+
+  /**
+   * Slices `armBody`'s `if std::env::var("GAMELIB_AUTOFILL_GLYPH")...` statement -- BOTH the
+   * skipped (kill-switch-set) branch and the injecting (`else`) branch -- by brace-matching the
+   * `if` block first, then brace-matching the immediately-following `else` block. Returning
+   * both branches (not just the `if` block `extractBracedBlock` alone would give) is the point:
+   * this plan's Test 1 asserts the cancel strip's injection call is absent from EITHER branch of
+   * the kill switch, not merely from the one that happens to skip injection.
+   */
+  function extractGamelibAutofillGlyphStatement(armBody: string): string {
+    const start = armBody.indexOf('if std::env::var("GAMELIB_AUTOFILL_GLYPH")')
+    expect(start).toBeGreaterThan(-1)
+    let i = armBody.indexOf('{', start)
+    expect(i).toBeGreaterThan(-1)
+    let depth = 0
+    for (; i < armBody.length; i++) {
+      if (armBody[i] === '{') depth++
+      else if (armBody[i] === '}') {
+        depth--
+        if (depth === 0) break
+      }
+    }
+    expect(depth).toBe(0)
+    const ifEnd = i + 1
+    const elseMatch = armBody.slice(ifEnd).match(/^\s*else\s*\{/)
+    expect(elseMatch).not.toBeNull()
+    const elseOpenOffset =
+      ifEnd + (elseMatch as RegExpMatchArray)[0].length - 1
+    let j = elseOpenOffset
+    let elseDepth = 0
+    for (; j < armBody.length; j++) {
+      if (armBody[j] === '{') elseDepth++
+      else if (armBody[j] === '}') {
+        elseDepth--
+        if (elseDepth === 0) break
+      }
+    }
+    expect(elseDepth).toBe(0)
+    return armBody.slice(start, j + 1)
+  }
+
+  /**
+   * Scans forward from `openMarker`'s FIRST `{` and returns the full brace-matched block
+   * (inclusive of both braces). Local copy of the identical helper other Plan-scoped describe
+   * blocks in this file already use.
+   */
+  function extractBracedBlock(code: string, openMarker: string): string {
+    const markerIdx = code.indexOf(openMarker)
+    expect(markerIdx).toBeGreaterThan(-1)
+    const braceStart = code.indexOf('{', markerIdx)
+    expect(braceStart).toBeGreaterThan(-1)
+    let depth = 0
+    let i = braceStart
+    for (; i < code.length; i++) {
+      if (code[i] === '{') depth++
+      else if (code[i] === '}') {
+        depth--
+        if (depth === 0) break
+      }
+    }
+    expect(depth).toBe(0)
+    return code.slice(markerIdx, i + 1)
+  }
+
+  /**
+   * Bounds the search to PRODUCTION code only -- everything before `mod tests {` -- mirroring
+   * Plan 03's own identical helper and its rationale verbatim: `login_cancel_strip_script` is a
+   * pure, cargo-tested helper (Task 1) with multiple call sites inside `mod tests` by design; a
+   * whole-file count would conflate "how many cargo tests exercise this helper" with "how many
+   * production call sites exist", which is the thing this plan's own `exactly ONCE`
+   * acceptance criterion actually polices.
+   */
+  function productionCode(code: string): string {
+    const testModStart = code.indexOf('mod tests {')
+    expect(testModStart).toBeGreaterThan(-1)
+    return code.slice(0, testModStart)
+  }
+
+  test("Test 1 (KILL-SWITCH-INDEPENDENCE, T-34.4.2-15, the single most important assertion in this plan): login_cancel_strip_script( is called exactly once in the comment-stripped PRODUCTION source, that call site sits inside the humble_login_open arm's if-visible block, and it is ABSENT from both branches of the GAMELIB_AUTOFILL_GLYPH kill switch statement", () => {
+    const code = productionCode(loadMainRsCode())
+    // Negative lookbehind excludes the `fn login_cancel_strip_script(` definition itself.
+    const fileCallSites =
+      code.match(/(?<!fn )login_cancel_strip_script\(/g) ?? []
+    expect(fileCallSites.length).toBe(1)
+
+    const armBody = extractHumbleLoginOpenArmBody(code)
+    const visibleBlock = extractBracedBlock(armBody, 'if visible {')
+    expect(visibleBlock).toContain('login_cancel_strip_script(')
+
+    const killSwitchStatement = extractGamelibAutofillGlyphStatement(armBody)
+    expect(killSwitchStatement).not.toContain('login_cancel_strip_script(')
+  })
+
+  test('Test 2 (ORDERING): inside the humble_login_open arm\'s .on_navigation( closure, is_login_cancel_request appears, and it appears BEFORE parse_autofill_request -- the cheaper, disjoint sentinel is checked first', () => {
+    const code = loadMainRsCode()
+    const armBody = extractHumbleLoginOpenArmBody(code)
+    const onNavStart = armBody.indexOf('.on_navigation(')
+    expect(onNavStart).toBeGreaterThan(-1)
+    const onNavEnd = armBody.indexOf('.build()', onNavStart)
+    expect(onNavEnd).toBeGreaterThan(onNavStart)
+    const onNavBody = armBody.slice(onNavStart, onNavEnd)
+
+    const cancelIdx = onNavBody.indexOf('is_login_cancel_request')
+    const autofillIdx = onNavBody.indexOf('parse_autofill_request')
+    expect(cancelIdx).toBeGreaterThan(-1)
+    expect(autofillIdx).toBeGreaterThan(-1)
+    expect(cancelIdx).toBeLessThan(autofillIdx)
+  })
+
+  test('Test 3 (ORDERING, load-bearing): request_login_sheet_cancel( is CALLED exactly twice in the file (strip route + Esc route), and its own sliced body calls dismiss_login_window_sheet( at an index strictly less than .close() -- ending the sheet before closing the window', () => {
+    const code = loadMainRsCode()
+    // Negative lookbehind excludes the `fn request_login_sheet_cancel(` definition itself.
+    const fileCallSites =
+      code.match(/(?<!fn )request_login_sheet_cancel\(/g) ?? []
+    expect(fileCallSites.length).toBe(2)
+
+    const start = code.indexOf('fn request_login_sheet_cancel(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    expect(end).toBeGreaterThan(start)
+    const body = code.slice(start, end)
+
+    const dismissIdx = body.indexOf('dismiss_login_window_sheet(')
+    const closeIdx = body.indexOf('.close()')
+    expect(dismissIdx).toBeGreaterThan(-1)
+    expect(closeIdx).toBeGreaterThan(-1)
+    expect(dismissIdx).toBeLessThan(closeIdx)
+  })
+
+  test('Test 4 (NEGATIVE, T-34.4.2-35, privacy is a hard constraint): the Esc monitor\'s sliced handler body references neither characters nor charactersIgnoringModifiers', () => {
+    const code = loadMainRsCode()
+    const start = code.indexOf('let esc_monitor_handler = block2::RcBlock::new(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('let esc_monitor_token = unsafe {', start)
+    expect(end).toBeGreaterThan(start)
+    const body = code.slice(start, end)
+    expect(body).not.toContain('characters')
+    expect(body).not.toContain('charactersIgnoringModifiers')
+  })
+
+  test('Test 5 (NEGATIVE, REQ-34.4.2-06 / T-34.4.2-22): the sliced login_cancel_strip_script body registers no keyboard listener -- Cmd+V into the password field must keep working', () => {
+    const code = loadMainRsCode()
+    const start = code.indexOf('fn login_cancel_strip_script(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf(
+      'fn request_login_sheet_cancel(',
+      start
+    )
+    expect(end).toBeGreaterThan(start)
+    const body = code.slice(start, end)
+    expect(body).not.toContain('keydown')
+    expect(body).not.toContain('keyup')
+    expect(body).not.toContain('keypress')
+  })
+
+  test('Test 6 (NEGATIVE, REQ-34.4.2-07): the sliced login_cancel_strip_script body reads no input value and transmits no password field content', () => {
+    const code = loadMainRsCode()
+    const start = code.indexOf('fn login_cancel_strip_script(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf(
+      'fn request_login_sheet_cancel(',
+      start
+    )
+    expect(end).toBeGreaterThan(start)
+    const body = code.slice(start, end)
+    expect(body).not.toContain('.value')
+    expect(body).not.toContain('password')
+  })
+
+  test('Test 7 (REGRESSION GUARD): addLocalMonitorForEventsMatchingMask_handler appears exactly twice in the whole comment-stripped source -- the pristine Epic arm\'s pre-existing monitor plus this plan\'s new Esc monitor; a count other than 2 means the byte-frozen pristine region was edited or refactored', () => {
+    const code = loadMainRsCode()
+    const matches =
+      code.match(/addLocalMonitorForEventsMatchingMask_handler/g) ?? []
+    expect(matches.length).toBe(2)
+  })
+
+  // Test 8 exists because the pristine Epic surface is excluded by a LOCKED USER SCOPE
+  // DECISION (2026-08-04), not by a technical limitation -- Epic is implemented LAST, after
+  // every other runner is ported and proven. Loosening this test requires the user's decision
+  // to change, not a planner's judgement (mirrors Plan 01/02/03/04's own Test 3/4/9/4/7
+  // rationale verbatim).
+  test("Test 8 (SCOPE GUARD, REQ-34.4.2-10, LOCKED USER SCOPE DECISION): neither open_pristine_epic_login_window NOR EpicPristineNavDelegate references any PHASE_34_4_2_NEW_SYMBOLS member, including this plan's own four new symbols", () => {
+    const code = loadMainRsCode()
+    const pristineBody = extractPristineLoginFnBody(code)
+    const delegateBody = extractEpicPristineNavDelegateBody(code)
+    for (const symbol of PHASE_34_4_2_NEW_SYMBOLS) {
+      expect(pristineBody).not.toContain(symbol)
+      expect(delegateBody).not.toContain(symbol)
+    }
   })
 })
