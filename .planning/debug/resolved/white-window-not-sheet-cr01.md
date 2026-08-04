@@ -1,8 +1,8 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: "— white window opens rather than a expected sheet for login. is not a child CR-01"
 created: 2026-08-04
-updated: 2026-08-04T03:05:00Z
+updated: 2026-08-04T03:20:00Z
 ---
 
 ## Symptoms
@@ -78,7 +78,17 @@ reasoning_checkpoint:
 
 test: "cargo check (clean), cargo test (131/131, 1 pre-existing ignored), cargo clippy (only pre-existing warnings, now at shifted line numbers 539-543/918/3850/3866/3992/4001, none inside the touched regions), npx jest src/backend/__tests__/tauriShellSource.test.ts (84/84, all 9 Plan-02 sheet-presentation tests including Test 1's single-call-site guard still pass -- the dispatch2 deferral is nested INSIDE the existing run_on_main_thread closure, not a second call site), npx jest full suite (3735/3735), git diff --exit-code Cargo.lock shows exactly one line added (dispatch2 promoted from transitive-only to also a direct dependency of gamelib-shell -- no new crate/version enters the tree, confirmed by diff)."
 expecting: "All static/structural checks clean; live macOS/tauri:dev proof that the 250ms deferral actually unwedges beginSheet_completionHandler (or, if not, that the new diagnostics correctly localize the wedge to AFTER the deferred closure entered, ruling this hypothesis out cleanly) remains the open item for the next live run."
-next_action: "Commit the F-34.4.2-05 fix (dispatch2 warmup-delay deferral + new diagnostics), then request human verification with an explicit ask to capture tauri:dev stdout/stderr again (same as last time) so the new 'deferred beginSheet closure entered' / 'deferred_elapsed' diagnostics can confirm or cleanly falsify this round's hypothesis."
+next_action: "SUPERSEDED — round 3 checkpoint response (post commit 8b2fdb315) CONFIRMED FIXED on real macOS hardware: 'deferred beginSheet closure entered (deferred_elapsed=260.328417ms)' -> 'beginSheet dispatch call returned' -> 'read-back attached=true', exactly matching this round's own falsification_test's confirming branch. Session closed; see Resolution."
+
+## Closure (round 3, post commit 8b2fdb315)
+
+status: RESOLVED. The round-3 checkpoint response confirmed the fix on real macOS hardware with
+a falsifiable signal (attached=true from the CR-02 read-back, logged AFTER
+beginSheet_completionHandler returned) — not a repeat of CR-02's original unfalsifiable
+"dispatch didn't time out" signal. This closes the F-34.4.2-03/-04/-05 three-round arc for gate
+item 1 (sheet ATTACHMENT) only. Gate items 2-6 and the un-losability sub-checks remain
+unmeasured and are NOT closed by this session — see Resolution.verification for the explicit
+scope caveat.
 
 ## Evidence
 
@@ -278,6 +288,51 @@ next_action: "Commit the F-34.4.2-05 fix (dispatch2 warmup-delay deferral + new 
     environment -- the explicit ask for the next checkpoint, per this round's own
     `falsification_test`.
 
+- timestamp: 2026-08-04T03:15:00Z (checkpoint response round 3, post commit 8b2fdb315)
+  checked: Operator checkpoint response to the post-F-34.4.2-05-fix human-verify request (commit 8b2fdb315 live on macOS hardware, tauri:dev stdout/stderr captured again).
+  found: |
+    CONFIRMED FIXED. Operator report: "it appeared" -- the login surface presented
+    successfully; no beachball, no hang. Captured `/tmp/gamelib-dev.log` (lines 186-198),
+    verbatim:
+    ```
+    [shell] humble_login_open: autofill glyph injected for 'loginwin-0-18c894eec8fbd808-c37a5be9'
+    [shell] humble_login_open: login cancel strip injected for 'loginwin-0-18c894eec8fbd808-c37a5be9'
+    [shell] login-window sheet: present_login_window_as_sheet entered for 'loginwin-0-18c894eec8fbd808-c37a5be9'
+    [shell] login-window sheet: both NSWindow addresses resolved for 'loginwin-0-18c894eec8fbd808-c37a5be9' (elapsed=53.844958ms)
+    [shell] login-window sheet: main-thread closure entered for 'loginwin-0-18c894eec8fbd808-c37a5be9'
+    [shell] login-window sheet: deferring beginSheet dispatch by 250ms via DispatchQueue::main().after() for 'loginwin-0-18c894eec8fbd808-c37a5be9'
+    [shell] login-window sheet: deferred beginSheet closure entered for 'loginwin-0-18c894eec8fbd808-c37a5be9' (deferred_elapsed=260.328417ms)
+    [shell] login-window sheet: beginSheet dispatch call returned for 'loginwin-0-18c894eec8fbd808-c37a5be9'
+    [shell] login-window sheet: read-back attached=true for 'loginwin-0-18c894eec8fbd808-c37a5be9'
+    [shell] login-window sheet: present_login_window_as_sheet resolved attached=true for 'loginwin-0-18c894eec8fbd808-c37a5be9' (elapsed=580.58325ms)
+    [shell] humble_login_open: presentation requested visible=true width=900 height=700 center=true focus_once=true persistent_pin=false light_theme_requested=true sheet_presented=true
+    [shell] humble_login_open: devtools opened for 'loginwin-0-18c894eec8fbd808-c37a5be9' (debug build)
+    [shell] humble_login_open: title change applied len=22
+    ```
+  implication: |
+    CONFIRMS the F-34.4.2-05 hypothesis per its own falsification_test's first branch:
+    "deferred beginSheet closure entered" prints with deferred_elapsed=260.3ms (>= the 250ms
+    warmup delay, proving the `dispatch2::DispatchQueue::main().after()` deferral genuinely ran
+    on a later run-loop turn), immediately followed by "beginSheet dispatch call returned" and
+    "read-back attached=true". The wedge that consumed every prior live round (F-34.4.2-04's
+    unlocalized "endless beachball, no window at all" and its own falsified unbounded-getter
+    theory; F-34.4.2-05's own prior round localizing the wedge to
+    `beginSheet_completionHandler` itself with no diagnostic proof of a fix yet) is gone --
+    `beginSheet_completionHandler` returned after 580.6ms total, well inside every existing
+    bound (250ms warmup + comfortably under the function's own 10s bound and the 15s watchdog,
+    neither of which fired). Unlike CR-02's original defect (`sheet_presented=true` on nothing
+    more than "dispatch didn't time out"), this `attached=true` is genuine evidence: it comes
+    from the CR-02 read-back (`child.isSheet()` + pointer-compared `parent.attachedSheet()`)
+    running AFTER `beginSheet_completionHandler` returned, not before or independent of it.
+    Downstream work (devtools, title change) proceeded normally, consistent with the main
+    thread being genuinely unwedged rather than merely not-yet-observed-hanging. This proves
+    gate item 1 (sheet ATTACHMENT) live, on real hardware, with a falsifiable signal --
+    closes the three-round F-34.4.2-03/-04/-05 arc. Items 2-6 of the 34.4.2 live gate (close
+    affordance/bare-Esc cancel, in-field autofill glyph, Cmd+V, kill switch, hidden-reveal +
+    Epic checks) and the un-losability sub-checks were NOT exercised in this round and remain
+    the phase's open work -- this debug session's scope is limited to the sheet-attachment
+    mechanism (F-34.4.2-03/-04/-05), not the full 6/6 gate.
+
 ## Eliminated
 
 - hypothesis: "present_login_window_as_sheet's rx.recv_timeout is executing on the OS main thread, causing a same-thread self-deadlock against the run_on_main_thread-queued beginSheet closure (the checkpoint response's leading theory)."
@@ -343,6 +398,14 @@ root_cause: |
       main-thread-dispatched and can never execute while the real main thread stays wedged --
       explaining why the operator still saw no window and a persistent beachball despite the
       fallback code path having "succeeded" on the worker side.
+  TERMINAL ROOT CAUSE (confirmed live, round 3, commit 8b2fdb315): `beginSheet:completionHandler:`
+  invoked synchronously immediately after WKWebView window creation wedges the main thread
+  because WebKit's content-process handshake has not had any run-loop turns yet. The round-3
+  checkpoint response's captured log confirms this precisely: the deferred closure entered at
+  deferred_elapsed=260.3ms (comfortably past the 250ms warmup), `beginSheet_completionHandler`
+  returned immediately after, and the CR-02 read-back confirmed `attached=true` -- the same
+  call that wedged forever in round 2 (no return within the 10s bound) returned promptly once
+  WebKit was given genuine run-loop turns to complete its handshake first.
 fix: |
   In src-tauri/src/main.rs, macOS-only (`#[cfg(target_os = "macos")]`):
   CR-01/CR-02 (commit 751521663, unchanged by this continuation):
@@ -428,13 +491,39 @@ verification: |
     `enrichmentFlows.test.ts` did not reproduce this run).
   - `git diff --exit-code src-tauri/Cargo.lock`: exactly one line added (`dispatch2` promoted
     from transitive-only to also a direct dependency), no new crate/version in the tree.
-  LIVE VERIFICATION LIMITATION (per binding constraint, unchanged): whether the 250ms
-  `SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY` deferral actually lets `beginSheet:completionHandler:`
-  return on real macOS hardware, whether the new `deferred beginSheet closure
-  entered`/`deferred_elapsed` diagnostic confirms a genuine run-loop yield took place, and
-  whether the sheet finally attaches, are all UNVERIFIED here and remain the explicit ask for
-  the next checkpoint (capture tauri:dev stdout/stderr again, same as last time).
+  LIVE VERIFICATION — ROUND 3 (post commit 8b2fdb315), CONFIRMED:
+  The operator's checkpoint response reported "CONFIRMED FIXED" on real macOS hardware
+  ("it appeared" -- the login surface presented successfully; no beachball, no hang) and
+  captured `/tmp/gamelib-dev.log` showing:
+  `deferred beginSheet closure entered ... (deferred_elapsed=260.328417ms)` ->
+  `beginSheet dispatch call returned` -> `read-back attached=true` ->
+  `present_login_window_as_sheet resolved attached=true ... (elapsed=580.58325ms)` ->
+  `sheet_presented=true`. This matches the F-34.4.2-05 round's own falsification_test's
+  confirming branch exactly (deferred_elapsed >= the 250ms warmup delay, immediately followed
+  by the call returning and a confirmed read-back). Neither the function's own 10s bound nor
+  the 15s watchdog fired. Downstream work (devtools opened, title change applied) proceeded
+  normally afterward, consistent with the OS main thread being genuinely unwedged. This is
+  a falsifiable, direct-observation signal — `attached=true` comes from the CR-02 read-back
+  (`child.isSheet()` + pointer-compared `parent.attachedSheet()`) executing AFTER
+  `beginSheet_completionHandler` returned, unlike CR-02's original defect where
+  `sheet_presented=true` meant nothing more than "the dispatch didn't time out."
+
+  SCOPE CAVEAT (binding — read before treating this session as closing the phase): this
+  verification proves gate item 1 (sheet ATTACHMENT) only, live-hardware-confirmed via the
+  above read-back signal. It does NOT prove the rest of the 34.4.2 live gate: items 2-6
+  (close affordance / bare-Esc cancel, in-field autofill glyph, Cmd+V,
+  `GAMELIB_AUTOFILL_GLYPH=0` kill switch, hidden-reveal + Epic checks) remain unmeasured in
+  this session, and the un-losability sub-checks (cannot be ordered behind main window,
+  survives minimize/restore) were not separately exercised in this run. The phase does NOT
+  close on this result alone — a full 6/6 live gate re-run is still owed at the phase level.
 files_changed:
-  - src-tauri/src/main.rs
-  - src-tauri/Cargo.toml
-  - src-tauri/Cargo.lock
+  - src-tauri/src/main.rs (present_login_window_as_sheet restructured across all three
+    rounds: CR-01 hidden-build + CR-02 read-back, F-34.4.2-04 diagnostics/watchdog,
+    F-34.4.2-05 SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY const + dispatch2 deferral; also
+    humble_login_open's LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT-bounded fallback logic)
+  - src-tauri/Cargo.toml (dispatch2 = "0.3.1" added as an explicit direct macOS-target
+    dependency; already resolved transitively via tao/objc2-core-foundation/
+    objc2-core-graphics/rfd, so no new crate/version entered the tree)
+  - src-tauri/Cargo.lock (single line: dispatch2 promoted from transitive-only to also a
+    direct dependency of gamelib-shell)
+  - .planning/debug/white-window-not-sheet-cr01.md
