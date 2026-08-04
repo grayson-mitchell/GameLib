@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "GAP CYCLE 5 COMPLETE 2026-08-02 -- all five plans (34.5-38..42) executed. The third blocking live gate (`34.5-LIVE-GATE-RERUN-2.md`, contract authored with `verdict: null` by plan 40, RUN by plan 41) recorded **verdict FAIL**: `items_passed: 0`, `items_failed: 2` (item 2 GOG, item 4 shortcuts), `items_blocked: 1` (item 1 Epic), `items_not_attempted: 2` (item 3 Amazon, item 5 Wine) -- the four counters reconcile to 5. Per D-08 **Phase 34.5 does NOT close**; the run lands in TWO of the routing table's four branches (the FAIL row and the NOT-ATTEMPTED row), both routing to gap cycle 6. The run spanned two sessions with DIFFERENT secret-store arms -- session A (21:23:55) `keyring`, a deviation from D-CYCLE5-B, and session B (21:42:53) `dev-vault` -- both preserved as `~/Library/Logs/GameLib/gamelib.log.34.5-g6-gate3-sessionA`/`-sessionB` after the live log ROTATED mid-gate and lost the run (F-34.5-G6-15). REAL ADVANCES, not consolation: **F-34.5-G6-02 is CLOSED, live-proven** -- GOG's full backend chain ran end to end and persisted 7 titles, with `phase=idle (login completed, library refresh triggered)` firing TWICE where run 2 produced zero such lines, moving the failure to a new frontend-render-only layer; **items 4 and 5 carry a result for the FIRST TIME in this phase's history** (item 4 FAIL with three named root causes, item 5 NOT ATTEMPTED as an explicit recorded refusal); **U-34.5-09 RETIRED**. Nine new findings `F-34.5-G6-07..15` recorded observation-only; four new ledger rows `U-34.5-12..15` created under Rule 2. **U-34.5-01 and U-34.5-10 stay OPEN but their REASON CHANGED** -- session A used the real keyring arm, so they are no longer open merely because a dev vault was in use: U-34.5-01's condition (4) failed with zero successful `SidecarKeyringSlotStore` reads, and 34.5-35's raised constants are now live-OBSERVED (`ms=120000`, ~45s read bound) but still NOT live-PROVEN. **Largest finding is bigger than this phase**: `getInstallInfo` is unported AND absent from `IPC-PORT-INVENTORY.md` entirely (F-34.5-G6-10 / U-34.5-14), so that document's own \"Phase 35 must not run while any channel below is unported\" rule cannot catch it -- the inventory is not exhaustive by an UNKNOWN amount, and auditing the real preload surface is a Phase 35 precondition. Plans 34.5-29/30/31 remain HALTED and superseded, byte-unchanged on disk. Phase 34.6 and Phase 35 dependency lines deliberately UNTOUCHED -- the four-counter test (0/2/1/2, not 5/0/0/0) forbids it."
-last_updated: "2026-08-04T01:01:58.397Z"
-last_activity: 2026-08-04 -- Phase 34.4.2 planned; Epic descoped by user decision (Epic ships LAST, after all other runners are proven)
+stopped_at: Completed 34.4.2-01-PLAN.md
+last_updated: "2026-08-04T01:50:44.302Z"
+last_activity: 2026-08-04 -- Phase 34.4.2 plan 01 complete; next plan 02
 progress:
   total_phases: 18
   completed_phases: 13
   total_plans: 197
-  completed_plans: 179
-  percent: 91
+  completed_plans: 181
+  percent: 92
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.5 — tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc
+**Current focus:** Phase 34.4.2 — macos-login-window-ux-modal-child-window-attachment-in-field
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -478,8 +478,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — GAP CYCLE 5 COMPLETE; third blocking gate RAN and FAILED 0/5 — **phase does NOT close** (supersedes cycles 3 and 4; plans 34.5-29/30/31 stay HALTED and superseded per 34.5-38-PLAN.md's disposition, byte-unchanged on disk and deliberately unticked in ROADMAP.md)
-Plan: 39 of 39 complete — all in-scope plans done (recounted from the phase directory 2026-08-02: 42 `*-PLAN.md`, 39 `*-SUMMARY.md`; the three without a SUMMARY are 34.5-29/30/31, HALTED and SUPERSEDED rather than pending, so the denominator for this phase's real scope is 39, not 42). Gap cycle 5 was 34.5-38..42 across 5 sequential waves; plan 41 ran the third blocking gate (verdict FAIL, `items_passed 0` / `items_failed 2` / `items_blocked 1` / `items_not_attempted 2`) and plan 42 propagated that verdict everywhere and resolved the ledger.
+Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — EXECUTING
+Plan: 2 of 6
 
 **Next action:** `/gsd-plan-phase 34.5 --gaps` — gap cycle 6. Named here once, deliberately nowhere else. Scope it around: the GOG frontend-render defect (F-34.5-G6-12 / U-34.5-07, where 7 titles persist to disk and the Library UI shows none); the dead `nativeImage` sidecar stub that structurally blocks every macOS `.app` shortcut (F-34.5-G6-07 / U-34.5-12); the Electron-shaped Steam LaunchOptions the Tauri shell ignores (F-34.5-G6-09 / U-34.5-13); **an audit of the real preload channel surface against `IPC-PORT-INVENTORY.md`, which is a Phase 35 precondition and whose incompleteness is of unknown extent** (F-34.5-G6-10 / U-34.5-14); `addToSteam` dropping its return value (F-34.5-G6-08 / U-34.5-15); the still-unattempted items 3 and 5; and the `REQUIREMENTS.md` inconsistency where REQ-34.5-01/02/03/04/05/12 sit checked `[x]` while carrying gate conditions that have now failed three times (deferred-items item 22). Epic (item 1) stays parked by explicit developer decision and is NOT this cycle's blocker.
 
@@ -2307,6 +2307,13 @@ NOTE (34.5-28): the same splice-into-historical-prose bug recurred yet again thi
 `state.update-progress` overwrote this note's own `93%` with `94%` (this session's own computed
 plan-based percent), corrupting the historical record above yet again. Hand-corrected back to
 `93%` per this cluster's own established convention.
+NOTE (34.4.2-01): the same splice-into-historical-prose bug recurred yet again this session --
+`state.update-progress` overwrote this note's own `94%` with `92%` (this session's own computed
+plan-based percent, correct for the frontmatter's `completed_plans: 181` but wrong here), the
+same "recurring `**Progress:**[...]NN%`" splice site every prior note in this cluster documents.
+Hand-corrected back to `94%` per this cluster's own established convention -- the real current
+value lives in the frontmatter `progress.percent` field and in the body `Plan: 2 of 6` line
+above, both hand-verified this session, not in this historical sentence.
 NOTE (34.5-24): the same splice-into-historical-prose bug recurred yet again this session --
 `state.update-progress` overwrote this note's own `91%` with `92%` (this session's own computed
 plan-based percent), corrupting the historical record above yet again. Hand-corrected back to
@@ -2338,7 +2345,7 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 `STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Ready to execute
+Status: Executing Phase 34.4.2
 
 > NOTE (34.3-08): `state.advance-plan` again spliced this session's current status
 > ("Phase complete — ready for verification") into this HISTORICAL "Prior phase: 34.1"
@@ -2569,7 +2576,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-04 -- **Phase 34.4.2 PLANNED** (macOS login-window UX: modal child-window attachment + in-field autofill affordance, from spikes 019-022). Inserted after 34.4.1 in ROADMAP.md (the sdk insert tool mis-placed it before 34.4.1 and left a stub goal -- hand-corrected). 6 plans in 6 sequential waves (every implementing plan edits `src-tauri/src/main.rs`, so no wave sharing), plan 06 is a non-autonomous blocking live gate. Checker cycle: 1 blocker (wrong testContainment path in plan 05, verify command exited 1 against the live tree) + 2 warnings fixed and re-verified 0-blockers; 2 cosmetic prose leftovers fixed by the orchestrator. No CONTEXT.md / RESEARCH.md / UI-SPEC by explicit user choice (spikes are the research); Nyquist VALIDATION.md absent for this run. Requirements REQ-34.4.2-01..10 are minted into REQUIREMENTS.md by plan 01 at execution time. **USER SCOPE DECISION (LOCKED): Epic is implemented LAST, after all other runners are ported successfully** — the Epic pristine-surface arm was descoped from all 6 plans in revision (commit 17da5d652): no phase code may attach to/inject into/resolve/exercise `open_pristine_epic_login_window`; enforcement is REQ-34.4.2-10 + the `PHASE_34_4_2_NEW_SYMBOLS` scope guard (generalized to both Epic regions) + zero-line-diff acceptance criteria; gate item 6(b) is an Epic ABSENCE check (parked 403 appearing does not fail it); `GAMELIB_AUTOFILL_GLYPH=0` kill switch KEPT and re-justified on the remaining surface (gate item 5 = kill-switch efficacy on Humble); the Epic follow-up phase inherits call-sites + `get_window` fallback only (recorded in EPIC-DEFERRED / deferred-items.md), not a redesign. Second checker pass: VERIFICATION PASSED, 0 blockers; 2 precision warnings fixed by orchestrator. Phase 34.5 gap cycle 6 remains the active blocker and is untouched by this planning.
+Last activity: 2026-08-04 -- Phase 34.4.2 plan 01 complete (REQ-34.4.2-01..10 minted, login-window handle resolvers + EPIC-UNTOUCHED guard); next plan 02
 Prior activity: 2026-08-03 - **F-34.5-G6-01 CLOSED and the embedded Epic login WORKS under Tauri.** Debug session epic-login-non-interactive RESOLVED and archived to .planning/debug/resolved/. The pre-auth 403 was Talon fingerprinting Tauri's injected globals (window.isTauri et al, non-configurable AND non-writable, correctly proven unmaskable from JS) — fixed not by hiding them but by not creating them: Epic's login window is now a webview-less tauri::WindowBuilder window with a raw WKWebView attached, zero initialization scripts, own WKNavigationDelegate (03b75211a, macOS+Epic only). The separate post-auth defect fell out of the same change — decidePolicyForNavigationAction sees the localhost redirect WKWebView silently refuses to LOAD — so the OAuth code is captured natively and NO JavaScript is injected into Epic's page anywhere; the old observer/shim/on_navigation trio was deleted (da529ca86, -400 lines). Four supporting defects found only by live hardware testing: WKUIDelegate (post-password hang), windowless WKWebsiteDataStore cookie clear (logout was silently leaving session cookies, so every "login" was a re-auth against a blank in-transit page), an NSEvent key monitor for Cmd+V (tao swallows the key equivalent; the Edit menu's paste: always worked), and humble_login_close falling back to get_window (the window never closed on success and every logout leaked an invisible window) — b76d58ee6, b8e73e437. Live-proven 20:26-20:28: the FIRST genuinely logged-out Epic login ever driven under Tauri, nav host=www.epicgames.com → nav host=localhost → status=captured → 15 games & DLCs, operator-confirmed in the UI; window self-close confirmed 22:03. Ledger rows U-34.5-06 (properly retired) and U-34.5-11 (retired as SUBJECT DELETED, never exercised — not a pass) updated (fe8a0ca2b). CARRIED FORWARD, unproven: a UA of Safari engine tokens + " EpicGamesLauncher" satisfies both Epic's launcher routing and hCaptcha's engine check, but the run that passed auto-logged-in and never rendered a captcha, so it was deliberately NOT defaulted. STANDING CONSTRAINT: Epic can demand a captcha at any time and the launcher UA its OAuth flow requires is one hCaptcha cannot initialize under, so the embedded window has a failure mode SIDLogin structurally does not — keep SIDLogin as Epic's PRIMARY tile. Phase 34.5 closure UNAFFECTED and still open. Prior same-day activity: shipped two live-verified debug fixes to fork PR #3: steam-refresh-hung-on-startup (22a9a328d, mount-time refresh gate now includes Steam) and login-logout-wipes-library (6f194fabe, per-runner scoped refresh, logout no longer reloads the app; Steam sync cache-hydration deferred into the IPC-port effort)
 ("Finalizing sign-in with <Runner>…" + spinner through the 5-27s token exchange) plus the
 cancel-path fix all the way down to Rust window-close detection — a user-closed OAuth popup now
@@ -3212,6 +3219,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P34 | 35min | 2 tasks | 3 files |
 | Phase 34.5 P35 | 55min | 2 tasks | 5 files |
 | Phase 34.5 P36 | 45min | 3 tasks | 6 files |
+| Phase 34.4.2 P01 | 25min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -3610,6 +3618,8 @@ Recent decisions affecting current work:
 - [Phase 34.5]: No env-var escape hatch or Keychain bypass added for the keyring-race fix -- T-34.5-C4-34 accept-and-forbid holds; dev-only vault stays plan 34.5-36's scope
 - [Phase 34.5-36]: devSecretVault.ts is env-gated (GAMELIB_DEV_SECRET_VAULT=1 exact match), packaged-build-refused, and wired into bootstrap.ts as an EXCLUSIVE branch against the two keyring stores — prevents migrateHumbleSecrets() firing underneath a vault-enabled boot; U-34.5-01 records the Keychain path as UNPROVEN whenever the vault is in use
 - [Phase 34.5-37]: F-34.5-G6-01 second Epic discriminator (Electron-vs-Tauri) verdict **E1 SELECTED**: Electron's Epic login form accepted a full credential exchange (real login completed, contradicting the contract's own no-credentials precondition, recorded as a named deviation) while Tauri's stayed non-interactive across two full 300s timeouts on the identical EPIC_LOGIN_URL -- implicates the Tauri/WKWebView seam specifically, not an Epic-side change independent of the port. Routes to instrumenting the login window's own console/script-error signal to confirm/refute R2; USER_AGENTS/EPIC_LOGIN_URL/matchOAuthRedirect remain untouched. U-34.5-06 stays OPEN (no status=captured reached on either Tauri attempt). Gap cycle 4 (plans 32-37, both waves) is now fully executed; the blocking five-item gate is still NOT authored/run this cycle.
+- [Phase 34.4.2-01]: login_window_wk_webview captures the WKWebView address through Arc<Mutex<Option<usize>>>, not a plain Cell -- with_webview requires Send + 'static, which a stack-borrowed Cell reference cannot satisfy
+- [Phase 34.4.2-01]: login_window_ns_window deliberately omits an app.get_window(label) fallback for the pristine Epic window (REQ-34.4.2-10) -- an unused branch that resolves it is still a code path that does
 
 ### Pending Todos
 
@@ -3688,8 +3698,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-02T21:10:00.000Z
-Stopped at: Completed 34.5-40-PLAN.md
+Last session: 2026-08-04T01:50:44.288Z
+Stopped at: Completed 34.4.2-01-PLAN.md
   This session (sequential executor): executed 34.5-40 (gap cycle 5, wave 3 -- author the third
   blocking gate contract). Task 1 (docs, commit `1f4932a43`): frontmatter (`verdict: null`), a
   "why this run exists" recap naming every fix landed since run 2 by plan number (34.5-23, -26,
