@@ -133,3 +133,12 @@ question requires otherwise.
   extends 016's `windowNumber` convention. Match src-tauri's `Cargo.toml` verbatim for the
   objc2 crates AND remember `tauri`'s `unstable` feature is required for
   `tauri::WindowBuilder`/`get_window` (raw-window shells, multiwebview).
+- **Menus are their own windows.** A per-window `screencapture -l<id>` grab (016) MISSES a
+  popped NSMenu. Use a region grab (`-R x,y,w,h`) scoped to the owning window's screen rect —
+  wider regions sweep in the user's unrelated windows. NSWindow frames are bottom-left origin;
+  `-R` is top-left, so flip against `NSScreen.mainScreen().frame().size.height`. *(022)*
+- **A synthesized event is not a user event — prove the hit before trusting a negative.**
+  Log `document.elementFromPoint` at the click centre (the coordinate path CSS px → view
+  coords → `convertPoint:toView:nil` is easy to get wrong by a title bar), and compare the
+  result against the same probe driven by a REAL click. In 022 the same verified element
+  yielded two DIFFERENT menus by event provenance. *(022)*

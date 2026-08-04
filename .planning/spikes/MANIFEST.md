@@ -385,6 +385,18 @@ capabilities: (1) a **modal** login window that cannot get lost behind the main 
   not Tauri `.parent()`** — one runtime-switchable code path covers the wry AND pristine
   surfaces; un-losable behind main; typing/paste/AutoFill panel keep working. Re-assert
   z-order after main deminiaturizes (child returns behind main until re-raised). *(021)*
+- **An in-field autofill affordance IS shippable — via synthesized right-click.** A key glyph
+  injected into the password field posts `rightMouseDown`/`Up` at that field; macOS shows its
+  real context menu **including AutoFill → Passwords** (screenshot-proven). All public API.
+  Costs one menu hop vs a browser's inline dropdown. *(022)*
+- **The AutoFill panel cannot be opened directly, at any price.** The item is injected at menu
+  DISPLAY time and is absent from the NSMenu object even for a real user right-click (verified
+  via a `willOpenMenu:` capture on a WKWebView subclass + a post-display re-dump); WKWebView
+  exposes no autofill selector (only W3C digital-credentials). Nothing to capture or re-fire.
+  *(022)*
+- **Never trust a synthesized-event negative without comparing to a real event.** Same
+  password field, verified by `elementFromPoint`: a real click yields a 3-item secure-field
+  menu, a synthesized one the 10-item generic text menu. *(022)*
 - **Sheet-mode login is forbidden without self-dismissal**: the sheet blocks the window
   holding any dismiss control, the store's page has no cancel, and sheets render no close
   button — an abandoning user is trapped (observed live). If ever used: auto-close on OAuth
@@ -396,4 +408,5 @@ capabilities: (1) a **modal** login window that cannot get lost behind the main 
 |---|------|------|-----------|---------|------|
 | 019 | dummy-oauth-store | standard | Given a local OAuth2 auth-code-grant provider, when a Tauri login window drives the flow end-to-end, then every step is observable and the harness is reusable for UI/form iteration | ✓ VALIDATED (2 consecutive scripted runs exit 0; replay + PKCE-tamper rejected; warm-session flow 75 ms) | oauth, pkce, login, webview, harness |
 | 020 | keychain-autofill-login-webview | standard | Given the dummy store's login form in (a) a wry WebviewWindow and (b) a pristine raw WKWebView, when the user focuses the credential fields, then macOS Keychain/password-manager autofill offers to fill — or the gating (web-browser entitlement) is proven and fallbacks enumerated | ⚠ PARTIAL (inline autofill + save-prompt platform-blocked on macOS 26, both surfaces, HTTP & HTTPS; BUT right-click → AutoFill → Passwords fills in both, and Cmd+V paste works in both) | keychain, autofill, wkwebview, entitlement |
+| 022 | programmatic-autofill-trigger | standard | Given a login WKWebView, when an in-app affordance tries to invoke the macOS AutoFill/Passwords panel programmatically, then the panel opens (L3) / a synthesized event pops the real menu with AutoFill (L2) / neither (L1) | ⚠ PARTIAL — **L2 achieved** (synthesized right-click pops the real menu WITH AutoFill, screenshot-proven, all public API); **L3 impossible** (the AutoFill item is never in the NSMenu — even for a real click — and WKWebView has no autofill selector) | autofill, keychain, wkwebview, nsmenu, event-synthesis |
 | 021 | modal-login-window | standard | Given the main Tauri window, when the login window opens modal (.parent() / NSWindow child / always-on-top), then it cannot be lost behind the main window and input+autofill still work | ✓ VALIDATED (child-window attachment RECOMMENDED — un-losable, input/autofill intact; sheet works but TRAPS the user without self-dismissal; oracle-proven restore-order gotcha) | modal, nswindow, child-window, sheet, window-management |
