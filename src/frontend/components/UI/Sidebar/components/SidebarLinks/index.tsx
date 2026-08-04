@@ -3,7 +3,6 @@ import {
   faGamepad,
   faSlidersH,
   faStore,
-  faUser,
   faUniversalAccess,
   faCoffee,
   faUserAlt,
@@ -55,13 +54,6 @@ export default function SidebarLinks() {
     location.pathname.includes('last-url')
   const isSettings = location.pathname.includes('settings')
   const isWin = platform === 'win32'
-
-  const loggedIn =
-    epic.username ||
-    gog.username ||
-    amazon.user_id ||
-    zoom.username ||
-    steam.username
 
   async function handleRefresh() {
     localStorage.setItem('scrollPosition', '0')
@@ -128,14 +120,6 @@ export default function SidebarLinks() {
 
   return (
     <div className="SidebarLinks Sidebar__section" data-tour="sidebar-menu">
-      {!loggedIn && (
-        <SidebarItem
-          icon={faUser}
-          label={t('button.login', 'Login')}
-          url="/login"
-          dataTour="sidebar-login"
-        />
-      )}
       <SidebarItem
         isActiveFallback={location.pathname.includes('gamepage')}
         url="/"
@@ -298,14 +282,12 @@ export default function SidebarLinks() {
         />
       )}
 
-      {loggedIn && (
-        <SidebarItem
-          url="/login"
-          icon={faUserAlt}
-          label={t('userselector.manageaccounts', 'Manage Accounts')}
-          dataTour="sidebar-manage-accounts"
-        />
-      )}
+      <SidebarItem
+        url="/login"
+        icon={faUserAlt}
+        label={t('userselector.manageaccounts', 'Manage Accounts')}
+        dataTour="sidebar-manage-accounts"
+      />
 
       <SidebarItem
         url="/accessibility"
