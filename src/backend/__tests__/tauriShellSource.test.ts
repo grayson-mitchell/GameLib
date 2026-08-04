@@ -731,7 +731,9 @@ const PHASE_34_4_2_NEW_SYMBOLS = [
   'LOGIN_CANCEL_EXFIL_PATH',
   'is_login_cancel_request',
   'login_cancel_strip_script',
-  'request_login_sheet_cancel'
+  'request_login_sheet_cancel',
+  // Plan 11 (WR-07/WR-01 fixes -- 34.4.2-REVIEW.md):
+  'register_presented_login_sheet'
 ]
 
 // Tests 3 and 4 below encode a LOCKED USER SCOPE DECISION (2026-08-04): Epic is implemented
@@ -1533,6 +1535,91 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
   // to change, not a planner's judgement (mirrors Plan 01/02/03/04's own Test 3/4/9/4/7
   // rationale verbatim).
   test("Test 8 (SCOPE GUARD, REQ-34.4.2-10, LOCKED USER SCOPE DECISION): neither open_pristine_epic_login_window NOR EpicPristineNavDelegate references any PHASE_34_4_2_NEW_SYMBOLS member, including this plan's own four new symbols", () => {
+    const code = loadMainRsCode()
+    const pristineBody = extractPristineLoginFnBody(code)
+    const delegateBody = extractEpicPristineNavDelegateBody(code)
+    for (const symbol of PHASE_34_4_2_NEW_SYMBOLS) {
+      expect(pristineBody).not.toContain(symbol)
+      expect(delegateBody).not.toContain(symbol)
+    }
+  })
+})
+
+// Phase 34.4.2 Plan 11 (gap cycle 2) — review-finding fixes on the item 2/3/5 routes:
+// WR-07 (never re-order a window that is already a presented sheet), WR-01 (a failed
+// endSheet: hop must not permanently strand the parent), WR-03 (top-frame-only cancel strip),
+// WR-04 (the strip's retry/observer must survive a throwing first build), IN-02 (the strip
+// must not advertise a keyboard affordance it cannot deliver). Live behaviour is NOT claimed
+// by any test below -- these are source guards only, per this plan's own acceptance criteria.
+describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes', () => {
+  /**
+   * Bounds the search to PRODUCTION code only -- everything before `mod tests {` -- mirroring
+   * Plan 08's own identical helper and its rationale verbatim.
+   */
+  function productionCode(code: string): string {
+    const testModStart = code.indexOf('mod tests {')
+    expect(testModStart).toBeGreaterThan(-1)
+    return code.slice(0, testModStart)
+  }
+
+  test('Test 1 (WR-07): .makeKeyAndOrderFront(None) — the CALL form, not the bare token, which also appears in the doc comment and the new WARN literal — appears exactly once in the comment-stripped PRODUCTION source, and the nearest enclosing if-statement condition before it references isSheet()', () => {
+    const code = productionCode(loadMainRsCode())
+    const callMatches = code.match(/\.makeKeyAndOrderFront\(None\)/g) ?? []
+    expect(callMatches.length).toBe(1)
+
+    const callIdx = code.indexOf('.makeKeyAndOrderFront(None)')
+    expect(callIdx).toBeGreaterThan(-1)
+
+    const precedingIfIdx = code.lastIndexOf('if ', callIdx)
+    expect(precedingIfIdx).toBeGreaterThan(-1)
+    const conditionEnd = code.indexOf('{', precedingIfIdx)
+    expect(conditionEnd).toBeGreaterThan(precedingIfIdx)
+    expect(conditionEnd).toBeLessThan(callIdx)
+    const condition = code.slice(precedingIfIdx, conditionEnd)
+    expect(condition).toContain('isSheet()')
+  })
+
+  test('Test 2 (WR-01, ORDERING): dismiss_login_window_sheet\'s sliced body calls register_presented_login_sheet( at least twice, each at an index strictly greater than list.retain( -- removal still happens first, re-registration only after a failed hop', () => {
+    const code = loadMainRsCode()
+    const start = code.indexOf('fn dismiss_login_window_sheet(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    expect(end).toBeGreaterThan(start)
+    const body = code.slice(start, end)
+
+    const retainIdx = body.indexOf('list.retain(')
+    expect(retainIdx).toBeGreaterThan(-1)
+
+    const registerMatches = [...body.matchAll(/register_presented_login_sheet\(/g)]
+    expect(registerMatches.length).toBeGreaterThanOrEqual(2)
+    for (const match of registerMatches) {
+      expect(match.index as number).toBeGreaterThan(retainIdx)
+    }
+  })
+
+  test('Test 3 (WR-01, T-34.4.2-08 preserved): register_presented_login_sheet( appears exactly three times as a call site in production source -- the present-path registration plus the two dismiss failure arms', () => {
+    const code = productionCode(loadMainRsCode())
+    // Negative lookbehind excludes the `fn register_presented_login_sheet(` definition itself.
+    const callSites =
+      code.match(/(?<!fn )register_presented_login_sheet\(/g) ?? []
+    expect(callSites.length).toBe(3)
+  })
+
+  test('Test 5 (SCOPE GUARD, REQ-34.4.2-10, LOCKED USER SCOPE DECISION): neither open_pristine_epic_login_window NOR EpicPristineNavDelegate references register_presented_login_sheet or any other PHASE_34_4_2_NEW_SYMBOLS member', () => {
+    function extractPristineLoginFnBody(code: string): string {
+      const start = code.indexOf('fn open_pristine_epic_login_window(')
+      expect(start).toBeGreaterThan(-1)
+      const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+      expect(end).toBeGreaterThan(start)
+      return code.slice(start, end)
+    }
+    function extractEpicPristineNavDelegateBody(code: string): string {
+      const start = code.indexOf('define_class!(')
+      expect(start).toBeGreaterThan(-1)
+      const end = code.indexOf('impl EpicPristineNavDelegate {', start)
+      expect(end).toBeGreaterThan(start)
+      return code.slice(start, end)
+    }
     const code = loadMainRsCode()
     const pristineBody = extractPristineLoginFnBody(code)
     const delegateBody = extractEpicPristineNavDelegateBody(code)

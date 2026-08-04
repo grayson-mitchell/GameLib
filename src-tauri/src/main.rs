@@ -1802,8 +1802,12 @@ fn synth_autofill_mouse_event(
 ///      event is EVER posted.
 ///   5. Convert to window coordinates via `convertPoint:toView:`.
 ///   6. Resolve the `NSWindow` from the view.
-///   7. `makeKeyAndOrderFront` (spike 022: the menu will not appear on a non-key window), then
-///      post exactly two events built through `synth_autofill_mouse_event`.
+///   7. `makeKeyAndOrderFront` ONLY when the target is not already a presented sheet (spike
+///      022's "the menu will not appear on a non-key window" measurement was taken under the
+///      RETIRED child-window mechanism; under sheet presentation the window is already key by
+///      construction, and re-ordering a presented sheet is a live mid-session detachment risk
+///      -- WR-07, `34.4.2-REVIEW.md`). Then post exactly two events built through
+///      `synth_autofill_mouse_event`.
 ///   8. Log exactly one success line: label, the four numbers, the two converted coordinates,
 ///      and `hit_id`/`hit_tag`/`hit_type` -- never the URL, origin, or page title
 ///      (T-34.4.2-19).
@@ -1931,9 +1935,20 @@ fn post_autofill_right_click(app: &AppHandle, label: &str, req: &AutofillRequest
             return;
         };
 
-        // 7. makeKeyAndOrderFront, then post exactly two events -- the sole two NSEventType
-        // variants this function ever constructs.
-        window.makeKeyAndOrderFront(None);
+        // 7. makeKeyAndOrderFront -- but ONLY when the target is not already a presented
+        // sheet (WR-07, `34.4.2-REVIEW.md`): a presented sheet is key by construction, and
+        // independently re-ordering it in the window list is exactly the operation that has
+        // broken attachment classes before. Skipping the call when isSheet() is true removes
+        // the only known route by which the autofill poster could detach a live sheet
+        // mid-session. Then post exactly two events -- the sole two NSEventType variants this
+        // function ever constructs.
+        if window.isSheet() {
+            eprintln!(
+                "[shell] post_autofill_right_click: '{label_owned}' target is a presented sheet -- skipping makeKeyAndOrderFront (already key, WR-07)"
+            );
+        } else {
+            window.makeKeyAndOrderFront(None);
+        }
         let Some(mtm) = objc2::MainThreadMarker::new() else {
             eprintln!(
                 "[shell] WARN: post_autofill_right_click: '{label_owned}' no MainThreadMarker -- skipping"
@@ -2928,6 +2943,20 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
         return false;
     }
 
+    register_presented_login_sheet(label);
+    true
+}
+
+/// Extracted from `present_login_window_as_sheet`'s own registration block (WR-01,
+/// `34.4.2-REVIEW.md`) so `dismiss_login_window_sheet`, below, can re-run the EXACT same
+/// dedup-on-insert + `PRESENTED_LOGIN_SHEETS_CAP` eviction semantics (T-34.4.2-08's
+/// bounded-growth guarantee, preserved verbatim) when a failed `endSheet:` hop must leave the
+/// label re-authorized for a retry, not only when a sheet is first confirmed attached. Called
+/// from exactly three sites: the present-path registration below (on confirmed attachment
+/// only -- CR-02's invariant is not relaxed here) and the two dismiss-failure re-registration
+/// arms in `dismiss_login_window_sheet`.
+#[cfg(target_os = "macos")]
+fn register_presented_login_sheet(label: &str) {
     if let Ok(mut guard) = PRESENTED_LOGIN_SHEETS.lock() {
         let list = guard.get_or_insert_with(Vec::new);
         if !list.iter().any(|existing| existing == label) {
@@ -2937,7 +2966,6 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
             list.push(label.to_string());
         }
     }
-    true
 }
 
 /// Mirror of `present_login_window_as_sheet`, above: resolves both `NSWindow`s, hops to the
@@ -2967,6 +2995,15 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
 ///
 /// Never fatal, never logs URL/origin/title content -- same discipline as
 /// `present_login_window_as_sheet`, above.
+///
+/// WR-01 fix (`34.4.2-REVIEW.md`): removal-first is unconditional, but it is REVERSIBLE on a
+/// failed AppKit hop. If the main-thread dispatch fails, or its own 10s bound expires with no
+/// confirmation the closure ran, the label is re-registered via `register_presented_login_sheet`
+/// before this function returns -- otherwise both cancel routes (the strip, the Esc monitor)
+/// and any retry would be permanently membership-gated shut against a sheet that may still be
+/// presented, stranding the parent window for the process lifetime with no remaining dismissal
+/// route. The healthy `child_addr == None` path below ("already gone by the time Destroyed
+/// fires") deliberately does NOT re-register -- that path means the window is genuinely gone.
 #[cfg(target_os = "macos")]
 fn dismiss_login_window_sheet(app: &AppHandle, label: &str) {
     let was_presented = if let Ok(mut guard) = PRESENTED_LOGIN_SHEETS.lock() {
@@ -3014,12 +3051,23 @@ fn dismiss_login_window_sheet(app: &AppHandle, label: &str) {
         parent.endSheet(child);
         let _ = tx.send(());
     }) {
+        // WR-01: the dispatch never ran at all -- re-register so both cancel routes (strip,
+        // Esc) and any retry stay reachable rather than permanently membership-gated shut.
+        register_presented_login_sheet(label);
         eprintln!(
-            "[shell] WARN: login-window dismiss: main-thread dispatch failed for '{label}' ({e})"
+            "[shell] WARN: login-window dismiss: '{label}' main-thread dispatch failed -- re-registered as still presented so the cancel routes stay reachable ({e})"
         );
         return;
     }
-    let _ = rx.recv_timeout(Duration::from_secs(10));
+    if rx.recv_timeout(Duration::from_secs(10)).is_err() {
+        // WR-01: the dispatch was queued but never confirmed within the bound -- treat as
+        // unconfirmed, not successful, and re-register for the same reason as the dispatch-Err
+        // arm above.
+        register_presented_login_sheet(label);
+        eprintln!(
+            "[shell] WARN: login-window dismiss: '{label}' main-thread hop unconfirmed within 10s -- re-registered as still presented so the cancel routes stay reachable"
+        );
+    }
 }
 
 /// Fixes the live-observed Epic logout defect (`humble_login_clear_cookies` rejecting with
