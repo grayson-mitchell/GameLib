@@ -1170,3 +1170,148 @@ describe('Phase 34.4.2 Plan 03 — in-field autofill glyph and its cancelled-nav
     expect(featureBlock).not.toContain('WKUserScriptInjectionTime')
   })
 })
+
+// Phase 34.4.2 Plan 04 (REQ-34.4.2-05/06/07/08/10): the synthesized right-click poster that
+// closes the affordance -- turns the autofill request Plan 03 delivers into a debounced,
+// bounds-validated RightMouseDown/RightMouseUp pair posted at the password field's centre.
+// PHASE_34_4_2_NEW_SYMBOLS (above) already carries this plan's six new symbol names, so Plan
+// 01's own generalized Test 3 (both pristine regions) covers them without any change to that
+// describe block; Test 7 below re-asserts the same absence directly, scoped to this plan's own
+// file section, so deleting either describe block still leaves a guard in place (mirrors Plan
+// 02's Test 9 / Plan 03's Test 4 precedent).
+describe('Phase 34.4.2 Plan 04 — synthesized right-click poster', () => {
+  function extractHumbleLoginOpenArmBody(code: string): string {
+    const armStart = code.indexOf('"humble_login_open" => {')
+    expect(armStart).toBeGreaterThan(-1)
+    const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
+    expect(armEnd).toBeGreaterThan(armStart)
+    return code.slice(armStart, armEnd)
+  }
+
+  function extractPristineLoginFnBody(code: string): string {
+    const start = code.indexOf('fn open_pristine_epic_login_window(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    expect(end).toBeGreaterThan(start)
+    return code.slice(start, end)
+  }
+
+  function extractEpicPristineNavDelegateBody(code: string): string {
+    const start = code.indexOf('define_class!(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('impl EpicPristineNavDelegate {', start)
+    expect(end).toBeGreaterThan(start)
+    return code.slice(start, end)
+  }
+
+  /**
+   * Slices `code` from `fn post_autofill_right_click(` (inclusive) to the next top-level
+   * `#[cfg(target_os = "macos")]` attribute OR the next `\nfn ` token -- whichever comes
+   * first -- asserting the start was found and at least one candidate end marker was found
+   * before slicing (an `indexOf` miss returning -1 must fail loudly, never silently slice to
+   * the file start/end).
+   */
+  function extractPostAutofillRightClickBody(code: string): string {
+    const start = code.indexOf('fn post_autofill_right_click(')
+    expect(start).toBeGreaterThan(-1)
+    const cfgEnd = code.indexOf('#[cfg(target_os = "macos")]', start)
+    const fnEnd = code.indexOf('\nfn ', start)
+    const candidates = [cfgEnd, fnEnd].filter((idx) => idx > start)
+    expect(candidates.length).toBeGreaterThan(0)
+    const end = Math.min(...candidates)
+    return code.slice(start, end)
+  }
+
+  test('Test 1: post_autofill_right_click( is CALLED exactly ONCE in the file, and that call site is inside the humble_login_open arm slice', () => {
+    const code = loadMainRsCode()
+    // Negative lookbehind excludes the `fn post_autofill_right_click(` definition itself.
+    const fileCallSites =
+      code.match(/(?<!fn )post_autofill_right_click\(/g) ?? []
+    expect(fileCallSites.length).toBe(1)
+
+    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armCallSites =
+      armBody.match(/(?<!fn )post_autofill_right_click\(/g) ?? []
+    expect(armCallSites.length).toBe(1)
+  })
+
+  test('Test 2 (ORDERING): inside post_autofill_right_click\'s sliced body, clamp_point_to_view_bounds is referenced BEFORE the first postEvent_atStart -- the bounds refusal cannot be bypassed by reordering', () => {
+    const code = loadMainRsCode()
+    const body = extractPostAutofillRightClickBody(code)
+    const clampIdx = body.indexOf('clamp_point_to_view_bounds')
+    const postIdx = body.indexOf('postEvent_atStart')
+    expect(clampIdx).toBeGreaterThan(-1)
+    expect(postIdx).toBeGreaterThan(-1)
+    expect(clampIdx).toBeLessThan(postIdx)
+  })
+
+  test('Test 3 (ORDERING): inside the same sliced body, the debounce read (LAST_AUTOFILL_POST) precedes login_window_wk_webview -- a flooded request must be rejected before it ever touches AppKit', () => {
+    const code = loadMainRsCode()
+    const body = extractPostAutofillRightClickBody(code)
+    const debounceIdx = body.indexOf('LAST_AUTOFILL_POST')
+    const webviewIdx = body.indexOf('login_window_wk_webview')
+    expect(debounceIdx).toBeGreaterThan(-1)
+    expect(webviewIdx).toBeGreaterThan(-1)
+    expect(debounceIdx).toBeLessThan(webviewIdx)
+  })
+
+  test('Test 4 (RESTRICTION): the sliced body constructs exactly two NSEventType:: variants -- RightMouseDown and RightMouseUp -- and contains no LeftMouse, no KeyDown, no ScrollWheel', () => {
+    const code = loadMainRsCode()
+    const body = extractPostAutofillRightClickBody(code)
+    const variantMatches = body.match(/NSEventType::/g) ?? []
+    expect(variantMatches.length).toBe(2)
+    expect(body).toContain('NSEventType::RightMouseDown')
+    expect(body).toContain('NSEventType::RightMouseUp')
+    expect(body).not.toContain('LeftMouse')
+    expect(body).not.toContain('KeyDown')
+    expect(body).not.toContain('ScrollWheel')
+  })
+
+  test('Test 5 (RESTRICTION): the sliced body references ATTACHED_LOGIN_CHILDREN -- hidden reveal/clear windows are structurally unreachable from this path', () => {
+    const code = loadMainRsCode()
+    const body = extractPostAutofillRightClickBody(code)
+    expect(body).toContain('ATTACHED_LOGIN_CHILDREN')
+  })
+
+  test('Test 6 (NEGATIVE, permanent): the comment-stripped source contains none of the Digital Credentials / private credential-storage selectors -- re-asserts Plan 03\'s own guard here so deleting either describe block still leaves one in place', () => {
+    const code = loadMainRsCode()
+    expect(code).not.toContain('_showDigitalCredentialsPicker')
+    expect(code).not.toContain('_dismissDigitalCredentialsPicker')
+    expect(code).not.toContain('_canUseCredentialStorage')
+    expect(code).not.toContain('_setCanUseCredentialStorage')
+  })
+
+  // Test 7 exists because the pristine Epic surface is excluded by a LOCKED USER SCOPE
+  // DECISION (2026-08-04), not by a technical limitation -- Epic is implemented LAST, after
+  // every other runner is ported and proven. Loosening this test requires the user's decision
+  // to change, not a planner's judgement (mirrors Plan 01's own Test 3/4 rationale verbatim).
+  test('Test 7 (SCOPE GUARD, REQ-34.4.2-10, LOCKED USER SCOPE DECISION): neither open_pristine_epic_login_window NOR EpicPristineNavDelegate references any PHASE_34_4_2_NEW_SYMBOLS member, including this plan\'s own six new symbols', () => {
+    const code = loadMainRsCode()
+    const pristineBody = extractPristineLoginFnBody(code)
+    const delegateBody = extractEpicPristineNavDelegateBody(code)
+    for (const symbol of PHASE_34_4_2_NEW_SYMBOLS) {
+      expect(pristineBody).not.toContain(symbol)
+      expect(delegateBody).not.toContain(symbol)
+    }
+  })
+
+  test('Test 8: synth_autofill_mouse_event is the SOLE construction site -- mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure appears exactly once in the whole comment-stripped source', () => {
+    const code = loadMainRsCode()
+    const matches =
+      code.match(
+        /mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure/g
+      ) ?? []
+    expect(matches.length).toBe(1)
+
+    const start = code.indexOf('fn synth_autofill_mouse_event(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf(
+      'fn post_autofill_right_click(',
+      start
+    )
+    expect(end).toBeGreaterThan(start)
+    expect(code.slice(start, end)).toContain(
+      'mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure'
+    )
+  })
+})
