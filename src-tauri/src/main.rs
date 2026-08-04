@@ -455,6 +455,14 @@ static LOGIN_WINDOW_EVENTS: Mutex<Option<HashMap<String, Vec<Value>>>> = Mutex::
 /// between `humble_login_take_events` drains.
 const LOGIN_WINDOW_EVENTS_CAP: usize = 50;
 
+/// Canonical label for the app's single Tauri-managed main window (the only entry in
+/// `tauri.conf.json`'s `app.windows` array). Used both by the always-compiled tray/devtools
+/// call sites below (`main()`'s `.setup()` closure) and by the macOS-only login-window
+/// attachment helpers this phase adds (Phase 34.4.2 Plan 02) -- kept as a single plain
+/// `const`, not `#[cfg(target_os = "macos")]`-gated, so the label has exactly one definition
+/// across the whole file regardless of which call sites end up using it on a given platform.
+const MAIN_WINDOW_LABEL: &str = "main";
+
 /// Dev-only pre-page-script diagnostic (epic-login-non-interactive investigation,
 /// 2026-08-02, F-34.5-G6-01): injected as a Tauri `initialization_script()` on the LOGIN
 /// window ONLY (see the `humble_login_open` arm below), gated identically to that arm's
@@ -1919,9 +1927,10 @@ const EPIC_COOKIE_DOMAIN: &str = "epicgames.com";
 ///
 /// Side-effect free: never logs a label's URL or any page content.
 ///
-/// `#[allow(dead_code)]`: no caller in this plan -- plans 34.4.2-02/04 are the callers.
+/// Callers: `attach_login_window_as_child`/`detach_login_window_from_parent` (Phase 34.4.2
+/// Plan 02, below) and the deminiaturize re-raise observer (`main()`'s `.setup()`); plan
+/// 34.4.2-04 is a further caller.
 #[cfg(target_os = "macos")]
-#[allow(dead_code)]
 fn login_window_ns_window(app: &AppHandle, label: &str) -> Option<usize> {
     app.get_webview_window(label)
         .and_then(|w| w.ns_window().ok())
@@ -1966,6 +1975,185 @@ fn login_window_wk_webview(app: &AppHandle, label: &str) -> Option<usize> {
         Ok(()) => addr.lock().ok().and_then(|guard| *guard),
         Err(_) => None,
     }
+}
+
+/// Cap on `ATTACHED_LOGIN_CHILDREN`, below -- mirrors `LOGIN_WINDOW_EVENTS_CAP`'s discipline
+/// (T-34.4.2-08): an unbounded child-window list would be a denial-of-service surface if a
+/// caller somehow kept minting attached labels without ever detaching them. In practice at
+/// most one or two Tauri-managed login windows are ever open at once (Humble plus one OAuth
+/// runner), so this bound is generous, not a realistic ceiling.
+#[cfg(target_os = "macos")]
+const ATTACHED_LOGIN_CHILDREN_CAP: usize = LOGIN_WINDOW_EVENTS_CAP;
+
+/// Labels of the Tauri-managed login windows currently attached to `MAIN_WINDOW_LABEL` as
+/// AppKit child windows (`attach_login_window_as_child`, below), consulted by the
+/// deminiaturize re-raise observer (Phase 34.4.2 Plan 02 Task 2, installed in `main()`'s
+/// `.setup()`) to know which windows to bring back in front of `main` after it restores from
+/// the Dock. Insertion-ordered, deduplicated on insert, capped at
+/// `ATTACHED_LOGIN_CHILDREN_CAP` (T-34.4.2-08) -- a label is ALWAYS removed on detach, even
+/// when the underlying AppKit call could not run, so a destroyed window never lingers on this
+/// list (see `detach_login_window_from_parent`'s own doc comment, below).
+#[cfg(target_os = "macos")]
+static ATTACHED_LOGIN_CHILDREN: Mutex<Option<Vec<String>>> = Mutex::new(None);
+
+/// Attaches a VISIBLE Tauri-managed login window (Humble/GOG/Amazon -- REQ-34.4.2-10's
+/// locked scope; see `open_pristine_epic_login_window`'s own module-level scope note, above,
+/// for the full boundary) as an AppKit child window of the app's `main` window
+/// (REQ-34.4.2-01/02), so it can never be lost behind `main` on raise, and follows `main` on
+/// drag and into the Dock on minimize -- spike 021's measured `attach_child`
+/// (`login-window-ux-macos.md` S1's behaviour table). Called from `humble_login_open`'s
+/// `if visible` branch ONLY, after `.build()` succeeds: hidden reveal/clear windows this arm
+/// also builds have no user-visible presentation and pinning them to `main` would be
+/// meaningless.
+///
+/// Never fatal (T-34.1-22 discipline, matching this file's existing tray/devtools
+/// convention): a missing parent, a missing child, or a failed main-thread dispatch logs one
+/// `[shell] WARN: login-window attach: ...` line and returns `false` -- a login flow must
+/// never fail because its window could not be pinned. Returns `true` only once the AppKit
+/// call actually ran, so `humble_login_open`'s own presentation-record `eprintln!` can report
+/// `child_attached=true/false` as real machine evidence of what was attempted (mirroring that
+/// line's existing `focus_once`/`persistent_pin` discipline: REQUESTED, not proven -- the
+/// live z-order behaviour itself is plan 34.4.2-06's live gate alone to prove).
+///
+/// Never logs the URL, origin, or title -- only the label and a fixed reason string
+/// (T-34.4.1-21/-106 discipline).
+///
+/// Crosses the `run_on_main_thread` boundary with this file's existing `SendPtr` convention
+/// (see `open_pristine_epic_login_window`'s own `SendPtr` doc comment, above), moving the
+/// WHOLE wrapper into the closure and rebinding it inside (the Rust-2021 disjoint-capture
+/// rebinding this file already documents twice) -- not a second pointer-passing convention.
+/// Blocks on the dispatch via `mpsc_channel` + `rx.recv_timeout`, the same
+/// worker-blocks-on-a-channel shape `open_pristine_epic_login_window` and
+/// `clear_default_data_store_cookies_for_domain` both already use for this exact
+/// main-thread-confinement problem, so a failure is observable rather than fire-and-forget --
+/// though a timeout is still only a WARN, never a propagated error.
+#[cfg(target_os = "macos")]
+fn attach_login_window_as_child(app: &AppHandle, label: &str) -> bool {
+    let Some(parent_addr) = login_window_ns_window(app, MAIN_WINDOW_LABEL) else {
+        eprintln!(
+            "[shell] WARN: login-window attach: no NSWindow for '{MAIN_WINDOW_LABEL}' -- skipping"
+        );
+        return false;
+    };
+    let Some(child_addr) = login_window_ns_window(app, label) else {
+        eprintln!("[shell] WARN: login-window attach: no NSWindow for '{label}' -- skipping");
+        return false;
+    };
+
+    // SAFETY: see `SendPtr`'s doc comment on `open_pristine_epic_login_window`, above -- a
+    // bare address is not normally `Send`, but this wrapper is reconstructed into a live
+    // reference only from within the main-thread closure below.
+    struct SendPtr(*mut std::ffi::c_void);
+    unsafe impl Send for SendPtr {}
+    let parent_ptr = SendPtr(parent_addr as *mut std::ffi::c_void);
+    let child_ptr = SendPtr(child_addr as *mut std::ffi::c_void);
+
+    let (tx, rx) = mpsc_channel::<()>();
+    if let Err(e) = app.run_on_main_thread(move || {
+        // Forces Rust 2021 disjoint closure capture to move in the WHOLE `SendPtr` wrapper
+        // for each address, not just its inner raw-pointer field, which would bypass
+        // `SendPtr`'s `Send` impl entirely and fail to compile.
+        let parent_ptr = parent_ptr;
+        let child_ptr = child_ptr;
+        // SAFETY: both addresses were resolved moments ago via `login_window_ns_window`,
+        // which only returns `Some` for a live Tauri-managed `NSWindow`; reconstructed into
+        // live references only here, on the main thread.
+        let parent: &objc2_app_kit::NSWindow =
+            unsafe { &*(parent_ptr.0 as *const objc2_app_kit::NSWindow) };
+        let child: &objc2_app_kit::NSWindow =
+            unsafe { &*(child_ptr.0 as *const objc2_app_kit::NSWindow) };
+        // SAFETY: `parent`/`child` are both live `NSWindow`s reconstructed above.
+        unsafe {
+            parent.addChildWindow_ordered(child, objc2_app_kit::NSWindowOrderingMode::Above);
+        }
+        let _ = tx.send(());
+    }) {
+        eprintln!(
+            "[shell] WARN: login-window attach: main-thread dispatch failed for '{label}' ({e})"
+        );
+        return false;
+    }
+    if rx.recv_timeout(Duration::from_secs(10)).is_err() {
+        eprintln!(
+            "[shell] WARN: login-window attach: main-thread dispatch timed out for '{label}'"
+        );
+        return false;
+    }
+
+    if let Ok(mut guard) = ATTACHED_LOGIN_CHILDREN.lock() {
+        let list = guard.get_or_insert_with(Vec::new);
+        if !list.iter().any(|existing| existing == label) {
+            if list.len() >= ATTACHED_LOGIN_CHILDREN_CAP {
+                list.remove(0);
+            }
+            list.push(label.to_string());
+        }
+    }
+    true
+}
+
+/// Mirror of `attach_login_window_as_child`, above: resolves both `NSWindow`s, hops to the
+/// main thread, and calls `removeChildWindow:`. Called from `humble_login_open`'s existing
+/// `WindowEvent::Destroyed` hook (Quick task 260803-eee Task 5's close-detection arm, below)
+/// for every window that arm builds, not gated on `visible` -- a hidden reveal/clear window
+/// was never attached in the first place, so detaching it is a guaranteed no-op, and calling
+/// this unconditionally is simpler than threading `visible` through the event closure.
+///
+/// `label` is ALWAYS removed from `ATTACHED_LOGIN_CHILDREN` first, unconditionally, even
+/// when neither `NSWindow` resolves or the AppKit call cannot run (T-34.4.2-08) -- a
+/// destroyed window must never stay on the deminiaturize re-raise list (Task 2, in `main()`'s
+/// `.setup()`) forever. A child `NSWindow` that no longer resolves by the time `Destroyed`
+/// fires is treated as already healthy (this file's existing `humble_login_close`
+/// "already closed is healthy" convention) -- Cocoa itself already tears down the
+/// parent/child relationship when either window closes, so a no-op `removeChildWindow:` call
+/// here is not a correctness gap.
+///
+/// Never fatal, never logs URL/origin/title content -- same discipline as
+/// `attach_login_window_as_child`, above.
+#[cfg(target_os = "macos")]
+fn detach_login_window_from_parent(app: &AppHandle, label: &str) {
+    if let Ok(mut guard) = ATTACHED_LOGIN_CHILDREN.lock() {
+        if let Some(list) = guard.as_mut() {
+            list.retain(|existing| existing != label);
+        }
+    }
+
+    let Some(parent_addr) = login_window_ns_window(app, MAIN_WINDOW_LABEL) else {
+        eprintln!(
+            "[shell] WARN: login-window detach: no NSWindow for '{MAIN_WINDOW_LABEL}' -- skipping"
+        );
+        return;
+    };
+    let Some(child_addr) = login_window_ns_window(app, label) else {
+        // Already gone by the time Destroyed fires -- healthy, not an error (see doc
+        // comment above).
+        return;
+    };
+
+    struct SendPtr(*mut std::ffi::c_void);
+    unsafe impl Send for SendPtr {}
+    let parent_ptr = SendPtr(parent_addr as *mut std::ffi::c_void);
+    let child_ptr = SendPtr(child_addr as *mut std::ffi::c_void);
+
+    let (tx, rx) = mpsc_channel::<()>();
+    if let Err(e) = app.run_on_main_thread(move || {
+        let parent_ptr = parent_ptr;
+        let child_ptr = child_ptr;
+        // SAFETY: both addresses were resolved moments ago via `login_window_ns_window`,
+        // reconstructed into live references only here, on the main thread.
+        let parent: &objc2_app_kit::NSWindow =
+            unsafe { &*(parent_ptr.0 as *const objc2_app_kit::NSWindow) };
+        let child: &objc2_app_kit::NSWindow =
+            unsafe { &*(child_ptr.0 as *const objc2_app_kit::NSWindow) };
+        parent.removeChildWindow(child);
+        let _ = tx.send(());
+    }) {
+        eprintln!(
+            "[shell] WARN: login-window detach: main-thread dispatch failed for '{label}' ({e})"
+        );
+        return;
+    }
+    let _ = rx.recv_timeout(Duration::from_secs(10));
 }
 
 /// Fixes the live-observed Epic logout defect (`humble_login_clear_cookies` rejecting with
@@ -2748,10 +2936,9 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 // records only that Plan 27's `.theme(Some(tauri::Theme::Light))` call
                 // above was REQUESTED, mirroring this line's existing discipline --
                 // whether the field actually rendered legibly is plan 34.5-28's live
-                // check alone.
-                eprintln!(
-                    "[shell] humble_login_open: presentation requested visible=true width=900 height=700 center=true focus_once=true persistent_pin=false light_theme_requested=true"
-                );
+                // check alone. MOVED to after `.build()` by Phase 34.4.2 Plan 02 (still
+                // gated on this same `if visible` intent) so it can also record
+                // `child_attached` -- see the print call after `window` exists, below.
             }
             // Dev-only diagnostic instrumentation (epic-login-non-interactive
             // investigation, 2026-08-02): injects `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`
@@ -2812,6 +2999,33 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 })
                 .build()
                 .map_err(|e| format!("humble_login_open:build-failed:{e}"))?;
+            // AppKit child-window attachment (Phase 34.4.2 Plan 02, REQ-34.4.2-01/02) --
+            // macOS only. Pins a VISIBLE login window to `main` immediately once it exists
+            // so it can never be lost behind `main` on raise/drag/minimize. Hidden
+            // reveal/clear windows this arm also builds are never attached. The pristine
+            // Epic login window (`open_pristine_epic_login_window`) is deliberately NOT
+            // wired here or anywhere else -- REQ-34.4.2-10, locked user decision, Epic
+            // ships last. On Windows/Linux the login window keeps exactly today's
+            // free-floating behavior -- declared UNVERIFIED here, matching the skill's
+            // Constraints section.
+            #[cfg(target_os = "macos")]
+            let child_attached = if visible {
+                attach_login_window_as_child(app, &label)
+            } else {
+                false
+            };
+            #[cfg(not(target_os = "macos"))]
+            let child_attached = false;
+            if visible {
+                // F-4 machine record (Phase 34.4.1 Plan 24) -- see this arm's
+                // builder-setup block above for the full "why record this at all"
+                // rationale. `child_attached` was added by Phase 34.4.2 Plan 02, which
+                // also moved this print to AFTER `.build()`/attach so it could be
+                // included.
+                eprintln!(
+                    "[shell] humble_login_open: presentation requested visible=true width=900 height=700 center=true focus_once=true persistent_pin=false light_theme_requested=true child_attached={child_attached}"
+                );
+            }
             // Quick task 260803-eee Task 5: close-detection, added AFTER `.build()` because
             // `on_window_event` is a method on the built `WebviewWindow` handle
             // (`tauri-2.11.5/src/webview/webview_window.rs:1524`), not on the builder --
@@ -2848,9 +3062,18 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // event produced by that SAME programmatic close is written to a queue nothing reads
             // again, never observed as a spurious cancel.
             let close_event_label = label.clone();
+            #[cfg(target_os = "macos")]
+            let app_for_detach = app.clone();
             window.on_window_event(move |event| {
                 if matches!(event, tauri::WindowEvent::Destroyed) {
                     push_login_window_event(&close_event_label, login_event_value("closed", ""));
+                    // Mirror of the attach call above (Phase 34.4.2 Plan 02,
+                    // REQ-34.4.2-01/02): unconditional (not gated on `visible`) because a
+                    // hidden reveal/clear window was never attached in the first place,
+                    // so detaching it is a guaranteed no-op -- see
+                    // `detach_login_window_from_parent`'s own doc comment.
+                    #[cfg(target_os = "macos")]
+                    detach_login_window_from_parent(&app_for_detach, &close_event_label);
                 }
             });
             // Seed the title from the validated open URL's origin (Phase 34.5 Plan 27) so
@@ -3885,7 +4108,7 @@ fn main() {
                                 .on_menu_event(|app_handle, event| match event.id().as_ref() {
                                     "show" => {
                                         if let Some(window) =
-                                            app_handle.get_webview_window("main")
+                                            app_handle.get_webview_window(MAIN_WINDOW_LABEL)
                                         {
                                             let _ = window.show();
                                             let _ = window.set_focus();
@@ -3903,7 +4126,7 @@ fn main() {
                                     {
                                         let app_handle = tray.app_handle();
                                         if let Some(window) =
-                                            app_handle.get_webview_window("main")
+                                            app_handle.get_webview_window(MAIN_WINDOW_LABEL)
                                         {
                                             let _ = window.show();
                                             let _ = window.set_focus();
@@ -3932,7 +4155,7 @@ fn main() {
             // confirm the webview window actually exists.
             #[cfg(debug_assertions)]
             {
-                match app.get_webview_window("main") {
+                match app.get_webview_window(MAIN_WINDOW_LABEL) {
                     Some(window) => {
                         window.open_devtools();
                         eprintln!("[shell] devtools opened for 'main' webview (debug build)");
