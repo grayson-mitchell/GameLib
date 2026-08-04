@@ -178,6 +178,13 @@ export default React.memo(function NewLogin() {
                   ? () => navigate(epicLoginPath)
                   : () => setShowSidLogin(true)
               }
+              // Quick task 260805-d62: mark the SIDLogin tile (the interactive legendary/SID
+              // login) as deletion-pending ahead of ROADMAP Phase 34.7 -- this reads inverted
+              // relative to intuition on purpose. Per the F-34.5-G6-01 pivot documented above,
+              // under Tauri the PRIMARY tile is SIDLogin and the ALTERNATIVE tile is the
+              // embedded web login; under Electron the roles are reversed. Naming the SIDLogin
+              // tile in both shells means the embedded web login is never marked red.
+              deprecatedTile={isTauri() ? 'primary' : 'alternative'}
               disabled={oldMac}
             />
             <Runner

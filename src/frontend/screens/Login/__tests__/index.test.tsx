@@ -162,3 +162,47 @@ describe('a failing route surfaces an error instead of an empty document', () =>
     expect(body).toMatch(/await importedFile/)
   })
 })
+
+/**
+ * Quick task 260805-d62: colour the interactive legendary/SID login red as
+ * deletion-pending (ROADMAP Phase 34.7). Same source-gate convention as above --
+ * this jest project has no jsdom, so these prove the wiring EXPRESSION is present
+ * and singular, not that a pixel actually renders red. Pixel/behavior verification
+ * is the plan's checkpoint:human-verify task.
+ */
+describe('deprecatedTile marker follows the SIDLogin tile, not a fixed position (quick task 260805-d62)', () => {
+  it('SOURCE GATE — the Epic Runner wires deprecatedTile to the isTauri() ternary that names the SIDLogin tile in both shells', () => {
+    const source = read(LOGIN_TSX)
+    expect(source).toMatch(
+      /deprecatedTile=\{isTauri\(\) \? 'primary' : 'alternative'\}/
+    )
+  })
+
+  it("SOURCE GATE — deprecatedTile occurs exactly once in comment-stripped Login/index.tsx -- no other runner is marked", () => {
+    const source = read(LOGIN_TSX)
+    const matches = source.match(/deprecatedTile/g) ?? []
+    expect(matches.length).toBe(1)
+  })
+
+  it('SOURCE GATE — the Epic primaryLoginAction/alternativeLoginAction expressions from the F-34.5-G6-01 pivot are unchanged', () => {
+    const source = read(LOGIN_TSX)
+    expect(source).toMatch(
+      /primaryLoginAction=\{\s*isTauri\(\) \? \(\) => setShowSidLogin\(true\) : undefined\s*\}/
+    )
+    expect(source).toMatch(
+      /alternativeLoginAction=\{\s*isTauri\(\)\s*\?\s*\(\) => navigate\(epicLoginPath\)\s*:\s*\(\) => setShowSidLogin\(true\)\s*\}/
+    )
+  })
+
+  it('login.deprecated_hint exists in the en translation bundle and matches the Runner t() default exactly', () => {
+    const translations = JSON.parse(
+      readFileSync(
+        join(REPO_ROOT, 'public/locales/en/translation.json'),
+        'utf8'
+      )
+    )
+    expect(translations.login.deprecated_hint).toBe(
+      'Deprecated — this sign-in method is scheduled for removal'
+    )
+  })
+})

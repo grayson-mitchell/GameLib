@@ -706,6 +706,7 @@
     "login": {
         "alternative_method": "Alternative Login Method",
         "amazon": "Amazon Login",
+        "deprecated_hint": "Deprecated — this sign-in method is scheduled for removal",
         "epic": "Epic Games Login",
         "gog": "GOG Login",
         "humble": "Humble Bundle Login",
