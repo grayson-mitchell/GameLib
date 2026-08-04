@@ -64,6 +64,19 @@ Epic in the meantime (its login window is byte-unchanged, machine-enforced by
 
 ## Plan 05 — pre-existing REQUIREMENTS.md checkbox/prose mismatches found, not fixed (2026-08-04)
 
+**Disposition: CLOSED 2026-08-04 by plan 09, Task 3.**
+
+Plan 09's own Task 3 corrected every premature `[x]` this entry named, plus two more mismatches the
+mechanism swap (plans 07-08) itself introduced: REQ-34.4.2-04, -05, -06 and -09 are all now `[ ]`,
+each row naming the specific item in `34.4.2-LIVE-GATE-RERUN.md` (not plan 06's failed, now-stale
+contract) as its precondition. REQ-34.4.2-07's premature-`[x]`-before-its-own-artifact question
+(the second bullet below) was investigated no further by plan 09 — it is a distinct, narrower
+question (temporal ordering of a single commit, not a live-proof mismatch) and plan 09's own scope
+(`files_modified`: `.planning/REQUIREMENTS.md`, this file) covers the live-proof class of mismatch
+only. REQ-34.4.2-07 remains `[x]` and is left as found; whoever next re-derives its git history can
+answer the original "how did this get checked before plan 05 ran" question independently of this
+closure.
+
 - **Found during:** Task 2, cross-checking this phase's requirement rows against the artifacts
   that are supposed to close them.
 - **Symptom:** two rows in `.planning/REQUIREMENTS.md` are marked `[x]` while their own prose
@@ -114,3 +127,33 @@ Epic in the meantime (its login window is byte-unchanged, machine-enforced by
 - **Disposition:** logged, not fixed. A future session (ideally the one that opens Phase 34.4.2's
   own live-gate work, plans 09/10) should replace that line with 34.4.2's actual next action, or
   relocate the 34.5 gap-cycle-6 pointer to wherever Phase 34.5's own current-position block lives.
+
+## Plan 09 — the autofill glyph's un-gated cross-platform injection remains unfixed, now with a macOS-gated sibling for contrast (2026-08-04)
+
+- **Found during:** Task 2's platform-scope record update, re-examining `34.4.2-PLATFORM-SCOPE.md`
+  § 1's own standing finding while adding plan 08's new symbols to the same table.
+- **Symptom:** `autofill_glyph_script`'s injection call site (`main.rs:3649-3657`, inside
+  `humble_login_open`'s `if visible` block) still carries **no** `#[cfg(target_os = "macos")]`
+  guard, exactly as plan 05 first recorded. This gap cycle (plans 07-09) did not touch that call
+  site at all -- confirmed by the scoped `git diff --stat fc38d229c^..95f631fe3 -- src/backend
+  src/frontend src/common` recorded in `34.4.2-PLATFORM-SCOPE.md` §4's gap-cycle subsection, which
+  shows only a test file changed, and by direct inspection of `main.rs:3649-3657` this session.
+- **What is new, for contrast:** plan 08 added a SECOND injected control, the cancel strip
+  (`login_cancel_strip_script`), whose call site (`main.rs:3668-3675`) IS deliberately
+  `#[cfg(target_os = "macos")]`-gated -- a considered choice recorded in `34.4.2-08-SUMMARY.md`'s
+  own key-decisions ("only macOS presents a login window as a sheet in the first place"), not an
+  oversight. The same login form now has one injected control that is platform-gated and one that
+  is not, for principled but different reasons (the strip has no reason to exist off macOS; the
+  glyph was never scoped to macOS in the first place, per plan 03's own original design). This
+  asymmetry is recorded in `34.4.2-PLATFORM-SCOPE.md` § 1's finding, updated this plan.
+- **Scope:** `src-tauri/src/main.rs`'s `autofill_glyph_script` call site is not in this plan's
+  `files_modified` (`34.4.2-LIVE-GATE-RERUN.md`, `34.4.2-PLATFORM-SCOPE.md`,
+  `deferred-items.md`, `REQUIREMENTS.md` -- docs only, this plan touches no Rust source). Gating
+  it would also be an out-of-scope behavioural change for a docs-only gap-cycle plan whose entire
+  job is to write and reconcile records, not alter shipped behaviour.
+- **Disposition:** logged, not fixed, no owning plan yet. Whoever next builds a Windows or Linux
+  poster for the AutoFill affordance (out of scope for this whole phase, per the skill's own
+  Constraints section) should gate `autofill_glyph_script`'s call site to macOS at the same time,
+  or ship a real cross-platform poster so the icon is no longer inert off macOS. Until then, an
+  unlabelled key icon that does nothing when clicked remains a worse experience than no icon at
+  all on Windows/Linux -- this phase's own finding, still true.
