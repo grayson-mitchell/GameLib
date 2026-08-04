@@ -105,6 +105,48 @@ describe('REQ-34.1-07 Cargo.toml tauri tray-icon feature (Phase 34.1 Plan 06, D-
 })
 
 /**
+ * Extracts the `objc2-app-kit` dependency's `features = [...]` list as a parsed array of bare
+ * feature names -- mirrors `extractTauriFeatures`'s own convention (parsed array, not a raw
+ * substring check, so a stray comment mentioning a feature name elsewhere can't satisfy a gate).
+ */
+function extractObjc2AppKitFeatures(source: string): string[] {
+  const lineMatch = source.match(/^objc2-app-kit\s*=\s*\{[^}]*\}/m)
+  if (!lineMatch) {
+    throw new Error('No `objc2-app-kit = { ... }` dependency line found in Cargo.toml')
+  }
+  const featuresMatch = lineMatch[0].match(/features\s*=\s*\[([^\]]*)\]/)
+  if (!featuresMatch) {
+    throw new Error(
+      'No `features = [...]` list found on the objc2-app-kit dependency line'
+    )
+  }
+  return featuresMatch[1]
+    .split(',')
+    .map((entry) => entry.trim().replace(/^"|"$/g, ''))
+    .filter((entry) => entry.length > 0)
+}
+
+describe('Phase 34.4.2 Plan 04 (REQ-34.4.2-05) objc2-app-kit NSGraphicsContext feature', () => {
+  test('the objc2-app-kit dependency line declares NSGraphicsContext -- required by NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure, confirmed by a real cargo build failure (E0599) before this feature was added, and NOT unioned in by wry\'s own request (wry requests the DIFFERENT "NSGraphics" feature, not "NSGraphicsContext")', () => {
+    const features = extractObjc2AppKitFeatures(loadCargoToml())
+    expect(features).toContain('NSGraphicsContext')
+  })
+
+  test('the objc2-app-kit dependency line still declares every pre-existing feature this phase relies on', () => {
+    const features = extractObjc2AppKitFeatures(loadCargoToml())
+    for (const feature of [
+      'NSView',
+      'NSWindow',
+      'NSEvent',
+      'NSApplication',
+      'block2'
+    ]) {
+      expect(features).toContain(feature)
+    }
+  })
+})
+
+/**
  * GAP-3 (supply chain, AR-34.1-07 / FOLLOW-UP-1 of 34.1-SECURITY.md): enabling
  * `features = ["tray-icon", "image-png"]` on the `tauri` dependency silently pulled 4
  * registry crates that were not previously in Cargo.lock (`image` 0.25.10, `moxcms` 0.8.1,

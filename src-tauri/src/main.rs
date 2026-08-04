@@ -1554,10 +1554,8 @@ fn autofill_glyph_script(exfil_host: &str) -> String {
 /// (`login_window_wk_webview`'s own doc comment: a title-bar-sized error there silently probes
 /// the wrong element).
 ///
-/// `#[allow(dead_code)]`: no caller in this task -- `post_autofill_right_click` (Task 2, below)
-/// is the caller, mirroring `login_window_wk_webview`'s own identical convention.
+/// Caller: `post_autofill_right_click` (below).
 #[cfg(target_os = "macos")]
-#[allow(dead_code)]
 fn css_rect_center_in_view(req: &AutofillRequest, view_height: f64) -> (f64, f64) {
     (req.x + req.w / 2.0, view_height - (req.y + req.h / 2.0))
 }
@@ -1569,10 +1567,8 @@ fn css_rect_center_in_view(req: &AutofillRequest, view_height: f64) -> (f64, f64
 /// resulting context menu would be misread as evidence about a password field it never actually
 /// touched (`login-window-ux-macos.md`'s mandatory `document.elementFromPoint` warning).
 ///
-/// `#[allow(dead_code)]`: no caller in this task -- `post_autofill_right_click` (Task 2, below)
-/// is the caller, mirroring `login_window_wk_webview`'s own identical convention.
+/// Caller: `post_autofill_right_click` (below).
 #[cfg(target_os = "macos")]
-#[allow(dead_code)]
 fn clamp_point_to_view_bounds(point: (f64, f64), bounds: (f64, f64)) -> Option<(f64, f64)> {
     let (x, y) = point;
     let (width, height) = bounds;
@@ -1586,6 +1582,249 @@ fn clamp_point_to_view_bounds(point: (f64, f64), bounds: (f64, f64)) -> Option<(
         return None;
     }
     Some((x, y))
+}
+
+/// Debounce window for `post_autofill_right_click`'s server-side rate limit (T-34.4.2-18) --
+/// the AUTHORITATIVE gate, unlike `autofill_glyph_script`'s own page-side 750ms limit, which a
+/// hostile or buggy page fully controls. Matches that page-side value so a well-behaved page
+/// never trips this gate on its own legitimate use.
+#[cfg(target_os = "macos")]
+const AUTOFILL_POST_DEBOUNCE: Duration = Duration::from_millis(750);
+
+/// Cap on `LAST_AUTOFILL_POST`'s map size -- mirrors `LOGIN_WINDOW_EVENTS_CAP`/
+/// `ATTACHED_LOGIN_CHILDREN_CAP`'s discipline (T-34.4.2-08): an unbounded map would be a
+/// denial-of-service surface if a caller somehow minted labels without the process ever
+/// exhausting them. In practice at most one or two Tauri-managed login windows are ever open at
+/// once, so this bound is generous, not a realistic ceiling.
+#[cfg(target_os = "macos")]
+const AUTOFILL_POST_DEBOUNCE_MAP_CAP: usize = ATTACHED_LOGIN_CHILDREN_CAP;
+
+/// Per-label last-post timestamp for `post_autofill_right_click`'s server-side debounce gate
+/// (T-34.4.2-18). Read and written FIRST, before any AppKit call -- a flooded request must be
+/// rejected before it ever touches the webview/window resolvers below.
+#[cfg(target_os = "macos")]
+static LAST_AUTOFILL_POST: Mutex<Option<HashMap<String, std::time::Instant>>> = Mutex::new(None);
+
+/// The SOLE construction site for a synthesized mouse event (T-34.4.2-17/-20) --
+/// `post_autofill_right_click` calls this exactly twice (`RightMouseDown` then
+/// `RightMouseUp`), never constructing an `NSEvent` any other way. Empty modifier flags,
+/// timestamp `0.0`, the TARGET window's own `windowNumber()`, `context: None` (public API --
+/// spike 022's own measured call, `login-window-ux-macos.md` S4), `eventNumber: 0`,
+/// `clickCount: 1`, `pressure: 1.0` -- no chord can be forged: empty modifier flags means no
+/// Cmd/Shift/Option/Control is ever attached to a synthesized click.
+#[cfg(target_os = "macos")]
+fn synth_autofill_mouse_event(
+    ty: objc2_app_kit::NSEventType,
+    point_in_window: NSPoint,
+    window: &objc2_app_kit::NSWindow,
+) -> Option<Retained<objc2_app_kit::NSEvent>> {
+    // Safe binding (not an `unsafe fn`): `mouseEventWithType:location:modifierFlags:
+    // timestamp:windowNumber:context:eventNumber:clickCount:pressure:` is public API
+    // (spike 022) that returns `None` on failure rather than trapping.
+    objc2_app_kit::NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure(
+        ty,
+        point_in_window,
+        objc2_app_kit::NSEventModifierFlags::empty(),
+        0.0,
+        window.windowNumber(),
+        None,
+        0,
+        1,
+        1.0,
+    )
+}
+
+/// Posts a debounced, bounds-validated synthesized right-click pair (`RightMouseDown` then
+/// `RightMouseUp`) at the password field's centre in a Tauri-managed login window -- spike
+/// 022's measured route to the real system AutoFill context menu (T-34.4.2-17). Called from
+/// exactly one place: the single sentinel branch inside `humble_login_open`'s `.on_navigation(`
+/// closure (REQ-34.4.2-10's locked scope -- the pristine Epic surface is unreachable from here).
+///
+/// Ordered contract -- the order is load-bearing and is asserted by source position (Task 3):
+///   1. Debounce first (`LAST_AUTOFILL_POST`) -- server-side, authoritative (T-34.4.2-18).
+///   2. Refuse a label absent from `ATTACHED_LOGIN_CHILDREN` -- only a VISIBLE, attached login
+///      window is eligible; hidden reveal/clear windows are structurally unreachable.
+///   3. Resolve the WEBVIEW (`login_window_wk_webview`), never the window's content view.
+///   4. Hop to the main thread; read the webview's OWN `bounds()`, flip via
+///      `css_rect_center_in_view`, then `clamp_point_to_view_bounds` -- a refusal here means no
+///      event is EVER posted.
+///   5. Convert to window coordinates via `convertPoint:toView:`.
+///   6. Resolve the `NSWindow` from the view.
+///   7. `makeKeyAndOrderFront` (spike 022: the menu will not appear on a non-key window), then
+///      post exactly two events built through `synth_autofill_mouse_event`.
+///   8. Log exactly one success line: label, the four numbers, the two converted coordinates,
+///      and `hit_id`/`hit_tag`/`hit_type` -- never the URL, origin, or page title
+///      (T-34.4.2-19).
+///
+/// Never fatal (this file's established `[shell] WARN: ...` discipline): every refusal logs one
+/// line and returns without ever calling `postEvent_atStart`.
+///
+/// Crosses the `run_on_main_thread` boundary with this file's existing `SendPtr` convention
+/// (see `attach_login_window_as_child`'s own doc comment, above), moving the whole wrapper into
+/// the closure and rebinding it inside (the Rust-2021 disjoint-capture rebinding this file
+/// already documents). Blocks on the dispatch via `mpsc_channel` + `rx.recv_timeout`, the same
+/// worker-blocks-on-a-channel shape `attach_login_window_as_child` already uses.
+#[cfg(target_os = "macos")]
+fn post_autofill_right_click(app: &AppHandle, label: &str, req: &AutofillRequest) {
+    // 1. Debounce first -- authoritative, server-side (T-34.4.2-18). Checked and recorded
+    // BEFORE anything below touches AppKit at all.
+    let now = std::time::Instant::now();
+    if let Ok(mut guard) = LAST_AUTOFILL_POST.lock() {
+        let map = guard.get_or_insert_with(HashMap::new);
+        if let Some(last) = map.get(label) {
+            if now.duration_since(*last) < AUTOFILL_POST_DEBOUNCE {
+                eprintln!(
+                    "[shell] post_autofill_right_click: debounced for '{label}' -- refusing"
+                );
+                return;
+            }
+        }
+        if map.len() >= AUTOFILL_POST_DEBOUNCE_MAP_CAP && !map.contains_key(label) {
+            if let Some(oldest_key) = map.keys().next().cloned() {
+                map.remove(&oldest_key);
+            }
+        }
+        map.insert(label.to_string(), now);
+    }
+
+    // 2. Refuse hidden windows: only a label present in ATTACHED_LOGIN_CHILDREN was ever a
+    // visible, attached login window -- see attach_login_window_as_child's own doc comment.
+    let is_attached = ATTACHED_LOGIN_CHILDREN
+        .lock()
+        .ok()
+        .and_then(|guard| {
+            guard
+                .as_ref()
+                .map(|list| list.iter().any(|existing| existing == label))
+        })
+        .unwrap_or(false);
+    if !is_attached {
+        eprintln!(
+            "[shell] WARN: post_autofill_right_click: '{label}' is not an attached login window -- refusing"
+        );
+        return;
+    }
+
+    // 3. Resolve the WEBVIEW, never the window's content view.
+    let Some(webview_addr) = login_window_wk_webview(app, label) else {
+        eprintln!(
+            "[shell] WARN: post_autofill_right_click: no WKWebView for '{label}' -- skipping"
+        );
+        return;
+    };
+
+    // SAFETY: see `SendPtr`'s doc comment on `attach_login_window_as_child`, above -- a bare
+    // address is not normally `Send`, but this wrapper is reconstructed into a live reference
+    // only from within the main-thread closure below.
+    struct SendPtr(*mut std::ffi::c_void);
+    unsafe impl Send for SendPtr {}
+    let webview_ptr = SendPtr(webview_addr as *mut std::ffi::c_void);
+
+    // Owned copies of everything the main-thread closure needs -- `req` itself is a borrow,
+    // not `Send + 'static`.
+    let req_x = req.x;
+    let req_y = req.y;
+    let req_w = req.w;
+    let req_h = req.h;
+    let hit_id = req.hit_id.clone();
+    let hit_tag = req.hit_tag.clone();
+    let hit_type = req.hit_type.clone();
+    let label_owned = label.to_string();
+
+    let (tx, rx) = mpsc_channel::<()>();
+    if let Err(e) = app.run_on_main_thread(move || {
+        // Forces Rust 2021 disjoint closure capture to move in the WHOLE `SendPtr` wrapper,
+        // not just its inner raw-pointer field, which would bypass `SendPtr`'s `Send` impl
+        // entirely and fail to compile.
+        let webview_ptr = webview_ptr;
+        // SAFETY: resolved moments ago via `login_window_wk_webview`, which only returns
+        // `Some` for a live Tauri-managed `WKWebView`; reconstructed into a live reference
+        // only here, on the main thread.
+        let view: &objc2_app_kit::NSView =
+            unsafe { &*(webview_ptr.0 as *const objc2_app_kit::NSView) };
+        let bounds = view.bounds();
+
+        // 4. Flip CSS -> view coords using the WEBVIEW's own bounds, then validate.
+        let flip_req = AutofillRequest {
+            x: req_x,
+            y: req_y,
+            w: req_w,
+            h: req_h,
+            hit_id: hit_id.clone(),
+            hit_tag: hit_tag.clone(),
+            hit_type: hit_type.clone(),
+        };
+        let (raw_vx, raw_vy) = css_rect_center_in_view(&flip_req, bounds.size.height);
+        let Some((vx, vy)) = clamp_point_to_view_bounds(
+            (raw_vx, raw_vy),
+            (bounds.size.width, bounds.size.height),
+        ) else {
+            eprintln!(
+                "[shell] WARN: post_autofill_right_click: '{label_owned}' point ({raw_vx}, {raw_vy}) outside view bounds ({}, {}) -- refusing",
+                bounds.size.width, bounds.size.height
+            );
+            let _ = tx.send(());
+            return;
+        };
+
+        // 5. Convert to window coordinates.
+        let in_window = view.convertPoint_toView(NSPoint::new(vx, vy), None);
+
+        // 6. Resolve the NSWindow.
+        let Some(window) = view.window() else {
+            eprintln!(
+                "[shell] WARN: post_autofill_right_click: '{label_owned}' view has no NSWindow -- skipping"
+            );
+            let _ = tx.send(());
+            return;
+        };
+
+        // 7. makeKeyAndOrderFront, then post exactly two events -- the sole two NSEventType
+        // variants this function ever constructs.
+        window.makeKeyAndOrderFront(None);
+        let Some(mtm) = objc2::MainThreadMarker::new() else {
+            eprintln!(
+                "[shell] WARN: post_autofill_right_click: '{label_owned}' no MainThreadMarker -- skipping"
+            );
+            let _ = tx.send(());
+            return;
+        };
+        let ns_app = objc2_app_kit::NSApplication::sharedApplication(mtm);
+        let down = synth_autofill_mouse_event(
+            objc2_app_kit::NSEventType::RightMouseDown,
+            in_window,
+            &window,
+        );
+        let up = synth_autofill_mouse_event(
+            objc2_app_kit::NSEventType::RightMouseUp,
+            in_window,
+            &window,
+        );
+        match (down, up) {
+            (Some(down), Some(up)) => {
+                ns_app.postEvent_atStart(&down, false);
+                ns_app.postEvent_atStart(&up, false);
+                // 8. Exactly one success line -- label, the four numbers, the two converted
+                // coordinates, and the hit_* diagnostics. Never the URL, origin, or title.
+                eprintln!(
+                    "[shell] post_autofill_right_click: posted for '{label_owned}' x={req_x} y={req_y} w={req_w} h={req_h} view=({vx}, {vy}) window=({}, {}) hit_id={hit_id:?} hit_tag={hit_tag:?} hit_type={hit_type:?}",
+                    in_window.x, in_window.y
+                );
+            }
+            _ => {
+                eprintln!(
+                    "[shell] WARN: post_autofill_right_click: '{label_owned}' event synthesis failed -- skipping"
+                );
+            }
+        }
+        let _ = tx.send(());
+    }) {
+        eprintln!(
+            "[shell] WARN: post_autofill_right_click: main-thread dispatch failed for '{label}' ({e})"
+        );
+        return;
+    }
+    let _ = rx.recv_timeout(Duration::from_secs(10));
 }
 
 /// Host this arm uses to decide whether the window it is about to open is Epic's --
@@ -2245,9 +2484,8 @@ fn login_window_ns_window(app: &AppHandle, label: &str) -> Option<usize> {
 ///
 /// Side-effect free: never logs a label's URL or any page content.
 ///
-/// `#[allow(dead_code)]`: no caller in this plan -- plan 34.4.2-04 is the caller.
+/// Caller: `post_autofill_right_click` (Phase 34.4.2 Plan 04, below).
 #[cfg(target_os = "macos")]
-#[allow(dead_code)]
 fn login_window_wk_webview(app: &AppHandle, label: &str) -> Option<usize> {
     let window = app.get_webview_window(label)?;
     let addr: Arc<Mutex<Option<usize>>> = Arc::new(Mutex::new(None));
@@ -3294,6 +3532,13 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 );
             }
             let page_load_origin = Arc::clone(&current_origin);
+            // Owned `AppHandle` clone for the `.on_navigation(` sentinel closure below (Phase
+            // 34.4.2 Plan 04, REQ-34.4.2-05/08): `post_autofill_right_click` needs `&AppHandle`
+            // to resolve the webview/window and hop to the main thread, and `.on_navigation(`
+            // takes a `move` closure -- mirrors this arm's own existing
+            // `app_for_detach = app.clone()` convention (a few lines below `.build()`).
+            #[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
+            let app_for_autofill = app.clone();
             let window = builder
                 .on_page_load(move |window, payload| {
                     let kind = match payload.event() {
@@ -3329,11 +3574,21 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     // and cancels exactly one reserved-host, reserved-path sentinel;
                     // every other navigation (including the real login page's own) is
                     // untouched.
+                    //
+                    // The synthesized-right-click poster itself (Phase 34.4.2 Plan 04,
+                    // REQ-34.4.2-05/06/07/08/10) replaces plan 03's log-only body here --
+                    // `post_autofill_right_click` does its own logging (exactly one success
+                    // line, or a distinct refusal line per guard). macOS only: on
+                    // Windows/Linux the glyph is injected (plan 03 is not platform-gated)
+                    // but no poster exists yet -- UNVERIFIED per the skill's Constraints
+                    // section, matching this whole phase's cross-platform discipline.
                     if let Some(req) = parse_autofill_request(&url) {
-                        eprintln!(
-                            "[shell] humble_login_open: autofill sentinel intercepted for '{nav_sentinel_label}' x={} y={} w={} h={} hit_id={:?} hit_tag={:?} hit_type={:?}",
-                            req.x, req.y, req.w, req.h, req.hit_id, req.hit_tag, req.hit_type
-                        );
+                        #[cfg(target_os = "macos")]
+                        post_autofill_right_click(&app_for_autofill, &nav_sentinel_label, &req);
+                        #[cfg(not(target_os = "macos"))]
+                        {
+                            let _ = (&app_for_autofill, &req);
+                        }
                         return false;
                     }
                     true

@@ -104,6 +104,19 @@ objc2 = "0.6.4"
 # through `sendAction:to:from:` -- the menu bar's own working path -- since the tao/wry `NSWindow`
 # swallows the raw `NSEvent` before `performKeyEquivalent:` traversal ever sees it. `NSEvent`
 # itself is not unioned in by any existing feature above.
+#
+# `NSGraphicsContext` added for the synthesized-right-click poster (Phase 34.4.2 Plan 04,
+# REQ-34.4.2-05): `NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_
+# context_eventNumber_clickCount_pressure` (spike 022's own measured call) is gated behind this
+# EXACT feature in objc2-app-kit-0.3.2's generated bindings (`grep -B1
+# 'fn mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_
+# clickCount_pressure' -- '#[cfg(feature = "NSGraphicsContext")]'`), confirmed by a real
+# `cargo build` failure (E0599, "function or associated item not found") before this feature
+# was added. NOT unioned in by wry's own request -- wry's `objc2-app-kit` feature list
+# requests `NSGraphics` (plural, a DIFFERENT feature gating `NSColor`/`NSBezierPath`/etc, see
+# objc2-app-kit-0.3.2/Cargo.toml's own `[features]` table), not `NSGraphicsContext`. Resolves
+# to `objc2-foundation`'s own `NSDictionary`/`NSGeometry` features -- both already-resolved
+# crates, so this adds no new crate to Cargo.lock (`git diff --exit-code Cargo.lock` stays 0).
 objc2-app-kit = { version = "0.3.2", default-features = false, features = [
     "NSView",
     "NSWindow",
@@ -112,6 +125,7 @@ objc2-app-kit = { version = "0.3.2", default-features = false, features = [
     "NSButton",
     "NSControl",
     "NSEvent",
+    "NSGraphicsContext",
     "NSResponder",
     "NSTextField",
     "block2",

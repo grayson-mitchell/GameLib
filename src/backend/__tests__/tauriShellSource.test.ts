@@ -717,8 +717,14 @@ const PHASE_34_4_2_NEW_SYMBOLS = [
   'AUTOFILL_EXFIL_PATH',
   'AutofillRequest',
   'parse_autofill_request',
-  'autofill_glyph_script'
-  // Plan 04: append your own new symbol names here.
+  'autofill_glyph_script',
+  // Plan 04 (synthesized right-click poster):
+  'css_rect_center_in_view',
+  'clamp_point_to_view_bounds',
+  'synth_autofill_mouse_event',
+  'post_autofill_right_click',
+  'LAST_AUTOFILL_POST',
+  'AUTOFILL_POST_DEBOUNCE'
 ]
 
 // Tests 3 and 4 below encode a LOCKED USER SCOPE DECISION (2026-08-04): Epic is implemented
