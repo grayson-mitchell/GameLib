@@ -666,3 +666,91 @@ describe('F-34.5-G6-05 (Plan 27) login window requests a light interface style',
     expect(armBody).toContain('.theme(Some(tauri::Theme::Light))')
   })
 })
+
+// Phase 34.4.2 Plan 01 (REQ-34.4.2-01..10): the two Tauri-managed login-window handle
+// resolvers this phase's later plans (02/04) build against, plus the machine-enforced
+// EPIC-UNTOUCHED scope guard that keeps this phase off the pristine Epic surface.
+//
+// PHASE_34_4_2_NEW_SYMBOLS is the extensible symbol list Test 3 below asserts absent from the
+// pristine function's own sliced body. Plans 02, 03 and 04 MUST append their own new symbol
+// names to this array as they land -- that is how the scope guard stays current without each
+// plan inventing its own version of it.
+const PHASE_34_4_2_NEW_SYMBOLS = [
+  'login_window_ns_window',
+  'login_window_wk_webview'
+  // Plans 02, 03, 04: append your own new symbol names here.
+]
+
+// Tests 3 and 4 below encode a LOCKED USER SCOPE DECISION (2026-08-04): Epic is implemented
+// LAST, after all other runners (Humble/GOG/Amazon) are ported and proven, because Epic's
+// problems are unresolved (the parked deterministic pre-auth 403, the zero-injection
+// constraint the pristine surface exists to satisfy, and the standing hCaptcha/UA
+// constraint). This is NOT a technical limitation the code happens to have -- it is a
+// decision the user made. Loosening either test requires the user's decision to change, not a
+// planner's judgement.
+describe('Phase 34.4.2 Plan 01 — login-window handle resolvers and the Epic scope guard', () => {
+  /**
+   * Slices `code` from `fn open_pristine_epic_login_window(` (inclusive) to the next
+   * top-level `#[cfg(target_os = "macos")]` attribute (exclusive) -- the identical "next
+   * top-level item" boundary this plan's own acceptance criteria pin against a raw `git diff`.
+   * Asserts both bounds were actually found before slicing (an `indexOf` miss returning -1
+   * must fail loudly rather than silently slice from the file start).
+   */
+  function extractPristineLoginFnBody(code: string): string {
+    const start = code.indexOf('fn open_pristine_epic_login_window(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    expect(end).toBeGreaterThan(start)
+    return code.slice(start, end)
+  }
+
+  test('Test 1: login_window_ns_window resolves via get_webview_window and never references get_window( -- the pristine surface is unreachable from it by construction', () => {
+    const code = loadMainRsCode()
+    const start = code.indexOf('fn login_window_ns_window(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('fn login_window_wk_webview(', start)
+    expect(end).toBeGreaterThan(start)
+    const fnBody = code.slice(start, end)
+    expect(fnBody).toContain('get_webview_window(')
+    expect(fnBody).not.toContain('get_window(')
+  })
+
+  test('Test 2: login_window_wk_webview references with_webview', () => {
+    const code = loadMainRsCode()
+    const start = code.indexOf('fn login_window_wk_webview(')
+    expect(start).toBeGreaterThan(-1)
+    // The next top-level item after this resolver (the pre-existing doc comment naming the
+    // Epic logout defect fix, stripped down to its code line) bounds the search window.
+    const end = code.indexOf(
+      'fn clear_default_data_store_cookies_for_domain(',
+      start
+    )
+    expect(end).toBeGreaterThan(start)
+    expect(code.slice(start, end)).toContain('with_webview')
+  })
+
+  test('Test 3 (SCOPE GUARD, REQ-34.4.2-10, LOCKED USER SCOPE DECISION): open_pristine_epic_login_window references NONE of this phase\'s new symbols', () => {
+    const pristineBody = extractPristineLoginFnBody(loadMainRsCode())
+    for (const symbol of PHASE_34_4_2_NEW_SYMBOLS) {
+      expect(pristineBody).not.toContain(symbol)
+    }
+  })
+
+  test('Test 4 (SCOPE GUARD, REQ-34.4.2-10, LOCKED USER SCOPE DECISION): the pristine slice still contains its pre-existing critical members -- proves this phase removed nothing from a surface it is not allowed to touch', () => {
+    const pristineBody = extractPristineLoginFnBody(loadMainRsCode())
+    expect(pristineBody).toContain(
+      'addLocalMonitorForEventsMatchingMask_handler'
+    )
+    expect(pristineBody).toContain('makeFirstResponder')
+    expect(pristineBody).toContain('NSEvent::removeMonitor')
+    for (const selector of ['paste:', 'copy:', 'cut:', 'selectAll:', 'undo:']) {
+      expect(pristineBody).toContain(selector)
+    }
+  })
+
+  test('Test 5 (NEGATIVE, REQ-34.4.2-03): the comment-stripped source contains no beginSheet and no endSheet anywhere', () => {
+    const code = loadMainRsCode()
+    expect(code).not.toContain('beginSheet')
+    expect(code).not.toContain('endSheet')
+  })
+})
