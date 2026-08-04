@@ -157,3 +157,91 @@ closure.
   or ship a real cross-platform poster so the icon is no longer inert off macOS. Until then, an
   unlabelled key icon that does nothing when clicked remains a worse experience than no icon at
   all on Windows/Linux -- this phase's own finding, still true.
+
+## Plan 11 — seven `34.4.2-REVIEW.md` findings deliberately OUT of scope this cycle (2026-08-05)
+
+**Disposition: deferred, not fixed. Operator decision D-A scoped this cycle to exactly five
+findings (WR-07, WR-03, WR-04, WR-01, IN-02) that sit directly on gate items 2/3/5's own routes;
+the seven below sit adjacent but are not on those routes.**
+
+- **WR-02 — use-after-free race on raw `NSWindow` addresses across the worker→main hop.**
+  **File:** `src-tauri/src/main.rs` (`present_login_window_as_sheet`'s and
+  `dismiss_login_window_sheet`'s `login_window_ns_window` resolution, present's crossing a real
+  thread boundary). **Symptom:** the address is resolved on a worker thread and reconstructed
+  into a live reference inside a queued main-thread closure; if the login window closes between
+  resolution and execution, the `NSWindow` may already be released, producing a dangling
+  dereference (a hard crash in the shell process). **Why out of scope:** not on any of items
+  2/3/5's own routes -- it is a narrow, timing-dependent race with no reported live occurrence.
+  **Disposition:** logged, not fixed, no owning plan.
+- **WR-05 — the strip route destroys the window synchronously inside its own WKWebView
+  navigation-policy callback.** **File:** `src-tauri/src/main.rs` (the sentinel branch inside
+  `humble_login_open`'s `.on_navigation(` closure, `request_login_sheet_cancel`). **Symptom:**
+  `request_login_sheet_cancel` runs `endSheet:` and `window.close()` inline, from inside
+  `decidePolicyForNavigationAction`'s own call stack -- undefined-order teardown inside a WebKit
+  delegate, a latent crash of the same shape as the minimize/restore unresponsiveness class this
+  phase exists to fix. **Why out of scope:** the fix shape (defer the close out of the delegate
+  frame via `tauri::async_runtime::spawn` or a queued main-thread task) is itself a structural
+  change to the dismissal call graph, not one of this cycle's five named findings, and no live
+  crash has been observed. **Disposition:** logged, not fixed, no owning plan.
+- **WR-06 — arbitrary (not-oldest) debounce eviction, and refusals arm the debounce.** **File:**
+  `src-tauri/src/main.rs` (`post_autofill_right_click`'s `LAST_AUTOFILL_POST` eviction and
+  ordering). **Symptom:** `map.keys().next()` on a `HashMap` yields an arbitrary key, not the
+  oldest, so a burst of new labels can evict the *hot* label's timestamp; the timestamp is also
+  written before the `PRESENTED_LOGIN_SHEETS` membership check, so a refused request still
+  consumes the label's rate-limit window. **Why out of scope:** not on items 2/3/5's own routes
+  (it affects debounce fairness, not sheet dismissability, strip rendering, or the WR-01
+  registry). **Disposition:** logged, not fixed, no owning plan.
+- **WR-08 — harness-containment Test 1 never walks `src-tauri/src/`; unguarded `statSync`.**
+  **File:** `src/backend/__tests__/dummyStoreHarnessContainment.test.ts` (Test 1's offenders
+  list; `listAllFilesRecursive`'s `statSync` call). **Symptom:** Test 2 scans both `src/` and
+  `src-tauri/src/` for the port literal, but Test 1 (the harness path string) scans only `src/`
+  -- a harness-path reference in the Rust shell would ship undetected. Separately, `statSync`
+  lacks the try/catch `readFileSync` has, so a broken symlink throws an unrelated error.
+  **Why out of scope:** a test-harness hygiene fix, not one of this cycle's five review-finding
+  fixes, and this plan's `files_modified` does not include that test file. **Disposition:**
+  logged, not fixed, no owning plan.
+- **IN-01 — `PRESENTED_LOGIN_SHEETS` cap eviction drops a still-presented label without ending
+  its sheet.** **File:** `src-tauri/src/main.rs` (`register_presented_login_sheet`'s eviction,
+  formerly inline in `present_login_window_as_sheet`). **Symptom:** at cap (50), `list.remove(0)`
+  evicts the oldest presented label; every later dismissal of that label is membership-gated to a
+  no-op, so its `endSheet:` never runs. **Why out of scope:** unreachable in practice (at most 1-2
+  login windows are ever open at once, per the cap's own doc comment); the same failure class as
+  WR-01, but WR-01's own fix (re-registration on a failed hop) does not touch the eviction path
+  itself. **Disposition:** logged, not fixed, no owning plan.
+- **IN-03 — `is_login_cancel_request` ignores the URL scheme.** **File:** `src-tauri/src/main.rs`
+  (`is_login_cancel_request`). **Symptom:** host + path only; any scheme matches. **Why out of
+  scope:** practically inert (the host is the reserved `gamelib.invalid`, and a hostile page
+  force-cancelling its own window is the accepted T-34.4.2-34 threat); not on items 2/3/5's own
+  routes. **Disposition:** logged, not fixed, no owning plan.
+- **IN-04 — the entire automated surface for this phase is source-text assertion; no test can
+  observe presentation ordering or attachment.** **File:**
+  `src/backend/__tests__/tauriShellSource.test.ts` (every Jest gate); `src-tauri/src/main.rs`
+  (every cargo test, all AppKit-free pure helpers). **Symptom:** nothing in the automated suite
+  executes `beginSheet:`/`endSheet:` or observes their effect -- exactly how cargo 131/131 +
+  jest 3735/3735 stayed green through a 0/6 live gate (the project's "live gate beats a green
+  suite" pattern, fourth instance). **Why out of scope:** this is a structural limitation of the
+  testing approach, not a fixable finding within a single plan's `files_modified` -- CR-02's
+  `attachedSheet()` read-back (already landed, outside this plan) is the cheapest partial
+  mitigation, giving the LIVE gate a trustworthy machine signal; a real fix would mean building
+  AppKit-executing test infrastructure, out of scope for this phase entirely. **Disposition:**
+  logged, not fixed, no owning plan -- accepted as a standing limitation, mitigated by the live
+  gate's own `attached=` requirement (`34.4.2-LIVE-GATE-RERUN-2.md` item 1).
+
+## Plan 11 — the debug arc's three commits landed with no phase plan documenting them (2026-08-05)
+
+- **Found during:** Task 3's own propagation work, cross-referencing
+  `.planning/debug/resolved/white-window-not-sheet-cr01.md` against this phase's plan ledger.
+- **Symptom:** commits `751521663` (CR-01/CR-02), `56d4986f8` (F-34.4.2-04 diagnostics +
+  watchdog), and `8b2fdb315` (F-34.4.2-05 the 250ms `dispatch2` deferral) all landed between plan
+  34.4.2-10's failed rerun and this plan (34.4.2-11) via a standalone debug session
+  (`/gsd-debug`-style investigation), not via a numbered phase plan. Before this task, no
+  `34.4.2-NN-SUMMARY.md`, `34.4.2-PLATFORM-SCOPE.md` row, threat-register entry, or
+  `REQUIREMENTS.md` note named any of the three commits.
+- **Scope:** this task (34.4.2-11 Task 3) IS the documentation -- `34.4.2-PLATFORM-SCOPE.md`'s
+  per-symbol table and its fourth §5 update table, plus `34.4.2-LIVE-GATE-RERUN-2.md`'s own "What
+  changed" section, plus REQ-34.4.2-01/-02's dated notes, all now name the three commits and
+  quote the round-3 evidence transcript verbatim. Not a gap requiring a future plan.
+- **Disposition:** CLOSED by this same plan's Task 3. Recorded here as a process note for future
+  arcs: a debug session that lands commits mid-phase should route its documentation through the
+  next phase plan (as this one did) rather than leaving the phase's own records silently stale
+  about work that already shipped.
