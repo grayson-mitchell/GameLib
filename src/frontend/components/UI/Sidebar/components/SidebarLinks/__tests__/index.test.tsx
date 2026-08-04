@@ -83,7 +83,6 @@ jest.mock('../../SidebarItem', () => ({
     props
   })
 }))
-
 ;(globalThis as unknown as { sessionStorage: Storage }).sessionStorage = {
   getItem: jest.fn().mockReturnValue(null),
   setItem: jest.fn(),
@@ -153,7 +152,6 @@ describe('SidebarLinks', () => {
     const redeemItem = findRedeemItem(tree)
     expect(redeemItem).toBeDefined()
     expect(redeemItem?.props.elementType).toBe('button')
-
     ;(redeemItem?.props.onClick as () => void)()
     expect(handleRedeemKeyDialog).toHaveBeenCalledWith(true)
   })
@@ -213,20 +211,24 @@ describe('SidebarLinks account item', () => {
   })
 
   it('points Manage Accounts at /login in both logged-out and logged-in states', () => {
+    function findManageAccountsItem(
+      tree: ReactNode
+    ): ReactElement<Record<string, unknown>> | undefined {
+      return collectElements(tree).find(
+        (el) => el.props?.label === 'Manage Accounts'
+      ) as ReactElement<Record<string, unknown>> | undefined
+    }
+
     contextValue = makeContextValue()
     const loggedOutTree = SidebarLinks() as unknown as ReactElement
-    const loggedOutItem = collectElements(loggedOutTree).find(
-      (el) => el.props?.label === 'Manage Accounts'
-    )
+    const loggedOutItem = findManageAccountsItem(loggedOutTree)
     expect(loggedOutItem?.props.url).toBe('/login')
 
     contextValue = makeContextValue({
       gog: { username: 'TestUser', library: [] }
     })
     const loggedInTree = SidebarLinks() as unknown as ReactElement
-    const loggedInItem = collectElements(loggedInTree).find(
-      (el) => el.props?.label === 'Manage Accounts'
-    )
+    const loggedInItem = findManageAccountsItem(loggedInTree)
     expect(loggedInItem?.props.url).toBe('/login')
   })
 })

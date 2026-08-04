@@ -9,16 +9,8 @@ export const SIDEBAR_TOUR_ID = 'sidebar-tour'
 const SidebarTour: React.FC = () => {
   const { t } = useTranslation()
   const { isTourActive } = useTour()
-  const { epic, gog, amazon, zoom, platform, isRTL } =
-    useContext(ContextProvider)
+  const { platform, isRTL } = useContext(ContextProvider)
 
-  // Check if the user is logged into any store
-  const isLoggedIn = Boolean(
-    epic.username ||
-    gog.username ||
-    amazon.user_id ||
-    (zoom.enabled && zoom.username)
-  )
   const isWin = platform === 'win32'
 
   // Set position based on RTL
@@ -80,26 +72,14 @@ const SidebarTour: React.FC = () => {
     })
   }
 
-  // Conditionally add Login or Manage Accounts step based on login status
-  if (isLoggedIn) {
-    baseSteps.push({
-      element: '[data-tour="sidebar-manage-accounts"]',
-      intro: t(
-        'tour.sidebar.accounts',
-        'Manage your connected store accounts and sign in to new stores.'
-      ),
-      position
-    })
-  } else {
-    baseSteps.push({
-      element: '[data-tour="sidebar-login"]',
-      intro: t(
-        'tour.sidebar.login',
-        'Log in to your game store accounts to access your library.'
-      ),
-      position
-    })
-  }
+  baseSteps.push({
+    element: '[data-tour="sidebar-manage-accounts"]',
+    intro: t(
+      'tour.sidebar.accounts',
+      'Manage your connected store accounts and sign in to new stores.'
+    ),
+    position
+  })
 
   // Add the remaining steps
   const remainingSteps: TourStep[] = [
