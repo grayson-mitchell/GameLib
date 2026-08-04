@@ -1538,6 +1538,158 @@ fn autofill_glyph_script(exfil_host: &str) -> String {
     template.replace("@@EXFIL_HOST@@", &exfil_host_js)
 }
 
+// ---- Login-sheet cancel channel: the /login-cancel sentinel and its injected strip
+// (Phase 34.4.2 Plan 08, REQ-34.4.2-03/04/06/07/08/10, T-34.4.2-33) ----
+//
+// Plan 07 (`present_login_window_as_sheet`/`dismiss_login_window_sheet`, above) presents the
+// Tauri-managed login window as an AppKit sheet with NO close affordance -- `endSheet:` HIDES
+// rather than closes, and a sheet renders no titlebar close button, exactly the hard lock-out
+// spike 021 measured (T-34.4.2-33). This section closes it via a SEPARATE reserved-path
+// sentinel on the SAME `REVEAL_EXFIL_HOST` the reveal/clear-storage/autofill channels already
+// use -- discriminated by path, not host (T-34.4.2-13's discipline).
+
+/// Sentinel path on `REVEAL_EXFIL_HOST` (never a second host) the injected cancel strip's
+/// cancelled-navigation request uses. Joins `AUTOFILL_EXFIL_PATH`/`/reveal`/`/clear-storage` as
+/// a fourth, path-discriminated channel on the same reserved host (T-34.4.2-13).
+const LOGIN_CANCEL_EXFIL_PATH: &str = "/login-cancel";
+
+/// This channel's entire input validation (mirrors `parse_autofill_request`'s "this arm's
+/// entire input validation lives here" discipline): pure, no `AppHandle`, no logging, no I/O,
+/// never panics. Carries deliberately NO payload -- unlike `parse_autofill_request`, which must
+/// validate four coordinates, this channel's whole semantic is "the user pressed cancel", so
+/// there is nothing for a hostile page to smuggle through it (T-34.4.2-34, accepted and
+/// bounded -- see this plan's threat register). Returns true only when the host equals
+/// `REVEAL_EXFIL_HOST` AND the path equals `LOGIN_CANCEL_EXFIL_PATH` exactly -- false for
+/// `AUTOFILL_EXFIL_PATH`/`/reveal`/`/clear-storage` on the same host (no collision with any
+/// sibling sentinel), and false for this exact path on any other host.
+fn is_login_cancel_request(url: &tauri::Url) -> bool {
+    url.host_str() == Some(REVEAL_EXFIL_HOST) && url.path() == LOGIN_CANCEL_EXFIL_PATH
+}
+
+/// Builds the JS injected as an `initialization_script()` into the Tauri-managed login
+/// surface's VISIBLE builder ONLY (`humble_login_open`'s `if visible` block, macOS-gated --
+/// see the injection site's own doc comment, below). A SEPARATE builder from
+/// `autofill_glyph_script`, not an extension of it -- the two have different lifecycles: the
+/// glyph is kill-switchable via `GAMELIB_AUTOFILL_GLYPH`, this strip is NOT and must never
+/// become so. An env var that removes the only visible exit from a parent-blocking sheet is a
+/// lock-out switch, not a safety switch (T-34.4.2-33/T-34.4.2-15).
+///
+/// Contract the generated script implements (REQ-34.4.2-03/04/06/07):
+/// - Idempotent via `window.__GAMELIB_LOGIN_CANCEL_STRIP__`, set before any DOM work.
+/// - Renders exactly ONE control, appended to `document.body || document.documentElement`,
+///   `position:fixed`, pinned to the top-right inset, `z-index` >= 2147483000, visible label
+///   text "Cancel sign-in", `role="button"`, `aria-label="Cancel sign-in"`, `tabindex="0"`, and
+///   enough contrast to be legible on a light or dark page (styling is executor discretion,
+///   matching `autofill_glyph_script`'s own precedent).
+/// - Re-appends itself if removed: a debounced `MutationObserver` on `document.documentElement`
+///   (`{childList:true, subtree:true}`) re-adds the control if the page's own script deletes
+///   it -- a login page that can delete the only exit re-creates the lock-out this plan exists
+///   to close.
+/// - On activation (`click` only) delivers via the hidden 1x1 `display:none` iframe technique
+///   to `'https://' + @@EXFIL_HOST@@ + '/login-cancel'`. No payload, no page state read --
+///   never `location.href`, which would fire `beforeunload` on the live, credential-bearing
+///   document.
+/// - Registers NO `keydown`/`keyup`/`keypress` listener anywhere, and calls `preventDefault()`
+///   on nothing but its own `click` (REQ-34.4.2-06: Cmd+V into the password field must keep
+///   working).
+/// - Never reads any input's `value`, never reads or transmits page content (REQ-34.4.2-07).
+/// - Whole body in one top-level try/catch (T-34.4.2-16) -- a throwing strip must never break
+///   a live login page.
+///
+/// Mirrors `autofill_glyph_script`'s own `concat!`-of-single-line-pieces discipline (every JS
+/// string literal below uses single quotes, so every piece keeps an EVEN raw `"`-count on its
+/// own source line -- `longRunningChannels.test.ts`'s WR-08 stripper-integrity guard). Pure:
+/// the same host input always produces the same output.
+fn login_cancel_strip_script(exfil_host: &str) -> String {
+    let exfil_host_js =
+        serde_json::to_string(exfil_host).unwrap_or_else(|_| "\"gamelib.invalid\"".to_string());
+    let template = concat!(
+        "(function() { ",
+        "try { ",
+        "if (window.__GAMELIB_LOGIN_CANCEL_STRIP__) { return; } ",
+        "window.__GAMELIB_LOGIN_CANCEL_STRIP__ = true; ",
+        "var ID = '__gamelib_login_cancel_strip__'; ",
+        "function deliver() { ",
+        "var frame = document.getElementById('__gamelib_login_cancel_frame__'); ",
+        "if (!frame) { ",
+        "frame = document.createElement('iframe'); ",
+        "frame.id = '__gamelib_login_cancel_frame__'; ",
+        "frame.style.display = 'none'; ",
+        "frame.style.width = '1px'; ",
+        "frame.style.height = '1px'; ",
+        "(document.body || document.documentElement).appendChild(frame); ",
+        "} ",
+        "frame.src = 'https://' + @@EXFIL_HOST@@ + '/login-cancel'; ",
+        "} ",
+        "function build() { ",
+        "var strip = document.createElement('div'); ",
+        "strip.id = ID; ",
+        "strip.setAttribute('role', 'button'); ",
+        "strip.setAttribute('aria-label', 'Cancel sign-in'); ",
+        "strip.setAttribute('tabindex', '0'); ",
+        "strip.textContent = 'Cancel sign-in'; ",
+        "strip.style.position = 'fixed'; ",
+        "strip.style.top = '8px'; ",
+        "strip.style.right = '8px'; ",
+        "strip.style.zIndex = '2147483000'; ",
+        "strip.style.padding = '6px 12px'; ",
+        "strip.style.borderRadius = '4px'; ",
+        "strip.style.background = '#1a1a1a'; ",
+        "strip.style.color = '#ffffff'; ",
+        "strip.style.fontFamily = 'sans-serif'; ",
+        "strip.style.fontSize = '13px'; ",
+        "strip.style.cursor = 'pointer'; ",
+        "strip.style.userSelect = 'none'; ",
+        "strip.style.boxShadow = '0 1px 4px rgba(0,0,0,0.4)'; ",
+        "strip.addEventListener('click', function(evt) { ",
+        "evt.preventDefault(); ",
+        "deliver(); ",
+        "}); ",
+        "(document.body || document.documentElement).appendChild(strip); ",
+        "} ",
+        "function ensure() { ",
+        "if (!document.getElementById(ID)) { build(); } ",
+        "} ",
+        "ensure(); ",
+        "if (document.readyState === 'loading') { ",
+        "document.addEventListener('DOMContentLoaded', function() { ensure(); }); ",
+        "} ",
+        "var debounceTimer = null; ",
+        "function scheduleEnsure() { ",
+        "if (debounceTimer) { return; } ",
+        "debounceTimer = setTimeout(function() { debounceTimer = null; ensure(); }, 200); ",
+        "} ",
+        "var observer = new MutationObserver(function() { scheduleEnsure(); }); ",
+        "observer.observe(document.documentElement, { childList: true, subtree: true }); ",
+        "} catch (e) { } ",
+        "})();"
+    );
+    template.replace("@@EXFIL_HOST@@", &exfil_host_js)
+}
+
+/// The SINGLE dismissal entry point both the cancel-strip sentinel (below, in the
+/// `.on_navigation(` closure) and the Esc monitor (Task 2, `main()`'s `.setup()`) call.
+/// `#[cfg(target_os = "macos")]` -- dismissing a sheet is a macOS-only concept (Plan 07).
+///
+/// Order is load-bearing: `dismiss_login_window_sheet` (Plan 07, above) FIRST -- ends the
+/// sheet, releasing the parent window -- THEN `app.get_webview_window(label)` and `.close()`
+/// it so the existing `WindowEvent::Destroyed` hook fires, pushes the `closed` event, and lets
+/// `oauthLoginCapture.ts` settle `{ status: 'cancelled' }` with reason `window-closed`. Closing
+/// the window BEFORE ending the sheet risks leaving the parent in a sheet-blocked state with no
+/// sheet -- do not reorder.
+///
+/// Never fatal, never logs URL/origin/title -- only the label and a fixed two-value `route`
+/// string (`strip`/`esc`), matching `present_login_window_as_sheet`/
+/// `dismiss_login_window_sheet`'s own logging discipline (T-34.4.2-11).
+#[cfg(target_os = "macos")]
+fn request_login_sheet_cancel(app: &AppHandle, label: &str, route: &str) {
+    dismiss_login_window_sheet(app, label);
+    if let Some(window) = app.get_webview_window(label) {
+        let _ = window.close();
+    }
+    eprintln!("[shell] login-sheet: cancel requested for '{label}' via {route}");
+}
+
 // ---- Synthesized right-click poster: pure coordinate helpers (Phase 34.4.2 Plan 04,
 // REQ-34.4.2-05/06/07/08/10, T-34.4.2-17) ----
 //
@@ -3503,6 +3655,24 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                         builder.initialization_script(&autofill_glyph_script(REVEAL_EXFIL_HOST));
                     eprintln!("[shell] humble_login_open: autofill glyph injected for '{label}'");
                 }
+                // Login-sheet cancel strip injection (Phase 34.4.2 Plan 08,
+                // REQ-34.4.2-03/04/06/07/08, T-34.4.2-33). `#[cfg(target_os = "macos")]`:
+                // only macOS presents this window as a sheet (Plan 07), so only macOS needs
+                // an in-page exit -- deliberately NOT the cross-platform-injected-but-inert
+                // shape the autofill glyph above uses (34.4.2-PLATFORM-SCOPE.md § 1's
+                // recorded wart is NOT repeated here). Deliberately OUTSIDE and INDEPENDENT
+                // of the `GAMELIB_AUTOFILL_GLYPH` branch above: the strip gets NO kill
+                // switch of its own. An env var that removes the only visible exit from a
+                // parent-blocking sheet would be a lock-out switch, not a safety switch
+                // (T-34.4.2-15).
+                #[cfg(target_os = "macos")]
+                {
+                    builder = builder
+                        .initialization_script(&login_cancel_strip_script(REVEAL_EXFIL_HOST));
+                    eprintln!(
+                        "[shell] humble_login_open: login cancel strip injected for '{label}'"
+                    );
+                }
                 // F-4 machine record (Phase 34.4.1 Plan 24): `.focused(true)` above is
                 // a ONE-SHOT raise-on-creation with no persistent state to inspect
                 // afterwards, so without this line there is no record of what
@@ -3564,6 +3734,14 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // `app_for_detach = app.clone()` convention (a few lines below `.build()`).
             #[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
             let app_for_autofill = app.clone();
+            // Owned `AppHandle` clone for the `.on_navigation(` sentinel closure below (Phase
+            // 34.4.2 Plan 08, REQ-34.4.2-03/04/08): `request_login_sheet_cancel` needs
+            // `&AppHandle` to dismiss the sheet and close the window -- mirrors
+            // `app_for_autofill`'s own convention immediately above, a separate clone rather
+            // than reusing `app_for_autofill` so each sentinel arm's capture is independently
+            // readable.
+            #[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
+            let app_for_cancel = app.clone();
             let window = builder
                 .on_page_load(move |window, payload| {
                     let kind = match payload.event() {
@@ -3607,6 +3785,24 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     // Windows/Linux the glyph is injected (plan 03 is not platform-gated)
                     // but no poster exists yet -- UNVERIFIED per the skill's Constraints
                     // section, matching this whole phase's cross-platform discipline.
+                    // Login-sheet cancel sentinel interception (Phase 34.4.2 Plan 08,
+                    // REQ-34.4.2-03/04/08, T-34.4.2-33). Checked BEFORE
+                    // `parse_autofill_request` -- cheaper (no JSON parse), and the two paths
+                    // are disjoint anyway (path discrimination on the shared
+                    // `REVEAL_EXFIL_HOST` keeps every sentinel on this host mutually
+                    // exclusive, T-34.4.2-13). macOS only: dismissing a sheet is a
+                    // macOS-only concept (Plan 07); on Windows/Linux this arm keeps silently
+                    // discarding the navigation, matching the autofill arm's own
+                    // non-macOS shape just below.
+                    if is_login_cancel_request(&url) {
+                        #[cfg(target_os = "macos")]
+                        request_login_sheet_cancel(&app_for_cancel, &nav_sentinel_label, "strip");
+                        #[cfg(not(target_os = "macos"))]
+                        {
+                            let _ = &app_for_cancel;
+                        }
+                        return false;
+                    }
                     if let Some(req) = parse_autofill_request(&url) {
                         #[cfg(target_os = "macos")]
                         post_autofill_right_click(&app_for_autofill, &nav_sentinel_label, &req);
@@ -5853,6 +6049,126 @@ mod tests {
             autofill_glyph_script(REVEAL_EXFIL_HOST).matches("try {").count(),
             1
         );
+    }
+
+    // ---- is_login_cancel_request / login_cancel_strip_script (Phase 34.4.2 Plan 08,
+    // REQ-34.4.2-03/04/06/07/08/10, T-34.4.2-33/-34) ----
+    //
+    // RED direction: an implementation that validates a payload, discriminates on host only
+    // (not path), or lets the strip register a keyboard listener, would flip one of the cases
+    // below.
+
+    #[test]
+    fn login_cancel_request_accepts_the_bare_sentinel_url() {
+        let url = tauri::Url::parse(&format!(
+            "https://{REVEAL_EXFIL_HOST}{LOGIN_CANCEL_EXFIL_PATH}"
+        ))
+        .unwrap();
+        assert!(is_login_cancel_request(&url));
+    }
+
+    #[test]
+    fn login_cancel_request_accepts_the_sentinel_url_with_arbitrary_query_pairs() {
+        let mut url = tauri::Url::parse(&format!(
+            "https://{REVEAL_EXFIL_HOST}{LOGIN_CANCEL_EXFIL_PATH}"
+        ))
+        .unwrap();
+        url.query_pairs_mut().append_pair("whatever", "ignored");
+        assert!(is_login_cancel_request(&url));
+    }
+
+    #[test]
+    fn login_cancel_request_rejects_the_autofill_sentinel_path_on_the_same_host() {
+        // The right host, but the pre-existing autofill sentinel's own path -- must NOT be
+        // mistaken for a cancel request (T-34.4.2-13, no collision between sibling sentinels).
+        let mut url =
+            tauri::Url::parse(&format!("https://{REVEAL_EXFIL_HOST}{AUTOFILL_EXFIL_PATH}"))
+                .unwrap();
+        url.query_pairs_mut().append_pair("data", "{}");
+        assert!(!is_login_cancel_request(&url));
+    }
+
+    #[test]
+    fn login_cancel_request_rejects_reveal_path() {
+        let url = tauri::Url::parse(&format!("https://{REVEAL_EXFIL_HOST}/reveal")).unwrap();
+        assert!(!is_login_cancel_request(&url));
+    }
+
+    #[test]
+    fn login_cancel_request_rejects_clear_storage_path() {
+        let url =
+            tauri::Url::parse(&format!("https://{REVEAL_EXFIL_HOST}/clear-storage")).unwrap();
+        assert!(!is_login_cancel_request(&url));
+    }
+
+    #[test]
+    fn login_cancel_request_rejects_the_sentinel_path_on_a_different_host() {
+        let url =
+            tauri::Url::parse(&format!("https://example.com{LOGIN_CANCEL_EXFIL_PATH}")).unwrap();
+        assert!(!is_login_cancel_request(&url));
+    }
+
+    #[test]
+    fn login_cancel_strip_script_embeds_the_exfil_host_exactly_once_as_a_json_escaped_literal() {
+        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        let literal = serde_json::to_string(REVEAL_EXFIL_HOST).unwrap();
+        assert_eq!(script.matches(&literal).count(), 1);
+    }
+
+    #[test]
+    fn login_cancel_strip_script_escapes_a_tricky_host_and_never_naively_interpolates_it() {
+        // Mirrors `autofill_glyph_script`'s own escaping round-trip case.
+        let tricky_host = "gamelib.invalid\"a\"b'c\\d</script>e";
+        let script = login_cancel_strip_script(tricky_host);
+        let expected_literal = serde_json::to_string(tricky_host).unwrap();
+        assert!(script.contains(&expected_literal));
+        let naive_interpolation = ["'", tricky_host, "'"].concat();
+        assert!(!script.contains(&naive_interpolation));
+    }
+
+    #[test]
+    fn login_cancel_strip_script_contains_the_sentinel_path() {
+        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        assert!(script.contains(LOGIN_CANCEL_EXFIL_PATH));
+    }
+
+    #[test]
+    fn login_cancel_strip_script_binds_no_keyboard_listener() {
+        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        assert!(!script.contains("keydown"));
+        assert!(!script.contains("keyup"));
+        assert!(!script.contains("keypress"));
+    }
+
+    #[test]
+    fn login_cancel_strip_script_never_reads_field_value_or_password_content() {
+        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        assert!(!script.contains(".value"));
+        assert!(!script.contains("password"));
+    }
+
+    #[test]
+    fn login_cancel_strip_script_delivers_via_a_hidden_iframe_never_location_href() {
+        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        assert!(script.contains("iframe"));
+        assert!(!script.contains("location.href"));
+    }
+
+    #[test]
+    fn login_cancel_strip_script_is_wrapped_in_a_single_top_level_try_catch() {
+        assert_eq!(
+            login_cancel_strip_script(REVEAL_EXFIL_HOST)
+                .matches("try {")
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn login_cancel_strip_script_is_pure_same_host_yields_identical_output() {
+        let a = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        let b = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        assert_eq!(a, b);
     }
 
     // ---- css_rect_center_in_view / clamp_point_to_view_bounds (Phase 34.4.2 Plan 04,
