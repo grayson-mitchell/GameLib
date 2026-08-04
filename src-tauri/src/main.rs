@@ -4773,117 +4773,24 @@ fn main() {
                 ),
             }
 
-            // Deminiaturize re-raise observer (Phase 34.4.2 Plan 02, REQ-34.4.2-04/05):
-            // spike 021 measured that an attached child window (`attach_login_window_as_child`,
-            // above) returns BEHIND `main` after `main` restores from the Dock unless
-            // explicitly re-raised (`login-window-ux-macos.md` S1's behaviour table, "restore
-            // main" row) -- this observer is that re-raise. Installed here in `.setup()`,
-            // alongside the tray-build block above, using this same block's non-fatal
-            // convention (T-34.1-22): if the main window's `NSWindow` cannot be resolved or
-            // the observer cannot be registered, log one WARN and continue -- the app must
-            // still start regardless.
-            //
-            // Deliberately NOT ALSO a main-window-focus-gained handler: a focus-driven
-            // re-raise would call `makeKeyAndOrderFront` every time the user deliberately
-            // clicks the main window, stealing key focus back to the login window and making
-            // the main window unusable while a login is open. Deminiaturize is the exact
-            // trigger spike 021 measured; this observer uses only that (no other
-            // `tauri::WindowEvent` variant is matched anywhere in this arm's own
-            // `.setup()` block).
-            #[cfg(target_os = "macos")]
-            match login_window_ns_window(app.handle(), MAIN_WINDOW_LABEL) {
-                Some(main_addr) => {
-                    // SAFETY: see `SendPtr`'s doc comment on `open_pristine_epic_login_window`,
-                    // above -- a bare address is not normally `Send`, but this wrapper is
-                    // reconstructed into a live reference only from within the main-thread
-                    // closure below.
-                    struct SendPtr(*mut std::ffi::c_void);
-                    unsafe impl Send for SendPtr {}
-                    let main_ptr = SendPtr(main_addr as *mut std::ffi::c_void);
-                    let app_for_observer = app.handle().clone();
-                    if let Err(e) = app.run_on_main_thread(move || {
-                        // Forces Rust 2021 disjoint closure capture to move in the WHOLE
-                        // `SendPtr` wrapper, not just its inner raw-pointer field, which
-                        // would bypass `SendPtr`'s `Send` impl entirely and fail to compile.
-                        let main_ptr = main_ptr;
-                        // SAFETY: `main_addr` was resolved moments ago via
-                        // `login_window_ns_window`, which only returns `Some` for a live
-                        // Tauri-managed `NSWindow`; reconstructed into a live `AnyObject`
-                        // reference only here, on the main thread. `AnyObject` (not the
-                        // typed `NSWindow`) is what
-                        // `addObserverForName_object_queue_usingBlock`'s `object` parameter
-                        // expects -- mirrors this file's existing `monitor: &AnyObject`
-                        // idiom on `open_pristine_epic_login_window`'s own raw-pointer
-                        // reconstruction, above.
-                        let main_window_obj: &objc2::runtime::AnyObject =
-                            unsafe { &*(main_ptr.0 as *const objc2::runtime::AnyObject) };
-                        let center = objc2_foundation::NSNotificationCenter::defaultCenter();
-                        // SAFETY: `getAllCookies`-style block delivery (see
-                        // `clear_default_data_store_cookies_for_domain`, above) -- this
-                        // block is only ever invoked by AppKit on the main thread (`queue:
-                        // None` below delivers on the posting thread, and
-                        // `NSWindowDidDeminiaturizeNotification` is always posted from the
-                        // main thread), and it captures only `Send + Sync + 'static`
-                        // Tauri/std values.
-                        let handler = block2::RcBlock::new(
-                            move |_note: std::ptr::NonNull<objc2_foundation::NSNotification>| {
-                                let labels: Vec<String> = PRESENTED_LOGIN_SHEETS
-                                    .lock()
-                                    .ok()
-                                    .and_then(|guard| guard.clone())
-                                    .unwrap_or_default();
-                                eprintln!(
-                                    "[shell] login-window: parent deminiaturized, re-raising {} presented login sheet(s)",
-                                    labels.len()
-                                );
-                                for child_label in &labels {
-                                    // A label whose window no longer resolves is skipped
-                                    // silently -- a closed window is a healthy state, not
-                                    // an error.
-                                    if let Some(child_addr) =
-                                        login_window_ns_window(&app_for_observer, child_label)
-                                    {
-                                        // SAFETY: `child_addr` was resolved moments ago via
-                                        // `login_window_ns_window`; this notification is
-                                        // delivered on the main thread (queue: None,
-                                        // below), so reconstructing a live reference here
-                                        // is safe.
-                                        let child_window: &objc2_app_kit::NSWindow = unsafe {
-                                            &*(child_addr as *const objc2_app_kit::NSWindow)
-                                        };
-                                        child_window.makeKeyAndOrderFront(None);
-                                    }
-                                }
-                            },
-                        );
-                        // SAFETY: `main_window_obj` is a live object reconstructed above;
-                        // `handler` outlives this call via `std::mem::forget` immediately
-                        // below.
-                        let observer = unsafe {
-                            center.addObserverForName_object_queue_usingBlock(
-                                Some(objc2_app_kit::NSWindowDidDeminiaturizeNotification),
-                                Some(main_window_obj),
-                                None,
-                                &handler,
-                            )
-                        };
-                        // Deliberately leaked for the process lifetime -- mirrors
-                        // `EpicPristineNavDelegate`'s own `std::mem::forget`, above: this is
-                        // ONE observer on the app's own main window, registered once in
-                        // `.setup()`, versus the per-open `NSEvent` local monitor that had
-                        // to be torn down because it ran on every keystroke app-wide for as
-                        // long as it lived.
-                        std::mem::forget(observer);
-                    }) {
-                        eprintln!(
-                            "[shell] WARN: login-window deminiaturize observer: main-thread dispatch failed ({e}) -- continuing without it"
-                        );
-                    }
-                }
-                None => eprintln!(
-                    "[shell] WARN: login-window deminiaturize observer: no NSWindow for '{MAIN_WINDOW_LABEL}' -- continuing without it"
-                ),
-            }
+            // DELIBERATELY RETIRED (Phase 34.4.2 Plan 07, 2026-08-04): a deminiaturize
+            // re-raise observer used to be installed here (Phase 34.4.2 Plan 02,
+            // REQ-34.4.2-04/05). It existed SOLELY to re-raise AppKit CHILD windows after
+            // `main` restored from the Dock -- spike 021's measured "restore main" defect,
+            // where an attached child window returned BEHIND `main` unless explicitly
+            // brought forward again. The operator's binding design decision of 2026-08-04
+            // (`34.4.2-LIVE-GATE.md`'s "Binding Design Decision" section, responding to
+            // F-34.4.2-01/-02) replaced child-window attachment with AppKit SHEET
+            // presentation (`present_login_window_as_sheet`, above): a sheet is presented BY
+            // its parent window and moves with it, so there is no child list to re-raise and
+            // no z-order defect this observer was written to fix. Keeping the observer would
+            // (a) do nothing useful -- `PRESENTED_LOGIN_SHEETS` entries are sheets, not
+            // AppKit child windows, and bringing one forward is not the same operation the
+            // old child-attachment call needed -- and (b) emit a misleading log line naming a
+            // re-raise mechanism that no longer exists. No replacement observer and no
+            // window-focus-driven re-raise handler were added: whether the sheet survives the
+            // minimize/restore cycle INTERACTIVE is exactly what the rewritten live gate's
+            // item 1 must measure, not something to pre-emptively paper over here.
 
             // Dev-only: force the webview devtools open (the dev webview exposes no
             // right-click inspect on macOS) so renderer errors are inspectable, and
