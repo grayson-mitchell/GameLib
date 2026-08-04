@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.2-08-PLAN.md (mandated close affordance lands); no live gate has run yet -- plans 09/10 (rewritten gate contract + hardware re-run) are next
-last_updated: "2026-08-04T07:29:29.280Z"
-last_activity: "2026-08-04 -- Phase 34.4.2 plan 08 executed: login-cancel sentinel + injected strip + Esc backstop land the T-34.4.2-33 mandated close affordance, both funnelled through request_login_sheet_cancel. cargo 131/131, jest 84/84, test:ci 3735/3735. See 34.4.2-08-SUMMARY.md. Next: plan 09 (rewritten live gate contract)."
+stopped_at: Completed 34.4.2-09-PLAN.md
+last_updated: "2026-08-04T07:45:55.627Z"
+last_activity: 2026-08-04
 progress:
   total_phases: 18
   completed_phases: 13
   total_plans: 201
-  completed_plans: 188
+  completed_plans: 189
   percent: 72
 ---
 
@@ -479,18 +479,18 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — EXECUTING
-Plan: 9 of 10 (08 done -- LOGIN_CANCEL_EXFIL_PATH/is_login_cancel_request/
-login_cancel_strip_script/request_login_sheet_cancel land the mandated close affordance
-T-34.4.2-33 required: an injected, self-re-appending "Cancel sign-in" strip with NO kill switch
-(deliberately not gated by GAMELIB_AUTOFILL_GLYPH, and macOS-only unlike the autofill glyph) plus
-a page-independent bare-Esc NSEvent monitor, both funnelled through request_login_sheet_cancel
-(dismiss_login_window_sheet THEN window.close()); cargo 131/131 (up from 117), jest 84/84 (up
-from 76), test:ci 3735/3735; REQ-34.4.2-03 text updated but stays unchecked pending the live
-gate; see 34.4.2-08-SUMMARY.md. Plans 09/10 (rewritten gate contract + hardware re-run) are next
-and now unblocked -- the lock-out T-34.4.2-33 flagged is closed on paper.)
+Plan: 10 of 10 (09 done -- 34.4.2-LIVE-GATE-RERUN.md written: six-item blocking contract for the
+sheet mechanism, verdict/run_date/items_passed all null, items 1-2 rewritten for sheet semantics
+(item 1 folds F-34.4.2-01 into a PASS sub-check), items 3-6 carried over intact.
+34.4.2-PLATFORM-SCOPE.md reconciled: retired-symbol history subsection, nine new symbol rows with
+source-verified cfg gates, T-34.4.2-05/-07 reset to OPEN-pending-gate, T-34.4.2-33/-34/-35 entered.
+REQ-34.4.2-04/05/06/09 corrected to unchecked, each naming its rerun-item precondition;
+REQ-34.4.2-01/02/03 verified byte-identical to plan 07's output. deferred-items.md's Plan 05
+premature-[x] entry CLOSED. See 34.4.2-09-SUMMARY.md. Phase remains NOT CLOSED -- no gate item was
+run.)
 
-**Next action:** `/gsd-execute-phase 34.4.2` — plan 09 (rewritten six-item live gate contract,
-written with verdict null by a plan forbidden from running it). Separately outstanding:
+**Next action:** `/gsd-execute-phase 34.4.2` — plan 10 (run `34.4.2-LIVE-GATE-RERUN.md` on real
+macOS hardware, the only plan permitted to fill any Observed/Verdict field). Separately outstanding:
 `/gsd-plan-phase 34.5 --gaps` — gap cycle 6. Named here once, deliberately nowhere else. Scope it around: the GOG frontend-render defect (F-34.5-G6-12 / U-34.5-07, where 7 titles persist to disk and the Library UI shows none); the dead `nativeImage` sidecar stub that structurally blocks every macOS `.app` shortcut (F-34.5-G6-07 / U-34.5-12); the Electron-shaped Steam LaunchOptions the Tauri shell ignores (F-34.5-G6-09 / U-34.5-13); **an audit of the real preload channel surface against `IPC-PORT-INVENTORY.md`, which is a Phase 35 precondition and whose incompleteness is of unknown extent** (F-34.5-G6-10 / U-34.5-14); `addToSteam` dropping its return value (F-34.5-G6-08 / U-34.5-15); the still-unattempted items 3 and 5; and the `REQUIREMENTS.md` inconsistency where REQ-34.5-01/02/03/04/05/12 sit checked `[x]` while carrying gate conditions that have now failed three times (deferred-items item 22). Epic (item 1) stays parked by explicit developer decision and is NOT this cycle's blocker.
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
@@ -2376,6 +2376,13 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
 Status: Executing Phase 34.4.2
 
+> NOTE (34.4.2-09): `state.advance-plan` again spliced this session's current status ("Ready to
+> execute") into this HISTORICAL "Prior phase: 34.1" block, the same recurring splice site the
+> note immediately below documents across 34.2-13/34.2-14/34.3-08/34.4.2-01/34.4.2-06/34.4.2-08
+> sessions. Hand-corrected back to `Status: Executing Phase 34.4.2` (this block's own pre-session
+> value, diffed against the pre-session snapshot rather than trusted blindly) -- plan 10 remains
+> in the same phase, so "Executing" is still the correct historical-block value, not "Ready".
+
 > NOTE (34.4.2-08): `state.advance-plan` again spliced this session's current status ("Ready to
 > execute") into this HISTORICAL "Prior phase: 34.1" block, the same recurring splice site the
 > note immediately below documents across 34.2-13/34.2-14/34.3-08/34.4.2-01/34.4.2-06 sessions.
@@ -2611,7 +2618,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-04 -- Phase 34.4.2 plan 08 executed: LOGIN_CANCEL_EXFIL_PATH/is_login_cancel_request/login_cancel_strip_script/request_login_sheet_cancel land the T-34.4.2-33 mandated close affordance (kill-switch-free cancel strip + page-independent Esc backstop, both funnelled through request_login_sheet_cancel's dismiss-then-close ordering). cargo 131/131 (up from 117), jest 84/84 (up from 76), test:ci 3735/3735. REQ-34.4.2-03 text updated, stays unchecked pending the live gate. See 34.4.2-08-SUMMARY.md. Next: plan 09 (rewritten six-item live gate contract).
+Last activity: 2026-08-04
 Prior activity: 2026-08-04 -- Phase 34.4.2 plan 07 executed: present_login_window_as_sheet/dismiss_login_window_sheet replace child-window attach/detach, PRESENTED_LOGIN_SHEETS registry re-homes the poster gate, deminiaturize re-raise observer retired, tauriShellSource.test.ts inverted (76/76), REQ-34.4.2-01/-02/-03 restated SUPERSEDED and unchecked. See 34.4.2-07-SUMMARY.md.
 Prior activity: 2026-08-03 - **F-34.5-G6-01 CLOSED and the embedded Epic login WORKS under Tauri.** Debug session epic-login-non-interactive RESOLVED and archived to .planning/debug/resolved/. The pre-auth 403 was Talon fingerprinting Tauri's injected globals (window.isTauri et al, non-configurable AND non-writable, correctly proven unmaskable from JS) — fixed not by hiding them but by not creating them: Epic's login window is now a webview-less tauri::WindowBuilder window with a raw WKWebView attached, zero initialization scripts, own WKNavigationDelegate (03b75211a, macOS+Epic only). The separate post-auth defect fell out of the same change — decidePolicyForNavigationAction sees the localhost redirect WKWebView silently refuses to LOAD — so the OAuth code is captured natively and NO JavaScript is injected into Epic's page anywhere; the old observer/shim/on_navigation trio was deleted (da529ca86, -400 lines). Four supporting defects found only by live hardware testing: WKUIDelegate (post-password hang), windowless WKWebsiteDataStore cookie clear (logout was silently leaving session cookies, so every "login" was a re-auth against a blank in-transit page), an NSEvent key monitor for Cmd+V (tao swallows the key equivalent; the Edit menu's paste: always worked), and humble_login_close falling back to get_window (the window never closed on success and every logout leaked an invisible window) — b76d58ee6, b8e73e437. Live-proven 20:26-20:28: the FIRST genuinely logged-out Epic login ever driven under Tauri, nav host=www.epicgames.com → nav host=localhost → status=captured → 15 games & DLCs, operator-confirmed in the UI; window self-close confirmed 22:03. Ledger rows U-34.5-06 (properly retired) and U-34.5-11 (retired as SUBJECT DELETED, never exercised — not a pass) updated (fe8a0ca2b). CARRIED FORWARD, unproven: a UA of Safari engine tokens + " EpicGamesLauncher" satisfies both Epic's launcher routing and hCaptcha's engine check, but the run that passed auto-logged-in and never rendered a captcha, so it was deliberately NOT defaulted. STANDING CONSTRAINT: Epic can demand a captcha at any time and the launcher UA its OAuth flow requires is one hCaptcha cannot initialize under, so the embedded window has a failure mode SIDLogin structurally does not — keep SIDLogin as Epic's PRIMARY tile. Phase 34.5 closure UNAFFECTED and still open. Prior same-day activity: shipped two live-verified debug fixes to fork PR #3: steam-refresh-hung-on-startup (22a9a328d, mount-time refresh gate now includes Steam) and login-logout-wipes-library (6f194fabe, per-runner scoped refresh, logout no longer reloads the app; Steam sync cache-hydration deferred into the IPC-port effort)
 ("Finalizing sign-in with <Runner>…" + spinner through the 5-27s token exchange) plus the
@@ -3263,6 +3270,7 @@ Closed/parked native-install phases:
 | Phase 34.4.2 P06 | ~25min | 3 tasks (Task 2 human checkpoint) | 5 files |
 | Phase 34.4.2 P07 | 50min | 3 tasks | 3 files |
 | Phase 34.4.2 P08 | 35min | 3 tasks | 3 files |
+| Phase 34.4.2 P09 | 40min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -3680,6 +3688,8 @@ Recent decisions affecting current work:
 - [Phase 34.4.2-08]: The cancel strip carries no kill switch at all -- an env var that removes the only visible exit from a parent-blocking sheet is a lock-out switch, not a safety switch (T-34.4.2-15)
 - [Phase 34.4.2-08]: The Esc monitor is reimplemented rather than refactored out of the pristine Epic arm's own local monitor -- that region is byte-frozen by REQ-34.4.2-10 and its monitor legitimately reads charactersIgnoringModifiers(), which this privacy-constrained monitor must never do (T-34.4.2-35)
 - [Phase 34.4.2-08]: REQ-34.4.2-03's checkbox stays UNCHECKED even though this plan lands both dismissal routes source-complete -- neither route has been observed on real macOS hardware; live discharge belongs to the rewritten gate's item 2 (plans 34.4.2-09/-10)
+- [Phase 34.4.2]: Item 1 of the rewritten live-gate contract folds F-34.4.2-01 (child window unresponsive after minimize/restore) directly into a PASS condition for the sheet mechanism — type into the password field and activate the cancel strip immediately after the Dock restore
+- [Phase 34.4.2]: T-34.4.2-05 and T-34.4.2-07 reset to OPEN-pending-gate rather than carried forward as CONFIRMED broken — the child-window mechanism they were confirmed broken against was retired by plan 07; a new mechanism does not inherit an old mechanism's fix
 
 ### Pending Todos
 
@@ -3759,8 +3769,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-04T07:29:29.269Z
-Stopped at: Completed 34.4.2-08-PLAN.md
+Last session: 2026-08-04T07:45:55.615Z
+Stopped at: Completed 34.4.2-09-PLAN.md
   This session (continuation executor, resumed after the Task 2 human checkpoint): transcribed
   the operator's live-gate run into `34.4.2-LIVE-GATE.md`. Task 1 (prior session, commit
   `b2542a56a`) had already discharged preflight: harness live (port 17940), binary

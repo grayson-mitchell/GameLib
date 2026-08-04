@@ -1545,7 +1545,7 @@ Verification can run offline against the spike-019 local OAuth DummyStore harnes
 PKCE + replay enforcement + `/events` oracle) where a live store login isn't required.
 **Requirements**: REQ-34.4.2-01, REQ-34.4.2-02, REQ-34.4.2-03, REQ-34.4.2-04, REQ-34.4.2-05, REQ-34.4.2-06, REQ-34.4.2-07, REQ-34.4.2-08, REQ-34.4.2-09, REQ-34.4.2-10 (minted by plan 34.4.2-01; the ID rows themselves land in `REQUIREMENTS.md` when that plan executes. **REQ-34.4.2-10 is the Epic descope**, minted so the exclusion is machine-enforceable rather than a comment; 01/04/06 were narrowed from "both login surfaces" to the Tauri-managed surface. No ID was deleted or renumbered.)
 **Depends on:** Phase 34.4.1 (the login-window seam these behaviors attach to — COMPLETE)
-**Plans:** 8/10 plans executed
+**Plans:** 9/10 plans executed
 
 **Status: LIVE GATE FAILED 2026-08-04 (0/6, items 3-6 NOT ATTEMPTED) — PHASE DOES NOT CLOSE.**
 `34.4.2-06-PLAN.md`'s blocking gate ran on real macOS hardware. Item 1 (child-window attachment)
@@ -1608,7 +1608,7 @@ Plans:
 **Gap cycle (planned 2026-08-04, implementing the BINDING sheet decision — 4 plans, 4 waves):**
 - [x] 34.4.2-07-PLAN.md — Replace AppKit child-window attachment with SHEET presentation (`beginSheet:`/`endSheet:`), re-home the poster's authorization gate onto `PRESENTED_LOGIN_SHEETS`, retire the deminiaturize re-raise observer, invert the superseded anti-sheet negatives, restate REQ-34.4.2-01/-02/-03 (wave 1)
 - [x] 34.4.2-08-PLAN.md — The mandated explicit close affordance, via two independent routes: a non-kill-switchable in-page "Cancel sign-in" strip on a `/login-cancel` sentinel, and a page-independent bare-Esc monitor scoped to presented sheets; both end the sheet then close the window, preserving `status=cancelled reason=window-closed` (wave 2)
-- [ ] 34.4.2-09-PLAN.md — Rewritten six-item blocking gate contract `34.4.2-LIVE-GATE-RERUN.md` (`verdict: null`): items 1/2 restated in sheet semantics with a mandatory post-minimize/restore INTERACTIVITY sub-check, items 3-6 carried over intact; platform-scope + threat roll-up updated (T-34.4.2-33/-34/-35); premature requirement checkmarks corrected (wave 3)
+- [x] 34.4.2-09-PLAN.md — Rewritten six-item blocking gate contract `34.4.2-LIVE-GATE-RERUN.md` (`verdict: null`): items 1/2 restated in sheet semantics with a mandatory post-minimize/restore INTERACTIVITY sub-check, items 3-6 carried over intact; platform-scope + threat roll-up updated (T-34.4.2-33/-34/-35); premature requirement checkmarks corrected (wave 3)
 - [ ] 34.4.2-10-PLAN.md — **BLOCKING live gate re-run** on real macOS hardware; records the measured verdict and propagates it (wave 4, non-autonomous)
 
 **Gap-cycle scope note:** the fix direction is the presentation switch, per the binding decision — **no plan diagnoses or repairs F-34.4.2-01's root cause inside the child-window mechanism, because that mechanism is removed.** Plan 07 alone ships a sheet the user cannot dismiss (T-34.4.2-33); **plan 08 is a hard prerequisite and no gate may run between them.** Epic remains byte-untouched throughout (REQ-34.4.2-10).
