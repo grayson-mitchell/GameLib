@@ -1545,7 +1545,7 @@ Verification can run offline against the spike-019 local OAuth DummyStore harnes
 PKCE + replay enforcement + `/events` oracle) where a live store login isn't required.
 **Requirements**: REQ-34.4.2-01, REQ-34.4.2-02, REQ-34.4.2-03, REQ-34.4.2-04, REQ-34.4.2-05, REQ-34.4.2-06, REQ-34.4.2-07, REQ-34.4.2-08, REQ-34.4.2-09, REQ-34.4.2-10 (minted by plan 34.4.2-01; the ID rows themselves land in `REQUIREMENTS.md` when that plan executes. **REQ-34.4.2-10 is the Epic descope**, minted so the exclusion is machine-enforceable rather than a comment; 01/04/06 were narrowed from "both login surfaces" to the Tauri-managed surface. No ID was deleted or renumbered.)
 **Depends on:** Phase 34.4.1 (the login-window seam these behaviors attach to — COMPLETE)
-**Plans:** 1/6 plans executed
+**Plans:** 2/6 plans executed
 
 **No CONTEXT.md, no RESEARCH.md, no PATTERNS.md, no UI-SPEC.md** — all four skipped by explicit
 developer decision. Spikes 019/020/021/022 (validated 2026-08-04) ARE the research and locked the
@@ -1579,7 +1579,7 @@ plan may attempt it; Cmd+V paste must keep working in both surfaces.
 
 Plans:
 - [x] 34.4.2-01-PLAN.md — Mint REQ-34.4.2-01..10 + Tauri-managed `NSWindow`/`WKWebView` handle resolvers + the EPIC-UNTOUCHED source guard (`PHASE_34_4_2_NEW_SYMBOLS`) (wave 1)
-- [ ] 34.4.2-02-PLAN.md — AppKit child-window attach/detach on the Tauri-managed surface + deminiaturize re-raise; permanent anti-sheet / anti-`.parent()` / anti-focus-re-raise negatives (wave 2)
+- [x] 34.4.2-02-PLAN.md — AppKit child-window attach/detach on the Tauri-managed surface + deminiaturize re-raise; permanent anti-sheet / anti-`.parent()` / anti-focus-re-raise negatives (wave 2)
 - [ ] 34.4.2-03-PLAN.md — In-field glyph script + path-discriminated cancelled-navigation request channel on the Tauri-managed surface (no `WKUserScript`, no Cargo change); retightens the `on_navigation` negative rather than deleting it (wave 3)
 - [ ] 34.4.2-04-PLAN.md — Synthesized `RightMouseDown`/`RightMouseUp` poster: webview-bounds coordinate flip, out-of-bounds refusal, server-side debounce, single call site (wave 4)
 - [ ] 34.4.2-05-PLAN.md — DummyStore-never-ships containment guard + `34.4.2-PLATFORM-SCOPE.md` (per-symbol Windows/Linux declaration, EPIC-DEFERRED record, Electron-unchanged evidence) + phase `deferred-items.md` + the 6-item gate contract with `verdict: null` (wave 5)
