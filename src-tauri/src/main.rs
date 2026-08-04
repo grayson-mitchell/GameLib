@@ -1303,6 +1303,241 @@ fn clear_storage_script(exfil_host: &str) -> String {
     template.replace("@@EXFIL_HOST@@", &exfil_host_js)
 }
 
+// ---- In-field autofill glyph support (Phase 34.4.2 Plan 03, REQ-34.4.2-04/06/07/08/10) ----
+//
+// Spikes 020/022 (`login-window-ux-macos.md`) proved the system AutoFill panel cannot be
+// opened directly, but a synthesized right-click at the password field pops the real context
+// menu with `AutoFill ›` in it. This section builds everything up to (but not including) that
+// click: the injected glyph script, and the page-to-Rust request channel carrying the field's
+// geometry (plan 34.4.2-04 posts the click itself). Scoped EXCLUSIVELY to the Tauri-managed
+// `humble_login_open` arm's `if visible` surface (Humble/GOG/Amazon) -- REQ-34.4.2-10's locked
+// user-decision scope. The pristine Epic surface (`open_pristine_epic_login_window`) receives
+// none of this: no script, no sentinel, no Cargo feature.
+
+/// Sentinel path on the existing `REVEAL_EXFIL_HOST` (never a second host) that the injected
+/// glyph script's cancelled-navigation request uses. Path discrimination -- not just host --
+/// is what keeps this channel from colliding with the pre-existing `/reveal`
+/// (`humble_reveal_post`) and `/clear-storage` (`humble_login_clear_storage`) sentinels on the
+/// same reserved host (T-34.4.2-13).
+const AUTOFILL_EXFIL_PATH: &str = "/autofill-request";
+
+/// The parsed, validated payload `parse_autofill_request` (below) produces from the glyph
+/// script's cancelled-navigation request. `hit_id`/`hit_tag`/`hit_type` are advisory
+/// diagnostics ONLY -- the machine record of the MANDATORY `document.elementFromPoint` check
+/// (`login-window-ux-macos.md` S4) -- their absence never fails the parse, and each is
+/// truncated to at most 64 chars before reaching a caller, so a hostile page cannot use this
+/// channel to smuggle an arbitrarily large string into a log line (T-34.4.2-11). Deliberately
+/// does NOT derive the standard formatting trait (REQ-34.1-07's file-wide text gate, same
+/// reasoning as `RevealPostArgs`/`ClearStorageArgs` above) -- `#[cfg(test)]` assertions read
+/// fields directly instead of relying on that trait.
+struct AutofillRequest {
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+    hit_id: Option<String>,
+    hit_tag: Option<String>,
+    hit_type: Option<String>,
+}
+
+/// Truncates `s` to at most `max` CHARACTERS (never bytes) -- `chars().take` is UTF-8-safe,
+/// unlike a byte-index slice that could panic mid-codepoint on a hostile page's crafted
+/// `hitId`/`hitTag`/`hitType` string.
+fn truncate_chars(s: &str, max: usize) -> String {
+    s.chars().take(max).collect()
+}
+
+/// This channel's entire ASVS V5 input validation (T-34.4.2-10/-13, mirrors
+/// `reveal_post_args`'s "this arm's entire input validation lives here" discipline): pure, no
+/// `AppHandle`, no logging, no I/O, never panics. Validates in this order -- host equals
+/// `REVEAL_EXFIL_HOST`; path equals `AUTOFILL_EXFIL_PATH` (discriminating this channel from the
+/// pre-existing `/reveal` and `/clear-storage` sentinels on the SAME host, T-34.4.2-13); a
+/// `data` query pair exists; it parses as JSON; `x`/`y`/`w`/`h` are all present, numeric AND
+/// finite (a NaN/inf coordinate must never reach plan 34.4.2-04's coordinate math -- in
+/// practice JSON itself cannot encode a non-finite float, so a crafted non-finite value is
+/// rejected either by this explicit guard or, for a literal `NaN`/`Infinity` token, by the JSON
+/// parse failing outright; both paths return `None`, which is the only guarantee this function
+/// makes); `w > 0.0 && h > 0.0` (a degenerate zero/negative rect is never a real field). Any
+/// failure returns `None` -- never a partial struct, never a panic, never `.unwrap()`.
+/// `hit_id`/`hit_tag`/`hit_type` are read as strings if present and truncated to 64 chars each;
+/// their absence or wrong type never fails the parse (T-34.4.2-11's advisory-diagnostics-only
+/// discipline).
+fn parse_autofill_request(url: &tauri::Url) -> Option<AutofillRequest> {
+    if url.host_str() != Some(REVEAL_EXFIL_HOST) {
+        return None;
+    }
+    if url.path() != AUTOFILL_EXFIL_PATH {
+        return None;
+    }
+    let (_, raw_data) = url.query_pairs().find(|(k, _)| k == "data")?;
+    let parsed: Value = serde_json::from_str(&raw_data).ok()?;
+    let x = parsed.get("x")?.as_f64()?;
+    let y = parsed.get("y")?.as_f64()?;
+    let w = parsed.get("w")?.as_f64()?;
+    let h = parsed.get("h")?.as_f64()?;
+    if !x.is_finite() || !y.is_finite() || !w.is_finite() || !h.is_finite() {
+        return None;
+    }
+    if w <= 0.0 || h <= 0.0 {
+        return None;
+    }
+    let hit_id = parsed
+        .get("hitId")
+        .and_then(|v| v.as_str())
+        .map(|s| truncate_chars(s, 64));
+    let hit_tag = parsed
+        .get("hitTag")
+        .and_then(|v| v.as_str())
+        .map(|s| truncate_chars(s, 64));
+    let hit_type = parsed
+        .get("hitType")
+        .and_then(|v| v.as_str())
+        .map(|s| truncate_chars(s, 64));
+    Some(AutofillRequest {
+        x,
+        y,
+        w,
+        h,
+        hit_id,
+        hit_tag,
+        hit_type,
+    })
+}
+
+/// Builds the JS injected as an `initialization_script()` into the Tauri-managed login
+/// surface's VISIBLE builder ONLY (`humble_login_open`'s `if visible` block -- Task 2, below).
+/// Uses `clear_storage_script`'s `@@EXFIL_HOST@@` placeholder + `serde_json::to_string` +
+/// `.replace()` technique verbatim (T-34.4.2-SC's escaping discipline) -- `exfil_host` is the
+/// ONLY interpolated value, and it appears exactly once in the output.
+///
+/// Contract the generated script implements (REQ-34.4.2-04/06/07):
+/// - Idempotent: bails immediately if `window.__GAMELIB_AUTOFILL_GLYPH__` is already set (sets
+///   it first).
+/// - `initialization_script()` itself runs before any page script, in every frame (login forms
+///   are frequently in iframes) -- this script additionally does an initial scan on load plus a
+///   debounced `MutationObserver` on `document.documentElement`
+///   (`{childList:true, subtree:true}`) so a form that renders late is still decorated.
+/// - Renders exactly one glyph per undecorated `input[type=password]`, positioned with
+///   `position:fixed` (from `getBoundingClientRect()`) over the field's right-hand inside edge,
+///   repositioned on `scroll` (capture) and `resize`. Never re-parents the input, never sets
+///   any input attribute other than one namespaced marker, never touches the input's own
+///   styles -- a login form's own validation logic must see an untouched field.
+/// - Accessible: `role="button"`, `aria-label="AutoFill password"`, matching `title`,
+///   `tabindex="-1"` (never enters the form's tab order).
+/// - Keyboard-transparent (REQ-34.4.2-06): registers NO `keydown`/`keyup`/`keypress` listener
+///   anywhere, and calls `preventDefault()` on nothing but its own `mousedown` -- Cmd+V into the
+///   password field (the universal password-manager fallback, `login-window-ux-macos.md` S5)
+///   must keep working.
+/// - On activation: `field.focus()`, reads `getBoundingClientRect()`, computes the centre, and
+///   calls `document.elementFromPoint(cx, cy)` to read `id`/`tagName`/`type` off the result --
+///   the MANDATORY diagnostic `login-window-ux-macos.md` S4 requires, since a coordinate error
+///   otherwise silently probes the wrong field. Builds `{x,y,w,h,hitId,hitTag,hitType}` -- **the
+///   field's `value` is never read and must not appear anywhere in this script** (T-34.4.2-10).
+/// - Delivers via a hidden (`display:none`, 1x1) `<iframe>`, never `location.href` -- an iframe
+///   navigation is observed and cancelled identically by this surface's navigation hook, but
+///   (unlike `location.href`) never fires `beforeunload` on the live, credential-bearing main
+///   document or drops half-entered form state.
+/// - Rate-limits itself: ignores a second activation within 750ms (T-34.4.2-14's page-side
+///   half; plan 34.4.2-04 adds the authoritative server-side debounce).
+/// - The whole script is wrapped in one top-level try/catch (T-34.4.2-16) -- a throwing glyph
+///   must never break a live login page.
+///
+/// Mirrors `clear_storage_script`'s own `concat!`-of-single-line-pieces discipline (every JS
+/// string literal below uses single quotes, so every piece keeps an EVEN raw `"`-count on its
+/// own source line -- `longRunningChannels.test.ts`'s WR-08 stripper-integrity guard).
+fn autofill_glyph_script(exfil_host: &str) -> String {
+    let exfil_host_js =
+        serde_json::to_string(exfil_host).unwrap_or_else(|_| "\"gamelib.invalid\"".to_string());
+    let template = concat!(
+        "(function() { ",
+        "try { ",
+        "if (window.__GAMELIB_AUTOFILL_GLYPH__) { return; } ",
+        "window.__GAMELIB_AUTOFILL_GLYPH__ = true; ",
+        "var MARK = 'data-gamelib-autofill-glyph'; ",
+        "var lastActivation = 0; ",
+        "function position(glyph, field) { ",
+        "var r = field.getBoundingClientRect(); ",
+        "var size = Math.max(16, Math.min(24, r.height - 8)); ",
+        "glyph.style.top = (r.top + (r.height - size) / 2) + 'px'; ",
+        "glyph.style.left = (r.left + r.width - size - 4) + 'px'; ",
+        "glyph.style.width = size + 'px'; ",
+        "glyph.style.height = size + 'px'; ",
+        "} ",
+        "function deliver(payload) { ",
+        "var frame = document.getElementById('__gamelib_autofill_frame__'); ",
+        "if (!frame) { ",
+        "frame = document.createElement('iframe'); ",
+        "frame.id = '__gamelib_autofill_frame__'; ",
+        "frame.style.display = 'none'; ",
+        "frame.style.width = '1px'; ",
+        "frame.style.height = '1px'; ",
+        "(document.body || document.documentElement).appendChild(frame); ",
+        "} ",
+        "frame.src = 'https://' + @@EXFIL_HOST@@ + '/autofill-request?data=' + encodeURIComponent(JSON.stringify(payload)); ",
+        "} ",
+        "function activate(field) { ",
+        "var now = Date.now(); ",
+        "if (now - lastActivation < 750) { return; } ",
+        "lastActivation = now; ",
+        "field.focus(); ",
+        "var r = field.getBoundingClientRect(); ",
+        "var cx = r.left + r.width / 2, cy = r.top + r.height / 2; ",
+        "var hit = document.elementFromPoint(cx, cy) || {}; ",
+        "deliver({ ",
+        "x: r.left, y: r.top, w: r.width, h: r.height, ",
+        "hitId: hit.id || null, hitTag: hit.tagName || null, hitType: hit.type || null ",
+        "}); ",
+        "} ",
+        "function decorate(field) { ",
+        "if (field.hasAttribute(MARK)) { return; } ",
+        "field.setAttribute(MARK, '1'); ",
+        "var glyph = document.createElement('div'); ",
+        "glyph.setAttribute('role', 'button'); ",
+        "glyph.setAttribute('aria-label', 'AutoFill password'); ",
+        "glyph.setAttribute('title', 'AutoFill password'); ",
+        "glyph.setAttribute('tabindex', '-1'); ",
+        "glyph.textContent = String.fromCharCode(128273); ",
+        "glyph.style.position = 'fixed'; ",
+        "glyph.style.zIndex = '2147483647'; ",
+        "glyph.style.display = 'flex'; ",
+        "glyph.style.alignItems = 'center'; ",
+        "glyph.style.justifyContent = 'center'; ",
+        "glyph.style.cursor = 'pointer'; ",
+        "glyph.style.background = 'transparent'; ",
+        "glyph.style.fontSize = '14px'; ",
+        "glyph.style.lineHeight = '1'; ",
+        "glyph.style.userSelect = 'none'; ",
+        "position(glyph, field); ",
+        "glyph.addEventListener('mousedown', function(evt) { ",
+        "evt.preventDefault(); ",
+        "activate(field); ",
+        "}); ",
+        "var reposition = function() { position(glyph, field); }; ",
+        "window.addEventListener('scroll', reposition, true); ",
+        "window.addEventListener('resize', reposition, true); ",
+        "(document.body || document.documentElement).appendChild(glyph); ",
+        "} ",
+        "function scan(root) { ",
+        "var fields = (root || document).querySelectorAll('input[type=password]'); ",
+        "for (var i = 0; i < fields.length; i++) { decorate(fields[i]); } ",
+        "} ",
+        "var debounceTimer = null; ",
+        "function scheduleScan() { ",
+        "if (debounceTimer) { return; } ",
+        "debounceTimer = setTimeout(function() { debounceTimer = null; scan(document); }, 200); ",
+        "} ",
+        "scan(document); ",
+        "if (document.readyState === 'loading') { ",
+        "document.addEventListener('DOMContentLoaded', function() { scan(document); }); ",
+        "} ",
+        "var observer = new MutationObserver(function() { scheduleScan(); }); ",
+        "observer.observe(document.documentElement, { childList: true, subtree: true }); ",
+        "} catch (e) { } ",
+        "})();"
+    );
+    template.replace("@@EXFIL_HOST@@", &exfil_host_js)
+}
+
 /// Host this arm uses to decide whether the window it is about to open is Epic's --
 /// the ONLY signal available here, since `LoginWindowSeam.open()` (`loginWindowSeam.ts`)
 /// takes no `runner` argument and `humble_login_open` is runner-agnostic by design. Mirrors
@@ -5147,6 +5382,182 @@ mod tests {
         let exfil_call_index = script.rfind("exfil(report)").unwrap();
         let last_await_index = script.rfind("await ").unwrap();
         assert!(exfil_call_index > last_await_index);
+    }
+
+    // ---- parse_autofill_request / autofill_glyph_script (Phase 34.4.2 Plan 03,
+    // REQ-34.4.2-04/06/07/08/10, T-34.4.2-10/-11/-13/-14/-16) ----
+    //
+    // RED direction: an implementation that reads a field's value, discriminates on host only
+    // (not path), or coerces a missing/NaN/negative coordinate into a default rather than
+    // `None`, would flip one of the cases below.
+
+    /// Builds a `REVEAL_EXFIL_HOST` + `AUTOFILL_EXFIL_PATH` URL carrying `data_json` verbatim
+    /// as the `data` query value -- `query_pairs_mut` handles the percent-encoding, matching
+    /// how the real glyph script's `encodeURIComponent` call is decoded on arrival.
+    fn autofill_url(data_json: &str) -> tauri::Url {
+        let mut url = tauri::Url::parse(&format!(
+            "https://{REVEAL_EXFIL_HOST}{AUTOFILL_EXFIL_PATH}"
+        ))
+        .unwrap();
+        url.query_pairs_mut().append_pair("data", data_json);
+        url
+    }
+
+    fn valid_autofill_payload() -> String {
+        json!({
+            "x": 10.5, "y": 20.5, "w": 24.0, "h": 32.0,
+            "hitId": "password", "hitTag": "INPUT", "hitType": "password"
+        })
+        .to_string()
+    }
+
+    #[test]
+    fn autofill_request_accepts_a_full_valid_payload_with_hit_diagnostics() {
+        let req = parse_autofill_request(&autofill_url(&valid_autofill_payload())).unwrap();
+        assert_eq!(req.x, 10.5);
+        assert_eq!(req.y, 20.5);
+        assert_eq!(req.w, 24.0);
+        assert_eq!(req.h, 32.0);
+        assert_eq!(req.hit_id, Some("password".to_string()));
+        assert_eq!(req.hit_tag, Some("INPUT".to_string()));
+        assert_eq!(req.hit_type, Some("password".to_string()));
+    }
+
+    #[test]
+    fn autofill_request_accepts_a_valid_payload_with_no_hit_diagnostics_at_all() {
+        let payload = json!({ "x": 1.0, "y": 2.0, "w": 3.0, "h": 4.0 }).to_string();
+        let req = parse_autofill_request(&autofill_url(&payload)).unwrap();
+        assert_eq!(req.hit_id, None);
+        assert_eq!(req.hit_tag, None);
+        assert_eq!(req.hit_type, None);
+    }
+
+    #[test]
+    fn autofill_request_truncates_a_hit_diagnostic_string_to_64_chars() {
+        let long = "x".repeat(200);
+        let payload = json!({ "x": 1.0, "y": 2.0, "w": 3.0, "h": 4.0, "hitId": long }).to_string();
+        let req = parse_autofill_request(&autofill_url(&payload)).unwrap();
+        assert_eq!(req.hit_id.unwrap().chars().count(), 64);
+    }
+
+    #[test]
+    fn autofill_request_rejects_a_url_on_a_different_host() {
+        let mut url = tauri::Url::parse(&format!("https://example.com{AUTOFILL_EXFIL_PATH}"))
+            .unwrap();
+        url.query_pairs_mut()
+            .append_pair("data", &valid_autofill_payload());
+        assert!(parse_autofill_request(&url).is_none());
+    }
+
+    #[test]
+    fn autofill_request_rejects_reveal_path() {
+        // The right host, but the pre-existing `/reveal` sentinel's own path -- must NOT be
+        // mistaken for an autofill request (T-34.4.2-13).
+        let mut url = tauri::Url::parse(&format!("https://{REVEAL_EXFIL_HOST}/reveal")).unwrap();
+        url.query_pairs_mut()
+            .append_pair("data", &valid_autofill_payload());
+        assert!(parse_autofill_request(&url).is_none());
+    }
+
+    #[test]
+    fn autofill_request_rejects_clear_storage_path() {
+        let mut url =
+            tauri::Url::parse(&format!("https://{REVEAL_EXFIL_HOST}/clear-storage")).unwrap();
+        url.query_pairs_mut()
+            .append_pair("data", &valid_autofill_payload());
+        assert!(parse_autofill_request(&url).is_none());
+    }
+
+    #[test]
+    fn autofill_request_rejects_a_url_with_no_data_query_pair() {
+        let url = tauri::Url::parse(&format!(
+            "https://{REVEAL_EXFIL_HOST}{AUTOFILL_EXFIL_PATH}"
+        ))
+        .unwrap();
+        assert!(parse_autofill_request(&url).is_none());
+    }
+
+    #[test]
+    fn autofill_request_rejects_non_json_data() {
+        assert!(parse_autofill_request(&autofill_url("not json")).is_none());
+    }
+
+    #[test]
+    fn autofill_request_rejects_a_payload_missing_w() {
+        let payload = json!({ "x": 1.0, "y": 2.0, "h": 4.0 }).to_string();
+        assert!(parse_autofill_request(&autofill_url(&payload)).is_none());
+    }
+
+    #[test]
+    fn autofill_request_rejects_a_non_numeric_x() {
+        let payload = json!({ "x": "abc", "y": 2.0, "w": 3.0, "h": 4.0 }).to_string();
+        assert!(parse_autofill_request(&autofill_url(&payload)).is_none());
+    }
+
+    #[test]
+    fn autofill_request_rejects_a_zero_width_rect() {
+        let payload = json!({ "x": 1.0, "y": 2.0, "w": 0.0, "h": 4.0 }).to_string();
+        assert!(parse_autofill_request(&autofill_url(&payload)).is_none());
+    }
+
+    #[test]
+    fn autofill_request_rejects_a_negative_height_rect() {
+        let payload = json!({ "x": 1.0, "y": 2.0, "w": 3.0, "h": -1.0 }).to_string();
+        assert!(parse_autofill_request(&autofill_url(&payload)).is_none());
+    }
+
+    #[test]
+    fn autofill_request_rejects_a_non_finite_x_value() {
+        // JSON itself cannot encode NaN/Infinity as a numeric literal -- a hand-crafted bareword
+        // `NaN` token fails `serde_json::from_str` outright, and `serde_json::json!`'s own
+        // `From<f64>` conversion maps a Rust-side NaN/inf to `Value::Null` before it could ever
+        // reach this parser. Both routes return `None`; this test exercises the literal-token
+        // route, which is the only way a non-finite value can appear on the wire at all.
+        let payload = r#"{"x":NaN,"y":2.0,"w":3.0,"h":4.0}"#;
+        assert!(parse_autofill_request(&autofill_url(payload)).is_none());
+    }
+
+    #[test]
+    fn autofill_glyph_script_never_reads_the_field_value_and_binds_no_keyboard_listener() {
+        // Machine-checkable form of REQ-34.4.2-06/07.
+        let script = autofill_glyph_script(REVEAL_EXFIL_HOST);
+        assert!(!script.contains(".value"));
+        assert!(!script.contains("keydown"));
+        assert!(!script.contains("keypress"));
+        assert!(!script.contains("keyup"));
+    }
+
+    #[test]
+    fn autofill_glyph_script_delivers_via_a_hidden_iframe_never_location_href() {
+        let script = autofill_glyph_script(REVEAL_EXFIL_HOST);
+        assert!(script.contains("iframe"));
+        assert!(!script.contains("location.href"));
+    }
+
+    #[test]
+    fn autofill_glyph_script_embeds_the_exfil_host_exactly_once_as_a_json_escaped_literal() {
+        let script = autofill_glyph_script(REVEAL_EXFIL_HOST);
+        let literal = serde_json::to_string(REVEAL_EXFIL_HOST).unwrap();
+        assert_eq!(script.matches(&literal).count(), 1);
+    }
+
+    #[test]
+    fn autofill_glyph_script_escapes_a_tricky_host_and_never_naively_interpolates_it() {
+        // Mirrors `reveal_post_script`/`clear_storage_script`'s own escaping round-trip case.
+        let tricky_host = "gamelib.invalid\"a\"b'c\\d</script>e";
+        let script = autofill_glyph_script(tricky_host);
+        let expected_literal = serde_json::to_string(tricky_host).unwrap();
+        assert!(script.contains(&expected_literal));
+        let naive_interpolation = ["'", tricky_host, "'"].concat();
+        assert!(!script.contains(&naive_interpolation));
+    }
+
+    #[test]
+    fn autofill_glyph_script_is_wrapped_in_a_single_top_level_try_catch() {
+        assert_eq!(
+            autofill_glyph_script(REVEAL_EXFIL_HOST).matches("try {").count(),
+            1
+        );
     }
 
     // ---- shell_exe_env_value (Phase 34.5 Plan 01, REQ-34.5-01, D-10) ----
