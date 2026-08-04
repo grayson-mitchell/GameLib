@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Planned 34.4.2 gap cycle 2 (plans 11-12). F-34.4.2-03/-04/-05 CLOSED by debug arc (sheet attachment live-proven, attached=true); gate items 2-6 STILL UNMEASURED after 4 runs -- phase does not close
-last_updated: "2026-08-04T18:54:36.421Z"
-last_activity: 2026-08-04 -- Phase 34.4.2 planning complete
+stopped_at: "Completed 34.4.2-11-PLAN.md (gap cycle 2, review-finding fixes + fresh blocking gate contract authored, verdict null). Next: 34.4.2-12 (human-driven live gate run)."
+last_updated: "2026-08-04T21:10:39.252Z"
+last_activity: 2026-08-04
 progress:
   total_phases: 18
   completed_phases: 13
   total_plans: 203
-  completed_plans: 190
+  completed_plans: 191
   percent: 72
 ---
 
@@ -478,8 +478,30 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — GAP CYCLE 2 PLANNED
-Plan: 10 of 12 (plans 11-12 planned 2026-08-05, not yet executed. Historical plan-10 record follows.)
+Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — EXECUTING GAP CYCLE 2
+Plan: 12 of 12 (plans 1-11 complete; plan 11 -- see its own record below -- closed WR-07/WR-01/WR-03/WR-04/IN-02
+and authored `34.4.2-LIVE-GATE-RERUN-2.md` with `verdict: null`. Plan 12 -- the human-driven live
+gate run -- is next and is the ONLY plan permitted to fill any Observed/Verdict field. Phase does
+NOT close until plan 12 records a measured result. Historical plan-10 record follows.)
+
+Plan 11 record (11 done -- gap cycle 2's fix-and-author plan, `34.4.2-11-SUMMARY.md`. Task 1:
+WR-07 (`post_autofill_right_click` skips `makeKeyAndOrderFront` when `isSheet()` is true) + WR-01
+(`dismiss_login_window_sheet` re-registers via the new `register_presented_login_sheet` helper on
+both failure arms) -- commit `dcd6dae29`. Task 2: WR-03 (`window.top !== window` top-frame guard)
+
++ WR-04 (DOMContentLoaded/observer registered before the now-last `ensure()` call, null-root-safe
+
+appends) + IN-02 (dropped `tabindex`, added `aria-keyshortcuts="Escape"`) -- commit `b02f1e42d`.
+Task 3: authored `34.4.2-LIVE-GATE-RERUN-2.md` (verdict null, six items, item 1 restated around
+the out-of-plan debug arc's live-proven `attached=true`; items 2-6 carried over with three
+fix-specific additions) and propagated the debug arc's three commits (`751521663`/`56d4986f8`/
+`8b2fdb315`) into `34.4.2-PLATFORM-SCOPE.md` (3 new rows, 2 updated rows, 4th threat-register
+table, T-34.4.2-36/-37/-38 minted) and `REQUIREMENTS.md` (dated notes on 7 rows, no box ticked) --
+commit `aae288af6`. Full suite re-verified clean end of plan: cargo 135/0/1-ignored, jest
+191/191 suites (3740/3740 tests). Seven review findings deliberately deferred (WR-02/WR-05/WR-06/
+WR-08/IN-01/IN-03/IN-04), logged in `deferred-items.md`, not fixed. This plan ran NO gate item,
+started NO harness, never launched `tauri:dev` -- author/runner separation held a fourth time in
+this phase. Next: `/gsd-execute-phase 34.4.2` to run plan 34.4.2-12, the blocking live gate.)
 Plan 10 record (10 done -- BLOCKING LIVE GATE RE-RUN executed on real macOS hardware.
 **VERDICT FAIL, 0/6 items_passed.** Preflight (Task 1): cargo build clean, all four new
 sheet/cancel-strip log literals FOUND in the binary via `strings|grep`, retired re-raise literal
@@ -2407,7 +2429,7 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 `STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Executing Phase 34.4.2
+Status: Ready to execute
 
 > NOTE (34.4.2 gap cycle 2 planning): `state.planned-phase` again spliced this session's current
 > status ("Ready to execute") into this HISTORICAL "Prior phase: 34.1" block — the same recurring
@@ -2660,7 +2682,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-04 -- Phase 34.4.2 planning complete
+Last activity: 2026-08-04
 Prior activity: 2026-08-04 -- Phase 34.4.2 plan 07 executed: present_login_window_as_sheet/dismiss_login_window_sheet replace child-window attach/detach, PRESENTED_LOGIN_SHEETS registry re-homes the poster gate, deminiaturize re-raise observer retired, tauriShellSource.test.ts inverted (76/76), REQ-34.4.2-01/-02/-03 restated SUPERSEDED and unchecked. See 34.4.2-07-SUMMARY.md.
 Prior activity: 2026-08-03 - **F-34.5-G6-01 CLOSED and the embedded Epic login WORKS under Tauri.** Debug session epic-login-non-interactive RESOLVED and archived to .planning/debug/resolved/. The pre-auth 403 was Talon fingerprinting Tauri's injected globals (window.isTauri et al, non-configurable AND non-writable, correctly proven unmaskable from JS) — fixed not by hiding them but by not creating them: Epic's login window is now a webview-less tauri::WindowBuilder window with a raw WKWebView attached, zero initialization scripts, own WKNavigationDelegate (03b75211a, macOS+Epic only). The separate post-auth defect fell out of the same change — decidePolicyForNavigationAction sees the localhost redirect WKWebView silently refuses to LOAD — so the OAuth code is captured natively and NO JavaScript is injected into Epic's page anywhere; the old observer/shim/on_navigation trio was deleted (da529ca86, -400 lines). Four supporting defects found only by live hardware testing: WKUIDelegate (post-password hang), windowless WKWebsiteDataStore cookie clear (logout was silently leaving session cookies, so every "login" was a re-auth against a blank in-transit page), an NSEvent key monitor for Cmd+V (tao swallows the key equivalent; the Edit menu's paste: always worked), and humble_login_close falling back to get_window (the window never closed on success and every logout leaked an invisible window) — b76d58ee6, b8e73e437. Live-proven 20:26-20:28: the FIRST genuinely logged-out Epic login ever driven under Tauri, nav host=www.epicgames.com → nav host=localhost → status=captured → 15 games & DLCs, operator-confirmed in the UI; window self-close confirmed 22:03. Ledger rows U-34.5-06 (properly retired) and U-34.5-11 (retired as SUBJECT DELETED, never exercised — not a pass) updated (fe8a0ca2b). CARRIED FORWARD, unproven: a UA of Safari engine tokens + " EpicGamesLauncher" satisfies both Epic's launcher routing and hCaptcha's engine check, but the run that passed auto-logged-in and never rendered a captcha, so it was deliberately NOT defaulted. STANDING CONSTRAINT: Epic can demand a captcha at any time and the launcher UA its OAuth flow requires is one hCaptcha cannot initialize under, so the embedded window has a failure mode SIDLogin structurally does not — keep SIDLogin as Epic's PRIMARY tile. Phase 34.5 closure UNAFFECTED and still open. Prior same-day activity: shipped two live-verified debug fixes to fork PR #3: steam-refresh-hung-on-startup (22a9a328d, mount-time refresh gate now includes Steam) and login-logout-wipes-library (6f194fabe, per-runner scoped refresh, logout no longer reloads the app; Steam sync cache-hydration deferred into the IPC-port effort)
 ("Finalizing sign-in with <Runner>…" + spinner through the 5-27s token exchange) plus the
@@ -3314,6 +3336,7 @@ Closed/parked native-install phases:
 | Phase 34.4.2 P08 | 35min | 3 tasks | 3 files |
 | Phase 34.4.2 P09 | 40min | 3 tasks | 4 files |
 | Phase 34.4.2 P10 | ~70min | 3 tasks (Task 2 human checkpoint) | 5 files (`34.4.2-LIVE-GATE-RERUN.md`, `34.4.2-PLATFORM-SCOPE.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`) |
+| Phase 34.4.2 P11 | 120min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -3735,6 +3758,7 @@ Recent decisions affecting current work:
 - [Phase 34.4.2]: T-34.4.2-05 and T-34.4.2-07 reset to OPEN-pending-gate rather than carried forward as CONFIRMED broken — the child-window mechanism they were confirmed broken against was retired by plan 07; a new mechanism does not inherit an old mechanism's fix
 - [Phase 34.4.2-10]: **Rewritten sheet-design live gate RAN 2026-08-04, VERDICT FAIL 0/6.** Item 1 (sheet presentation) FAILED live with a DIFFERENT symptom than the first gate: the presented login window was an ordinary titled macOS window with standard traffic-light buttons and blank white content — neither an AppKit sheet (plan 07's mechanism) nor an attached child window (plan 02's retired mechanism) — and could be ordered behind the main window (F-34.4.2-03, BLOCKING). No root cause asserted. Items 2-6 NOT ATTEMPTED — operator ended the session at item 1's failure. `gamelib.log` contains no `[shell]`-prefixed line at all in this or any archived session (confirmed by inspecting every `gamelib.log*` in `~/Library/Logs/GameLib/`), so the log-based absence of `sheet_presented=` is inconclusive, not confirmatory — the `tauri:dev` process's own stdout/stderr was not captured this run. D-08's no-partial-pass rule applies; Phase 34.4.2 STILL DOES NOT CLOSE — a second gap cycle is required.
 - [Phase 34.4.2-10]: T-34.4.2-05 moved back from "reset-unproven against the sheet mechanism" to "live-confirmed-broken against the sheet mechanism, again" — an honest statement that the first gap cycle's fix direction has not yet produced working live behaviour on this hardware, not a claim about which layer is at fault. T-34.4.2-07/-15(residual)/-17/-21/-22/-33 stay OPEN-pending-gate (unreached, no new evidence); T-34.4.2-32/-34/-35 unchanged, still CLOSED by source (never gate-dependent).
+- [Phase 34.4.2]: Plan 11 gap cycle 2: scoped to five review findings on gate items 2/3/5's routes (WR-07/WR-03/WR-04/WR-01/IN-02); WR-04 fixed via reorder + null-root-safe appends (not inner try/catch) to preserve the exactly-once try-block guard — Author/runner separation held a fourth time -- 34.4.2-LIVE-GATE-RERUN-2.md authored with verdict null, no gate item run by this plan
 
 ### Pending Todos
 
@@ -3814,8 +3838,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-04T08:58:00.000Z
-Stopped at: Completed 34.4.2-10-PLAN.md
+Last session: 2026-08-04T21:10:39.240Z
+Stopped at: Completed 34.4.2-11-PLAN.md (gap cycle 2, review-finding fixes + fresh blocking gate contract authored, verdict null). Next: 34.4.2-12 (human-driven live gate run).
   This session (sequential executor): ran the rewritten sheet-design blocking live gate
   (`34.4.2-LIVE-GATE-RERUN.md`) on real macOS hardware. Task 1 (commit `5d3f1360a`): preflight --
   `cargo build` clean, all four new literals (`sheet_presented=`, cancel-strip injected, cancel

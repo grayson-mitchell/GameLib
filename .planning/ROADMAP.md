@@ -1563,7 +1563,7 @@ Verification can run offline against the spike-019 local OAuth DummyStore harnes
 PKCE + replay enforcement + `/events` oracle) where a live store login isn't required.
 **Requirements**: REQ-34.4.2-01, REQ-34.4.2-02, REQ-34.4.2-03, REQ-34.4.2-04, REQ-34.4.2-05, REQ-34.4.2-06, REQ-34.4.2-07, REQ-34.4.2-08, REQ-34.4.2-09, REQ-34.4.2-10 (minted by plan 34.4.2-01; the ID rows themselves land in `REQUIREMENTS.md` when that plan executes. **REQ-34.4.2-10 is the Epic descope**, minted so the exclusion is machine-enforceable rather than a comment; 01/04/06 were narrowed from "both login surfaces" to the Tauri-managed surface. No ID was deleted or renumbered.)
 **Depends on:** Phase 34.4.1 (the login-window seam these behaviors attach to — COMPLETE)
-**Plans:** 12 plans — 10 executed, 2 planned (gap cycle 2: 34.4.2-11, 34.4.2-12)
+**Plans:** 11/12 plans executed
 
 **Status: SHEET-DESIGN LIVE GATE RE-RUN FAILED 2026-08-04 (0/6, items 2-6 NOT ATTEMPTED) — PHASE
 STILL DOES NOT CLOSE.** `34.4.2-10-PLAN.md`'s blocking gate ran on real macOS hardware against the
@@ -1682,7 +1682,7 @@ four gate runs to date.** That — not the sheet mechanism — is this cycle's r
 also landed as raw commits with no phase plan documenting them and no propagation into
 REQUIREMENTS/PLATFORM-SCOPE/ROADMAP/STATE; that bookkeeping debt is in scope here.
 
-- [ ] 34.4.2-11-PLAN.md — Fix the five `34.4.2-REVIEW.md` findings that sit directly on the paths gate items 2/3/5 must traverse (WR-07 the poster no longer re-orders a presented sheet; WR-03 top-frame-only cancel strip; WR-04 retry listener + MutationObserver registered before anything that can throw; WR-01 a failed `endSheet:` hop re-registers the label so both cancel routes stay reachable; IN-02 no advertised keyboard activation the strip cannot deliver), propagate the debug arc's bookkeeping, and author the fresh contract `34.4.2-LIVE-GATE-RERUN-2.md` (`verdict: null`). **Forbidden from running any gate item or writing any verdict.** (wave 1)
+- [x] 34.4.2-11-PLAN.md — Fix the five `34.4.2-REVIEW.md` findings that sit directly on the paths gate items 2/3/5 must traverse (WR-07 the poster no longer re-orders a presented sheet; WR-03 top-frame-only cancel strip; WR-04 retry listener + MutationObserver registered before anything that can throw; WR-01 a failed `endSheet:` hop re-registers the label so both cancel routes stay reachable; IN-02 no advertised keyboard activation the strip cannot deliver), propagate the debug arc's bookkeeping, and author the fresh contract `34.4.2-LIVE-GATE-RERUN-2.md` (`verdict: null`). **Forbidden from running any gate item or writing any verdict.** (wave 1)
 - [ ] 34.4.2-12-PLAN.md — **BLOCKING live gate re-run** on real macOS hardware against `34.4.2-LIVE-GATE-RERUN-2.md`; sole writer of `verdict`/`run_date`/`items_passed`, filled from a measured run and never from expectation (T-34.4.2-25). Mandatory evidence capture: `npm run tauri:dev 2>&1 | tee /tmp/gamelib-dev.log` — `gamelib.log` carries no `[shell]`-prefixed Rust lines, which is what made rounds 2/3 of the debug arc diagnosable. (wave 2, non-autonomous)
 
 **Gap-cycle-2 scope note:** findings WR-02, WR-05, WR-06, WR-08, IN-01, IN-03 and IN-04 are
