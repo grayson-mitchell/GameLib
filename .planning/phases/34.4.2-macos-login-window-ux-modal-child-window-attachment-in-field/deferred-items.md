@@ -94,3 +94,23 @@ Epic in the meantime (its login window is byte-unchanged, machine-enforced by
   premature `[x]` back to `[ ]` if plan 06's live gate has not yet recorded a PASS for item 4 by the
   time that plan starts, and should investigate how REQ-34.4.2-07 came to be checked before this
   plan (05) had produced any artifact at all.
+
+## Plan 07 — `.planning/STATE.md`'s "Next action" line points at an unrelated Phase 34.5 gap cycle (2026-08-04)
+
+- **Found during:** Task 3's `state_updates` step, while hand-correcting the `gsd-sdk` state-write
+  corruption this cluster's own STATE.md notes document repeatedly (see the `NOTE (34.4.2-07)`
+  added alongside this session's `state.advance-plan`/`state.update-progress` calls).
+- **Symptom:** immediately below `Phase: 34.4.2 ... — EXECUTING` / `Plan: 8 of 10` sits
+  `**Next action:** \`/gsd-plan-phase 34.5 --gaps\` — gap cycle 6...` — a next-action pointer for a
+  completely different phase (34.5), not for 34.4.2's own next step (plan 08's close affordance,
+  per T-34.4.2-33). Reads as though it is 34.4.2's own next action given its position directly
+  under the Current Position header.
+- **Scope:** `STATE.md` is not in this plan's `files_modified`
+  (`src-tauri/src/main.rs`, `src/backend/__tests__/tauriShellSource.test.ts`,
+  `.planning/REQUIREMENTS.md`); the `Next action:` line's own content predates this session (it was
+  not introduced by this session's `gsd-sdk` writes, confirmed by diffing against the pre-session
+  snapshot) and rewriting stale cross-phase narrative is outside this executor's scope-boundary
+  rule for a single-plan execution.
+- **Disposition:** logged, not fixed. A future session (ideally the one that opens Phase 34.4.2's
+  own live-gate work, plans 09/10) should replace that line with 34.4.2's actual next action, or
+  relocate the 34.5 gap-cycle-6 pointer to wherever Phase 34.5's own current-position block lives.

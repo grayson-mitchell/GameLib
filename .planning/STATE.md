@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Planned 34.4.2 gap cycle (plans 07-10, checker-verified) — live gate failed 0/6, sheet-presentation fix planned, ready to execute
-last_updated: "2026-08-04T05:10:16.311Z"
-last_activity: 2026-08-04 -- Phase 34.4.2 planning complete
+stopped_at: Completed 34.4.2-07-PLAN.md (sheet presentation lands); no live gate until plan 08 lands the close affordance (T-34.4.2-33)
+last_updated: "2026-08-04T06:45:14.127Z"
+last_activity: "2026-08-04 -- Phase 34.4.2 plan 07 executed: present_login_window_as_sheet/dismiss_login_window_sheet replace child-window attach/detach, PRESENTED_LOGIN_SHEETS registry re-homes the poster gate, deminiaturize re-raise observer retired, tauriShellSource.test.ts inverted (76/76), REQ-34.4.2-01/-02/-03 restated SUPERSEDED and unchecked. See 34.4.2-07-SUMMARY.md. Next: plan 08 (mandated close affordance) — no live gate may run before it lands (T-34.4.2-33)."
 progress:
   total_phases: 18
   completed_phases: 13
   total_plans: 201
-  completed_plans: 186
-  percent: 93
+  completed_plans: 187
+  percent: 72
 ---
 
 # Project State
@@ -479,7 +479,12 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — EXECUTING
-Plan: 6 of 6
+Plan: 8 of 10 (07 done -- present_login_window_as_sheet/dismiss_login_window_sheet replace
+child-window attach/detach per the 2026-08-04 binding design decision, PRESENTED_LOGIN_SHEETS
+re-homes the poster's authorization gate, the deminiaturize re-raise observer is deliberately
+retired, tauriShellSource.test.ts inverted 76/76, REQ-34.4.2-01/-02/-03 restated SUPERSEDED and
+unchecked; see 34.4.2-07-SUMMARY.md. T-34.4.2-33: no live gate may run before plan 08 lands the
+mandated close affordance.)
 
 **Next action:** `/gsd-plan-phase 34.5 --gaps` — gap cycle 6. Named here once, deliberately nowhere else. Scope it around: the GOG frontend-render defect (F-34.5-G6-12 / U-34.5-07, where 7 titles persist to disk and the Library UI shows none); the dead `nativeImage` sidecar stub that structurally blocks every macOS `.app` shortcut (F-34.5-G6-07 / U-34.5-12); the Electron-shaped Steam LaunchOptions the Tauri shell ignores (F-34.5-G6-09 / U-34.5-13); **an audit of the real preload channel surface against `IPC-PORT-INVENTORY.md`, which is a Phase 35 precondition and whose incompleteness is of unknown extent** (F-34.5-G6-10 / U-34.5-14); `addToSteam` dropping its return value (F-34.5-G6-08 / U-34.5-15); the still-unattempted items 3 and 5; and the `REQUIREMENTS.md` inconsistency where REQ-34.5-01/02/03/04/05/12 sit checked `[x]` while carrying gate conditions that have now failed three times (deferred-items item 22). Epic (item 1) stays parked by explicit developer decision and is NOT this cycle's blocker.
 
@@ -2303,6 +2308,13 @@ hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each t
 trusted blindly. The recurring `**Progress:**[█████████░] 94%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
+NOTE (34.4.2-07): the same splice-into-historical-prose bug recurred yet again this session --
+`state.update-progress` overwrote this note's own `94%` with `93%` (this session's own computed
+plan-based percent, correct for the frontmatter's `completed_plans: 187` but wrong here, same
+splice site every prior note in this cluster documents). Hand-corrected back to `94%` per this
+cluster's established convention; `state.advance-plan` also reverted `last_activity` (frontmatter)
+and both the body `Status:`/`Last activity:` fields below to their generic/bare forms, all
+hand-restored against a pre-session snapshot diffed with `diff`, not trusted.
 NOTE (34.4.2-02): the same splice-into-historical-prose bug recurred yet again this session --
 `state.update-progress` overwrote this note's own `94%` with `92%` (this session's own computed
 plan-based percent, correct for the frontmatter's `completed_plans: 182` but wrong here, same
@@ -2357,7 +2369,7 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 `STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Ready to execute
+Status: Executing Phase 34.4.2
 
 > NOTE (34.3-08): `state.advance-plan` again spliced this session's current status
 > ("Phase complete — ready for verification") into this HISTORICAL "Prior phase: 34.1"
@@ -2588,7 +2600,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-04 -- Phase 34.4.2 planning complete
+Last activity: 2026-08-04 -- Phase 34.4.2 plan 07 executed: present_login_window_as_sheet/dismiss_login_window_sheet replace child-window attach/detach, PRESENTED_LOGIN_SHEETS registry re-homes the poster gate, deminiaturize re-raise observer retired, tauriShellSource.test.ts inverted (76/76), REQ-34.4.2-01/-02/-03 restated SUPERSEDED and unchecked. See 34.4.2-07-SUMMARY.md. Next: plan 08 (mandated close affordance) — no live gate may run before it lands (T-34.4.2-33).
 Prior activity: 2026-08-03 - **F-34.5-G6-01 CLOSED and the embedded Epic login WORKS under Tauri.** Debug session epic-login-non-interactive RESOLVED and archived to .planning/debug/resolved/. The pre-auth 403 was Talon fingerprinting Tauri's injected globals (window.isTauri et al, non-configurable AND non-writable, correctly proven unmaskable from JS) — fixed not by hiding them but by not creating them: Epic's login window is now a webview-less tauri::WindowBuilder window with a raw WKWebView attached, zero initialization scripts, own WKNavigationDelegate (03b75211a, macOS+Epic only). The separate post-auth defect fell out of the same change — decidePolicyForNavigationAction sees the localhost redirect WKWebView silently refuses to LOAD — so the OAuth code is captured natively and NO JavaScript is injected into Epic's page anywhere; the old observer/shim/on_navigation trio was deleted (da529ca86, -400 lines). Four supporting defects found only by live hardware testing: WKUIDelegate (post-password hang), windowless WKWebsiteDataStore cookie clear (logout was silently leaving session cookies, so every "login" was a re-auth against a blank in-transit page), an NSEvent key monitor for Cmd+V (tao swallows the key equivalent; the Edit menu's paste: always worked), and humble_login_close falling back to get_window (the window never closed on success and every logout leaked an invisible window) — b76d58ee6, b8e73e437. Live-proven 20:26-20:28: the FIRST genuinely logged-out Epic login ever driven under Tauri, nav host=www.epicgames.com → nav host=localhost → status=captured → 15 games & DLCs, operator-confirmed in the UI; window self-close confirmed 22:03. Ledger rows U-34.5-06 (properly retired) and U-34.5-11 (retired as SUBJECT DELETED, never exercised — not a pass) updated (fe8a0ca2b). CARRIED FORWARD, unproven: a UA of Safari engine tokens + " EpicGamesLauncher" satisfies both Epic's launcher routing and hCaptcha's engine check, but the run that passed auto-logged-in and never rendered a captcha, so it was deliberately NOT defaulted. STANDING CONSTRAINT: Epic can demand a captcha at any time and the launcher UA its OAuth flow requires is one hCaptcha cannot initialize under, so the embedded window has a failure mode SIDLogin structurally does not — keep SIDLogin as Epic's PRIMARY tile. Phase 34.5 closure UNAFFECTED and still open. Prior same-day activity: shipped two live-verified debug fixes to fork PR #3: steam-refresh-hung-on-startup (22a9a328d, mount-time refresh gate now includes Steam) and login-logout-wipes-library (6f194fabe, per-runner scoped refresh, logout no longer reloads the app; Steam sync cache-hydration deferred into the IPC-port effort)
 ("Finalizing sign-in with <Runner>…" + spinner through the 5-27s token exchange) plus the
 cancel-path fix all the way down to Rust window-close detection — a user-closed OAuth popup now
@@ -3237,6 +3249,7 @@ Closed/parked native-install phases:
 | Phase 34.4.2 P04 | 60min | 3 tasks | 4 files |
 | Phase 34.4.2 P05 | 23min | 3 tasks | 4 files |
 | Phase 34.4.2 P06 | ~25min | 3 tasks (Task 2 human checkpoint) | 5 files |
+| Phase 34.4.2 P07 | 50min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -3649,6 +3662,7 @@ Recent decisions affecting current work:
 - [Phase ?]: REQ-34.4.2-09 deliberately withheld from mark-complete: its own REQUIREMENTS.md row says it stays UNCHECKED until plan 06's live gate runs, not plan 05's contract
 - [Phase 34.4.2-06]: **Live gate RAN 2026-08-04, VERDICT FAIL 0/6.** Item 1 (child-window attachment) FAILED live: after the main window minimizes and restores from the Dock, the attached child login window becomes unresponsive — cannot close, password field will not accept input (F-34.4.2-01). Item 2 (dismissability) also FAILED, observed against that same broken window (F-34.4.2-02). Items 3-6 NOT ATTEMPTED — operator ended the session at the item-1/2 blocking failure. D-08's no-partial-pass rule applies; Phase 34.4.2 does not close.
 - [Phase 34.4.2-06, BINDING, operator, 2026-08-04]: **Login-window presentation switches from AppKit child-window attachment to SHEET presentation. The sheet MUST have an explicit close affordance — that is the sole required addition.** Supersedes the spike-019-021 ship choice of child-window attachment (ROADMAP.md's Phase 34.4.2 "Locked, do not re-litigate" sheet-rejection clause). The known sheet trap (no self-dismissal, spike 021) is addressed by the mandated close affordance. The gap cycle's fix direction is the sheet switch, not debugging the child-window unresponsiveness. Full record: `34.4.2-LIVE-GATE.md` § Binding Design Decision.
+- [Phase 34.4.2]: Sheet presentation (beginSheet:completionHandler:/endSheet:) replaces AppKit child-window attachment per the operator's binding design decision of 2026-08-04 — F-34.4.2-01/-02: the child-window mechanism went live-CONFIRMED broken (unresponsive after minimize/restore, undismissable). dismiss_login_window_sheet is membership-gated (endSheet: is not a defined no-op on a non-sheet window, unlike removeChildWindow:). The deminiaturize re-raise observer was deleted, not adapted: a sheet moves with its parent, so there is no z-order defect left to fix.
 
 ### Pending Todos
 
@@ -3728,8 +3742,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-04T05:10:00.000Z
-Stopped at: Completed 34.4.2-06-PLAN.md — LIVE GATE FAILED
+Last session: 2026-08-04T06:45:14.114Z
+Stopped at: Completed 34.4.2-07-PLAN.md (sheet presentation lands); no live gate until plan 08 lands the close affordance (T-34.4.2-33)
   This session (continuation executor, resumed after the Task 2 human checkpoint): transcribed
   the operator's live-gate run into `34.4.2-LIVE-GATE.md`. Task 1 (prior session, commit
   `b2542a56a`) had already discharged preflight: harness live (port 17940), binary
