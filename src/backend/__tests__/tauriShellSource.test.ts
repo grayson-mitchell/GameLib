@@ -708,10 +708,12 @@ describe('F-34.5-G6-05 (Plan 27) login window requests a light interface style',
 const PHASE_34_4_2_NEW_SYMBOLS = [
   'login_window_ns_window',
   'login_window_wk_webview',
-  // Plan 02 (AppKit child-window attachment):
-  'attach_login_window_as_child',
-  'detach_login_window_from_parent',
-  'ATTACHED_LOGIN_CHILDREN',
+  // Plan 07 (AppKit SHEET presentation -- supersedes Plan 02's child-window attachment,
+  // operator's binding design decision 2026-08-04, `34.4.2-LIVE-GATE.md`'s "Binding Design
+  // Decision" section):
+  'present_login_window_as_sheet',
+  'dismiss_login_window_sheet',
+  'PRESENTED_LOGIN_SHEETS',
   'MAIN_WINDOW_LABEL',
   // Plan 03 (in-field autofill glyph + cancelled-navigation request channel):
   'AUTOFILL_EXFIL_PATH',
@@ -819,22 +821,31 @@ describe('Phase 34.4.2 Plan 01 — login-window handle resolvers and the Epic sc
     }
   })
 
-  test('Test 5 (NEGATIVE, REQ-34.4.2-03): the comment-stripped source contains no beginSheet and no endSheet anywhere', () => {
+  test('Test 5 (SUPERSEDED 2026-08-04, now POSITIVE, REQ-34.4.2-01/-03): the comment-stripped source CONTAINS beginSheet_completionHandler and endSheet exactly once each -- this negative was inverted by Plan 07 per the operator\'s binding design decision of 2026-08-04 (`34.4.2-LIVE-GATE.md`\'s "Binding Design Decision" section), responding to F-34.4.2-01/-02 (the child-window mechanism this negative used to protect went live-CONFIRMED unresponsive after minimize/restore and undismissable)', () => {
     const code = loadMainRsCode()
-    expect(code).not.toContain('beginSheet')
-    expect(code).not.toContain('endSheet')
+    expect(code).toContain('beginSheet_completionHandler')
+    expect((code.match(/beginSheet_completionHandler/g) ?? []).length).toBe(1)
+    expect(code).toContain('endSheet')
+    expect((code.match(/endSheet/g) ?? []).length).toBe(1)
   })
 })
 
-// Phase 34.4.2 Plan 02 (REQ-34.4.2-01/02/03/04/05/08/10): AppKit child-window attach/detach
+// Phase 34.4.2 Plan 02 (REQ-34.4.2-01/02/03/04/05/08/10), SUPERSEDED 2026-08-04 by Plan 07's
+// AppKit SHEET presentation (`present_login_window_as_sheet`/`dismiss_login_window_sheet`),
+// per the operator's binding design decision recorded in `34.4.2-LIVE-GATE.md`'s "Binding
+// Design Decision" section: the child-window attach/detach mechanism this describe block
+// originally asserted went live-CONFIRMED broken (F-34.4.2-01/-02 -- unresponsive after
+// minimize/restore, could not be closed). This block's tests are now INVERTED (Tests 1-4)
+// or RETIRED (Test 5) to assert the sheet-presentation design and forbid the old mechanism,
 // for the Tauri-managed login surface (Humble/GOG/Amazon -- REQ-34.4.2-10's locked scope,
-// unchanged from Plan 01), the deminiaturize re-raise observer, and the permanent negatives
-// that keep sheets, Tauri's own `.parent(` builder call, and a focus-driven re-raise out.
-// PHASE_34_4_2_NEW_SYMBOLS (above) already carries this plan's four new symbol names, so
-// Plan 01's own Test 3/Test 4 scope guard covers them without any change to that describe
-// block; Test 9 below re-asserts the same absence directly, scoped to this plan's own file
-// section, so deleting either describe block still leaves a guard in place.
-describe('Phase 34.4.2 Plan 02 — AppKit child-window attachment', () => {
+// unchanged from Plan 01) -- alongside the permanent negatives that keep Tauri's own
+// `.parent(` builder call and a focus-driven re-raise out (Tests 7/8, unchanged).
+// PHASE_34_4_2_NEW_SYMBOLS (above) already carries this plan's three current symbol names
+// (renamed by Plan 07), so Plan 01's own Test 3/Test 4 scope guard covers them without any
+// change to that describe block; Test 9 below re-asserts the same absence directly, scoped
+// to this plan's own file section, so deleting either describe block still leaves a guard
+// in place.
+describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from child-window attachment, 2026-08-04)', () => {
   /**
    * Scans forward from `openMarker`'s FIRST `{` and returns the full brace-matched block
    * (inclusive of both braces), counting depth rather than relying on a second string
@@ -868,22 +879,22 @@ describe('Phase 34.4.2 Plan 02 — AppKit child-window attachment', () => {
     return code.slice(armStart, armEnd)
   }
 
-  test('Test 1: attach_login_window_as_child( is CALLED exactly once in the file, and that call site is inside the humble_login_open arm -- catches a future caller landing in (or being dropped from) the wrong arm', () => {
+  test('Test 1 (INVERTED 2026-08-04): present_login_window_as_sheet( is CALLED exactly once in the file, and that call site is inside the humble_login_open arm -- catches a future caller landing in (or being dropped from) the wrong arm', () => {
     const code = loadMainRsCode()
-    // Negative lookbehind excludes the `fn attach_login_window_as_child(` definition
+    // Negative lookbehind excludes the `fn present_login_window_as_sheet(` definition
     // itself, which also ends in a trailing `(` -- this counts CALL sites only.
-    const fileCallSites = code.match(/(?<!fn )attach_login_window_as_child\(/g) ?? []
+    const fileCallSites = code.match(/(?<!fn )present_login_window_as_sheet\(/g) ?? []
     expect(fileCallSites.length).toBe(1)
 
     const armBody = extractHumbleLoginOpenArmBody(code)
-    const armCallSites = armBody.match(/(?<!fn )attach_login_window_as_child\(/g) ?? []
+    const armCallSites = armBody.match(/(?<!fn )present_login_window_as_sheet\(/g) ?? []
     expect(armCallSites.length).toBe(1)
   })
 
-  test("Test 2: detach_login_window_from_parent( is CALLED exactly once in the file, inside the humble_login_open arm's WindowEvent::Destroyed branch -- catches the detach call being dropped from the close hook", () => {
+  test("Test 2 (INVERTED 2026-08-04): dismiss_login_window_sheet( is CALLED exactly once in the file, inside the humble_login_open arm's WindowEvent::Destroyed branch -- catches the dismiss call being dropped from the close hook", () => {
     const code = loadMainRsCode()
     const fileCallSites =
-      code.match(/(?<!fn )detach_login_window_from_parent\(/g) ?? []
+      code.match(/(?<!fn )dismiss_login_window_sheet\(/g) ?? []
     expect(fileCallSites.length).toBe(1)
 
     const armBody = extractHumbleLoginOpenArmBody(code)
@@ -891,66 +902,40 @@ describe('Phase 34.4.2 Plan 02 — AppKit child-window attachment', () => {
       armBody,
       'if matches!(event, tauri::WindowEvent::Destroyed) {'
     )
-    expect(destroyedBlock).toContain('detach_login_window_from_parent(')
+    expect(destroyedBlock).toContain('dismiss_login_window_sheet(')
   })
 
-  test('Test 3: the attach call site sits inside an if-visible guard -- hidden reveal/clear windows must never be attached', () => {
+  test('Test 3 (INVERTED 2026-08-04): the present call site sits inside an if-visible guard -- hidden reveal/clear windows must never be presented', () => {
     const code = loadMainRsCode()
-    const visibleAttachBlock = extractBracedBlock(
+    const visiblePresentBlock = extractBracedBlock(
       code,
-      'let child_attached = if visible {'
+      'let sheet_presented = if visible {'
     )
-    expect(visibleAttachBlock).toContain('attach_login_window_as_child(')
+    expect(visiblePresentBlock).toContain('present_login_window_as_sheet(')
   })
 
-  test('Test 4: addChildWindow_ordered and removeChildWindow each appear exactly once in the file, each inside its own named helper', () => {
+  test('Test 4 (INVERTED 2026-08-04, PERMANENT NEGATIVE): the comment-stripped source contains none of addChildWindow_ordered, removeChildWindow, attach_login_window_as_child, detach_login_window_from_parent, ATTACHED_LOGIN_CHILDREN -- the retired child-window mechanism must never reappear', () => {
     const code = loadMainRsCode()
-    expect((code.match(/addChildWindow_ordered\(/g) ?? []).length).toBe(1)
-    expect((code.match(/removeChildWindow\(/g) ?? []).length).toBe(1)
-
-    const attachStart = code.indexOf('fn attach_login_window_as_child(')
-    expect(attachStart).toBeGreaterThan(-1)
-    const attachEnd = code.indexOf(
-      'fn detach_login_window_from_parent(',
-      attachStart
-    )
-    expect(attachEnd).toBeGreaterThan(attachStart)
-    expect(code.slice(attachStart, attachEnd)).toContain('addChildWindow_ordered(')
-
-    const detachStart = code.indexOf('fn detach_login_window_from_parent(')
-    expect(detachStart).toBeGreaterThan(-1)
-    const detachEnd = code.indexOf(
-      'fn clear_default_data_store_cookies_for_domain(',
-      detachStart
-    )
-    expect(detachEnd).toBeGreaterThan(detachStart)
-    expect(code.slice(detachStart, detachEnd)).toContain('removeChildWindow(')
+    expect(code).not.toContain('addChildWindow_ordered')
+    expect(code).not.toContain('removeChildWindow')
+    expect(code).not.toContain('attach_login_window_as_child')
+    expect(code).not.toContain('detach_login_window_from_parent')
+    expect(code).not.toContain('ATTACHED_LOGIN_CHILDREN')
   })
 
-  test('Test 5: NSWindowDidDeminiaturizeNotification appears exactly once, and makeKeyAndOrderFront appears inside the same sliced deminiaturize-observer handler', () => {
+  test('Test 5 (RETIRED 2026-08-04, now NEGATIVE): NSWindowDidDeminiaturizeNotification appears 0 times -- the deminiaturize re-raise observer was deliberately retired by Plan 07 Task 2 because a sheet is presented BY its parent and moves with it, so there is no child list to re-raise', () => {
     const code = loadMainRsCode()
     expect(
       (code.match(/NSWindowDidDeminiaturizeNotification/g) ?? []).length
-    ).toBe(1)
-
-    const observerStart = code.indexOf(
-      'match login_window_ns_window(app.handle(), MAIN_WINDOW_LABEL) {'
-    )
-    expect(observerStart).toBeGreaterThan(-1)
-    const observerEnd = code.indexOf(
-      'match app.get_webview_window(MAIN_WINDOW_LABEL) {',
-      observerStart
-    )
-    expect(observerEnd).toBeGreaterThan(observerStart)
-    const observerBlock = code.slice(observerStart, observerEnd)
-    expect(observerBlock).toContain('NSWindowDidDeminiaturizeNotification')
-    expect(observerBlock).toContain('makeKeyAndOrderFront(')
+    ).toBe(0)
   })
 
-  test('Test 6 (NEGATIVE, REQ-34.4.2-03): the comment-stripped source contains no beginSheet and no endSheet anywhere -- re-asserted here (Plan 01 already added this guard, above) so deleting either describe block still leaves it in place', () => {
+  test('Test 6 (SUPERSEDED 2026-08-04, now POSITIVE, REQ-34.4.2-03): the comment-stripped source CONTAINS beginSheet_completionHandler and endSheet exactly once each -- re-asserted here (Plan 01 already added this guard, above) so deleting either describe block still leaves it in place', () => {
     const code = loadMainRsCode()
-    expect(code).not.toContain('beginSheet')
-    expect(code).not.toContain('endSheet')
+    expect(code).toContain('beginSheet_completionHandler')
+    expect((code.match(/beginSheet_completionHandler/g) ?? []).length).toBe(1)
+    expect(code).toContain('endSheet')
+    expect((code.match(/endSheet/g) ?? []).length).toBe(1)
   })
 
   test("Test 7 (NEGATIVE): no Tauri builder .parent(window) call appears anywhere in the comment-stripped source -- Tauri's builder .parent() cannot re-attach at runtime, which is exactly why AppKit-layer attachment was chosen instead. Scoped to exclude std::path::Path::parent() (a pre-existing, argument-less, unrelated call in this same file)", () => {
@@ -967,7 +952,7 @@ describe('Phase 34.4.2 Plan 02 — AppKit child-window attachment', () => {
     expect(code).not.toContain('WindowEvent::Focused')
   })
 
-  test("Test 9 (SCOPE GUARD, REQ-34.4.2-10): the PHASE_34_4_2_NEW_SYMBOLS-driven guard still passes with this plan's four symbols appended -- none of them is referenced from open_pristine_epic_login_window's sliced body", () => {
+  test("Test 9 (SCOPE GUARD, REQ-34.4.2-10, updated 2026-08-04 for Plan 07's renamed symbols): the PHASE_34_4_2_NEW_SYMBOLS-driven guard still passes with this plan's three current symbols appended -- none of them is referenced from open_pristine_epic_login_window's sliced body", () => {
     const code = loadMainRsCode()
     const start = code.indexOf('fn open_pristine_epic_login_window(')
     expect(start).toBeGreaterThan(-1)
@@ -975,9 +960,9 @@ describe('Phase 34.4.2 Plan 02 — AppKit child-window attachment', () => {
     expect(end).toBeGreaterThan(start)
     const pristineBody = code.slice(start, end)
     for (const symbol of [
-      'attach_login_window_as_child',
-      'detach_login_window_from_parent',
-      'ATTACHED_LOGIN_CHILDREN',
+      'present_login_window_as_sheet',
+      'dismiss_login_window_sheet',
+      'PRESENTED_LOGIN_SHEETS',
       'MAIN_WINDOW_LABEL'
     ]) {
       expect(pristineBody).not.toContain(symbol)
@@ -1267,10 +1252,10 @@ describe('Phase 34.4.2 Plan 04 — synthesized right-click poster', () => {
     expect(body).not.toContain('ScrollWheel')
   })
 
-  test('Test 5 (RESTRICTION): the sliced body references ATTACHED_LOGIN_CHILDREN -- hidden reveal/clear windows are structurally unreachable from this path', () => {
+  test('Test 5 (RESTRICTION, renamed 2026-08-04 -- Plan 07 re-homed the registry onto sheet presentation): the sliced body references PRESENTED_LOGIN_SHEETS -- hidden reveal/clear windows are structurally unreachable from this path', () => {
     const code = loadMainRsCode()
     const body = extractPostAutofillRightClickBody(code)
-    expect(body).toContain('ATTACHED_LOGIN_CHILDREN')
+    expect(body).toContain('PRESENTED_LOGIN_SHEETS')
   })
 
   test('Test 6 (NEGATIVE, permanent): the comment-stripped source contains none of the Digital Credentials / private credential-storage selectors -- re-asserts Plan 03\'s own guard here so deleting either describe block still leaves one in place', () => {
