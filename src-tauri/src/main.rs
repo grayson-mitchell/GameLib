@@ -1575,16 +1575,36 @@ fn is_login_cancel_request(url: &tauri::Url) -> bool {
 /// lock-out switch, not a safety switch (T-34.4.2-33/T-34.4.2-15).
 ///
 /// Contract the generated script implements (REQ-34.4.2-03/04/06/07):
-/// - Idempotent via `window.__GAMELIB_LOGIN_CANCEL_STRIP__`, set before any DOM work.
-/// - Renders exactly ONE control, appended to `document.body || document.documentElement`,
-///   `position:fixed`, pinned to the top-right inset, `z-index` >= 2147483000, visible label
-///   text "Cancel sign-in", `role="button"`, `aria-label="Cancel sign-in"`, `tabindex="0"`, and
-///   enough contrast to be legible on a light or dark page (styling is executor discretion,
-///   matching `autofill_glyph_script`'s own precedent).
-/// - Re-appends itself if removed: a debounced `MutationObserver` on `document.documentElement`
-///   (`{childList:true, subtree:true}`) re-adds the control if the page's own script deletes
-///   it -- a login page that can delete the only exit re-creates the lock-out this plan exists
-///   to close.
+/// - **Top-frame only (WR-03, `34.4.2-REVIEW.md`).** The FIRST statement inside the try is
+///   `if (window.top !== window) { return; }`, checked before the idempotence flag is even
+///   read, so a subframe leaves no state behind at all. `initialization_script` runs in every
+///   frame; spike 013 measured 5 of 8 navigations on Humble's real login page as third-party
+///   iframes, each of which would otherwise build its own duplicate "Cancel sign-in" control
+///   pinned to ITS OWN top-right, plus its own `MutationObserver`. A cross-origin `window.top`
+///   access that throws still bails through the existing top-level catch.
+/// - Idempotent via `window.__GAMELIB_LOGIN_CANCEL_STRIP__`, set before any further DOM work.
+/// - Renders exactly ONE control, appended to `document.body || document.documentElement`
+///   (resolved into a local first; if neither exists yet, the append is skipped rather than
+///   thrown -- WR-04, below), `position:fixed`, pinned to the top-right inset, `z-index` >=
+///   2147483000, visible label text "Cancel sign-in", `role="button"`, `aria-label="Cancel
+///   sign-in"`, and enough contrast to be legible on a light or dark page (styling is executor
+///   discretion, matching `autofill_glyph_script`'s own precedent).
+/// - **Pointer control, not a keyboard-activatable one (IN-02, `34.4.2-REVIEW.md`).** No
+///   `tabindex` is set -- REQ-34.4.2-06 forbids key listeners, so this control can only ever
+///   activate on `click`, and advertising `tabindex="0"` would promise Enter/Space activation
+///   it cannot deliver. It carries `aria-keyshortcuts="Escape"` instead: a static attribute,
+///   not a listener, truthfully advertising the page-independent bare-Esc `NSEvent` monitor as
+///   the sanctioned keyboard route.
+/// - **Retry and observer survive a throwing first build (WR-04, `34.4.2-REVIEW.md`).** The
+///   `DOMContentLoaded` listener and the `MutationObserver`'s `observe()` call are both
+///   registered BEFORE the initial `ensure()` call, which is the LAST statement inside the
+///   try -- so if that initial call throws (or simply no-ops because neither `document.body`
+///   nor `document.documentElement` exists yet), both retries are already installed and the
+///   strip still gets built on `DOMContentLoaded` or on the next mutation, instead of never
+///   appearing for that document at all. Re-appends itself if removed: a debounced
+///   `MutationObserver` on `document.documentElement` (`{childList:true, subtree:true}`)
+///   re-adds the control if the page's own script deletes it -- a login page that can delete
+///   the only exit re-creates the lock-out this plan exists to close.
 /// - On activation (`click` only) delivers via the hidden 1x1 `display:none` iframe technique
 ///   to `'https://' + @@EXFIL_HOST@@ + '/login-cancel'`. No payload, no page state read --
 ///   never `location.href`, which would fire `beforeunload` on the live, credential-bearing
@@ -1594,7 +1614,9 @@ fn is_login_cancel_request(url: &tauri::Url) -> bool {
 ///   working).
 /// - Never reads any input's `value`, never reads or transmits page content (REQ-34.4.2-07).
 /// - Whole body in one top-level try/catch (T-34.4.2-16) -- a throwing strip must never break
-///   a live login page.
+///   a live login page. WR-04's fix is deliberately NOT an inner try/catch (the cargo test
+///   `login_cancel_strip_script_is_wrapped_in_a_single_top_level_try_catch` asserts `"try {"`
+///   appears exactly once) -- it is a reorder plus null-root-safe appends instead.
 ///
 /// Mirrors `autofill_glyph_script`'s own `concat!`-of-single-line-pieces discipline (every JS
 /// string literal below uses single quotes, so every piece keeps an EVEN raw `"`-count on its
@@ -1606,27 +1628,32 @@ fn login_cancel_strip_script(exfil_host: &str) -> String {
     let template = concat!(
         "(function() { ",
         "try { ",
+        "if (window.top !== window) { return; } ",
         "if (window.__GAMELIB_LOGIN_CANCEL_STRIP__) { return; } ",
         "window.__GAMELIB_LOGIN_CANCEL_STRIP__ = true; ",
         "var ID = '__gamelib_login_cancel_strip__'; ",
         "function deliver() { ",
         "var frame = document.getElementById('__gamelib_login_cancel_frame__'); ",
         "if (!frame) { ",
+        "var deliverRoot = document.body || document.documentElement; ",
+        "if (!deliverRoot) { return; } ",
         "frame = document.createElement('iframe'); ",
         "frame.id = '__gamelib_login_cancel_frame__'; ",
         "frame.style.display = 'none'; ",
         "frame.style.width = '1px'; ",
         "frame.style.height = '1px'; ",
-        "(document.body || document.documentElement).appendChild(frame); ",
+        "deliverRoot.appendChild(frame); ",
         "} ",
         "frame.src = 'https://' + @@EXFIL_HOST@@ + '/login-cancel'; ",
         "} ",
         "function build() { ",
+        "var buildRoot = document.body || document.documentElement; ",
+        "if (!buildRoot) { return; } ",
         "var strip = document.createElement('div'); ",
         "strip.id = ID; ",
         "strip.setAttribute('role', 'button'); ",
         "strip.setAttribute('aria-label', 'Cancel sign-in'); ",
-        "strip.setAttribute('tabindex', '0'); ",
+        "strip.setAttribute('aria-keyshortcuts', 'Escape'); ",
         "strip.textContent = 'Cancel sign-in'; ",
         "strip.style.position = 'fixed'; ",
         "strip.style.top = '8px'; ",
@@ -1645,12 +1672,11 @@ fn login_cancel_strip_script(exfil_host: &str) -> String {
         "evt.preventDefault(); ",
         "deliver(); ",
         "}); ",
-        "(document.body || document.documentElement).appendChild(strip); ",
+        "buildRoot.appendChild(strip); ",
         "} ",
         "function ensure() { ",
         "if (!document.getElementById(ID)) { build(); } ",
         "} ",
-        "ensure(); ",
         "if (document.readyState === 'loading') { ",
         "document.addEventListener('DOMContentLoaded', function() { ensure(); }); ",
         "} ",
@@ -1661,6 +1687,7 @@ fn login_cancel_strip_script(exfil_host: &str) -> String {
         "} ",
         "var observer = new MutationObserver(function() { scheduleEnsure(); }); ",
         "observer.observe(document.documentElement, { childList: true, subtree: true }); ",
+        "ensure(); ",
         "} catch (e) { } ",
         "})();"
     );
@@ -6593,6 +6620,54 @@ mod tests {
         let a = login_cancel_strip_script(REVEAL_EXFIL_HOST);
         let b = login_cancel_strip_script(REVEAL_EXFIL_HOST);
         assert_eq!(a, b);
+    }
+
+    // ---- Plan 11 additions (WR-03/WR-04/IN-02, `34.4.2-REVIEW.md`) ----
+
+    #[test]
+    fn login_cancel_strip_script_top_frame_guard_precedes_the_idempotence_flag() {
+        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        let guard_idx = script.find("window.top !== window");
+        let flag_idx = script.find("__GAMELIB_LOGIN_CANCEL_STRIP__");
+        assert!(guard_idx.is_some());
+        assert!(flag_idx.is_some());
+        assert!(guard_idx.unwrap() < flag_idx.unwrap());
+    }
+
+    #[test]
+    fn login_cancel_strip_script_last_ensure_call_follows_both_dom_content_loaded_and_observer_observe(
+    ) {
+        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        let last_ensure_call = script.rfind("ensure(); ");
+        let dom_content_loaded_idx = script.find("DOMContentLoaded");
+        let observer_observe_idx = script.find("observer.observe(");
+        assert!(last_ensure_call.is_some());
+        assert!(dom_content_loaded_idx.is_some());
+        assert!(observer_observe_idx.is_some());
+        assert!(last_ensure_call.unwrap() > dom_content_loaded_idx.unwrap());
+        assert!(last_ensure_call.unwrap() > observer_observe_idx.unwrap());
+    }
+
+    #[test]
+    fn login_cancel_strip_script_drops_tabindex_and_advertises_aria_keyshortcuts() {
+        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        assert!(!script.contains("tabindex"));
+        assert!(script.contains("aria-keyshortcuts"));
+    }
+
+    #[test]
+    fn login_cancel_strip_script_wr04_regression_still_wraps_in_a_single_top_level_try_catch() {
+        // Explicit WR-04-regression note: the review's own suggested fix shape (an inner
+        // try/catch around the initial ensure() call) would add a second `"try {"` and break
+        // the pre-existing exactly-once guard above. This plan's actual fix is a reorder plus
+        // null-root-safe appends -- re-asserted here alongside the new WR-03/IN-02 guards so a
+        // future edit that reintroduces an inner try is caught in the same neighbourhood.
+        assert_eq!(
+            login_cancel_strip_script(REVEAL_EXFIL_HOST)
+                .matches("try {")
+                .count(),
+            1
+        );
     }
 
     // ---- css_rect_center_in_view / clamp_point_to_view_bounds (Phase 34.4.2 Plan 04,

@@ -1605,6 +1605,17 @@ describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes
     expect(callSites.length).toBe(3)
   })
 
+  test('Test 4 (WR-03/IN-02): the sliced login_cancel_strip_script body contains window.top and does not contain tabindex', () => {
+    const code = loadMainRsCode()
+    const start = code.indexOf('fn login_cancel_strip_script(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('fn request_login_sheet_cancel(', start)
+    expect(end).toBeGreaterThan(start)
+    const body = code.slice(start, end)
+    expect(body).toContain('window.top')
+    expect(body).not.toContain('tabindex')
+  })
+
   test('Test 5 (SCOPE GUARD, REQ-34.4.2-10, LOCKED USER SCOPE DECISION): neither open_pristine_epic_login_window NOR EpicPristineNavDelegate references register_presented_login_sheet or any other PHASE_34_4_2_NEW_SYMBOLS member', () => {
     function extractPristineLoginFnBody(code: string): string {
       const start = code.indexOf('fn open_pristine_epic_login_window(')
