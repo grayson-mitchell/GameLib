@@ -41,6 +41,11 @@ const CAPABILITIES_PATH = join(
   'default.json'
 )
 
+// Phase 34.4.2 Plan 03, Test 8 (REQ-34.4.2-10): reads Cargo.toml directly rather than through
+// `loadMainRsCode` -- this is a config-shape assertion (the `objc2-web-kit` feature array),
+// not a main.rs source assertion, mirroring `cargoFeatures.test.ts`'s own convention.
+const CARGO_TOML_PATH = join(__dirname, '..', '..', '..', 'src-tauri', 'Cargo.toml')
+
 /**
  * Reads main.rs (or `source` if provided — the self-tests below drive this SAME code path
  * with synthetic input rather than reimplementing the stripping algorithm) and strips
@@ -739,6 +744,22 @@ describe('Phase 34.4.2 Plan 01 — login-window handle resolvers and the Epic sc
     return code.slice(start, end)
   }
 
+  /**
+   * Slices `code` from `define_class!(` (inclusive, the ONLY `define_class!(` call in this
+   * file) to `impl EpicPristineNavDelegate {` (exclusive) -- the delegate's own trailing
+   * `impl` block that follows the macro invocation. Asserts both bounds were actually found
+   * before slicing, mirroring `extractPristineLoginFnBody`'s own discipline (Phase 34.4.2 Plan
+   * 03, REQ-34.4.2-10: this is the pristine surface's OTHER machine-checkable body, alongside
+   * `open_pristine_epic_login_window` itself).
+   */
+  function extractEpicPristineNavDelegateBody(code: string): string {
+    const start = code.indexOf('define_class!(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('impl EpicPristineNavDelegate {', start)
+    expect(end).toBeGreaterThan(start)
+    return code.slice(start, end)
+  }
+
   test('Test 1: login_window_ns_window resolves via get_webview_window and never references get_window( -- the pristine surface is unreachable from it by construction', () => {
     const code = loadMainRsCode()
     const start = code.indexOf('fn login_window_ns_window(')
@@ -764,10 +785,19 @@ describe('Phase 34.4.2 Plan 01 — login-window handle resolvers and the Epic sc
     expect(code.slice(start, end)).toContain('with_webview')
   })
 
-  test('Test 3 (SCOPE GUARD, REQ-34.4.2-10, LOCKED USER SCOPE DECISION): open_pristine_epic_login_window references NONE of this phase\'s new symbols', () => {
-    const pristineBody = extractPristineLoginFnBody(loadMainRsCode())
+  // GENERALIZED by Phase 34.4.2 Plan 03 (REQ-34.4.2-10): this guard used to check only
+  // `open_pristine_epic_login_window`'s sliced body. It now runs the SAME
+  // `PHASE_34_4_2_NEW_SYMBOLS` loop against `EpicPristineNavDelegate`'s sliced body too, so any
+  // symbol a FUTURE plan appends to the array is automatically checked against BOTH pristine
+  // regions with no further test edits -- the guard's coverage grows by mechanism, not by a
+  // planner remembering to duplicate a hardcoded check for each new region.
+  test('Test 3 (SCOPE GUARD, REQ-34.4.2-10, LOCKED USER SCOPE DECISION): neither open_pristine_epic_login_window NOR EpicPristineNavDelegate references any of this phase\'s new symbols', () => {
+    const code = loadMainRsCode()
+    const pristineBody = extractPristineLoginFnBody(code)
+    const delegateBody = extractEpicPristineNavDelegateBody(code)
     for (const symbol of PHASE_34_4_2_NEW_SYMBOLS) {
       expect(pristineBody).not.toContain(symbol)
+      expect(delegateBody).not.toContain(symbol)
     }
   })
 
@@ -946,5 +976,191 @@ describe('Phase 34.4.2 Plan 02 — AppKit child-window attachment', () => {
     ]) {
       expect(pristineBody).not.toContain(symbol)
     }
+  })
+})
+
+// Phase 34.4.2 Plan 03 (REQ-34.4.2-04/06/07/08/10): the in-field autofill glyph injected into
+// the Tauri-managed login surface (Humble/GOG/Amazon), and the cancelled-navigation request
+// channel it uses to reach Rust. PHASE_34_4_2_NEW_SYMBOLS (above) already carries this plan's
+// four new symbol names, so Plan 01's own generalized Test 3 (both pristine regions) covers
+// them without any change to that describe block; Test 4 below re-asserts the same absence
+// directly, scoped to this plan's own file section, so deleting either describe block still
+// leaves a guard in place (mirrors Plan 02's own Test 9 precedent).
+describe('Phase 34.4.2 Plan 03 — in-field autofill glyph and its cancelled-navigation channel', () => {
+  function extractHumbleLoginOpenArmBody(code: string): string {
+    const armStart = code.indexOf('"humble_login_open" => {')
+    expect(armStart).toBeGreaterThan(-1)
+    const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
+    expect(armEnd).toBeGreaterThan(armStart)
+    return code.slice(armStart, armEnd)
+  }
+
+  function extractPristineLoginFnBody(code: string): string {
+    const start = code.indexOf('fn open_pristine_epic_login_window(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    expect(end).toBeGreaterThan(start)
+    return code.slice(start, end)
+  }
+
+  function extractEpicPristineNavDelegateBody(code: string): string {
+    const start = code.indexOf('define_class!(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('impl EpicPristineNavDelegate {', start)
+    expect(end).toBeGreaterThan(start)
+    return code.slice(start, end)
+  }
+
+  /**
+   * Scans forward from `openMarker`'s FIRST `{` and returns the full brace-matched block
+   * (inclusive of both braces), counting depth rather than relying on a second string
+   * marker. Local copy of the identical helper the Plan 02 describe block (above) already
+   * uses -- kept per-describe-block rather than shared, matching this file's existing
+   * convention of not sharing helpers across `describe` callbacks.
+   */
+  function extractBracedBlock(code: string, openMarker: string): string {
+    const markerIdx = code.indexOf(openMarker)
+    expect(markerIdx).toBeGreaterThan(-1)
+    const braceStart = code.indexOf('{', markerIdx)
+    expect(braceStart).toBeGreaterThan(-1)
+    let depth = 0
+    let i = braceStart
+    for (; i < code.length; i++) {
+      if (code[i] === '{') depth++
+      else if (code[i] === '}') {
+        depth--
+        if (depth === 0) break
+      }
+    }
+    expect(depth).toBe(0)
+    return code.slice(markerIdx, i + 1)
+  }
+
+  /**
+   * Bounds the search to PRODUCTION code only -- everything before `#[cfg(test)] mod tests {`
+   * (the unique, code-only occurrence of that exact brace-terminated text; doc-comment
+   * mentions of the phrase elsewhere in the file never include the trailing ` {`, and are
+   * stripped by `loadMainRsCode` regardless). `autofill_glyph_script`/`parse_autofill_request`
+   * are pure, cargo-tested helpers (Plan 03 Task 1) with multiple call sites inside `mod
+   * tests` by design -- a whole-file count would conflate "how many cargo tests exercise this
+   * helper" with "how many production call sites exist", which is the thing these `exactly
+   * ONCE` acceptance criteria actually police (mirrors the file's own reveal_post_script /
+   * clear_storage_script precedent, neither of which carries a whole-file uniqueness guard for
+   * exactly this reason).
+   */
+  function productionCode(code: string): string {
+    const testModStart = code.indexOf('mod tests {')
+    expect(testModStart).toBeGreaterThan(-1)
+    return code.slice(0, testModStart)
+  }
+
+  test('Test 1: autofill_glyph_script( is called exactly once in the comment-stripped PRODUCTION source, inside the humble_login_open arm slice', () => {
+    const code = productionCode(loadMainRsCode())
+    // Negative lookbehind excludes the `fn autofill_glyph_script(` definition itself.
+    const fileCallSites = code.match(/(?<!fn )autofill_glyph_script\(/g) ?? []
+    expect(fileCallSites.length).toBe(1)
+
+    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armCallSites = armBody.match(/(?<!fn )autofill_glyph_script\(/g) ?? []
+    expect(armCallSites.length).toBe(1)
+  })
+
+  test('Test 2: within the arm slice, the autofill_glyph_script( call site lies inside an if-visible guard', () => {
+    const code = loadMainRsCode()
+    const armBody = extractHumbleLoginOpenArmBody(code)
+    const visibleStart = armBody.indexOf('if visible {')
+    expect(visibleStart).toBeGreaterThan(-1)
+    // The `if visible` block containing the glyph injection is closed a few lines before the
+    // arm's dev-only-diagnostic `#[cfg(debug_assertions)]` attribute -- a CODE token that
+    // survives comment-stripping, unlike the surrounding prose (which is comment-only and
+    // therefore invisible to `loadMainRsCode`'s output). Bound the search there rather than
+    // brace-counting, mirroring this file's other arm-slice conventions.
+    const visibleEnd = armBody.indexOf(
+      '#[cfg(debug_assertions)]',
+      visibleStart
+    )
+    expect(visibleEnd).toBeGreaterThan(visibleStart)
+    const visibleBlock = armBody.slice(visibleStart, visibleEnd)
+    expect(visibleBlock).toContain('autofill_glyph_script(')
+  })
+
+  test('Test 3: the arm contains exactly one .on_navigation( call, its closure body contains parse_autofill_request and return false, and contains none of push_login_window_event/set_title/current_origin/login_event_value', () => {
+    const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
+    const onNavCount = (armBody.match(/\.on_navigation\(/g) ?? []).length
+    expect(onNavCount).toBe(1)
+
+    const onNavStart = armBody.indexOf('.on_navigation(')
+    expect(onNavStart).toBeGreaterThan(-1)
+    const onNavEnd = armBody.indexOf('.build()', onNavStart)
+    expect(onNavEnd).toBeGreaterThan(onNavStart)
+    const onNavBody = armBody.slice(onNavStart, onNavEnd)
+
+    expect(onNavBody).toContain('parse_autofill_request')
+    expect(onNavBody).toContain('return false')
+    expect(onNavBody).not.toContain('push_login_window_event')
+    expect(onNavBody).not.toContain('set_title')
+    expect(onNavBody).not.toContain('current_origin')
+    expect(onNavBody).not.toContain('login_event_value')
+  })
+
+  // GENERALIZED array-driven guard (REQ-34.4.2-10): every member of PHASE_34_4_2_NEW_SYMBOLS
+  // -- current and future appends -- is asserted absent from BOTH pristine regions. Plan 01's
+  // own Test 3 already runs this same generalized loop; this copy is scoped to this plan's own
+  // file section so deleting either describe block still leaves a guard in place (Plan 02's
+  // Test 9 precedent). Additionally asserts the pristine open function receives no WKUserScript
+  // machinery at all -- the pristine surface receives NOTHING from this phase.
+  test('Test 4 (SCOPE GUARD, REQ-34.4.2-10): neither pristine region references any PHASE_34_4_2_NEW_SYMBOLS member, and open_pristine_epic_login_window contains no WKUserScript/addUserScript/userContentController', () => {
+    const code = loadMainRsCode()
+    const pristineBody = extractPristineLoginFnBody(code)
+    const delegateBody = extractEpicPristineNavDelegateBody(code)
+    for (const symbol of PHASE_34_4_2_NEW_SYMBOLS) {
+      expect(pristineBody).not.toContain(symbol)
+      expect(delegateBody).not.toContain(symbol)
+    }
+    expect(pristineBody).not.toContain('WKUserScript')
+    expect(pristineBody).not.toContain('addUserScript')
+    expect(pristineBody).not.toContain('userContentController')
+  })
+
+  // Permanent negatives (spike 022, `login-window-ux-macos.md` "What to Avoid"): these are not
+  // stylistic bans, they are records of MEASURED platform impossibility -- a future reader must
+  // be able to see that, so nobody spends another spike rediscovering them.
+  test('Test 5 (NEGATIVE, permanent -- spike 022 measured platform impossibility): the source contains none of the Digital Credentials / private credential-storage selectors, which are either the W3C Digital Credentials API (identity documents, not passwords) or private and inaccessible', () => {
+    const code = loadMainRsCode()
+    expect(code).not.toContain('_showDigitalCredentialsPicker')
+    expect(code).not.toContain('_setCanUseCredentialStorage')
+    expect(code).not.toContain('_canUseCredentialStorage')
+    expect(code).not.toContain('menuForEvent')
+  })
+
+  test('Test 6 (NEGATIVE, permanent -- spike 022 measured platform impossibility): the source contains no willOpenMenu and no NSMenu import -- the AutoFill item is injected by macOS at menu-display time and is absent from the NSMenu object graph; capturing or re-firing it is impossible', () => {
+    const code = loadMainRsCode()
+    expect(code).not.toContain('willOpenMenu')
+    expect(code).not.toContain('NSMenu')
+  })
+
+  test('Test 7: GAMELIB_AUTOFILL_GLYPH appears exactly once, inside the same (brace-matched) if-visible block as autofill_glyph_script(, and that block contains no #[cfg(debug_assertions)] attribute -- the kill switch must work in a packaged build (unlike GAMELIB_LOGIN_DIAG, which IS debug_assertions-gated, further down this same arm)', () => {
+    const code = loadMainRsCode()
+    expect((code.match(/GAMELIB_AUTOFILL_GLYPH/g) ?? []).length).toBe(1)
+
+    const armBody = extractHumbleLoginOpenArmBody(code)
+    // Brace-matched (not string-bounded), so an ABSENCE assertion on the slice is meaningful
+    // rather than trivially true by construction of the boundary itself.
+    const visibleBlock = extractBracedBlock(armBody, 'if visible {')
+
+    expect(visibleBlock).toContain('GAMELIB_AUTOFILL_GLYPH')
+    expect(visibleBlock).not.toContain('#[cfg(debug_assertions)]')
+  })
+
+  test('Test 8 (NEGATIVE, REQ-34.4.2-10): Cargo.toml\'s objc2-web-kit feature array contains none of WKUserScript/WKUserContentController/WKUserScriptInjectionTime -- the features only a pristine-surface injection would need', () => {
+    const cargoToml = readFileSync(CARGO_TOML_PATH, 'utf-8')
+    const start = cargoToml.indexOf('objc2-web-kit = {')
+    expect(start).toBeGreaterThan(-1)
+    const end = cargoToml.indexOf('] }', start)
+    expect(end).toBeGreaterThan(start)
+    const featureBlock = cargoToml.slice(start, end)
+    expect(featureBlock).not.toContain('WKUserScript')
+    expect(featureBlock).not.toContain('WKUserContentController')
+    expect(featureBlock).not.toContain('WKUserScriptInjectionTime')
   })
 })

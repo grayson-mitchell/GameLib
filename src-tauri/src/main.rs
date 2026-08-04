@@ -1411,7 +1411,7 @@ fn parse_autofill_request(url: &tauri::Url) -> Option<AutofillRequest> {
 /// ONLY interpolated value, and it appears exactly once in the output.
 ///
 /// Contract the generated script implements (REQ-34.4.2-04/06/07):
-/// - Idempotent: bails immediately if `window.__GAMELIB_AUTOFILL_GLYPH__` is already set (sets
+/// - Idempotent: bails immediately if `window.__GAMELIB_LOGIN_GLYPH__` is already set (sets
 ///   it first).
 /// - `initialization_script()` itself runs before any page script, in every frame (login forms
 ///   are frequently in iframes) -- this script additionally does an initial scan on load plus a
@@ -1451,8 +1451,8 @@ fn autofill_glyph_script(exfil_host: &str) -> String {
     let template = concat!(
         "(function() { ",
         "try { ",
-        "if (window.__GAMELIB_AUTOFILL_GLYPH__) { return; } ",
-        "window.__GAMELIB_AUTOFILL_GLYPH__ = true; ",
+        "if (window.__GAMELIB_LOGIN_GLYPH__) { return; } ",
+        "window.__GAMELIB_LOGIN_GLYPH__ = true; ",
         "var MARK = 'data-gamelib-autofill-glyph'; ",
         "var lastActivation = 0; ",
         "function position(glyph, field) { ",
@@ -3183,7 +3183,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 // a trade worth making.
                 if std::env::var("GAMELIB_AUTOFILL_GLYPH").as_deref() == Ok("0") {
                     eprintln!(
-                        "[shell] humble_login_open: autofill glyph injection SKIPPED for '{label}' (GAMELIB_AUTOFILL_GLYPH=0)"
+                        "[shell] humble_login_open: autofill glyph injection SKIPPED for '{label}' (kill switch set to 0)"
                     );
                 } else {
                     builder =
