@@ -2683,14 +2683,16 @@ static PRESENTED_LOGIN_SHEETS: Mutex<Option<Vec<String>>> = Mutex::new(None);
 /// presentation and sheeting them onto `main` would be meaningless.
 ///
 /// Never fatal (T-34.1-22 discipline, matching this file's existing tray/devtools
-/// convention): a missing parent, a missing child, or a failed main-thread dispatch logs one
-/// `[shell] WARN: login-window sheet: ...` line and returns `false` -- a login flow must
-/// never fail because its window could not be presented. Returns `true` only once the AppKit
-/// call actually ran, so `humble_login_open`'s own presentation-record `eprintln!` can report
-/// the resulting `sheet_presented` boolean as real machine evidence of what was attempted
-/// (mirroring that line's existing `focus_once`/`persistent_pin` discipline: REQUESTED, not
-/// proven -- the live sheet behaviour itself is the rewritten live gate's item 1 alone to
-/// prove).
+/// convention): a missing parent, a missing child, a failed main-thread dispatch, or an
+/// UNCONFIRMED attachment logs one `[shell] WARN: login-window sheet: ...` line and returns
+/// `false` -- a login flow must never fail because its window could not be presented. CR-02
+/// fix: returns `true` only once `attachedSheet()`/`isSheet()` (read back on the main thread,
+/// immediately after `beginSheet:completionHandler:` returns) CONFIRM the child is attached
+/// as the parent's sheet -- not merely once the AppKit call ran without erroring, which CR-01
+/// proved can silently no-op. `humble_login_open`'s own presentation-record `eprintln!` reports
+/// the resulting `sheet_presented` boolean as real machine evidence, and its own fallback (see
+/// that arm, below) shows the window normally when this returns `false` so a user is never left
+/// looking at nothing.
 ///
 /// Never logs the URL, origin, or title -- only the label and a fixed reason string
 /// (T-34.4.1-21/-106 discipline).
@@ -2729,7 +2731,14 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
     let parent_ptr = SendPtr(parent_addr as *mut std::ffi::c_void);
     let child_ptr = SendPtr(child_addr as *mut std::ffi::c_void);
 
-    let (tx, rx) = mpsc_channel::<()>();
+    // CR-02 fix (gap cycle following 34.4.2-LIVE-GATE-RERUN.md's FAIL 0/6): the channel now
+    // carries a `bool` -- whether AppKit itself confirms the attachment -- rather than `()`.
+    // The prior shape treated "the main-thread dispatch didn't time out" as proof of success,
+    // which is unfalsifiable: `beginSheet:completionHandler:` can run to completion and still
+    // not attach anything (that was CR-01's silent-failure mode). Reading back
+    // `attachedSheet()`/`isSheet()` immediately after the call, on the SAME main-thread hop,
+    // turns "did the dispatch return" into "did AppKit actually attach the sheet".
+    let (tx, rx) = mpsc_channel::<bool>();
     if let Err(e) = app.run_on_main_thread(move || {
         // Forces Rust 2021 disjoint closure capture to move in the WHOLE `SendPtr` wrapper
         // for each address, not just its inner raw-pointer field, which would bypass
@@ -2748,16 +2757,36 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
         // above via the `unsafe` pointer casts, but the call itself needs no further
         // `unsafe` block.
         parent.beginSheet_completionHandler(child, None);
-        let _ = tx.send(());
+        // CR-02 read-back: two independent AppKit-owned signals, both required. `isSheet()`
+        // confirms the child itself now believes it is presented as a sheet; `attachedSheet()`
+        // on the parent is compared by POINTER identity (not `==`, which `NSWindow` does not
+        // implement) to confirm the parent's sheet is specifically THIS child, not some other
+        // sheet already queued/presented on it. Either alone could be a false positive (e.g. a
+        // stale `isSheet()` from a previous presentation); both together are the strongest
+        // falsifiable signal this binding exposes.
+        let attached = child.isSheet()
+            && parent
+                .attachedSheet()
+                .is_some_and(|sheet| std::ptr::eq(&*sheet as *const _, child as *const _));
+        let _ = tx.send(attached);
     }) {
         eprintln!(
             "[shell] WARN: login-window sheet: main-thread dispatch failed for '{label}' ({e})"
         );
         return false;
     }
-    if rx.recv_timeout(Duration::from_secs(10)).is_err() {
+    let attached = match rx.recv_timeout(Duration::from_secs(10)) {
+        Ok(attached) => attached,
+        Err(_) => {
+            eprintln!(
+                "[shell] WARN: login-window sheet: main-thread dispatch timed out for '{label}'"
+            );
+            return false;
+        }
+    };
+    if !attached {
         eprintln!(
-            "[shell] WARN: login-window sheet: main-thread dispatch timed out for '{label}'"
+            "[shell] WARN: login-window sheet: beginSheet did not attach '{label}' to '{MAIN_WINDOW_LABEL}' (attachedSheet/isSheet read-back false -- CR-01/CR-02)"
         );
         return false;
     }
@@ -3589,16 +3618,45 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // `on_document_title_changed` so a title change is always composed against
             // the CURRENT host, not the one the window opened on.
             let current_origin = Arc::new(Mutex::new(origin.clone()));
+            // CR-01 fix (gap cycle following 34.4.2-LIVE-GATE-RERUN.md's FAIL 0/6): on macOS
+            // this window is the sheet CANDIDATE `present_login_window_as_sheet` attempts to
+            // attach further down this arm, after `.build()`. `beginSheet:completionHandler:`
+            // expects to be the thing that orders the sheet window in and makes it key --
+            // building it `.visible(true)`/`.focused(true)` here races that call (tao/wry
+            // orders the window in and takes key status synchronously during `.build()`,
+            // strictly BEFORE `beginSheet:` ever runs), so AppKit silently does not attach it
+            // and the window is left as an ordinary titled window (F-34.4.2-03). So on macOS
+            // the sheet candidate is ALWAYS built `.visible(false)` regardless of this arm's
+            // own `visible` argument -- presentation happens exclusively through
+            // `present_login_window_as_sheet`'s `beginSheet:` call below, with an explicit
+            // visible-fallback (see the `sheet_presented` block further down this arm) so a
+            // failed attach never leaves the user looking at nothing. Windows/Linux have no
+            // sheet concept and keep exactly today's behavior (REQ-34.4.2-08).
+            #[cfg(target_os = "macos")]
+            let initial_visible = false;
+            #[cfg(not(target_os = "macos"))]
+            let initial_visible = visible;
             let mut builder =
                 tauri::WebviewWindowBuilder::new(app, &label, tauri::WebviewUrl::External(url))
                     .user_agent(user_agent)
-                    .visible(visible);
+                    .visible(initial_visible);
             if visible {
                 let title_origin = Arc::clone(&current_origin);
+                builder = builder.inner_size(900.0, 700.0);
+                // CR-01 fix (continued): `.center()`/`.focused(true)` are AppKit-owned
+                // concerns once this window becomes a sheet -- `beginSheet:` positions the
+                // sheet under the parent's title bar and gives it key status itself, so
+                // pre-setting them here on macOS would be immediately overridden (harmless)
+                // when attachment succeeds, but WOULD be exactly the race described above
+                // when it does not run first. The visible-fallback path (below) calls
+                // `.center()`/`.set_focus()` itself if attachment is not confirmed, so macOS
+                // loses nothing on the failure path either. Windows/Linux keep the original,
+                // unconditional immediate center+focus.
+                #[cfg(not(target_os = "macos"))]
+                {
+                    builder = builder.center().focused(true);
+                }
                 builder = builder
-                    .inner_size(900.0, 700.0)
-                    .center()
-                    .focused(true)
                     .theme(Some(tauri::Theme::Light))
                     .on_document_title_changed(move |window, title| {
                         // Never .unwrap() on a live user-facing path (T-34.4.1-108): a
@@ -3835,6 +3893,30 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             };
             #[cfg(not(target_os = "macos"))]
             let sheet_presented = false;
+            // CR-01 visible-fallback (gap cycle following 34.4.2-LIVE-GATE-RERUN.md's FAIL
+            // 0/6): this window was built `.visible(false)` on macOS specifically so
+            // `beginSheet:` could be the one to reveal it as a sheet (see the builder-setup
+            // block above). If `present_login_window_as_sheet` did not confirm attachment
+            // (CR-02's read-back), the window is otherwise ordered nowhere, offscreen, and
+            // non-key -- the user would see nothing at all, strictly worse than the
+            // free-standing-window symptom this fix was written for. `window.show()` +
+            // `window.set_focus()` (post-`.build()` `WebviewWindow` methods, not the builder's
+            // own `.center()`/`.inner_size()`/`.focused(true)`/`on_document_title_changed`
+            // presentation calls Test 559 scopes to the `if visible {` block above -- this is
+            // deliberately a DIFFERENT, later code path, not a second copy of those) restore
+            // visibility and key status; none of these calls are fatal to the login flow
+            // (T-34.1-22 discipline), so failures here are logged, not propagated. Position is
+            // whatever AppKit's default placement is for a window shown without `.center()`
+            // having run -- acceptable: an off-center but genuinely visible/focused window is
+            // still strictly better than the invisible one this fallback exists to prevent.
+            #[cfg(target_os = "macos")]
+            if visible && !sheet_presented {
+                eprintln!(
+                    "[shell] WARN: humble_login_open: '{label}' sheet attachment unconfirmed -- falling back to a free-standing visible window"
+                );
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
             if visible {
                 // F-4 machine record (Phase 34.4.1 Plan 24) -- see this arm's
                 // builder-setup block above for the full "why record this at all"
