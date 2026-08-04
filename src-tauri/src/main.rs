@@ -2672,6 +2672,19 @@ const PRESENTED_LOGIN_SHEETS_CAP: usize = LOGIN_WINDOW_EVENTS_CAP;
 #[cfg(target_os = "macos")]
 static PRESENTED_LOGIN_SHEETS: Mutex<Option<Vec<String>>> = Mutex::new(None);
 
+/// F-34.4.2-04 (checkpoint response, 2026-08-04): the OUTER bound `humble_login_open` places
+/// on the entire sheet-attach attempt, not just `present_login_window_as_sheet`'s own internal
+/// 10s `rx.recv_timeout` around its main-thread dispatch. `login_window_ns_window`'s two
+/// `.ns_window()` calls at that function's own top run BEFORE its internal bound even starts,
+/// and each is tauri-runtime-wry's own `window_getter!`/`getter!` machinery, confirmed by
+/// direct read of that crate's vendored source to block on an UNBOUNDED `rx.recv()` -- no
+/// timeout parameter exists there at all. Set comfortably above the inner 10s bound (not
+/// merely equal to it) so `present_login_window_as_sheet` is given every chance to finish
+/// normally; this constant exists purely as the caller-side backstop for the part of that
+/// function's own critical path it cannot itself bound.
+#[cfg(target_os = "macos")]
+const LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT: Duration = Duration::from_secs(15);
+
 /// Presents a VISIBLE Tauri-managed login window (Humble/GOG/Amazon -- REQ-34.4.2-10's
 /// locked scope; see `open_pristine_epic_login_window`'s own module-level scope note, above,
 /// for the full boundary) as an AppKit SHEET on the app's `main` window (REQ-34.4.2-01/02),
@@ -2712,6 +2725,17 @@ static PRESENTED_LOGIN_SHEETS: Mutex<Option<Vec<String>>> = Mutex::new(None);
 /// mandated explicit close affordance is plan 34.4.2-08's deliverable (T-34.4.2-33).
 #[cfg(target_os = "macos")]
 fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
+    // Live-evidence gap (checkpoint response, 2026-08-04, F-34.4.2-04): the first live
+    // hardware run of the CR-01/CR-02 fix (commit 751521663) reported a SYMPTOM CHANGE --
+    // no window at all (not even the pre-fix free-standing one) plus a stuck spinner that
+    // never cleared -- with no captured `[shell]` stdout to say WHERE time was spent. This
+    // `Instant` and the `eprintln!`s below it (entry, both `ns_window` resolutions, the
+    // main-thread closure's own entry/exit) exist so the NEXT live run's captured
+    // `tauri:dev` stdout can localize a stall to a specific leg of this function instead of
+    // guessing again. Never fatal, never logs URL/origin/title (T-34.4.1-21/-106
+    // discipline unchanged) -- only elapsed durations and the fixed label.
+    let started = std::time::Instant::now();
+    eprintln!("[shell] login-window sheet: present_login_window_as_sheet entered for '{label}'");
     let Some(parent_addr) = login_window_ns_window(app, MAIN_WINDOW_LABEL) else {
         eprintln!(
             "[shell] WARN: login-window sheet: no NSWindow for '{MAIN_WINDOW_LABEL}' -- skipping"
@@ -2722,6 +2746,10 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
         eprintln!("[shell] WARN: login-window sheet: no NSWindow for '{label}' -- skipping");
         return false;
     };
+    eprintln!(
+        "[shell] login-window sheet: both NSWindow addresses resolved for '{label}' (elapsed={:?})",
+        started.elapsed()
+    );
 
     // SAFETY: see `SendPtr`'s doc comment on `open_pristine_epic_login_window`, above -- a
     // bare address is not normally `Send`, but this wrapper is reconstructed into a live
@@ -2739,12 +2767,21 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
     // `attachedSheet()`/`isSheet()` immediately after the call, on the SAME main-thread hop,
     // turns "did the dispatch return" into "did AppKit actually attach the sheet".
     let (tx, rx) = mpsc_channel::<bool>();
+    let closure_label = label.to_string();
     if let Err(e) = app.run_on_main_thread(move || {
         // Forces Rust 2021 disjoint closure capture to move in the WHOLE `SendPtr` wrapper
         // for each address, not just its inner raw-pointer field, which would bypass
         // `SendPtr`'s `Send` impl entirely and fail to compile.
         let parent_ptr = parent_ptr;
         let child_ptr = child_ptr;
+        // Live-evidence gap (see this function's own entry comment): proves the QUEUED
+        // main-thread closure actually STARTED running, distinguishing "never got
+        // scheduled" from "started and stalled inside the AppKit call below" -- the two
+        // failure modes the checkpoint response could not tell apart from a beachball
+        // alone.
+        eprintln!(
+            "[shell] login-window sheet: main-thread closure entered for '{closure_label}'"
+        );
         // SAFETY: both addresses were resolved moments ago via `login_window_ns_window`,
         // which only returns `Some` for a live Tauri-managed `NSWindow`; reconstructed into
         // live references only here, on the main thread.
@@ -2757,6 +2794,13 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
         // above via the `unsafe` pointer casts, but the call itself needs no further
         // `unsafe` block.
         parent.beginSheet_completionHandler(child, None);
+        // Live-evidence gap: proves the AppKit sheet-begin call itself RETURNED (as opposed
+        // to blocking the main thread inside AppKit, which would mean this line -- and
+        // every other main-thread message queued behind it, including the visible-fallback
+        // `humble_login_open` queues further down -- never runs).
+        eprintln!(
+            "[shell] login-window sheet: beginSheet dispatch call returned for '{closure_label}'"
+        );
         // CR-02 read-back: two independent AppKit-owned signals, both required. `isSheet()`
         // confirms the child itself now believes it is presented as a sheet; `attachedSheet()`
         // on the parent is compared by POINTER identity (not `==`, which `NSWindow` does not
@@ -2768,6 +2812,9 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
             && parent
                 .attachedSheet()
                 .is_some_and(|sheet| std::ptr::eq(&*sheet as *const _, child as *const _));
+        eprintln!(
+            "[shell] login-window sheet: read-back attached={attached} for '{closure_label}'"
+        );
         let _ = tx.send(attached);
     }) {
         eprintln!(
@@ -2779,11 +2826,16 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
         Ok(attached) => attached,
         Err(_) => {
             eprintln!(
-                "[shell] WARN: login-window sheet: main-thread dispatch timed out for '{label}'"
+                "[shell] WARN: login-window sheet: main-thread dispatch timed out for '{label}' (elapsed={:?} -- the main-thread closure above may still be running/queued; see LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT in humble_login_open for the caller-side bound that guarantees a fallback regardless)",
+                started.elapsed()
             );
             return false;
         }
     };
+    eprintln!(
+        "[shell] login-window sheet: present_login_window_as_sheet resolved attached={attached} for '{label}' (elapsed={:?})",
+        started.elapsed()
+    );
     if !attached {
         eprintln!(
             "[shell] WARN: login-window sheet: beginSheet did not attach '{label}' to '{MAIN_WINDOW_LABEL}' (attachedSheet/isSheet read-back false -- CR-01/CR-02)"
@@ -3887,7 +3939,41 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // UNVERIFIED here, matching the skill's Constraints section.
             #[cfg(target_os = "macos")]
             let sheet_presented = if visible {
-                present_login_window_as_sheet(app, &label)
+                // F-34.4.2-04 fix (checkpoint response, 2026-08-04, post commit 751521663):
+                // the first live hardware run of the CR-01/CR-02 fix reported a symptom
+                // CHANGE -- no window at all (not even the pre-fix free-standing one) plus a
+                // spinner that never cleared, i.e. worse than F-34.4.2-03, not better. That
+                // shape is exactly what a stall ANYWHERE inside `present_login_window_as_sheet`
+                // (including tauri's own unbounded internal `.ns_window()` getters --
+                // `LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT`'s own doc comment, above) would look
+                // like: if the call never returns, this arm's fallback below (which exists
+                // SPECIFICALLY to guarantee visibility) never runs either, because it is
+                // gated on `sheet_presented`, which would never get assigned.
+                //
+                // Racing the WHOLE attempt on its own thread against an independent, bounded
+                // watchdog decouples "the fallback is guaranteed to run" from "whatever
+                // `present_login_window_as_sheet` is doing eventually finishes" -- the
+                // reasoning_checkpoint's own explicit constraint ("never block the main thread
+                // waiting on a closure queued to the main thread") is satisfied doubly here:
+                // this wait happens on a worker thread exactly like the pre-existing recv
+                // calls in this file already do, and it can no longer be starved by a stall
+                // this file does not control.
+                let (watchdog_tx, watchdog_rx) = mpsc_channel::<bool>();
+                let app_for_sheet = app.clone();
+                let label_for_sheet = label.clone();
+                thread::spawn(move || {
+                    let attached = present_login_window_as_sheet(&app_for_sheet, &label_for_sheet);
+                    let _ = watchdog_tx.send(attached);
+                });
+                match watchdog_rx.recv_timeout(LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT) {
+                    Ok(attached) => attached,
+                    Err(_) => {
+                        eprintln!(
+                            "[shell] WARN: humble_login_open: '{label}' sheet-attach watchdog exceeded {LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT:?} -- present_login_window_as_sheet has not returned (see that function's own diagnostics for where it last logged); treating as unconfirmed and falling back now rather than waiting further"
+                        );
+                        false
+                    }
+                }
             } else {
                 false
             };
