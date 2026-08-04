@@ -2,7 +2,7 @@
 status: awaiting_human_verify
 trigger: "— white window opens rather than a expected sheet for login. is not a child CR-01"
 created: 2026-08-04
-updated: 2026-08-04T02:15:00Z
+updated: 2026-08-04T03:05:00Z
 ---
 
 ## Symptoms
@@ -60,7 +60,25 @@ reasoning_checkpoint:
 
 test: "cargo check (clean), cargo test (131/131, 1 pre-existing ignored), cargo clippy (only pre-existing warnings, now at shifted line numbers 539-543/918/3765/3781/3907/3916, none inside the touched regions), npx jest src/backend/__tests__/tauriShellSource.test.ts (84/84, including all 9 Plan-02 sheet-presentation tests and the F-4/Test-559 presentation-token-scoping test), npx jest full suite (3735/3735, the previously-flaky enrichmentFlows.test.ts passed clean this run)."
 expecting: "All static/structural checks clean; live macOS/tauri:dev proof of the watchdog firing and the fallback producing a visible window remains the open item for the next live run."
-next_action: "Commit the F-34.4.2-04 fix (diagnostics + watchdog), then request human verification with an explicit ask to capture tauri:dev stdout/stderr this time so the new eprintln! diagnostics can localize any remaining stall precisely."
+next_action: "SUPERSEDED by the F-34.4.2-05 continuation below -- commit 56d4986f8 (F-34.4.2-04 diagnostics + watchdog) was applied and the operator's round-2 live hardware run captured the requested tauri:dev [shell] diagnostics for the first time. They isolate the wedge to a single AppKit call (parent.beginSheet_completionHandler(child, None)) and FALSIFY this continuation's own leading theory (the unbounded login_window_ns_window() getter). See the new reasoning_checkpoint below for the continuation investigation and fix."
+
+## Continuation: F-34.4.2-05 (checkpoint response round 2, post commit 56d4986f8)
+
+reasoning_checkpoint:
+  hypothesis: "`parent.beginSheet_completionHandler(child, None)` itself -- the single AppKit call between the two live-confirmed log lines 'main-thread closure entered' and the never-printed 'beginSheet dispatch call returned' -- wedges the real OS main thread forever when invoked synchronously, in the same run-loop turn as the sheet-candidate child window's own creation, on a WKWebView-backed NSWindow that has never completed an on-screen display/layout pass. This is a known class of macOS interaction (independently reported for unrelated Rust/Go webview+native-window stacks: Apple Developer Forums 'WKWebView in a modal window' thread, wailsapp/wails#4226 'Deadlock in webview_window_darwin', r0x0r/pywebview#138 'Deadlock while closing the window with persistent threads running'), not a bug in this file's own dispatch/threading logic, which F-34.4.2-04 already proved runs on a spawned worker thread throughout."
+  confirming_evidence:
+    - "The operator's round-2 [shell] log (captured via tauri:dev stdout/stderr for the first time, verbatim in Evidence below) shows: 'present_login_window_as_sheet entered' -> 'both NSWindow addresses resolved ... (elapsed=58.516541ms)' -> 'main-thread closure entered' -> then NOTHING further from inside that closure -> 'WARN: main-thread dispatch timed out ... (elapsed=10.063618708s)'. The only AppKit call between 'main-thread closure entered' and the missing 'beginSheet dispatch call returned' line (read directly from the pre-fix source, main.rs, at the time of this checkpoint) is `parent.beginSheet_completionHandler(child, None)` itself."
+    - "This FALSIFIES this continuation's own leading theory from the prior round (F-34.4.2-04's reasoning_checkpoint): 'login_window_ns_window's unbounded getter (`.ns_window()`) sitting on the critical path before present_login_window_as_sheet's own bound even starts' -- the live log shows BOTH ns_window() calls completed in 58.5ms, two full orders of magnitude faster than the 10s WARN, and well before the main-thread closure (which does not call `.ns_window()` at all -- both addresses were already resolved on the calling worker thread, before `run_on_main_thread` was ever invoked) even started."
+    - "Direct read of tao-0.35.3's vendored source (src/platform_impl/macos/window.rs:246-253) confirms every tao-created NSWindow, regardless of `.visible()`, is created with `backing: NSBackingStoreType::Buffered, defer: NO` -- it always has a real backing store from the moment `.build()` completes, never a deferred/unbacked window. This rules out 'the window has no backing store yet' as the hang's mechanism -- the window IS fully backed; it has simply never been ORDERED onto the window server's screen list (visible=false skips the `if visible { orderFront/makeKeyAndOrderFront }` branch at window.rs:630-637), which is precisely the AppKit-documented CR-01 precondition (confirmed again in this round's research: 'deselect Visible at Launch or it will fail to present modally')."
+    - "Web research on the Apple Developer Forums 'WKWebView in a modal window' thread (independently, not this codebase) reports the same class of failure with the same tentative mechanism: 'WKWebView needs a certain NSRunLoop to do its work on, or perhaps it schedules its loading task on a queue that is paused while a modal window is running' -- and that a fix for an analogous case was found by 'rearranging things to avoid [invoking modal presentation] from inside a dispatch_async block', i.e. giving the content view's setup work real run-loop turns to complete BEFORE the modal/sheet transition call, not calling it synchronously back-to-back with the window's own creation."
+    - "Direct read of tauri-runtime-wry-2.11.4/src/lib.rs:235-255 (`send_user_message`) confirms: when the caller is ALREADY on the main thread (`current_thread().id() == context.main_thread_id`), the message is handled SYNCHRONOUSLY INLINE (`handle_user_message(...)` called directly, no queueing) -- NOT posted for later processing. This means a second `app.run_on_main_thread(...)` call issued from WITHIN the first closure (itself already running on the main thread) would NOT yield a run-loop turn; it would execute inline, reproducing the exact same synchronous-back-to-back call shape that is the leading suspect. Confirmed by a real `cargo check` failure (E0277, `*mut c_void cannot be sent`) when this was first attempted with `dispatch2` before the `SendPtr`-wrapper rebinding discipline was applied inside the new inner closure too -- an unrelated compile error, but it forced tracing this exact call-shape question before shipping a fix that silently would not have worked."
+  falsification_test: "If a live re-run with the new diagnostics shows 'deferred beginSheet closure entered ... (deferred_elapsed=...)' printing (proving the `dispatch2::DispatchQueue::main().after()` deferral genuinely ran on a later run-loop turn, elapsed >= the 250ms warmup delay) followed immediately by 'beginSheet dispatch call returned' and a 'read-back attached=true', that CONFIRMS the hypothesis and the fix. If 'deferred beginSheet closure entered' prints but 'beginSheet dispatch call returned' STILL never prints (i.e. the wedge persists even after a genuine run-loop-yielding deferral), that FALSIFIES this hypothesis's specific mechanism (WKWebView needing warmup turns) and points instead at something unconditional about `beginSheet:completionHandler:` itself in this exact NSWindow/style-mask/subclass configuration (e.g. the `TaoWindow` class's `canBecomeKeyWindow`/`canBecomeMainWindow` override, tao-0.35.3/src/platform_impl/macos/window.rs:415-422, returning a stale/false `focusable` ivar) -- the next round would need to test THAT candidate specifically. If 'deferred beginSheet closure entered' never prints at all, that would mean GCD's main queue itself is not being serviced by this app's run loop, falsifying the whole `dispatch2` approach and requiring a completely different deferral mechanism (e.g. `NSRunLoop` pumping)."
+  fix_rationale: "The fix defers the single suspect call (`beginSheet_completionHandler`) by a bounded, deterministic wall-clock delay (250ms, via `dispatch2::DispatchQueue::main().after()`) so WebKit's content-process handshake gets real run-loop turns to complete BEFORE the AppKit call that (per this round's evidence and independent third-party reports) appears to need it to have already happened. This is NOT a race against another thread and does not weaken the standing constraint ('never leave the user without a visible window', 'the hang itself must be prevented, not bounded/raced') -- it is a single-threaded, deterministic delay that runs strictly BEFORE the protected call, on the SAME main thread, and it composes cleanly with F-34.4.2-04's watchdog (still 15s, comfortably above this function's own 10s bound, itself comfortably above the 250ms warmup) rather than replacing it: if this fix's hypothesis is wrong and the wedge persists even after the deferral, the watchdog still fires and the visible-fallback still runs, so the user is never left with nothing regardless of whether this specific hypothesis is confirmed. Addresses the MECHANISM this round's evidence points to (a synchronous call-back-to-back-with-creation timing issue) rather than a symptom -- it does not touch CR-01's window-visibility precondition (still built `.visible(false)`, still never ordered before the deferred call) or CR-02's read-back (unchanged, now inside the deferred closure)."
+  blind_spots: "Still cannot execute this on real macOS hardware in this environment -- whether 250ms is actually sufficient warmup time for WebKit's handshake (as opposed to needing longer, or needing an entirely different trigger such as the window's first `orderFront`/`orderOut` cycle rather than mere elapsed time) is UNVERIFIED live. The `TaoWindow` class's `canBecomeKeyWindow`/`canBecomeMainWindow` override (tao-0.35.3 window.rs:415-422) was read and noted as a candidate alternative mechanism but NOT ruled out or fixed here -- this fix targets the higher-confidence, better-corroborated (multiple independent third-party reports) hypothesis first, per one-hypothesis-at-a-time discipline; if the falsification test's second branch fires on the next live run, that ivar-override path is the next candidate to investigate. If GCD's main queue is for some reason not serviced promptly by this specific app's run loop configuration (unconfirmed either way in this environment), the 250ms delay could be exceeded without functional harm (the 10s/15s bounds still apply) but the diagnostic's 'deferred_elapsed' value would look anomalously large, which is itself useful signal for the next round."
+
+test: "cargo check (clean), cargo test (131/131, 1 pre-existing ignored), cargo clippy (only pre-existing warnings, now at shifted line numbers 539-543/918/3850/3866/3992/4001, none inside the touched regions), npx jest src/backend/__tests__/tauriShellSource.test.ts (84/84, all 9 Plan-02 sheet-presentation tests including Test 1's single-call-site guard still pass -- the dispatch2 deferral is nested INSIDE the existing run_on_main_thread closure, not a second call site), npx jest full suite (3735/3735), git diff --exit-code Cargo.lock shows exactly one line added (dispatch2 promoted from transitive-only to also a direct dependency of gamelib-shell -- no new crate/version enters the tree, confirmed by diff)."
+expecting: "All static/structural checks clean; live macOS/tauri:dev proof that the 250ms deferral actually unwedges beginSheet_completionHandler (or, if not, that the new diagnostics correctly localize the wedge to AFTER the deferred closure entered, ruling this hypothesis out cleanly) remains the open item for the next live run."
+next_action: "Commit the F-34.4.2-05 fix (dispatch2 warmup-delay deferral + new diagnostics), then request human verification with an explicit ask to capture tauri:dev stdout/stderr again (same as last time) so the new 'deferred beginSheet closure entered' / 'deferred_elapsed' diagnostics can confirm or cleanly falsify this round's hypothesis."
 
 ## Evidence
 
@@ -114,11 +132,161 @@ next_action: "Commit the F-34.4.2-04 fix (diagnostics + watchdog), then request 
   found: `cargo check` clean. `cargo test`: 131/131 passed (1 pre-existing ignored). `cargo clippy`: only the same pre-existing warnings as before (doc-list-item at what is now 539-543, manual_hash_one at 918, needless-borrow-style warnings at 3765/3781/3907/3916 — all shifted by the same offset as the inserted diagnostic lines, none inside the newly touched logic). `npx jest tauriShellSource.test.ts`: 84/84 passed, including Test 1 (present_login_window_as_sheet( still called exactly once, still inside the humble_login_open arm — the watchdog wraps the call in a nested closure but does not add a second call site) and Test 3 (the call still sits inside `let sheet_presented = if visible { ... }`). `npx jest` full suite: 3735/3735 passed (the previously-noted enrichmentFlows.test.ts flake did not reproduce this run).
   implication: Fix is statically/structurally verified with the same rigor as the original CR-01/CR-02 fix. Live behavior (does the watchdog actually fire under a real stall, does the fallback produce a genuinely visible/usable window, do the new diagnostics pinpoint the exact stalling leg) remains unverified in this environment — that is the explicit ask for the next checkpoint.
 
+- timestamp: 2026-08-04T02:30:00Z (F-34.4.2-05 continuation, checkpoint response round 2)
+  checked: Operator checkpoint response to the post-F-34.4.2-04-fix human-verify request (commit 56d4986f8 live on macOS hardware, tauri:dev stdout/stderr captured via `tee` for the first time).
+  found: |
+    STILL BROKEN -- "endless [beachball], still going now" -- no window ever appeared (neither
+    sheet nor fallback); the app's main thread was still wedged as of the report. Captured
+    `[shell]` log, verbatim:
+    ```
+    [shell] humble_login_open: autofill glyph injected for 'loginwin-0-18c8932c04375588-b1b20836'
+    [shell] humble_login_open: login cancel strip injected for 'loginwin-0-18c8932c04375588-b1b20836'
+    [shell] login-window sheet: present_login_window_as_sheet entered for 'loginwin-0-18c8932c04375588-b1b20836'
+    [shell] login-window sheet: both NSWindow addresses resolved for 'loginwin-0-18c8932c04375588-b1b20836' (elapsed=58.516541ms)
+    [shell] login-window sheet: main-thread closure entered for 'loginwin-0-18c8932c04375588-b1b20836'
+    [shell] WARN: login-window sheet: main-thread dispatch timed out for 'loginwin-0-18c8932c04375588-b1b20836' (elapsed=10.063618708s -- the main-thread closure above may still be running/queued; see LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT in humble_login_open for the caller-side bound that guarantees a fallback regardless)
+    [shell] WARN: humble_login_open: 'loginwin-0-18c8932c04375588-b1b20836' sheet attachment unconfirmed -- falling back to a free-standing visible window
+    [shell] humble_login_open: presentation requested visible=true width=900 height=700 center=true focus_once=true persistent_pin=false light_theme_requested=true sheet_presented=false
+    [shell] humble_login_open: devtools opened for 'loginwin-0-18c8932c04375588-b1b20836' (debug build)
+    ```
+  implication: |
+    New finding F-34.4.2-05 (BLOCKING, supersedes F-34.4.2-04's "fix applied, awaiting
+    verification" state). This is the FIRST live evidence that localizes the wedge to a
+    specific point: 'main-thread closure entered' prints, then nothing further from inside
+    that closure for the full 10s bound -- the WARN that follows is
+    `present_login_window_as_sheet`'s OWN `rx.recv_timeout` giving up on the worker thread,
+    not a log line the closure itself produced. The only AppKit call between 'main-thread
+    closure entered' and the never-printed 'beginSheet dispatch call returned' (read from the
+    pre-fix source at the time of this checkpoint) is
+    `parent.beginSheet_completionHandler(child, None)` itself. This directly FALSIFIES
+    F-34.4.2-04's own leading theory (the unbounded `login_window_ns_window()` getter) --
+    both NSWindow addresses resolved in 58.5ms, on the calling worker thread, well before the
+    main-thread closure even started -- see the Eliminated entry below. The watchdog and
+    fallback (F-34.4.2-04's own fix) DID work as designed on the worker-thread side
+    (`sheet_presented=false`, the WARN fallback line, and the presentation-record line all
+    printed) -- but the fallback's `window.show()`/`.set_focus()` calls are themselves
+    main-thread-dispatched (queued via `send_user_message`) and can never execute while the
+    real OS main thread stays wedged inside `beginSheet_completionHandler`, which is why the
+    operator still observed no window and a persistent beachball despite the fallback code
+    path having run to completion on the worker side. "devtools opened" printing is consistent
+    with this too: `window.open_devtools()` is itself fire-and-forget/queued, so the eprintln!
+    fires immediately regardless of whether the main thread ever actually processes it.
+
+- timestamp: 2026-08-04T02:40:00Z
+  checked: tao-0.35.3 vendored source, src/platform_impl/macos/window.rs -- `UnownedWindow::new` (line 517-644), `create_window` (line 163-338), and the `TaoWindow` custom NSWindow subclass (`WINDOW_CLASS`, line 404-427).
+  found: |
+    (a) `create_window` always allocates the NSWindow with `backing: NSBackingStoreType::Buffered,
+    defer: NO` (line 246-253) regardless of the `visible` attribute -- the window always has a
+    real backing store from creation; it is never a deferred/unbacked window. `visible: false`
+    only skips the `if visible { makeKeyAndOrderFront/orderFront }` branch in `UnownedWindow::new`
+    (line 630-637) -- the window is simply never ORDERED onto the window server's screen list,
+    matching the AppKit-documented CR-01 precondition exactly (see the research entry below).
+    (b) `create_window` also unconditionally calls `ns_window.center()` (line 331-333) whenever
+    `attrs.position` is `None` -- which it always is for this arm's builder (it never calls
+    `.position(...)`) -- REGARDLESS of the CR-01 fix's removal of the `humble_login_open` arm's
+    own explicit `.center()` call. This centers the (still off-screen/unordered) window in
+    space; harmless on its own (never visible while `visible: false`), but noted as a
+    pre-existing tao-internal behavior this file's own CR-01 comment did not account for.
+    (c) `TaoWindow` (the custom `NSWindow` subclass every tao window uses) overrides
+    `canBecomeKeyWindow`/`canBecomeMainWindow` to return a `focusable` ivar set once at creation
+    from `attrs.focusable` (line 258) -- a DIFFERENT field from `attrs.focused` (the
+    grab-focus-on-creation flag `humble_login_open`'s CR-01 fix already skips on macOS). This
+    file never calls a `.focusable(false)` builder method, so this ivar is presumed to stay at
+    tao's own default; noted as an UNVERIFIED alternative candidate mechanism (if
+    `canBecomeKeyWindow` were somehow `false`, a sheet's request to make its child key could
+    behave unexpectedly) but not pursued further this round -- see this round's
+    `blind_spots` field.
+  implication: |
+    Rules out "the child window has no valid backing store" as the hang's mechanism (it always
+    does, via `defer: NO`). Confirms CR-01's `.visible(false)` fix is necessary and correctly
+    implemented per tao's own window-creation code path. Surfaces two previously-undocumented
+    tao-internal behaviors (the always-on `.center()`, and the `TaoWindow` class's
+    key/main-window override) as background context for future rounds if this round's fix does
+    not resolve the wedge.
+
+- timestamp: 2026-08-04T02:50:00Z
+  checked: Web research -- Apple Developer Forums "WKWebView in a modal window" thread; `wailsapp/wails#4226` ("Deadlock in Webview_window_darwin"); `r0x0r/pywebview#138` ("Deadlock while closing the window with persistent threads running"); further research on `NSWindow beginSheet:completionHandler:` preconditions.
+  found: |
+    Independent reports, across unrelated Rust/Go native-window+WKWebView stacks, describe the
+    same CLASS of failure: a WKWebView-backed window participating in a modal/sheet transition
+    can hang because "WKWebView needs a certain NSRunLoop to do its work on, or perhaps it
+    schedules its loading task on a queue that is paused while a modal window is running" --
+    and one developer's fix for an analogous case was "rearranging things to avoid [invoking
+    the modal-presentation call] from inside a dispatch_async block", i.e. giving the webview's
+    own setup work real run-loop turns to complete BEFORE the modal/sheet call, rather than
+    invoking it synchronously back-to-back with window creation. No source found describes an
+    EXACT match to this file's specific `beginSheet:completionHandler:` + `objc2` + `tao`
+    combination (this remains genuinely novel as far as this research could confirm), but the
+    mechanism class (WKWebView content-process handshake vs. modal/sheet transition timing) is
+    corroborated by multiple independent, unrelated codebases.
+  implication: |
+    Provides the strongest available (though not 100% dispositive) support for the F-34.4.2-05
+    hypothesis: the wedge is a timing/ordering issue between WebKit's own setup and AppKit's
+    sheet-transition machinery, not a logic bug in this file's own Rust code. Directly informs
+    the fix direction (defer `beginSheet:` by a real, bounded wall-clock amount rather than
+    calling it synchronously in the same run-loop turn as window creation).
+
+- timestamp: 2026-08-04T02:55:00Z
+  checked: tauri-runtime-wry-2.11.4 vendored source, `send_user_message` (src/lib.rs:235-255) -- specifically the on-main-thread branch, not the off-main-thread branch already read in the prior round.
+  found: |
+    When the caller is ALREADY on the main thread (`current_thread().id() ==
+    context.main_thread_id`), `send_user_message` calls `handle_user_message(...)` DIRECTLY,
+    SYNCHRONOUSLY, INLINE -- it does NOT post the message for later processing via
+    `context.proxy.send_event(...)` (that branch is `else`-only, for the off-main-thread case
+    already documented in the F-34.4.2-04 evidence).
+  implication: |
+    A second `app.run_on_main_thread(...)` call issued from WITHIN
+    `present_login_window_as_sheet`'s existing main-thread closure would NOT yield a run-loop
+    turn -- it would execute synchronously inline, reproducing the exact same
+    call-back-to-back-with-creation shape suspected of causing the wedge. This ELIMINATES
+    "nest another `run_on_main_thread` call to defer `beginSheet:`" as a viable fix approach
+    BEFORE it was implemented incorrectly and shipped for a wasted live-hardware round trip --
+    `dispatch2::DispatchQueue::main().after(...)` (GCD, serviced by a dedicated run-loop source
+    `NSApplication` registers automatically, independent of tao's own event-proxy pipeline) is
+    used instead; confirmed present in this workspace's own dependency tree already (a
+    transitive dependency of `tao` itself, `objc2-core-foundation`, `objc2-core-graphics`, and
+    `rfd`) at version 0.3.1, added as an explicit direct dependency (`git diff --exit-code
+    Cargo.lock` shows exactly one line, no new crate/version).
+
+- timestamp: 2026-08-04T03:00:00Z
+  checked: Applied fix (F-34.4.2-05: `SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY` constant + `dispatch2::DispatchQueue::main().after()` deferral of `beginSheet_completionHandler` and its CR-02 read-back, plus new diagnostics for the deferred closure's own entry/elapsed time; `dispatch2 = "0.3.1"` added to `src-tauri/Cargo.toml`'s macOS target dependencies), then `cargo check`, `cargo test`, `cargo clippy`, `npx jest src/backend/__tests__/tauriShellSource.test.ts`, `npx jest` (full suite), on real macOS hardware (this environment is macOS/arm64).
+  found: |
+    First `cargo check` attempt failed E0277 (`*mut c_void cannot be sent between threads
+    safely`) -- the new inner `dispatch2` closure's direct field access
+    (`parent_ptr.0`/`child_ptr.0`) triggered Rust 2021 disjoint closure capture to pull in only
+    the bare pointer field, bypassing `SendPtr`'s `Send` impl, exactly the pitfall the OUTER
+    closure's own pre-existing rebinding comment already warned about -- fixed by adding the
+    same `let parent_ptr = parent_ptr; let child_ptr = child_ptr;` whole-wrapper-capture
+    rebinding inside the new inner closure too. After that fix: `cargo check` clean. `cargo
+    test`: 131/131 passed (1 pre-existing ignored). `cargo clippy`: only the same pre-existing
+    warnings as every prior round, now at shifted line numbers (539-543 doc-list-item, 918
+    manual_hash_one, 3850/3866/3992/4001 needless-borrow-style) -- none inside the newly touched
+    logic. `npx jest tauriShellSource.test.ts`: 84/84 passed, including Test 1 (
+    present_login_window_as_sheet( still called exactly once, still inside the humble_login_open
+    arm -- the dispatch2 deferral nests inside the EXISTING run_on_main_thread closure, it does
+    not add a second call site) and Test 6 (beginSheet_completionHandler/endSheet each still
+    appear exactly once in the comment-stripped source). `npx jest` full suite: 3735/3735 passed
+    (191/191 suites; the previously-noted `enrichmentFlows.test.ts` flake did not reproduce this
+    run). `git diff --exit-code src-tauri/Cargo.lock`: exactly one line added (`dispatch2`
+    promoted from transitive-only to also a direct dependency of `gamelib-shell`) -- no new
+    crate/version entered the dependency tree, confirming the Cargo.toml comment's claim.
+  implication: |
+    Fix is statically/structurally verified with the same rigor as every prior round. Live
+    behavior (does the 250ms warmup delay actually let `beginSheet:completionHandler:` return,
+    does the new 'deferred beginSheet closure entered'/'deferred_elapsed' diagnostic confirm a
+    genuine run-loop yield took place, does the sheet finally attach) remains unverified in this
+    environment -- the explicit ask for the next checkpoint, per this round's own
+    `falsification_test`.
+
 ## Eliminated
 
 - hypothesis: "present_login_window_as_sheet's rx.recv_timeout is executing on the OS main thread, causing a same-thread self-deadlock against the run_on_main_thread-queued beginSheet closure (the checkpoint response's leading theory)."
   evidence: "Direct grep of every call site of dispatch_rust_channel (main.rs) shows exactly one, inside a thread::spawn block in start_reader's rustInvoke branch — present_login_window_as_sheet, and therefore every rx.recv_timeout in this presentation path, always executes on a spawned worker thread, never the main thread."
   timestamp: 2026-08-04T01:40:00Z
+
+- hypothesis: "F-34.4.2-04's own leading theory: login_window_ns_window()'s two `.ns_window()` calls (routing through tauri-runtime-wry's unbounded `getter!`/`rx.recv()` macro, confirmed by direct crate-source read in the prior round) are where present_login_window_as_sheet stalls, sitting on the critical path before that function's own bounded 10s wait even begins."
+  evidence: "The operator's round-2 live [shell] log (captured via tauri:dev stdout/stderr for the first time) shows 'both NSWindow addresses resolved ... (elapsed=58.516541ms)' printing promptly, followed by 'main-thread closure entered' -- which does not call `.ns_window()` at all, both addresses having already been resolved on the calling worker thread before `run_on_main_thread` was ever invoked. The 10s stall demonstrably happens AFTER this getter-based resolution completes, inside the main-thread closure itself, not in `login_window_ns_window`."
+  timestamp: 2026-08-04T02:30:00Z
 
 ## Resolution
 
@@ -153,6 +321,28 @@ root_cause: |
       dispatch_rust_channel's single call site to a spawned worker thread (main.rs:4901) --
       the real mechanism is architectural (fallback reachability gated on an unbounded
       dependency), not a same-thread reentrant deadlock.
+  (4) F-34.4.2-05 (this continuation, checkpoint response round 2): commit 56d4986f8's live
+      hardware run captured `tauri:dev` stdout/stderr for the first time, and the F-34.4.2-04
+      diagnostics localize the wedge precisely -- `main-thread closure entered` prints, then
+      NOTHING further for the full 10s bound. This directly FALSIFIES F-34.4.2-04's own
+      leading theory (the unbounded `login_window_ns_window()` getter -- both NSWindow
+      addresses resolved in 58.5ms, well before the main-thread closure even started, per the
+      Eliminated entry). The only AppKit call between the last-printed line and the
+      never-printed `beginSheet dispatch call returned` is
+      `parent.beginSheet_completionHandler(child, None)` itself -- the OS main thread is
+      wedged inside (or immediately around) that single call. Independent third-party reports
+      (Apple Developer Forums "WKWebView in a modal window" thread; `wailsapp/wails#4226`;
+      `r0x0r/pywebview#138`) describe the same CLASS of failure for unrelated Rust/Go
+      webview+native-window stacks: a WKWebView-backed window that has never completed an
+      on-screen display/layout pass can wedge AppKit's modal/sheet-transition machinery when
+      the transition call is made synchronously, in the same run-loop turn as the window's
+      own creation -- WebKit's content-process handshake needs real run-loop turns to
+      complete first. F-34.4.2-04's own watchdog and fallback DID run to completion on the
+      worker-thread side (confirmed by the log's WARN/fallback/presentation-record lines all
+      printing), but the fallback's `window.show()`/`.set_focus()` calls are themselves
+      main-thread-dispatched and can never execute while the real main thread stays wedged --
+      explaining why the operator still saw no window and a persistent beachball despite the
+      fallback code path having "succeeded" on the worker side.
 fix: |
   In src-tauri/src/main.rs, macOS-only (`#[cfg(target_os = "macos")]`):
   CR-01/CR-02 (commit 751521663, unchanged by this continuation):
@@ -180,31 +370,71 @@ fix: |
       time" from "present_login_window_as_sheet happens to complete", directly satisfying
       "never leave the user with an invisible login window" even against an unbounded
       internal dependency this file does not own.
-  No new Cargo.toml dependencies/features required. Epic's pristine login window path
-  (`open_pristine_epic_login_window`) remains untouched -- verified by the pre-existing
-  `PHASE_34_4_2_NEW_SYMBOLS` scope-guard tests, which still pass. `present_login_window_as_sheet(`
-  remains called exactly once in the file (Test 1), still inside the humble_login_open arm's
-  `let sheet_presented = if visible { ... }` block (Test 3) -- the watchdog wraps the call in
-  a nested closure, it does not add a second call site.
+  No new Cargo.toml *feature* requirements for the CR-01/CR-02/F-34.4.2-04 work.
+  Epic's pristine login window path (`open_pristine_epic_login_window`) remains untouched --
+  verified by the pre-existing `PHASE_34_4_2_NEW_SYMBOLS` scope-guard tests, which still pass.
+  `present_login_window_as_sheet(` remains called exactly once in the file (Test 1), still
+  inside the humble_login_open arm's `let sheet_presented = if visible { ... }` block (Test 3)
+  -- the watchdog wraps the call in a nested closure, it does not add a second call site.
+  F-34.4.2-05 (this continuation, additive):
+  (5) A new constant `SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY` (250ms) documents the live
+      evidence and third-party research behind this fix (main.rs, immediately after
+      `LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT`).
+  (6) Inside `present_login_window_as_sheet`'s existing main-thread closure, the actual
+      `beginSheet_completionHandler` call and its CR-02 read-back are no longer invoked
+      synchronously inline. They are moved into a NEW inner closure scheduled via
+      `dispatch2::DispatchQueue::main().after(when, ...)`, `SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY`
+      in the future -- deliberately NOT a second `app.run_on_main_thread(...)` call, which
+      `tauri-runtime-wry`'s `send_user_message` (confirmed by direct source read) executes
+      SYNCHRONOUSLY INLINE when already on the main thread, and so would not yield a
+      run-loop turn at all. GCD's main queue is serviced by a dedicated run-loop source
+      `NSApplication` registers automatically, independent of tao's own event-proxy pipeline.
+  (7) New diagnostics: an `eprintln!` immediately before scheduling the deferral, and one at
+      the top of the deferred closure reporting `deferred_elapsed` (time since scheduling) --
+      so the next live run can confirm the deferral genuinely happened (elapsed >= 250ms)
+      before `beginSheet dispatch call returned`/`read-back attached=...` (both pre-existing
+      diagnostics, unchanged, now inside the deferred closure).
+  (8) `dispatch2 = "0.3.1"` added to `src-tauri/Cargo.toml`'s `[target.'cfg(target_os =
+      "macos")'.dependencies]` block, default features kept. Already resolved in this
+      workspace's dependency tree at this exact version (transitive dependency of `tao`,
+      `objc2-core-foundation`, `objc2-core-graphics`, `rfd`) -- `git diff --exit-code
+      Cargo.lock` shows exactly one line added (this crate promoted from transitive-only to
+      also a direct dependency of `gamelib-shell`), no new crate/version enters the tree.
+  (9) The SAME `let parent_ptr = parent_ptr; let child_ptr = child_ptr;` whole-wrapper-capture
+      rebinding the outer closure already used is now ALSO applied inside the new inner
+      `dispatch2` closure -- required because that closure's own direct field access
+      (`parent_ptr.0`/`child_ptr.0`) would otherwise let Rust 2021 disjoint closure capture
+      pull in only the bare `*mut c_void` field, bypassing `SendPtr`'s `Send` impl (a real
+      `cargo check` E0277 failure caught this before it shipped).
+  `present_login_window_as_sheet(` still called exactly once (Test 1 still passes) --
+  the `dispatch2` deferral nests inside the EXISTING `run_on_main_thread` closure, it does
+  not add a second call site; `beginSheet_completionHandler`/`endSheet` each still appear
+  exactly once in the comment-stripped source (Test 6 still passes).
 verification: |
   Statically/structurally verified only (this environment has no live macOS/tauri:dev
   interactive session available):
-  - `cargo check`: clean.
+  - `cargo check`: clean (after fixing one E0277 caught during this round's own development
+    -- see Evidence).
   - `cargo test`: 131/131 passed (1 pre-existing ignored, unrelated).
   - `cargo clippy`: only pre-existing warnings, now at shifted line numbers (539-543
-    doc-list-item, 918 manual_hash_one, 3765/3781/3907/3916 needless-borrow-style) -- none
+    doc-list-item, 918 manual_hash_one, 3850/3866/3992/4001 needless-borrow-style) -- none
     inside the newly touched logic.
   - `npx jest src/backend/__tests__/tauriShellSource.test.ts`: 84/84 passed, including all
     9 tests in the "AppKit sheet presentation" describe block, Test 1 (single call site,
     still inside the arm), Test 3 (still inside the `if visible {` sheet_presented block),
-    and the F-4/Test-559 presentation-token-scoping test.
-  - `npx jest` (full suite): 3735/3735 passed (the previously-flaky `enrichmentFlows.test.ts`
-    did not reproduce this run).
-  LIVE VERIFICATION LIMITATION (per binding constraint, unchanged): whether `beginSheet:` now
-  actually attaches the sheet on real macOS hardware, whether the F-34.4.2-04 watchdog fires
-  and the fallback produces a genuinely visible/usable window under the real stall the
-  operator hit, and whether the new diagnostics pinpoint the exact stalling leg, are all
-  UNVERIFIED here and remain the explicit ask for the next checkpoint (capture tauri:dev
-  stdout/stderr this time).
+    Test 6 (beginSheet_completionHandler/endSheet each exactly once), and the F-4/Test-559
+    presentation-token-scoping test.
+  - `npx jest` (full suite): 3735/3735 passed, 191/191 suites (the previously-flaky
+    `enrichmentFlows.test.ts` did not reproduce this run).
+  - `git diff --exit-code src-tauri/Cargo.lock`: exactly one line added (`dispatch2` promoted
+    from transitive-only to also a direct dependency), no new crate/version in the tree.
+  LIVE VERIFICATION LIMITATION (per binding constraint, unchanged): whether the 250ms
+  `SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY` deferral actually lets `beginSheet:completionHandler:`
+  return on real macOS hardware, whether the new `deferred beginSheet closure
+  entered`/`deferred_elapsed` diagnostic confirms a genuine run-loop yield took place, and
+  whether the sheet finally attaches, are all UNVERIFIED here and remain the explicit ask for
+  the next checkpoint (capture tauri:dev stdout/stderr again, same as last time).
 files_changed:
   - src-tauri/src/main.rs
+  - src-tauri/Cargo.toml
+  - src-tauri/Cargo.lock
