@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.4.2-13-PLAN.md (D-A: deleted the in-field autofill glyph mechanism in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected). Phase 34.4.2 DOES NOT CLOSE -- boxes stay unticked pending a fresh live gate (34.4.2-LIVE-GATE-RERUN-3.md). Next: continue gap cycle 3 (plan 14, T-34.4.2-39 origin confusion, then the gate re-run)."
-last_updated: "2026-08-05T08:58:39.262Z"
+stopped_at: Completed 34.4.2-14-PLAN.md
+last_updated: "2026-08-05T10:08:51.086Z"
 last_activity: 2026-08-05
 progress:
   total_phases: 20
   completed_phases: 13
   total_plans: 207
-  completed_plans: 193
-  percent: 65
+  completed_plans: 194
+  percent: 94
 ---
 
 # Project State
@@ -479,12 +479,37 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — GAP CYCLE 3 EXECUTING
-Plan: 14 of 16 (plans 01-12 complete; gap cycle 3 = plans 13-16, plan 13 EXECUTED 2026-08-05 --
+Plan: 16 of 16 (plans 01-13 complete; gap cycle 3 = plans 13-16, plan 13 EXECUTED 2026-08-05 --
 D-A: the in-field autofill glyph mechanism deleted in full, mutation-proven absence guard,
-REQ-34.4.2-04/-05 scope-corrected, see 34.4.2-13-SUMMARY.md -- plans 14-16 not yet executed).
+REQ-34.4.2-04/-05 scope-corrected, see 34.4.2-13-SUMMARY.md; plan 14 EXECUTED 2026-08-05 --
+T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW single-flight guard refuses a second visible login
+window while one is pending/presented, 25s TTL derived from the existing 15s watchdog, see
+34.4.2-14-SUMMARY.md -- plans 15-16 not yet executed).
 Plan 12 -- the human-driven live gate run -- RAN 2026-08-05 and recorded VERDICT FAIL,
 items_passed 5/6 (see its own record below). D-08's no-partial-pass rule applies: the phase does
-NOT close. Next: continue gap cycle 3 (plan 14). Historical plan-11/plan-10 records follow.)
+NOT close. Next: continue gap cycle 3 (plan 15, authors the new gate contract). Historical
+plan-11/plan-10 records follow.)
+
+Plan 14 record (14 done -- `34.4.2-14-SUMMARY.md`. Closed T-34.4.2-39's app gap (a second
+VISIBLE login window queuing behind a first, minted by plan 12's live gate) with a source-level
+single-flight guard: `PENDING_VISIBLE_LOGIN_WINDOW` refuses a second visible request at
+`humble_login_open`'s shell entry point, before any window is built, while another visible flow
+is pending or presented. Minted and mitigated T-34.4.2-41 (NEW, DoS) in the same plan: the latch
+carries a 25s TTL derived from the existing 15s `LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT` (+10s
+margin) via the pure, unit-tested `pending_login_entry_is_stale` helper, and clears on all three
+resolution paths (sheet confirmed, visible-fallback, `WindowEvent::Destroyed`) via
+`clear_pending_visible_login_window`. Task 2 held the guard in place with 5 new
+`tauriShellSource.test.ts` tests (one mutation-proven: swapped the guard above Epic's early
+return, confirmed the ordering test FAILED, reverted) and propagated to
+`34.4.2-PLATFORM-SCOPE.md` (4 new §1 rows, a seventh §5 threat-register update) and
+`deferred-items.md` (F-34.4.2-06 the nile spawn tax this guard mitigates the consequence of;
+traced finding that Humble's own login path silently swallows a refusal while the 4 OAuth
+runners surface it via `TauriLoginPanel`'s error phase). One deviation (Rule 1): the guard's
+condition had to be written `if visible == true {` rather than the bare `if visible {` this arm
+uses elsewhere, because the bare form collided with two pre-existing tests'
+`indexOf('if visible {')` first-match lookups. cargo test 115/116 (1 pre-existing ignored), jest
+tauriShellSource.test.ts 82/82, npm run test:ci 3746/3746. **Live behaviour NOT claimed --
+T-34.4.2-39's live discharge is plan 15's own gate item. Phase remains NOT CLOSED.**)
 
 Plan 12 record (12 done -- **BLOCKING LIVE GATE executed on real macOS hardware for the first
 time in this phase's history to a full completion.** VERDICT FAIL, items_passed 5/6.
@@ -2419,7 +2444,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 93%
+trusted blindly. The recurring `**Progress:**[█████████░] 94%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.2-07): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2736,7 +2761,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-05 - Completed quick task 260805-u68: retargeted all 5 Ko-fi donation links from Heroic's accounts to the fork's own https://ko-fi.com/gamelib (FUNDING.yml, Support.md, flatpak template, snapcraft.yaml, kofiPage constant)
+Last activity: 2026-08-05
 Prior activity: 2026-08-05 - Completed quick task 260805-t0s: removed Patreon from the sidebar menu and all code references (openPatreonPage channel deleted across all four layers + Tauri sidecar registration; FUNDING.yml/Support.md/snapcraft.yaml stripped; grep-clean)
 Prior activity: 2026-08-05 - Phase 34.4.2 plan 13 executed: D-A (operator, binding) deleted the in-field autofill glyph mechanism in full from src-tauri/src/main.rs (13 symbols, ~24 cargo tests, plus truncate_chars, an orphan the compiler caught) -- 34.4.2-LIVE-GATE-RERUN-2.md item 3 had measured the synthesized right-click surfacing the AutoFill menu but never filling the field (F-34.4.2-09), falsifying spike 022's own premise. Minted PHASE_34_4_2_REMOVED_AUTOFILL_SYMBOLS, a mutation-proven permanent absence guard (tauriShellSource.test.ts) making reintroduction a test failure; relocated T-34.4.2-20's private-selector negative so it survives the poster's deletion; retired the NSGraphicsContext Cargo feature. REQ-34.4.2-04/-05 rewritten (amend-in-place) to state Cmd+V/Edit-Paste as the sole credential-entry route, both boxes stay UNTICKED. 34.4.2-PLATFORM-SCOPE.md's sixth threat-register update retires 10 threats by deletion (T-34.4.2-17, this phase's largest security surface, specifically called out as eliminated not merely mitigated), moves 7 previously-closed threats to CLOSED-pending-re-measurement, and adds T-34.4.2-40 (reintroduction, mutation-proven-mitigated). cargo test 111/1-ignored, jest 89/89 (targeted) + 3742/3742 (full suite, context only). Ran NO gate item, ticked NO requirement box. Phase 34.4.2 remains NOT CLOSED. See 34.4.2-13-SUMMARY.md.
 Prior activity: 2026-08-05 - Completed quick task 260805-rwy: removed the "Login with your platform…" paragraph from the Manage Accounts page (visual UAT pending)
@@ -3396,6 +3421,7 @@ Closed/parked native-install phases:
 | Phase 34.4.2 P11 | 120min | 3 tasks | 5 files |
 | Phase 34.4.2 P12 | ~180min | 3 tasks (Task 2 blocking live gate, multiple in-run checkpoints) | 6 files (`34.4.2-LIVE-GATE-RERUN-2.md`, `34.4.2-PLATFORM-SCOPE.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`, `34.4.2-12-SUMMARY.md`) |
 | Phase 34.4.2 P13 | 55min | 3 tasks | 7 files |
+| Phase 34.4.2 P14 | 50min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -3828,6 +3854,7 @@ Recent decisions affecting current work:
 - [Phase 34.4.2]: D-A executed: in-field autofill glyph mechanism deleted in full (13 symbols, ~24 tests) rather than disabled -- 34.4.2-LIVE-GATE-RERUN-2.md item 3 falsified spike 022's premise
 - [Phase 34.4.2]: PHASE_34_4_2_REMOVED_AUTOFILL_SYMBOLS mutation-proven absence guard makes the deletion permanent -- reintroducing any of 13 names is now a test failure
 - [Phase 34.4.2]: REQ-34.4.2-04/-05 scope-corrected to state Cmd+V/Edit-Paste as the sole credential-entry route; both boxes stay unticked pending 34.4.2-LIVE-GATE-RERUN-3.md item 3
+- [Phase ?]: T-34.4.2-39/-41 (34.4.2-14): PENDING_VISIBLE_LOGIN_WINDOW single-flight guard refuses a second visible login window at humble_login_open, with a 25s TTL derived from the existing 15s watchdog so the guard cannot itself become a lockout DoS; live discharge deferred to plan 15's gate item
 
 ### Pending Todos
 
@@ -3912,8 +3939,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-05T08:58:39.247Z
-Stopped at: Completed 34.4.2-13-PLAN.md (D-A: deleted the in-field autofill glyph mechanism in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected). Phase 34.4.2 DOES NOT CLOSE -- boxes stay unticked pending a fresh live gate (34.4.2-LIVE-GATE-RERUN-3.md). Next: continue gap cycle 3 (plan 14, T-34.4.2-39 origin confusion, then the gate re-run).
+Last session: 2026-08-05T10:08:51.073Z
+Stopped at: Completed 34.4.2-14-PLAN.md
   This session (sequential executor): ran `34.4.2-LIVE-GATE-RERUN-2.md`, the fresh six-item
   blocking live gate, on real macOS hardware, to a full completion for the first time in this
   phase's history. Task 1 (commit `75431b20a`): preflight -- `cargo build` clean (23.62s), all
