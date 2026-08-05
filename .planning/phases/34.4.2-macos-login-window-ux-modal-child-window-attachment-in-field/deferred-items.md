@@ -128,7 +128,15 @@ closure.
   own live-gate work, plans 09/10) should replace that line with 34.4.2's actual next action, or
   relocate the 34.5 gap-cycle-6 pointer to wherever Phase 34.5's own current-position block lives.
 
-## Plan 09 — the autofill glyph's un-gated cross-platform injection remains unfixed, now with a macOS-gated sibling for contrast (2026-08-04)
+## Plan 09 — the autofill glyph's un-gated cross-platform injection remains unfixed, now with a macOS-gated sibling for contrast (2026-08-04) — **CLOSED 2026-08-05 by plan 13's deletion**
+
+**CLOSED 2026-08-05 (plan 13, operator decision D-A).** Not fixed by gating the call site to macOS
+— the entry below's own recommended fix — but by deleting `autofill_glyph_script` and its call site
+outright, as part of the whole in-field autofill mechanism's removal (`34.4.2-LIVE-GATE-RERUN-2.md`
+item 3, F-34.4.2-09). Worth recording the irony for future sessions: an inert, unlabelled key icon
+that did nothing when clicked on Windows/Linux was logged as owed work across three plans (05, 08,
+09), and the fix that finally landed was deleting the icon everywhere, including macOS, rather than
+ever gating or shipping a cross-platform poster for it.
 
 - **Found during:** Task 2's platform-scope record update, re-examining `34.4.2-PLATFORM-SCOPE.md`
   § 1's own standing finding while adding plan 08's new symbols to the same table.
@@ -172,7 +180,11 @@ the seven below sit adjacent but are not on those routes.**
   resolution and execution, the `NSWindow` may already be released, producing a dangling
   dereference (a hard crash in the shell process). **Why out of scope:** not on any of items
   2/3/5's own routes -- it is a narrow, timing-dependent race with no reported live occurrence.
-  **Disposition:** logged, not fixed, no owning plan.
+  **Disposition:** logged, not fixed, no owning plan. **NARROWED 2026-08-05 (plan 13):** the
+  poster's own worker-to-main `NSWindow` address hop (`post_autofill_right_click`'s resolution of
+  `login_window_wk_webview`, a sibling race of the same shape) is gone with the deleted mechanism
+  — this threat's remaining sites are `present_login_window_as_sheet` and
+  `dismiss_login_window_sheet` only, strictly fewer than before. Still OPEN, still not fixed here.
 - **WR-05 — the strip route destroys the window synchronously inside its own WKWebView
   navigation-policy callback.** **File:** `src-tauri/src/main.rs` (the sentinel branch inside
   `humble_login_open`'s `.on_navigation(` closure, `request_login_sheet_cancel`). **Symptom:**
@@ -190,7 +202,9 @@ the seven below sit adjacent but are not on those routes.**
   written before the `PRESENTED_LOGIN_SHEETS` membership check, so a refused request still
   consumes the label's rate-limit window. **Why out of scope:** not on items 2/3/5's own routes
   (it affects debounce fairness, not sheet dismissability, strip rendering, or the WR-01
-  registry). **Disposition:** logged, not fixed, no owning plan.
+  registry). **Disposition:** logged, not fixed, no owning plan. **MOOT 2026-08-05 (plan 13)** —
+  its subject (`post_autofill_right_click`'s `LAST_AUTOFILL_POST` debounce map, and the poster
+  itself) no longer exists.
 - **WR-08 — harness-containment Test 1 never walks `src-tauri/src/`; unguarded `statSync`.**
   **File:** `src/backend/__tests__/dummyStoreHarnessContainment.test.ts` (Test 1's offenders
   list; `listAllFilesRecursive`'s `statSync` call). **Symptom:** Test 2 scans both `src/` and
@@ -245,3 +259,30 @@ the seven below sit adjacent but are not on those routes.**
   arcs: a debug session that lands commits mid-phase should route its documentation through the
   next phase plan (as this one did) rather than leaving the phase's own records silently stale
   about work that already shipped.
+
+## Plan 13 — what the deletion deliberately did NOT do (2026-08-05)
+
+**Not a gap — a scope boundary, recorded so a future session does not read the deletion's silence
+on these four points as an oversight.**
+
+- **Did NOT fix F-34.4.2-08.** `String.fromCharCode(128273)` truncating U+1F511 to a PUA tofu box
+  (`autofill_glyph_script`, the deleted key-glyph generator) is MOOT, superseded by the deletion —
+  applying `String.fromCodePoint` would have been work on a corpse. Explicitly instructed against
+  in this plan's own `<action>` block.
+- **Did NOT touch the cancel strip or sheet presentation (D-B/D-C).** `login_cancel_strip_script`'s
+  generated JS, the Esc monitor, `present_login_window_as_sheet`,
+  `dismiss_login_window_sheet`, `register_presented_login_sheet` and
+  `SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY` are all confirmed byte-identical (extraction diff, this
+  plan's SUMMARY) — only comments naming the now-deleted mechanism nearby were rewritten. D-B/D-C
+  stand: child-window attachment is off the table forever, the cancel strip has no kill switch by
+  design.
+- **Did NOT touch Epic (D-D).** `open_pristine_epic_login_window` (18423 bytes) and
+  `EpicPristineNavDelegate` (7706 bytes) are byte-identical before/after, confirmed by extraction
+  diff, not merely by the coarser whole-file `git diff | grep` proxy this plan's own verify command
+  also runs (which shows 3 removed lines that are stale mentions of Epic's function name inside the
+  DELETED mechanism's OWN comments — see this plan's SUMMARY for the full explanation of that
+  proxy's false positive).
+- **Did NOT attempt any alternative autofill trigger.** D-A is a binding decision to delete, not
+  disable, and forbids re-proposing the affordance under a different synthesis approach, a
+  different trigger event, or behind a kill switch. No such attempt was made in this plan, and none
+  should be proposed by a future session without a new operator decision superseding D-A.
