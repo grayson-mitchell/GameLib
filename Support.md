@@ -1,6 +1,6 @@
 ## Support Heroic Development
 
-### Buy a Cofee: [Ko-fi](https://ko-fi.com/gamelib)
+### Buy a Coffee: [Ko-fi](https://ko-fi.com/gamelib)
 
 ### Support with Crypto
 
