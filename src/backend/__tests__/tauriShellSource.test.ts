@@ -638,19 +638,25 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
     expect(pageLoadBlock).toContain('set_title(')
   })
 
-  // RETIGHTENED (Phase 34.4.2 Plan 03, REQ-34.4.2-04/08), not deleted: this used to be a
-  // blanket "no .on_navigation( at all" guard. Plan 03 adds exactly one sentinel-only,
-  // cancel-only .on_navigation( arm to intercept the in-field autofill glyph's request --
+  // RETIGHTENED (Phase 34.4.2 Plan 08, REQ-34.4.2-03/04/08), not deleted: this used to be a
+  // blanket "no .on_navigation( at all" guard. Plan 08 adds exactly one sentinel-only,
+  // cancel-only .on_navigation( arm to intercept the login-sheet cancel strip's request --
   // that does NOT violate the invariant this guard protects, because the invariant is "no
   // on_navigation-driven login-watch relay" (spike 013: 5 of 8 on_navigation events on
   // Humble's real login page were third-party iframes; letting a subframe re-arm
   // notifyLoginNavigated()'s deadline via on_navigation would defeat WR-03's timeout), not
   // "no on_navigation call of any kind". The assertions below enforce that narrower invariant
-  // precisely: at most one on_navigation call exists, its closure parses the autofill
-  // sentinel and nothing else, and it never touches the login-watch relay's own state
+  // precisely: at most one on_navigation call exists, its closure parses the cancel sentinel
+  // and nothing else, and it never touches the login-watch relay's own state
   // (push_login_window_event/set_title/current_origin/login_event_value) -- those stay
   // exclusively owned by the .on_page_load( hook, per the POSITIVE test above.
-  test('NEGATIVE/RETIGHTENED: the humble_login_open arm has at most one .on_navigation( call, and that closure ONLY parses the autofill sentinel -- it never drives the login-watch relay', () => {
+  //
+  // RETIGHTENED AGAIN (Phase 34.4.2 Plan 13, operator decision D-A): this arm's closure used
+  // to carry a SECOND sentinel (the now-deleted synthesized-right-click poster's), so this
+  // test previously asserted `parse_autofill_request` was present. That sentinel is gone;
+  // this test now asserts `is_login_cancel_request` instead -- the closure parses exactly one
+  // sentinel, and it is the surviving one.
+  test('NEGATIVE/RETIGHTENED: the humble_login_open arm has at most one .on_navigation( call, and that closure ONLY parses the login-cancel sentinel -- it never drives the login-watch relay', () => {
     const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
     const onNavCount = (armBody.match(/\.on_navigation\(/g) ?? []).length
     expect(onNavCount).toBeLessThanOrEqual(1)
@@ -661,7 +667,7 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
     expect(onNavEnd).toBeGreaterThan(onNavStart)
     const onNavBody = armBody.slice(onNavStart, onNavEnd)
 
-    expect(onNavBody).toContain('parse_autofill_request')
+    expect(onNavBody).toContain('is_login_cancel_request')
     expect(onNavBody).not.toContain('push_login_window_event')
     expect(onNavBody).not.toContain('set_title')
     expect(onNavBody).not.toContain('current_origin')
@@ -707,7 +713,6 @@ describe('F-34.5-G6-05 (Plan 27) login window requests a light interface style',
 // plan inventing its own version of it.
 const PHASE_34_4_2_NEW_SYMBOLS = [
   'login_window_ns_window',
-  'login_window_wk_webview',
   // Plan 07 (AppKit SHEET presentation -- supersedes Plan 02's child-window attachment,
   // operator's binding design decision 2026-08-04, `34.4.2-LIVE-GATE.md`'s "Binding Design
   // Decision" section):
@@ -715,18 +720,6 @@ const PHASE_34_4_2_NEW_SYMBOLS = [
   'dismiss_login_window_sheet',
   'PRESENTED_LOGIN_SHEETS',
   'MAIN_WINDOW_LABEL',
-  // Plan 03 (in-field autofill glyph + cancelled-navigation request channel):
-  'AUTOFILL_EXFIL_PATH',
-  'AutofillRequest',
-  'parse_autofill_request',
-  'autofill_glyph_script',
-  // Plan 04 (synthesized right-click poster):
-  'css_rect_center_in_view',
-  'clamp_point_to_view_bounds',
-  'synth_autofill_mouse_event',
-  'post_autofill_right_click',
-  'LAST_AUTOFILL_POST',
-  'AUTOFILL_POST_DEBOUNCE',
   // Plan 08 (mandated close affordance -- cancel strip + Esc backstop, REQ-34.4.2-03):
   'LOGIN_CANCEL_EXFIL_PATH',
   'is_login_cancel_request',
@@ -734,6 +727,29 @@ const PHASE_34_4_2_NEW_SYMBOLS = [
   'request_login_sheet_cancel',
   // Plan 11 (WR-07/WR-01 fixes -- 34.4.2-REVIEW.md):
   'register_presented_login_sheet'
+]
+
+// Phase 34.4.2 Plan 13 (operator decision D-A): the in-field autofill glyph mechanism --
+// originally Plan 03's `login_window_wk_webview`/glyph-request channel and Plan 04's
+// synthesized-right-click poster -- was DELETED, not disabled. These names MOVED here from
+// PHASE_34_4_2_NEW_SYMBOLS: a name that no longer exists in the source cannot meaningfully be
+// asserted absent from the two pristine Epic regions alone (that guard is now vacuous for
+// these names), while asserting their FILE-WIDE absence is strictly stronger and is what the
+// describe block below (Test 1) actually does.
+const PHASE_34_4_2_REMOVED_AUTOFILL_SYMBOLS = [
+  'login_window_wk_webview',
+  'AUTOFILL_EXFIL_PATH',
+  'AutofillRequest',
+  'parse_autofill_request',
+  'autofill_glyph_script',
+  'css_rect_center_in_view',
+  'clamp_point_to_view_bounds',
+  'synth_autofill_mouse_event',
+  'post_autofill_right_click',
+  'LAST_AUTOFILL_POST',
+  'AUTOFILL_POST_DEBOUNCE',
+  'AUTOFILL_POST_DEBOUNCE_MAP_CAP',
+  'GAMELIB_AUTOFILL_GLYPH'
 ]
 
 // Tests 3 and 4 below encode a LOCKED USER SCOPE DECISION (2026-08-04): Epic is implemented
@@ -775,30 +791,27 @@ describe('Phase 34.4.2 Plan 01 — login-window handle resolvers and the Epic sc
     return code.slice(start, end)
   }
 
+  // RE-ANCHORED (Phase 34.4.2 Plan 13, operator decision D-A): the end marker used to be
+  // `fn login_window_wk_webview(`, which Plan 13 deleted (its sole caller,
+  // `post_autofill_right_click`, went with it -- an orphan, not its own defect). Re-anchored
+  // on `const PRESENTED_LOGIN_SHEETS_CAP` -- the next surviving top-level item after
+  // `login_window_ns_window` -- rather than deleting this test, per this plan's own
+  // instruction that Test 1 must not be dropped.
   test('Test 1: login_window_ns_window resolves via get_webview_window and never references get_window( -- the pristine surface is unreachable from it by construction', () => {
     const code = loadMainRsCode()
     const start = code.indexOf('fn login_window_ns_window(')
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('fn login_window_wk_webview(', start)
+    const end = code.indexOf('const PRESENTED_LOGIN_SHEETS_CAP', start)
     expect(end).toBeGreaterThan(start)
     const fnBody = code.slice(start, end)
     expect(fnBody).toContain('get_webview_window(')
     expect(fnBody).not.toContain('get_window(')
   })
 
-  test('Test 2: login_window_wk_webview references with_webview', () => {
-    const code = loadMainRsCode()
-    const start = code.indexOf('fn login_window_wk_webview(')
-    expect(start).toBeGreaterThan(-1)
-    // The next top-level item after this resolver (the pre-existing doc comment naming the
-    // Epic logout defect fix, stripped down to its code line) bounds the search window.
-    const end = code.indexOf(
-      'fn clear_default_data_store_cookies_for_domain(',
-      start
-    )
-    expect(end).toBeGreaterThan(start)
-    expect(code.slice(start, end)).toContain('with_webview')
-  })
+  // Test 2 (formerly "login_window_wk_webview references with_webview") DELETED (Phase 34.4.2
+  // Plan 13, operator decision D-A): its subject, `login_window_wk_webview`, was deleted along
+  // with the poster it existed solely to serve. Its absence is now asserted permanently by
+  // `PHASE_34_4_2_REMOVED_AUTOFILL_SYMBOLS`, below.
 
   // GENERALIZED by Phase 34.4.2 Plan 03 (REQ-34.4.2-10): this guard used to check only
   // `open_pristine_epic_login_window`'s sliced body. It now runs the SAME
@@ -988,334 +1001,102 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
   })
 })
 
-// Phase 34.4.2 Plan 03 (REQ-34.4.2-04/06/07/08/10): the in-field autofill glyph injected into
-// the Tauri-managed login surface (Humble/GOG/Amazon), and the cancelled-navigation request
-// channel it uses to reach Rust. PHASE_34_4_2_NEW_SYMBOLS (above) already carries this plan's
-// four new symbol names, so Plan 01's own generalized Test 3 (both pristine regions) covers
-// them without any change to that describe block; Test 4 below re-asserts the same absence
-// directly, scoped to this plan's own file section, so deleting either describe block still
-// leaves a guard in place (mirrors Plan 02's own Test 9 precedent).
-describe('Phase 34.4.2 Plan 03 — in-field autofill glyph and its cancelled-navigation channel', () => {
-  function extractHumbleLoginOpenArmBody(code: string): string {
+// Phase 34.4.2 Plan 13 (operator decision D-A): the in-field autofill glyph mechanism --
+// Plan 03's injected glyph + cancelled-navigation request channel, and Plan 04's
+// synthesized-right-click poster that consumed it -- was DELETED, not disabled, after
+// `34.4.2-LIVE-GATE-RERUN-2.md` item 3 measured it on real hardware: the synthesized
+// right-click surfaces the system AutoFill menu but never fills the field, while an
+// identical REAL right-click in the same sheet does (F-34.4.2-09, falsifying spike 022's own
+// Recommendation #4). Cmd+V / Edit > Paste is now the sole credential-entry route
+// (REQ-34.4.2-04/-05, SCOPE-CORRECTED). Supersedes the Plan 03 and Plan 04 describe blocks
+// this file used to carry (their own guards are replaced by the permanent absence negative
+// below); their one negative worth keeping forever -- T-34.4.2-20's private-selector ban --
+// is RELOCATED into Test 3 here, unconditionally on the poster's own continued existence.
+describe('Phase 34.4.2 Plan 13 — the in-field autofill mechanism is DELETED (operator decision D-A)', () => {
+  test('Test 1 (PERMANENT ABSENCE, T-34.4.2-40): every PHASE_34_4_2_REMOVED_AUTOFILL_SYMBOLS member appears 0 times in the comment-stripped production source -- a future session reintroducing any of them violates operator decision D-A', () => {
+    const code = loadMainRsCode()
+    for (const symbol of PHASE_34_4_2_REMOVED_AUTOFILL_SYMBOLS) {
+      const count = (
+        code.match(
+          new RegExp(symbol.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
+        ) ?? []
+      ).length
+      // Asserted as an object (not a bare number) so a failing symbol's NAME appears
+      // directly in Jest's diff output -- a future session reintroducing one of these is
+      // told exactly which operator decision (D-A) it is violating, not just "expected 0".
+      expect({ symbol, count }).toEqual({ symbol, count: 0 })
+    }
+  })
+
+  test('Test 2 (STRONGER THAN Test 1, PERMANENT): this application constructs and posts NO synthesized NSEvent of any kind -- postEvent_atStart and the full mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure selector each appear 0 times in the comment-stripped production source', () => {
+    const code = loadMainRsCode()
+    expect((code.match(/postEvent_atStart/g) ?? []).length).toBe(0)
+    expect(
+      (
+        code.match(
+          /mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure/g
+        ) ?? []
+      ).length
+    ).toBe(0)
+  })
+
+  // T-34.4.2-20 RELOCATED (permanent, outlives the poster) -- NOT tied to the deleted
+  // mechanism: this negative exists to stop a FUTURE session reaching for a private "open the
+  // Passwords panel" call, which spike 022 proved does not exist. It must survive any future
+  // login-window work, independent of whether an in-field affordance ever returns.
+  test('Test 3 (NEGATIVE, PERMANENT, T-34.4.2-20 -- survives independently of the deleted poster): the comment-stripped source contains none of the Digital Credentials / private credential-storage selectors spike 022 enumerated, which are either the W3C Digital Credentials API (identity documents, not passwords) or private and inaccessible', () => {
+    const code = loadMainRsCode()
+    expect(code).not.toContain('_showDigitalCredentialsPicker')
+    expect(code).not.toContain('_setCanUseCredentialStorage')
+    expect(code).not.toContain('_canUseCredentialStorage')
+    expect(code).not.toContain('_dismissDigitalCredentialsPicker')
+  })
+
+  test('Test 4 (the surviving sentinel is alone): the humble_login_open arm\'s .on_navigation( closure contains is_login_cancel_request and contains no parse_autofill_request', () => {
+    const code = loadMainRsCode()
     const armStart = code.indexOf('"humble_login_open" => {')
     expect(armStart).toBeGreaterThan(-1)
     const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
     expect(armEnd).toBeGreaterThan(armStart)
-    return code.slice(armStart, armEnd)
-  }
-
-  function extractPristineLoginFnBody(code: string): string {
-    const start = code.indexOf('fn open_pristine_epic_login_window(')
-    expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
-    expect(end).toBeGreaterThan(start)
-    return code.slice(start, end)
-  }
-
-  function extractEpicPristineNavDelegateBody(code: string): string {
-    const start = code.indexOf('define_class!(')
-    expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('impl EpicPristineNavDelegate {', start)
-    expect(end).toBeGreaterThan(start)
-    return code.slice(start, end)
-  }
-
-  /**
-   * Scans forward from `openMarker`'s FIRST `{` and returns the full brace-matched block
-   * (inclusive of both braces), counting depth rather than relying on a second string
-   * marker. Local copy of the identical helper the Plan 02 describe block (above) already
-   * uses -- kept per-describe-block rather than shared, matching this file's existing
-   * convention of not sharing helpers across `describe` callbacks.
-   */
-  function extractBracedBlock(code: string, openMarker: string): string {
-    const markerIdx = code.indexOf(openMarker)
-    expect(markerIdx).toBeGreaterThan(-1)
-    const braceStart = code.indexOf('{', markerIdx)
-    expect(braceStart).toBeGreaterThan(-1)
-    let depth = 0
-    let i = braceStart
-    for (; i < code.length; i++) {
-      if (code[i] === '{') depth++
-      else if (code[i] === '}') {
-        depth--
-        if (depth === 0) break
-      }
-    }
-    expect(depth).toBe(0)
-    return code.slice(markerIdx, i + 1)
-  }
-
-  /**
-   * Bounds the search to PRODUCTION code only -- everything before `#[cfg(test)] mod tests {`
-   * (the unique, code-only occurrence of that exact brace-terminated text; doc-comment
-   * mentions of the phrase elsewhere in the file never include the trailing ` {`, and are
-   * stripped by `loadMainRsCode` regardless). `autofill_glyph_script`/`parse_autofill_request`
-   * are pure, cargo-tested helpers (Plan 03 Task 1) with multiple call sites inside `mod
-   * tests` by design -- a whole-file count would conflate "how many cargo tests exercise this
-   * helper" with "how many production call sites exist", which is the thing these `exactly
-   * ONCE` acceptance criteria actually police (mirrors the file's own reveal_post_script /
-   * clear_storage_script precedent, neither of which carries a whole-file uniqueness guard for
-   * exactly this reason).
-   */
-  function productionCode(code: string): string {
-    const testModStart = code.indexOf('mod tests {')
-    expect(testModStart).toBeGreaterThan(-1)
-    return code.slice(0, testModStart)
-  }
-
-  test('Test 1: autofill_glyph_script( is called exactly once in the comment-stripped PRODUCTION source, inside the humble_login_open arm slice', () => {
-    const code = productionCode(loadMainRsCode())
-    // Negative lookbehind excludes the `fn autofill_glyph_script(` definition itself.
-    const fileCallSites = code.match(/(?<!fn )autofill_glyph_script\(/g) ?? []
-    expect(fileCallSites.length).toBe(1)
-
-    const armBody = extractHumbleLoginOpenArmBody(code)
-    const armCallSites = armBody.match(/(?<!fn )autofill_glyph_script\(/g) ?? []
-    expect(armCallSites.length).toBe(1)
-  })
-
-  test('Test 2: within the arm slice, the autofill_glyph_script( call site lies inside an if-visible guard', () => {
-    const code = loadMainRsCode()
-    const armBody = extractHumbleLoginOpenArmBody(code)
-    const visibleStart = armBody.indexOf('if visible {')
-    expect(visibleStart).toBeGreaterThan(-1)
-    // The `if visible` block containing the glyph injection is closed a few lines before the
-    // arm's dev-only-diagnostic `#[cfg(debug_assertions)]` attribute -- a CODE token that
-    // survives comment-stripping, unlike the surrounding prose (which is comment-only and
-    // therefore invisible to `loadMainRsCode`'s output). Bound the search there rather than
-    // brace-counting, mirroring this file's other arm-slice conventions.
-    const visibleEnd = armBody.indexOf(
-      '#[cfg(debug_assertions)]',
-      visibleStart
-    )
-    expect(visibleEnd).toBeGreaterThan(visibleStart)
-    const visibleBlock = armBody.slice(visibleStart, visibleEnd)
-    expect(visibleBlock).toContain('autofill_glyph_script(')
-  })
-
-  test('Test 3: the arm contains exactly one .on_navigation( call, its closure body contains parse_autofill_request and return false, and contains none of push_login_window_event/set_title/current_origin/login_event_value', () => {
-    const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
-    const onNavCount = (armBody.match(/\.on_navigation\(/g) ?? []).length
-    expect(onNavCount).toBe(1)
-
+    const armBody = code.slice(armStart, armEnd)
     const onNavStart = armBody.indexOf('.on_navigation(')
     expect(onNavStart).toBeGreaterThan(-1)
     const onNavEnd = armBody.indexOf('.build()', onNavStart)
     expect(onNavEnd).toBeGreaterThan(onNavStart)
     const onNavBody = armBody.slice(onNavStart, onNavEnd)
-
-    expect(onNavBody).toContain('parse_autofill_request')
-    expect(onNavBody).toContain('return false')
-    expect(onNavBody).not.toContain('push_login_window_event')
-    expect(onNavBody).not.toContain('set_title')
-    expect(onNavBody).not.toContain('current_origin')
-    expect(onNavBody).not.toContain('login_event_value')
+    expect(onNavBody).toContain('is_login_cancel_request')
+    expect(onNavBody).not.toContain('parse_autofill_request')
   })
 
-  // GENERALIZED array-driven guard (REQ-34.4.2-10): every member of PHASE_34_4_2_NEW_SYMBOLS
-  // -- current and future appends -- is asserted absent from BOTH pristine regions. Plan 01's
-  // own Test 3 already runs this same generalized loop; this copy is scoped to this plan's own
-  // file section so deleting either describe block still leaves a guard in place (Plan 02's
-  // Test 9 precedent). Additionally asserts the pristine open function receives no WKUserScript
-  // machinery at all -- the pristine surface receives NOTHING from this phase.
-  test('Test 4 (SCOPE GUARD, REQ-34.4.2-10): neither pristine region references any PHASE_34_4_2_NEW_SYMBOLS member, and open_pristine_epic_login_window contains no WKUserScript/addUserScript/userContentController', () => {
-    const code = loadMainRsCode()
-    const pristineBody = extractPristineLoginFnBody(code)
-    const delegateBody = extractEpicPristineNavDelegateBody(code)
-    for (const symbol of PHASE_34_4_2_NEW_SYMBOLS) {
-      expect(pristineBody).not.toContain(symbol)
-      expect(delegateBody).not.toContain(symbol)
-    }
-    expect(pristineBody).not.toContain('WKUserScript')
-    expect(pristineBody).not.toContain('addUserScript')
-    expect(pristineBody).not.toContain('userContentController')
-  })
+  test('Test 5 (the strip survived the deletion): login_cancel_strip_script( is still called exactly once in the comment-stripped PRODUCTION source, inside the humble_login_open arm\'s if-visible block', () => {
+    const testModStart_code = loadMainRsCode()
+    const testModStart = testModStart_code.indexOf('mod tests {')
+    expect(testModStart).toBeGreaterThan(-1)
+    const code = testModStart_code.slice(0, testModStart)
+    const fileCallSites = code.match(/(?<!fn )login_cancel_strip_script\(/g) ?? []
+    expect(fileCallSites.length).toBe(1)
 
-  // Permanent negatives (spike 022, `login-window-ux-macos.md` "What to Avoid"): these are not
-  // stylistic bans, they are records of MEASURED platform impossibility -- a future reader must
-  // be able to see that, so nobody spends another spike rediscovering them.
-  test('Test 5 (NEGATIVE, permanent -- spike 022 measured platform impossibility): the source contains none of the Digital Credentials / private credential-storage selectors, which are either the W3C Digital Credentials API (identity documents, not passwords) or private and inaccessible', () => {
-    const code = loadMainRsCode()
-    expect(code).not.toContain('_showDigitalCredentialsPicker')
-    expect(code).not.toContain('_setCanUseCredentialStorage')
-    expect(code).not.toContain('_canUseCredentialStorage')
-    expect(code).not.toContain('menuForEvent')
-  })
-
-  test('Test 6 (NEGATIVE, permanent -- spike 022 measured platform impossibility): the source contains no willOpenMenu and no NSMenu import -- the AutoFill item is injected by macOS at menu-display time and is absent from the NSMenu object graph; capturing or re-firing it is impossible', () => {
-    const code = loadMainRsCode()
-    expect(code).not.toContain('willOpenMenu')
-    expect(code).not.toContain('NSMenu')
-  })
-
-  test('Test 7: GAMELIB_AUTOFILL_GLYPH appears exactly once, inside the same (brace-matched) if-visible block as autofill_glyph_script(, and that block contains no #[cfg(debug_assertions)] attribute -- the kill switch must work in a packaged build (unlike GAMELIB_LOGIN_DIAG, which IS debug_assertions-gated, further down this same arm)', () => {
-    const code = loadMainRsCode()
-    expect((code.match(/GAMELIB_AUTOFILL_GLYPH/g) ?? []).length).toBe(1)
-
-    const armBody = extractHumbleLoginOpenArmBody(code)
-    // Brace-matched (not string-bounded), so an ABSENCE assertion on the slice is meaningful
-    // rather than trivially true by construction of the boundary itself.
-    const visibleBlock = extractBracedBlock(armBody, 'if visible {')
-
-    expect(visibleBlock).toContain('GAMELIB_AUTOFILL_GLYPH')
-    expect(visibleBlock).not.toContain('#[cfg(debug_assertions)]')
-  })
-
-  test('Test 8 (NEGATIVE, REQ-34.4.2-10): Cargo.toml\'s objc2-web-kit feature array contains none of WKUserScript/WKUserContentController/WKUserScriptInjectionTime -- the features only a pristine-surface injection would need', () => {
-    const cargoToml = readFileSync(CARGO_TOML_PATH, 'utf-8')
-    const start = cargoToml.indexOf('objc2-web-kit = {')
-    expect(start).toBeGreaterThan(-1)
-    const end = cargoToml.indexOf('] }', start)
-    expect(end).toBeGreaterThan(start)
-    const featureBlock = cargoToml.slice(start, end)
-    expect(featureBlock).not.toContain('WKUserScript')
-    expect(featureBlock).not.toContain('WKUserContentController')
-    expect(featureBlock).not.toContain('WKUserScriptInjectionTime')
-  })
-})
-
-// Phase 34.4.2 Plan 04 (REQ-34.4.2-05/06/07/08/10): the synthesized right-click poster that
-// closes the affordance -- turns the autofill request Plan 03 delivers into a debounced,
-// bounds-validated RightMouseDown/RightMouseUp pair posted at the password field's centre.
-// PHASE_34_4_2_NEW_SYMBOLS (above) already carries this plan's six new symbol names, so Plan
-// 01's own generalized Test 3 (both pristine regions) covers them without any change to that
-// describe block; Test 7 below re-asserts the same absence directly, scoped to this plan's own
-// file section, so deleting either describe block still leaves a guard in place (mirrors Plan
-// 02's Test 9 / Plan 03's Test 4 precedent).
-describe('Phase 34.4.2 Plan 04 — synthesized right-click poster', () => {
-  function extractHumbleLoginOpenArmBody(code: string): string {
     const armStart = code.indexOf('"humble_login_open" => {')
     expect(armStart).toBeGreaterThan(-1)
     const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
     expect(armEnd).toBeGreaterThan(armStart)
-    return code.slice(armStart, armEnd)
-  }
-
-  function extractPristineLoginFnBody(code: string): string {
-    const start = code.indexOf('fn open_pristine_epic_login_window(')
-    expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
-    expect(end).toBeGreaterThan(start)
-    return code.slice(start, end)
-  }
-
-  function extractEpicPristineNavDelegateBody(code: string): string {
-    const start = code.indexOf('define_class!(')
-    expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('impl EpicPristineNavDelegate {', start)
-    expect(end).toBeGreaterThan(start)
-    return code.slice(start, end)
-  }
-
-  /**
-   * Slices `code` from `fn post_autofill_right_click(` (inclusive) to the next top-level
-   * `#[cfg(target_os = "macos")]` attribute OR the next `\nfn ` token -- whichever comes
-   * first -- asserting the start was found and at least one candidate end marker was found
-   * before slicing (an `indexOf` miss returning -1 must fail loudly, never silently slice to
-   * the file start/end).
-   */
-  function extractPostAutofillRightClickBody(code: string): string {
-    const start = code.indexOf('fn post_autofill_right_click(')
-    expect(start).toBeGreaterThan(-1)
-    const cfgEnd = code.indexOf('#[cfg(target_os = "macos")]', start)
-    const fnEnd = code.indexOf('\nfn ', start)
-    const candidates = [cfgEnd, fnEnd].filter((idx) => idx > start)
-    expect(candidates.length).toBeGreaterThan(0)
-    const end = Math.min(...candidates)
-    return code.slice(start, end)
-  }
-
-  test('Test 1: post_autofill_right_click( is CALLED exactly ONCE in the file, and that call site is inside the humble_login_open arm slice', () => {
-    const code = loadMainRsCode()
-    // Negative lookbehind excludes the `fn post_autofill_right_click(` definition itself.
-    const fileCallSites =
-      code.match(/(?<!fn )post_autofill_right_click\(/g) ?? []
-    expect(fileCallSites.length).toBe(1)
-
-    const armBody = extractHumbleLoginOpenArmBody(code)
-    const armCallSites =
-      armBody.match(/(?<!fn )post_autofill_right_click\(/g) ?? []
-    expect(armCallSites.length).toBe(1)
-  })
-
-  test('Test 2 (ORDERING): inside post_autofill_right_click\'s sliced body, clamp_point_to_view_bounds is referenced BEFORE the first postEvent_atStart -- the bounds refusal cannot be bypassed by reordering', () => {
-    const code = loadMainRsCode()
-    const body = extractPostAutofillRightClickBody(code)
-    const clampIdx = body.indexOf('clamp_point_to_view_bounds')
-    const postIdx = body.indexOf('postEvent_atStart')
-    expect(clampIdx).toBeGreaterThan(-1)
-    expect(postIdx).toBeGreaterThan(-1)
-    expect(clampIdx).toBeLessThan(postIdx)
-  })
-
-  test('Test 3 (ORDERING): inside the same sliced body, the debounce read (LAST_AUTOFILL_POST) precedes login_window_wk_webview -- a flooded request must be rejected before it ever touches AppKit', () => {
-    const code = loadMainRsCode()
-    const body = extractPostAutofillRightClickBody(code)
-    const debounceIdx = body.indexOf('LAST_AUTOFILL_POST')
-    const webviewIdx = body.indexOf('login_window_wk_webview')
-    expect(debounceIdx).toBeGreaterThan(-1)
-    expect(webviewIdx).toBeGreaterThan(-1)
-    expect(debounceIdx).toBeLessThan(webviewIdx)
-  })
-
-  test('Test 4 (RESTRICTION): the sliced body constructs exactly two NSEventType:: variants -- RightMouseDown and RightMouseUp -- and contains no LeftMouse, no KeyDown, no ScrollWheel', () => {
-    const code = loadMainRsCode()
-    const body = extractPostAutofillRightClickBody(code)
-    const variantMatches = body.match(/NSEventType::/g) ?? []
-    expect(variantMatches.length).toBe(2)
-    expect(body).toContain('NSEventType::RightMouseDown')
-    expect(body).toContain('NSEventType::RightMouseUp')
-    expect(body).not.toContain('LeftMouse')
-    expect(body).not.toContain('KeyDown')
-    expect(body).not.toContain('ScrollWheel')
-  })
-
-  test('Test 5 (RESTRICTION, renamed 2026-08-04 -- Plan 07 re-homed the registry onto sheet presentation): the sliced body references PRESENTED_LOGIN_SHEETS -- hidden reveal/clear windows are structurally unreachable from this path', () => {
-    const code = loadMainRsCode()
-    const body = extractPostAutofillRightClickBody(code)
-    expect(body).toContain('PRESENTED_LOGIN_SHEETS')
-  })
-
-  test('Test 6 (NEGATIVE, permanent): the comment-stripped source contains none of the Digital Credentials / private credential-storage selectors -- re-asserts Plan 03\'s own guard here so deleting either describe block still leaves one in place', () => {
-    const code = loadMainRsCode()
-    expect(code).not.toContain('_showDigitalCredentialsPicker')
-    expect(code).not.toContain('_dismissDigitalCredentialsPicker')
-    expect(code).not.toContain('_canUseCredentialStorage')
-    expect(code).not.toContain('_setCanUseCredentialStorage')
-  })
-
-  // Test 7 exists because the pristine Epic surface is excluded by a LOCKED USER SCOPE
-  // DECISION (2026-08-04), not by a technical limitation -- Epic is implemented LAST, after
-  // every other runner is ported and proven. Loosening this test requires the user's decision
-  // to change, not a planner's judgement (mirrors Plan 01's own Test 3/4 rationale verbatim).
-  test('Test 7 (SCOPE GUARD, REQ-34.4.2-10, LOCKED USER SCOPE DECISION): neither open_pristine_epic_login_window NOR EpicPristineNavDelegate references any PHASE_34_4_2_NEW_SYMBOLS member, including this plan\'s own six new symbols', () => {
-    const code = loadMainRsCode()
-    const pristineBody = extractPristineLoginFnBody(code)
-    const delegateBody = extractEpicPristineNavDelegateBody(code)
-    for (const symbol of PHASE_34_4_2_NEW_SYMBOLS) {
-      expect(pristineBody).not.toContain(symbol)
-      expect(delegateBody).not.toContain(symbol)
+    const armBody = code.slice(armStart, armEnd)
+    const visibleStart = armBody.indexOf('if visible {')
+    expect(visibleStart).toBeGreaterThan(-1)
+    let depth = 0
+    let i = armBody.indexOf('{', visibleStart)
+    const braceStart = i
+    expect(braceStart).toBeGreaterThan(-1)
+    for (; i < armBody.length; i++) {
+      if (armBody[i] === '{') depth++
+      else if (armBody[i] === '}') {
+        depth--
+        if (depth === 0) break
+      }
     }
-  })
-
-  test('Test 8: synth_autofill_mouse_event is the SOLE construction site -- mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure appears exactly once in the whole comment-stripped source', () => {
-    const code = loadMainRsCode()
-    const matches =
-      code.match(
-        /mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure/g
-      ) ?? []
-    expect(matches.length).toBe(1)
-
-    const start = code.indexOf('fn synth_autofill_mouse_event(')
-    expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf(
-      'fn post_autofill_right_click(',
-      start
-    )
-    expect(end).toBeGreaterThan(start)
-    expect(code.slice(start, end)).toContain(
-      'mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure'
-    )
+    expect(depth).toBe(0)
+    const visibleBlock = armBody.slice(visibleStart, i + 1)
+    expect(visibleBlock).toContain('login_cancel_strip_script(')
   })
 })
 
@@ -1355,46 +1136,6 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
   }
 
   /**
-   * Slices `armBody`'s `if std::env::var("GAMELIB_AUTOFILL_GLYPH")...` statement -- BOTH the
-   * skipped (kill-switch-set) branch and the injecting (`else`) branch -- by brace-matching the
-   * `if` block first, then brace-matching the immediately-following `else` block. Returning
-   * both branches (not just the `if` block `extractBracedBlock` alone would give) is the point:
-   * this plan's Test 1 asserts the cancel strip's injection call is absent from EITHER branch of
-   * the kill switch, not merely from the one that happens to skip injection.
-   */
-  function extractGamelibAutofillGlyphStatement(armBody: string): string {
-    const start = armBody.indexOf('if std::env::var("GAMELIB_AUTOFILL_GLYPH")')
-    expect(start).toBeGreaterThan(-1)
-    let i = armBody.indexOf('{', start)
-    expect(i).toBeGreaterThan(-1)
-    let depth = 0
-    for (; i < armBody.length; i++) {
-      if (armBody[i] === '{') depth++
-      else if (armBody[i] === '}') {
-        depth--
-        if (depth === 0) break
-      }
-    }
-    expect(depth).toBe(0)
-    const ifEnd = i + 1
-    const elseMatch = armBody.slice(ifEnd).match(/^\s*else\s*\{/)
-    expect(elseMatch).not.toBeNull()
-    const elseOpenOffset =
-      ifEnd + (elseMatch as RegExpMatchArray)[0].length - 1
-    let j = elseOpenOffset
-    let elseDepth = 0
-    for (; j < armBody.length; j++) {
-      if (armBody[j] === '{') elseDepth++
-      else if (armBody[j] === '}') {
-        elseDepth--
-        if (elseDepth === 0) break
-      }
-    }
-    expect(elseDepth).toBe(0)
-    return armBody.slice(start, j + 1)
-  }
-
-  /**
    * Scans forward from `openMarker`'s FIRST `{` and returns the full brace-matched block
    * (inclusive of both braces). Local copy of the identical helper other Plan-scoped describe
    * blocks in this file already use.
@@ -1431,7 +1172,12 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
     return code.slice(0, testModStart)
   }
 
-  test("Test 1 (KILL-SWITCH-INDEPENDENCE, T-34.4.2-15, the single most important assertion in this plan): login_cancel_strip_script( is called exactly once in the comment-stripped PRODUCTION source, that call site sits inside the humble_login_open arm's if-visible block, and it is ABSENT from both branches of the GAMELIB_AUTOFILL_GLYPH kill switch statement", () => {
+  // The kill-switch-independence clause this test used to carry (asserting the strip's
+  // injection call was absent from both branches of the now-deleted `GAMELIB_AUTOFILL_GLYPH`
+  // statement) is RETIRED (Phase 34.4.2 Plan 13, operator decision D-A) -- not because it
+  // stopped mattering, but because its subject, the kill switch itself, no longer exists. The
+  // exactly-once and inside-`if visible` clauses below are unaffected and stay.
+  test("Test 1: login_cancel_strip_script( is called exactly once in the comment-stripped PRODUCTION source, and that call site sits inside the humble_login_open arm's if-visible block", () => {
     const code = productionCode(loadMainRsCode())
     // Negative lookbehind excludes the `fn login_cancel_strip_script(` definition itself.
     const fileCallSites =
@@ -1441,12 +1187,15 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
     const armBody = extractHumbleLoginOpenArmBody(code)
     const visibleBlock = extractBracedBlock(armBody, 'if visible {')
     expect(visibleBlock).toContain('login_cancel_strip_script(')
-
-    const killSwitchStatement = extractGamelibAutofillGlyphStatement(armBody)
-    expect(killSwitchStatement).not.toContain('login_cancel_strip_script(')
   })
 
-  test('Test 2 (ORDERING): inside the humble_login_open arm\'s .on_navigation( closure, is_login_cancel_request appears, and it appears BEFORE parse_autofill_request -- the cheaper, disjoint sentinel is checked first', () => {
+  // RETIGHTENED (Phase 34.4.2 Plan 13, operator decision D-A): this was an ORDERING
+  // assertion over two sibling sentinels sharing one closure (cancel checked before the
+  // now-deleted autofill sentinel, since it's cheaper and the two paths are disjoint). An
+  // ordering assertion over a deleted sibling is meaningless once that sibling is gone; the
+  // property worth keeping is narrower and stronger: this closure parses exactly one
+  // sentinel, and it is the cancel one.
+  test('Test 2: inside the humble_login_open arm\'s .on_navigation( closure, is_login_cancel_request appears and parse_autofill_request does not', () => {
     const code = loadMainRsCode()
     const armBody = extractHumbleLoginOpenArmBody(code)
     const onNavStart = armBody.indexOf('.on_navigation(')
@@ -1455,11 +1204,8 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
     expect(onNavEnd).toBeGreaterThan(onNavStart)
     const onNavBody = armBody.slice(onNavStart, onNavEnd)
 
-    const cancelIdx = onNavBody.indexOf('is_login_cancel_request')
-    const autofillIdx = onNavBody.indexOf('parse_autofill_request')
-    expect(cancelIdx).toBeGreaterThan(-1)
-    expect(autofillIdx).toBeGreaterThan(-1)
-    expect(cancelIdx).toBeLessThan(autofillIdx)
+    expect(onNavBody).toContain('is_login_cancel_request')
+    expect(onNavBody).not.toContain('parse_autofill_request')
   })
 
   test('Test 3 (ORDERING, load-bearing): request_login_sheet_cancel( is CALLED exactly twice in the file (strip route + Esc route), and its own sliced body calls dismiss_login_window_sheet( at an index strictly less than .close() -- ending the sheet before closing the window', () => {
@@ -1562,21 +1308,17 @@ describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes
     return code.slice(0, testModStart)
   }
 
-  test('Test 1 (WR-07): .makeKeyAndOrderFront(None) — the CALL form, not the bare token, which also appears in the doc comment and the new WARN literal — appears exactly once in the comment-stripped PRODUCTION source, and the nearest enclosing if-statement condition before it references isSheet()', () => {
+  // CONVERTED TO A ZERO-OCCURRENCE NEGATIVE (Phase 34.4.2 Plan 13, operator decision D-A):
+  // this used to assert the WR-07 call site (inside the deleted synthesized-right-click
+  // poster, its ONLY call site anywhere in the file) appeared exactly once, guarded by an
+  // `isSheet()` check. That call site was deleted along with the poster -- an exactly-once
+  // assertion over a subject with zero remaining call sites would FAIL, not vacuously pass,
+  // so this is a real retightening, not housekeeping: it now asserts the call form is gone
+  // entirely, which is what "the last call site left with the poster" actually means.
+  test('Test 1: .makeKeyAndOrderFront(None) — the CALL form — appears 0 times in the comment-stripped PRODUCTION source; its sole call site left with the deleted synthesized-right-click poster (Plan 13, D-A)', () => {
     const code = productionCode(loadMainRsCode())
     const callMatches = code.match(/\.makeKeyAndOrderFront\(None\)/g) ?? []
-    expect(callMatches.length).toBe(1)
-
-    const callIdx = code.indexOf('.makeKeyAndOrderFront(None)')
-    expect(callIdx).toBeGreaterThan(-1)
-
-    const precedingIfIdx = code.lastIndexOf('if ', callIdx)
-    expect(precedingIfIdx).toBeGreaterThan(-1)
-    const conditionEnd = code.indexOf('{', precedingIfIdx)
-    expect(conditionEnd).toBeGreaterThan(precedingIfIdx)
-    expect(conditionEnd).toBeLessThan(callIdx)
-    const condition = code.slice(precedingIfIdx, conditionEnd)
-    expect(condition).toContain('isSheet()')
+    expect(callMatches.length).toBe(0)
   })
 
   test('Test 2 (WR-01, ORDERING): dismiss_login_window_sheet\'s sliced body calls register_presented_login_sheet( at least twice, each at an index strictly greater than list.retain( -- removal still happens first, re-registration only after a failed hop', () => {

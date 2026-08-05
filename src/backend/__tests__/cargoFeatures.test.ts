@@ -126,10 +126,10 @@ function extractObjc2AppKitFeatures(source: string): string[] {
     .filter((entry) => entry.length > 0)
 }
 
-describe('Phase 34.4.2 Plan 04 (REQ-34.4.2-05) objc2-app-kit NSGraphicsContext feature', () => {
-  test('the objc2-app-kit dependency line declares NSGraphicsContext -- required by NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure, confirmed by a real cargo build failure (E0599) before this feature was added, and NOT unioned in by wry\'s own request (wry requests the DIFFERENT "NSGraphics" feature, not "NSGraphicsContext")', () => {
+describe('Phase 34.4.2 Plan 13 (operator decision D-A) objc2-app-kit NSGraphicsContext feature RETIRED', () => {
+  test('the objc2-app-kit dependency line does NOT declare NSGraphicsContext -- it existed solely for NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure, the synthesized-right-click poster deleted by Plan 13; a clean cargo build with the feature removed confirms it was never needed by anything else', () => {
     const features = extractObjc2AppKitFeatures(loadCargoToml())
-    expect(features).toContain('NSGraphicsContext')
+    expect(features).not.toContain('NSGraphicsContext')
   })
 
   test('the objc2-app-kit dependency line still declares every pre-existing feature this phase relies on', () => {
