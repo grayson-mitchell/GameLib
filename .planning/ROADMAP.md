@@ -1563,7 +1563,7 @@ Verification can run offline against the spike-019 local OAuth DummyStore harnes
 PKCE + replay enforcement + `/events` oracle) where a live store login isn't required.
 **Requirements**: REQ-34.4.2-01, REQ-34.4.2-02, REQ-34.4.2-03, REQ-34.4.2-04, REQ-34.4.2-05, REQ-34.4.2-06, REQ-34.4.2-07, REQ-34.4.2-08, REQ-34.4.2-09, REQ-34.4.2-10 (minted by plan 34.4.2-01; the ID rows themselves land in `REQUIREMENTS.md` when that plan executes. **REQ-34.4.2-10 is the Epic descope**, minted so the exclusion is machine-enforceable rather than a comment; 01/04/06 were narrowed from "both login surfaces" to the Tauri-managed surface. No ID was deleted or renumbered.)
 **Depends on:** Phase 34.4.1 (the login-window seam these behaviors attach to — COMPLETE)
-**Plans:** 12/12 plans executed
+**Plans:** 12/12 plans complete
 
 **Status: GAP CYCLE 2 LIVE GATE RAN 2026-08-05 — FAIL, 5/6 (item 3 the sole FAIL) — PHASE STILL
 DOES NOT CLOSE.** `34.4.2-12-PLAN.md`'s blocking gate ran in full against
