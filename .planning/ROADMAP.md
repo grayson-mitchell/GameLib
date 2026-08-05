@@ -1563,7 +1563,7 @@ Verification can run offline against the spike-019 local OAuth DummyStore harnes
 PKCE + replay enforcement + `/events` oracle) where a live store login isn't required.
 **Requirements**: REQ-34.4.2-01, REQ-34.4.2-02, REQ-34.4.2-03, REQ-34.4.2-04, REQ-34.4.2-05, REQ-34.4.2-06, REQ-34.4.2-07, REQ-34.4.2-08, REQ-34.4.2-09, REQ-34.4.2-10 (minted by plan 34.4.2-01; the ID rows themselves land in `REQUIREMENTS.md` when that plan executes. **REQ-34.4.2-10 is the Epic descope**, minted so the exclusion is machine-enforceable rather than a comment; 01/04/06 were narrowed from "both login surfaces" to the Tauri-managed surface. No ID was deleted or renumbered.)
 **Depends on:** Phase 34.4.1 (the login-window seam these behaviors attach to — COMPLETE)
-**Plans:** 12/12 plans complete
+**Plans:** 16 plans (12/12 executed; gap cycle 3 adds plans 13-16, unexecuted)
 
 **Status: GAP CYCLE 2 LIVE GATE RAN 2026-08-05 — FAIL, 5/6 (item 3 the sole FAIL) — PHASE STILL
 DOES NOT CLOSE.** `34.4.2-12-PLAN.md`'s blocking gate ran in full against
@@ -1723,6 +1723,57 @@ to the five findings that can block or corrupt items 2/3/5. Epic stays byte-unto
 runner is proven. No new REQ ID is minted: this cycle closes REQ-34.4.2-01/-02/-03/-06 (live PASS)
 and REQ-34.4.2-10 (live-reconfirmed); it does NOT close REQ-34.4.2-04/-05/-09 — item 3's genuine
 measured FAIL means those requirements' live claims remain unproven, routing to gap cycle 3.
+
+**Gap cycle 3 (planned 2026-08-05, after gate run 2 measured item 3 a genuine FAIL — 4 plans, 4 waves):**
+
+**Binding operator decision D-A (2026-08-05): the in-field autofill glyph is DROPPED and its code is
+DELETED — not disabled, not kept behind the kill switch, and no alternative synthesis approach is to
+be attempted.** Gate run 2 measured the mechanism end to end on real hardware: the synthesized
+right-click fires 5/5, correctly skips `makeKeyAndOrderFront` under the WR-07 sheet branch, targets
+the correct element (`hit_tag=Some("INPUT")`, `hit_type=Some("password")`) and pops the real system
+menu with `AutoFill ›` present — **and the field never fills**, while an identical REAL right-click in
+the same sheet, same field, same seeded entry does. That discriminator rules out the sheet context,
+Humble's page and the platform. **F-34.4.2-09** records the consequence: spike 022's own
+Recommendation #4 — the premise the whole affordance was built on — is falsified, because its evidence
+only ever showed the menu APPEARING and never measured whether selecting an entry writes to the field.
+**Cmd+V and Edit ▸ Paste become the sole credential-entry route.** F-34.4.2-08 (the glyph rendering as
+tofu via `String.fromCharCode`/`fromCodePoint` BMP truncation) is consequently MOOT and must NOT be
+fixed — deleting the code supersedes it. REQ-34.4.2-04/-05 are rewritten so the ABSENCE is the
+verifiable claim; no REQ ID is added, deleted or renumbered.
+
+**Also in scope: T-34.4.2-39, which has been OPEN with no discharging item since it was minted
+mid-gate.** The ~7-8s nile/Amazon CLI-helper spawn delay (F-34.4.2-06, the pre-existing PyInstaller
+onefile tax, NOT a 34.4.2 regression) leaves the main window interactive pre-presentation, so a second
+login flow can be initiated and AppKit queues its `beginSheet:` behind the first — surfacing it on the
+first's dismissal rather than at its own request time. Concrete failure mode: typing one store's
+password into another store's just-arrived sheet.
+
+**Process change this cycle: contract authoring is treated as a defect surface.** Gate run 2 produced
+FOUR independent structural impossibilities in its own contract, every one found during execution
+rather than review (the DummyStore https-only shell gate at `main.rs:926` forbidding two sub-checks
+and one precondition; item 6(a)'s concurrency framing against a sheet's own parent-blocking
+semantics; item 2's `status=cancelled reason=window-closed` being an OAuth-runner-only signal Humble
+structurally cannot emit). Plan 15 adds a **Structural Reachability Review** as a first-class
+deliverable, and plan 16 measures whether it worked.
+
+**Unchanged and not re-litigated:** D-B the cancel strip stays intact (separate mechanism, no kill
+switch, live-PASSED); D-C sheet presentation is permanent and child-window attachment is off the table
+forever (CR-01/CR-02 and the 250ms `SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY` deferral must not be
+re-fixed); D-D Epic stays byte-untouched; D-E author/runner separation — the plan shipping code never
+writes a verdict; D-F no-partial-pass — the phase closes only on a genuine 6/6.
+
+- [ ] 34.4.2-13-PLAN.md — Execute D-A: delete the in-field autofill mechanism from `src-tauri/src/main.rs` in full (glyph script, parser, sentinel arm, poster, event synthesizer, debounce, coordinate helpers, the orphaned `login_window_wk_webview`, and the `GAMELIB_AUTOFILL_GLYPH` kill switch), make the deletion machine-enforceable via a mutation-proven `PHASE_34_4_2_REMOVED_AUTOFILL_SYMBOLS` absence guard, relocate T-34.4.2-20's permanent credential-selector negatives so they survive the removal of the blocks hosting them, and rewrite REQ-34.4.2-04/-05 to the corrected scope (boxes stay `[ ]`). Retires T-34.4.2-15 as moot and T-34.4.2-10/-11/-12/-14/-16/-17/-18/-19/-21/-36 by deletion; mints T-34.4.2-40. (wave 1)
+- [ ] 34.4.2-14-PLAN.md — Close T-34.4.2-39: a `#[cfg(target_os = "macos")]` single-flight guard refusing a second VISIBLE login window at the shell entry point while another is pending or presented, so AppKit is never asked to queue a second sheet. Hidden reveal/clear windows and Epic are structurally exempt; the latch clears on all three resolution paths and expires on a TTL derived from the existing 15s watchdog so it can never become a lock-out of its own (new threat T-34.4.2-41). The residual pre-`humble_login_open` interval is documented, not overclaimed. (wave 2)
+- [ ] 34.4.2-15-PLAN.md — Correct the falsified project-knowledge artifact `login-window-ux-macos.md` (Recommendation #4 FALSIFIED at the point of use, Recommendation #1/§1/§2 SUPERSEDED, a Current-status block above both), fold gate run 2's orphaned findings (F-34.4.2-06..10, T-34.4.2-39, the contract-authoring-defect pattern) into `deferred-items.md`, author `34.4.2-LIVE-GATE-RERUN-3.md` (`verdict: null`, six items — item 3 becomes an ABSENCE check absorbing the retired kill-switch item, item 5 is new for T-34.4.2-39, and the four prior PASSes are RE-MEASURED not inherited), and run a **Structural Reachability Review** over every item and precondition before any live run. **Forbidden from running any gate item or writing any verdict.** (wave 3)
+- [ ] 34.4.2-16-PLAN.md — **BLOCKING live gate re-run** on real macOS hardware against `34.4.2-LIVE-GATE-RERUN-3.md`; sole writer of `verdict`/`run_date`/`items_passed`, filled from a measured run and never from expectation (T-34.4.2-25). Bidirectional preflight symbol check (current literals present AND deleted literals absent — a surviving `post_autofill_right_click` means the binary predates plan 13 and the run must not start); no DummyStore harness is started (the https-only gate makes it unreachable); mandatory evidence capture `npm run tauri:dev 2>&1 | tee /tmp/gamelib-dev.log`. Also corrects this phase's stale ROADMAP Goal text and records D-A in STATE.md's Decisions. (wave 4, non-autonomous)
+
+**Gap-cycle-3 scope note:** WR-02, WR-05, WR-08, IN-01, IN-03 and IN-04 stay deferred and unfixed.
+WR-06 (the poster's debounce-eviction fairness) and the standing plan-09 finding (the glyph's un-gated
+cross-platform injection) are both retired by plan 13's deletion rather than fixed — an inert
+unlabelled key icon on Windows/Linux was owed work for three plans, and the fix that landed was
+deleting the icon everywhere. No new REQ ID is minted; REQ-34.4.2-04/-05 are rewritten in place with
+the removal as their verifiable claim, and every box stays `[ ]` until plan 16 records a measured
+result.
 
 ### Phase 34.5: Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts (INSERTED)
 
