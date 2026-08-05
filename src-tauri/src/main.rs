@@ -2203,6 +2203,73 @@ const LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT: Duration = Duration::from_secs(15);
 #[cfg(target_os = "macos")]
 const SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY: Duration = Duration::from_millis(250);
 
+/// T-34.4.2-39 (Phase 34.4.2 Plan 14): the single pending VISIBLE Tauri-managed login window
+/// currently between request (`humble_login_open`'s refuse-or-arm check, below) and resolution
+/// (sheet-attach confirmed, visible-fallback shown, or the window's own `WindowEvent::Destroyed`).
+/// A latch, not a list -- zero or one entry, label plus arm-time. Consulted alongside
+/// `PRESENTED_LOGIN_SHEETS` (above) so a request is refused whether the incumbent is still
+/// between request and presentation (the F-34.4.2-06/T-34.4.2-39 pre-presentation gap) OR
+/// already on screen. Hidden reveal/clear windows never touch this latch (see
+/// `humble_login_open`'s own `if visible` gating around the refuse-or-arm check). Deliberately
+/// NOT routed through `register_presented_login_sheet`/`PRESENTED_LOGIN_SHEETS` itself -- that
+/// registry's exactly-three-call-sites test (Plan 11) is load-bearing and this is a
+/// structurally different concern (pre-presentation vs. already-presented).
+#[cfg(target_os = "macos")]
+static PENDING_VISIBLE_LOGIN_WINDOW: Mutex<Option<(String, std::time::Instant)>> =
+    Mutex::new(None);
+
+/// T-34.4.2-41 (NEW, Phase 34.4.2 Plan 14): bounds how long `PENDING_VISIBLE_LOGIN_WINDOW` may
+/// stay armed before its entry is treated as absent. This is a safety requirement, not a
+/// nicety -- a latch armed by a flow that then panics, hangs in the upstream CLI spawn
+/// (F-34.4.2-06), or is killed mid-flight would otherwise block every future sign-in for the
+/// life of the process, converting a spoofing mitigation (T-34.4.2-39) into a total denial of
+/// service. This phase already learned once (T-34.4.2-15/-33, the cancel-strip kill-switch
+/// case) that a mechanism added to make a login surface safer can itself become the lock-out;
+/// this constant applies that lesson before a gate rather than after one.
+///
+/// Derived from `LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT` (the existing 15s OUTER bound on the
+/// whole sheet-attach attempt) rather than invented independently, with a stated 10s margin, so
+/// the two can never disagree: the watchdog's own fallback path always runs and clears this
+/// latch (see the visible-fallback clear-call in `humble_login_open`) well before this TTL could
+/// ever expire it out from under a flow that is still legitimately in flight.
+#[cfg(target_os = "macos")]
+const PENDING_VISIBLE_LOGIN_WINDOW_TTL: Duration =
+    Duration::from_secs(LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT.as_secs() + 10);
+
+/// Pure, AppKit-free staleness check for `PENDING_VISIBLE_LOGIN_WINDOW_TTL` -- extracted so it
+/// is unit-testable without a live window (T-34.4.2-41). Boundary verdict: an age EQUAL to the
+/// TTL is treated as stale (`>=`, not `>`) -- the TTL is the point past which the entry is no
+/// longer trusted, not the last instant it is still trusted, matching this file's existing
+/// `LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT`/`recv_timeout` convention of a bound that has been
+/// EXCEEDED (not merely reached) before the caller-side fallback runs.
+#[cfg(target_os = "macos")]
+fn pending_login_entry_is_stale(age: Duration) -> bool {
+    age >= PENDING_VISIBLE_LOGIN_WINDOW_TTL
+}
+
+/// Clears `PENDING_VISIBLE_LOGIN_WINDOW` only when the stored label MATCHES `label` -- a late
+/// clear from an already-superseded (e.g. expired-and-replaced) flow must never unlatch a newer,
+/// still-legitimate one. Called from `humble_login_open`'s three resolution paths: sheet
+/// presentation confirmed, the visible-fallback (`window.show()`/`window.set_focus()`), and
+/// `WindowEvent::Destroyed`. Deliberately a distinct function from `register_presented_login_sheet`
+/// (T-34.4.2-08's registry) -- routing this through that helper would add a fourth call site and
+/// fail Plan 11's exactly-three-call-sites test.
+#[cfg(target_os = "macos")]
+fn clear_pending_visible_login_window(label: &str) {
+    if let Ok(mut guard) = PENDING_VISIBLE_LOGIN_WINDOW.lock() {
+        let matches = guard
+            .as_ref()
+            .map(|(pending_label, _)| pending_label == label)
+            .unwrap_or(false);
+        if matches {
+            *guard = None;
+            eprintln!(
+                "[shell] humble_login_open: cleared pending login window latch for '{label}'"
+            );
+        }
+    }
+}
+
 /// Presents a VISIBLE Tauri-managed login window (Humble/GOG/Amazon -- REQ-34.4.2-10's
 /// locked scope; see `open_pristine_epic_login_window`'s own module-level scope note, above,
 /// for the full boundary) as an AppKit SHEET on the app's `main` window (REQ-34.4.2-01/02),
@@ -3251,6 +3318,76 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             if is_epic_login {
                 return open_pristine_epic_login_window(app, &label, url, visible, user_agent);
             }
+            // T-34.4.2-39 single-flight guard (Phase 34.4.2 Plan 14): refuse a second VISIBLE
+            // login window while one is already pending (armed here, not yet resolved) or
+            // presented (`PRESENTED_LOGIN_SHEETS` non-empty), so AppKit is never asked to queue
+            // a second `beginSheet:` behind the first -- the concrete failure mode this closes
+            // is typing one store's password into another store's just-arrived sheet. Sits
+            // AFTER Epic's early return above (structural exemption, D-D) and BEFORE the
+            // builder below (a refused request never gets a window built). Scoped to `visible`
+            // only -- hidden reveal/clear windows (e.g. the Humble health-check/disconnect
+            // routes in `src/backend/humble/user.ts`, both `visible: false`) never arm or are
+            // refused by this latch.
+            //
+            // HONEST BOUNDARY: this guard arms at `humble_login_open`, the earliest point this
+            // shell can know a login is being opened. It does NOT cover the interval between
+            // the user's click and this call -- on the Amazon path that interval is the ~7-8s
+            // nile PyInstaller-onefile spawn (F-34.4.2-06), during which the shell has been
+            // told nothing. Concretely: if the user clicks Amazon then Humble during that
+            // window, Humble presents and Amazon is REFUSED -- the user's first click loses.
+            // That is a deliberate trade (an explicit, logged refusal is strictly safer than an
+            // unrequested sheet arriving over a dismissed one) and a residual, not full
+            // coverage -- see `34.4.2-PLATFORM-SCOPE.md`'s Plan 14 entry.
+            //
+            // Deliberately `if visible == true {`, NOT the bare `if visible {` this arm uses
+            // everywhere else: Plan 08 Test 1 (`tauriShellSource.test.ts`) locates the ORIGINAL
+            // `if visible {` block (the builder-setup one containing
+            // `login_cancel_strip_script(`) via `code.indexOf('if visible {')`, the FIRST
+            // occurrence. This guard is required to sit textually BEFORE that block (see the
+            // ordering requirement above -- both must be before the same
+            // `tauri::WebviewWindowBuilder::new(` call), so an identical bare condition here
+            // would make `indexOf` resolve to THIS block instead and silently break that
+            // pre-existing test. The comparison changes nothing about the runtime check
+            // (`visible` is already a `bool`); `if (visible) {` was tried first and rejected --
+            // it compiles but trips rustc's own `unused_parens` warning, violating this file's
+            // zero-warnings bar.
+            #[cfg(target_os = "macos")]
+            if visible == true {
+                let now = std::time::Instant::now();
+                let mut pending_guard = PENDING_VISIBLE_LOGIN_WINDOW
+                    .lock()
+                    .map_err(|_| "humble_login_open:pending-lock-poisoned".to_string())?;
+                // Expire a stale latch in passing (T-34.4.2-41): a flow that panicked, hung
+                // upstream, or was killed mid-flight must not block every later sign-in for the
+                // life of the process.
+                if let Some((stale_label, armed_at)) = pending_guard.clone() {
+                    let age = now.duration_since(armed_at);
+                    if pending_login_entry_is_stale(age) {
+                        eprintln!(
+                            "[shell] humble_login_open: pending login window latch for '{stale_label}' expired after {age:?} (TTL {PENDING_VISIBLE_LOGIN_WINDOW_TTL:?}) -- treating as absent"
+                        );
+                        *pending_guard = None;
+                    }
+                }
+                let incumbent = pending_guard
+                    .as_ref()
+                    .map(|(pending_label, _)| pending_label.clone())
+                    .or_else(|| {
+                        PRESENTED_LOGIN_SHEETS.lock().ok().and_then(|guard| {
+                            guard.as_ref().and_then(|list| list.first().cloned())
+                        })
+                    });
+                if let Some(incumbent_label) = incumbent {
+                    eprintln!(
+                        "[shell] humble_login_open: REFUSED visible login window '{label}' -- '{incumbent_label}' is already pending or presented (T-34.4.2-39 single-flight)"
+                    );
+                    return Err("humble_login_open:login-already-in-progress".to_string());
+                }
+                *pending_guard = Some((label.clone(), now));
+                eprintln!(
+                    "[shell] humble_login_open: visible login window '{label}' armed as the single pending login flow (T-34.4.2-39)"
+                );
+            }
             // Shared last-known main-frame origin (Phase 34.5 Plan 27): seeded from the
             // validated open URL so it is never empty, updated only from `on_page_load`
             // (main-frame only, per this arm's own doc comment above), and read by
@@ -3513,6 +3650,15 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             };
             #[cfg(not(target_os = "macos"))]
             let sheet_presented = false;
+            // T-34.4.2-39 resolution path 1 of 3 (Phase 34.4.2 Plan 14): sheet presentation
+            // CONFIRMED -- clear the pending-login latch now that this request has resolved to
+            // an on-screen sheet, membership in `PRESENTED_LOGIN_SHEETS` (set inside
+            // `present_login_window_as_sheet`'s own `register_presented_login_sheet` call)
+            // taking over as this label's "in progress" signal from here on.
+            #[cfg(target_os = "macos")]
+            if sheet_presented {
+                clear_pending_visible_login_window(&label);
+            }
             // CR-01 visible-fallback (gap cycle following 34.4.2-LIVE-GATE-RERUN.md's FAIL
             // 0/6): this window was built `.visible(false)` on macOS specifically so
             // `beginSheet:` could be the one to reveal it as a sheet (see the builder-setup
@@ -3536,6 +3682,11 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 );
                 let _ = window.show();
                 let _ = window.set_focus();
+                // T-34.4.2-39 resolution path 2 of 3 (Phase 34.4.2 Plan 14): the visible
+                // fallback also resolves this request -- the window is genuinely on screen
+                // (just not as a sheet), so the latch must clear here too, not only on the
+                // sheet-confirmed path above.
+                clear_pending_visible_login_window(&label);
             }
             if visible {
                 // F-4 machine record (Phase 34.4.1 Plan 24) -- see this arm's
@@ -3595,6 +3746,16 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     // `dismiss_login_window_sheet`'s own doc comment.
                     #[cfg(target_os = "macos")]
                     dismiss_login_window_sheet(&app_for_dismiss, &close_event_label);
+                    // T-34.4.2-39 resolution path 3 of 3 (Phase 34.4.2 Plan 14): a destroyed
+                    // window resolves this request too, whichever way it got there (sheet
+                    // dismissed via the cancel strip/Esc, closed while still an unattached
+                    // free-standing fallback window, or closed programmatically before either
+                    // ran). Unconditional like `dismiss_login_window_sheet` above -- a hidden
+                    // reveal/clear window never armed the latch in the first place, so clearing
+                    // it here is a guaranteed no-op for those (label-matched, see this
+                    // function's own doc comment).
+                    #[cfg(target_os = "macos")]
+                    clear_pending_visible_login_window(&close_event_label);
                 }
             });
             // Seed the title from the validated open URL's origin (Phase 34.5 Plan 27) so
@@ -6233,5 +6394,44 @@ mod tests {
         let present_returned = present_result.is_ok() || present_result.is_err();
         assert!(absent_returned);
         assert!(present_returned);
+    }
+
+    // ---- pending_login_entry_is_stale (Phase 34.4.2 Plan 14, T-34.4.2-39/-41) ----
+    //
+    // Pure, AppKit-free boundary tests for `PENDING_VISIBLE_LOGIN_WINDOW_TTL`'s staleness
+    // check -- exercised directly, without any live window, exactly as this task's own
+    // acceptance criteria require.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn pending_login_entry_below_ttl_is_not_stale() {
+        let age = PENDING_VISIBLE_LOGIN_WINDOW_TTL - Duration::from_secs(1);
+        assert!(!pending_login_entry_is_stale(age));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn pending_login_entry_above_ttl_is_stale() {
+        let age = PENDING_VISIBLE_LOGIN_WINDOW_TTL + Duration::from_secs(1);
+        assert!(pending_login_entry_is_stale(age));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn pending_login_entry_exactly_at_ttl_is_stale() {
+        // Documented boundary verdict (see `pending_login_entry_is_stale`'s own doc comment):
+        // an age EQUAL to the TTL is treated as stale (`>=`, not `>`) -- the TTL is the point
+        // past which the entry is no longer trusted, matching this file's existing
+        // `LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT`/`recv_timeout` convention of a bound that has
+        // been EXCEEDED (not merely reached) before the caller-side fallback runs.
+        assert!(pending_login_entry_is_stale(PENDING_VISIBLE_LOGIN_WINDOW_TTL));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn pending_login_window_ttl_is_derived_from_the_watchdog_timeout_with_a_margin() {
+        // The TTL must be strictly greater than the watchdog's own 15s bound so the two can
+        // never disagree -- the watchdog's fallback always runs and clears the latch well
+        // before this TTL could ever expire it out from under a still-legitimate flow.
+        assert!(PENDING_VISIBLE_LOGIN_WINDOW_TTL > LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT);
     }
 }
