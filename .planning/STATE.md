@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.2-14-PLAN.md
-last_updated: "2026-08-05T10:08:51.086Z"
+stopped_at: Completed 34.4.2-15-PLAN.md
+last_updated: "2026-08-05T10:34:13.225Z"
 last_activity: 2026-08-05
 progress:
   total_phases: 20
   completed_phases: 13
   total_plans: 207
-  completed_plans: 194
+  completed_plans: 195
   percent: 94
 ---
 
@@ -487,8 +487,13 @@ window while one is pending/presented, 25s TTL derived from the existing 15s wat
 34.4.2-14-SUMMARY.md -- plans 15-16 not yet executed).
 Plan 12 -- the human-driven live gate run -- RAN 2026-08-05 and recorded VERDICT FAIL,
 items_passed 5/6 (see its own record below). D-08's no-partial-pass rule applies: the phase does
-NOT close. Next: continue gap cycle 3 (plan 15, authors the new gate contract). Historical
-plan-11/plan-10 records follow.)
+NOT close. Plan 15 EXECUTED 2026-08-05 -- corrected the falsified login-window-ux-macos.md skill
+reference (Recommendation #4/§4 FALSIFIED, #1/§§1-2 SUPERSEDED), folded gate run 2's orphaned
+findings into deferred-items.md, and authored 34.4.2-LIVE-GATE-RERUN-3.md (verdict: null, six
+items rebuilt around plans 13/14's changes) with its own Structural Reachability Review (found and
+fixed one IMPOSSIBLE sub-check before any live use), see 34.4.2-15-SUMMARY.md. Next: plan 16 runs
+34.4.2-LIVE-GATE-RERUN-3.md and records the measured result. Historical plan-11/plan-10 records
+follow.)
 
 Plan 14 record (14 done -- `34.4.2-14-SUMMARY.md`. Closed T-34.4.2-39's app gap (a second
 VISIBLE login window queuing behind a first, minted by plan 12's live gate) with a source-level
@@ -2508,7 +2513,7 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 `STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Ready to execute
+Status: Phase complete — ready for verification
 
 > NOTE (34.4.2 gap cycle 2 planning): `state.planned-phase` again spliced this session's current
 > status ("Ready to execute") into this HISTORICAL "Prior phase: 34.1" block — the same recurring
@@ -2761,7 +2766,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-05 — Completed quick task 260805-v1f: Remove Discord and GitHub Sponsors from left sidebar menu
+Last activity: 2026-08-05
 Prior activity: 2026-08-05 - Completed quick task 260805-t0s: removed Patreon from the sidebar menu and all code references (openPatreonPage channel deleted across all four layers + Tauri sidecar registration; FUNDING.yml/Support.md/snapcraft.yaml stripped; grep-clean)
 Prior activity: 2026-08-05 - Phase 34.4.2 plan 13 executed: D-A (operator, binding) deleted the in-field autofill glyph mechanism in full from src-tauri/src/main.rs (13 symbols, ~24 cargo tests, plus truncate_chars, an orphan the compiler caught) -- 34.4.2-LIVE-GATE-RERUN-2.md item 3 had measured the synthesized right-click surfacing the AutoFill menu but never filling the field (F-34.4.2-09), falsifying spike 022's own premise. Minted PHASE_34_4_2_REMOVED_AUTOFILL_SYMBOLS, a mutation-proven permanent absence guard (tauriShellSource.test.ts) making reintroduction a test failure; relocated T-34.4.2-20's private-selector negative so it survives the poster's deletion; retired the NSGraphicsContext Cargo feature. REQ-34.4.2-04/-05 rewritten (amend-in-place) to state Cmd+V/Edit-Paste as the sole credential-entry route, both boxes stay UNTICKED. 34.4.2-PLATFORM-SCOPE.md's sixth threat-register update retires 10 threats by deletion (T-34.4.2-17, this phase's largest security surface, specifically called out as eliminated not merely mitigated), moves 7 previously-closed threats to CLOSED-pending-re-measurement, and adds T-34.4.2-40 (reintroduction, mutation-proven-mitigated). cargo test 111/1-ignored, jest 89/89 (targeted) + 3742/3742 (full suite, context only). Ran NO gate item, ticked NO requirement box. Phase 34.4.2 remains NOT CLOSED. See 34.4.2-13-SUMMARY.md.
 Prior activity: 2026-08-05 - Completed quick task 260805-rwy: removed the "Login with your platform…" paragraph from the Manage Accounts page (visual UAT pending)
@@ -3422,6 +3427,7 @@ Closed/parked native-install phases:
 | Phase 34.4.2 P12 | ~180min | 3 tasks (Task 2 blocking live gate, multiple in-run checkpoints) | 6 files (`34.4.2-LIVE-GATE-RERUN-2.md`, `34.4.2-PLATFORM-SCOPE.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`, `34.4.2-12-SUMMARY.md`) |
 | Phase 34.4.2 P13 | 55min | 3 tasks | 7 files |
 | Phase 34.4.2 P14 | 50min | 2 tasks | 4 files |
+| Phase 34.4.2 P15 | 12min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -3855,6 +3861,7 @@ Recent decisions affecting current work:
 - [Phase 34.4.2]: PHASE_34_4_2_REMOVED_AUTOFILL_SYMBOLS mutation-proven absence guard makes the deletion permanent -- reintroducing any of 13 names is now a test failure
 - [Phase 34.4.2]: REQ-34.4.2-04/-05 scope-corrected to state Cmd+V/Edit-Paste as the sole credential-entry route; both boxes stay unticked pending 34.4.2-LIVE-GATE-RERUN-3.md item 3
 - [Phase ?]: T-34.4.2-39/-41 (34.4.2-14): PENDING_VISIBLE_LOGIN_WINDOW single-flight guard refuses a second visible login window at humble_login_open, with a 25s TTL derived from the existing 15s watchdog so the guard cannot itself become a lockout DoS; live discharge deferred to plan 15's gate item
+- [Phase 34.4.2]: Item 5's UI-driven 'Arm 2' found IMPOSSIBLE (Structural Reachability Review) -- a presented sheet is application-modal to the only window hosting every login trigger; replaced with a record-only observation — No tray/menu-bar/secondary-window login entry point exists; confirmed via grep of humbleStartLogin/captureOAuthLogin call sites
 
 ### Pending Todos
 
@@ -3940,8 +3947,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-05T10:08:51.073Z
-Stopped at: Completed 34.4.2-14-PLAN.md
+Last session: 2026-08-05T10:34:13.211Z
+Stopped at: Completed 34.4.2-15-PLAN.md
   This session (sequential executor): ran `34.4.2-LIVE-GATE-RERUN-2.md`, the fresh six-item
   blocking live gate, on real macOS hardware, to a full completion for the first time in this
   phase's history. Task 1 (commit `75431b20a`): preflight -- `cargo build` clean (23.62s), all
