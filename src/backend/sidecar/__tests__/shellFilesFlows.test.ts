@@ -231,7 +231,6 @@ import {
   weblateUrl,
   epicLoginUrl,
   discordLink,
-  patreonPage,
   kofiPage,
   githubSponsorsPage,
   wineprefixFAQ,
@@ -352,7 +351,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     warnSpy.mockRestore()
   })
 
-  // ── REQ-34.3-01: the 10 constant URL openers sharing openUrlOrFile's
+  // ── REQ-34.3-01: the 9 constant URL openers sharing openUrlOrFile's
   // shell.openExternal path (all pushed as an 'openExternal' frame, the
   // same parity path appShellFlows.test.ts's own openers assert against) ────
 
@@ -361,7 +360,6 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     ['openWeblate', 'weblate.org'],
     ['openLoginPage', 'epiclogin'],
     ['openDiscordLink', 'discord.gg'],
-    ['openPatreonPage', 'patreon.com'],
     ['openKofiPage', 'ko-fi.com'],
     ['openGithubSponsorsPage', 'sponsors'],
     ['openWinePrefixFAQ', 'winehq.org'],
@@ -392,7 +390,6 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
       openWeblate: weblateUrl,
       openLoginPage: epicLoginUrl,
       openDiscordLink: discordLink,
-      openPatreonPage: patreonPage,
       openKofiPage: kofiPage,
       openGithubSponsorsPage: githubSponsorsPage,
       openWinePrefixFAQ: wineprefixFAQ,
@@ -792,7 +789,6 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     openWeblate: 'send',
     openLoginPage: 'send',
     openDiscordLink: 'send',
-    openPatreonPage: 'send',
     openKofiPage: 'send',
     openGithubSponsorsPage: 'send',
     openWinePrefixFAQ: 'send',
@@ -809,10 +805,10 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     pathExists: 'invoke'
   }
 
-  it("REQ-34.3-01/REQ-34.3-02/REQ-34.3-05/REQ-34.3-06 send-vs-handle contract: every one of this module's 21 channels is registered with the kind that matches main.ts", () => {
+  it("REQ-34.3-01/REQ-34.3-02/REQ-34.3-05/REQ-34.3-06 send-vs-handle contract: every one of this module's 20 channels is registered with the kind that matches main.ts", () => {
     startSidecar()
 
-    expect(Object.keys(CHANNEL_KINDS)).toHaveLength(21)
+    expect(Object.keys(CHANNEL_KINDS)).toHaveLength(20)
 
     for (const [channel, kind] of Object.entries(CHANNEL_KINDS)) {
       if (kind === 'send') {
