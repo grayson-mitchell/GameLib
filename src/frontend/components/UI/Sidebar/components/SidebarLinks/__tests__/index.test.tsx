@@ -10,8 +10,7 @@
  * established by HumbleOriginInfo.test.tsx / StoreSearchScreen.test.tsx.
  * SidebarItem and QuitButton are stubbed out (both pull in a colocated
  * index.css side-effect import with no CSS transform configured for this
- * jest project) and 'frontend/helpers' is stubbed because its module body
- * reads `window.api.openDiscordLink` at import time.
+ * jest project).
  */
 import type { ReactElement, ReactNode } from 'react'
 
@@ -61,10 +60,6 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_key: string, defaultValue: string): string => defaultValue
   })
-}))
-
-jest.mock('frontend/helpers', () => ({
-  openDiscordLink: jest.fn()
 }))
 
 jest.mock('frontend/components/UI/ExternalLinkDialog', () => ({
