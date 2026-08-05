@@ -12,7 +12,7 @@ export const wikiLink =
   'https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki'
 export const weblateUrl =
   'https://hosted.weblate.org/projects/heroic-games-launcher'
-export const kofiPage = 'https://ko-fi.com/heroicgames'
+export const kofiPage = 'https://ko-fi.com/gamelib'
 export const githubSponsorsPage =
   'https://github.com/sponsors/Heroic-Games-Launcher'
 export const wineprefixFAQ = 'https://wiki.winehq.org/FAQ#Wineprefixes'
