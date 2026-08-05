@@ -360,3 +360,99 @@ something to pre-empt with an out-of-scope fix.**
   or the refuse-or-arm check reference `request_login_sheet_cancel`, the harness-containment test,
   `PRESENTED_LOGIN_SHEETS`' eviction path, or `is_login_cancel_request`'s scheme handling). Stated
   here explicitly so the non-action is visible as a deliberate scope decision, not an oversight.
+
+## Plan 15 — gate run 2's orphaned findings folded into the ledger (2026-08-05)
+
+**Disposition: this section exists because `34.4.2-VERIFICATION.md` flagged a consistency gap —
+F-34.4.2-06 through -10, T-34.4.2-39, and the four-instance contract-authoring-defect pattern lived
+only inside `34.4.2-LIVE-GATE-RERUN-2.md` and `34.4.2-12-SUMMARY.md`, not in this ledger. Folded in
+now, each with the disposition it already carries elsewhere — no new investigation performed here,
+no previously-deferred finding (WR-02, WR-05, WR-08, IN-01, IN-03, IN-04) re-opened.**
+
+- **F-34.4.2-06 — the nile/PyInstaller-onefile spawn tax.** Already logged in full in this file's
+  own **Plan 14** entry above (the pre-presentation window T-34.4.2-39 closes). Cross-referenced
+  here, not duplicated.
+
+- **F-34.4.2-07 — pre-presentation window allows a second login flow to queue behind the first.**
+  **File:** `src-tauri/src/main.rs`, `humble_login_open`. **Symptom:** during the upstream nile
+  spawn delay (F-34.4.2-06), no sheet is yet up, so nothing blocks input and a second login flow
+  can be initiated; when both subsequently call `beginSheet:` on the same parent, AppKit queues the
+  second sheet behind the first, so it appears unrequested at the moment the first is dismissed
+  rather than at its own request time. Discovered live, `34.4.2-LIVE-GATE-RERUN-2.md`'s IN-RUN
+  FINDINGS. **Disposition: MITIGATED by Plan 14** — the `PENDING_VISIBLE_LOGIN_WINDOW` single-flight
+  guard refuses a second visible login window at the shell entry point while another is pending or
+  presented, so AppKit is never asked to queue a second sheet at all. **Live discharge is pending**
+  `34.4.2-LIVE-GATE-RERUN-3.md`'s own single-flight item (item 5). Cross-reference: T-34.4.2-39 (the
+  threat this finding discovered; see below).
+
+- **F-34.4.2-08 — the autofill glyph rendered as tofu, not a key.** **File:** `src-tauri/src/main.rs`
+  (formerly `autofill_glyph_script`, now deleted). **Symptom:** `String.fromCharCode(128273)` is
+  16-bit only; codepoint 128273 (U+1F511 KEY) lies outside the BMP and truncates to U+F511, an
+  unassigned Private Use Area codepoint with no assigned glyph — every font rendered it as an empty
+  box. One-line fix identified and NEVER applied: `String.fromCodePoint(128273)` (equivalently
+  `'\u{1F511}'`). **Disposition: MOOT — superseded by Plan 13's deletion, deliberately NOT fixed.**
+  The symbol this fix would have touched (`autofill_glyph_script`) no longer exists in the codebase.
+  **Recorded explicitly so a later session does not rediscover this one-line fix and helpfully apply
+  it to a symbol that is gone** — there is nothing left in `src-tauri/src/main.rs` for
+  `String.fromCodePoint(128273)` to be applied to.
+
+- **F-34.4.2-09 — spike 022's Recommendation #4 falsified; the phase's own design premise did not
+  hold.** **File:** `.claude/skills/spike-findings-gamelib/references/login-window-ux-macos.md`
+  (design source) and `src-tauri/src/main.rs` (formerly `post_autofill_right_click`, now deleted).
+  **Symptom:** the synthesized right-click poster fired correctly, targeted the correct element
+  (`hit_tag=Some("INPUT")`, `hit_type=Some("password")`), and popped the real system menu with
+  `AutoFill ›` present — but selecting a seeded Passwords entry never filled the field. An identical
+  REAL right-click, same sheet, same field, same entry, DOES fill — isolating the failure to the
+  synthesized-event path itself and ruling out the sheet context, Humble's page, and the platform.
+  Nowhere did spike 022's own evidence measure this last mile; it only ever showed the menu
+  appearing. **Disposition: CLOSED by scope correction** — operator decision D-A (delete the
+  mechanism, don't re-attempt or gate it), Plan 13's deletion of the mechanism in full, and the
+  REQ-34.4.2-04/-05 rewrite stating Cmd+V/Edit ▸ Paste as the sole credential-entry route. **The
+  knowledge-artifact half of this closure is this same plan's (15) Task 1 correction** to
+  `login-window-ux-macos.md`: Recommendation #4/§4 now marked FALSIFIED at the point of use, before
+  a future reader would otherwise act on the stale recommendation.
+
+- **F-34.4.2-10 — Humble disconnect's storage wipe times out (non-fatal, incomplete logout).**
+  **File:** `src/backend/humble/user.ts` (the `clearHumbleStorage` wipe step). **Symptom:**
+  `Humble partition wipe step clearHumbleStorage failed (continuing): Error:
+  humble_login_clear_storage:timeout`, recorded 20 seconds after a successful cookie census
+  (`before(total=71, matched=37) after(total=34, matched=0) deleted=37 survivingNonHumble=34` —
+  aggregate counts only). Cookies are cleared; localStorage/sessionStorage is NOT. Non-fatal by
+  design (the disconnect flow continues past this failure), but the net result is a logout that
+  leaves site storage intact. **Disposition: logged, not fixed, no owning plan.** A real functional
+  gap in the logout path, independent of and not named by any of this phase's six gate items' PASS
+  conditions — outside this phase's scope. **Flagged explicitly for whoever next touches the Humble
+  disconnect path**, so this timeout is not silently rediscovered as a surprise.
+
+- **T-34.4.2-39 — cross-reference only, not duplicated.** Spoofing (origin confusion from a second
+  login flow queued behind a slow upstream CLI spawn, surfacing as an unrequested sheet arriving at
+  the moment a different one is dismissed). Its authoritative record is
+  `34.4.2-PLATFORM-SCOPE.md` §5's fifth update table (minted) and seventh update table
+  (mitigate/source-fixed by Plan 14, live discharge assigned to `34.4.2-LIVE-GATE-RERUN-3.md`'s
+  single-flight item). Not duplicated here; see F-34.4.2-07 above for this finding's own entry.
+
+- **Contract-authoring defects — the four-instance pattern, its own entry (a process finding, not a
+  code finding).** `34.4.2-LIVE-GATE-RERUN-2.md` produced four structural impossibilities in its own
+  contract, all found DURING execution rather than review:
+  1. Items 3 and 4's DummyStore arms required a `http://127.0.0.1:17940/...` origin that
+     `login_window_url_arg`'s https-only gate (`src-tauri/src/main.rs:926`, test at `main.rs:5725`)
+     can never load in a Tauri-managed login sheet.
+  2. Precondition 4's logout preamble required navigating to that same forbidden `http://` origin —
+     the identical cause as (1).
+  3. Item 6(a)'s concurrency framing ("while a visible sheet is separately open") was structurally
+     impossible: a sheet blocks its own parent by AppKit design, so no second flow can be driven
+     concurrently through the UI. Measured instead via an alternate route exercising the identical
+     `if visible` gate (a Humble disconnect).
+  4. Item 2's required log line `status=cancelled reason=window-closed` is emitted by
+     `oauthLoginCapture.ts:236`, gated to `OAuthRunner = 'legendary' | 'gog' | 'nile' | 'zoom'` —
+     Humble is not an OAuth runner and structurally cannot emit it.
+
+  None of the four caused a false PASS or false FAIL — each was caught and the item was scored on
+  an equivalent, honestly-labeled alternate route or amendment — but four independent instances in
+  one contract is a pattern, not four one-offs. **Disposition: ADDRESSED by Plan 15 Task 3** — a
+  dedicated Structural Reachability Review, applying four defect-class tests (origin/scheme
+  reachability, concurrency reachability, log-line emitter reachability, absence-observability) to
+  every item and precondition in `34.4.2-LIVE-GATE-RERUN-3.md` BEFORE it is ever run, rather than a
+  promise to "be more careful" next time. **This is measurable**: the count of structural
+  impossibilities discovered during the next live run (plan 16) should be zero. If it is not, the
+  review's own method — not just this one contract — should be revisited.
