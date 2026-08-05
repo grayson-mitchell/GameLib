@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.4.2-11-PLAN.md (gap cycle 2, review-finding fixes + fresh blocking gate contract authored, verdict null). Next: 34.4.2-12 (human-driven live gate run)."
-last_updated: "2026-08-04T21:28:32.457Z"
+stopped_at: "Completed 34.4.2-12-PLAN.md (gap cycle 2's blocking live gate RAN, VERDICT FAIL, items_passed 5/6). Phase 34.4.2 DOES NOT CLOSE. Next: /gsd-plan-phase 34.4.2 --gaps (gap cycle 3)."
+last_updated: "2026-08-05T09:35:00.000Z"
 last_activity: 2026-08-05
 progress:
   total_phases: 19
   completed_phases: 13
   total_plans: 203
-  completed_plans: 191
+  completed_plans: 192
   percent: 68
 ---
 
@@ -478,11 +478,55 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — EXECUTING GAP CYCLE 2
-Plan: 12 of 12 (plans 1-11 complete; plan 11 -- see its own record below -- closed WR-07/WR-01/WR-03/WR-04/IN-02
-and authored `34.4.2-LIVE-GATE-RERUN-2.md` with `verdict: null`. Plan 12 -- the human-driven live
-gate run -- is next and is the ONLY plan permitted to fill any Observed/Verdict field. Phase does
-NOT close until plan 12 records a measured result. Historical plan-10 record follows.)
+Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — GAP CYCLE 2 EXECUTED, PHASE STILL DOES NOT CLOSE
+Plan: 12 of 12 (all 12 plans complete. Plan 12 -- the human-driven live gate run -- RAN 2026-08-05
+and recorded VERDICT FAIL, items_passed 5/6 (see its own record below). D-08's no-partial-pass
+rule applies: the phase does NOT close. Next: `/gsd-plan-phase 34.4.2 --gaps` (gap cycle 3).
+Historical plan-11/plan-10 records follow.)
+
+Plan 12 record (12 done -- **BLOCKING LIVE GATE executed on real macOS hardware for the first
+time in this phase's history to a full completion.** VERDICT FAIL, items_passed 5/6.
+Preflight (Task 1): cargo build clean (23.62s), all eight current log literals FOUND via
+`strings|grep`, retired re-raise literal CONFIRMED ABSENT, DummyStore harness live (PID 84424),
+baselines `npm run test:ci` 191/191 suites (3740/3740 tests), `cargo test` 135/0/1-ignored.
+**Contract amendment found before the operator started** (Task 1, blocking finding): the shell's
+own https-only URL gate (`login_window_url_arg`, `main.rs:926`, test at `main.rs:5725`)
+structurally forbids `http://127.0.0.1:17940/...`, so the DummyStore harness can NEVER be reached
+from a Tauri-managed login sheet -- items 3/4's DummyStore sub-checks and precondition 4's logout
+preamble were amended to BLOCKED-BY-DESIGN/INAPPLICABLE-THIS-RUN, scoping items 3/4 to Humble
+alone; launch command amended to add `GAMELIB_DEV_SECRET_VAULT=1` to avoid repeated Keychain
+prompts. Task 2 (operator, driven live, multiple in-run checkpoints during the session): **item
+1 PASS** (all six sub-checks a-f, including the first-ever live measurement of F-34.4.2-01's
+post-restore interactivity claim across five gate runs); **item 2 PASS** (both required dismissal
+routes close the sheet and release the main window; contract's own `status=cancelled` line proved
+to be an OAuth-runner-only signal Humble cannot emit -- scored on Humble's own equivalent signal
+instead); **item 3 FAIL** -- the synthesized-right-click poster fires correctly (WR-07 branch 5/5
+live, correct `INPUT`/`password` element targeting) and the real menu pops with `AutoFill ›`
+present, but the field never fills; an identical REAL right-click in the same sheet/field/entry
+DOES fill, isolating the failure to the synthesized-event path itself (new finding F-34.4.2-09,
+falsifying spike 022's own Recommendation #4 in `login-window-ux-macos.md`, which only ever
+measured menu appearance, never fill); **item 4 PASS** (Cmd+V + Edit-Paste both work on Humble,
+Esc monitor undisturbed -- now load-bearing as the only working credential-entry route given item
+3's FAIL); **item 5 PASS** (kill switch genuinely disables the glyph, cancel strip survives
+`GAMELIB_AUTOFILL_GLYPH=0` and still dismisses); **item 6 PASS** (hidden-window non-interference
+measured by an alternate route after the contract's own concurrency framing proved structurally
+impossible against a sheet's own blocking semantics; Epic's four required absences confirmed).
+Four more new findings: F-34.4.2-06 (nile/Amazon CLI spawn delay, 7-8s, pre-existing PyInstaller
+onefile tax, NOT a regression), F-34.4.2-07 (the spawn delay's pre-presentation window lets a
+second login flow queue behind the first, minting new threat T-34.4.2-39 origin-confusion),
+F-34.4.2-08 (autofill glyph renders as tofu -- `String.fromCharCode(128273)` truncates U+1F511 to
+PUA U+F511, one-line fix identified and deliberately deferred), F-34.4.2-10 (Humble disconnect's
+storage-wipe times out, non-fatal, incomplete logout). Also recorded a four-instance
+contract-authoring-defect pattern (the https gate hitting two preconditions/items, the item-6(a)
+concurrency framing, and item 2's OAuth-only log-line requirement). Task 3 (this session):
+propagated the FAIL verdict into `34.4.2-PLATFORM-SCOPE.md` §5 (fifth threat-register table:
+8 threats CLOSED live for the first time, T-34.4.2-17 PARTIALLY DISCHARGED, T-34.4.2-39 minted
+OPEN), `REQUIREMENTS.md` (REQ-34.4.2-01/-02/-03/-06 TICKED, REQ-34.4.2-10 live-reconfirmed,
+REQ-34.4.2-04/-05/-09 stay UNCHECKED on item 3's genuine FAIL), `ROADMAP.md` (superseded status
+banner, plan 12 checked). Stopped the DummyStore harness (`kill 84424`); confirmed port 17940
+released. See `34.4.2-LIVE-GATE-RERUN-2.md` and `34.4.2-12-SUMMARY.md`. Phase remains NOT CLOSED
+-- 5/6 items passed, next: `/gsd-plan-phase 34.4.2 --gaps` gap cycle 3, scoped against F-34.4.2-09
+and T-34.4.2-39.)
 
 Plan 11 record (11 done -- gap cycle 2's fix-and-author plan, `34.4.2-11-SUMMARY.md`. Task 1:
 WR-07 (`post_autofill_right_click` skips `makeKeyAndOrderFront` when `isSheet()` is true) + WR-01
@@ -537,15 +581,23 @@ invoked in the same run-loop turn as a just-created WKWebView-backed NSWindow; f
 the decisive one — capturing `tauri:dev` stdout/stderr is what made rounds 2 and 3 diagnosable, and
 it is now a mandatory instruction in the new gate contract.
 
-**Next action:** `/gsd-execute-phase 34.4.2` — gap cycle 2, plans 11-12 (planned 2026-08-05,
-checker VERIFICATION PASSED, 0 blockers). Plan 11 (autonomous) fixes the five review findings that
-sit on the paths gate items 2/3/5 must traverse — WR-07 (`makeKeyAndOrderFront` may detach the
-sheet), WR-03 (cancel strip in every frame, no top-frame guard), WR-04 (a throw in `ensure()` kills
-the retry + MutationObserver), WR-01 (de-register-before-`endSheet:` strands the parent), IN-02
-(strip not keyboard-activatable) — propagates the debug-arc bookkeeping, and authors
-`34.4.2-LIVE-GATE-RERUN-2.md` with `verdict: null`. Plan 12 (`autonomous: false`) is the sole
-writer of the verdict, from a measured run only. **Gate items 2-6 have never been reached in four
-runs; that, not the sheet mechanism, is what this cycle exists to fix.** Separately
+**SUPERSEDED — plans 11-12 both RAN.** Plan 11 fixed the five review findings (WR-07/WR-03/WR-04/
+WR-01/IN-02) and authored `34.4.2-LIVE-GATE-RERUN-2.md`. Plan 12 ran the blocking live gate to
+completion 2026-08-05: **VERDICT FAIL, items_passed 5/6** (items 1/2/4/5/6 PASS -- the first
+passing results this phase has ever recorded; item 3, the glyph/AutoFill menu, FAIL -- the
+synthesized-right-click poster pops the real menu correctly but the field never fills, F-34.4.2-09,
+falsifying spike 022's Recommendation #4). See the Plan 12 record above for full detail.
+
+**Next action:** `/gsd-plan-phase 34.4.2 --gaps` — gap cycle 3, scoped against F-34.4.2-09 (the
+synthesized-right-click path cannot fill; candidate directions recorded without deciding: drop the
+glyph and rely on Cmd+V + a real right-click, keep the glyph as a discoverability hint only, or
+find a different trigger) and new threat T-34.4.2-39 (origin confusion from a second login flow
+queuing a sheet behind a slow nile/Amazon CLI spawn -- F-34.4.2-06/-07). Also owed, non-blocking:
+F-34.4.2-08's one-line glyph-tofu fix (`String.fromCodePoint(128273)`), F-34.4.2-10 (Humble
+disconnect storage-wipe timeout), and correcting `login-window-ux-macos.md`'s two now-stale
+recommendations (#1 superseded by the sheet decision, #4 falsified by this gate). Historical
+context on how this gap cycle 2 was scoped follows below, preserved as the record of that
+planning session; it is no longer the pending action. Separately
 outstanding: `/gsd-plan-phase 34.5 --gaps` — gap cycle 6. Named here once, deliberately nowhere else. Scope it around: the GOG frontend-render defect (F-34.5-G6-12 / U-34.5-07, where 7 titles persist to disk and the Library UI shows none); the dead `nativeImage` sidecar stub that structurally blocks every macOS `.app` shortcut (F-34.5-G6-07 / U-34.5-12); the Electron-shaped Steam LaunchOptions the Tauri shell ignores (F-34.5-G6-09 / U-34.5-13); **an audit of the real preload channel surface against `IPC-PORT-INVENTORY.md`, which is a Phase 35 precondition and whose incompleteness is of unknown extent** (F-34.5-G6-10 / U-34.5-14); `addToSteam` dropping its return value (F-34.5-G6-08 / U-34.5-15); the still-unattempted items 3 and 5; and the `REQUIREMENTS.md` inconsistency where REQ-34.5-01/02/03/04/05/12 sit checked `[x]` while carrying gate conditions that have now failed three times (deferred-items item 22). Epic (item 1) stays parked by explicit developer decision and is NOT this cycle's blocker.
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
@@ -3337,6 +3389,7 @@ Closed/parked native-install phases:
 | Phase 34.4.2 P09 | 40min | 3 tasks | 4 files |
 | Phase 34.4.2 P10 | ~70min | 3 tasks (Task 2 human checkpoint) | 5 files (`34.4.2-LIVE-GATE-RERUN.md`, `34.4.2-PLATFORM-SCOPE.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`) |
 | Phase 34.4.2 P11 | 120min | 3 tasks | 5 files |
+| Phase 34.4.2 P12 | ~180min | 3 tasks (Task 2 blocking live gate, multiple in-run checkpoints) | 6 files (`34.4.2-LIVE-GATE-RERUN-2.md`, `34.4.2-PLATFORM-SCOPE.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`, `34.4.2-12-SUMMARY.md`) |
 
 ## Accumulated Context
 
@@ -3760,6 +3813,11 @@ Recent decisions affecting current work:
 - [Phase 34.4.2-10]: **Rewritten sheet-design live gate RAN 2026-08-04, VERDICT FAIL 0/6.** Item 1 (sheet presentation) FAILED live with a DIFFERENT symptom than the first gate: the presented login window was an ordinary titled macOS window with standard traffic-light buttons and blank white content — neither an AppKit sheet (plan 07's mechanism) nor an attached child window (plan 02's retired mechanism) — and could be ordered behind the main window (F-34.4.2-03, BLOCKING). No root cause asserted. Items 2-6 NOT ATTEMPTED — operator ended the session at item 1's failure. `gamelib.log` contains no `[shell]`-prefixed line at all in this or any archived session (confirmed by inspecting every `gamelib.log*` in `~/Library/Logs/GameLib/`), so the log-based absence of `sheet_presented=` is inconclusive, not confirmatory — the `tauri:dev` process's own stdout/stderr was not captured this run. D-08's no-partial-pass rule applies; Phase 34.4.2 STILL DOES NOT CLOSE — a second gap cycle is required.
 - [Phase 34.4.2-10]: T-34.4.2-05 moved back from "reset-unproven against the sheet mechanism" to "live-confirmed-broken against the sheet mechanism, again" — an honest statement that the first gap cycle's fix direction has not yet produced working live behaviour on this hardware, not a claim about which layer is at fault. T-34.4.2-07/-15(residual)/-17/-21/-22/-33 stay OPEN-pending-gate (unreached, no new evidence); T-34.4.2-32/-34/-35 unchanged, still CLOSED by source (never gate-dependent).
 - [Phase 34.4.2]: Plan 11 gap cycle 2: scoped to five review findings on gate items 2/3/5's routes (WR-07/WR-03/WR-04/WR-01/IN-02); WR-04 fixed via reorder + null-root-safe appends (not inner try/catch) to preserve the exactly-once try-block guard — Author/runner separation held a fourth time -- 34.4.2-LIVE-GATE-RERUN-2.md authored with verdict null, no gate item run by this plan
+- [Phase 34.4.2-12, operator, 2026-08-05]: The DummyStore harness cannot be reached from a Tauri-managed login sheet under this app's own https-only URL gate (`main.rs:926`) — spikes 019-022 used a separate, gate-free spike app. This run's DummyStore-dependent sub-checks (items 3(a)/4's DummyStore half, precondition 4's logout preamble) are amended to BLOCKED-BY-DESIGN/INAPPLICABLE-THIS-RUN rather than run against a URL the shell will always reject; the gate proceeds Humble-only for those items. Recorded as a contract-authoring defect, not an app defect.
+- [Phase 34.4.2-12]: **Blocking live gate RAN 2026-08-05, VERDICT FAIL, items_passed 5/6.** Items 1, 2, 4, 5, 6 PASSED live — the first passing results this phase has ever recorded, including the first-ever live measurement of F-34.4.2-01's post-restore interactivity claim (item 1e) across five gate runs. **Item 3 FAILED**: the synthesized-right-click poster fires correctly (WR-07 branch 5/5, correct `hit_tag=INPUT`/`hit_type=password` targeting) and the real system menu pops with `AutoFill ›` present, but selecting a seeded Passwords entry never fills the field — a real right-click in the identical sheet/field/entry DOES fill, isolating the failure to the synthesized-event path itself. D-08's no-partial-pass rule applies: Phase 34.4.2 DOES NOT CLOSE. Next: `/gsd-plan-phase 34.4.2 --gaps` (gap cycle 3).
+- [Phase 34.4.2-12]: **New finding F-34.4.2-09 falsifies spike 022's own Recommendation #4** (`login-window-ux-macos.md`) — the spike's evidence only ever showed the AutoFill menu popping with the synthesized event, never that selecting an entry fills the field; this gate measured the last mile for the first time and it fails. `login-window-ux-macos.md` now carries two stale recommendations (#1, already superseded by the sheet decision; #4, falsified here) and is owed a correction before it misleads further work.
+- [Phase 34.4.2-12]: **New threat T-34.4.2-39 minted (Spoofing, origin confusion), OPEN, no discharging item.** A ~7-8s nile/Amazon CLI-helper spawn delay (F-34.4.2-06, pre-existing PyInstaller onefile tax, not a 34.4.2 regression) leaves the main window interactive pre-presentation, letting a second login flow queue behind the first; AppKit then presents the queued sheet immediately on the first sheet's dismissal rather than at its own request time (F-34.4.2-07). Concrete risk: typing one store's password into another store's just-arrived sheet. The current six-item contract has no item scoped to multi-flow-initiation ordering — a contract gap, not only an app gap, for gap cycle 3 to scope.
+- [Phase 34.4.2-12]: With item 3 failing and item 4 (Cmd+V) passing, **Cmd+V plus a real right-click is now the only proven working credential-entry route** for the Tauri-managed login surface; the glyph's in-field affordance cannot currently deliver its stated purpose. Next-cycle directions recorded without deciding: drop the glyph and rely on Cmd+V + real right-click, keep the glyph purely as a discoverability hint, or find a different trigger.
 
 ### Pending Todos
 
@@ -3840,9 +3898,56 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-04T21:10:39.240Z
-Stopped at: Completed 34.4.2-11-PLAN.md (gap cycle 2, review-finding fixes + fresh blocking gate contract authored, verdict null). Next: 34.4.2-12 (human-driven live gate run).
-  This session (sequential executor): ran the rewritten sheet-design blocking live gate
+Last session: 2026-08-05T09:20:00.000Z
+Stopped at: Completed 34.4.2-12-PLAN.md (gap cycle 2's blocking live gate RAN to completion, VERDICT FAIL, items_passed 5/6). Phase 34.4.2 DOES NOT CLOSE. Next: `/gsd-plan-phase 34.4.2 --gaps` (gap cycle 3).
+  This session (sequential executor): ran `34.4.2-LIVE-GATE-RERUN-2.md`, the fresh six-item
+  blocking live gate, on real macOS hardware, to a full completion for the first time in this
+  phase's history. Task 1 (commit `75431b20a`): preflight -- `cargo build` clean (23.62s), all
+  eight current log literals FOUND via `strings|grep` against the debug binary, retired re-raise
+  literal CONFIRMED ABSENT; DummyStore harness started (PID 84424), liveness confirmed; baselines
+  `npm run test:ci` 191/191 suites (3740/3740 tests), `cargo test` 135/0/1-ignored (matches plan
+  11's own baseline). Task 1 amendment (commit `d63caa9db`, found before the operator started):
+  the shell's own https-only URL gate (`login_window_url_arg`, `main.rs:926`, test at
+  `main.rs:5725`) structurally forbids `http://127.0.0.1:17940/...`, so the DummyStore harness can
+  never be reached from a Tauri-managed login sheet -- amended items 3(a)/4's DummyStore
+  sub-checks to BLOCKED-BY-DESIGN and precondition 4 to INAPPLICABLE-THIS-RUN, scoping items 3/4
+  to Humble alone; added `GAMELIB_DEV_SECRET_VAULT=1` to the staged launch command.
+  Task 2 (operator, driven live across several in-run checkpoints, commits `7778dd2f7`,
+  `708057942`, `a50387293` recording findings as they surfaced): item 1 sub-checks (a)-(e) PASS,
+  including the first-ever live measurement of F-34.4.2-01's post-restore interactivity (sub-check
+  e); the operator's first item-3 attempt turned out to be a REAL right-click, not the glyph (zero
+  `post_autofill_right_click` lines) -- re-run against the actual poster surfaced **item 3's
+  MEASURED FAIL**: the poster fires correctly (WR-07 branch 5/5 live, `hit_tag=INPUT`/
+  `hit_type=password` correct) and the real menu pops with `AutoFill ›` present, but the field
+  never fills, while an identical real right-click in the same sheet/field/entry DOES fill --
+  isolating the failure to the synthesized-event path (F-34.4.2-09, falsifying spike 022's own
+  Recommendation #4). Also surfaced live: F-34.4.2-06 (nile/Amazon CLI spawn delay, pre-existing,
+  not a regression), F-34.4.2-07 (the delay's pre-presentation window lets a second login flow
+  queue behind the first -- new threat T-34.4.2-39, origin confusion), F-34.4.2-08 (autofill glyph
+  renders as tofu, `fromCharCode`/`fromCodePoint` BMP-truncation, fix identified but deferred).
+  Items 1(f)/2/4/5/6 subsequently all PASSED (item 1(f)'s post-glyph-click un-losability re-check,
+  item 2's both dismissal routes plus the exactly-one-control sub-check, item 4's Cmd+V + Edit
+  Paste on Humble, item 5's both kill-switch arms including the mandatory cancel-strip survival,
+  item 6's alternate-route hidden-window check plus Epic's four absences). F-34.4.2-10 (Humble
+  disconnect storage-wipe timeout) surfaced during item 6. A four-instance contract-authoring-defect
+  pattern was recorded (the https gate hitting two preconditions/items; item 6(a)'s concurrency
+  framing being structurally impossible against a sheet's own blocking semantics; item 2's
+  OAuth-only log-line requirement Humble cannot emit). Task 3 (this session, hand-editing STATE.md
+  per the standing gsd-sdk-corruption gotcha): transcribed all six items' `Observed:`/`Verdict:`
+  fields into `34.4.2-LIVE-GATE-RERUN-2.md` -- **VERDICT FAIL, items_passed 5**. Propagated into
+  `34.4.2-PLATFORM-SCOPE.md` §5 (fifth threat-register table: T-34.4.2-05/-07/-33/-15(residual)/
+  -22/-36/-38 CLOSED live for the first time; T-34.4.2-17 PARTIALLY DISCHARGED; T-34.4.2-37
+  source-fixed but unexercised; T-34.4.2-39 minted OPEN), `REQUIREMENTS.md` (REQ-34.4.2-01/-02/-03/
+  -06 TICKED, REQ-34.4.2-10 live-reconfirmed, REQ-34.4.2-04/-05/-09 stay UNCHECKED on item 3's
+  genuine FAIL), `ROADMAP.md` (status banner superseded, plan 12 checked, 12/12 plans executed).
+  Stopped the DummyStore harness (`kill 84424`); confirmed port 17940 released. D-08's
+  no-partial-pass rule applies: **Phase 34.4.2 DOES NOT CLOSE.** Next: `/gsd-plan-phase 34.4.2
+  --gaps` (gap cycle 3), scoped against F-34.4.2-09 and T-34.4.2-39. See `34.4.2-LIVE-GATE-RERUN-2.md`
+  and `34.4.2-12-SUMMARY.md` for full detail.
+
+  --- historical: the prior session's own continuity record follows, preserved as-is ---
+
+  Prior session (sequential executor): ran the rewritten sheet-design blocking live gate
   (`34.4.2-LIVE-GATE-RERUN.md`) on real macOS hardware. Task 1 (commit `5d3f1360a`): preflight --
   `cargo build` clean, all four new literals (`sheet_presented=`, cancel-strip injected, cancel
   requested, `/login-cancel`) FOUND via `strings|grep` against the debug binary, the retired
