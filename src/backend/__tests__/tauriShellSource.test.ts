@@ -726,7 +726,12 @@ const PHASE_34_4_2_NEW_SYMBOLS = [
   'login_cancel_strip_script',
   'request_login_sheet_cancel',
   // Plan 11 (WR-07/WR-01 fixes -- 34.4.2-REVIEW.md):
-  'register_presented_login_sheet'
+  'register_presented_login_sheet',
+  // Plan 14 (T-34.4.2-39/-41 single-flight guard on visible login windows):
+  'PENDING_VISIBLE_LOGIN_WINDOW',
+  'PENDING_VISIBLE_LOGIN_WINDOW_TTL',
+  'pending_login_entry_is_stale',
+  'clear_pending_visible_login_window'
 ]
 
 // Phase 34.4.2 Plan 13 (operator decision D-A): the in-field autofill glyph mechanism --
@@ -1381,4 +1386,131 @@ describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes
       expect(delegateBody).not.toContain(symbol)
     }
   })
+})
+
+// Phase 34.4.2 Plan 14 (T-34.4.2-39/-41): a second VISIBLE login window requested while one is
+// already pending or presented must be refused at the shell entry point, before any window is
+// built -- gate run 2's operator observed Amazon's slow nile spawn (~7-8s, F-34.4.2-06) let
+// Humble's own click open and present FIRST, so Amazon's own sheet then queued behind it and
+// surfaced unrequested the moment Humble was dismissed (origin confusion: typing one store's
+// password into another store's just-arrived sheet). This describe block holds the
+// source-level guard that makes that structurally impossible in place -- ordering,
+// visible-only scoping, three-way clearing and a bounded (not unbounded) expiry.
+describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows (T-34.4.2-39)', () => {
+  function extractHumbleLoginOpenArmBody(code: string): string {
+    const armStart = code.indexOf('"humble_login_open" => {')
+    expect(armStart).toBeGreaterThan(-1)
+    const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
+    expect(armEnd).toBeGreaterThan(armStart)
+    return code.slice(armStart, armEnd)
+  }
+
+  /**
+   * Scans forward from `openMarker`'s FIRST `{` and returns the full brace-matched block
+   * (inclusive of both braces), counting depth rather than relying on a second string marker
+   * -- mirrors the identical helper the WR-07 and Plan 02 describe blocks (above) already use,
+   * kept as a local copy per this file's own established convention (neither block imports
+   * from the other).
+   */
+  function extractBracedBlock(code: string, openMarker: string): string {
+    const markerIdx = code.indexOf(openMarker)
+    expect(markerIdx).toBeGreaterThan(-1)
+    const braceStart = code.indexOf('{', markerIdx)
+    expect(braceStart).toBeGreaterThan(-1)
+    let depth = 0
+    let i = braceStart
+    for (; i < code.length; i++) {
+      if (code[i] === '{') depth++
+      else if (code[i] === '}') {
+        depth--
+        if (depth === 0) break
+      }
+    }
+    expect(depth).toBe(0)
+    return code.slice(markerIdx, i + 1)
+  }
+
+  // ORDERING. Both bounds matter: the first is Epic's structural exemption (D-D) -- the guard
+  // must never run before Epic's own early return has had its chance to fire; the second is
+  // "no window is built for a refused request" -- the guard must run before the shared
+  // `WebviewWindowBuilder` this arm's every other runner (and Epic on non-macOS) goes on to
+  // construct.
+  test('Test 1 (ORDERING): PENDING_VISIBLE_LOGIN_WINDOW is referenced after open_pristine_epic_login_window( and before tauri::WebviewWindowBuilder::new( inside the humble_login_open arm', () => {
+    const code = loadMainRsCode()
+    const armBody = extractHumbleLoginOpenArmBody(code)
+    const epicReturnIdx = armBody.indexOf('open_pristine_epic_login_window(')
+    const guardIdx = armBody.indexOf('PENDING_VISIBLE_LOGIN_WINDOW')
+    const builderIdx = armBody.indexOf('tauri::WebviewWindowBuilder::new(')
+    expect(epicReturnIdx).toBeGreaterThan(-1)
+    expect(guardIdx).toBeGreaterThan(-1)
+    expect(builderIdx).toBeGreaterThan(-1)
+    expect(guardIdx).toBeGreaterThan(epicReturnIdx)
+    expect(guardIdx).toBeLessThan(builderIdx)
+  })
+
+  // VISIBLE-ONLY SCOPING. Brace-matched the way Plan 03's own `if visible` guard test does
+  // (block first, containment second) rather than by proximity. The guard's condition is
+  // deliberately `if visible == true {`, not the bare `if visible {` this arm uses elsewhere --
+  // see the guard's own doc comment in main.rs for why (Plan 08 Test 1 / the WR-07 F-4 test
+  // both locate the ORIGINAL `if visible {` block via the first `indexOf` match; an identical
+  // bare condition here would silently redirect both to this new block instead).
+  test('Test 2 (VISIBLE-ONLY SCOPING): the refuse-or-arm block is brace-matched from a condition referencing visible -- hidden reveal/clear windows never arm or are refused', () => {
+    const code = loadMainRsCode()
+    const armBody = extractHumbleLoginOpenArmBody(code)
+    const guardBlock = extractBracedBlock(armBody, 'if visible == true {')
+    expect(guardBlock).toContain('PENDING_VISIBLE_LOGIN_WINDOW')
+    expect(guardBlock).toContain('visible')
+  })
+
+  // CLEAR-ON-EVERY-PATH. Negative-lookbehind excludes the `fn clear_pending_visible_login_window(`
+  // definition itself -- counts CALL sites only, mirroring Plan 08 Test 1's identical idiom.
+  // Three call sites: sheet presentation confirmed, the visible-fallback
+  // (`window.show()`/`window.set_focus()`), and `WindowEvent::Destroyed`.
+  test('Test 3 (CLEAR-ON-EVERY-PATH): clear_pending_visible_login_window( is CALLED exactly three times in comment-stripped production source', () => {
+    const code = loadMainRsCode()
+    const callSites = code.match(/(?<!fn )clear_pending_visible_login_window\(/g) ?? []
+    expect(callSites.length).toBe(3)
+  })
+
+  // BOUNDED, NOT UNBOUNDED (T-34.4.2-41). A latch with no expiry would convert this plan's own
+  // spoofing mitigation into a denial-of-service surface -- see PENDING_VISIBLE_LOGIN_WINDOW_TTL's
+  // own doc comment. The TTL's definition must reference the EXISTING watchdog constant, not an
+  // independently invented magic number, so the two can never disagree.
+  test('Test 4 (BOUNDED, NOT UNBOUNDED, T-34.4.2-41): the refuse-or-arm region references pending_login_entry_is_stale, and PENDING_VISIBLE_LOGIN_WINDOW_TTL is defined in terms of LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT rather than an independent magic number', () => {
+    const code = loadMainRsCode()
+    const armBody = extractHumbleLoginOpenArmBody(code)
+    const guardBlock = extractBracedBlock(armBody, 'if visible == true {')
+    expect(guardBlock).toContain('pending_login_entry_is_stale')
+
+    const ttlDeclIdx = code.indexOf('const PENDING_VISIBLE_LOGIN_WINDOW_TTL')
+    expect(ttlDeclIdx).toBeGreaterThan(-1)
+    const ttlDeclEnd = code.indexOf(';', ttlDeclIdx)
+    expect(ttlDeclEnd).toBeGreaterThan(ttlDeclIdx)
+    const ttlDecl = code.slice(ttlDeclIdx, ttlDeclEnd)
+    expect(ttlDecl).toContain('LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT')
+  })
+
+  // SCOPE GUARD (REQ-34.4.2-10). All four Plan 14 symbols must be members of
+  // PHASE_34_4_2_NEW_SYMBOLS so Plan 01's own array-driven Epic guard (Test 3, above) covers
+  // them automatically -- no separate absence assertion needed here.
+  test('Test 5 (SCOPE GUARD, REQ-34.4.2-10): all four Plan 14 symbols are present in PHASE_34_4_2_NEW_SYMBOLS', () => {
+    for (const symbol of [
+      'PENDING_VISIBLE_LOGIN_WINDOW',
+      'PENDING_VISIBLE_LOGIN_WINDOW_TTL',
+      'pending_login_entry_is_stale',
+      'clear_pending_visible_login_window'
+    ]) {
+      expect(PHASE_34_4_2_NEW_SYMBOLS).toContain(symbol)
+    }
+  })
+
+  // MUTATION DISCIPLINE (recorded again, with the reversal proof, in 34.4.2-14-SUMMARY.md).
+  // Test 1's ordering assertion above was proven load-bearing by temporarily moving the
+  // refuse-or-arm check's `if visible == true {` line (and its body) to directly above the
+  // Epic early return in main.rs, re-running this describe block -- Test 1 FAILED
+  // (`guardIdx` < `epicReturnIdx`) -- then reverting the edit and confirming
+  // `git diff --stat -- src-tauri/src/main.rs` was empty afterward. Not encoded as a permanent
+  // test here: it is a one-time proof the assertion actually fires, not a fixture this suite
+  // re-runs every pass, mirroring Plan 13's own mutation check (`34.4.2-13-SUMMARY.md`'s
+  // "Mutation Check" section), which was done and recorded the identical way.
 })

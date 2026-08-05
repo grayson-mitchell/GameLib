@@ -286,3 +286,77 @@ on these four points as an oversight.**
   disable, and forbids re-proposing the affordance under a different synthesis approach, a
   different trigger event, or behind a kill switch. No such attempt was made in this plan, and none
   should be proposed by a future session without a new operator decision superseding D-A.
+
+## Plan 14 — the nile spawn tax that motivates the guard, and one silently-swallowed refusal path (2026-08-05)
+
+**Disposition: both logged, neither fixed here. The guard this plan ships mitigates the
+CONSEQUENCE of the first entry (an unrequested sheet), not its CAUSE (the upstream spawn delay).
+The second entry is a real, recordable outcome for the new gate's own single-flight item, not
+something to pre-empt with an out-of-scope fix.**
+
+- **F-34.4.2-06 — the nile/PyInstaller-onefile spawn tax that creates the pre-presentation
+  window T-34.4.2-39 closes.** **File:** `src/backend/storeManagers/nile/user.ts:30` (obtains the
+  Amazon login URL by exec'ing `nile`, a PyInstaller onefile binary). **Symptom:** this project's
+  own recorded measurement (`pyinstaller-onefile-spawn-tax` project memory) puts
+  gogdl/legendary/nile's macOS spawn cost at 5-13s per exec — random `_MEI`
+  extraction defeating the Gatekeeper signature cache. Clicking Amazon triggers this exec; the
+  shell (and this plan's own guard) learn nothing about a login starting until `humble_login_open`
+  is actually called, ~7-8s later on the Amazon path specifically. **Pre-existing, NOT a 34.4.2
+  regression** — this phase (specifically Plan 07's sheet presentation) merely made the delay
+  VISIBLE by putting a modal in front of it; before sheets existed, the same 7-8s gap produced a
+  free-floating window that simply appeared late, with no queued-sheet consequence to notice.
+  **Why out of scope:** the only in-repo lever is call-count reduction (per the project's own
+  memory record), which is a different-shaped fix (caching/pre-warming the nile exec, or avoiding
+  the CLI spawn on the hot path entirely) than anything this plan's `files_modified`
+  (`src-tauri/src/main.rs`, `src/backend/__tests__/tauriShellSource.test.ts`,
+  `34.4.2-PLATFORM-SCOPE.md`, this file) touches. **Disposition:** logged, not fixed, no owning
+  plan. This plan's guard mitigates the CONSEQUENCE (an unrequested sheet arriving over a
+  dismissed one) by making the pre-presentation window a REFUSAL instead of a silent queue — it
+  does not, and is not intended to, shorten the 7-8s window itself.
+
+- **Silent-refusal path: Humble's own `startLogin()`/`reconnect()` swallow a T-34.4.2-39 refusal
+  with no user-visible signal, while the four OAuth runners (GOG/Amazon/Zoom, and Epic on
+  non-macOS) surface it.** Task 1 step 6 traced BOTH consumers of a rejected `seam.open()`, per
+  the plan's own instruction to verify rather than trust the registration comments' claims:
+  - **`captureOAuthLogin` (GOG/Amazon/Zoom via `oauthCaptureLogin`) — SURFACES the refusal.**
+    `captureOAuthLogin`'s `.open(...).catch((err) => { settle({ status: 'error', message:
+    err.message }) })` (`src/backend/sidecar/oauthLoginCapture.ts:326-331`) resolves — never
+    rejects — confirming `oauthLoginFlowRegistration.ts`'s own comment ("captureOAuthLogin()
+    itself never rejects") is accurate for THIS refusal, not merely asserted. The frontend
+    (`useTauriOAuthLogin.ts:283-287`) checks `outcome.status === 'error'` and calls
+    `safeSetState({ phase: 'error', message: outcome.message })`; `TauriLoginPanel.tsx`'s
+    `phase === 'error'` branch (line 188) renders `webview.login.oauth.error.heading` /
+    `webview.login.oauth.error.body` with `Something went wrong while signing in:
+    humble_login_open:login-already-in-progress` — the user sees an explicit, readable error.
+  - **Humble's own `startLogin()`/`reconnect()` (via `humbleStartLogin`/`humbleReconnect`) —
+    SWALLOWS the refusal silently.** `HumbleUser`'s watch (`src/backend/humble/user.ts:553-579`)
+    has the identical `.open(...).catch((err) => { settle({ status: 'error' }) })` shape, so the
+    refusal DOES reach the frontend as `{ status: 'error' }` — but `WebView/index.tsx`'s
+    `runHumbleLoginWatch()` (lines 303-314) only branches on `result.status === 'done'`; there is
+    no `'error'` branch at all. A refused Humble login therefore produces no toast, no navigation,
+    no state change of any kind — the effect completes silently and the user is left looking at
+    whatever they were already looking at, with zero indication a second login attempt was even
+    made, let alone refused.
+  - **Why out of scope:** REQ-34.4.2-08 requires all new behaviour in this phase to be
+    `#[cfg(target_os = "macos")]`-gated; wiring an `'error'` branch into `runHumbleLoginWatch()`
+    would be a cross-platform TypeScript change with no such gate available (the frontend cannot
+    tell which platform refused it from here), and this phase has already recorded one standing
+    wart against an un-gated cross-platform surface (the Plan 09 autofill-glyph finding, CLOSED
+    2026-08-05 by Plan 13's deletion) — it must not acquire a second. The gate item
+    `34.4.2-LIVE-GATE-RERUN-3.md`'s own single-flight item will measure what the user actually
+    sees on both paths; a silent refusal on the Humble path is a real, recordable outcome for that
+    item, not something to pre-empt with an out-of-scope fix here.
+  - **Disposition:** logged, not fixed, no owning plan. A future plan wiring a Humble-side
+    `'error'` phase into `runHumbleLoginWatch()` (or a shared error-surfacing convention across
+    both login paths) should treat this entry as the starting trace.
+
+- **WR-02, WR-05, WR-08, IN-01, IN-03, IN-04 — deliberately NOT re-opened.** This plan edits the
+  same `humble_login_open` arm WR-02 (`present_login_window_as_sheet`'s and
+  `dismiss_login_window_sheet`'s raw-`NSWindow`-address worker→main hop) sits in, which could read
+  as an opportunity to revisit it — it is not. This plan adds no new raw-`NSWindow`-address hop of
+  its own (`PENDING_VISIBLE_LOGIN_WINDOW` stores a `String` label and an `Instant`, never a
+  pointer), so WR-02's own surface is unchanged, not narrowed and not widened. WR-05/WR-08/IN-01/
+  IN-03/IN-04 are untouched by this plan's diff entirely (confirmed: none of the four new symbols
+  or the refuse-or-arm check reference `request_login_sheet_cancel`, the harness-containment test,
+  `PRESENTED_LOGIN_SHEETS`' eviction path, or `is_login_cancel_request`'s scheme handling). Stated
+  here explicitly so the non-action is visible as a deliberate scope decision, not an oversight.
