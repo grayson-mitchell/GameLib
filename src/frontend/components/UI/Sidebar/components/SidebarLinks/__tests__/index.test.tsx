@@ -232,3 +232,22 @@ describe('SidebarLinks account item', () => {
     expect(loggedInItem?.props.url).toBe('/login')
   })
 })
+
+describe('SidebarLinks community links', () => {
+  function labelsOf(tree: ReactNode): string[] {
+    return collectElements(tree)
+      .map((el) => el.props?.label)
+      .filter((l): l is string => typeof l === 'string')
+  }
+
+  it('does not render Discord or GitHub Sponsors, but still renders Ko-fi', () => {
+    contextValue = makeContextValue()
+
+    const tree = SidebarLinks() as unknown as ReactElement
+    const labels = labelsOf(tree)
+
+    expect(labels).not.toContain('Discord')
+    expect(labels).not.toContain('GitHub Sponsors')
+    expect(labels).toContain('Ko-fi')
+  })
+})
