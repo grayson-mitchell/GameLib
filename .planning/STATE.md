@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.4.2-12-PLAN.md (gap cycle 2's blocking live gate RAN, VERDICT FAIL, items_passed 5/6). Phase 34.4.2 DOES NOT CLOSE. Next: /gsd-plan-phase 34.4.2 --gaps (gap cycle 3)."
-last_updated: "2026-08-05T09:35:00.000Z"
+stopped_at: "Completed 34.4.2-13-PLAN.md (D-A: deleted the in-field autofill glyph mechanism in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected). Phase 34.4.2 DOES NOT CLOSE -- boxes stay unticked pending a fresh live gate (34.4.2-LIVE-GATE-RERUN-3.md). Next: continue gap cycle 3 (plan 14, T-34.4.2-39 origin confusion, then the gate re-run)."
+last_updated: "2026-08-05T08:58:39.262Z"
 last_activity: 2026-08-05
 progress:
-  total_phases: 19
+  total_phases: 20
   completed_phases: 13
-  total_plans: 203
-  completed_plans: 192
-  percent: 68
+  total_plans: 207
+  completed_plans: 193
+  percent: 65
 ---
 
 # Project State
@@ -478,9 +478,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — GAP CYCLE 2 EXECUTED, PHASE STILL DOES NOT CLOSE
-Plan: 12 of 12 (all 12 plans complete. Plan 12 -- the human-driven live gate run -- RAN 2026-08-05
-and recorded VERDICT FAIL, items_passed 5/6 (see its own record below). D-08's no-partial-pass
+Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — GAP CYCLE 3 PLANNED, NOT YET EXECUTING
+Plan: 14 of 16 (plans 01-12 complete; gap cycle 3 = plans 13-16 planned, 0 of 4 executed,
+checker blocker resolved a8e324e34). Plan 12 -- the human-driven live
+gate run -- RAN 2026-08-05 and recorded VERDICT FAIL, items_passed 5/6 (see its own record below). D-08's no-partial-pass
 rule applies: the phase does NOT close. Next: `/gsd-plan-phase 34.4.2 --gaps` (gap cycle 3).
 Historical plan-11/plan-10 records follow.)
 
@@ -2417,7 +2418,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 94%
+trusted blindly. The recurring `**Progress:**[█████████░] 93%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.2-07): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2734,7 +2735,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-05 - Completed quick task 260805-rwy: removed the "Login with your platform…" paragraph from the Manage Accounts page (visual UAT pending)
+Last activity: 2026-08-05
 Prior activity: 2026-08-04 -- Phase 34.4.2 plan 07 executed: present_login_window_as_sheet/dismiss_login_window_sheet replace child-window attach/detach, PRESENTED_LOGIN_SHEETS registry re-homes the poster gate, deminiaturize re-raise observer retired, tauriShellSource.test.ts inverted (76/76), REQ-34.4.2-01/-02/-03 restated SUPERSEDED and unchecked. See 34.4.2-07-SUMMARY.md.
 Prior activity: 2026-08-03 - **F-34.5-G6-01 CLOSED and the embedded Epic login WORKS under Tauri.** Debug session epic-login-non-interactive RESOLVED and archived to .planning/debug/resolved/. The pre-auth 403 was Talon fingerprinting Tauri's injected globals (window.isTauri et al, non-configurable AND non-writable, correctly proven unmaskable from JS) — fixed not by hiding them but by not creating them: Epic's login window is now a webview-less tauri::WindowBuilder window with a raw WKWebView attached, zero initialization scripts, own WKNavigationDelegate (03b75211a, macOS+Epic only). The separate post-auth defect fell out of the same change — decidePolicyForNavigationAction sees the localhost redirect WKWebView silently refuses to LOAD — so the OAuth code is captured natively and NO JavaScript is injected into Epic's page anywhere; the old observer/shim/on_navigation trio was deleted (da529ca86, -400 lines). Four supporting defects found only by live hardware testing: WKUIDelegate (post-password hang), windowless WKWebsiteDataStore cookie clear (logout was silently leaving session cookies, so every "login" was a re-auth against a blank in-transit page), an NSEvent key monitor for Cmd+V (tao swallows the key equivalent; the Edit menu's paste: always worked), and humble_login_close falling back to get_window (the window never closed on success and every logout leaked an invisible window) — b76d58ee6, b8e73e437. Live-proven 20:26-20:28: the FIRST genuinely logged-out Epic login ever driven under Tauri, nav host=www.epicgames.com → nav host=localhost → status=captured → 15 games & DLCs, operator-confirmed in the UI; window self-close confirmed 22:03. Ledger rows U-34.5-06 (properly retired) and U-34.5-11 (retired as SUBJECT DELETED, never exercised — not a pass) updated (fe8a0ca2b). CARRIED FORWARD, unproven: a UA of Safari engine tokens + " EpicGamesLauncher" satisfies both Epic's launcher routing and hCaptcha's engine check, but the run that passed auto-logged-in and never rendered a captcha, so it was deliberately NOT defaulted. STANDING CONSTRAINT: Epic can demand a captcha at any time and the launcher UA its OAuth flow requires is one hCaptcha cannot initialize under, so the embedded window has a failure mode SIDLogin structurally does not — keep SIDLogin as Epic's PRIMARY tile. Phase 34.5 closure UNAFFECTED and still open. Prior same-day activity: shipped two live-verified debug fixes to fork PR #3: steam-refresh-hung-on-startup (22a9a328d, mount-time refresh gate now includes Steam) and login-logout-wipes-library (6f194fabe, per-runner scoped refresh, logout no longer reloads the app; Steam sync cache-hydration deferred into the IPC-port effort)
 ("Finalizing sign-in with <Runner>…" + spinner through the 5-27s token exchange) plus the
@@ -3390,6 +3391,7 @@ Closed/parked native-install phases:
 | Phase 34.4.2 P10 | ~70min | 3 tasks (Task 2 human checkpoint) | 5 files (`34.4.2-LIVE-GATE-RERUN.md`, `34.4.2-PLATFORM-SCOPE.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`) |
 | Phase 34.4.2 P11 | 120min | 3 tasks | 5 files |
 | Phase 34.4.2 P12 | ~180min | 3 tasks (Task 2 blocking live gate, multiple in-run checkpoints) | 6 files (`34.4.2-LIVE-GATE-RERUN-2.md`, `34.4.2-PLATFORM-SCOPE.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`, `34.4.2-12-SUMMARY.md`) |
+| Phase 34.4.2 P13 | 55min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -3410,6 +3412,7 @@ Closed/parked native-install phases:
 
 - Phases 28–35 added 2026-07-22 under the existing **v0.8 — Tauri Shell** milestone (extends it; `/gsd-new-milestone` deliberately NOT run, v0.8 already exists from Phase 27): the incremental Electron→Tauri/daemon port, sliced from `27-.../SEAM.md`'s ranked backlog. **28** real `safeStorage` via spike 011's `keyring` crate → **29** generalize the sidecar store past the two skeleton stores → **30/31/32** IPC re-plumb in domain slices (install/uninstall/update-check, settings/config, downloads/queue) → **33** the 44-file lifecycle cluster (`app`/`dialog`/window/`Notification`/tray/protocol, plus the `session`/`powerSaveBlocker` parity soft spots) → **34** Windows/Linux packaging+signing+auto-update → **35** Electron cutover. **Slicing rule:** every phase except 35 must end with BOTH `npm run tauri:dev` and `npm start` working (REQ-27-06's additive/reversible invariant, SEAM.md checklist step 5) — 35 is the one phase that intentionally breaks it, which is why it runs last. **Phase 28 is order-constrained, not merely first-by-value:** the sidecar and Electron share one store, so wiring any token-WRITING channel under the current passthrough stub writes `TOKEN_PREFIX`+plaintext and silently signs the user out of the real Electron app. Requirements stay TBD per phase — mint at `/gsd-plan-phase N`. Note these phases are invisible to `roadmap.analyze` until STATE.md's `milestone:` frontmatter advances past v0.7 (same caveat already recorded for Phase 27).
 - Phase 34.7 inserted after Phase 34.6: Epic device-auth single sign-in path — delete interactive legendary-login UI, seed legendary via exchange code; scheduled LAST before Phase 35; alt-login 403 permanently parked
+- Phase 34.8 inserted after Phase 34.6: Frontend i18n compliance for fork-added code — retrofit hardcoded strings + enforcement gate; sequenced before 34.7; upstream strings and backend error-code contract out of scope
 
 ### Decisions
 
@@ -3818,6 +3821,9 @@ Recent decisions affecting current work:
 - [Phase 34.4.2-12]: **New finding F-34.4.2-09 falsifies spike 022's own Recommendation #4** (`login-window-ux-macos.md`) — the spike's evidence only ever showed the AutoFill menu popping with the synthesized event, never that selecting an entry fills the field; this gate measured the last mile for the first time and it fails. `login-window-ux-macos.md` now carries two stale recommendations (#1, already superseded by the sheet decision; #4, falsified here) and is owed a correction before it misleads further work.
 - [Phase 34.4.2-12]: **New threat T-34.4.2-39 minted (Spoofing, origin confusion), OPEN, no discharging item.** A ~7-8s nile/Amazon CLI-helper spawn delay (F-34.4.2-06, pre-existing PyInstaller onefile tax, not a 34.4.2 regression) leaves the main window interactive pre-presentation, letting a second login flow queue behind the first; AppKit then presents the queued sheet immediately on the first sheet's dismissal rather than at its own request time (F-34.4.2-07). Concrete risk: typing one store's password into another store's just-arrived sheet. The current six-item contract has no item scoped to multi-flow-initiation ordering — a contract gap, not only an app gap, for gap cycle 3 to scope.
 - [Phase 34.4.2-12]: With item 3 failing and item 4 (Cmd+V) passing, **Cmd+V plus a real right-click is now the only proven working credential-entry route** for the Tauri-managed login surface; the glyph's in-field affordance cannot currently deliver its stated purpose. Next-cycle directions recorded without deciding: drop the glyph and rely on Cmd+V + real right-click, keep the glyph purely as a discoverability hint, or find a different trigger.
+- [Phase 34.4.2]: D-A executed: in-field autofill glyph mechanism deleted in full (13 symbols, ~24 tests) rather than disabled -- 34.4.2-LIVE-GATE-RERUN-2.md item 3 falsified spike 022's premise
+- [Phase 34.4.2]: PHASE_34_4_2_REMOVED_AUTOFILL_SYMBOLS mutation-proven absence guard makes the deletion permanent -- reintroducing any of 13 names is now a test failure
+- [Phase 34.4.2]: REQ-34.4.2-04/-05 scope-corrected to state Cmd+V/Edit-Paste as the sole credential-entry route; both boxes stay unticked pending 34.4.2-LIVE-GATE-RERUN-3.md item 3
 
 ### Pending Todos
 
@@ -3899,8 +3905,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-05T09:20:00.000Z
-Stopped at: Completed 34.4.2-12-PLAN.md (gap cycle 2's blocking live gate RAN to completion, VERDICT FAIL, items_passed 5/6). Phase 34.4.2 DOES NOT CLOSE. Next: `/gsd-plan-phase 34.4.2 --gaps` (gap cycle 3).
+Last session: 2026-08-05T08:58:39.247Z
+Stopped at: Completed 34.4.2-13-PLAN.md (D-A: deleted the in-field autofill glyph mechanism in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected). Phase 34.4.2 DOES NOT CLOSE -- boxes stay unticked pending a fresh live gate (34.4.2-LIVE-GATE-RERUN-3.md). Next: continue gap cycle 3 (plan 14, T-34.4.2-39 origin confusion, then the gate re-run).
   This session (sequential executor): ran `34.4.2-LIVE-GATE-RERUN-2.md`, the fresh six-item
   blocking live gate, on real macOS hardware, to a full completion for the first time in this
   phase's history. Task 1 (commit `75431b20a`): preflight -- `cargo build` clean (23.62s), all

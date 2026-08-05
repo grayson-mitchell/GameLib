@@ -1563,7 +1563,7 @@ Verification can run offline against the spike-019 local OAuth DummyStore harnes
 PKCE + replay enforcement + `/events` oracle) where a live store login isn't required.
 **Requirements**: REQ-34.4.2-01, REQ-34.4.2-02, REQ-34.4.2-03, REQ-34.4.2-04, REQ-34.4.2-05, REQ-34.4.2-06, REQ-34.4.2-07, REQ-34.4.2-08, REQ-34.4.2-09, REQ-34.4.2-10 (minted by plan 34.4.2-01; the ID rows themselves land in `REQUIREMENTS.md` when that plan executes. **REQ-34.4.2-10 is the Epic descope**, minted so the exclusion is machine-enforceable rather than a comment; 01/04/06 were narrowed from "both login surfaces" to the Tauri-managed surface. No ID was deleted or renumbered.)
 **Depends on:** Phase 34.4.1 (the login-window seam these behaviors attach to — COMPLETE)
-**Plans:** 16 plans (12/12 executed; gap cycle 3 adds plans 13-16, unexecuted)
+**Plans:** 13/16 plans executed
 
 **Status: GAP CYCLE 2 LIVE GATE RAN 2026-08-05 — FAIL, 5/6 (item 3 the sole FAIL) — PHASE STILL
 DOES NOT CLOSE.** `34.4.2-12-PLAN.md`'s blocking gate ran in full against
@@ -1762,7 +1762,7 @@ forever (CR-01/CR-02 and the 250ms `SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY` deferr
 re-fixed); D-D Epic stays byte-untouched; D-E author/runner separation — the plan shipping code never
 writes a verdict; D-F no-partial-pass — the phase closes only on a genuine 6/6.
 
-- [ ] 34.4.2-13-PLAN.md — Execute D-A: delete the in-field autofill mechanism from `src-tauri/src/main.rs` in full (glyph script, parser, sentinel arm, poster, event synthesizer, debounce, coordinate helpers, the orphaned `login_window_wk_webview`, and the `GAMELIB_AUTOFILL_GLYPH` kill switch), make the deletion machine-enforceable via a mutation-proven `PHASE_34_4_2_REMOVED_AUTOFILL_SYMBOLS` absence guard, relocate T-34.4.2-20's permanent credential-selector negatives so they survive the removal of the blocks hosting them, and rewrite REQ-34.4.2-04/-05 to the corrected scope (boxes stay `[ ]`). Retires T-34.4.2-15 as moot and T-34.4.2-10/-11/-12/-14/-16/-17/-18/-19/-21/-36 by deletion; mints T-34.4.2-40. (wave 1)
+- [x] 34.4.2-13-PLAN.md — Execute D-A: delete the in-field autofill mechanism from `src-tauri/src/main.rs` in full (glyph script, parser, sentinel arm, poster, event synthesizer, debounce, coordinate helpers, the orphaned `login_window_wk_webview`, and the `GAMELIB_AUTOFILL_GLYPH` kill switch), make the deletion machine-enforceable via a mutation-proven `PHASE_34_4_2_REMOVED_AUTOFILL_SYMBOLS` absence guard, relocate T-34.4.2-20's permanent credential-selector negatives so they survive the removal of the blocks hosting them, and rewrite REQ-34.4.2-04/-05 to the corrected scope (boxes stay `[ ]`). Retires T-34.4.2-15 as moot and T-34.4.2-10/-11/-12/-14/-16/-17/-18/-19/-21/-36 by deletion; mints T-34.4.2-40. (wave 1)
 - [ ] 34.4.2-14-PLAN.md — Close T-34.4.2-39: a `#[cfg(target_os = "macos")]` single-flight guard refusing a second VISIBLE login window at the shell entry point while another is pending or presented, so AppKit is never asked to queue a second sheet. Hidden reveal/clear windows and Epic are structurally exempt; the latch clears on all three resolution paths and expires on a TTL derived from the existing 15s watchdog so it can never become a lock-out of its own (new threat T-34.4.2-41). The residual pre-`humble_login_open` interval is documented, not overclaimed. (wave 2)
 - [ ] 34.4.2-15-PLAN.md — Correct the falsified project-knowledge artifact `login-window-ux-macos.md` (Recommendation #4 FALSIFIED at the point of use, Recommendation #1/§1/§2 SUPERSEDED, a Current-status block above both), fold gate run 2's orphaned findings (F-34.4.2-06..10, T-34.4.2-39, the contract-authoring-defect pattern) into `deferred-items.md`, author `34.4.2-LIVE-GATE-RERUN-3.md` (`verdict: null`, six items — item 3 becomes an ABSENCE check absorbing the retired kill-switch item, item 5 is new for T-34.4.2-39, and the four prior PASSes are RE-MEASURED not inherited), and run a **Structural Reachability Review** over every item and precondition before any live run. **Forbidden from running any gate item or writing any verdict.** (wave 3)
 - [ ] 34.4.2-16-PLAN.md — **BLOCKING live gate re-run** on real macOS hardware against `34.4.2-LIVE-GATE-RERUN-3.md`; sole writer of `verdict`/`run_date`/`items_passed`, filled from a measured run and never from expectation (T-34.4.2-25). Bidirectional preflight symbol check (current literals present AND deleted literals absent — a surviving `post_autofill_right_click` means the binary predates plan 13 and the run must not start); no DummyStore harness is started (the https-only gate makes it unreachable); mandatory evidence capture `npm run tauri:dev 2>&1 | tee /tmp/gamelib-dev.log`. Also corrects this phase's stale ROADMAP Goal text and records D-A in STATE.md's Decisions. (wave 4, non-autonomous)
@@ -1948,6 +1948,44 @@ the three dedicated IPC channels above, not about making winetricks work at all.
 Plans:
 
 - [ ] TBD (run /gsd-plan-phase 34.6 to break down)
+
+### Phase 34.8: Frontend i18n compliance for fork-added code (INSERTED)
+
+**Goal:** Every fork-added frontend surface is fully translatable via i18next, and a
+gate prevents new hardcoded user-facing strings from ever landing again. Audit
+2026-08-05 found 4 fork-added files bypassing i18n entirely (~35 strings —
+`SteamLogin/index.tsx` alone is ~25: "Steam client not found", "Incorrect username or
+password…", etc.; plus `RedeemSteamKeyDialog/copy.ts`, `useTauriOAuthLogin.ts`, and
+`bootErrorSurface.ts` which is pre-i18n-boot and may be exempted with a comment) and
+fork-added mixed files with stray literals (ConsoleMode store labels, LogSettings
+titles, PlatformSupport, etc.). Scope: (1) retrofit all fork-added hardcoded strings
+to `t(key, 'Default')`; (2) maintain an explicit allowlist for brand names, units and
+platform names (GameLib, Steam, MB/s, Linux/macOS/Windows…) — these stay literal;
+(3) run `pnpm i18n` (i18next-parser) to sync the stale en catalogs (en/login.json has
+zero Steam keys today) and make it repeatable; (4) add an enforcement gate — either an
+eslint rule (react/jsx-no-literals with the allowlist) or a source-scanning extension
+to `meta/lintTranslations.ts` — wired into CI/test so violations fail loudly. Gate
+must tolerate the repo's dynamic `[key, default]` tuple tables (CrossoverBadge,
+LibraryFilters), aliased `t` (`t2`, `tr`), and the deliberate English fallbacks in
+`repairFailure.ts`.
+**Out of scope:** upstream-inherited Heroic strings (~50, e.g. GOG REDmod, Gamescope,
+aria-labels) — churning them is pure merge-conflict surface against upstream; and the
+backend error-code contract (~30 English error payloads from Steam
+bottle/clientSetup/bridge managers surfacing verbatim in the UI) — that needs its own
+design phase (codes over IPC, frontend maps to t() keys) and must not churn
+live-verified Steam paths mid-Tauri-migration. Note: fork-minted keys will render
+their English defaults in the other 37 locales (Weblate is upstream's) — full key
+coverage in `en` + English fallback is the compliance bar here.
+*Inserted 2026-08-05 at operator direction: localisation is a standing requirement;
+new features (Steam et al.) had shipped hardcoded constants.*
+**Requirements:** TBD — mint at `/gsd-plan-phase 34.8`
+**Depends on:** Phase 34 (frontend-only; independent of the 34.x IPC slices)
+**Blocks:** Phase 35 (sequenced BEFORE 34.7 — 34.7 stays last before cutover)
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 34.8 to break down)
 
 ### Phase 34.7: Epic device-auth single sign-in path (INSERTED)
 
