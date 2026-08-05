@@ -101,10 +101,7 @@ const SidebarTour: React.FC = () => {
     },
     {
       element: '[data-tour="sidebar-community"]',
-      intro: t(
-        'tour.sidebar.community',
-        "Join our community on Discord and support GameLib's development."
-      ),
+      intro: t('tour.sidebar.community', "Support GameLib's development."),
       position
     },
     {

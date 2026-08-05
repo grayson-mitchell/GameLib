@@ -1301,7 +1301,7 @@
         "sidebar": {
             "accessibility": "Access accessibility features to customize your experience.",
             "accounts": "Manage your connected store accounts (Epic, GOG, Amazon), logout or login on them.",
-            "community": "Join our community on Discord and support GameLib's development.",
+            "community": "Support GameLib's development.",
             "docs": "Read documentation for help with using GameLib.",
             "downloads": "Track and manage your game downloads and installations.",
             "library": "Access your game library from different stores in one place.",
