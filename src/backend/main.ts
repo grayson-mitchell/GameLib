@@ -153,7 +153,6 @@ import {
   githubSponsorsPage,
   heroicGithubURL,
   kofiPage,
-  patreonPage,
   sidInfoUrl,
   supportURL,
   weblateUrl,
@@ -740,7 +739,6 @@ addListener('openWeblate', async () => openUrlOrFile(weblateUrl))
 addListener('showAboutWindow', () => showAboutWindow())
 addListener('openLoginPage', async () => openUrlOrFile(epicLoginUrl))
 addListener('openDiscordLink', async () => openUrlOrFile(discordLink))
-addListener('openPatreonPage', async () => openUrlOrFile(patreonPage))
 addListener('openKofiPage', async () => openUrlOrFile(kofiPage))
 addListener('openGithubSponsorsPage', async () =>
   openUrlOrFile(githubSponsorsPage)

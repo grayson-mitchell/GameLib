@@ -89,7 +89,6 @@ interface SyncIPCFunctions {
   showAboutWindow: () => void
   openLoginPage: () => void
   openDiscordLink: () => void
-  openPatreonPage: () => void
   openKofiPage: () => void
   openGithubSponsorsPage: () => void
   openWinePrefixFAQ: () => void

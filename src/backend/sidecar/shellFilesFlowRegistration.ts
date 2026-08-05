@@ -2,18 +2,17 @@
  * Curated shell/files/diagnostics channel registration (Phase 34.3 Plans 01
  * and 02, D-14, REQ-34.3-01/REQ-34.3-02/REQ-34.3-05/REQ-34.3-06/REQ-34.3-13).
  *
- * Registers 21 of this slice's 29 channels onto electronStub's `ipcMain`
+ * Registers 20 of this slice's 28 channels onto electronStub's `ipcMain`
  * recorder, importing the REAL `backend/utils.ts` / `backend/utils/filesystem`
  * functions UNCHANGED:
  *
- *   send (ipcMain.on, 18):
+ *   send (ipcMain.on, 17):
  *     - `openExternalUrl` -> `utils.ts`'s `openUrlOrFile(args[0])` (`main.ts:735`)
  *     - `openFolder` -> `openUrlOrFile(args[0])` (`main.ts:736`)
  *     - `openSupportPage` -> `openUrlOrFile(supportURL)` (`main.ts:737`)
  *     - `openWeblate` -> `openUrlOrFile(weblateUrl)` (`main.ts:739`)
  *     - `openLoginPage` -> `openUrlOrFile(epicLoginUrl)` (`main.ts:741`)
  *     - `openDiscordLink` -> `openUrlOrFile(discordLink)` (`main.ts:742`)
- *     - `openPatreonPage` -> `openUrlOrFile(patreonPage)` (`main.ts:743`)
  *     - `openKofiPage` -> `openUrlOrFile(kofiPage)` (`main.ts:744`)
  *     - `openGithubSponsorsPage` -> `openUrlOrFile(githubSponsorsPage)` (`main.ts:745`)
  *     - `openWinePrefixFAQ` -> `openUrlOrFile(wineprefixFAQ)` (`main.ts:748`)
@@ -117,7 +116,6 @@ import {
   weblateUrl,
   epicLoginUrl,
   discordLink,
-  patreonPage,
   kofiPage,
   githubSponsorsPage,
   wineprefixFAQ,
@@ -138,14 +136,14 @@ function logSendFailure(channel: string, error: unknown): void {
 }
 
 /**
- * Registers this module's 21 shell/files/diagnostics channels (18 from Plan
+ * Registers this module's 20 shell/files/diagnostics channels (17 from Plan
  * 01, plus Plan 02's `clearCache`/`clearAchievementCache`/`resetHeroic`).
  * Called once from `handlers.ts` — this module owns no side effects at
  * import time beyond the imports above; the caller decides when
  * registration onto the handler registry happens.
  */
 export function registerShellFilesFlows(): void {
-  // ── send (12): the 12 URL openers sharing the openUrlOrFile code path ────
+  // ── send (11): the 11 URL openers sharing the openUrlOrFile code path ────
 
   ipcMain.on('openExternalUrl', (_event: unknown, ...args: unknown[]) => {
     openUrlOrFile(args[0] as string).catch((error) =>
@@ -180,12 +178,6 @@ export function registerShellFilesFlows(): void {
   ipcMain.on('openDiscordLink', () => {
     openUrlOrFile(discordLink).catch((error) =>
       logSendFailure('openDiscordLink', error)
-    )
-  })
-
-  ipcMain.on('openPatreonPage', () => {
-    openUrlOrFile(patreonPage).catch((error) =>
-      logSendFailure('openPatreonPage', error)
     )
   })
 

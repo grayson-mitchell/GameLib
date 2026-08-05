@@ -28,7 +28,6 @@ export const openExternalUrl = makeListenerCaller('openExternalUrl')
 export const getHeroicVersion = makeHandlerInvoker('getHeroicVersion')
 export const getLatestReleases = makeHandlerInvoker('getLatestReleases')
 export const getCurrentChangelog = makeHandlerInvoker('getCurrentChangelog')
-export const openPatreonPage = makeListenerCaller('openPatreonPage')
 export const openKofiPage = makeListenerCaller('openKofiPage')
 export const openGithubSponsorsPage = makeListenerCaller('openGithubSponsorsPage')
 // D-01/D-02 (Phase 34.1 Plan 03): window chrome executes RENDERER-SIDE under Tauri --
