@@ -1303,241 +1303,6 @@ fn clear_storage_script(exfil_host: &str) -> String {
     template.replace("@@EXFIL_HOST@@", &exfil_host_js)
 }
 
-// ---- In-field autofill glyph support (Phase 34.4.2 Plan 03, REQ-34.4.2-04/06/07/08/10) ----
-//
-// Spikes 020/022 (`login-window-ux-macos.md`) proved the system AutoFill panel cannot be
-// opened directly, but a synthesized right-click at the password field pops the real context
-// menu with `AutoFill ›` in it. This section builds everything up to (but not including) that
-// click: the injected glyph script, and the page-to-Rust request channel carrying the field's
-// geometry (plan 34.4.2-04 posts the click itself). Scoped EXCLUSIVELY to the Tauri-managed
-// `humble_login_open` arm's `if visible` surface (Humble/GOG/Amazon) -- REQ-34.4.2-10's locked
-// user-decision scope. The pristine Epic surface (`open_pristine_epic_login_window`) receives
-// none of this: no script, no sentinel, no Cargo feature.
-
-/// Sentinel path on the existing `REVEAL_EXFIL_HOST` (never a second host) that the injected
-/// glyph script's cancelled-navigation request uses. Path discrimination -- not just host --
-/// is what keeps this channel from colliding with the pre-existing `/reveal`
-/// (`humble_reveal_post`) and `/clear-storage` (`humble_login_clear_storage`) sentinels on the
-/// same reserved host (T-34.4.2-13).
-const AUTOFILL_EXFIL_PATH: &str = "/autofill-request";
-
-/// The parsed, validated payload `parse_autofill_request` (below) produces from the glyph
-/// script's cancelled-navigation request. `hit_id`/`hit_tag`/`hit_type` are advisory
-/// diagnostics ONLY -- the machine record of the MANDATORY `document.elementFromPoint` check
-/// (`login-window-ux-macos.md` S4) -- their absence never fails the parse, and each is
-/// truncated to at most 64 chars before reaching a caller, so a hostile page cannot use this
-/// channel to smuggle an arbitrarily large string into a log line (T-34.4.2-11). Deliberately
-/// does NOT derive the standard formatting trait (REQ-34.1-07's file-wide text gate, same
-/// reasoning as `RevealPostArgs`/`ClearStorageArgs` above) -- `#[cfg(test)]` assertions read
-/// fields directly instead of relying on that trait.
-struct AutofillRequest {
-    x: f64,
-    y: f64,
-    w: f64,
-    h: f64,
-    hit_id: Option<String>,
-    hit_tag: Option<String>,
-    hit_type: Option<String>,
-}
-
-/// Truncates `s` to at most `max` CHARACTERS (never bytes) -- `chars().take` is UTF-8-safe,
-/// unlike a byte-index slice that could panic mid-codepoint on a hostile page's crafted
-/// `hitId`/`hitTag`/`hitType` string.
-fn truncate_chars(s: &str, max: usize) -> String {
-    s.chars().take(max).collect()
-}
-
-/// This channel's entire ASVS V5 input validation (T-34.4.2-10/-13, mirrors
-/// `reveal_post_args`'s "this arm's entire input validation lives here" discipline): pure, no
-/// `AppHandle`, no logging, no I/O, never panics. Validates in this order -- host equals
-/// `REVEAL_EXFIL_HOST`; path equals `AUTOFILL_EXFIL_PATH` (discriminating this channel from the
-/// pre-existing `/reveal` and `/clear-storage` sentinels on the SAME host, T-34.4.2-13); a
-/// `data` query pair exists; it parses as JSON; `x`/`y`/`w`/`h` are all present, numeric AND
-/// finite (a NaN/inf coordinate must never reach plan 34.4.2-04's coordinate math -- in
-/// practice JSON itself cannot encode a non-finite float, so a crafted non-finite value is
-/// rejected either by this explicit guard or, for a literal `NaN`/`Infinity` token, by the JSON
-/// parse failing outright; both paths return `None`, which is the only guarantee this function
-/// makes); `w > 0.0 && h > 0.0` (a degenerate zero/negative rect is never a real field). Any
-/// failure returns `None` -- never a partial struct, never a panic, never `.unwrap()`.
-/// `hit_id`/`hit_tag`/`hit_type` are read as strings if present and truncated to 64 chars each;
-/// their absence or wrong type never fails the parse (T-34.4.2-11's advisory-diagnostics-only
-/// discipline).
-fn parse_autofill_request(url: &tauri::Url) -> Option<AutofillRequest> {
-    if url.host_str() != Some(REVEAL_EXFIL_HOST) {
-        return None;
-    }
-    if url.path() != AUTOFILL_EXFIL_PATH {
-        return None;
-    }
-    let (_, raw_data) = url.query_pairs().find(|(k, _)| k == "data")?;
-    let parsed: Value = serde_json::from_str(&raw_data).ok()?;
-    let x = parsed.get("x")?.as_f64()?;
-    let y = parsed.get("y")?.as_f64()?;
-    let w = parsed.get("w")?.as_f64()?;
-    let h = parsed.get("h")?.as_f64()?;
-    if !x.is_finite() || !y.is_finite() || !w.is_finite() || !h.is_finite() {
-        return None;
-    }
-    if w <= 0.0 || h <= 0.0 {
-        return None;
-    }
-    let hit_id = parsed
-        .get("hitId")
-        .and_then(|v| v.as_str())
-        .map(|s| truncate_chars(s, 64));
-    let hit_tag = parsed
-        .get("hitTag")
-        .and_then(|v| v.as_str())
-        .map(|s| truncate_chars(s, 64));
-    let hit_type = parsed
-        .get("hitType")
-        .and_then(|v| v.as_str())
-        .map(|s| truncate_chars(s, 64));
-    Some(AutofillRequest {
-        x,
-        y,
-        w,
-        h,
-        hit_id,
-        hit_tag,
-        hit_type,
-    })
-}
-
-/// Builds the JS injected as an `initialization_script()` into the Tauri-managed login
-/// surface's VISIBLE builder ONLY (`humble_login_open`'s `if visible` block -- Task 2, below).
-/// Uses `clear_storage_script`'s `@@EXFIL_HOST@@` placeholder + `serde_json::to_string` +
-/// `.replace()` technique verbatim (T-34.4.2-SC's escaping discipline) -- `exfil_host` is the
-/// ONLY interpolated value, and it appears exactly once in the output.
-///
-/// Contract the generated script implements (REQ-34.4.2-04/06/07):
-/// - Idempotent: bails immediately if `window.__GAMELIB_LOGIN_GLYPH__` is already set (sets
-///   it first).
-/// - `initialization_script()` itself runs before any page script, in every frame (login forms
-///   are frequently in iframes) -- this script additionally does an initial scan on load plus a
-///   debounced `MutationObserver` on `document.documentElement`
-///   (`{childList:true, subtree:true}`) so a form that renders late is still decorated.
-/// - Renders exactly one glyph per undecorated `input[type=password]`, positioned with
-///   `position:fixed` (from `getBoundingClientRect()`) over the field's right-hand inside edge,
-///   repositioned on `scroll` (capture) and `resize`. Never re-parents the input, never sets
-///   any input attribute other than one namespaced marker, never touches the input's own
-///   styles -- a login form's own validation logic must see an untouched field.
-/// - Accessible: `role="button"`, `aria-label="AutoFill password"`, matching `title`,
-///   `tabindex="-1"` (never enters the form's tab order).
-/// - Keyboard-transparent (REQ-34.4.2-06): registers NO `keydown`/`keyup`/`keypress` listener
-///   anywhere, and calls `preventDefault()` on nothing but its own `mousedown` -- Cmd+V into the
-///   password field (the universal password-manager fallback, `login-window-ux-macos.md` S5)
-///   must keep working.
-/// - On activation: `field.focus()`, reads `getBoundingClientRect()`, computes the centre, and
-///   calls `document.elementFromPoint(cx, cy)` to read `id`/`tagName`/`type` off the result --
-///   the MANDATORY diagnostic `login-window-ux-macos.md` S4 requires, since a coordinate error
-///   otherwise silently probes the wrong field. Builds `{x,y,w,h,hitId,hitTag,hitType}` -- **the
-///   field's `value` is never read and must not appear anywhere in this script** (T-34.4.2-10).
-/// - Delivers via a hidden (`display:none`, 1x1) `<iframe>`, never `location.href` -- an iframe
-///   navigation is observed and cancelled identically by this surface's navigation hook, but
-///   (unlike `location.href`) never fires `beforeunload` on the live, credential-bearing main
-///   document or drops half-entered form state.
-/// - Rate-limits itself: ignores a second activation within 750ms (T-34.4.2-14's page-side
-///   half; plan 34.4.2-04 adds the authoritative server-side debounce).
-/// - The whole script is wrapped in one top-level try/catch (T-34.4.2-16) -- a throwing glyph
-///   must never break a live login page.
-///
-/// Mirrors `clear_storage_script`'s own `concat!`-of-single-line-pieces discipline (every JS
-/// string literal below uses single quotes, so every piece keeps an EVEN raw `"`-count on its
-/// own source line -- `longRunningChannels.test.ts`'s WR-08 stripper-integrity guard).
-fn autofill_glyph_script(exfil_host: &str) -> String {
-    let exfil_host_js =
-        serde_json::to_string(exfil_host).unwrap_or_else(|_| "\"gamelib.invalid\"".to_string());
-    let template = concat!(
-        "(function() { ",
-        "try { ",
-        "if (window.__GAMELIB_LOGIN_GLYPH__) { return; } ",
-        "window.__GAMELIB_LOGIN_GLYPH__ = true; ",
-        "var MARK = 'data-gamelib-autofill-glyph'; ",
-        "var lastActivation = 0; ",
-        "function position(glyph, field) { ",
-        "var r = field.getBoundingClientRect(); ",
-        "var size = Math.max(16, Math.min(24, r.height - 8)); ",
-        "glyph.style.top = (r.top + (r.height - size) / 2) + 'px'; ",
-        "glyph.style.left = (r.left + r.width - size - 4) + 'px'; ",
-        "glyph.style.width = size + 'px'; ",
-        "glyph.style.height = size + 'px'; ",
-        "} ",
-        "function deliver(payload) { ",
-        "var frame = document.getElementById('__gamelib_autofill_frame__'); ",
-        "if (!frame) { ",
-        "frame = document.createElement('iframe'); ",
-        "frame.id = '__gamelib_autofill_frame__'; ",
-        "frame.style.display = 'none'; ",
-        "frame.style.width = '1px'; ",
-        "frame.style.height = '1px'; ",
-        "(document.body || document.documentElement).appendChild(frame); ",
-        "} ",
-        "frame.src = 'https://' + @@EXFIL_HOST@@ + '/autofill-request?data=' + encodeURIComponent(JSON.stringify(payload)); ",
-        "} ",
-        "function activate(field) { ",
-        "var now = Date.now(); ",
-        "if (now - lastActivation < 750) { return; } ",
-        "lastActivation = now; ",
-        "field.focus(); ",
-        "var r = field.getBoundingClientRect(); ",
-        "var cx = r.left + r.width / 2, cy = r.top + r.height / 2; ",
-        "var hit = document.elementFromPoint(cx, cy) || {}; ",
-        "deliver({ ",
-        "x: r.left, y: r.top, w: r.width, h: r.height, ",
-        "hitId: hit.id || null, hitTag: hit.tagName || null, hitType: hit.type || null ",
-        "}); ",
-        "} ",
-        "function decorate(field) { ",
-        "if (field.hasAttribute(MARK)) { return; } ",
-        "field.setAttribute(MARK, '1'); ",
-        "var glyph = document.createElement('div'); ",
-        "glyph.setAttribute('role', 'button'); ",
-        "glyph.setAttribute('aria-label', 'AutoFill password'); ",
-        "glyph.setAttribute('title', 'AutoFill password'); ",
-        "glyph.setAttribute('tabindex', '-1'); ",
-        "glyph.textContent = String.fromCharCode(128273); ",
-        "glyph.style.position = 'fixed'; ",
-        "glyph.style.zIndex = '2147483647'; ",
-        "glyph.style.display = 'flex'; ",
-        "glyph.style.alignItems = 'center'; ",
-        "glyph.style.justifyContent = 'center'; ",
-        "glyph.style.cursor = 'pointer'; ",
-        "glyph.style.background = 'transparent'; ",
-        "glyph.style.fontSize = '14px'; ",
-        "glyph.style.lineHeight = '1'; ",
-        "glyph.style.userSelect = 'none'; ",
-        "position(glyph, field); ",
-        "glyph.addEventListener('mousedown', function(evt) { ",
-        "evt.preventDefault(); ",
-        "activate(field); ",
-        "}); ",
-        "var reposition = function() { position(glyph, field); }; ",
-        "window.addEventListener('scroll', reposition, true); ",
-        "window.addEventListener('resize', reposition, true); ",
-        "(document.body || document.documentElement).appendChild(glyph); ",
-        "} ",
-        "function scan(root) { ",
-        "var fields = (root || document).querySelectorAll('input[type=password]'); ",
-        "for (var i = 0; i < fields.length; i++) { decorate(fields[i]); } ",
-        "} ",
-        "var debounceTimer = null; ",
-        "function scheduleScan() { ",
-        "if (debounceTimer) { return; } ",
-        "debounceTimer = setTimeout(function() { debounceTimer = null; scan(document); }, 200); ",
-        "} ",
-        "scan(document); ",
-        "if (document.readyState === 'loading') { ",
-        "document.addEventListener('DOMContentLoaded', function() { scan(document); }); ",
-        "} ",
-        "var observer = new MutationObserver(function() { scheduleScan(); }); ",
-        "observer.observe(document.documentElement, { childList: true, subtree: true }); ",
-        "} catch (e) { } ",
-        "})();"
-    );
-    template.replace("@@EXFIL_HOST@@", &exfil_host_js)
-}
-
 // ---- Login-sheet cancel channel: the /login-cancel sentinel and its injected strip
 // (Phase 34.4.2 Plan 08, REQ-34.4.2-03/04/06/07/08/10, T-34.4.2-33) ----
 //
@@ -1545,34 +1310,38 @@ fn autofill_glyph_script(exfil_host: &str) -> String {
 // Tauri-managed login window as an AppKit sheet with NO close affordance -- `endSheet:` HIDES
 // rather than closes, and a sheet renders no titlebar close button, exactly the hard lock-out
 // spike 021 measured (T-34.4.2-33). This section closes it via a SEPARATE reserved-path
-// sentinel on the SAME `REVEAL_EXFIL_HOST` the reveal/clear-storage/autofill channels already
-// use -- discriminated by path, not host (T-34.4.2-13's discipline).
+// sentinel on the SAME `REVEAL_EXFIL_HOST` the reveal/clear-storage channels already use --
+// discriminated by path, not host (T-34.4.2-13's discipline).
 
 /// Sentinel path on `REVEAL_EXFIL_HOST` (never a second host) the injected cancel strip's
-/// cancelled-navigation request uses. Joins `AUTOFILL_EXFIL_PATH`/`/reveal`/`/clear-storage` as
-/// a fourth, path-discriminated channel on the same reserved host (T-34.4.2-13).
+/// cancelled-navigation request uses. Joins `/reveal`/`/clear-storage` as a third,
+/// path-discriminated channel on the same reserved host (T-34.4.2-13).
 const LOGIN_CANCEL_EXFIL_PATH: &str = "/login-cancel";
 
-/// This channel's entire input validation (mirrors `parse_autofill_request`'s "this arm's
-/// entire input validation lives here" discipline): pure, no `AppHandle`, no logging, no I/O,
-/// never panics. Carries deliberately NO payload -- unlike `parse_autofill_request`, which must
-/// validate four coordinates, this channel's whole semantic is "the user pressed cancel", so
-/// there is nothing for a hostile page to smuggle through it (T-34.4.2-34, accepted and
-/// bounded -- see this plan's threat register). Returns true only when the host equals
-/// `REVEAL_EXFIL_HOST` AND the path equals `LOGIN_CANCEL_EXFIL_PATH` exactly -- false for
-/// `AUTOFILL_EXFIL_PATH`/`/reveal`/`/clear-storage` on the same host (no collision with any
-/// sibling sentinel), and false for this exact path on any other host.
+/// This channel's entire input validation (mirrors this file's other sentinel-path
+/// validators' "this arm's entire input validation lives here" discipline): pure, no
+/// `AppHandle`, no logging, no I/O, never panics. Carries deliberately NO payload -- unlike
+/// a payload-bearing sentinel that must validate structured data, this channel's whole
+/// semantic is "the user pressed cancel", so there is nothing for a hostile page to smuggle
+/// through it (T-34.4.2-34, accepted and bounded -- see this plan's threat register).
+/// Returns true only when the host equals `REVEAL_EXFIL_HOST` AND the path equals
+/// `LOGIN_CANCEL_EXFIL_PATH` exactly -- false for `/reveal`/`/clear-storage` on the same
+/// host (no collision with either sibling sentinel), and false for this exact path on any
+/// other host.
 fn is_login_cancel_request(url: &tauri::Url) -> bool {
     url.host_str() == Some(REVEAL_EXFIL_HOST) && url.path() == LOGIN_CANCEL_EXFIL_PATH
 }
 
 /// Builds the JS injected as an `initialization_script()` into the Tauri-managed login
 /// surface's VISIBLE builder ONLY (`humble_login_open`'s `if visible` block, macOS-gated --
-/// see the injection site's own doc comment, below). A SEPARATE builder from
-/// `autofill_glyph_script`, not an extension of it -- the two have different lifecycles: the
-/// glyph is kill-switchable via `GAMELIB_AUTOFILL_GLYPH`, this strip is NOT and must never
-/// become so. An env var that removes the only visible exit from a parent-blocking sheet is a
-/// lock-out switch, not a safety switch (T-34.4.2-33/T-34.4.2-15).
+/// see the injection site's own doc comment, below). This strip is NOT kill-switchable and
+/// must never become so: an env var that removes the only visible exit from a
+/// parent-blocking sheet is a lock-out switch, not a safety switch (T-34.4.2-33/T-34.4.2-15).
+/// After Phase 34.4.2 Plan 13 deleted the in-field injected-glyph mechanism this comment
+/// used to be contrasted against (operator decision D-A), this is permanent by construction
+/// rather than by convention: no kill-switchable injected control exists anywhere in this
+/// arm at all, so there is nothing left this strip's independence could even be contrasted
+/// against.
 ///
 /// Contract the generated script implements (REQ-34.4.2-03/04/06/07):
 /// - **Top-frame only (WR-03, `34.4.2-REVIEW.md`).** The FIRST statement inside the try is
@@ -1587,8 +1356,8 @@ fn is_login_cancel_request(url: &tauri::Url) -> bool {
 ///   (resolved into a local first; if neither exists yet, the append is skipped rather than
 ///   thrown -- WR-04, below), `position:fixed`, pinned to the top-right inset, `z-index` >=
 ///   2147483000, visible label text "Cancel sign-in", `role="button"`, `aria-label="Cancel
-///   sign-in"`, and enough contrast to be legible on a light or dark page (styling is executor
-///   discretion, matching `autofill_glyph_script`'s own precedent).
+///   sign-in"`, and enough contrast to be legible on a light or dark page (styling is
+///   executor discretion).
 /// - **Pointer control, not a keyboard-activatable one (IN-02, `34.4.2-REVIEW.md`).** No
 ///   `tabindex` is set -- REQ-34.4.2-06 forbids key listeners, so this control can only ever
 ///   activate on `click`, and advertising `tabindex="0"` would promise Enter/Space activation
@@ -1618,10 +1387,10 @@ fn is_login_cancel_request(url: &tauri::Url) -> bool {
 ///   `login_cancel_strip_script_is_wrapped_in_a_single_top_level_try_catch` asserts `"try {"`
 ///   appears exactly once) -- it is a reorder plus null-root-safe appends instead.
 ///
-/// Mirrors `autofill_glyph_script`'s own `concat!`-of-single-line-pieces discipline (every JS
-/// string literal below uses single quotes, so every piece keeps an EVEN raw `"`-count on its
-/// own source line -- `longRunningChannels.test.ts`'s WR-08 stripper-integrity guard). Pure:
-/// the same host input always produces the same output.
+/// Uses this file's `concat!`-of-single-line-pieces discipline (matching `clear_storage_script`'s
+/// own convention -- every JS string literal below uses single quotes, so every piece keeps an
+/// EVEN raw `"`-count on its own source line -- `longRunningChannels.test.ts`'s WR-08
+/// stripper-integrity guard). Pure: the same host input always produces the same output.
 fn login_cancel_strip_script(exfil_host: &str) -> String {
     let exfil_host_js =
         serde_json::to_string(exfil_host).unwrap_or_else(|_| "\"gamelib.invalid\"".to_string());
@@ -1715,310 +1484,6 @@ fn request_login_sheet_cancel(app: &AppHandle, label: &str, route: &str) {
         let _ = window.close();
     }
     eprintln!("[shell] login-sheet: cancel requested for '{label}' via {route}");
-}
-
-// ---- Synthesized right-click poster: pure coordinate helpers (Phase 34.4.2 Plan 04,
-// REQ-34.4.2-05/06/07/08/10, T-34.4.2-17) ----
-//
-// Spike 022 (`login-window-ux-macos.md` S4) measured the CSS-px -> view-point flip and the
-// bounds-refusal these two helpers implement. Both are deliberately AppKit-free (plain `f64`
-// in, plain `f64`/`Option` out) so their behavior is provable by `cargo test` alone, without a
-// live main-thread/`WKWebView` session -- `post_autofill_right_click` (below) is the only piece
-// of this section that actually touches AppKit.
-
-/// Maps `req`'s CSS rect (top-left origin, the browser's own coordinate system) to its centre
-/// in VIEW coordinates (bottom-left origin, AppKit's) for a view of the given height. `x + w/2`
-/// is unaffected by the flip; `y` becomes `view_height - (y + h/2)`. `view_height` must be the
-/// WEBVIEW's OWN `bounds().size.height` -- never the window's content view
-/// (`login_window_wk_webview`'s own doc comment: a title-bar-sized error there silently probes
-/// the wrong element).
-///
-/// Caller: `post_autofill_right_click` (below).
-#[cfg(target_os = "macos")]
-fn css_rect_center_in_view(req: &AutofillRequest, view_height: f64) -> (f64, f64) {
-    (req.x + req.w / 2.0, view_height - (req.y + req.h / 2.0))
-}
-
-/// Validates -- despite the name, this REFUSES rather than clamps -- `point` against `bounds`:
-/// `Some(point)` only when every value is finite, both bounds are strictly positive, and
-/// `0.0 <= x < width && 0.0 <= y < height`. Otherwise `None`. Refusing beats edge-clamping
-/// because a clamped point lands on a DIFFERENT element than the one the page measured, and the
-/// resulting context menu would be misread as evidence about a password field it never actually
-/// touched (`login-window-ux-macos.md`'s mandatory `document.elementFromPoint` warning).
-///
-/// Caller: `post_autofill_right_click` (below).
-#[cfg(target_os = "macos")]
-fn clamp_point_to_view_bounds(point: (f64, f64), bounds: (f64, f64)) -> Option<(f64, f64)> {
-    let (x, y) = point;
-    let (width, height) = bounds;
-    if !x.is_finite() || !y.is_finite() || !width.is_finite() || !height.is_finite() {
-        return None;
-    }
-    if width <= 0.0 || height <= 0.0 {
-        return None;
-    }
-    if x < 0.0 || x >= width || y < 0.0 || y >= height {
-        return None;
-    }
-    Some((x, y))
-}
-
-/// Debounce window for `post_autofill_right_click`'s server-side rate limit (T-34.4.2-18) --
-/// the AUTHORITATIVE gate, unlike `autofill_glyph_script`'s own page-side 750ms limit, which a
-/// hostile or buggy page fully controls. Matches that page-side value so a well-behaved page
-/// never trips this gate on its own legitimate use.
-#[cfg(target_os = "macos")]
-const AUTOFILL_POST_DEBOUNCE: Duration = Duration::from_millis(750);
-
-/// Cap on `LAST_AUTOFILL_POST`'s map size -- mirrors `LOGIN_WINDOW_EVENTS_CAP`/
-/// `PRESENTED_LOGIN_SHEETS_CAP`'s discipline (T-34.4.2-08): an unbounded map would be a
-/// denial-of-service surface if a caller somehow minted labels without the process ever
-/// exhausting them. In practice at most one or two Tauri-managed login windows are ever open at
-/// once, so this bound is generous, not a realistic ceiling.
-#[cfg(target_os = "macos")]
-const AUTOFILL_POST_DEBOUNCE_MAP_CAP: usize = PRESENTED_LOGIN_SHEETS_CAP;
-
-/// Per-label last-post timestamp for `post_autofill_right_click`'s server-side debounce gate
-/// (T-34.4.2-18). Read and written FIRST, before any AppKit call -- a flooded request must be
-/// rejected before it ever touches the webview/window resolvers below.
-#[cfg(target_os = "macos")]
-static LAST_AUTOFILL_POST: Mutex<Option<HashMap<String, std::time::Instant>>> = Mutex::new(None);
-
-/// The SOLE construction site for a synthesized mouse event (T-34.4.2-17/-20) --
-/// `post_autofill_right_click` calls this exactly twice (`RightMouseDown` then
-/// `RightMouseUp`), never constructing an `NSEvent` any other way. Empty modifier flags,
-/// timestamp `0.0`, the TARGET window's own `windowNumber()`, `context: None` (public API --
-/// spike 022's own measured call, `login-window-ux-macos.md` S4), `eventNumber: 0`,
-/// `clickCount: 1`, `pressure: 1.0` -- no chord can be forged: empty modifier flags means no
-/// Cmd/Shift/Option/Control is ever attached to a synthesized click.
-#[cfg(target_os = "macos")]
-fn synth_autofill_mouse_event(
-    ty: objc2_app_kit::NSEventType,
-    point_in_window: NSPoint,
-    window: &objc2_app_kit::NSWindow,
-) -> Option<Retained<objc2_app_kit::NSEvent>> {
-    // Safe binding (not an `unsafe fn`): `mouseEventWithType:location:modifierFlags:
-    // timestamp:windowNumber:context:eventNumber:clickCount:pressure:` is public API
-    // (spike 022) that returns `None` on failure rather than trapping.
-    objc2_app_kit::NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure(
-        ty,
-        point_in_window,
-        objc2_app_kit::NSEventModifierFlags::empty(),
-        0.0,
-        window.windowNumber(),
-        None,
-        0,
-        1,
-        1.0,
-    )
-}
-
-/// Posts a debounced, bounds-validated synthesized right-click pair (`RightMouseDown` then
-/// `RightMouseUp`) at the password field's centre in a Tauri-managed login window -- spike
-/// 022's measured route to the real system AutoFill context menu (T-34.4.2-17). Called from
-/// exactly one place: the single sentinel branch inside `humble_login_open`'s `.on_navigation(`
-/// closure (REQ-34.4.2-10's locked scope -- the pristine Epic surface is unreachable from here).
-///
-/// Ordered contract -- the order is load-bearing and is asserted by source position (Task 3):
-///   1. Debounce first (`LAST_AUTOFILL_POST`) -- server-side, authoritative (T-34.4.2-18).
-///   2. Refuse a label absent from `PRESENTED_LOGIN_SHEETS` -- only a VISIBLE, presented login
-///      sheet is eligible; hidden reveal/clear windows are structurally unreachable.
-///   3. Resolve the WEBVIEW (`login_window_wk_webview`), never the window's content view.
-///   4. Hop to the main thread; read the webview's OWN `bounds()`, flip via
-///      `css_rect_center_in_view`, then `clamp_point_to_view_bounds` -- a refusal here means no
-///      event is EVER posted.
-///   5. Convert to window coordinates via `convertPoint:toView:`.
-///   6. Resolve the `NSWindow` from the view.
-///   7. `makeKeyAndOrderFront` ONLY when the target is not already a presented sheet (spike
-///      022's "the menu will not appear on a non-key window" measurement was taken under the
-///      RETIRED child-window mechanism; under sheet presentation the window is already key by
-///      construction, and re-ordering a presented sheet is a live mid-session detachment risk
-///      -- WR-07, `34.4.2-REVIEW.md`). Then post exactly two events built through
-///      `synth_autofill_mouse_event`.
-///   8. Log exactly one success line: label, the four numbers, the two converted coordinates,
-///      and `hit_id`/`hit_tag`/`hit_type` -- never the URL, origin, or page title
-///      (T-34.4.2-19).
-///
-/// Never fatal (this file's established `[shell] WARN: ...` discipline): every refusal logs one
-/// line and returns without ever calling `postEvent_atStart`.
-///
-/// Crosses the `run_on_main_thread` boundary with this file's existing `SendPtr` convention
-/// (see `present_login_window_as_sheet`'s own doc comment, above), moving the whole wrapper into
-/// the closure and rebinding it inside (the Rust-2021 disjoint-capture rebinding this file
-/// already documents). Blocks on the dispatch via `mpsc_channel` + `rx.recv_timeout`, the same
-/// worker-blocks-on-a-channel shape `present_login_window_as_sheet` already uses.
-#[cfg(target_os = "macos")]
-fn post_autofill_right_click(app: &AppHandle, label: &str, req: &AutofillRequest) {
-    // 1. Debounce first -- authoritative, server-side (T-34.4.2-18). Checked and recorded
-    // BEFORE anything below touches AppKit at all.
-    let now = std::time::Instant::now();
-    if let Ok(mut guard) = LAST_AUTOFILL_POST.lock() {
-        let map = guard.get_or_insert_with(HashMap::new);
-        if let Some(last) = map.get(label) {
-            if now.duration_since(*last) < AUTOFILL_POST_DEBOUNCE {
-                eprintln!(
-                    "[shell] post_autofill_right_click: debounced for '{label}' -- refusing"
-                );
-                return;
-            }
-        }
-        if map.len() >= AUTOFILL_POST_DEBOUNCE_MAP_CAP && !map.contains_key(label) {
-            if let Some(oldest_key) = map.keys().next().cloned() {
-                map.remove(&oldest_key);
-            }
-        }
-        map.insert(label.to_string(), now);
-    }
-
-    // 2. Refuse hidden windows: only a label present in PRESENTED_LOGIN_SHEETS was ever a
-    // visible, presented login sheet -- see present_login_window_as_sheet's own doc comment.
-    let is_presented = PRESENTED_LOGIN_SHEETS
-        .lock()
-        .ok()
-        .and_then(|guard| {
-            guard
-                .as_ref()
-                .map(|list| list.iter().any(|existing| existing == label))
-        })
-        .unwrap_or(false);
-    if !is_presented {
-        eprintln!(
-            "[shell] WARN: post_autofill_right_click: '{label}' is not a presented login sheet -- refusing"
-        );
-        return;
-    }
-
-    // 3. Resolve the WEBVIEW, never the window's content view.
-    let Some(webview_addr) = login_window_wk_webview(app, label) else {
-        eprintln!(
-            "[shell] WARN: post_autofill_right_click: no WKWebView for '{label}' -- skipping"
-        );
-        return;
-    };
-
-    // SAFETY: see `SendPtr`'s doc comment on `present_login_window_as_sheet`, above -- a bare
-    // address is not normally `Send`, but this wrapper is reconstructed into a live reference
-    // only from within the main-thread closure below.
-    struct SendPtr(*mut std::ffi::c_void);
-    unsafe impl Send for SendPtr {}
-    let webview_ptr = SendPtr(webview_addr as *mut std::ffi::c_void);
-
-    // Owned copies of everything the main-thread closure needs -- `req` itself is a borrow,
-    // not `Send + 'static`.
-    let req_x = req.x;
-    let req_y = req.y;
-    let req_w = req.w;
-    let req_h = req.h;
-    let hit_id = req.hit_id.clone();
-    let hit_tag = req.hit_tag.clone();
-    let hit_type = req.hit_type.clone();
-    let label_owned = label.to_string();
-
-    let (tx, rx) = mpsc_channel::<()>();
-    if let Err(e) = app.run_on_main_thread(move || {
-        // Forces Rust 2021 disjoint closure capture to move in the WHOLE `SendPtr` wrapper,
-        // not just its inner raw-pointer field, which would bypass `SendPtr`'s `Send` impl
-        // entirely and fail to compile.
-        let webview_ptr = webview_ptr;
-        // SAFETY: resolved moments ago via `login_window_wk_webview`, which only returns
-        // `Some` for a live Tauri-managed `WKWebView`; reconstructed into a live reference
-        // only here, on the main thread.
-        let view: &objc2_app_kit::NSView =
-            unsafe { &*(webview_ptr.0 as *const objc2_app_kit::NSView) };
-        let bounds = view.bounds();
-
-        // 4. Flip CSS -> view coords using the WEBVIEW's own bounds, then validate.
-        let flip_req = AutofillRequest {
-            x: req_x,
-            y: req_y,
-            w: req_w,
-            h: req_h,
-            hit_id: hit_id.clone(),
-            hit_tag: hit_tag.clone(),
-            hit_type: hit_type.clone(),
-        };
-        let (raw_vx, raw_vy) = css_rect_center_in_view(&flip_req, bounds.size.height);
-        let Some((vx, vy)) = clamp_point_to_view_bounds(
-            (raw_vx, raw_vy),
-            (bounds.size.width, bounds.size.height),
-        ) else {
-            eprintln!(
-                "[shell] WARN: post_autofill_right_click: '{label_owned}' point ({raw_vx}, {raw_vy}) outside view bounds ({}, {}) -- refusing",
-                bounds.size.width, bounds.size.height
-            );
-            let _ = tx.send(());
-            return;
-        };
-
-        // 5. Convert to window coordinates.
-        let in_window = view.convertPoint_toView(NSPoint::new(vx, vy), None);
-
-        // 6. Resolve the NSWindow.
-        let Some(window) = view.window() else {
-            eprintln!(
-                "[shell] WARN: post_autofill_right_click: '{label_owned}' view has no NSWindow -- skipping"
-            );
-            let _ = tx.send(());
-            return;
-        };
-
-        // 7. makeKeyAndOrderFront -- but ONLY when the target is not already a presented
-        // sheet (WR-07, `34.4.2-REVIEW.md`): a presented sheet is key by construction, and
-        // independently re-ordering it in the window list is exactly the operation that has
-        // broken attachment classes before. Skipping the call when isSheet() is true removes
-        // the only known route by which the autofill poster could detach a live sheet
-        // mid-session. Then post exactly two events -- the sole two NSEventType variants this
-        // function ever constructs.
-        if window.isSheet() {
-            eprintln!(
-                "[shell] post_autofill_right_click: '{label_owned}' target is a presented sheet -- skipping makeKeyAndOrderFront (already key, WR-07)"
-            );
-        } else {
-            window.makeKeyAndOrderFront(None);
-        }
-        let Some(mtm) = objc2::MainThreadMarker::new() else {
-            eprintln!(
-                "[shell] WARN: post_autofill_right_click: '{label_owned}' no MainThreadMarker -- skipping"
-            );
-            let _ = tx.send(());
-            return;
-        };
-        let ns_app = objc2_app_kit::NSApplication::sharedApplication(mtm);
-        let down = synth_autofill_mouse_event(
-            objc2_app_kit::NSEventType::RightMouseDown,
-            in_window,
-            &window,
-        );
-        let up = synth_autofill_mouse_event(
-            objc2_app_kit::NSEventType::RightMouseUp,
-            in_window,
-            &window,
-        );
-        match (down, up) {
-            (Some(down), Some(up)) => {
-                ns_app.postEvent_atStart(&down, false);
-                ns_app.postEvent_atStart(&up, false);
-                // 8. Exactly one success line -- label, the four numbers, the two converted
-                // coordinates, and the hit_* diagnostics. Never the URL, origin, or title.
-                eprintln!(
-                    "[shell] post_autofill_right_click: posted for '{label_owned}' x={req_x} y={req_y} w={req_w} h={req_h} view=({vx}, {vy}) window=({}, {}) hit_id={hit_id:?} hit_tag={hit_tag:?} hit_type={hit_type:?}",
-                    in_window.x, in_window.y
-                );
-            }
-            _ => {
-                eprintln!(
-                    "[shell] WARN: post_autofill_right_click: '{label_owned}' event synthesis failed -- skipping"
-                );
-            }
-        }
-        let _ = tx.send(());
-    }) {
-        eprintln!(
-            "[shell] WARN: post_autofill_right_click: main-thread dispatch failed for '{label}' ({e})"
-        );
-        return;
-    }
-    let _ = rx.recv_timeout(Duration::from_secs(10));
 }
 
 /// Host this arm uses to decide whether the window it is about to open is Epic's --
@@ -2654,45 +2119,6 @@ fn login_window_ns_window(app: &AppHandle, label: &str) -> Option<usize> {
         .map(|ptr| ptr as usize)
 }
 
-/// Resolves the live `WKWebView` handle for a Tauri-managed login window (same scope as
-/// `login_window_ns_window`, above -- REQ-34.4.2-10). Returns the raw address as `usize` for the
-/// same `Send`-across-`run_on_main_thread` rationale documented on `login_window_ns_window`,
-/// above: callers reconstruct it inside their own main-thread closure.
-///
-/// `with_webview`'s closure runs synchronously inline when invoked on the OS main thread (spike
-/// 016 Q1, already relied on by other call sites in this file -- see
-/// `clear_default_data_store_cookies_for_domain`'s and `humble_login_clear_cookies`'s own doc
-/// comments on that distinction), so the address is captured out through an `Option` in the
-/// enclosing scope rather than a channel -- a channel is this file's convention for the
-/// WORKER-thread case, which does not apply to this resolver's expected (main-thread) caller.
-/// The closure itself must still be `Send + 'static` (tauri's own `with_webview` bound), so the
-/// enclosing `Option` is wrapped in `Arc<Mutex<..>>` -- the same wrapper shape
-/// `open_pristine_epic_login_window`'s `monitor_slot` above already uses for an identical
-/// capture-out-of-a-main-thread-closure need.
-///
-/// Plan 34.4.2-04 needs this specifically because the coordinate flip for the synthesized
-/// right-click must use the WEBVIEW's own `bounds()`, never the window's content view -- a
-/// title-bar-sized error there silently probes the wrong element (`login-window-ux-macos.md`'s
-/// own "Always log `document.elementFromPoint`" warning).
-///
-/// Side-effect free: never logs a label's URL or any page content.
-///
-/// Caller: `post_autofill_right_click` (Phase 34.4.2 Plan 04, below).
-#[cfg(target_os = "macos")]
-fn login_window_wk_webview(app: &AppHandle, label: &str) -> Option<usize> {
-    let window = app.get_webview_window(label)?;
-    let addr: Arc<Mutex<Option<usize>>> = Arc::new(Mutex::new(None));
-    let addr_for_closure = Arc::clone(&addr);
-    match window.with_webview(move |platform| {
-        if let Ok(mut guard) = addr_for_closure.lock() {
-            *guard = Some(platform.inner() as usize);
-        }
-    }) {
-        Ok(()) => addr.lock().ok().and_then(|guard| *guard),
-        Err(_) => None,
-    }
-}
-
 /// Cap on `PRESENTED_LOGIN_SHEETS`, below -- mirrors `LOGIN_WINDOW_EVENTS_CAP`'s discipline
 /// (T-34.4.2-08): an unbounded presented-sheet list would be a denial-of-service surface if a
 /// caller somehow kept minting presented labels without ever dismissing them. In practice at
@@ -2702,11 +2128,12 @@ fn login_window_wk_webview(app: &AppHandle, label: &str) -> Option<usize> {
 const PRESENTED_LOGIN_SHEETS_CAP: usize = LOGIN_WINDOW_EVENTS_CAP;
 
 /// Labels of the Tauri-managed login windows currently presented as AppKit SHEETS on
-/// `MAIN_WINDOW_LABEL` (`present_login_window_as_sheet`, below), consulted by
-/// `post_autofill_right_click`'s authorization gate to confirm a label was a live, visible
-/// login presentation before posting a synthesized event to it -- the same registry the prior
-/// child-window mechanism used, re-homed onto sheet presentation by the operator's binding
-/// design decision of 2026-08-04 (`34.4.2-LIVE-GATE.md`'s "Binding Design Decision" section).
+/// `MAIN_WINDOW_LABEL` (`present_login_window_as_sheet`, below). Consulted by
+/// `present_login_window_as_sheet`/`dismiss_login_window_sheet` themselves and by the Esc
+/// local monitor's membership check (`main()`'s `.setup()`) to confirm a label is a live,
+/// presented sheet before acting on it -- the same registry the prior child-window
+/// mechanism used, re-homed onto sheet presentation by the operator's binding design
+/// decision of 2026-08-04 (`34.4.2-LIVE-GATE.md`'s "Binding Design Decision" section).
 /// Insertion-ordered, deduplicated on insert, capped at `PRESENTED_LOGIN_SHEETS_CAP`
 /// (T-34.4.2-08) -- a label is ALWAYS removed on dismiss, even when the underlying AppKit call
 /// could not run, so a destroyed window never lingers on this list (see
@@ -3805,10 +3232,10 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 .ok_or_else(|| "humble_login_open:bad-args".to_string())?;
             let label = next_login_window_label();
             let event_label = label.clone();
-            // Cloned separately from `event_label` (Phase 34.4.2 Plan 03,
-            // REQ-34.4.2-04/08): the autofill sentinel's `.on_navigation(` closure below
-            // needs its own owned label for its log line, and moves it independently of
-            // the `.on_page_load(` closure's own `event_label` capture.
+            // Cloned separately from `event_label` (Phase 34.4.2 Plan 08,
+            // REQ-34.4.2-03/04/08): the login-cancel sentinel's `.on_navigation(` closure
+            // below needs its own owned label for its log line, and moves it independently
+            // of the `.on_page_load(` closure's own `event_label` capture.
             let nav_sentinel_label = label.clone();
             // Bounded pristine-webview attempt (checkpoint response, 2026-08-03T18:00:00
             // superseding cycle; F-34.5-G6-01): route Epic's login window through a
@@ -3895,46 +3322,17 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                             title.len()
                         );
                     });
-                // In-field autofill glyph injection (Phase 34.4.2 Plan 03,
-                // REQ-34.4.2-04/06/07/08). Gated on `visible` (this whole block already
-                // is) so the hidden reveal/clear windows this arm also builds never
-                // receive it -- those windows run their own exfil scripts and a second
-                // injected script there is pure risk, not a benefit. The pristine Epic
-                // surface (`open_pristine_epic_login_window`, above) is unreachable from
-                // here entirely -- REQ-34.4.2-10, locked user decision.
-                //
-                // Kill switch DEFAULTS ON, and unlike `GAMELIB_LOGIN_DIAG` above is NOT
-                // `#[cfg(debug_assertions)]`-gated -- it must work in a packaged build.
-                // Re-earned here (its original justification was the Epic arm, now
-                // descoped) because `initialization_script()` runs before any page
-                // script, in every frame, on live third-party login pages that sit
-                // behind real bot management (Humble is behind Cloudflare), and this
-                // repo has already had an injected `initialization_script` become the
-                // PRIME SUSPECT for causing a deterministic 403
-                // (`DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`, which is why that one now
-                // defaults OFF). If injection ever trips a store's detection, the
-                // failure mode is a user locked out of their own library with no
-                // workaround short of a rebuild -- three lines of Rust against that is
-                // a trade worth making.
-                if std::env::var("GAMELIB_AUTOFILL_GLYPH").as_deref() == Ok("0") {
-                    eprintln!(
-                        "[shell] humble_login_open: autofill glyph injection SKIPPED for '{label}' (kill switch set to 0)"
-                    );
-                } else {
-                    builder =
-                        builder.initialization_script(&autofill_glyph_script(REVEAL_EXFIL_HOST));
-                    eprintln!("[shell] humble_login_open: autofill glyph injected for '{label}'");
-                }
                 // Login-sheet cancel strip injection (Phase 34.4.2 Plan 08,
                 // REQ-34.4.2-03/04/06/07/08, T-34.4.2-33). `#[cfg(target_os = "macos")]`:
-                // only macOS presents this window as a sheet (Plan 07), so only macOS needs
-                // an in-page exit -- deliberately NOT the cross-platform-injected-but-inert
-                // shape the autofill glyph above uses (34.4.2-PLATFORM-SCOPE.md § 1's
-                // recorded wart is NOT repeated here). Deliberately OUTSIDE and INDEPENDENT
-                // of the `GAMELIB_AUTOFILL_GLYPH` branch above: the strip gets NO kill
-                // switch of its own. An env var that removes the only visible exit from a
+                // only macOS presents this window as a sheet (Plan 07), so only macOS
+                // needs an in-page exit. This strip has NO kill switch of its own and
+                // never has: an env var that removes the only visible exit from a
                 // parent-blocking sheet would be a lock-out switch, not a safety switch
-                // (T-34.4.2-15).
+                // (T-34.4.2-15). Phase 34.4.2 Plan 13 (operator decision D-A) deleted the
+                // OTHER in-field injected-glyph mechanism entirely -- closing
+                // `34.4.2-PLATFORM-SCOPE.md` §1's previously-recorded
+                // cross-platform-injected-but-inert wart -- so this strip is now the ONLY
+                // injected control on the login form, on any platform.
                 #[cfg(target_os = "macos")]
                 {
                     builder = builder
@@ -3998,18 +3396,13 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             }
             let page_load_origin = Arc::clone(&current_origin);
             // Owned `AppHandle` clone for the `.on_navigation(` sentinel closure below (Phase
-            // 34.4.2 Plan 04, REQ-34.4.2-05/08): `post_autofill_right_click` needs `&AppHandle`
-            // to resolve the webview/window and hop to the main thread, and `.on_navigation(`
-            // takes a `move` closure -- mirrors this arm's own existing
-            // `app_for_detach = app.clone()` convention (a few lines below `.build()`).
-            #[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
-            let app_for_autofill = app.clone();
-            // Owned `AppHandle` clone for the `.on_navigation(` sentinel closure below (Phase
             // 34.4.2 Plan 08, REQ-34.4.2-03/04/08): `request_login_sheet_cancel` needs
-            // `&AppHandle` to dismiss the sheet and close the window -- mirrors
-            // `app_for_autofill`'s own convention immediately above, a separate clone rather
-            // than reusing `app_for_autofill` so each sentinel arm's capture is independently
-            // readable.
+            // `&AppHandle` to dismiss the sheet and close the window, and `.on_navigation(`
+            // takes a `move` closure -- mirrors this arm's own existing
+            // `app_for_detach = app.clone()` convention (a few lines below `.build()`). The
+            // sole surviving owned `AppHandle` clone this arm's head needs, after Phase
+            // 34.4.2 Plan 13 (operator decision D-A) deleted this arm's other such clone,
+            // and the mechanism it served, entirely.
             #[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
             let app_for_cancel = app.clone();
             let window = builder
@@ -4036,49 +3429,30 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     }
                 })
                 .on_navigation(move |url| {
-                    // Autofill sentinel interception ONLY (Phase 34.4.2 Plan 03,
-                    // REQ-34.4.2-04/08). This closure is deliberately separate from the
-                    // `.on_page_load(` hook above and preserves this arm's own
-                    // F-34.5-G6-04 invariant (spike 013: 5 of 8 `on_navigation` events on
-                    // Humble's real login page were third-party iframes -- letting a
-                    // subframe drive the login-watch relay lets an ad frame re-arm its
-                    // deadline forever): it never calls `push_login_window_event`, never
-                    // touches `current_origin`, and never calls `set_title`. It parses
-                    // and cancels exactly one reserved-host, reserved-path sentinel;
-                    // every other navigation (including the real login page's own) is
-                    // untouched.
+                    // Login-sheet cancel sentinel interception ONLY (Phase 34.4.2 Plan 08,
+                    // REQ-34.4.2-03/04/08, T-34.4.2-33). This closure is deliberately
+                    // separate from the `.on_page_load(` hook above and preserves this
+                    // arm's own F-34.5-G6-04 invariant (spike 013: 5 of 8 `on_navigation`
+                    // events on Humble's real login page were third-party iframes --
+                    // letting a subframe drive the login-watch relay lets an ad frame
+                    // re-arm its deadline forever): it never calls
+                    // `push_login_window_event`, never touches `current_origin`, and never
+                    // calls `set_title`. It parses and cancels exactly one reserved-host,
+                    // reserved-path sentinel; every other navigation (including the real
+                    // login page's own) is untouched. macOS only: dismissing a sheet is a
+                    // macOS-only concept (Plan 07); on Windows/Linux this arm keeps
+                    // silently discarding the navigation.
                     //
-                    // The synthesized-right-click poster itself (Phase 34.4.2 Plan 04,
-                    // REQ-34.4.2-05/06/07/08/10) replaces plan 03's log-only body here --
-                    // `post_autofill_right_click` does its own logging (exactly one success
-                    // line, or a distinct refusal line per guard). macOS only: on
-                    // Windows/Linux the glyph is injected (plan 03 is not platform-gated)
-                    // but no poster exists yet -- UNVERIFIED per the skill's Constraints
-                    // section, matching this whole phase's cross-platform discipline.
-                    // Login-sheet cancel sentinel interception (Phase 34.4.2 Plan 08,
-                    // REQ-34.4.2-03/04/08, T-34.4.2-33). Checked BEFORE
-                    // `parse_autofill_request` -- cheaper (no JSON parse), and the two paths
-                    // are disjoint anyway (path discrimination on the shared
-                    // `REVEAL_EXFIL_HOST` keeps every sentinel on this host mutually
-                    // exclusive, T-34.4.2-13). macOS only: dismissing a sheet is a
-                    // macOS-only concept (Plan 07); on Windows/Linux this arm keeps silently
-                    // discarding the navigation, matching the autofill arm's own
-                    // non-macOS shape just below.
+                    // Phase 34.4.2 Plan 13 (operator decision D-A) deleted the
+                    // synthesized-right-click sentinel this closure previously also
+                    // intercepted -- this cancel arm is now the closure's ONLY sentinel,
+                    // and the only path through this closure that ever returns `false`.
                     if is_login_cancel_request(&url) {
                         #[cfg(target_os = "macos")]
                         request_login_sheet_cancel(&app_for_cancel, &nav_sentinel_label, "strip");
                         #[cfg(not(target_os = "macos"))]
                         {
                             let _ = &app_for_cancel;
-                        }
-                        return false;
-                    }
-                    if let Some(req) = parse_autofill_request(&url) {
-                        #[cfg(target_os = "macos")]
-                        post_autofill_right_click(&app_for_autofill, &nav_sentinel_label, &req);
-                        #[cfg(not(target_os = "macos"))]
-                        {
-                            let _ = (&app_for_autofill, &req);
                         }
                         return false;
                     }
@@ -6326,182 +5700,6 @@ mod tests {
         assert!(exfil_call_index > last_await_index);
     }
 
-    // ---- parse_autofill_request / autofill_glyph_script (Phase 34.4.2 Plan 03,
-    // REQ-34.4.2-04/06/07/08/10, T-34.4.2-10/-11/-13/-14/-16) ----
-    //
-    // RED direction: an implementation that reads a field's value, discriminates on host only
-    // (not path), or coerces a missing/NaN/negative coordinate into a default rather than
-    // `None`, would flip one of the cases below.
-
-    /// Builds a `REVEAL_EXFIL_HOST` + `AUTOFILL_EXFIL_PATH` URL carrying `data_json` verbatim
-    /// as the `data` query value -- `query_pairs_mut` handles the percent-encoding, matching
-    /// how the real glyph script's `encodeURIComponent` call is decoded on arrival.
-    fn autofill_url(data_json: &str) -> tauri::Url {
-        let mut url = tauri::Url::parse(&format!(
-            "https://{REVEAL_EXFIL_HOST}{AUTOFILL_EXFIL_PATH}"
-        ))
-        .unwrap();
-        url.query_pairs_mut().append_pair("data", data_json);
-        url
-    }
-
-    fn valid_autofill_payload() -> String {
-        json!({
-            "x": 10.5, "y": 20.5, "w": 24.0, "h": 32.0,
-            "hitId": "password", "hitTag": "INPUT", "hitType": "password"
-        })
-        .to_string()
-    }
-
-    #[test]
-    fn autofill_request_accepts_a_full_valid_payload_with_hit_diagnostics() {
-        let req = parse_autofill_request(&autofill_url(&valid_autofill_payload())).unwrap();
-        assert_eq!(req.x, 10.5);
-        assert_eq!(req.y, 20.5);
-        assert_eq!(req.w, 24.0);
-        assert_eq!(req.h, 32.0);
-        assert_eq!(req.hit_id, Some("password".to_string()));
-        assert_eq!(req.hit_tag, Some("INPUT".to_string()));
-        assert_eq!(req.hit_type, Some("password".to_string()));
-    }
-
-    #[test]
-    fn autofill_request_accepts_a_valid_payload_with_no_hit_diagnostics_at_all() {
-        let payload = json!({ "x": 1.0, "y": 2.0, "w": 3.0, "h": 4.0 }).to_string();
-        let req = parse_autofill_request(&autofill_url(&payload)).unwrap();
-        assert_eq!(req.hit_id, None);
-        assert_eq!(req.hit_tag, None);
-        assert_eq!(req.hit_type, None);
-    }
-
-    #[test]
-    fn autofill_request_truncates_a_hit_diagnostic_string_to_64_chars() {
-        let long = "x".repeat(200);
-        let payload = json!({ "x": 1.0, "y": 2.0, "w": 3.0, "h": 4.0, "hitId": long }).to_string();
-        let req = parse_autofill_request(&autofill_url(&payload)).unwrap();
-        assert_eq!(req.hit_id.unwrap().chars().count(), 64);
-    }
-
-    #[test]
-    fn autofill_request_rejects_a_url_on_a_different_host() {
-        let mut url = tauri::Url::parse(&format!("https://example.com{AUTOFILL_EXFIL_PATH}"))
-            .unwrap();
-        url.query_pairs_mut()
-            .append_pair("data", &valid_autofill_payload());
-        assert!(parse_autofill_request(&url).is_none());
-    }
-
-    #[test]
-    fn autofill_request_rejects_reveal_path() {
-        // The right host, but the pre-existing `/reveal` sentinel's own path -- must NOT be
-        // mistaken for an autofill request (T-34.4.2-13).
-        let mut url = tauri::Url::parse(&format!("https://{REVEAL_EXFIL_HOST}/reveal")).unwrap();
-        url.query_pairs_mut()
-            .append_pair("data", &valid_autofill_payload());
-        assert!(parse_autofill_request(&url).is_none());
-    }
-
-    #[test]
-    fn autofill_request_rejects_clear_storage_path() {
-        let mut url =
-            tauri::Url::parse(&format!("https://{REVEAL_EXFIL_HOST}/clear-storage")).unwrap();
-        url.query_pairs_mut()
-            .append_pair("data", &valid_autofill_payload());
-        assert!(parse_autofill_request(&url).is_none());
-    }
-
-    #[test]
-    fn autofill_request_rejects_a_url_with_no_data_query_pair() {
-        let url = tauri::Url::parse(&format!(
-            "https://{REVEAL_EXFIL_HOST}{AUTOFILL_EXFIL_PATH}"
-        ))
-        .unwrap();
-        assert!(parse_autofill_request(&url).is_none());
-    }
-
-    #[test]
-    fn autofill_request_rejects_non_json_data() {
-        assert!(parse_autofill_request(&autofill_url("not json")).is_none());
-    }
-
-    #[test]
-    fn autofill_request_rejects_a_payload_missing_w() {
-        let payload = json!({ "x": 1.0, "y": 2.0, "h": 4.0 }).to_string();
-        assert!(parse_autofill_request(&autofill_url(&payload)).is_none());
-    }
-
-    #[test]
-    fn autofill_request_rejects_a_non_numeric_x() {
-        let payload = json!({ "x": "abc", "y": 2.0, "w": 3.0, "h": 4.0 }).to_string();
-        assert!(parse_autofill_request(&autofill_url(&payload)).is_none());
-    }
-
-    #[test]
-    fn autofill_request_rejects_a_zero_width_rect() {
-        let payload = json!({ "x": 1.0, "y": 2.0, "w": 0.0, "h": 4.0 }).to_string();
-        assert!(parse_autofill_request(&autofill_url(&payload)).is_none());
-    }
-
-    #[test]
-    fn autofill_request_rejects_a_negative_height_rect() {
-        let payload = json!({ "x": 1.0, "y": 2.0, "w": 3.0, "h": -1.0 }).to_string();
-        assert!(parse_autofill_request(&autofill_url(&payload)).is_none());
-    }
-
-    #[test]
-    fn autofill_request_rejects_a_non_finite_x_value() {
-        // JSON itself cannot encode NaN/Infinity as a numeric literal -- a hand-crafted bareword
-        // `NaN` token fails `serde_json::from_str` outright, and `serde_json::json!`'s own
-        // `From<f64>` conversion maps a Rust-side NaN/inf to `Value::Null` before it could ever
-        // reach this parser. Both routes return `None`; this test exercises the literal-token
-        // route, which is the only way a non-finite value can appear on the wire at all.
-        let payload = r#"{"x":NaN,"y":2.0,"w":3.0,"h":4.0}"#;
-        assert!(parse_autofill_request(&autofill_url(payload)).is_none());
-    }
-
-    #[test]
-    fn autofill_glyph_script_never_reads_the_field_value_and_binds_no_keyboard_listener() {
-        // Machine-checkable form of REQ-34.4.2-06/07.
-        let script = autofill_glyph_script(REVEAL_EXFIL_HOST);
-        assert!(!script.contains(".value"));
-        assert!(!script.contains("keydown"));
-        assert!(!script.contains("keypress"));
-        assert!(!script.contains("keyup"));
-    }
-
-    #[test]
-    fn autofill_glyph_script_delivers_via_a_hidden_iframe_never_location_href() {
-        let script = autofill_glyph_script(REVEAL_EXFIL_HOST);
-        assert!(script.contains("iframe"));
-        assert!(!script.contains("location.href"));
-    }
-
-    #[test]
-    fn autofill_glyph_script_embeds_the_exfil_host_exactly_once_as_a_json_escaped_literal() {
-        let script = autofill_glyph_script(REVEAL_EXFIL_HOST);
-        let literal = serde_json::to_string(REVEAL_EXFIL_HOST).unwrap();
-        assert_eq!(script.matches(&literal).count(), 1);
-    }
-
-    #[test]
-    fn autofill_glyph_script_escapes_a_tricky_host_and_never_naively_interpolates_it() {
-        // Mirrors `reveal_post_script`/`clear_storage_script`'s own escaping round-trip case.
-        let tricky_host = "gamelib.invalid\"a\"b'c\\d</script>e";
-        let script = autofill_glyph_script(tricky_host);
-        let expected_literal = serde_json::to_string(tricky_host).unwrap();
-        assert!(script.contains(&expected_literal));
-        let naive_interpolation = ["'", tricky_host, "'"].concat();
-        assert!(!script.contains(&naive_interpolation));
-    }
-
-    #[test]
-    fn autofill_glyph_script_is_wrapped_in_a_single_top_level_try_catch() {
-        assert_eq!(
-            autofill_glyph_script(REVEAL_EXFIL_HOST).matches("try {").count(),
-            1
-        );
-    }
-
     // ---- is_login_cancel_request / login_cancel_strip_script (Phase 34.4.2 Plan 08,
     // REQ-34.4.2-03/04/06/07/08/10, T-34.4.2-33/-34) ----
     //
@@ -6529,11 +5727,16 @@ mod tests {
     }
 
     #[test]
-    fn login_cancel_request_rejects_the_autofill_sentinel_path_on_the_same_host() {
-        // The right host, but the pre-existing autofill sentinel's own path -- must NOT be
+    fn login_cancel_request_rejects_an_unrelated_path_on_the_same_host() {
+        // The right host, but an unrelated, arbitrary sentinel-shaped path -- must NOT be
         // mistaken for a cancel request (T-34.4.2-13, no collision between sibling sentinels).
+        // Neutral literal rather than a real sentinel path, deliberately: the invariant this
+        // test protects ("an arbitrary non-cancel path on the same host is rejected") is
+        // proven just as well by a made-up path, and reusing a former sentinel path here
+        // would leave a now-forbidden name fragment in this file, defeating Phase 34.4.2
+        // Plan 13's reconciliation grep.
         let mut url =
-            tauri::Url::parse(&format!("https://{REVEAL_EXFIL_HOST}{AUTOFILL_EXFIL_PATH}"))
+            tauri::Url::parse(&format!("https://{REVEAL_EXFIL_HOST}/some-other-sentinel"))
                 .unwrap();
         url.query_pairs_mut().append_pair("data", "{}");
         assert!(!is_login_cancel_request(&url));
@@ -6568,7 +5771,7 @@ mod tests {
 
     #[test]
     fn login_cancel_strip_script_escapes_a_tricky_host_and_never_naively_interpolates_it() {
-        // Mirrors `autofill_glyph_script`'s own escaping round-trip case.
+        // Mirrors `clear_storage_script`'s own escaping round-trip case.
         let tricky_host = "gamelib.invalid\"a\"b'c\\d</script>e";
         let script = login_cancel_strip_script(tricky_host);
         let expected_literal = serde_json::to_string(tricky_host).unwrap();
@@ -6668,84 +5871,6 @@ mod tests {
                 .count(),
             1
         );
-    }
-
-    // ---- css_rect_center_in_view / clamp_point_to_view_bounds (Phase 34.4.2 Plan 04,
-    // REQ-34.4.2-05/06/07/08, T-34.4.2-17) ----
-    //
-    // RED direction: an implementation that flips the wrong axis, edge-clamps instead of
-    // refusing, or coerces a non-finite/zero-sized input into a default would flip one of the
-    // cases below.
-
-    fn autofill_req(x: f64, y: f64, w: f64, h: f64) -> AutofillRequest {
-        AutofillRequest {
-            x,
-            y,
-            w,
-            h,
-            hit_id: None,
-            hit_tag: None,
-            hit_type: None,
-        }
-    }
-
-    #[test]
-    fn css_rect_center_in_view_flips_the_vertical_axis_top_left_to_bottom_left_origin() {
-        // A 1000px-tall view: a rect pinned to the TOP (y=0) must land near the view's own
-        // bottom-left-origin MAX (990.0), and a rect pinned to the BOTTOM (y=980) must land
-        // near view-origin MIN (10.0) -- the two ends of the flip.
-        let (_, y_top) = css_rect_center_in_view(&autofill_req(0.0, 0.0, 10.0, 20.0), 1000.0);
-        assert_eq!(y_top, 990.0);
-        let (_, y_bottom) = css_rect_center_in_view(&autofill_req(0.0, 980.0, 10.0, 20.0), 1000.0);
-        assert_eq!(y_bottom, 10.0);
-    }
-
-    #[test]
-    fn css_rect_center_in_view_leaves_the_horizontal_centre_unchanged_by_the_flip() {
-        let (x, _) = css_rect_center_in_view(&autofill_req(100.0, 0.0, 200.0, 20.0), 1000.0);
-        assert_eq!(x, 200.0);
-    }
-
-    #[test]
-    fn clamp_point_to_view_bounds_accepts_a_point_strictly_inside_the_bounds() {
-        assert_eq!(
-            clamp_point_to_view_bounds((50.0, 50.0), (100.0, 100.0)),
-            Some((50.0, 50.0))
-        );
-    }
-
-    #[test]
-    fn clamp_point_to_view_bounds_refuses_negative_or_out_of_bounds_points_rather_than_clamping() {
-        // Negative coordinates.
-        assert_eq!(clamp_point_to_view_bounds((-1.0, 50.0), (100.0, 100.0)), None);
-        assert_eq!(clamp_point_to_view_bounds((50.0, -1.0), (100.0, 100.0)), None);
-        // At or beyond width/height -- a request whose field lies outside the webview is
-        // refused outright, never pulled to the nearest edge.
-        assert_eq!(clamp_point_to_view_bounds((100.0, 50.0), (100.0, 100.0)), None);
-        assert_eq!(clamp_point_to_view_bounds((50.0, 100.0), (100.0, 100.0)), None);
-        assert_eq!(clamp_point_to_view_bounds((150.0, 50.0), (100.0, 100.0)), None);
-    }
-
-    #[test]
-    fn clamp_point_to_view_bounds_refuses_a_non_finite_point_or_non_finite_bounds() {
-        assert_eq!(clamp_point_to_view_bounds((f64::NAN, 50.0), (100.0, 100.0)), None);
-        assert_eq!(
-            clamp_point_to_view_bounds((f64::INFINITY, 50.0), (100.0, 100.0)),
-            None
-        );
-        assert_eq!(clamp_point_to_view_bounds((50.0, 50.0), (f64::NAN, 100.0)), None);
-        assert_eq!(
-            clamp_point_to_view_bounds((50.0, 50.0), (f64::INFINITY, 100.0)),
-            None
-        );
-    }
-
-    #[test]
-    fn clamp_point_to_view_bounds_refuses_zero_sized_view_bounds() {
-        // A webview that has not laid out yet reports a zero-sized bounds().
-        assert_eq!(clamp_point_to_view_bounds((0.0, 0.0), (0.0, 0.0)), None);
-        assert_eq!(clamp_point_to_view_bounds((0.0, 0.0), (100.0, 0.0)), None);
-        assert_eq!(clamp_point_to_view_bounds((0.0, 0.0), (0.0, 100.0)), None);
     }
 
     // ---- shell_exe_env_value (Phase 34.5 Plan 01, REQ-34.5-01, D-10) ----
