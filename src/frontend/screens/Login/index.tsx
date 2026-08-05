@@ -84,11 +84,6 @@ export default React.memo(function NewLogin() {
     }
   }
 
-  const loginMessage = t(
-    'login.message',
-    'Login with your platform. You can login to more than one platform at the same time.'
-  )
-
   useEffect(() => {
     setLoading(false)
   }, [epic, gog])
@@ -151,7 +146,6 @@ export default React.memo(function NewLogin() {
             )}
           </div>
 
-          <p className="runnerMessage">{loginMessage}</p>
           {oldMac && <p className="disabledMessage">{oldMacMessage}</p>}
 
           <div className="runnerGroup">

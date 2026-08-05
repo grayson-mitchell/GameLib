@@ -206,3 +206,39 @@ describe('deprecatedTile marker follows the SIDLogin tile, not a fixed position 
     )
   })
 })
+
+// Quick task 260805-rwy: remove the "Login with your platform..." paragraph
+// from the Manage Accounts page. Same source-gate convention as above -- this
+// jest project has no jsdom, so these prove the source text is gone (or
+// present) rather than anything about a rendered tree.
+describe('the login.message paragraph is gone from the Manage Accounts page (quick task 260805-rwy)', () => {
+  it('SOURCE GATE — comment-stripped Login/index.tsx contains no loginMessage, login.message, runnerMessage, or the removed sentence', () => {
+    const source = read(LOGIN_TSX)
+    expect(source).not.toMatch(/loginMessage/)
+    expect(source).not.toMatch(/login\.message/)
+    expect(source).not.toMatch(/runnerMessage/)
+    expect(source).not.toContain(
+      'You can login to more than one platform'
+    )
+  })
+
+  it('POSITIVE CONTROL — the disabledMessage paragraph, runnerGroup container, and all six runner tiles survived the removal', () => {
+    const source = read(LOGIN_TSX)
+    expect(source).toMatch(
+      /\{oldMac && <p className="disabledMessage">/
+    )
+    expect(source).toMatch(/<div className="runnerGroup">/)
+    for (const runnerClass of [
+      'epic',
+      'gog',
+      'nile',
+      'zoom',
+      'steam',
+      'humble'
+    ]) {
+      expect(source).toMatch(
+        new RegExp(`class="${runnerClass}"`)
+      )
+    }
+  })
+})
