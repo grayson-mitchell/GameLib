@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.2-15-PLAN.md
-last_updated: "2026-08-05T10:34:13.225Z"
+stopped_at: Completed 34.4.2-16-PLAN.md (BLOCKING live gate RAN, VERDICT FAIL 5/6 -- item 6 sole FAIL, gap cycle 4 required)
+last_updated: "2026-08-05T23:10:00.000Z"
 last_activity: 2026-08-05
 progress:
   total_phases: 20
   completed_phases: 13
   total_plans: 207
-  completed_plans: 195
-  percent: 94
+  completed_plans: 196
+  percent: 95
 ---
 
 # Project State
@@ -478,22 +478,43 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — GAP CYCLE 3 EXECUTING
-Plan: 16 of 16 (plans 01-13 complete; gap cycle 3 = plans 13-16, plan 13 EXECUTED 2026-08-05 --
-D-A: the in-field autofill glyph mechanism deleted in full, mutation-proven absence guard,
-REQ-34.4.2-04/-05 scope-corrected, see 34.4.2-13-SUMMARY.md; plan 14 EXECUTED 2026-08-05 --
-T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW single-flight guard refuses a second visible login
-window while one is pending/presented, 25s TTL derived from the existing 15s watchdog, see
-34.4.2-14-SUMMARY.md -- plans 15-16 not yet executed).
-Plan 12 -- the human-driven live gate run -- RAN 2026-08-05 and recorded VERDICT FAIL,
-items_passed 5/6 (see its own record below). D-08's no-partial-pass rule applies: the phase does
-NOT close. Plan 15 EXECUTED 2026-08-05 -- corrected the falsified login-window-ux-macos.md skill
-reference (Recommendation #4/§4 FALSIFIED, #1/§§1-2 SUPERSEDED), folded gate run 2's orphaned
-findings into deferred-items.md, and authored 34.4.2-LIVE-GATE-RERUN-3.md (verdict: null, six
-items rebuilt around plans 13/14's changes) with its own Structural Reachability Review (found and
-fixed one IMPOSSIBLE sub-check before any live use), see 34.4.2-15-SUMMARY.md. Next: plan 16 runs
-34.4.2-LIVE-GATE-RERUN-3.md and records the measured result. Historical plan-11/plan-10 records
-follow.)
+Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — GAP CYCLE 3
+EXECUTED, STILL DOES NOT CLOSE -- GAP CYCLE 4 REQUIRED
+Plan: 16 of 16 (all 16 plans complete. Plan 13 EXECUTED 2026-08-05 -- D-A: the in-field autofill
+glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
+see 34.4.2-13-SUMMARY.md. Plan 14 EXECUTED 2026-08-05 -- T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW
+single-flight guard refuses a second visible login window while one is pending/presented, 25s TTL
+derived from the existing 15s watchdog, see 34.4.2-14-SUMMARY.md. Plan 15 EXECUTED 2026-08-05 --
+corrected the falsified login-window-ux-macos.md skill reference, folded gate run 2's orphaned
+findings into deferred-items.md, authored 34.4.2-LIVE-GATE-RERUN-3.md with its own Structural
+Reachability Review, see 34.4.2-15-SUMMARY.md.
+
+**Plan 16 -- the human-driven live gate run against 34.4.2-LIVE-GATE-RERUN-3.md -- RAN 2026-08-05
+and recorded VERDICT FAIL, items_passed 5/6.** Items 1-5 PASSED (items 3/5 measured live for the
+FIRST time ever this phase -- the entire reason gap cycle 3 exists; items 1/2/4 RE-measured
+against Plans 13/14's changed source rather than inherited). **Item 6 FAILED**, a NEW blocking
+defect: clicking Humble's disconnect/logout control produced a hard, unbounded macOS main-thread
+wedge (spinning-wait cursor); the operator had to force-kill the app -- **F-34.4.2-12**, escalating
+gate run 2's own F-34.4.2-10 (a bounded, non-fatal storage-wipe timeout) to a fatal hang, no root
+cause asserted. Item 6(b) (Epic) consequently NOT ATTEMPTED. A SEPARATE process finding,
+**F-34.4.2-11**, also surfaced: the contract's own mandatory `tee` (no `-a`) truncates on every
+relaunch, and item 3(c) mandates a relaunch -- items 3/5 are recorded PASS on the operator's word
+alone, with NO surviving transcript corroboration for either item's own decisive evidence, honestly
+marked LOST rather than fabricated (a fifth contract-authoring-defect instance, the first that is
+an INTERACTION between two individually-reachable requirements, which plan 15's per-item
+Structural Reachability Review could not have caught by its own four-test design). New threat
+**T-34.4.2-43** minted (Denial of service, OPEN, BLOCKING). D-08's no-partial-pass rule applies:
+**the phase does NOT close.** Propagated into `34.4.2-PLATFORM-SCOPE.md` §5's ninth update (the
+seven `CLOSED-pending-re-measurement` threats all resolved CLOSED again; T-34.4.2-39/-41
+discharged on the operator's word only; T-34.4.2-42 partially validated with a completeness gap
+named; T-34.4.2-43 minted OPEN/BLOCKING), `REQUIREMENTS.md` (REQ-34.4.2-01/-02/-03/-06/-10
+re-confirmed TICKED; REQ-34.4.2-04/-05/-09 stay UNCHECKED per D-08), `ROADMAP.md` (status banner
+superseded, Goal paragraph corrected -- the glyph promise and "sheets are explicitly rejected"
+both struck through, plan 16 checked, 16/16 plans executed), `deferred-items.md` (F-34.4.2-11/-12
+both logged). See `34.4.2-LIVE-GATE-RERUN-3.md` and `34.4.2-16-SUMMARY.md`. **Next:**
+`/gsd-plan-phase 34.4.2 --gaps` (gap cycle 4), scoped against F-34.4.2-12 (BLOCKING) and
+F-34.4.2-11 (non-blocking, owed before items 3/5 are ever re-measured again). Historical
+plan-11/plan-10 records follow.)
 
 Plan 14 record (14 done -- `34.4.2-14-SUMMARY.md`. Closed T-34.4.2-39's app gap (a second
 VISIBLE login window queuing behind a first, minted by plan 12's live gate) with a source-level
@@ -3428,6 +3449,7 @@ Closed/parked native-install phases:
 | Phase 34.4.2 P13 | 55min | 3 tasks | 7 files |
 | Phase 34.4.2 P14 | 50min | 2 tasks | 4 files |
 | Phase 34.4.2 P15 | 12min | 3 tasks | 4 files |
+| Phase 34.4.2 P16 | ~40min | 3 tasks (Task 2 blocking live gate, human-driven) | 6 files (`34.4.2-LIVE-GATE-RERUN-3.md`, `34.4.2-PLATFORM-SCOPE.md`, `deferred-items.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`) |
 
 ## Accumulated Context
 
@@ -3862,6 +3884,10 @@ Recent decisions affecting current work:
 - [Phase 34.4.2]: REQ-34.4.2-04/-05 scope-corrected to state Cmd+V/Edit-Paste as the sole credential-entry route; both boxes stay unticked pending 34.4.2-LIVE-GATE-RERUN-3.md item 3
 - [Phase ?]: T-34.4.2-39/-41 (34.4.2-14): PENDING_VISIBLE_LOGIN_WINDOW single-flight guard refuses a second visible login window at humble_login_open, with a 25s TTL derived from the existing 15s watchdog so the guard cannot itself become a lockout DoS; live discharge deferred to plan 15's gate item
 - [Phase 34.4.2]: Item 5's UI-driven 'Arm 2' found IMPOSSIBLE (Structural Reachability Review) -- a presented sheet is application-modal to the only window hosting every login trigger; replaced with a record-only observation — No tray/menu-bar/secondary-window login entry point exists; confirmed via grep of humbleStartLogin/captureOAuthLogin call sites
+- [Phase 34.4.2-16]: **Blocking live gate RAN 2026-08-05 against `34.4.2-LIVE-GATE-RERUN-3.md`, VERDICT FAIL, items_passed 5/6.** Items 1-5 PASSED -- items 3/5 measured live for the FIRST time ever this phase (this gap cycle's own reason for existing); items 1/2/4 RE-measured against Plans 13/14's changed source rather than inherited. **Item 6 FAILED**: clicking Humble's disconnect/logout control produced a hard, unbounded main-thread wedge (macOS spinning cursor, unresponsive to all input); the operator had to force-kill the app. New finding F-34.4.2-12 escalates gate run 2's own F-34.4.2-10 (a bounded, non-fatal storage-wipe timeout) to a fatal hang -- no root cause asserted, three candidate layers recorded without preferring any. Item 6(b) (Epic) consequently NOT ATTEMPTED. D-08's no-partial-pass rule applies: Phase 34.4.2 DOES NOT CLOSE. Next: `/gsd-plan-phase 34.4.2 --gaps` (gap cycle 4).
+- [Phase 34.4.2-16]: **New threat T-34.4.2-43 minted (Denial of service), OPEN, BLOCKING** -- a user-triggered action (Humble disconnect) hangs the entire application indefinitely, recoverable only by a force-kill. Discharged only by a future gap-cycle diagnosis and a re-run of item 6.
+- [Phase 34.4.2-16]: **New process finding F-34.4.2-11**: the gate contract's own mandatory evidence-capture instruction (`tee` without `-a`) is mutually destructive with item 3(c)'s own mandatory relaunch (`GAMELIB_AUTOFILL_GLYPH=0`) -- every relaunch truncates the tee'd transcript, so only the FINAL launch's log survives. Items 3 and 5 (this cycle's own reason for existing) are recorded PASS on the operator's verbatim word alone, with NO surviving transcript corroboration for either item's own decisive evidence -- honestly marked LOST/UNAVAILABLE in `34.4.2-LIVE-GATE-RERUN-3.md`, not fabricated. This is the fifth instance of this phase's contract-authoring-defect pattern, and the first that is an INTERACTION between two individually-reachable requirements rather than a single unreachable one -- plan 15's Structural Reachability Review examines items/preconditions individually and has no test for pairwise interactions, a gap named against T-34.4.2-42's own completeness (not its correctness on the terms it was written to check).
+- [Phase 34.4.2-16]: No requirement box was ticked this run despite items 1-5 all PASSing: REQ-34.4.2-01/-02/-03/-06/-10 stay `[x]` as re-confirmed (unaffected by item 6's own unrelated failure); REQ-34.4.2-04/-05/-09 stay `[ ]` per D-08 -- item 3's own PASS does not tick 04/05 while item 6 FAILs elsewhere in the same contract and item 3's own transcript corroboration is itself unavailable (F-34.4.2-11).
 
 ### Pending Todos
 
@@ -3947,8 +3973,52 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-05T10:34:13.211Z
-Stopped at: Completed 34.4.2-15-PLAN.md
+Last session: 2026-08-05T23:10:00.000Z
+Stopped at: Completed 34.4.2-16-PLAN.md
+  This session (sequential executor): recorded and propagated the measured verdict from
+  `34.4.2-LIVE-GATE-RERUN-3.md`, the blocking live gate the operator drove against Plans 13/14's
+  changed source (single-flight guard, autofill-glyph deletion). Task 3 (this session, hand-editing
+  STATE.md per the standing gsd-sdk-corruption gotcha): transcribed the operator's verbatim report
+  into all six items' `Observed:`/`Verdict:` fields -- **VERDICT FAIL, items_passed 5**. Items 1-5
+  PASSED: items 1/2/4 RE-measured against Plans 13/14's changed source (machine-confirmed in the
+  surviving `/tmp/gamelib-dev.log` transcript -- `read-back attached=true` x2, `sheet_presented=
+  true` x2, cancel-strip dismissal x2); items 3/5 measured live for the FIRST time ever this phase
+  (this gap cycle's own reason for existing), but on the operator's verbatim word alone -- **a
+  newly-found evidence-capture contract defect (F-34.4.2-11)** meant the mandated `tee` (no `-a`)
+  truncated on every relaunch, and item 3(c) mandates a relaunch, so neither item's own decisive
+  transcript evidence survived to this session; recorded honestly as LOST/UNAVAILABLE per item, not
+  fabricated or reconstructed. **Item 6 FAILED**: the operator's own account -- "beach balled, had
+  to kill app" on "clicked on logout on humble button" -- is a hard, unbounded macOS main-thread
+  wedge, forcing a kill of the app; **new finding F-34.4.2-12** escalates gate run 2's own
+  F-34.4.2-10 (a bounded, non-fatal storage-wipe timeout) to a fatal hang, no root cause asserted,
+  three candidate layers recorded without preferring any (plan 13's shared `.on_navigation(`
+  closure edit; plan 14's single-flight latch's hidden-window interaction, unconfirmed live this
+  run; the pre-existing exfil-channel wait). Item 6(b) (Epic) consequently NOT ATTEMPTED. New
+  threat T-34.4.2-43 minted (Denial of service, OPEN, BLOCKING). Zero structural impossibilities
+  were encountered against plan 15's own four defect-class tests (validating the review on its own
+  literal terms), but F-34.4.2-11 exposed a blind spot in T-34.4.2-42's own completeness -- the
+  review has no test for interactions BETWEEN two individually-reachable requirements, named
+  explicitly as a finding against the review's own scope, not its correctness. Propagated into
+  `34.4.2-PLATFORM-SCOPE.md` §5's ninth update (the seven `CLOSED-pending-re-measurement` threats
+  all resolved CLOSED again; T-34.4.2-39/-41 discharged on the operator's word only, transcript
+  evidence lost; T-34.4.2-43 minted OPEN/BLOCKING), `deferred-items.md` (F-34.4.2-11/-12 both
+  logged with full candidate-layer reasoning), `REQUIREMENTS.md` (REQ-34.4.2-01/-02/-03/-06/-10
+  re-confirmed TICKED, unaffected by item 6's own unrelated failure; REQ-34.4.2-04/-05/-09 stay
+  UNCHECKED per D-08's no-partial-pass rule -- item 3's own PASS does not tick 04/05 while item 6
+  FAILs elsewhere in the same contract), `ROADMAP.md` (status banner superseded not deleted, Goal
+  paragraph corrected -- the child-window-attachment and synthesized-right-click promises and the
+  "sheets are explicitly rejected" claim all struck through with the shipped sheet/deletion reality
+  stated in their place, plan 16 checked, 16/16 plans executed). Confirmed no harness running
+  (`lsof -nP -iTCP:17940 -sTCP:LISTEN` empty, matching Task 1's own preflight confirmation).
+  D-08's no-partial-pass rule applies: **Phase 34.4.2 DOES NOT CLOSE.** Next:
+  `/gsd-plan-phase 34.4.2 --gaps` (gap cycle 4), scoped against F-34.4.2-12 (BLOCKING, the item-6
+  wedge) and F-34.4.2-11 (non-blocking, owed before items 3/5 are ever re-measured again). See
+  `34.4.2-LIVE-GATE-RERUN-3.md` and `34.4.2-16-SUMMARY.md` for full detail.
+
+  --- historical: the prior session's own continuity record follows, preserved as-is ---
+
+Prior session: 2026-08-05T10:34:13.211Z
+Stopped at (superseded): Completed 34.4.2-15-PLAN.md
   This session (sequential executor): ran `34.4.2-LIVE-GATE-RERUN-2.md`, the fresh six-item
   blocking live gate, on real macOS hardware, to a full completion for the first time in this
   phase's history. Task 1 (commit `75431b20a`): preflight -- `cargo build` clean (23.62s), all

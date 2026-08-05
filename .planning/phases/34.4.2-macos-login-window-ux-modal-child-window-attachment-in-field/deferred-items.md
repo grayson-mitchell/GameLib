@@ -456,3 +456,65 @@ no previously-deferred finding (WR-02, WR-05, WR-08, IN-01, IN-03, IN-04) re-ope
   promise to "be more careful" next time. **This is measurable**: the count of structural
   impossibilities discovered during the next live run (plan 16) should be zero. If it is not, the
   review's own method — not just this one contract — should be revisited.
+
+## Plan 16 — a fifth contract-authoring defect (an interaction, not a single unreachable requirement), plus two live findings (2026-08-05)
+
+**Disposition: the evidence-capture defect is logged, not fixed here (this plan records a gate
+result, it does not re-author the contract that produced it); the item-6 wedge is logged and
+BLOCKS the phase, routed to gap cycle 4 for diagnosis.**
+
+- **F-34.4.2-11 — Evidence-capture contract defect: mandatory `tee` truncation collides with the
+  mandatory item-3(c) relaunch.** **File:**
+  `34.4.2-LIVE-GATE-RERUN-3.md`'s own Evidence-capture instruction (mandates `tee
+  /tmp/gamelib-dev.log` without `-a`) and item 3(c) (mandates a relaunch with
+  `GAMELIB_AUTOFILL_GLYPH=0`). **Symptom:** every `npm run tauri:dev` launch truncates the tee'd
+  log to zero before writing; the operator relaunched at least once during this run; only the
+  FINAL launch's 214-line transcript survives (confirmed: `/tmp/gamelib-dev.log` at plan-16
+  execution time contains exactly two Humble login/cancel cycles and nothing else). **Items 3 and
+  5 — the two items this entire gap cycle exists to measure for the first time — are recorded PASS
+  on the operator's verbatim word alone, with NO surviving transcript corroboration for either
+  item's own decisive evidence** (item 3's zero-log-occurrence and `GAMELIB_AUTOFILL_GLYPH=0`
+  no-op sub-checks; item 5's REFUSED line and the specific Amazon-then-Humble scenario) —
+  `34.4.2-LIVE-GATE-RERUN-3.md` records this explicitly as LOST/UNAVAILABLE per item, not
+  fabricated. **Why plan 15's Structural Reachability Review did not catch this:** the review's
+  four defect-class tests examine each item, sub-check, and precondition INDIVIDUALLY; both
+  requirements here are, individually, perfectly reachable — the defect is in their INTERACTION,
+  a category the review's four tests were never designed to check. This is the fifth instance of
+  this phase's contract-authoring-defect pattern, and the first that is an interaction defect
+  rather than a single unreachable requirement (see `34.4.2-LIVE-GATE-RERUN-3.md`'s own finding
+  for the full mechanism, and `34.4.2-PLATFORM-SCOPE.md` §5's ninth update for the T-34.4.2-42
+  threat-register disposition). **Scope:** neither this plan's `files_modified` list nor any prior
+  plan's covers re-authoring the gate contract's evidence-capture instruction. **Disposition:**
+  logged, not fixed, no owning plan yet. Whoever next authors a live-gate contract for this phase
+  should either append `-a` to the `tee` invocation with per-launch markers, or require a
+  uniquely-named log file per relaunch — and should add a fifth Structural Reachability Review test
+  for requirement-interaction reachability (does satisfying requirement A ever undo requirement
+  B's own evidence?) before trusting the review's completeness again.
+
+- **F-34.4.2-12 — Humble disconnect wedges the main thread (NEW, escalates F-34.4.2-10).** **File:**
+  the Humble disconnect flow (`src/backend/humble/user.ts`'s hidden-window disconnect path and its
+  shell-side counterpart). **Symptom:** clicking Humble's disconnect/logout control produced a
+  hard, unbounded macOS main-thread wedge (spinning-wait cursor, unresponsive to all input),
+  requiring the operator to force-kill the app — no graceful recovery, no error dialog, no log
+  line (the surviving transcript ends before any disconnect-specific line, consistent with either
+  a pre-emission wedge or a post-emission force-kill discarding an unflushed write; no claim is
+  made about which). **No root cause is asserted.** This is a genuine escalation from
+  F-34.4.2-10's own prior symptom (a BOUNDED, non-fatal storage-wipe timeout after which the
+  disconnect flow continued) to an UNBOUNDED, fatal hang. Whether this cycle's plans 13/14 caused
+  the escalation or merely exposed a pre-existing defect the bounded timeout was previously masking
+  is **UNDETERMINED**. **Candidate layers, none preferred** (full reasoning in
+  `34.4.2-LIVE-GATE-RERUN-3.md`'s own findings section): (a) plan 13's deletion of the
+  `/autofill-request` sentinel arm from the shared `.on_navigation(` closure also carrying
+  `/reveal`/`/clear-storage`/`/login-cancel` on `REVEAL_EXFIL_HOST`; (b) plan 14's single-flight
+  latch's interaction with the hidden reveal-window path, though the latch's own `if visible ==
+  true` scoping and this run's clean visible-path evidence make it a weaker candidate, not an
+  eliminated one, since the hidden-window path itself was never reached live this run; (c) the
+  pre-existing `humble_login_clear_storage` exfil-channel wait, which already carried a
+  bounded-timeout defect (F-34.4.2-10) before this cycle. **New threat T-34.4.2-43 minted**
+  (Denial of service, OPEN, BLOCKING — `34.4.2-PLATFORM-SCOPE.md` §5's ninth update). **Scope:**
+  this plan records a gate result; it does not diagnose or fix code (author/runner discipline,
+  D-E — the plan that recorded this result must not also repair it). **Disposition:** logged, not
+  fixed, BLOCKS phase closure. Owed to gap cycle 4: a discriminator test distinguishing the three
+  candidate layers before attempting any fix, per this phase's own standing lesson that when two
+  readings of a measurement both fit, the next step is to build a discriminator, not ship the
+  nicer-sounding cause.
