@@ -463,10 +463,26 @@ async function installDependencies(repoDir: string): Promise<void> {
     )
     return
   }
+  // Rule 1 fix (found live during this plan's real gogdl build): an EDITABLE
+  // install is not cosmetic here -- it is what heroic-gogdl's own CI does
+  // ("Build C module: pip3 install -e .") and it is load-bearing for
+  // PyInstaller's discovery of the compiled gogdl.xdelta3 C extension.
+  // Empirically confirmed on this machine (both under python3.14 AND
+  // python3.11, isolating out the interpreter as a variable): a regular
+  // `pip install .` places the .so under the venv's site-packages and
+  // PyInstaller's analysis reports "missing module named 'gogdl.xdelta3'"
+  // in build/gogdl/warn-gogdl.txt even though the file is present on disk;
+  // `pip install -e .` places the .so back in the source tree next to
+  // cli.py's own package and PyInstaller's analysis finds it with no
+  // warning. gogdl is the only ONEDIR_RUNNERS repo with no requirements.txt,
+  // so this only ever exercises for gogdl -- legendary/nile both declare one
+  // and use the -r branch above, unaffected.
   await runOrThrow(
-    'pip install . (no requirements.txt)',
+    'pip install -e . (no requirements.txt; editable install matches ' +
+      'upstream CI and is required for PyInstaller to find compiled ' +
+      'C extensions such as gogdl.xdelta3)',
     pipPath(repoDir),
-    ['install', '.'],
+    ['install', '-e', '.'],
     repoDir
   )
 }
