@@ -92,6 +92,42 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
     </button>
   )
 
+  if (state && phase === 'preparing') {
+    // Quick task 260806-teb: covers the wait BEFORE a sign-in window exists at all -- currently
+    // only reachable for `runner === 'nile'`, whose login URL costs a real ~12.8s `nile auth`
+    // subprocess spawn (pyinstaller-onefile-spawn-tax) to resolve. Placed before `awaiting`
+    // because `awaiting`'s copy ("A sign-in window has opened...") would otherwise lie for the
+    // whole of this wait. Prefer the runner carried on the state itself over the separately-
+    // passed `runner` prop, mirroring the `finalizing`/`blocked` branches above.
+    const preparingRunnerLabel = state.runner
+      ? state.runner.charAt(0).toUpperCase() + state.runner.slice(1)
+      : runnerLabel
+    const heading = t(
+      'webview.login.oauth.preparing.heading',
+      preparingRunnerLabel
+        ? `Preparing ${preparingRunnerLabel} sign-in…`
+        : 'Preparing sign-in…'
+    )
+    const body = t(
+      'webview.login.oauth.preparing.body',
+      "The store's sign-in window is being prepared and will open shortly."
+    )
+    window.api.logInfo(
+      `[TauriLoginPanel] runner=${state.runner} phase=preparing`
+    )
+    return (
+      <div className="WebView__unavailablePanel">
+        <div
+          className="WebView__unavailablePanel-spinner"
+          role="progressbar"
+          aria-hidden="true"
+        />
+        <h2 className="WebView__unavailablePanel-heading">{heading}</h2>
+        <p className="WebView__unavailablePanel-body">{body}</p>
+      </div>
+    )
+  }
+
   if (phase === 'awaiting') {
     const heading = t(
       'webview.login.oauth.awaiting.heading',

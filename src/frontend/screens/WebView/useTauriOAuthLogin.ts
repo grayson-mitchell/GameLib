@@ -41,9 +41,22 @@ import { EPIC_LOGIN_URL, GOG_LOGIN_URL, ZOOM_LOGIN_URL } from './loginRoutes'
  * The `finalizing` phase below fills that gap. It needs no new IPC channel: `oauthCaptureLogin`'s
  * own resolution already IS the popup-closed signal, so the transition is inserted at the existing
  * captured/non-captured fork, immediately before the auth-exchange call.
+ *
+ * Quick task 260806-teb: `nile`'s login URL is not a constant like the other three runners' --
+ * resolving it costs a real `nile auth --login --non-interactive` subprocess spawn, measured at
+ * ~12.8s per invocation (pyinstaller-onefile-spawn-tax). The OLD code set `{ phase: 'awaiting' }`
+ * as the very first action, before that fetch even started, so `TauriLoginPanel`'s `awaiting`
+ * copy -- "A sign-in window has opened. Complete sign-in there." -- actively LIED for the entire
+ * pre-window wait: no window had opened yet. The `preparing` phase below fills that gap for nile
+ * specifically. It carries `runner` (mirroring `finalizing`/`blocked`) and is set immediately
+ * before `window.api.getAmazonLoginData()` is awaited; `awaiting` now moves to fire for ALL four
+ * runners only once the login URL is actually resolved and immediately before
+ * `oauthCaptureLogin` opens the real window -- which the three constant-URL runners
+ * (legendary/gog/zoom) still reach synchronously, so they never observe `preparing` at all.
  */
 export type TauriOAuthLoginState =
   | { phase: 'idle' }
+  | { phase: 'preparing'; runner: OAuthRunner }
   | { phase: 'awaiting' }
   | { phase: 'finalizing'; runner: OAuthRunner }
   | { phase: 'blocked'; runner: OAuthRunner; channel: string }
@@ -178,8 +191,6 @@ export function useTauriOAuthLogin(
     }
 
     async function run(): Promise<void> {
-      safeSetState({ phase: 'awaiting' })
-
       let url: string
       let amazonData: NileLoginData | undefined
       try {
@@ -192,7 +203,13 @@ export function useTauriOAuthLogin(
         } else {
           // nile: account-session-dependent, fetched fresh per attempt (mirrors index.tsx's
           // own /loginweb/nile effect) -- client_id/code_verifier/serial are kept for the
-          // authAmazon call below, never re-derived.
+          // authAmazon call below, never re-derived. Quick task 260806-teb: this fetch is the
+          // ~12.8s nile-auth spawn `preparing` exists to cover honestly, set BEFORE the await
+          // so the panel never claims a window has opened while this is still in flight.
+          safeSetState({ phase: 'preparing', runner: activeRunner })
+          window.api.logInfo(
+            `[useTauriOAuthLogin] runner=${activeRunner} phase=preparing (fetching login url)`
+          )
           amazonData = await window.api.getAmazonLoginData()
           url = amazonData.url
         }
@@ -211,6 +228,12 @@ export function useTauriOAuthLogin(
         safeSetState({ phase: 'error', message })
         return
       }
+
+      // Quick task 260806-teb: moved from the top of run() -- now fires for ALL four runners
+      // only once the login url is actually resolved, immediately before oauthCaptureLogin
+      // opens the real window. The three constant-URL runners (legendary/gog/zoom) reach this
+      // synchronously (no await above), so they never observe `preparing` at all.
+      safeSetState({ phase: 'awaiting' })
 
       let outcome: OAuthCaptureOutcome
       try {

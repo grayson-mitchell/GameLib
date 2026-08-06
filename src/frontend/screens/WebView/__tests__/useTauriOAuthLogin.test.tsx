@@ -1152,6 +1152,142 @@ describe('useTauriOAuthLogin — finalizing (capture complete, exchange in fligh
   })
 })
 
+describe('useTauriOAuthLogin — preparing (quick task 260806-teb)', () => {
+  it("runner='nile' reaches { phase: 'preparing', runner: 'nile' } before getAmazonLoginData() resolves", async () => {
+    let resolveAmazonData: (value: unknown) => void = () => {}
+    mockApi.getAmazonLoginData.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveAmazonData = resolve
+        })
+    )
+    mockApi.oauthCaptureLogin.mockImplementation(() => new Promise(() => {}))
+
+    mount('nile')
+    await flushPromises()
+    const hook = rerender('nile')
+
+    expect(hook).toEqual({ phase: 'preparing', runner: 'nile' })
+    expect(mockApi.oauthCaptureLogin).not.toHaveBeenCalled()
+
+    resolveAmazonData(AMAZON_LOGIN_DATA)
+  })
+
+  it("runner='nile' moves preparing -> awaiting only AFTER getAmazonLoginData() resolves, and before oauthCaptureLogin is called", async () => {
+    let resolveAmazonData: (value: unknown) => void = () => {}
+    mockApi.getAmazonLoginData.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveAmazonData = resolve
+        })
+    )
+    mockApi.oauthCaptureLogin.mockImplementation(() => new Promise(() => {}))
+
+    mount('nile')
+    await flushPromises()
+    const preparing = rerender('nile')
+    expect(preparing).toEqual({ phase: 'preparing', runner: 'nile' })
+
+    resolveAmazonData(AMAZON_LOGIN_DATA)
+    const hook = await settle('nile')
+
+    expect(hook).toEqual({ phase: 'awaiting' })
+    expect(mockApi.oauthCaptureLogin).toHaveBeenCalledWith({
+      runner: 'nile',
+      url: AMAZON_LOGIN_DATA.url
+    })
+  })
+
+  it.each<OAuthRunner>(['legendary', 'gog', 'zoom'])(
+    "runner=%s never observes { phase: 'preparing' } -- its url resolves from a constant with no spawn",
+    async (runner) => {
+      mockApi.oauthCaptureLogin.mockImplementation(() => new Promise(() => {}))
+
+      mount(runner)
+      await flushPromises()
+      const hook = rerender(runner)
+
+      expect(hook).toEqual({ phase: 'awaiting' })
+      expect(hook.phase).not.toBe('preparing')
+
+      const preparingLines = mockApi.logInfo.mock.calls.filter(
+        ([line]) => typeof line === 'string' && line.includes('phase=preparing')
+      )
+      expect(preparingLines).toHaveLength(0)
+    }
+  )
+
+  it('a getAmazonLoginData() rejection still lands { phase: "error" } and logs the existing failed-to-resolve line -- preparing is not terminal', async () => {
+    mockApi.getAmazonLoginData.mockRejectedValue(new Error('nile auth exited non-zero'))
+
+    mount('nile')
+    const hook = await settle('nile')
+
+    expect(hook).toEqual({ phase: 'error', message: 'nile auth exited non-zero' })
+    const matching = mockApi.logInfo.mock.calls.filter(
+      ([line]) =>
+        typeof line === 'string' &&
+        line.includes('phase=error (failed to resolve login url)')
+    )
+    expect(matching).toHaveLength(1)
+  })
+
+  it('a teardown during preparing (getAmazonLoginData still in flight, then rejecting) logs phase=cancelled-midflight at=login-url and suppresses the state update', async () => {
+    // Mirrors the existing "late rejection after unmount" precedent in the
+    // capture-transport-failed describe block below -- same shape, but the in-flight promise
+    // here is getAmazonLoginData() during `preparing`, not oauthCaptureLogin() during
+    // `awaiting`.
+    let rejectAmazonData: (reason: unknown) => void = () => {}
+    mockApi.getAmazonLoginData.mockImplementation(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectAmazonData = reject
+        })
+    )
+
+    mount('nile')
+    await flushPromises()
+    const preparing = rerender('nile')
+    expect(preparing).toEqual({ phase: 'preparing', runner: 'nile' })
+
+    unmount()
+    mockApi.logInfo.mockClear()
+
+    const unhandled = jest.fn()
+    process.on('unhandledRejection', unhandled)
+    try {
+      rejectAmazonData(new Error('nile auth exited non-zero'))
+      await flushPromises()
+    } finally {
+      process.off('unhandledRejection', unhandled)
+    }
+
+    expect(unhandled).not.toHaveBeenCalled()
+    // Plan 34.5-34's precedent: this site logs the cancellation diagnostic and returns --
+    // it must still be the ONLY line, and oauthCaptureLogin must never be reached.
+    expect(mockApi.logInfo).toHaveBeenCalledTimes(1)
+    expect(mockApi.logInfo).toHaveBeenCalledWith(
+      '[useTauriOAuthLogin] runner=nile phase=cancelled-midflight at=login-url'
+    )
+    expect(mockApi.oauthCaptureLogin).not.toHaveBeenCalled()
+  })
+
+  it('emits exactly one logInfo line containing phase=preparing (fetching login url) and runner=nile per attempt', async () => {
+    mockApi.oauthCaptureLogin.mockImplementation(() => new Promise(() => {}))
+
+    mount('nile')
+    await settle('nile')
+
+    const matching = mockApi.logInfo.mock.calls.filter(
+      ([line]) =>
+        typeof line === 'string' &&
+        line.includes('phase=preparing (fetching login url)') &&
+        line.includes('runner=nile')
+    )
+    expect(matching).toHaveLength(1)
+  })
+})
+
 describe('useTauriOAuthLogin — unmount safety', () => {
   it('unmounting mid-capture does not throw, and a captured code still reaches the auth channel (Plan 34.5-34 Task 2 -- a perishable code is never abandoned)', async () => {
     let resolveCapture: (value: unknown) => void = () => {}

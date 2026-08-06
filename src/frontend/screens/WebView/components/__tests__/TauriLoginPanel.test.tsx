@@ -187,6 +187,62 @@ describe('TauriLoginPanel — finalizing surface [quick task 260803-eee]', () =>
   })
 })
 
+describe('TauriLoginPanel — preparing surface (quick task 260806-teb)', () => {
+  it('renders the spinner element, a heading naming the runner, and a body -- never the awaiting or declared-blocked copy', () => {
+    const element = TauriLoginPanel({
+      runner: 'nile',
+      state: { phase: 'preparing', runner: 'nile' }
+    }) as AnyReactElement
+    const text = collectText(element)
+
+    expect(text).toContain('Preparing')
+    expect(text).toContain('Nile')
+    expect(text.toLowerCase()).not.toContain('a sign-in window has opened')
+    expect(text).not.toContain('Phase 34.5')
+    expect(text).not.toContain('not wired up')
+
+    const classNames = collectClassNames(element)
+    expect(classNames).toContain('WebView__unavailablePanel-spinner')
+  })
+
+  it('never claims a sign-in window has already opened', () => {
+    const element = TauriLoginPanel({
+      runner: 'nile',
+      state: { phase: 'preparing', runner: 'nile' }
+    }) as AnyReactElement
+    const text = collectText(element).toLowerCase()
+
+    expect(text).not.toContain('window has opened')
+  })
+
+  it('logs one [TauriLoginPanel] runner=<runner> phase=preparing line', () => {
+    mockApi.logInfo.mockClear()
+    TauriLoginPanel({ runner: 'nile', state: { phase: 'preparing', runner: 'nile' } })
+
+    expect(mockApi.logInfo).toHaveBeenCalledTimes(1)
+    const [message] = mockApi.logInfo.mock.calls[0]
+    expect(message).toContain('runner=nile')
+    expect(message).toContain('phase=preparing')
+  })
+
+  it('{ phase: "awaiting" } and the declared-blocked default are unaffected by the new branch', () => {
+    const awaiting = TauriLoginPanel({
+      runner: 'gog',
+      state: { phase: 'awaiting' }
+    }) as AnyReactElement
+    const awaitingText = collectText(awaiting)
+    expect(awaitingText).toContain('Signing in to Gog')
+    expect(awaitingText).not.toContain('Preparing')
+
+    mockApi.logInfo.mockClear()
+    const idleDefault = TauriLoginPanel({ runner: 'gog' }) as AnyReactElement
+    const idleText = collectText(idleDefault)
+    expect(idleText).toContain('Phase 34.5')
+    expect(idleText).not.toContain('Preparing')
+    expect(mockApi.logInfo).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('TauriLoginPanel — no navigator.clipboard reference', () => {
   it('never touches navigator.clipboard for either surface', () => {
     TauriLoginPanel({ runner: 'humble' })
