@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "ACTIVE BLOCKER unchanged -- 34.4.2 gap cycle 5 COMPLETE, all 25 plans EXECUTED. Plan 24's blocking live gate RAN 2026-08-06 and FAILED 0/5, no launch scorable; blocker F-34.4.2-19 is UNDIAGNOSED. Plan 25 brought VERIFICATION.md current. Phase NOT CLOSED (D-08). Next for 34.4.2: /gsd-debug. SIDE TRACK 2026-08-07: Phase 34.8 (frontend i18n compliance) is now PLANNED -- 12 plans across 9 waves, REQ-34.8-01..17 minted, plan-checker PASSED with no blockers. No code executed, no phase closed. Next for 34.8: /gsd-execute-phase 34.8."
+stopped_at: "ACTIVE BLOCKER unchanged -- 34.4.2 gap cycle 5 COMPLETE, all 25 plans EXECUTED. Plan 24's blocking live gate RAN 2026-08-06 and FAILED 0/5, no launch scorable; blocker F-34.4.2-19 is UNDIAGNOSED. Plan 25 brought VERIFICATION.md current. Phase NOT CLOSED (D-08). Next for 34.4.2: /gsd-debug. SIDE TRACK 2026-08-07: Phase 34.8 (frontend i18n compliance) is now PLANNED -- 12 plans across 9 waves, REQ-34.8-01..17 minted, plan-checker PASSED with no blockers. No code executed, no phase closed. Next for 34.8: /gsd-execute-phase 34.8. SECOND SIDE TRACK 2026-08-07: Phase 34.9 (macOS runner onedir repackaging) is PLANNED (11 plans, 7 waves, REQ-34.9-01..11, plan-checker PASSED after 2 blocking fixes) and PARTIALLY EXECUTED -- plans 01, 02, 03 DONE, plans 04-11 REMAIN. Next for 34.9: /gsd-execute-phase 34.9 (resumes at plan 04, wave 2)."
 last_updated: "2026-08-07T00:00:00.000Z"
-last_activity: 2026-08-07 -- Phase 34.8 PLANNED (12 plans, 9 waves). No code changed, no plans executed.
+last_activity: 2026-08-07 -- Phase 34.8 PLANNED (12 plans, 9 waves), no code executed. CONCURRENTLY Phase 34.9 executing: plans 01-03 done (onedir builder deriving each upstream repo's own pyinstaller command; archSpecificBinary made onedir-aware with a loud stale-layout throw, mutation-proven; per-runner measurement). Measurement cold ratio VOID twice (validity anchor caught both -- neither idle nor `purge` restores a cold state once amfid has assessed a binary; needs a reboot-fresh machine), but WARM per-runner win CONFIRMED for all three: nile 32.5x, legendary 26.6x, gogdl 27.2x, which unblocks plan 05's per-runner PR citations (T-34.9-20). Remaining 34.9: 04/06/07/08 autonomous; 05 (submit 3 upstream PRs) + 11 (live gate) need the user; 09 dispatches the fork's first macos-13/macos-14 CI matrix and is the ONLY source of x64 artifacts (PyInstaller cannot cross-compile). Known-unproven by design: Tauri-PACKAGED resolution (R-34.5-G1-PKG, owned by 34.5) and real-certificate notarization (D-03/D-04).
 progress:
   total_phases: 21
   completed_phases: 13
   total_plans: 228
-  completed_plans: 205
+  completed_plans: 206
   percent: 90
 ---
 
