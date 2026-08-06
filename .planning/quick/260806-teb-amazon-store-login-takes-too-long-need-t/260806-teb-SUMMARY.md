@@ -35,17 +35,21 @@ decisions:
   - "safeSetState({ phase: 'awaiting' }) moved from the top of run() to immediately after the login URL is resolved (for ALL four runners), immediately before oauthCaptureLogin -- not just for nile. The three constant-URL runners resolve synchronously so they still reach awaiting in the same tick as before; only nile's async fetch now has a preceding preparing state to cover."
   - "preparing carries `runner` on the state itself (mirroring finalizing/blocked), so TauriLoginPanel reads it from state rather than depending on the separately-passed runner prop staying in sync."
 metrics:
-  duration_minutes: "~35 (implementation tasks only; checkpoint task pending)"
-  completed: null
+  duration_minutes: "~50 (3 implementation tasks + live checkpoint)"
+  completed: "2026-08-06"
 ---
 
 # Quick 260806-teb: Cut Amazon login dead time under Tauri Summary
 
-**STATUS: IMPLEMENTATION COMPLETE, CHECKPOINT PENDING.** All three automated tasks (auto-verified:
-tsc clean, 253 tests passing across the affected surface) landed and committed. Task 4 is a
-blocking live-verification checkpoint requiring a human to drive the real Tauri build and record
-the actual click-to-window-visible timing -- that measurement has NOT been taken and is NOT
-fabricated here. This plan is **not complete** until that checkpoint resolves.
+**STATUS: ALL FOUR TASKS COMPLETE. Every behavior this plan promised is live-proven. The USER'S
+UNDERLYING COMPLAINT IS NOT RESOLVED** -- the measured residual wait is 18-36s, and the live
+measurement falsified the plan's central cost assumption. See "Checkpoint Results" below. A
+follow-up investigation is owed and recorded in deferred-items.
+
+All three automated tasks (tsc clean, 253 tests passing across the affected surface) landed and
+committed. Task 4's live measurement was driven by the developer on the real Tauri build on
+2026-08-06 at 21:27-21:30, corroborated against `gamelib.log` and `runners/nile.log`, and is
+recorded verbatim below -- no timing here is estimated or fabricated.
 
 ## Performance
 
@@ -168,34 +172,110 @@ material (T-TEB-03, consistent with the existing permitted-key-vocabulary test i
 
 None - no external service configuration required.
 
-## CHECKPOINT PENDING -- Task 4 (Live-verify the Amazon login wait)
+## Checkpoint Results -- Task 4 (Live-verified 2026-08-06)
 
-This is a **blocking live checkpoint**. It requires a human to:
+Driven by the developer on the real Tauri debug build. Evidence: `~/Library/Logs/GameLib/gamelib.log`
+(single launch, bootstrap 21:27:45 -- no concurrent-instance sink split) and
+`~/Library/Logs/GameLib/runners/nile.log`.
 
-1. Launch the Tauri build and confirm exactly one GameLib process is running
-   (`pgrep -fl GameLib`).
-2. Go to Manage Accounts, click Amazon, start a stopwatch on the click.
-3. Confirm the panel shows the new spinner + "Preparing Amazon sign-in..." surface (NOT "A
-   sign-in window has opened").
-4. Stop the stopwatch when the native Amazon sign-in window actually appears. Record the elapsed
-   seconds -- expectation is roughly half the previous wait, with one ~12.8s nile spawn remaining
-   (not removable in-repo).
-5. Confirm `gamelib.log` shows `phase=preparing (fetching login url)` exactly once, followed by
-   `phase=awaiting`, with only ONE nile auth invocation for the attempt.
-6. Close the sign-in window without signing in, confirm landing back on Manage Accounts, click
-   Amazon again, and confirm a real second spawn occurs (fresh PKCE material, not cached).
-7. Complete a real Amazon sign-in through to the library.
-8. Sanity-check GOG: must go straight to "Signing in to Gog" with no preparing surface.
+### Measured
 
-**No timing has been measured or fabricated.** This SUMMARY will need to be updated (or the
-orchestrator will spawn a continuation agent) once a human provides the step-4 and step-8
-measurements at the checkpoint.
+| Attempt | Click -> window visible | Log window |
+|---|---|---|
+| 1 (cold, at app startup) | **36s** | spawn 21:28:04 -> register data 21:28:40, window 21:28:41 |
+| 2 (warm, 90s later) | **18s** | spawn 21:29:38 -> register data 21:29:56, window 21:29:57 |
+| GOG sanity check | **1s** | developer-observed |
+
+### What the plan promised, and whether it held
+
+| must_have | Verdict | Evidence |
+|---|---|---|
+| Exactly ONE `nile auth --login --non-interactive` spawn per Tauri attempt, not two | **PASS (live)** | `gamelib.log:27` and `:43` -- one invocation each, nothing else in between. The duplicate spawn is definitively gone. |
+| A second sequential attempt mints FRESH PKCE material, never cached | **PASS (live)** | `code_verifier` `8V5I2WGQ...` vs `6W0rDNMg...`; `serial` `35CB8DBE...` vs `63525984...`. The deliberate no-TTL-cache decision is proven correct in the field, not just in the unit test. |
+| Preparing surface holds the whole wait; never the false "window has opened" copy | **PASS (live)** | `phase=preparing (fetching login url)` at 21:28:04, `[TauriLoginPanel] phase=preparing` same second, sustained until the window at 21:28:41. Held for the full 36s. |
+| legendary/gog/zoom go straight to `awaiting`, no preparing surface | **PASS (weak)** | GOG measured at 1s, consistent with a synchronous constant URL. Developer-observed only -- no GOG login appears in this log, so this rests on the 1s reading plus the unit tests, not on a log line. |
+| Electron `<webview>` Amazon path behaviourally unchanged | **NOT LIVE-TESTED** | Unit/structural tests only. No Electron run was made. Unchanged from the plan's stated risk posture. |
+| Concurrent callers share one in-flight spawn | **NOT LIVE-OBSERVABLE** | Unit-tested only; with the duplicate caller removed there is no longer a live path that produces concurrency. This is now purely a regression guard. |
+
+### The plan's cost model was WRONG -- corrected here
+
+The plan asserted a residual of "one ~12.8s nile spawn, not removable in-repo." Both halves of that
+are false, measured directly on this machine (source binary warm in page cache):
+
+```
+public/bin/arm64/darwin/nile --version                     -> 7.09s / 6.81s   (5% CPU, I/O bound)
+public/bin/arm64/darwin/nile auth --login --non-interactive -> 6.86s / 6.79s   (4% CPU, I/O bound)
+```
+
+`auth --login` costs the **same as `--version`** -- it is pure PyInstaller-onefile spawn tax doing
+essentially no work of its own (the URL and PKCE material are generated locally; there is no slow
+Amazon round-trip hiding in it). So:
+
+- The nile binary accounts for only **~7s**, not 12.8s.
+- That leaves **~29s unexplained on attempt 1 and ~11s on attempt 2** -- app-side latency this
+  plan neither addressed nor knew about. It is now the dominant cost, and "not removable in-repo"
+  is an unsupported claim about it.
+
+Attempt 1's excess has a strong candidate: the app fires `legendary --version`, `gogdl --version`
+and `nile --version` concurrently at 21:28:01 (`gamelib.log:19-23`), and `nile.log` shows the
+`--version` output landing *after* the 21:28:04 auth command was logged -- so four PyInstaller
+onefile extractions were contending on disk when the user clicked. **Attempt 2 has no such
+explanation**: it ran in isolation with nothing else spawning, and still took 18s against a 6.8s
+standalone baseline. That ~11s gap is undiagnosed.
+
+### Checkpoint contract defect (recorded, per the live-gate-contract-authoring discipline)
+
+Step 7 of this checkpoint ("complete a real Amazon sign-in through to the library") was
+**unsatisfiable as written**: `gamelib.log:24` shows
+`[TauriLoginPanel] declared-blocked: runner=nile channel=authAmazon -- lands in Phase 34.5`.
+Amazon sign-in cannot complete until Phase 34.5 ports that channel, so the developer could only
+cancel -- which is exactly what both attempts did (`status=cancelled reason=window-closed`). The
+step demanded an outcome the app currently forbids. This is the same defect class as
+`contract-interaction-defects-evade-item-review`: each step was individually reasonable, but step 7
+contradicted a known platform state that no per-step review caught. Not a defect in the code under
+test.
+
+### Honest bottom line
+
+The three code fixes did exactly what they were designed to do, and the design was aimed at the
+wrong dominant cost. The user asked for a faster Amazon login; 18-36s is still an unacceptable
+wait. **This task removed a real, proven duplicate spawn and made the remaining wait honest, but
+did not solve the presenting problem.** The follow-up is filed in deferred-items below.
+
+## Deferred Items
+
+**D-TEB-01 (open, recommended next): the ~11-29s app-side gap between the nile binary's 6.8s
+standalone cost and the 18-36s observed in-app.** Undiagnosed with more than one live candidate --
+route through `/gsd-debug`, not a guessed fix. Candidates, none preferred:
+(a) concurrent PyInstaller extraction contention from the three startup `--version` probes
+(explains attempt 1, but demonstrably NOT attempt 2, which ran isolated);
+(b) sidecar-spawn overhead specific to `runRunnerCommand` (different parent process, env, or cwd
+than a plain shell invocation -- the standalone 6.8s baseline was measured from a shell, so the
+comparison is not yet apples-to-apples);
+(c) debug-build overhead in `target/debug/gamelib-shell`, untested against a release build.
+The cheap discriminator to run first is a release-build timing plus a `sample` of the sidecar
+during the wait -- per `sample-the-hung-process-before-killing`, one sample has collapsed a
+multi-candidate field here before.
+
+**D-TEB-02 (open, design decision the user should weigh): prefetch the nile login URL.** The
+in-flight memoization from Task 2 already makes a prefetch safe to land -- a fetch started on
+Manage Accounts mount would be reused by the click rather than racing it, and a cancel/retry still
+mints fresh PKCE material. This could hide most of the remaining wait behind the time the user
+spends reading the page. **Not implemented, deliberately**: it spawns a multi-second subprocess for
+every visitor to Manage Accounts including the majority who never touch Amazon, which is a real
+cost trade the user should decide rather than absorb silently. Revisit after D-TEB-01, since the
+right prefetch lead time depends on what the true cost turns out to be.
+
+**D-TEB-03 (open, low priority): the Electron `<webview>` Amazon path was never live-exercised.**
+Task 1's guard is pinned by structural/unit tests only. Worth one Electron run if that path is
+still considered supported.
 
 ## Next Phase Readiness
 
 Not applicable -- this is a quick task, not a phase. Nothing downstream depends on this work
 completing before proceeding with other phases; it is a standalone latency/UX fix scoped to the
-Amazon Tauri login path.
+Amazon Tauri login path. Note that a complete Amazon sign-in remains blocked until Phase 34.5
+ports the `authAmazon` channel, so the end-to-end flow cannot be validated before then.
 
 ## Self-Check: PASSED
 
