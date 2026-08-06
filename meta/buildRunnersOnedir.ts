@@ -145,9 +145,51 @@ function indentOf(line: string): number {
   return match ? match[1].length : 0
 }
 
-function extractRunValues(text: string): string[] {
+interface RunValueMatch {
+  command: string
+  // The step's OWN `working-directory:` sibling key, if declared (e.g.
+  // legendary's Build step runs with `working-directory: legendary`, so its
+  // `cli.py` / `../assets/...` arguments resolve relative to `<repo>/legendary`,
+  // not the repo root). Undefined means "repo root" (GitHub Actions' own
+  // default when a step declares no working-directory).
+  workingDirectory?: string
+}
+
+// Walks backward from a `run:` key's line to find a sibling key (e.g.
+// `working-directory:`) declared earlier in the SAME step mapping. Stops as
+// soon as indentation drops below the run: key's own indent -- that is the
+// step-list-item boundary (`- name: ...`) and searching further would read a
+// PRIOR, unrelated step's keys.
+function findSiblingKey(
+  lines: string[],
+  runLineIndex: number,
+  keyIndent: number,
+  keyName: string
+): string | undefined {
+  for (let k = runLineIndex - 1; k >= 0; k--) {
+    const line = lines[k]
+    if (line.trim() === '') continue
+    const lineIndent = indentOf(line)
+    if (lineIndent < keyIndent) break // left this step's key block entirely
+
+    if (lineIndent === keyIndent) {
+      const dashMatch = line.match(/^\s*-\s+(.*)$/)
+      const content = dashMatch ? dashMatch[1] : line.trim()
+      const kv = content.match(
+        new RegExp(`^${keyName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:\\s*(.*)$`)
+      )
+      if (kv) return kv[1].trim()
+      if (dashMatch) break // "- name: ..." start-of-step line -- stop here
+    }
+    // lineIndent > keyIndent is a continuation of some other folded value;
+    // keep walking backward past it.
+  }
+  return undefined
+}
+
+function extractRunValues(text: string): RunValueMatch[] {
   const lines = text.split('\n')
-  const values: string[] = []
+  const values: RunValueMatch[] = []
 
   for (let i = 0; i < lines.length; i++) {
     const match = lines[i].match(/^(\s*)(?:-\s+)?run:\s?(.*)$/)
@@ -166,18 +208,35 @@ function extractRunValues(text: string): string[] {
       j++
     }
 
-    values.push(
-      parts
+    const workingDirectory = findSiblingKey(
+      lines,
+      i,
+      keyIndent,
+      'working-directory'
+    )
+
+    values.push({
+      command: parts
         .join(' ')
         .replace(/\s{2,}/g, ' ')
-        .trim()
-    )
+        .trim(),
+      workingDirectory
+    })
   }
 
   return values
 }
 
-export function extractUpstreamPyinstallerCommand(repoDir: string): string {
+export interface UpstreamPyinstallerCommand {
+  command: string
+  // Absolute path the command must run FROM, if the step declared its own
+  // `working-directory:` (undefined means repo root).
+  workingDirectory?: string
+}
+
+export function extractUpstreamPyinstallerCommand(
+  repoDir: string
+): UpstreamPyinstallerCommand {
   const workflowsDir = join(repoDir, '.github', 'workflows')
 
   let entries: string[]
@@ -189,14 +248,22 @@ export function extractUpstreamPyinstallerCommand(repoDir: string): string {
     entries = []
   }
 
-  const matches: { file: string; command: string }[] = []
+  const matches: {
+    file: string
+    command: string
+    workingDirectory?: string
+  }[] = []
   for (const file of entries) {
     const text = readFileSync(join(workflowsDir, file), 'utf-8')
     for (const value of extractRunValues(text)) {
       // Only a run: value that INVOKES pyinstaller (first token), not one
       // that merely mentions it (e.g. "pip3 install --upgrade pyinstaller").
-      if (/^pyinstaller(\s|$)/.test(value)) {
-        matches.push({ file, command: value })
+      if (/^pyinstaller(\s|$)/.test(value.command)) {
+        matches.push({
+          file,
+          command: value.command,
+          workingDirectory: value.workingDirectory
+        })
       }
     }
   }
@@ -211,20 +278,26 @@ export function extractUpstreamPyinstallerCommand(repoDir: string): string {
   // Rule 1 fix (found live during this plan's real legendary build): a repo
   // may commit more than one workflow file whose pyinstaller step is
   // byte-identical (e.g. legendary's python.yml CI check and release.yml
-  // release job both build the exact same command). That is NOT ambiguous --
-  // there is only one candidate command, just declared twice. Only throw when
-  // the DISTINCT command texts number more than one; the error message still
+  // release job both build the exact same command, from the same
+  // working-directory). That is NOT ambiguous -- there is only one candidate
+  // command, just declared twice. Only throw when the DISTINCT (command,
+  // workingDirectory) pairs number more than one; the error message still
   // names every matching file for auditability.
-  const distinctCommands = new Set(matches.map((m) => m.command))
-  if (distinctCommands.size > 1) {
+  const distinctPairs = new Set(
+    matches.map((m) => `${m.command} ${m.workingDirectory ?? ''}`)
+  )
+  if (distinctPairs.size > 1) {
     throw new Error(
       `Expected exactly one DISTINCT pyinstaller invocation under ${workflowsDir}, ` +
-        `found ${distinctCommands.size}: ` +
+        `found ${distinctPairs.size}: ` +
         matches.map((m) => `${m.file}: "${m.command}"`).join(' | ')
     )
   }
 
-  return matches[0].command
+  return {
+    command: matches[0].command,
+    workingDirectory: matches[0].workingDirectory
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -417,15 +490,24 @@ async function installPyinstaller(repoDir: string): Promise<void> {
 
 async function runOnedirBuild(
   repoDir: string,
+  buildCwd: string,
   onedirCommand: string
 ): Promise<void> {
   const argv = onedirCommand.split(/\s+/).filter(Boolean)
+  // pyinstaller itself always resolves from the venv at repoDir/.venv
+  // (working-directory never moves the venv), but it must be SPAWNED with
+  // buildCwd as its cwd -- upstream's own `working-directory:` step key
+  // (e.g. legendary's `working-directory: legendary`) means its `cli.py` /
+  // `../assets/...` arguments, and PyInstaller's own default --distpath
+  // (`<cwd>/dist`), are resolved relative to that subdirectory, not the repo
+  // root. Found live during this plan's real legendary build ("Script file
+  // 'cli.py' does not exist" when spawned from repoDir instead).
   argv[0] = pyinstallerPath(repoDir)
   await runOrThrow(
     'pyinstaller --onedir build',
     argv[0],
     argv.slice(1),
-    repoDir
+    buildCwd
   )
 }
 
@@ -512,6 +594,7 @@ export interface RunnerBuildResult {
   repo: string
   tag: string
   upstreamLine: string
+  upstreamWorkingDirectory?: string
   onedirCommand: string
   droppedExpressions: string[]
   python3Version: string
@@ -554,11 +637,16 @@ export async function buildRunner(
   await installDependencies(repoDir)
   await installPyinstaller(repoDir)
 
-  const upstreamLine = extractUpstreamPyinstallerCommand(repoDir)
+  const { command: upstreamLine, workingDirectory } =
+    extractUpstreamPyinstallerCommand(repoDir)
   const { command, droppedExpressions } = toOnedirCommand(upstreamLine)
-  await runOnedirBuild(repoDir, command)
+  const buildCwd = workingDirectory ? join(repoDir, workingDirectory) : repoDir
+  await runOnedirBuild(repoDir, buildCwd, command)
 
-  const distParentDir = join(repoDir, 'dist')
+  // PyInstaller's own default --distpath is "<cwd>/dist" -- i.e. relative to
+  // wherever it was SPAWNED from, not the repo root. buildCwd (which folds in
+  // any working-directory: step key) is therefore also the base for dist/.
+  const distParentDir = join(buildCwd, 'dist')
   const distDir = join(distParentDir, runner)
   if (!existsSync(distDir)) {
     throw new Error(
@@ -585,6 +673,7 @@ export async function buildRunner(
     repo,
     tag,
     upstreamLine,
+    upstreamWorkingDirectory: workingDirectory,
     onedirCommand: command,
     droppedExpressions,
     python3Version,
@@ -617,6 +706,7 @@ function writeBuildManifest(arch: string, results: RunnerBuildResult[]): void {
       repo: r.repo,
       tag: r.tag,
       upstreamPyinstallerLine: r.upstreamLine,
+      upstreamWorkingDirectory: r.upstreamWorkingDirectory ?? null,
       onedirCommand: r.onedirCommand,
       droppedExpressions: r.droppedExpressions,
       python3Version: r.python3Version,

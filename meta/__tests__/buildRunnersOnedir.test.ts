@@ -139,8 +139,38 @@ describe('buildRunnersOnedir', () => {
         `name: release\non: push\njobs:\n  build:\n    steps:\n${identicalRun}`
       )
 
-      const command = extractUpstreamPyinstallerCommand(fixtureDir)
-      expect(command).toBe('pyinstaller --onefile --name legendary cli.py')
+      const result = extractUpstreamPyinstallerCommand(fixtureDir)
+      expect(result.command).toBe('pyinstaller --onefile --name legendary cli.py')
+      expect(result.workingDirectory).toBeUndefined()
+    })
+
+    it('captures a step-level working-directory: sibling key (legendary\'s real shape)', () => {
+      fixtureDir = mkdtempSync(join(tmpdir(), 'onedir-fixture-workdir-'))
+      const workflowsDir = join(fixtureDir, '.github', 'workflows')
+      mkdirSync(workflowsDir, { recursive: true })
+      writeFileSync(
+        join(workflowsDir, 'release.yml'),
+        [
+          'name: release',
+          'on: push',
+          'jobs:',
+          '  build:',
+          '    steps:',
+          '      - name: Build',
+          '        working-directory: legendary',
+          '        run: pyinstaller',
+          '          --onefile',
+          '          --name legendary',
+          '          -i ../assets/windows_icon.ico',
+          '          cli.py'
+        ].join('\n')
+      )
+
+      const result = extractUpstreamPyinstallerCommand(fixtureDir)
+      expect(result.command).toBe(
+        'pyinstaller --onefile --name legendary -i ../assets/windows_icon.ico cli.py'
+      )
+      expect(result.workingDirectory).toBe('legendary')
     })
 
     it('throws naming both matches when two pyinstaller lines exist', () => {
