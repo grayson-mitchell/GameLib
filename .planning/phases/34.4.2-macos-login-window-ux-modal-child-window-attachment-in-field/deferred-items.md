@@ -600,3 +600,99 @@ pending live re-confirmation.** The source fix (`6bad86227`) is landed and unit-
 third call site (`humble_login_cookies`) is now covered too (plan 34.4.2-17). Per
 REQ-34.4.2-09 a source fix alone never closes anything in this phase — item 6(a) of RERUN-4 is its
 live discharge. **Not marked discharged here.**
+
+## Plan 20 — RERUN-4 RAN, verdict FAIL 1/6; four new findings, three of them contract defects (2026-08-06)
+
+**Disposition: the phase does NOT close (D-08, not a genuine 6/6). Item 6(b) earned this phase's
+first-ever measured PASS (Epic absence check) — a real, standalone win inside an otherwise FAILing
+gate, reported as such and not inflated. Four findings minted this run, continuing the F-34.4.2-NN
+sequence from F-34.4.2-14. All are logged here, none fixed in this plan — this plan records a gate
+result, per the same author/runner discipline this phase has held since plans 05/06.**
+
+Full item-by-item Observed/Verdict detail lives in `34.4.2-LIVE-GATE-RERUN-4.md` — not duplicated
+here. This section records the four findings and their dispositions.
+
+- **F-34.4.2-15 (F-A) — Capture-integrity defect, a NEW CLASS that generalises beyond this
+  phase.** **File:** the evidence-capture instruction in `34.4.2-LIVE-GATE-RERUN-4.md` (Section 2
+  of its dual-sink standard) and, by extension,
+  `.claude/skills/spike-findings-gamelib/references/live-gate-contract-authoring.md` (the standing
+  reference plan 18 wrote). **Symptom:** two `gamelib-shell` processes ran concurrently during
+  launch 2 (PID 6862, ppid 6758 — the captured, idle gate launch; PID 7352, ppid 7241 —
+  separately started, operator-driven). The `[shell]` stderr sink SPLIT: the driven instance's
+  `[shell]` lines went to an uncaptured terminal, while `gamelib.log` stayed SHARED and kept
+  receiving `[Backend]` lines from the driven instance. **Consequence:** an observer sees a
+  plausible, populated `gamelib.log` and an apparently-healthy transcript, and can wrongly
+  conclude `[shell]`-sourced items were measured when their decisive evidence never reached the
+  capture at all — exactly what happened to items 1 and 2's own machine evidence this run. The
+  dual-sink append-and-archive standard (plan 18's reference) assumes exactly ONE instance and has
+  no check that would have caught this. **Why out of scope for this plan:** the fix (assert
+  exactly one `gamelib-shell` PID for the whole launch, recorded at both launch and teardown)
+  belongs in the standing reference document, which is not in this plan's `files_modified`.
+  **Disposition:** logged, not fixed, no owning plan yet. A future contract-authoring plan should
+  add this as a sixth capture-integrity requirement to `live-gate-contract-authoring.md` before
+  the next live gate is staged. Associated with new threat **T-34.4.2-44**
+  (`34.4.2-PLATFORM-SCOPE.md` §5's eleventh update).
+
+- **F-34.4.2-16 (F-B) — Item 4 unmeasurable by construction; a contract precondition gap.**
+  **File:** `34.4.2-LIVE-GATE-RERUN-4.md`'s own launch-plan ordering (item 4 before item 6(a)) and
+  its Preflight Results section (which records `humble_store/config.json` state but not the
+  WKWebView cookie-jar state). **Symptom:** the contract sequences item 4 (login completes via
+  Cmd+V) before item 6(a) (disconnect, which clears cookies), but a pre-existing WKWebView Humble
+  session — carried over from BEFORE this gate session began — makes item 4's own premise false:
+  the login auto-completes with no credential entry to observe. The app-side store being wiped
+  (`humble_store/config.json`, confirmed 2 bytes both before this run's preflight AND before that)
+  is NOT sufficient evidence of a logged-out state, because the live WKWebView session cookie is
+  what actually drives the auto-login. **Same defect CLASS as the truncating-`tee` (F-34.4.2-11):**
+  items 4 and 6(a) are individually valid, defective only in their ordering relative to session
+  state that persists OUTSIDE anything the contract's own preflight checks. **Why out of scope for
+  this plan:** this plan records a gate result; it does not re-author the contract. **Disposition:**
+  logged, not fixed, no owning plan yet. A future contract-authoring plan should add a WKWebView
+  cookie-jar-clearing step (or an explicit precondition check for a clean session) before item 4.
+
+- **F-34.4.2-17 (F-C) — Item 5's scenario is UI-unreachable; a contract defect the Structural
+  Reachability Review's own Test 2 did not catch.** **File:** `34.4.2-LIVE-GATE-RERUN-4.md`'s item
+  5 (the single-flight login-initiation scenario) and its own Structural Reachability Review's Test
+  2 (concurrency reachability) row for that item. **Symptom:** the Rust single-flight guard
+  (`PENDING_VISIBLE_LOGIN_WINDOW`) cannot be exercised from the UI as this item describes, because
+  the frontend disables/clears the other login buttons while one login is already in flight —
+  there is no Humble button to click during Amazon's ~7-8s spawn delay. Item 5 as written can
+  never PASS. **Why the review missed it:** Test 2, applied at authoring time, reasoned correctly
+  about BACKEND timing (the `if visible == true` scoping, when `humble_login_open` actually runs)
+  but never checked whether the FRONTEND UI itself permits the described click sequence — a gap in
+  what the test checks, not an unlucky miss on a case it was designed to catch. **Why out of scope
+  for this plan:** this plan records a gate result; rewriting an item's PASS bar or a review test's
+  own coverage is out of scope for the runner plan (D-E). **Disposition:** logged, not fixed, no
+  owning plan yet. A future contract-authoring plan must either rewrite item 5 to drive the
+  refusal below the UI (e.g., a direct Rust-command invocation with a pending latch already
+  armed), restate it as a structural/unit-level assertion, or withdraw it as already covered by
+  Plan 14's own mutation-proven guard test (ordering) — this item cannot be re-run as written and
+  expect a different result.
+
+- **F-34.4.2-18 (F-D) — Preflight gap: no check for a pre-existing `gamelib-shell` instance.**
+  **File:** `34.4.2-LIVE-GATE-RERUN-4.md`'s Task 1 preflight (checks
+  `lsof -nP -iTCP:17940 -sTCP:LISTEN` for the DummyStore harness, but nothing for a stray shell
+  process). **Symptom:** a stale `gamelib-shell` instance (PID 95499, 56 minutes old) was already
+  running when the operator started, forcing launch 1 to be aborted and cleanly re-run before any
+  capture began. **Why out of scope for this plan:** a preflight-hygiene gap in a contract this
+  plan does not re-author. **Disposition:** logged, not fixed, no owning plan yet. A future
+  contract's preflight should add `pgrep -f gamelib-shell` (expect empty) alongside the existing
+  port check — this is also the root precondition F-34.4.2-15/F-A's own second (aborted) launch-2
+  instance shares in spirit, though F-A's own trigger was a deliberately operator-driven second
+  instance, not a stray leftover one.
+
+- **T-34.4.2-42's own scorecard — non-zero this run, a further completeness gap.** The count of
+  structural impossibilities/unresolved requirement interactions actually encountered this run is
+  **3** (F-34.4.2-15/F-A, F-34.4.2-16/F-B, F-34.4.2-17/F-C — F-D is a preflight-hygiene gap, not
+  itself a structural-reachability miss), against this threat's own measurable clause of "should be
+  zero." None of the five existing Structural Reachability Review tests, including the newly-added
+  pairwise Test 5, anticipated: (a) a concurrent second app instance splitting a sink mid-session;
+  (b) a pre-existing EXTERNAL session state (the WKWebView cookie jar) invalidating an item's
+  premise independent of anything the contract's own preflight checks; or (c) a backend-reasoned
+  concurrency scenario being foreclosed by a FRONTEND-level UI constraint the review never
+  inspected. **Two candidate new test classes, named for a future review, neither built here:**
+  "pre-existing external state reachability" (does the item's premise assume a fresh state that a
+  carried-over external session can invalidate?) and "UI-level reachability distinct from
+  backend-logic reachability" (does the backend scenario reviewed actually match what the frontend
+  UI permits the user to do?). **Disposition:** logged against T-34.4.2-42
+  (`34.4.2-PLATFORM-SCOPE.md` §5's eleventh update), not fixed here — a future review-authoring
+  plan should add these two test classes before the next contract is trusted to be complete.
