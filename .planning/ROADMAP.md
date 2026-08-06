@@ -1578,9 +1578,25 @@ in-field autofill affordance is DELETED, not shipped** (operator decision D-A, 2
 spike 022's Recommendation #4. **Cmd+V and Edit ▸ Paste are the sole credential-entry route.**
 **Requirements**: REQ-34.4.2-01, REQ-34.4.2-02, REQ-34.4.2-03, REQ-34.4.2-04, REQ-34.4.2-05, REQ-34.4.2-06, REQ-34.4.2-07, REQ-34.4.2-08, REQ-34.4.2-09, REQ-34.4.2-10 (minted by plan 34.4.2-01; the ID rows themselves land in `REQUIREMENTS.md` when that plan executes. **REQ-34.4.2-10 is the Epic descope**, minted so the exclusion is machine-enforceable rather than a comment; 01/04/06 were narrowed from "both login surfaces" to the Tauri-managed surface. No ID was deleted or renumbered.)
 **Depends on:** Phase 34.4.1 (the login-window seam these behaviors attach to — COMPLETE)
-**Plans:** 20 plans — 20/20 executed. Gap cycle 4 EXECUTED 2026-08-06 (plans 17-20, 4 waves);
-a genuine 6/6 gate PASS has never been achieved in this phase's six-gate history — plan 20's own
-run FAILED, 1/6 — so the phase does not close and a fifth gap cycle is required.
+**Plans:** 25 plans — 20/25 executed. Gap cycle 4 EXECUTED 2026-08-06 (plans 17-20, 4 waves);
+a genuine full gate PASS has never been achieved in this phase's six-gate history — plan 20's own
+run FAILED, 1/6 — so the phase does not close. **Gap cycle 5 PLANNED 2026-08-06 (plans 21-25, 4
+waves, 0/5 executed), scoped against RERUN-4's three measured CONTRACT defects (F-34.4.2-15/-16/-17)
+plus the two owed review tests, under binding operator decisions D-G1/D-G2/D-G3:**
+
+Plans:
+- [ ] 34.4.2-21-PLAN.md — add Tests 6 (pre-existing external-state reachability) and 7 (UI-level
+  reachability) to the standing Structural Reachability Review reference, with a measured-defect
+  coverage map
+- [ ] 34.4.2-22-PLAN.md — pin the frontend behaviour that makes item 5's gate scenario unperformable
+  (D-G1 layer b), so withdrawing that item leaves T-34.4.2-39/-41 with a watchdog
+- [ ] 34.4.2-23-PLAN.md — author `34.4.2-LIVE-GATE-RERUN-5.md` (five items; item 5 WITHDRAWN per
+  D-G1) with a seven-test review, single-instance capture assertions, and D-G2's unscored
+  preparatory disconnect; record D-G1/D-G2/D-G3 and the explicit F-34.4.2-10 deferral
+- [ ] 34.4.2-24-PLAN.md — RUN the gate on real macOS hardware (blocking operator checkpoint) and
+  propagate the measured verdict, whatever it is
+- [ ] 34.4.2-25-PLAN.md — bring the two-cycles-stale `34.4.2-VERIFICATION.md` current and cross-check
+  every ledger against the measured verdict
 
 **Status: GAP CYCLE 4 LIVE GATE RAN 2026-08-06 — FAIL, 1/6 (item 6(b) the sole PASS, its first-ever
 measured result in this phase's history) — PHASE STILL DOES NOT CLOSE.** `34.4.2-20-PLAN.md`'s
@@ -1614,6 +1630,24 @@ with a stated fix direction, not an undiagnosed mystery, so `/gsd-plan-phase 34.
 correct next command, not `/gsd-debug`. Full record: `34.4.2-LIVE-GATE-RERUN-4.md` (item sections,
 Findings, ITEM VERDICT SUMMARY), `34.4.2-PLATFORM-SCOPE.md` §5's eleventh update,
 `deferred-items.md`'s Plan 20 section, `34.4.2-20-SUMMARY.md`.
+
+**Gap cycle 5 PLANNED 2026-08-06 — plans 21-25, NOT YET EXECUTED.** Scoped against the three
+CONTRACT defects RERUN-4 measured, not against app bugs. Three binding operator decisions govern it:
+**D-G1** — item 5 is WITHDRAWN from the live gate (its scenario is unperformable against the shipped
+frontend), with its reasoning recorded in place and its coverage preserved by plan 14's
+mutation-proven unit test plus a new frontend pin; T-34.4.2-39/-41's basis is restated honestly as
+unit-proven + UI-pinned, **never live-discharged**. **D-G2** — an UNSCORED preparatory disconnect runs
+before the measured sequence to clear the WKWebView cookie jar, confirmed by a RENDERED LOGIN FORM
+rather than by an emptied `humble_store/config.json`; this is what makes items 1(e), 3(a) and 4
+measurable at all, and it is NOT item 6(a), whose own before/after filesystem proof stays intact.
+**D-G3** — every item is re-measured, nothing inherited (item 6(b)'s RERUN-4 PASS is historical
+record), and item 6(b) now gets the in-session positive control RERUN-4's own caveat recorded as
+missing. The next contract (`34.4.2-LIVE-GATE-RERUN-5.md`) carries **five** scored items and is the
+first to implement the exactly-one-`gamelib-shell`-instance capture-integrity assertion that plan 20
+added to the standing reference. **F-34.4.2-10** (the bounded-timeout debt in `clearHumbleStorage`)
+is explicitly DEFERRED again this cycle with stated reasons and a named taking-condition — it is
+instrumented by a record-only sub-check on item 6(a) rather than fixed blind against a code path that
+has never been reached live. Next step: `/gsd-execute-phase 34.4.2`.
 
 > --- historical: gap cycle 3's own gate-run-3 status banner follows, preserved as the record of
 > that earlier-in-the-cycle run, now itself superseded by the completed gate-run-4 above ---
