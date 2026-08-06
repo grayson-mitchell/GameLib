@@ -1578,34 +1578,70 @@ in-field autofill affordance is DELETED, not shipped** (operator decision D-A, 2
 spike 022's Recommendation #4. **Cmd+V and Edit ▸ Paste are the sole credential-entry route.**
 **Requirements**: REQ-34.4.2-01, REQ-34.4.2-02, REQ-34.4.2-03, REQ-34.4.2-04, REQ-34.4.2-05, REQ-34.4.2-06, REQ-34.4.2-07, REQ-34.4.2-08, REQ-34.4.2-09, REQ-34.4.2-10 (minted by plan 34.4.2-01; the ID rows themselves land in `REQUIREMENTS.md` when that plan executes. **REQ-34.4.2-10 is the Epic descope**, minted so the exclusion is machine-enforceable rather than a comment; 01/04/06 were narrowed from "both login surfaces" to the Tauri-managed surface. No ID was deleted or renumbered.)
 **Depends on:** Phase 34.4.1 (the login-window seam these behaviors attach to — COMPLETE)
-**Plans:** 20 plans — 19/20 executed. Gap cycle 4 EXECUTING 2026-08-06 (plans 17-20, 4 waves);
-a genuine 6/6 gate PASS has never been achieved in this phase's five-gate history, so the phase
-does not close until plan 34.4.2-20 records one.
+**Plans:** 20 plans — 20/20 executed. Gap cycle 4 EXECUTED 2026-08-06 (plans 17-20, 4 waves);
+a genuine 6/6 gate PASS has never been achieved in this phase's six-gate history — plan 20's own
+run FAILED, 1/6 — so the phase does not close and a fifth gap cycle is required.
 
-**Status: GAP CYCLE 3 LIVE GATE RAN 2026-08-05 — FAIL, 5/6 (item 6 the sole FAIL, a NEW blocking
-defect) — PHASE STILL DOES NOT CLOSE.** `34.4.2-16-PLAN.md`'s blocking gate ran in full against
-`34.4.2-LIVE-GATE-RERUN-3.md`, the fresh six-item contract rebuilt around Plans 13/14's changes
-(D-A's autofill-glyph deletion; the single-flight login guard). **Items 1-5 all PASSED live** —
-items 1/2/4 RE-measured against changed source rather than inherited, and items 3/5 measured for
-the FIRST time ever in this phase's history (the entire reason gap cycle 3 exists). **Item 6
-FAILED**, a NEW blocking defect: clicking Humble's disconnect/logout control produced a hard,
-unbounded macOS main-thread wedge (spinning-wait cursor, unresponsive to all input); the operator
-had to force-kill the app. This is **F-34.4.2-12**, an escalation of gate run 2's own
-F-34.4.2-10 (a bounded, non-fatal storage-wipe timeout) to an unbounded, fatal hang — no root
-cause is asserted; three candidate layers are recorded without preferring any. Item 6(b) (Epic's
-required absences) was consequently **NOT ATTEMPTED**. D-08's no-partial-pass rule applies
-unchanged: **the phase does not close on 5/6.** A SEPARATE process finding, **F-34.4.2-11**, also
-surfaced this run: the gate contract's own mandatory `tee` evidence capture (no `-a`) truncates on
-every relaunch, and item 3(c) separately mandates a relaunch — the two requirements are
-individually reachable (so plan 15's Structural Reachability Review could not catch their
-interaction) but mutually destructive in combination, so items 3 and 5's own decisive machine
-evidence did not survive to this document; both items are recorded PASS on the operator's verbatim
-word alone, honestly marked as lacking transcript corroboration rather than fabricated. New threat
-**T-34.4.2-43** minted (Denial of service, OPEN, BLOCKING). Next step: `/gsd-plan-phase 34.4.2
---gaps` (gap cycle 4), scoped against F-34.4.2-12 (BLOCKING) and F-34.4.2-11 (non-blocking, owed
-before items 3/5 are ever re-measured again). Full record: `34.4.2-LIVE-GATE-RERUN-3.md` (items
-1-6, Findings section), `34.4.2-PLATFORM-SCOPE.md` §5's ninth update, `34.4.2-16-SUMMARY.md`.
+**Status: GAP CYCLE 4 LIVE GATE RAN 2026-08-06 — FAIL, 1/6 (item 6(b) the sole PASS, its first-ever
+measured result in this phase's history) — PHASE STILL DOES NOT CLOSE.** `34.4.2-20-PLAN.md`'s
+blocking gate ran in full against `34.4.2-LIVE-GATE-RERUN-4.md`, the sixth blocking-gate contract,
+implementing the dual-sink evidence-capture standard for the first time. **Item 6(b) (the Epic
+absence check) PASSED** — the first genuine measured result for it across this phase's entire
+six-gate history, achieved by running it alone, first, in its own dedicated launch before anything
+else could foreclose it. Every other item recorded a non-PASS this run, each for a distinct,
+honestly-stated reason: **item 1 FAIL (incomplete)** — sub-check (e) unmeasurable because a
+pre-existing Humble session left no empty password field to type into; **item 2 FAIL** — operator
+reported both dismissal routes working, but the item's own required session-transcript evidence is
+entirely absent from every surviving sink; **item 3 NOT ATTEMPTED (incomplete)** — its dedicated
+`GAMELIB_AUTOFILL_GLYPH=0` relaunch never ran, the session ended after launch 2; **item 4 BLOCKED /
+NOT ATTEMPTED** and **item 6(a) NOT ATTEMPTED** — neither launch 4 nor launch 5 was ever reached;
+**item 5 UNREACHABLE** — its own scenario cannot be driven from the UI at all (the frontend
+disables the other login buttons while one login is in flight). Three of these are themselves
+**NEW contract defects**, not diagnosed app bugs: **F-34.4.2-15 (F-A)**, a capture-integrity gap —
+a concurrent second `gamelib-shell` instance split the `[shell]` evidence sink mid-session while
+`gamelib.log` stayed shared, so an apparently-healthy transcript can mask an unmeasured item;
+**F-34.4.2-16 (F-B)** — item 4's premise is invalidated by a pre-existing WKWebView Humble session
+the contract has no step to clear before item 4 begins; **F-34.4.2-17 (F-C)** — item 5's scenario
+is UI-unreachable by construction, a gap in the Structural Reachability Review's own Test 2. A
+fourth, process-only finding, **F-34.4.2-18 (F-D)**, records a preflight hygiene gap (no check for
+a pre-existing `gamelib-shell` instance; a stale one forced launch 1 to be aborted and re-run).
+D-08's no-partial-pass rule applies unchanged: **the phase does not close on 1/6.** New threat
+**T-34.4.2-44** minted (Repudiation, the capture-integrity gap itself). T-34.4.2-39/-41's own live
+discharge path (item 5) is now known structurally blocked, not merely unattempted — a stronger
+finding than a repeated NOT ATTEMPTED. Next step: `/gsd-plan-phase 34.4.2 --gaps` (gap cycle 5),
+scoped first against fixing F-34.4.2-15/-16/-17 (F-A/F-B/F-C) — each a known, named contract defect
+with a stated fix direction, not an undiagnosed mystery, so `/gsd-plan-phase 34.4.2 --gaps` is the
+correct next command, not `/gsd-debug`. Full record: `34.4.2-LIVE-GATE-RERUN-4.md` (item sections,
+Findings, ITEM VERDICT SUMMARY), `34.4.2-PLATFORM-SCOPE.md` §5's eleventh update,
+`deferred-items.md`'s Plan 20 section, `34.4.2-20-SUMMARY.md`.
 
+> --- historical: gap cycle 3's own gate-run-3 status banner follows, preserved as the record of
+> that earlier-in-the-cycle run, now itself superseded by the completed gate-run-4 above ---
+>
+> **⛔ [SUPERSEDED] Status: GAP CYCLE 3 LIVE GATE RAN 2026-08-05 — FAIL, 5/6 (item 6 the sole FAIL, a NEW blocking
+> defect) — PHASE STILL DOES NOT CLOSE.** `34.4.2-16-PLAN.md`'s blocking gate ran in full against
+> `34.4.2-LIVE-GATE-RERUN-3.md`, the fresh six-item contract rebuilt around Plans 13/14's changes
+> (D-A's autofill-glyph deletion; the single-flight login guard). **Items 1-5 all PASSED live** —
+> items 1/2/4 RE-measured against changed source rather than inherited, and items 3/5 measured for
+> the FIRST time ever in this phase's history (the entire reason gap cycle 3 exists). **Item 6
+> FAILED**, a NEW blocking defect: clicking Humble's disconnect/logout control produced a hard,
+> unbounded macOS main-thread wedge (spinning-wait cursor, unresponsive to all input); the operator
+> had to force-kill the app. This is **F-34.4.2-12**, an escalation of gate run 2's own
+> F-34.4.2-10 (a bounded, non-fatal storage-wipe timeout) to an unbounded, fatal hang — no root
+> cause is asserted; three candidate layers are recorded without preferring any. Item 6(b) (Epic's
+> required absences) was consequently **NOT ATTEMPTED**. D-08's no-partial-pass rule applies
+> unchanged: **the phase does not close on 5/6.** A SEPARATE process finding, **F-34.4.2-11**, also
+> surfaced this run: the gate contract's own mandatory `tee` evidence capture (no `-a`) truncates on
+> every relaunch, and item 3(c) separately mandates a relaunch — the two requirements are
+> individually reachable (so plan 15's Structural Reachability Review could not catch their
+> interaction) but mutually destructive in combination, so items 3 and 5's own decisive machine
+> evidence did not survive to this document; both items are recorded PASS on the operator's verbatim
+> word alone, honestly marked as lacking transcript corroboration rather than fabricated. New threat
+> **T-34.4.2-43** minted (Denial of service, OPEN, BLOCKING). Next step: `/gsd-plan-phase 34.4.2
+> --gaps` (gap cycle 4), scoped against F-34.4.2-12 (BLOCKING) and F-34.4.2-11 (non-blocking, owed
+> before items 3/5 are ever re-measured again). Full record: `34.4.2-LIVE-GATE-RERUN-3.md` (items
+> 1-6, Findings section), `34.4.2-PLATFORM-SCOPE.md` §5's ninth update, `34.4.2-16-SUMMARY.md`.
+>
 > --- historical: gap cycle 3's own gate-run-2 status banner follows, preserved as the record of
 > that earlier-in-the-cycle run, now itself superseded by the completed gate-run-3 above ---
 >
@@ -1836,7 +1872,33 @@ structurally could not be caught by four per-requirement tests.
 - [x] 34.4.2-17-PLAN.md — Port `humble_login_cookies` (the `watchForLogin()` poll direction, the debug session's own recorded residual) onto the async `WKHTTPCookieStore` pattern, macOS-gated, non-macOS byte-unchanged (D-09); make the F-34.4.2-12 regression pin **shape-robust** across all three cookie-reading arms — substring detection with comment skipping, a minimum found-count, and a split-line self-test — replacing the two literal call-site prefixes that would have missed the `window` / `.cookies()` form already present at `main.rs:4237-4238` (wave 1)
 - [x] 34.4.2-18-PLAN.md — Correct `34.4.2-VERIFICATION.md`'s gap-1 record in place (two `missing:` bullets marked CLOSED with `6bad86227`, candidates (a)/(b) FALSIFIED, (c) SUBSUMED, the timeout shape called wrong); give F-34.4.2-11/-12/-13/-14 and T-34.4.2-43 honest ledger dispositions; and write the **standing** `references/live-gate-contract-authoring.md` — five defect-class tests (Test 3 gains a SINK clause, Test 5 takes the requirement PAIR as its unit) plus the dual-sink evidence-capture standard, indexed in `SKILL.md` so it applies to every future gate contract (wave 2)
 - [x] 34.4.2-19-PLAN.md — Author `34.4.2-LIVE-GATE-RERUN-4.md` (`verdict: null`), **all six items re-measured, none inherited** (D-F1); every required literal annotated with the sink that actually carries it; item **6(b) ordered FIRST in its own launch** so a 6(a) regression cannot foreclose it a sixth time; item 6(a) carrying dual-channel evidence (the `gamelib.log` census line plus the `humble_store/config.json` filesystem proof); the five-test Structural Reachability Review run and recorded BEFORE any live run. **Forbidden from running any item** (D-E) (wave 3)
-- [ ] 34.4.2-20-PLAN.md — **BLOCKING live gate** on real macOS hardware against `34.4.2-LIVE-GATE-RERUN-4.md`; sole writer of `verdict`/`run_date`/`items_passed`; dual-sink per-launch capture with delimiters and `gamelib.log` archiving; a `sample` capture mandated before any force-kill; requirement boxes tick **if and only if** the verdict is a genuine 6/6 (D-08), enforced mechanically by the task's own verify command (wave 4, non-autonomous)
+- [x] 34.4.2-20-PLAN.md — **BLOCKING live gate** on real macOS hardware against `34.4.2-LIVE-GATE-RERUN-4.md`; sole writer of `verdict`/`run_date`/`items_passed`; dual-sink per-launch capture with delimiters and `gamelib.log` archiving; a `sample` capture mandated before any force-kill; requirement boxes tick **if and only if** the verdict is a genuine 6/6 (D-08), enforced mechanically by the task's own verify command (wave 4, non-autonomous) — **RAN 2026-08-06, VERDICT FAIL, items_passed 1/6** (item 6(b) the sole PASS, its first-ever measured result this phase; items 1/2 FAIL, item 3 NOT ATTEMPTED, item 4/6(a) never reached, item 5 UNREACHABLE by contract defect). New findings F-34.4.2-15..18 (F-A/F-B/F-C/F-D), new threat T-34.4.2-44. See `34.4.2-LIVE-GATE-RERUN-4.md` and `34.4.2-20-SUMMARY.md`. **Phase 34.4.2 STILL DOES NOT CLOSE** — gap cycle 5 required, `/gsd-plan-phase 34.4.2 --gaps`.
+
+**Gap cycle 4 outcome (plan 20 RAN, 2026-08-06): FAIL, 1/6, item 6(b) the sole PASS — a genuine
+6/6 was NOT achieved, so gap cycle 4 does NOT close the phase.** Item 6(b) (the Epic absence check)
+finally earned a measured result — PASS — after being foreclosed by something upstream in all five
+prior gate runs; the reordering fix (running it alone, first, in its own launch) worked exactly as
+designed. Every other item recorded a non-PASS, but for reasons this run itself distinguishes
+sharply from the previous cycle's undiagnosed main-thread wedge: **three of the five non-passes are
+themselves contract defects**, not diagnosed app bugs — F-34.4.2-15/F-A (a concurrent second
+`gamelib-shell` instance split the `[shell]` evidence sink mid-session), F-34.4.2-16/F-B (item 4's
+premise is invalidated by a pre-existing WKWebView Humble session the contract never clears), and
+F-34.4.2-17/F-C (item 5's scenario cannot be driven from the UI at all, a gap in the Structural
+Reachability Review's own Test 2). Items 1 and 2 recorded incomplete/evidence-gap FAILs directly
+attributable to F-A/F-B, not to a live-confirmed regression of either mechanism. **Gap cycle 5 is
+required**, `/gsd-plan-phase 34.4.2 --gaps`, scoped against:
+- **F-34.4.2-15/F-A:** add an exactly-one-`gamelib-shell`-instance assertion to the dual-sink
+  evidence-capture standard, checked and recorded at both launch and teardown.
+- **F-34.4.2-16/F-B:** add a WKWebView Humble cookie-jar-clearing step (not just an app-side store
+  check) before item 4 begins, so a carried-over session cannot invalidate its premise again.
+- **F-34.4.2-17/F-C:** item 5 as written can never PASS from the UI — rewrite it to drive the
+  refusal below the UI, restate it as a structural/unit-level assertion, or withdraw it as already
+  covered by Plan 14's own mutation-proven guard test.
+- **F-34.4.2-18/F-D:** add a pre-existing-`gamelib-shell`-instance preflight check alongside the
+  existing DummyStore port check.
+No new REQ ID was minted, deleted, or renumbered by gap cycle 4's own run; REQ-34.4.2-01/-02/-03/-04/
+-05/-06/-09 all carry a dated note recording this run's result, with no box changed, per D-08's
+no-partial-pass rule.
 
 **Gap-cycle-3 scope note:** WR-02, WR-05, WR-08, IN-01, IN-03 and IN-04 stay deferred and unfixed.
 WR-06 (the poster's debounce-eviction fairness) and the standing plan-09 finding (the glyph's un-gated
