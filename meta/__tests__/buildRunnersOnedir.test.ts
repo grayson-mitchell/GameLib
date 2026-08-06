@@ -120,6 +120,29 @@ describe('buildRunnersOnedir', () => {
       expect(thrown?.message).toContain(workflowsDir)
     })
 
+    it('does not throw when two workflow files declare the byte-identical pyinstaller command (legendary python.yml/release.yml shape)', () => {
+      fixtureDir = mkdtempSync(join(tmpdir(), 'onedir-fixture-dupe-identical-'))
+      const workflowsDir = join(fixtureDir, '.github', 'workflows')
+      mkdirSync(workflowsDir, { recursive: true })
+      const identicalRun =
+        '      - name: Build\n' +
+        '        run: pyinstaller\n' +
+        '          --onefile\n' +
+        '          --name legendary\n' +
+        '          cli.py\n'
+      writeFileSync(
+        join(workflowsDir, 'python.yml'),
+        `name: python\non: push\njobs:\n  build:\n    steps:\n${identicalRun}`
+      )
+      writeFileSync(
+        join(workflowsDir, 'release.yml'),
+        `name: release\non: push\njobs:\n  build:\n    steps:\n${identicalRun}`
+      )
+
+      const command = extractUpstreamPyinstallerCommand(fixtureDir)
+      expect(command).toBe('pyinstaller --onefile --name legendary cli.py')
+    })
+
     it('throws naming both matches when two pyinstaller lines exist', () => {
       fixtureDir = mkdtempSync(join(tmpdir(), 'onedir-fixture-dupe-'))
       const workflowsDir = join(fixtureDir, '.github', 'workflows')

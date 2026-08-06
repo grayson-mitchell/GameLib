@@ -207,10 +207,19 @@ export function extractUpstreamPyinstallerCommand(repoDir: string): string {
         `found in any *.yml/*.yaml workflow under ${workflowsDir}`
     )
   }
-  if (matches.length > 1) {
+
+  // Rule 1 fix (found live during this plan's real legendary build): a repo
+  // may commit more than one workflow file whose pyinstaller step is
+  // byte-identical (e.g. legendary's python.yml CI check and release.yml
+  // release job both build the exact same command). That is NOT ambiguous --
+  // there is only one candidate command, just declared twice. Only throw when
+  // the DISTINCT command texts number more than one; the error message still
+  // names every matching file for auditability.
+  const distinctCommands = new Set(matches.map((m) => m.command))
+  if (distinctCommands.size > 1) {
     throw new Error(
-      `Expected exactly one pyinstaller invocation under ${workflowsDir}, ` +
-        `found ${matches.length}: ` +
+      `Expected exactly one DISTINCT pyinstaller invocation under ${workflowsDir}, ` +
+        `found ${distinctCommands.size}: ` +
         matches.map((m) => `${m.file}: "${m.command}"`).join(' | ')
     )
   }
