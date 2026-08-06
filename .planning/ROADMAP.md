@@ -1578,14 +1578,16 @@ in-field autofill affordance is DELETED, not shipped** (operator decision D-A, 2
 spike 022's Recommendation #4. **Cmd+V and Edit ▸ Paste are the sole credential-entry route.**
 **Requirements**: REQ-34.4.2-01, REQ-34.4.2-02, REQ-34.4.2-03, REQ-34.4.2-04, REQ-34.4.2-05, REQ-34.4.2-06, REQ-34.4.2-07, REQ-34.4.2-08, REQ-34.4.2-09, REQ-34.4.2-10 (minted by plan 34.4.2-01; the ID rows themselves land in `REQUIREMENTS.md` when that plan executes. **REQ-34.4.2-10 is the Epic descope**, minted so the exclusion is machine-enforceable rather than a comment; 01/04/06 were narrowed from "both login surfaces" to the Tauri-managed surface. No ID was deleted or renumbered.)
 **Depends on:** Phase 34.4.1 (the login-window seam these behaviors attach to — COMPLETE)
-**Plans:** 25 plans — 20/25 executed. Gap cycle 4 EXECUTED 2026-08-06 (plans 17-20, 4 waves);
+**Plans:** 25 plans — 21/25 executed. Gap cycle 4 EXECUTED 2026-08-06 (plans 17-20, 4 waves);
 a genuine full gate PASS has never been achieved in this phase's six-gate history — plan 20's own
-run FAILED, 1/6 — so the phase does not close. **Gap cycle 5 PLANNED 2026-08-06 (plans 21-25, 4
-waves, 0/5 executed), scoped against RERUN-4's three measured CONTRACT defects (F-34.4.2-15/-16/-17)
-plus the two owed review tests, under binding operator decisions D-G1/D-G2/D-G3:**
+run FAILED, 1/6 — so the phase does not close. **Gap cycle 5 EXECUTING 2026-08-06 (plans 21-25, 4
+waves, 1/5 executed — plan 21 added Tests 6/7 + a coverage map to the standing Structural
+Reachability Review reference), scoped against RERUN-4's three measured CONTRACT defects
+(F-34.4.2-15/-16/-17) plus the two owed review tests, under binding operator decisions
+D-G1/D-G2/D-G3:**
 
 Plans:
-- [ ] 34.4.2-21-PLAN.md — add Tests 6 (pre-existing external-state reachability) and 7 (UI-level
+- [x] 34.4.2-21-PLAN.md — add Tests 6 (pre-existing external-state reachability) and 7 (UI-level
   reachability) to the standing Structural Reachability Review reference, with a measured-defect
   coverage map
 - [ ] 34.4.2-22-PLAN.md — pin the frontend behaviour that makes item 5's gate scenario unperformable

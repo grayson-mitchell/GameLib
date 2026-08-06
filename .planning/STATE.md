@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Planned 34.4.2-21..25 (gap cycle 5) -- ready to execute
-last_updated: "2026-08-06T21:30:00.000Z"
-last_activity: 2026-08-06 -- Phase 34.4.2 gap cycle 5 PLANNED (plans 21-25, 4 waves, 0 executed). Scoped against RERUN-4's three measured contract defects (F-34.4.2-16/-17/-15), not against app-level bugs. Binding operator decisions D-G1 (withdraw item 5 as UI-unreachable, pin the frontend mechanism), D-G2 (unscored preparatory disconnect so item 4 has a login form), D-G3 (all items re-measured, nothing inherited).
+stopped_at: Completed 34.4.2-21-PLAN.md
+last_updated: "2026-08-06T09:50:58.505Z"
+last_activity: "2026-08-06 - Phase 34.4.2 plan 21 executed: Tests 6/7 + coverage map added to live-gate-contract-authoring.md"
 progress:
   total_phases: 20
   completed_phases: 13
   total_plans: 216
-  completed_plans: 200
-  percent: 93
+  completed_plans: 201
+  percent: 65
 ---
 
 # Project State
@@ -478,9 +478,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — GAP CYCLE 4
+Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — EXECUTING
 EXECUTED 2026-08-06, STILL DID NOT CLOSE (gate FAILED 1/6) -- gap cycle 5 required, NOT COMPLETE
-Plan: 20 of 20 COMPLETE (plans 1-20 complete. Plan 13 EXECUTED 2026-08-05 -- D-A: the in-field autofill
+Plan: 21 of 25 complete -- executing gap cycle 5 (21-25)
 glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
 see 34.4.2-13-SUMMARY.md. Plan 14 EXECUTED 2026-08-05 -- T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW
 single-flight guard refuses a second visible login window while one is pending/presented, 25s TTL
@@ -2577,7 +2577,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 94%
+trusted blindly. The recurring `**Progress:**[█████████░] 93%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.2-07): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2894,7 +2894,27 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-06 - Quick task 260806-teb COMPLETE (live-verified): duplicate nile spawn removed and honest 'preparing' surface landed, all three behaviors proven on hardware — but the live measurement FALSIFIED the plan's cost model (nile binary is only ~6.8s standalone; 18-36s observed in-app means ~11-29s is undiagnosed app-side latency). Amazon login is still too slow; D-TEB-01 owed to /gsd-debug. Prior: Phase 34.4.2 plan 19 executed: authored 34.4.2-LIVE-GATE-RERUN-4.md (verdict: null), the sixth blocking live-gate contract, implementing the dual-sink evidence-capture standard (tee -a session transcript, per-launch delimiters, per-launch gamelib.log archiving before rotation, a five-launch plan) and running the five-test Structural Reachability Review against it (Test 5's pairwise pass: M=7 x N=8, at most 56 pairs, three known pairs flagged and resolved, zero rows IMPOSSIBLE). Item 6(b) reordered to run FIRST in its own launch; item 6(a) now requires dual-channel evidence (gamelib.log cookie-census line + humble_store/config.json filesystem proof). Named the contract of record in REQUIREMENTS.md and 34.4.2-PLATFORM-SCOPE.md's Tenth SS5 update, ticking no box. Ran NO gate item, changed NO source. Phase 34.4.2 remains NOT CLOSED. See 34.4.2-19-SUMMARY.md.
+Last activity: 2026-08-06 - Phase 34.4.2 plan 21 executed (gap cycle 5, plan 1 of 5): added Test 6
+  (pre-existing external-state reachability) and Test 7 (UI-level reachability, distinct from
+  backend-logic reachability) to live-gate-contract-authoring.md's Structural Reachability Review,
+  closing the T-34.4.2-42 completeness gap RERUN-4 re-opened. Test 6's worked example cites
+  F-34.4.2-16 (item 4's premise invalidated by a live WKWebView cookie jar the preflight never
+  checked). Test 7's worked example cites F-34.4.2-17, re-confirmed against current source rather
+  than trusting deferred-items.md's approximate wording: clicking a login tile calls
+  navigate(props.loginUrl) (Runner/index.tsx:72), a full route change to loginweb/:runner
+  (App.tsx:200-201) that unmounts the entire runnerGroup container (Login/index.tsx:151) -- not a
+  disabled/cleared button state. Added a coverage map (Section 2, end) mapping all eight measured
+  contract-authoring defects to the test or Section 3 rule that catches each, with an explicit
+  category column so F-34.4.2-15/-18 (capture-integrity, landed by db08bbfc6) are never counted as
+  Section 2 test coverage. Section 1's tally raised six->eight, heading/preamble/standing-rule
+  five->seven. Section 3's two capture-integrity bullets confirmed present exactly once, not
+  duplicated. Ran NO gate item, changed NO source (git diff --stat -- src src-tauri/src empty at
+  both task commits). Tests 6/7 explicitly stated as derived, not yet validated by a run. Phase
+  34.4.2 remains NOT CLOSED. See 34.4.2-21-SUMMARY.md.
+Prior activity: 2026-08-06 -- Phase 34.4.2 execution started (orchestrator pre-session state note;
+  the richer "quick-260806-teb" / plan-19 activity this line had previously carried was already
+  overwritten by that pre-session write before this session began -- not restored here, out of this
+  plan's own scope).
 Prior activity: 2026-08-06 - Phase 34.4.2 plan 18 executed: corrected 34.4.2-VERIFICATION.md's gap-1 record in place (commit 6bad86227 supersedes two of gap 1's three missing bullets -- discriminator and timeout, both marked CLOSED 2026-08-06 (6bad86227), candidates (a)/(b) FALSIFIED, (c) SUBSUMED -- leaving exactly one open item, the full six-item gate re-run including the never-attempted 6(b)); appended honest ledger dispositions for F-34.4.2-11/-12/-13/-14 and T-34.4.2-43 to deferred-items.md (earlier sections byte-unchanged); wrote the standing reference .claude/skills/spike-findings-gamelib/references/live-gate-contract-authoring.md (five defect-class tests, the new fifth reviewing the requirement PAIR, plus the dual-sink append-and-archive evidence-capture standard) and indexed it in SKILL.md. Zero deviations. Ran NO gate item, changed NO source, ticked NO requirement box. Phase 34.4.2 remains NOT CLOSED. See 34.4.2-18-SUMMARY.md.
 Prior activity: 2026-08-06 - Phase 34.4.2 plan 17 executed: humble_login_cookies ported onto the async WKHTTPCookieStore read (last mechanically-identical F-34.4.2-12 site, latent not measured); F-34.4.2-12 regression pin rebuilt as a shape-robust exact-set scan over all three cookie arms, watched to FAIL twice (guard change + site deletion) and GREEN after each revert. THREE DEVIATIONS: (1) the plan's literal guard-flip mutation does not compile on macOS -- both branches activate, E0308 -- so a compile-preserving textual variant was used; (2) OPERATOR-AUTHORISED scope expansion to src/backend/__tests__/longRunningChannels.test.ts, fixing the WR-08 quote-balance guard's lack of escaped-quote awareness (RED since 6bad86227 on a FALSE POSITIVE against correct source); (3) the plan's stated test:ci baseline of "3747, zero failures" was STALE -- measured 1 failed/3746 passed before the fix. cargo test 116/0/1-ignored, test:ci now 3748/3748. Ran NO gate item, ticked NO requirement box. Phase 34.4.2 remains NOT CLOSED. See 34.4.2-17-SUMMARY.md.
 Prior activity: 2026-08-05 - Completed quick task 260805-t0s: removed Patreon from the sidebar menu and all code references (openPatreonPage channel deleted across all four layers + Tauri sidecar registration; FUNDING.yml/Support.md/snapcraft.yaml stripped; grep-clean)
@@ -3560,6 +3580,7 @@ Closed/parked native-install phases:
 | Phase 34.4.2 P15 | 12min | 3 tasks | 4 files |
 | Phase 34.4.2 P16 | ~40min | 3 tasks (Task 2 blocking live gate, human-driven) | 6 files (`34.4.2-LIVE-GATE-RERUN-3.md`, `34.4.2-PLATFORM-SCOPE.md`, `deferred-items.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`) |
 | Phase 34.4.2 P19 | 1h | 3 tasks | 3 files |
+| Phase 34.4.2 P21 | 20min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -4001,6 +4022,8 @@ Recent decisions affecting current work:
 - [Phase 34.4.2-20]: **Blocking live gate RAN 2026-08-06 against `34.4.2-LIVE-GATE-RERUN-4.md`, VERDICT FAIL, items_passed 1/6.** Item 6(b) (Epic absence check) PASSED for the first time in this phase's six-gate history -- run alone, first, in its own launch, the reordering fix worked exactly as designed. Every other item recorded a non-PASS, three of them attributable to NEW contract defects rather than diagnosed app bugs: item 1 FAIL (incomplete, sub-check (e) unmeasurable -- a pre-existing Humble session left no empty password field); item 2 FAIL (operator-reported PASS, but the item's own required transcript evidence is entirely absent, a capture-integrity gap); item 3 NOT ATTEMPTED (incomplete, its dedicated relaunch never ran); item 4 and item 6(a) NEVER REACHED (launches 4/5 never happened); item 5 UNREACHABLE (its own scenario cannot be driven from the UI at all). D-08's no-partial-pass rule applies: Phase 34.4.2 STILL DOES NOT CLOSE. Next: `/gsd-plan-phase 34.4.2 --gaps` (gap cycle 5) -- not `/gsd-debug`, since F-34.4.2-15/-16/-17 are known, named contract defects with a stated fix direction each, not an undiagnosed mystery.
 - [Phase 34.4.2-20]: **New findings F-34.4.2-15..18 minted.** F-34.4.2-15 (F-A, NEW CLASS, generalises beyond this phase): a concurrent second `gamelib-shell` instance split the `[shell]` evidence sink mid-session while `gamelib.log` stayed shared -- an observer can wrongly conclude a `[shell]`-sourced item was measured when it was not; the dual-sink standard's single-instance assumption has no check that would catch this. F-34.4.2-16 (F-B): item 4's premise is invalidated by a pre-existing WKWebView Humble session the contract has no step to clear before item 4 begins -- an emptied app-side store is not sufficient evidence of a logged-out session. F-34.4.2-17 (F-C): item 5's scenario is UI-unreachable by construction -- the frontend disables the other login buttons while one login is in flight, a gap in the Structural Reachability Review's own Test 2 (backend-only reasoning). F-34.4.2-18 (F-D): a preflight hygiene gap, no check for a pre-existing `gamelib-shell` instance. New threat T-34.4.2-44 minted (Repudiation, the capture-integrity gap itself). T-34.4.2-42's own completeness scorecard is non-zero this run (3), re-opening a gap the tenth update had closed.
 - [Phase 34.4.2-20]: No requirement box was ticked this run: REQ-34.4.2-01/-02/-03/-04/-05/-06/-09 each carry a dated note recording this run's result (none is a live-confirmed regression of a previously-proven mechanism -- each non-PASS traces to F-A/F-B/F-C or to never being reached); REQ-34.4.2-10 stays `[x]`, now with its first genuine live re-confirmation via item 6(b)'s PASS. Verified via `git diff` that no `[ ]` became `[x]` in `.planning/REQUIREMENTS.md`.
+- [Phase 34.4.2-21]: Section 1's tally counts eight contract-authoring defects (six prior + F-16/F-17); F-15/F-18 excluded as run-time capture-integrity defects (Section 3), a different category from Section 2's seven authoring-time tests.
+- [Phase 34.4.2-21]: Test 7's worked example describes what src/frontend/screens/Login/components/Runner/index.tsx:72 (navigate(props.loginUrl), unmounting the whole runnerGroup via a route change to loginweb/:runner) actually does, correcting deferred-items.md's approximate 'disables/clears the other login buttons' wording after re-confirming against current source.
 
 ### Pending Todos
 
@@ -4089,8 +4112,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-06T20:00:00.000Z
-Stopped at: Completed 34.4.2-20-PLAN.md
+Last session: 2026-08-06T09:50:58.490Z
+Stopped at: Completed 34.4.2-21-PLAN.md
   This session (sequential executor, Task 3 of plan 20): recorded and propagated the measured
   verdict from `34.4.2-LIVE-GATE-RERUN-4.md`, the blocking live gate the operator drove against
   the dual-sink evidence-capture standard for the first time. Filled all six items'
