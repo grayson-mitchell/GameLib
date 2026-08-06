@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.2-19-PLAN.md
-last_updated: "2026-08-06T19:00:00.000Z"
-last_activity: 2026-08-06 -- Phase 34.4.2 plan 19 executed
+stopped_at: Completed 34.4.2-20-PLAN.md
+last_updated: "2026-08-06T20:00:00.000Z"
+last_activity: 2026-08-06 -- Phase 34.4.2 plan 20 executed (blocking live gate RAN, VERDICT FAIL 1/6 -- phase NOT COMPLETE, gap cycle 5 required)
 progress:
   total_phases: 20
   completed_phases: 13
   total_plans: 211
-  completed_plans: 199
+  completed_plans: 200
   percent: 93
 ---
 
@@ -479,8 +479,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — GAP CYCLE 4
-EXECUTING (gap cycle 3 EXECUTED, STILL DID NOT CLOSE)
-Plan: 19 of 20 COMPLETE (plans 1-19 complete. Plan 13 EXECUTED 2026-08-05 -- D-A: the in-field autofill
+EXECUTED 2026-08-06, STILL DID NOT CLOSE (gate FAILED 1/6) -- gap cycle 5 required, NOT COMPLETE
+Plan: 20 of 20 COMPLETE (plans 1-20 complete. Plan 13 EXECUTED 2026-08-05 -- D-A: the in-field autofill
 glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
 see 34.4.2-13-SUMMARY.md. Plan 14 EXECUTED 2026-08-05 -- T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW
 single-flight guard refuses a second visible login window while one is pending/presented, 25s TTL
@@ -580,6 +580,48 @@ self-sufficient); no item's PASS bar changed. Ran NO gate item, launched NO `tau
 source, ticked NO requirement box. **Phase 34.4.2 remains NOT CLOSED -- next: plan 20 (the sole
 runner, D-E) executes the five-launch plan and records the phase's first genuine measured result
 into `34.4.2-LIVE-GATE-RERUN-4.md`.**
+
+**Plan 20 -- the human-driven live gate run against `34.4.2-LIVE-GATE-RERUN-4.md` -- RAN 2026-08-06
+and recorded VERDICT FAIL, items_passed 1/6.** Two launches were ABORTED and cleanly re-run before
+capture (launch 1: a stale pre-existing `gamelib-shell` instance, 56 minutes old; launch 2: a
+concurrent second app instance split the `[shell]` sink) -- both fully recorded, nothing archived
+from either aborted attempt. Only launches 1 and 2 (their final, clean forms) actually completed;
+launches 3, 4 and 5 were never reached. **Item 6(b) PASSED** -- the first-ever measured result for
+it in this phase's six-gate history, achieved by running it alone, first, in its own dedicated
+launch exactly as plan 19 designed. **Item 1 FAIL (incomplete)**: sub-check (e) unmeasurable
+because a pre-existing Humble webview session left no empty password field to type into;
+machine evidence absent from both sinks. **Item 2 FAIL**: operator-reported PASS on both dismissal
+routes, but this item's own required route-discriminating session-transcript evidence has ZERO
+occurrences in any surviving sink -- not scored a contract PASS despite the operator's unqualified
+account, per this document's own honesty rules. **Item 3 NOT ATTEMPTED (incomplete)**: its
+dedicated `GAMELIB_AUTOFILL_GLYPH=0` relaunch (launch 3) never ran; (a) unmeasurable, (b)
+partial-PASS with a coverage gap. **Item 4 and item 6(a) NEVER REACHED** -- launches 4 and 5 never
+happened; item 4's own premise (an empty credential field) never existed this run regardless.
+**Item 5 UNREACHABLE**: the operator reports the frontend disables/clears the other login buttons
+while one login is in flight, so the contract's own scenario (click Amazon, then Humble during the
+delay) cannot be driven from the UI at all -- a contract defect, not a scored PASS/FAIL of the
+underlying single-flight guard. **Four new findings minted**, continuing the F-34.4.2-NN sequence
+from F-34.4.2-14: **F-34.4.2-15/F-A** (capture-integrity, NEW CLASS -- a concurrent second
+`gamelib-shell` instance split the `[shell]` sink while `gamelib.log` stayed shared, so an
+apparently-healthy transcript can mask an unmeasured item -- generalises beyond this phase, belongs
+in the standing `live-gate-contract-authoring.md` reference as a new capture-integrity requirement,
+out of this plan's own `files_modified` scope); **F-34.4.2-16/F-B** (item 4's premise invalidated by
+a pre-existing WKWebView session the contract has no step to clear); **F-34.4.2-17/F-C** (item 5's
+scenario is UI-unreachable, a gap in the Structural Reachability Review's own Test 2, which reasoned
+about backend timing only); **F-34.4.2-18/F-D** (a preflight hygiene gap, no pre-existing-instance
+check). New threat **T-34.4.2-44** minted (Repudiation, the capture-integrity gap itself).
+T-34.4.2-42's own completeness scorecard is **non-zero this run (3)**, re-opening a gap the tenth
+update had closed. D-08's no-partial-pass rule applies: **the phase does NOT close.** Propagated
+into `34.4.2-PLATFORM-SCOPE.md` §5's eleventh update (T-34.4.2-32 gains its first live discharge
+via item 6(b); T-34.4.2-39/-41 downgraded to "the contract cannot currently discharge these live";
+T-34.4.2-43/F-34.4.2-10 stay undischarged/open), `REQUIREMENTS.md` (dated notes on
+REQ-34.4.2-01/-02/-03/-04/-05/-06/-09, no box ticked; REQ-34.4.2-10 live-reconfirmed via item 6(b)),
+`ROADMAP.md` (status banner superseded, plan 20 checked, 20/20 plans executed, gap cycle 4 outcome
+recorded), `deferred-items.md` (Plan 20 section appended, F-34.4.2-15..18 logged). See
+`34.4.2-LIVE-GATE-RERUN-4.md` and `34.4.2-20-SUMMARY.md`. **Next:** `/gsd-plan-phase 34.4.2 --gaps`
+(gap cycle 5), scoped against F-34.4.2-15/-16/-17 (F-A/F-B/F-C) -- each a known, named contract
+defect with a stated fix direction, not an undiagnosed mystery, so this is the correct next command,
+not `/gsd-debug`.
 
 Plan 14 record (14 done -- `34.4.2-14-SUMMARY.md`. Closed T-34.4.2-39's app gap (a second
 VISIBLE login window queuing behind a first, minted by plan 12's live gate) with a source-level
@@ -3956,6 +3998,9 @@ Recent decisions affecting current work:
 - [Phase 34.4.2-16]: **New threat T-34.4.2-43 minted (Denial of service), OPEN, BLOCKING** -- a user-triggered action (Humble disconnect) hangs the entire application indefinitely, recoverable only by a force-kill. Discharged only by a future gap-cycle diagnosis and a re-run of item 6.
 - [Phase 34.4.2-16]: **New process finding F-34.4.2-11**: the gate contract's own mandatory evidence-capture instruction (`tee` without `-a`) is mutually destructive with item 3(c)'s own mandatory relaunch (`GAMELIB_AUTOFILL_GLYPH=0`) -- every relaunch truncates the tee'd transcript, so only the FINAL launch's log survives. Items 3 and 5 (this cycle's own reason for existing) are recorded PASS on the operator's verbatim word alone, with NO surviving transcript corroboration for either item's own decisive evidence -- honestly marked LOST/UNAVAILABLE in `34.4.2-LIVE-GATE-RERUN-3.md`, not fabricated. This is the fifth instance of this phase's contract-authoring-defect pattern, and the first that is an INTERACTION between two individually-reachable requirements rather than a single unreachable one -- plan 15's Structural Reachability Review examines items/preconditions individually and has no test for pairwise interactions, a gap named against T-34.4.2-42's own completeness (not its correctness on the terms it was written to check).
 - [Phase 34.4.2-16]: No requirement box was ticked this run despite items 1-5 all PASSing: REQ-34.4.2-01/-02/-03/-06/-10 stay `[x]` as re-confirmed (unaffected by item 6's own unrelated failure); REQ-34.4.2-04/-05/-09 stay `[ ]` per D-08 -- item 3's own PASS does not tick 04/05 while item 6 FAILs elsewhere in the same contract and item 3's own transcript corroboration is itself unavailable (F-34.4.2-11).
+- [Phase 34.4.2-20]: **Blocking live gate RAN 2026-08-06 against `34.4.2-LIVE-GATE-RERUN-4.md`, VERDICT FAIL, items_passed 1/6.** Item 6(b) (Epic absence check) PASSED for the first time in this phase's six-gate history -- run alone, first, in its own launch, the reordering fix worked exactly as designed. Every other item recorded a non-PASS, three of them attributable to NEW contract defects rather than diagnosed app bugs: item 1 FAIL (incomplete, sub-check (e) unmeasurable -- a pre-existing Humble session left no empty password field); item 2 FAIL (operator-reported PASS, but the item's own required transcript evidence is entirely absent, a capture-integrity gap); item 3 NOT ATTEMPTED (incomplete, its dedicated relaunch never ran); item 4 and item 6(a) NEVER REACHED (launches 4/5 never happened); item 5 UNREACHABLE (its own scenario cannot be driven from the UI at all). D-08's no-partial-pass rule applies: Phase 34.4.2 STILL DOES NOT CLOSE. Next: `/gsd-plan-phase 34.4.2 --gaps` (gap cycle 5) -- not `/gsd-debug`, since F-34.4.2-15/-16/-17 are known, named contract defects with a stated fix direction each, not an undiagnosed mystery.
+- [Phase 34.4.2-20]: **New findings F-34.4.2-15..18 minted.** F-34.4.2-15 (F-A, NEW CLASS, generalises beyond this phase): a concurrent second `gamelib-shell` instance split the `[shell]` evidence sink mid-session while `gamelib.log` stayed shared -- an observer can wrongly conclude a `[shell]`-sourced item was measured when it was not; the dual-sink standard's single-instance assumption has no check that would catch this. F-34.4.2-16 (F-B): item 4's premise is invalidated by a pre-existing WKWebView Humble session the contract has no step to clear before item 4 begins -- an emptied app-side store is not sufficient evidence of a logged-out session. F-34.4.2-17 (F-C): item 5's scenario is UI-unreachable by construction -- the frontend disables the other login buttons while one login is in flight, a gap in the Structural Reachability Review's own Test 2 (backend-only reasoning). F-34.4.2-18 (F-D): a preflight hygiene gap, no check for a pre-existing `gamelib-shell` instance. New threat T-34.4.2-44 minted (Repudiation, the capture-integrity gap itself). T-34.4.2-42's own completeness scorecard is non-zero this run (3), re-opening a gap the tenth update had closed.
+- [Phase 34.4.2-20]: No requirement box was ticked this run: REQ-34.4.2-01/-02/-03/-04/-05/-06/-09 each carry a dated note recording this run's result (none is a live-confirmed regression of a previously-proven mechanism -- each non-PASS traces to F-A/F-B/F-C or to never being reached); REQ-34.4.2-10 stays `[x]`, now with its first genuine live re-confirmation via item 6(b)'s PASS. Verified via `git diff` that no `[ ]` became `[x]` in `.planning/REQUIREMENTS.md`.
 
 ### Pending Todos
 
@@ -4043,7 +4088,33 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-06T07:23:55.025Z
+Last session: 2026-08-06T20:00:00.000Z
+Stopped at: Completed 34.4.2-20-PLAN.md
+  This session (sequential executor, Task 3 of plan 20): recorded and propagated the measured
+  verdict from `34.4.2-LIVE-GATE-RERUN-4.md`, the blocking live gate the operator drove against
+  the dual-sink evidence-capture standard for the first time. Filled all six items'
+  `Observed:`/`Verdict:` fields from the operator's verbatim report -- **VERDICT FAIL,
+  items_passed 1/6**. Item 6(b) (Epic absence check) PASSED, the first-ever measured result for it
+  in this phase's six-gate history, run alone first in its own launch exactly as designed. Every
+  other item recorded a non-PASS: item 1 FAIL (incomplete, sub-check (e) unmeasurable); item 2 FAIL
+  (operator-reported PASS but the item's own required transcript evidence is entirely absent); item
+  3 NOT ATTEMPTED (incomplete, its dedicated relaunch never ran); item 4 and item 6(a) never
+  reached (launches 4/5 never happened); item 5 UNREACHABLE (its own scenario cannot be driven from
+  the UI at all). Two launches were ABORTED and cleanly re-run before capture (a stale pre-existing
+  process; a concurrent second app instance splitting the `[shell]` sink) -- only launches 1 and 2
+  actually completed. Minted four findings (F-34.4.2-15..18 / F-A..F-D) and one new threat
+  (T-34.4.2-44); three of the four findings are contract defects discovered live, not diagnosed app
+  bugs. Propagated into `34.4.2-PLATFORM-SCOPE.md` §5's eleventh update, `REQUIREMENTS.md` (dated
+  notes, no box ticked, verified via `git diff`), `ROADMAP.md` (status banner superseded, plan 20
+  checked, 20/20 executed), `deferred-items.md` (Plan 20 section appended). D-08's no-partial-pass
+  rule applies: **Phase 34.4.2 STILL DOES NOT CLOSE.** Next: `/gsd-plan-phase 34.4.2 --gaps` (gap
+  cycle 5), scoped against F-34.4.2-15/-16/-17 (F-A/F-B/F-C) -- known, named contract defects with a
+  stated fix direction each, not an undiagnosed mystery, so this is the correct next command, not
+  `/gsd-debug`. See `34.4.2-LIVE-GATE-RERUN-4.md` and `34.4.2-20-SUMMARY.md` for full detail.
+
+  --- historical: the prior session's own continuity record follows, preserved as-is ---
+
+Prior session: 2026-08-06T07:23:55.025Z
 Stopped at: Completed 34.4.2-19-PLAN.md
   This session (sequential executor): recorded and propagated the measured verdict from
   `34.4.2-LIVE-GATE-RERUN-3.md`, the blocking live gate the operator drove against Plans 13/14's
