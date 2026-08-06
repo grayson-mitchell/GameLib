@@ -1,0 +1,55 @@
+(21:58:30) [INFO]:    [Backend]:         [bootstrap] GAMELIB_SHELL_EXE received=/Users/graysonmitchell/Projects/GameLib/src-tauri/target/debug/gamelib-shell
+(21:58:30) [INFO]:    [Backend]:         [bootstrap] appRoot resolved=/Users/graysonmitchell/Projects/GameLib source=GAMELIB_APP_ROOT
+(21:58:30) [INFO]:    [Backend]:         [bootstrap] publicDir resolved=/Users/graysonmitchell/Projects/GameLib/public exists=true
+(21:58:30) [INFO]:    [Backend]:         [bootstrap] runner binary legendary path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/legendary exists=true
+(21:58:30) [INFO]:    [Backend]:         [bootstrap] runner binary gogdl path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl exists=true
+(21:58:30) [INFO]:    [Backend]:         [bootstrap] runner binary nile path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile exists=true
+(21:58:30) [INFO]:    [Backend]:         [bootstrap] runner binary comet path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/comet exists=true
+(21:58:30) [INFO]:    [Steam]:           Steam TokenStore implementation set to DevVaultTokenStore
+(21:58:30) [WARNING]: [Backend]:         [dev-secret-vault] INSTALLED — secrets are stored in PLAINTEXT at /var/folders/bn/m7q59n8x5qx6zm74fqyjf22r0000gn/T/gamelib-dev-secret-vault.json — NEVER use in production
+(21:58:30) [INFO]:    [Backend]:         [bootstrap] secret stores: dev-vault
+(21:58:30) [INFO]:    [Connection]:      Connectivity: check-online
+(21:58:30) [INFO]:    [Connection]:      Pinging external endpoints
+(21:58:30) [INFO]:    [DownloadManager]: sidecar: boot-time download-queue auto-resume (main.ts:579-only, startup-flagged initQueue call) is deliberately disabled (D-05) — a persisted queue head stays resumable via the Resume button, never auto-started on sidecar boot
+(21:58:30) [INFO]:    [Connection]:      Connectivity: online
+(21:58:30) [DEBUG]:   [Backend]:         Releases info ready, checking wine releases
+(21:58:30) [DEBUG]:   [Backend]:         Releases info ready, checking anticheat data
+(21:58:30) [DEBUG]:   [Backend]:         AreWeAnticheatYet data did not change. Skipping.
+(22:01:09) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/nile.log
+(22:01:09) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/gog.log
+(22:01:09) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/legendary.log
+(22:01:09) [INFO]:    [Legendary]:       Running command: LEGENDARY_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/legendaryConfig/legendary" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/legendary --version
+(22:01:09) [INFO]:    [Gog]:             Running command: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" --version
+(22:01:09) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile --version
+(22:02:32) [INFO]:    [Frontend]:        [TauriLoginPanel] declared-blocked: runner=nile channel=authAmazon -- lands in Phase 34.5
+(22:02:32) [INFO]:    [Frontend]:        [useTauriOAuthLogin] runner=nile phase=preparing (fetching login url)
+(22:02:32) [INFO]:    [Frontend]:        [TauriLoginPanel] runner=nile phase=preparing
+(22:02:32) [DEBUG]:   [Nile]:            Getting login data from Nile
+(22:02:32) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile auth --login --non-interactive
+(22:02:39) [INFO]:    [Nile]:            Register data is: {
+  "client_id": "4635333743304532393137443131463141424134434130384139373436414131234132554d56484f58375550345637",
+  "code_verifier": "XkQmLuuh3fbT2rBjCoflhmmXLFGZHW6cbJ43r3EfZW8",
+  "serial": "F537C0E2917D11F1ABA4CA08A9746AA1",
+  "url": "https://amazon.com/ap/signin?openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0&openid.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.mode=checkid_setup&openid.oa2.scope=device_auth_access&openid.ns.oa2=http%3A%2F%2Fwww.amazon.com%2Fap%2Fext%2Foauth%2F2&openid.oa2.response_type=code&openid.oa2.code_challenge_method=S256&openid.oa2.client_id=device%3A4635333743304532393137443131463141424134434130384139373436414131234132554d56484f58375550345637&language=en_US&marketPlaceId=ATVPDKIKX0DER&openid.return_to=https%3A%2F%2Fwww.amazon.com&openid.pape.max_auth_age=0&openid.assoc_handle=amzn_sonic_games_launcher&pageId=amzn_sonic_games_launcher&openid.oa2.code_challenge=85mhw4d41eE3Kzrp5bEoMmtQLgSPQn0UtGuAmuIfXzg"
+}
+(22:02:40) [INFO]:    [Backend]:         [oauthLoginCapture] runner=nile label=loginwin-0-18c92f242cdc2b78-ac3b4253
+(22:02:41) [INFO]:    [Backend]:         [oauthLoginCapture] runner=nile nav host=www.amazon.com
+(22:02:43) [INFO]:    [Backend]:         [oauthLoginCapture] runner=nile status=cancelled reason=window-closed
+(22:02:43) [INFO]:    [Frontend]:        [useTauriOAuthLogin] runner=nile phase=cancelled
+(22:02:43) [INFO]:    [Frontend]:        [useTauriOAuthLogin] runner=nile phase=teardown inflight=false
+(22:04:01) [INFO]:    [Frontend]:        [TauriLoginPanel] declared-blocked: runner=nile channel=authAmazon -- lands in Phase 34.5
+(22:04:01) [INFO]:    [Frontend]:        [useTauriOAuthLogin] runner=nile phase=preparing (fetching login url)
+(22:04:01) [DEBUG]:   [Nile]:            Getting login data from Nile
+(22:04:01) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile auth --login --non-interactive
+(22:04:01) [INFO]:    [Frontend]:        [TauriLoginPanel] runner=nile phase=preparing
+(22:04:08) [INFO]:    [Nile]:            Register data is: {
+  "client_id": "3241364534323232393137453131463142374141434130384139373436414131234132554d56484f58375550345637",
+  "code_verifier": "XNOh8vEL4XnmVUpzxfQ1Mfw4IUVDyUVf8yVzY-Grzak",
+  "serial": "2A6E4222917E11F1B7AACA08A9746AA1",
+  "url": "https://amazon.com/ap/signin?openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0&openid.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.mode=checkid_setup&openid.oa2.scope=device_auth_access&openid.ns.oa2=http%3A%2F%2Fwww.amazon.com%2Fap%2Fext%2Foauth%2F2&openid.oa2.response_type=code&openid.oa2.code_challenge_method=S256&openid.oa2.client_id=device%3A3241364534323232393137453131463142374141434130384139373436414131234132554d56484f58375550345637&language=en_US&marketPlaceId=ATVPDKIKX0DER&openid.return_to=https%3A%2F%2Fwww.amazon.com&openid.pape.max_auth_age=0&openid.assoc_handle=amzn_sonic_games_launcher&pageId=amzn_sonic_games_launcher&openid.oa2.code_challenge=ABBqf4wmWAFeexn4_LkN6CWsn4a8yvTdH0KyO7xnTa8"
+}
+(22:04:09) [INFO]:    [Backend]:         [oauthLoginCapture] runner=nile label=loginwin-1-18c92f38f75b2cf0-732c35ce
+(22:04:10) [INFO]:    [Backend]:         [oauthLoginCapture] runner=nile nav host=www.amazon.com
+(22:09:08) [INFO]:    [Backend]:         [oauthLoginCapture] runner=nile status=timeout
+(22:09:09) [INFO]:    [Frontend]:        [useTauriOAuthLogin] runner=nile phase=timeout
+(22:09:09) [INFO]:    [Frontend]:        [TauriLoginPanel] runner=nile phase=timeout

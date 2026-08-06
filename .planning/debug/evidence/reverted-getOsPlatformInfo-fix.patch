@@ -1,0 +1,366 @@
+diff --git a/src/backend/sidecar/__tests__/gameDetailsImportGate.test.ts b/src/backend/sidecar/__tests__/gameDetailsImportGate.test.ts
+index dd7d91fc8..3e195bbc2 100644
+--- a/src/backend/sidecar/__tests__/gameDetailsImportGate.test.ts
++++ b/src/backend/sidecar/__tests__/gameDetailsImportGate.test.ts
+@@ -281,8 +281,15 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
+   // "Steam". The D-09 bottle-launch fix these gates protect
+   // (`steamLibrary.has(appName)` in `requestGameSettings`) is untouched;
+   // see the semantic-pin test below for that direct proof.
++  // Recomputed 2026-08-06 (debug/nile-spawn-app-side-latency.md): this file
++  // deliberately grew by ONE registration, `getOsPlatformInfo` — an OS-only
++  // read (platform + version, no runner --version spawns) the Login screen
++  // now uses instead of the full `getSystemInfo()` bundle, so opening "Manage
++  // Accounts" no longer forces legendary/gogdl/comet/nile version probes to
++  // spawn concurrently with a user's immediate login-button click. The D-09
++  // bottle-launch fix is untouched; see the semantic-pin test below.
+   const SETTINGS_FLOW_REGISTRATION_SHA256 =
+-    '5cc3245e06290db1f7754a7579db862dee5956a893315c21dbf934381ce99ee1'
++    '2470c18794789e94ab6aa7781c6b04fa7505b5fc8b172c1b7a7bf368e14876b7'
+ 
+   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
+     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
+@@ -319,10 +326,13 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
+     // Phase 34.4 Plan 03, REQ-34.4-06 — the GOG private-branch pair,
+     // corrected out of the inventory's mis-filed "Steam" classification.
+     'getPrivateBranchPassword',
+-    'setPrivateBranchPassword'
++    'setPrivateBranchPassword',
++    // debug/nile-spawn-app-side-latency.md — OS-only read (no runner --version
++    // spawns), consumed by the Login screen instead of the full getSystemInfo() bundle.
++    'getOsPlatformInfo'
+   ]
+ 
+-  it('REQ-34.2-10/D-09 Gate 7 semantic pin: settingsFlowRegistration.ts registers exactly these twelve channels', () => {
++  it('REQ-34.2-10/D-09 Gate 7 semantic pin: settingsFlowRegistration.ts registers exactly these thirteen channels', () => {
+     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
+     const stripped = stripComments(readFileSync(filePath, 'utf-8'))
+     const channelPattern = /ipcMain\.(?:handle|on)\(\s*['"]([^'"]+)['"]/g
+@@ -336,7 +346,7 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
+     // intentional (a REQ-34.2-10 / D-09 do-not-touch file), state the reason
+     // in the commit, then update this list AND the sha256 digest above
+     // together, never one without the other.
+-    expect(found.size).toBe(12)
++    expect(found.size).toBe(13)
+     expect([...found].sort()).toEqual(
+       [...EXPECTED_SETTINGS_FLOW_CHANNELS].sort()
+     )
+diff --git a/src/backend/sidecar/__tests__/settingsFlows.test.ts b/src/backend/sidecar/__tests__/settingsFlows.test.ts
+index 9e3dd4c85..e25fec4bf 100644
+--- a/src/backend/sidecar/__tests__/settingsFlows.test.ts
++++ b/src/backend/sidecar/__tests__/settingsFlows.test.ts
+@@ -151,6 +151,10 @@ jest.mock('../../storeManagers/steam/state', () => ({
+ // `getSystemInfo` export, not the OS-probing internals underneath it ────────
+ jest.mock('backend/utils/systeminfo', () => ({
+   getSystemInfo: jest.fn(),
++  // debug/nile-spawn-app-side-latency.md fix: `getOsPlatformInfo` (OS-only, no runner
++  // --version spawns) added to this module alongside `getSystemInfo` -- mocked here for
++  // the same determinism reason as `getSystemInfo` above.
++  getOsPlatformInfo: jest.fn(),
+   formatSystemInfo: jest.fn()
+ }))
+ 
+@@ -170,7 +174,10 @@ import { GlobalConfig } from 'backend/config'
+ import { GameConfig } from 'backend/game_config'
+ import { libraryManagerMap } from 'backend/storeManagers'
+ import { library as steamLibrary } from '../../storeManagers/steam/state'
+-import { getSystemInfo as mockedGetSystemInfo } from 'backend/utils/systeminfo'
++import {
++  getSystemInfo as mockedGetSystemInfo,
++  getOsPlatformInfo as mockedGetOsPlatformInfo
++} from 'backend/utils/systeminfo'
+ import { hasExecutable as mockedHasExecutable } from 'backend/utils/os/path'
+ import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
+ import type { AppSettings, GameSettings } from 'common/types'
+@@ -604,6 +611,32 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
+     expect(mockedGetSystemInfo).toHaveBeenCalledWith(false)
+   })
+ 
++  // debug/nile-spawn-app-side-latency.md fix: proves the CHANNEL WIRING reaches the real
++  // (mocked) getOsPlatformInfo() -- the OS-only read the Login screen now uses instead of
++  // the full getSystemInfo() bundle, so opening "Manage Accounts" no longer forces
++  // legendary/gogdl/comet/nile `--version` probes to spawn.
++  it('getOsPlatformInfo resolves without the unported marker and reaches the real (mocked) getOsPlatformInfo()', async () => {
++    ;(mockedGetOsPlatformInfo as jest.Mock).mockResolvedValue({
++      platform: 'darwin',
++      name: 'macOS',
++      version: '14.1.0'
++    })
++    const { input, frames } = startSidecar()
++    writeInvoke(input, 'os-platform-info-1', 'getOsPlatformInfo', [])
++    await flush()
++
++    const response = frames.find(
++      (frame) => frame.id === 'os-platform-info-1'
++    ) as { ok: boolean; result?: unknown; error?: string } | undefined
++    expect(response?.ok).toBe(true)
++    expect(response?.error).toBeUndefined()
++    expect(response?.result).toMatchObject({
++      platform: 'darwin',
++      version: '14.1.0'
++    })
++    expect(mockedGetOsPlatformInfo).toHaveBeenCalledWith()
++  })
++
+   it('hasExecutable resolves a real boolean, not the unported marker', async () => {
+     const { input, frames } = startSidecar()
+     writeInvoke(input, 'has-executable-1', 'hasExecutable', ['node'])
+diff --git a/src/backend/sidecar/settingsFlowRegistration.ts b/src/backend/sidecar/settingsFlowRegistration.ts
+index bd45e0347..e64d62f97 100644
+--- a/src/backend/sidecar/settingsFlowRegistration.ts
++++ b/src/backend/sidecar/settingsFlowRegistration.ts
+@@ -35,6 +35,11 @@
+  * write-path block comment above `registerSettingsFlows()`'s body for the
+  * accepted D-02 Tauri↔Electron divergence.
+  *
++ * `getOsPlatformInfo` (debug/nile-spawn-app-side-latency.md) was added later, alongside
++ * these six — a seventh generic read, deliberately OS-only (no runner --version spawns).
++ * See its own registration comment below and the load-bearing comment on
++ * `getOsPlatformInfo()` in `../utils/systeminfo/index.ts`.
++ *
+  * Deliberately does NOT register `getUserInfo` (Epic-only, `main.ts:880` —
+  * never reached by the Settings screen) or `readConfig` (Legendary-only,
+  * `main.ts:989` — never reached by the Settings screen), nor any of the
+@@ -89,7 +94,7 @@ import { library as steamLibrary } from '../storeManagers/steam/state'
+ // adds zero new module-graph cost (31-RESEARCH.md "Write-Path Mechanics").
+ import { writeConfig } from '../utils'
+ import { getLogFilePath } from '../logger/paths'
+-import { getSystemInfo } from '../utils/systeminfo'
++import { getOsPlatformInfo, getSystemInfo } from '../utils/systeminfo'
+ import { hasExecutable } from '../utils/os/path'
+ import { isFlatpak } from '../constants/environment'
+ import { gamesConfigPath } from '../constants/paths'
+@@ -239,6 +244,13 @@ export function registerSettingsFlows(): void {
+     getSystemInfo(cache as boolean | undefined)
+   )
+ 
++  // debug/nile-spawn-app-side-latency.md fix: OS-only info (platform + version), no
++  // runner --version spawns -- see the load-bearing comment on getOsPlatformInfo()
++  // in ../utils/systeminfo/index.ts. Consumed by the Login screen so opening
++  // "Manage Accounts" no longer forces legendary/gogdl/comet/nile version probes to
++  // spawn concurrently with a user's immediate login-button click.
++  ipcMain.handle('getOsPlatformInfo', async () => getOsPlatformInfo())
++
+   // utils/ipc_handler.ts:28-30
+   ipcMain.handle(
+     'hasExecutable',
+diff --git a/src/backend/utils/ipc_handler.ts b/src/backend/utils/ipc_handler.ts
+index 9c550b919..6723ddead 100644
+--- a/src/backend/utils/ipc_handler.ts
++++ b/src/backend/utils/ipc_handler.ts
+@@ -9,7 +9,7 @@ import {
+   getNileVersion
+ } from './helperBinaries'
+ import { hasExecutable } from './os/path'
+-import { formatSystemInfo, getSystemInfo } from './systeminfo'
++import { formatSystemInfo, getOsPlatformInfo, getSystemInfo } from './systeminfo'
+ import { isIntelMac } from 'backend/constants/environment'
+ 
+ addListener('abort', (event, id) => {
+@@ -20,6 +20,9 @@ addHandler('getGogdlVersion', getGogdlVersion)
+ addHandler('getCometVersion', getCometVersion)
+ addHandler('getNileVersion', getNileVersion)
+ addHandler('getSystemInfo', async (e, cache) => getSystemInfo(cache))
++// debug/nile-spawn-app-side-latency.md fix: OS-only info, no runner --version spawns --
++// see the load-bearing comment on getOsPlatformInfo() in ./systeminfo/index.ts.
++addHandler('getOsPlatformInfo', async () => getOsPlatformInfo())
+ addListener('copySystemInfoToClipboard', async () => {
+   const info = await getSystemInfo()
+   const formatted = await formatSystemInfo(info)
+diff --git a/src/backend/utils/systeminfo/__tests__/index.test.ts b/src/backend/utils/systeminfo/__tests__/index.test.ts
+index bbb630ea8..957cc020b 100644
+--- a/src/backend/utils/systeminfo/__tests__/index.test.ts
++++ b/src/backend/utils/systeminfo/__tests__/index.test.ts
+@@ -49,7 +49,11 @@ jest.mock('../../helperBinaries', () => ({
+   getNileVersion: (...args: unknown[]) => mockGetNileVersion(...args)
+ }))
+ 
+-import { getSystemInfo, __resetSystemInfoCacheForTests } from '../index'
++import {
++  getSystemInfo,
++  getOsPlatformInfo,
++  __resetSystemInfoCacheForTests
++} from '../index'
+ 
+ // `process.getSystemVersion` is an Electron-injected extension, not part of plain
+ // Node's `process` -- stub it so `fetchSystemInfo()`'s `OS.version` read doesn't throw
+@@ -119,3 +123,41 @@ describe('debug/gog-spawn-reduction fix 3 -- getSystemInfo() in-flight-promise m
+     expect(mockGetGogdlVersion.mock.calls.length).toBeLessThanOrEqual(2)
+   })
+ })
++
++describe('debug/nile-spawn-app-side-latency.md fix -- getOsPlatformInfo() never touches runner binaries', () => {
++  beforeEach(() => {
++    __resetSystemInfoCacheForTests()
++    mockGetOsInfo.mockResolvedValue({ name: 'Test OS', version: '1.0' })
++  })
++
++  it('returns platform + version without calling ANY of the runner version probes', async () => {
++    const info = await getOsPlatformInfo()
++
++    expect(info.platform).toBe(process.platform)
++    // getOsInfo()'s own `version` (mocked to '1.0' above) takes precedence over the
++    // process.getSystemVersion() stub, mirroring fetchSystemInfo()'s exact field-merge
++    // order (OS: { platform, version: process.getSystemVersion(), ...detailedOsInfo }).
++    expect(info.version).toBe('1.0')
++    expect(mockGetLegendaryVersion).not.toHaveBeenCalled()
++    expect(mockGetGogdlVersion).not.toHaveBeenCalled()
++    expect(mockGetCometVersion).not.toHaveBeenCalled()
++    expect(mockGetNileVersion).not.toHaveBeenCalled()
++  })
++
++  it('does not share or populate getSystemInfo()\'s cache -- a subsequent getSystemInfo() call still runs the full fetch', async () => {
++    mockGetGpuInfo.mockResolvedValue([])
++    mockGetMemoryInfo.mockResolvedValue({ total: 100, used: 50 })
++    mockGetSteamDeckInfo.mockReturnValue({ isDeck: false })
++    mockGetHeroicVersion.mockReturnValue('1.0.0')
++    mockGetLegendaryVersion.mockResolvedValue('legendary 1.0')
++    mockGetGogdlVersion.mockResolvedValue('gogdl 1.0')
++    mockGetCometVersion.mockResolvedValue('comet 1.0')
++    mockGetNileVersion.mockResolvedValue('nile 1.0')
++
++    await getOsPlatformInfo()
++    expect(mockGetNileVersion).not.toHaveBeenCalled()
++
++    await getSystemInfo()
++    expect(mockGetNileVersion).toHaveBeenCalledTimes(1)
++  })
++})
+diff --git a/src/backend/utils/systeminfo/index.ts b/src/backend/utils/systeminfo/index.ts
+index 80e5c9a35..a298a8d5b 100644
+--- a/src/backend/utils/systeminfo/index.ts
++++ b/src/backend/utils/systeminfo/index.ts
+@@ -178,6 +178,36 @@ Software Versions:
+   Nile: ${info.softwareInUse.nileVersion}`
+ }
+ 
++/**
++ * Lightweight OS-only info (platform + OS version/name) -- debug/nile-spawn-app-side-latency.md
++ * fix. Deliberately does NOT go through `getSystemInfo()`/`fetchSystemInfo()`: that function
++ * bundles the OS read together with `Promise.all([getLegendaryVersion(), getGogdlVersion(),
++ * getCometVersion(), getNileVersion()])`, which spawns/extracts all four PyInstaller-onefile
++ * runner binaries just to determine `process.platform`/`process.getSystemVersion()`. The Login
++ * screen (`frontend/screens/Login/index.tsx`) only ever needs `OS.platform`/`OS.version` (for
++ * its "unsupported old macOS" gate) but was calling the full `getSystemInfo()` on every mount --
++ * and under the Tauri sidecar, `initHeadless()` (`backend/logger/index.ts`) deliberately skips the
++ * Electron path's boot-time system-info warm-up (Phase 27 Plan 04 deviation, Rule 3), so the
++ * Login screen's mount is the FIRST caller in a fresh session. That made "open Manage
++ * Accounts, click a login button immediately" -- the natural first user action -- land the
++ * login spawn directly on top of 4 concurrent onefile extractions triggered by the SAME mount,
++ * inflating click-to-window latency by ~25-30s. This function reuses the exact OS-assembly
++ * logic `fetchSystemInfo()` uses (same field order, same `getOsInfo()` call) but nothing else,
++ * so it never touches the runner binaries and returns near-instantly.
++ */
++async function getOsPlatformInfo(): Promise<{
++  platform: NodeJS.Platform
++  name: string
++  version: string
++}> {
++  const detailedOsInfo = await getOsInfo()
++  return {
++    platform: process.platform,
++    version: process.getSystemVersion(),
++    ...detailedOsInfo
++  }
++}
++
+ /**
+  * Test-only reset hook (debug/gog-spawn-reduction.md fix 3). `cachedSystemInfo` and
+  * `inFlightSystemInfoFetch` are module-level singletons that outlive any individual test
+@@ -190,5 +220,10 @@ function __resetSystemInfoCacheForTests(): void {
+   inFlightSystemInfoFetch = null
+ }
+ 
+-export { getSystemInfo, formatSystemInfo, __resetSystemInfoCacheForTests }
++export {
++  getSystemInfo,
++  getOsPlatformInfo,
++  formatSystemInfo,
++  __resetSystemInfoCacheForTests
++}
+ export type { SystemInformation, GPUInfo }
+diff --git a/src/common/types/ipc.ts b/src/common/types/ipc.ts
+index 807e67f90..09f412451 100644
+--- a/src/common/types/ipc.ts
++++ b/src/common/types/ipc.ts
+@@ -484,6 +484,12 @@ interface AsyncIPCFunctions {
+     retryIn: number
+   }
+   getSystemInfo: (cache?: boolean) => Promise<SystemInformation>
++  // debug/nile-spawn-app-side-latency.md fix: OS-only info, no runner --version spawns.
++  getOsPlatformInfo: () => Promise<{
++    platform: NodeJS.Platform
++    name: string
++    version: string
++  }>
+   removeRecent: (appName: string) => Promise<void>
+   getWikiGameInfo: (
+     title: string,
+diff --git a/src/frontend/screens/Login/__tests__/loginInFlightUiReachability.test.tsx b/src/frontend/screens/Login/__tests__/loginInFlightUiReachability.test.tsx
+index 531aa108c..cdd6fbc00 100644
+--- a/src/frontend/screens/Login/__tests__/loginInFlightUiReachability.test.tsx
++++ b/src/frontend/screens/Login/__tests__/loginInFlightUiReachability.test.tsx
+@@ -136,7 +136,14 @@ describe('F-34.4.2-17 / D-G1: what actually makes a second login tile unreachabl
+     // Breaks if: the macOS-version-check expression is removed or renamed
+     // (presence half), or a login/pending/in-flight-shaped identifier is
+     // introduced into oldMac's own derivation (absence half).
+-    expect(body).toMatch(/systemInfo\?\.OS\.platform === 'darwin'/)
++    //
++    // debug/nile-spawn-app-side-latency.md renamed the source variable from
++    // `systemInfo` (the full SystemInformation bundle, which forced
++    // legendary/gogdl/comet/nile `--version` probes on every Login mount) to
++    // `osPlatformInfo` (an OS-only fetch with no runner spawns) -- the pin
++    // below was updated to match, but the underlying assertion is identical:
++    // oldMac must still derive solely from `.platform`/`.version`.
++    expect(body).toMatch(/osPlatformInfo\?\.platform === 'darwin'/)
+     expect(body).not.toMatch(/pending|inFlight|isLoggingIn|loginInProgress/i)
+   })
+ 
+diff --git a/src/frontend/screens/Login/index.tsx b/src/frontend/screens/Login/index.tsx
+index d50fe740a..a7b2f65f9 100644
+--- a/src/frontend/screens/Login/index.tsx
++++ b/src/frontend/screens/Login/index.tsx
+@@ -68,18 +68,28 @@ export default React.memo(function NewLogin() {
+     Boolean(humble?.isLoggedIn) && !humble?.expired
+   )
+ 
+-  const systemInfo = useAwaited(window.api.systemInfo.get)
++  // debug/nile-spawn-app-side-latency.md fix: was `useAwaited(window.api.systemInfo.get)`,
++  // which fetches the FULL SystemInformation bundle -- including
++  // legendary/gogdl/comet/nile `--version` probes -- just to read `OS.platform`/`OS.version`
++  // below. Under the Tauri sidecar, the boot-time system-info warm-up is deliberately
++  // skipped (see `initHeadless()` in backend/logger/index.ts), so this Login-screen mount
++  // was the FIRST caller of that bundle in a fresh session -- exactly the moment a user is
++  // about to click a login button. That made the click's own runner spawn contend with 4
++  // concurrent onefile extractions, inflating click-to-window latency by ~25-30s.
++  // `getOsPlatformInfo()` reads only `process.platform`/`process.getSystemVersion()` -- no
++  // binary spawns -- so this mount no longer touches the runner binaries at all.
++  const osPlatformInfo = useAwaited(window.api.getOsPlatformInfo)
+ 
+   let oldMac = false
+   let oldMacMessage = ''
+-  if (systemInfo?.OS.platform === 'darwin') {
+-    const version = parseInt(systemInfo.OS.version.split('.')[0])
++  if (osPlatformInfo?.platform === 'darwin') {
++    const version = parseInt(osPlatformInfo.version.split('.')[0])
+     if (version < 12) {
+       oldMac = true
+       oldMacMessage = t(
+         'login.old-mac',
+         'Your macOS version is {{version}}. macOS 12 or newer is required to log in.',
+-        { version: systemInfo.OS.version }
++        { version: osPlatformInfo.version }
+       )
+     }
+   }
+diff --git a/src/preload/api/settings.ts b/src/preload/api/settings.ts
+index dbc781ce3..814b5a0b9 100644
+--- a/src/preload/api/settings.ts
++++ b/src/preload/api/settings.ts
+@@ -51,4 +51,7 @@ export const systemInfo = {
+   get: makeHandlerInvoker('getSystemInfo'),
+   copyToClipboard: makeListenerCaller('copySystemInfoToClipboard')
+ }
++// debug/nile-spawn-app-side-latency.md fix: OS-only info, no runner --version spawns --
++// see the load-bearing comment on getOsPlatformInfo() in backend/utils/systeminfo/index.ts.
++export const getOsPlatformInfo = makeHandlerInvoker('getOsPlatformInfo')
+ export const hasExecutable = makeHandlerInvoker('hasExecutable')

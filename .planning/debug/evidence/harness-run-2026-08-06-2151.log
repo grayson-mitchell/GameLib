@@ -1,0 +1,34 @@
+(21:51:27) [INFO]:    [Backend]:         [bootstrap] GAMELIB_SHELL_EXE received=/fake/shell/exe
+(21:51:27) [INFO]:    [Backend]:         [bootstrap] publicDir resolved=/Users/graysonmitchell/Projects/GameLib/public exists=true
+(21:51:27) [INFO]:    [Backend]:         [bootstrap] appRoot resolved=/Users/graysonmitchell/Projects/GameLib source=GAMELIB_APP_ROOT
+(21:51:27) [INFO]:    [Backend]:         [bootstrap] runner binary legendary path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/legendary exists=true
+(21:51:27) [INFO]:    [Backend]:         [bootstrap] runner binary nile path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile exists=true
+(21:51:27) [INFO]:    [Backend]:         [bootstrap] runner binary gogdl path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl exists=true
+(21:51:27) [INFO]:    [Backend]:         [bootstrap] runner binary comet path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/comet exists=true
+(21:51:27) [INFO]:    [Backend]:         [bootstrap] Humble secret store installed: keyring-backed (humble-session/humble-csrf slots)
+(21:51:27) [INFO]:    [Steam]:           Steam TokenStore implementation set to SidecarKeyringTokenStore
+(21:51:27) [INFO]:    [Backend]:         [bootstrap] secret stores: keyring
+(21:51:27) [INFO]:    [Connection]:      Pinging external endpoints
+(21:51:27) [INFO]:    [Connection]:      Connectivity: check-online
+(21:51:27) [DEBUG]:   [Nile]:            Getting login data from Nile
+(21:51:27) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile auth --login --non-interactive
+(21:51:27) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/nile.log
+(21:51:27) [INFO]:    [DownloadManager]: sidecar: boot-time download-queue auto-resume (main.ts:579-only, startup-flagged initQueue call) is deliberately disabled (D-05) — a persisted queue head stays resumable via the Resume button, never auto-started on sidecar boot
+(21:51:28) [INFO]:    [Connection]:      Connectivity: online
+(21:51:28) [DEBUG]:   [Backend]:         Releases info ready, checking wine releases
+(21:51:28) [DEBUG]:   [Backend]:         Releases info ready, checking anticheat data
+(21:51:28) [DEBUG]:   [Backend]:         AreWeAnticheatYet data did not change. Skipping.
+(21:51:34) [INFO]:    [Nile]:            Register data is: {
+  "client_id": "3639303238343530393137433131463142323234434130384139373436414131234132554d56484f58375550345637",
+  "code_verifier": "CAZmKuDXA0BsreuwkdD-b_FPeU86zvCWIl091-Zx0FE",
+  "serial": "69028450917C11F1B224CA08A9746AA1",
+  "url": "https://amazon.com/ap/signin?openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0&openid.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.mode=checkid_setup&openid.oa2.scope=device_auth_access&openid.ns.oa2=http%3A%2F%2Fwww.amazon.com%2Fap%2Fext%2Foauth%2F2&openid.oa2.response_type=code&openid.oa2.code_challenge_method=S256&openid.oa2.client_id=device%3A3639303238343530393137433131463142323234434130384139373436414131234132554d56484f58375550345637&language=en_US&marketPlaceId=ATVPDKIKX0DER&openid.return_to=https%3A%2F%2Fwww.amazon.com&openid.pape.max_auth_age=0&openid.assoc_handle=amzn_sonic_games_launcher&pageId=amzn_sonic_games_launcher&openid.oa2.code_challenge=jN_SvfA_160T1iJS7c1hWeaVjCqAGJFBXsXu5k0hmpA"
+}
+(21:53:04) [DEBUG]:   [Nile]:            Getting login data from Nile
+(21:53:04) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile auth --login --non-interactive
+(21:53:12) [INFO]:    [Nile]:            Register data is: {
+  "client_id": "4132454137354438393137433131463139443834434130384139373436414131234132554d56484f58375550345637",
+  "code_verifier": "WtfYgoEVvGMsErauIzKV2YQbZ4YHh31gZoe91ZRXmpA",
+  "serial": "A2EA75D8917C11F19D84CA08A9746AA1",
+  "url": "https://amazon.com/ap/signin?openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0&openid.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.mode=checkid_setup&openid.oa2.scope=device_auth_access&openid.ns.oa2=http%3A%2F%2Fwww.amazon.com%2Fap%2Fext%2Foauth%2F2&openid.oa2.response_type=code&openid.oa2.code_challenge_method=S256&openid.oa2.client_id=device%3A4132454137354438393137433131463139443834434130384139373436414131234132554d56484f58375550345637&language=en_US&marketPlaceId=ATVPDKIKX0DER&openid.return_to=https%3A%2F%2Fwww.amazon.com&openid.pape.max_auth_age=0&openid.assoc_handle=amzn_sonic_games_launcher&pageId=amzn_sonic_games_launcher&openid.oa2.code_challenge=oT0AHPEWlerzzEAGtscxzUhC19zjzx0kT-G_Ij6mFHU"
+}
