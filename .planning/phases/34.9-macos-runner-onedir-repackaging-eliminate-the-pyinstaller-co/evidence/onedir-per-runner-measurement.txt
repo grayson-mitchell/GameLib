@@ -1,0 +1,6 @@
+2026-08-06T22:34:41Z nile-onefile cold=7.91s warm1=4.46s warm2=4.88s path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile
+2026-08-06T22:41:21Z legendary-onedir cold=0.41s warm1=0.16s warm2=0.16s path=/Users/graysonmitchell/Projects/GameLib/.build-tools/runners-onedir/extracted/legendary/legendary
+2026-08-06T22:48:22Z gogdl-onefile cold=10.66s warm1=4.82s warm2=4.72s path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl
+2026-08-06T22:55:05Z nile-onedir cold=3.46s warm1=0.14s warm2=0.13s path=/Users/graysonmitchell/Projects/GameLib/.build-tools/runners-onedir/extracted/nile/nile
+2026-08-06T23:02:01Z legendary-onefile cold=7.21s warm1=4.12s warm2=4.08s path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/legendary
+2026-08-06T23:08:45Z gogdl-onedir cold=3.52s warm1=0.12s warm2=0.12s path=/Users/graysonmitchell/Projects/GameLib/.build-tools/runners-onedir/extracted/gogdl/gogdl
