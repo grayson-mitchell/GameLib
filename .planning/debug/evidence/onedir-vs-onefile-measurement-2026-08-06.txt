@@ -1,0 +1,20 @@
+idling 400s (nothing spawns these binaries)...
+--- COLD round 1  (order: vendored, onefile, onedir) ---
+  vendored-onefile    19.87s
+  local-onefile       20.40s
+  local-onedir         0.20s
+--- WARM (immediately after cold round 1) ---
+  vendored-onefile     6.52s
+  local-onefile        6.61s
+  local-onedir         0.14s
+idling 400s again...
+--- COLD round 2  (REVERSED order: onedir, onefile, vendored) ---
+  local-onedir         0.24s
+  local-onefile       21.28s
+  vendored-onefile     6.57s
+
+=== SUMMARY ===
+binary                  cold1    cold2  coldavg     warm  cold/warm
+vendored-onefile       19.87s    6.57s   13.22s    6.52s      2.03x
+local-onefile          20.40s   21.28s   20.84s    6.61s      3.15x
+local-onedir            0.20s    0.24s    0.22s    0.14s      1.54x

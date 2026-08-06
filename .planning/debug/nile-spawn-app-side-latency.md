@@ -253,6 +253,41 @@ second_fix_reasoning_checkpoint:
   reason: "FALSIFIED live, 2026-08-06 22:21-22:40 session: fix 1 (getOsPlatformInfo) verified to fully remove the version-probe contention (0 probes fired all session), yet click-to-register latency was 14s and 22s -- both worse than the 7s/7s measured pre-fix when probes fired 83s+ before the click. Removing the alleged contention source did not recover the baseline and correlates with things getting WORSE, not better. This was previously recorded as a 'confirmed root cause' with a reasoning_checkpoint and two complementary fixes shipped against it -- that confirmation is now retracted. See the 2026-08-06 falsification checkpoint in Current Focus for the re-investigation and new candidates (self-warm-up via a preceding same-binary spawn; candidate (d) window-teardown contention reconsidered for click 2 only; a possible post-rebuild/first-parent-spawn tax, none yet confirmed)."
   timestamp: 2026-08-06 (falsification)
 
+## 2026-08-06 ADDENDUM — `--onedir` MEASURED: eliminates the tax outright (~95x)
+
+The upstream fix is no longer a prediction. nile v1.1.2 was cloned from `imLinguin/nile` at the
+pinned tag and built twice with the SAME command upstream CI uses
+(`pyinstaller --onefile --name nile --strip nile/cli.py`, per `.github/workflows/build.yaml`),
+differing only in `--onefile` vs `--onedir`. Both adhoc-signed, both print `1.1.2 Will A. Zeppeli`.
+Two cold rounds separated by 400s idles, second round in REVERSED order to catch ordering effects.
+
+```
+binary                  cold1    cold2  coldavg     warm  cold/warm
+vendored-onefile       19.87s    6.57s   13.22s    6.52s      2.03x
+local-onefile          20.40s   21.28s   20.84s    6.61s      3.15x
+local-onedir            0.20s    0.24s    0.22s    0.14s      1.54x
+```
+
+**`--onedir` does not reduce the spawn tax — it removes it. 0.22s cold vs 20.84s cold (~95x);
+0.14s warm vs 6.61s warm (~47x).** The cold/warm distinction essentially vanishes for onedir
+(0.22s vs 0.14s is ~80ms of noise), which is exactly what "no runtime extraction, stable paths,
+Gatekeeper assessment cache actually hits" predicts.
+
+**Control passed:** the locally built ONEFILE faithfully reproduced the tax (20.40s/21.28s cold,
+6.61s warm) against the vendored binary's independently measured 21.27s cold / 6.50s warm. So the
+local toolchain is representative and the onedir number is trustworthy rather than an artifact of
+building differently from upstream.
+
+**One anomaly, recorded not explained:** `vendored-onefile` read 6.57s in cold round 2 — i.e. it
+behaved WARM despite a 400s idle, where it read 19.87s in round 1. This reinforces the existing
+caveat that the decay is NOT a clean function of elapsed time (it is likelier eviction-under-
+memory-pressure than a timer). It does not touch the headline: both onefile builds were ~20s cold
+at least once, and onedir was never above 0.24s under any condition.
+
+**Cost of the change, measured:** onedir is 29MB across 108 files (103 Mach-O) vs 13MB as one
+file — 2.2x bundle growth for nile, and ~100 additional files per runner that macOS notarization
+must sign and staple. That signing/packaging work, not the flag, is the real effort.
+
 ## 2026-08-06 FINAL — mechanism CONFIRMED, both fixes REVERTED by user decision
 
 **status: root cause identified; no in-repo fix applied; both candidate fixes reverted.**
