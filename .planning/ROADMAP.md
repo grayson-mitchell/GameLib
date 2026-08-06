@@ -2299,13 +2299,41 @@ problem, so upstreaming benefits both projects and limits how far the fork diver
 - The `altLegendaryBin`/`altGogdlBin`/`altNileBin` user overrides must keep working (they bypass
   `archSpecificBinary` entirely and may point at a onefile binary).
 
-**Requirements**: TBD (run /gsd-plan-phase 34.9)
+**Requirements**: REQ-34.9-01, REQ-34.9-02, REQ-34.9-03, REQ-34.9-04, REQ-34.9-05, REQ-34.9-06,
+REQ-34.9-07, REQ-34.9-08, REQ-34.9-09, REQ-34.9-10, REQ-34.9-11 (minted 2026-08-07 at
+`/gsd-plan-phase 34.9`; the full block lands in REQUIREMENTS.md at plan 34.9-11, where each box is
+ticked only by measured evidence)
 **Depends on:** Phase 34 (packaging/signing/notarization pipeline). Independent of the 34.1-34.8
 IPC slices. Runs before Phase 35, which will later delete the Electron half of the signing work.
-**Plans:** 0 plans
+**Plans:** 11 plans in 7 waves
+
+**Scope note (planning, 2026-08-07):** `R-34.5-G1-PKG` — the packaged Tauri asset root does not
+resolve, because `electronStub.app.isPackaged` stays `false` under the sidecar so `publicDir`
+unconditionally appends `'public'` to a resource root that has no such child — is **DESCOPED**. It
+is Phase 34.5's deferred item 12, it pre-dates this phase, and it already breaks packaged-Tauri
+runner resolution for today's single-file runners identically. Phase 34.9 therefore proves the
+onedir win in the **Tauri DEV** build and the **Electron PACKAGED** build (still the shipping
+artifact until Phase 35), and records **Tauri-PACKAGED as UNPROVEN**. Real-certificate notarization
+also stays out of scope (D-03/D-04, no Apple credentials enrolled); the honest proxy is
+`codesign --verify` on an adhoc-signed bundle plus a per-file signature-state report.
+
+**Measurement caveat:** the ~95x figure above is **nile-only**. Plan 34.9-03 measures legendary and
+gogdl against their own vendored onefile controls and will replace this prose with per-runner
+figures if either falls short — the phase may not leave behind a headline number its own
+measurement falsified.
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 34.9 to break down)
+- [ ] 34.9-01-PLAN.md — `meta/buildRunnersOnedir.ts`: clone pinned tags, derive upstream's own pyinstaller command, swap one flag, archive (wave 1)
+- [ ] 34.9-02-PLAN.md — `archSpecificBinary()` resolves nested darwin paths for three runners; alt*Bin bypass and stale-layout throw (wave 1)
+- [ ] 34.9-03-PLAN.md — Build all three on arm64 and MEASURE cold/warm per runner against the vendored onefile control (wave 2)
+- [ ] 34.9-04-PLAN.md — `build-runners-onedir-macos.yml`: macos-13/macos-14 matrix publishing to a rolling prerelease (wave 2)
+- [ ] 34.9-05-PLAN.md — Upstream PR patches + bodies for nile/legendary/heroic-gogdl; developer submits (wave 2)
+- [ ] 34.9-06-PLAN.md — Downloader: darwin archives, sha256-verified against in-repo digests, layout-aware freshness (wave 3)
+- [ ] 34.9-07-PLAN.md — electron-builder + Tauri packaging config, and the packaging-limitations record (wave 4)
+- [ ] 34.9-08-PLAN.md — `meta/verifyRunnerBundle.ts`: inspect a BUILT artifact, report per-file signature state (wave 4)
+- [ ] 34.9-09-PLAN.md — Dispatch CI for real, pin the published digests, run the vendoring round trip (wave 5)
+- [ ] 34.9-10-PLAN.md — Author the blocking live-gate contract + Structural Reachability Review (wave 6)
+- [ ] 34.9-11-PLAN.md — Run the gate on hardware; reconcile REQUIREMENTS.md and this ROADMAP entry (wave 7)
 
 ### Phase 35: Electron cutover — remove the Electron build
 
