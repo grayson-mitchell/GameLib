@@ -6,21 +6,11 @@ import { finished } from 'stream/promises'
 
 import { setGlobalDispatcher, ProxyAgent } from 'undici'
 
-type SupportedPlatform = 'win32' | 'darwin' | 'linux'
-type DownloadedBinary =
-  | 'legendary'
-  | 'gogdl'
-  | 'nile'
-  | 'comet'
-  | 'epic-integration'
-
-const RELEASE_TAGS = {
-  legendary: '0.20.43',
-  gogdl: 'v1.2.1',
-  nile: 'v1.1.2',
-  comet: 'v0.2.0',
-  'epic-integration': 'v0.4'
-} as const satisfies Record<DownloadedBinary, string>
+import {
+  RELEASE_TAGS,
+  type SupportedPlatform,
+  type DownloadedBinary
+} from './releaseTags'
 
 const pathExists = async (path: string): Promise<boolean> =>
   stat(path).then(
