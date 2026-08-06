@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.2-17-PLAN.md
-last_updated: "2026-08-06T03:25:03.520Z"
-last_activity: 2026-08-06 -- Phase 34.4.2 plan 17 executed
+stopped_at: Completed 34.4.2-18-PLAN.md
+last_updated: "2026-08-06T14:30:00.000Z"
+last_activity: 2026-08-06 -- Phase 34.4.2 plan 18 executed
 progress:
   total_phases: 20
   completed_phases: 13
@@ -480,7 +480,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — GAP CYCLE 4
 EXECUTING (gap cycle 3 EXECUTED, STILL DID NOT CLOSE)
-Plan: 17 of 20 COMPLETE (plans 1-17 complete. Plan 13 EXECUTED 2026-08-05 -- D-A: the in-field autofill
+Plan: 18 of 20 COMPLETE (plans 1-18 complete. Plan 13 EXECUTED 2026-08-05 -- D-A: the in-field autofill
 glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
 see 34.4.2-13-SUMMARY.md. Plan 14 EXECUTED 2026-08-05 -- T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW
 single-flight guard refuses a second visible login window while one is pending/presented, 25s TTL
@@ -539,6 +539,28 @@ transcript AND per-launch archiving of the sidecar log. Plans: 17 (Rust residual
 regression pin), 18 (VERIFICATION.md correction + findings ledger + five-test standing reference),
 19 (author `34.4.2-LIVE-GATE-RERUN-4.md`, verdict null), 20 (**human-driven live gate run**,
 `autonomous: false`, D-E author/runner separation). **Next:** `/gsd-execute-phase 34.4.2`.)
+
+**Plan 17 EXECUTED 2026-08-06 -- see 34.4.2-17-SUMMARY.md.** `humble_login_cookies` (the
+login-poll direction) ported onto the async `WKHTTPCookieStore` read, closing F-34.4.2-13 (the
+last mechanically-identical F-34.4.2-12 site, latent not measured); the regression pin rebuilt as
+a shape-robust exact-set scan over all three cookie arms, watched to FAIL twice and GREEN after
+each revert. Three deviations: a compile-preserving mutation-proof variant (the plan's literal
+cfg flip does not compile on macOS), an operator-authorised WR-08 quote-balance fix (RED since
+`6bad86227` on a false positive), and a stale `test:ci` baseline corrected (measured 1
+failed/3746 passed before the fix; 3748/3748 after). Ran NO gate item, ticked NO requirement box.
+
+**Plan 18 EXECUTED 2026-08-06 -- see 34.4.2-18-SUMMARY.md.** Corrected `34.4.2-VERIFICATION.md`'s
+gap-1 record in place: commit `6bad86227` supersedes two of the three `missing:` bullets
+(discriminator and timeout, both marked `CLOSED 2026-08-06 (6bad86227)`, candidates (a)/(b)
+FALSIFIED, (c) SUBSUMED), leaving exactly one open item -- the full six-item gate re-run
+including the never-attempted 6(b). Appended honest ledger dispositions for
+F-34.4.2-11/-12/-13/-14 and T-34.4.2-43 to `deferred-items.md` (earlier sections byte-unchanged).
+Wrote the standing reference `.claude/skills/spike-findings-gamelib/references/live-gate-contract-authoring.md`
+(five defect-class tests, the new fifth reviewing the requirement PAIR, plus the dual-sink
+append-and-archive evidence-capture standard) and indexed it in `SKILL.md`. Zero deviations. Ran
+NO gate item, changed NO source, ticked NO requirement box. **Phase 34.4.2 remains NOT CLOSED --
+next: plan 19 authors `34.4.2-LIVE-GATE-RERUN-4.md` implementing the dual-sink standard, then
+plan 20 runs it live.**
 
 Plan 14 record (14 done -- `34.4.2-14-SUMMARY.md`. Closed T-34.4.2-39's app gap (a second
 VISIBLE login window queuing behind a first, minted by plan 12's live gate) with a source-level
@@ -2811,7 +2833,8 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-06 - Phase 34.4.2 plan 17 executed: humble_login_cookies ported onto the async WKHTTPCookieStore read (last mechanically-identical F-34.4.2-12 site, latent not measured); F-34.4.2-12 regression pin rebuilt as a shape-robust exact-set scan over all three cookie arms, watched to FAIL twice (guard change + site deletion) and GREEN after each revert. THREE DEVIATIONS: (1) the plan's literal guard-flip mutation does not compile on macOS -- both branches activate, E0308 -- so a compile-preserving textual variant was used; (2) OPERATOR-AUTHORISED scope expansion to src/backend/__tests__/longRunningChannels.test.ts, fixing the WR-08 quote-balance guard's lack of escaped-quote awareness (RED since 6bad86227 on a FALSE POSITIVE against correct source); (3) the plan's stated test:ci baseline of "3747, zero failures" was STALE -- measured 1 failed/3746 passed before the fix. cargo test 116/0/1-ignored, test:ci now 3748/3748. Ran NO gate item, ticked NO requirement box. Phase 34.4.2 remains NOT CLOSED. See 34.4.2-17-SUMMARY.md.
+Last activity: 2026-08-06 - Phase 34.4.2 plan 18 executed: corrected 34.4.2-VERIFICATION.md's gap-1 record in place (commit 6bad86227 supersedes two of gap 1's three missing bullets -- discriminator and timeout, both marked CLOSED 2026-08-06 (6bad86227), candidates (a)/(b) FALSIFIED, (c) SUBSUMED -- leaving exactly one open item, the full six-item gate re-run including the never-attempted 6(b)); appended honest ledger dispositions for F-34.4.2-11/-12/-13/-14 and T-34.4.2-43 to deferred-items.md (earlier sections byte-unchanged); wrote the standing reference .claude/skills/spike-findings-gamelib/references/live-gate-contract-authoring.md (five defect-class tests, the new fifth reviewing the requirement PAIR, plus the dual-sink append-and-archive evidence-capture standard) and indexed it in SKILL.md. Zero deviations. Ran NO gate item, changed NO source, ticked NO requirement box. Phase 34.4.2 remains NOT CLOSED. See 34.4.2-18-SUMMARY.md.
+Prior activity: 2026-08-06 - Phase 34.4.2 plan 17 executed: humble_login_cookies ported onto the async WKHTTPCookieStore read (last mechanically-identical F-34.4.2-12 site, latent not measured); F-34.4.2-12 regression pin rebuilt as a shape-robust exact-set scan over all three cookie arms, watched to FAIL twice (guard change + site deletion) and GREEN after each revert. THREE DEVIATIONS: (1) the plan's literal guard-flip mutation does not compile on macOS -- both branches activate, E0308 -- so a compile-preserving textual variant was used; (2) OPERATOR-AUTHORISED scope expansion to src/backend/__tests__/longRunningChannels.test.ts, fixing the WR-08 quote-balance guard's lack of escaped-quote awareness (RED since 6bad86227 on a FALSE POSITIVE against correct source); (3) the plan's stated test:ci baseline of "3747, zero failures" was STALE -- measured 1 failed/3746 passed before the fix. cargo test 116/0/1-ignored, test:ci now 3748/3748. Ran NO gate item, ticked NO requirement box. Phase 34.4.2 remains NOT CLOSED. See 34.4.2-17-SUMMARY.md.
 Prior activity: 2026-08-05 - Completed quick task 260805-t0s: removed Patreon from the sidebar menu and all code references (openPatreonPage channel deleted across all four layers + Tauri sidecar registration; FUNDING.yml/Support.md/snapcraft.yaml stripped; grep-clean)
 Prior activity: 2026-08-05 - Phase 34.4.2 plan 13 executed: D-A (operator, binding) deleted the in-field autofill glyph mechanism in full from src-tauri/src/main.rs (13 symbols, ~24 cargo tests, plus truncate_chars, an orphan the compiler caught) -- 34.4.2-LIVE-GATE-RERUN-2.md item 3 had measured the synthesized right-click surfacing the AutoFill menu but never filling the field (F-34.4.2-09), falsifying spike 022's own premise. Minted PHASE_34_4_2_REMOVED_AUTOFILL_SYMBOLS, a mutation-proven permanent absence guard (tauriShellSource.test.ts) making reintroduction a test failure; relocated T-34.4.2-20's private-selector negative so it survives the poster's deletion; retired the NSGraphicsContext Cargo feature. REQ-34.4.2-04/-05 rewritten (amend-in-place) to state Cmd+V/Edit-Paste as the sole credential-entry route, both boxes stay UNTICKED. 34.4.2-PLATFORM-SCOPE.md's sixth threat-register update retires 10 threats by deletion (T-34.4.2-17, this phase's largest security surface, specifically called out as eliminated not merely mitigated), moves 7 previously-closed threats to CLOSED-pending-re-measurement, and adds T-34.4.2-40 (reintroduction, mutation-proven-mitigated). cargo test 111/1-ignored, jest 89/89 (targeted) + 3742/3742 (full suite, context only). Ran NO gate item, ticked NO requirement box. Phase 34.4.2 remains NOT CLOSED. See 34.4.2-13-SUMMARY.md.
 Prior activity: 2026-08-05 - Completed quick task 260805-rwy: removed the "Login with your platform…" paragraph from the Manage Accounts page (visual UAT pending)
