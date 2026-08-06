@@ -115,6 +115,7 @@ feasibility 009–012), 2026-07-27 (Tauri login webview + cookies 013–015), 20
 | Tauri embedded store browser | references/tauri-embedded-store-browser.md | In-app store browser VALIDATED: `add_child` embeds a child webview in the config-created main window (real Steam store composited, screenshot-proven); renderer must be the sole bounds owner; one shared jar per process across all windows/children |
 | Login-window UX on macOS | references/login-window-ux-macos.md | Child-window attachment makes the login un-losable (sheets trap the user); inline Keychain autofill is platform-blocked, but a **synthesized right-click from an in-field key glyph pops the real AutoFill menu** — the panel can never be opened directly |
 | OAuth login test harness | references/oauth-login-test-harness.md | **DummyStore**: a zero-dep local OAuth 2.0 code-grant provider (port 17940) with a hot-editable login form, PKCE + replay enforcement and an `/events` oracle — the offline fixture for all login/form work |
+| Live-gate contract authoring | references/live-gate-contract-authoring.md | Five defect-class tests for reviewing a blocking live-gate contract BEFORE its first run — Test 5's unit of review is the requirement **PAIR** (does satisfying A destroy B's evidence: restart/truncate/clear/reset/env-var/one-shot-resource), and a dual-sink **append-and-archive** capture standard (`tee -a`, per-launch delimiters, `gamelib.log` archived before it rotates) so both the transcript and sidecar-log sinks survive every launch |
 
 ## Source Files
 
