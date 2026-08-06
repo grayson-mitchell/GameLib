@@ -3899,6 +3899,8 @@ Recent decisions affecting current work:
 
 - Clean up 44 eslint errors blocking the pre-push hook (branch debt on fix/steam-native-install-stability; pushes currently need `--no-verify` — used for the 2026-08-03 PR #3 ship). Mostly `no-require-imports` in sidecar jest tests where dynamic re-requires are intentional (needs test-file rule exception, NOT import conversion) + ~15 auto-fixable assertions. See `.planning/todos/pending/2026-08-03-clean-up-44-eslint-errors-blocking-the-pre-push-hook.md`.
 
+- Phase 34.8 planning context (decided 2026-08-06): hybrid i18n approach — fork-owned namespace `public/locales/<locale>/gamelib.json` (keeps upstream Heroic/Weblate catalogs byte-identical and mergeable), LLM-based glossary-aware machine-fill script in `scripts/` (never overwrites non-empty values; `fallbackLng: 'en'` makes fill polish, not the compliance gate), mark MT-origin strings for later Weblate import as needs-editing, and **defer standing up Hosted Weblate until real translator demand**. See `.planning/todos/pending/2026-08-06-phase-34-8-i18n-context-fork-namespace-llm-machine-fill-defe.md`.
+
 ### Blockers/Concerns
 
 - Pre-push hook (`prettier` + `i18n --fail-on-update`) fails on **pre-existing repo debt** unrelated to Phase 7: ~141 files fail `prettier --check .` (likely a Prettier version bump; `pnpm-lock.yaml` already modified) and the locale files have orphaned-key drift. Phase 7 was pushed with `--no-verify` after independently verifying tsc/lint/tests. A separate housekeeping pass (`pnpm prettier --write .` + `pnpm i18n`) would clear it.
