@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.2-21-PLAN.md
-last_updated: "2026-08-06T09:50:58.505Z"
-last_activity: "2026-08-06 - Phase 34.4.2 plan 21 executed: Tests 6/7 + coverage map added to live-gate-contract-authoring.md"
+stopped_at: Completed 34.4.2-22-PLAN.md
+last_updated: "2026-08-06T10:04:37.967Z"
+last_activity: "2026-08-06 - Phase 34.4.2 plan 22 executed: F-34.4.2-17 UI-reachability pin (loginInFlightUiReachability.test.tsx), correcting the disables/clears characterisation to navigation-unmounts-the-screen"
 progress:
   total_phases: 20
   completed_phases: 13
   total_plans: 216
-  completed_plans: 201
+  completed_plans: 202
   percent: 65
 ---
 
@@ -480,7 +480,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — EXECUTING
 EXECUTED 2026-08-06, STILL DID NOT CLOSE (gate FAILED 1/6) -- gap cycle 5 required, NOT COMPLETE
-Plan: 21 of 25 complete -- executing gap cycle 5 (21-25)
+Plan: 22 of 25 complete -- executing gap cycle 5 (21-25)
 glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
 see 34.4.2-13-SUMMARY.md. Plan 14 EXECUTED 2026-08-05 -- T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW
 single-flight guard refuses a second visible login window while one is pending/presented, 25s TTL
@@ -2577,7 +2577,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 93%
+trusted blindly. The recurring `**Progress:**[█████████░] 94%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.2-07): the same splice-into-historical-prose bug recurred yet again this session --
@@ -3581,6 +3581,7 @@ Closed/parked native-install phases:
 | Phase 34.4.2 P16 | ~40min | 3 tasks (Task 2 blocking live gate, human-driven) | 6 files (`34.4.2-LIVE-GATE-RERUN-3.md`, `34.4.2-PLATFORM-SCOPE.md`, `deferred-items.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`) |
 | Phase 34.4.2 P19 | 1h | 3 tasks | 3 files |
 | Phase 34.4.2 P21 | 20min | 2 tasks | 1 files |
+| Phase 34.4.2 P22 | 15min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -4024,6 +4025,7 @@ Recent decisions affecting current work:
 - [Phase 34.4.2-20]: No requirement box was ticked this run: REQ-34.4.2-01/-02/-03/-04/-05/-06/-09 each carry a dated note recording this run's result (none is a live-confirmed regression of a previously-proven mechanism -- each non-PASS traces to F-A/F-B/F-C or to never being reached); REQ-34.4.2-10 stays `[x]`, now with its first genuine live re-confirmation via item 6(b)'s PASS. Verified via `git diff` that no `[ ]` became `[x]` in `.planning/REQUIREMENTS.md`.
 - [Phase 34.4.2-21]: Section 1's tally counts eight contract-authoring defects (six prior + F-16/F-17); F-15/F-18 excluded as run-time capture-integrity defects (Section 3), a different category from Section 2's seven authoring-time tests.
 - [Phase 34.4.2-21]: Test 7's worked example describes what src/frontend/screens/Login/components/Runner/index.tsx:72 (navigate(props.loginUrl), unmounting the whole runnerGroup via a route change to loginweb/:runner) actually does, correcting deferred-items.md's approximate 'disables/clears the other login buttons' wording after re-confirming against current source.
+- [Phase 34.4.2-22]: F-34.4.2-17 CORRECTED (deferred-items.md/ROADMAP.md's "disables/clears the other login buttons" wording): five falsifiable source-text gates in loginInFlightUiReachability.test.tsx confirm the frontend does not disable/clear other login buttons during an in-flight login -- navigate(loginUrl) unmounts the whole runnerGroup container, taking every tile with it. Every pin proven falsifiable by a real reverted mutation. T-34.4.2-39/-41 basis is unit-proven + UI-pinned, never live-discharged.
 
 ### Pending Todos
 
@@ -4112,8 +4114,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-06T09:50:58.490Z
-Stopped at: Completed 34.4.2-21-PLAN.md
+Last session: 2026-08-06T10:04:37.953Z
+Stopped at: Completed 34.4.2-22-PLAN.md
   This session (sequential executor, Task 3 of plan 20): recorded and propagated the measured
   verdict from `34.4.2-LIVE-GATE-RERUN-4.md`, the blocking live gate the operator drove against
   the dual-sink evidence-capture standard for the first time. Filled all six items'
