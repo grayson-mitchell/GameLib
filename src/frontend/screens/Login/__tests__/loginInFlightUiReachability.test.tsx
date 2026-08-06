@@ -61,20 +61,25 @@
  * this phase's blocking live defects).
  *
  * FALSIFIABILITY (recorded per pin, per this phase's own regression-gate
- * register): every assertion below was confirmed, by a temporary local
- * mutation of the file it guards and then reverted before commit, to
- * actually fail against the mutated shape -- see 34.4.2-22-SUMMARY.md for
- * each mutation performed and the observed failure message. What NO
- * source-text gate in this file can ever catch: a behaviour change made in
- * a file this suite does not read, or a runtime state change that leaves
- * the source text of these three files byte-identical (for example, a new
- * state variable that happens to always evaluate to `false` at the moment
- * it is read). Each test below is individually labelled PRESENCE (a
- * specific token must exist -- the stronger kind, satisfied by fewer
- * unrelated edits) or ABSENCE (a token or shape must NOT exist -- the
- * weaker kind, since many unrelated edits also satisfy an absence). No
- * assertion in this file counts occurrences over unstripped source; every
- * count and match below operates on `stripSourceComments`'s output.
+ * register): ALL FIVE assertions below were confirmed, by a temporary local
+ * mutation of the file each one guards and then a revert before commit, to
+ * actually fail against the mutated shape -- full mutation text and the
+ * observed Jest failure output for each of the four independent pins (the
+ * disabled= set, the oldMac derivation, the runnerGroup container, the
+ * loginweb/:runner sibling route) is recorded in 34.4.2-22-SUMMARY.md,
+ * with every mutated file confirmed restored via `git diff --quiet` before
+ * the next mutation began. What NO source-text gate in this file can ever
+ * catch: a behaviour change made in a file this suite does not read, or a
+ * runtime state change that leaves the source text of these three files
+ * byte-identical (for example, a new state variable that happens to always
+ * evaluate to `false` at the moment it is read -- exactly the shape of the
+ * `const isLoggingIn = false` mutation used to prove the third pin above).
+ * Each test below is individually labelled PRESENCE (a specific token must
+ * exist -- the stronger kind, satisfied by fewer unrelated edits) or
+ * ABSENCE (a token or shape must NOT exist -- the weaker kind, since many
+ * unrelated edits also satisfy an absence). No assertion in this file
+ * counts occurrences over unstripped source; every count and match below
+ * operates on `stripSourceComments`'s output.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
