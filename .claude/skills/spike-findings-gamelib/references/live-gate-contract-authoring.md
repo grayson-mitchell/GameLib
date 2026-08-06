@@ -226,6 +226,41 @@ disables/clears the other login buttons") was approximate — re-confirmed at th
 current source, the mechanism is a full route navigation that unmounts the login screen outright,
 not a disabled/cleared button state.**
 
+### Coverage map — which test catches which measured defect
+
+**Category distinction, stated in the file's own voice, before the table below:** Section 2's
+seven tests are **authoring-time reachability tests**, applied to a contract's items, sub-checks
+and preconditions before it runs. Section 3's bullets are **run-time capture-integrity
+requirements**, applied to the evidence pipeline while it runs. A defect belongs to exactly one
+category. Putting a capture-integrity failure in the test list below would make the test list look
+more complete than it is — this is why F-34.4.2-15 and F-34.4.2-18 are attributed to Section 3
+rules in the table, never to a Section 2 test.
+
+| Finding | What it was | Caught by (test or Section 3 rule) | Category |
+|---|---|---|---|
+| Gate run 2's four single-requirement impossibilities | A `http://` origin against an `https`-only gate; a concurrency framing forbidden by AppKit sheet modality; an OAuth-only log line demanded of a non-OAuth runner | Test 1 / Test 2 / Test 3 | Authoring-time test |
+| F-34.4.2-11 | A mandatory truncating `tee` colliding with a mandatory mid-run relaunch, destroying prior items' transcript evidence | Test 5 | Authoring-time test |
+| F-34.4.2-14 | Three required log lines demanded of a transcript sink that structurally cannot carry sidecar-emitted output | Test 3's SINK clause | Authoring-time test |
+| F-34.4.2-15 | A concurrent second `gamelib-shell` instance split the `[shell]` sink while `gamelib.log` stayed shared, so a partially-captured run looked successfully measured | Section 3's exactly-ONE-app-instance bullet | Run-time capture-integrity rule, NOT a Section 2 test |
+| F-34.4.2-16 | Item 4's premise (a credential-entry event to observe) invalidated by a live WKWebView cookie jar the preflight never checked, though the app-side store it did check was correctly empty | Test 6 | Authoring-time test |
+| F-34.4.2-17 | Item 5's gesture sequence was backend-reachable by every test applied to it, but the shipped frontend never offered the control the sequence needed | Test 7 | Authoring-time test |
+| F-34.4.2-18 | Preflight checked for the DummyStore harness on its port but not for a pre-existing `gamelib-shell` instance | Section 3's preflight-must-check-for-a-pre-existing-instance clause | Run-time capture-integrity rule, NOT a Section 2 test |
+
+**The map's own limits, stated plainly rather than implied.** This list is drawn from defects this
+project has **MEASURED**, and every entry was added to this reference only after a live run had
+already paid for it. Nothing here demonstrates the list is complete — the five-test list looked
+complete before RERUN-4 measured three misses against it (F-34.4.2-15/-16/-17), and this
+seven-test-plus-two-capture-rule list can fail the same way against whatever the next run finds.
+The reviewable clause this file is held to (T-34.4.2-42: the count of structural impossibilities
+and unresolved requirement interactions actually encountered during a run should be zero) is
+restated here on purpose — the count is recorded per run whatever it is, so the next completeness
+gap surfaces as a number rather than as a surprise.
+
+**Tests 6 and 7 have caught nothing yet.** Both are derived directly from findings RERUN-4
+measured, not validated by a run that applied them and confirmed they hold. The first contract
+this reference's Tests 6 and 7 apply to (RERUN-4's successor) is also the first opportunity to find
+out whether they actually work.
+
 ## Section 3 — The dual-sink evidence-capture standard
 
 This is the concrete fix for F-34.4.2-11 and F-34.4.2-14. Every future contract in this project
