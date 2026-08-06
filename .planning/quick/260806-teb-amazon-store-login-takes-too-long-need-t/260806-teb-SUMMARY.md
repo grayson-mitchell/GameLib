@@ -244,9 +244,25 @@ did not solve the presenting problem.** The follow-up is filed in deferred-items
 
 ## Deferred Items
 
-**D-TEB-01 (open, recommended next): the ~11-29s app-side gap between the nile binary's 6.8s
-standalone cost and the 18-36s observed in-app.** Undiagnosed with more than one live candidate --
-route through `/gsd-debug`, not a guessed fix. Candidates, none preferred:
+**D-TEB-01 — CLOSED 2026-08-06. ROOT-CAUSED, NO IN-REPO FIX. See
+`.planning/debug/nile-spawn-app-side-latency.md` (commit `052eb0e9b`).**
+
+The premise below was wrong: there is no "app-side gap." The cost is the PyInstaller-onefile
+extraction itself, which is **3.27x worse cold than warm** — measured in a bare shell with no app
+involved at all: 6.50s immediately after a prior nile spawn, 21.27s after 360s idle. Every reading
+in this SUMMARY is explained by time-since-the-previous-nile-spawn, including the 7s figures,
+which were warm because a `--version` probe had fired ~80s earlier.
+
+Consequence: the three startup `--version` probes were a load-bearing WARM-UP. Removing them
+measured *worse* live (14s/22s vs 7s/7s), and caching them away would supply the warm-up once
+after install then silently stop forever. Both candidate fixes were REVERTED on user instruction;
+the work is recoverable at `.planning/debug/evidence/reverted-getOsPlatformInfo-fix.patch`.
+Prewarm-on-mount is not a fix either — it is what the reverted code already did, and it produced
+the 36s reading. The real fix is upstream `--onedir` packaging for the vendored runners. What
+ships as mitigation is this task's `preparing` spinner, which makes the wait honest, not shorter.
+
+_Original (falsified) framing retained below for audit:_ the ~11-29s app-side gap between the
+nile binary's 6.8s standalone cost and the 18-36s observed in-app. Candidates, none preferred:
 (a) concurrent PyInstaller extraction contention from the three startup `--version` probes
 (explains attempt 1, but demonstrably NOT attempt 2, which ran isolated);
 (b) sidecar-spawn overhead specific to `runRunnerCommand` (different parent process, env, or cwd
