@@ -7,7 +7,8 @@ cited throughout only as the evidence for why each rule exists.
 ## Section 1 — Why this file exists
 
 Phase 34.4.2 has, across six gate runs (gate run 2 through RERUN-3 plus the two-plan review that
-produced this file), found **six distinct contract-authoring defects**:
+produced this file), found **six distinct contract-authoring defects**, plus two more found by
+RERUN-4 that this section's own tally had not yet absorbed:
 
 - Four single-requirement structural impossibilities in gate run 2's own contract (the DummyStore
   https-only block affecting items 3/4 and a precondition; item 6(a)'s concurrency framing against
@@ -18,17 +19,31 @@ produced this file), found **six distinct contract-authoring defects**:
 - F-34.4.2-14: a **sink mismatch** — three required log lines demanded of a transcript sink that
   structurally cannot carry sidecar-emitted output, regardless of whether the emitter itself was
   correctly identified.
+- F-34.4.2-16: a **pre-existing external-state** defect — item 4's premise (a credential-entry
+  event to observe) was invalidated by a live WKWebView cookie jar the contract's own preflight
+  never checked, even though the app-side store it did check was correctly recorded as empty.
+- F-34.4.2-17: a **UI-level unreachability** defect — item 5's gesture sequence was backend-reachable
+  by every test applied to it at authoring time, yet the shipped frontend never offered the control
+  the sequence needed.
+
+**Eight distinct contract-authoring defects total, as of this writing.** RERUN-4 also found two
+**capture-integrity** defects — F-34.4.2-15 (a concurrent second app instance splitting the
+`[shell]` sink) and F-34.4.2-18 (a preflight gap for a pre-existing app instance) — both already
+fixed in Section 3 below. They are not counted in the list above: Section 2's tests are
+authoring-time reachability tests applied to a contract's items before it runs, while
+capture-integrity defects belong to the evidence pipeline's own run-time behaviour, a different
+category stated in full by Section 2's own coverage map at the end of this section.
 
 Contract authoring is a **defect surface in its own right**, on the same footing as the code the
 gate exists to verify. The Structural Reachability Review below is a **deliverable**, produced
 before the contract's first live run, not a footnote added after a run goes wrong.
 
 **Standing rule (decision D-E): the plan that authors a gate contract may never also run it.** The
-plan that authors the contract must run this review — all five tests — before publishing it.
+plan that authors the contract must run this review — all seven tests — before publishing it.
 
-## Section 2 — The five defect-class tests
+## Section 2 — The seven defect-class tests
 
-Apply all five tests to every item, sub-check, and precondition in the contract, and to the
+Apply all seven tests to every item, sub-check, and precondition in the contract, and to the
 evidence-capture instruction itself. Record a verdict (REACHABLE / IMPOSSIBLE / CONDITIONAL) and
 cite evidence (a file:line or a command) for each row, in a table of this shape:
 
@@ -154,6 +169,62 @@ relaunch (a mid-run app restart, on the hunting list) invalidate the tee'd trans
 evidence-bearing requirement)? Yes: a bare `tee` (no `-a`) truncates to zero on every new process
 start. This single pairwise check, run once during authoring, would have caught the defect before
 any live run.
+
+### Test 6 — Pre-existing external-state reachability
+
+**Its unit of review is the item's PREMISE, not its evidence.** Does this item's premise assume a
+fresh or clean state that some state living OUTSIDE what the contract's own preflight checks can
+silently invalidate? Name the concrete external-state surfaces this project has: a live WKWebView
+cookie jar, a system keychain entry, an already-running external process, a browser session, an
+OS-level permission grant.
+
+**General rule the finding produced: an emptied app-side store does not prove a logged-out
+session.** For every premise of the form "the user is logged out / the field is empty / no session
+exists," the contract must name a POSITIVE observable that confirms it (a rendered login form),
+never merely the absence of app-side data. Require the review to record, per item, which external
+state its premise depends on and what preflight check or in-run confirmation covers it.
+
+**Worked example (Phase 34.4.2, F-34.4.2-16):** RERUN-4's Preflight Results recorded
+`~/Library/Application Support/gamelib/humble_store/config.json`
+(`34.4.2-LIVE-GATE-RERUN-4.md`, Preflight Results section) at 2 bytes with an mtime from a prior
+session and treated it as a clean starting point. Item 4's premise — a credential-entry event to
+observe — was nevertheless false: the WKWebView cookie jar independently held a live Humble
+session that auto-completed the login with no form to paste into. Items 1(e) and 3(a) were
+invalidated by the identical mechanism in the same run. The contract had no step that cleared the
+cookie jar and no observable that would have shown the premise was already broken.
+
+### Test 7 — UI-level reachability, distinct from backend-logic reachability
+
+**Its unit of review is the operator GESTURE SEQUENCE.** Can the described sequence of clicks,
+keystrokes and window interactions actually be performed against the shipped frontend as built?
+
+**Why this is not covered by Test 2:** Test 2 reasons about platform modality and backend timing
+(is the code path reachable at that moment?) and never inspects whether the UI exposes the
+controls the gesture needs. A backend path can be perfectly reachable while the frontend never
+offers the operator a way to reach it. Require the test to trace each gesture to the component
+that renders the control it names, and to record what the frontend does with that control in the
+state the item assumes — including whether navigation, conditional rendering, or a disabled state
+removes it.
+
+**General rule: a scenario whose gesture sequence the UI forbids can never PASS, no matter how
+correct the backend guard is.** The correct dispositions are to drive the path below the UI,
+restate the assertion at unit level, or withdraw the item with its reasoning recorded.
+
+**Worked example (Phase 34.4.2, F-34.4.2-17):** RERUN-4's item 5 asked the operator to click
+Amazon sign-in and then click Humble sign-in during nile's ~7-8s spawn delay, exercising the Rust
+`PENDING_VISIBLE_LOGIN_WINDOW` single-flight guard. The Structural Reachability Review's Test 2 row
+for that item verified — correctly — that the second initiation would land in the first's
+PRE-presentation window, when no sheet is up and the parent is still interactive. The item was
+still unperformable, for a reason Test 2 never asked about: clicking a login tile navigates the
+whole route away from `/login` (`Runner`'s `handleLogin()`,
+`src/frontend/screens/Login/components/Runner/index.tsx:72`, `navigate(props.loginUrl)`) to
+`loginweb/:runner` (`src/frontend/App.tsx:200-201`), unmounting the entire `runnerGroup` container
+— every OTHER runner's tile, including Humble's — that held it
+(`src/frontend/screens/Login/index.tsx:151`). There is no second store's sign-in control left
+mounted to click during the delay. **`deferred-items.md`'s own characterisation ("the frontend
+disables/clears the other login buttons") was approximate — re-confirmed at this authoring against
+current source, the mechanism is a full route navigation that unmounts the login screen outright,
+not a disabled/cleared button state.**
 
 ## Section 3 — The dual-sink evidence-capture standard
 
