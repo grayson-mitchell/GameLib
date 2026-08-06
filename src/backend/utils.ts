@@ -496,9 +496,35 @@ function splitPathAndName(fullPath: string): { dir: string; bin: string } {
   return { dir, bin }
 }
 
+// Phase 34.9: legendary/gogdl/nile ship as PyInstaller --onedir bundles on
+// macOS only, to eliminate the amfid Gatekeeper per-file-extraction tax that
+// onefile pays there (~20s cold spawn vs ~0.2s onedir -- measured, see
+// 34.9-CONTEXT.md). Windows and Linux keep onefile: they don't pay that tax
+// and gain nothing from onedir's ~2.2x bundle-size growth. `comet` is
+// deliberately excluded here -- it's a Rust static binary (~0.01s spawn)
+// that pays no tax either, and must never be dragged into the nested branch.
+const MACOS_ONEDIR_RUNNERS = ['legendary', 'gogdl', 'nile'] as const
+
 function archSpecificBinary(binaryName: string) {
+  // Decide onedir nesting from the CLEAN runner name, before any
+  // platform-specific suffix is appended below -- so a win32 run (whose
+  // `binaryName` gets a `.exe` suffix a few lines down) can never enter the
+  // nested branch: the check both requires `process.platform === 'darwin'`
+  // AND matches against the pre-suffix name.
+  const isMacOnedirRunner =
+    process.platform === 'darwin' &&
+    (MACOS_ONEDIR_RUNNERS as readonly string[]).includes(binaryName)
+
   // On Windows the helper binaries have .exe extension
   if (process.platform === 'win32') binaryName += '.exe'
+
+  // Onedir runners live one directory deeper, at `.../{runner}/{runner}`
+  // (the folder PyInstaller's `--onedir` produces, containing the
+  // executable plus its bundled Python/Mach-O dependencies). Flat runners
+  // (Windows, Linux, and `comet` everywhere) keep the single-segment shape.
+  const segments = isMacOnedirRunner
+    ? [binaryName, binaryName]
+    : [binaryName]
 
   // Try to use the arch-native binary first, if that doesn't exist fall back to
   // the x64 version (assume a compatibility layer like box64 is installed).
@@ -519,12 +545,38 @@ function archSpecificBinary(binaryName: string) {
     'bin',
     process.arch,
     process.platform,
-    binaryName
+    ...segments
   )
   if (existsSync(archSpecificPath)) return archSpecificPath
 
-  const x64Path = join(publicDir, 'bin', 'x64', process.platform, binaryName)
+  const x64Path = join(publicDir, 'bin', 'x64', process.platform, ...segments)
   if (existsSync(x64Path)) return x64Path
+
+  // Phase 34.9 Pitfall 6: a checkout that still holds the OLD flat-file
+  // macOS runner (from before this onedir change) would otherwise silently
+  // miss both candidates above and fall through to the generic "not found"
+  // throw -- which reads like a missing download, not a stale layout, and
+  // the REAL downstream failure is a cryptic `spawn ./nile ENOENT` six
+  // layers away in `launcher.ts`'s `callRunner` (the exact shape that cost
+  // Phase 34.5's live gate items 1/2/3). Detect that specific stale-flat
+  // case here and fail loudly, naming the fix, at the point of resolution.
+  if (isMacOnedirRunner) {
+    const staleFlatPath = join(
+      publicDir,
+      'bin',
+      process.arch,
+      'darwin',
+      binaryName
+    )
+    if (existsSync(staleFlatPath)) {
+      throw new Error(
+        `[archSpecificBinary] Found a pre-Phase-34.9 flat onefile binary at "${staleFlatPath}", ` +
+          `but an onedir tree is now expected at "${archSpecificPath}". This checkout's ` +
+          `public/bin is stale. Run "pnpm download-helper-binaries" to fetch the current ` +
+          `onedir runner bundle.`
+      )
+    }
+  }
 
   throw new Error(
     `[archSpecificBinary] Could not locate runner binary "${binaryName}". ` +
@@ -1726,6 +1778,8 @@ export {
   getGOGdlBin,
   getCometBin,
   getNileBin,
+  archSpecificBinary,
+  MACOS_ONEDIR_RUNNERS,
   formatEpicStoreUrl,
   getSteamRuntime,
   constructAndUpdateRPC,
