@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4.2 gap cycle 5 -- plans 21-24 EXECUTED. Plan 24's blocking live gate RAN 2026-08-06 and FAILED 0/5, no launch scorable; blocker F-34.4.2-19 is UNDIAGNOSED. Plan 25 not started. Phase NOT CLOSED. Next: /gsd-debug.
+stopped_at: 34.4.2 gap cycle 5 COMPLETE -- all 25 plans EXECUTED. Plan 24's blocking live gate RAN 2026-08-06 and FAILED 0/5, no launch scorable; blocker F-34.4.2-19 is UNDIAGNOSED. Plan 25 brought VERIFICATION.md current. Phase NOT CLOSED (D-08). Next: /gsd-debug.
 last_updated: "2026-08-06T18:59:10.594Z"
 last_activity: 2026-08-06 -- Phase 34.4.2 gap cycle 5 wave 3 EXECUTED: plan 24's BLOCKING LIVE GATE RAN against 34.4.2-LIVE-GATE-RERUN-5.md and FAILED, verdict FAIL / items_passed 0 of 5, NO LAUNCH SCORABLE. Every scored item (6(b), 1, 2, 3, 4, 6(a)) recorded NOT ATTEMPTED. Segment 1 held two Humble login attempts only -- no Epic window ever built (zero `pristine WKWebView built for`), no GOG control -- and was ABORTED; nothing from it cited. Segment 2 entered D-G2 branch (a) but its required positive observable (a rendered, empty login form) was NEVER produced: with the sheet held open (sheet_presented=true, attached=true, no cancel line) the Humble cookie watcher emitted nothing and humble_store/config.json never left its pre-session 2-byte state/mtime, so isLoggedIn was never set, the Runner disconnect control never rendered, and no route to a login form OR the disconnect control exists from the shipped UI. BLOCKING FINDING F-34.4.2-19 (NEW, OPEN, UNDIAGNOSED): the D-G2 branch-(a) resolution -- reasoned correctly from source, never verified live -- is FALSIFIED on hardware; it blocks items 1(e)/3(a)/4 for the THIRD consecutive run and now blocks item 6(a) too (also NOT ATTEMPTED a third time). Second finding F-34.4.2-20 (NEW, contract defect): item 6(b)'s main.rs:3698 literal carries no window label, so its label-attributed PASS bar is unsatisfiable as written -- a Test 4 gap, candidate eighth review test class named ("label-attribution completeness"). T-34.4.2-42 scorecard measured at 2. NO WEDGE occurred anywhere -- explicitly NOT an F-34.4.2-12 regression, no sample required. T-34.4.2-43/-44/-32 all do NOT discharge; T-34.4.2-39/-41 never discharge per D-G1; F-34.4.2-10's taking condition NOT met, stays deferred. Zero requirement boxes moved per D-08. Plan 25 (VERIFICATION.md refresh) NOT started. Next: /gsd-debug -- the blocker is an undiagnosed defect, not a known contract gap, so NOT /gsd-plan-phase --gaps. Prior context: Wave 1 added Tests 6-7 + coverage map to live-gate-contract-authoring.md (tally now eight) and loginInFlightUiReachability.test.tsx pinning the real UI mechanism behind F-34.4.2-17 with 5 mutation-proven gates. Wave 2 authored 34.4.2-LIVE-GATE-RERUN-5.md (verdict null, items_total 5, item 5 permanently WITHDRAWN per D-G1) -- the seventh blocking contract, first whose items are all reachable. FALSIFIED: the recorded 'frontend disables/clears the other login buttons' characterisation is WRONG -- all six tiles pass an identical disabled={oldMac} (macOS-version check only); the real mechanism is Runner.handleLogin() navigating to the sibling loginweb/:runner route, which unmounts the whole Login screen. The two conditions that stopped the previous session are cleared: the working tree carries no uncommitted Login-screen edits, and `pgrep -f gamelib-shell` is empty. Prior context: Wave 1 added Tests 6-7 + coverage map to live-gate-contract-authoring.md (tally now eight) and loginInFlightUiReachability.test.tsx pinning the real UI mechanism behind F-34.4.2-17 with 5 mutation-proven gates. Wave 2 authored 34.4.2-LIVE-GATE-RERUN-5.md (verdict null, items_total 5, item 5 permanently WITHDRAWN per D-G1) -- the seventh blocking contract, first whose items are all reachable. FALSIFIED: the recorded 'frontend disables/clears the other login buttons' characterisation is WRONG -- all six tiles pass an identical disabled={oldMac} (macOS-version check only); the real mechanism is Runner.handleLogin() navigating to the sibling loginweb/:runner route, which unmounts the whole Login screen.
 progress:
   total_phases: 21
   completed_phases: 13
   total_plans: 216
-  completed_plans: 204
+  completed_plans: 205
   percent: 94
 ---
 
@@ -480,7 +480,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — EXECUTING
 EXECUTED 2026-08-06, STILL DID NOT CLOSE (gate FAILED 1/6) -- gap cycle 5 required, NOT COMPLETE
-Plan: 24 of 25 complete -- gap cycle 5 wave 3 RAN, gate FAILED 0/5 (no launch scorable), blocker F-34.4.2-19 UNDIAGNOSED -> /gsd-debug
+Plan: 25 of 25 complete -- gap cycle 5 fully executed; gate FAILED 0/5 (no launch scorable), blocker F-34.4.2-19 UNDIAGNOSED. PHASE STILL OPEN per D-08 -> /gsd-debug
 glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
 see 34.4.2-13-SUMMARY.md. Plan 14 EXECUTED 2026-08-05 -- T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW
 single-flight guard refuses a second visible login window while one is pending/presented, 25s TTL
@@ -4143,7 +4143,11 @@ Stopped at: Completed 34.4.2-24-PLAN.md — gate RAN, FAILED 0/5, blocker UNDIAG
   suites / 3776 tests green, `cargo test` 116/0/1, both regression pins green, and a suite drift
   vs RERUN-4 (+3 suites/+28 tests) that was FULLY ATTRIBUTED rather than absorbed — so no
   unexplained-drift finding. The run itself then produced nothing scorable: the operator's shell
-  left `${N}` unset on every `GATE LAUNCH` delimiter, so no launch ordinal was ever assigned.
+  left `${N}` unset on segment 1's `GATE LAUNCH` delimiter. (**CORRECTED by plan 25's cross-check:**
+  the original wording said "on every delimiter, so no launch ordinal was ever assigned" — that
+  over-generalised segment 1's defect. Segment 2's delimiter correctly carries ordinal 1
+  (`=== GATE LAUNCH 1 — 2026-08-06T19:02:52Z ===`). Segment 2 is non-scorable because no item was
+  ever driven in it, NOT because its ordinal was missing. No item's verdict changes.)
   Segment 1 held **two Humble login attempts and nothing else** — no Epic window was ever built
   (zero `pristine WKWebView built for` occurrences across the whole transcript) and no GOG control
   window either, so item 6(b)'s Epic-first ordering was not held; ABORTED by operator decision,
