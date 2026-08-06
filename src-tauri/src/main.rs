@@ -3947,6 +3947,106 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // already proved it correct against Defect A): the cookie's OWN domain first,
             // the caller's fixed target second. Used for BOTH the before- and after-reads,
             // on every platform, so `verified_delete_count`'s subtraction is meaningful.
+            //
+            // F-34.4.2-12 fix (`.planning/debug/humble-disconnect-main-wedge.md`): on macOS
+            // this closure must NEVER call wry's own blocking `WebviewWindow::cookies()`
+            // getter. That getter blocks the calling closure inside
+            // `wait_for_blocking_operation`'s reentrant `NSRunLoop` pump
+            // (wry-0.55.1/src/wkwebview/mod.rs:1446), and when this arm's caller
+            // (`dispatch_rust_channel`, always a `thread::spawn`'d worker thread) has its
+            // request serviced from INSIDE tao's `EventLoopHandler::with_callback`
+            // (`app_state.rs:78`, which holds tao's own handler `Mutex` for the whole
+            // user-event dispatch), that reentrant pump can let AppKit's redraw path
+            // (`handle_redraw` -> `handle_nonuser_event`) try to relock the SAME mutex the
+            // outer frame already holds -- a real, live-reproduced (2/2) main-thread
+            // self-deadlock, confirmed by a full hung-process sample (4185/4185 samples in
+            // the identical state; see the debug session's Evidence for the backtrace and
+            // durable evidence file paths). This is a hard deadlock, not a slow path: no
+            // timeout on this call's own `rx.recv()` would help, because the main thread is
+            // blocked BELOW that level, inside wry's internals.
+            //
+            // Fixed the SAME way this arm's own removal branch (below) and
+            // `clear_default_data_store_cookies_for_domain` (above) already read/removed
+            // cookies safely: `with_webview()` -> `WKHTTPCookieStore.getAllCookies()` via an
+            // async completion handler, with the wait on a plain `mpsc_channel` done on the
+            // CALLING (worker) thread, never nested inside the main-thread closure itself --
+            // that closure only registers the completion block and returns immediately, so it
+            // never blocks main-thread control flow and never needs (or triggers) a reentrant
+            // run-loop pump. Root-cause fix, not a timing mitigation.
+            #[cfg(target_os = "macos")]
+            let count_matching = |w: &tauri::WebviewWindow| -> Result<usize, String> {
+                let (tx, rx) = mpsc_channel::<Result<usize, String>>();
+                let target_domain = domain.to_string();
+                if let Err(e) = w.with_webview(move |webview| {
+                    let outcome: Result<(), String> = (|| {
+                        // Bound but not otherwise read -- kept as the live proof (per its own
+                        // type's invariant) that this closure is genuinely running on the
+                        // main thread, the same safety receipt `mtm` serves everywhere else
+                        // in this file even where no ObjC call actually takes it as an arg.
+                        let _mtm = objc2::MainThreadMarker::new().ok_or_else(|| {
+                            "humble_login_clear_cookies:count-matching:no-main-thread-marker"
+                                .to_string()
+                        })?;
+                        // SAFETY: mirrors this arm's own removal-branch cast, below --
+                        // `webview.inner()` is a live `WKWebView*` for the duration of a
+                        // `with_webview` closure running on the main thread (tauri's own doc
+                        // guarantee); `mtm` proves this closure is running on the main thread.
+                        let view: &objc2_web_kit::WKWebView =
+                            unsafe { &*webview.inner().cast() };
+                        let data_store = unsafe { view.configuration().websiteDataStore() };
+                        let cookie_store = unsafe { data_store.httpCookieStore() };
+                        let target = target_domain.clone();
+                        let tx_fetch = tx.clone();
+                        // SAFETY: `getAllCookies` hands the completion handler a valid, live
+                        // array pointer for the duration of this call; `tx_fetch` outlives it.
+                        let completion = block2::RcBlock::new(
+                            move |cookies: std::ptr::NonNull<
+                                objc2_foundation::NSArray<objc2_foundation::NSHTTPCookie>,
+                            >| {
+                                let cookies_ref = unsafe { cookies.as_ref() };
+                                // Never logged (T-34.4.1-02) -- each cookie's domain is read
+                                // only to feed the pure, count-only `cookie_domain_matches`
+                                // filter, never printed.
+                                let count = cookies_ref
+                                    .to_vec()
+                                    .iter()
+                                    .filter(|cookie| {
+                                        cookie_domain_matches(
+                                            &cookie.domain().to_string(),
+                                            Some(&target),
+                                        )
+                                    })
+                                    .count();
+                                let _ = tx_fetch.send(Ok(count));
+                            },
+                        );
+                        unsafe {
+                            cookie_store.getAllCookies(&completion);
+                        }
+                        Ok(())
+                    })();
+                    if let Err(e) = outcome {
+                        let _ = tx.send(Err(e));
+                    }
+                }) {
+                    return Err(format!(
+                        "humble_login_clear_cookies:count-matching:dispatch:{e}"
+                    ));
+                }
+                match rx.recv_timeout(CLEAR_COOKIES_TIMEOUT) {
+                    Ok(inner) => inner,
+                    Err(_) => {
+                        Err("humble_login_clear_cookies:count-matching:timeout".to_string())
+                    }
+                }
+            };
+            // Non-macOS: unchanged wry getter path -- F-34.4.2-12's reentrant-pump mechanism
+            // is macOS/WebKit/tao-specific (`wait_for_blocking_operation`'s `NSRunLoop` pump
+            // colliding with tao's Cocoa-only `EventLoopHandler` mutex); no live evidence
+            // implicates the `webview2`/`webkitgtk` backends, so this path is left exactly as
+            // it was (D-09 discipline: declare unverified, never silently assume broken or
+            // fixed).
+            #[cfg(not(target_os = "macos"))]
             let count_matching = |w: &tauri::WebviewWindow| -> Result<usize, String> {
                 Ok(w.cookies()
                     .map_err(|e| e.to_string())?
@@ -4321,24 +4421,124 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             let window = app
                 .get_webview_window(label)
                 .ok_or_else(|| format!("humble_login_cookies_for_domain:no-window:{label}"))?;
-            let all = window.cookies().map_err(|e| e.to_string())?;
-            let total = all.len();
-            let matched: Vec<Value> = all
-                .into_iter()
-                .filter(|c| match c.domain() {
-                    Some(d) => cookie_domain_matches(d, Some(domain)),
-                    None => false,
-                })
-                .filter(|c| names.is_empty() || names.contains(&c.name()))
-                .map(|c| {
-                    serde_json::json!({
-                        "name": c.name(),
-                        "domain": c.domain().unwrap_or_default(),
-                        "value": c.value()
+
+            // F-34.4.2-12 fix (see `humble_login_clear_cookies`'s `count_matching` closure,
+            // above, for the full mechanism this closes): this arm is disconnect's cookie
+            // census (`readCensus()`), called TWICE against the SAME just-created hidden
+            // window in quick succession, alongside `count_matching`'s own two calls -- four
+            // wry `.cookies()` round trips against one freshly-created, still-rendering
+            // WKWebView was the reproduced deadlock's exact trigger shape (live sample:
+            // 4185/4185 samples in the identical self-deadlocked state). Same fix, same
+            // reasoning: never call wry's own blocking `WebviewWindow::cookies()` getter here
+            // on macOS; read the SAME window's own `WKHTTPCookieStore` natively via an async
+            // completion handler instead -- the calling closure only registers the callback
+            // and returns immediately, so it never blocks inside tao's `with_callback`
+            // critical section and never needs (or triggers) a reentrant run-loop pump.
+            #[cfg(target_os = "macos")]
+            {
+                let (tx, rx) = mpsc_channel::<Result<(usize, Vec<Value>), String>>();
+                let target_domain = domain.to_string();
+                let target_names: Vec<String> = names.iter().map(|n| n.to_string()).collect();
+                if let Err(e) = window.with_webview(move |webview| {
+                    let outcome: Result<(), String> = (|| {
+                        // Bound but not otherwise read -- see `count_matching`'s identical
+                        // `_mtm` binding, above, for why this is kept as a live safety proof.
+                        let _mtm = objc2::MainThreadMarker::new().ok_or_else(|| {
+                            "humble_login_cookies_for_domain:no-main-thread-marker".to_string()
+                        })?;
+                        // SAFETY: mirrors `humble_login_clear_cookies`'s own removal-branch
+                        // cast -- `webview.inner()` is a live `WKWebView*` for the duration of
+                        // a `with_webview` closure running on the main thread; `mtm` proves
+                        // this closure is running on the main thread.
+                        let view: &objc2_web_kit::WKWebView =
+                            unsafe { &*webview.inner().cast() };
+                        let data_store = unsafe { view.configuration().websiteDataStore() };
+                        let cookie_store = unsafe { data_store.httpCookieStore() };
+                        let filter_domain = target_domain.clone();
+                        let filter_names = target_names.clone();
+                        let tx_fetch = tx.clone();
+                        // SAFETY: `getAllCookies` hands the completion handler a valid, live
+                        // array pointer for the duration of this call; `tx_fetch` outlives it.
+                        let completion = block2::RcBlock::new(
+                            move |cookies: std::ptr::NonNull<
+                                objc2_foundation::NSArray<objc2_foundation::NSHTTPCookie>,
+                            >| {
+                                let cookies_ref = unsafe { cookies.as_ref() };
+                                let all_cookies = cookies_ref.to_vec();
+                                let total = all_cookies.len();
+                                // Never logs a cookie value (T-34.4.1-02/T-34.4.1-94) -- names
+                                // and domains are read only to feed the pure comparison
+                                // filters below, values only into the returned JSON payload
+                                // the caller already explicitly requested over the
+                                // already-allowlisted rustInvoke channel.
+                                let matched: Vec<Value> = all_cookies
+                                    .into_iter()
+                                    .filter(|c| {
+                                        cookie_domain_matches(
+                                            &c.domain().to_string(),
+                                            Some(&filter_domain),
+                                        )
+                                    })
+                                    .filter(|c| {
+                                        filter_names.is_empty()
+                                            || filter_names
+                                                .iter()
+                                                .any(|n| n.as_str() == c.name().to_string())
+                                    })
+                                    .map(|c| {
+                                        serde_json::json!({
+                                            "name": c.name().to_string(),
+                                            "domain": c.domain().to_string(),
+                                            "value": c.value().to_string()
+                                        })
+                                    })
+                                    .collect();
+                                let _ = tx_fetch.send(Ok((total, matched)));
+                            },
+                        );
+                        unsafe {
+                            cookie_store.getAllCookies(&completion);
+                        }
+                        Ok(())
+                    })();
+                    if let Err(e) = outcome {
+                        let _ = tx.send(Err(e));
+                    }
+                }) {
+                    return Err(format!("humble_login_cookies_for_domain:dispatch:{e}"));
+                }
+                match rx.recv_timeout(CLEAR_COOKIES_TIMEOUT) {
+                    Ok(Ok((total, matched))) => {
+                        Ok(serde_json::json!({ "total": total, "matched": matched }))
+                    }
+                    Ok(Err(e)) => Err(e),
+                    Err(_) => Err("humble_login_cookies_for_domain:timeout".to_string()),
+                }
+            }
+
+            // Non-macOS: unchanged wry getter path -- see `count_matching`'s own non-macOS
+            // branch, above, for why this is left as-is (D-09 discipline).
+            #[cfg(not(target_os = "macos"))]
+            {
+                let all = window.cookies().map_err(|e| e.to_string())?;
+                let total = all.len();
+                let matched: Vec<Value> = all
+                    .into_iter()
+                    .filter(|c| match c.domain() {
+                        Some(d) => cookie_domain_matches(d, Some(domain)),
+                        None => false,
                     })
-                })
-                .collect();
-            Ok(serde_json::json!({ "total": total, "matched": matched }))
+                    .filter(|c| names.is_empty() || names.contains(&c.name()))
+                    .map(|c| {
+                        serde_json::json!({
+                            "name": c.name(),
+                            "domain": c.domain().unwrap_or_default(),
+                            "value": c.value()
+                        })
+                    })
+                    .collect();
+                Ok(serde_json::json!({ "total": total, "matched": matched }))
+            }
         }
         _ => Err(format!("rustInvoke:unknown-channel:{channel}")),
     }
@@ -6433,5 +6633,109 @@ mod tests {
         // never disagree -- the watchdog's fallback always runs and clears the latch well
         // before this TTL could ever expire it out from under a still-legitimate flow.
         assert!(PENDING_VISIBLE_LOGIN_WINDOW_TTL > LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT);
+    }
+
+    // ---- F-34.4.2-12 regression pin: Humble disconnect main-thread wedge ----
+    //
+    // `.planning/debug/humble-disconnect-main-wedge.md`. Live-reproduced 2/2: disconnect's
+    // cookie census/count (`humble_login_cookies_for_domain`'s `readCensus()` backing, and
+    // `humble_login_clear_cookies`'s `count_matching` closure) fires FOUR wry
+    // `WebviewWindow::cookies()` round trips against a just-created hidden WKWebView. On macOS
+    // each blocks inside wry's `wait_for_blocking_operation`, which reentrantly pumps
+    // `NSRunLoop::mainRunLoop()` from INSIDE tao's `EventLoopHandler::with_callback` (already
+    // holding tao's own handler `Mutex`); the reentrant pump lets a pending CoreAnimation
+    // transaction flush hit tao's own redraw path, which tries to relock the SAME mutex ->
+    // main-thread self-deadlock. A full hung-process sample (4185/4185 samples in the identical
+    // state) confirmed this exact frame chain -- see the debug session's Evidence for the full
+    // backtrace and durable evidence file paths.
+    //
+    // A live end-to-end reproduction of the deadlock itself is NOT safely automatable here: it
+    // requires a real, contended AppKit/WebKit run loop, and a flaky or genuinely-hanging
+    // assertion would defeat its own purpose (and could hang CI) -- the same reason
+    // `#[cfg(test)] mod tests` elsewhere in this file cannot construct a live `AppHandle` at
+    // all (see this file's own comment near `mod tests`, above). This test instead pins the
+    // STRUCTURAL fix, the same "prove it against the source" discipline
+    // `seamBranchParity.test.ts` already uses on the TypeScript side of this codebase: neither
+    // implicated arm may reach wry's blocking `.cookies()` on macOS ever again. Runs on every
+    // platform (`include_str!` just reads text; it does not need to compile the macOS-only
+    // code it is checking).
+    #[test]
+    fn f_34_4_2_12_wry_blocking_cookies_calls_are_macos_gated() {
+        let source = include_str!("main.rs");
+        let lines: Vec<&str> = source.lines().collect();
+
+        // Only these two arms were touched by F-34.4.2-12's fix. `humble_login_cookies` (the
+        // LOGIN-POLL direction used by `watchForLogin()`) shares the identical wry-internal
+        // hazard mechanically, but is a DIFFERENT call pattern (a single call per poll tick,
+        // against a visible window already past its initial CA-transaction burst) with zero
+        // live evidence of failure, and was explicitly left out of this session's scope (see
+        // the debug session's Evidence) -- it must NOT be checked by this pin.
+        let target_arms = ["humble_login_cookies_for_domain", "humble_login_clear_cookies"];
+        let mut current_arm: Option<&str> = None;
+        let mut checked_any = false;
+
+        for (i, line) in lines.iter().enumerate() {
+            let trimmed = line.trim();
+
+            // Track which `dispatch_rust_channel` match arm this line is inside. Every arm in
+            // that match is a single line of the shape `"channel_name" => {`.
+            if trimmed.starts_with('"') && trimmed.ends_with("\" => {") {
+                let name = trimmed.trim_start_matches('"').split('"').next().unwrap_or("");
+                current_arm = target_arms.iter().find(|a| **a == name).copied();
+                continue;
+            }
+
+            let Some(arm) = current_arm else {
+                continue;
+            };
+
+            // The exact two call shapes this bug's fix eliminated from the macOS-reachable
+            // path: `humble_login_cookies_for_domain`'s direct read, and
+            // `humble_login_clear_cookies`'s `count_matching` closure's read (used for both
+            // its before- and after-removal counts).
+            let is_call_site = trimmed.starts_with("Ok(w.cookies()")
+                || trimmed.starts_with("let all = window.cookies()");
+            if !is_call_site {
+                continue;
+            }
+            checked_any = true;
+
+            // Walk backward to the nearest preceding `#[cfg(...)]` attribute line. A
+            // legitimate SURVIVING call site must be immediately (modulo blank/comment lines)
+            // gated behind exactly `#[cfg(not(target_os = "macos"))]` -- never unconditional,
+            // and never `#[cfg(target_os = "macos")]`. Stops at a function or match-arm
+            // boundary (no cfg found before it means the call is unconditional).
+            let mut guard: Option<String> = None;
+            for prior in lines[..i].iter().rev() {
+                let prior_trimmed = prior.trim();
+                if prior_trimmed.starts_with("#[cfg(") {
+                    guard = Some(prior_trimmed.to_string());
+                    break;
+                }
+                if prior_trimmed.starts_with("fn ") || prior_trimmed.ends_with("\" => {") {
+                    break;
+                }
+            }
+
+            assert_eq!(
+                guard.as_deref(),
+                Some("#[cfg(not(target_os = \"macos\"))]"),
+                "F-34.4.2-12 regression: `{arm}` has an unconditional (or macOS-reachable) wry \
+                 `.cookies()` call at main.rs line {} (`{}`). This getter blocks the calling \
+                 closure inside a reentrant NSRunLoop pump that can self-deadlock against \
+                 tao's EventLoopHandler mutex on macOS -- live-reproduced 2/2, see \
+                 `.planning/debug/humble-disconnect-main-wedge.md`. It must only ever be \
+                 reached via `#[cfg(not(target_os = \"macos\"))]`.",
+                i + 1,
+                trimmed
+            );
+        }
+
+        assert!(
+            checked_any,
+            "F-34.4.2-12 regression pin found no `.cookies()` call sites in \
+             `humble_login_cookies_for_domain`/`humble_login_clear_cookies` to check -- have \
+             these arms been restructured? Update this test's patterns to match the new shape."
+        );
     }
 }

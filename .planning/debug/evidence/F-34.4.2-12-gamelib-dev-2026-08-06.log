@@ -1,0 +1,199 @@
+npm warn Unknown project config "node-linker". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> gamelib@0.7.0 tauri:dev
+> electron-vite build && pnpm build:sidecar && tauri dev
+
+vite v6.3.5 building SSR bundle for production...
+transforming...
+✓ 225 modules transformed.
+rendering chunks...
+[plugin vite:reporter] 
+(!) /Users/graysonmitchell/Projects/GameLib/src/backend/constants/environment.ts is dynamically imported by /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/steam/bottle.ts but also statically imported by /Users/graysonmitchell/Projects/GameLib/src/backend/anticheat/ipc_handler.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/anticheat/utils.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/config.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/constants/paths.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/crossover_index/crossoverRatingMap.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/dialog/dialog.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/game_config.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/humble/expirationAlerts.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/launcher.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/logger/paths.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/main.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/migration/migrations/legendary.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/protocol.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/shortcuts/ipc_handler.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/shortcuts/nonesteamgame/nonesteamgame.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/shortcuts/shortcuts/shortcuts.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/gog/games.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/gog/setup.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/legendary/constants.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/legendary/eos_overlay/eos_overlay.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/legendary/games.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/legendary/library.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/legendary/setup.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/nile/games.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/nile/setup.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/sideload/games.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/sideload/library.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/steam/clientSetup.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/steam/games.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/steam/library.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/storeManagerCommon/games.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/zoom/games.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/tools/dxmt.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/tools/index.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/tools/ipc_handler.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/tray_icon/tray_icon.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/updater.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/utils.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/utils/compatibility_layers.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/utils/filesystem/index.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/utils/ipc_handler.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/utils/plausible.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/utils/releases.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/utils/systeminfo/steamDeck.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/wiki_game_info/wiki_game_info.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/wine/manager/downloader/utilities.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/wine/manager/utils.ts, dynamic import will not move module into another chunk.
+
+[plugin vite:reporter] 
+(!) /Users/graysonmitchell/Projects/GameLib/src/backend/launcher.ts is dynamically imported by /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/steam/bottle.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/steam/bottle.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/steam/games.ts but also statically imported by /Users/graysonmitchell/Projects/GameLib/src/backend/main.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/protocol.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/save_sync.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/gog/games.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/gog/library.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/gog/setup.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/legendary/games.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/legendary/library.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/legendary/setup.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/nile/games.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/nile/library.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/nile/setup.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/storeManagerCommon/games.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/zoom/games.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/tools/index.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/utils.ts, dynamic import will not move module into another chunk.
+
+[plugin vite:reporter] 
+(!) /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/steam/bottle.ts is dynamically imported by /Users/graysonmitchell/Projects/GameLib/src/backend/launcher.ts but also statically imported by /Users/graysonmitchell/Projects/GameLib/src/backend/main.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/steam/bridge/launchTarget.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/steam/bridge/shimGenerate.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/steam/games.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/steam/library.ts, dynamic import will not move module into another chunk.
+
+[plugin vite:reporter] 
+(!) /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/index.ts is dynamically imported by /Users/graysonmitchell/Projects/GameLib/src/backend/downloadmanager/utils.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/downloadmanager/utils.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/launcher.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/launcher.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/gog/redist.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/gog/setup.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/gog/user.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/gog/user.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/legendary/eos_overlay/eos_overlay.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/legendary/eos_overlay/eos_overlay.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/legendary/eos_overlay/eos_overlay.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/legendary/eos_overlay/eos_overlay.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/legendary/eos_overlay/eos_overlay.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/legendary/eos_overlay/eos_overlay.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/legendary/eos_overlay/eos_overlay.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/legendary/setup.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/nile/setup.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/tools/index.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/tools/index.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/utils.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/utils/helperBinaries/index.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/utils/helperBinaries/index.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/utils/helperBinaries/index.ts but also statically imported by /Users/graysonmitchell/Projects/GameLib/src/backend/crossover_index/crossoverRatingMap.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/downloadmanager/downloadqueue.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/gamedetails/dispatch.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/launcher.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/main.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/protocol.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/save_sync.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/shortcuts/shortcuts/shortcuts.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/shortcuts/utils.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/gog/games.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/gog/library.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/legendary/games.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/legendary/user.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/nile/games.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/nile/user.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/zoom/games.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/tools/ipc_handler.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/utils.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/utils/checkGameUpdates.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/utils/uninstaller.ts, /Users/graysonmitchell/Projects/GameLib/src/backend/wiki_game_info/gamesdb/utils.ts, dynamic import will not move module into another chunk.
+
+build/main/chunks/windows-C60IW2i5.js    0.24 kB
+build/main/chunks/linux-CdwwgEv7.js      0.39 kB
+build/main/chunks/index-nZ_NU6B5.js      0.49 kB
+build/main/chunks/unix-C9Kk0WVU.js       0.58 kB
+build/main/chunks/windows-DN-idZYC.js    0.60 kB
+build/main/chunks/macos-CSyGfzok.js      0.72 kB
+build/main/chunks/linux-iXPBjuNP.js      0.73 kB
+build/main/chunks/windows-9czOjsNQ.js    1.22 kB
+build/main/chunks/windows-DVOFs5XX.js    1.33 kB
+build/main/chunks/linux-BelpezFM.js      1.84 kB
+build/main/decompressWorker.js           2.15 kB
+build/main/main.js                      93.22 kB
+build/main/chunks/index-CL35juJQ.js    373.22 kB
+✓ built in 468ms
+vite v6.3.5 building SSR bundle for production...
+transforming...
+✓ 22 modules transformed.
+rendering chunks...
+build/preload/index.js  27.84 kB
+✓ built in 29ms
+vite v6.3.5 building for production...
+transforming...
+✓ 13100 modules transformed.
+Export "install" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/Library/components/GameCard/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "launch" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/Library/components/GameCard/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "repair" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/Game/GameSubMenu/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "install" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/components/UI/DLCList/DLC/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "launch" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/Game/GamePage/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "updateGame" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/Game/GamePage/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "launch" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/ConsoleMode/components/LaunchOverlay/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "install" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/ConsoleMode/InstallOverlay/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "updateGame" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/ConsoleMode/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+rendering chunks...
+[plugin vite:reporter] 
+(!) /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/index.tsx is dynamically imported by /Users/graysonmitchell/Projects/GameLib/src/frontend/App.tsx but also statically imported by /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/AdvertiseAvxForRosetta.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/AutoDXVK.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/AutoDXVKNVAPI.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/AutoVKD3D.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/CrossoverBottle.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/DisableUMU.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/EnableDXVKFpsLimit.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/EnableMsync.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/PreferSystemLibs.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/SteamRuntime.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/WinePrefix.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/WineVersionSelector.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/sections/GamesSettings/index.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/sections/SyncSaves/index.tsx, dynamic import will not move module into another chunk.
+
+[plugin vite:reporter] 
+(!) /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Login/index.tsx is dynamically imported by /Users/graysonmitchell/Projects/GameLib/src/frontend/App.tsx but also statically imported by /Users/graysonmitchell/Projects/GameLib/src/frontend/components/UI/HumbleExpiryToast/index.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Humble/Keys/index.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Login/components/LoginWarning/index.tsx, dynamic import will not move module into another chunk.
+
+build/index.html                                               0.70 kB
+build/assets/SteamDeck_X-DwNz7cO3.png                          4.22 kB
+build/assets/Switch_Left_Stick-CWpl1pz1.png                    4.30 kB
+build/assets/PS5_Square-MF_dhaoW.png                           4.32 kB
+build/assets/SteamDeck_R1-BpoU8NKQ.png                         4.32 kB
+build/assets/rubik-hebrew-400-normal-DNObuXye.woff2            4.40 kB
+build/assets/PS4_Left_Stick-Cl1iGT5u.png                       4.43 kB
+build/assets/PS5_Cross-nKvb2zFH.png                            4.54 kB
+build/assets/PS4_Circle-D75wZQZ5.png                           4.56 kB
+build/assets/PS4_Right_Stick-Ajpmj18o.png                      4.68 kB
+build/assets/PS5_Triangle-D12MO93J.png                         4.72 kB
+build/assets/PS5_Left_Stick-Boc4jN1F.png                       5.13 kB
+build/assets/SteamDeck_Left_Stick-DJTqmJ0Q.png                 5.18 kB
+build/assets/XboxSeriesX_Left_Stick-Cji4AZEG.png               5.20 kB
+build/assets/PS5_Circle-DCilCbz_.png                           5.36 kB
+build/assets/PS5_Right_Stick-H1EufGXy.png                      5.43 kB
+build/assets/XboxSeriesX_Right_Stick-Bs9FE3IW.png              5.51 kB
+build/assets/SteamDeck_Right_Stick-CHgGJqZU.png                5.62 kB
+build/assets/rubik-cyrillic-ext-400-normal-B_ISZE4R.woff2      5.83 kB
+build/assets/PS5_Dpad-CUUVZ112.png                             6.14 kB
+build/assets/rubik-cyrillic-400-normal-CFCITy_P.woff2          7.30 kB
+build/assets/cabin-latin-ext-400-normal-CrIKaydt.woff2         8.32 kB
+build/assets/rubik-latin-ext-400-normal-BvADScal.woff2         8.93 kB
+build/assets/cabin-latin-400-normal-Csq5M_Nd.woff2            15.48 kB
+build/assets/rubik-latin-400-normal-CRbIWQXK.woff2            17.42 kB
+build/assets/cabin-all-400-normal-DslYAS_m.woff               35.50 kB
+build/assets/rubik-all-400-normal-LeYnpOeC.woff               51.78 kB
+build/assets/gamelib_card-Bv2CpHlk.svg                        78.99 kB
+build/assets/gamelib_card_missing-Bv06edlW.svg                79.11 kB
+build/assets/login-background-1536x864-CfEy_sdA.jpg          254.88 kB
+build/assets/gamelib-icon-B0ktIo4B.png                       667.34 kB
+build/assets/NotoColorEmoji.subset-C9pS9TGB.ttf              847.88 kB
+build/assets/index-DNptv-GU.css                                0.74 kB
+build/assets/index-BSLnMj59.css                                1.04 kB
+build/assets/index-Bj7w1EBI.css                                1.61 kB
+build/assets/index-lagMOwZj.css                                2.01 kB
+build/assets/index-BVvl7RR5.css                                2.31 kB
+build/assets/index-C2VwHpQR.css                                2.32 kB
+build/assets/index-CAPgwDuK.css                                3.51 kB
+build/assets/index-C2REhoER.css                                3.91 kB
+build/assets/index-CqrVUnvK.css                                4.78 kB
+build/assets/index-D1b751Hh.css                                5.98 kB
+build/assets/index-B1DOP_Eq.css                               11.57 kB
+build/assets/index-C6hxc9sN.css                               16.04 kB
+build/assets/index-CaHE9j-M.css                               16.60 kB
+build/assets/index-CuNjXNjz.css                               27.69 kB
+build/assets/App-BQTD4anv.css                                 51.84 kB
+build/assets/index-DwiV7V3l.css                               87.92 kB
+build/assets/index-DVBHWigm.css                              122.07 kB
+build/assets/tiny-invariant-BaFNuDhB.js                        0.08 kB
+build/assets/ExpandMore-CbvxRc1z.js                            0.30 kB
+build/assets/play-icon-DDPA4pn-.js                             0.32 kB
+build/assets/stop-icon-CJjoK0l1.js                             0.43 kB
+build/assets/index-DWnJhaLD.js                                 0.47 kB
+build/assets/down-icon-DP94qfaq.js                             0.53 kB
+build/assets/viewFilters-Et6pHpEd.js                           0.65 kB
+build/assets/gamelib_card_missing-CagyaiI2.js                  0.79 kB
+build/assets/urgencyBadge-Bz2Zm1n-.js                          0.94 kB
+build/assets/badges-CefxeBXp.js                                1.16 kB
+build/assets/index-CIwiSZ2d.js                                 1.51 kB
+build/assets/index-CPC2wp_J.js                                 1.75 kB
+build/assets/index-CMRGRCcO.js                                 2.19 kB
+build/assets/index-C6fyjFCg.js                                 3.15 kB
+build/assets/hasStatus-B45D-TYT.js                             3.51 kB
+build/assets/index-fJZ3Spt6.js                                 4.19 kB
+build/assets/index-DcFvuOHQ.js                                 4.59 kB
+build/assets/index-B_YdbLzB.js                                 5.84 kB
+build/assets/index-DQBPmK6B.js                                 7.78 kB
+build/assets/index-Dxp9Xx7R.js                                 8.52 kB
+build/assets/index-CHHDkZ-w.js                                11.10 kB
+build/assets/index-D7wFgL4W.js                                16.60 kB
+build/assets/index-CNuARaQM.js                                22.16 kB
+build/assets/index-DifdEPQ4.js                                32.42 kB
+build/assets/index-DedVIklk.js                                54.59 kB
+build/assets/index-Cs6KD1et.js                                59.50 kB
+build/assets/index-t3Fn78iP.js                                94.43 kB
+build/assets/index-CFHf5YgM.js                               362.95 kB
+build/assets/index-CzUFUj7i.js                               391.68 kB
+build/assets/index-BxtrhBfj.js                               642.04 kB
+build/assets/App-l6SRFGrM.js                               1,130.85 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 5.78s
+
+> gamelib@0.7.0 build:sidecar /Users/graysonmitchell/Projects/GameLib
+> esbuild --bundle --platform=node --target=node22 --format=cjs --packages=external --external:electron --external:electron-store --outfile=build/main/sidecar.js src/sidecar/index.ts
+
+
+  build/main/sidecar.js  1.1mb ⚠️
+
+⚡ Done in 23ms
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+        Info Watching /Users/graysonmitchell/Projects/GameLib/src-tauri for changes...
+[1m[92m   Compiling[0m gamelib-shell v0.7.0 (/Users/graysonmitchell/Projects/GameLib/src-tauri)
+[1m[96m    Building[0m [=======================> ] 463/465: gamelib-shell(build)        [1m[96m    Building[0m [=======================> ] 464/465: gamelib-shell(bin)          [K[1m[92m    Finished[0m ]8;;https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles\`dev` profile [unoptimized + debuginfo]]8;;\ target(s) in 7.33s
+[1m[92m     Running[0m `target/debug/gamelib-shell`
+[shell] spawning sidecar (dev): node "/Users/graysonmitchell/Projects/GameLib/src-tauri/../build/main/sidecar.js"
+[shell]   cwd=/Users/graysonmitchell/Projects/GameLib/src-tauri
+[shell]   entry_exists=true
+[shell]   GAMELIB_SHELL_EXE=/Users/graysonmitchell/Projects/GameLib/src-tauri/target/debug/gamelib-shell
+[shell]   GAMELIB_APP_ROOT=/Users/graysonmitchell/Projects/GameLib
+[shell] sidecar process spawned OK
+[shell] devtools opened for 'main' webview (debug build)
+[shell] sidecar signalled READY (__GAMELIB_SIDECAR_READY__)
+[sidecar:err] [storeWriteHandlers] storeNew ignored renderer-supplied options for 'legendary_library' — using the hardcoded cache-store shape
+[sidecar:err] [storeWriteHandlers] storeNew ignored renderer-supplied options for 'gog_library' — using the hardcoded cache-store shape
+[sidecar:err] [storeWriteHandlers] storeNew ignored renderer-supplied options for 'zoom_library' — using the hardcoded cache-store shape
+[sidecar:err] [storeWriteHandlers] storeNew ignored renderer-supplied options for 'nile_library' — using the hardcoded cache-store shape
+[sidecar:err] [storeWriteHandlers] storeNew ignored renderer-supplied options for 'legendary_library' — using the hardcoded cache-store shape
+[sidecar:err] [storeWriteHandlers] storeNew ignored renderer-supplied options for 'gog_library' — using the hardcoded cache-store shape
+[sidecar:err] [storeWriteHandlers] storeNew ignored renderer-supplied options for 'zoom_library' — using the hardcoded cache-store shape
+[sidecar:err] [storeWriteHandlers] storeNew ignored renderer-supplied options for 'nile_library' — using the hardcoded cache-store shape
+[sidecar:err] [appShellFlowRegistration] getWebviewPreloadPath(): declared-empty return (D-12) -- Tauri has no <webview> tag; the login-webview story is Phase 34.4's
+[shell] humble_login_open: visible login window 'loginwin-0-18c9108b40225638-7a700d81' armed as the single pending login flow (T-34.4.2-39)
+[shell] humble_login_open: login cancel strip injected for 'loginwin-0-18c9108b40225638-7a700d81'
+[shell] login-window sheet: present_login_window_as_sheet entered for 'loginwin-0-18c9108b40225638-7a700d81'
+[shell] login-window sheet: both NSWindow addresses resolved for 'loginwin-0-18c9108b40225638-7a700d81' (elapsed=73.664334ms)
+[shell] login-window sheet: main-thread closure entered for 'loginwin-0-18c9108b40225638-7a700d81'
+[shell] login-window sheet: deferring beginSheet dispatch by 250ms via DispatchQueue::main().after() for 'loginwin-0-18c9108b40225638-7a700d81'
+[shell] login-window sheet: deferred beginSheet closure entered for 'loginwin-0-18c9108b40225638-7a700d81' (deferred_elapsed=261.845042ms)
+[shell] login-window sheet: beginSheet dispatch call returned for 'loginwin-0-18c9108b40225638-7a700d81'
+[shell] login-window sheet: read-back attached=true for 'loginwin-0-18c9108b40225638-7a700d81'
+[shell] login-window sheet: present_login_window_as_sheet resolved attached=true for 'loginwin-0-18c9108b40225638-7a700d81' (elapsed=603.9315ms)
+[shell] humble_login_open: cleared pending login window latch for 'loginwin-0-18c9108b40225638-7a700d81'
+[shell] humble_login_open: presentation requested visible=true width=900 height=700 center=true focus_once=true persistent_pin=false light_theme_requested=true sheet_presented=true
+[shell] humble_login_open: devtools opened for 'loginwin-0-18c9108b40225638-7a700d81' (debug build)
+[shell] humble_login_open: title change applied len=42
