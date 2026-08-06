@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4.2 gap cycle 5 -- plans 21-23 EXECUTED, waves 3-4 (plans 24-25) DEFERRED by operator decision. Phase NOT CLOSED.
-last_updated: "2026-08-06T10:33:07.160Z"
-last_activity: 2026-08-06 -- Phase 34.4.2 gap cycle 5 PARTIALLY executed (plans 21, 22, 23 complete; 24, 25 not started). Wave 1: Tests 6-7 + coverage map added to live-gate-contract-authoring.md (tally now eight); loginInFlightUiReachability.test.tsx pins the real UI mechanism behind F-34.4.2-17 with 5 mutation-proven gates. Wave 2: 34.4.2-LIVE-GATE-RERUN-5.md authored (verdict null, items_total 5, item 5 permanently WITHDRAWN per D-G1) -- the seventh blocking contract, first whose items are all reachable. FALSIFIED: the recorded 'frontend disables/clears the other login buttons' characterisation is WRONG -- all six tiles pass an identical disabled={oldMac} (macOS-version check only); the real mechanism is Runner.handleLogin() navigating to the sibling loginweb/:runner route, which unmounts the whole Login screen. STOPPED before wave 3 (the human live gate) by operator decision: a concurrent nile-latency session holds uncommitted src/frontend/screens/Login/index.tsx changes and a gamelib-shell instance was already running, either of which would make the RERUN-5 verdict untrustworthy under the contract's own single-instance abort rule.
+stopped_at: 34.4.2 gap cycle 5 -- plans 21-23 EXECUTED; RESUMING at wave 3 (plan 24, the human live gate) 2026-08-06. Phase NOT CLOSED.
+last_updated: "2026-08-06T18:59:10.594Z"
+last_activity: 2026-08-06 -- Phase 34.4.2 gap cycle 5 RESUMED at wave 3. Plans 21, 22, 23 complete; 24 (blocking live gate, RERUN-5) and 25 (VERIFICATION.md refresh) now executing. The two conditions that stopped the previous session are cleared: the working tree carries no uncommitted Login-screen edits, and `pgrep -f gamelib-shell` is empty. Prior context: Wave 1 added Tests 6-7 + coverage map to live-gate-contract-authoring.md (tally now eight) and loginInFlightUiReachability.test.tsx pinning the real UI mechanism behind F-34.4.2-17 with 5 mutation-proven gates. Wave 2 authored 34.4.2-LIVE-GATE-RERUN-5.md (verdict null, items_total 5, item 5 permanently WITHDRAWN per D-G1) -- the seventh blocking contract, first whose items are all reachable. FALSIFIED: the recorded 'frontend disables/clears the other login buttons' characterisation is WRONG -- all six tiles pass an identical disabled={oldMac} (macOS-version check only); the real mechanism is Runner.handleLogin() navigating to the sibling loginweb/:runner route, which unmounts the whole Login screen.
 progress:
-  total_phases: 20
+  total_phases: 21
   completed_phases: 13
   total_plans: 216
   completed_plans: 203
@@ -480,7 +480,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — EXECUTING
 EXECUTED 2026-08-06, STILL DID NOT CLOSE (gate FAILED 1/6) -- gap cycle 5 required, NOT COMPLETE
-Plan: 23 of 25 complete -- executing gap cycle 5 (21-25)
+Plan: 23 of 25 complete -- executing gap cycle 5 wave 3 (plan 24, blocking live gate)
 glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
 see 34.4.2-13-SUMMARY.md. Plan 14 EXECUTED 2026-08-05 -- T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW
 single-flight guard refuses a second visible login window while one is pending/presented, 25s TTL
@@ -2641,7 +2641,21 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 `STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Ready to execute
+Status: Executing Phase 34.4.2
+
+> NOTE (34.4.2 gap cycle 5, wave 3 resume): `state.begin-phase` corrupted the frontmatter in the
+> now-usual way and was hand-corrected against a pre-session snapshot: `stopped_at` truncated to
+> "Completed 34.4.2-23-PLAN.md" (blocking qualifier discarded), `last_activity` replaced with
+> "Phase 34.4.2 execution started" (the whole gap-cycle-5 narrative discarded), `percent` 94 -> 65,
+> and "Current Position" `Plan: 23 of 25 complete` -> `Plan: 1 of 25`. All four restored. The same
+> call also appended " -- Phase 34.4.2 execution started" to the HISTORICAL Phase-34 block's
+> `Last activity: 2026-08-06` line (~line 2897) -- reverted; note that line's dangling
+> "(pre-existing external-state reachability)" continuation is a PRE-EXISTING wound from an earlier
+> session's SDK write and was left as found rather than reconstructed from guesswork. This time the
+> `Status:` line in the historical "Prior phase: 34.1" block below was written as
+> `Executing Phase 34.4.2`, which happens to MATCH this block's established correct value (plan 24
+> is still in phase 34.4.2), so it was left alone -- the pre-session file had it drifted to
+> "Ready to execute".
 
 > NOTE (34.4.2 gap cycle 2 planning): `state.planned-phase` again spliced this session's current
 > status ("Ready to execute") into this HISTORICAL "Prior phase: 34.1" block — the same recurring
@@ -3604,6 +3618,7 @@ Closed/parked native-install phases:
 - Phases 28–35 added 2026-07-22 under the existing **v0.8 — Tauri Shell** milestone (extends it; `/gsd-new-milestone` deliberately NOT run, v0.8 already exists from Phase 27): the incremental Electron→Tauri/daemon port, sliced from `27-.../SEAM.md`'s ranked backlog. **28** real `safeStorage` via spike 011's `keyring` crate → **29** generalize the sidecar store past the two skeleton stores → **30/31/32** IPC re-plumb in domain slices (install/uninstall/update-check, settings/config, downloads/queue) → **33** the 44-file lifecycle cluster (`app`/`dialog`/window/`Notification`/tray/protocol, plus the `session`/`powerSaveBlocker` parity soft spots) → **34** Windows/Linux packaging+signing+auto-update → **35** Electron cutover. **Slicing rule:** every phase except 35 must end with BOTH `npm run tauri:dev` and `npm start` working (REQ-27-06's additive/reversible invariant, SEAM.md checklist step 5) — 35 is the one phase that intentionally breaks it, which is why it runs last. **Phase 28 is order-constrained, not merely first-by-value:** the sidecar and Electron share one store, so wiring any token-WRITING channel under the current passthrough stub writes `TOKEN_PREFIX`+plaintext and silently signs the user out of the real Electron app. Requirements stay TBD per phase — mint at `/gsd-plan-phase N`. Note these phases are invisible to `roadmap.analyze` until STATE.md's `milestone:` frontmatter advances past v0.7 (same caveat already recorded for Phase 27).
 - Phase 34.7 inserted after Phase 34.6: Epic device-auth single sign-in path — delete interactive legendary-login UI, seed legendary via exchange code; scheduled LAST before Phase 35; alt-login 403 permanently parked
 - Phase 34.8 inserted after Phase 34.6: Frontend i18n compliance for fork-added code — retrofit hardcoded strings + enforcement gate; sequenced before 34.7; upstream strings and backend error-code contract out of scope
+- Phase 34.9 inserted after Phase 34.7: macOS runner onedir repackaging - measured ~95x cold spawn win (20.84s -> 0.22s) (URGENT)
 
 ### Decisions
 

@@ -2212,6 +2212,57 @@ Plans:
 
 - [ ] TBD (run /gsd-plan-phase 34.7 to break down)
 
+### Phase 34.9: macOS runner onedir repackaging — eliminate the PyInstaller cold-start spawn tax (INSERTED)
+
+**Goal:** Ship `legendary`, `gogdl` and `nile` as PyInstaller **`--onedir`** builds on macOS so a
+runner spawn costs ~0.2s instead of ~20s cold, removing the dominant term in every store login.
+The tax is macOS-specific (`amfid` runs a Gatekeeper assessment per extracted file, and onefile's
+randomly-named `$TMPDIR/_MEIxxxxxx` defeats the assessment cache), so **Linux and Windows keep the
+current onefile binaries unchanged** — they gain nothing and would only pay the bundle growth.
+
+**Measured, not assumed** (debug session `nile-spawn-app-side-latency`, commit `a9192ae80`;
+nile v1.1.2 built twice from `imLinguin/nile` at the pinned tag with upstream CI's own pyinstaller
+command, differing only in the flag; two cold rounds separated by 400s idles, second reversed):
+
+| build | cold (avg) | warm |
+|---|---|---|
+| onefile (control — reproduces the tax) | 20.84s | 6.61s |
+| **onedir** | **0.22s** | **0.14s** |
+
+~95x cold, ~47x warm; for onedir the cold/warm distinction collapses to ~80ms of noise.
+Measured cost: 29MB across 108 files vs 13MB as one — 2.2x bundle growth per runner and ~100
+extra Mach-O files each for notarization to sign and staple. **That signing/packaging work is the
+real effort; the build flag is one word.**
+
+**Strategy (user decision 2026-08-06): BOTH.** Build onedir runners in GameLib's own CI and ship
+the win now, while opening PRs upstream in parallel; drop the local build if/when upstream lands
+it. Upstream owners: `imLinguin/nile` (`.github/workflows/build.yaml`),
+`Heroic-Games-Launcher/legendary`, `Heroic-Games-Launcher/heroic-gogdl`. Heroic has the identical
+problem, so upstreaming benefits both projects and limits how far the fork diverges on vendoring.
+`comet` is a Rust static binary (~0.01s) and is explicitly OUT of scope.
+
+**Known constraints the plan must handle (do not rediscover):**
+- PyInstaller **cannot cross-compile**. macOS x64 and arm64 must each build on their own runner
+  (upstream uses a macos-13/macos-14 matrix). Only arm64 is verifiable on the dev machine.
+- `meta/downloadHelperBinaries.ts` currently downloads a **single file** and `chmod 755`s it
+  (`downloadAsset`, line ~58). Onedir assets are directory trees and need archive + extract.
+- `archSpecificBinary()` (`src/backend/utils.ts:~510`) resolves a **file**; onedir needs
+  `.../nile/nile`. `getNileBin()`/`getLegendaryBin()`/`getGOGdlBin()` already return `{dir, bin}`
+  via `splitPathAndName`, so the consumer shape likely survives unchanged — verify, don't assume.
+- Signing must cover every Mach-O in the tree or notarization fails. **Both** `electron-builder.yml`
+  and the Tauri bundler need this until Phase 35 removes the Electron build — i.e. this phase pays
+  the packaging cost twice by running before 35. Accepted deliberately for the size of the win.
+- The `altLegendaryBin`/`altGogdlBin`/`altNileBin` user overrides must keep working (they bypass
+  `archSpecificBinary` entirely and may point at a onefile binary).
+
+**Requirements**: TBD (run /gsd-plan-phase 34.9)
+**Depends on:** Phase 34 (packaging/signing/notarization pipeline). Independent of the 34.1-34.8
+IPC slices. Runs before Phase 35, which will later delete the Electron half of the signing work.
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 34.9 to break down)
+
 ### Phase 35: Electron cutover — remove the Electron build
 
 **Goal:** Retire the Electron build: delete `electron-vite`/`electron-builder` config, the preload contextBridge path, and the `isTauri()` branches, leaving Tauri as the only shell. This is the one phase that deliberately breaks the additive/reversible invariant every prior phase preserved — so it runs last, and only once the `session`/`powerSaveBlocker` parity gaps are resolved or explicitly accepted, and the parked Electron-renderer bugs (see `debug-uninstall-game-vanishes-parked`) have been re-tested against Tauri rather than fixed in Electron.
