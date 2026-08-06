@@ -53,7 +53,7 @@ import {
   rmSync,
   writeFileSync
 } from 'node:fs'
-import { join } from 'node:path'
+import { join, resolve as resolvePath } from 'node:path'
 
 import { RELEASE_TAGS } from './releaseTags'
 
@@ -114,16 +114,67 @@ export function archiveName(runner: string, arch: string): string {
 // ---------------------------------------------------------------------------
 // extractUpstreamPyinstallerCommand -- reads the upstream repo's OWN
 // pyinstaller invocation from its committed GitHub Actions workflow. Never
-// guesses: throws naming the repoDir when zero matching lines exist, and
-// throws naming every match when more than one does.
+// guesses: throws naming the repoDir when zero matching invocations exist,
+// and throws naming every match when more than one does.
+//
+// Rule 1 fix (found live against the real, cloned nile/legendary/heroic-gogdl
+// workflows during this plan's execution): all three upstream repos write
+// their build step as a `run:` key whose value is a PLAIN (unquoted,
+// non-block-scalar) YAML scalar folded across several MORE-INDENTED physical
+// lines, e.g.:
+//
+//   - name: Build
+//     run: pyinstaller
+//       --onefile
+//       --name nile
+//       ${{ steps.strip.outputs.option }}
+//       nile/cli.py
+//
+// GitHub Actions folds that into one command line at execution time. A
+// naive one-physical-line reading finds only "run: pyinstaller" -- missing
+// every flag -- and ALSO matches unrelated lines that merely mention
+// "pyinstaller" in prose (a step name) or as a `pip install` argument (not
+// the invocation itself). This extractor instead (a) recognises `run:`
+// keys and folds their continuation lines the same way GitHub Actions does,
+// then (b) keeps only run values whose FIRST token is literally
+// "pyinstaller" -- the actual invocation, not merely a mention of the name.
 // ---------------------------------------------------------------------------
 
-function stripYamlPrefix(line: string): string {
-  const idx = line.indexOf('pyinstaller')
-  return line
-    .slice(idx)
-    .trim()
-    .replace(/["']\s*$/, '')
+function indentOf(line: string): number {
+  const match = line.match(/^( *)/)
+  return match ? match[1].length : 0
+}
+
+function extractRunValues(text: string): string[] {
+  const lines = text.split('\n')
+  const values: string[] = []
+
+  for (let i = 0; i < lines.length; i++) {
+    const match = lines[i].match(/^(\s*)(?:-\s+)?run:\s?(.*)$/)
+    if (!match) continue
+
+    const [, keyIndentStr, remainder] = match
+    const keyIndent = keyIndentStr.length
+    const parts = [remainder]
+
+    let j = i + 1
+    while (j < lines.length) {
+      const next = lines[j]
+      if (next.trim() === '') break
+      if (indentOf(next) <= keyIndent) break
+      parts.push(next.trim())
+      j++
+    }
+
+    values.push(
+      parts
+        .join(' ')
+        .replace(/\s{2,}/g, ' ')
+        .trim()
+    )
+  }
+
+  return values
 }
 
 export function extractUpstreamPyinstallerCommand(repoDir: string): string {
@@ -138,31 +189,33 @@ export function extractUpstreamPyinstallerCommand(repoDir: string): string {
     entries = []
   }
 
-  const matches: { file: string; line: string }[] = []
+  const matches: { file: string; command: string }[] = []
   for (const file of entries) {
     const text = readFileSync(join(workflowsDir, file), 'utf-8')
-    for (const rawLine of text.split('\n')) {
-      if (rawLine.includes('pyinstaller')) {
-        matches.push({ file, line: rawLine })
+    for (const value of extractRunValues(text)) {
+      // Only a run: value that INVOKES pyinstaller (first token), not one
+      // that merely mentions it (e.g. "pip3 install --upgrade pyinstaller").
+      if (/^pyinstaller(\s|$)/.test(value)) {
+        matches.push({ file, command: value })
       }
     }
   }
 
   if (matches.length === 0) {
     throw new Error(
-      `No line containing "pyinstaller" found in any *.yml/*.yaml workflow ` +
-        `under ${workflowsDir}`
+      `No "run:" step invoking pyinstaller directly (as its first token) ` +
+        `found in any *.yml/*.yaml workflow under ${workflowsDir}`
     )
   }
   if (matches.length > 1) {
     throw new Error(
-      `Expected exactly one "pyinstaller" line under ${workflowsDir}, found ` +
-        `${matches.length}: ` +
-        matches.map((m) => `${m.file}: "${m.line.trim()}"`).join(' | ')
+      `Expected exactly one pyinstaller invocation under ${workflowsDir}, ` +
+        `found ${matches.length}: ` +
+        matches.map((m) => `${m.file}: "${m.command}"`).join(' | ')
     )
   }
 
-  return stripYamlPrefix(matches[0].line)
+  return matches[0].command
 }
 
 // ---------------------------------------------------------------------------
@@ -479,7 +532,13 @@ export async function buildRunner(
   }
 
   const { repo, tag } = ONEDIR_RUNNERS[runner]
-  const repoDir = join(RUNNERS_SRC_DIR, runner)
+  // Resolved to an ABSOLUTE path deliberately: node's spawn(), when given a
+  // relative `command` string alongside an `options.cwd`, resolves that
+  // relative command against the CHILD's cwd (not this process's cwd) --
+  // so a repo-root-relative venv binary path (e.g. pipPath(repoDir)) would
+  // silently double-nest and ENOENT once cwd is also repoDir. Verified live
+  // against a real venv during this plan's execution.
+  const repoDir = resolvePath(RUNNERS_SRC_DIR, runner)
 
   await cloneRepo(repo, tag, repoDir)
   await createVenv(repoDir)
