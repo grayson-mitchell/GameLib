@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.2-16-PLAN.md (BLOCKING live gate RAN, VERDICT FAIL 5/6 -- item 6 sole FAIL, gap cycle 4 required)
-last_updated: "2026-08-05T23:10:00.000Z"
-last_activity: 2026-08-05
+stopped_at: Gap cycle 4 PLANNED (plans 17-20) -- F-34.4.2-12 fixed out-of-band (6bad86227), gate item 6 re-run still owed
+last_updated: "2026-08-06T02:38:48.737Z"
+last_activity: 2026-08-06 -- Phase 34.4.2 planning complete
 progress:
   total_phases: 20
   completed_phases: 13
-  total_plans: 207
+  total_plans: 211
   completed_plans: 196
-  percent: 95
+  percent: 93
 ---
 
 # Project State
@@ -515,6 +515,30 @@ both logged). See `34.4.2-LIVE-GATE-RERUN-3.md` and `34.4.2-16-SUMMARY.md`. **Ne
 `/gsd-plan-phase 34.4.2 --gaps` (gap cycle 4), scoped against F-34.4.2-12 (BLOCKING) and
 F-34.4.2-11 (non-blocking, owed before items 3/5 are ever re-measured again). Historical
 plan-11/plan-10 records follow.)
+
+**GAP CYCLE 4 PLANNED 2026-08-06 -- plans 17-20, 4 waves.** Scope shifted after planning began:
+**F-34.4.2-12 was diagnosed and FIXED out-of-band by `/gsd-debug` (commit `6bad86227`)**, so gap
+1's first two `missing:` bullets (build a discriminator, build a bounding fix) are CLOSED and
+`34.4.2-VERIFICATION.md` is STALE on them -- plan 18 corrects that record in place. Root cause was
+a reentrancy self-deadlock on tao's `EventLoopHandler` handler mutex via wry's blocking
+`WebviewWindow::cookies()`; candidates (a) plan-13's shared-closure arm removal and (b) plan-14's
+single-flight latch are both **FALSIFIED**, and **a timeout cannot fix this class** (the block sits
+below where any Tauri-side receive timeout lives). Operator scoping decisions: **D-F1** RERUN-4
+covers ALL SIX items for one fresh self-contained verdict (6(b), the Epic-absence check, has never
+been attempted in five gate runs); **D-F2** the `humble_login_cookies` / `watchForLogin()` residual
+is IN SCOPE (same blocking-`.cookies()` hazard, unfixed); **D-F3** fix the evidence-capture
+contract AND add a fifth Structural-Reachability-Review defect-class test whose unit of review is
+the requirement PAIR. Planning surfaced **F-34.4.2-14 (NEW)**: three of RERUN-3's required lines
+(`Humble sync finished:`, `Humble disconnect: cookie census`, `Humble login-window cookie read
+UNSUPPORTED_OR_ERROR`) are sidecar `logInfo`/`logWarning` output landing in
+`~/Library/Logs/GameLib/gamelib.log`, and so structurally COULD NOT reach the tee'd terminal
+transcript the contract demanded them of -- a sixth contract-authoring defect, and the reason item
+4's line was recorded absent with no cause assigned. `gamelib.log` also self-rotates per process
+(`log_writer.ts:72-74`), so the capture standard now mandates BOTH append-with-delimiters on the
+transcript AND per-launch archiving of the sidecar log. Plans: 17 (Rust residual + shape-robust
+regression pin), 18 (VERIFICATION.md correction + findings ledger + five-test standing reference),
+19 (author `34.4.2-LIVE-GATE-RERUN-4.md`, verdict null), 20 (**human-driven live gate run**,
+`autonomous: false`, D-E author/runner separation). **Next:** `/gsd-execute-phase 34.4.2`.)
 
 Plan 14 record (14 done -- `34.4.2-14-SUMMARY.md`. Closed T-34.4.2-39's app gap (a second
 VISIBLE login window queuing behind a first, minted by plan 12's live gate) with a source-level
@@ -2534,7 +2558,7 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 `STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Phase complete — ready for verification
+Status: Ready to execute
 
 > NOTE (34.4.2 gap cycle 2 planning): `state.planned-phase` again spliced this session's current
 > status ("Ready to execute") into this HISTORICAL "Prior phase: 34.1" block — the same recurring
@@ -2787,7 +2811,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-05
+Last activity: 2026-08-06 -- Phase 34.4.2 planning complete
 Prior activity: 2026-08-05 - Completed quick task 260805-t0s: removed Patreon from the sidebar menu and all code references (openPatreonPage channel deleted across all four layers + Tauri sidecar registration; FUNDING.yml/Support.md/snapcraft.yaml stripped; grep-clean)
 Prior activity: 2026-08-05 - Phase 34.4.2 plan 13 executed: D-A (operator, binding) deleted the in-field autofill glyph mechanism in full from src-tauri/src/main.rs (13 symbols, ~24 cargo tests, plus truncate_chars, an orphan the compiler caught) -- 34.4.2-LIVE-GATE-RERUN-2.md item 3 had measured the synthesized right-click surfacing the AutoFill menu but never filling the field (F-34.4.2-09), falsifying spike 022's own premise. Minted PHASE_34_4_2_REMOVED_AUTOFILL_SYMBOLS, a mutation-proven permanent absence guard (tauriShellSource.test.ts) making reintroduction a test failure; relocated T-34.4.2-20's private-selector negative so it survives the poster's deletion; retired the NSGraphicsContext Cargo feature. REQ-34.4.2-04/-05 rewritten (amend-in-place) to state Cmd+V/Edit-Paste as the sole credential-entry route, both boxes stay UNTICKED. 34.4.2-PLATFORM-SCOPE.md's sixth threat-register update retires 10 threats by deletion (T-34.4.2-17, this phase's largest security surface, specifically called out as eliminated not merely mitigated), moves 7 previously-closed threats to CLOSED-pending-re-measurement, and adds T-34.4.2-40 (reintroduction, mutation-proven-mitigated). cargo test 111/1-ignored, jest 89/89 (targeted) + 3742/3742 (full suite, context only). Ran NO gate item, ticked NO requirement box. Phase 34.4.2 remains NOT CLOSED. See 34.4.2-13-SUMMARY.md.
 Prior activity: 2026-08-05 - Completed quick task 260805-rwy: removed the "Login with your platform…" paragraph from the Manage Accounts page (visual UAT pending)
