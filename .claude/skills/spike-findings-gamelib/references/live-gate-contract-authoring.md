@@ -184,6 +184,29 @@ must implement it in full — it is not optional guidance.
   missing or zero-length capture is visible immediately during the gate run itself, rather than
   discovered during write-up after the app has already been closed and the evidence is gone.
 
+- **Exactly ONE app instance for the whole run — asserted, not assumed** (F-34.4.2-15, the
+  RERUN-4 run). Before each launch, assert zero pre-existing instances
+  (`pgrep -f 'target/debug/gamelib-shell'` must be empty); after the window appears, record the
+  single PID into the transcript; at teardown, record it again. If the count is ever not 1, the
+  launch is ABORTED and re-run — its evidence is not scorable.
+
+  **Why this is its own bullet and not a footnote.** A second concurrent instance does not
+  announce itself: it **splits the `[shell] sink while leaving `gamelib.log` SHARED**. The Rust
+  binary's `eprintln!` lines follow the stderr of whichever process the runner's `tee` wrapped,
+  while the sidecar's `[Backend]` lines from *both* processes land in the one `gamelib.log`. The
+  resulting evidence set is the most dangerous shape this standard can produce: a populated,
+  plausible-looking `gamelib.log` that independently confirms the operator really did drive the
+  UI, sitting next to a transcript that is missing every scored `[shell]` literal. A reader who
+  checks only that "the logs have content" concludes the items were measured. They were not.
+
+  This is a **capture-integrity** failure, not a product failure, and it is invisible to every
+  other rule in this section: the session directory was correct, the delimiters were correct, the
+  appends were correct, the per-launch archiving was correct. Section 3's other bullets all
+  silently assume a single instance. This bullet is what makes that assumption checkable.
+
+  A stale instance from a previous session causes the same split, so **preflight must check for a
+  pre-existing instance** — not only for the DummyStore harness on its port (F-34.4.2-18).
+
 ## Section 4 — Two rules the project has paid for twice
 
 **(i) Never use a tee'd transcript to prove a backend path did NOT run.** Absence in a transcript
