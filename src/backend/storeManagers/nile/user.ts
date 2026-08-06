@@ -23,20 +23,66 @@ function authLogSanitizer(line: string) {
   }
 }
 
+// Quick task 260806-teb Task 2: in-flight-promise memoization around getLoginData()'s
+// `runRunnerCommand` spawn, mirroring `src/backend/utils/systeminfo/index.ts:69-99`'s
+// `inFlightSystemInfoFetch` exactly in structure. Under Tauri, two concurrent
+// getAmazonLoginData() callers (e.g. a remounted WebView route) used to race two independent
+// `nile auth --login --non-interactive` spawns -- each ~12.8s (pyinstaller-onefile-spawn-tax)
+// -- instead of sharing the one already in flight.
+//
+// CRITICAL -- there is deliberately NO value cache and NO TTL here, unlike
+// `GOGUser.getCredentials()`. `NileLoginData` carries single-use PKCE material
+// (`code_verifier`, `serial`) consumed exactly once by the `authAmazon` -> `nile register`
+// exchange. Reusing it across attempts would let a retry after a cancelled login replay stale
+// PKCE material into `authAmazon` -- a correctness bug, not an optimisation. A future
+// "consistency" pass must NOT add the TTL value cache that the GOG sibling has.
+let inFlightLoginData: Promise<NileLoginData> | null = null
+
 export class NileUser {
   static async getLoginData(): Promise<NileLoginData> {
-    logDebug('Getting login data from Nile', LogPrefix.Nile)
-    const { stdout } = await libraryManagerMap['nile'].runRunnerCommand(
-      ['auth', '--login', '--non-interactive'],
-      {
-        abortId: 'nile-auth',
-        logSanitizer: authLogSanitizer
-      }
-    )
-    const output: NileLoginData = JSON.parse(stdout)
+    if (inFlightLoginData) {
+      logDebug(
+        'Getting login data from Nile: reusing an already in-flight fetch',
+        LogPrefix.Nile
+      )
+      return inFlightLoginData
+    }
 
-    logInfo(['Register data is:', output], LogPrefix.Nile)
-    return output
+    const fetchPromise = (async (): Promise<NileLoginData> => {
+      logDebug('Getting login data from Nile', LogPrefix.Nile)
+      const { stdout } = await libraryManagerMap['nile'].runRunnerCommand(
+        ['auth', '--login', '--non-interactive'],
+        {
+          abortId: 'nile-auth',
+          logSanitizer: authLogSanitizer
+        }
+      )
+      const output: NileLoginData = JSON.parse(stdout)
+
+      logInfo(['Register data is:', output], LogPrefix.Nile)
+      return output
+    })()
+
+    inFlightLoginData = fetchPromise
+    try {
+      return await fetchPromise
+    } finally {
+      // Identity check (systeminfo's own precedent) -- prevents a slow loser clearing a
+      // newer winner's slot: if a call issued AFTER this one resolved already replaced
+      // `inFlightLoginData` with its own fresh promise, this `finally` must not clear that.
+      if (inFlightLoginData === fetchPromise) {
+        inFlightLoginData = null
+      }
+    }
+  }
+
+  /**
+   * Test-only reset hook (mirrors systeminfo's `__resetSystemInfoCacheForTests`). This
+   * project's Jest config has no `resetModules`, so `inFlightLoginData` would otherwise leak
+   * between tests in the same file. Never called from production code.
+   */
+  static __resetInFlightLoginDataForTests(): void {
+    inFlightLoginData = null
   }
 
   static async login(
