@@ -1,0 +1,8 @@
+2026-08-06T23:41:59Z RERUN begins -- forced eviction (purge), not idle
+2026-08-06T23:48:00Z RERUN begins -- forced eviction (purge), timed as graysonmitchell
+2026-08-06T23:48:14Z nile-onefile cold=4.24s warm1=4.30s warm2=4.23s path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile
+2026-08-06T23:48:15Z legendary-onedir cold=0.49s warm1=0.15s warm2=0.19s path=/Users/graysonmitchell/Projects/GameLib/.build-tools/runners-onedir/extracted/legendary/legendary
+2026-08-06T23:48:24Z gogdl-onefile cold=3.14s warm1=2.96s warm2=2.99s path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl
+2026-08-06T23:48:25Z nile-onedir cold=0.43s warm1=0.13s warm2=0.13s path=/Users/graysonmitchell/Projects/GameLib/.build-tools/runners-onedir/extracted/nile/nile
+2026-08-06T23:48:38Z legendary-onefile cold=4.15s warm1=4.07s warm2=3.99s path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/legendary
+2026-08-06T23:48:39Z gogdl-onedir cold=0.33s warm1=0.11s warm2=0.11s path=/Users/graysonmitchell/Projects/GameLib/.build-tools/runners-onedir/extracted/gogdl/gogdl
