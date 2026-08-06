@@ -63,6 +63,7 @@
     "build-crossover-index": "esbuild --bundle --platform=node --target=node21 meta/buildCrossoverIndex.ts | node",
     "gen-vtables": "esbuild --bundle --platform=node --target=node21 meta/gen_vtables.ts | node",
     "build-steam-bridge": "esbuild --bundle --platform=node --target=node21 meta/buildSteamBridgeShims.ts | node",
+    "build-runners-onedir": "esbuild --bundle --platform=node --target=node21 meta/buildRunnersOnedir.ts | node --",
     "verify:updater-key": "esbuild --bundle --platform=node --target=node22 --outfile=node_modules/.cache/verify-updater-key.cjs meta/verifyUpdaterSigningKey.ts && node node_modules/.cache/verify-updater-key.cjs"
   },
   "dependencies": {
