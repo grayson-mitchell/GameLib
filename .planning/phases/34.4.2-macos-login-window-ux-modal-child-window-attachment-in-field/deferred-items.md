@@ -696,3 +696,67 @@ here. This section records the four findings and their dispositions.
   UI permits the user to do?). **Disposition:** logged against T-34.4.2-42
   (`34.4.2-PLATFORM-SCOPE.md` §5's eleventh update), not fixed here — a future review-authoring
   plan should add these two test classes before the next contract is trusted to be complete.
+
+## Plan 23 — gap cycle 5 authoring: owners assigned to RERUN-4's four findings, F-34.4.2-10 deferred with reasons (2026-08-06)
+
+**Disposition: this plan records no gate result — it authors `34.4.2-LIVE-GATE-RERUN-5.md`, the
+seventh blocking contract in this phase's history, and assigns an owning plan to each of RERUN-4's
+four findings. Applying plan 21's two new Structural Reachability Review tests (Test 6, Test 7) to
+this new contract is itself part of what discharges F-34.4.2-15/-16/-17's OWNERSHIP here — but per
+this section's own standing rule, an owned finding is not a closed finding until the run measures
+the behaviour the fix is supposed to enable.**
+
+- **F-34.4.2-15 (F-A) — Capture-integrity defect.** **Owner:** plan 34.4.2-20's own commit
+  `db08bbfc6` (the standing reference fix) — **now IMPLEMENTED, for the first time, in a contract**
+  by this plan: `34.4.2-LIVE-GATE-RERUN-5.md`'s Evidence-capture instruction §0 carries the
+  `pgrep -f 'target/debug/gamelib-shell'` assertion at three points (before every launch, at
+  window-appearance, at teardown) and the explicit abort-and-re-run rule. **Not closed** — closure
+  requires a run that actually holds the assertion and reports zero splits; plan 24 owes that
+  measurement.
+- **F-34.4.2-16 (F-B) — Item 4 (and 1(e)/3(a)) unmeasurable by construction; a contract
+  precondition gap.** **Owner:** this plan (34.4.2-23), Task 1. **Fix:** the D-G2 preparatory
+  sequence — an unscored step that clears the WKWebView Humble cookie jar (via a confirmed
+  two-branch fallback: auto-login-then-disconnect if a live cookie exists, or nothing further if
+  the form already renders empty) and requires a POSITIVE observable (a rendered login form) before
+  items 1(e), 3(a) and 4 begin. **Not closed** — the fix is written into the contract; closure
+  requires plan 24's run to confirm the observable actually holds and the three items' evidence is
+  captured this time.
+- **F-34.4.2-17 (F-C) — Item 5's scenario is UI-unreachable; a contract defect Test 2 alone did
+  not catch.** **Owner:** this plan (34.4.2-23), Task 1, per operator decision **D-G1**. **Fix:**
+  item 5 is WITHDRAWN, permanently, not merely for this cycle — its scenario cannot be re-run as
+  written and expect a different result. Coverage preserved by plan 14's mutation-proven unit test
+  plus plan 22's new frontend pin (`loginInFlightUiReachability.test.tsx`); T-34.4.2-39/-41 restated
+  as unit-proven + UI-pinned, NOT live-discharged, permanently. **This IS a closure** — a withdrawn
+  item has no future "measured behaviour" to await; the withdrawal itself, with its full reasoning
+  preserved in the contract, is the complete disposition. Recorded here as closed, unlike F-A/F-B
+  above which remain open pending measurement.
+- **F-34.4.2-18 (F-D) — Preflight gap: no pre-existing-instance check.** **Owner:** the same
+  §0 fix as F-34.4.2-15 above — a `pgrep` assertion is now a documented PRECONDITION (precondition
+  5) in `34.4.2-LIVE-GATE-RERUN-5.md`, not merely a preflight afterthought. **Not closed** —
+  closure requires plan 24's preflight to actually run the check and report the result.
+- **The T-34.4.2-42 scorecard entry.** **Owner:** plan 21 (Tests 6 and 7 added to the standing
+  reference) and this plan (34.4.2-23), Task 2 (both tests APPLIED to a real contract for the first
+  time — a per-requirement row for every item/sub-check/precondition/the preparatory
+  sequence/the evidence-capture instruction itself, plus a Test 6 dedicated summary and a Test 7
+  dedicated summary). **Not closed** — Tests 6 and 7 are derived from RERUN-4's own measured
+  findings, not yet validated by a run that applied them and confirmed they hold; that validation
+  is plan 24's own first opportunity.
+
+**F-34.4.2-10's deferral, recorded here with the SAME three reasons and taking-condition as
+`34.4.2-PLATFORM-SCOPE.md` §5's twelfth update (not duplicated in full, cross-referenced):** the
+code path (`clearHumbleStorage`, `src/backend/humble/user.ts:919-1116`) has never been reached
+live; it sits inside the one flow item 6(a) must measure, and this cycle's purpose (a clean,
+reachable gate run) argues against adding an unmeasured change to it now; a fresh defect here would
+risk item 6(a) failing to be reached for a THIRD consecutive cycle. Item 6(a)'s own new record-only
+observability sub-check is added instead — confirmed at this authoring to have TWO real emitters
+(`user.ts:1125` success, `user.ts:1139` failure/timeout), correcting this plan's own initial
+uncertainty about whether any observable exists at all for this code path. **Taking condition:**
+once item 6(a) records a measured PASS with the path confirmed reached, F-34.4.2-10 becomes a
+normal source-fix candidate with observed behaviour to fix against — not before.
+
+**Note honestly, per this section's own standing discipline: an owned finding is not a closed
+finding.** Of the five items above, only F-34.4.2-17/F-C is recorded as closed — its disposition
+(withdrawal with preserved reasoning) has no further measurement to await. F-34.4.2-15/F-A,
+F-34.4.2-16/F-B, F-34.4.2-18/F-D and the T-34.4.2-42 scorecard entry are all owned and fixed IN THE
+CONTRACT, but none is closed until plan 34.4.2-24's run measures the behaviour each fix is supposed
+to enable. F-34.4.2-10 remains explicitly deferred, not owned by any fix this cycle.
