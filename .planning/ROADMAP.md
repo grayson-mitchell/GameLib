@@ -1597,7 +1597,7 @@ Plans:
 - [x] 34.4.2-23-PLAN.md — author `34.4.2-LIVE-GATE-RERUN-5.md` (five items; item 5 WITHDRAWN per
   D-G1) with a seven-test review, single-instance capture assertions, and D-G2's unscored
   preparatory disconnect; record D-G1/D-G2/D-G3 and the explicit F-34.4.2-10 deferral
-- [ ] 34.4.2-24-PLAN.md — RUN the gate on real macOS hardware (blocking operator checkpoint) and
+- [x] 34.4.2-24-PLAN.md — RUN the gate on real macOS hardware (blocking operator checkpoint) and
   propagate the measured verdict, whatever it is
 - [ ] 34.4.2-25-PLAN.md — bring the two-cycles-stale `34.4.2-VERIFICATION.md` current and cross-check
   every ledger against the measured verdict
@@ -1635,7 +1635,49 @@ correct next command, not `/gsd-debug`. Full record: `34.4.2-LIVE-GATE-RERUN-4.m
 Findings, ITEM VERDICT SUMMARY), `34.4.2-PLATFORM-SCOPE.md` §5's eleventh update,
 `deferred-items.md`'s Plan 20 section, `34.4.2-20-SUMMARY.md`.
 
-**Gap cycle 5 PLANNED 2026-08-06 — plans 21-25, NOT YET EXECUTED.** Scoped against the three
+**Status: GAP CYCLE 5 LIVE GATE RAN 2026-08-06 — FAIL, 0/5, NO LAUNCH SCORABLE — PHASE STILL DOES
+NOT CLOSE.** `34.4.2-24-PLAN.md`'s blocking gate ran against `34.4.2-LIVE-GATE-RERUN-5.md`, the
+seventh blocking-gate contract and the first whose five items were all structurally reachable
+(item 5 WITHDRAWN per D-G1). **Every scored item — 6(b), 1, 2, 3, 4, 6(a) — is recorded NOT
+ATTEMPTED**, and no launch in the session was ever assigned a scorable ordinal (the operator's
+shell left `${N}` unset on every `GATE LAUNCH` delimiter). Segment 1 contained two Humble
+login-window attempts and nothing else — **no Epic window was ever built** (zero
+`pristine WKWebView built for` occurrences) and no GOG control window either, so item 6(b)'s
+Epic-first ordering was not held; that segment was ABORTED by operator decision and nothing from
+it is cited. Segment 2 entered the D-G2 preparatory sequence's branch (a): the WKWebView carried a
+live Humble session and auto-authenticated, but **the sequence's own required positive observable —
+a rendered, empty login form — was NEVER produced.** With the sheet held open (`sheet_presented=true`,
+`attached=true`, no cancel line), the Humble cookie watcher emitted nothing and
+`humble_store/config.json` never left its pre-session 2-byte state at its original mtime, so
+`configStore.set('isLoggedIn', true)` never ran, the Runner disconnect control never rendered, and
+no route to either a login form or the disconnect control exists from the shipped UI.
+
+**The run's blocking finding is F-34.4.2-19 (NEW, OPEN, BLOCKING, UNDIAGNOSED): the D-G2 branch-(a)
+resolution — reasoned correctly from source at authoring, never previously verified live — is
+FALSIFIED on hardware.** It blocks items 1(e), 3(a) and 4 on the login-form premise for the THIRD
+consecutive run (the F-34.4.2-16 defect class), and now additionally blocks item 6(a), which is
+NOT ATTEMPTED for the third consecutive run and remains the undischarged live proof of
+F-34.4.2-12's source fix. A second, independent contract defect **F-34.4.2-20 (NEW)** was found:
+item 6(b)'s `main.rs:3698` required literal carries no window-label field, so its label-attributed
+PASS bar cannot be satisfied by that literal as written — a Test 4 gap, with a candidate eighth
+Structural Reachability Review test class named ("label-attribution completeness").
+**T-34.4.2-42's scorecard is measured at 2 this run** (against a measurable clause expecting zero
+now that the review has seven tests). **No wedge occurred anywhere this session — explicitly NOT an
+F-34.4.2-12 regression**, and no `sample` was required. T-34.4.2-43 does NOT discharge (item 6(a)
+never ran); T-34.4.2-44 does NOT discharge (no scored launch existed to hold the single-instance
+assertion); T-34.4.2-32 does NOT discharge (item 6(b) never measured); T-34.4.2-39/-41 do not
+discharge under any outcome per D-G1. F-34.4.2-10's taking condition is NOT met — it stays OPEN and
+deferred. D-08's no-partial-pass rule applies unchanged: **the phase does not close on 0/5**, and
+exactly zero requirement boxes moved.
+
+**Next step: `/gsd-debug`** — unlike gap cycle 5's own three contract defects (F-A/F-B/F-C, all now
+fixed), F-34.4.2-19 is an undiagnosed app-level defect, so `/gsd-plan-phase 34.4.2 --gaps` is NOT
+the correct next command. Full record: `34.4.2-LIVE-GATE-RERUN-5.md` (Preparatory sequence
+"Measured outcome", Aborted segments, Findings, T-34.4.2-42 scorecard, ITEM VERDICT SUMMARY),
+`34.4.2-PLATFORM-SCOPE.md` §5's thirteenth update, `deferred-items.md`'s Plan 24 section,
+`34.4.2-24-SUMMARY.md`.
+
+**Gap cycle 5 PLANNED 2026-08-06 — plans 21-25, plans 21-24 EXECUTED.** Scoped against the three
 CONTRACT defects RERUN-4 measured, not against app bugs. Three binding operator decisions govern it:
 **D-G1** — item 5 is WITHDRAWN from the live gate (its scenario is unperformable against the shipped
 frontend), with its reasoning recorded in place and its coverage preserved by plan 14's

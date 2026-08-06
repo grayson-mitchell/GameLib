@@ -760,3 +760,90 @@ finding.** Of the five items above, only F-34.4.2-17/F-C is recorded as closed �
 F-34.4.2-16/F-B, F-34.4.2-18/F-D and the T-34.4.2-42 scorecard entry are all owned and fixed IN THE
 CONTRACT, but none is closed until plan 34.4.2-24's run measures the behaviour each fix is supposed
 to enable. F-34.4.2-10 remains explicitly deferred, not owned by any fix this cycle.
+
+## Plan 24 — the blocking live gate RAN against `34.4.2-LIVE-GATE-RERUN-5.md`, verdict FAIL, items_passed 0/5 — no launch was scorable (2026-08-06)
+
+**Disposition: this plan recorded the measured verdict from the operator-driven checkpoint and
+propagated it. No item PASSED, no item genuinely FAILED its own mechanism either — every scored
+item is NOT ATTEMPTED, by the operator's own explicit decision to stop the session once a blocking,
+undiagnosed defect was established live.** Neither of the session's two transcript segments ever
+received a launch ordinal (the operator's shell left `${N}` unset on every `GATE LAUNCH`
+delimiter), so nothing in either segment is citable as any item's own scored evidence — recorded as
+the honest state, not reconstructed. Full detail (the operator's verbatim report, the preparatory
+sequence's own measured outcome, both aborted segments, all six items' `Observed:`/`Verdict:`
+fields) lives in `34.4.2-LIVE-GATE-RERUN-5.md` itself; this section records the two findings this
+run mints and F-34.4.2-10's own updated status, per this ledger's own convention.
+
+- **F-34.4.2-19 (NEW) — the D-G2 branch-(a) resolution is FALSIFIED live; Humble login-detection
+  does not complete while the sheet is held open.**
+  **File:** `src/backend/humble/user.ts` (validate path, `:591-635`);
+  `src/frontend/screens/Login/components/Runner/index.tsx:99-127` (the `isLoggedIn`-gated Logout
+  render).
+  **Symptom:** the WKWebView displayed Humble's page in what visually appeared to be an
+  already-authenticated state (D-G2's own branch (a): "the window auto-logs in"), but
+  `configStore.set('isLoggedIn', true)` (`user.ts:635`) — the call D-G2's own Preparatory-sequence
+  text and the Structural Reachability Review's own Test 6 row both cite as making the Logout
+  control reachable — was never observed to fire. `humble_store/config.json` stayed at its
+  pre-session 2-byte state (mtime Aug 6 13:52) for the entire session, measured independently via
+  both `wc -c` and `ls -la`. No Logout control was ever observed rendered; the sheet was held open
+  indefinitely with the Humble login-window cookie watcher (`gamelib.log` sink) emitting nothing at
+  all for its whole duration. Per this ledger's own standing rule, that silence is recorded as
+  silence, not as proof any backend path did or did not run — the filesystem channel
+  (`config.json`'s own unchanged size/mtime) is the decisive, independent evidence.
+  **Disposition:** OPEN, undiagnosed, BLOCKING. No root cause asserted. Candidate layers named
+  without preference (full reasoning in `34.4.2-LIVE-GATE-RERUN-5.md`'s own "Preparatory
+  sequence — Measured outcome" subsection): (i) the WKWebView's own apparently-logged-in page state
+  may be a cached/rendered view of humblebundle.com's own session rather than a live event the
+  app's own login-watcher (`watchForLogin()` / `humble_login_cookies`) is subscribed to at that
+  moment; (ii) the login-watcher may require a specific triggering event (a navigation, a
+  cookie-store change callback) that an already-authenticated page load never produces; (iii)
+  `HumbleUser`'s own validate path may be gated on a condition this session's own window-open
+  sequence never satisfied. **This is the phase's blocking defect. Next: `/gsd-debug`, NOT
+  `/gsd-plan-phase 34.4.2 --gaps`** — this is an undiagnosed defect, not a known, named contract
+  gap of the kind gap cycle 5 itself was scoped to fix.
+
+- **F-34.4.2-20 (NEW) — contract defect: item 6(b)'s `main.rs:3698` literal carries no window-label
+  field, so its own label-attributed PASS bar cannot be satisfied by the literal itself.**
+  **File:** `src-tauri/src/main.rs:3698` (`humble_login_open`'s `presentation requested visible=true
+  ... sheet_presented={sheet_presented}` line).
+  **Symptom:** item 6(b) requires this exact line, for BOTH its Epic-absence half and its
+  GOG-presence half, to be attributable to a specific window's own label — verified against current
+  source this run: the sibling required line at `main.rs:2436` (`read-back attached={attached} for
+  '{deferred_label}'`) DOES interpolate a label; `main.rs:3698` does NOT — it carries no window-label
+  field of any kind. Attribution of this literal to a specific window is therefore only possible by
+  construction/elimination (this command only fires inside `humble_login_open`, which Epic's own
+  code path cannot reach) or by positional adjacency to the preceding, genuinely label-bearing
+  `main.rs:2436` line — neither of which is the label attribution the bar as written literally
+  demands.
+  **Disposition:** FINDING against the seven-test Structural Reachability Review, per this plan's
+  own `<interfaces>` block (the review's `verdict: PASS on this contract` never asserted the bar was
+  reachable AS LABEL-ATTRIBUTED for this specific literal — only that the emitter existed and fired
+  unconditionally). **Test 4 (absence-observability) confirmed the emitter EXISTS but never checked
+  that it PRINTS the identity its own bar attributes occurrences to** — this is the gap. **Candidate
+  eighth test class, named:** "label-attribution completeness — for any bar that attributes
+  occurrences of a literal to a specific identity (a window label, a runner name), confirm the
+  emitter itself PRINTS that identity in its own output, not merely that the emitter exists and
+  fires unconditionally." Not fixed this plan (scope guard: `git diff --stat -- src src-tauri/src`
+  is empty); the literal and the bar are both left unchanged, and item 5 was not re-instated.
+
+- **F-34.4.2-10's status, updated.** Item 6(a) did NOT run this session; `clearHumbleStorage` was
+  NOT shown reached by either of its two possible emitter lines (`user.ts:1125` success,
+  `user.ts:1139` failure/timeout). **F-34.4.2-10's own taking condition — "once item 6(a) records a
+  measured PASS with the path confirmed reached" (`34.4.2-PLATFORM-SCOPE.md` §5's twelfth
+  update) — is NOT met.** F-34.4.2-10 stays OPEN and deferred, on the same three reasons stated
+  there. Never omitted.
+
+**T-34.4.2-42 scorecard, measured this run: 2** (F-34.4.2-19, F-34.4.2-20), against this threat's
+own measurable clause stating the count should be zero now that the review carries seven tests.
+Neither finding is a "single unreachable requirement" of the kind Tests 1-4 individually check;
+F-34.4.2-19 is closest to a Test 6 (pre-existing external-state reachability) hazard whose own
+prior resolution reasoned correctly from source but was never live-verified — a completeness gap in
+what "resolved" can mean for an async runtime path this test's own current design does not probe
+for, not evidence a wholly new test class is strictly required. F-34.4.2-20 is a genuine Test 4 gap
+with a named candidate eighth test class (see above).
+
+**No source was changed this plan.** `git diff --stat -- src src-tauri/src` is empty. No PASS bar,
+sub-check or required literal was changed; item 5 was not re-instated. All prior gate documents
+(`-LIVE-GATE.md`, `-RERUN.md`, `-RERUN-2.md`, `-RERUN-3.md`, `-RERUN-4.md`) remain byte-unchanged.
+No requirement box was ticked (`REQ-34.4.2-04`, `-05`, `-09` all stay `[ ]`, D-08's no-partial-pass
+rule). **Next: `/gsd-debug`** — the blocker (F-34.4.2-19) is an undiagnosed defect, not a known gap.

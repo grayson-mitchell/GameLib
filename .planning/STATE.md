@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4.2 gap cycle 5 -- plans 21-23 EXECUTED; RESUMING at wave 3 (plan 24, the human live gate) 2026-08-06. Phase NOT CLOSED.
+stopped_at: 34.4.2 gap cycle 5 -- plans 21-24 EXECUTED. Plan 24's blocking live gate RAN 2026-08-06 and FAILED 0/5, no launch scorable; blocker F-34.4.2-19 is UNDIAGNOSED. Plan 25 not started. Phase NOT CLOSED. Next: /gsd-debug.
 last_updated: "2026-08-06T18:59:10.594Z"
-last_activity: 2026-08-06 -- Phase 34.4.2 gap cycle 5 RESUMED at wave 3. Plans 21, 22, 23 complete; 24 (blocking live gate, RERUN-5) and 25 (VERIFICATION.md refresh) now executing. The two conditions that stopped the previous session are cleared: the working tree carries no uncommitted Login-screen edits, and `pgrep -f gamelib-shell` is empty. Prior context: Wave 1 added Tests 6-7 + coverage map to live-gate-contract-authoring.md (tally now eight) and loginInFlightUiReachability.test.tsx pinning the real UI mechanism behind F-34.4.2-17 with 5 mutation-proven gates. Wave 2 authored 34.4.2-LIVE-GATE-RERUN-5.md (verdict null, items_total 5, item 5 permanently WITHDRAWN per D-G1) -- the seventh blocking contract, first whose items are all reachable. FALSIFIED: the recorded 'frontend disables/clears the other login buttons' characterisation is WRONG -- all six tiles pass an identical disabled={oldMac} (macOS-version check only); the real mechanism is Runner.handleLogin() navigating to the sibling loginweb/:runner route, which unmounts the whole Login screen.
+last_activity: 2026-08-06 -- Phase 34.4.2 gap cycle 5 wave 3 EXECUTED: plan 24's BLOCKING LIVE GATE RAN against 34.4.2-LIVE-GATE-RERUN-5.md and FAILED, verdict FAIL / items_passed 0 of 5, NO LAUNCH SCORABLE. Every scored item (6(b), 1, 2, 3, 4, 6(a)) recorded NOT ATTEMPTED. Segment 1 held two Humble login attempts only -- no Epic window ever built (zero `pristine WKWebView built for`), no GOG control -- and was ABORTED; nothing from it cited. Segment 2 entered D-G2 branch (a) but its required positive observable (a rendered, empty login form) was NEVER produced: with the sheet held open (sheet_presented=true, attached=true, no cancel line) the Humble cookie watcher emitted nothing and humble_store/config.json never left its pre-session 2-byte state/mtime, so isLoggedIn was never set, the Runner disconnect control never rendered, and no route to a login form OR the disconnect control exists from the shipped UI. BLOCKING FINDING F-34.4.2-19 (NEW, OPEN, UNDIAGNOSED): the D-G2 branch-(a) resolution -- reasoned correctly from source, never verified live -- is FALSIFIED on hardware; it blocks items 1(e)/3(a)/4 for the THIRD consecutive run and now blocks item 6(a) too (also NOT ATTEMPTED a third time). Second finding F-34.4.2-20 (NEW, contract defect): item 6(b)'s main.rs:3698 literal carries no window label, so its label-attributed PASS bar is unsatisfiable as written -- a Test 4 gap, candidate eighth review test class named ("label-attribution completeness"). T-34.4.2-42 scorecard measured at 2. NO WEDGE occurred anywhere -- explicitly NOT an F-34.4.2-12 regression, no sample required. T-34.4.2-43/-44/-32 all do NOT discharge; T-34.4.2-39/-41 never discharge per D-G1; F-34.4.2-10's taking condition NOT met, stays deferred. Zero requirement boxes moved per D-08. Plan 25 (VERIFICATION.md refresh) NOT started. Next: /gsd-debug -- the blocker is an undiagnosed defect, not a known contract gap, so NOT /gsd-plan-phase --gaps. Prior context: Wave 1 added Tests 6-7 + coverage map to live-gate-contract-authoring.md (tally now eight) and loginInFlightUiReachability.test.tsx pinning the real UI mechanism behind F-34.4.2-17 with 5 mutation-proven gates. Wave 2 authored 34.4.2-LIVE-GATE-RERUN-5.md (verdict null, items_total 5, item 5 permanently WITHDRAWN per D-G1) -- the seventh blocking contract, first whose items are all reachable. FALSIFIED: the recorded 'frontend disables/clears the other login buttons' characterisation is WRONG -- all six tiles pass an identical disabled={oldMac} (macOS-version check only); the real mechanism is Runner.handleLogin() navigating to the sibling loginweb/:runner route, which unmounts the whole Login screen. The two conditions that stopped the previous session are cleared: the working tree carries no uncommitted Login-screen edits, and `pgrep -f gamelib-shell` is empty. Prior context: Wave 1 added Tests 6-7 + coverage map to live-gate-contract-authoring.md (tally now eight) and loginInFlightUiReachability.test.tsx pinning the real UI mechanism behind F-34.4.2-17 with 5 mutation-proven gates. Wave 2 authored 34.4.2-LIVE-GATE-RERUN-5.md (verdict null, items_total 5, item 5 permanently WITHDRAWN per D-G1) -- the seventh blocking contract, first whose items are all reachable. FALSIFIED: the recorded 'frontend disables/clears the other login buttons' characterisation is WRONG -- all six tiles pass an identical disabled={oldMac} (macOS-version check only); the real mechanism is Runner.handleLogin() navigating to the sibling loginweb/:runner route, which unmounts the whole Login screen.
 progress:
   total_phases: 21
   completed_phases: 13
   total_plans: 216
-  completed_plans: 203
+  completed_plans: 204
   percent: 94
 ---
 
@@ -480,7 +480,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — EXECUTING
 EXECUTED 2026-08-06, STILL DID NOT CLOSE (gate FAILED 1/6) -- gap cycle 5 required, NOT COMPLETE
-Plan: 23 of 25 complete -- executing gap cycle 5 wave 3 (plan 24, blocking live gate)
+Plan: 24 of 25 complete -- gap cycle 5 wave 3 RAN, gate FAILED 0/5 (no launch scorable), blocker F-34.4.2-19 UNDIAGNOSED -> /gsd-debug
 glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
 see 34.4.2-13-SUMMARY.md. Plan 14 EXECUTED 2026-08-05 -- T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW
 single-flight guard refuses a second visible login window while one is pending/presented, 25s TTL
@@ -4132,6 +4132,62 @@ Recent decisions affecting current work:
 | Humble Store | HSTORE-02: Read-only Humble bundle/deals listing in-app with "Buy on Humble" deep-links | Post-v0.3 | v0.3 requirements (separate data source; key management prioritized) |
 
 ## Session Continuity
+
+Last session: 2026-08-06T18:59:10.594Z
+Stopped at: Completed 34.4.2-24-PLAN.md — gate RAN, FAILED 0/5, blocker UNDIAGNOSED
+  This session (orchestrated `/gsd-execute-phase 34.4.2`, wave 3, plan 24): ran the BLOCKING LIVE
+  GATE against `34.4.2-LIVE-GATE-RERUN-5.md` — the seventh blocking contract and the first whose
+  five items were all structurally reachable (item 5 WITHDRAWN per D-G1). **VERDICT FAIL,
+  items_passed 0/5, and no launch in the session was ever scorable.** Task 1's preflight passed
+  everything machine-satisfiable, including the NEW single-instance check (`pgrep` empty), 194
+  suites / 3776 tests green, `cargo test` 116/0/1, both regression pins green, and a suite drift
+  vs RERUN-4 (+3 suites/+28 tests) that was FULLY ATTRIBUTED rather than absorbed — so no
+  unexplained-drift finding. The run itself then produced nothing scorable: the operator's shell
+  left `${N}` unset on every `GATE LAUNCH` delimiter, so no launch ordinal was ever assigned.
+  Segment 1 held **two Humble login attempts and nothing else** — no Epic window was ever built
+  (zero `pristine WKWebView built for` occurrences across the whole transcript) and no GOG control
+  window either, so item 6(b)'s Epic-first ordering was not held; ABORTED by operator decision,
+  nothing cited from it. Segment 2 entered D-G2's branch (a) — a live WKWebView cookie jar
+  auto-authenticated Humble — but **the sequence's own required positive observable, a rendered
+  empty login form, was NEVER produced.** With the sheet held OPEN (`sheet_presented=true`,
+  `attached=true`, no `cancel requested` line for the label), the Humble cookie watcher emitted
+  NOTHING and `humble_store/config.json` stayed at its pre-session 2 bytes / Aug 6 13:52 mtime.
+  The two earlier `humble_login:no-window` watcher aborts were a consequence of the sheet being
+  CLOSED; holding it open produces no store write either. So `configStore.set('isLoggedIn', true)`
+  (`user.ts:635`) never ran, `Runner` kept rendering a Login button and never a Logout control
+  (`Runner/index.tsx:99-127`), and there is no route from the shipped UI to either a login form or
+  the disconnect control. **BLOCKING FINDING F-34.4.2-19 (NEW, OPEN, UNDIAGNOSED): the D-G2
+  branch-(a) resolution — reasoned correctly from source at authoring, never previously verified
+  live — is FALSIFIED on hardware.** It blocks items 1(e)/3(a)/4 on the login-form premise for the
+  THIRD consecutive run (the F-34.4.2-16 defect class) and now blocks item 6(a) as well, which is
+  NOT ATTEMPTED for the third consecutive run and remains the undischarged live proof of
+  F-34.4.2-12's source fix. **Second finding F-34.4.2-20 (NEW, contract defect):** item 6(b)'s
+  `main.rs:3698` required literal carries no window-label field, so its label-attributed PASS bar
+  cannot be satisfied by that literal as written — the absence half still holds by construction
+  (that line lives in `humble_login_open`; Epic uses `open_pristine_epic_login_window`), but that
+  is attribution by elimination, not by label. A Test 4 gap, with a candidate EIGHTH review test
+  class named ("label-attribution completeness"). **T-34.4.2-42's scorecard is measured at 2** this
+  run, against a measurable clause expecting zero now the review has seven tests. **No wedge
+  occurred anywhere — explicitly NOT an F-34.4.2-12 regression**, the app stayed responsive, and no
+  `sample` was required or captured. Items 6(b), 1, 2 and 3 were NOT ATTEMPTED **by explicit
+  operator decision to stop and route to debug**, not by foreclosure — that distinction is recorded.
+  T-34.4.2-43 does NOT discharge (item 6(a) never ran); T-34.4.2-44 does NOT discharge (no scored
+  launch existed to hold the assertion); T-34.4.2-32 does NOT discharge (item 6(b) never measured);
+  T-34.4.2-39/-41 never discharge per D-G1; F-34.4.2-10's taking condition is NOT met and it stays
+  OPEN and deferred. Propagated into `34.4.2-PLATFORM-SCOPE.md` §5's THIRTEENTH update (the twelve
+  earlier survive), `REQUIREMENTS.md` (dated notes on REQ-34.4.2-04/-05/-09, **zero boxes ticked**,
+  mechanically asserted), `ROADMAP.md` (status banner superseded, plan 24 checked),
+  `deferred-items.md` (Plan 24 section appended). One process note: `state.begin-phase` again
+  CORRUPTED `STATE.md` at session start (`stopped_at` truncated, `last_activity` clobbered,
+  `percent` 94→65, plan counter 23→1, plus a splice into the historical Phase-34 block) — all
+  hand-corrected against a pre-session snapshot, with a NOTE added to this file's own note cluster.
+  D-08's no-partial-pass rule applies: **Phase 34.4.2 STILL DOES NOT CLOSE.** Next: **`/gsd-debug`**
+  — unlike gap cycle 5's own three contract defects (F-A/F-B/F-C, all now fixed), F-34.4.2-19 is an
+  undiagnosed app-level defect, so `/gsd-plan-phase 34.4.2 --gaps` is NOT correct. Plan 25
+  (`34.4.2-VERIFICATION.md` refresh) remains unstarted. See `34.4.2-LIVE-GATE-RERUN-5.md` and
+  `34.4.2-24-SUMMARY.md` for full detail.
+
+  --- historical: the prior session's own continuity record follows, preserved as-is ---
 
 Last session: 2026-08-06T10:33:07.146Z
 Stopped at: Completed 34.4.2-23-PLAN.md
