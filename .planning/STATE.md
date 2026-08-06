@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.2-20-PLAN.md
-last_updated: "2026-08-06T20:00:00.000Z"
-last_activity: 2026-08-06 -- Phase 34.4.2 plan 20 executed (blocking live gate RAN, VERDICT FAIL 1/6 -- phase NOT COMPLETE, gap cycle 5 required)
+stopped_at: Planned 34.4.2-21..25 (gap cycle 5) -- ready to execute
+last_updated: "2026-08-06T21:30:00.000Z"
+last_activity: 2026-08-06 -- Phase 34.4.2 gap cycle 5 PLANNED (plans 21-25, 4 waves, 0 executed). Scoped against RERUN-4's three measured contract defects (F-34.4.2-16/-17/-15), not against app-level bugs. Binding operator decisions D-G1 (withdraw item 5 as UI-unreachable, pin the frontend mechanism), D-G2 (unscored preparatory disconnect so item 4 has a login form), D-G3 (all items re-measured, nothing inherited).
 progress:
   total_phases: 20
   completed_phases: 13
-  total_plans: 211
+  total_plans: 216
   completed_plans: 200
   percent: 93
 ---
