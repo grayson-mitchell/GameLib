@@ -6866,15 +6866,26 @@ mod tests {
                 }
             }
 
+            // The message below is built with `concat!` rather than a `\`-continued multi-line
+            // literal (which the ORIGINAL pin's own two messages used): a backslash-continued
+            // literal's OPENING and CLOSING physical lines each carry an odd, unbalanced `"`
+            // count in isolation, which is exactly the truncated-string-literal shape
+            // `longRunningChannels.test.ts`'s WR-08 guard exists to catch -- it cannot tell that
+            // shape apart from a genuine defect. `concat!` joins several COMPLETE,
+            // self-contained (and therefore individually balanced) string literals at compile
+            // time into the identical runtime message, with no `\`-continuation involved.
             assert_eq!(
                 guard.as_deref(),
                 Some("#[cfg(not(target_os = \"macos\"))]"),
-                "F-34.4.2-12 regression: `{arm}` has an unconditional (or macOS-reachable) wry \
-                 `.cookies()` call at main.rs line {} (`{}`). This getter blocks the calling \
-                 closure inside a reentrant NSRunLoop pump that can self-deadlock against \
-                 tao's EventLoopHandler mutex on macOS -- live-reproduced 2/2, see \
-                 `.planning/debug/resolved/humble-disconnect-main-wedge.md`. It must only ever \
-                 be reached via `#[cfg(not(target_os = \"macos\"))]`.",
+                concat!(
+                    "F-34.4.2-12 regression: `{}` has an unconditional (or macOS-reachable) ",
+                    "wry `.cookies()` call at main.rs line {} (`{}`). This getter blocks the ",
+                    "calling closure inside a reentrant NSRunLoop pump that can self-deadlock ",
+                    "against tao's EventLoopHandler mutex on macOS -- live-reproduced 2/2, see ",
+                    "`.planning/debug/resolved/humble-disconnect-main-wedge.md`. It must only ",
+                    "ever be reached via `#[cfg(not(target_os = \"macos\"))]`."
+                ),
+                arm,
                 i + 1,
                 trimmed
             );
@@ -6903,26 +6914,37 @@ mod tests {
         expected.sort();
         let mut actual = found_sites.clone();
         actual.sort();
+        // `concat!`, not a `\`-continued literal -- see the comment above the first `assert_eq!`
+        // in this test for why (WR-08).
         assert_eq!(
-            actual, expected,
-            "F-34.4.2-12 regression pin: the set of macOS-reachable-gated `.cookies()` call \
-             sites no longer matches the exact expected set (four sites across three arms -- \
-             `humble_login_clear_cookies` alone carries two, separately guarded; the other two \
-             arms carry one each; neither number is a typo). A mismatch means either a genuine \
-             regression (a new macOS-reachable blocking call) or that an arm was restructured; \
-             in the restructuring case, re-derive and re-review this expected set from a fresh \
-             measurement -- never widen it just to make this test pass."
+            actual,
+            expected,
+            concat!(
+                "F-34.4.2-12 regression pin: the set of macOS-reachable-gated `.cookies()` ",
+                "call sites no longer matches the exact expected set (four sites across three ",
+                "arms -- `humble_login_clear_cookies` alone carries two, separately guarded; ",
+                "the other two arms carry one each; neither number is a typo). A mismatch ",
+                "means either a genuine regression (a new macOS-reachable blocking call) or ",
+                "that an arm was restructured; in the restructuring case, re-derive and ",
+                "re-review this expected set from a fresh measurement -- never widen it just ",
+                "to make this test pass."
+            )
         );
 
         // Load-bearing, not decorative: if this assertion ever fails, the matcher above has
         // silently narrowed back to prefix matching and would once again miss the split-line
         // shape (`window` / `.cookies()`) that is the debug session's own recorded blind spot.
+        // `concat!`, not a `\`-continued literal -- see the comment above the first
+        // `assert_eq!` in this test for why (WR-08).
         assert!(
             found_split_line_shape,
-            "F-34.4.2-12 regression pin: expected to find at least one call site whose trimmed \
-             text is exactly `.cookies()` (the split-line `window` / `.cookies()` shape already \
-             present in `humble_login_clear_cookies`'s deletion branch). Its absence means the \
-             matcher has stopped recognising call sites split across lines."
+            concat!(
+                "F-34.4.2-12 regression pin: expected to find at least one call site whose ",
+                "trimmed text is exactly `.cookies()` (the split-line `window` / `.cookies()` ",
+                "shape already present in `humble_login_clear_cookies`'s deletion branch). Its ",
+                "absence means the matcher has stopped recognising call sites split across ",
+                "lines."
+            )
         );
     }
 }
