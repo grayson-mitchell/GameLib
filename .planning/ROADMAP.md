@@ -1578,9 +1578,9 @@ in-field autofill affordance is DELETED, not shipped** (operator decision D-A, 2
 spike 022's Recommendation #4. **Cmd+V and Edit ▸ Paste are the sole credential-entry route.**
 **Requirements**: REQ-34.4.2-01, REQ-34.4.2-02, REQ-34.4.2-03, REQ-34.4.2-04, REQ-34.4.2-05, REQ-34.4.2-06, REQ-34.4.2-07, REQ-34.4.2-08, REQ-34.4.2-09, REQ-34.4.2-10 (minted by plan 34.4.2-01; the ID rows themselves land in `REQUIREMENTS.md` when that plan executes. **REQ-34.4.2-10 is the Epic descope**, minted so the exclusion is machine-enforceable rather than a comment; 01/04/06 were narrowed from "both login surfaces" to the Tauri-managed surface. No ID was deleted or renumbered.)
 **Depends on:** Phase 34.4.1 (the login-window seam these behaviors attach to — COMPLETE)
-**Plans:** 16/16 plans executed — gap cycle 3 fully executed; a genuine 6/6 gate PASS was NOT
-achieved (5/6, item 6 FAIL), so **a further gap cycle 4 is required** and this count will grow
-again once it is planned.
+**Plans:** 20 plans — 16/20 executed. Gap cycle 4 PLANNED 2026-08-06 (plans 17-20, 4 waves);
+a genuine 6/6 gate PASS has never been achieved in this phase's five-gate history, so the phase
+does not close until plan 34.4.2-20 records one.
 
 **Status: GAP CYCLE 3 LIVE GATE RAN 2026-08-05 — FAIL, 5/6 (item 6 the sole FAIL, a NEW blocking
 defect) — PHASE STILL DOES NOT CLOSE.** `34.4.2-16-PLAN.md`'s blocking gate ran in full against
@@ -1810,6 +1810,33 @@ writes a verdict; D-F no-partial-pass — the phase closes only on a genuine 6/6
 - [x] 34.4.2-14-PLAN.md — Close T-34.4.2-39: a `#[cfg(target_os = "macos")]` single-flight guard refusing a second VISIBLE login window at the shell entry point while another is pending or presented, so AppKit is never asked to queue a second sheet. Hidden reveal/clear windows and Epic are structurally exempt; the latch clears on all three resolution paths and expires on a TTL derived from the existing 15s watchdog so it can never become a lock-out of its own (new threat T-34.4.2-41). The residual pre-`humble_login_open` interval is documented, not overclaimed. (wave 2)
 - [x] 34.4.2-15-PLAN.md — Correct the falsified project-knowledge artifact `login-window-ux-macos.md` (Recommendation #4 FALSIFIED at the point of use, Recommendation #1/§1/§2 SUPERSEDED, a Current-status block above both), fold gate run 2's orphaned findings (F-34.4.2-06..10, T-34.4.2-39, the contract-authoring-defect pattern) into `deferred-items.md`, author `34.4.2-LIVE-GATE-RERUN-3.md` (`verdict: null`, six items — item 3 becomes an ABSENCE check absorbing the retired kill-switch item, item 5 is new for T-34.4.2-39, and the four prior PASSes are RE-MEASURED not inherited), and run a **Structural Reachability Review** over every item and precondition before any live run. **Forbidden from running any gate item or writing any verdict.** (wave 3)
 - [x] 34.4.2-16-PLAN.md — **BLOCKING live gate re-run** on real macOS hardware against `34.4.2-LIVE-GATE-RERUN-3.md`; sole writer of `verdict`/`run_date`/`items_passed`, filled from a measured run and never from expectation (T-34.4.2-25). Bidirectional preflight symbol check (current literals present AND deleted literals absent — a surviving `post_autofill_right_click` means the binary predates plan 13 and the run must not start); no DummyStore harness is started (the https-only gate makes it unreachable); mandatory evidence capture `npm run tauri:dev 2>&1 | tee /tmp/gamelib-dev.log`. Also corrects this phase's stale ROADMAP Goal text and records D-A in STATE.md's Decisions. (wave 4, non-autonomous) — **RAN 2026-08-05, VERDICT FAIL, items_passed 5/6** (items 1-5 PASS — items 1/2/4 RE-measured against Plans 13/14's changed source, items 3/5 measured live for the FIRST time ever this phase; item 6 FAIL — a NEW blocking main-thread wedge on Humble disconnect, F-34.4.2-12, escalating F-34.4.2-10, item 6(b) Epic consequently NOT ATTEMPTED). New threat T-34.4.2-43 minted (DoS, OPEN, BLOCKING). Also surfaced F-34.4.2-11: the contract's own mandatory `tee` truncation collides with item 3(c)'s mandatory relaunch — items 3/5 PASS on the operator's word alone, with NO surviving transcript corroboration, honestly recorded rather than fabricated (a fifth contract-authoring-defect instance, the first that is an interaction defect plan 15's per-item Structural Reachability Review could not have caught). See `34.4.2-LIVE-GATE-RERUN-3.md` and `34.4.2-16-SUMMARY.md`. **Phase 34.4.2 STILL DOES NOT CLOSE** — gap cycle 4 required, `/gsd-plan-phase 34.4.2 --gaps`.
+
+**Gap cycle 4 (planned 2026-08-06, after `/gsd-debug` diagnosed and fixed F-34.4.2-12 — 4 plans, 4 waves):**
+
+**F-34.4.2-12 is CLOSED, and the VERIFICATION.md gap that named it is STALE.** A `/gsd-debug`
+session took a live `sample` of the hung process: 4185/4185 samples in one identical frame chain,
+naming a **reentrancy self-deadlock on tao's `EventLoopHandler` handler mutex** — wry's blocking
+`WebviewWindow::cookies()` reentrantly pumps `NSRunLoop::mainRunLoop()` from inside
+`handle_user_message`, itself inside `with_callback` which already holds tao's handler `Mutex`; a
+CoreAnimation flush drives tao's redraw path into relocking the mutex it owns. Candidates (a) and
+(b) from the gate document are **FALSIFIED**; (c) is SUBSUMED, not eliminated. **A timeout cannot
+fix this** — the block sits below where any Tauri-side receive timeout lives. Fixed in `6bad86227`
+by the async `WKHTTPCookieStore.getAllCookies(completionHandler:)` pattern, live-verified across
+four independent channels. `34.4.2-VERIFICATION.md`'s gap 1 therefore asks for a discriminator and
+a timeout that are both already known to be wrong answers, and plan 18 corrects it in place.
+
+Two further contract-authoring defects are in scope: **F-34.4.2-11** (the mandatory truncating
+`tee` colliding with a mandatory mid-run relaunch — items 3 and 5 PASSED on the operator's word
+alone) and **F-34.4.2-14** (three required lines demanded of the terminal transcript when they are
+sidecar `logInfo` output landing in `gamelib.log`, which itself rotates on every launch). Both are
+fixed by a dual-sink append-and-archive capture standard, and the Structural Reachability Review
+gains a **fifth defect-class test whose unit of review is the requirement PAIR** — the class that
+structurally could not be caught by four per-requirement tests.
+
+- [ ] 34.4.2-17-PLAN.md — Port `humble_login_cookies` (the `watchForLogin()` poll direction, the debug session's own recorded residual) onto the async `WKHTTPCookieStore` pattern, macOS-gated, non-macOS byte-unchanged (D-09); make the F-34.4.2-12 regression pin **shape-robust** across all three cookie-reading arms — substring detection with comment skipping, a minimum found-count, and a split-line self-test — replacing the two literal call-site prefixes that would have missed the `window` / `.cookies()` form already present at `main.rs:4237-4238` (wave 1)
+- [ ] 34.4.2-18-PLAN.md — Correct `34.4.2-VERIFICATION.md`'s gap-1 record in place (two `missing:` bullets marked CLOSED with `6bad86227`, candidates (a)/(b) FALSIFIED, (c) SUBSUMED, the timeout shape called wrong); give F-34.4.2-11/-12/-13/-14 and T-34.4.2-43 honest ledger dispositions; and write the **standing** `references/live-gate-contract-authoring.md` — five defect-class tests (Test 3 gains a SINK clause, Test 5 takes the requirement PAIR as its unit) plus the dual-sink evidence-capture standard, indexed in `SKILL.md` so it applies to every future gate contract (wave 2)
+- [ ] 34.4.2-19-PLAN.md — Author `34.4.2-LIVE-GATE-RERUN-4.md` (`verdict: null`), **all six items re-measured, none inherited** (D-F1); every required literal annotated with the sink that actually carries it; item **6(b) ordered FIRST in its own launch** so a 6(a) regression cannot foreclose it a sixth time; item 6(a) carrying dual-channel evidence (the `gamelib.log` census line plus the `humble_store/config.json` filesystem proof); the five-test Structural Reachability Review run and recorded BEFORE any live run. **Forbidden from running any item** (D-E) (wave 3)
+- [ ] 34.4.2-20-PLAN.md — **BLOCKING live gate** on real macOS hardware against `34.4.2-LIVE-GATE-RERUN-4.md`; sole writer of `verdict`/`run_date`/`items_passed`; dual-sink per-launch capture with delimiters and `gamelib.log` archiving; a `sample` capture mandated before any force-kill; requirement boxes tick **if and only if** the verdict is a genuine 6/6 (D-08), enforced mechanically by the task's own verify command (wave 4, non-autonomous)
 
 **Gap-cycle-3 scope note:** WR-02, WR-05, WR-08, IN-01, IN-03 and IN-04 stay deferred and unfixed.
 WR-06 (the poster's debounce-eviction fairness) and the standing plan-09 finding (the glyph's un-gated
