@@ -223,6 +223,16 @@ export default function WebView() {
 
   useEffect(() => {
     if (pathname !== '/loginweb/nile') return
+    // Quick task 260806-teb Task 1: under Tauri this effect's only two consumers are
+    // BOTH unreachable -- `urls['/loginweb/nile']` feeds the `<webview>` `src`, which is
+    // never rendered under Tauri (the render returns `<TauriLoginPanel>` first), and
+    // `handleAmazonLogin` is only reached via the webview event-listener effect, whose
+    // `webviewRef.current` stays null. So this effect used to pay a ~12.8s `nile auth`
+    // spawn (pyinstaller-onefile-spawn-tax) purely to discard the result, racing
+    // useTauriOAuthLogin.ts:196's OWN getAmazonLoginData() call -- the one that actually
+    // feeds the sign-in window. Do NOT "restore" this as dead defensive code:
+    // useTauriOAuthLogin.ts is the single remaining owner of that fetch under Tauri.
+    if (isTauri()) return
     console.log('Loading amazon login data')
 
     setLoading({
