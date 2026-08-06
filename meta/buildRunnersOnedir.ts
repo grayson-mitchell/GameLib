@@ -284,7 +284,7 @@ export function extractUpstreamPyinstallerCommand(
   // workingDirectory) pairs number more than one; the error message still
   // names every matching file for auditability.
   const distinctPairs = new Set(
-    matches.map((m) => `${m.command} ${m.workingDirectory ?? ''}`)
+    matches.map((m) => JSON.stringify([m.command, m.workingDirectory ?? null]))
   )
   if (distinctPairs.size > 1) {
     throw new Error(
@@ -426,12 +426,21 @@ async function cloneRepo(
 ): Promise<void> {
   rmSync(destDir, { recursive: true, force: true })
   mkdirSync(join(destDir, '..'), { recursive: true })
+  // Rule 1 fix (found live during this plan's real gogdl build): heroic-gogdl
+  // vendors its xdelta3 C dependency as a git submodule (.gitmodules ->
+  // jmacd/xdelta.git @ a pinned commit), and its own CI checks it out with
+  // actions/checkout's `submodules: 'true'`. Without --recurse-submodules the
+  // clone leaves xdelta3/ empty, and pip's native-extension build fails with
+  // "xdelta3/xdelta3.h file not found". Not shallow-submodules deliberately:
+  // the pinned submodule commit is not guaranteed to be its branch tip, and a
+  // shallow submodule clone can fail to reach an older pinned commit.
   await runOrThrow(`git clone of ${repo}@${tag}`, 'git', [
     'clone',
     '--branch',
     tag,
     '--depth',
     '1',
+    '--recurse-submodules',
     `https://github.com/${repo}`,
     destDir
   ])
