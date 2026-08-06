@@ -2305,7 +2305,7 @@ REQ-34.9-07, REQ-34.9-08, REQ-34.9-09, REQ-34.9-10, REQ-34.9-11 (minted 2026-08-
 ticked only by measured evidence)
 **Depends on:** Phase 34 (packaging/signing/notarization pipeline). Independent of the 34.1-34.8
 IPC slices. Runs before Phase 35, which will later delete the Electron half of the signing work.
-**Plans:** 11 plans in 7 waves
+**Plans:** 11 plans in 7 waves · validation contract: `34.9-VALIDATION.md`
 
 **Scope note (planning, 2026-08-07):** `R-34.5-G1-PKG` — the packaged Tauri asset root does not
 resolve, because `electronStub.app.isPackaged` stays `false` under the sidecar so `publicDir`
@@ -2327,7 +2327,7 @@ Plans:
 - [ ] 34.9-02-PLAN.md — `archSpecificBinary()` resolves nested darwin paths for three runners; alt*Bin bypass and stale-layout throw (wave 1)
 - [ ] 34.9-03-PLAN.md — Build all three on arm64 and MEASURE cold/warm per runner against the vendored onefile control (wave 2)
 - [ ] 34.9-04-PLAN.md — `build-runners-onedir-macos.yml`: macos-13/macos-14 matrix publishing to a rolling prerelease (wave 2)
-- [ ] 34.9-05-PLAN.md — Upstream PR patches + bodies for nile/legendary/heroic-gogdl; developer submits (wave 2)
+- [ ] 34.9-05-PLAN.md — Upstream PR patches + bodies for nile/legendary/heroic-gogdl; developer submits (wave 3 — sequenced AFTER 34.9-03 so every PR body cites its own runner's measured figures)
 - [ ] 34.9-06-PLAN.md — Downloader: darwin archives, sha256-verified against in-repo digests, layout-aware freshness (wave 3)
 - [ ] 34.9-07-PLAN.md — electron-builder + Tauri packaging config, and the packaging-limitations record (wave 4)
 - [ ] 34.9-08-PLAN.md — `meta/verifyRunnerBundle.ts`: inspect a BUILT artifact, report per-file signature state (wave 4)
