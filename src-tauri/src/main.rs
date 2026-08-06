@@ -6753,9 +6753,9 @@ mod tests {
 
     // ---- F-34.4.2-12 regression pin: Humble disconnect main-thread wedge ----
     //
-    // `.planning/debug/humble-disconnect-main-wedge.md`. Live-reproduced 2/2: disconnect's
-    // cookie census/count (`humble_login_cookies_for_domain`'s `readCensus()` backing, and
-    // `humble_login_clear_cookies`'s `count_matching` closure) fires FOUR wry
+    // `.planning/debug/resolved/humble-disconnect-main-wedge.md`. Live-reproduced 2/2:
+    // disconnect's cookie census/count (`humble_login_cookies_for_domain`'s `readCensus()`
+    // backing, and `humble_login_clear_cookies`'s `count_matching` closure) fires FOUR wry
     // `WebviewWindow::cookies()` round trips against a just-created hidden WKWebView. On macOS
     // each blocks inside wry's `wait_for_blocking_operation`, which reentrantly pumps
     // `NSRunLoop::mainRunLoop()` from INSIDE tao's `EventLoopHandler::with_callback` (already
@@ -6765,30 +6765,55 @@ mod tests {
     // state) confirmed this exact frame chain -- see the debug session's Evidence for the full
     // backtrace and durable evidence file paths.
     //
+    // Gap cycle 4 / D-F2: `humble_login_cookies` (the LOGIN-POLL direction used by
+    // `watchForLogin()`) was the one call site the original fix session deliberately left out
+    // of scope -- it shares the identical wry-internal hazard mechanically (a DIFFERENT call
+    // pattern: one call per poll tick against a settled, already-visible window, with zero live
+    // evidence of failure, versus the four-call burst against a freshly-created hidden window
+    // that reproduced the deadlock), and D-F2 brought it into scope for this cycle. It is now
+    // fixed the same way and is CHECKED by this pin below -- the instruction that it "must NOT
+    // be checked by this pin" is superseded and no longer applies.
+    //
+    // The debug session's own `## Residual Risks` also recorded this pin's second limitation:
+    // the original matcher matched only two exact call-site prefixes (`Ok(w.cookies()` and
+    // `let all = window.cookies()`) and would not catch a blocking `.cookies()` written with a
+    // different binding name, split across lines, or added at a third site -- there is a live
+    // example of exactly that missed shape in this file (`humble_login_clear_cookies`'s
+    // deletion branch, where `window` and `.cookies()` are split across two lines). D-F2
+    // requires the pin be shape-robust, not merely given a third literal, so the matcher below
+    // is a `.cookies()` CONTAINS scan over non-comment lines instead.
+    //
     // A live end-to-end reproduction of the deadlock itself is NOT safely automatable here: it
     // requires a real, contended AppKit/WebKit run loop, and a flaky or genuinely-hanging
     // assertion would defeat its own purpose (and could hang CI) -- the same reason
     // `#[cfg(test)] mod tests` elsewhere in this file cannot construct a live `AppHandle` at
     // all (see this file's own comment near `mod tests`, above). This test instead pins the
     // STRUCTURAL fix, the same "prove it against the source" discipline
-    // `seamBranchParity.test.ts` already uses on the TypeScript side of this codebase: neither
-    // implicated arm may reach wry's blocking `.cookies()` on macOS ever again. Runs on every
-    // platform (`include_str!` just reads text; it does not need to compile the macOS-only
-    // code it is checking).
+    // `seamBranchParity.test.ts` already uses on the TypeScript side of this codebase: it is a
+    // STRUCTURAL source scan, not a behavioural test, and does not itself prove the deadlock
+    // cannot recur -- only that no macOS-reachable call site of the eliminated shape currently
+    // exists in the three arms it covers. Runs on every platform (`include_str!` just reads
+    // text; it does not need to compile the macOS-only code it is checking).
     #[test]
     fn f_34_4_2_12_wry_blocking_cookies_calls_are_macos_gated() {
         let source = include_str!("main.rs");
         let lines: Vec<&str> = source.lines().collect();
 
-        // Only these two arms were touched by F-34.4.2-12's fix. `humble_login_cookies` (the
-        // LOGIN-POLL direction used by `watchForLogin()`) shares the identical wry-internal
-        // hazard mechanically, but is a DIFFERENT call pattern (a single call per poll tick,
-        // against a visible window already past its initial CA-transaction burst) with zero
-        // live evidence of failure, and was explicitly left out of this session's scope (see
-        // the debug session's Evidence) -- it must NOT be checked by this pin.
-        let target_arms = ["humble_login_cookies_for_domain", "humble_login_clear_cookies"];
+        // All three cookie-reading dispatch arms are now in scope (D-F2): the login-poll read,
+        // the disconnect census, and the disconnect count/removal arm.
+        let target_arms = [
+            "humble_login_cookies",
+            "humble_login_cookies_for_domain",
+            "humble_login_clear_cookies",
+        ];
         let mut current_arm: Option<&str> = None;
-        let mut checked_any = false;
+        // (arm, guard) pairs for every matched call site, in scan order -- asserted as an EXACT
+        // structural set below, not a floor. This also lets a site MIGRATE between arms or
+        // silently LOSE its guard without the raw count changing, and still be caught.
+        let mut found_sites: Vec<(&str, String)> = Vec::new();
+        // Load-bearing self-test (see below): proves the matcher recognises the split-line
+        // shape `window` / `.cookies()`, not only single-line prefixes.
+        let mut found_split_line_shape = false;
 
         for (i, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
@@ -6805,16 +6830,24 @@ mod tests {
                 continue;
             };
 
-            // The exact two call shapes this bug's fix eliminated from the macOS-reachable
-            // path: `humble_login_cookies_for_domain`'s direct read, and
-            // `humble_login_clear_cookies`'s `count_matching` closure's read (used for both
-            // its before- and after-removal counts).
-            let is_call_site = trimmed.starts_with("Ok(w.cookies()")
-                || trimmed.starts_with("let all = window.cookies()");
+            // Comment lines are skipped -- several legitimate comments in these arms mention
+            // `window.cookies()`/`.cookies()` by name (this pin's own doc comment above is one),
+            // and a naive substring scan would flag them. `*` covers this file's block-comment
+            // continuation lines. `cookies_for_url` is skipped too: it is separately forbidden
+            // everywhere in this file (a different pin's subject), not this scan's.
+            if trimmed.starts_with("//") || trimmed.starts_with('*') {
+                continue;
+            }
+            if trimmed.contains("cookies_for_url") {
+                continue;
+            }
+            let is_call_site = trimmed.contains(".cookies()");
             if !is_call_site {
                 continue;
             }
-            checked_any = true;
+            if trimmed == ".cookies()" {
+                found_split_line_shape = true;
+            }
 
             // Walk backward to the nearest preceding `#[cfg(...)]` attribute line. A
             // legitimate SURVIVING call site must be immediately (modulo blank/comment lines)
@@ -6840,18 +6873,56 @@ mod tests {
                  `.cookies()` call at main.rs line {} (`{}`). This getter blocks the calling \
                  closure inside a reentrant NSRunLoop pump that can self-deadlock against \
                  tao's EventLoopHandler mutex on macOS -- live-reproduced 2/2, see \
-                 `.planning/debug/humble-disconnect-main-wedge.md`. It must only ever be \
-                 reached via `#[cfg(not(target_os = \"macos\"))]`.",
+                 `.planning/debug/resolved/humble-disconnect-main-wedge.md`. It must only ever \
+                 be reached via `#[cfg(not(target_os = \"macos\"))]`.",
                 i + 1,
                 trimmed
             );
+
+            found_sites.push((arm, guard.unwrap_or_default()));
         }
 
+        // EXACT structural expectation, not a floor (D-F2). "Three arms" and "four sites" are
+        // DIFFERENT numbers and neither is a typo: `humble_login_clear_cookies` alone carries
+        // TWO separately-guarded sites (the `count_matching` read and the deletion branch's
+        // split-line read), the other two arms carry one each. A floor (e.g. `>= 4`) cannot
+        // detect a site DISAPPEARING if the disappearance lands on the floor's own slack; exact
+        // equality on the full `(arm, guard)` multiset fails loudly on disappearance, on
+        // unreviewed addition, on a site MIGRATING between arms, and on a site silently LOSING
+        // its guard -- none of which necessarily changes the bare count. If this assertion ever
+        // fails because an arm was genuinely restructured (not because a call site regressed),
+        // the expected set below must be RE-DERIVED from a fresh measurement and re-reviewed --
+        // never widened or loosened just to make the test pass.
+        let guard_ok = "#[cfg(not(target_os = \"macos\"))]".to_string();
+        let mut expected: Vec<(&str, String)> = vec![
+            ("humble_login_cookies", guard_ok.clone()),
+            ("humble_login_cookies_for_domain", guard_ok.clone()),
+            ("humble_login_clear_cookies", guard_ok.clone()),
+            ("humble_login_clear_cookies", guard_ok),
+        ];
+        expected.sort();
+        let mut actual = found_sites.clone();
+        actual.sort();
+        assert_eq!(
+            actual, expected,
+            "F-34.4.2-12 regression pin: the set of macOS-reachable-gated `.cookies()` call \
+             sites no longer matches the exact expected set (four sites across three arms -- \
+             `humble_login_clear_cookies` alone carries two, separately guarded; the other two \
+             arms carry one each; neither number is a typo). A mismatch means either a genuine \
+             regression (a new macOS-reachable blocking call) or that an arm was restructured; \
+             in the restructuring case, re-derive and re-review this expected set from a fresh \
+             measurement -- never widen it just to make this test pass."
+        );
+
+        // Load-bearing, not decorative: if this assertion ever fails, the matcher above has
+        // silently narrowed back to prefix matching and would once again miss the split-line
+        // shape (`window` / `.cookies()`) that is the debug session's own recorded blind spot.
         assert!(
-            checked_any,
-            "F-34.4.2-12 regression pin found no `.cookies()` call sites in \
-             `humble_login_cookies_for_domain`/`humble_login_clear_cookies` to check -- have \
-             these arms been restructured? Update this test's patterns to match the new shape."
+            found_split_line_shape,
+            "F-34.4.2-12 regression pin: expected to find at least one call site whose trimmed \
+             text is exactly `.cookies()` (the split-line `window` / `.cookies()` shape already \
+             present in `humble_login_clear_cookies`'s deletion branch). Its absence means the \
+             matcher has stopped recognising call sites split across lines."
         );
     }
 }
