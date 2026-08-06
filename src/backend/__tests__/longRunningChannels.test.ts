@@ -200,6 +200,33 @@ function stripRustRawStrings(source: string): string {
 }
 
 /**
+ * Removes Rust ESCAPE SEQUENCES (`\"`, `\\`, `\n`, `\'`, ...) from `source`.
+ *
+ * Same class of false positive as the two normalizers above, third variant. The WR-08 guards count
+ * bare `"` occurrences; an ESCAPED quote inside an ordinary string literal is not a delimiter, but
+ * a naive count treats it as one. `main.rs`'s F-34.4.2-12 pin carries the canonical case —
+ * `trimmed.ends_with("\" => {")` counts three `"` and reads as "unbalanced" even though the line is
+ * perfectly balanced Rust. Without this pass the guard reports a defect in correct source.
+ *
+ * Removing the whole two-character escape (`\\.`) rather than just `\"` is what makes the ordering
+ * safe: a literal backslash is written `\\`, so in `"\\"` the regex consumes the `\\` pair FIRST
+ * (left-to-right) and leaves `""` balanced. Matching `\"` alone would instead consume the closing
+ * delimiter of that same literal and manufacture the very imbalance this pass exists to remove.
+ *
+ * `.` deliberately does NOT match a newline, so a `\`-continued multi-line string literal keeps its
+ * trailing backslash and its opening/closing lines still read as odd. That shape is a REAL finding
+ * the guard is meant to report (it is indistinguishable from a stripper-truncated literal), so this
+ * pass must not launder it away.
+ *
+ * MUST run after `stripRustRawStrings` — a raw string's body may contain backslashes that are not
+ * escapes at all (`r"C:\path\n"`), and eating them there would corrupt the very text the raw-string
+ * pass is careful to blank out while preserving line counts.
+ */
+function stripRustEscapes(source: string): string {
+  return source.replace(/\\./g, '')
+}
+
+/**
  * True if `source` contains a `#[cfg(test)]` module that genuinely exercises `timeout_for` via a
  * real `assert_eq!` call (not merely the identifier appearing somewhere in the region) and
  * iterates `LONG_RUNNING_CHANNELS` (rather than hardcoding a second duplicate list).
@@ -380,7 +407,9 @@ describe('REQ-34.2-12 main.rs LONG_RUNNING_CHANNELS exemption list (D-10)', () =
  */
 describe('stripper integrity (WR-08)', () => {
   test('the real file: stripping does not cut a string literal in half (quote count stays EVEN)', () => {
-    const stripped = stripRustCharLiterals(stripRustRawStrings(loadMainRsCode()))
+    const stripped = stripRustCharLiterals(
+      stripRustEscapes(stripRustRawStrings(loadMainRsCode()))
+    )
     const quoteCount = (stripped.match(/"/g) ?? []).length
     // Plain `toBe(0)` would only report "Expected: 0, Received: 1" on failure — the raw count
     // itself (needed to locate which literal got cut) would be lost. Assert via a labeled
@@ -398,7 +427,9 @@ describe('stripper integrity (WR-08)', () => {
       .map((line, index) => ({
         index,
         line,
-        quoteCount: (stripRustCharLiterals(line).match(/"/g) ?? []).length
+        quoteCount: (
+          stripRustCharLiterals(stripRustEscapes(line)).match(/"/g) ?? []
+        ).length
       }))
       .filter(({ quoteCount }) => quoteCount % 2 !== 0)
     // Reporting the full list of unbalanced lines (not just a boolean) makes a future failure
@@ -417,6 +448,34 @@ describe('stripper integrity (WR-08)', () => {
     )
     const truncated = stripRustCharLiterals('let s = "steam://')
     expect((truncated.match(/"/g) ?? []).length % 2).toBe(1)
+  })
+
+  test('stripRustEscapes neutralises escaped quotes without laundering real findings', () => {
+    // The case that made this normalizer necessary: main.rs's F-34.4.2-12 pin. Balanced Rust that
+    // a bare `"`-count calls unbalanced (3) until the `\"` escape is removed.
+    const pinLine = 'if trimmed.ends_with("\\" => {") {'
+    expect((pinLine.match(/"/g) ?? []).length % 2).toBe(1)
+    expect((stripRustEscapes(pinLine).match(/"/g) ?? []).length % 2).toBe(0)
+
+    // Ordering proof, and the reason the pass eats `\\.` rather than `\"`. In `"\\"` the escaped
+    // BACKSLASH must be consumed first; a `\"`-only pass would eat the closing delimiter instead
+    // and manufacture an imbalance. Left-to-right `\\.` gets this right.
+    expect((stripRustEscapes('let s = "\\\\";').match(/"/g) ?? []).length).toBe(
+      2
+    )
+
+    // MUST still fail loudly. A genuinely truncated literal has no escape to remove, so it stays
+    // odd — the normalizer narrows false positives, it does not blunt the guard.
+    expect(
+      (stripRustEscapes('let s = "steam://').match(/"/g) ?? []).length % 2
+    ).toBe(1)
+
+    // A `\`-continued multi-line literal must STAY odd on its opening line: that shape is
+    // indistinguishable from a stripper-truncated literal and is a real finding to report. `.`
+    // not matching a newline is what preserves this.
+    const continued = 'let s = "first half \\\n             second half";'
+    const openingLine = stripRustEscapes(continued).split('\n')[0]
+    expect((openingLine.match(/"/g) ?? []).length % 2).toBe(1)
   })
 
   // WR-08 is now RESOLVED rather than merely predicted (34.4.1 Plan 01 post-merge gate).
