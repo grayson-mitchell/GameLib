@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.2-23-PLAN.md
+stopped_at: 34.4.2 gap cycle 5 -- plans 21-23 EXECUTED, waves 3-4 (plans 24-25) DEFERRED by operator decision. Phase NOT CLOSED.
 last_updated: "2026-08-06T10:33:07.160Z"
-last_activity: 2026-08-06
+last_activity: 2026-08-06 -- Phase 34.4.2 gap cycle 5 PARTIALLY executed (plans 21, 22, 23 complete; 24, 25 not started). Wave 1: Tests 6-7 + coverage map added to live-gate-contract-authoring.md (tally now eight); loginInFlightUiReachability.test.tsx pins the real UI mechanism behind F-34.4.2-17 with 5 mutation-proven gates. Wave 2: 34.4.2-LIVE-GATE-RERUN-5.md authored (verdict null, items_total 5, item 5 permanently WITHDRAWN per D-G1) -- the seventh blocking contract, first whose items are all reachable. FALSIFIED: the recorded 'frontend disables/clears the other login buttons' characterisation is WRONG -- all six tiles pass an identical disabled={oldMac} (macOS-version check only); the real mechanism is Runner.handleLogin() navigating to the sibling loginweb/:runner route, which unmounts the whole Login screen. STOPPED before wave 3 (the human live gate) by operator decision: a concurrent nile-latency session holds uncommitted src/frontend/screens/Login/index.tsx changes and a gamelib-shell instance was already running, either of which would make the RERUN-5 verdict untrustworthy under the contract's own single-instance abort rule.
 progress:
   total_phases: 20
   completed_phases: 13
   total_plans: 216
   completed_plans: 203
-  percent: 65
+  percent: 94
 ---
 
 # Project State
