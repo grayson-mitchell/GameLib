@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.2-22-PLAN.md
-last_updated: "2026-08-06T10:04:37.967Z"
-last_activity: "2026-08-06 - Phase 34.4.2 plan 22 executed: F-34.4.2-17 UI-reachability pin (loginInFlightUiReachability.test.tsx), correcting the disables/clears characterisation to navigation-unmounts-the-screen"
+stopped_at: Completed 34.4.2-23-PLAN.md
+last_updated: "2026-08-06T10:33:07.160Z"
+last_activity: 2026-08-06
 progress:
   total_phases: 20
   completed_phases: 13
   total_plans: 216
-  completed_plans: 202
+  completed_plans: 203
   percent: 65
 ---
 
@@ -480,7 +480,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — EXECUTING
 EXECUTED 2026-08-06, STILL DID NOT CLOSE (gate FAILED 1/6) -- gap cycle 5 required, NOT COMPLETE
-Plan: 22 of 25 complete -- executing gap cycle 5 (21-25)
+Plan: 23 of 25 complete -- executing gap cycle 5 (21-25)
 glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
 see 34.4.2-13-SUMMARY.md. Plan 14 EXECUTED 2026-08-05 -- T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW
 single-flight guard refuses a second visible login window while one is pending/presented, 25s TTL
@@ -2894,7 +2894,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-06 - Phase 34.4.2 plan 21 executed (gap cycle 5, plan 1 of 5): added Test 6
+Last activity: 2026-08-06
   (pre-existing external-state reachability) and Test 7 (UI-level reachability, distinct from
   backend-logic reachability) to live-gate-contract-authoring.md's Structural Reachability Review,
   closing the T-34.4.2-42 completeness gap RERUN-4 re-opened. Test 6's worked example cites
@@ -3582,6 +3582,7 @@ Closed/parked native-install phases:
 | Phase 34.4.2 P19 | 1h | 3 tasks | 3 files |
 | Phase 34.4.2 P21 | 20min | 2 tasks | 1 files |
 | Phase 34.4.2 P22 | 15min | 2 tasks | 1 files |
+| Phase 34.4.2 P23 | 70min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -4026,6 +4027,9 @@ Recent decisions affecting current work:
 - [Phase 34.4.2-21]: Section 1's tally counts eight contract-authoring defects (six prior + F-16/F-17); F-15/F-18 excluded as run-time capture-integrity defects (Section 3), a different category from Section 2's seven authoring-time tests.
 - [Phase 34.4.2-21]: Test 7's worked example describes what src/frontend/screens/Login/components/Runner/index.tsx:72 (navigate(props.loginUrl), unmounting the whole runnerGroup via a route change to loginweb/:runner) actually does, correcting deferred-items.md's approximate 'disables/clears the other login buttons' wording after re-confirming against current source.
 - [Phase 34.4.2-22]: F-34.4.2-17 CORRECTED (deferred-items.md/ROADMAP.md's "disables/clears the other login buttons" wording): five falsifiable source-text gates in loginInFlightUiReachability.test.tsx confirm the frontend does not disable/clear other login buttons during an in-flight login -- navigate(loginUrl) unmounts the whole runnerGroup container, taking every tile with it. Every pin proven falsifiable by a real reverted mutation. T-34.4.2-39/-41 basis is unit-proven + UI-pinned, never live-discharged.
+- [Phase 34.4.2]: D-G1: gate item 5 permanently WITHDRAWN (UI-unreachable, F-34.4.2-17); T-34.4.2-39/-41 basis restated unit-proven + UI-pinned, never live-discharged
+- [Phase 34.4.2]: D-G2: an unscored preparatory disconnect precedes items 1(e)/3(a)/4 in RERUN-5, requiring a rendered login form as the positive observable rather than an emptied store file (F-34.4.2-16 fix)
+- [Phase 34.4.2]: D-G3: all five RERUN-5 items are re-measured every run; the single-instance capture-integrity rule (F-34.4.2-15/-18) is implemented in a contract for the first time
 
 ### Pending Todos
 
@@ -4114,8 +4118,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-06T10:04:37.953Z
-Stopped at: Completed 34.4.2-22-PLAN.md
+Last session: 2026-08-06T10:33:07.146Z
+Stopped at: Completed 34.4.2-23-PLAN.md
   This session (sequential executor, Task 3 of plan 20): recorded and propagated the measured
   verdict from `34.4.2-LIVE-GATE-RERUN-4.md`, the blocking live gate the operator drove against
   the dual-sink evidence-capture standard for the first time. Filled all six items'
