@@ -518,3 +518,85 @@ BLOCKS the phase, routed to gap cycle 4 for diagnosis.**
   candidate layers before attempting any fix, per this phase's own standing lesson that when two
   readings of a measurement both fit, the next step is to build a discriminator, not ship the
   nicer-sounding cause.
+
+## Plans 17-18 — the wedge closed, its residual closed, and the review method upgraded (2026-08-06)
+
+**Disposition:** one blocking finding CLOSED (F-34.4.2-12), one residual CLOSED (F-34.4.2-13,
+newly minted and closed in the same cycle), one process finding whose FIX is now mandated by a
+standing reference but not yet applied (F-34.4.2-11, still OPEN), one new process finding minted
+and given the same fix-mandated disposition (F-34.4.2-14), and one threat closed at source only
+(T-34.4.2-43, live discharge still pending). F-34.4.2-10 is explicitly restated as still open.
+
+**F-34.4.2-12 — CLOSED (diagnosed, fixed, live-verified).** Root cause: reentrancy self-deadlock
+on tao's `EventLoopHandler` handler mutex via wry's blocking `WebviewWindow::cookies()` →
+`wait_for_blocking_operation` → reentrant `NSRunLoop` pump → CoreAnimation flush → tao's
+`handle_redraw` relocking the held mutex. Evidence: `sample` of the hung process, 4185/4185
+samples in the identical frame chain, durable at
+`.planning/debug/evidence/F-34.4.2-12-hang-sample-2026-08-06.txt`. Fix: commit `6bad86227`, async
+`WKHTTPCookieStore.getAllCookies(completionHandler:)` at both implicated call sites
+(`humble_login_cookies_for_domain`, `humble_login_clear_cookies`'s `count_matching` closure),
+macOS-gated, non-macOS unchanged (D-09). Verified across four independent channels: operator live
+repro (no beach-ball, disconnect completes), `cargo test` green (116 passed, 0 failed, 1 ignored)
+including the new regression pin, the genuinely-emptied 2-byte `humble_store/config.json`, and a
+fresh 197-line launch log reaching store teardown. Candidates (a) plan 13's `.on_navigation(`
+shared-closure arm removal and (b) plan 14's single-flight latch are **FALSIFIED** — no
+`.on_navigation` frame, no `/clear-storage` arm frame, no `beginSheet` frame anywhere in the
+4185-sample capture. Candidate (c) is **SUBSUMED, not eliminated** — execution deadlocks strictly
+before `clearHumbleStorage` runs, so (c)'s own bounded-timeout defect is neither confirmed nor
+refuted. **F-34.4.2-10's bounded-timeout debt in `clearHumbleStorage` (`src/backend/humble/user.ts:919-1116`)
+remains OPEN and unfixed** — it was simply never reached in the run that measured this defect, and
+must not be quietly folded into this closure.
+
+**F-34.4.2-13 (NEW, and CLOSED in the same cycle) — the login-poll cookie read shared the
+identical hazard.** File: `src-tauri/src/main.rs`, the `humble_login_cookies` dispatch arm (the
+`watchForLogin()` poll direction). Symptom: called wry's blocking `.cookies()` unconditionally on
+every platform — mechanically identical to F-34.4.2-12, differing only in trigger shape (one call
+per poll tick against a settled visible window, versus a four-call burst against a freshly-created
+hidden window). **No live failure was ever observed on this path** — stated plainly; this closes a
+latent risk, not a measured defect. Minted by the debug session's own `## Residual Risks` section
+and brought into scope by operator decision D-F2. Disposition: CLOSED by plan 34.4.2-17 (commit
+`83d3f7317`, porting the arm onto the same async pattern) and its shape-robust regression pin
+(commits `34515a290`, `9eebcb0c2`) which now scans all three cookie-reading arms — `humble_login_cookies`,
+`humble_login_cookies_for_domain`, `humble_login_clear_cookies` — for an exact four-site set across
+three arms, per plan 34.4.2-17's own SUMMARY: `cargo test` 116 passed, 0 failed, 1 ignored;
+`npm run test:ci` 191 suites, 3748 passed (+1 new self-test), 0 failed.
+
+**The regression pin's structural limitation — CLOSED by plan 34.4.2-17.** The pin
+`f_34_4_2_12_wry_blocking_cookies_calls_are_macos_gated` was originally a source scan matching two
+exact call-site prefixes and would have missed a differently-shaped call — including the
+split-line `window` / `.cookies()` form already present at `main.rs:4237-4238`. Now a shape-robust
+substring scan across all three cookie-reading arms, with comment-line skipping, a minimum
+found-count of three (later tightened to an exact-set assertion), and a split-line self-test.
+Record the pin's REMAINING limitation honestly: it is still a STRUCTURAL scan, not a behavioural
+test, and a live end-to-end deadlock reproduction remains unautomatable (it needs a real contended
+AppKit/WebKit run loop; a hanging assertion would defeat its own purpose and could hang CI).
+
+**F-34.4.2-11 — fix MANDATED, not yet applied.** Restated: a mandatory truncating `tee` (no `-a`)
+colliding with a mandatory mid-run relaunch destroyed the transcript for items 3 and 5's own
+decisive evidence in gate run 3. Plan 34.4.2-18 Task 3 writes the standing evidence-capture
+standard (`.claude/skills/spike-findings-gamelib/references/live-gate-contract-authoring.md`,
+Section 3) that fixes it; plan 34.4.2-19 is the first contract required to implement it.
+**Status stays OPEN until RERUN-4 carries the fixed instruction.**
+
+**F-34.4.2-14 (NEW) — three required log lines were demanded of a sink that structurally cannot
+carry them.** File: `34.4.2-LIVE-GATE-RERUN-3.md`'s Evidence-capture instruction plus items 2, 4
+and 6(a). Symptom: `Humble sync finished:` (`src/backend/humble/library.ts:954`),
+`Humble disconnect: cookie census before(...)` (`src/backend/humble/user.ts:1049`) and
+`Humble login-window cookie read UNSUPPORTED_OR_ERROR for window {seamLabel} — aborting watch`
+(`src/backend/humble/user.ts:461`) are all emitted by sidecar-side `logInfo`/`logWarning`, which
+reach `~/Library/Logs/GameLib/gamelib.log` and never the tee'd terminal transcript (the sidecar's
+stdout is the RPC frame pipe — this project's own `sidecar-console-and-logger-are-invisible`
+lesson). The contract required them of the transcript. This is why item 4's line was recorded
+absent with no cause assigned. **Compounding:** `gamelib.log` has its own relaunch truncation —
+`src/backend/logger/log_writer.ts:72-74` (`existsSync(this.logFilePath)` then
+`renameSync(this.logFilePath, this.oldLogFilePath)`) renames it to `.old` on first write per
+process, so a third launch destroys the first launch's sidecar evidence outright. Disposition:
+fixed by the dual-sink standard in Task 3; first implemented by plan 34.4.2-19's contract.
+**Note explicitly:** this is a SIXTH instance of this phase's contract-authoring-defect pattern and
+the SECOND whose reviewable unit is not a single requirement.
+
+**T-34.4.2-43 (DoS — a user-triggered action wedges the entire application) — CLOSED at source,
+pending live re-confirmation.** The source fix (`6bad86227`) is landed and unit-pinned, and the
+third call site (`humble_login_cookies`) is now covered too (plan 34.4.2-17). Per
+REQ-34.4.2-09 a source fix alone never closes anything in this phase — item 6(a) of RERUN-4 is its
+live discharge. **Not marked discharged here.**
