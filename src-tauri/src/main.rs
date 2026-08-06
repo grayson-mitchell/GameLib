@@ -3792,6 +3792,28 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         // above (the ONLY domain comparison this file uses). This arm
         // never logs a cookie value (T-34.4.1-02); values are returned only to the
         // caller's own explicit request over the already-allowlisted rustInvoke channel.
+        //
+        // F-34.4.2-12 / D-F2 (gap cycle 4): this is the LOGIN-POLL direction used by
+        // `watchForLogin()`, the one call site the original F-34.4.2-12 fix (`6bad86227`)
+        // deliberately left out of scope (see that debug session's own `## Residual
+        // Risks`). It is mechanically the identical hazard as `humble_login_cookies_for_domain`
+        // and `humble_login_clear_cookies`'s `count_matching` closure below: wry's blocking
+        // `WebviewWindow::cookies()` resolves to `wait_for_blocking_operation`, which
+        // reentrantly pumps `NSRunLoop::mainRunLoop()` from inside tao's
+        // `EventLoopHandler::with_callback` -- already holding tao's own handler `Mutex` for
+        // the whole user-event dispatch -- and can self-deadlock the main thread. The poll
+        // path has NEVER been observed to wedge live (its trigger shape is one call per poll
+        // tick against a settled, already-visible window, not a burst against a
+        // freshly-created hidden one) -- this closes a latent, mechanically-identical risk,
+        // not a measured defect. Same fix, same reasoning as the already-proven sites: never
+        // call wry's own blocking getter here on macOS; read the SAME window's own
+        // `WKHTTPCookieStore` natively via an async completion handler instead -- the
+        // calling closure only registers the callback and returns immediately, so it never
+        // blocks inside tao's `with_callback` critical section and never needs (or
+        // triggers) a reentrant run-loop pump. The poll direction of `cookie_domain_matches`
+        // (caller-supplied host FIRST, the cookie's own domain second -- 34.4.1 Plan 22, F-6
+        // Defect A) is deliberately UNCHANGED by this rewrite; `cookies_for_url()` still must
+        // never appear anywhere in this file.
         "humble_login_cookies" => {
             let label = args
                 .first()
@@ -3809,21 +3831,115 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             let window = app
                 .get_webview_window(label)
                 .ok_or_else(|| format!("humble_login:no-window:{label}"))?;
-            let all = window.cookies().map_err(|e| e.to_string())?;
-            let total = all.len();
-            let matched: Vec<Value> = all
-                .into_iter()
-                .filter(|c| cookie_domain_matches(host, c.domain()))
-                .filter(|c| names.is_empty() || names.contains(&c.name()))
-                .map(|c| {
-                    serde_json::json!({
-                        "name": c.name(),
-                        "domain": c.domain().unwrap_or_default(),
-                        "value": c.value()
+
+            #[cfg(target_os = "macos")]
+            {
+                let (tx, rx) = mpsc_channel::<Result<(usize, Vec<Value>), String>>();
+                let filter_host = host.to_string();
+                let filter_names: Vec<String> = names.iter().map(|n| n.to_string()).collect();
+                if let Err(e) = window.with_webview(move |webview| {
+                    let outcome: Result<(), String> = (|| {
+                        // Bound but not otherwise read -- see `count_matching`'s identical
+                        // `_mtm` binding, above, for why this is kept as a live safety proof.
+                        let _mtm = objc2::MainThreadMarker::new().ok_or_else(|| {
+                            "humble_login_cookies:no-main-thread-marker".to_string()
+                        })?;
+                        // SAFETY: mirrors `humble_login_cookies_for_domain`'s own cast --
+                        // `webview.inner()` is a live `WKWebView*` for the duration of a
+                        // `with_webview` closure running on the main thread; `mtm` proves
+                        // this closure is running on the main thread.
+                        let view: &objc2_web_kit::WKWebView =
+                            unsafe { &*webview.inner().cast() };
+                        let data_store = unsafe { view.configuration().websiteDataStore() };
+                        let cookie_store = unsafe { data_store.httpCookieStore() };
+                        let host_for_filter = filter_host.clone();
+                        let names_for_filter = filter_names.clone();
+                        let tx_fetch = tx.clone();
+                        // SAFETY: `getAllCookies` hands the completion handler a valid, live
+                        // array pointer for the duration of this call; `tx_fetch` outlives it.
+                        let completion = block2::RcBlock::new(
+                            move |cookies: std::ptr::NonNull<
+                                objc2_foundation::NSArray<objc2_foundation::NSHTTPCookie>,
+                            >| {
+                                let cookies_ref = unsafe { cookies.as_ref() };
+                                let all_cookies = cookies_ref.to_vec();
+                                let total = all_cookies.len();
+                                // Never logs a cookie value (T-34.4.1-02) -- names and
+                                // domains are read only to feed the pure comparison filters
+                                // below, values only into the returned JSON payload the
+                                // caller already explicitly requested over the
+                                // already-allowlisted rustInvoke channel. POLL direction,
+                                // deliberately preserved: the caller-supplied host is the
+                                // FIRST argument to `cookie_domain_matches`, the cookie's own
+                                // domain the second (34.4.1 Plan 22, F-6 Defect A) -- the
+                                // opposite order from the census arm above.
+                                let matched: Vec<Value> = all_cookies
+                                    .into_iter()
+                                    .filter(|c| {
+                                        cookie_domain_matches(
+                                            &host_for_filter,
+                                            Some(&c.domain().to_string()),
+                                        )
+                                    })
+                                    .filter(|c| {
+                                        names_for_filter.is_empty()
+                                            || names_for_filter
+                                                .iter()
+                                                .any(|n| n.as_str() == c.name().to_string())
+                                    })
+                                    .map(|c| {
+                                        serde_json::json!({
+                                            "name": c.name().to_string(),
+                                            "domain": c.domain().to_string(),
+                                            "value": c.value().to_string()
+                                        })
+                                    })
+                                    .collect();
+                                let _ = tx_fetch.send(Ok((total, matched)));
+                            },
+                        );
+                        unsafe {
+                            cookie_store.getAllCookies(&completion);
+                        }
+                        Ok(())
+                    })();
+                    if let Err(e) = outcome {
+                        let _ = tx.send(Err(e));
+                    }
+                }) {
+                    return Err(format!("humble_login_cookies:dispatch:{e}"));
+                }
+                match rx.recv_timeout(CLEAR_COOKIES_TIMEOUT) {
+                    Ok(Ok((total, matched))) => {
+                        Ok(serde_json::json!({ "total": total, "matched": matched }))
+                    }
+                    Ok(Err(e)) => Err(e),
+                    Err(_) => Err("humble_login_cookies:timeout".to_string()),
+                }
+            }
+
+            // Non-macOS: unchanged wry getter path -- F-34.4.2-12's reentrant-pump
+            // mechanism is macOS/WebKit/tao-specific; no live evidence implicates the
+            // `webview2`/`webkitgtk` backends, so this path is left exactly as it was (D-09
+            // discipline: declare unverified, never silently assume broken or fixed).
+            #[cfg(not(target_os = "macos"))]
+            {
+                let all = window.cookies().map_err(|e| e.to_string())?;
+                let total = all.len();
+                let matched: Vec<Value> = all
+                    .into_iter()
+                    .filter(|c| cookie_domain_matches(host, c.domain()))
+                    .filter(|c| names.is_empty() || names.contains(&c.name()))
+                    .map(|c| {
+                        serde_json::json!({
+                            "name": c.name(),
+                            "domain": c.domain().unwrap_or_default(),
+                            "value": c.value()
+                        })
                     })
-                })
-                .collect();
-            Ok(serde_json::json!({ "total": total, "matched": matched }))
+                    .collect();
+                Ok(serde_json::json!({ "total": total, "matched": matched }))
+            }
         }
         // Drain (not merely read) `label`'s queued navigation events (Phase 34.4.1 Plan
         // 01, REQ-34.4.1-03's navigation relay contract). An absent/never-navigated label
