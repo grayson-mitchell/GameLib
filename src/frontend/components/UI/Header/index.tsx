@@ -5,16 +5,14 @@ import './index.css'
 
 export default function Header() {
   return (
-    <>
-      <div className="Header">
-        <div className="Header__search">
-          <LibrarySearchBar />
-        </div>
-        <span className="Header__filters">
-          <CategoryFilter />
-          <LibraryFilters />
-        </span>
+    <div className="Header">
+      <div className="Header__search">
+        <LibrarySearchBar />
       </div>
-    </>
+      <span className="Header__filters">
+        <CategoryFilter />
+        <LibraryFilters />
+      </span>
+    </div>
   )
 }

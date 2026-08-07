@@ -1,28 +1,19 @@
 .Header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
   display: flex;
-  justify-content: space-between;
-  align-items: start;
+  flex-direction: column;
+  align-items: stretch;
   gap: var(--space-md);
-  padding: var(--space-md);
+  padding: var(--space-lg) var(--space-sm);
   background: var(--gradient-body-background, var(--body-background));
   color: var(--text-secondary);
-}
-
-.frameless:not(.fullscreen) .Header {
-  padding-right: calc(
-    var(--overlay-controls-width) - env(titlebar-area-x, 0px) + 10px
-  );
 }
 
 .Header__filters {
   grid-area: filters;
   display: flex;
+  flex-direction: column;
   gap: var(--space-md);
-  align-self: center;
-  justify-self: flex-end;
+  align-self: stretch;
 }
 
 .Header__filters .FormControl {
@@ -31,7 +22,6 @@
 
 .Header__search {
   flex-grow: 1;
-  max-width: 700px;
 }
 
 .Header__search .FormControl {
