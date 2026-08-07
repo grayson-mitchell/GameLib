@@ -24,6 +24,15 @@ import useSettingsContext from 'frontend/hooks/useSettingsContext'
 import { hasHelp } from 'frontend/hooks/hasHelp'
 import { ContentCopy, FileOpen } from '@mui/icons-material'
 
+/**
+ * i18n-gate-exempt: 'Wine Default' is a persisted-config fallback sentinel, not rendered directly
+ *
+ * `WineVersionSelector.tsx`'s `WineVersionListItem` now translates the DISPLAY of this
+ * value at its one real render site (34.8-08c). This literal's own runtime string must
+ * stay byte-identical because it is persisted in user config (`useSetting('wineVersion',
+ * defaultWineVersion)` / electron-store) and read/compared by name/type/bin across 14
+ * other consumer files. See `34.8-08b-CLOSURE.md` and `34.8-08c-CLOSURE.md`.
+ */
 export const defaultWineVersion: WineInstallation = {
   bin: '/usr/bin/wine',
   name: 'Wine Default',

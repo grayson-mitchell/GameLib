@@ -25,10 +25,14 @@ export const WineVersionListItem = React.memo(function WineVersionListItem({
   version
 }: ListItemProps) {
   const { name, type } = version
+  const { t: tGamelib } = useTranslation('gamelib')
 
   const substitutedName = useMemo(
-    () => name.replace(/(Proton-GE-Proton|Proton-GE)/, 'GE-Proton'),
-    [name]
+    () =>
+      name === defaultWineVersion.name
+        ? tGamelib('gamelib:settings.wineDefaultLabel', 'Wine Default')
+        : name.replace(/(Proton-GE-Proton|Proton-GE)/, 'GE-Proton'),
+    [name, tGamelib]
   )
 
   const primaryIcon = useMemo(() => {
