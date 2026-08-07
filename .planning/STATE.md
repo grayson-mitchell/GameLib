@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: executing
-stopped_at: "Phase 34.8 side track — plan 10 of 14 EXECUTED (flipped the i18n gate to BLOCKING: `meta/__tests__/hardcodedStringGate.test.ts`'s `scope orchestration` test now asserts `report.violations`/`report.staleExemptions` both `toHaveLength(0)`, riding the already-blocking `pnpm test:ci`, plus a new `gate is not disabled` describe block (T-34.8-29/T-34.8-30). Discovered mid-task that `34.8-AUDIT.md § Closure`'s own re-measurement (`violations: 62`) was real -- the 52-item retrofit backlog was genuinely zero, but 62 `not-user-facing`/`glossary`-dispositioned literals the scanner had not yet learned to recognise stood between that and a literal `toHaveLength(0)`. Closed all 62 under Rule 1 (same narrow content-shape/structural-position discipline as plans 05/06/08c): new content-shape checks (icon-size multipliers, ALL-CAPS enum tokens, hex GUIDs, CDN query strings, domains, a `??`-prefixed sentinel), new structural checks (DOM/browser API args, internal string-comparison args, `.includes()` array elements), a shared composing-walk extended with `??`/template-interpolation hops, `isAssignedThenPassedToT` broadened to recognise diagnostic-log/excluded-JSX-attribute/technical-DOM-API consumption (not only `t()`), a split-glossary-term check (SidebarLinks' `Game`/`Lib`), `GameLibSteam` added to the glossary, and a second real use of the 34.8-08c declaration-scoped `i18n-gate-exempt:` marker on `StoreSearch/helpers.ts`'s `buildOwnedBadgeLabel()` (cross-file dataflow the same-file-only reference tracer cannot trace). Proved the gate genuinely fails: a real temporary literal in GameStatus.tsx failed the assertion naming file/line/column/text, then reverted clean. No allowlist growth, no new CI YAML. Wrote `34.8-I18N-CONTRACT.md` recording every deliberate non-action (D-06/D-13/D-20/D-21/D-22) plus the parser-alias trap and the honest open upstream-catalog-drift limit. `pnpm test:ci`: 203/203 suites, 4045/4045 green (was 203/4041). Next for 34.8: plans 11/12 (machine-fill script + phase closure). 34.4.2 blocker UNCHANGED and still the critical path.)"
-last_updated: "2026-08-07T19:40:00.000Z"
+status: verifying
+stopped_at: Phase 34.8 side track — plan 10 of 14 EXECUTED (flipped the i18n gate to
+last_updated: "2026-08-07T07:43:11.953Z"
 last_activity: 2026-08-07
 progress:
-  total_phases: 21
+  total_phases: 23
   completed_phases: 14
   total_plans: 241
   completed_plans: 220
-  percent: 67
+  percent: 61
 ---
 
 # Project State
@@ -3627,6 +3627,8 @@ Closed/parked native-install phases:
 - Phase 34.7 inserted after Phase 34.6: Epic device-auth single sign-in path — delete interactive legendary-login UI, seed legendary via exchange code; scheduled LAST before Phase 35; alt-login 403 permanently parked
 - Phase 34.8 inserted after Phase 34.6: Frontend i18n compliance for fork-added code — retrofit hardcoded strings + enforcement gate; sequenced before 34.7; upstream strings and backend error-code contract out of scope
 - Phase 34.9 inserted after Phase 34.7: macOS runner onedir repackaging - measured ~95x cold spawn win (20.84s -> 0.22s) (URGENT)
+- Phase 34.10 inserted after Phase 34.9: Navigation shell — horizontal card tabs replace the sidebar (from sketches 001-003)
+- Phase 34.11 inserted after Phase 34.10: Library filtering — search, views, collections and cross-store facets (sketch 004 variant C)
 
 ### Decisions
 

@@ -2349,6 +2349,96 @@ Plans:
 - [ ] 34.9-10-PLAN.md — Author the blocking live-gate contract + Structural Reachability Review (wave 6)
 - [ ] 34.9-11-PLAN.md — Run the gate on hardware; reconcile REQUIREMENTS.md and this ROADMAP entry (wave 7)
 
+### Phase 34.10: Navigation shell — horizontal card tabs replace the sidebar (INSERTED)
+
+**Goal:** Replace the left sidebar with a **two-tier navigation shell**. Tier 1 is a horizontal
+row of **card/folder tabs** — `Manage Accounts`, `Games`, `Stores`, `Settings` — where the active
+tab merges into the content surface below it. Tier 2 is a **vertical contextual panel** scoped to
+the selected tab. `Sidebar` and `SidebarLinks` are retired, and the ~14 destinations they carry
+are redistributed. **The Games panel carries today's filter controls across unchanged** — the
+filter redesign is Phase 34.11, so this phase ships a usable app on its own.
+
+**Designed, not speculative.** Sketches `001`–`004` in `.planning/sketches/` are committed,
+interactive, and rendered in the app's real tokens. `001` selected the card/folder tab style;
+`003`'s winning synthesis fixed the tier-2 behaviour. The planner should read
+`.planning/sketches/MANIFEST.md` first and treat the sketch decisions as settled input.
+
+**Structure (settled — do not re-litigate):**
+
+| Tier 1 tab | Tier 2 |
+|---|---|
+| Manage Accounts | **none** — content runs full-bleed |
+| Games | filter panel (this phase: relocate existing controls; 34.11 redesigns) |
+| Stores | nav list — GOG, Steam, Epic, Amazon, Deals, Store Search, Humble Keys, Redeem a Steam key |
+| Settings | nav list — General, Game Defaults, Advanced, Wine Manager, Accessibility, Console Mode, Logs, Documentation, Ko-fi |
+
+**Downloads is not a tab.** It is ambient state with live progress, so it sits top-right as a
+progress ring with an active count.
+
+**Known constraints the plan must handle (do not rediscover):**
+- **macOS traffic lights occupy ~78px** at the window's top-left whenever the Tauri titlebar is
+  transparent or overlaid. No top-mounted bar may start at x=0. Every sketch reserves this inset;
+  toggle `Annotate` in any sketch to see it.
+- **Themes invert the figure/ground assumption.** `themes.scss` ships themes whose navbar is
+  *lighter* than the body (`dracula`, `dracula-classic`). Card/folder tabs were chosen partly
+  because they survive this; any restyle must be checked against all shipped themes, not just
+  `midnightMirage`.
+- **MUI `<Tabs>/<Tab>` is already in the tree** at `WineManager/index.tsx:222`, and
+  `components/UI/TabPanel/index.tsx` already exists. Prefer restyling the existing pattern over
+  introducing a new dependency.
+- **Two of four tier-1 tabs have asymmetric tier 2.** Manage Accounts drops the panel entirely,
+  which shifts content width by ~204px on that transition. This was accepted deliberately (003)
+  because it fires on one infrequent tab; it is a decision, not a defect to fix.
+- **i18n.** Every relocated destination has an existing translation key across **49 locale
+  directories**. Renaming `Library` → `Games` and reparenting sub-items is a key migration, and
+  Phase 34.8's hardcoded-string gate rides `pnpm test:ci` — new nav literals will fail it.
+
+**Requirements:** TBD — mint at `/gsd-plan-phase 34.10`
+**Depends on:** Phase 34.1 (app shell and window chrome — provides the title-bar overlay and
+window-control surface this rebuilds against)
+**Blocks:** Phase 34.11 (the filter panel needs the tier-2 slot to exist)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 34.10 to break down)
+
+### Phase 34.11: Library filtering — search, views, collections and cross-store facets (INSERTED)
+
+**Goal:** Build the Games tier-2 panel for real — sketch `004` **variant C (hybrid)**. Search and
+single-select views (`All games`, `Installed`, `Recently played`, `Favourites`) and user
+collections sit at the top so the common case stays one click. Multi-select facets for **Store**,
+**Platform** and **Genre** live below, collapsed by default. Active filters surface as
+**removable chips above the grid**, so the user can always see why they are looking at 6 games
+instead of 214.
+
+**Why the facets matter more here than in other launchers:** spanning Epic, GOG, Amazon and Steam
+is GameLib's reason to exist, so "show me only my GOG games" is the product's central question. A
+views-only panel (sketch 004 variant A) cannot answer it, which is why A lost.
+
+**Known constraints the plan must handle (do not rediscover):**
+- **Facet counts must exclude their own facet.** Ticking `GOG` must leave the other Store counts
+  showing what they *would* yield rather than collapsing to 0. The sketch implements this; it is
+  the difference between counts that guide the next click and counts that lie.
+- **Genre metadata coverage is unverified and will be uneven.** Genres come from four different
+  store APIs. A genre facet that is empty for every Amazon title reads as broken. **Verify real
+  coverage per store before committing to the genre facet** — dropping it is an acceptable
+  outcome; shipping it half-populated is not.
+- **Platform filtering is not cosmetic on this fork.** GameLib runs Windows games on macOS through
+  Wine/CrossOver bottles, so the question users have is "will this run on my machine", not "is
+  this native". Those are different predicates. The CrossOver compatibility index (Phase 19) and
+  the macOS 32-bit detection work (Phase 18) already hold the data to answer the first one.
+- **Filter state persistence** — whether filters survive navigation, restart, or neither, is
+  undecided and belongs in this phase's discuss step.
+- Collections (`Roguelikes`/`Cozy`/`Backlog`/`Co-op` in the sketch) are mocked. Whether they are
+  manual, rule-based, or both was explicitly left out of scope by sketch 004.
+
+**Requirements:** TBD — mint at `/gsd-plan-phase 34.11`
+**Depends on:** Phase 34.10 (the tier-2 panel slot)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 34.11 to break down)
+
 ### Phase 35: Electron cutover — remove the Electron build
 
 **Goal:** Retire the Electron build: delete `electron-vite`/`electron-builder` config, the preload contextBridge path, and the `isTauri()` branches, leaving Tauri as the only shell. This is the one phase that deliberately breaks the additive/reversible invariant every prior phase preserved — so it runs last, and only once the `session`/`powerSaveBlocker` parity gaps are resolved or explicitly accepted, and the parked Electron-renderer bugs (see `debug-uninstall-game-vanishes-parked`) have been re-tested against Tauri rather than fixed in Electron.
