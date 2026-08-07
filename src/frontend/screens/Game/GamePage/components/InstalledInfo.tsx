@@ -39,6 +39,7 @@ const getInstallPlatformIcon = (installPlatform: string | undefined) => {
 const InstalledInfo = ({ gameInfo }: Props) => {
   const { t } = useTranslation('gamepage')
   const { t: t2 } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const { gameSettings, runner, is } = useContext(GameContext)
 
   if (!gameInfo.is_installed) {
@@ -147,7 +148,7 @@ const InstalledInfo = ({ gameInfo }: Props) => {
       {!is.win && !is.native && (
         <>
           <div>
-            <b>Wine:</b> {wineName}
+            <b>{tGamelib('gamelib:gamepage.wineLabel', 'Wine:')}</b> {wineName}
           </div>
           {wineType === 'crossover' ? (
             <div>

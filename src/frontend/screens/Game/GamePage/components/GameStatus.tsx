@@ -15,6 +15,7 @@ interface Props {
 
 const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
   const { t } = useTranslation('gamepage')
+  const { t: tGamelib } = useTranslation('gamelib')
   const { runner, is, statusContext } = useContext(GameContext)
 
   function getInstallLabel(
@@ -68,13 +69,15 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
       return `${t('status.moving', 'Moving Installation, please wait')} ...`
     }
 
+    const etaText = eta
+      ? tGamelib('gamelib:gamepage.etaPrefix', 'ETA: {{eta}}', { eta })
+      : ''
+
     const currentProgress =
       getProgress(progress) >= 99
         ? ''
         : `${
-            percent && bytes
-              ? `${percent}% [${bytes}] ${eta ? `ETA: ${eta}` : ''}`
-              : '...'
+            percent && bytes ? `${percent}% [${bytes}] ${etaText}` : '...'
           }`
 
     if (is.updating && is_installed) {

@@ -96,6 +96,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
   }
   const { t, i18n } = useTranslation('gamepage')
   const { t: t2 } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
 
   const { gameInfo: locationGameInfo } = location.state
 
@@ -536,7 +537,10 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           className="gameInfoTabs"
                           value={currentTab}
                           onChange={(e, newVal) => setCurrentTab(newVal)}
-                          aria-label="gameinfo tabs"
+                          aria-label={tGamelib(
+                            'gamelib:gamepage.tabsAriaLabel',
+                            'gameinfo tabs'
+                          )}
                           selectionFollowsFocus
                           variant="scrollable"
                           scrollButtons="auto"

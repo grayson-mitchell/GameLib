@@ -1,6 +1,7 @@
 import './index.css'
 
 import { useContext, useEffect, useState } from 'react'
+import { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Navigate, NavLink, Outlet } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -18,10 +19,10 @@ import {
 // Local formatRelativeTime (mirrors LibraryHeader's, returns the bare
 // duration phrase — the "ago"/"showing data from" wrapper lives in the
 // caller's i18n string). 4 buckets: <1 minute / minutes / hours / days.
-function formatRelativeTime(ms: number): string {
+function formatRelativeTime(ms: number, t: TFunction): string {
   const minutes = Math.floor(ms / 60000)
   if (minutes < 1) {
-    return 'less than a minute'
+    return t('gamelib:humble.lessThanAMinute', 'less than a minute')
   }
   if (minutes < 60) {
     return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`
@@ -42,6 +43,7 @@ function formatRelativeTime(ms: number): string {
 
 export default function HumbleKeys() {
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const { humble } = useContext(ContextProvider)
 
   const [cooldownUntil, setCooldownUntil] = useState<number | undefined>(
@@ -111,7 +113,7 @@ export default function HumbleKeys() {
   const now = Date.now()
   const syncedAt = humble.syncedAt ?? null
   const relativeTime =
-    syncedAt !== null ? formatRelativeTime(now - syncedAt) : null
+    syncedAt !== null ? formatRelativeTime(now - syncedAt, tGamelib) : null
 
   const inCooldown =
     humble.syncError === 'denied' && !!cooldownUntil && cooldownUntil > now

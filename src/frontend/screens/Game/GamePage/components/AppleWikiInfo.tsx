@@ -15,6 +15,7 @@ interface Props {
 
 const AppleWikiInfo = ({ gameInfo }: Props) => {
   const { t } = useTranslation('gamepage')
+  const { t: tGamelib } = useTranslation('gamelib')
   const { wikiInfo, is, refreshWikiInfo } = useContext(GameContext)
   const [refreshing, setRefreshing] = useState(false)
 
@@ -165,7 +166,7 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
         >
           <WineBar />
           <b>{t('info.wine-rating', 'Wine emulation')}:</b>
-          {ratingTier(applegamingwiki?.wineRating ?? '').label}
+          {ratingTier(applegamingwiki?.wineRating ?? '', tGamelib).label}
         </a>
       )}
     </>

@@ -1,3 +1,5 @@
+import { TFunction } from 'i18next'
+
 /**
  * DETAIL-02 shared helpers for the AppleGamingWiki compatibility surfaces
  * (Extra-info tab rows).
@@ -15,7 +17,7 @@ export interface RatingTier {
  * `_colors.scss` (green→amber→red, neutral for empty/unknown). Values are
  * free-form upstream, so unknown values fall back to the neutral tier.
  */
-export const ratingTier = (rating: string): RatingTier => {
+export const ratingTier = (rating: string, t: TFunction): RatingTier => {
   const normalized = rating.trim().toLowerCase()
 
   switch (normalized) {
@@ -28,7 +30,10 @@ export const ratingTier = (rating: string): RatingTier => {
     case 'unplayable':
       return { label: capitalize(rating), colorVar: '--status-danger' }
     case '':
-      return { label: 'Unrated', colorVar: '--status-default' }
+      return {
+        label: t('gamelib:gamepage.appleRatingUnrated', 'Unrated'),
+        colorVar: '--status-default'
+      }
     default:
       // Known-but-unmapped value — show the label, keep a neutral color.
       return { label: capitalize(rating), colorVar: '--status-default' }

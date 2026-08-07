@@ -38,6 +38,7 @@ export default React.memo(function NewLogin() {
   const { epic, gog, amazon, zoom, steam, humble, refreshLibrary } =
     useContext(ContextProvider)
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
 
   hasHelp(
     'login',
@@ -197,7 +198,10 @@ export default React.memo(function NewLogin() {
               icon={() => <AmazonLogo />}
               loginUrl={amazonLoginPath}
               isLoggedIn={isAmazonLoggedIn}
-              user={amazon.username || 'Unknown'}
+              user={
+                amazon.username ||
+                tGamelib('gamelib:login.unknownUser', 'Unknown')
+              }
               logoutAction={amazon.logout}
               disabled={oldMac}
             />
