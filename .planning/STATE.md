@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.10-04-PLAN.md
-last_updated: "2026-08-07T11:30:54.665Z"
+stopped_at: Completed 34.10-05-PLAN.md
+last_updated: "2026-08-07T11:45:17.974Z"
 last_activity: 2026-08-07
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 252
-  completed_plans: 225
-  percent: 61
+  completed_plans: 226
+  percent: 90
 ---
 
 # Project State
@@ -480,7 +480,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — EXECUTING
 EXECUTED 2026-08-06, STILL DID NOT CLOSE (gate FAILED 1/6) -- gap cycle 5 required, NOT COMPLETE
-Plan: 5 of 11
+Plan: 6 of 11
 glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
 see 34.4.2-13-SUMMARY.md. Plan 14 EXECUTED 2026-08-05 -- T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW
 single-flight guard refuses a second visible login window while one is pending/presented, 25s TTL
@@ -2577,7 +2577,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 89%
+trusted blindly. The recurring `**Progress:**[█████████░] 90%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.2-07): the same splice-into-historical-prose bug recurred yet again this session --
@@ -3609,6 +3609,7 @@ Closed/parked native-install phases:
 | Phase 34.10 P02 | 35min | 2 tasks | 5 files |
 | Phase 34.10 P03 | 40min | 2 tasks | 3 files |
 | Phase 34.10 P04 | 55min | 2 tasks | 3 files |
+| Phase 34.10 P05 | 35min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -4092,6 +4093,8 @@ Recent decisions affecting current work:
 - [Phase 34.10]: 34.10-02: tier-2 collapse is a pure CSS width/padding/opacity transition on a permanently-mounted element, never display:none or unmount, so the always-mounted version slot survives a tab switch
 - [Phase 34.10]: DownloadsRing returns handleDMQueueInformation's unsubscribe directly from the mount effect (not wrapped) to preserve cleanup-function identity
 - [Phase 34.10]: 34.10-04: Renamed NavTabs.test.tsx to NavTabsComponent.test.tsx -- case-insensitive filesystem collision with the pre-existing navTabs.test.ts silently dropped one file from tsc/eslint's file set with no casing diagnostic
+- [Phase 34.10]: Reparented rows (Wine Manager, Accessibility, Console Mode) keep the FontAwesome icons they carried at their old top-level sidebar position; plan text only specified icons for Stores panel rows, was silent on the rest
+- [Phase 34.10]: jest tests mocking localStorage.getItem with a dynamic per-test return value must reassign the mock implementation inside beforeEach, since resetMocks:true clears implementations (not just call history) between tests
 
 ### Pending Todos
 
@@ -4181,8 +4184,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-07T11:30:54.652Z
-Stopped at: Completed 34.10-04-PLAN.md
+Last session: 2026-08-07T11:45:17.959Z
+Stopped at: Completed 34.10-05-PLAN.md
   34.10-DISCUSSION-LOG.md written and committed (`d421405bd`), 13 decisions (D-01..D-13) over
   4 discussed areas. Still design/planning only: no code, no plans, phase status Pending.
   Next: `/gsd-plan-phase 34.10`. The parked work below is UNCHANGED — 34.8 is still parked at
