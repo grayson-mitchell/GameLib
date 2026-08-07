@@ -1,3 +1,24 @@
+/**
+ * DISABLED by Phase 34.10 (D-13) -- not mounted by anything. The onboarding
+ * tour this file drives depended on the retired left navigation (deleted by
+ * 34.10-09 Task 3); this one file is deliberately kept on disk because it
+ * plus its twelve `data-tour="sidebar-*"` step selectors below are the
+ * deferred tour-rework phase's work-list -- re-anchoring each step against
+ * the new two-tier shell. `NavShell/__tests__/tourDisabled.test.ts` proves
+ * both of the retired navigation's tour entry points (this component's own
+ * mount, and the second one -- the help button `HeroicVersion` used to
+ * render, removed in 34.10-07) are unreachable.
+ *
+ * Known pre-existing defect for the rework phase to fix, not to rediscover:
+ * two different elements used to carry the SAME `data-tour="sidebar-downloads"`
+ * value -- the retired `Sidebar/index.tsx`'s `currentDownloads` wrapper div,
+ * and the "Downloads" nav row inside the retired `SidebarLinks`. A step
+ * selector that matches two elements is ambiguous; whichever the tour
+ * library picked first was never guaranteed to be the intended one.
+ *
+ * Nothing else in this file changes -- its step text and i18n keys are the
+ * rework phase's input, not this plan's.
+ */
 import React, { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import Tour, { TourStep } from '../../../../components/Tour/Tour'
