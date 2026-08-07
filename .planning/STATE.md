@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: verifying
-stopped_at: Phase 34.8 side track — plan 07 of 13 EXECUTED (RedeemSteamKeyDialog/copy.ts
-last_updated: "2026-08-07T03:10:00.000Z"
+stopped_at: Phase 34.8 side track — plan 08a of 13 EXECUTED (ThemeSelector + SideloadDialog retrofit, 27/27 violations closed)
+last_updated: "2026-08-07T04:05:00.000Z"
 last_activity: 2026-08-07
 progress:
   total_phases: 21
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 07 of 13 done — RedeemSteamKeyDialog/copy.ts retrofitted to the injected-TFunction idiom + bootErrorSurface.ts's first-ever full-file gate exemption landed; next is 34.8-08a/08b) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
+**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 08a of 13 done — ThemeSelector (14) + SideloadDialog (13) retrofitted, 27/27 violations closed, 23 new gamelib: keys; next is 34.8-08b) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -4153,8 +4153,28 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-07T15:10:00+12:00
-Stopped at: Phase 34.8 side track — plan 07 of 13 EXECUTED (retrofitted the phase's flagship
+Last session: 2026-08-07T16:05:00+12:00
+Stopped at: Phase 34.8 side track — plan 08a of 13 EXECUTED (retrofitted the audit's two
+  "heavy" split-plan files — ThemeSelector's 14 theme display names and SideloadDialog's 13
+  native file-picker filter labels — 27/27 violations closed, 0 reclassified, 0 blocked, per
+  34.8-08a-CLOSURE.md. 23 new gamelib: keys (14 gamelib:themeSelector.*, 9
+  gamelib:sideload.filter.*, 4 reused across duplicate 'All'/'Other Binaries' sites). Two
+  deviations, both caught by running scanSource()/scanScope() directly rather than trusting
+  jest green alone: (1) both index.tsx files (directly or transitively) import .scss,
+  unparseable by this project's jsdom-less jest config — extracted the retrofit logic into new
+  SCSS-free sibling modules (themeLabels.ts, filters.ts) that the new test files import
+  instead; (2) ThemeSelector's first attempt used the CrossoverBadge [key, defaultText] tuple
+  idiom, which does NOT gate-trace once the key carries a gamelib: namespace-prefix colon
+  (DOTTED_KEY_RE rejects it) — reworked to a 14-case switch of direct t() calls (Pattern 1),
+  0 violations confirmed. REQ-34.8-01/-11/-17 complete. tsc clean; jest 44/44 suites, 532/532
+  tests (was 42/489); pnpm test:ci 201/201 suites, 4020/4020 tests (was 199/3977, +2 suites,
+  +43 tests); meta gate 278/278. themeLabels.ts/filters.ts are new files not yet in the
+  committed meta/i18nGateScope.json snapshot — flagged for a future pnpm gen-i18n-gate-scope
+  run. See 34.8-08a-SUMMARY.md and 34.8-08a-CLOSURE.md.
+  Next for 34.8: 34.8-08b-PLAN.md (the remaining 15 one-liner files, disjoint file set).
+  34.4.2 blocker UNCHANGED and still the critical path.
+
+Stopped at (superseded): Phase 34.8 side track — plan 07 of 13 EXECUTED (retrofitted the phase's flagship
   named target, RedeemSteamKeyDialog/copy.ts, from zero i18n to the injected-TFunction idiom —
   redeemOutcomeCopy(outcome, t, packageName?) — with 6 gamelib:redeemKey.* keys, English text
   byte-preserved, success-with-packageName's template literal replaced by {{packageName}}
@@ -4172,7 +4192,7 @@ Stopped at: Phase 34.8 side track — plan 07 of 13 EXECUTED (retrofitted the ph
   one-liner files) — both wave 6, disjoint file sets from this plan and from each other.
   34.4.2 blocker UNCHANGED and still the critical path.
 
-Stopped at (superseded): Phase 34.8 side track — plan 06 of 12 EXECUTED (scanScope() run
+Stopped at (superseded x2): Phase 34.8 side track — plan 06 of 12 EXECUTED (scanScope() run
   whole-scope for the
   first time — 134 files, 1889 candidates, 335 raw hits; 9 scanner false-positive categories
   fixed as Rule-1 bugs -> 124 trustworthy violations, 40 new regression tests, 9 new glossary
