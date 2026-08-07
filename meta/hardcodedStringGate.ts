@@ -201,6 +201,41 @@ const CSS_FUNCTION_RE = /^[a-zA-Z-]+\([^()]*\)$/
 // like the checks above, not property-name-based, so it also covers any future
 // `querySelector`-style use of the same shape.
 const CSS_ATTR_SELECTOR_RE = /^\[[a-zA-Z0-9_-]+(=("[^"]*"|'[^']*'))?\]$/
+// Plan 10 (34.8-10), discovered flipping the gate to blocking and measuring
+// the 62-item residual `34.8-AUDIT.md § Closure` had already triaged as
+// `not-user-facing`/`glossary`: a FontAwesomeIcon `size` prop value
+// (`"2x"`, `"3x"`) is an icon-size multiplier, not prose --
+// EditGameDialog/index.tsx, GameCard/index.tsx, SideloadDialog/index.tsx.
+const ICON_SIZE_MULTIPLIER_RE = /^\d+x$/
+// A bare single all-caps word (letters/digits only, no whitespace) reads as
+// an internal enum/state discriminator in this codebase's own convention,
+// symmetric with `LOWERCASE_TOKEN_RE` below (whose own comment already
+// states real UI prose here is sentence-cased): `showDialogModal({ type:
+// 'MESSAGE' | 'ERROR' })`'s discriminator (helpers/library.ts,
+// DownloadDialog/index.tsx, AnalyticsDialog.tsx, ShowValveProton.tsx,
+// repairFailure.ts), Humble key-state comparisons (`REDEEMED`, `REVEALED`,
+// `UNREDEEMABLE`, `UNPICKED`), `document.createElement('CANVAS'|'IMG')` tag
+// names (index.tsx), and `.replace('THE ', '')` sort-key stripping
+// (Library/index.tsx) -- every one confirmed genuinely not user-facing by
+// direct read in `34.8-AUDIT.md`'s `## Triage`/`## Closure`.
+const ALL_CAPS_TOKEN_RE = /^[A-Z][A-Z0-9]*$/
+// A 32-character hex string with no separators is a GUID/hash, not prose --
+// GameSubMenu/index.tsx's EOS overlay app-id constant.
+const HEX_GUID_RE = /^[0-9a-fA-F]{32}$/
+// A CDN query-string fragment (`?h=800&resize=1&w=600`) -- the literal span
+// of a template expression whose interpolated head is the image URL
+// (GamePicture/index.tsx, GameCard/constants.ts). Anchored so it cannot
+// match real prose that merely starts with `?`.
+const QUERY_STRING_RE = /^\?[a-zA-Z0-9=&]+$/
+// A bare DNS hostname (`store.steampowered.com`) used for `url.includes(...)`
+// domain matching (WebView/index.tsx) -- no whitespace, at least one dot,
+// TLD-shaped tail.
+const DOMAIN_RE = /^([a-z0-9-]+\.)+[a-z]{2,}$/
+// A backend placeholder sentinel that starts with a literal "??" (e.g.
+// `DownloadSizeInfo.tsx`'s `'?? MB'`, compared via `=== '?? MB'` against a
+// Steam install-size lookup that failed) -- no real UI prose in this
+// codebase starts a sentence with a bare double question mark.
+const PLACEHOLDER_QUESTION_MARKS_RE = /^\?\?(\s|$)/
 // A single lowercase-leading token with no whitespace or separators reads as
 // an internal identifier (a runner/store key, a CSS token, an enum-shaped
 // value), not rendered prose — this codebase's own convention is that real
@@ -228,6 +263,12 @@ function isTechnicalToken(rawText: string): boolean {
   if (CSS_VAR_FUNCTION_RE.test(text)) return true
   if (CSS_LENGTH_RE.test(text)) return true
   if (CSS_ATTR_SELECTOR_RE.test(text)) return true
+  if (ICON_SIZE_MULTIPLIER_RE.test(text)) return true
+  if (ALL_CAPS_TOKEN_RE.test(text)) return true
+  if (HEX_GUID_RE.test(text)) return true
+  if (QUERY_STRING_RE.test(text)) return true
+  if (DOMAIN_RE.test(text)) return true
+  if (PLACEHOLDER_QUESTION_MARKS_RE.test(text)) return true
 
   const hasWhitespace = /\s/.test(text)
   if (/[\\/]/.test(text) && !hasWhitespace) return true // path
@@ -450,6 +491,81 @@ function isInfoBoxTextKeyProp(node: Node): boolean {
 }
 
 /**
+ * Plan 10 (34.8-10): a compound glossary term (`GameLib`) split across
+ * sibling JSX children for CSS styling —
+ * `SidebarLinks/index.tsx`: `Game<span className="Sidebar__brandLib">
+ * Lib</span>`. Only fires for a `JsxText` candidate; walks up to the
+ * enclosing `JsxElement`/`JsxFragment`, reads EVERY child's own simple text
+ * (a bare `JsxText`, or a `JsxElement` whose sole child is a bare `JsxText`
+ * — never descending further), concatenates them in source order, and
+ * checks the joined, trimmed result against the glossary. Any child that is
+ * not one of these two simple shapes (e.g. a nested component, an
+ * expression container) makes the whole check bail out (`undefined`),
+ * exactly like `isTechnicalToken`'s other content-shape checks: narrow
+ * enough that an unrelated multi-child fragment can never accidentally
+ * match.
+ */
+function jsxSimpleChildText(child: Node): string | undefined {
+  if (Node.isJsxText(child)) return child.getText()
+  if (Node.isJsxElement(child)) {
+    const kids = child.getJsxChildren()
+    if (kids.length === 1 && Node.isJsxText(kids[0])) {
+      return kids[0].getText()
+    }
+  }
+  return undefined
+}
+
+/**
+ * Walks `node` up through any chain of enclosing `JsxElement`s where `node`
+ * (or the previous hop) is that element's ONLY child — the "Lib" `JsxText`
+ * inside `<span className="Sidebar__brandLib">Lib</span>` needs this to
+ * reach the SPAN element itself before the sibling-scan below can see the
+ * span's own position among the Fragment's children (`Game`, `<span>Lib
+ * </span>`); without this hop, checking "Lib"'s own immediate parent (the
+ * span) would only ever see a one-child sibling list (`["Lib"]`), never the
+ * `Game` text one level further out.
+ */
+function outermostSingleChildJsxAncestor(node: Node): Node {
+  let current: Node = node
+  for (;;) {
+    const parent = current.getParent()
+    if (
+      parent &&
+      Node.isJsxElement(parent) &&
+      parent.getJsxChildren().length === 1 &&
+      parent.getJsxChildren()[0] === current
+    ) {
+      current = parent
+      continue
+    }
+    break
+  }
+  return current
+}
+
+function isPartOfSplitGlossaryTerm(
+  node: Node,
+  glossarySet: Set<string>
+): boolean {
+  const anchor = outermostSingleChildJsxAncestor(node)
+  const parent = anchor.getParent()
+  if (!parent) return false
+  if (!Node.isJsxElement(parent) && !Node.isJsxFragment(parent)) return false
+
+  const children = parent.getJsxChildren()
+  const texts: string[] = []
+  for (const child of children) {
+    const childText = jsxSimpleChildText(child)
+    if (childText === undefined) return false
+    texts.push(childText)
+  }
+
+  const joined = texts.join('').trim()
+  return joined.length > 0 && glossarySet.has(joined)
+}
+
+/**
  * Plan 06 (34.8-06): a string/template literal that is an argument (any
  * position, matching `isConsoleArgument`/`isWindowApiLogArgument`'s existing
  * any-position precedent above) to a config-store accessor call is a STORAGE
@@ -479,6 +595,97 @@ function isConfigStoreKeyArgument(node: Node): boolean {
   if (!Node.isPropertyAccessExpression(callee)) return false
   if (!STORE_KEY_METHOD_NAMES.has(callee.getName())) return false
   return call.getArguments().includes(node)
+}
+
+/**
+ * Plan 10 (34.8-10): a string/template literal that is a direct argument to
+ * `document.querySelector`/`querySelectorAll` (a CSS selector,
+ * `index.tsx`'s `'style.customTheme'`, `ConsoleMode/index.tsx`'s
+ * `'button:not(:disabled)'`), `canvas.getContext` (a canvas context-type
+ * constant, `index.tsx`'s `'2d'`), or `webview.setUserAgent` (a technical
+ * User-Agent string, `WebView/index.tsx`) is a browser/DOM API technical
+ * constant, never rendered prose. Method-name-gated, mirroring
+ * `isConfigStoreKeyArgument`'s precedent, so it cannot accidentally exempt
+ * an unrelated same-named method on some other object.
+ */
+const TECHNICAL_DOM_API_METHOD_NAMES = new Set([
+  'querySelector',
+  'querySelectorAll',
+  'getContext',
+  'setUserAgent',
+  // Plan 10 (34.8-10): Web Storage API key arguments — a session/local
+  // storage key is a technical identifier, never rendered prose
+  // (`WebView/index.tsx`'s `sessionStorage.getItem`/`setItem('last-url-
+  // ${store}', ...)`). Named distinctly from `STORE_KEY_METHOD_NAMES`
+  // above, which covers this codebase's OWN `electron-store` wrapper
+  // methods (`get`/`set`/`storeGet`/...), not the browser's native Web
+  // Storage API.
+  'getItem',
+  'setItem'
+])
+
+function isTechnicalDomApiArgument(node: Node): boolean {
+  const call = node.getFirstAncestor(Node.isCallExpression)
+  if (!call) return false
+  const callee = call.getExpression()
+  if (!Node.isPropertyAccessExpression(callee)) return false
+  if (!TECHNICAL_DOM_API_METHOD_NAMES.has(callee.getName())) return false
+  return call.getArguments().includes(node)
+}
+
+/**
+ * Plan 10 (34.8-10): a string literal argument (any position, mirroring
+ * `isConfigStoreKeyArgument`'s any-position precedent -- `.replace()`'s
+ * replacement value included) to `.includes()`/`.endsWith()`/
+ * `.startsWith()`/`.replace()` is used ONLY as an internal comparison or
+ * prefix-strip operand at that call site -- never rendered there --
+ * confirmed by direct read for every real occurrence this covers:
+ * `InstalledInfo.tsx`'s `.replace('Wine - ', '')`/`.includes('Default')`,
+ * `Library/index.tsx`'s `.replace('THE ', '')` sort-key stripping,
+ * `WineVersionSelector.tsx`'s `.includes('-latest')`,
+ * `WineManager/index.tsx`'s `.endsWith('LoL')`, and `WebView/index.tsx`'s
+ * `url.includes('epicgames.com')`-style domain matching (also covered by
+ * `DOMAIN_RE` above; either check exempting it is fine).
+ */
+const INTERNAL_STRING_COMPARISON_METHOD_NAMES = new Set([
+  'includes',
+  'endsWith',
+  'startsWith',
+  'replace'
+])
+
+function isInternalStringComparisonArgument(node: Node): boolean {
+  const call = node.getFirstAncestor(Node.isCallExpression)
+  if (!call) return false
+  const callee = call.getExpression()
+  if (!Node.isPropertyAccessExpression(callee)) return false
+  if (!INTERNAL_STRING_COMPARISON_METHOD_NAMES.has(callee.getName())) {
+    return false
+  }
+  return call.getArguments().includes(node)
+}
+
+/**
+ * Plan 10 (34.8-10): a string-literal element of an array literal that is
+ * IMMEDIATELY `.includes()`'d (`['Denied', 'Broken', 'Unknown'].includes(
+ * anticheatInfo.status)`, `DownloadDialog/index.tsx`) is an inline enum
+ * comparison table, never rendered -- distinct from
+ * `isKeyDefaultTupleElement`'s 2-element `[key, defaultText]` shape (which
+ * requires a dotted-key-shaped first element and feeds a LATER `t()` call at
+ * a different location); this shape has no length restriction and its
+ * result is consumed by `.includes()` at the SAME expression, never `t()`.
+ */
+function isIncludesArrayLiteralElement(node: Node): boolean {
+  const parent = node.getParent()
+  if (!parent || !Node.isArrayLiteralExpression(parent)) return false
+  const propertyAccess = parent.getParent()
+  if (!propertyAccess || !Node.isPropertyAccessExpression(propertyAccess)) {
+    return false
+  }
+  if (propertyAccess.getExpression() !== parent) return false
+  if (propertyAccess.getName() !== 'includes') return false
+  const call = propertyAccess.getParent()
+  return !!call && Node.isCallExpression(call)
 }
 
 // ---------------------------------------------------------------------------
@@ -569,6 +776,9 @@ function isStructuralNonCandidate(
   if (isWithinTransComponentChildren(node)) return true
   if (isInfoBoxTextKeyProp(node)) return true
   if (isConfigStoreKeyArgument(node)) return true
+  if (isTechnicalDomApiArgument(node)) return true
+  if (isInternalStringComparisonArgument(node)) return true
+  if (isIncludesArrayLiteralElement(node)) return true
   return false
 }
 
@@ -686,12 +896,28 @@ function isTCallArgument(node: Node, aliases: Set<string>): boolean {
  *   `t(canRunOffline ? 'box.no' : 'box.yes')` (InstalledInfo.tsx — the KEY
  *   argument, not the default-text argument; position does not matter here)
  * Walks up through any chain of `ConditionalExpression`/`BinaryExpression
- * (+)`/`ParenthesizedExpression` wrapping — nested ternaries
- * (`a ? x : b ? y : z`) and repeated concatenation (`a + b + c`) both
- * resolve to a single outermost composed expression — then applies the same
- * direct-argument-of-a-t-alias-call check `isTCallArgument` uses.
+ * (+ or ??)`/`ParenthesizedExpression`/template-interpolation wrapping —
+ * nested ternaries (`a ? x : b ? y : z`), repeated concatenation
+ * (`a + b + c`), a nullish-coalescing fallback nested inside a template
+ * interpolation (`TauriLoginPanel.tsx`'s `` `...${state?.message ?? 'unknown
+ * error'}` `` passed directly to `t()`, plan 10/34.8-10), and a literal
+ * referenced inside a `${...}` template interpolation that is itself
+ * composed into a t()-argument (`TauriLoginPanel.tsx`'s `` `...${channelLabel}
+ * ...` + '...' `` passed to `t()`, reached via `isAssignedThenPassedToT`'s
+ * reference walk below, not directly here — the hop is shared so both
+ * callers benefit) — all resolve to a single outermost composed expression —
+ * then applies the same direct-argument-of-a-t-alias-call check
+ * `isTCallArgument` uses. `??` is scoped narrowly (only inside this walk,
+ * never as a general equality-comparison exemption) — the phase's own
+ * negative-proof fixture ("still flags a string compared against an
+ * unrelated property") specifically pins that an arbitrary `===` comparison
+ * must stay flagged, so this file never grows a broad "any comparison
+ * operand is exempt" rule.
  */
-function isComposedTCallArgument(node: Node, aliases: Set<string>): boolean {
+function walkUpThroughComposingWrappers(node: Node): {
+  current: Node
+  parent: Node | undefined
+} {
   let current: Node = node
   let parent = current.getParent()
 
@@ -706,7 +932,7 @@ function isComposedTCallArgument(node: Node, aliases: Set<string>): boolean {
     }
     if (
       Node.isBinaryExpression(parent) &&
-      parent.getOperatorToken().getText() === '+' &&
+      ['+', '??'].includes(parent.getOperatorToken().getText()) &&
       (parent.getLeft() === current || parent.getRight() === current)
     ) {
       current = parent
@@ -718,8 +944,31 @@ function isComposedTCallArgument(node: Node, aliases: Set<string>): boolean {
       parent = current.getParent()
       continue
     }
+    // Plan 10 (34.8-10): a reference sitting inside a template
+    // interpolation's `${...}` slot — first hop from the reference to its
+    // enclosing `TemplateSpan`, second hop from that span to the enclosing
+    // `TemplateExpression`, after which the loop's existing `+`/ternary/
+    // paren rules can keep walking outward (e.g. the TemplateExpression
+    // being one operand of a `+` concatenation whose result is the t()
+    // argument).
+    if (Node.isTemplateSpan(parent) && parent.getExpression() === current) {
+      current = parent
+      parent = current.getParent()
+      continue
+    }
+    if (Node.isTemplateExpression(parent) && current !== node) {
+      current = parent
+      parent = current.getParent()
+      continue
+    }
     break
   }
+
+  return { current, parent }
+}
+
+function isComposedTCallArgument(node: Node, aliases: Set<string>): boolean {
+  const { current, parent } = walkUpThroughComposingWrappers(node)
 
   if (current === node) return false // no composing wrapper found at all
   if (!parent || !Node.isCallExpression(parent)) return false
@@ -797,6 +1046,36 @@ function isKeyDefaultTupleElement(node: Node): boolean {
 }
 
 /**
+ * Plan 10 (34.8-10): the same binding-capture logic `isAssignedThenPassedToT`
+ * below needs, generalized (via the shared `walkUpThroughComposingWrappers`
+ * composing-walk) to also recognise a literal that reaches its binding
+ * through a ternary — `MacArchBadge.tsx`'s `const variantClass = isMac ?
+ * 'macArchBadge--warning' : 'macArchBadge--informational'` — not only a
+ * direct `const x = 'text'`/`x = 'text'` assignment.
+ */
+function findAssignedBindingNameNode(node: Node): Node | undefined {
+  const { current, parent } = walkUpThroughComposingWrappers(node)
+  if (!parent) return undefined
+
+  if (
+    Node.isVariableDeclaration(parent) &&
+    parent.getInitializer() === current
+  ) {
+    const nameNode = parent.getNameNode()
+    return Node.isIdentifier(nameNode) ? nameNode : undefined
+  }
+  if (
+    Node.isBinaryExpression(parent) &&
+    parent.getOperatorToken().getText() === '=' &&
+    parent.getRight() === current
+  ) {
+    const left = parent.getLeft()
+    return Node.isIdentifier(left) ? left : undefined
+  }
+  return undefined
+}
+
+/**
  * Pattern 3: `repairFailure.ts`'s deliberate English fallback — a plain
  * string literal assigned to a local binding, later passed as that SAME
  * binding to a t-alias call as an argument (typically the default-text
@@ -806,40 +1085,51 @@ function isKeyDefaultTupleElement(node: Node): boolean {
  * which is why it is evaluated last: by the time this runs, the glossary,
  * tuple, and direct-t-call-argument checks have already cleared everything
  * cheaper to prove exempt.
+ *
+ * Plan 10 (34.8-10): generalized in two directions, both confirmed
+ * already-compliant by direct read rather than guessed:
+ *   - the binding capture now also follows a ternary-composed assignment
+ *     (`findAssignedBindingNameNode` above), and a reference is also
+ *     recognised through `isComposedTCallArgument`'s composing walk (now
+ *     including its own template-interpolation hop) —
+ *     `TauriLoginPanel.tsx`'s `const channelLabel = channel ? \`...\` : 'the
+ *     sign-in channel'`, later referenced as `` `...${channelLabel}...` + '...'
+ *     `` inside a `t()` call, two AST layers deeper than the original
+ *     direct-argument check alone could trace.
+ *   - a reference is ALSO "safely consumed" (not only "passed to `t()`") when
+ *     it is a diagnostic-only `console.*`/`window.api.log*` argument
+ *     (`repairFailure.ts`'s `errorText`, referenced only inside
+ *     `window.api.logError(...)`'s template) or sits inside a JSX attribute
+ *     already excluded from user-facing scope (`MacArchBadge.tsx`'s
+ *     `variantClass`, referenced only inside `className={...}`) — neither of
+ *     these is an i18n idiom, but both are the SAME underlying claim this
+ *     function already makes: the literal, through this one binding, is
+ *     never rendered as untranslated prose.
  */
 function isAssignedThenPassedToT(
   node: Node,
   aliases: Set<string>,
   sourceFile: SourceFile
 ): boolean {
-  const parent = node.getParent()
-  if (!parent) return false
-
-  let bindingNameNode: Node | undefined
-
-  if (
-    Node.isVariableDeclaration(parent) &&
-    parent.getInitializer() === node
-  ) {
-    const nameNode = parent.getNameNode()
-    if (Node.isIdentifier(nameNode)) bindingNameNode = nameNode
-  } else if (
-    Node.isBinaryExpression(parent) &&
-    parent.getOperatorToken().getText() === '=' &&
-    parent.getRight() === node
-  ) {
-    const left = parent.getLeft()
-    if (Node.isIdentifier(left)) bindingNameNode = left
-  }
-
+  const bindingNameNode = findAssignedBindingNameNode(node)
   if (!bindingNameNode) return false
 
   const references = bindingNameNode.findReferencesAsNodes()
-  return references.some(
-    (reference) =>
-      reference.getSourceFile() === sourceFile &&
-      isTCallArgument(reference, aliases)
-  )
+  return references.some((reference) => {
+    if (reference.getSourceFile() !== sourceFile) return false
+    return (
+      isTCallArgument(reference, aliases) ||
+      isComposedTCallArgument(reference, aliases) ||
+      isConsoleArgument(reference) ||
+      isWindowApiLogArgument(reference) ||
+      isNestedInExcludedJsxAttribute(reference) ||
+      // Plan 10 (34.8-10): `WebView/index.tsx`'s `userAgent` binding
+      // (assigned via ternary, referenced only at `webview.setUserAgent(
+      // userAgent)`) — the SAME "never rendered through this binding" claim,
+      // reached through a technical browser-API call instead of an i18n one.
+      isTechnicalDomApiArgument(reference)
+    )
+  })
 }
 
 /**
@@ -984,6 +1274,24 @@ export function scanSource(
     }
 
     if (glossarySet.has(text)) {
+      exempted += 1
+      return
+    }
+
+    // Plan 10 (34.8-10): a glossary term split across sibling JSX nodes for
+    // CSS styling — `SidebarLinks/index.tsx`'s `Game<span
+    // className="Sidebar__brandLib">Lib</span>`, whose concatenated rendered
+    // text is `GameLib`, an already-glossed term (D-02/D-21). The exact-
+    // string check above cannot see this because each node is a SEPARATE
+    // JsxText/JsxElement candidate; this widens the match to the node's full
+    // JSX-child siblings ONLY for `jsx-text` candidates, and only when every
+    // sibling resolves to plain text (never descends into a sibling with its
+    // own nested elements, so it cannot over-match an unrelated multi-child
+    // fragment).
+    if (
+      classification.kind === 'jsx-text' &&
+      isPartOfSplitGlossaryTerm(node, glossarySet)
+    ) {
       exempted += 1
       return
     }

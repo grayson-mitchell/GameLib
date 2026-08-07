@@ -1178,29 +1178,74 @@ describe('hardcodedStringGate', () => {
   })
 
   describe('scope orchestration', () => {
-    it('scans the whole committed scope and reconciles the real D-18 allowlist', () => {
+    // 34.8-10: the gate goes BLOCKING here — no advisory grace period (D-12).
+    // Plan 34.8-06's whole-scope audit produced a 124-item, fully-triaged
+    // backlog; plans 07/08a/08b/08c retrofitted every `retrofit`-dispositioned
+    // item (52/52) and closed the `bootErrorSurface.ts` file-exemption (10/10)
+    // — see `34.8-AUDIT.md § Closure`, which records zero remaining `retrofit`
+    // violations. The 62 residual violations the gate would otherwise report
+    // are all `not-user-facing` (60) or `glossary` (2) per that document's
+    // `## Triage` — none of them belong in `report.violations` once the
+    // scanner itself is correct, which is why the assertion below expects an
+    // empty array, not a reduced count.
+    it('scans the whole committed scope and finds zero violations outside the allowlist (D-12: blocking, no advisory grace period)', () => {
       const report = scanScope()
 
-      const realScope = JSON.parse(
-        readFileSync('meta/i18nGateScope.json', 'utf-8')
-      ) as { files: string[] }
-      expect(report.scannedFiles).toBe(realScope.files.length)
+      // A gate whose failure output does not tell you which file and line to
+      // fix will be worked around rather than fixed — print the full,
+      // human-readable report (file, line, column, kind, literal text, and
+      // the two remedies) before asserting, so a real CI failure names every
+      // offending literal instead of just a bare count.
+      if (report.violations.length > 0) {
+        console.error(formatReport(report))
+      }
+      expect(report.violations).toHaveLength(0)
 
-      // A zero here would mean an unscanned scope masquerading as a clean
-      // one (T-34.8-13) — the scanner must have genuinely looked.
-      expect(report.totalCandidates).toBeGreaterThan(0)
+      // D-18: a deferred file's exemption must self-expire the moment its
+      // measured count no longer matches what was recorded when it was
+      // deferred — surfaced here with the same "stale exemption — remove
+      // this entry" guidance `formatReport()`/`StaleExemptionError` use, so
+      // nobody has to remember to check `meta/i18nGateAllowlist.json` by hand.
+      if (report.staleExemptions.length > 0) {
+        console.error(formatReport(report))
+      }
+      expect(report.staleExemptions).toHaveLength(0)
+    })
 
-      expect(report.allowlisted).toHaveLength(2)
-      expect(report.staleExemptions).toEqual([])
+    // T-34.8-29/T-34.8-30: the gate's own integrity — asserts the scope was
+    // genuinely scanned and that neither the allowlist nor the comment-exempt
+    // mechanism has grown beyond its recorded, deliberate size. An emptied
+    // scope, a widened allowlist, or a second full-file exemption must all
+    // fail loudly here rather than silently making the block above pass.
+    describe('gate is not disabled', () => {
+      it('genuinely scanned something — a zero here would mean an unscanned scope masquerading as a clean one (T-34.8-29)', () => {
+        const report = scanScope()
+        expect(report.totalCandidates).toBeGreaterThan(0)
+      })
 
-      // report.violations is intentionally NOT asserted empty here: this
-      // plan (34.8-05) only wires the orchestration and the D-18 allowlist.
-      // Plan 34.8-06 runs the audit that turns the current violation list
-      // into a retrofit backlog, and a later plan (34.8-10) is what flips
-      // this to `expect(report.violations).toHaveLength(0)` once the
-      // in-scope D-19 retrofit targets land. Logged so an audit run has
-      // readable output.
-      console.log(formatReport(report))
+      it('scannedFiles matches the committed scope snapshot exactly', () => {
+        const report = scanScope()
+        const realScope = JSON.parse(
+          readFileSync('meta/i18nGateScope.json', 'utf-8')
+        ) as { files: string[] }
+        expect(report.scannedFiles).toBe(realScope.files.length)
+      })
+
+      it('the D-18 allowlist has exactly the two D-17 deferred entries — growing it is a decision, not a way to reach green (T-34.8-30)', () => {
+        const allowlist = JSON.parse(
+          readFileSync('meta/i18nGateAllowlist.json', 'utf-8')
+        ) as Array<{ file: string }>
+        expect(allowlist).toHaveLength(2)
+        expect(allowlist.map((entry) => entry.file)).toEqual([
+          'src/frontend/screens/Login/components/SteamLogin/index.tsx',
+          'src/frontend/screens/WebView/useTauriOAuthLogin.ts'
+        ])
+      })
+
+      it('exactly one file is comment-exempted — a second full-file exemption is a decision, not something to slip in (T-34.8-30)', () => {
+        const report = scanScope()
+        expect(report.fileExempt).toEqual(['src/frontend/bootErrorSurface.ts'])
+      })
     })
   })
 })

@@ -65,6 +65,16 @@ export interface OwnedBadgeLabel {
  * Returns null when there is no ownership match at all (no badge element —
  * missing beats wrong, matching `common/discounts/badges.ts`'s convention).
  */
+// i18n-gate-exempt: 34.8-10 -- this function's returned `key`/`defaultValue`/`values` object
+// IS consumed through `t(ownedLabel.key, ownedLabel.defaultValue, ownedLabel.values)` at
+// StoreSearchRow/index.tsx:48 (verified by direct read), a real i18n call site one
+// function-return/call-site hop deeper than the gate's same-file reference-tracing
+// (`isAssignedThenPassedToT`) reaches -- it only follows a binding within the SAME source
+// file, never across a function boundary into a different file. Confirmed already-compliant
+// in 34.8-AUDIT.md's own `## Triage` (StoreSearch/helpers.ts rows) and re-confirmed unchanged
+// in `## Closure`'s reconciliation. Declaration-scoped per the 34.8-08c mechanism -- exempts
+// only this one function, not the whole file (LibraryFilters-style tuple tables and any other
+// real violation later added to this file stay fully scanned).
 export function buildOwnedBadgeLabel(
   owned: StoreOwnershipMatch[]
 ): OwnedBadgeLabel | null {

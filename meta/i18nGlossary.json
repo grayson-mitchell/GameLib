@@ -14,6 +14,7 @@
     "GE",
     "GOG",
     "GameLib",
+    "GameLibSteam",
     "Linux",
     "MB/s",
     "Mac",
@@ -27,5 +28,5 @@
     "Zoom",
     "macOS"
   ],
-  "rationale": "These terms stay literal per D-02 (brand names, platform names and units are pinned do-not-translate); D-21 extended the list after measuring compound and variant brand forms (Amazon, ZOOM, Zoom, Epic/Legendary, Amazon/Nile, Amazon Games) in ConsoleMode/index.tsx, LogSettings/index.tsx and StoreSearch/helpers.ts. The gate failing on an unglossed brand name is the intended reminder to extend this file when a new store is added. Plan 06 (34.8-06) extended it again after the whole-scope audit measured further compound/short-form brand and platform names: `Mac` (a short display form of the already-glossed `macOS`, e.g. DownloadManagerItem/index.tsx's rendered platform label), `Win32`/`Android`/`Browser` (sideload platform-type identifiers, SideloadDialog/index.tsx), `EA app` (a rendered third-party-manager name, DownloadSizeInfo.tsx/InstalledInfo.tsx/ThirdPartyDialog/index.tsx), `Epic Games`/`ZOOM Platform` (compound store display names mirroring the already-glossed `Amazon Games`, LibraryFilters/index.tsx and helpers/index.ts's getStoreName()), and `GE`/`CachyOS` (Wine/Proton build vendor names, WineVersionSelector.tsx)."
+  "rationale": "These terms stay literal per D-02 (brand names, platform names and units are pinned do-not-translate); D-21 extended the list after measuring compound and variant brand forms (Amazon, ZOOM, Zoom, Epic/Legendary, Amazon/Nile, Amazon Games) in ConsoleMode/index.tsx, LogSettings/index.tsx and StoreSearch/helpers.ts. The gate failing on an unglossed brand name is the intended reminder to extend this file when a new store is added. Plan 06 (34.8-06) extended it again after the whole-scope audit measured further compound/short-form brand and platform names: `Mac` (a short display form of the already-glossed `macOS`, e.g. DownloadManagerItem/index.tsx's rendered platform label), `Win32`/`Android`/`Browser` (sideload platform-type identifiers, SideloadDialog/index.tsx), `EA app` (a rendered third-party-manager name, DownloadSizeInfo.tsx/InstalledInfo.tsx/ThirdPartyDialog/index.tsx), `Epic Games`/`ZOOM Platform` (compound store display names mirroring the already-glossed `Amazon Games`, LibraryFilters/index.tsx and helpers/index.ts's getStoreName()), and `GE`/`CachyOS` (Wine/Proton build vendor names, WineVersionSelector.tsx). Plan 10 (34.8-10), flipping the gate to blocking, added `GameLibSteam` (`steamBottleDefaults.ts`'s `DEFAULT_STEAM_BOTTLE_NAME` — the internal CrossOver bottle name, never rendered as UI prose but a compound of two already-glossed terms, `GameLib` + `Steam`, so matching is whole-string exact per the existing near-miss test's own rule, not substring)."
 }
