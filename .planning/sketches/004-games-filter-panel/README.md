@@ -2,7 +2,7 @@
 sketch: 004
 name: games-filter-panel
 question: "What goes in the Games tier-2 panel — search, categories and filters, Steam/Playnite style?"
-winner: null
+winner: "C"
 tags: [navigation, filtering, library, information-architecture]
 ---
 

@@ -32,7 +32,22 @@ a usable tab style.
 | 001 | app-level-tab-bar | What should an app-level tab bar look like? | **C — card / folder** | navigation, tabs, shell, macos |
 | 002 | sidebar-overflow-strategy | Where do the other ~9 destinations go? | **B, adapted** — 2nd level vertical, not horizontal | navigation, information-architecture, shell |
 | 003 | two-tier-card-nav | How does a vertical tier 2 behave under card tabs? | **Synthesis** | navigation, information-architecture, shell |
-| 004 | games-filter-panel | What goes in the Games tier-2 panel? | _pending_ | navigation, filtering, library |
+| 004 | games-filter-panel | What goes in the Games tier-2 panel? | **C — hybrid** | navigation, filtering, library |
+
+## Outcome — Phases 34.10 and 34.11
+
+The design is settled and split across two phases so each ships something usable on its own:
+
+**Phase 34.10 — navigation shell.** Tier-1 card tabs, tier-2 vertical panel, Manage Accounts
+full-bleed, `Sidebar`/`SidebarLinks` retired, Downloads relocated to a top-right progress ring,
+macOS traffic-light inset, route and i18n key migration. Games' panel carries today's filter
+controls across unchanged.
+
+**Phase 34.11 — library filtering.** Sketch 004 variant C: search, views, collections,
+store/platform/genre facets with exclude-own-facet counts, removable filter chips, and filter
+state persistence.
+
+Sequenced **before 34.7**, which stays last before the Phase 35 Electron cutover.
 
 ## Decisions So Far
 
