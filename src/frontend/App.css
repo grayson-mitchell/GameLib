@@ -24,16 +24,13 @@ body {
   text-align: center;
   display: grid;
   grid-template-columns: min-content 1fr;
-  grid-template-areas: 'offline offline' 'sidebar content' 'sidebar controller';
-  grid-template-rows: min-content 1fr min-content;
+  grid-template-areas:
+    'offline offline'
+    'navbar navbar'
+    'tier2 content'
+    'tier2 controller';
+  grid-template-rows: min-content min-content 1fr min-content;
   min-height: 100vh;
-}
-
-.App .Sidebar {
-  grid-area: sidebar;
-  max-height: 100vh;
-  position: sticky;
-  top: 0px;
 }
 
 .App .content {
@@ -112,7 +109,7 @@ body:has(dialog[open]) {
   }
 }
 
-/* Remove outline on the root element since it's not clickable anyway and it's partially hidden away by sidebar */
+/* Remove outline on the root element since it's not clickable anyway and it's partially hidden away by the navigation shell */
 
 #root:focus-visible {
   outline: none;
