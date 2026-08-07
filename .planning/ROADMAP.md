@@ -2408,7 +2408,21 @@ REQ-34.10-13, REQ-34.10-14, REQ-34.10-15, REQ-34.10-16
 the frameless drag-region runtime this rebuilds against)
 **Blocks:** Phase 34.11 (the filter panel needs the tier-2 slot to exist); the deferred
 onboarding-tour rework phase (34.10 disables `SidebarTour` per D-13 and does not rebuild it)
-**Plans:** 10/11 plans executed
+**Plans:** 11/11 plans executed — **PHASE DOES NOT CLOSE.** The blocking 5-item live gate
+(`34.10-11-PLAN.md`) authored `34.10-LIVE-GATE.md` and RAN it on real hardware 2026-08-08:
+**VERDICT FAIL, 2 of 5 PASS** (`items_passed: 2`) — see `34.10-LIVE-GATE.md` and
+`34.10-11-SUMMARY.md`. Item 1 (theme survival, REQ-34.10-06) and item 2 (window dragging under
+WKWebView, REQ-34.10-04) PASS, both now live-confirmed. Item 3 (tier-2 portal live, REQ-34.10-09)
+FAILS on **F-34.10-01**: the portal seam itself is confirmed sound (search filters the grid
+correctly), but `CategoryFilter`/`LibraryFilters` open on hover and overflow off the left edge of
+the 204px tier-2 column (`Dropdown/index.scss`'s `right:0; min-width:250px` popup). Item 4
+(Downloads ring, REQ-34.10-08) FAILS on **F-34.10-02**: no ring renders at rest or during an
+active download — a hover-state backdrop-token mismatch plus `hasProgress()` yielding no percent
+for the head element. Item 5 (Electron, REQ-34.10-05) is NOT ATTEMPTED on its tab-navigation
+sub-check (shell-renders and the no-traffic-light-overlap observation both PASS). REQUIREMENTS.md's
+REQ-34.10-05/-08/-09 were reverted Complete → Pending accordingly; REQ-34.10-04/-06 stay Complete.
+**Next:** `/gsd-plan-phase 34.10 --gaps` to close F-34.10-01 and F-34.10-02 (and, optionally,
+item 5's unmeasured sub-check) — not `/gsd-verify-work`, and not a milestone transition.
 
 Plans:
 - [x] 34.10-01-PLAN.md — Shell contracts: `navTabs.ts` tab identity + default-store cascade, the tier-2 portal context, and the Games portal-target panel (wave 1)
@@ -2421,7 +2435,7 @@ Plans:
 - [x] 34.10-08-PLAN.md — Mount the shell in `App.tsx`, restructure the `App.css` grid, migrate the drag region off `.Sidebar` with its three fixtures in lockstep (wave 4)
 - [x] 34.10-09-PLAN.md — Replacement structural tests + retire the `Sidebar` tree (wave 5)
 - [x] 34.10-10-PLAN.md — i18n: the one new `nav.tabs.games` key, gate-scope regeneration, full-suite proof (wave 6)
-- [ ] 34.10-11-PLAN.md — Author and run the blocking live gate: theme survival on 3 themes + real WKWebView dragging (wave 7)
+- [x] 34.10-11-PLAN.md — Author and run the blocking live gate: FAIL 2/5 (F-34.10-01, F-34.10-02) — phase does not close, gap cycle owed (wave 7)
 
 ### Phase 34.11: Library filtering — search, views, collections and cross-store facets (INSERTED)
 
