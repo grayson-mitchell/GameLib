@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Phase 34.8 side track — plan 02 of 12 EXECUTED (i18n gate scope derivation: meta/genI18nGateScope.ts + committed meta/i18nGateScope.json with 134 fork-owned files, REQ-34.8-06 complete, see 34.8-02-SUMMARY.md). Next for 34.8: /gsd-execute-phase 34.8 (resumes at plan 03). 34.4.2 blocker UNCHANGED and still the critical path."
-last_updated: "2026-08-07T00:33:40.053Z"
-last_activity: "2026-08-07 -- Phase 34.8 side track plan 02 of 12 EXECUTED (meta/genI18nGateScope.ts pure derivation functions + offline CLI, meta/i18nGateScope.json committed with 134 fork-owned src/frontend files pinned to package.json's upstream.baseCommit, REQ-34.8-06 complete, see 34.8-02-SUMMARY.md), 10 plans remain. Phase 34.9 side track unchanged: plans 01-03 of 11 done. 34.4.2 blocker UNCHANGED, still critical path."
+stopped_at: "Phase 34.8 side track — plan 03 of 12 EXECUTED (ts-morph hardcoded-string scanner core: meta/hardcodedStringGate.ts scanSource()/loadGlossary()/USER_FACING_ATTRIBUTES/EXCLUDED_ATTRIBUTES + 50-test proof suite in meta/__tests__/hardcodedStringGate.test.ts, REQ-34.8-07/08 complete, see 34.8-03-SUMMARY.md). Next for 34.8: /gsd-execute-phase 34.8 (resumes at plan 04). 34.4.2 blocker UNCHANGED and still the critical path."
+last_updated: "2026-08-07T00:50:48.000Z"
+last_activity: "2026-08-07 -- Phase 34.8 side track plan 03 of 12 EXECUTED (meta/hardcodedStringGate.ts: pure ts-morph AST scanner scanSource(), literal collection + user-facing classification + glossary exemption, loadGlossary()/GlossaryLoadError guard, USER_FACING_ATTRIBUTES/EXCLUDED_ATTRIBUTES exported v1 scope; 50-test proof suite including D-21/D-22 mechanical zero-violation fixtures for ConsoleMode/LogSettings/PlatformSupport; REQ-34.8-07/08 complete, see 34.8-03-SUMMARY.md), 9 plans remain. Full pnpm test:ci 199 suites/3898 tests green, no regression. Phase 34.9 side track unchanged: plans 01-03 of 11 done. 34.4.2 blocker UNCHANGED, still critical path."
 progress:
   total_phases: 21
   completed_phases: 14
   total_plans: 239
-  completed_plans: 210
+  completed_plans: 211
   percent: 67
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 02 of 12 done) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
+**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 03 of 12 done) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -3599,6 +3599,7 @@ Closed/parked native-install phases:
 | Phase 34.4.2 P23 | 70min | 3 tasks | 4 files |
 | Phase 34.8 P01 | 4min | 2 tasks | 4 files |
 | Phase 34.8 P02 | 25min | 2 tasks | 4 files |
+| Phase 34.8 P03 | 15min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -4050,6 +4051,7 @@ Recent decisions affecting current work:
 - [Phase 34.8]: keepRemoved flipped false->true (D-03), pinned by a test citing the measured 36-key deletion
 - [Phase 34.8]: ConsoleMode/LogSettings/StoreSearch brand-label maps covered by glossary term coverage instead of code retrofit (D-21) — verified zero code change needed
 - [Phase 34.8]: D-07's fork-owned-file scope is derived mechanically from the Heroic merge-base diff and committed (meta/i18nGateScope.json) rather than computed live in CI (RESEARCH.md Pitfall 1 — actions/checkout@v6 has no Heroic remote/merge-base history); both A and M diff statuses kept in scope (fork literals live mixed into upstream files, not just net-new ones); the two D-17 deferred files carved into excluded.deferred for plan 05's allowlist to own instead
+- [Phase 34.8-03]: meta/hardcodedStringGate.ts's candidate pipeline evaluates the glossary exact-match exemption BEFORE the technical-token shape check (not after) — otherwise glossary terms containing a slash (MB/s, Epic/Legendary, Amazon/Nile) get silently discarded as path-shaped tokens and never count as exempted; the single-token discard rule is broadened to any lowercase-leading no-whitespace token (not requiring an internal case transition), which is what lets ConsoleMode/LogSettings's internal store-key literals (legendary/gog/nile/steam/sideload/zoom) need zero code change under D-21 while capitalized/multi-word prose still flags
 
 ### Pending Todos
 
@@ -4138,10 +4140,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-07T00:33:40.053Z
-Stopped at: Phase 34.8 side track — plan 02 of 12 EXECUTED (i18n gate scope derivation:
-  meta/genI18nGateScope.ts pure functions + offline CLI, meta/i18nGateScope.json committed with
-  134 fork-owned src/frontend files, REQ-34.8-06 complete, see 34.8-02-SUMMARY.md).
+Last session: 2026-08-07T00:50:48.000Z
+Stopped at: Phase 34.8 side track — plan 03 of 12 EXECUTED (ts-morph hardcoded-string scanner
+  core: meta/hardcodedStringGate.ts scanSource()/loadGlossary()/USER_FACING_ATTRIBUTES/
+  EXCLUDED_ATTRIBUTES + a 50-test proof suite, REQ-34.8-07/08 complete, see 34.8-03-SUMMARY.md).
   34.4.2 blocker UNCHANGED and still the critical path.
 
   **2026-08-07 side track — Phase 34.8 discuss-phase, then plan-phase, then execution began.**
@@ -4163,8 +4165,22 @@ Stopped at: Phase 34.8 side track — plan 02 of 12 EXECUTED (i18n gate scope de
   into `excluded.deferred` for plan 05's allowlist to own. One Rule-1 fix mid-plan: `__dirname`
   resolves to `process.cwd()` under the `esbuild --bundle ... | node` stdin-pipe convention, not
   the source file's directory — the CLI's output path was switched to a repo-root-relative path
-  after the first run wrote to the repo root instead of `meta/`. Next for 34.8:
-  `/gsd-execute-phase 34.8` (resumes at plan 03).
+  after the first run wrote to the repo root instead of `meta/`. Plan 03 followed same-day:
+  `meta/hardcodedStringGate.ts` — a pure ts-morph `useInMemoryFileSystem` scanner
+  (`scanSource(filePath, sourceText, config)`) collecting JSX text/string/template literals,
+  classifying their AST position (`jsx-text`/`jsx-attribute`/`object-property`/`return`/
+  `variable`/`argument`), discarding non-user-facing structural positions and technical-token
+  shapes, and exempting exact glossary matches — with `USER_FACING_ATTRIBUTES`/
+  `EXCLUDED_ATTRIBUTES` exported as the visible v1 scope (RESOLVED Open Question 1) and
+  `loadGlossary()`/`GlossaryLoadError` refusing to run against a missing/empty glossary. Proven
+  by 50 jest tests including the D-21/D-22 mechanical zero-violation fixtures for
+  ConsoleMode/LogSettings/PlatformSupport and a whole-string-not-substring near-miss test. One
+  Rule-1 fix found while writing those tests: the glossary exact-match check had to be reordered
+  to run BEFORE the technical-token shape check (glossary terms `MB/s`/`Epic/Legendary`/
+  `Amazon/Nile` were being silently discarded as path-shaped first), and the single-token discard
+  rule was broadened from requiring an internal camelCase transition to any lowercase-leading
+  no-whitespace token — full `pnpm test:ci` 199 suites/3898 tests green (baseline 198/3848, no
+  regression). Next for 34.8: `/gsd-execute-phase 34.8` (resumes at plan 04).
 
   **The 34.4.2 record below is the live blocker and takes precedence. Next: `/gsd-debug`.**
 
