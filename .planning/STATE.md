@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.10-07-PLAN.md
-last_updated: "2026-08-07T20:14:10.289Z"
+stopped_at: Completed 34.10-08-PLAN.md
+last_updated: "2026-08-07T20:30:13.407Z"
 last_activity: 2026-08-07
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 252
-  completed_plans: 228
-  percent: 90
+  completed_plans: 229
+  percent: 91
 ---
 
 # Project State
@@ -480,7 +480,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — EXECUTING
 EXECUTED 2026-08-06, STILL DID NOT CLOSE (gate FAILED 1/6) -- gap cycle 5 required, NOT COMPLETE
-Plan: 8 of 11
+Plan: 9 of 11
 glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
 see 34.4.2-13-SUMMARY.md. Plan 14 EXECUTED 2026-08-05 -- T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW
 single-flight guard refuses a second visible login window while one is pending/presented, 25s TTL
@@ -2577,7 +2577,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 90%
+trusted blindly. The recurring `**Progress:**[█████████░] 91%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.2-07): the same splice-into-historical-prose bug recurred yet again this session --
@@ -3612,6 +3612,7 @@ Closed/parked native-install phases:
 | Phase 34.10 P05 | 35min | 2 tasks | 5 files |
 | Phase 34.10 P06 | 25min | 2 tasks | 5 files |
 | Phase 34.10 P07 | ~50min | 2 tasks | 4 files |
+| Phase 34.10 P08 | 25min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -4100,6 +4101,8 @@ Recent decisions affecting current work:
 - [Phase 34.10-07]: HeroicVersion's two useEffect bodies are byte-identical to the retired Sidebar original (diff-verified); only TourButton/SIDEBAR_TOUR_ID/data-tour were removed
 - [Phase 34.10-07]: HeroicVersion is mounted unconditionally as the tier-2 column's last child, visible only on Settings via hidden={activeTab !== 'settings'} -- keeps mount-triggered cache-clear/changelog effects firing every launch (REQ-34.10-12)
 - [Phase 34.10-07]: NavShell's tier-2 collapse condition: no active tab, OR accounts, OR games-with-unfilled-portal
+- [Phase 34.10]: Tier2PortalProvider wraps NavShell + <main> + controller + WindowControls + Help (not just NavShell/<main>) inside TourProvider, since both tier-2 portal consumers must be inside a single shared provider instance
+- [Phase 34.10]: resolveDragRegion's fallback drag-region selector moved from .Sidebar to .NavShell__navbar in the same commit as all three test fixtures, so no green test proves a class name that no longer exists in the app
 
 ### Pending Todos
 
@@ -4189,8 +4192,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-07T20:14:10.274Z
-Stopped at: Completed 34.10-07-PLAN.md
+Last session: 2026-08-07T20:30:13.392Z
+Stopped at: Completed 34.10-08-PLAN.md
   34.10-DISCUSSION-LOG.md written and committed (`d421405bd`), 13 decisions (D-01..D-13) over
   4 discussed areas. Still design/planning only: no code, no plans, phase status Pending.
   Next: `/gsd-plan-phase 34.10`. The parked work below is UNCHANGED — 34.8 is still parked at
