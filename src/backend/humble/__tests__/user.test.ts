@@ -1390,6 +1390,48 @@ describe('HumbleUser', () => {
       }
     })
 
+    // F-34.4.2-19 fix: a { event: 'closed' } nav event -- pushed by main.rs's
+    // WindowEvent::Destroyed handler whenever the Rust-owned login window is destroyed, for
+    // ANY reason (user action, an OS-level teardown, or anything else) -- must settle the
+    // watch immediately rather than being silently dropped (the pre-fix behavior: the poll
+    // discovered the window's absence only one tick later, indirectly, via the NEXT
+    // seam.cookies() call throwing a stringly-typed `humble_login:no-window:*` error).
+    test("a { event: 'closed' } nav event settles { status: 'error' } immediately, without waiting for the next cookie-read tick", async () => {
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      try {
+        // Liveness proven, no matched candidate yet -- an ordinary in-progress wait right up
+        // until the window is destroyed out from under it.
+        mockSeamCookies.mockResolvedValue({ total: 3, matched: [] })
+
+        const loginPromise = HumbleUser.startLogin()
+        await flushAsync()
+
+        mockSeamTakeEvents.mockResolvedValueOnce([
+          { event: 'closed', url: '' }
+        ])
+        jest.advanceTimersByTime(1500)
+        await flushAsync()
+
+        await expect(loginPromise).resolves.toEqual({ status: 'error' })
+        // No cookie read was ever needed to reach this outcome -- the 'closed' event alone
+        // was sufficient, proving this is the DIRECT signal, not the indirect no-window
+        // inference from a cookies() call.
+        expect(mockSeamCookies).not.toHaveBeenCalled()
+        expect(mockLogWarning).toHaveBeenCalledWith(
+          expect.stringContaining('closed before login completed'),
+          expect.anything()
+        )
+
+        // The watch is fully torn down -- no further poll ticks fire.
+        mockSeamTakeEvents.mockClear()
+        jest.advanceTimersByTime(10_000)
+        await flushAsync()
+        expect(mockSeamTakeEvents).not.toHaveBeenCalled()
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
     test('close(label) is called exactly once when the watch settles via a completed (done) login', async () => {
       jest.useFakeTimers({ doNotFake: ['setImmediate'] })
       try {

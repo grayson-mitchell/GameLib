@@ -19,7 +19,10 @@ import { isTauri } from '../../../preload/tauriTransport'
 import WebviewUnavailablePanel from './components/WebviewUnavailablePanel'
 import TauriLoginPanel from './components/TauriLoginPanel'
 import { useTauriOAuthLogin } from './useTauriOAuthLogin'
-import type { OAuthLoginCompletionPayload } from './useTauriOAuthLogin'
+import type {
+  OAuthLoginCompletionPayload,
+  TauriOAuthLoginState
+} from './useTauriOAuthLogin'
 import type { OAuthRunner } from 'common/types/oauthLogin'
 import {
   isLoginPathname,
@@ -300,6 +303,18 @@ export default function WebView() {
     void fetchHumbleLoginUserAgent()
   }, [runner])
 
+  // F-34.4.2-19 fix: `result.status === 'error'`/`'waiting'` used to be silently swallowed
+  // here — the promise settled, but nothing told `TauriLoginPanel` (still statically rendering
+  // "a sign-in window has opened" for `runner === 'humble'` regardless of any watch outcome),
+  // so the user was left staring at a lying in-progress message forever. This state is what
+  // lets the two of them agree: 'error'/'timeout' route through the SAME
+  // `TauriOAuthLoginState` shape the four OAuth runners already use, so `TauriLoginPanel`'s
+  // existing generic error/timeout branches (heading, body, Retry button) render for humble
+  // too, instead of a humble-specific copy/path having to be invented from scratch.
+  const [humbleLoginState, setHumbleLoginState] = useState<TauriOAuthLoginState>(
+    { phase: 'idle' }
+  )
+
   // Drives the main-process login watch (D-05/D-06/D-16) from the humble
   // route: starts it exactly once on mount (reconnect() instead of
   // startLogin() when arriving with an expired session), applies the
@@ -320,6 +335,29 @@ export default function WebView() {
       if (result.status === 'done') {
         await humble.login(result)
         navigate('/login')
+      } else if (result.status === 'error') {
+        // F-34.4.2-19: the backend watch gave up (e.g. the login window became
+        // unreachable — see the humble-isloggedin-never-set debug session). Surface it
+        // rather than leaving the static "signing in" copy on screen forever.
+        window.api.logInfo(
+          '[WebView] runner=humble phase=error (login watch settled with status=error)'
+        )
+        setHumbleLoginState({
+          phase: 'error',
+          message: t(
+            'webview.login.humble.error.window_unreachable',
+            'the Humble sign-in window closed or could not be reached'
+          )
+        })
+      } else if (result.status === 'waiting') {
+        // Only reachable HERE (i.e. while still mounted) via WR-03's ten-minute watch
+        // deadline — `stopLogin()`'s own `{ status: 'waiting' }` settle always races an
+        // unmount that has already set `mounted = false` first, so that path never reaches
+        // this branch. Treated exactly like the OAuth runners' own 'timeout' phase.
+        window.api.logInfo(
+          '[WebView] runner=humble phase=timeout (login watch deadline elapsed)'
+        )
+        setHumbleLoginState({ phase: 'timeout' })
       }
     }
 
@@ -571,7 +609,12 @@ export default function WebView() {
       // drive TauriLoginPanel instead: Humble gets an honest in-progress
       // surface, and the four OAuth runners get a declared-blocked one
       // naming the exact backend channel and Phase 34.5.
-      return <TauriLoginPanel runner={runner} state={oauthLoginState} />
+      return (
+        <TauriLoginPanel
+          runner={runner}
+          state={runner === 'humble' ? humbleLoginState : oauthLoginState}
+        />
+      )
     }
     if (isTauri()) {
       // D-05: in-app store and wiki browsing was never this phase's job --

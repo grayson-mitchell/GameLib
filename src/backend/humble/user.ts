@@ -323,6 +323,51 @@ export class HumbleUser {
       let suppressedSinceLastRejectionLog = 0
       let lastRejectionLogAt = 0
 
+      // F-34.4.2-19 fix: the SUPPORTED_NONEMPTY branch's `if (!match) return`
+      // (below, in checkCookie) previously had NO logging on its path at
+      // all — the jar was live (total > 0) but `_simpleauth_sess` was never
+      // present in the filtered `matched` set (e.g. the poll-direction
+      // domain-match defect this same finding fixed elsewhere), and this
+      // function returned in total silence, tick after tick, forever. The
+      // liveness heartbeat above (`logRejectionStatus`) cannot help here — it
+      // is only reachable AFTER `cookieValue` is assigned, which this path
+      // never does. Mirrors `logRejectionStatus`'s own noise-reduction
+      // shape (F-2, Phase 34.4.1 Plan 18) so this fix cannot re-introduce
+      // the "one identical warning per throttled poll tick" noise problem
+      // that fix was written to solve: log on the first tick, then only
+      // every LOGIN_WATCH_LIVENESS_LOG_INTERVAL_MS thereafter while the
+      // condition persists unchanged, reporting how many ticks were
+      // suppressed so no information is lost. Counts only — `total` (the
+      // unfiltered cookie count) and `matchedCount` (the filtered set's
+      // size) — NEVER a cookie name or value.
+      let lastCandidateNotFoundLogAt = 0
+      let suppressedSinceLastCandidateNotFoundLog = 0
+
+      function logCandidateNotFoundStatus(total: number, matchedCount: number) {
+        const now = Date.now()
+        if (
+          lastCandidateNotFoundLogAt === 0 ||
+          now - lastCandidateNotFoundLogAt >= LOGIN_WATCH_LIVENESS_LOG_INTERVAL_MS
+        ) {
+          logWarning(
+            suppressedSinceLastCandidateNotFoundLog > 0
+              ? [
+                  `Humble login-window cookie jar is live but _simpleauth_sess was not found in the filtered set (status unchanged; ${suppressedSinceLastCandidateNotFoundLog} prior identical tick(s) suppressed):`,
+                  `total=${total} matchedCount=${matchedCount}`
+                ]
+              : [
+                  'Humble login-window cookie jar is live but _simpleauth_sess was not found in the filtered set:',
+                  `total=${total} matchedCount=${matchedCount}`
+                ],
+            LogPrefix.Backend
+          )
+          lastCandidateNotFoundLogAt = now
+          suppressedSinceLastCandidateNotFoundLog = 0
+          return
+        }
+        suppressedSinceLastCandidateNotFoundLog += 1
+      }
+
       function logRejectionStatus(status: string) {
         const now = Date.now()
         if (status !== lastLoggedRejectionStatus) {
@@ -405,8 +450,32 @@ export class HumbleUser {
             // on every tick. A 'finished' event re-arms the deadline and
             // forces this tick's read to bypass the throttle — the same
             // signal notifyLoginNavigated()'s forceRevalidate() relays today.
+            //
+            // F-34.4.2-19 fix: `'closed'` (pushed by main.rs's
+            // `WindowEvent::Destroyed` handler on EVERY window this arm
+            // builds, per that handler's own doc comment) used to be pushed
+            // onto this SAME queue and never consumed — the poll only ever
+            // discovered a closed window one tick later, indirectly, via the
+            // NEXT `seam.cookies()` call throwing `humble_login:no-window:*`
+            // (classified UNSUPPORTED_OR_ERROR below). Consuming it directly
+            // here turns that one-tick-late, stringly-typed inference into
+            // an immediate, explicit settle — the window is gone, so there
+            // is nothing left to read. Not a race with this watch's OWN
+            // programmatic close (`settle()`'s `seam.close()` call): by the
+            // time that close happens `settled` is already `true`, so the
+            // `if (settled || validationInFlight) return` guard immediately
+            // below this block is what makes a self-triggered `'closed'`
+            // harmless, not this check.
             try {
               const events = await seam.takeEvents(seamLabel)
+              if (events.some((event) => event.event === 'closed')) {
+                logWarning(
+                  `Humble login window ${seamLabel} closed before login completed — aborting watch`,
+                  LogPrefix.Backend
+                )
+                settle({ status: 'error' })
+                return
+              }
               if (events.some((event) => event.event === 'finished')) {
                 armDeadline()
                 forceValidation = true
@@ -470,7 +539,10 @@ export class HumbleUser {
             // SUPPORTED_NONEMPTY — the jar is live, but the CANDIDATE cookie
             // may still be absent from the filtered set (not logged in yet).
             const match = matched.find((c) => c.name === '_simpleauth_sess')
-            if (!match) return
+            if (!match) {
+              logCandidateNotFoundStatus(total ?? 0, matched.length)
+              return
+            }
             cookieValue = match.value
           }
 

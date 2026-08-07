@@ -86,6 +86,84 @@ describe('TauriLoginPanel — Humble in-progress surface', () => {
   })
 })
 
+describe('TauriLoginPanel — Humble error/timeout surfaces [F-34.4.2-19]', () => {
+  it('{ phase: "error" } falls through to the shared generic error branch, naming Humble Bundle and a Retry affordance', () => {
+    const element = TauriLoginPanel({
+      runner: 'humble',
+      state: {
+        phase: 'error',
+        message: 'the Humble sign-in window closed or could not be reached'
+      }
+    }) as AnyReactElement
+    const text = collectText(element)
+
+    expect(text).toContain('Humble Bundle')
+    expect(text).toContain('failed')
+    expect(text).toContain(
+      'the Humble sign-in window closed or could not be reached'
+    )
+    expect(text.toLowerCase()).not.toContain('sign-in window has opened')
+    expect(text).toContain('Retry')
+  })
+
+  it('{ phase: "timeout" } falls through to the shared generic timeout branch, naming Humble Bundle and a Retry affordance', () => {
+    const element = TauriLoginPanel({
+      runner: 'humble',
+      state: { phase: 'timeout' }
+    }) as AnyReactElement
+    const text = collectText(element)
+
+    expect(text).toContain('Humble Bundle')
+    expect(text).toContain('timed out')
+    expect(text.toLowerCase()).not.toContain('sign-in window has opened')
+    expect(text).toContain('Retry')
+  })
+
+  it('the Retry button reloads the page, exactly like every other runner’s error/timeout surface', () => {
+    const element = TauriLoginPanel({
+      runner: 'humble',
+      state: { phase: 'error', message: 'unreachable' }
+    }) as AnyReactElement
+    const reloadSpy = jest.fn()
+    Object.defineProperty(window, 'location', {
+      value: { reload: reloadSpy },
+      writable: true
+    })
+
+    function findButton(node: unknown): AnyReactElement | undefined {
+      if (node === null || node === undefined || typeof node === 'boolean') {
+        return undefined
+      }
+      if (Array.isArray(node)) {
+        for (const child of node) {
+          const found = findButton(child)
+          if (found) return found
+        }
+        return undefined
+      }
+      if (typeof node === 'object' && node !== null && 'type' in node) {
+        const el = node as AnyReactElement & { type?: unknown }
+        if (el.type === 'button') return el
+        return findButton((el.props as { children?: unknown })?.children)
+      }
+      return undefined
+    }
+
+    const button = findButton(element)
+    expect(button).toBeDefined()
+    ;(button?.props as { onClick?: () => void })?.onClick?.()
+    expect(reloadSpy).toHaveBeenCalled()
+  })
+
+  it('other phases (idle/undefined) are unaffected: humble still renders its in-progress copy', () => {
+    const element = TauriLoginPanel({ runner: 'humble' }) as AnyReactElement
+    const text = collectText(element)
+
+    expect(text.toLowerCase()).toContain('sign-in window has opened')
+    expect(text).not.toContain('Retry')
+  })
+})
+
 describe('TauriLoginPanel — OAuth declared-blocked surface (D-04)', () => {
   it.each([
     ['legendary', 'login'],

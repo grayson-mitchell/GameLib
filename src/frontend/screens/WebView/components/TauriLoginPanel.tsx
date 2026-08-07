@@ -31,8 +31,16 @@ const OAUTH_CHANNEL_BY_RUNNER: Record<string, string> = {
  *
  * Two top-level surfaces, chosen by `runner`:
  *
- *  - `runner === 'humble'`: unchanged from plan 05 -- an IN-PROGRESS surface. A native sign-in
- *    window is already open; this page updates itself automatically once that watch resolves.
+ *  - `runner === 'humble'`: an IN-PROGRESS surface for as long as the watch is still running --
+ *    a native sign-in window is open; this page updates itself automatically once that watch
+ *    resolves. F-34.4.2-19 fix: this is no longer unconditional. `WebView/index.tsx`'s
+ *    `runHumbleLoginWatch()` now surfaces `result.status === 'error'`/`'waiting'` (the watch
+ *    settling without a completed login -- e.g. the login window became unreachable, or the
+ *    WR-03 ten-minute deadline elapsed) as `{ phase: 'error' }`/`{ phase: 'timeout' }`, exactly
+ *    the shape the OAuth runners below already produce -- so those two phases fall through to
+ *    the SAME generic error/timeout branches, complete with a Retry button, instead of leaving
+ *    the static "a sign-in window has opened" copy lying on screen indefinitely after the watch
+ *    has already given up.
  *
  *  - any other runner (`legendary`/`gog`/`nile`/`zoom`), or no runner at all: the OAuth surface,
  *    now driven by `state` (plan 34.4.1-09):
@@ -56,7 +64,23 @@ const OAUTH_CHANNEL_BY_RUNNER: Record<string, string> = {
 const TauriLoginPanel = ({ runner, state }: Props) => {
   const { t } = useTranslation()
 
-  if (runner === 'humble') {
+  // Hoisted above the humble branch (F-34.4.2-19 fix) so 'error'/'timeout' can be checked
+  // BEFORE deciding whether humble takes its own static in-progress branch below -- those two
+  // phases must fall through to the shared branches further down instead.
+  const phase = state?.phase
+  const channel = runner ? OAUTH_CHANNEL_BY_RUNNER[runner] : undefined
+  // 'Humble Bundle' (not the generic capitalized-runner-id 'Humble') matches this component's
+  // own original humble in-progress copy below -- only used once humble reaches the shared
+  // error/timeout branches, which name the runner via this same variable.
+  const runnerLabel =
+    runner === 'humble'
+      ? 'Humble Bundle'
+      : runner
+        ? runner.charAt(0).toUpperCase() + runner.slice(1)
+        : undefined
+  const channelLabel = channel ? `\`${channel}\`` : 'the sign-in channel'
+
+  if (runner === 'humble' && phase !== 'error' && phase !== 'timeout') {
     const heading = t(
       'webview.login.humble.heading',
       'Signing in to Humble Bundle'
@@ -74,13 +98,6 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
       </div>
     )
   }
-
-  const channel = runner ? OAUTH_CHANNEL_BY_RUNNER[runner] : undefined
-  const runnerLabel = runner
-    ? runner.charAt(0).toUpperCase() + runner.slice(1)
-    : undefined
-  const channelLabel = channel ? `\`${channel}\`` : 'the sign-in channel'
-  const phase = state?.phase
 
   const retryButton = (
     <button

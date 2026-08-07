@@ -3735,11 +3735,13 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // `on_page_load` hook above already uses -- one relay mechanism, not two. Fires for
             // ANY window this arm builds (hidden reveal/clear windows included, not gated on
             // `visible`) -- harmless for those, since nothing calls `takeEvents()` on a
-            // reveal/clear window's label, and `humble/user.ts`'s own `takeEvents()` consumer
-            // (`watchForLogin()`) only ever checks for `'finished'`, so a `'closed'` entry
-            // passing through it is inert (see `loginWindowSeam.ts`'s `LoginWindowNavEvent` doc
-            // comment for the full cross-consumer safety argument). No url to relay -- `""`,
-            // never a partial/stale navigation url that could be mistaken for one.
+            // reveal/clear window's label. F-34.4.2-19 fix: `humble/user.ts`'s own
+            // `takeEvents()` consumer (`watchForLogin()`) now settles `{ status: 'error' }`
+            // immediately on a `'closed'` entry, rather than discovering the window's absence
+            // one poll tick later via a `no-window` cookie-read error (see `loginWindowSeam.ts`'s
+            // `LoginWindowNavEvent` doc comment for the full cross-consumer safety argument). No
+            // url to relay -- `""`, never a partial/stale navigation url that could be mistaken
+            // for one.
             //
             // NOT a race with this arm's own `humble_login_close` (a few match arms below):
             // every caller that closes a window programmatically (`captureOAuthLogin`'s

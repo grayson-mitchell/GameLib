@@ -53,11 +53,17 @@ export interface LoginWindowCookieRead {
  * `push_login_window_event` helper the nav events already use. It carries an empty `url` (there is
  * no navigation url for a close). Fires once the window is truly gone, regardless of whether the
  * user closed it or a caller closed it programmatically -- `oauthLoginCapture.ts`'s `captureOAuthLogin`
- * is the only consumer that acts on it (resolve-first-wins via its own `settled` flag makes a
+ * is one consumer that acts on it (resolve-first-wins via its own `settled` flag makes a
  * caller-initiated close, which always happens AFTER that flag is already set and polling has
- * already stopped, a no-op). `humble/user.ts`'s `watchForLogin()` -- the OTHER `takeEvents()`
- * consumer -- only ever checks for `'finished'`, so a `'closed'` entry passing through it is
- * inert, not a behaviour change.
+ * already stopped, a no-op).
+ *
+ * F-34.4.2-19 fix: `humble/user.ts`'s `watchForLogin()` -- the OTHER `takeEvents()` consumer --
+ * USED to only ever check for `'finished'`, leaving a `'closed'` entry passing through it inert.
+ * That left the watch discovering a destroyed window only one tick later, indirectly, via the
+ * NEXT `seam.cookies()` call throwing `humble_login:no-window:*`. It now settles
+ * `{ status: 'error' }` immediately on `'closed'`, for the exact same resolve-first-wins reason
+ * given above -- a caller-initiated close from its own `settle()` is already a no-op by the time
+ * the event is observed.
  */
 export interface LoginWindowNavEvent {
   event: 'started' | 'finished' | 'closed'
