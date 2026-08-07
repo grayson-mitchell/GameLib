@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Phase 34.8 side track — plan 04 of 12 EXECUTED (D-14 exemption engine: collectTAliases()/FILE_EXEMPT_MARKER wired into meta/hardcodedStringGate.ts's scanSource() pipeline — t-alias detection, [key,defaultText] tuple exemption, single-scope dataflow fallback exemption, full-file leading-comment exemption — all four proven with 13 new verbatim-fixture tests including negative counterparts, REQ-34.8-07/08 complete, see 34.8-04-SUMMARY.md). Next for 34.8: /gsd-execute-phase 34.8 (resumes at plan 05). 34.4.2 blocker UNCHANGED and still the critical path."
-last_updated: "2026-08-07T01:19:26.470Z"
-last_activity: "2026-08-07 -- Phase 34.8 side track plan 04 of 12 EXECUTED (meta/hardcodedStringGate.ts: D-14 exemption engine -- collectTAliases() t-alias detection generalized to any ObjectBindingPattern (VariableDeclaration and destructured Parameter alike), [key,defaultText] tuple exemption, single-scope findReferencesAsNodes() dataflow fallback exemption, FILE_EXEMPT_MARKER full-file leading-comment exemption requiring a same-line reason; 13-test proof suite with 4 D-14: describe blocks each carrying a negative counterpart, fixtures verbatim from CrossoverBadge.tsx/LibraryFilters/stateLabels.ts/repairFailure.ts; REQ-34.8-07/08 complete, see 34.8-04-SUMMARY.md), 8 plans remain. Full pnpm test:ci 199 suites/3911 tests green, no regression. Phase 34.9 side track unchanged: plans 01-03 of 11 done. 34.4.2 blocker UNCHANGED, still critical path."
+stopped_at: "Phase 34.8 side track — plan 05 of 12 EXECUTED (scanScope() whole-scope gate orchestration wired into meta/hardcodedStringGate.ts; meta/i18nGateAllowlist.json seeded with MEASURED D-17 deferred-file counts (SteamLogin/index.tsx=27, useTauriOAuthLogin.ts=2); two Rule-1 scanner bugs fixed en route (window.api.log*/style={{}} false positives); D-18 stale-exemption mechanism proven bidirectional, REQ-34.8-07/10/17 complete, see 34.8-05-SUMMARY.md). Next for 34.8: /gsd-execute-phase 34.8 (resumes at plan 06). 34.4.2 blocker UNCHANGED and still the critical path."
+last_updated: "2026-08-07T13:35:22+12:00"
+last_activity: "2026-08-07 -- Phase 34.8 side track plan 05 of 12 EXECUTED (meta/hardcodedStringGate.ts: scanScope() whole-scope orchestration reading meta/i18nGateScope.json + meta/i18nGateAllowlist.json, ScopeLoadError/StaleExemptionError/formatReport(); meta/i18nGateAllowlist.json seeded with measured D-17 counts (SteamLogin/index.tsx=27, useTauriOAuthLogin.ts=2, both matching the plan's predictions once two Rule-1 scanner bugs -- window.api.log* diagnostic calls and style={{}} CSS values flagged as violations -- were fixed; TauriLoginPanel.tsx confirmed already fully t()-wrapped, no entry needed; D-18 stale-exemption proven bidirectional on scratch fixtures plus a real-artifact scope-orchestration test; REQ-34.8-07/10/17 complete, see 34.8-05-SUMMARY.md), 7 plans remain. Full pnpm test:ci 199 suites/3921 tests green (baseline 199/3911, no regression). Phase 34.9 side track unchanged: plans 01-03 of 11 done. 34.4.2 blocker UNCHANGED, still critical path."
 progress:
   total_phases: 21
   completed_phases: 14
   total_plans: 239
-  completed_plans: 212
+  completed_plans: 213
   percent: 67
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 03 of 12 done) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
+**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 05 of 12 done) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -2577,7 +2577,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 88%
+trusted blindly. The recurring `**Progress:**[█████████░] 89%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.2-07): the same splice-into-historical-prose bug recurred yet again this session --
@@ -3601,6 +3601,7 @@ Closed/parked native-install phases:
 | Phase 34.8 P02 | 25min | 2 tasks | 4 files |
 | Phase 34.8 P03 | 15min | 2 tasks | 2 files |
 | Phase 34.8 P04 | 35min | 2 tasks | 2 files |
+| Phase 34.8 P05 | 25min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -4056,6 +4057,8 @@ Recent decisions affecting current work:
 - [Phase 34.8]: collectTAliases() generalizes to any ObjectBindingPattern (VariableDeclaration or destructured Parameter), not just VariableDeclaration, so repairFailure.ts's parameter-destructured t resolves
 - [Phase 34.8]: Exemption pipeline runs cheapest-first: glossary, tuple, t-call-argument, then dataflow (findReferencesAsNodes) last, since it is the only expensive check
 - [Phase 34.8]: Two tuple-table test fixtures trimmed of real-but-orthogonal logic (CrossoverBadge tier if/else, LibraryFilters htmlId attribute) that would otherwise fail the zero-violation assertion for a reason unrelated to the D-14 idiom being proven
+- [Phase 34.8-05]: scanScope() always scans every D-18 allowlist entry regardless of extraFiles/scope-snapshot membership, so a deferred file's exemption can go stale on every gate run, not only an audit run that happens to widen coverage to include it; formatReport()/StaleExemptionError both derive D-18's "stale exemption — remove this entry" wording from one shared internal helper
+- [Phase 34.8-05]: Two scanner false-positive categories fixed as Rule-1 bugs during Task 2's required measurement rather than transcribing inflated counts into the allowlist — window.api.logInfo/logError diagnostic-log arguments (this codebase's console-under-Tauri-sidecar replacement, 26/134 scope files) and CSS values nested inside a style={{}} JSX attribute (17/134 scope files) are both non-user-facing by the scanner's own stated purpose; after the fixes the two D-17 deferred files measured exactly as predicted (SteamLogin/index.tsx=27, useTauriOAuthLogin.ts=2)
 
 ### Pending Todos
 
@@ -4144,13 +4147,13 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-07T01:19:26.445Z
-Stopped at: Phase 34.8 side track — plan 04 of 12 EXECUTED (D-14 exemption engine: t-alias
-  detection generalized to any ObjectBindingPattern (VariableDeclaration and destructured
-  Parameter alike), [key,defaultText] tuple exemption, single-scope findReferencesAsNodes()
-  dataflow fallback exemption, FILE_EXEMPT_MARKER full-file leading-comment exemption requiring
-  a same-line reason -- all four proven with 13 new verbatim-fixture tests including negative
-  counterparts, REQ-34.8-07/08 complete, see 34.8-04-SUMMARY.md).
+Last session: 2026-08-07T13:35:22+12:00
+Stopped at: Phase 34.8 side track — plan 05 of 12 EXECUTED (scanScope() whole-scope gate
+  orchestration wired into meta/hardcodedStringGate.ts; meta/i18nGateAllowlist.json seeded with
+  MEASURED D-17 deferred-file counts (SteamLogin/index.tsx=27, useTauriOAuthLogin.ts=2); two
+  Rule-1 scanner bugs fixed en route (window.api.log*/style={{}} false positives); D-18
+  stale-exemption mechanism proven bidirectional, REQ-34.8-07/10/17 complete, see
+  34.8-05-SUMMARY.md).
   34.4.2 blocker UNCHANGED and still the critical path.
 
   **2026-08-07 side track — Phase 34.8 discuss-phase, then plan-phase, then execution began.**
@@ -4198,8 +4201,28 @@ Stopped at: Phase 34.8 side track — plan 04 of 12 EXECUTED (D-14 exemption eng
   `LibraryFilters/index.tsx`, `Humble/Keys/stateLabels.ts`, and `GameSubMenu/repairFailure.ts`.
   Manually verified the tuple-exemption branch is load-bearing (temporarily neutered it, 3/4
   tests in that block failed, restored to a byte-identical file). Full `pnpm test:ci` 199
-  suites/3911 tests green (baseline 199/3898, no regression). See `34.8-04-SUMMARY.md`. Next for
-  34.8: `/gsd-execute-phase 34.8` (resumes at plan 05).
+  suites/3911 tests green (baseline 199/3898, no regression). See `34.8-04-SUMMARY.md`. Plan 05
+  followed same-day: `scanScope()` reads the committed `meta/i18nGateScope.json` snapshot, scans
+  every listed file plus every D-18 allowlist entry (always scanned, independent of `extraFiles`)
+  plus any audit-mode `extraFiles`, and reconciles the allowlist into `allowlisted`/
+  `staleExemptions`; `ScopeLoadError` refuses a missing/unparseable/empty scope snapshot, a
+  missing/malformed allowlist, or an unreadable scoped/allowlisted file; `formatReport()` and
+  `StaleExemptionError` both derive D-18's "stale exemption — remove this entry" wording from one
+  shared internal helper. `meta/i18nGateAllowlist.json` seeded with two entries carrying MEASURED
+  (not estimated) counts: `SteamLogin/index.tsx`=27 (within the research session's ~26-28
+  estimate), `useTauriOAuthLogin.ts`=2 (the plan's exact prediction). `TauriLoginPanel.tsx`
+  confirmed already fully `t()`-wrapped, no entry needed. Two Rule-1 fixes discovered while
+  measuring: `window.api.logInfo`/`logError` diagnostic-log arguments (this codebase's
+  console-under-Tauri-sidecar replacement, 26/134 scope files) and CSS values nested inside a
+  `style={{}}` JSX attribute (17/134 scope files) were both flagged as user-facing violations
+  before the fix — left unfixed, plan 06's audit would have been swamped with non-actionable
+  noise. D-18's stale-exemption mechanism proven bidirectional (measured drops AND measured
+  rises both fire) on `mkdtempSync` scratch fixtures, plus a real-artifact scope-orchestration
+  test (`scannedFiles`=134, `totalCandidates`=2050, `allowlisted.length`=2,
+  `staleExemptions`=[], `violations.length`=335 captured but deliberately not yet asserted
+  empty — that is plan 06's audit input and plan 34.8-10's eventual blocking assertion). Full
+  `pnpm test:ci` 199 suites/3921 tests green (baseline 199/3911, no regression). See
+  `34.8-05-SUMMARY.md`. Next for 34.8: `/gsd-execute-phase 34.8` (resumes at plan 06).
 
   **The 34.4.2 record below is the live blocker and takes precedence. Next: `/gsd-debug`.**
 
