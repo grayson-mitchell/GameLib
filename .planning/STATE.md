@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Phase 34.8 side track — plan 05 of 12 EXECUTED (scanScope() whole-scope gate orchestration wired into meta/hardcodedStringGate.ts; meta/i18nGateAllowlist.json seeded with MEASURED D-17 deferred-file counts (SteamLogin/index.tsx=27, useTauriOAuthLogin.ts=2); two Rule-1 scanner bugs fixed en route (window.api.log*/style={{}} false positives); D-18 stale-exemption mechanism proven bidirectional, REQ-34.8-07/10/17 complete, see 34.8-05-SUMMARY.md). Next for 34.8: /gsd-execute-phase 34.8 (resumes at plan 06). 34.4.2 blocker UNCHANGED and still the critical path."
-last_updated: "2026-08-07T13:35:22+12:00"
-last_activity: "2026-08-07 -- Phase 34.8 side track plan 05 of 12 EXECUTED (meta/hardcodedStringGate.ts: scanScope() whole-scope orchestration reading meta/i18nGateScope.json + meta/i18nGateAllowlist.json, ScopeLoadError/StaleExemptionError/formatReport(); meta/i18nGateAllowlist.json seeded with measured D-17 counts (SteamLogin/index.tsx=27, useTauriOAuthLogin.ts=2, both matching the plan's predictions once two Rule-1 scanner bugs -- window.api.log* diagnostic calls and style={{}} CSS values flagged as violations -- were fixed; TauriLoginPanel.tsx confirmed already fully t()-wrapped, no entry needed; D-18 stale-exemption proven bidirectional on scratch fixtures plus a real-artifact scope-orchestration test; REQ-34.8-07/10/17 complete, see 34.8-05-SUMMARY.md), 7 plans remain. Full pnpm test:ci 199 suites/3921 tests green (baseline 199/3911, no regression). Phase 34.9 side track unchanged: plans 01-03 of 11 done. 34.4.2 blocker UNCHANGED, still critical path."
+stopped_at: "Phase 34.8 side track — plan 06 of 12 EXECUTED (scanScope() run whole-scope for the first time: 134 files, 1889 candidates, 335 raw hits -> 9 scanner false-positive categories fixed as Rule-1 bugs -> 124 trustworthy violations; every violation triaged into retrofit(52)/glossary(2)/file-exemption(10)/deferred(29)/not-user-facing(60, a documented fifth disposition); blocking checkpoint fired (52>40 violations, 17>12 files) and developer selected split-plan -- 34.8-08 to be split into 34.8-08a/08b (etc.) by disjoint file sets, D-12 unweakened, see 34.8-06-SUMMARY.md and 34.8-AUDIT.md § Scope Decision). Next for 34.8: orchestrator mints 34.8-08a/08b, then /gsd-execute-phase 34.8 continues at plan 07. 34.4.2 blocker UNCHANGED and still the critical path."
+last_updated: "2026-08-07T14:20:30+12:00"
+last_activity: "2026-08-07 -- Phase 34.8 side track plan 06 of 12 EXECUTED (34.8-AUDIT.md: gate's own whole-scope scanScope() run superseding the manual audit and heuristic sweep; 9 hardcodedStringGate.ts false-positive-category fixes -- ternary/template-composed t() args, {defaultValue} interpolation idiom, <Trans> children, programmatic CSS custom properties, KeyboardEvent.key comparisons, classNames()-derived className values, InfoBox text prop, electron-store key arguments, bracketed CSS attribute selectors -- with 40 new regression tests (77->117 meta tests); meta/i18nGlossary.json +9 brand/platform terms (Mac, Win32, Android, Browser, EA app, Epic Games, ZOOM Platform, GE, CachyOS); 124-row triage table, 52-item retrofit backlog split 6/46 across plans 07/08; blocking checkpoint resolved -- developer selected split-plan, D-12 unweakened, REQ-34.8-11 complete, see 34.8-06-SUMMARY.md). Full pnpm test:ci 199 suites/3965 tests green (baseline 199/3921, no regressions). Phase 34.9 side track unchanged: plans 01-03 of 11 done. 34.4.2 blocker UNCHANGED, still critical path."
 progress:
   total_phases: 21
   completed_phases: 14
   total_plans: 239
-  completed_plans: 213
+  completed_plans: 214
   percent: 67
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 05 of 12 done) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
+**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 06 of 12 done — plan 08 to be split into 08a/08b by the orchestrator per the plan 06 checkpoint decision) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -3602,6 +3602,7 @@ Closed/parked native-install phases:
 | Phase 34.8 P03 | 15min | 2 tasks | 2 files |
 | Phase 34.8 P04 | 35min | 2 tasks | 2 files |
 | Phase 34.8 P05 | 25min | 3 tasks | 3 files |
+| Phase 34.8 P06 | ~50min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -4059,6 +4060,9 @@ Recent decisions affecting current work:
 - [Phase 34.8]: Two tuple-table test fixtures trimmed of real-but-orthogonal logic (CrossoverBadge tier if/else, LibraryFilters htmlId attribute) that would otherwise fail the zero-violation assertion for a reason unrelated to the D-14 idiom being proven
 - [Phase 34.8-05]: scanScope() always scans every D-18 allowlist entry regardless of extraFiles/scope-snapshot membership, so a deferred file's exemption can go stale on every gate run, not only an audit run that happens to widen coverage to include it; formatReport()/StaleExemptionError both derive D-18's "stale exemption — remove this entry" wording from one shared internal helper
 - [Phase 34.8-05]: Two scanner false-positive categories fixed as Rule-1 bugs during Task 2's required measurement rather than transcribing inflated counts into the allowlist — window.api.logInfo/logError diagnostic-log arguments (this codebase's console-under-Tauri-sidecar replacement, 26/134 scope files) and CSS values nested inside a style={{}} JSX attribute (17/134 scope files) are both non-user-facing by the scanner's own stated purpose; after the fixes the two D-17 deferred files measured exactly as predicted (SteamLogin/index.tsx=27, useTauriOAuthLogin.ts=2)
+- [Phase 34.8-06]: 9 further hardcodedStringGate.ts false-positive categories fixed as Rule-1 bugs while performing the plan's own required whole-scope measurement (raw 335 -> trustworthy 124 violations) — ternary/template-composed t() default-text args, {defaultValue} interpolation idiom, <Trans> component children, programmatic CSS custom-property values, KeyboardEvent.key comparisons, classNames()-derived className values, InfoBox text prop, electron-store key arguments, bracketed CSS attribute-selector shapes; 40 new regression tests, 9 new glossary terms (Mac, Win32, Android, Browser, EA app, Epic Games, ZOOM Platform, GE, CachyOS)
+- [Phase 34.8-06]: A fifth disposition, not-user-facing, added beyond the plan's four declared values (retrofit/glossary/file-exemption/deferred) for 60 of the 124 measured violations confirmed to be internal enum discriminators, technical constants, or already-t()-wrapped code one dataflow layer deeper than the scanner traces — documented in 34.8-AUDIT.md rather than forced into retrofit or glossary
+- [Phase 34.8-06]: Developer selected split-plan (2026-08-07) to resolve the over-threshold 52-violation/17-file retrofit backlog: plan 34.8-08 splits into 34.8-08a/08b (etc.) by disjoint file sets, minted by the orchestrator; D-12's blocking-from-day-one posture stays fully unweakened, no allowlist entries added — see 34.8-AUDIT.md § Scope Decision
 
 ### Pending Todos
 
@@ -4147,14 +4151,17 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-07T13:35:22+12:00
-Stopped at: Phase 34.8 side track — plan 05 of 12 EXECUTED (scanScope() whole-scope gate
-  orchestration wired into meta/hardcodedStringGate.ts; meta/i18nGateAllowlist.json seeded with
-  MEASURED D-17 deferred-file counts (SteamLogin/index.tsx=27, useTauriOAuthLogin.ts=2); two
-  Rule-1 scanner bugs fixed en route (window.api.log*/style={{}} false positives); D-18
-  stale-exemption mechanism proven bidirectional, REQ-34.8-07/10/17 complete, see
-  34.8-05-SUMMARY.md).
-  34.4.2 blocker UNCHANGED and still the critical path.
+Last session: 2026-08-07T14:20:30+12:00
+Stopped at: Phase 34.8 side track — plan 06 of 12 EXECUTED (scanScope() run whole-scope for the
+  first time — 134 files, 1889 candidates, 335 raw hits; 9 scanner false-positive categories
+  fixed as Rule-1 bugs -> 124 trustworthy violations, 40 new regression tests, 9 new glossary
+  terms; every violation triaged into retrofit(52)/glossary(2)/file-exemption(10)/deferred(29)/
+  not-user-facing(60, a documented fifth disposition); blocking checkpoint fired (52>40
+  violations, 17>12 files) and developer selected split-plan — 34.8-08 to be split into
+  34.8-08a/08b (etc.) by disjoint file sets, D-12 unweakened, REQ-34.8-11 complete, see
+  34.8-06-SUMMARY.md and 34.8-AUDIT.md § Scope Decision).
+  Next for 34.8: orchestrator mints 34.8-08a/08b, then `/gsd-execute-phase 34.8` continues at
+  plan 07. 34.4.2 blocker UNCHANGED and still the critical path.
 
   **2026-08-07 side track — Phase 34.8 discuss-phase, then plan-phase, then execution began.**
   At operator request, Phase 34.8 (frontend i18n compliance for fork-added code) was pulled
@@ -4222,7 +4229,35 @@ Stopped at: Phase 34.8 side track — plan 05 of 12 EXECUTED (scanScope() whole-
   `staleExemptions`=[], `violations.length`=335 captured but deliberately not yet asserted
   empty — that is plan 06's audit input and plan 34.8-10's eventual blocking assertion). Full
   `pnpm test:ci` 199 suites/3921 tests green (baseline 199/3911, no regression). See
-  `34.8-05-SUMMARY.md`. Next for 34.8: `/gsd-execute-phase 34.8` (resumes at plan 06).
+  `34.8-05-SUMMARY.md`. Plan 06 followed same-day: `scanScope()` run whole-scope for the first
+  time across the committed 134-file snapshot, superseding both the 2026-08-05 manual audit and
+  RESEARCH.md's time-boxed heuristic sweep as the scope source of truth. The first raw run
+  reported 335 violations; reading a representative sample showed 9 categories of scanner
+  false-positives (ternary/template-composed `t()` default-text args, `{ defaultValue }`
+  interpolation idiom, `<Trans>` component children, programmatic CSS custom-property values,
+  `KeyboardEvent.key` comparisons, `classNames()`-derived `className` values, `<InfoBox
+  text="...">`'s key-forwarding prop, electron-store key arguments, bracketed CSS
+  attribute-selector shapes) — all fixed as Rule-1 bugs (direct precedent from plan 05's own
+  2-category fix in this exact file), backed by 40 new regression tests (77 -> 117 meta tests)
+  and 9 new glossary terms (`Mac`, `Win32`, `Android`, `Browser`, `EA app`, `Epic Games`, `ZOOM
+  Platform`, `GE`, `CachyOS`). The authoritative post-fix run measured 124 violations, each
+  triaged into exactly one of five dispositions in `34.8-AUDIT.md`'s `## Triage` table
+  (`retrofit`=52, `glossary`=2, `file-exemption`=10 all in `bootErrorSurface.ts`, `deferred`=29
+  the two D-17 files, and a newly-introduced fifth value `not-user-facing`=60 for confirmed
+  non-violations like internal enum discriminators and technical constants — documented as a
+  Rule 2 deviation rather than forced into `retrofit`/`glossary`). `appleRating.ts:31`'s
+  `'Unrated'` (RESEARCH.md's known-answer control) was confirmed captured. The resulting
+  `## Retrofit Backlog` (6 violations assigned to plan 34.8-07's `RedeemSteamKeyDialog/` +
+  `bootErrorSurface.ts`; 46 across 17 files assigned to plan 34.8-08) exceeded both planning
+  thresholds (52>40 violations, 17>12 files), firing the plan's blocking `checkpoint:decision`.
+  The developer selected `split-plan`: `34.8-08` will be split into `34.8-08a`/`34.8-08b` (etc.)
+  by disjoint file sets (the orchestrator's job, immediately after this plan), keeping every
+  plan inside its context budget while the phase still closes this pass and the gate still goes
+  blocking on schedule — D-12's "blocking from day one" posture is explicitly confirmed
+  unweakened, with no new allowlist entries. REQ-34.8-11 complete. Full `pnpm test:ci` 199
+  suites/3965 tests green (baseline 199/3921, no regressions). See `34.8-06-SUMMARY.md` and
+  `34.8-AUDIT.md`. Next for 34.8: orchestrator mints `34.8-08a`/`34.8-08b`, then
+  `/gsd-execute-phase 34.8` continues at plan 07.
 
   **The 34.4.2 record below is the live blocker and takes precedence. Next: `/gsd-debug`.**
 
