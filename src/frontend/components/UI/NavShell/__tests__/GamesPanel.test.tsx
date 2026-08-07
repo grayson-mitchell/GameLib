@@ -33,9 +33,8 @@ import GamesPanel from '../components/GamesPanel'
 
 type DivElement = ReactElement<{
   className?: string
-  ref?: unknown
   children?: unknown
-}>
+}> & { ref?: unknown }
 
 describe('Tier2PortalContext', () => {
   it('has target: null, filled: false and no-throw setters by default', () => {
@@ -73,8 +72,12 @@ describe('GamesPanel', () => {
   })
 
   it("forwards the context's setTarget as the ref callback", () => {
+    // React 18's createElement (and the react-jsx automatic runtime) pulls
+    // `ref` out of the config object onto ReactElement.ref -- it is not part
+    // of `.props` until React 19. Verified against
+    // node_modules/react/cjs/react-jsx-runtime.development.js.
     const element = GamesPanel() as DivElement
-    expect(element.props.ref).toBe(mockSetTarget)
+    expect(element.ref).toBe(mockSetTarget)
   })
 
   it('renders no children of its own', () => {
