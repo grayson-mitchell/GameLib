@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.10-05-PLAN.md
-last_updated: "2026-08-07T11:45:17.974Z"
+stopped_at: Completed 34.10-06-PLAN.md
+last_updated: "2026-08-07T11:55:33.309Z"
 last_activity: 2026-08-07
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 252
-  completed_plans: 226
+  completed_plans: 227
   percent: 90
 ---
 
@@ -480,7 +480,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — EXECUTING
 EXECUTED 2026-08-06, STILL DID NOT CLOSE (gate FAILED 1/6) -- gap cycle 5 required, NOT COMPLETE
-Plan: 6 of 11
+Plan: 7 of 11
 glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
 see 34.4.2-13-SUMMARY.md. Plan 14 EXECUTED 2026-08-05 -- T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW
 single-flight guard refuses a second visible login window while one is pending/presented, 25s TTL
@@ -3610,6 +3610,7 @@ Closed/parked native-install phases:
 | Phase 34.10 P03 | 40min | 2 tasks | 3 files |
 | Phase 34.10 P04 | 55min | 2 tasks | 3 files |
 | Phase 34.10 P05 | 35min | 2 tasks | 5 files |
+| Phase 34.10 P06 | 25min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -4184,8 +4185,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-07T11:45:17.959Z
-Stopped at: Completed 34.10-05-PLAN.md
+Last session: 2026-08-07T11:55:33.294Z
+Stopped at: Completed 34.10-06-PLAN.md
   34.10-DISCUSSION-LOG.md written and committed (`d421405bd`), 13 decisions (D-01..D-13) over
   4 discussed areas. Still design/planning only: no code, no plans, phase status Pending.
   Next: `/gsd-plan-phase 34.10`. The parked work below is UNCHANGED — 34.8 is still parked at
