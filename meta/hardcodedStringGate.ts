@@ -98,7 +98,8 @@ export const EXCLUDED_ATTRIBUTES = [
   'name',
   'href',
   'src',
-  'to'
+  'to',
+  'style'
 ] as const
 
 function isExcludedAttribute(attributeName: string): boolean {
@@ -208,6 +209,31 @@ function isConsoleArgument(node: Node): boolean {
   return Node.isIdentifier(target) && target.getText() === 'console'
 }
 
+/**
+ * Plan 05, discovered while measuring `useTauriOAuthLogin.ts` for the D-17 allowlist:
+ * `window.api.logInfo(...)` / `window.api.logError(...)` are this codebase's diagnostic
+ * logging channel under the Tauri sidecar (see memory `sidecar-console-and-logger-are-invisible`
+ * — stdout IS the RPC pipe, so `console.*` is unreliable there and 26+ fork-owned frontend files
+ * use `window.api.log*` instead). These strings are developer-facing log lines, never rendered
+ * to a user — the exact same category `isConsoleArgument` already exempts, just reached through
+ * the sidecar bridge instead of the global `console` object. Without this, every `window.api.log*`
+ * call site in the 134-file scope would flood the gate with false positives, contradicting D-15's
+ * "100% actionable" requirement for gate trust.
+ */
+function isWindowApiLogArgument(node: Node): boolean {
+  const call = node.getFirstAncestor(Node.isCallExpression)
+  if (!call) return false
+  const callee = call.getExpression()
+  if (!Node.isPropertyAccessExpression(callee)) return false
+  const methodName = callee.getName()
+  if (methodName !== 'log' && !/^log[A-Z]/.test(methodName)) return false
+  const target = callee.getExpression()
+  if (!Node.isPropertyAccessExpression(target)) return false
+  if (target.getName() !== 'api') return false
+  const root = target.getExpression()
+  return Node.isIdentifier(root) && root.getText() === 'window'
+}
+
 function isNewErrorArgument(node: Node): boolean {
   const newExpr = node.getFirstAncestor(Node.isNewExpression)
   if (!newExpr) return false
@@ -253,6 +279,25 @@ function isElementAccessKey(node: Node): boolean {
     Node.isElementAccessExpression(parent) &&
     parent.getArgumentExpression() === node
   )
+}
+
+/**
+ * Plan 05, discovered while measuring `SteamLogin/index.tsx` for the D-17 allowlist: a React
+ * inline `style={{ fontSize: '2em', color: 'var(--text-default)' }}` attribute is always an
+ * OBJECT literal, never a direct string value — so `getEnclosingJsxAttributeName` (which only
+ * fires for `attr="text"` / `attr={'text'}`) never sees it, and every CSS value nested inside
+ * that object literal falls through to the generic `object-property` classification meant for
+ * real config/prose objects (`{ message: 'Repair failed.' }`). `EXCLUDED_ATTRIBUTES` gained
+ * `'style'` for defense-in-depth on any future direct-string case, but the actual bug is this
+ * nested-object shape: CSS declaration values (`'2em'`, `'var(--text-lg)'`, `'8px'`) are not
+ * user-facing prose and were flooding the SteamLogin measurement (91 raw hits, ~70 of them CSS
+ * values) before this fix. 17 of the 134 in-scope files use inline `style={{}}` — left unfixed,
+ * this would have swamped plan 06's audit with non-actionable noise, contradicting D-15's
+ * "100% actionable" requirement for gate trust.
+ */
+function isStyleAttributeValue(node: Node): boolean {
+  const attribute = node.getFirstAncestor(Node.isJsxAttribute)
+  return !!attribute && attribute.getNameNode().getText() === 'style'
 }
 
 // ---------------------------------------------------------------------------
@@ -323,6 +368,7 @@ function isStructuralNonCandidate(
   classification: Classification
 ): boolean {
   if (isConsoleArgument(node)) return true
+  if (isWindowApiLogArgument(node)) return true
   if (isNewErrorArgument(node)) return true
   if (
     classification.kind === 'jsx-attribute' &&
@@ -336,6 +382,7 @@ function isStructuralNonCandidate(
   if (isObjectKey(node)) return true
   if (isEnumMemberName(node)) return true
   if (isElementAccessKey(node)) return true
+  if (isStyleAttributeValue(node)) return true
   return false
 }
 
@@ -650,5 +697,247 @@ export function scanSource(
     violations,
     exempted,
     fileExempt: fileExemptResult
+  }
+}
+
+// ---------------------------------------------------------------------------
+// scanScope — plan 05: whole-scope orchestration + D-18 allowlist
+// reconciliation. scanSource() above stays pure and disk-free; everything
+// below owns the I/O (reading the scope snapshot, the allowlist, and every
+// scanned file from disk).
+// ---------------------------------------------------------------------------
+
+export interface AllowlistEntry {
+  file: string // repo-root-relative POSIX path
+  expectedCount: number // measured violation count at the time of deferral
+  reason: string // names D-17 and the blocking phase
+}
+
+export interface ScopeScanReport {
+  scannedFiles: number
+  totalCandidates: number // sum of violations + exempted across the scope
+  violations: Violation[] // violations OUTSIDE allowlisted files
+  allowlisted: Array<{ file: string; measured: number; expected: number }>
+  staleExemptions: string[] // allowlisted files whose measured !== expected
+  fileExempt: string[] // files skipped by FILE_EXEMPT_MARKER
+}
+
+interface ScopeSnapshot {
+  files: string[]
+  excluded?: {
+    deferred?: string[]
+    reason?: Record<string, string>
+  }
+}
+
+/**
+ * A tool that cannot do its job must refuse loudly rather than pass silently
+ * (mirrors `GlossaryLoadError` above and `buildCrossoverIndex.ts`'s
+ * `ZeroRecordError`). Covers both the scope snapshot and the allowlist —
+ * both are "config this gate cannot run without" — plus a scoped/allowlisted
+ * file that cannot be read from disk (T-34.8-14's "clear error, not a
+ * silent skip" for a stale/typo'd allowlist path).
+ */
+export class ScopeLoadError extends Error {
+  constructor(message: string) {
+    super(`ScopeLoadError: ${message}`)
+    this.name = 'ScopeLoadError'
+  }
+}
+
+function readJsonSafely<T>(path: string, context: string): T {
+  let raw: string
+  try {
+    raw = readFileSync(path, 'utf-8')
+  } catch (error) {
+    throw new ScopeLoadError(
+      `could not read ${context} at "${path}": ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    )
+  }
+
+  try {
+    return JSON.parse(raw) as T
+  } catch (error) {
+    throw new ScopeLoadError(
+      `${context} at "${path}" is not valid JSON: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    )
+  }
+}
+
+/**
+ * Builds D-18's per-entry stale-exemption failure lines, shared by
+ * `formatReport()` and `StaleExemptionError` — the ONE place the wording
+ * is written out, per D-18's requirement that it live in a single spot.
+ */
+function staleExemptionLines(report: ScopeScanReport): string[] {
+  return report.staleExemptions.map((file) => {
+    const entry = report.allowlisted.find((a) => a.file === file)
+    const expected = entry?.expected ?? 0
+    const measured = entry?.measured ?? 0
+    return (
+      `stale exemption — remove this entry: ${file} (expected ${expected}, ` +
+      `measured ${measured}) in meta/i18nGateAllowlist.json`
+    )
+  })
+}
+
+/**
+ * Reads the committed scope snapshot, scans every listed file plus every
+ * D-18 allowlist entry (always scanned, regardless of `extraFiles`, so a
+ * deferred file's exemption can go stale even on a run that never widens
+ * coverage) plus any `extraFiles` audit-mode addition, and reconciles the
+ * allowlist. Violations inside an allowlisted file never reach
+ * `report.violations` — they surface only via `report.allowlisted` /
+ * `report.staleExemptions`.
+ */
+export function scanScope(
+  opts: {
+    scopePath?: string
+    allowlistPath?: string
+    glossaryPath?: string
+    extraFiles?: string[]
+  } = {}
+): ScopeScanReport {
+  const scopePath = opts.scopePath ?? 'meta/i18nGateScope.json'
+  const allowlistPath = opts.allowlistPath ?? 'meta/i18nGateAllowlist.json'
+  const glossaryPath = opts.glossaryPath ?? 'meta/i18nGlossary.json'
+  const extraFiles = opts.extraFiles ?? []
+
+  const scope = readJsonSafely<ScopeSnapshot>(scopePath, 'scope snapshot')
+  if (!Array.isArray(scope.files) || scope.files.length === 0) {
+    throw new ScopeLoadError(
+      `scope snapshot at "${scopePath}" has no files — an empty scope is a ` +
+        'gate that passes everything, and it must be indistinguishable ' +
+        'from a crash, not from a pass'
+    )
+  }
+
+  const allowlist = readJsonSafely<AllowlistEntry[]>(
+    allowlistPath,
+    'allowlist'
+  )
+  if (!Array.isArray(allowlist)) {
+    throw new ScopeLoadError(`allowlist at "${allowlistPath}" is not an array`)
+  }
+
+  const glossary = loadGlossary(glossaryPath)
+
+  const scopeFileSet = new Set(scope.files)
+  const allowlistFileSet = new Set(allowlist.map((entry) => entry.file))
+  // Audit-mode widening (plan 06) must not double-scan a file already
+  // covered by the committed scope or the allowlist.
+  const extraOnlyFiles = extraFiles.filter(
+    (file) => !scopeFileSet.has(file) && !allowlistFileSet.has(file)
+  )
+
+  const report: ScopeScanReport = {
+    scannedFiles: 0,
+    totalCandidates: 0,
+    violations: [],
+    allowlisted: [],
+    staleExemptions: [],
+    fileExempt: []
+  }
+
+  function scanFile(file: string): ScanResult {
+    let text: string
+    try {
+      text = readFileSync(file, 'utf-8')
+    } catch (error) {
+      throw new ScopeLoadError(
+        `could not read scoped file "${file}": ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      )
+    }
+    return scanSource(file, text, { glossary })
+  }
+
+  // Scope snapshot files — the committed, always-enforced list.
+  for (const file of scope.files) {
+    const result = scanFile(file)
+    report.scannedFiles += 1
+    report.totalCandidates += result.violations.length + result.exempted
+    if (result.fileExempt) report.fileExempt.push(file)
+    report.violations.push(...result.violations)
+  }
+
+  // Allowlist entries — always scanned regardless of extraFiles, so a
+  // deferred file's exemption can go stale on every single run, not only
+  // an audit run that happens to widen coverage to include it.
+  for (const entry of allowlist) {
+    const result = scanFile(entry.file)
+    report.totalCandidates += result.violations.length + result.exempted
+    if (result.fileExempt) report.fileExempt.push(entry.file)
+    const measured = result.violations.length
+    report.allowlisted.push({
+      file: entry.file,
+      measured,
+      expected: entry.expectedCount
+    })
+    if (measured !== entry.expectedCount) {
+      report.staleExemptions.push(entry.file)
+    }
+  }
+
+  // Audit-mode widening — extra files beyond the committed snapshot.
+  for (const file of extraOnlyFiles) {
+    const result = scanFile(file)
+    report.scannedFiles += 1
+    report.totalCandidates += result.violations.length + result.exempted
+    if (result.fileExempt) report.fileExempt.push(file)
+    report.violations.push(...result.violations)
+  }
+
+  return report
+}
+
+/**
+ * Human-readable report text — one line per violation, no early return
+ * (mirrors `lintTranslations.ts`'s report convention), a trailing summary,
+ * one line per stale exemption, and a closing remediation hint.
+ */
+export function formatReport(report: ScopeScanReport): string {
+  const lines: string[] = []
+
+  for (const violation of report.violations) {
+    lines.push(
+      `${violation.file}:${violation.line}:${violation.column}  ` +
+        `${violation.kind}  "${violation.text}"`
+    )
+  }
+
+  lines.push(
+    `Scanned ${report.scannedFiles} file(s), found ${report.violations.length} ` +
+      `violation(s), ${report.totalCandidates} candidate(s) considered.`
+  )
+
+  lines.push(...staleExemptionLines(report))
+
+  if (report.violations.length > 0 || report.staleExemptions.length > 0) {
+    lines.push(
+      "Fix: wrap the literal in t('gamelib:<key>', '<English default>'), " +
+        'or add the term to meta/i18nGlossary.json if it is a brand or ' +
+        'platform name.'
+    )
+  }
+
+  return lines.join('\n')
+}
+
+/**
+ * Thrown by the gate test (plan 10) when `report.staleExemptions` is
+ * non-empty. Its message is built from the SAME `staleExemptionLines()`
+ * helper `formatReport()` uses, so D-18's failure wording exists in
+ * exactly one place.
+ */
+export class StaleExemptionError extends Error {
+  constructor(report: ScopeScanReport) {
+    super(staleExemptionLines(report).join('\n'))
+    this.name = 'StaleExemptionError'
   }
 }

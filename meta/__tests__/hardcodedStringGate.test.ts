@@ -177,6 +177,56 @@ describe('hardcodedStringGate', () => {
 
       expect(result.violations).toHaveLength(0)
     })
+
+    it('never flags a window.api.logInfo argument — real useTauriOAuthLogin.ts diagnostic logging under the Tauri sidecar (plan 05)', () => {
+      const source = `
+        function run(activeRunner: string) {
+          window.api.logInfo(\`[useTauriOAuthLogin] runner=\${activeRunner} phase=preparing\`)
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+      expect(result.violations).toHaveLength(0)
+    })
+
+    it('never flags a window.api.logError argument — same diagnostic-logging category as window.api.logInfo', () => {
+      const source = `
+        function run() {
+          window.api.logError('Repair failed: something went wrong')
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+      expect(result.violations).toHaveLength(0)
+    })
+
+    it('never flags a CSS value nested inside a style={{}} object — real SteamLogin/index.tsx inline styles (plan 05)', () => {
+      const source = `
+        export const Example = () => (
+          <p style={{ fontSize: 'var(--text-lg)', color: 'var(--text-default)', padding: '8px' }}>
+            hi
+          </p>
+        )
+      `
+      const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+
+      expect(result.violations).toHaveLength(0)
+    })
+
+    it('still flags real prose inside a style={{}} sibling attribute — the style exemption is scoped to the style attribute only', () => {
+      const source = `
+        export const Example = () => (
+          <p style={{ color: 'var(--text-default)' }} title="Repair failed. See the log." />
+        )
+      `
+      const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+
+      expect(result.violations).toHaveLength(1)
+      expect(result.violations[0]).toMatchObject({
+        kind: 'jsx-attribute',
+        attribute: 'title'
+      })
+    })
   })
 
   describe('glossary exemption', () => {
