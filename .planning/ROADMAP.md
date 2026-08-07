@@ -2408,7 +2408,7 @@ REQ-34.10-13, REQ-34.10-14, REQ-34.10-15, REQ-34.10-16
 the frameless drag-region runtime this rebuilds against)
 **Blocks:** Phase 34.11 (the filter panel needs the tier-2 slot to exist); the deferred
 onboarding-tour rework phase (34.10 disables `SidebarTour` per D-13 and does not rebuild it)
-**Plans:** 8/11 plans executed
+**Plans:** 9/11 plans executed
 
 Plans:
 - [x] 34.10-01-PLAN.md — Shell contracts: `navTabs.ts` tab identity + default-store cascade, the tier-2 portal context, and the Games portal-target panel (wave 1)
@@ -2419,7 +2419,7 @@ Plans:
 - [x] 34.10-06-PLAN.md — Games tier-2 via portal from `Library` (LibraryContext stays intact), `Header` becomes a vertical stack, frameless padding hack deleted (wave 2)
 - [x] 34.10-07-PLAN.md — `HeroicVersion` relocation with unconditional mount, tour disabled, `NavShell` root composition (wave 3)
 - [x] 34.10-08-PLAN.md — Mount the shell in `App.tsx`, restructure the `App.css` grid, migrate the drag region off `.Sidebar` with its three fixtures in lockstep (wave 4)
-- [ ] 34.10-09-PLAN.md — Replacement structural tests + retire the `Sidebar` tree (wave 5)
+- [x] 34.10-09-PLAN.md — Replacement structural tests + retire the `Sidebar` tree (wave 5)
 - [ ] 34.10-10-PLAN.md — i18n: the one new `nav.tabs.games` key, gate-scope regeneration, full-suite proof (wave 6)
 - [ ] 34.10-11-PLAN.md — Author and run the blocking live gate: theme survival on 3 themes + real WKWebView dragging (wave 7)
 

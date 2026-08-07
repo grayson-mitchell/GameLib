@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.10-08-PLAN.md
-last_updated: "2026-08-07T20:30:13.407Z"
+stopped_at: Completed 34.10-09-PLAN.md
+last_updated: "2026-08-07T20:58:09.276Z"
 last_activity: 2026-08-07
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 252
-  completed_plans: 229
+  completed_plans: 230
   percent: 91
 ---
 
@@ -480,7 +480,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — EXECUTING
 EXECUTED 2026-08-06, STILL DID NOT CLOSE (gate FAILED 1/6) -- gap cycle 5 required, NOT COMPLETE
-Plan: 9 of 11
+Plan: 10 of 11
 glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
 see 34.4.2-13-SUMMARY.md. Plan 14 EXECUTED 2026-08-05 -- T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW
 single-flight guard refuses a second visible login window while one is pending/presented, 25s TTL
@@ -3613,6 +3613,7 @@ Closed/parked native-install phases:
 | Phase 34.10 P06 | 25min | 2 tasks | 5 files |
 | Phase 34.10 P07 | ~50min | 2 tasks | 4 files |
 | Phase 34.10 P08 | 25min | 3 tasks | 4 files |
+| Phase 34.10 P09 | 35min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -4103,6 +4104,10 @@ Recent decisions affecting current work:
 - [Phase 34.10-07]: NavShell's tier-2 collapse condition: no active tab, OR accounts, OR games-with-unfilled-portal
 - [Phase 34.10]: Tier2PortalProvider wraps NavShell + <main> + controller + WindowControls + Help (not just NavShell/<main>) inside TourProvider, since both tier-2 portal consumers must be inside a single shared provider instance
 - [Phase 34.10]: resolveDragRegion's fallback drag-region selector moved from .Sidebar to .NavShell__navbar in the same commit as all three test fixtures, so no green test proves a class name that no longer exists in the app
+- [Phase 34.10]: 34.10-09: destinationCoverage.test.tsx excludes QuitButton's Quit label from the exact-set union -- Quit is an action not a navigable destination, and JSX element creation doesn't invoke child component functions
+- [Phase 34.10]: 34.10-09: tourDisabled.test.ts scopes its no-source-file-references-the-tour scan to non-test .tsx files -- an absence-gate cannot include itself (or NavShell.test.tsx's own already-shipped absence-check) in its target set without being unsatisfiable by construction
+- [Phase 34.10]: 34.10-09: tourDisabled.test.ts's no-importer scan excludes the retired Sidebar/ tree -- those files are dead code this same plan's Task 3 deletes, and checking them would make Task 2's verification depend on Task 3 having already run
+- [Phase 34.10]: 34.10-09: removed themes.scss's orphaned dracula .Sidebar .tour-button override (outside files_modified) as a Rule 1 fix -- Task 3 removes the last .Sidebar DOM markup, making the nested selector permanently unreachable, caught by the plan's own verification grep
 
 ### Pending Todos
 
@@ -4122,6 +4127,7 @@ Recent decisions affecting current work:
 - Phase 23 Plan 05 Task 3 (checkpoint:human-verify, gate=blocking-human): 23-UAT.md Gate 1 real-hardware re-run pending — human must install a multi-depot title (Hogwarts Legacy 990080 or Cyberpunk 2077 1091500) on real macOS hardware after deleting the stale appmanifest_990080.acf, confirm single monotonic progress percent through a pause/resume cycle, and confirm StateFlags=4 completion + launch. Code fix (single-flight guard + reconciliation) is landed and regression-tested (commits cc77a9df/ddde970d/7fccfb2a/f963de8b); this is the only remaining Phase 23 gap before Gates 2/3 can proceed.
 - G-30-01: Steam QR login logon button unresponsive under Tauri (Manage Accounts renders, QR tab never reached) — install/uninstall E2E for Phase 30 unreached as a direct consequence; see 30-HUMAN-UAT.md for reproduction and untested hypothesis
 - pathShim.test.ts (plan 34.5-01) unclassified in testContainment.test.ts's declared-suite lists — needs a one-line addition in a future pass (see deferred-items.md); not blocking 34.5-04's own completion
+- meta/i18nGateScope.json is stale after 34.10-09's deletion -- 4 entries point at now-deleted Sidebar paths (HeroicVersion/index.tsx, SidebarItem/index.tsx, SidebarLinks/index.tsx, Sidebar/index.tsx), causing hardcodedStringGate.test.ts (4 tests) and genI18nGateScope.test.ts (1 test) to fail. Plan 34.10-10 must regenerate the scope snapshot before its own gate work.
 
 ### Quick Tasks Completed
 
@@ -4192,8 +4198,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-07T20:30:13.392Z
-Stopped at: Completed 34.10-08-PLAN.md
+Last session: 2026-08-07T20:58:09.264Z
+Stopped at: Completed 34.10-09-PLAN.md
   34.10-DISCUSSION-LOG.md written and committed (`d421405bd`), 13 decisions (D-01..D-13) over
   4 discussed areas. Still design/planning only: no code, no plans, phase status Pending.
   Next: `/gsd-plan-phase 34.10`. The parked work below is UNCHANGED — 34.8 is still parked at
