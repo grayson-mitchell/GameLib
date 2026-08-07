@@ -70,9 +70,11 @@ jest.mock('../components/QuitButton', () => ({
   key: jest.fn(),
   length: 0
 }
-;(globalThis as unknown as { window: { api: { openKofiPage: jest.Mock } } }).window = {
+;(
+  globalThis as unknown as { window: { api: { openKofiPage: jest.Mock } } }
+).window = {
   api: { openKofiPage: jest.fn() }
-} as unknown as Window & typeof globalThis
+}
 
 // Imported after the mocks above (textual order -- this project's ts-jest
 // setup does not hoist jest.mock like babel-jest). `element.type` from
@@ -137,7 +139,14 @@ function findNavItem(
 
 describe('SettingsPanel', () => {
   beforeEach(() => {
+    // `resetMocks: true` (src/frontend/jest.config.js) clears every mock's
+    // implementation before each test, including the module-level
+    // `localStorage.getItem` factory below -- reassign it here so each
+    // test's `storedPreference` value actually takes effect.
     storedPreference = null
+    ;(localStorage.getItem as jest.Mock).mockImplementation(
+      () => storedPreference
+    )
   })
 
   it('renders all eleven entries in the settled order for a non-Windows context', () => {
