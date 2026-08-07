@@ -1,0 +1,12 @@
+[
+  {
+    "file": "src/frontend/screens/Login/components/SteamLogin/index.tsx",
+    "expectedCount": 27,
+    "reason": "D-17 -- deferred; Phase 34.4.2 is mid-/gsd-debug on this exact Login screen (F-34.4.2-19 undiagnosed, live gate 0/5), and loginInFlightUiReachability.test.tsx pins this screen's markup with 5 mutation-proven gates, so editing its literals means editing pins under active diagnosis."
+  },
+  {
+    "file": "src/frontend/screens/WebView/useTauriOAuthLogin.ts",
+    "expectedCount": 2,
+    "reason": "D-17 -- deferred; Phase 34.5's open gate fails at this file's render layer (useTauriOAuthLogin), which is why the retrofit is blocked until that gate closes."
+  }
+]
