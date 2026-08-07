@@ -60,6 +60,7 @@
     "prettier-fix": "prettier --write .",
     "download-helper-binaries": "esbuild --bundle --platform=node --target=node21 meta/downloadHelperBinaries.ts | node",
     "lint-translations": "esbuild --bundle --platform=node --target=node21 meta/lintTranslations.ts | node",
+    "i18n-churn-guard": "esbuild --bundle --platform=node --target=node21 meta/i18nCatalogChurnGuard.ts | node",
     "build-crossover-index": "esbuild --bundle --platform=node --target=node21 meta/buildCrossoverIndex.ts | node",
     "gen-i18n-gate-scope": "esbuild --bundle --platform=node --target=node21 meta/genI18nGateScope.ts | node",
     "gen-vtables": "esbuild --bundle --platform=node --target=node21 meta/gen_vtables.ts | node",
