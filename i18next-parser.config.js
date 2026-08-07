@@ -32,8 +32,12 @@ module.exports = {
   // An array of globs that describe where to look for source files
   // relative to the location of the configuration file
 
-  keepRemoved: false,
-  // Keep keys from the catalog that are no longer in code
+  keepRemoved: true,
+  // D-03: a measured 2026-08-07 run with keepRemoved:false DELETED 36 real fork keys the
+  // static lexer cannot see (33 in translation.json, 3 in gamepage.json) — reached only via
+  // dynamic key construction or an aliased `t`. Accepted cost: genuinely dead upstream keys
+  // are no longer auto-pruned, which is harmless in a fork that is not the translation
+  // source of truth.
 
   keySeparator: '.',
   // Key separator used in your translation keys
