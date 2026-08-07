@@ -1,0 +1,62 @@
+// Ambient Downloads ring for the navbar's nav-right cluster (34.10-03 Task
+// 2). Pure CSS conic-gradient, no SVG -- see
+// .claude/skills/sketch-findings-gamelib/references/navigation-shell.md
+// "Downloads progress ring". The `::after` inset MUST use the navbar
+// background token, not a literal, so it follows the theme -- `dracula`
+// makes its navbar LIGHTER than the body, breaking any implementation that
+// assumes a fixed dark inset color.
+.DownloadsRing {
+  --dl-progress: 0turn;
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  padding: var(--space-3xs);
+  border-radius: var(--space-2xs);
+  text-decoration: none;
+  transition: background-color 0.16s ease, opacity 0.16s ease;
+
+  &:hover {
+    background-color: var(--navbar-active-background);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--text-hover);
+    outline-offset: -2px;
+  }
+
+  // D-07: the idle state is dimmed, never hidden -- the ring's slot in the
+  // navbar is held at all times so nothing pops in/out of a fixed-height
+  // navbar.
+  &.DownloadsRing--idle {
+    opacity: 0.5;
+  }
+}
+
+.DownloadsRing__ring {
+  position: relative;
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--primary) 0turn var(--dl-progress),
+    var(--divider) var(--dl-progress) 1turn
+  );
+  transition: background 0.16s ease;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: var(--navbar-background);
+  }
+}
+
+.DownloadsRing__count {
+  font-size: var(--text-sm);
+  font-weight: var(--regular);
+  line-height: 1;
+  color: var(--navbar-inactive, var(--navbar-accent));
+}
