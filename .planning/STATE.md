@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: executing
-stopped_at: "Phase 34.8 side track — plan 06 of 12 EXECUTED (scanScope() run whole-scope for the first time: 134 files, 1889 candidates, 335 raw hits -> 9 scanner false-positive categories fixed as Rule-1 bugs -> 124 trustworthy violations; every violation triaged into retrofit(52)/glossary(2)/file-exemption(10)/deferred(29)/not-user-facing(60, a documented fifth disposition); blocking checkpoint fired (52>40 violations, 17>12 files) and developer selected split-plan -- 34.8-08 to be split into 34.8-08a/08b (etc.) by disjoint file sets, D-12 unweakened, see 34.8-06-SUMMARY.md and 34.8-AUDIT.md § Scope Decision). Next for 34.8: orchestrator mints 34.8-08a/08b, then /gsd-execute-phase 34.8 continues at plan 07. 34.4.2 blocker UNCHANGED and still the critical path."
-last_updated: "2026-08-07T14:20:30+12:00"
-last_activity: "2026-08-07 -- Phase 34.8 side track plan 06 of 12 EXECUTED (34.8-AUDIT.md: gate's own whole-scope scanScope() run superseding the manual audit and heuristic sweep; 9 hardcodedStringGate.ts false-positive-category fixes -- ternary/template-composed t() args, {defaultValue} interpolation idiom, <Trans> children, programmatic CSS custom properties, KeyboardEvent.key comparisons, classNames()-derived className values, InfoBox text prop, electron-store key arguments, bracketed CSS attribute selectors -- with 40 new regression tests (77->117 meta tests); meta/i18nGlossary.json +9 brand/platform terms (Mac, Win32, Android, Browser, EA app, Epic Games, ZOOM Platform, GE, CachyOS); 124-row triage table, 52-item retrofit backlog split 6/46 across plans 07/08; blocking checkpoint resolved -- developer selected split-plan, D-12 unweakened, REQ-34.8-11 complete, see 34.8-06-SUMMARY.md). Full pnpm test:ci 199 suites/3965 tests green (baseline 199/3921, no regressions). Phase 34.9 side track unchanged: plans 01-03 of 11 done. 34.4.2 blocker UNCHANGED, still critical path."
+status: verifying
+stopped_at: Phase 34.8 side track — plan 07 of 13 EXECUTED (RedeemSteamKeyDialog/copy.ts
+last_updated: "2026-08-07T03:10:00.000Z"
+last_activity: 2026-08-07
 progress:
   total_phases: 21
   completed_phases: 14
-  total_plans: 239
-  completed_plans: 214
+  total_plans: 240
+  completed_plans: 215
   percent: 67
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 06 of 12 done — plan 08 to be split into 08a/08b by the orchestrator per the plan 06 checkpoint decision) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
+**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 07 of 13 done — RedeemSteamKeyDialog/copy.ts retrofitted to the injected-TFunction idiom + bootErrorSurface.ts's first-ever full-file gate exemption landed; next is 34.8-08a/08b) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -4063,6 +4063,8 @@ Recent decisions affecting current work:
 - [Phase 34.8-06]: 9 further hardcodedStringGate.ts false-positive categories fixed as Rule-1 bugs while performing the plan's own required whole-scope measurement (raw 335 -> trustworthy 124 violations) — ternary/template-composed t() default-text args, {defaultValue} interpolation idiom, <Trans> component children, programmatic CSS custom-property values, KeyboardEvent.key comparisons, classNames()-derived className values, InfoBox text prop, electron-store key arguments, bracketed CSS attribute-selector shapes; 40 new regression tests, 9 new glossary terms (Mac, Win32, Android, Browser, EA app, Epic Games, ZOOM Platform, GE, CachyOS)
 - [Phase 34.8-06]: A fifth disposition, not-user-facing, added beyond the plan's four declared values (retrofit/glossary/file-exemption/deferred) for 60 of the 124 measured violations confirmed to be internal enum discriminators, technical constants, or already-t()-wrapped code one dataflow layer deeper than the scanner traces — documented in 34.8-AUDIT.md rather than forced into retrofit or glossary
 - [Phase 34.8-06]: Developer selected split-plan (2026-08-07) to resolve the over-threshold 52-violation/17-file retrofit backlog: plan 34.8-08 splits into 34.8-08a/08b (etc.) by disjoint file sets, minted by the orchestrator; D-12's blocking-from-day-one posture stays fully unweakened, no allowlist entries added — see 34.8-AUDIT.md § Scope Decision
+- [Phase 34.8-07]: successWithPackage's fallback must mirror repairFailure.ts's assign-then-pass-to-t() shape verbatim (the SAME `message` binding holds the pre-assigned English fallback AND is the literal default argument passed to `t`) for the gate's Pattern-3 dataflow exemption to trace it — a string-concatenation fallback, or passing a different literal to `t()` than the pre-assigned one, does not trace and leaves residual gate violations even though runtime tests stay green; caught by running scanSource() directly rather than trusting `npx jest` alone (34.8-07-SUMMARY.md)
+- [Phase 34.8-07]: D-22 confirmed live: PlatformSupport.tsx's title="Windows"/"macOS"/"Linux" are exact meta/i18nGlossary.json matches and its prose is already t()-wrapped — measurement-superseded audit false positive, zero code change
 
 ### Pending Todos
 
@@ -4151,8 +4153,27 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-07T14:20:30+12:00
-Stopped at: Phase 34.8 side track — plan 06 of 12 EXECUTED (scanScope() run whole-scope for the
+Last session: 2026-08-07T15:10:00+12:00
+Stopped at: Phase 34.8 side track — plan 07 of 13 EXECUTED (retrofitted the phase's flagship
+  named target, RedeemSteamKeyDialog/copy.ts, from zero i18n to the injected-TFunction idiom —
+  redeemOutcomeCopy(outcome, t, packageName?) — with 6 gamelib:redeemKey.* keys, English text
+  byte-preserved, success-with-packageName's template literal replaced by {{packageName}}
+  i18next interpolation; index.tsx supplies a Suspense-resolved gamelib t via a second aliased
+  useTranslation() hook; bootErrorSurface.ts got the repo's first real i18n-gate-exempt: marker
+  (D-14/D-19), purely additive; D-22 (PlatformSupport.tsx) and D-21 (ConsoleMode/LogSettings/
+  StoreSearch) no-code-change confirmed via git diff --stat, zero files touched in those four
+  paths. One Rule-1 fix mid-plan: the first successWithPackage fallback used string
+  concatenation and didn't trace through the gate's Pattern-3 dataflow exemption (2 residual
+  violations, caught by running scanSource() directly rather than trusting jest green alone);
+  reworked to mirror repairFailure.ts's fallback shape verbatim, 0 violations confirmed.
+  REQ-34.8-12/-13 complete. tsc clean; jest 199/199 suites, 3977/3977 tests (was 3965, +12);
+  meta gate 278/278. See 34.8-07-SUMMARY.md.
+  Next for 34.8: 34.8-08a-PLAN.md (ThemeSelector + SideloadDialog) and 34.8-08b-PLAN.md (15
+  one-liner files) — both wave 6, disjoint file sets from this plan and from each other.
+  34.4.2 blocker UNCHANGED and still the critical path.
+
+Stopped at (superseded): Phase 34.8 side track — plan 06 of 12 EXECUTED (scanScope() run
+  whole-scope for the
   first time — 134 files, 1889 candidates, 335 raw hits; 9 scanner false-positive categories
   fixed as Rule-1 bugs -> 124 trustworthy violations, 40 new regression tests, 9 new glossary
   terms; every violation triaged into retrofit(52)/glossary(2)/file-exemption(10)/deferred(29)/
