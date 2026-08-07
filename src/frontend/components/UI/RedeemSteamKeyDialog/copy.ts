@@ -13,12 +13,12 @@ export interface RedeemOutcomeCopy {
 }
 
 // Phase 34.8-07 (REQ-34.8-12/-13): routed through an injected TFunction
-// rather than `import { t } from 'i18next'` (GlobalStateV2.ts's idiom) —
-// this module is called during render/event handling, so it needs the
-// calling component's Suspense-resolved `t`, not a module-scope binding that
-// races i18next initialisation. Mirrors repairFailure.ts's injected-
-// TFunction idiom, including its try/catch English-fallback posture: a
-// throwing `t` must still yield a rendered dialog.
+// rather than GlobalStateV2.ts's module-scope-import idiom — this module is
+// called during render/event handling, so it needs the calling component's
+// Suspense-resolved `t`, not a module-scope binding that races i18next
+// initialisation. Mirrors repairFailure.ts's injected-TFunction idiom,
+// including its try/catch English-fallback posture: a throwing `t` must
+// still yield a rendered dialog.
 export function redeemOutcomeCopy(
   outcome: RedeemKeyOutcome,
   t: TFunction,
@@ -27,15 +27,22 @@ export function redeemOutcomeCopy(
   switch (outcome) {
     case 'success': {
       if (packageName) {
-        // i18next interpolation, not a template literal — a template
-        // literal cannot be translated as a unit, which is why this file
-        // was a retrofit target in the first place.
+        // i18next interpolation via the options argument below, not a
+        // template literal — a template literal cannot be translated as a
+        // unit, which is why this file was a retrofit target in the first
+        // place. Mirrors repairFailure.ts's assign-then-pass-to-t()
+        // fallback shape verbatim: the SAME `message` binding is both the
+        // pre-assigned English fallback and the literal default argument
+        // passed to `t`, and the catch keeps it unchanged -- a throwing `t`
+        // still yields a rendered dialog, at the cost of the raw
+        // placeholder token being visible on that rare failure path rather
+        // than a hand-rolled second interpolation implementation.
         let message =
-          'Key redeemed! ' + packageName + ' has been added to your Steam library.'
+          'Key redeemed! {{packageName}} has been added to your Steam library.'
         try {
           message = t(
             'gamelib:redeemKey.successWithPackage',
-            'Key redeemed! {{packageName}} has been added to your Steam library.',
+            message,
             { packageName }
           )
         } catch {
