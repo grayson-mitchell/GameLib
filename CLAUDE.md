@@ -9,7 +9,7 @@ GameLib is a public fork of Heroic Games Launcher that adds Steam as a first-cla
 
 ### Constraints
 
-- **Tech stack**: Must remain Electron + React + TypeScript to stay mergeable with Heroic upstream improvements
+- **Tech stack**: React + TypeScript on a Rust/Tauri shell. GameLib is an independent project, not a fork tracking Heroic — upstream mergeability is not a constraint. Do not raise deviation from upstream Heroic as a concern or caveat.
 - **Compatibility**: Linux, macOS, Windows (same as Heroic)
 - **Steam auth**: Approach TBD during research phase — Steamworks SDK, steam-user npm package, or browser-based login
 <!-- GSD:project-end -->
