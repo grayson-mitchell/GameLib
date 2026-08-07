@@ -1,7 +1,11 @@
+import { Project } from 'ts-morph'
+
 import {
   EXCLUDED_ATTRIBUTES,
+  FILE_EXEMPT_MARKER,
   GlossaryLoadError,
   USER_FACING_ATTRIBUTES,
+  collectTAliases,
   loadGlossary,
   scanSource
 } from '../hardcodedStringGate'
@@ -280,6 +284,303 @@ describe('hardcodedStringGate', () => {
       expect(() => loadGlossary('meta/does-not-exist.json')).toThrow(
         GlossaryLoadError
       )
+    })
+  })
+
+  // ---------------------------------------------------------------------
+  // D-14: the four idioms the gate MUST tolerate. Each fixture below is
+  // copied verbatim from the real file it protects (aside from trimming
+  // unrelated surrounding logic) -- a paraphrased fixture proves nothing
+  // about the real file. Each block also carries a negative counterpart
+  // proving the exemption is narrow, not a blanket hole.
+  // ---------------------------------------------------------------------
+
+  function makeSourceFile(source: string) {
+    const project = new Project({ useInMemoryFileSystem: true })
+    return project.createSourceFile('fixture.tsx', source)
+  }
+
+  describe('D-14: aliased t', () => {
+    it('never flags a t() call through the bare, unaliased `t`', () => {
+      const source = `
+        export const Example = () => {
+          const { t } = useTranslation()
+          return t('key.name', 'Some English default')
+        }
+      `
+      const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+      expect(result.violations).toHaveLength(0)
+
+      expect(collectTAliases(makeSourceFile(source))).toEqual(new Set(['t']))
+    })
+
+    it('never flags a t() call through `t2` — real GameCard/index.tsx:105 alias (useTranslation(\'gamepage\'))', () => {
+      const source = `
+        export const Example = () => {
+          const { t: t2 } = useTranslation('gamepage')
+          return t2('key.name', 'Some English default')
+        }
+      `
+      const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+      expect(result.violations).toHaveLength(0)
+
+      expect(collectTAliases(makeSourceFile(source))).toEqual(
+        new Set(['t', 't2'])
+      )
+    })
+
+    it('never flags a t() call through `tr` — real InstallModal/DownloadDialog/index.tsx:157 alias', () => {
+      const source = `
+        export const Example = () => {
+          const { t: tr } = useTranslation()
+          return tr('key.name', 'Some English default')
+        }
+      `
+      const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+      expect(result.violations).toHaveLength(0)
+
+      expect(collectTAliases(makeSourceFile(source))).toEqual(
+        new Set(['t', 'tr'])
+      )
+    })
+
+    it('never enforces namespace/key choice (D-13) — a colon-namespaced key through an alias still passes', () => {
+      const source = `
+        export const Example = () => {
+          const { t: t2 } = useTranslation()
+          return t2('gamelib:steam.installQueued', 'Install queued')
+        }
+      `
+      const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+      expect(result.violations).toHaveLength(0)
+    })
+
+    it('flags a call through a name that is NOT a known t-alias — proves the exemption is alias-set-driven, not "any call passes"', () => {
+      const source = `
+        export const Example = () => {
+          const { t: tr } = useTranslation()
+          return someOtherFn('key.name', 'Not exempt')
+        }
+      `
+      const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+      expect(result.violations.length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('D-14: [key, default] tuple tables', () => {
+    it("never flags CrossoverBadge.tsx's labelKeyByTier table — real Library/components/GameCard/CrossoverBadge.tsx", () => {
+      const source = `
+        import { useTranslation } from 'react-i18next'
+
+        interface Props {
+          rating: number | null | undefined
+        }
+
+        type Tier = 'gold' | 'silver' | 'bronze' | 'wontRun' | 'unknown'
+
+        const CrossoverBadge = ({ rating }: Props) => {
+          const { t } = useTranslation()
+
+          if (rating === undefined) {
+            return null
+          }
+
+          let tier: Tier
+          if (rating === null) {
+            tier = 'unknown'
+          } else if (rating >= 5) {
+            tier = 'gold'
+          } else if (rating === 4) {
+            tier = 'silver'
+          } else if (rating === 3) {
+            tier = 'bronze'
+          } else {
+            tier = 'wontRun'
+          }
+
+          const labelKeyByTier: Record<Tier, [string, string]> = {
+            gold: ['library.crossover_gold', 'Runs great on CrossOver (gold rating)'],
+            silver: ['library.crossover_silver', 'Runs well on CrossOver (silver rating)'],
+            bronze: [
+              'library.crossover_bronze',
+              'Runs with issues on CrossOver (bronze rating)'
+            ],
+            wontRun: ['library.crossover_wont_run', 'Known not to work on CrossOver'],
+            unknown: ['library.crossover_unknown', 'CrossOver compatibility unknown']
+          }
+
+          const [key, defaultText] = labelKeyByTier[tier]
+          const label = t(key, defaultText)
+
+          return (
+            <span
+              className={\`gameCardCrossoverBadge gameCardCrossoverBadge--\${tier}\`}
+              title={label}
+              aria-label={label}
+              aria-hidden={false}
+              style={{ pointerEvents: 'none' }}
+            />
+          )
+        }
+
+        export default CrossoverBadge
+      `
+      const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+      expect(result.violations).toHaveLength(0)
+    })
+
+    it("never flags LibraryFilters' crossoverRatingLabels table — real components/UI/LibraryFilters/index.tsx:172-194", () => {
+      const source = `
+        import { useTranslation } from 'react-i18next'
+
+        interface CrossoverRatingFilters {
+          gold: boolean
+          silver: boolean
+          bronze: boolean
+          wontRun: boolean
+          unrated: boolean
+        }
+
+        const LibraryFiltersFixture = (
+          crossoverRatingFilters: CrossoverRatingFilters,
+          toggleCrossoverRatingFilter: (tier: keyof CrossoverRatingFilters) => void
+        ) => {
+          const { t } = useTranslation()
+
+          // t('header.show_crossover_gold', 'Runs great (gold)')
+          // t('header.show_crossover_silver', 'Runs well (silver)')
+          // t('header.show_crossover_bronze', 'Runs with issues (bronze)')
+          // t('header.show_crossover_wont_run', "Known not to work")
+          // t('header.show_crossover_unrated', 'Unrated / not yet checked')
+          const crossoverRatingLabels: Record<
+            keyof CrossoverRatingFilters,
+            [string, string]
+          > = {
+            gold: ['header.show_crossover_gold', 'Runs great (gold)'],
+            silver: ['header.show_crossover_silver', 'Runs well (silver)'],
+            bronze: ['header.show_crossover_bronze', 'Runs with issues (bronze)'],
+            wontRun: ['header.show_crossover_wont_run', "Known not to work"],
+            unrated: ['header.show_crossover_unrated', 'Unrated / not yet checked']
+          }
+
+          const crossoverRatingToggle = (tier: keyof CrossoverRatingFilters) => {
+            const [key, defaultText] = crossoverRatingLabels[tier]
+            return (
+              <ToggleSwitch
+                key={tier}
+                handleChange={() => toggleCrossoverRatingFilter(tier)}
+                value={crossoverRatingFilters[tier]}
+                title={t(key, defaultText)}
+              />
+            )
+          }
+
+          return crossoverRatingToggle
+        }
+      `
+      const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+      expect(result.violations).toHaveLength(0)
+    })
+
+    it("never flags stateLabels.ts's STATE_LABEL_KEYS table — real screens/Humble/Keys/stateLabels.ts (verbatim)", () => {
+      const source = `
+        import { HumbleKeyState } from 'common/types/humble'
+
+        export const STATE_LABEL_KEYS: Record<HumbleKeyState, [string, string]> = {
+          UNPICKED: ['humbleKeys.state.unpicked', 'Unpicked'],
+          UNREVEALED: ['humbleKeys.state.unrevealed', 'Unrevealed'],
+          REVEALED: ['humbleKeys.state.revealed', 'Revealed'],
+          REDEEMED: ['humbleKeys.state.redeemed', 'Redeemed'],
+          UNREDEEMABLE: ['humbleKeys.state.unredeemable', 'Expired']
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+      expect(result.violations).toHaveLength(0)
+    })
+
+    it('flags a two-string tuple whose first element is NOT key-shaped — the exemption is narrow, not a blanket pair-of-strings hole', () => {
+      const source = `
+        const labels = {
+          windowsOnly: ['Windows only', 'Not available on macOS']
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+      expect(result.violations).toHaveLength(2)
+    })
+  })
+
+  describe('D-14: repairFailure English fallbacks', () => {
+    it('never flags the assigned-then-passed-to-t() title/message fallback — real Game/GameSubMenu/repairFailure.ts:113-121', () => {
+      const source = `
+        import { TFunction } from 'i18next'
+
+        function reportRepairFailure({
+          t
+        }: {
+          t: TFunction<'gamepage'>
+        }): void {
+          let title = 'Error'
+          let message = 'Repair failed. See the log for details.'
+          try {
+            title = t('box.error.title', title)
+            message = t('box.repair.error', message)
+          } catch {
+            // keep the hardcoded English fallback -- a throwing \`t\` must still
+            // yield a rendered dialog
+          }
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+      expect(result.violations).toHaveLength(0)
+    })
+
+    it('flags the same fallback literal when the t() reassignment is removed — the exemption is reference-driven, not declaration-shape-driven', () => {
+      const source = `
+        function reportRepairFailureWithoutFallback(): void {
+          let message = 'Repair failed. See the log for details.'
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+      expect(result.violations).toHaveLength(1)
+    })
+  })
+
+  describe('D-14: bootErrorSurface full-file exemption', () => {
+    it('exempts a whole file whose leading comment carries the marker plus a reason — modelled on bootErrorSurface.ts', () => {
+      const source = `
+        // ${FILE_EXEMPT_MARKER} pre-i18n-boot renderer crash surface -- see bootErrorSurface.ts header
+        function renderBootError(context: string, error: unknown): void {
+          const message = String(error)
+          const el = document.getElementById('root')
+          if (el) {
+            el.innerHTML =
+              'GameLib renderer bootstrap error (' + context + '): ' + message
+          }
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+      expect(result.fileExempt).toBe(true)
+      expect(result.violations).toHaveLength(0)
+      expect(result.exempted).toBeGreaterThan(0)
+    })
+
+    it('does NOT exempt a bare marker with no explanation — the marker must carry its reason on the same line', () => {
+      const source = `
+        // ${FILE_EXEMPT_MARKER}
+        function renderBootError(context: string, error: unknown): void {
+          const message = String(error)
+          const el = document.getElementById('root')
+          if (el) {
+            el.innerHTML =
+              'GameLib renderer bootstrap error (' + context + '): ' + message
+          }
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+      expect(result.fileExempt).toBe(false)
+      expect(result.violations.length).toBeGreaterThan(0)
     })
   })
 })
