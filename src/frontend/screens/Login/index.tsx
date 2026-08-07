@@ -173,13 +173,14 @@ export default React.memo(function NewLogin() {
                   ? () => navigate(epicLoginPath)
                   : () => setShowSidLogin(true)
               }
-              // Quick task 260805-d62: mark the SIDLogin tile (the interactive legendary/SID
-              // login) as deletion-pending ahead of ROADMAP Phase 34.7 -- this reads inverted
-              // relative to intuition on purpose. Per the F-34.5-G6-01 pivot documented above,
-              // under Tauri the PRIMARY tile is SIDLogin and the ALTERNATIVE tile is the
-              // embedded web login; under Electron the roles are reversed. Naming the SIDLogin
-              // tile in both shells means the embedded web login is never marked red.
-              deprecatedTile={isTauri() ? 'primary' : 'alternative'}
+              // Quick task 260808-f80 (supersedes 260805-d62, which marked the wrong tile):
+              // the EMBEDDED WEB LOGIN is the deletion-pending path -- it is the one that hits
+              // Epic's Talon 403 (F-34.5-G6-01 above). SIDLogin (real system browser) is the
+              // path that survives and becomes the single Epic device-auth sign-in in ROADMAP
+              // Phase 34.7. Per the pivot documented above, under Tauri the embedded web login
+              // is the ALTERNATIVE tile and under Electron it is the PRIMARY tile, so this
+              // ternary names the embedded web login in both shells -- SIDLogin is never red.
+              deprecatedTile={isTauri() ? 'alternative' : 'primary'}
               disabled={oldMac}
             />
             <Runner

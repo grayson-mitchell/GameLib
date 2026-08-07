@@ -164,16 +164,25 @@ describe('a failing route surfaces an error instead of an empty document', () =>
 })
 
 /**
- * Quick task 260805-d62: colour the interactive legendary/SID login red as
- * deletion-pending (ROADMAP Phase 34.7). Same source-gate convention as above --
- * this jest project has no jsdom, so these prove the wiring EXPRESSION is present
- * and singular, not that a pixel actually renders red. Pixel/behavior verification
- * is the plan's checkpoint:human-verify task.
+ * Quick task 260808-f80 (supersedes 260805-d62, which marked the wrong tile):
+ * colour the EMBEDDED WEB LOGIN red as deletion-pending (ROADMAP Phase 34.7).
+ * SIDLogin is the surviving device-auth path and must never be red. Same
+ * source-gate convention as above -- this jest project has no jsdom, so these
+ * prove the wiring EXPRESSION is present and singular, not that a pixel actually
+ * renders red. Pixel/behavior verification is the plan's checkpoint:human-verify
+ * task.
  */
-describe('deprecatedTile marker follows the SIDLogin tile, not a fixed position (quick task 260805-d62)', () => {
-  it('SOURCE GATE — the Epic Runner wires deprecatedTile to the isTauri() ternary that names the SIDLogin tile in both shells', () => {
+describe('deprecatedTile marker follows the embedded web-login tile, not a fixed position (quick task 260808-f80)', () => {
+  it('SOURCE GATE — the Epic Runner wires deprecatedTile to the isTauri() ternary that names the embedded web-login tile in both shells', () => {
     const source = read(LOGIN_TSX)
     expect(source).toMatch(
+      /deprecatedTile=\{isTauri\(\) \? 'alternative' : 'primary'\}/
+    )
+  })
+
+  it('SOURCE GATE — the superseded 260805-d62 expression (which marked the SIDLogin tile) is gone', () => {
+    const source = read(LOGIN_TSX)
+    expect(source).not.toMatch(
       /deprecatedTile=\{isTauri\(\) \? 'primary' : 'alternative'\}/
     )
   })
