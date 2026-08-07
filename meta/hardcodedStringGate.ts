@@ -99,7 +99,23 @@ export const EXCLUDED_ATTRIBUTES = [
   'href',
   'src',
   'to',
-  'style'
+  'style',
+  // Plan 06 (34.8-06), discovered during the whole-scope audit run: these
+  // four are the same category as the ten above -- CSS/DOM/routing
+  // plumbing, never prose -- reached through component-library and
+  // react-i18next conventions this codebase already relies on.
+  // `i18nKey` is react-i18next's own `<Trans i18nKey="...">` prop (an i18n
+  // KEY, not the text itself -- the text is the Trans children, handled by
+  // `isWithinTransComponentChildren` below). `htmlId`/`extraClass` are this
+  // codebase's own ToggleSwitch/InfoBox-family prop names for `id`/
+  // `className` (LibraryFilters' `htmlId={\`crossover-rating-${tier}\`}`,
+  // DownloadDialog's `extraClass="InstallModal__toggle--sdl"`).
+  // `partition` is Electron/Tauri's `<webview partition="persist:...">`
+  // session-partition identifier (WebView/index.tsx).
+  'i18nKey',
+  'htmlId',
+  'extraClass',
+  'partition'
 ] as const
 
 function isExcludedAttribute(attributeName: string): boolean {
@@ -166,6 +182,25 @@ const URL_SCHEME_RE = /^(https?|file|steam|tauri):/
 const HEX_COLOUR_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 const BARE_FILE_EXTENSION_RE = /^\.[a-zA-Z0-9]+$/
 const KEBAB_OR_SNAKE_RE = /^[A-Za-z0-9]+([-_][A-Za-z0-9]+)+$/
+// Plan 06 (34.8-06): CSS custom-property syntax, discovered auditing the
+// whole scope -- these values are used PROGRAMMATICALLY (MUI `createTheme()`
+// objects, `getComputedStyle().getPropertyValue()`, `element.style.
+// setProperty()`, a `getStatusColor()`-style helper whose RETURN feeds a
+// `style={{color: ...}}`) rather than through a literal `style={{}}` JSX
+// attribute, so plan 05's `isStyleAttributeValue` structural check never
+// sees them. A content-shape check is the correct fix here (same idiom as
+// `HEX_COLOUR_RE` above): no real UI prose in this codebase is shaped like
+// `--primary-font-family`, `var(--accent)`, `2px`, or `blur(10px)`.
+const CSS_CUSTOM_PROPERTY_RE = /^--[a-zA-Z0-9-]+$/
+const CSS_VAR_FUNCTION_RE = /^var\(--[a-zA-Z0-9-]+(,\s*.+)?\)$/
+const CSS_LENGTH_RE =
+  /^-?\d+(\.\d+)?(px|em|rem|vh|vw|vmin|vmax|%|s|ms|deg)$/
+const CSS_FUNCTION_RE = /^[a-zA-Z-]+\([^()]*\)$/
+// Plan 06 (34.8-06): a bracketed CSS attribute selector (`[data-tour="sidebar-menu"]`,
+// `SidebarTour.tsx`/`LibraryTour.tsx`'s `intro.js` step targets) — content-shape,
+// like the checks above, not property-name-based, so it also covers any future
+// `querySelector`-style use of the same shape.
+const CSS_ATTR_SELECTOR_RE = /^\[[a-zA-Z0-9_-]+(=("[^"]*"|'[^']*'))?\]$/
 // A single lowercase-leading token with no whitespace or separators reads as
 // an internal identifier (a runner/store key, a CSS token, an enum-shaped
 // value), not rendered prose — this codebase's own convention is that real
@@ -185,11 +220,21 @@ function isTechnicalToken(rawText: string): boolean {
   if (HEX_COLOUR_RE.test(text)) return true
   if (BARE_FILE_EXTENSION_RE.test(text)) return true
 
+  // CSS custom-property syntax is fully anchored (`^...$`) and self-
+  // describing, so it is checked before the no-whitespace gate below: a
+  // `var(--x, fallback)` value legitimately contains a space after its
+  // comma (`var(--cancel-button, var(--danger))`, DownloadManagerItem).
+  if (CSS_CUSTOM_PROPERTY_RE.test(text)) return true
+  if (CSS_VAR_FUNCTION_RE.test(text)) return true
+  if (CSS_LENGTH_RE.test(text)) return true
+  if (CSS_ATTR_SELECTOR_RE.test(text)) return true
+
   const hasWhitespace = /\s/.test(text)
   if (/[\\/]/.test(text) && !hasWhitespace) return true // path
   if (!hasWhitespace) {
     if (KEBAB_OR_SNAKE_RE.test(text)) return true
     if (LOWERCASE_TOKEN_RE.test(text)) return true
+    if (CSS_FUNCTION_RE.test(text)) return true
   }
   return false
 }
@@ -300,6 +345,142 @@ function isStyleAttributeValue(node: Node): boolean {
   return !!attribute && attribute.getNameNode().getText() === 'style'
 }
 
+/**
+ * Plan 06 (34.8-06), discovered auditing the whole scope: `isStyleAttributeValue`
+ * above only catches a literal nested DIRECTLY inside `style={{}}`'s object. It
+ * does not catch a literal nested inside a TEMPLATE-LITERAL INTERPOLATION or a
+ * CONDITIONAL EXPRESSION that is itself the value of an excluded attribute —
+ * `className={\`discountFilters__toggle${active ? ' discountFilters__toggle--hasActive' : ''}\`}`
+ * (DiscountFilters/index.tsx) or `className={loading ? 'searchButton fa-spin-pulse' :
+ * 'searchButton'}` (SearchBar/index.tsx). `sourceFile.forEachDescendant` visits the
+ * NESTED string literal inside the `${...}`/ternary independently of the outer
+ * template/conditional, so it never inherits the outer attribute's exclusion.
+ * This generalizes the check to walk up through ANY number of intermediate
+ * expression nodes to the nearest enclosing `JsxAttribute`, regardless of shape —
+ * which also transparently covers a `classNames('Sidebar__item', className, {...})`
+ * call nested inside `className={classNames(...)}` (SidebarItem/index.tsx,
+ * EditGameDialog/index.tsx, ConsoleMode/InstallOverlay/index.tsx,
+ * InstallModal/DownloadDialog/index.tsx), since `getFirstAncestor` does not care
+ * how many `CallExpression`/`ConditionalExpression`/`TemplateExpression` layers
+ * sit between the literal and the attribute. `isStyleAttributeValue` above is
+ * kept (and still exercised by its own tests) as the narrower case this
+ * subsumes; both are wired into `isStructuralNonCandidate` for defense-in-depth.
+ */
+function isNestedInExcludedJsxAttribute(node: Node): boolean {
+  const attribute = node.getFirstAncestor(Node.isJsxAttribute)
+  if (!attribute) return false
+  return isExcludedAttribute(attribute.getNameNode().getText())
+}
+
+/**
+ * Plan 06 (34.8-06): a string literal compared against a DOM `KeyboardEvent`'s
+ * `.key` property (`e.key === 'Escape'`) or matched in a `switch (e.key) { case
+ * 'Escape': }` is a technical key-name constant, never rendered prose — this
+ * codebase's ConsoleMode surfaces (`InstallOverlay`, `LaunchOverlay`, the main
+ * grid) drive keyboard navigation entirely this way. Scoped to the property
+ * name literally being `key` (not glossary-based, not content-shape-based) so
+ * it cannot accidentally exempt a real comparison against unrelated data.
+ */
+function isKeyboardEventKeyComparison(node: Node): boolean {
+  const parent = node.getParent()
+  if (!parent) return false
+
+  const isDotKeyAccess = (expr: Node): boolean =>
+    Node.isPropertyAccessExpression(expr) && expr.getName() === 'key'
+
+  if (Node.isBinaryExpression(parent)) {
+    const op = parent.getOperatorToken().getText()
+    if (!['===', '!==', '==', '!='].includes(op)) return false
+    const other = parent.getLeft() === node ? parent.getRight() : parent.getLeft()
+    return isDotKeyAccess(other)
+  }
+
+  if (Node.isCaseClause(parent)) {
+    const switchStatement = parent.getFirstAncestor(Node.isSwitchStatement)
+    if (!switchStatement) return false
+    return isDotKeyAccess(switchStatement.getExpression())
+  }
+
+  return false
+}
+
+/**
+ * Plan 06 (34.8-06): react-i18next's `<Trans i18nKey="...">English text with
+ * <Link>nested elements</Link></Trans>` idiom (`GamePage/index.tsx`'s wikiLink,
+ * `EmptyLibrary/index.tsx` x2, `DownloadDialog/index.tsx`'s anticheat warning,
+ * `WineSelector/index.tsx` x2) keeps its translatable content as literal JSX
+ * children, not as a `t()` call argument — `collectTAliases`/`isTCallArgument`
+ * cannot see this at all, and it is a DIFFERENT, equally valid react-i18next
+ * mechanism from `t()`, not a violation. Walks outward through every enclosing
+ * `JsxElement` (not just the nearest one) so text nested inside a child element
+ * INSIDE the `<Trans>` (`<Link>Open page</Link>`) is still recognised.
+ */
+function isWithinTransComponentChildren(node: Node): boolean {
+  let current: Node = node
+  for (;;) {
+    const jsxElement = current.getFirstAncestor(Node.isJsxElement)
+    if (!jsxElement) return false
+    const tagName = jsxElement.getOpeningElement().getTagNameNode().getText()
+    if (tagName === 'Trans') return true
+    current = jsxElement
+  }
+}
+
+/**
+ * Plan 06 (34.8-06): `components/UI/InfoBox/index.tsx`'s own `text` prop is an
+ * i18n KEY forwarded to an internal `t(text)` call (`<InfoBox text="infobox.help">`,
+ * `ThemeSelector.tsx` x2, `DefaultSteamPath.tsx`, `PreferedLanguage.tsx`,
+ * `WineVersionSelector.tsx`) — not prose itself. Scoped to the specific
+ * `InfoBox` tag name (unlike the broader `EXCLUDED_ATTRIBUTES` list) because
+ * `text` is too generic an attribute name to exempt everywhere — a hardcoded
+ * `text="Some real prose"` on an arbitrary OTHER component would be a real
+ * violation, so this must not become a blanket `text`-attribute exemption.
+ */
+function isInfoBoxTextKeyProp(node: Node): boolean {
+  const attribute = node.getFirstAncestor(Node.isJsxAttribute)
+  if (!attribute || attribute.getNameNode().getText() !== 'text') return false
+  const jsxElement = attribute.getFirstAncestor(
+    (n): n is Node => Node.isJsxElement(n) || Node.isJsxSelfClosingElement(n)
+  )
+  if (!jsxElement) return false
+  const tagNameNode = Node.isJsxElement(jsxElement)
+    ? jsxElement.getOpeningElement().getTagNameNode()
+    : jsxElement.getTagNameNode()
+  return tagNameNode.getText() === 'InfoBox'
+}
+
+/**
+ * Plan 06 (34.8-06): a string/template literal that is an argument (any
+ * position, matching `isConsoleArgument`/`isWindowApiLogArgument`'s existing
+ * any-position precedent above) to a config-store accessor call is a STORAGE
+ * KEY, never prose — `configStore.get('games.hidden', [])`,
+ * `nileConfigStore.get_nodefault('userData.name')`,
+ * `window.api.storeGet(this.storeName, \`__timestamp.${key}\`)`
+ * (`electronStores.ts`, `GlobalState.tsx`, `RecentlyPlayed/index.tsx`).
+ * Method-name-gated (not tied to a specific store variable name, since this
+ * codebase has `configStore`/`gogConfigStore`/`nileConfigStore`/
+ * `zoomConfigStore`/`wineDownloaderInfoStore`, all sharing the same
+ * `TypeCheckedStoreFrontend` method names from `electronStores.ts`).
+ */
+const STORE_KEY_METHOD_NAMES = new Set([
+  'get',
+  'set',
+  'get_nodefault',
+  'storeGet',
+  'storeSet',
+  'storeHas',
+  'storeDelete'
+])
+
+function isConfigStoreKeyArgument(node: Node): boolean {
+  const call = node.getFirstAncestor(Node.isCallExpression)
+  if (!call) return false
+  const callee = call.getExpression()
+  if (!Node.isPropertyAccessExpression(callee)) return false
+  if (!STORE_KEY_METHOD_NAMES.has(callee.getName())) return false
+  return call.getArguments().includes(node)
+}
+
 // ---------------------------------------------------------------------------
 // Kind classification — what shape of code position the literal sits in.
 // ---------------------------------------------------------------------------
@@ -383,6 +564,11 @@ function isStructuralNonCandidate(
   if (isEnumMemberName(node)) return true
   if (isElementAccessKey(node)) return true
   if (isStyleAttributeValue(node)) return true
+  if (isNestedInExcludedJsxAttribute(node)) return true
+  if (isKeyboardEventKeyComparison(node)) return true
+  if (isWithinTransComponentChildren(node)) return true
+  if (isInfoBoxTextKeyProp(node)) return true
+  if (isConfigStoreKeyArgument(node)) return true
   return false
 }
 
@@ -482,6 +668,102 @@ function isTCallArgument(node: Node, aliases: Set<string>): boolean {
     return false
   }
   return parent.getArguments().includes(node)
+}
+
+/**
+ * Plan 06 (34.8-06), discovered auditing the whole scope: `isTCallArgument`
+ * above only recognises a literal that IS DIRECTLY one of the call's
+ * arguments. It misses a literal that is one BRANCH of a ternary or one
+ * OPERAND of a `+` string concatenation that is ITSELF the argument — both
+ * genuinely-compliant, widely-used idioms in this codebase:
+ *   `t('webview.login.oauth.awaiting.heading', runnerLabel ? \`Signing in to
+ *   ${runnerLabel}\` : 'Signing in')` (TauriLoginPanel.tsx, every branch —
+ *   20 of plan 06's 335 raw hits came from this ONE file, all already
+ *   correctly wrapped)
+ *   `t('webview.unavailable.body', "GameLib's Tauri build does not yet " +
+ *   'embed a browser view for the store and wiki pages.')`
+ *   (WebviewUnavailablePanel.tsx)
+ *   `t(canRunOffline ? 'box.no' : 'box.yes')` (InstalledInfo.tsx — the KEY
+ *   argument, not the default-text argument; position does not matter here)
+ * Walks up through any chain of `ConditionalExpression`/`BinaryExpression
+ * (+)`/`ParenthesizedExpression` wrapping — nested ternaries
+ * (`a ? x : b ? y : z`) and repeated concatenation (`a + b + c`) both
+ * resolve to a single outermost composed expression — then applies the same
+ * direct-argument-of-a-t-alias-call check `isTCallArgument` uses.
+ */
+function isComposedTCallArgument(node: Node, aliases: Set<string>): boolean {
+  let current: Node = node
+  let parent = current.getParent()
+
+  while (parent) {
+    if (
+      Node.isConditionalExpression(parent) &&
+      (parent.getWhenTrue() === current || parent.getWhenFalse() === current)
+    ) {
+      current = parent
+      parent = current.getParent()
+      continue
+    }
+    if (
+      Node.isBinaryExpression(parent) &&
+      parent.getOperatorToken().getText() === '+' &&
+      (parent.getLeft() === current || parent.getRight() === current)
+    ) {
+      current = parent
+      parent = current.getParent()
+      continue
+    }
+    if (Node.isParenthesizedExpression(parent)) {
+      current = parent
+      parent = current.getParent()
+      continue
+    }
+    break
+  }
+
+  if (current === node) return false // no composing wrapper found at all
+  if (!parent || !Node.isCallExpression(parent)) return false
+  const callee = parent.getExpression()
+  if (!Node.isIdentifier(callee) || !aliases.has(callee.getText())) {
+    return false
+  }
+  return parent.getArguments().includes(current)
+}
+
+/**
+ * Plan 06 (34.8-06): react-i18next's `t(key, { defaultValue: '...',
+ * ...interpolationVars })` call shape — the OBJECT-FORM second argument used
+ * whenever interpolation variables are needed (`SteamBottleSetup.tsx`,
+ * `SteamBridgeSetup.tsx` x2, `SteamClientSetup.tsx`) — nests the English
+ * default as the `defaultValue` PROPERTY of an object literal, not as a
+ * direct call argument, so `isTCallArgument` cannot see it (the object
+ * literal is the direct argument; the string is one level further in).
+ */
+function isTCallDefaultValueProperty(
+  node: Node,
+  aliases: Set<string>
+): boolean {
+  const propertyAssignment = node.getParent()
+  if (!propertyAssignment || !Node.isPropertyAssignment(propertyAssignment)) {
+    return false
+  }
+  if (propertyAssignment.getInitializer() !== node) return false
+  const nameNode = propertyAssignment.getNameNode()
+  if (!Node.isIdentifier(nameNode) || nameNode.getText() !== 'defaultValue') {
+    return false
+  }
+
+  const objectLiteral = propertyAssignment.getFirstAncestor(
+    Node.isObjectLiteralExpression
+  )
+  if (!objectLiteral) return false
+  const call = objectLiteral.getParent()
+  if (!call || !Node.isCallExpression(call)) return false
+  const callee = call.getExpression()
+  if (!Node.isIdentifier(callee) || !aliases.has(callee.getText())) {
+    return false
+  }
+  return call.getArguments().includes(objectLiteral)
 }
 
 // Requires at least one literal `.`, matching this repo's `keySeparator: '.'`
@@ -648,6 +930,16 @@ export function scanSource(
     }
 
     if (isTCallArgument(node, aliases)) {
+      exempted += 1
+      return
+    }
+
+    if (isComposedTCallArgument(node, aliases)) {
+      exempted += 1
+      return
+    }
+
+    if (isTCallDefaultValueProperty(node, aliases)) {
       exempted += 1
       return
     }

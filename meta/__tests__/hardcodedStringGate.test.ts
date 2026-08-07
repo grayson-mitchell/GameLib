@@ -236,6 +236,323 @@ describe('hardcodedStringGate', () => {
     })
   })
 
+  describe('plan 06 (34.8-06): whole-scope audit fixes', () => {
+    describe('composed t()-call arguments', () => {
+      it('never flags a ternary default-text argument — real TauriLoginPanel.tsx idiom', () => {
+        const source = `
+          function run(t: TFunction, runnerLabel?: string) {
+            return t(
+              'webview.login.oauth.awaiting.heading',
+              runnerLabel ? \`Signing in to \${runnerLabel}\` : 'Signing in'
+            )
+          }
+        `
+        const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(0)
+      })
+
+      it('never flags a ternary KEY argument — real InstalledInfo.tsx idiom', () => {
+        const source = `
+          function run(t: TFunction, canRunOffline: boolean) {
+            return t(canRunOffline ? 'box.no' : 'box.yes')
+          }
+        `
+        const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(0)
+      })
+
+      it('never flags a string-concatenation default-text argument — real WebviewUnavailablePanel.tsx idiom', () => {
+        const source = `
+          function run(t: TFunction) {
+            return t(
+              'webview.unavailable.body',
+              "GameLib's Tauri build does not yet embed a browser view for the " +
+                'store and wiki pages.'
+            )
+          }
+        `
+        const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(0)
+      })
+
+      it('still flags a ternary branch that is NOT a t()-call argument — the exemption is call-site-driven, not shape-driven', () => {
+        const source = `
+          function run(loading: boolean) {
+            return loading ? 'Loading now' : 'Not loading'
+          }
+        `
+        const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(2)
+      })
+    })
+
+    describe('t(key, { defaultValue }) object-form argument', () => {
+      it('never flags a defaultValue property on an object passed to t() — real SteamBottleSetup.tsx idiom', () => {
+        const source = `
+          function run(t: TFunction, error: string) {
+            return t('bottle.setup.errorMessage', {
+              defaultValue: 'Steam setup could not start: {{error}}',
+              error
+            })
+          }
+        `
+        const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(0)
+      })
+
+      it('still flags a defaultValue-named property on an object NOT passed to t() — the exemption is call-site-driven', () => {
+        const source = `
+          const config = { defaultValue: 'Some real prose here' }
+        `
+        const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(1)
+      })
+    })
+
+    describe('<Trans> component children', () => {
+      it('never flags JSX text as a direct child of <Trans> — real EmptyLibrary/index.tsx idiom', () => {
+        const source = `
+          export const Example = () => (
+            <Trans i18n={i18n} i18nKey="emptyLibrary.noGames">
+              Your library is empty.
+            </Trans>
+          )
+        `
+        const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(0)
+      })
+
+      it('never flags JSX text nested inside a child element of <Trans> — real GamePage/index.tsx wikiLink idiom', () => {
+        const source = `
+          export const Example = () => (
+            <Trans key="wikiLink" i18n={i18n}>
+              Important information about this game, read this:
+              <Link to={wikiLink}>Open page</Link>
+            </Trans>
+          )
+        `
+        const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(0)
+      })
+
+      it('never flags a Trans i18nKey attribute value — an i18n key, not prose', () => {
+        const source = `
+          export const Example = () => (
+            <Trans i18nKey="install.warn-crossover-wont-run" ns="gamepage">
+              This game is known not to run well.
+            </Trans>
+          )
+        `
+        const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(0)
+      })
+
+      it('still flags JSX text OUTSIDE a <Trans> element — the exemption is scoped to the Trans tag name only', () => {
+        const source = `
+          export const Example = () => <p>Real hardcoded prose</p>
+        `
+        const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(1)
+      })
+    })
+
+    describe('keyboard event .key comparisons', () => {
+      it('never flags a string compared against KeyboardEvent.key — real ConsoleMode idiom', () => {
+        const source = `
+          function onKeyDown(e: KeyboardEvent) {
+            if (e.key === 'Escape' || e.key === 'Backspace') return
+          }
+        `
+        const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(0)
+      })
+
+      it('never flags a case clause matched against a switch(x.key) discriminant', () => {
+        const source = `
+          function onKeyDown(e: KeyboardEvent) {
+            switch (e.key) {
+              case 'Enter':
+                return
+              default:
+                return
+            }
+          }
+        `
+        const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(0)
+      })
+
+      it('still flags a string compared against an unrelated property — the exemption is scoped to .key specifically', () => {
+        const source = `
+          function check(x: { status: string }) {
+            if (x.status === 'Some real prose here') return
+          }
+        `
+        const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(1)
+      })
+    })
+
+    describe('CSS custom-property / value content shapes', () => {
+      it.each([
+        '--primary-font-family',
+        'var(--accent)',
+        'var(--cancel-button, var(--danger))',
+        '2px',
+        '350px',
+        'blur(10px)',
+        'blur(0)',
+        '[data-tour="sidebar-menu"]'
+      ])('never flags the CSS-shaped value "%s"', (value) => {
+        const source = `const config = { style: '${value}' }`
+        const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(0)
+      })
+
+      it('still flags real prose that happens to contain a dash — the CSS shape checks are fully anchored', () => {
+        const source = "const config = { message: 'Something - went wrong here' }"
+        const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(1)
+      })
+    })
+
+    describe('generalized excluded-JSX-attribute nesting', () => {
+      it('never flags a CSS class string passed to classNames() nested inside className={} — real SidebarItem/index.tsx idiom', () => {
+        const source = `
+          export const Example = ({ className }: { className: string }) => (
+            <button className={classNames('Sidebar__item', className, { active: true })} />
+          )
+        `
+        const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(0)
+      })
+
+      it('never flags a ternary branch used directly as a className value — real SearchBar/index.tsx idiom', () => {
+        const source = `
+          export const Example = ({ loading }: { loading: boolean }) => (
+            <span className={loading ? 'searchButton fa-spin-pulse' : 'searchButton'} />
+          )
+        `
+        const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(0)
+      })
+
+      it('never flags a string nested inside a template-literal interpolation inside className={} — real DiscountFilters/index.tsx idiom', () => {
+        const source = `
+          export const Example = ({ active }: { active: boolean }) => (
+            <button
+              className={\`discountFilters__segment\${
+                active ? ' discountFilters__segment--active' : ''
+              }\`}
+            />
+          )
+        `
+        const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(0)
+      })
+
+      it('still flags real prose nested inside a NON-excluded attribute\'s ternary — the exemption is attribute-name-driven', () => {
+        const source = `
+          export const Example = ({ ok }: { ok: boolean }) => (
+            <span title={ok ? 'All good here' : 'Something went wrong here'} />
+          )
+        `
+        const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(2)
+      })
+    })
+
+    describe('new EXCLUDED_ATTRIBUTES entries', () => {
+      it.each(['i18nKey', 'htmlId', 'extraClass', 'partition'])(
+        'never flags the "%s" attribute',
+        (attribute) => {
+          const source = `
+            export const Example = () => <div ${attribute}="some-value" />
+          `
+          const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+
+          expect(result.violations).toHaveLength(0)
+        }
+      )
+    })
+
+    describe('InfoBox text-key prop', () => {
+      it('never flags the "text" attribute on an <InfoBox> element — an i18n key forwarded to an internal t(text) call', () => {
+        const source = `
+          export const Example = () => <InfoBox text="infobox.help">content</InfoBox>
+        `
+        const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(0)
+      })
+
+      it('still flags a "text" attribute on a DIFFERENT component — the exemption is scoped to the InfoBox tag name only', () => {
+        const source = `
+          export const Example = () => <SomeOtherWidget text="Real hardcoded prose here" />
+        `
+        const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(1)
+      })
+    })
+
+    describe('config-store key arguments', () => {
+      it.each(['get', 'set', 'get_nodefault'])(
+        'never flags a string key argument to configStore.%s(...)',
+        (method) => {
+          const source = `
+            function run() {
+              return configStore.${method}('games.hidden', [])
+            }
+          `
+          const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+          expect(result.violations).toHaveLength(0)
+        }
+      )
+
+      it.each(['storeGet', 'storeSet', 'storeHas', 'storeDelete'])(
+        'never flags a string key argument to window.api.%s(...) — real electronStores.ts idiom',
+        (method) => {
+          const source = `
+            function run(key: string) {
+              return window.api.${method}('configStore', \`__timestamp.\${key}\`)
+            }
+          `
+          const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+          expect(result.violations).toHaveLength(0)
+        }
+      )
+
+      it('still flags a string argument to an unrelated method sharing no method-name overlap', () => {
+        const source = "const x = someOtherApi.fetchData('Real hardcoded prose here')"
+        const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(1)
+      })
+    })
+  })
+
   describe('glossary exemption', () => {
     const REAL_GLOSSARY = loadGlossary()
 
