@@ -1,42 +1,49 @@
 import { TFunction } from 'i18next'
 
-// Phase 34.8-08a (REQ-34.8-01/-11/-17): value type changed from a bare
-// English string to a [gamelib key, English default] tuple, mirroring
-// CrossoverBadge.tsx's `labelKeyByTier` idiom (already gate-tolerant per
-// D-14). The KEY SET is unchanged -- src/frontend/index.tsx:34/224 both call
-// `Object.keys(defaultThemes)` (via this module's re-export from
-// `./index`) and must keep working unmodified.
+// Phase 34.8-08a (REQ-34.8-01/-11/-17): the 14 theme display-name
+// violations this plan retrofits, extracted out of `index.tsx` into this
+// standalone module.
 //
-// [Rule 3 - blocking issue, deviation from the plan's stated "same file"
-// action] Split out of `index.tsx` into this standalone module: `index.tsx`
-// imports `{ SelectField, InfoBox, PathSelectionBox } from '..'`, the UI
-// barrel, which transitively imports several `.scss` files this project's
-// jsdom-less jest config (`src/frontend/jest.config.js`, no `.scss`
-// transform/moduleNameMapper) cannot parse. A test file that imports
-// `resolveThemeLabel`/`defaultThemes` from `index.tsx` directly fails with
-// "Jest encountered an unexpected token" on the first `.scss` import it
-// transitively pulls in. Extracting the pure, `t`-parameterized logic into
-// this SCSS-free sibling module lets the test import it in isolation, the
-// same "extracted pure function tested directly" posture this plan's
-// `<interfaces>` section already mandates for the component itself.
-export const defaultThemes: Record<string, [key: string, defaultText: string]> = {
-  midnightMirage: ['gamelib:themeSelector.midnightMirage', 'Midnight Mirage'],
-  cyberSpaceOasis: ['gamelib:themeSelector.cyberSpaceOasis', 'Cyberspace Oasis'],
-  cyberSpaceOasisAlt: [
-    'gamelib:themeSelector.cyberSpaceOasisAlt',
-    'Cyberspace Oasis Classic'
-  ],
-  'high-contrast': ['gamelib:themeSelector.highContrast', 'High Contrast'],
-  'old-school': ['gamelib:themeSelector.oldSchool', 'Old School GameLib'],
-  dracula: ['gamelib:themeSelector.dracula', 'Dracula'],
-  marine: ['gamelib:themeSelector.marine', 'Marine'],
-  'marine-classic': ['gamelib:themeSelector.marineClassic', 'Marine Classic'],
-  zombie: ['gamelib:themeSelector.zombie', 'Zombie'],
-  'zombie-classic': ['gamelib:themeSelector.zombieClassic', 'Zombie Classic'],
-  'nord-light': ['gamelib:themeSelector.nordLight', 'Nord Light'],
-  'nord-dark': ['gamelib:themeSelector.nordDark', 'Nord Dark'],
-  gruvbox_dark: ['gamelib:themeSelector.gruvboxDark', 'Gruvbox Dark'],
-  sweet: ['gamelib:themeSelector.sweet', 'Sweet']
+// [Rule 3 - blocking issue, deviation from the plan's stated "same file" /
+// "[key, defaultText] tuple table" action] `index.tsx` imports
+// `{ SelectField, InfoBox, PathSelectionBox } from '..'`, the UI barrel,
+// which transitively imports several `.scss` files this project's
+// jsdom-less jest config cannot parse -- so this logic is split into this
+// SCSS-free sibling module (same posture as `filters.ts` for
+// SideloadDialog, later in this same plan).
+//
+// A SECOND, independent blocking issue surfaced re-running `scanSource()`
+// directly (not just `npx jest`): `meta/hardcodedStringGate.ts`'s Pattern 2
+// `[key, defaultText]` tuple-table exemption (the CrossoverBadge.tsx /
+// LibraryFilters idiom this plan's `<read_first>` names) requires its first
+// tuple element to match `DOTTED_KEY_RE`
+// (`^[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$`), which does not
+// accept the `gamelib:` namespace-prefix colon this plan's own key
+// convention (`gamelib:themeSelector.<slug>`) requires. A tuple-table built
+// with `gamelib:`-prefixed keys therefore does NOT satisfy the gate's
+// tuple exemption and is flagged. `defaultThemes` is kept as a
+// `Record<string, true>` (key set unchanged, no string values at all) and
+// `resolveThemeLabel` instead uses a plain switch with 14 direct,
+// literal-argument `t('gamelib:themeSelector.<slug>', '<English>')` calls
+// -- Pattern 1 (`isTCallArgument`), the same exemption already proven for
+// every `gamelib:`-namespaced call site in this codebase (`copy.ts`,
+// `filters.ts`), with no key-shape requirement at all. Directly verified
+// via `scanSource()`: 0 violations, 28 exempted.
+export const defaultThemes: Record<string, true> = {
+  midnightMirage: true,
+  cyberSpaceOasis: true,
+  cyberSpaceOasisAlt: true,
+  'high-contrast': true,
+  'old-school': true,
+  dracula: true,
+  marine: true,
+  'marine-classic': true,
+  zombie: true,
+  'zombie-classic': true,
+  'nord-light': true,
+  'nord-dark': true,
+  gruvbox_dark: true,
+  sweet: true
 }
 
 /**
@@ -46,10 +53,39 @@ export const defaultThemes: Record<string, [key: string, defaultText: string]> =
  * || key` behaviour exactly.
  */
 export function resolveThemeLabel(themeKey: string, t: TFunction): string {
-  const entry = defaultThemes[themeKey]
-  if (!entry) {
-    return themeKey
+  switch (themeKey) {
+    case 'midnightMirage':
+      return t('gamelib:themeSelector.midnightMirage', 'Midnight Mirage')
+    case 'cyberSpaceOasis':
+      return t('gamelib:themeSelector.cyberSpaceOasis', 'Cyberspace Oasis')
+    case 'cyberSpaceOasisAlt':
+      return t(
+        'gamelib:themeSelector.cyberSpaceOasisAlt',
+        'Cyberspace Oasis Classic'
+      )
+    case 'high-contrast':
+      return t('gamelib:themeSelector.highContrast', 'High Contrast')
+    case 'old-school':
+      return t('gamelib:themeSelector.oldSchool', 'Old School GameLib')
+    case 'dracula':
+      return t('gamelib:themeSelector.dracula', 'Dracula')
+    case 'marine':
+      return t('gamelib:themeSelector.marine', 'Marine')
+    case 'marine-classic':
+      return t('gamelib:themeSelector.marineClassic', 'Marine Classic')
+    case 'zombie':
+      return t('gamelib:themeSelector.zombie', 'Zombie')
+    case 'zombie-classic':
+      return t('gamelib:themeSelector.zombieClassic', 'Zombie Classic')
+    case 'nord-light':
+      return t('gamelib:themeSelector.nordLight', 'Nord Light')
+    case 'nord-dark':
+      return t('gamelib:themeSelector.nordDark', 'Nord Dark')
+    case 'gruvbox_dark':
+      return t('gamelib:themeSelector.gruvboxDark', 'Gruvbox Dark')
+    case 'sweet':
+      return t('gamelib:themeSelector.sweet', 'Sweet')
+    default:
+      return themeKey
   }
-  const [key, defaultText] = entry
-  return t(key, defaultText)
 }
