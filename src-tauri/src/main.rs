@@ -965,7 +965,21 @@ fn login_window_title(origin: &str, document_title: Option<&str>) -> String {
 /// `.claude/skills/spike-findings-gamelib/references/tauri-login-webview-cookies.md`).
 fn cookie_domain_matches(host: &str, domain: Option<&str>) -> bool {
     match domain {
-        Some(d) => host == d || host.ends_with(&format!(".{d}")),
+        // Normalize a leading-dot `domain` (RFC 6265's wildcard-subdomain marker) before
+        // comparing (F-34.4.2-19). Without this, `format!(".{d}")` on an already-dotted `d`
+        // produces an impossible ".."-prefixed suffix requirement no real hostname can ever
+        // satisfy, making this comparator categorically blind to any leading-dot cookie
+        // domain regardless of `host` -- exactly the shape `_simpleauth_sess`'s real,
+        // live-measured domain (".humblebundle.com") takes, which silently broke
+        // `humble_login_cookies`' poll arm. RFC 6265 defines a `.example.com` cookie as
+        // applying to `example.com` itself, not only to its subdomains, so stripping the
+        // leading dot here is the spec-correct fix, not a special case. Argument order at
+        // every call site is DELIBERATELY left untouched (Plan 22, F-6 Defect A) -- this
+        // normalizes the value being compared, not which position it is compared from.
+        Some(d) => {
+            let d = d.strip_prefix('.').unwrap_or(d);
+            host == d || host.ends_with(&format!(".{d}"))
+        }
         None => false,
     }
 }
@@ -5730,19 +5744,69 @@ mod tests {
 
     #[test]
     fn humble_login_cookies_for_domain_direction_is_the_defect_a_fix() {
-        // THE single most consequential assertion in THIS arm's test group -- documents the
-        // asymmetry by test rather than by prose (spike 016 measured this live: total=33,
-        // the OLD/poll direction against a fixed apex target=29, this arm's direction=33 --
-        // see `34.4.1-SPIKE-016-FINDINGS.md`).
+        // F-34.4.2-19 (fixed) -- REWRITTEN. Before this fix, this test's first assertion
+        // pinned `cookie_domain_matches`'s POLL-direction argument order
+        // (`cookie_domain_matches(fixed_host, Some(cookie_domain))`, exactly what
+        // `humble_login_cookies`' poll arm calls at main.rs:3878-3885) as UNCONDITIONALLY
+        // blind to any leading-dot cookie domain -- and asserted that blindness as CORRECT,
+        // intended behavior ("the suffix branch can never fire for a leading-dot cookie
+        // domain, so it silently fails to match"). It was not correct: that assertion
+        // pinned F-34.4.2-19's own root cause in place. `_simpleauth_sess`'s real,
+        // live-measured domain is `.humblebundle.com` (leading dot); with the old
+        // comparator, the poll arm could never match it, so Humble's login watcher polled
+        // forever without ever finding its own session cookie -- silently, with zero log
+        // output, because the early-return this produced (user.ts:494-498) sits upstream of
+        // every logging path in that function. `34.4.1-SPIKE-016-FINDINGS.md`'s live
+        // measurement (total=33, poll direction=29 -- 4 cookies silently dropped) was this
+        // SAME undercounting, and was filed there as an acceptable, documented asymmetry
+        // rather than as the defect it actually was. Do not read that document, or this
+        // test's prior form, as evidence the old behavior was ever intentional.
         //
-        // The OLD/poll direction (`cookie_domain_matches(fixed_target, Some(cookie_domain))`)
-        // is exactly what the disconnect census used to call through `humble_login_cookies`.
-        // With a FIXED apex as the first ("host") argument, the suffix branch can never fire
-        // for a leading-dot cookie domain, so it silently fails to match:
-        assert!(!cookie_domain_matches("humblebundle.com", Some(".humblebundle.com")));
-        // The NEW/census direction this arm uses -- cookie's own domain first, fixed target
-        // second -- matches the identical leading-dot cookie correctly:
+        // `cookie_domain_matches` now strips a leading dot from its `domain` argument before
+        // comparing (RFC 6265: a `.example.com` cookie is defined to apply to `example.com`
+        // itself, not only to its subdomains), so BOTH directions now correctly match a
+        // leading-dot cookie domain against its own bare apex host:
+        assert!(cookie_domain_matches("humblebundle.com", Some(".humblebundle.com")));
         assert!(cookie_domain_matches(".humblebundle.com", Some("humblebundle.com")));
+    }
+
+    #[test]
+    fn cookie_domain_matches_normalizes_leading_dot_domain_against_apex_host() {
+        // F-34.4.2-19 fix-verification test. Pre-fix: `format!(".{d}")` on an
+        // already-dotted `d` (".humblebundle.com") produces an impossible
+        // ".."-prefixed suffix requirement no real hostname can satisfy, so this returned
+        // false -- RED against the pre-fix comparator. Post-fix, the leading dot is
+        // stripped from `domain` before comparing, so this is GREEN.
+        assert!(cookie_domain_matches("humblebundle.com", Some(".humblebundle.com")));
+    }
+
+    #[test]
+    fn cookie_domain_matches_normalizes_leading_dot_domain_against_subdomain_host() {
+        // F-34.4.2-19 fix-verification test -- the ACTUAL production shape of the defect.
+        // `humble_login_cookies`' poll arm (main.rs:3878-3885) calls
+        // `cookie_domain_matches(host_for_filter, Some(c.domain()))` with `host_for_filter`
+        // fixed at "www.humblebundle.com" and `_simpleauth_sess`'s real, live-measured
+        // domain being ".humblebundle.com" (leading dot). This is that exact call,
+        // reproduced directly. RED against the pre-fix comparator, GREEN post-fix.
+        assert!(cookie_domain_matches(
+            "www.humblebundle.com",
+            Some(".humblebundle.com")
+        ));
+    }
+
+    #[test]
+    fn cookie_domain_matches_direction_still_discriminates_for_host_vs_subdomain_pairs() {
+        // Normalizing the leading dot makes the comparator order-INsensitive for the
+        // apex-host/leading-dot-domain pair specifically -- that pair (the one the rewritten
+        // test above now asserts symmetrically) stops being a canary for Plan 22's Defect A
+        // argument-order regression. Direction still matters for other shapes, and the fix
+        // deliberately leaves argument order untouched at both call sites, so that
+        // protection must not be silently retired: an apex HOST can never match a cookie
+        // scoped to a SUBDOMAIN, but a subdomain host correctly matches a cookie scoped to
+        // its own parent apex. Pinned here with a non-Humble pair so it stays independent of
+        // the now-symmetric leading-dot case above.
+        assert!(!cookie_domain_matches("epicgames.com", Some("www.epicgames.com")));
+        assert!(cookie_domain_matches("www.epicgames.com", Some("epicgames.com")));
     }
 
     #[test]
