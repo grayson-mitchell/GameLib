@@ -1,0 +1,43 @@
+.NavShell__versionSlot {
+  .heroicVersionWrapper {
+    display: flex;
+    gap: 5px;
+    align-items: flex-start;
+    margin-top: var(--space-sm);
+
+    button {
+      padding: 0;
+    }
+  }
+
+  .heroicVersion {
+    display: flex;
+    gap: 5px;
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: 300ms;
+    color: var(--brand-text-01);
+
+    &:hover {
+      color: var(--accent);
+    }
+  }
+
+  .heroicNewReleases {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    font-size: var(--text-sm);
+
+    & > a {
+      color: var(--accent);
+      transition: 300ms;
+      -webkit-app-region: no-drag;
+      cursor: pointer;
+
+      &:hover {
+        color: var(--accent-overlay);
+      }
+    }
+  }
+}
