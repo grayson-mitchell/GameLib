@@ -164,11 +164,17 @@ const URL_SCHEME_RE = /^(https?|file|steam|tauri):/
 const HEX_COLOUR_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 const BARE_FILE_EXTENSION_RE = /^\.[a-zA-Z0-9]+$/
 const KEBAB_OR_SNAKE_RE = /^[A-Za-z0-9]+([-_][A-Za-z0-9]+)+$/
-// camelCase: starts lowercase, no whitespace, and contains at least one
-// lower-to-upper transition (i.e., genuinely multiple concatenated words —
-// a plain single English word like "Unrated" must NOT match this).
-const CAMEL_CASE_RE = /^[a-z][a-zA-Z0-9]*$/
-const CAMEL_CASE_TRANSITION_RE = /[a-z][A-Z]/
+// A single lowercase-leading token with no whitespace or separators reads as
+// an internal identifier (a runner/store key, a CSS token, an enum-shaped
+// value), not rendered prose — this codebase's own convention is that real
+// UI text is sentence-cased ("Unrated", "Repair failed..."). This is what
+// lets `{ key: 'legendary', label: 'Epic' }` (ConsoleMode's store-label map,
+// D-21) need no code change: `legendary`/`gog`/`nile`/`steam`/`sideload`/
+// `zoom` are all internal keys, exempt by shape; `label`'s glossary-listed
+// brand strings are exempt by the glossary. A capitalized or multi-word
+// literal (`Unrated`, `Repair failed. See the log.`) is NOT a single
+// lowercase-leading token and is unaffected.
+const LOWERCASE_TOKEN_RE = /^[a-z][a-zA-Z0-9]*$/
 
 function isTechnicalToken(rawText: string): boolean {
   const text = rawText.trim()
@@ -181,9 +187,7 @@ function isTechnicalToken(rawText: string): boolean {
   if (/[\\/]/.test(text) && !hasWhitespace) return true // path
   if (!hasWhitespace) {
     if (KEBAB_OR_SNAKE_RE.test(text)) return true
-    if (CAMEL_CASE_RE.test(text) && CAMEL_CASE_TRANSITION_RE.test(text)) {
-      return true
-    }
+    if (LOWERCASE_TOKEN_RE.test(text)) return true
   }
   return false
 }
@@ -302,14 +306,19 @@ function classify(node: Node): Classification {
 }
 
 // ---------------------------------------------------------------------------
-// Discard decision — every reason a candidate literal is NOT a real
-// violation candidate at all (structural position, technical-token shape,
-// or containing no letter whatsoever).
+// Discard decision. Split into two phases so the glossary exemption (which
+// must win even over a technical-looking shape, e.g. glossary term "MB/s"
+// or "Epic/Legendary" would otherwise match the path-shape check) still
+// applies BEFORE the technical-token shape check runs. Structural-position
+// discards (console arg, thrown Error arg, excluded JSX attribute,
+// import/export specifier, literal type position, object key, enum member
+// name, element-access key) are never candidates regardless of text or
+// glossary — a glossary term used as an import specifier is still not a
+// user-facing candidate.
 // ---------------------------------------------------------------------------
 
-function shouldDiscard(
+function isStructuralNonCandidate(
   node: Node,
-  text: string,
   classification: Classification
 ): boolean {
   if (isConsoleArgument(node)) return true
@@ -326,8 +335,6 @@ function shouldDiscard(
   if (isObjectKey(node)) return true
   if (isEnumMemberName(node)) return true
   if (isElementAccessKey(node)) return true
-  if (!/[a-zA-Z]/.test(text)) return true // pure punctuation/digits/whitespace/CSS units
-  if (isTechnicalToken(text)) return true
   return false
 }
 
@@ -373,13 +380,17 @@ export function scanSource(
     rawText: string,
     classification: Classification
   ): void {
-    if (shouldDiscard(node, rawText, classification)) return
+    if (isStructuralNonCandidate(node, classification)) return
 
     const text = rawText.trim()
+    if (!/[a-zA-Z]/.test(text)) return // pure punctuation/digits/whitespace/CSS units — not a candidate
+
     if (glossarySet.has(text)) {
       exempted += 1
       return
     }
+
+    if (isTechnicalToken(text)) return
 
     const { line, column } = sourceFile.getLineAndColumnAtPos(node.getStart())
     violations.push({
