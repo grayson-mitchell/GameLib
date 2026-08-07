@@ -1,7 +1,75 @@
-// Placeholder pending 34.10-04 Task 2's card/folder tab visuals -- kept as a
-// separate commit so the component (Task 1) and its stylesheet (Task 2) each
-// land as an independently reviewable, independently tested change. See
-// Task 2's commit for the real content (MuiTabs-indicator suppression and
-// the --body-background seam).
+// Card/folder tab visuals (34.10-04 Task 2, D-04, REQ-34.10-02).
+//
+// See .claude/skills/sketch-findings-gamelib/references/navigation-shell.md
+// § CSS Patterns → "Card / folder tab" for the seam recipe this ports, and
+// § 3 for the three-theme navbar/body inversion table that makes an
+// absolute "the bar is dark" style unsafe. `.NavShell__navbar` already sets
+// `align-items: flex-end` (34.10-02) so these tabs sit on the navbar's
+// baseline, which is what makes the `top: 1px` overlap land.
 .NavTabs {
+  // The underline-plus-sliding-indicator style is the explicitly rejected
+  // alternative from sketch 001 (navigation-shell.md § Design Decisions #1)
+  // -- MUI renders one by default, so it must be suppressed outright or the
+  // rejected design ships underneath the chosen one.
+  .MuiTabs-indicator {
+    display: none;
+  }
+
+  .MuiTab-root {
+    border: 1px solid transparent;
+    border-bottom: none;
+    background: transparent;
+    color: var(--navbar-inactive);
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--space-2xs) var(--space-2xs) 0 0;
+    position: relative;
+    // Pulls the tab down over the navbar's own bottom border so an active
+    // tab's border-bottom (painted in the content colour, below) can erase
+    // the seam exactly where the two borders would otherwise double up.
+    top: 1px;
+    font-size: var(--text-md);
+    font-weight: var(--regular);
+    // MUI uppercases tab labels by default, which would fight the
+    // translated strings' own casing (e.g. "Manage Accounts").
+    text-transform: none;
+    transition:
+      color 0.12s ease,
+      background-color 0.12s ease,
+      border-color 0.12s ease;
+
+    &:hover {
+      color: var(--text-hover);
+      // A subtle neutral tint, not the accent -- the accent stays reserved
+      // for "this is where you are" (the active/selected state below).
+      background-color: color-mix(
+        in srgb,
+        var(--navbar-inactive) 8%,
+        transparent
+      );
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--text-hover);
+      outline-offset: -2px;
+    }
+
+    // The whole point of this plan (D-04): the active tab's merge is
+    // defined RELATIONALLY against the content surface, never absolutely
+    // against "the bar is dark". `dracula` makes the navbar lighter than
+    // the body -- any style keyed off a fixed light/dark assumption breaks
+    // there. Never key this off the active tier-2 row's background token:
+    // that token names a different surface (the tier-2 row highlight) that
+    // happens to coincide with the content background in some themes today,
+    // which is exactly what would make picking the wrong token invisible in
+    // `midnightMirage` and wrong everywhere else.
+    &.Mui-selected {
+      background: var(--body-background);
+      color: var(--navbar-active);
+      border-color: var(--divider);
+      // Painted in the content colour so the navbar's bottom border and
+      // this tab's own bottom edge visually merge into one surface.
+      border-bottom: 1px solid var(--body-background);
+      font-weight: var(--bold);
+    }
+  }
 }

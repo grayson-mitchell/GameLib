@@ -19,6 +19,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { ReactElement, ReactNode } from 'react'
+import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 type MockContextValue = {
   epic: { username?: string; library: unknown[] }
@@ -269,5 +270,51 @@ describe('NavTabs', () => {
       'utf8'
     )
     expect(source).not.toMatch(/label=["']/)
+  })
+})
+
+describe('NavTabs stylesheet -- card/folder tab visuals (34.10-04 Task 2, D-04)', () => {
+  const STYLESHEET_PATH = join(
+    __dirname,
+    '..',
+    'components',
+    'NavTabs',
+    'index.scss'
+  )
+
+  function readStripped(): string {
+    return stripSourceComments(readFileSync(STYLESHEET_PATH, 'utf8'))
+  }
+
+  it("suppresses MUI's own sliding indicator with a display: none rule", () => {
+    const source = readStripped()
+    expect(source).toMatch(/\.MuiTabs-indicator\s*{[^}]*display:\s*none/)
+  })
+
+  it('defines the active tab background and border-bottom against --body-background (the seam-erasing token), never the tier-2 row token', () => {
+    const source = readStripped()
+    expect(
+      (source.match(/--body-background/g) ?? []).length
+    ).toBeGreaterThanOrEqual(2)
+    // The rejected token: it names the active tier-2 ROW's background, not
+    // the content surface, and coincides with --body-background in some
+    // themes today -- which is exactly what would make picking it invisible
+    // in midnightMirage and wrong everywhere else.
+    expect(source).not.toMatch(/--navbar-active-background/)
+  })
+
+  it('uses only the two nav-wide weights -- no --semibold', () => {
+    const source = readStripped()
+    expect(source).not.toMatch(/--semibold/)
+  })
+
+  it('contains no hex colour literal for any tab state', () => {
+    const source = readStripped()
+    expect(source).not.toMatch(/#[0-9a-fA-F]{3,8}/)
+  })
+
+  it('keeps MUI-uppercased labels off -- text-transform: none is present', () => {
+    const source = readStripped()
+    expect(source).toMatch(/text-transform:\s*none/)
   })
 })
