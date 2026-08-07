@@ -13,10 +13,34 @@
  *
  * It shows a list with the different results of the checks, language
  * and keys compared.
+ *
+ * D-15 (Phase 34.8-09): the general-purpose `pnpm lint-translations`
+ * invocation above still checks all four namespaces, unchanged. A
+ * SEPARATE, `gamelib`-only invocation exists (`pnpm lint-translations:gamelib`)
+ * for anything that wires this script's checks into an actionable CI-facing
+ * gate. Running these checks across all 49 locales for the three upstream
+ * namespaces (`translation`/`gamepage`/`login`) surfaces a wall of
+ * pre-existing failures on Weblate-sourced data this fork does not own and
+ * cannot fix -- a gate with unactionable noise stops being read. Scope is
+ * read from `LINT_TRANSLATIONS_NAMESPACES` (comma-separated), not a CLI
+ * flag: this script runs through an `esbuild --bundle | node` pipe, so argv
+ * never reaches it -- the same env-var convention `meta/verifyUpdaterSigningKey.ts`
+ * already uses for its own CI-facing configuration.
  */
 
 import { readdirSync, readFileSync } from 'graceful-fs'
 import { join } from 'path'
+
+const ALL_NAMESPACES = ['gamelib', 'gamepage', 'login', 'translation'] as const
+type Namespace = (typeof ALL_NAMESPACES)[number]
+
+const namespaceScope: Namespace[] = process.env.LINT_TRANSLATIONS_NAMESPACES
+  ? (process.env.LINT_TRANSLATIONS_NAMESPACES.split(',')
+      .map((ns) => ns.trim())
+      .filter((ns): ns is Namespace =>
+        (ALL_NAMESPACES as readonly string[]).includes(ns)
+      ) as Namespace[])
+  : [...ALL_NAMESPACES]
 
 // there are many extra keys in translation files without a matching
 // key in the english file
@@ -38,9 +62,10 @@ function readFile(fileName: string, language: string) {
   }
 }
 
-// Read the 3 files for a given language
+// Read the 4 files for a given language
 function readFiles(language: string) {
   return {
+    gamelib: readFile('gamelib', language),
     gamepage: readFile('gamepage', language),
     login: readFile('login', language),
     translation: readFile('translation', language)
@@ -123,7 +148,19 @@ function checkLanguage(language: string) {
   const langFiles = readFiles(language)
 
   for (const file in langFiles) {
+    // D-15 scope selector -- see the header docstring. Filtering here (not
+    // in readFiles()) keeps readFiles() a plain "read everything" helper;
+    // this is the one seam that decides what actually gets checked.
+    if (!namespaceScope.includes(file as Namespace)) continue
+
     const content = langFiles[file]
+    // The 48 keys catalogue 34.8-07/08a/08b/08c introduced into
+    // en/gamelib.json are legitimately empty (defaultValue: '' plus
+    // returnEmptyString: false plus the inline t(key, 'Default') fallback --
+    // see i18next-parser.config.js and 34.8-09-PLAN.md's own <interfaces>
+    // note). The existing `if (dir === 'en') return` in the readdirSync
+    // loop below already excludes `en` from ever reaching this function, so
+    // no separate empty-string carve-out is needed here.
     if (!content) continue
 
     processingFile = file
