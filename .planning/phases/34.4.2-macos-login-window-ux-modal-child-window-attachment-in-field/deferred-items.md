@@ -833,6 +833,54 @@ run mints and F-34.4.2-10's own updated status, per this ledger's own convention
   update) — is NOT met.** F-34.4.2-10 stays OPEN and deferred, on the same three reasons stated
   there. Never omitted.
 
+## F-34.4.2-19 Track 2 continuation — WR-03 deadline lead structurally ruled out; a gate-contract defect surfaces, plus one NEW unrelated logger defect (2026-08-08)
+
+**Disposition: logged, not fixed here (debug-session scope; the consumption-side fix for
+F-34.4.2-19 itself is tracked in `.planning/debug/humble-isloggedin-never-set.md`, not this
+ledger). Two findings below.**
+
+- **Gate-contract defect: any live-gate procedure holding the Humble sheet open past 10 minutes
+  trips WR-03's watch deadline by design.** **File:** `src/backend/humble/user.ts:71` (
+  `LOGIN_WATCH_TIMEOUT_MS = 10 * 60_000`) and `:549-556` (`armDeadline()`). **Symptom:** the
+  login watch's own designed 10-minute unattended-timeout closes the login window and settles
+  `{status: 'waiting'}` if no main-frame navigation re-arms it first (`forceRevalidate()`,
+  `:562-567`) — an already-authenticated page load that never navigates never re-arms it. Any
+  gate procedure (this phase's own live-gate documents included) that requires an operator to
+  hold the sheet open indefinitely for measurement will hit this deadline on every sufficiently
+  long run. **This is a contract defect in the gate document as much as an app defect** — the
+  procedure's own "hold the sheet open" requirement is incompatible with the watch's own designed
+  timeout, the SAME shape as this phase's other contract-authoring-defect instances above
+  (F-34.4.2-11, -14, -15, -16 and siblings). **Why logged here, not fixed:** no owning plan;
+  raised for whoever next authors a live-gate contract touching the Humble login window to either
+  bound the procedure's own hold time under 10 minutes, or arrange a periodic re-arming action
+  (e.g. a scripted no-op navigation) into the contract itself. **Not the cause of the specific
+  08:17:37 F-34.4.2-19 incident** — see the debug session file for the structural proof the
+  deadline could not have produced that incident's own log signature; this entry documents the
+  designed timeout as a real, general hazard independent of that specific incident.
+
+- **NEW, unrelated, out-of-scope defect: `LogWriter.writeString()`'s serialization gate is
+  racy under two unawaited, near-simultaneous callers.** **File:**
+  `src/backend/logger/log_writer.ts:81-125` (`writeString`'s `this.#messageWaitPromise` gate).
+  **Symptom:** the gate is `await`ed (line 105) BEFORE it is reassigned (line 111, only inside
+  the `message instanceof Promise` branch) — two `logWarning()`/`logInfo()`/etc. calls issued in
+  the same synchronous JS stretch (common, since none of this codebase's fire-and-forget logger
+  call sites are `await`ed — confirmed via `src/backend/logger/index.ts:16-38`'s own comment
+  naming this explicitly) both read the SAME pre-update gate value and race independently to
+  their own `fsPromises.appendFile()` call. Their actual on-disk order then depends on each
+  message's own async formatting cost (`formatLogMessage`), not their true call order — CONFIRMED
+  live: two Humble log lines (`user.ts:465`/`user.ts:485`) from what is very likely a single
+  `checkCookie()` invocation landed on disk in the OPPOSITE of the order the source code
+  guarantees they must be called in (full mechanism and proof in
+  `.planning/debug/humble-isloggedin-never-set.md`'s Evidence section, entries dated 2026-08-08
+  under "Track 2 continuation"). **Why out of scope for this debug session:** `log_writer.ts` is
+  not on any of F-34.4.2-19's own consumption-side fix files, and this defect is a general
+  cross-cutting logger hazard, not specific to Humble. **Disposition:** logged, not fixed, no
+  owning plan. A future fix should either move the `this.#messageWaitPromise` reassignment BEFORE
+  the `await` (closing the read/reassign race window), or make every logger call site `await` its
+  own write before returning. Until fixed, log-file ORDER cannot be trusted as call-order evidence
+  anywhere two logger calls happen without an intervening `await` — a standing caveat for any
+  future debug session reading this project's log files as a timeline.
+
 **T-34.4.2-42 scorecard, measured this run: 2** (F-34.4.2-19, F-34.4.2-20), against this threat's
 own measurable clause stating the count should be zero now that the review carries seven tests.
 Neither finding is a "single unreachable requirement" of the kind Tests 1-4 individually check;
@@ -847,3 +895,82 @@ sub-check or required literal was changed; item 5 was not re-instated. All prior
 (`-LIVE-GATE.md`, `-RERUN.md`, `-RERUN-2.md`, `-RERUN-3.md`, `-RERUN-4.md`) remain byte-unchanged.
 No requirement box was ticked (`REQ-34.4.2-04`, `-05`, `-09` all stay `[ ]`, D-08's no-partial-pass
 rule). **Next: `/gsd-debug`** — the blocker (F-34.4.2-19) is an undiagnosed defect, not a known gap.
+
+## F-34.4.2-19 CLOSED — debug session resolved the root cause; three residuals recorded (2026-08-08)
+
+**Disposition: F-34.4.2-19 itself is CLOSED (root cause diagnosed, fixed, live-verified by the
+coordinator via an independent filesystem check — see
+`.planning/debug/resolved/humble-isloggedin-never-set.md` for the full investigation). This does
+NOT close Phase 34.4.2. The phase's own gate items have not been re-run since this fix landed —
+that is separate work, owed next, not performed by this debug session.** Three residuals below,
+none fixed here.
+
+- **F-34.4.2-21 — Track 1's error/timeout UI remains LIVE-UNVERIFIED.** **File:**
+  `src/frontend/screens/WebView/index.tsx` (`runHumbleLoginWatch()`'s new `'error'`/`'waiting'`
+  branches), `src/frontend/screens/WebView/components/TauriLoginPanel.tsx` (the new
+  `phase === 'error' || phase === 'timeout'` fall-through for the humble branch). **Symptom:** the
+  live verification round that closed F-34.4.2-19 succeeded on its FIRST try — the Track 2 fix
+  let the watcher find and validate the session cookie immediately, so `watchForLogin()` resolved
+  `{status: 'done'}` and neither the frontend's new error branch nor its new timeout branch was
+  ever exercised live. Both have unit coverage only (`TauriLoginPanel.test.tsx`'s new
+  describe block, `HumbleLoginWatchErrorHandling.test.ts`). **State plainly: a passing live test
+  on the success path must NOT be read as validating the failure path** — they are different code
+  branches, and only one was exercised. **Disposition:** logged, not fixed, no owning plan yet. A
+  future live-gate run (or a dedicated live check) should deliberately force an error/timeout
+  outcome (e.g. a logged-out Humble session, or closing the window mid-watch) and confirm the
+  Retry-button UI actually renders and functions.
+
+- **F-34.4.2-22 — `clearHumbleStorage`/logout remains UNPROVEN; interacts with F-34.4.2-10's
+  taking condition.** **File:** `src/backend/humble/user.ts` (the disconnect flow's storage-wipe
+  step, `clearHumbleStorage`). **Symptom:** on the user's own logout-and-back-in repro during this
+  session's live verification, there was again no rendered login form — the humblebundle.com
+  WKWebView session survived the GameLib disconnect and the window auto-logged in a second time,
+  the same as the first. This is PLAUSIBLY correct behavior (disconnecting GameLib's own account
+  state need not force-clear the underlying WKWebView's persistent cookie jar), but it means
+  gate item 6(a)'s own path (`clearHumbleStorage` actually running and clearing webview cookies)
+  has STILL never been observed completing live, in this session or any prior one. **Record as an
+  open question, not as working.** **Interacts directly with F-34.4.2-10** ("Humble disconnect's
+  storage wipe times out (non-fatal, incomplete logout)", this file's own Plan-15 entry): F-34.4.2-10's
+  taking condition is explicitly "once item 6(a) records a measured PASS with the path confirmed
+  reached" (`34.4.2-PLATFORM-SCOPE.md` §5's twelfth update, restated at Plan 23 and Plan 24 above)
+  — that condition is STILL not met after this session. **Disposition:** logged, not fixed, no
+  owning plan yet. The next live-gate run touching item 6(a) should deliberately verify
+  `clearHumbleStorage`'s own success/failure emitter (`user.ts:1125` success, `user.ts:1139`
+  failure/timeout) fires and inspect whether the WKWebView cookie jar is actually cleared
+  afterward (e.g. via the same read-only binarycookies parse technique this debug session used),
+  not merely whether the disconnect flow completes without hanging.
+
+- **F-34.4.2-23 — two upstream artifacts encode the mistaken premise that let F-34.4.2-19 hide
+  for months; neither is corrected here, both need an owner.** **Files:**
+  - `.planning/phases/34.4.1-tauri-embedded-browser-login-seam-replace-the-electron-webvi/34.4.1-SPIKE-016-FINDINGS.md`
+    — its "Defect A" section records `census_direction=29` against `total=33` (a live,
+    4-cookie undercount using the SAME `cookie_domain_matches(fixed_host, Some(cookie_domain))`
+    direction `humble_login_cookies`' poll arm uses) and files it as an accepted, unremarkable
+    byproduct of a different, more urgent defect (the opposite direction's over-match), never as
+    its own defect requiring a fix. This 29-vs-33 gap IS the same leading-dot undercount
+    F-34.4.2-19's root cause turned out to be.
+  - `.claude/skills/spike-findings-gamelib/references/tauri-login-webview-cookies.md:46-47` —
+    records spike 014a's measurement that `_simpleauth_sess`'s domain is `'humblebundle.com'`
+    WITHOUT a leading dot. `cookie_domain_matches`'s own doc comment in
+    `src-tauri/src/main.rs` (lines 963-965) cites this exact reference as justification for the
+    suffix-match design being "already correct and complete." This debug session's own
+    independent, live, byte-level parse of the on-disk WKWebView cookie jar found
+    `_simpleauth_sess`'s real domain to be `.humblebundle.com` — WITH a leading dot — directly
+    contradicting the cited spike measurement for the same cookie.
+
+  **Why neither was edited:** out of scope for a debug session; both documents belong to whoever
+  owns `spike-findings-gamelib`/phase-34.4.1 artifact maintenance, per the explicit instruction
+  this debug session operated under. **Disposition:** logged, not fixed, no owning plan yet. A
+  future session should: (1) update `34.4.1-SPIKE-016-FINDINGS.md`'s Defect A section to name the
+  29-vs-33 gap as a confirmed defect (F-34.4.2-19), not an accepted asymmetry, and (2) correct
+  `tauri-login-webview-cookies.md:46-47`'s dot-less domain measurement (the discrepancy is most
+  plausibly explained by spike 014a having measured via wry's OLD blocking `.cookies()` API,
+  a different code path than the OS-level WKWebView data store this debug session read from — not
+  investigated further here) and update `cookie_domain_matches`'s own doc-comment citation in
+  `src-tauri/src/main.rs:963-965` accordingly if the skill file itself changes.
+
+**Not unblocked by this closure: the phase's live gate has not been re-run.** F-34.4.2-19 is
+CLOSED as a diagnosed-and-fixed defect, but Phase 34.4.2's own six gate items (items 1-6 across
+`34.4.2-LIVE-GATE-RERUN-5.md` and any successor contract) have not been re-scored since this fix
+landed. A fresh live-gate run is the phase's own next step, and is separate work from this debug
+session — this session performed diagnosis and fix only, not phase-gate closure.
