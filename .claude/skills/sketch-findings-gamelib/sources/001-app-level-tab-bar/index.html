@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sketch 001 — App-level tab bar</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&family=Cabin:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: #0b0d0e;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  padding-top: 52px;
+  padding-bottom: 60px;
+}
+
+/* ─── sketch chrome (not part of the design) ─────────────────── */
+#variant-nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+  background: #16181a; border-bottom: 1px solid #2a2e31;
+  padding: 8px 16px; display: flex; gap: 8px; align-items: center;
+  font-family: system-ui, sans-serif;
+}
+#variant-nav .brand {
+  font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+  color: #6b7376; margin-right: 12px; font-weight: 600;
+}
+.variant-tab {
+  background: transparent; border: 1px solid #2a2e31; color: #b9c0c2;
+  padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;
+  font-family: inherit; transition: all .15s ease;
+}
+.variant-tab:hover { border-color: #4a5154; color: #e6ebec; }
+.variant-tab.active { background: #1de8f5; border-color: #1de8f5; color: #08191b; font-weight: 600; }
+
+.variant { display: none; padding: 28px 24px 0; }
+.variant.active { display: block; }
+
+.variant-caption {
+  max-width: 1180px; margin: 0 auto 16px; font-family: system-ui, sans-serif;
+}
+.variant-caption h2 { margin: 0 0 6px; font-size: 15px; color: #e6ebec; font-weight: 600; }
+.variant-caption p { margin: 0; font-size: 13px; line-height: 1.55; color: #8b9295; max-width: 78ch; }
+
+/* ─── simulated app window ───────────────────────────────────── */
+.window {
+  max-width: 1180px; margin: 0 auto; border-radius: 10px; overflow: hidden;
+  border: 1px solid #2a2e31; box-shadow: var(--shadow-lg);
+  background: var(--color-bg); transition: max-width .2s ease;
+}
+
+/* macOS traffic lights */
+.titlebar {
+  height: var(--titlebar-height); display: flex; align-items: center;
+  padding: 0 var(--space-4); gap: 8px; position: relative;
+  background: var(--navbar-background);
+}
+.tl { width: 12px; height: 12px; border-radius: 50%; }
+.tl.r { background: #ff5f57; } .tl.y { background: #febc2e; } .tl.g { background: #28c840; }
+.titlebar .win-title {
+  position: absolute; left: 0; right: 0; text-align: center;
+  font-size: var(--text-xs); color: var(--color-text-dim);
+  letter-spacing: .06em; pointer-events: none;
+}
+
+/* annotation overlay for the traffic-light reserved zone */
+.tl-zone {
+  display: none; position: absolute; top: 0; left: 0;
+  width: var(--traffic-light-inset); bottom: 0;
+  border-right: 1px dashed #ff5f57; background: rgba(255,95,87,.10);
+  align-items: flex-end; justify-content: center; padding-bottom: 2px;
+  font-size: 9px; color: #ff8a84; font-family: ui-monospace, monospace;
+}
+body.annotate .tl-zone { display: flex; }
+body.annotate .measure { display: inline-block !important; }
+.measure {
+  display: none !important; font-family: ui-monospace, monospace; font-size: 9px;
+  color: #ff8a84; background: rgba(255,95,87,.12); border: 1px dashed rgba(255,95,87,.5);
+  border-radius: 3px; padding: 0 4px; margin-left: 6px; vertical-align: middle;
+}
+
+/* nav bar shared skeleton */
+.navbar {
+  background: var(--navbar-background); display: flex; align-items: stretch;
+  padding-left: var(--space-4); padding-right: var(--space-4); gap: var(--space-4);
+  position: relative;
+}
+.wordmark {
+  display: flex; align-items: center; gap: 8px; padding-right: var(--space-4);
+  font-weight: var(--bold); font-size: var(--text-base); letter-spacing: -.01em;
+  color: var(--color-text); white-space: nowrap;
+}
+.wordmark .dot { width: 8px; height: 8px; border-radius: 2px; background: var(--color-primary); }
+.nav-right { margin-left: auto; display: flex; align-items: center; gap: var(--space-1); }
+.icon-btn {
+  width: 30px; height: 30px; border-radius: var(--radius-sm); border: none;
+  background: transparent; color: var(--color-text-muted); cursor: pointer;
+  display: grid; place-items: center; transition: all .15s ease; font-size: 14px;
+}
+.icon-btn:hover { background: rgba(255,255,255,.07); color: var(--color-text); }
+.avatar {
+  width: 26px; height: 26px; border-radius: 50%; margin-left: 6px; cursor: pointer;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #08191b;
+}
+.tab-badge {
+  display: inline-grid; place-items: center; min-width: 17px; height: 17px;
+  padding: 0 5px; border-radius: var(--radius-full); background: var(--color-primary);
+  color: #08191b; font-size: 10px; font-weight: 700; margin-left: 7px;
+}
+
+/* ─── content ────────────────────────────────────────────────── */
+.content { padding: var(--space-6); min-height: 420px; background: var(--color-bg); }
+.content-head { display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-4); }
+.content-head h3 { margin: 0; font-size: var(--text-lg); font-weight: var(--semibold); }
+.content-head .count { font-size: var(--text-sm); color: var(--color-text-dim); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: var(--space-4); }
+.card { cursor: pointer; transition: transform .15s ease; }
+.card:hover { transform: translateY(-3px); }
+.card:hover .art { border-color: var(--color-primary); }
+.art {
+  aspect-ratio: 3/4; border-radius: var(--radius-md); border: 1px solid var(--color-border);
+  display: grid; place-items: center; padding: var(--space-2); text-align: center;
+  font-size: var(--text-xs); font-weight: var(--semibold); line-height: 1.3;
+  color: rgba(255,255,255,.92); transition: border-color .15s ease; position: relative; overflow: hidden;
+}
+.store-chip {
+  position: absolute; top: 5px; right: 5px; font-size: 8px; letter-spacing: .06em;
+  text-transform: uppercase; padding: 2px 5px; border-radius: 3px; font-weight: 700;
+  background: rgba(0,0,0,.62); color: rgba(255,255,255,.88);
+}
+.card .name { margin-top: 7px; font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.35; }
+.card .meta { font-size: 10px; color: var(--color-text-dim); margin-top: 2px; }
+
+.row-list { display: flex; flex-direction: column; gap: var(--space-2); }
+.row {
+  display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-surface); transition: border-color .15s ease;
+}
+.row:hover { border-color: var(--color-border-strong); }
+.row .thumb { width: 44px; height: 44px; border-radius: var(--radius-sm); flex: none; }
+.row .t { font-size: var(--text-sm); font-weight: var(--medium); }
+.row .s { font-size: var(--text-xs); color: var(--color-text-dim); margin-top: 2px; }
+.row .right { margin-left: auto; text-align: right; }
+.bar { height: 4px; border-radius: 2px; background: var(--color-border); width: 190px; overflow: hidden; margin-top: 6px; }
+.bar > i { display: block; height: 100%; background: var(--color-primary); }
+.btn {
+  border: 1px solid var(--color-border-strong); background: transparent; color: var(--color-text);
+  padding: 6px 13px; border-radius: var(--radius-sm); font-size: var(--text-xs); cursor: pointer;
+  font-family: inherit; transition: all .15s ease;
+}
+.btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.btn.primary { background: var(--color-primary); border-color: var(--color-primary); color: #08191b; font-weight: 600; }
+.btn.primary:hover { background: var(--color-primary-hover); border-color: var(--color-primary-hover); color: #08191b; }
+
+.field { margin-bottom: var(--space-4); max-width: 560px; }
+.field label { display: block; font-size: var(--text-sm); margin-bottom: 6px; color: var(--color-text-muted); }
+.field .ctl { display: flex; gap: var(--space-2); }
+.field input {
+  flex: 1; background: var(--color-surface-raised); border: 1px solid var(--color-border);
+  color: var(--color-text); padding: 8px 11px; border-radius: var(--radius-sm);
+  font-family: inherit; font-size: var(--text-sm);
+}
+.field input:focus { outline: none; border-color: var(--color-primary); }
+.switch-row { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
+.switch { width: 38px; height: 21px; border-radius: 999px; background: var(--color-border-strong); position: relative; cursor: pointer; transition: background .15s ease; flex: none; }
+.switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 17px; height: 17px; border-radius: 50%; background: #fff; transition: transform .15s ease; }
+.switch.on { background: var(--color-primary); }
+.switch.on::after { transform: translateX(17px); }
+
+/* ══ VARIANT A — underline ═══════════════════════════════════ */
+.navA { height: 46px; align-items: stretch; }
+.navA .tabs { display: flex; align-items: stretch; gap: var(--space-1); position: relative; }
+.navA .tab {
+  border: none; background: transparent; cursor: pointer; font-family: inherit;
+  font-size: var(--text-sm); font-weight: var(--medium); color: var(--color-text-dim);
+  padding: 0 var(--space-4); display: flex; align-items: center;
+  transition: color .15s ease; position: relative; white-space: nowrap;
+}
+.navA .tab:hover { color: var(--color-text-muted); }
+.navA .tab.active { color: var(--color-text); }
+.navA .indicator {
+  position: absolute; bottom: 0; height: 2px; background: var(--color-primary);
+  border-radius: 2px 2px 0 0; transition: left .22s cubic-bezier(.4,0,.2,1), width .22s cubic-bezier(.4,0,.2,1);
+}
+.navA::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--color-border); }
+
+/* ══ VARIANT B — segmented pill ══════════════════════════════ */
+.navB { height: 52px; align-items: center; }
+.navB .track {
+  display: flex; gap: 2px; background: rgba(0,0,0,.28); padding: 3px;
+  border-radius: var(--radius-md); border: 1px solid rgba(0,0,0,.35);
+}
+.navB .tab {
+  border: none; background: transparent; cursor: pointer; font-family: inherit;
+  font-size: var(--text-sm); font-weight: var(--medium); color: var(--color-text-muted);
+  padding: 6px 15px; border-radius: var(--radius-sm); display: flex; align-items: center;
+  transition: all .15s ease; white-space: nowrap;
+}
+.navB .tab:hover { color: var(--color-text); background: rgba(255,255,255,.05); }
+.navB .tab.active {
+  background: var(--color-surface-raised); color: var(--color-text);
+  box-shadow: 0 1px 3px rgba(0,0,0,.4); font-weight: var(--semibold);
+}
+.navB .tab.active .tab-badge { background: var(--color-primary); }
+.navB { border-bottom: 1px solid var(--color-border); }
+
+/* ══ VARIANT C — card / folder ═══════════════════════════════ */
+.navC { height: 50px; align-items: flex-end; padding-bottom: 0; }
+.navC .tabs { display: flex; gap: 3px; align-items: flex-end; }
+.navC .tab {
+  border: 1px solid transparent; border-bottom: none; background: transparent;
+  cursor: pointer; font-family: inherit; font-size: var(--text-sm);
+  font-weight: var(--medium); color: var(--color-text-dim);
+  padding: 8px 16px 9px; border-radius: var(--radius-md) var(--radius-md) 0 0;
+  display: flex; align-items: center; transition: all .15s ease;
+  position: relative; top: 1px; white-space: nowrap;
+}
+.navC .tab:hover { color: var(--color-text-muted); background: rgba(255,255,255,.04); }
+.navC .tab.active {
+  background: var(--color-bg); color: var(--color-text);
+  border-color: var(--color-border); border-bottom: 1px solid var(--color-bg);
+  font-weight: var(--semibold); padding-bottom: 10px;
+}
+.navC { border-bottom: 1px solid var(--color-border); }
+
+/* ─── sketch toolbar ─────────────────────────────────────────── */
+#sketch-tools {
+  position: fixed; bottom: 12px; right: 12px; z-index: 9999;
+  font-family: system-ui, sans-serif; font-size: 12px;
+  background: rgba(0,0,0,.82); color: #fff; padding: 8px 12px; border-radius: 8px;
+  opacity: .4; transition: opacity .2s; display: flex; gap: 8px; align-items: center;
+  border: 1px solid rgba(255,255,255,.12);
+}
+#sketch-tools:hover { opacity: 1; }
+#sketch-tools select, #sketch-tools button {
+  background: #24282a; color: #fff; border: 1px solid #3a4042; border-radius: 5px;
+  padding: 4px 8px; font-size: 11px; font-family: inherit; cursor: pointer;
+}
+#sketch-tools button:hover { background: #333a3c; }
+#sketch-tools button.on { background: #1de8f5; color: #08191b; border-color: #1de8f5; font-weight: 600; }
+#sketch-tools .sep { width: 1px; height: 18px; background: rgba(255,255,255,.15); }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <span class="brand">Sketch 001 · App-level tab bar</span>
+  <button class="variant-tab active" data-v="a" onclick="showVariant('a', this)">A: Underline</button>
+  <button class="variant-tab" data-v="b" onclick="showVariant('b', this)">B: Segmented pill</button>
+  <button class="variant-tab" data-v="c" onclick="showVariant('c', this)">C: Card / folder ★ Selected</button>
+</div>
+
+<!-- ══════════════ VARIANT A ══════════════ -->
+<div id="variant-a" class="variant active">
+  <div class="variant-caption">
+    <h2>A — Underline with sliding indicator</h2>
+    <p>Closest to what WineManager already renders with MUI <code>&lt;Tabs&gt;</code>, so it's the path of least resistance: mostly a restyle, no new dependency. The indicator animates between tabs. Bar sits flush against content with a hairline divider.</p>
+  </div>
+  <div class="window">
+    <div class="titlebar">
+      <div class="tl-zone">78px</div>
+      <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+      <span class="win-title">GameLib</span>
+    </div>
+    <div class="navbar navA" style="padding-left: var(--traffic-light-inset);">
+      <div class="wordmark"><span class="dot"></span>GameLib</div>
+      <div class="tabs" id="tabsA">
+        <button class="tab active" onclick="pick('a','library',this)">Library</button>
+        <button class="tab" onclick="pick('a','stores',this)">Stores</button>
+        <button class="tab" onclick="pick('a','deals',this)">Deals</button>
+        <button class="tab" onclick="pick('a','downloads',this)">Downloads<span class="tab-badge">2</span></button>
+        <button class="tab" onclick="pick('a','settings',this)">Settings</button>
+        <div class="indicator" id="indA"></div>
+      </div>
+      <div class="nav-right">
+        <button class="icon-btn" title="Search">⌕</button>
+        <button class="icon-btn" title="Notifications">◔</button>
+        <div class="avatar">G</div>
+      </div>
+    </div>
+    <div class="content" id="contentA"></div>
+  </div>
+</div>
+
+<!-- ══════════════ VARIANT B ══════════════ -->
+<div id="variant-b" class="variant">
+  <div class="variant-caption">
+    <h2>B — Segmented pill (macOS-native feel)</h2>
+    <p>A recessed track holding raised pills, mirroring <code>NSSegmentedControl</code>. Reads as a Mac app first. The track is a fixed-width object, so it degrades badly as tab count grows — worth judging against sketch 002's overflow answer.</p>
+  </div>
+  <div class="window">
+    <div class="titlebar">
+      <div class="tl-zone">78px</div>
+      <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+      <span class="win-title">GameLib</span>
+    </div>
+    <div class="navbar navB" style="padding-left: var(--traffic-light-inset);">
+      <div class="wordmark"><span class="dot"></span>GameLib</div>
+      <div class="track">
+        <button class="tab active" onclick="pick('b','library',this)">Library</button>
+        <button class="tab" onclick="pick('b','stores',this)">Stores</button>
+        <button class="tab" onclick="pick('b','deals',this)">Deals</button>
+        <button class="tab" onclick="pick('b','downloads',this)">Downloads<span class="tab-badge">2</span></button>
+        <button class="tab" onclick="pick('b','settings',this)">Settings</button>
+      </div>
+      <div class="nav-right">
+        <button class="icon-btn" title="Search">⌕</button>
+        <button class="icon-btn" title="Notifications">◔</button>
+        <div class="avatar">G</div>
+      </div>
+    </div>
+    <div class="content" id="contentB"></div>
+  </div>
+</div>
+
+<!-- ══════════════ VARIANT C ══════════════ -->
+<div id="variant-c" class="variant">
+  <div class="variant-caption">
+    <h2>C — Card / folder tabs</h2>
+    <p>The active tab merges into the content surface below, so the tab visibly "owns" the panel. Strongest signal of which section you're in, and the only variant that survives a light navbar (try the dracula theme). Heaviest chrome of the three.</p>
+  </div>
+  <div class="window">
+    <div class="titlebar">
+      <div class="tl-zone">78px</div>
+      <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+      <span class="win-title">GameLib</span>
+    </div>
+    <div class="navbar navC" style="padding-left: var(--traffic-light-inset);">
+      <div class="wordmark" style="align-self:center;"><span class="dot"></span>GameLib</div>
+      <div class="tabs">
+        <button class="tab active" onclick="pick('c','library',this)">Library</button>
+        <button class="tab" onclick="pick('c','stores',this)">Stores</button>
+        <button class="tab" onclick="pick('c','deals',this)">Deals</button>
+        <button class="tab" onclick="pick('c','downloads',this)">Downloads<span class="tab-badge">2</span></button>
+        <button class="tab" onclick="pick('c','settings',this)">Settings</button>
+      </div>
+      <div class="nav-right" style="align-self:center;">
+        <button class="icon-btn" title="Search">⌕</button>
+        <button class="icon-btn" title="Notifications">◔</button>
+        <div class="avatar">G</div>
+      </div>
+    </div>
+    <div class="content" id="contentC"></div>
+  </div>
+</div>
+
+<div id="sketch-tools">
+  <select id="theme-switcher" onchange="setTheme(this.value)" title="Theme">
+    <option value="default">midnightMirage</option>
+    <option value="gruvbox">gruvbox_dark</option>
+    <option value="dracula">dracula</option>
+  </select>
+  <div class="sep"></div>
+  <button onclick="setWidth(760,this)">760</button>
+  <button onclick="setWidth(1024,this)">1024</button>
+  <button class="on" onclick="setWidth(1180,this)">Full</button>
+  <div class="sep"></div>
+  <button id="annBtn" onclick="toggleAnnotate(this)">Annotate</button>
+</div>
+
+<script>
+/* ── content panels ─────────────────────────────────────────── */
+const GAMES = [
+  ['Hades II','Supergiant','Steam','linear-gradient(150deg,#7b2d5e,#2b1030)'],
+  ["Baldur's Gate 3",'Larian','GOG','linear-gradient(150deg,#8a3b1e,#2d1408)'],
+  ['Elden Ring','FromSoftware','Steam','linear-gradient(150deg,#6b5a1f,#241d08)'],
+  ['Hollow Knight: Silksong','Team Cherry','Epic','linear-gradient(150deg,#1f4a6b,#08161f)'],
+  ['Disco Elysium','ZA/UM','GOG','linear-gradient(150deg,#6b1f2e,#210a10)'],
+  ['Outer Wilds','Mobius','Epic','linear-gradient(150deg,#2d4a6b,#0b1420)'],
+  ['Stardew Valley','ConcernedApe','Steam','linear-gradient(150deg,#3d6b2d,#0f2008)'],
+  ['Return of the Obra Dinn','Lucas Pope','Steam','linear-gradient(150deg,#4a4a4a,#141414)'],
+  ['Factorio','Wube','Steam','linear-gradient(150deg,#6b4a1f,#211607)'],
+  ['Celeste','Maddy Makes','Amazon','linear-gradient(150deg,#4a2d6b,#150a20)'],
+  ['Slay the Spire','Mega Crit','GOG','linear-gradient(150deg,#6b2d2d,#200a0a)'],
+  ['Cyberpunk 2077','CD Projekt','GOG','linear-gradient(150deg,#6b6420,#201e07)']
+];
+
+const PANELS = {
+  library: () => `
+    <div class="content-head"><h3>Library</h3><span class="count">214 games · 12 installed</span></div>
+    <div class="grid">${GAMES.map(g => `
+      <div class="card">
+        <div class="art" style="background:${g[3]}">
+          <span class="store-chip">${g[2]}</span>${g[0]}
+        </div>
+        <div class="name">${g[0]}</div>
+        <div class="meta">${g[1]}</div>
+      </div>`).join('')}
+    </div>`,
+
+  stores: () => `
+    <div class="content-head"><h3>Stores</h3><span class="count">4 connected</span></div>
+    <div class="row-list">
+      ${[['Steam','Connected · 189 games','#1b2838'],['GOG','Connected · 41 games','#7d1f9c'],
+         ['Epic Games','Connected · 63 games','#2a2a2a'],['Amazon Games','Connected · 18 games','#ff9900']]
+        .map(s => `<div class="row">
+          <div class="thumb" style="background:${s[2]}"></div>
+          <div><div class="t">${s[1].startsWith('Connected') ? s[0] : s[0]}</div><div class="s">${s[1]}</div></div>
+          <div class="right"><button class="btn">Manage</button></div>
+        </div>`).join('')}
+    </div>`,
+
+  deals: () => `
+    <div class="content-head"><h3>Deals</h3><span class="count">9 games from your wishlist are on sale</span></div>
+    <div class="row-list">
+      ${[['Cyberpunk 2077','GOG','−70%','$17.99'],['Disco Elysium','GOG','−80%','$7.99'],
+         ['Outer Wilds','Epic','−60%','$9.99'],['Factorio','Steam','−25%','$26.24']]
+        .map(d => `<div class="row">
+          <div class="thumb" style="background:linear-gradient(150deg,#3a4a55,#12181c)"></div>
+          <div><div class="t">${d[0]}</div><div class="s">${d[1]}</div></div>
+          <div class="right">
+            <div class="t" style="color:var(--color-success)">${d[2]} · ${d[3]}</div>
+            <button class="btn primary" style="margin-top:6px" onclick="toast('Opening ${d[1]} store page…')">View deal</button>
+          </div>
+        </div>`).join('')}
+    </div>`,
+
+  downloads: () => `
+    <div class="content-head"><h3>Downloads</h3><span class="count">1 downloading · 1 queued</span></div>
+    <div class="row-list">
+      <div class="row">
+        <div class="thumb" style="background:linear-gradient(150deg,#7b2d5e,#2b1030)"></div>
+        <div style="flex:1">
+          <div class="t">Hades II</div>
+          <div class="s">Installing · 8.4 GB of 14.2 GB · 42 MB/s</div>
+          <div class="bar"><i style="width:59%"></i></div>
+        </div>
+        <div class="right"><button class="btn" onclick="toast('Paused Hades II')">Pause</button></div>
+      </div>
+      <div class="row">
+        <div class="thumb" style="background:linear-gradient(150deg,#6b5a1f,#241d08)"></div>
+        <div style="flex:1">
+          <div class="t">Elden Ring</div>
+          <div class="s">Queued · 61.2 GB</div>
+          <div class="bar"><i style="width:0%"></i></div>
+        </div>
+        <div class="right"><button class="btn" onclick="toast('Removed from queue')">Cancel</button></div>
+      </div>
+    </div>`,
+
+  settings: () => `
+    <div class="content-head"><h3>Settings</h3><span class="count">General</span></div>
+    <div class="field">
+      <label>Default install path</label>
+      <div class="ctl">
+        <input value="/Users/grayson/Games" onblur="toast('Path saved')">
+        <button class="btn" onclick="toast('Opening file picker…')">Browse</button>
+      </div>
+    </div>
+    <div class="switch-row"><div class="switch on" onclick="this.classList.toggle('on');toast('Setting updated')"></div><span style="font-size:var(--text-sm)">Start GameLib on login</span></div>
+    <div class="switch-row"><div class="switch" onclick="this.classList.toggle('on');toast('Setting updated')"></div><span style="font-size:var(--text-sm)">Minimise to tray on close</span></div>
+    <div class="switch-row"><div class="switch on" onclick="this.classList.toggle('on');toast('Setting updated')"></div><span style="font-size:var(--text-sm)">Auto-sync saves with cloud</span></div>
+    <div style="margin-top:var(--space-6)"><button class="btn primary" onclick="toast('Settings saved ✓')">Save changes</button></div>`
+};
+
+/* ── behaviour ──────────────────────────────────────────────── */
+function render(v, panel) {
+  document.getElementById('content' + v.toUpperCase()).innerHTML = PANELS[panel]();
+}
+
+function pick(v, panel, el) {
+  const bar = el.parentElement;
+  bar.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  render(v, panel);
+  if (v === 'a') moveIndicator();
+}
+
+function moveIndicator() {
+  const bar = document.getElementById('tabsA');
+  const act = bar.querySelector('.tab.active');
+  const ind = document.getElementById('indA');
+  if (!act) return;
+  ind.style.left = act.offsetLeft + 'px';
+  ind.style.width = act.offsetWidth + 'px';
+}
+
+function showVariant(id, el) {
+  document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('variant-' + id).classList.add('active');
+  el.classList.add('active');
+  if (id === 'a') requestAnimationFrame(moveIndicator);
+}
+
+function setTheme(name) {
+  document.querySelector('link[href*="themes/"]').href = '../themes/' + name + '.css';
+  setTimeout(moveIndicator, 60);
+}
+
+function setWidth(px, el) {
+  document.querySelectorAll('#sketch-tools button').forEach(b => {
+    if (b.id !== 'annBtn') b.classList.remove('on');
+  });
+  el.classList.add('on');
+  document.querySelectorAll('.window').forEach(w => w.style.maxWidth = px + 'px');
+  setTimeout(moveIndicator, 240);
+}
+
+function toggleAnnotate(el) {
+  document.body.classList.toggle('annotate');
+  el.classList.toggle('on');
+}
+
+function toast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:64px;right:12px;z-index:9999;background:#1de8f5;color:#08191b;' +
+      'padding:9px 15px;border-radius:7px;font-family:system-ui,sans-serif;font-size:12px;font-weight:600;' +
+      'box-shadow:0 6px 18px rgba(0,0,0,.5);transition:opacity .2s,transform .2s;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  t.style.transform = 'translateY(0)';
+  clearTimeout(t._h);
+  t._h = setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(6px)'; }, 1900);
+}
+
+['a','b','c'].forEach(v => render(v, 'library'));
+requestAnimationFrame(moveIndicator);
+window.addEventListener('resize', moveIndicator);
+</script>
+</body>
+</html>

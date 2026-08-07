@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sketch 003 — Two-tier card nav</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&family=Cabin:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: #0b0d0e; font-family: var(--font-sans); color: var(--color-text);
+  padding-top: 52px; padding-bottom: 60px;
+}
+
+/* ─── sketch chrome ──────────────────────────────────────────── */
+#variant-nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+  background: #16181a; border-bottom: 1px solid #2a2e31;
+  padding: 8px 16px; display: flex; gap: 8px; align-items: center;
+  font-family: system-ui, sans-serif;
+}
+#variant-nav .brand {
+  font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+  color: #6b7376; margin-right: 12px; font-weight: 600;
+}
+.variant-tab {
+  background: transparent; border: 1px solid #2a2e31; color: #b9c0c2;
+  padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;
+  font-family: inherit; transition: all .15s ease;
+}
+.variant-tab:hover { border-color: #4a5154; color: #e6ebec; }
+.variant-tab.active { background: #1de8f5; border-color: #1de8f5; color: #08191b; font-weight: 600; }
+
+.variant { display: none; padding: 28px 24px 0; }
+.variant.active { display: block; }
+.variant-caption { max-width: 1180px; margin: 0 auto 16px; font-family: system-ui, sans-serif; }
+.variant-caption h2 { margin: 0 0 6px; font-size: 15px; color: #e6ebec; font-weight: 600; }
+.variant-caption p { margin: 0; font-size: 13px; line-height: 1.55; color: #8b9295; max-width: 80ch; }
+.tradeoff { display: flex; gap: 18px; font-size: 12px; margin-top: 10px; flex-wrap: wrap; }
+.tradeoff span { color: #8b9295; }
+.good b { color: #58c06d; } .bad b { color: #d6704e; }
+
+/* ─── app window ─────────────────────────────────────────────── */
+.window {
+  max-width: 1180px; margin: 0 auto; border-radius: 10px; overflow: hidden;
+  border: 1px solid #2a2e31; box-shadow: var(--shadow-lg); background: var(--color-bg);
+}
+.titlebar {
+  height: var(--titlebar-height); display: flex; align-items: center;
+  padding: 0 var(--space-4); gap: 8px; position: relative; background: var(--navbar-background);
+}
+.tl { width: 12px; height: 12px; border-radius: 50%; }
+.tl.r { background: #ff5f57; } .tl.y { background: #febc2e; } .tl.g { background: #28c840; }
+.titlebar .win-title {
+  position: absolute; left: 0; right: 0; text-align: center;
+  font-size: var(--text-xs); color: var(--color-text-dim); letter-spacing: .06em; pointer-events: none;
+}
+.tl-zone {
+  display: none; position: absolute; top: 0; left: 0; width: var(--traffic-light-inset); bottom: 0;
+  border-right: 1px dashed #ff5f57; background: rgba(255,95,87,.10);
+  align-items: flex-end; justify-content: center; padding-bottom: 2px;
+  font-size: 9px; color: #ff8a84; font-family: ui-monospace, monospace;
+}
+body.annotate .tl-zone { display: flex; }
+
+/* ─── tier 1 — card / folder tabs (winner of 001) ────────────── */
+.navbar {
+  background: var(--navbar-background); display: flex; align-items: flex-end;
+  padding-left: var(--traffic-light-inset); padding-right: var(--space-4);
+  gap: var(--space-4); position: relative; height: 50px;
+  border-bottom: 1px solid var(--color-border);
+}
+.wordmark {
+  display: flex; align-items: center; gap: 8px; padding-right: var(--space-4);
+  font-weight: var(--bold); font-size: var(--text-base); color: var(--color-text);
+  white-space: nowrap; align-self: center;
+}
+.wordmark .dot { width: 8px; height: 8px; border-radius: 2px; background: var(--color-primary); }
+.tabs { display: flex; gap: 3px; align-items: flex-end; }
+.tab {
+  border: 1px solid transparent; border-bottom: none; background: transparent; cursor: pointer;
+  font-family: inherit; font-size: var(--text-sm); font-weight: var(--medium);
+  color: var(--color-text-dim); padding: 8px 16px 9px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0; display: flex; align-items: center;
+  transition: all .15s ease; position: relative; top: 1px; white-space: nowrap;
+}
+.tab:hover { color: var(--color-text-muted); background: rgba(255,255,255,.04); }
+.tab.active {
+  background: var(--color-bg); color: var(--color-text);
+  border-color: var(--color-border); border-bottom: 1px solid var(--color-bg);
+  font-weight: var(--semibold); padding-bottom: 10px;
+}
+.nav-right { margin-left: auto; display: flex; align-items: center; gap: var(--space-1); align-self: center; }
+.icon-btn {
+  width: 30px; height: 30px; border-radius: var(--radius-sm); border: none; background: transparent;
+  color: var(--color-text-muted); cursor: pointer; display: grid; place-items: center;
+  transition: all .15s ease; font-size: 14px; position: relative;
+}
+.icon-btn:hover { background: rgba(255,255,255,.07); color: var(--color-text); }
+.avatar {
+  width: 26px; height: 26px; border-radius: 50%; margin-left: 6px; cursor: pointer;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #08191b;
+}
+
+/* downloads — ambient activity, not a browse destination */
+.dl-btn { display: flex; align-items: center; gap: 6px; width: auto; padding: 0 9px; height: 30px; }
+.dl-ring {
+  width: 15px; height: 15px; border-radius: 50%; flex: none;
+  background: conic-gradient(var(--color-primary) 0turn .59turn, var(--color-border) .59turn 1turn);
+  position: relative;
+}
+.dl-ring::after {
+  content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--navbar-background);
+}
+.dl-btn .n { font-size: var(--text-xs); font-weight: 600; }
+
+/* ─── tier 2 — vertical panel ────────────────────────────────── */
+.page { display: flex; min-height: 430px; background: var(--color-bg); }
+.tier2 {
+  width: 204px; flex: none; border-right: 1px solid var(--color-border);
+  padding: var(--space-4) var(--space-2); display: flex; flex-direction: column;
+  transition: width .22s cubic-bezier(.4,0,.2,1), padding .22s ease, opacity .18s ease;
+  overflow: hidden;
+}
+.tier2.hidden { width: 0; padding-left: 0; padding-right: 0; opacity: 0; border-right-color: transparent; }
+.tier2.mini { width: 50px; padding-left: var(--space-1); padding-right: var(--space-1); }
+.t2-label {
+  padding: 0 var(--space-3) var(--space-2); font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--color-text-dim); font-weight: 600; white-space: nowrap;
+}
+.tier2.mini .t2-label { opacity: 0; height: 0; padding: 0; }
+.t2-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 7px var(--space-3); background: transparent; border: none; cursor: pointer;
+  font-family: inherit; font-size: var(--text-sm); color: var(--color-text-muted);
+  border-radius: var(--radius-sm); transition: all .13s ease; margin-bottom: 1px;
+  white-space: nowrap; position: relative;
+}
+.t2-item:hover { background: rgba(255,255,255,.06); color: var(--color-text); }
+.t2-item.active { background: var(--color-surface-raised); color: var(--color-text); font-weight: var(--semibold); }
+.t2-item .gl { width: 17px; text-align: center; flex: none; opacity: .85; font-size: 13px; }
+.tier2.mini .t2-item { justify-content: center; padding: 8px 0; }
+.tier2.mini .t2-item .lbl { display: none; }
+.tier2.mini .t2-item .added { display: none; }
+.t2-sep { height: 1px; background: var(--color-border); margin: var(--space-2) var(--space-3); }
+.t2-spacer { flex: 1; }
+
+/* marker for destinations Claude placed, not in the user's tree */
+.added {
+  font-size: 9px; color: var(--color-warning); margin-left: auto; font-weight: 700;
+  border: 1px solid var(--color-warning); border-radius: 3px; padding: 0 3px; line-height: 1.5;
+  opacity: .85;
+}
+.legend {
+  max-width: 1180px; margin: 10px auto 0; font-family: system-ui, sans-serif;
+  font-size: 11.5px; color: #8b9295; display: flex; align-items: center; gap: 8px;
+}
+.legend .k {
+  font-size: 9px; color: #e0ab40; border: 1px solid #e0ab40; border-radius: 3px;
+  padding: 0 3px; font-weight: 700;
+}
+
+/* collapse toggle */
+.t2-toggle {
+  border: none; background: transparent; color: var(--color-text-dim); cursor: pointer;
+  font-size: 13px; padding: 6px; border-radius: var(--radius-sm); transition: all .13s ease;
+  align-self: flex-start; margin-top: var(--space-2);
+}
+.t2-toggle:hover { background: rgba(255,255,255,.07); color: var(--color-text); }
+.tier2.mini .t2-toggle { align-self: center; }
+
+/* ─── content ────────────────────────────────────────────────── */
+.content { padding: var(--space-6); flex: 1; min-width: 0; }
+.content-head { display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-4); }
+.content-head h3 { margin: 0; font-size: var(--text-lg); font-weight: var(--semibold); }
+.content-head .count { font-size: var(--text-sm); color: var(--color-text-dim); }
+.crumb { font-size: var(--text-xs); color: var(--color-text-dim); margin-bottom: var(--space-2); }
+.crumb b { color: var(--color-text-muted); font-weight: 500; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(126px, 1fr)); gap: var(--space-4); }
+.card { cursor: pointer; transition: transform .15s ease; }
+.card:hover { transform: translateY(-3px); }
+.card:hover .art { border-color: var(--color-primary); }
+.art {
+  aspect-ratio: 3/4; border-radius: var(--radius-md); border: 1px solid var(--color-border);
+  display: grid; place-items: center; padding: var(--space-2); text-align: center;
+  font-size: var(--text-xs); font-weight: var(--semibold); line-height: 1.3;
+  color: rgba(255,255,255,.92); transition: border-color .15s ease; position: relative; overflow: hidden;
+}
+.store-chip {
+  position: absolute; top: 5px; right: 5px; font-size: 8px; letter-spacing: .06em;
+  text-transform: uppercase; padding: 2px 5px; border-radius: 3px; font-weight: 700;
+  background: rgba(0,0,0,.62); color: rgba(255,255,255,.88);
+}
+.card .name { margin-top: 7px; font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.35; }
+.placeholder {
+  border: 1px dashed var(--color-border-strong); border-radius: var(--radius-md);
+  padding: var(--space-8); text-align: center; color: var(--color-text-dim); font-size: var(--text-sm);
+}
+.placeholder b { display: block; color: var(--color-text); font-size: var(--text-base); margin-bottom: 6px; font-weight: 600; }
+.acct-list { display: flex; flex-direction: column; gap: var(--space-2); max-width: 620px; }
+.acct {
+  display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface);
+}
+.acct .sq { width: 38px; height: 38px; border-radius: var(--radius-sm); flex: none; }
+.acct .t { font-size: var(--text-sm); font-weight: var(--medium); }
+.acct .s { font-size: var(--text-xs); color: var(--color-text-dim); margin-top: 2px; }
+.acct .right { margin-left: auto; }
+.btn {
+  border: 1px solid var(--color-border-strong); background: transparent; color: var(--color-text);
+  padding: 6px 13px; border-radius: var(--radius-sm); font-size: var(--text-xs); cursor: pointer;
+  font-family: inherit; transition: all .15s ease;
+}
+.btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+/* ─── toolbar ────────────────────────────────────────────────── */
+#sketch-tools {
+  position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui, sans-serif;
+  font-size: 12px; background: rgba(0,0,0,.82); color: #fff; padding: 8px 12px; border-radius: 8px;
+  opacity: .4; transition: opacity .2s; display: flex; gap: 8px; align-items: center;
+  border: 1px solid rgba(255,255,255,.12);
+}
+#sketch-tools:hover { opacity: 1; }
+#sketch-tools select, #sketch-tools button {
+  background: #24282a; color: #fff; border: 1px solid #3a4042; border-radius: 5px;
+  padding: 4px 8px; font-size: 11px; font-family: inherit; cursor: pointer;
+}
+#sketch-tools button:hover { background: #333a3c; }
+#sketch-tools button.on { background: #1de8f5; color: #08191b; border-color: #1de8f5; font-weight: 600; }
+#sketch-tools .sep { width: 1px; height: 18px; background: rgba(255,255,255,.15); }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <span class="brand">Sketch 003 · Two-tier card nav</span>
+  <button class="variant-tab active" onclick="showVariant('a', this)">A: Always populated</button>
+  <button class="variant-tab" onclick="showVariant('b', this)">B: Collapses when empty</button>
+  <button class="variant-tab" onclick="showVariant('c', this)">C: User-collapsible rail</button>
+  <button class="variant-tab" onclick="showVariant('synth', this)">Synthesis ★ Selected</button>
+</div>
+
+<div id="variant-a" class="variant active"></div>
+<div id="variant-b" class="variant"></div>
+<div id="variant-c" class="variant"></div>
+<div id="variant-synth" class="variant"></div>
+
+<div id="sketch-tools">
+  <select id="theme-switcher" onchange="setTheme(this.value)" title="Theme">
+    <option value="default">midnightMirage</option>
+    <option value="gruvbox">gruvbox_dark</option>
+    <option value="dracula">dracula</option>
+  </select>
+  <div class="sep"></div>
+  <button onclick="setWidth(760,this)">760</button>
+  <button onclick="setWidth(1024,this)">1024</button>
+  <button class="on" onclick="setWidth(1180,this)">Full</button>
+  <div class="sep"></div>
+  <button id="annBtn" onclick="toggleAnnotate(this)">Annotate</button>
+</div>
+
+<script>
+/* ═══ navigation model ═══════════════════════════════════════════
+   `added: true` marks a destination that exists in SidebarLinks but was
+   NOT in the proposed tree — placement is Claude's call, flagged for review. */
+
+const NAV = {
+  accounts: {
+    label: 'Manage Accounts',
+    // no children in the proposed tree — variants differ on what happens here
+    filler: [
+      { g: '◉', t: 'All accounts' },
+      { g: '▣', t: 'Steam' },
+      { g: '▣', t: 'GOG' },
+      { g: '▣', t: 'Epic Games' },
+      { g: '▣', t: 'Amazon' }
+    ],
+    children: []
+  },
+  games: {
+    label: 'Games',
+    // no children in the proposed tree
+    filler: [
+      { g: '▦', t: 'All games' },
+      { g: '⤓', t: 'Installed' },
+      { g: '↻', t: 'Recently played' },
+      { g: '★', t: 'Favourites' },
+      { g: '◌', t: 'Hidden' }
+    ],
+    children: []
+  },
+  stores: {
+    label: 'Stores',
+    children: [
+      { g: '▣', t: 'GOG' },
+      { g: '▣', t: 'Steam' },
+      { g: '▣', t: 'Epic' },
+      { g: '▣', t: 'Amazon' },
+      { g: '％', t: 'Deals' },
+      { g: '⌕', t: 'Store Search' },
+      { g: '🔑', t: 'Humble Keys', added: true },
+      { g: '＋', t: 'Redeem a Steam key', added: true }
+    ]
+  },
+  settings: {
+    label: 'Settings',
+    children: [
+      { g: '⚙', t: 'General' },
+      { g: '▤', t: 'Game Defaults' },
+      { g: '⚗', t: 'Advanced' },
+      { g: '🍷', t: 'Wine Manager' },
+      { g: '◐', t: 'Accessibility' },
+      { g: '▣', t: 'Console Mode', added: true },
+      { g: '☰', t: 'Logs', added: true },
+      { sep: true },
+      { g: '?', t: 'Documentation', added: true },
+      { g: '♥', t: 'Support on Ko-fi', added: true }
+    ]
+  }
+};
+
+const ORDER = ['accounts', 'games', 'stores', 'settings'];
+
+const GAMES = [
+  ['Hades II','Steam','linear-gradient(150deg,#7b2d5e,#2b1030)'],
+  ["Baldur's Gate 3",'GOG','linear-gradient(150deg,#8a3b1e,#2d1408)'],
+  ['Elden Ring','Steam','linear-gradient(150deg,#6b5a1f,#241d08)'],
+  ['Hollow Knight: Silksong','Epic','linear-gradient(150deg,#1f4a6b,#08161f)'],
+  ['Disco Elysium','GOG','linear-gradient(150deg,#6b1f2e,#210a10)'],
+  ['Outer Wilds','Epic','linear-gradient(150deg,#2d4a6b,#0b1420)'],
+  ['Stardew Valley','Steam','linear-gradient(150deg,#3d6b2d,#0f2008)'],
+  ['Factorio','Steam','linear-gradient(150deg,#6b4a1f,#211607)'],
+  ['Celeste','Amazon','linear-gradient(150deg,#4a2d6b,#150a20)'],
+  ['Slay the Spire','GOG','linear-gradient(150deg,#6b2d2d,#200a0a)'],
+  ['Cyberpunk 2077','GOG','linear-gradient(150deg,#6b6420,#201e07)'],
+  ['Return of the Obra Dinn','Steam','linear-gradient(150deg,#4a4a4a,#141414)']
+];
+
+/* ═══ variant definitions ════════════════════════════════════════ */
+const VARIANTS = {
+  a: {
+    title: 'A — Vertical panel is always populated',
+    blurb: 'Every tier-1 tab gets a tier-2 list, so the panel never empties and the layout never ' +
+           'shifts. Games and Manage Accounts get views rather than destinations — filters and ' +
+           'account scopes. Costs you the widest content area, and it means inventing tier-2 ' +
+           'content for tabs that did not ask for any.',
+    good: 'Zero layout shift · panel is a stable landmark',
+    bad: 'Narrowest content · invents tier 2 where the tree had none',
+    // childless tabs use their filler list
+    panelFor: k => NAV[k].children.length ? NAV[k].children : NAV[k].filler,
+    collapsible: false
+  },
+  b: {
+    title: 'B — Panel collapses when the tab has no children',
+    blurb: 'Faithful to the tree as written: Stores and Settings show a panel, Games and Manage ' +
+           'Accounts run full-bleed. Games gets the whole window for its grid, which is the ' +
+           'screen you look at most. The cost is that content width jumps by 204px every time ' +
+           'you cross between a tab with children and one without.',
+    good: 'Max width on the grid · faithful to the tree as written',
+    bad: 'Content jumps 204px when switching tabs',
+    panelFor: k => NAV[k].children,
+    collapsible: false
+  },
+  c: {
+    title: 'C — Panel persists, user collapses it',
+    blurb: 'Always populated like A, but with a collapse control that shrinks it to a 50px icon ' +
+           'rail. You decide when to trade the labels for width, and the choice sticks instead ' +
+           'of changing under you per tab. Costs a control to learn, and collapsed icon-only ' +
+           'items lean on tooltips.',
+    good: 'User controls the trade · no involuntary shift · reclaims width on demand',
+    bad: 'One more control · icon-only state needs tooltips',
+    panelFor: k => NAV[k].children.length ? NAV[k].children : NAV[k].filler,
+    collapsible: true
+  },
+  synth: {
+    title: 'Synthesis — only Manage Accounts goes full-bleed',
+    blurb: 'Manage Accounts drops the panel entirely; every other tab keeps one. Games gets a ' +
+           'filter / search panel rather than a nav list — Steam and Playnite style — so the ' +
+           'panel earns its width on the busiest screen instead of just listing destinations. ' +
+           'The 204px shift still exists but now fires on one infrequent tab rather than two, ' +
+           'which is a price worth paying. The Games panel itself is designed in sketch 004.',
+    good: 'Shift confined to one rare tab · panel does real work on Games',
+    bad: 'Tier 2 now means two different things: filters on Games, nav elsewhere',
+    panelFor: k => k === 'accounts' ? [] : (NAV[k].children.length ? NAV[k].children : NAV[k].filler),
+    collapsible: false
+  }
+};
+
+/* ═══ rendering ══════════════════════════════════════════════════ */
+const state = {
+  a: { tab: 'games', sub: 0, mini: false },
+  b: { tab: 'games', sub: 0, mini: false },
+  c: { tab: 'games', sub: 0, mini: false },
+  synth: { tab: 'games', sub: 0, mini: false }
+};
+
+function gridHTML() {
+  return `<div class="grid">${GAMES.map(g => `
+    <div class="card">
+      <div class="art" style="background:${g[2]}"><span class="store-chip">${g[1]}</span>${g[0]}</div>
+      <div class="name">${g[0]}</div>
+    </div>`).join('')}</div>`;
+}
+
+function accountsHTML() {
+  return `<div class="acct-list">${[
+    ['Steam','graysonm · 189 games','#1b2838'],
+    ['GOG','grayson.mitchell · 41 games','#7d1f9c'],
+    ['Epic Games','GraysonM · 63 games','#2a2a2a'],
+    ['Amazon Games','grayson · 18 games','#ff9900']
+  ].map(a => `<div class="acct">
+      <div class="sq" style="background:${a[2]}"></div>
+      <div><div class="t">${a[0]}</div><div class="s">${a[1]}</div></div>
+      <div class="right"><button class="btn" onclick="toast('Disconnect ${a[0]}?')">Disconnect</button></div>
+    </div>`).join('')}
+    <div style="margin-top:8px"><button class="btn" onclick="toast('Choose a store to connect…')">＋ Connect another store</button></div>
+  </div>`;
+}
+
+function contentFor(v, tabKey, subIdx) {
+  const cfg = VARIANTS[v];
+  const list = cfg.panelFor(tabKey);
+  const nav = NAV[tabKey];
+  const sub = list[subIdx] && !list[subIdx].sep ? list[subIdx] : null;
+  const crumb = sub
+    ? `<div class="crumb"><b>${nav.label}</b> › ${sub.t}</div>`
+    : `<div class="crumb"><b>${nav.label}</b></div>`;
+
+  if (tabKey === 'games') {
+    const names = { 0: '214 games', 1: '12 installed', 2: '5 played this week', 3: '9 favourites', 4: '3 hidden' };
+    return crumb +
+      `<div class="content-head"><h3>${sub ? sub.t : 'Games'}</h3><span class="count">${names[subIdx] || '214 games'}</span></div>` +
+      gridHTML();
+  }
+  if (tabKey === 'accounts') {
+    return crumb +
+      `<div class="content-head"><h3>${sub ? sub.t : 'Manage Accounts'}</h3><span class="count">4 connected</span></div>` +
+      accountsHTML();
+  }
+  return crumb +
+    `<div class="content-head"><h3>${sub ? sub.t : nav.label}</h3><span class="count">${nav.label}</span></div>` +
+    `<div class="placeholder"><b>${sub ? sub.t : nav.label}</b>Panel content is out of scope for 003.<br>
+      <span style="opacity:.7">— this sketch tests how tier 2 behaves, not what each screen contains —</span></div>`;
+}
+
+function panelHTML(v, tabKey) {
+  const cfg = VARIANTS[v];
+  const list = cfg.panelFor(tabKey);
+  const st = state[v];
+  if (!list.length) return '';
+  const items = list.map((it, i) => {
+    if (it.sep) return '<div class="t2-sep"></div>';
+    return `<button class="t2-item ${i === st.sub ? 'active' : ''}" onclick="pickSub('${v}',${i})" title="${it.t}">
+      <span class="gl">${it.g}</span><span class="lbl">${it.t}</span>${it.added ? '<span class="added">NEW</span>' : ''}
+    </button>`;
+  }).join('');
+  const toggle = cfg.collapsible
+    ? `<div class="t2-spacer"></div><button class="t2-toggle" onclick="toggleMini('${v}')" title="${st.mini ? 'Expand' : 'Collapse'} panel">${st.mini ? '»' : '«'}</button>`
+    : '';
+  return `<div class="t2-label">${NAV[tabKey].label}</div>${items}${toggle}`;
+}
+
+function render(v) {
+  const cfg = VARIANTS[v];
+  const st = state[v];
+  const list = cfg.panelFor(st.tab);
+  const empty = list.length === 0;
+  const cls = 'tier2' + (empty ? ' hidden' : '') + (st.mini ? ' mini' : '');
+
+  document.getElementById('variant-' + v).innerHTML = `
+    <div class="variant-caption">
+      <h2>${cfg.title}</h2>
+      <p>${cfg.blurb}</p>
+      <div class="tradeoff">
+        <span class="good"><b>+</b> ${cfg.good}</span>
+        <span class="bad"><b>−</b> ${cfg.bad}</span>
+      </div>
+    </div>
+    <div class="window">
+      <div class="titlebar">
+        <div class="tl-zone">78px</div>
+        <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+        <span class="win-title">GameLib</span>
+      </div>
+      <div class="navbar">
+        <div class="wordmark"><span class="dot"></span>GameLib</div>
+        <div class="tabs">
+          ${ORDER.map(k => `<button class="tab ${k === st.tab ? 'active' : ''}" onclick="pickTab('${v}','${k}')">${NAV[k].label}</button>`).join('')}
+        </div>
+        <div class="nav-right">
+          <button class="icon-btn" title="Search">⌕</button>
+          <button class="icon-btn dl-btn" title="Downloads — 1 active, 1 queued" onclick="toast('Downloads — ambient, not a tab. Move it if you disagree.')">
+            <span class="dl-ring"></span><span class="n">2</span>
+          </button>
+          <div class="avatar">G</div>
+        </div>
+      </div>
+      <div class="page">
+        <div class="${cls}">${panelHTML(v, st.tab)}</div>
+        <div class="content">${contentFor(v, st.tab, st.sub)}</div>
+      </div>
+    </div>
+    <div class="legend">
+      <span class="k">NEW</span>
+      <span>placed by Claude — not in your tree. Downloads sits top-right as ambient state rather than a destination. Move any of it.</span>
+    </div>`;
+}
+
+function pickTab(v, k) { state[v].tab = k; state[v].sub = 0; render(v); }
+function pickSub(v, i) { state[v].sub = i; render(v); }
+function toggleMini(v) { state[v].mini = !state[v].mini; render(v); }
+
+function showVariant(id, el) {
+  document.querySelectorAll('.variant').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('variant-' + id).classList.add('active');
+  el.classList.add('active');
+}
+
+function setTheme(name) { document.querySelector('link[href*="themes/"]').href = '../themes/' + name + '.css'; }
+
+function setWidth(px, el) {
+  document.querySelectorAll('#sketch-tools button').forEach(b => { if (b.id !== 'annBtn') b.classList.remove('on'); });
+  el.classList.add('on');
+  document.querySelectorAll('.window').forEach(w => w.style.maxWidth = px + 'px');
+}
+
+function toggleAnnotate(el) { document.body.classList.toggle('annotate'); el.classList.toggle('on'); }
+
+function toast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:64px;right:12px;z-index:9999;background:#1de8f5;color:#08191b;' +
+      'padding:9px 15px;border-radius:7px;font-family:system-ui,sans-serif;font-size:12px;font-weight:600;' +
+      'box-shadow:0 6px 18px rgba(0,0,0,.5);transition:opacity .2s,transform .2s;max-width:330px;line-height:1.4;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1'; t.style.transform = 'translateY(0)';
+  clearTimeout(t._h);
+  t._h = setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(6px)'; }, 2600);
+}
+
+['a','b','c','synth'].forEach(render);
+</script>
+</body>
+</html>

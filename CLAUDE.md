@@ -95,6 +95,7 @@ Architecture not yet mapped. Follow existing patterns found in the codebase.
 ## Project Skills
 
 - **Spike findings for GameLib** (implementation patterns, constraints, gotchas for Steam native install + macOS native Steam bridge + the Rust/Tauri rearchitecture and its login-webview/cookie surface + login-window UX on macOS: modal attachment, Keychain autofill channels, and the local OAuth test store) → `Skill("spike-findings-gamelib")`
+- **Sketch findings for GameLib** (validated design decisions, CSS patterns, visual direction: app-level card/folder tabs replacing the sidebar, the two-tier nav structure, the 78px macOS traffic-light inset, multi-theme survival rules, and the Games library filter panel) → `Skill("sketch-findings-gamelib")`
 <!-- GSD:skills-end -->
 
 <!-- GSD:workflow-start source:GSD defaults -->
