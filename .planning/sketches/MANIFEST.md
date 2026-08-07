@@ -31,7 +31,8 @@ a usable tab style.
 |---|------|----------------|--------|------|
 | 001 | app-level-tab-bar | What should an app-level tab bar look like? | **C — card / folder** | navigation, tabs, shell, macos |
 | 002 | sidebar-overflow-strategy | Where do the other ~9 destinations go? | **B, adapted** — 2nd level vertical, not horizontal | navigation, information-architecture, shell |
-| 003 | two-tier-card-nav | How does a vertical tier 2 behave under card tabs? | _pending_ | navigation, information-architecture, shell |
+| 003 | two-tier-card-nav | How does a vertical tier 2 behave under card tabs? | **Synthesis** | navigation, information-architecture, shell |
+| 004 | games-filter-panel | What goes in the Games tier-2 panel? | _pending_ | navigation, filtering, library |
 
 ## Decisions So Far
 
@@ -54,6 +55,16 @@ Stores            Settings
  ├ Store Search
 ```
 
-This creates the question 003 exists to answer: **two of the four tier-1 tabs have no tier-2
-children.** Whether the vertical panel persists, collapses, or is always populated decides
-whether the layout jumps every time you switch tabs.
+**Tier 2 resolved (003).** Only **Manage Accounts** goes full-bleed, so the 204px width shift
+fires on one infrequent tab rather than two. Every other tab keeps a panel — but the panel means
+two different things depending on the tab:
+
+| Tier 1 tab | Tier 2 |
+|---|---|
+| Manage Accounts | none — full-bleed |
+| Games | **filters**: search, views, collections, facets (sketch 004) |
+| Stores | nav list |
+| Settings | nav list |
+
+**Downloads is not a tab.** It's ambient state with live progress, so it sits top-right as a
+progress ring rather than a destination you browse to.
