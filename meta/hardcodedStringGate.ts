@@ -20,16 +20,17 @@
  * The only disk read anywhere in this file is `loadGlossary()`'s fixed,
  * caller-overridable path.
  *
- * This file lands the half of the gate that decides what a violation IS
- * (literal collection, user-facing classification, glossary exemption).
- * Plan 04 adds the D-14 dataflow/comment-marker exemptions (see the
- * `// plan 04` marker below). Plan 05 adds scope orchestration
- * (`scanScope()`) and the D-18 allowlist.
+ * This file lands both halves of what a violation IS: plan 03's literal
+ * collection / user-facing classification / glossary exemption, and plan
+ * 04's D-14 dataflow/comment-marker exemptions (t-alias detection,
+ * `[key, defaultText]` tuple tables, assigned-then-passed-to-`t()`
+ * fallback, and the full-file leading-comment exemption). Plan 05 adds
+ * scope orchestration (`scanScope()`) and the D-18 allowlist.
  */
 
 import { readFileSync } from 'node:fs'
 
-import { Node, Project, ts } from 'ts-morph'
+import { Node, Project, SourceFile, ts } from 'ts-morph'
 
 // ---------------------------------------------------------------------------
 // Types (contract consumed by plans 04, 05, 06 — do not rename or reshape)
@@ -353,6 +354,196 @@ function templateExpressionLiteralText(node: Node): string {
 }
 
 // ---------------------------------------------------------------------------
+// D-14 dataflow / comment-marker exemptions (plan 04). Four idioms this
+// codebase relies on, all of which would otherwise false-positive the gate
+// on day one:
+//   1. t()-alias detection (collectTAliases) — `t`, `t2`, `tr`, ...
+//   2. `[key, defaultText]` tuple tables — structural, not dataflow
+//   3. assigned-then-passed-to-`t()` fallback — single-scope dataflow
+//   4. full-file exemption via a leading `i18n-gate-exempt:` comment
+// Every exemption here is a hole (see the threat register, T-34.8-09/10/11)
+// so each one is kept as narrow as its real-file source demands, and each
+// is proven by a paired negative fixture in the test suite.
+// ---------------------------------------------------------------------------
+
+/**
+ * Collects every local binding that resolves to i18next's `t` function in
+ * this source file, so the exemption checks below cover `t`, `t2`, `tr`, and
+ * any future alias without a hardcoded name list (RESEARCH.md Pattern 1).
+ *
+ * Seeded with the bare name `t`: this alone is what makes
+ * `repairFailure.ts`'s injected `{ t }: ReportRepairFailureOptions`
+ * parameter and `CrossoverBadge.tsx`'s `const { t } = useTranslation()`
+ * both resolve without any extra detection — an unaliased `t` call is
+ * already covered by the seed.
+ *
+ * Two detection passes:
+ *   - Any `ObjectBindingPattern` element whose resolved property name
+ *     (`getPropertyNameNode()?.getText() ?? getName()`) is `t` adds its own
+ *     local name to the set. This walks every destructuring context —
+ *     `const { t: t2 } = useTranslation()` AND a destructured function
+ *     parameter such as `{ t }: ReportRepairFailureOptions` — because both
+ *     shapes are `ObjectBindingPattern` nodes in the AST regardless of
+ *     whether their parent is a `VariableDeclaration` or a `Parameter`.
+ *   - Any (non-destructured) parameter whose declared type text contains
+ *     `TFunction` adds its own name — this is what makes an aliased,
+ *     directly-typed `TFunction` parameter (plan 07's retrofit of
+ *     `copy.ts` to this shape) recognisable even when it is never seeded
+ *     as the bare name `t`.
+ */
+export function collectTAliases(sourceFile: SourceFile): Set<string> {
+  const aliases = new Set<string>(['t'])
+
+  sourceFile.forEachDescendant((node) => {
+    if (Node.isObjectBindingPattern(node)) {
+      node.getElements().forEach((element) => {
+        const propertyName =
+          element.getPropertyNameNode()?.getText() ?? element.getName()
+        if (propertyName === 't') {
+          aliases.add(element.getName())
+        }
+      })
+      return
+    }
+
+    if (Node.isParameterDeclaration(node)) {
+      const typeText = node.getTypeNode()?.getText() ?? ''
+      if (typeText.includes('TFunction')) {
+        const paramNameNode = node.getNameNode()
+        if (Node.isIdentifier(paramNameNode)) {
+          aliases.add(paramNameNode.getText())
+        }
+      }
+    }
+  })
+
+  return aliases
+}
+
+/**
+ * Pattern 1 consumption: a string literal that is a direct argument to a
+ * `CallExpression` whose callee identifier resolves to a known t-alias is
+ * exempt — both the key argument and the default-text argument, since D-13
+ * is explicit that the gate does not enforce namespace/key choice, only
+ * whether the string is wrapped in `t()` at all.
+ */
+function isTCallArgument(node: Node, aliases: Set<string>): boolean {
+  const parent = node.getParent()
+  if (!parent || !Node.isCallExpression(parent)) return false
+  const callee = parent.getExpression()
+  if (!Node.isIdentifier(callee) || !aliases.has(callee.getText())) {
+    return false
+  }
+  return parent.getArguments().includes(node)
+}
+
+// Requires at least one literal `.`, matching this repo's `keySeparator: '.'`
+// i18next config — RESEARCH.md Pattern 2, Assumption A1. Deliberately
+// narrow: a developer wrapping two unrelated strings in a fake key-shaped
+// tuple to dodge the gate is visible in review, and the paired negative
+// fixture (`['Windows only', 'Not available on macOS']`) proves the shape
+// alone is not enough to exempt.
+const DOTTED_KEY_RE = /^[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/
+
+/**
+ * Pattern 2: exempts both string elements of a `[i18nKeyString,
+ * englishDefaultString]` tuple — `CrossoverBadge.tsx`'s
+ * `labelKeyByTier`, `LibraryFilters`' `crossoverRatingLabels`, and
+ * `stateLabels.ts`'s `STATE_LABEL_KEYS` all build this table shape, then
+ * destructure and call `t(key, defaultText)` at a DIFFERENT source
+ * location than the literal itself — a pure per-call-site check cannot see
+ * this link, so this exemption is structural (the tuple shape itself), not
+ * dataflow-traced.
+ */
+function isKeyDefaultTupleElement(node: Node): boolean {
+  const parent = node.getParent()
+  if (!parent || !Node.isArrayLiteralExpression(parent)) return false
+  const elements = parent.getElements()
+  if (elements.length !== 2) return false
+  const [first, second] = elements
+  if (!Node.isStringLiteral(first) || !Node.isStringLiteral(second)) {
+    return false
+  }
+  return DOTTED_KEY_RE.test(first.getLiteralText())
+}
+
+/**
+ * Pattern 3: `repairFailure.ts`'s deliberate English fallback — a plain
+ * string literal assigned to a local binding, later passed as that SAME
+ * binding to a t-alias call as an argument (typically the default-text
+ * argument), inside a `try`/`catch` that keeps the literal if `t` throws.
+ * Bounded to references within the same source file — no cross-file
+ * dataflow. This is the only exemption that runs `findReferencesAsNodes()`,
+ * which is why it is evaluated last: by the time this runs, the glossary,
+ * tuple, and direct-t-call-argument checks have already cleared everything
+ * cheaper to prove exempt.
+ */
+function isAssignedThenPassedToT(
+  node: Node,
+  aliases: Set<string>,
+  sourceFile: SourceFile
+): boolean {
+  const parent = node.getParent()
+  if (!parent) return false
+
+  let bindingNameNode: Node | undefined
+
+  if (
+    Node.isVariableDeclaration(parent) &&
+    parent.getInitializer() === node
+  ) {
+    const nameNode = parent.getNameNode()
+    if (Node.isIdentifier(nameNode)) bindingNameNode = nameNode
+  } else if (
+    Node.isBinaryExpression(parent) &&
+    parent.getOperatorToken().getText() === '=' &&
+    parent.getRight() === node
+  ) {
+    const left = parent.getLeft()
+    if (Node.isIdentifier(left)) bindingNameNode = left
+  }
+
+  if (!bindingNameNode) return false
+
+  const references = bindingNameNode.findReferencesAsNodes()
+  return references.some(
+    (reference) =>
+      reference.getSourceFile() === sourceFile &&
+      isTCallArgument(reference, aliases)
+  )
+}
+
+/**
+ * Pattern 4: D-14 says `bootErrorSurface.ts` (pre-i18n-boot) is "exempted
+ * with an explanatory comment," not a config-file allowlist entry. The
+ * marker must carry a reason on the same line — a bare `i18n-gate-exempt:`
+ * with no explanation is NOT an exemption and the file is scanned normally
+ * (D-14's own wording: "exempted with an explanatory comment"). Reaching
+ * for this mechanism anywhere other than `bootErrorSurface.ts` should be
+ * challenged in review — it is the single largest-blast-radius exemption
+ * in the gate (T-34.8-09).
+ */
+export const FILE_EXEMPT_MARKER = 'i18n-gate-exempt:'
+
+function checkFileExemptMarker(sourceFile: SourceFile): boolean {
+  const firstStatement = sourceFile.getStatements()[0]
+  const ranges = firstStatement
+    ? firstStatement.getLeadingCommentRanges()
+    : sourceFile.getLeadingCommentRanges()
+
+  return ranges.some((range) => {
+    const rangeText = range.getText()
+    const markerIndex = rangeText.indexOf(FILE_EXEMPT_MARKER)
+    if (markerIndex === -1) return false
+    const afterMarker = rangeText
+      .slice(markerIndex + FILE_EXEMPT_MARKER.length)
+      .split('\n')[0]
+    const reason = afterMarker.replace(/\*\/\s*$/, '').trim()
+    return reason.length > 0
+  })
+}
+
+// ---------------------------------------------------------------------------
 // scanSource — the pure entry point
 // ---------------------------------------------------------------------------
 
@@ -372,6 +563,8 @@ export function scanSource(
   const sourceFile = project.createSourceFile(filePath, sourceText)
 
   const glossarySet = new Set(config.glossary)
+  const aliases = collectTAliases(sourceFile)
+  const fileExemptResult = checkFileExemptMarker(sourceFile)
   const violations: Violation[] = []
   let exempted = 0
 
@@ -385,7 +578,34 @@ export function scanSource(
     const text = rawText.trim()
     if (!/[a-zA-Z]/.test(text)) return // pure punctuation/digits/whitespace/CSS units — not a candidate
 
+    // Plan 04: the full-file comment-marker exemption blankets every
+    // remaining candidate in the file — still counted toward `exempted` so
+    // a zero-violation exempt file is distinguishable from an unscanned
+    // one (T-34.8-07), but never individually classified.
+    if (fileExemptResult) {
+      exempted += 1
+      return
+    }
+
     if (glossarySet.has(text)) {
+      exempted += 1
+      return
+    }
+
+    // Cheapest-first per RESEARCH.md Pattern 1-3: tuple (structural) before
+    // direct t-call-argument (one parent hop) before dataflow
+    // (`findReferencesAsNodes()`, the only one that walks the whole file).
+    if (isKeyDefaultTupleElement(node)) {
+      exempted += 1
+      return
+    }
+
+    if (isTCallArgument(node, aliases)) {
+      exempted += 1
+      return
+    }
+
+    if (isAssignedThenPassedToT(node, aliases, sourceFile)) {
       exempted += 1
       return
     }
@@ -429,6 +649,6 @@ export function scanSource(
     file: filePath,
     violations,
     exempted,
-    fileExempt: false // plan 04: D-14 comment-marker full-file exemption hooks in here
+    fileExempt: fileExemptResult
   }
 }
