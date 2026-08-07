@@ -32,7 +32,14 @@ jest.mock('@fortawesome/react-fontawesome', () => ({
 }))
 
 // Imported after the mocks above (textual order -- this project's ts-jest
-// setup does not hoist jest.mock like babel-jest).
+// setup does not hoist jest.mock like babel-jest). `element.type` from
+// `React.createElement(NavLink, ...)` is a REFERENCE to whatever `NavLink`
+// resolves to at import time -- not the mock factory's return value, which
+// is only produced if the reference were actually CALLED. Importing the
+// same mocked bindings here lets tests assert type identity rather than
+// invoking the element's type.
+import { NavLink } from 'react-router-dom'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import NavItem from '../components/NavItem'
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
@@ -80,7 +87,7 @@ describe('NavItem', () => {
       url: '/library'
     }) as AnyElement
 
-    expect(element.type).toBe('mock-navlink')
+    expect(element.type).toBe(NavLink)
     expect(element.props.to).toBe('/library')
   })
 
@@ -135,7 +142,7 @@ describe('NavItem', () => {
     }) as AnyElement
 
     const found = collectElements(element.props.children).find(
-      (el) => el.type === 'mock-fontawesome-icon'
+      (el) => el.type === FontAwesomeIcon
     )
     expect(found).toBeDefined()
     expect(found?.props.title).toBe('Games')
@@ -148,7 +155,7 @@ describe('NavItem', () => {
     }) as AnyElement
 
     const found = collectElements(element.props.children).find(
-      (el) => el.type === 'mock-fontawesome-icon'
+      (el) => el.type === FontAwesomeIcon
     )
     expect(found).toBeUndefined()
   })

@@ -1,0 +1,97 @@
+// Ported from Sidebar/components/SidebarItem/index.css (lines 2-83) for
+// 34.10-02 Task 1. The retired sidebar nested this whole rule set under a
+// `.Sidebar` ancestor selector (`SidebarItem/index.css:1-2`) -- reusing it
+// verbatim once `.Sidebar` is gone would mean every declaration below
+// silently stops applying. Re-parented onto `.NavShell__tier2` instead,
+// which is this phase's actual tier-2 column ancestor.
+//
+// The `.collapsed` block (sidebar drag-resize collapse) and the
+// `.Sidebar__brandLib` rule (wordmark is icon-only per UI-SPEC OQ5) are
+// deliberately dropped -- neither is carried forward.
+.NavShell__tier2 {
+  // Replaces `--sidebar-horizontal-padding` (`Sidebar/index.scss:2`), which
+  // the ported `.Sidebar__item` padding rules consumed from their `.Sidebar`
+  // ancestor. Declared locally so this stylesheet has no dependency on the
+  // retired `.Sidebar` selector.
+  --tier2-row-padding-inline: var(--space-md);
+
+  .NavItem {
+    --navitem-inactive-color: var(--navbar-inactive, var(--navbar-accent));
+    --navitem-hover-color: var(--text-hover);
+    --navitem-active-color: var(
+      --navbar-active,
+      var(--accent-overlay, var(--accent))
+    );
+    --navitem-active-background: var(--navbar-active-background);
+
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    padding: var(--space-xs) var(--tier2-row-padding-inline);
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: var(--text-md);
+    color: var(--navitem-inactive-color);
+    transition: color 250ms;
+    text-align: start;
+    font-family: var(--primary-font-family);
+
+    .NavItem__icon {
+      width: 24px;
+      display: inline-flex;
+      justify-content: center;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--navitem-hover-color);
+      outline-offset: -2px;
+    }
+
+    &.active {
+      color: var(--navitem-active-color);
+
+      .NavItem__icon {
+        color: currentColor;
+      }
+
+      &.NavItem--sub {
+        font-weight: var(--bold);
+      }
+    }
+    &.active:not(.NavItem--sub) {
+      background-color: var(--navitem-active-background);
+    }
+
+    &.NavItem--sub {
+      &,
+      &:hover {
+        padding-block: var(--space-3xs);
+        padding-inline: var(--space-xl) var(--tier2-row-padding-inline);
+        font-size: var(--text-sm);
+        line-height: 20px;
+        white-space: break-spaces;
+      }
+      &::before {
+        content: '• ';
+      }
+      & + .NavItem:not(.NavItem--sub) {
+        margin-top: 4px;
+      }
+    }
+
+    &:hover {
+      background-color: var(--navitem-active-background);
+      transition: 0.1s;
+      padding-inline-start: 12px;
+    }
+
+    @media screen and (max-width: 730px) {
+      &,
+      &:hover {
+        padding: var(--space-3xs) var(--tier2-row-padding-inline)
+          var(--space-3xs) var(--space-lg);
+      }
+    }
+  }
+}
