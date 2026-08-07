@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "ACTIVE BLOCKER unchanged -- 34.4.2 gap cycle 5 COMPLETE, all 25 plans EXECUTED. Plan 24's blocking live gate RAN 2026-08-06 and FAILED 0/5, no launch scorable; blocker F-34.4.2-19 is UNDIAGNOSED. Plan 25 brought VERIFICATION.md current. Phase NOT CLOSED (D-08). Next for 34.4.2: /gsd-debug. SIDE TRACK 2026-08-07: Phase 34.8 (frontend i18n compliance) plan 01 of 12 EXECUTED -- keepRemoved flip (D-03) + meta/i18nGlossary.json (D-02/D-21), REQ-34.8-02/-03 complete, see 34.8-01-SUMMARY.md. Next for 34.8: /gsd-execute-phase 34.8 (resumes at plan 02). SECOND SIDE TRACK: Phase 34.9 (macOS runner onedir repackaging) PARTIALLY EXECUTED -- plans 01, 02, 03 DONE, plans 04-11 REMAIN. Next for 34.9: /gsd-execute-phase 34.9 (resumes at plan 04, wave 2)."
-last_updated: "2026-08-07T00:05:22.198Z"
-last_activity: 2026-08-07 -- Phase 34.8 side track plan 01 of 12 EXECUTED (keepRemoved flip D-03 + meta/i18nGlossary.json D-02/D-21, REQ-34.8-02/-03 complete, see 34.8-01-SUMMARY.md), 11 plans remain. CONCURRENTLY Phase 34.9 executing: plans 01-03 done (onedir builder deriving each upstream repo's own pyinstaller command; archSpecificBinary made onedir-aware with a loud stale-layout throw, mutation-proven; per-runner measurement). Measurement cold ratio VOID twice (validity anchor caught both -- neither idle nor `purge` restores a cold state once amfid has assessed a binary; needs a reboot-fresh machine), but WARM per-runner win CONFIRMED for all three: nile 32.5x, legendary 26.6x, gogdl 27.2x, which unblocks plan 05's per-runner PR citations (T-34.9-20). Remaining 34.9: 04/06/07/08 autonomous; 05 (submit 3 upstream PRs) + 11 (live gate) need the user; 09 dispatches the fork's first macos-13/macos-14 CI matrix and is the ONLY source of x64 artifacts (PyInstaller cannot cross-compile). Known-unproven by design: Tauri-PACKAGED resolution (R-34.5-G1-PKG, owned by 34.5) and real-certificate notarization (D-03/D-04). 34.4.2 blocker UNCHANGED, still critical path.
+stopped_at: "Phase 34.8 side track — plan 02 of 12 EXECUTED (i18n gate scope derivation: meta/genI18nGateScope.ts + committed meta/i18nGateScope.json with 134 fork-owned files, REQ-34.8-06 complete, see 34.8-02-SUMMARY.md). Next for 34.8: /gsd-execute-phase 34.8 (resumes at plan 03). 34.4.2 blocker UNCHANGED and still the critical path."
+last_updated: "2026-08-07T00:33:40.053Z"
+last_activity: "2026-08-07 -- Phase 34.8 side track plan 02 of 12 EXECUTED (meta/genI18nGateScope.ts pure derivation functions + offline CLI, meta/i18nGateScope.json committed with 134 fork-owned src/frontend files pinned to package.json's upstream.baseCommit, REQ-34.8-06 complete, see 34.8-02-SUMMARY.md), 10 plans remain. Phase 34.9 side track unchanged: plans 01-03 of 11 done. 34.4.2 blocker UNCHANGED, still critical path."
 progress:
   total_phases: 21
   completed_phases: 14
   total_plans: 239
-  completed_plans: 209
+  completed_plans: 210
   percent: 67
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 01 of 12 done) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
+**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 02 of 12 done) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -2577,7 +2577,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 87%
+trusted blindly. The recurring `**Progress:**[█████████░] 88%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.2-07): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2641,7 +2641,7 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 `STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Executing Phase 34.4.2 (blocked, /gsd-debug owed) — Phase 34.8 side track: plan 01 of 12 executed 2026-08-07 (keepRemoved flip + i18nGlossary.json, see 34.8-01-SUMMARY.md); Phase 34.9 side track: plans 01-03 of 11 executed, plans 04-11 remain
+Status: Phase complete — ready for verification
 
 > NOTE (34.4.2 gap cycle 5, wave 3 resume): `state.begin-phase` corrupted the frontmatter in the
 > now-usual way and was hand-corrected against a pre-session snapshot: `stopped_at` truncated to
@@ -3598,6 +3598,7 @@ Closed/parked native-install phases:
 | Phase 34.4.2 P22 | 15min | 2 tasks | 1 files |
 | Phase 34.4.2 P23 | 70min | 3 tasks | 4 files |
 | Phase 34.8 P01 | 4min | 2 tasks | 4 files |
+| Phase 34.8 P02 | 25min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -4048,6 +4049,7 @@ Recent decisions affecting current work:
 - [Phase 34.4.2]: D-G3: all five RERUN-5 items are re-measured every run; the single-instance capture-integrity rule (F-34.4.2-15/-18) is implemented in a contract for the first time
 - [Phase 34.8]: keepRemoved flipped false->true (D-03), pinned by a test citing the measured 36-key deletion
 - [Phase 34.8]: ConsoleMode/LogSettings/StoreSearch brand-label maps covered by glossary term coverage instead of code retrofit (D-21) — verified zero code change needed
+- [Phase 34.8]: D-07's fork-owned-file scope is derived mechanically from the Heroic merge-base diff and committed (meta/i18nGateScope.json) rather than computed live in CI (RESEARCH.md Pitfall 1 — actions/checkout@v6 has no Heroic remote/merge-base history); both A and M diff statuses kept in scope (fork literals live mixed into upstream files, not just net-new ones); the two D-17 deferred files carved into excluded.deferred for plan 05's allowlist to own instead
 
 ### Pending Todos
 
@@ -4136,9 +4138,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-07T00:05:22.180Z
-Stopped at: Phase 34.8 side track — plan 01 of 12 EXECUTED (keepRemoved flip D-03 +
-  meta/i18nGlossary.json D-02/D-21, REQ-34.8-02/-03 complete, see 34.8-01-SUMMARY.md).
+Last session: 2026-08-07T00:33:40.053Z
+Stopped at: Phase 34.8 side track — plan 02 of 12 EXECUTED (i18n gate scope derivation:
+  meta/genI18nGateScope.ts pure functions + offline CLI, meta/i18nGateScope.json committed with
+  134 fork-owned src/frontend files, REQ-34.8-06 complete, see 34.8-02-SUMMARY.md).
   34.4.2 blocker UNCHANGED and still the critical path.
 
   **2026-08-07 side track — Phase 34.8 discuss-phase, then plan-phase, then execution began.**
@@ -4152,7 +4155,16 @@ Stopped at: Phase 34.8 side track — plan 01 of 12 EXECUTED (keepRemoved flip D
   plan-checker PASSED, `da116c22a`) and execution began same-day: plan 01 flipped
   `i18next-parser.config.js`'s `keepRemoved` to `true` (defusing the measured 36-key `pnpm i18n`
   data-loss landmine) and authored `meta/i18nGlossary.json`, both pinned by new `meta/__tests__`
-  jest tests. Next for 34.8: `/gsd-execute-phase 34.8` (resumes at plan 02).
+  jest tests. Plan 02 followed same-day: `meta/genI18nGateScope.ts` derives the gate's scan
+  scope mechanically from the Heroic merge-base diff (D-07) via pure `deriveScopeFiles()`/
+  `buildScopeSnapshot()` functions plus a guarded `execFileSync`-only CLI
+  (`pnpm gen-i18n-gate-scope`); the committed `meta/i18nGateScope.json` (134 files, pinned to
+  `package.json`'s `upstream.baseCommit`/`baseVersion`) excludes the two D-17-deferred files
+  into `excluded.deferred` for plan 05's allowlist to own. One Rule-1 fix mid-plan: `__dirname`
+  resolves to `process.cwd()` under the `esbuild --bundle ... | node` stdin-pipe convention, not
+  the source file's directory — the CLI's output path was switched to a repo-root-relative path
+  after the first run wrote to the repo root instead of `meta/`. Next for 34.8:
+  `/gsd-execute-phase 34.8` (resumes at plan 03).
 
   **The 34.4.2 record below is the live blocker and takes precedence. Next: `/gsd-debug`.**
 
