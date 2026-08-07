@@ -6,27 +6,14 @@ import { AppSettings } from 'common/types'
 import { writeConfig } from 'frontend/helpers'
 import { hasHelp } from 'frontend/hooks/hasHelp'
 import { MenuItem } from '@mui/material'
+import { defaultThemes, resolveThemeLabel } from './themeLabels'
 
-export const defaultThemes: Record<string, string> = {
-  midnightMirage: 'Midnight Mirage',
-  cyberSpaceOasis: 'Cyberspace Oasis',
-  cyberSpaceOasisAlt: 'Cyberspace Oasis Classic',
-  'high-contrast': 'High Contrast',
-  'old-school': 'Old School GameLib',
-  dracula: 'Dracula',
-  marine: 'Marine',
-  'marine-classic': 'Marine Classic',
-  zombie: 'Zombie',
-  'zombie-classic': 'Zombie Classic',
-  'nord-light': 'Nord Light',
-  'nord-dark': 'Nord Dark',
-  gruvbox_dark: 'Gruvbox Dark',
-  sweet: 'Sweet'
-}
+export { defaultThemes, resolveThemeLabel }
 
 export const ThemeSelector = () => {
   const { theme, setTheme } = useContext(ContextProvider)
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const [appConfig, setAppConfig] = useState<AppSettings | null>(null)
   const [themesPath, setThemesPath] = useState('')
   const [themes, setThemes] = useState<string[]>(Object.keys(defaultThemes))
@@ -77,7 +64,7 @@ export const ThemeSelector = () => {
       >
         {themes.map((key) => (
           <MenuItem key={key} value={key}>
-            {defaultThemes[key] || key}
+            {resolveThemeLabel(key, tGamelib)}
           </MenuItem>
         ))}
       </SelectField>
