@@ -194,6 +194,7 @@ const DiscountFilters = ({
   hasActiveFilters
 }: Props) => {
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const [expanded, setExpanded] = useState(false)
 
   const toggleOS = (os: OsOption) => {
@@ -427,7 +428,9 @@ const DiscountFilters = ({
                 </span>
                 {maxPegiAge !== null && (
                   <span className="discountFilters__labelValue">
-                    PEGI ≤ {maxPegiAge}
+                    {tGamelib('gamelib:discounts.pegiPrefix', 'PEGI ≤ {{value}}', {
+                      value: maxPegiAge
+                    })}
                   </span>
                 )}
               </label>

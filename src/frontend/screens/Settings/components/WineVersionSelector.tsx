@@ -69,6 +69,7 @@ export const WineVersionListItem = React.memo(function WineVersionListItem({
 
 export default function WineVersionSelector() {
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const { platform } = useContext(ContextProvider)
   const isLinux = platform === 'linux'
 
@@ -205,7 +206,12 @@ export default function WineVersionSelector() {
                   <i>~/.local/share/lutris/runners/wine</i>
                 </li>
                 <li>
-                  <i>~/.var/app/com.valvesoftware.Steam (Steam Flatpak)</i>
+                  <i>
+                    {tGamelib(
+                      'gamelib:settings.wineFlatpakPath',
+                      '~/.var/app/com.valvesoftware.Steam (Steam Flatpak)'
+                    )}
+                  </i>
                 </li>
                 <li>
                   <i>/usr/share/steam</i>

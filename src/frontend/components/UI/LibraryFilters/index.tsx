@@ -7,17 +7,21 @@ import ContextProvider from 'frontend/state/ContextProvider'
 import type { Runner } from 'common/types'
 import Dropdown from '../Dropdown'
 
+// 'sideload' deliberately has no entry here -- its label is handled by the
+// gamelib:library.storeOther special-case below, before this map is ever
+// consulted, so no dead 'Other' string literal remains for the i18n gate to
+// (correctly) flag on this object.
 const RunnerToStore = {
   legendary: 'Epic Games',
   gog: 'GOG',
   nile: 'Amazon Games',
-  sideload: 'Other',
   zoom: 'ZOOM Platform',
   steam: 'Steam'
 }
 
 export default function LibraryFilters() {
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const { platform, epic, gog, amazon, zoom, steam } = useContext(ContextProvider)
   const {
     setShowFavourites,
@@ -199,7 +203,8 @@ export default function LibraryFilters() {
   // t('Epic Games', 'Epic Games')
   // t('GOG', 'GOG')
   // t('Amazon Games', 'Amazon Games')
-  // t('Other', 'Other')
+  // 'Other' (sideload) moved to gamelib:library.storeOther below -- no
+  // longer routed through the default-namespace t(), so no extraction hint.
   const storeToggle = (store: Runner) => {
     const toggle = (
       <ToggleSwitch
@@ -207,7 +212,11 @@ export default function LibraryFilters() {
         htmlId={store}
         handleChange={() => toggleStoreFilter(store)}
         value={storesFilters[store]}
-        title={t(RunnerToStore[store])}
+        title={
+          store === 'sideload'
+            ? tGamelib('gamelib:library.storeOther', 'Other')
+            : t(RunnerToStore[store])
+        }
       />
     )
     const onOnlyClick = () => {

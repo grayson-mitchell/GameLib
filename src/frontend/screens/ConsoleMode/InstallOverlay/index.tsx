@@ -371,6 +371,8 @@ function SelectorRow({
   onNext: () => void
   disabled?: boolean
 }) {
+  const { t: tGamelib } = useTranslation('gamelib')
+
   return (
     <div
       className={classNames('consoleInstallRow consoleInstallSelector', {
@@ -386,7 +388,7 @@ function SelectorRow({
           className="consoleInstallArrow"
           onClick={onPrev}
           disabled={disabled}
-          aria-label="Previous"
+          aria-label={tGamelib('gamelib:consoleMode.installPrevious', 'Previous')}
           tabIndex={-1}
         >
           ‹
@@ -397,7 +399,7 @@ function SelectorRow({
           className="consoleInstallArrow"
           onClick={onNext}
           disabled={disabled}
-          aria-label="Next"
+          aria-label={tGamelib('gamelib:consoleMode.installNext', 'Next')}
           tabIndex={-1}
         >
           ›

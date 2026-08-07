@@ -1,4 +1,5 @@
 import React, { useContext } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import './App.css'
 import {
@@ -135,6 +136,7 @@ function Root() {
 // to F-10's real cause and cost a live gate run to tell apart. A route error
 // must always land on something the user can see.
 function RouteErrorSurface() {
+  const { t } = useTranslation('gamelib')
   const error = useRouteError()
   const detail =
     error instanceof Error
@@ -142,7 +144,12 @@ function RouteErrorSurface() {
       : typeof error === 'string'
         ? error
         : JSON.stringify(error)
-  return <ErrorComponent message={`Something went wrong: ${detail}`} />
+  const message = t(
+    'gamelib:app.routeError',
+    'Something went wrong: {{detail}}',
+    { detail }
+  )
+  return <ErrorComponent message={message} />
 }
 
 function makeLazyFunc(

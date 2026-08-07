@@ -57,6 +57,7 @@ const CANCEL_DOWNLOAD_COPY = {
 
 export default function ConsoleMode() {
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const navigate = useNavigate()
   const {
     epic,
@@ -447,7 +448,9 @@ export default function ConsoleMode() {
             aria-label={t('console.sort', 'Sort')}
             disabled={!!launchingGame}
           >
-            {ascending ? 'A → Z' : 'Z → A'}
+            {ascending
+              ? tGamelib('gamelib:consoleMode.sortAscending', 'A → Z')
+              : tGamelib('gamelib:consoleMode.sortDescending', 'Z → A')}
           </button>
           <button
             className="consoleQuitButton"

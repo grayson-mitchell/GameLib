@@ -19,6 +19,7 @@ export default function ProgressHeader(props: {
 }) {
   const sampleSize = 100
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const [progress] = hasProgress(props.appName, props.runner)
   const [avgSpeed, setAvgDownloadSpeed] = useState<Point[]>(
     Array<Point>(sampleSize).fill({ download: 0, disk: 0 })
@@ -128,7 +129,7 @@ export default function ProgressHeader(props: {
               >
                 {props.state === 'running'
                   ? (progress.eta ?? '00.00.00')
-                  : 'Paused'}
+                  : tGamelib('gamelib:downloadManager.progressPaused', 'Paused')}
               </Typography>
             </Box>
           </Box>

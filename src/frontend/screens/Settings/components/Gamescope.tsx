@@ -13,6 +13,7 @@ import InfoIcon from 'frontend/components/UI/InfoIcon'
 
 const Gamescope = () => {
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const { platform } = useContext(ContextProvider)
   const isLinux = platform === 'linux'
   const [gamescope, setGamescope] = useSetting('gamescope', {
@@ -93,7 +94,13 @@ const Gamescope = () => {
   }
 
   const upscaleMethods = [
-    { name: 'AMD FidelityFX™ Super Resolution 1.0 (FSR)', value: 'fsr' },
+    {
+      name: tGamelib(
+        'gamelib:settings.gamescopeFsr',
+        'AMD FidelityFX™ Super Resolution 1.0 (FSR)'
+      ),
+      value: 'fsr'
+    },
     {
       name: t('options.gamescope.nis', 'NVIDIA Image Scale (NIS)'),
       value: 'nis'
@@ -141,7 +148,10 @@ const Gamescope = () => {
         <>
           {/* Upscale Method */}
           <SelectField
-            label={'Upscale Method'}
+            label={tGamelib(
+              'gamelib:settings.gamescopeUpscaleMethod',
+              'Upscale Method'
+            )}
             htmlId="upscaleMethod"
             afterSelect={
               <InfoIcon
@@ -261,7 +271,10 @@ const Gamescope = () => {
           </div>
           {/* Window Type */}
           <SelectField
-            label={'Window Type'}
+            label={tGamelib(
+              'gamelib:settings.gamescopeWindowType',
+              'Window Type'
+            )}
             htmlId="windowType"
             onChange={(event) =>
               setGamescope({
