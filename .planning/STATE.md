@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: paused
-stopped_at: "Phase 34.8 PARKED 2026-08-07 by developer decision (deliberate pause to protect the weekly token budget, NOT a blocker). 13 of 14 plans EXECUTED — 01,02,03,04,05,06,07,08a,08b,08c,09,10,11. ONLY plan 34.8-12 remains, stopped at a legitimate human-action checkpoint: `ANTHROPIC_API_KEY` is present in the environment but returns HTTP 401 `invalid x-api-key` (verified twice — direct `curl` probe AND the real `pnpm machine-fill-gamelib` run), so the live de/fr machine-fill cannot run. NOTHING was written to `public/locales/` — the script fails per-locale before any merge/write, confirmed clean before and after. Plan 12 also needs the developer at the keyboard for its task-3 Electron/Tauri runtime check regardless of the credential. Phase 34.8 is NOT verified and NOT closed — phase-level verification was deliberately SKIPPED because incomplete plans remain. State on park: i18n gate is BLOCKING and independently proven to catch real violations (4 injected shapes all caught, then reverted); whole-scope gate `scannedFiles: 136`, `violations: 0`, `fileExempt` exactly `[bootErrorSurface.ts]`; all 52 retrofit-dispositioned violations closed, zero blocked; `pnpm test:ci` green at 204 suites / 4069 tests; working tree clean; `public/locales/` untouched. TWO OPEN ITEMS carried forward: (1) `pnpm i18n` still churns the three upstream `en/` catalogs on PRE-EXISTING unrelated source drift predating this phase — the D-05 guard is built and correct but the tree is not clean enough for it to pass, recorded in 34.8-I18N-CONTRACT.md; (2) REQ-34.8-15 was marked complete by plan 11 per its own frontmatter, but its text ('proven on TWO locales with an idempotence re-run') is plan 12's scope and is NOT substantively true yet — re-check at verification. Resume with `/gsd-execute-phase 34.8` (discovers the 13 SUMMARYs, skips them, resumes at plan 12) AFTER supplying a working ANTHROPIC_API_KEY via the shell profile — never as a CLI arg, the script reads only process.env. 34.4.2 blocker UNCHANGED and still the critical path. SIDE TRACK 2026-08-07: Phase 34.10 UI-SPEC created and APPROVED (`/gsd-ui-phase 34.10`) — 6/6 checker dimensions PASS after one revision cycle (blocker was a 3rd font weight; fixed by consolidating tier-1 active to `--bold`). Design-contract only — NO code written, NO plans created, phase 34.10 status still Pending. Next for 34.10 is `/gsd-discuss-phase 34.10` then `/gsd-plan-phase 34.10`. Two notable findings the planner must handle: the 78px macOS traffic-light inset is NOT yet configured anywhere in `src-tauri/tauri.conf.json` or `main.rs` (this phase may need to introduce transparent/overlay titlebar mode, not just reserve space), and 4 real destinations (System Information, Quit, app-version display, onboarding-tour `data-tour` selectors) have no placement in the ROADMAP's settled tab tree — recorded as Open Questions in the UI-SPEC with recommended defaults. Neither 34.8 nor 34.4.2 was touched; both remain exactly as parked above. SIDE TRACK CONTINUED 2026-08-07: `/gsd-discuss-phase 34.10` complete — 34.10-CONTEXT.md + 34.10-DISCUSSION-LOG.md committed (`d421405bd`), 13 decisions (D-01..D-13) across 4 areas. Still NO code and NO plans; 34.10 status remains Pending; next is `/gsd-plan-phase 34.10`. The discussion CORRECTED two UI-SPEC premises the planner would otherwise have inherited: (1) the 78px traffic-light inset does NOT apply on this branch — `framelessWindow` defaults to false (`src/backend/config.ts:367`) and Tauri's `setDecorations(false)` removes macOS traffic lights entirely, so D-01 ships a CONDITIONAL inset and explicitly does NOT adopt overlay titlebar; (2) `showAboutWindow` DOES exist (34.1 D-12), but `HeroicVersion` is load-bearing beyond its label — it clears the cache on version change and hosts the startup ChangelogModal — so D-11 moves the whole component to the Settings tier-2 footer rather than dropping it. TWO SILENT-BREAKAGE TRAPS recorded for the planner: `src/preload/api/tauriWindowChrome.ts:333` falls back to `closest('.Sidebar')` for the window drag region and that fallback is the ACTIVE path under WKWebView (retiring `.Sidebar` kills dragging — D-02); and the 204px-vs-218px tier-2 width conflict between the two sketch reference files (resolved as a `--tier2-width` token — D-10). NEW DEFERRED PHASE OWED: the onboarding-tour rework is now its own phase by user decision — 34.10 DISABLES `SidebarTour` (D-13) rather than carrying its `data-tour=\"sidebar-*\"` selectors over, so a ROADMAP entry must be minted to re-enable it. PLANNING SIDE TRACK 2026-08-07: `/gsd-plan-phase 34.10` COMPLETE — 11 plans in 7 waves committed `ed356aa07`, RESEARCH/PATTERNS/VALIDATION written, plan-checker PASSED with zero blockers (it re-verified every trap against real source, not against the planning docs). REQ-34.10-01..16 minted in REQUIREMENTS.md; ROADMAP Requirements line updated; coverage 16/16 REQ and 13/13 D-IDs. 34.10 is now READY TO EXECUTE (`/gsd-execute-phase 34.10`). STILL NO CODE WRITTEN. Planning surfaced a FOURTH silent-breakage trap in no upstream artifact: `LibraryContext.tsx`'s `initialContext` is a full set of no-op setters, so MOVING `<Header>` into tier 2 (D-08 read literally) would ship live-looking DEAD filter controls with no error and no failing test — plan 06 PORTALS it from inside Library's provider instead (REQ-34.10-09). Also: the drag-region fixture count is THREE not two (`framelessRuntime.test.ts:235,243,256`); the tour has TWO entry points (`Sidebar/index.tsx:153` AND `HeroicVersion/index.tsx:93`'s TourButton); `SidebarItem/index.css` and `HeroicVersion/index.scss` both nest their whole rule set inside `.Sidebar` so retiring it silently kills every declaration; and `handleGoToScreen` (the tray/deeplink subscription at `Sidebar/index.tsx:58-63`) was nearly lost — plan 07 carries it over AND fixes the sidebar's missing unsubscribe. D-10 resolved to `--tier2-width: 204px`; `--traffic-light-inset: 0px` (the ROADMAP's 78px premise stays FALSIFIED). Plan 11 is a BLOCKING human live gate (autonomous: false) covering theme survival across midnightMirage/gruvbox_dark/dracula and real WKWebView window dragging. Neither 34.8 nor 34.4.2 was touched; both remain exactly as parked above. STILL OWED: a ROADMAP entry for the onboarding-tour rework phase."
-last_updated: "2026-08-07T22:30:00.000Z"
+status: executing
+stopped_at: Completed 34.10-01-PLAN.md
+last_updated: "2026-08-07T10:40:51.033Z"
 last_activity: 2026-08-07
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 252
-  completed_plans: 221
-  percent: 61
+  completed_plans: 222
+  percent: 88
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 11 of 14 done — the i18n gate is BLOCKING (unchanged from plan 10) and the D-08/D-09/D-10/D-11 glossary-aware machine-fill script (`meta/machineFillGamelib.ts`, `pnpm machine-fill-gamelib`) is now built and hermetically proven (24 tests) with its bulk-run refusal live-verified by three real CLI runs, deliberately NOT bulk-run across the 48 non-English locales; next is 34.8-12, phase closure) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
+**Current focus:** Phase 34.10 — navigation-shell-horizontal-card-tabs-replace-the-sidebar
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -478,9 +478,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.4.2 (macos-login-window-ux-modal-child-window-attachment-in-field) — EXECUTING
+Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — EXECUTING
 EXECUTED 2026-08-06, STILL DID NOT CLOSE (gate FAILED 1/6) -- gap cycle 5 required, NOT COMPLETE
-Plan: 25 of 25 complete -- gap cycle 5 fully executed; gate FAILED 0/5 (no launch scorable), blocker F-34.4.2-19 UNDIAGNOSED. PHASE STILL OPEN per D-08 -> /gsd-debug
+Plan: 2 of 11
 glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
 see 34.4.2-13-SUMMARY.md. Plan 14 EXECUTED 2026-08-05 -- T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW
 single-flight guard refuses a second visible login window while one is pending/presented, 25s TTL
@@ -2577,7 +2577,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 89%
+trusted blindly. The recurring `**Progress:**[█████████░] 88%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.2-07): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2641,7 +2641,7 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 `STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Phase complete — ready for verification
+Status: Ready to execute
 
 > NOTE (34.4.2 gap cycle 5, wave 3 resume): `state.begin-phase` corrupted the frontmatter in the
 > now-usual way and was hand-corrected against a pre-session snapshot: `stopped_at` truncated to
@@ -3605,6 +3605,7 @@ Closed/parked native-install phases:
 | Phase 34.8 P06 | ~50min | 3 tasks | 4 files |
 | Phase 34.8 P08b | 50min | 3 tasks | 17 files |
 | Phase 34.8 P08c | 30min | 2 tasks | 4 files |
+| Phase 34.10 P01 | 20min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -4081,6 +4082,8 @@ Recent decisions affecting current work:
 - [Phase 34.8-10]: `34.8-AUDIT.md § Closure`'s own re-measurement (`violations: 62`) was real, not a stale plan assumption — the 52-item retrofit backlog was genuinely zero, but 62 `not-user-facing`/`glossary`-dispositioned literals (per the AUDIT's own `## Triage`) stood between that and a literal `report.violations.length === 0`. Closed all 62 under Rule 1 rather than widening the allowlist or weakening the assertion — new content-shape checks (icon-size multipliers, ALL-CAPS enum tokens, hex GUIDs, CDN query strings, domains, a `??`-prefixed sentinel), new structural checks (DOM/browser API args, internal string-comparison args, `.includes()` array elements), `walkUpThroughComposingWrappers` extracted/extended with `??`/template-interpolation hops and shared by a new `findAssignedBindingNameNode`, `isAssignedThenPassedToT` broadened to recognise diagnostic-log/excluded-JSX-attribute/technical-DOM-API consumption not only `t()`, a split-glossary-term check for `SidebarLinks`' `Game`/`Lib`, `GameLibSteam` added to the glossary, and a second real use of the 34.8-08c declaration-scoped `i18n-gate-exempt:` marker on `StoreSearch/helpers.ts`'s `buildOwnedBadgeLabel()` (cross-file dataflow the same-file-only reference tracer cannot and should not trace)
 - [Phase 34.8-10]: Proved the gate genuinely fails, not just green jest — a real temporary literal added to `GameStatus.tsx` made the assertion fail naming the exact file/line/column/text (recorded verbatim in `34.8-10-SUMMARY.md`), then reverted byte-identical and re-ran green
 - [Phase 34.8-11]: `meta/machineFillGamelib.ts` built as a pure D-09 contract layer (`collectMissingKeys`/`buildTranslationMemory`/`validateTranslation`/`mergeFill`/`fillLocale`, no fs/network/clock, `now: Date` threaded through) plus a real `createAnthropicTranslator` backend and CLI, wired as `pnpm machine-fill-gamelib`. D-08's bulk-run refusal ordered BEFORE any credential check or network call — proved live by actually running the CLI three times (unset `GAMELIB_MT_LOCALES`, `=all` without `GAMELIB_MT_CONFIRM_BULK=1`, a named locale with no `ANTHROPIC_API_KEY`), all three non-zero exit with the correct message, transcripts recorded in `34.8-11-SUMMARY.md`. `git status --porcelain public/locales/` stayed empty across all three runs — deliberately NOT bulk-run this phase (D-08). One Rule-1 deviation: a stray NUL byte in a template literal made git classify the whole source file as binary (`Bin ... bytes` diffs) — found by inspecting the actual commit diff, not by trusting the green test suite (a NUL and a space behave identically as a Set dedupe key); fixed with a byte-level rewrite, `6795179e5`. Known limitation, not a defect: the six `redeemKey.*` keys with an empty English catalog default (their real default lives in an inline `t()` call, per plan 09) are excluded from `collectMissingKeys`'s `missing` set — nothing to translate FROM yet. REQ-34.8-15 complete. `meta` jest 12/12 suites, 319/319 tests (was 11/291, +1 suite, +24 tests, includes the still-green `hardcodedStringGate` blocking gate); `pnpm test:ci` 204/204 suites, 4069/4069 tests (was 203/4045, +1 suite, +24 tests, 0 regressions); `tsc --noEmit`/`pnpm codecheck` clean.
+- [Phase 34.10]: resolveDefaultStore ports the SidebarLinks default-store cascade verbatim, including the sessionStorage last-store override that wins over every branch
+- [Phase 34.10]: Tier2PortalContext seam exists because LibraryContext's no-op initialContext would silently swallow filter interactions if <Header> were moved instead of portalled into tier 2
 
 ### Pending Todos
 
@@ -4170,8 +4173,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-07T21:15:00+12:00
-Stopped at: Phase 34.10 context gathered (`/gsd-discuss-phase 34.10`) — 34.10-CONTEXT.md +
+Last session: 2026-08-07T10:40:51.018Z
+Stopped at: Completed 34.10-01-PLAN.md
   34.10-DISCUSSION-LOG.md written and committed (`d421405bd`), 13 decisions (D-01..D-13) over
   4 discussed areas. Still design/planning only: no code, no plans, phase status Pending.
   Next: `/gsd-plan-phase 34.10`. The parked work below is UNCHANGED — 34.8 is still parked at
