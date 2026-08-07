@@ -11,7 +11,8 @@ import {
   useRouteError
 } from 'react-router-dom'
 import ErrorComponent from './components/UI/ErrorComponent'
-import Sidebar from './components/UI/Sidebar'
+import NavShell from './components/UI/NavShell'
+import { Tier2PortalProvider } from './components/UI/NavShell/Tier2PortalContext'
 import ContextProvider from './state/ContextProvider'
 import { ControllerHints, Help, OfflineMessage } from './components/UI'
 import DialogHandler from './components/UI/DialogHandler'
@@ -96,32 +97,34 @@ function Root() {
           </main>
         ) : (
           <TourProvider>
-            <OfflineMessage />
-            <Sidebar />
-            <main className="content">
-              <DialogHandler />
-              <InstallGameWrapper />
-              <SteamBottleSetup />
-              <SteamClientSetup />
-              <SteamBridgeSetup />
-              <SteamInstallLocationPicker />
-              <SettingsModalWrapper />
-              <ExternalLinkDialog />
-              <RedeemSteamKeyDialog />
-              <LogFileUploadDialog />
-              <UploadedLogFilesList />
-              <Outlet />
-              <AnalyticsDialog />
-              <HumbleExpiryToast />
-            </main>
-            <div className="controller">
-              <ControllerHints />
-              <dialog className="simple-keyboard-wrapper">
-                <div className="simple-keyboard"></div>
-              </dialog>
-            </div>
-            {showOverlayControls && <WindowControls />}
-            {experimentalFeatures.enableHelp && <Help items={help.items} />}
+            <Tier2PortalProvider>
+              <OfflineMessage />
+              <NavShell />
+              <main className="content">
+                <DialogHandler />
+                <InstallGameWrapper />
+                <SteamBottleSetup />
+                <SteamClientSetup />
+                <SteamBridgeSetup />
+                <SteamInstallLocationPicker />
+                <SettingsModalWrapper />
+                <ExternalLinkDialog />
+                <RedeemSteamKeyDialog />
+                <LogFileUploadDialog />
+                <UploadedLogFilesList />
+                <Outlet />
+                <AnalyticsDialog />
+                <HumbleExpiryToast />
+              </main>
+              <div className="controller">
+                <ControllerHints />
+                <dialog className="simple-keyboard-wrapper">
+                  <div className="simple-keyboard"></div>
+                </dialog>
+              </div>
+              {showOverlayControls && <WindowControls />}
+              {experimentalFeatures.enableHelp && <Help items={help.items} />}
+            </Tier2PortalProvider>
           </TourProvider>
         )}
       </ThemeProvider>
