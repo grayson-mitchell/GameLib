@@ -75,7 +75,7 @@ describe('NavShell source files never reference the disabled tour', () => {
   it.each(navShellSourceFiles.map((path) => [relative(REPO_ROOT, path), path]))(
     '%s contains no SidebarTour, SIDEBAR_TOUR_ID, TourButton or data-tour reference',
     (_label, path) => {
-      const source = readStripped(path as string)
+      const source = readStripped(path)
       expect(source).not.toMatch(/SidebarTour/)
       expect(source).not.toMatch(/SIDEBAR_TOUR_ID/)
       expect(source).not.toMatch(/TourButton/)

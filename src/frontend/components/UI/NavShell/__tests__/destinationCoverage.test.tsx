@@ -80,7 +80,6 @@ function permissiveContextValue(): MockContextValue {
 
 let contextValue: MockContextValue = makeContextValue()
 let pathname = '/'
-let effectCleanup: void | (() => void)
 
 jest.mock('../components/NavTabs/index.scss', () => ({}))
 jest.mock('../index.scss', () => ({}))
@@ -90,7 +89,7 @@ jest.mock('react', () => ({
   ...jest.requireActual<typeof import('react')>('react'),
   useContext: () => contextValue,
   useEffect: (effect: () => void | (() => void)) => {
-    effectCleanup = effect()
+    effect()
   }
 }))
 
@@ -232,7 +231,6 @@ function navItemLabels(tree: ReactNode): string[] {
 beforeEach(() => {
   contextValue = makeContextValue()
   pathname = '/'
-  effectCleanup = undefined
   navigateMock.mockClear()
   handleGoToScreenMock.mockClear()
   handleGoToScreenMock.mockReturnValue(jest.fn())
