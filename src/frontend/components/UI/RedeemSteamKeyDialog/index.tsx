@@ -15,6 +15,12 @@ import { redeemOutcomeCopy } from './copy'
 
 export default function RedeemSteamKeyDialog() {
   const { t } = useTranslation()
+  // Phase 34.8-07 (REQ-34.8-12/-13): a second, aliased useTranslation() call
+  // for the `gamelib` namespace, passed into redeemOutcomeCopy() so it
+  // inherits a Suspense-resolved `t` rather than a module-scope binding that
+  // could race i18next initialisation. Same two-hook-with-alias pattern as
+  // GameCard/index.tsx.
+  const { t: tGamelib } = useTranslation('gamelib')
   const navigate = useNavigate()
   const { showRedeemKeyDialog, handleRedeemKeyDialog, steam, refreshLibrary } =
     useContext(ContextProvider)
@@ -101,7 +107,7 @@ export default function RedeemSteamKeyDialog() {
 
   if (!showRedeemKeyDialog) return null
 
-  const copy = outcome ? redeemOutcomeCopy(outcome, packageName) : null
+  const copy = outcome ? redeemOutcomeCopy(outcome, tGamelib, packageName) : null
 
   return (
     <Dialog onClose={resetAndClose} showCloseButton>
