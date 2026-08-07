@@ -1,4 +1,8 @@
+import { existsSync } from 'fs'
+import { join } from 'path'
+
 import packageJson from '../../package.json'
+import scopeSnapshot from '../i18nGateScope.json'
 
 import {
   deriveScopeFiles,
@@ -78,6 +82,49 @@ describe('genI18nGateScope', () => {
       )
       expect(snapshot.excluded.reason[DEFERRED_STEAM_LOGIN]).toBeDefined()
       expect(snapshot.excluded.reason[DEFERRED_OAUTH_LOGIN]).toBeDefined()
+    })
+  })
+
+  // Guards the committed artifact's freshness against the next upstream
+  // rebase (D-07): once package.json's upstream.baseCommit/baseVersion
+  // move, these go red until someone re-runs `pnpm gen-i18n-gate-scope`.
+  describe('committed snapshot', () => {
+    it('baseCommit matches package.json upstream.baseCommit -- re-run `pnpm gen-i18n-gate-scope` if this fails', () => {
+      expect(scopeSnapshot.baseCommit).toBe(packageJson.upstream.baseCommit)
+    })
+
+    it('baseVersion matches package.json upstream.baseVersion -- re-run `pnpm gen-i18n-gate-scope` if this fails', () => {
+      expect(scopeSnapshot.baseVersion).toBe(packageJson.upstream.baseVersion)
+    })
+
+    it('files is non-empty, sorted, de-duplicated, and every entry is a src/frontend .ts(x) path', () => {
+      expect(scopeSnapshot.files.length).toBeGreaterThan(0)
+      expect(scopeSnapshot.files).toEqual(
+        [...new Set(scopeSnapshot.files)].sort()
+      )
+      for (const file of scopeSnapshot.files) {
+        expect(file.startsWith('src/frontend/')).toBe(true)
+        expect(file.endsWith('.ts') || file.endsWith('.tsx')).toBe(true)
+      }
+    })
+
+    it('files contains neither D-17 deferred path', () => {
+      expect(scopeSnapshot.files).not.toContain(DEFERRED_STEAM_LOGIN)
+      expect(scopeSnapshot.files).not.toContain(DEFERRED_OAUTH_LOGIN)
+    })
+
+    it('excluded.deferred contains exactly the two D-17 paths, each with a reason', () => {
+      expect(scopeSnapshot.excluded.deferred.slice().sort()).toEqual(
+        [DEFERRED_STEAM_LOGIN, DEFERRED_OAUTH_LOGIN].sort()
+      )
+      expect(scopeSnapshot.excluded.reason[DEFERRED_STEAM_LOGIN]).toBeDefined()
+      expect(scopeSnapshot.excluded.reason[DEFERRED_OAUTH_LOGIN]).toBeDefined()
+    })
+
+    it('every path in files exists on disk (catches a snapshot that drifted after a file rename)', () => {
+      for (const file of scopeSnapshot.files) {
+        expect(existsSync(join(__dirname, '..', '..', file))).toBe(true)
+      }
     })
   })
 })

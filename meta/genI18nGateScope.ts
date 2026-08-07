@@ -236,7 +236,12 @@ export function main(): void {
     now: new Date()
   })
 
-  const outPath = join(__dirname, 'i18nGateScope.json')
+  // NOT __dirname -- this script runs via `esbuild --bundle ... | node`
+  // (stdin), and __dirname in that mode resolves to process.cwd(), NOT the
+  // source file's directory (measured directly: it wrote to the repo root
+  // instead of meta/ on the first run). `pnpm gen-i18n-gate-scope` always
+  // runs from the repo root, so a repo-root-relative path is correct here.
+  const outPath = join('meta', 'i18nGateScope.json')
   writeFileSync(outPath, JSON.stringify(snapshot, null, 2) + '\n')
 
   console.log(
