@@ -1,7 +1,7 @@
 {
   "baseCommit": "b5b5cad3fa2e822602d320b70788d87240fc056e",
   "baseVersion": "2.22.0",
-  "generatedAt": "2026-08-07T00:31:26.750Z",
+  "generatedAt": "2026-08-07T06:24:41.531Z",
   "generatedBy": "pnpm gen-i18n-gate-scope",
   "files": [
     "src/frontend/App.tsx",
@@ -22,6 +22,7 @@
     "src/frontend/components/UI/Sidebar/index.tsx",
     "src/frontend/components/UI/StoreLogos/index.tsx",
     "src/frontend/components/UI/ThemeSelector/index.tsx",
+    "src/frontend/components/UI/ThemeSelector/themeLabels.ts",
     "src/frontend/helpers/electronStores.ts",
     "src/frontend/helpers/epicAuthCode.ts",
     "src/frontend/helpers/index.ts",
@@ -84,6 +85,7 @@
     "src/frontend/screens/Library/components/GameCard/index.tsx",
     "src/frontend/screens/Library/components/InstallModal/DownloadDialog/index.tsx",
     "src/frontend/screens/Library/components/InstallModal/ImportDialog/index.tsx",
+    "src/frontend/screens/Library/components/InstallModal/SideloadDialog/filters.ts",
     "src/frontend/screens/Library/components/InstallModal/SideloadDialog/index.tsx",
     "src/frontend/screens/Library/components/InstallModal/ThirdPartyDialog/index.tsx",
     "src/frontend/screens/Library/components/InstallModal/WineSelector/index.tsx",
