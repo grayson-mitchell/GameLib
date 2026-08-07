@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sketch 002 — Sidebar overflow strategy</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&family=Cabin:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: #0b0d0e; font-family: var(--font-sans); color: var(--color-text);
+  padding-top: 52px; padding-bottom: 60px;
+}
+
+/* ─── sketch chrome ──────────────────────────────────────────── */
+#variant-nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+  background: #16181a; border-bottom: 1px solid #2a2e31;
+  padding: 8px 16px; display: flex; gap: 8px; align-items: center;
+  font-family: system-ui, sans-serif;
+}
+#variant-nav .brand {
+  font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+  color: #6b7376; margin-right: 12px; font-weight: 600;
+}
+.variant-tab {
+  background: transparent; border: 1px solid #2a2e31; color: #b9c0c2;
+  padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;
+  font-family: inherit; transition: all .15s ease;
+}
+.variant-tab:hover { border-color: #4a5154; color: #e6ebec; }
+.variant-tab.active { background: #1de8f5; border-color: #1de8f5; color: #08191b; font-weight: 600; }
+
+.variant { display: none; padding: 28px 24px 0; }
+.variant.active { display: block; }
+.variant-caption { max-width: 1180px; margin: 0 auto 16px; font-family: system-ui, sans-serif; }
+.variant-caption h2 { margin: 0 0 6px; font-size: 15px; color: #e6ebec; font-weight: 600; }
+.variant-caption p { margin: 0 0 8px; font-size: 13px; line-height: 1.55; color: #8b9295; max-width: 78ch; }
+.tradeoff { display: flex; gap: 18px; font-size: 12px; margin-top: 10px; flex-wrap: wrap; }
+.tradeoff span { color: #8b9295; }
+.tradeoff b { font-weight: 600; }
+.good b { color: #58c06d; } .bad b { color: #d6704e; }
+
+/* ─── app window ─────────────────────────────────────────────── */
+.window {
+  max-width: 1180px; margin: 0 auto; border-radius: 10px; overflow: hidden;
+  border: 1px solid #2a2e31; box-shadow: var(--shadow-lg); background: var(--color-bg);
+}
+.titlebar {
+  height: var(--titlebar-height); display: flex; align-items: center;
+  padding: 0 var(--space-4); gap: 8px; position: relative; background: var(--navbar-background);
+}
+.tl { width: 12px; height: 12px; border-radius: 50%; }
+.tl.r { background: #ff5f57; } .tl.y { background: #febc2e; } .tl.g { background: #28c840; }
+.titlebar .win-title {
+  position: absolute; left: 0; right: 0; text-align: center;
+  font-size: var(--text-xs); color: var(--color-text-dim); letter-spacing: .06em; pointer-events: none;
+}
+.tl-zone {
+  display: none; position: absolute; top: 0; left: 0; width: var(--traffic-light-inset); bottom: 0;
+  border-right: 1px dashed #ff5f57; background: rgba(255,95,87,.10);
+  align-items: flex-end; justify-content: center; padding-bottom: 2px;
+  font-size: 9px; color: #ff8a84; font-family: ui-monospace, monospace;
+}
+body.annotate .tl-zone { display: flex; }
+
+.navbar {
+  background: var(--navbar-background); display: flex; align-items: stretch;
+  padding-left: var(--traffic-light-inset); padding-right: var(--space-4);
+  gap: var(--space-4); position: relative; height: 46px;
+}
+.wordmark {
+  display: flex; align-items: center; gap: 8px; padding-right: var(--space-4);
+  font-weight: var(--bold); font-size: var(--text-base); color: var(--color-text); white-space: nowrap;
+}
+.wordmark .dot { width: 8px; height: 8px; border-radius: 2px; background: var(--color-primary); }
+.nav-right { margin-left: auto; display: flex; align-items: center; gap: var(--space-1); }
+.icon-btn {
+  width: 30px; height: 30px; border-radius: var(--radius-sm); border: none; background: transparent;
+  color: var(--color-text-muted); cursor: pointer; display: grid; place-items: center;
+  transition: all .15s ease; font-size: 14px;
+}
+.icon-btn:hover { background: rgba(255,255,255,.07); color: var(--color-text); }
+.avatar {
+  width: 26px; height: 26px; border-radius: 50%; margin-left: 6px; cursor: pointer;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #08191b;
+}
+.tab-badge {
+  display: inline-grid; place-items: center; min-width: 17px; height: 17px; padding: 0 5px;
+  border-radius: var(--radius-full); background: var(--color-primary); color: #08191b;
+  font-size: 10px; font-weight: 700; margin-left: 7px;
+}
+
+/* underline tabs — sketch 001 variant A, reused so 002 tests structure not style */
+.tabs { display: flex; align-items: stretch; gap: var(--space-1); position: relative; }
+.tab {
+  border: none; background: transparent; cursor: pointer; font-family: inherit;
+  font-size: var(--text-sm); font-weight: var(--medium); color: var(--color-text-dim);
+  padding: 0 var(--space-4); display: flex; align-items: center; transition: color .15s ease;
+  position: relative; white-space: nowrap;
+}
+.tab:hover { color: var(--color-text-muted); }
+.tab.active { color: var(--color-text); }
+.indicator {
+  position: absolute; bottom: 0; height: 2px; background: var(--color-primary);
+  border-radius: 2px 2px 0 0; transition: left .22s cubic-bezier(.4,0,.2,1), width .22s cubic-bezier(.4,0,.2,1);
+}
+.navbar::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--color-border); }
+
+/* overflow menu */
+.menu-wrap { position: relative; display: flex; }
+.menu {
+  display: none; position: absolute; top: 100%; right: 0; z-index: 50; min-width: 216px;
+  background: var(--color-surface); border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: var(--space-1) 0; margin-top: 4px;
+}
+.menu.open { display: block; }
+.menu-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 8px 14px; background: transparent; border: none; cursor: pointer;
+  font-family: inherit; font-size: var(--text-sm); color: var(--color-text-muted); transition: all .12s ease;
+}
+.menu-item:hover { background: rgba(255,255,255,.07); color: var(--color-text); }
+.menu-item .gl { width: 16px; text-align: center; opacity: .8; }
+.menu-sep { height: 1px; background: var(--color-border); margin: var(--space-1) 0; }
+.menu-label {
+  padding: 7px 14px 4px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--color-text-dim); font-weight: 600;
+}
+
+/* second-level contextual bar */
+.subbar {
+  display: flex; align-items: center; gap: var(--space-1); height: 38px;
+  padding-left: var(--traffic-light-inset); padding-right: var(--space-4);
+  background: var(--color-bg); border-bottom: 1px solid var(--color-border);
+}
+.subtab {
+  border: none; background: transparent; cursor: pointer; font-family: inherit;
+  font-size: var(--text-xs); font-weight: var(--medium); color: var(--color-text-dim);
+  padding: 5px 11px; border-radius: var(--radius-full); transition: all .15s ease; white-space: nowrap;
+}
+.subtab:hover { color: var(--color-text); background: rgba(255,255,255,.06); }
+.subtab.active { background: var(--color-surface-raised); color: var(--color-text); font-weight: var(--semibold); }
+
+/* icon rail */
+.shell { display: flex; }
+.rail {
+  width: 52px; flex: none; background: var(--navbar-background);
+  border-right: 1px solid var(--color-border); display: flex; flex-direction: column;
+  align-items: center; padding: var(--space-3) 0; gap: 2px;
+}
+.rail-btn {
+  width: 36px; height: 36px; border-radius: var(--radius-md); border: none; background: transparent;
+  color: var(--color-text-dim); cursor: pointer; display: grid; place-items: center;
+  font-size: 15px; transition: all .15s ease; position: relative;
+}
+.rail-btn:hover { background: rgba(255,255,255,.08); color: var(--color-text); }
+.rail-btn.active { background: var(--color-surface-raised); color: var(--color-primary); }
+.rail-btn .dot-badge {
+  position: absolute; top: 5px; right: 5px; width: 7px; height: 7px;
+  border-radius: 50%; background: var(--color-primary);
+}
+.rail-btn .tip {
+  position: absolute; left: 46px; top: 50%; transform: translateY(-50%);
+  background: var(--color-surface); border: 1px solid var(--color-border-strong);
+  padding: 5px 10px; border-radius: var(--radius-sm); font-size: var(--text-xs);
+  white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .15s ease;
+  z-index: 60; color: var(--color-text); box-shadow: var(--shadow-md);
+}
+.rail-btn:hover .tip { opacity: 1; }
+.rail-sep { width: 24px; height: 1px; background: var(--color-border); margin: var(--space-2) 0; }
+.rail .spacer { flex: 1; }
+
+/* content */
+.content { padding: var(--space-6); min-height: 400px; background: var(--color-bg); flex: 1; }
+.content-head { display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-4); }
+.content-head h3 { margin: 0; font-size: var(--text-lg); font-weight: var(--semibold); }
+.content-head .count { font-size: var(--text-sm); color: var(--color-text-dim); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: var(--space-4); }
+.card { cursor: pointer; transition: transform .15s ease; }
+.card:hover { transform: translateY(-3px); }
+.card:hover .art { border-color: var(--color-primary); }
+.art {
+  aspect-ratio: 3/4; border-radius: var(--radius-md); border: 1px solid var(--color-border);
+  display: grid; place-items: center; padding: var(--space-2); text-align: center;
+  font-size: var(--text-xs); font-weight: var(--semibold); line-height: 1.3;
+  color: rgba(255,255,255,.92); transition: border-color .15s ease; position: relative; overflow: hidden;
+}
+.store-chip {
+  position: absolute; top: 5px; right: 5px; font-size: 8px; letter-spacing: .06em;
+  text-transform: uppercase; padding: 2px 5px; border-radius: 3px; font-weight: 700;
+  background: rgba(0,0,0,.62); color: rgba(255,255,255,.88);
+}
+.card .name { margin-top: 7px; font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.35; }
+.placeholder {
+  border: 1px dashed var(--color-border-strong); border-radius: var(--radius-md);
+  padding: var(--space-8); text-align: center; color: var(--color-text-dim); font-size: var(--text-sm);
+}
+.placeholder b { display: block; color: var(--color-text); font-size: var(--text-base); margin-bottom: 6px; font-weight: 600; }
+
+/* toolbar */
+#sketch-tools {
+  position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui, sans-serif;
+  font-size: 12px; background: rgba(0,0,0,.82); color: #fff; padding: 8px 12px; border-radius: 8px;
+  opacity: .4; transition: opacity .2s; display: flex; gap: 8px; align-items: center;
+  border: 1px solid rgba(255,255,255,.12);
+}
+#sketch-tools:hover { opacity: 1; }
+#sketch-tools select, #sketch-tools button {
+  background: #24282a; color: #fff; border: 1px solid #3a4042; border-radius: 5px;
+  padding: 4px 8px; font-size: 11px; font-family: inherit; cursor: pointer;
+}
+#sketch-tools button:hover { background: #333a3c; }
+#sketch-tools button.on { background: #1de8f5; color: #08191b; border-color: #1de8f5; font-weight: 600; }
+#sketch-tools .sep { width: 1px; height: 18px; background: rgba(255,255,255,.15); }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <span class="brand">Sketch 002 · Overflow strategy</span>
+  <button class="variant-tab active" onclick="showVariant('a', this)">A: More menu</button>
+  <button class="variant-tab" onclick="showVariant('b', this)">B: Two-level bar</button>
+  <button class="variant-tab" onclick="showVariant('c', this)">C: Rail + tabs</button>
+</div>
+
+<!-- ══════════════ VARIANT A ══════════════ -->
+<div id="variant-a" class="variant active">
+  <div class="variant-caption">
+    <h2>A — Five tabs + a "More" menu</h2>
+    <p>Promote the five destinations people use daily; everything else lives behind <b>⋯</b>. Simplest to build and the tab bar stays honest at five items. The cost is that nine destinations become invisible — discoverability drops hard for things like Wine Manager and Humble Keys.</p>
+    <div class="tradeoff">
+      <span class="good"><b>+</b> Simplest build · tab bar never overflows</span>
+      <span class="bad"><b>−</b> 9 destinations hidden behind one glyph</span>
+    </div>
+  </div>
+  <div class="window">
+    <div class="titlebar">
+      <div class="tl-zone">78px</div>
+      <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+      <span class="win-title">GameLib</span>
+    </div>
+    <div class="navbar">
+      <div class="wordmark"><span class="dot"></span>GameLib</div>
+      <div class="tabs" id="tabsA">
+        <button class="tab active" onclick="pick('A','Library','214 games · 12 installed','grid',this)">Library</button>
+        <button class="tab" onclick="pick('A','Stores','4 connected','ph',this)">Stores</button>
+        <button class="tab" onclick="pick('A','Deals','9 wishlist games on sale','ph',this)">Deals</button>
+        <button class="tab" onclick="pick('A','Downloads','1 downloading · 1 queued','ph',this)">Downloads<span class="tab-badge">2</span></button>
+        <button class="tab" onclick="pick('A','Settings','General','ph',this)">Settings</button>
+        <div class="indicator" id="indA"></div>
+      </div>
+      <div class="nav-right">
+        <button class="icon-btn" title="Search">⌕</button>
+        <div class="menu-wrap">
+          <button class="icon-btn" onclick="toggleMenu(event)" title="More">⋯</button>
+          <div class="menu" id="menuA">
+            <div class="menu-label">Tools</div>
+            <button class="menu-item" onclick="fromMenu('A','Humble Keys')"><span class="gl">🔑</span>Humble Keys</button>
+            <button class="menu-item" onclick="fromMenu('A','Store Search')"><span class="gl">⌕</span>Store Search</button>
+            <button class="menu-item" onclick="fromMenu('A','Redeem a Steam Key')"><span class="gl">＋</span>Redeem a Steam key</button>
+            <button class="menu-item" onclick="fromMenu('A','Wine Manager')"><span class="gl">🍷</span>Wine Manager</button>
+            <button class="menu-item" onclick="fromMenu('A','Console Mode')"><span class="gl">▣</span>Console Mode</button>
+            <div class="menu-sep"></div>
+            <div class="menu-label">Account</div>
+            <button class="menu-item" onclick="fromMenu('A','Manage Accounts')"><span class="gl">◉</span>Manage Accounts</button>
+            <button class="menu-item" onclick="fromMenu('A','Accessibility')"><span class="gl">◐</span>Accessibility</button>
+            <div class="menu-sep"></div>
+            <button class="menu-item" onclick="fromMenu('A','Documentation')"><span class="gl">?</span>Documentation</button>
+            <button class="menu-item" onclick="fromMenu('A','Ko-fi')"><span class="gl">♥</span>Support on Ko-fi</button>
+          </div>
+        </div>
+        <div class="avatar">G</div>
+      </div>
+    </div>
+    <div class="content" id="contentA"></div>
+  </div>
+</div>
+
+<!-- ══════════════ VARIANT B ══════════════ -->
+<div id="variant-b" class="variant">
+  <div class="variant-caption">
+    <h2>B — Two-level bar (primary tabs + contextual sub-bar)</h2>
+    <p>Four broad sections up top, each revealing its own second row. Every one of the 14 destinations stays visible without a hidden menu, and it maps cleanly onto the submenus <code>SidebarLinks</code> already has. The cost is 84px of permanent vertical chrome and a sub-bar that shifts under you as you switch sections.</p>
+    <div class="tradeoff">
+      <span class="good"><b>+</b> Nothing hidden · matches existing submenu structure</span>
+      <span class="bad"><b>−</b> 84px vertical chrome · second row changes on every switch</span>
+    </div>
+  </div>
+  <div class="window">
+    <div class="titlebar">
+      <div class="tl-zone">78px</div>
+      <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+      <span class="win-title">GameLib</span>
+    </div>
+    <div class="navbar">
+      <div class="wordmark"><span class="dot"></span>GameLib</div>
+      <div class="tabs" id="tabsB">
+        <button class="tab active" onclick="pickB('library',this)">Library</button>
+        <button class="tab" onclick="pickB('stores',this)">Stores</button>
+        <button class="tab" onclick="pickB('tools',this)">Tools</button>
+        <button class="tab" onclick="pickB('settings',this)">Settings</button>
+        <div class="indicator" id="indB"></div>
+      </div>
+      <div class="nav-right">
+        <button class="icon-btn" title="Search">⌕</button>
+        <button class="icon-btn" title="Downloads" onclick="toast('Downloads')">⇩<span class="tab-badge" style="margin:0 0 0 1px;min-width:14px;height:14px;font-size:9px">2</span></button>
+        <div class="avatar">G</div>
+      </div>
+    </div>
+    <div class="subbar" id="subbarB"></div>
+    <div class="content" id="contentB"></div>
+  </div>
+</div>
+
+<!-- ══════════════ VARIANT C ══════════════ -->
+<div id="variant-c" class="variant">
+  <div class="variant-caption">
+    <h2>C — Icon rail + top tabs (hybrid)</h2>
+    <p>Splits the problem by kind rather than by frequency. <b>Content</b> destinations become top tabs; <b>utilities</b> become a 52px icon rail — persistent, always one click away, no hidden menu. It keeps a vertical strip, so it's the least radical departure from today's sidebar, which cuts migration risk.</p>
+    <div class="tradeoff">
+      <span class="good"><b>+</b> Nothing hidden · one row of chrome · smallest migration</span>
+      <span class="bad"><b>−</b> Icon-only utilities need tooltips to be learnable</span>
+    </div>
+  </div>
+  <div class="window">
+    <div class="titlebar">
+      <div class="tl-zone">78px</div>
+      <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+      <span class="win-title">GameLib</span>
+    </div>
+    <div class="navbar">
+      <div class="wordmark"><span class="dot"></span>GameLib</div>
+      <div class="tabs" id="tabsC">
+        <button class="tab active" onclick="pick('C','Library','214 games · 12 installed','grid',this)">Library</button>
+        <button class="tab" onclick="pick('C','Stores','4 connected','ph',this)">Stores</button>
+        <button class="tab" onclick="pick('C','Deals','9 wishlist games on sale','ph',this)">Deals</button>
+        <button class="tab" onclick="pick('C','Humble Keys','37 unredeemed','ph',this)">Humble Keys</button>
+        <button class="tab" onclick="pick('C','Store Search','Search across 4 stores','ph',this)">Store Search</button>
+        <div class="indicator" id="indC"></div>
+      </div>
+      <div class="nav-right">
+        <button class="icon-btn" title="Search">⌕</button>
+        <div class="avatar">G</div>
+      </div>
+    </div>
+    <div class="shell">
+      <div class="rail">
+        <button class="rail-btn" onclick="railPick(this,'Downloads')">⇩<span class="dot-badge"></span><span class="tip">Downloads · 2 active</span></button>
+        <button class="rail-btn" onclick="railPick(this,'Wine Manager')">🍷<span class="tip">Wine Manager</span></button>
+        <button class="rail-btn" onclick="railPick(this,'Console Mode')">▣<span class="tip">Console Mode</span></button>
+        <button class="rail-btn" onclick="railPick(this,'Redeem a Steam Key')">＋<span class="tip">Redeem a Steam key</span></button>
+        <div class="rail-sep"></div>
+        <button class="rail-btn" onclick="railPick(this,'Manage Accounts')">◉<span class="tip">Manage Accounts</span></button>
+        <button class="rail-btn" onclick="railPick(this,'Accessibility')">◐<span class="tip">Accessibility</span></button>
+        <div class="spacer"></div>
+        <button class="rail-btn" onclick="railPick(this,'Settings')">⚙<span class="tip">Settings</span></button>
+        <button class="rail-btn" onclick="railPick(this,'Documentation')">?<span class="tip">Documentation</span></button>
+        <button class="rail-btn" onclick="railPick(this,'Ko-fi')">♥<span class="tip">Support on Ko-fi</span></button>
+      </div>
+      <div class="content" id="contentC"></div>
+    </div>
+  </div>
+</div>
+
+<div id="sketch-tools">
+  <select id="theme-switcher" onchange="setTheme(this.value)" title="Theme">
+    <option value="default">midnightMirage</option>
+    <option value="gruvbox">gruvbox_dark</option>
+    <option value="dracula">dracula</option>
+  </select>
+  <div class="sep"></div>
+  <button onclick="setWidth(760,this)">760</button>
+  <button onclick="setWidth(1024,this)">1024</button>
+  <button class="on" onclick="setWidth(1180,this)">Full</button>
+  <div class="sep"></div>
+  <button id="annBtn" onclick="toggleAnnotate(this)">Annotate</button>
+</div>
+
+<script>
+const GAMES = [
+  ['Hades II','Steam','linear-gradient(150deg,#7b2d5e,#2b1030)'],
+  ["Baldur's Gate 3",'GOG','linear-gradient(150deg,#8a3b1e,#2d1408)'],
+  ['Elden Ring','Steam','linear-gradient(150deg,#6b5a1f,#241d08)'],
+  ['Hollow Knight: Silksong','Epic','linear-gradient(150deg,#1f4a6b,#08161f)'],
+  ['Disco Elysium','GOG','linear-gradient(150deg,#6b1f2e,#210a10)'],
+  ['Outer Wilds','Epic','linear-gradient(150deg,#2d4a6b,#0b1420)'],
+  ['Stardew Valley','Steam','linear-gradient(150deg,#3d6b2d,#0f2008)'],
+  ['Factorio','Steam','linear-gradient(150deg,#6b4a1f,#211607)'],
+  ['Celeste','Amazon','linear-gradient(150deg,#4a2d6b,#150a20)'],
+  ['Slay the Spire','GOG','linear-gradient(150deg,#6b2d2d,#200a0a)']
+];
+
+const gridHTML = () => `<div class="grid">${GAMES.map(g => `
+  <div class="card">
+    <div class="art" style="background:${g[2]}"><span class="store-chip">${g[1]}</span>${g[0]}</div>
+    <div class="name">${g[0]}</div>
+  </div>`).join('')}</div>`;
+
+function body(title, sub, kind) {
+  return `<div class="content-head"><h3>${title}</h3><span class="count">${sub}</span></div>` +
+    (kind === 'grid' ? gridHTML()
+      : `<div class="placeholder"><b>${title}</b>${sub}<br><span style="opacity:.7">— panel content not sketched here; 002 tests navigation structure, not screens —</span></div>`);
+}
+
+/* ── sub-bar model for variant B ─────────────────────────────── */
+const SUB = {
+  library:  { label: 'Library',  items: ['All games','Installed','Recently played','Favourites','Hidden'] },
+  stores:   { label: 'Stores',   items: ['Epic Store','GOG Store','Steam Store','Amazon Luna','Store Search','Deals'] },
+  tools:    { label: 'Tools',    items: ['Downloads','Humble Keys','Redeem a Steam key','Wine Manager','Console Mode'] },
+  settings: { label: 'Settings', items: ['General','Games','Advanced','Sync','Log','Accessibility','Manage Accounts'] }
+};
+
+function renderSub(key, activeIdx) {
+  const cfg = SUB[key];
+  document.getElementById('subbarB').innerHTML = cfg.items.map((it, i) =>
+    `<button class="subtab ${i === (activeIdx || 0) ? 'active' : ''}" onclick="pickSub('${key}',${i},this)">${it}</button>`
+  ).join('');
+  const it = cfg.items[activeIdx || 0];
+  document.getElementById('contentB').innerHTML =
+    body(it, cfg.label, key === 'library' && (activeIdx || 0) < 2 ? 'grid' : 'ph');
+}
+
+function pickB(key, el) {
+  const bar = document.getElementById('tabsB');
+  bar.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  moveInd('B');
+  renderSub(key, 0);
+}
+
+function pickSub(key, i, el) {
+  el.parentElement.querySelectorAll('.subtab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderSub(key, i);
+}
+
+/* ── shared ──────────────────────────────────────────────────── */
+function pick(v, title, sub, kind, el) {
+  el.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('content' + v).innerHTML = body(title, sub, kind);
+  moveInd(v);
+  if (v === 'C') document.querySelectorAll('#variant-c .rail-btn').forEach(b => b.classList.remove('active'));
+}
+
+function fromMenu(v, name) {
+  closeMenus();
+  document.querySelectorAll('#tabs' + v + ' .tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('ind' + v).style.width = '0px';
+  document.getElementById('content' + v).innerHTML = body(name, 'Reached via the ⋯ menu', 'ph');
+  toast('No tab is lit — you are somewhere the tab bar cannot show');
+}
+
+function railPick(el, name) {
+  document.querySelectorAll('#variant-c .rail-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('#tabsC .tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('indC').style.width = '0px';
+  document.getElementById('contentC').innerHTML = body(name, 'Reached from the utility rail', 'ph');
+}
+
+function toggleMenu(e) {
+  e.stopPropagation();
+  const m = e.target.parentElement.querySelector('.menu');
+  const wasOpen = m.classList.contains('open');
+  closeMenus();
+  if (!wasOpen) m.classList.add('open');
+}
+function closeMenus() { document.querySelectorAll('.menu').forEach(m => m.classList.remove('open')); }
+document.addEventListener('click', closeMenus);
+
+function moveInd(v) {
+  const bar = document.getElementById('tabs' + v);
+  if (!bar) return;
+  const act = bar.querySelector('.tab.active');
+  const ind = document.getElementById('ind' + v);
+  if (!act) { ind.style.width = '0px'; return; }
+  ind.style.left = act.offsetLeft + 'px';
+  ind.style.width = act.offsetWidth + 'px';
+}
+
+function showVariant(id, el) {
+  document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('variant-' + id).classList.add('active');
+  el.classList.add('active');
+  requestAnimationFrame(() => ['A','B','C'].forEach(moveInd));
+}
+
+function setTheme(name) {
+  document.querySelector('link[href*="themes/"]').href = '../themes/' + name + '.css';
+  setTimeout(() => ['A','B','C'].forEach(moveInd), 60);
+}
+
+function setWidth(px, el) {
+  document.querySelectorAll('#sketch-tools button').forEach(b => { if (b.id !== 'annBtn') b.classList.remove('on'); });
+  el.classList.add('on');
+  document.querySelectorAll('.window').forEach(w => w.style.maxWidth = px + 'px');
+  setTimeout(() => ['A','B','C'].forEach(moveInd), 240);
+}
+
+function toggleAnnotate(el) { document.body.classList.toggle('annotate'); el.classList.toggle('on'); }
+
+function toast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:64px;right:12px;z-index:9999;background:#1de8f5;color:#08191b;' +
+      'padding:9px 15px;border-radius:7px;font-family:system-ui,sans-serif;font-size:12px;font-weight:600;' +
+      'box-shadow:0 6px 18px rgba(0,0,0,.5);transition:opacity .2s,transform .2s;max-width:320px;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1'; t.style.transform = 'translateY(0)';
+  clearTimeout(t._h);
+  t._h = setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(6px)'; }, 2400);
+}
+
+document.getElementById('contentA').innerHTML = body('Library','214 games · 12 installed','grid');
+document.getElementById('contentC').innerHTML = body('Library','214 games · 12 installed','grid');
+renderSub('library', 0);
+requestAnimationFrame(() => ['A','B','C'].forEach(moveInd));
+window.addEventListener('resize', () => ['A','B','C'].forEach(moveInd));
+</script>
+</body>
+</html>

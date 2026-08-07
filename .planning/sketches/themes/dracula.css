@@ -1,0 +1,70 @@
+/* dracula — real GameLib theme (themes.scss:271).
+   Stress-test: the navbar background is much lighter than the body here,
+   which breaks any tab style that assumes bar-darker-than-content. */
+
+:root {
+  --brand-primary: #ff79c6;
+  --brand-primary-hover: #ff92d0;
+  --brand-text-01: #f8f8f2;
+  --brand-text-02: #bd93f9;
+
+  --neutral-01: #21222c;
+  --neutral-02: #282a35;
+  --neutral-03: #44475a;
+  --neutral-04: #6272a4;
+  --neutral-05: #9ca3c0;
+  --neutral-06: #f8f8f2;
+
+  --color-bg: #282a35;
+  --color-surface: #44475a;
+  --color-surface-raised: #4f5268;
+  --color-border: #4f5268;
+  --color-border-strong: #6272a4;
+  --color-text: #f8f8f2;
+  --color-text-muted: #9ca3c0;
+  --color-text-dim: #6272a4;
+  --color-primary: #ff79c6;
+  --color-primary-hover: #ff92d0;
+  --color-accent: #bd93f9;
+  --navbar-background: #44475a;
+
+  --color-danger: #ff5555;
+  --color-success: #50fa7b;
+  --color-warning: #f1fa8c;
+
+  --font-sans: 'Rubik', system-ui, -apple-system, sans-serif;
+  --font-secondary: 'Cabin', system-ui, -apple-system, sans-serif;
+  --text-xs: 0.69rem;
+  --text-sm: 0.83rem;
+  --text-base: 1rem;
+  --text-lg: 1.2rem;
+  --text-xl: 1.44rem;
+  --text-2xl: 1.73rem;
+  --text-3xl: 2.07rem;
+
+  --light: 300;
+  --regular: 400;
+  --medium: 500;
+  --semibold: 600;
+  --bold: 700;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.55);
+
+  --traffic-light-inset: 78px;
+  --titlebar-height: 38px;
+}

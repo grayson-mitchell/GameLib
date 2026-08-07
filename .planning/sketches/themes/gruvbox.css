@@ -1,0 +1,70 @@
+/* gruvbox_dark — real GameLib theme (themes.scss:192).
+   Stress-test: warm, low-contrast palette with a muted accent.
+   A tab style that only reads well in cyan fails here. */
+
+:root {
+  --brand-primary: #458588;
+  --brand-primary-hover: #689d6a;
+  --brand-text-01: #eae8e5;
+  --brand-text-02: #d5c4a1;
+
+  --neutral-01: #1d2021;
+  --neutral-02: #282828;
+  --neutral-03: #32302f;
+  --neutral-04: #504945;
+  --neutral-05: #a89984;
+  --neutral-06: #ebdbb2;
+
+  --color-bg: #1d2021;
+  --color-surface: #282828;
+  --color-surface-raised: #32302f;
+  --color-border: #3c3836;
+  --color-border-strong: #504945;
+  --color-text: #eae8e5;
+  --color-text-muted: #a89984;
+  --color-text-dim: #665c54;
+  --color-primary: #458588;
+  --color-primary-hover: #689d6a;
+  --color-accent: #b57614;
+  --navbar-background: #32302f;
+
+  --color-danger: #cc241d;
+  --color-success: #98971a;
+  --color-warning: #d79921;
+
+  --font-sans: 'Rubik', system-ui, -apple-system, sans-serif;
+  --font-secondary: 'Cabin', system-ui, -apple-system, sans-serif;
+  --text-xs: 0.69rem;
+  --text-sm: 0.83rem;
+  --text-base: 1rem;
+  --text-lg: 1.2rem;
+  --text-xl: 1.44rem;
+  --text-2xl: 1.73rem;
+  --text-3xl: 2.07rem;
+
+  --light: 300;
+  --regular: 400;
+  --medium: 500;
+  --semibold: 600;
+  --bold: 700;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.55);
+
+  --traffic-light-inset: 78px;
+  --titlebar-height: 38px;
+}
