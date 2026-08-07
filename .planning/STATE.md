@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Phase 34.8 side track — plan 03 of 12 EXECUTED (ts-morph hardcoded-string scanner core: meta/hardcodedStringGate.ts scanSource()/loadGlossary()/USER_FACING_ATTRIBUTES/EXCLUDED_ATTRIBUTES + 50-test proof suite in meta/__tests__/hardcodedStringGate.test.ts, REQ-34.8-07/08 complete, see 34.8-03-SUMMARY.md). Next for 34.8: /gsd-execute-phase 34.8 (resumes at plan 04). 34.4.2 blocker UNCHANGED and still the critical path."
-last_updated: "2026-08-07T00:50:48.000Z"
-last_activity: "2026-08-07 -- Phase 34.8 side track plan 03 of 12 EXECUTED (meta/hardcodedStringGate.ts: pure ts-morph AST scanner scanSource(), literal collection + user-facing classification + glossary exemption, loadGlossary()/GlossaryLoadError guard, USER_FACING_ATTRIBUTES/EXCLUDED_ATTRIBUTES exported v1 scope; 50-test proof suite including D-21/D-22 mechanical zero-violation fixtures for ConsoleMode/LogSettings/PlatformSupport; REQ-34.8-07/08 complete, see 34.8-03-SUMMARY.md), 9 plans remain. Full pnpm test:ci 199 suites/3898 tests green, no regression. Phase 34.9 side track unchanged: plans 01-03 of 11 done. 34.4.2 blocker UNCHANGED, still critical path."
+stopped_at: "Phase 34.8 side track — plan 04 of 12 EXECUTED (D-14 exemption engine: collectTAliases()/FILE_EXEMPT_MARKER wired into meta/hardcodedStringGate.ts's scanSource() pipeline — t-alias detection, [key,defaultText] tuple exemption, single-scope dataflow fallback exemption, full-file leading-comment exemption — all four proven with 13 new verbatim-fixture tests including negative counterparts, REQ-34.8-07/08 complete, see 34.8-04-SUMMARY.md). Next for 34.8: /gsd-execute-phase 34.8 (resumes at plan 05). 34.4.2 blocker UNCHANGED and still the critical path."
+last_updated: "2026-08-07T01:19:26.470Z"
+last_activity: "2026-08-07 -- Phase 34.8 side track plan 04 of 12 EXECUTED (meta/hardcodedStringGate.ts: D-14 exemption engine -- collectTAliases() t-alias detection generalized to any ObjectBindingPattern (VariableDeclaration and destructured Parameter alike), [key,defaultText] tuple exemption, single-scope findReferencesAsNodes() dataflow fallback exemption, FILE_EXEMPT_MARKER full-file leading-comment exemption requiring a same-line reason; 13-test proof suite with 4 D-14: describe blocks each carrying a negative counterpart, fixtures verbatim from CrossoverBadge.tsx/LibraryFilters/stateLabels.ts/repairFailure.ts; REQ-34.8-07/08 complete, see 34.8-04-SUMMARY.md), 8 plans remain. Full pnpm test:ci 199 suites/3911 tests green, no regression. Phase 34.9 side track unchanged: plans 01-03 of 11 done. 34.4.2 blocker UNCHANGED, still critical path."
 progress:
   total_phases: 21
   completed_phases: 14
   total_plans: 239
-  completed_plans: 211
+  completed_plans: 212
   percent: 67
 ---
 
@@ -3600,6 +3600,7 @@ Closed/parked native-install phases:
 | Phase 34.8 P01 | 4min | 2 tasks | 4 files |
 | Phase 34.8 P02 | 25min | 2 tasks | 4 files |
 | Phase 34.8 P03 | 15min | 2 tasks | 2 files |
+| Phase 34.8 P04 | 35min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -4052,6 +4053,9 @@ Recent decisions affecting current work:
 - [Phase 34.8]: ConsoleMode/LogSettings/StoreSearch brand-label maps covered by glossary term coverage instead of code retrofit (D-21) — verified zero code change needed
 - [Phase 34.8]: D-07's fork-owned-file scope is derived mechanically from the Heroic merge-base diff and committed (meta/i18nGateScope.json) rather than computed live in CI (RESEARCH.md Pitfall 1 — actions/checkout@v6 has no Heroic remote/merge-base history); both A and M diff statuses kept in scope (fork literals live mixed into upstream files, not just net-new ones); the two D-17 deferred files carved into excluded.deferred for plan 05's allowlist to own instead
 - [Phase 34.8-03]: meta/hardcodedStringGate.ts's candidate pipeline evaluates the glossary exact-match exemption BEFORE the technical-token shape check (not after) — otherwise glossary terms containing a slash (MB/s, Epic/Legendary, Amazon/Nile) get silently discarded as path-shaped tokens and never count as exempted; the single-token discard rule is broadened to any lowercase-leading no-whitespace token (not requiring an internal case transition), which is what lets ConsoleMode/LogSettings's internal store-key literals (legendary/gog/nile/steam/sideload/zoom) need zero code change under D-21 while capitalized/multi-word prose still flags
+- [Phase 34.8]: collectTAliases() generalizes to any ObjectBindingPattern (VariableDeclaration or destructured Parameter), not just VariableDeclaration, so repairFailure.ts's parameter-destructured t resolves
+- [Phase 34.8]: Exemption pipeline runs cheapest-first: glossary, tuple, t-call-argument, then dataflow (findReferencesAsNodes) last, since it is the only expensive check
+- [Phase 34.8]: Two tuple-table test fixtures trimmed of real-but-orthogonal logic (CrossoverBadge tier if/else, LibraryFilters htmlId attribute) that would otherwise fail the zero-violation assertion for a reason unrelated to the D-14 idiom being proven
 
 ### Pending Todos
 
@@ -4140,10 +4144,13 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-07T00:50:48.000Z
-Stopped at: Phase 34.8 side track — plan 03 of 12 EXECUTED (ts-morph hardcoded-string scanner
-  core: meta/hardcodedStringGate.ts scanSource()/loadGlossary()/USER_FACING_ATTRIBUTES/
-  EXCLUDED_ATTRIBUTES + a 50-test proof suite, REQ-34.8-07/08 complete, see 34.8-03-SUMMARY.md).
+Last session: 2026-08-07T01:19:26.445Z
+Stopped at: Phase 34.8 side track — plan 04 of 12 EXECUTED (D-14 exemption engine: t-alias
+  detection generalized to any ObjectBindingPattern (VariableDeclaration and destructured
+  Parameter alike), [key,defaultText] tuple exemption, single-scope findReferencesAsNodes()
+  dataflow fallback exemption, FILE_EXEMPT_MARKER full-file leading-comment exemption requiring
+  a same-line reason -- all four proven with 13 new verbatim-fixture tests including negative
+  counterparts, REQ-34.8-07/08 complete, see 34.8-04-SUMMARY.md).
   34.4.2 blocker UNCHANGED and still the critical path.
 
   **2026-08-07 side track — Phase 34.8 discuss-phase, then plan-phase, then execution began.**
@@ -4180,7 +4187,19 @@ Stopped at: Phase 34.8 side track — plan 03 of 12 EXECUTED (ts-morph hardcoded
   `Amazon/Nile` were being silently discarded as path-shaped first), and the single-token discard
   rule was broadened from requiring an internal camelCase transition to any lowercase-leading
   no-whitespace token — full `pnpm test:ci` 199 suites/3898 tests green (baseline 198/3848, no
-  regression). Next for 34.8: `/gsd-execute-phase 34.8` (resumes at plan 04).
+  regression). Plan 04 followed same-day: `collectTAliases()` (any `ObjectBindingPattern`,
+  seeded with bare `t`), `isKeyDefaultTupleElement()` (structural `[dottedKey, default]` tuple
+  exemption), `isAssignedThenPassedToT()` (single-scope `findReferencesAsNodes()` dataflow
+  exemption for `repairFailure.ts`'s assign-then-reassign fallback), and
+  `FILE_EXEMPT_MARKER`/`checkFileExemptMarker()` (full-file leading-comment exemption requiring
+  a same-line reason) all wired into `scanSource()`'s cheapest-first pipeline (glossary → tuple →
+  t-call-argument → dataflow → technical-token). 13 new tests across 4 `D-14:` describe blocks,
+  each with a negative counterpart, fixtures copied verbatim from `CrossoverBadge.tsx`,
+  `LibraryFilters/index.tsx`, `Humble/Keys/stateLabels.ts`, and `GameSubMenu/repairFailure.ts`.
+  Manually verified the tuple-exemption branch is load-bearing (temporarily neutered it, 3/4
+  tests in that block failed, restored to a byte-identical file). Full `pnpm test:ci` 199
+  suites/3911 tests green (baseline 199/3898, no regression). See `34.8-04-SUMMARY.md`. Next for
+  34.8: `/gsd-execute-phase 34.8` (resumes at plan 05).
 
   **The 34.4.2 record below is the live blocker and takes precedence. Next: `/gsd-debug`.**
 
