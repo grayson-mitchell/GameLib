@@ -1,0 +1,22 @@
+{
+  "terms": [
+    "Amazon",
+    "Amazon Games",
+    "Amazon/Nile",
+    "CrossOver",
+    "Epic",
+    "Epic/Legendary",
+    "GOG",
+    "GameLib",
+    "Linux",
+    "MB/s",
+    "Proton",
+    "Steam",
+    "Steam Deck",
+    "Windows",
+    "ZOOM",
+    "Zoom",
+    "macOS"
+  ],
+  "rationale": "These terms stay literal per D-02 (brand names, platform names and units are pinned do-not-translate); D-21 extended the list after measuring compound and variant brand forms (Amazon, ZOOM, Zoom, Epic/Legendary, Amazon/Nile, Amazon Games) in ConsoleMode/index.tsx, LogSettings/index.tsx and StoreSearch/helpers.ts. The gate failing on an unglossed brand name is the intended reminder to extend this file when a new store is added."
+}
