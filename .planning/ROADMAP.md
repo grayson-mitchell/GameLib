@@ -2408,13 +2408,13 @@ REQ-34.10-13, REQ-34.10-14, REQ-34.10-15, REQ-34.10-16
 the frameless drag-region runtime this rebuilds against)
 **Blocks:** Phase 34.11 (the filter panel needs the tier-2 slot to exist); the deferred
 onboarding-tour rework phase (34.10 disables `SidebarTour` per D-13 and does not rebuild it)
-**Plans:** 3/11 plans executed
+**Plans:** 4/11 plans executed
 
 Plans:
 - [x] 34.10-01-PLAN.md — Shell contracts: `navTabs.ts` tab identity + default-store cascade, the tier-2 portal context, and the Games portal-target panel (wave 1)
 - [x] 34.10-02-PLAN.md — `NavItem` tier-2 row primitive + the shell stylesheet and its `--tier2-width` / navbar-height / inset tokens (wave 1)
 - [x] 34.10-03-PLAN.md — Ambient Downloads ring: always-present, dimmed when idle, queue-count badge (wave 1)
-- [ ] 34.10-04-PLAN.md — Tier-1 card/folder tab strip on reskinned MUI `<Tabs>`, route-driven, relational seam (wave 2)
+- [x] 34.10-04-PLAN.md — Tier-1 card/folder tab strip on reskinned MUI `<Tabs>`, route-driven, relational seam (wave 2)
 - [ ] 34.10-05-PLAN.md — Stores and Settings tier-2 panels: all 14 destinations redistributed, three reparented, Quit relocated (wave 2)
 - [ ] 34.10-06-PLAN.md — Games tier-2 via portal from `Library` (LibraryContext stays intact), `Header` becomes a vertical stack, frameless padding hack deleted (wave 2)
 - [ ] 34.10-07-PLAN.md — `HeroicVersion` relocation with unconditional mount, tour disabled, `NavShell` root composition (wave 3)
