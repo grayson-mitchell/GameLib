@@ -2408,7 +2408,7 @@ REQ-34.10-13, REQ-34.10-14, REQ-34.10-15, REQ-34.10-16
 the frameless drag-region runtime this rebuilds against)
 **Blocks:** Phase 34.11 (the filter panel needs the tier-2 slot to exist); the deferred
 onboarding-tour rework phase (34.10 disables `SidebarTour` per D-13 and does not rebuild it)
-**Plans:** 11/11 plans executed — **PHASE DOES NOT CLOSE.** The blocking 5-item live gate
+**Plans:** 16 plans (11 executed + 5 gap-closure) — **PHASE DOES NOT CLOSE.** The blocking 5-item live gate
 (`34.10-11-PLAN.md`) authored `34.10-LIVE-GATE.md` and RAN it on real hardware 2026-08-08:
 **VERDICT FAIL, 2 of 5 PASS** (`items_passed: 2`) — see `34.10-LIVE-GATE.md` and
 `34.10-11-SUMMARY.md`. Item 1 (theme survival, REQ-34.10-06) and item 2 (window dragging under
@@ -2421,8 +2421,15 @@ active download — a hover-state backdrop-token mismatch plus `hasProgress()` y
 for the head element. Item 5 (Electron, REQ-34.10-05) is NOT ATTEMPTED on its tab-navigation
 sub-check (shell-renders and the no-traffic-light-overlap observation both PASS). REQUIREMENTS.md's
 REQ-34.10-05/-08/-09 were reverted Complete → Pending accordingly; REQ-34.10-04/-06 stay Complete.
-**Next:** `/gsd-plan-phase 34.10 --gaps` to close F-34.10-01 and F-34.10-02 (and, optionally,
-item 5's unmeasured sub-check) — not `/gsd-verify-work`, and not a milestone transition.
+**Gap cycle 1 planned 2026-08-08** (`/gsd-plan-phase 34.10 --gaps`): plans 34.10-12..16, 16/16
+total, 3 waves. Plan 12 is a live *diagnostic* (not a gate) that collapses F-34.10-02 cause (b)'s
+hypothesis field before any code is written — the live gate's own suggested cause (a keying/remount
+difference vs. the retired `CurrentDownload`) is already falsified in source, since
+`git show 0559bc0d0^:src/frontend/components/UI/Sidebar/index.tsx` used the identical `elements[0]`
+source AND the identical `key={...params.appName}`. Plan 16 re-runs the gate, including the three
+sub-checks recorded NOT ATTEMPTED in run 1.
+**Next:** `/gsd-execute-phase 34.10 --gaps-only` — not `/gsd-verify-work`, and not a milestone
+transition.
 
 Plans:
 - [x] 34.10-01-PLAN.md — Shell contracts: `navTabs.ts` tab identity + default-store cascade, the tier-2 portal context, and the Games portal-target panel (wave 1)
@@ -2436,6 +2443,11 @@ Plans:
 - [x] 34.10-09-PLAN.md — Replacement structural tests + retire the `Sidebar` tree (wave 5)
 - [x] 34.10-10-PLAN.md — i18n: the one new `nav.tabs.games` key, gate-scope regeneration, full-suite proof (wave 6)
 - [x] 34.10-11-PLAN.md — Author and run the blocking live gate: FAIL 2/5 (F-34.10-01, F-34.10-02) — phase does not close, gap cycle owed (wave 7)
+- [ ] 34.10-12-PLAN.md — GAP: F-34.10-02 cause (b) live diagnostic — three-question discriminator on real hardware, then a six-hypothesis source trace to one root cause (wave 1, checkpoint)
+- [ ] 34.10-13-PLAN.md — GAP: F-34.10-01 — `Dropdown` becomes a click-toggled in-flow disclosure sized to the 204px column, `popUpOnHover` deleted, tier-2 portal gains a scroll container (wave 1)
+- [ ] 34.10-14-PLAN.md — GAP: F-34.10-02 cause (a) — the ring's painted hole becomes a CSS mask, idle track repainted in the count badge's proven-visible token chain (wave 1)
+- [ ] 34.10-15-PLAN.md — GAP: F-34.10-02 cause (b) — implement the diagnosed arc-binding fix and give `RingProgress` its first test coverage (wave 2)
+- [ ] 34.10-16-PLAN.md — GAP: live gate RUN 2 — items 1/3/4 full, item 2 partial, item 5's unmeasured tab-navigation sub-check; phase closes only on 5/5 (wave 3, checkpoint)
 
 ### Phase 34.11: Library filtering — search, views, collections and cross-store facets (INSERTED)
 
