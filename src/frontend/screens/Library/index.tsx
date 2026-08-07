@@ -9,6 +9,8 @@ import React, {
   useLayoutEffect
 } from 'react'
 
+import { createPortal } from 'react-dom'
+
 import ArrowDropUp from '@mui/icons-material/ArrowDropUp'
 import { Header, UpdateComponent } from 'frontend/components/UI'
 import { useTranslation } from 'react-i18next'
@@ -45,6 +47,7 @@ import CategoriesManager from './components/CategoriesManager'
 import LibraryTour from './components/LibraryTour'
 import AlphabetFilter from './components/AlphabetFilter'
 import { openInstallGameModal } from 'frontend/state/InstallGameModal'
+import { Tier2PortalContext } from 'frontend/components/UI/NavShell/Tier2PortalContext'
 
 const storage = window.localStorage
 
@@ -56,6 +59,8 @@ type SearchableGame = {
 
 export default React.memo(function Library(): JSX.Element {
   const { t } = useTranslation()
+  const { target: tier2PortalTarget, setFilled: setTier2PortalFilled } =
+    useContext(Tier2PortalContext)
 
   const {
     libraryStatus,
@@ -729,39 +734,14 @@ export default React.memo(function Library(): JSX.Element {
     installing
   ])
 
-  // we need this to do proper `position: sticky` of the Add Game area
-  // the height of the Header can change at runtime with different font families
-  // and when resizing the window
+  // Reports to the shell that the Games tier-2 column has content, so it can
+  // collapse an empty column on routes where Library isn't mounted (REQ-34.10-09).
   useEffect(() => {
-    let timer: NodeJS.Timeout | null = null
-
-    const setHeaderHightCSS = () => {
-      if (timer) clearTimeout(timer)
-
-      // adding a timeout so we don't run this for every resize event
-      timer = setTimeout(() => {
-        const header = document.querySelector('.Header')
-        if (header) {
-          const headerHeight = header.getBoundingClientRect().height
-          const libraryHeader =
-            document.querySelector<HTMLDivElement>('.libraryHeader')
-          if (libraryHeader)
-            libraryHeader.style.setProperty(
-              '--header-height',
-              `${headerHeight}px`
-            )
-        }
-      }, 50)
-    }
-    // set when mounted
-    setHeaderHightCSS()
-    // also listen the resize event
-    window.addEventListener('resize', setHeaderHightCSS)
-
+    setTier2PortalFilled(true)
     return () => {
-      window.removeEventListener('resize', setHeaderHightCSS)
+      setTier2PortalFilled(false)
     }
-  }, [])
+  }, [setTier2PortalFilled])
 
   if (!epic && !gog && !amazon && !zoom) {
     return (
@@ -814,7 +794,9 @@ export default React.memo(function Library(): JSX.Element {
         setAlphabetFilterLetter
       }}
     >
-      <Header />
+      {tier2PortalTarget
+        ? createPortal(<Header />, tier2PortalTarget)
+        : null}
       <LibraryTour />
 
       <div className="listing">

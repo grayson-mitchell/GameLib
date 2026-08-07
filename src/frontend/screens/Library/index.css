@@ -45,7 +45,7 @@
   margin: 0;
   background: var(--gradient-body-background, var(--body-background));
   position: sticky;
-  top: var(--header-height, 82px);
+  top: 0;
   z-index: 9;
 }
 
