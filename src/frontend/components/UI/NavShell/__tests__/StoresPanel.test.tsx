@@ -57,7 +57,14 @@ jest.mock('../components/NavItem', () => ({
 }))
 
 // Imported after the mocks above (textual order -- this project's ts-jest
-// setup does not hoist jest.mock like babel-jest).
+// setup does not hoist jest.mock like babel-jest). `element.type` from
+// `React.createElement(NavItem, ...)` is a REFERENCE to whatever `NavItem`
+// resolves to at import time -- not the mock factory's return value, which
+// is only produced if the reference were actually CALLED. Importing the
+// same mocked binding here lets tests assert type identity rather than
+// invoking the element's type (see NavItem.test.tsx / 34.10-02 SUMMARY
+// Deviation 1 for the bug this avoids).
+import NavItem from '../components/NavItem'
 import StoresPanel from '../components/StoresPanel'
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
@@ -86,7 +93,7 @@ function collectElements(
 }
 
 function navItemsOf(tree: ReactNode): AnyElement[] {
-  return collectElements(tree).filter((el) => el.type === 'mock-navitem')
+  return collectElements(tree).filter((el) => el.type === NavItem)
 }
 
 function labelsOf(tree: ReactNode): string[] {
