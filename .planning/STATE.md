@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Phase 34.8 side track — plan 09 of 14 EXECUTED (generated `public/locales/en/gamelib.json`, all 48 retrofit keys from plans 07/08a/08b/08c present, verified programmatically. Discovered and fixed a real i18next-parser bug along the way: the default lexer `functions` list is exactly `['t']`, so the retrofit's second-aliased-hook idiom (`const { t: tGamelib } = useTranslation('gamelib')`, used at 17 call sites) was invisible to the parser -- 16 of 48 keys were silently missing until `functions: ['t', 'tGamelib']` was added to both lexer configs (with a regression test). Two `pnpm i18n` runs both produced churn in the three upstream catalogs, confirmed both times to be pre-existing, unrelated drift (Steam bridge/client setup strings, WebView OAuth login flow copy, Humble notification plurals, redeem-key dialog chrome) that predates this phase -- exactly the D-04-superseded ROADMAP item (3) gap, out of scope; reverted both times, upstream catalogs byte-identical. Built `meta/i18nCatalogChurnGuard.ts` (classifyChangedPaths/assertNoUpstreamChurn/UpstreamChurnError) as the D-05 mechanical no-churn assertion, wired as `pnpm i18n-churn-guard` and a `pnpm test:ci`-riding live-tree jest test. Taught `meta/lintTranslations.ts` about the `gamelib` namespace and scoped its CI-facing invocation to `gamelib`-only per D-15 (`pnpm lint-translations:gamelib`, via `LINT_TRANSLATIONS_NAMESPACES` env var -- a bare `VAR=val` prefix does not cross a shell pipe boundary, needed `export VAR=val &&` instead). `pnpm test:ci`: 203/203 suites, 4041/4041 green (was 202/4028). Next for 34.8: plan 10 (flip the i18n gate to blocking). 34.4.2 blocker UNCHANGED and still the critical path.)"
-last_updated: "2026-08-07T06:56:30.000Z"
+stopped_at: "Phase 34.8 side track — plan 10 of 14 EXECUTED (flipped the i18n gate to BLOCKING: `meta/__tests__/hardcodedStringGate.test.ts`'s `scope orchestration` test now asserts `report.violations`/`report.staleExemptions` both `toHaveLength(0)`, riding the already-blocking `pnpm test:ci`, plus a new `gate is not disabled` describe block (T-34.8-29/T-34.8-30). Discovered mid-task that `34.8-AUDIT.md § Closure`'s own re-measurement (`violations: 62`) was real -- the 52-item retrofit backlog was genuinely zero, but 62 `not-user-facing`/`glossary`-dispositioned literals the scanner had not yet learned to recognise stood between that and a literal `toHaveLength(0)`. Closed all 62 under Rule 1 (same narrow content-shape/structural-position discipline as plans 05/06/08c): new content-shape checks (icon-size multipliers, ALL-CAPS enum tokens, hex GUIDs, CDN query strings, domains, a `??`-prefixed sentinel), new structural checks (DOM/browser API args, internal string-comparison args, `.includes()` array elements), a shared composing-walk extended with `??`/template-interpolation hops, `isAssignedThenPassedToT` broadened to recognise diagnostic-log/excluded-JSX-attribute/technical-DOM-API consumption (not only `t()`), a split-glossary-term check (SidebarLinks' `Game`/`Lib`), `GameLibSteam` added to the glossary, and a second real use of the 34.8-08c declaration-scoped `i18n-gate-exempt:` marker on `StoreSearch/helpers.ts`'s `buildOwnedBadgeLabel()` (cross-file dataflow the same-file-only reference tracer cannot trace). Proved the gate genuinely fails: a real temporary literal in GameStatus.tsx failed the assertion naming file/line/column/text, then reverted clean. No allowlist growth, no new CI YAML. Wrote `34.8-I18N-CONTRACT.md` recording every deliberate non-action (D-06/D-13/D-20/D-21/D-22) plus the parser-alias trap and the honest open upstream-catalog-drift limit. `pnpm test:ci`: 203/203 suites, 4045/4045 green (was 203/4041). Next for 34.8: plans 11/12 (machine-fill script + phase closure). 34.4.2 blocker UNCHANGED and still the critical path.)"
+last_updated: "2026-08-07T19:40:00.000Z"
 last_activity: 2026-08-07
 progress:
   total_phases: 21
   completed_phases: 14
   total_plans: 241
-  completed_plans: 219
+  completed_plans: 220
   percent: 67
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 09 of 14 done — generated `public/locales/en/gamelib.json` (48 keys, all of 07/08a/08b/08c's retrofit content present), fixed a real i18next-parser `tGamelib`-alias lexer gap along the way, built the D-05 no-churn guard (`meta/i18nCatalogChurnGuard.ts`), scoped `lintTranslations.ts` to `gamelib`-only for CI per D-15; upstream catalogs byte-identical; next is 34.8-10) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
+**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 10 of 14 done — the i18n gate is now BLOCKING (`pnpm test:ci` fails on a new hardcoded fork-frontend literal), closed 62 scanner false positives `34.8-AUDIT.md`'s own re-measurement found beyond the already-zero 52-item retrofit backlog, proved the gate genuinely fails via a real temporary-violation experiment, wrote `34.8-I18N-CONTRACT.md`; next is 34.8-11/12) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -4075,6 +4075,9 @@ Recent decisions affecting current work:
 - [Phase 34.8-09]: Two `pnpm i18n` runs both churned the three upstream catalogs; both times traced (by reading the diffs in full) to pre-existing, unrelated drift — Steam bridge/client setup dialogs, WebView OAuth login flow copy, Humble notification plurals, redeem-key dialog chrome — that predates this retrofit phase and was never previously synced. This is the exact ROADMAP item (3) gap D-04 supersedes and places out of scope; reverted both times per the plan's mandatory revert discipline rather than fixed or explained away
 - [Phase 34.8-09]: `meta/i18nCatalogChurnGuard.ts` built to the plan's exact `<interfaces>` surface (classifyChangedPaths/assertNoUpstreamChurn/UpstreamChurnError), CLI half guarded by the `JEST_WORKER_ID` convention (mirrors `meta/buildCrossoverIndex.ts`) so importing it under jest never shells out; its `live tree` jest test asserts the real current `git diff` against `public/locales/` classifies with an empty upstream bucket — this is what turns D-05 from an agreement into something `pnpm test:ci` proves after every parser run
 - [Phase 34.8-09]: `lintTranslations.ts`'s D-15 scope selector reads `LINT_TRANSLATIONS_NAMESPACES` from an env var (not a CLI flag, since the script runs through an `esbuild --bundle | node` pipe and argv never reaches it); the first `package.json` script draft (`VAR=val esbuild ... | node`) silently ran unscoped because a bare env-var prefix does not cross a shell pipe boundary to the piped `node` process — fixed to `export VAR=val && esbuild ... | node`
+- [Phase 34.8-10]: The gate is now BLOCKING (D-12) — `meta/__tests__/hardcodedStringGate.test.ts`'s `scope orchestration` test asserts `report.violations`/`report.staleExemptions` both `toHaveLength(0)`, plus a new `gate is not disabled` describe block (T-34.8-29/T-34.8-30: totalCandidates > 0, scannedFiles matches the committed scope, allowlist stays at exactly 2 D-17 entries, fileExempt stays at exactly bootErrorSurface.ts)
+- [Phase 34.8-10]: `34.8-AUDIT.md § Closure`'s own re-measurement (`violations: 62`) was real, not a stale plan assumption — the 52-item retrofit backlog was genuinely zero, but 62 `not-user-facing`/`glossary`-dispositioned literals (per the AUDIT's own `## Triage`) stood between that and a literal `report.violations.length === 0`. Closed all 62 under Rule 1 rather than widening the allowlist or weakening the assertion — new content-shape checks (icon-size multipliers, ALL-CAPS enum tokens, hex GUIDs, CDN query strings, domains, a `??`-prefixed sentinel), new structural checks (DOM/browser API args, internal string-comparison args, `.includes()` array elements), `walkUpThroughComposingWrappers` extracted/extended with `??`/template-interpolation hops and shared by a new `findAssignedBindingNameNode`, `isAssignedThenPassedToT` broadened to recognise diagnostic-log/excluded-JSX-attribute/technical-DOM-API consumption not only `t()`, a split-glossary-term check for `SidebarLinks`' `Game`/`Lib`, `GameLibSteam` added to the glossary, and a second real use of the 34.8-08c declaration-scoped `i18n-gate-exempt:` marker on `StoreSearch/helpers.ts`'s `buildOwnedBadgeLabel()` (cross-file dataflow the same-file-only reference tracer cannot and should not trace)
+- [Phase 34.8-10]: Proved the gate genuinely fails, not just green jest — a real temporary literal added to `GameStatus.tsx` made the assertion fail naming the exact file/line/column/text (recorded verbatim in `34.8-10-SUMMARY.md`), then reverted byte-identical and re-ran green
 
 ### Pending Todos
 
@@ -4164,8 +4167,61 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-07T18:56:00+12:00
-Stopped at: Phase 34.8 side track — plan 09 of 14 EXECUTED (generated
+Last session: 2026-08-07T19:40:00+12:00
+Stopped at: Phase 34.8 side track — plan 10 of 14 EXECUTED (flipped the i18n gate to
+  BLOCKING: `meta/__tests__/hardcodedStringGate.test.ts`'s `scope orchestration` test now
+  asserts `report.violations`/`report.staleExemptions` both `toHaveLength(0)` — no more
+  deferred `console.log` — riding the already-blocking `pnpm test:ci` (the `meta` jest project
+  is already one of `jest.config.js`'s five projects, already run by `.github/workflows/
+  test.yml`). Added a `gate is not disabled` describe block (4 tests, T-34.8-29/T-34.8-30):
+  `totalCandidates > 0`, `scannedFiles` matches the committed `meta/i18nGateScope.json`, the
+  D-18 allowlist stays at exactly its two D-17 entries, `report.fileExempt` stays at exactly
+  `bootErrorSurface.ts`. Discovered mid-task that `34.8-AUDIT.md § Closure`'s own
+  re-measurement (`violations: 62`) was real, not a stale plan assumption — every one of the
+  52 `retrofit`-dispositioned backlog items IS closed (the plan's own stop condition, satisfied),
+  but 62 further literals the AUDIT's own `## Triage` had already classified
+  `not-user-facing`/`glossary` (never real i18n violations) stood between that and a literal
+  zero. Closed all 62 under Rule 1 (the same narrow content-shape/structural-position scanner-
+  bug-fixing discipline plans 05/06/08c already established in this exact file), not by
+  widening `meta/i18nGateAllowlist.json` (unchanged, confirmed by `git diff --quiet`) or
+  weakening the assertion: 6 new content-shape regexes in `isTechnicalToken` (icon-size
+  multipliers `2x`/`3x`, single-word ALL-CAPS enum/state tokens, 32-char hex GUIDs, CDN
+  query-string fragments, bare DNS hostnames, a `??`-prefixed backend sentinel); 3 new
+  structural-position checks (DOM/browser API technical arguments —
+  querySelector/querySelectorAll/getContext/setUserAgent/sessionStorage getItem/setItem —,
+  internal string-comparison arguments — includes/endsWith/startsWith/replace, any position —,
+  and `[...].includes()` array literal elements); `walkUpThroughComposingWrappers` extracted
+  from the existing ternary/`+`/parenthesized composing walk and extended with `??` and
+  template-interpolation hops, shared by `isComposedTCallArgument` and a new
+  `findAssignedBindingNameNode` (ternary-composed variable assignment, not only direct
+  `const x = 'text'`); `isAssignedThenPassedToT` broadened from "passed to t()" to "safely
+  consumed" (also exempt via a diagnostic console/window.api.log* argument, an already-excluded
+  JSX attribute, or a technical DOM API argument); `isPartOfSplitGlossaryTerm` recognising a
+  glossary term (`GameLib`) split across sibling JSX nodes (`SidebarLinks/index.tsx`'s
+  `Game<span>Lib</span>`); `GameLibSteam` added to `meta/i18nGlossary.json` (a compound of two
+  already-glossed terms); and a second real use of the 34.8-08c declaration-scoped
+  `i18n-gate-exempt:` marker on `StoreSearch/helpers.ts`'s `buildOwnedBadgeLabel()`, whose
+  returned object is consumed via `t(ownedLabel.key, ownedLabel.defaultValue, ...)` one
+  function-return/call-site hop beyond the gate's same-file-only reference tracing — a load-
+  bearing existing negative fixture ("still flags a string compared against an unrelated
+  property") was re-checked and confirmed unweakened throughout: the gate never grew a general
+  "any comparison is exempt" rule. Proved the gate genuinely fails: a real temporary literal
+  added to `GameStatus.tsx` made the assertion fail, naming the exact file/line/column/text
+  (recorded verbatim in `34.8-10-SUMMARY.md`); reverted, byte-identical (`git status
+  --porcelain` empty), gate green again. Wrote `34.8-I18N-CONTRACT.md`: how to add a string
+  (including the `tGamelib` parser-visibility trap plan 09 found), how the gate and its
+  exemption mechanisms work, how to regenerate `meta/i18nGateScope.json` after an upstream
+  sync (`pnpm gen-i18n-gate-scope`, local-only, needs the `heroic` remote), every deliberate
+  non-action with its decision ID (D-06/D-13/D-20/D-21/D-22), the D-17 allowlist deferrals, and
+  a plainly-stated open limit: the upstream catalogs still carry pre-existing, unrelated drift
+  the D-05 churn guard prevents from GROWING but does not itself CLOSE. REQ-34.8-05/-09/-13/-16
+  complete. `npx tsc --noEmit` clean; `pnpm codecheck` clean; `meta` jest 124/124 tests (no
+  regression); `pnpm test:ci` 203/203 suites, 4045/4045 tests (was 203/4041, +4 tests, 0
+  regressions). `.github/` untouched; allowlist untouched. See 34.8-10-SUMMARY.md.
+  Next for 34.8: plans 11/12 (machine-fill script + phase closure).
+  34.4.2 blocker UNCHANGED and still the critical path.
+
+Stopped at (superseded): Phase 34.8 side track — plan 09 of 14 EXECUTED (generated
   public/locales/en/gamelib.json via `pnpm i18n`, containing all 48 gamelib: keys named across
   34.8-07/08a/08b/08c's SUMMARYs — verified programmatically (flatten-and-compare, not eyeballed),
   48/48 present, 0 missing. Discovered and fixed a real i18next-parser bug along the way (Rule 1,
