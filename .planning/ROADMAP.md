@@ -2221,7 +2221,7 @@ new features (Steam et al.) had shipped hardcoded constants.*
 **Requirements:** REQ-34.8-01..17 (minted 2026-08-07 during `/gsd-plan-phase 34.8` from `34.8-CONTEXT.md` D-01..D-22 + `34.8-RESEARCH.md`. Research resolved the two decisions CONTEXT.md left open: the D-16 gate is a new `ts-morph` AST scanner exercised as a `meta/` jest test riding the already-blocking `pnpm test:ci` — **zero new CI YAML** — and D-07's merge-base diff is a committed snapshot, because `actions/checkout@v6` carries neither the Heroic upstream remote nor the merge-base commit. **Two targets named in this phase's own goal text above are resolved to NO CODE CHANGE by measurement, not descoped:** D-21 — ConsoleMode store labels, LogSettings titles and StoreSearch's `STORE_DISPLAY_NAME` are satisfied by extending the do-not-translate glossary with the compound/variant brand forms actually in use (`Amazon`, `ZOOM`, `Epic/Legendary`, `Amazon/Nile`, `Amazon Games`), so those three files need no retrofit; and D-22 — `PlatformSupport.tsx` is DROPPED, a measurement-superseded audit false positive whose only literals are exact glossary matches (`Windows`/`macOS`/`Linux`) and whose one prose string is already `t()`-wrapped. Also corrected: the "37 locales" figure above is wrong — the repo has **49** locale directories, i.e. 48 non-English; and item (3)'s "sync the stale en catalogs" is SUPERSEDED by D-01/D-04, the deliverable being `en/gamelib.json` generated repeatably in a fork-owned namespace. The retrofit backlog's true size is DISCOVERED by REQ-34.8-11's audit-mode gate run — 205 `src/frontend/**` files are touched since merge-base `b5b5cad3f` (104 net-new) — not assumed from the 4 files named above.)
 **Depends on:** Phase 34 (frontend-only; independent of the 34.x IPC slices)
 **Blocks:** Phase 35 (sequenced BEFORE 34.7 — 34.7 stays last before cutover)
-**Plans:** 8/13 plans executed
+**Plans:** 9/13 plans executed
 
 Plans:
 
@@ -2233,7 +2233,7 @@ Plans:
 - [x] 34.8-06-PLAN.md — wave 5: the gate's own audit-mode run → `34.8-AUDIT.md` triaged retrofit backlog (+ blocking scope decision if oversized)
 - [x] 34.8-07-PLAN.md — wave 6: retrofit `RedeemSteamKeyDialog/copy.ts` to the injected-`TFunction` idiom; `bootErrorSurface.ts` exemption comment; record D-21/D-22 no-change
 - [x] 34.8-08a-PLAN.md — wave 6: retrofit the two heavy audit-assigned files — `ThemeSelector` (14) + `SideloadDialog` (13) — into `gamelib:` keys, then prove that subset closed
-- [ ] 34.8-08b-PLAN.md — wave 6: retrofit the 15 one-to-three-string audit-assigned files (19 violations, incl. `appleRating.ts`) into `gamelib:` keys, then prove that subset closed
+- [x] 34.8-08b-PLAN.md — wave 6: retrofit the 15 one-to-three-string audit-assigned files (19 violations, incl. `appleRating.ts`) into `gamelib:` keys, then prove that subset closed
   <sub>(34.8-08 was split into 08a/08b on 2026-08-07 by the developer's `split-plan` scope decision — the measured backlog, 46 violations across 17 files, exceeded the single plan's context budget. `34.8-08-PLAN.superseded.md` must not execute. See `34.8-AUDIT.md` § Scope Decision.)</sub>
 - [ ] 34.8-09-PLAN.md — wave 7: generate `public/locales/en/gamelib.json`, build the D-05 no-churn guard, scope `lintTranslations.ts` to `gamelib`
 - [ ] 34.8-10-PLAN.md — wave 8: flip the gate to BLOCKING and write `34.8-I18N-CONTRACT.md` (incl. every deliberate non-action: D-06/D-13/D-20/D-21/D-22)

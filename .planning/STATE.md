@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: verifying
-stopped_at: Phase 34.8 side track — plan 08a of 13 EXECUTED (ThemeSelector + SideloadDialog retrofit, 27/27 violations closed)
-last_updated: "2026-08-07T04:05:00.000Z"
+stopped_at: Phase 34.8 side track — plan 08b of 13 EXECUTED (15-file long-tail retrofit, 18/19 violations closed + 1 blocked)
+last_updated: "2026-08-07T04:04:08.635Z"
 last_activity: 2026-08-07
 progress:
   total_phases: 21
   completed_phases: 14
   total_plans: 240
-  completed_plans: 215
+  completed_plans: 217
   percent: 67
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 08a of 13 done — ThemeSelector (14) + SideloadDialog (13) retrofitted, 27/27 violations closed, 23 new gamelib: keys; next is 34.8-08b) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
+**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 08b of 13 done — the 15-file long-tail retrofit, 18/19 violations closed + 1 blocked (Settings/index.tsx's defaultWineVersion, 14-file fan-out), 18 new gamelib: keys; 08a+08b together close plan 08's full 46-violation/17-file backlog; next is 34.8-09) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -3603,6 +3603,7 @@ Closed/parked native-install phases:
 | Phase 34.8 P04 | 35min | 2 tasks | 2 files |
 | Phase 34.8 P05 | 25min | 3 tasks | 3 files |
 | Phase 34.8 P06 | ~50min | 3 tasks | 4 files |
+| Phase 34.8 P08b | 50min | 3 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -4065,6 +4066,9 @@ Recent decisions affecting current work:
 - [Phase 34.8-06]: Developer selected split-plan (2026-08-07) to resolve the over-threshold 52-violation/17-file retrofit backlog: plan 34.8-08 splits into 34.8-08a/08b (etc.) by disjoint file sets, minted by the orchestrator; D-12's blocking-from-day-one posture stays fully unweakened, no allowlist entries added — see 34.8-AUDIT.md § Scope Decision
 - [Phase 34.8-07]: successWithPackage's fallback must mirror repairFailure.ts's assign-then-pass-to-t() shape verbatim (the SAME `message` binding holds the pre-assigned English fallback AND is the literal default argument passed to `t`) for the gate's Pattern-3 dataflow exemption to trace it — a string-concatenation fallback, or passing a different literal to `t()` than the pre-assigned one, does not trace and leaves residual gate violations even though runtime tests stay green; caught by running scanSource() directly rather than trusting `npx jest` alone (34.8-07-SUMMARY.md)
 - [Phase 34.8-07]: D-22 confirmed live: PlatformSupport.tsx's title="Windows"/"macOS"/"Linux" are exact meta/i18nGlossary.json matches and its prose is already t()-wrapped — measurement-superseded audit false positive, zero code change
+- [Phase 34.8-08b]: Settings/index.tsx's defaultWineVersion recorded `blocked`, not retrofitted — git grep confirmed 14 consumer files outside this plan's file set (AdvertiseAvxForRosetta/AutoDXVK/AutoDXVKNVAPI/AutoVKD3D/CrossoverBottle/DisableUMU/EnableDXVKFpsLimit/EnableMsync/PreferSystemLibs/SteamRuntime/WinePrefix/WineVersionSelector/GamesSettings/SyncSaves), and WineVersionSelector.tsx's own SelectField value + every MenuItem's WineVersionListItem confirmed .name genuinely renders as visible UI text — converting the constant to a t()-requiring function would require editing all 14 out-of-scope files, breaking the 08a/08b disjoint-files_modified parallel-execution guarantee
+- [Phase 34.8-08b]: WineVersionSelector.tsx's Flatpak <li> — chose option (a) (whole line as one gamelib key) over option (b) (extract only the annotation); option (b) was tried first and produced a NEW residual jsx-text violation for the leading path+paren fragment once the JSX text was split, caught by running scanScope() directly rather than trusting jest alone
+- [Phase 34.8-08b]: A t() call nested three levels deep inside multi-line template literals can defeat the gate's AST tracing even when tsc/jest are fully green (GameStatus.tsx's ETA fragment) — extracting the t() call to a flat local binding computed before the template literal is the fix; a lookup-object's dead key (unreachable after a ternary special-cases it ahead of the object[dynamicKey] access) also stays flagged since the scanner traces the whole object's flow to t(), not per-branch reachability (LibraryFilters.tsx's RunnerToStore) — removing the dead key, not restructuring the surviving keys, is the fix
 
 ### Pending Todos
 
@@ -4154,8 +4158,48 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-07T16:05:00+12:00
-Stopped at: Phase 34.8 side track — plan 08a of 13 EXECUTED (retrofitted the audit's two
+Last session: 2026-08-07T17:10:00+12:00
+Stopped at: Phase 34.8 side track — plan 08b of 13 EXECUTED (retrofitted the remaining 15
+  one-to-three-string "long tail" files from the audit's split-plan backlog — the disjoint
+  sibling of 08a's two heavy files. 18 of 19 assigned violations closed, 1 blocked, per
+  34.8-08b-CLOSURE.md; 08a+08b together fully account for plan 08's original 46-violation/
+  17-file backlog (27 + 19 = 46). 18 new gamelib: keys, no reuse (gamelib:gamepage.*,
+  gamelib:app.routeError, gamelib:library.storeOther, gamelib:consoleMode.*,
+  gamelib:discounts.pegiPrefix, gamelib:downloadManager.progressPaused,
+  gamelib:humble.lessThanAMinute, gamelib:login.unknownUser, gamelib:settings.gamescope*,
+  gamelib:settings.wineFlatpakPath). appleRating.ts's ratingTier(rating, t) takes an injected
+  TFunction (second use of this idiom after plan 07's copy.ts), proven by a new
+  appleRating.test.ts sibling to protonRating.test.ts. Two developer-judgement calls the audit
+  left open, both decided and recorded: (1) WineVersionSelector.tsx's Flatpak <li> — option (a)
+  chosen (whole line as one key), after option (b) (annotation-only) was tried first and found
+  to fragment the JSX text into a new residual violation; (2) Settings/index.tsx's
+  defaultWineVersion — recorded `blocked`, not retrofitted: git grep confirmed 14 consumer
+  files outside this plan's file set, and WineVersionSelector.tsx's own SelectField/MenuItem
+  chain confirmed wineVersion.name genuinely renders as visible UI text, so converting the
+  constant would require editing 14 out-of-scope files and break the 08a/08b disjoint-scope
+  parallel-execution guarantee. Three Rule-1 deviations, all caught by running scanScope()
+  directly (not jest alone): GameStatus.tsx's deeply-nested multi-line template literal around
+  a t() call didn't gate-trace (tsc/jest both green, scanner still flagged a garbled
+  multi-line literal) — fixed by extracting to a flat local etaText binding;
+  LibraryFilters/index.tsx's RunnerToStore kept its dead 'sideload' key flagged even after the
+  ternary special-case bypassed it — fixed by removing the now-unreachable key (5 real
+  glossary-exempt brand entries untouched); App.tsx's first retrofit attempt split
+  `<ErrorComponent message=` across lines, breaking a pre-existing Login/index.test.tsx
+  source-gate regex — fixed by extracting to a local `message` binding and keeping the JSX
+  return single-line. REQ-34.8-01/-11/-17 complete. tsc clean; jest 45/45 suites, 540/540 tests
+  (was 44/532); pnpm test:ci 202/202 suites, 4028/4028 tests (was 201/4020, +1 suite, +8
+  tests); meta gate scope-orchestration green; allowlist unchanged. No new sibling modules
+  created (unlike 08a's themeLabels.ts/filters.ts) — no meta/i18nGateScope.json regeneration
+  owed by this plan. See 34.8-08b-SUMMARY.md and 34.8-08b-CLOSURE.md.
+  Next for 34.8: 34.8-08a-CLOSURE.md + 34.8-08b-CLOSURE.md + 34.8-07-SUMMARY.md's closure facts
+  still need consolidating into 34.8-AUDIT.md § Closure (orchestrator work, not a plan's own),
+  which 34.8-10-PLAN.md expects before flipping the gate to blocking — must carry forward this
+  plan's one blocked item honestly, not smooth it into a false 100%-closed. Then 34.8-09-PLAN.md
+  (the gamelib.json catalog / lint-translations scoping plan, consuming this plan's + 07's +
+  08a's gamelib: key lists — 6 + 23 + 18 = 47 total).
+  34.4.2 blocker UNCHANGED and still the critical path.
+
+Stopped at (superseded): Phase 34.8 side track — plan 08a of 13 EXECUTED (retrofitted the audit's two
   "heavy" split-plan files — ThemeSelector's 14 theme display names and SideloadDialog's 13
   native file-picker filter labels — 27/27 violations closed, 0 reclassified, 0 blocked, per
   34.8-08a-CLOSURE.md. 23 new gamelib: keys (14 gamelib:themeSelector.*, 9
