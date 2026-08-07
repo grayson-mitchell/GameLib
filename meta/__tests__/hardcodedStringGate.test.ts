@@ -958,6 +958,72 @@ describe('hardcodedStringGate', () => {
     })
   })
 
+  describe('34.8-08c: declaration-scoped exemption marker', () => {
+    it('exempts only the ONE marked top-level statement — a real violation elsewhere in the same file, before or after it, is still flagged, and result.fileExempt stays false', () => {
+      const source = `
+        const routeError = 'Something went wrong'
+
+        /**
+         * ${FILE_EXEMPT_MARKER} 'Wine Default' is a persisted-config fallback sentinel, not rendered directly
+         */
+        export const defaultWineVersion = {
+          bin: '/usr/bin/wine',
+          name: 'Wine Default',
+          type: 'wine'
+        }
+
+        const anotherRealViolation = 'Repair failed. See the log.'
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+      expect(result.fileExempt).toBe(false)
+      expect(result.violations).toHaveLength(2)
+      const violationTexts = result.violations.map((v) => v.text)
+      expect(violationTexts).toContain('Something went wrong')
+      expect(violationTexts).toContain('Repair failed. See the log.')
+      expect(violationTexts).not.toContain('Wine Default')
+    })
+
+    it('does NOT exempt a bare marker with no explanation on a non-first statement — the marked declaration\'s literal is still flagged', () => {
+      const source = `
+        const routeError = 'Something went wrong'
+
+        /**
+         * ${FILE_EXEMPT_MARKER}
+         */
+        export const defaultWineVersion = {
+          bin: '/usr/bin/wine',
+          name: 'Wine Default',
+          type: 'wine'
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+      expect(result.fileExempt).toBe(false)
+      const violationTexts = result.violations.map((v) => v.text)
+      expect(violationTexts).toContain('Wine Default')
+    })
+
+    it('non-regression: the marker on the file\'s actual FIRST statement still sets result.fileExempt to true, unchanged from the existing whole-file behaviour', () => {
+      const source = `
+        /**
+         * ${FILE_EXEMPT_MARKER} 'Wine Default' is a persisted-config fallback sentinel, not rendered directly
+         */
+        export const defaultWineVersion = {
+          bin: '/usr/bin/wine',
+          name: 'Wine Default',
+          type: 'wine'
+        }
+
+        const anotherRealViolation = 'Repair failed. See the log.'
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+      expect(result.fileExempt).toBe(true)
+      expect(result.violations).toHaveLength(0)
+    })
+  })
+
   // ---------------------------------------------------------------------
   // Plan 05: scanScope() whole-scope orchestration + D-18's self-expiring
   // allowlist. Every case below operates on TEMPORARY fixture files written

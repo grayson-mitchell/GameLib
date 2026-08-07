@@ -30,7 +30,7 @@
 
 import { readFileSync } from 'node:fs'
 
-import { Node, Project, SourceFile, ts } from 'ts-morph'
+import { CommentRange, Node, Project, SourceFile, ts } from 'ts-morph'
 
 // ---------------------------------------------------------------------------
 // Types (contract consumed by plans 04, 05, 06 — do not rename or reshape)
@@ -851,15 +851,32 @@ function isAssignedThenPassedToT(
  * for this mechanism anywhere other than `bootErrorSurface.ts` should be
  * challenged in review — it is the single largest-blast-radius exemption
  * in the gate (T-34.8-09).
+ *
+ * 34.8-08c: this ONE marker string now carries TWO granularities,
+ * distinguished purely by WHERE its leading comment sits, not by any
+ * different marker text:
+ *   - on the source file's FIRST top-level statement -> the WHOLE FILE is
+ *     exempt (existing, unchanged `checkFileExemptMarker` behaviour below;
+ *     `bootErrorSurface.ts` remains its only real user)
+ *   - on any OTHER top-level statement -> ONLY THAT ONE STATEMENT is
+ *     exempt (`checkDeclarationExemptMarker` below; `Settings/index.tsx`'s
+ *     `defaultWineVersion` declaration is the second-ever real user,
+ *     34.8-08c)
+ * This is a deliberate reuse of one marker string at two scopes, not an
+ * accidental overlap — a future author placing this marker on a non-first
+ * statement should not be surprised that it does NOT blank the whole file.
  */
 export const FILE_EXEMPT_MARKER = 'i18n-gate-exempt:'
 
-function checkFileExemptMarker(sourceFile: SourceFile): boolean {
-  const firstStatement = sourceFile.getStatements()[0]
-  const ranges = firstStatement
-    ? firstStatement.getLeadingCommentRanges()
-    : sourceFile.getLeadingCommentRanges()
-
+/**
+ * Shared "does this comment range carry the marker plus a non-empty
+ * same-line reason" check, used by both `checkFileExemptMarker` (whole-
+ * file) and `checkDeclarationExemptMarker` (single top-level statement)
+ * below, so the string-slicing logic exists in exactly one place.
+ */
+function commentRangesCarryExemptMarker(
+  ranges: readonly CommentRange[]
+): boolean {
   return ranges.some((range) => {
     const rangeText = range.getText()
     const markerIndex = rangeText.indexOf(FILE_EXEMPT_MARKER)
@@ -870,6 +887,48 @@ function checkFileExemptMarker(sourceFile: SourceFile): boolean {
     const reason = afterMarker.replace(/\*\/\s*$/, '').trim()
     return reason.length > 0
   })
+}
+
+function checkFileExemptMarker(sourceFile: SourceFile): boolean {
+  const firstStatement = sourceFile.getStatements()[0]
+  const ranges = firstStatement
+    ? firstStatement.getLeadingCommentRanges()
+    : sourceFile.getLeadingCommentRanges()
+
+  return commentRangesCarryExemptMarker(ranges)
+}
+
+/**
+ * 34.8-08c: walks `node`'s ancestors until it finds the direct child of
+ * the `SourceFile` — i.e. the top-level statement that encloses `node`.
+ * Returns `undefined` if `node` has no such ancestor (e.g. `node` is
+ * already a top-level node with no further parent, or is the `SourceFile`
+ * itself).
+ */
+function getEnclosingTopLevelStatement(node: Node): Node | undefined {
+  let current: Node = node
+  let parent = current.getParent()
+  while (parent) {
+    if (Node.isSourceFile(parent)) return current
+    current = parent
+    parent = current.getParent()
+  }
+  return undefined
+}
+
+/**
+ * 34.8-08c: the declaration-scoped sibling of `checkFileExemptMarker`.
+ * Exempts only the literal(s) inside the ONE top-level statement whose
+ * OWN leading comment carries the marker plus a reason — never the whole
+ * file. A marker on the file's first statement is handled entirely by
+ * `checkFileExemptMarker` above (checked first in `record()`, see below);
+ * this function only ever runs for candidates whose enclosing top-level
+ * statement is some OTHER, later statement.
+ */
+function checkDeclarationExemptMarker(node: Node): boolean {
+  const statement = getEnclosingTopLevelStatement(node)
+  if (!statement) return false
+  return commentRangesCarryExemptMarker(statement.getLeadingCommentRanges())
 }
 
 // ---------------------------------------------------------------------------
@@ -912,6 +971,14 @@ export function scanSource(
     // a zero-violation exempt file is distinguishable from an unscanned
     // one (T-34.8-07), but never individually classified.
     if (fileExemptResult) {
+      exempted += 1
+      return
+    }
+
+    // 34.8-08c: declaration-scoped sibling of the whole-file check above —
+    // exempts only the one top-level statement the marker leads, never
+    // `result.fileExempt` (that field means "the WHOLE file is exempt").
+    if (checkDeclarationExemptMarker(node)) {
       exempted += 1
       return
     }
