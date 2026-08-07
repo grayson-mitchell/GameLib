@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: verifying
-stopped_at: Phase 34.8 side track — plan 08b of 13 EXECUTED (15-file long-tail retrofit, 18/19 violations closed + 1 blocked)
-last_updated: "2026-08-07T04:04:08.635Z"
+status: executing
+stopped_at: "Phase 34.8 side track — plan 08c of 14 EXECUTED (render-site fix for `defaultWineVersion`'s `'Wine Default'`: `WineVersionListItem` translates the sentinel at its one real render site, and the constant's declaration is exempted via a NEW declaration-scoped `i18n-gate-exempt:` mechanism — narrower than a full-file marker, which would have blinded the gate to ~10 other real strings in `Settings/index.tsx` and broken plan 10's `fileExempt` acceptance criterion. No allowlist entry added; the constant's runtime value is unchanged because it is persisted in user config. Plan 08's full 46-violation backlog is now ZERO-blocked. Wave 6 complete: 07 + 08a + 08b + 08c. Next for 34.8: consolidate the three CLOSURE docs into `34.8-AUDIT.md § Closure` and regenerate `meta/i18nGateScope.json` (08a added two new sibling modules not yet in the snapshot), then wave 7 = plan 09. 34.4.2 blocker UNCHANGED and still the critical path.)"
+last_updated: "2026-08-07T04:55:44.276Z"
 last_activity: 2026-08-07
 progress:
   total_phases: 21
   completed_phases: 14
-  total_plans: 240
-  completed_plans: 217
+  total_plans: 241
+  completed_plans: 218
   percent: 67
 ---
 
@@ -3604,6 +3604,7 @@ Closed/parked native-install phases:
 | Phase 34.8 P05 | 25min | 3 tasks | 3 files |
 | Phase 34.8 P06 | ~50min | 3 tasks | 4 files |
 | Phase 34.8 P08b | 50min | 3 tasks | 17 files |
+| Phase 34.8 P08c | 30min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -4069,6 +4070,7 @@ Recent decisions affecting current work:
 - [Phase 34.8-08b]: Settings/index.tsx's defaultWineVersion recorded `blocked`, not retrofitted — git grep confirmed 14 consumer files outside this plan's file set (AdvertiseAvxForRosetta/AutoDXVK/AutoDXVKNVAPI/AutoVKD3D/CrossoverBottle/DisableUMU/EnableDXVKFpsLimit/EnableMsync/PreferSystemLibs/SteamRuntime/WinePrefix/WineVersionSelector/GamesSettings/SyncSaves), and WineVersionSelector.tsx's own SelectField value + every MenuItem's WineVersionListItem confirmed .name genuinely renders as visible UI text — converting the constant to a t()-requiring function would require editing all 14 out-of-scope files, breaking the 08a/08b disjoint-files_modified parallel-execution guarantee
 - [Phase 34.8-08b]: WineVersionSelector.tsx's Flatpak <li> — chose option (a) (whole line as one gamelib key) over option (b) (extract only the annotation); option (b) was tried first and produced a NEW residual jsx-text violation for the leading path+paren fragment once the JSX text was split, caught by running scanScope() directly rather than trusting jest alone
 - [Phase 34.8-08b]: A t() call nested three levels deep inside multi-line template literals can defeat the gate's AST tracing even when tsc/jest are fully green (GameStatus.tsx's ETA fragment) — extracting the t() call to a flat local binding computed before the template literal is the fix; a lookup-object's dead key (unreachable after a ternary special-cases it ahead of the object[dynamicKey] access) also stays flagged since the scanner traces the whole object's flow to t(), not per-branch reachability (LibraryFilters.tsx's RunnerToStore) — removing the dead key, not restructuring the surviving keys, is the fix
+- [Phase 34.8-08c]: Render-site fix + declaration-scoped i18n-gate-exempt: marker close 08b's blocked defaultWineVersion item: WineVersionListItem translates the display at its one real render site; defaultWineVersion's declaration is exempted narrowly via a new getEnclosingTopLevelStatement()-based gate mechanism, not a full-file exemption or an allowlist entry. Plan 08's full 46-violation backlog is now zero-blocked.
 
 ### Pending Todos
 

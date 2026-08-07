@@ -2234,7 +2234,8 @@ Plans:
 - [x] 34.8-07-PLAN.md — wave 6: retrofit `RedeemSteamKeyDialog/copy.ts` to the injected-`TFunction` idiom; `bootErrorSurface.ts` exemption comment; record D-21/D-22 no-change
 - [x] 34.8-08a-PLAN.md — wave 6: retrofit the two heavy audit-assigned files — `ThemeSelector` (14) + `SideloadDialog` (13) — into `gamelib:` keys, then prove that subset closed
 - [x] 34.8-08b-PLAN.md — wave 6: retrofit the 15 one-to-three-string audit-assigned files (19 violations, incl. `appleRating.ts`) into `gamelib:` keys, then prove that subset closed
-  <sub>(34.8-08 was split into 08a/08b on 2026-08-07 by the developer's `split-plan` scope decision — the measured backlog, 46 violations across 17 files, exceeded the single plan's context budget. `34.8-08-PLAN.superseded.md` must not execute. See `34.8-AUDIT.md` § Scope Decision.)</sub>
+- [x] 34.8-08c-PLAN.md — wave 6: close 08b's one blocked violation — translate `defaultWineVersion`'s `'Wine Default'` at its render site and exempt the declaration narrowly
+  <sub>(34.8-08 was split into 08a/08b on 2026-08-07 by the developer's `split-plan` scope decision — the measured backlog, 46 violations across 17 files, exceeded the single plan's context budget. `34.8-08-PLAN.superseded.md` must not execute. See `34.8-AUDIT.md` § Scope Decision. 08c was added the same day to close the single `blocked` item 08b correctly refused to fix out-of-scope; the developer chose the render-site approach over a 14-file fan-out or an allowlist entry.)</sub>
 - [ ] 34.8-09-PLAN.md — wave 7: generate `public/locales/en/gamelib.json`, build the D-05 no-churn guard, scope `lintTranslations.ts` to `gamelib`
 - [ ] 34.8-10-PLAN.md — wave 8: flip the gate to BLOCKING and write `34.8-I18N-CONTRACT.md` (incl. every deliberate non-action: D-06/D-13/D-20/D-21/D-22)
 - [ ] 34.8-11-PLAN.md — wave 8: build the D-08/D-09/D-10/D-11 machine-fill script with hermetic tests and a bulk-run refusal
