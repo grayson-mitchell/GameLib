@@ -1,3 +1,5 @@
+import { TFunction } from 'i18next'
+
 import { RedeemKeyOutcome } from 'common/types/steam'
 
 // SPEC REQ5 / D-08: the four RedeemKeyOutcome buckets (+ 'error') must each
@@ -10,39 +12,84 @@ export interface RedeemOutcomeCopy {
   tone: 'success' | 'error'
 }
 
+// Phase 34.8-07 (REQ-34.8-12/-13): routed through an injected TFunction
+// rather than `import { t } from 'i18next'` (GlobalStateV2.ts's idiom) —
+// this module is called during render/event handling, so it needs the
+// calling component's Suspense-resolved `t`, not a module-scope binding that
+// races i18next initialisation. Mirrors repairFailure.ts's injected-
+// TFunction idiom, including its try/catch English-fallback posture: a
+// throwing `t` must still yield a rendered dialog.
 export function redeemOutcomeCopy(
   outcome: RedeemKeyOutcome,
+  t: TFunction,
   packageName?: string
 ): RedeemOutcomeCopy {
   switch (outcome) {
-    case 'success':
-      return {
-        tone: 'success',
-        message: packageName
-          ? `Key redeemed! ${packageName} has been added to your Steam library.`
-          : 'Key redeemed! Your Steam library has been updated.'
+    case 'success': {
+      if (packageName) {
+        // i18next interpolation, not a template literal — a template
+        // literal cannot be translated as a unit, which is why this file
+        // was a retrofit target in the first place.
+        let message =
+          'Key redeemed! ' + packageName + ' has been added to your Steam library.'
+        try {
+          message = t(
+            'gamelib:redeemKey.successWithPackage',
+            'Key redeemed! {{packageName}} has been added to your Steam library.',
+            { packageName }
+          )
+        } catch {
+          // keep the hardcoded English fallback -- a throwing `t` must
+          // still yield a rendered dialog
+        }
+        return { tone: 'success', message }
       }
-    case 'already-owned':
-      return {
-        tone: 'error',
-        message: 'This key has already been redeemed — you already own this on Steam.'
+      let message = 'Key redeemed! Your Steam library has been updated.'
+      try {
+        message = t('gamelib:redeemKey.successNoPackage', message)
+      } catch {
+        // keep the hardcoded English fallback
       }
-    case 'invalid':
-      return {
-        tone: 'error',
-        message: "This key doesn't look right. Double-check it and try again."
+      return { tone: 'success', message }
+    }
+    case 'already-owned': {
+      let message =
+        'This key has already been redeemed — you already own this on Steam.'
+      try {
+        message = t('gamelib:redeemKey.alreadyOwned', message)
+      } catch {
+        // keep the hardcoded English fallback
       }
-    case 'rate-limited':
-      return {
-        tone: 'error',
-        message: 'Too many attempts — please wait a bit before trying again.'
+      return { tone: 'error', message }
+    }
+    case 'invalid': {
+      let message = "This key doesn't look right. Double-check it and try again."
+      try {
+        message = t('gamelib:redeemKey.invalid', message)
+      } catch {
+        // keep the hardcoded English fallback
       }
+      return { tone: 'error', message }
+    }
+    case 'rate-limited': {
+      let message = 'Too many attempts — please wait a bit before trying again.'
+      try {
+        message = t('gamelib:redeemKey.rateLimited', message)
+      } catch {
+        // keep the hardcoded English fallback
+      }
+      return { tone: 'error', message }
+    }
     case 'error':
-    default:
-      return {
-        tone: 'error',
-        message:
-          "Couldn't reach Steam to redeem this key. Check your connection and try again."
+    default: {
+      let message =
+        "Couldn't reach Steam to redeem this key. Check your connection and try again."
+      try {
+        message = t('gamelib:redeemKey.error', message)
+      } catch {
+        // keep the hardcoded English fallback
       }
+      return { tone: 'error', message }
+    }
   }
 }
