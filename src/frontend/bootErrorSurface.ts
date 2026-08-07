@@ -1,4 +1,10 @@
 /**
+ * i18n-gate-exempt: this module renders the renderer's bootstrap-failure
+ * surface and runs BEFORE i18next.init() completes, so no t() call here can
+ * resolve -- its English strings are deliberate and permanent (D-14, D-19).
+ */
+
+/**
  * Dependency-free on-page error surface (Phase 27 Plan 05 blank-screen fix).
  *
  * The Tauri dev webview exposes no right-click "Inspect" on macOS, so any uncaught
