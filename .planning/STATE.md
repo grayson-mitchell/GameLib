@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.10-01-PLAN.md
-last_updated: "2026-08-07T10:40:51.033Z"
+stopped_at: Completed 34.10-02-PLAN.md
+last_updated: "2026-08-07T10:57:20.588Z"
 last_activity: 2026-08-07
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 252
-  completed_plans: 222
-  percent: 88
+  completed_plans: 223
+  percent: 61
 ---
 
 # Project State
@@ -480,7 +480,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — EXECUTING
 EXECUTED 2026-08-06, STILL DID NOT CLOSE (gate FAILED 1/6) -- gap cycle 5 required, NOT COMPLETE
-Plan: 2 of 11
+Plan: 3 of 11
 glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
 see 34.4.2-13-SUMMARY.md. Plan 14 EXECUTED 2026-08-05 -- T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW
 single-flight guard refuses a second visible login window while one is pending/presented, 25s TTL
@@ -3606,6 +3606,7 @@ Closed/parked native-install phases:
 | Phase 34.8 P08b | 50min | 3 tasks | 17 files |
 | Phase 34.8 P08c | 30min | 2 tasks | 4 files |
 | Phase 34.10 P01 | 20min | 2 tasks | 5 files |
+| Phase 34.10 P02 | 35min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -4084,6 +4085,9 @@ Recent decisions affecting current work:
 - [Phase 34.8-11]: `meta/machineFillGamelib.ts` built as a pure D-09 contract layer (`collectMissingKeys`/`buildTranslationMemory`/`validateTranslation`/`mergeFill`/`fillLocale`, no fs/network/clock, `now: Date` threaded through) plus a real `createAnthropicTranslator` backend and CLI, wired as `pnpm machine-fill-gamelib`. D-08's bulk-run refusal ordered BEFORE any credential check or network call — proved live by actually running the CLI three times (unset `GAMELIB_MT_LOCALES`, `=all` without `GAMELIB_MT_CONFIRM_BULK=1`, a named locale with no `ANTHROPIC_API_KEY`), all three non-zero exit with the correct message, transcripts recorded in `34.8-11-SUMMARY.md`. `git status --porcelain public/locales/` stayed empty across all three runs — deliberately NOT bulk-run this phase (D-08). One Rule-1 deviation: a stray NUL byte in a template literal made git classify the whole source file as binary (`Bin ... bytes` diffs) — found by inspecting the actual commit diff, not by trusting the green test suite (a NUL and a space behave identically as a Set dedupe key); fixed with a byte-level rewrite, `6795179e5`. Known limitation, not a defect: the six `redeemKey.*` keys with an empty English catalog default (their real default lives in an inline `t()` call, per plan 09) are excluded from `collectMissingKeys`'s `missing` set — nothing to translate FROM yet. REQ-34.8-15 complete. `meta` jest 12/12 suites, 319/319 tests (was 11/291, +1 suite, +24 tests, includes the still-green `hardcodedStringGate` blocking gate); `pnpm test:ci` 204/204 suites, 4069/4069 tests (was 203/4045, +1 suite, +24 tests, 0 regressions); `tsc --noEmit`/`pnpm codecheck` clean.
 - [Phase 34.10]: resolveDefaultStore ports the SidebarLinks default-store cascade verbatim, including the sessionStorage last-store override that wins over every branch
 - [Phase 34.10]: Tier2PortalContext seam exists because LibraryContext's no-op initialContext would silently swallow filter interactions if <Header> were moved instead of portalled into tier 2
+- [Phase 34.10]: 34.10-02: --traffic-light-inset is 0px, not the sketches' reserved value -- no overlaid macOS titlebar exists on this branch today (framelessWindow defaults false, no titleBarStyle/decorations override)
+- [Phase 34.10]: 34.10-02: --tier2-width is 204px (D-10), not the filter sketch's 218px -- 204px is what the navigation sketch's layout/collapse/min-width rules were judged against; 218px is 34.11 scope
+- [Phase 34.10]: 34.10-02: tier-2 collapse is a pure CSS width/padding/opacity transition on a permanently-mounted element, never display:none or unmount, so the always-mounted version slot survives a tab switch
 
 ### Pending Todos
 
@@ -4173,8 +4177,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-07T10:40:51.018Z
-Stopped at: Completed 34.10-01-PLAN.md
+Last session: 2026-08-07T10:57:20.574Z
+Stopped at: Completed 34.10-02-PLAN.md
   34.10-DISCUSSION-LOG.md written and committed (`d421405bd`), 13 decisions (D-01..D-13) over
   4 discussed areas. Still design/planning only: no code, no plans, phase status Pending.
   Next: `/gsd-plan-phase 34.10`. The parked work below is UNCHANGED — 34.8 is still parked at
