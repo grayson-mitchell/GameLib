@@ -62,6 +62,7 @@
     "lint-translations": "esbuild --bundle --platform=node --target=node21 meta/lintTranslations.ts | node",
     "lint-translations:gamelib": "export LINT_TRANSLATIONS_NAMESPACES=gamelib && esbuild --bundle --platform=node --target=node21 meta/lintTranslations.ts | node",
     "i18n-churn-guard": "esbuild --bundle --platform=node --target=node21 meta/i18nCatalogChurnGuard.ts | node",
+    "machine-fill-gamelib": "esbuild --bundle --platform=node --target=node21 meta/machineFillGamelib.ts | node",
     "build-crossover-index": "esbuild --bundle --platform=node --target=node21 meta/buildCrossoverIndex.ts | node",
     "gen-i18n-gate-scope": "esbuild --bundle --platform=node --target=node21 meta/genI18nGateScope.ts | node",
     "gen-vtables": "esbuild --bundle --platform=node --target=node21 meta/gen_vtables.ts | node",
