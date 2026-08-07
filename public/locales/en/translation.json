@@ -725,6 +725,11 @@
         "sync": "Sync Complete",
         "unsync": "Unsync Complete"
     },
+    "nav": {
+        "tabs": {
+            "games": "Games"
+        }
+    },
     "next": "Next",
     "notify": {
         "error": {
