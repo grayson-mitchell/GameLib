@@ -1,0 +1,112 @@
+// Shell-level layout for the two-tier navigation (34.10-02 Task 2).
+//
+// There is NO wrapping `.NavShell` element -- `NavShell` (plan 34.10-07)
+// returns a FRAGMENT whose two top-level children are `.NavShell__navbar`
+// and `.NavShell__tier2`, because both must be direct grid items of `.App`
+// to resolve their `grid-area`. A wrapper div would break grid placement.
+// The three tokens below are therefore declared at `:root`, not on a shell
+// wrapper selector.
+:root {
+  // REQ-34.10-10 / D-10. The two sketch files conflict: 204px
+  // (navigation-shell.md:59,156) vs 218px (library-filtering.md:109-111).
+  // 204px wins because it is the value the navigation sketch's own layout,
+  // collapse transition and content `min-width: 0` rules were built and
+  // judged against -- 218px appears only in the filter sketch, which is
+  // 34.11's scope. Declared exactly once (see shellTokens.test.ts) so
+  // 34.11 can retune it in one place.
+  --tier2-width: 204px;
+
+  // Nearest multiple of 8 to the sketch's 50px navbar height (UI-SPEC §
+  // Layout).
+  --navbar-height: 56px;
+
+  // REQ-34.10-03 / D-01. The design sketches reserve space at the window's
+  // top-left for an overlaid macOS title bar's traffic lights, but nothing
+  // on this branch currently overlays the title bar: `framelessWindow`
+  // defaults to false (`src/backend/config.ts:367`), neither
+  // `tauri.conf.json` nor `main.rs` set a `titleBarStyle`/`decorations`
+  // override, and Tauri's `setDecorations(false)` removes the traffic
+  // lights entirely -- so the correct reservation today is zero. This
+  // exists as a token so that adopting overlay mode later is a value
+  // change, not a re-layout. Do NOT set this defensively to the sketches'
+  // reserved value: an un-overlaid native title bar makes that reservation
+  // wrong, not merely unnecessary.
+  --traffic-light-inset: 0px;
+}
+
+.NavShell__navbar {
+  grid-area: navbar;
+  height: var(--navbar-height);
+  background: var(--navbar-background);
+  display: flex;
+  // Tabs sit on the baseline -- this is what makes the card-tab seam land
+  // (see .claude/skills/sketch-findings-gamelib/references/navigation-shell.md
+  // § CSS Patterns).
+  align-items: flex-end;
+  padding-inline-start: var(--traffic-light-inset);
+}
+
+// D-05: reserve room for `WindowControls` so it never overlaps the
+// nav-right cluster, mirroring the hack deleted from `Header/index.css:14-18`
+// in plan 34.10-06. `WindowControls` itself is untouched here -- 34.1 owns
+// it and it keeps `grid-area: content; justify-self: right`.
+.frameless:not(.fullscreen) .NavShell__navbar {
+  padding-inline-end: calc(
+    var(--overlay-controls-width) - env(titlebar-area-x, 0px) + 10px
+  );
+}
+
+.NavShell__wordmark {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.NavShell__navRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-inline-start: auto;
+}
+
+.NavShell__tier2 {
+  grid-area: tier2;
+  width: var(--tier2-width);
+  flex: none;
+  background: var(--navbar-background);
+  border-inline-end: 1px solid var(--divider);
+  overflow: hidden;
+  // Replaces `--sidebar-horizontal-padding` (`Sidebar/index.scss:2`) for
+  // the ported tier-2 row rules in `components/NavItem/index.scss`.
+  --tier2-row-padding-inline: var(--space-md);
+  transition:
+    width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    padding 0.22s ease,
+    opacity 0.18s ease;
+}
+
+// Manage Accounts only (REQ-34.10-03 § Design Decisions #5). Collapse is
+// CSS only -- the element stays mounted, which is what lets the
+// always-mounted HeroicVersion in `.NavShell__versionSlot` survive a tab
+// switch (REQ-34.10-12). Do NOT unmount or `display: none` this: that would
+// defeat the always-mounted version slot.
+.NavShell__tier2--collapsed {
+  width: 0;
+  padding-inline: 0;
+  opacity: 0;
+  border-inline-end-color: transparent;
+}
+
+.NavShell__tier2Portal {
+  height: 100%;
+}
+
+.NavShell__versionSlot {
+  margin-top: auto;
+
+  &[hidden] {
+    display: none;
+  }
+}
