@@ -1,12 +1,19 @@
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
 import { Project } from 'ts-morph'
 
 import {
   EXCLUDED_ATTRIBUTES,
   FILE_EXEMPT_MARKER,
   GlossaryLoadError,
+  ScopeLoadError,
   USER_FACING_ATTRIBUTES,
   collectTAliases,
+  formatReport,
   loadGlossary,
+  scanScope,
   scanSource
 } from '../hardcodedStringGate'
 
@@ -631,6 +638,186 @@ describe('hardcodedStringGate', () => {
 
       expect(result.fileExempt).toBe(false)
       expect(result.violations.length).toBeGreaterThan(0)
+    })
+  })
+
+  // ---------------------------------------------------------------------
+  // Plan 05: scanScope() whole-scope orchestration + D-18's self-expiring
+  // allowlist. Every case below operates on TEMPORARY fixture files written
+  // into an fs.mkdtempSync(os.tmpdir()) directory and torn down in
+  // afterEach — never on the real deferred files, and nothing is left in
+  // the working tree.
+  // ---------------------------------------------------------------------
+  describe('stale exemption', () => {
+    let dir: string
+
+    beforeEach(() => {
+      dir = mkdtempSync(join(tmpdir(), 'hardcoded-string-gate-stale-'))
+    })
+
+    afterEach(() => {
+      rmSync(dir, { recursive: true, force: true })
+    })
+
+    function writeScope(scopePath: string, files: string[]) {
+      writeFileSync(scopePath, JSON.stringify({ files }))
+    }
+
+    function writeAllowlist(
+      allowlistPath: string,
+      entries: Array<{ file: string; expectedCount: number; reason: string }>
+    ) {
+      writeFileSync(allowlistPath, JSON.stringify(entries))
+    }
+
+    // A trivial zero-violation file so scope.files is non-empty without
+    // ever overlapping the allowlisted scratch file under test — mirrors
+    // the real i18nGateScope.json, which never lists a D-18 deferred file
+    // in `files` (only in `excluded.deferred`).
+    const NOOP_SOURCE = 'export const noop = () => null\n'
+
+    const THREE_VIOLATIONS_SOURCE = `
+      export const Example = () => (
+        <div>
+          <p>Alpha bravo charlie</p>
+          <p>Delta echo foxtrot</p>
+          <p>Golf hotel india</p>
+        </div>
+      )
+    `
+
+    it('measured === expected: no stale exemption, the file\'s violations never reach report.violations, and allowlisted records the match', () => {
+      const scratchFile = join(dir, 'Scratch.tsx')
+      writeFileSync(scratchFile, THREE_VIOLATIONS_SOURCE)
+      const noopFile = join(dir, 'Noop.ts')
+      writeFileSync(noopFile, NOOP_SOURCE)
+
+      const scopePath = join(dir, 'scope.json')
+      writeScope(scopePath, [noopFile])
+      const allowlistPath = join(dir, 'allowlist.json')
+      writeAllowlist(allowlistPath, [
+        { file: scratchFile, expectedCount: 3, reason: 'test fixture' }
+      ])
+
+      const report = scanScope({ scopePath, allowlistPath })
+
+      expect(report.staleExemptions).toEqual([])
+      expect(report.violations.some((v) => v.file === scratchFile)).toBe(
+        false
+      )
+      expect(report.allowlisted).toEqual([
+        { file: scratchFile, measured: 3, expected: 3 }
+      ])
+    })
+
+    it("D-18's headline behaviour: measured DROPS below expected (the retrofit landed) — stale exemption fires with the exact remediation wording", () => {
+      const scratchFile = join(dir, 'Scratch.tsx')
+      const retrofitted = `
+        import { useTranslation } from 'react-i18next'
+        export const Example = () => {
+          const { t } = useTranslation()
+          return (
+            <div>
+              <p>{t('gamelib:alpha', 'Alpha bravo charlie')}</p>
+              <p>Delta echo foxtrot</p>
+              <p>Golf hotel india</p>
+            </div>
+          )
+        }
+      `
+      writeFileSync(scratchFile, retrofitted)
+      const noopFile = join(dir, 'Noop.ts')
+      writeFileSync(noopFile, NOOP_SOURCE)
+
+      const scopePath = join(dir, 'scope.json')
+      writeScope(scopePath, [noopFile])
+      const allowlistPath = join(dir, 'allowlist.json')
+      writeAllowlist(allowlistPath, [
+        { file: scratchFile, expectedCount: 3, reason: 'test fixture' }
+      ])
+
+      const report = scanScope({ scopePath, allowlistPath })
+
+      expect(report.staleExemptions).toEqual([scratchFile])
+      expect(formatReport(report)).toContain(
+        'stale exemption — remove this entry'
+      )
+    })
+
+    it('bidirectional proof: measured RISES above expected (a new hardcoded literal was added behind the exemption) — also stale, an exemption is not a place to keep adding strings', () => {
+      const scratchFile = join(dir, 'Scratch.tsx')
+      const grown = `
+        export const Example = () => (
+          <div>
+            <p>Alpha bravo charlie</p>
+            <p>Delta echo foxtrot</p>
+            <p>Golf hotel india</p>
+            <p>Juliet kilo lima</p>
+          </div>
+        )
+      `
+      writeFileSync(scratchFile, grown)
+      const noopFile = join(dir, 'Noop.ts')
+      writeFileSync(noopFile, NOOP_SOURCE)
+
+      const scopePath = join(dir, 'scope.json')
+      writeScope(scopePath, [noopFile])
+      const allowlistPath = join(dir, 'allowlist.json')
+      writeAllowlist(allowlistPath, [
+        { file: scratchFile, expectedCount: 3, reason: 'test fixture' }
+      ])
+
+      const report = scanScope({ scopePath, allowlistPath })
+
+      expect(report.staleExemptions).toEqual([scratchFile])
+      expect(report.allowlisted[0]).toMatchObject({ measured: 4, expected: 3 })
+    })
+
+    it('an allowlist entry pointing at a nonexistent path throws a clear error rather than silently skipping it', () => {
+      const noopFile = join(dir, 'Noop.ts')
+      writeFileSync(noopFile, NOOP_SOURCE)
+
+      const scopePath = join(dir, 'scope.json')
+      writeScope(scopePath, [noopFile])
+      const allowlistPath = join(dir, 'allowlist.json')
+      writeAllowlist(allowlistPath, [
+        {
+          file: join(dir, 'DoesNotExist.tsx'),
+          expectedCount: 5,
+          reason: 'test fixture'
+        }
+      ])
+
+      expect(() => scanScope({ scopePath, allowlistPath })).toThrow(
+        ScopeLoadError
+      )
+    })
+  })
+
+  describe('scope orchestration', () => {
+    it('scans the whole committed scope and reconciles the real D-18 allowlist', () => {
+      const report = scanScope()
+
+      const realScope = JSON.parse(
+        readFileSync('meta/i18nGateScope.json', 'utf-8')
+      ) as { files: string[] }
+      expect(report.scannedFiles).toBe(realScope.files.length)
+
+      // A zero here would mean an unscanned scope masquerading as a clean
+      // one (T-34.8-13) — the scanner must have genuinely looked.
+      expect(report.totalCandidates).toBeGreaterThan(0)
+
+      expect(report.allowlisted).toHaveLength(2)
+      expect(report.staleExemptions).toEqual([])
+
+      // report.violations is intentionally NOT asserted empty here: this
+      // plan (34.8-05) only wires the orchestration and the D-18 allowlist.
+      // Plan 34.8-06 runs the audit that turns the current violation list
+      // into a retrofit backlog, and a later plan (34.8-10) is what flips
+      // this to `expect(report.violations).toHaveLength(0)` once the
+      // in-scope D-19 retrofit targets land. Logged so an audit run has
+      // readable output.
+      console.log(formatReport(report))
     })
   })
 })
