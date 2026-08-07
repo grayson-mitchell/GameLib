@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: verifying
-stopped_at: Phase 34.8 side track — plan 10 of 14 EXECUTED (flipped the i18n gate to
-last_updated: "2026-08-07T07:43:11.953Z"
+stopped_at: Phase 34.8 side track — plan 11 of 14 EXECUTED (built the D-08/D-09/D-10/D-11
+last_updated: "2026-08-07T19:45:00.000Z"
 last_activity: 2026-08-07
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 241
-  completed_plans: 220
+  completed_plans: 221
   percent: 61
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 10 of 14 done — the i18n gate is now BLOCKING (`pnpm test:ci` fails on a new hardcoded fork-frontend literal), closed 62 scanner false positives `34.8-AUDIT.md`'s own re-measurement found beyond the already-zero 52-item retrofit backlog, proved the gate genuinely fails via a real temporary-violation experiment, wrote `34.8-I18N-CONTRACT.md`; next is 34.8-11/12) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
+**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 11 of 14 done — the i18n gate is BLOCKING (unchanged from plan 10) and the D-08/D-09/D-10/D-11 glossary-aware machine-fill script (`meta/machineFillGamelib.ts`, `pnpm machine-fill-gamelib`) is now built and hermetically proven (24 tests) with its bulk-run refusal live-verified by three real CLI runs, deliberately NOT bulk-run across the 48 non-English locales; next is 34.8-12, phase closure) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -4080,6 +4080,7 @@ Recent decisions affecting current work:
 - [Phase 34.8-10]: The gate is now BLOCKING (D-12) — `meta/__tests__/hardcodedStringGate.test.ts`'s `scope orchestration` test asserts `report.violations`/`report.staleExemptions` both `toHaveLength(0)`, plus a new `gate is not disabled` describe block (T-34.8-29/T-34.8-30: totalCandidates > 0, scannedFiles matches the committed scope, allowlist stays at exactly 2 D-17 entries, fileExempt stays at exactly bootErrorSurface.ts)
 - [Phase 34.8-10]: `34.8-AUDIT.md § Closure`'s own re-measurement (`violations: 62`) was real, not a stale plan assumption — the 52-item retrofit backlog was genuinely zero, but 62 `not-user-facing`/`glossary`-dispositioned literals (per the AUDIT's own `## Triage`) stood between that and a literal `report.violations.length === 0`. Closed all 62 under Rule 1 rather than widening the allowlist or weakening the assertion — new content-shape checks (icon-size multipliers, ALL-CAPS enum tokens, hex GUIDs, CDN query strings, domains, a `??`-prefixed sentinel), new structural checks (DOM/browser API args, internal string-comparison args, `.includes()` array elements), `walkUpThroughComposingWrappers` extracted/extended with `??`/template-interpolation hops and shared by a new `findAssignedBindingNameNode`, `isAssignedThenPassedToT` broadened to recognise diagnostic-log/excluded-JSX-attribute/technical-DOM-API consumption not only `t()`, a split-glossary-term check for `SidebarLinks`' `Game`/`Lib`, `GameLibSteam` added to the glossary, and a second real use of the 34.8-08c declaration-scoped `i18n-gate-exempt:` marker on `StoreSearch/helpers.ts`'s `buildOwnedBadgeLabel()` (cross-file dataflow the same-file-only reference tracer cannot and should not trace)
 - [Phase 34.8-10]: Proved the gate genuinely fails, not just green jest — a real temporary literal added to `GameStatus.tsx` made the assertion fail naming the exact file/line/column/text (recorded verbatim in `34.8-10-SUMMARY.md`), then reverted byte-identical and re-ran green
+- [Phase 34.8-11]: `meta/machineFillGamelib.ts` built as a pure D-09 contract layer (`collectMissingKeys`/`buildTranslationMemory`/`validateTranslation`/`mergeFill`/`fillLocale`, no fs/network/clock, `now: Date` threaded through) plus a real `createAnthropicTranslator` backend and CLI, wired as `pnpm machine-fill-gamelib`. D-08's bulk-run refusal ordered BEFORE any credential check or network call — proved live by actually running the CLI three times (unset `GAMELIB_MT_LOCALES`, `=all` without `GAMELIB_MT_CONFIRM_BULK=1`, a named locale with no `ANTHROPIC_API_KEY`), all three non-zero exit with the correct message, transcripts recorded in `34.8-11-SUMMARY.md`. `git status --porcelain public/locales/` stayed empty across all three runs — deliberately NOT bulk-run this phase (D-08). One Rule-1 deviation: a stray NUL byte in a template literal made git classify the whole source file as binary (`Bin ... bytes` diffs) — found by inspecting the actual commit diff, not by trusting the green test suite (a NUL and a space behave identically as a Set dedupe key); fixed with a byte-level rewrite, `6795179e5`. Known limitation, not a defect: the six `redeemKey.*` keys with an empty English catalog default (their real default lives in an inline `t()` call, per plan 09) are excluded from `collectMissingKeys`'s `missing` set — nothing to translate FROM yet. REQ-34.8-15 complete. `meta` jest 12/12 suites, 319/319 tests (was 11/291, +1 suite, +24 tests, includes the still-green `hardcodedStringGate` blocking gate); `pnpm test:ci` 204/204 suites, 4069/4069 tests (was 203/4045, +1 suite, +24 tests, 0 regressions); `tsc --noEmit`/`pnpm codecheck` clean.
 
 ### Pending Todos
 
@@ -4169,8 +4170,51 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-07T19:40:00+12:00
-Stopped at: Phase 34.8 side track — plan 10 of 14 EXECUTED (flipped the i18n gate to
+Last session: 2026-08-07T19:45:00+12:00
+Stopped at: Phase 34.8 side track — plan 11 of 14 EXECUTED (built the D-08/D-09/D-10/D-11
+  glossary-aware machine-fill script, `meta/machineFillGamelib.ts`, wired as
+  `pnpm machine-fill-gamelib`. Task 1: pure logic layer (`collectMissingKeys`,
+  `buildTranslationMemory`, `validateTranslation`, `mergeFill`, `BulkRunRefusedError`,
+  `TranslateFn` — exactly the plan's `<interfaces>` export list — plus an additional
+  `fillLocale` orchestration export tying them to an injected `TranslateFn`), zero fs/
+  network/clock access, `now: Date` threaded through as a parameter. 24-test hermetic suite
+  (`meta/__tests__/machineFillGamelib.test.ts`) with a fake translator covers every
+  `<behavior>` bullet: never-overwrites-a-human-correction, `{{interpolation}}`/`_one`/`_other`
+  plural-sibling preservation (including a fillLocale-level check that a filled `_one` is
+  rolled back if its `_other` sibling won't also land, since `validateTranslation`'s fixed
+  (source, target, glossary) signature can't see sibling key paths), glossary-term
+  preservation, and "a translation that fails validation leaves that key UNFILLED and records
+  the problem" (both for a validateTranslation rejection and for a translator returning no
+  result at all). Task 2: `createAnthropicTranslator` (fetch-based, zero new npm packages,
+  per T-34.8-SC), `ANTHROPIC_API_KEY` read from `process.env` only (never a CLI flag, never
+  logged, request bodies never logged), `GAMELIB_MT_MODEL` env override defaulting to
+  `claude-sonnet-5` (dated 2026-08-07, chosen from this environment's own system-reported
+  model identity since a live `api.anthropic.com/v1/models` probe returned `invalid
+  x-api-key` in this sandbox), per-locale `gamelib.mt.json` D-10 provenance sidecar, D-11
+  read-only upstream translation memory (`translation.json`/`gamepage.json`/`login.json`
+  opened, never written — `grep -cE "writeFileSync\(.*(translation|gamepage|login)\.json"`
+  returns 0), and the D-08 bulk-run refusal (`resolveLocales()` throws `BulkRunRefusedError`
+  BEFORE any credential check or network call). Live-proved the refusal with three real CLI
+  runs, not just read from the source — `GAMELIB_MT_LOCALES` unset, `=all` with no
+  `GAMELIB_MT_CONFIRM_BULK=1`, and a named locale (`de`) with no `ANTHROPIC_API_KEY` — all
+  three exited non-zero with the correct message; `git status --porcelain public/locales/`
+  stayed empty across all three (transcripts in `34.8-11-SUMMARY.md`). One Rule-1 deviation,
+  caught by inspecting the actual `git commit` diff output (not the green jest run, which
+  couldn't have caught it): a literal NUL byte landed in `buildTranslationMemory`'s dedupe-key
+  template literal, making git classify the whole file as binary (`Bin ... bytes` diffs, `file`
+  reported `data`); fixed with a byte-level rewrite (`6795179e5`), re-verified 24/24 tests and
+  clean `tsc --noEmit` after. Known limitation, not a defect: the six `redeemKey.*` keys with
+  an empty English catalog default (real default lives in an inline `t()` call per plan 09) are
+  excluded from `collectMissingKeys`'s `missing` set, since there's no English text to
+  translate FROM yet — this script does not yet backfill them. REQ-34.8-15 complete. `tsc
+  --noEmit`/`pnpm codecheck` clean; `meta` jest 12/12 suites, 319/319 tests (was 11/291, +1
+  suite, +24 tests); `pnpm test:ci` 204/204 suites, 4069/4069 tests (was 203/4045, +1 suite,
+  +24 tests, 0 regressions, `hardcodedStringGate` still green — no user-facing hardcoded
+  strings added). No file under `public/locales/` created or modified. See 34.8-11-SUMMARY.md.
+  Next for 34.8: 34.8-12-PLAN.md (phase closure).
+  34.4.2 blocker UNCHANGED and still the critical path.
+
+Stopped at (superseded): Phase 34.8 side track — plan 10 of 14 EXECUTED (flipped the i18n gate to
   BLOCKING: `meta/__tests__/hardcodedStringGate.test.ts`'s `scope orchestration` test now
   asserts `report.violations`/`report.staleExemptions` both `toHaveLength(0)` — no more
   deferred `console.log` — riding the already-blocking `pnpm test:ci` (the `meta` jest project
