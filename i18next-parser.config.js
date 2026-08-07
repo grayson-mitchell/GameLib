@@ -45,12 +45,29 @@ module.exports = {
 
   // see below for more details
   lexers: {
-    ts: ['JavascriptLexer'],
+    ts: [
+      {
+        lexer: 'JavascriptLexer',
+        // Plan 34.8-09: the retrofit's second-aliased-hook idiom
+        // (`const { t: tGamelib } = useTranslation('gamelib')`) is
+        // universal across every gamelib: call site outside the
+        // injected-TFunction sibling modules (17 files, confirmed via
+        // grep). The lexer's default `functions: ['t']` only matches the
+        // literal identifier `t`, so it silently could not see any
+        // `tGamelib(...)` call -- 16 of 48 retrofitted keys measured
+        // absent from the generated catalog before this fix. Adding
+        // `tGamelib` here is additive only; it does not change which `t`
+        // calls are still recognised.
+        functions: ['t', 'tGamelib']
+      }
+    ],
     tsx: [
       {
         attr: 'i18nKey', // Attribute for the keys
         lexer: 'JsxLexer',
-        transSupportBasicHtmlNodes: true
+        transSupportBasicHtmlNodes: true,
+        // Same reasoning as the `ts` lexer above.
+        functions: ['t', 'tGamelib']
       }
     ]
   },

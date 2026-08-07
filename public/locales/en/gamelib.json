@@ -1,0 +1,76 @@
+{
+    "app": {
+        "routeError": "Something went wrong: {{detail}}"
+    },
+    "consoleMode": {
+        "installNext": "Next",
+        "installPrevious": "Previous",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A"
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Paused"
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Unrated",
+        "etaPrefix": "ETA: {{eta}}",
+        "tabsAriaLabel": "gameinfo tabs",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "less than a minute"
+    },
+    "library": {
+        "storeOther": "Other"
+    },
+    "login": {
+        "unknownUser": "Unknown"
+    },
+    "redeemKey": {
+        "alreadyOwned": "",
+        "error": "",
+        "invalid": "",
+        "rateLimited": "",
+        "successNoPackage": "",
+        "successWithPackage": ""
+    },
+    "settings": {
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Upscale Method",
+        "gamescopeWindowType": "Window Type",
+        "wineDefaultLabel": "Wine Default",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sideload": {
+        "filter": {
+            "all": "All",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImages",
+            "apps": "Apps",
+            "executables": "Executables",
+            "images": "Images",
+            "otherBinaries": "Other Binaries",
+            "scripts": "Scripts"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Cyberspace Oasis",
+        "cyberSpaceOasisAlt": "Cyberspace Oasis Classic",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Dark",
+        "highContrast": "High Contrast",
+        "marine": "Marine",
+        "marineClassic": "Marine Classic",
+        "midnightMirage": "Midnight Mirage",
+        "nordDark": "Nord Dark",
+        "nordLight": "Nord Light",
+        "oldSchool": "Old School GameLib",
+        "sweet": "Sweet",
+        "zombie": "Zombie",
+        "zombieClassic": "Zombie Classic"
+    }
+}
