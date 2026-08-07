@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Phase 34.8 side track — plan 08c of 14 EXECUTED (render-site fix for `defaultWineVersion`'s `'Wine Default'`: `WineVersionListItem` translates the sentinel at its one real render site, and the constant's declaration is exempted via a NEW declaration-scoped `i18n-gate-exempt:` mechanism — narrower than a full-file marker, which would have blinded the gate to ~10 other real strings in `Settings/index.tsx` and broken plan 10's `fileExempt` acceptance criterion. No allowlist entry added; the constant's runtime value is unchanged because it is persisted in user config. Plan 08's full 46-violation backlog is now ZERO-blocked. Wave 6 complete: 07 + 08a + 08b + 08c. Next for 34.8: consolidate the three CLOSURE docs into `34.8-AUDIT.md § Closure` and regenerate `meta/i18nGateScope.json` (08a added two new sibling modules not yet in the snapshot), then wave 7 = plan 09. 34.4.2 blocker UNCHANGED and still the critical path.)"
-last_updated: "2026-08-07T04:55:44.276Z"
+stopped_at: "Phase 34.8 side track — plan 09 of 14 EXECUTED (generated `public/locales/en/gamelib.json`, all 48 retrofit keys from plans 07/08a/08b/08c present, verified programmatically. Discovered and fixed a real i18next-parser bug along the way: the default lexer `functions` list is exactly `['t']`, so the retrofit's second-aliased-hook idiom (`const { t: tGamelib } = useTranslation('gamelib')`, used at 17 call sites) was invisible to the parser -- 16 of 48 keys were silently missing until `functions: ['t', 'tGamelib']` was added to both lexer configs (with a regression test). Two `pnpm i18n` runs both produced churn in the three upstream catalogs, confirmed both times to be pre-existing, unrelated drift (Steam bridge/client setup strings, WebView OAuth login flow copy, Humble notification plurals, redeem-key dialog chrome) that predates this phase -- exactly the D-04-superseded ROADMAP item (3) gap, out of scope; reverted both times, upstream catalogs byte-identical. Built `meta/i18nCatalogChurnGuard.ts` (classifyChangedPaths/assertNoUpstreamChurn/UpstreamChurnError) as the D-05 mechanical no-churn assertion, wired as `pnpm i18n-churn-guard` and a `pnpm test:ci`-riding live-tree jest test. Taught `meta/lintTranslations.ts` about the `gamelib` namespace and scoped its CI-facing invocation to `gamelib`-only per D-15 (`pnpm lint-translations:gamelib`, via `LINT_TRANSLATIONS_NAMESPACES` env var -- a bare `VAR=val` prefix does not cross a shell pipe boundary, needed `export VAR=val &&` instead). `pnpm test:ci`: 203/203 suites, 4041/4041 green (was 202/4028). Next for 34.8: plan 10 (flip the i18n gate to blocking). 34.4.2 blocker UNCHANGED and still the critical path.)"
+last_updated: "2026-08-07T06:56:30.000Z"
 last_activity: 2026-08-07
 progress:
   total_phases: 21
   completed_phases: 14
   total_plans: 241
-  completed_plans: 218
+  completed_plans: 219
   percent: 67
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 08b of 13 done — the 15-file long-tail retrofit, 18/19 violations closed + 1 blocked (Settings/index.tsx's defaultWineVersion, 14-file fan-out), 18 new gamelib: keys; 08a+08b together close plan 08's full 46-violation/17-file backlog; next is 34.8-09) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
+**Current focus:** Phase 34.4.2 blocked (/gsd-debug owed); side tracks: Phase 34.8 (frontend-i18n-compliance-for-fork-added-code-retrofit-hardco, plan 09 of 14 done — generated `public/locales/en/gamelib.json` (48 keys, all of 07/08a/08b/08c's retrofit content present), fixed a real i18next-parser `tGamelib`-alias lexer gap along the way, built the D-05 no-churn guard (`meta/i18nCatalogChurnGuard.ts`), scoped `lintTranslations.ts` to `gamelib`-only for CI per D-15; upstream catalogs byte-identical; next is 34.8-10) and Phase 34.9 (macOS runner onedir repackaging, plans 01-03 of 11 done)
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -4071,6 +4071,10 @@ Recent decisions affecting current work:
 - [Phase 34.8-08b]: WineVersionSelector.tsx's Flatpak <li> — chose option (a) (whole line as one gamelib key) over option (b) (extract only the annotation); option (b) was tried first and produced a NEW residual jsx-text violation for the leading path+paren fragment once the JSX text was split, caught by running scanScope() directly rather than trusting jest alone
 - [Phase 34.8-08b]: A t() call nested three levels deep inside multi-line template literals can defeat the gate's AST tracing even when tsc/jest are fully green (GameStatus.tsx's ETA fragment) — extracting the t() call to a flat local binding computed before the template literal is the fix; a lookup-object's dead key (unreachable after a ternary special-cases it ahead of the object[dynamicKey] access) also stays flagged since the scanner traces the whole object's flow to t(), not per-branch reachability (LibraryFilters.tsx's RunnerToStore) — removing the dead key, not restructuring the surviving keys, is the fix
 - [Phase 34.8-08c]: Render-site fix + declaration-scoped i18n-gate-exempt: marker close 08b's blocked defaultWineVersion item: WineVersionListItem translates the display at its one real render site; defaultWineVersion's declaration is exempted narrowly via a new getEnclosingTopLevelStatement()-based gate mechanism, not a full-file exemption or an allowlist entry. Plan 08's full 46-violation backlog is now zero-blocked.
+- [Phase 34.8-09]: Fixed a real i18next-parser bug (Rule 1) rather than accepting missing keys — the default lexer `functions` list is exactly `['t']`, so the retrofit's universal second-aliased-hook idiom (`const { t: tGamelib } = useTranslation('gamelib')`, 17 real call sites) was invisible to the static parser; 16/48 retrofit keys were silently absent until `functions: ['t', 'tGamelib']` was added to both the `ts` and `tsx` lexer configs in `i18next-parser.config.js` (additive only, regression-tested)
+- [Phase 34.8-09]: Two `pnpm i18n` runs both churned the three upstream catalogs; both times traced (by reading the diffs in full) to pre-existing, unrelated drift — Steam bridge/client setup dialogs, WebView OAuth login flow copy, Humble notification plurals, redeem-key dialog chrome — that predates this retrofit phase and was never previously synced. This is the exact ROADMAP item (3) gap D-04 supersedes and places out of scope; reverted both times per the plan's mandatory revert discipline rather than fixed or explained away
+- [Phase 34.8-09]: `meta/i18nCatalogChurnGuard.ts` built to the plan's exact `<interfaces>` surface (classifyChangedPaths/assertNoUpstreamChurn/UpstreamChurnError), CLI half guarded by the `JEST_WORKER_ID` convention (mirrors `meta/buildCrossoverIndex.ts`) so importing it under jest never shells out; its `live tree` jest test asserts the real current `git diff` against `public/locales/` classifies with an empty upstream bucket — this is what turns D-05 from an agreement into something `pnpm test:ci` proves after every parser run
+- [Phase 34.8-09]: `lintTranslations.ts`'s D-15 scope selector reads `LINT_TRANSLATIONS_NAMESPACES` from an env var (not a CLI flag, since the script runs through an `esbuild --bundle | node` pipe and argv never reaches it); the first `package.json` script draft (`VAR=val esbuild ... | node`) silently ran unscoped because a bare env-var prefix does not cross a shell pipe boundary to the piped `node` process — fixed to `export VAR=val && esbuild ... | node`
 
 ### Pending Todos
 
@@ -4160,8 +4164,47 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-07T17:10:00+12:00
-Stopped at: Phase 34.8 side track — plan 08b of 13 EXECUTED (retrofitted the remaining 15
+Last session: 2026-08-07T18:56:00+12:00
+Stopped at: Phase 34.8 side track — plan 09 of 14 EXECUTED (generated
+  public/locales/en/gamelib.json via `pnpm i18n`, containing all 48 gamelib: keys named across
+  34.8-07/08a/08b/08c's SUMMARYs — verified programmatically (flatten-and-compare, not eyeballed),
+  48/48 present, 0 missing. Discovered and fixed a real i18next-parser bug along the way (Rule 1,
+  not a retrofit code defect): the default lexer `functions` list is exactly ['t'] (confirmed
+  directly against the installed package), so the retrofit's universal second-aliased-hook idiom
+  (`const { t: tGamelib } = useTranslation('gamelib')`, used at 17 real call sites) was invisible
+  to the static parser — 16/48 keys were silently absent on the first run. Fixed by adding
+  `functions: ['t', 'tGamelib']` to both the ts and tsx lexer configs in
+  i18next-parser.config.js (additive only, regression-tested in i18nParserConfig.test.ts). Two
+  `pnpm i18n` runs (pre- and post-fix) both churned the three upstream catalogs
+  (translation.json/gamepage.json/login.json); both times traced by reading the diffs in full to
+  pre-existing, unrelated drift (Steam bridge/client setup dialogs, WebView OAuth login flow copy,
+  Humble notification plurals, redeem-key dialog chrome) that predates this retrofit phase and was
+  never previously synced — exactly the D-04-superseded ROADMAP item (3) gap, out of scope for
+  this plan. Reverted both times per the plan's mandatory revert discipline
+  (`git checkout -- public/locales/...`); the second run additionally required deleting the
+  first (pre-fix) run's contaminated gamelib.json before re-running, since its own namespace
+  misattribution (RedeemSteamKeyDialog/index.tsx's default-namespace chrome strings had leaked
+  into gamelib.json under the old ['t']-only lexer config) would otherwise have re-surfaced as
+  churn on the next run via keepRemoved: true. Built meta/i18nCatalogChurnGuard.ts (the D-05
+  mechanical no-churn assertion: classifyChangedPaths/assertNoUpstreamChurn/UpstreamChurnError),
+  CLI half guarded by the JEST_WORKER_ID convention (mirrors meta/buildCrossoverIndex.ts), wired
+  as `pnpm i18n-churn-guard` plus a `pnpm test:ci`-riding `live tree` jest test that asserts the
+  real current git diff against public/locales/ classifies with an empty upstream bucket. Taught
+  meta/lintTranslations.ts about the gamelib namespace (readFiles() gained
+  `gamelib: readFile('gamelib', language)`) and added a D-15 scope selector
+  (LINT_TRANSLATIONS_NAMESPACES env var, since the script runs through an esbuild --bundle | node
+  pipe and argv never reaches it) filtered inside checkLanguage(); `pnpm lint-translations:gamelib`
+  scopes to gamelib only, `pnpm lint-translations` keeps its existing all-namespace behaviour. One
+  more Rule-3 deviation here too: the first package.json script draft
+  (`VAR=val esbuild ... | node`) silently ran unscoped because a bare env-var shell prefix does
+  not cross a pipe boundary to the second command — fixed to `export VAR=val && esbuild ... | node`.
+  REQ-34.8-01/-04/-14 complete. tsc clean; meta jest 11/11 suites, 291/291 tests (was 10/282);
+  pnpm test:ci 203/203 suites, 4041/4041 tests (was 202/4028, +1 suite, +10 tests, 0 regressions).
+  `.github/` untouched; no process.exit added to lintTranslations.ts. See 34.8-09-SUMMARY.md.
+  Next for 34.8: 34.8-10-PLAN.md (flip the i18n gate to blocking).
+  34.4.2 blocker UNCHANGED and still the critical path.
+
+Stopped at (superseded): Phase 34.8 side track — plan 08b of 13 EXECUTED (retrofitted the remaining 15
   one-to-three-string "long tail" files from the audit's split-plan backlog — the disjoint
   sibling of 08a's two heavy files. 18 of 19 assigned violations closed, 1 blocked, per
   34.8-08b-CLOSURE.md; 08a+08b together fully account for plan 08's original 46-violation/
