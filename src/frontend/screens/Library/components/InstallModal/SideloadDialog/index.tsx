@@ -19,7 +19,7 @@ import {
   removeSpecialcharacters,
   writeConfig
 } from 'frontend/helpers'
-import React, { useCallback, useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { AvailablePlatforms } from '..'
 import fallbackImage from 'frontend/assets/gamelib_card.svg?url'
@@ -29,6 +29,7 @@ import axios from 'axios'
 import { NavLink, useNavigate } from 'react-router-dom'
 import TextInputWithIconField from 'frontend/components/UI/TextInputWithIconField'
 import Folder from '@mui/icons-material/Folder'
+import { fileFilters, localImageFilters } from './filters'
 
 type Props = {
   availablePlatforms: AvailablePlatforms
@@ -54,6 +55,7 @@ export default function SideloadDialog({
   setTitle
 }: Props) {
   const { t, i18n } = useTranslation('gamepage')
+  const { t: tGamelib } = useTranslation('gamelib')
   const [selectedExe, setSelectedExe] = useState('')
   const [gameUrl, setGameUrl] = useState('')
   const [customUserAgent, setCustomUserAgent] = useState('')
@@ -163,13 +165,7 @@ export default function SideloadDialog({
       buttonLabel: t('box.select.button', 'Select'),
       properties: ['openFile'],
       title: t('box.select.image', 'Select Image'),
-      filters: [
-        {
-          name: 'Images',
-          extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif']
-        },
-        { name: 'All', extensions: ['*'] }
-      ]
+      filters: localImageFilters(tGamelib)
     })
 
     if (!path) return
@@ -205,44 +201,13 @@ export default function SideloadDialog({
     return backdropClick()
   }
 
-  const fileFilters = useCallback((platform: InstallPlatform) => {
-    switch (platform) {
-      case 'Windows':
-      case 'windows':
-      case 'Win32':
-        return [
-          { name: 'Executables', extensions: ['exe', 'msi'] },
-          { name: 'Scripts', extensions: ['bat'] },
-          { name: 'All', extensions: ['*'] }
-        ]
-      case 'linux':
-        return [
-          { name: 'AppImages', extensions: ['AppImage'] },
-          { name: 'Other Binaries', extensions: ['sh', 'py', 'bin'] },
-          { name: 'All', extensions: ['*'] }
-        ]
-      case 'osx':
-      case 'Mac':
-        return [
-          { name: 'Apps', extensions: ['App'] },
-          { name: 'Other Binaries', extensions: ['sh', 'py', 'bin'] },
-          { name: 'All', extensions: ['*'] }
-        ]
-      // FIXME: Can these happen?
-      case 'Android':
-      case 'iOS':
-      case 'Browser':
-        return []
-    }
-  }, [])
-
   const handleRunExe = async () => {
     let exeToRun = ''
     const path = await window.api.openDialog({
       buttonLabel: t('box.select.button', 'Select'),
       properties: ['openFile'],
       title: t('box.runexe.title', 'Select EXE to Run'),
-      filters: fileFilters(appPlatform)
+      filters: fileFilters(appPlatform, tGamelib)
     })
     if (path) {
       exeToRun = path
@@ -463,7 +428,7 @@ export default function SideloadDialog({
                     placeholder={t('sideload.info.exe', 'Select Executable')}
                     pathDialogTitle={t('box.sideload.exe', 'Select Executable')}
                     pathDialogDefaultPath={winePrefix}
-                    pathDialogFilters={fileFilters(platformToInstall)}
+                    pathDialogFilters={fileFilters(platformToInstall, tGamelib)}
                     htmlId="sideload-exe"
                     label={t('sideload.info.exe', 'Select Executable')}
                     noDeleteButton
