@@ -231,18 +231,18 @@ describe('installDragRegionHandlers (REQ-34.1-03)', () => {
     expect(mockWindow.startDragging).not.toHaveBeenCalled()
   })
 
-  it('REQ-34.1-03: with the property unsupported, a mousedown inside a .Sidebar element calls startDragging', () => {
-    const sidebar = new FakeElement('div', { className: 'Sidebar' })
+  it('REQ-34.1-03: with the property unsupported, a mousedown inside a .NavShell__navbar element calls startDragging', () => {
+    const navbar = new FakeElement('div', { className: 'NavShell__navbar' })
     const child = new FakeElement('span')
-    chain(sidebar, child)
+    chain(navbar, child)
     mousedownHandler?.({ button: 0, target: child })
     expect(mockWindow.startDragging).toHaveBeenCalledTimes(1)
   })
 
-  it('REQ-34.1-03: with the property unsupported, a mousedown on a button inside .Sidebar does not call startDragging', () => {
-    const sidebar = new FakeElement('div', { className: 'Sidebar' })
+  it('REQ-34.1-03: with the property unsupported, a mousedown on a button inside .NavShell__navbar does not call startDragging', () => {
+    const navbar = new FakeElement('div', { className: 'NavShell__navbar' })
     const button = new FakeElement('button')
-    chain(sidebar, button)
+    chain(navbar, button)
     mousedownHandler?.({ button: 0, target: button })
     expect(mockWindow.startDragging).not.toHaveBeenCalled()
   })
@@ -253,10 +253,10 @@ describe('installDragRegionHandlers (REQ-34.1-03)', () => {
   // previously read `.WindowControls` (capital W), which is case-sensitively different
   // and matched nothing, so this test would have failed against the shipped code.
   it('REQ-34.1-03/WR-01: with the property unsupported, a mousedown inside the REAL .windowControls container does not call startDragging', () => {
-    const sidebar = new FakeElement('div', { className: 'Sidebar' })
+    const navbar = new FakeElement('div', { className: 'NavShell__navbar' })
     const controls = new FakeElement('div', { className: 'windowControls' })
     const gap = new FakeElement('span')
-    chain(sidebar, controls, gap)
+    chain(navbar, controls, gap)
     mousedownHandler?.({ button: 0, target: gap })
     expect(mockWindow.startDragging).not.toHaveBeenCalled()
   })

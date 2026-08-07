@@ -290,8 +290,8 @@ export const applyFramelessDecorations = (frameless?: boolean): void => {
  * change): walks from the event target up through its ancestors, resolving `drag` on
  * the first ancestor that declares it, `no-drag` on the first ancestor that declares
  * `no-drag`. If the property is unsupported by the webview (every ancestor's computed
- * value is empty), falls back to a `.Sidebar`-vs-interactive-element heuristic that
- * approximates the same regions the CSS declares today.
+ * value is empty), falls back to a `.NavShell__navbar`-vs-interactive-element heuristic
+ * that approximates the same regions the CSS declares today.
  */
 interface DragTarget {
   parentElement: DragTarget | null
@@ -330,7 +330,7 @@ function resolveDragRegion(target: EventTarget | null): boolean {
   ) {
     return false
   }
-  return start.closest('.Sidebar') !== null
+  return start.closest('.NavShell__navbar') !== null
 }
 
 function handleDragMouseDown(event: MouseEvent): void {
