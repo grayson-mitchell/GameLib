@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.10-11-PLAN.md -- live gate FAIL 2/5 (F-34.10-01, F-34.10-02); phase 34.10 does NOT close, gap cycle owed (/gsd-plan-phase 34.10 --gaps)"
-last_updated: "2026-08-08T10:58:08.805Z"
+stopped_at: "Completed 34.10-13-PLAN.md -- GAP: F-34.10-01, Dropdown click-toggled in-flow disclosure; phase 34.10 still does NOT close (34.10-12/14/15/16 remain), gap cycle continues"
+last_updated: "2026-08-08T01:20:00.000Z"
 last_activity: 2026-08-08
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 252
-  completed_plans: 232
+  completed_plans: 233
   percent: 92
 ---
 
@@ -480,7 +480,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — EXECUTING
 EXECUTED 2026-08-06, STILL DID NOT CLOSE (gate FAILED 1/6) -- gap cycle 5 required, NOT COMPLETE
-Plan: 11 of 11
+Plan: 12 of 16 (gap cycle 1: 34.10-13 done, closing F-34.10-01; 34.10-12/14/15/16 remain)
 glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
 see 34.4.2-13-SUMMARY.md. Plan 14 EXECUTED 2026-08-05 -- T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW
 single-flight guard refuses a second visible login window while one is pending/presented, 25s TTL
@@ -3617,6 +3617,7 @@ Closed/parked native-install phases:
 | Phase 34.10 P09 | 35min | 3 tasks | 15 files |
 | Phase 34.10 P10 | 25min | 2 tasks | 2 files |
 | Phase 34.10 P11 | 66min | 2 tasks | 2 files |
+| Phase 34.10 P13 | 24min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -4114,6 +4115,9 @@ Recent decisions affecting current work:
 - [Phase 34.10]: Reverted pnpm i18n's unrelated catalog churn (gamepage.json, login.json, parts of translation.json) rather than hand-editing the extractor output, per the 34.8-I18N-CONTRACT pre-existing-drift caveat — The extractor run touched far more than the single intended nav.tabs.games key; targeted git checkout isolated exactly the intended addition
 - [Phase 34.10]: Finalized plan 34.10-10 with hardcodedStringGate.test.ts's one remaining failure recorded as an external blocker, not fixed by this plan — Confirmed via scope-file diff that src/frontend/screens/WebView/index.tsx was already in the gate scope snapshot before this plan's regeneration (zero concurrent-session leakage), and via git diff that the violating string is uncommitted WIP from a concurrent Humble debug session (F-34.4.2-19), not committed or touched by phase 34.10
 - [Phase 34.10]: Live gate FAILS 2/5 (F-34.10-01 tier-2 Dropdown popup overflow/hover trigger, F-34.10-02 DownloadsRing renders no visible ring) -- phase 34.10 does not close, gap cycle owed — REQ-34.10-05/-08/-09 reverted Complete->Pending in REQUIREMENTS.md since they were checked off from unit tests alone before this phase's own live gate ever ran; REQ-34.10-04/-06 stay Complete, now live-confirmed
+- [Phase 34.10-13]: popUpOnHover deleted from Dropdown's Props (not left unpassed) so the hover trigger is unreachable by construction
+- [Phase 34.10-13]: Blur-close moved from panel to container with a containment check to fix the trigger-click-while-focused refuse-to-close bug
+- [Phase 34.10-13]: Dropdown/index.tsx and CategoryFilter/index.tsx registered into meta/i18nGateScope.json for the first time per CLAUDE.md's blocking i18n gate policy — REQ-34.10-09 restored Pending->Complete in REQUIREMENTS.md, closing F-34.10-01; REQ-34.10-08 (F-34.10-02, DownloadsRing) stays Pending, owed to plans 34.10-14/15
 
 ### Pending Todos
 
@@ -4207,8 +4211,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-07T22:58:08.790Z
-Stopped at: Completed 34.10-11-PLAN.md -- live gate FAIL 2/5, phase 34.10 blocked pending gap cycle (/gsd-plan-phase 34.10 --gaps)
+Last session: 2026-08-08T01:20:00.000Z
+Stopped at: Completed 34.10-13-PLAN.md -- GAP: F-34.10-01, Dropdown click-toggled in-flow disclosure closing REQ-34.10-09; phase 34.10 still does NOT close (34.10-12/14/15/16 remain). Next: `/gsd-execute-phase 34.10 --gaps-only`.
+
+Previously stopped at: Completed 34.10-11-PLAN.md -- live gate FAIL 2/5, phase 34.10 blocked pending gap cycle (/gsd-plan-phase 34.10 --gaps)
   meta/i18nGateScope.json regenerated (136->144 files, all 11 NavShell files registered, 4
   deleted Sidebar paths removed) and nav.tabs.games translation key synced. Suite went from
   2 failing suites/5 failing tests to 1 failing suite/1 failing test; the sole remainder
