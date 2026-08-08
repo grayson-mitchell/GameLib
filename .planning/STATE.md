@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.10-18-PLAN.md -- gap cycle 2 plan 18 (navbar seam border + scroll-container relocation, F-34.10-03/-06), corrected post-review from var(--divider) to var(--body-background); phase 34.10 does not close, plans 19-22 remain"
-last_updated: "2026-08-08T08:08:57.083Z"
+stopped_at: "Completed 34.10-20-PLAN.md -- gap cycle 2 plan 20 (F-34.10-05 disclosure panel background, REQ-34.10-09); phase 34.10 does not close, plan 19 and the live-gate re-run remain"
+last_updated: "2026-08-08T08:18:00.000Z"
 last_activity: 2026-08-08
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 263
-  completed_plans: 239
+  completed_plans: 240
   percent: 91
 ---
 
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — EXECUTING gap cycle 2
-Plan: 18 of 22 complete (seam-token corrected post-review); gap-cycle-2 plans 17-22 now executing. Prior state -- **live gate RUN 2
+Plan: 19 of 22 complete (seam-token corrected post-review); gap-cycle-2 plans 17-22 now executing. Prior state -- **live gate RUN 2
 recorded, VERDICT FAIL, items_passed 4/5.
 PHASE 34.10 DOES NOT CLOSE.** Both of run 1's blocking defects are CLOSED and live-confirmed:
 F-34.10-01 (tier-2 dropdowns, item 3 PASS -- functional contract: click-toggle, containment,
@@ -2667,7 +2667,7 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 `STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Executing Phase 34.10 (gap cycle 2, plan 18 of 22 complete, seam-token corrected post-review)
+Status: Ready to execute
 
 > NOTE (34.10-18): `state.advance-plan` corrupted STATE.md again, the same recurring
 > mis-targeted-write bug every note in this cluster documents — it spliced this session's status
@@ -2986,7 +2986,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-08 - Completed quick task 260808-gl6: closing the Humble sign-in window
+Last activity: 2026-08-08
   cancels instead of erroring
   (pre-existing external-state reachability) and Test 7 (UI-level reachability, distinct from
   backend-logic reachability) to live-gate-contract-authoring.md's Structural Reachability Review,
@@ -4215,6 +4215,7 @@ Recent decisions affecting current work:
 - [Phase 34.10-18]: GamesList scrollCardIntoView arithmetic expressed relative to the container's own rect (container.scrollTop + rect delta), not window.innerHeight/offsetTop — the scroll container no longer spans the full window after F-34.10-06's relocation, and offsetTop is measured against offsetParent, not necessarily the new scroll container
 - [Phase 34.10-18]: position: sticky on the navbar deliberately not attempted for F-34.10-06 — a sticky grid item is constrained to its own grid area; the navbar's min-content row gives zero sticky travel distance -- documented as a dead end in App.css so it cannot be re-added as an apparent fix
 - [Phase 34.10-18]: CORRECTED: navbar seam border token changed from var(--divider) to var(--body-background) after coordinator review found --divider has no CSS fallback and resolves in only 2 of 11 themes.scss theme blocks — var() with an undefined property and no fallback invalidates the whole declaration at computed-value time -- no border painted in 9 themes including 3 of the 4 the run-3 live gate sweeps; var(--body-background) verified via structural parse to resolve in all 11 themes and exactly matches the active tab's own erasure border token
+- [Phase 34.10-20]: F-34.10-05 implemented as W1 (the reading 34.10-17's live dracula capture settled): `Dropdown/index.scss`'s `.dropdown` background changed from `var(--background)` to `background: transparent`, compositing directly onto `.NavShell__tier2`'s own `var(--navbar-background)` surface rather than swapping one absolute token for another — same reasoning as `DownloadsRing/index.scss`'s mask-fix precedent; the `.expanded` inset hairline remains the delimiting affordance; plan 34.10-13's geometry untouched; REQ-34.10-09 not ticked, adjudicated by plan 34.10-22's live gate item 3
 
 ### Pending Todos
 
@@ -4318,7 +4319,30 @@ Recent decisions affecting current work:
 > 34.10-16-PLAN.md --` prefix and demoted into the `--- prior session, preserved as history ---`
 > chain below, in the same "Previously stopped at:" format used everywhere else in that chain.
 
-Last session: 2026-08-08T07:56:23.677Z
+Last session: 2026-08-08T08:12:34.000Z
+Stopped at: Completed 34.10-20-PLAN.md -- gap cycle 2 plan 20 (F-34.10-05 disclosure panel
+background, REQ-34.10-09). Task 1 gated on `34.10-F04-DIAGNOSIS.md`'s "F-34.10-05 verdict":
+confirmed W1 (wrong token) SURVIVES, W2 (broken inheritance) REJECTED in both captured themes --
+implemented W1. Re-ran the consumer census (`import Dropdown from`, not a path alias) and
+confirmed exactly the two expected production call sites, no third context. `.dropdown`'s
+`background: var(--background)` changed to `background: transparent`, removing the class of
+defect (composites onto `.NavShell__tier2`'s own surface) rather than swapping one absolute token
+for another, per the DownloadsRing mask-fix precedent; the `.expanded` inset hairline remains the
+delimiting affordance. Every plan 34.10-13 geometry declaration survives; F-34.10-01's popup
+geometry (`right: 0`, `min-width: 250px`) has not returned. Task 2 extended
+`dropdownDisclosure.test.tsx` with a 5-assertion comment-immune `F-34.10-05` gate group (no
+`var(--background)`, no hex literal, the new declaration present, 34.10-13 geometry intact,
+F-34.10-01 geometry absent), all passing (20/20), 34.10-13's behavioural assertions untouched.
+`pnpm codecheck` clean; `meta/i18nGateScope.json` unchanged. Full suite: 218/219 suites passed (1
+pre-existing flake, `bootstrapWirings.test.ts`, passes cleanly in isolation, same flake
+34.10-13-SUMMARY.md already recorded, out of this plan's scope), 4263/4264 tests -- reconciles
+exactly against 34.10-18-SUMMARY.md's 219/219, 4259/4259 baseline plus this plan's +5 new tests.
+**Nothing here is proven by the suite** -- REQ-34.10-09 not ticked from this plan; plan 34.10-22's
+live gate item 3 is the adjudicator. **PHASE 34.10 STILL DOES NOT CLOSE** -- plan 19 (F-34.10-04)
+and the live-gate re-run (plans 21/22) remain. Next: `/gsd-execute-phase 34.10 --gaps-only`.
+
+--- prior session, preserved as history ---
+
 Stopped at: Completed 34.10-18-PLAN.md -- gap cycle 2 plan 18 (navbar seam border + scroll-container relocation, F-34.10-03/-06); phase 34.10 does not close, plans 19-22 remain
 Task 1 reverted REQ-34.10-06 to Pending (live gate run 2 item 1 FAIL). Task 2's checkpoint
 captured a real box-model measurement from a live `pnpm tauri:dev` build in two themes
