@@ -351,3 +351,87 @@ describe('App shell layout (F-34.10-03 seam recipe, F-34.10-06 scroll relocation
     expect(offenders).toEqual([])
   })
 })
+
+describe('F-34.10-04 -- the navbar is one line', () => {
+  it('F-34.10-04 implemented declaration: .NavTabs .MuiTab-root declares the content-derived min-height 34.10-F04-DIAGNOSIS.md specifies', () => {
+    // Quoting the finding ID in the failure message per this gate's own
+    // requirement: F-34.10-04. The declaration is read from the exact file
+    // and selector 34.10-F04-DIAGNOSIS.md's "Surviving hypotheses" section
+    // names -- NOT a generic "some min-height exists" check, which would
+    // pass on an arbitrary, unmeasured value.
+    const tabRootBlock = extractBlock(
+      readStripped(NAVTABS_SCSS),
+      /\.MuiTab-root\s*\{/
+    )
+    expect(tabRootBlock).not.toBeNull()
+    expect(tabRootBlock).toMatch(
+      /min-height:\s*calc\(\(\s*2\s*\*\s*var\(--space-xs\)\s*\)\s*\+\s*1\.25em\s*\+\s*1px\)\s*;/
+    )
+  })
+
+  it('F-34.10-04 MUI scoping: every MuiTab/MuiTabs selector in NavTabs/index.scss is nested under .NavTabs', () => {
+    // A bare `.MuiTab-root { ... }` or `.MuiTabs-root { ... }` selector
+    // would also restyle the app's OTHER MUI <Tabs> instance --
+    // `src/frontend/screens/WineManager/index.tsx:222` -- which is not this
+    // phase's surface and has its own height expectations. Proved
+    // structurally: every `MuiTab`/`MuiTabs` occurrence in the stripped
+    // file must fall inside the single top-level `.NavTabs { ... }` block,
+    // not merely asserted by indentation convention.
+    const strippedSource = readStripped(NAVTABS_SCSS)
+    const navTabsBlock = extractBlock(strippedSource, /^\.NavTabs\s*\{/m)
+    expect(navTabsBlock).not.toBeNull()
+
+    const muiTabPattern = /\.MuiTabs?-[a-zA-Z-]+/g
+    const wholeFileMatches = strippedSource.match(muiTabPattern) ?? []
+    const withinNavTabsMatches = navTabsBlock?.match(muiTabPattern) ?? []
+    expect(wholeFileMatches.length).toBeGreaterThan(0)
+    expect(withinNavTabsMatches.length).toBe(wholeFileMatches.length)
+
+    // Belt-and-suspenders: no line in the file opens a MuiTab*/MuiTabs*
+    // selector at column 0 (i.e. NOT indented/nested under `.NavTabs`).
+    // WineManager/index.tsx:222's tab strip is the collateral surface an
+    // unscoped rule here would reach.
+    expect(strippedSource).not.toMatch(/^\.MuiTabs?-[a-zA-Z-]+\s*\{/m)
+  })
+
+  it('F-34.10-04 seam recipe survives: .MuiTab-root keeps position: relative / top: 1px, and .Mui-selected keeps background: var(--body-background)', () => {
+    // A height change is the most plausible way to silently break the
+    // card/folder seam recipe (34.10-18's own gates above pin the border
+    // half; this pins the two declarations a min-height edit most directly
+    // threatens).
+    const tabRootBlock = extractBlock(
+      readStripped(NAVTABS_SCSS),
+      /\.MuiTab-root\s*\{/
+    )
+    expect(tabRootBlock).not.toBeNull()
+    expect(tabRootBlock).toMatch(/position:\s*relative\s*;/)
+    expect(tabRootBlock).toMatch(/top:\s*1px\s*;/)
+
+    const selectedBlock = extractBlock(
+      readStripped(NAVTABS_SCSS),
+      /&\.Mui-selected\s*\{/
+    )
+    expect(selectedBlock).not.toBeNull()
+    expect(selectedBlock).toMatch(
+      /background:\s*var\(--body-background\)\s*;/
+    )
+  })
+
+  it('F-34.10-04 flex-wrap prohibition: neither NavShell/index.scss nor NavTabs/index.scss declares flex-wrap anywhere', () => {
+    // 34.10-F04-DIAGNOSIS.md's H2 REJECTED a literal flex-wrap line break as
+    // the cause -- `nowrap` is the default and is what the shell relies on.
+    // An explicit `wrap` added later would reproduce F-34.10-04's reported
+    // symptom for real, not merely the vertical-overflow illusion H1 found.
+    expect(readStripped(NAVSHELL_SCSS)).not.toMatch(/flex-wrap/)
+    expect(readStripped(NAVTABS_SCSS)).not.toMatch(/flex-wrap/)
+  })
+
+  it('F-34.10-04 no literal colour introduced into NavTabs/index.scss', () => {
+    // navigation-shell.md § 3's inversion table: the navbar is LIGHTER than
+    // the body in every scored theme (dracula most severely). A fixed hex
+    // colour anywhere in this file would break relationally in at least one
+    // theme -- including the border-color fix carried in from 34.10-18's
+    // handoff finding, which must resolve to a token, not a literal.
+    expect(readStripped(NAVTABS_SCSS)).not.toMatch(/#[0-9a-fA-F]{3,8}/)
+  })
+})
