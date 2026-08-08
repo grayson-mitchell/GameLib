@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.10-13-PLAN.md -- GAP: F-34.10-01, Dropdown click-toggled in-flow disclosure; phase 34.10 still does NOT close (34.10-12/14/15/16 remain), gap cycle continues"
-last_updated: "2026-08-08T01:20:00.000Z"
+stopped_at: "Completed 34.10-14-PLAN.md -- GAP: F-34.10-02(a), DownloadsRing hole masked (not painted) + idle track repainted in the count badge's proven-visible token chain, comment-immune source gate added; phase 34.10 still does NOT close (34.10-12/15/16 remain), gap cycle continues"
+last_updated: "2026-08-08T01:23:31.000Z"
 last_activity: 2026-08-08
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 252
-  completed_plans: 233
-  percent: 92
+  completed_plans: 234
+  percent: 93
 ---
 
 # Project State
@@ -480,7 +480,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — EXECUTING
 EXECUTED 2026-08-06, STILL DID NOT CLOSE (gate FAILED 1/6) -- gap cycle 5 required, NOT COMPLETE
-Plan: 12 of 16 (gap cycle 1: 34.10-13 done, closing F-34.10-01; 34.10-12/14/15/16 remain)
+Plan: 14 of 16 (gap cycle 1: 34.10-13 done closing F-34.10-01, 34.10-14 done closing F-34.10-02(a); 34.10-12/15/16 remain)
 glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
 see 34.4.2-13-SUMMARY.md. Plan 14 EXECUTED 2026-08-05 -- T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW
 single-flight guard refuses a second visible login window while one is pending/presented, 25s TTL
@@ -3618,6 +3618,7 @@ Closed/parked native-install phases:
 | Phase 34.10 P10 | 25min | 2 tasks | 2 files |
 | Phase 34.10 P11 | 66min | 2 tasks | 2 files |
 | Phase 34.10 P13 | 24min | 3 tasks | 8 files |
+| Phase 34.10 P14 | ~15min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -4118,6 +4119,9 @@ Recent decisions affecting current work:
 - [Phase 34.10-13]: popUpOnHover deleted from Dropdown's Props (not left unpassed) so the hover trigger is unreachable by construction
 - [Phase 34.10-13]: Blur-close moved from panel to container with a containment check to fix the trigger-click-while-focused refuse-to-close bug
 - [Phase 34.10-13]: Dropdown/index.tsx and CategoryFilter/index.tsx registered into meta/i18nGateScope.json for the first time per CLAUDE.md's blocking i18n gate policy — REQ-34.10-09 restored Pending->Complete in REQUIREMENTS.md, closing F-34.10-01; REQ-34.10-08 (F-34.10-02, DownloadsRing) stays Pending, owed to plans 34.10-14/15
+- [Phase 34.10-14]: DownloadsRing's `::after` hole replaced with `-webkit-mask`/`mask: radial-gradient(farthest-side, ...)` instead of painting a guessed backdrop colour, so the centre cannot mismatch any state or theme (closes F-34.10-02 cause (a)); `@supports not` fallback restores the old technique for rest AND hover
+- [Phase 34.10-14]: Idle track repainted from `var(--divider)` to `var(--navbar-inactive, var(--navbar-accent))`, byte-identical to `.DownloadsRing__count`'s token chain — the one foreground in this component operator-confirmed visible on real hardware; idle opacity 0.5->0.65, ring 15px->16px
+- [Phase 34.10-14]: `downloadsRingStyles.test.ts` added as a comment-immune source gate (stripSourceComments + stripTrailingLineComment); full suite ran fully green twice (218/218 suites, 4240/4240 tests) — the plan's documented single pre-existing failure had already been resolved by a concurrent session per 34.10-13's own SUMMARY; REQ-34.10-08 remains Pending pending the live gate (34.10-16), not yet closed by this plan alone since visibility is unprovable in this jest project
 
 ### Pending Todos
 
@@ -4211,8 +4215,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-08T01:20:00.000Z
-Stopped at: Completed 34.10-13-PLAN.md -- GAP: F-34.10-01, Dropdown click-toggled in-flow disclosure closing REQ-34.10-09; phase 34.10 still does NOT close (34.10-12/14/15/16 remain). Next: `/gsd-execute-phase 34.10 --gaps-only`.
+Last session: 2026-08-08T01:23:31.000Z
+Stopped at: Completed 34.10-14-PLAN.md -- GAP: F-34.10-02(a), DownloadsRing `::after` hole replaced with a `-webkit-mask`/`mask: radial-gradient(farthest-side, ...)` cut (with an `@supports not` fallback covering rest AND hover), idle track repainted in `.DownloadsRing__count`'s proven-visible token chain, idle opacity 0.5->0.65, ring 15px->16px; `downloadsRingStyles.test.ts` added as a comment-immune source gate. Full suite ran fully green twice (218/218 suites, 4240/4240 tests). REQ-34.10-08 stays Pending -- this plan's own acceptance criteria explicitly disclaim proving visibility (no jsdom/CSS engine in this jest project); that proof is routed to plan 34.10-16's live gate items 1 and 4. Phase 34.10 still does NOT close (34.10-12/15/16 remain). Next: `/gsd-execute-phase 34.10 --gaps-only`.
+
+Previously stopped at: Completed 34.10-13-PLAN.md -- GAP: F-34.10-01, Dropdown click-toggled in-flow disclosure closing REQ-34.10-09; phase 34.10 still does NOT close (34.10-12/14/15/16 remain). Next: `/gsd-execute-phase 34.10 --gaps-only`.
 
 Previously stopped at: Completed 34.10-11-PLAN.md -- live gate FAIL 2/5, phase 34.10 blocked pending gap cycle (/gsd-plan-phase 34.10 --gaps)
   meta/i18nGateScope.json regenerated (136->144 files, all 11 NavShell files registered, 4

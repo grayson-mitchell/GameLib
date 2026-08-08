@@ -2408,7 +2408,7 @@ REQ-34.10-13, REQ-34.10-14, REQ-34.10-15, REQ-34.10-16
 the frameless drag-region runtime this rebuilds against)
 **Blocks:** Phase 34.11 (the filter panel needs the tier-2 slot to exist); the deferred
 onboarding-tour rework phase (34.10 disables `SidebarTour` per D-13 and does not rebuild it)
-**Plans:** 16 plans (12 executed, 4 remaining: 34.10-12/14/15/16) — **PHASE DOES NOT CLOSE.** The blocking 5-item live gate
+**Plans:** 16 plans (13 executed, 3 remaining: 34.10-12/15/16) — **PHASE DOES NOT CLOSE.** The blocking 5-item live gate
 (`34.10-11-PLAN.md`) authored `34.10-LIVE-GATE.md` and RAN it on real hardware 2026-08-08:
 **VERDICT FAIL, 2 of 5 PASS** (`items_passed: 2`) — see `34.10-LIVE-GATE.md` and
 `34.10-11-SUMMARY.md`. Item 1 (theme survival, REQ-34.10-06) and item 2 (window dragging under
@@ -2445,7 +2445,7 @@ Plans:
 - [x] 34.10-11-PLAN.md — Author and run the blocking live gate: FAIL 2/5 (F-34.10-01, F-34.10-02) — phase does not close, gap cycle owed (wave 7)
 - [ ] 34.10-12-PLAN.md — GAP: F-34.10-02 cause (b) live diagnostic — three-question discriminator on real hardware, then a six-hypothesis source trace to one root cause (wave 1, checkpoint)
 - [x] 34.10-13-PLAN.md — GAP: F-34.10-01 — `Dropdown` becomes a click-toggled in-flow disclosure sized to the 204px column, `popUpOnHover` deleted, tier-2 portal gains a scroll container (wave 1)
-- [ ] 34.10-14-PLAN.md — GAP: F-34.10-02 cause (a) — the ring's painted hole becomes a CSS mask, idle track repainted in the count badge's proven-visible token chain (wave 1)
+- [x] 34.10-14-PLAN.md — GAP: F-34.10-02 cause (a) — the ring's painted hole becomes a CSS mask, idle track repainted in the count badge's proven-visible token chain (wave 1)
 - [ ] 34.10-15-PLAN.md — GAP: F-34.10-02 cause (b) — implement the diagnosed arc-binding fix and give `RingProgress` its first test coverage (wave 2)
 - [ ] 34.10-16-PLAN.md — GAP: live gate RUN 2 — items 1/3/4 full, item 2 partial, item 5's unmeasured tab-navigation sub-check; phase closes only on 5/5 (wave 3, checkpoint)
 
