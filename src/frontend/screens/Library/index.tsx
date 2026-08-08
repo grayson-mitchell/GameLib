@@ -278,42 +278,63 @@ export default React.memo(function Library(): JSX.Element {
 
   //Remember scroll position
   useLayoutEffect(() => {
+    // F-34.10-06 (34.10-18 Task 2): `.App .content` is now the scroll
+    // container (App.css), not `document.body` -- `.App` is fixed at
+    // `height: 100vh; overflow: hidden` so body no longer scrolls. Resolved
+    // HERE, inside the effect body, not at module scope: `main.content`
+    // does not exist until App has mounted. The `?? document.body` fallback
+    // is kept for console mode and any future shell that does not render
+    // the nav shell (no `main.content` in the DOM at all), and the SAME
+    // resolved element is used for both attach and detach below so cleanup
+    // can never detach from a different element than it attached to.
+    const scrollContainer =
+      document.querySelector<HTMLElement>('main.content') ?? document.body
+
     const scrollPosition = parseInt(storage?.getItem('scrollPosition') || '0')
 
     const storeScrollPosition = () => {
       storage?.setItem(
         'scrollPosition',
-        document.body.scrollTop.toString() || '0'
+        scrollContainer.scrollTop.toString() || '0'
       )
     }
 
-    document.body.addEventListener('scroll', storeScrollPosition)
-    document.body.scrollTo(0, scrollPosition || 0)
+    scrollContainer.addEventListener('scroll', storeScrollPosition)
+    scrollContainer.scrollTo(0, scrollPosition || 0)
 
     return () => {
-      document.body.removeEventListener('scroll', storeScrollPosition)
+      scrollContainer.removeEventListener('scroll', storeScrollPosition)
     }
   }, [])
 
   // bind back to top button
   useEffect(() => {
+    // Same resolution as the effect above -- see its comment for why this
+    // must be resolved inside the effect body, not at module scope, and why
+    // the `?? document.body` fallback is kept.
+    const scrollContainer =
+      document.querySelector<HTMLElement>('main.content') ?? document.body
+
     const btn = document.getElementById('backToTopBtn')
     const topSpan = document.getElementById('top')
 
     const scrollCallback = () => {
       if (btn && topSpan) {
         btn.style.visibility =
-          document.body.scrollTop > 450 ? 'visible' : 'hidden'
+          scrollContainer.scrollTop > 450 ? 'visible' : 'hidden'
       }
     }
 
-    document.body.addEventListener('scroll', scrollCallback)
-    return () => document.body.removeEventListener('scroll', scrollCallback)
+    scrollContainer.addEventListener('scroll', scrollCallback)
+    return () => scrollContainer.removeEventListener('scroll', scrollCallback)
   }, [])
 
   const backToTop = () => {
     const anchor = document.getElementById('top')
     if (anchor) {
+      // Untouched by 34.10-18: `scrollIntoView` walks up to whatever scroll
+      // container actually exists in the DOM (now `.App .content`), so it
+      // needs no change for the F-34.10-06 relocation.
       anchor.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
   }

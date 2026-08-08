@@ -19,22 +19,59 @@ interface Props {
   isFavourite?: boolean
 }
 
-// When a card is focused in the library,
+// When a card is focused in the library, keep it in view during controller
+// (gamepad) navigation.
+//
+// F-34.10-06 (34.10-18 Task 2): this is a module-level function, not a
+// component or an effect, so the scroll container is resolved AT CALL TIME
+// inside the function body -- a module-scope lookup would run before
+// `main.content` exists in the DOM. Same selector and `?? document.body`
+// fallback used by Library/index.tsx's two effects (console mode and any
+// future shell that does not render the nav shell have no `main.content`).
+//
+// The container no longer spans the whole window -- the navbar sits above
+// it and the controller row below it -- so every measurement below is taken
+// relative to the CONTAINER's own `getBoundingClientRect()`, not
+// `window.innerHeight`/`rect.top` against 0. `trgt.parentElement!.offsetTop`
+// (the old arithmetic) is measured against the focused element's
+// `offsetParent`, which is not necessarily this container; swapping only the
+// scroll target while keeping that arithmetic would have converted a silent
+// no-op into a silent WRONG-OFFSET scroll, which is worse because it looks
+// like it works. `rect` (the focused element's own viewport rect) is already
+// computed here, so both destinations are expressed as:
+//   container.scrollTop + (element's position relative to the container's
+//   own viewport rect)
+// which reduces to the container's current scroll-space offset of the
+// element, regardless of what container it lives in.
 const scrollCardIntoView = (ev: FocusEvent) => {
-  const windowHeight = window.innerHeight
+  const container =
+    document.querySelector<HTMLElement>('main.content') ?? document.body
+
   const trgt = ev.target as HTMLElement
   const rect = trgt.getBoundingClientRect()
+  const containerRect = container.getBoundingClientRect()
 
-  if (rect.top < 100) {
-    // if it's too close to the top, scroll a bit down
-    document.body.scrollTo({
-      top: trgt.parentElement!.offsetTop - 200,
+  if (rect.top < containerRect.top + 100) {
+    // Too close to the container's own top edge -- compared against
+    // `containerRect.top`, not window/viewport 0, because the navbar now
+    // occupies the top of the window above the container. A window-relative
+    // threshold would fire too early (or too late) by however much chrome
+    // sits above the container.
+    container.scrollTo({
+      top: container.scrollTop + (rect.top - containerRect.top) - 200,
       behavior: 'smooth'
     })
-  } else if (rect.bottom > windowHeight - 100) {
-    // if it's too close to the bottom, scroll a bit up
-    document.body.scrollTo({
-      top: trgt.parentElement!.offsetTop - windowHeight + rect.height + 150,
+  } else if (rect.bottom > containerRect.bottom - 100) {
+    // Too close to the container's own bottom edge -- compared against
+    // `containerRect.bottom`, not `window.innerHeight`, for the same reason:
+    // the controller row now occupies window space below the container, so
+    // a window-height threshold would fire too late.
+    container.scrollTo({
+      top:
+        container.scrollTop +
+        (rect.bottom - containerRect.top) -
+        containerRect.height +
+        150,
       behavior: 'smooth'
     })
   }

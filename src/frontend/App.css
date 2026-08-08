@@ -30,7 +30,31 @@ body {
     'tier2 content'
     'tier2 controller';
   grid-template-rows: min-content min-content 1fr min-content;
-  min-height: 100vh;
+  /*
+   * F-34.10-06 (34.10-18 Task 2): `height: 100vh; overflow: hidden` replaces
+   * the old `min-height: 100vh` with an auto (unbounded) height. That old
+   * shape let `.App` grow past the viewport for tall routes, which is why
+   * `body` (index.scss: `height: 100vh; overflow: auto !important`) was the
+   * page's real scroll container -- and why its full-height scrollbar drew
+   * over the navbar, and why the navbar itself scrolled away with the page
+   * (commit `0000baf94` deleted `.App .Sidebar { position: sticky; top: 0 }`
+   * without ever adding an equivalent rule here).
+   *
+   * `position: sticky` on `.NavShell__navbar` CANNOT fix this: a sticky grid
+   * item's containing block is its own grid area, and the navbar's area is a
+   * single `min-content` row exactly as tall as the navbar itself -- zero
+   * sticky travel distance, no pinning. The old `.App .Sidebar` sticky rule
+   * only worked because its grid area spanned the tall `1fr` row; do not
+   * port that rule shape onto the navbar. Instead, `.App` itself is now
+   * fixed at the viewport height with `overflow: hidden`, so it can never
+   * grow past the window, and `.App .content` below becomes the actual
+   * scroll container for the `1fr` row's content -- the navbar's own grid
+   * row never scrolls because there is nothing above `.App`'s box to move.
+   * `100vh` is a viewport unit, not a percentage; it does not re-enter the
+   * F-10 cycle documented below.
+   */
+  height: 100vh;
+  overflow: hidden;
 }
 
 .App .content {
@@ -57,7 +81,20 @@ body {
    * still grows past the viewport for tall routes because `.App` is
    * `min-height: 100vh` with an auto height. Stretch gives the intended
    * "at least full height" with no percentage and no cycle.
+   *
+   * F-34.10-06 (34.10-18 Task 2) update: `.App` is no longer auto-height --
+   * it is now `height: 100vh; overflow: hidden` (see above), and THIS
+   * element is now the scroll container (`overflow-y: auto` below). The
+   * added `min-height: 0` is a LENGTH, not a percentage, so it does not
+   * re-enter the cycle described above: it is what lets a `1fr` grid item
+   * shrink below its own content's intrinsic size so the row stops growing
+   * to fit the content and the element scrolls internally instead. Without
+   * it, the `1fr` row would grow to the content's full height exactly as it
+   * did before, `.App`'s `overflow: hidden` would clip the excess instead of
+   * scrolling it, and nothing would be reachable below the fold.
    */
+  overflow-y: auto;
+  min-height: 0;
   &:not(:has(.gameConfigContainer img.backgroundImage)) {
     background: var(--gradient-body-background, var(--body-background));
   }
