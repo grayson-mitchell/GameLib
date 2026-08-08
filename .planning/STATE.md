@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.10-22-PLAN.md -- RAN live gate run 3, verdict FAIL 4/5, item 1 FAILS on F-34.10-03/-04; phase 34.10 does NOT close; next command is /gsd-debug (34.10-VERIFICATION.md is stale)
-last_updated: "2026-08-08T08:50:18.330Z"
-last_activity: 2026-08-08
+stopped_at: Executing 34.10 gap cycle 3 (plans 23-27); run-3 verdict was FAIL 4/5 with item 1 failing on F-34.10-03/-04, both since FIXED out-of-band by /gsd-debug (F-34.10-03 = 220211230, F-34.10-04 operator-confirmed); plan 27 is the blocking run-4 gate
+last_updated: "2026-08-09T00:00:00.000Z"
+last_activity: 2026-08-09 -- Phase 34.10 gap cycle 3 execution started
 progress:
   total_phases: 23
   completed_phases: 14
-  total_plans: 263
+  total_plans: 268
   completed_plans: 242
-  percent: 92
+  percent: 90
 ---
 
 # Project State
@@ -478,8 +478,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — gap cycle 2 EXECUTED, PHASE STILL OPEN
-Plan: 22 of 22 complete — **live gate RUN 3 recorded 2026-08-08 (plan 34.10-22), VERDICT FAIL,
+Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — gap cycle 3 EXECUTING (plans 23-27), PHASE STILL OPEN
+Plan: 22 of 27 complete — **live gate RUN 3 recorded 2026-08-08 (plan 34.10-22), VERDICT FAIL,
 items_passed 4/5. PHASE 34.10 DOES NOT CLOSE.** Items 2, 3, 4 and 5 PASS; **item 1 FAILS.**
 
 CLOSED BY MEASUREMENT in run 3: **F-34.10-05** (disclosure-panel background correct in
