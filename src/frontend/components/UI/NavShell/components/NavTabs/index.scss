@@ -21,6 +21,34 @@
     background: transparent;
     color: var(--navbar-inactive);
     padding: var(--space-xs) var(--space-md);
+    // F-34.10-04 (34.10-19, implementing 34.10-F04-DIAGNOSIS.md's single
+    // surviving hypothesis, H1). `node_modules/@mui/material/Tab/Tab.js`
+    // applies `minHeight: 72` unconditionally whenever a `<Tab>` receives
+    // BOTH `icon` and `label` -- every `<Tab>` in `NavTabs/index.tsx` does,
+    // and this file declared no `min-height` anywhere, so nothing overrode
+    // it. Live-measured (dracula capture, 34.10-F04-DIAGNOSIS.md):
+    // `tab0Computed['min-height']` = 72px against
+    // `navbarComputed['height']` = 56px (`--navbar-height`); because
+    // `.NavShell__navbar` sets `align-items: flex-end`, the 16px excess
+    // overflowed ABOVE the navbar's own top edge, which is what read as the
+    // wordmark/Downloads ring sitting on a second row below the tab strip.
+    // The value below is this tab's own content-derived minimum, not a
+    // shrink-to-fit guess: `2 * var(--space-xs)` (this rule's own top+
+    // bottom padding, 8px each at the 16px root) + `1.25em` (MUI's own
+    // `lineHeight: 1.25` multiplier on this rule's `font-size:
+    // var(--text-md)` = 16px, i.e. the label's line-box, 20px) + `1px`
+    // (this rule's own border-top; `border-bottom` is `none`) = 37px at the
+    // default 16px root -- comfortably inside `--navbar-height` (56px), so
+    // no second-row overflow, and never below the icon+label content it
+    // must clear (the icon sits beside the label via `iconPosition="start"`
+    // and `flex-direction: row`, so the label's line-box, the taller of the
+    // two, sets the floor). Deliberately NOT a bare `min-height: 0`: that
+    // would rely entirely on padding+line-height with no explicit floor if
+    // either token's value ever shrinks. Diagnosis text: "must not make the
+    // tab shorter than its own label+icon content ... must preserve the
+    // `top: 1px` overlap" -- both preserved below and by the untouched
+    // `top: 1px` declaration further down this rule.
+    min-height: calc((2 * var(--space-xs)) + 1.25em + 1px);
     border-radius: var(--space-2xs) var(--space-2xs) 0 0;
     position: relative;
     // Pulls the tab down over the navbar's own bottom border so an active
@@ -65,7 +93,30 @@
     &.Mui-selected {
       background: var(--body-background);
       color: var(--navbar-active);
-      border-color: var(--divider);
+      // HANDOFF FROM 34.10-18 (34.10-18-SUMMARY.md "Findings"): this line
+      // originally read `border-color: var(--divider)`. `--divider` has no
+      // CSS fallback and is declared in only 2 of themes.scss's 11 real
+      // theme blocks (`grep -n "^\s*--divider:" src/frontend/themes.scss`
+      // to re-verify) -- per the CSS custom-properties spec, `var()` with an
+      // undefined property and no fallback is invalid at computed-value
+      // time, which drops the entire `border-color` declaration, not just
+      // its value, so the cascade fell back to `.MuiTab-root`'s own
+      // `border: 1px solid transparent` in the other 9 themes -- including 3
+      // of the 4 themes the live gate sweeps (gruvbox_dark, dracula,
+      // dracula-classic). The active tab's top/side "card" framing was
+      // fully transparent (invisible) there, even though the core merge
+      // illusion (this rule's own `background` + `border-bottom` below)
+      // still worked. Fixed to `var(--body-background)` -- the SAME token
+      // this rule already uses for `background` and `border-bottom` below,
+      // verified (structurally, via `appShellLayout.test.ts`'s
+      // `tokenResolvesInEveryTheme` scan) to resolve in all 11 real theme
+      // blocks. One token for the tab's entire border (top/side/bottom) and
+      // its fill keeps the "this card is made of content-surface material"
+      // reading uniform on every edge, not just the bottom, and needs no
+      // fallback because it is unconditionally defined -- see
+      // `NavShell/index.scss`'s own `border-bottom` comment for the
+      // identical precedent this mirrors.
+      border-color: var(--body-background);
       // Painted in the content colour so the navbar's bottom border and
       // this tab's own bottom edge visually merge into one surface.
       border-bottom: 1px solid var(--body-background);
