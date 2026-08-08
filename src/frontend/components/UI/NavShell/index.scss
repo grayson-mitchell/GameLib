@@ -101,6 +101,11 @@
 
 .NavShell__tier2Portal {
   height: 100%;
+  // In-flow filter disclosures (Dropdown, plan 34.10-13) can now exceed the
+  // column's own height; this is the scroll container that keeps the excess
+  // reachable instead of clipped by .NavShell__tier2's overflow: hidden.
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .NavShell__versionSlot {
