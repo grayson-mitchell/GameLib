@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.10-19-PLAN.md
-last_updated: "2026-08-08T08:26:49.970Z"
+stopped_at: Completed 34.10-21-PLAN.md -- authored run-3 live-gate contract §9, all verdict slots empty per decision D-E
+last_updated: "2026-08-08T08:50:18.330Z"
 last_activity: 2026-08-08
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 263
-  completed_plans: 241
+  completed_plans: 242
   percent: 92
 ---
 
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — EXECUTING gap cycle 2
-Plan: 20 of 22 complete (seam-token corrected post-review); gap-cycle-2 plans 17-22 now executing. Prior state -- **live gate RUN 2
+Plan: 21 of 22 complete (seam-token corrected post-review); gap-cycle-2 plans 17-22 now executing. Prior state -- **live gate RUN 2
 recorded, VERDICT FAIL, items_passed 4/5.
 PHASE 34.10 DOES NOT CLOSE.** Both of run 1's blocking defects are CLOSED and live-confirmed:
 F-34.10-01 (tier-2 dropdowns, item 3 PASS -- functional contract: click-toggle, containment,
@@ -3702,6 +3702,7 @@ Closed/parked native-install phases:
 | Phase 34.10 P17 | 70min | 3 tasks | 2 files |
 | Phase 34.10 P18 | ~40min | 3 tasks + 1 correction | 6 files |
 | Phase 34.10 P19 | 25min | 2 tasks | 2 files |
+| Phase 34.10 P21 | ~35min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -4219,6 +4220,8 @@ Recent decisions affecting current work:
 - [Phase 34.10-20]: F-34.10-05 implemented as W1 (the reading 34.10-17's live dracula capture settled): `Dropdown/index.scss`'s `.dropdown` background changed from `var(--background)` to `background: transparent`, compositing directly onto `.NavShell__tier2`'s own `var(--navbar-background)` surface rather than swapping one absolute token for another — same reasoning as `DownloadsRing/index.scss`'s mask-fix precedent; the `.expanded` inset hairline remains the delimiting affordance; plan 34.10-13's geometry untouched; REQ-34.10-09 not ticked, adjudicated by plan 34.10-22's live gate item 3
 - [Phase 34.10-19]: Implemented F-34.10-04's single surviving cause: min-height calc() on .NavTabs .MuiTab-root constraining MUI's icon+label 72px default to a content-derived 37px — Diagnosis explicitly named this file/selector and rejected a --navbar-height change; calc() derives from existing --space-xs padding token + MUI's own 1.25 line-height multiplier rather than a disconnected magic number
 - [Phase 34.10-19]: Fixed the 34.10-18 handed-off border-color: var(--divider) no-fallback bug in NavTabs/index.scss's .Mui-selected to var(--body-background) — 34.10-18-SUMMARY.md explicitly recorded this as a finding owned by this plan's file; --divider resolves in only 2 of 11 theme blocks so the active tab's framing border was invisible in 9/11 themes including 3 of 4 live-gate themes
+- [Phase 34.10]: Item 2 (window dragging) gets a FULL 5-sub-check re-run in the run-3 live-gate contract, not carried forward — 34.10-18's own coordinator-caught defect on the same .NavShell__navbar element proved source-level 'this is unaffected' reasoning is not reliable enough to skip a live re-measurement in this phase
+- [Phase 34.10]: Item 4's idle Downloads-ring sub-check is folded into item 1's new per-theme idle-ring sweep in the run-3 contract, with an explicit reopen condition — avoids double-counting the identical observation under two item numbers; any FAIL in item 1's per-theme sweep reopens item 4 in full regardless of its own carried-forward sub-checks
 
 ### Pending Todos
 
@@ -4333,8 +4336,8 @@ Recent decisions affecting current work:
 > its `Stopped at: Completed 34.10-20-PLAN.md --` prefix and demoted into the "prior session,
 > preserved as history" chain.
 
-Last session: 2026-08-08T08:26:49.955Z
-Stopped at: Completed 34.10-19-PLAN.md -- gap cycle 2 plan 19 (F-34.10-04 navbar min-height fix +
+Last session: 2026-08-08T08:50:18.312Z
+Stopped at: Completed 34.10-21-PLAN.md -- authored run-3 live-gate contract §9, all verdict slots empty per decision D-E
 34.10-18 handoff, REQ-34.10-06). Task 1 implemented `34.10-F04-DIAGNOSIS.md`'s single surviving
 cause exactly: MUI's `Tab.js` applies an unconditional `minHeight: 72` when a `<Tab>` gets both
 `icon` and `label` (every `<Tab>` in `NavTabs/index.tsx` does), unmitigated by any override in
