@@ -81,12 +81,20 @@ describe('F-10: no percentage height may resolve against .App\'s 1fr row', () =>
     expect(block).not.toMatch(/min-height:\s*[\d.]+%/)
   })
 
-  it('.App still guarantees at least a viewport-tall shell, so removing that min-height did not trade a runaway for a collapse', () => {
-    // The deleted declaration was redundant, not load-bearing: `.content` is a
-    // grid item and defaults to `align-self: stretch`, so it fills the `1fr`
-    // row, and the row is at least viewport-tall because of this. If this
-    // min-height ever goes away, the redundancy argument goes with it.
-    expect(cssBlock(read(APP_CSS), '.App')).toMatch(/min-height:\s*100vh/)
+  it('.App still guarantees a viewport-tall shell, so removing that min-height did not trade a runaway for a collapse', () => {
+    // Updated by 34.10-18 (F-34.10-06): `.App` no longer uses
+    // `min-height: 100vh` with an auto (unbounded) height -- that shape let
+    // `.App` grow past the viewport for tall routes, which is precisely why
+    // `document.body` had to be the page's scroll container, which in turn
+    // is why the navbar could scroll away and why body's scrollbar drew over
+    // it (F-34.10-06). `.App` is now FIXED at `height: 100vh` with
+    // `overflow: hidden`, and `.App .content` (not `.App` itself) is the
+    // scroll container -- see appShellLayout.test.ts for that half. `height`
+    // is a strictly stronger viewport-tall guarantee than the old
+    // `min-height` was (it can no longer grow past the viewport at all), so
+    // this assertion still guards against the collapse this test's own name
+    // describes; only the property changed, not the guarantee.
+    expect(cssBlock(read(APP_CSS), '.App')).toMatch(/height:\s*100vh/)
   })
 
   it('SECONDARY HARDENING (not the F-10 fix) — .loginBackground stays out of flow so a decorative layer cannot contribute intrinsic height', () => {
