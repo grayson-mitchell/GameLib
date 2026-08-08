@@ -44,6 +44,28 @@
   // § CSS Patterns).
   align-items: flex-end;
   padding-inline-start: var(--traffic-light-inset);
+  // F-34.10-03 (34.10-18 Task 1): this is the OTHER half of the card/folder
+  // seam recipe. The active tab's own `border-bottom: 1px solid
+  // var(--body-background)` plus its `top: 1px` offset (both already shipped
+  // in `NavTabs/index.scss`, D-04) exist specifically to ERASE this border
+  // where the two overlap, producing the illusion that the active tab merges
+  // into the content surface below (REQ-34.10-06). Removing EITHER half
+  // silently reverts the illusion -- one half alone paints no visible error,
+  // it just quietly stops erasing. `var(--divider)` is the same relational
+  // token `.NavTabs .MuiTab-root.Mui-selected` already uses for
+  // `border-color`, so the two halves cannot drift apart per-theme; a fixed
+  // colour would break navigation-shell.md § 3's inversion table (the navbar
+  // is LIGHTER than the body in all three scored themes, `dracula` most
+  // severely). Because `* { box-sizing: border-box }` is set globally
+  // (App.css), this 1px border is drawn INSIDE the existing
+  // `height: var(--navbar-height)` -- the navbar's outer box does not grow
+  // and no row re-flow occurs. Do NOT change `--navbar-height` here for this;
+  // the tab strip's own height/geometry is plan 34.10-19's subject, not this
+  // plan's -- H5 in 34.10-F04-DIAGNOSIS.md found the visible ~10px seam is
+  // the SAME underlying geometry as F-34.10-04 (the 72px tab sitting flush
+  // to the top of its 80px container), which plan 34.10-19 owns; this border
+  // is this plan's half of the recipe regardless of that other contributor.
+  border-bottom: 1px solid var(--divider);
 }
 
 // D-05: reserve room for `WindowControls` so it never overlaps the
