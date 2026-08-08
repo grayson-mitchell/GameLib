@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.10-20-PLAN.md -- gap cycle 2 plan 20 (F-34.10-05 disclosure panel background, REQ-34.10-09); phase 34.10 does not close, plan 19 and the live-gate re-run remain"
-last_updated: "2026-08-08T08:18:00.000Z"
+stopped_at: Completed 34.10-19-PLAN.md
+last_updated: "2026-08-08T08:26:49.970Z"
 last_activity: 2026-08-08
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 263
-  completed_plans: 240
-  percent: 91
+  completed_plans: 241
+  percent: 92
 ---
 
 # Project State
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — EXECUTING gap cycle 2
-Plan: 19 of 22 complete (seam-token corrected post-review); gap-cycle-2 plans 17-22 now executing. Prior state -- **live gate RUN 2
+Plan: 20 of 22 complete (seam-token corrected post-review); gap-cycle-2 plans 17-22 now executing. Prior state -- **live gate RUN 2
 recorded, VERDICT FAIL, items_passed 4/5.
 PHASE 34.10 DOES NOT CLOSE.** Both of run 1's blocking defects are CLOSED and live-confirmed:
 F-34.10-01 (tier-2 dropdowns, item 3 PASS -- functional contract: click-toggle, containment,
@@ -2598,7 +2598,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 91%
+trusted blindly. The recurring `**Progress:**[█████████░] 92%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 
@@ -3701,6 +3701,7 @@ Closed/parked native-install phases:
 | Phase 34.10 P16 | ~1h10min | 2 tasks | 3 files |
 | Phase 34.10 P17 | 70min | 3 tasks | 2 files |
 | Phase 34.10 P18 | ~40min | 3 tasks + 1 correction | 6 files |
+| Phase 34.10 P19 | 25min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -4216,6 +4217,8 @@ Recent decisions affecting current work:
 - [Phase 34.10-18]: position: sticky on the navbar deliberately not attempted for F-34.10-06 — a sticky grid item is constrained to its own grid area; the navbar's min-content row gives zero sticky travel distance -- documented as a dead end in App.css so it cannot be re-added as an apparent fix
 - [Phase 34.10-18]: CORRECTED: navbar seam border token changed from var(--divider) to var(--body-background) after coordinator review found --divider has no CSS fallback and resolves in only 2 of 11 themes.scss theme blocks — var() with an undefined property and no fallback invalidates the whole declaration at computed-value time -- no border painted in 9 themes including 3 of the 4 the run-3 live gate sweeps; var(--body-background) verified via structural parse to resolve in all 11 themes and exactly matches the active tab's own erasure border token
 - [Phase 34.10-20]: F-34.10-05 implemented as W1 (the reading 34.10-17's live dracula capture settled): `Dropdown/index.scss`'s `.dropdown` background changed from `var(--background)` to `background: transparent`, compositing directly onto `.NavShell__tier2`'s own `var(--navbar-background)` surface rather than swapping one absolute token for another — same reasoning as `DownloadsRing/index.scss`'s mask-fix precedent; the `.expanded` inset hairline remains the delimiting affordance; plan 34.10-13's geometry untouched; REQ-34.10-09 not ticked, adjudicated by plan 34.10-22's live gate item 3
+- [Phase 34.10-19]: Implemented F-34.10-04's single surviving cause: min-height calc() on .NavTabs .MuiTab-root constraining MUI's icon+label 72px default to a content-derived 37px — Diagnosis explicitly named this file/selector and rejected a --navbar-height change; calc() derives from existing --space-xs padding token + MUI's own 1.25 line-height multiplier rather than a disconnected magic number
+- [Phase 34.10-19]: Fixed the 34.10-18 handed-off border-color: var(--divider) no-fallback bug in NavTabs/index.scss's .Mui-selected to var(--body-background) — 34.10-18-SUMMARY.md explicitly recorded this as a finding owned by this plan's file; --divider resolves in only 2 of 11 theme blocks so the active tab's framing border was invisible in 9/11 themes including 3 of 4 live-gate themes
 
 ### Pending Todos
 
@@ -4319,7 +4322,47 @@ Recent decisions affecting current work:
 > 34.10-16-PLAN.md --` prefix and demoted into the `--- prior session, preserved as history ---`
 > chain below, in the same "Previously stopped at:" format used everywhere else in that chain.
 
-Last session: 2026-08-08T08:12:34.000Z
+> NOTE (34.10-19): the same mis-targeted-write pattern struck again --
+> `state.record-session` spliced this session's bare `--stopped-at` argument ("Completed
+> 34.10-19-PLAN.md") in as the `Stopped at:` line's FIRST line only, leaving plan 20's entire
+> multi-line descriptive body orphaned directly underneath it with no heading (identical mechanism
+> to the 34.10-17 note above). The frontmatter `progress.percent` field was also corrupted in the
+> same write (`91` -> `61`, not the `92` the same session's own `state.update-progress` call had
+> just computed) -- hand-corrected back to `92`. Both hand-corrected below: plan 19's own
+> `Stopped at:` now carries a full description, and the orphaned plan-20 paragraph was given back
+> its `Stopped at: Completed 34.10-20-PLAN.md --` prefix and demoted into the "prior session,
+> preserved as history" chain.
+
+Last session: 2026-08-08T08:26:49.955Z
+Stopped at: Completed 34.10-19-PLAN.md -- gap cycle 2 plan 19 (F-34.10-04 navbar min-height fix +
+34.10-18 handoff, REQ-34.10-06). Task 1 implemented `34.10-F04-DIAGNOSIS.md`'s single surviving
+cause exactly: MUI's `Tab.js` applies an unconditional `minHeight: 72` when a `<Tab>` gets both
+`icon` and `label` (every `<Tab>` in `NavTabs/index.tsx` does), unmitigated by any override in
+`NavTabs/index.scss`, overflowing 16px above the 56px navbar (`align-items: flex-end` anchored the
+excess upward) -- read live as the wordmark/Downloads ring on a second row. Added a content-derived
+`min-height: calc((2 * var(--space-xs)) + 1.25em + 1px)` (37px at the 16px root) on
+`.NavTabs .MuiTab-root`, scoped so `WineManager/index.tsx:222`'s separate MUI `<Tabs>` instance is
+untouched; did not change `--navbar-height` (diagnosis explicitly rejected that). Also fixed the
+`border-color: var(--divider)` no-fallback bug 34.10-18-SUMMARY.md handed off (recorded as this
+plan's own file's finding): `--divider` resolves in only 2 of 11 real theme blocks, so `.Mui-
+selected`'s top/side framing border was invisible in 9/11 themes; changed to `var(--body-
+background)`, the same token this rule already uses for `background`/`border-bottom`, already
+structurally verified elsewhere in this file's own gates to resolve in all 11 blocks. Task 2
+extended `appShellLayout.test.ts` (18 tests total, not a new file) with a 5-gate `F-34.10-04` block:
+the exact implemented declaration, MUI-selector scoping proof (nothing leaks to WineManager), seam-
+recipe survival (`position: relative`/`top: 1px`/`.Mui-selected`'s `background`), a `flex-wrap`
+prohibition (H2 was REJECTED as a literal cause in the diagnosis), and a no-hex-literal check.
+`pnpm codecheck` clean; `meta/i18nGateScope.json` unchanged. Full suite: 219/219 suites, 4269/4269
+tests, fully green (no flake this run) -- reconciles exactly against 34.10-20-SUMMARY.md's
+4264-baseline plus this plan's +5 new tests. **Nothing here is proven by the suite** -- REQ-34.10-06
+explicitly NOT ticked from this plan per its own `<verification>` section (no jsdom/CSS engine can
+see whether three elements share a line); reverted a premature `requirements.mark-complete` this
+session's own workflow step had applied, back to Pending. Plan 34.10-22's live gate item 1 remains
+the adjudicator. **PHASE 34.10 STILL DOES NOT CLOSE** -- the live-gate re-run (plans 21/22) remains.
+Next: `/gsd-execute-phase 34.10 --gaps-only`.
+
+--- prior session, preserved as history ---
+
 Stopped at: Completed 34.10-20-PLAN.md -- gap cycle 2 plan 20 (F-34.10-05 disclosure panel
 background, REQ-34.10-09). Task 1 gated on `34.10-F04-DIAGNOSIS.md`'s "F-34.10-05 verdict":
 confirmed W1 (wrong token) SURVIVES, W2 (broken inheritance) REJECTED in both captured themes --
