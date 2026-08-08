@@ -39,6 +39,34 @@ const NAVTABS_SCSS = join(
   FRONTEND_ROOT,
   'components/UI/NavShell/components/NavTabs/index.scss'
 )
+const THEMES_SCSS = join(FRONTEND_ROOT, 'themes.scss')
+
+// The 11 real theme block selectors in themes.scss, as they exist at time of
+// writing -- grepped directly (`grep -n "^body\\." src/frontend/themes.scss`)
+// and cross-checked with a structural nested-brace parse, not assumed. This
+// list deliberately EXCLUDES `body {}` (the shared base, not a theme),
+// `body.alphabet-filter-button--active` (a cross-theme STATE modifier, not a
+// theme), and descendant-combinator sub-selectors like
+// `body.zombie .alphabet-filter-button--active` or `body.classic .sid-input`
+// (component-scoped overrides nested a theme, not themes themselves) --
+// none of those three kinds of block reliably define surface tokens like
+// `--body-background`, so folding them into a "must define" scan would
+// produce false failures unrelated to actual theme coverage. If a new theme
+// is added to `themes.scss`, this list -- and only this list -- needs a new
+// entry; the intentional exclusions above do not change.
+const REAL_THEME_BLOCK_PATTERNS = [
+  /^body\.midnightMirage\s*\{/m,
+  /^body\.classic,\s*\n?body\.cyberSpaceOasis,\s*\n?body\.cyberSpaceOasisAlt\s*\{/m,
+  /^body\.gruvbox_dark\s*\{/m,
+  /^body\.high-contrast\s*\{/m,
+  /^body\.dracula,\s*\n?body\.dracula-classic\s*\{/m,
+  /^body\.nord-light\s*\{/m,
+  /^body\.nord-dark\s*\{/m,
+  /^body\.marine,\s*\n?body\.marine-classic\s*\{/m,
+  /^body\.zombie,\s*\n?body\.zombie-classic\s*\{/m,
+  /^body\.old-school\s*\{/m,
+  /^body\.sweet,\s*\n?body\.sweet-dark\s*\{/m
+]
 const LIBRARY_TSX = join(FRONTEND_ROOT, 'screens/Library/index.tsx')
 const GAMES_LIST_TSX = join(
   FRONTEND_ROOT,
@@ -86,14 +114,99 @@ function collectSourceFiles(dir: string, out: string[] = []): string[] {
   return out
 }
 
+/**
+ * Extracts the body of every real theme block in `themes.scss` (see
+ * `REAL_THEME_BLOCK_PATTERNS` above), so a token's universality can be
+ * PROVEN by scanning actual source structure rather than asserted from
+ * plausibility (F-34.10-03's original bug: `var(--divider)` was assumed
+ * relational/universal and was neither -- see the incident recorded in
+ * `NavShell/index.scss`'s own comment and 34.10-18-SUMMARY.md).
+ */
+function realThemeBlockBodies(): string[] {
+  const source = readStripped(THEMES_SCSS)
+  return REAL_THEME_BLOCK_PATTERNS.map((pattern) => {
+    const body = extractBlock(source, pattern)
+    if (body === null) {
+      throw new Error(
+        `themes.scss: expected theme block matching ${pattern} not found -- ` +
+          'themes.scss structure has changed; update REAL_THEME_BLOCK_PATTERNS'
+      )
+    }
+    return body
+  })
+}
+
+/** True only if `--${token}:` is declared in every real theme block. */
+function tokenResolvesInEveryTheme(token: string): boolean {
+  return realThemeBlockBodies().every((body) =>
+    new RegExp(`--${token}:`).test(body)
+  )
+}
+
 describe('App shell layout (F-34.10-03 seam recipe, F-34.10-06 scroll relocation)', () => {
-  it('F-34.10-03 navbar half: .NavShell__navbar declares border-bottom: 1px solid var(--divider)', () => {
+  it('F-34.10-03 navbar half: .NavShell__navbar declares border-bottom: 1px solid var(--body-background)', () => {
+    // CORRECTED post-review: the original declaration used `var(--divider)`,
+    // a no-fallback custom property defined in only 2 of 11 real theme
+    // blocks in themes.scss. `var()` with an undefined property and no
+    // fallback is invalid at computed-value time -- the WHOLE
+    // `border-bottom` shorthand drops, not just its colour, so no border
+    // painted at all in the other 9 themes. `--body-background` (asserted
+    // below, gate 3a, to actually resolve in all 11) is what this must be.
     const navbarBlock = extractBlock(
       readStripped(NAVSHELL_SCSS),
       /^\.NavShell__navbar\s*\{/m
     )
     expect(navbarBlock).not.toBeNull()
-    expect(navbarBlock).toMatch(/border-bottom:\s*1px\s+solid\s+var\(--divider\)\s*;/)
+    expect(navbarBlock).toMatch(
+      /border-bottom:\s*1px\s+solid\s+var\(--body-background\)\s*;/
+    )
+  })
+
+  it('F-34.10-03 no no-fallback var(--divider) reintroduced into .NavShell__navbar', () => {
+    // Guards specifically against re-committing this plan's own original
+    // mistake, scoped to the ONE rule this plan actually owns and fixed:
+    // `.NavShell__navbar` in `NavShell/index.scss`. Deliberately NOT scoped
+    // to the whole file or the whole `NavShell/` subtree: TWO other,
+    // pre-existing no-fallback `var(--divider)` usages already exist and
+    // are explicitly left unchanged by this plan --
+    // `.NavShell__tier2 { border-inline-end: ... var(--divider) }` (same
+    // file, a few rules below this one -- draws the tier-2 column's
+    // vertical divider, unrelated to this seam) and
+    // `NavTabs/index.scss:68`'s `border-color: var(--divider)` (a
+    // different file, plan 34.10-19's scope). A gate scoped any wider than
+    // `.NavShell__navbar` itself would fail on those pre-existing,
+    // out-of-scope findings rather than catching a genuine regression. See
+    // 34.10-18-SUMMARY.md's "Findings" section for the full app-wide
+    // no-fallback `--divider` census, both of these included.
+    const navbarBlock = extractBlock(
+      readStripped(NAVSHELL_SCSS),
+      /^\.NavShell__navbar\s*\{/m
+    )
+    expect(navbarBlock).not.toBeNull()
+    // Matches `var(--divider)` with nothing but the closing paren after the
+    // property name -- i.e. no comma introducing a fallback.
+    const noFallbackDivider = /var\(\s*--divider\s*\)/g
+    expect(navbarBlock?.match(noFallbackDivider)).toBeNull()
+  })
+
+  it('F-34.10-03 chosen token: var(--body-background) actually resolves in every real theme block in themes.scss', () => {
+    // The gate that would have caught the original bug BEFORE it shipped:
+    // proves universality by scanning themes.scss's actual structure
+    // (REAL_THEME_BLOCK_PATTERNS, grepped and cross-checked at authoring
+    // time), not by asserting a belief about the token's relational-ness.
+    // `--divider` fails this exact check (defined in only 2 of 11 blocks);
+    // `--body-background` is asserted to pass it.
+    expect(tokenResolvesInEveryTheme('body-background')).toBe(true)
+  })
+
+  it('SANITY: the theme-universality checker itself correctly fails --divider (proves it is not vacuously true)', () => {
+    // Negative control for the gate above. If this ever flips to `true`,
+    // themes.scss has been edited to define `--divider` in every block --
+    // meaning the ORIGINAL `var(--divider)` declaration this plan replaced
+    // would in fact have been safe, and `NavShell/index.scss`'s comment
+    // plus this plan's "Findings" writeup should be revisited rather than
+    // treated as still-true history.
+    expect(tokenResolvesInEveryTheme('divider')).toBe(false)
   })
 
   it('F-34.10-03 tab half: NavTabs .Mui-selected still declares border-bottom: 1px solid var(--body-background)', () => {

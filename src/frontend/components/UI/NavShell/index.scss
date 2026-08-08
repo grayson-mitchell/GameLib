@@ -44,28 +44,76 @@
   // § CSS Patterns).
   align-items: flex-end;
   padding-inline-start: var(--traffic-light-inset);
-  // F-34.10-03 (34.10-18 Task 1): this is the OTHER half of the card/folder
-  // seam recipe. The active tab's own `border-bottom: 1px solid
-  // var(--body-background)` plus its `top: 1px` offset (both already shipped
-  // in `NavTabs/index.scss`, D-04) exist specifically to ERASE this border
-  // where the two overlap, producing the illusion that the active tab merges
-  // into the content surface below (REQ-34.10-06). Removing EITHER half
-  // silently reverts the illusion -- one half alone paints no visible error,
-  // it just quietly stops erasing. `var(--divider)` is the same relational
-  // token `.NavTabs .MuiTab-root.Mui-selected` already uses for
-  // `border-color`, so the two halves cannot drift apart per-theme; a fixed
-  // colour would break navigation-shell.md § 3's inversion table (the navbar
-  // is LIGHTER than the body in all three scored themes, `dracula` most
-  // severely). Because `* { box-sizing: border-box }` is set globally
-  // (App.css), this 1px border is drawn INSIDE the existing
-  // `height: var(--navbar-height)` -- the navbar's outer box does not grow
-  // and no row re-flow occurs. Do NOT change `--navbar-height` here for this;
-  // the tab strip's own height/geometry is plan 34.10-19's subject, not this
-  // plan's -- H5 in 34.10-F04-DIAGNOSIS.md found the visible ~10px seam is
-  // the SAME underlying geometry as F-34.10-04 (the 72px tab sitting flush
-  // to the top of its 80px container), which plan 34.10-19 owns; this border
-  // is this plan's half of the recipe regardless of that other contributor.
-  border-bottom: 1px solid var(--divider);
+  // F-34.10-03 (34.10-18 Task 1, CORRECTED post-review -- see the
+  // 34.10-18-SUMMARY.md "Deviations" entry for the full incident): this is
+  // the OTHER half of the card/folder seam recipe. The active tab's own
+  // `border-bottom: 1px solid var(--body-background)` plus its `top: 1px`
+  // offset (both already shipped in `NavTabs/index.scss`, D-04) exist
+  // specifically to ERASE this border where the two overlap, producing the
+  // illusion that the active tab merges into the content surface below
+  // (REQ-34.10-06). Removing EITHER half silently reverts the illusion --
+  // one half alone paints no visible error, it just quietly stops erasing.
+  //
+  // ORIGINALLY WRITTEN as `var(--divider)` and WRONG: `--divider` is a
+  // no-fallback custom property declared in only 2 of `themes.scss`'s 11
+  // theme blocks (`body.midnightMirage` line 97, `body.classic /
+  // .cyberSpaceOasis* / .cyberSpaceOasisAlt` line 145 -- grep
+  // `^\s*--divider:` in `src/frontend/themes.scss` to re-verify). Per the
+  // CSS custom-properties spec, `var(--divider)` with no fallback and an
+  // undefined property is invalid at computed-value time, which drops the
+  // ENTIRE `border-bottom` shorthand -- not "falls back to a default
+  // colour", the declaration disappears outright and `border-bottom-style`
+  // reverts to its initial `none`. Live-measured proof of exactly this
+  // collapse mechanism, on the same no-fallback pattern, already existed in
+  // this codebase before this bug shipped:
+  // `components/UI/Dropdown/index.scss:12`'s `box-shadow: inset 0 0 0 1px
+  // var(--divider)` painted in midnightMirage (`--divider` defined) and
+  // measured `box-shadow: none` in dracula (`--divider` undefined) in
+  // `34.10-F04-DIAGNOSIS.md`'s own live capture. The run-3 live gate sweeps
+  // midnightMirage, gruvbox_dark, dracula, and a dracula-classic spot-check
+  // (34.10-VERIFICATION.md) -- three of those four have no `--divider`, so
+  // the original fix was invisible in 3/4 gate themes despite every unit
+  // gate passing.
+  //
+  // FIXED to `var(--body-background)`: this token is declared in all 11
+  // theme blocks in `themes.scss` (grep `^\s*--body-background:`,
+  // confirmed against a structural per-block parse, not string counting --
+  // every occurrence outside the base `body {}` and component-scoped
+  // sub-selectors like `.sid-input` lands inside exactly one of the 11 real
+  // theme blocks). It is also a STRONGER erasure guarantee than the
+  // original relational-but-distinct `--divider` would have given even in
+  // the 2 themes where `--divider` DID resolve: the active tab's own
+  // erasure border is `var(--body-background)`, so painting the navbar's
+  // own border in that SAME token means the two halves are colour-IDENTICAL
+  // in every theme, not merely "close by design intent" -- there is no
+  // theme where the erasure could be an imperfect colour match. The border
+  // is still visually distinct from `.NavShell__navbar`'s own
+  // `background: var(--navbar-background)` in every theme (verified: no
+  // theme block sets `--body-background` and `--navbar-background` to the
+  // same value), so it still reads as a real dividing line everywhere
+  // except exactly where the active tab erases it. No `var(--divider, ...)`
+  // fallback form was used -- `--body-background` needs no fallback because
+  // it is unconditionally defined, and layering a fallback onto a token
+  // that never needs one would be dead code.
+  //
+  // Because `* { box-sizing: border-box }` is set globally (App.css), this
+  // 1px border is drawn INSIDE the existing `height: var(--navbar-height)`
+  // -- the navbar's outer box does not grow and no row re-flow occurs. Do
+  // NOT change `--navbar-height` here for this; the tab strip's own
+  // height/geometry is plan 34.10-19's subject, not this plan's -- H5 in
+  // 34.10-F04-DIAGNOSIS.md found the visible ~10px seam is the SAME
+  // underlying geometry as F-34.10-04 (the 72px tab sitting flush to the
+  // top of its 80px container), which plan 34.10-19 owns; this border is
+  // this plan's half of the recipe regardless of that other contributor.
+  //
+  // KNOWN, OUT-OF-SCOPE, RECORDED SEPARATELY: `.NavShell__tier2`'s own
+  // `border-inline-end: 1px solid var(--divider)` two rules below this one
+  // has the SAME no-fallback defect and is in this same file, but it draws
+  // the tier-2 sidebar column's vertical divider, not the navbar/content
+  // horizontal seam this task fixes -- it is unrelated to F-34.10-03 and
+  // left unchanged here (see 34.10-18-SUMMARY.md "Findings" for the
+  // app-wide `--divider` no-fallback census, including this line).
+  border-bottom: 1px solid var(--body-background);
 }
 
 // D-05: reserve room for `WindowControls` so it never overlaps the
