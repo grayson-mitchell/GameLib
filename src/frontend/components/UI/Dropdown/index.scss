@@ -13,6 +13,26 @@
     overflow-y: auto;
   }
 
+  // F-34.10-05: `.dropdown` used to paint `background: var(--background)`,
+  // the app's deep body surface -- correct back when this control lived in
+  // the full-width header, but wrong now that plan 34.10-06 portals it
+  // inside `.NavShell__tier2`, a 204px column painted a DIFFERENT token
+  // (`--navbar-background`). `34.10-F04-DIAGNOSIS.md`'s "F-34.10-05
+  // verdict" measured the mismatch live in dracula:
+  // dropdownPanel.computed['background-color'] = rgb(9, 11, 28) (#090b1c,
+  // an exact match for --background) painted on top of
+  // dropdownPanel.tier2Computed['background-color'] = rgb(68, 71, 90)
+  // (#44475a, --navbar-background) -- the reported "black block". The
+  // custom-property chain itself was confirmed fully healthy at all ten
+  // measured DOM ancestors, so this is W1 (wrong token), not W2 (broken
+  // inheritance): the same fix DownloadsRing/index.scss's header comment
+  // records for its own mask fix applies here too -- remove the class of
+  // bug rather than chase the symptom by swapping one absolute token for
+  // another. Compositing transparently onto `.NavShell__tier2`'s own
+  // surface leaves nothing to mismatch in any theme, including a future
+  // one where the navbar is lighter than the body (dracula already is).
+  // The `.expanded` inset hairline above remains the affordance that
+  // delimits the panel from the column behind it.
   .dropdown {
     width: 100%;
     min-width: 0;
@@ -20,7 +40,7 @@
     display: flex;
     border-radius: var(--space-xs);
     flex-direction: column;
-    background: var(--background);
+    background: transparent;
     opacity: 0;
     transition: all 200ms;
     pointer-events: none;
