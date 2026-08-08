@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.10-15-PLAN.md -- GAP: RingProgress mounted unconditionally (H3, item 2 of 3) with ProgressHeader-precedent fallback args, exported and directly tested for the first time; item 1 (hasProgress.ts:14-19 seed fix) deliberately NOT implemented, recorded as owed six-consumer follow-up; post-implementation re-read surfaced two unresolved risks (key-driven remount may preserve the pre-fix hook lifetime; H3's reconciliation effect may only explain a single transient frame, not a sustained flat arc) -- F-34.10-02 remains UNPROVEN, routed to plan 34.10-16's live gate item 4; REQ-34.10-08 stays Pending; phase 34.10 still does NOT close (34.10-16 remains), gap cycle continues"
-last_updated: "2026-08-08T03:20:00.000Z"
+stopped_at: "Completed 34.10-16-PLAN.md -- live gate RUN 2 recorded: VERDICT FAIL, items_passed 4/5. F-34.10-01 and F-34.10-02 CLOSED and live-confirmed (item 3 and item 4 both PASS; the two risks 34.10-15-SUMMARY.md left open are FALSIFIED). Item 5 (Electron) PASSES for the first time on tab-navigation. Item 1 (theme/seam survival) newly FAILS on three new findings (F-34.10-03 visible seam gap, F-34.10-04 logo/ring wrap to a second row, F-34.10-06 navbar not fixed to top + scrollbar overlap); a fourth new finding F-34.10-05 (item 3's black-background panel) keeps REQ-34.10-09 Pending. REQ-34.10-05 and REQ-34.10-08 ticked Complete; REQ-34.10-09 and REQ-34.10-16 stay Pending. PHASE 34.10 DOES NOT CLOSE -- next command is /gsd-plan-phase 34.10 --gaps to diagnose F-34.10-03..06"
+last_updated: "2026-08-08T04:55:00.000Z"
 last_activity: 2026-08-08
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 252
-  completed_plans: 236
+  completed_plans: 237
   percent: 94
 ---
 
@@ -478,7 +478,27 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — EXECUTING
+Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — EXECUTING, PHASE DOES NOT CLOSE
+Plan: 16 of 16 EXECUTED 2026-08-08 -- **live gate RUN 2 recorded, VERDICT FAIL, items_passed 4/5.
+PHASE 34.10 DOES NOT CLOSE.** Both of run 1's blocking defects are CLOSED and live-confirmed:
+F-34.10-01 (tier-2 dropdowns, item 3 PASS -- functional contract: click-toggle, containment,
+close-on-reclick, filter application) and F-34.10-02 (Downloads ring, item 4 PASS -- idle
+visible/dimmed/ring-shaped, hover stays a ring, arc fills and advances during a real download;
+this FALSIFIES both risks 34.10-15-SUMMARY.md left open). Item 5 (Electron) PASSES for the first
+time on tab-navigation. Item 2 (drag) PASSES. **Item 1 (theme/seam survival) newly FAILS** on
+three findings never seen in run 1: F-34.10-03 (~10px visible seam gap between tab strip and
+content), F-34.10-04 (logo/Downloads-ring wrap to a second row instead of one line), F-34.10-06
+(navbar scrolls away instead of staying fixed to the top; an active scrollbar draws over it). A
+fourth new finding, F-34.10-05 (item 3's tier-2 disclosure panel renders a black background), does
+not gate item 3's own PASS but keeps REQ-34.10-09 Pending. REQ-34.10-05 and REQ-34.10-08 ticked
+Complete against this measured run; REQ-34.10-09 and REQ-34.10-16 stay Pending, tied to the new
+findings. Preflight P1-P7 recorded NOT REPORTED (operator's relay covered item verdicts only), not
+fabricated. See `34.10-LIVE-GATE.md` run 2 and `34.10-16-SUMMARY.md`.
+**NEXT COMMAND: `/gsd-plan-phase 34.10 --gaps` to diagnose and fix F-34.10-03 through F-34.10-06,
+then a third live-gate pass scoped to item 1 (and item 3's F-34.10-05) -- items 2, 4 and 5 are now
+closed and should not need re-measurement unless a gap-cycle fix touches their surfaces.**
+
+--- prior status, preserved as history ---
 EXECUTED 2026-08-06, STILL DID NOT CLOSE (gate FAILED 1/6) -- gap cycle 5 required, NOT COMPLETE
 Plan: 15 of 16 (gap cycle 1: 34.10-13 done closing F-34.10-01, 34.10-14 done closing F-34.10-02 cause (a), 34.10-12 done diagnosing F-34.10-02 cause (b) -- H3 survives by elimination, fix implemented in 34.10-15 (item 2 only, unconditional mount) but NOT proven -- two unresolved risks documented in 34.10-15-SUMMARY.md; F-34.10-02 status is genuinely open pending 34.10-16's live gate; 34.10-16 remains)
 glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
@@ -3620,6 +3640,7 @@ Closed/parked native-install phases:
 | Phase 34.10 P13 | 24min | 3 tasks | 8 files |
 | Phase 34.10 P14 | ~15min | 2 tasks | 2 files |
 | Phase 34.10 P15 | ~35min | 2 tasks | 2 files |
+| Phase 34.10 P16 | ~1h10min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -4126,6 +4147,8 @@ Recent decisions affecting current work:
 - [Phase 34.10-15]: `RingProgress` mounted unconditionally in `DownloadsRing` (H3, item 2 of the diagnosis's three-item recommendation only), fallback `appName={head?.params.appName ?? ''}`/`runner={head?.params.runner ?? 'legendary'}` per the `ProgressHeader` precedent (`DownloadManager/index.tsx:113-115`); `percent` gated on non-empty `appName`; `key={head?.params.appName ?? 'idle'}` kept to preserve per-download progress reset on handover
 - [Phase 34.10-15]: `RingProgress` exported and directly invoked by a new regression test for the first time — verified to fail pre-fix (`idleRingElement` undefined) by temporarily reverting `index.tsx` and re-running; full suite 218/218 suites, 4246/4246 tests green post-fix; item 1 (`hasProgress.ts:14-19` empty-object seed bug, all six consumers affected) deliberately NOT implemented, owed to a future plan
 - [Phase 34.10-15]: **F-34.10-02 remains UNPROVEN, do not treat as closed.** Post-implementation re-read surfaced two unresolved risks recorded in full in `34.10-15-SUMMARY.md`: (1) `key`'s idle->active change forces a React remount anyway, so the hook-instance lifetime this plan targets may not have actually changed at the boundary that matters, and the new test (calling `RingProgress` directly, no reconciler) cannot detect this; (2) `hasProgress.ts`'s reconciliation effect fires on mount, so H3's `{}` seed should produce at most one transient 0%-frame, not the sustained flat arc the live gate observed — H3's mechanism may not survive close reading. REQ-34.10-08 stays Pending; plan 34.10-16's live gate item 4 is the only adjudicator and must specifically check both risks if it fails again
+- [Phase 34.10-16]: **Live gate RUN 2 recorded 2026-08-08: VERDICT FAIL, items_passed 4/5. F-34.10-01 and F-34.10-02 CLOSED, both live-confirmed.** Item 3 PASS (click-toggle, containment, close-on-reclick, filter application, both Categories and Filters). Item 4 PASS (idle ring visible/dimmed/ring-shaped, hover stays a ring, arc fills and advances) — this FALSIFIES both risks 34.10-15-SUMMARY.md left open, recorded explicitly per the coordinator's own instruction that the correction "matters and must not be lost." Item 5 PASS, first-ever measurement of the Electron tab-navigation sub-check (NOT ATTEMPTED in run 1). Item 2 PASS (frameless drag by the ring).
+- [Phase 34.10-16]: **Item 1 (theme/seam survival) newly FAILS**, three findings never seen in run 1: F-34.10-03 (~10px visible seam gap between the tier-1 tab strip and content, breaking the card/folder merge illusion), F-34.10-04 (logo/Downloads-ring wrap to a second row instead of sharing one line with the tab strip), F-34.10-06 (navbar scrolls away with content instead of staying fixed to the top; an active scrollbar draws over it instead of starting below it). Per-theme rows recorded NOT ATTEMPTED (operator's report was general, not per-theme) — not inferred as FAIL per-theme, but item 1's own overall verdict is FAIL on the reported defects. F-34.10-05 (item 3's tier-2 disclosure panel renders a black background) does NOT gate item 3's own PASS but keeps REQ-34.10-09 Pending, by the same precedent run 1 set for F-34.10-01. REQ-34.10-05 and REQ-34.10-08 ticked Complete; REQ-34.10-09 and REQ-34.10-16 stay Pending. Preflight P1-P7 recorded NOT REPORTED, not fabricated. **PHASE 34.10 DOES NOT CLOSE — next command is `/gsd-plan-phase 34.10 --gaps`** to diagnose F-34.10-03 through F-34.10-06.
 
 ### Pending Todos
 
@@ -4219,7 +4242,26 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-08T02:54:19.000Z
+Last session: 2026-08-08T04:55:00.000Z
+Stopped at: Completed 34.10-16-PLAN.md -- live gate RUN 2 recorded (`34.10-LIVE-GATE.md` §7,
+`34.10-16-SUMMARY.md`). VERDICT FAIL, items_passed 4/5. **PHASE 34.10 DOES NOT CLOSE.** Both of
+run 1's blocking defects (F-34.10-01, F-34.10-02) are CLOSED and live-confirmed — item 3 (tier-2
+filter controls' functional contract) and item 4 (Downloads ring) both PASS; the two risks
+34.10-15-SUMMARY.md left unresolved are FALSIFIED by this measurement. Item 5 (Electron) PASSES
+for the first time on tab-navigation (never measured before this run). Item 2 (drag) PASSES.
+**Item 1 (theme/seam survival) newly FAILS** on three findings not present in run 1: F-34.10-03
+(~10px visible gap between the tab strip and content), F-34.10-04 (logo/Downloads-ring wrap to a
+second row), F-34.10-06 (navbar not fixed to top; active scrollbar draws over it). F-34.10-05
+(item 3's black-background disclosure panel) does not gate item 3's own PASS but keeps
+REQ-34.10-09 Pending. REQ-34.10-05 and REQ-34.10-08 ticked Complete; REQ-34.10-09 and REQ-34.10-16
+stay Pending. Preflight P1-P7 recorded NOT REPORTED (the operator's relay covered item verdicts
+only), not fabricated. **NEXT COMMAND: `/gsd-plan-phase 34.10 --gaps`** to diagnose and fix
+F-34.10-03 through F-34.10-06, then a third live-gate pass scoped to item 1 (and item 3's
+F-34.10-05) — items 2, 4 and 5 are now closed and should not need re-measurement unless a
+gap-cycle fix touches their surfaces.
+
+--- prior session, preserved as history ---
+
 Stopped at: Completed 34.10-12-PLAN.md -- GAP: F-34.10-02 cause (b) diagnosed. Task 1 (checkpoint:
 human-verify) ran the three-question live discriminator on real hardware: Q1 (DM screen's own
 per-item percent readout advances past 0%) YES, Q3 (elements[0] genuinely is the downloading item)

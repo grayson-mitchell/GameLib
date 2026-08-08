@@ -2408,7 +2408,34 @@ REQ-34.10-13, REQ-34.10-14, REQ-34.10-15, REQ-34.10-16
 the frameless drag-region runtime this rebuilds against)
 **Blocks:** Phase 34.11 (the filter panel needs the tier-2 slot to exist); the deferred
 onboarding-tour rework phase (34.10 disables `SidebarTour` per D-13 and does not rebuild it)
-**Plans:** 16 plans (15 executed, 1 remaining: 34.10-16) — **PHASE DOES NOT CLOSE.** The blocking 5-item live gate
+**Plans:** 16 plans, all 16 executed — **PHASE STILL DOES NOT CLOSE (gap cycle 2 owed).** The
+blocking 5-item live gate ran a SECOND time 2026-08-08 (`34.10-16-PLAN.md`), recorded into
+`34.10-LIVE-GATE.md` §7 (run 2): **VERDICT FAIL, 4 of 5 PASS** (`items_passed: 4`) — see
+`34.10-LIVE-GATE.md` run 2 and `34.10-16-SUMMARY.md`. Both of run 1's blocking defects are now
+CLOSED and live-confirmed: item 3 (tier-2 filter controls' functional contract, REQ-34.10-09)
+PASSES — **F-34.10-01 CLOSED**; item 4 (Downloads ring, REQ-34.10-08) PASSES, including the arc
+filling and advancing during a real download — **F-34.10-02 CLOSED**, and the two risks
+34.10-15-SUMMARY.md left explicitly unresolved (a `key`-driven remount; H3's mechanism doubt) are
+**FALSIFIED** by this measurement. Item 5 (Electron, REQ-34.10-05) PASSES for the first time on
+its tab-navigation sub-check — never measured in run 1. Item 2 (window dragging, REQ-34.10-04)
+PASSES. **Item 1 (theme survival, REQ-34.10-06) newly FAILS**, on layout defects not present in
+run 1: **F-34.10-03** (a visible ~10px gap between the tier-1 tab strip and the content region,
+breaking the card/folder merge illusion), **F-34.10-04** (the logo and Downloads ring wrap onto a
+second row instead of sharing one line with the tab strip), and **F-34.10-06** (the navbar scrolls
+away with page content instead of staying fixed to the top of the window, and an active scrollbar
+draws over it). A fourth new finding, **F-34.10-05** (item 3's tier-2 disclosure panel renders a
+black background that breaks its styling), does not gate item 3's own PASS but keeps
+REQ-34.10-09 Pending, by the same precedent run 1 itself set for F-34.10-01. `REQUIREMENTS.md`'s
+REQ-34.10-05 and REQ-34.10-08 are now Complete; REQ-34.10-09 and REQ-34.10-16 stay Pending. Item
+1's per-theme rows are recorded NOT ATTEMPTED (the operator's report was general, not per-theme),
+never inferred. **Next: `/gsd-plan-phase 34.10 --gaps` (gap cycle 2)** to diagnose and fix
+F-34.10-03 through F-34.10-06, then a third live-gate pass scoped to item 1 (and item 3's
+F-34.10-05) — items 2, 4 and 5 are closed and should not need re-measurement unless a gap-cycle fix
+touches their surfaces.
+
+--- run 1's original entry, preserved as history ---
+
+The blocking 5-item live gate
 (`34.10-11-PLAN.md`) authored `34.10-LIVE-GATE.md` and RAN it on real hardware 2026-08-08:
 **VERDICT FAIL, 2 of 5 PASS** (`items_passed: 2`) — see `34.10-LIVE-GATE.md` and
 `34.10-11-SUMMARY.md`. Item 1 (theme survival, REQ-34.10-06) and item 2 (window dragging under
@@ -2476,7 +2503,7 @@ Plans:
 - [x] 34.10-13-PLAN.md — GAP: F-34.10-01 — `Dropdown` becomes a click-toggled in-flow disclosure sized to the 204px column, `popUpOnHover` deleted, tier-2 portal gains a scroll container (wave 1)
 - [x] 34.10-14-PLAN.md — GAP: F-34.10-02 cause (a) — the ring's painted hole becomes a CSS mask, idle track repainted in the count badge's proven-visible token chain (wave 1)
 - [x] 34.10-15-PLAN.md — GAP: F-34.10-02 cause (b) — RingProgress mounted unconditionally (item 2 only) + first `RingProgress` test coverage; F-34.10-02 remains UNPROVEN, two risks unresolved, routed to plan 16's live gate (wave 2)
-- [ ] 34.10-16-PLAN.md — GAP: live gate RUN 2 — items 1/3/4 full, item 2 partial, item 5's unmeasured tab-navigation sub-check; phase closes only on 5/5 (wave 3, checkpoint)
+- [x] 34.10-16-PLAN.md — GAP: live gate RUN 2 EXECUTED — 4/5 PASS (items 2, 3, 4, 5); item 1 (theme/seam) FAILS on 3 new findings (F-34.10-03/04/06); F-34.10-01 and F-34.10-02 CLOSED; phase still does not close, gap cycle 2 owed (wave 3, checkpoint)
 
 ### Phase 34.11: Library filtering — search, views, collections and cross-store facets (INSERTED)
 
