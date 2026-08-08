@@ -1,10 +1,26 @@
-// Ambient Downloads ring for the navbar's nav-right cluster (34.10-03 Task
-// 2). Pure CSS conic-gradient, no SVG -- see
-// .claude/skills/sketch-findings-gamelib/references/navigation-shell.md
-// "Downloads progress ring". The `::after` inset MUST use the navbar
-// background token, not a literal, so it follows the theme -- `dracula`
-// makes its navbar LIGHTER than the body, breaking any implementation that
-// assumes a fixed dark inset color.
+/* Ambient Downloads ring for the navbar's nav-right cluster (34.10-03 Task
+ * 2, repainted 34.10-14 closing F-34.10-02). Pure CSS, no SVG -- see
+ * .claude/skills/sketch-findings-gamelib/references/navigation-shell.md
+ * "Downloads progress ring".
+ *
+ * The ring's hole used to be an opaque `::after` patch filled with
+ * var(--navbar-background) -- a GUESS about what sits behind the ring. The
+ * parent Link's own `:hover { background-color: var(--navbar-active-background) }`
+ * falsified that guess the moment the pointer arrived, producing the exact
+ * "solid filled disc on hover" defect the live gate recorded (F-34.10-02).
+ * Any future third background state on this Link would falsify it again.
+ *
+ * The fix removes the class of bug rather than chasing the symptom: the
+ * centre is now a real transparent hole, cut with a CSS mask, so there is
+ * nothing behind it to mismatch in any state or any theme. A `@supports
+ * not` fallback below restores the old painted-patch technique -- covering
+ * BOTH rest and hover this time -- for a webview without mask support.
+ *
+ * dracula still matters here: its navbar (#44475a) is LIGHTER than its body
+ * (#282a35), the most inverted case any shipped theme has. That is why the
+ * idle track below is drawn in a relational token chain rather than a fixed
+ * dark colour.
+ */
 .DownloadsRing {
   --dl-progress: 0turn;
 
@@ -27,30 +43,47 @@
 
   // D-07: the idle state is dimmed, never hidden -- the ring's slot in the
   // navbar is held at all times so nothing pops in/out of a fixed-height
-  // navbar.
+  // navbar. 0.65 (was 0.5) keeps the dimmed track legible instead of
+  // reading as absent.
   &.DownloadsRing--idle {
-    opacity: 0.5;
+    opacity: 0.65;
   }
 }
 
 .DownloadsRing__ring {
   position: relative;
   display: inline-block;
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
+  // Track stop uses the identical token chain .DownloadsRing__count already
+  // uses below -- the one foreground in this component the operator
+  // confirmed visible on real hardware, in the same navbar, at the same
+  // scale.
   background: conic-gradient(
     var(--primary) 0turn var(--dl-progress),
-    var(--divider) var(--dl-progress) 1turn
+    var(--navbar-inactive, var(--navbar-accent)) var(--dl-progress) 1turn
   );
   transition: background 0.16s ease;
 
-  &::after {
+  // farthest-side with a 16px box gives an 8px radius: transparent from the
+  // centre out to 5px, opaque from 5px to 8px -- a real 3px ring band, with
+  // nothing painted behind it to mismatch any backdrop or theme.
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+}
+
+@supports not (mask: radial-gradient(farthest-side, transparent 0, #000 0)) {
+  .DownloadsRing__ring::after {
     content: '';
     position: absolute;
     inset: 3px;
     border-radius: 50%;
     background: var(--navbar-background);
+  }
+
+  .DownloadsRing:hover .DownloadsRing__ring::after {
+    background: var(--navbar-active-background);
   }
 }
 
