@@ -79,8 +79,14 @@ export const LOGIN_WATCH_TIMEOUT_MS = 10 * 60_000
 // change value because of this fix.
 const LOGIN_WATCH_LIVENESS_LOG_INTERVAL_MS = 30_000
 
+// `'cancelled'` (quick task 260808-gl6) is the DELIBERATE-user-close outcome, kept
+// distinct from `'error'` on purpose: `'error'` still means the watch could not
+// continue (the UNDECIDABLE / UNSUPPORTED_OR_ERROR cookie-read verdicts below), and
+// its frontend surface — the failure panel with a Retry button — must stay reachable
+// for exactly those. A user who closes the sign-in window has not hit a failure and
+// must not be shown one; the renderer navigates back to Manage Accounts instead.
 type LoginResult = {
-  status: 'done' | 'waiting' | 'error'
+  status: 'done' | 'waiting' | 'error' | 'cancelled'
   username?: string
 }
 
@@ -466,14 +472,22 @@ export class HumbleUser {
             // `if (settled || validationInFlight) return` guard immediately
             // below this block is what makes a self-triggered `'closed'`
             // harmless, not this check.
+            //
+            // Quick task 260808-gl6: this settles `'cancelled'`, NOT `'error'`. The
+            // `WindowEvent::Destroyed` hook that pushes this event fires for a user
+            // closing the window just as it does for any other teardown, and closing
+            // the sign-in window is the ordinary way to back out of signing in — it is
+            // a cancel, not a failure, and the renderer must not show a failure panel
+            // for it. The two genuine-failure settles further below (UNDECIDABLE /
+            // UNSUPPORTED_OR_ERROR) keep `'error'` and keep that panel.
             try {
               const events = await seam.takeEvents(seamLabel)
               if (events.some((event) => event.event === 'closed')) {
-                logWarning(
-                  `Humble login window ${seamLabel} closed before login completed — aborting watch`,
+                logInfo(
+                  `Humble login window ${seamLabel} closed before login completed — cancelling watch`,
                   LogPrefix.Backend
                 )
-                settle({ status: 'error' })
+                settle({ status: 'cancelled' })
                 return
               }
               if (events.some((event) => event.event === 'finished')) {

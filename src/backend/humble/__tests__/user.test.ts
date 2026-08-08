@@ -1396,7 +1396,15 @@ describe('HumbleUser', () => {
     // watch immediately rather than being silently dropped (the pre-fix behavior: the poll
     // discovered the window's absence only one tick later, indirectly, via the NEXT
     // seam.cookies() call throwing a stringly-typed `humble_login:no-window:*` error).
-    test("a { event: 'closed' } nav event settles { status: 'error' } immediately, without waiting for the next cookie-read tick", async () => {
+    //
+    // Quick task 260808-gl6 amends the SETTLED STATUS only: the same event now settles
+    // { status: 'cancelled' }, not { status: 'error' }. Closing the sign-in window is how a
+    // user backs out of signing in, and the renderer must return to Manage Accounts rather
+    // than render the failure panel. The immediacy contract this test was written for (no
+    // cookie read needed; watch fully torn down) is unchanged and still asserted below —
+    // as are the two genuine-failure settles ('error', for the UNDECIDABLE and
+    // UNSUPPORTED_OR_ERROR verdicts) covered by their own tests.
+    test("a { event: 'closed' } nav event settles { status: 'cancelled' } immediately, without waiting for the next cookie-read tick", async () => {
       jest.useFakeTimers({ doNotFake: ['setImmediate'] })
       try {
         // Liveness proven, no matched candidate yet -- an ordinary in-progress wait right up
@@ -1412,12 +1420,20 @@ describe('HumbleUser', () => {
         jest.advanceTimersByTime(1500)
         await flushAsync()
 
-        await expect(loginPromise).resolves.toEqual({ status: 'error' })
+        await expect(loginPromise).resolves.toEqual({ status: 'cancelled' })
         // No cookie read was ever needed to reach this outcome -- the 'closed' event alone
         // was sufficient, proving this is the DIRECT signal, not the indirect no-window
         // inference from a cookies() call.
         expect(mockSeamCookies).not.toHaveBeenCalled()
-        expect(mockLogWarning).toHaveBeenCalledWith(
+        // Logged at INFO, not WARNING (260808-gl6): a user closing a window is an ordinary
+        // outcome. Asserting the ABSENCE of a warning is what keeps a future revert from
+        // silently reclassifying this as a failure again while the status assertion above
+        // still passes.
+        expect(mockLogInfo).toHaveBeenCalledWith(
+          expect.stringContaining('closed before login completed'),
+          expect.anything()
+        )
+        expect(mockLogWarning).not.toHaveBeenCalledWith(
           expect.stringContaining('closed before login completed'),
           expect.anything()
         )

@@ -335,6 +335,17 @@ export default function WebView() {
       if (result.status === 'done') {
         await humble.login(result)
         navigate('/login')
+      } else if (result.status === 'cancelled') {
+        // Quick task 260808-gl6: the user closed the sign-in window. That is how you back
+        // out of signing in, not a failure — so this returns to Manage Accounts and leaves
+        // `humbleLoginState` at 'idle', deliberately rendering NO panel. Ordered before the
+        // 'error' branch below, which keeps its failure surface for the outcomes that
+        // genuinely are failures (the UNDECIDABLE / UNSUPPORTED_OR_ERROR cookie-read
+        // verdicts in `humble/user.ts`'s watch).
+        window.api.logInfo(
+          '[WebView] runner=humble phase=cancelled (sign-in window closed by the user)'
+        )
+        navigate('/login')
       } else if (result.status === 'error') {
         // F-34.4.2-19: the backend watch gave up (e.g. the login window became
         // unreachable — see the humble-isloggedin-never-set debug session). Surface it

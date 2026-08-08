@@ -62,6 +62,29 @@ describe('WebView humble login watch error/timeout handling (F-34.4.2-19)', () =
     expect(watchFn).toContain("navigate('/login')")
   })
 
+  // Quick task 260808-gl6. The F-34.4.2-19 fix above made the watch surface every
+  // non-'done' outcome, which was right -- but the backend settled a DELIBERATE user close
+  // of the sign-in window as { status: 'error' }, so backing out of signing in rendered
+  // "Something went wrong while signing in: the Humble sign-in window closed or could not
+  // be reached". The backend now settles { status: 'cancelled' } for that case (see
+  // humble/user.ts) and this arm must return to Manage Accounts showing nothing at all.
+  it('handles status === "cancelled" by navigating back to /login, never by setting an error state', () => {
+    expect(watchFn).toContain("result.status === 'cancelled'")
+    // The branch body, up to the next `else if`, both navigates and stays panel-free.
+    const cancelledArm = watchFn.slice(
+      watchFn.indexOf("result.status === 'cancelled'")
+    )
+    const armBody = cancelledArm.slice(0, cancelledArm.indexOf('} else if'))
+    expect(armBody).toContain("navigate('/login')")
+    expect(armBody).not.toMatch(/setHumbleLoginState/)
+  })
+
+  it('orders the cancelled arm before the error arm, so a user close can never fall into the failure surface', () => {
+    expect(watchFn.indexOf("result.status === 'cancelled'")).toBeLessThan(
+      watchFn.indexOf("result.status === 'error'")
+    )
+  })
+
   it('handles status === "error" by setting a phase: "error" state, never silently returning', () => {
     expect(watchFn).toContain("result.status === 'error'")
     expect(watchFn).toMatch(/result\.status === 'error'[\s\S]{0,300}phase:\s*'error'/)
@@ -94,6 +117,14 @@ describe('WebView humble login watch error/timeout handling (F-34.4.2-19)', () =
       const regressed =
         "async function runHumbleLoginWatch() { if (result.status === 'done') { navigate('/login') } }"
       expect(regressed).not.toContain("result.status === 'error'")
+    })
+
+    it('detects a cancelled branch that renders an error panel instead of navigating', () => {
+      const regressed =
+        "if (result.status === 'cancelled') { setHumbleLoginState({ phase: 'error' }) } else if (x) {}"
+      const armBody = regressed.slice(0, regressed.indexOf('} else if'))
+      expect(armBody).not.toContain("navigate('/login')")
+      expect(armBody).toMatch(/setHumbleLoginState/)
     })
 
     it('detects an error branch that never sets phase: "error"', () => {

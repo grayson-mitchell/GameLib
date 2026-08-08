@@ -310,13 +310,17 @@ interface AsyncIPCFunctions {
     ready: boolean
     error?: string
   }>
+  // `'cancelled'` (quick task 260808-gl6) = the user closed the sign-in window. Distinct
+  // from `'error'` (the watch could not continue) so the renderer can return to Manage
+  // Accounts silently instead of rendering a failure panel — see humble/user.ts's
+  // LoginResult.
   humbleStartLogin: () => Promise<{
-    status: 'done' | 'waiting' | 'error'
+    status: 'done' | 'waiting' | 'error' | 'cancelled'
     username?: string
   }>
   humbleGetUserInfo: () => Promise<HumbleUserData | undefined>
   humbleReconnect: () => Promise<{
-    status: 'done' | 'waiting' | 'error'
+    status: 'done' | 'waiting' | 'error' | 'cancelled'
     username?: string
   }>
   humbleCheckHealth: () => Promise<void>
