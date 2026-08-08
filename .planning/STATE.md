@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Executing 34.10 gap cycle 3 (plans 23-27); run-3 verdict was FAIL 4/5 with item 1 failing on F-34.10-03/-04, both since FIXED out-of-band by /gsd-debug (F-34.10-03 = 220211230, F-34.10-04 operator-confirmed); plan 27 is the blocking run-4 gate
-last_updated: "2026-08-09T00:00:00.000Z"
-last_activity: 2026-08-09 -- Phase 34.10 gap cycle 3 execution started
+stopped_at: Completed 34.10-23-PLAN.md
+last_updated: "2026-08-08T23:25:16.931Z"
+last_activity: 2026-08-08
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 268
-  completed_plans: 242
-  percent: 90
+  completed_plans: 244
+  percent: 91
 ---
 
 # Project State
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — gap cycle 3 EXECUTING (plans 23-27), PHASE STILL OPEN
-Plan: 22 of 27 complete — **live gate RUN 3 recorded 2026-08-08 (plan 34.10-22), VERDICT FAIL,
+Plan: 23 of 27 complete — **live gate RUN 3 recorded 2026-08-08 (plan 34.10-22), VERDICT FAIL,
 items_passed 4/5. PHASE 34.10 DOES NOT CLOSE.** Items 2, 3, 4 and 5 PASS; **item 1 FAILS.**
 
 CLOSED BY MEASUREMENT in run 3: **F-34.10-05** (disclosure-panel background correct in
@@ -2639,7 +2639,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 92%
+trusted blindly. The recurring `**Progress:**[█████████░] 91%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 
@@ -3744,6 +3744,7 @@ Closed/parked native-install phases:
 | Phase 34.10 P18 | ~40min | 3 tasks + 1 correction | 6 files |
 | Phase 34.10 P19 | 25min | 2 tasks | 2 files |
 | Phase 34.10 P21 | ~35min | 3 tasks | 1 files |
+| Phase 34.10 P23 | 24min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -4263,6 +4264,8 @@ Recent decisions affecting current work:
 - [Phase 34.10-19]: Fixed the 34.10-18 handed-off border-color: var(--divider) no-fallback bug in NavTabs/index.scss's .Mui-selected to var(--body-background) — 34.10-18-SUMMARY.md explicitly recorded this as a finding owned by this plan's file; --divider resolves in only 2 of 11 theme blocks so the active tab's framing border was invisible in 9/11 themes including 3 of 4 live-gate themes
 - [Phase 34.10]: Item 2 (window dragging) gets a FULL 5-sub-check re-run in the run-3 live-gate contract, not carried forward — 34.10-18's own coordinator-caught defect on the same .NavShell__navbar element proved source-level 'this is unaffected' reasoning is not reliable enough to skip a live re-measurement in this phase
 - [Phase 34.10]: Item 4's idle Downloads-ring sub-check is folded into item 1's new per-theme idle-ring sweep in the run-3 contract, with an explicit reopen condition — avoids double-counting the identical observation under two item numbers; any FAIL in item 1's per-theme sweep reopens item 4 in full regardless of its own carried-forward sub-checks
+- [Phase 34.10-23]: Kept NavTabs/index.scss's nested &.MuiTabs-root override as a deliberate second line of defense after rescoping GamesSettings' rule at the source
+- [Phase 34.10-23]: Guard test detector uses brace-depth + comma-split-per-selector rather than a naive regex so ancestor-scoped multi-line selectors are not false positives
 
 ### Pending Todos
 
@@ -4377,8 +4380,8 @@ Recent decisions affecting current work:
 > its `Stopped at: Completed 34.10-20-PLAN.md --` prefix and demoted into the "prior session,
 > preserved as history" chain.
 
-Last session: 2026-08-08T08:50:18.312Z
-Stopped at: Completed 34.10-21-PLAN.md -- authored run-3 live-gate contract §9, all verdict slots empty per decision D-E
+Last session: 2026-08-08T23:25:16.903Z
+Stopped at: Completed 34.10-23-PLAN.md
 34.10-18 handoff, REQ-34.10-06). Task 1 implemented `34.10-F04-DIAGNOSIS.md`'s single surviving
 cause exactly: MUI's `Tab.js` applies an unconditional `minHeight: 72` when a `<Tab>` gets both
 `icon` and `label` (every `<Tab>` in `NavTabs/index.tsx` does), unmitigated by any override in

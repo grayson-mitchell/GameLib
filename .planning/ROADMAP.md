@@ -2408,7 +2408,7 @@ REQ-34.10-13, REQ-34.10-14, REQ-34.10-15, REQ-34.10-16
 the frameless drag-region runtime this rebuilds against)
 **Blocks:** Phase 34.11 (the filter panel needs the tier-2 slot to exist); the deferred
 onboarding-tour rework phase (34.10 disables `SidebarTour` per D-13 and does not rebuild it)
-**Plans:** 22/22 plans executed — **PHASE STILL DOES NOT CLOSE.** All 22 plans having SUMMARYs is
+**Plans:** 23/27 plans executed — **PHASE STILL DOES NOT CLOSE.** 23 of 27 plans having SUMMARYs is
 a plan-count fact, not a phase verdict: live gate **run 3** (plan 34.10-22, 2026-08-08) scored
 **4/5**. Items 2, 3, 4 and 5 PASS; **item 1 FAILS** on F-34.10-03 (seam still visible) and
 F-34.10-04 (wordmark and Downloads ring not on the tab strip's line), both measured against a
