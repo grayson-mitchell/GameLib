@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.10-21-PLAN.md -- authored run-3 live-gate contract §9, all verdict slots empty per decision D-E
+stopped_at: Completed 34.10-22-PLAN.md -- RAN live gate run 3, verdict FAIL 4/5, item 1 FAILS on F-34.10-03/-04; phase 34.10 does NOT close; next command is /gsd-debug (34.10-VERIFICATION.md is stale)
 last_updated: "2026-08-08T08:50:18.330Z"
 last_activity: 2026-08-08
 progress:
@@ -478,7 +478,48 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — EXECUTING gap cycle 2
+Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — gap cycle 2 EXECUTED, PHASE STILL OPEN
+Plan: 22 of 22 complete — **live gate RUN 3 recorded 2026-08-08 (plan 34.10-22), VERDICT FAIL,
+items_passed 4/5. PHASE 34.10 DOES NOT CLOSE.** Items 2, 3, 4 and 5 PASS; **item 1 FAILS.**
+
+CLOSED BY MEASUREMENT in run 3: **F-34.10-05** (disclosure-panel background correct in
+`gruvbox_dark`, `dracula` and a third theme the operator volunteered) and **F-34.10-06** on both
+halves (navbar stays pinned; scrollbar sits below it; the mouse/keyboard back-to-top consumer
+migration holds) — 34.10-18's scroll-container relocation off `document.body`, the riskiest change
+of the cycle, is measured as working. **REQ-34.10-09 → Complete.**
+
+STILL OPEN, measured failing against a bundle VERIFIED to contain their fixes: **F-34.10-03**
+(operator: "still a gap" — 34.10-18's seam border did not work) and **F-34.10-04** (operator:
+"gamelib icon and download sit lower" — 34.10-19's `min-height` did not work; the failure SHAPE
+changed from a second-row wrap to a vertical misalignment, recorded not diagnosed). REQ-34.10-06
+and REQ-34.10-16 stay Pending.
+
+THREE COLUMNS MEASURED FOR THE FIRST TIME IN THIS PHASE: item 1's four-theme sweep (NOT ATTEMPTED
+in runs 1 and 2 — the seam is IDENTICAL across all three scored themes, including `dracula`, so it
+does NOT vary by theme); item 3's sub-checks (vi) and (vii); and a fully recorded preflight P1-P9.
+
+TWO TRAPS CAUGHT: (a) the running app was serving a **PRE-FIX BUNDLE** — `frontendDist` is a static
+dir, so a bare `tauri dev` serves the last `electron-vite build`; caught at preflight before any
+scoring, or run 3 would have failed all four findings against fixes the app never contained.
+**Always launch `pnpm tauri:dev`, never bare `tauri dev`.** (b) **F-34.10-07** — six ways run 3's
+own automated checks were unsatisfiable against a correctly-filled specimen (a `dracula-classic`
+theme that does not exist in the picker, plus five verification/prose collisions). None altered a
+verdict. Rule: run a gate check against a FILLED specimen at authoring time.
+
+UNMEASURED, carried forward: the gamepad focus-scroll regression (no controller) and
+`dracula-classic`.
+
+OPERATOR DECISION during the run: replace the card/folder tab with a **pill tab with rounded bottom
+corners**. Supersedes the fix direction for F-34.10-03/-04 but closes neither; needs its own plan.
+
+⚠ **`34.10-VERIFICATION.md` IS STALE** — it is run-2-derived and predates run 3. Regenerate it
+before any `/gsd-plan-phase 34.10 --gaps`.
+
+**NEXT COMMAND: `/gsd-debug`** — NOT `--gaps`. F-34.10-03 and F-34.10-04 have each now survived a
+targeted fix that its author's reasoning and unit gates both endorsed; that is an undiagnosed
+defect, not a known gap. See `34.10-LIVE-GATE.md` §9.6 and `34.10-22-SUMMARY.md`.
+
+--- run 2's status, preserved as history ---
 Plan: 21 of 22 complete (seam-token corrected post-review); gap-cycle-2 plans 17-22 now executing. Prior state -- **live gate RUN 2
 recorded, VERDICT FAIL, items_passed 4/5.
 PHASE 34.10 DOES NOT CLOSE.** Both of run 1's blocking defects are CLOSED and live-confirmed:
