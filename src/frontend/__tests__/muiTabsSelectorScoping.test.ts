@@ -73,14 +73,55 @@ function lineNumberAt(stripped: string, index: number): number {
  * nested inside another rule (brace depth >= 1 at its own `{`) is never
  * inspected here, because nesting under any ancestor is what "scoped" means.
  *
- * STUB (RED phase, 34.10-23 Task 2): intentionally does no real detection
- * yet. Replaced with the real brace-depth walk in the GREEN commit.
  */
 export function findUnscopedMuiTabsSelectors(
-  _source: string,
-  _file: string
+  source: string,
+  file: string
 ): Offender[] {
-  return []
+  const stripped = stripPreservingLineNumbers(source)
+  const offenders: Offender[] = []
+  let depth = 0
+  let selectorStart = 0
+
+  const flagSelector = (selectorText: string, textStart: number) => {
+    let cursor = textStart
+    for (const rawPart of selectorText.split(',')) {
+      const leadingWs = rawPart.match(/^\s*/)?.[0].length ?? 0
+      const partStart = cursor + leadingWs
+      const trimmed = rawPart.trim()
+      if (trimmed) {
+        const firstCompoundMatch = trimmed.match(/^[^\s>+~]+/)
+        const firstCompound = firstCompoundMatch
+          ? firstCompoundMatch[0]
+          : trimmed
+        if (/^\.MuiTabs?-[A-Za-z-]+/.test(firstCompound)) {
+          offenders.push({
+            file,
+            line: lineNumberAt(stripped, partStart),
+            selector: firstCompound
+          })
+        }
+      }
+      cursor += rawPart.length + 1 // +1 for the comma consumed by split()
+    }
+  }
+
+  for (let i = 0; i < stripped.length; i++) {
+    const ch = stripped[i]
+    if (ch === '{') {
+      if (depth === 0) {
+        flagSelector(stripped.slice(selectorStart, i), selectorStart)
+      }
+      depth++
+    } else if (ch === '}') {
+      depth = Math.max(0, depth - 1)
+      if (depth === 0) {
+        selectorStart = i + 1
+      }
+    }
+  }
+
+  return offenders
 }
 
 function collectStylesheets(dir: string, out: string[] = []): string[] {
