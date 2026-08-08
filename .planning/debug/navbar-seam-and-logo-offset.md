@@ -1,5 +1,5 @@
 ---
-status: resolved-pending-gate-rerun
+status: resolved
 trigger: "Phase 34.10 live gate run 3 (2026-08-08) item 1 FAILED. Two findings survived their own targeted fixes: F-34.10-03 — operator verbatim 'still a gap' (visible ~10px seam between the tier-1 tab strip and the content region below it); F-34.10-04 — operator verbatim 'gamelib icon and download sit lower' (wordmark + Downloads ring vertically misaligned relative to the tab strip)."
 created: 2026-08-08
 updated: 2026-08-08T23:59:00-00:00
@@ -550,10 +550,25 @@ verification: LIVE-CONFIRMED 2026-08-09 by screencapture + pngscan.py after a ge
             151. The selected tab now merges into the content surface: seam gone.
   Non-regression: 154/154 NavShell tests pass across 13 suites, including
   `appShellLayout.test.ts`'s MUI-scoping guard.
-  STILL OWED: F-34.10-04 is a visual judgement ("do the wordmark and ring read level with the
-  tab strip?") and belongs to the operator at the live gate, not to this session. The geometric
-  cause is measurably gone; the perceptual verdict is not this session's to record. The phase
-  gate (34.10 item 1) must still be re-run — this session closes the defect, not the gate.
+  F-34.10-04 — OPERATOR-CONFIRMED 2026-08-09, verbatim: "the download and wordmark read level
+  now". This is the perceptual verdict this session could not give itself (the geometric cause
+  was measurably gone, but "do they read level?" is a human judgement). It directly answers the
+  operator's original run-3 report, "gamelib icon and download sit lower". Both findings are now
+  closed: F-34.10-03 by measurement, F-34.10-04 by the operator's own eye.
+
+  SCOPE LIMIT ON THAT CONFIRMATION — do not overstate it at the gate: it was given against the
+  theme the app happened to launch in (a teal scheme, navbar `#1c3d4a` / body `#091a21`), NOT
+  midnightMirage, and against a single window state. The pixel measurement above was likewise
+  taken in that theme. Because the cause is pure geometry (an 8px padding), it is theme-
+  independent by construction — but run 3's OWN four-theme sweep is what item 1 requires, and
+  that sweep has not been re-run since the fix.
+
+  STILL OWED: the phase gate (34.10 item 1) must be re-run in full. This session closes the two
+  defects, not the gate. Item 1 also carries sub-checks untouched here — the four-theme seam/
+  idle-ring sweep, and the gamepad focus-scroll regression, which has never been measured in any
+  run (P9, no controller). Note for whoever authors that run: the Web Inspector console does NOT
+  evaluate in this build, so any contract step assuming console access is defective, and
+  `34.10-VERIFICATION.md` is still stale (derived from run 2).
 
 follow_up: NEW FINDING (not fixed here) — `GamesSettings/index.scss:40`'s unscoped
   `.MuiTabs-root` rule leaks app-wide. `NavTabs/index.scss` is protected by
