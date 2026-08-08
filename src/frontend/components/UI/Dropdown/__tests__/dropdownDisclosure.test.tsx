@@ -241,3 +241,47 @@ describe('Dropdown panel geometry (source gate)', () => {
     expect(readScssStripped()).not.toMatch(/body\.isRTL/)
   })
 })
+
+describe('Dropdown panel surface (F-34.10-05 source gate)', () => {
+  // Comment-immune gate on the panel's surface fix. Extends the geometry
+  // gate above with 34.10-20's own assertions -- proves only that the
+  // source text is right, not that a browser resolves it correctly. That
+  // proof is routed to plan 34.10-22's live gate item 3.
+  function readScssStripped(): string {
+    const raw = readFileSync(
+      join(__dirname, '..', 'index.scss'),
+      'utf8'
+    )
+    return stripSourceComments(raw)
+      .split('\n')
+      .map(stripTrailingLineComment)
+      .join('\n')
+  }
+
+  it('no longer declares background: var(--background) -- measured in dracula (34.10-F04-DIAGNOSIS.md): #090b1c on top of the tier-2 column\'s #44475a, the reported "black block"', () => {
+    expect(readScssStripped()).not.toMatch(/background:\s*var\(--background\)/)
+  })
+
+  it('contains no hex colour literal -- an absolute colour here is invisible in midnightMirage (panel and column coincide) and wrong in dracula, per navigation-shell.md § 3\'s navbar-lighter-than-body table', () => {
+    expect(readScssStripped()).not.toMatch(/#[0-9a-fA-F]{3,8}/)
+  })
+
+  it('declares the exact surface fix: background: transparent', () => {
+    expect(readScssStripped()).toMatch(/background:\s*transparent/)
+  })
+
+  it('34.10-13 geometry survives -- these are the F-34.10-01 fix live gate run 2 confirmed; a failure here means a closed finding is being reopened', () => {
+    const css = readScssStripped()
+    expect(css).toMatch(/width:\s*100%/)
+    expect(css).toMatch(/min-width:\s*0/)
+    expect(css).toMatch(/box-sizing:\s*border-box/)
+    expect(css).toMatch(/max-height:\s*50vh/)
+    expect(css).toMatch(/box-shadow:\s*inset 0 0 0 1px var\(--divider\)/)
+  })
+
+  it('the F-34.10-01 popup geometry has not returned', () => {
+    const css = readScssStripped()
+    expect(css).not.toMatch(/right:\s*0/)
+    expect(css).not.toMatch(/min-width:\s*250px/)
+  })
+})
