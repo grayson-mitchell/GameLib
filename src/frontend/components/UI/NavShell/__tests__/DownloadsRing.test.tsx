@@ -31,8 +31,13 @@ jest.mock('react-i18next', () => ({
 }))
 
 let progressPercent: number | undefined = 42
+const hasProgressMock = jest.fn((_appName: string, _runner: Runner) => [
+  { percent: progressPercent },
+  {}
+])
 jest.mock('frontend/hooks/hasProgress', () => ({
-  hasProgress: jest.fn(() => [{ percent: progressPercent }, {}])
+  hasProgress: (appName: string, runner: Runner) =>
+    hasProgressMock(appName, runner)
 }))
 
 jest.mock('react', () => {
@@ -113,7 +118,7 @@ const mockApi = {
 // the same mocked binding so tests can assert type identity (mirrors
 // `NavItem.test.tsx`).
 import { Link } from 'react-router-dom'
-import DownloadsRing from '../components/DownloadsRing'
+import DownloadsRing, { RingProgress } from '../components/DownloadsRing'
 
 type HookHarness = {
   __beginRender: () => void
@@ -277,5 +282,159 @@ describe('DownloadsRing', () => {
     mount()
 
     expect(harness().__getEffectCleanups()[0]).toBe(unsubscribe)
+  })
+})
+
+/**
+ * F-34.10-02 cause (b), diagnosed in 34.10-F02-DIAGNOSIS.md (surviving
+ * hypothesis H3): `RingProgress` was the only `hasProgress` consumer that
+ * was conditionally mounted on `head`'s truthiness, so its hook instance
+ * was torn down and reseeded at every queue-membership boundary. These
+ * tests actually INVOKE `RingProgress` (a named export as of 34.10-15,
+ * added for exactly this reason) instead of only inspecting it as an
+ * unexecuted `{ type: RingProgress, props }` node in the outer component's
+ * element graph -- the gap `DownloadsRing.test.tsx` had until now, per the
+ * diagnosis's own "Test-coverage gap" section.
+ *
+ * These assertions cover the DATA PATH only: does `--dl-progress` track
+ * `hasProgress`'s returned percent, and does `RingProgress` stay present
+ * in the tree across the idle/active boundary. Whether the arc actually
+ * paints visible pixels is NOT provable here -- this jest project is
+ * `testEnvironment: 'node'`, no jsdom, no CSS engine. That proof is routed
+ * to plan 34.10-16's live gate, item 4.
+ */
+describe('RingProgress arc binding (F-34.10-02)', () => {
+  beforeEach(() => {
+    currentPathname = '/'
+    progressPercent = 42
+    hasProgressMock.mockReset()
+    hasProgressMock.mockImplementation(() => [{ percent: progressPercent }, {}])
+    mockApi.getDMQueueInformation.mockReset().mockResolvedValue({
+      elements: [],
+      finished: [],
+      state: 'idle'
+    })
+    mockApi.handleDMQueueInformation.mockReset().mockReturnValue(jest.fn())
+  })
+
+  it('derives --dl-progress as a turn fraction of hasProgress percent (42 -> 0.42turn)', () => {
+    hasProgressMock.mockReturnValueOnce([{ percent: 42 }, {}])
+
+    const element = RingProgress({
+      appName: 'x',
+      runner: 'legendary'
+    }) as unknown as AnyElement
+
+    expect(
+      (element.props.style as Record<string, string>)['--dl-progress']
+    ).toBe('0.42turn')
+  })
+
+  it('renders 0turn when percent is 0', () => {
+    hasProgressMock.mockReturnValueOnce([{ percent: 0 }, {}])
+
+    const element = RingProgress({
+      appName: 'x',
+      runner: 'legendary'
+    }) as unknown as AnyElement
+
+    expect(
+      (element.props.style as Record<string, string>)['--dl-progress']
+    ).toBe('0turn')
+  })
+
+  it('renders 1turn when percent is 100', () => {
+    hasProgressMock.mockReturnValueOnce([{ percent: 100 }, {}])
+
+    const element = RingProgress({
+      appName: 'x',
+      runner: 'legendary'
+    }) as unknown as AnyElement
+
+    expect(
+      (element.props.style as Record<string, string>)['--dl-progress']
+    ).toBe('1turn')
+  })
+
+  it('renders 0turn and does not throw when percent is undefined (the ?? 0 path)', () => {
+    hasProgressMock.mockReturnValueOnce([{ percent: undefined }, {}])
+
+    expect(() => {
+      const element = RingProgress({
+        appName: 'x',
+        runner: 'legendary'
+      }) as unknown as AnyElement
+
+      expect(
+        (element.props.style as Record<string, string>)['--dl-progress']
+      ).toBe('0turn')
+    }).not.toThrow()
+  })
+
+  it('carries className exactly DownloadsRing__ring, the selector 34.10-14 stylesheet targets', () => {
+    hasProgressMock.mockReturnValueOnce([{ percent: 42 }, {}])
+
+    const element = RingProgress({
+      appName: 'x',
+      runner: 'legendary'
+    }) as unknown as AnyElement
+
+    expect(element.props.className).toBe('DownloadsRing__ring')
+  })
+
+  it('REGRESSION (F-34.10-02 H3): RingProgress stays in the element tree across the idle -> active queue-membership boundary, so its hasProgress hook instance is never torn down and reseeded', () => {
+    hasProgressMock.mockImplementation(() => [{ percent: 0 }, {}])
+
+    const idleTree = mount() as AnyElement
+    const idleRingElement = collectElements(idleTree.props.children).find(
+      (el) => el.type === RingProgress
+    )
+
+    // Pre-fix: RingProgress was only mounted while `head` was truthy; while
+    // idle the outer component rendered a bare `<span>`, never RingProgress
+    // itself, so `idleRingElement` would be `undefined` here. If this
+    // assertion ever fails again, the conditional-mount defect has come
+    // back. (Verified against the pre-fix component -- see plan 34.10-15's
+    // SUMMARY for the method.)
+    expect(idleRingElement).toBeDefined()
+    expect(idleRingElement?.type).toBe(RingProgress)
+
+    const idleSpan = RingProgress(
+      idleRingElement?.props as { appName: string; runner: Runner }
+    ) as unknown as AnyElement
+    const firstValue = (idleSpan.props.style as Record<string, string>)[
+      '--dl-progress'
+    ]
+    expect(firstValue).toBe('0turn')
+
+    // The queue now gains an actively-downloading head, pushed the same way
+    // the real backend pushes it -- via handleDMQueueInformation's
+    // callback, not by remounting the component.
+    hasProgressMock.mockImplementation(() => [{ percent: 55 }, {}])
+    const pushCallback = mockApi.handleDMQueueInformation.mock.calls[0][0] as (
+      event: unknown,
+      elements: DMQueueElement[]
+    ) => void
+    pushCallback({}, [makeElement('active-game')])
+
+    const activeTree = reinvoke() as AnyElement
+    const activeRingElement = collectElements(activeTree.props.children).find(
+      (el) => el.type === RingProgress
+    )
+    expect(activeRingElement).toBeDefined()
+    expect(activeRingElement?.props.appName).toBe('active-game')
+
+    const activeSpan = RingProgress(
+      activeRingElement?.props as { appName: string; runner: Runner }
+    ) as unknown as AnyElement
+    const secondValue = (activeSpan.props.style as Record<string, string>)[
+      '--dl-progress'
+    ]
+
+    // The sequence [idle, active] must show two DIFFERENT values -- a
+    // single static assertion cannot catch a reseeding-at-mount-boundary
+    // defect.
+    expect(secondValue).toBe('0.55turn')
+    expect(secondValue).not.toBe(firstValue)
   })
 })
