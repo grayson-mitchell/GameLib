@@ -60,12 +60,35 @@ watch failure and rendered the failure surface for both.
 | `npx eslint` (5 changed files) | 0 errors (100 pre-existing warnings) |
 | `npx jest --runInBand --silent` (full suite) | **216/216 suites, 4218/4218 tests pass** |
 
+## Live confirmation (2026-08-08 12:06)
+
+Confirmed on a real `pnpm tauri:dev` run: opened the Humble sign-in window from Manage Accounts
+and closed it without signing in. `~/Library/Logs/GameLib/gamelib.log`:
+
+```
+(12:06:13) [INFO]: [Backend]:  Humble login window loginwin-0-18c9abbf564e3ec0-13317877
+                               closed before login completed — cancelling watch
+(12:06:13) [INFO]: [Frontend]: [WebView] runner=humble phase=cancelled
+                               (sign-in window closed by the user)
+```
+
+Both halves of the new path fired, and the three things that distinguish this from the old
+behaviour all hold in one trace: the level is `INFO` not `WARNING`, the phase is `cancelled` not
+`error`, and no `phase=error` line follows — so the failure panel was never rendered and the route
+navigated to `/login`. This closes the structural-gates-only gap this task shipped with (no jsdom
+in the tree, so `WebView/index.tsx` is gated by source text per that file's own stated limitation).
+
+Note this is inherently a **Tauri-build** confirmation: the `'closed'` nav event exists only in the
+Rust login-window seam. Under Electron `getLoginWindowSeam()` returns `null` and the untouched
+`session.fromPartition` path runs, which has no equivalent close signal — so `pnpm start` can
+neither exercise nor regress this.
+
 ## Not verified
 
-Live behaviour was not exercised — no app run. Every test in this tree is structural or
-unit-level (no jsdom; `WebView/index.tsx` is gated by source text, per the file's own stated
-limitation). Confirming that closing the real sign-in window lands on Manage Accounts with no
-panel needs a live run.
+- A genuine watch failure (UNDECIDABLE / UNSUPPORTED_OR_ERROR cookie read) still rendering its
+  error panel with the Retry button. Unchanged by this task and covered by its own unit tests, but
+  not live-exercised — it needs a dead cookie jar, which a closed window no longer produces.
+- The WR-03 ten-minute timeout surface, for the same reason.
 
 ## Decisions
 
