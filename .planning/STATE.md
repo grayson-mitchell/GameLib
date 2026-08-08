@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.10-23-PLAN.md
-last_updated: "2026-08-08T23:25:16.931Z"
-last_activity: 2026-08-08
+stopped_at: Gap cycle 3 planned (34.10-23..27); the debug session (navbar-seam-and-logo-offset) is CLOSED and its fix is live-confirmed; what remains is a run-4 live gate re-measuring item 1 in full; next command /gsd-execute-phase 34.10
+last_updated: "2026-08-09T00:00:00.000Z"
+last_activity: 2026-08-09
 progress:
   total_phases: 23
   completed_phases: 14
@@ -488,11 +488,15 @@ halves (navbar stays pinned; scrollbar sits below it; the mouse/keyboard back-to
 migration holds) — 34.10-18's scroll-container relocation off `document.body`, the riskiest change
 of the cycle, is measured as working. **REQ-34.10-09 → Complete.**
 
-STILL OPEN, measured failing against a bundle VERIFIED to contain their fixes: **F-34.10-03**
-(operator: "still a gap" — 34.10-18's seam border did not work) and **F-34.10-04** (operator:
-"gamelib icon and download sit lower" — 34.10-19's `min-height` did not work; the failure SHAPE
-changed from a second-row wrap to a vertical misalignment, recorded not diagnosed). REQ-34.10-06
-and REQ-34.10-16 stay Pending.
+**F-34.10-03 and F-34.10-04 are now FIXED.** The run-3 failure above led to a debug session
+(`.planning/debug/navbar-seam-and-logo-offset.md`, `status: resolved`): the true root cause was an
+unscoped `.MuiTabs-root { padding-bottom: var(--space-xs) }` in `GamesSettings/index.scss:40`
+leaking 8px app-wide into the nav shell's `<Tabs>` — not the `min-height`/`align-items` properties
+34.10-18/-19 had targeted. Fixed in commit `220211230`, operator-confirmed live in commit
+`1c7a3359d` ("the download and wordmark read level now"). Both findings are
+`fixed-but-unmeasured-by-the-gate`: the fix was confirmed in ONE non-scored theme (the ambient teal
+scheme) only, never in the three scored themes (`midnightMirage`/`gruvbox_dark`/`dracula`).
+REQ-34.10-06 and REQ-34.10-16 correctly stay Pending until a run-4 gate scores a genuine 5/5.
 
 THREE COLUMNS MEASURED FOR THE FIRST TIME IN THIS PHASE: item 1's four-theme sweep (NOT ATTEMPTED
 in runs 1 and 2 — the seam is IDENTICAL across all three scored themes, including `dracula`, so it
@@ -506,18 +510,22 @@ own automated checks were unsatisfiable against a correctly-filled specimen (a `
 theme that does not exist in the picker, plus five verification/prose collisions). None altered a
 verdict. Rule: run a gate check against a FILLED specimen at authoring time.
 
-UNMEASURED, carried forward: the gamepad focus-scroll regression (no controller) and
-`dracula-classic`.
+UNMEASURED, carried forward: the gamepad focus-scroll regression. This sub-check (P9 unmet, no
+controller) has been NOT ATTEMPTED in every run of this phase and is either measured in run 4 or
+permanently carried forward as a named residual risk — never inferred from the mouse/keyboard
+result. Also carried forward: `dracula-classic`, a theme named in the gate's scope that does not
+exist in the shipped theme picker (F-34.10-07, a contract defect).
 
-OPERATOR DECISION during the run: replace the card/folder tab with a **pill tab with rounded bottom
-corners**. Supersedes the fix direction for F-34.10-03/-04 but closes neither; needs its own plan.
+PILL-TAB ELECTION: DEFERRED. The operator's run-3-time election to replace the card/folder tab
+with a **pill tab with rounded bottom corners** is recorded as a deferred decision, out of scope
+for gap cycle 3 — see `ROADMAP.md`'s Phase 34.10 "Deferred from this phase" entry for the verbatim
+quote. **REQ-34.10-06's card/folder framing STANDS for run 4** — the gate scores the tab shape as
+it currently ships, not the pill variant.
 
-⚠ **`34.10-VERIFICATION.md` IS STALE** — it is run-2-derived and predates run 3. Regenerate it
-before any `/gsd-plan-phase 34.10 --gaps`.
+`34.10-VERIFICATION.md` was REGENERATED 2026-08-09 from run 3 plus the resolved debug session and
+is now AUTHORITATIVE.
 
-**NEXT COMMAND: `/gsd-debug`** — NOT `--gaps`. F-34.10-03 and F-34.10-04 have each now survived a
-targeted fix that its author's reasoning and unit gates both endorsed; that is an undiagnosed
-defect, not a known gap. See `34.10-LIVE-GATE.md` §9.6 and `34.10-22-SUMMARY.md`.
+**NEXT COMMAND: `/gsd-execute-phase 34.10`** — gap cycle 3 is planned as plans 34.10-23..27.
 
 --- run 2's status, preserved as history ---
 Plan: 21 of 22 complete (seam-token corrected post-review); gap-cycle-2 plans 17-22 now executing. Prior state -- **live gate RUN 2
