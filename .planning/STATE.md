@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.10-17-PLAN.md -- F-34.10-04/-05 live diagnosis (REQ-34.10-06 reverted to Pending on live gate FAIL); phase 34.10 does not close, plans 18-22 remain"
-last_updated: "2026-08-08T07:32:45.904Z"
+stopped_at: "Completed 34.10-18-PLAN.md -- gap cycle 2 plan 18 (navbar seam border + scroll-container relocation, F-34.10-03/-06); phase 34.10 does not close, plans 19-22 remain"
+last_updated: "2026-08-08T07:56:23.693Z"
 last_activity: 2026-08-08
 progress:
   total_phases: 23
   completed_phases: 14
-  total_plans: 252
-  completed_plans: 238
-  percent: 94
+  total_plans: 263
+  completed_plans: 239
+  percent: 91
 ---
 
 # Project State
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — EXECUTING gap cycle 2
-Plan: 17 of 22 complete; gap-cycle-2 plans 17-22 now executing. Prior state -- **live gate RUN 2
+Plan: 18 of 22 complete; gap-cycle-2 plans 17-22 now executing. Prior state -- **live gate RUN 2
 recorded, VERDICT FAIL, items_passed 4/5.
 PHASE 34.10 DOES NOT CLOSE.** Both of run 1's blocking defects are CLOSED and live-confirmed:
 F-34.10-01 (tier-2 dropdowns, item 3 PASS -- functional contract: click-toggle, containment,
@@ -2598,7 +2598,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 92%
+trusted blindly. The recurring `**Progress:**[█████████░] 91%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 
@@ -2667,7 +2667,23 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 `STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Executing Phase 34.10 (gap cycle 2, plan 17 of 22 complete)
+Status: Executing Phase 34.10 (gap cycle 2, plan 18 of 22 complete)
+
+> NOTE (34.10-18): `state.advance-plan` corrupted STATE.md again, the same recurring
+> mis-targeted-write bug every note in this cluster documents — it spliced this session's status
+> into this HISTORICAL "Prior phase: 34.1" narrative line (overwriting "plan 17 of 22 complete"
+> with a bare "Ready to execute"), corrupted the frontmatter `progress` block (`total_plans` jumped
+> 252→263, `completed_plans` 238→239 but `percent` DROPPED to 61 — internally inconsistent with
+> either number), and truncated an unrelated historical "Last activity: ... 260808-gl6" line
+> elsewhere in this file mid-sentence. A follow-up `state.update-progress` call then correctly
+> recomputed `239/263 = 91%` in its OWN JSON return value, but wrote `percent: 61` (the prior
+> stale, wrong number) into the frontmatter anyway, and separately reverted the just-fixed
+> frontmatter `stopped_at`/`last_activity` fields back to the plan-17 values while also relocating
+> the `260808-gl6` description text INTO the frontmatter `last_activity` field (which should be a
+> bare date, matching the rest of this file's convention) rather than leaving it in its own
+> historical body line. All hand-corrected below (frontmatter `percent` set to `91`, `stopped_at`
+> reset to plan 18's completion, `last_activity` reset to the bare date), diffed against this
+> session's own git-committed pre-session baseline rather than trusted blindly.
 
 > NOTE (34.10-17): `state.advance-plan` again spliced this session's current status into this
 > HISTORICAL "Prior phase: 34.1" narrative line — the same recurring mis-targeted-write bug every
@@ -3663,6 +3679,7 @@ Closed/parked native-install phases:
 | Phase 34.10 P15 | ~35min | 2 tasks | 2 files |
 | Phase 34.10 P16 | ~1h10min | 2 tasks | 3 files |
 | Phase 34.10 P17 | 70min | 3 tasks | 2 files |
+| Phase 34.10 P18 | 20min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -4174,6 +4191,8 @@ Recent decisions affecting current work:
 - [Phase 34.10-17]: F-34.10-04 fix belongs in NavTabs/index.scss as a .MuiTab-root min-height override, not a --navbar-height change
 - [Phase 34.10-17]: F-34.10-05 resolves to W1 (wrong token): panel background should key relationally off var(--navbar-background), matching the tier-2 host; exact file left to plan 34.10-20
 - [Phase 34.10-17]: F-34.10-03's measured 8px seam gap shares H1's tab-height geometry with F-34.10-04 but does not supersede plan 34.10-18's separate missing-seam-border defect
+- [Phase 34.10-18]: GamesList scrollCardIntoView arithmetic expressed relative to the container's own rect (container.scrollTop + rect delta), not window.innerHeight/offsetTop — the scroll container no longer spans the full window after F-34.10-06's relocation, and offsetTop is measured against offsetParent, not necessarily the new scroll container
+- [Phase 34.10-18]: position: sticky on the navbar deliberately not attempted for F-34.10-06 — a sticky grid item is constrained to its own grid area; the navbar's min-content row gives zero sticky travel distance -- documented as a dead end in App.css so it cannot be re-added as an apparent fix
 
 ### Pending Todos
 
@@ -4277,8 +4296,8 @@ Recent decisions affecting current work:
 > 34.10-16-PLAN.md --` prefix and demoted into the `--- prior session, preserved as history ---`
 > chain below, in the same "Previously stopped at:" format used everywhere else in that chain.
 
-Last session: 2026-08-08T07:32:45.890Z
-Stopped at: Completed 34.10-17-PLAN.md -- gap cycle 2 plan 17 (F-34.10-04/-05 live diagnosis).
+Last session: 2026-08-08T07:56:23.677Z
+Stopped at: Completed 34.10-18-PLAN.md -- gap cycle 2 plan 18 (navbar seam border + scroll-container relocation, F-34.10-03/-06); phase 34.10 does not close, plans 19-22 remain
 Task 1 reverted REQ-34.10-06 to Pending (live gate run 2 item 1 FAIL). Task 2's checkpoint
 captured a real box-model measurement from a live `pnpm tauri:dev` build in two themes
 (midnightMirage, dracula) via a DevTools console snippet — single-process precondition confirmed
