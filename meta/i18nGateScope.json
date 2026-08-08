@@ -1,12 +1,14 @@
 {
   "baseCommit": "b5b5cad3fa2e822602d320b70788d87240fc056e",
   "baseVersion": "2.22.0",
-  "generatedAt": "2026-08-07T21:06:05.587Z",
+  "generatedAt": "2026-08-08T00:13:21.574Z",
   "generatedBy": "pnpm gen-i18n-gate-scope",
   "files": [
     "src/frontend/App.tsx",
     "src/frontend/bootErrorSurface.ts",
     "src/frontend/components/UI/CachedImage/index.tsx",
+    "src/frontend/components/UI/CategoryFilter/index.tsx",
+    "src/frontend/components/UI/Dropdown/index.tsx",
     "src/frontend/components/UI/EditGameDialog/index.tsx",
     "src/frontend/components/UI/ErrorComponent/index.tsx",
     "src/frontend/components/UI/Header/index.tsx",
