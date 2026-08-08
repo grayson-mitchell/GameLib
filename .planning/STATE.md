@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.10-16-PLAN.md -- live gate RUN 2 recorded: VERDICT FAIL, items_passed 4/5. F-34.10-01 and F-34.10-02 CLOSED and live-confirmed (item 3 and item 4 both PASS; the two risks 34.10-15-SUMMARY.md left open are FALSIFIED). Item 5 (Electron) PASSES for the first time on tab-navigation. Item 1 (theme/seam survival) newly FAILS on three new findings (F-34.10-03 visible seam gap, F-34.10-04 logo/ring wrap to a second row, F-34.10-06 navbar not fixed to top + scrollbar overlap); a fourth new finding F-34.10-05 (item 3's black-background panel) keeps REQ-34.10-09 Pending. REQ-34.10-05 and REQ-34.10-08 ticked Complete; REQ-34.10-09 and REQ-34.10-16 stay Pending. PHASE 34.10 DOES NOT CLOSE -- next command is /gsd-plan-phase 34.10 --gaps to diagnose F-34.10-03..06"
-last_updated: "2026-08-08T04:55:00.000Z"
+stopped_at: "Completed 34.10-17-PLAN.md -- F-34.10-04/-05 live diagnosis (REQ-34.10-06 reverted to Pending on live gate FAIL); phase 34.10 does not close, plans 18-22 remain"
+last_updated: "2026-08-08T07:32:45.904Z"
 last_activity: 2026-08-08
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 252
-  completed_plans: 237
+  completed_plans: 238
   percent: 94
 ---
 
@@ -478,8 +478,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — EXECUTING, PHASE DOES NOT CLOSE
-Plan: 16 of 16 EXECUTED 2026-08-08 -- **live gate RUN 2 recorded, VERDICT FAIL, items_passed 4/5.
+Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — EXECUTING gap cycle 2
+Plan: 17 of 22 complete; gap-cycle-2 plans 17-22 now executing. Prior state -- **live gate RUN 2
+recorded, VERDICT FAIL, items_passed 4/5.
 PHASE 34.10 DOES NOT CLOSE.** Both of run 1's blocking defects are CLOSED and live-confirmed:
 F-34.10-01 (tier-2 dropdowns, item 3 PASS -- functional contract: click-toggle, containment,
 close-on-reclick, filter application) and F-34.10-02 (Downloads ring, item 4 PASS -- idle
@@ -2600,6 +2601,11 @@ hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each t
 trusted blindly. The recurring `**Progress:**[█████████░] 92%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
+
+> NOTE (34.10-17): this session's own `state.update-progress` call spliced its freshly-computed
+> `90%` progress-bar string into this SAME historical placeholder, overwriting the `92%` value the
+> note immediately above already fixed once. Reverted back to `92%` (this note's own frozen
+> historical value, diffed against the pre-session snapshot) rather than trusted.
 NOTE (34.4.2-07): the same splice-into-historical-prose bug recurred yet again this session --
 `state.update-progress` overwrote this note's own `94%` with `93%` (this session's own computed
 plan-based percent, correct for the frontmatter's `completed_plans: 187` but wrong here, same
@@ -2661,7 +2667,22 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 `STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Phase complete — ready for verification
+Status: Executing Phase 34.10 (gap cycle 2, plan 17 of 22 complete)
+
+> NOTE (34.10-17): `state.advance-plan` again spliced this session's current status into this
+> HISTORICAL "Prior phase: 34.1" narrative line — the same recurring mis-targeted-write bug every
+> note in this cluster documents, this time overwriting the prior session's "Phase complete —
+> ready for verification" value with a bare "Ready to execute". Hand-corrected to reflect the
+> real current status (Phase 34.10 executing gap cycle 2, plan 17 of 22 complete), diffed against
+> this session's own git-committed pre-session baseline rather than trusted blindly.
+
+> NOTE (34.10 gap cycle 2, execute start): `state.begin-phase` corrupted STATE.md in the now-usual
+> way and was hand-corrected against `git show HEAD:.planning/STATE.md`: `stopped_at` truncated
+> mid-sentence and unquoted, `total_plans` 252 -> 263 (real delta is +6 new gap plans -> 258),
+> `percent` 94 -> 61 (formula silently switched from plans to phases), the "Plan: 16 of 16 EXECUTED"
+> narrative line severed leaving an orphaned "PHASE 34.10 DOES NOT CLOSE.**" continuation, this
+> prior-phase-34.1 `Status:` line overwritten with the CURRENT phase's status, and the 2026-08-08
+> `Last activity:` line overwritten mid-sentence. All six repaired by hand.
 
 > NOTE (34.4.2 gap cycle 5, wave 3 resume): `state.begin-phase` corrupted the frontmatter in the
 > now-usual way and was hand-corrected against a pre-session snapshot: `stopped_at` truncated to
@@ -3641,6 +3662,7 @@ Closed/parked native-install phases:
 | Phase 34.10 P14 | ~15min | 2 tasks | 2 files |
 | Phase 34.10 P15 | ~35min | 2 tasks | 2 files |
 | Phase 34.10 P16 | ~1h10min | 2 tasks | 3 files |
+| Phase 34.10 P17 | 70min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -4149,6 +4171,9 @@ Recent decisions affecting current work:
 - [Phase 34.10-15]: **F-34.10-02 remains UNPROVEN, do not treat as closed.** Post-implementation re-read surfaced two unresolved risks recorded in full in `34.10-15-SUMMARY.md`: (1) `key`'s idle->active change forces a React remount anyway, so the hook-instance lifetime this plan targets may not have actually changed at the boundary that matters, and the new test (calling `RingProgress` directly, no reconciler) cannot detect this; (2) `hasProgress.ts`'s reconciliation effect fires on mount, so H3's `{}` seed should produce at most one transient 0%-frame, not the sustained flat arc the live gate observed — H3's mechanism may not survive close reading. REQ-34.10-08 stays Pending; plan 34.10-16's live gate item 4 is the only adjudicator and must specifically check both risks if it fails again
 - [Phase 34.10-16]: **Live gate RUN 2 recorded 2026-08-08: VERDICT FAIL, items_passed 4/5. F-34.10-01 and F-34.10-02 CLOSED, both live-confirmed.** Item 3 PASS (click-toggle, containment, close-on-reclick, filter application, both Categories and Filters). Item 4 PASS (idle ring visible/dimmed/ring-shaped, hover stays a ring, arc fills and advances) — this FALSIFIES both risks 34.10-15-SUMMARY.md left open, recorded explicitly per the coordinator's own instruction that the correction "matters and must not be lost." Item 5 PASS, first-ever measurement of the Electron tab-navigation sub-check (NOT ATTEMPTED in run 1). Item 2 PASS (frameless drag by the ring).
 - [Phase 34.10-16]: **Item 1 (theme/seam survival) newly FAILS**, three findings never seen in run 1: F-34.10-03 (~10px visible seam gap between the tier-1 tab strip and content, breaking the card/folder merge illusion), F-34.10-04 (logo/Downloads-ring wrap to a second row instead of sharing one line with the tab strip), F-34.10-06 (navbar scrolls away with content instead of staying fixed to the top; an active scrollbar draws over it instead of starting below it). Per-theme rows recorded NOT ATTEMPTED (operator's report was general, not per-theme) — not inferred as FAIL per-theme, but item 1's own overall verdict is FAIL on the reported defects. F-34.10-05 (item 3's tier-2 disclosure panel renders a black background) does NOT gate item 3's own PASS but keeps REQ-34.10-09 Pending, by the same precedent run 1 set for F-34.10-01. REQ-34.10-05 and REQ-34.10-08 ticked Complete; REQ-34.10-09 and REQ-34.10-16 stay Pending. Preflight P1-P7 recorded NOT REPORTED, not fabricated. **PHASE 34.10 DOES NOT CLOSE — next command is `/gsd-plan-phase 34.10 --gaps`** to diagnose F-34.10-03 through F-34.10-06.
+- [Phase 34.10-17]: F-34.10-04 fix belongs in NavTabs/index.scss as a .MuiTab-root min-height override, not a --navbar-height change
+- [Phase 34.10-17]: F-34.10-05 resolves to W1 (wrong token): panel background should key relationally off var(--navbar-background), matching the tier-2 host; exact file left to plan 34.10-20
+- [Phase 34.10-17]: F-34.10-03's measured 8px seam gap shares H1's tab-height geometry with F-34.10-04 but does not supersede plan 34.10-18's separate missing-seam-border defect
 
 ### Pending Todos
 
@@ -4242,7 +4267,39 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-08T04:55:00.000Z
+> NOTE (34.10-17): `state.record-session` spliced the bare `--stopped-at` argument
+> ("Completed 34.10-17-PLAN.md") in as the `Stopped at:` line's FIRST line only, leaving the
+> entire multi-line body that used to follow the old `Stopped at:` line (plan 16's live-gate-RUN-2
+> narrative) orphaned directly underneath it with no heading — the same mis-targeted-write pattern
+> this cluster's notes document repeatedly, this time truncating rather than splicing into a
+> historical block. Hand-corrected: plan 17's own `Stopped at:` now carries a full description
+> below, and the orphaned plan-16 paragraph was given back its `Stopped at: Completed
+> 34.10-16-PLAN.md --` prefix and demoted into the `--- prior session, preserved as history ---`
+> chain below, in the same "Previously stopped at:" format used everywhere else in that chain.
+
+Last session: 2026-08-08T07:32:45.890Z
+Stopped at: Completed 34.10-17-PLAN.md -- gap cycle 2 plan 17 (F-34.10-04/-05 live diagnosis).
+Task 1 reverted REQ-34.10-06 to Pending (live gate run 2 item 1 FAIL). Task 2's checkpoint
+captured a real box-model measurement from a live `pnpm tauri:dev` build in two themes
+(midnightMirage, dracula) via a DevTools console snippet — single-process precondition confirmed
+clean via `pgrep`. Task 3 adjudicated all 5 named F-34.10-04 hypotheses against the measurement:
+H1 (MUI's unconditional `minHeight: 72` on icon+label `.MuiTab-root`, unmitigated by any override
+in `NavTabs/index.scss`, against a 56px navbar) SURVIVES; H2 (genuine flex-wrap), H3 (horizontal
+overflow) and H4 (grid column mis-size) REJECTED outright; H5 (grid row mis-size) REJECTED but its
+call-out confirmed F-34.10-03's measured 8px seam shares H1's root geometry, without rewriting
+plan 34.10-18's separate missing-seam-border premise. F-34.10-05 resolved to W1 (wrong token,
+`Dropdown/index.scss:23`'s `var(--background)` vs the tier-2 column's own `var(--navbar-background)`
+at `NavShell/index.scss:78`) — W2 (broken custom-property inheritance) REJECTED, the full
+ancestor chain resolves cleanly in both themes. `34.10-F04-DIAGNOSIS.md` created (245 lines);
+`git diff --quiet -- src` and `-- 34.10-LIVE-GATE.md` both held throughout, per D-E. Full suite
+green (218 suites / 4246 tests). One item honestly recorded NOT ATTEMPTED: the operator's own
+subjective description of the wordmark/ring position was never obtained. **PHASE 34.10 STILL DOES
+NOT CLOSE — plans 18 (F-34.10-03/-06), 19 (F-34.10-04) and 20 (F-34.10-05) implement the named
+fixes next, each against a concrete file:selector:declaration this plan named**, followed by
+plans 21/22's live-gate re-run. Next: `/gsd-execute-phase 34.10 --gaps-only`.
+
+--- prior session, preserved as history ---
+
 Stopped at: Completed 34.10-16-PLAN.md -- live gate RUN 2 recorded (`34.10-LIVE-GATE.md` §7,
 `34.10-16-SUMMARY.md`). VERDICT FAIL, items_passed 4/5. **PHASE 34.10 DOES NOT CLOSE.** Both of
 run 1's blocking defects (F-34.10-01, F-34.10-02) are CLOSED and live-confirmed — item 3 (tier-2
@@ -4259,8 +4316,6 @@ only), not fabricated. **NEXT COMMAND: `/gsd-plan-phase 34.10 --gaps`** to diagn
 F-34.10-03 through F-34.10-06, then a third live-gate pass scoped to item 1 (and item 3's
 F-34.10-05) — items 2, 4 and 5 are now closed and should not need re-measurement unless a
 gap-cycle fix touches their surfaces.
-
---- prior session, preserved as history ---
 
 Stopped at: Completed 34.10-12-PLAN.md -- GAP: F-34.10-02 cause (b) diagnosed. Task 1 (checkpoint:
 human-verify) ran the three-question live discriminator on real hardware: Q1 (DM screen's own

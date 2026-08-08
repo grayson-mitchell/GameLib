@@ -2408,11 +2408,11 @@ REQ-34.10-13, REQ-34.10-14, REQ-34.10-15, REQ-34.10-16
 the frameless drag-region runtime this rebuilds against)
 **Blocks:** Phase 34.11 (the filter panel needs the tier-2 slot to exist); the deferred
 onboarding-tour rework phase (34.10 disables `SidebarTour` per D-13 and does not rebuild it)
-**Plans:** 22 plans — 16 executed, 6 PLANNED and unexecuted (gap cycle 2, planned 2026-08-08).
+**Plans:** 17/22 plans executed
 
 Gap cycle 2 plans, closing F-34.10-03 through F-34.10-06 plus the per-theme sweep that has
 never been reached in two runs:
-- [ ] 34.10-17-PLAN.md — revert REQ-34.10-06 to Pending; live box-model capture; diagnose F-34.10-04 and settle F-34.10-05 (wave 1)
+- [x] 34.10-17-PLAN.md — revert REQ-34.10-06 to Pending; live box-model capture; diagnose F-34.10-04 and settle F-34.10-05 (wave 1)
 - [ ] 34.10-18-PLAN.md — F-34.10-03 seam border + F-34.10-06 navbar pinning and scroll-container relocation (wave 2)
 - [ ] 34.10-20-PLAN.md — F-34.10-05 tier-2 disclosure panel surface (wave 2)
 - [ ] 34.10-19-PLAN.md — F-34.10-04 single-line navbar, implemented against 34.10-17's diagnosis (wave 3)
