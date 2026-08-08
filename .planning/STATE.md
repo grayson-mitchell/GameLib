@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.10-12-PLAN.md -- GAP: F-34.10-02 cause (b) diagnosed via live discriminator (Q1/Q2/Q3 all YES); H3 survives by elimination (hasProgress.ts:14-19 empty-object seed bug + RingProgress's unique conditional mount), fix routed to plan 34.10-15 with three concrete directives; REQ-34.10-08 stays Pending; phase 34.10 still does NOT close (34.10-15/16 remain), gap cycle continues"
-last_updated: "2026-08-08T02:54:19.000Z"
+stopped_at: "Completed 34.10-15-PLAN.md -- GAP: RingProgress mounted unconditionally (H3, item 2 of 3) with ProgressHeader-precedent fallback args, exported and directly tested for the first time; item 1 (hasProgress.ts:14-19 seed fix) deliberately NOT implemented, recorded as owed six-consumer follow-up; post-implementation re-read surfaced two unresolved risks (key-driven remount may preserve the pre-fix hook lifetime; H3's reconciliation effect may only explain a single transient frame, not a sustained flat arc) -- F-34.10-02 remains UNPROVEN, routed to plan 34.10-16's live gate item 4; REQ-34.10-08 stays Pending; phase 34.10 still does NOT close (34.10-16 remains), gap cycle continues"
+last_updated: "2026-08-08T03:20:00.000Z"
 last_activity: 2026-08-08
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 252
-  completed_plans: 235
-  percent: 93
+  completed_plans: 236
+  percent: 94
 ---
 
 # Project State
@@ -480,7 +480,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — EXECUTING
 EXECUTED 2026-08-06, STILL DID NOT CLOSE (gate FAILED 1/6) -- gap cycle 5 required, NOT COMPLETE
-Plan: 14 of 16 (gap cycle 1: 34.10-13 done closing F-34.10-01, 34.10-14 done closing F-34.10-02 cause (a), 34.10-12 done diagnosing F-34.10-02 cause (b) -- H3 survives by elimination, fix routed to 34.10-15; 34.10-15/16 remain)
+Plan: 15 of 16 (gap cycle 1: 34.10-13 done closing F-34.10-01, 34.10-14 done closing F-34.10-02 cause (a), 34.10-12 done diagnosing F-34.10-02 cause (b) -- H3 survives by elimination, fix implemented in 34.10-15 (item 2 only, unconditional mount) but NOT proven -- two unresolved risks documented in 34.10-15-SUMMARY.md; F-34.10-02 status is genuinely open pending 34.10-16's live gate; 34.10-16 remains)
 glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
 see 34.4.2-13-SUMMARY.md. Plan 14 EXECUTED 2026-08-05 -- T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW
 single-flight guard refuses a second visible login window while one is pending/presented, 25s TTL
@@ -3619,6 +3619,7 @@ Closed/parked native-install phases:
 | Phase 34.10 P11 | 66min | 2 tasks | 2 files |
 | Phase 34.10 P13 | 24min | 3 tasks | 8 files |
 | Phase 34.10 P14 | ~15min | 2 tasks | 2 files |
+| Phase 34.10 P15 | ~35min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -4122,6 +4123,9 @@ Recent decisions affecting current work:
 - [Phase 34.10-14]: DownloadsRing's `::after` hole replaced with `-webkit-mask`/`mask: radial-gradient(farthest-side, ...)` instead of painting a guessed backdrop colour, so the centre cannot mismatch any state or theme (closes F-34.10-02 cause (a)); `@supports not` fallback restores the old technique for rest AND hover
 - [Phase 34.10-14]: Idle track repainted from `var(--divider)` to `var(--navbar-inactive, var(--navbar-accent))`, byte-identical to `.DownloadsRing__count`'s token chain — the one foreground in this component operator-confirmed visible on real hardware; idle opacity 0.5->0.65, ring 15px->16px
 - [Phase 34.10-14]: `downloadsRingStyles.test.ts` added as a comment-immune source gate (stripSourceComments + stripTrailingLineComment); full suite ran fully green twice (218/218 suites, 4240/4240 tests) — the plan's documented single pre-existing failure had already been resolved by a concurrent session per 34.10-13's own SUMMARY; REQ-34.10-08 remains Pending pending the live gate (34.10-16), not yet closed by this plan alone since visibility is unprovable in this jest project
+- [Phase 34.10-15]: `RingProgress` mounted unconditionally in `DownloadsRing` (H3, item 2 of the diagnosis's three-item recommendation only), fallback `appName={head?.params.appName ?? ''}`/`runner={head?.params.runner ?? 'legendary'}` per the `ProgressHeader` precedent (`DownloadManager/index.tsx:113-115`); `percent` gated on non-empty `appName`; `key={head?.params.appName ?? 'idle'}` kept to preserve per-download progress reset on handover
+- [Phase 34.10-15]: `RingProgress` exported and directly invoked by a new regression test for the first time — verified to fail pre-fix (`idleRingElement` undefined) by temporarily reverting `index.tsx` and re-running; full suite 218/218 suites, 4246/4246 tests green post-fix; item 1 (`hasProgress.ts:14-19` empty-object seed bug, all six consumers affected) deliberately NOT implemented, owed to a future plan
+- [Phase 34.10-15]: **F-34.10-02 remains UNPROVEN, do not treat as closed.** Post-implementation re-read surfaced two unresolved risks recorded in full in `34.10-15-SUMMARY.md`: (1) `key`'s idle->active change forces a React remount anyway, so the hook-instance lifetime this plan targets may not have actually changed at the boundary that matters, and the new test (calling `RingProgress` directly, no reconciler) cannot detect this; (2) `hasProgress.ts`'s reconciliation effect fires on mount, so H3's `{}` seed should produce at most one transient 0%-frame, not the sustained flat arc the live gate observed — H3's mechanism may not survive close reading. REQ-34.10-08 stays Pending; plan 34.10-16's live gate item 4 is the only adjudicator and must specifically check both risks if it fails again
 
 ### Pending Todos
 

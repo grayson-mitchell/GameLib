@@ -2408,7 +2408,7 @@ REQ-34.10-13, REQ-34.10-14, REQ-34.10-15, REQ-34.10-16
 the frameless drag-region runtime this rebuilds against)
 **Blocks:** Phase 34.11 (the filter panel needs the tier-2 slot to exist); the deferred
 onboarding-tour rework phase (34.10 disables `SidebarTour` per D-13 and does not rebuild it)
-**Plans:** 16 plans (14 executed, 2 remaining: 34.10-15/16) — **PHASE DOES NOT CLOSE.** The blocking 5-item live gate
+**Plans:** 16 plans (15 executed, 1 remaining: 34.10-16) — **PHASE DOES NOT CLOSE.** The blocking 5-item live gate
 (`34.10-11-PLAN.md`) authored `34.10-LIVE-GATE.md` and RAN it on real hardware 2026-08-08:
 **VERDICT FAIL, 2 of 5 PASS** (`items_passed: 2`) — see `34.10-LIVE-GATE.md` and
 `34.10-11-SUMMARY.md`. Item 1 (theme survival, REQ-34.10-06) and item 2 (window dragging under
@@ -2439,8 +2439,26 @@ elimination**, not a proven always-reproducing mechanism: `hasProgress.ts:14-19`
 (`DownloadsRing/index.tsx:70-75`) rather than persistently mounted. Three concrete fix directives
 handed to plan 34.10-15 — see `34.10-F02-DIAGNOSIS.md`. No `src/` changes; `34.10-LIVE-GATE.md`
 byte-identical. REQ-34.10-08 stays Pending (diagnosis only, no fix implemented or measured).
+**Plan 15 EXECUTED 2026-08-08** (`34.10-15-SUMMARY.md`): implemented ONLY item 2 of the diagnosis's
+three-item recommendation (unconditional mount, in scope) — `RingProgress` in `DownloadsRing`
+(`index.tsx`) mounted unconditionally with `?? ''`/`?? 'legendary'` fallback args, following the
+`ProgressHeader` precedent (`DownloadManager/index.tsx:113-115`); `percent` gated on non-empty
+`appName`. `RingProgress` exported and directly invoked by a new test for the first time, with a
+regression assertion verified to fail pre-fix (temporarily reverted `index.tsx`, `idleRingElement`
+came back `undefined`). Full suite green: 218/218 suites, 4246/4246 tests. **F-34.10-02 remains
+UNPROVEN** — a post-implementation re-read surfaced two unresolved risks (full detail in
+`34.10-15-SUMMARY.md`): (1) `key={head?.params.appName ?? 'idle'}` still forces a React remount at
+the idle→active boundary, so the hook-instance lifetime this fix targets may not have actually
+changed at the one boundary that matters, and the new test cannot detect this (it invokes
+`RingProgress` directly, bypassing React's reconciler and `key` semantics entirely); (2)
+`hasProgress.ts`'s reconciliation effect fires on mount, so H3's `{}` seed should produce at most
+one transient 0%-frame, not the sustained flat arc the live gate observed — H3's mechanism may not
+survive close reading. Item 1 (`hasProgress.ts:14-19` seed fix, all six consumers affected)
+deliberately NOT implemented — out of scope (shared hook, not in this plan's files_modified), owed
+to a future plan. REQ-34.10-08 stays Pending; `34.10-LIVE-GATE.md` untouched.
 **Next:** `/gsd-execute-phase 34.10 --gaps-only` — not `/gsd-verify-work`, and not a milestone
-transition.
+transition. Plan 34.10-16's live gate item 4 is the only adjudicator of whether F-34.10-02 is
+actually closed, and must specifically check both unresolved risks above if it fails again.
 
 Plans:
 - [x] 34.10-01-PLAN.md — Shell contracts: `navTabs.ts` tab identity + default-store cascade, the tier-2 portal context, and the Games portal-target panel (wave 1)
@@ -2457,7 +2475,7 @@ Plans:
 - [x] 34.10-12-PLAN.md — GAP: F-34.10-02 cause (b) live diagnostic — three-question discriminator on real hardware, then a six-hypothesis source trace to one root cause; H3 survives by elimination (wave 1, checkpoint)
 - [x] 34.10-13-PLAN.md — GAP: F-34.10-01 — `Dropdown` becomes a click-toggled in-flow disclosure sized to the 204px column, `popUpOnHover` deleted, tier-2 portal gains a scroll container (wave 1)
 - [x] 34.10-14-PLAN.md — GAP: F-34.10-02 cause (a) — the ring's painted hole becomes a CSS mask, idle track repainted in the count badge's proven-visible token chain (wave 1)
-- [ ] 34.10-15-PLAN.md — GAP: F-34.10-02 cause (b) — implement the diagnosed arc-binding fix and give `RingProgress` its first test coverage (wave 2)
+- [x] 34.10-15-PLAN.md — GAP: F-34.10-02 cause (b) — RingProgress mounted unconditionally (item 2 only) + first `RingProgress` test coverage; F-34.10-02 remains UNPROVEN, two risks unresolved, routed to plan 16's live gate (wave 2)
 - [ ] 34.10-16-PLAN.md — GAP: live gate RUN 2 — items 1/3/4 full, item 2 partial, item 5's unmeasured tab-navigation sub-check; phase closes only on 5/5 (wave 3, checkpoint)
 
 ### Phase 34.11: Library filtering — search, views, collections and cross-store facets (INSERTED)
