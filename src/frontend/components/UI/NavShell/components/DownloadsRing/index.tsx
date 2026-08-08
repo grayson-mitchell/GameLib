@@ -14,9 +14,23 @@ import './index.scss'
  * `Sidebar/index.tsx:21-44`), but D-07 inverts the old idle guard: the ring
  * is now always mounted -- dimmed and unfilled when the queue is empty --
  * instead of unmounting itself, so the navbar slot never pops in or out.
+ *
+ * `RingProgress` (F-34.10-02 cause (b), 34.10-F02-DIAGNOSIS.md H3) is now
+ * ALSO unconditionally mounted, matching the pattern every other
+ * `hasProgress` consumer already uses (`ProgressHeader` in
+ * `DownloadManager/index.tsx:113-114` is the direct precedent for the
+ * `?? ''` / `?? 'legendary'` fallback below). Previously it was only
+ * mounted while `head` was truthy, so its `hasProgress` hook instance was
+ * torn down and reseeded at every queue-membership boundary -- the one
+ * place `hasProgress`'s empty-object seed defect (`hasProgress.ts:14-19`,
+ * a separate, NOT-fixed-here latent bug) is guaranteed to be painted
+ * straight to the screen instead of silently resolving before the next
+ * render. `RingProgress` itself still gates its own `percent` behind
+ * `appName` being non-empty so the idle state renders `0turn` rather than
+ * whatever stale value a still-alive hook instance might otherwise carry.
  */
 
-function RingProgress({
+export function RingProgress({
   appName,
   runner
 }: {
@@ -24,7 +38,7 @@ function RingProgress({
   runner: Runner
 }) {
   const [progress] = hasProgress(appName, runner)
-  const percent = progress.percent ?? 0
+  const percent = appName ? progress.percent ?? 0 : 0
 
   return (
     <span
@@ -67,18 +81,11 @@ export default function DownloadsRing() {
       aria-label={t('download-manager.link', 'Downloads')}
       aria-current={isActive ? 'page' : undefined}
     >
-      {head ? (
-        <RingProgress
-          key={head.params.appName}
-          appName={head.params.appName}
-          runner={head.params.runner}
-        />
-      ) : (
-        <span
-          className="DownloadsRing__ring"
-          style={{ '--dl-progress': '0turn' } as CSSProperties}
-        />
-      )}
+      <RingProgress
+        key={head?.params.appName ?? 'idle'}
+        appName={head?.params.appName ?? ''}
+        runner={head?.params.runner ?? 'legendary'}
+      />
       {elements.length > 0 && (
         <span className="DownloadsRing__count">{elements.length}</span>
       )}
