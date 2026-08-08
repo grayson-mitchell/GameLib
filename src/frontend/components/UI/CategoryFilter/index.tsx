@@ -75,7 +75,6 @@ export default function CategoryFilter() {
       className="categoriesFilter"
       data-tour="library-categories"
       title={t('header.categories', 'Categories')}
-      popUpOnHover
     >
       {categoriesList.length === 0 && (
         <>

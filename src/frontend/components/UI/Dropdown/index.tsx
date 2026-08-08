@@ -6,45 +6,41 @@ type Props = {
   children: ReactNode
   className?: string
   buttonClass?: string
-  popUpOnHover?: boolean
 }
 
 export default function Dropdown({
   title,
   children,
   className,
-  buttonClass,
-  popUpOnHover = false
+  buttonClass
 }: Props) {
   const [isExpanded, setIsExpanded] = useState(false)
 
-  const handlePopup = (state: 'enter' | 'leave') => {
-    // if no pop up behavior is wanted, ignore mouse movements
-    if (!popUpOnHover) return
-    setIsExpanded(state === 'enter')
+  const toggle = () => {
+    // focus first component only when expanding
+    if (!isExpanded) {
+      window.api.gamepadAction({ action: 'tab' })
+    }
+    setIsExpanded((prev) => !prev)
   }
 
   return (
-    <div className={`dropdownContainer ${className || ''}`}>
+    <div
+      className={`dropdownContainer ${className || ''}`}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setIsExpanded(false)
+        }
+      }}
+    >
       <button
-        onMouseEnter={() => handlePopup('enter')}
-        onMouseLeave={() => handlePopup('leave')}
         className={`dropdownButton ${buttonClass ? buttonClass : ''}`}
-        onClick={() => {
-          // focus first component when expanding
-          if (!isExpanded) {
-            window.api.gamepadAction({ action: 'tab' })
-          }
-
-          setIsExpanded(true)
-        }}
+        aria-expanded={isExpanded}
+        onClick={toggle}
       >
         {title}
       </button>
       <div
-        onMouseEnter={() => handlePopup('enter')}
-        onMouseLeave={() => handlePopup('leave')}
-        onBlur={() => setIsExpanded(false)}
         onFocus={() => setIsExpanded(true)}
         className={`dropdown ${isExpanded ? 'expanded' : 'collapsed'}`}
       >

@@ -262,7 +262,6 @@ export default function LibraryFilters() {
       title={t('header.filters', 'Filters')}
       className="libraryFilters"
       data-tour="library-filters"
-      popUpOnHover
     >
       {epic.username && storeToggle('legendary')}
       {gog.username && storeToggle('gog')}
