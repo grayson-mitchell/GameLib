@@ -2414,10 +2414,24 @@ a plan-count fact, not a phase verdict: live gate **run 3** (plan 34.10-22, 2026
 F-34.10-04 (wordmark and Downloads ring not on the tab strip's line), both measured against a
 bundle verified to contain 34.10-18's and 34.10-19's fixes. REQ-34.10-06 and REQ-34.10-16 stay
 Pending. Closed by measurement this run: F-34.10-05 and F-34.10-06 (and REQ-34.10-09 → Complete).
-The operator elected during the run to replace the card/folder tab with a **pill tab**, which
-supersedes the fix direction but closes nothing. **Next: `/gsd-debug`** — F-34.10-03/-04 have each
-now survived a targeted fix, making them undiagnosed defects rather than known gaps. See
-`34.10-LIVE-GATE.md` §9.6 and `34.10-22-SUMMARY.md`.
+The operator elected during the run to replace the card/folder tab with a **pill tab** — see
+**Deferred from this phase** below for the resolution of that election; **REQ-34.10-06's
+card/folder framing STANDS unchanged** for run 4.
+
+The debug session triggered by F-34.10-03/-04 surviving their targeted fixes has RUN and
+is CLOSED (`.planning/debug/navbar-seam-and-logo-offset.md`, `status: resolved`). Root cause:
+`src/frontend/screens/Settings/sections/GamesSettings/index.scss:40` declared
+`.MuiTabs-root { padding-bottom: var(--space-xs) }` with no scoping ancestor, so the 8px leaked
+app-wide into the nav shell's `<Tabs>`; `.NavShell__navbar`'s `align-items: flex-end` bottom-aligns
+the flex item's BORDER BOX, so that padding held the tab strip 8px above the real navbar/content
+boundary — one cause, both findings. Fixed in commit `220211230` (a nested
+`&.MuiTabs-root { padding-bottom: 0; min-height: 0 }` in `NavTabs/index.scss`), operator-confirmed
+live in commit `1c7a3359d` ("the download and wordmark read level now"). Five earlier attempts
+targeted the wrong property and are enumerated in the debug file so none is retried — do not
+re-litigate `min-height` or `align-items` on that element. STILL OWED: a run-4 live gate that
+re-measures item 1 IN FULL, because the fix was confirmed in ONE non-scored theme (the ambient
+teal scheme) only, and this exact truth has already been wrongly declared fixed twice in this
+phase. **Next: `/gsd-execute-phase 34.10`.**
 
 Gap cycle 2 plans, closing F-34.10-03 through F-34.10-06 plus the per-theme sweep that has
 never been reached in two runs:
@@ -2427,6 +2441,30 @@ never been reached in two runs:
 - [x] 34.10-19-PLAN.md — F-34.10-04 single-line navbar, implemented against 34.10-17's diagnosis (wave 3)
 - [x] 34.10-21-PLAN.md — author the run-3 live-gate contract, its reviews and preflight (wave 4, D-E author)
 - [x] 34.10-22-PLAN.md — RUN the run-3 gate and reconcile REQUIREMENTS.md (wave 5, D-E runner)
+
+Gap cycle 3 plans, closing the run-3 gaps recorded in `34.10-VERIFICATION.md`:
+- [x] 34.10-23-PLAN.md — rescope the leaking `.MuiTabs-root` rule + repo-wide guard test (wave 1)
+- [ ] 34.10-24-PLAN.md — correct stale ROADMAP/STATE records; record the pill-tab deferral (wave 1)
+- [ ] 34.10-25-PLAN.md — author the run-4 gate contract §10.1-§10.4 (scope, preflight, reviews) (wave 2)
+- [ ] 34.10-26-PLAN.md — author §10.5 item bodies + prove every automated check against a filled specimen (wave 3)
+- [ ] 34.10-27-PLAN.md — RUN the run-4 gate; reconcile REQUIREMENTS/ROADMAP/STATE (wave 4, blocking checkpoint)
+
+**Deferred from this phase — pill-tab restyle election.** During run 3 the operator said, verbatim
+(`34.10-LIVE-GATE.md` §9.6): *"i going to drop the tab and let make a pill, that what it looks
+like anyway! just needs rounded bottom corners."* This is a recorded DECISION, not an oversight and
+not an open question — `34.10-VERIFICATION.md`'s third `human_verification` item is answered here.
+The pill-tab restyle is DEFERRED to separate follow-up work and is explicitly OUT OF SCOPE for
+gap cycle 3 (its plans are listed above). **REQ-34.10-06's card/folder framing STANDS
+unchanged** — run 4 scores the tab shape as it
+currently ships (card/folder), not the pill variant. This is a SECOND deferred item alongside the
+onboarding-tour rework the phase already owes (CONTEXT.md D-13) — not a replacement for it.
+
+**Follow-up finding filed by the debug session, closed by plan 34.10-23:** the unscoped
+`.MuiTabs-root` leak class (see root cause above) had no regression guard anywhere in the app —
+`NavTabs/index.scss` is protected by `appShellLayout.test.ts`, but the `GamesSettings`/
+`WineManager`/`DownloadManager` stylesheets that also declare `.MuiTabs-root`-adjacent rules were
+not. `34.10-23-PLAN.md` rescopes the leaking rule and adds a repo-wide guard test for this leak
+class.
 
 --- run 2's status, preserved as history ---
 **Plans:** 16 plans, all 16 executed — **PHASE STILL DOES NOT CLOSE (gap cycle 2 owed).** The
