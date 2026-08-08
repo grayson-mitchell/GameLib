@@ -6,7 +6,134 @@
 // absolute "the bar is dark" style unsafe. `.NavShell__navbar` already sets
 // `align-items: flex-end` (34.10-02) so these tabs sit on the navbar's
 // baseline, which is what makes the `top: 1px` overlap land.
+// F-34.10-03 (the ~8px seam) and F-34.10-04 (wordmark/ring reading lower than
+// the tab strip) are ONE defect with ONE cause, root-caused in
+// `.planning/debug/navbar-seam-and-logo-offset.md` by dumping live computed
+// styles to `gamelib.log` (the Web Inspector console does not evaluate in this
+// build, so the values are unreachable interactively).
+//
+// CAUSE: `src/frontend/screens/Settings/sections/GamesSettings/index.scss:40`
+// declares `.MuiTabs-root { padding-bottom: var(--space-xs) }` with NO scoping
+// ancestor, so it leaks to every `<Tabs>` in the app -- including this one.
+// `--space-xs` is `.5em` = 8px. Live-measured before this fix: navbar
+// 0->56 (1px border, so content bottom 55), `.NavTabs` 9->55 h=46,
+// scroller/flexContainer 9->47 h=38. The box is 8px taller than its content
+// and `.NavShell__navbar`'s `align-items: flex-end` bottom-aligns the BOX, so
+// the padding lands between the tab strip's bottom edge -- where the
+// `.Mui-selected` erasure border is painted -- and the real navbar/content
+// boundary. That unpainted strip of navbar background IS the seam; the
+// wordmark and ring, which carry no such padding, sit lower by the same 8px.
+//
+// Four earlier fixes failed because they all targeted the wrong property:
+// `df351c087` fixed `.MuiTab-root`'s `minHeight: 72`; a bare
+// `.NavTabs { min-height: 0 }` lost the cascade; `.NavTabs.MuiTabs-root
+// { min-height: 0 }` won it but min-height was never binding (live probe
+// confirmed `min-height: 0px` while the box stayed 46px); and
+// `align-items: flex-end` here was inert because padding leaves NO free space
+// in the content box for alignment to act on. Do not re-litigate min-height.
+//
+// `min-height: 0` is retained deliberately: without it MUI's own
+// `TabsRoot` floor (`@mui/material/Tabs/Tabs.js:109`, `minHeight: 48`) would
+// make this box 48px against 38px of content and reintroduce a 10px gap by a
+// different route.
+// The fix itself lives in the `&.MuiTabs-root` block nested inside
+// `.NavTabs { ... }` below -- NOT as a top-level rule here.
+// `appShellLayout.test.ts`'s "F-34.10-04 MUI scoping" test structurally
+// requires it, and the leak documented above is precisely what that rule
+// exists to prevent.
+
 .NavTabs {
+  // F-34.10-03 / F-34.10-04 (navbar-seam-and-logo-offset.md, the session that
+  // diagnosed why df351c087/34.10-19 did not close either finding).
+  // `node_modules/@mui/material/Tabs/Tabs.js`'s `TabsRoot` styled component
+  // -- the SAME DOM node this `.NavTabs` class targets, since
+  // `<Tabs className="NavTabs">` (NavTabs/index.tsx) renders `TabsRoot`
+  // carrying both the `MuiTabs-root` and `NavTabs` classes on one element
+  // (`Tabs.js`: `className: clsx(classes.root, className)`, where
+  // `classes.root` resolves to `MuiTabs-root`) -- ships its OWN
+  // unconditional `min-height: 48` (`overflow: hidden; display: flex`),
+  // completely independent of `Tab.js`'s own `minHeight: 72` that
+  // `.MuiTab-root`'s rule below already overrides (34.10-19). That second,
+  // un-fixed 48px floor is why both findings survived 34.10-19: post-fix,
+  // the tab content (the flex container governed by `.MuiTab-root`'s
+  // min-height below) is only ~37-38px tall -- shorter than THIS root's own
+  // 48px floor -- so `.NavTabs`'s own box stays pinned to 48px while its
+  // content top-aligns inside the stretched `.MuiTabs-scroller`, leaving a
+  // dead band at the BOTTOM of the box. `.NavShell__navbar`'s
+  // `align-items: flex-end` aligns this box's bottom edge to the navbar's
+  // own bottom, so that dead band pushes the visible tab content -- and the
+  // `.Mui-selected` erasure border painted along its bottom -- above the
+  // real navbar/content boundary: F-34.10-03, the seam. The wordmark
+  // `<img>` and `.NavShell__navRight` carry no such floor and sit flush at
+  // the navbar's true bottom, below the tab content by the same amount:
+  // F-34.10-04, "the icon and download sit lower". Live-measured
+  // (screencapture + pixel-decode PNG scan -- Web Inspector console
+  // evaluation is dead in this build, see the session's debug file) in the
+  // shipped default theme (midnightMirage): tab pill bottom y=111,
+  // navbar/content boundary y=120 -- a 9px band of navbar background between
+  // them, matching this floor's arithmetic (48px root vs ~38-40px content).
+  //
+  // THIRD FIX ATTEMPT on this finding (navbar-seam-and-logo-offset.md
+  // Eliminated section has the first: the falsified shared-`minHeight: 72`
+  // fix). Attempt 2 -- a bare `min-height: 0;` declared directly on this
+  // `.NavTabs { ... }` block -- was MEASURED AS A NO-OP on 2026-08-08: a full
+  // kill+relaunch (`pnpm tauri:dev`) restart with a confirmed-fresh bundle
+  // (the compiled CSS chunk contained `.NavTabs{min-height:0}` and was
+  // referenced by the fresh JS entry), followed by the same
+  // screencapture+pngscan.py measurement, read tab-bottom=110 / navbar-
+  // bottom=119 -- the whole window shifted 1pt between runs, but the 9px
+  // band itself was bit-for-bit unchanged. Root cause of the no-op: a
+  // one-class selector `.NavTabs` has specificity (0,1,0) -- IDENTICAL to
+  // the `.css-<hash>` class `TabsRoot`'s `styled()` call generates at
+  // runtime via `@emotion/styled` (also (0,1,0), on the exact same DOM
+  // node), so the two rules TIE on specificity and the cascade falls through
+  // to source order. This app has no root-level `StyledEngineProvider
+  // injectFirst` (confirmed: `src/frontend/App.tsx` wraps the tree in
+  // `ThemeProvider` only, no cache override; the only `injectFirst` usage in
+  // this codebase is local to
+  // `screens/Settings/sections/SystemInfo/index.tsx`, which does not wrap
+  // `NavTabs`), so MUI's DEFAULT emotion cache applies -- no `prepend` /
+  // `insertionPoint` configured anywhere in `src/`, confirmed by direct
+  // search -- which inserts each new `<style data-emotion>` tag by
+  // `container.insertBefore(tag, null)`, i.e. APPENDED to the end of
+  // `<head>`, AFTER the app's own static `<link rel="stylesheet">` entries
+  // (confirmed present in `build/index.html`'s `<head>` ahead of any script
+  // execution). At an exact specificity tie, later-in-source wins, so
+  // emotion's runtime-injected `min-height: 48` always beat this rule --
+  // the bare selector could never have worked, restart/cache-staleness was
+  // never the issue.
+  //
+  // Fix (attempt 3): raise this rule's specificity above the tie rather than
+  // relying on source order. `.NavTabs.MuiTabs-root` -- a compound selector
+  // on the SAME single element (confirmed both classes land on `TabsRoot`
+  // together, see above) -- is (0,2,0), which beats emotion's (0,1,0)
+  // unconditionally, regardless of cache insertion order. This mirrors the
+  // two-class idiom the working 34.10-19 fix already uses
+  // (`.NavTabs .MuiTab-root`, also (0,2,0)). Nested here (`&.MuiTabs-root`)
+  // rather than written as a second top-level rule so it stays inside this
+  // file's single `.NavTabs { ... }` block --
+  // `appShellLayout.test.ts`'s "F-34.10-04 MUI scoping" test structurally
+  // requires every `MuiTab*`/`MuiTabs*` selector in this file to nest inside
+  // this block, specifically so a rule here can never leak onto the app's
+  // OTHER `<Tabs>` instances (WineManager, DownloadManager, GamesSettings).
+  // Do NOT flatten this back to a bare `.NavTabs { min-height: 0 }` -- that
+  // is the exact form measured as inert above -- and do NOT replace it with
+  // `!important` or a fixed px value; `.MuiTab-root`'s own min-height below
+  // already sets the real, content-derived floor, and that token and this
+  // one are independent and must be allowed to diverge.
+  &.MuiTabs-root {
+    // THE ACTUAL FIX for F-34.10-03/-04. See this file's header comment:
+    // `GamesSettings/index.scss:40` leaks `.MuiTabs-root { padding-bottom:
+    // var(--space-xs) }` (8px) onto this element, and `.NavShell__navbar`'s
+    // `align-items: flex-end` bottom-aligns the BOX, so that padding becomes
+    // an unpainted band between the tab strip and the content surface -- the
+    // seam. Neutralise it here rather than rescoping the Settings rule, which
+    // would change WineManager/DownloadManager/GamesSettings tab metrics that
+    // are outside this phase's scope (recorded as a separate finding).
+    padding-bottom: 0;
+    min-height: 0;
+  }
+
   // The underline-plus-sliding-indicator style is the explicitly rejected
   // alternative from sketch 001 (navigation-shell.md § Design Decisions #1)
   // -- MUI renders one by default, so it must be suppressed outright or the
