@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.10-14-PLAN.md -- GAP: F-34.10-02(a), DownloadsRing hole masked (not painted) + idle track repainted in the count badge's proven-visible token chain, comment-immune source gate added; phase 34.10 still does NOT close (34.10-12/15/16 remain), gap cycle continues"
-last_updated: "2026-08-08T01:23:31.000Z"
+stopped_at: "Completed 34.10-12-PLAN.md -- GAP: F-34.10-02 cause (b) diagnosed via live discriminator (Q1/Q2/Q3 all YES); H3 survives by elimination (hasProgress.ts:14-19 empty-object seed bug + RingProgress's unique conditional mount), fix routed to plan 34.10-15 with three concrete directives; REQ-34.10-08 stays Pending; phase 34.10 still does NOT close (34.10-15/16 remain), gap cycle continues"
+last_updated: "2026-08-08T02:54:19.000Z"
 last_activity: 2026-08-08
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 252
-  completed_plans: 234
+  completed_plans: 235
   percent: 93
 ---
 
@@ -480,7 +480,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — EXECUTING
 EXECUTED 2026-08-06, STILL DID NOT CLOSE (gate FAILED 1/6) -- gap cycle 5 required, NOT COMPLETE
-Plan: 14 of 16 (gap cycle 1: 34.10-13 done closing F-34.10-01, 34.10-14 done closing F-34.10-02(a); 34.10-12/15/16 remain)
+Plan: 14 of 16 (gap cycle 1: 34.10-13 done closing F-34.10-01, 34.10-14 done closing F-34.10-02 cause (a), 34.10-12 done diagnosing F-34.10-02 cause (b) -- H3 survives by elimination, fix routed to 34.10-15; 34.10-15/16 remain)
 glyph mechanism deleted in full, mutation-proven absence guard, REQ-34.4.2-04/-05 scope-corrected,
 see 34.4.2-13-SUMMARY.md. Plan 14 EXECUTED 2026-08-05 -- T-34.4.2-39/-41: PENDING_VISIBLE_LOGIN_WINDOW
 single-flight guard refuses a second visible login window while one is pending/presented, 25s TTL
@@ -4215,8 +4215,32 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-08T01:23:31.000Z
-Stopped at: Completed 34.10-14-PLAN.md -- GAP: F-34.10-02(a), DownloadsRing `::after` hole replaced with a `-webkit-mask`/`mask: radial-gradient(farthest-side, ...)` cut (with an `@supports not` fallback covering rest AND hover), idle track repainted in `.DownloadsRing__count`'s proven-visible token chain, idle opacity 0.5->0.65, ring 15px->16px; `downloadsRingStyles.test.ts` added as a comment-immune source gate. Full suite ran fully green twice (218/218 suites, 4240/4240 tests). REQ-34.10-08 stays Pending -- this plan's own acceptance criteria explicitly disclaim proving visibility (no jsdom/CSS engine in this jest project); that proof is routed to plan 34.10-16's live gate items 1 and 4. Phase 34.10 still does NOT close (34.10-12/15/16 remain). Next: `/gsd-execute-phase 34.10 --gaps-only`.
+Last session: 2026-08-08T02:54:19.000Z
+Stopped at: Completed 34.10-12-PLAN.md -- GAP: F-34.10-02 cause (b) diagnosed. Task 1 (checkpoint:
+human-verify) ran the three-question live discriminator on real hardware: Q1 (DM screen's own
+per-item percent readout advances past 0%) YES, Q3 (elements[0] genuinely is the downloading item)
+YES, Q2 (Games grid card also shows advancing progress) YES. Single-process precondition initially
+FAILED (two live gamelib-shell instances found via pgrep) and was remediated by the developer
+before measuring -- recorded honestly. Task 2 evaluated all six prescribed hypotheses: H1/H2/H4
+rejected by the plan's own Q-answer/code-identity criteria, H5 rejected because
+`.DownloadsRing--idle`'s opacity dimming does not apply during an active (non-idle) download, H6
+rejected by two independent working precedents in this codebase (WineItem's `--progress`,
+GameCard's `--installing-effect`) for the identical inline-custom-property mechanism. H3 SURVIVES
+BY ELIMINATION -- not a proven always-reproducing mechanism (an empirical simulation of
+hasProgress's own state machine could not reproduce a persistent-0 result) -- but is the one
+hypothesis pointing at a real, source-verified defect: `hasProgress.ts:14-19`'s `previousProgress
+?? default` never applies because `previousProgress` is always the truthy empty object `{}` (full-
+repo grep confirms `${appName}_${runner}_progress` is written nowhere in the codebase), and
+`RingProgress` is the one `hasProgress` consumer that is conditionally mounted
+(`DownloadsRing/index.tsx:70-75`) rather than persistently mounted, with no downstream render gate.
+Three concrete fix directives (each with exact file:line) handed to plan 34.10-15. No `src/`
+changes; `34.10-LIVE-GATE.md` byte-identical (`git diff --quiet` exits 0), preserving D-E.
+`DownloadsRing.test.tsx`'s inability to invoke `RingProgress` (mocks `hasProgress` wholesale)
+documented as a coverage gap plan 15 must close. REQ-34.10-08 stays Pending -- diagnosis only, no
+fix implemented or measured. Phase 34.10 still does NOT close (34.10-15/16 remain). See
+`34.10-F02-DIAGNOSIS.md` and `34.10-12-SUMMARY.md`. Next: `/gsd-execute-phase 34.10 --gaps-only`.
+
+Previously stopped at: Completed 34.10-14-PLAN.md -- GAP: F-34.10-02(a), DownloadsRing `::after` hole replaced with a `-webkit-mask`/`mask: radial-gradient(farthest-side, ...)` cut (with an `@supports not` fallback covering rest AND hover), idle track repainted in `.DownloadsRing__count`'s proven-visible token chain, idle opacity 0.5->0.65, ring 15px->16px; `downloadsRingStyles.test.ts` added as a comment-immune source gate. Full suite ran fully green twice (218/218 suites, 4240/4240 tests). REQ-34.10-08 stays Pending -- this plan's own acceptance criteria explicitly disclaim proving visibility (no jsdom/CSS engine in this jest project); that proof is routed to plan 34.10-16's live gate items 1 and 4. Phase 34.10 still does NOT close (34.10-12/15/16 remain). Next: `/gsd-execute-phase 34.10 --gaps-only`.
 
 Previously stopped at: Completed 34.10-13-PLAN.md -- GAP: F-34.10-01, Dropdown click-toggled in-flow disclosure closing REQ-34.10-09; phase 34.10 still does NOT close (34.10-12/14/15/16 remain). Next: `/gsd-execute-phase 34.10 --gaps-only`.
 

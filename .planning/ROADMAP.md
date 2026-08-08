@@ -2408,7 +2408,7 @@ REQ-34.10-13, REQ-34.10-14, REQ-34.10-15, REQ-34.10-16
 the frameless drag-region runtime this rebuilds against)
 **Blocks:** Phase 34.11 (the filter panel needs the tier-2 slot to exist); the deferred
 onboarding-tour rework phase (34.10 disables `SidebarTour` per D-13 and does not rebuild it)
-**Plans:** 16 plans (13 executed, 3 remaining: 34.10-12/15/16) — **PHASE DOES NOT CLOSE.** The blocking 5-item live gate
+**Plans:** 16 plans (14 executed, 2 remaining: 34.10-15/16) — **PHASE DOES NOT CLOSE.** The blocking 5-item live gate
 (`34.10-11-PLAN.md`) authored `34.10-LIVE-GATE.md` and RAN it on real hardware 2026-08-08:
 **VERDICT FAIL, 2 of 5 PASS** (`items_passed: 2`) — see `34.10-LIVE-GATE.md` and
 `34.10-11-SUMMARY.md`. Item 1 (theme survival, REQ-34.10-06) and item 2 (window dragging under
@@ -2428,6 +2428,17 @@ difference vs. the retired `CurrentDownload`) is already falsified in source, si
 `git show 0559bc0d0^:src/frontend/components/UI/Sidebar/index.tsx` used the identical `elements[0]`
 source AND the identical `key={...params.appName}`. Plan 16 re-runs the gate, including the three
 sub-checks recorded NOT ATTEMPTED in run 1.
+**Plan 12 EXECUTED 2026-08-08** (`34.10-12-SUMMARY.md`): the live three-question discriminator
+(Q1/Q2/Q3, all YES) rejected H1/H2/H4 by direct criteria, H5 by the idle-opacity-does-not-apply
+-during-active-download argument, and H6 by two independent working precedents (`WineItem`,
+`GameCard`) for the same inline-custom-property mechanism in this codebase. H3 survives **by
+elimination**, not a proven always-reproducing mechanism: `hasProgress.ts:14-19`'s `previousProgress
+?? default` never applies because `previousProgress` is always the truthy empty object `{}` (the
+`${appName}_${runner}_progress` localStorage key is written nowhere in the repo), amplified by
+`RingProgress` being the one `hasProgress` consumer that is conditionally mounted
+(`DownloadsRing/index.tsx:70-75`) rather than persistently mounted. Three concrete fix directives
+handed to plan 34.10-15 — see `34.10-F02-DIAGNOSIS.md`. No `src/` changes; `34.10-LIVE-GATE.md`
+byte-identical. REQ-34.10-08 stays Pending (diagnosis only, no fix implemented or measured).
 **Next:** `/gsd-execute-phase 34.10 --gaps-only` — not `/gsd-verify-work`, and not a milestone
 transition.
 
@@ -2443,7 +2454,7 @@ Plans:
 - [x] 34.10-09-PLAN.md — Replacement structural tests + retire the `Sidebar` tree (wave 5)
 - [x] 34.10-10-PLAN.md — i18n: the one new `nav.tabs.games` key, gate-scope regeneration, full-suite proof (wave 6)
 - [x] 34.10-11-PLAN.md — Author and run the blocking live gate: FAIL 2/5 (F-34.10-01, F-34.10-02) — phase does not close, gap cycle owed (wave 7)
-- [ ] 34.10-12-PLAN.md — GAP: F-34.10-02 cause (b) live diagnostic — three-question discriminator on real hardware, then a six-hypothesis source trace to one root cause (wave 1, checkpoint)
+- [x] 34.10-12-PLAN.md — GAP: F-34.10-02 cause (b) live diagnostic — three-question discriminator on real hardware, then a six-hypothesis source trace to one root cause; H3 survives by elimination (wave 1, checkpoint)
 - [x] 34.10-13-PLAN.md — GAP: F-34.10-01 — `Dropdown` becomes a click-toggled in-flow disclosure sized to the 204px column, `popUpOnHover` deleted, tier-2 portal gains a scroll container (wave 1)
 - [x] 34.10-14-PLAN.md — GAP: F-34.10-02 cause (a) — the ring's painted hole becomes a CSS mask, idle track repainted in the count badge's proven-visible token chain (wave 1)
 - [ ] 34.10-15-PLAN.md — GAP: F-34.10-02 cause (b) — implement the diagnosed arc-binding fix and give `RingProgress` its first test coverage (wave 2)
