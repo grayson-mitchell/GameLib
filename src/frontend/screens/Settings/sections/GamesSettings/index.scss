@@ -35,23 +35,46 @@
     padding-top: var(--space-xl);
     min-width: 500px;
   }
-}
 
-.MuiTabs-root {
-  padding-bottom: var(--space-xs);
+  // Scoped here (34.10-23, gap cycle 3) -- this rule used to be a top-level
+  // `.MuiTabs-root { ... }` selector with NO scoping ancestor, so it applied
+  // to EVERY `<Tabs>` in the app, not just this screen's own tab strip. That
+  // leak was the confirmed root cause of F-34.10-03 (the ~8px navbar seam)
+  // and F-34.10-04 (wordmark/Downloads ring reading lower than the tab
+  // strip) -- see `.planning/debug/navbar-seam-and-logo-offset.md`
+  // Resolution. `GamesSettings` renders under BOTH ancestors above
+  // (`Settings/index.tsx` uses `.settingsWrapper`, `SettingsModal/index.tsx`
+  // uses `.settingsDialogContent`), which is why neither alone is
+  // sufficient -- the same reason `.defaults-hint` above uses this exact
+  // pair.
+  //
+  // Before this rescope, this 8px `padding-bottom` was ALSO landing, by
+  // accident, on every other `<Tabs>` in the app: WineManager
+  // (`screens/WineManager/index.tsx`), the Game details page
+  // (`screens/Game/GamePage/index.tsx`), Steam login
+  // (`screens/Login/components/SteamLogin/index.tsx`), the GOG
+  // modify-install modal (`screens/Game/ModifyInstallModal/GOG/index.tsx`),
+  // and the nav shell's own tab strip (`components/UI/NavShell/components/
+  // NavTabs/index.tsx`, protected by its own `&.MuiTabs-root` override --
+  // see that file's header comment). None of those five surfaces receives
+  // this padding any more -- that is the correction, not a regression, and
+  // the 8px is deliberately NOT re-added anywhere else.
+  .MuiTabs-root {
+    padding-bottom: var(--space-xs);
 
-  .MuiTabs-scroller {
-    .MuiTabs-indicator {
-      background-color: var(--accent);
-    }
-
-    .MuiTabs-flexContainer {
-      .MuiTab-root {
-        color: var(--text-default);
+    .MuiTabs-scroller {
+      .MuiTabs-indicator {
+        background-color: var(--accent);
       }
 
-      .Mui-selected {
-        color: var(--accent);
+      .MuiTabs-flexContainer {
+        .MuiTab-root {
+          color: var(--text-default);
+        }
+
+        .Mui-selected {
+          color: var(--accent);
+        }
       }
     }
   }

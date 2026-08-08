@@ -123,13 +123,20 @@
   // one are independent and must be allowed to diverge.
   &.MuiTabs-root {
     // THE ACTUAL FIX for F-34.10-03/-04. See this file's header comment:
-    // `GamesSettings/index.scss:40` leaks `.MuiTabs-root { padding-bottom:
-    // var(--space-xs) }` (8px) onto this element, and `.NavShell__navbar`'s
-    // `align-items: flex-end` bottom-aligns the BOX, so that padding becomes
-    // an unpainted band between the tab strip and the content surface -- the
-    // seam. Neutralise it here rather than rescoping the Settings rule, which
-    // would change WineManager/DownloadManager/GamesSettings tab metrics that
-    // are outside this phase's scope (recorded as a separate finding).
+    // `GamesSettings/index.scss:40` used to leak `.MuiTabs-root {
+    // padding-bottom: var(--space-xs) }` (8px) onto this element, and
+    // `.NavShell__navbar`'s `align-items: flex-end` bottom-aligns the BOX,
+    // so that padding became an unpainted band between the tab strip and
+    // the content surface -- the seam.
+    //
+    // UPDATE (34.10-23, gap cycle 3): `GamesSettings/index.scss`'s rule is
+    // now rescoped under `.settingsDialogContent, .settingsWrapper` and no
+    // longer leaks anywhere, so this override is no longer the ONLY thing
+    // standing between the nav shell and the 8px band. It is kept anyway,
+    // deliberately, as a second line of defense -- both declarations below
+    // remain load-bearing independently of the leak (see the block comment
+    // above: without `min-height: 0`, MUI's own `TabsRoot` floor reopens a
+    // ~10px gap by a different route).
     padding-bottom: 0;
     min-height: 0;
   }
