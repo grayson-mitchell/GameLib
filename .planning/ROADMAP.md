@@ -2408,7 +2408,16 @@ REQ-34.10-13, REQ-34.10-14, REQ-34.10-15, REQ-34.10-16
 the frameless drag-region runtime this rebuilds against)
 **Blocks:** Phase 34.11 (the filter panel needs the tier-2 slot to exist); the deferred
 onboarding-tour rework phase (34.10 disables `SidebarTour` per D-13 and does not rebuild it)
-**Plans:** 21/22 plans executed
+**Plans:** 22/22 plans executed — **PHASE STILL DOES NOT CLOSE.** All 22 plans having SUMMARYs is
+a plan-count fact, not a phase verdict: live gate **run 3** (plan 34.10-22, 2026-08-08) scored
+**4/5**. Items 2, 3, 4 and 5 PASS; **item 1 FAILS** on F-34.10-03 (seam still visible) and
+F-34.10-04 (wordmark and Downloads ring not on the tab strip's line), both measured against a
+bundle verified to contain 34.10-18's and 34.10-19's fixes. REQ-34.10-06 and REQ-34.10-16 stay
+Pending. Closed by measurement this run: F-34.10-05 and F-34.10-06 (and REQ-34.10-09 → Complete).
+The operator elected during the run to replace the card/folder tab with a **pill tab**, which
+supersedes the fix direction but closes nothing. **Next: `/gsd-debug`** — F-34.10-03/-04 have each
+now survived a targeted fix, making them undiagnosed defects rather than known gaps. See
+`34.10-LIVE-GATE.md` §9.6 and `34.10-22-SUMMARY.md`.
 
 Gap cycle 2 plans, closing F-34.10-03 through F-34.10-06 plus the per-theme sweep that has
 never been reached in two runs:
@@ -2417,7 +2426,7 @@ never been reached in two runs:
 - [x] 34.10-20-PLAN.md — F-34.10-05 tier-2 disclosure panel surface (wave 2)
 - [x] 34.10-19-PLAN.md — F-34.10-04 single-line navbar, implemented against 34.10-17's diagnosis (wave 3)
 - [x] 34.10-21-PLAN.md — author the run-3 live-gate contract, its reviews and preflight (wave 4, D-E author)
-- [ ] 34.10-22-PLAN.md — RUN the run-3 gate and reconcile REQUIREMENTS.md (wave 5, D-E runner)
+- [x] 34.10-22-PLAN.md — RUN the run-3 gate and reconcile REQUIREMENTS.md (wave 5, D-E runner)
 
 --- run 2's status, preserved as history ---
 **Plans:** 16 plans, all 16 executed — **PHASE STILL DOES NOT CLOSE (gap cycle 2 owed).** The
