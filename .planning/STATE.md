@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.11-04-PLAN.md
-last_updated: "2026-08-09T09:36:53.152Z"
+stopped_at: Completed 34.11-05-PLAN.md
+last_updated: "2026-08-09T09:58:23.554Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 23
   completed_phases: 15
   total_plans: 277
-  completed_plans: 251
+  completed_plans: 252
   percent: 91
 ---
 
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.11 (library-filtering-search-views-collections-and-cross-store-f) — EXECUTING
-Plan: 5 of 9
+Plan: 6 of 9
 
 Prior phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — **COMPLETE
 2026-08-09**, 27 of 27 plans executed, verification passed 9/9.
@@ -3819,6 +3819,7 @@ Closed/parked native-install phases:
 | Phase 34.11 P02 | 15min | 2 tasks | 2 files |
 | Phase 34.11 P03 | 35min | 3 tasks | 3 files |
 | Phase 34.11 P04 | 20min | 3 tasks | 4 files |
+| Phase 34.11 P05 | 20min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -4349,6 +4350,8 @@ Recent decisions affecting current work:
 - [Phase 34.11-04]: Namespace-import filterEngine helpers (import * as filterEngine) so each call site is provably the identifier's only occurrence
 - [Phase 34.11-04]: engineState.searchMatchedKeys stays null this plan -- not wired to Fuse results until plan 05 rewires the grid pipeline
 - [Phase 34.11-04]: countForStore/countForRunnability read gamesForAlphabetFilter as their library source rather than deriving a fresh raw library array (plan 05's concern)
+- [Phase 34.11-05]: engineState/engineDeps assembly moved ahead of gamesForAlphabetFilter so the grid consumes the same memoized objects the facet counts read -- one assembly site, not two
+- [Phase 34.11-05]: Deleted filterByPlatform and the macOS crossoverRatingFilters filtering branch outright rather than leaving them dead-but-callable, since their logic is now filterEngine's passesRunnability/deriveRunnabilityTier (D-09/D-10)
 
 ### Pending Todos
 
@@ -4476,8 +4479,8 @@ Recent decisions affecting current work:
 > demoted into the "prior session, preserved as history" chain, and plan 34.11-02's own `Stopped
 > at:` now carries a full description with nothing trailing it.
 
-Last session: 2026-08-09T09:36:53.138Z
-Stopped at: Completed 34.11-04-PLAN.md
+Last session: 2026-08-09T09:58:12.631Z
+Stopped at: Completed 34.11-05-PLAN.md
 a caller `className` and render an `active` class via `classNames`, unblocking selectable
 Views/Collections rows in the tier-2 filter panel (REQ-34.11-11). Task 1 added an `active?: boolean`
 prop (deliberately named apart from react-router's `isActive`) and routed the button branch through
