@@ -88,7 +88,7 @@ export default function FilterChipRow() {
     setShowSupportOfflineOnly,
     setShowThirdPartyManagedOnly,
     setShowUpdatesOnly,
-    __isDefaultLibraryContext
+    __isDefaultLibraryContext: isDefaultLibraryContext
   } = useContext(LibraryContext)
 
   // Guard the default context FIRST -- `initialContext` supplies silent
@@ -97,7 +97,7 @@ export default function FilterChipRow() {
   // one correctly mounted over an unfiltered library. That ambiguity is the
   // 34.10 defect (a relocated <Header> whose filters looked alive and
   // weren't) -- the console line below is the discriminator.
-  if (__isDefaultLibraryContext) {
+  if (isDefaultLibraryContext) {
     console.error(
       'FilterChipRow rendered outside LibraryContext.Provider -- its chips would be inert. Mount it only inside the provider.'
     )
