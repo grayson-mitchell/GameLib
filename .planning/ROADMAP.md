@@ -2450,7 +2450,7 @@ Gap cycle 3 plans, closing the run-3 gaps recorded in `34.10-VERIFICATION.md`:
 - [x] 34.10-23-PLAN.md — rescope the leaking `.MuiTabs-root` rule + repo-wide guard test (wave 1)
 - [x] 34.10-24-PLAN.md — correct stale ROADMAP/STATE records; record the pill-tab deferral (wave 1)
 - [x] 34.10-25-PLAN.md — author the run-4 gate contract §10.1-§10.4 (scope, preflight, reviews) (wave 2)
-- [ ] 34.10-26-PLAN.md — author §10.5 item bodies + prove every automated check against a filled specimen (wave 3)
+- [x] 34.10-26-PLAN.md — author §10.5 item bodies + prove every automated check against a filled specimen (wave 3)
 - [ ] 34.10-27-PLAN.md — RUN the run-4 gate; reconcile REQUIREMENTS/ROADMAP/STATE (wave 4, blocking checkpoint)
 
 **Deferred from this phase — pill-tab restyle election.** During run 3 the operator said, verbatim

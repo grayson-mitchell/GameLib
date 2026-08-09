@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.10-25-PLAN.md (gap cycle 3, plans 34.10-23..27) -- run-4 live-gate SCOPE authored (§10.1-§10.4 in 34.10-LIVE-GATE.md) -- item 1's re-measurement split into a midnightMirage-only step (never-scored-theme confirmation of commit 220211230's fix) plus a 3-theme sweep, dracula-classic dropped from scope with its Test-7 evidence; what remains is the BODY half + checker script (plan 34.10-26, validated against a filled specimen per F-34.10-07) then the blocking run-4 gate itself (plan 34.10-27); next command /gsd-execute-phase 34.10
-last_updated: "2026-08-09T00:45:01.202Z"
+stopped_at: Completed 34.10-26-PLAN.md (gap cycle 3, plans 34.10-23..27) -- run-4 live-gate BODY authored ("### 10.5 Run 4 -- the items" in 34.10-LIVE-GATE.md, every verdict slot empty) plus 34.10-run4-contract-check.mjs, a structural verdict-slot checker proven COMPLETE against a six-collision-shape filled specimen (scratchpad/, not committed) and INCOMPLETE against the real file; F-34.10-03/-04 recorded fixed-but-unmeasured, not closed; what remains is the blocking run-4 gate itself (plan 34.10-27); next command /gsd-execute-phase 34.10
+last_updated: "2026-08-09T01:14:17.225Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 268
-  completed_plans: 245
-  percent: 91
+  completed_plans: 246
+  percent: 92
 ---
 
 # Project State
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — gap cycle 3 EXECUTING (plans 23-27), PHASE STILL OPEN
-Plan: 25 of 27 complete — **live gate RUN 3 recorded 2026-08-08 (plan 34.10-22), VERDICT FAIL,
+Plan: 26 of 27 complete — **live gate RUN 3 recorded 2026-08-08 (plan 34.10-22), VERDICT FAIL,
 items_passed 4/5. PHASE 34.10 DOES NOT CLOSE.** Items 2, 3, 4 and 5 PASS; **item 1 FAILS.**
 
 CLOSED BY MEASUREMENT in run 3: **F-34.10-05** (disclosure-panel background correct in
@@ -2674,6 +2674,15 @@ edit was needed there this time — coincidence, not a fix.
 > snapshot) rather than trusted. This is at least the third recorded recurrence of this exact
 > splice-into-historical-prose bug in this file.
 
+> NOTE (34.10-26): recurred a FOURTH time, same session. Both `state.advance-plan` and
+> `state.update-progress` each independently spliced their own freshly-computed `92%` into this
+> SAME historical placeholder (reverted back to `91%` again here) and separately mis-set the
+> top-level frontmatter `completed_plans` to `247` (+2 for a single plan, the exact same
+> off-by-two miscount 34.10-25's own note recorded) and `percent` to `61` -- both hand-corrected
+> to `246`/`92` after diffing against a pre-call snapshot each time, never trusted blindly.
+> `stopped_at` was also reverted to a stale `Completed 34.10-23-PLAN.md` placeholder by BOTH calls
+> and hand-corrected both times.
+
 > NOTE (34.10-17): this session's own `state.update-progress` call spliced its freshly-computed
 > `90%` progress-bar string into this SAME historical placeholder, overwriting the `92%` value the
 > note immediately above already fixed once. Reverted back to `92%` (this note's own frozen
@@ -3058,7 +3067,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-08
+Last activity: 2026-08-09
   cancels instead of erroring
   (pre-existing external-state reachability) and Test 7 (UI-level reachability, distinct from
   backend-logic reachability) to live-gate-contract-authoring.md's Structural Reachability Review,
@@ -3778,6 +3787,7 @@ Closed/parked native-install phases:
 | Phase 34.10 P23 | 24min | 2 tasks | 3 files |
 | Phase 34.10 P24 | 18min | 2 tasks | 2 files |
 | Phase 34.10 P25 | 95min | 2 tasks | 1 files |
+| Phase 34.10 P26 | ~140min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
