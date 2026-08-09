@@ -2666,7 +2666,7 @@ views-only panel (sketch 004 variant A) cannot answer it, which is why A lost.
 
 **Requirements:** REQ-34.11-01..17 (minted 2026-08-09 during `/gsd-plan-phase 34.11` from `34.11-CONTEXT.md` D-01..D-35 + the checker-approved `34.11-UI-SPEC.md` + `34.11-RESEARCH.md` + `34.11-VALIDATION.md`. **Three of the "Known constraints" above are superseded by measurement:** the **genre facet is DROPPED** — measured coverage shows Epic contributes none at all and Steam only for games the user has already opened, so the "verify before committing" instruction was carried out and its answer was no (D-13/D-14/D-15); **filter-state persistence is no longer undecided** — search is session-only and cleared on tab switch, every other filter survives tab switch and restart, and `Clear all` persists (D-22..D-25, REQ-34.11-06/07); and **the runnability facet cannot render on Windows at all** — `GameInfo` carries `is_mac_native`, `mac_arch` and `is_linux_native` but no Windows-native field of any kind, so D-12's own "hide rows you cannot compute" rule removes the entire group on that host rather than showing a degenerate all-pass row (REQ-34.11-01). **Two operator decisions at plan time are recorded as CONTEXT.md amendments:** `Fuse.js` fuzzy search STAYS this phase — research falsified D-33's premise that substring matching is what ships today (`Library/index.tsx:601-616` runs Fuse at `threshold: 0.4`), so D-35 is tagged `[informational — DEFERRED]` and REQ-34.11-15 specifies the consequence that facet counts are computed over the fuzzy-matched set; and the Runnability group is omitted entirely on Windows. **One defect absent from every upstream artifact** was found during UI-SPEC scouting and minted as REQ-34.11-12: `.NavShell__tier2`'s `border-inline-end` resolves `var(--divider)`, a token defined in only 2 of 11 theme blocks and missing from both mandatory stress-test themes — the third instance of this class, and the first pinned by a committed automated gate rather than a live sweep. Collections ship **manual only**, as sketch 004 left open (D-19).)
 **Depends on:** Phase 34.10 (the tier-2 panel slot)
-**Plans:** 6/9 plans executed
+**Plans:** 7/9 plans executed
 
 Plans:
 
@@ -2681,7 +2681,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2 completion)*
 - [x] 34.11-05 — Rewire `gamesForAlphabetFilter` onto `filterEngine`; retire literal-platform + CrossOver-rating stages
 - [x] 34.11-06 — Views + Collections panel sections
-- [ ] 34.11-07 — Store + Runnability + "More filters" facet groups, with own-facet-excluding counts
+- [x] 34.11-07 — Store + Runnability + "More filters" facet groups, with own-facet-excluding counts
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 34.11-08 — `FilterChipRow` above the grid + zero-result empty state

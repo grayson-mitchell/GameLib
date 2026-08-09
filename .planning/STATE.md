@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.11-06-PLAN.md
-last_updated: "2026-08-09T10:22:14.227Z"
+stopped_at: Completed 34.11-07-PLAN.md -- Store/Runnability/More-filters panel groups (REQ-34.11-01/-10).
+last_updated: "2026-08-09T10:53:19.035Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 23
   completed_phases: 15
   total_plans: 277
-  completed_plans: 253
-  percent: 91
+  completed_plans: 255
+  percent: 92
 ---
 
 # Project State
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.11 (library-filtering-search-views-collections-and-cross-store-f) — EXECUTING
-Plan: 7 of 9
+Plan: 8 of 9
 
 Prior phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — **COMPLETE
 2026-08-09**, 27 of 27 plans executed, verification passed 9/9.
@@ -3821,6 +3821,7 @@ Closed/parked native-install phases:
 | Phase 34.11 P04 | 20min | 3 tasks | 4 files |
 | Phase 34.11 P05 | 20min | 3 tasks | 2 files |
 | Phase 34.11 P06 | 45min | 3 tasks | 8 files |
+| Phase 34.11 P07 | 55min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -4354,6 +4355,8 @@ Recent decisions affecting current work:
 - [Phase 34.11-05]: engineState/engineDeps assembly moved ahead of gamesForAlphabetFilter so the grid consumes the same memoized objects the facet counts read -- one assembly site, not two
 - [Phase 34.11-05]: Deleted filterByPlatform and the macOS crossoverRatingFilters filtering branch outright rather than leaving them dead-but-callable, since their logic is now filterEngine's passesRunnability/deriveRunnabilityTier (D-09/D-10)
 - [Phase 34.11]: FilterViewList mints its four Views keys via literal per-row tGamelib() calls, not a lookup-array call site — i18next-parser only resolves string-literal first arguments; a data-driven call was empirically invisible to pnpm i18n extraction
+- [Phase 34.11-07]: Token-survival substitutions: --navbar-inactive -> --navbar-accent and --text-hover -> --accent (both undefined in gruvbox_dark/dracula, the CR-01/--divider defect class)
+- [Phase 34.11-07]: FilterRunnabilityFacet uses fully-literal tGamelib() call sites rather than a spread over RUNNABILITY_LABELS[tier] -- a spread, and even a literal-key/non-literal-default hybrid, either misses i18n extraction entirely or ships an empty catalog default; a dev-only drift guard echoes call-site defaults (not a duplicated literal table) to stay in sync with facetLabels.ts
 
 ### Pending Todos
 
@@ -4495,8 +4498,8 @@ Recent decisions affecting current work:
 > `state.update-progress`'s own JSON return reported `92`, itself one under the correct `91` for
 > `253/277`) -- hand-corrected to `completed_plans: 253`, `percent: 91`.
 
-Last session: 2026-08-09T10:22:14.211Z
-Stopped at: Completed 34.11-06-PLAN.md -- Views + Collections panel sections (REQ-34.11-05/-08).
+Last session: 2026-08-09T10:53:19.020Z
+Stopped at: Completed 34.11-07-PLAN.md -- Store/Runnability/More-filters panel groups (REQ-34.11-01/-10).
 `FilterViewList` (four single-select View rows bound to `libraryView`/`setLibraryView`, D-05) and
 `FilterCollectionList` (single-select rows sourced verbatim from `customCategories.listCategories()`
 plus `'preset_uncategorized'`, D-17/D-21; `+ New collection`/`Manage collections` only call
