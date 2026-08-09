@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Gap cycle 3 planned (34.10-23..27); the debug session (navbar-seam-and-logo-offset) is CLOSED and its fix is live-confirmed; what remains is a run-4 live gate re-measuring item 1 in full; next command /gsd-execute-phase 34.10
-last_updated: "2026-08-09T00:00:00.000Z"
+stopped_at: Completed 34.10-24-PLAN.md (gap cycle 3, plans 34.10-23..27); the debug session (navbar-seam-and-logo-offset) is CLOSED and its fix is live-confirmed; what remains is authoring + running the run-4 live gate (plans 25-27); next command /gsd-execute-phase 34.10
+last_updated: "2026-08-09T00:10:00.000Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 23
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — gap cycle 3 EXECUTING (plans 23-27), PHASE STILL OPEN
-Plan: 23 of 27 complete — **live gate RUN 3 recorded 2026-08-08 (plan 34.10-22), VERDICT FAIL,
+Plan: 24 of 27 complete — **live gate RUN 3 recorded 2026-08-08 (plan 34.10-22), VERDICT FAIL,
 items_passed 4/5. PHASE 34.10 DOES NOT CLOSE.** Items 2, 3, 4 and 5 PASS; **item 1 FAILS.**
 
 CLOSED BY MEASUREMENT in run 3: **F-34.10-05** (disclosure-panel background correct in
@@ -3753,6 +3753,7 @@ Closed/parked native-install phases:
 | Phase 34.10 P19 | 25min | 2 tasks | 2 files |
 | Phase 34.10 P21 | ~35min | 3 tasks | 1 files |
 | Phase 34.10 P23 | 24min | 2 tasks | 3 files |
+| Phase 34.10 P24 | 18min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
