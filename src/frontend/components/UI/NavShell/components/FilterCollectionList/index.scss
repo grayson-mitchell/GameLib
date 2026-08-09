@@ -1,0 +1,32 @@
+// Collections section box, header and empty-state text only (34.11-06
+// Task 2). Row padding, hover, active colour and font weight all come from
+// `.NavShell__tier2 .NavItem` (NavItem/index.scss) -- redeclaring any of
+// that here would fork the tier-2 row spec into two places. Scoped under
+// `.NavShell__tier2Portal` (the Games panel's portal target, itself nested
+// inside `.NavShell__tier2` -- see NavShell/index.scss) rather than left
+// unscoped: an unscoped `.MuiTabs-root` rule once leaked 8px into every
+// `<Tabs>` app-wide (34.10 postmortem), and these class names are generic
+// enough to collide the same way.
+//
+// No colour declaration on the header or empty message -- both inherit the
+// panel's foreground. Adding a colour here would need an entry in all
+// eleven `themes.scss` blocks for no visual gain.
+.NavShell__tier2Portal {
+  .FilterCollectionList {
+    display: flex;
+    flex-direction: column;
+    margin-block-end: var(--space-sm);
+  }
+
+  .FilterCollectionList__header {
+    font-size: var(--text-sm);
+    font-weight: var(--bold);
+    line-height: 1;
+    padding: var(--space-2xs) var(--tier2-row-padding-inline);
+  }
+
+  .FilterCollectionList__empty {
+    font-size: var(--text-sm);
+    padding: var(--space-2xs) var(--tier2-row-padding-inline);
+  }
+}
