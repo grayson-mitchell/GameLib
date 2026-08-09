@@ -199,6 +199,15 @@ body.gruvbox_dark {
   --current-background: var(--body-background);
   --navbar-background: #32302f;
   --navbar-active-background: #282828;
+  // D-31 / CR-01, 34.10-REVIEW.md. Without its own declaration, NavItem's
+  // fallback chain (`var(--navbar-active, var(--accent-overlay, var(--accent)))`,
+  // NavItem/index.scss:20-23) resolves to `--accent-overlay` (#d79921, a
+  // mustard) instead of the intended bright active colour -- the fallback
+  // chain exists and never breaks, so the symptom here is a WRONG colour,
+  // not a dropped declaration. Sourced from this theme's own
+  // `--navbar-accent` (#f9f5d7, line above) rather than a literal hex so a
+  // future gruvbox palette change propagates automatically.
+  --navbar-active: var(--navbar-accent);
   --gradient-body-background: linear-gradient(
     90deg,
     var(--background-darker) -32px,
