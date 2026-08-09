@@ -211,7 +211,10 @@ function collectLineVerdicts(section) {
     const match = line.match(pattern);
     if (match) {
       slots.push({
-        location: `verdict line: ${line.trim().slice(0, 60)}...`,
+        // Display-only truncation for the human-readable report line, via regex match
+        // rather than slice(a, b) -- kept clear of any fixed-width-window shape at all,
+        // even for logging, since that shape is exactly what collision (4) was.
+        location: `verdict line: ${line.trim().match(/^.{0,60}/)[0]}...`,
         ...classify(match[1]),
       });
     }
