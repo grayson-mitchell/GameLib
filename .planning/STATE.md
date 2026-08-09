@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.11-05-PLAN.md
-last_updated: "2026-08-09T09:58:23.554Z"
+stopped_at: Completed 34.11-06-PLAN.md
+last_updated: "2026-08-09T10:22:14.227Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 23
   completed_phases: 15
   total_plans: 277
-  completed_plans: 252
+  completed_plans: 253
   percent: 91
 ---
 
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.11 (library-filtering-search-views-collections-and-cross-store-f) — EXECUTING
-Plan: 6 of 9
+Plan: 7 of 9
 
 Prior phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — **COMPLETE
 2026-08-09**, 27 of 27 plans executed, verification passed 9/9.
@@ -2689,7 +2689,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 91%
+trusted blindly. The recurring `**Progress:**[█████████░] 92%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 
@@ -3820,6 +3820,7 @@ Closed/parked native-install phases:
 | Phase 34.11 P03 | 35min | 3 tasks | 3 files |
 | Phase 34.11 P04 | 20min | 3 tasks | 4 files |
 | Phase 34.11 P05 | 20min | 3 tasks | 2 files |
+| Phase 34.11 P06 | 45min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -4352,6 +4353,7 @@ Recent decisions affecting current work:
 - [Phase 34.11-04]: countForStore/countForRunnability read gamesForAlphabetFilter as their library source rather than deriving a fresh raw library array (plan 05's concern)
 - [Phase 34.11-05]: engineState/engineDeps assembly moved ahead of gamesForAlphabetFilter so the grid consumes the same memoized objects the facet counts read -- one assembly site, not two
 - [Phase 34.11-05]: Deleted filterByPlatform and the macOS crossoverRatingFilters filtering branch outright rather than leaving them dead-but-callable, since their logic is now filterEngine's passesRunnability/deriveRunnabilityTier (D-09/D-10)
+- [Phase 34.11]: FilterViewList mints its four Views keys via literal per-row tGamelib() calls, not a lookup-array call site — i18next-parser only resolves string-literal first arguments; a data-driven call was empirically invisible to pnpm i18n extraction
 
 ### Pending Todos
 
@@ -4479,8 +4481,39 @@ Recent decisions affecting current work:
 > demoted into the "prior session, preserved as history" chain, and plan 34.11-02's own `Stopped
 > at:` now carries a full description with nothing trailing it.
 
-Last session: 2026-08-09T09:58:12.631Z
-Stopped at: Completed 34.11-05-PLAN.md
+> NOTE (34.11-06): the same mis-targeted-write pattern struck a sixth time -- `state.record-session`
+> once again overwrote only the `Stopped at:` line's first line, leaving the 34.11-02 body below it
+> (itself already documented as orphaned by the NOTE (34.11-02) above) still without its own
+> heading four sessions later (03, 04, 05, and now 06 all passed through this same call without it
+> ever gaining one). Reconstructed here rather than left to drift further: the orphaned paragraph is
+> plan 34.11-02's actual completion description (confirmed by its content -- the `NavItem` button
+> branch `active` prop, REQ-34.11-11, "Next plan: 34.11-03") and is given back its
+> `Stopped at: Completed 34.11-02-PLAN.md` prefix below, demoted into the "prior session, preserved
+> as history" chain. The frontmatter `progress` block was also corrupted in the same
+> `state.advance-plan`/`state.update-progress` pair this session (`completed_plans` jumped
+> 252 -> 254, a gain of 2 for one completed plan; `percent` written as `65` even though
+> `state.update-progress`'s own JSON return reported `92`, itself one under the correct `91` for
+> `253/277`) -- hand-corrected to `completed_plans: 253`, `percent: 91`.
+
+Last session: 2026-08-09T10:22:14.211Z
+Stopped at: Completed 34.11-06-PLAN.md -- Views + Collections panel sections (REQ-34.11-05/-08).
+`FilterViewList` (four single-select View rows bound to `libraryView`/`setLibraryView`, D-05) and
+`FilterCollectionList` (single-select rows sourced verbatim from `customCategories.listCategories()`
+plus `'preset_uncategorized'`, D-17/D-21; `+ New collection`/`Manage collections` only call
+`setShowCategories(true)`, D-20; `CategoriesManager`'s own strings untouched, D-18; no rule/predicate
+concept anywhere, D-19) -- both extend `NavItem`'s button branch (plan 02) rather than forking a row
+component. Registered both in `meta/i18nGateScope.json`; `pnpm lint-translations:gamelib` exits 0.
+Rule 1 fix: `FilterViewList`'s rows were rewritten from a lookup-array `tGamelib(row.key, ...)` call
+site (invisible to `i18next-parser`'s string-literal-only extractor, empirically 0/4 keys added) to
+four literal `tGamelib('gamelib:...', '...')` call sites (4/4 keys added on re-run); all 7 minted
+`library.filterPanel.*` keys now exist in `public/locales/en/gamelib.json`. D-34 source gate added to
+`FilterViewList.test.tsx` (Header still imports/renders `LibrarySearchBar` unchanged). `pnpm test:ci`:
+225/225 suites, 4348/4348 tests green. Neither component mounted yet -- plan 09 wires them into
+Header's replacement. Next plan: 34.11-07.
+
+--- prior session, preserved as history ---
+
+Stopped at: Completed 34.11-02-PLAN.md -- NavItem button-branch active state (REQ-34.11-11). Merged
 a caller `className` and render an `active` class via `classNames`, unblocking selectable
 Views/Collections rows in the tier-2 filter panel (REQ-34.11-11). Task 1 added an `active?: boolean`
 prop (deliberately named apart from react-router's `isActive`) and routed the button branch through
