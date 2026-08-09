@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.10-24-PLAN.md (gap cycle 3, plans 34.10-23..27); the debug session (navbar-seam-and-logo-offset) is CLOSED and its fix is live-confirmed; what remains is authoring + running the run-4 live gate (plans 25-27); next command /gsd-execute-phase 34.10
-last_updated: "2026-08-09T00:10:00.000Z"
+stopped_at: Completed 34.10-25-PLAN.md (gap cycle 3, plans 34.10-23..27) -- run-4 live-gate SCOPE authored (§10.1-§10.4 in 34.10-LIVE-GATE.md) -- item 1's re-measurement split into a midnightMirage-only step (never-scored-theme confirmation of commit 220211230's fix) plus a 3-theme sweep, dracula-classic dropped from scope with its Test-7 evidence; what remains is the BODY half + checker script (plan 34.10-26, validated against a filled specimen per F-34.10-07) then the blocking run-4 gate itself (plan 34.10-27); next command /gsd-execute-phase 34.10
+last_updated: "2026-08-09T00:45:01.202Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 268
-  completed_plans: 244
+  completed_plans: 245
   percent: 91
 ---
 
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — gap cycle 3 EXECUTING (plans 23-27), PHASE STILL OPEN
-Plan: 24 of 27 complete — **live gate RUN 3 recorded 2026-08-08 (plan 34.10-22), VERDICT FAIL,
+Plan: 25 of 27 complete — **live gate RUN 3 recorded 2026-08-08 (plan 34.10-22), VERDICT FAIL,
 items_passed 4/5. PHASE 34.10 DOES NOT CLOSE.** Items 2, 3, 4 and 5 PASS; **item 1 FAILS.**
 
 CLOSED BY MEASUREMENT in run 3: **F-34.10-05** (disclosure-panel background correct in
@@ -525,7 +525,23 @@ it currently ships, not the pill variant.
 `34.10-VERIFICATION.md` was REGENERATED 2026-08-09 from run 3 plus the resolved debug session and
 is now AUTHORITATIVE.
 
-**NEXT COMMAND: `/gsd-execute-phase 34.10`** — gap cycle 3 is planned as plans 34.10-23..27.
+**34.10-25 EXECUTED 2026-08-09 — authored the run-4 live-gate SCOPE half** (`## 10. Run 4`,
+§10.1-§10.4, in `34.10-LIVE-GATE.md`; §0-§9 byte-identical, confirmed via `git diff --numstat`).
+Item 1 (the only item that can still fail the phase) is split into a Step 1 that re-measures
+F-34.10-03/F-34.10-04 in `midnightMirage` — a SCORED theme, closing the gap the debug session's own
+teal-theme-only confirmation left open — plus a Step 2 three-theme sweep. `dracula-classic` is
+dropped from scope, confirmed absent from `themeLabels.ts` (F-34.10-07). Items 2/3/4/5 are RE-RUN
+rather than carried forward, each decision backed by a `git log --stat` diff proving zero code
+change since run 3's own live PASS. Preflight P1-P9 re-derived (jest baseline re-measured live:
+220 suites / 4274 tests, 0 failing) plus five new rows (`pnpm tauri:dev`, a bundle-content grep for
+`padding-bottom:0`, `GAMELIB_DEV_SECRET_VAULT=1`, single-instance re-assertion, screenshot
+hygiene). §10.3/§10.4 re-verify every citation against current source and derive run order
+`[1, 3, 4, 2, 5]` (coincides with runs 1-3, not reused verbatim). Fills no verdict. Plan
+34.10-26 authors `### 10.5 Run 4 — the items` (the BODY half) plus a checker script, validated
+against a filled specimen per F-34.10-07's own lesson; plan 34.10-27 is the only invocation
+permitted to run the gate.
+
+**NEXT COMMAND: `/gsd-execute-phase 34.10`** — gap cycle 3 continues with plans 34.10-26..27.
 
 --- run 2's status, preserved as history ---
 Plan: 21 of 22 complete (seam-token corrected post-review); gap-cycle-2 plans 17-22 now executing. Prior state -- **live gate RUN 2
@@ -2651,6 +2667,13 @@ trusted blindly. The recurring `**Progress:**[█████████░] 91
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 
+> NOTE (34.10-25): `state.update-progress` spliced its own freshly-computed `92%` into this SAME
+> historical placeholder yet again this session (also miscomputed `completed_plans` as 246, +2 for
+> a single plan, and the top-level frontmatter `percent` as 61 -- both hand-corrected separately).
+> Reverted back to `91%` (this note's own frozen historical value, diffed against a pre-session
+> snapshot) rather than trusted. This is at least the third recorded recurrence of this exact
+> splice-into-historical-prose bug in this file.
+
 > NOTE (34.10-17): this session's own `state.update-progress` call spliced its freshly-computed
 > `90%` progress-bar string into this SAME historical placeholder, overwriting the `92%` value the
 > note immediately above already fixed once. Reverted back to `92%` (this note's own frozen
@@ -3754,6 +3777,7 @@ Closed/parked native-install phases:
 | Phase 34.10 P21 | ~35min | 3 tasks | 1 files |
 | Phase 34.10 P23 | 24min | 2 tasks | 3 files |
 | Phase 34.10 P24 | 18min | 2 tasks | 2 files |
+| Phase 34.10 P25 | 95min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -4275,6 +4299,7 @@ Recent decisions affecting current work:
 - [Phase 34.10]: Item 4's idle Downloads-ring sub-check is folded into item 1's new per-theme idle-ring sweep in the run-3 contract, with an explicit reopen condition — avoids double-counting the identical observation under two item numbers; any FAIL in item 1's per-theme sweep reopens item 4 in full regardless of its own carried-forward sub-checks
 - [Phase 34.10-23]: Kept NavTabs/index.scss's nested &.MuiTabs-root override as a deliberate second line of defense after rescoping GamesSettings' rule at the source
 - [Phase 34.10-23]: Guard test detector uses brace-depth + comma-split-per-selector rather than a naive regex so ancestor-scoped multi-line selectors are not false positives
+- [Phase 34.10]: Item 1's run-4 re-measurement split into a midnightMirage-only step (never-scored-theme confirmation of 220211230's fix) plus a 3-theme sweep; items 2/3/4/5 re-run (not carried forward) per this contract's own cheap-re-measurement-beats-confidence lesson; dracula-classic dropped from scope (F-34.10-07).
 
 ### Pending Todos
 
@@ -4389,7 +4414,7 @@ Recent decisions affecting current work:
 > its `Stopped at: Completed 34.10-20-PLAN.md --` prefix and demoted into the "prior session,
 > preserved as history" chain.
 
-Last session: 2026-08-08T23:25:16.903Z
+Last session: 2026-08-09T00:45:01.189Z
 Stopped at: Completed 34.10-23-PLAN.md
 34.10-18 handoff, REQ-34.10-06). Task 1 implemented `34.10-F04-DIAGNOSIS.md`'s single surviving
 cause exactly: MUI's `Tab.js` applies an unconditional `minHeight: 72` when a `<Tab>` gets both

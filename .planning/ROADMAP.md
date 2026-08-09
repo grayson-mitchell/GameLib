@@ -2408,7 +2408,7 @@ REQ-34.10-13, REQ-34.10-14, REQ-34.10-15, REQ-34.10-16
 the frameless drag-region runtime this rebuilds against)
 **Blocks:** Phase 34.11 (the filter panel needs the tier-2 slot to exist); the deferred
 onboarding-tour rework phase (34.10 disables `SidebarTour` per D-13 and does not rebuild it)
-**Plans:** 23/27 plans executed — **PHASE STILL DOES NOT CLOSE.** 23 of 27 plans having SUMMARYs is
+**Plans:** 25/27 plans executed — **PHASE STILL DOES NOT CLOSE.** 25 of 27 plans having SUMMARYs is
 a plan-count fact, not a phase verdict: live gate **run 3** (plan 34.10-22, 2026-08-08) scored
 **4/5**. Items 2, 3, 4 and 5 PASS; **item 1 FAILS** on F-34.10-03 (seam still visible) and
 F-34.10-04 (wordmark and Downloads ring not on the tab strip's line), both measured against a
@@ -2431,7 +2431,11 @@ targeted the wrong property and are enumerated in the debug file so none is retr
 re-litigate `min-height` or `align-items` on that element. STILL OWED: a run-4 live gate that
 re-measures item 1 IN FULL, because the fix was confirmed in ONE non-scored theme (the ambient
 teal scheme) only, and this exact truth has already been wrongly declared fixed twice in this
-phase. **Next: `/gsd-execute-phase 34.10`.**
+phase. **34.10-25 (2026-08-09) authored the run-4 gate's SCOPE half** (§10.1-§10.4 in
+`34.10-LIVE-GATE.md`) — item 1's re-measurement split into a midnightMirage-only step plus a
+3-theme sweep, `dracula-classic` dropped from scope; fills no verdict. Remaining: 34.10-26 (BODY
+half + checker script) and 34.10-27 (the blocking run-4 gate itself). **Next:
+`/gsd-execute-phase 34.10`.**
 
 Gap cycle 2 plans, closing F-34.10-03 through F-34.10-06 plus the per-theme sweep that has
 never been reached in two runs:
@@ -2444,8 +2448,8 @@ never been reached in two runs:
 
 Gap cycle 3 plans, closing the run-3 gaps recorded in `34.10-VERIFICATION.md`:
 - [x] 34.10-23-PLAN.md — rescope the leaking `.MuiTabs-root` rule + repo-wide guard test (wave 1)
-- [ ] 34.10-24-PLAN.md — correct stale ROADMAP/STATE records; record the pill-tab deferral (wave 1)
-- [ ] 34.10-25-PLAN.md — author the run-4 gate contract §10.1-§10.4 (scope, preflight, reviews) (wave 2)
+- [x] 34.10-24-PLAN.md — correct stale ROADMAP/STATE records; record the pill-tab deferral (wave 1)
+- [x] 34.10-25-PLAN.md — author the run-4 gate contract §10.1-§10.4 (scope, preflight, reviews) (wave 2)
 - [ ] 34.10-26-PLAN.md — author §10.5 item bodies + prove every automated check against a filled specimen (wave 3)
 - [ ] 34.10-27-PLAN.md — RUN the run-4 gate; reconcile REQUIREMENTS/ROADMAP/STATE (wave 4, blocking checkpoint)
 
