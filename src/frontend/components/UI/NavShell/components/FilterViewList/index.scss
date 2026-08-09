@@ -1,0 +1,16 @@
+// Views section box only (34.11-06 Task 1). Row padding, hover, active
+// colour and font weight all come from `.NavShell__tier2 .NavItem`
+// (NavItem/index.scss) -- redeclaring any of that here would fork the
+// tier-2 row spec into two places. Scoped under `.NavShell__tier2Portal`
+// (the Games panel's portal target, itself nested inside `.NavShell__tier2`
+// -- see NavShell/index.scss) rather than left unscoped: an unscoped
+// `.MuiTabs-root` rule once leaked 8px into every `<Tabs>` app-wide
+// (34.10 postmortem), and `.FilterViewList` is a generic enough class name
+// to collide the same way.
+.NavShell__tier2Portal {
+  .FilterViewList {
+    display: flex;
+    flex-direction: column;
+    margin-block-end: var(--space-sm);
+  }
+}
