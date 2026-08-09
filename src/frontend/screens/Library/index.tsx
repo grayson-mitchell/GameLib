@@ -1,6 +1,7 @@
 import './index.css'
 
 import React, {
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -36,8 +37,13 @@ import LibraryContext from './LibraryContext'
 import {
   Category,
   CrossoverRatingFilters,
+  FilterEngineDeps,
+  FilterEngineState,
   FilterMode,
+  LibraryView,
   PlatformsFilters,
+  RunnabilityTier,
+  StoreFacetValue,
   StoresFilters
 } from 'frontend/types'
 import useGlobalState from 'frontend/state/GlobalStateV2'
@@ -48,8 +54,23 @@ import LibraryTour from './components/LibraryTour'
 import AlphabetFilter from './components/AlphabetFilter'
 import { openInstallGameModal } from 'frontend/state/InstallGameModal'
 import { Tier2PortalContext } from 'frontend/components/UI/NavShell/Tier2PortalContext'
+import { configStore } from 'frontend/helpers/electronStores'
+// Namespace import: filterEngine's helpers are referenced as
+// `filterEngine.xxx` throughout this file rather than named imports, so a
+// call site is this identifier's only appearance in the file (see the
+// acceptance criteria on 34.11-04-PLAN.md Tasks 2/3 -- each migration
+// helper and describeActiveFilters must be called exactly once, provably,
+// with no separate import-line match to conflate with a real call).
+import * as filterEngine from './filterEngine'
 
 const storage = window.localStorage
+
+const VALID_LIBRARY_VIEWS: LibraryView[] = [
+  'all',
+  'installed',
+  'recentlyPlayed',
+  'favourites'
+]
 
 type SearchableGame = {
   original: GameInfo
@@ -175,6 +196,108 @@ export default React.memo(function Library(): JSX.Element {
     storage.setItem('crossoverRatingFilters', JSON.stringify(newFilters))
     setCrossoverRatingFilters_(newFilters)
   }
+
+  // --- 34.11 Plan 04: opt-in facet state, additive alongside the legacy
+  // storesFilters/platformsFilters/crossoverRatingFilters state above. ---
+
+  // D-05: single-select view. A format guard in the shape of
+  // migrateFilterMode below -- an unrecognised or absent value falls back
+  // to 'all' rather than throwing.
+  const initialLibraryView = (): LibraryView => {
+    const stored = storage.getItem('libraryView')
+    return (VALID_LIBRARY_VIEWS as string[]).includes(stored || '')
+      ? (stored as LibraryView)
+      : 'all'
+  }
+  const [libraryView, setLibraryView_] = useState<LibraryView>(
+    initialLibraryView
+  )
+  const setLibraryViewPersisted = (value: LibraryView) => {
+    storage.setItem('libraryView', value)
+    setLibraryView_(value)
+  }
+
+  // D-01: opt-in store facet, migrated from the legacy opt-out
+  // storesFilters shape via filterEngine's D-02 migration helper (discards,
+  // never translates).
+  const [storeFacet, setStoreFacet_] = useState<StoreFacetValue[]>(() =>
+    filterEngine.migrateStoreFacetSelection(
+      storage.getItem('storeFacet'),
+      storage.getItem('storesFilters')
+    )
+  )
+  const setStoreFacetPersisted = (value: StoreFacetValue[]) => {
+    storage.setItem('storeFacet', JSON.stringify(value))
+    setStoreFacet_(value)
+  }
+
+  // D-01: opt-in runnability facet, migrated from the legacy
+  // platformsFilters shape.
+  const [runnabilityFacet, setRunnabilityFacet_] = useState<
+    RunnabilityTier[]
+  >(() =>
+    filterEngine.migrateRunnabilityFacetSelection(
+      storage.getItem('runnabilityFacet'),
+      storage.getItem('platformsFilters')
+    )
+  )
+  const setRunnabilityFacetPersisted = (value: RunnabilityTier[]) => {
+    storage.setItem('runnabilityFacet', JSON.stringify(value))
+    setRunnabilityFacet_(value)
+  }
+
+  // D-21: single-select collection -- a customCategories key, the literal
+  // 'preset_uncategorized', or null for no constraint. An empty string or
+  // absent key both yield null.
+  const [currentCollection, setCurrentCollection_] = useState<string | null>(
+    () => storage.getItem('libraryCollection') || null
+  )
+  const setCurrentCollectionPersisted = (value: string | null) => {
+    storage.setItem('libraryCollection', value ?? '')
+    setCurrentCollection_(value)
+  }
+
+  // RESEARCH assumption A1, resolved in favour of active removal (D-02):
+  // the legacy opt-out filter keys are discarded once, guarded by this
+  // sentinel so the effect never races LibraryFilters (still mounted and
+  // still writing these keys until plan 09 retires it), and never re-runs
+  // (D-02 requires a one-time reset, a claim a re-running effect cannot
+  // make). This whole effect plus its sentinel is deletable once plan 09
+  // lands.
+  useEffect(() => {
+    if (storage.getItem('facetOptInMigrated') === '1') {
+      return
+    }
+    storage.removeItem('storesFilters')
+    storage.removeItem('platformsFilters')
+    storage.removeItem('crossoverRatingFilters')
+    storage.setItem('facetOptInMigrated', '1')
+  }, [])
+
+  // Recent-games source mirrors RecentlyPlayed/index.tsx's own read.
+  const recentAppNames = useMemo(
+    () => configStore.get('games.recent', []).map((entry) => entry.appName),
+    []
+  )
+
+  // D-04: the store facet values whose account is connected, reusing the
+  // same gating expressions makeLibrary() already uses below -- the Store
+  // group renders a row only for a connected account, never a permanent 0.
+  const connectedStores: StoreFacetValue[] = useMemo(() => {
+    const stores: StoreFacetValue[] = ['sideload']
+    if (gog.username) stores.push('gog')
+    if (epic.username) stores.push('legendary')
+    if (amazon.username) stores.push('nile')
+    if (zoom.enabled && zoom.username) stores.push('zoom')
+    if (steam?.username) stores.push('steam')
+    return stores
+  }, [gog.username, epic.username, amazon.username, zoom.enabled, zoom.username, steam?.username])
+
+  // The Runnability rows this host can compute (plan 01). Empty on Windows.
+  const runnabilityRows = useMemo(
+    () => filterEngine.runnabilityRowsForHost(platform),
+    [platform]
+  )
 
   // 19-06 slice: app_name -> rating|null; absent = never looked up (D-16).
   const { crossoverRatings } = useGlobalState.keys('crossoverRatings')
