@@ -18,41 +18,49 @@ import { RUNNABILITY_LABELS } from 'frontend/screens/Library/facetLabels'
 import type { RunnabilityTier } from 'frontend/types'
 import FilterFacetGroup, { FilterFacetRow } from '../FilterFacetGroup'
 
-// i18next-parser's JavascriptLexer only resolves string-literal key
-// arguments to tGamelib() calls -- confirmed empirically in 34.11-06, where
-// a call built from a runtime lookup extracted 0 of 4 keys in the same
-// `pnpm i18n` run that correctly picked up three literal calls elsewhere.
-// A spread over a runtime-looked-up tuple has the same shape, so each key
-// below is a literal call site instead of a shared loop over the table.
-// The default text is still read FROM the shared table (never duplicated
-// as a second literal), so facetLabels.ts stays the single declaration
-// site for the actual English copy.
+// i18next-parser's JavascriptLexer only resolves string-literal arguments
+// to tGamelib() calls -- confirmed empirically in 34.11-06 (a lookup-array
+// call extracted 0 of 4 keys in the same `pnpm i18n` run that correctly
+// picked up three literal calls elsewhere) and reconfirmed here: a literal
+// KEY paired with a non-literal defaultValue (`RUNNABILITY_LABELS[tier][1]`)
+// still extracts the key, but the generated catalog gets an EMPTY default
+// text for it -- and once a key exists in the resource bundle, i18next
+// renders that catalog value instead of falling back to the call site's
+// defaultValue argument, so the row would render blank text, not the
+// intended copy. Both arguments are therefore literal below. The
+// development-only check beneath the switch throws if this literal copy
+// ever drifts from facetLabels.ts's tuples, which stays the canonical
+// source for the English text.
 function runnabilityLabel(
   tier: RunnabilityTier,
   tGamelib: (key: string, defaultValue: string) => string
 ): string {
   switch (tier) {
     case 'native':
-      return tGamelib(
-        'gamelib:library.filterPanel.runsNatively',
-        RUNNABILITY_LABELS.native[1]
-      )
+      return tGamelib('gamelib:library.filterPanel.runsNatively', 'Runs natively')
     case 'bottle':
-      return tGamelib(
-        'gamelib:library.filterPanel.runsViaBottle',
-        RUNNABILITY_LABELS.bottle[1]
-      )
+      return tGamelib('gamelib:library.filterPanel.runsViaBottle', 'Runs via bottle')
     case 'wontRun':
-      return tGamelib(
-        'gamelib:library.filterPanel.wontRun',
-        RUNNABILITY_LABELS.wontRun[1]
-      )
+      return tGamelib('gamelib:library.filterPanel.wontRun', "Won't run")
     case 'notChecked':
-      return tGamelib(
-        'gamelib:library.filterPanel.notYetChecked',
-        RUNNABILITY_LABELS.notChecked[1]
-      )
+      return tGamelib('gamelib:library.filterPanel.notYetChecked', 'Not yet checked')
   }
+}
+
+if (process.env.NODE_ENV !== 'production') {
+  const LITERAL_DEFAULT_TEXT: Record<RunnabilityTier, string> = {
+    native: 'Runs natively',
+    bottle: 'Runs via bottle',
+    wontRun: "Won't run",
+    notChecked: 'Not yet checked'
+  }
+  ;(Object.keys(RUNNABILITY_LABELS) as RunnabilityTier[]).forEach((tier) => {
+    if (RUNNABILITY_LABELS[tier][1] !== LITERAL_DEFAULT_TEXT[tier]) {
+      throw new Error(
+        `FilterRunnabilityFacet's literal default text for "${tier}" has drifted from facetLabels.ts's RUNNABILITY_LABELS -- update both together`
+      )
+    }
+  })
 }
 
 export default function FilterRunnabilityFacet() {

@@ -27,11 +27,18 @@
         "filterPanel": {
             "collections": "Collections",
             "manageCollections": "Manage collections",
+            "moreFilters": "More filters",
             "newCollection": "+ New collection",
+            "notYetChecked": "Not yet checked",
+            "runnabilityGroup": "Runnability",
+            "runsNatively": "Runs natively",
+            "runsViaBottle": "Runs via bottle",
+            "storeGroup": "Store",
             "viewAll": "All games",
             "viewFavourites": "Favourites",
             "viewInstalled": "Installed",
-            "viewRecentlyPlayed": "Recently played"
+            "viewRecentlyPlayed": "Recently played",
+            "wontRun": "Won't run"
         },
         "storeOther": "Other"
     },
