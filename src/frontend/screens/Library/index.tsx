@@ -596,41 +596,23 @@ export default React.memo(function Library(): JSX.Element {
     return favourites.map((game) => `${game.app_name}_${game.runner}`)
   }, [favourites])
 
+  // 34.11 Plan 05: unions every CONNECTED account's library only -- no
+  // filter logic lives here. The store FACET is applied downstream in
+  // filterLibrary (filterEngine.passesStore) so countFor's skip rule can see
+  // the games a store WOULD contribute if selected. Do not reintroduce a
+  // store filter here -- leaving the store gate in makeLibrary would make
+  // every unselected store's count 0, the "counts that lie" failure the
+  // sketch's library-filtering findings warn against.
   const makeLibrary = () => {
-    let displayedStores: string[] = []
-    if (storesFilters['gog'] && gog.username) {
-      displayedStores.push('gog')
-    }
-    if (storesFilters['legendary'] && epic.username) {
-      displayedStores.push('legendary')
-    }
-    if (storesFilters['nile'] && amazon.username) {
-      displayedStores.push('nile')
-    }
-    if (storesFilters['sideload']) {
-      displayedStores.push('sideload')
-    }
-    if (storesFilters['zoom'] && zoom.username) {
-      displayedStores.push('zoom')
-    }
-    if (storesFilters['steam'] && steam?.username) {
-      displayedStores.push('steam')
-    }
-
-    if (!displayedStores.length) {
-      displayedStores = Object.keys(storesFilters)
-    }
-
-    const showEpic = epic.username && displayedStores.includes('legendary')
-    const showGog = gog.username && displayedStores.includes('gog')
-    const showAmazon = amazon.user_id && displayedStores.includes('nile')
-    const showSideloaded = displayedStores.includes('sideload')
-    const showZoom = zoom.username && displayedStores.includes('zoom')
-    const showSteam = steam?.username && displayedStores.includes('steam')
+    const showEpic = !!epic.username
+    const showGog = !!gog.username
+    const showAmazon = !!amazon.user_id
+    const showZoom = zoom.enabled && !!zoom.username
+    const showSteam = !!steam?.username
 
     const epicLibrary = showEpic ? epic.library : []
     const gogLibrary = showGog ? gog.library : []
-    const sideloadedApps = showSideloaded ? sideloadedLibrary : []
+    const sideloadedApps = sideloadedLibrary
     const amazonLibrary = showAmazon ? amazon.library : []
     const zoomLibrary = showZoom ? zoom.library : []
     const steamLibrary = showSteam ? steam.library : []
