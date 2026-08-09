@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.11-07-PLAN.md -- Store/Runnability/More-filters panel groups (REQ-34.11-01/-10).
-last_updated: "2026-08-09T10:53:19.035Z"
+stopped_at: Completed 34.11-08-PLAN.md -- FilterChipRow + FilterZeroResult grid surfaces (REQ-34.11-13/-14)
+last_updated: "2026-08-09T11:25:37.318Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 23
   completed_phases: 15
   total_plans: 277
-  completed_plans: 254
+  completed_plans: 256
   percent: 92
 ---
 
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.11 (library-filtering-search-views-collections-and-cross-store-f) — EXECUTING
-Plan: 8 of 9
+Plan: 9 of 9
 
 Prior phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — **COMPLETE
 2026-08-09**, 27 of 27 plans executed, verification passed 9/9.
@@ -3822,6 +3822,7 @@ Closed/parked native-install phases:
 | Phase 34.11 P05 | 20min | 3 tasks | 2 files |
 | Phase 34.11 P06 | 45min | 3 tasks | 8 files |
 | Phase 34.11 P07 | 55min | 3 tasks | 12 files |
+| Phase 34.11 P08 | 18min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -4357,6 +4358,8 @@ Recent decisions affecting current work:
 - [Phase 34.11]: FilterViewList mints its four Views keys via literal per-row tGamelib() calls, not a lookup-array call site — i18next-parser only resolves string-literal first arguments; a data-driven call was empirically invisible to pnpm i18n extraction
 - [Phase 34.11-07]: Token-survival substitutions: --navbar-inactive -> --navbar-accent and --text-hover -> --accent (both undefined in gruvbox_dark/dracula, the CR-01/--divider defect class)
 - [Phase 34.11-07]: FilterRunnabilityFacet uses fully-literal tGamelib() call sites rather than a spread over RUNNABILITY_LABELS[tier] -- a spread, and even a literal-key/non-literal-default hybrid, either misses i18n extraction entirely or ships an empty catalog default; a dev-only drift guard echoes call-site defaults (not a duplicated literal table) to stay in sync with facetLabels.ts
+- [Phase 34.11-08]: Close (x) control uses FontAwesome faXmark, not a bare Unicode glyph — matches SearchBar/FormControl/HumbleExpiryToast precedent, avoids a hardcoded-string-gate false positive
+- [Phase 34.11-08]: Token substitution: text-hover to accent in FilterChipRow/FilterZeroResult focus-visible rings — text-hover is undefined in gruvbox_dark/dracula per themes.scss, matching 34.11-07's precedent for the same token
 
 ### Pending Todos
 
@@ -4498,8 +4501,8 @@ Recent decisions affecting current work:
 > `state.update-progress`'s own JSON return reported `92`, itself one under the correct `91` for
 > `253/277`) -- hand-corrected to `completed_plans: 253`, `percent: 91`.
 
-Last session: 2026-08-09T10:53:19.020Z
-Stopped at: Completed 34.11-07-PLAN.md -- Store/Runnability/More-filters panel groups (REQ-34.11-01/-10).
+Last session: 2026-08-09T11:25:37.303Z
+Stopped at: Completed 34.11-08-PLAN.md -- FilterChipRow + FilterZeroResult grid surfaces (REQ-34.11-13/-14)
 `FilterViewList` (four single-select View rows bound to `libraryView`/`setLibraryView`, D-05) and
 `FilterCollectionList` (single-select rows sourced verbatim from `customCategories.listCategories()`
 plus `'preset_uncategorized'`, D-17/D-21; `+ New collection`/`Manage collections` only call
