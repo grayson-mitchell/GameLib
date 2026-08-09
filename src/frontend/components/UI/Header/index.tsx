@@ -1,6 +1,9 @@
 import LibrarySearchBar from '../LibrarySearchBar'
-import CategoryFilter from '../CategoryFilter'
-import LibraryFilters from '../LibraryFilters'
+import FilterViewList from '../NavShell/components/FilterViewList'
+import FilterCollectionList from '../NavShell/components/FilterCollectionList'
+import FilterStoreFacet from '../NavShell/components/FilterStoreFacet'
+import FilterRunnabilityFacet from '../NavShell/components/FilterRunnabilityFacet'
+import FilterMoreGroup from '../NavShell/components/FilterMoreGroup'
 import './index.css'
 
 export default function Header() {
@@ -9,10 +12,11 @@ export default function Header() {
       <div className="Header__search">
         <LibrarySearchBar />
       </div>
-      <span className="Header__filters">
-        <CategoryFilter />
-        <LibraryFilters />
-      </span>
+      <FilterViewList />
+      <FilterCollectionList />
+      <FilterStoreFacet />
+      <FilterRunnabilityFacet />
+      <FilterMoreGroup />
     </div>
   )
 }

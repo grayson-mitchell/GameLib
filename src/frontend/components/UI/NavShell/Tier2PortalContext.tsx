@@ -4,7 +4,9 @@ import React, { useMemo, useState } from 'react'
  * Why this seam exists (REQ-34.10-09) -- read before "simplifying" this into
  * a component move:
  *
- * `LibrarySearchBar`, `CategoryFilter` and `LibraryFilters` all call
+ * `LibrarySearchBar` and the Games tier-2 filter panel sections
+ * (`FilterViewList`, `FilterCollectionList`, `FilterStoreFacet`,
+ * `FilterRunnabilityFacet`, `FilterMoreGroup`) all call
  * `useContext(LibraryContext)`. `frontend/screens/Library/LibraryContext.tsx`'s
  * `initialContext` supplies a full set of silent no-op setters (`() => null`)
  * for every filter/search/layout handler. React context follows the React
@@ -16,8 +18,8 @@ import React, { useMemo, useState } from 'react'
  * silently swallowed by a no-op.
  *
  * A portal avoids this: `Library`'s provider stays the actual React parent
- * of `<Header>` (and therefore of `LibrarySearchBar` / `CategoryFilter` /
- * `LibraryFilters`), while `ReactDOM.createPortal` places its rendered DOM
+ * of `<Header>` (and therefore of `LibrarySearchBar` and the panel
+ * sections), while `ReactDOM.createPortal` places its rendered DOM
  * node inside the shell's tier-2 column. This context is the seam that
  * carries the portal *target* DOM node from the shell (`GamesPanel`, plan
  * 34.10-01) to the `Library` side (plan 34.10-06) without either side

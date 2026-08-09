@@ -259,7 +259,7 @@ export interface PlatformsFilters {
 // D-17: macOS-only CrossOver-rating library filter. Deliberately NOT
 // `FilterMode` (tri-state off/show/only) — a rating filter is inherently
 // multi-select, mirroring the `PlatformsFilters` shape (default all `true`,
-// opt-out semantics). See LibraryFilters/index.tsx + Library/index.tsx.
+// opt-out semantics). See Library/index.tsx.
 export interface CrossoverRatingFilters {
   gold: boolean
   silver: boolean
