@@ -306,6 +306,54 @@ export interface LibraryContextType {
   alphabetFilterLetter: string | null
   setAlphabetFilterLetter: (letter: string | null) => void
   gamesForAlphabetFilter: GameInfo[]
+
+  // --- 34.11 Plan 04: opt-in facet surface, additive to the legacy fields
+  // above. `storesFilters`/`platformsFilters`/`crossoverRatingFilters` and
+  // their setters stay until plan 09 retires `LibraryFilters`/`CategoryFilter`. ---
+
+  // D-05: single-select view. Default 'all'.
+  libraryView: LibraryView
+  setLibraryView: (value: LibraryView) => void
+  // D-01: opt-in store selection. Default []. [] means no constraint.
+  storeFacet: StoreFacetValue[]
+  setStoreFacet: (value: StoreFacetValue[]) => void
+  // D-01: opt-in runnability selection (runnabilityFacet). Default [].
+  // [] means no constraint.
+  runnabilityFacet: RunnabilityTier[]
+  setRunnabilityFacet: (value: RunnabilityTier[]) => void
+  // D-21: single-select collection -- a `customCategories` key, the literal
+  // 'preset_uncategorized', or null for no constraint.
+  currentCollection: string | null
+  setCurrentCollection: (value: string | null) => void
+  // D-25: resets AND persists every filter below to its default, including
+  // clearing the session-only search term. A non-persisting implementation
+  // would be a defect, not a simplification -- see Library/index.tsx.
+  clearAllFilters: () => void
+  // D-26: the active filter DESCRIPTOR LIST, not just a count -- plan 08's
+  // chip row renders one chip per descriptor and needs id/kind/value per
+  // entry, which a bare count cannot provide.
+  activeFilterDescriptors: ActiveFilterDescriptor[]
+  // Always the descriptor list's `.length`, derived from that same array in
+  // the same memo -- never a second independent computation (see the
+  // provider's clear-all wiring in Library/index.tsx for why that matters).
+  activeFilterCount: number
+  // The Runnability rows this host can compute (plan 01's
+  // `runnabilityRowsForHost`). Empty on Windows -- consumers render no
+  // Runnability group at all when this is empty (D-12 extension).
+  runnabilityRows: RunnabilityTier[]
+  // The store facet values whose account is connected (D-04) -- the Store
+  // group renders a row only for a connected account, never a permanent 0.
+  connectedStores: StoreFacetValue[]
+  // D-28: exclude-your-own-facet counts, built on filterEngine's `countFor`.
+  countForStore: (value: StoreFacetValue) => number
+  countForRunnability: (value: RunnabilityTier) => number
+  // Set ONLY in `LibraryContext.tsx`'s `initialContext`, never by the real
+  // provider in `Library/index.tsx`. Lets a consumer distinguish "mounted,
+  // nothing selected" ([] descriptors, 0 count) from "rendered outside the
+  // provider" (same [] / 0, but from the no-op default) -- the exact
+  // ambiguity that let 34.10 ship a relocated <Header> whose filters were
+  // dead while looking alive. Plan 08 branches on this sentinel.
+  __isDefaultLibraryContext?: true
 }
 
 export interface GameContextType {

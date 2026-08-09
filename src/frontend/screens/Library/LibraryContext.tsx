@@ -51,7 +51,29 @@ const initialContext: LibraryContextType = {
   onToggleAlphabetFilter: () => null,
   alphabetFilterLetter: null,
   setAlphabetFilterLetter: () => null,
-  gamesForAlphabetFilter: [] as GameInfo[]
+  gamesForAlphabetFilter: [] as GameInfo[],
+
+  // 34.11 Plan 04: opt-in facet surface defaults. See the field comments on
+  // `LibraryContextType` (frontend/types.ts) for what each one is for.
+  libraryView: 'all',
+  setLibraryView: () => null,
+  storeFacet: [],
+  setStoreFacet: () => null,
+  runnabilityFacet: [],
+  setRunnabilityFacet: () => null,
+  currentCollection: null,
+  setCurrentCollection: () => null,
+  clearAllFilters: () => null,
+  activeFilterDescriptors: [],
+  activeFilterCount: 0,
+  runnabilityRows: [],
+  connectedStores: [],
+  countForStore: () => 0,
+  countForRunnability: () => 0,
+  // The sentinel: only `initialContext` sets this. The real provider value
+  // in `Library/index.tsx` must never set it -- its absence there is the
+  // whole signal that a consumer is mounted inside the provider.
+  __isDefaultLibraryContext: true
 }
 
 export default React.createContext(initialContext)
