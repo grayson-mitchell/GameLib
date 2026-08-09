@@ -357,3 +357,91 @@ export interface HelpItem {
   title: string
   content: JSX.Element
 }
+
+// D-05: the Games tier-2 panel's single-select view set. 'all' is the
+// default and the only value that produces no chip (D-26).
+export type LibraryView = 'all' | 'installed' | 'recentlyPlayed' | 'favourites'
+
+// D-09/D-10: the runnability facet's rows. 'bottle' collapses the
+// gold/silver/bronze CrossOver medal tiers into one row — medal tiers are
+// evidence, not user-facing controls (D-10). 'notChecked' is the
+// `rating === null` row (looked up, no data). A game whose tier cannot be
+// computed on the current host renders NO row at all (D-12).
+export type RunnabilityTier = 'native' | 'bottle' | 'wontRun' | 'notChecked'
+
+// D-01: the store facet's opt-in value union, mirroring StoresFilters' six
+// runner keys so a selection can be a plain array instead of a boolean mask.
+export type StoreFacetValue =
+  | 'legendary'
+  | 'gog'
+  | 'nile'
+  | 'sideload'
+  | 'zoom'
+  | 'steam'
+
+// D-28: the domain of filterEngine's exclude-your-own-facet `skip` parameter.
+export type FacetKind =
+  | 'view'
+  | 'collection'
+  | 'store'
+  | 'runnability'
+  | 'search'
+  | 'more'
+
+// The Games tier-2 filter panel's full engine state (D-01, D-05, D-21).
+export interface FilterEngineState {
+  view: LibraryView
+  // A `customCategories` key, the literal 'preset_uncategorized', or `null`
+  // for no constraint. Collections are single-select (D-21).
+  collection: string | null
+  // Opt-in: `[]` means no constraint (D-01).
+  stores: StoreFacetValue[]
+  // Opt-in: `[]` means no constraint (D-01).
+  runnability: RunnabilityTier[]
+  // `null` means no search active; otherwise the precomputed set of
+  // `gameKey()` values the Fuse.js search matched (D-33 amendment — search
+  // stays fuzzy, so counts are computed over the matched set).
+  searchMatchedKeys: Set<string> | null
+  showHidden: FilterMode
+  showNonAvailable: FilterMode
+  showSupportOfflineOnly: boolean
+  showThirdPartyManagedOnly: boolean
+  showUpdatesOnly: boolean
+}
+
+// External data the filter engine needs but does not source itself — every
+// field here is already resolved/parsed by the caller (see T-34.11-02).
+export interface FilterEngineDeps {
+  hiddenAppNames: string[]
+  nonAvailableAppNames: string[]
+  // Keyed by gameKey(), i.e. `${app_name}_${runner}` (matches
+  // Library/index.tsx's favouritesIds shape).
+  favouriteKeys: Set<string>
+  recentAppNames: string[]
+  customCategories: Record<string, string[]>
+  gameUpdates: string[]
+  crossoverRatings: Record<string, number | null>
+  // ContextProvider's `platform`, i.e. 'darwin' | 'linux' | 'win32'.
+  hostPlatform: string
+}
+
+// D-26: chips render for everything non-default, including views.
+export interface ActiveFilterDescriptor {
+  // Stable, unique within one render — e.g. 'store:gog',
+  // 'runnability:bottle', 'view:installed', 'collection:Backlog', 'search'.
+  id: string
+  kind:
+    | 'view'
+    | 'collection'
+    | 'store'
+    | 'runnability'
+    | 'search'
+    | 'showHidden'
+    | 'showNonAvailable'
+    | 'showSupportOfflineOnly'
+    | 'showThirdPartyManagedOnly'
+    | 'showUpdatesOnly'
+  // The facet value, the collection name, the raw search term, or the
+  // FilterMode value ('show'/'only') for a tri-state (D-27).
+  value: string
+}
