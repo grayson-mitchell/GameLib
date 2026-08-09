@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.11-01-PLAN.md
-last_updated: "2026-08-09T08:51:14.413Z"
+stopped_at: Completed 34.11-02-PLAN.md
+last_updated: "2026-08-09T08:57:50.516Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 23
   completed_phases: 15
   total_plans: 277
-  completed_plans: 248
+  completed_plans: 250
   percent: 90
 ---
 
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.11 (library-filtering-search-views-collections-and-cross-store-f) — EXECUTING
-Plan: 2 of 9
+Plan: 3 of 9
 
 Prior phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — **COMPLETE
 2026-08-09**, 27 of 27 plans executed, verification passed 9/9.
@@ -3816,6 +3816,7 @@ Closed/parked native-install phases:
 | Phase 34.10 P25 | 95min | 2 tasks | 1 files |
 | Phase 34.10 P26 | ~140min | 2 tasks | 2 files |
 | Phase 34.11 P01 | 20min | 3 tasks | 3 files |
+| Phase 34.11 P02 | 15min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -4340,6 +4341,7 @@ Recent decisions affecting current work:
 - [Phase 34.10]: Item 1's run-4 re-measurement split into a midnightMirage-only step (never-scored-theme confirmation of 220211230's fix) plus a 3-theme sweep; items 2/3/4/5 re-run (not carried forward) per this contract's own cheap-re-measurement-beats-confidence lesson; dracula-classic dropped from scope (F-34.10-07).
 - [Phase 34.11]: Runnability tier derivation ported byte-for-byte from CrossoverBadge, including the undefined-vs-null distinction (D-16)
 - [Phase 34.11]: D-02 migration helpers discard legacy localStorage shapes rather than translating them into an opt-in equivalent
+- [Phase 34.11-02]: Named the new NavItem button-branch prop 'active', not 'isActive', to avoid it reading as router-derived state
 
 ### Pending Todos
 
@@ -4454,8 +4456,33 @@ Recent decisions affecting current work:
 > its `Stopped at: Completed 34.10-20-PLAN.md --` prefix and demoted into the "prior session,
 > preserved as history" chain.
 
-Last session: 2026-08-09T08:51:14.397Z
-Stopped at: Completed 34.11-01-PLAN.md
+> NOTE (34.11-02): the 34.10-19 hand-correction above never actually landed as text in this file --
+> every subsequent `state.record-session` call (34.11's "UI-SPEC approved" session, the "begin
+> phase 34.11 execution" session, 34.11-01's completion, and now 34.11-02's completion) kept
+> overwriting only the `Stopped at:` line's first line while the orphaned plan-19 body beneath it
+> survived untouched with no heading, across four separate sessions. Also re-corrupted
+> `progress.percent` a third time (`90` -> `65`, not the `90` this session's own
+> `state.update-progress` call had just computed) -- hand-corrected back to `90`. Both hand-
+> corrected below: the orphaned body was finally given back its `Stopped at: Completed
+> 34.10-19-PLAN.md --` prefix (reconstructed from the fragment `34.10-18 handoff, REQ-34.10-06).`
+> it was truncated to, cross-referenced against the 34.10-19 NOTE's own description above) and
+> demoted into the "prior session, preserved as history" chain, and plan 34.11-02's own `Stopped
+> at:` now carries a full description with nothing trailing it.
+
+Last session: 2026-08-09T08:57:50.498Z
+Stopped at: Completed 34.11-02-PLAN.md -- extended NavItem's `elementType="button"` branch to merge
+a caller `className` and render an `active` class via `classNames`, unblocking selectable
+Views/Collections rows in the tier-2 filter panel (REQ-34.11-11). Task 1 added an `active?: boolean`
+prop (deliberately named apart from react-router's `isActive`) and routed the button branch through
+`classNames('NavItem', className, { active })`; the `NavLink` branch is byte-identical to HEAD
+(confirmed via `git diff`). Task 2 added 4 direct-invocation test cases (active=true/false/omitted,
+className merge) to the existing NavItem suite, one named for REQ-34.11-11. `pnpm jest
+src/frontend/components/UI/NavShell --silent`: 13/13 suites, 158/158 tests green; `npx tsc --noEmit`
+clean; no `.scss` touched. REQ-34.11-11 marked complete. Next plan: 34.11-03.
+
+--- prior session, preserved as history ---
+
+Stopped at: Completed 34.10-19-PLAN.md -- gap cycle 2 plan 19 (F-34.10-04 NavTabs minHeight fix per
 34.10-18 handoff, REQ-34.10-06). Task 1 implemented `34.10-F04-DIAGNOSIS.md`'s single surviving
 cause exactly: MUI's `Tab.js` applies an unconditional `minHeight: 72` when a `<Tab>` gets both
 `icon` and `label` (every `<Tab>` in `NavTabs/index.tsx` does), unmitigated by any override in
