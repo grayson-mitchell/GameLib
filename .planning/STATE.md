@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.11-02-PLAN.md
-last_updated: "2026-08-09T08:57:50.516Z"
+stopped_at: Completed 34.11-03-PLAN.md -- CR-01/CR-02/tier2-divider fixes plus a committed jest source gate
+last_updated: "2026-08-09T09:16:42.115Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 23
   completed_phases: 15
   total_plans: 277
-  completed_plans: 250
-  percent: 90
+  completed_plans: 251
+  percent: 91
 ---
 
 # Project State
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.11 (library-filtering-search-views-collections-and-cross-store-f) — EXECUTING
-Plan: 3 of 9
+Plan: 4 of 9
 
 Prior phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — **COMPLETE
 2026-08-09**, 27 of 27 plans executed, verification passed 9/9.
@@ -2689,7 +2689,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 90%
+trusted blindly. The recurring `**Progress:**[█████████░] 91%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 
@@ -3817,6 +3817,7 @@ Closed/parked native-install phases:
 | Phase 34.10 P26 | ~140min | 2 tasks | 2 files |
 | Phase 34.11 P01 | 20min | 3 tasks | 3 files |
 | Phase 34.11 P02 | 15min | 2 tasks | 2 files |
+| Phase 34.11 P03 | 35min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -4342,6 +4343,8 @@ Recent decisions affecting current work:
 - [Phase 34.11]: Runnability tier derivation ported byte-for-byte from CrossoverBadge, including the undefined-vs-null distinction (D-16)
 - [Phase 34.11]: D-02 migration helpers discard legacy localStorage shapes rather than translating them into an opt-in equivalent
 - [Phase 34.11-02]: Named the new NavItem button-branch prop 'active', not 'isActive', to avoid it reading as router-derived state
+- [Phase 34.11]: CR-02 (navbar drag region) recorded as source-verified-only, never live-confirmed -- -webkit-app-region is inert under WKWebView and this project's live-gate host is macOS/Tauri — No live sweep on this dev machine can ever exercise this CSS; the plan itself specifies this acceptance, and plan 09 Task 3's three-theme sweep must adjudicate CR-01 and the --divider fix instead
+- [Phase 34.11]: Used a curated 11-selector theme-block list for the census assertion instead of a generic regex — themes.scss:628-632 is a real cross-theme override block whose selector shape is identical to a genuine theme-definition block, which would inflate a naive regex count
 
 ### Pending Todos
 
@@ -4469,8 +4472,8 @@ Recent decisions affecting current work:
 > demoted into the "prior session, preserved as history" chain, and plan 34.11-02's own `Stopped
 > at:` now carries a full description with nothing trailing it.
 
-Last session: 2026-08-09T08:57:50.498Z
-Stopped at: Completed 34.11-02-PLAN.md -- extended NavItem's `elementType="button"` branch to merge
+Last session: 2026-08-09T09:16:42.101Z
+Stopped at: Completed 34.11-03-PLAN.md -- CR-01/CR-02/tier2-divider fixes plus a committed jest source gate
 a caller `className` and render an `active` class via `classNames`, unblocking selectable
 Views/Collections rows in the tier-2 filter panel (REQ-34.11-11). Task 1 added an `active?: boolean`
 prop (deliberately named apart from react-router's `isActive`) and routed the button branch through
