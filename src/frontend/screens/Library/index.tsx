@@ -96,7 +96,6 @@ export default React.memo(function Library(): JSX.Element {
     favouriteGames,
     libraryTopSection,
     platform,
-    currentCustomCategories,
     customCategories,
     hiddenGames,
     gameUpdates
@@ -479,57 +478,6 @@ export default React.memo(function Library(): JSX.Element {
     [libraryStatus]
   )
 
-  const filterByPlatform = (library: GameInfo[]) => {
-    if (!library) {
-      return []
-    }
-
-    // check which platforms are turned on if valid for current platform
-    let displayedPlatforms: string[] = []
-    if (platformsFilters['win']) {
-      displayedPlatforms.push('win')
-    }
-    if (platformsFilters['mac'] && platform === 'darwin') {
-      displayedPlatforms.push('mac')
-    }
-    if (platformsFilters['linux'] && platform === 'linux') {
-      displayedPlatforms.push('linux')
-    }
-    if (platformsFilters['browser']) {
-      displayedPlatforms.push('browser')
-    }
-
-    // if all are turned off, display all instead
-    if (!displayedPlatforms.length) {
-      displayedPlatforms = Object.keys(platformsFilters)
-    }
-
-    // add platform variants to check with game info
-    if (displayedPlatforms.includes('win')) {
-      displayedPlatforms.push('windows')
-    }
-    if (displayedPlatforms.includes('mac')) {
-      displayedPlatforms.push('osx', 'Mac')
-    }
-
-    return library.filter((game) => {
-      let gamePlatforms: string[] = []
-
-      if (game?.is_installed) {
-        gamePlatforms = [game?.install?.platform?.toLowerCase() || 'windows']
-      } else {
-        if (game.is_linux_native && platform === 'linux') {
-          gamePlatforms.push('linux')
-        }
-        if (game.is_mac_native && platform === 'darwin') {
-          gamePlatforms.push('mac')
-        }
-        gamePlatforms.push('windows')
-      }
-      return gamePlatforms.some((plat) => displayedPlatforms.includes(plat))
-    })
-  }
-
   // top section
   const showRecentGames = libraryTopSection.startsWith('recently_played')
 
@@ -596,6 +544,70 @@ export default React.memo(function Library(): JSX.Element {
     return favourites.map((game) => `${game.app_name}_${game.runner}`)
   }, [favourites])
 
+  // --- 34.11 Plan 04/05: the filter engine's assembled state/deps,
+  // computed ONCE here (ahead of gamesForAlphabetFilter, which now consumes
+  // them directly) and reused by the grid, the exclude-your-own-facet
+  // counts, and the active-descriptor list -- so all three provably read
+  // the same inputs and can never drift apart. `searchMatchedKeys` is
+  // overridden per-consumer: the grid spreads in the real fuzzy-matched set
+  // computed inside its own memo below; countFor/describeActiveFilters use
+  // this object's `null` unmodified (search is not one of the facets they
+  // skip or describe against the grid's own match set). ---
+
+  const engineDeps: FilterEngineDeps = useMemo(
+    () => ({
+      hiddenAppNames: hiddenGames.list.map((hidden) => hidden.appName),
+      nonAvailableAppNames: JSON.parse(
+        storage.getItem('nonAvailableGames') || '[]'
+      ),
+      favouriteKeys: new Set(favouritesIds),
+      recentAppNames,
+      customCategories: customCategories.list,
+      gameUpdates,
+      crossoverRatings,
+      hostPlatform: platform
+    }),
+    [
+      hiddenGames,
+      favouritesIds,
+      recentAppNames,
+      customCategories,
+      gameUpdates,
+      crossoverRatings,
+      platform
+    ]
+  )
+
+  const engineState: FilterEngineState = useMemo(
+    () => ({
+      view: libraryView,
+      collection: currentCollection,
+      stores: storeFacet,
+      runnability: runnabilityFacet,
+      // Base value is "no constraint" -- gamesForAlphabetFilter spreads in
+      // the real fuzzy-matched key set (or null) computed from its own Fuse
+      // pass below; countFor/describeActiveFilters read this field
+      // unmodified, since search is not itself a store/runnability facet.
+      searchMatchedKeys: null,
+      showHidden,
+      showNonAvailable,
+      showSupportOfflineOnly,
+      showThirdPartyManagedOnly,
+      showUpdatesOnly
+    }),
+    [
+      libraryView,
+      currentCollection,
+      storeFacet,
+      runnabilityFacet,
+      showHidden,
+      showNonAvailable,
+      showSupportOfflineOnly,
+      showThirdPartyManagedOnly,
+      showUpdatesOnly
+    ]
+  )
+
   // 34.11 Plan 05: unions every CONNECTED account's library only -- no
   // filter logic lives here. The store FACET is applied downstream in
   // filterLibrary (filterEngine.passesStore) so countFor's skip rule can see
@@ -627,81 +639,38 @@ export default React.memo(function Library(): JSX.Element {
     ]
   }
 
+  // 34.11 Plan 05: the grid's ONLY pipeline. Store union -> search-key
+  // precompute -> filterLibrary, reusing the SAME memoized engineState/
+  // engineDeps objects countForStore/countForRunnability/
+  // activeFilterDescriptors read below -- one implementation, so a facet
+  // count can never disagree with what the grid shows (RESEARCH
+  // Anti-Patterns). filterByPlatform (literal platform facet, D-09) and the
+  // macOS crossoverRatingFilters branch (D-10, absorbed into the
+  // runnability facet as evidence) are retired: neither runs here anymore.
+  // showFavouritesLibrary/showInstalledOnly/the legacy currentCustomCategories
+  // collection filter/the offline-support/third-party/updates-only toggles/
+  // the hidden+non-available tri-state block all now live in filterEngine's
+  // per-stage predicates, driven by the opt-in facet state plan 04 declared.
   const gamesForAlphabetFilter = useMemo(() => {
-    let library: Array<GameInfo> = makeLibrary()
+    const library: Array<GameInfo> = makeLibrary()
 
-    if (showFavouritesLibrary) {
-      library = library.filter((game) =>
-        favouritesIds.includes(`${game.app_name}_${game.runner}`)
-      )
-    } else {
-      library = library.filter((game) => !game.install.is_dlc)
-
-      if (currentCustomCategories && currentCustomCategories.length > 0) {
-        const gamesInSelectedCategories = new Set<string>()
-
-        // loop through selected categories and add all games in all those categories
-        currentCustomCategories.forEach((category) => {
-          if (category === 'preset_uncategorized') {
-            // in the case of the special "uncategorized" category, we read all
-            // the categorized games and add the others to the list to show
-            const categorizedGames = Array.from(
-              new Set(Object.values(customCategories.list).flat())
-            )
-
-            library.forEach((game) => {
-              if (
-                !categorizedGames.includes(`${game.app_name}_${game.runner}`)
-              ) {
-                gamesInSelectedCategories.add(`${game.app_name}_${game.runner}`)
-              }
-            })
-          } else {
-            const gamesInCustomCategory = customCategories.list[category]
-
-            if (gamesInCustomCategory) {
-              gamesInCustomCategory.forEach((game) => {
-                gamesInSelectedCategories.add(game)
-              })
-            }
-          }
-        })
-
-        library = library.filter((game) =>
-          gamesInSelectedCategories.has(`${game.app_name}_${game.runner}`)
-        )
-      }
-
-      if (showSupportOfflineOnly) {
-        library = library.filter((game) => game.canRunOffline)
-      }
-
-      if (showThirdPartyManagedOnly) {
-        library = library.filter((game) => !!game.thirdPartyManagedApp)
-      }
-
-      if (showUpdatesOnly) {
-        library = library.filter((game) => gameUpdates.includes(game.app_name))
-      }
-
-      if (showInstalledOnly) {
-        library = library.filter((game) => game.is_installed)
-      }
-    }
-
-    // filter
+    // Search-key precompute, built over the FULL (unconstrained) library so
+    // search stays order-independent -- what lets filterLibrary's `skip`
+    // rule compute correct sibling counts. The match SET this produces is
+    // identical to (or a superset of) what a platform-filtered subset would
+    // have produced; no match is lost. Fuse's options are byte-identical to
+    // the shipped configuration (D-33 amendment, REQ-34.11-15) -- removing
+    // Fuse is out of scope this phase.
+    let searchMatchedKeys: Set<string> | null = null
     try {
-      const filteredLibrary = filterByPlatform(library)
-      const searchableLibrary: SearchableGame[] = filteredLibrary.map(
-        (game) => {
-          const title = game.overrides?.title || game.title
-          return {
-            original: game,
-            title,
-            normalizedTitle: normalizeTitle(title)
-          }
+      const searchableLibrary: SearchableGame[] = library.map((game) => {
+        const title = game.overrides?.title || game.title
+        return {
+          original: game,
+          title,
+          normalizedTitle: normalizeTitle(title)
         }
-      )
+      })
 
       const options = {
         minMatchCharLength: 1,
@@ -712,100 +681,37 @@ export default React.memo(function Library(): JSX.Element {
       const fuse = new Fuse(searchableLibrary, options)
 
       if (filterText) {
-        const fuzzySearch = fuse
-          .search(filterText)
-          .map((result) => result.item.original)
-        library = fuzzySearch
+        searchMatchedKeys = new Set(
+          fuse
+            .search(filterText)
+            .map((result) => filterEngine.gameKey(result.item.original))
+        )
       } else {
-        library = filteredLibrary
+        searchMatchedKeys = null
       }
     } catch (error) {
       console.log(error)
+      // Defensive fallback preserved from the shipped behaviour: a Fuse
+      // construction/search failure degrades to "no search constraint"
+      // rather than blanking the grid.
+      searchMatchedKeys = null
     }
 
-    // hide hidden
-    const hiddenGamesAppNames = hiddenGames.list.map(
-      (hidden: HiddenGame) => hidden?.appName
+    return filterEngine.filterLibrary(
+      library,
+      { ...engineState, searchMatchedKeys },
+      engineDeps
     )
-
-    // Helper: non-available means in nonAvailableGames localStorage OR is a delisted Steam game
-    const isNonAvailable = (game: GameInfo): boolean => {
-      const nonAvailableGames = storage.getItem('nonAvailableGames') || '[]'
-      const nonAvailableGamesArray: string[] = JSON.parse(nonAvailableGames)
-      return (
-        nonAvailableGamesArray.includes(game.app_name) ||
-        (game.runner === 'steam' && !!game.is_delisted)
-      )
-    }
-
-    const isHidden = (game: GameInfo): boolean =>
-      hiddenGamesAppNames.includes(game.app_name)
-
-    // Tri-state filter logic (D-08/D-09)
-    if (showHidden === 'only' && showNonAvailable === 'only') {
-      // D-09: both 'only' → union
-      library = library.filter((game) => isNonAvailable(game) || isHidden(game))
-    } else if (showHidden === 'only') {
-      library = library.filter(isHidden)
-    } else if (showNonAvailable === 'only') {
-      library = library.filter(isNonAvailable)
-    } else {
-      if (showNonAvailable === 'off') {
-        library = library.filter((game) => !isNonAvailable(game))
-      }
-      if (showHidden === 'off') {
-        library = library.filter((game) => !isHidden(game))
-      }
-    }
-
-    // D-17: macOS-only CrossOver-rating filter. A game absent from the
-    // crossoverRatings slice was never looked up (non-macOS, or D-02 gate
-    // closed) — that is "no signal", not "unrated", and must never be
-    // filtered out here.
-    if (platform === 'darwin') {
-      const crossoverRatingTier = (
-        rating: number | null
-      ): keyof CrossoverRatingFilters => {
-        if (rating === null) return 'unrated'
-        if (rating >= 5) return 'gold'
-        if (rating === 4) return 'silver'
-        if (rating === 3) return 'bronze'
-        return 'wontRun'
-      }
-
-      library = library.filter((game) => {
-        const rating = crossoverRatings[game.app_name]
-        if (rating === undefined) return true
-        return crossoverRatingFilters[crossoverRatingTier(rating)]
-      })
-    }
-
-    return library
   }, [
-    storesFilters,
-    platformsFilters,
-    crossoverRatingFilters,
-    crossoverRatings,
+    engineState,
+    engineDeps,
+    filterText,
     epic.library,
     gog.library,
     amazon.library,
     zoom.library,
     steam?.library,
-    sideloadedLibrary,
-    platform,
-    filterText,
-    showHidden,
-    hiddenGames,
-    showFavouritesLibrary,
-    favouritesIds,
-    currentCustomCategories,
-    customCategories,
-    showInstalledOnly,
-    showNonAvailable,
-    showSupportOfflineOnly,
-    showThirdPartyManagedOnly,
-    showUpdatesOnly,
-    gameUpdates
+    sideloadedLibrary
   ])
 
   // select library
@@ -869,68 +775,10 @@ export default React.memo(function Library(): JSX.Element {
     }
   }, [setTier2PortalFilled])
 
-  // --- 34.11 Plan 04: the filter engine's assembled state/deps, computed
-  // ONCE here and reused by both the exclude-your-own-facet counts and the
-  // active-descriptor list, so they provably read the same inputs. Neither
-  // drives the grid yet -- plan 05 rewires gamesForAlphabetFilter onto this
-  // engine. ---
-
-  const engineDeps: FilterEngineDeps = useMemo(
-    () => ({
-      hiddenAppNames: hiddenGames.list.map((hidden) => hidden.appName),
-      nonAvailableAppNames: JSON.parse(
-        storage.getItem('nonAvailableGames') || '[]'
-      ),
-      favouriteKeys: new Set(favouritesIds),
-      recentAppNames,
-      customCategories: customCategories.list,
-      gameUpdates,
-      crossoverRatings,
-      hostPlatform: platform
-    }),
-    [
-      hiddenGames,
-      favouritesIds,
-      recentAppNames,
-      customCategories,
-      gameUpdates,
-      crossoverRatings,
-      platform
-    ]
-  )
-
-  const engineState: FilterEngineState = useMemo(
-    () => ({
-      view: libraryView,
-      collection: currentCollection,
-      stores: storeFacet,
-      runnability: runnabilityFacet,
-      // Search stays fuzzy-match-only here (D-33 amendment): this plan does
-      // not yet wire the engine onto the fuzzy-search results, so `null` is
-      // "no additional constraint" -- the existing search block still owns
-      // matching for the grid until plan 05.
-      searchMatchedKeys: null,
-      showHidden,
-      showNonAvailable,
-      showSupportOfflineOnly,
-      showThirdPartyManagedOnly,
-      showUpdatesOnly
-    }),
-    [
-      libraryView,
-      currentCollection,
-      storeFacet,
-      runnabilityFacet,
-      showHidden,
-      showNonAvailable,
-      showSupportOfflineOnly,
-      showThirdPartyManagedOnly,
-      showUpdatesOnly
-    ]
-  )
-
   // D-28: exclude-your-own-facet counts, built on filterEngine's countFor --
-  // never a duplicated predicate chain.
+  // never a duplicated predicate chain. engineState/engineDeps are the SAME
+  // memoized objects the grid above consumes (declared earlier, ahead of
+  // makeLibrary) -- see the 34.11 Plan 04/05 comment at their declaration.
   const countForStore = useCallback(
     (value: StoreFacetValue) =>
       filterEngine.countFor(
