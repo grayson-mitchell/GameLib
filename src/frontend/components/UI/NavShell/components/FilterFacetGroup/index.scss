@@ -1,0 +1,124 @@
+// The only declaration site for facet group header, facet row, checkbox box
+// and count styling -- FilterStoreFacet, FilterRunnabilityFacet and
+// FilterMoreGroup all reuse these classes rather than declaring their own
+// row rules. Every selector is scoped under .NavShell__tier2Portal: an
+// unscoped selector in this codebase has already leaked app-wide once
+// (34.10's .MuiTabs-root incident) and .FilterFacetRow is generic enough to
+// collide with something else.
+//
+// Token-survival substitutions (CR-01 / --divider defect class -- an
+// undefined custom property with no fallback drops the ENTIRE declaration
+// at computed-value time, silently, in whichever theme lacks it):
+//   --navbar-inactive -> --navbar-accent
+//     --navbar-inactive has no value in gruvbox_dark or dracula (only
+//     midnightMirage and one other theme define it); --navbar-accent
+//     resolves in every theme block and is the same substitute NavItem's
+//     own fallback chain already falls back to
+//     (`var(--navbar-inactive, var(--navbar-accent))`,
+//     NavItem/index.scss:19).
+//   --text-hover -> --accent
+//     --text-hover has no value in gruvbox_dark or dracula either (only
+//     midnightMirage, classic/cyberSpaceOasis, high-contrast and
+//     nord-light define it); --accent resolves in every theme block.
+// No inline fallback was added and no new token was defined in a single
+// theme block, per this plan's token-survival instruction.
+.NavShell__tier2Portal {
+  .FilterFacetGroup {
+    margin-block-end: var(--space-sm);
+  }
+
+  .FilterFacetGroup .dropdownButton {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    font-size: var(--text-sm);
+    font-weight: var(--bold);
+    line-height: 1;
+    padding: var(--space-2xs) var(--tier2-row-padding-inline);
+  }
+
+  .FilterFacetGroup__caret {
+    transition: transform 0.12s ease;
+  }
+
+  .FilterFacetGroup .dropdownButton[aria-expanded='false']
+    .FilterFacetGroup__caret {
+    transform: rotate(-90deg);
+  }
+
+  .FilterFacetRow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    width: 100%;
+    min-width: 0;
+    padding: var(--space-2xs) var(--tier2-row-padding-inline);
+    border: 0;
+    background: none;
+    text-align: start;
+    cursor: pointer;
+    font-size: var(--text-md);
+    font-weight: var(--regular);
+    line-height: 1;
+    color: var(--navbar-accent);
+    transition:
+      background-color 0.12s ease,
+      color 0.12s ease;
+  }
+
+  .FilterFacetRow:hover {
+    background: var(--navbar-active-background);
+    color: var(--navbar-active);
+  }
+
+  .FilterFacetRow:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+
+  .FilterFacetRow--checked {
+    color: var(--navbar-active);
+    font-weight: var(--bold);
+    background: var(--navbar-active-background);
+  }
+
+  // Must stay hoverable, clickable and in tab order -- a zero count means
+  // "nothing else matches this combination right now", not "unavailable".
+  .FilterFacetRow--zero {
+    opacity: 0.38;
+  }
+
+  .FilterFacetRow__box {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--neutral-04);
+    border-radius: var(--space-3xs);
+    background: transparent;
+    transition:
+      background-color 0.12s ease,
+      border-color 0.12s ease;
+  }
+
+  .FilterFacetRow--checked .FilterFacetRow__box {
+    background: var(--navbar-active);
+    border-color: var(--navbar-active);
+  }
+
+  .FilterFacetRow__label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .FilterFacetRow__count {
+    flex: 0 0 auto;
+    font-size: var(--text-xs);
+    font-weight: var(--regular);
+    font-variant-numeric: tabular-nums;
+    color: var(--text-secondary);
+  }
+}
