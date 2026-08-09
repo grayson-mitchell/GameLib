@@ -16,6 +16,13 @@ import './index.scss'
  * tour is disabled by this phase, so its string-keyed tour-anchor
  * attribute is not carried over -- re-adding it would ship anchors for a
  * tour that does not run.
+ *
+ * The button branch gained `className` merging and an `active` class
+ * (34.11-02 Task 1) because Views and Collections in the Games tier-2
+ * filter panel are `LibraryContext` state rather than routes, so the
+ * button branch is their only option, and it previously could not render
+ * a selected state at all (REQ-34.11-11, 34.11-UI-SPEC
+ * § "Views/Collections row control").
  */
 interface NavItemProps {
   label: string
@@ -26,6 +33,7 @@ interface NavItemProps {
   onClick?: MouseEventHandler
   className?: string
   elementType?: 'a' | 'button'
+  active?: boolean
 }
 
 export default function NavItem({
@@ -36,7 +44,8 @@ export default function NavItem({
   isActiveFallback = false,
   onClick,
   className,
-  elementType
+  elementType,
+  active
 }: NavItemProps) {
   const itemContent = (
     <>
@@ -52,7 +61,10 @@ export default function NavItem({
   switch (elementType) {
     case 'button':
       return (
-        <button className="NavItem" onClick={onClick}>
+        <button
+          className={classNames('NavItem', className, { active })}
+          onClick={onClick}
+        >
           {itemContent}
         </button>
       )
