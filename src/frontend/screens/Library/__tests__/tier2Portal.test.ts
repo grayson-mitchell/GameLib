@@ -19,7 +19,7 @@
  * while doing nothing. The first `describe` block below is the regression
  * gate for exactly that failure mode.
  */
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
@@ -106,14 +106,68 @@ describe('Header vertical stack (Task 1, REQ-34.10-07)', () => {
     expect(headerCss).toMatch(/@keyframes refreshing/)
   })
 
-  it('still renders LibrarySearchBar, CategoryFilter and LibraryFilters, in that order, and imports them unchanged', () => {
+  it('still renders LibrarySearchBar first, imported unchanged (D-34)', () => {
+    const tsx = read(HEADER_TSX)
+    expect(tsx).toMatch(/import LibrarySearchBar from '..\/LibrarySearchBar'/)
+    expect(tsx).toMatch(/<LibrarySearchBar \/>/)
+  })
+
+  it('renders FilterViewList', () => {
+    const tsx = read(HEADER_TSX)
+    expect(tsx).toMatch(/<FilterViewList \/>/)
+  })
+
+  it('renders FilterCollectionList', () => {
+    const tsx = read(HEADER_TSX)
+    expect(tsx).toMatch(/<FilterCollectionList \/>/)
+  })
+
+  it('renders FilterStoreFacet', () => {
+    const tsx = read(HEADER_TSX)
+    expect(tsx).toMatch(/<FilterStoreFacet \/>/)
+  })
+
+  it('renders FilterRunnabilityFacet', () => {
+    const tsx = read(HEADER_TSX)
+    expect(tsx).toMatch(/<FilterRunnabilityFacet \/>/)
+  })
+
+  it('renders FilterMoreGroup', () => {
+    const tsx = read(HEADER_TSX)
+    expect(tsx).toMatch(/<FilterMoreGroup \/>/)
+  })
+
+  it('the six sections appear in UI-SPEC Panel Structure order', () => {
     const tsx = read(HEADER_TSX)
     expect(tsx).toMatch(
-      /LibrarySearchBar[\s\S]*CategoryFilter[\s\S]*LibraryFilters/
+      /LibrarySearchBar[\s\S]*FilterViewList[\s\S]*FilterCollectionList[\s\S]*FilterStoreFacet[\s\S]*FilterRunnabilityFacet[\s\S]*FilterMoreGroup/
     )
-    expect(tsx).toMatch(/import LibrarySearchBar from '..\/LibrarySearchBar'/)
-    expect(tsx).toMatch(/import CategoryFilter from '..\/CategoryFilter'/)
-    expect(tsx).toMatch(/import LibraryFilters from '..\/LibraryFilters'/)
+  })
+
+  it('no longer imports or renders CategoryFilter', () => {
+    const tsx = read(HEADER_TSX)
+    expect(tsx).not.toMatch(/CategoryFilter/)
+  })
+
+  it('no longer imports or renders LibraryFilters', () => {
+    const tsx = read(HEADER_TSX)
+    expect(tsx).not.toMatch(/LibraryFilters/)
+  })
+
+  it('CategoryFilter/index.tsx no longer exists on disk (D-21)', () => {
+    expect(
+      existsSync(
+        join(REPO_ROOT, 'src/frontend/components/UI/CategoryFilter/index.tsx')
+      )
+    ).toBe(false)
+  })
+
+  it('LibraryFilters/index.tsx no longer exists on disk (D-21)', () => {
+    expect(
+      existsSync(
+        join(REPO_ROOT, 'src/frontend/components/UI/LibraryFilters/index.tsx')
+      )
+    ).toBe(false)
   })
 })
 
