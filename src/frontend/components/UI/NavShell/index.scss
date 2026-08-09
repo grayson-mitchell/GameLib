@@ -38,6 +38,16 @@
   grid-area: navbar;
   height: var(--navbar-height);
   background: var(--navbar-background);
+  // D-32 / CR-02, 34.10-REVIEW.md. Restores the drag surface REQ-34.10-04
+  // migrated off `.Sidebar`. This property is INERT under WKWebView --
+  // macOS's webview does not implement `-webkit-app-region` at all -- so
+  // this fix serves the Electron/Chromium shell only. The ACTIVE drag path
+  // under Tauri is `tauriWindowChrome.ts`'s `closest('.NavShell__navbar')`
+  // selector fallback (REQ-34.10-04), which this task does not touch and
+  // must not be treated as superseded by this CSS. `.NavTabs` and
+  // `.NavShell__navRight`'s interactive children below carry `no-drag` so
+  // this region does not swallow their clicks (T-34.11-07).
+  -webkit-app-region: drag;
   display: flex;
   // Tabs sit on the baseline -- this is what makes the card-tab seam land
   // (see .claude/skills/sketch-findings-gamelib/references/navigation-shell.md
@@ -134,11 +144,32 @@
   justify-content: center;
 }
 
+// D-32 / CR-02. `.NavTabs` is owned by the NavTabs subcomponent
+// (`components/NavTabs/index.scss`), but this rule intentionally lives here
+// rather than there: `.NavShell__navbar`'s new `drag` region above is a
+// NavShell-level concern, so its exclusion belongs beside it, and
+// `NavShell/index.tsx` imports `./index.scss` after importing the `NavTabs`
+// component (whose own stylesheet loads as a side effect of that import),
+// so this declaration lands later in cascade order and is not shadowed by
+// anything in the subcomponent's own file. A `drag` region over the tab
+// strip would swallow every tab click (T-34.11-07).
+.NavTabs {
+  -webkit-app-region: no-drag;
+}
+
 .NavShell__navRight {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   margin-inline-start: auto;
+
+  // D-32 / CR-02. Scoped to the actual clickable descendant (DownloadsRing's
+  // own root, a <Link>) rather than the whole .NavShell__navRight container,
+  // matching how .NavTabs above is excluded at its own root -- the drag
+  // region above must not swallow this click target.
+  .DownloadsRing {
+    -webkit-app-region: no-drag;
+  }
 }
 
 .NavShell__tier2 {
@@ -146,7 +177,21 @@
   width: var(--tier2-width);
   flex: none;
   background: var(--navbar-background);
-  border-inline-end: 1px solid var(--divider);
+  // UI-SPEC "New Finding" / third instance of the no-fallback-custom-property
+  // defect class (see the `.NavShell__navbar` border-bottom comment above,
+  // which recorded this exact line as "KNOWN, OUT-OF-SCOPE" at the time).
+  // `--divider` is a no-fallback custom property declared in only 2 of
+  // `themes.scss`'s 11 theme blocks (`themes.scss:97`, `:145`) -- an
+  // undefined no-fallback custom property is invalid at computed-value time
+  // per the CSS Custom Properties spec, which drops the ENTIRE
+  // `border-inline-end` shorthand, not just the colour. The symptom in
+  // `gruvbox_dark` and `dracula` (both mandatory stress-test themes, and
+  // both among the 9 that never define `--divider`) was therefore a MISSING
+  // divider, not a wrong-coloured one. Substituted with `--body-background`,
+  // the same token 34.10's navbar-seam fix already proved present in all 11
+  // theme blocks. Do NOT reintroduce `var(--divider)` anywhere in this
+  // file -- a later divider need uses `var(--body-background)` instead.
+  border-inline-end: 1px solid var(--body-background);
   overflow: hidden;
   // Replaces `--sidebar-horizontal-padding` (`Sidebar/index.scss:2`) for
   // the ported tier-2 row rules in `components/NavItem/index.scss`.
