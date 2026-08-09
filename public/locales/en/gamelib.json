@@ -24,6 +24,15 @@
         "lessThanAMinute": "less than a minute"
     },
     "library": {
+        "filterPanel": {
+            "collections": "Collections",
+            "manageCollections": "Manage collections",
+            "newCollection": "+ New collection",
+            "viewAll": "All games",
+            "viewFavourites": "Favourites",
+            "viewInstalled": "Installed",
+            "viewRecentlyPlayed": "Recently played"
+        },
         "storeOther": "Other"
     },
     "login": {

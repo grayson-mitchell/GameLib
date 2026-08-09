@@ -16,51 +16,60 @@ import './index.scss'
  * this section and `FilterCollectionList` can never drift from the same
  * tier-2 row spec (`NavItem/index.scss`).
  *
+ * Every row's label is a literal `tGamelib('gamelib:...', '...')` call
+ * site, not a lookup against a key stored in data -- `i18next-parser`'s
+ * `JavascriptLexer` (the tool behind `pnpm i18n` / the `gamelib:` catalog)
+ * only resolves string-literal first arguments; a call built from a
+ * variable is invisible to it. Confirmed empirically for this exact file:
+ * a first draft stored `{value, key, defaultText}` in a lookup array and
+ * called `tGamelib(row.key, row.defaultText)` inside the row map --
+ * `pnpm i18n` then added zero of these four keys to
+ * `public/locales/en/gamelib.json`, while `FilterCollectionList`'s three
+ * literal call sites landed correctly in the same run.
+ *
  * Selecting the already-active row is intentionally idempotent: it calls
  * `setLibraryView` again with the same value rather than clearing back to
  * 'all'. Views therefore always have exactly one active row -- there is no
  * "off" state, unlike Collections (`FilterCollectionList`), where the
  * active row can be cleared by re-clicking it.
  */
-const VIEW_ROWS: Array<{
-  value: LibraryView
-  key: string
-  defaultText: string
-}> = [
-  {
-    value: 'all',
-    key: 'gamelib:library.filterPanel.viewAll',
-    defaultText: 'All games'
-  },
-  {
-    value: 'installed',
-    key: 'gamelib:library.filterPanel.viewInstalled',
-    defaultText: 'Installed'
-  },
-  {
-    value: 'recentlyPlayed',
-    key: 'gamelib:library.filterPanel.viewRecentlyPlayed',
-    defaultText: 'Recently played'
-  },
-  {
-    value: 'favourites',
-    key: 'gamelib:library.filterPanel.viewFavourites',
-    defaultText: 'Favourites'
-  }
-]
-
 export default function FilterViewList() {
   const { libraryView, setLibraryView } = useContext(LibraryContext)
   const { t: tGamelib } = useTranslation('gamelib')
 
+  const rows: Array<{ value: LibraryView; label: string }> = [
+    {
+      value: 'all',
+      label: tGamelib('gamelib:library.filterPanel.viewAll', 'All games')
+    },
+    {
+      value: 'installed',
+      label: tGamelib('gamelib:library.filterPanel.viewInstalled', 'Installed')
+    },
+    {
+      value: 'recentlyPlayed',
+      label: tGamelib(
+        'gamelib:library.filterPanel.viewRecentlyPlayed',
+        'Recently played'
+      )
+    },
+    {
+      value: 'favourites',
+      label: tGamelib(
+        'gamelib:library.filterPanel.viewFavourites',
+        'Favourites'
+      )
+    }
+  ]
+
   return (
     <nav className="FilterViewList">
-      {VIEW_ROWS.map((row) => (
+      {rows.map((row) => (
         <NavItem
           key={row.value}
           elementType="button"
           className="FilterViewList__row"
-          label={tGamelib(row.key, row.defaultText)}
+          label={row.label}
           active={libraryView === row.value}
           onClick={() => setLibraryView(row.value)}
         />

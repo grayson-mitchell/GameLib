@@ -14,6 +14,7 @@
 import type { ReactElement, ReactNode } from 'react'
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 import type { LibraryView } from 'frontend/types'
 
@@ -166,16 +167,56 @@ describe('FilterViewList', () => {
     expect(setLibraryView).not.toHaveBeenCalledWith('all')
   })
 
-  it('every row label is routed through t(key, default) -- no bare string literal reaches the label prop', () => {
+  it('every row label is routed through tGamelib(key, default) -- no bare string literal reaches the label prop', () => {
     // The mocked t() simply echoes the defaultValue, so this assertion
-    // instead reads the source for the label-construction call site --
-    // proving the mocked-echo labels above came from a t()/tGamelib() call,
-    // not a bare literal that happens to read the same.
-    const source = readFileSync(
-      join(__dirname, '..', 'components', 'FilterViewList', 'index.tsx'),
-      'utf8'
+    // instead reads the source for the label-construction call sites --
+    // proving the mocked-echo labels above came from a tGamelib() call,
+    // not a bare literal that happens to read the same. Each of the four
+    // rows uses a literal `tGamelib('gamelib:...', '...')` call (rather
+    // than a shared call site fed by a data lookup) so `pnpm i18n`'s
+    // string-literal-only extraction can actually see all four keys --
+    // see the component's own docstring for the empirical count that
+    // proved the lookup-array version invisible to the extractor.
+    const source = stripSourceComments(
+      readFileSync(
+        join(__dirname, '..', 'components', 'FilterViewList', 'index.tsx'),
+        'utf8'
+      )
     )
-    expect(source).toMatch(/label=\{tGamelib\(/)
+    expect(source.match(/tGamelib\(\s*'gamelib:/g)).toHaveLength(4)
     expect(source).not.toMatch(/label="[^{]/)
+  })
+})
+
+describe('FilterViewList -- D-34 (search is inherited from Header, not rebuilt here)', () => {
+  // D-34 is decided nowhere else in the phase. Search is ALREADY at the top
+  // of the Games tier-2 panel because `Header` is portalled into the tier-2
+  // slot at `Library/index.tsx:819` -- this plan neither moves it nor
+  // reimplements it here, and plan 09's rewrite of `Header` must not drop
+  // it while replacing everything around it (CategoryFilter, LibraryFilters).
+  const headerSource = readFileSync(
+    join(__dirname, '..', '..', 'Header', 'index.tsx'),
+    'utf8'
+  )
+
+  it("Header still imports LibrarySearchBar from '../LibrarySearchBar'", () => {
+    expect(headerSource).toMatch(
+      /import LibrarySearchBar from '\.\.\/LibrarySearchBar'/
+    )
+  })
+
+  it('Header still renders <LibrarySearchBar />', () => {
+    expect(headerSource).toMatch(/<LibrarySearchBar \/>/)
+  })
+
+  it('the gate above is non-vacuous -- proven to fail against a known-bad literal', () => {
+    const corrupted = headerSource.replace(
+      '<LibrarySearchBar />',
+      '<NotTheSearchBar />'
+    )
+    expect(corrupted).not.toMatch(/<LibrarySearchBar \/>/)
+    // headerSource itself was never mutated -- the real gate above still
+    // runs against the genuine file on every test run.
+    expect(headerSource).toMatch(/<LibrarySearchBar \/>/)
   })
 })
