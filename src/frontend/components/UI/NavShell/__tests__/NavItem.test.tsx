@@ -159,4 +159,50 @@ describe('NavItem', () => {
     )
     expect(found).toBeUndefined()
   })
+
+  it('button branch renders the selected state (REQ-34.11-11)', () => {
+    const element = NavItem({
+      label: 'Recently Played',
+      elementType: 'button',
+      active: true
+    }) as AnyElement
+
+    expect(element.props.className).toEqual(expect.stringContaining('active'))
+  })
+
+  it('button branch omits the active class when active is false', () => {
+    const element = NavItem({
+      label: 'Recently Played',
+      elementType: 'button',
+      active: false
+    }) as AnyElement
+
+    expect(element.props.className).not.toEqual(
+      expect.stringContaining('active')
+    )
+  })
+
+  it('button branch omits the active class when active is not supplied', () => {
+    const element = NavItem({
+      label: 'Recently Played',
+      elementType: 'button'
+    }) as AnyElement
+
+    expect(element.props.className).not.toEqual(
+      expect.stringContaining('active')
+    )
+  })
+
+  it("button branch merges the caller's className with 'NavItem'", () => {
+    const element = NavItem({
+      label: 'Recently Played',
+      elementType: 'button',
+      className: 'FilterRow'
+    }) as AnyElement
+
+    expect(element.props.className).toEqual(expect.stringContaining('NavItem'))
+    expect(element.props.className).toEqual(
+      expect.stringContaining('FilterRow')
+    )
+  })
 })
