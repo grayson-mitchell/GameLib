@@ -662,3 +662,186 @@ describe('FilterChipRow -- D-08 source gate (sort/layout/alphabet are not filter
     expect(knownBad).toMatch(/sortDescending/)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Task 3: FilterZeroResult -- reuses the exact same 'react' / 'react-i18next'
+// mocks registered above for FilterChipRow (both components read the same
+// LibraryContext shape), so no second `jest.mock('react', ...)` registration
+// is needed here -- re-pointing the shared `chipRowContextValue` per case is
+// enough, matching the FilterMoreGroup.test.tsx precedent of one context
+// mock reused by every test in the file.
+// ---------------------------------------------------------------------------
+
+jest.mock('../../FilterZeroResult/index.scss', () => ({}))
+
+// Imported after the mocks above -- ts-jest does not hoist jest.mock.
+import FilterZeroResultImport from '../../FilterZeroResult'
+
+describe('FilterZeroResult', () => {
+  it('body is exactly D-30\'s own example sentence for view:installed + store:gog + search:witcher', () => {
+    const descriptors: ActiveFilterDescriptor[] = [
+      { id: 'view:installed', kind: 'view', value: 'installed' },
+      { id: 'store:gog', kind: 'store', value: 'gog' },
+      { id: 'search', kind: 'search', value: 'witcher' }
+    ]
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterDescriptors: descriptors,
+      activeFilterCount: descriptors.length
+    })
+
+    const tree = FilterZeroResultImport() as unknown as { props: AnyProps }
+    const body = collectElements(tree).find(
+      (el) => el.props.className === 'FilterZeroResult__body'
+    )
+
+    expect(body?.props.children).toBe(
+      'No games match Installed + GOG + "witcher".'
+    )
+  })
+
+  it('a runnability:bottle descriptor is named "Runs via bottle" in the sentence', () => {
+    const descriptors: ActiveFilterDescriptor[] = [
+      { id: 'runnability:bottle', kind: 'runnability', value: 'bottle' }
+    ]
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterDescriptors: descriptors,
+      activeFilterCount: descriptors.length
+    })
+
+    const tree = FilterZeroResultImport() as unknown as { props: AnyProps }
+    const body = collectElements(tree).find(
+      (el) => el.props.className === 'FilterZeroResult__body'
+    )
+
+    expect(body?.props.children).toContain('Runs via bottle')
+  })
+
+  it('the body is never generic -- it always contains at least one active filter label', () => {
+    const descriptors: ActiveFilterDescriptor[] = [
+      { id: 'showUpdatesOnly', kind: 'showUpdatesOnly', value: 'true' }
+    ]
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterDescriptors: descriptors,
+      activeFilterCount: descriptors.length
+    })
+
+    const tree = FilterZeroResultImport() as unknown as { props: AnyProps }
+    const body = collectElements(tree).find(
+      (el) => el.props.className === 'FilterZeroResult__body'
+    )
+
+    expect(body?.props.children).toContain('Show games with updates only')
+  })
+
+  it('activeFilterCount === 0 (real context) -> returns null', () => {
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterCount: 0,
+      activeFilterDescriptors: []
+    })
+
+    expect(FilterZeroResultImport()).toBeNull()
+  })
+
+  it('rendered outside the provider (__isDefaultLibraryContext) -> console.error fires once naming FilterZeroResult, returns null', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => undefined)
+    chipRowContextValue = makeChipRowContextValue({
+      __isDefaultLibraryContext: true
+    })
+
+    const result = FilterZeroResultImport()
+
+    expect(result).toBeNull()
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(spy.mock.calls[0]?.[0] as string).toEqual(
+      expect.stringContaining('FilterZeroResult')
+    )
+    spy.mockRestore()
+  })
+
+  it('mounted inside the provider with zero descriptors -> null, console.error NOT called', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => undefined)
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterCount: 0,
+      activeFilterDescriptors: []
+    })
+
+    const result = FilterZeroResultImport()
+
+    expect(result).toBeNull()
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
+
+  it('the inline action calls clearAllFilters exactly once and calls no individual setter (D-25)', () => {
+    const descriptors: ActiveFilterDescriptor[] = [
+      { id: 'view:installed', kind: 'view', value: 'installed' }
+    ]
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterDescriptors: descriptors,
+      activeFilterCount: descriptors.length
+    })
+
+    const tree = FilterZeroResultImport() as unknown as { props: AnyProps }
+    const action = collectElements(tree).find(
+      (el) => el.props.className === 'FilterZeroResult__action'
+    )
+    ;(action?.props.onClick as () => void)()
+
+    expect(chipRowContextValue.clearAllFilters).toHaveBeenCalledTimes(1)
+    expect(chipRowContextValue.setLibraryView).not.toHaveBeenCalled()
+  })
+
+  it('a hostile collection name containing i18next nesting syntax ($t(...)) renders literally, including the $t( run', () => {
+    const hostileName = 'Backlog $t(header.uncategorized)'
+    const descriptors: ActiveFilterDescriptor[] = [
+      { id: `collection:${hostileName}`, kind: 'collection', value: hostileName }
+    ]
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterDescriptors: descriptors,
+      activeFilterCount: descriptors.length
+    })
+
+    const tree = FilterZeroResultImport() as unknown as { props: AnyProps }
+    const body = collectElements(tree).find(
+      (el) => el.props.className === 'FilterZeroResult__body'
+    )
+
+    expect(body?.props.children).toBe(`No games match ${hostileName}.`)
+  })
+
+  it('a hostile collection name containing a literal {{filters}} token renders literally, not re-interpolated', () => {
+    const hostileName = 'Backlog {{filters}}'
+    const descriptors: ActiveFilterDescriptor[] = [
+      { id: `collection:${hostileName}`, kind: 'collection', value: hostileName }
+    ]
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterDescriptors: descriptors,
+      activeFilterCount: descriptors.length
+    })
+
+    const tree = FilterZeroResultImport() as unknown as { props: AnyProps }
+    const body = collectElements(tree).find(
+      (el) => el.props.className === 'FilterZeroResult__body'
+    )
+
+    expect(body?.props.children).toBe(`No games match ${hostileName}.`)
+  })
+})
+
+describe('FilterZeroResult -- no unsafe render path source gate', () => {
+  const source = readFileSync(
+    join(__dirname, '..', '..', 'FilterZeroResult', 'index.tsx'),
+    'utf8'
+  )
+
+  it('contains neither dangerouslySetInnerHTML nor <Trans', () => {
+    expect(source).not.toMatch(/dangerouslySetInnerHTML/)
+    expect(source).not.toMatch(/<Trans/)
+  })
+
+  it('gate is non-vacuous -- proven to fail against a known-bad literal', () => {
+    const knownBad = `${source}\n// dangerouslySetInnerHTML`
+
+    expect(knownBad).toMatch(/dangerouslySetInnerHTML/)
+  })
+})

@@ -96,6 +96,8 @@
     "src/frontend/screens/Humble/Keys/stateLabels.ts",
     "src/frontend/screens/Library/LibraryContext.tsx",
     "src/frontend/screens/Library/components/EmptyLibrary/index.tsx",
+    "src/frontend/screens/Library/components/FilterChipRow/index.tsx",
+    "src/frontend/screens/Library/components/FilterZeroResult/index.tsx",
     "src/frontend/screens/Library/components/GameCard/CrossoverBadge.tsx",
     "src/frontend/screens/Library/components/GameCard/constants.ts",
     "src/frontend/screens/Library/components/GameCard/index.tsx",

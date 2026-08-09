@@ -53,6 +53,7 @@ import CategoriesManager from './components/CategoriesManager'
 import LibraryTour from './components/LibraryTour'
 import AlphabetFilter from './components/AlphabetFilter'
 import FilterChipRow from './components/FilterChipRow'
+import FilterZeroResult from './components/FilterZeroResult'
 import { openInstallGameModal } from 'frontend/state/InstallGameModal'
 import { Tier2PortalContext } from 'frontend/components/UI/NavShell/Tier2PortalContext'
 import { configStore } from 'frontend/helpers/electronStores'
@@ -949,7 +950,12 @@ export default React.memo(function Library(): JSX.Element {
             />
           )}
 
-        {libraryToShow.length === 0 && <EmptyLibraryMessage />}
+        {libraryToShow.length === 0 &&
+          (activeFilterCount > 0 ? (
+            <FilterZeroResult />
+          ) : (
+            <EmptyLibraryMessage />
+          ))}
 
         {libraryToShow.length > 0 &&
           (!refreshing || refreshingInTheBackground) && (

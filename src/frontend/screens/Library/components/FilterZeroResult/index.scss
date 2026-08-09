@@ -1,0 +1,55 @@
+// The zero-result empty state (34.11-08 Task 3). Every selector nests
+// under its own component root -- an unscoped selector has already leaked
+// app-wide once in this project (34.10's `.MuiTabs-root` incident).
+//
+// Token-survival substitution (CR-01 / --divider defect class, same
+// reasoning and same substitute as FilterChipRow/index.scss's own
+// focus-visible ring): --text-hover -> --accent. --text-hover has no
+// value in gruvbox_dark or dracula.
+.FilterZeroResult {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  padding: var(--space-lg) var(--space-sm);
+
+  .FilterZeroResult__heading {
+    font-size: var(--text-md);
+    font-weight: var(--bold);
+    line-height: 1.2;
+    margin: 0;
+  }
+
+  .FilterZeroResult__body {
+    // 1.4, not 1 -- this sentence wraps once several filters are active
+    // (UI-SPEC Typography). The interpolated filter names are NOT
+    // separately weighted or coloured -- the sentence stays one uniform
+    // run, which is why no <strong>/accent span exists in the component.
+    font-size: var(--text-sm);
+    font-weight: var(--regular);
+    line-height: 1.4;
+    margin: 0;
+    color: var(--text-secondary);
+  }
+
+  .FilterZeroResult__action {
+    align-self: flex-start;
+    font-size: var(--text-sm);
+    font-weight: var(--regular);
+    line-height: 1.4;
+    color: var(--navbar-active);
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .FilterZeroResult__action:hover {
+    // Distinguished by colour + underline, not by size or weight.
+    text-decoration: underline;
+  }
+
+  .FilterZeroResult__action:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+}
