@@ -2480,6 +2480,45 @@ Gap cycle 3 plans, closing the run-3 gaps recorded in `34.10-VERIFICATION.md`:
 - [x] 34.10-26-PLAN.md — author §10.5 item bodies + prove every automated check against a filled specimen (wave 3)
 - [x] 34.10-27-PLAN.md — RUN the run-4 gate; reconcile REQUIREMENTS/ROADMAP/STATE (wave 4, blocking checkpoint) — **VERDICT PASS 5/5**
 
+**Carried forward from the phase-34.10 code review (`34.10-REVIEW.md`, 2026-08-09) — two
+CONFIRMED Critical findings, deliberately NOT fixed in this phase.** Both were independently
+verified rather than taken on the reviewer's word, and both are coverage gaps the live-gate
+contract never covered — not measurements it got wrong, so neither contradicts run 4's 5/5. They
+are deferred on the operator's explicit decision, because patching CSS after the gate would mean
+HEAD no longer matches the bundle that passed, and *a shipped fix is not evidence* is the lesson
+this phase paid for four times over.
+
+- **CR-01 — `NavTabs/index.scss:229` uses an undefined theme token with no fallback.**
+  `.Mui-selected { color: var(--navbar-active) }`. `--navbar-active` is declared in only 3 places
+  in `themes.scss` while `--navbar-active-background` exists in all 11 theme blocks; **`gruvbox_dark`,
+  one of the three SCORED gate themes, has the background variant and not this one**, so the active
+  tab's label falls through to an inherited colour. `NavItem/index.scss:22` already uses the correct
+  fallback chain (`var(--navbar-active, var(--accent-overlay, var(--accent)))`), and the comment
+  block directly below the offending line documents this exact defect class for `--divider` — it was
+  fixed there for `border-color` and missed on `color`. **Not observed as visibly broken during run
+  4's gruvbox_dark sweep**, which judged the seam and the idle ring rather than label legibility;
+  stated in both directions rather than inflated. Whichever phase fixes it must re-measure the
+  active-tab label in `gruvbox_dark`, not fix-and-assume.
+- **CR-02 — the window drag region was never ported from the retired sidebar.**
+  `.Sidebar/index.scss` carried `-webkit-app-region: drag` (confirmed at `0559bc0d0~1:21`).
+  `.NavShell__navbar` has no equivalent. The `no-drag` CHILDREN *were* ported
+  (`HeroicVersion/index.scss:35`, `WindowControls/index.scss:6`), so those exclusions now exclude
+  from a drag region that does not exist — a partial port, not a design choice. Under **Electron**
+  frameless (`main_window.ts:48-49`, driven by the same `settings.framelessWindow` the gate toggled
+  under Tauri) navbar dragging is therefore broken; `tauriWindowChrome.ts`'s JS drag handler is
+  Tauri-only and does not cover that path. The gate could not have caught this by construction:
+  item 2 was Tauri-only and item 5's Electron check never exercised dragging. **Likely moot rather
+  than urgent** — Phase 35 deletes Electron entirely — but recorded so that decision is made
+  knowingly rather than by omission.
+
+Also carried forward, lower severity: **WR-01** — `muiTabsSelectorScoping.test.ts`'s guard (the
+load-bearing one that prevents F-34.10-03/-04 recurring) is bypassable by wrapping an unscoped
+`.MuiTabs-root` in `@media`/`@supports`, verified empirically; dormant today but the guard's stated
+promise does not fully hold. **WR-02** — `LibraryFilters/index.tsx`'s `t(RunnerToStore[store])`
+produces untranslatable labels for `steam`/`zoom` (never registered in `translation.json`, unlike
+the Epic/GOG/Amazon siblings); pre-existing, predates this phase. **IN-01** — dead `data-tour`
+props in `CategoryFilter`/`LibraryFilters` that `Dropdown` never reads.
+
 **Deferred from this phase — pill-tab restyle election.** During run 3 the operator said, verbatim
 (`34.10-LIVE-GATE.md` §9.6): *"i going to drop the tab and let make a pill, that what it looks
 like anyway! just needs rounded bottom corners."* This is a recorded DECISION, not an oversight and
