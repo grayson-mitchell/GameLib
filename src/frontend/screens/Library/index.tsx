@@ -52,6 +52,7 @@ import EmptyLibraryMessage from './components/EmptyLibrary'
 import CategoriesManager from './components/CategoriesManager'
 import LibraryTour from './components/LibraryTour'
 import AlphabetFilter from './components/AlphabetFilter'
+import FilterChipRow from './components/FilterChipRow'
 import { openInstallGameModal } from 'frontend/state/InstallGameModal'
 import { Tier2PortalContext } from 'frontend/components/UI/NavShell/Tier2PortalContext'
 import { configStore } from 'frontend/helpers/electronStores'
@@ -935,6 +936,8 @@ export default React.memo(function Library(): JSX.Element {
         <LibraryHeader list={libraryToShow} />
 
         {showAlphabetFilter && <AlphabetFilter />}
+
+        <FilterChipRow />
 
         {refreshing && !refreshingInTheBackground && <UpdateComponent />}
 

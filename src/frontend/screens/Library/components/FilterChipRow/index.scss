@@ -1,0 +1,80 @@
+// The chip row above GamesList (34.11-08 Task 2). Lives in the grid/content
+// area, NOT the 204px tier-2 panel, so none of `.NavShell__tier2Portal`'s
+// width/scoping rules apply here -- but every selector still nests under
+// its own component root: an unscoped selector has already leaked app-wide
+// once in this project (34.10's `.MuiTabs-root` incident).
+//
+// Token-survival substitution (CR-01 / --divider defect class -- an
+// undefined custom property with no fallback drops the ENTIRE declaration
+// at computed-value time, silently, in whichever theme lacks it):
+//   --text-hover -> --accent
+//     --text-hover has no value in gruvbox_dark or dracula (only
+//     midnightMirage, classic/cyberSpaceOasis, high-contrast and
+//     nord-light define it -- confirmed against src/frontend/themes.scss);
+//     --accent resolves in every theme block. This is the exact
+//     substitution 34.11-07's FilterFacetGroup/index.scss already made for
+//     its own focus-visible ring, for the same reason -- reused here rather
+//     than shipping a focus ring that silently disappears in two of this
+//     phase's own mandatory stress-test themes.
+.FilterChipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  padding-block: var(--space-2xs);
+
+  .FilterChipRow__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3xs);
+    border-radius: 9999px;
+    padding: var(--space-2xs) var(--space-xs);
+    font-size: var(--text-sm);
+    font-weight: var(--regular);
+    line-height: 1;
+    background: var(--navbar-background);
+    border: 1px solid var(--neutral-04);
+    color: var(--text-default);
+    transition:
+      border-color 0.12s ease,
+      color 0.12s ease;
+  }
+
+  .FilterChipRow__chip:hover {
+    // The removal-preview affordance -- the only place `--status-danger`
+    // is used in this phase.
+    border-color: var(--status-danger);
+    color: var(--status-danger);
+  }
+
+  .FilterChipRow__chip:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+
+  .FilterChipRow__clearAll {
+    border-style: dashed;
+    color: var(--text-secondary);
+  }
+
+  .FilterChipRow__clearAll:hover {
+    // Reads as a different KIND of action from a removal (the sketch's
+    // own distinction) -- no `--status-danger` here.
+    color: var(--navbar-active);
+    border-color: var(--navbar-active);
+  }
+
+  .FilterChipRow__remove {
+    display: inline-flex;
+    align-items: center;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    color: inherit;
+  }
+
+  .FilterChipRow__remove:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+}

@@ -8,6 +8,8 @@
  * `describe` blocks below, in the same file, per the plan's Wave 0
  * requirement (`34.11-VALIDATION.md`).
  */
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import {
   chipLabelSpec,
   joinChipLabels,
@@ -248,5 +250,415 @@ describe('chipLabels', () => {
 
   it('joinChipLabels([]) is an empty string', () => {
     expect(joinChipLabels([])).toBe('')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Task 2: FilterChipRow -- direct-invocation tests, no jsdom, matching the
+// FilterMoreGroup.test.tsx idiom (`jest.mock('react', ...)` for useContext,
+// `jest.mock('react-i18next', ...)` for useTranslation, component invoked
+// as a plain function).
+// ---------------------------------------------------------------------------
+
+jest.mock('../index.scss', () => ({}))
+
+jest.mock('@fortawesome/react-fontawesome', () => ({
+  FontAwesomeIcon: (props: Record<string, unknown>) => ({
+    type: 'mock-fontawesome-icon',
+    props
+  })
+}))
+
+function interpolate(
+  template: string,
+  options?: Record<string, string>
+): string {
+  if (!options) return template
+  return template.replace(
+    /\{\{(\w+)\}\}/g,
+    (_match, name: string) => options[name] ?? ''
+  )
+}
+
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (
+      _key: string,
+      defaultValue: string,
+      options?: Record<string, string>
+    ): string => interpolate(defaultValue, options)
+  })
+}))
+
+type MockLibraryContextValue = {
+  activeFilterDescriptors: ActiveFilterDescriptor[]
+  activeFilterCount: number
+  clearAllFilters: jest.Mock
+  storeFacet: string[]
+  setStoreFacet: jest.Mock
+  runnabilityFacet: string[]
+  setRunnabilityFacet: jest.Mock
+  setLibraryView: jest.Mock
+  setCurrentCollection: jest.Mock
+  handleSearch: jest.Mock
+  setShowHidden: jest.Mock
+  setShowNonAvailable: jest.Mock
+  setShowSupportOfflineOnly: jest.Mock
+  setShowThirdPartyManagedOnly: jest.Mock
+  setShowUpdatesOnly: jest.Mock
+  __isDefaultLibraryContext?: true
+}
+
+function makeChipRowContextValue(
+  overrides: Partial<MockLibraryContextValue> = {}
+): MockLibraryContextValue {
+  return {
+    activeFilterDescriptors: [],
+    activeFilterCount: 0,
+    clearAllFilters: jest.fn(),
+    storeFacet: [],
+    setStoreFacet: jest.fn(),
+    runnabilityFacet: [],
+    setRunnabilityFacet: jest.fn(),
+    setLibraryView: jest.fn(),
+    setCurrentCollection: jest.fn(),
+    handleSearch: jest.fn(),
+    setShowHidden: jest.fn(),
+    setShowNonAvailable: jest.fn(),
+    setShowSupportOfflineOnly: jest.fn(),
+    setShowThirdPartyManagedOnly: jest.fn(),
+    setShowUpdatesOnly: jest.fn(),
+    ...overrides
+  }
+}
+
+let chipRowContextValue: MockLibraryContextValue = makeChipRowContextValue()
+
+jest.mock('react', () => ({
+  ...jest.requireActual<typeof import('react')>('react'),
+  useContext: () => chipRowContextValue
+}))
+
+// Imported after the mocks above -- ts-jest does not hoist jest.mock like
+// babel-jest, so textual order matters (see FilterMoreGroup.test.tsx).
+import FilterChipRowImport from '../index'
+
+type AnyProps = Record<string, unknown> & { children?: unknown }
+type AnyElement = { type: unknown; props: AnyProps }
+
+function collectElements(node: unknown, out: AnyElement[] = []): AnyElement[] {
+  if (node === null || node === undefined || typeof node === 'boolean') {
+    return out
+  }
+  if (Array.isArray(node)) {
+    node.forEach((child) => collectElements(child, out))
+    return out
+  }
+  if (typeof node === 'object' && node !== null && 'type' in node) {
+    const element = node as AnyElement
+    out.push(element)
+    if (element.props?.children !== undefined) {
+      collectElements(element.props.children, out)
+    }
+    return out
+  }
+  return out
+}
+
+function removeButtonsOf(tree: unknown): AnyElement[] {
+  return collectElements(tree).filter(
+    (el) => el.type === 'button' && el.props.className === 'FilterChipRow__remove'
+  )
+}
+
+function clearAllButtonOf(tree: unknown): AnyElement | undefined {
+  return collectElements(tree).find((el) => {
+    const className = el.props.className
+    return (
+      el.type === 'button' &&
+      typeof className === 'string' &&
+      className.includes('FilterChipRow__clearAll')
+    )
+  })
+}
+
+beforeEach(() => {
+  chipRowContextValue = makeChipRowContextValue()
+})
+
+describe('FilterChipRow', () => {
+  it('activeFilterCount === 0 (real context) -> returns null, no empty row', () => {
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterCount: 0,
+      activeFilterDescriptors: []
+    })
+
+    expect(FilterChipRowImport()).toBeNull()
+  })
+
+  it('rendered outside the provider (__isDefaultLibraryContext) -> console.error fires once naming FilterChipRow and LibraryContext.Provider, returns null', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => undefined)
+    chipRowContextValue = makeChipRowContextValue({
+      __isDefaultLibraryContext: true
+    })
+
+    const result = FilterChipRowImport()
+
+    expect(result).toBeNull()
+    expect(spy).toHaveBeenCalledTimes(1)
+    const message = spy.mock.calls[0]?.[0] as string
+    expect(message).toEqual(expect.stringContaining('FilterChipRow'))
+    expect(message).toEqual(expect.stringContaining('LibraryContext.Provider'))
+    spy.mockRestore()
+  })
+
+  it('mounted inside the provider with zero descriptors -> null, console.error NOT called -- distinguishable from the dead-provider case', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => undefined)
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterCount: 0,
+      activeFilterDescriptors: []
+    })
+
+    const result = FilterChipRowImport()
+
+    expect(result).toBeNull()
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
+
+  it('descriptors for view:installed, store:gog and search render exactly three removal chips plus one Clear all chip, in descriptor order', () => {
+    const descriptors: ActiveFilterDescriptor[] = [
+      { id: 'view:installed', kind: 'view', value: 'installed' },
+      { id: 'store:gog', kind: 'store', value: 'gog' },
+      { id: 'search', kind: 'search', value: 'witcher' }
+    ]
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterDescriptors: descriptors,
+      activeFilterCount: descriptors.length
+    })
+
+    const tree = FilterChipRowImport()
+    const removeButtons = removeButtonsOf(tree)
+    const clearAll = clearAllButtonOf(tree)
+
+    expect(removeButtons).toHaveLength(3)
+    expect(clearAll).toBeDefined()
+  })
+
+  it('a runnability:bottle descriptor renders a chip labelled "Runs via bottle" with a working ×', () => {
+    const descriptor: ActiveFilterDescriptor = {
+      id: 'runnability:bottle',
+      kind: 'runnability',
+      value: 'bottle'
+    }
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterDescriptors: [descriptor],
+      activeFilterCount: 1,
+      runnabilityFacet: ['bottle']
+    })
+
+    const tree = FilterChipRowImport()
+    const removeButtons = removeButtonsOf(tree)
+
+    expect(removeButtons).toHaveLength(1)
+    expect(removeButtons[0]?.props['aria-label']).toContain('Runs via bottle')
+
+    ;(removeButtons[0]?.props.onClick as () => void)()
+    expect(chipRowContextValue.setRunnabilityFacet).toHaveBeenCalledWith([])
+  })
+
+  it("every removal chip's × carries a real interpolated aria-label -- three active chips produce three distinct accessible names", () => {
+    const descriptors: ActiveFilterDescriptor[] = [
+      { id: 'view:installed', kind: 'view', value: 'installed' },
+      { id: 'store:gog', kind: 'store', value: 'gog' },
+      { id: 'search', kind: 'search', value: 'witcher' }
+    ]
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterDescriptors: descriptors,
+      activeFilterCount: descriptors.length
+    })
+
+    const tree = FilterChipRowImport()
+    const labels = removeButtonsOf(tree).map((el) => el.props['aria-label'])
+
+    expect(labels).toEqual([
+      'Remove Installed filter',
+      'Remove GOG filter',
+      'Remove "witcher" filter'
+    ])
+    expect(new Set(labels).size).toBe(3)
+  })
+
+  it('clicking the × on a store:gog chip calls setStoreFacet with the previous array minus gog -- never empty, never a string', () => {
+    const descriptor: ActiveFilterDescriptor = {
+      id: 'store:gog',
+      kind: 'store',
+      value: 'gog'
+    }
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterDescriptors: [descriptor],
+      activeFilterCount: 1,
+      storeFacet: ['gog', 'legendary']
+    })
+
+    const tree = FilterChipRowImport()
+    const [removeButton] = removeButtonsOf(tree)
+    ;(removeButton?.props.onClick as () => void)()
+
+    expect(chipRowContextValue.setStoreFacet).toHaveBeenCalledWith(['legendary'])
+  })
+
+  it('clicking the × on a view:installed chip calls setLibraryView("all")', () => {
+    const descriptor: ActiveFilterDescriptor = {
+      id: 'view:installed',
+      kind: 'view',
+      value: 'installed'
+    }
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterDescriptors: [descriptor],
+      activeFilterCount: 1
+    })
+
+    const tree = FilterChipRowImport()
+    const [removeButton] = removeButtonsOf(tree)
+    ;(removeButton?.props.onClick as () => void)()
+
+    expect(chipRowContextValue.setLibraryView).toHaveBeenCalledWith('all')
+  })
+
+  it('clicking the × on a collection:Backlog chip calls setCurrentCollection(null)', () => {
+    const descriptor: ActiveFilterDescriptor = {
+      id: 'collection:Backlog',
+      kind: 'collection',
+      value: 'Backlog'
+    }
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterDescriptors: [descriptor],
+      activeFilterCount: 1
+    })
+
+    const tree = FilterChipRowImport()
+    const [removeButton] = removeButtonsOf(tree)
+    ;(removeButton?.props.onClick as () => void)()
+
+    expect(chipRowContextValue.setCurrentCollection).toHaveBeenCalledWith(null)
+  })
+
+  it.each<['only' | 'show', string]>([
+    ['only', 'off'],
+    ['show', 'off']
+  ])(
+    "clicking the × on a showHidden:%s chip always calls setShowHidden('%s') -- D-27, never steps the cycle",
+    (value) => {
+      const descriptor: ActiveFilterDescriptor = {
+        id: `showHidden:${value}`,
+        kind: 'showHidden',
+        value
+      }
+      chipRowContextValue = makeChipRowContextValue({
+        activeFilterDescriptors: [descriptor],
+        activeFilterCount: 1
+      })
+
+      const tree = FilterChipRowImport()
+      const [removeButton] = removeButtonsOf(tree)
+      ;(removeButton?.props.onClick as () => void)()
+
+      expect(chipRowContextValue.setShowHidden).toHaveBeenCalledWith('off')
+      expect(chipRowContextValue.setShowHidden).not.toHaveBeenCalledWith('only')
+      expect(chipRowContextValue.setShowHidden).not.toHaveBeenCalledWith('show')
+    }
+  )
+
+  it('clicking the × on a showUpdatesOnly chip calls setShowUpdatesOnly(false)', () => {
+    const descriptor: ActiveFilterDescriptor = {
+      id: 'showUpdatesOnly',
+      kind: 'showUpdatesOnly',
+      value: 'true'
+    }
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterDescriptors: [descriptor],
+      activeFilterCount: 1
+    })
+
+    const tree = FilterChipRowImport()
+    const [removeButton] = removeButtonsOf(tree)
+    ;(removeButton?.props.onClick as () => void)()
+
+    expect(chipRowContextValue.setShowUpdatesOnly).toHaveBeenCalledWith(false)
+  })
+
+  it('clicking Clear all calls clearAllFilters exactly once and calls no individual setter (D-25)', () => {
+    const descriptors: ActiveFilterDescriptor[] = [
+      { id: 'view:installed', kind: 'view', value: 'installed' },
+      { id: 'store:gog', kind: 'store', value: 'gog' }
+    ]
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterDescriptors: descriptors,
+      activeFilterCount: descriptors.length
+    })
+
+    const tree = FilterChipRowImport()
+    const clearAll = clearAllButtonOf(tree)
+    ;(clearAll?.props.onClick as () => void)()
+
+    expect(chipRowContextValue.clearAllFilters).toHaveBeenCalledTimes(1)
+    expect(chipRowContextValue.setLibraryView).not.toHaveBeenCalled()
+    expect(chipRowContextValue.setStoreFacet).not.toHaveBeenCalled()
+  })
+
+  it('no chip element carries a count, a number, or a numeric child (D-28)', () => {
+    const descriptors: ActiveFilterDescriptor[] = [
+      { id: 'view:installed', kind: 'view', value: 'installed' },
+      { id: 'store:gog', kind: 'store', value: 'gog' }
+    ]
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterDescriptors: descriptors,
+      activeFilterCount: descriptors.length
+    })
+
+    const tree = FilterChipRowImport()
+    collectElements(tree).forEach((el) => {
+      expect(el.props.count).toBeUndefined()
+      if (typeof el.props.children === 'number') {
+        throw new Error('a chip child must never be a bare number')
+      }
+    })
+  })
+
+  it('a descriptor for which chipLabelSpec returns null (unmapped store value) renders no chip and does not throw', () => {
+    const descriptor: ActiveFilterDescriptor = {
+      id: 'store:notARealStore',
+      kind: 'store',
+      value: 'notARealStore'
+    }
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterDescriptors: [descriptor],
+      activeFilterCount: 1
+    })
+
+    expect(() => {
+      const tree = FilterChipRowImport()
+      expect(removeButtonsOf(tree)).toHaveLength(0)
+    }).not.toThrow()
+  })
+})
+
+describe('FilterChipRow -- D-08 source gate (sort/layout/alphabet are not filters)', () => {
+  const source = readFileSync(
+    join(__dirname, '..', 'index.tsx'),
+    'utf8'
+  )
+
+  it('the component source never references sort/layout/alphabet vocabulary', () => {
+    expect(source).not.toMatch(
+      /sortDescending|sortInstalled|alphabetFilterLetter|showAlphabetFilter/
+    )
+  })
+
+  it('gate is non-vacuous -- proven to fail against a known-bad literal', () => {
+    const knownBad = `${source}\n// sortDescending`
+
+    expect(knownBad).toMatch(/sortDescending/)
   })
 })
