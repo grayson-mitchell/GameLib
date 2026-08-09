@@ -2685,6 +2685,8 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 34.11-08 — `FilterChipRow` above the grid + zero-result empty state
+
+**Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 34.11-09 — Mount the panel, retire `CategoryFilter`/`LibraryFilters`, close the i18n + multi-theme gates *(not autonomous — human-driven live sweep)*
 
 **Cross-cutting constraints:**
