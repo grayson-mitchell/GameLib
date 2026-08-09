@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.11 executing -- 9 plans, 5 waves
-last_updated: "2026-08-09T08:41:59.511Z"
-last_activity: 2026-08-09 -- Phase 34.11 execution started
+stopped_at: Completed 34.11-01-PLAN.md
+last_updated: "2026-08-09T08:51:14.413Z"
+last_activity: 2026-08-09
 progress:
   total_phases: 23
   completed_phases: 15
   total_plans: 277
-  completed_plans: 247
-  percent: 89
+  completed_plans: 248
+  percent: 90
 ---
 
 # Project State
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.11 (library-filtering-search-views-collections-and-cross-store-f) — EXECUTING
-Plan: 1 of 9
+Plan: 2 of 9
 
 Prior phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — **COMPLETE
 2026-08-09**, 27 of 27 plans executed, verification passed 9/9.
@@ -2689,7 +2689,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 91%
+trusted blindly. The recurring `**Progress:**[█████████░] 90%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 
@@ -2774,7 +2774,7 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 `STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Executing Phase 34.11
+Status: Ready to execute
 
 > NOTE (34.10-18): `state.advance-plan` corrupted STATE.md again, the same recurring
 > mis-targeted-write bug every note in this cluster documents — it spliced this session's status
@@ -3093,7 +3093,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-09 -- Phase 34.11 execution started
+Last activity: 2026-08-09
   cancels instead of erroring
   (pre-existing external-state reachability) and Test 7 (UI-level reachability, distinct from
   backend-logic reachability) to live-gate-contract-authoring.md's Structural Reachability Review,
@@ -3815,6 +3815,7 @@ Closed/parked native-install phases:
 | Phase 34.10 P24 | 18min | 2 tasks | 2 files |
 | Phase 34.10 P25 | 95min | 2 tasks | 1 files |
 | Phase 34.10 P26 | ~140min | 2 tasks | 2 files |
+| Phase 34.11 P01 | 20min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -4337,6 +4338,8 @@ Recent decisions affecting current work:
 - [Phase 34.10-23]: Kept NavTabs/index.scss's nested &.MuiTabs-root override as a deliberate second line of defense after rescoping GamesSettings' rule at the source
 - [Phase 34.10-23]: Guard test detector uses brace-depth + comma-split-per-selector rather than a naive regex so ancestor-scoped multi-line selectors are not false positives
 - [Phase 34.10]: Item 1's run-4 re-measurement split into a midnightMirage-only step (never-scored-theme confirmation of 220211230's fix) plus a 3-theme sweep; items 2/3/4/5 re-run (not carried forward) per this contract's own cheap-re-measurement-beats-confidence lesson; dracula-classic dropped from scope (F-34.10-07).
+- [Phase 34.11]: Runnability tier derivation ported byte-for-byte from CrossoverBadge, including the undefined-vs-null distinction (D-16)
+- [Phase 34.11]: D-02 migration helpers discard legacy localStorage shapes rather than translating them into an opt-in equivalent
 
 ### Pending Todos
 
@@ -4451,8 +4454,8 @@ Recent decisions affecting current work:
 > its `Stopped at: Completed 34.10-20-PLAN.md --` prefix and demoted into the "prior session,
 > preserved as history" chain.
 
-Last session: 2026-08-09T05:12:16.984Z
-Stopped at: Phase 34.11 UI-SPEC approved
+Last session: 2026-08-09T08:51:14.397Z
+Stopped at: Completed 34.11-01-PLAN.md
 34.10-18 handoff, REQ-34.10-06). Task 1 implemented `34.10-F04-DIAGNOSIS.md`'s single surviving
 cause exactly: MUI's `Tab.js` applies an unconditional `minHeight: 72` when a `<Tab>` gets both
 `icon` and `label` (every `<Tab>` in `NavTabs/index.tsx` does), unmitigated by any override in
