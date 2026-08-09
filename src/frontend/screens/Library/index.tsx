@@ -887,6 +887,121 @@ export default React.memo(function Library(): JSX.Element {
     }
   }, [setTier2PortalFilled])
 
+  // --- 34.11 Plan 04: the filter engine's assembled state/deps, computed
+  // ONCE here and reused by both the exclude-your-own-facet counts and the
+  // active-descriptor list, so they provably read the same inputs. Neither
+  // drives the grid yet -- plan 05 rewires gamesForAlphabetFilter onto this
+  // engine. ---
+
+  const engineDeps: FilterEngineDeps = useMemo(
+    () => ({
+      hiddenAppNames: hiddenGames.list.map((hidden) => hidden.appName),
+      nonAvailableAppNames: JSON.parse(
+        storage.getItem('nonAvailableGames') || '[]'
+      ),
+      favouriteKeys: new Set(favouritesIds),
+      recentAppNames,
+      customCategories: customCategories.list,
+      gameUpdates,
+      crossoverRatings,
+      hostPlatform: platform
+    }),
+    [
+      hiddenGames,
+      favouritesIds,
+      recentAppNames,
+      customCategories,
+      gameUpdates,
+      crossoverRatings,
+      platform
+    ]
+  )
+
+  const engineState: FilterEngineState = useMemo(
+    () => ({
+      view: libraryView,
+      collection: currentCollection,
+      stores: storeFacet,
+      runnability: runnabilityFacet,
+      // Search stays fuzzy-match-only here (D-33 amendment): this plan does
+      // not yet wire the engine onto the fuzzy-search results, so `null` is
+      // "no additional constraint" -- the existing search block still owns
+      // matching for the grid until plan 05.
+      searchMatchedKeys: null,
+      showHidden,
+      showNonAvailable,
+      showSupportOfflineOnly,
+      showThirdPartyManagedOnly,
+      showUpdatesOnly
+    }),
+    [
+      libraryView,
+      currentCollection,
+      storeFacet,
+      runnabilityFacet,
+      showHidden,
+      showNonAvailable,
+      showSupportOfflineOnly,
+      showThirdPartyManagedOnly,
+      showUpdatesOnly
+    ]
+  )
+
+  // D-28: exclude-your-own-facet counts, built on filterEngine's countFor --
+  // never a duplicated predicate chain.
+  const countForStore = useCallback(
+    (value: StoreFacetValue) =>
+      filterEngine.countFor(
+        gamesForAlphabetFilter,
+        engineState,
+        engineDeps,
+        'store',
+        value
+      ),
+    [gamesForAlphabetFilter, engineState, engineDeps]
+  )
+
+  const countForRunnability = useCallback(
+    (value: RunnabilityTier) =>
+      filterEngine.countFor(
+        gamesForAlphabetFilter,
+        engineState,
+        engineDeps,
+        'runnability',
+        value
+      ),
+    [gamesForAlphabetFilter, engineState, engineDeps]
+  )
+
+  // D-26: the descriptor list and its count come from ONE call -- the count
+  // is that list's `.length`, never a second independent computation, so
+  // the chip row can never disagree with what the panel claims is active.
+  const activeFilterDescriptors = useMemo(
+    () => filterEngine.describeActiveFilters(engineState, filterText),
+    [engineState, filterText]
+  )
+  const activeFilterCount = activeFilterDescriptors.length
+
+  // D-25: clears AND PERSISTS every filter to its default -- "whatever the
+  // chip row shows is what comes back next launch". A non-persisting
+  // implementation would silently restore the old filters on next launch,
+  // which would be a defect, not a simplification.
+  const clearAllFilters = () => {
+    setLibraryViewPersisted('all')
+    setStoreFacetPersisted([])
+    setRunnabilityFacetPersisted([])
+    setCurrentCollectionPersisted(null)
+    handleShowHidden('off')
+    handleShowNonAvailable('off')
+    handleShowSupportOfflineOnly(false)
+    handleShowThirdPartyOnly(false)
+    handleShowUpdatesOnly(false)
+    // filterText is session-only (D-22) and has no localStorage key -- the
+    // sole exception to "every one of those goes through its persisted
+    // wrapper".
+    setFilterText('')
+  }
+
   if (!epic && !gog && !amazon && !zoom) {
     return (
       <ErrorComponent
@@ -935,7 +1050,27 @@ export default React.memo(function Library(): JSX.Element {
         onToggleAlphabetFilter: handleToggleAlphabetFilter,
         gamesForAlphabetFilter,
         alphabetFilterLetter,
-        setAlphabetFilterLetter
+        setAlphabetFilterLetter,
+
+        // 34.11 Plan 04: opt-in facet surface. NOTE: the default-context
+        // sentinel field (see LibraryContext.tsx's initialContext) is
+        // deliberately NOT set here -- its absence is what lets a consumer
+        // tell this real provider apart from that default.
+        libraryView,
+        setLibraryView: setLibraryViewPersisted,
+        storeFacet,
+        setStoreFacet: setStoreFacetPersisted,
+        runnabilityFacet,
+        setRunnabilityFacet: setRunnabilityFacetPersisted,
+        currentCollection,
+        setCurrentCollection: setCurrentCollectionPersisted,
+        clearAllFilters,
+        activeFilterDescriptors,
+        activeFilterCount,
+        runnabilityRows,
+        connectedStores,
+        countForStore,
+        countForRunnability
       }}
     >
       {tier2PortalTarget
