@@ -47,15 +47,18 @@ function runnabilityLabel(
   }
 }
 
+// Echoes the defaultValue argument straight back, so the dev-only check
+// below can read out what runnabilityLabel's own literal switch passed at
+// each call site without a second copy of the English text living
+// anywhere in this file (a second copy is exactly what the hardcoded-
+// string gate -- meta/hardcodedStringGate.ts -- exists to catch, since
+// this file is now inside its scan scope).
+const echoDefaultValue = (_key: string, defaultValue: string) => defaultValue
+
 if (process.env.NODE_ENV !== 'production') {
-  const LITERAL_DEFAULT_TEXT: Record<RunnabilityTier, string> = {
-    native: 'Runs natively',
-    bottle: 'Runs via bottle',
-    wontRun: "Won't run",
-    notChecked: 'Not yet checked'
-  }
   ;(Object.keys(RUNNABILITY_LABELS) as RunnabilityTier[]).forEach((tier) => {
-    if (RUNNABILITY_LABELS[tier][1] !== LITERAL_DEFAULT_TEXT[tier]) {
+    const literalDefault = runnabilityLabel(tier, echoDefaultValue)
+    if (literalDefault !== RUNNABILITY_LABELS[tier][1]) {
       throw new Error(
         `FilterRunnabilityFacet's literal default text for "${tier}" has drifted from facetLabels.ts's RUNNABILITY_LABELS -- update both together`
       )
