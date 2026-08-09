@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: ready_to_plan
-stopped_at: Phase 34.10 complete (27/27) — ready to discuss Phase 34.11
-last_updated: 2026-08-09T03:38:52.346Z
-last_activity: 2026-08-09 -- Phase 34.10 live gate run 4 PASSED 5/5, phase closes
+status: planning
+stopped_at: Phase 34.11 context gathered
+last_updated: "2026-08-09T04:38:40.305Z"
+last_activity: 2026-08-09 -- Phase 34.11 context captured (35 decisions); UI-SPEC owed next
 progress:
   total_phases: 23
   completed_phases: 15
@@ -4451,8 +4451,8 @@ Recent decisions affecting current work:
 > its `Stopped at: Completed 34.10-20-PLAN.md --` prefix and demoted into the "prior session,
 > preserved as history" chain.
 
-Last session: 2026-08-09T00:45:01.189Z
-Stopped at: Completed 34.10-23-PLAN.md
+Last session: 2026-08-09T04:38:40.284Z
+Stopped at: Phase 34.11 context gathered
 34.10-18 handoff, REQ-34.10-06). Task 1 implemented `34.10-F04-DIAGNOSIS.md`'s single surviving
 cause exactly: MUI's `Tab.js` applies an unconditional `minHeight: 72` when a `<Tab>` gets both
 `icon` and `label` (every `<Tab>` in `NavTabs/index.tsx` does), unmitigated by any override in
