@@ -2408,15 +2408,43 @@ REQ-34.10-13, REQ-34.10-14, REQ-34.10-15, REQ-34.10-16
 the frameless drag-region runtime this rebuilds against)
 **Blocks:** Phase 34.11 (the filter panel needs the tier-2 slot to exist); the deferred
 onboarding-tour rework phase (34.10 disables `SidebarTour` per D-13 and does not rebuild it)
-**Plans:** 25/27 plans executed — **PHASE STILL DOES NOT CLOSE.** 25 of 27 plans having SUMMARYs is
-a plan-count fact, not a phase verdict: live gate **run 3** (plan 34.10-22, 2026-08-08) scored
-**4/5**. Items 2, 3, 4 and 5 PASS; **item 1 FAILS** on F-34.10-03 (seam still visible) and
-F-34.10-04 (wordmark and Downloads ring not on the tab strip's line), both measured against a
-bundle verified to contain 34.10-18's and 34.10-19's fixes. REQ-34.10-06 and REQ-34.10-16 stay
-Pending. Closed by measurement this run: F-34.10-05 and F-34.10-06 (and REQ-34.10-09 → Complete).
-The operator elected during the run to replace the card/folder tab with a **pill tab** — see
-**Deferred from this phase** below for the resolution of that election; **REQ-34.10-06's
-card/folder framing STANDS unchanged** for run 4.
+**Plans:** 27/27 plans executed — **PHASE 34.10 CLOSES.** Live gate **run 4** (plan 34.10-27,
+2026-08-09) scored **5/5**: all five items PASS. **REQ-34.10-06 and REQ-34.10-16 → Complete.**
+
+Item 1 — the only item that could still fail this phase closed, and the one that failed every
+prior run — PASSES. **F-34.10-03 (the seam) and F-34.10-04 (wordmark/strip/ring on one line) are
+CLOSED BY MEASUREMENT in a SCORED theme**, which is the distinction gap cycle 3 was built around:
+commit `220211230`'s pixel verification and the operator's `1c7a3359d` confirmation were both taken
+in an unscored teal scheme, and this phase had already declared this same truth fixed twice before
+(34.10-18's seam border, 34.10-19's tab `min-height`) with a live measurement contradicting it both
+times. Item 1's three-theme sweep PASSED on both the seam and idle-ring columns across
+`midnightMirage`, `gruvbox_dark` and `dracula`, obtained as six distinctly elicited answers — the
+first run in this phase with clean per-theme provenance on all six cells. Items 2, 3, 4 and 5 were
+each RE-RUN live rather than carried forward, and all PASS.
+
+**PERMANENT RESIDUAL RISK — the gamepad focus-scroll regression, never measured in any of the four
+runs.** No controller was available at any run (P9), so `GamesList/index.tsx:46-76`'s
+`scrollCardIntoView` — container-rect-relative arithmetic, exercised only when `activeController`
+is truthy, and **directly affected by plan 34.10-18's relocation of the scroll container off
+`document.body`** — has never been exercised live. It is non-blocking per the gate's own escape
+hatch and the phase closes with it open, but it is recorded here as a named risk rather than left
+as a pending gate cell for a fifth run to inherit. It must never be inferred from the
+mouse/keyboard back-to-top sub-check's PASS: different code path, different arithmetic. Whoever
+next has a controller on this machine should drive it.
+
+**F-34.10-08 (new, process-not-product, open).** Run 4's own preflight row P11 carried two
+independent defects, both proven empirically rather than reasoned about: a `^` anchor that can
+never match vite's single-line minified CSS (it returned `0` even for the file that *does* contain
+the rule, so it would have passed against a bundle carrying the live leak), and a directory-wide
+glob over 14 accumulated build chunks including abandoned debug instrumentation. Neither altered a
+verdict — the intended assertion was carried out correctly by hand — and both are recorded rather
+than fixed, per decision D-E. Same class as F-34.10-07. **Generalisable rule for successor
+contracts: a grep-based assertion must be proven to FAIL against a known-bad input before it is
+trusted to pass against a good one.**
+
+**The stale-bundle rule earned its place for the second run running.** Preflight caught that the
+already-running app was serving an 08:39 build predating plan 34.10-23's 11:17 rescope; `build/`
+was cleared and rebuilt before any scored observation.
 
 The debug session triggered by F-34.10-03/-04 surviving their targeted fixes has RUN and
 is CLOSED (`.planning/debug/navbar-seam-and-logo-offset.md`, `status: resolved`). Root cause:
@@ -2431,11 +2459,10 @@ targeted the wrong property and are enumerated in the debug file so none is retr
 re-litigate `min-height` or `align-items` on that element. STILL OWED: a run-4 live gate that
 re-measures item 1 IN FULL, because the fix was confirmed in ONE non-scored theme (the ambient
 teal scheme) only, and this exact truth has already been wrongly declared fixed twice in this
-phase. **34.10-25 (2026-08-09) authored the run-4 gate's SCOPE half** (§10.1-§10.4 in
-`34.10-LIVE-GATE.md`) — item 1's re-measurement split into a midnightMirage-only step plus a
-3-theme sweep, `dracula-classic` dropped from scope; fills no verdict. Remaining: 34.10-26 (BODY
-half + checker script) and 34.10-27 (the blocking run-4 gate itself). **Next:
-`/gsd-execute-phase 34.10`.**
+phase. **That run-4 gate has now RUN and PASSED** (34.10-25 authored §10.1-§10.4, 34.10-26 authored
+§10.5 plus `34.10-run4-contract-check.mjs`, 34.10-27 ran it — decision D-E honoured throughout, no
+plan both authoring and scoring). See `34.10-LIVE-GATE.md` §10 and §10.6. **Next:
+`/gsd-verify-work 34.10`.**
 
 Gap cycle 2 plans, closing F-34.10-03 through F-34.10-06 plus the per-theme sweep that has
 never been reached in two runs:
@@ -2451,7 +2478,7 @@ Gap cycle 3 plans, closing the run-3 gaps recorded in `34.10-VERIFICATION.md`:
 - [x] 34.10-24-PLAN.md — correct stale ROADMAP/STATE records; record the pill-tab deferral (wave 1)
 - [x] 34.10-25-PLAN.md — author the run-4 gate contract §10.1-§10.4 (scope, preflight, reviews) (wave 2)
 - [x] 34.10-26-PLAN.md — author §10.5 item bodies + prove every automated check against a filled specimen (wave 3)
-- [ ] 34.10-27-PLAN.md — RUN the run-4 gate; reconcile REQUIREMENTS/ROADMAP/STATE (wave 4, blocking checkpoint)
+- [x] 34.10-27-PLAN.md — RUN the run-4 gate; reconcile REQUIREMENTS/ROADMAP/STATE (wave 4, blocking checkpoint) — **VERDICT PASS 5/5**
 
 **Deferred from this phase — pill-tab restyle election.** During run 3 the operator said, verbatim
 (`34.10-LIVE-GATE.md` §9.6): *"i going to drop the tab and let make a pill, that what it looks

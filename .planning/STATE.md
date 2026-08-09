@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.10-26-PLAN.md (gap cycle 3, plans 34.10-23..27) -- run-4 live-gate BODY authored ("### 10.5 Run 4 -- the items" in 34.10-LIVE-GATE.md, every verdict slot empty) plus 34.10-run4-contract-check.mjs, a structural verdict-slot checker proven COMPLETE against a six-collision-shape filled specimen (scratchpad/, not committed) and INCOMPLETE against the real file; F-34.10-03/-04 recorded fixed-but-unmeasured, not closed; what remains is the blocking run-4 gate itself (plan 34.10-27); next command /gsd-execute-phase 34.10
-last_updated: "2026-08-09T01:14:17.225Z"
-last_activity: 2026-08-09
+stopped_at: Completed 34.10-27-PLAN.md -- RAN live gate run 4, VERDICT PASS 5/5, PHASE 34.10 CLOSES. All 27 plans executed. F-34.10-03 and F-34.10-04 CLOSED BY MEASUREMENT in a scored theme (midnightMirage) for the first time; three-theme sweep PASSED on both seam and idle-ring columns with six distinctly elicited answers. REQ-34.10-06 and REQ-34.10-16 -> Complete. Two things carried forward, neither blocking: the gamepad focus-scroll regression is a PERMANENT named residual risk (never measured in any of the four runs, no controller), and F-34.10-08 records two proven defects in the contract's own P11 grep. Next command /gsd-verify-work 34.10
+last_updated: "2026-08-09T02:30:00.000Z"
+last_activity: 2026-08-09 -- Phase 34.10 live gate run 4 PASSED 5/5, phase closes
 progress:
   total_phases: 23
-  completed_phases: 14
+  completed_phases: 15
   total_plans: 268
-  completed_plans: 246
+  completed_plans: 247
   percent: 92
 ---
 
@@ -478,9 +478,31 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — gap cycle 3 EXECUTING (plans 23-27), PHASE STILL OPEN
-Plan: 26 of 27 complete — **live gate RUN 3 recorded 2026-08-08 (plan 34.10-22), VERDICT FAIL,
-items_passed 4/5. PHASE 34.10 DOES NOT CLOSE.** Items 2, 3, 4 and 5 PASS; **item 1 FAILS.**
+Phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — **COMPLETE**, gap cycle 3 closed the phase
+Plan: 27 of 27 complete — **live gate RUN 4 recorded 2026-08-09 (plan 34.10-27), VERDICT PASS,
+items_passed 5/5. PHASE 34.10 CLOSES.** All five items PASS. **F-34.10-03 (seam) and F-34.10-04
+(wordmark/strip/ring on one line) CLOSED BY MEASUREMENT in `midnightMirage` — the first time either
+was measured in a theme the gate scores.** Both had only ever been confirmed in an unscored teal
+scheme (`220211230`, `1c7a3359d`), which is why gap cycle 3 refused to close them on a shipped fix:
+this phase declared the same truth fixed twice before and a measurement contradicted it both times.
+Item 1's three-theme sweep PASSED on both the seam and idle-ring columns across `midnightMirage`,
+`gruvbox_dark` and `dracula`, from six distinctly elicited answers — clean per-theme provenance for
+the first time in four runs. Items 2/3/4/5 re-run live, all PASS. REQ-34.10-06 and REQ-34.10-16 →
+Complete.
+
+CARRIED FORWARD (neither blocking, both recorded rather than left as pending cells):
+**the gamepad focus-scroll regression** is a PERMANENT named residual risk — never measured in any
+of the four runs (no controller, P9); `GamesList/index.tsx:46-76`'s `scrollCardIntoView` is
+container-rect-relative and directly affected by 34.10-18's scroll-container relocation, and must
+never be inferred from the mouse/keyboard PASS. **F-34.10-08** records two empirically-proven
+defects in the gate's own P11 grep (a `^` anchor that cannot match vite's single-line minified CSS,
+returning 0 even for the file that contains the rule; and a directory-wide glob over 14 accumulated
+build chunks). Neither altered a verdict. Generalisable rule: a grep assertion must be proven to
+FAIL against a known-bad input before it is trusted to pass.
+
+Superseded run-3 record follows for history:
+**live gate RUN 3 recorded 2026-08-08 (plan 34.10-22), VERDICT FAIL,
+items_passed 4/5.** Items 2, 3, 4 and 5 PASS; **item 1 FAILED.**
 
 CLOSED BY MEASUREMENT in run 3: **F-34.10-05** (disclosure-panel background correct in
 `gruvbox_dark`, `dracula` and a third theme the operator volunteered) and **F-34.10-06** on both
