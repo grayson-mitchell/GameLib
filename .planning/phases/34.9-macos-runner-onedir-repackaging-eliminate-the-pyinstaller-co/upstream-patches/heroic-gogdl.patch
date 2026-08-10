@@ -1,0 +1,95 @@
+From c4af109bf6adfc2ce6edb3d6b57291f4553812da Mon Sep 17 00:00:00 2001
+From: GameLib Dev <dev@gamelib.local>
+Date: Mon, 10 Aug 2026 21:46:17 +1200
+Subject: [PATCH] ci(macos): build gogdl as PyInstaller --onedir and archive it
+
+amfid performs a per-file Gatekeeper assessment on every file --onefile
+extracts to a freshly-randomized $TMPDIR/_MEIxxxxxx path on each run, so
+the assessment cache never hits and every cold spawn re-assesses the
+whole bundle. --onedir uses a fixed on-disk layout so the cache hits
+after the first assessment.
+
+A new Set PyInstaller mode step computes --onedir on macOS and
+--onefile everywhere else (mirroring the existing Set strip step's
+per-OS pattern), followed by an archive step that tars dist/gogdl into
+dist-archive/gogdl.tar.gz and uploads that in place of the bare binary
+on macOS. Linux and Windows are untouched. The draft release job's
+macOS mv commands are updated to move the .tar.gz archives into
+release/gogdl_macos_x86_64.tar.gz and release/gogdl_macos_arm64.tar.gz,
+keeping the existing asset naming convention with an appended archive
+extension.
+---
+ .github/workflows/build.yaml | 37 +++++++++++++++++++++++++++++++++---
+ 1 file changed, 34 insertions(+), 3 deletions(-)
+
+diff --git a/.github/workflows/build.yaml b/.github/workflows/build.yaml
+index 1fd76ab..6890ee5 100644
+--- a/.github/workflows/build.yaml
++++ b/.github/workflows/build.yaml
+@@ -39,20 +39,51 @@ jobs:
+         run: echo "option=--strip" >> $GITHUB_OUTPUT
+         if: runner.os != 'Windows'
+ 
++      # macOS-only: PyInstaller --onedir instead of --onefile. On macOS,
++      # amfid performs a per-file Gatekeeper assessment on every file
++      # --onefile extracts to a freshly-randomized $TMPDIR/_MEIxxxxxx path
++      # on every run, so that assessment cache never hits and every cold
++      # spawn re-assesses the whole bundle (measured cold-spawn win
++      # locally, see PR description). Linux and Windows do not run amfid
++      # and would only absorb --onedir's bundle growth for no gain, so only
++      # macOS's mode switches below.
++      - name: Set PyInstaller mode
++        id: mode
++        shell: bash
++        run: |
++          if [ "$RUNNER_OS" = "macOS" ]; then
++            echo "option=--onedir" >> "$GITHUB_OUTPUT"
++          else
++            echo "option=--onefile" >> "$GITHUB_OUTPUT"
++          fi
++
+       - name: Build
+         run: pyinstaller
+-          --onefile
++          ${{ steps.mode.outputs.option }}
+           --name gogdl
+           ${{ steps.strip.outputs.option }}
+           gogdl/cli.py
+         env:
+           PYTHONOPTIMIZE: 1
+ 
++      - name: Archive onedir bundle (macOS)
++        if: runner.os == 'macOS'
++        run: |
++          mkdir -p dist-archive
++          tar -C dist -czf dist-archive/gogdl.tar.gz gogdl
++
+       - uses: actions/upload-artifact@v6
++        if: runner.os != 'macOS'
+         with:
+           name: gogdl-${{ matrix.os }}
+           path: dist/*
+ 
++      - uses: actions/upload-artifact@v6
++        if: runner.os == 'macOS'
++        with:
++          name: gogdl-${{ matrix.os }}
++          path: dist-archive/gogdl.tar.gz
++
+   draft:
+     needs: build
+     if: ${{ github.ref_type == 'tag' }}
+@@ -64,8 +95,8 @@ jobs:
+       - run: |
+           mv gogdl-ubuntu-24.04/gogdl release/gogdl_linux_x86_64
+           mv gogdl-ubuntu-24.04-arm/gogdl release/gogdl_linux_arm64
+-          mv gogdl-macos-15-intel/gogdl release/gogdl_macos_x86_64
+-          mv gogdl-macos-15/gogdl release/gogdl_macos_arm64
++          mv gogdl-macos-15-intel/gogdl.tar.gz release/gogdl_macos_x86_64.tar.gz
++          mv gogdl-macos-15/gogdl.tar.gz release/gogdl_macos_arm64.tar.gz
+           mv gogdl-windows-2025/gogdl.exe release/gogdl_windows_x86_64.exe 
+           mv gogdl-windows-11-arm/gogdl.exe release/gogdl_windows_arm64.exe 
+ 
+-- 
+2.50.1 (Apple Git-155)
+

@@ -1,0 +1,90 @@
+From 31392baf718fa595e3192a781d8b0dfefe70d405 Mon Sep 17 00:00:00 2001
+From: GameLib Dev <dev@gamelib.local>
+Date: Mon, 10 Aug 2026 21:45:55 +1200
+Subject: [PATCH] ci(macos): build legendary as PyInstaller --onedir and
+ archive it
+
+amfid performs a per-file Gatekeeper assessment on every file --onefile
+extracts to a freshly-randomized $TMPDIR/_MEIxxxxxx path on each run, so
+the assessment cache never hits and every cold spawn re-assesses the
+whole bundle. --onedir uses a fixed on-disk layout so the cache hits
+after the first assessment. This affects legendary_macOS_x86_64 and
+legendary_macOS_arm64 release assets built by this workflow; Windows
+assets are untouched (no amfid tax to avoid there).
+
+A new Set PyInstaller mode step computes --onedir on macOS and
+--onefile everywhere else (mirroring the existing Set strip option
+step's per-OS pattern), followed by an archive step that tars
+legendary/dist/legendary into legendary/dist/<asset_name>.tar.gz and
+uploads that in place of the bare binary on macOS, keeping the
+existing legendary_macOS_x86_64 / legendary_macOS_arm64 asset naming
+with an appended archive extension.
+---
+ .github/workflows/release.yml | 33 ++++++++++++++++++++++++++++++---
+ 1 file changed, 30 insertions(+), 3 deletions(-)
+
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+index 1cc3582..9fe6f96 100644
+--- a/.github/workflows/release.yml
++++ b/.github/workflows/release.yml
+@@ -55,10 +55,29 @@ jobs:
+         run: echo "option=--strip" >> $GITHUB_OUTPUT
+         if: runner.os != 'Windows'
+ 
++      # macOS-only: PyInstaller --onedir instead of --onefile. On macOS,
++      # amfid performs a per-file Gatekeeper assessment on every file
++      # --onefile extracts to a freshly-randomized $TMPDIR/_MEIxxxxxx path
++      # on every run, so that assessment cache never hits and every cold
++      # spawn re-assesses the whole bundle (measured cold-spawn win
++      # locally, see PR description). This affects the
++      # legendary_macOS_x86_64 / legendary_macOS_arm64 release assets;
++      # Windows keeps --onefile below -- it does not run amfid and would
++      # only absorb --onedir's bundle growth for no gain.
++      - name: Set PyInstaller mode
++        id: mode
++        shell: bash
++        run: |
++          if [ "$RUNNER_OS" = "macOS" ]; then
++            echo "option=--onedir" >> "$GITHUB_OUTPUT"
++          else
++            echo "option=--onefile" >> "$GITHUB_OUTPUT"
++          fi
++
+       - name: Build
+         working-directory: legendary
+         run: pyinstaller
+-          --onefile
++          ${{ steps.mode.outputs.option }}
+           --name legendary
+           ${{ steps.strip.outputs.option }}
+           -i ../assets/windows_icon.ico
+@@ -71,16 +90,24 @@ jobs:
+         shell: bash
+         run: mv legendary/dist/legendary.exe legendary/dist/${{ matrix.asset_name }}
+ 
+-      - name: Rename artifact (macOS)
++      - name: Archive onedir bundle (macOS)
+         if: runner.os == 'macOS'
+-        run: mv legendary/dist/legendary legendary/dist/${{ matrix.asset_name }}
++        run: tar -C legendary/dist -czf legendary/dist/${{ matrix.asset_name }}.tar.gz legendary
+ 
+       - uses: actions/upload-artifact@v4
++        if: runner.os != 'macOS'
+         with:
+           name: ${{ matrix.asset_name }}
+           path: legendary/dist/${{ matrix.asset_name }}
+           if-no-files-found: error
+ 
++      - uses: actions/upload-artifact@v4
++        if: runner.os == 'macOS'
++        with:
++          name: ${{ matrix.asset_name }}
++          path: legendary/dist/${{ matrix.asset_name }}.tar.gz
++          if-no-files-found: error
++
+   zipapp:
+     name: Build (${{ matrix.os }})
+     runs-on: ${{ matrix.os }}
+-- 
+2.50.1 (Apple Git-155)
+
