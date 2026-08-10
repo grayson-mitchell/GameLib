@@ -309,9 +309,8 @@ export default class NileGameManager implements Game {
       rpcClient,
       mangoHudCommand,
       gameModeBin,
-      gameScopeCommand,
-      steamRuntime
-    } = await prepareLaunch(gameSettings, logWriter, gameInfo, this.isNative())
+      gameScopeCommand
+    } = await prepareLaunch(gameSettings, logWriter, gameInfo)
 
     if (!launchPrepSuccess) {
       logWriter.logError(['Launch aborted:', launchPrepFailReason])
@@ -344,8 +343,7 @@ export default class NileGameManager implements Game {
       gameSettings,
       mangoHudCommand,
       gameModeBin,
-      gameScopeCommand,
-      steamRuntime?.length ? [...steamRuntime] : undefined
+      gameScopeCommand
     )
 
     let wineFlag: string[] = wrappers.length

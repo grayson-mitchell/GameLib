@@ -539,9 +539,8 @@ export default class GOGGame implements Game {
       rpcClient,
       mangoHudCommand,
       gameScopeCommand,
-      gameModeBin,
-      steamRuntime
-    } = await prepareLaunch(gameSettings, logWriter, gameInfo, this.isNative())
+      gameModeBin
+    } = await prepareLaunch(gameSettings, logWriter, gameInfo)
     if (!launchPrepSuccess) {
       logWriter.logError(['Launch aborted:', launchPrepFailReason])
       launchCleanup()
@@ -573,8 +572,7 @@ export default class GOGGame implements Game {
       gameSettings,
       mangoHudCommand,
       gameModeBin,
-      gameScopeCommand,
-      steamRuntime?.length ? [...steamRuntime] : undefined
+      gameScopeCommand
     )
 
     let wineFlag: string[] = wrappers.length

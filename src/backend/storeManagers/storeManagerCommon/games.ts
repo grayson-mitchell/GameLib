@@ -158,9 +158,8 @@ export async function launchGame(
       rpcClient,
       mangoHudCommand,
       gameScopeCommand,
-      gameModeBin,
-      steamRuntime
-    } = await prepareLaunch(gameSettings, logWriter, gameInfo, isNative)
+      gameModeBin
+    } = await prepareLaunch(gameSettings, logWriter, gameInfo)
 
     if (!isNative) {
       await prepareWineLaunch(game, logWriter)
@@ -170,8 +169,7 @@ export async function launchGame(
       gameSettings,
       mangoHudCommand,
       gameModeBin,
-      gameScopeCommand,
-      steamRuntime?.length ? [...steamRuntime] : undefined
+      gameScopeCommand
     )
 
     if (!launchPrepSuccess) {

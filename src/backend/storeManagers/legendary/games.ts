@@ -889,9 +889,8 @@ export default class LegendaryGame implements Game {
       mangoHudCommand,
       gameModeBin,
       gameScopeCommand,
-      steamRuntime,
       offlineMode
-    } = await prepareLaunch(gameSettings, logWriter, gameInfo, this.isNative())
+    } = await prepareLaunch(gameSettings, logWriter, gameInfo)
     if (!launchPrepSuccess) {
       logWriter.logError(['Launch aborted:', launchPrepFailReason])
       launchCleanup()
@@ -940,8 +939,7 @@ export default class LegendaryGame implements Game {
       gameSettings,
       mangoHudCommand,
       gameModeBin,
-      gameScopeCommand,
-      steamRuntime?.length ? [...steamRuntime] : undefined
+      gameScopeCommand
     )
 
     let wineFlags: AllowedWineFlags = wrappers.length

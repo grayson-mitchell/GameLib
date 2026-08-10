@@ -603,9 +603,8 @@ export default class ZoomGame implements Game {
       failureReason: launchPrepFailReason,
       mangoHudCommand,
       gameScopeCommand,
-      gameModeBin,
-      steamRuntime
-    } = await prepareLaunch(gameSettings, logWriter, gameInfo, this.isNative())
+      gameModeBin
+    } = await prepareLaunch(gameSettings, logWriter, gameInfo)
     if (!launchPrepSuccess) {
       logWriter.logError(['Launch aborted:', launchPrepFailReason])
       showDialogBoxModalAuto({
@@ -629,8 +628,7 @@ export default class ZoomGame implements Game {
       gameSettings,
       mangoHudCommand,
       gameModeBin,
-      gameScopeCommand,
-      steamRuntime?.length ? [...steamRuntime] : undefined
+      gameScopeCommand
     )
 
     const launchArgumentsArgs =
