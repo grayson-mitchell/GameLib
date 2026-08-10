@@ -180,6 +180,24 @@ describe('filter engine', () => {
   })
 })
 
+// SCOPE WARNING (34.11 code review, CR-01). Every case below hands
+// `countFor` the FULL library, because that is the contract `countFor`
+// itself has: given the unfiltered set, exclude your own facet. It is a
+// correct unit test of a correct function -- and it passed, unbroken,
+// during the entire time the shipped Library screen was reporting `0` for
+// every unselected facet option.
+//
+// The reason is that production did not make this call. `Library/index.tsx`
+// filtered first and handed `countFor` the ALREADY-NARROWED grid output, on
+// which `{ skip }` has nothing left to recover. So do NOT read this block as
+// coverage of the counts users actually see: it cannot fail for a
+// wrong-argument defect at the call site, which is the only place that
+// defect can live now that the engine is correct.
+//
+// The call site's own coverage is `__tests__/engineWiring.test.ts` (the real
+// production arguments, behaviourally) plus the `engineWiring` describe in
+// `__tests__/libraryPipeline.test.ts` (structurally). If you are changing
+// how counts are computed, that is where a change must be proven.
 describe('count', () => {
   it('countFor a store option returns the count for every OTHER active filter, not 0 just because a sibling store is selected (D-28)', () => {
     const library = [

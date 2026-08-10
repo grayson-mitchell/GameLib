@@ -30,6 +30,7 @@ const read = (relPath: string) =>
   stripSourceComments(readFileSync(join(REPO_ROOT, relPath), 'utf8'))
 
 const LIBRARY_TSX = 'src/frontend/screens/Library/index.tsx'
+const ENGINE_WIRING_TS = 'src/frontend/screens/Library/engineWiring.ts'
 
 /**
  * Returns the declaration body of the first function whose source begins at
@@ -59,11 +60,37 @@ function functionRegion(source: string, startNeedle: string): string {
 describe('Library pipeline has exactly one implementation', () => {
   const libraryTsx = read(LIBRARY_TSX)
 
-  it('calls filterLibrary( exactly once -- a second call site means the grid and the counts have started to diverge', () => {
-    const matches = libraryTsx.match(/filterLibrary\(/g) ?? []
-    expect(matches).toHaveLength(1)
+  // WR-14: the gate that used to live here asserted
+  // `libraryTsx.match(/filterLibrary\(/g)` had length 1, and was described as
+  // the tripwire for "the grid and the counts have started to diverge". CR-01
+  // was precisely that divergence and this gate stayed GREEN throughout,
+  // because the second pipeline pass happened INSIDE `filterEngine.countFor`
+  // -- driven by the wrong first argument at a `countFor` call site the gate
+  // never looked at. Counting `filterLibrary(` occurrences could not, even in
+  // principle, observe the defect.
+  //
+  // The replacement asserts the property that actually matters: neither
+  // `filterLibrary` nor `countFor` is invoked from this component at all.
+  // Both call shapes now live in `engineWiring.ts`, where
+  // `__tests__/engineWiring.test.ts` exercises them BEHAVIOURALLY over the
+  // real production arguments. A source gate is the wrong instrument for a
+  // wrong-argument defect; its job here is only to stop the call shape
+  // leaking back into the component where no test can reach it.
+  it('never calls filterLibrary( or countFor( itself -- both call shapes live in engineWiring.ts, where a behavioural test can reach the real arguments', () => {
+    expect(libraryTsx.match(/filterLibrary\(/g) ?? []).toHaveLength(0)
+    expect(libraryTsx.match(/countFor\(/g) ?? []).toHaveLength(0)
   })
 
+  it('builds its grid and both facet counts from ONE buildGridPipeline call -- a second call could be handed a different library and reintroduce CR-01', () => {
+    expect(libraryTsx.match(/buildGridPipeline\(/g) ?? []).toHaveLength(1)
+  })
+
+  it('reads the grid list and both count accessors off that single pipeline object, never recomputing either', () => {
+    expect(libraryTsx).toMatch(/gamesForAlphabetFilter\s*=\s*gridPipeline\.games/)
+    expect(libraryTsx).toMatch(
+      /\{\s*countForStore,\s*countForRunnability\s*\}\s*=\s*gridPipeline/
+    )
+  })
   it('no longer contains filterByPlatform -- D-09 retired the literal platform facet', () => {
     expect(libraryTsx).not.toMatch(/filterByPlatform/)
   })
@@ -83,6 +110,36 @@ describe('Library pipeline has exactly one implementation', () => {
   it("makeLibrary's own region contains no storesFilters reference -- the store facet is applied exclusively downstream in filterLibrary", () => {
     const region = functionRegion(libraryTsx, 'const makeLibrary = () => {')
     expect(region).not.toMatch(/storesFilters/)
+  })
+})
+
+describe('engineWiring passes the UNFILTERED union to every engine call (CR-01)', () => {
+  const engineWiringTs = read(ENGINE_WIRING_TS)
+
+  // The behavioural proof lives in `__tests__/engineWiring.test.ts`. This is
+  // the structural half: all three engine calls must take the SAME
+  // identifier as their first argument, and that identifier must be the
+  // untouched parameter -- not a local derived from it. CR-01 was one of
+  // those identifiers being different from the others; asserting all three
+  // are literally `libraryUnion` is what makes that unrepresentable here.
+  it('filterLibrary and both countFor calls all take `libraryUnion` as their first argument', () => {
+    expect(engineWiringTs).toMatch(/filterLibrary\(\s*libraryUnion,/)
+    const countForCalls =
+      engineWiringTs.match(/countFor\(\s*libraryUnion,/g) ?? []
+    expect(countForCalls).toHaveLength(2)
+  })
+
+  it('makes exactly those three engine calls and no others', () => {
+    expect(
+      engineWiringTs.match(/filterEngine\.filterLibrary\(/g) ?? []
+    ).toHaveLength(1)
+    expect(engineWiringTs.match(/filterEngine\.countFor\(/g) ?? []).toHaveLength(
+      2
+    )
+  })
+
+  it('never reassigns libraryUnion -- the list reaching every call is the one the caller passed', () => {
+    expect(engineWiringTs).not.toMatch(/\blibraryUnion\s*=[^=>]/)
   })
 })
 

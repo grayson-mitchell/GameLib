@@ -1,7 +1,6 @@
 import './index.css'
 
 import React, {
-  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -64,6 +63,10 @@ import { configStore } from 'frontend/helpers/electronStores'
 // helper and describeActiveFilters must be called exactly once, provably,
 // with no separate import-line match to conflate with a real call).
 import * as filterEngine from './filterEngine'
+// CR-01: the grid/count call shape lives in this React-free module, not
+// inline here, so a unit test can exercise the REAL production wiring
+// instead of a hand-written replica of it.
+import { buildGridPipeline } from './engineWiring'
 
 const storage = window.localStorage
 
@@ -546,69 +549,27 @@ export default React.memo(function Library(): JSX.Element {
     return favourites.map((game) => `${game.app_name}_${game.runner}`)
   }, [favourites])
 
-  // --- 34.11 Plan 04/05: the filter engine's assembled state/deps,
-  // computed ONCE here (ahead of gamesForAlphabetFilter, which now consumes
-  // them directly) and reused by the grid, the exclude-your-own-facet
-  // counts, and the active-descriptor list -- so all three provably read
-  // the same inputs and can never drift apart. `searchMatchedKeys` is
-  // overridden per-consumer: the grid spreads in the real fuzzy-matched set
-  // computed inside its own memo below; countFor/describeActiveFilters use
-  // this object's `null` unmodified (search is not one of the facets they
-  // skip or describe against the grid's own match set). ---
-
-  const engineDeps: FilterEngineDeps = useMemo(
-    () => ({
-      hiddenAppNames: hiddenGames.list.map((hidden) => hidden.appName),
-      nonAvailableAppNames: JSON.parse(
-        storage.getItem('nonAvailableGames') || '[]'
-      ),
-      favouriteKeys: new Set(favouritesIds),
-      recentAppNames,
-      customCategories: customCategories.list,
-      gameUpdates,
-      crossoverRatings,
-      hostPlatform: platform
-    }),
-    [
-      hiddenGames,
-      favouritesIds,
-      recentAppNames,
-      customCategories,
-      gameUpdates,
-      crossoverRatings,
-      platform
-    ]
-  )
-
-  const engineState: FilterEngineState = useMemo(
-    () => ({
-      view: libraryView,
-      collection: currentCollection,
-      stores: storeFacet,
-      runnability: runnabilityFacet,
-      // Base value is "no constraint" -- gamesForAlphabetFilter spreads in
-      // the real fuzzy-matched key set (or null) computed from its own Fuse
-      // pass below; countFor/describeActiveFilters read this field
-      // unmodified, since search is not itself a store/runnability facet.
-      searchMatchedKeys: null,
-      showHidden,
-      showNonAvailable,
-      showSupportOfflineOnly,
-      showThirdPartyManagedOnly,
-      showUpdatesOnly
-    }),
-    [
-      libraryView,
-      currentCollection,
-      storeFacet,
-      runnabilityFacet,
-      showHidden,
-      showNonAvailable,
-      showSupportOfflineOnly,
-      showThirdPartyManagedOnly,
-      showUpdatesOnly
-    ]
-  )
+  // --- 34.11 Plan 04/05 (+ CR-01 code-review fix): the filter engine's
+  // assembled inputs, computed ONCE here and reused by the grid, the
+  // exclude-your-own-facet counts, and the active-descriptor list -- so all
+  // three provably read the same inputs and can never drift apart.
+  //
+  // CR-01 fix, and the reason the declaration order below matters: the
+  // UNFILTERED union and the fuzzy-matched key set are both hoisted out of
+  // the grid memo and declared FIRST, because the COUNTS need both. The
+  // pre-fix arrangement computed them inside the grid memo and handed the
+  // grid's filtered OUTPUT to countFor, which made every unselected facet
+  // option report a permanent 0 -- skipping a facet on a list that facet has
+  // already narrowed cannot recover the games it excluded.
+  //
+  // `engineState.searchMatchedKeys` now carries the real Fuse match set
+  // rather than a placeholder `null`, so REQ-34.11-15 ("facet counts are
+  // computed over the fuzzy-matched set") holds because filterLibrary
+  // applies the search stage on every pass -- not, as before, by side effect
+  // of the search constraint having already been baked into the list being
+  // counted. `describeActiveFilters` does not read this field at all (it
+  // takes the raw search term as its own argument), so widening it is inert
+  // there. ---
 
   // 34.11 Plan 05: unions every CONNECTED account's library only -- no
   // filter logic lives here. The store FACET is applied downstream in
@@ -641,31 +602,36 @@ export default React.memo(function Library(): JSX.Element {
     ]
   }
 
-  // 34.11 Plan 05: the grid's ONLY pipeline. Store union -> search-key
-  // precompute -> filterLibrary, reusing the SAME memoized engineState/
-  // engineDeps objects countForStore/countForRunnability/
-  // activeFilterDescriptors read below -- one implementation, so a facet
-  // count can never disagree with what the grid shows (RESEARCH
-  // Anti-Patterns). filterByPlatform (literal platform facet, D-09) and the
-  // macOS crossoverRatingFilters branch (D-10, absorbed into the
-  // runnability facet as evidence) are retired: neither runs here anymore.
-  // showFavouritesLibrary/showInstalledOnly/the legacy currentCustomCategories
-  // collection filter/the offline-support/third-party/updates-only toggles/
-  // the hidden+non-available tri-state block all now live in filterEngine's
-  // per-stage predicates, driven by the opt-in facet state plan 04 declared.
-  const gamesForAlphabetFilter = useMemo(() => {
-    const library: Array<GameInfo> = makeLibrary()
+  // The UNFILTERED union. This exact array -- never a filtered derivative of
+  // it -- is what buildGridPipeline hands to both filterLibrary and countFor.
+  // Dependency list carried over VERBATIM from the pre-fix grid memo,
+  // including its known incompleteness: `makeLibrary` also reads
+  // epic/gog/amazon/zoom/steam login state, which is not listed here. That
+  // is a separate, still-open review finding (WR-01) and is deliberately
+  // NOT fixed or suppressed here -- the `react-hooks/exhaustive-deps`
+  // warning this list produces is the finding's own tripwire and must stay
+  // visible.
+  const libraryUnion = useMemo(
+    () => makeLibrary(),
+    [
+      epic.library,
+      gog.library,
+      amazon.library,
+      zoom.library,
+      steam?.library,
+      sideloadedLibrary
+    ]
+  )
 
-    // Search-key precompute, built over the FULL (unconstrained) library so
-    // search stays order-independent -- what lets filterLibrary's `skip`
-    // rule compute correct sibling counts. The match SET this produces is
-    // identical to (or a superset of) what a platform-filtered subset would
-    // have produced; no match is lost. Fuse's options are byte-identical to
-    // the shipped configuration (D-33 amendment, REQ-34.11-15) -- removing
-    // Fuse is out of scope this phase.
-    let searchMatchedKeys: Set<string> | null = null
+  // Search-key precompute, built over the FULL (unconstrained) union so
+  // search stays order-independent -- what lets filterLibrary's `skip` rule
+  // compute correct sibling counts. Moved verbatim out of the grid memo by
+  // the CR-01 fix so the counts read the same match set the grid does; the
+  // Fuse configuration is byte-identical to the shipped one (D-33 amendment,
+  // REQ-34.11-15) -- removing Fuse is out of scope this phase.
+  const searchMatchedKeys = useMemo<Set<string> | null>(() => {
     try {
-      const searchableLibrary: SearchableGame[] = library.map((game) => {
+      const searchableLibrary: SearchableGame[] = libraryUnion.map((game) => {
         const title = game.overrides?.title || game.title
         return {
           original: game,
@@ -682,39 +648,97 @@ export default React.memo(function Library(): JSX.Element {
       }
       const fuse = new Fuse(searchableLibrary, options)
 
-      if (filterText) {
-        searchMatchedKeys = new Set(
-          fuse
-            .search(filterText)
-            .map((result) => filterEngine.gameKey(result.item.original))
-        )
-      } else {
-        searchMatchedKeys = null
+      if (!filterText) {
+        return null
       }
+
+      return new Set(
+        fuse
+          .search(filterText)
+          .map((result) => filterEngine.gameKey(result.item.original))
+      )
     } catch (error) {
       console.log(error)
       // Defensive fallback preserved from the shipped behaviour: a Fuse
       // construction/search failure degrades to "no search constraint"
       // rather than blanking the grid.
-      searchMatchedKeys = null
+      return null
     }
+  }, [libraryUnion, filterText])
 
-    return filterEngine.filterLibrary(
-      library,
-      { ...engineState, searchMatchedKeys },
-      engineDeps
-    )
-  }, [
-    engineState,
-    engineDeps,
-    filterText,
-    epic.library,
-    gog.library,
-    amazon.library,
-    zoom.library,
-    steam?.library,
-    sideloadedLibrary
-  ])
+  const engineDeps: FilterEngineDeps = useMemo(
+    () => ({
+      hiddenAppNames: hiddenGames.list.map((hidden) => hidden.appName),
+      nonAvailableAppNames: JSON.parse(
+        storage.getItem('nonAvailableGames') || '[]'
+      ),
+      favouriteKeys: new Set(favouritesIds),
+      recentAppNames,
+      customCategories: customCategories.list,
+      gameUpdates,
+      crossoverRatings,
+      hostPlatform: platform
+    }),
+    [
+      hiddenGames,
+      favouritesIds,
+      recentAppNames,
+      customCategories,
+      gameUpdates,
+      crossoverRatings,
+      platform
+    ]
+  )
+
+  const engineState: FilterEngineState = useMemo(
+    () => ({
+      view: libraryView,
+      collection: currentCollection,
+      stores: storeFacet,
+      runnability: runnabilityFacet,
+      // CR-01 fix: the REAL fuzzy-matched key set (or null when the search
+      // box is empty), no longer a placeholder the grid alone overrode. The
+      // grid and both counts now read the identical search constraint.
+      searchMatchedKeys,
+      showHidden,
+      showNonAvailable,
+      showSupportOfflineOnly,
+      showThirdPartyManagedOnly,
+      showUpdatesOnly
+    }),
+    [
+      libraryView,
+      currentCollection,
+      storeFacet,
+      runnabilityFacet,
+      searchMatchedKeys,
+      showHidden,
+      showNonAvailable,
+      showSupportOfflineOnly,
+      showThirdPartyManagedOnly,
+      showUpdatesOnly
+    ]
+  )
+
+  // 34.11 Plan 05 + CR-01 fix: the grid's ONLY pipeline, and the counts',
+  // built by one call to the React-free `buildGridPipeline` -- which is what
+  // makes the production call shape directly unit-testable
+  // (`__tests__/engineWiring.test.ts`). The grid list and both count
+  // accessors come out of the SAME call over the SAME unfiltered union, so a
+  // facet count can never disagree with what the grid shows (RESEARCH
+  // Anti-Patterns). filterByPlatform (literal platform facet, D-09) and the
+  // macOS crossoverRatingFilters branch (D-10, absorbed into the runnability
+  // facet as evidence) are retired: neither runs here anymore.
+  // showFavouritesLibrary/showInstalledOnly/the legacy currentCustomCategories
+  // collection filter/the offline-support/third-party/updates-only toggles/
+  // the hidden+non-available tri-state block all now live in filterEngine's
+  // per-stage predicates, driven by the opt-in facet state plan 04 declared.
+  const gridPipeline = useMemo(
+    () => buildGridPipeline(libraryUnion, engineState, engineDeps),
+    [libraryUnion, engineState, engineDeps]
+  )
+
+  const gamesForAlphabetFilter = gridPipeline.games
 
   // select library
   const libraryToShow = useMemo(() => {
@@ -777,33 +801,13 @@ export default React.memo(function Library(): JSX.Element {
     }
   }, [setTier2PortalFilled])
 
-  // D-28: exclude-your-own-facet counts, built on filterEngine's countFor --
-  // never a duplicated predicate chain. engineState/engineDeps are the SAME
-  // memoized objects the grid above consumes (declared earlier, ahead of
-  // makeLibrary) -- see the 34.11 Plan 04/05 comment at their declaration.
-  const countForStore = useCallback(
-    (value: StoreFacetValue) =>
-      filterEngine.countFor(
-        gamesForAlphabetFilter,
-        engineState,
-        engineDeps,
-        'store',
-        value
-      ),
-    [gamesForAlphabetFilter, engineState, engineDeps]
-  )
-
-  const countForRunnability = useCallback(
-    (value: RunnabilityTier) =>
-      filterEngine.countFor(
-        gamesForAlphabetFilter,
-        engineState,
-        engineDeps,
-        'runnability',
-        value
-      ),
-    [gamesForAlphabetFilter, engineState, engineDeps]
-  )
+  // D-28: exclude-your-own-facet counts. These come off the SAME
+  // `gridPipeline` object the grid list above does, which is the whole point
+  // of the CR-01 fix: there is no longer a call site here that could pick
+  // the wrong list to count over. Both accessors close over the unfiltered
+  // union inside `buildGridPipeline`; passing the grid's filtered output was
+  // the defect, and this component can no longer express that mistake.
+  const { countForStore, countForRunnability } = gridPipeline
 
   // D-26: the descriptor list and its count come from ONE call -- the count
   // is that list's `.length`, never a second independent computation, so
