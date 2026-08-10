@@ -1,0 +1,12 @@
+{
+  "_comment": "Phase 34.9 Plan 06. Plan 34.9-09 replaces every PENDING-CI-PUBLISH sentinel below with the real sha256 digest published by .github/workflows/build-runners-onedir-macos.yml's SHA256SUMS-{arch} output. Changing ANY digest value here, or the layout string, intentionally forces every checkout to re-download the darwin runners -- see darwinLayoutMarker()/computeLayoutMarker() in meta/downloadHelperBinaries.ts.",
+  "layout": "onedir-v1",
+  "digests": {
+    "legendary_macOS_x86_64_onedir.tar.gz": "PENDING-CI-PUBLISH",
+    "legendary_macOS_arm64_onedir.tar.gz": "PENDING-CI-PUBLISH",
+    "gogdl_macOS_x86_64_onedir.tar.gz": "PENDING-CI-PUBLISH",
+    "gogdl_macOS_arm64_onedir.tar.gz": "PENDING-CI-PUBLISH",
+    "nile_macOS_x86_64_onedir.tar.gz": "PENDING-CI-PUBLISH",
+    "nile_macOS_arm64_onedir.tar.gz": "PENDING-CI-PUBLISH"
+  }
+}
