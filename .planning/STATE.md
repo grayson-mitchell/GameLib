@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.9-08-PLAN.md
-last_updated: "2026-08-10T10:16:18.259Z"
+stopped_at: Completed 34.9-09-PLAN.md (Outcome C -- CI dispatch blocked, arm64 staged locally)
+last_updated: "2026-08-10T10:39:26.889Z"
 last_activity: 2026-08-10
 progress:
   total_phases: 23
   completed_phases: 16
   total_plans: 277
-  completed_plans: 261
-  percent: 94
+  completed_plans: 262
+  percent: 70
 ---
 
 # Project State
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — EXECUTING
-Plan: 8 of 11 complete (01, 02, 03, 04, 06 done — 06 depended only on 01/04 and ran out of
+Plan: 9 of 11 complete (01, 02, 03, 04, 06 done — 06 depended only on 01/04 and ran out of
 order per wave scheduling; 05 is NOT complete, no summary on disk yet. 34.9-06 extended
 meta/downloadHelperBinaries.ts with digest-verified darwin onedir sourcing from the GameLib
 rolling release, plus its first-ever test coverage — see 34.9-06-SUMMARY.md.)
@@ -2692,7 +2692,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 94%
+trusted blindly. The recurring `**Progress:**[██████████] 95%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 
@@ -3832,6 +3832,7 @@ Closed/parked native-install phases:
 | Phase 34.9 P06 | ~55min | 3 tasks | 4 files |
 | Phase 34.9 P07 | 45min | 3 tasks | 4 files |
 | Phase 34.9 P08 | 50min | 2 tasks | 3 files |
+| Phase 34.9 P09 | 70min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -4379,6 +4380,7 @@ Recent decisions affecting current work:
 - [Phase 34.9]: 34.9-07: bundle.resources uses trailing-slash directory-copy form ["../build/bin/"], not a glob, to preserve the nested onedir directory structure under $RESOURCE
 - [Phase 34.9]: 34.9-07: R-34.5-G1-PKG stays descoped from Phase 34.9 per 34.9-CONTEXT.md's locked scope decision; recorded in 34.9-PACKAGING-LIMITATIONS.md with no hedging language
 - [Phase 34.9-08]: verify:runner-bundle uses 'node -' (stdin) not the plan's literal 'node --', which does not pipe stdin — node -- terminates option parsing but does not select stdin as the script source; a positional root path after it gets require()'d as the script and throws MODULE_NOT_FOUND before the tool runs; node - is the working precedent already used by build-runners-onedir
+- [Phase 34.9]: CI dispatch for build-runners-onedir-macos.yml is blocked at the GitHub platform level: workflow_dispatch requires the workflow file on the repo's default branch (main), not merely on the dispatched ref — gh workflow run 404'd; confirmed independently via gh workflow list and gh release view that CI never ran. Plan 34.9-09's authorization is scoped to the feature branch only (no PR, no push to main), so this cannot be self-resolved. Recorded as Outcome C; arm64 staged from the local 34.9-03 build so plan 34.9-11's gate is not fully blocked; x64 remains entirely unproven.
 
 ### Pending Todos
 
@@ -4401,6 +4403,7 @@ Recent decisions affecting current work:
 - **RESOLVED by 34.10-10 Tasks 1-2** (commits `3202f2ed6`, `f7fe85ad4`): meta/i18nGateScope.json regenerated (136→144 files; +11 NavShell files +Header/index.tsx, -4 deleted Sidebar paths), `nav.tabs.games` key synced. `genI18nGateScope.test.ts` now fully green (9/9); `hardcodedStringGate.test.ts` went from 4 failing (ScopeLoadError, masking any real scan) to 123/124 passing — proving the gate now genuinely scans all 144 files (self-verified: `scannedFiles matches the committed scope snapshot exactly`).
 - **NEW BLOCKER found by 34.10-10 Task 2's verification, plan NOT closed**: `hardcodedStringGate.test.ts`'s one remaining failure is a real violation at `src/frontend/screens/WebView/index.tsx:347` (`'the Humble sign-in window closed or could not be reached'`) — but that line is **uncommitted WIP from the concurrent debug session** (`.planning/debug/humble-isloggedin-never-set.md`, F-34.4.2-19), confirmed via `git diff` (the string only exists in the working tree, not at HEAD). 34.10-10 is explicitly forbidden from touching that file (contamination rules) or widening the allowlist (T-34.10-25). Plan 34.10-10 stops here — Task 1 and Task 2's own artifacts are committed and correct, but the plan's "full suite green" success criterion cannot be met until the concurrent session either wraps that string in `t()` or commits/reverts its WIP. No action needed from 34.10-10 beyond re-running `pnpm jest --runInBand --silent --forceExit` once that session's WebView/index.tsx work is committed.
 - REQUIREMENTS.md has no Phase 34.9 traceability section -- REQ-34.9-01..11 are cited by ROADMAP.md, STATE.md, and every 34.9 plan/summary, but requirements.mark-complete cannot find them to check off. Pre-existing gap, not caused by plan 34.9-07; needs a REQUIREMENTS.md backfill pass (D-XX -> REQ mapping + traceability table) for the whole phase.
+- Phase 34.9-09: build-runners-onedir-macos.yml cannot be dispatched via gh workflow run until it exists on the repo's default branch (main) -- GitHub's workflow_dispatch requires this for ANY --ref, not just the pushed feature branch. Not resolvable within plan 34.9-09's authorized scope (no PR, no push to main). Blocks: real x64 onedir artifact (never built, no local fallback possible per constraint 1), pinning meta/runnersOnedirDigests.json's 6 sentinels, and full CI proof of the download-verify-extract round trip. See 34.9-CI-ROUNDTRIP.md.
 
 ### Quick Tasks Completed
 
@@ -4522,8 +4525,8 @@ Recent decisions affecting current work:
 > `state.update-progress`'s own JSON return reported `92`, itself one under the correct `91` for
 > `253/277`) -- hand-corrected to `completed_plans: 253`, `percent: 91`.
 
-Last session: 2026-08-10T10:16:18.244Z
-Stopped at: Completed 34.9-08-PLAN.md
+Last session: 2026-08-10T10:39:26.873Z
+Stopped at: Completed 34.9-09-PLAN.md (Outcome C -- CI dispatch blocked, arm64 staged locally)
 digest-verified darwin onedir sourcing (REQ-34.9-03/04/05). Task 1 added
 `downloadOnedirAsset(binaryName, arch)`: fetches legendary/gogdl/nile's macOS archives from
 the grayson-mitchell/GameLib `runners-onedir-macos` rolling release, sha256-verifies against
