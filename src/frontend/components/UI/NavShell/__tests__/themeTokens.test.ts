@@ -95,68 +95,58 @@ describe('navbar app-region (CR-02, D-32)', () => {
   })
 })
 
-describe('tier2 border-inline-end (--divider finding, 34.11-09 FOURTH fix -- brightness, not width)', () => {
+describe('tier2 divider (--divider finding, 34.11-09 FIFTH fix -- pseudo-element mechanism, not a border)', () => {
   const navShellScss = read(NAV_SHELL_SCSS)
   const tier2Block = cssBlock(navShellScss, '.NavShell__tier2')
 
-  it('.NavShell__tier2 border-inline-end is 2px solid var(--neutral-04)', () => {
+  it('.NavShell__tier2 no longer declares any border-inline-end -- the divider moved to a pseudo-element entirely', () => {
     // History (each superseded for a DIFFERENT, measured reason -- see this
-    // declaration's own header comment for the full account):
-    //   var(--divider)        -- undefined in 9/11 themes, drops the whole
-    //                             declaration.
-    //   var(--body-background) -- resolves everywhere, but colour-IDENTICAL
-    //                             to `.App .content`'s background in every
-    //                             theme without a `--gradient-body-
-    //                             background` override -- invisible against
-    //                             the grid side by construction.
-    //   1px var(--neutral-05) -- resolved AND had real contrast
-    //                             (7.65-8.83:1) yet was still reported
-    //                             completely absent in midnightMirage. A
-    //                             pixel-level Playwright reproduction of
-    //                             this exact DOM/CSS structure ruled out
-    //                             colour and occlusion in Chromium, pointing
-    //                             at the ONE variable Chromium cannot
-    //                             reproduce: `.App`'s `1fr`-fractional grid
-    //                             track (App.css:26) landing this boundary
-    //                             on a non-integer WKWebView device pixel --
-    //                             the same defect class this project already
-    //                             recorded once (`WKWebView % height vs 1fr
-    //                             grid row`).
-    //   2px var(--neutral-05) -- LIVE-CONFIRMED FIX for the rasterisation
-    //                             gap: the divider became visible in
-    //                             midnightMirage. This is now a reusable
-    //                             project-level finding (1px on a
-    //                             fractional-DPR grid-track boundary is
-    //                             unreliable in WKWebView; 2px has margin),
-    //                             not just this declaration's story. But
-    //                             `--neutral-05` at 2px read as a "chunky
-    //                             rule", not the hairline the design calls
-    //                             for.
-    // Route 1 (make 1px itself survive) was investigated and rejected: the
-    // fractional boundary is `--tier2-width * DPR`, and macOS's fractional
-    // "scaled resolution" backing-scale factors (e.g. 1.8x) make an integer
-    // result for EVERY plausible DPR simultaneously unachievable by any
-    // single fixed width -- this is a property of the runtime, not
-    // something a CSS length value can pin away.
-    // Route 2 (this line): `--neutral-04`, the design system's "strong
-    // border" role (`.claude/skills/sketch-findings-gamelib/SKILL.md`'s
-    // palette table) versus `--neutral-05`'s "muted text", measurably
-    // softer and pixel-confirmed as a clean hairline in midnightMirage and
-    // gruvbox_dark. See the dracula-override describe block below for why
-    // dracula does NOT use this token.
-    expect(tier2Block).toMatch(
-      /border-inline-end:\s*2px solid var\(--neutral-04\)/
-    )
+    // declaration's own header comment for the full account): var(--divider)
+    // (undefined in 9/11 themes) -> var(--body-background) (colour-identical
+    // to the grid side by construction) -> 1px var(--neutral-05) (resolved,
+    // real contrast, still reported absent -- Chromium repro ruled out
+    // colour/occlusion, pointing at WKWebView's `1fr`-fractional grid-track
+    // rounding, App.css:26) -> 2px var(--neutral-05), LIVE-CONFIRMED fixing
+    // the rasterisation gap but reported "too heavy" -> 2px var(--neutral-04)
+    // (softer, but still 2px, not the 1px hairline the design calls for).
+    // This fifth attempt keeps the width battle from repeating a sixth time
+    // by leaving the `border-inline-end` mechanism entirely: a border is
+    // painted as part of GRID ITEM layout, on the exact seam between two
+    // independently-rounded quantities (the grid track's own boundary and
+    // the item's own border-box edge) that a fractional-DPR engine could
+    // round differently. `border-inline-end` is asserted GONE, not just
+    // recoloured, because leaving a stray declaration behind would double up
+    // with the new pseudo-element divider below.
+    expect(tier2Block).not.toMatch(/border-inline-end/)
   })
 
-  it('.NavShell__tier2 no longer references var(--divider), var(--body-background), or var(--neutral-05) directly on its own border-inline-end -- each superseded for a reason a repeat cannot dodge', () => {
-    expect(tier2Block).not.toMatch(/var\(--divider\)/)
-    expect(tier2Block).not.toMatch(
-      /border-inline-end:\s*(1px|2px) solid var\(--body-background\)/
+  it('.NavShell__tier2 is position: relative -- the containing block the pseudo-element needs', () => {
+    expect(tier2Block).toMatch(/position:\s*relative/)
+  })
+
+  it('.NavShell__tier2::after paints the divider as an absolutely positioned 1px pseudo-element, flush with the true edge and RTL-safe', () => {
+    // `inset-inline-end` (not `right`) is direction-aware, auto-flipping
+    // under `.isRTL { direction: rtl }` (App.css:253) the same way
+    // `border-inline-end` did -- verified with a Playwright repro forcing
+    // `direction: rtl`: the pseudo-element's computed left/right swap
+    // correctly with no hand-written direction check. `inset-inline-end: 0`
+    // (flush with the edge) was chosen over pulling it 1px inward: both
+    // render identically in Chromium (which never reproduced the
+    // border-mechanism defect either, so neither result is WKWebView
+    // evidence), but 1px inward has a real, visible cost -- a gap of panel
+    // colour between the divider and the actual seam -- with no offsetting
+    // evidence of benefit.
+    const afterBlock = navShellScss.match(
+      /\.NavShell__tier2\s*\{[\s\S]*?&::after\s*\{([^}]*)\}/
     )
-    expect(tier2Block).not.toMatch(
-      /border-inline-end:\s*(1px|2px) solid var\(--neutral-05\)/
-    )
+    expect(afterBlock).not.toBeNull()
+    const body = afterBlock?.[1] ?? ''
+    expect(body).toMatch(/content:\s*['"]{2}/)
+    expect(body).toMatch(/position:\s*absolute/)
+    expect(body).toMatch(/inset-block:\s*0/)
+    expect(body).toMatch(/inset-inline-end:\s*0/)
+    expect(body).toMatch(/width:\s*1px/)
+    expect(body).toMatch(/background:\s*var\(--neutral-04\)/)
   })
 
   it('census: --divider is declared in strictly fewer theme blocks than the file defines -- guards against a future contributor reintroducing it under the mistaken assumption it is universal', () => {
@@ -203,30 +193,75 @@ describe('tier2 border-inline-end (--divider finding, 34.11-09 FOURTH fix -- bri
   })
 })
 
-describe('dracula-only divider override (34.11-09 FOURTH fix, --neutral-04 collision)', () => {
+describe('dracula-only divider override (34.11-09 FIFTH fix, --neutral-04 collision, retargeted at the pseudo-element)', () => {
   const navShellScss = read(NAV_SHELL_SCSS)
 
-  it('body.dracula and body.dracula-classic override border-inline-end-color to var(--neutral-05), excluding the collapsed state', () => {
+  it('body.dracula and body.dracula-classic override .NavShell__tier2::after background to var(--neutral-05)', () => {
     // `--navbar-background` (#44475a, dracula's panel colour) and
     // `--neutral-04` (#51595a) share an identical blue channel (90 = 90) --
     // measured at ~1.28:1 against dracula's panel side, and a pixel-level
-    // screenshot of this exact declaration showed no perceptible line
+    // screenshot of this exact collision (both under the border mechanism
+    // and again after the pseudo-element switch) showed no perceptible line
     // there at all. `--neutral-05` is the token already proven visible in
-    // dracula (4.07:1 / 6.33:1, pixel-confirmed in the prior fix), so the
-    // override falls back to it rather than accepting a token with a
-    // directly-observed failure in one of the three mandatory sweep themes.
+    // dracula (4.07:1 / 6.33:1), so the override falls back to it rather
+    // than accepting a token with a directly-observed failure in one of the
+    // three mandatory sweep themes. Nothing about switching from a border to
+    // a pseudo-element changes this collision -- both mechanisms paint the
+    // same two RGB values adjacent to each other -- so the exception carries
+    // forward unchanged, just retargeted at `::after`.
     const dracula = navShellScss.match(
-      /body\.dracula \.NavShell__tier2:not\(\.NavShell__tier2--collapsed\),\s*\n?body\.dracula-classic \.NavShell__tier2:not\(\.NavShell__tier2--collapsed\)\s*\{([^}]*)\}/
+      /body\.dracula \.NavShell__tier2::after,\s*\n?body\.dracula-classic \.NavShell__tier2::after\s*\{([^}]*)\}/
     )
     expect(dracula).not.toBeNull()
-    expect(dracula?.[1]).toMatch(/border-inline-end-color:\s*var\(--neutral-05\)/)
+    expect(dracula?.[1]).toMatch(/background:\s*var\(--neutral-05\)/)
   })
 
-  it('the override excludes .NavShell__tier2--collapsed -- without it, two classes would outrank the one-class Manage-Accounts collapse rule and repaint a border colour on a column collapsed to zero width', () => {
+  it('the override does not need a :not(.NavShell__tier2--collapsed) exclusion -- the collapse rule suppresses the pseudo-element via content: none, which the override cannot out-cascade because the box it would paint never exists', () => {
     const dracula = navShellScss.match(
-      /body\.dracula \.NavShell__tier2:not\(\.NavShell__tier2--collapsed\)/
+      /body\.dracula \.NavShell__tier2::after/
     )
     expect(dracula).not.toBeNull()
+    // Negative half of the same claim: no `:not(...)` guard was added here,
+    // because none is needed -- unlike the border-mechanism version of this
+    // override, which DID need one (a real specificity bug this project
+    // found and fixed in the prior fix).
+    const draculaLine = navShellScss.match(/body\.dracula \.NavShell__tier2[^\n{,]*/)
+    expect(draculaLine?.[0]).not.toMatch(/:not\(/)
+  })
+})
+
+describe('collapse state hides the pseudo-element divider explicitly (34.11-09 FIFTH fix)', () => {
+  const navShellScss = read(NAV_SHELL_SCSS)
+
+  it('.NavShell__tier2.NavShell__tier2--collapsed::after sets content: none', () => {
+    // `.NavShell__tier2--collapsed { opacity: 0; ... }` already visually
+    // hides the pseudo-element as an IMPLICIT side effect (opacity applies
+    // to an element's whole rendered result, pseudo-elements included), but
+    // that is not an explicit, load-bearing statement of intent -- fragile
+    // if `opacity` is ever reworked independently of the divider (e.g. to
+    // an animated/partial value). `content: none` makes the pseudo-element
+    // not exist at all while collapsed, regardless of any other rule
+    // (including the dracula override) that sets its `background`.
+    //
+    // Chained as `.NavShell__tier2.NavShell__tier2--collapsed` (both classes
+    // the element actually carries together, per `NavShell/index.tsx`'s
+    // `classNames('NavShell__tier2', { 'NavShell__tier2--collapsed':
+    // tier2Collapsed })`), not `.NavShell__tier2--collapsed` alone, so its
+    // specificity (two classes) unconditionally beats the base divider
+    // rule's `content: ''` (one class) regardless of source order -- the
+    // same class of specificity mistake the border-mechanism dracula
+    // override made and had to correct (34.11-09's prior fix) is pre-empted
+    // here rather than repeated. Verified via the Playwright harness with
+    // the collapsed class applied: computed `content` reads `none` and no
+    // pixel of the divider colour renders.
+    expect(navShellScss).toMatch(
+      /\.NavShell__tier2\.NavShell__tier2--collapsed::after\s*\{[^}]*content:\s*none/
+    )
+  })
+
+  it('.NavShell__tier2--collapsed itself no longer declares border-inline-end-color -- that property has nothing left to do once the border is gone, and a stray declaration here would be dead code', () => {
+    const collapsedBlock = cssBlock(navShellScss, '.NavShell__tier2--collapsed')
+    expect(collapsedBlock).not.toMatch(/border-inline-end-color/)
   })
 })
 

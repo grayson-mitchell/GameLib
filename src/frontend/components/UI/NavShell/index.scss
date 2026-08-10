@@ -177,6 +177,10 @@
   width: var(--tier2-width);
   flex: none;
   background: var(--navbar-background);
+  // Containing block for the `::after` divider below (FIFTH ATTEMPT) --
+  // does NOT establish a new stacking context on its own (no `z-index` is
+  // set here), only a positioning context for the pseudo-element.
+  position: relative;
   // UI-SPEC "New Finding" / third instance of the no-fallback-custom-property
   // defect class (see the `.NavShell__navbar` border-bottom comment above,
   // which recorded this exact line as "KNOWN, OUT-OF-SCOPE" at the time).
@@ -305,13 +309,38 @@
   // than ship a token with directly-observed failure in one of the three
   // mandatory themes -- repeating this exact defect class one theme later
   // -- dracula (and dracula-classic, which shares the same
-  // `--navbar-background`, themes.scss:280-281) gets a scoped override
-  // below falling back to the already-proven `--neutral-05`. This means the
-  // divider is not colour-uniform across themes, which is a deliberate,
-  // evidence-driven trade: a seam that is reliably visible in every
-  // mandatory theme beats one that is consistently coloured but sometimes
-  // invisible.
-  border-inline-end: 2px solid var(--neutral-04);
+  // `--navbar-background`, themes.scss:280-281) got a scoped override
+  // (superseded below, not deleted from this history: the mechanism it
+  // targeted is gone, the exception it encodes is not) falling back to the
+  // already-proven `--neutral-05`. This meant the divider was not
+  // colour-uniform across themes, a deliberate, evidence-driven trade: a
+  // seam that is reliably visible in every mandatory theme beats one that
+  // is consistently coloured but sometimes invisible. That trade-off
+  // CARRIES FORWARD into the fifth attempt below unchanged -- only the
+  // paint mechanism changes.
+  //
+  // FIFTH ATTEMPT (this file's current state): re-sweep verdict on the 2px
+  // border was "colour is right, width is still wrong" -- 2px is what
+  // physical-pixel margin against the DPR rounding gap costs when the paint
+  // mechanism is a `border`, but the design calls for a true 1px hairline.
+  // The border was replaced entirely by a `position: absolute` `::after`
+  // pseudo-element (below), on a specific, falsifiable rationale distinct
+  // from "try 1px again": a `border` is painted as part of GRID ITEM
+  // layout, at the coordinate the grid algorithm resolves for the item's
+  // OWN box edge -- which sits directly on the seam between two
+  // INDEPENDENTLY-rounded quantities (the grid track's own resolved
+  // boundary, and the item's own border-box edge), either of which a
+  // fractional-DPR engine could round differently, in which case the
+  // border is painted into the gap between two disagreeing roundings. An
+  // absolutely positioned pseudo-element is instead resolved by the CSS
+  // POSITIONING algorithm against `.NavShell__tier2`'s own, ALREADY-SETTLED
+  // padding box -- a single resolved geometry, not two independently
+  // rounded ones sitting edge to edge. This repro cannot prove that
+  // difference matters in WKWebView specifically (Chromium has never
+  // reproduced the border defect either), so this is reported as a
+  // reasoned, falsifiable attempt, not a proof -- if the human's next sweep
+  // still finds it missing at 1px, revert to `4b446abd9`'s 2px border,
+  // which IS proven.
   overflow: hidden;
   // Replaces `--sidebar-horizontal-padding` (`Sidebar/index.scss:2`) for
   // the ported tier-2 row rules in `components/NavItem/index.scss`.
@@ -320,30 +349,59 @@
     width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
     padding 0.22s ease,
     opacity 0.18s ease;
+
+  // The divider itself (FIFTH ATTEMPT). `inset-inline-end: 0` (not `right:
+  // 0`) is direction-aware, so it auto-flips under `.isRTL { direction: rtl
+  // }` (App.css:253) the same way `border-inline-end` did -- verified with
+  // a Playwright repro forcing `direction: rtl`: the pseudo-element's
+  // computed `left`/`right` swap correctly with no hand-written direction
+  // check. `--neutral-04` carries forward unchanged from the 2px-border fix
+  // (measurably softer than `--neutral-05` in midnightMirage/gruvbox_dark;
+  // see the dracula override immediately below for the one theme where it
+  // collides).
+  //
+  // `inset-inline-end: 0` (flush with the true panel/grid edge) was chosen
+  // over `inset-inline-end: 1px` (pulled one device pixel inward). Both
+  // were built and rendered in the Chromium repro -- Chromium shows no
+  // difference in reliability between them, which is expected, since
+  // Chromium never reproduced the border-mechanism defect either; neither
+  // result says anything about WKWebView. `1px` inward has a real,
+  // visible cost with no offsetting evidence of benefit: it leaves a 1px
+  // gap of panel-background colour between the divider and the actual
+  // seam, reading as a divider floating just inside the edge rather than
+  // marking it. `0` was kept as the geometrically correct default; `1px`
+  // is the next thing to try if this pseudo-element approach is proven
+  // and 0 specifically still fails.
+  &::after {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    width: 1px;
+    background: var(--neutral-04);
+  }
 }
 
-// Dracula-only exception to the `--neutral-04` divider above (see that
-// declaration's own comment for the measured/screenshotted evidence).
+// Dracula-only exception to the `::after` divider above -- unchanged
+// reasoning from the 2px-border fix, retargeted at the new pseudo-element.
 // `--navbar-background` (#44475a, dracula's panel colour) and `--neutral-04`
-// (#51595a) share an identical blue channel and render with no perceptible
-// separation against the panel side specifically in this one theme --
-// `--neutral-05` is the already-proven-visible fallback (4.07:1 / 6.33:1
-// against dracula's panel/grid, pixel-confirmed earlier in this file's
-// history). Scoped to both dracula selectors, which share the same
-// `--navbar-background` (`themes.scss:280-281`).
+// (#51595a) share an identical blue channel and rendered with no
+// perceptible separation against the panel side in the border-mechanism
+// screenshot; nothing about switching to a pseudo-element changes that
+// colour collision, since both mechanisms paint the same two RGB values
+// adjacent to each other. `--neutral-05` is the already-proven-visible
+// fallback (4.07:1 / 6.33:1 against dracula's panel/grid).
 //
-// `:not(.NavShell__tier2--collapsed)` is load-bearing, not decoration: two
-// classes (`body.dracula .NavShell__tier2`) outrank the Manage-Accounts
-// collapse rule's one class (`.NavShell__tier2--collapsed`,
-// `border-inline-end-color: transparent`, immediately below) regardless of
-// source order. Without this exclusion, this override would win over the
-// collapse rule in dracula specifically and repaint a visible border-colour
-// on a column whose width, padding and opacity are already collapsed to
-// zero -- invisible today only because the box itself has zero width, and
-// a latent regression the moment that geometry changes.
-body.dracula .NavShell__tier2:not(.NavShell__tier2--collapsed),
-body.dracula-classic .NavShell__tier2:not(.NavShell__tier2--collapsed) {
-  border-inline-end-color: var(--neutral-05);
+// No `:not(.NavShell__tier2--collapsed)` exclusion is needed here (unlike
+// the 2px-border version of this override): the collapse rule below
+// suppresses the pseudo-element entirely via `content: none`, which makes
+// the element's box -- and therefore anything this override sets on it,
+// including `background` -- not exist, regardless of this selector's
+// higher specificity. A property CANNOT win a cascade fight for a box that
+// was never generated.
+body.dracula .NavShell__tier2::after,
+body.dracula-classic .NavShell__tier2::after {
+  background: var(--neutral-05);
 }
 
 // Manage Accounts only (REQ-34.10-03 § Design Decisions #5). Collapse is
@@ -355,7 +413,27 @@ body.dracula-classic .NavShell__tier2:not(.NavShell__tier2--collapsed) {
   width: 0;
   padding-inline: 0;
   opacity: 0;
-  border-inline-end-color: transparent;
+}
+
+// `opacity: 0` above already visually hides the `::after` divider (opacity
+// applies to an element's whole rendered result, pseudo-elements included),
+// but that is an IMPLICIT side effect of a property whose job is to fade
+// the column, not to own the divider's visibility -- fragile if `opacity`
+// is ever reworked (e.g. to an animated/partial value) independently of the
+// divider. `content: none` makes the explicit, load-bearing statement:
+// this pseudo-element does not exist while collapsed, full stop, regardless
+// of what `background` any other rule (including the dracula override
+// above) sets on it. Chained as `.NavShell__tier2.NavShell__tier2--collapsed`
+// (both classes the element actually carries together, per
+// `NavShell/index.tsx`'s `classNames('NavShell__tier2', {
+// 'NavShell__tier2--collapsed': tier2Collapsed })`) rather than left at
+// `.NavShell__tier2--collapsed` alone, so its specificity (two classes)
+// unconditionally beats the base divider rule's `content: ''` (one class)
+// regardless of source order -- the same class of specificity mistake the
+// 2px-border dracula override made and had to correct is pre-empted here
+// rather than repeated.
+.NavShell__tier2.NavShell__tier2--collapsed::after {
+  content: none;
 }
 
 .NavShell__tier2Portal {
