@@ -23,7 +23,7 @@
  * way any of this is reachable from a test.
  */
 
-import { GameInfo } from 'common/types'
+import { FavouriteGame, GameInfo, HiddenGame } from 'common/types'
 import {
   FilterEngineDeps,
   FilterEngineState,
@@ -75,5 +75,97 @@ export function buildGridPipeline(
       filterEngine.countFor(libraryUnion, state, deps, 'store', value),
     countForRunnability: (value: RunnabilityTier) =>
       filterEngine.countFor(libraryUnion, state, deps, 'runnability', value)
+  }
+}
+
+/**
+ * Everything `buildEngineDeps` needs, in the raw shapes `Library/index.tsx`
+ * actually has in scope -- so the component does no derivation of its own
+ * and the whole `FilterEngineDeps` construction is unit-testable (WR-15).
+ */
+export interface EngineDepsInputs {
+  hiddenGames: HiddenGame[]
+  /**
+   * `favouriteGames.list` from `ContextProvider` -- the UNCONDITIONAL source
+   * of truth. Not the Library screen's `favourites` display memo, whose
+   * population is gated on the top-section setting (see CR-02 below).
+   */
+  favouriteGames: FavouriteGame[]
+  /**
+   * The same unfiltered union `buildGridPipeline` receives. Needed because
+   * `FavouriteGame` (= `RecentGame` = `{ appName, title }`) carries no
+   * `runner`, while `filterEngine.gameKey` is `${app_name}_${runner}` --
+   * the runner can only come from the library entry itself.
+   */
+  libraryUnion: GameInfo[]
+  /** Raw `localStorage['nonAvailableGames']`, parsed here. */
+  nonAvailableGamesRaw: string | null
+  recentAppNames: string[]
+  customCategories: Record<string, string[]>
+  gameUpdates: string[]
+  crossoverRatings: Record<string, number | null>
+  hostPlatform: string
+}
+
+/**
+ * CR-02: resolves `favouriteGames.list` (keyed by `appName` only) into the
+ * `${app_name}_${runner}` key set `filterEngine.passesView` compares against
+ * for the `favourites` view.
+ *
+ * One `appName` can legitimately resolve to more than one key -- the same
+ * game owned on two stores produces two library entries with two runners --
+ * so this collects EVERY match rather than the first.
+ */
+export function buildFavouriteKeys(
+  favouriteGames: FavouriteGame[],
+  libraryUnion: GameInfo[]
+): Set<string> {
+  const favouriteAppNames = new Set(favouriteGames.map((fav) => fav.appName))
+
+  const keys = new Set<string>()
+  for (const game of libraryUnion) {
+    if (favouriteAppNames.has(game.app_name)) {
+      keys.add(filterEngine.gameKey(game))
+    }
+  }
+  return keys
+}
+
+/**
+ * CR-02: builds `FilterEngineDeps` from `Library/index.tsx`'s raw inputs.
+ *
+ * `favouriteKeys` comes from `favouriteGames` DIRECTLY. It must not be
+ * derived from the Library screen's `favourites` memo: that memo only
+ * populates `if (showFavourites || showFavouritesLibrary)`, and both of
+ * those are off by default (`libraryTopSection` defaults to `'disabled'`;
+ * `localStorage['show_favorites']` defaults to `'false'` and its only UI was
+ * deleted in 34.11-09). Deriving the engine's key set from a DISPLAY memo
+ * made the `Favourites` view return zero games on every default install.
+ *
+ * Hidden favourites are deliberately NOT filtered out here, unlike the
+ * display memo's `favouriteGamesList`: `filterLibrary`'s `more` stage
+ * (`passesMore` -> `isHiddenGame`) already applies the showHidden tri-state
+ * to every game, favourite or not. Pre-filtering here would apply the same
+ * rule twice, and would make `deps` depend on filter STATE, which it must
+ * not -- `deps` is data, `state` is the selection.
+ */
+export function buildEngineDeps(inputs: EngineDepsInputs): FilterEngineDeps {
+  return {
+    hiddenAppNames: inputs.hiddenGames.map((hidden) => hidden.appName),
+    // Behaviour preserved verbatim from the pre-fix inline expression,
+    // including its lack of a try/catch -- that is a separate, still-open
+    // review finding (WR-02) and is deliberately not changed here.
+    nonAvailableAppNames: JSON.parse(
+      inputs.nonAvailableGamesRaw || '[]'
+    ) as string[],
+    favouriteKeys: buildFavouriteKeys(
+      inputs.favouriteGames,
+      inputs.libraryUnion
+    ),
+    recentAppNames: inputs.recentAppNames,
+    customCategories: inputs.customCategories,
+    gameUpdates: inputs.gameUpdates,
+    crossoverRatings: inputs.crossoverRatings,
+    hostPlatform: inputs.hostPlatform
   }
 }

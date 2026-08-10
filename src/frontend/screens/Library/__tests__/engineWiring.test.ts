@@ -15,10 +15,15 @@
  * `testEnvironment: 'node'` (`src/frontend/jest.config.js`) and this project
  * has no jsdom and no DOM-rendering test helper installed.
  */
-import { GameInfo } from 'common/types'
+import { FavouriteGame, GameInfo, HiddenGame } from 'common/types'
 import { FilterEngineDeps, FilterEngineState } from 'frontend/types'
 import { gameKey } from '../filterEngine'
-import { buildGridPipeline } from '../engineWiring'
+import {
+  buildEngineDeps,
+  buildFavouriteKeys,
+  buildGridPipeline,
+  EngineDepsInputs
+} from '../engineWiring'
 
 function makeGame(overrides: Partial<GameInfo> = {}): GameInfo {
   return {
@@ -181,5 +186,176 @@ describe('buildGridPipeline: counts are computed over the fuzzy-matched set (REQ
 
     expect(pipeline.games).toHaveLength(0)
     expect(pipeline.countForStore('steam')).toBe(0)
+  })
+})
+
+/**
+ * CR-02 / WR-15. Before this fix nothing in the phase exercised
+ * `engineDeps` construction at all -- `filterEngine.test.ts` built `deps`
+ * from its own local `makeDeps()` factory, and the two source-text gates
+ * never look at values. That untested seam is where CR-02 lived: the
+ * engine's `favouriteKeys` was derived from the Library screen's
+ * `favourites` DISPLAY memo, which only populates when
+ * `showFavourites || showFavouritesLibrary`.
+ *
+ * Both of those are off on a default install -- `libraryTopSection`
+ * defaults to `'disabled'` (`src/backend/config.ts`, `GlobalState.tsx`) and
+ * `localStorage['show_favorites']` defaults to `'false'` with its only UI
+ * (`LibraryFilters`) deleted by 34.11-09 -- so `favouriteKeys` was an empty
+ * Set and `passesView(game, 'favourites', deps)` was false for EVERY game.
+ *
+ * Every case below therefore goes through the real `buildEngineDeps`, and
+ * the headline case composes it with the real `buildGridPipeline`, so what
+ * is under test is the production path and not a replica of it.
+ */
+function makeDepsInputs(
+  overrides: Partial<EngineDepsInputs> = {}
+): EngineDepsInputs {
+  return {
+    hiddenGames: [],
+    favouriteGames: [],
+    libraryUnion: [],
+    nonAvailableGamesRaw: null,
+    recentAppNames: [],
+    customCategories: {},
+    gameUpdates: [],
+    crossoverRatings: {},
+    hostPlatform: 'darwin',
+    ...overrides
+  }
+}
+
+function makeFavourite(appName: string): FavouriteGame {
+  return { appName, title: appName }
+}
+
+describe('buildEngineDeps: the Favourites view works on a default install (CR-02)', () => {
+  const libraryUnion = [
+    makeGame({ app_name: 'g1', runner: 'gog', title: 'Gog One' }),
+    makeGame({ app_name: 'g2', runner: 'gog', title: 'Gog Two' }),
+    makeGame({ app_name: 's1', runner: 'steam', title: 'Steam One' })
+  ]
+
+  it('the Favourites view returns the favourited games with libraryTopSection disabled and show_favorites false', () => {
+    // The default-install configuration exactly: NOTHING about the
+    // top-section display setting or the deleted show_favorites toggle is an
+    // input to this function any more, which is the fix. Before it, this
+    // same configuration produced an empty Set and an empty grid.
+    const deps = buildEngineDeps(
+      makeDepsInputs({
+        libraryUnion,
+        favouriteGames: [makeFavourite('g1'), makeFavourite('s1')]
+      })
+    )
+
+    const pipeline = buildGridPipeline(
+      libraryUnion,
+      makeState({ view: 'favourites' }),
+      deps
+    )
+
+    expect(pipeline.games.map((game) => game.app_name).sort()).toEqual([
+      'g1',
+      's1'
+    ])
+  })
+
+  it('favouriteKeys carries the runner, not just the app_name -- passesView compares gameKey()', () => {
+    const deps = buildEngineDeps(
+      makeDepsInputs({ libraryUnion, favouriteGames: [makeFavourite('g1')] })
+    )
+
+    expect([...deps.favouriteKeys]).toEqual(['g1_gog'])
+  })
+
+  it('a favourite owned on two stores resolves to BOTH keys', () => {
+    // FavouriteGame is keyed by appName alone, so the runner can only come
+    // from the library entries -- and there can be more than one.
+    const dualOwned = [
+      makeGame({ app_name: 'dual', runner: 'gog' }),
+      makeGame({ app_name: 'dual', runner: 'steam' })
+    ]
+    const keys = buildFavouriteKeys([makeFavourite('dual')], dualOwned)
+
+    expect([...keys].sort()).toEqual(['dual_gog', 'dual_steam'])
+  })
+
+  it('a favourite that is not in the library union produces no key rather than a bogus one', () => {
+    const keys = buildFavouriteKeys([makeFavourite('not-owned')], libraryUnion)
+
+    expect([...keys]).toEqual([])
+  })
+
+  it('a hidden favourite stays IN favouriteKeys -- the showHidden tri-state is applied by filterLibrary, not by deps', () => {
+    // deps is data; state is the selection. Pre-filtering hidden games here
+    // would apply the rule twice and make deps depend on filter state.
+    const hidden: HiddenGame[] = [{ appName: 'g1', title: 'Gog One' }]
+    const deps = buildEngineDeps(
+      makeDepsInputs({
+        libraryUnion,
+        favouriteGames: [makeFavourite('g1')],
+        hiddenGames: hidden
+      })
+    )
+
+    expect(deps.favouriteKeys.has('g1_gog')).toBe(true)
+
+    // ...and filterLibrary is what actually drops it while showHidden is off.
+    const offPipeline = buildGridPipeline(
+      libraryUnion,
+      makeState({ view: 'favourites', showHidden: 'off' }),
+      deps
+    )
+    expect(offPipeline.games).toHaveLength(0)
+
+    const shownPipeline = buildGridPipeline(
+      libraryUnion,
+      makeState({ view: 'favourites', showHidden: 'show' }),
+      deps
+    )
+    expect(shownPipeline.games.map((game) => game.app_name)).toEqual(['g1'])
+  })
+
+  it('no favourites at all still yields an empty key set -- the fix must not fabricate favourites', () => {
+    const deps = buildEngineDeps(makeDepsInputs({ libraryUnion }))
+
+    expect(deps.favouriteKeys.size).toBe(0)
+    expect(
+      buildGridPipeline(libraryUnion, makeState({ view: 'favourites' }), deps)
+        .games
+    ).toHaveLength(0)
+  })
+})
+
+describe('buildEngineDeps: the remaining fields (WR-15)', () => {
+  it('maps hiddenGames to app names and passes the rest through unchanged', () => {
+    const libraryUnion = [makeGame({ app_name: 'g1', runner: 'gog' })]
+    const deps = buildEngineDeps(
+      makeDepsInputs({
+        libraryUnion,
+        hiddenGames: [
+          { appName: 'h1', title: 'Hidden One' },
+          { appName: 'h2', title: 'Hidden Two' }
+        ],
+        nonAvailableGamesRaw: '["na1","na2"]',
+        recentAppNames: ['r1'],
+        customCategories: { Backlog: ['g1_gog'] },
+        gameUpdates: ['u1'],
+        crossoverRatings: { g1: null },
+        hostPlatform: 'linux'
+      })
+    )
+
+    expect(deps.hiddenAppNames).toEqual(['h1', 'h2'])
+    expect(deps.nonAvailableAppNames).toEqual(['na1', 'na2'])
+    expect(deps.recentAppNames).toEqual(['r1'])
+    expect(deps.customCategories).toEqual({ Backlog: ['g1_gog'] })
+    expect(deps.gameUpdates).toEqual(['u1'])
+    expect(deps.crossoverRatings).toEqual({ g1: null })
+    expect(deps.hostPlatform).toBe('linux')
+  })
+
+  it('an absent nonAvailableGames key yields an empty list', () => {
+    expect(buildEngineDeps(makeDepsInputs()).nonAvailableAppNames).toEqual([])
   })
 })

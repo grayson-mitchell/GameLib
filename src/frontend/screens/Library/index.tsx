@@ -66,7 +66,7 @@ import * as filterEngine from './filterEngine'
 // CR-01: the grid/count call shape lives in this React-free module, not
 // inline here, so a unit test can exercise the REAL production wiring
 // instead of a hand-written replica of it.
-import { buildGridPipeline } from './engineWiring'
+import { buildEngineDeps, buildGridPipeline } from './engineWiring'
 
 const storage = window.localStorage
 
@@ -545,9 +545,14 @@ export default React.memo(function Library(): JSX.Element {
     steam
   ])
 
-  const favouritesIds = useMemo(() => {
-    return favourites.map((game) => `${game.app_name}_${game.runner}`)
-  }, [favourites])
+  // NOTE (CR-02): there is deliberately no `favouritesIds` memo here any
+  // more. `engineDeps.favouriteKeys` used to be derived from `favourites`
+  // above -- a DISPLAY memo that only populates when `showFavourites ||
+  // showFavouritesLibrary`, both of which are off on a default install. That
+  // made the Favourites VIEW return zero games for everyone. The engine now
+  // reads `favouriteGames.list` directly (see the engineDeps memo below);
+  // `favourites` survives solely to feed the top-section Favourites lane in
+  // the JSX, which is what it was always for.
 
   // --- 34.11 Plan 04/05 (+ CR-01 code-review fix): the filter engine's
   // assembled inputs, computed ONCE here and reused by the grid, the
@@ -666,22 +671,30 @@ export default React.memo(function Library(): JSX.Element {
     }
   }, [libraryUnion, filterText])
 
+  // CR-02/WR-15: every field is built by the React-free `buildEngineDeps`,
+  // so the whole construction is unit-testable
+  // (`__tests__/engineWiring.test.ts`) rather than being an untested inline
+  // object literal -- the seam CR-02 lived on, and which no test in the
+  // phase touched. `favouriteGames` is passed RAW, straight from
+  // ContextProvider, so the engine's favourite key set can never again be
+  // gated on a display setting.
   const engineDeps: FilterEngineDeps = useMemo(
-    () => ({
-      hiddenAppNames: hiddenGames.list.map((hidden) => hidden.appName),
-      nonAvailableAppNames: JSON.parse(
-        storage.getItem('nonAvailableGames') || '[]'
-      ),
-      favouriteKeys: new Set(favouritesIds),
-      recentAppNames,
-      customCategories: customCategories.list,
-      gameUpdates,
-      crossoverRatings,
-      hostPlatform: platform
-    }),
+    () =>
+      buildEngineDeps({
+        hiddenGames: hiddenGames.list,
+        favouriteGames: favouriteGames.list,
+        libraryUnion,
+        nonAvailableGamesRaw: storage.getItem('nonAvailableGames'),
+        recentAppNames,
+        customCategories: customCategories.list,
+        gameUpdates,
+        crossoverRatings,
+        hostPlatform: platform
+      }),
     [
       hiddenGames,
-      favouritesIds,
+      favouriteGames,
+      libraryUnion,
       recentAppNames,
       customCategories,
       gameUpdates,
