@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: executing
-stopped_at: Completed 34.11-08-PLAN.md -- FilterChipRow + FilterZeroResult grid surfaces (REQ-34.11-13/-14)
-last_updated: "2026-08-09T11:25:37.318Z"
-last_activity: 2026-08-09
+status: verifying
+stopped_at: Completed 34.11-09-PLAN.md -- tier-2 panel mounted, checkpoint resolved after 4 re-sweeps, phase 34.11 plans all executed (9/9)
+last_updated: "2026-08-10T07:55:01.286Z"
+last_activity: 2026-08-10
 progress:
   total_phases: 23
-  completed_phases: 15
+  completed_phases: 16
   total_plans: 277
-  completed_plans: 255
+  completed_plans: 256
   percent: 92
 ---
 
@@ -2689,7 +2689,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 92%
+trusted blindly. The recurring `**Progress:**[█████████░] 93%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 
@@ -2774,7 +2774,7 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 `STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Ready to execute
+Status: Phase complete — ready for verification
 
 > NOTE (34.10-18): `state.advance-plan` corrupted STATE.md again, the same recurring
 > mis-targeted-write bug every note in this cluster documents — it spliced this session's status
@@ -3093,7 +3093,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-09
+Last activity: 2026-08-10
   cancels instead of erroring
   (pre-existing external-state reachability) and Test 7 (UI-level reachability, distinct from
   backend-logic reachability) to live-gate-contract-authoring.md's Structural Reachability Review,
@@ -3823,6 +3823,7 @@ Closed/parked native-install phases:
 | Phase 34.11 P06 | 45min | 3 tasks | 8 files |
 | Phase 34.11 P07 | 55min | 3 tasks | 12 files |
 | Phase 34.11 P08 | 18min | 3 tasks | 9 files |
+| Phase 34.11 P09 | checkpoint-spanning | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -4360,6 +4361,9 @@ Recent decisions affecting current work:
 - [Phase 34.11-07]: FilterRunnabilityFacet uses fully-literal tGamelib() call sites rather than a spread over RUNNABILITY_LABELS[tier] -- a spread, and even a literal-key/non-literal-default hybrid, either misses i18n extraction entirely or ships an empty catalog default; a dev-only drift guard echoes call-site defaults (not a duplicated literal table) to stay in sync with facetLabels.ts
 - [Phase 34.11-08]: Close (x) control uses FontAwesome faXmark, not a bare Unicode glyph — matches SearchBar/FormControl/HumbleExpiryToast precedent, avoids a hardcoded-string-gate false positive
 - [Phase 34.11-08]: Token substitution: text-hover to accent in FilterChipRow/FilterZeroResult focus-visible rings — text-hover is undefined in gruvbox_dark/dracula per themes.scss, matching 34.11-07's precedent for the same token
+- [Phase 34.11]: Tier-2 divider: five mechanism attempts, four falsified by evidence -- border-mechanism approaches (--divider, --body-background, 2px --neutral-05, 2px --neutral-04) all superseded by a 1px position:absolute pseudo-element off the CSS Grid track boundary — A 1px border on a fractional width x DPR grid-track boundary does not reliably rasterize in WKWebView; the actual defect was only found by building a pixel-level Chromium reproduction as a discriminator instead of substituting another token
+- [Phase 34.11]: A stale Header/index.css full-width-header background, painted inside the new tier-2 portal, caused two of the four originally-reported live-sweep defects at once — In midnightMirage --body-background and --navbar-active-background are both aliases of --background-darker, so the selected-row highlight and the divider both became colour-identical to the surface painted over them by one unrelated rule; a source-text gate on the divider's own property stayed green throughout because a NEW SIBLING RULE, not the gated property, was defeating it -- a distinct failure mode from vacuity
+- [Phase 34.11]: Gamepad focus-scroll in the tier-2 panel is NOT MEASURED for the second consecutive phase (34.10, then 34.11) -- no gamepad was available in either case — Recorded honestly rather than inferred; carried forward as a standing, overdue measurement rather than allowed to silently defer a third time
 
 ### Pending Todos
 
@@ -4501,8 +4505,8 @@ Recent decisions affecting current work:
 > `state.update-progress`'s own JSON return reported `92`, itself one under the correct `91` for
 > `253/277`) -- hand-corrected to `completed_plans: 253`, `percent: 91`.
 
-Last session: 2026-08-09T11:25:37.303Z
-Stopped at: Completed 34.11-08-PLAN.md -- FilterChipRow + FilterZeroResult grid surfaces (REQ-34.11-13/-14)
+Last session: 2026-08-10T07:55:01.270Z
+Stopped at: Completed 34.11-09-PLAN.md -- tier-2 panel mounted, checkpoint resolved after 4 re-sweeps, phase 34.11 plans all executed (9/9)
 `FilterViewList` (four single-select View rows bound to `libraryView`/`setLibraryView`, D-05) and
 `FilterCollectionList` (single-select rows sourced verbatim from `customCategories.listCategories()`
 plus `'preset_uncategorized'`, D-17/D-21; `+ New collection`/`Manage collections` only call
