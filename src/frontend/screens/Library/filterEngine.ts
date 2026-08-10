@@ -56,6 +56,21 @@ const VALID_RUNNABILITY_TIERS: RunnabilityTier[] = [
 ]
 
 /**
+ * The Collections pseudo-category (D-17). It is an INTERNAL SENTINEL, not a
+ * collection name and not user data: `FilterCollectionList` renders it as
+ * `t('header.uncategorized', 'Uncategorized')`.
+ *
+ * Exported as a constant by the 34.11 code-review fix (CR-04) because three
+ * sites compare against this literal -- `passesCollection` below,
+ * `FilterCollectionList/index.tsx`, and `FilterChipRow/chipLabels.ts` -- and
+ * one of them (chipLabels) did not, treating the sentinel as an opaque
+ * collection name and printing it raw in the chip and the zero-result
+ * sentence. A shared constant is what makes that particular drift
+ * impossible; each site importing it also makes the set of sites greppable.
+ */
+export const PRESET_UNCATEGORIZED = 'preset_uncategorized'
+
+/**
  * Matches the key shape `Library/index.tsx:472-474` already builds for
  * `favouritesIds`.
  */
@@ -164,7 +179,7 @@ export function passesCollection(
 
   const key = gameKey(game)
 
-  if (collection === 'preset_uncategorized') {
+  if (collection === PRESET_UNCATEGORIZED) {
     const categorizedGames = new Set(
       Object.values(deps.customCategories).flat()
     )

@@ -15,8 +15,28 @@ import {
   joinChipLabels,
   ChipLabelSpec
 } from '../chipLabels'
+import { PRESET_UNCATEGORIZED } from '../../../filterEngine'
+import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { RunnerToStore, RUNNABILITY_LABELS } from '../../../facetLabels'
 import type { ActiveFilterDescriptor, RunnabilityTier } from 'frontend/types'
+
+// The panel component chipLabels must agree with about the Uncategorized
+// sentinel (CR-04). Resolved relative to __dirname, matching this file's
+// existing source-gate idiom further down.
+const COLLECTION_LIST_TSX = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  'components',
+  'UI',
+  'NavShell',
+  'components',
+  'FilterCollectionList',
+  'index.tsx'
+)
 
 function literalOf(spec: ChipLabelSpec | null): string | null {
   if (spec === null) return null
@@ -52,6 +72,51 @@ describe('chipLabels', () => {
     })
 
     expect(spec).toEqual({ literal: 'Backlog' })
+  })
+
+  // CR-04 (34.11 code review). Only `collection: 'Backlog'` was covered
+  // here, so the sentinel path was untested and shipped: every collection
+  // value was treated as opaque user data, and selecting Uncategorized
+  // produced a chip reading `preset_uncategorized` plus the sentence "No
+  // games match preset_uncategorized." -- while the panel row for that same
+  // filter read "Uncategorized".
+  it('collection:preset_uncategorized is NOT treated as user data -- it resolves through the same key the panel uses', () => {
+    const spec = chipLabelSpec({
+      id: `collection:${PRESET_UNCATEGORIZED}`,
+      kind: 'collection',
+      value: PRESET_UNCATEGORIZED
+    })
+
+    expect(spec).toEqual({
+      ns: 'default',
+      key: 'header.uncategorized',
+      defaultText: 'Uncategorized'
+    })
+    // The load-bearing negative: the sentinel must never reach the literal
+    // branch, which is what put the raw string on screen.
+    expect(literalOf(spec)).toBeNull()
+  })
+
+  it('the sentinel the chip row special-cases is the SAME constant filterEngine and the panel compare against', () => {
+    // Guards the drift CR-04's fix exists to prevent: if any site ever
+    // reverts to its own string literal, this and the case above diverge.
+    expect(PRESET_UNCATEGORIZED).toBe('preset_uncategorized')
+
+    // Comments stripped: this file's header comment legitimately NAMES the
+    // sentinel in prose, and a gate that trips on prose is a gate that gets
+    // deleted. Only real code is asserted against.
+    const collectionList = stripSourceComments(
+      readFileSync(COLLECTION_LIST_TSX, 'utf8')
+    )
+    expect(collectionList).toMatch(/PRESET_UNCATEGORIZED/)
+    expect(collectionList).not.toMatch(/'preset_uncategorized'/)
+  })
+
+  it("the key the sentinel resolves to is the one FilterCollectionList calls t() with literally -- i18next-parser only sees that call site, not chipLabels' data", () => {
+    const collectionList = readFileSync(COLLECTION_LIST_TSX, 'utf8')
+    expect(collectionList).toMatch(
+      /t\(\s*'header\.uncategorized',\s*'Uncategorized'\s*\)/
+    )
   })
 
   it('search:witcher is a literal spec, quoted with straight double quotes', () => {

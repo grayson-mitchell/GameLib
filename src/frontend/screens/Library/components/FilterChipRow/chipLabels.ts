@@ -18,6 +18,7 @@
  */
 
 import { RunnerToStore, RUNNABILITY_LABELS } from '../../facetLabels'
+import { PRESET_UNCATEGORIZED } from '../../filterEngine'
 import type { ActiveFilterDescriptor } from 'frontend/types'
 
 export type ChipLabelSpec =
@@ -69,7 +70,23 @@ export function chipLabelSpec(
     }
 
     case 'collection':
-      // Literal: a collection name is user data, not copy -- no key
+      // CR-04: the Uncategorized pseudo-category is NOT user data -- it is
+      // filterEngine's internal sentinel, which describeActiveFilters emits
+      // verbatim as the descriptor value. Falling through to the literal
+      // branch below printed `preset_uncategorized` in the chip and in "No
+      // games match preset_uncategorized.", while the panel row for the
+      // same filter said "Uncategorized". This case resolves it through the
+      // SAME key FilterCollectionList/index.tsx uses, so the two can never
+      // disagree about the name of one filter -- the drift this module's
+      // header comment says it exists to prevent.
+      if (descriptor.value === PRESET_UNCATEGORIZED) {
+        return {
+          ns: 'default',
+          key: 'header.uncategorized',
+          defaultText: 'Uncategorized'
+        }
+      }
+      // Literal: a real collection name is user data, not copy -- no key
       // lookup, no title-casing, no truncation.
       return { literal: descriptor.value }
 

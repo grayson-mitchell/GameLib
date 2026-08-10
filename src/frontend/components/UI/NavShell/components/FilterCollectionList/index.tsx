@@ -2,6 +2,10 @@ import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import ContextProvider from 'frontend/state/ContextProvider'
 import LibraryContext from 'frontend/screens/Library/LibraryContext'
+// CR-04: the sentinel is a shared constant, not a literal repeated per
+// call site -- chipLabels.ts previously did not recognise it and printed it
+// raw in the chip row while this component rendered "Uncategorized".
+import { PRESET_UNCATEGORIZED } from 'frontend/screens/Library/filterEngine'
 import NavItem from '../NavItem'
 import './index.scss'
 
@@ -64,12 +68,16 @@ export default function FilterCollectionList() {
         />
       ))}
       <NavItem
-        key="preset_uncategorized"
+        key={PRESET_UNCATEGORIZED}
         elementType="button"
         className="FilterCollectionList__row"
+        // The literal t() call site here is what makes `header.uncategorized`
+        // reachable by i18next-parser's static extractor. chipLabels.ts
+        // returns the same key as DATA and resolves it dynamically, which is
+        // only safe because this literal call site exists.
         label={t('header.uncategorized', 'Uncategorized')}
-        active={currentCollection === 'preset_uncategorized'}
-        onClick={() => selectCollection('preset_uncategorized')}
+        active={currentCollection === PRESET_UNCATEGORIZED}
+        onClick={() => selectCollection(PRESET_UNCATEGORIZED)}
       />
       <NavItem
         elementType="button"
