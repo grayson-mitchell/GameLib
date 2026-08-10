@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.9-04-PLAN.md
-last_updated: "2026-08-10T09:34:55.795Z"
+stopped_at: Completed 34.9-06-PLAN.md
+last_updated: "2026-08-10T09:37:18.770Z"
 last_activity: 2026-08-10
 progress:
   total_phases: 23
@@ -479,7 +479,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — EXECUTING
-Plan: 6 of 11 (01–03 complete; resuming at 34.9-04)
+Plan: 6 of 11 complete (01, 02, 03, 04, 06 done — 06 depended only on 01/04 and ran out of
+order per wave scheduling; 05 is NOT complete, no summary on disk yet. 34.9-06 extended
+meta/downloadHelperBinaries.ts with digest-verified darwin onedir sourcing from the GameLib
+rolling release, plus its first-ever test coverage — see 34.9-06-SUMMARY.md.)
 
 Prior phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — **COMPLETE
 2026-08-09**, 27 of 27 plans executed, verification passed 9/9.
@@ -3826,6 +3829,7 @@ Closed/parked native-install phases:
 | Phase 34.11 P08 | 18min | 3 tasks | 9 files |
 | Phase 34.11 P09 | checkpoint-spanning | 3 tasks | 11 files |
 | Phase 34.9 P04 | 25min | 2 tasks | 3 files |
+| Phase 34.9 P06 | ~55min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -4368,6 +4372,8 @@ Recent decisions affecting current work:
 - [Phase 34.11]: Gamepad focus-scroll in the tier-2 panel is NOT MEASURED for the second consecutive phase (34.10, then 34.11) -- no gamepad was available in either case — Recorded honestly rather than inferred; carried forward as a standing, overdue measurement rather than allowed to silently defer a third time
 - [Phase 34.9-04]: Scoped the plan's negative 'ubuntu' workflow-test assertion to the build: job block only (prepare-release legitimately runs on ubuntu-latest, per the plan's own Task 1 acceptance criteria)
 - [Phase 34.9-04]: Added src/common/typedefs/js-yaml.d.ts (single load() export) instead of installing @types/js-yaml -- js-yaml is already present transitively; no new package was installed
+- [Phase 34.9]: downloadOnedirAsset checks digest-missing/sentinel gates before any fetch() call — a not-yet-published archive (today's real state: all 6 sentinels) causes zero network I/O, verified live
+- [Phase 34.9]: compareDownloadedTags/storeDownloadedTags extended with a __darwin_layout marker independent of RELEASE_TAGS — closes 34.9-RESEARCH.md Pitfall 6: a layout-only change (flat file -> nested onedir tree) with no version bump must still force re-download
 
 ### Pending Todos
 
@@ -4510,21 +4516,54 @@ Recent decisions affecting current work:
 > `state.update-progress`'s own JSON return reported `92`, itself one under the correct `91` for
 > `253/277`) -- hand-corrected to `completed_plans: 253`, `percent: 91`.
 
-Last session: 2026-08-10T09:08:13.758Z
-Stopped at: Completed 34.9-04-PLAN.md
-`FilterViewList` (four single-select View rows bound to `libraryView`/`setLibraryView`, D-05) and
-`FilterCollectionList` (single-select rows sourced verbatim from `customCategories.listCategories()`
-plus `'preset_uncategorized'`, D-17/D-21; `+ New collection`/`Manage collections` only call
-`setShowCategories(true)`, D-20; `CategoriesManager`'s own strings untouched, D-18; no rule/predicate
-concept anywhere, D-19) -- both extend `NavItem`'s button branch (plan 02) rather than forking a row
-component. Registered both in `meta/i18nGateScope.json`; `pnpm lint-translations:gamelib` exits 0.
-Rule 1 fix: `FilterViewList`'s rows were rewritten from a lookup-array `tGamelib(row.key, ...)` call
-site (invisible to `i18next-parser`'s string-literal-only extractor, empirically 0/4 keys added) to
-four literal `tGamelib('gamelib:...', '...')` call sites (4/4 keys added on re-run); all 7 minted
-`library.filterPanel.*` keys now exist in `public/locales/en/gamelib.json`. D-34 source gate added to
-`FilterViewList.test.tsx` (Header still imports/renders `LibrarySearchBar` unchanged). `pnpm test:ci`:
-225/225 suites, 4348/4348 tests green. Neither component mounted yet -- plan 09 wires them into
-Header's replacement. Next plan: 34.11-07.
+Last session: 2026-08-10T09:37:18.755Z
+Stopped at: Completed 34.9-06-PLAN.md -- extended meta/downloadHelperBinaries.ts with
+digest-verified darwin onedir sourcing (REQ-34.9-03/04/05). Task 1 added
+`downloadOnedirAsset(binaryName, arch)`: fetches legendary/gogdl/nile's macOS archives from
+the grayson-mitchell/GameLib `runners-onedir-macos` rolling release, sha256-verifies against
+`meta/runnersOnedirDigests.json` (an in-repo pin, missing/sentinel/mismatch all throw before
+any write), lists every `tar -tzf` entry and rejects absolute/`..`/wrong-prefix paths before
+extraction, extracts via argv-form `tar -xzf`, and chmods only the single top-level
+`{runner}/{runner}` entry when needed. Removed the six `darwin:` entries from
+downloadLegendary/downloadGogdl/downloadNile's upstream maps; win32/linux and comet/
+epic-integration are byte-identical. Task 2 added `darwinLayoutMarker()`/`computeLayoutMarker()`
+and wired a `__darwin_layout` marker into compareDownloadedTags()/storeDownloadedTags(),
+independent of RELEASE_TAGS, closing 34.9-RESEARCH.md Pitfall 6 -- verified live against the
+real committed `public/bin/.release_tags` (no `__darwin_layout` key, today's actual checkout
+state): correctly forces legendary/gogdl/nile to re-download even though every RELEASE_TAGS
+value already matches. Task 3 added `meta/__tests__/downloadHelperBinaries.test.ts` (45 tests,
+this script's first-ever coverage) and fixed `buildRunnersOnedir.test.ts`'s now-obsolete
+darwin-literal regression assertions (Rule 1). Two pre-existing type errors fixed (Rule 3,
+first exposed because this plan is the first to import the module under Jest): a
+DOM-vs-Node ReadableStream cast mirroring `downloadZig.ts`'s existing workaround, and a
+`DownloadedBinary` index cast. All 5 plan-mandated mutation proofs performed live (RED then
+GREEN). `npm run test:ci`: 233/233 suites, 4577/4577 tests. Live-verified without mocks: a
+real `downloadOnedirAsset('nile','arm64')` invocation against the real (still-sentinel)
+digests file threw the exact expected message, zero network calls, zero writes under
+public/bin. Plan 34.9-05 is NOT yet complete (no summary on disk) -- 34.9-06 ran out of order
+per wave scheduling since it only depended on 01/04. Next: plan 34.9-09 (first real CI
+dispatch + digest fill-in) is unblocked by this plan; 34.9-05/07/08 remain independently open.
+See 34.9-06-SUMMARY.md.
+
+--- prior session, preserved as history ---
+
+Stopped at: Completed 34.11-06-PLAN.md -- `FilterViewList` (four single-select View rows bound
+to `libraryView`/`setLibraryView`, D-05) and `FilterCollectionList` (single-select rows sourced
+verbatim from `customCategories.listCategories()` plus `'preset_uncategorized'`, D-17/D-21;
+`+ New collection`/`Manage collections` only call `setShowCategories(true)`, D-20;
+`CategoriesManager`'s own strings untouched, D-18; no rule/predicate concept anywhere, D-19) --
+both extend `NavItem`'s button branch (plan 02) rather than forking a row component. Registered
+both in `meta/i18nGateScope.json`; `pnpm lint-translations:gamelib` exits 0. Rule 1 fix:
+`FilterViewList`'s rows were rewritten from a lookup-array `tGamelib(row.key, ...)` call site
+(invisible to `i18next-parser`'s string-literal-only extractor, empirically 0/4 keys added) to
+four literal `tGamelib('gamelib:...', '...')` call sites (4/4 keys added on re-run); all 7
+minted `library.filterPanel.*` keys now exist in `public/locales/en/gamelib.json`. D-34 source
+gate added to `FilterViewList.test.tsx` (Header still imports/renders `LibrarySearchBar`
+unchanged). `pnpm test:ci`: 225/225 suites, 4348/4348 tests green. Neither component mounted
+yet -- plan 09 wires them into Header's replacement. Next plan: 34.11-07.
+(NOTE: this paragraph was orphaned under a stale `Stopped at: Completed 34.9-06-PLAN.md`
+heading by the same `state.record-session` mis-targeted-write bug this file has documented
+repeatedly above -- reconstructed here with its correct heading during 34.9-06's own session.)
 
 --- prior session, preserved as history ---
 
