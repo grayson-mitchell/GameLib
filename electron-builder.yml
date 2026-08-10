@@ -52,8 +52,18 @@ mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     com.apple.security.cs.allow-jit: true
+  # legendary/gogdl/nile ship as PyInstaller --onedir trees on macOS ONLY
+  # (Phase 34.9) -- the recursive glob below reaches every file nested
+  # inside those trees. Windows and Linux deliberately stay flat (see
+  # win.files/linux.files below) because the amfid per-file Gatekeeper tax
+  # that motivated onedir is macOS-specific. A nested tree landing inside
+  # app.asar.unpacked must not be trusted just because the build succeeded
+  # -- electron-builder issue #3940 documents nested binaries silently
+  # skipped by signing -- so this is verified against the BUILT artifact by
+  # `pnpm verify:runner-bundle` (plan 34.9-08), not by this config alone.
   files:
     - build/bin/${arch}/darwin/*
+    - build/bin/${arch}/darwin/**/*
     - build/bin/x64/win32/GalaxyCommunication.exe
     - build/bin/x64/win32/EpicGamesLauncher.exe
 
