@@ -206,24 +206,56 @@
   // (border AND grid, identical) -- the border only ever showed against the
   // panel side, never against the grid side it is meant to divide from.
   //
-  // THIRD ATTEMPT (live-sweep fix, this line): `--neutral-05` (#a8aeaf),
-  // a global token from `styles/_colors.scss` -- included once at `:root`
-  // (`index.scss:8`) rather than per theme block, so it is unconditionally
-  // defined and needs no fallback, and no theme in this file redefines it
-  // (`grep -n -- '--neutral-05' themes.scss` shows only two *aliases to* it,
-  // never a redeclaration of it). Measured against BOTH neighbours in all
-  // three mandatory-sweep themes (panel side / grid side):
+  // THIRD ATTEMPT (34.11-09, superseded here in mechanism only, NOT colour):
+  // `--neutral-05` (#a8aeaf), a global token from `styles/_colors.scss` --
+  // included once at `:root` (`index.scss:8`) rather than per theme block,
+  // so it is unconditionally defined and needs no fallback, and no theme in
+  // this file redefines it (`grep -n -- '--neutral-05' themes.scss` shows
+  // only two *aliases to* it, never a redeclaration of it). Measured against
+  // BOTH neighbours in all three mandatory-sweep themes (panel side / grid
+  // side):
   //   midnightMirage: #161c1e / #070a0b -> 7.65:1 / 8.83:1
   //   gruvbox_dark:   #32302f / #282828 -> 5.84:1 / 6.54:1
   //   dracula:        #44475a / #282a35 -> 4.07:1 / 6.33:1
-  // All six ratios clear WCAG 2.1 SC 1.4.11's 3:1 non-text-UI minimum, with
-  // the tightest margin (dracula's panel side, 4.07:1) still comfortably
-  // above it. Do NOT reintroduce `var(--divider)` OR `var(--body-background)`
-  // on this declaration -- both were proven wrong for the same underlying
-  // reason (colour-identical to one of the two surfaces this border sits
-  // between), not a token-resolution problem a different alias can dodge
-  // twice.
-  border-inline-end: 1px solid var(--neutral-05);
+  // All six ratios clear WCAG 2.1 SC 1.4.11's 3:1 non-text-UI minimum. The
+  // re-sweep still reported the line completely ABSENT in midnightMirage
+  // (visible only in `high-contrast`) -- at those ratios that cannot be a
+  // colour/resolution defect, so a fourth colour substitution was rejected
+  // in favour of building a discriminator: a pixel-level Playwright
+  // reproduction of this exact DOM/CSS structure (real extracted token
+  // values, real grid, real box-sizing:border-box, tested at DPR 1 and 2,
+  // with and without the tier-2 portal's vertical overflow active) sampled
+  // the actual rasterised pixel colours across the boundary. Result: the
+  // line renders CORRECTLY -- exactly 1 device pixel of `rgb(168,174,175)`
+  // (`--neutral-05`), at the exact grid-track boundary, un-occluded by any
+  // sibling, identically in both themes, at both DPRs. Chromium shows no
+  // defect. That does not clear this token: the design source
+  // (`.claude/skills/sketch-findings-gamelib/references/navigation-shell.md`
+  // and its palette table) also reconsiders the token choice itself and was
+  // checked here -- its literal mapping for this exact role is
+  // `--color-border: var(--neutral-03)` (`sources/themes/default.css:24`),
+  // which measures ~1.26:1 / ~1.45:1 against midnightMirage's panel/grid and
+  // ~1.37:1 against high-contrast's (both sides identical there) -- i.e. by
+  // design a near-invisible hairline in EVERY theme, which would not fix
+  // midnightMirage and would newly break the high-contrast case this project
+  // just confirmed working. `--neutral-03` was therefore rejected too, on
+  // measured evidence, not preference. `--neutral-05` stays.
+  //
+  // What changed on this line is the MECHANISM, not the colour: 1px widened
+  // to 2px. `.App`'s grid (`App.css:26`, `grid-template-columns: min-content
+  // 1fr`) is exactly the `1fr`-fractional-track shape this project has
+  // already measured WKWebView mishandling once (`WKWebView % height vs 1fr
+  // grid row` -- the fractional part of a non-integer device-pixel track
+  // boundary was the tell there too), and Chromium -- the only engine this
+  // repro could test -- cannot reproduce a WKWebView-specific rasterisation
+  // gap. A hairline that depends on exactly 1 device pixel landing on a
+  // fractional grid-track boundary surviving anti-aliasing has no margin; 2
+  // physical CSS pixels does, while staying a `border-inline-end` (still
+  // auto-flips for RTL via `.isRTL { direction: rtl }`, App.css:253 -- no
+  // hand-written physical-offset alternative like `box-shadow` was used
+  // here specifically because that would need a second, direction-aware
+  // override to stay RTL-correct, trading one unverified risk for another).
+  border-inline-end: 2px solid var(--neutral-05);
   overflow: hidden;
   // Replaces `--sidebar-horizontal-padding` (`Sidebar/index.scss:2`) for
   // the ported tier-2 row rules in `components/NavItem/index.scss`.

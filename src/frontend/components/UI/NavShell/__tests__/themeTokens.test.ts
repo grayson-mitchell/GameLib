@@ -95,14 +95,14 @@ describe('navbar app-region (CR-02, D-32)', () => {
   })
 })
 
-describe('tier2 border-inline-end (--divider finding, 34.11-09 THIRD fix)', () => {
+describe('tier2 border-inline-end (--divider finding, 34.11-09 FOURTH fix -- mechanism, not colour)', () => {
   const navShellScss = read(NAV_SHELL_SCSS)
   const tier2Block = cssBlock(navShellScss, '.NavShell__tier2')
 
-  it('.NavShell__tier2 border-inline-end uses var(--neutral-05)', () => {
-    // Superseded twice: `var(--divider)` (undefined in 9/11 themes, drops
-    // the whole declaration) and `var(--body-background)` (resolves
-    // everywhere, but is colour-IDENTICAL to `.App .content`'s own
+  it('.NavShell__tier2 border-inline-end uses var(--neutral-05) at 2px', () => {
+    // Colour superseded twice before this: `var(--divider)` (undefined in
+    // 9/11 themes, drops the whole declaration) and `var(--body-background)`
+    // (resolves everywhere, but is colour-IDENTICAL to `.App .content`'s own
     // background in every theme without a `--gradient-body-background`
     // override, per `App.css:98-100` -- a border painted the same colour as
     // the surface it abuts on one side is invisible against that side by
@@ -110,17 +110,40 @@ describe('tier2 border-inline-end (--divider finding, 34.11-09 THIRD fix)', () =
     // `--neutral-05` is a global, unthemed token (styles/_colors.scss,
     // included once at `:root` in `index.scss`, never redeclared per theme
     // -- see the census test below) measured with real contrast against
-    // BOTH neighbours in all three mandatory-sweep themes; see this
-    // declaration's own header comment for the six measured ratios.
+    // BOTH neighbours in all three mandatory-sweep themes (7.65:1-8.83:1
+    // range); a pixel-level Playwright reproduction of this exact DOM/CSS
+    // structure additionally confirmed the line rasterises correctly, at
+    // the right colour and position, un-occluded, in both midnightMirage
+    // and high-contrast, at DPR 1 and 2 -- Chromium shows no defect.
+    //
+    // The re-sweep still reported it completely absent in midnightMirage,
+    // which a colour/resolution defect cannot explain at those ratios. The
+    // WIDTH changed instead, from 1px to 2px: `.App`'s grid
+    // (`grid-template-columns: min-content 1fr`, App.css:26) is the same
+    // fractional-track shape this project already measured WKWebView
+    // mishandling once (`WKWebView % height vs 1fr grid row`), and Chromium
+    // -- the only engine this repro could test -- cannot reproduce an
+    // engine-specific rasterisation gap on a hairline that depends on
+    // exactly 1 device pixel landing on a fractional grid-track boundary.
+    // 2 physical CSS pixels has margin where 1 has none. The design
+    // source's own literal token for this role (`--color-border: var(
+    // --neutral-03)`, sources/themes/default.css:24) was checked and
+    // rejected on measured evidence: ~1.26-1.45:1 in midnightMirage and
+    // ~1.37:1 in high-contrast -- a near-invisible hairline by design in
+    // EVERY theme, which would not fix midnightMirage and would newly break
+    // the high-contrast case already confirmed working.
     expect(tier2Block).toMatch(
-      /border-inline-end:\s*1px solid var\(--neutral-05\)/
+      /border-inline-end:\s*2px solid var\(--neutral-05\)/
     )
   })
 
-  it('.NavShell__tier2 no longer references var(--divider) or var(--body-background) on border-inline-end -- both were proven wrong for the same reason a different alias cannot dodge', () => {
+  it('.NavShell__tier2 no longer references var(--divider), var(--body-background), or a 1px width on border-inline-end -- colour and width were each proven wrong for reasons a repeat cannot dodge', () => {
     expect(tier2Block).not.toMatch(/var\(--divider\)/)
     expect(tier2Block).not.toMatch(
       /border-inline-end:\s*1px solid var\(--body-background\)/
+    )
+    expect(tier2Block).not.toMatch(
+      /border-inline-end:\s*1px solid var\(--neutral-05\)/
     )
   })
 
