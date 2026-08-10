@@ -221,6 +221,38 @@
   // reachable instead of clipped by .NavShell__tier2's overflow: hidden.
   overflow-y: auto;
   overflow-x: hidden;
+
+  // 34.11-09 live-sweep fix (checks 1 and 5 of the midnightMirage sweep).
+  // `Header/index.css`'s `.Header` rule predates this portal -- it was
+  // written for the OLD full-width header that sat above the content grid
+  // and painted its own surface there (`background:
+  // var(--gradient-body-background, var(--body-background))`). Header is
+  // out of scope for this fix (the file is owned by an earlier task and is
+  // not touched here), so the override lives on the portal target instead,
+  // at higher specificity (`.NavShell__tier2Portal > .Header` beats
+  // `.Header` alone) so it always wins regardless of CSS import order.
+  //
+  // Without this override, `.Header`'s own background paints solid
+  // `var(--body-background)` across the ENTIRE panel, on top of
+  // `.NavShell__tier2`'s own `background: var(--navbar-background)`. In
+  // midnightMirage this is silently catastrophic rather than merely a
+  // colour swap: `--body-background` and `--navbar-active-background` are
+  // BOTH aliases of the same `--background-darker` token (themes.scss:47,
+  // :94), so a selected View/Collection row's active-highlight background
+  // becomes colour-IDENTICAL to the panel surface behind it (check 1 -- the
+  // row's background no longer reads as "selected", even though its text
+  // colour and the `.active` class are both applied correctly). And because
+  // `.NavShell__tier2`'s own `border-inline-end` is ALSO `var(--body-
+  // background)` (the plan-03 fix, immediately below in this same file),
+  // that same now-identical colour sits on both sides of the border,
+  // camouflaging it (check 5). Removing the second, competing background
+  // here lets `.NavShell__tier2`'s own surface show through as designed,
+  // which restores contrast for both the active-row highlight and the
+  // divider without touching either of their own (already-correct)
+  // declarations.
+  > .Header {
+    background: transparent;
+  }
 }
 
 .NavShell__versionSlot {

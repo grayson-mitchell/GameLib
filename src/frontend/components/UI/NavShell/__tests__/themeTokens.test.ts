@@ -146,3 +146,22 @@ describe('tier2 border-inline-end (--divider finding)', () => {
     expect(dividerDeclaringCount).toBeLessThan(themeSelectors.length)
   })
 })
+
+describe('Header background is overridden inside the tier-2 portal (34.11-09 live-sweep fix, checks 1 and 5)', () => {
+  const navShellScss = read(NAV_SHELL_SCSS)
+  const portalBlock = cssBlock(navShellScss, '.NavShell__tier2Portal')
+
+  it('sanity: the extracted block is really .NavShell__tier2Portal, not some other block', () => {
+    expect(portalBlock).toMatch(/overflow-y:\s*auto/)
+  })
+
+  it('overrides .Header background to transparent at higher specificity than Header/index.css alone', () => {
+    // Header/index.css's own `.Header { background: var(--gradient-body-
+    // background, var(--body-background)); }` predates this portal and is
+    // NOT edited here -- this asserts the higher-specificity override that
+    // neutralises it from the portal side instead. `> .Header` (two
+    // classes) beats `.Header` (one class) regardless of stylesheet import
+    // order.
+    expect(portalBlock).toMatch(/>\s*\.Header\s*{[^}]*background:\s*transparent/)
+  })
+})
