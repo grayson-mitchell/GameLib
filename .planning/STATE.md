@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.9-07-PLAN.md
-last_updated: "2026-08-10T10:03:28.560Z"
+stopped_at: Completed 34.9-08-PLAN.md
+last_updated: "2026-08-10T10:16:18.259Z"
 last_activity: 2026-08-10
 progress:
   total_phases: 23
   completed_phases: 16
   total_plans: 277
-  completed_plans: 260
-  percent: 70
+  completed_plans: 261
+  percent: 94
 ---
 
 # Project State
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — EXECUTING
-Plan: 7 of 11 complete (01, 02, 03, 04, 06 done — 06 depended only on 01/04 and ran out of
+Plan: 8 of 11 complete (01, 02, 03, 04, 06 done — 06 depended only on 01/04 and ran out of
 order per wave scheduling; 05 is NOT complete, no summary on disk yet. 34.9-06 extended
 meta/downloadHelperBinaries.ts with digest-verified darwin onedir sourcing from the GameLib
 rolling release, plus its first-ever test coverage — see 34.9-06-SUMMARY.md.)
@@ -3831,6 +3831,7 @@ Closed/parked native-install phases:
 | Phase 34.9 P04 | 25min | 2 tasks | 3 files |
 | Phase 34.9 P06 | ~55min | 3 tasks | 4 files |
 | Phase 34.9 P07 | 45min | 3 tasks | 4 files |
+| Phase 34.9 P08 | 50min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -4377,6 +4378,7 @@ Recent decisions affecting current work:
 - [Phase 34.9]: compareDownloadedTags/storeDownloadedTags extended with a __darwin_layout marker independent of RELEASE_TAGS — closes 34.9-RESEARCH.md Pitfall 6: a layout-only change (flat file -> nested onedir tree) with no version bump must still force re-download
 - [Phase 34.9]: 34.9-07: bundle.resources uses trailing-slash directory-copy form ["../build/bin/"], not a glob, to preserve the nested onedir directory structure under $RESOURCE
 - [Phase 34.9]: 34.9-07: R-34.5-G1-PKG stays descoped from Phase 34.9 per 34.9-CONTEXT.md's locked scope decision; recorded in 34.9-PACKAGING-LIMITATIONS.md with no hedging language
+- [Phase 34.9-08]: verify:runner-bundle uses 'node -' (stdin) not the plan's literal 'node --', which does not pipe stdin — node -- terminates option parsing but does not select stdin as the script source; a positional root path after it gets require()'d as the script and throws MODULE_NOT_FOUND before the tool runs; node - is the working precedent already used by build-runners-onedir
 
 ### Pending Todos
 
@@ -4520,8 +4522,8 @@ Recent decisions affecting current work:
 > `state.update-progress`'s own JSON return reported `92`, itself one under the correct `91` for
 > `253/277`) -- hand-corrected to `completed_plans: 253`, `percent: 91`.
 
-Last session: 2026-08-10T10:02:24.175Z
-Stopped at: Completed 34.9-07-PLAN.md
+Last session: 2026-08-10T10:16:18.244Z
+Stopped at: Completed 34.9-08-PLAN.md
 digest-verified darwin onedir sourcing (REQ-34.9-03/04/05). Task 1 added
 `downloadOnedirAsset(binaryName, arch)`: fetches legendary/gogdl/nile's macOS archives from
 the grayson-mitchell/GameLib `runners-onedir-macos` rolling release, sha256-verifies against

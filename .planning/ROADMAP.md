@@ -2319,7 +2319,7 @@ REQ-34.9-07, REQ-34.9-08, REQ-34.9-09, REQ-34.9-10, REQ-34.9-11 (minted 2026-08-
 ticked only by measured evidence)
 **Depends on:** Phase 34 (packaging/signing/notarization pipeline). Independent of the 34.1-34.8
 IPC slices. Runs before Phase 35, which will later delete the Electron half of the signing work.
-**Plans:** 6/11 plans executed
+**Plans:** 7/11 plans executed
 
 **Scope note (planning, 2026-08-07):** `R-34.5-G1-PKG` — the packaged Tauri asset root does not
 resolve, because `electronStub.app.isPackaged` stays `false` under the sidecar so `publicDir`
@@ -2344,7 +2344,7 @@ Plans:
 - [ ] 34.9-05-PLAN.md — Upstream PR patches + bodies for nile/legendary/heroic-gogdl; developer submits (wave 3 — sequenced AFTER 34.9-03 so every PR body cites its own runner's measured figures)
 - [x] 34.9-06-PLAN.md — Downloader: darwin archives, sha256-verified against in-repo digests, layout-aware freshness (wave 3)
 - [x] 34.9-07-PLAN.md — electron-builder + Tauri packaging config, and the packaging-limitations record (wave 4)
-- [ ] 34.9-08-PLAN.md — `meta/verifyRunnerBundle.ts`: inspect a BUILT artifact, report per-file signature state (wave 4)
+- [x] 34.9-08-PLAN.md — `meta/verifyRunnerBundle.ts`: inspect a BUILT artifact, report per-file signature state (wave 4)
 - [ ] 34.9-09-PLAN.md — Dispatch CI for real, pin the published digests, run the vendoring round trip (wave 5)
 - [ ] 34.9-10-PLAN.md — Author the blocking live-gate contract + Structural Reachability Review (wave 6)
 - [ ] 34.9-11-PLAN.md — Run the gate on hardware; reconcile REQUIREMENTS.md and this ROADMAP entry (wave 7)
