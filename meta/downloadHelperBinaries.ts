@@ -390,16 +390,59 @@ async function downloadEpicIntegration() {
   )
 }
 
+// Pure hash-over-canonical-JSON helper, factored out of darwinLayoutMarker()
+// below so it (and therefore the marker's sensitivity to a digest VALUE
+// changing vs. its stability under key reordering) is directly testable
+// without needing to mock or mutate meta/runnersOnedirDigests.json's
+// imported module.
+export function computeLayoutMarker(
+  layout: string,
+  digests: Record<string, string>
+): string {
+  const sortedKeys = Object.keys(digests).sort()
+  const canonical = JSON.stringify({
+    layout,
+    digests: Object.fromEntries(sortedKeys.map((key) => [key, digests[key]]))
+  })
+  return createHash('sha256').update(canonical).digest('hex')
+}
+
+/**
+ * A sha256 hex digest over meta/runnersOnedirDigests.json's `layout` string
+ * and its `digests` object (keys sorted, so reordering the JSON's keys does
+ * NOT change the marker -- only the layout name or a digest VALUE does).
+ *
+ * RELEASE_TAGS (compareDownloadedTags below) answers "did the upstream
+ * version change". Phase 34.9 is the first change to alter the on-disk
+ * LAYOUT (a flat public/bin/{arch}/darwin/{runner} file becoming a nested
+ * public/bin/{arch}/darwin/{runner}/{runner} onedir tree) WITHOUT changing a
+ * version -- without this __darwin_layout marker, an existing checkout
+ * holding the old flat public/bin/arm64/darwin/nile file would report
+ * "up to date", skip the re-download, and then fail at runtime against
+ * archSpecificBinary()'s new nested lookup (34.9-RESEARCH.md Pitfall 6).
+ */
+export function darwinLayoutMarker(): string {
+  return computeLayoutMarker(
+    runnersOnedirDigests.layout,
+    runnersOnedirDigests.digests
+  )
+}
+
+const DARWIN_LAYOUT_RUNNERS: DownloadedBinary[] = ['legendary', 'gogdl', 'nile']
+
 /**
  * Finds out which binaries need to be downloaded by comparing
- * `public/bin/.release_tags` to RELEASE_TAGS
+ * `public/bin/.release_tags` to RELEASE_TAGS, PLUS the darwin onedir layout
+ * marker above (__darwin_layout) -- see darwinLayoutMarker()'s docblock.
  */
-async function compareDownloadedTags(): Promise<DownloadedBinary[]> {
+export async function compareDownloadedTags(): Promise<DownloadedBinary[]> {
   const storedTagsText = await readFile(
     'public/bin/.release_tags',
     'utf-8'
   ).catch(() => '{}')
-  let storedTagsParsed: Partial<Record<DownloadedBinary, string>>
+  let storedTagsParsed: Partial<Record<DownloadedBinary, string>> & {
+    __darwin_layout?: string
+  }
   try {
     storedTagsParsed = JSON.parse(storedTagsText)
   } catch {
@@ -410,11 +453,26 @@ async function compareDownloadedTags(): Promise<DownloadedBinary[]> {
     if (storedTagsParsed[runner as DownloadedBinary] !== currentTag)
       binariesToDownload.push(runner as keyof typeof RELEASE_TAGS)
   }
+
+  // Layout-only re-download branch. Deliberately restricted to the three
+  // onedir-affected runners -- comet and epic-integration must never be
+  // pulled in from here, only from the RELEASE_TAGS comparison above.
+  if (storedTagsParsed.__darwin_layout !== darwinLayoutMarker()) {
+    for (const runner of DARWIN_LAYOUT_RUNNERS) {
+      if (!binariesToDownload.includes(runner)) {
+        binariesToDownload.push(runner)
+      }
+    }
+  }
+
   return binariesToDownload
 }
 
-async function storeDownloadedTags() {
-  await writeFile('public/bin/.release_tags', JSON.stringify(RELEASE_TAGS))
+export async function storeDownloadedTags() {
+  await writeFile(
+    'public/bin/.release_tags',
+    JSON.stringify({ ...RELEASE_TAGS, __darwin_layout: darwinLayoutMarker() })
+  )
 }
 
 async function main() {
