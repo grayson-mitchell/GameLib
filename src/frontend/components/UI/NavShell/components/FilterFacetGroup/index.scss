@@ -89,11 +89,23 @@
     opacity: 0.38;
   }
 
+  // 34.11-09 live-sweep fix (check 3 of the midnightMirage sweep): the
+  // unchecked box border was `--neutral-04` (#51595a in the base palette),
+  // which measures ~2.6:1 against this panel's own background in
+  // midnightMirage -- under WCAG 2.1 SC 1.4.11's 3:1 minimum for
+  // non-text UI components, and the sweep's own report ("unchecked border
+  // not visible against the panel background") matches that measured gap.
+  // `--neutral-05` is the next step up the same global neutral scale
+  // (styles/_colors.scss -- unthemed, so this holds in every theme, not
+  // just midnightMirage) and measures ~7.7:1 here, clearing the minimum
+  // with headroom while staying visually distinct from the bright
+  // `--navbar-active` checked-state fill below, so an unchecked box still
+  // reads as "off", not "checked".
   .FilterFacetRow__box {
     flex: 0 0 auto;
     width: 14px;
     height: 14px;
-    border: 1px solid var(--neutral-04);
+    border: 1px solid var(--neutral-05);
     border-radius: var(--space-3xs);
     background: transparent;
     transition:
