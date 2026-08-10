@@ -7,6 +7,18 @@
 // focus-visible ring): --text-hover -> --accent. --text-hover has no
 // value in gruvbox_dark or dracula.
 .FilterZeroResult {
+  // CR-03 (34.11 code review): `--navbar-active` is declared in only 4 of
+  // the 11 theme blocks, so the bare `var(--navbar-active)` the Clear-all
+  // action used to carry was invalid at computed-value time in the other 7
+  // and dropped the whole `color` declaration -- the only affordance
+  // marking this as a button rather than body text (its underline appears
+  // on hover only). Resolved through the same fallback chain
+  // NavItem/index.scss:21-24 already uses for this token. Declared locally
+  // in this file so it does not depend on any other stylesheet; the
+  // themeTokens census gate asserts every consumer file carries the
+  // identical chain, so copies cannot drift.
+  --filter-active-color: var(--navbar-active, var(--accent-overlay, var(--accent)));
+
   display: flex;
   flex-direction: column;
   gap: var(--space-2xs);
@@ -36,7 +48,7 @@
     font-size: var(--text-sm);
     font-weight: var(--regular);
     line-height: 1.4;
-    color: var(--navbar-active);
+    color: var(--filter-active-color);
     background: none;
     border: 0;
     padding: 0;

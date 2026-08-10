@@ -20,9 +20,28 @@
 //     --text-hover has no value in gruvbox_dark or dracula either (only
 //     midnightMirage, classic/cyberSpaceOasis, high-contrast and
 //     nord-light define it); --accent resolves in every theme block.
-// No inline fallback was added and no new token was defined in a single
-// theme block, per this plan's token-survival instruction.
+//   --navbar-active -> var(--navbar-active, var(--accent-overlay, var(--accent)))
+//     ADDED BY THE 34.11 CODE REVIEW (CR-03). The two substitutions above
+//     were made for exactly this reason and then this token -- the one this
+//     stylesheet leans on hardest -- was left bare. `--navbar-active` is
+//     declared in only 4 of the 11 theme blocks (midnightMirage,
+//     gruvbox_dark, dracula-classic, nord-light), so in the other 7 every
+//     declaration below that consumed it bare was invalid at
+//     computed-value time and dropped ENTIRELY. The worst case was
+//     `.FilterFacetRow--checked .FilterFacetRow__box`, which lost BOTH
+//     `background` and `border-color`: the checked checkbox reverted to a
+//     transparent box with a currentColor border, i.e. the primary state
+//     indicator for every facet in this panel simply did not render.
+//     The chain is NavItem/index.scss:21-24's, verbatim -- not a new one.
+//     Gated by themeTokens.test.ts's `--navbar-active` census (WR-13).
 .NavShell__tier2Portal {
+  // Declared locally, in THIS file, rather than imported from a sibling
+  // stylesheet: every file that consumes --navbar-active carries its own
+  // copy of the chain so none of them depends on another file's declaration
+  // order. The census gate asserts each file matches the same chain, so the
+  // copies cannot drift.
+  --filter-active-color: var(--navbar-active, var(--accent-overlay, var(--accent)));
+
   .FilterFacetGroup {
     margin-block-end: var(--space-sm);
   }
@@ -69,7 +88,7 @@
 
   .FilterFacetRow:hover {
     background: var(--navbar-active-background);
-    color: var(--navbar-active);
+    color: var(--filter-active-color);
   }
 
   .FilterFacetRow:focus-visible {
@@ -78,7 +97,7 @@
   }
 
   .FilterFacetRow--checked {
-    color: var(--navbar-active);
+    color: var(--filter-active-color);
     font-weight: var(--bold);
     background: var(--navbar-active-background);
   }
@@ -114,8 +133,8 @@
   }
 
   .FilterFacetRow--checked .FilterFacetRow__box {
-    background: var(--navbar-active);
-    border-color: var(--navbar-active);
+    background: var(--filter-active-color);
+    border-color: var(--filter-active-color);
   }
 
   .FilterFacetRow__label {
