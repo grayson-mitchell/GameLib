@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.9-09-PLAN.md (Outcome C -- CI dispatch blocked, arm64 staged locally)
-last_updated: "2026-08-10T10:39:26.889Z"
+stopped_at: Completed 34.9-10-PLAN.md (authored 34.9-LIVE-GATE.md, verdict null, not run)
+last_updated: "2026-08-10T11:04:11.545Z"
 last_activity: 2026-08-10
 progress:
   total_phases: 23
   completed_phases: 16
   total_plans: 277
-  completed_plans: 262
+  completed_plans: 263
   percent: 70
 ---
 
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — EXECUTING
-Plan: 9 of 11 complete (01, 02, 03, 04, 06 done — 06 depended only on 01/04 and ran out of
+Plan: 10 of 11 complete (01, 02, 03, 04, 06 done — 06 depended only on 01/04 and ran out of
 order per wave scheduling; 05 is NOT complete, no summary on disk yet. 34.9-06 extended
 meta/downloadHelperBinaries.ts with digest-verified darwin onedir sourcing from the GameLib
 rolling release, plus its first-ever test coverage — see 34.9-06-SUMMARY.md.)
@@ -3833,6 +3833,7 @@ Closed/parked native-install phases:
 | Phase 34.9 P07 | 45min | 3 tasks | 4 files |
 | Phase 34.9 P08 | 50min | 2 tasks | 3 files |
 | Phase 34.9 P09 | 70min | 2 tasks | 2 files |
+| Phase 34.9 P10 | 90min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -4381,6 +4382,8 @@ Recent decisions affecting current work:
 - [Phase 34.9]: 34.9-07: R-34.5-G1-PKG stays descoped from Phase 34.9 per 34.9-CONTEXT.md's locked scope decision; recorded in 34.9-PACKAGING-LIMITATIONS.md with no hedging language
 - [Phase 34.9-08]: verify:runner-bundle uses 'node -' (stdin) not the plan's literal 'node --', which does not pipe stdin — node -- terminates option parsing but does not select stdin as the script source; a positional root path after it gets require()'d as the script and throws MODULE_NOT_FOUND before the tool runs; node - is the working precedent already used by build-runners-onedir
 - [Phase 34.9]: CI dispatch for build-runners-onedir-macos.yml is blocked at the GitHub platform level: workflow_dispatch requires the workflow file on the repo's default branch (main), not merely on the dispatched ref — gh workflow run 404'd; confirmed independently via gh workflow list and gh release view that CI never ran. Plan 34.9-09's authorization is scoped to the feature branch only (no PR, no push to main), so this cannot be self-resolved. Recorded as Outcome C; arm64 staged from the local 34.9-03 build so plan 34.9-11's gate is not fully blocked; x64 remains entirely unproven.
+- [Phase 34.9]: Item 1's gate gesture changed from 'on startup' to a Settings > Advanced Settings visit -- the sidecar's initHeadless() skips the system-info dump that framing assumed — src/backend/sidecar/bootstrap.ts calls initHeadless(), which explicitly skips the getSystemInfo dump init() performs for Electron; only the three Alt*Bin Settings components call the version-probe IPC channels
+- [Phase 34.9]: Item 3's gate timing changed from click-based to oauth-capture-based -- GOG's constant login URL means click-to-completion would measure human typing time, not runner-spawn latency — GOG's login URL requires no runner spawn (unlike nile); the first gogdl call fires only after the operator completes the OAuth form, so the clock starts at oauthLoginCapture's status=captured line instead
 
 ### Pending Todos
 
@@ -4525,8 +4528,8 @@ Recent decisions affecting current work:
 > `state.update-progress`'s own JSON return reported `92`, itself one under the correct `91` for
 > `253/277`) -- hand-corrected to `completed_plans: 253`, `percent: 91`.
 
-Last session: 2026-08-10T10:39:26.873Z
-Stopped at: Completed 34.9-09-PLAN.md (Outcome C -- CI dispatch blocked, arm64 staged locally)
+Last session: 2026-08-10T11:03:51.578Z
+Stopped at: Completed 34.9-10-PLAN.md (authored 34.9-LIVE-GATE.md, verdict null, not run)
 digest-verified darwin onedir sourcing (REQ-34.9-03/04/05). Task 1 added
 `downloadOnedirAsset(binaryName, arch)`: fetches legendary/gogdl/nile's macOS archives from
 the grayson-mitchell/GameLib `runners-onedir-macos` rolling release, sha256-verifies against
