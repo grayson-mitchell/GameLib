@@ -205,16 +205,20 @@ describe('buildRunnersOnedir', () => {
   })
 
   describe('regression: downloadHelperBinaries.ts vendoring unchanged by the extraction', () => {
+    // legendary_macOS_*/gogdl_macOS_*/nile_macOS_* literals were REMOVED by
+    // Phase 34.9 Plan 06 (darwin now sources from the GameLib rolling
+    // release via downloadOnedirAsset(), not these upstream flat-file
+    // names) -- see meta/__tests__/downloadHelperBinaries.test.ts's own
+    // regression coverage for the darwin-onedir-sourcing behaviour this
+    // test file predates. win32/linux and comet/epic-integration are
+    // untouched by that plan and stay pinned here.
     it.each([
       'legendary_linux_x86_64',
       'legendary_windows_x86_64.exe',
-      'legendary_macOS_arm64',
       'gogdl_linux_x86_64',
       'gogdl_windows_x86_64.exe',
-      'gogdl_macOS_arm64',
       'nile_linux_x86_64',
       'nile_windows_x86_64.exe',
-      'nile_macOS_arm64',
       'comet-x86_64-unknown-linux-gnu',
       'comet-aarch64-apple-darwin',
       'comet-x86_64-pc-windows-msvc.exe',
