@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: ready_to_plan
-stopped_at: Phase 34.11 complete (9/9) — ready to discuss Phase 35
-last_updated: 2026-08-10T08:51:30.520Z
+status: executing
+stopped_at: Completed 34.9-04-PLAN.md
+last_updated: "2026-08-10T09:08:13.773Z"
 last_activity: 2026-08-10
 progress:
   total_phases: 23
   completed_phases: 16
   total_plans: 277
-  completed_plans: 256
-  percent: 92
+  completed_plans: 258
+  percent: 70
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 35 — electron cutover remove the electron build
+**Current focus:** Phase 34.9 — macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -478,8 +478,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 35
-Plan: Not started
+Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — EXECUTING
+Plan: 5 of 11 (01–03 complete; resuming at 34.9-04)
 
 Prior phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — **COMPLETE
 2026-08-09**, 27 of 27 plans executed, verification passed 9/9.
@@ -2774,7 +2774,7 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 `STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Ready to plan
+Status: Ready to execute
 
 > NOTE (34.10-18): `state.advance-plan` corrupted STATE.md again, the same recurring
 > mis-targeted-write bug every note in this cluster documents — it spliced this session's status
@@ -3825,6 +3825,7 @@ Closed/parked native-install phases:
 | Phase 34.11 P07 | 55min | 3 tasks | 12 files |
 | Phase 34.11 P08 | 18min | 3 tasks | 9 files |
 | Phase 34.11 P09 | checkpoint-spanning | 3 tasks | 11 files |
+| Phase 34.9 P04 | 25min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -4365,6 +4366,8 @@ Recent decisions affecting current work:
 - [Phase 34.11]: Tier-2 divider: five mechanism attempts, four falsified by evidence -- border-mechanism approaches (--divider, --body-background, 2px --neutral-05, 2px --neutral-04) all superseded by a 1px position:absolute pseudo-element off the CSS Grid track boundary — A 1px border on a fractional width x DPR grid-track boundary does not reliably rasterize in WKWebView; the actual defect was only found by building a pixel-level Chromium reproduction as a discriminator instead of substituting another token
 - [Phase 34.11]: A stale Header/index.css full-width-header background, painted inside the new tier-2 portal, caused two of the four originally-reported live-sweep defects at once — In midnightMirage --body-background and --navbar-active-background are both aliases of --background-darker, so the selected-row highlight and the divider both became colour-identical to the surface painted over them by one unrelated rule; a source-text gate on the divider's own property stayed green throughout because a NEW SIBLING RULE, not the gated property, was defeating it -- a distinct failure mode from vacuity
 - [Phase 34.11]: Gamepad focus-scroll in the tier-2 panel is NOT MEASURED for the second consecutive phase (34.10, then 34.11) -- no gamepad was available in either case — Recorded honestly rather than inferred; carried forward as a standing, overdue measurement rather than allowed to silently defer a third time
+- [Phase 34.9-04]: Scoped the plan's negative 'ubuntu' workflow-test assertion to the build: job block only (prepare-release legitimately runs on ubuntu-latest, per the plan's own Task 1 acceptance criteria)
+- [Phase 34.9-04]: Added src/common/typedefs/js-yaml.d.ts (single load() export) instead of installing @types/js-yaml -- js-yaml is already present transitively; no new package was installed
 
 ### Pending Todos
 
@@ -4506,8 +4509,8 @@ Recent decisions affecting current work:
 > `state.update-progress`'s own JSON return reported `92`, itself one under the correct `91` for
 > `253/277`) -- hand-corrected to `completed_plans: 253`, `percent: 91`.
 
-Last session: 2026-08-10T07:55:01.270Z
-Stopped at: Completed 34.11-09-PLAN.md -- tier-2 panel mounted, checkpoint resolved after 4 re-sweeps, phase 34.11 plans all executed (9/9)
+Last session: 2026-08-10T09:08:13.758Z
+Stopped at: Completed 34.9-04-PLAN.md
 `FilterViewList` (four single-select View rows bound to `libraryView`/`setLibraryView`, D-05) and
 `FilterCollectionList` (single-select rows sourced verbatim from `customCategories.listCategories()`
 plus `'preset_uncategorized'`, D-17/D-21; `+ New collection`/`Manage collections` only call
