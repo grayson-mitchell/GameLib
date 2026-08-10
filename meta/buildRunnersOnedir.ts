@@ -803,7 +803,23 @@ export async function main(): Promise<void> {
   writeBuildManifest(arch, results)
 }
 
-if (!process.env.JEST_WORKER_ID) {
+// Phase 34.9 Plan 09: `meta/downloadHelperBinaries.ts` imports `archiveName`
+// from this module, and esbuild bundles both into one script executed via
+// `node`. Without a further check, this file's own top-level code -- and
+// therefore this guarded invocation -- runs as a side effect of merely being
+// imported, since `JEST_WORKER_ID` alone cannot distinguish "the entrypoint"
+// from "a dependency of the entrypoint" once bundled together. Requiring
+// `--arch=` to be present in argv (which `parseArgs` already mandates before
+// building anything) is a no-op for every legitimate direct invocation
+// (`pnpm build-runners-onedir --arch=<x64|arm64>` always supplies it) and
+// prevents this file's main() from running -- and crashing the whole bundle
+// with a "Missing required --arch" exit before the importing script's own
+// logic ever gets a chance to run -- when it is merely imported for its
+// named export.
+if (
+  !process.env.JEST_WORKER_ID &&
+  process.argv.some((a) => a.startsWith('--arch='))
+) {
   main().catch((error: unknown) => {
     console.error(error)
     process.exit(1)
