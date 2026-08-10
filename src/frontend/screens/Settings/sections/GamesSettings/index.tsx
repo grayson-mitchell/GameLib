@@ -27,7 +27,6 @@ import {
   PreferedLanguage,
   PreferSystemLibs,
   ShowFPS,
-  SteamRuntime,
   WinePrefix,
   WineVersionSelector,
   WrappersTable,
@@ -209,7 +208,6 @@ export default function GamesSettings() {
         <Mangohud />
         <GameMode />
         {isLinux && <PreferSystemLibs />}
-        <SteamRuntime />
         <NvidiaPrime />
         {!isNative && (
           <>
