@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.9-10-PLAN.md (authored 34.9-LIVE-GATE.md, verdict null, not run)
-last_updated: "2026-08-10T11:04:11.545Z"
-last_activity: 2026-08-10
+stopped_at: Completed 34.9-05-PLAN.md (all three upstream PRs DECLINED 2026-08-11); only 34.9-11 remains — the blocking live gate, awaiting a human run on macOS hardware
+last_updated: "2026-08-11T00:00:00.000Z"
+last_activity: 2026-08-11
 progress:
   total_phases: 23
   completed_phases: 16
   total_plans: 277
-  completed_plans: 263
+  completed_plans: 264
   percent: 70
 ---
 
