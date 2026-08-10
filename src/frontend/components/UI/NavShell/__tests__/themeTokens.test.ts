@@ -34,6 +34,71 @@ const THEMES_SCSS = 'src/frontend/themes.scss'
 const NAV_SHELL_SCSS = 'src/frontend/components/UI/NavShell/index.scss'
 
 /**
+ * The 11 real theme root selectors in themes.scss, one representative
+ * selector per theme (the last comma-separated selector in a grouped theme,
+ * since cssBlock's indexOf(`${selector} {`) needs a literal "selector {"
+ * substring and grouped themes only close with `{` on their final selector
+ * line). Verified by hand against `grep -n '^body\.' src/frontend/themes.scss`:
+ *   midnightMirage; classic/cyberSpaceOasis/cyberSpaceOasisAlt;
+ *   gruvbox_dark; high-contrast; dracula/dracula-classic; nord-light;
+ *   nord-dark; marine/marine-classic; zombie/zombie-classic;
+ *   old-school; sweet/sweet-dark.
+ * cssBlock() throws if any of these no longer resolves to a real block, so a
+ * renamed/removed theme fails loudly instead of a count silently drifting.
+ *
+ * Hoisted to module scope by the 34.11 code-review fix (WR-13) so the
+ * `--navbar-active` census below uses the SAME 11 selectors the `--divider`
+ * census does, rather than a second hand-maintained list.
+ */
+const themeSelectors = [
+  'body.midnightMirage',
+  'body.cyberSpaceOasisAlt',
+  'body.gruvbox_dark',
+  'body.high-contrast',
+  'body.dracula-classic',
+  'body.nord-light',
+  'body.nord-dark',
+  'body.marine-classic',
+  'body.zombie-classic',
+  'body.old-school',
+  'body.sweet-dark'
+]
+
+/**
+ * WR-13/CR-03: every stylesheet ADDED BY PHASE 34.11 that consumes
+ * `--navbar-active`.
+ *
+ * Deliberately enumerated rather than globbed, and deliberately scoped to
+ * this phase's own files. Three PRE-EXISTING consumers use the bare
+ * `var(--navbar-active)` form and are knowingly left unguarded here, because
+ * fixing them was not in this review's scope and a gate that fails on
+ * untouched code is a gate someone deletes:
+ *   src/frontend/components/UI/NavShell/components/NavTabs/index.scss:229
+ *   src/frontend/screens/Game/GamePage/index.css:590, 619, 646
+ * (themes.scss's own four uses are inside theme blocks that declare the
+ * token, so they resolve by construction.) If those are ever fixed, add them
+ * to this list -- the scope of this gate is exactly the list below and
+ * nothing more, which is the honesty the finding it replaces lacked.
+ */
+const NAVBAR_ACTIVE_CONSUMERS = [
+  'src/frontend/components/UI/NavShell/components/FilterFacetGroup/index.scss',
+  'src/frontend/components/UI/NavShell/components/FilterMoreGroup/index.scss',
+  'src/frontend/screens/Library/components/FilterChipRow/index.scss',
+  'src/frontend/screens/Library/components/FilterZeroResult/index.scss'
+]
+
+/**
+ * The fallback chain `NavItem/index.scss:21-24` already established for this
+ * exact token. Matched as a regex so whitespace/formatting is irrelevant.
+ */
+const NAVBAR_ACTIVE_FALLBACK_CHAIN =
+  /var\(\s*--navbar-active,\s*var\(\s*--accent-overlay,\s*var\(\s*--accent\s*\)\s*\)\s*\)/
+
+/** `--navbar-active` but NOT `--navbar-active-background`. */
+const BARE_NAVBAR_ACTIVE = /var\(\s*--navbar-active\s*\)/
+const ANY_NAVBAR_ACTIVE = /--navbar-active(?![-\w])/g
+
+/**
  * Returns the declaration body of the FIRST top-level rule whose selector
  * matches exactly, e.g. `.Header`. Brace-counted rather than
  * regex-terminated so a nested block cannot end the match early. Copied
@@ -73,6 +138,63 @@ describe('gruvbox_dark theme tokens (CR-01, D-31)', () => {
 
   it('declares its own --navbar-active', () => {
     expect(block).toMatch(/--navbar-active:/)
+  })
+})
+
+/**
+ * WR-13 (34.11 code review). The gate above -- `it('declares its own
+ * --navbar-active')` against `body.gruvbox_dark` alone -- read as broad
+ * theme coverage while checking exactly one of eleven themes. It stayed
+ * green while CR-03 shipped: `--navbar-active` is declared in only 4 of the
+ * 11 theme blocks, and four new stylesheets consumed it with NO fallback,
+ * so in the other 7 themes an undefined custom property made the whole
+ * declaration invalid at computed-value time and dropped it. Worst case,
+ * `.FilterFacetRow--checked .FilterFacetRow__box` lost BOTH `background` and
+ * `border-color` and the checked-checkbox indicator did not render at all.
+ *
+ * This is the census form the same file already used 80 lines lower for
+ * `--divider`, applied to the token that actually needed it. It was proven
+ * to FAIL against the pre-fix stylesheets before being accepted.
+ */
+describe('--navbar-active survives in all 11 themes (WR-13, CR-03)', () => {
+  const themesScss = read(THEMES_SCSS)
+
+  it('census: --navbar-active is declared in strictly fewer theme blocks than the file defines -- which is WHY every consumer needs a fallback', () => {
+    const declaringCount = themeSelectors.filter((selector) =>
+      /--navbar-active:/.test(cssBlock(themesScss, selector))
+    ).length
+
+    // Non-vacuity guard: if this ever reads 0 the regex or cssBlock broke,
+    // and `toBeLessThan` would pass for the wrong reason.
+    expect(declaringCount).toBeGreaterThan(0)
+    expect(declaringCount).toBeLessThan(themeSelectors.length)
+  })
+
+  it.each(NAVBAR_ACTIVE_CONSUMERS)(
+    '%s still consumes --navbar-active at all (guards the two assertions below against a vacuous pass)',
+    (relPath) => {
+      expect(read(relPath).match(ANY_NAVBAR_ACTIVE) ?? []).not.toHaveLength(0)
+    }
+  )
+
+  it.each(NAVBAR_ACTIVE_CONSUMERS)(
+    '%s never uses the bare var(--navbar-active) form -- that drops the ENTIRE declaration in 7 themes',
+    (relPath) => {
+      expect(read(relPath)).not.toMatch(BARE_NAVBAR_ACTIVE)
+    }
+  )
+
+  it.each(NAVBAR_ACTIVE_CONSUMERS)(
+    '%s resolves --navbar-active through the same fallback chain NavItem/index.scss already uses',
+    (relPath) => {
+      expect(read(relPath)).toMatch(NAVBAR_ACTIVE_FALLBACK_CHAIN)
+    }
+  )
+
+  it('the chain asserted above is the one NavItem actually declares -- not a second, drifting copy of it', () => {
+    expect(
+      read('src/frontend/components/UI/NavShell/components/NavItem/index.scss')
+    ).toMatch(NAVBAR_ACTIVE_FALLBACK_CHAIN)
   })
 })
 
@@ -152,34 +274,12 @@ describe('tier2 divider (--divider finding, 34.11-09 FIFTH fix -- pseudo-element
   it('census: --divider is declared in strictly fewer theme blocks than the file defines -- guards against a future contributor reintroducing it under the mistaken assumption it is universal', () => {
     const themesScss = read(THEMES_SCSS)
 
-    // The 11 real theme root selectors in themes.scss, one representative
-    // selector per theme (the last comma-separated selector in a grouped
-    // theme, since cssBlock's indexOf(`${selector} {`) needs a literal
-    // "selector {" substring and grouped themes only close with `{` on
-    // their final selector line). Verified by hand against
-    // `grep -n '^body\.' src/frontend/themes.scss`:
-    //   midnightMirage; classic/cyberSpaceOasis/cyberSpaceOasisAlt;
-    //   gruvbox_dark; high-contrast; dracula/dracula-classic; nord-light;
-    //   nord-dark; marine/marine-classic; zombie/zombie-classic;
-    //   old-school; sweet/sweet-dark.
-    // cssBlock() throws if any of these no longer resolves to a real block,
-    // so a renamed/removed theme fails this test loudly instead of the
-    // count silently drifting.
-    const themeSelectors = [
-      'body.midnightMirage',
-      'body.cyberSpaceOasisAlt',
-      'body.gruvbox_dark',
-      'body.high-contrast',
-      'body.dracula-classic',
-      'body.nord-light',
-      'body.nord-dark',
-      'body.marine-classic',
-      'body.zombie-classic',
-      'body.old-school',
-      'body.sweet-dark'
-    ]
-
+    // `themeSelectors` is now declared at module scope (hoisted by WR-13's
+    // fix) so this census and the `--navbar-active` census above provably
+    // iterate the SAME 11 theme blocks rather than two hand-maintained
+    // lists that could drift apart.
     const dividerDeclaringCount = themeSelectors.filter((selector) =>
+
       /--divider:/.test(cssBlock(themesScss, selector))
     ).length
 
