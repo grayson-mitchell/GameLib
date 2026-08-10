@@ -187,11 +187,43 @@
   // `border-inline-end` shorthand, not just the colour. The symptom in
   // `gruvbox_dark` and `dracula` (both mandatory stress-test themes, and
   // both among the 9 that never define `--divider`) was therefore a MISSING
-  // divider, not a wrong-coloured one. Substituted with `--body-background`,
-  // the same token 34.10's navbar-seam fix already proved present in all 11
-  // theme blocks. Do NOT reintroduce `var(--divider)` anywhere in this
-  // file -- a later divider need uses `var(--body-background)` instead.
-  border-inline-end: 1px solid var(--body-background);
+  // divider, not a wrong-coloured one.
+  //
+  // SECOND ATTEMPT, ALSO WRONG (34.11-03, superseded here): substituted
+  // `var(--body-background)`, reasoning that it resolves in all 11 theme
+  // blocks so at least the declaration would never drop. That reasoning
+  // addressed resolution, not visibility, and missed the actual construction
+  // of this border: `.NavShell__tier2` (this selector) sits on the LEFT of
+  // the border and paints `var(--navbar-background)`; `.App .content` (the
+  // game grid, `App.css:98-100`) sits on the RIGHT and paints
+  // `var(--gradient-body-background, var(--body-background))`. In every
+  // theme that has no `--gradient-body-background` override -- midnightMirage
+  // included -- that resolves to the exact same `var(--body-background)`
+  // this border used. A border painted the same colour as the surface it
+  // abuts on one side is invisible against that side BY CONSTRUCTION, no
+  // matter how reliably the token itself resolves: midnightMirage measured
+  // `--navbar-background` #161c1e (panel) / `--body-background` #070a0b
+  // (border AND grid, identical) -- the border only ever showed against the
+  // panel side, never against the grid side it is meant to divide from.
+  //
+  // THIRD ATTEMPT (live-sweep fix, this line): `--neutral-05` (#a8aeaf),
+  // a global token from `styles/_colors.scss` -- included once at `:root`
+  // (`index.scss:8`) rather than per theme block, so it is unconditionally
+  // defined and needs no fallback, and no theme in this file redefines it
+  // (`grep -n -- '--neutral-05' themes.scss` shows only two *aliases to* it,
+  // never a redeclaration of it). Measured against BOTH neighbours in all
+  // three mandatory-sweep themes (panel side / grid side):
+  //   midnightMirage: #161c1e / #070a0b -> 7.65:1 / 8.83:1
+  //   gruvbox_dark:   #32302f / #282828 -> 5.84:1 / 6.54:1
+  //   dracula:        #44475a / #282a35 -> 4.07:1 / 6.33:1
+  // All six ratios clear WCAG 2.1 SC 1.4.11's 3:1 non-text-UI minimum, with
+  // the tightest margin (dracula's panel side, 4.07:1) still comfortably
+  // above it. Do NOT reintroduce `var(--divider)` OR `var(--body-background)`
+  // on this declaration -- both were proven wrong for the same underlying
+  // reason (colour-identical to one of the two surfaces this border sits
+  // between), not a token-resolution problem a different alias can dodge
+  // twice.
+  border-inline-end: 1px solid var(--neutral-05);
   overflow: hidden;
   // Replaces `--sidebar-horizontal-padding` (`Sidebar/index.scss:2`) for
   // the ported tier-2 row rules in `components/NavItem/index.scss`.

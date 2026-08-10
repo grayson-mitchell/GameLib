@@ -95,18 +95,33 @@ describe('navbar app-region (CR-02, D-32)', () => {
   })
 })
 
-describe('tier2 border-inline-end (--divider finding)', () => {
+describe('tier2 border-inline-end (--divider finding, 34.11-09 THIRD fix)', () => {
   const navShellScss = read(NAV_SHELL_SCSS)
   const tier2Block = cssBlock(navShellScss, '.NavShell__tier2')
 
-  it('.NavShell__tier2 border-inline-end uses var(--body-background)', () => {
+  it('.NavShell__tier2 border-inline-end uses var(--neutral-05)', () => {
+    // Superseded twice: `var(--divider)` (undefined in 9/11 themes, drops
+    // the whole declaration) and `var(--body-background)` (resolves
+    // everywhere, but is colour-IDENTICAL to `.App .content`'s own
+    // background in every theme without a `--gradient-body-background`
+    // override, per `App.css:98-100` -- a border painted the same colour as
+    // the surface it abuts on one side is invisible against that side by
+    // construction, independent of whether the token resolves).
+    // `--neutral-05` is a global, unthemed token (styles/_colors.scss,
+    // included once at `:root` in `index.scss`, never redeclared per theme
+    // -- see the census test below) measured with real contrast against
+    // BOTH neighbours in all three mandatory-sweep themes; see this
+    // declaration's own header comment for the six measured ratios.
     expect(tier2Block).toMatch(
-      /border-inline-end:\s*1px solid var\(--body-background\)/
+      /border-inline-end:\s*1px solid var\(--neutral-05\)/
     )
   })
 
-  it('.NavShell__tier2 no longer references var(--divider)', () => {
+  it('.NavShell__tier2 no longer references var(--divider) or var(--body-background) on border-inline-end -- both were proven wrong for the same reason a different alias cannot dodge', () => {
     expect(tier2Block).not.toMatch(/var\(--divider\)/)
+    expect(tier2Block).not.toMatch(
+      /border-inline-end:\s*1px solid var\(--body-background\)/
+    )
   })
 
   it('census: --divider is declared in strictly fewer theme blocks than the file defines -- guards against a future contributor reintroducing it under the mistaken assumption it is universal', () => {
@@ -144,6 +159,11 @@ describe('tier2 border-inline-end (--divider finding)', () => {
     ).length
 
     expect(dividerDeclaringCount).toBeLessThan(themeSelectors.length)
+  })
+
+  it('census: no theme block redeclares --neutral-05 -- the chosen token must stay the single global unthemed value the contrast measurements above were computed against, in every theme, not just the three that were live-swept', () => {
+    const themesScss = read(THEMES_SCSS)
+    expect(themesScss).not.toMatch(/--neutral-05:/)
   })
 })
 
