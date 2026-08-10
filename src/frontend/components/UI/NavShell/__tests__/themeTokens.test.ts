@@ -95,55 +95,67 @@ describe('navbar app-region (CR-02, D-32)', () => {
   })
 })
 
-describe('tier2 border-inline-end (--divider finding, 34.11-09 FOURTH fix -- mechanism, not colour)', () => {
+describe('tier2 border-inline-end (--divider finding, 34.11-09 FOURTH fix -- brightness, not width)', () => {
   const navShellScss = read(NAV_SHELL_SCSS)
   const tier2Block = cssBlock(navShellScss, '.NavShell__tier2')
 
-  it('.NavShell__tier2 border-inline-end uses var(--neutral-05) at 2px', () => {
-    // Colour superseded twice before this: `var(--divider)` (undefined in
-    // 9/11 themes, drops the whole declaration) and `var(--body-background)`
-    // (resolves everywhere, but is colour-IDENTICAL to `.App .content`'s own
-    // background in every theme without a `--gradient-body-background`
-    // override, per `App.css:98-100` -- a border painted the same colour as
-    // the surface it abuts on one side is invisible against that side by
-    // construction, independent of whether the token resolves).
-    // `--neutral-05` is a global, unthemed token (styles/_colors.scss,
-    // included once at `:root` in `index.scss`, never redeclared per theme
-    // -- see the census test below) measured with real contrast against
-    // BOTH neighbours in all three mandatory-sweep themes (7.65:1-8.83:1
-    // range); a pixel-level Playwright reproduction of this exact DOM/CSS
-    // structure additionally confirmed the line rasterises correctly, at
-    // the right colour and position, un-occluded, in both midnightMirage
-    // and high-contrast, at DPR 1 and 2 -- Chromium shows no defect.
-    //
-    // The re-sweep still reported it completely absent in midnightMirage,
-    // which a colour/resolution defect cannot explain at those ratios. The
-    // WIDTH changed instead, from 1px to 2px: `.App`'s grid
-    // (`grid-template-columns: min-content 1fr`, App.css:26) is the same
-    // fractional-track shape this project already measured WKWebView
-    // mishandling once (`WKWebView % height vs 1fr grid row`), and Chromium
-    // -- the only engine this repro could test -- cannot reproduce an
-    // engine-specific rasterisation gap on a hairline that depends on
-    // exactly 1 device pixel landing on a fractional grid-track boundary.
-    // 2 physical CSS pixels has margin where 1 has none. The design
-    // source's own literal token for this role (`--color-border: var(
-    // --neutral-03)`, sources/themes/default.css:24) was checked and
-    // rejected on measured evidence: ~1.26-1.45:1 in midnightMirage and
-    // ~1.37:1 in high-contrast -- a near-invisible hairline by design in
-    // EVERY theme, which would not fix midnightMirage and would newly break
-    // the high-contrast case already confirmed working.
+  it('.NavShell__tier2 border-inline-end is 2px solid var(--neutral-04)', () => {
+    // History (each superseded for a DIFFERENT, measured reason -- see this
+    // declaration's own header comment for the full account):
+    //   var(--divider)        -- undefined in 9/11 themes, drops the whole
+    //                             declaration.
+    //   var(--body-background) -- resolves everywhere, but colour-IDENTICAL
+    //                             to `.App .content`'s background in every
+    //                             theme without a `--gradient-body-
+    //                             background` override -- invisible against
+    //                             the grid side by construction.
+    //   1px var(--neutral-05) -- resolved AND had real contrast
+    //                             (7.65-8.83:1) yet was still reported
+    //                             completely absent in midnightMirage. A
+    //                             pixel-level Playwright reproduction of
+    //                             this exact DOM/CSS structure ruled out
+    //                             colour and occlusion in Chromium, pointing
+    //                             at the ONE variable Chromium cannot
+    //                             reproduce: `.App`'s `1fr`-fractional grid
+    //                             track (App.css:26) landing this boundary
+    //                             on a non-integer WKWebView device pixel --
+    //                             the same defect class this project already
+    //                             recorded once (`WKWebView % height vs 1fr
+    //                             grid row`).
+    //   2px var(--neutral-05) -- LIVE-CONFIRMED FIX for the rasterisation
+    //                             gap: the divider became visible in
+    //                             midnightMirage. This is now a reusable
+    //                             project-level finding (1px on a
+    //                             fractional-DPR grid-track boundary is
+    //                             unreliable in WKWebView; 2px has margin),
+    //                             not just this declaration's story. But
+    //                             `--neutral-05` at 2px read as a "chunky
+    //                             rule", not the hairline the design calls
+    //                             for.
+    // Route 1 (make 1px itself survive) was investigated and rejected: the
+    // fractional boundary is `--tier2-width * DPR`, and macOS's fractional
+    // "scaled resolution" backing-scale factors (e.g. 1.8x) make an integer
+    // result for EVERY plausible DPR simultaneously unachievable by any
+    // single fixed width -- this is a property of the runtime, not
+    // something a CSS length value can pin away.
+    // Route 2 (this line): `--neutral-04`, the design system's "strong
+    // border" role (`.claude/skills/sketch-findings-gamelib/SKILL.md`'s
+    // palette table) versus `--neutral-05`'s "muted text", measurably
+    // softer and pixel-confirmed as a clean hairline in midnightMirage and
+    // gruvbox_dark. See the dracula-override describe block below for why
+    // dracula does NOT use this token.
     expect(tier2Block).toMatch(
-      /border-inline-end:\s*2px solid var\(--neutral-05\)/
+      /border-inline-end:\s*2px solid var\(--neutral-04\)/
     )
   })
 
-  it('.NavShell__tier2 no longer references var(--divider), var(--body-background), or a 1px width on border-inline-end -- colour and width were each proven wrong for reasons a repeat cannot dodge', () => {
+  it('.NavShell__tier2 no longer references var(--divider), var(--body-background), or var(--neutral-05) directly on its own border-inline-end -- each superseded for a reason a repeat cannot dodge', () => {
     expect(tier2Block).not.toMatch(/var\(--divider\)/)
     expect(tier2Block).not.toMatch(
-      /border-inline-end:\s*1px solid var\(--body-background\)/
+      /border-inline-end:\s*(1px|2px) solid var\(--body-background\)/
     )
     expect(tier2Block).not.toMatch(
-      /border-inline-end:\s*1px solid var\(--neutral-05\)/
+      /border-inline-end:\s*(1px|2px) solid var\(--neutral-05\)/
     )
   })
 
@@ -184,9 +196,37 @@ describe('tier2 border-inline-end (--divider finding, 34.11-09 FOURTH fix -- mec
     expect(dividerDeclaringCount).toBeLessThan(themeSelectors.length)
   })
 
-  it('census: no theme block redeclares --neutral-05 -- the chosen token must stay the single global unthemed value the contrast measurements above were computed against, in every theme, not just the three that were live-swept', () => {
+  it('census: no theme block redeclares --neutral-04 or --neutral-05 -- both must stay the single global unthemed values the contrast measurements were computed against, in every theme, not just the three that were live-swept', () => {
     const themesScss = read(THEMES_SCSS)
+    expect(themesScss).not.toMatch(/--neutral-04:/)
     expect(themesScss).not.toMatch(/--neutral-05:/)
+  })
+})
+
+describe('dracula-only divider override (34.11-09 FOURTH fix, --neutral-04 collision)', () => {
+  const navShellScss = read(NAV_SHELL_SCSS)
+
+  it('body.dracula and body.dracula-classic override border-inline-end-color to var(--neutral-05), excluding the collapsed state', () => {
+    // `--navbar-background` (#44475a, dracula's panel colour) and
+    // `--neutral-04` (#51595a) share an identical blue channel (90 = 90) --
+    // measured at ~1.28:1 against dracula's panel side, and a pixel-level
+    // screenshot of this exact declaration showed no perceptible line
+    // there at all. `--neutral-05` is the token already proven visible in
+    // dracula (4.07:1 / 6.33:1, pixel-confirmed in the prior fix), so the
+    // override falls back to it rather than accepting a token with a
+    // directly-observed failure in one of the three mandatory sweep themes.
+    const dracula = navShellScss.match(
+      /body\.dracula \.NavShell__tier2:not\(\.NavShell__tier2--collapsed\),\s*\n?body\.dracula-classic \.NavShell__tier2:not\(\.NavShell__tier2--collapsed\)\s*\{([^}]*)\}/
+    )
+    expect(dracula).not.toBeNull()
+    expect(dracula?.[1]).toMatch(/border-inline-end-color:\s*var\(--neutral-05\)/)
+  })
+
+  it('the override excludes .NavShell__tier2--collapsed -- without it, two classes would outrank the one-class Manage-Accounts collapse rule and repaint a border colour on a column collapsed to zero width', () => {
+    const dracula = navShellScss.match(
+      /body\.dracula \.NavShell__tier2:not\(\.NavShell__tier2--collapsed\)/
+    )
+    expect(dracula).not.toBeNull()
   })
 })
 

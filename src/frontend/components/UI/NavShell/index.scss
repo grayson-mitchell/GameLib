@@ -241,21 +241,77 @@
   // just confirmed working. `--neutral-03` was therefore rejected too, on
   // measured evidence, not preference. `--neutral-05` stays.
   //
-  // What changed on this line is the MECHANISM, not the colour: 1px widened
+  // What changed on that line was the MECHANISM, not the colour: 1px widened
   // to 2px. `.App`'s grid (`App.css:26`, `grid-template-columns: min-content
   // 1fr`) is exactly the `1fr`-fractional-track shape this project has
   // already measured WKWebView mishandling once (`WKWebView % height vs 1fr
   // grid row` -- the fractional part of a non-integer device-pixel track
   // boundary was the tell there too), and Chromium -- the only engine this
   // repro could test -- cannot reproduce a WKWebView-specific rasterisation
-  // gap. A hairline that depends on exactly 1 device pixel landing on a
-  // fractional grid-track boundary surviving anti-aliasing has no margin; 2
-  // physical CSS pixels does, while staying a `border-inline-end` (still
-  // auto-flips for RTL via `.isRTL { direction: rtl }`, App.css:253 -- no
-  // hand-written physical-offset alternative like `box-shadow` was used
-  // here specifically because that would need a second, direction-aware
-  // override to stay RTL-correct, trading one unverified risk for another).
-  border-inline-end: 2px solid var(--neutral-05);
+  // gap. LIVE-CONFIRMED by the next re-sweep: the divider became visible in
+  // midnightMirage at 2px. The WKWebView-fractional-grid-track hypothesis is
+  // therefore no longer speculative -- it is a reusable project-level
+  // finding, not just this declaration's story. Stayed on `border-inline-end`
+  // (not `box-shadow`) so RTL auto-flip keeps working via `.isRTL {
+  // direction: rtl }` (App.css:253) without a second, hand-written
+  // direction-aware override.
+  //
+  // FOURTH ATTEMPT (this line): 2px survived, but read as a "chunky rule"
+  // rather than a hairline at `--neutral-05`'s brightness. Route 1 (make 1px
+  // itself survive, matching the design source's literal `border-right: 1px
+  // solid var(--color-border)`) was investigated and rejected: the
+  // fractional boundary comes from the DEVICE PIXEL RATIO, not from any
+  // length value this file controls. For a boundary to land on a whole
+  // device pixel, `--tier2-width * DPR` must be an integer. 204px already
+  // satisfies that for every *integer* DPR (1x, 2x, 3x) and even most common
+  // *fractional* DPRs (1.25, 1.5, 1.75 -- all give whole numbers), which is
+  // consistent with this repro never reproducing the defect in Chromium at
+  // DPR 1 or 2. But macOS's "scaled resolution" display modes routinely use
+  // OTHER fractional backing-scale factors (e.g. 1.8x: 204*1.8 = 367.2,
+  // genuinely fractional) that no single fixed width can satisfy
+  // simultaneously with the common ones above -- 205px fixes 1.8x
+  // (205*1.8=369) but breaks 1.5x (205*1.5=307.5). There is no CSS length
+  // choice that guarantees an integer device-pixel boundary across an
+  // unknown, environment-chosen DPR; this is a property of the runtime, not
+  // a bug this stylesheet can pin away. Switching `.App`'s grid-template-
+  // columns from `min-content` to a direct `var(--tier2-width)` track was
+  // also considered (removing the indirection through content-based track
+  // sizing) but rejected: it has no evidence of fixing a DPR-driven
+  // fractional boundary (the boundary position is still `width * DPR`
+  // either way) and would edit a foundational, app-wide selector (`.App`,
+  // all 4 grid rows) for a speculative, unverifiable benefit when a PROVEN
+  // 2px fix already exists -- disproportionate blast radius for the gain.
+  //
+  // With 1px ruled out, the lever left is brightness, not width. Route 2:
+  // `--neutral-04` (#51595a, the design system's "strong border" role --
+  // `.claude/skills/sketch-findings-gamelib/SKILL.md`'s palette table --
+  // versus `--neutral-05`'s "muted text") is a closer semantic match and
+  // measurably softer. Measured against both neighbours in all three
+  // mandatory-sweep themes (panel side / grid side; global unthemed token,
+  // census-verified below same as `--neutral-05`):
+  //   midnightMirage: #161c1e / #070a0b -> 2.40:1 / 2.77:1
+  //   gruvbox_dark:   #32302f / #282828 -> 1.83:1 / 2.05:1
+  //   dracula:        #44475a / #282a35 -> 1.28:1 / 1.98:1
+  // Pixel-rendered and screenshotted for all three (not just measured):
+  // midnightMirage and gruvbox_dark both show a clean, visible hairline --
+  // exactly the target look. Dracula does NOT: `--navbar-background`
+  // (#44475a) and `--neutral-04` (#51595a) share an IDENTICAL blue channel
+  // (90 = 90, differing only ~13 in red/green), and the rendered screenshot
+  // shows no perceptible line against the panel side at all. WCAG 1.4.11's
+  // 3:1 floor does not govern a decorative divider (established in the
+  // prior fix), but "not perceptible in a screenshot" is a stronger, more
+  // direct signal than the ratio alone and this project has already spent
+  // three failed sweep cycles on results that looked fine on paper. Rather
+  // than ship a token with directly-observed failure in one of the three
+  // mandatory themes -- repeating this exact defect class one theme later
+  // -- dracula (and dracula-classic, which shares the same
+  // `--navbar-background`, themes.scss:280-281) gets a scoped override
+  // below falling back to the already-proven `--neutral-05`. This means the
+  // divider is not colour-uniform across themes, which is a deliberate,
+  // evidence-driven trade: a seam that is reliably visible in every
+  // mandatory theme beats one that is consistently coloured but sometimes
+  // invisible.
+  border-inline-end: 2px solid var(--neutral-04);
   overflow: hidden;
   // Replaces `--sidebar-horizontal-padding` (`Sidebar/index.scss:2`) for
   // the ported tier-2 row rules in `components/NavItem/index.scss`.
@@ -264,6 +320,30 @@
     width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
     padding 0.22s ease,
     opacity 0.18s ease;
+}
+
+// Dracula-only exception to the `--neutral-04` divider above (see that
+// declaration's own comment for the measured/screenshotted evidence).
+// `--navbar-background` (#44475a, dracula's panel colour) and `--neutral-04`
+// (#51595a) share an identical blue channel and render with no perceptible
+// separation against the panel side specifically in this one theme --
+// `--neutral-05` is the already-proven-visible fallback (4.07:1 / 6.33:1
+// against dracula's panel/grid, pixel-confirmed earlier in this file's
+// history). Scoped to both dracula selectors, which share the same
+// `--navbar-background` (`themes.scss:280-281`).
+//
+// `:not(.NavShell__tier2--collapsed)` is load-bearing, not decoration: two
+// classes (`body.dracula .NavShell__tier2`) outrank the Manage-Accounts
+// collapse rule's one class (`.NavShell__tier2--collapsed`,
+// `border-inline-end-color: transparent`, immediately below) regardless of
+// source order. Without this exclusion, this override would win over the
+// collapse rule in dracula specifically and repaint a visible border-colour
+// on a column whose width, padding and opacity are already collapsed to
+// zero -- invisible today only because the box itself has zero width, and
+// a latent regression the moment that geometry changes.
+body.dracula .NavShell__tier2:not(.NavShell__tier2--collapsed),
+body.dracula-classic .NavShell__tier2:not(.NavShell__tier2--collapsed) {
+  border-inline-end-color: var(--neutral-05);
 }
 
 // Manage Accounts only (REQ-34.10-03 § Design Decisions #5). Collapse is
