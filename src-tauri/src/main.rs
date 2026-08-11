@@ -25,7 +25,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -4901,6 +4901,77 @@ fn resolve_packaged_app_root(app: &AppHandle) -> String {
     app_root_env_value(app.path().resource_dir().map_err(|e| e.to_string()))
 }
 
+// ---- Single-instance guard (Phase 34.5 gap cycle 6 plan 44, D-44-A) -----------------------
+//
+// Hand-rolled, std-only, Unix-only. No crate is added (`tauri-plugin-single-instance` is
+// rejected -- see the plan's own decision record D-44-A): a plugin-based guard cannot run
+// before `tauri::Builder::default()`, so a secondary process would still reach `.setup()` and
+// spawn its own sidecar before the plugin could ever tell it "you are secondary". This guard
+// runs at the very top of `main()`, before the builder is even constructed, so a secondary
+// process's `std::process::exit(0)` fires before `spawn_sidecar` can ever be called.
+
+/// Outcome of a single-instance acquisition attempt. `Primary` holds the bound listener the
+/// accept loop in `main()`'s `.setup()` closure will service; `PrimaryWithoutListener` behaves
+/// identically to a primary process (spawns the sidecar, opens the window) but has no socket
+/// to accept connections on -- the FAIL-OPEN path (T-34.5-G6-24) for every recoverable
+/// failure: no resolvable home directory, a directory-creation failure, or a bind failure.
+/// `Secondary` means another instance is already alive and listening.
+#[cfg(unix)]
+enum SingleInstanceRole {
+    Primary(std::os::unix::net::UnixListener),
+    PrimaryWithoutListener,
+    Secondary,
+}
+
+/// Acquires this process's single-instance role at `socket_path`. Connect-first, bind-second:
+/// a successful `UnixStream::connect` means another instance is alive and listening, so this
+/// process is `Secondary`. Any connect failure -- including a stale socket left behind by a
+/// crashed instance, which fails with `ConnectionRefused` -- removes the old socket file
+/// (best-effort; its own result is not load-bearing, since either the file existed and is now
+/// gone, or it never existed) and attempts to bind fresh.
+///
+/// FAIL OPEN, NEVER FAIL CLOSED (T-34.5-G6-24): a bind failure returns
+/// `PrimaryWithoutListener`, never an error -- a guard that cannot acquire its socket must
+/// never make the app unlaunchable. On a successful bind, the socket file's permissions are
+/// tightened to `0600` (best-effort; a chmod failure is logged and the guard proceeds anyway
+/// -- the real enforcement of T-34.5-G6-20 is the `0700` parent directory the caller creates
+/// before this function ever runs, not this belt-and-braces call).
+#[cfg(unix)]
+fn acquire_single_instance(socket_path: &std::path::Path) -> SingleInstanceRole {
+    use std::os::unix::fs::PermissionsExt;
+    use std::os::unix::net::{UnixListener, UnixStream};
+
+    if UnixStream::connect(socket_path).is_ok() {
+        return SingleInstanceRole::Secondary;
+    }
+
+    let _ = std::fs::remove_file(socket_path);
+
+    match UnixListener::bind(socket_path) {
+        Ok(listener) => {
+            if let Err(e) =
+                std::fs::set_permissions(socket_path, std::fs::Permissions::from_mode(0o600))
+            {
+                eprintln!(
+                    "[shell] WARN: failed to set single-instance socket permissions to 0600: {e}"
+                );
+            }
+            SingleInstanceRole::Primary(listener)
+        }
+        Err(e) => {
+            eprintln!(
+                "[shell] WARN: single-instance socket bind failed ({e}) -- continuing as primary without a listener (fail-open, T-34.5-G6-24)"
+            );
+            SingleInstanceRole::PrimaryWithoutListener
+        }
+    }
+}
+
+// D-44-A accepted cost, ledger row `U-34.5-18`: `std::os::unix::net` has no non-unix
+// equivalent, so `acquire_single_instance` is never called on a non-unix target at all (see
+// `main()`'s `#[cfg(not(unix))]` arm below) -- Windows keeps TODAY's behaviour (a second
+// launch starts a second instance), a named, accepted gap, not a silent regression.
+
 /// DEV MODE: spawn `node <sidecar-entry>` with piped stdio, logging exactly what it runs so a
 /// spawn/path failure is visible in the `tauri dev` terminal (previously the whole leg was
 /// invisible: a piped stdout consumed by the reader thread and no diagnostics meant even a
@@ -4911,7 +4982,13 @@ fn resolve_packaged_app_root(app: &AppHandle) -> String {
 /// sidecar's `pathShim.getPath('exe')` reads it back synchronously (REQ-34.5-01, D-10). Logged
 /// here on the dev path only, so the live gate can read it back from
 /// `~/Library/Logs/GameLib/gamelib.log`.
-fn spawn_sidecar_dev(shell_exe: &str) -> std::io::Result<Child> {
+///
+/// `forward_args` is handed down from `spawn_sidecar` too (computed once via
+/// `sidecar_forward_args`, Phase 34.5 gap cycle 6 plan 44) and appended to the child's own
+/// argv AFTER the entry path -- the sidecar's `process.argv` becomes
+/// `[node, <entry>, ...forward_args]`, matching `environment.ts`'s `process.argv.includes(...)`
+/// checks.
+fn spawn_sidecar_dev(shell_exe: &str, forward_args: &[String]) -> std::io::Result<Child> {
     let entry = resolve_sidecar_entry();
     let app_root = resolve_dev_app_root();
     let cwd = std::env::current_dir()
@@ -4923,8 +5000,10 @@ fn spawn_sidecar_dev(shell_exe: &str) -> std::io::Result<Child> {
     eprintln!("[shell]   entry_exists={exists}");
     eprintln!("[shell]   GAMELIB_SHELL_EXE={shell_exe}");
     eprintln!("[shell]   GAMELIB_APP_ROOT={app_root}");
+    eprintln!("[shell]   forward_args={forward_args:?}");
     let child = Command::new("node")
         .arg(&entry)
+        .args(forward_args)
         .env("GAMELIB_SHELL_EXE", shell_exe)
         .env("GAMELIB_APP_ROOT", &app_root)
         .stdin(Stdio::piped())
@@ -4946,7 +5025,14 @@ fn spawn_sidecar_dev(shell_exe: &str) -> std::io::Result<Child> {
 /// layouts; never a manual `cfg!(debug_assertions)` path branch here). The plugin's `Command`
 /// wrapper converts into a plain `std::process::Command` (`impl From<Command> for StdCommand`),
 /// so the rest of the spawn/pipe/diagnostic plumbing below is identical to the dev path.
-fn spawn_sidecar_packaged(app: &AppHandle, shell_exe: &str) -> std::io::Result<Child> {
+///
+/// `forward_args` is appended to `std_command`'s existing args (Phase 34.5 gap cycle 6 plan
+/// 44) -- the packaged sidecar's `process.argv` becomes `[gamelib-sidecar, ...forward_args]`.
+fn spawn_sidecar_packaged(
+    app: &AppHandle,
+    shell_exe: &str,
+    forward_args: &[String],
+) -> std::io::Result<Child> {
     let shell_command: ShellCommand = app.shell().sidecar("gamelib-sidecar").map_err(|e| {
         std::io::Error::other(format!("sidecar externalBin resolution failed: {e}"))
     })?;
@@ -4961,7 +5047,9 @@ fn spawn_sidecar_packaged(app: &AppHandle, shell_exe: &str) -> std::io::Result<C
     eprintln!("[shell]   cwd={cwd}");
     eprintln!("[shell]   entry_exists={exists}");
     eprintln!("[shell]   GAMELIB_APP_ROOT={app_root}");
+    eprintln!("[shell]   forward_args={forward_args:?}");
     let child = std_command
+        .args(forward_args)
         .env("GAMELIB_SHELL_EXE", shell_exe)
         .env("GAMELIB_APP_ROOT", &app_root)
         .stdin(Stdio::piped())
@@ -4980,12 +5068,18 @@ fn spawn_sidecar_packaged(app: &AppHandle, shell_exe: &str) -> std::io::Result<C
 /// Dispatches to the dev or packaged spawn path per `use_dev_sidecar()`. Calls
 /// `std::env::current_exe()` exactly ONCE here and hands the formatted result down to both
 /// spawn paths (never re-derived per-path with two different fallbacks) — REQ-34.5-01, D-10.
+///
+/// Also computes `forward_args` exactly ONCE here (Phase 34.5 gap cycle 6 plan 44) via
+/// `sidecar_forward_args`, mirroring `shell_exe`'s own single-derivation discipline one line
+/// above, and hands it down to both spawn paths -- neither `spawn_sidecar_dev` nor
+/// `spawn_sidecar_packaged` calls `sidecar_forward_args` itself.
 fn spawn_sidecar(app: &AppHandle) -> std::io::Result<Child> {
     let shell_exe = shell_exe_env_value(std::env::current_exe());
+    let forward_args = sidecar_forward_args(&std::env::args().skip(1).collect::<Vec<String>>());
     if use_dev_sidecar() {
-        spawn_sidecar_dev(&shell_exe)
+        spawn_sidecar_dev(&shell_exe, &forward_args)
     } else {
-        spawn_sidecar_packaged(app, &shell_exe)
+        spawn_sidecar_packaged(app, &shell_exe, &forward_args)
     }
 }
 
@@ -5164,6 +5258,91 @@ fn start_reader(
 }
 
 fn main() {
+    // ---- Single-instance guard + deep-link argv (Phase 34.5 gap cycle 6 plan 44,
+    // REQ-34.5-01/05/12, F-34.5-G6-09, D-44-A) -- runs BEFORE `tauri::Builder::default()` so a
+    // secondary process's `std::process::exit(0)` below fires before `.setup()` can ever call
+    // `spawn_sidecar`. This is the entire fix for the "second full GameLib instance" half of
+    // F-34.5-G6-09. Unix-only (`std::os::unix::net` has no non-unix equivalent); on a non-unix
+    // target `single_instance_socket_path_var`/`primary_listener` simply stay `None`, so the
+    // rest of this function behaves identically to today's shipped behaviour there (the
+    // accepted Windows gap, ledger row `U-34.5-18`).
+    let argv: Vec<String> = std::env::args().skip(1).collect();
+    let no_gui = cli_no_gui(&argv);
+
+    #[cfg(unix)]
+    let single_instance_socket_path_var: Option<std::path::PathBuf> = {
+        use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
+        single_instance_dir(std::env::var("HOME").ok().as_deref()).and_then(|dir| {
+            match std::fs::DirBuilder::new()
+                .recursive(true)
+                .mode(0o700)
+                .create(&dir)
+            {
+                Ok(()) => {
+                    // Belt and braces (T-34.5-G6-20): `DirBuilderExt::mode` only governs the
+                    // mode mkdir() is called with for a directory this call actually CREATES --
+                    // if the directory already existed (e.g. from an older release, or from a
+                    // stale run) `recursive(true)` succeeds without re-chmod'ing it. Explicitly
+                    // enforce `0700` here regardless of which branch just ran.
+                    if let Err(e) = std::fs::set_permissions(
+                        &dir,
+                        std::fs::Permissions::from_mode(0o700),
+                    ) {
+                        eprintln!(
+                            "[shell] WARN: failed to set single-instance socket directory permissions to 0700: {e}"
+                        );
+                    }
+                    Some(single_instance_socket_path(&dir))
+                }
+                Err(e) => {
+                    eprintln!(
+                        "[shell] WARN: failed to create single-instance socket directory {dir:?}: {e} -- continuing without the single-instance guard (fail-open, T-34.5-G6-24)"
+                    );
+                    None
+                }
+            }
+        })
+    };
+    #[cfg(not(unix))]
+    let single_instance_socket_path_var: Option<std::path::PathBuf> = None;
+
+    // `primary_listener` is moved into the `.setup(move |app| ...)` closure below, where it
+    // becomes the deep-link accept loop's listener once the sidecar state is live.
+    #[cfg(unix)]
+    let primary_listener: Option<std::os::unix::net::UnixListener> = single_instance_socket_path_var
+        .as_deref()
+        .and_then(|path| match acquire_single_instance(path) {
+            SingleInstanceRole::Secondary => {
+                use std::io::Write as _;
+                use std::os::unix::net::UnixStream;
+                // A bare second launch with no deep link raises the existing window -- the
+                // sentinel below -- which is the correct UX and matches what a plugin-based
+                // guard would do. Never logs the URL itself here (T-34.5-G6-25): the running
+                // instance's own `handleProtocol` logs it authoritatively one line later.
+                let (payload, kind) = match protocol_url_arg(&argv) {
+                    Some(url) => (url, "deep-link"),
+                    None => ("__GAMELIB_FOCUS__".to_string(), "focus sentinel"),
+                };
+                eprintln!(
+                    "[shell] another GameLib instance is already running -- sending {kind} to it and exiting"
+                );
+                match UnixStream::connect(path) {
+                    Ok(mut stream) => {
+                        let _ = writeln!(stream, "{payload}");
+                        let _ = stream.flush();
+                    }
+                    Err(e) => eprintln!(
+                        "[shell] WARN: secondary instance failed to deliver {kind} to the running instance: {e}"
+                    ),
+                }
+                std::process::exit(0);
+            }
+            SingleInstanceRole::Primary(listener) => Some(listener),
+            SingleInstanceRole::PrimaryWithoutListener => None,
+        });
+    #[cfg(not(unix))]
+    let primary_listener: Option<()> = None;
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
@@ -5185,7 +5364,7 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .setup(|app| {
+        .setup(move |app| {
             let mut child = spawn_sidecar(app.handle())?;
             let stdin = child
                 .stdin
@@ -5209,6 +5388,82 @@ fn main() {
 
             start_reader(app.handle().clone(), state.clone(), stdout);
             start_stderr_forwarder(stderr);
+
+            // Deep-link accept loop (Phase 34.5 gap cycle 6 plan 44, D-44-A): the primary's
+            // warm-delivery path for a launch received while this instance is already
+            // running. Spawned AFTER `app.manage(state)` below would be too late for the
+            // clone captured here -- clone first, manage the original.
+            #[cfg(unix)]
+            if let Some(listener) = primary_listener {
+                let accept_state = state.clone();
+                let accept_app_handle = app.handle().clone();
+                thread::spawn(move || {
+                    for incoming in listener.incoming() {
+                        let stream = match incoming {
+                            Ok(s) => s,
+                            Err(e) => {
+                                eprintln!(
+                                    "[shell] WARN: single-instance accept() failed: {e}"
+                                );
+                                continue;
+                            }
+                        };
+                        // T-34.5-G6-23: bound the read exactly like sidecarRpc's own
+                        // MAX_LINE_LENGTH discipline -- a single read_line off a capped reader,
+                        // never an unbounded buffer.
+                        let mut reader = BufReader::new(stream.take(4096));
+                        let mut line = String::new();
+                        match reader.read_line(&mut line) {
+                            Ok(0) | Err(_) => continue,
+                            Ok(_) => {}
+                        }
+                        let trimmed = line.trim();
+
+                        if trimmed == "__GAMELIB_FOCUS__" {
+                            let focus_handle = accept_app_handle.clone();
+                            let _ = accept_app_handle.run_on_main_thread(move || {
+                                if let Some(window) =
+                                    focus_handle.get_webview_window(MAIN_WINDOW_LABEL)
+                                {
+                                    let _ = window.show();
+                                    let _ = window.set_focus();
+                                }
+                            });
+                            continue;
+                        }
+
+                        // Defence in depth (T-34.5-G6-20): re-validate through the SAME
+                        // allow-list used for argv, never trusting the socket because it is
+                        // "internal" -- the socket is a trust boundary even inside a `0700`
+                        // directory.
+                        match protocol_url_arg(&[trimmed.to_string()]) {
+                            Some(url) => {
+                                match accept_state
+                                    .invoke("handleProtocolUrl".to_string(), vec![Value::String(url)])
+                                {
+                                    Ok(_) => eprintln!(
+                                        "[shell] delivered single-instance deep link to sidecar: ok"
+                                    ),
+                                    Err(e) => eprintln!(
+                                        "[shell] delivered single-instance deep link to sidecar: err={e}"
+                                    ),
+                                }
+                            }
+                            None => {
+                                // T-34.5-G6-25: the REASON and byte count only, never the
+                                // payload.
+                                eprintln!(
+                                    "[shell] rejected single-instance payload (failed protocol_url_arg validation), bytes={}",
+                                    trimmed.len()
+                                );
+                            }
+                        }
+                    }
+                });
+            }
+            #[cfg(not(unix))]
+            let _ = &primary_listener;
+
             app.manage(state);
 
             // Real Tauri tray (Phase 34.1 Plan 06, D-11) -- bounded scope: tooltip, left-click
@@ -5422,19 +5677,38 @@ fn main() {
                 }
             }
 
-            // Dev-only: force the webview devtools open (the dev webview exposes no
-            // right-click inspect on macOS) so renderer errors are inspectable, and
-            // confirm the webview window actually exists.
-            #[cfg(debug_assertions)]
-            {
+            // `--no-gui` (Phase 34.5 gap cycle 6 plan 44, F-34.5-G6-09): gate 3 recorded that
+            // `--no-gui` was previously ignored entirely, including opening devtools. When
+            // set, the devtools-open block below is skipped ENTIRELY (never conditionally
+            // opened then hidden), and the main window is explicitly hidden once it exists.
+            // `tauri.conf.json`'s `main` window carries no explicit `"visible"` key, so Tauri's
+            // own default (visible on creation) applies -- a brief flash before this `.hide()`
+            // call is an expected observation for the live gate, not a failure.
+            if no_gui {
                 match app.get_webview_window(MAIN_WINDOW_LABEL) {
                     Some(window) => {
-                        window.open_devtools();
-                        eprintln!("[shell] devtools opened for 'main' webview (debug build)");
+                        let _ = window.hide();
+                        eprintln!("[shell] --no-gui: main window hidden");
                     }
                     None => eprintln!(
-                        "[shell] WARN: no 'main' webview window found — devtools not opened"
+                        "[shell] WARN: --no-gui: no 'main' webview window found to hide"
                     ),
+                }
+            } else {
+                // Dev-only: force the webview devtools open (the dev webview exposes no
+                // right-click inspect on macOS) so renderer errors are inspectable, and
+                // confirm the webview window actually exists.
+                #[cfg(debug_assertions)]
+                {
+                    match app.get_webview_window(MAIN_WINDOW_LABEL) {
+                        Some(window) => {
+                            window.open_devtools();
+                            eprintln!("[shell] devtools opened for 'main' webview (debug build)");
+                        }
+                        None => eprintln!(
+                            "[shell] WARN: no 'main' webview window found — devtools not opened"
+                        ),
+                    }
                 }
             }
             Ok(())
@@ -5453,10 +5727,19 @@ fn main() {
         // believes the app has quit -- retaining an authenticated Steam session, open
         // network sockets, and file handles. Kill it here on the way out; this is not a
         // WindowEvent::CloseRequested handler and does not cancel or defer exit.
-        .run(|app_handle, event| {
+        .run(move |app_handle, event| {
             if let tauri::RunEvent::Exit = event {
                 if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
                     state.shutdown_child();
+                }
+                // Phase 34.5 gap cycle 6 plan 44 (D-44-A): best-effort socket cleanup on a
+                // clean quit, so a fresh start does not have to fall through
+                // `acquire_single_instance`'s stale-socket recovery path. Swallowed, like
+                // `shutdown_child()`'s own exit-path discipline -- an unwind here is worse
+                // than a leaked socket file.
+                #[cfg(unix)]
+                if let Some(path) = &single_instance_socket_path_var {
+                    let _ = std::fs::remove_file(path);
                 }
             }
         });
