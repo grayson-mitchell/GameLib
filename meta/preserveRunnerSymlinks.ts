@@ -62,10 +62,14 @@ export function collectSymlinks(rootDir: string): SymlinkRecord[] {
     for (const entry of entries) {
       const full = join(dir, entry.name)
 
+      // No `continue`/early-exit here: `isSymbolicLink()` and
+      // `isDirectory()` are already mutually exclusive under `lstat`
+      // semantics (a symlink-to-directory is never `isDirectory()`), so
+      // both checks run independently against every entry. This matters
+      // for the recursion guard's own correctness -- see doc comment above.
       if (entry.isSymbolicLink()) {
         const relPath = relative(rootDir, full).split(sep).join('/')
         records.push({ relPath, target: readlinkSync(full) })
-        continue
       }
 
       if (entry.isDirectory()) {

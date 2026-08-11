@@ -26,6 +26,7 @@ import { stripHashComments } from './helpers/workflowSteps'
 
 const ELECTRON_BUILDER_PATH = join(__dirname, '..', '..', '..', 'electron-builder.yml')
 const TAURI_CONF_PATH = join(__dirname, '..', '..', '..', 'src-tauri', 'tauri.conf.json')
+const ELECTRON_VITE_CONFIG_PATH = join(__dirname, '..', '..', '..', 'electron.vite.config.ts')
 const PACKAGING_LIMITATIONS_PATH = join(
   __dirname,
   '..',
@@ -158,5 +159,43 @@ describe('34.9-PACKAGING-LIMITATIONS.md exists and names its owner', () => {
   test('the file exists and names R-34.5-G1-PKG', () => {
     const contents = readFileSync(PACKAGING_LIMITATIONS_PATH, 'utf-8')
     expect(contents).toContain('R-34.5-G1-PKG')
+  })
+})
+
+/**
+ * Removes `/* ... *\/` block comments and `// ...` line comments from a JS/TS
+ * source string. Deliberately NOT `stripHashComments` above, which only
+ * strips `#`-led YAML comments. Local to this file -- no other suite in this
+ * repo currently needs a JS-comment stripper.
+ */
+function stripJsComments(src: string): string {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/.*$/gm, '')
+}
+
+describe('stripJsComments self-test (anti-vacuity guard for the assertions below)', () => {
+  test('a commented-out call yields no match for the call it names', () => {
+    const source = '// preserveRunnerSymlinksPlugin()\n'
+    const stripped = stripJsComments(source)
+    expect(stripped).not.toContain('preserveRunnerSymlinksPlugin()')
+  })
+})
+
+describe('electron.vite.config.ts registers the runner-symlink preservation plugin (F-34.9-01)', () => {
+  function loadStrippedElectronViteConfig(): string {
+    return stripJsComments(readFileSync(ELECTRON_VITE_CONFIG_PATH, 'utf-8'))
+  }
+
+  test('imports preserveRunnerSymlinksPlugin from ./meta/preserveRunnerSymlinks', () => {
+    const stripped = loadStrippedElectronViteConfig()
+    expect(stripped).toMatch(
+      /import\s*\{\s*preserveRunnerSymlinksPlugin\s*\}\s*from\s*['"]\.\/meta\/preserveRunnerSymlinks['"]/
+    )
+  })
+
+  test('the renderer config registers a preserveRunnerSymlinksPlugin() call', () => {
+    const stripped = loadStrippedElectronViteConfig()
+    expect(stripped).toContain('preserveRunnerSymlinksPlugin()')
   })
 })
