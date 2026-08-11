@@ -199,6 +199,29 @@ const ENTRY_POINTS = [
 // procedure at execution time (before: 34 electron-importing modules; after:
 // 35 modules -- the ONE new addition below). No other module entered or left
 // the set.
+//
+// Phase 34.5 gap cycle 6 Plan 43 (REQ-34.5-10, 34.3 D-10 / 34.4 D-10
+// standing obligation): getInstallInfo (F-34.5-G6-10) was moved verbatim
+// into gamedetails/dispatch.ts (already ENTRY_POINTS[0]) and registered in
+// gameDetailsFlowRegistration.ts (already ENTRY_POINTS[2]) -- neither file
+// gained a new import statement to a module outside the existing 'common/
+// types' edge both already had. The planning-time prediction was that both
+// readings would be IDENTICAL; per the plan's own rule that prediction is
+// not evidence and was not transcribed -- computeElectronReach() was run
+// TWICE via a temporary one-off measurement script (removed after capture):
+// once with dispatch.ts/gameDetailsFlowRegistration.ts's content swapped
+// for their pre-Task-1 (HEAD~1) versions (via `git show`, working tree
+// untouched) and once against the current post-Task-1 disk state.
+//   BEFORE (pre-Task-1): electronImportingFiles.size 35, visitedFiles.size 228
+//   AFTER  (post-Task-1): electronImportingFiles.size 35, visitedFiles.size 228
+// MEASURED, UNCHANGED -- the two electronImportingFiles sets are set-equal
+// (verified by sorted-array deep-equality, not just size comparison) and
+// visitedFiles.size delta is exactly 0. The prediction happened to hold this
+// time, but only the measurement -- not the prediction -- is recorded as the
+// baseline's justification. No new entry below; the `> 224` floor in the
+// 'reachability sanity' test is unchanged (228 is still comfortably above
+// it) and is not raised, per that test's own never-lower/only-raise-when-
+// no-longer-meaningful instruction.
 const BASELINE_ELECTRON_REACHING_MODULES: string[] = [
   'src/backend/constants/paths.ts',
   'src/backend/dialog/dialog.ts',
@@ -523,6 +546,15 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
     // visitedFiles.size further, to a measured 226. Raised the floor from
     // 220 to 224 -- comfortably below the measured size, never lowered, per
     // the same instruction.
+    //
+    // Phase 34.5 gap cycle 6 Plan 43 (REQ-34.5-10): no new entry point was
+    // added -- this plan only ported getInstallInfo into two files already
+    // in ENTRY_POINTS. Measured BEFORE/AFTER (see the BASELINE_ELECTRON_
+    // REACHING_MODULES header comment above for the full two-run
+    // measurement): visitedFiles.size 228 both times -- UNCHANGED, and
+    // measured, not transcribed. 228 is comfortably above the existing 224
+    // floor, so the floor is NOT raised, per this test's own
+    // never-lower/only-raise-when-no-longer-meaningful instruction.
     expect(reachResult.visitedFiles.size).toBeGreaterThan(224)
   }, 30000)
 
