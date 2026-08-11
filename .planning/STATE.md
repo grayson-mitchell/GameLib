@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.9-17-PLAN.md (final gap-cycle 1 plan -- wrote deferred-items.md, the phase-level ledger recording all 6 descoped items from the 2026-08-11 scope fence (REQ-34.9-02/03/04/09, Tauri-PACKAGED resolution, real-cert notarization) plus the 2 out-of-scope UI defects the gate observed plus the pre-existing PKCE-logging note plus the cold-measurement gap, each dated with a blocker mechanism, a named precondition and an OWNER. Reconciled REQUIREMENTS.md (REQ-34.9-02/03/04/09's status-table rows and checkbox entries now cross-reference deferred-items.md; the trailing summary note corrected from the stale "4 ticked, 7 unticked" FAIL-run count to the current "7 ticked (01/05/06/07/08/10/11), 4 unticked (02/03/04/09), all 4 descoped not failed"), ROADMAP.md (Plans: 17/17 executed, Phase status note rewritten from "DOES NOT CLOSE" to "CLOSES on the arm64 leg only", the existing warm-ratio measurement-caveat block left byte-identical), and this file. Phase 34.9 gap cycle 1 (34.9-12..17) is now complete; the phase CLOSES on the arm64 leg only per the re-run's PASS verdict and the user's own 2026-08-11 scope fence. Next: pick the next phase to plan/execute -- no specific phase pre-selected by this reconciliation.)
-last_updated: "2026-08-11T03:13:20.000Z"
-last_activity: 2026-08-11 -- Phase 34.9 CLOSED (arm64 leg only); gap cycle 1 complete (34.9-12..17)
+stopped_at: Phase 34.5 gap cycle 6 PLANNED 2026-08-11 -- plans 34.5-43..51 (9 plans, 4 waves), plan-checker VERIFICATION PASSED after one revision round. Scope fence in 34.5-CYCLE6-ROUTING.md from four operator decisions: D-CYCLE6-A Epic gate item DESCOPED to Phase 34.7 (gate 4 has FOUR items, not five); D-CYCLE6-B all four defect clusters in scope; D-CYCLE6-C the FULL preload-surface audit runs; D-CYCLE6-D the cycle ends by authoring AND running gate 4. Biggest planning finding: U-34.5-14's "extent UNKNOWN" is ANSWERED -- the preload surface is 217 channels against 205 listed-and-exposed, so 12 are unlisted in IPC-PORT-INVENTORY.md (not 1), and 4 of them (runWineCommandForGame, moveInstall, importGame, oauthCaptureLogin) are recorded as security findings rather than bucket rows. This is a Phase 35 precondition. Next: /gsd-execute-phase 34.5 -- plan 34.5-51 is autonomous:false and needs a human on real macOS hardware with GAMELIB_DEV_SECRET_VAULT UNSET.
+last_updated: "2026-08-11T06:58:35.682Z"
+last_activity: 2026-08-11 -- Phase 34.5 planning complete
 progress:
   total_phases: 23
   completed_phases: 16
-  total_plans: 283
+  total_plans: 292
   completed_plans: 271
-  percent: 96
+  percent: 93
 ---
 
 # Project State
