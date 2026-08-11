@@ -3,7 +3,7 @@
  * and 05, D-01/D-03/D-04/D-08, REQ-34.2-01/REQ-34.2-03/REQ-34.2-08/
  * REQ-34.2-09/REQ-34.2-10/REQ-34.2-14).
  *
- * Registers the 18 game-details/settings/override channels (15 invoke + 3
+ * Registers the 19 game-details/settings/override channels (16 invoke + 3
  * send) the game-details page and its settings/override affordances depend
  * on, onto electronStub's `ipcMain` recorder, importing the REAL
  * `backend/gamedetails/dispatch.ts`/`backend/gamedetails/overrides.ts`
@@ -12,7 +12,12 @@
  * objective — prove the real logic runs behind the new transport, not a
  * reimplementation, so the Electron and Tauri builds cannot drift apart):
  *
- *   invoke (15, `ipcMain.handle`):
+ *   invoke (16, `ipcMain.handle`):
+ *     - `getInstallInfo` -> `gamedetails/dispatch` (`main.ts:842`) — arrived
+ *       LATE (F-34.5-G6-10, plan 34.5-43): it is a real preload channel that
+ *       was registered ONLY on the Electron side until this port. Its 4th
+ *       and 5th positional args are build then branch, per
+ *       `frontend/helpers/index.ts:88` and `main.ts:844`
  *     - `getGameInfo` -> `gamedetails/dispatch` (`main.ts:821-823`)
  *     - `getExtraInfo` -> `gamedetails/dispatch` (`main.ts:832-834`)
  *     - `getGameSettings` -> `gamedetails/dispatch` (`main.ts:836-838`)
@@ -107,6 +112,7 @@ import {
   getGameInfo,
   getExtraInfo,
   getGameSettings,
+  getInstallInfo,
   isGameAvailable,
   getLaunchOptions,
   kill,
@@ -128,7 +134,12 @@ import {
   getGameOverrides,
   getAllGameOverrides
 } from '../game_overrides'
-import type { MoveGameArgs, GameInfo, Runner } from 'common/types'
+import type {
+  MoveGameArgs,
+  GameInfo,
+  InstallPlatform,
+  Runner
+} from 'common/types'
 
 function logSendFailure(channel: string, error: unknown): void {
   console.warn(
@@ -138,7 +149,7 @@ function logSendFailure(channel: string, error: unknown): void {
 }
 
 /**
- * Registers the 18 game-details/settings/override channels (15 invoke + 3
+ * Registers the 19 game-details/settings/override channels (16 invoke + 3
  * send). Called once from `handlers.ts` — this module owns no side effects
  * at import time beyond the imports above; the caller decides when
  * registration onto the handler registry happens.
@@ -174,6 +185,28 @@ export function registerGameDetailsFlows(): void {
     'getGameSettings',
     async (_event: unknown, ...args: unknown[]) =>
       getGameSettings(args[0] as string, args[1] as Runner)
+  )
+
+  // F-34.5-G6-10 (34.5-43): late-discovered channel, absent from every
+  // inventory bucket until this port. `ipc.ts`'s declared parameter NAMES
+  // for positions 4/5 used to read (branch?, build?) -- that was WRONG
+  // relative to both real ends and has been corrected in this same plan to
+  // (build?, branch?). args[3] is BUILD and args[4] is BRANCH here, matching
+  // frontend/helpers/index.ts:88's forwarding order and main.ts:844's own
+  // unpacking order -- the two agreeing ground truths.
+  ipcMain.handle(
+    'getInstallInfo',
+    async (_event: unknown, ...args: unknown[]) => {
+      const build = args[3] as string | undefined
+      const branch = args[4] as string | undefined
+      return getInstallInfo(
+        args[0] as string,
+        args[1] as Runner,
+        args[2] as InstallPlatform,
+        build,
+        branch
+      )
+    }
   )
 
   // Single {appName, runner} OBJECT argument, not positional args.

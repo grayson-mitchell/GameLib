@@ -277,7 +277,9 @@ jest.mock('backend/storeManagers', () => {
     getListOfGames: jest.fn(),
     getCyberpunkMods: jest.fn(),
     setCyberpunkModConfig: jest.fn(),
-    addNewApp: jest.fn()
+    addNewApp: jest.fn(),
+    // F-34.5-G6-10 (34.5-43): getInstallInfo -- late-discovered channel.
+    getInstallInfo: jest.fn()
   })
   return {
     libraryManagerMap: {
@@ -342,7 +344,8 @@ import { handlerRegistry, listenerRegistry } from '../electronStub'
 import * as sidecarRpc from '../sidecarRpc'
 import { gameOverridesStore } from '../../game_overrides/electronStores'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
-import { relative, resolve, isAbsolute } from 'path'
+import { relative, resolve, isAbsolute, join } from 'path'
+import { readFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { fixesPath, appFolder, userDataPath } from '../../constants/paths'
 import { getLogFilePath } from 'backend/logger/paths'
@@ -845,6 +848,179 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
       enabled: true,
       modsToLoad: ['mod-a']
     })
+  })
+
+  // ── F-34.5-G6-10 (34.5-43): getInstallInfo (REQ-34.5-10/REQ-34.5-11/
+  // REQ-34.5-13) -- a real preload channel that was registered ONLY on the
+  // Electron side until this plan. These tests prove DISPATCH only: the
+  // sidecar registration reaches the same extracted `gamedetails/dispatch.ts`
+  // body as `main.ts`. F-34.5-G6-10 itself does NOT close on this evidence --
+  // it closes when a live session observes zero
+  // `[GAMELIB_UNPORTED_CHANNEL] No handler registered for channel
+  // 'getInstallInfo'` lines on a details-page open. ───────────────────────────
+
+  it('REQ-34.5-10/13 getInstallInfo (invoke, gog runner) forwards build then branch to the gog manager, sentinels distinct so a transposition fails', async () => {
+    gogManager.getInstallInfo.mockResolvedValue({
+      game: { app_name: 'appName' }
+    })
+
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'gii-1', 'getInstallInfo', [
+      'appName',
+      'gog',
+      'windows',
+      'BUILD_SENTINEL',
+      'BRANCH_SENTINEL'
+    ])
+    await flush()
+
+    const response = findResponse(frames, 'gii-1')
+    expect(response?.ok).toBe(true)
+    expect(gogManager.getInstallInfo).toHaveBeenCalledWith(
+      'appName',
+      'windows',
+      { build: 'BUILD_SENTINEL', branch: 'BRANCH_SENTINEL' }
+    )
+  })
+
+  it('REQ-34.5-10/13 getInstallInfo (invoke, legendary runner) with no build/branch calls legendary with both undefined, and never dispatches to gog or steam', async () => {
+    legendaryManager.getInstallInfo.mockResolvedValue({
+      game: { app_name: 'appName' }
+    })
+
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'gii-2', 'getInstallInfo', [
+      'appName',
+      'legendary',
+      'windows'
+    ])
+    await flush()
+
+    const response = findResponse(frames, 'gii-2')
+    expect(response?.ok).toBe(true)
+    expect(legendaryManager.getInstallInfo).toHaveBeenCalledWith(
+      'appName',
+      'windows',
+      { build: undefined, branch: undefined }
+    )
+    expect(gogManager.getInstallInfo).not.toHaveBeenCalled()
+    expect(steamManager.getInstallInfo).not.toHaveBeenCalled()
+  })
+
+  it('REQ-34.5-13 getInstallInfo resolves null (never undefined) when the manager resolves undefined', async () => {
+    gogManager.getInstallInfo.mockResolvedValue(undefined)
+
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'gii-3', 'getInstallInfo', [
+      'appName',
+      'gog',
+      'windows'
+    ])
+    await flush()
+
+    const response = findResponse(frames, 'gii-3')
+    expect(response?.ok).toBe(true)
+    expect(response?.result).toBeNull()
+  })
+
+  it('REQ-34.5-13 getInstallInfo resolves null (never rejects) when the manager rejects, parity with main.ts', async () => {
+    gogManager.getInstallInfo.mockRejectedValue(
+      new Error('boom-getInstallInfo')
+    )
+
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'gii-4', 'getInstallInfo', [
+      'appName',
+      'gog',
+      'windows'
+    ])
+    await flush()
+
+    await expect(
+      Promise.resolve(findResponse(frames, 'gii-4'))
+    ).resolves.toMatchObject({ ok: true, result: null })
+  })
+
+  it('REQ-34.5-13 getInstallInfo resolves null (never rejects) for a runner string absent from libraryManagerMap', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'gii-5', 'getInstallInfo', [
+      'appName',
+      'not-a-real-runner',
+      'windows'
+    ])
+    await flush()
+
+    const response = findResponse(frames, 'gii-5')
+    expect(response?.ok).toBe(true)
+    expect(response?.result).toBeNull()
+  })
+
+  it('REQ-34.5-11 getInstallInfo is registered as INVOKE only (handlerRegistry has it, listenerRegistry does not), and its resolved value is never UNPORTED_CHANNEL_MARKER', async () => {
+    gogManager.getInstallInfo.mockResolvedValue({
+      game: { app_name: 'appName' }
+    })
+
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'gii-6', 'getInstallInfo', [
+      'appName',
+      'gog',
+      'windows'
+    ])
+    await flush()
+
+    expect(handlerRegistry.has('getInstallInfo')).toBe(true)
+    expect(listenerRegistry.has('getInstallInfo')).toBe(false)
+
+    const response = findResponse(frames, 'gii-6')
+    expect(String(response?.result ?? '')).not.toContain(
+      UNPORTED_CHANNEL_MARKER
+    )
+  })
+
+  // Source-text cross-check (T-34.5-C6 interfaces note 3): `ipc.ts`'s
+  // declared parameter NAMES for positions 4/5 disagree with every real
+  // caller, and `npx tsc --noEmit` is structurally incapable of catching a
+  // transposition there (both positions are `string | undefined`). This test
+  // reads the REAL wrapper and REAL registration off disk and asserts they
+  // agree on build-then-branch ordering -- proven RED at authoring time by
+  // temporarily swapping the registration's `const build = args[3]` /
+  // `const branch = args[4]` assignments; see 34.5-43-SUMMARY.md for the
+  // verbatim failure/pass transcript.
+  it('REQ-34.5-10 source-text cross-check: the wrapper forwards build before branch, and the registration reads args[3] as build / args[4] as branch', () => {
+    const wrapperSource = readFileSync(
+      join(__dirname, '..', '..', '..', 'frontend', 'helpers', 'index.ts'),
+      'utf-8'
+    )
+    const registrationSource = readFileSync(
+      join(__dirname, '..', 'gameDetailsFlowRegistration.ts'),
+      'utf-8'
+    )
+
+    // Ground truth 1: frontend/helpers/index.ts:88's wrapper forwards
+    // (appName, runner, installPlatform, build, branch) -- build BEFORE
+    // branch -- to window.api.getInstallInfo.
+    const wrapperCallMatch = wrapperSource.match(
+      /window\.api\.getInstallInfo\(\s*appName,\s*runner,\s*handleRunnersPlatforms\([^)]*\),\s*build,\s*branch\s*\)/
+    )
+    expect(wrapperCallMatch).not.toBeNull()
+
+    // Ground truth 2: the sidecar registration must read args[3] as BUILD
+    // and args[4] as BRANCH, in that order.
+    const buildAssignIndex = registrationSource.indexOf(
+      'const build = args[3] as string | undefined'
+    )
+    const branchAssignIndex = registrationSource.indexOf(
+      'const branch = args[4] as string | undefined'
+    )
+    expect(buildAssignIndex).toBeGreaterThan(-1)
+    expect(branchAssignIndex).toBeGreaterThan(buildAssignIndex)
+
+    // And the extracted `getInstallInfo(...)` call must pass build before
+    // branch as its final two positional arguments.
+    const callMatch = registrationSource.match(
+      /getInstallInfo\(\s*args\[0\] as string,\s*args\[1\] as Runner,\s*args\[2\] as InstallPlatform,\s*build,\s*branch\s*\)/
+    )
+    expect(callMatch).not.toBeNull()
   })
 
   // ── REQ-34.2-08: the two already-clean game_overrides pass-throughs, real store ─

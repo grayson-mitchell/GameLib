@@ -128,6 +128,7 @@ import {
   getGameInfo,
   getExtraInfo,
   getGameSettings,
+  getInstallInfo,
   kill,
   repair,
   changeInstallPath,
@@ -841,26 +842,8 @@ addHandler('getGOGLinuxInstallersLangs', async (event, appName) =>
 
 addHandler(
   'getInstallInfo',
-  async (event, appName, runner, installPlatform, build, branch) => {
-    try {
-      const info = await libraryManagerMap[runner].getInstallInfo(
-        appName,
-        installPlatform,
-        {
-          branch,
-          build
-        }
-      )
-      if (info === undefined) return null
-      return info
-    } catch (error) {
-      logError(
-        error,
-        runner === 'legendary' ? LogPrefix.Legendary : LogPrefix.Gog
-      )
-      return null
-    }
-  }
+  async (event, appName, runner, installPlatform, build, branch) =>
+    getInstallInfo(appName, runner, installPlatform, build, branch)
 )
 
 addHandler('getUserInfo', async () => {

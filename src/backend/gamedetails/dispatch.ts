@@ -43,6 +43,8 @@ import type {
   ExtraInfo,
   GameInfo,
   GameSettings,
+  InstallInfo,
+  InstallPlatform,
   LaunchOption,
   MoveGameArgs,
   Runner
@@ -109,6 +111,38 @@ export async function getGameSettings(
     return await libraryManagerMap[runner].getGame(appName).getSettings()
   } catch (error) {
     logError(error, LogPrefix.Backend)
+    return null
+  }
+}
+
+// F-34.5-G6-10 (34.5-43): moved verbatim from main.ts:844-863 -- a real
+// preload channel that was registered ONLY on the Electron side until this
+// port. Parameter order is build THEN branch, the order both real ends
+// (frontend/helpers/index.ts:88, main.ts:844) already agree on; ipc.ts's
+// declared parameter NAMES disagreed and are corrected in this same plan.
+export async function getInstallInfo(
+  appName: string,
+  runner: Runner,
+  installPlatform: InstallPlatform,
+  build?: string,
+  branch?: string
+): Promise<InstallInfo | null> {
+  try {
+    const info = await libraryManagerMap[runner].getInstallInfo(
+      appName,
+      installPlatform,
+      {
+        branch,
+        build
+      }
+    )
+    if (info === undefined) return null
+    return info
+  } catch (error) {
+    logError(
+      error,
+      runner === 'legendary' ? LogPrefix.Legendary : LogPrefix.Gog
+    )
     return null
   }
 }
