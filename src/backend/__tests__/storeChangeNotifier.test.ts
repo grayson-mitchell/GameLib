@@ -26,6 +26,8 @@ import {
   setStoreChangeNotifier,
   withStoreChangeSuppressed
 } from '../storeChangeNotifier'
+import { installedGamesStore } from '../storeManagers/gog/electronStores'
+import { isAllowedStoreField } from 'common/types/storePolicy'
 import type { StoreChangedPayload } from 'common/types/sidecarTransport'
 
 jest.mock('electron-store')
@@ -193,8 +195,15 @@ describe('backend/storeChangeNotifier.ts', () => {
     test('set and delete announce with the store NAME, not its filename', () => {
       // REQ-29-01: the ValidStoreName is not the on-disk filename. The renderer knows the
       // store by its name, and `StoreChangedPayload.store` must carry that identity.
-      const store = new TypeCheckedStoreBackend('gogInstalledGamesStore', {
-        cwd: 'gog_store',
+      //
+      // Uses `zoomInstalledGamesStore` (same shape as `gogInstalledGamesStore`, and NOT
+      // the store this generic test is really about) rather than a locally-constructed
+      // `gogInstalledGamesStore` instance — the `gogInstalledGamesStore` describe block
+      // below imports the PRODUCTION `installedGamesStore` singleton instead, and a second,
+      // locally-constructed instance under the same `ValidStoreName` would trip
+      // `TypeCheckedStoreBackend`'s own WR-08 duplicate-registration guard.
+      const store = new TypeCheckedStoreBackend('zoomInstalledGamesStore', {
+        cwd: 'zoom_store',
         name: 'installed'
       })
       pushed = []
@@ -203,8 +212,8 @@ describe('backend/storeChangeNotifier.ts', () => {
       store.delete('installed')
 
       expect(pushed).toEqual([
-        { store: 'gogInstalledGamesStore', key: 'installed', value: [] },
-        { store: 'gogInstalledGamesStore', key: 'installed', deleted: true }
+        { store: 'zoomInstalledGamesStore', key: 'installed', value: [] },
+        { store: 'zoomInstalledGamesStore', key: 'installed', deleted: true }
       ])
     })
 
@@ -242,6 +251,58 @@ describe('backend/storeChangeNotifier.ts', () => {
       } finally {
         spy.mockRestore()
       }
+    })
+  })
+
+  // GAP CYCLE 6 (34.5-46 Task 3): settles whether commit eb117d9e4 already covers the
+  // 34.5-UAT.md gap "uninstall completes in the backend but the tile still reads
+  // installed". Three links chain GOGGame.uninstall to the renderer push:
+  //   (1) GOGGame.uninstall writes through installedGamesStore.set('installed', …)
+  //       (gog/games.ts:986) — verified by direct source read, not re-proven here.
+  //   (2) that store is a TypeCheckedStoreBackend, whose set() announces via
+  //       notifyStoreChanged (electron_store.ts:113) — covered by the positive case below.
+  //   (3) pushStoreChanged forwards it only if isAllowedStoreField('gogInstalledGamesStore',
+  //       'installed') — the one link that could still silently DROP the push, and the
+  //       reason this task exists rather than a paper assertion. Covered by both the
+  //       positive and negative cases below.
+  //
+  // Imports the PRODUCTION `installedGamesStore` singleton (not a locally-constructed
+  // `TypeCheckedStoreBackend('gogInstalledGamesStore', …)` — see the note on the
+  // `zoomInstalledGamesStore` test above for why a second instance under the same
+  // ValidStoreName would trip WR-08's duplicate-registration guard) so link (2) is
+  // verified against the exact instance GOGGame.uninstall itself calls.
+  describe('gogInstalledGamesStore — production store, three-link uninstall→renderer chain', () => {
+    test('link 2: writing through the production installedGamesStore announces store===gogInstalledGamesStore, key===installed', () => {
+      pushed = []
+
+      installedGamesStore.set('installed', [])
+
+      expect(pushed).toEqual([
+        { store: 'gogInstalledGamesStore', key: 'installed', value: [] }
+      ])
+    })
+
+    test('link 2: delete announces the same store/key identity', () => {
+      installedGamesStore.set('installed', [])
+      pushed = []
+
+      installedGamesStore.delete('installed')
+
+      expect(pushed).toEqual([
+        { store: 'gogInstalledGamesStore', key: 'installed', deleted: true }
+      ])
+    })
+
+    test("link 3 (positive): isAllowedStoreField('gogInstalledGamesStore', 'installed') is true — pushStoreChanged does not drop the payload link 2 just produced", () => {
+      expect(isAllowedStoreField('gogInstalledGamesStore', 'installed')).toBe(
+        true
+      )
+    })
+
+    test("link 3 (negative, non-vacuous): isAllowedStoreField('gogInstalledGamesStore', 'credentials') is false — a secret-shaped field on this store IS dropped", () => {
+      expect(
+        isAllowedStoreField('gogInstalledGamesStore', 'credentials')
+      ).toBe(false)
     })
   })
 })
