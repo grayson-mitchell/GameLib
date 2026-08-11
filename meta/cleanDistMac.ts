@@ -127,7 +127,14 @@ export function cleanDistMac(distDir: string): {
 
 export function main(argv: string[] = process.argv.slice(2)): number {
   const positional = argv.find((a) => !a.startsWith('--'))
-  const distDir = positional ?? path.join(__dirname, '..', 'dist')
+  // NOT __dirname -- this script runs via `esbuild --bundle ... | node -`
+  // (stdin), and __dirname in that mode resolves to `.` (process.cwd()), not
+  // meta/ (measured directly: a `__dirname`-based default silently pointed
+  // at `../dist`, one level above the repo root, and cleaned nothing while
+  // reporting success -- meta/genI18nGateScope.ts documents the same trap).
+  // `pnpm clean:dist-mac` always runs from the repo root, so a cwd-relative
+  // path is correct here.
+  const distDir = positional ?? path.join('dist')
 
   const { removed, kept } = cleanDistMac(distDir)
 
