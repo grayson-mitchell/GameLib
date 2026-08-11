@@ -14,17 +14,26 @@
  *     once `backend/ipc.ts`'s `sendFrontendMessage` -> `getMainWindow()` ->
  *     electronStub's fake `BrowserWindow.webContents.send` is wired to the
  *     RPC transport (27-02). Nothing here re-implements that push.
- *   - `launch` -> the real `SteamGame.launch()`, whose native branch
- *     already funnels through `buildSteamProtocolUrl` (T-27-08's
- *     numeric-appId guard) + `shell.openExternal` (bridged to the Rust
- *     opener by electronStub's `shell.openExternal` forwarder, 27-02).
+ *   - `launch` -> runner-aware dispatch through `libraryManagerMap` (GAP
+ *     CYCLE 6, plan 34.5-46 — see below). `runner === 'steam'` keeps the
+ *     curated native path — `libraryManagerMap.steam.getGame(appName)` +
+ *     `SteamGame.launch()`'s native branch, which already funnels through
+ *     `buildSteamProtocolUrl` (T-27-08's numeric-appId guard) +
+ *     `shell.openExternal` (bridged to the Rust opener by electronStub's
+ *     `shell.openExternal` forwarder, 27-02). Every other runner delegates
+ *     to `launcher.ts`'s `launchEventCallback`, the same dispatch this
+ *     module already reproduces for `refreshLibrary` below.
  *
- * Deliberately does NOT import `launcher.ts`'s `launchEventCallback` (the
- * full Wine/GameConfig/DownloadManager pipeline the Electron build's own
- * 'launch' handler delegates to) — only `SteamGame` is imported for that
- * flow, holding the sidecar's import graph to exactly what these two flows
- * touch (must_haves: "only the 2–4 channels... not the 220-endpoint
- * surface").
+ * Curated-import rule (unchanged in spirit, narrowed in scope by GAP CYCLE
+ * 6): this module's import graph is held to exactly what its two flows
+ * touch, and nothing is added without a stated reason. `launcher.ts` is
+ * ALREADY in this bundle's graph — `wineToolsFlowRegistration.ts:39` imports
+ * `runWineCommand`/`validWine` from it, and `handlers.ts` registers that
+ * module's flows — so importing `launchEventCallback` from the same module
+ * here adds zero new files to the bundle. The `SteamGame` DIRECT import this
+ * paragraph used to defend is gone (see GAP CYCLE 6 below); `libraryManagerMap`
+ * (already this file's load-bearing first import) is the single source of
+ * dispatch truth for every runner, Steam included.
  *
  * GAP CYCLE 4 (34.5-33, Routing item 1): `refreshLibrary` used to be an
  * argument-less Phase 27 walking-skeleton stub that unconditionally called
@@ -46,6 +55,20 @@
  * branch and threw `unknown runner 'null'`, failing the refresh outright.
  * `handleRefreshLibrary`'s gate now excludes `null` alongside `undefined`;
  * see the comment directly above that gate for the full mechanism.
+ *
+ * GAP CYCLE 6 (34.5-46): `handleLaunch` was runner-BLIND — it unconditionally
+ * did `const game = new SteamGame(appName)`, ignoring the `runner` field
+ * already present on `LaunchParams`, so ANY runner's launch reached the Steam
+ * native path and tried to build a `steam://rungameid/<appName>` URL for it.
+ * Live-observed twice in `gamelib.log`: `[Steam]: SteamGame: launching appId
+ * 1207659037 via steam://rungameid/1207659037` for a title whose `runner` is
+ * `gog`. Structurally the same shape 34.5-33 fixed for `refreshLibrary` above,
+ * left behind because that plan's routing item named only the read flow.
+ * `handleLaunch` below now dispatches on `runner` through `libraryManagerMap`
+ * with the same own-property fail-closed guard as `handleRefreshLibrary`
+ * (T-34.5-C4-10 mitigation, restated as T-34.5-46-01) — an unrecognised
+ * runner returns `{ status: 'error' }` and is structurally incapable of
+ * falling through to the Steam branch.
  */
 
 // Load-bearing FIRST import (Phase 27 Plan 05 circular-dep fix, refined by
@@ -69,7 +92,20 @@
 import { libraryManagerMap } from '../storeManagers'
 
 import { ipcMain } from './electronStub'
-import SteamGame from '../storeManagers/steam/games'
+// launchEventCallback: the real Wine/GameConfig/DownloadManager pipeline
+// every non-Steam runner's launch must go through (GAP CYCLE 6, 34.5-46).
+// Reasons this is safe to import here: (a) `launcher.ts` is ALREADY in this
+// bundle's graph via `wineToolsFlowRegistration.ts:39`'s `runWineCommand`/
+// `validWine` import, so this adds no new module; (b) the non-Steam managers
+// dereference their `logWriter` argument unconditionally (e.g.
+// `gog/games.ts:542,545` — `prepareLaunch`/`logWriter.logError`), and
+// `launchEventCallback`'s own `createGameLogWriter(appName, runner)` call is
+// the only thing in the tree that produces a real one; (c) it also supplies
+// `sendGameStatusUpdate`, the install-path existence precheck, save sync and
+// the before/after-launch scripts, all of which the renderer's tile state
+// depends on. Steam does NOT go through this path — see the `runner ===
+// 'steam'` branch in `handleLaunch` below for why.
+import { launchEventCallback } from '../launcher'
 import { HumbleLibrary } from '../humble/library'
 import { logInfo, logWarning, LogPrefix, RunnerToLogPrefixMap } from '../logger'
 import type { LaunchParams, Runner, StatusPromise } from 'common/types'
@@ -234,20 +270,90 @@ async function handleRefreshLibrary(
 /**
  * The `launch` handler body, extracted for the same one-line-registration
  * reason as `handleRefreshLibrary` above.
+ *
+ * GAP CYCLE 6 (34.5-46): dispatches on `runner` through `libraryManagerMap`
+ * — the map, not `new SteamGame(...)`, so the map is the single source of
+ * dispatch truth for every runner, matching `handleRefreshLibrary`'s own
+ * pattern. Guards `runner` FIRST, before touching the map at all: an
+ * unrecognised, absent, or prototype-chain runner returns `{ status: 'error'
+ * }` and is structurally incapable of reaching the Steam branch — silently
+ * launching Steam for an unrecognised runner is the exact confused-deputy
+ * shape (T-34.5-46-03) this fix exists to close.
  */
 async function handleLaunch(
   _event: unknown,
   ...args: unknown[]
 ): Promise<Awaited<StatusPromise>> {
-  const { appName } = (args[0] ?? {}) as LaunchParams
-  const game = new SteamGame(appName)
-  // The LogWriter parameter is unused by SteamGame.launch()'s native/
-  // action-flow branch (retained only for the shared Game interface
+  const params = (args[0] ?? {}) as Partial<LaunchParams>
+  const { appName, runner: rawRunner, launchArguments, args: launchArgs, skipVersionCheck } =
+    params
+
+  // Guard first, dispatch second (T-34.5-46-01 mitigation — own-property
+  // form only, never `in` and never a bare index truth test; see the
+  // identical reasoning at `handleRefreshLibrary`'s T-34.5-C4-10 guard
+  // above). A bare `libraryManagerMap[rawRunner]` index resolves through
+  // `Object.prototype`, so `constructor`/`toString`/`valueOf`/
+  // `hasOwnProperty` come back as FUNCTIONS rather than `undefined` and
+  // would slip past a truthiness check.
+  if (
+    typeof appName !== 'string' ||
+    appName.length === 0 ||
+    typeof rawRunner !== 'string' ||
+    !Object.prototype.hasOwnProperty.call(libraryManagerMap, rawRunner)
+  ) {
+    logWarning(
+      `launch failed runner=${rawRunner} appName=${appName}: unknown runner`,
+      LogPrefix.Backend
+    )
+    return { status: 'error' }
+  }
+
+  const runner = rawRunner as Runner
+
+  // Steam keeps TODAY'S curated behaviour byte-for-byte: SteamGame.launch()'s
+  // native branch already funnels through buildSteamProtocolUrl (T-27-08's
+  // numeric-appId guard) + shell.openExternal. The LogWriter parameter is
+  // unused by that branch (retained only for the shared Game interface
   // signature) — a headless sidecar has no per-game log-file lifecycle,
-  // which belongs to launcher.ts's full pipeline (explicitly out of scope
-  // here, see module docstring above).
-  const launched = await game.launch(undefined as unknown as LogWriter)
-  return { status: launched ? 'done' : 'error' }
+  // which belongs to launcher.ts's full pipeline. This is now load-bearing
+  // in a SECOND way: it documents exactly why the OTHER branch (below)
+  // cannot reuse this `undefined` LogWriter — the non-Steam managers
+  // dereference it unconditionally and would throw.
+  //
+  // Steam deliberately does NOT go through `launchEventCallback`: the Steam
+  // native path hands off to the Steam client via `steam://rungameid`
+  // instead of running a local binary, so `launchEventCallback`'s
+  // `existsSync(gameInfo.install.install_path)` precheck and its
+  // `askForceUninstall` branch would abort a perfectly valid Steam launch.
+  // That branch is live-proven working and is preserved on purpose, not by
+  // omission.
+  if (runner === 'steam') {
+    const game = libraryManagerMap.steam.getGame(appName)
+    const launched = await game.launch(undefined as unknown as LogWriter)
+    return { status: launched ? 'done' : 'error' }
+  }
+
+  // Every other runner delegates to launchEventCallback — see the import
+  // comment above for why this is safe and what it supplies beyond a bare
+  // Game.launch() call. Caught here (T-34.5-46-04 mitigation) so an
+  // unhandled rejection inside a sidecar invoke handler — the exact shape
+  // `sidecarRejectionGuard.test.ts` exists to catch — cannot escape this
+  // handler.
+  try {
+    return await launchEventCallback({
+      appName,
+      runner,
+      launchArguments,
+      args: launchArgs,
+      skipVersionCheck
+    })
+  } catch (err) {
+    logWarning(
+      [`launch failed runner=${runner} appName=${appName}:`, err],
+      RunnerToLogPrefixMap[runner]
+    )
+    return { status: 'error' }
+  }
 }
 
 /**
