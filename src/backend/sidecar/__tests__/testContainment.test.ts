@@ -627,6 +627,16 @@ const IN_SCOPE_SUITES = [
  * construction, no per-suite opt-in required" guarantee this whole Block C exists to prove. A
  * `readdirSync` recount at this plan's execution time puts the directory at 42 `*.test.ts` files:
  * 4 `IN_SCOPE_SUITES` + 38 below.
+ *
+ * `steamFlows.test.ts` (Phase 34.5 gap cycle 6, plan 34.5-46 Task 2) is classified as
+ * structurally contained: it reuses `skeletonFlows.test.ts`'s isolation preamble
+ * verbatim -- a `jest.mock('os', ...)` disposable-homedir redirect plus `electron` /
+ * `electron-store` / `axios` / `backend/utils` / `backend/constants/environment` mocks --
+ * not the four-element `pathShim`/`backend/logger/paths` containment kit `IN_SCOPE_SUITES`
+ * requires, so it cannot be an `IN_SCOPE_SUITE`. It never imports `pathShim` at all; the
+ * dispatch under test (`handleLaunch`'s runner routing) has no `pathShim` surface. A
+ * `readdirSync` recount at this plan's execution time puts the directory at 43
+ * `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 39 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -663,6 +673,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'shortcutsFlows.test.ts',
   'skeletonFlows.test.ts',
   'steamAuthFlows.test.ts',
+  'steamFlows.test.ts',
   'storeLayer.test.ts',
   'structuralContainment.test.ts',
   'testContainment.test.ts',
