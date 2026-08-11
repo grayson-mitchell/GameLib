@@ -2041,7 +2041,7 @@ all stay `[ ]` per D-08's no-partial-pass rule — item 3's own PASS does not ti
 > **What this dependency does and does not block.** The seam itself is BUILT and unit-proven — 8 of 9 of 34.4.1's plans are executed, the runner-agnostic child-window mechanism is deliberately Humble-agnostic, and 34.4.1-09 already **wired** all four OAuth runners via the new `oauthCaptureLogin` channel with a declared-blocked UI surface naming each runner's unported channel. So 34.5 may be **discussed and planned now**. What is still outstanding is 34.4.1's *live proof* (plan 08's blocking 4-item gate, plus item 3(b) already recorded BLOCKED-UNOBSERVABLE and headed for a gap cycle). 34.5 must not **ship** a real OAuth credential path on a seam whose live gate never ran.
 >
 > **Inherited obligation, not a note — `T-34.4.1-44b`.** nile and zoom capture via a **host-free param match** inherited from the Electron original. This is harmless in 34.4.1 only because the captured value is handed to a channel that rejects. **34.5 MUST host-anchor both before it mints a real credential.** Also inherited: navigation observation (NOT the cookie read) is the actual seam surface, and 34.4.1 RESEARCH Open Question 1 — in-app `on_navigation` cancellation timing — remains unobserved.
-**Plans:** 44/51 plans executed — recounted from the phase directory 2026-08-11 (51 `*-PLAN.md`,
+**Plans:** 45/51 plans executed
 44 `*-SUMMARY.md`). **The three without a SUMMARY among the first 42 are 34.5-29/30/31, which are
 HALTED and SUPERSEDED, not pending.** Gap cycle 5 added plans 34.5-38..42 on 2026-08-02: 34.5-38 —
 authorisation/disposition/measured-baseline record; 34.5-39 — item-4/item-5 gate preflight;

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.5-48-PLAN.md (closed the EOS overlay UAT test-16 gap: added callOrDeclare(), rewrote AdvancedSettings/index.tsx so the EOS panel declines visibly under Tauri, shipped a call-site source-text gate RED-proven against three injected known-bad inputs, and corrected 34.5-PORTED-CHANNELS.md's falsified 'no new code needed' claim). WAVE 1 COMPLETE: 5 of 9 gap-cycle-6 plans done (34.5-43, 34.5-44, 34.5-46, 34.5-47, 34.5-48). Post-wave test gate green: 241/241 suites, 4724 passed / 1 pre-existing skip. Next is WAVE 2: plan 34.5-45 (depends on 44) then 34.5-49 (depends on 43), run sequentially because both write 34.5-UNTESTED-ITEMS.md. Then wave 3 = 34.5-50 (author gate-4 contract), wave 4 = 34.5-51 (autonomous:false, BLOCKING four-item live gate on real macOS hardware with GAMELIB_DEV_SECRET_VAULT UNSET)."
-last_updated: "2026-08-11T10:51:30.678Z"
-last_activity: 2026-08-11 -- Phase 34.5 gap cycle 6 wave 1 complete (34.5-43/44/46/47/48); test gate 241/241 suites, 4724 passed
+stopped_at: "Completed 34.5-45-PLAN.md (real sips-backed nativeImage shim un-deading the macOS .app shortcut path and closing a run.sh shell-injection surface; F-34.5-G6-08 diagnosed with a written discriminator matrix, VERDICT NOT REPRODUCED, no speculative fix shipped; all 34 invoke channels in this slice's four registration modules swept for the return-value-drop class, zero DROP hits, new anti-rot gate added). WAVE 2 (of 4) IN PROGRESS: 6 of 9 gap-cycle-6 plans done (34.5-43, 34.5-44, 34.5-46, 34.5-47, 34.5-48, 34.5-45). Post-plan test gate green: 243/243 suites, 4746 passed / 1 pre-existing skip. Next: plan 34.5-49 (depends on 43, also writes 34.5-UNTESTED-ITEMS.md, run sequentially after 45 per the wave-2 note). Then wave 3 = 34.5-50 (author gate-4 contract), wave 4 = 34.5-51 (autonomous:false, BLOCKING four-item live gate on real macOS hardware with GAMELIB_DEV_SECRET_VAULT UNSET)."
+last_updated: "2026-08-12T00:50:00.000Z"
+last_activity: 2026-08-12 -- Phase 34.5 gap cycle 6 plan 34.5-45 complete (nativeImage shim, run.sh injection fix, F-34.5-G6-08 diagnosis); test gate 243/243 suites, 4746 passed
 progress:
   total_phases: 23
   completed_phases: 16
   total_plans: 292
-  completed_plans: 276
+  completed_plans: 277
   percent: 95
 ---
 
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — **EXECUTING gap cycle 6**
-Plan: 5 of 9 gap-cycle-6 plans (34.5-43..51, 4 waves) complete — execution started 2026-08-11.
+Plan: 6 of 9 gap-cycle-6 plans (34.5-43..51, 4 waves) complete — execution started 2026-08-11.
 Plans 34.5-29/30/31 are SUPERSEDED (see `34.5-CYCLE5-ROUTING.md` § Disposition) and will never
 receive SUMMARY.md files; they are not part of this run. Plan 34.5-51 is `autonomous: false` and
 requires a human on real macOS hardware with `GAMELIB_DEV_SECRET_VAULT` UNSET.
@@ -4502,6 +4502,10 @@ Recent decisions affecting current work:
 - [Phase ?]: Kept RefreshLibraryOptions['origin'] as a plain string in both copies -- union narrowing deferred to ledger row U-34.5-23 (file-ownership-collision fence)
 - [Phase ?]: Defect B (Manage Accounts 'logging into gog') recorded as READING NONE -- a live non-reproduction on current HEAD, not a retirement of U-34.5-07 or gate item 2
 - [Phase 34.5]: callOrDeclare() dedupes a deferred-channel decline to one durable window.api.logError line per channel per session; isEosOverlayEnabled is wrapped but excluded from eosOverlayUnavailable detection since it never fires on macOS
+- [Phase 34.5-45]: sips crops CENTERED and Electron's crop({x,y}) takes a top-left origin; --cropOffset measured a no-op at planning time, so the nativeImage shim never emits it and a non-zero x/y is silently not honoured (unobservable today, convertPngToICNS always passes {x:0,y:0})
+- [Phase 34.5-45]: run.sh's launch command is now double-quoted (exe) + single-quoted/percent-encoded (gamelib:// URL) -- a deliberate security fix (T-34.5-C6-17) that also changes the Electron build's own run.sh the same way, not an invariant-preserving no-op
+- [Phase 34.5-45]: F-34.5-G6-08 VERDICT: NOT REPRODUCED (discriminator matrix H1..H5) -- H2/H3/H4 excluded by offline evidence, H1 (WKWebView DevTools artifact) and H5 (60s INVOKE_TIMEOUT racing addNonSteamGame's two networked awaits) are both live-only. Branch B taken: no speculative production fix shipped; U-34.5-15 stays OPEN with an amended cell requiring a .then console readout instead of a bare await
+- [Phase 34.5-45]: 34-channel invoke-return-value sweep (four registration modules, 10/9/4/11) found zero DROP hits; steamFlowRegistration.ts (plan 34.5-46, same wave) and src/common/types/ipc.ts (plan 34.5-43) left untouched per fence
 
 ### Pending Todos
 
