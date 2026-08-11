@@ -20,14 +20,23 @@ Phase 35 (Electron cutover). Phase 35 must not run while any channel below is un
 
 | | Count |
 |---|---:|
-| Unique channels | 210 |
+| Unique channels | 211 |
 | Ported to sidecar | 28 |
-| **Unported** | **182** |
+| **Unported** | **183** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
 "28 wired/re-routed total" tally — that count was approximate and pre-dates this edit; the
-`logError` early port below moves it to 28/182, not yet reflected in SEAM.md's own approximate
-figure.
+`logError` early port below moves it to 28/182 (this table's own historical Phase 34.1-era
+snapshot), not yet reflected in SEAM.md's own approximate figure.
+
+**Unique channels raised 210 → 211 (plan 34.5-43, F-34.5-G6-10):** `getInstallInfo` was a real
+preload channel that existed in the source the whole time (`common/types/ipc.ts:217`,
+`main.ts:842`) but was never counted by this document's original grep-based tally — the +1 is the
+previously unlisted channel entering the count for the first time, not a newly created one. This
+table's "Ported to sidecar"/"Unported" split is a frozen Phase 34.1-era snapshot and is not
+re-tallied per phase (the per-phase sections below carry the current per-slice counts); the +1
+above is reflected in "Unported" only because that is where an unlisted-but-real channel belongs
+until it is credited to a specific phase's ported set below.
 
 ## Already ported (28)
 
@@ -110,10 +119,15 @@ Chromium dependency — `humblePostRequest` (`humble/adapter.ts:264`) routes thr
 403s axios's TLS/HTTP fingerprint. **This phase runs BEFORE Phase 34.5**, whose Epic/GOG/Amazon
 logins depend on the same seam.
 
-## Phase 34.5 — Slice 8 — non-Steam runners, Wine and shortcuts (57 channels)
+## Phase 34.5 — Slice 8 — non-Steam runners, Wine and shortcuts (58 channels)
 
-**Re-scoped 2026-07-29 by `34.5-CONTEXT.md` D-01/D-02/D-03: the 57 below reconciles as
-38 ported + 3 dropped + 16 moved.**
+**Re-scoped 2026-07-29 by `34.5-CONTEXT.md` D-01/D-02/D-03, then again 2026-08-11 by plan 34.5-43
+(F-34.5-G6-10): the 58 below reconciles as 39 ported + 3 dropped + 16 moved.**
+- **39th channel, late-discovered (2026-08-11, plan 34.5-43):** `getInstallInfo` was found
+  unported AND absent from every bucket in this document (see the amended ⚠ paragraph below). It
+  is ported by plan 34.5-43 into `gameDetailsFlowRegistration.ts` — a game-details channel by
+  concern, not one of this slice's four runner modules — bringing the reconciliation from
+  38+3+16=57 to 39+3+16=58.
 - **3 DROPPED permanently:** `authZoom`, `getZoomUserInfo`, `logoutZoom` — never ported; Zoom
   sign-in dies at the Phase 35 cutover. Rationale (D-02): absent from GameLib's stated core value
   ("Epic, GOG, Amazon, and Steam"), smallest storefront, purely inherited from Heroic. No new code
@@ -128,11 +142,12 @@ logins depend on the same seam.
   (`src/backend/launcher.ts:973`). It **IS ported** in the 38, under Runner CLI versions; an
   earlier discussion wrongly bundled it with Zoom.
 - `callTool` (arrived from Phase 34.1 per D-14) and `isLoggedIn` (arrived from Phase 34.4 per
-  D-03) are both already reflected in the 57 below — no further reassignment needed.
+  D-03) are both already reflected in the 58 below (they were already in the prior 57 before
+  `getInstallInfo` joined) — no further reassignment needed.
 
 Gained `isLoggedIn` from slice 7 on 2026-07-27 (34.4 **D-03**) — 56 → 57.
 
-`addShortcut`, `addToSteam`, `authAmazon`, `authGOG`, `authZoom`, `callTool`, `disableEosOverlay`, `downloadRuntime`, `egsSync`, `enableEosOverlay`, `getAlternativeWine`, `getAmazonLoginData`, `getAmazonUserInfo`, `getCometVersion`, `getEosOverlayStatus`, `getEpicGamesStatus`, `getGOGLinuxInstallersLangs`, `getGogdlVersion`, `getLatestEosOverlayVersion`, `getLegendaryVersion`, `getNileVersion`, `getUserInfo`, `getZoomUserInfo`, `installEosOverlay`, `installWineVersion`, `isAddedToSteam`, `isEosOverlayEnabled`, `isLoggedIn`, `isRuntimeInstalled`, `login`, `logoutAmazon`, `logoutGOG`, `logoutLegendary`, `logoutZoom`, `processShortcut`, `refreshWineVersionInfo`, `removeEosOverlay`, `removeFromSteam`, `removeShortcut`, `removeWineVersion`, `runWineCommand`, `shortcutsExists`, `steamgriddb.getGrids`, `steamgriddb.getHeroes`, `steamgriddb.hasApiKey`, `steamgriddb.searchGame`, `steamgriddb.setApiKey`, `syncGOGSaves`, `syncSaves`, `toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`, `updateEosOverlayInfo`, `wine.isValidVersion`, `winetricksAvailable`, `winetricksInstall`, `winetricksInstalled`
+`addShortcut`, `addToSteam`, `authAmazon`, `authGOG`, `authZoom`, `callTool`, `disableEosOverlay`, `downloadRuntime`, `egsSync`, `enableEosOverlay`, `getAlternativeWine`, `getAmazonLoginData`, `getAmazonUserInfo`, `getCometVersion`, `getEosOverlayStatus`, `getEpicGamesStatus`, `getGOGLinuxInstallersLangs`, `getGogdlVersion`, `getInstallInfo`, `getLatestEosOverlayVersion`, `getLegendaryVersion`, `getNileVersion`, `getUserInfo`, `getZoomUserInfo`, `installEosOverlay`, `installWineVersion`, `isAddedToSteam`, `isEosOverlayEnabled`, `isLoggedIn`, `isRuntimeInstalled`, `login`, `logoutAmazon`, `logoutGOG`, `logoutLegendary`, `logoutZoom`, `processShortcut`, `refreshWineVersionInfo`, `removeEosOverlay`, `removeFromSteam`, `removeShortcut`, `removeWineVersion`, `runWineCommand`, `shortcutsExists`, `steamgriddb.getGrids`, `steamgriddb.getHeroes`, `steamgriddb.hasApiKey`, `steamgriddb.searchGame`, `steamgriddb.setApiKey`, `syncGOGSaves`, `syncSaves`, `toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`, `updateEosOverlayInfo`, `wine.isValidVersion`, `winetricksAvailable`, `winetricksInstall`, `winetricksInstalled`
 
 **Status (2026-08-02): the blocking live gate has now run THREE times and FAILED all three —
 channel membership and the 38/3/16 split above are unchanged by any of them.** The first run
@@ -157,18 +172,23 @@ the library data lands on disk and the UI shows nothing. **Items 4 and 5 carry a
 first time in this phase's history** — item 4 FAIL, item 5 NOT ATTEMPTED with its blocking
 prerequisite explicitly recorded rather than silently skipped.
 
-⚠ **This inventory is NOT exhaustive, and its incompleteness is of UNKNOWN extent
-(F-34.5-G6-10, 2026-08-02).** The third gate found `getInstallInfo` — a real channel
-(`src/common/types/ipc.ts:218`, exposed via `src/preload/api/helpers.ts:43` as
-`makeHandlerInvoker`) — to be unported AND absent from every bucket in this document: it is not
-among the 38 ported, the 3 dropped, or the 16 deferred to Phase 34.6. It surfaced live as
+⚠ **This inventory was NOT exhaustive, and the extent of that incompleteness is still UNKNOWN
+(F-34.5-G6-10, 2026-08-02; amended 2026-08-11 by plan 34.5-43).** The third gate found
+`getInstallInfo` — a real channel (`src/common/types/ipc.ts:217`, exposed via
+`src/preload/api/helpers.ts:43` as `makeHandlerInvoker`) — to be unported AND absent from every
+bucket in this document: it was not among the 38 ported, the 3 dropped, or the 16 deferred to
+Phase 34.6. It surfaced live as
 `[GAMELIB_UNPORTED_CHANNEL] No handler registered for channel 'getInstallInfo'`, blocking the game
-page outright. **The header rule above — "Phase 35 must not run while any channel below is
+page outright. **Plan 34.5-43 has since ported `getInstallInfo` and bucketed it** (now the 39th
+name in the 39+3+16=58 reconciliation above) — but it was ONE previously unlisted channel out of
+an UNKNOWN total, and fixing this one named example **must not be assumed to be** evidence that no
+others remain. **The header rule above — "Phase 35 must not run while any channel below is
 unported" — cannot catch a channel that was never listed.** `ported-channels-gate.py` verifies
-that the 38+3+16=57 split reconciles *internally*; it does not verify that this inventory covers
+that the 39+3+16=58 split reconciles *internally*; it does not verify that this inventory covers
 the real preload surface. No audit of that surface has been performed, so the true number of
 missing channels is unknown and **must not be assumed to be one**. Auditing it is a Phase 35
-precondition and is scoped to gap cycle 6.
+precondition, scoped to gap cycle 6, and is plan **34.5-49**'s own deliverable (D-CYCLE6-C) — this
+plan (34.5-43) buckets ONE channel only and does not perform that audit.
 
 Per D-08's no-partial-pass rule, Phase 34.5 does NOT close on any of these three results; see
 `34.5-LIVE-GATE-RERUN-2.md` for the third run's full evidence and `34.5-42-SUMMARY.md` for this

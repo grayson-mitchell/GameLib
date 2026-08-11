@@ -6,9 +6,12 @@ Purpose (read this before deleting a failing assertion): this phase's declared p
 exists so a future reader never conflates "wired and unit-proven" with "seen working" — the same
 conflation `34.4.1-PORTED-CHANNELS.md`'s own gate was built to prevent (that document's own
 docstring cites the G-30-02 double-fixed-while-hung incident). This script is modeled closely on
-`.planning/phases/34.4.1-.../ported-channels-gate.py`, adapted for this phase's 38-channel shape
-(vs. that phase's 7) and its own extra obligation: the two-channel scope of live-gate item 4
-(`addToSteam` AND `addShortcut`, T-34.5-67) that a natural mistake would credit to `addToSteam` alone.
+`.planning/phases/34.4.1-.../ported-channels-gate.py`, adapted for this phase's 39-channel shape
+(vs. that phase's 7) and its own extra obligations: the two-channel scope of live-gate item 4
+(`addToSteam` AND `addShortcut`, T-34.5-67) that a natural mistake would credit to `addToSteam`
+alone, and (as of plan 34.5-43, F-34.5-G6-10) a late-discovered 39th channel (`getInstallInfo`)
+that a future editor could quietly absorb into the original 38 and erase the record that
+`IPC-PORT-INVENTORY.md` was not exhaustive — check 10 exists specifically to prevent that.
 
 When this gate fails, the correct maintenance action is to RESTORE the missing declaration (a
 dropped channel row, a dropped rider, a reverted arithmetic total) — never to delete or weaken an
@@ -31,9 +34,11 @@ PORTED_CHANNELS_PATH = PHASE_DIR / "34.5-PORTED-CHANNELS.md"
 INVENTORY_PATH = PHASE_DIR.parent.parent / "IPC-PORT-INVENTORY.md"
 
 # ---------------------------------------------------------------------------
-# The declared 38, by registration module (11 + 9 + 7 + 11 = 38), measured by
-# plan 34.5-13's completeness proof (runnerSliceRegistration.test.ts Describe 6),
-# not merely predicted by CONTEXT.md.
+# The declared 39, by registration module (11 + 9 + 7 + 11 + 1 = 39), the first 38 measured by
+# plan 34.5-13's completeness proof (runnerSliceRegistration.test.ts Describe 6), not merely
+# predicted by CONTEXT.md. The 39th, `getInstallInfo`, arrived LATE (F-34.5-G6-10, plan 34.5-43) --
+# it is a game-details channel by concern, not one of this slice's four runner modules, so it is
+# ported into `gameDetailsFlowRegistration.ts` rather than any of the other four.
 # ---------------------------------------------------------------------------
 
 AUTH_CHANNELS = [
@@ -88,32 +93,43 @@ assert len(WINE_CHANNELS) == 9
 assert len(SHORTCUTS_CHANNELS) == 7
 assert len(MISC_CHANNELS) == 11
 
+# The 39th channel, late-discovered (F-34.5-G6-10, plan 34.5-43): getInstallInfo is a real preload
+# channel that was registered ONLY on the Electron side (main.ts:842) until this port. It is a
+# game-details channel by concern -- ported into gameDetailsFlowRegistration.ts, not any of the
+# four runner modules above.
+GAME_DETAILS_CHANNELS = [
+    "getInstallInfo",
+]
+assert len(GAME_DETAILS_CHANNELS) == 1
+
 MODULE_CHANNELS = {
     "runnerAuthFlowRegistration.ts": AUTH_CHANNELS,
     "wineToolsFlowRegistration.ts": WINE_CHANNELS,
     "shortcutsFlowRegistration.ts": SHORTCUTS_CHANNELS,
     "runnerMiscFlowRegistration.ts": MISC_CHANNELS,
+    "gameDetailsFlowRegistration.ts": GAME_DETAILS_CHANNELS,
 }
 MODULE_EXPECTED_COUNTS = {
     "runnerAuthFlowRegistration.ts": 11,
     "wineToolsFlowRegistration.ts": 9,
     "shortcutsFlowRegistration.ts": 7,
     "runnerMiscFlowRegistration.ts": 11,
+    "gameDetailsFlowRegistration.ts": 1,
 }
 
-ALL_CHANNELS = AUTH_CHANNELS + WINE_CHANNELS + SHORTCUTS_CHANNELS + MISC_CHANNELS
-assert len(ALL_CHANNELS) == 38, f"ALL_CHANNELS has {len(ALL_CHANNELS)} entries, expected 38"
-assert len(set(ALL_CHANNELS)) == 38, "ALL_CHANNELS contains a duplicate name"
+ALL_CHANNELS = AUTH_CHANNELS + WINE_CHANNELS + SHORTCUTS_CHANNELS + MISC_CHANNELS + GAME_DETAILS_CHANNELS
+assert len(ALL_CHANNELS) == 39, f"ALL_CHANNELS has {len(ALL_CHANNELS)} entries, expected 39"
+assert len(set(ALL_CHANNELS)) == 39, "ALL_CHANNELS contains a duplicate name"
 
-# The 4 channels that must carry kind "sidecar send". Every other one of the 38 must be
-# "sidecar invoke".
+# The 4 channels that must carry kind "sidecar send". Every other one of the 39 must be
+# "sidecar invoke" -- including getInstallInfo (main.ts:842 is addHandler).
 SEND_CHANNELS = {"logoutGOG", "addShortcut", "removeShortcut", "processShortcut"}
 INVOKE_CHANNELS = set(ALL_CHANNELS) - SEND_CHANNELS
 assert len(SEND_CHANNELS) == 4
-assert len(INVOKE_CHANNELS) == 34
+assert len(INVOKE_CHANNELS) == 35
 
 # The 3 permanently-dropped channels (D-02) and the 16 deferred-to-Phase-34.6 channels (D-03/D-05).
-# 38 + 3 + 16 = 57, matching IPC-PORT-INVENTORY.md's Phase 34.5 section count.
+# 39 + 3 + 16 = 58, matching IPC-PORT-INVENTORY.md's Phase 34.5 section count.
 DROPPED_CHANNELS = {"authZoom", "getZoomUserInfo", "logoutZoom"}
 DEFERRED_CHANNELS = {
     # EOS overlay (8)
@@ -186,9 +202,9 @@ def _relevant_rows(text: str) -> list[tuple[str, str]]:
 def check_row_count(text: str) -> None:
     rows = _relevant_rows(text)
     names = [name for name, _ in rows]
-    if len(rows) != 38:
+    if len(rows) != 39:
         fail(
-            f"found {len(rows)} declared-channel table row(s), expected exactly 38 — a dropped "
+            f"found {len(rows)} declared-channel table row(s), expected exactly 39 — a dropped "
             "row or a duplicate row both fail this assertion"
         )
     missing = [c for c in ALL_CHANNELS if c not in names]
@@ -232,8 +248,8 @@ def check_kind_correctness(text: str) -> None:
         )
     if actual_invoke != INVOKE_CHANNELS:
         fail(
-            "the invoke-kind channel set does not exactly match the expected 34 — got "
-            f"{len(actual_invoke)} channel(s), expected 34"
+            "the invoke-kind channel set does not exactly match the expected 35 — got "
+            f"{len(actual_invoke)} channel(s), expected 35"
         )
 
 
@@ -296,7 +312,7 @@ def check_live_cells_have_state(text: str) -> None:
 # ---------------------------------------------------------------------------
 
 PHASE_34_5_HEADING = re.compile(
-    r"^## Phase 34\.5 — Slice 8 — non-Steam runners, Wine and shortcuts \(57 channels\)",
+    r"^## Phase 34\.5 — Slice 8 — non-Steam runners, Wine and shortcuts \(58 channels\)",
     re.MULTILINE,
 )
 PHASE_34_6_HEADING = re.compile(
@@ -360,8 +376,8 @@ def check_inventory_arithmetic(ported_text: str, inventory_text: str) -> None:
         )
     deferred = _channel_names_in_backtick_lists(section_34_6)
 
-    if len(declared) != 38:
-        fail(f"declared set has {len(declared)} names, expected 38")
+    if len(declared) != 39:
+        fail(f"declared set has {len(declared)} names, expected 39")
     if len(deferred) != 16:
         fail(
             f"IPC-PORT-INVENTORY.md's Phase 34.6 section lists {len(deferred)} channel name(s), "
@@ -389,8 +405,8 @@ def check_inventory_arithmetic(ported_text: str, inventory_text: str) -> None:
         if extra:
             details.append(f"in a bucket but not in the inventory's 57: {sorted(extra)}")
         fail(
-            "declared (38) + dropped + deferred (16) does not reconcile against "
-            f"IPC-PORT-INVENTORY.md's Phase 34.5 57-name set — {'; '.join(details)}"
+            "declared (39) + dropped + deferred (16) does not reconcile against "
+            f"IPC-PORT-INVENTORY.md's Phase 34.5 58-name set — {'; '.join(details)}"
         )
     if len(dropped) != 3:
         fail(
@@ -423,7 +439,7 @@ def check_per_module_counts(text: str) -> None:
             fail(f"channel `{name}` is attributed to an unrecognized module: '{module}'")
     if counts != MODULE_EXPECTED_COUNTS:
         details = "; ".join(f"{m}: got {counts[m]}, expected {MODULE_EXPECTED_COUNTS[m]}" for m in counts)
-        fail(f"per-module row counts do not match 11/9/7/11 — {details}")
+        fail(f"per-module row counts do not match 11/9/7/11/1 — {details}")
 
 
 # ---------------------------------------------------------------------------
@@ -516,6 +532,41 @@ def check_item_4_scope(text: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Check 10 — the late-discovered getInstallInfo row (F-34.5-G6-10, plan 34.5-43) is attributed to
+# gameDetailsFlowRegistration.ts and carries the literal F-34.5-G6-10 in its Riders cell.
+#
+# Purpose (anti-rot): without this check a future editor can quietly absorb this row into the
+# original 38 and erase the record that IPC-PORT-INVENTORY.md was not exhaustive — which is
+# U-34.5-14's entire subject. This check exists independently of the ⚠ warning paragraph in
+# IPC-PORT-INVENTORY.md itself, so the provenance survives even if that paragraph is edited.
+# ---------------------------------------------------------------------------
+
+
+def check_late_discovery_provenance(text: str) -> None:
+    rows = _relevant_rows(text)
+    row_by_name = {name: row for name, row in rows}
+    if "getInstallInfo" not in row_by_name:
+        fail(
+            "no `getInstallInfo` row found — F-34.5-G6-10's late-discovered channel must be "
+            "declared with its own row, not silently absorbed into the original 38"
+        )
+        return
+    cells = _cells(row_by_name["getInstallInfo"])
+    if len(cells) < 3 or cells[2].strip("`") != "gameDetailsFlowRegistration.ts":
+        fail(
+            "`getInstallInfo`'s row is not attributed to `gameDetailsFlowRegistration.ts` — the "
+            "late-discovery provenance would be lost"
+        )
+    riders = cells[4] if len(cells) > 4 else ""
+    if "F-34.5-G6-10" not in riders:
+        fail(
+            "`getInstallInfo`'s Riders cell does not carry the literal 'F-34.5-G6-10' — without "
+            "it a future editor can quietly absorb this row into the original 38 and erase the "
+            "record that IPC-PORT-INVENTORY.md was not exhaustive (U-34.5-14's entire subject)"
+        )
+
+
+# ---------------------------------------------------------------------------
 # Assertion registry
 # ---------------------------------------------------------------------------
 
@@ -536,10 +587,15 @@ SINGLE_TEXT_ASSERTIONS = [
         "(check 9)",
         check_item_4_scope,
     ),
+    (
+        "the late-discovered getInstallInfo row is attributed to gameDetailsFlowRegistration.ts "
+        "and carries F-34.5-G6-10 in its Riders cell (check 10)",
+        check_late_discovery_provenance,
+    ),
 ]
 # Check 5 is a two-argument check (ported text + inventory text), run separately.
 ASSERTION_COUNT = len(SINGLE_TEXT_ASSERTIONS) + 1  # +1 for check 5
-assert ASSERTION_COUNT == 9, f"expected 9 checks total, got {ASSERTION_COUNT}"
+assert ASSERTION_COUNT == 10, f"expected 10 checks total, got {ASSERTION_COUNT}"
 
 
 def run_all_single_text_assertions(text: str) -> None:
@@ -563,6 +619,8 @@ def _valid_synthetic_row(name: str) -> str:
         module = "wineToolsFlowRegistration.ts"
     elif name in SHORTCUTS_CHANNELS:
         module = "shortcutsFlowRegistration.ts"
+    elif name in GAME_DETAILS_CHANNELS:
+        module = "gameDetailsFlowRegistration.ts"
     else:
         module = "runnerMiscFlowRegistration.ts"
     kind = "sidecar send" if name in SEND_CHANNELS else "sidecar invoke"
@@ -575,6 +633,10 @@ def _valid_synthetic_row(name: str) -> str:
     elif name == "runWineCommand":
         proof = "unit + LIVE (item 5) — PENDING"
         riders = "placeholder"
+    elif name == "getInstallInfo":
+        # F-34.5-G6-10: check 10 requires the literal marker in this cell.
+        proof = "unit"
+        riders = "F-34.5-G6-10"
     else:
         proof = "unit"
         riders = "placeholder"
@@ -598,7 +660,7 @@ CLOSED: T-34.4.1-44b, the nile host-anchor obligation, closed by plan 34.5-02.
 - The www.amazon.com anchor is MEDIUM confidence pending Assumption A1's live confirmation.
 - GAMELIB_SHELL_EXE's macOS bundle behaviour is Assumption A2, unproven until item 4.
 
-## The 38 channels
+## The 39 channels
 
 | Channel | Kind | Registration module | Proof level | Riders |
 |---|---|---|---|---|
@@ -608,8 +670,8 @@ CLOSED: T-34.4.1-44b, the nile host-anchor obligation, closed by plan 34.5-02.
 
 def _valid_synthetic_inventory_doc() -> str:
     """A minimal synthetic IPC-PORT-INVENTORY.md satisfying check 5's arithmetic shape."""
-    all_57 = sorted(set(ALL_CHANNELS) | DROPPED_CHANNELS | DEFERRED_CHANNELS)
-    phase_34_5_line = ", ".join(f"`{c}`" for c in all_57)
+    all_58 = sorted(set(ALL_CHANNELS) | DROPPED_CHANNELS | DEFERRED_CHANNELS)
+    phase_34_5_line = ", ".join(f"`{c}`" for c in all_58)
 
     eos = sorted(c for c in DEFERRED_CHANNELS if "Eos" in c or "eos" in c.lower())
     sgdb = sorted(c for c in DEFERRED_CHANNELS if c.startswith("steamgriddb."))
@@ -618,7 +680,7 @@ def _valid_synthetic_inventory_doc() -> str:
 
     return f"""# Synthetic inventory
 
-## Phase 34.5 — Slice 8 — non-Steam runners, Wine and shortcuts (57 channels)
+## Phase 34.5 — Slice 8 — non-Steam runners, Wine and shortcuts (58 channels)
 
 {phase_34_5_line}
 
@@ -778,6 +840,20 @@ def self_test() -> None:
         item_4_understated_doc,
     )
 
+    # Case 10 (check_late_discovery_provenance): strip F-34.5-G6-10 from getInstallInfo's Riders
+    # cell -- the natural mistake this check exists to catch: a future editor quietly absorbing
+    # the late-discovered channel into the original 38 with no trace of why it arrived separately.
+    stripped_provenance_doc = base.replace(
+        _valid_synthetic_row("getInstallInfo"),
+        "| `getInstallInfo` | sidecar invoke | `gameDetailsFlowRegistration.ts` | unit | placeholder |",
+    )
+    case(
+        "getInstallInfo Riders cell stripped of F-34.5-G6-10 rejected by "
+        "check_late_discovery_provenance",
+        check_late_discovery_provenance,
+        stripped_provenance_doc,
+    )
+
     if self_test_case_count != ASSERTION_COUNT:
         fail(
             f"self-test FAILED: ran {self_test_case_count} self-test case(s) but there are "
@@ -809,12 +885,13 @@ def main() -> None:
     check_inventory_arithmetic(ported_text, inventory_text)
 
     print(
-        "OK: all 38 channels declared exactly once with correct send/invoke kind, every proof "
+        "OK: all 39 channels declared exactly once with correct send/invoke kind, every proof "
         "level permitted with an explicit PENDING/PASS/FAIL state on every LIVE cell, per-module "
-        "counts are 11/9/7/11, the 38+3+16=57 arithmetic reconciles against "
+        "counts are 11/9/7/11/1, the 39+3+16=58 arithmetic reconciles against "
         "IPC-PORT-INVENTORY.md with no name in two buckets, the residuals and obligations "
-        "sections carry their required citations, and live-gate item 4 is scoped to exactly "
-        "{addToSteam, addShortcut} (REQ-34.5-11)."
+        "sections carry their required citations, live-gate item 4 is scoped to exactly "
+        "{addToSteam, addShortcut}, and the late-discovered getInstallInfo row (F-34.5-G6-10) "
+        "carries its provenance marker (REQ-34.5-11)."
     )
     sys.exit(0)
 
