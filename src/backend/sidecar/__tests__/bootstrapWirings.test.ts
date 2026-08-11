@@ -213,12 +213,15 @@ async function waitFor(
  */
 function setupIsolatedBootstrap(): {
   init: (input: PassThrough, output: PassThrough) => void
+  deliverStartupProtocolUrl: (argv?: string[]) => boolean
 
   backendEvents: any
   axiosGet: jest.Mock
 
   i18nextInstance: any
   appFolder: string
+  logFilePath: string
+  handlerRegistry: Map<string, (...args: unknown[]) => unknown>
 } {
   let harness!: ReturnType<typeof setupIsolatedBootstrap>
   jest.isolateModules(() => {
@@ -235,7 +238,7 @@ function setupIsolatedBootstrap(): {
     })
 
     const { backendEvents } = require('../../backend_events')
-    const { init } = require('../bootstrap')
+    const { init, deliverStartupProtocolUrl } = require('../bootstrap')
     // Plain CJS require -- NOT `.default`. TS's `import i18next from 'i18next'`
     // (used by bootstrap.ts) compiles under esModuleInterop to
     // `__importDefault(require('i18next')).default`, but `__importDefault` only WRAPS
@@ -246,14 +249,24 @@ function setupIsolatedBootstrap(): {
     // appending `.default` here would silently yield `undefined`.
     const i18nextInstance = require('i18next')
     const { appFolder } = require('../../constants/paths')
+    // Phase 34.5 gap cycle 6 plan 44 (Test A/C): required INSIDE this same
+    // jest.isolateModules() callback, not after setupIsolatedBootstrap() returns -- a
+    // require() outside this callback would resolve against the OUTER, non-isolated module
+    // registry, a DIFFERENT `handlerRegistry`/`getLogFilePath` instance than the one `init`
+    // (also required here) actually populates.
+    const { getLogFilePath } = require('../../logger/paths')
+    const { handlerRegistry } = require('../electronStub')
     /* eslint-enable @typescript-eslint/no-require-imports */
 
     harness = {
       init,
+      deliverStartupProtocolUrl,
       backendEvents,
       axiosGet: axiosInstance.get,
       i18nextInstance,
-      appFolder
+      appFolder,
+      logFilePath: getLogFilePath({}),
+      handlerRegistry
     }
   })
   return harness
@@ -417,6 +430,161 @@ describe('sidecar bootstrap wirings (Phase 34.2 Plan 01 -- REQ-34.2-02/04/07/14)
   it('REQ-34.2-04/T-34.2-05: appFolder resolves inside the disposable tmp home, never the real config directory', () => {
     const { appFolder } = setupIsolatedBootstrap()
     expect(appFolder.startsWith(tmpdir())).toBe(true)
+  })
+})
+
+// Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09, REQ-34.5-01/05/12): production wiring for
+// `deliverStartupProtocolUrl`/`registerProtocolUrlHandler`, not a replica -- reuses this
+// file's own `jest.isolateModules()` + redirected-`homedir` harness (see module docstring).
+describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44, F-34.5-G6-09)', () => {
+  beforeEach(() => {
+    mockTestHomeSuffix += 1
+  })
+
+  it('Test A (behaviour, real log file): deliverStartupProtocolUrl makes the real LogWriter write the [ProtocolHandler] Received line', async () => {
+    const { init, deliverStartupProtocolUrl, logFilePath, appFolder } =
+      setupIsolatedBootstrap()
+    // Same precondition the pre-existing anticheat-data test (above) states explicitly: a
+    // real Electron app guarantees `userData` exists before any file operation runs, via
+    // `app.whenReady()`; the sidecar has no such hook. Belt-and-braces here even though the
+    // runner-less URL below is not expected to reach a GameConfig write (see next comment).
+    mkdirSync(join(appFolder, 'GamesConfig'), { recursive: true })
+
+    const input = new PassThrough()
+    const output = new PassThrough()
+    init(input, output)
+    await flush()
+
+    // Deviation (Rule 1 -- bug, found live running this test): the plan's own draft used
+    // `&runner=gog`, but with an explicit runner `findGame` (protocol.ts:188) calls
+    // `libraryManagerMap[runner].getGame(appName).getGameInfo()` DIRECTLY, skipping the
+    // truthy-`app_name` check the runner-LESS branch (protocol.ts:191-196) applies -- every
+    // real, unmocked store manager's `getGameInfo()` returns `{app_name: '', ...}` for an
+    // unrecognised appName (confirmed by direct read of gog/legendary/nile/sideload
+    // `games.ts`), which is still a DEFINED object, so `handleLaunch` proceeded past its
+    // `if (!gameInfo) return` guard and reached the REAL, unmocked
+    // `GOGGame.getSettings()` -> `GameConfig.get()` -> `new GameConfigV0(...)`, which needs
+    // far more of the real settings-merge machinery (`enviromentOptions` and friends) than
+    // this file's minimal `GlobalConfig` mock provides -- an unrelated crash, not the log
+    // observable this test exists to prove. Dropping `runner=` here restores the plan's own
+    // STATED intent ("findGame returns nothing and no real launch is attempted"): with no
+    // runner, `findGame` iterates every manager and returns `undefined` since ALL FOUR real
+    // implementations report a falsy `app_name` for this appName, so `handleLaunch` logs
+    // "Could not receive game data" and returns immediately after the `Received` line below.
+    const testUrl = 'gamelib://launch?appName=__gamelib_test_missing__'
+    deliverStartupProtocolUrl(['--no-gui', testUrl])
+
+    // Real, unmocked LogWriter queues its write fire-and-forget (no caller in this codebase
+    // `await`s a `logXXX()` call) -- poll for the CONTENT, not merely the file's existence,
+    // since the file can exist (from init()'s own earlier boot-diagnostic writes) before this
+    // specific line has landed.
+    await waitFor(() => {
+      if (!existsSync(logFilePath)) return false
+      return readFileSync(logFilePath, 'utf-8').includes(
+        'Received gamelib://launch?appName=__gamelib_test_missing__'
+      )
+    })
+
+    const contents = readFileSync(logFilePath, 'utf-8')
+    expect(contents).toMatch(
+      /\[ProtocolHandler\]:\s+Received gamelib:\/\/launch\?appName=__gamelib_test_missing__/
+    )
+  })
+
+  it('Test A negative control: logFilePath resolves under the redirected tmp home, never the real ~/Library/Logs/GameLib', () => {
+    const { logFilePath } = setupIsolatedBootstrap()
+    expect(logFilePath.startsWith(tmpdir())).toBe(true)
+    expect(logFilePath).not.toContain('Library/Logs/GameLib')
+  })
+
+  // Test B is intentionally SEPARATE from Test A: calling `deliverStartupProtocolUrl`
+  // directly (Test A) proves the FUNCTION works, never that `init()` actually calls it. The
+  // two failures are independent -- a deleted call site inside `init()` would leave Test A
+  // green forever, which is exactly the trap `test-must-exercise-production-call-shape`
+  // names. This is a by-construction source gate instead, reading `bootstrap.ts`'s own
+  // source text.
+  describe('Test B (by-construction, source gate): init() calls both registerProtocolUrlHandler() and deliverStartupProtocolUrl()', () => {
+    function extractInitBody(source: string): string {
+      const stripped = stripComments(source)
+      const startMarker = 'export function init('
+      const start = stripped.indexOf(startMarker)
+      expect(start).toBeGreaterThan(-1)
+      // init() is the last top-level export in bootstrap.ts -- slice to EOF rather than
+      // hunting for a second marker that could itself drift.
+      return stripped.slice(start)
+    }
+
+    it('the real bootstrap.ts source calls both inside init()', () => {
+      const source = readFileSync(
+        join(__dirname, '..', 'bootstrap.ts'),
+        'utf-8'
+      )
+      const initBody = extractInitBody(source)
+      expect(initBody).toContain('registerProtocolUrlHandler()')
+      expect(initBody).toContain('deliverStartupProtocolUrl()')
+    })
+
+    it('self-test (RED proof): a synthetic init() missing both calls does NOT satisfy the gate', () => {
+      const synthetic = [
+        'export function init(input, output) {',
+        '  startRpcServer(input, output)',
+        "  output.write(`${READY_SENTINEL}\\n`)",
+        '}'
+      ].join('\n')
+      const initBody = extractInitBody(synthetic)
+      expect(initBody).not.toContain('registerProtocolUrlHandler()')
+      expect(initBody).not.toContain('deliverStartupProtocolUrl()')
+    })
+
+    it('self-test (RED proof): a synthetic init() missing ONLY registerProtocolUrlHandler() still fails the gate', () => {
+      const synthetic = [
+        'export function init(input, output) {',
+        '  startRpcServer(input, output)',
+        "  output.write(`${READY_SENTINEL}\\n`)",
+        '  deliverStartupProtocolUrl()',
+        '}'
+      ].join('\n')
+      const initBody = extractInitBody(synthetic)
+      expect(initBody).not.toContain('registerProtocolUrlHandler()')
+    })
+  })
+
+  it('Test C (registration + rejection): handleProtocolUrl accepts a gamelib:// url and rejects a non-gamelib one without echoing it', async () => {
+    const { init, handlerRegistry, appFolder } = setupIsolatedBootstrap()
+    // Same precondition as Test A above -- the accepted URL below carries no `runner` param,
+    // so findGame's all-runner search may reach a real GameConfig read/write for whichever
+    // runner (if any) resolves a match.
+    mkdirSync(join(appFolder, 'GamesConfig'), { recursive: true })
+
+    const input = new PassThrough()
+    const output = new PassThrough()
+    init(input, output)
+    await flush()
+
+    const handler = handlerRegistry.get('handleProtocolUrl')
+    expect(handler).toBeDefined()
+
+    // `registerProtocolUrlHandler`'s handler is NOT declared `async` -- it dispatches
+    // `handleProtocol` via a fire-and-forget `Promise.resolve(...).catch(...)` and returns
+    // `true` SYNCHRONOUSLY (load-bearing: it must never await the launch, Task 1's
+    // `handle_protocol_url_channel_is_bounded_at_invoke_timeout` pins why). Assert the plain
+    // return value, not a resolved promise.
+    expect(
+      handler?.(undefined, 'gamelib://launch?appName=__gamelib_test_missing__')
+    ).toBe(true)
+
+    // The rejection is a SYNCHRONOUS throw (the handler function itself is not async), so
+    // this is a plain try/catch, not an awaited rejection.
+    let rejection: unknown
+    try {
+      handler?.(undefined, 'https://evil.example/x')
+    } catch (error) {
+      rejection = error
+    }
+    expect(rejection).toBeDefined()
+    expect(String(rejection)).toMatch(/rejected a non-gamelib argument/)
+    // T-34.5-G6-25: the rejection message must never echo the rejected value.
+    expect(String(rejection)).not.toContain('evil.example')
   })
 })
 

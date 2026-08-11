@@ -38,6 +38,15 @@ import { supportedLanguages } from 'common/languages'
 // ---- Step 2: import the backend registration path — AFTER the hook -------
 
 import './handlers'
+// Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09, REQ-34.5-01/05/12): `protocol.ts` imports
+// `dialog`/`app` from `electron`, so this import is safe ONLY because `./installElectronHook`
+// (Step 1, above) has already installed the `Module._load` redirect by the time this
+// statement runs — ES modules evaluate every static import before a module's own executable
+// statements run, so the exact ordering that makes `import './handlers'` safe makes this safe
+// too. `bootstrap.ts` is deliberately absent from `electronReachLedger.test.ts`'s
+// `ENTRY_POINTS` list (confirmed at planning time): that ledger tracks registration modules,
+// and `bootstrap.ts` itself has never been a member.
+import { handleProtocol } from '../protocol'
 import {
   startRpcServer,
   pushFrontendMessage,
@@ -128,6 +137,97 @@ let anticheatListenerRegistered = false
 // bootstrap.test.ts / *Flows.test.ts call init() many times per file, and a second fetch per
 // call is wasteful and would violate the "one fetch, one listener" idempotency contract.
 let releasesFetchInitialized = false
+// Guards registerProtocolUrlHandler()'s ipcMain.handle() registration below (Phase 34.5 gap
+// cycle 6 plan 44). Same reason as the guards above: bootstrap.test.ts / *Flows.test.ts call
+// init() many times per file, and electronStub's handlerRegistry is a plain module-scope Map
+// keyed by channel name — a second handle('handleProtocolUrl', ...) call would just silently
+// overwrite the first, which is harmless today but is exactly the kind of "works by accident"
+// idempotency this file's other five guards exist to make explicit instead.
+let protocolUrlHandlerRegistered = false
+
+/**
+ * Delivers a startup (cold-start) `gamelib://` deep link to `handleProtocol`, if `argv`
+ * carries one (Phase 34.5 gap cycle 6 plan 44, F-34.5-G6-09, REQ-34.5-01/05/12) — the sidecar
+ * side of the shell's `sidecar_forward_args` allow-list (`src-tauri/src/main.rs`).
+ *
+ * Finds the first element starting `gamelib://` — mirrors `protocol.ts`'s own
+ * `parseHeroicUrl`'s `args.find((arg) => arg.startsWith('gamelib://'))` exactly, so this
+ * function's own pre-check can never diverge from what `handleProtocol` itself would accept.
+ * Returns `false` with NO logging when absent — a normal boot has no deep link, and a
+ * per-boot log line would be noise.
+ *
+ * When present, logs `[bootstrap] startup protocol URL present` at `LogPrefix.Backend` — the
+ * URL itself is NOT logged here; `handleProtocol` (`protocol.ts:50`) logs it authoritatively
+ * one line later, and double-logging would put two different renderings of the same value in
+ * the gate's evidence.
+ *
+ * Calls `handleProtocol` wrapped in `Promise.resolve(...).catch(...)`: `handleProtocol` is not
+ * `async`, and its `launch` arm returns `handleLaunch`'s promise un-awaited (`protocol.ts:56`)
+ * — an unwrapped call would leave a floating rejection. The whole body is wrapped in
+ * try/catch so a synchronous throw can never fail boot (T-34.5-G3-02, matching the two
+ * existing boot-time diagnostic blocks above at `:161`/`:203`).
+ *
+ * `argv` defaults to `process.argv` but is injectable, so a test can drive this PRODUCTION
+ * function with a synthetic argv instead of reconstructing the call site
+ * (`test-must-exercise-production-call-shape`).
+ */
+export function deliverStartupProtocolUrl(argv: string[] = process.argv): boolean {
+  const hasProtocolUrl = argv.some((arg) => arg.startsWith('gamelib://'))
+  if (!hasProtocolUrl) return false
+
+  try {
+    logInfo('[bootstrap] startup protocol URL present', LogPrefix.Backend)
+    void Promise.resolve(handleProtocol(argv)).catch((error) => {
+      logError(
+        `[bootstrap] deliverStartupProtocolUrl: handleProtocol rejected: ${error}`,
+        LogPrefix.Backend
+      )
+    })
+  } catch (error) {
+    logError(
+      `[bootstrap] deliverStartupProtocolUrl threw synchronously: ${error}`,
+      LogPrefix.Backend
+    )
+  }
+  return true
+}
+
+/**
+ * Registers the `handleProtocolUrl` invoke channel — the sidecar-side entry point the Rust
+ * shell's single-instance accept loop calls to deliver a WARM (already-running) deep link
+ * (Phase 34.5 gap cycle 6 plan 44, D-44-A). Guarded by `protocolUrlHandlerRegistered`,
+ * mirroring this file's other five idempotency guards immediately above.
+ *
+ * Rejects anything that is not a `string` beginning `gamelib://` by THROWING —
+ * `new Error('handleProtocolUrl: rejected a non-gamelib argument')`, deliberately never
+ * echoing the rejected value in the message (T-34.5-G6-25: the Rust accept loop that calls
+ * this channel logs only the reason and byte count, never the payload, and this handler must
+ * not undo that). A thrown handler produces an `ok:false` response frame back to the Rust
+ * accept loop, which logs `ok`/`err` only.
+ *
+ * On acceptance, calls `handleProtocol` the same wrapped way `deliverStartupProtocolUrl` does
+ * above, and returns `true` IMMEDIATELY — without awaiting the launch. This is load-bearing:
+ * `handleProtocolUrl` is deliberately absent from `LONG_RUNNING_CHANNELS`
+ * (`src-tauri/src/main.rs`'s `handle_protocol_url_channel_is_bounded_at_invoke_timeout` test,
+ * Task 1), so a handler that awaited `handleLaunch` would block the shell's accept thread
+ * until `INVOKE_TIMEOUT` (60s) fired mid-game.
+ */
+export function registerProtocolUrlHandler(): void {
+  if (protocolUrlHandlerRegistered) return
+  protocolUrlHandlerRegistered = true
+  electronStub.ipcMain.handle('handleProtocolUrl', (_event: unknown, url?: unknown) => {
+    if (typeof url !== 'string' || !url.startsWith('gamelib://')) {
+      throw new Error('handleProtocolUrl: rejected a non-gamelib argument')
+    }
+    void Promise.resolve(handleProtocol([url])).catch((error) => {
+      logError(
+        `[bootstrap] registerProtocolUrlHandler: handleProtocol rejected: ${error}`,
+        LogPrefix.Backend
+      )
+    })
+    return true
+  })
+}
 
 export function init(
   input: Readable = process.stdin,
@@ -326,6 +426,10 @@ export function init(
     }
   }
   startRpcServer(input, output)
+  // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09): registered immediately after
+  // startRpcServer() and BEFORE the READY_SENTINEL write below, so the shell can never send a
+  // handleProtocolUrl frame for an unregistered channel.
+  registerProtocolUrlHandler()
   electronStub.bindTransport({
     openExternal: requestOpenExternal,
     pushFrontendMessage
@@ -440,4 +544,9 @@ export function init(
     }
   }
   output.write(`${READY_SENTINEL}\n`)
+  // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09): the LAST statement of init(), deliberately
+  // AFTER the READY_SENTINEL write above — so the shell knows the sidecar is up before any
+  // launch begins, and so every store manager imported by ./handlers (Step 2, above) is fully
+  // constructed before handleProtocol can possibly touch libraryManagerMap.
+  deliverStartupProtocolUrl()
 }

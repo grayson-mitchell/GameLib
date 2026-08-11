@@ -31,6 +31,7 @@ import { app, dialog } from 'electron'
 import { libraryManagerMap } from '../storeManagers'
 import { getMainWindow } from '../main_window'
 import { sendFrontendMessage } from '../ipc'
+import { logInfo } from '../logger'
 
 // Mock electron modules
 jest.mock('electron', () => ({
@@ -362,6 +363,94 @@ describe('protocol.ts --no-gui behavior', () => {
       expect(
         shouldHideWindowForProtocolArgs(['/path/to/heroic', '--some-flag'])
       ).toBe(false)
+    })
+  })
+
+  // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09, REQ-34.5-01/05/12): exercises the exact
+  // production argv SHAPES `sidecar_forward_args`/`deliverStartupProtocolUrl` deliver — the
+  // real dev-sidecar and packaged-SEA argv arrays (not a hand-built ideal), the D-44-C
+  // runner-less truncated shape, and the inert-Electron-flags rejection case.
+  describe('production argv shapes (Phase 34.5 gap cycle 6 plan 44, F-34.5-G6-09)', () => {
+    const installedGogGame = {
+      app_name: '1207659037',
+      title: 'Installed GOG Game',
+      runner: 'gog' as const,
+      is_installed: true
+    }
+    const installedGameSettings = { ignoreGameUpdates: false }
+
+    beforeEach(() => {
+      mockIsCLINoGui.mockReturnValue(true)
+      // Deterministic regardless of test order: the outer describe's own `mockGameInfo`
+      // (shared by `libraryManagerMap.legendary.getGame`'s mock) is mutated by sibling
+      // describes elsewhere in this file, so this block sets its own installed state rather
+      // than inheriting whatever the previous test left behind.
+      mockGameInfo.is_installed = true
+      ;(libraryManagerMap.gog.getGame as jest.Mock).mockReturnValue({
+        getGameInfo: () => installedGogGame,
+        getSettings: () => installedGameSettings
+      })
+    })
+
+    // RED direction: a shell that passed only the bare URL with no surrounding argv, or that
+    // stripped the query string before handing it to handleProtocol, would fail this.
+    test('dev sidecar argv shape: node + entry path + --no-gui + URL launches the named GOG game', async () => {
+      await handleProtocol([
+        '/usr/local/bin/node',
+        '/repo/build/main/sidecar.js',
+        '--no-gui',
+        'gamelib://launch?appName=1207659037&runner=gog'
+      ])
+
+      expect(libraryManagerMap.gog.getGame).toHaveBeenCalledWith('1207659037')
+      expect(logInfo).toHaveBeenCalledWith(
+        ['Received', 'gamelib://launch?appName=1207659037&runner=gog'],
+        'ProtocolHandler'
+      )
+    })
+
+    // The two spawn paths (spawn_sidecar_dev / spawn_sidecar_packaged, src-tauri/src/main.rs)
+    // produce DIFFERENT argv shapes and only the dev one is exercised by a `tauri:dev` session
+    // — this case exists so the packaged shape is not assumed identical without proof.
+    test('packaged SEA argv shape: gamelib-sidecar entry + --no-gui + URL launches the named GOG game', async () => {
+      await handleProtocol([
+        '/Applications/GameLib.app/Contents/MacOS/gamelib-sidecar',
+        '--no-gui',
+        'gamelib://launch?appName=1207659037&runner=gog'
+      ])
+
+      expect(libraryManagerMap.gog.getGame).toHaveBeenCalledWith('1207659037')
+      expect(logInfo).toHaveBeenCalledWith(
+        ['Received', 'gamelib://launch?appName=1207659037&runner=gog'],
+        'ProtocolHandler'
+      )
+    })
+
+    // D-44-C / U-34.5-19: shortcuts.ts:227's unquoted run.sh template makes bash split the
+    // command on the unescaped `&`, so the macOS .app path delivers exactly this
+    // runner-less, truncated URL. RED direction: an implementation that required a `runner`
+    // param would return early with "Could not receive game data" and never call getGame at
+    // all.
+    test('runner-less truncated shape (D-44-C / U-34.5-19): findGame all-runner search runs, legendary first', async () => {
+      await handleProtocol(['--no-gui', 'gamelib://launch?appName=1207659037'])
+
+      // findGame (protocol.ts:181) iterates RUNNERS.options with no runner param -- legendary
+      // is the first entry (RUNNERS = z.enum(['legendary','gog','nile','sideload'])).
+      expect(libraryManagerMap.legendary.getGame).toHaveBeenCalledWith(
+        '1207659037'
+      )
+    })
+
+    // Pins that the Electron-shaped flags this shell now drops (--no-sandbox) — and any argv
+    // with no gamelib:// URL at all — are inert: no game lookup, no Received log line.
+    test('inert flags: --no-gui and --no-sandbox alone perform no getGame call and emit no Received log line', async () => {
+      await handleProtocol(['--no-gui', '--no-sandbox'])
+
+      expect(libraryManagerMap.legendary.getGame).not.toHaveBeenCalled()
+      expect(libraryManagerMap.gog.getGame).not.toHaveBeenCalled()
+      expect(libraryManagerMap.nile.getGame).not.toHaveBeenCalled()
+      expect(libraryManagerMap.sideload.getGame).not.toHaveBeenCalled()
+      expect(logInfo).not.toHaveBeenCalled()
     })
   })
 })
