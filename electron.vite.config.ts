@@ -5,6 +5,8 @@ import path from 'path'
 
 import type { Plugin } from 'vite'
 
+import { preserveRunnerSymlinksPlugin } from './meta/preserveRunnerSymlinks'
+
 const srcAliases = ['backend', 'frontend', 'common'].map((aliasName) => ({
   find: aliasName,
   replacement: path.join(__dirname, 'src', aliasName)
@@ -79,7 +81,14 @@ export default defineConfig(({ mode }) => ({
     plugins: [
       react(),
       svgr(),
-      mode !== 'production' && vite_plugin_react_dev_tools
+      mode !== 'production' && vite_plugin_react_dev_tools,
+      // F-34.9-01: vite's copyDir (publicDir -> outDir) dereferences
+      // symlinks -- every Python.framework symlink inside the onedir
+      // runners becomes a real file/directory in build/, which codesign
+      // then rejects ("bundle format is ambiguous"). This restores every
+      // source symlink after the copy runs. Unconditional -- a no-op
+      // wherever the source tree has no symlinks (Linux/Windows checkouts).
+      preserveRunnerSymlinksPlugin()
     ]
   }
 }))
