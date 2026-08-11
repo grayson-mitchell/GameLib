@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.5-47-PLAN.md (threaded a fixed-literal origin through all 9 remaining external refreshLibrary call sites, RED-proven source-text gate extended to all 15 sites plus a literal-only log-injection mitigation, and ran a live three-way discriminator for the Manage Accounts 'logging into gog' symptom that resolved as READING NONE / non-reproduction on current HEAD via a developer-driven live GOG login through a mid-plan checkpoint). 4 of 9 gap-cycle-6 plans complete (34.5-43, 34.5-44, 34.5-46, 34.5-47; 34.5-45 same-wave, not yet summarized). Next: plan 34.5-48."
-last_updated: "2026-08-11T10:30:24.498Z"
+stopped_at: "Completed 34.5-48-PLAN.md (closed the EOS overlay UAT test-16 gap: added callOrDeclare(), rewrote AdvancedSettings/index.tsx so the EOS panel declines visibly under Tauri, shipped a call-site source-text gate RED-proven against three injected known-bad inputs, and corrected 34.5-PORTED-CHANNELS.md's falsified 'no new code needed' claim). 5 of 9 gap-cycle-6 plans complete (34.5-43, 34.5-44, 34.5-46, 34.5-47, 34.5-48; 34.5-45 same-wave, not yet summarized). Next: plan 34.5-49."
+last_updated: "2026-08-11T10:51:30.678Z"
 last_activity: 2026-08-11
 progress:
   total_phases: 23
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — **EXECUTING gap cycle 6**
-Plan: 4 of 9 gap-cycle-6 plans (34.5-43..51, 4 waves) complete — execution started 2026-08-11.
+Plan: 5 of 9 gap-cycle-6 plans (34.5-43..51, 4 waves) complete — execution started 2026-08-11.
 Plans 34.5-29/30/31 are SUPERSEDED (see `34.5-CYCLE5-ROUTING.md` § Disposition) and will never
 receive SUMMARY.md files; they are not part of this run. Plan 34.5-51 is `autonomous: false` and
 requires a human on real macOS hardware with `GAMELIB_DEV_SECRET_VAULT` UNSET.
@@ -3937,6 +3937,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P43 | 55min | 3 tasks | 10 files |
 | Phase 34.5 P46 | 1h34m | 3 tasks | 5 files |
 | Phase 34.5 P47 | 21min | 3 tasks | 15 files |
+| Phase 34.5 P48 | 35min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -4500,6 +4501,7 @@ Recent decisions affecting current work:
 - [Phase ?]: frontend/types.ts's own local RefreshOptions type needed origin?: string too (Rule 3 blocking-issue fix)
 - [Phase ?]: Kept RefreshLibraryOptions['origin'] as a plain string in both copies -- union narrowing deferred to ledger row U-34.5-23 (file-ownership-collision fence)
 - [Phase ?]: Defect B (Manage Accounts 'logging into gog') recorded as READING NONE -- a live non-reproduction on current HEAD, not a retirement of U-34.5-07 or gate item 2
+- [Phase 34.5]: callOrDeclare() dedupes a deferred-channel decline to one durable window.api.logError line per channel per session; isEosOverlayEnabled is wrapped but excluded from eosOverlayUnavailable detection since it never fires on macOS
 
 ### Pending Todos
 
@@ -4644,8 +4646,39 @@ Recent decisions affecting current work:
 > `state.update-progress`'s own JSON return reported `92`, itself one under the correct `91` for
 > `253/277`) -- hand-corrected to `completed_plans: 253`, `percent: 91`.
 
-Last session: 2026-08-11T10:30:24.483Z
-Stopped at: Completed 34.5-47-PLAN.md
+Last session: 2026-08-11T10:51:30.665Z
+Stopped at: Completed 34.5-48-PLAN.md -- closed the EOS overlay UAT test-16 gap (cluster 4,
+`34.5-CYCLE6-ROUTING.md`): the panel rendered "not installed", offered Install, entered a permanent
+"installing" state and offered Cancel while making ZERO backend calls a rejection could ever reach
+(`grep -ic -E "eos|overlay"` across a full UAT session returned 0). Task 1 added
+`src/frontend/helpers/declaredUnavailable.ts`'s `callOrDeclare()`: never throws, routes a rejection
+through `window.api.logError` exactly once per channel per session (dedupe Set mirrors
+`tauriTransport.ts`'s `lazyMissWarned`), never leaks call arguments into the log line
+(T-34.5-48-04), proven by 8 behavioral tests. Task 2 rewrote `AdvancedSettings/index.tsx`: all 11
+raw `window.api.<eosChannel>` occurrences now sit inside a `callOrDeclare()` call thunk;
+`eosOverlayUnavailable` flips true only from the two unconditional probes (`isEosOverlayEnabled` is
+wrapped but excluded from detection -- it is `isWindows`-gated and never fires on macOS);
+`getMainEosText()` returns the decline text as its FIRST branch; the six-button action row is
+wrapped in one `{!eosOverlayUnavailable && (...)}` with one sibling decline-line wrapper; `abort`
+is unreachable while declined (T-34.5-48-05, closing the observed "Aborting not possible ...
+98bc04bc842e4906993fd6d6644ffb8d" line). New `EosDeclineCallSiteGuard.test.ts` targets the CALL
+SITE, not the registry SEAM Invariant B already covers -- RED-proven against three injected
+known-bad inputs (a bare unwrapped call, a deleted wrapper, a deleted call site), each captured
+verbatim in `34.5-48-SUMMARY.md`, then reverted to GREEN. Task 3 corrected
+`34.5-PORTED-CHANNELS.md`'s falsified "no new code needed" claim (also carried by REQ-34.5-11) with
+the exact file:line mechanism (`sidecarRpc.ts:113-120`, `frontend/index.tsx:41`,
+`bootErrorSurface.ts:49`) and a runnable sweep command handed to plan 34.5-50 for the still-unchecked
+SteamGridDB (5) and winetricks (3) deferred channels; opened three new ledger rows (`U-34.5-24..26`,
+additions only). Three Rule-1 auto-fixes: comment prose in three files accidentally duplicated the
+literal text this plan's own acceptance-criteria greps count (`window.api.logError`,
+`window.api.installEosOverlay()`/`window.api.abort()`, `not.toMatch`), each reworded before commit.
+`npx tsc --noEmit` clean, `npx eslint` exits 0 (warnings only), full `Frontend` project 75/75 suites
+1021/1021 tests, `Meta` project 16/16 suites 395/396 (1 pre-existing skip). See 34.5-48-SUMMARY.md.
+Next: plan 34.5-49.
+
+--- prior session (34.5-46), preserved as history ---
+
+Stopped at: Completed 34.5-46-PLAN.md -- runner-aware sidecar launch dispatch, guarded
 `libraryManagerMap`, fixing the confused-deputy defect that sent every runner's launch to
 `steam://rungameid/<appName>` regardless of `runner` (live-observed for a GOG title). Task 1 rewrote
 `handleLaunch` to guard `runner` with the same own-property `hasOwnProperty.call(libraryManagerMap,
