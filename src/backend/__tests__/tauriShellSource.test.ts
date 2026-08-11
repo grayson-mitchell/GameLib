@@ -1514,3 +1514,67 @@ describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows 
   // re-runs every pass, mirroring Plan 13's own mutation check (`34.4.2-13-SUMMARY.md`'s
   // "Mutation Check" section), which was done and recorded the identical way.
 })
+
+/**
+ * Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09, REQ-34.5-01/05/12): pins the continued
+ * existence of the five pure deep-link/single-instance argv helpers Task 1 added, and pins
+ * D-44-A structurally -- the comment-stripped source must never gain either of the two
+ * rejected Tauri plugins (`tauri-plugin-single-instance`, `tauri-plugin-deep-link`), so a
+ * future "simplification" back to a plugin-based guard cannot land silently.
+ *
+ * Every assertion below (positive and negative) is paired with a self-test driving
+ * `loadMainRsCode(syntheticSource)` with the token deliberately absent (for a positive
+ * assertion) or deliberately present (for a negative assertion) -- the RED proof this file's
+ * own conventions require, mirroring the clipboard/tray describe blocks above.
+ */
+describe('Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09) deep-link/single-instance argv helpers', () => {
+  // Each token carries a trailing `(` boundary deliberately: this file's own #[cfg(test)]
+  // module (Task 1) names test fns like `cli_no_gui_requires_an_exact_flag_match` and
+  // `protocol_url_arg_finds_url_among_the_vdf_launch_options` -- without the paren boundary,
+  // `'fn cli_no_gui'` is a SUBSTRING of `fn cli_no_gui_requires_an_exact_flag_match(`, so the
+  // gate would pass vacuously off the TEST function's own declaration even if the real
+  // `fn cli_no_gui(` helper were deleted. Caught live: an early draft of this describe block
+  // used the bare (unparenthesized) token and stayed green through a deliberate deletion of
+  // `fn cli_no_gui` -- see this plan's SUMMARY for the failure transcript before the fix.
+  const POSITIVE_TOKENS = [
+    'fn protocol_url_arg(',
+    'fn cli_no_gui(',
+    'fn sidecar_forward_args(',
+    'fn single_instance_socket_path(',
+    'fn single_instance_dir('
+  ]
+
+  test.each(POSITIVE_TOKENS)('the real source contains %s', (token) => {
+    expect(loadMainRsCode()).toContain(token)
+  })
+
+  test.each(POSITIVE_TOKENS)(
+    'self-test (RED proof): a synthetic source lacking %s does NOT satisfy the gate',
+    (token) => {
+      const syntheticSource = 'fn some_other_helper() {}\n'
+      expect(loadMainRsCode(syntheticSource)).not.toContain(token)
+    }
+  )
+
+  const REJECTED_PLUGIN_TOKENS = [
+    'tauri_plugin_single_instance',
+    'tauri-plugin-single-instance',
+    'tauri_plugin_deep_link',
+    'tauri-plugin-deep-link'
+  ]
+
+  test.each(REJECTED_PLUGIN_TOKENS)(
+    'the real source does NOT contain %s (D-44-A: hand-rolled guard, no plugin)',
+    (token) => {
+      expect(loadMainRsCode()).not.toContain(token)
+    }
+  )
+
+  test.each(REJECTED_PLUGIN_TOKENS)(
+    'self-test (RED proof): a synthetic source containing %s DOES fail the negative gate',
+    (token) => {
+      const syntheticSource = `// pretend plugin registration\nfn main() { let _x = "${token}"; }\n`
+      expect(loadMainRsCode(syntheticSource)).toContain(token)
+    }
+  )
+})

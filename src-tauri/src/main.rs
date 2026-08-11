@@ -4748,6 +4748,122 @@ fn app_root_env_value(app_root: Result<std::path::PathBuf, String>) -> String {
         .unwrap_or_else(|_| String::new())
 }
 
+// ---- Deep-link / single-instance argv helpers (Phase 34.5 gap cycle 6 plan 44,
+// REQ-34.5-01/05/12, F-34.5-G6-09) ----
+//
+// Gate 3's own recorded invocation (`gamelib-shell --no-gui --no-sandbox
+// "gamelib://launch?appName=1207659037&runner=gog"`) is the input shape every helper below is
+// built against. Like `shell_exe_env_value`/`app_root_env_value` immediately above, these are
+// pure and `AppHandle`-free specifically so a `#[cfg(test)] fn` can drive them -- neither a
+// live `UnixListener` nor a spawned child process can be constructed from a plain `#[test]`.
+
+/// The ONLY scheme this shell's argv parser recognizes. Case-SENSITIVE by design -- matches
+/// `protocol.ts`'s own `args.find((arg) => arg.startsWith('gamelib://'))` exactly. A
+/// case-insensitive Rust side paired with a case-sensitive JS side would itself be a defect
+/// class (two parsers silently disagreeing on what counts as a deep link).
+const PROTOCOL_SCHEME_PREFIX: &str = "gamelib://";
+
+/// Exact-match flag mirroring `environment.ts`'s `process.argv.includes('--no-gui')`.
+const NO_GUI_FLAG: &str = "--no-gui";
+
+/// Upper bound on an accepted deep-link URL's length (T-34.5-G6-23) -- keeps a malformed or
+/// hostile argv/socket payload from growing unbounded before it ever reaches a JSON-RPC frame
+/// or a log line.
+const MAX_PROTOCOL_URL_LEN: usize = 2048;
+
+/// The deep-link extractor and this plan's single input-validation choke point (ASVS V5):
+/// every other helper below, and the single-instance accept loop in `main()`, MUST route a
+/// candidate URL through this function before trusting it. Failure mode is always `None` --
+/// never panics.
+///
+/// Deliberately returns the ORIGINAL candidate string, byte-for-byte -- not a re-serialised
+/// `tauri::Url`. The shell must never silently rewrite what a shortcut asked for;
+/// `protocol.ts`'s own `new URL()` call remains the sole authority on interpretation.
+///
+/// Deliberately ACCEPTS a URL with no `runner` query parameter (e.g.
+/// `gamelib://launch?appName=1207659037`) -- load-bearing, see D-44-C / `U-34.5-19`:
+/// `shortcuts.ts:227`'s unquoted `run.sh` template makes `bash` split the whole command on the
+/// unescaped `&`, so the macOS `.app` path delivers exactly this truncated form, and
+/// `findGame` (`protocol.ts:181`) recovers by searching every runner in order.
+fn protocol_url_arg(args: &[String]) -> Option<String> {
+    let candidate = args
+        .iter()
+        .find(|arg| arg.starts_with(PROTOCOL_SCHEME_PREFIX))?;
+
+    // T-34.5-G6-21: a newline/CR/NUL inside the value could split or forge a frame on the
+    // newline-delimited JSON-RPC pipe this value is about to travel on, or corrupt a
+    // line-oriented log file.
+    if candidate.chars().any(|c| c.is_ascii_control()) {
+        return None;
+    }
+
+    if candidate.len() > MAX_PROTOCOL_URL_LEN {
+        return None;
+    }
+
+    let parsed = tauri::Url::parse(candidate).ok()?;
+    if parsed.scheme() != "gamelib" {
+        return None;
+    }
+
+    Some(candidate.clone())
+}
+
+/// Exact string equality only, mirroring `process.argv.includes('--no-gui')`.
+///
+/// RED direction: a `starts_with`/`contains` implementation would wrongly accept
+/// `--no-gui-really` and `--not-no-gui`.
+fn cli_no_gui(args: &[String]) -> bool {
+    args.iter().any(|a| a == NO_GUI_FLAG)
+}
+
+/// The ALLOW-LIST deciding what the sidecar child's own `process.argv` receives
+/// (T-34.5-G6-22) -- emits, in order, `NO_GUI_FLAG` (if present) then a validated deep-link
+/// URL (if present), and NOTHING else, ever. Every other token -- `--no-sandbox`,
+/// `--fullscreen`, `--console`, macOS's `-psn_0_...`, an unknown flag, a bare path -- is
+/// silently dropped. `--no-sandbox` in particular is an Electron-only flag the Steam VDF's
+/// `LaunchOptions` string carries verbatim; it has no meaning for this shell and must never
+/// reach the sidecar.
+///
+/// Widening this list is a deliberate FUTURE decision, not something an executor may do
+/// opportunistically -- see this plan's own decision record (D-44-A/T-34.5-G6-22).
+fn sidecar_forward_args(args: &[String]) -> Vec<String> {
+    let mut forwarded = Vec::new();
+    if cli_no_gui(args) {
+        forwarded.push(NO_GUI_FLAG.to_string());
+    }
+    if let Some(url) = protocol_url_arg(args) {
+        forwarded.push(url);
+    }
+    forwarded
+}
+
+/// Pure path join, no I/O -- the single-instance guard's Unix socket file, always named
+/// identically inside whatever directory `single_instance_dir` resolves.
+fn single_instance_socket_path(app_support_dir: &std::path::Path) -> std::path::PathBuf {
+    app_support_dir.join("gamelib-single-instance.sock")
+}
+
+/// Resolves the directory the single-instance socket lives in, from an explicit `home`
+/// parameter rather than reading `std::env::var` internally -- mirrors
+/// `resolve_dev_app_root`'s own doc comment (below) on why: neither this file's
+/// `#[cfg(test)] mod tests` nor a parallel `cargo test` run may mutate process-global env
+/// vars. Returns `None` when `home` is `None` or empty, so callers can fall back to running
+/// without a guard (fail open, T-34.5-G6-24) rather than crash.
+fn single_instance_dir(home: Option<&str>) -> Option<std::path::PathBuf> {
+    let home = home.filter(|h| !h.is_empty())?;
+    let base = std::path::Path::new(home);
+    if cfg!(target_os = "macos") {
+        Some(
+            base.join("Library")
+                .join("Application Support")
+                .join("gamelib"),
+        )
+    } else {
+        Some(base.join(".config").join("gamelib"))
+    }
+}
+
 /// Resolves the DEV-mode `GAMELIB_APP_ROOT` value: the repository root, i.e. the parent of
 /// `CARGO_MANIFEST_DIR` (`src-tauri/..`) — baked at compile time exactly as
 /// `resolve_sidecar_entry()` above bakes its own path, and for the identical reason:
@@ -7012,5 +7128,163 @@ mod tests {
                 "lines."
             )
         );
+    }
+
+    // ---- deep-link argv helpers (Phase 34.5 gap cycle 6 plan 44, REQ-34.5-01/05/12,
+    // F-34.5-G6-09) ----
+    //
+    // RED direction for the `protocol_url_arg` group as a whole: an implementation that
+    // trusted a re-serialised `tauri::Url` instead of returning the original candidate
+    // verbatim would fail the byte-identical assertion below; one that used a
+    // case-insensitive prefix match would silently diverge from `protocol.ts`'s own
+    // `startsWith('gamelib://')`.
+
+    #[test]
+    fn protocol_url_arg_finds_url_among_the_vdf_launch_options() {
+        let args = vec![
+            "--no-gui".to_string(),
+            "--no-sandbox".to_string(),
+            "gamelib://launch?appName=1207659037&runner=gog".to_string(),
+        ];
+        assert_eq!(
+            protocol_url_arg(&args),
+            Some("gamelib://launch?appName=1207659037&runner=gog".to_string())
+        );
+    }
+
+    #[test]
+    fn protocol_url_arg_returns_none_when_absent() {
+        let args = vec!["--no-gui".to_string(), "--no-sandbox".to_string()];
+        assert_eq!(protocol_url_arg(&args), None);
+    }
+
+    #[test]
+    fn protocol_url_arg_rejects_foreign_schemes() {
+        for candidate in [
+            "https://evil.example/x",
+            "file:///etc/passwd",
+            "javascript:alert(1)",
+            "heroic://launch?appName=x",
+        ] {
+            assert_eq!(
+                protocol_url_arg(&[candidate.to_string()]),
+                None,
+                "expected {candidate} to be rejected"
+            );
+        }
+    }
+
+    #[test]
+    fn protocol_url_arg_rejects_control_characters() {
+        // T-34.5-G6-21: an embedded newline followed by a synthetic RPC frame -- the
+        // frame-injection case this rejection exists to close.
+        let candidate =
+            "gamelib://launch?appName=1\n{\"id\":\"1\",\"kind\":\"invoke\",\"channel\":\"x\",\"args\":[]}"
+                .to_string();
+        assert_eq!(protocol_url_arg(&[candidate]), None);
+    }
+
+    #[test]
+    fn protocol_url_arg_rejects_oversized_url() {
+        let candidate = format!("gamelib://launch?appName={}", "a".repeat(4096));
+        assert_eq!(protocol_url_arg(&[candidate]), None);
+    }
+
+    #[test]
+    fn protocol_url_arg_returns_the_first_match() {
+        let args = vec![
+            "gamelib://launch?appName=first".to_string(),
+            "gamelib://launch?appName=second".to_string(),
+        ];
+        assert_eq!(
+            protocol_url_arg(&args),
+            Some("gamelib://launch?appName=first".to_string())
+        );
+    }
+
+    #[test]
+    fn protocol_url_arg_accepts_a_runnerless_url() {
+        // D-44-C / U-34.5-19: the bash-truncated macOS .app run.sh form -- the `runner`
+        // param is lost when `bash` splits `shortcuts.ts:227`'s unquoted command on `&`.
+        let args = vec!["gamelib://launch?appName=1207659037".to_string()];
+        assert_eq!(
+            protocol_url_arg(&args),
+            Some("gamelib://launch?appName=1207659037".to_string())
+        );
+    }
+
+    #[test]
+    fn cli_no_gui_requires_an_exact_flag_match() {
+        assert!(cli_no_gui(&["--no-gui".to_string()]));
+        assert!(!cli_no_gui(&["--no-gui-really".to_string()]));
+        assert!(!cli_no_gui(&["--nogui".to_string()]));
+        assert!(!cli_no_gui(&["--no-sandbox".to_string()]));
+        assert!(!cli_no_gui(&[]));
+    }
+
+    #[test]
+    fn sidecar_forward_args_drops_no_sandbox() {
+        let args = vec![
+            "--no-gui".to_string(),
+            "--no-sandbox".to_string(),
+            "gamelib://launch?appName=1207659037&runner=gog".to_string(),
+        ];
+        let forwarded = sidecar_forward_args(&args);
+        assert_eq!(
+            forwarded,
+            vec![
+                "--no-gui".to_string(),
+                "gamelib://launch?appName=1207659037&runner=gog".to_string()
+            ]
+        );
+        assert!(!forwarded.iter().any(|a| a == "--no-sandbox"));
+    }
+
+    #[test]
+    fn sidecar_forward_args_drops_unknown_flags() {
+        let args = vec![
+            "--fullscreen".to_string(),
+            "--console".to_string(),
+            "-psn_0_12345".to_string(),
+            "/some/path".to_string(),
+        ];
+        assert_eq!(sidecar_forward_args(&args), Vec::<String>::new());
+    }
+
+    #[test]
+    fn sidecar_forward_args_forwards_a_url_without_no_gui() {
+        let url = "gamelib://launch?appName=1207659037".to_string();
+        assert_eq!(sidecar_forward_args(&[url.clone()]), vec![url]);
+    }
+
+    #[test]
+    fn sidecar_forward_args_forwards_no_gui_without_a_url() {
+        let args = vec!["--no-gui".to_string()];
+        assert_eq!(sidecar_forward_args(&args), vec!["--no-gui".to_string()]);
+    }
+
+    #[test]
+    fn single_instance_socket_path_is_under_the_given_dir() {
+        let dir = std::path::Path::new("/tmp/gamelib-test-dir");
+        let path = single_instance_socket_path(dir);
+        assert!(path.starts_with(dir));
+        assert!(path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or_default()
+            .ends_with(".sock"));
+    }
+
+    #[test]
+    fn single_instance_dir_returns_none_without_a_home() {
+        assert_eq!(single_instance_dir(None), None);
+        assert_eq!(single_instance_dir(Some("")), None);
+    }
+
+    #[test]
+    fn handle_protocol_url_channel_is_bounded_at_invoke_timeout() {
+        // Pins Task 2's design constraint: handleProtocolUrl must answer immediately and must
+        // never await the game launch, so it deliberately stays OFF LONG_RUNNING_CHANNELS.
+        assert_eq!(timeout_for("handleProtocolUrl"), Some(INVOKE_TIMEOUT));
     }
 }
