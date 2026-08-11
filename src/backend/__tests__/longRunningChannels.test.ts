@@ -53,7 +53,12 @@ const EXPECTED_LONG_RUNNING_CHANNELS = [
   // src/backend/humble/user.ts) both far exceed the 60s INVOKE_TIMEOUT bound.
   'oauthCaptureLogin',
   'humbleStartLogin',
-  'humbleReconnect'
+  'humbleReconnect',
+  // Phase 34.5 gap cycle 6 plan 44 Task 4 (closes ledger row U-34.5-16, T-34.5-C6-06):
+  // getInstallInfo (ported to the sidecar by plan 34.5-43) spawns gogdl over the network
+  // (gog/library.ts:624) and can re-enter itself on a retry (legendary/library.ts:260) --
+  // either can plausibly exceed the 60s INVOKE_TIMEOUT bound on a cold cache or slow CDN.
+  'getInstallInfo'
 ]
 
 /**

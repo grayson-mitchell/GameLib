@@ -156,6 +156,15 @@ const LONG_RUNNING_CHANNELS: &[&str] = &[
     // times this shell's 60s bound, an even larger mismatch than oauthCaptureLogin's.
     "humbleStartLogin",
     "humbleReconnect",
+    // Phase 34.5 gap cycle 6: getInstallInfo was ported to the sidecar by plan 34.5-43
+    // (F-34.5-G6-10), which deliberately did NOT touch this file (it belongs to plan 34.5-44,
+    // same wave); this entry is added by plan 34.5-44 Task 4 to close ledger row U-34.5-16
+    // (threat T-34.5-C6-06). Same shape as checkGameUpdates/refreshLibrary above:
+    // gog/library.ts:624 spawns `gogdl` over the network and legendary/library.ts:260
+    // re-enters getInstallInfo on a retry, either of which can plausibly exceed 60s on a cold
+    // cache or a slow CDN, producing a spurious "sidecar invoke timed out" that looks like a
+    // code failure rather than a slow network.
+    "getInstallInfo",
 ];
 
 /// `None` means "wait indefinitely" (see `LONG_RUNNING_CHANNELS`).
