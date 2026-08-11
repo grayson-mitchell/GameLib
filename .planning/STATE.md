@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.5-48-PLAN.md (closed the EOS overlay UAT test-16 gap: added callOrDeclare(), rewrote AdvancedSettings/index.tsx so the EOS panel declines visibly under Tauri, shipped a call-site source-text gate RED-proven against three injected known-bad inputs, and corrected 34.5-PORTED-CHANNELS.md's falsified 'no new code needed' claim). 5 of 9 gap-cycle-6 plans complete (34.5-43, 34.5-44, 34.5-46, 34.5-47, 34.5-48; 34.5-45 same-wave, not yet summarized). Next: plan 34.5-49."
+stopped_at: "Completed 34.5-48-PLAN.md (closed the EOS overlay UAT test-16 gap: added callOrDeclare(), rewrote AdvancedSettings/index.tsx so the EOS panel declines visibly under Tauri, shipped a call-site source-text gate RED-proven against three injected known-bad inputs, and corrected 34.5-PORTED-CHANNELS.md's falsified 'no new code needed' claim). WAVE 1 COMPLETE: 5 of 9 gap-cycle-6 plans done (34.5-43, 34.5-44, 34.5-46, 34.5-47, 34.5-48). Post-wave test gate green: 241/241 suites, 4724 passed / 1 pre-existing skip. Next is WAVE 2: plan 34.5-45 (depends on 44) then 34.5-49 (depends on 43), run sequentially because both write 34.5-UNTESTED-ITEMS.md. Then wave 3 = 34.5-50 (author gate-4 contract), wave 4 = 34.5-51 (autonomous:false, BLOCKING four-item live gate on real macOS hardware with GAMELIB_DEV_SECRET_VAULT UNSET)."
 last_updated: "2026-08-11T10:51:30.678Z"
-last_activity: 2026-08-11
+last_activity: 2026-08-11 -- Phase 34.5 gap cycle 6 wave 1 complete (34.5-43/44/46/47/48); test gate 241/241 suites, 4724 passed
 progress:
   total_phases: 23
-  completed_phases: 17
+  completed_phases: 16
   total_plans: 292
   completed_plans: 276
   percent: 95
