@@ -2321,9 +2321,9 @@ ticked only by measured evidence)
 IPC slices. Runs before Phase 35, which will later delete the Electron half of the signing work.
 **Plans:** 17 total — 11/11 original plans executed, but the phase does NOT close: the blocking
 live gate FAILED (4/5). See the phase-status note above. **Gap cycle 1 planned 2026-08-11**
-(`/gsd-plan-phase 34.9 --gaps`), 6 plans in 4 waves:
+(`/gsd-plan-phase 34.9 --gaps`), 6 plans in 4 waves, 2/6 gap-cycle plans complete (13/17 overall):
 - [x] 34.9-12-PLAN.md — preserve the runner `Python.framework` symlinks through vite's `publicDir` → `outDir` copy (fixes F-34.9-01; corroborated by F-34.9-03) — **DONE 2026-08-11**, see 34.9-12-SUMMARY.md
-- [ ] 34.9-13-PLAN.md — make `pnpm verify:runner-bundle` enforce framework structural integrity against the BUILT artifact
+- [x] 34.9-13-PLAN.md — make `pnpm verify:runner-bundle` enforce framework structural integrity against the BUILT artifact
 - [ ] 34.9-14-PLAN.md — clear stale macOS `dist/` artifacts before every build so a failed build cannot read as success (fixes F-34.9-02)
 - [ ] 34.9-15-PLAN.md — author `34.9-LIVE-GATE-RERUN.md` (author/runner separation: this plan may not run it)
 - [ ] 34.9-16-PLAN.md — run the re-run gate on macOS hardware and write its verdict (human operator required)
