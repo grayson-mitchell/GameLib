@@ -39,13 +39,15 @@ import { spawnSync } from 'node:child_process'
 import {
   closeSync,
   existsSync,
+  lstatSync,
   openSync,
   readdirSync,
+  readlinkSync,
   readSync,
   statSync,
   type Dirent
 } from 'node:fs'
-import { join, resolve as resolvePath } from 'node:path'
+import { basename, join, resolve as resolvePath } from 'node:path'
 
 // ---------------------------------------------------------------------------
 // The three onedir runners -- never comet, never win32/linux, never the
@@ -75,6 +77,126 @@ export interface RunnerInspection {
   fileCount: number
   machoCount: number
   machoFiles: MachOSignature[]
+  frameworks: FrameworkInspection[]
+}
+
+// ---------------------------------------------------------------------------
+// Framework structural integrity (F-34.9-01, plan 34.9-13). vite's copyDir
+// dereferenced every `Python.framework/Versions/Current` symlink into a real
+// directory, and `codesign` rejected the resulting bundle as "ambiguous"
+// (could be app or framework). Plan 34.9-12 fixed the mechanism
+// (meta/preserveRunnerSymlinks.ts); this enforces the structural property
+// codesign actually cares about so a regression cannot go silent again.
+//
+// This is a STRUCTURE check, a different category from the signature-IDENTITY
+// checks in getSignatureState() above -- it is credential-free and verifiable
+// on any machine (no Apple Developer enrolment, D-03/D-04), so it is
+// legitimate to enforce here where signature state is intentionally left as
+// data only.
+// ---------------------------------------------------------------------------
+
+export interface FrameworkInspection {
+  path: string
+  name: string
+  versionsCurrentExists: boolean
+  versionsCurrentIsSymlink: boolean
+  versionsCurrentTarget: string | null
+  resolvedVersionDirExists: boolean
+  topLevelStubExists: boolean
+  topLevelStubIsSymlink: boolean
+  codesignDisplay: string
+}
+
+/**
+ * Recursively finds every directory named `*.framework` under `runnerDir`.
+ * Recursion is guarded on `dirent.isDirectory()` from
+ * `readdirSync(..., { withFileTypes: true })`, which reflects the directory
+ * ENTRY's own type (lstat-based) rather than resolving symlinks -- so a
+ * symlinked directory (e.g. `Versions/Current` -> `3.14`) is never walked
+ * into, and a framework is never double-counted through its own
+ * `Versions/Current` alias (T-34.9G-05).
+ */
+function findFrameworks(runnerDir: string): string[] {
+  const out: string[] = []
+  let entries: Dirent[]
+  try {
+    entries = readdirSync(runnerDir, { withFileTypes: true })
+  } catch {
+    return out
+  }
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue
+    const full = join(runnerDir, entry.name)
+    if (entry.name.endsWith('.framework')) {
+      out.push(full)
+    }
+    out.push(...findFrameworks(full))
+  }
+  return out
+}
+
+/**
+ * Inspects a single `*.framework` directory's structural integrity. Every
+ * symlink determination uses `lstatSync` (never `statSync`), so a
+ * dereferenced (real-directory) `Versions/Current` is correctly reported as
+ * NOT a symlink rather than silently resolved through.
+ */
+function inspectFramework(frameworkDir: string): FrameworkInspection {
+  const name = basename(frameworkDir)
+  const stubName = name.endsWith('.framework')
+    ? name.slice(0, -'.framework'.length)
+    : name
+
+  const versionsCurrentPath = join(frameworkDir, 'Versions', 'Current')
+  let versionsCurrentExists = false
+  let versionsCurrentIsSymlink = false
+  let versionsCurrentTarget: string | null = null
+  try {
+    const st = lstatSync(versionsCurrentPath)
+    versionsCurrentExists = true
+    versionsCurrentIsSymlink = st.isSymbolicLink()
+    if (versionsCurrentIsSymlink) {
+      versionsCurrentTarget = readlinkSync(versionsCurrentPath)
+    }
+  } catch {
+    versionsCurrentExists = false
+  }
+
+  let resolvedVersionDirExists = false
+  if (versionsCurrentIsSymlink && versionsCurrentTarget) {
+    resolvedVersionDirExists = existsSync(
+      join(frameworkDir, 'Versions', versionsCurrentTarget)
+    )
+  }
+
+  const topLevelStubPath = join(frameworkDir, stubName)
+  let topLevelStubExists = false
+  let topLevelStubIsSymlink = false
+  try {
+    const st = lstatSync(topLevelStubPath)
+    topLevelStubExists = true
+    topLevelStubIsSymlink = st.isSymbolicLink()
+  } catch {
+    topLevelStubExists = false
+  }
+
+  // The artifact `codesign` actually classifies is the framework BUNDLE
+  // itself, not an inner binary -- the 2026-08-11 live gate's
+  // `codesign --verify --deep` on `.../gogdl/gogdl` exited 0 while the
+  // framework was already malformed (34.9-LIVE-GATE.md item 4).
+  const codesignDisplay = getSignatureState(frameworkDir)
+
+  return {
+    path: frameworkDir,
+    name,
+    versionsCurrentExists,
+    versionsCurrentIsSymlink,
+    versionsCurrentTarget,
+    resolvedVersionDirExists,
+    topLevelStubExists,
+    topLevelStubIsSymlink,
+    codesignDisplay
+  }
 }
 
 export interface Summary {
@@ -241,6 +363,10 @@ function inspectRunner(darwinRoot: string, runner: RunnerName): RunnerInspection
     .filter((f) => isMachO(f))
     .map((f) => ({ path: f, signature: getSignatureState(f) }))
 
+  const frameworks = findFrameworks(runnerDir).map((dir) =>
+    inspectFramework(dir)
+  )
+
   return {
     runner,
     binaryPath,
@@ -249,7 +375,8 @@ function inspectRunner(darwinRoot: string, runner: RunnerName): RunnerInspection
     isMachO: binaryIsMachO,
     fileCount: files.length,
     machoCount: machoFiles.length,
-    machoFiles
+    machoFiles,
+    frameworks
   }
 }
 
@@ -297,6 +424,41 @@ export function summarise(results: RunnerInspection[]): Summary {
           `like a smuggled onefile binary, not a onedir bundle`
       )
     }
+
+    // Framework structural integrity (F-34.9-01). Each condition below is
+    // independently enforced -- see FrameworkInspection's doc comment for
+    // why this is credential-free and legitimate to enforce, unlike
+    // signature IDENTITY (MachOSignature.signature), which stays data-only.
+    for (const fw of r.frameworks) {
+      if (!fw.versionsCurrentExists) {
+        failures.push(
+          `${r.runner}: framework ${fw.path} is malformed -- ` +
+            `Versions/Current does not exist (F-34.9-01)`
+        )
+      }
+      if (fw.versionsCurrentExists && !fw.versionsCurrentIsSymlink) {
+        failures.push(
+          `${r.runner}: framework ${fw.path} is malformed -- ` +
+            `Versions/Current exists but is not a symlink (F-34.9-01) -- ` +
+            `this is the exact dereferenced shape that made codesign reject ` +
+            `the bundle as ambiguous`
+        )
+      }
+      if (fw.versionsCurrentIsSymlink && !fw.resolvedVersionDirExists) {
+        failures.push(
+          `${r.runner}: framework ${fw.path} is malformed -- ` +
+            `Versions/Current symlink target "${fw.versionsCurrentTarget}" ` +
+            `does not resolve to an existing Versions/ directory (F-34.9-01)`
+        )
+      }
+      if (fw.topLevelStubExists && !fw.topLevelStubIsSymlink) {
+        failures.push(
+          `${r.runner}: framework ${fw.path} is malformed -- top-level stub ` +
+            `"${fw.name.replace(/\.framework$/, '')}" is a real file, not a ` +
+            `symlink into Versions/Current (F-34.9-01)`
+        )
+      }
+    }
   }
 
   return { ok: failures.length === 0, failures }
@@ -341,6 +503,17 @@ function printTable(results: RunnerInspection[]): void {
   for (const r of results) {
     for (const m of r.machoFiles) {
       console.log(`  ${r.runner}: ${m.path} -> ${m.signature}`)
+    }
+  }
+  console.log('')
+  console.log('Frameworks (structural integrity ENFORCED, F-34.9-01):')
+  for (const r of results) {
+    for (const fw of r.frameworks) {
+      console.log(
+        `  ${r.runner}: ${fw.name} Versions/Current symlink=` +
+          `${fw.versionsCurrentIsSymlink} target=` +
+          `${fw.versionsCurrentTarget ?? 'n/a'} codesign=${fw.codesignDisplay}`
+      )
     }
   }
 }
