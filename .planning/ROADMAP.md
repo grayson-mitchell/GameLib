@@ -2389,6 +2389,21 @@ Plans:
 - [x] 34.9-10-PLAN.md — Author the blocking live-gate contract + Structural Reachability Review (wave 6)
 - [x] 34.9-11-PLAN.md — Run the gate on hardware; reconcile REQUIREMENTS.md and this ROADMAP entry (wave 7) — **RAN 2026-08-11, verdict FAIL 4/5**; REQ-34.9-01..11 backfilled, ROADMAP ~95x claim retired
 
+**Gap cycle 1 — planned 2026-08-11 at `/gsd-plan-phase 34.9 --gaps`.** Closes the live gate's FAIL.
+Scope fenced by user decision at that run: REQ-34.9-02/03/04 (x64 CI leg — blocked by
+`workflow_dispatch`'s default-branch constraint) and REQ-34.9-09 (cold ratio — warm 26.6–33x stands)
+are **descoped and recorded, not worked**; the two out-of-scope UI defects the gate found
+(`electronStub.showOpenDialog` swallowing every failure as a user-cancel, `PathSelectionBox`
+discarding typed input unless blurred) go to `deferred-items.md`. The phase closes on the **arm64
+leg only**.
+
+- [ ] 34.9-12-PLAN.md — Preserve each runner's `Python.framework` symlinks through vite's `publicDir`→`outDir` copy, via a `closeBundle` plugin in `electron.vite.config.ts` (wave 1) — closes **F-34.9-01**, corroborated by **F-34.9-03**'s payload returning to ~84M
+- [ ] 34.9-13-PLAN.md — `meta/verifyRunnerBundle.ts` **enforces** framework structural integrity against the built artifact — the check that would have caught F-34.9-01 while 4598 tests stayed green (wave 1)
+- [ ] 34.9-14-PLAN.md — Clear stale macOS `dist/` artifacts before every build so a failed build cannot read as success (wave 1) — closes **F-34.9-02**
+- [ ] 34.9-15-PLAN.md — Author `34.9-LIVE-GATE-RERUN.md` + its Structural Reachability Review; **forbidden from running any of it** (wave 2) — carries the absolute-path rule and **F-34.9-04**'s version-string non-discriminator
+- [ ] 34.9-16-PLAN.md — Run the re-run gate on hardware; sole writer of results (wave 3, `autonomous: false` — human operator on macOS arm64)
+- [ ] 34.9-17-PLAN.md — Record the descoped/deferred set; reconcile REQUIREMENTS.md, this ROADMAP entry and STATE.md to post-gap-cycle truth (wave 4)
+
 ### Phase 34.10: Navigation shell — horizontal card tabs replace the sidebar (INSERTED)
 
 **Goal:** Replace the left sidebar with a **two-tier navigation shell**. Tier 1 is a horizontal

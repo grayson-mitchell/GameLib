@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.9-05-PLAN.md (all three upstream PRs DECLINED 2026-08-11); only 34.9-11 remains — the blocking live gate, awaiting a human run on macOS hardware
-last_updated: "2026-08-11T00:00:00.000Z"
-last_activity: 2026-08-11
+stopped_at: Phase 34.9 gap cycle 1 PLANNED (34.9-12..17). The blocking live gate RAN 2026-08-11 and returned verdict FAIL 4/5 -- item 4 (Electron PACKAGED) failed: F-34.9-01, vite's copyDir dereferences each onedir runner's Python.framework symlinks, so codesign rejects the bundle as "format is ambiguous" and pnpm dist:mac aborts. No packaged macOS build can be produced. Phase does NOT close. Next: /gsd-execute-phase 34.9 (wave 3 needs a human operator on macOS arm64 hardware)
+last_updated: "2026-08-11T01:04:34.800Z"
+last_activity: 2026-08-11 -- Phase 34.9 planning complete
 progress:
   total_phases: 23
   completed_phases: 16
-  total_plans: 277
-  completed_plans: 264
+  total_plans: 283
+  completed_plans: 265
   percent: 70
 ---
 
