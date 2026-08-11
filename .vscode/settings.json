@@ -3,5 +3,6 @@
   "prettier.configPath": "${fileDirname}/../.prettierrc.json",
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "files.insertFinalNewline": true
+  "files.insertFinalNewline": true,
+  "gsdPhaseStatus.plannedMarkers": ["*PLAN.md"]
 }

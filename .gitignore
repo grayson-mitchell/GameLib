@@ -55,3 +55,14 @@ native/steam-bridge/generated/*.dll
 # come back.
 graphify-out/
 .planning/graphs/
+
+# Local scratch working directory. Holds ad-hoc analysis files AND raw archived
+# `gamelib-*.log` captures, which carry nile's plaintext PKCE material
+# (`client_id`/`code_verifier`/`serial`) written by nile/user.ts:62. Ignored so
+# that material can never be staged -- a prior session committed it once and
+# had to amend it out.
+scratchpad/
+
+# Steam Spacewar (480) test AppID dropped next to the binary by the Steam
+# bridge during local dev. Never part of a build.
+steam_appid.txt
