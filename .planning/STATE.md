@@ -4,8 +4,8 @@ milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
 stopped_at: Phase 34.5 gap cycle 6 PLANNED 2026-08-11 -- plans 34.5-43..51 (9 plans, 4 waves), plan-checker VERIFICATION PASSED after one revision round. Scope fence in 34.5-CYCLE6-ROUTING.md from four operator decisions: D-CYCLE6-A Epic gate item DESCOPED to Phase 34.7 (gate 4 has FOUR items, not five); D-CYCLE6-B all four defect clusters in scope; D-CYCLE6-C the FULL preload-surface audit runs; D-CYCLE6-D the cycle ends by authoring AND running gate 4. Biggest planning finding: U-34.5-14's "extent UNKNOWN" is ANSWERED -- the preload surface is 217 channels against 205 listed-and-exposed, so 12 are unlisted in IPC-PORT-INVENTORY.md (not 1), and 4 of them (runWineCommandForGame, moveInstall, importGame, oauthCaptureLogin) are recorded as security findings rather than bucket rows. This is a Phase 35 precondition. Next: /gsd-execute-phase 34.5 -- plan 34.5-51 is autonomous:false and needs a human on real macOS hardware with GAMELIB_DEV_SECRET_VAULT UNSET.
-last_updated: "2026-08-11T06:58:35.682Z"
-last_activity: 2026-08-11 -- Phase 34.5 planning complete
+last_updated: "2026-08-11T07:05:00.000Z"
+last_activity: 2026-08-11 -- Phase 34.5 gap cycle 6 execution started (plans 34.5-43..51)
 progress:
   total_phases: 23
   completed_phases: 16
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.9 — macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co
+**Current focus:** Phase 34.5 — tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc (gap cycle 6, plans 34.5-43..51)
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -478,7 +478,14 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **CLOSED 2026-08-11,
+Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — **EXECUTING gap cycle 6**
+Plan: 0 of 9 gap-cycle-6 plans (34.5-43..51, 4 waves) complete — execution started 2026-08-11.
+Plans 34.5-29/30/31 are SUPERSEDED (see `34.5-CYCLE5-ROUTING.md` § Disposition) and will never
+receive SUMMARY.md files; they are not part of this run. Plan 34.5-51 is `autonomous: false` and
+requires a human on real macOS hardware with `GAMELIB_DEV_SECRET_VAULT` UNSET.
+Status: Executing Phase 34.5 gap cycle 6
+
+Prior phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **CLOSED 2026-08-11,
 arm64 leg only**
 Plan: 34.9-17 of gap cycle 1 (34.9-12..17) complete 2026-08-11 — the final gap-cycle plan. Wrote
 `deferred-items.md` (the phase-level ledger): 4 sections, 10 dated `OWNER:` entries covering the 6
