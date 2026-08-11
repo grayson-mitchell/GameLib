@@ -291,3 +291,43 @@ one while the other is public changes nothing about what is findable. The publis
 the SteamID64 in those 37 published files — that is expected and must NOT be re-raised as a new
 finding or spent another cycle on. Anything genuinely new (a token, cookie, session id, OAuth code,
 or a NEW unredacted account id in an unpublished file) is still in scope and still blocks.
+
+## Found during gap cycle 6 (plan 34.5-50) — the fourth blocking-gate contract's authoring
+
+### 24. D-CYCLE6-A — Epic login is DESCOPED from Phase 34.5's blocking gate; Phase 34.7 is the OWNER
+
+Recorded per `34.5-CYCLE6-ROUTING.md` § D-CYCLE6-A, at the authoring of the fourth blocking live
+gate (`34.5-LIVE-GATE-RERUN-3.md`), so the descope is on record in a place a future reader will
+find before citing the gate's own item count as an oversight.
+
+**What is descoped, and to whom.** Gate item 1 (Epic login completed from scratch, populated
+library) is **DESCOPED** from Phase 34.5's blocking live gate. **Phase 34.7 is the OWNER** — the
+phase that builds Epic's replacement login path. The blocker mechanism, named precisely: the
+**operator decision of 2026-08-05**. No further time is ever spent on the Epic alt-login/403
+defect, ever, and Phase 34.7 **deletes the interactive Epic login outright**, making device-auth
+bootstrap the single Epic sign-in path.
+
+**Why this cannot be gated in 34.5 at all, stated so it is not re-litigated.** Gating 34.5's
+closure on a login path that Phase 34.7 deletes can never be durably satisfied: a PASS on that item
+would certify code that is scheduled for removal, and a FAIL would block Phase 34.5 on work the
+2026-08-05 parking decision explicitly forbids spending further time on. Neither outcome is a
+coherent gate result, so the item is removed from the gate rather than carried as an unwinnable
+one.
+
+**What travels with the descope, and what does not.** UAT tests **11 (the Epic half), 12
+(`egsSync`) and 13 (legendary save sync)** travel with the descope to Phase 34.7. **Amazon's half
+of UAT test 11 stays in Phase 34.5**, as the fourth gate's item 2.
+
+**The descope retires nothing.** Two ledger rows already carry Epic's history, and neither is a
+retirement credit for this descope:
+- **`U-34.5-06`** (Epic's success path end to end) **RETIRED 2026-08-03** on its own named
+  observation: `runner=legendary status=captured` at 20:28:00, followed by `phase=idle` in the
+  same session (`34.5-UNTESTED-ITEMS.md`'s own cell for that row).
+- **`U-34.5-11`** (the OAuth-redirect-capture exfil mechanism) **RETIRED 2026-08-03 as SUBJECT
+  DELETED** (commit `da529ca86`) — its own row is explicit that this is not a pass, and the
+  mechanism was never once exercised in its entire lifetime.
+
+Neither row retired **by this descope** — both retired on their own dates, for their own reasons,
+before this descope was ever recorded. This descope is a scope decision at gate-authoring time,
+not a test result, and it must never be read as "Epic passed" or as adding to either row's own
+retirement credit.
