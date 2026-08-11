@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.5 gap cycle 6 PLANNED 2026-08-11 -- plans 34.5-43..51 (9 plans, 4 waves), plan-checker VERIFICATION PASSED after one revision round. Scope fence in 34.5-CYCLE6-ROUTING.md from four operator decisions: D-CYCLE6-A Epic gate item DESCOPED to Phase 34.7 (gate 4 has FOUR items, not five); D-CYCLE6-B all four defect clusters in scope; D-CYCLE6-C the FULL preload-surface audit runs; D-CYCLE6-D the cycle ends by authoring AND running gate 4. Biggest planning finding: U-34.5-14's "extent UNKNOWN" is ANSWERED -- the preload surface is 217 channels against 205 listed-and-exposed, so 12 are unlisted in IPC-PORT-INVENTORY.md (not 1), and 4 of them (runWineCommandForGame, moveInstall, importGame, oauthCaptureLogin) are recorded as security findings rather than bucket rows. This is a Phase 35 precondition. Next: /gsd-execute-phase 34.5 -- plan 34.5-51 is autonomous:false and needs a human on real macOS hardware with GAMELIB_DEV_SECRET_VAULT UNSET.
-last_updated: "2026-08-11T07:05:00.000Z"
-last_activity: 2026-08-11 -- Phase 34.5 gap cycle 6 execution started (plans 34.5-43..51)
+stopped_at: "Completed 34.5-43-PLAN.md (getInstallInfo ported to sidecar, F-34.5-G6-10; inventory/gate reconciled to 39+3+16=58). 1 of 9 gap-cycle-6 plans complete. Next: plan 34.5-44."
+last_updated: "2026-08-11T07:29:36.190Z"
+last_activity: 2026-08-11 -- Phase 34.5 gap cycle 6, plan 34.5-43 executed (3 tasks, 4 commits)
 progress:
   total_phases: 23
   completed_phases: 16
   total_plans: 292
-  completed_plans: 271
+  completed_plans: 272
   percent: 93
 ---
 
@@ -479,11 +479,11 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — **EXECUTING gap cycle 6**
-Plan: 0 of 9 gap-cycle-6 plans (34.5-43..51, 4 waves) complete — execution started 2026-08-11.
+Plan: 1 of 9 gap-cycle-6 plans (34.5-43..51, 4 waves) complete — execution started 2026-08-11.
 Plans 34.5-29/30/31 are SUPERSEDED (see `34.5-CYCLE5-ROUTING.md` § Disposition) and will never
 receive SUMMARY.md files; they are not part of this run. Plan 34.5-51 is `autonomous: false` and
 requires a human on real macOS hardware with `GAMELIB_DEV_SECRET_VAULT` UNSET.
-Status: Executing Phase 34.5 gap cycle 6
+Status: Executing Phase 34.5 gap cycle 6 (1 of 9 plans complete)
 
 Prior phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **CLOSED 2026-08-11,
 arm64 leg only**
@@ -2792,7 +2792,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[██████████] 95%
+trusted blindly. The recurring `**Progress:**[█████████░] 93%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 
@@ -3196,7 +3196,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-10
+Last activity: 2026-08-11
   cancels instead of erroring
   (pre-existing external-state reachability) and Test 7 (UI-level reachability, distinct from
   backend-logic reachability) to live-gate-contract-authoring.md's Structural Reachability Review,
@@ -3934,6 +3934,7 @@ Closed/parked native-install phases:
 | Phase 34.9 P08 | 50min | 2 tasks | 3 files |
 | Phase 34.9 P09 | 70min | 2 tasks | 2 files |
 | Phase 34.9 P10 | 90min | 2 tasks | 1 files |
+| Phase 34.5 P43 | 55min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -4489,6 +4490,9 @@ Recent decisions affecting current work:
 - [Phase 34.9-13]: REQ-34.9-08's checkbox stays unticked -- this plan contributes automated coverage but the requirement's own pass bar is 34.9-16's live-gate re-run PASSing, per plan 34.9-12's own established precedent for the same requirement
 - [Phase 34.9-14]: `meta/` CLI scripts must default any path off `process.cwd()`/a repo-root-relative literal, never `__dirname` -- `__dirname` resolves to `.` when a script runs via `esbuild --bundle ... | node -` (stdin), a trap `meta/genI18nGateScope.ts` already documented and this plan hit live: the first `pnpm clean:dist-mac` run against the real `dist/` silently computed `../dist`, found nothing, and reported success (`kept 0 non-macOS entries`) while removing zero of the six real stale entries -- fixed to a cwd-relative `'dist'` literal, re-verified live
 - [Phase 34.9-14]: `cleanDistMac`'s selection is a positive allow-list (`-macOS-` token, `latest-mac.yml`, `/^mac(-.+)?$/` staging dirs), never a deny-list, so a future non-macOS artifact type landing in `dist/` is safe by default without needing an explicit exclusion
+- [Phase 34.5-43]: getInstallInfo's 4th/5th args are build-then-branch; ipc.ts's declared parameter NAMES (not the call sites) were wrong and were corrected as a rename only
+- [Phase 34.5-43]: Electron-reach baseline re-measured via a temporary out-of-tree script using git show (never touching the working tree) -- confirmed unchanged (35 modules / 228 visited, before and after)
+- [Phase 34.5-43]: ported-channels-gate.py extended with a 10th check independent of IPC-PORT-INVENTORY.md's own prose warning, so getInstallInfo's F-34.5-G6-10 provenance survives future prose edits
 
 ### Pending Todos
 
@@ -4633,8 +4637,8 @@ Recent decisions affecting current work:
 > `state.update-progress`'s own JSON return reported `92`, itself one under the correct `91` for
 > `253/277`) -- hand-corrected to `completed_plans: 253`, `percent: 91`.
 
-Last session: 2026-08-10T11:03:51.578Z
-Stopped at: Completed 34.9-10-PLAN.md (authored 34.9-LIVE-GATE.md, verdict null, not run)
+Last session: 2026-08-11T07:29:36.173Z
+Stopped at: Completed 34.5-43-PLAN.md (getInstallInfo ported to sidecar, F-34.5-G6-10; inventory/gate reconciled to 39+3+16=58). 1 of 9 gap-cycle-6 plans complete. Next: plan 34.5-44.
 digest-verified darwin onedir sourcing (REQ-34.9-03/04/05). Task 1 added
 `downloadOnedirAsset(binaryName, arch)`: fetches legendary/gogdl/nile's macOS archives from
 the grayson-mitchell/GameLib `runners-onedir-macos` rolling release, sha256-verifies against
