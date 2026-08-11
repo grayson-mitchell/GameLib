@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.9-14-PLAN.md (gap cycle 1, closes F-34.9-02 -- meta/cleanDistMac.ts + pnpm clean:dist-mac now run FIRST in dist:mac/release:mac, removing every macOS-identifiable dist/ entry before electron-builder runs so a failed build can no longer be mistaken for a successful one; live-verified against the real dist/, which had carried three-week-old stale artifacts since 2026-07-21). Phase 34.9 does NOT close yet -- gap cycle 1 continues with 34.9-15..17. Next: /gsd-execute-phase 34.9
-last_updated: "2026-08-11T01:57:00Z"
-last_activity: 2026-08-11 -- Phase 34.9 gap cycle 1, plan 14 complete
+stopped_at: Completed 34.9-15-PLAN.md (authored 34.9-LIVE-GATE-RERUN.md -- an unrun re-run contract for REQ-34.9-11's blocking live gate; verdict PENDING, run_date null, both Observed: fields unfilled. Re-scores item 4/Electron-PACKAGED and item 1/Tauri-DEV as the two scored items, carries items 2/3/5 forward with a written conditional non-invalidation argument, and builds F-34.9-01/02/04 into its pass criteria. 34.9-LIVE-GATE.md's FAIL record is untouched. Phase 34.9 does NOT close yet -- gap cycle 1 continues with 34.9-16 (the human-operated run) and 34.9-17. Next: /gsd-execute-phase 34.9)
+last_updated: "2026-08-11T02:14:18.151Z"
+last_activity: 2026-08-11 -- Phase 34.9 gap cycle 1, plan 15 complete
 progress:
   total_phases: 23
   completed_phases: 16
   total_plans: 283
-  completed_plans: 268
+  completed_plans: 269
   percent: 95
 ---
 
@@ -479,7 +479,26 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — EXECUTING, gap cycle 1
-Plan: 34.9-14 of gap cycle 1 (34.9-12..17) complete 2026-08-11 — closes F-34.9-02. A failed
+Plan: 34.9-15 of gap cycle 1 (34.9-12..17) complete 2026-08-11 — authored `34.9-LIVE-GATE-RERUN.md`,
+an UNRUN re-run contract for REQ-34.9-11's blocking live gate (`verdict: PENDING`, `run_date:
+null`, both `Observed:` fields unfilled). Re-scores item 4 (Electron PACKAGED, the FAIL run's own
+failure) and item 1 (Tauri DEV nested resolution, kept as a regression canary since 34.9-12 edits
+`electron.vite.config.ts`, which `pnpm tauri:dev` also runs) as the two scored items; carries items
+2 (Amazon/nile), 3 (GOG/gogdl) and 5 (`altNileBin` override) forward with a written, EXPLICITLY
+CONDITIONAL non-invalidation argument — any DEV-side regression in the re-run item 1 requires
+2/3/5 to be re-run too before the phase can close. Scored item 2 (Electron PACKAGED) carries 8
+numbered on-disk-shape criteria (never a command's self-report): `BUILD_START` mtime newness
+(F-34.9-02), exactly 12 restored symlinks, `codesign -dv` against the FRAMEWORK BUNDLE (not the
+inner binary — the FAIL run's own false-comfort miss) asserting zero `bundle format is ambiguous`
+occurrences, `pnpm verify:runner-bundle` exit 0, a `du -sk` payload cross-check, and a repeat of
+item 1's two-sink check against the packaged app. `34.9-LIVE-GATE.md`'s FAIL record is untouched
+(`git status --porcelain` empty for it, both commits). Structural Reachability Review (all seven
+tests) covers both scored items, 3 preconditions, and the evidence-capture instruction; Test 5
+pairwise pass considered 11 pairs, flagged 2 (both already resolved in-document). Authored by a
+plan FORBIDDEN from running any item — no `pnpm tauri:dev`/`dist:mac`/`verify:runner-bundle`
+invocation, no result field written, exactly one file touched per commit (2 commits, one per plan
+task). See 34.9-15-SUMMARY.md. Next: 34.9-16 (the human-operated run this contract exists for).
+(Prior, now superseded: 34.9-14 of gap cycle 1 (34.9-12..17) complete 2026-08-11 — closes F-34.9-02. A failed
 `pnpm dist:mac` was leaving stale distributable artifacts in `dist/` (only `dist/mac-arm64/` was
 cleared per build) so a total build failure could still answer "yes" to "did it produce a dmg?"
 from a three-week-old pre-34.9 artifact, nearly masking F-34.9-01 during the 2026-08-11 gate run.
