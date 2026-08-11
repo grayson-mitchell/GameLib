@@ -144,6 +144,54 @@ function tokenResolvesInEveryTheme(token: string): boolean {
 }
 
 describe('App shell layout (F-34.10-03 seam recipe, F-34.10-06 scroll relocation)', () => {
+  it('REQ-34.10-01: .App grid-template-areas is exactly offline/navbar/tier2 content/tier2 controller', () => {
+    // The requirement text names these four area rows verbatim
+    // ('offline offline' / 'navbar navbar' / 'tier2 content' /
+    // 'tier2 controller') -- nothing before this gate pinned the grid shape
+    // itself, only .App's height/overflow and the F-10 selector prohibition.
+    const appBlock = extractBlock(readStripped(APP_CSS), /^\.App\s*\{/m)
+    expect(appBlock).not.toBeNull()
+    expect(appBlock).toMatch(
+      /grid-template-areas:\s*'offline offline'\s*'navbar navbar'\s*'tier2 content'\s*'tier2 controller'\s*;/
+    )
+  })
+
+  it('SANITY: the grid-template-areas check above fails against a known-bad input (the retired sidebar shape) -- proves it is not vacuously true', () => {
+    const retiredSidebarShape = `
+      grid-template-areas:
+        'offline offline'
+        'sidebar content'
+        'sidebar controller';
+    `
+    expect(retiredSidebarShape).not.toMatch(
+      /grid-template-areas:\s*'offline offline'\s*'navbar navbar'\s*'tier2 content'\s*'tier2 controller'\s*;/
+    )
+  })
+
+  it('REQ-34.10-07: the frameless navbar reserves trailing space via var(--overlay-controls-width), so WindowControls never overlaps it', () => {
+    // D-05: mirrors the hack deleted from Header/index.css -- the navbar's
+    // own trailing padding must consume the SAME custom property so
+    // WindowControls (grid-area: content; justify-self: right) never draws
+    // over the nav-right cluster (Downloads ring / wordmark).
+    const framelessNavbarBlock = extractBlock(
+      readStripped(NAVSHELL_SCSS),
+      /^\.frameless:not\(\.fullscreen\)\s+\.NavShell__navbar\s*\{/m
+    )
+    expect(framelessNavbarBlock).not.toBeNull()
+    expect(framelessNavbarBlock).toMatch(
+      /padding-inline-end:[\s\S]*var\(--overlay-controls-width\)/
+    )
+  })
+
+  it('SANITY: the trailing-reserve check above fails against a known-bad input (a literal px reserve with no token) -- proves it is not vacuously true', () => {
+    const literalOnlyReserve = `
+      padding-inline-end: 10px;
+    `
+    expect(literalOnlyReserve).not.toMatch(
+      /padding-inline-end:[\s\S]*var\(--overlay-controls-width\)/
+    )
+  })
+
   it('F-34.10-03 navbar half: .NavShell__navbar declares border-bottom: 1px solid var(--body-background)', () => {
     // CORRECTED post-review: the original declaration used `var(--divider)`,
     // a no-fallback custom property defined in only 2 of 11 real theme
