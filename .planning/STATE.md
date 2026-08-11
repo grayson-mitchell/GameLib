@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.9-13-PLAN.md (gap cycle 1, closes the automated-coverage gap that let F-34.9-01 reach a live gate -- meta/verifyRunnerBundle.ts now enforces framework structural integrity (Versions/Current existence/symlink-ness/resolvability, top-level stub shape), mutation-proven live three ways against a `cp -RL`-dereferenced fixture; REQ-34.9-08 checkbox stays unticked per 34.9-12's own precedent, pending 34.9-16's gate re-run). Phase 34.9 does NOT close yet -- gap cycle 1 continues with 34.9-14..17. Next: /gsd-execute-phase 34.9
-last_updated: "2026-08-11T01:45:41Z"
-last_activity: 2026-08-11 -- Phase 34.9 gap cycle 1, plan 13 complete
+stopped_at: Completed 34.9-14-PLAN.md (gap cycle 1, closes F-34.9-02 -- meta/cleanDistMac.ts + pnpm clean:dist-mac now run FIRST in dist:mac/release:mac, removing every macOS-identifiable dist/ entry before electron-builder runs so a failed build can no longer be mistaken for a successful one; live-verified against the real dist/, which had carried three-week-old stale artifacts since 2026-07-21). Phase 34.9 does NOT close yet -- gap cycle 1 continues with 34.9-15..17. Next: /gsd-execute-phase 34.9
+last_updated: "2026-08-11T01:57:00Z"
+last_activity: 2026-08-11 -- Phase 34.9 gap cycle 1, plan 14 complete
 progress:
   total_phases: 23
   completed_phases: 16
   total_plans: 283
-  completed_plans: 267
-  percent: 94
+  completed_plans: 268
+  percent: 95
 ---
 
 # Project State
@@ -479,29 +479,34 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — EXECUTING, gap cycle 1
-Plan: 34.9-13 of gap cycle 1 (34.9-12..17) complete 2026-08-11 — closes the automated-coverage gap
-that let F-34.9-01 reach a live gate before a green 4598-test suite ever caught it. Extended
-`meta/verifyRunnerBundle.ts` (plan 34.9-08) with `FrameworkInspection`: `findFrameworks()`/
-`inspectFramework()` enforce four independent structural conditions on every `*.framework` bundle
-(Versions/Current existence/symlink-ness/resolvability, top-level stub shape), each credential-free
-and distinct from the pre-existing signature-IDENTITY reporting, which stays data-only exactly as
-34.9-08 established. All three plan-mandated mutations applied live, confirmed RED, reverted,
-reconfirmed GREEN — including two test-integrity bugs found and fixed live during the mutation step
-itself (a whole-framework `cp -RL` fixture made mutation (a) vacuous by also tripping condition (d);
-no reachable duplicate framework made the symlink-walk claim untestable until one was planted).
-Empirical `codesign` determination performed as the plan required: on this machine, `-dv`/`--sign`
-against a dereferenced framework emit "bundle format unrecognized, invalid, or unsuitable", not the
-CI runner's exact "bundle format is ambiguous" string — no fifth condition added, per the plan's own
-contingency; enforcement relies on the four structural conditions alone. `npm run test:ci`:
-237/237 suites, 4629/4629 (4628 passed, 1 pre-existing skip). REQ-34.9-08's checkbox stays unticked
-(pass bar is 34.9-16's live-gate re-run, per 34.9-12's own precedent — this plan contributes
-automated coverage, not the requirement's own close). See 34.9-13-SUMMARY.md. Next: 34.9-14 (gap
-cycle 1 continues). (Prior, now superseded: 34.9-12 closed F-34.9-01's mechanism —
-`preserveRunnerSymlinksPlugin` restores onedir runner symlinks after vite's copyDir, live-proven,
-exact prior-failing codesign invocation now exits 0 — see 34.9-12-SUMMARY.md. 01, 02, 03, 04,
-06 done — 06 depended only on 01/04 and ran out of order per wave scheduling; 34.9-06 extended
-meta/downloadHelperBinaries.ts with digest-verified darwin onedir sourcing from the GameLib
-rolling release, plus its first-ever test coverage — see 34.9-06-SUMMARY.md.)
+Plan: 34.9-14 of gap cycle 1 (34.9-12..17) complete 2026-08-11 — closes F-34.9-02. A failed
+`pnpm dist:mac` was leaving stale distributable artifacts in `dist/` (only `dist/mac-arm64/` was
+cleared per build) so a total build failure could still answer "yes" to "did it produce a dmg?"
+from a three-week-old pre-34.9 artifact, nearly masking F-34.9-01 during the 2026-08-11 gate run.
+`meta/cleanDistMac.ts` exports `macArtifactEntries`/`cleanDistMac`/`main`: a positive allow-list
+(`-macOS-` token, `latest-mac.yml`, `/^mac(-.+)?$/` staging dirs) removes every macOS-identifiable
+`dist/` entry, containment-checked before each `rmSync` (T-34.9G-09) and symlink-safe (unlinks,
+never follows, T-34.9G-11). `pnpm clean:dist-mac` now runs FIRST in both `dist:mac` and
+`release:mac`. 11 fixture tests incl. the non-macOS survival guard (all five foreign entries named
+individually), a symlink-outside-`distDir` case, a `js-yaml`-parsed `electron-builder.yml`
+`artifactName` pin, and a `package.json` ordering pin; all three plan-mandated mutations applied
+live, confirmed RED, reverted, reconfirmed GREEN. Live-ran `pnpm clean:dist-mac` against the real
+`dist/`: removed the four 2026-07-21 stale macOS artifacts, `latest-mac.yml`, and the partial
+`mac-arm64/` tree abandoned mid-signing on 2026-08-11; `builder-debug.yml` survives. Deviation
+(Rule 1 - bug, found live): `main()`'s default `distDir` used `__dirname`, which resolves to `.`
+(process.cwd()) under the `| node -` stdin invocation, not `meta/` — the exact trap
+`meta/genI18nGateScope.ts` already documents; the first live run silently pointed at `../dist` and
+reported success while removing nothing. Fixed to a cwd-relative `'dist'` literal. `npm run
+test:ci`: 238/238 suites, 4639/4640 (1 pre-existing skip). See 34.9-14-SUMMARY.md. Next: 34.9-15
+(gap cycle 1 continues). (Prior, now superseded: 34.9-13 closed the automated-coverage gap that let
+F-34.9-01 reach a live gate — `meta/verifyRunnerBundle.ts` now enforces framework structural
+integrity, mutation-proven live three ways; REQ-34.9-08 checkbox stays unticked per 34.9-12's own
+precedent, pending 34.9-16's gate re-run — see 34.9-13-SUMMARY.md. 34.9-12 closed F-34.9-01's
+mechanism — `preserveRunnerSymlinksPlugin` restores onedir runner symlinks after vite's copyDir,
+live-proven, exact prior-failing codesign invocation now exits 0 — see 34.9-12-SUMMARY.md. 01, 02,
+03, 04, 06 done — 06 depended only on 01/04 and ran out of order per wave scheduling; 34.9-06
+extended meta/downloadHelperBinaries.ts with digest-verified darwin onedir sourcing from the
+GameLib rolling release, plus its first-ever test coverage — see 34.9-06-SUMMARY.md.)
 
 Prior phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — **COMPLETE
 2026-08-09**, 27 of 27 plans executed, verification passed 9/9.
@@ -4406,6 +4411,8 @@ Recent decisions affecting current work:
 - [Phase 34.9-13]: No fifth codesignDisplay-matching enforced condition added -- empirically, `codesign -dv`/`--sign` against a `cp -RL`-dereferenced framework on this machine emit "bundle format unrecognized, invalid, or unsuitable", not the CI runner's exact "bundle format is ambiguous" string from 34.9-LIVE-GATE.md item 4; per the plan's explicit contingency, enforcement relies on the four structural conditions (Versions/Current existence/symlink-ness/resolvability, top-level stub shape) alone
 - [Phase 34.9-13]: The dereferenced test fixture mutates ONLY the Versions/Current entry via `cp -RL` (not the whole framework directory) -- a whole-framework dereference also breaks the top-level stub symlink, letting a different enforced condition catch the malformation even with the target condition's enforcement deleted, which made mutation (a) pass vacuously on first attempt; discovered live during the plan's own mandated mutation-testing step
 - [Phase 34.9-13]: REQ-34.9-08's checkbox stays unticked -- this plan contributes automated coverage but the requirement's own pass bar is 34.9-16's live-gate re-run PASSing, per plan 34.9-12's own established precedent for the same requirement
+- [Phase 34.9-14]: `meta/` CLI scripts must default any path off `process.cwd()`/a repo-root-relative literal, never `__dirname` -- `__dirname` resolves to `.` when a script runs via `esbuild --bundle ... | node -` (stdin), a trap `meta/genI18nGateScope.ts` already documented and this plan hit live: the first `pnpm clean:dist-mac` run against the real `dist/` silently computed `../dist`, found nothing, and reported success (`kept 0 non-macOS entries`) while removing zero of the six real stale entries -- fixed to a cwd-relative `'dist'` literal, re-verified live
+- [Phase 34.9-14]: `cleanDistMac`'s selection is a positive allow-list (`-macOS-` token, `latest-mac.yml`, `/^mac(-.+)?$/` staging dirs), never a deny-list, so a future non-macOS artifact type landing in `dist/` is safe by default without needing an explicit exclusion
 
 ### Pending Todos
 
