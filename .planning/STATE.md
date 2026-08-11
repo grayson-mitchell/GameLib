@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.5-43-PLAN.md (getInstallInfo ported to sidecar, F-34.5-G6-10; inventory/gate reconciled to 39+3+16=58). 1 of 9 gap-cycle-6 plans complete. Next: plan 34.5-44."
-last_updated: "2026-08-11T07:29:36.190Z"
-last_activity: 2026-08-11 -- Phase 34.5 gap cycle 6, plan 34.5-43 executed (3 tasks, 4 commits)
+stopped_at: "Completed 34.5-44-PLAN.md (single-instance guard + deep-link delivery, F-34.5-G6-09; U-34.5-16 retired). 2 of 9 gap-cycle-6 plans complete. Next: plan 34.5-45."
+last_updated: "2026-08-11T20:10:00.000Z"
+last_activity: 2026-08-11 -- Phase 34.5 gap cycle 6, plan 34.5-44 executed (4 tasks, 5 commits)
 progress:
   total_phases: 23
   completed_phases: 16
   total_plans: 292
-  completed_plans: 272
+  completed_plans: 273
   percent: 93
 ---
 
@@ -479,11 +479,11 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — **EXECUTING gap cycle 6**
-Plan: 1 of 9 gap-cycle-6 plans (34.5-43..51, 4 waves) complete — execution started 2026-08-11.
+Plan: 2 of 9 gap-cycle-6 plans (34.5-43..51, 4 waves) complete — execution started 2026-08-11.
 Plans 34.5-29/30/31 are SUPERSEDED (see `34.5-CYCLE5-ROUTING.md` § Disposition) and will never
 receive SUMMARY.md files; they are not part of this run. Plan 34.5-51 is `autonomous: false` and
 requires a human on real macOS hardware with `GAMELIB_DEV_SECRET_VAULT` UNSET.
-Status: Executing Phase 34.5 gap cycle 6 (1 of 9 plans complete)
+Status: Executing Phase 34.5 gap cycle 6 (2 of 9 plans complete)
 
 Prior phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **CLOSED 2026-08-11,
 arm64 leg only**
