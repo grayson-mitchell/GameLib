@@ -637,6 +637,24 @@ const IN_SCOPE_SUITES = [
  * dispatch under test (`handleLaunch`'s runner routing) has no `pathShim` surface. A
  * `readdirSync` recount at this plan's execution time puts the directory at 43
  * `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 39 below.
+ *
+ * `invokeReturnValueSweep.test.ts` (Phase 34.5 gap cycle 6, plan 34.5-45 Task 3) is classified as
+ * structurally contained: it declares NO `jest.mock(...)` of any kind. It reads the four
+ * `*FlowRegistration.ts` modules off disk via plain `fs.readFileSync` for static text analysis
+ * only -- it never imports, requires, or executes any of them, so there is no `electron`/
+ * `electron-store`/`pathShim` import chain to contain in the first place, the same "contained by
+ * construction, no per-suite opt-in required" floor `seamBranchParity.test.ts`/
+ * `appRootResolution.test.ts` already rely on. A `readdirSync` recount at this plan's execution
+ * time puts the directory at 44 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 40 below.
+ *
+ * `nativeImageShim.test.ts` (Phase 34.5 gap cycle 6, plan 34.5-45 Task 1) is classified as
+ * structurally contained: it declares NO `jest.mock(...)` of any kind. It imports only
+ * `../nativeImageShim` (a pure `sips`-backed module with no `electron`/`electron-store`/
+ * `pathShim` surface at all -- it shells out to `/usr/bin/sips` directly, never through
+ * `electronStub`) plus Node built-ins (`node:child_process`, `node:fs`, `node:os`, `node:path`)
+ * for its own fixture generation and dimension probing. No containment surface exists for this
+ * suite to opt into. A `readdirSync` recount at this plan's execution time puts the directory at
+ * 45 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 41 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -656,9 +674,11 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'humbleLoginFlows.test.ts',
   'humbleSecretStore.test.ts',
   'installFlows.test.ts',
+  'invokeReturnValueSweep.test.ts',
   'keyringTokenStore.test.ts',
   'lifecycleStub.test.ts',
   'loggerCallSiteGuard.test.ts',
+  'nativeImageShim.test.ts',
   'netStub.test.ts',
   'oauthLoginCapture.test.ts',
   'onlineMonitorWiring.test.ts',
