@@ -724,3 +724,109 @@ describe("addToSteam's GAMELIB_SHELL_EXE pin (T-34.5-39/40, invoke-kind counterp
     expect(contents).not.toContain(process.execPath)
   })
 })
+
+// ── Describe 7: F-34.5-G6-08 discriminator offline arm (plan 34.5-45, Task 2) ─────────────────
+//
+// Drives a REAL `{id, kind:'invoke', channel:'addToSteam', args:[...]}` frame through the REAL
+// `startRpcServer` loop (`sidecarRpc.ts`) -- the same harness shape `appShellFlows.test.ts` and
+// `skeletonFlows.test.ts` use -- and asserts on the PARSED STDOUT FRAME, not on the handler's own
+// return value (Describe 6's `SET` case already covers that, at the handler level, bypassing the
+// RPC envelope entirely). This is the H2/H3 discriminator: `frame.ok === true`, an OWN `result`
+// key present (`Object.prototype.hasOwnProperty`, not merely `frame.result === true` --
+// `JSON.stringify` OMITS a key whose value is `undefined`, so a dropped key and a `false` value
+// are different failures), and `frame.result === true`.
+describe('F-34.5-G6-08 discriminator — addToSteam over the REAL RPC frame path (offline H2/H3 arm)', () => {
+  let tmpDir: DirResult
+  let steamUserConfigDir: string
+  let savedShellExe: string | undefined
+
+  const EMPTY_SHORTCUTS_VDF = Buffer.from([
+    0, 115, 104, 111, 114, 116, 99, 117, 116, 115, 0, 8, 8
+  ])
+
+  beforeEach(() => {
+    tmpDir = dirSync({ unsafeCleanup: true })
+    steamUserConfigDir = join(tmpDir.name, 'userdata', 'steam_user', 'config')
+    mkdirSync(steamUserConfigDir, { recursive: true })
+    writeFileSync(join(steamUserConfigDir, 'shortcuts.vdf'), EMPTY_SHORTCUTS_VDF)
+
+    mockGlobalConfigGet.mockReturnValue({
+      getSettings: () => ({
+        defaultSteamPath: tmpDir.name,
+        addDesktopShortcuts: false,
+        addStartMenuShortcuts: true,
+        addSteamShortcuts: false
+      })
+    })
+    mockGetGame.mockReturnValue({
+      getGameInfo: () => makeGameInfo({ title: 'RPC Frame Discriminator Game' })
+    })
+
+    savedShellExe = process.env.GAMELIB_SHELL_EXE
+    process.env.GAMELIB_SHELL_EXE = '/Applications/GameLib.app/Contents/MacOS/GameLib'
+  })
+
+  afterEach(() => {
+    tmpDir.removeCallback()
+    if (savedShellExe === undefined) {
+      delete process.env.GAMELIB_SHELL_EXE
+    } else {
+      process.env.GAMELIB_SHELL_EXE = savedShellExe
+    }
+  })
+
+  it("the emitted stdout frame has ok:true, an OWN 'result' key, and result === true", async () => {
+    const { PassThrough } = await import('node:stream')
+    const { startRpcServer } = await import('../sidecarRpc')
+
+    const input = new PassThrough()
+    const output = new PassThrough()
+    const frames: Record<string, unknown>[] = []
+    let buffer = ''
+    output.on('data', (chunk: Buffer | string) => {
+      buffer += chunk.toString()
+      let newlineIndex = buffer.indexOf('\n')
+      while (newlineIndex !== -1) {
+        const line = buffer.slice(0, newlineIndex)
+        buffer = buffer.slice(newlineIndex + 1)
+        if (line.trim().length > 0) {
+          try {
+            frames.push(JSON.parse(line))
+          } catch {
+            // non-JSON diagnostic line, ignore
+          }
+        }
+        newlineIndex = buffer.indexOf('\n')
+      }
+    })
+
+    startRpcServer(input, output)
+
+    input.write(
+      `${JSON.stringify({
+        id: 'g6-08-frame-1',
+        kind: 'invoke',
+        channel: 'addToSteam',
+        args: ['RPC Frame Discriminator Game', 'legendary']
+      })}\n`
+    )
+    await flush()
+
+    const frame = frames.find((f) => f.id === 'g6-08-frame-1')
+    expect(frame).toBeDefined()
+    expect(frame?.ok).toBe(true)
+    // H2/H3 discriminator: an OWN key, not merely a truthy/matching value.
+    expect(Object.prototype.hasOwnProperty.call(frame, 'result')).toBe(true)
+    expect(frame?.result).toBe(true)
+  })
+
+  // Pins interfaces fact 2 (34.5-45-PLAN.md): the Rust leg's response branch can never deliver a
+  // genuine `undefined` -- the smallest value it can produce is `null` (Serde's
+  // `unwrap_or(Value::Null)`). A source-text assertion, so this floor cannot silently change
+  // without this test noticing.
+  it("main.rs's response branch still floors a missing result at Value::Null (source-text pin)", () => {
+    const mainRsPath = join(__dirname, '../../../../src-tauri/src/main.rs')
+    const source = readFileSync(mainRsPath, 'utf-8')
+    expect(source).toContain('unwrap_or(Value::Null)')
+  })
+})
