@@ -146,13 +146,6 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
   }
 
   if (phase === 'awaiting') {
-    // 34.5-47 DISCRIMINATOR — REMOVE. Probe 4: the render path of the "Signing in to <Runner>"
-    // surface. Distinguishes READING 3 (a SEPARATE Manage Accounts tile renders the stuck text)
-    // from READINGS 1/2 (this SAME TauriLoginPanel `awaiting` branch is what the operator saw) --
-    // located by the i18n key `webview.login.oauth.awaiting.heading`, not the English text.
-    window.api.logInfo(
-      `[34.5-47-discriminator] probe=4-awaiting-render runner=${runner ?? 'undefined'} t=${Date.now()}`
-    )
     const heading = t(
       'webview.login.oauth.awaiting.heading',
       runnerLabel ? `Signing in to ${runnerLabel}` : 'Signing in'

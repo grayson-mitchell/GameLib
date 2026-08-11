@@ -93,12 +93,6 @@ export default function WebView() {
   useEffect(() => {
     mountedRef.current = true
     return () => {
-      // 34.5-47 DISCRIMINATOR — REMOVE. Probe 3: timestamps a TRUE unmount so it can be
-      // ordered against probes 1/2 below -- distinguishes READING 2 (this fires BEFORE
-      // phase=idle) from READINGS 1/3 (this never fires, or fires AFTER).
-      window.api.logInfo(
-        `[34.5-47-discriminator] probe=3-mountedRef-cleanup runner=${runner ?? 'undefined'} t=${Date.now()}`
-      )
       mountedRef.current = false
     }
   }, [])
@@ -137,20 +131,9 @@ export default function WebView() {
    */
   const handleTauriOAuthSuccess = useCallback(
     (payload: OAuthLoginCompletionPayload) => {
-      // 34.5-47 DISCRIMINATOR — REMOVE. Probe 1: mountedRef.current's value BEFORE the branch --
-      // distinguishes READING 1 (false here, so navigation is skipped while the panel is still
-      // visibly mounted) from READINGS 2/3 (true here).
-      window.api.logInfo(
-        `[34.5-47-discriminator] probe=1-handleTauriOAuthSuccess-entry runner=${payload.runner} mountedRef=${mountedRef.current} t=${Date.now()}`
-      )
       completeOAuthLogin(payload)
       if (mountedRef.current) {
         navigate('/login')
-        // 34.5-47 DISCRIMINATOR — REMOVE. Probe 2: presence proves navigation RAN; its absence
-        // (relative to probe 1) proves the `if` branch was skipped -- the READING 1 signature.
-        window.api.logInfo(
-          `[34.5-47-discriminator] probe=2-navigate-fired runner=${payload.runner} t=${Date.now()}`
-        )
       }
     },
     [completeOAuthLogin, navigate]
