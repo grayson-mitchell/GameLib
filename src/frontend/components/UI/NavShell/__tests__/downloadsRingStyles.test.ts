@@ -46,6 +46,12 @@ function readGated(): string {
     .join('\n')
 }
 
+// Hoisted so the real prohibition below and its SANITY counter-check consume
+// the exact same detector -- a counter-check with its own re-typed copy of
+// the pattern would drift silently and prove nothing about the real gate.
+const DIVIDER_TOKEN_PATTERN = /--divider/
+const OPACITY_HALF_PATTERN = /opacity:\s*0\.5\s*;/
+
 describe('DownloadsRing stylesheet (F-34.10-02, REQ-34.10-08)', () => {
   const source = readGated()
 
@@ -55,7 +61,12 @@ describe('DownloadsRing stylesheet (F-34.10-02, REQ-34.10-08)', () => {
   })
 
   it('never references --divider', () => {
-    expect(source).not.toMatch(/--divider/)
+    expect(source).not.toMatch(DIVIDER_TOKEN_PATTERN)
+  })
+
+  it('SANITY: the --divider prohibition above fires against a known-bad input -- proves it is not vacuously true', () => {
+    const knownBad = '.DownloadsRing__track { border-color: var(--divider); }'
+    expect(knownBad).toMatch(DIVIDER_TOKEN_PATTERN)
   })
 
   it('shares the navbar-inactive/navbar-accent token chain between the ring track and the count badge, byte for byte', () => {
@@ -66,7 +77,12 @@ describe('DownloadsRing stylesheet (F-34.10-02, REQ-34.10-08)', () => {
 
   it('raises idle opacity to 0.65 and no longer declares 0.5', () => {
     expect(source).toMatch(/opacity:\s*0\.65/)
-    expect(source).not.toMatch(/opacity:\s*0\.5\s*;/)
+    expect(source).not.toMatch(OPACITY_HALF_PATTERN)
+  })
+
+  it('SANITY: the idle-opacity-0.5 prohibition above fires against a known-bad input -- proves it is not vacuously true', () => {
+    const knownBad = '.DownloadsRing__track { opacity: 0.5; }'
+    expect(knownBad).toMatch(OPACITY_HALF_PATTERN)
   })
 
   it('grows the ring to 16px in both dimensions', () => {

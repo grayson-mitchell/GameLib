@@ -21,6 +21,16 @@ import { join } from 'path'
 import type { ReactElement, ReactNode } from 'react'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
+// Hoisted so each real source-gate prohibition below and its SANITY
+// counter-check consume the exact same detector -- a counter-check with its
+// own re-typed copy of the pattern would drift silently and prove nothing
+// about the real gate.
+const GAMELIB_PREFIX_PATTERN = /gamelib:/
+const BARE_LABEL_PATTERN = /label=["']/
+const TIER2_ROW_TOKEN_PATTERN = /--navbar-active-background/
+const SEMIBOLD_TOKEN_PATTERN = /--semibold/
+const HEX_COLOUR_PATTERN = /#[0-9a-fA-F]{3,8}/
+
 type MockContextValue = {
   epic: { username?: string; library: unknown[] }
   gog: { username?: string; library: unknown[] }
@@ -261,7 +271,12 @@ describe('NavTabs', () => {
       'utf8'
     )
     expect((source.match(/nav\.tabs\.games/g) ?? []).length).toBe(1)
-    expect(source).not.toMatch(/gamelib:/)
+    expect(source).not.toMatch(GAMELIB_PREFIX_PATTERN)
+  })
+
+  it('SANITY: the gamelib: prefix prohibition above fires against a known-bad input -- proves it is not vacuously true', () => {
+    const knownBad = "t('gamelib:nav.tabs.games', 'Games')"
+    expect(knownBad).toMatch(GAMELIB_PREFIX_PATTERN)
   })
 
   it('every label= value is a t( call -- no bare string literal label prop', () => {
@@ -269,7 +284,12 @@ describe('NavTabs', () => {
       join(__dirname, '..', 'components', 'NavTabs', 'index.tsx'),
       'utf8'
     )
-    expect(source).not.toMatch(/label=["']/)
+    expect(source).not.toMatch(BARE_LABEL_PATTERN)
+  })
+
+  it('SANITY: the bare label= prohibition above fires against a known-bad input -- proves it is not vacuously true', () => {
+    const knownBad = '<Tab label="Games" value="games" />'
+    expect(knownBad).toMatch(BARE_LABEL_PATTERN)
   })
 })
 
@@ -300,17 +320,33 @@ describe('NavTabs stylesheet -- card/folder tab visuals (34.10-04 Task 2, D-04)'
     // the content surface, and coincides with --body-background in some
     // themes today -- which is exactly what would make picking it invisible
     // in midnightMirage and wrong everywhere else.
-    expect(source).not.toMatch(/--navbar-active-background/)
+    expect(source).not.toMatch(TIER2_ROW_TOKEN_PATTERN)
+  })
+
+  it('SANITY: the tier-2 row token prohibition above fires against a known-bad input -- proves it is not vacuously true', () => {
+    const knownBad =
+      '.Mui-selected { background: var(--navbar-active-background); }'
+    expect(knownBad).toMatch(TIER2_ROW_TOKEN_PATTERN)
   })
 
   it('uses only the two nav-wide weights -- no --semibold', () => {
     const source = readStripped()
-    expect(source).not.toMatch(/--semibold/)
+    expect(source).not.toMatch(SEMIBOLD_TOKEN_PATTERN)
+  })
+
+  it('SANITY: the --semibold prohibition above fires against a known-bad input -- proves it is not vacuously true', () => {
+    const knownBad = '.MuiTab-root { font-weight: var(--semibold); }'
+    expect(knownBad).toMatch(SEMIBOLD_TOKEN_PATTERN)
   })
 
   it('contains no hex colour literal for any tab state', () => {
     const source = readStripped()
-    expect(source).not.toMatch(/#[0-9a-fA-F]{3,8}/)
+    expect(source).not.toMatch(HEX_COLOUR_PATTERN)
+  })
+
+  it('SANITY: the hex-colour prohibition above fires against a known-bad input -- proves it is not vacuously true', () => {
+    const knownBad = '.Mui-selected { color: #ff0000; }'
+    expect(knownBad).toMatch(HEX_COLOUR_PATTERN)
   })
 
   it('keeps MUI-uppercased labels off -- text-transform: none is present', () => {
