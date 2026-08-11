@@ -479,26 +479,41 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — EXECUTING, gap cycle 1
-Plan: 34.9-15 of gap cycle 1 (34.9-12..17) complete 2026-08-11 — authored `34.9-LIVE-GATE-RERUN.md`,
-an UNRUN re-run contract for REQ-34.9-11's blocking live gate (`verdict: PENDING`, `run_date:
-null`, both `Observed:` fields unfilled). Re-scores item 4 (Electron PACKAGED, the FAIL run's own
-failure) and item 1 (Tauri DEV nested resolution, kept as a regression canary since 34.9-12 edits
-`electron.vite.config.ts`, which `pnpm tauri:dev` also runs) as the two scored items; carries items
-2 (Amazon/nile), 3 (GOG/gogdl) and 5 (`altNileBin` override) forward with a written, EXPLICITLY
-CONDITIONAL non-invalidation argument — any DEV-side regression in the re-run item 1 requires
-2/3/5 to be re-run too before the phase can close. Scored item 2 (Electron PACKAGED) carries 8
-numbered on-disk-shape criteria (never a command's self-report): `BUILD_START` mtime newness
-(F-34.9-02), exactly 12 restored symlinks, `codesign -dv` against the FRAMEWORK BUNDLE (not the
-inner binary — the FAIL run's own false-comfort miss) asserting zero `bundle format is ambiguous`
-occurrences, `pnpm verify:runner-bundle` exit 0, a `du -sk` payload cross-check, and a repeat of
-item 1's two-sink check against the packaged app. `34.9-LIVE-GATE.md`'s FAIL record is untouched
-(`git status --porcelain` empty for it, both commits). Structural Reachability Review (all seven
-tests) covers both scored items, 3 preconditions, and the evidence-capture instruction; Test 5
-pairwise pass considered 11 pairs, flagged 2 (both already resolved in-document). Authored by a
-plan FORBIDDEN from running any item — no `pnpm tauri:dev`/`dist:mac`/`verify:runner-bundle`
-invocation, no result field written, exactly one file touched per commit (2 commits, one per plan
-task). See 34.9-15-SUMMARY.md. Next: 34.9-16 (the human-operated run this contract exists for).
-(Prior, now superseded: 34.9-14 of gap cycle 1 (34.9-12..17) complete 2026-08-11 — closes F-34.9-02. A failed
+Plan: 34.9-16 of gap cycle 1 (34.9-12..17) complete 2026-08-11 — recorded the blocking live-gate
+re-run's verdict into `34.9-LIVE-GATE-RERUN.md` from the operator+orchestrator's already-performed,
+already-archived macOS arm64 hardware run (`/tmp/gamelib-gate-20260811T023738Z`). **Verdict: PASS,
+2/2 scored items.** Scored Item 1 (Tauri DEV nested resolution) PASS: all three runners resolved
+the nested onedir path in `gamelib.log`, real non-"Invalid" versions (`0.20.43`/`1.2.1`/`1.1.2 Will
+A. Zeppeli`) via the per-runner logs. Scored Item 2 (Electron PACKAGED, the original FAIL run's own
+failure) PASS on all 8 numbered on-disk-shape criteria, none accepted on a command's self-report:
+new dmg (198463448B)/zip (190691642B) at +117s/+120s after `BUILD_START`, exactly 12 restored
+symlinks, zero `bundle format is ambiguous` against all three framework bundles (`codesign -dv`),
+`pnpm verify:runner-bundle` exit 0, +0.02% payload delta (85260KB packaged vs 85244KB source,
+F-34.9-03 corroboration), and the packaged app's Settings page resolving all three runners under
+the packaged tree with zero "Invalid". Section 2's conditional did NOT trigger (no DEV-side
+regression), so carried-forward items 2/3/5 retain their 2026-08-11 PASS verdicts unchanged.
+Recorded honestly, not smoothed over: Launch 1 was driven before `$GATE_SESSION_DIR` existed, so
+its capture deviated from the contract's `tee -a` flow in FORM (no `terminal.log` coverage, no
+pre-launch `pgrep` zero-count) while its own designated evidence sinks (`gamelib.log` + per-runner
+logs) stayed intact and the item remained fully scorable. Also disambiguated two payload figures
+(83MB per-runner-sum vs 97M/94M whole-tree `du -sh`) that could otherwise read as a discrepancy.
+REQ-34.9-08 and REQ-34.9-11 ticked in REQUIREMENTS.md — both requirements' own stated pass bars
+("gate item 4 PASSing on a full re-run" / "the re-run's two scored items both PASSing") are now
+literally met; Tauri-packaged stays correctly recorded UNPROVEN (REQ-34.9-11's own text requires
+exactly that, not a proof). Pre-commit identifier audit: zero leaked values (only the pre-existing
+discipline text naming prohibited field names). See 34.9-16-SUMMARY.md. Next: 34.9-17 (final
+gap-cycle plan — records the descoped/deferred set and reconciles REQUIREMENTS/ROADMAP/STATE to
+post-gap-cycle truth so Phase 34.9 can close on the arm64 leg only).
+(Prior, now superseded: 34.9-15 of gap cycle 1 (34.9-12..17) complete 2026-08-11 — authored
+`34.9-LIVE-GATE-RERUN.md`, an UNRUN re-run contract for REQ-34.9-11's blocking live gate (`verdict:
+PENDING`, `run_date: null`, both `Observed:` fields unfilled). Re-scores item 4 (Electron PACKAGED,
+the FAIL run's own failure) and item 1 (Tauri DEV nested resolution, kept as a regression canary
+since 34.9-12 edits `electron.vite.config.ts`, which `pnpm tauri:dev` also runs) as the two scored
+items; carries items 2 (Amazon/nile), 3 (GOG/gogdl) and 5 (`altNileBin` override) forward with a
+written, EXPLICITLY CONDITIONAL non-invalidation argument. Authored by a plan FORBIDDEN from
+running any item — no `pnpm tauri:dev`/`dist:mac`/`verify:runner-bundle` invocation, no result
+field written, exactly one file touched per commit (2 commits, one per plan task). See
+34.9-15-SUMMARY.md. (Prior, now superseded: 34.9-14 of gap cycle 1 (34.9-12..17) complete 2026-08-11 — closes F-34.9-02. A failed
 `pnpm dist:mac` was leaving stale distributable artifacts in `dist/` (only `dist/mac-arm64/` was
 cleared per build) so a total build failure could still answer "yes" to "did it produce a dmg?"
 from a three-week-old pre-34.9 artifact, nearly masking F-34.9-01 during the 2026-08-11 gate run.
@@ -525,7 +540,7 @@ mechanism — `preserveRunnerSymlinksPlugin` restores onedir runner symlinks aft
 live-proven, exact prior-failing codesign invocation now exits 0 — see 34.9-12-SUMMARY.md. 01, 02,
 03, 04, 06 done — 06 depended only on 01/04 and ran out of order per wave scheduling; 34.9-06
 extended meta/downloadHelperBinaries.ts with digest-verified darwin onedir sourcing from the
-GameLib rolling release, plus its first-ever test coverage — see 34.9-06-SUMMARY.md.)
+GameLib rolling release, plus its first-ever test coverage — see 34.9-06-SUMMARY.md.))
 
 Prior phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — **COMPLETE
 2026-08-09**, 27 of 27 plans executed, verification passed 9/9.
