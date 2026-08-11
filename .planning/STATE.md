@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.5-46-PLAN.md (handleLaunch made runner-aware and fail-closed through libraryManagerMap, fixing the confused-deputy defect that sent every runner's launch to steam://rungameid; behavioural GOG-dispatch test added against production sidecar wiring; eb117d9e4 verdict settled with test-covered links + dated commit fact for the uninstall-tile-staleness symptom). 3 of 9 gap-cycle-6 plans complete (34.5-43, 34.5-44, 34.5-46; 34.5-45 same-wave, not yet summarized). Next: plan 34.5-47."
-last_updated: "2026-08-11T09:58:51.428Z"
+stopped_at: "Completed 34.5-47-PLAN.md (threaded a fixed-literal origin through all 9 remaining external refreshLibrary call sites, RED-proven source-text gate extended to all 15 sites plus a literal-only log-injection mitigation, and ran a live three-way discriminator for the Manage Accounts 'logging into gog' symptom that resolved as READING NONE / non-reproduction on current HEAD via a developer-driven live GOG login through a mid-plan checkpoint). 4 of 9 gap-cycle-6 plans complete (34.5-43, 34.5-44, 34.5-46, 34.5-47; 34.5-45 same-wave, not yet summarized). Next: plan 34.5-48."
+last_updated: "2026-08-11T10:30:24.498Z"
 last_activity: 2026-08-11
 progress:
   total_phases: 23
   completed_phases: 17
   total_plans: 292
-  completed_plans: 275
-  percent: 94
+  completed_plans: 276
+  percent: 95
 ---
 
 # Project State
@@ -479,7 +479,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — **EXECUTING gap cycle 6**
-Plan: 3 of 9 gap-cycle-6 plans (34.5-43..51, 4 waves) complete — execution started 2026-08-11.
+Plan: 4 of 9 gap-cycle-6 plans (34.5-43..51, 4 waves) complete — execution started 2026-08-11.
 Plans 34.5-29/30/31 are SUPERSEDED (see `34.5-CYCLE5-ROUTING.md` § Disposition) and will never
 receive SUMMARY.md files; they are not part of this run. Plan 34.5-51 is `autonomous: false` and
 requires a human on real macOS hardware with `GAMELIB_DEV_SECRET_VAULT` UNSET.
@@ -3936,6 +3936,7 @@ Closed/parked native-install phases:
 | Phase 34.9 P10 | 90min | 2 tasks | 1 files |
 | Phase 34.5 P43 | 55min | 3 tasks | 10 files |
 | Phase 34.5 P46 | 1h34m | 3 tasks | 5 files |
+| Phase 34.5 P47 | 21min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -4496,6 +4497,9 @@ Recent decisions affecting current work:
 - [Phase 34.5-43]: ported-channels-gate.py extended with a 10th check independent of IPC-PORT-INVENTORY.md's own prose warning, so getInstallInfo's F-34.5-G6-10 provenance survives future prose edits
 - [Phase 34.5]: Task 3 verifies the uninstall->renderer chain against the PRODUCTION installedGamesStore singleton, not a locally-constructed TypeCheckedStoreBackend, requiring the pre-existing generic 'store NAME not filename' test to be retargeted onto zoomInstalledGamesStore to avoid WR-08's duplicate-registration guard
 - [Phase 34.5]: eb117d9e4 (2026-08-03T01:24:43+12:00) post-dates the 00:33:24 UAT observation of the symptom it targets, so the original UAT observation is not evidence against the fix -- the no-restart tile-flip itself remains live-only and unproven (ledger row U-34.5-22, handed to plan 34.5-50)
+- [Phase ?]: frontend/types.ts's own local RefreshOptions type needed origin?: string too (Rule 3 blocking-issue fix)
+- [Phase ?]: Kept RefreshLibraryOptions['origin'] as a plain string in both copies -- union narrowing deferred to ledger row U-34.5-23 (file-ownership-collision fence)
+- [Phase ?]: Defect B (Manage Accounts 'logging into gog') recorded as READING NONE -- a live non-reproduction on current HEAD, not a retirement of U-34.5-07 or gate item 2
 
 ### Pending Todos
 
@@ -4640,8 +4644,8 @@ Recent decisions affecting current work:
 > `state.update-progress`'s own JSON return reported `92`, itself one under the correct `91` for
 > `253/277`) -- hand-corrected to `completed_plans: 253`, `percent: 91`.
 
-Last session: 2026-08-11T09:58:51.411Z
-Stopped at: Completed 34.5-46-PLAN.md -- handleLaunch made runner-aware and fail-closed through
+Last session: 2026-08-11T10:30:24.483Z
+Stopped at: Completed 34.5-47-PLAN.md
 `libraryManagerMap`, fixing the confused-deputy defect that sent every runner's launch to
 `steam://rungameid/<appName>` regardless of `runner` (live-observed for a GOG title). Task 1 rewrote
 `handleLaunch` to guard `runner` with the same own-property `hasOwnProperty.call(libraryManagerMap,
