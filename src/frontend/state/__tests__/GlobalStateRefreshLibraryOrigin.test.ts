@@ -28,6 +28,23 @@
  * Self-tested against synthetic merged/regressed sources per this project's
  * own anti-vacuity requirement — a source-text gate without a self-test is
  * a vacuous gate (the exact lesson Phase 34.2's gap cycles paid for).
+ *
+ * EXTENDED (plan 34.5-47, T-34.5-47-01): a third top-level describe below
+ * pins the nine PRODUCTION `refreshLibrary` call sites living OUTSIDE this
+ * file (Login, NavTabs, ActionIcons, ErrorComponent, RedeemSteamKeyDialog,
+ * ClearCache, EgsSettings, ConsoleMode, SideloadDialog) plus a literal-only
+ * security rule (`everyOriginIsAFixedStringLiteral`) applied to all nine of
+ * those sources concatenated with GlobalState.tsx's own. None of the nine
+ * host components can be imported under this project's `node`-environment
+ * frontend jest project either — several read `window.api`/`window.location`
+ * at module or render scope — so this is a source-text gate for the same
+ * documented reason as the two blocks above, not a stylistic choice. It does
+ * NOT prove the runtime `origin=` string a real session logs (that stays
+ * `U-34.5-08`'s live-only remainder); it proves the nine call sites' SOURCE
+ * TEXT cannot regress to an unattributed or forgeable form. RED-proven by
+ * physically reverting the `ConsoleMode/index.tsx` edit and confirming the
+ * `console-mode-mount` row fails naming that value, then restoring it and
+ * confirming green again (verbatim output in `34.5-47-SUMMARY.md`).
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -97,13 +114,47 @@ function refreshingGuardAndResetUnchanged(strippedSource: string): boolean {
   return hasGuard && hasReset
 }
 
-/** Counts how many times an exact `origin: '<value>'` literal appears. */
+/**
+ * Counts how many times an exact `origin: '<value>'` literal appears.
+ * Deliberately generic over ANY stripped source string, not only
+ * GlobalState.tsx's — plan 34.5-47 reuses it unchanged against the nine
+ * external call-site files' stripped sources below.
+ */
 function countOriginLiteral(strippedSource: string, value: string): number {
   const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const matches = strippedSource.match(
     new RegExp(`origin:\\s*'${escaped}'`, 'g')
   )
   return matches?.length ?? 0
+}
+
+/**
+ * The T-34.5-47-01 mitigation as an executable gate. Scans every `origin:`
+ * KEY occurrence (object-literal property syntax — deliberately does NOT
+ * match the `origin = 'unknown'` DESTRUCTURING DEFAULT in GlobalState.tsx's
+ * own signature, which uses `=` not `:` and is intentionally left alone by
+ * this plan) and requires the value immediately following the colon to be a
+ * single-quoted string literal containing no backslash (which also rejects
+ * any `\n`-style escape), no `${` interpolation marker, and nothing else —
+ * no template literal, no double-quoted string, no bare identifier, no
+ * function call. Returns `false` on the FIRST `origin:` occurrence that
+ * fails this shape; `true` only if every occurrence in the given source
+ * passes.
+ */
+function everyOriginIsAFixedStringLiteral(source: string): boolean {
+  const originKeyRegex = /origin\s*:\s*/g
+  let match: RegExpExecArray | null
+  while ((match = originKeyRegex.exec(source)) !== null) {
+    const rest = source.slice(match.index + match[0].length)
+    if (rest[0] !== "'") return false
+    const closingIdx = rest.indexOf("'", 1)
+    if (closingIdx === -1) return false
+    const inner = rest.slice(1, closingIdx)
+    if (inner.includes('\\')) return false
+    if (inner.includes('${')) return false
+    if (inner.includes('\n')) return false
+  }
+  return true
 }
 
 /**
@@ -337,5 +388,113 @@ describe('GlobalState.tsx componentDidMount — mount-time refresh gate includes
     ].join('\n')
 
     expect(mountGateIncludesSteamUser(definedButUnusedShape)).toBe(false)
+  })
+})
+
+/**
+ * Plan 34.5-47 (T-34.5-47-01, Task 2): the nine PRODUCTION `refreshLibrary`
+ * call sites living OUTSIDE GlobalState.tsx, plus the literal-only origin
+ * rule applied to all fifteen call sites (six internal + nine external)
+ * combined. Reads the REAL production source of each of the nine files with
+ * `readFileSync` + `stripSourceComments` — never a reconstruction of the
+ * call site — per this project's own `test-must-exercise-production-call-
+ * shape` standing rule.
+ */
+describe('GlobalState.tsx refreshLibrary — nine EXTERNAL call sites thread a unique fixed-literal origin (plan 34.5-47)', () => {
+  const EXTERNAL_CALL_SITES: Array<[string, string]> = [
+    ['../../screens/Login/index.tsx', 'login-screen'],
+    [
+      '../../components/UI/NavShell/components/NavTabs/index.tsx',
+      'nav-tabs-games-tab'
+    ],
+    [
+      '../../components/UI/ActionIcons/index.tsx',
+      'action-icons-refresh-button'
+    ],
+    ['../../components/UI/ErrorComponent/index.tsx', 'error-component-retry'],
+    ['../../components/UI/RedeemSteamKeyDialog/index.tsx', 'redeem-steam-key'],
+    ['../../screens/Settings/components/ClearCache.tsx', 'clear-cache'],
+    ['../../screens/Settings/components/EgsSettings.tsx', 'egs-sync'],
+    ['../../screens/ConsoleMode/index.tsx', 'console-mode-mount'],
+    [
+      '../../screens/Library/components/InstallModal/SideloadDialog/index.tsx',
+      'sideload-add-app'
+    ]
+  ]
+
+  const externalSources = EXTERNAL_CALL_SITES.map(([relPath, originValue]) => ({
+    relPath,
+    originValue,
+    stripped: stripSourceComments(
+      readFileSync(join(__dirname, relPath), 'utf-8')
+    )
+  }))
+
+  const globalStateSourceStripped = stripSourceComments(
+    readFileSync(globalStatePath, 'utf-8')
+  )
+
+  it.each(EXTERNAL_CALL_SITES)(
+    '%s threads origin: %s exactly once (exact-count, not >= 1)',
+    (relPath: string, originValue: string) => {
+      const entry = externalSources.find((s) => s.relPath === relPath)
+      expect(entry).toBeDefined()
+      expect(countOriginLiteral(entry!.stripped, originValue)).toBe(1)
+    }
+  )
+
+  it('every origin: key across all nine external call sites AND GlobalState.tsx is a fixed single-quoted string literal — never a template literal, double-quoted string, or bare identifier', () => {
+    const concatenated =
+      externalSources.map((s) => s.stripped).join('\n') +
+      '\n' +
+      globalStateSourceStripped
+    expect(everyOriginIsAFixedStringLiteral(concatenated)).toBe(true)
+  })
+
+  describe('self-test (anti-vacuity)', () => {
+    it('ACCEPTS the exact shape Task 1 produces (positive control)', () => {
+      const correctShape =
+        "void refreshLibrary({\n  runInBackground: true,\n  origin: 'console-mode-mount'\n})"
+      expect(everyOriginIsAFixedStringLiteral(correctShape)).toBe(true)
+      expect(countOriginLiteral(correctShape, 'console-mode-mount')).toBe(1)
+    })
+
+    it('detects the origin key deleted from a call site (the pre-Task-1 regression) — count drops to zero, never treated as satisfied', () => {
+      const regressedToPreTask1 =
+        'void refreshLibrary({ runInBackground: true })'
+      expect(
+        countOriginLiteral(regressedToPreTask1, 'console-mode-mount')
+      ).toBe(0)
+    })
+
+    it('REJECTS a template literal reintroducing interpolation', () => {
+      const regressed =
+        'refreshLibrary({ origin: `refresh-${runner}`, runInBackground: true })'
+      expect(everyOriginIsAFixedStringLiteral(regressed)).toBe(false)
+    })
+
+    it('REJECTS a bare caller-supplied identifier', () => {
+      const regressed =
+        'refreshLibrary({ origin: originFromProps, runInBackground: true })'
+      expect(everyOriginIsAFixedStringLiteral(regressed)).toBe(false)
+    })
+
+    it('REJECTS a double-quoted string standing in for the required single-quoted literal', () => {
+      const regressed =
+        'refreshLibrary({ origin: "console-mode-mount", runInBackground: true })'
+      expect(everyOriginIsAFixedStringLiteral(regressed)).toBe(false)
+    })
+
+    it('REJECTS a single-quoted value carrying an embedded newline plus a forged [refreshLibrary] prefix — the log-injection/forged-attribution case T-34.5-47-01 names', () => {
+      const regressed =
+        "refreshLibrary({ origin: '\\n[refreshLibrary] runner=all origin=forged', runInBackground: true })"
+      expect(everyOriginIsAFixedStringLiteral(regressed)).toBe(false)
+    })
+
+    it('does not false-positive on the origin = \'unknown\' destructuring DEFAULT (uses "=", not ":", and is deliberately untouched by this plan)', () => {
+      const defaultOnly =
+        "refreshLibrary = async ({ origin = 'unknown' }: RefreshLibraryOptions) => {}"
+      expect(everyOriginIsAFixedStringLiteral(defaultOnly)).toBe(true)
+    })
   })
 })
