@@ -2041,18 +2041,21 @@ all stay `[ ]` per D-08's no-partial-pass rule — item 3's own PASS does not ti
 > **What this dependency does and does not block.** The seam itself is BUILT and unit-proven — 8 of 9 of 34.4.1's plans are executed, the runner-agnostic child-window mechanism is deliberately Humble-agnostic, and 34.4.1-09 already **wired** all four OAuth runners via the new `oauthCaptureLogin` channel with a declared-blocked UI surface naming each runner's unported channel. So 34.5 may be **discussed and planned now**. What is still outstanding is 34.4.1's *live proof* (plan 08's blocking 4-item gate, plus item 3(b) already recorded BLOCKED-UNOBSERVABLE and headed for a gap cycle). 34.5 must not **ship** a real OAuth credential path on a seam whose live gate never ran.
 >
 > **Inherited obligation, not a note — `T-34.4.1-44b`.** nile and zoom capture via a **host-free param match** inherited from the Electron original. This is harmless in 34.4.1 only because the captured value is handed to a channel that rejects. **34.5 MUST host-anchor both before it mints a real credential.** Also inherited: navigation observation (NOT the cookie read) is the actual seam surface, and 34.4.1 RESEARCH Open Question 1 — in-app `on_navigation` cancellation timing — remains unobserved.
-**Plans:** 41/51 plans executed — recounted from the phase directory 2026-08-11 (51 `*-PLAN.md`,
-41 `*-SUMMARY.md`). **The three without a SUMMARY among the first 42 are 34.5-29/30/31, which are
+**Plans:** 42/51 plans executed — recounted from the phase directory 2026-08-11 (51 `*-PLAN.md`,
+42 `*-SUMMARY.md`). **The three without a SUMMARY among the first 42 are 34.5-29/30/31, which are
 HALTED and SUPERSEDED, not pending.** Gap cycle 5 added plans 34.5-38..42 on 2026-08-02: 34.5-38 —
 authorisation/disposition/measured-baseline record; 34.5-39 — item-4/item-5 gate preflight;
 34.5-40 — authored `34.5-LIVE-GATE-RERUN-2.md`, the third blocking gate contract, `verdict: null`;
 34.5-41 — RAN the third blocking gate on real hardware, **VERDICT FAIL 0/5** (see below); 34.5-42
 — propagated that verdict and closed the cycle. Gap cycle 6 added plans 34.5-43..51 (9 plans, 4
-waves) on 2026-08-11, of which **34.5-43 and 34.5-44 are now executed** (34.5-43:
+waves) on 2026-08-11, of which **34.5-43, 34.5-44 and 34.5-46 are now executed** (34.5-43:
 `getInstallInfo` ported to the sidecar, F-34.5-G6-10, inventory/gate reconciled to 39+3+16=58;
-34.5-44: single-instance guard + deep-link delivery, F-34.5-G6-09, ledger row U-34.5-16 retired)
-— 7 gap-cycle-6 plans remain. 41 of 48 in-scope plans are complete (39 pre-cycle-6 + 2 cycle-6).
-Dispositions for 34.5-29/30/31: `34.5-CYCLE5-ROUTING.md`.
+34.5-44: single-instance guard + deep-link delivery, F-34.5-G6-09, ledger row U-34.5-16 retired;
+34.5-46: `handleLaunch` made runner-aware and fail-closed through `libraryManagerMap`, closing the
+confused-deputy defect that sent every runner's launch to `steam://rungameid`, plus a test-covered
+`eb117d9e4` verdict for the uninstall-tile-staleness symptom)
+— 6 gap-cycle-6 plans remain (34.5-45, 47, 48, 49, 50, 51). 42 of 48 in-scope plans are complete
+(39 pre-cycle-6 + 3 cycle-6). Dispositions for 34.5-29/30/31: `34.5-CYCLE5-ROUTING.md`.
 
 **PHASE DOES NOT CLOSE.** The blocking 5-item live gate (`34.5-15-PLAN.md`) ran
 2026-08-01 and FAILED (0/5 PASS) — see `34.5-LIVE-GATE.md` and `34.5-15-SUMMARY.md`. Gap cycle
