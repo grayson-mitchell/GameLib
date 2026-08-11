@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.9 gap cycle 1 PLANNED (34.9-12..17). The blocking live gate RAN 2026-08-11 and returned verdict FAIL 4/5 -- item 4 (Electron PACKAGED) failed: F-34.9-01, vite's copyDir dereferences each onedir runner's Python.framework symlinks, so codesign rejects the bundle as "format is ambiguous" and pnpm dist:mac aborts. No packaged macOS build can be produced. Phase does NOT close. Next: /gsd-execute-phase 34.9 (wave 3 needs a human operator on macOS arm64 hardware)
-last_updated: "2026-08-11T01:04:34.800Z"
-last_activity: 2026-08-11 -- Phase 34.9 planning complete
+stopped_at: Completed 34.9-12-PLAN.md (gap cycle 1, closes F-34.9-01/F-34.9-03 -- preserveRunnerSymlinksPlugin restores onedir runner symlinks after vite's copyDir; live-proven, exact prior-failing codesign invocation now exits 0). Phase 34.9 does NOT close yet -- gap cycle 1 continues with 34.9-13..17. Next: /gsd-execute-phase 34.9
+last_updated: "2026-08-11T01:23:51Z"
+last_activity: 2026-08-11 -- Phase 34.9 gap cycle 1, plan 12 complete
 progress:
   total_phases: 23
   completed_phases: 16
   total_plans: 283
-  completed_plans: 265
+  completed_plans: 266
   percent: 70
 ---
 
@@ -478,9 +478,17 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — EXECUTING
-Plan: 10 of 11 complete (01, 02, 03, 04, 06 done — 06 depended only on 01/04 and ran out of
-order per wave scheduling; 05 is NOT complete, no summary on disk yet. 34.9-06 extended
+Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — EXECUTING, gap cycle 1
+Plan: 34.9-12 of gap cycle 1 (34.9-12..17) complete 2026-08-11 — closes F-34.9-01 (vite's copyDir
+dereferences each onedir runner's Python.framework symlinks, breaking codesign with "bundle format
+is ambiguous") and corroborates F-34.9-03 (payload bloat). `meta/preserveRunnerSymlinks.ts`'s
+`closeBundle` vite plugin restores every source symlink into `build/` after vite's copy runs, wired
+into `electron.vite.config.ts`'s `renderer.plugins`. Live-proven against the real tree: two
+consecutive `electron-vite build` runs each leave exactly 12 symlinks in `build/bin/arm64/darwin`
+with byte-identical `readlink` targets, apparent-size payload matches source exactly, and the exact
+codesign invocation that aborted `pnpm dist:mac` in the live gate now exits 0. See
+34.9-12-SUMMARY.md. Next: 34.9-13 (gap cycle 1 continues). (Prior, now superseded: 01, 02, 03, 04,
+06 done — 06 depended only on 01/04 and ran out of order per wave scheduling; 34.9-06 extended
 meta/downloadHelperBinaries.ts with digest-verified darwin onedir sourcing from the GameLib
 rolling release, plus its first-ever test coverage — see 34.9-06-SUMMARY.md.)
 

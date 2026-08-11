@@ -2322,7 +2322,7 @@ IPC slices. Runs before Phase 35, which will later delete the Electron half of t
 **Plans:** 17 total — 11/11 original plans executed, but the phase does NOT close: the blocking
 live gate FAILED (4/5). See the phase-status note above. **Gap cycle 1 planned 2026-08-11**
 (`/gsd-plan-phase 34.9 --gaps`), 6 plans in 4 waves:
-- [ ] 34.9-12-PLAN.md — preserve the runner `Python.framework` symlinks through vite's `publicDir` → `outDir` copy (fixes F-34.9-01; corroborated by F-34.9-03)
+- [x] 34.9-12-PLAN.md — preserve the runner `Python.framework` symlinks through vite's `publicDir` → `outDir` copy (fixes F-34.9-01; corroborated by F-34.9-03) — **DONE 2026-08-11**, see 34.9-12-SUMMARY.md
 - [ ] 34.9-13-PLAN.md — make `pnpm verify:runner-bundle` enforce framework structural integrity against the BUILT artifact
 - [ ] 34.9-14-PLAN.md — clear stale macOS `dist/` artifacts before every build so a failed build cannot read as success (fixes F-34.9-02)
 - [ ] 34.9-15-PLAN.md — author `34.9-LIVE-GATE-RERUN.md` (author/runner separation: this plan may not run it)
@@ -2397,7 +2397,7 @@ are **descoped and recorded, not worked**; the two out-of-scope UI defects the g
 discarding typed input unless blurred) go to `deferred-items.md`. The phase closes on the **arm64
 leg only**.
 
-- [ ] 34.9-12-PLAN.md — Preserve each runner's `Python.framework` symlinks through vite's `publicDir`→`outDir` copy, via a `closeBundle` plugin in `electron.vite.config.ts` (wave 1) — closes **F-34.9-01**, corroborated by **F-34.9-03**'s payload returning to ~84M
+- [x] 34.9-12-PLAN.md — Preserve each runner's `Python.framework` symlinks through vite's `publicDir`→`outDir` copy, via a `closeBundle` plugin in `electron.vite.config.ts` (wave 1) — closes **F-34.9-01**, corroborated by **F-34.9-03**'s payload returning to ~84M (apparent-size match, 0.0% diff) — **DONE 2026-08-11**, live-proven: 12/12 symlinks restored across two consecutive builds, the exact prior-failing codesign invocation now exits 0; see 34.9-12-SUMMARY.md
 - [ ] 34.9-13-PLAN.md — `meta/verifyRunnerBundle.ts` **enforces** framework structural integrity against the built artifact — the check that would have caught F-34.9-01 while 4598 tests stayed green (wave 1)
 - [ ] 34.9-14-PLAN.md — Clear stale macOS `dist/` artifacts before every build so a failed build cannot read as success (wave 1) — closes **F-34.9-02**
 - [ ] 34.9-15-PLAN.md — Author `34.9-LIVE-GATE-RERUN.md` + its Structural Reachability Review; **forbidden from running any of it** (wave 2) — carries the absolute-path rule and **F-34.9-04**'s version-string non-discriminator
