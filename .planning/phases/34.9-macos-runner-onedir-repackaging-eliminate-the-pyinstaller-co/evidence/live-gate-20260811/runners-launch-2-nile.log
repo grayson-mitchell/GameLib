@@ -1,0 +1,6 @@
+(11:48:37) [INFO]:    Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile --version 
+
+1.1.2 Will A. Zeppeli
+(11:48:41) [INFO]:    Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile auth --login --non-interactive 
+
+{"client_id":"<REDACTED-PKCE — see 34.9-LIVE-GATE.md redaction discipline>","code_verifier":"<REDACTED-PKCE — see 34.9-LIVE-GATE.md redaction discipline>","serial":"<REDACTED-PKCE — see 34.9-LIVE-GATE.md redaction discipline>","url":"<REDACTED-PKCE — see 34.9-LIVE-GATE.md redaction discipline>"}

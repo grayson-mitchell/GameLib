@@ -2319,7 +2319,7 @@ REQ-34.9-07, REQ-34.9-08, REQ-34.9-09, REQ-34.9-10, REQ-34.9-11 (minted 2026-08-
 ticked only by measured evidence)
 **Depends on:** Phase 34 (packaging/signing/notarization pipeline). Independent of the 34.1-34.8
 IPC slices. Runs before Phase 35, which will later delete the Electron half of the signing work.
-**Plans:** 10/11 plans executed — only 34.9-11 (the blocking live gate, human-run) remains
+**Plans:** 11/11 plans executed — but the phase does NOT close: the blocking live gate FAILED (4/5). See the phase-status note above.
 
 **Scope note (planning, 2026-08-07):** `R-34.5-G1-PKG` — the packaged Tauri asset root does not
 resolve, because `electronStub.app.isPackaged` stays `false` under the sidecar so `publicDir`
@@ -2331,10 +2331,42 @@ artifact until Phase 35), and records **Tauri-PACKAGED as UNPROVEN**. Real-certi
 also stays out of scope (D-03/D-04, no Apple credentials enrolled); the honest proxy is
 `codesign --verify` on an adhoc-signed bundle plus a per-file signature-state report.
 
-**Measurement caveat:** the ~95x figure above is **nile-only**. Plan 34.9-03 measures legendary and
-gogdl against their own vendored onefile controls and will replace this prose with per-runner
-figures if either falls short — the phase may not leave behind a headline number its own
-measurement falsified.
+**Measurement caveat — RESOLVED 2026-08-11, and the headline number is retired.** The `~95x cold`
+figure above is **nile-only, and this phase did not reproduce it per-runner.** Plan 34.9-03's two
+attempted cold runs both failed their own harness validity anchor, so the **cold ratio is
+UNMEASURED for all three runners** and no cold claim may be cited from this phase. What IS measured
+and valid is the **warm** ratio, per runner (`34.9-MEASUREMENT.md` §8.4):
+
+| runner | onefile warm | onedir warm | ratio |
+|---|---|---|---|
+| nile | 4.23s | 0.13s | **32.5x** |
+| legendary | 3.99s | 0.15s | **26.6x** |
+| gogdl | 2.99s | 0.11s | **27.2x** |
+
+All three independently confirm a large win, so the phase's premise holds — but the honest headline
+is **~27–33x warm, cold unmeasured**, not ~95x cold. The one cold figure the project may still cite
+(nile ~20.84s → 0.22s) comes from the earlier `nile-spawn-app-side-latency` debug session,
+independently of this phase's invalidated runs, and applies to nile alone. The live gate's own
+items 2 and 3 measured real user-visible intervals (<1s and 1s against a 2s bar), consistent with
+the warm figures and with no disagreement found.
+
+**Phase status 2026-08-11: DOES NOT CLOSE.** The blocking live gate ran and returned
+`verdict: FAIL` — 4 of 5 items PASS (`34.9-LIVE-GATE.md`). Item 4 (Electron PACKAGED) FAILED:
+**`pnpm dist:mac` aborts and no packaged macOS build can be produced at all.** Root cause
+(**F-34.9-01**, proven by a one-variable `cp -R` vs `cp -RL` experiment): each onedir runner
+carries a `Python.framework` bundle, and vite's `copyDir` dereferences its symlinks, leaving
+`Versions/Current` a real directory — a layout `codesign` cannot classify
+(`bundle format is ambiguous (could be app or framework)`). This is a regression introduced by this
+phase; before it, the darwin runners were flat files containing no framework. It also roughly
+doubles the runner payload (84M → 157M, **F-34.9-03**). A green 235-suite / 4598-test run never
+detected any of it. Routes to **`/gsd-plan-phase 34.9 --gaps`**.
+
+Also unresolved, and not caused by the gate: the CI leg was never dispatchable
+(`workflow_dispatch` requires the workflow on the default branch — `34.9-CI-ROUNDTRIP.md`
+Outcome C), so **the x64 onedir leg exists nowhere**, all six digests remain
+`PENDING-CI-PUBLISH` sentinels, and the download → verify → extract path is unproven. The three
+upstream PRs were **declined** by the developer on 2026-08-11, so the local build is permanent
+rather than interim.
 
 Plans:
 - [x] 34.9-01-PLAN.md — `meta/buildRunnersOnedir.ts`: clone pinned tags, derive upstream's own pyinstaller command, swap one flag, archive (wave 1)
@@ -2347,7 +2379,7 @@ Plans:
 - [x] 34.9-08-PLAN.md — `meta/verifyRunnerBundle.ts`: inspect a BUILT artifact, report per-file signature state (wave 4)
 - [x] 34.9-09-PLAN.md — Dispatch CI for real, pin the published digests, run the vendoring round trip (wave 5)
 - [x] 34.9-10-PLAN.md — Author the blocking live-gate contract + Structural Reachability Review (wave 6)
-- [ ] 34.9-11-PLAN.md — Run the gate on hardware; reconcile REQUIREMENTS.md and this ROADMAP entry (wave 7)
+- [x] 34.9-11-PLAN.md — Run the gate on hardware; reconcile REQUIREMENTS.md and this ROADMAP entry (wave 7) — **RAN 2026-08-11, verdict FAIL 4/5**; REQ-34.9-01..11 backfilled, ROADMAP ~95x claim retired
 
 ### Phase 34.10: Navigation shell — horizontal card tabs replace the sidebar (INSERTED)
 

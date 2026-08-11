@@ -1,0 +1,15 @@
+(11:48:37) [INFO]:    Running command: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" --version 
+
+1.2.1
+(11:49:36) [INFO]:    Running command: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" auth --code <redacted> 
+
+{"access_token":"<redacted>","expires_in":3600,"token_type":"bearer","scope":"","session_id":"<redacted>","refresh_token":"<redacted>","user_id":"<redacted>","loginTime":1786405777.211523}
+(11:49:41) [INFO]:    Games List:
+* Alan Wake (App name: 1207659037)
+* Balrum (App name: 1769415595)
+* Empire Earth Gold Edition (App name: 1207658777)
+* Endless Sky (App name: 1829678475)
+* Fallout: London (App name: 1491728574)
+* Hero of the Kingdom: The Lost Tales 3 (App name: 1313144493)
+
+Total: 6
