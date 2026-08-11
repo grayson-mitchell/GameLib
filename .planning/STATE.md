@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.9-12-PLAN.md (gap cycle 1, closes F-34.9-01/F-34.9-03 -- preserveRunnerSymlinksPlugin restores onedir runner symlinks after vite's copyDir; live-proven, exact prior-failing codesign invocation now exits 0). Phase 34.9 does NOT close yet -- gap cycle 1 continues with 34.9-13..17. Next: /gsd-execute-phase 34.9
-last_updated: "2026-08-11T01:23:51Z"
-last_activity: 2026-08-11 -- Phase 34.9 gap cycle 1, plan 12 complete
+stopped_at: Completed 34.9-13-PLAN.md (gap cycle 1, closes the automated-coverage gap that let F-34.9-01 reach a live gate -- meta/verifyRunnerBundle.ts now enforces framework structural integrity (Versions/Current existence/symlink-ness/resolvability, top-level stub shape), mutation-proven live three ways against a `cp -RL`-dereferenced fixture; REQ-34.9-08 checkbox stays unticked per 34.9-12's own precedent, pending 34.9-16's gate re-run). Phase 34.9 does NOT close yet -- gap cycle 1 continues with 34.9-14..17. Next: /gsd-execute-phase 34.9
+last_updated: "2026-08-11T01:45:41Z"
+last_activity: 2026-08-11 -- Phase 34.9 gap cycle 1, plan 13 complete
 progress:
   total_phases: 23
   completed_phases: 16
   total_plans: 283
-  completed_plans: 266
-  percent: 70
+  completed_plans: 267
+  percent: 94
 ---
 
 # Project State
@@ -479,15 +479,26 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — EXECUTING, gap cycle 1
-Plan: 34.9-12 of gap cycle 1 (34.9-12..17) complete 2026-08-11 — closes F-34.9-01 (vite's copyDir
-dereferences each onedir runner's Python.framework symlinks, breaking codesign with "bundle format
-is ambiguous") and corroborates F-34.9-03 (payload bloat). `meta/preserveRunnerSymlinks.ts`'s
-`closeBundle` vite plugin restores every source symlink into `build/` after vite's copy runs, wired
-into `electron.vite.config.ts`'s `renderer.plugins`. Live-proven against the real tree: two
-consecutive `electron-vite build` runs each leave exactly 12 symlinks in `build/bin/arm64/darwin`
-with byte-identical `readlink` targets, apparent-size payload matches source exactly, and the exact
-codesign invocation that aborted `pnpm dist:mac` in the live gate now exits 0. See
-34.9-12-SUMMARY.md. Next: 34.9-13 (gap cycle 1 continues). (Prior, now superseded: 01, 02, 03, 04,
+Plan: 34.9-13 of gap cycle 1 (34.9-12..17) complete 2026-08-11 — closes the automated-coverage gap
+that let F-34.9-01 reach a live gate before a green 4598-test suite ever caught it. Extended
+`meta/verifyRunnerBundle.ts` (plan 34.9-08) with `FrameworkInspection`: `findFrameworks()`/
+`inspectFramework()` enforce four independent structural conditions on every `*.framework` bundle
+(Versions/Current existence/symlink-ness/resolvability, top-level stub shape), each credential-free
+and distinct from the pre-existing signature-IDENTITY reporting, which stays data-only exactly as
+34.9-08 established. All three plan-mandated mutations applied live, confirmed RED, reverted,
+reconfirmed GREEN — including two test-integrity bugs found and fixed live during the mutation step
+itself (a whole-framework `cp -RL` fixture made mutation (a) vacuous by also tripping condition (d);
+no reachable duplicate framework made the symlink-walk claim untestable until one was planted).
+Empirical `codesign` determination performed as the plan required: on this machine, `-dv`/`--sign`
+against a dereferenced framework emit "bundle format unrecognized, invalid, or unsuitable", not the
+CI runner's exact "bundle format is ambiguous" string — no fifth condition added, per the plan's own
+contingency; enforcement relies on the four structural conditions alone. `npm run test:ci`:
+237/237 suites, 4629/4629 (4628 passed, 1 pre-existing skip). REQ-34.9-08's checkbox stays unticked
+(pass bar is 34.9-16's live-gate re-run, per 34.9-12's own precedent — this plan contributes
+automated coverage, not the requirement's own close). See 34.9-13-SUMMARY.md. Next: 34.9-14 (gap
+cycle 1 continues). (Prior, now superseded: 34.9-12 closed F-34.9-01's mechanism —
+`preserveRunnerSymlinksPlugin` restores onedir runner symlinks after vite's copyDir, live-proven,
+exact prior-failing codesign invocation now exits 0 — see 34.9-12-SUMMARY.md. 01, 02, 03, 04,
 06 done — 06 depended only on 01/04 and ran out of order per wave scheduling; 34.9-06 extended
 meta/downloadHelperBinaries.ts with digest-verified darwin onedir sourcing from the GameLib
 rolling release, plus its first-ever test coverage — see 34.9-06-SUMMARY.md.)
@@ -4392,6 +4403,9 @@ Recent decisions affecting current work:
 - [Phase 34.9]: CI dispatch for build-runners-onedir-macos.yml is blocked at the GitHub platform level: workflow_dispatch requires the workflow file on the repo's default branch (main), not merely on the dispatched ref — gh workflow run 404'd; confirmed independently via gh workflow list and gh release view that CI never ran. Plan 34.9-09's authorization is scoped to the feature branch only (no PR, no push to main), so this cannot be self-resolved. Recorded as Outcome C; arm64 staged from the local 34.9-03 build so plan 34.9-11's gate is not fully blocked; x64 remains entirely unproven.
 - [Phase 34.9]: Item 1's gate gesture changed from 'on startup' to a Settings > Advanced Settings visit -- the sidecar's initHeadless() skips the system-info dump that framing assumed — src/backend/sidecar/bootstrap.ts calls initHeadless(), which explicitly skips the getSystemInfo dump init() performs for Electron; only the three Alt*Bin Settings components call the version-probe IPC channels
 - [Phase 34.9]: Item 3's gate timing changed from click-based to oauth-capture-based -- GOG's constant login URL means click-to-completion would measure human typing time, not runner-spawn latency — GOG's login URL requires no runner spawn (unlike nile); the first gogdl call fires only after the operator completes the OAuth form, so the clock starts at oauthLoginCapture's status=captured line instead
+- [Phase 34.9-13]: No fifth codesignDisplay-matching enforced condition added -- empirically, `codesign -dv`/`--sign` against a `cp -RL`-dereferenced framework on this machine emit "bundle format unrecognized, invalid, or unsuitable", not the CI runner's exact "bundle format is ambiguous" string from 34.9-LIVE-GATE.md item 4; per the plan's explicit contingency, enforcement relies on the four structural conditions (Versions/Current existence/symlink-ness/resolvability, top-level stub shape) alone
+- [Phase 34.9-13]: The dereferenced test fixture mutates ONLY the Versions/Current entry via `cp -RL` (not the whole framework directory) -- a whole-framework dereference also breaks the top-level stub symlink, letting a different enforced condition catch the malformation even with the target condition's enforcement deleted, which made mutation (a) pass vacuously on first attempt; discovered live during the plan's own mandated mutation-testing step
+- [Phase 34.9-13]: REQ-34.9-08's checkbox stays unticked -- this plan contributes automated coverage but the requirement's own pass bar is 34.9-16's live-gate re-run PASSing, per plan 34.9-12's own established precedent for the same requirement
 
 ### Pending Todos
 
