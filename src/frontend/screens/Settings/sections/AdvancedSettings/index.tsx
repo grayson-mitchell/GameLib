@@ -30,6 +30,14 @@ import {
   SteamGridDbApiKey
 } from '../../components'
 import DisableGOGPresence from '../../components/DisableGOGPresence'
+import { callOrDeclare } from 'frontend/helpers/declaredUnavailable'
+
+// D-03 (34.5-48, Task 2): every EOS overlay channel is deferred to Phase 34.6 and
+// unregistered on the Tauri sidecar today. `feature`/`deferral` are fixed for every call
+// site below so the log line callOrDeclare() writes on decline always names the same
+// deferral -- see 34.5-CYCLE6-ROUTING.md cluster 4 for the full diagnosis this closes.
+const EOS_FEATURE = 'EOS Overlay'
+const EOS_DEFERRAL = 'D-03'
 
 export default function AdvancedSetting() {
   const { config } = useContext(SettingsContext)
@@ -45,6 +53,11 @@ export default function AdvancedSetting() {
     useState(false)
   const [eosOverlayEnabledGlobally, setEosOverlayEnabledGlobally] =
     useState(false)
+  // True once either unconditional probe below declines under Tauri (D-03). The panel
+  // then declines visibly instead of presenting the optimistic false/'' defaults above as
+  // fact -- see getMainEosText() and the footerFlex render below. Defaults false and stays
+  // false under Electron, where both probes resolve: byte-identical behavior to today.
+  const [eosOverlayUnavailable, setEosOverlayUnavailable] = useState(false)
   const eosOverlayAppName = '98bc04bc842e4906993fd6d6644ffb8d'
 
   const { libraryStatus, platform } = useContext(ContextProvider)
@@ -64,19 +77,42 @@ export default function AdvancedSetting() {
     return () => clearTimeout(timer)
   }, [isCopiedToClipboard])
 
+  // One of the two unconditional, always-reachable EOS probes -- on decline this is a
+  // reliable signal the whole panel must present as unavailable (isEosOverlayEnabled,
+  // below, is isWindows-gated and genuinely never fires on macOS, so it is NOT used for
+  // detection).
   useEffect(() => {
     const getEosStatus = async () => {
-      const { isInstalled, version } = await window.api.getEosOverlayStatus()
-      setEosOverlayInstalled(isInstalled)
-      setEosOverlayVersion(version ?? '')
+      const result = await callOrDeclare({
+        channel: 'getEosOverlayStatus',
+        feature: EOS_FEATURE,
+        deferral: EOS_DEFERRAL,
+        call: () => window.api.getEosOverlayStatus()
+      })
+      if (!result.ok) {
+        setEosOverlayUnavailable(true)
+        return
+      }
+      setEosOverlayInstalled(result.value.isInstalled)
+      setEosOverlayVersion(result.value.version ?? '')
     }
     getEosStatus()
   }, [])
 
+  // The second unconditional, always-reachable EOS probe -- see the comment above.
   useEffect(() => {
     const getLatestEosOverlayVersion = async () => {
-      const version = await window.api.getLatestEosOverlayVersion()
-      setEosOverlayLatestVersion(version)
+      const result = await callOrDeclare({
+        channel: 'getLatestEosOverlayVersion',
+        feature: EOS_FEATURE,
+        deferral: EOS_DEFERRAL,
+        call: () => window.api.getLatestEosOverlayVersion()
+      })
+      if (!result.ok) {
+        setEosOverlayUnavailable(true)
+        return
+      }
+      setEosOverlayLatestVersion(result.value)
     }
     getLatestEosOverlayVersion()
   }, [])
@@ -94,13 +130,28 @@ export default function AdvancedSetting() {
   useEffect(() => {
     const enabledGlobally = async () => {
       if (isWindows) {
-        setEosOverlayEnabledGlobally(await window.api.isEosOverlayEnabled())
+        const result = await callOrDeclare({
+          channel: 'isEosOverlayEnabled',
+          feature: EOS_FEATURE,
+          deferral: EOS_DEFERRAL,
+          call: () => window.api.isEosOverlayEnabled()
+        })
+        if (!result.ok) {
+          setEosOverlayUnavailable(true)
+          return
+        }
+        setEosOverlayEnabledGlobally(result.value)
       }
     }
     enabledGlobally()
   }, [])
 
   function getMainEosText() {
+    if (eosOverlayUnavailable)
+      return t(
+        'setting.eosOverlay.unavailable',
+        'The EOS Overlay is unavailable in this build'
+      )
     if (eosOverlayInstalled && eosOverlayInstallingOrUpdating)
       return t(
         'setting.eosOverlay.updating',
@@ -123,9 +174,21 @@ export default function AdvancedSetting() {
 
   async function installEosOverlay() {
     setEosOverlayInstallingOrUpdating(true)
-    const installError = await window.api.installEosOverlay()
+    const result = await callOrDeclare({
+      channel: 'installEosOverlay',
+      feature: EOS_FEATURE,
+      deferral: EOS_DEFERRAL,
+      call: () => window.api.installEosOverlay()
+    })
+    // Runs on BOTH branches (ok and not-ok) -- callOrDeclare never throws, so this reset
+    // is no longer reachable only on success the way a bare, unwrapped await used to
+    // leave it stuck true forever on a rejection.
     setEosOverlayInstallingOrUpdating(false)
-    setEosOverlayInstalled(!installError)
+    if (!result.ok) {
+      setEosOverlayUnavailable(true)
+      return
+    }
+    setEosOverlayInstalled(!result.value)
     // `eos-overlay install` enables the overlay by default on Windows
     setEosOverlayEnabledGlobally(isWindows)
     // Update latest version info
@@ -133,39 +196,109 @@ export default function AdvancedSetting() {
   }
 
   async function removeEosOverlay() {
-    const wasRemoved = await window.api.removeEosOverlay()
-    setEosOverlayInstalled(!wasRemoved)
+    const result = await callOrDeclare({
+      channel: 'removeEosOverlay',
+      feature: EOS_FEATURE,
+      deferral: EOS_DEFERRAL,
+      call: () => window.api.removeEosOverlay()
+    })
+    if (!result.ok) {
+      setEosOverlayUnavailable(true)
+      return
+    }
+    setEosOverlayInstalled(!result.value)
   }
 
   async function updateEosOverlay() {
     setEosOverlayInstallingOrUpdating(true)
-    await window.api.installEosOverlay()
+    const installResult = await callOrDeclare({
+      channel: 'installEosOverlay',
+      feature: EOS_FEATURE,
+      deferral: EOS_DEFERRAL,
+      call: () => window.api.installEosOverlay()
+    })
+    // Runs on BOTH branches -- see the identical comment in installEosOverlay() above.
     setEosOverlayInstallingOrUpdating(false)
-    const { version: newVersion } = await window.api.getEosOverlayStatus()
-    setEosOverlayVersion(newVersion ?? '')
+    if (!installResult.ok) {
+      setEosOverlayUnavailable(true)
+      return
+    }
+    const statusResult = await callOrDeclare({
+      channel: 'getEosOverlayStatus',
+      feature: EOS_FEATURE,
+      deferral: EOS_DEFERRAL,
+      call: () => window.api.getEosOverlayStatus()
+    })
+    if (!statusResult.ok) {
+      setEosOverlayUnavailable(true)
+      return
+    }
+    setEosOverlayVersion(statusResult.value.version ?? '')
   }
 
   async function cancelEosOverlayInstallOrUpdate() {
+    // T-34.5-48-05: while declined, no install/update was ever registered on the backend
+    // -- the abort call below must be unreachable, or it sends a real abort request for a
+    // controller that never existed (the observed "Aborting not possible. Could not find
+    // a matching abort controller for 98bc04bc842e4906993fd6d6644ffb8d").
+    if (eosOverlayUnavailable) return
     window.api.abort(eosOverlayAppName)
     setEosOverlayInstallingOrUpdating(false)
   }
 
   async function toggleEosOverlay() {
     if (eosOverlayEnabledGlobally) {
-      await window.api.disableEosOverlay('')
+      const result = await callOrDeclare({
+        channel: 'disableEosOverlay',
+        feature: EOS_FEATURE,
+        deferral: EOS_DEFERRAL,
+        call: () => window.api.disableEosOverlay('')
+      })
+      if (!result.ok) {
+        setEosOverlayUnavailable(true)
+        return
+      }
       setEosOverlayEnabledGlobally(false)
     } else {
-      const { wasEnabled } = await window.api.enableEosOverlay('')
-      setEosOverlayEnabledGlobally(wasEnabled)
+      const result = await callOrDeclare({
+        channel: 'enableEosOverlay',
+        feature: EOS_FEATURE,
+        deferral: EOS_DEFERRAL,
+        call: () => window.api.enableEosOverlay('')
+      })
+      if (!result.ok) {
+        setEosOverlayUnavailable(true)
+        return
+      }
+      setEosOverlayEnabledGlobally(result.value.wasEnabled)
     }
   }
 
   async function checkForEosOverlayUpdates() {
     setEosOverlayCheckingForUpdates(true)
-    await window.api.updateEosOverlayInfo()
-    const newVersion = await window.api.getLatestEosOverlayVersion()
-    setEosOverlayLatestVersion(newVersion)
+    const infoResult = await callOrDeclare({
+      channel: 'updateEosOverlayInfo',
+      feature: EOS_FEATURE,
+      deferral: EOS_DEFERRAL,
+      call: () => window.api.updateEosOverlayInfo()
+    })
+    if (!infoResult.ok) {
+      setEosOverlayCheckingForUpdates(false)
+      setEosOverlayUnavailable(true)
+      return
+    }
+    const versionResult = await callOrDeclare({
+      channel: 'getLatestEosOverlayVersion',
+      feature: EOS_FEATURE,
+      deferral: EOS_DEFERRAL,
+      call: () => window.api.getLatestEosOverlayVersion()
+    })
     setEosOverlayCheckingForUpdates(false)
+    if (!versionResult.ok) {
+      setEosOverlayUnavailable(true)
+      return
+    }
+    setEosOverlayLatestVersion(versionResult.value)
   }
 
   return (
@@ -221,91 +354,109 @@ export default function AdvancedSetting() {
           </>
         )}
         <div className="footerFlex">
-          {eosOverlayInstalled && (
+          {!eosOverlayUnavailable && (
             <>
-              {/* Check for updates */}
-              {(eosOverlayVersion === eosOverlayLatestVersion ||
-                eosOverlayCheckingForUpdates) && (
+              {eosOverlayInstalled && (
+                <>
+                  {/* Check for updates */}
+                  {(eosOverlayVersion === eosOverlayLatestVersion ||
+                    eosOverlayCheckingForUpdates) && (
+                    <button
+                      className="button is-primary"
+                      onClick={checkForEosOverlayUpdates}
+                    >
+                      <CachedOutlined />
+                      <span>
+                        {eosOverlayCheckingForUpdates
+                          ? t(
+                              'setting.eosOverlay.checkingForUpdates',
+                              'Checking for updates...'
+                            )
+                          : t(
+                              'setting.eosOverlay.checkForUpdates',
+                              'Check for updates'
+                            )}
+                      </span>
+                    </button>
+                  )}
+                  {/* Update */}
+                  {eosOverlayVersion !== eosOverlayLatestVersion &&
+                    !eosOverlayCheckingForUpdates && (
+                      <button
+                        className="button is-primary"
+                        onClick={updateEosOverlay}
+                      >
+                        <UploadOutlined />
+                        <span>
+                          {eosOverlayInstallingOrUpdating
+                            ? t('setting.eosOverlay.updating', 'Updating...')
+                            : t('setting.eosOverlay.updateNow', 'Update')}
+                        </span>
+                      </button>
+                    )}
+                  {/* Enable/Disable */}
+                  {isWindows && (
+                    <button
+                      className={
+                        eosOverlayEnabledGlobally
+                          ? 'button is-danger'
+                          : 'button is-primary'
+                      }
+                      onClick={toggleEosOverlay}
+                    >
+                      {eosOverlayEnabledGlobally ? (
+                        <DeselectOutlined />
+                      ) : (
+                        <SelectAllOutlined />
+                      )}
+                      <span>
+                        {eosOverlayEnabledGlobally
+                          ? t('setting.eosOverlay.disable', 'Disable')
+                          : t('setting.eosOverlay.enable', 'Enable')}
+                      </span>
+                    </button>
+                  )}
+                  {/* Remove */}
+                  {!eosOverlayInstallingOrUpdating && (
+                    <button
+                      className="button is-danger"
+                      onClick={removeEosOverlay}
+                    >
+                      <DeleteOutline />
+                      <span>{t('setting.eosOverlay.remove', 'Uninstall')}</span>
+                    </button>
+                  )}
+                </>
+              )}
+              {/* Install */}
+              {!eosOverlayInstalled && !eosOverlayInstallingOrUpdating && (
                 <button
                   className="button is-primary"
-                  onClick={checkForEosOverlayUpdates}
+                  onClick={installEosOverlay}
                 >
-                  <CachedOutlined />
-                  <span>
-                    {eosOverlayCheckingForUpdates
-                      ? t(
-                          'setting.eosOverlay.checkingForUpdates',
-                          'Checking for updates...'
-                        )
-                      : t(
-                          'setting.eosOverlay.checkForUpdates',
-                          'Check for updates'
-                        )}
-                  </span>
+                  <DownloadOutlined />
+                  <span>{t('setting.eosOverlay.install', 'Install')}</span>
                 </button>
               )}
-              {/* Update */}
-              {eosOverlayVersion !== eosOverlayLatestVersion &&
-                !eosOverlayCheckingForUpdates && (
-                  <button
-                    className="button is-primary"
-                    onClick={updateEosOverlay}
-                  >
-                    <UploadOutlined />
-                    <span>
-                      {eosOverlayInstallingOrUpdating
-                        ? t('setting.eosOverlay.updating', 'Updating...')
-                        : t('setting.eosOverlay.updateNow', 'Update')}
-                    </span>
-                  </button>
-                )}
-              {/* Enable/Disable */}
-              {isWindows && (
+              {/* Cancel install/update */}
+              {eosOverlayInstallingOrUpdating && (
                 <button
-                  className={
-                    eosOverlayEnabledGlobally
-                      ? 'button is-danger'
-                      : 'button is-primary'
-                  }
-                  onClick={toggleEosOverlay}
+                  className="button is-danger"
+                  onClick={cancelEosOverlayInstallOrUpdate}
                 >
-                  {eosOverlayEnabledGlobally ? (
-                    <DeselectOutlined />
-                  ) : (
-                    <SelectAllOutlined />
-                  )}
-                  <span>
-                    {eosOverlayEnabledGlobally
-                      ? t('setting.eosOverlay.disable', 'Disable')
-                      : t('setting.eosOverlay.enable', 'Enable')}
-                  </span>
-                </button>
-              )}
-              {/* Remove */}
-              {!eosOverlayInstallingOrUpdating && (
-                <button className="button is-danger" onClick={removeEosOverlay}>
-                  <DeleteOutline />
-                  <span>{t('setting.eosOverlay.remove', 'Uninstall')}</span>
+                  <CancelOutlined />
+                  <span>{t('setting.eosOverlay.cancelInstall', 'Cancel')}</span>
                 </button>
               )}
             </>
           )}
-          {/* Install */}
-          {!eosOverlayInstalled && !eosOverlayInstallingOrUpdating && (
-            <button className="button is-primary" onClick={installEosOverlay}>
-              <DownloadOutlined />
-              <span>{t('setting.eosOverlay.install', 'Install')}</span>
-            </button>
-          )}
-          {/* Cancel install/update */}
-          {eosOverlayInstallingOrUpdating && (
-            <button
-              className="button is-danger"
-              onClick={cancelEosOverlayInstallOrUpdate}
-            >
-              <CancelOutlined />
-              <span>{t('setting.eosOverlay.cancelInstall', 'Cancel')}</span>
-            </button>
+          {eosOverlayUnavailable && (
+            <div>
+              {t(
+                'setting.eosOverlay.unavailableDetail',
+                'EOS Overlay support is deferred to a future release (D-03, Phase 34.6) and cannot be installed, updated, or removed from this build.'
+              )}
+            </div>
           )}
         </div>
         <hr />
