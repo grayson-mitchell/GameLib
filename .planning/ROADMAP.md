@@ -2319,16 +2319,16 @@ REQ-34.9-07, REQ-34.9-08, REQ-34.9-09, REQ-34.9-10, REQ-34.9-11 (minted 2026-08-
 ticked only by measured evidence)
 **Depends on:** Phase 34 (packaging/signing/notarization pipeline). Independent of the 34.1-34.8
 IPC slices. Runs before Phase 35, which will later delete the Electron half of the signing work.
-**Plans:** 17 total — 16/17 plans executed. The blocking live-gate RE-RUN PASSED 2/2
-(2026-08-11) — see the phase-status note above (still pending 34.9-17's full reconciliation).
+**Plans:** 17 total — 17/17 plans executed. The blocking live-gate RE-RUN PASSED 2/2
+(2026-08-11) — see the phase-status note above; 34.9-17 completed the full reconciliation.
 **Gap cycle 1 planned 2026-08-11**
-(`/gsd-plan-phase 34.9 --gaps`), 6 plans in 4 waves, 5/6 gap-cycle plans complete (16/17 overall):
+(`/gsd-plan-phase 34.9 --gaps`), 6 plans in 4 waves, 6/6 gap-cycle plans complete (17/17 overall):
 - [x] 34.9-12-PLAN.md — preserve the runner `Python.framework` symlinks through vite's `publicDir` → `outDir` copy (fixes F-34.9-01; corroborated by F-34.9-03) — **DONE 2026-08-11**, see 34.9-12-SUMMARY.md
 - [x] 34.9-13-PLAN.md — make `pnpm verify:runner-bundle` enforce framework structural integrity against the BUILT artifact
 - [x] 34.9-14-PLAN.md — clear stale macOS `dist/` artifacts before every build so a failed build cannot read as success (fixes F-34.9-02) — **DONE 2026-08-11**, see 34.9-14-SUMMARY.md
 - [x] 34.9-15-PLAN.md — author `34.9-LIVE-GATE-RERUN.md` (author/runner separation: this plan may not run it)
 - [x] 34.9-16-PLAN.md — run the re-run gate on macOS hardware and write its verdict (human operator required) — **DONE 2026-08-11, verdict PASS 2/2** (Scored Item 1 Tauri DEV PASS, Scored Item 2 Electron PACKAGED PASS 8/8 criteria); carried-forward items 2/3/5 not invalidated (no DEV-side regression). See `34.9-LIVE-GATE-RERUN.md`, 34.9-16-SUMMARY.md
-- [ ] 34.9-17-PLAN.md — record the descoped/deferred set and reconcile REQUIREMENTS/ROADMAP/STATE to the post-gap-cycle truth
+- [x] 34.9-17-PLAN.md — record the descoped/deferred set and reconcile REQUIREMENTS/ROADMAP/STATE to the post-gap-cycle truth — **DONE 2026-08-11**, see `deferred-items.md`, 34.9-17-SUMMARY.md
 
 **Scope note (planning, 2026-08-07):** `R-34.5-G1-PKG` — the packaged Tauri asset root does not
 resolve, because `electronStub.app.isPackaged` stays `false` under the sidecar so `publicDir`
@@ -2359,23 +2359,39 @@ independently of this phase's invalidated runs, and applies to nile alone. The l
 items 2 and 3 measured real user-visible intervals (<1s and 1s against a 2s bar), consistent with
 the warm figures and with no disagreement found.
 
-**Phase status 2026-08-11: DOES NOT CLOSE.** The blocking live gate ran and returned
-`verdict: FAIL` — 4 of 5 items PASS (`34.9-LIVE-GATE.md`). Item 4 (Electron PACKAGED) FAILED:
-**`pnpm dist:mac` aborts and no packaged macOS build can be produced at all.** Root cause
-(**F-34.9-01**, proven by a one-variable `cp -R` vs `cp -RL` experiment): each onedir runner
-carries a `Python.framework` bundle, and vite's `copyDir` dereferences its symlinks, leaving
-`Versions/Current` a real directory — a layout `codesign` cannot classify
-(`bundle format is ambiguous (could be app or framework)`). This is a regression introduced by this
-phase; before it, the darwin runners were flat files containing no framework. It also roughly
-doubles the runner payload (84M → 157M, **F-34.9-03**). A green 235-suite / 4598-test run never
-detected any of it. Routes to **`/gsd-plan-phase 34.9 --gaps`**.
+**Phase status 2026-08-11: CLOSES on the arm64 leg only.** Gap cycle 1 (plans `34.9-12`..`34.9-17`)
+closed the blocking live gate's FAIL finding. **F-34.9-01** (each onedir runner's `Python.framework`
+bundle dereferenced by vite's `copyDir`, producing a layout `codesign` rejects with
+`bundle format is ambiguous`, aborting `pnpm dist:mac` outright) was closed at its mechanism by
+plan 34.9-12's symlink-preserving `closeBundle` vite plugin, with plan 34.9-13 adding automated
+framework-structural-integrity enforcement to `pnpm verify:runner-bundle` so a regression cannot go
+silent again. **F-34.9-02** (a failed build leaving a stale pre-34.9 dmg/zip in `dist/` that could
+read as success) was closed by plan 34.9-14's `pnpm clean:dist-mac`, now the first step of both
+`dist:mac` and `release:mac`. **F-34.9-03** (the same dereferencing roughly doubling the runner
+payload, 84M → 157M) closed as a side effect of F-34.9-01's fix. The blocking live gate then
+RE-RAN in full on real macOS arm64 hardware (`34.9-LIVE-GATE-RERUN.md`, authored by plan 34.9-15,
+run by plan 34.9-16, 2026-08-11) and returned **`verdict: PASS`, `items_passed: 2`,
+`items_failed: 0`** — Scored Item 1 (Tauri DEV, regression canary) and Scored Item 2 (Electron
+PACKAGED, the original failure) both PASS, against the artifact's own on-disk shape (exactly 12
+restored symlinks, zero `bundle format is ambiguous` occurrences, `verify:runner-bundle` exit 0,
++0.02% payload delta, a new dmg/zip strictly newer than a recorded `BUILD_START`). Carried-forward
+items 2/3/5 were not invalidated (no DEV-side regression observed) and retain their original PASS
+verdicts. REQ-34.9-08 and REQ-34.9-11 ticked on this basis. A green 235-suite / 4598-test run never
+detected F-34.9-01 in the first place — the live gate is what caught it, and the live gate is what
+closed it. See `34.9-16-SUMMARY.md`.
 
-Also unresolved, and not caused by the gate: the CI leg was never dispatchable
-(`workflow_dispatch` requires the workflow on the default branch — `34.9-CI-ROUNDTRIP.md`
-Outcome C), so **the x64 onedir leg exists nowhere**, all six digests remain
-`PENDING-CI-PUBLISH` sentinels, and the download → verify → extract path is unproven. The three
-upstream PRs were **declined** by the developer on 2026-08-11, so the local build is permanent
-rather than interim.
+**The x64 leg remains permanently blocked FOR THIS PHASE, by a user decision recorded 2026-08-11 at
+gap-planning time** — this is a deliberate scope fence, not an unresolved gap. The CI leg was never
+dispatchable (`workflow_dispatch` requires the workflow on the default branch —
+`34.9-CI-ROUNDTRIP.md` Outcome C), so **the x64 onedir leg exists nowhere**, all six digests remain
+`PENDING-CI-PUBLISH` sentinels, and the download → verify → extract path (REQ-34.9-02/03/04) is
+unproven. REQ-34.9-09's cold-spawn ratio stays satisfied-on-WARM only, with no third
+cold-measurement attempt authorized. The three upstream PRs were **declined** by the developer on
+2026-08-11, so the local onedir build is permanent rather than interim. Every descoped item, plus
+two out-of-scope UI defects the gate observed and the pre-existing plaintext PKCE logging at
+`nile/user.ts:62`, are recorded with dated blockers, preconditions and owners in
+`.planning/phases/34.9-macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co/deferred-items.md`
+(plan 34.9-17).
 
 Plans:
 - [x] 34.9-01-PLAN.md — `meta/buildRunnersOnedir.ts`: clone pinned tags, derive upstream's own pyinstaller command, swap one flag, archive (wave 1)

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.9-15-PLAN.md (authored 34.9-LIVE-GATE-RERUN.md -- an unrun re-run contract for REQ-34.9-11's blocking live gate; verdict PENDING, run_date null, both Observed: fields unfilled. Re-scores item 4/Electron-PACKAGED and item 1/Tauri-DEV as the two scored items, carries items 2/3/5 forward with a written conditional non-invalidation argument, and builds F-34.9-01/02/04 into its pass criteria. 34.9-LIVE-GATE.md's FAIL record is untouched. Phase 34.9 does NOT close yet -- gap cycle 1 continues with 34.9-16 (the human-operated run) and 34.9-17. Next: /gsd-execute-phase 34.9)
-last_updated: "2026-08-11T02:14:18.151Z"
-last_activity: 2026-08-11 -- Phase 34.9 gap cycle 1, plan 15 complete
+stopped_at: Completed 34.9-17-PLAN.md (final gap-cycle 1 plan -- wrote deferred-items.md, the phase-level ledger recording all 6 descoped items from the 2026-08-11 scope fence (REQ-34.9-02/03/04/09, Tauri-PACKAGED resolution, real-cert notarization) plus the 2 out-of-scope UI defects the gate observed plus the pre-existing PKCE-logging note plus the cold-measurement gap, each dated with a blocker mechanism, a named precondition and an OWNER. Reconciled REQUIREMENTS.md (REQ-34.9-02/03/04/09's status-table rows and checkbox entries now cross-reference deferred-items.md; the trailing summary note corrected from the stale "4 ticked, 7 unticked" FAIL-run count to the current "7 ticked (01/05/06/07/08/10/11), 4 unticked (02/03/04/09), all 4 descoped not failed"), ROADMAP.md (Plans: 17/17 executed, Phase status note rewritten from "DOES NOT CLOSE" to "CLOSES on the arm64 leg only", the existing warm-ratio measurement-caveat block left byte-identical), and this file. Phase 34.9 gap cycle 1 (34.9-12..17) is now complete; the phase CLOSES on the arm64 leg only per the re-run's PASS verdict and the user's own 2026-08-11 scope fence. Next: pick the next phase to plan/execute -- no specific phase pre-selected by this reconciliation.)
+last_updated: "2026-08-11T03:13:20.000Z"
+last_activity: 2026-08-11 -- Phase 34.9 CLOSED (arm64 leg only); gap cycle 1 complete (34.9-12..17)
 progress:
   total_phases: 23
   completed_phases: 16
   total_plans: 283
-  completed_plans: 269
-  percent: 95
+  completed_plans: 271
+  percent: 96
 ---
 
 # Project State
@@ -478,8 +478,43 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — EXECUTING, gap cycle 1
-Plan: 34.9-16 of gap cycle 1 (34.9-12..17) complete 2026-08-11 — recorded the blocking live-gate
+Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **CLOSED 2026-08-11,
+arm64 leg only**
+Plan: 34.9-17 of gap cycle 1 (34.9-12..17) complete 2026-08-11 — the final gap-cycle plan. Wrote
+`deferred-items.md` (the phase-level ledger): 4 sections, 10 dated `OWNER:` entries covering the 6
+items descoped by the 2026-08-11 gap-planning scope fence (REQ-34.9-02 CI x64 leg blocked on
+`workflow_dispatch` requiring the workflow on the repo's default branch; REQ-34.9-03/04 blocked
+transitively on REQ-34.9-02; REQ-34.9-09's cold ratio satisfied-on-WARM only, no third
+cold-measurement attempt authorized; Tauri-PACKAGED resolution blocked on Phase 34.5's pre-existing
+`R-34.5-G1-PKG`; real-certificate notarization out of scope on D-03/D-04), the 2 out-of-scope UI
+defects the 2026-08-11 gate observed (the `electronStub.showOpenDialog` silent-cancel file-picker
+failure, owned by Phase 35; `PathSelectionBox`'s blur-only commit + paste-glyph defect, owner
+UNASSIGNED -- no UI-owning phase remains after 34.11, a decision owed to the developer), and the
+pre-existing plaintext PKCE logging at `nile/user.ts:62` (owner: a future security pass). Reconciled
+REQUIREMENTS.md (REQ-34.9-02/03/04/09's status-table rows and checkbox entries now cross-reference
+the new ledger by item number; the trailing footer note corrected from the stale FAIL-run "4
+ticked, 7 unticked" count to the current, measured "7 ticked (01/05/06/07/08/10/11), 4 unticked
+(02/03/04/09), all 4 DESCOPED not failed"; REQ-34.9-01/05/06/07/10 re-read and confirmed still
+accurate, unchanged), ROADMAP.md (`**Plans:**` line now reads 17/17 executed; the `Phase status`
+note rewritten from "DOES NOT CLOSE" to "CLOSES on the arm64 leg only", narrating F-34.9-01/02/03's
+closure and the re-run's PASS verdict; the existing warm-ratio measurement-caveat block left
+byte-identical, per its own instruction), and this file's own frontmatter (`stopped_at`,
+`last_updated`, `last_activity`, `progress.completed_plans` 269->271, `progress.percent` 95->96 --
+hand-computed as `271/283*100=95.76%` rounds to 96, matching this project's established rounding
+convention; `completed_phases`/`total_phases` left untouched, outside this plan's explicit scope).
+**Before/after for the record:** `completed_plans` was last correctly written as 269 by plan
+34.9-15's own commit; plan 34.9-16's commit (`718a3e08d`) updated the Current Position body
+paragraph but never touched the frontmatter progress block, so 269 silently underscored by 2 before
+this plan's own edit -- corrected here directly to 271 (accounting for both 34.9-16 and 34.9-17),
+not via a `gsd-sdk` write, since every prior plan this gap cycle hit SDK corruption on that verb.
+**Phase 34.9 CLOSES on the arm64 leg only** -- the re-run's `verdict: PASS` (2/2 scored items,
+`34.9-LIVE-GATE-RERUN.md`) plus the descoped set's ledger entries together satisfy this gap cycle's
+own no-partial-pass-without-a-recorded-scope-fence bar. The x64 leg, the digest-verification path,
+and the cold-spawn ratio all remain open but DEFERRED, not FAILED, each with a dated owner in
+`deferred-items.md`. Next: no specific phase pre-selected by this reconciliation -- the next
+session picks the next phase to plan or execute. See `34.9-17-SUMMARY.md`.
+
+(Prior, now superseded: 34.9-16 of gap cycle 1 (34.9-12..17) complete 2026-08-11 — recorded the blocking live-gate
 re-run's verdict into `34.9-LIVE-GATE-RERUN.md` from the operator+orchestrator's already-performed,
 already-archived macOS arm64 hardware run (`/tmp/gamelib-gate-20260811T023738Z`). **Verdict: PASS,
 2/2 scored items.** Scored Item 1 (Tauri DEV nested resolution) PASS: all three runners resolved
@@ -540,7 +575,7 @@ mechanism — `preserveRunnerSymlinksPlugin` restores onedir runner symlinks aft
 live-proven, exact prior-failing codesign invocation now exits 0 — see 34.9-12-SUMMARY.md. 01, 02,
 03, 04, 06 done — 06 depended only on 01/04 and ran out of order per wave scheduling; 34.9-06
 extended meta/downloadHelperBinaries.ts with digest-verified darwin onedir sourcing from the
-GameLib rolling release, plus its first-ever test coverage — see 34.9-06-SUMMARY.md.))
+GameLib rolling release, plus its first-ever test coverage — see 34.9-06-SUMMARY.md.)))
 
 Prior phase: 34.10 (navigation-shell-horizontal-card-tabs-replace-the-sidebar) — **COMPLETE
 2026-08-09**, 27 of 27 plans executed, verification passed 9/9.
