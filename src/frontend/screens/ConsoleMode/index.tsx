@@ -108,7 +108,10 @@ export default function ConsoleMode() {
       zoom.library.length === 0 &&
       steam.library.length === 0
     ) {
-      void refreshLibrary({ runInBackground: true })
+      void refreshLibrary({
+        runInBackground: true,
+        origin: 'console-mode-mount'
+      })
     }
     return () => {
       window.api.setFullscreen(false)

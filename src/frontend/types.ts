@@ -195,6 +195,13 @@ type RefreshOptions = {
   fullRefresh?: boolean
   library?: Runner | 'all'
   runInBackground?: boolean
+  // Plan 34.5-47 (T-34.5-47-01): threads the fixed-literal `origin` from the
+  // nine external call sites through the ContextType-facing surface. Kept a
+  // plain optional string here to match GlobalState.tsx's own local
+  // `RefreshLibraryOptions = RefreshOptions(common) & { origin?: string }` —
+  // deliberately NOT narrowed to a union in this plan (see that file's L58-69
+  // comment and this plan's threat register T-34.5-47-01 residual note).
+  origin?: string
 }
 
 export type SyncType = 'Download' | 'Upload' | 'Force download' | 'Force upload'

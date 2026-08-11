@@ -44,7 +44,11 @@ const EgsSettings = () => {
           title: 'EGS Sync'
         })
         setEgsPath(newPath === 'unlink' ? '' : newPath)
-        refreshLibrary({ fullRefresh: true, runInBackground: false })
+        refreshLibrary({
+          fullRefresh: true,
+          runInBackground: false,
+          origin: 'egs-sync'
+        })
       }
       setIsSyncing(false)
     })

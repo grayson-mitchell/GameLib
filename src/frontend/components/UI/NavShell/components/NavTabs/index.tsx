@@ -72,7 +72,10 @@ export default function NavTabs() {
       (amazon.user_id && !amazon.library.length) ||
       (zoom.username && !zoom.library.length)
     if (shouldRefresh) {
-      return refreshLibrary({ runInBackground: true })
+      return refreshLibrary({
+        runInBackground: true,
+        origin: 'nav-tabs-games-tab'
+      })
     }
     return
   }

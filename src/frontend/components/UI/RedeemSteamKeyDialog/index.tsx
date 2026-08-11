@@ -28,9 +28,7 @@ export default function RedeemSteamKeyDialog() {
   const [key, setKey] = useState('')
   const [busy, setBusy] = useState(false)
   const [outcome, setOutcome] = useState<RedeemKeyOutcome | null>(null)
-  const [packageName, setPackageName] = useState<string | undefined>(
-    undefined
-  )
+  const [packageName, setPackageName] = useState<string | undefined>(undefined)
   const [matchedGame, setMatchedGame] = useState<GameInfo | undefined>(
     undefined
   )
@@ -88,7 +86,7 @@ export default function RedeemSteamKeyDialog() {
         setPackageName(firstPackageName)
         // NOT recomputeOwnership directly — reuse the existing refresh path
         // so the library, ownership, and any dependent UI stay consistent.
-        await refreshLibrary({ library: 'steam' })
+        await refreshLibrary({ library: 'steam', origin: 'redeem-steam-key' })
       }
     } catch {
       setOutcome('error')
@@ -107,7 +105,9 @@ export default function RedeemSteamKeyDialog() {
 
   if (!showRedeemKeyDialog) return null
 
-  const copy = outcome ? redeemOutcomeCopy(outcome, tGamelib, packageName) : null
+  const copy = outcome
+    ? redeemOutcomeCopy(outcome, tGamelib, packageName)
+    : null
 
   return (
     <Dialog onClose={resetAndClose} showCloseButton>
@@ -146,10 +146,7 @@ export default function RedeemSteamKeyDialog() {
           </p>
         )}
         {outcome === 'success' && matchedGame && (
-          <button
-            className="button is-secondary"
-            onClick={onViewInLibrary}
-          >
+          <button className="button is-secondary" onClick={onViewInLibrary}>
             {t('redeemSteamKey.viewInLibrary', 'View in library')}
           </button>
         )}

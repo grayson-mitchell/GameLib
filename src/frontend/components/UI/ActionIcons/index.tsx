@@ -117,7 +117,8 @@ export default React.memo(function ActionIcons({
           title={t('generic.library.refresh', 'Refresh Library')}
           onClick={async () =>
             refreshLibrary({
-              checkForUpdates: true
+              checkForUpdates: true,
+              origin: 'action-icons-refresh-button'
             })
           }
         >

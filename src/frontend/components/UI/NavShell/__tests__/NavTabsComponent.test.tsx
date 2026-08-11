@@ -226,7 +226,7 @@ describe('NavTabs', () => {
     })
   })
 
-  it('invokes refreshLibrary with { runInBackground: true } via the Games tab onClick when a logged-in store has an empty library', async () => {
+  it('invokes refreshLibrary with { runInBackground: true, origin: "nav-tabs-games-tab" } via the Games tab onClick when a logged-in store has an empty library', async () => {
     const refreshLibrary = jest.fn()
     contextValue = makeContextValue({
       gog: { username: 'TestUser', library: [] },
@@ -237,7 +237,10 @@ describe('NavTabs', () => {
     const gamesTab = tabs[1]
     await (gamesTab.props.onClick as () => Promise<void>)()
 
-    expect(refreshLibrary).toHaveBeenCalledWith({ runInBackground: true })
+    expect(refreshLibrary).toHaveBeenCalledWith({
+      runInBackground: true,
+      origin: 'nav-tabs-games-tab'
+    })
   })
 
   it('does not invoke refreshLibrary via the Games tab onClick when libraries are populated', async () => {

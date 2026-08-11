@@ -55,7 +55,9 @@ export default React.memo(function NewLogin() {
     Boolean(amazon.user_id)
   )
   const [isZoomLoggedIn, setIsZoomLoggedIn] = useState(Boolean(zoom.username))
-  const [isSteamLoggedIn, setIsSteamLoggedIn] = useState(Boolean(steam?.username))
+  const [isSteamLoggedIn, setIsSteamLoggedIn] = useState(
+    Boolean(steam?.username)
+  )
   // Runner only shows `buttonText` (the reconnect prompt) in its
   // not-logged-in branch, so when the session has expired we present the
   // tile as "not logged in" (D-09: tile flips to Session expired — Reconnect)
@@ -108,7 +110,7 @@ export default React.memo(function NewLogin() {
   ])
 
   async function handleLibraryClick() {
-    await refreshLibrary({ runInBackground: false })
+    await refreshLibrary({ runInBackground: false, origin: 'login-screen' })
     navigate('/')
   }
 
@@ -130,11 +132,7 @@ export default React.memo(function NewLogin() {
       <div className="loginContentWrapper">
         <div className="runnerList">
           <div className="runnerHeader">
-            <img
-              src={GameLibIcon}
-              className="runnerHeaderIcon"
-              alt="GameLib"
-            />
+            <img src={GameLibIcon} className="runnerHeaderIcon" alt="GameLib" />
             <div className="runnerHeaderText">
               <h1 className="title">GameLib</h1>
             </div>
@@ -239,8 +237,7 @@ export default React.memo(function NewLogin() {
               loginUrl={humbleLoginPath}
               isLoggedIn={isHumbleLoggedIn}
               user={
-                humble?.username ??
-                t('login.humble_connected', 'Connected')
+                humble?.username ?? t('login.humble_connected', 'Connected')
               }
               logoutAction={humble?.logout ?? (() => Promise.resolve())}
               disabled={oldMac}

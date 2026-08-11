@@ -195,7 +195,8 @@ export default function SideloadDialog({
     await refreshLibrary({
       library: 'sideload',
       runInBackground: true,
-      checkForUpdates: true
+      checkForUpdates: true,
+      origin: 'sideload-add-app'
     })
     setAddingApp(false)
     return backdropClick()
