@@ -4790,10 +4790,14 @@ const MAX_PROTOCOL_URL_LEN: usize = 2048;
 /// `protocol.ts`'s own `new URL()` call remains the sole authority on interpretation.
 ///
 /// Deliberately ACCEPTS a URL with no `runner` query parameter (e.g.
-/// `gamelib://launch?appName=1207659037`) -- load-bearing, see D-44-C / `U-34.5-19`:
-/// `shortcuts.ts:227`'s unquoted `run.sh` template makes `bash` split the whole command on the
-/// unescaped `&`, so the macOS `.app` path delivers exactly this truncated form, and
-/// `findGame` (`protocol.ts:181`) recovers by searching every runner in order.
+/// `gamelib://launch?appName=1207659037`) -- see D-44-C / `U-34.5-19`. `shortcuts.ts:227`'s
+/// `run.sh` template USED TO be unquoted, which made `bash` split the whole command on the
+/// unescaped `&` so the macOS `.app` path delivered exactly this truncated form -- that template
+/// is quoted and percent-encoded now, so this specific shape is no longer emitted by current code (fixed in plan 34.5-45).
+/// The tolerance is KEPT anyway: `.app` bundles generated before that fix already exist on
+/// users' disks and still deliver the truncated runner-less URL, so this is now a compatibility
+/// guarantee plus defence-in-depth, not dead code. `findGame` (`protocol.ts:181`) recovers by
+/// searching every runner in order.
 fn protocol_url_arg(args: &[String]) -> Option<String> {
     let candidate = args
         .iter()
@@ -7497,7 +7501,10 @@ mod tests {
     #[test]
     fn protocol_url_arg_accepts_a_runnerless_url() {
         // D-44-C / U-34.5-19: the bash-truncated macOS .app run.sh form -- the `runner`
-        // param is lost when `bash` splits `shortcuts.ts:227`'s unquoted command on `&`.
+        // param USED TO be lost when `bash` split shortcuts.ts:227's unquoted command on `&`.
+        // That template is quoted and percent-encoded now, so this specific shape is no longer
+        // emitted by current code (fixed in plan 34.5-45); kept as a regression/compat pin for
+        // .app bundles written before the fix.
         let args = vec!["gamelib://launch?appName=1207659037".to_string()];
         assert_eq!(
             protocol_url_arg(&args),

@@ -26,22 +26,19 @@
  *
  * `addShortcut`'s darwin exe pin drives the REAL `shortcuts/shortcuts/shortcuts.ts` `addShortcuts`/
  * `generateMacOsApp` chain (imported directly, not mocked) so the assertion proves the real code
- * path, not a re-implementation. `getIcon` (`backend/shortcuts/utils`), `nativeImage.createFromBuffer`
- * (`electron`, only this one member overridden — `app.getPath` stays the REAL `electronStub`
- * forward to `pathShim.ts`, which is the whole point) and `IconIcns` (`@shockpkg/icon-encoder`)
- * are the three dependencies `convertPngToICNS` (module-private, try/catch-wrapped, returns false
- * on ANY failure) needs — mocked here specifically so the CONTROL case can reach `shortcuts.ts:227`
- * at all; see that describe block's own header for why the control case must be written and pass
- * FIRST.
+ * path, not a re-implementation.
  *
- * GAP FIX (found while writing this suite): `jest.config.js` sets `resetMocks: true`, which wipes
- * ANY mock implementation — including one supplied inline inside a `jest.mock(...)` factory —
- * before EVERY test (the same gotcha `steamAuthFlows.test.ts` documents for
- * `mockRequestRustInvoke`). `nativeImage.createFromBuffer` and `IconIcns`'s constructor are
- * therefore re-armed in the shared `beforeEach` below, not left as one-shot factory bodies; the
- * first attempt at this suite left them factory-only and every darwin-exe-pin case failed with
- * `Cannot read properties of undefined (reading 'resize')` because the mock had been silently
- * reset back to a bare no-op before the test body ran.
+ * UPDATED (Phase 34.5 gap cycle 6, plan 34.5-45, F-34.5-G6-07): `convertPngToICNS`'s full chain
+ * now runs REAL, nothing mocked — `nativeImage.createFromBuffer` resolves to the real
+ * `sips`-backed shim (`nativeImageShim.ts`, via `electron`'s real `electronStub` forward) and
+ * `@shockpkg/icon-encoder`'s `IconIcns` is the real encoder. This file previously mocked BOTH
+ * (`createFromBuffer: jest.fn()` on the `electron` factory, plus a whole-module
+ * `jest.mock('@shockpkg/icon-encoder', ...)`) with an explicit comment naming
+ * `nativeImage.createFromBuffer` as "the one member `convertPngToICNS` needs and the real stub
+ * does not implement" — that pair of mocks is exactly why a 4462-test green suite never caught
+ * `nativeImage`'s missing members (F-34.5-G6-07); both are gone, not merely adjusted
+ * (T-34.5-C6-24). `app.getPath` was already the REAL `electronStub` forward to `pathShim.ts`
+ * before this change and still is.
  */
 
 // ── backend/config — avoid a real on-disk config.json read while driving the real addShortcuts
@@ -115,36 +112,25 @@ jest.mock('backend/shortcuts/utils', () => ({
   removeImage: jest.fn().mockReturnValue(undefined)
 }))
 
-// ── @shockpkg/icon-encoder — IconIcns is a real native-adjacent PNG->ICNS encoder; mocked so
-// convertPngToICNS's control case can succeed without a real 512x512 PNG fixture. Re-armed in
-// beforeEach below (resetMocks wipes this factory body too).
-jest.mock('@shockpkg/icon-encoder', () => ({
-  IconIcns: jest.fn()
-}))
-
-// ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shims,
-// same three-way preamble every prior real-shim suite uses, EXCEPT `nativeImage.createFromBuffer`
-// is overridden (the one member convertPngToICNS needs and the real stub does not implement) —
-// `app.getPath` is deliberately left as the REAL electronStub forward to pathShim.ts, since proving
-// THAT chain (GAMELIB_SHELL_EXE -> getPath('exe') -> shortcuts.ts:227) is this suite's whole point.
-// Re-armed in beforeEach below (resetMocks wipes this factory body too).
-jest.mock('electron', () => {
-  const actual = jest.requireActual('../electronStub')
-  return {
-    ...actual,
-    nativeImage: {
-      ...actual.nativeImage,
-      createFromBuffer: jest.fn()
-    }
-  }
-})
+// ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shims.
+// `nativeImage` (F-34.5-G6-07 fix) and `app.getPath` are BOTH the real electronStub forward now
+// — proving the real `sips`-backed `nativeImageShim.ts` chain (and, for `app.getPath('exe')`,
+// GAMELIB_SHELL_EXE -> getPath('exe') -> shortcuts.ts:227) is this suite's whole point.
+jest.mock('electron', () => jest.requireActual('../electronStub'))
 jest.mock('electron-store', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync } from 'fs'
+import {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  readdirSync,
+  mkdirSync,
+  statSync
+} from 'fs'
 import { homedir, tmpdir } from 'os'
 import { join } from 'path'
 import { dirSync, type DirResult } from 'tmp'
@@ -154,11 +140,10 @@ import { handlerRegistry, listenerRegistry } from '../electronStub'
 import { getPath } from '../pathShim'
 import { getGame, handleExit } from 'backend/utils'
 import { sendFrontendMessage } from 'backend/ipc'
-import { logWarning } from 'backend/logger'
+import { logWarning, logError } from 'backend/logger'
 import { GlobalConfig } from 'backend/config'
 import { getIcon } from 'backend/shortcuts/utils'
-import { nativeImage } from 'electron'
-import { IconIcns } from '@shockpkg/icon-encoder'
+import { execFileSync } from 'node:child_process'
 import {
   addShortcuts as realAddShortcuts,
   shortcutFiles
@@ -209,21 +194,32 @@ const mockGetGame = getGame as jest.Mock
 const mockHandleExit = handleExit as jest.Mock
 const mockSendFrontendMessage = sendFrontendMessage as jest.Mock
 const mockLogWarning = logWarning as jest.Mock
+const mockLogError = logError as jest.Mock
 const mockGlobalConfigGet = GlobalConfig.get as jest.Mock
 const mockGetIcon = getIcon as jest.Mock
-const mockCreateFromBuffer = nativeImage.createFromBuffer as jest.Mock
-const mockIconIcns = IconIcns as unknown as jest.Mock
 
-// A real fixture image `getIcon` resolves to -- read once by `convertPngToICNS` before the
-// (mocked) nativeImage/IconIcns pipeline runs. Deliberately OUTSIDE the redirected home (a
-// read-only scratch INPUT under the real os.tmpdir(), never a destination this suite asserts
-// against) -- every path this suite actually makes assertions about (the `.app`/run.sh writes) is
-// under the structurally redirected `homedir()`.
+// A real fixture image `getIcon` resolves to -- read once by `convertPngToICNS`, which now (F-34.5-G6-07
+// fix, plan 34.5-45) runs the REAL nativeImage/IconIcns chain end to end, nothing mocked. Deliberately
+// OUTSIDE the redirected home (a read-only scratch INPUT under the real os.tmpdir(), never a
+// destination this suite asserts against) -- every path this suite actually makes assertions about
+// (the `.app`/run.sh writes) is under the structurally redirected `homedir()`.
+//
+// Generated at test-file load time by converting a file that ships with every macOS install
+// (GenericDocumentIcon.icns, present since at least 10.x) to a real PNG via the real `sips` binary
+// -- never a committed binary fixture, and never hand-rolled fake bytes (`Buffer.from('fake-fixture-icon-bytes')`
+// is not a decodable image and fails the real shim).
 const FIXTURE_ICON_PATH = join(
   tmpdir(),
-  `gamelib-shortcuts-test-fixture-icon-${process.pid}.jpg`
+  `gamelib-shortcuts-test-fixture-icon-${process.pid}.png`
 )
-writeFileSync(FIXTURE_ICON_PATH, Buffer.from('fake-fixture-icon-bytes'))
+execFileSync('/usr/bin/sips', [
+  '-s',
+  'format',
+  'png',
+  '/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/GenericDocumentIcon.icns',
+  '--out',
+  FIXTURE_ICON_PATH
+])
 
 // Registered ONCE for this whole file (not per-test) -- `listenerRegistry`/`handlerRegistry` are
 // module-scope maps; calling registerShortcutsFlows() more than once would stack a duplicate
@@ -244,20 +240,6 @@ beforeEach(() => {
       }) as Partial<AppSettings>
   })
   mockGetIcon.mockResolvedValue(FIXTURE_ICON_PATH)
-  // GAP FIX (see module docstring): resetMocks wipes these two factory-supplied implementations
-  // before every test -- re-armed here every time, mirroring steamAuthFlows.test.ts's own
-  // `mockRequestRustInvoke.mockImplementation(...)` re-wiring convention.
-  mockCreateFromBuffer.mockReturnValue({
-    resize: () => ({
-      crop: () => ({
-        toPNG: () => Buffer.from('mock-png-bytes')
-      })
-    })
-  })
-  mockIconIcns.mockImplementation(() => ({
-    addFromPng: jest.fn(),
-    encode: jest.fn(() => Buffer.from('mock-icns-bytes'))
-  }))
 })
 
 afterAll(() => {
@@ -510,13 +492,65 @@ describe("addShortcut's darwin GAMELIB_SHELL_EXE pin (T-34.5-65/66, D-10 rejects
 
     const [, menuFile] = shortcutFiles(title)
     const runShPath = `${menuFile}/Contents/MacOS/run.sh`
+    const icnsPath = `${menuFile}/Contents/Resources/shortcut.icns`
+
+    // F-34.5-G6-07: with the real nativeImage shim + real IconIcns, convertPngToICNS's
+    // downstream artifact (shortcut.icns) exists alongside run.sh -- both files, not one.
+    expect(existsSync(icnsPath)).toBe(true)
+    expect(statSync(icnsPath).size).toBeGreaterThan(0)
 
     expect(existsSync(runShPath)).toBe(true)
     const contents = readFileSync(runShPath, 'utf-8')
+    // T-34.5-C6-17 (plan 34.5-45): exe path double-quoted, gamelib:// URL single-quoted.
     expect(contents).toContain(
-      '/Applications/GameLib Test.app/Contents/MacOS/GameLib --no-gui gamelib://launch?appName='
+      '"/Applications/GameLib Test.app/Contents/MacOS/GameLib" --no-gui \'gamelib://launch?appName='
     )
     expect(contents).not.toContain(process.execPath)
+
+    // F-34.5-G6-07: convertPngToICNS succeeded for real -- no swallowed-throw failure line.
+    const sawFailure = mockLogError.mock.calls.some((call) =>
+      JSON.stringify(call).includes('Error generating MacOS App')
+    )
+    expect(sawFailure).toBe(false)
+  })
+
+  // Injection proof (T-34.5-C6-17, F-34.5-G6-07 follow-on) — plan 34.5-45's Task 1 makes
+  // generateMacOsApp reachable for the first time, which makes the injection this template opens
+  // reachable too. Proven RED first: with the encodeURIComponent calls temporarily reverted
+  // (`shortcuts.ts`'s `gamelibUrl` built from the raw, un-encoded `app_name`/`runner`), this exact
+  // test FAILED -- see 34.5-45-SUMMARY.md for the verbatim failure output. Restored, it passes.
+  it('a malicious app_name cannot inject a shell command into run.sh (RED-proven, see SUMMARY for the failing-run transcript)', async () => {
+    process.env.GAMELIB_SHELL_EXE = '/Applications/GameLib.app/Contents/MacOS/GameLib'
+    const maliciousAppName = 'x&runner=gog;touch /tmp/gamelib-pwned'
+    const title = 'Injection Pin Game'
+
+    mockGetGame.mockImplementation(() =>
+      makeFakeGame(
+        makeGameInfo({ title, app_name: maliciousAppName, runner: 'legendary' })
+      )
+    )
+
+    const listener = listenerRegistry.get('addShortcut')?.[0]
+    listener?.(null, title, 'legendary', undefined)
+    await flush()
+
+    const [, menuFile] = shortcutFiles(title)
+    const runShPath = `${menuFile}/Contents/MacOS/run.sh`
+    expect(existsSync(runShPath)).toBe(true)
+    const contents = readFileSync(runShPath, 'utf-8')
+
+    const urlMatch = /'(gamelib:\/\/[^']*)'/.exec(contents)
+    expect(urlMatch).not.toBeNull()
+    const parsedAppName = new URL(urlMatch![1]).searchParams.get('appName')
+    expect(parsedAppName).toBe(maliciousAppName)
+
+    // No bare `;` or `&` outside the single-quoted URL region -- strip that region and assert
+    // what remains (the launch command's exe/flag portion) contains neither. Once percent-encoded,
+    // the malicious payload lives entirely inside the single-quoted URL, so a passing assertion
+    // here means nothing of it escaped into unquoted shell syntax.
+    const withoutUrl = contents.replace(/'gamelib:\/\/[^']*'/, "''")
+    expect(withoutUrl).not.toContain(';')
+    expect(withoutUrl).not.toContain('&')
   })
 
   it('UNSET: deleting GAMELIB_SHELL_EXE writes no run.sh, does not reject the listener, and logs the failure', async () => {

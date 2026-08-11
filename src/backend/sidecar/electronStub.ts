@@ -646,13 +646,22 @@ export const session = {
   }
 }
 
-// ---- Remaining main-process surfaces (safe no-ops; out of scope per 27-CONTEXT) --
-
-export const nativeImage = {
-  createFromPath: () => ({}),
-  createFromDataURL: () => ({}),
-  createEmpty: () => ({})
-}
+// ---- nativeImage (Phase 34.5 gap cycle 6, plan 34.5-45, F-34.5-G6-07) ---------------------
+//
+// Previously a four-line stub with only `createFromPath`/`createFromDataURL`/`createEmpty`, each
+// returning a bare `{}` -- the buffer-based factory member (`createFrom` + `Buffer`) did not
+// exist at all. That made `shortcuts.ts:259`'s icon-buffer conversion call throw ("...is not a
+// function"), so `convertPngToICNS` always failed, `generateMacOsApp` never reached its
+// `run.sh` write, and the throw was swallowed into the generic `Error generating MacOS App` --
+// structurally dead for EVERY macOS game, not target- or icon-format-specific. A second,
+// independent instance of the same defect class sat on `steamhelper.ts:121`'s data-URL-to-JPEG
+// call (reached from `prepareImagesForSteam` on the `addToSteam` path, for any non-`http` image
+// URL) -- `.toJPEG` was not a function on the old bare `{}` either.
+//
+// Now a real, `sips`-backed implementation -- see `nativeImageShim.ts` for the full contract
+// (lazy resize/crop, real toPNG/toJPEG, a loud non-darwin decline instead of a silent empty
+// Buffer).
+export { nativeImage } from './nativeImageShim'
 
 export const screen = {
   getPrimaryDisplay: () => ({
