@@ -16,11 +16,23 @@ Phase 35 (Electron cutover). Phase 35 must not run while any channel below is un
   relays (`gameStatusUpdate`/`progressUpdate`/`changedDMQueueInformation`/`pushGameToLibrary`)
   are counted outside this tally, per the convention SEAM.md established in Phase 30.
 
+## Preload-surface coverage
+
+Every channel exposed via `makeHandlerInvoker`/`makeListenerCaller` under `src/preload/` appears
+in exactly one bucket line of this document. Enforcement: `preload-surface-gate.py`
+(`.planning/phases/34.5-.../preload-surface-gate.py`), which re-derives the surface from source
+at run time rather than trusting any transcribed list. Provenance: `34.5-PRELOAD-SURFACE-AUDIT.md`
+(plan 34.5-49, D-CYCLE6-C, 2026-08-12), which measured the gap this invariant closes. Push
+(`frontendListenerSlot`) channels are out of tally by this document's own `## Method` convention
+above. This is what makes the header rule at the top of this file — "Phase 35 must not run while
+any channel below is unported" — mean something for the first time: the set it quantifies over is
+now provably the real one, not merely the originally-transcribed one.
+
 ## Totals
 
 | | Count |
 |---|---:|
-| Unique channels | 211 |
+| Unique channels | 222 |
 | Ported to sidecar | 28 |
 | **Unported** | **183** |
 
@@ -38,14 +50,43 @@ re-tallied per phase (the per-phase sections below carry the current per-slice c
 above is reflected in "Unported" only because that is where an unlisted-but-real channel belongs
 until it is credited to a specific phase's ported set below.
 
-## Already ported (28)
+**Unique channels raised 211 → 222 (plan 34.5-49, D-CYCLE6-C, 2026-08-12):** the full
+preload-surface audit (`34.5-PRELOAD-SURFACE-AUDIT.md`) diffed **every** channel exposed under
+`src/preload/` (217 distinct invoke+send channels, multi-line-aware and comment-stripped) against
+this document's bucket lines (211 names) and found **11 unlisted**, each now bucketed below: 3
+into "Already ported" (`connectivity-changed`, `get-connectivity-status`, `oauthCaptureLogin` —
+each reached under the sidecar by a route other than a dedicated `*FlowRegistration.ts` file, see
+the audit for the grep evidence) and 8 into the new "Late-discovered" section owned by Phase 34.6
+(`frontendReady`, `getAchievements`, `getDefaultSavePath`, `getGogDiscounts`,
+`getPlaytimeFromRunner`, `importGame`, `moveInstall`, `runWineCommandForGame`). 211 + 11 = 222.
+This +11 is arithmetically independent of the Phase 34.5 section's own 39+3+16=58 reconciliation
+below — none of the 11 belong to slice 8's four runner modules.
 
-`cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `getDMQueueInformation`, `getLogContent`, `getMaxCpus`, `getSystemInfo`, `hasExecutable`, `health`, `install`, `isNative`, `launch`, `listSteamLibraryTargets`, `logError`, `openDialog`, `pauseCurrentDownload`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamPollQR`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
+## Already ported (31)
+
+`cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `getDMQueueInformation`, `get-connectivity-status`, `getLogContent`, `getMaxCpus`, `getSystemInfo`, `hasExecutable`, `health`, `install`, `isNative`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamPollQR`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
 
 `logError` was ported early by Phase 34.2 gap cycle 2 (plan 34.2-16) — see the Phase 34.3 list
 below, which now excludes it, and `34.2-PORTED-CHANNELS.md`'s gap-cycle-2 subsection for the full
 rationale (REQ-34.2-12, code-review CR-01). It is a `sidecar send` channel, not one of Phase 34.2's
 own 26 slice-5 channels. Phase 34.3 must NOT register it a second time.
+
+**Three more added 2026-08-12 by plan 34.5-49 (D-CYCLE6-C), late-discovered by the full
+preload-surface audit — 28 → 31:**
+- `connectivity-changed` (sidecar send) and `get-connectivity-status` (sidecar invoke) are
+  registered by `src/backend/online_monitor.ts` (`addListener`/`addHandler` from `backend/ipc`),
+  which `src/backend/sidecar/bootstrap.ts:480` imports and calls (`initOnlineMonitor()`) directly
+  at boot, reached under the sidecar via the `Module._load` shim that redirects `require('electron')`
+  to `electronStub.ts`. This is a genuine port — just not via a dedicated
+  `sidecar/*FlowRegistration.ts` file the way most of this inventory's other entries are — and is
+  confirmed live by the dedicated `src/backend/sidecar/__tests__/onlineMonitorWiring.test.ts`.
+  `set-connectivity-online` (their sibling, same module) was already correctly bucketed under
+  Phase 34.1.
+- `oauthCaptureLogin` (sidecar invoke) was **never registered under Electron at all** — it is a
+  Tauri-only channel added by Phase 34.4.1 (D-01/D-04, `src/backend/sidecar/oauthLoginFlowRegistration.ts`)
+  and was simply never written into a bucket line. It carries an OAuth `code=`/redirect URL — see
+  the audit's finding note; recorded here as ported, the credential-handling concern is a
+  **separate** flag, not a reason to withhold bucketing.
 
 ## Phase 34.1 — Slice 4 — app shell and window chrome (33 channels)
 
@@ -190,6 +231,18 @@ missing channels is unknown and **must not be assumed to be one**. Auditing it i
 precondition, scoped to gap cycle 6, and is plan **34.5-49**'s own deliverable (D-CYCLE6-C) — this
 plan (34.5-43) buckets ONE channel only and does not perform that audit.
 
+**UPDATE 2026-08-12 (plan 34.5-49, D-CYCLE6-C) — the extent is now KNOWN: 11 more unlisted
+channels, all bucketed.** `34.5-PRELOAD-SURFACE-AUDIT.md` re-derived the preload surface from
+source (217 distinct invoke+send channels, multi-line-aware, comment-stripped) and set-differenced
+it against this document's bucket-line names (211). The result was **11** unlisted channels — not
+zero, and not assumed to be one — each now bucketed above (3 into "Already ported", 8 into the new
+"Late-discovered — owner Phase 34.6" section). This closes the **enumeration question**
+`U-34.5-14` was created to answer; it closes **nothing** about whether any of those 11 (or any of
+the other 211+11=222) channels actually works under Tauri. This paragraph is kept, not deleted,
+because it is provenance: deleting the record of how the gap was found the moment it stops being
+embarrassing would recreate the exact blind spot `U-34.5-14` exists to prevent. See the
+"Preload-surface coverage" section below for the standing invariant this establishes.
+
 Per D-08's no-partial-pass rule, Phase 34.5 does NOT close on any of these three results; see
 `34.5-LIVE-GATE-RERUN-2.md` for the third run's full evidence and `34.5-42-SUMMARY.md` for this
 propagation pass.
@@ -209,6 +262,29 @@ Split out of Phase 34.5's 57 on 2026-07-29 (D-03/D-05) — deferred, not dropped
 silent-failure warning already documented for this project's other send channels. `callTool`'s
 `winetricks` branch already works from Phase 34.5 via `Winetricks.run()` on the shared
 `tools/index.ts` object; this phase is only about the three dedicated IPC channels above.
+
+## Late-discovered — owner Phase 34.6 (8 channels)
+
+Found 2026-08-12 by plan 34.5-49's full preload-surface audit (D-CYCLE6-C,
+`34.5-PRELOAD-SURFACE-AUDIT.md`) — unported, and absent from every bucket line until this plan.
+Deliberately **not** folded into the "Phase 34.6 — Slice 9" list above: none of these 8 belong to
+the EOS overlay, SteamGridDB or winetricks clusters that section's own "(16 channels)" heading
+counts, and merging them in would silently inflate that historical count. This section is their
+own bucket, with Phase 34.6 as the owner because that is the next phase scheduled to port
+non-Steam-runner/Wine/shortcut-adjacent unported channels before Phase 35's cutover gate.
+
+`frontendReady`, `getAchievements`, `getDefaultSavePath`, `getGogDiscounts`, `getPlaytimeFromRunner`, `importGame`, `moveInstall`, `runWineCommandForGame`
+
+- `getDefaultSavePath` already had a prior owner decision (Phase 34.6, per
+  `34.5-PORTED-CHANNELS.md` correction 1 / `deferred-items.md` item 4) — this is its first actual
+  bucket **line**.
+- `importGame`, `moveInstall` and `runWineCommandForGame` are flagged findings
+  (T-34.5-C6-49-03, see the audit): renderer-supplied filesystem paths / a command string
+  reaching a Wine process, with no sidecar handler. Flagging is a record, not a fix.
+- `frontendReady` has a real, unguarded frontend caller (`GlobalState.tsx:1586`) that will hit
+  `UNPORTED_CHANNEL_MARKER` under Tauri today.
+- `getAchievements`, `getGogDiscounts`, `getPlaytimeFromRunner` are plain unported reads with no
+  sidecar registration found by grep.
 
 ## Not an IPC channel, but blocks Phase 35
 
