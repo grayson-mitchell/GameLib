@@ -2411,11 +2411,13 @@ REQ-34.9-07, REQ-34.9-08, REQ-34.9-09, REQ-34.9-10, REQ-34.9-11 (minted 2026-08-
 ticked only by measured evidence)
 **Depends on:** Phase 34 (packaging/signing/notarization pipeline). Independent of the 34.1-34.8
 IPC slices. Runs before Phase 35, which will later delete the Electron half of the signing work.
-**Plans:** 19/22 plans executed. Gap cycle 1 (34.9-12..17) closed the arm64 leg
+**Plans:** 20/22 plans executed. Gap cycle 1 (34.9-12..17) closed the arm64 leg
 (2026-08-11) — see the phase-status note above; 34.9-17 completed the full reconciliation. Gap
 cycle 2 (34.9-18..22) is now underway to close CR-01/WR-01 and the six unrecorded review findings;
-34.9-18 (CR-01/WR-01, `meta/preserveRunnerSymlinks.ts`) and 34.9-19 (WR-02 in
-`meta/verifyRunnerBundle.ts`, IN-01/IN-02 doc comments in `meta/cleanDistMac.ts`) are complete.
+34.9-18 (CR-01/WR-01, `meta/preserveRunnerSymlinks.ts`), 34.9-19 (WR-02 in
+`meta/verifyRunnerBundle.ts`, IN-01/IN-02 doc comments in `meta/cleanDistMac.ts`), and 34.9-20
+(CR-01 fully closed -- guard wired into `dist:mac`/`release:mac`; `34.9-GUARD-PROOF.md` authored +
+validated, unrun) are complete.
 **Gap cycle 1 planned 2026-08-11**
 (`/gsd-plan-phase 34.9 --gaps`), 6 plans in 4 waves, 6/6 gap-cycle plans complete (17/17 overall):
 

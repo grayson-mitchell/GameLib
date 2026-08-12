@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.9-19-PLAN.md -- closed WR-02 in verifyRunnerBundle.ts, corrected IN-01/IN-02 doc comments in cleanDistMac.ts
-last_updated: "2026-08-12T08:00:50.765Z"
-last_activity: 2026-08-12 -- Phase 34.9 gap cycle 2 plan 34.9-19 complete
+stopped_at: Completed 34.9-20-PLAN.md -- wired `pnpm verify:runner-bundle` into `dist:mac`/`release:mac` (closes CR-01), authored + validated the unrun `34.9-GUARD-PROOF.md` contract for plan 34.9-21
+last_updated: "2026-08-12T08:24:56.352Z"
+last_activity: 2026-08-12 -- Phase 34.9 gap cycle 2 plan 34.9-20 complete
 progress:
   total_phases: 23
   completed_phases: 17
   total_plans: 297
-  completed_plans: 281
+  completed_plans: 282
   percent: 74
 ---
 
@@ -508,13 +508,15 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **EXECUTING gap cycle 2**
-Plan: 19 of 22 complete. Gap cycle 2 is plans 34.9-18..22 across 4 waves — execution started
+Plan: 20 of 22 complete. Gap cycle 2 is plans 34.9-18..22 across 4 waves — execution started
 2026-08-12. Wave 1 = 34.9-18 + 34.9-19, wave 2 = 34.9-20, wave 3 = 34.9-21, wave 4 = 34.9-22.
 Plan 34.9-21 is `autonomous: false` and requires a human on real macOS arm64 hardware to run
 `34.9-GUARD-PROOF.md`.
 Status: Executing Phase 34.9 gap cycle 2 -- plans 34.9-18 (CR-01/WR-01 closure in
-`meta/preserveRunnerSymlinks.ts`) and 34.9-19 (WR-02 closure in `verifyRunnerBundle.ts`, IN-01/IN-02
-doc-comment corrections in `cleanDistMac.ts`) complete, plans 34.9-20..22 remain
+`meta/preserveRunnerSymlinks.ts`), 34.9-19 (WR-02 closure in `verifyRunnerBundle.ts`, IN-01/IN-02
+doc-comment corrections in `cleanDistMac.ts`), and 34.9-20 (CR-01 fully closed -- guard wired into
+`dist:mac`/`release:mac`; `34.9-GUARD-PROOF.md` authored + validated, unrun) complete, plans
+34.9-21..22 remain
 
 Paused phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — gap cycle 6
 executed (34.5-43..51), but the fourth blocking live gate FAILED 2026-08-12 and the phase does not
@@ -3978,6 +3980,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P50 | 2h40m | 3 tasks | 4 files |
 | Phase 34.9 P18 | 25min | 3 tasks | 2 files |
 | Phase 34.9 P19 | 25min | 2 tasks | 4 files |
+| Phase 34.9 P20 | 55min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -4553,6 +4556,9 @@ Recent decisions affecting current work:
 - [Phase 34.9-18]: Target-containment check runs before rmSync/parent-missing check in restoreSymlinks so a rejected record's destination is left untouched (T-34.9-18-02)
 - [Phase 34.9-18]: Guard A's failing direction (closeBundle throw) is proven at unit level only -- unreachable from a real build today since vendored darwin trees are git-ignored; live proof deferred to plan 34.9-21
 - [Phase 34.9-19]: Split summarise's stub condition into two branches (absent-first, wrong-type-second) so both stub defects remain separately diagnosable
+- [Phase 34.9]: 34.9-20: Inserted the guard step AFTER electron-vite build and IMMEDIATELY BEFORE electron-builder in both dist:mac and release:mac, keeping electron-builder the last && segment so CI's appended args keep landing on it unchanged
+- [Phase 34.9]: 34.9-20: Did not touch any .github/workflows/*.yml file -- one script edit covers both local and CI invocation paths
+- [Phase 34.9]: 34.9-20: Fixed a self-satisfying assertion in 34.9-GUARD-PROOF.md's Direction B before publishing it -- replaced a bare 'publish' grep (self-matches on dist:mac's own --publish=never invocation line) with an absence check on the literal Uploading
 
 ### Pending Todos
 
@@ -4728,7 +4734,32 @@ Recent decisions affecting current work:
 > tracks `completed_phases`/`total_phases` = 17/23, not plans); both hand-corrected in the
 > frontmatter above.
 
-Last session: 2026-08-12T08:00:50.747Z
+> NOTE (34.9-20): the same mis-targeted-write pattern struck a FOURTH consecutive time --
+> `state.record-session` overwrote only the first line of plan 34.9-19's `Stopped at:` entry
+> ("Completed 34.9-19-PLAN.md -- closed WR-02 in `meta/verifyRunnerBundle.ts` (`summarise`") with
+> this session's own short line ("Completed 34.9-20-PLAN.md"), orphaning 34.9-19's entire
+> multi-line body underneath with no heading. The same `state.update-progress` call also
+> corrupted the frontmatter `progress` block a fourth time (`completed_plans` 281 -> 283, a gain
+> of 2 for one completed plan; `completed_phases` 17 -> 16, unrelated to any phase closing;
+> `percent` 74 -> 70, a stale plan-based figure, not `completed_phases`/`total_phases`).
+> Hand-corrected below: the orphaned body has been given back its
+> `Stopped at: Completed 34.9-19-PLAN.md -- closed WR-02 in meta/verifyRunnerBundle.ts (summarise`
+> prefix and demoted into its own "prior session (34.9-19)" block, this session's own `Stopped at:`
+> now carries a full description with nothing trailing it, and the frontmatter has been
+> hand-corrected to `completed_plans: 282`, `completed_phases: 17`, `percent: 74`.
+
+Last session: 2026-08-12T08:24:56.336Z
+Stopped at: Completed 34.9-20-PLAN.md -- wired `pnpm verify:runner-bundle build --arch=arm64` into
+`dist:mac`/`release:mac` (closes CR-01), retired the orphan `electron-builder.yml` comment that
+described the guard as a manual tool, and authored + validated (against synthetic specimens,
+never run) `34.9-GUARD-PROOF.md` -- the two-direction proof contract (FAILING: injected
+dereferenced `Python.framework`; PASSING: normal build, appended CLI args honored) plan 34.9-21
+will run on real macOS arm64 hardware. Caught and fixed one self-satisfying contract assertion at
+authoring time (Direction B's publish-absence check). See 34.9-20-SUMMARY.md. Next: plan 34.9-21
+(`autonomous: false`, needs a human on real macOS arm64 hardware).
+
+--- prior session (34.9-19), preserved as history ---
+
 Stopped at: Completed 34.9-19-PLAN.md -- closed WR-02 in `meta/verifyRunnerBundle.ts` (`summarise`
 now records a failure when a framework's top-level stub is absent entirely, not only when it is
 present as the wrong type -- the malformation a partial dereferencing failure actually produces),
