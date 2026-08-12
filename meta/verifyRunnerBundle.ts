@@ -104,6 +104,8 @@ export interface FrameworkInspection {
   resolvedVersionDirExists: boolean
   topLevelStubExists: boolean
   topLevelStubIsSymlink: boolean
+  topLevelStubTarget: string | null
+  resolvedTopLevelTargetExists: boolean
   codesignDisplay: string
 }
 
@@ -139,7 +141,11 @@ function findFrameworks(runnerDir: string): string[] {
  * Inspects a single `*.framework` directory's structural integrity. Every
  * symlink determination uses `lstatSync` (never `statSync`), so a
  * dereferenced (real-directory) `Versions/Current` is correctly reported as
- * NOT a symlink rather than silently resolved through.
+ * NOT a symlink rather than silently resolved through. The top-level stub
+ * (`Python.framework/Python`) receives the same three-part check as
+ * `Versions/Current`: it exists, it is a symlink, and its target resolves
+ * to a real path -- a stub that is a symlink to nowhere is caught here, not
+ * silently passed through as healthy.
  */
 function inspectFramework(frameworkDir: string): FrameworkInspection {
   const name = basename(frameworkDir)
@@ -172,12 +178,26 @@ function inspectFramework(frameworkDir: string): FrameworkInspection {
   const topLevelStubPath = join(frameworkDir, stubName)
   let topLevelStubExists = false
   let topLevelStubIsSymlink = false
+  let topLevelStubTarget: string | null = null
   try {
     const st = lstatSync(topLevelStubPath)
     topLevelStubExists = true
     topLevelStubIsSymlink = st.isSymbolicLink()
+    if (topLevelStubIsSymlink) {
+      topLevelStubTarget = readlinkSync(topLevelStubPath)
+    }
   } catch {
     topLevelStubExists = false
+  }
+
+  // Resolved against the stub's OWN parent directory (frameworkDir), not
+  // against Versions/ -- the top-level stub lives one level shallower than
+  // Versions/Current, so it must not reuse that check's resolution base.
+  let resolvedTopLevelTargetExists = false
+  if (topLevelStubIsSymlink && topLevelStubTarget) {
+    resolvedTopLevelTargetExists = existsSync(
+      join(frameworkDir, topLevelStubTarget)
+    )
   }
 
   // The artifact `codesign` actually classifies is the framework BUNDLE
@@ -195,6 +215,8 @@ function inspectFramework(frameworkDir: string): FrameworkInspection {
     resolvedVersionDirExists,
     topLevelStubExists,
     topLevelStubIsSymlink,
+    topLevelStubTarget,
+    resolvedTopLevelTargetExists,
     codesignDisplay
   }
 }
@@ -466,6 +488,13 @@ export function summarise(results: RunnerInspection[]): Summary {
           `${r.runner}: framework ${fw.path} is malformed -- top-level stub ` +
             `"${fw.name.replace(/\.framework$/, '')}" is a real file, not a ` +
             `symlink into Versions/Current (F-34.9-01)`
+        )
+      } else if (!fw.resolvedTopLevelTargetExists) {
+        failures.push(
+          `${r.runner}: framework ${fw.path} is malformed -- top-level stub ` +
+            `"${fw.name.replace(/\.framework$/, '')}" symlink target ` +
+            `"${fw.topLevelStubTarget}" does not resolve to an existing ` +
+            `path (F-34.9-01)`
         )
       }
     }
