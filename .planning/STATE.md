@@ -4,7 +4,7 @@ milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
 stopped_at: "Completed 34.9-21-PLAN.md -- ran 34.9-GUARD-PROOF.md on real macOS arm64 hardware, verdict PASS, closes CR-01 (see NOTE 34.9-21 below)"
-last_updated: "2026-08-12T10:07:13.751Z"
+last_updated: "2026-08-12T10:12:57.650Z"
 last_activity: 2026-08-12 -- Phase 34.9 gap cycle 2 plan 34.9-21 complete (guard-proof PASS, arm64-only)
 progress:
   total_phases: 23
@@ -3988,6 +3988,7 @@ Closed/parked native-install phases:
 | Phase 34.9 P18 | 25min | 3 tasks | 2 files |
 | Phase 34.9 P19 | 25min | 2 tasks | 4 files |
 | Phase 34.9 P20 | 55min | 3 tasks | 3 files |
+| Phase 34.9 P21 | 73min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
