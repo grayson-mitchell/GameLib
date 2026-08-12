@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Planned 34.9 gap cycle 3 (plans 34.9-23..28); ready to execute"
-last_updated: "2026-08-13T00:00:00.000Z"
-last_activity: 2026-08-13 -- Phase 34.9 gap cycle 3 PLANNED (6 plans, 34.9-23..28, 5 waves; plan-checker PASSED after one sequencing revision). Closes the sole remaining verification gap: truth 8 / C2-01.
+stopped_at: "Completed 34.9-23-PLAN.md -- derived the C2-01 pipe-swallow census (34.9-PIPE-AUDIT.md); 5 plans remain in gap cycle 3 (34.9-24..28)"
+last_updated: "2026-08-13T18:47:00.000Z"
+last_activity: 2026-08-13 -- Phase 34.9 gap cycle 3 plan 34.9-23 EXECUTED (2/2 tasks). Census found 13 esbuild-pipe-to-node instances (1 more than D-C3-01's 12, build:sidecar-sea missed by both prior scope lists), all 12 distinct entry files compile clean and carry zero __dirname/require.main deltas -- no BLOCKER for plan 34.9-25's conversion.
 progress:
   total_phases: 23
   completed_phases: 17
   total_plans: 303
-  completed_plans: 284
-  percent: 74
+  completed_plans: 285
+  percent: 94
 ---
 
 # Project State
@@ -506,6 +506,27 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   they would land in plaintext. **Recommendation: fix F-1 before 34.5-15 runs.** Developer's call;
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
+
+Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **gap cycle 3 IN
+PROGRESS, phase remains OPEN**
+Plan: 34.9-23 of 34.9-23..28 complete (2026-08-13). Gap cycle 3 was planned 2026-08-13 (6 plans,
+5 waves, plan-checker PASSED) to close the sole remaining verification gap from gap cycle 2's
+re-verification: truth 8 / C2-01 (the `esbuild ... | node`/`| node -` pipe-swallow idiom — a
+compile failure in a wired guard script is invisible because `sh -c` has no `pipefail` and a
+POSIX pipeline's exit status is its last command's). Plan 34.9-23 (audit-only, no code/script
+touched) derived the defect's census by a mechanical predicate against the live `package.json`
+(never a line-range grep) and found **13** instances — one more than gap-planning decision
+D-C3-01's 12-item list: `build:sidecar-sea` (`package.json:35`), outside the line-61-72 window
+both `34.9-REVIEW-CYCLE2.md` and D-C3-01 were scoped to. All 12 distinct entry files compile
+clean today (no `VACUOUS TODAY` instance); every one of their emitted bundles carries zero
+`__dirname`/`require.main` references (measured against the bundle, not source comments) — no
+BLOCKER for the conversion. Every CI caller is currently BLOCKED UPSTREAM (12 scripts via
+`install-deps`'s unconditional `download-helper-binaries` throw on the six `PENDING-CI-PUBLISH`
+digest sentinels; `build-runners-onedir`'s sole caller via a separate mechanism — the workflow
+file is absent from the repo's default branch). See `34.9-PIPE-AUDIT.md` and
+`34.9-23-SUMMARY.md`. Next: **34.9-24-PLAN.md**, the next plan in gap cycle 3's wave sequence.
+
+Prior phase-34.9 position (superseded by gap cycle 3 above, retained as history):
 
 Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **gap cycle 2 COMPLETE,
 phase remains OPEN**
@@ -3998,6 +4019,7 @@ Closed/parked native-install phases:
 | Phase 34.9 P19 | 25min | 2 tasks | 4 files |
 | Phase 34.9 P20 | 55min | 3 tasks | 3 files |
 | Phase 34.9 P21 | 73min | 3 tasks | 3 files |
+| Phase 34.9 P23 | 45min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -4576,6 +4598,10 @@ Recent decisions affecting current work:
 - [Phase 34.9]: 34.9-20: Inserted the guard step AFTER electron-vite build and IMMEDIATELY BEFORE electron-builder in both dist:mac and release:mac, keeping electron-builder the last && segment so CI's appended args keep landing on it unchanged
 - [Phase 34.9]: 34.9-20: Did not touch any .github/workflows/*.yml file -- one script edit covers both local and CI invocation paths
 - [Phase 34.9]: 34.9-20: Fixed a self-satisfying assertion in 34.9-GUARD-PROOF.md's Direction B before publishing it -- replaced a bare 'publish' grep (self-matches on dist:mac's own --publish=never invocation line) with an absence check on the literal Uploading
+- [Phase 34.9-23]: Census derived by JSON.parse(package.json).scripts classified into three pipe-shape buckets, never by grepping a line-number window -- found 13 esbuild-pipe-to-node instances, one more (build:sidecar-sea, package.json:35) than gap-planning decision D-C3-01's 12-item list, outside the lines-61-72 window both D-C3-01 and 34.9-REVIEW-CYCLE2.md were scoped to
+- [Phase 34.9-23]: All 12 distinct census entry files compile clean today (esbuild exit 0) and carry zero __dirname/require.main references in their emitted bundles (measured against the bundle, never source comments) -- no VACUOUS TODAY instance, no BLOCKER for plan 34.9-25's conversion
+- [Phase 34.9-23]: install-deps' pnpm download-helper-binaries throw (deferred-items.md item 13) is platform-unconditional, not macOS-scoped as item 13's own framing implied -- confirmed by reading downloadOnedirAsset(), which is never gated on process.platform -- so every one of the 9 workflow files referencing install-deps is currently BLOCKED UPSTREAM at the same step, not just the macOS legs
+- [Phase 34.9-23]: STATE.md frontmatter progress block was hand-corrected rather than trusted from gsd-sdk state.advance-plan/state.update-progress -- both calls reverted status/stopped_at/last_activity to stale plan-21 values and wrote inconsistent completed_plans/percent pairs across two separate invocations (284->286 then a JSON-report/file-write mismatch); reverted via git checkout -- .planning/STATE.md (twice) and hand-edited completed_plans 284->285, percent recomputed 285/303*100=94.06 rounds to 94 per this project's established plan-ratio convention (the committed percent:74 pre-dated this session and did not match either formula -- left as a pre-existing drift, not re-derived further, out of this plan's scope)
 
 ### Pending Todos
 

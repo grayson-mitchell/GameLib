@@ -2411,9 +2411,14 @@ REQ-34.9-07, REQ-34.9-08, REQ-34.9-09, REQ-34.9-10, REQ-34.9-11 (minted 2026-08-
 ticked only by measured evidence)
 **Depends on:** Phase 34 (packaging/signing/notarization pipeline). Independent of the 34.1-34.8
 IPC slices. Runs before Phase 35, which will later delete the Electron half of the signing work.
-**Plans:** 22 total (17 original + 5 gap cycle 2) — 22/22 executed on disk (counted from
-`-SUMMARY.md` files present in this phase's directory 2026-08-12, including this closing plan's
-own). Gap cycle 1 (34.9-12..17) closed the arm64 leg (2026-08-11) — see the phase-status
+**Plans:** 28 total (17 original + 5 gap cycle 2 + 6 gap cycle 3) — 23/28 executed on disk as of
+2026-08-13 (counted from `-SUMMARY.md` files present in this phase's directory), including gap
+cycle 3's first plan, 34.9-23 (audit-only, `34.9-PIPE-AUDIT.md`: derived the C2-01 pipe-swallow
+census by predicate — 13 instances, one more than gap-planning decision D-C3-01's 12-item list;
+no `VACUOUS TODAY`/`BLOCKER` instances found; every CI caller currently BLOCKED UPSTREAM). Gap
+cycle 3 (34.9-23..28, planned 2026-08-13, 5 waves) closes the sole remaining verification gap:
+`34.9-VERIFICATION.md` truth 8 / C2-01 (the pipe-swallow idiom itself, not merely the guard it was
+originally found in). Gap cycle 1 (34.9-12..17) closed the arm64 leg (2026-08-11) — see the phase-status
 note above. **2026-08-12 correction:** the earlier claim that "34.9-17 completed the full
 reconciliation" was FALSE — `34.9-VERIFICATION.md` truth 8 found that 34.9-17's own ledger recorded
 6 descoped items, 2 UI defects and 1 PKCE note but contained **zero** mentions of CR-01, WR-01, or
@@ -2431,6 +2436,16 @@ methodology findings on the proof contract's own commands opened as `deferred-it
 tripwire prose) are complete. **The phase does not close from gap cycle 2's own edits** —
 `34.9-VERIFICATION.md` remains `status: gaps_found` until the verifier re-scores truth 8 against
 this landed evidence: `/gsd-verify-work 34.9`.
+**Gap cycle 3 planned 2026-08-13** (`/gsd-plan-phase 34.9 --gaps`), 6 plans in 5 waves, 1/6
+gap-cycle plans complete:
+
+- [x] 34.9-23-PLAN.md — derive the C2-01 defect census by predicate (never a line-range grep), enumerate every caller, and measure the __dirname/require.main deltas against real bundled output — **DONE 2026-08-13**, see `34.9-PIPE-AUDIT.md`, 34.9-23-SUMMARY.md
+- [ ] 34.9-24-PLAN.md — close C2-06/C2-08: the top-level framework stub's missing resolved-target check, and the symlink-free-tree test's ignored third return-shape key
+- [ ] 34.9-25-PLAN.md — convert every census instance from the exit-code-swallowing pipe to the `&&` idiom this repo already uses (`verify:updater-key`'s precedent), and correct every comment the conversion makes false
+- [ ] 34.9-26-PLAN.md — prove, both directions against a known-bad input, that plan 34.9-25's conversion actually converts silent success into loud failure, per script and at the `dist:mac` chain level
+- [ ] 34.9-27-PLAN.md — close C2-04 with a wiring-pin regression test for `verify:runner-bundle`'s position in `dist:mac`/`release:mac`; record C2-05/C2-07 as dated, owned deferred entries
+- [ ] 34.9-28-PLAN.md — close gap cycle 3: sweep all eight `34.9-REVIEW-CYCLE2.md` findings by set-difference, confirm each cycle-3 deliverable against the repository, leave `/gsd-verify-work 34.9` as the next step
+
 **Gap cycle 1 planned 2026-08-11**
 (`/gsd-plan-phase 34.9 --gaps`), 6 plans in 4 waves, 6/6 gap-cycle plans complete (17/17 overall):
 
