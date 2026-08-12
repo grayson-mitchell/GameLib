@@ -58,7 +58,9 @@ feasibility 009–012), 2026-07-27 (Tauri login webview + cookies 013–015), 20
 **Tauri login webview + cookies (013–015):**
 - **NEVER `Webview::cookies_for_url()`** — wry compares domains with string `==` on macOS, so
   `https://www.humblebundle.com` returns 4 plausible cookies with `_simpleauth_sess` **missing**
-  while `cookies()` returns 33 with it. Use `cookies()` + your own suffix match.
+  while `cookies()` returns 33 with it. Use `cookies()` + your own suffix match — and that match
+  **must strip a leading dot from the cookie's `domain` first** (`_simpleauth_sess`'s real domain is
+  `.humblebundle.com`). Omitting the strip is production defect F-34.4.2-19; see the reference.
 - **Any cookie poll needs a liveness proof** — `count === 0` is otherwise indistinguishable from a
   dead API, and `watchForLogin()` would spin silently for its full 5-minute deadline.
 - **Never detect login from `document.cookie`** — `_simpleauth_sess` is `HttpOnly` and structurally

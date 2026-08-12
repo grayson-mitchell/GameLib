@@ -12,7 +12,11 @@ Affected code: `HumbleUser.watchForLogin()` / `getLiveCsrfToken()` / `notifyLogi
 
 ## Requirements
 
-1. **NEVER use `Webview::cookies_for_url()`. Use `cookies()` plus your own domain filter.**
+1. **NEVER use `Webview::cookies_for_url()`. Use `cookies()` plus your own domain filter — and that
+   filter MUST strip a leading dot from the cookie's `domain` before comparing.** Skipping the strip
+   is not a rounding error: it makes the filter categorically blind to every leading-dot cookie
+   domain, which is exactly how F-34.4.2-19 broke Humble login silently for weeks. See
+   "The killer" below.
 2. **Any cookie poll must carry a liveness proof** — `count === 0` is otherwise indistinguishable
    from a dead API.
 3. **The Rust cookie API is the ONLY viable login-detection channel** — `document.cookie` cannot see
@@ -43,10 +47,33 @@ cookies_for_url("https://www.humblebundle.com")  →  4 cookies, _simpleauth_ses
 cookies_for_url("https://humblebundle.com")      → 25 cookies, INCLUDING _simpleauth_sess
 ```
 
-Humble stores `_simpleauth_sess` with `domain='humblebundle.com'` (WebKit normalises away the
-leading dot), so `"humblebundle.com" == "www.humblebundle.com"` → `false`.
+> 🔍 **OPEN DISCREPANCY — worth re-measuring, deliberately NOT reconciled here.** The third row
+> above is hard to square with the corrected domain finding below. If `_simpleauth_sess`'s domain is
+> really `.humblebundle.com` (leading dot) and wry filters with plain `==`, then
+> `cookie.domain() == url.domain()` should be `".humblebundle.com" == "humblebundle.com"` → `false`,
+> and the dot-less URL should have excluded the cookie too. It did not.
+>
+> Something in that chain is not what we think: wry's `url.domain()`, WebKit's per-call domain
+> rendering, or the July reading itself. **No explanation is offered — none has been measured.** The
+> numbers above are left exactly as recorded in July (`sources/014a-.../round1.log`); they are raw
+> observations and stay unedited. Anyone depending on `cookies_for_url` semantics should re-measure
+> both URLs *and* dump the raw `cookie.domain()` string in the same breath before trusting either.
+>
+> This does not weaken the guidance: `cookies()` + your own filter is correct regardless of how the
+> discrepancy resolves.
+
+Humble stores `_simpleauth_sess` under the **`humblebundle.com` apex, not `www.`**, so
+`"humblebundle.com" == "www.humblebundle.com"` → `false`.
 `HUMBLE_BASE_URL = 'https://www.humblebundle.com'` (`src/backend/humble/constants.ts:13`) is passed
 verbatim to both `watchForLogin()` and `getLiveCsrfToken()`.
+
+> ⚠ **CORRECTION (2026-08-08, F-34.4.2-19).** This section previously read
+> "`domain='humblebundle.com'` (WebKit normalises away the leading dot)". **That parenthetical is
+> FALSIFIED.** `_simpleauth_sess`'s real domain, re-measured live via a read-only OS-level
+> WKWebView cookie-jar parse, is **`.humblebundle.com` — leading dot present.** WebKit does *not*
+> normalise it away. Acting on the dot-less reading is what produced the defective comparator
+> below, and the mistake cost weeks of silent Humble-login failure.
+> Record: `.planning/debug/resolved/humble-isloggedin-never-set.md`; fix commit `0dfd08044`.
 
 **This is worse than an empty return.** The four cookies the `www.` read *does* return are host-only
 cookies (`fu`, `__lt__cid`, `__lt__sid`, `optimizelySession`), so the call looks perfectly healthy —
@@ -65,11 +92,43 @@ let host = url.host_str().unwrap_or_default();
 let cookies: Vec<_> = webview.cookies()?          // NOT cookies_for_url
     .into_iter()
     .filter(|c| match c.domain() {
-        Some(d) => host == d || host.ends_with(&format!(".{d}")),   // proper suffix match
+        Some(d) => {
+            // MANDATORY: strip RFC 6265's leading-dot wildcard marker BEFORE comparing.
+            // Removing this line reintroduces F-34.4.2-19. See the warning below.
+            let d = d.strip_prefix('.').unwrap_or(d);
+            host == d || host.ends_with(&format!(".{d}"))
+        }
         None => false,
     })
     .collect();
 ```
+
+This mirrors the shipped `cookie_domain_matches` at `src-tauri/src/main.rs:975-994`. Keep the two
+in step — that function is the only domain comparator this project has, deliberately, so a second
+ad hoc one does not drift.
+
+> ⛔ **DO NOT "simplify" the strip away.** Earlier revisions of this document recommended exactly
+> that shape without it:
+>
+> ```rust
+> Some(d) => host == d || host.ends_with(&format!(".{d}")),   // ← SHIPPED. BROKE PRODUCTION.
+> ```
+>
+> `format!(".{d}")` on an already-dotted `d` (`.humblebundle.com`) demands a `"..humblebundle.com"`
+> suffix **no real hostname can ever contain**, so the comparator silently matches *nothing* with a
+> leading-dot domain — for any host, not just Humble's. That is F-34.4.2-19: the login poll ticked
+> correctly forever, `_simpleauth_sess` never entered the `matched` array, the unfiltered `total`
+> stayed healthy every tick (Humble sets 20+ cookies), `classifyCookieRead` therefore always
+> returned `SUPPORTED_NONEMPTY` instead of an error or timeout verdict, and **not one log line was
+> ever emitted.** No config write, no Logout control, no login form, no error — on a session that
+> was genuinely authenticated (`getGamekeys()` → `status:'ok'`, 31 gamekeys).
+>
+> RFC 6265 defines a `.example.com` cookie as applying to `example.com` itself, not only to its
+> subdomains — so stripping the dot is the **spec-correct** reading, not a Humble special case.
+>
+> A passing Rust test asserted the blind behaviour as *correct, intended* behavior until this was
+> caught. A green test is not evidence the comparator is right; see the memory
+> `grep-assertion-must-fail-against-known-bad-input`.
 
 ### Liveness proof before any poll
 

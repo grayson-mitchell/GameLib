@@ -123,6 +123,18 @@ See `../013-tauri-child-webview-login-window/README.md`. Round 1 (`SPIKE_AUTORUN
    so the call looks perfectly healthy — it returns a plausible non-empty list while silently
    dropping the one cookie that matters.
 
+   > ⚠ **LATER CORRECTION (2026-08-08, F-34.4.2-19) — this July record is preserved as measured;
+   > the note below is the only addition.** The dot-less `domain='humblebundle.com'` reading above,
+   > and finding 4's generalisation that "WebKit normalises the dot away", are **FALSIFIED for this
+   > cookie**. Re-measured live via a read-only OS-level WKWebView cookie-jar parse,
+   > `_simpleauth_sess`'s real domain is **`.humblebundle.com`** — leading dot present. Finding 4's
+   > own observation stands *for `localhost`* (a single-label host genuinely gets a host-only,
+   > dot-less cookie); **generalising it to registrable domains was the error**, and that
+   > generalisation is what produced the blind `format!(".{d}")` comparator that shipped and broke
+   > Humble login silently. Do not carry the dot-less premise forward from this document.
+   > See `.planning/debug/resolved/humble-isloggedin-never-set.md`, fix commit `0dfd08044`, and
+   > `references/tauri-login-webview-cookies.md` for the corrected guidance.
+
 6. **Confirmed the defect lands on real code, not a hypothetical.**
    `src/backend/humble/constants.ts:13` — `HUMBLE_BASE_URL = 'https://www.humblebundle.com'`.
    Both live call sites pass it verbatim:
