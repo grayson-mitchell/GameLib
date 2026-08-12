@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.9-18-PLAN.md -- closed CR-01/WR-01 in meta/preserveRunnerSymlinks.ts
-last_updated: "2026-08-12T07:50:20.165Z"
-last_activity: 2026-08-12 -- Phase 34.9 gap cycle 2 plan 34.9-18 complete
+stopped_at: Completed 34.9-19-PLAN.md -- closed WR-02 in verifyRunnerBundle.ts, corrected IN-01/IN-02 doc comments in cleanDistMac.ts
+last_updated: "2026-08-12T08:00:50.765Z"
+last_activity: 2026-08-12 -- Phase 34.9 gap cycle 2 plan 34.9-19 complete
 progress:
   total_phases: 23
   completed_phases: 17
   total_plans: 297
   completed_plans: 281
-  percent: 95
+  percent: 74
 ---
 
 # Project State
@@ -508,12 +508,13 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **EXECUTING gap cycle 2**
-Plan: 18 of 22 complete. Gap cycle 2 is plans 34.9-18..22 across 4 waves — execution started
+Plan: 19 of 22 complete. Gap cycle 2 is plans 34.9-18..22 across 4 waves — execution started
 2026-08-12. Wave 1 = 34.9-18 + 34.9-19, wave 2 = 34.9-20, wave 3 = 34.9-21, wave 4 = 34.9-22.
 Plan 34.9-21 is `autonomous: false` and requires a human on real macOS arm64 hardware to run
 `34.9-GUARD-PROOF.md`.
-Status: Executing Phase 34.9 gap cycle 2 -- plan 34.9-18 (CR-01/WR-01 closure in
-`meta/preserveRunnerSymlinks.ts`) complete, plans 34.9-19..22 remain
+Status: Executing Phase 34.9 gap cycle 2 -- plans 34.9-18 (CR-01/WR-01 closure in
+`meta/preserveRunnerSymlinks.ts`) and 34.9-19 (WR-02 closure in `verifyRunnerBundle.ts`, IN-01/IN-02
+doc-comment corrections in `cleanDistMac.ts`) complete, plans 34.9-20..22 remain
 
 Paused phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — gap cycle 6
 executed (34.5-43..51), but the fourth blocking live gate FAILED 2026-08-12 and the phase does not
@@ -3976,6 +3977,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P49 | 70min | 3 tasks | 4 files |
 | Phase 34.5 P50 | 2h40m | 3 tasks | 4 files |
 | Phase 34.9 P18 | 25min | 3 tasks | 2 files |
+| Phase 34.9 P19 | 25min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -4550,6 +4552,7 @@ Recent decisions affecting current work:
 - [Phase 34.5]: 34.5-50: redaction-sweep regex hardened from a [^<] single-char exclusion to 4+ token-alphabet chars after Part D found a real self-match false positive
 - [Phase 34.9-18]: Target-containment check runs before rmSync/parent-missing check in restoreSymlinks so a rejected record's destination is left untouched (T-34.9-18-02)
 - [Phase 34.9-18]: Guard A's failing direction (closeBundle throw) is proven at unit level only -- unreachable from a real build today since vendored darwin trees are git-ignored; live proof deferred to plan 34.9-21
+- [Phase 34.9-19]: Split summarise's stub condition into two branches (absent-first, wrong-type-second) so both stub defects remain separately diagnosable
 
 ### Pending Todos
 
@@ -4713,7 +4716,29 @@ Recent decisions affecting current work:
 > prefix and demoted into its own "prior session (34.5-51)" block, and this session's own
 > `Stopped at:` now carries a short, accurate description with nothing trailing it.
 
-Last session: 2026-08-12T07:50:20.149Z
+> NOTE (34.9-19): the same mis-targeted-write pattern struck a THIRD consecutive time --
+> `state.record-session` overwrote only the first line of plan 34.9-18's `Stopped at:` entry
+> ("Completed 34.9-18-PLAN.md -- closed CR-01 (closeBundle now throws instead of logging on")
+> with this session's own line, orphaning 34.9-18's entire multi-line body underneath and
+> attributing it to plan 34.9-19. The executing agent was hand-correcting this when its API
+> connection dropped; the orchestrator finished the correction. The orphaned body has been given
+> back its `Stopped at: Completed 34.9-18-PLAN.md ...` prefix and demoted into its own
+> "prior session (34.9-18)" block below. The same write also set `completed_plans: 282` (correct:
+> 281 -- baseline 279 plus plans 34.9-18 and 34.9-19) and `percent: 95` (correct: 74 -- `percent`
+> tracks `completed_phases`/`total_phases` = 17/23, not plans); both hand-corrected in the
+> frontmatter above.
+
+Last session: 2026-08-12T08:00:50.747Z
+Stopped at: Completed 34.9-19-PLAN.md -- closed WR-02 in `meta/verifyRunnerBundle.ts` (`summarise`
+now records a failure when a framework's top-level stub is absent entirely, not only when it is
+present as the wrong type -- the malformation a partial dereferencing failure actually produces),
+and corrected the two overstated doc comments in `meta/cleanDistMac.ts` (IN-01, IN-02) so they
+claim only what the code delivers. This lands BEFORE plan 34.9-20 wires `verify:runner-bundle`
+into `dist:mac`/`release:mac`, so what gets wired is a whole guard rather than one with a known
+hole. See 34.9-19-SUMMARY.md. Next: plan 34.9-20.
+
+--- prior session (34.9-18), preserved as history ---
+
 Stopped at: Completed 34.9-18-PLAN.md -- closed CR-01 (closeBundle now throws instead of logging on
 a skipped/rejected symlink) and WR-01 (new isContainedSymlinkTarget rejects absolute/escaping
 symlink targets before restoreSymlinks writes them) in meta/preserveRunnerSymlinks.ts. TDD: 11 new
