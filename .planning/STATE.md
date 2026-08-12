@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-50-PLAN.md
-last_updated: "2026-08-11T13:26:41.856Z"
-last_activity: 2026-08-11
+stopped_at: Completed 34.5-51-PLAN.md -- executed the fourth blocking live gate on real macOS
+last_updated: "2026-08-12T07:32:54.906Z"
+last_activity: 2026-08-12 -- Phase 34.9 planning complete
 progress:
   total_phases: 23
   completed_phases: 17
-  total_plans: 292
+  total_plans: 297
   completed_plans: 279
   percent: 74
 ---
@@ -3226,7 +3226,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-11
+Last activity: 2026-08-12 -- Phase 34.9 planning complete
   cancels instead of erroring
   (pre-existing external-state reachability) and Test 7 (UI-level reachability, distinct from
   backend-logic reachability) to live-gate-contract-authoring.md's Structural Reachability Review,
