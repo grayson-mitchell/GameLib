@@ -25,7 +25,7 @@ import {
   symlinkSync,
   type Dirent
 } from 'node:fs'
-import { dirname, join, relative, resolve, sep } from 'node:path'
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 
 import type { Plugin } from 'vite'
 
@@ -105,28 +105,83 @@ export function resolveDestPath(destDir: string, relPath: string): string {
 }
 
 /**
+ * Returns `true` only when `target` -- a raw `readlinkSync` string sourced
+ * from the untrusted vendored onedir tree (WR-01, T-34.9G-03) -- is safe to
+ * recreate at `relPath` inside `destDir`. An absolute target is always
+ * refused. A relative target is resolved from the LINK'S OWN directory
+ * (matching real symlink resolution semantics) and accepted only when the
+ * result is `resolve(destDir)` itself or strictly inside it.
+ *
+ * Deliberately lexical, not `realpathSync`: the check must not depend on
+ * the destination existing yet (it usually doesn't -- this runs before the
+ * link is created), and normalising both sides against the same `destDir`
+ * string means a symlinked temp root cannot skew the comparison. This
+ * mirrors `resolveDestPath`'s own containment idiom.
+ */
+export function isContainedSymlinkTarget(
+  destDir: string,
+  relPath: string,
+  target: string
+): boolean {
+  if (isAbsolute(target)) {
+    return false
+  }
+
+  const resolvedDestDir = resolve(destDir)
+  const linkPath = resolve(resolvedDestDir, relPath)
+  const resolvedTarget = resolve(dirname(linkPath), target)
+
+  return (
+    resolvedTarget === resolvedDestDir ||
+    resolvedTarget.startsWith(resolvedDestDir + sep)
+  )
+}
+
+/**
  * Re-creates every symlink from `sourceDir` inside `destDir`, replacing
  * whatever vite's dereferencing copy left in its place (a real file or a
  * real directory). Idempotent: `rmSync(destPath, { recursive: true, force:
  * true })` unlinks a symlink destination without following it (Node stats
  * with `lstat`), so re-running over an already-restored tree is safe and
- * produces the same link targets. Targets are copied byte-identical from
- * the source record -- never rewritten or absolutised, since all twelve
- * real targets are relative and rely on staying that way.
+ * produces the same link targets. Targets are still never rewritten or
+ * absolutised -- but they are now VALIDATED and REFUSED when unsafe (WR-01,
+ * T-34.9G-03 upgraded from accept to mitigate): the vendored onedir tree is
+ * externally-sourced, untrusted input, and an absolute or `..`-escaping
+ * target would otherwise be recreated byte-identically inside the shipped
+ * `.app`.
+ *
+ * A record whose target fails `isContainedSymlinkTarget` is pushed to
+ * `rejected` and skipped -- checked BEFORE the destination-parent check and
+ * BEFORE `rmSync`, so a rejected record's destination is left exactly as
+ * vite's copy left it (T-34.9-18-02: the naive placement, after `rmSync`,
+ * would delete the real dereferenced file/directory and then refuse to
+ * replace it, turning a rejected link into a destructive partial build).
  *
  * A record whose destination PARENT directory does not exist is skipped
- * (and reported), rather than creating a partial tree with `mkdirSync`.
+ * and pushed to `skipped` -- no longer merely reported: `closeBundle` now
+ * fails the build on either non-empty bucket. This function itself does
+ * not log or warn; reporting is the plugin's job.
  */
 export function restoreSymlinks(
   sourceDir: string,
   destDir: string
-): { restored: SymlinkRecord[]; skipped: SymlinkRecord[] } {
+): {
+  restored: SymlinkRecord[]
+  skipped: SymlinkRecord[]
+  rejected: SymlinkRecord[]
+} {
   const records = collectSymlinks(sourceDir)
   const restored: SymlinkRecord[] = []
   const skipped: SymlinkRecord[] = []
+  const rejected: SymlinkRecord[] = []
 
   for (const record of records) {
     const destPath = resolveDestPath(destDir, record.relPath)
+
+    if (!isContainedSymlinkTarget(destDir, record.relPath, record.target)) {
+      rejected.push(record)
+      continue
+    }
 
     if (!existsSync(dirname(destPath))) {
       skipped.push(record)
@@ -138,7 +193,7 @@ export function restoreSymlinks(
     restored.push(record)
   }
 
-  return { restored, skipped }
+  return { restored, skipped, rejected }
 }
 
 /**
@@ -147,6 +202,17 @@ export function restoreSymlinks(
  * nothing to restore and nothing to touch there. Runs unconditionally
  * (unconditional platform/mode gating) because `restoreSymlinks` is a no-op
  * wherever the source tree has no symlinks (T-34.9G-04).
+ *
+ * CR-01: `closeBundle` THROWS when either `skipped` or `rejected` is
+ * non-empty, so `electron-vite build` exits non-zero and `electron-builder`
+ * never runs over a partially-restored tree -- a build that used to merely
+ * `console.log` its own integrity signal and proceed. This throw is
+ * defense-in-depth and is NOT reachable from a real build today: the
+ * vendored darwin onedir trees are git-ignored and untracked, so every
+ * fresh checkout has no darwin symlinks at all and both buckets stay empty.
+ * Its failing direction is proven at UNIT level only (see the module's
+ * test file); no comment here claims a live or build-level observation of
+ * this throw firing.
  */
 export function preserveRunnerSymlinksPlugin(options?: {
   sourceDir?: string
@@ -160,10 +226,31 @@ export function preserveRunnerSymlinksPlugin(options?: {
     apply: 'build',
     enforce: 'post',
     closeBundle() {
-      const { restored, skipped } = restoreSymlinks(sourceDir, destDir)
-      console.log(
-        `[preserve-runner-symlinks] restored ${restored.length} symlink(s), skipped ${skipped.length}`
+      const { restored, skipped, rejected } = restoreSymlinks(
+        sourceDir,
+        destDir
       )
+      console.log(
+        `[preserve-runner-symlinks] restored ${restored.length} symlink(s), skipped ${skipped.length}, rejected ${rejected.length}`
+      )
+
+      if (skipped.length > 0 || rejected.length > 0) {
+        const skippedLines = skipped.map(
+          (record) => `  - ${record.relPath}`
+        )
+        const rejectedLines = rejected.map(
+          (record) => `  - ${record.relPath} -> ${record.target}`
+        )
+        throw new Error(
+          [
+            'preserve-runner-symlinks: refusing to emit a bundle with unrestored symlink(s).',
+            `skipped (destination parent missing): ${skipped.length}`,
+            ...skippedLines,
+            `rejected (unsafe target): ${rejected.length}`,
+            ...rejectedLines
+          ].join('\n')
+        )
+      }
     }
   }
 }
