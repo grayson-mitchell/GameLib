@@ -59,8 +59,24 @@ mac:
   # that motivated onedir is macOS-specific. A nested tree landing inside
   # app.asar.unpacked must not be trusted just because the build succeeded
   # -- electron-builder issue #3940 documents nested binaries silently
-  # skipped by signing -- so this is verified against the BUILT artifact by
-  # `pnpm verify:runner-bundle` (plan 34.9-08), not by this config alone.
+  # skipped by signing.
+  #
+  # `pnpm verify:runner-bundle build --arch=arm64` now runs automatically as
+  # a step of both `dist:mac` and `release:mac`, immediately before
+  # `electron-builder` -- a malformed framework (F-34.9-01) aborts the build
+  # before packaging. What it inspects is the STAGED `build/` tree, not the
+  # packaged `.app`: electron-builder's own copy into `app.asar.unpacked` is
+  # verified by the blocking live gate (`34.9-LIVE-GATE-RERUN.md` scored
+  # item 2) and by manual invocation against a built app, not automatically.
+  # Coverage is ARM64 ONLY -- `release:mac` also builds x64, and that leg is
+  # unverified by this step (`build/bin/x64/darwin` holds onefile binaries
+  # and would fail the file-count floor). A deliberate consequence: because
+  # the guard runs before packaging, `dist:mac` and `release:mac` now fail
+  # fast on a macOS checkout that has no staged `build/bin/arm64/darwin`
+  # tree -- `verifyRunnerBundle` throws naming the root and arch. This is
+  # intended: an app packaged without its runners is broken either way, and
+  # `pnpm download-helper-binaries` cannot currently supply them (six
+  # PENDING-CI-PUBLISH sentinels).
   files:
     - build/bin/${arch}/darwin/*
     - build/bin/${arch}/darwin/**/*
