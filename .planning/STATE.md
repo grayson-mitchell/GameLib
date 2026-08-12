@@ -4,8 +4,8 @@ milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
 stopped_at: Completed 34.5-51-PLAN.md -- executed the fourth blocking live gate on real macOS
-last_updated: "2026-08-12T07:32:54.906Z"
-last_activity: 2026-08-12 -- Phase 34.9 planning complete
+last_updated: "2026-08-12T07:42:49.428Z"
+last_activity: 2026-08-12 -- Phase 34.9 execution started
 progress:
   total_phases: 23
   completed_phases: 17
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.5 — tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc (gap cycle 6, plans 34.5-43..51)
+**Current focus:** Phase 34.9 — macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -507,13 +507,17 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — **EXECUTING gap cycle 6**
-Plan: 8 of 9 gap-cycle-6 plans (34.5-43..51, 4 waves) complete — execution started 2026-08-11.
-Plans 34.5-29/30/31 are SUPERSEDED (see `34.5-CYCLE5-ROUTING.md` § Disposition) and will never
-receive SUMMARY.md files; they are not part of this run. Plan 34.5-51 is `autonomous: false` and
-requires a human on real macOS hardware with `GAMELIB_DEV_SECRET_VAULT` UNSET.
-Status: Ready to execute
-(34.5-50, author gate-4 contract) next, then wave 4 (34.5-51, blocking live gate).
+Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **EXECUTING gap cycle 2**
+Plan: 17 of 22 complete. Gap cycle 2 is plans 34.9-18..22 across 4 waves — execution started
+2026-08-12. Wave 1 = 34.9-18 + 34.9-19, wave 2 = 34.9-20, wave 3 = 34.9-21, wave 4 = 34.9-22.
+Plan 34.9-21 is `autonomous: false` and requires a human on real macOS arm64 hardware to run
+`34.9-GUARD-PROOF.md`.
+Status: Executing Phase 34.9 gap cycle 2
+
+Paused phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — gap cycle 6
+executed (34.5-43..51), but the fourth blocking live gate FAILED 2026-08-12 and the phase does not
+close. Plans 34.5-29/30/31 are SUPERSEDED (see `34.5-CYCLE5-ROUTING.md` § Disposition) and will
+never receive SUMMARY.md files.
 
 Prior phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **CLOSED 2026-08-11,
 arm64 leg only**
@@ -3226,7 +3230,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-12 -- Phase 34.9 planning complete
+Last activity: 2026-08-12 -- Phase 34.9 execution started
   cancels instead of erroring
   (pre-existing external-state reachability) and Test 7 (UI-level reachability, distinct from
   backend-logic reachability) to live-gate-contract-authoring.md's Structural Reachability Review,
