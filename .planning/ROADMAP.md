@@ -2461,13 +2461,23 @@ independently of this phase's invalidated runs, and applies to nile alone. The l
 items 2 and 3 measured real user-visible intervals (<1s and 1s against a 2s bar), consistent with
 the warm figures and with no disagreement found.
 
-**Phase status 2026-08-11: CLOSES on the arm64 leg only.** Gap cycle 1 (plans `34.9-12`..`34.9-17`)
-closed the blocking live gate's FAIL finding. **F-34.9-01** (each onedir runner's `Python.framework`
+**Phase status 2026-08-12: does not close yet.** `34.9-VERIFICATION.md` is `status: gaps_found` --
+truth 8 ("automated regression protection exists so a future dereferencing regression of the
+F-34.9-01 shape cannot silently ship again") FAILED that verification run, because CR-01 (the code
+review's sole Critical finding) had been neither fixed nor triaged into a dated, owned deferral.
+Gap cycle 2 (`34.9-18`..`34.9-22`) has now landed the fixes (CR-01, WR-01, WR-02, IN-01, IN-02) and
+the ledger entry for the one deferred finding (IN-03, `deferred-items.md` item 11), plus items 12
+and 13 recording the guard's arm64-only and not-in-CI scope. **Truth 8 must now be re-scored by the
+verifier against this landed evidence** -- `/gsd-verify-work 34.9` is the next step; this ROADMAP
+entry does not itself close the phase. Gap cycle 1 (plans `34.9-12`..`34.9-17`) closed the blocking
+live gate's original FAIL finding. **F-34.9-01** (each onedir runner's `Python.framework`
 bundle dereferenced by vite's `copyDir`, producing a layout `codesign` rejects with
 `bundle format is ambiguous`, aborting `pnpm dist:mac` outright) was closed at its mechanism by
-plan 34.9-12's symlink-preserving `closeBundle` vite plugin, with plan 34.9-13 adding automated
-framework-structural-integrity enforcement to `pnpm verify:runner-bundle` so a regression cannot go
-silent again. **F-34.9-02** (a failed build leaving a stale pre-34.9 dmg/zip in `dist/` that could
+plan 34.9-12's symlink-preserving `closeBundle` vite plugin, with plan 34.9-13 adding
+framework-structural-integrity enforcement to `pnpm verify:runner-bundle` -- later wired into
+`dist:mac`/`release:mac` (plan 34.9-20) and observed live to gate `electron-builder` on real macOS
+arm64 hardware (`34.9-GUARD-PROOF.md`, run 2026-08-12, verdict PASS), scoped to **arm64 only** and
+**not in CI** (`deferred-items.md` items 12-13). **F-34.9-02** (a failed build leaving a stale pre-34.9 dmg/zip in `dist/` that could
 read as success) was closed by plan 34.9-14's `pnpm clean:dist-mac`, now the first step of both
 `dist:mac` and `release:mac`. **F-34.9-03** (the same dereferencing roughly doubling the runner
 payload, 84M → 157M) closed as a side effect of F-34.9-01's fix. The blocking live gate then
