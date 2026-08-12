@@ -265,3 +265,124 @@ args-passthrough claim does not.
 resulting electron-builder invocation honored it (an arm64 `target=` line, no `Uploading` line).
 
 **OWNER:** whichever plan next exercises `dist:mac`/`release:mac` on real hardware (2026-08-12).
+
+## Code-review finding disposition (2026-08-12)
+
+`34.9-REVIEW.md` (2026-08-11T03:22:49Z) opened six findings against gap cycle 1's own fixes. Gap
+cycle 1's reconciliation plan, `34.9-17`, wrote a 10-item ledger and closed none of them — a direct
+grep of `34.9-17-SUMMARY.md` for `CR-01|WR-0|IN-0|REVIEW` returns **zero matches** (confirmed
+2026-08-12, this plan). `34.9-VERIFICATION.md` truth 8 records the consequence: CR-01 "was neither
+fixed nor triaged into a dated, owned deferral — it fell through the phase's own reconciliation
+step." This is the standing project rule in concrete form — **an audit whose unit is coarser than
+the defect's unit cannot find the defect.** 34.9-17 swept at the granularity of descoped
+*requirements* and never enumerated review *findings* at all. This section is the set-difference
+that closes that class of miss, swept at the granularity of the defect itself: finding IDs.
+
+**List A — every finding ID in `34.9-REVIEW.md`,** obtained by `grep -n '^### ' 34.9-REVIEW.md` and
+extracting the `CR-`/`WR-`/`IN-` prefix (raw grep output, reproduced verbatim):
+
+```
+58:### CR-01: `closeBundle` doesn't fail the build on a skipped symlink restore, and nothing in the pipeline runs `verify:runner-bundle` to catch it
+131:### WR-01: `restoreSymlinks` validates the destination path but never the symlink *target*
+161:### WR-02: Missing top-level framework stub is never flagged, unlike a missing `Versions/Current`
+188:### IN-01: `MAC_DIR_PATTERN` branch requires `isDirectory()`, so a bare macOS-staging-named symlink would go undetected — contradicting the doc comment
+205:### IN-02: `cleanDistMac`'s containment throw is untested and structurally unreachable via its only call path
+224:### IN-03: The F-34.9-02 fix is macOS-only; the same false-pass mechanism plausibly affects `dist:win`/`dist:linux`
+```
+
+List A = `{CR-01, WR-01, WR-02, IN-01, IN-02, IN-03}` — 6 IDs, confirmed by `grep -c '^### '
+34.9-REVIEW.md` = 6.
+
+**List B — every finding ID claimed closed by a landed gap-cycle-2 plan.** None of the four
+Summaries (`34.9-18-SUMMARY.md`, `34.9-19-SUMMARY.md`, `34.9-20-SUMMARY.md`,
+`34.9-21-SUMMARY.md`) carries a frontmatter field literally named `closes_findings:` — this is a
+mismatch between this plan's own `<interfaces>` expectation and what actually landed, recorded here
+rather than silently substituted. The equivalent evidence exists in each Summary's own body text, so
+list B is derived from those explicit "closing X" statements instead, cross-checked against each
+Summary's self-check section:
+
+- `34.9-18-SUMMARY.md:45`: *"closing CR-01 and WR-01"* — both self-check PASSED, no disagreement in
+  the body.
+- `34.9-19-SUMMARY.md:60`: *"Closed the one known blind spot (WR-02)"*; `:62-63`: IN-01/IN-02 doc
+  comments corrected and pinned; `:148` explicitly states *"IN-03 ... remains deferred, owned by
+  plan 34.9-22's ledger entry"* — i.e. 34.9-19 itself records that IN-03 is NOT closed by it. No
+  disagreement between frontmatter/tags and body for WR-02/IN-01/IN-02.
+- `34.9-20-SUMMARY.md:61`: *"Closed the second half of CR-01 ... It is now an unconditional `&&`
+  step in both macOS packaging scripts"* — wiring only, not yet observed firing; consistent with
+  34.9-21 being the plan that completes CR-01's closure.
+- `34.9-21-SUMMARY.md:62`: *"CR-01 (the sole Critical finding from `34.9-REVIEW.md`) is closed and
+  `34.9-VERIFICATION.md` truth 8 is satisfied"* (verdict `PASS`, both directions scored from disk
+  evidence) — no disagreement; this is CR-01's landing plan.
+
+List B = `{CR-01 → 34.9-21, WR-01 → 34.9-18, WR-02 → 34.9-19, IN-01 → 34.9-19, IN-02 → 34.9-19}` —
+5 IDs mapped to a landed fix.
+
+**A minus B** = `{IN-03}` — exactly the one ID 34.9-19's own Summary already named as deferred to
+this plan's ledger. It receives item 11 below.
+
+| Finding | Severity | Disposition | Evidence |
+|---|---|---|---|
+| CR-01 | Critical | FIXED | 34.9-18 (`closeBundle` throw) + 34.9-20 (wired into `dist:mac`/`release:mac`) + 34.9-21 (`34.9-GUARD-PROOF.md`, live proof, verdict PASS) |
+| WR-01 | Warning | FIXED | 34.9-18 (`isContainedSymlinkTarget`, `meta/preserveRunnerSymlinks.ts`) |
+| WR-02 | Warning | FIXED | 34.9-19 (`summarise()`'s `!fw.topLevelStubExists` branch, `meta/verifyRunnerBundle.ts`) |
+| IN-01 | Info | FIXED | 34.9-19 (`meta/cleanDistMac.ts` doc-comment correction, pinned) |
+| IN-02 | Info | FIXED | 34.9-19 (`meta/cleanDistMac.ts` doc-comment downgraded to defense-in-depth, pinned) |
+| IN-03 | Info | DEFERRED | item 11 |
+
+**Count:** 6 IDs in list A. 5 mapped to a landed fix. 1 mapped to a ledger item (item 11). Unmapped
+count: **0**.
+
+### 11. IN-03 — the F-34.9-02 stale-artifact fix is macOS-only
+
+**What it is:** `clean:dist-mac` runs first in `dist:mac`/`release:mac` only; `dist:win` and
+`dist:linux` have no counterpart script and no equivalent pre-build clearing step.
+
+**Blocker (mechanism, not a summary):** electron-builder clears only the target-specific
+subdirectory it is about to populate and never top-level `dist/` — this is exactly F-34.9-02's root
+cause, and `meta/cleanDistMac.ts`'s own header describes it as a general electron-builder behaviour,
+not a macOS-specific one. A failed `dist:win`/`dist:linux` run therefore plausibly leaves stale
+`.exe`/`.AppImage`/`latest-*.yml` behind, reproducing the same "did the build produce an artifact?"
+false-pass risk F-34.9-02 named on macOS. This is **UNCONFIRMED** on win/linux — a plausible
+generalization of a confirmed macOS mechanism, not an observed win/linux defect. No sentence here
+asserts win/linux is broken; none asserts it is fine either.
+
+**Named precondition:** a win or linux build run that reproduces the stale-artifact false pass, or a
+decision to generalize `cleanDistMac.ts` into a platform-parameterized `cleanDist.ts` without
+waiting for one.
+
+**OWNER:** follow-up packaging phase / developer action, dated 2026-08-12.
+
+### 12. The wired guard covers arm64 only
+
+**What it is:** the `pnpm verify:runner-bundle build --arch=arm64` invocation wired into `dist:mac`
+and `release:mac` by plan 34.9-20, and live-proven by plan 34.9-21 (`34.9-GUARD-PROOF.md`, verdict
+PASS), hardcodes `--arch=arm64`.
+
+**Blocker (mechanism, not a summary):** `build/bin/x64/darwin` holds onefile binaries, which have no
+`_internal` directory and no `Python.framework`, so pointing the guard at x64 would fail its
+**file-count floor** for a reason unrelated to symlink integrity — the guard's own preconditions are
+not met by an x64 tree. The coverage consequence is **UNPROVEN, not asserted**: whether a real x64
+darwin onedir tree would pass or fail the framework-structure checks has never been observed,
+because no x64 onedir tree exists anywhere (item 1). This entry does not write that x64 is
+unprotected, and does not write that x64 is unaffected.
+
+**Named precondition:** an x64 darwin onedir tree existing on disk (transitively, REQ-34.9-02's own
+precondition).
+
+**OWNER:** the same follow-up phase that owns item 1, dated 2026-08-12.
+
+### 13. The guard has never been exercised in CI
+
+**What it is:** the `verify:runner-bundle` wiring is npm-script-level, so `build-base.yml`'s
+`pnpm dist:mac` and `draft-release-mac.yml`'s `pnpm release:mac` would each invoke it — nominally.
+
+**Blocker (mechanism, not a summary):** the macOS CI leg cannot reach the build step at all, because
+`install-deps` runs `pnpm download-helper-binaries`, which throws on the six `PENDING-CI-PUBLISH`
+sentinels in `meta/runnersOnedirDigests.json`; the job fails before any `dist:mac` invocation. This
+is **UNPROVEN in CI** — the wiring is present and the CI path is structurally blocked upstream of
+it, so no CI run has ever executed the guard, in either direction.
+
+**Named precondition:** REQ-34.9-02/03/04's own precondition (real published darwin archives and
+real digests), which unblocks `install-deps`.
+
+**OWNER:** the same follow-up phase that owns items 1-3, dated 2026-08-12.
