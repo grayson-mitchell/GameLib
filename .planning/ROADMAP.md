@@ -2411,9 +2411,9 @@ REQ-34.9-07, REQ-34.9-08, REQ-34.9-09, REQ-34.9-10, REQ-34.9-11 (minted 2026-08-
 ticked only by measured evidence)
 **Depends on:** Phase 34 (packaging/signing/notarization pipeline). Independent of the 34.1-34.8
 IPC slices. Runs before Phase 35, which will later delete the Electron half of the signing work.
-**Plans:** 22 total (17 original + 5 gap cycle 2) — 21/22 executed on disk (counted from
-`-SUMMARY.md` files present in this phase's directory 2026-08-12; `34.9-22`, this closing plan, is
-completing now). Gap cycle 1 (34.9-12..17) closed the arm64 leg (2026-08-11) — see the phase-status
+**Plans:** 22 total (17 original + 5 gap cycle 2) — 22/22 executed on disk (counted from
+`-SUMMARY.md` files present in this phase's directory 2026-08-12, including this closing plan's
+own). Gap cycle 1 (34.9-12..17) closed the arm64 leg (2026-08-11) — see the phase-status
 note above. **2026-08-12 correction:** the earlier claim that "34.9-17 completed the full
 reconciliation" was FALSE — `34.9-VERIFICATION.md` truth 8 found that 34.9-17's own ledger recorded
 6 descoped items, 2 UI defects and 1 PKCE note but contained **zero** mentions of CR-01, WR-01, or
