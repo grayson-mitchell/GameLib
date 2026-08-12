@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.9-20-PLAN.md -- wired `pnpm verify:runner-bundle` into `dist:mac`/`release:mac` (closes CR-01), authored + validated the unrun `34.9-GUARD-PROOF.md` contract for plan 34.9-21
-last_updated: "2026-08-12T08:24:56.352Z"
-last_activity: 2026-08-12 -- Phase 34.9 gap cycle 2 plan 34.9-20 complete
+stopped_at: "Completed 34.9-21-PLAN.md -- ran 34.9-GUARD-PROOF.md on real macOS arm64 hardware, verdict PASS, closes CR-01 (see NOTE 34.9-21 below)"
+last_updated: "2026-08-12T10:07:13.751Z"
+last_activity: 2026-08-12 -- Phase 34.9 gap cycle 2 plan 34.9-21 complete (guard-proof PASS, arm64-only)
 progress:
   total_phases: 23
   completed_phases: 17
   total_plans: 297
-  completed_plans: 282
+  completed_plans: 283
   percent: 74
 ---
 
@@ -508,15 +508,17 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **EXECUTING gap cycle 2**
-Plan: 20 of 22 complete. Gap cycle 2 is plans 34.9-18..22 across 4 waves — execution started
+Plan: 21 of 22 complete. Gap cycle 2 is plans 34.9-18..22 across 4 waves — execution started
 2026-08-12. Wave 1 = 34.9-18 + 34.9-19, wave 2 = 34.9-20, wave 3 = 34.9-21, wave 4 = 34.9-22.
-Plan 34.9-21 is `autonomous: false` and requires a human on real macOS arm64 hardware to run
-`34.9-GUARD-PROOF.md`.
-Status: Executing Phase 34.9 gap cycle 2 -- plans 34.9-18 (CR-01/WR-01 closure in
-`meta/preserveRunnerSymlinks.ts`), 34.9-19 (WR-02 closure in `verifyRunnerBundle.ts`, IN-01/IN-02
-doc-comment corrections in `cleanDistMac.ts`), and 34.9-20 (CR-01 fully closed -- guard wired into
-`dist:mac`/`release:mac`; `34.9-GUARD-PROOF.md` authored + validated, unrun) complete, plans
-34.9-21..22 remain
+Plan 34.9-21 ran on real macOS arm64 hardware (`autonomous: false`) and completed 2026-08-12:
+`34.9-GUARD-PROOF.md` verdict **PASS** (both directions scored from disk evidence; restore
+independently audited twice), closing CR-01 and `34.9-VERIFICATION.md` truth 8, **scoped strictly
+to arm64, local, non-CI**. Three methodology findings (not guard-correctness findings) opened as
+`deferred-items.md` items 14-16. See `34.9-21-SUMMARY.md`.
+Status: Plans 34.9-18 (CR-01/WR-01 closure in `meta/preserveRunnerSymlinks.ts`), 34.9-19 (WR-02
+closure in `verifyRunnerBundle.ts`, IN-01/IN-02 doc-comment corrections in `cleanDistMac.ts`),
+34.9-20 (CR-01 wiring, `34.9-GUARD-PROOF.md` authored + validated, unrun), and now 34.9-21 (the
+guard-proof run itself, PASS) are all complete. Plan 34.9-22 (wave 4, the closing plan) remains.
 
 Paused phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — gap cycle 6
 executed (34.5-43..51), but the fourth blocking live gate FAILED 2026-08-12 and the phase does not
@@ -2834,6 +2836,11 @@ trusted blindly. The recurring `**Progress:**[██████████] 95
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 
+> NOTE (34.9-21): `state.update-progress` hit this exact documented defect again, this session —
+> it spliced its own freshly-computed `96%` into THIS historical narrative line (unrelated to
+> phase 34.9, describing a Phase 34.2 coincidence), reverted back to `95%` by hand. Confirms the
+> defect is still live in `gsd-sdk`, not merely a one-time occurrence from 34.10-25.
+
 > NOTE (34.10-25): `state.update-progress` spliced its own freshly-computed `92%` into this SAME
 > historical placeholder yet again this session (also miscomputed `completed_plans` as 246, +2 for
 > a single plan, and the top-level frontmatter `percent` as 61 -- both hand-corrected separately).
@@ -4749,7 +4756,41 @@ Recent decisions affecting current work:
 > now carries a full description with nothing trailing it, and the frontmatter has been
 > hand-corrected to `completed_plans: 282`, `completed_phases: 17`, `percent: 74`.
 
-Last session: 2026-08-12T08:24:56.336Z
+> NOTE (34.9-21): this session's `gsd-sdk` state writes hit the SAME known-corruption family
+> documented throughout this cluster. `state.record-session` overwrote only the first line of
+> the prior `Stopped at:` entry (truncating "wired `pnpm verify:runner-bundle build --arch=arm64`
+> into" mid-sentence with the rest of the body left orphaned below it), and `state.update-progress`
+> spliced its freshly-computed `96%` into an UNRELATED historical narrative line ~line 2835,
+> describing a Phase 34.2 coincidence, reverted by hand back to `95%`. `state.advance-plan` +
+> `state.update-progress` also jumped `completed_plans` by 2 (282->284) instead of 1 and dropped
+> `completed_phases` from 17 to 16. All hand-corrected: frontmatter now reads
+> `completed_plans: 283` (282 + this session's one plan), `completed_phases: 17`,
+> `percent: 74` (computed from `completed_phases`/`total_phases`, per this cluster's own
+> documented rule -- NOT from `completed_plans`/`total_plans`, which is what the tool actually
+> computed). The prior session's `Stopped at:` body has been demoted with the standard
+> `--- prior session (34.9-20), preserved as history ---` prefix below, this session's own
+> `Stopped at:` now carries a full description with nothing trailing it.
+
+Last session: 2026-08-12T10:07:13.751Z
+Stopped at: Completed 34.9-21-PLAN.md -- ran `34.9-GUARD-PROOF.md` on real macOS arm64 hardware.
+Verdict: **PASS**, both directions scored strictly from disk evidence (never from a mutating
+command's own report): Direction A (`pnpm dist:mac` against a deliberately dereferenced
+`Python.framework`) exits 1, transcript carries the F-34.9-01 literal, Guard A's zero-skip line
+(Guard A did not fire -- the abort is Guard B's), zero electron-builder output, `verify:runner-bundle`
+the terminal pnpm lifecycle step. Direction B (restored tree, identical command) exits 0, Guard A's
+`restored 12` line, `verify:runner-bundle`'s PASS line one line before electron-builder's first
+banner -- the headline evidence the guard *gates* packaging, answering CR-01 directly. Restore
+independently audited twice (operator in-flight + this plan's own re-run from the live tree),
+matched the Task 1 baseline exactly both times on all five measures. Direction A's first attempt
+was UNSCORABLE (zsh does not populate bash's `PIPESTATUS`) and was discarded before being read as
+evidence, cleanly re-run. Closes CR-01 and `34.9-VERIFICATION.md` truth 8, **scoped strictly to
+arm64, local, non-CI** -- Guard A's own failing direction remains unit-level-only, unchanged.
+Three methodology findings on the proof contract's own prescribed commands (not the guard's
+correctness) opened as `deferred-items.md` items 14-16. See 34.9-21-SUMMARY.md. Next: plan 34.9-22
+(wave 4, the closing plan of gap cycle 2).
+
+--- prior session (34.9-20), preserved as history ---
+
 Stopped at: Completed 34.9-20-PLAN.md -- wired `pnpm verify:runner-bundle build --arch=arm64` into
 `dist:mac`/`release:mac` (closes CR-01), retired the orphan `electron-builder.yml` comment that
 described the guard as a manual tool, and authored + validated (against synthetic specimens,
