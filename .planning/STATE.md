@@ -9,7 +9,7 @@ last_activity: 2026-08-12 -- Phase 34.9 gap cycle 2 plan 34.9-22 complete (closi
 progress:
   total_phases: 23
   completed_phases: 17
-  total_plans: 298
+  total_plans: 297
   completed_plans: 284
   percent: 74
 ---
