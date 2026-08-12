@@ -199,3 +199,69 @@ alone, not to legendary or gogdl and not as a phase-wide claim.
 gap-planning decision (2026-08-11), reproduced from item 4 above for readers who land on this
 section directly. The honest headline for this phase is **~27–33x warm, cold unmeasured** for
 legendary and gogdl.
+
+## Findings opened by the 2026-08-12 guard-proof run (plan 34.9-21)
+
+Plan 34.9-21 ran `34.9-GUARD-PROOF.md` (the CR-01 tripwire proof authored by plan 34.9-20) on real
+macOS arm64 hardware — both directions PASS, restore independently verified twice. Three
+methodology/coverage findings were opened during that run; none of the three implicates the
+guard's own correctness (`meta/verifyRunnerBundle.ts`, `meta/preserveRunnerSymlinks.ts`), all three
+are about the *proof contract's own prescribed commands*.
+
+### 14. `34.9-GUARD-PROOF.md` Direction A's `find -newer` dist/-emptiness check is vacuous
+
+**What it is:** Section 3 step (d) of the proof contract asserts "no new `.dmg`/`.zip` in `dist/`"
+as evidence the failing direction never reached `electron-builder`.
+
+**Blocker (mechanism, not a summary):** `clean:dist-mac` runs FIRST in the `pnpm dist:mac` `&&`
+chain and unconditionally empties `dist/` down to one non-macOS survivor (`builder-debug.yml`),
+regardless of whether the guard later fires. The check cannot produce output either way — it
+passed on the 2026-08-12 run by construction, not by discrimination. This is the same
+self-satisfying-assertion class 34.9-20 already caught once at authoring time (`--publish=never`
+self-matching a bare `publish` grep in Direction B).
+
+**Named precondition:** rewrite Section 3 step (d) to use the terminal-pnpm-lifecycle-step check
+this run substituted and validated instead: assert `verify:runner-bundle` is the LAST pnpm
+lifecycle banner in the transcript and that neither `electron-builder  version=` nor `building
+target=` appears anywhere in it (both proven real discriminators — either would be ≥1 had
+electron-builder run).
+
+**OWNER:** whichever plan next re-runs or re-authors this contract (2026-08-12).
+
+### 15. `34.9-GUARD-PROOF.md`'s exit-capture idiom silently no-ops under zsh; `cat -A` is BSD-incompatible
+
+**What it is:** the contract's prescribed pattern `pnpm dist:mac 2>&1 | tee -a log; echo
+${PIPESTATUS[0]}` for capturing a piped command's exit status, and its `cat -A` suggestion for
+restore-verification byte dumps.
+
+**Blocker:** zsh does not populate bash's `PIPESTATUS` array the same way bash does — under the
+operator's actual default shell on this hardware (zsh), the idiom silently wrote a 1-byte (bare
+newline) exit-status file with no error, which would have been read as an empty/unscorable result
+had it not been caught before being treated as evidence (2026-08-12 run, Direction A Block 2).
+Separately, macOS's BSD `cat` has no `-A` flag (GNU-only); `cat -e` or `xxd` are the macOS-portable
+equivalents.
+
+**Named precondition:** rewrite the contract's exit-capture instruction to the shell-portable
+redirect form (`pnpm dist:mac > log 2>&1; echo $? > exit-file`, which behaves identically under
+zsh and bash) and its byte-dump instruction to `cat -e`/`xxd`.
+
+**OWNER:** whichever plan next re-runs or re-authors this contract (2026-08-12).
+
+### 16. `34.9-GUARD-PROOF.md`'s CLI-argument-passthrough sub-claim (Direction B) was never exercised
+
+**What it is:** Section 5 of the contract, as authored by plan 34.9-20, specifies Direction B as
+`pnpm dist:mac --arm64 --publish=never` specifically to prove that appended CLI arguments still
+reach `electron-builder` — the exact invocation shape `build-base.yml:48` uses
+(`pnpm dist:mac --x64 --arm64 --publish=never`).
+
+**Blocker:** plan 34.9-21's own Task 2 `how-to-verify` text (Step 4.3, "Run the identical `pnpm
+dist:mac`") superseded Section 5's wording without appended args, and the 2026-08-12 run followed
+34.9-21's instruction. The core claim under test (the guard gates `electron-builder` and does not
+obstruct a normal build) remains validly proven independent of this gap; the narrower
+args-passthrough claim does not.
+
+**Named precondition:** the next hardware run that exercises `dist:mac`/`release:mac` should append
+`--arm64 --publish=never` (or the real `release:mac` invocation) at least once and assert the
+resulting electron-builder invocation honored it (an arm64 `target=` line, no `Uploading` line).
+
+**OWNER:** whichever plan next exercises `dist:mac`/`release:mac` on real hardware (2026-08-12).
