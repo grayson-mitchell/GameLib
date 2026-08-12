@@ -86,7 +86,7 @@ function buildPassCaseFixture(
 /**
  * Lays down a `Python.framework` inside `gogdl/_internal/` (the exact
  * location the live gate observed, 34.9-LIVE-GATE.md item 4), on top of an
- * otherwise well-formed three-runner pass-case tree, in one of four shapes.
+ * otherwise well-formed three-runner pass-case tree, in one of five shapes.
  *
  * `well-formed` reproduces the real shape verified on disk (34.9-13-PLAN.md
  * <interfaces>): a real Mach-O `Versions/3.14/Python`, a real
@@ -98,12 +98,22 @@ function buildPassCaseFixture(
  * root cause in the live gate (34.9-12-SUMMARY.md) -- which turns every
  * symlink inside the framework into a real copy.
  *
- * `stub-file` and `unresolvable-target` each malform exactly one other
- * structural property, independent of the dereferenced case.
+ * `stub-file`, `unresolvable-target` and `stub-absent` each malform exactly
+ * one other structural property, independent of the dereferenced case.
+ * `stub-absent` is the partial-copy shape (WR-02): the `Versions/Current`
+ * symlink survived intact but the top-level stub link
+ * (`Python.framework/Python`) was dropped entirely -- a real malformation a
+ * partial dereferencing/copy failure can produce, distinct from `stub-file`
+ * where the stub exists but as the wrong type.
  */
 function buildGogdlFrameworkFixture(
   root: string,
-  shape: 'well-formed' | 'dereferenced' | 'stub-file' | 'unresolvable-target',
+  shape:
+    | 'well-formed'
+    | 'dereferenced'
+    | 'stub-file'
+    | 'unresolvable-target'
+    | 'stub-absent',
   arch: string = ARCH
 ): {
   darwinDir: string
@@ -157,6 +167,14 @@ function buildGogdlFrameworkFixture(
     chmodSync(join(frameworkDir, 'Python'), 0o755)
   } else if (shape === 'unresolvable-target') {
     rmSync(versionDir, { recursive: true, force: true })
+  } else if (shape === 'stub-absent') {
+    // Unlink ONLY the top-level stub `Python.framework/Python` (the link
+    // `inspectFramework` derives from the framework's own name). This is
+    // NOT the sibling `_internal/Python` symlink -- that one lives outside
+    // the framework directory entirely and is not what `topLevelStubExists`
+    // reflects. Nothing else is touched, so `Versions/Current` remains a
+    // valid symlink -- the framework is malformed in exactly one respect.
+    rmSync(join(frameworkDir, 'Python'))
   }
 
   return { darwinDir, frameworkDir, binaryPaths }
@@ -375,6 +393,41 @@ describe('framework structural integrity (F-34.9-01)', () => {
     const fwFailure = summary.failures.find((f) => f.includes(frameworkDir))
     expect(fwFailure).toBeDefined()
     expect(fwFailure).toMatch(/top-level stub/)
+  })
+
+  it('top-level stub is absent entirely (partial-copy shape): ok becomes false', () => {
+    root = mkdtempSync(
+      join(tmpdir(), 'verify-runner-bundle-fw-stub-absent-')
+    )
+    const { frameworkDir } = buildGogdlFrameworkFixture(root, 'stub-absent')
+
+    // Vacuity guard, asserted BEFORE inspectRunnerTree/summarise are called:
+    // the framework must be malformed in exactly ONE respect, so any
+    // failure below is attributable to the absent stub and not to a
+    // co-occurring defect.
+    expect(existsSync(join(frameworkDir, 'Python'))).toBe(false)
+    expect(
+      lstatSync(join(frameworkDir, 'Versions', 'Current')).isSymbolicLink()
+    ).toBe(true)
+    expect(
+      existsSync(join(frameworkDir, 'Versions', '3.14', 'Python'))
+    ).toBe(true)
+
+    const results = inspectRunnerTree(root, ARCH)
+    const gogdl = results.find((r) => r.runner === 'gogdl')
+    expect(gogdl?.frameworks[0]?.topLevelStubExists).toBe(false)
+    expect(gogdl?.frameworks[0]?.versionsCurrentIsSymlink).toBe(true)
+    expect(gogdl?.frameworks[0]?.resolvedVersionDirExists).toBe(true)
+
+    const summary = summarise(results)
+    expect(summary.ok).toBe(false)
+    const fwFailures = summary.failures.filter((f) =>
+      f.includes(frameworkDir)
+    )
+    expect(fwFailures).toHaveLength(1)
+    expect(fwFailures[0]).toContain('top-level stub')
+    expect(fwFailures[0]).toContain('"Python"')
+    expect(fwFailures[0]).toContain('does not exist (F-34.9-01)')
   })
 
   it("Versions/Current symlink target does not resolve to an existing Versions/ directory: ok becomes false", () => {

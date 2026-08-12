@@ -429,6 +429,11 @@ export function summarise(results: RunnerInspection[]): Summary {
     // independently enforced -- see FrameworkInspection's doc comment for
     // why this is credential-free and legitimate to enforce, unlike
     // signature IDENTITY (MachOSignature.signature), which stays data-only.
+    // The top-level stub is enforced in BOTH directions -- absent entirely
+    // (WR-02, the partial-copy shape a dereferencing/copy failure produces)
+    // AND present as the wrong type -- so this pair must not be collapsed
+    // back into a single `if` as a "simplification"; that would reopen
+    // WR-02.
     for (const fw of r.frameworks) {
       if (!fw.versionsCurrentExists) {
         failures.push(
@@ -451,7 +456,12 @@ export function summarise(results: RunnerInspection[]): Summary {
             `does not resolve to an existing Versions/ directory (F-34.9-01)`
         )
       }
-      if (fw.topLevelStubExists && !fw.topLevelStubIsSymlink) {
+      if (!fw.topLevelStubExists) {
+        failures.push(
+          `${r.runner}: framework ${fw.path} is malformed -- top-level stub ` +
+            `"${fw.name.replace(/\.framework$/, '')}" does not exist (F-34.9-01)`
+        )
+      } else if (!fw.topLevelStubIsSymlink) {
         failures.push(
           `${r.runner}: framework ${fw.path} is malformed -- top-level stub ` +
             `"${fw.name.replace(/\.framework$/, '')}" is a real file, not a ` +
