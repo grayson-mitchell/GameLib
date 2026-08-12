@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.9-21-PLAN.md -- ran 34.9-GUARD-PROOF.md on real macOS arm64 hardware, verdict PASS, closes CR-01 (see NOTE 34.9-21 below)"
-last_updated: "2026-08-12T10:12:57.650Z"
-last_activity: 2026-08-12 -- Phase 34.9 gap cycle 2 plan 34.9-21 complete (guard-proof PASS, arm64-only)
+stopped_at: "Completed 34.9-22-PLAN.md"
+last_updated: "2026-08-12T12:00:00.000Z"
+last_activity: 2026-08-12 -- Phase 34.9 gap cycle 2 plan 34.9-22 complete (closing plan; phase remains gaps_found, awaits /gsd-verify-work 34.9)
 progress:
   total_phases: 23
   completed_phases: 17
-  total_plans: 297
-  completed_plans: 283
+  total_plans: 298
+  completed_plans: 284
   percent: 74
 ---
 
@@ -507,18 +507,27 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **EXECUTING gap cycle 2**
-Plan: 21 of 22 complete. Gap cycle 2 is plans 34.9-18..22 across 4 waves — execution started
-2026-08-12. Wave 1 = 34.9-18 + 34.9-19, wave 2 = 34.9-20, wave 3 = 34.9-21, wave 4 = 34.9-22.
+Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **gap cycle 2 COMPLETE,
+phase remains OPEN**
+Plan: 22 of 22 complete (2026-08-12). Gap cycle 2 is plans 34.9-18..22 across 4 waves — execution
+started 2026-08-12. Wave 1 = 34.9-18 + 34.9-19, wave 2 = 34.9-20, wave 3 = 34.9-21, wave 4 = 34.9-22.
 Plan 34.9-21 ran on real macOS arm64 hardware (`autonomous: false`) and completed 2026-08-12:
 `34.9-GUARD-PROOF.md` verdict **PASS** (both directions scored from disk evidence; restore
-independently audited twice), closing CR-01 and `34.9-VERIFICATION.md` truth 8, **scoped strictly
-to arm64, local, non-CI**. Three methodology findings (not guard-correctness findings) opened as
-`deferred-items.md` items 14-16. See `34.9-21-SUMMARY.md`.
-Status: Plans 34.9-18 (CR-01/WR-01 closure in `meta/preserveRunnerSymlinks.ts`), 34.9-19 (WR-02
-closure in `verifyRunnerBundle.ts`, IN-01/IN-02 doc-comment corrections in `cleanDistMac.ts`),
-34.9-20 (CR-01 wiring, `34.9-GUARD-PROOF.md` authored + validated, unrun), and now 34.9-21 (the
-guard-proof run itself, PASS) are all complete. Plan 34.9-22 (wave 4, the closing plan) remains.
+independently audited twice), closing CR-01 and `34.9-VERIFICATION.md` truth 8's guard-firing
+claim. **The guard's coverage is scoped strictly to arm64, local `dist:mac`/`release:mac`, and is
+not in CI** — the macOS CI leg cannot reach the build at all (`install-deps` throws on six
+`PENDING-CI-PUBLISH` sentinels). Three methodology findings (not guard-correctness findings) opened
+as `deferred-items.md` items 14-16.
+Plan 34.9-22 (this plan, the closing plan of gap cycle 2) swept all six `34.9-REVIEW.md` findings by
+set-difference (CR-01, WR-01, WR-02, IN-01, IN-02 landed via 34.9-18..21; IN-03 deferred to
+`deferred-items.md` item 11, with items 12-13 recording the arm64-only, not in CI scope as
+UNPROVEN), corrected the overclaiming "automated tripwire ... cannot go silent again" prose in
+`34.9-LIVE-GATE-RERUN.md`, ROADMAP.md and REQUIREMENTS.md to carry that same scope in every passage,
+and reconciled ROADMAP.md's duplicate `34.9-17` row. See `34.9-22-SUMMARY.md`.
+Status: **`34.9-VERIFICATION.md` remains `status: gaps_found`.** Gap cycle 2 landed the fixes and
+the ledger this plan's own truth-8 gap named as missing, but this plan does not itself re-score that
+verification report. **Next step: `/gsd-verify-work 34.9`**, to re-score truth 8 against this
+landed evidence. The phase does not close until that re-verification runs.
 
 Paused phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — gap cycle 6
 executed (34.5-43..51), but the fourth blocking live gate FAILED 2026-08-12 and the phase does not

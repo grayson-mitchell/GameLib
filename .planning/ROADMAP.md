@@ -2411,17 +2411,26 @@ REQ-34.9-07, REQ-34.9-08, REQ-34.9-09, REQ-34.9-10, REQ-34.9-11 (minted 2026-08-
 ticked only by measured evidence)
 **Depends on:** Phase 34 (packaging/signing/notarization pipeline). Independent of the 34.1-34.8
 IPC slices. Runs before Phase 35, which will later delete the Electron half of the signing work.
-**Plans:** 21/22 plans executed. Gap cycle 1 (34.9-12..17) closed the arm64 leg
-(2026-08-11) — see the phase-status note above; 34.9-17 completed the full reconciliation. Gap
-cycle 2 (34.9-18..22) is now underway to close CR-01/WR-01 and the six unrecorded review findings;
-34.9-18 (CR-01/WR-01, `meta/preserveRunnerSymlinks.ts`), 34.9-19 (WR-02 in
+**Plans:** 22 total (17 original + 5 gap cycle 2) — 21/22 executed on disk (counted from
+`-SUMMARY.md` files present in this phase's directory 2026-08-12; `34.9-22`, this closing plan, is
+completing now). Gap cycle 1 (34.9-12..17) closed the arm64 leg (2026-08-11) — see the phase-status
+note above. **2026-08-12 correction:** the earlier claim that "34.9-17 completed the full
+reconciliation" was FALSE — `34.9-VERIFICATION.md` truth 8 found that 34.9-17's own ledger recorded
+6 descoped items, 2 UI defects and 1 PKCE note but contained **zero** mentions of CR-01, WR-01, or
+any other code-review finding; gap cycle 2 is the reconciliation that actually swept them (see
+`deferred-items.md`'s "Code-review finding disposition" section). Gap cycle 2 (34.9-18..22) closes
+CR-01/WR-01 and the five other unrecorded review findings; 34.9-18 (CR-01/WR-01,
+`meta/preserveRunnerSymlinks.ts`), 34.9-19 (WR-02 in
 `meta/verifyRunnerBundle.ts`, IN-01/IN-02 doc comments in `meta/cleanDistMac.ts`), 34.9-20
-(CR-01 fully closed -- guard wired into `dist:mac`/`release:mac`; `34.9-GUARD-PROOF.md` authored +
-validated, unrun), and 34.9-21 (ran `34.9-GUARD-PROOF.md` on real macOS arm64 hardware, verdict
+(CR-01 fully wired into `dist:mac`/`release:mac`; `34.9-GUARD-PROOF.md` authored + validated,
+unrun), 34.9-21 (ran `34.9-GUARD-PROOF.md` on real macOS arm64 hardware, verdict
 **PASS** -- both directions scored from disk evidence, restore independently audited twice,
 closing CR-01 and `34.9-VERIFICATION.md` truth 8, scoped strictly to arm64/local/non-CI; three
 methodology findings on the proof contract's own commands opened as `deferred-items.md` items
-14-16) are complete. Only 34.9-22 (wave 4, the closing plan) remains.
+14-16), and 34.9-22 (this plan — the six-finding sweep, deferred-items.md 11-13, and the corrected
+tripwire prose) are complete. **The phase does not close from gap cycle 2's own edits** —
+`34.9-VERIFICATION.md` remains `status: gaps_found` until the verifier re-scores truth 8 against
+this landed evidence: `/gsd-verify-work 34.9`.
 **Gap cycle 1 planned 2026-08-11**
 (`/gsd-plan-phase 34.9 --gaps`), 6 plans in 4 waves, 6/6 gap-cycle plans complete (17/17 overall):
 
@@ -2532,7 +2541,18 @@ leg only**.
 - [x] 34.9-14-PLAN.md — Clear stale macOS `dist/` artifacts before every build so a failed build cannot read as success (wave 1) — closes **F-34.9-02** — **DONE 2026-08-11**, live-verified against the real `dist/`: removed the four 2026-07-21 stale macOS artifacts, `latest-mac.yml`, and the abandoned `mac-arm64/` tree; `builder-debug.yml` survives; see 34.9-14-SUMMARY.md
 - [x] 34.9-15-PLAN.md — Author `34.9-LIVE-GATE-RERUN.md` + its Structural Reachability Review; **forbidden from running any of it** (wave 2) — carries the absolute-path rule and **F-34.9-04**'s version-string non-discriminator — **DONE 2026-08-11**, unrun contract authored (`verdict: PENDING`), see 34.9-15-SUMMARY.md
 - [x] 34.9-16-PLAN.md — Run the re-run gate on hardware; sole writer of results (wave 3, `autonomous: false` — human operator on macOS arm64) — **RAN 2026-08-11, verdict PASS 2/2.** Scored Item 1 (Tauri DEV nested resolution) PASS, both sinks, no regression. Scored Item 2 (Electron PACKAGED, F-34.9-01's own subject) PASS on all 8 on-disk criteria: exactly 12 restored symlinks, zero `bundle format is ambiguous` against the framework bundle, `verify:runner-bundle` exit 0, new dmg/zip strictly after `BUILD_START`, +0.02% payload delta (F-34.9-03 corroboration). Carried-forward items 2/3/5 NOT invalidated (Section 2's conditional did not trigger). REQ-34.9-08/11 ticked. See `34.9-LIVE-GATE-RERUN.md`, 34.9-16-SUMMARY.md.
-- [x] 34.9-17-PLAN.md — Record the descoped/deferred set; reconcile REQUIREMENTS.md, this ROADMAP entry and STATE.md to post-gap-cycle truth (wave 4)
+
+**Gap cycle 2 — planned 2026-08-12 at `/gsd-plan-phase 34.9 --gaps`.** Closes
+`34.9-VERIFICATION.md` truth 8 (FAILED, `status: gaps_found`) and CR-01, the code review's sole
+Critical finding — plus the five other `34.9-REVIEW.md` findings (WR-01, WR-02, IN-01, IN-02, IN-03)
+that gap cycle 1's own reconciliation plan (34.9-17) recorded nowhere, the exact failure this cycle
+exists to not repeat.
+
+- [x] 34.9-18-PLAN.md — Close CR-01 (`closeBundle` throws on a skipped or rejected symlink restore) and WR-01 (`isContainedSymlinkTarget` target-containment guard) in `meta/preserveRunnerSymlinks.ts` (wave 1) — **DONE 2026-08-12**, see 34.9-18-SUMMARY.md
+- [x] 34.9-19-PLAN.md — Close WR-02 (`summarise()` now fails a fully-absent top-level framework stub) in `meta/verifyRunnerBundle.ts`; correct IN-01/IN-02 doc comments in `meta/cleanDistMac.ts` (wave 1) — **DONE 2026-08-12**, see 34.9-19-SUMMARY.md
+- [x] 34.9-20-PLAN.md — Wire `pnpm verify:runner-bundle build --arch=arm64` into `dist:mac`/`release:mac` immediately before `electron-builder`; author `34.9-GUARD-PROOF.md`, an unrun, author/runner-separated proof contract (wave 2) — **DONE 2026-08-12**, see 34.9-20-SUMMARY.md
+- [x] 34.9-21-PLAN.md — Run `34.9-GUARD-PROOF.md` on real macOS arm64 hardware, sole writer of results (wave 3, `autonomous: false` — human operator required) — **RAN 2026-08-12, verdict PASS** (`directions_passed: 2`, `directions_failed: 0`), both directions scored from disk evidence, restore independently audited twice; closes CR-01 and `34.9-VERIFICATION.md` truth 8's guard-firing claim, scoped strictly to arm64/local/non-CI. Three methodology findings on the proof contract's own commands opened as `deferred-items.md` items 14-16. See `34.9-GUARD-PROOF.md`, 34.9-21-SUMMARY.md
+- [x] 34.9-22-PLAN.md — Sweep all six review findings by set-difference (deferred-items.md items 11-13); correct the overclaiming tripwire prose in `34.9-LIVE-GATE-RERUN.md`/ROADMAP.md/REQUIREMENTS.md; reconcile ROADMAP structure and STATE.md (wave 4, the closing plan) — **DONE 2026-08-12.** **The phase does NOT close from this plan** — `34.9-VERIFICATION.md` remains `status: gaps_found`; truth 8 awaits re-scoring by the verifier against this cycle's landed evidence: `/gsd-verify-work 34.9`. See `deferred-items.md`, 34.9-22-SUMMARY.md
 
 ### Phase 34.10: Navigation shell — horizontal card tabs replace the sidebar (INSERTED)
 
