@@ -331,3 +331,36 @@ Neither row retired **by this descope** — both retired on their own dates, for
 before this descope was ever recorded. This descope is a scope decision at gate-authoring time,
 not a test result, and it must never be read as "Epic passed" or as adding to either row's own
 retirement credit.
+
+## Found during the fourth blocking live gate (2026-08-12, plan 34.5-51) — gap cycle 7 to scope
+
+Verdict `FAIL`: `items_passed: 2, items_failed: 1, items_blocked: 0, items_not_attempted: 1`.
+Evidence: `34.5-LIVE-GATE-RERUN-3.md`. Full work-list: `34.5-CYCLE7-ROUTING.md`.
+
+25. **`F-34.5-G6-16` — the anti-phishing origin title (Phase 34.5 Plan 27) is never visible on
+    macOS, because the login window is always presented as a titleless AppKit sheet (Phase
+    34.4.2's CR-01 fix).** `main.rs`'s `humble_login_open` arm unconditionally builds the login
+    window `.visible(false)` on macOS and presents it exclusively via
+    `present_login_window_as_sheet`/`beginSheet:`. AppKit sheets render no title bar UI at all.
+    `on_document_title_changed`'s composed origin+title string is still set on the underlying
+    `NSWindow` every time, but has zero visible effect. Elevated to item 1's own scored FAIL by
+    developer decision (the observation is complete and positive: the feature does not exist, not
+    merely unproven). Needs a code fix — either stop presenting this window as a sheet, or find an
+    AppKit-supported way to surface origin text on a sheet — before any future gate run of this
+    item can pass.
+26. **`F-34.5-G6-17` — `nile`'s own DEBUG-level "Got register data" log line writes the raw OAuth
+    `code` value unredacted, inside a JSON blob, to `gamelib.log`.** Observed live during a real
+    Amazon login; the command-line echo of the same value IS correctly redacted, but the very next
+    DEBUG line is not. Not diagnosed — unknown whether this is `nile`'s own stdout relayed
+    verbatim, or a GameLib-side logger call.
+27. **`F-34.5-G6-18` — the gate contract itself cited the wrong "definitive" evidence line for
+    item 4's DXVK-toggle clause.** The install/backup direction (turning the toggle ON, the only
+    direction this item's own steps ever exercise) never calls `runWineCommand` at all — it
+    copies DXVK `.dll` files directly via Node's `copyFile`. `launcher.ts:1581`'s `Running Wine
+    command: ...` is only reached on the RESTORE direction. The corrected evidence line is
+    `tools/index.ts:369`'s `installing dxvk-macOS on...`. Any future gate contract re-attempting
+    this item must cite the corrected line.
+28. **`U-34.5-29`/`U-34.5-30` opened** (ledger now 30 rows) — Amazon library population has never
+    been observed live by any gate run (the test account owns zero games); the DXVK toggle action
+    has never been observed live either (the one opportunity found the switch already on, a
+    week-old stale value, never actually clicked).

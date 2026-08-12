@@ -2041,7 +2041,7 @@ all stay `[ ]` per D-08's no-partial-pass rule — item 3's own PASS does not ti
 > **What this dependency does and does not block.** The seam itself is BUILT and unit-proven — 8 of 9 of 34.4.1's plans are executed, the runner-agnostic child-window mechanism is deliberately Humble-agnostic, and 34.4.1-09 already **wired** all four OAuth runners via the new `oauthCaptureLogin` channel with a declared-blocked UI surface naming each runner's unported channel. So 34.5 may be **discussed and planned now**. What is still outstanding is 34.4.1's *live proof* (plan 08's blocking 4-item gate, plus item 3(b) already recorded BLOCKED-UNOBSERVABLE and headed for a gap cycle). 34.5 must not **ship** a real OAuth credential path on a seam whose live gate never ran.
 >
 > **Inherited obligation, not a note — `T-34.4.1-44b`.** nile and zoom capture via a **host-free param match** inherited from the Electron original. This is harmless in 34.4.1 only because the captured value is handed to a channel that rejects. **34.5 MUST host-anchor both before it mints a real credential.** Also inherited: navigation observation (NOT the cookie read) is the actual seam surface, and 34.4.1 RESEARCH Open Question 1 — in-app `on_navigation` cancellation timing — remains unobserved.
-**Plans:** 47/51 plans executed
+**Plans:** 48/51 plans executed (48 of 48 in-scope; 3 halted/superseded — see below)
 44 `*-SUMMARY.md`). **The three without a SUMMARY among the first 42 are 34.5-29/30/31, which are
 HALTED and SUPERSEDED, not pending.** Gap cycle 5 added plans 34.5-38..42 on 2026-08-02: 34.5-38 —
 authorisation/disposition/measured-baseline record; 34.5-39 — item-4/item-5 gate preflight;
@@ -2061,8 +2061,13 @@ test-16 gap — `callOrDeclare()` plus an `AdvancedSettings/index.tsx` rewrite s
 declines visibly under Tauri, a call-site source-text gate RED-proven against three injected
 known-bad inputs, and a correction of `34.5-PORTED-CHANNELS.md`'s falsified "no new code needed"
 claim)
-— 4 gap-cycle-6 plans remain (34.5-45, 49, 50, 51). 44 of 48 in-scope plans are complete
-(39 pre-cycle-6 + 5 cycle-6). Dispositions for 34.5-29/30/31: `34.5-CYCLE5-ROUTING.md`.
+; 34.5-45 (real `sips`-backed `nativeImage` shim + quoted/percent-encoded `run.sh`, closing the
+injection surface), 34.5-49 (full preload-surface audit, 217 channels, 11 previously unlisted, all
+bucketed) and 34.5-50 (authored `34.5-LIVE-GATE-RERUN-3.md`, the fourth blocking gate contract)
+also now executed — **all 9 gap-cycle-6 plans complete.** 34.5-51 **RAN the fourth blocking gate
+on real hardware 2026-08-12: VERDICT FAIL** (`items_passed=2, items_failed=1, items_blocked=0,
+items_not_attempted=1` — see below). 48 of 48 in-scope plans are complete (39 pre-cycle-6 + 9
+cycle-6). Dispositions for 34.5-29/30/31: `34.5-CYCLE5-ROUTING.md`.
 
 **PHASE DOES NOT CLOSE.** The blocking 5-item live gate (`34.5-15-PLAN.md`) ran
 2026-08-01 and FAILED (0/5 PASS) — see `34.5-LIVE-GATE.md` and `34.5-15-SUMMARY.md`. Gap cycle
@@ -2110,6 +2115,47 @@ inventory's incompleteness is UNKNOWN and must not be assumed to be one channel.
 See `34.5-LIVE-GATE-RERUN-2.md` for the third run's full evidence, `34.5-CYCLE5-ROUTING.md`
 § Outcome for the routing decision, `deferred-items.md` items 13-22 for the nine new findings, and
 `34.5-42-SUMMARY.md` for this propagation pass.
+
+**Gap cycle 6 (plans `34.5-43`..`34.5-51`) authored and RAN the fourth blocking gate on
+2026-08-12** — contract `34.5-LIVE-GATE-RERUN-3.md` written with `verdict: null` before any live
+work (by plan 34.5-50), executed by plan `34.5-51`: **FAIL** — `items_passed: 2` (item 2 Amazon
+login, item 3 shortcuts), `items_failed: 1` (item 1 GOG login, on a single clause), `items_blocked:
+0`, `items_not_attempted: 1` (item 4 Wine). The four counters reconcile to 4. Per D-08, **the phase
+still does not close.**
+
+What the fourth run earned, stated without inflation:
+
+- **Items 2 and 3 both PASSED, independently verified from disk and log, not taken on the
+  operator's report alone.** Item 2: real Amazon login end to end, `www.amazon.com` host anchor
+  CONFIRMED (Assumption A1). Item 3: both `exe` call sites confirmed byte-exact from disk
+  (`shortcuts.vdf`'s `Exe` field matching `GAMELIB_SHELL_EXE` character for character, and the
+  `.app`/`run.sh` shortcut correctly quoted/percent-encoded), addToSteam's resolved value
+  cross-checked across two independent components, two independent real-game launches both showing
+  the clean single-instance flow — driven through the REAL UI buttons after the DevTools console
+  was confirmed unusable on this build mid-run, not through the console invocations the original
+  contract prescribed.
+- **Item 1 FAILED on one clause, root-caused rather than merely observed absent.** The GOG login
+  mechanism itself worked cleanly (8 of 9 clauses PASS: capture, CLI auth, library population,
+  account surface, Manage Accounts resolution) — but the anti-phishing origin-title clause FAILS
+  because the feature has been established as genuinely ABSENT on macOS: the login window is
+  unconditionally presented as a titleless AppKit sheet (a Phase 34.4.2 fix), so Plan 34.5-27's
+  origin-prefixed title is set correctly on the underlying `NSWindow` but never visible to the
+  user (`F-34.5-G6-16`). By explicit developer decision this is FAIL, not BLOCKED — the observation
+  is complete and positive, not merely unreachable. This is a code defect requiring a fix, not a
+  re-run.
+- **Item 4 (Wine) is NOT ATTEMPTED, and a second contract defect was found alongside it.** The
+  wineVersion-repoint prerequisite is independently confirmed, but the DXVK-toggle action itself
+  was never clicked — a stale, week-old setting already showed the switch ON, and no click ever
+  happened. This gate's own contract also cited the wrong "definitive" evidence line for this
+  action (`F-34.5-G6-18`): the install/backup direction never calls `runWineCommand` at all.
+- **7 ledger rows retired** on their own named observations (`U-34.5-02/07/08/12/13/15/17`),
+  **2 new rows opened** (`U-34.5-29` Amazon library population never observed by any run to date —
+  the test account owns zero games; `U-34.5-30` the DXVK toggle never actually exercised),
+  `34.5-UNTESTED-ITEMS.md` now 30 rows.
+
+See `34.5-LIVE-GATE-RERUN-3.md` for the fourth run's full evidence, `34.5-CYCLE7-ROUTING.md` for
+the gap-cycle-7 work-list, `deferred-items.md` items 25-28 for the new findings, and
+`34.5-51-SUMMARY.md` for the full execution record.
 
 Plans:
 

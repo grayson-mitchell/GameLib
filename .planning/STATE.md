@@ -33,7 +33,36 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-> **⛔ ACTIVE BLOCKER — Phase 34.5's blocking live gate RAN A THIRD TIME 2026-08-02
+> **⛔ ACTIVE BLOCKER — Phase 34.5's blocking live gate RAN A FOURTH TIME 2026-08-12
+> (`34.5-LIVE-GATE-RERUN-3.md`, plan 34.5-51) and FAILED (verdict FAIL: 2 PASS / 1 FAIL / 0
+> BLOCKED / 1 NOT ATTEMPTED, against the required 4/0/0/0).** Gap cycle 6's own seven fix plans
+> (34.5-43..34.5-49) plus the contract-authoring plan (34.5-50) are complete, but **Phase 34.5
+> STILL DOES NOT CLOSE.** D-08's no-partial-pass rule applies unchanged: this fourth FAIL is
+> another gap cycle inside 34.5 — `/gsd-plan-phase 34.5 --gaps` (gap cycle 7) — not a deferred UAT
+> entry, not an advisory note, and not a pre-authorized override.
+>
+> **Items 2 (Amazon login) and 3 (shortcuts) both PASSED, independently verified from disk and log,
+> not taken on the operator's word alone.** Item 1 (GOG login) FAILED on a single clause, by
+> explicit developer decision: 8 of 9 evidence clauses passed cleanly, but the anti-phishing
+> origin-title clause FAILS because the feature has been established as genuinely ABSENT on
+> macOS — the login window is unconditionally presented as a titleless AppKit sheet
+> (`present_login_window_as_sheet`/`beginSheet:`, a Phase 34.4.2 fix), so Plan 34.5-27's
+> origin-prefixed title is set correctly on the underlying `NSWindow` but never visible to the
+> user (`F-34.5-G6-16`). This is a code defect, not a re-run — no future attempt of this same
+> contract can pass without a fix first. Item 4 (Wine) is NOT ATTEMPTED: the wineVersion-repoint
+> prerequisite is confirmed, but the DXVK-toggle action was never actually clicked (a stale,
+> week-old setting already showed the switch ON), and this run also found the gate contract itself
+> cites the wrong "definitive" evidence line for that action (`F-34.5-G6-18`) — a future contract
+> must correct it or the same clause is unverifiable again even on a genuine click.
+>
+> Full work-list for gap cycle 7: `34.5-CYCLE7-ROUTING.md`. Full evidence: `34.5-LIVE-GATE-RERUN-3.md`
+> (now `status: complete`). `34.5-UNTESTED-ITEMS.md`: 7 rows retired (`U-34.5-02/07/08/12/13/15/17`),
+> 2 new rows opened (`U-34.5-29` Amazon library population never observed by any run to date,
+> `U-34.5-30` the never-exercised DXVK toggle), 30 rows total.
+>
+> --- historical: run 3's own banner follows, preserved as the record of that run ---
+>
+> **⛔ [SUPERSEDED] Phase 34.5's blocking live gate RAN A THIRD TIME 2026-08-02
 > (`34.5-LIVE-GATE-RERUN-2.md`, plan 34.5-41) and FAILED AGAIN (0 of 5 clean).** Gap cycle 5's own
 > five plans (34.5-38..41; plan 42's propagation task is superseded by the new gap cycle this result
 > routes to) are complete, but **Phase 34.5 STILL DOES NOT CLOSE.** D-08's no-partial-pass rule
@@ -4657,9 +4686,45 @@ Recent decisions affecting current work:
 > `state.update-progress`'s own JSON return reported `92`, itself one under the correct `91` for
 > `253/277`) -- hand-corrected to `completed_plans: 253`, `percent: 91`.
 
-Last session: 2026-08-11T13:26:41.840Z
-Stopped at: Completed 34.5-50-PLAN.md
-`34.5-CYCLE6-ROUTING.md`): the panel rendered "not installed", offered Install, entered a permanent
+> NOTE (34.5-51): `state.record-session` was NOT invoked for this session's own completion --
+> hand-corrected directly instead, per this cluster's own documented history of the same
+> mis-targeted-write pattern recurring across 34.10-17/34.10-19/34.11-02 above. The orphaned body
+> that had been sitting under the OLD `Stopped at: Completed 34.5-50-PLAN.md` line (plan 34.5-48's
+> own multi-line description, truncated to its first line by a PRIOR corrupted write, before this
+> session even began) was given back its proper prefix and demoted into its own
+> "prior session (34.5-48)" block below, in the same format as every other entry in this chain.
+
+Last session: 2026-08-12T18:30:00.000Z
+Stopped at: Completed 34.5-51-PLAN.md -- executed the fourth blocking live gate on real macOS
+hardware (`34.5-LIVE-GATE-RERUN-3.md`). Verdict FAIL: 2 PASS (Amazon login, shortcuts) / 1 FAIL
+(GOG login, on a single clause) / 0 BLOCKED / 1 NOT ATTEMPTED (Wine/DXVK). Root-caused item 1's
+FAIL: the login window is unconditionally presented as a titleless AppKit sheet on macOS
+(`present_login_window_as_sheet`/`beginSheet:`, a Phase 34.4.2 fix), so Plan 34.5-27's
+anti-phishing origin-title is set correctly on the underlying `NSWindow` but never visible to the
+user -- a genuine code defect (`F-34.5-G6-16`), not a re-run situation. Item 4's DXVK toggle was
+never actually clicked (a stale, week-old setting already showed it ON); also found the gate
+contract itself cited the wrong "definitive" evidence line for that action (`F-34.5-G6-18`).
+Items 2/3 both independently verified from disk and log, not taken on the operator's report alone.
+Withdrew a mid-run executor error (an unverified "kill Steam's ipcserver helper" instruction) after
+re-investigating and finding nothing held `shortcuts.vdf` open. Re-planned item 3's verification
+route mid-run around the real UI buttons after the operator reported the DevTools console is
+unusable on this build. 7 ledger rows retired (`U-34.5-02/07/08/12/13/15/17`), 2 opened
+(`U-34.5-29`/`U-34.5-30`), 30 rows total. Per D-08, Phase 34.5 does NOT close; routes to gap cycle
+7 (`34.5-CYCLE7-ROUTING.md`). See `34.5-51-SUMMARY.md`. Next: `/gsd-plan-phase 34.5 --gaps`.
+
+--- prior session (34.5-50), preserved as history ---
+
+> NOTE (34.5-51): plan 34.5-50's own descriptive `Stopped at:` body is MISSING from this file --
+> its `state.record-session` write appears to have landed only a bare first line ("Completed
+> 34.5-50-PLAN.md") with no body at all, the same corruption class documented throughout this
+> section, discovered while hand-correcting this session's own entry. Not fabricated here; see
+> `34.5-50-SUMMARY.md` for the real record of that plan's work (authoring
+> `34.5-LIVE-GATE-RERUN-3.md`, the contract this session executed).
+
+--- prior session (34.5-48), preserved as history ---
+
+Stopped at: Completed 34.5-48-PLAN.md -- fixed the EOS overlay panel's dishonest degradation
+(`34.5-CYCLE6-ROUTING.md`): the panel rendered "not installed", offered Install, entered a permanent
 "installing" state and offered Cancel while making ZERO backend calls a rejection could ever reach
 (`grep -ic -E "eos|overlay"` across a full UAT session returned 0). Task 1 added
 `src/frontend/helpers/declaredUnavailable.ts`'s `callOrDeclare()`: never throws, routes a rejection
