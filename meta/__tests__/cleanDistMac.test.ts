@@ -30,6 +30,7 @@ import { cleanDistMac, macArtifactEntries, MAC_ARTIFACT_TOKEN } from '../cleanDi
 
 const ELECTRON_BUILDER_PATH = join(__dirname, '..', '..', 'electron-builder.yml')
 const PACKAGE_JSON_PATH = join(__dirname, '..', '..', 'package.json')
+const CLEAN_DIST_MAC_SOURCE_PATH = join(__dirname, '..', 'cleanDistMac.ts')
 
 interface ElectronBuilderConfig {
   mac: { artifactName: string }
@@ -227,5 +228,49 @@ describe('package.json wiring pin', () => {
     expect(releaseMac.indexOf('clean:dist-mac')).toBeLessThan(
       releaseMac.indexOf('electron-builder')
     )
+  })
+})
+
+describe('doc-comment accuracy pins (IN-01/IN-02)', () => {
+  // Normalises the source once: strips each line's leading comment marker
+  // (`*`, `/**`, `//`, plus surrounding whitespace) and collapses all
+  // whitespace runs to single spaces, so these pins survive any future
+  // re-wrapping of the comment block. Mirrors the `<normalised_comment_scan>`
+  // shell pipeline used at authoring time (34.9-19-PLAN.md) -- do NOT assert
+  // on the raw, un-normalised source text.
+  function normalisedSource(): string {
+    const raw = readFileSync(CLEAN_DIST_MAC_SOURCE_PATH, 'utf-8')
+    return raw
+      .split('\n')
+      .map((line) => line.replace(/^\s*(\/\*\*|\*\/|\*|\/\/)\s?/, ''))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+  }
+
+  test('IN-01: the retired "symlink is matched by the token/standalone-name branches" claim is gone', () => {
+    expect(normalisedSource()).not.toContain(
+      'symlink is matched by the token/standalone-name branches'
+    )
+  })
+
+  test('IN-01: the corrected comment names the unreachable shape and states it is left in place', () => {
+    const source = normalisedSource()
+    expect(source).toContain('symlink literally named')
+    expect(source).toContain('matches no branch and is left in place')
+  })
+
+  test('IN-02: the retired "Every removal path is containment-checked" framing is gone', () => {
+    expect(normalisedSource()).not.toContain(
+      'Every removal path is containment-checked'
+    )
+  })
+
+  test('IN-02: the corrected comment states the throw is untested defense-in-depth', () => {
+    const source = normalisedSource()
+    expect(source).toContain('never contain a path separator')
+    expect(source).toContain(
+      'defense-in-depth against a currently-unreachable input'
+    )
+    expect(source).toContain('no test exercises it')
   })
 })

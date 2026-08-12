@@ -44,10 +44,14 @@ export const MAC_DIR_PATTERN = /^mac(-.+)?$/
  * True when `name` (a direct child of `dist/`) is a macOS-produced artifact
  * or staging directory, by the positive allow-list above. `isDirectory`
  * reflects the directory ENTRY's own type (as `readdirSync(..., {
- * withFileTypes: true })` reports it, i.e. lstat-based) -- a symlink is never
- * treated as a directory here even if its target is one, so a macOS-named
- * symlink is matched by the token/standalone-name branches, never by the
- * directory-pattern branch.
+ * withFileTypes: true })` reports it, i.e. lstat-based), so the
+ * `MAC_DIR_PATTERN` branch never fires for a symlink -- a symlink is
+ * therefore matched only when its own NAME contains `MAC_ARTIFACT_TOKEN` or
+ * is listed in `MAC_STANDALONE_ENTRIES`. A symlink whose name matches only
+ * `MAC_DIR_PATTERN` -- the concrete example being a symlink literally named
+ * `mac-arm64` -- matches no branch and is left in place. This shape is not
+ * reachable today: electron-builder always creates the per-arch staging
+ * directory as a real directory, never a symlink (IN-01).
  */
 function isMacArtifact(name: string, isDirectory: boolean): boolean {
   if (name.includes(MAC_ARTIFACT_TOKEN)) return true
@@ -76,12 +80,18 @@ export function macArtifactEntries(distDir: string): string[] {
 
 /**
  * Removes every macOS-identifiable entry directly under `distDir` and
- * reports what was removed and what survived. Every removal path is
- * containment-checked (T-34.9G-09): `resolve(distDir, name)` must land
- * strictly inside `resolve(distDir) + sep` or this throws naming both paths,
- * rather than ever removing something outside `distDir`. `rmSync(..., {
- * recursive: true, force: true })` unlinks a symlinked entry itself -- it
- * never follows the link and deletes its target (T-34.9G-11).
+ * reports what was removed and what survived. Every `entry.name` reaching
+ * the containment check (T-34.9G-09) comes from `readdirSync(distDir, {
+ * withFileTypes: true })`, and real directory entries can never contain a
+ * path separator, so `path.resolve(distDir, entry.name)` cannot escape
+ * `resolve(distDir)` through this call path -- the throw is
+ * defense-in-depth against a currently-unreachable input, not an enforced,
+ * tested contract, and no test exercises it (IN-02). If this module ever
+ * accepts externally-supplied names (e.g. a `--only` filter), the throw
+ * becomes reachable and MUST gain a test. `rmSync(..., { recursive: true,
+ * force: true })` unlinks a symlinked entry itself -- it never follows the
+ * link and deletes its target (T-34.9G-11), and that claim IS tested, at
+ * meta/__tests__/cleanDistMac.test.ts:162.
  *
  * On a `distDir` that does not exist, returns `{ removed: [], kept: [] }`
  * without throwing.
