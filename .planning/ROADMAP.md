@@ -2411,8 +2411,10 @@ REQ-34.9-07, REQ-34.9-08, REQ-34.9-09, REQ-34.9-10, REQ-34.9-11 (minted 2026-08-
 ticked only by measured evidence)
 **Depends on:** Phase 34 (packaging/signing/notarization pipeline). Independent of the 34.1-34.8
 IPC slices. Runs before Phase 35, which will later delete the Electron half of the signing work.
-**Plans:** 17 total — 17/17 plans executed. The blocking live-gate RE-RUN PASSED 2/2
-(2026-08-11) — see the phase-status note above; 34.9-17 completed the full reconciliation.
+**Plans:** 18/22 plans executed. Gap cycle 1 (34.9-12..17) closed the arm64 leg
+(2026-08-11) — see the phase-status note above; 34.9-17 completed the full reconciliation. Gap
+cycle 2 (34.9-18..22) is now underway to close CR-01/WR-01 and the six unrecorded review findings;
+34.9-18 (CR-01/WR-01, `meta/preserveRunnerSymlinks.ts`) is complete.
 **Gap cycle 1 planned 2026-08-11**
 (`/gsd-plan-phase 34.9 --gaps`), 6 plans in 4 waves, 6/6 gap-cycle plans complete (17/17 overall):
 
@@ -2513,7 +2515,7 @@ leg only**.
 - [x] 34.9-14-PLAN.md — Clear stale macOS `dist/` artifacts before every build so a failed build cannot read as success (wave 1) — closes **F-34.9-02** — **DONE 2026-08-11**, live-verified against the real `dist/`: removed the four 2026-07-21 stale macOS artifacts, `latest-mac.yml`, and the abandoned `mac-arm64/` tree; `builder-debug.yml` survives; see 34.9-14-SUMMARY.md
 - [x] 34.9-15-PLAN.md — Author `34.9-LIVE-GATE-RERUN.md` + its Structural Reachability Review; **forbidden from running any of it** (wave 2) — carries the absolute-path rule and **F-34.9-04**'s version-string non-discriminator — **DONE 2026-08-11**, unrun contract authored (`verdict: PENDING`), see 34.9-15-SUMMARY.md
 - [x] 34.9-16-PLAN.md — Run the re-run gate on hardware; sole writer of results (wave 3, `autonomous: false` — human operator on macOS arm64) — **RAN 2026-08-11, verdict PASS 2/2.** Scored Item 1 (Tauri DEV nested resolution) PASS, both sinks, no regression. Scored Item 2 (Electron PACKAGED, F-34.9-01's own subject) PASS on all 8 on-disk criteria: exactly 12 restored symlinks, zero `bundle format is ambiguous` against the framework bundle, `verify:runner-bundle` exit 0, new dmg/zip strictly after `BUILD_START`, +0.02% payload delta (F-34.9-03 corroboration). Carried-forward items 2/3/5 NOT invalidated (Section 2's conditional did not trigger). REQ-34.9-08/11 ticked. See `34.9-LIVE-GATE-RERUN.md`, 34.9-16-SUMMARY.md.
-- [ ] 34.9-17-PLAN.md — Record the descoped/deferred set; reconcile REQUIREMENTS.md, this ROADMAP entry and STATE.md to post-gap-cycle truth (wave 4)
+- [x] 34.9-17-PLAN.md — Record the descoped/deferred set; reconcile REQUIREMENTS.md, this ROADMAP entry and STATE.md to post-gap-cycle truth (wave 4)
 
 ### Phase 34.10: Navigation shell — horizontal card tabs replace the sidebar (INSERTED)
 

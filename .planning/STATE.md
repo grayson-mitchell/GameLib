@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-51-PLAN.md -- executed the fourth blocking live gate on real macOS
-last_updated: "2026-08-12T07:42:49.428Z"
-last_activity: 2026-08-12 -- Phase 34.9 execution started
+stopped_at: Completed 34.9-18-PLAN.md -- closed CR-01/WR-01 in meta/preserveRunnerSymlinks.ts
+last_updated: "2026-08-12T07:50:20.165Z"
+last_activity: 2026-08-12 -- Phase 34.9 gap cycle 2 plan 34.9-18 complete
 progress:
   total_phases: 23
   completed_phases: 17
   total_plans: 297
-  completed_plans: 279
-  percent: 74
+  completed_plans: 281
+  percent: 95
 ---
 
 # Project State
@@ -508,11 +508,12 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **EXECUTING gap cycle 2**
-Plan: 17 of 22 complete. Gap cycle 2 is plans 34.9-18..22 across 4 waves — execution started
+Plan: 18 of 22 complete. Gap cycle 2 is plans 34.9-18..22 across 4 waves — execution started
 2026-08-12. Wave 1 = 34.9-18 + 34.9-19, wave 2 = 34.9-20, wave 3 = 34.9-21, wave 4 = 34.9-22.
 Plan 34.9-21 is `autonomous: false` and requires a human on real macOS arm64 hardware to run
 `34.9-GUARD-PROOF.md`.
-Status: Executing Phase 34.9 gap cycle 2
+Status: Executing Phase 34.9 gap cycle 2 -- plan 34.9-18 (CR-01/WR-01 closure in
+`meta/preserveRunnerSymlinks.ts`) complete, plans 34.9-19..22 remain
 
 Paused phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — gap cycle 6
 executed (34.5-43..51), but the fourth blocking live gate FAILED 2026-08-12 and the phase does not
@@ -2826,7 +2827,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[██████████] 96%
+trusted blindly. The recurring `**Progress:**[██████████] 95%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 
@@ -3974,6 +3975,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P48 | 35min | 3 tasks | 6 files |
 | Phase 34.5 P49 | 70min | 3 tasks | 4 files |
 | Phase 34.5 P50 | 2h40m | 3 tasks | 4 files |
+| Phase 34.9 P18 | 25min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -4546,6 +4548,8 @@ Recent decisions affecting current work:
 - [Phase 34.5]: 34.5-49: importGame/moveInstall/runWineCommandForGame/oauthCaptureLogin flagged as findings (T-34.5-C6-49-03) for crossing a trust boundary with a path/command/credential -- recorded only, not fixed
 - [Phase 34.5]: 34.5-50: Task 2/Task 3 committed together -- Part D specimen validation necessarily edits Task-2-authored content (evidence-handling rule)
 - [Phase 34.5]: 34.5-50: redaction-sweep regex hardened from a [^<] single-char exclusion to 4+ token-alphabet chars after Part D found a real self-match false positive
+- [Phase 34.9-18]: Target-containment check runs before rmSync/parent-missing check in restoreSymlinks so a rejected record's destination is left untouched (T-34.9-18-02)
+- [Phase 34.9-18]: Guard A's failing direction (closeBundle throw) is proven at unit level only -- unreachable from a real build today since vendored darwin trees are git-ignored; live proof deferred to plan 34.9-21
 
 ### Pending Todos
 
@@ -4698,7 +4702,30 @@ Recent decisions affecting current work:
 > session even began) was given back its proper prefix and demoted into its own
 > "prior session (34.5-48)" block below, in the same format as every other entry in this chain.
 
-Last session: 2026-08-12T18:30:00.000Z
+> NOTE (34.9-18): the same mis-targeted-write pattern struck again -- `state.record-session`
+> overwrote only the `Stopped at:` line's first line ("Completed 34.5-51-PLAN.md -- executed the
+> fourth blocking live gate on real macOS") with this session's bare "Completed 34.9-18-PLAN.md",
+> leaving plan 34.5-51's entire multi-line descriptive body orphaned directly underneath with no
+> heading -- attributing 34.5-51's live-gate content to plan 34.9-18. Caught before commit via a
+> pre-write diff against the session's own history convention (documented in the NOTEs above).
+> Hand-corrected below: the orphaned body was given back its
+> `Stopped at: Completed 34.5-51-PLAN.md -- executed the fourth blocking live gate on real macOS`
+> prefix and demoted into its own "prior session (34.5-51)" block, and this session's own
+> `Stopped at:` now carries a short, accurate description with nothing trailing it.
+
+Last session: 2026-08-12T07:50:20.149Z
+Stopped at: Completed 34.9-18-PLAN.md -- closed CR-01 (closeBundle now throws instead of logging on
+a skipped/rejected symlink) and WR-01 (new isContainedSymlinkTarget rejects absolute/escaping
+symlink targets before restoreSymlinks writes them) in meta/preserveRunnerSymlinks.ts. TDD: 11 new
+tests added first (RED, 7 failing against the unguarded module, verbatim in 34.9-18-SUMMARY.md),
+then both guards implemented (GREEN, 17/17). Guard A's failing direction proven at unit level only
+(vendored darwin trees are git-ignored, unreachable from a real build today); its passing direction
+proven at build level with a real `electron-vite build` (12 restored, 0 skipped, 0 rejected). Whole
+`meta` suite (406 passed), packagingConfig suite, and `tsc --noEmit` all clean. See
+34.9-18-SUMMARY.md. Next: plan 34.9-19.
+
+--- prior session (34.5-51), preserved as history ---
+
 Stopped at: Completed 34.5-51-PLAN.md -- executed the fourth blocking live gate on real macOS
 hardware (`34.5-LIVE-GATE-RERUN-3.md`). Verdict FAIL: 2 PASS (Amazon login, shortcuts) / 1 FAIL
 (GOG login, on a single clause) / 0 BLOCKED / 1 NOT ATTEMPTED (Wine/DXVK). Root-caused item 1's
