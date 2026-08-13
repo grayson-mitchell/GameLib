@@ -23,15 +23,14 @@
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { isTauri, snapshotGet } from '../tauriTransport'
+import { isMacWebview } from '../platformDetect'
 
 function warn(label: string, error: unknown): void {
   console.warn(`[tauriWindowChrome] ${label} failed:`, error)
 }
 
 function readFramelessSetting(): boolean {
-  const settings = snapshotGet('configStore', 'settings') as
-    | { framelessWindow?: boolean }
-    | undefined
+  const settings = snapshotGet('configStore', 'settings') as { framelessWindow?: boolean } | undefined
   return settings?.framelessWindow === true
 }
 
@@ -94,9 +93,7 @@ export const tauriSetFullscreen = (enabled: boolean): void => {
  * verified by test.
  */
 export const tauriIsFullscreen = (): Promise<boolean> => {
-  return Promise.resolve(
-    (window as { isSteamDeckGameMode?: boolean }).isSteamDeckGameMode === true
-  )
+  return Promise.resolve((window as { isSteamDeckGameMode?: boolean }).isSteamDeckGameMode === true)
 }
 
 /**
@@ -223,10 +220,7 @@ function ensureMaximizeWatcher(): void {
   }
 }
 
-function subscribeMaximizeChange(
-  wanted: boolean,
-  listener: () => void
-): () => void {
+function subscribeMaximizeChange(wanted: boolean, listener: () => void): () => void {
   const wrapped: MaximizeChangeListener = (maximized) => {
     if (maximized === wanted) listener()
   }
@@ -238,12 +232,10 @@ function subscribeMaximizeChange(
 }
 
 /** `handleMaximized` parity: fires when the window BECOMES maximized. */
-export const tauriHandleMaximized = (listener: () => void): (() => void) =>
-  subscribeMaximizeChange(true, listener)
+export const tauriHandleMaximized = (listener: () => void): (() => void) => subscribeMaximizeChange(true, listener)
 
 /** `handleUnmaximized` parity: fires when the window STOPS being maximized. */
-export const tauriHandleUnmaximized = (listener: () => void): (() => void) =>
-  subscribeMaximizeChange(false, listener)
+export const tauriHandleUnmaximized = (listener: () => void): (() => void) => subscribeMaximizeChange(false, listener)
 
 /**
  * `handleFullscreen` -- a DECLARED no-op under Tauri. See the block comment above
@@ -251,9 +243,7 @@ export const tauriHandleUnmaximized = (listener: () => void): (() => void) =>
  * silent semantic change, not a fix. Returns a no-op unsubscribe so the caller's
  * `useEffect` cleanup contract still holds.
  */
-export const tauriHandleFullscreen = (
-  _listener: (isFullscreen: boolean) => void
-): (() => void) => {
+export const tauriHandleFullscreen = (_listener: (isFullscreen: boolean) => void): (() => void) => {
   return () => {}
 }
 
@@ -265,16 +255,34 @@ export const __resetMaximizeWatcherForTests = (): void => {
 }
 
 /**
- * D-05: applies `settings.framelessWindow` to the real window via `setDecorations()`.
- * Called with no argument to resolve from the settings snapshot (default `false` ->
- * DECORATED, matching Electron's shipped default); called with an explicit boolean
- * when the caller already knows the desired state (the `setSetting` on-toggle path,
- * Task 3). Never throws -- a capability denial or transport hiccup here must not blank
- * the window (SEAM Invariant A).
+ * D-05 (reconciled, gap cycle 1 / plan 34.1-10, G4): applies `settings.framelessWindow`
+ * to the real window. Called with no argument to resolve from the settings snapshot
+ * (default `false`); called with an explicit boolean when the caller already knows the
+ * desired state (the `setSetting` on-toggle path, Task 3). Never throws -- a capability
+ * denial or transport hiccup here must not blank the window (SEAM Invariant A).
+ *
+ * MECHANISM SWAP, not a no-op (REQ-34.1-09): on macOS `titleBarStyle` -- not
+ * `setDecorations` -- is the decoration mechanism, because `setDecorations(false)`
+ * strips the native traffic lights (gap G4 / UAT test 9; `setDecorations(false)` is NOT
+ * the Tauri translation of Electron's `titleBarStyle: 'hidden'`). `framelessWindow` maps
+ * ON -> `'overlay'` / OFF -> `'visible'`, with the native traffic lights present in BOTH
+ * states -- `setDecorations` is UNREACHABLE on macOS, by design, not belt-and-braces.
+ * `tauri.conf.json`'s `titleBarStyle` declares only the CREATION-time state (`Visible`,
+ * matching the setting's default), and this function owns every state after that: the
+ * pre-paint apply from `tauriAttach.ts`, the post-hydration re-apply from `index.tsx`
+ * (the CR-02 fix), and every user toggle. On Windows/Linux `setDecorations` remains the
+ * only mechanism, unchanged. A future reader who "restores" `setDecorations` on the
+ * macOS branch here reintroduces gap G4 exactly -- do not do that.
  */
 export const applyFramelessDecorations = (frameless?: boolean): void => {
   try {
     const resolved = frameless ?? readFramelessSetting()
+    if (isMacWebview()) {
+      void getCurrentWindow()
+        .setTitleBarStyle(resolved ? 'overlay' : 'visible')
+        .catch((error) => warn('setTitleBarStyle', error))
+      return
+    }
     void getCurrentWindow()
       .setDecorations(!resolved)
       .catch((error) => warn('setDecorations', error))
@@ -323,11 +331,7 @@ function resolveDragRegion(target: EventTarget | null): boolean {
   // and this exclusion was dead code. On a webview that does NOT implement
   // `-webkit-app-region` -- the fallback's entire reason to exist -- a mousedown on the
   // padding/gaps inside the window-controls container therefore started a window drag.
-  if (
-    start.closest(
-      'a, button, [role="button"], input, select, textarea, .windowControls'
-    )
-  ) {
+  if (start.closest('a, button, [role="button"], input, select, textarea, .windowControls')) {
     return false
   }
   return start.closest('.NavShell__navbar') !== null

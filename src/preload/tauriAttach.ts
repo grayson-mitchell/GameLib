@@ -29,10 +29,8 @@
  */
 import api from './api'
 import { isTauri } from './tauriTransport'
-import {
-  applyFramelessDecorations,
-  installDragRegionHandlers
-} from './api/tauriWindowChrome'
+import { applyFramelessDecorations, installDragRegionHandlers } from './api/tauriWindowChrome'
+import { isMacWebview } from './platformDetect'
 
 // Proof-of-execution marker (Phase 27 Plan 05): the literal first console line so we can
 // confirm this attach module evaluates BEFORE the renderer renders / lazy-loads App (whose
@@ -59,9 +57,7 @@ const shouldAttach = tauriDetected || !apiAlreadyPresent
 // Tauri dev webview devtools console).
 console.log('[GameLib] renderer env detection:', {
   isTauri: tauriDetected,
-  hasTauriInternals:
-    typeof (globalThis as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ !==
-    'undefined',
+  hasTauriInternals: typeof (globalThis as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ !== 'undefined',
   hasWindowIsTauri: Boolean((globalThis as { isTauri?: unknown }).isTauri),
   apiAlreadyPresent,
   willAttach: shouldAttach
@@ -69,11 +65,7 @@ console.log('[GameLib] renderer env detection:', {
 
 if (shouldAttach) {
   window.api = api
-  console.log(
-    '[GameLib] window.api attached (readConfig present:',
-    typeof window.api.readConfig,
-    ')'
-  )
+  console.log('[GameLib] window.api attached (readConfig present:', typeof window.api.readConfig, ')')
   // Tauri-safe fallbacks for the 6 globals the Electron preload normally computes from
   // `backend/constants/environment.ts` (Node-only: os.cpus(), graceful-fs,
   // process.env/argv -- no browser equivalent inside a webview). Neither Steam Deck nor
@@ -83,9 +75,7 @@ if (shouldAttach) {
   window.isSteamDeckGameMode = false
   window.isFlatpak = false
   window.isSteamDeck = false
-  window.platform = (
-    navigator.platform.toLowerCase().includes('mac') ? 'darwin' : 'linux'
-  ) as NodeJS.Platform
+  window.platform = (isMacWebview() ? 'darwin' : 'linux') as NodeJS.Platform
   window.isE2ETesting = false
   window.flatpakRuntimeVersion = undefined
 
