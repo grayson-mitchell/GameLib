@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.5 gap cycle 7 plan 34.5-53 EXECUTED (F-34.5-G6-17/F-34.5-G6-20 code fix: redactNileLoginData/redactNileRegisterData redact the OAuth code + PKCE code_verifier out of both nile credential-logging call sites; RED-proven behavioral + source-text gate, 9/9 passing, npm run test:ci 4809->4818). Both findings fixed AND diagnosed on the record; live confirmation deferred to the wave-5 live gate (plan 34.5-59) per this plan's own success criteria -- not a standing hole. Next: 34.5-54..60.
-last_updated: "2026-08-14T09:05:00.000Z"
-last_activity: 2026-08-14 -- Phase 34.5 gap cycle 7 plan 34.5-53 EXECUTED (nile OAuth code / PKCE code_verifier log redaction, F-34.5-G6-17 + F-34.5-G6-20). Next: 34.5-54..60. Earlier: plan 34.5-52 EXECUTED (F-34.5-G6-16 code fix: login_origin_banner_script/_update_script, wired into humble_login_open macOS arm; U-34.5-05 retargeted, U-34.5-31 opened, 31 rows). F-34.5-G6-16 itself stays open pending live transcription (plan 34.5-59). Earlier: Phase 34.5 gap cycle 7 execution STARTED (plans 34.5-52..60); 34.5-29/30/31 recorded as superseded (never executed, dispositioned by CYCLE5-ROUTING); earlier: Phase 34.1 gap cycle 1 execution STARTED (plans 34.1-09..15); Phase 34.9 gap cycle 4 planning complete (5 plans / 4 waves)
+stopped_at: Phase 34.5 gap cycle 7 plan 34.5-54 EXECUTED (F-34.5-G6-19 correction of F-34.5-G6-18: the DXVK install direction DOES call runWineCommand via the reg add DllOverrides loops at tools/index.ts:438/:459, contra the fourth gate contract's own "never calls runWineCommand at all" overstatement; corrected Running Wine command: emitter is launcher.ts:1520, a logDebug, not :1581. RED-proven 7-assertion source-text gate dxvkEvidenceLines.test.ts pins the corrected evidence set, proved against three injected regressions then restored byte-identical; F-34.5-G6-19/-20/-21 recorded in deferred-items.md items 29-31; npm run test:ci 4818->4825). Explicitly does NOT prove a live DXVK toggle works -- U-34.5-30 stays NOT ATTEMPTED, owed to the wave-5 live gate (plan 34.5-59). Next: 34.5-55..60.
+last_updated: "2026-08-14T09:20:00.000Z"
+last_activity: 2026-08-14 -- Phase 34.5 gap cycle 7 plan 34.5-54 EXECUTED (DXVK evidence-line correction, F-34.5-G6-19 fixing F-34.5-G6-18's own overstated claim; findings F-34.5-G6-20/-21 also recorded). Next: 34.5-55..60. Earlier: plan 34.5-53 EXECUTED (nile OAuth code / PKCE code_verifier log redaction, F-34.5-G6-17 + F-34.5-G6-20). Earlier: plan 34.5-52 EXECUTED (F-34.5-G6-16 code fix: login_origin_banner_script/_update_script, wired into humble_login_open macOS arm; U-34.5-05 retargeted, U-34.5-31 opened, 31 rows). F-34.5-G6-16 itself stays open pending live transcription (plan 34.5-59). Earlier: Phase 34.5 gap cycle 7 execution STARTED (plans 34.5-52..60); 34.5-29/30/31 recorded as superseded (never executed, dispositioned by CYCLE5-ROUTING); earlier: Phase 34.1 gap cycle 1 execution STARTED (plans 34.1-09..15); Phase 34.9 gap cycle 4 planning complete (5 plans / 4 waves)
 progress:
   # Hand-corrected after `state.begin-phase` corrupted these (recurring gsd-sdk defect).
   # Tool wrote 24/15/324/298/63 and also mangled three prose blocks (orphaned continuation
@@ -24,10 +24,14 @@ progress:
   # Reverted from a pre-call snapshot (`/tmp/STATE.before.md`) and this delta re-applied by
   # hand instead: +1 completed plan (34.5-53, this plan's own SUMMARY landed).
   # percent = 295/315 = 93 (floor, matching prior convention).
+  # 2026-08-14 (plan 34.5-54 execution): gsd-sdk query state.* verbs are a KNOWN recurring
+  # corruption defect on this file (see comments above) -- this delta was hand-applied
+  # directly, no gsd-sdk state.* verb invoked. +1 completed plan (34.5-54, this plan's own
+  # SUMMARY landed). percent = 296/315 = 93 (floor, matching prior convention).
   total_phases: 23
   completed_phases: 17
   total_plans: 315
-  completed_plans: 295
+  completed_plans: 296
   percent: 93
 ---
 

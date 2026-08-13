@@ -2077,7 +2077,7 @@ all stay `[ ]` per D-08's no-partial-pass rule — item 3's own PASS does not ti
 > **What this dependency does and does not block.** The seam itself is BUILT and unit-proven — 8 of 9 of 34.4.1's plans are executed, the runner-agnostic child-window mechanism is deliberately Humble-agnostic, and 34.4.1-09 already **wired** all four OAuth runners via the new `oauthCaptureLogin` channel with a declared-blocked UI surface naming each runner's unported channel. So 34.5 may be **discussed and planned now**. What is still outstanding is 34.4.1's *live proof* (plan 08's blocking 4-item gate, plus item 3(b) already recorded BLOCKED-UNOBSERVABLE and headed for a gap cycle). 34.5 must not **ship** a real OAuth credential path on a seam whose live gate never ran.
 >
 > **Inherited obligation, not a note — `T-34.4.1-44b`.** nile and zoom capture via a **host-free param match** inherited from the Electron original. This is harmless in 34.4.1 only because the captured value is handed to a channel that rejects. **34.5 MUST host-anchor both before it mints a real credential.** Also inherited: navigation observation (NOT the cookie read) is the actual seam surface, and 34.4.1 RESEARCH Open Question 1 — in-app `on_navigation` cancellation timing — remains unobserved.
-**Plans:** 50/60 plans executed (48 of 48 pre-cycle-7 in-scope; 9 gap-cycle-7 plans 34.5-52..60 added 2026-08-13, 2 executed — 34.5-52, 34.5-53; 3 halted/superseded — see below)
+**Plans:** 51/60 plans executed (48 of 48 pre-cycle-7 in-scope; 9 gap-cycle-7 plans 34.5-52..60 added 2026-08-13, 3 executed — 34.5-52, 34.5-53, 34.5-54; 3 halted/superseded — see below)
 44 `*-SUMMARY.md`). **34.5-29/30/31 are HALTED and SUPERSEDED, not pending** — as of 2026-08-13 each
 carries a `type: superseded`, `executed: false` SUMMARY recording its disposition, so it no longer
 reports as outstanding work; their `[ ]` checkboxes stay deliberately unticked and their PLAN files
@@ -2156,6 +2156,20 @@ test:ci`: 4809 -> 4818 passed, 246 -> 247 suites, no regressions. Both findings 
 diagnosed on the record (GameLib-side logger calls, not nile stdout) — live confirmation in a
 real `gamelib.log` is explicitly deferred to the wave-5 live gate (plan 34.5-59), not claimed
 here. Next: 34.5-54.
+
+**2026-08-14 — 34.5-54 EXECUTED** (`F-34.5-G6-19` correction of `F-34.5-G6-18`, gap-cycle-7
+routing item 3): created `dxvkEvidenceLines.test.ts`, a 7-assertion RED-proven source-text gate
+pinning the corrected DXVK-toggle evidence set — the install dispatch marker
+(`tools/index.ts:369`) and its ordering before the early return, the install direction's genuine
+`runWineCommand` calls via the `reg add`/`native,builtin` registration loops at `:438`/`:459`, the
+restore direction's `wineboot -u`/`reg delete` ordering, the version-marker write, and
+`launcher.ts:1520`'s `logDebug` emitter (not `:1581`'s assumed `logInfo`). RED-proved against
+three injections (renamed marker, reordered early return, stripped `reg add` loops), each
+producing a non-vacuous failure; restored to a byte-identical `git diff` on `tools/index.ts`
+(confirmed empty). Recorded `F-34.5-G6-19`/`-20`/`-21` in `deferred-items.md` (items 29-31) as
+findings against findings, none from a live run. `npm run test:ci`: 4818 -> 4825 passed (+7,
+matching the new assertions), no regressions. Explicitly does NOT prove a live DXVK toggle works —
+`U-34.5-30` stays NOT ATTEMPTED, owed to the wave-5 live gate (plan 34.5-59). Next: 34.5-55.
 
 **PHASE DOES NOT CLOSE.** The blocking 5-item live gate (`34.5-15-PLAN.md`) ran
 2026-08-01 and FAILED (0/5 PASS) — see `34.5-LIVE-GATE.md` and `34.5-15-SUMMARY.md`. Gap cycle
