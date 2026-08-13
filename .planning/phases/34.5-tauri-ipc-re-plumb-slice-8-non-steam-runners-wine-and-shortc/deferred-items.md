@@ -364,3 +364,65 @@ Evidence: `34.5-LIVE-GATE-RERUN-3.md`. Full work-list: `34.5-CYCLE7-ROUTING.md`.
     been observed live by any gate run (the test account owns zero games); the DXVK toggle action
     has never been observed live either (the one opportunity found the switch already on, a
     week-old stale value, never actually clicked).
+
+## Found during gap cycle 7 planning (2026-08-13, plan 34.5-54) — three findings against findings
+
+None of these three came from a live run: all three were found by reading current source during
+planning, two of them (29, 30) because a brief instructed re-verification and the third (31)
+because a census was recounted with the defect's own predicate rather than the assumed channel
+names.
+
+29. **`F-34.5-G6-19` — `F-34.5-G6-18`'s own text is PARTIALLY WRONG.** Its clause "the install/
+    backup direction... never calls `runWineCommand` at all" is FALSE. Re-reading current source
+    (`src/backend/tools/index.ts`, `DXVK.installRemove`) confirms two of `F-34.5-G6-18`'s three
+    clauses hold — the install direction dispatches via `logInfo([\`installing ${tool} on...\`,
+    prefix], LogPrefix.ToolInstaller)` at `tools/index.ts:369`, and the DLL copy at `:376-421` is
+    genuinely Node's `copyFile`, not Wine — but immediately AFTER the copy, `:423-465` runs the
+    DLL-registration loops, and every iteration calls `runWineCommand` with `['reg', 'add',
+    'HKEY_CURRENT_USER\Software\Wine\DllOverrides', '/v', <dll>, '/d', 'native,builtin', '/f']` —
+    at `tools/index.ts:438` (64-bit loop) and `:459` (32-bit loop). `runWineCommand` **IS** reached
+    on the install/ON direction.
+    **Consequence, stated explicitly: under the uncorrected reading, a DXVK-ON PASS would retire
+    nothing, because the item's own subject is `runWineCommand` executing for a non-Steam runner
+    under the sidecar (research Pitfall 2).** Corrected, a genuine DXVK-ON click on a
+    storefront-authenticated runner can retire Pitfall 2.
+    **Two further sub-corrections to the same finding's text:** the `Running Wine command:`
+    emitter is at `src/backend/launcher.ts:1520`, not `launcher.ts:1581`, and it is a `logDebug`,
+    not a `logInfo` (`logDebug` does reach `gamelib.log` — `F-34.5-G6-17`'s own observation was a
+    DEBUG line in that same file). And the registration loops are `dlls32.forEach(async (dll) => {
+    await runWineCommand(...) })` — an **un-awaited** `async` callback inside a synchronous
+    `forEach`. `installRemove` can therefore resolve, and the UI switch can flip ON, **before** the
+    `reg add` commands finish; a settle window is required in any gate step that reads the log
+    immediately after the switch flips, not optional.
+    All five corrected facts (dispatch marker exists and precedes the early return; the install
+    direction reaches `runWineCommand` via the `reg add` loops at `:438`/`:459`; the restore
+    direction's `wineboot -u`/`reg delete` precede the install marker; the version-marker write
+    follows it; the `launcher.ts:1520` `logDebug` emitter) are pinned by
+    `src/backend/tools/__tests__/dxvkEvidenceLines.test.ts` (this plan, RED-proven against three
+    injected regressions). Names plan 34.5-56 as the consumer of the corrected evidence set.
+
+30. **`F-34.5-G6-20` — a SECOND nile credential-logging site**, `src/backend/storeManagers/nile/
+    user.ts:62`, `logInfo(['Register data is:', output], LogPrefix.Nile)`, leaking
+    `NileLoginData.code_verifier` (PKCE material) at INFO level plus the full authorize URL. Not
+    observed by any gate — `F-34.5-G6-17` recorded only the DEBUG-level `code` site at `:91`. Both
+    sites are GameLib-side logger calls, which closes `F-34.5-G6-17`'s own open question ("nile's
+    stdout relayed verbatim, or a GameLib-side logger call") — it is the latter. INFO level makes
+    this site the more exposed of the two. Names plan 34.5-53 as the fix.
+
+31. **`F-34.5-G6-21` — the winetricks half of `34.5-PORTED-CHANNELS.md` correction 3's sweep
+    command is structurally incapable of finding its own subject.** The command greps
+    `window\.api\.(steamgriddb|winetricksAvailable|winetricksInstall|winetricksInstalled)` — but
+    `winetricksAvailable` and `winetricksInstalled` are **channel** names, while the frontend calls
+    the **preload API method** names `winetricksListAvailable` and `winetricksListInstalled`
+    (`src/preload/api/wine.ts:15-16` maps `winetricksListInstalled -> 'winetricksInstalled'` and
+    `winetricksListAvailable -> 'winetricksAvailable'`). The two real call sites at
+    `src/frontend/components/UI/Winetricks/index.tsx:26` and `:45` therefore could never be found
+    by that command. The fourth gate ran it verbatim and reported **8** call sites; the correct
+    census is 10. The two missed sites are the WORST shape in the set — both are `await`ed
+    inside a `try { } catch { }` that swallows the rejection into an empty array, so an unported
+    channel renders a confident, false "no components installed / none available" panel rather
+    than declining. Corrected sweep pattern:
+    `window\.api\.(steamgriddb|winetricksListAvailable|winetricksInstall|winetricksListInstalled)`.
+    Names plan 34.5-55 as the fix. Cross-references this project's own standing lesson that a
+    census must be parsed with the defect's own predicate, never with the names the previous
+    document assumed.
