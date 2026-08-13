@@ -4,5 +4,8 @@
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "files.insertFinalNewline": true,
-  "gsdPhaseStatus.plannedMarkers": ["*PLAN.md"]
+  "gsdPhaseStatus.plannedMarkers": ["*PLAN.md"],
+  "workbench.colorCustomizations": {
+    "charts.red": "#ff2d2d"
+  }
 }
