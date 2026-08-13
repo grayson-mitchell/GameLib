@@ -34,6 +34,7 @@ import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 const FRONTEND_ROOT = join(__dirname, '..', '..', '..', '..')
 
 const APP_CSS = join(FRONTEND_ROOT, 'App.css')
+const APP_TSX = join(FRONTEND_ROOT, 'App.tsx')
 const NAVSHELL_SCSS = join(FRONTEND_ROOT, 'components/UI/NavShell/index.scss')
 const NAVTABS_SCSS = join(
   FRONTEND_ROOT,
@@ -171,16 +172,42 @@ describe('App shell layout (F-34.10-03 seam recipe, F-34.10-06 scroll relocation
   it('REQ-34.10-07: the frameless navbar reserves trailing space via var(--overlay-controls-width), so WindowControls never overlaps it', () => {
     // D-05: mirrors the hack deleted from Header/index.css -- the navbar's
     // own trailing padding must consume the SAME custom property so
-    // WindowControls (grid-area: content; justify-self: right) never draws
-    // over the nav-right cluster (Downloads ring / wordmark).
+    // WindowControls (grid-area: navbar, re-anchored by plan 34.1-09; see
+    // windowControlsPlacement.test.ts) never draws over the nav-right
+    // cluster (Downloads ring / wordmark). This rule was previously
+    // guarding a collision that could not occur, because Phase 34.10 moved
+    // WindowControls out of the navbar row without anyone auditing the
+    // consumers -- plan 34.1-09 restored the co-location, so this gate is
+    // meaningful again. It is now correctly ABSENT on macOS
+    // (`.macOverlayTitlebar`, D-06 reversal, plan 34.1-11), where
+    // `WindowControls` no longer renders in either titlebar state.
     const framelessNavbarBlock = extractBlock(
       readStripped(NAVSHELL_SCSS),
-      /^\.frameless:not\(\.fullscreen\)\s+\.NavShell__navbar\s*\{/m
+      /^\.App:not\(\.macOverlayTitlebar\)\.frameless:not\(\.fullscreen\)\s+\.NavShell__navbar\s*\{/m
     )
     expect(framelessNavbarBlock).not.toBeNull()
     expect(framelessNavbarBlock).toMatch(
       /padding-inline-end:[\s\S]*var\(--overlay-controls-width\)/
     )
+  })
+
+  it('REQ-34.10-07 / D-06 reversal: the trailing-reserve selector EXCLUDES the macOS-overlaid state', () => {
+    // The assertion that would catch a future edit re-broadening the rule
+    // back to all platforms, silently reintroducing 120px of dead trailing
+    // padding on macOS (WindowControls does not render there in either
+    // titlebar state, per plan 34.1-11 Task 1).
+    const source = readStripped(NAVSHELL_SCSS)
+    const openPattern =
+      /^\.App:not\(\.macOverlayTitlebar\)\.frameless:not\(\.fullscreen\)\s+\.NavShell__navbar\s*\{/m
+    const match = openPattern.exec(source)
+    expect(match).not.toBeNull()
+    expect(match?.[0]).toMatch(/:not\(\.macOverlayTitlebar\)/)
+  })
+
+  it('SANITY: the macOS-exclusion check above fails against the pre-reversal selector (no exclusion) -- proves it is not vacuously true', () => {
+    const preReversalSelector =
+      '.frameless:not(.fullscreen) .NavShell__navbar {'
+    expect(preReversalSelector).not.toMatch(/:not\(\.macOverlayTitlebar\)/)
   })
 
   it('SANITY: the trailing-reserve check above fails against a known-bad input (a literal px reserve with no token) -- proves it is not vacuously true', () => {
@@ -262,10 +289,7 @@ describe('App shell layout (F-34.10-03 seam recipe, F-34.10-06 scroll relocation
     // the recipe is a pair, and deleting either half produces no visible
     // error -- that is exactly how this shipped broken the first time.
     const navTabsSource = readStripped(NAVTABS_SCSS)
-    const selectedBlock = extractBlock(
-      navTabsSource,
-      /&\.Mui-selected\s*\{/
-    )
+    const selectedBlock = extractBlock(navTabsSource, /&\.Mui-selected\s*\{/)
     expect(selectedBlock).not.toBeNull()
     expect(selectedBlock).toMatch(
       /border-bottom:\s*1px\s+solid\s+var\(--body-background\)\s*;/
@@ -285,9 +309,7 @@ describe('App shell layout (F-34.10-03 seam recipe, F-34.10-06 scroll relocation
       /&\.Mui-selected\s*\{/
     )
     const navbarBorderLine = navbarBlock?.match(/border-bottom:[^;]*;/)?.[0]
-    const selectedBorderLine = selectedBlock?.match(
-      /border-bottom:[^;]*;/
-    )?.[0]
+    const selectedBorderLine = selectedBlock?.match(/border-bottom:[^;]*;/)?.[0]
     expect(navbarBorderLine).toBeDefined()
     expect(selectedBorderLine).toBeDefined()
     expect(navbarBorderLine).not.toMatch(/#[0-9a-fA-F]{3,8}/)
@@ -460,9 +482,7 @@ describe('F-34.10-04 -- the navbar is one line', () => {
       /&\.Mui-selected\s*\{/
     )
     expect(selectedBlock).not.toBeNull()
-    expect(selectedBlock).toMatch(
-      /background:\s*var\(--body-background\)\s*;/
-    )
+    expect(selectedBlock).toMatch(/background:\s*var\(--body-background\)\s*;/)
   })
 
   it('F-34.10-04 flex-wrap prohibition: neither NavShell/index.scss nor NavTabs/index.scss declares flex-wrap anywhere', () => {
@@ -481,5 +501,104 @@ describe('F-34.10-04 -- the navbar is one line', () => {
     // theme -- including the border-color fix carried in from 34.10-18's
     // handoff finding, which must resolve to a token, not a literal.
     expect(readStripped(NAVTABS_SCSS)).not.toMatch(/#[0-9a-fA-F]{3,8}/)
+  })
+})
+
+describe('App.tsx D-06 reversal: the two macOS booleans are pinned distinct (34.1-11 Task 3)', () => {
+  // `isMac` (hide GameLib's own WindowControls, unconditional) and
+  // `isMacOverlayTitlebar` (apply the 78px reserve, conjoined with
+  // `isFrameless`) look interchangeable and are not -- collapsing toward
+  // the narrow form reintroduces the D-06 duplicate-buttons symptom
+  // whenever frameless is off; collapsing toward the wide form paints a
+  // 78px dead gap beside a normal native title bar. Neither errors, and
+  // both are plausible good-faith simplifications a later reader could make.
+  //
+  // This is a SOURCE-TEXT gate, matching the rest of this file and
+  // `appShellMount.test.ts`'s idiom for pinning facts about `App.tsx`: the
+  // `Frontend` jest project has no jsdom, so there is no render harness in
+  // this suite (or any sibling test file under this `__tests__` directory)
+  // to mount `<App>` against -- confirmed by reading the directory before
+  // writing this gate, per the plan's own instruction to prefer an existing
+  // harness over a new one. None exists, so the plan's documented fallback
+  // applies.
+  it('the showOverlayControls macOS negation is a DIFFERENT identifier than the one bound to macOverlayTitlebar', () => {
+    const appSource = readStripped(APP_TSX)
+
+    const macOverlayTitlebarMatch = appSource.match(
+      /macOverlayTitlebar:\s*([A-Za-z_$][\w$]*)/
+    )
+    expect(macOverlayTitlebarMatch).not.toBeNull()
+    const macOverlayTitlebarIdentifier = macOverlayTitlebarMatch?.[1]
+
+    const showOverlayControlsMatch = appSource.match(
+      /const showOverlayControls = ([^\n]+)/
+    )
+    expect(showOverlayControlsMatch).not.toBeNull()
+    const showOverlayControlsExpr = showOverlayControlsMatch?.[1] ?? ''
+
+    // Every negated identifier in the expression that mentions "mac" --
+    // isolates the macOS-specific negation from the unrelated
+    // `!hasNativeOverlayControls` clause also present there.
+    const negatedMacIdentifiers = [
+      ...showOverlayControlsExpr.matchAll(/!([A-Za-z_$][\w$]*)/g)
+    ]
+      .map((m) => m[1])
+      .filter((id) => /mac/i.test(id))
+    expect(negatedMacIdentifiers.length).toBeGreaterThan(0)
+
+    expect(negatedMacIdentifiers).not.toContain(macOverlayTitlebarIdentifier)
+  })
+
+  it('the identifier bound to macOverlayTitlebar is defined as a conjunction that includes the frameless state', () => {
+    const appSource = readStripped(APP_TSX)
+
+    const macOverlayTitlebarMatch = appSource.match(
+      /macOverlayTitlebar:\s*([A-Za-z_$][\w$]*)/
+    )
+    expect(macOverlayTitlebarMatch).not.toBeNull()
+    const macOverlayTitlebarIdentifier = macOverlayTitlebarMatch?.[1] ?? ''
+
+    const definitionPattern = new RegExp(
+      `const ${macOverlayTitlebarIdentifier} = ([^\\n]+)`
+    )
+    const definitionMatch = appSource.match(definitionPattern)
+    expect(definitionMatch).not.toBeNull()
+    const definitionExpr = definitionMatch?.[1] ?? ''
+
+    // Must be a conjunction (not the bare platform check alone) that
+    // references the frameless state.
+    expect(definitionExpr).toMatch(/&&/)
+    expect(definitionExpr).toMatch(/isFrameless/)
+  })
+
+  it('SANITY: the distinct-identifier check fails against a known-bad input (both bound to the same identifier)', () => {
+    const collapsedFixture = `
+      const isMac = platform === 'darwin'
+      const showOverlayControls = isFrameless && !hasNativeOverlayControls && !isMac
+      classNames('App', { macOverlayTitlebar: isMac })
+    `
+    const macOverlayTitlebarMatch = collapsedFixture.match(
+      /macOverlayTitlebar:\s*([A-Za-z_$][\w$]*)/
+    )
+    const showOverlayControlsMatch = collapsedFixture.match(
+      /const showOverlayControls = ([^\n]+)/
+    )
+    const negatedMacIdentifiers = [
+      ...(showOverlayControlsMatch?.[1] ?? '').matchAll(/!([A-Za-z_$][\w$]*)/g)
+    ]
+      .map((m) => m[1])
+      .filter((id) => /mac/i.test(id))
+    // In the collapsed fixture the two ARE the same identifier -- the real
+    // gate above must reject this shape, and here it does.
+    expect(negatedMacIdentifiers).toContain(macOverlayTitlebarMatch?.[1])
+  })
+
+  it('SANITY: the frameless-conjunction check fails against a known-bad input (narrowed to the bare platform check)', () => {
+    const narrowedFixture = `const isMacOverlayTitlebar = platform === 'darwin'`
+    const definitionMatch = narrowedFixture.match(
+      /const isMacOverlayTitlebar = ([^\n]+)/
+    )
+    expect(definitionMatch?.[1]).not.toMatch(/&&/)
+    expect(definitionMatch?.[1]).not.toMatch(/isFrameless/)
   })
 })
