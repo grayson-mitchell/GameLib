@@ -4,19 +4,24 @@ milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
 stopped_at: Phase 34.1 gap cycle 1 PLANNED (34.1-09..15, 7 plans / 4 waves) -- closes the four `status: failed` findings from the 2026-07-25 + 2026-08-13 live UAT sessions: G1 WindowControls `grid-area: content` regression from 34.10's grid rewrite, G2 frameless-toggle copy defect, G3 byte-identical tray icon assets, G4 the D-06 reversal (macOS overlay titlebar + native traffic lights). Plan-checker BLOCKED revision 1 on a false constraint (the plans claimed Tauri v2 has no runtime `setTitleBarStyle`; it does, `@tauri-apps/api` 2.11.1) -- corrected, re-verified PASSED. Next step /gsd-execute-phase 34.1. ALSO STILL OPEN: Phase 34.9 gap cycle 4 PLANNED (34.9-29..33, 5 plans / 4 waves), next step /gsd-execute-phase 34.9.
-last_updated: "2026-08-13T11:05:00.000Z"
-last_activity: 2026-08-13 -- Phase 34.5 gap cycle 7 execution STARTED (plans 34.5-52..60); 34.5-29/30/31 recorded as superseded (never executed, dispositioned by CYCLE5-ROUTING); earlier: Phase 34.1 gap cycle 1 execution STARTED (plans 34.1-09..15); Phase 34.9 gap cycle 4 planning complete (5 plans / 4 waves)
+last_updated: "2026-08-14T08:50:00.000Z"
+last_activity: 2026-08-14 -- Phase 34.5 gap cycle 7 plan 34.5-52 EXECUTED (F-34.5-G6-16 code fix: login_origin_banner_script/_update_script, wired into humble_login_open macOS arm; U-34.5-05 retargeted, U-34.5-31 opened, 31 rows). F-34.5-G6-16 itself stays open pending live transcription (plan 34.5-59). Next: 34.5-53..60. Earlier: Phase 34.5 gap cycle 7 execution STARTED (plans 34.5-52..60); 34.5-29/30/31 recorded as superseded (never executed, dispositioned by CYCLE5-ROUTING); earlier: Phase 34.1 gap cycle 1 execution STARTED (plans 34.1-09..15); Phase 34.9 gap cycle 4 planning complete (5 plans / 4 waves)
 progress:
   # Hand-corrected after `state.begin-phase` corrupted these (recurring gsd-sdk defect).
   # Tool wrote 24/15/324/298/63 and also mangled three prose blocks (orphaned continuation
   # text after "Plan: 1 of 60" and "Status: Executing Phase 34.5"); whole-file diff reviewed
   # and the tool write was reverted, then re-applied by hand.
-  # Delta this session is +3 completed plans (34.5-29/30/31, recorded superseded-not-executed).
-  # percent = 293/315 = 93.
+  # 2026-08-14: `gsd-sdk query state.advance-plan` corrupted this block AGAIN (wrote
+  # 24/15/324/301/63 and rewrote stopped_at/status to a DIFFERENT phase's, 34.9's, own
+  # completion banner, plus mangled unrelated prose ~line 4837). Reverted from a pre-call
+  # snapshot and this delta re-applied by hand instead: +1 completed plan (34.5-52, this
+  # plan's own SUMMARY landed). 34.5-53..60 remain not-yet-executed, already counted in
+  # total_plans (planning for gap cycle 7 landed all 9 plan files before this session).
+  # percent = 294/315 = 93.
   total_phases: 23
   completed_phases: 17
   total_plans: 315
-  completed_plans: 293
+  completed_plans: 294
   percent: 93
 ---
 

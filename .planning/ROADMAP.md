@@ -2077,7 +2077,7 @@ all stay `[ ]` per D-08's no-partial-pass rule — item 3's own PASS does not ti
 > **What this dependency does and does not block.** The seam itself is BUILT and unit-proven — 8 of 9 of 34.4.1's plans are executed, the runner-agnostic child-window mechanism is deliberately Humble-agnostic, and 34.4.1-09 already **wired** all four OAuth runners via the new `oauthCaptureLogin` channel with a declared-blocked UI surface naming each runner's unported channel. So 34.5 may be **discussed and planned now**. What is still outstanding is 34.4.1's *live proof* (plan 08's blocking 4-item gate, plus item 3(b) already recorded BLOCKED-UNOBSERVABLE and headed for a gap cycle). 34.5 must not **ship** a real OAuth credential path on a seam whose live gate never ran.
 >
 > **Inherited obligation, not a note — `T-34.4.1-44b`.** nile and zoom capture via a **host-free param match** inherited from the Electron original. This is harmless in 34.4.1 only because the captured value is handed to a channel that rejects. **34.5 MUST host-anchor both before it mints a real credential.** Also inherited: navigation observation (NOT the cookie read) is the actual seam surface, and 34.4.1 RESEARCH Open Question 1 — in-app `on_navigation` cancellation timing — remains unobserved.
-**Plans:** 48/60 plans executed (48 of 48 pre-cycle-7 in-scope; 9 gap-cycle-7 plans 34.5-52..60 added 2026-08-13, 0 executed; 3 halted/superseded — see below)
+**Plans:** 49/60 plans executed (48 of 48 pre-cycle-7 in-scope; 9 gap-cycle-7 plans 34.5-52..60 added 2026-08-13, 1 executed — 34.5-52; 3 halted/superseded — see below)
 44 `*-SUMMARY.md`). **The three without a SUMMARY among the first 42 are 34.5-29/30/31, which are
 HALTED and SUPERSEDED, not pending.** Gap cycle 5 added plans 34.5-38..42 on 2026-08-02: 34.5-38 —
 authorisation/disposition/measured-baseline record; 34.5-39 — item-4/item-5 gate preflight;
@@ -2135,6 +2135,13 @@ Waves: (1) 34.5-52 origin banner, 34.5-53 nile redaction, 34.5-54 DXVK evidence-
 (sequenced BEFORE the sweep, so its findings can still be ledgered); (4) 34.5-58 the non-gate
 keyring session; (5) 34.5-59 RUNS the fifth gate; (6) 34.5-60 propagates the verdict and resolves
 the ledger row by row. Next step: `/gsd-execute-phase 34.5`.
+
+**2026-08-14 — 34.5-52 EXECUTED** (F-34.5-G6-16 code fix): `login_origin_banner_script` /
+`login_origin_banner_update_script`, RED-proven `#[cfg(test)]` coverage, wired into
+`humble_login_open`'s macOS visible arm alongside the mandated cancel strip. `U-34.5-05`
+RE-TARGETED (not retired) to the banner per D-CYCLE7-A; `U-34.5-31` opened for the banner's own
+spoofability residual (31 rows). `F-34.5-G6-16` itself stays OPEN pending live transcription —
+this plan is the code half only, per D-CYCLE7-A's own closing condition. Next: 34.5-53.
 
 **PHASE DOES NOT CLOSE.** The blocking 5-item live gate (`34.5-15-PLAN.md`) ran
 2026-08-01 and FAILED (0/5 PASS) — see `34.5-LIVE-GATE.md` and `34.5-15-SUMMARY.md`. Gap cycle
