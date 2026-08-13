@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.9-23-PLAN.md -- derived the C2-01 pipe-swallow census (34.9-PIPE-AUDIT.md); 5 plans remain in gap cycle 3 (34.9-24..28)"
-last_updated: "2026-08-13T18:47:00.000Z"
-last_activity: 2026-08-13 -- Phase 34.9 gap cycle 3 plan 34.9-23 EXECUTED (2/2 tasks). Census found 13 esbuild-pipe-to-node instances (1 more than D-C3-01's 12, build:sidecar-sea missed by both prior scope lists), all 12 distinct entry files compile clean and carry zero __dirname/require.main deltas -- no BLOCKER for plan 34.9-25's conversion.
+stopped_at: "Completed 34.9-24-PLAN.md -- closed C2-06 (top-level framework stub resolved-target check) and C2-08 (restoreSymlinks rejected-key assertion); 4 plans remain in gap cycle 3 (34.9-25..28)"
+last_updated: "2026-08-13T19:30:00.000Z"
+last_activity: 2026-08-13 -- Phase 34.9 gap cycle 3 plan 34.9-24 EXECUTED (2/2 tasks, resumed from interruption). Closed C2-06 (Python.framework top-level stub now gets the same resolved-target check as Versions/Current, proven RED/GREEN with a shasum-verified restore) and C2-08 (preserveRunnerSymlinks symlink-free-tree test now asserts all three return-shape keys). Full pnpm test:ci: 243/243 suites, 4763/4764 tests (1 pre-existing skip).
 progress:
   total_phases: 23
   completed_phases: 17
   total_plans: 303
-  completed_plans: 285
+  completed_plans: 286
   percent: 94
 ---
 
@@ -509,7 +509,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **gap cycle 3 IN
 PROGRESS, phase remains OPEN**
-Plan: 34.9-23 of 34.9-23..28 complete (2026-08-13). Gap cycle 3 was planned 2026-08-13 (6 plans,
+Plan: 34.9-24 of 34.9-23..28 complete (2026-08-13). Gap cycle 3 was planned 2026-08-13 (6 plans,
 5 waves, plan-checker PASSED) to close the sole remaining verification gap from gap cycle 2's
 re-verification: truth 8 / C2-01 (the `esbuild ... | node`/`| node -` pipe-swallow idiom — a
 compile failure in a wired guard script is invisible because `sh -c` has no `pipefail` and a
@@ -524,7 +524,24 @@ BLOCKER for the conversion. Every CI caller is currently BLOCKED UPSTREAM (12 sc
 `install-deps`'s unconditional `download-helper-binaries` throw on the six `PENDING-CI-PUBLISH`
 digest sentinels; `build-runners-onedir`'s sole caller via a separate mechanism — the workflow
 file is absent from the repo's default branch). See `34.9-PIPE-AUDIT.md` and
-`34.9-23-SUMMARY.md`. Next: **34.9-24-PLAN.md**, the next plan in gap cycle 3's wave sequence.
+`34.9-23-SUMMARY.md`.
+
+Plan 34.9-24 (wave 1, shares no file with the pipe-idiom family, ran alongside 34.9-23) closed
+the two non-pipe findings from `34.9-REVIEW-CYCLE2.md`: **C2-06** — `verifyRunnerBundle.ts`'s
+`Python.framework` top-level stub now gets the same three-part check (`exists` / `is-symlink` /
+`target-resolves`) `Versions/Current` already had; a stub that IS a symlink but points at a
+non-existent target is now reported malformed via a new `else if` on the existing stub ladder,
+tagged `F-34.9-01`. Proven in both directions: a `stub-dangling-target` fixture proves it fires
+and names the target, a negative control on the well-formed baseline proves it does not
+over-fire, and the RED direction was demonstrated verbatim (Task 1 was already committed when
+this plan's Task 2 resumed after an interruption, so the plan's documented fallback was used:
+neutralise the `else if` condition in a working copy, observe the new test fail, restore from a
+backup with `cp`, verify the restore with matching `shasum -a 256` — `git checkout --` was never
+used). **C2-08** — `preserveRunnerSymlinks.test.ts`'s symlink-free-tree test now asserts all
+three keys (`restored`, `skipped`, `rejected`) of `restoreSymlinks`' return shape, not just the
+first two. `pnpm codecheck` exits 0; full `pnpm test:ci` is 243/243 suites, 4763/4764 tests (1
+pre-existing skip), no newly-failing suite. See `34.9-24-SUMMARY.md`. Next: **34.9-25-PLAN.md**,
+the next plan in gap cycle 3's wave sequence (the pipe-idiom conversion family, 34.9-25..28).
 
 Prior phase-34.9 position (superseded by gap cycle 3 above, retained as history):
 

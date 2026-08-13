@@ -2436,11 +2436,11 @@ methodology findings on the proof contract's own commands opened as `deferred-it
 tripwire prose) are complete. **The phase does not close from gap cycle 2's own edits** —
 `34.9-VERIFICATION.md` remains `status: gaps_found` until the verifier re-scores truth 8 against
 this landed evidence: `/gsd-verify-work 34.9`.
-**Gap cycle 3 planned 2026-08-13** (`/gsd-plan-phase 34.9 --gaps`), 6 plans in 5 waves, 1/6
+**Gap cycle 3 planned 2026-08-13** (`/gsd-plan-phase 34.9 --gaps`), 6 plans in 5 waves, 2/6
 gap-cycle plans complete:
 
 - [x] 34.9-23-PLAN.md — derive the C2-01 defect census by predicate (never a line-range grep), enumerate every caller, and measure the __dirname/require.main deltas against real bundled output — **DONE 2026-08-13**, see `34.9-PIPE-AUDIT.md`, 34.9-23-SUMMARY.md
-- [ ] 34.9-24-PLAN.md — close C2-06/C2-08: the top-level framework stub's missing resolved-target check, and the symlink-free-tree test's ignored third return-shape key
+- [x] 34.9-24-PLAN.md — close C2-06/C2-08: the top-level framework stub's missing resolved-target check, and the symlink-free-tree test's ignored third return-shape key — **DONE 2026-08-13**, see `34.9-24-SUMMARY.md`
 - [ ] 34.9-25-PLAN.md — convert every census instance from the exit-code-swallowing pipe to the `&&` idiom this repo already uses (`verify:updater-key`'s precedent), and correct every comment the conversion makes false
 - [ ] 34.9-26-PLAN.md — prove, both directions against a known-bad input, that plan 34.9-25's conversion actually converts silent success into loud failure, per script and at the `dist:mac` chain level
 - [ ] 34.9-27-PLAN.md — close C2-04 with a wiring-pin regression test for `verify:runner-bundle`'s position in `dist:mac`/`release:mac`; record C2-05/C2-07 as dated, owned deferred entries
