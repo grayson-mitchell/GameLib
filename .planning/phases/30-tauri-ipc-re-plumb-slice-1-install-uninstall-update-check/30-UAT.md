@@ -3,7 +3,7 @@ status: diagnosed
 phase: 30-tauri-ipc-re-plumb-slice-1-install-uninstall-update-check
 source: [30-01-SUMMARY.md, 30-02-SUMMARY.md, 30-03-SUMMARY.md, 30-04-SUMMARY.md, 30-REVIEW-FIX.md]
 started: 2026-07-22T21:57:57Z
-updated: 2026-07-22T22:30:00Z
+updated: 2026-08-13T00:00:00Z
 ---
 
 ## Current Test
@@ -32,20 +32,59 @@ severity: major
 
 ### 5. Install Starts and Button State Transitions
 expected: After choosing an install folder, the depot download starts and the library button transitions queued → installing → done via the `gameStatusUpdate` push. The install does NOT abort at ~60 seconds (CR-03 timeout fix) — a long download keeps running past a minute.
-result: blocked
-blocked_by: prior-phase
-reason: "Cannot access — blocked by Test 4 (install folder picker never opens)"
+result: pass
+verified_by: "Phase 33 plan 33-05 — gate D-13, outcome PASS, verified_by human (live hardware, `npm run tauri:dev`, sidecar rebuilt from current tree), verified_on 2026-07-24"
+note: |
+  PROVEN BY A LATER PHASE'S GATE — not re-run in this file. Phase 30 recorded this as blocked
+  behind test 4; that blocker (G-30-02, the install-spinner hang) was PARKED to Phase 33 and Phase
+  33 closed it on real hardware.
+
+  Evidence (33-05-SUMMARY.md): clicking Install on Baldur's Gate II: Enhanced Edition (appId
+  257350) reaches a terminal state — badge never hangs — and the install actually starts and
+  completes:
+    (11:37:52) [DownloadManager]: Baldur's Gate II: Enhanced Edition was added to the download queue.
+  33-VALIDATION.md:70-77 made this a load-bearing manual gate (REQ-33-10 / D-13) precisely because
+  "jest was provably green while the live build hung TWICE (30-05, 30-07)". 33-05-SUMMARY.md:87:
+  "G-30-02 (parked since Phase 30) is resolved and hardware-proven."
+
+  The "does NOT abort at ~60 seconds (CR-03 timeout fix)" clause was separately confirmed live
+  earlier — see 30-HUMAN-UAT.md retest cycle 1, test 6 (result: pass, no 60s `sidecar invoke timed
+  out` observed).
+
+  CAVEAT: 33-05's evidence is the badge resolving plus the download-queue log line; it does not
+  name the `gameStatusUpdate` push mechanism explicitly. The observable outcome this test asks for
+  was witnessed; the transport carrying it was inferred.
 
 ### 6. Uninstall Reverts Button State
 expected: Clicking Uninstall on an installed Steam title removes it and the library button transitions back to Install.
-result: blocked
-blocked_by: prior-phase
-reason: "Cannot access — no game can be installed while Test 4 blocks the install flow"
+result: tracked
+tracked_by: "30-VERIFICATION.md human_verification — 'Uninstall reverts button state (30-UAT test 6)'. Tracked THERE, not here, so this open question is counted once rather than three times."
+reason: |
+  ORIGINAL (2026-07-22): "Cannot access — no game can be installed while Test 4 blocks the install
+  flow."
+
+  THAT BLOCKER IS GONE. Phase 33's D-13 live gate (33-05, human-verified 2026-07-24) proved install
+  reaches a terminal state and completes, so a game CAN now be installed to uninstall.
+
+  Still genuinely unproven: uninstall is not mentioned in ANY Phase 33 artifact — the D-13 gate
+  exercised install only. This is one of the two surviving open questions for Phase 30, and the
+  canonical record for the "Install → Uninstall E2E" item that 30-HUMAN-UAT.md and
+  30-VERIFICATION.md each restate.
 
 ### 7. Update Check Reports Real Results
 expected: The update check runs across runners without one failing runner killing the whole check (WR-05), and triggering an update on a game reports the actual outcome — a failed update surfaces as a failure, not a false "success" (WR-04).
-result: skipped
-reason: No installed game available to exercise the update path (install flow blocked by Test 4)
+result: tracked
+tracked_by: "30-VERIFICATION.md human_verification — 'Update check reports real results — WR-04 / WR-05 (30-UAT test 7)'. Tracked THERE, not here, so this open question is counted once."
+reason: |
+  ORIGINAL (2026-07-22): "No installed game available to exercise the update path (install flow
+  blocked by Test 4)."
+
+  That premise is void — install works as of Phase 33's D-13 gate, so an installed game is
+  obtainable. Testable now; never observed. This is the second of Phase 30's two surviving open
+  questions.
+
+  NOTE: the `WR-04`/`WR-05` identifiers in Phase 34 artifacts are DIFFERENT findings (packaging
+  CSP / `withGlobalTauri`). They are not evidence for this test.
 
 ### 8. openDialog File-Picker Call Sites (WR-02 / WR-01)
 expected: Any UI that browses for a FILE rather than a folder (e.g. adding a game / choosing an executable or path in Settings) opens a native picker honoring the requested mode — a file picker where a file is asked for, not always a folder picker. Previously this path rejected outright under Tauri.
@@ -62,13 +101,24 @@ severity: major
 ## Summary
 
 total: 9
-passed: 3
+passed: 4
 issues: 3
+tracked: 2
 pending: 0
-blocked: 2
-skipped: 1
 skipped: 0
 blocked: 0
+
+<!--
+Counts corrected 2026-08-13. This block previously declared `skipped` and `blocked` TWICE with
+contradictory values (skipped 1 then 0; blocked 2 then 0), so a reader taking the last value got
+0/0 while the body still showed two blocked tests and one skipped.
+
+Now: passed 4 (test 5 closed on Phase 33's D-13 live gate), issues 3 (tests 4, 8, 9 — all diagnosed
+in Gaps below), tracked 2 (tests 6 and 7 — the phase's two surviving open questions, carried
+canonically in 30-VERIFICATION.md's human_verification block so each is counted ONCE across this
+phase's three files rather than restated in all of them). 4+3+2 = 9.
+-->
+
 
 ## Gaps
 

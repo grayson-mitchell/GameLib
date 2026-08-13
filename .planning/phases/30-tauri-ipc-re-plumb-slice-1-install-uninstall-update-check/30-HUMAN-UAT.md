@@ -162,9 +162,16 @@ note: Folder-picker mode exercised live and behaved as expected. File-mode (open
 
 ### 4. Full Install → Uninstall E2E on real Steam depot content
 expected: With a signed-in populated library, Install starts a real depot download, the button transitions queued → installing → done via gameStatusUpdate, and Uninstall reverts the button to Install.
-result: blocked
-blocked_by: prior-phase
-reason: "blocked by the install hang, same as test 1 — install never leaves 'installing', so download start / done transition / uninstall cannot be reached"
+result: partial
+reason: |
+  ORIGINAL (2026-07-23): "blocked by the install hang, same as test 1 — install never leaves
+  'installing', so download start / done transition / uninstall cannot be reached."
+
+  SUPERSEDED. G-30-02 was closed on live hardware by Phase 33 plan 33-05 (gate D-13, outcome PASS,
+  human-verified 2026-07-24). The INSTALL half of this test is proven: badge reaches a terminal
+  state, download starts and completes (appId 257350; log line quoted in 33-05-SUMMARY.md).
+  The UNINSTALL half remains unobserved — no Phase 33 artifact exercises uninstall.
+canonical_record: "30-UAT.md test 6 (Uninstall Reverts Button State) — this entry is a duplicate restatement, not an independent item"
 
 ### 5. Both-builds smoke re-confirmation after 30-05/30-06
 expected: `npm start` and `npm run tauri:dev` both still launch clean with no new console errors after the two gap-closure fixes (re-runs the 30-04 Task 3 checkpoint against current HEAD).
@@ -196,8 +203,10 @@ blocked: 1
 
 <!-- YAML for plan-phase --gaps consumption -->
 - truth: "Clicking Install on a Steam title under Tauri always reaches a terminal state — the 'installing' badge clears (client-not-ready) or an ERROR dialog appears (genuine failure); it never hangs forever."
-  status: failed
-  reason: "User reported (live retest Test 1): no, spinner remains spinning once clicked. Also blocks Install→Uninstall E2E (Test 4)."
+  status: resolved
+  resolved_by: "Phase 33 — 33-01 (badge-clear + watchdog) + 33-02 (ensureConnected canary + relog CM revalidation), proven live by 33-05's D-13 gate, human-verified 2026-07-24"
+  resolved_evidence: "33-05-SUMMARY.md — gate D-13 PASS on live hardware; appId 257350 install reaches terminal state and completes; '[DownloadManager]: Baldur's Gate II: Enhanced Edition was added to the download queue.' 33-05-SUMMARY.md:87 states G-30-02 resolved and hardware-proven."
+  historical_reason: "User reported (live retest Test 1): no, spinner remains spinning once clicked. Also blocked Install→Uninstall E2E (Test 4)."
   severity: major
   test: 1
   gap_id: G-30-02
@@ -221,11 +230,15 @@ blocked: 1
   debug_session: .planning/debug/steam-install-spinner-hangs-tauri-live-g3002.md
 
 - truth: "Install→Uninstall E2E completes (queued→installing→done, then Uninstall reverts to Install)."
-  status: blocked
-  reason: "Blocked by G-30-02 — install never leaves 'installing', so the E2E cannot be reached. Not separately diagnosed; will re-run once G-30-02 is fixed."
+  status: partial
+  reason: |
+    Install half PROVEN on hardware by Phase 33's D-13 gate (33-05, 2026-07-24): download starts,
+    progresses, completes. Uninstall half still unobserved — uninstall is exercised by no Phase 33
+    artifact. The original blocker (G-30-02) is resolved, so this is testable, not blocked.
+  historical_reason: "Blocked by G-30-02 — install never leaves 'installing', so the E2E cannot be reached. Not separately diagnosed; will re-run once G-30-02 is fixed."
   severity: major
   test: 4
-  blocked_by: G-30-02
+  canonical_record: "30-UAT.md test 6"
 
 ---
 
@@ -249,15 +262,40 @@ result: issue
 reported: "4. fails" — live Tauri retest 2026-07-23, install spinner STILL hangs forever after the 30-07 timeout fix + WR-01/02/03 bound tuning.
 severity: major
 gap_id: G-30-02
-disposition: PARKED to Phase 33 (user directive 2026-07-23)
-note: 30-07 implemented the diagnosed remedy (bound every pre-download CM await + resolveSteamInstallTarget) and is unit-proven (1004 tests), but the live badge still never clears. The real live trigger is on a path the pre-download withTimeout wrapping does not reach — see `.planning/debug/steam-install-spinner-hangs-tauri-live-g3002.md` "PARKED → Phase 33" section for diagnose-only starting points (install branch native-vs-bottle, pre-resolveSteamInstallTarget awaits, sidecar handler-level watchdog).
+disposition: PARKED to Phase 33 (user directive 2026-07-23) — PARK HONORED, RESOLVED 2026-07-24
+resolved_by: "Phase 33 plans 33-01 (badge-clear + failure dialog + watchdog) and 33-02 (ensureConnected canary + relog CM revalidation), proven live by 33-05's D-13 gate"
+resolution: |
+  RESOLVED 2026-07-24. Phase 33's D-13 gate (33-05, outcome PASS, human-verified on live hardware
+  under `npm run tauri:dev` with the sidecar rebuilt from the current tree) proved the hang is
+  gone: clicking Install on Baldur's Gate II: Enhanced Edition (appId 257350) reaches a terminal
+  state and the install starts and completes —
+    (11:37:52) [DownloadManager]: Baldur's Gate II: Enhanced Edition was added to the download queue.
+  33-05-SUMMARY.md:87: "G-30-02 (parked since Phase 30) is resolved and hardware-proven."
+
+  What actually fixed it was NOT more pre-download timeout wrapping (30-07's approach, which
+  failed live twice). It was 33-01's handler-level badge-clear/watchdog plus 33-02's
+  ensureConnected socket revalidation — i.e. the "belt-and-suspenders" branch this file's own
+  `missing:` list had named third.
+
+  Three separate blockers surfaced DURING that gate and were fixed there — a missing
+  `notification:allow-is-permission-granted` capability, `initOnlineMonitor()` never being wired
+  into the headless sidecar (so `isOnline()` was false forever and installs bailed with "App
+  offline"), and an unguarded `navigator.windowControlsOverlay` read. None were G-30-02 itself.
+note: 30-07 implemented the diagnosed remedy (bound every pre-download CM await + resolveSteamInstallTarget) and is unit-proven (1004 tests), but the live badge still never cleared. The real live trigger was on a path the pre-download withTimeout wrapping does not reach — see `.planning/debug/steam-install-spinner-hangs-tauri-live-g3002.md`, now marked resolved.
 
 ### 2. Full Install → Uninstall E2E on real Steam depot content (Test 4)
 expected: With a signed-in populated library, Install starts a real depot download, the button transitions queued → installing → done via gameStatusUpdate, and Uninstall reverts the button to Install.
-result: blocked
-blocked_by: G-30-02
-disposition: PARKED to Phase 33
-reason: "Blocked by the install hang (item 1); cannot be reached until G-30-02 is fixed. Phase's headline claim has never been observed succeeding end-to-end on hardware. Parked with G-30-02."
+result: partial
+disposition: PARKED to Phase 33 — PARK HONORED; install half proven, uninstall half still open
+reason: |
+  ORIGINAL (2026-07-23): "Blocked by the install hang (item 1); cannot be reached until G-30-02 is
+  fixed. Phase's headline claim has never been observed succeeding end-to-end on hardware. Parked
+  with G-30-02."
+
+  SUPERSEDED 2026-07-24. G-30-02 was fixed and hardware-proven by Phase 33's D-13 gate (33-05).
+  The install half of the headline claim HAS now been observed on hardware — download starts,
+  progresses, completes. The uninstall half has not: no Phase 33 artifact exercises uninstall.
+canonical_record: "30-UAT.md test 6 — this and cycle-1 test 4 are duplicate restatements of the same open question"
 
 ### Retest Summary (post 30-07)
 

@@ -15,17 +15,30 @@ re_verification:
     - "CR-03/CR-04 long-running-channel timeout removal holds under real load (live-confirmed, was human_needed)"
     - "Electron Steam sync recovers after re-sign-in (live-confirmed, was human_needed)"
   gaps_remaining:
-    - "Install badge clears instead of spinning forever (G-30-02) — 30-07's fix is code/jest/tsc-proven only; the debug session (.planning/debug/steam-install-spinner-hangs-tauri-live-g3002.md) is still status:diagnosed, never re-marked resolved after a live retest"
-    - "Full Install -> Uninstall E2E — blocked by the same unresolved-live item; 30-HUMAN-UAT.md's Gaps section still lists both as open (status: failed / blocked)"
+    - "SUPERSEDED 2026-07-24 — see gaps_closed_later. Both bullets below described G-30-02 and the E2E it blocked; Phase 33's D-13 gate closed G-30-02 on hardware and proved the install half of the E2E. Retained for history, not current state."
+    - "(historical) Install badge clears instead of spinning forever (G-30-02) — 30-07's fix is code/jest/tsc-proven only; the debug session is still status:diagnosed, never re-marked resolved after a live retest"
+    - "(historical) Full Install -> Uninstall E2E — blocked by the same unresolved-live item; 30-HUMAN-UAT.md's Gaps section still lists both as open (status: failed / blocked)"
+  gaps_closed_later:
+    - gap: "G-30-02 — install badge hangs forever under Tauri"
+      closed_by: "Phase 33 plans 33-01 (handler badge-clear + failure dialog + watchdog) and 33-02 (ensureConnected canary + relog CM revalidation)"
+      proven_by: "33-05 D-13 live gate — outcome PASS, human-verified on real hardware 2026-07-24 under `npm run tauri:dev`, sidecar rebuilt from tree"
+      evidence: "appId 257350 (Baldur's Gate II: EE): badge reaches terminal state, install starts and completes. '(11:37:52) [DownloadManager]: Baldur's Gate II: Enhanced Edition was added to the download queue.' 33-05-SUMMARY.md:87 — 'G-30-02 (parked since Phase 30) is resolved and hardware-proven.'"
+      note: "30-07's pre-download timeout wrapping was NOT what fixed it — that approach failed live twice. The handler-level watchdog + socket revalidation did."
+    - gap: "Install half of the Install -> Uninstall E2E"
+      closed_by: "same 33-05 D-13 gate — download starts, progresses, completes"
   regressions: []
 gaps: []
 human_verification:
-  - test: "Live Tauri retest of 30-07's G-30-02 fix (install-spinner hang)"
-    expected: "Clicking Install on a Steam title under `npm run tauri:dev` (enableSteamNativeInstall:true, signed-in library) with a genuinely stale steam-user CM socket now clears the 'installing' badge within the documented ~1.5-4.5 min bound (badge returns to Install or an ERROR dialog appears) instead of spinning forever indefinitely, matching the symptom reported in 30-HUMAN-UAT.md's retest-cycle Test 1."
-    why_human: "30-07's fix (withTimeout wrapping every pre-download CM call) is proven at the unit-test level (depot.test.ts/games.test.ts/installFlows.test.ts G-30-02 describe blocks, 293/293 green) and by static code review (0 blockers), but the ORIGINAL defect this fix targets was only ever reproducible on a live Tauri build against a genuinely stale CM socket — jest mocks cannot reproduce steam-user's real never-settling PICS callback. The debug session this fix closes is still `status: diagnosed`, not `resolved`, and 30-HUMAN-UAT.md's retest-cycle Test 1 has not been re-run since commit 3d3a5887 landed."
-  - test: "Full Install -> Uninstall E2E on real Steam depot content, post-30-07"
-    expected: "With a signed-in, populated library, Install starts a real depot download, the library button transitions queued -> installing -> done via gameStatusUpdate, and Uninstall reverts the button to Install — the phase's headline user-facing claim."
-    why_human: "This is blocked by the same G-30-02 root cause (30-HUMAN-UAT.md Test 4: 'blocked_by: prior-phase'); it has never been observed succeeding end-to-end on hardware and remains the phase's core unproven claim."
+  # Reduced 2026-08-13 from 2 entries to 1. The former entry 1 (live retest of the G-30-02 fix) is
+  # CLOSED — see gaps_closed_later above. The former entry 2 asked for the whole E2E; its install
+  # half is now hardware-proven, so only the uninstall clause survives, and it is merged with the
+  # update-check item that was blocked behind the same install flow.
+  - test: "Uninstall reverts button state (30-UAT test 6)"
+    expected: "With a game installed via the now-working install flow, clicking Uninstall on a Steam title removes it and the library button transitions back to Install."
+    why_human: "Recorded as blocked behind the G-30-02 install hang, which Phase 33's D-13 gate closed 2026-07-24 — so it is now reachable and no longer blocked. Never exercised: uninstall appears in NO Phase 33 artifact; the D-13 gate ran install only. This is the surviving clause of the phase's headline Install -> Uninstall E2E claim, whose install half is now hardware-proven."
+  - test: "Update check reports real results — WR-04 / WR-05 (30-UAT test 7)"
+    expected: "The update check runs across runners without one failing runner killing the whole check (WR-05), and triggering an update on a game reports the actual outcome — a failed update surfaces as a failure, not a false 'success' (WR-04)."
+    why_human: "Originally skipped for 'no installed game available' — a premise voided by the D-13 gate, since installs now work. Never exercised live. NOTE: the WR-04/WR-05 identifiers appearing in Phase 34 artifacts are DIFFERENT findings (packaging CSP / withGlobalTauri) and are not evidence for this item."
 ---
 
 # Phase 30: Tauri IPC re-plumb slice 1 (install/uninstall/update-check) Verification Report

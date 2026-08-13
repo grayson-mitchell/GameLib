@@ -1,10 +1,45 @@
 ---
-status: parked
+status: resolved
 parked_to_phase: 33
+resolved_by: "Phase 33 — plan 33-01 (handler badge-clear + failure dialog + watchdog) and plan 33-02 (ensureConnected canary + relog CM revalidation)"
+proven_by: "Phase 33 plan 33-05 — gate D-13, outcome PASS, human-verified on live hardware"
+resolved_on: 2026-07-24
+resolved_evidence: "`npm run tauri:dev`, sidecar rebuilt from current tree, appId 257350 (Baldur's Gate II: EE): badge reaches a terminal state and the install starts and completes. '(11:37:52) [DownloadManager]: Baldur's Gate II: Enhanced Edition was added to the download queue.' 33-05-SUMMARY.md:87 — 'G-30-02 (parked since Phase 30) is resolved and hardware-proven.'"
 trigger: "G-30-02 — live human retest 2026-07-23 on `npm run tauri:dev`, enableSteamNativeInstall:true, signed-in library: clicking Install on a Steam title leaves the spinner spinning forever. The 30-05 fix (which cleared a RETURNED {status:'error'}) did NOT hold on the live build. Find the path 30-05 did not cover."
 created: 2026-07-23T00:00:00Z
-updated: 2026-07-23T04:00:00Z
+updated: 2026-08-13T00:00:00Z
 goal: find_root_cause_only
+---
+
+## RESOLVED 2026-07-24 — the park was honored
+
+Phase 33 picked this up and closed it. The D-13 live gate (plan 33-05) is the proof: it was made a
+load-bearing manual gate precisely because "jest was provably green while the live build hung TWICE
+(30-05, 30-07)" (`33-VALIDATION.md:70-77`).
+
+**What actually fixed it — not what this session predicted.** This file's diagnosis chased the
+never-settling pre-download PICS await, and 30-07 implemented exactly that remedy; it failed live
+anyway (see the PARKED section below). The fix that held was the third, least-specific item in this
+file's own `missing:` list — the belt-and-suspenders one:
+
+- **33-01** — a handler-level badge-clear + failure dialog + watchdog around `await install()`, so
+  the badge reaches a terminal state regardless of what any downstream await does.
+- **33-02** — `ensureConnected()` canary + relog CM revalidation, removing the fast-path-returns-
+  true-on-a-stale-socket enabling condition.
+
+**Three unrelated blockers surfaced during the gate itself** and were fixed there — a missing
+`notification:allow-is-permission-granted` capability that crashed startup, `initOnlineMonitor()`
+never being wired into the headless sidecar (so `isOnline()` was false forever and every install
+bailed with "App offline"), and an unguarded `navigator.windowControlsOverlay` read. None of these
+were G-30-02; they were latent Tauri-parity gaps only a live run exposes.
+
+**Lesson.** Two precisely-diagnosed, unit-proven fixes (30-05, 30-07) both failed live, and the
+generic guard succeeded. When a defect class is defined by "the await never settles," a bound placed
+on any *specific* await is a guess about which one; a bound placed on the *caller* is not.
+
+The original diagnosis and park record follow, unedited — they are the record of those two failed
+attempts and are the instructive part of this file.
+
 ---
 
 ## PARKED 2026-07-23 → Phase 33
