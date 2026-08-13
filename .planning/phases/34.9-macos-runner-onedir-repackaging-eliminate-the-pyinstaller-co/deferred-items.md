@@ -417,3 +417,72 @@ tree going forward.
 
 **OWNER:** whichever plan or developer next touches the i18n gate scope or the frontend screens
 directory tree, dated 2026-08-13 (finding F-34.9-26-01).
+
+## Code-review finding disposition, gap cycle 2 (2026-08-13)
+
+Per locked user decision D-C3-05, `34.9-REVIEW-CYCLE2.md`'s C2-05 and C2-07 findings are recorded
+here, not fixed — no code change. This section covers **only** C2-05 and C2-07. C2-01, C2-02,
+C2-03, C2-06 and C2-08 are dispositioned elsewhere in this gap cycle (plans `34.9-24`..`34.9-26`
+and their own ledger entries/proof documents) and are **deliberately not claimed by this section**
+— a table implying full eight-ID coverage here would be a worse defect than an honestly scoped one.
+
+| Finding | Severity | Disposition | Evidence |
+|---|---|---|---|
+| C2-05 | Warning | DEFERRED (ledger only, D-C3-05) | item 18 below, reconciled against items 12 and 13 |
+| C2-07 | Info | DEFERRED (ledger only, D-C3-05) | item 19 below |
+
+### 18. C2-05 — the arm64-only guard is live and active in real CI, and gates an auto-publishing release
+
+**What it is:** the base fact — the `verify:runner-bundle` guard wired into `dist:mac` and
+`release:mac` (plan 34.9-20) hardcodes `--arch=arm64`, and `release:mac` also builds x64 — is
+**already recorded**, in full, as items 12 and 13 above. This entry does **not** reopen either item
+or restate their content; it cross-references both by number and records only the two concrete
+details `34.9-REVIEW-CYCLE2.md`'s C2-05 finding adds on top of them:
+
+1. The arm64-only invocation is live in real, currently-active CI, not merely theoretically wired.
+   `.github/workflows/build-base.yml:48` runs `pnpm dist:mac --x64 --arm64 --publish=never` on a
+   `macos-15` runner. pnpm appends extra CLI arguments to the end of the resolved script string
+   with no `--` separator (unlike npm), so the guard still runs exactly once against arm64 only
+   while `electron-builder` is handed both architectures in the same job.
+2. `release:mac` chains `-p always` (`package.json:44`) — i.e. auto-publish to the GitHub releases
+   feed `electron-updater` consumes. An unverified x64 macOS build can therefore reach real users'
+   auto-update channel with the guard green throughout — a materially worse consequence than "built
+   locally but unchecked".
+
+Detail 1 sits in apparent tension with item 13, which states the guard has never been exercised in
+CI because `install-deps` throws on the six `PENDING-CI-PUBLISH` sentinels before the build step is
+reached. That tension is resolved, explicitly, here: the invocation is real and active in the
+workflow file, and the job is nonetheless blocked upstream of it — so what detail 1 establishes is
+that the arm64-only exposure is **structurally wired into the live CI definition**, not that it has
+ever executed. No sentence in this entry claims the guard has run in CI.
+
+**Blocker (mechanism, not a summary):** an x64 darwin onedir tree does not exist anywhere (item 1),
+so the guard cannot be pointed at x64 without failing its file-count floor for a reason unrelated to
+symlink integrity — item 12's own mechanism.
+
+**Named precondition:** REQ-34.9-02's own precondition (land the workflow on the default branch,
+then dispatch, producing a real x64 onedir tree), plus a decision on whether `release:mac`'s
+`-p always` should be gated on a second `--arch=x64` guard invocation once that tree exists.
+
+**OWNER:** the same follow-up phase that owns items 1, 12 and 13 (2026-08-13).
+
+### 19. C2-07 — the doc-comment accuracy pins couple CI to documentation wording, not just behaviour
+
+**What it is:** the four tests in `meta/__tests__/cleanDistMac.test.ts:234-276`
+("doc-comment accuracy pins (IN-01/IN-02)") assert exact prose substrings of
+`meta/cleanDistMac.ts`'s normalised header comments. Stated clearly: these tests are **not
+vacuous** — they will genuinely fail if the wording changes — so this is a coupling concern, not a
+correctness defect.
+
+**Blocker (mechanism, not a summary):** two of the four assertions (`toContain`) pin documentation
+wording rather than program behaviour, so any future rewording that preserves the identical
+technical claim still breaks CI. The other two assertions (`not.toContain`) are what actually
+prevent regression to the retired, misleading claims (the "symlink is matched by the
+token/standalone-name branches" and "Every removal path is containment-checked" framings) and
+carry the real protection — they are not affected by this concern.
+
+**Named precondition:** a decision by whoever next edits `meta/cleanDistMac.ts`'s header comments
+on whether to drop the positive `toContain` assertions and retain only the negative
+(`not.toContain`) ones.
+
+**OWNER:** whichever plan next edits those doc comments (2026-08-13).
