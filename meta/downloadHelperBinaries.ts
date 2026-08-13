@@ -515,10 +515,13 @@ async function main() {
 // Guard main() so importing this module (e.g. from
 // meta/__tests__/downloadHelperBinaries.test.ts) never starts a real
 // download. Mirrors meta/buildCrossoverIndex.ts's / meta/buildRunnersOnedir.ts's
-// idiom: this script is invoked via `esbuild --bundle ... | node` (the
-// meta/ convention), so Node never sets `require.main`; `JEST_WORKER_ID` is
-// set by Jest for every worker and reliably distinguishes "imported under
-// test" from "run as a script".
+// idiom: this script is bundled by esbuild to
+// node_modules/.cache/download-helper-binaries.cjs and run as
+// `node node_modules/.cache/download-helper-binaries.cjs` (the meta/
+// convention), which DOES set `require.main` -- but this module is also
+// imported directly by its jest suite, so `JEST_WORKER_ID` (set by Jest for
+// every worker) still reliably distinguishes "imported under test" from
+// "run as a CLI".
 if (!process.env.JEST_WORKER_ID) {
   main().catch((error: unknown) => {
     console.error(error)

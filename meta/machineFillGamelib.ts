@@ -736,13 +736,16 @@ async function main(): Promise<void> {
   }
 }
 
-// `require.main === module` does not work under the `esbuild --bundle ... |
-// node` convention (Node reads the script from stdin, so require.main is
-// undefined even on a real invocation) -- see buildCrossoverIndex.ts's own
-// comment on this. JEST_WORKER_ID is set by Jest for every worker
-// (including --runInBand), so it reliably distinguishes "imported under
-// test" from "run as a script", guarding main() from ever firing a network
-// call, filesystem write or process.exit during the test suite above.
+// This script is bundled by esbuild to
+// node_modules/.cache/machine-fill-gamelib.cjs and run as
+// `node node_modules/.cache/machine-fill-gamelib.cjs`, which DOES set
+// `require.main` -- but this module is also imported directly by its jest
+// suite above, so the usual `require.main === module` idiom would run this
+// at import time under test too -- see buildCrossoverIndex.ts's own comment
+// on this. JEST_WORKER_ID is set by Jest for every worker (including
+// --runInBand), so it reliably distinguishes "imported under test" from
+// "run as a CLI", guarding main() from ever firing a network call,
+// filesystem write or process.exit during the test suite above.
 if (!process.env.JEST_WORKER_ID) {
   void main()
 }

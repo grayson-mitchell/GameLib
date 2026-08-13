@@ -89,13 +89,15 @@ export function assertNoUpstreamChurn(paths: string[]): void {
 // CLI half -- guarded so importing this module (e.g. from the jest test
 // suite) never triggers a git shell-out or process.exit.
 //
-// NOTE: this can't use the usual `require.main === module` idiom -- this
-// script is invoked via `esbuild --bundle ... | node` (the meta/ convention,
-// package.json `i18n-churn-guard`), and Node does NOT set `require.main`
-// when it reads a script from stdin. `JEST_WORKER_ID` is set by Jest for
-// every worker (including --runInBand), so this reliably distinguishes
-// "imported under test" from "run as a script" (mirrors
-// meta/buildCrossoverIndex.ts's identical guard).
+// NOTE: this script is bundled by esbuild to
+// node_modules/.cache/i18n-churn-guard.cjs and run as
+// `node node_modules/.cache/i18n-churn-guard.cjs` (the meta/ convention,
+// package.json `i18n-churn-guard`), which DOES set `require.main` -- but
+// this module is also imported directly by its jest suite, so the usual
+// `require.main === module` idiom would run this at import time under test
+// too. `JEST_WORKER_ID` is set by Jest for every worker (including
+// --runInBand), so this reliably distinguishes "imported under test" from
+// "run as a CLI" (mirrors meta/buildCrossoverIndex.ts's identical guard).
 // ---------------------------------------------------------------------------
 
 function runCli(): void {

@@ -337,13 +337,15 @@ export async function main(): Promise<void> {
 // Guard main() so importing this module (e.g. from the Task 1 regression
 // test) never triggers a network fetch / filesystem write / process.exit.
 //
-// NOTE: this can't use the usual `require.main === module` idiom — this
-// script is invoked via `esbuild --bundle ... | node` (the meta/ convention,
-// package.json `build-crossover-index`), and Node does NOT set `require.main`
-// when it reads a script from stdin (verified: it is `undefined` in that
-// mode), so that check would silently skip main() on every real invocation.
-// `JEST_WORKER_ID` is set by Jest for every worker (including --runInBand),
-// so this reliably distinguishes "imported under test" from "run as a script".
+// NOTE: this script is bundled by esbuild to
+// node_modules/.cache/build-crossover-index.cjs and run as
+// `node node_modules/.cache/build-crossover-index.cjs` (the meta/
+// convention, package.json `build-crossover-index`), which DOES set
+// `require.main` -- but this module is also imported directly by its jest
+// suite, so the usual `require.main === module` idiom would run this at
+// import time under test too. `JEST_WORKER_ID` is set by Jest for every
+// worker (including --runInBand), so this reliably distinguishes "imported
+// under test" from "run as a CLI".
 if (!process.env.JEST_WORKER_ID) {
   main().catch((error: unknown) => {
     console.error(error)

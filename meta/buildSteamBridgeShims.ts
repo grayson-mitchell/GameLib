@@ -132,9 +132,13 @@ export function machoArchFlag(arch: string): string {
 
 /**
  * Build-time equivalent of `publicDir` (src/backend/constants/paths.ts) --
- * this script runs from the repo root via `esbuild --bundle ... | node`
- * (the meta/ convention), so `join('public', 'bin', ...)` resolves to the
- * exact same location `publicDir` resolves to at dev-run time.
+ * `pnpm build-steam-bridge` (esbuild-bundled to
+ * node_modules/.cache/build-steam-bridge.cjs, then run as
+ * `node node_modules/.cache/build-steam-bridge.cjs`, the meta/ convention)
+ * always runs from the repo root, so `join('public', 'bin', ...)` -- which
+ * resolves relative to `process.cwd()`, not this file's compiled location --
+ * resolves to the exact same location `publicDir` resolves to at dev-run
+ * time.
  */
 function bundledBinDir(arch: string = resolveBridgeArch()): string {
   return join('public', 'bin', arch, 'darwin')
@@ -306,10 +310,12 @@ export async function main(): Promise<void> {
 }
 
 // See meta/gen_vtables.ts for why this can't use the usual
-// `require.main === module` idiom (esbuild-bundled, run via `... | node`
-// stdin -- Node never sets `require.main` for a script read from stdin).
-// `JEST_WORKER_ID` reliably distinguishes "imported under test" from "run as
-// a script" (same guard as meta/gen_vtables.ts / meta/buildCrossoverIndex.ts).
+// `require.main === module` idiom (esbuild-bundled to
+// node_modules/.cache/build-steam-bridge.cjs and run as
+// `node node_modules/.cache/build-steam-bridge.cjs`, which DOES set
+// `require.main` -- but this module is also imported directly by its jest
+// suite). `JEST_WORKER_ID` reliably distinguishes "imported under test" from
+// "run as a CLI" (same guard as meta/gen_vtables.ts / meta/buildCrossoverIndex.ts).
 if (!process.env.JEST_WORKER_ID) {
   main().catch((error: unknown) => {
     console.error(error)

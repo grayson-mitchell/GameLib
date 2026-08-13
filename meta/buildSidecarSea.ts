@@ -792,10 +792,12 @@ export async function main(): Promise<void> {
   console.log(`SEA sidecar compiled -> ${outputPath}`)
 }
 
-// esbuild-bundled, run via `... | node` stdin -- Node never sets
-// `require.main` for a script read from stdin. `JEST_WORKER_ID` reliably
-// distinguishes "imported under test" from "run as a script" (same guard
-// as meta/buildSteamBridgeShims.ts / meta/gen_vtables.ts).
+// esbuild-bundled to node_modules/.cache/build-sidecar-sea.cjs and run as
+// `node node_modules/.cache/build-sidecar-sea.cjs`, which DOES set
+// `require.main` -- but this module is also imported directly by its jest
+// suite. `JEST_WORKER_ID` reliably distinguishes "imported under test" from
+// "run as a CLI" (same guard as meta/buildSteamBridgeShims.ts /
+// meta/gen_vtables.ts).
 if (!process.env.JEST_WORKER_ID) {
   main().catch((error: unknown) => {
     console.error(error)

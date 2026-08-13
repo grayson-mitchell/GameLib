@@ -550,12 +550,15 @@ export function main(): void {
   )
 }
 
-// NOTE: this can't use the usual `require.main === module` idiom -- this
-// script is invoked via `esbuild --bundle ... | node` (the meta/ convention,
-// package.json `gen-vtables`), and Node does NOT set `require.main` when it
-// reads a script from stdin. `JEST_WORKER_ID` is set by Jest for every
-// worker, so this reliably distinguishes "imported under test" from "run as
-// a script" (same guard as meta/buildCrossoverIndex.ts).
+// NOTE: this script is bundled by esbuild to
+// node_modules/.cache/gen-vtables.cjs and run as
+// `node node_modules/.cache/gen-vtables.cjs` (the meta/ convention,
+// package.json `gen-vtables`), which DOES set `require.main` -- but this
+// module is also imported directly by its jest suite, so the usual
+// `require.main === module` idiom would run this at import time under test
+// too. `JEST_WORKER_ID` is set by Jest for every worker, so this reliably
+// distinguishes "imported under test" from "run as a CLI" (same guard as
+// meta/buildCrossoverIndex.ts).
 if (!process.env.JEST_WORKER_ID) {
   try {
     main()

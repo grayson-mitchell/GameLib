@@ -137,13 +137,14 @@ export function cleanDistMac(distDir: string): {
 
 export function main(argv: string[] = process.argv.slice(2)): number {
   const positional = argv.find((a) => !a.startsWith('--'))
-  // NOT __dirname -- this script runs via `esbuild --bundle ... | node -`
-  // (stdin), and __dirname in that mode resolves to `.` (process.cwd()), not
-  // meta/ (measured directly: a `__dirname`-based default silently pointed
-  // at `../dist`, one level above the repo root, and cleaned nothing while
-  // reporting success -- meta/genI18nGateScope.ts documents the same trap).
-  // `pnpm clean:dist-mac` always runs from the repo root, so a cwd-relative
-  // path is correct here.
+  // NOT __dirname -- this script is bundled by esbuild to
+  // node_modules/.cache/clean-dist-mac.cjs and run as
+  // `node node_modules/.cache/clean-dist-mac.cjs`, so __dirname in that mode
+  // resolves to node_modules/.cache, not meta/ (a `__dirname`-based default
+  // would silently point at a path under node_modules/, nowhere near the repo
+  // root, and clean nothing while reporting success -- meta/genI18nGateScope.ts
+  // documents the same trap). `pnpm clean:dist-mac` always runs from the repo
+  // root, so a cwd-relative path is correct here.
   const distDir = positional ?? path.join('dist')
 
   const { removed, kept } = cleanDistMac(distDir)
@@ -161,9 +162,11 @@ export function main(argv: string[] = process.argv.slice(2)): number {
 }
 
 // Guard idiom shared with meta/verifyRunnerBundle.ts / meta/buildSteamBridgeShims.ts:
-// this script is invoked via `esbuild --bundle ... | node -`, so Node never
-// sets `require.main`; `JEST_WORKER_ID` reliably distinguishes "imported
-// under test" from "run as a script".
+// this script is bundled by esbuild and run as
+// `node node_modules/.cache/clean-dist-mac.cjs`, which DOES set `require.main`
+// -- but this module is also imported directly by its jest suite, so
+// `JEST_WORKER_ID` still reliably distinguishes "imported under test" from
+// "run as a CLI".
 if (!process.env.JEST_WORKER_ID) {
   process.exit(main())
 }

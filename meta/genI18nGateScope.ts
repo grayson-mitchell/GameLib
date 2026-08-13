@@ -236,11 +236,12 @@ export function main(): void {
     now: new Date()
   })
 
-  // NOT __dirname -- this script runs via `esbuild --bundle ... | node`
-  // (stdin), and __dirname in that mode resolves to process.cwd(), NOT the
-  // source file's directory (measured directly: it wrote to the repo root
-  // instead of meta/ on the first run). `pnpm gen-i18n-gate-scope` always
-  // runs from the repo root, so a repo-root-relative path is correct here.
+  // NOT __dirname -- this script is bundled by esbuild to
+  // node_modules/.cache/gen-i18n-gate-scope.cjs and run as
+  // `node node_modules/.cache/gen-i18n-gate-scope.cjs`, so __dirname in that
+  // mode resolves to node_modules/.cache, NOT the source file's directory.
+  // `pnpm gen-i18n-gate-scope` always runs from the repo root, so a
+  // repo-root-relative path is correct here.
   const outPath = join('meta', 'i18nGateScope.json')
   writeFileSync(outPath, JSON.stringify(snapshot, null, 2) + '\n')
 
@@ -250,12 +251,15 @@ export function main(): void {
   )
 }
 
-// NOTE: this can't use the usual `require.main === module` idiom -- this
-// script is invoked via `esbuild --bundle ... | node` (the meta/
-// convention, package.json `gen-i18n-gate-scope`), and Node does NOT set
-// `require.main` when it reads a script from stdin. `JEST_WORKER_ID` is set
-// by Jest for every worker (including --runInBand), so this reliably
-// distinguishes "imported under test" from "run as a script".
+// NOTE: this script is bundled by esbuild to
+// node_modules/.cache/gen-i18n-gate-scope.cjs and run as
+// `node node_modules/.cache/gen-i18n-gate-scope.cjs` (package.json
+// `gen-i18n-gate-scope`), which DOES set `require.main` -- but this module is
+// also imported directly by its jest suite, so the usual
+// `require.main === module` idiom would run this at import time under test
+// too. `JEST_WORKER_ID` is set by Jest for every worker (including
+// --runInBand), so this reliably distinguishes "imported under test" from
+// "run as a CLI".
 if (!process.env.JEST_WORKER_ID) {
   try {
     main()
