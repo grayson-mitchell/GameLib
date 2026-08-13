@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.5 gap cycle 7 plan 34.5-54 EXECUTED (F-34.5-G6-19 correction of F-34.5-G6-18: the DXVK install direction DOES call runWineCommand via the reg add DllOverrides loops at tools/index.ts:438/:459, contra the fourth gate contract's own "never calls runWineCommand at all" overstatement; corrected Running Wine command: emitter is launcher.ts:1520, a logDebug, not :1581. RED-proven 7-assertion source-text gate dxvkEvidenceLines.test.ts pins the corrected evidence set, proved against three injected regressions then restored byte-identical; F-34.5-G6-19/-20/-21 recorded in deferred-items.md items 29-31; npm run test:ci 4818->4825). Explicitly does NOT prove a live DXVK toggle works -- U-34.5-30 stays NOT ATTEMPTED, owed to the wave-5 live gate (plan 34.5-59). Next: 34.5-55..60.
-last_updated: "2026-08-14T09:20:00.000Z"
-last_activity: 2026-08-14 -- Phase 34.5 gap cycle 7 plan 34.5-54 EXECUTED (DXVK evidence-line correction, F-34.5-G6-19 fixing F-34.5-G6-18's own overstated claim; findings F-34.5-G6-20/-21 also recorded). Next: 34.5-55..60. Earlier: plan 34.5-53 EXECUTED (nile OAuth code / PKCE code_verifier log redaction, F-34.5-G6-17 + F-34.5-G6-20). Earlier: plan 34.5-52 EXECUTED (F-34.5-G6-16 code fix: login_origin_banner_script/_update_script, wired into humble_login_open macOS arm; U-34.5-05 retargeted, U-34.5-31 opened, 31 rows). F-34.5-G6-16 itself stays open pending live transcription (plan 34.5-59). Earlier: Phase 34.5 gap cycle 7 execution STARTED (plans 34.5-52..60); 34.5-29/30/31 recorded as superseded (never executed, dispositioned by CYCLE5-ROUTING); earlier: Phase 34.1 gap cycle 1 execution STARTED (plans 34.1-09..15); Phase 34.9 gap cycle 4 planning complete (5 plans / 4 waves)
+stopped_at: Phase 34.5 gap cycle 7 plan 34.5-55 EXECUTED (closes routing item 8, U-34.5-25: all 10 SteamGridDB (7 sites, 5 channels)/winetricks (3 sites, 3 channels) call sites now route through callOrDeclare() with a visible decline, the 1 send-kind winetricksInstall gated behind a WINETRICKS_DECLINED_GUARD instead of wrapped. Census corrected 8->10 per F-34.5-G6-21 -- the fourth gate's own sweep grepped CHANNEL names against the PRELOAD API-METHOD-name space, missing the 2 real winetricks call sites. DeferredChannelCallSiteGuard.test.ts RED-proven 4 ways (1 natural + 3 synthetic injections, all restored byte-identical). Live-discovered Rule 1 fix: meta/hardcodedStringGate.test.ts (D-12, blocking) flagged real violations in the 2 in-scope files this plan edits -- fixed by centralizing feature/channel constants in declaredUnavailable.ts, which the gate's scope file does not cover; npm run test:ci 4825->4832). U-34.5-25 retired (source-level only, live half split into U-34.5-32), 32 rows. Next: 34.5-56..60.
+last_updated: "2026-08-14T11:05:00.000Z"
+last_activity: 2026-08-14 -- Phase 34.5 gap cycle 7 plan 34.5-55 EXECUTED (SteamGridDB/winetricks honest decline, closes U-34.5-25 on the corrected 10-site census, F-34.5-G6-21). Next: 34.5-56..60. Earlier: plan 34.5-54 EXECUTED (DXVK evidence-line correction, F-34.5-G6-19 fixing F-34.5-G6-18's own overstated claim; findings F-34.5-G6-20/-21 also recorded). Earlier: plan 34.5-53 EXECUTED (nile OAuth code / PKCE code_verifier log redaction, F-34.5-G6-17 + F-34.5-G6-20). Earlier: plan 34.5-52 EXECUTED (F-34.5-G6-16 code fix: login_origin_banner_script/_update_script, wired into humble_login_open macOS arm; U-34.5-05 retargeted, U-34.5-31 opened, 31 rows). F-34.5-G6-16 itself stays open pending live transcription (plan 34.5-59). Earlier: Phase 34.5 gap cycle 7 execution STARTED (plans 34.5-52..60); 34.5-29/30/31 recorded as superseded (never executed, dispositioned by CYCLE5-ROUTING); earlier: Phase 34.1 gap cycle 1 execution STARTED (plans 34.1-09..15); Phase 34.9 gap cycle 4 planning complete (5 plans / 4 waves)
 progress:
   # Hand-corrected after `state.begin-phase` corrupted these (recurring gsd-sdk defect).
   # Tool wrote 24/15/324/298/63 and also mangled three prose blocks (orphaned continuation
@@ -28,11 +28,15 @@ progress:
   # corruption defect on this file (see comments above) -- this delta was hand-applied
   # directly, no gsd-sdk state.* verb invoked. +1 completed plan (34.5-54, this plan's own
   # SUMMARY landed). percent = 296/315 = 93 (floor, matching prior convention).
+  # 2026-08-14 (plan 34.5-55 execution): same known gsd-sdk state.*/roadmap.update-plan-progress
+  # corruption defect -- neither verb invoked; this delta hand-applied directly. +1 completed
+  # plan (34.5-55, this plan's own SUMMARY landed). percent = 297/315 = 94 (floor, matching
+  # prior convention).
   total_phases: 23
   completed_phases: 17
   total_plans: 315
-  completed_plans: 296
-  percent: 93
+  completed_plans: 297
+  percent: 94
 ---
 
 # Project State

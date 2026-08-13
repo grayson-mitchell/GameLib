@@ -2077,7 +2077,7 @@ all stay `[ ]` per D-08's no-partial-pass rule — item 3's own PASS does not ti
 > **What this dependency does and does not block.** The seam itself is BUILT and unit-proven — 8 of 9 of 34.4.1's plans are executed, the runner-agnostic child-window mechanism is deliberately Humble-agnostic, and 34.4.1-09 already **wired** all four OAuth runners via the new `oauthCaptureLogin` channel with a declared-blocked UI surface naming each runner's unported channel. So 34.5 may be **discussed and planned now**. What is still outstanding is 34.4.1's *live proof* (plan 08's blocking 4-item gate, plus item 3(b) already recorded BLOCKED-UNOBSERVABLE and headed for a gap cycle). 34.5 must not **ship** a real OAuth credential path on a seam whose live gate never ran.
 >
 > **Inherited obligation, not a note — `T-34.4.1-44b`.** nile and zoom capture via a **host-free param match** inherited from the Electron original. This is harmless in 34.4.1 only because the captured value is handed to a channel that rejects. **34.5 MUST host-anchor both before it mints a real credential.** Also inherited: navigation observation (NOT the cookie read) is the actual seam surface, and 34.4.1 RESEARCH Open Question 1 — in-app `on_navigation` cancellation timing — remains unobserved.
-**Plans:** 51/60 plans executed (48 of 48 pre-cycle-7 in-scope; 9 gap-cycle-7 plans 34.5-52..60 added 2026-08-13, 3 executed — 34.5-52, 34.5-53, 34.5-54; 3 halted/superseded — see below)
+**Plans:** 52/60 plans executed (48 of 48 pre-cycle-7 in-scope; 9 gap-cycle-7 plans 34.5-52..60 added 2026-08-13, 4 executed — 34.5-52, 34.5-53, 34.5-54, 34.5-55; 3 halted/superseded — see below)
 44 `*-SUMMARY.md`). **34.5-29/30/31 are HALTED and SUPERSEDED, not pending** — as of 2026-08-13 each
 carries a `type: superseded`, `executed: false` SUMMARY recording its disposition, so it no longer
 reports as outstanding work; their `[ ]` checkboxes stay deliberately unticked and their PLAN files
@@ -2170,6 +2170,30 @@ producing a non-vacuous failure; restored to a byte-identical `git diff` on `too
 findings against findings, none from a live run. `npm run test:ci`: 4818 -> 4825 passed (+7,
 matching the new assertions), no regressions. Explicitly does NOT prove a live DXVK toggle works —
 `U-34.5-30` stays NOT ATTEMPTED, owed to the wave-5 live gate (plan 34.5-59). Next: 34.5-55.
+
+**2026-08-14 — 34.5-55 EXECUTED** (closes routing item 8, `U-34.5-25`): all 10 SteamGridDB
+(7 sites, 5 channels) and winetricks (3 sites, 3 channels) call sites now route through
+`callOrDeclare()` with a visible decline — the API-key field disables with an unavailable notice,
+the "has key" answer becomes UNKNOWN-AND-UNAVAILABLE rather than false, the picker's generic
+try/catch is replaced by the declared result, and the Winetricks panel's `declined` state never
+substitutes an empty component array; the one send-kind `winetricksInstall` call is gated behind
+`WINETRICKS_DECLINED_GUARD` instead of wrapped. Census corrected 8 -> 10 (`F-34.5-G6-21`): the
+fourth gate's own sweep grepped CHANNEL names (`winetricksAvailable`/`winetricksInstalled`)
+against the PRELOAD API-METHOD-name space the frontend actually calls
+(`winetricksListAvailable`/`winetricksListInstalled`), so it could never match the two real
+call sites in `Winetricks/index.tsx`. `DeferredChannelCallSiteGuard.test.ts` RED-proven four
+separate ways — a natural capture against the real unwrapped source before any wrapping, plus
+three synthetic injections (an unwrap, a full deletion, a removed guard token), each restored
+byte-identical. Live-discovered Rule 1 fix along the way: `meta/hardcodedStringGate.test.ts`
+(D-12, blocking) flagged real violations — a locally-declared feature-name variable and a dotted
+channel-name object-property literal — in the two files this plan edits that ARE in the gate's
+scope (`EditGameDialog/index.tsx`, `SideloadDialog/index.tsx`); fixed by centralizing those
+strings as exports in `declaredUnavailable.ts`, which the gate's scope file does not cover.
+`npm run test:ci`: 4825 -> 4832 passed (+7, matching the new gate's assertions), no regressions.
+`34.5-UNTESTED-ITEMS.md`: `U-34.5-25` RETIRED on the corrected-sweep observation, scoped
+explicitly to the source-level treatment only; `U-34.5-32` opened in the same commit for the
+live-observation half (mirrors `U-34.5-24`'s identical split for the EOS cluster), 32 rows.
+Nothing in this plan has been observed live under a real Tauri webview. Next: 34.5-56.
 
 **PHASE DOES NOT CLOSE.** The blocking 5-item live gate (`34.5-15-PLAN.md`) ran
 2026-08-01 and FAILED (0/5 PASS) — see `34.5-LIVE-GATE.md` and `34.5-15-SUMMARY.md`. Gap cycle
