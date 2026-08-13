@@ -1,12 +1,16 @@
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ToggleSwitch } from 'frontend/components/UI'
 import useSetting from 'frontend/hooks/useSetting'
-import ContextProvider from 'frontend/state/ContextProvider'
 
+// Gap G2 / UAT test 2: the toggle applies live -- confirmed twice in live
+// testing, no restart required. The on-toggle re-apply this phase shipped is
+// a deliberate superset of Electron parity, whose own toggle DOES require a
+// restart. The description string moved to the `gamelib` namespace because
+// `meta/i18nCatalogChurnGuard.ts` forbids ANY change to `translation.json`
+// (not merely hand-edited ones) -- the corrected copy describes fork
+// behaviour upstream does not have.
 const UseFramelessWindow = () => {
-  const { t } = useTranslation()
-  const { showDialogModal } = useContext(ContextProvider)
+  const { t: tGamelib } = useTranslation('gamelib')
   const [framelessWindow, setFramelessWindow] = useSetting(
     'framelessWindow',
     false
@@ -16,41 +20,14 @@ const UseFramelessWindow = () => {
     return <></>
   }
 
-  function toggleFramelessWindow() {
-    if (!framelessWindow) {
-      showDialogModal({
-        title: t(
-          'setting.frameless-window.confirmation.title',
-          'Experimental feature ahead'
-        ),
-        message: t(
-          'setting.frameless-window.confirmation.message',
-          'This feature is still experimental. Please report any issues you encounter with it on GitHub.'
-        ),
-        buttons: [
-          {
-            text: t('box.ok'),
-            onClick: () => setFramelessWindow(true)
-          },
-          {
-            text: t('button.cancel')
-          }
-        ],
-        type: 'MESSAGE'
-      })
-      return
-    }
-    setFramelessWindow(!framelessWindow)
-  }
-
   return (
     <ToggleSwitch
       htmlId="framelessWindow"
       value={framelessWindow}
-      handleChange={toggleFramelessWindow}
-      title={t(
-        'setting.frameless-window.description',
-        'Use frameless window (requires restart)'
+      handleChange={() => setFramelessWindow(!framelessWindow)}
+      title={tGamelib(
+        'gamelib:settings.framelessWindowDescription',
+        'Use frameless window'
       )}
     />
   )
