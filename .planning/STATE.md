@@ -732,11 +732,15 @@ permanently carried forward as a named residual risk — never inferred from the
 result. Also carried forward: `dracula-classic`, a theme named in the gate's scope that does not
 exist in the shipped theme picker (F-34.10-07, a contract defect).
 
-PILL-TAB ELECTION: DEFERRED. The operator's run-3-time election to replace the card/folder tab
-with a **pill tab with rounded bottom corners** is recorded as a deferred decision, out of scope
-for gap cycle 3 — see `ROADMAP.md`'s Phase 34.10 "Deferred from this phase" entry for the verbatim
-quote. **REQ-34.10-06's card/folder framing STANDS for run 4** — the gate scores the tab shape as
-it currently ships, not the pill variant.
+PILL-TAB ELECTION: **DROPPED FROM SCOPE 2026-08-13 (user decision) — do not re-raise in sweeps.**
+The operator's run-3-time election to replace the card/folder tab with a **pill tab with rounded
+bottom corners** was recorded as a deferred decision, out of scope for gap cycle 3 (see
+`ROADMAP.md`'s Phase 34.10 entry for the verbatim run-3 quote). Asked on 2026-08-13 whether to
+capture it as a phase, the user answered: *"no do not need pill-tab restyle, that can be removed
+from scope."* The restyle will NOT be done; it needs no phase, no backlog entry, no follow-up.
+**REQ-34.10-06's card/folder framing STANDS permanently** — the shape run 4 scored is the shape
+that ships. The separate 34.10 deferral, the onboarding-tour rework, became Phase 34.12 the same
+day and is unaffected.
 
 `34.10-VERIFICATION.md` was REGENERATED 2026-08-09 from run 3 plus the resolved debug session and
 is now AUTHORITATIVE.

@@ -2749,17 +2749,24 @@ produces untranslatable labels for `steam`/`zoom` (never registered in `translat
 the Epic/GOG/Amazon siblings); pre-existing, predates this phase. **IN-01** — dead `data-tour`
 props in `CategoryFilter`/`LibraryFilters` that `Dropdown` never reads.
 
-**Deferred from this phase — pill-tab restyle election.** During run 3 the operator said, verbatim
-(`34.10-LIVE-GATE.md` §9.6): *"i going to drop the tab and let make a pill, that what it looks
-like anyway! just needs rounded bottom corners."* This is a recorded DECISION, not an oversight and
-not an open question — `34.10-VERIFICATION.md`'s third `human_verification` item is answered here.
-The pill-tab restyle is DEFERRED to separate follow-up work and is explicitly OUT OF SCOPE for
-gap cycle 3 (its plans are listed above). **REQ-34.10-06's card/folder framing STANDS
-unchanged** — run 4 scores the tab shape as it
-currently ships (card/folder), not the pill variant. This is a SECOND deferred item alongside the
-onboarding-tour rework the phase already owes (CONTEXT.md D-13) — not a replacement for it. That
-tour rework is now **Phase 34.12** (created 2026-08-13). The pill-tab restyle remains uncaptured —
-it is still a deferred item with no phase of its own.
+**Pill-tab restyle election — DROPPED FROM SCOPE 2026-08-13 (user decision). Do not re-raise.**
+
+History: during run 3 the operator said, verbatim (`34.10-LIVE-GATE.md` §9.6): *"i going to drop
+the tab and let make a pill, that what it looks like anyway! just needs rounded bottom corners."*
+That was recorded as a DECISION and deferred to follow-up work, out of scope for gap cycle 3.
+`34.10-VERIFICATION.md`'s third `human_verification` item was answered by it.
+
+**Outcome: the restyle will not be done.** Asked on 2026-08-13 whether to capture it as a phase
+alongside the tour rework, the user answered: *"no do not need pill-tab restyle, that can be
+removed from scope."* The card/folder tab **as it currently ships is final** — this is now a
+closed decision, not a pending one, and it needs no phase, no backlog entry and no follow-up work.
+
+**REQ-34.10-06's card/folder framing STANDS unchanged** and is now permanent rather than
+provisional — run 4 scored the tab shape as it ships, which is the shape that stays.
+
+The onboarding-tour rework that was the OTHER deferred item from this phase (CONTEXT.md D-13) is a
+separate matter and was captured as **Phase 34.12** on 2026-08-13. Dropping the pill restyle does
+not affect it.
 
 **Follow-up finding filed by the debug session, closed by plan 34.10-23:** the unscoped
 `.MuiTabs-root` leak class (see root cause above) had no regression guard anywhere in the app —
