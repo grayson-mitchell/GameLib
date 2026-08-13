@@ -3,15 +3,18 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.9 gap cycle 4 PLANNED (34.9-29..33, 5 plans / 4 waves) -- closes the sole remaining 34.9-VERIFICATION.md gap: C3-01/C3-02/C3-03 from 34.9-REVIEW-CYCLE3.md have no disposition in any ledger. All three are FIXED (not risk-accepted) per locked decisions D-C4-01/02/03, and D-C4-04 breaks the review-after-sweep ordering loop that has produced this same gap four cycles running. Next step /gsd-execute-phase 34.9.
-last_updated: "2026-08-13T08:32:52.883Z"
-last_activity: 2026-08-13 -- Phase 34.9 gap cycle 4 planning complete (5 plans / 4 waves); then quick task 260813-ssg (doc-only: corrected the stale Avernum 5 retest claim in both Phase 24 records)
+stopped_at: Phase 34.1 gap cycle 1 PLANNED (34.1-09..15, 7 plans / 4 waves) -- closes the four `status: failed` findings from the 2026-07-25 + 2026-08-13 live UAT sessions: G1 WindowControls `grid-area: content` regression from 34.10's grid rewrite, G2 frameless-toggle copy defect, G3 byte-identical tray icon assets, G4 the D-06 reversal (macOS overlay titlebar + native traffic lights). Plan-checker BLOCKED revision 1 on a false constraint (the plans claimed Tauri v2 has no runtime `setTitleBarStyle`; it does, `@tauri-apps/api` 2.11.1) -- corrected, re-verified PASSED. Next step /gsd-execute-phase 34.1. ALSO STILL OPEN: Phase 34.9 gap cycle 4 PLANNED (34.9-29..33, 5 plans / 4 waves), next step /gsd-execute-phase 34.9.
+last_updated: "2026-08-13T09:14:48.120Z"
+last_activity: 2026-08-13 -- Phase 34.1 gap cycle 1 planning complete (7 plans / 4 waves); earlier: Phase 34.9 gap cycle 4 planning complete (5 plans / 4 waves); quick task 260813-ssg (doc-only)
 progress:
+  # Hand-corrected after `state.planned-phase` corrupted these (recurring gsd-sdk defect).
+  # Tool wrote 24/15/315/291/63. Only legitimate delta this session is +7 plans (308 -> 315);
+  # nothing was executed, so completed_plans stays 290. percent = 290/315 = 92.
   total_phases: 23
   completed_phases: 17
-  total_plans: 308
+  total_plans: 315
   completed_plans: 290
-  percent: 94
+  percent: 92
 ---
 
 # Project State
@@ -3386,7 +3389,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-13
+Last activity: 2026-08-13 -- Phase 34.1 planning complete
   cancels instead of erroring
   (pre-existing external-state reachability) and Test 7 (UI-level reachability, distinct from
   backend-logic reachability) to live-gate-contract-authoring.md's Structural Reachability Review,

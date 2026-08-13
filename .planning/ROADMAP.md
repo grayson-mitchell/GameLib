@@ -1298,7 +1298,31 @@ Plans:
 **Goal:** Port the **app shell and window chrome** IPC cluster (**33 channels** — `callTool` reassigned to Phase 34.5 by D-14) onto the Tauri build: window state and controls (minimize/maximize/unmaximize/close/fullscreen/frameless), zoom factor, title-bar overlay, tray colour, About window, language switching, custom themes/CSS, app version + changelog + releases, connectivity signal, gamepad input, and quit/lock/unlock. Establishes a **third port kind** — `renderer-side (Tauri JS)` — for window chrome (D-01/D-02), and is the **first slice to modify `src/backend/main.ts`** (D-07 body extraction), so the additive/reversible invariant becomes BEHAVIORAL rather than textual: `npm start` and `pnpm tauri:dev` must both still work.
 **Requirements:** REQ-34.1-01, REQ-34.1-02, REQ-34.1-03, REQ-34.1-04, REQ-34.1-05, REQ-34.1-06, REQ-34.1-07, REQ-34.1-08, REQ-34.1-09, REQ-34.1-10, REQ-34.1-11, REQ-34.1-12
 **Depends on:** Phase 34 (independent of the other slice-4..8 phases — these may run in any order or in parallel)
-**Plans:** 8/8 plans complete
+**Plans:** 15 total (8 original + 7 gap cycle 1) — 8/15 executed on disk
+
+**2026-08-13 — gap cycle 1 opened. The phase did NOT close.** `34.1-VERIFICATION.md` scored 12/12
+truths statically and stayed `status: human_needed`; two live UAT sessions (2026-07-25 and
+2026-08-13) then produced **four `status: failed` findings**, none of which any automated test
+caught. G1: `WindowControls/index.scss:2` still declares `grid-area: content`, an area Phase 34.10
+moved BELOW the new navbar row — a REGRESSION of an item that passed on 2026-07-25, with nothing
+turning red (`appShellLayout.test.ts:171` is non-vacuous, correctly written, green, and guards a
+collision that can no longer occur). G2: the frameless toggle's own copy claims "(requires
+restart)" and an experimental-feature dialog gates it — both falsified by the test that passes.
+G3: `public/icon-dark.png` and `icon-light.png` are byte-identical, so `tray_set_icon` succeeds and
+installs a pixel-identical image (a DATA defect predating this phase by ~a month; the Electron path
+has the identical no-op, so parity is intact and the shared data is wrong). G4: **D-06 is REVERSED**
+— `.setDecorations(false)` is not the Tauri translation of Electron's `titleBarStyle: 'hidden'`, so
+macOS silently lost its traffic lights; macOS now adopts an overlaid titlebar with native traffic
+lights and `--traffic-light-inset` 0px→78px.
+
+**Planning found a false constraint before it reached the operator.** Revision 1 was BLOCKED by the
+plan-checker: the plans asserted Tauri v2 exposes no runtime `titleBarStyle` setter and therefore
+that `settings.framelessWindow` must go permanently decoration-inert on macOS. `setTitleBarStyle`
+exists in the installed `@tauri-apps/api` 2.11.1. Corrected — `framelessWindow` stays functional on
+macOS (ON → `overlay`, OFF → `visible`, native lights in both states) and the `tauri.conf.json`
+creation value is `"Visible"`, not `"Overlay"`, so the default user gets no startup flip (UAT test 3
+non-regression). Same failure class as D-06 itself, one level up: D-06 missed a real constraint,
+this invented one.
 
 Plans:
 
@@ -1310,6 +1334,16 @@ Plans:
 - [x] 34.1-06-PLAN.md — D-11 real bounded Tauri tray (`tray-icon` feature, `TrayIcon` at setup, one new `tray_set_icon` Rust arm driving `changeTrayColor`)
 - [x] 34.1-07-PLAN.md — D-12 `createNewWindow`/`showAboutWindow` as real `WebviewWindow`s with a fail-closed child-window capability boundary + static `about.html`
 - [x] 34.1-08-PLAN.md — D-02/D-15 `34.1-PORTED-CHANNELS.md` declared list (third port kind + honest unobserved sign-off), `34.1-HUMAN-UAT.md`, SEAM.md §3→§1 move
+
+**Gap cycle 1** (planned 2026-08-13, 7 plans / 4 waves — waves: 1 → {09, 10, 12, 13}, 2 → {11}, 3 → {14}, 4 → {15}):
+
+- [ ] 34.1-09-PLAN.md — close G1: re-anchor `WindowControls` off the sidebar-era `grid-area: content` onto the navbar row, complete the `grid-area: content` consumer census (4 found, 2 dead ones pruned), and add a gate asserting the PREMISE — the row index recomputed from `.App`'s own `grid-template-areas` — rather than a consequence that a future grid rewrite can silently invalidate again
+- [ ] 34.1-10-PLAN.md — close G4's mechanism half: `"titleBarStyle": "Visible"` as the creation-time default on the `main` window, `core:window:allow-set-title-bar-style` granted as the thirteenth explicit D-04 identifier (12→13 pinned in all three places at once: capability prose, `capabilitiesDefault.test.ts`, REQ-34.1-02), and `applyFramelessDecorations` driving `setTitleBarStyle` on macOS instead of `setDecorations` — one mechanism, not two
+- [ ] 34.1-11-PLAN.md — close G4's frontend half: `--traffic-light-inset` 0px→**78px** scoped to a new `.macOverlayTitlebar` hook (`darwin && isFrameless` — the reserve clears lights drawn OVER the webview, which only happens in `'overlay'`), `WindowControls` hidden **unconditionally** on macOS (the lights exist in both states, so GameLib's buttons are always redundant), `shellTokens.test.ts` **RETUNED, not deleted**
+- [ ] 34.1-12-PLAN.md — close G2: drop the "Experimental feature ahead" dialog and the false "(requires restart)" claim. The string moves to the fork-owned `gamelib` namespace — `meta/i18nCatalogChurnGuard.ts` forbids ANY write to `translation.json`, not just hand-edits, so the briefed fix was impossible as written; `keepRemoved: true` leaves the retired keys in place and they become the gate's non-vacuity specimen
+- [ ] 34.1-13-PLAN.md — close G3: **the gap brief's file mapping was inverted.** The shared artwork measures 226 opaque px at mean luminance 94.6 (dark ink) and `getIcon()` returns `darkTrayIcon ? iconDark : iconLight`, so the wrong file is `icon-light.png`. Dependency-free PNG generator, three regenerated assets, the three existing `it.failing` gates in `trayIconAssets.test.ts` flipped to `it`, plus a **semantic-ordering** gate (dark < light) because byte-distinctness alone would pass a backwards fix. `autonomous: false` — blocking artwork design pass
+- [ ] 34.1-14-PLAN.md — live macOS gate across `midnightMirage` / `gruvbox_dark` / `dracula`, tray re-run, and the eight separately-numbered titlebar observations L2–L9 that plan 10 could not settle statically (runtime effect ON/OFF, both transition visuals, overlaid tab clearance, startup-flip non-regression in both toggle states, unfocused drag + title overdraw). Split at the branch boundary on purpose — this phase's UAT test 5 recorded a "pass" twice while the branch it was written to cover went unexercised. `autonomous: false`
+- [ ] 34.1-15-PLAN.md — write plan 14's results back into the ledger honouring **both** silent `audit-uat` failure modes (`status` stays `human_needed`, or the phase yields zero items and vanishes; resolved items are MOVED to `human_verification_resolved`, never annotated in place), and reconcile ROADMAP / REQUIREMENTS / STATE. Carried-forward items (gamepad, child windows, Electron parity re-run **before Phase 35 removes the Electron build**, sub-1200px DPI branch, Windows/Linux `WindowControls` placement) are ledgered with concrete greppable blockers, not category words
 
 ### Phase 34.2: Tauri IPC re-plumb slice 5 — game details, settings and overrides (INSERTED)
 
