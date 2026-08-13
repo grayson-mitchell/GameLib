@@ -59,6 +59,52 @@ export const EOS_OVERLAY_CHANNELS = [
   'isEosOverlayEnabled'
 ] as const
 
+/**
+ * The 5 deferred SteamGridDB artwork channels (D-03), matching
+ * `.planning/IPC-PORT-INVENTORY.md`'s `steamgriddb.<name>` bucket rows exactly -- the members
+ * of the `window.api.steamgriddb` namespace (`src/preload/api/misc.ts:295-300`).
+ */
+export const STEAMGRIDDB_CHANNELS = [
+  'getGrids',
+  'getHeroes',
+  'hasApiKey',
+  'searchGame',
+  'setApiKey'
+] as const
+
+/**
+ * The 3 deferred winetricks channels (D-03), named as the PRELOAD API-METHOD names the
+ * frontend actually calls -- deliberately named `_API_METHODS`, not `_CHANNELS`, because these
+ * are NOT the wire channel names. `src/preload/api/wine.ts:15-16` maps
+ * `winetricksListInstalled` to the wire channel `winetricksInstalled`, and
+ * `winetricksListAvailable` to `winetricksAvailable`. A prior sweep
+ * (`34.5-PORTED-CHANNELS.md` correction 3) grepped the CHANNEL names against this
+ * API-METHOD-name space and structurally could not match the two real call sites in
+ * `Winetricks/index.tsx` -- it reported a census of 8 when the real census is 10 (`F-34.5-G6-21`,
+ * `deferred-items.md` item 31, plan 34.5-55). `winetricksInstall` has no method/channel split
+ * (it is both, and is send-kind), so it appears here unchanged as the third member -- this
+ * constant enumerates every deferred call site the frontend actually touches for this cluster.
+ */
+export const WINETRICKS_API_METHODS = [
+  'winetricksListInstalled',
+  'winetricksListAvailable',
+  'winetricksInstall'
+] as const
+
+/**
+ * The 3 deferred winetricks WIRE CHANNEL names (D-03), matching
+ * `.planning/IPC-PORT-INVENTORY.md`'s bucket row exactly. Used as `callOrDeclare`'s `channel:`
+ * field so the log line names what the inventory names, never the preload method name. Mapping:
+ * `winetricksListInstalled` -> `winetricksInstalled`; `winetricksListAvailable` ->
+ * `winetricksAvailable`; `winetricksInstall` -> `winetricksInstall` (identity -- the send-kind
+ * call has no method/channel split).
+ */
+export const WINETRICKS_CHANNELS = [
+  'winetricksAvailable',
+  'winetricksInstall',
+  'winetricksInstalled'
+] as const
+
 export type DeclaredResult<T> =
   | { ok: true; value: T }
   | { ok: false; channel: string; reason: string }
