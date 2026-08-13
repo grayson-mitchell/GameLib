@@ -40,11 +40,43 @@ function Root() {
     isFrameless,
     experimentalFeatures,
     help,
-    disableAnimations
+    disableAnimations,
+    platform
   } = useContext(ContextProvider)
 
   const hasNativeOverlayControls = navigator['windowControlsOverlay']?.visible
-  const showOverlayControls = isFrameless && !hasNativeOverlayControls
+
+  // D-06 REVERSAL (2026-08-13, 34.1-HUMAN-UAT.md "## D-06 reversal"): macOS now
+  // drives the titlebar via `setTitleBarStyle` (plan 34.1-10) -- `framelessWindow`
+  // ON -> 'overlay', OFF -> 'visible' -- and the native traffic lights are present
+  // in BOTH of those states (in the native bar when 'visible', drawn over the
+  // webview when 'overlay'). Rendering GameLib's own `WindowControls` on macOS in
+  // EITHER state would reproduce the exact duplicate-buttons symptom D-06 was
+  // originally raised about, so the hide condition below is `isMac`, UNCONDITIONAL
+  // -- it does not narrow to the overlay state.
+  //
+  // `isMacOverlayTitlebar` is a DIFFERENT, NARROWER condition (`isMac &&
+  // isFrameless`) and exists ONLY as the CSS hook (`macOverlayTitlebar` below) for
+  // the 78px leading reserve that clears the lights when they are drawn OVER
+  // content -- that only happens in the 'overlay' state. Do NOT collapse these two
+  // booleans into one: collapsing toward the narrow form would make GameLib's own
+  // buttons reappear on macOS whenever frameless is off (the D-06 symptom,
+  // returning); collapsing toward the wide form would apply a 78px dead leading
+  // gap next to a normal native title bar that isn't overlaying anything. This is
+  // the most likely future regression in this file -- see `App.test.tsx`'s (or
+  // equivalent) pinned two-boolean gate.
+  //
+  // `navigator.windowControlsOverlay` is undefined under WKWebView, so
+  // `hasNativeOverlayControls` cannot express any of the above -- it stays scoped
+  // to its original Electron/Chromium purpose below.
+  //
+  // Keyed on `platform`, not on a shell/runtime detection check, so the Electron
+  // macOS build stops rendering the duplicate set too (declared consequence, see
+  // SUMMARY).
+  const isMac = platform === 'darwin'
+  const isMacOverlayTitlebar = isMac && isFrameless
+
+  const showOverlayControls = isFrameless && !hasNativeOverlayControls && !isMac
 
   const isConsoleMode = useLocation().pathname.startsWith('/console')
 
@@ -84,6 +116,7 @@ function Root() {
         isRTL,
         frameless: isFrameless,
         fullscreen: isFullscreen,
+        macOverlayTitlebar: isMacOverlayTitlebar,
         disableAnimations,
         consoleMode: isConsoleMode
       })}
