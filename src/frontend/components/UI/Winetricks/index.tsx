@@ -5,6 +5,12 @@ import WinetricksSearchBar from './WinetricksSearch'
 import { useTranslation } from 'react-i18next'
 import SettingsContext from 'frontend/screens/Settings/SettingsContext'
 import { Runner } from 'common/types'
+import {
+  callOrDeclare,
+  WINETRICKS_FEATURE,
+  WINETRICKS_CHANNEL_BY_METHOD,
+  DEFERRAL_D03
+} from 'frontend/helpers/declaredUnavailable'
 
 interface Props {
   onClose: () => void
@@ -17,20 +23,29 @@ export default function Winetricks({ onClose, runner }: Props) {
 
   const [loadingInstalled, setLoadingInstalled] = useState(true)
   const [loadingAvailable, setLoadingAvailable] = useState(true)
+  // True once either invoke-kind probe below declines under Tauri (D-03) -- the panel then
+  // renders an explicit unavailable state and gates the send-kind winetricksInstall call
+  // (the guard below), rather than substituting an empty component list the way a bare
+  // `catch { setX([]) }` used to (a confident, false "none installed/available" panel;
+  // F-34.5-G6-21 / U-34.5-25).
+  const [declined, setDeclined] = useState(false)
 
   // keep track of all installed components for a game/app
   const [installed, setInstalled] = useState<string[]>([])
   async function listInstalled() {
     setLoadingInstalled(true)
-    try {
-      const components = await window.api.winetricksListInstalled(
-        runner,
-        appName
-      )
-      setInstalled(components)
-    } catch {
-      setInstalled([])
+    const result = await callOrDeclare({
+      channel: WINETRICKS_CHANNEL_BY_METHOD.winetricksListInstalled,
+      feature: WINETRICKS_FEATURE,
+      deferral: DEFERRAL_D03,
+      call: () => window.api.winetricksListInstalled(runner, appName)
+    })
+    if (!result.ok) {
+      setDeclined(true)
+      setLoadingInstalled(false)
+      return
     }
+    setInstalled(result.value)
     setLoadingInstalled(false)
   }
   useEffect(() => {
@@ -41,15 +56,18 @@ export default function Winetricks({ onClose, runner }: Props) {
   useEffect(() => {
     async function listComponents() {
       setLoadingAvailable(true)
-      try {
-        const components = await window.api.winetricksListAvailable(
-          runner,
-          appName
-        )
-        setAllComponents(components)
-      } catch {
-        setAllComponents([])
+      const result = await callOrDeclare({
+        channel: WINETRICKS_CHANNEL_BY_METHOD.winetricksListAvailable,
+        feature: WINETRICKS_FEATURE,
+        deferral: DEFERRAL_D03,
+        call: () => window.api.winetricksListAvailable(runner, appName)
+      })
+      if (!result.ok) {
+        setDeclined(true)
+        setLoadingAvailable(false)
+        return
       }
+      setAllComponents(result.value)
       setLoadingAvailable(false)
     }
 
@@ -60,7 +78,15 @@ export default function Winetricks({ onClose, runner }: Props) {
   const [installing, setInstalling] = useState(false)
   const [installingComponent, setInstallingComponent] = useState('')
   const [logs, setLogs] = useState<string[]>([])
+  // winetricksInstall is send-kind (`makeListenerCaller`, src/preload/api/wine.ts:17) -- it
+  // returns no promise, so callOrDeclare cannot wrap it, and per this project's own
+  // sidecar-send-channels-fail-silently lesson a mis-routed send produces no reject, no
+  // timeout and no log line. The only honest treatment is to gate it behind the invoke-kind
+  // probes' own decline, both by code (the early return below) and by gesture (the whole
+  // component list renders unavailable instead of the install affordance when declined).
+  const WINETRICKS_DECLINED_GUARD = declined
   function install(component: string) {
+    if (WINETRICKS_DECLINED_GUARD) return
     window.api.winetricksInstall(runner, appName, component)
   }
 
@@ -112,7 +138,17 @@ export default function Winetricks({ onClose, runner }: Props) {
 
   const dialogContent = (
     <>
-      {!loadingInstalled && (
+      {declined && (
+        <div className="installWrapper">
+          <span>
+            {t(
+              'winetricks.unavailable',
+              'Winetricks component management is unavailable on this build'
+            )}
+          </span>
+        </div>
+      )}
+      {!declined && !loadingInstalled && (
         <div className="installWrapper">
           {!installing && allComponents.length !== 0 && (
             <div className="actions">
@@ -157,8 +193,18 @@ export default function Winetricks({ onClose, runner }: Props) {
 
       <div className="installedWrapper">
         <b>{t('winetricks.installed', 'Installed components:')}</b>
-        {loadingInstalled && <span>{t('winetricks.loading', 'Loading')}</span>}
-        {!loadingInstalled && installed.length === 0 && (
+        {declined && (
+          <span>
+            {t(
+              'winetricks.unavailableDetail',
+              'Winetricks support is deferred to a future release (D-03, Phase 34.6) and cannot be listed or installed from this build.'
+            )}
+          </span>
+        )}
+        {!declined && loadingInstalled && (
+          <span>{t('winetricks.loading', 'Loading')}</span>
+        )}
+        {!declined && !loadingInstalled && installed.length === 0 && (
           <span>
             {t(
               'winetricks.nothingYet',
@@ -166,7 +212,9 @@ export default function Winetricks({ onClose, runner }: Props) {
             )}
           </span>
         )}
-        {!loadingInstalled && <span>{installed.join(', ')}</span>}
+        {!declined && !loadingInstalled && (
+          <span>{installed.join(', ')}</span>
+        )}
       </div>
     </>
   )
