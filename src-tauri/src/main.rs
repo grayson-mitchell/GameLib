@@ -1537,6 +1537,140 @@ fn login_cancel_strip_script(exfil_host: &str) -> String {
     template.replace("@@EXFIL_HOST@@", &exfil_host_js)
 }
 
+// ---- Login-sheet origin banner: the in-page anti-phishing indicator AppKit sheets cannot
+// render as a title bar (Phase 34.5 Plan 52, F-34.5-G6-16, D-CYCLE7-A, REQ-34.5-04/12) ----
+//
+// `on_document_title_changed` (below, `humble_login_open`'s visible arm) composes
+// `login_window_title`'s origin-prefixed string correctly and sets it on the underlying
+// `NSWindow` -- but AppKit sheets structurally render NO title bar UI at all, so that string is
+// never user-visible on macOS (F-34.5-G6-16). Per D-CYCLE7-A (child-window attachment is
+// permanently closed, F-34.4.2-01/-02, and the routing document's "stop presenting as a sheet"
+// option is factually closed), the fix is an in-page element instead, injected by the EXACT SAME
+// mechanism the mandated cancel strip already uses -- never a second injection path.
+// `login_window_title` itself is UNCHANGED; Windows/Linux still render it as a real OS title.
+
+/// Builds the JS injected as an `initialization_script()` into the Tauri-managed login
+/// surface's VISIBLE builder ONLY (`humble_login_open`'s `if visible` block, macOS-gated --
+/// see the injection site's own doc comment), immediately alongside `login_cancel_strip_script`.
+/// Mirrors that function's conventions exactly (T-34.5-C7-02..05, this plan's threat register):
+///
+/// - **Top-frame only.** The FIRST statement inside the try is `if (window.top !== window) {
+///   return; }`, checked before the idempotence flag -- identical discipline to the cancel
+///   strip, for the identical reason (spike 013's 5-of-8-iframe measurement).
+/// - Idempotent via `window.__GAMELIB_LOGIN_ORIGIN_BANNER__`, set before any further DOM work.
+/// - The live origin is stored on `window.__GAMELIB_LOGIN_ORIGIN_VALUE__` so
+///   `login_origin_banner_update_script` (below) can re-text an already-built banner without
+///   re-running this whole script.
+/// - Renders exactly ONE element, id `'__gamelib_login_origin_banner__'`, appended to
+///   `document.body || document.documentElement` (null-root-safe, mirrors the cancel strip's
+///   WR-04 fix), `position: fixed`, pinned to the **top-LEFT** inset (`top: 8px`, `left: 8px`)
+///   -- the opposite corner from the cancel strip's top-right, so the two controls can never
+///   overlap (T-34.5-C7-05).
+/// - `z-index: '2147482999'` -- strictly BELOW the cancel strip's `'2147483000'`, so the banner
+///   can never paint over the sheet's only exit affordance (T-34.5-C7-05).
+/// - `pointerEvents: 'none'`, `userSelect: 'none'`. Registers NO event listener of any kind --
+///   no `click`, no `keydown`/`keyup`/`keypress`, and (unlike the cancel strip, which needs
+///   `DOMContentLoaded` for its own click-armed control) no `addEventListener` call anywhere in
+///   this script at all: the loading-state arm below uses `document.onreadystatechange`
+///   instead, a property assignment rather than a listener registration, so this banner is
+///   provably inert with respect to REQ-34.4.2-06 (Cmd+V into the password field must keep
+///   working) by construction, not merely by omission of the specific key names.
+/// - Sets text via `textContent` ONLY -- no HTML-fragment-write API of any kind appears in this
+///   function's body (T-34.5-C7-02).
+/// - Never reads any input's `value`, never transmits anything anywhere, creates no iframe
+///   (T-34.5-C7-04) -- unlike the cancel strip, this control has nothing to deliver; it is
+///   read-only chrome.
+/// - Self-re-appending: the same debounced `MutationObserver` on `document.documentElement`
+///   (`{childList: true, subtree: true}`) / `scheduleEnsure()` / `ensure()` / `build()` shape the
+///   cancel strip uses, plus a `document.readyState === 'loading'` arm that re-runs `ensure()`
+///   on the next ready-state change (functionally the cancel strip's own `DOMContentLoaded`
+///   safety net, without an `addEventListener` call -- see above).
+/// - Whole body in exactly ONE top-level `try { } catch (e) { }` (T-34.5-C7-03) -- a throwing
+///   banner must never break a live login page.
+/// - Pure: the same origin input always yields byte-identical output.
+///
+/// The ONLY interpolated value is `origin`, through the same `serde_json::to_string`
+/// placeholder-token discipline `login_cancel_strip_script`/`clear_storage_script` use for their
+/// own interpolated values -- never naive string interpolation (T-34.5-C7-02). Every JS string
+/// literal below is single-quoted, so every `concat!` piece keeps an EVEN raw `"`-count on its
+/// own source line (`longRunningChannels.test.ts`'s WR-08 stripper-integrity guard).
+fn login_origin_banner_script(origin: &str) -> String {
+    let origin_js = serde_json::to_string(origin).unwrap_or_else(|_| "\"\"".to_string());
+    let template = concat!(
+        "(function() { ",
+        "try { ",
+        "if (window.top !== window) { return; } ",
+        "if (window.__GAMELIB_LOGIN_ORIGIN_BANNER__) { return; } ",
+        "window.__GAMELIB_LOGIN_ORIGIN_BANNER__ = true; ",
+        "window.__GAMELIB_LOGIN_ORIGIN_VALUE__ = @@ORIGIN@@; ",
+        "var ID = '__gamelib_login_origin_banner__'; ",
+        "function build() { ",
+        "var buildRoot = document.body || document.documentElement; ",
+        "if (!buildRoot) { return; } ",
+        "var banner = document.createElement('div'); ",
+        "banner.id = ID; ",
+        "banner.textContent = window.__GAMELIB_LOGIN_ORIGIN_VALUE__; ",
+        "banner.style.position = 'fixed'; ",
+        "banner.style.top = '8px'; ",
+        "banner.style.left = '8px'; ",
+        "banner.style.zIndex = '2147482999'; ",
+        "banner.style.padding = '6px 12px'; ",
+        "banner.style.borderRadius = '4px'; ",
+        "banner.style.background = '#1a1a1a'; ",
+        "banner.style.color = '#ffffff'; ",
+        "banner.style.fontFamily = 'sans-serif'; ",
+        "banner.style.fontSize = '13px'; ",
+        "banner.style.pointerEvents = 'none'; ",
+        "banner.style.userSelect = 'none'; ",
+        "banner.style.boxShadow = '0 1px 4px rgba(0,0,0,0.4)'; ",
+        "buildRoot.appendChild(banner); ",
+        "} ",
+        "function ensure() { ",
+        "var existing = document.getElementById(ID); ",
+        "if (!existing) { build(); } else { existing.textContent = window.__GAMELIB_LOGIN_ORIGIN_VALUE__; } ",
+        "} ",
+        "if (document.readyState === 'loading') { ",
+        "document.onreadystatechange = function() { ensure(); }; ",
+        "} ",
+        "var debounceTimer = null; ",
+        "function scheduleEnsure() { ",
+        "if (debounceTimer) { return; } ",
+        "debounceTimer = setTimeout(function() { debounceTimer = null; ensure(); }, 200); ",
+        "} ",
+        "var observer = new MutationObserver(function() { scheduleEnsure(); }); ",
+        "observer.observe(document.documentElement, { childList: true, subtree: true }); ",
+        "ensure(); ",
+        "} catch (e) { } ",
+        "})();"
+    );
+    template.replace("@@ORIGIN@@", &origin_js)
+}
+
+/// Builds a small script for `window.eval()`, called on every main-frame origin change (the
+/// `on_page_load` visible branch, below) after `current_origin` has already been updated. JSON-
+/// escapes `origin` via the same `serde_json::to_string` placeholder-token discipline as the
+/// banner script above, assigns it to `window.__GAMELIB_LOGIN_ORIGIN_VALUE__`, and if the banner
+/// element already exists (`document.getElementById('__gamelib_login_origin_banner__')`) sets
+/// its `textContent` to the new value -- never an HTML-fragment-write API. Wrapped in its own single top-level
+/// `try { } catch (e) { }` (T-34.5-C7-03): `window.eval` firing on a page that has since
+/// navigated away, or before the banner script's own injection has run, must never throw into
+/// the caller. Registers no listener of any kind. Pure: the same origin input always yields
+/// byte-identical output, and two different origins always yield different output (both
+/// asserted below).
+fn login_origin_banner_update_script(origin: &str) -> String {
+    let origin_js = serde_json::to_string(origin).unwrap_or_else(|_| "\"\"".to_string());
+    let template = concat!(
+        "(function() { ",
+        "try { ",
+        "window.__GAMELIB_LOGIN_ORIGIN_VALUE__ = @@ORIGIN@@; ",
+        "var el = document.getElementById('__gamelib_login_origin_banner__'); ",
+        "if (el) { el.textContent = window.__GAMELIB_LOGIN_ORIGIN_VALUE__; } ",
+        "} catch (e) { } ",
+        "})();"
+    );
+    template.replace("@@ORIGIN@@", &origin_js)
+}
+
 /// The SINGLE dismissal entry point both the cancel-strip sentinel (below, in the
 /// `.on_navigation(` closure) and the Esc monitor (Task 2, `main()`'s `.setup()`) call.
 /// `#[cfg(target_os = "macos")]` -- dismissing a sheet is a macOS-only concept (Plan 07).
@@ -6882,6 +7016,140 @@ mod tests {
                 .count(),
             1
         );
+    }
+
+    // ---- login_origin_banner_script / login_origin_banner_update_script (Phase 34.5 Plan 52,
+    // F-34.5-G6-16, D-CYCLE7-A) ----
+    //
+    // RED direction (captured verbatim in `34.5-52-SUMMARY.md`): (a) swapping `textContent` for
+    // the HTML-fragment-write API in `build()` fails `login_origin_banner_script_never_uses_innerhtml`; (b)
+    // raising the banner's z-index literal to `'2147483001'` fails
+    // `login_origin_banner_script_z_index_is_strictly_below_the_cancel_strips`; (c) adding a
+    // `keydown` `addEventListener` to `build()` fails
+    // `login_origin_banner_script_binds_no_keyboard_listener`.
+
+    const TEST_LOGIN_ORIGIN: &str = "https://login.gog.com";
+
+    #[test]
+    fn login_origin_banner_script_embeds_the_origin_exactly_once_as_a_json_escaped_literal() {
+        let script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
+        let literal = serde_json::to_string(TEST_LOGIN_ORIGIN).unwrap();
+        assert_eq!(script.matches(&literal).count(), 1);
+    }
+
+    #[test]
+    fn login_origin_banner_script_escapes_a_tricky_origin_and_never_naively_interpolates_it() {
+        // Mirrors `login_cancel_strip_script`'s own escaping round-trip case.
+        let tricky_origin = "https://ex\"a'mple.com";
+        let script = login_origin_banner_script(tricky_origin);
+        let expected_literal = serde_json::to_string(tricky_origin).unwrap();
+        assert!(script.contains(&expected_literal));
+        let naive_interpolation = ["'", tricky_origin, "'"].concat();
+        assert!(!script.contains(&naive_interpolation));
+    }
+
+    #[test]
+    fn login_origin_banner_script_binds_no_keyboard_listener() {
+        let script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
+        assert!(!script.contains("keydown"));
+        assert!(!script.contains("keyup"));
+        assert!(!script.contains("keypress"));
+        assert!(!script.contains("addEventListener"));
+    }
+
+    #[test]
+    fn login_origin_banner_script_never_reads_field_value_or_password_content() {
+        let script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
+        assert!(!script.contains(".value"));
+        assert!(!script.contains("password"));
+    }
+
+    #[test]
+    fn login_origin_banner_script_never_uses_innerhtml() {
+        let script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
+        assert!(!script.contains("innerHTML"));
+        assert!(script.contains("textContent"));
+    }
+
+    #[test]
+    fn login_origin_banner_script_top_frame_guard_precedes_the_idempotence_flag() {
+        let script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
+        let guard_idx = script.find("window.top !== window");
+        let flag_idx = script.find("__GAMELIB_LOGIN_ORIGIN_BANNER__");
+        assert!(guard_idx.is_some());
+        assert!(flag_idx.is_some());
+        assert!(guard_idx.unwrap() < flag_idx.unwrap());
+    }
+
+    #[test]
+    fn login_origin_banner_script_z_index_is_strictly_below_the_cancel_strips() {
+        // Numeric comparison, not substring presence alone (T-34.5-C7-05, WR-08-adjacent
+        // discipline): extract both z-index literals and compare them as integers.
+        let banner_script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
+        let strip_script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        assert!(banner_script.contains("'2147482999'"));
+        let banner_z: i64 = banner_script
+            .split("zIndex = '")
+            .nth(1)
+            .and_then(|s| s.split('\'').next())
+            .expect("banner script must set zIndex")
+            .parse()
+            .expect("banner zIndex must parse as an integer");
+        let strip_z: i64 = strip_script
+            .split("zIndex = '")
+            .nth(1)
+            .and_then(|s| s.split('\'').next())
+            .expect("strip script must set zIndex")
+            .parse()
+            .expect("strip zIndex must parse as an integer");
+        assert!(banner_z < strip_z);
+    }
+
+    #[test]
+    fn login_origin_banner_script_pointer_events_are_disabled() {
+        let script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
+        assert!(script.contains("pointerEvents = 'none'"));
+    }
+
+    #[test]
+    fn login_origin_banner_script_is_wrapped_in_a_single_top_level_try_catch() {
+        assert_eq!(
+            login_origin_banner_script(TEST_LOGIN_ORIGIN)
+                .matches("try {")
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn login_origin_banner_script_is_pure_same_origin_yields_identical_output() {
+        let a = login_origin_banner_script(TEST_LOGIN_ORIGIN);
+        let b = login_origin_banner_script(TEST_LOGIN_ORIGIN);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn login_origin_banner_update_script_embeds_the_new_origin_and_differs_by_origin() {
+        let a = login_origin_banner_update_script(TEST_LOGIN_ORIGIN);
+        let b = login_origin_banner_update_script("https://embed.gog.com");
+        let literal = serde_json::to_string(TEST_LOGIN_ORIGIN).unwrap();
+        assert!(a.contains(&literal));
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn login_origin_banner_update_script_never_uses_innerhtml_and_is_wrapped_in_one_try_catch() {
+        let script = login_origin_banner_update_script(TEST_LOGIN_ORIGIN);
+        assert!(!script.contains("innerHTML"));
+        assert!(script.contains("textContent"));
+        assert_eq!(script.matches("try {").count(), 1);
+    }
+
+    #[test]
+    fn login_origin_banner_update_script_registers_no_listener() {
+        let script = login_origin_banner_update_script(TEST_LOGIN_ORIGIN);
+        assert!(!script.contains("addEventListener"));
+        assert!(!script.contains("keydown"));
     }
 
     // ---- shell_exe_env_value (Phase 34.5 Plan 01, REQ-34.5-01, D-10) ----
