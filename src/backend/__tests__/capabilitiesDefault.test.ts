@@ -5,7 +5,11 @@
  *
  * Pins the D-04 capability grant list by test so neither a silent widening
  * (e.g. adding core:window:default) nor a silent narrowing (e.g. dropping
- * one of the twelve explicit identifiers) can land green.
+ * one of the thirteen explicit identifiers) can land green.
+ *
+ * gap cycle 1 (plan 34.1-10, G4): core:window:allow-set-title-bar-style added as the
+ * thirteenth D-04 identifier, alongside a CLOSURE gate (below) the file previously
+ * lacked -- see that test's own docstring for why it is needed.
  */
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
@@ -20,7 +24,14 @@ const CAPABILITIES_DEFAULT_PATH = join(
   'default.json'
 )
 
-const CAPABILITIES_DIR = join(__dirname, '..', '..', '..', 'src-tauri', 'capabilities')
+const CAPABILITIES_DIR = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'src-tauri',
+  'capabilities'
+)
 
 interface ShellAllowExecutePermission {
   identifier: string
@@ -42,9 +53,7 @@ function loadCapabilitiesDefault(): CapabilitiesDefault {
 }
 
 function stringPermissions(conf: CapabilitiesDefault): string[] {
-  return conf.permissions.filter(
-    (p): p is string => typeof p === 'string'
-  )
+  return conf.permissions.filter((p): p is string => typeof p === 'string')
 }
 
 const D04_WINDOW_WEBVIEW_GRANTS = [
@@ -59,16 +68,41 @@ const D04_WINDOW_WEBVIEW_GRANTS = [
   'core:window:allow-is-maximized',
   'core:window:allow-is-minimized',
   'core:window:allow-set-decorations',
+  'core:window:allow-set-title-bar-style',
   'core:webview:allow-set-webview-zoom'
 ]
 
 describe('capabilities/default.json D-04 window/webview grants (REQ-34.1-02)', () => {
-  test('REQ-34.1-02: all twelve D-04 window/webview identifiers are granted as bare strings', () => {
+  test('REQ-34.1-02: all thirteen D-04 window/webview identifiers are granted as bare strings', () => {
     const conf = loadCapabilitiesDefault()
     const perms = stringPermissions(conf)
     for (const grant of D04_WINDOW_WEBVIEW_GRANTS) {
       expect(perms).toContain(grant)
     }
+    expect(D04_WINDOW_WEBVIEW_GRANTS).toHaveLength(13)
+  })
+
+  // gap cycle 1 (plan 34.1-10, G4): CLOSURE gate the file previously lacked. The
+  // pre-existing negative gate above (`forbidden`) names only five specific broader
+  // identifiers, so it cannot catch an unanticipated FOURTEENTH core:window:*/core:webview:*
+  // grant landing beside the named thirteen -- every existing `toContain` assertion would
+  // still pass even with an extra grant present. This test closes that gap by asserting
+  // every core:window:*/core:webview:* string permission is EITHER a member of
+  // D04_WINDOW_WEBVIEW_GRANTS OR exactly the separately-owned
+  // core:webview:allow-create-webview-window (REQ-34.1-08, owned by the describe block below
+  // -- do not fold it into D04_WINDOW_WEBVIEW_GRANTS).
+  test('REQ-34.1-02 CLOSURE: no core:window:*/core:webview:* string permission exists outside the named thirteen plus create-webview-window', () => {
+    const conf = loadCapabilitiesDefault()
+    const perms = stringPermissions(conf)
+    const windowOrWebviewPerms = perms.filter((p) =>
+      /^core:(window|webview):/.test(p)
+    )
+    const allowed = new Set([
+      ...D04_WINDOW_WEBVIEW_GRANTS,
+      'core:webview:allow-create-webview-window'
+    ])
+    const unexpected = windowOrWebviewPerms.filter((p) => !allowed.has(p))
+    expect(unexpected).toEqual([])
   })
 
   test('REQ-34.1-02: negative gate -- no broader window/webview/tray/notification/dialog grant is present', () => {
@@ -131,7 +165,9 @@ describe('capabilities/default.json D-12 child-window grant (REQ-34.1-08)', () =
   })
 
   test('REQ-34.1-08: src-tauri/capabilities/ contains exactly one .json file', () => {
-    const jsonFiles = readdirSync(CAPABILITIES_DIR).filter((f) => f.endsWith('.json'))
+    const jsonFiles = readdirSync(CAPABILITIES_DIR).filter((f) =>
+      f.endsWith('.json')
+    )
     expect(jsonFiles).toEqual(['default.json'])
   })
 
