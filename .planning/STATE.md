@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.1 gap cycle 1 PLANNED (34.1-09..15, 7 plans / 4 waves) -- closes the four `status: failed` findings from the 2026-07-25 + 2026-08-13 live UAT sessions: G1 WindowControls `grid-area: content` regression from 34.10's grid rewrite, G2 frameless-toggle copy defect, G3 byte-identical tray icon assets, G4 the D-06 reversal (macOS overlay titlebar + native traffic lights). Plan-checker BLOCKED revision 1 on a false constraint (the plans claimed Tauri v2 has no runtime `setTitleBarStyle`; it does, `@tauri-apps/api` 2.11.1) -- corrected, re-verified PASSED. Next step /gsd-execute-phase 34.1. ALSO STILL OPEN: Phase 34.9 gap cycle 4 PLANNED (34.9-29..33, 5 plans / 4 waves), next step /gsd-execute-phase 34.9.
-last_updated: "2026-08-14T08:50:00.000Z"
-last_activity: 2026-08-14 -- Phase 34.5 gap cycle 7 plan 34.5-52 EXECUTED (F-34.5-G6-16 code fix: login_origin_banner_script/_update_script, wired into humble_login_open macOS arm; U-34.5-05 retargeted, U-34.5-31 opened, 31 rows). F-34.5-G6-16 itself stays open pending live transcription (plan 34.5-59). Next: 34.5-53..60. Earlier: Phase 34.5 gap cycle 7 execution STARTED (plans 34.5-52..60); 34.5-29/30/31 recorded as superseded (never executed, dispositioned by CYCLE5-ROUTING); earlier: Phase 34.1 gap cycle 1 execution STARTED (plans 34.1-09..15); Phase 34.9 gap cycle 4 planning complete (5 plans / 4 waves)
+stopped_at: Phase 34.5 gap cycle 7 plan 34.5-53 EXECUTED (F-34.5-G6-17/F-34.5-G6-20 code fix: redactNileLoginData/redactNileRegisterData redact the OAuth code + PKCE code_verifier out of both nile credential-logging call sites; RED-proven behavioral + source-text gate, 9/9 passing, npm run test:ci 4809->4818). Both findings fixed AND diagnosed on the record; live confirmation deferred to the wave-5 live gate (plan 34.5-59) per this plan's own success criteria -- not a standing hole. Next: 34.5-54..60.
+last_updated: "2026-08-14T09:05:00.000Z"
+last_activity: 2026-08-14 -- Phase 34.5 gap cycle 7 plan 34.5-53 EXECUTED (nile OAuth code / PKCE code_verifier log redaction, F-34.5-G6-17 + F-34.5-G6-20). Next: 34.5-54..60. Earlier: plan 34.5-52 EXECUTED (F-34.5-G6-16 code fix: login_origin_banner_script/_update_script, wired into humble_login_open macOS arm; U-34.5-05 retargeted, U-34.5-31 opened, 31 rows). F-34.5-G6-16 itself stays open pending live transcription (plan 34.5-59). Earlier: Phase 34.5 gap cycle 7 execution STARTED (plans 34.5-52..60); 34.5-29/30/31 recorded as superseded (never executed, dispositioned by CYCLE5-ROUTING); earlier: Phase 34.1 gap cycle 1 execution STARTED (plans 34.1-09..15); Phase 34.9 gap cycle 4 planning complete (5 plans / 4 waves)
 progress:
   # Hand-corrected after `state.begin-phase` corrupted these (recurring gsd-sdk defect).
   # Tool wrote 24/15/324/298/63 and also mangled three prose blocks (orphaned continuation
@@ -18,10 +18,16 @@ progress:
   # plan's own SUMMARY landed). 34.5-53..60 remain not-yet-executed, already counted in
   # total_plans (planning for gap cycle 7 landed all 9 plan files before this session).
   # percent = 294/315 = 93.
+  # 2026-08-14 (plan 34.5-53 execution): `gsd-sdk query state.advance-plan` corrupted this
+  # block YET AGAIN (wrote 24/15/324/302/63, reverted stopped_at/status/last_activity to a
+  # stale 34.9-27 completion banner, and mangled unrelated prose at ~lines 616/664/3400/4842).
+  # Reverted from a pre-call snapshot (`/tmp/STATE.before.md`) and this delta re-applied by
+  # hand instead: +1 completed plan (34.5-53, this plan's own SUMMARY landed).
+  # percent = 295/315 = 93 (floor, matching prior convention).
   total_phases: 23
   completed_phases: 17
   total_plans: 315
-  completed_plans: 294
+  completed_plans: 295
   percent: 93
 ---
 
@@ -4977,7 +4983,19 @@ Recent decisions affecting current work:
 > require reading five SUMMARY.md files, outside this plan's own scope); flagged here for whoever
 > next does a history cleanup pass on this file.
 
-Last session: 2026-08-13T07:12:00.820Z
+> NOTE (34.5-53): `gsd-sdk query state.advance-plan` corrupted the frontmatter again this session
+> (see the `progress:` block comment above) -- hand-corrected there. `state.record-session` was
+> NOT invoked for this session's own completion, per this cluster's own documented history of the
+> same mis-targeted-write pattern; hand-corrected directly instead. The prior `Stopped at:
+> Completed 34.9-27-PLAN.md` entry (a different, concurrently-active phase's session, per this
+> file's own recurring cross-phase interleaving) is demoted below into its own "prior session
+> (34.9-27), preserved as history" block, unchanged in content.
+
+Last session: 2026-08-14T09:05:00.000Z
+Stopped at: Completed 34.5-53-PLAN.md -- redacted the raw OAuth `code` and PKCE `code_verifier` out of both nile credential-logging call sites (F-34.5-G6-17 at `NileUser.login`'s `logDebug`, F-34.5-G6-20 at `NileUser.getLoginData`'s `logInfo`, closing gap-cycle-7 routing item 4) via `redactNileLoginData`/`redactNileRegisterData`, both call sites kept (never deleted). RED-proven behavioral + source-text gate (`nileCredentialRedaction.test.ts`, 9/9 passing) proven to fail against three known-bad inputs (each raw call site individually restored, plus a synthetic third unswept logger call), then restored to GREEN. `npm run test:ci`: 4809 -> 4818 passed, 246 -> 247 suites, no regressions. Both findings fixed AND diagnosed on the record (GameLib-side logger calls, not nile stdout); live confirmation in a real `gamelib.log` is explicitly NOT claimed here -- deferred to the wave-5 live gate (plan 34.5-59) per this plan's own success criteria. See 34.5-53-SUMMARY.md. Next: plan 34.5-54.
+
+--- prior session (34.9-27), preserved as history ---
+
 Stopped at: Completed 34.9-27-PLAN.md -- closed C2-04 with a proven-red package.json wiring pin (all four mutations scored correctly on real hardware), ledgered C2-05 and C2-07 as dated deferrals per D-C3-05 (items 18/19). Does not close C2-01 / VERIFICATION.md truth 8.
 
 --- prior session (34.9-21), preserved as history (reconstructed 34.9-27 -- see NOTE above) ---

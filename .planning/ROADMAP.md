@@ -2077,7 +2077,7 @@ all stay `[ ]` per D-08's no-partial-pass rule — item 3's own PASS does not ti
 > **What this dependency does and does not block.** The seam itself is BUILT and unit-proven — 8 of 9 of 34.4.1's plans are executed, the runner-agnostic child-window mechanism is deliberately Humble-agnostic, and 34.4.1-09 already **wired** all four OAuth runners via the new `oauthCaptureLogin` channel with a declared-blocked UI surface naming each runner's unported channel. So 34.5 may be **discussed and planned now**. What is still outstanding is 34.4.1's *live proof* (plan 08's blocking 4-item gate, plus item 3(b) already recorded BLOCKED-UNOBSERVABLE and headed for a gap cycle). 34.5 must not **ship** a real OAuth credential path on a seam whose live gate never ran.
 >
 > **Inherited obligation, not a note — `T-34.4.1-44b`.** nile and zoom capture via a **host-free param match** inherited from the Electron original. This is harmless in 34.4.1 only because the captured value is handed to a channel that rejects. **34.5 MUST host-anchor both before it mints a real credential.** Also inherited: navigation observation (NOT the cookie read) is the actual seam surface, and 34.4.1 RESEARCH Open Question 1 — in-app `on_navigation` cancellation timing — remains unobserved.
-**Plans:** 49/60 plans executed (48 of 48 pre-cycle-7 in-scope; 9 gap-cycle-7 plans 34.5-52..60 added 2026-08-13, 1 executed — 34.5-52; 3 halted/superseded — see below)
+**Plans:** 50/60 plans executed (48 of 48 pre-cycle-7 in-scope; 9 gap-cycle-7 plans 34.5-52..60 added 2026-08-13, 2 executed — 34.5-52, 34.5-53; 3 halted/superseded — see below)
 44 `*-SUMMARY.md`). **34.5-29/30/31 are HALTED and SUPERSEDED, not pending** — as of 2026-08-13 each
 carries a `type: superseded`, `executed: false` SUMMARY recording its disposition, so it no longer
 reports as outstanding work; their `[ ]` checkboxes stay deliberately unticked and their PLAN files
@@ -2143,7 +2143,19 @@ the ledger row by row. Next step: `/gsd-execute-phase 34.5`.
 `humble_login_open`'s macOS visible arm alongside the mandated cancel strip. `U-34.5-05`
 RE-TARGETED (not retired) to the banner per D-CYCLE7-A; `U-34.5-31` opened for the banner's own
 spoofability residual (31 rows). `F-34.5-G6-16` itself stays OPEN pending live transcription —
-this plan is the code half only, per D-CYCLE7-A's own closing condition. Next: 34.5-53.
+this plan is the code half only, per D-CYCLE7-A's own closing condition.
+
+**2026-08-14 — 34.5-53 EXECUTED** (`F-34.5-G6-17`/`F-34.5-G6-20` code fix, gap-cycle-7 routing
+item 4): `redactNileLoginData`/`redactNileRegisterData` route both nile credential-logging call
+sites (`NileUser.login`'s `logDebug`, `NileUser.getLoginData`'s `logInfo`) through redaction —
+lengths, presence booleans, and (login-data only) the authorize URL's host, never the raw OAuth
+`code`, PKCE `code_verifier`, or full URL. Both lines kept, not deleted. RED-proven behavioral +
+source-text gate (`nileCredentialRedaction.test.ts`, 9/9 passing) against three known-bad inputs
+(each raw call site individually restored, plus a synthetic third unswept logger call). `npm run
+test:ci`: 4809 -> 4818 passed, 246 -> 247 suites, no regressions. Both findings fixed AND
+diagnosed on the record (GameLib-side logger calls, not nile stdout) — live confirmation in a
+real `gamelib.log` is explicitly deferred to the wave-5 live gate (plan 34.5-59), not claimed
+here. Next: 34.5-54.
 
 **PHASE DOES NOT CLOSE.** The blocking 5-item live gate (`34.5-15-PLAN.md`) ran
 2026-08-01 and FAILED (0/5 PASS) — see `34.5-LIVE-GATE.md` and `34.5-15-SUMMARY.md`. Gap cycle
