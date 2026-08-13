@@ -2436,13 +2436,13 @@ methodology findings on the proof contract's own commands opened as `deferred-it
 tripwire prose) are complete. **The phase does not close from gap cycle 2's own edits** —
 `34.9-VERIFICATION.md` remains `status: gaps_found` until the verifier re-scores truth 8 against
 this landed evidence: `/gsd-verify-work 34.9`.
-**Gap cycle 3 planned 2026-08-13** (`/gsd-plan-phase 34.9 --gaps`), 6 plans in 5 waves, 2/6
+**Gap cycle 3 planned 2026-08-13** (`/gsd-plan-phase 34.9 --gaps`), 6 plans in 5 waves, 4/6
 gap-cycle plans complete:
 
 - [x] 34.9-23-PLAN.md — derive the C2-01 defect census by predicate (never a line-range grep), enumerate every caller, and measure the __dirname/require.main deltas against real bundled output — **DONE 2026-08-13**, see `34.9-PIPE-AUDIT.md`, 34.9-23-SUMMARY.md
 - [x] 34.9-24-PLAN.md — close C2-06/C2-08: the top-level framework stub's missing resolved-target check, and the symlink-free-tree test's ignored third return-shape key — **DONE 2026-08-13**, see `34.9-24-SUMMARY.md`
 - [x] 34.9-25-PLAN.md — convert every census instance from the exit-code-swallowing pipe to the `&&` idiom this repo already uses (`verify:updater-key`'s precedent), and correct every comment the conversion makes false
-- [ ] 34.9-26-PLAN.md — prove, both directions against a known-bad input, that plan 34.9-25's conversion actually converts silent success into loud failure, per script and at the `dist:mac` chain level
+- [x] 34.9-26-PLAN.md — prove, both directions against a known-bad input, that plan 34.9-25's conversion actually converts silent success into loud failure, per script and at the `dist:mac` chain level — **DONE 2026-08-13, verdict PASS 36/36** (Direction A 13/13 scripts both shapes, Direction B 8/8 RUN, both chain proofs, restore audit independently confirmed), see `34.9-PIPE-PROOF.md`, `34.9-26-SUMMARY.md`; one finding (F-34.9-26-01, `meta/i18nGateScope.json` catalogue drift) opened as `deferred-items.md` item 17
 - [ ] 34.9-27-PLAN.md — close C2-04 with a wiring-pin regression test for `verify:runner-bundle`'s position in `dist:mac`/`release:mac`; record C2-05/C2-07 as dated, owned deferred entries
 - [ ] 34.9-28-PLAN.md — close gap cycle 3: sweep all eight `34.9-REVIEW-CYCLE2.md` findings by set-difference, confirm each cycle-3 deliverable against the repository, leave `/gsd-verify-work 34.9` as the next step
 
