@@ -63,6 +63,7 @@
         "successWithPackage": ""
     },
     "settings": {
+        "framelessWindowDescription": "Use frameless window",
         "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
         "gamescopeUpscaleMethod": "Upscale Method",
         "gamescopeWindowType": "Window Type",
