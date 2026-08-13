@@ -486,3 +486,134 @@ on whether to drop the positive `toContain` assertions and retain only the negat
 (`not.toContain`) ones.
 
 **OWNER:** whichever plan next edits those doc comments (2026-08-13).
+
+## Code-review finding disposition — gap cycle 2 review (2026-08-13)
+
+`34.9-REVIEW-CYCLE2.md`'s eight findings (C2-01 through C2-08) appeared in **none** of
+`deferred-items.md`, `STATE.md`, `ROADMAP.md` or `REQUIREMENTS.md` at the 2026-08-12 verification
+run (grep for `C2-0`, zero matches in all four) — the identical shape that produced the original
+truth-8 failure, where CR-01 sat in a review document with no ledger entry and no fix and fell
+through the phase's own reconciliation step. Plan 34.9-22's `## Code-review finding disposition
+(2026-08-12)` section (above) is the structural precedent for closing that class of miss at the
+granularity of the defect — one row per finding ID, never per file, because an audit whose unit is
+coarser than the defect's unit cannot find the defect. This section is that precedent's cycle-3
+counterpart, and it is strengthened over it in one respect: every `FIXED` row below is scored from
+repository state OUTSIDE `.planning/` (a source symbol, a `package.json` script string, a named
+green test), never from a plan SUMMARY's or a frontmatter `closes_findings`' claim, because a plan
+SUMMARY is exactly the kind of mutating command's own report this project's standing rule says
+must never be accepted as proof of effect on its own.
+
+### List A — every finding ID in `34.9-REVIEW-CYCLE2.md`
+
+Obtained by `grep -n '^### C2-' 34.9-REVIEW-CYCLE2.md` (raw output, reproduced verbatim):
+
+```
+65:### C2-01: A compile failure in the wired guard is invisible — `dist:mac` proceeds unguarded
+98:### C2-02: `build-steam-bridge` shares C2-01's exact defect and is not named by it
+126:### C2-03: `build-runners-onedir` shares the defect too, but is likely caught by an accidental downstream failure (lower severity, per the proven finding's own note)
+152:### C2-04: No regression test pins `verify:runner-bundle`'s wiring into `dist:mac`/`release:mac`
+184:### C2-05: `--arch=arm64`-only guard coverage is confirmed live in real CI, and `release:mac` amplifies it via auto-publish
+221:### C2-06: `verifyRunnerBundle`'s top-level framework stub check is asymmetric — a dangling-target stub reports nothing
+269:### C2-07: Doc-comment-prose-matching tests couple the suite to documentation wording, not behavior
+285:### C2-08: Minor incomplete assertion — `rejected` bucket not checked in the symlink-free-tree test
+```
+
+List A = `{C2-01, C2-02, C2-03, C2-04, C2-05, C2-06, C2-07, C2-08}` — 8 IDs, confirmed by
+`grep -c '^### C2-' 34.9-REVIEW-CYCLE2.md` = **8** (matches the review's own frontmatter
+`findings: {critical: 1, warning: 5, info: 2, total: 8}`).
+
+### List B — every finding ID with a landed fix, confirmed against the repository
+
+Stage one (the claim) is each ID's `closes_findings` frontmatter across `34.9-23-PLAN.md` through
+`34.9-27-PLAN.md`, cross-read against the corresponding Summary's own body. Stage two (the
+confirmation) is repository state outside `.planning/`, checked live at execution time. An ID
+enters list B only when stage two passes.
+
+- **C2-01, C2-02, C2-03** — claimed by `34.9-25-PLAN.md`'s frontmatter (`closes_findings: [C2-01,
+  C2-02, C2-03]`); `34.9-25-SUMMARY.md` records the conversion as landed and defers the *proof*
+  that it works to 34.9-26 (no disagreement — the SUMMARY never claims the fix was itself proven,
+  only converted). **Confirmation (repository, this execution):** the census predicate run live
+  against `package.json`'s `scripts` object — every value containing `esbuild` cross-checked
+  against a pipe-into-node pattern (`\|\s*node\b`) — returns **0** surviving matches out of the 13
+  scripts `34.9-PIPE-AUDIT.md` originally censused. `verify:runner-bundle`, `clean:dist-mac`,
+  `build-steam-bridge` and `build-runners-onedir` (the four scripts C2-01/02/03 name) each read,
+  verbatim, as:
+  - `verify:runner-bundle`: `esbuild --bundle --platform=node --target=node21 --outfile=node_modules/.cache/verify-runner-bundle.cjs meta/verifyRunnerBundle.ts && node node_modules/.cache/verify-runner-bundle.cjs`
+  - `clean:dist-mac`: `esbuild --bundle --platform=node --target=node21 --outfile=node_modules/.cache/clean-dist-mac.cjs meta/cleanDistMac.ts && node node_modules/.cache/clean-dist-mac.cjs`
+  - `build-steam-bridge`: `esbuild --bundle --platform=node --target=node21 --outfile=node_modules/.cache/build-steam-bridge.cjs meta/buildSteamBridgeShims.ts && node node_modules/.cache/build-steam-bridge.cjs`
+  - `build-runners-onedir`: `esbuild --bundle --platform=node --target=node21 --outfile=node_modules/.cache/build-runners-onedir.cjs meta/buildRunnersOnedir.ts && node node_modules/.cache/build-runners-onedir.cjs`
+
+  All four use the `--outfile=... && node ...` idiom, not the `| node`/`| node -` pipe. The FIX
+  is additionally proven, not merely converted, by `34.9-26-PLAN.md`'s `34.9-PIPE-PROOF.md`
+  (verdict **PASS, 36/36 directions**: 13/13 census scripts non-zero exit in both deliberately-broken
+  shapes for Direction A, 8/8 safely-runnable scripts green for Direction B, both `dist:mac`
+  chain-abort proofs PASS, restore audit independently recomputed and matched) — no disagreement
+  between `34.9-26-SUMMARY.md`'s claim and the proof document it cites.
+- **C2-04** — claimed by `34.9-27-PLAN.md`'s frontmatter (`closes_findings: [C2-04, C2-05, C2-07]`);
+  `34.9-27-SUMMARY.md` states the wiring pin was added to `meta/__tests__/verifyRunnerBundle.test.ts`
+  and proven red against all four mutations (M1/M2 presence, M3/M4 ordering) before `package.json`
+  was restored byte-identical — no disagreement. **Confirmation (repository, this execution):**
+  `meta/__tests__/verifyRunnerBundle.test.ts` contains a `describe('package.json wiring pin
+  (C2-04)', ...)` block (module-scope `PACKAGE_JSON_PATH` const, local `loadScripts()` helper) with
+  two tests asserting presence and `indexOf`-ordering of `verify:runner-bundle` before
+  `electron-builder` in both `dist:mac` and `release:mac`; `pnpm test:ci` (this execution) reports
+  the file's suite green as part of a full 243/243-suite, 4765/4766-test run (1 pre-existing skip).
+- **C2-06** — claimed by `34.9-24-PLAN.md`'s frontmatter (`closes_findings: [C2-06, C2-08]`);
+  `34.9-24-SUMMARY.md` states the top-level-stub asymmetry was closed and proven in both directions
+  (fires / does not over-fire) — no disagreement. **Confirmation (repository, this execution):**
+  `meta/verifyRunnerBundle.ts:108` declares `resolvedTopLevelTargetExists: boolean` on the
+  framework-inspection type; `:196-219`'s `inspectFramework` computes it (mirroring the existing
+  `Versions/Current` resolution check); `:492`'s `summarise()` consumes it in an `else if
+  (!fw.resolvedTopLevelTargetExists)` failure branch. `pnpm test:ci` (this execution) reports the
+  file's suite green in the same full run.
+- **C2-08** — claimed by the same `34.9-24-PLAN.md` frontmatter entry; same Summary, no
+  disagreement. **Confirmation (repository, this execution):**
+  `meta/__tests__/preserveRunnerSymlinks.test.ts:270`, inside `'restoreSymlinks over a
+  symlink-free source tree leaves the destination byte-for-byte unchanged'`, now asserts
+  `expect(result.rejected).toEqual([])` alongside the pre-existing `restored`/`skipped`
+  assertions. `pnpm test:ci` (this execution) reports the file's suite green in the same full run.
+- **C2-05, C2-07** — expected DEFERRED per locked user decision D-C3-05; not scored against list B
+  (no code fix claimed by any plan's frontmatter). Scored instead by the DEFERRED arm below, against
+  the structured ledger sections `## Code-review finding disposition, gap cycle 2 (2026-08-13)`
+  already added items 18 and 19 for.
+
+List B = `{C2-01 → 34.9-25/26, C2-02 → 34.9-25/26, C2-03 → 34.9-25/26, C2-04 → 34.9-27, C2-06 →
+34.9-24, C2-08 → 34.9-24}` — 6 IDs mapped to a confirmed landed fix, every confirmation drawn from
+`meta/`, `package.json` or a live `pnpm test:ci` run, never from `.planning/` or a SUMMARY's own
+words.
+
+### A minus B
+
+`{C2-05, C2-07}` — exactly the two IDs plan 34.9-27 already ledgered as dated, owned deferrals per
+locked decision D-C3-05 (items 18 and 19, added by that plan, unchanged by this one). A minus B is
+therefore empty apart from the two deferrals already owned by 34.9-27; no new ledger item is opened
+by this section.
+
+### The table
+
+| Finding | Severity | Disposition | Evidence | Independent confirmation (non-.planning) |
+|---|---|---|---|---|
+| C2-01 | Critical | FIXED | 34.9-25 (pipe-to-`&&` conversion) + 34.9-26 (`34.9-PIPE-PROOF.md`, verdict PASS 36/36) | package.json `verify:runner-bundle`: `esbuild ... --outfile=node_modules/.cache/verify-runner-bundle.cjs meta/verifyRunnerBundle.ts && node node_modules/.cache/verify-runner-bundle.cjs`; live census of package.json scripts matching esbuild-piped-into-node = 0/13 |
+| C2-02 | Warning | FIXED | 34.9-25 (conversion) + 34.9-26 (proof) | package.json `build-steam-bridge`: `esbuild ... --outfile=node_modules/.cache/build-steam-bridge.cjs meta/buildSteamBridgeShims.ts && node node_modules/.cache/build-steam-bridge.cjs` |
+| C2-03 | Warning | FIXED | 34.9-25 (conversion) + 34.9-26 (proof) | package.json `build-runners-onedir`: `esbuild ... --outfile=node_modules/.cache/build-runners-onedir.cjs meta/buildRunnersOnedir.ts && node node_modules/.cache/build-runners-onedir.cjs` |
+| C2-04 | Warning | FIXED | 34.9-27 (package.json wiring pin) | meta/__tests__/verifyRunnerBundle.test.ts `package.json wiring pin (C2-04)` describe block asserts presence + ordering of verify:runner-bundle before electron-builder in dist:mac and release:mac; pnpm test:ci green |
+| C2-05 | Warning | DEFERRED | item 18 below | `### 18. C2-05 — the arm64-only guard is live and active in real CI, and gates an auto-publishing release` |
+| C2-06 | Warning | FIXED | 34.9-24 (`resolvedTopLevelTargetExists`) | meta/verifyRunnerBundle.ts:108,196-219,492 — resolvedTopLevelTargetExists computed in inspectFramework, consumed by a failure branch in summarise; pnpm test:ci green |
+| C2-07 | Info | DEFERRED | item 19 below | `### 19. C2-07 — the doc-comment accuracy pins couple CI to documentation wording, not just behaviour` |
+| C2-08 | Info | FIXED | 34.9-24 (`result.rejected` assertion) | meta/__tests__/preserveRunnerSymlinks.test.ts:270 — expect(result.rejected).toEqual([]) added to the symlink-free-tree test; pnpm test:ci green |
+
+**Count:** 8 IDs in list A. 6 mapped to a confirmed landed fix. 2 mapped to an already-existing
+ledger item (items 18/19, opened by plan 34.9-27). Unmapped count: **0**.
+
+### Truth 8 missing-list delivery state (2026-08-13)
+
+Three items, quoted verbatim from `34.9-VERIFICATION.md` lines 79-82 (the `truths[7].missing` list
+that failed the 2026-08-12 re-verification run).
+
+| Missing item (verbatim) | Delivered? | Evidence observed on disk | Partial or deferred outcome recorded by the delivering plan |
+|---|---|---|---|
+| "Either fix the pipe idiom (temp-file the esbuild output and check its own exit code, `set -o pipefail` where supported, or invoke via a bundler/runner that surfaces a compile failure as a non-zero top-level exit ...) across all four affected scripts (verify:runner-bundle, clean:dist-mac, build-steam-bridge, build-runners-onedir), or an explicit, dated risk-acceptance entry in deferred-items.md if the team chooses not to fix it now" | YES | All 13 census scripts (not just the four named) converted from `\| node`/`\| node -` to `--outfile=... && node ...` (34.9-25); proven both directions on real arm64 hardware — Direction A 13/13 scripts, both deliberately-broken shapes (S1 parse error, S2 unresolvable import), non-zero exit, no false `Cannot find module`; Direction B 8/8 safely-runnable scripts green, cache present, `[OK]`/success literal observed (`34.9-PIPE-PROOF.md`, verdict PASS 36/36) | 34.9-26's own run cross-checked at SCRIPT granularity against `34.9-PIPE-AUDIT.md`'s 13-script census: all 13 appear in the Direction A table; the 5 scripts NOT RUN in Direction B (`download-helper-binaries`, `machine-fill-gamelib`, `build-crossover-index`, `build-runners-onedir`, `build:sidecar-sea`) each carry a named network/destructive reason in `34.9-PIPE-PROOF.md` §5 — no censused script is silently absorbed into a per-file "COVERED" verdict. One unrelated data-drift finding (F-34.9-26-01, `meta/i18nGateScope.json` stale snapshot) opened as item 17; it does not implicate the conversion under test. |
+| "A wiring-pin test (C2-04) mirroring cleanDistMac.test.ts's existing package.json assertions, so a future refactor of dist:mac/release:mac cannot silently drop verify:runner-bundle without a red test — this closes a narrower, adjacent gap (is the step present and ordered correctly), not C2-01 itself" | YES | `meta/__tests__/verifyRunnerBundle.test.ts`'s `package.json wiring pin (C2-04)` describe block (34.9-27), proven red against all four deliberate mutations on real hardware (M1/M2 deletion → red on presence; M3/M4 relocation → red on ordering, presence still passing), `package.json` restored byte-identical (`shasum -a 256` matched after every restore) | None — 34.9-27's own Summary states this plan does NOT close C2-01 itself; the pin is explicitly the narrower "present and ordered" guarantee, distinct from the pipe-idiom fix (34.9-25/26) |
+| "Ledger entries for C2-01 through C2-08 in deferred-items.md (or a landed fix), so this finding does not repeat CR-01's own history of falling through a reconciliation step" | YES | This section: all eight IDs mapped, six to a confirmed landed fix, two (C2-05, C2-07) to dated, owned ledger items (18, 19, opened by 34.9-27 per locked decision D-C3-05). Computed unmapped count 0, agreeing with the stated count. | None — this section is the delivery of this exact missing-list item |
+
+**This plan does not score truth 8; that judgment belongs to `/gsd-verify-work 34.9`.**
