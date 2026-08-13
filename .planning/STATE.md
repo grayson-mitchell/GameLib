@@ -4,8 +4,8 @@ milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
 stopped_at: Phase 34.1 gap cycle 1 PLANNED (34.1-09..15, 7 plans / 4 waves) -- closes the four `status: failed` findings from the 2026-07-25 + 2026-08-13 live UAT sessions: G1 WindowControls `grid-area: content` regression from 34.10's grid rewrite, G2 frameless-toggle copy defect, G3 byte-identical tray icon assets, G4 the D-06 reversal (macOS overlay titlebar + native traffic lights). Plan-checker BLOCKED revision 1 on a false constraint (the plans claimed Tauri v2 has no runtime `setTitleBarStyle`; it does, `@tauri-apps/api` 2.11.1) -- corrected, re-verified PASSED. Next step /gsd-execute-phase 34.1. ALSO STILL OPEN: Phase 34.9 gap cycle 4 PLANNED (34.9-29..33, 5 plans / 4 waves), next step /gsd-execute-phase 34.9.
-last_updated: "2026-08-13T09:14:48.120Z"
-last_activity: 2026-08-13 -- Phase 34.1 gap cycle 1 planning complete (7 plans / 4 waves); earlier: Phase 34.9 gap cycle 4 planning complete (5 plans / 4 waves); quick task 260813-ssg (doc-only)
+last_updated: "2026-08-13T09:30:00.000Z"
+last_activity: 2026-08-13 -- Phase 34.1 gap cycle 1 execution STARTED (plans 34.1-09..15); earlier: Phase 34.1 gap cycle 1 planning complete (7 plans / 4 waves); Phase 34.9 gap cycle 4 planning complete (5 plans / 4 waves)
 progress:
   # Hand-corrected after `state.planned-phase` corrupted these (recurring gsd-sdk defect).
   # Tool wrote 24/15/315/291/63. Only legitimate delta this session is +7 plans (308 -> 315);
@@ -24,7 +24,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.9 — macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co
+**Current focus:** Phase 34.1 — tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome (gap cycle 1, executing 34.1-09..15)
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
