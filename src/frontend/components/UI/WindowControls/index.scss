@@ -1,11 +1,19 @@
+// Gap G1 / UAT test 1 (34.1-09): this rule's grid-area is `navbar`, NOT
+// `content`. `content` was correct only under the RETIRED sidebar grid,
+// where `content` was the top row and this element's `align-self: start`
+// landed it at the window's top edge. Phase 34.10 (`App.css:27-31`) inserted
+// a `navbar` row ABOVE `content` and nothing errored, because `content`
+// still resolved to a real area -- it just meant a row below the titlebar
+// instead of the titlebar row itself, silently pushing these buttons below
+// the navbar. `windowControlsPlacement.test.ts` now derives this row from
+// `.App`'s own `grid-template-areas` at test time, so the same silent
+// displacement cannot recur without turning that gate RED.
 .windowControls {
-  grid-area: content;
+  grid-area: navbar;
   justify-self: right;
   align-self: start;
   z-index: 100;
   -webkit-app-region: no-drag;
-  position: sticky;
-  top: 0px;
 
   button {
     display: inline-flex;
