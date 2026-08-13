@@ -44,7 +44,14 @@ const CAPABILITIES_PATH = join(
 // Phase 34.4.2 Plan 03, Test 8 (REQ-34.4.2-10): reads Cargo.toml directly rather than through
 // `loadMainRsCode` -- this is a config-shape assertion (the `objc2-web-kit` feature array),
 // not a main.rs source assertion, mirroring `cargoFeatures.test.ts`'s own convention.
-const CARGO_TOML_PATH = join(__dirname, '..', '..', '..', 'src-tauri', 'Cargo.toml')
+const CARGO_TOML_PATH = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'src-tauri',
+  'Cargo.toml'
+)
 
 /**
  * Reads main.rs (or `source` if provided — the self-tests below drive this SAME code path
@@ -186,6 +193,77 @@ describe('REQ-34.1-07 main.rs tray construction (Phase 34.1 Plan 06, D-11)', () 
     expect(endIdx).toBeGreaterThan(startIdx)
     const traySetupBlock = code.slice(startIdx, endIdx)
     expect(traySetupBlock).not.toMatch(/unwrap\(\)|expect\(/)
+  })
+})
+
+describe('REQ-34.1-07 macOS tray template wiring (gap G3 redirect, 34.1-13)', () => {
+  test('embeds the macOS template asset via include_bytes!, cfg-gated to macOS only', () => {
+    const code = loadMainRsCode()
+    expect(code).toContain(
+      'include_bytes!("../../public/icon-tray-template.png")'
+    )
+    // The embed must be reachable only under a macOS cfg gate, not unconditional --
+    // Windows/Linux builds must not try to embed a file that only exists for the template
+    // path's own generator to have produced.
+    const templateLineIdx = code.indexOf('TRAY_ICON_TEMPLATE')
+    expect(templateLineIdx).toBeGreaterThan(-1)
+    const precedingCfg = code.lastIndexOf(
+      '#[cfg(target_os = "macos")]',
+      templateLineIdx
+    )
+    expect(precedingCfg).toBeGreaterThan(-1)
+    // No unrelated code between the cfg attribute and the const it gates.
+    expect(code.slice(precedingCfg, templateLineIdx)).not.toContain(';')
+  })
+
+  test('the tray builder marks the icon as a template via icon_as_template', () => {
+    const code = loadMainRsCode()
+    expect(code).toMatch(/\.icon_as_template\(tray_is_template\(\)\)/)
+  })
+
+  test('tray_set_icon uses the atomic set_icon_with_as_template setter, not a bare set_icon', () => {
+    const code = loadMainRsCode()
+    // Same arm-boundary technique as the "ONLY new dispatch arm" test below: outer match
+    // arms are indented exactly 8 spaces, so the next such line after tray_set_icon's own
+    // marks the end of its arm body.
+    const armStartPattern = /^ {8}"[a-z_]+"\s*=>/gm
+    const armIdx = code.indexOf('"tray_set_icon" =>')
+    expect(armIdx).toBeGreaterThan(-1)
+    armStartPattern.lastIndex = armIdx + 1
+    const nextArmMatch = armStartPattern.exec(code)
+    expect(nextArmMatch).not.toBeNull()
+    const armBody = code.slice(
+      armIdx,
+      nextArmMatch ? nextArmMatch.index : undefined
+    )
+    expect(armBody).toMatch(
+      /set_icon_with_as_template\(Some\(tray_image\(dark\)\), tray_is_template\(\)\)/
+    )
+    expect(armBody).not.toMatch(/\.set_icon\(Some\(tray_image/)
+  })
+
+  test('tray_is_template reduces to cfg!(target_os = "macos") -- no env-var or runtime escape hatch', () => {
+    const code = loadMainRsCode()
+    const fnIdx = code.indexOf('fn tray_is_template()')
+    expect(fnIdx).toBeGreaterThan(-1)
+    const bodyEnd = code.indexOf('\n}', fnIdx)
+    const body = code.slice(fnIdx, bodyEnd)
+    expect(body).toContain('cfg!(target_os = "macos")')
+    expect(body).not.toMatch(/env::var|std::env/)
+  })
+
+  test('tray_image falls through to the colour dark/light selection if the macOS template fails to decode (T-34.1-22)', () => {
+    const code = loadMainRsCode()
+    const fnIdx = code.indexOf('fn tray_image(dark: bool)')
+    expect(fnIdx).toBeGreaterThan(-1)
+    const bodyEnd = code.indexOf('\n}', fnIdx)
+    const body = code.slice(fnIdx, bodyEnd)
+    // The macOS block must not be the only path -- TRAY_ICON_DARK/LIGHT selection must still
+    // appear textually after it as the fallback for both platforms.
+    const macBlockIdx = body.indexOf('TRAY_ICON_TEMPLATE')
+    const fallbackIdx = body.indexOf('TRAY_ICON_DARK } else { TRAY_ICON_LIGHT')
+    expect(macBlockIdx).toBeGreaterThan(-1)
+    expect(fallbackIdx).toBeGreaterThan(macBlockIdx)
   })
 })
 
@@ -438,7 +516,7 @@ describe('REQ-34.4.1-GAP-07 both humble cookie-read arms keep their proven-corre
     expect(armBody).not.toContain('cookie_domain_matches(d, Some(domain))')
   })
 
-  test('humble_login_cookies_for_domain (the census arm) calls cookie_domain_matches with the cookie\'s OWN domain FIRST', () => {
+  test("humble_login_cookies_for_domain (the census arm) calls cookie_domain_matches with the cookie's OWN domain FIRST", () => {
     const code = loadMainRsCode()
     const armBody = extractArmBody(
       code,
@@ -528,7 +606,7 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
     return code.slice(markerIdx, i + 1)
   }
 
-  test('on_document_title_changed is present in source -- static proof only, NOT proof the OS title bar tracks Humble\'s document title (that is plan 29 item 1)', () => {
+  test("on_document_title_changed is present in source -- static proof only, NOT proof the OS title bar tracks Humble's document title (that is plan 29 item 1)", () => {
     const code = loadMainRsCode()
     expect(code).toContain('on_document_title_changed')
   })
@@ -538,7 +616,7 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
     expect(code).not.toContain('always_on_top')
   })
 
-  test('no WebviewWindowBuilder chain in this file hard-codes .title( -- WR-07\'s negative half, unchanged; proves absence only, never the presence plan 29 item 1 must observe', () => {
+  test("no WebviewWindowBuilder chain in this file hard-codes .title( -- WR-07's negative half, unchanged; proves absence only, never the presence plan 29 item 1 must observe", () => {
     const code = loadMainRsCode()
     // All three WebviewWindowBuilder call sites in this file (humble_login_open,
     // humble_reveal_post, humble_login_clear_storage) -- each chain runs from its
@@ -556,7 +634,7 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
     }
   })
 
-  test('.inner_size(/.center()/.focused(true)/on_document_title_changed appear ONLY inside humble_login_open\'s if-visible block -- the adjacent-already-present gating Plan 18 introduced and nothing had ever tested; proves source placement only, never that the operator actually saw the window raised (plan 29 item 1)', () => {
+  test(".inner_size(/.center()/.focused(true)/on_document_title_changed appear ONLY inside humble_login_open's if-visible block -- the adjacent-already-present gating Plan 18 introduced and nothing had ever tested; proves source placement only, never that the operator actually saw the window raised (plan 29 item 1)", () => {
     const code = loadMainRsCode()
     const armStart = code.indexOf('"humble_login_open" => {')
     expect(armStart).toBeGreaterThan(-1)
@@ -590,7 +668,10 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
     const code = loadMainRsCode()
     const revealStart = code.indexOf('"humble_reveal_post" => {')
     expect(revealStart).toBeGreaterThan(-1)
-    const revealEnd = code.indexOf('"humble_login_clear_storage" => {', revealStart)
+    const revealEnd = code.indexOf(
+      '"humble_login_clear_storage" => {',
+      revealStart
+    )
     expect(revealEnd).toBeGreaterThan(revealStart)
     const clearStorageEnd = code.indexOf(
       '"humble_login_cookies_for_domain" => {',
@@ -608,7 +689,9 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
       expect(hiddenWindowsBody).not.toContain(token)
     }
     // Both hidden builders stay explicitly non-visible.
-    expect((hiddenWindowsBody.match(/\.visible\(false\)/g) ?? []).length).toBe(2)
+    expect((hiddenWindowsBody.match(/\.visible\(false\)/g) ?? []).length).toBe(
+      2
+    )
   })
 })
 
@@ -628,7 +711,7 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
     return code.slice(armStart, armEnd)
   }
 
-  test('POSITIVE: the title-refresh call (set_title) lives inside the arm\'s .on_page_load( hook body', () => {
+  test("POSITIVE: the title-refresh call (set_title) lives inside the arm's .on_page_load( hook body", () => {
     const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
     const pageLoadStart = armBody.indexOf('.on_page_load(')
     expect(pageLoadStart).toBeGreaterThan(-1)
@@ -824,7 +907,7 @@ describe('Phase 34.4.2 Plan 01 — login-window handle resolvers and the Epic sc
   // symbol a FUTURE plan appends to the array is automatically checked against BOTH pristine
   // regions with no further test edits -- the guard's coverage grows by mechanism, not by a
   // planner remembering to duplicate a hardcoded check for each new region.
-  test('Test 3 (SCOPE GUARD, REQ-34.4.2-10, LOCKED USER SCOPE DECISION): neither open_pristine_epic_login_window NOR EpicPristineNavDelegate references any of this phase\'s new symbols', () => {
+  test("Test 3 (SCOPE GUARD, REQ-34.4.2-10, LOCKED USER SCOPE DECISION): neither open_pristine_epic_login_window NOR EpicPristineNavDelegate references any of this phase's new symbols", () => {
     const code = loadMainRsCode()
     const pristineBody = extractPristineLoginFnBody(code)
     const delegateBody = extractEpicPristineNavDelegateBody(code)
@@ -908,11 +991,13 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
     const code = loadMainRsCode()
     // Negative lookbehind excludes the `fn present_login_window_as_sheet(` definition
     // itself, which also ends in a trailing `(` -- this counts CALL sites only.
-    const fileCallSites = code.match(/(?<!fn )present_login_window_as_sheet\(/g) ?? []
+    const fileCallSites =
+      code.match(/(?<!fn )present_login_window_as_sheet\(/g) ?? []
     expect(fileCallSites.length).toBe(1)
 
     const armBody = extractHumbleLoginOpenArmBody(code)
-    const armCallSites = armBody.match(/(?<!fn )present_login_window_as_sheet\(/g) ?? []
+    const armCallSites =
+      armBody.match(/(?<!fn )present_login_window_as_sheet\(/g) ?? []
     expect(armCallSites.length).toBe(1)
   })
 
@@ -931,10 +1016,7 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
 
     const cancelStart = code.indexOf('fn request_login_sheet_cancel(')
     expect(cancelStart).toBeGreaterThan(-1)
-    const cancelEnd = code.indexOf(
-      '#[cfg(target_os = "macos")]',
-      cancelStart
-    )
+    const cancelEnd = code.indexOf('#[cfg(target_os = "macos")]', cancelStart)
     expect(cancelEnd).toBeGreaterThan(cancelStart)
     expect(code.slice(cancelStart, cancelEnd)).toContain(
       'dismiss_login_window_sheet('
@@ -1057,7 +1139,7 @@ describe('Phase 34.4.2 Plan 13 — the in-field autofill mechanism is DELETED (o
     expect(code).not.toContain('_dismissDigitalCredentialsPicker')
   })
 
-  test('Test 4 (the surviving sentinel is alone): the humble_login_open arm\'s .on_navigation( closure contains is_login_cancel_request and contains no parse_autofill_request', () => {
+  test("Test 4 (the surviving sentinel is alone): the humble_login_open arm's .on_navigation( closure contains is_login_cancel_request and contains no parse_autofill_request", () => {
     const code = loadMainRsCode()
     const armStart = code.indexOf('"humble_login_open" => {')
     expect(armStart).toBeGreaterThan(-1)
@@ -1073,12 +1155,13 @@ describe('Phase 34.4.2 Plan 13 — the in-field autofill mechanism is DELETED (o
     expect(onNavBody).not.toContain('parse_autofill_request')
   })
 
-  test('Test 5 (the strip survived the deletion): login_cancel_strip_script( is still called exactly once in the comment-stripped PRODUCTION source, inside the humble_login_open arm\'s if-visible block', () => {
+  test("Test 5 (the strip survived the deletion): login_cancel_strip_script( is still called exactly once in the comment-stripped PRODUCTION source, inside the humble_login_open arm's if-visible block", () => {
     const testModStart_code = loadMainRsCode()
     const testModStart = testModStart_code.indexOf('mod tests {')
     expect(testModStart).toBeGreaterThan(-1)
     const code = testModStart_code.slice(0, testModStart)
-    const fileCallSites = code.match(/(?<!fn )login_cancel_strip_script\(/g) ?? []
+    const fileCallSites =
+      code.match(/(?<!fn )login_cancel_strip_script\(/g) ?? []
     expect(fileCallSites.length).toBe(1)
 
     const armStart = code.indexOf('"humble_login_open" => {')
@@ -1200,7 +1283,7 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
   // ordering assertion over a deleted sibling is meaningless once that sibling is gone; the
   // property worth keeping is narrower and stronger: this closure parses exactly one
   // sentinel, and it is the cancel one.
-  test('Test 2: inside the humble_login_open arm\'s .on_navigation( closure, is_login_cancel_request appears and parse_autofill_request does not', () => {
+  test("Test 2: inside the humble_login_open arm's .on_navigation( closure, is_login_cancel_request appears and parse_autofill_request does not", () => {
     const code = loadMainRsCode()
     const armBody = extractHumbleLoginOpenArmBody(code)
     const onNavStart = armBody.indexOf('.on_navigation(')
@@ -1233,9 +1316,11 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
     expect(dismissIdx).toBeLessThan(closeIdx)
   })
 
-  test('Test 4 (NEGATIVE, T-34.4.2-35, privacy is a hard constraint): the Esc monitor\'s sliced handler body references neither characters nor charactersIgnoringModifiers', () => {
+  test("Test 4 (NEGATIVE, T-34.4.2-35, privacy is a hard constraint): the Esc monitor's sliced handler body references neither characters nor charactersIgnoringModifiers", () => {
     const code = loadMainRsCode()
-    const start = code.indexOf('let esc_monitor_handler = block2::RcBlock::new(')
+    const start = code.indexOf(
+      'let esc_monitor_handler = block2::RcBlock::new('
+    )
     expect(start).toBeGreaterThan(-1)
     const end = code.indexOf('let esc_monitor_token = unsafe {', start)
     expect(end).toBeGreaterThan(start)
@@ -1248,10 +1333,7 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
     const code = loadMainRsCode()
     const start = code.indexOf('fn login_cancel_strip_script(')
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf(
-      'fn request_login_sheet_cancel(',
-      start
-    )
+    const end = code.indexOf('fn request_login_sheet_cancel(', start)
     expect(end).toBeGreaterThan(start)
     const body = code.slice(start, end)
     expect(body).not.toContain('keydown')
@@ -1263,17 +1345,14 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
     const code = loadMainRsCode()
     const start = code.indexOf('fn login_cancel_strip_script(')
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf(
-      'fn request_login_sheet_cancel(',
-      start
-    )
+    const end = code.indexOf('fn request_login_sheet_cancel(', start)
     expect(end).toBeGreaterThan(start)
     const body = code.slice(start, end)
     expect(body).not.toContain('.value')
     expect(body).not.toContain('password')
   })
 
-  test('Test 7 (REGRESSION GUARD): addLocalMonitorForEventsMatchingMask_handler appears exactly twice in the whole comment-stripped source -- the pristine Epic arm\'s pre-existing monitor plus this plan\'s new Esc monitor; a count other than 2 means the byte-frozen pristine region was edited or refactored', () => {
+  test("Test 7 (REGRESSION GUARD): addLocalMonitorForEventsMatchingMask_handler appears exactly twice in the whole comment-stripped source -- the pristine Epic arm's pre-existing monitor plus this plan's new Esc monitor; a count other than 2 means the byte-frozen pristine region was edited or refactored", () => {
     const code = loadMainRsCode()
     const matches =
       code.match(/addLocalMonitorForEventsMatchingMask_handler/g) ?? []
@@ -1326,7 +1405,7 @@ describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes
     expect(callMatches.length).toBe(0)
   })
 
-  test('Test 2 (WR-01, ORDERING): dismiss_login_window_sheet\'s sliced body calls register_presented_login_sheet( at least twice, each at an index strictly greater than list.retain( -- removal still happens first, re-registration only after a failed hop', () => {
+  test("Test 2 (WR-01, ORDERING): dismiss_login_window_sheet's sliced body calls register_presented_login_sheet( at least twice, each at an index strictly greater than list.retain( -- removal still happens first, re-registration only after a failed hop", () => {
     const code = loadMainRsCode()
     const start = code.indexOf('fn dismiss_login_window_sheet(')
     expect(start).toBeGreaterThan(-1)
@@ -1337,7 +1416,9 @@ describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes
     const retainIdx = body.indexOf('list.retain(')
     expect(retainIdx).toBeGreaterThan(-1)
 
-    const registerMatches = [...body.matchAll(/register_presented_login_sheet\(/g)]
+    const registerMatches = [
+      ...body.matchAll(/register_presented_login_sheet\(/g)
+    ]
     expect(registerMatches.length).toBeGreaterThanOrEqual(2)
     for (const match of registerMatches) {
       expect(match.index as number).toBeGreaterThan(retainIdx)
@@ -1468,7 +1549,8 @@ describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows 
   // (`window.show()`/`window.set_focus()`), and `WindowEvent::Destroyed`.
   test('Test 3 (CLEAR-ON-EVERY-PATH): clear_pending_visible_login_window( is CALLED exactly three times in comment-stripped production source', () => {
     const code = loadMainRsCode()
-    const callSites = code.match(/(?<!fn )clear_pending_visible_login_window\(/g) ?? []
+    const callSites =
+      code.match(/(?<!fn )clear_pending_visible_login_window\(/g) ?? []
     expect(callSites.length).toBe(3)
   })
 

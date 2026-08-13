@@ -1,39 +1,73 @@
 /**
- * Phase 34.1 gap closure (G3 / D-11): dependency-free PNG decode, luminance
- * measurement and alpha-preserving RGB inversion for the tray icon dark/light
- * assets, plus a CLI that regenerates `public/icon-light*.png`.
+ * Phase 34.1 gap closure (G3 / D-11): dependency-free PNG decode/encode and a
+ * macOS AppKit **template image** generator for the tray icon.
  *
  * `public/icon-dark.png` and `public/icon-light.png` (and their `@2x`/`@3x`
- * siblings) are byte-identical as of this writing -- see
+ * siblings) are byte-identical -- see
  * `.planning/todos/pending/tray-dark-light-icons-are-identical.md`. The
  * `changeTrayColor` -> `tray_set_icon` chain runs correctly end to end; it
- * installs a pixel-identical image, so the setting is a visual no-op.
+ * installs a pixel-identical image, so the setting was a visual no-op.
  *
- * DECLARED DEVIATION from the gap's own text: the gap said "regenerate
- * icon-dark". Measurement says otherwise -- `getIcon()`
- * (`src/backend/tray_icon/tray_icon.ts:91`) returns
- * `darkTrayIcon ? iconDark : iconLight`, so `icon-light.png` is the DEFAULT
- * asset (setting off). A tray glyph for a DARK menu bar needs LIGHT ink; the
- * shared artwork measures ~94.6 mean opaque luminance at 1x -- dark ink -- so
- * the artwork already in both slots is the correct `icon-dark` content, and
- * it is `icon-light.png` that holds the wrong variant. This module therefore
- * treats `icon-dark*.png` as the SOURCE of truth and regenerates
- * `icon-light*.png` as its inversion. See 34.1-13-PLAN.md's
- * `<declared_deviation_from_the_gap_text>` for the full reasoning and the
- * Task 2 human checkpoint that can swap this mapping.
+ * REJECTED APPROACH, recorded so it is not re-attempted: this module
+ * originally regenerated `icon-light*.png` as a straight RGB inversion of
+ * `icon-dark*.png` (`invertRgbPreservingAlpha`), gated on a mean-opaque-
+ * luminance delta of >= 40. That gate was non-vacuous and correctly computed
+ * -- and it guarded nothing that mattered. The artwork is a full-colour
+ * magenta gamer-cat over an orange starburst; inverting RGB turns it into a
+ * full-colour GREEN cat over a cyan starburst. At 22x22 in a menu bar that
+ * reads as a coloured smudge in either tone -- green is no more legible
+ * against a light menu bar than magenta was. Luminance delta measures mean
+ * brightness, not menu-bar legibility; a metric can be correctly computed
+ * and still be the wrong property. See commit `49e891f58` (reverted) and
+ * `34.1-13-SUMMARY.md` for the full account.
+ *
+ * CURRENT APPROACH: a macOS AppKit template image
+ * (https://developer.apple.com/documentation/appkit/nsimage/1520017-template).
+ * A template image is a monochrome silhouette carried in the ALPHA channel
+ * (solid black RGB; the shape is where alpha is high) -- macOS renders it
+ * black on a light menu bar and white on a dark one automatically, which is
+ * the actual property "legible against both menu-bar appearances" depends
+ * on, not mean luminance of a full-colour asset.
+ *
+ * The existing artwork's alpha channel contains BOTH the cat and the
+ * starburst behind it, flattened together; naively using the whole alpha
+ * channel as a template silhouette produces an unreadable blob (measured:
+ * see 34.1-13-SUMMARY.md's "flattened silhouette" comparison). The cat and
+ * the starburst are, however, cleanly separable by HUE: a histogram of
+ * `public/icon-dark@3x.png`'s opaque, saturated pixels shows the starburst
+ * confined to 0-50deg (orange/gold) and the cat confined to 200-360deg
+ * (magenta, plus its purple shadow gradient), with an EMPTY gap from
+ * 50-200deg (only 1-3 stray anti-aliased pixels per 10deg bucket in that
+ * range, against hundreds per bucket in the two real clusters). `HUE_SPLIT`
+ * below sits in the middle of that empirically-measured gap. This constant
+ * is tied to THIS specific artwork's colour separation, not a general
+ * algorithm -- if the source art changes, it must be re-derived from a fresh
+ * hue histogram, not assumed to still apply.
+ *
+ * Only `icon-dark.png` (the 1x / 22x22 base raster) is used as the
+ * generator's source and only a single `icon-tray-template.png` (1x) is
+ * produced: `src-tauri/src/main.rs`'s Tauri tray embeds ONLY the 1x
+ * `icon-dark.png`/`icon-light.png` rasters via `include_bytes!` today (no
+ * `@2x`/`@3x` `include_bytes!` calls exist there -- grep confirms it), so
+ * generating unused `@2x`/`@3x` template variants would be dead committed
+ * assets. Electron's `nativeImage.createFromPath` (the OTHER consumer of
+ * these files, `src/backend/tray_icon/tray_icon.ts`) auto-picks-up `@2x`/
+ * `@3x` siblings for retina scaling, but Electron is NOT given the template
+ * treatment by this plan (see the SUMMARY's "darkTrayIcon on macOS" section)
+ * -- it keeps selecting between the unchanged, still byte-identical
+ * `icon-dark.png`/`icon-light.png` pair, out of this redirect's scope.
  *
  * TOOLING CONSTRAINT: no third-party PNG dependency exists in `package.json`
  * (`upng-js`/`pako` are transitive only and must not be imported by
  * committed project code). This module uses only `node:fs`, `node:path` and
  * `node:zlib` -- PNG IDAT is zlib DEFLATE, and every asset here is 8-bit
- * RGBA (colour type 6), non-interlaced, at 22/44/66px, so a minimal decoder/
- * encoder (IHDR parse, IDAT inflate, the five PNG scanline filters, re-filter
- * with type 0, deflate, hand-rolled CRC32 per chunk) is all that is needed
- * for a one-time asset transform.
+ * RGBA (colour type 6), non-interlaced, so a minimal decoder/encoder (IHDR
+ * parse, IDAT inflate, the five PNG scanline filters, re-filter with type 0,
+ * deflate, hand-rolled CRC32 per chunk) is all that is needed.
  *
  * Run with `pnpm gen-tray-icon-variants`. Importing this module (e.g. from
- * `src/backend/__tests__/trayIconAssets.test.ts`, which imports
- * `meanOpaqueLuminance` directly rather than reimplementing PNG decoding)
+ * `src/backend/__tests__/trayIconAssets.test.ts`, which imports the
+ * production functions directly rather than reimplementing PNG decoding)
  * never triggers the CLI -- see the `JEST_WORKER_ID` guard at the bottom,
  * which mirrors `meta/i18nCatalogChurnGuard.ts` and
  * `meta/buildCrossoverIndex.ts`.
@@ -125,7 +159,7 @@ function paethPredictor(a: number, b: number, c: number): number {
  * Decode an 8-bit RGBA (colour type 6), non-interlaced PNG into raw
  * un-filtered pixel bytes. Throws a descriptive error naming the actual
  * bit depth / colour type / interlace value if the input does not match --
- * all six current tray assets are 8-bit RGBA non-interlaced, so a throw here
+ * all current tray assets are 8-bit RGBA non-interlaced, so a throw here
  * means the input's shape changed and must be looked at, not silently
  * coerced.
  */
@@ -221,58 +255,95 @@ export function decodeRgba(path: string): DecodedPng {
 }
 
 // ---------------------------------------------------------------------------
-// Measurement
-// ---------------------------------------------------------------------------
-
-function computeMeanOpaqueLuminance(pixels: Buffer, path: string): number {
-  let sum = 0
-  let count = 0
-  for (let i = 0; i < pixels.length; i += 4) {
-    const alpha = pixels[i + 3]
-    if (alpha > 16) {
-      const r = pixels[i]
-      const g = pixels[i + 1]
-      const b = pixels[i + 2]
-      sum += 0.299 * r + 0.587 * g + 0.114 * b
-      count += 1
-    }
-  }
-  if (count === 0) {
-    throw new Error(
-      `${path}: zero opaque pixels (alpha > 16) -- cannot measure luminance`
-    )
-  }
-  return sum / count
-}
-
-/**
- * Mean of `0.299R + 0.587G + 0.114B` over pixels whose alpha is greater than
- * 16 (i.e. the glyph's opaque ink, ignoring fully/near-transparent
- * background). Throws if there are zero such pixels.
- */
-export function meanOpaqueLuminance(path: string): number {
-  const { pixels } = decodeRgba(path)
-  return computeMeanOpaqueLuminance(pixels, path)
-}
-
-// ---------------------------------------------------------------------------
-// Transform
+// Hue segmentation + template construction
 // ---------------------------------------------------------------------------
 
 /**
- * `255 - v` on R, G and B. The alpha byte is copied unchanged -- preserving
- * alpha is load-bearing: the glyph's silhouette and anti-aliasing must not
- * move, only its ink.
+ * Hue split, in degrees, between the starburst cluster (0-50deg measured)
+ * and the cat cluster (200-360deg measured) -- see the module docstring.
+ * Sits in the middle of an empirically-empty 50-200deg gap in the source
+ * artwork's hue histogram. Pixels with hue >= this value are classified as
+ * the cat glyph; pixels below it are the starburst background and are
+ * excluded from the template.
  */
-export function invertRgbPreservingAlpha(pixels: Buffer): Buffer {
-  const out = Buffer.alloc(pixels.length)
+export const HUE_SPLIT_DEGREES = 125
+
+function rgbToHueDegrees(r: number, g: number, b: number): number {
+  const rn = r / 255
+  const gn = g / 255
+  const bn = b / 255
+  const max = Math.max(rn, gn, bn)
+  const min = Math.min(rn, gn, bn)
+  const d = max - min
+  if (d === 0) return 0
+  let h: number
+  if (max === rn) h = ((gn - bn) / d) % 6
+  else if (max === gn) h = (bn - rn) / d + 2
+  else h = (rn - gn) / d + 4
+  h *= 60
+  if (h < 0) h += 360
+  return h
+}
+
+/**
+ * Build a macOS AppKit template silhouette from a full-colour source raster:
+ * solid black RGB, alpha = the source alpha ONLY where the pixel's hue is
+ * classified as the glyph (`>= hueSplitDegrees`) rather than the background
+ * cluster. Alpha is otherwise 0 (fully transparent) -- this both removes the
+ * background AND preserves the glyph's original anti-aliasing where it is
+ * kept, rather than hard-thresholding to a binary mask.
+ */
+export function buildHueSegmentedTemplateAlpha(
+  width: number,
+  height: number,
+  pixels: Buffer,
+  hueSplitDegrees: number = HUE_SPLIT_DEGREES
+): Buffer {
+  const out = Buffer.alloc(width * height * 4)
   for (let i = 0; i < pixels.length; i += 4) {
-    out[i] = 255 - pixels[i]
-    out[i + 1] = 255 - pixels[i + 1]
-    out[i + 2] = 255 - pixels[i + 2]
-    out[i + 3] = pixels[i + 3]
+    const a = pixels[i + 3]
+    const isGlyph =
+      a > 16 &&
+      rgbToHueDegrees(pixels[i], pixels[i + 1], pixels[i + 2]) >=
+        hueSplitDegrees
+    out[i] = 0
+    out[i + 1] = 0
+    out[i + 2] = 0
+    out[i + 3] = isGlyph ? a : 0
   }
   return out
+}
+
+/**
+ * True iff every pixel with non-zero alpha has RGB exactly (0,0,0) -- the
+ * defining property of an AppKit template image (the shape lives entirely
+ * in the alpha channel). This is the property that actually matters for
+ * "does this render correctly on both a light and a dark menu bar", unlike
+ * the rejected mean-luminance-delta metric (see module docstring).
+ */
+export function isMonochromeTemplate(pixels: Buffer): boolean {
+  for (let i = 0; i < pixels.length; i += 4) {
+    if (
+      pixels[i + 3] > 0 &&
+      (pixels[i] !== 0 || pixels[i + 1] !== 0 || pixels[i + 2] !== 0)
+    ) {
+      return false
+    }
+  }
+  return true
+}
+
+/** Fraction of pixels with alpha > 16 -- a sanity bound against degenerate output (empty or near-total), NOT a legibility measurement. See `isMonochromeTemplate`'s docstring for why legibility itself cannot be reduced to a single arithmetic gate. */
+export function opaqueFraction(
+  width: number,
+  height: number,
+  pixels: Buffer
+): number {
+  let opaque = 0
+  for (let i = 3; i < pixels.length; i += 4) {
+    if (pixels[i] > 16) opaque++
+  }
+  return opaque / (width * height)
 }
 
 // ---------------------------------------------------------------------------
@@ -349,98 +420,65 @@ export function encodeRgba(
 // `public/...` paths are correct here.
 // ---------------------------------------------------------------------------
 
-const SCALES = ['', '@2x', '@3x']
-const MIN_LUMINANCE_DELTA = 40
+const SOURCE_PATH = join('public', 'icon-dark.png')
+const TEMPLATE_PATH = join('public', 'icon-tray-template.png')
 
-interface ScaleResult {
-  suffix: string
-  sourcePath: string
-  destPath: string
-  width: number
-  height: number
-  sourceLuminance: number
-  destLuminance: number
-  delta: number
-}
-
-function regenerateScale(suffix: string): ScaleResult {
-  const sourcePath = join('public', `icon-dark${suffix}.png`)
-  const destPath = join('public', `icon-light${suffix}.png`)
-
-  const source = decodeRgba(sourcePath)
-  const sourceLuminance = computeMeanOpaqueLuminance(source.pixels, sourcePath)
-
-  const destPixels = invertRgbPreservingAlpha(source.pixels)
-  const destLuminance = computeMeanOpaqueLuminance(destPixels, destPath)
-  const delta = destLuminance - sourceLuminance
-
-  // HARD GATE 1: the transform must actually separate the two variants.
-  if (delta < MIN_LUMINANCE_DELTA) {
-    throw new Error(
-      `${destPath} mean-opaque-luminance delta over ${sourcePath} is ` +
-        `${delta.toFixed(1)}, below the required minimum of ${MIN_LUMINANCE_DELTA}. ` +
-        'The source artwork sits too close to mid-grey for inversion to be a ' +
-        'usable transform -- take this to the Task 2 checkpoint for hand-drawn ' +
-        'artwork; do not lower this threshold.'
-    )
-  }
-
-  // HARD GATE 2: dimensions must match (trivially true here since the dest
-  // buffer reuses source.width/source.height -- asserted explicitly rather
-  // than trusted).
-  if (destPixels.length !== source.pixels.length) {
-    throw new Error(
-      `${destPath} pixel buffer length diverged from ${sourcePath} -- dimension mismatch`
-    )
-  }
-
-  // HARD GATE 3: alpha channel must be byte-identical (trivially true since
-  // invertRgbPreservingAlpha copies alpha unchanged -- asserted explicitly).
-  for (let i = 3; i < source.pixels.length; i += 4) {
-    if (source.pixels[i] !== destPixels[i]) {
-      throw new Error(
-        `${destPath} alpha channel diverged from ${sourcePath} at byte offset ${i}`
-      )
-    }
-  }
-
-  const destBytes = encodeRgba(source.width, source.height, destPixels)
-
-  // HARD GATE 4: the produced file must not be byte-identical to the source
-  // file (the exact defect this plan fixes).
-  const sourceBytes = readFileSync(sourcePath)
-  if (destBytes.equals(sourceBytes)) {
-    throw new Error(
-      `${destPath} would be byte-identical to ${sourcePath} -- inversion produced no change`
-    )
-  }
-
-  writeFileSync(destPath, destBytes)
-
-  return {
-    suffix: suffix === '' ? '1x' : suffix.replace('@', ''),
-    sourcePath,
-    destPath,
-    width: source.width,
-    height: source.height,
-    sourceLuminance,
-    destLuminance,
-    delta
-  }
-}
+// Sanity bounds on the fraction of opaque pixels in the produced template --
+// wide enough not to be flaky, narrow enough to catch the two degenerate
+// failure modes (near-empty: segmentation excluded almost everything;
+// near-total: segmentation excluded almost nothing, i.e. didn't actually
+// separate the glyph from its background). Measured value at generation
+// time for the 22x22 source: ~33%.
+const MIN_OPAQUE_FRACTION = 0.05
+const MAX_OPAQUE_FRACTION = 0.7
 
 function runCli(): void {
   try {
-    const results = SCALES.map(regenerateScale)
-    for (const r of results) {
-      console.log(
-        `[gen-tray-icon-variants] ${r.suffix} (${r.width}x${r.height}): ` +
-          `${r.sourcePath} -> ${r.destPath} | source-luminance=${r.sourceLuminance.toFixed(1)} ` +
-          `dest-luminance=${r.destLuminance.toFixed(1)} delta=${r.delta.toFixed(1)}`
+    const source = decodeRgba(SOURCE_PATH)
+    const template = buildHueSegmentedTemplateAlpha(
+      source.width,
+      source.height,
+      source.pixels
+    )
+
+    const fraction = opaqueFraction(source.width, source.height, template)
+
+    // HARD GATE 1: non-degenerate shape.
+    if (fraction < MIN_OPAQUE_FRACTION || fraction > MAX_OPAQUE_FRACTION) {
+      throw new Error(
+        `${TEMPLATE_PATH} opaque-pixel fraction ${(fraction * 100).toFixed(1)}% is outside the ` +
+          `expected [${MIN_OPAQUE_FRACTION * 100}%, ${MAX_OPAQUE_FRACTION * 100}%] band -- hue ` +
+          `segmentation likely excluded almost everything or almost nothing, which means it did ` +
+          'not separate the glyph from its background. Re-derive HUE_SPLIT_DEGREES from a fresh ' +
+          'hue histogram of the source before re-running.'
       )
     }
+
+    // HARD GATE 2: the defining property of a template image.
+    if (!isMonochromeTemplate(template)) {
+      throw new Error(
+        `${TEMPLATE_PATH} is not monochrome -- some opaque pixel has non-zero RGB`
+      )
+    }
+
+    const templateBytes = encodeRgba(source.width, source.height, template)
+
+    // HARD GATE 3: must not be byte-identical to its full-colour source.
+    const sourceBytes = readFileSync(SOURCE_PATH)
+    if (templateBytes.equals(sourceBytes)) {
+      throw new Error(
+        `${TEMPLATE_PATH} would be byte-identical to ${SOURCE_PATH}`
+      )
+    }
+
+    writeFileSync(TEMPLATE_PATH, templateBytes)
+
     console.log(
-      'gen-tray-icon-variants: all three scales regenerated and gated successfully.'
+      `[gen-tray-icon-variants] ${SOURCE_PATH} -> ${TEMPLATE_PATH} (${source.width}x${source.height}) ` +
+        `hue-split=${HUE_SPLIT_DEGREES}deg opaque-fraction=${(fraction * 100).toFixed(1)}%`
+    )
+    console.log(
+      'gen-tray-icon-variants: macOS tray template regenerated and gated successfully.'
     )
   } catch (error) {
     console.error(
