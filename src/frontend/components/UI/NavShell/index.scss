@@ -20,18 +20,34 @@
   // Layout).
   --navbar-height: 56px;
 
-  // REQ-34.10-03 / D-01. The design sketches reserve space at the window's
-  // top-left for an overlaid macOS title bar's traffic lights, but nothing
-  // on this branch currently overlays the title bar: `framelessWindow`
-  // defaults to false (`src/backend/config.ts:367`), neither
-  // `tauri.conf.json` nor `main.rs` set a `titleBarStyle`/`decorations`
-  // override, and Tauri's `setDecorations(false)` removes the traffic
-  // lights entirely -- so the correct reservation today is zero. This
-  // exists as a token so that adopting overlay mode later is a value
-  // change, not a re-layout. Do NOT set this defensively to the sketches'
-  // reserved value: an un-overlaid native title bar makes that reservation
-  // wrong, not merely unnecessary.
-  --traffic-light-inset: 0px;
+  // REQ-34.10-03 / D-01, REVISED by the D-06 reversal (34.1-10, 34.1-11,
+  // gap G4). Plan 34.1-10 makes the macOS titlebar a function of
+  // `settings.framelessWindow`: ON drives `setTitleBarStyle('overlay')`, OFF
+  // drives `setTitleBarStyle('visible')`. The titlebar IS now overlaid in
+  // the frameless-on state, so this reservation is CORRECT there, not
+  // merely defensive -- this is exactly the prediction the original comment
+  // made when it said "This exists as a token so that adopting overlay mode
+  // later is a value change, not a re-layout." That prediction is fulfilled
+  // here.
+  //
+  // 78px is the sketch-mandated value from `Skill("sketch-findings-gamelib")`
+  // -- one of exactly two constraints in that skill that override
+  // aesthetics: "78px at the window's top-left belongs to the macOS traffic
+  // lights whenever the Tauri titlebar is transparent or overlaid. No
+  // top-mounted bar starts at x=0."
+  //
+  // The value APPLIES only on macOS AND only while the bar is overlaid --
+  // scoped at the `.App.macOverlayTitlebar .NavShell__navbar` consumer
+  // below, not here, because this token must stay singly-declared for
+  // `shellTokens.test.ts`'s exactly-once gate.
+  //
+  // The OLD comment's reasoning is STILL correct in the 'visible' state: an
+  // un-overlaid native title bar makes this reservation wrong, not merely
+  // unnecessary -- which is exactly why the reserve below is STATE-scoped
+  // (`.macOverlayTitlebar`, `isMac && isFrameless`) rather than
+  // platform-scoped (`isMac` alone). On Windows/Linux there is no titlebar
+  // overlay at all, so the reserve is absent there too.
+  --traffic-light-inset: 78px;
 }
 
 .NavShell__navbar {
@@ -53,7 +69,6 @@
   // (see .claude/skills/sketch-findings-gamelib/references/navigation-shell.md
   // § CSS Patterns).
   align-items: flex-end;
-  padding-inline-start: var(--traffic-light-inset);
   // F-34.10-03 (34.10-18 Task 1, CORRECTED post-review -- see the
   // 34.10-18-SUMMARY.md "Deviations" entry for the full incident): this is
   // the OTHER half of the card/folder seam recipe. The active tab's own
@@ -126,11 +141,42 @@
   border-bottom: 1px solid var(--body-background);
 }
 
+// D-06 reversal (34.1-11, gap G4). `.macOverlayTitlebar` is `App.tsx`'s
+// `isMac && isFrameless` hook -- the macOS titlebar is overlaid on content
+// ONLY in that state (plan 34.1-10). The reserve is scoped here, not
+// unconditionally on `.NavShell__navbar` above, because it must be ABSENT
+// -- not zero-valued -- in both exclusion cases: on Windows/Linux there are
+// no traffic lights at all, and on macOS with frameless OFF the lights sit
+// in their own native title bar above the webview rather than over it.
+.App.macOverlayTitlebar .NavShell__navbar {
+  padding-inline-start: var(--traffic-light-inset);
+}
+
 // D-05: reserve room for `WindowControls` so it never overlaps the
 // nav-right cluster, mirroring the hack deleted from `Header/index.css:14-18`
-// in plan 34.10-06. `WindowControls` itself is untouched here -- 34.1 owns
-// it and it keeps `grid-area: content; justify-self: right`.
-.frameless:not(.fullscreen) .NavShell__navbar {
+// in plan 34.10-06. `WindowControls` itself is untouched here -- plan
+// 34.1-09 re-anchored its `grid-area` from `content` to `navbar`, moving it
+// into the SAME grid row as `.NavShell__navbar`, so this reserve rule now
+// protects a collision that can actually occur again --
+// `windowControlsPlacement.test.ts` (34.1-09) is the gate that proves the
+// two share a row.
+//
+// Scoped OUT of the macOS-overlaid state via `:not(.macOverlayTitlebar)`:
+// `--overlay-controls-width` resolves to 120px under WKWebView (the
+// `env(titlebar-area-width)` fallback), and `App.tsx` (34.1-11 Task 1) stops
+// rendering `WindowControls` entirely on macOS, in BOTH titlebar states --
+// so without this exclusion the rule would reserve 120px of trailing
+// padding for buttons that are not there, pushing the nav-right cluster
+// left for no reason. This selector is correct even though
+// `.macOverlayTitlebar` is the NARROWER (`isMac && isFrameless`) hook
+// rather than a plain platform check: the rule already requires
+// `.frameless`, and on macOS `.frameless` implies `.macOverlayTitlebar`
+// (both derive from the SAME `settings.framelessWindow` value, per plan
+// 34.1-10) -- so on macOS this rule is excluded in every state in which it
+// could have matched at all. A second, platform-only class was deliberately
+// NOT introduced to "make it explicit" -- that would add a class whose only
+// consumer is a rule that never needs it.
+.App:not(.macOverlayTitlebar).frameless:not(.fullscreen) .NavShell__navbar {
   padding-inline-end: calc(
     var(--overlay-controls-width) - env(titlebar-area-x, 0px) + 10px
   );
