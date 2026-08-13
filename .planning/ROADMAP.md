@@ -56,7 +56,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 21: Steam Native Install (depot download)** - Steam games install through an in-process depot download GameLib owns — real progress, real errors, recovery — instead of the opaque steam://rungameid handoff; Steam adopts the install and keeps owning updates (17/17 plans, code-review clean, secure-phase 41/41 threats_open:0; hardware UAT items deferred) (completed 2026-07-20)
 - [ ] **Phase 23: Steam full-ownership install (StateFlags=4)** - GameLib authors a StateFlags=4 (FullyInstalled) manifest so Steam does zero verify/download work on first install (in progress — 5/10 plans executed [23-01,02,03,05,06]; gaps G-23-01/G-23-02 open — native install applies no execute bits, KCD2 Blocked-depot-key aborts whole install; Gate 2 CONDITIONAL PASS only after a manual `chmod +x`; Gate 3 not yet run; REQ-23-07 stays open; see 23-TRACE.md)
-- [ ] **Phase 24: macOS native Steam bridge (out-of-process steam_api proxy)** - Out-of-process steam_api shim so bottled Windows-only Steam games run against ONE native macOS Steam client instead of a bottled Windows Steam client per bottle (16/17 plans — 24-10, the human-HW packaged-build acceptance checkpoint, has no SUMMARY.md; Gates 0/1/2/3 PASS on real hardware per 24-UAT.md and gap cycles 24-11..24-17 closed the shim-overwrite/install-poll/launch/sync clusters; Gate 4 (Hoard) explicitly out of scope — bridge proxies only ISteamUser + ISteamFriends; superseded/parked the multi-bottle-families phase, see `## Parked / Superseded Phases`)
+- [x] **Phase 24: macOS native Steam bridge (out-of-process steam_api proxy)** - Out-of-process steam_api shim so bottled Windows-only Steam games run against ONE native macOS Steam client instead of a bottled Windows Steam client per bottle (16/17 plans — 24-10, the human-HW packaged-build acceptance checkpoint, has no SUMMARY.md; Gates 0/1/2/3 PASS on real hardware per 24-UAT.md and gap cycles 24-11..24-17 closed the shim-overwrite/install-poll/launch/sync clusters; Gate 4 (Hoard) explicitly out of scope — bridge proxies only ISteamUser + ISteamFriends; superseded/parked the multi-bottle-families phase, see `## Parked / Superseded Phases`)
 - [x] **Phase 25: Steam depot download multi-host fan-out (throughput)** - Raises native-depot download throughput toward Steam-client parity by fanning chunk attempts across multiple healthy CDN hosts instead of one (completed + hardware-verified 2026-07-19: hosts=3, ~10 MiB/s vs 1.5–2.9 MiB/s baseline)
 - [x] **Phase 26: Steam Key Redemption** - Users can redeem a loose Steam product key into their own Steam library from inside GameLib via steam-user's redeemKey(), without ever opening the Steam client (completed 2026-07-20)
 
@@ -895,7 +895,7 @@ Plans:
 
 **Wave 5** (human-HW-gated, autonomous:false):
 
-- [ ] 24-10-PLAN.md — R5/R6 packaged-build + Avernum 4 + Hoard playable single-player acceptance → 24-UAT.md (needs 24-07/08/09). No SUMMARY.md — hardware acceptance recorded directly in 24-UAT.md instead (Gates 0/1/2/3 PASS; Gate 4/Hoard out of scope).
+- [x] 24-10-PLAN.md — R5/R6 packaged-build + Avernum 4 + Hoard playable single-player acceptance → 24-UAT.md (needs 24-07/08/09). No SUMMARY.md — hardware acceptance recorded directly in 24-UAT.md instead (Gates 0/1/2/3 PASS; Gate 4/Hoard out of scope).
 
 **Wave 6** (gap closure — real-hardware UAT findings, 2026-07-21; closes D-UAT-24-04):
 
