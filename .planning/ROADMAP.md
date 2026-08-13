@@ -1582,6 +1582,8 @@ F-10 ∥ F-9 ∥ housekeeping → sweeps → THIRD blocking live gate.**
 
 ### Phase 34.4.2: macOS login-window UX — modal child-window attachment + in-field autofill affordance (INSERTED)
 
+**Status:** ⛔ BLOCKED — gap cycle 5 live gate FAILED 0/5 on 2026-08-06, no launch scorable; F-34.4.2-19 is fixed and live-confirmed but the gate has not been re-run. Full banner below.
+
 **Goal (ORIGINAL 2026-08-04, PARTIALLY STRUCK 2026-08-05 by plan 16 per this block's own Status —
 see the corrected goal immediately below):** Ship the two spike-validated (019–022, 2026-08-04)
 login-window UX behaviors onto the 34.4.1 login seam on macOS. ~~**(1) Modal attachment (spike
