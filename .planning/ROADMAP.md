@@ -2078,8 +2078,10 @@ all stay `[ ]` per D-08's no-partial-pass rule — item 3's own PASS does not ti
 >
 > **Inherited obligation, not a note — `T-34.4.1-44b`.** nile and zoom capture via a **host-free param match** inherited from the Electron original. This is harmless in 34.4.1 only because the captured value is handed to a channel that rejects. **34.5 MUST host-anchor both before it mints a real credential.** Also inherited: navigation observation (NOT the cookie read) is the actual seam surface, and 34.4.1 RESEARCH Open Question 1 — in-app `on_navigation` cancellation timing — remains unobserved.
 **Plans:** 49/60 plans executed (48 of 48 pre-cycle-7 in-scope; 9 gap-cycle-7 plans 34.5-52..60 added 2026-08-13, 1 executed — 34.5-52; 3 halted/superseded — see below)
-44 `*-SUMMARY.md`). **The three without a SUMMARY among the first 42 are 34.5-29/30/31, which are
-HALTED and SUPERSEDED, not pending.** Gap cycle 5 added plans 34.5-38..42 on 2026-08-02: 34.5-38 —
+44 `*-SUMMARY.md`). **34.5-29/30/31 are HALTED and SUPERSEDED, not pending** — as of 2026-08-13 each
+carries a `type: superseded`, `executed: false` SUMMARY recording its disposition, so it no longer
+reports as outstanding work; their `[ ]` checkboxes stay deliberately unticked and their PLAN files
+byte-unchanged. Gap cycle 5 added plans 34.5-38..42 on 2026-08-02: 34.5-38 —
 authorisation/disposition/measured-baseline record; 34.5-39 — item-4/item-5 gate preflight;
 34.5-40 — authored `34.5-LIVE-GATE-RERUN-2.md`, the third blocking gate contract, `verdict: null`;
 34.5-41 — RAN the third blocking gate on real hardware, **VERDICT FAIL 0/5** (see below); 34.5-42
