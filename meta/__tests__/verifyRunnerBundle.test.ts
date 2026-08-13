@@ -16,6 +16,7 @@ import {
   lstatSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync
@@ -26,6 +27,11 @@ import { join } from 'node:path'
 import { RUNNERS, inspectRunnerTree, summarise } from '../verifyRunnerBundle'
 
 const ARCH = 'arm64'
+
+// C2-04's own PACKAGE_JSON_PATH, module-scope, identical form to
+// cleanDistMac.test.ts:32. Deliberately declared here rather than imported
+// from that file -- see the rationale comment above the describe block below.
+const PACKAGE_JSON_PATH = join(__dirname, '..', '..', 'package.json')
 
 // Real Mach-O 64-bit magic bytes as they appear on disk (MH_MAGIC_64,
 // little-endian host representation): CF FA ED FE. Padded so the "file"
@@ -581,5 +587,57 @@ describe('framework structural integrity (F-34.9-01)', () => {
 
     const summary = summarise(results)
     expect(summary.ok).toBe(true)
+  })
+})
+
+// C2-04: this project has no pin against `verify:runner-bundle` being
+// dropped from -- or reordered after `electron-builder` within -- either
+// macOS packaging script. `clean:dist-mac` already has an identical pin at
+// cleanDistMac.test.ts:208-232; this block duplicates its six-line
+// `loadScripts()` helper rather than importing it. That duplication is a
+// deliberate, accepted cost: C2-04's own failure scenario is "a future
+// refactor drops the wiring", and a pin that lives inside the test file for
+// a *different* meta script becomes collateral damage in any refactor that
+// retires `cleanDistMac`. The pin belongs with the thing it pins -- do NOT
+// "helpfully" consolidate this with cleanDistMac.test.ts's copy.
+describe('package.json wiring pin (C2-04)', () => {
+  interface PackageJsonScripts {
+    scripts: Record<string, string>
+  }
+
+  function loadScripts(): Record<string, string> {
+    return (
+      JSON.parse(readFileSync(PACKAGE_JSON_PATH, 'utf-8')) as PackageJsonScripts
+    ).scripts
+  }
+
+  // Structural JSON.parse, never raw-text/regex: a raw-text grep for
+  // `pnpm verify:runner-bundle` would ALSO match the script *definition*
+  // itself (`"verify:runner-bundle": "..."` at package.json:71) even if
+  // both call sites below were deleted -- the exact self-satisfying-
+  // assertion class this phase has already shipped twice. Reading only
+  // scripts['dist:mac'] and scripts['release:mac'] makes that definition
+  // unreachable from the assertion.
+
+  test('dist:mac invokes pnpm verify:runner-bundle before electron-builder', () => {
+    const scripts = loadScripts()
+    const distMac = scripts['dist:mac']
+    // Presence: the `pnpm ` prefix pins this as an invoked pipeline step,
+    // not merely a comment-like fragment or a differently-invoked mention.
+    expect(distMac).toContain('pnpm verify:runner-bundle')
+    // Ordering (load-bearing half): presence alone would still pass with
+    // the step relocated after electron-builder, where it gates nothing.
+    expect(distMac.indexOf('pnpm verify:runner-bundle')).toBeLessThan(
+      distMac.indexOf('electron-builder')
+    )
+  })
+
+  test('release:mac invokes pnpm verify:runner-bundle before electron-builder', () => {
+    const scripts = loadScripts()
+    const releaseMac = scripts['release:mac']
+    expect(releaseMac).toContain('pnpm verify:runner-bundle')
+    expect(releaseMac.indexOf('pnpm verify:runner-bundle')).toBeLessThan(
+      releaseMac.indexOf('electron-builder')
+    )
   })
 })
