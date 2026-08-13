@@ -3690,6 +3690,21 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                         "[shell] humble_login_open: login cancel strip injected for '{label}'"
                     );
                 }
+                // Login-sheet origin banner injection (Phase 34.5 Plan 52, F-34.5-G6-16,
+                // D-CYCLE7-A). Same `#[cfg(target_os = "macos")]` gate as the cancel strip
+                // immediately above -- only macOS presents this window as a titleless sheet,
+                // so only macOS needs an in-page substitute for the OS title's origin prefix.
+                // `origin` here is the SHELL-RESOLVED value `current_origin` is seeded from
+                // (this arm's own validated open URL), never page content. Placed AFTER the
+                // cancel strip's own injection so the two injected-control helpers sit
+                // together, matching Task 1's own doc-comment ordering.
+                #[cfg(target_os = "macos")]
+                {
+                    builder = builder.initialization_script(&login_origin_banner_script(&origin));
+                    eprintln!(
+                        "[shell] humble_login_open: login origin banner injected for '{label}'"
+                    );
+                }
                 // F-4 machine record (Phase 34.4.1 Plan 24): `.focused(true)` above is
                 // a ONE-SHOT raise-on-creation with no persistent state to inspect
                 // afterwards, so without this line there is no record of what
@@ -3775,6 +3790,22 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                             *guard = new_origin.clone();
                         }
                         let _ = window.set_title(&login_window_title(&new_origin, None));
+                        // Origin banner re-text on main-frame origin change (Phase 34.5 Plan
+                        // 52, F-34.5-G6-16, D-CYCLE7-A). KEPT alongside, never replacing, the
+                        // `set_title` call above -- Windows/Linux still render the OS title;
+                        // this is macOS's in-page substitute for it. Never `.unwrap()` on a
+                        // live user-facing path (T-34.4.1-108): a stale banner is cosmetic, a
+                        // panic here would kill the login flow. Logs the LENGTH only, never
+                        // the origin string, matching this arm's existing `title change
+                        // applied len={}` discipline (T-34.4.1-106).
+                        #[cfg(target_os = "macos")]
+                        {
+                            let _ = window.eval(&login_origin_banner_update_script(&new_origin));
+                            eprintln!(
+                                "[shell] humble_login_open: origin banner updated len={}",
+                                new_origin.len()
+                            );
+                        }
                     }
                 })
                 .on_navigation(move |url| {
