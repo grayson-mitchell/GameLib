@@ -2077,7 +2077,7 @@ all stay `[ ]` per D-08's no-partial-pass rule — item 3's own PASS does not ti
 > **What this dependency does and does not block.** The seam itself is BUILT and unit-proven — 8 of 9 of 34.4.1's plans are executed, the runner-agnostic child-window mechanism is deliberately Humble-agnostic, and 34.4.1-09 already **wired** all four OAuth runners via the new `oauthCaptureLogin` channel with a declared-blocked UI surface naming each runner's unported channel. So 34.5 may be **discussed and planned now**. What is still outstanding is 34.4.1's *live proof* (plan 08's blocking 4-item gate, plus item 3(b) already recorded BLOCKED-UNOBSERVABLE and headed for a gap cycle). 34.5 must not **ship** a real OAuth credential path on a seam whose live gate never ran.
 >
 > **Inherited obligation, not a note — `T-34.4.1-44b`.** nile and zoom capture via a **host-free param match** inherited from the Electron original. This is harmless in 34.4.1 only because the captured value is handed to a channel that rejects. **34.5 MUST host-anchor both before it mints a real credential.** Also inherited: navigation observation (NOT the cookie read) is the actual seam surface, and 34.4.1 RESEARCH Open Question 1 — in-app `on_navigation` cancellation timing — remains unobserved.
-**Plans:** 48/51 plans executed (48 of 48 in-scope; 3 halted/superseded — see below)
+**Plans:** 48/60 plans executed (48 of 48 pre-cycle-7 in-scope; 9 gap-cycle-7 plans 34.5-52..60 added 2026-08-13, 0 executed; 3 halted/superseded — see below)
 44 `*-SUMMARY.md`). **The three without a SUMMARY among the first 42 are 34.5-29/30/31, which are
 HALTED and SUPERSEDED, not pending.** Gap cycle 5 added plans 34.5-38..42 on 2026-08-02: 34.5-38 —
 authorisation/disposition/measured-baseline record; 34.5-39 — item-4/item-5 gate preflight;
@@ -2104,6 +2104,37 @@ also now executed — **all 9 gap-cycle-6 plans complete.** 34.5-51 **RAN the fo
 on real hardware 2026-08-12: VERDICT FAIL** (`items_passed=2, items_failed=1, items_blocked=0,
 items_not_attempted=1` — see below). 48 of 48 in-scope plans are complete (39 pre-cycle-6 + 9
 cycle-6). Dispositions for 34.5-29/30/31: `34.5-CYCLE5-ROUTING.md`.
+
+**2026-08-13 — gap cycle 7 PLANNED: 9 plans (34.5-52..60) across 6 waves.** Built from
+`34.5-CYCLE7-ROUTING.md`'s ten-item work-list as modified by three binding operator decisions.
+**D-CYCLE7-A**: item 1's fix is an **in-page origin banner** reusing the mandated cancel strip's own
+injection mechanism — child-window attachment is permanently closed and sheet presentation is
+SHIPPED and live-PASSED, so the routing document's first option is factually unavailable;
+`U-34.5-05`'s transcription bar is RE-TARGETED to that element rather than retired.
+**D-CYCLE7-B**: routing items 5 (`U-34.5-29`, Amazon library population) and 9 (`U-34.5-27`, a real
+GOG `.ico`) are OUT of scope for cycle 7 — both need an operator-supplied fixture that does not
+exist — recorded with `blocked_on: operator-supplied test fixture`, both rows staying OPEN, and
+neither able to affect the gate's required 4/0/0/0. **D-CYCLE7-C**: the keyring arm
+(`U-34.5-01`/`U-34.5-10`) gets its own **non-blocking** session outside the gate, screen unlocked.
+
+Planning falsified three of its own briefs, each verified against current source:
+**`F-34.5-G6-19`** — `F-34.5-G6-18`'s claim that DXVK's install direction "never calls
+`runWineCommand`" is WRONG (the `reg add ... DllOverrides` loops at `tools/index.ts:438`/`:459` do,
+after the copy), and the emitter is `launcher.ts:1520` (`logDebug`), not `1581`; without this
+correction a DXVK-ON PASS would have retired nothing, because `runWineCommand` executing for a
+non-Steam runner IS item 4's subject. **`F-34.5-G6-20`** — a SECOND nile credential-log site at
+`nile/user.ts:62` leaking the PKCE `code_verifier` at INFO level, unobserved by any gate; both sites
+are GameLib-side logger calls, which closes `F-34.5-G6-17`'s open question.
+**`F-34.5-G6-21`** — the SteamGridDB/winetricks sweep command greps CHANNEL names against
+API-METHOD-name space, so it structurally could not find two real call sites; the census is 10, not
+8, and the two missed sites are the worst shape (a `catch` that substitutes an empty array).
+
+Waves: (1) 34.5-52 origin banner, 34.5-53 nile redaction, 34.5-54 DXVK evidence-line pinning;
+(2) 34.5-55 SteamGridDB/winetricks honest decline; (3) 34.5-56 authors the fifth gate contract
+`34.5-LIVE-GATE-RERUN-4.md` with its seven-test Structural Reachability Review, 34.5-57 code review
+(sequenced BEFORE the sweep, so its findings can still be ledgered); (4) 34.5-58 the non-gate
+keyring session; (5) 34.5-59 RUNS the fifth gate; (6) 34.5-60 propagates the verdict and resolves
+the ledger row by row. Next step: `/gsd-execute-phase 34.5`.
 
 **PHASE DOES NOT CLOSE.** The blocking 5-item live gate (`34.5-15-PLAN.md`) ran
 2026-08-01 and FAILED (0/5 PASS) — see `34.5-LIVE-GATE.md` and `34.5-15-SUMMARY.md`. Gap cycle
