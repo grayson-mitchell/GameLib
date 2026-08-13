@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: verifying
-stopped_at: Completed 34.9-26-PLAN.md -- ran the pipe-conversion proof (36/36 PASS), closed F-34.9-26-01 into deferred-items.md item 17.
-last_updated: "2026-08-13T06:56:50.881Z"
+stopped_at: Completed 34.9-27-PLAN.md -- closed C2-04 with a proven-red package.json wiring pin (all four mutations scored correctly on real hardware), ledgered C2-05 and C2-07 as dated deferrals per D-C3-05 (items 18/19). Does not close C2-01 / VERIFICATION.md truth 8.
+last_updated: "2026-08-13T07:12:00.843Z"
 last_activity: 2026-08-13
 progress:
   total_phases: 24
   completed_phases: 16
   total_plans: 303
-  completed_plans: 288
+  completed_plans: 289
   percent: 67
 ---
 
@@ -509,7 +509,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **gap cycle 3 IN
 PROGRESS, phase remains OPEN**
-Plan: 34.9-26 of 34.9-23..28 complete (2026-08-13). Gap cycle 3 was planned 2026-08-13 (6 plans,
+Plan: 34.9-27 of 34.9-23..28 complete (2026-08-13). Gap cycle 3 was planned 2026-08-13 (6 plans,
 5 waves, plan-checker PASSED) to close the sole remaining verification gap from gap cycle 2's
 re-verification: truth 8 / C2-01 (the `esbuild ... | node`/`| node -` pipe-swallow idiom — a
 compile failure in a wired guard script is invisible because `sh -c` has no `pipefail` and a
@@ -581,8 +581,21 @@ and ledgered as `deferred-items.md` item 17 (it had been present only in the fro
 list, undefined and unledgered, at hand-off). **Verdict: PASS, 36/36 directions** (26 Direction A +
 8 Direction B + 2 chain proofs), re-scored independently against the plan's full-conjunction
 discipline rather than inherited. `34.9-VERIFICATION.md` truth 8 is now satisfied by measurement,
-scoped strictly to arm64/local/non-CI. See `34.9-PIPE-PROOF.md` and `34.9-26-SUMMARY.md`. Next:
-**34.9-27-PLAN.md**, the next plan in gap cycle 3's wave sequence.
+scoped strictly to arm64/local/non-CI. See `34.9-PIPE-PROOF.md` and `34.9-26-SUMMARY.md`.
+
+**Plan 34.9-27 (wave 4, depends on 34.9-24/34.9-25) is now COMPLETE (2026-08-13).** Closed C2-04
+by adding a `package.json wiring pin` describe block to `meta/__tests__/verifyRunnerBundle.test.ts`
+(two tests: presence + ordering of `pnpm verify:runner-bundle` relative to `electron-builder`, for
+both `dist:mac` and `release:mac`), proven red against all four deliberate mutations on real
+hardware (M1/M2 deletion → red on the presence assertion; M3/M4 relocation → red on the ordering
+assertion, presence still passing) before `package.json` was restored byte-identical
+(`shasum -a 256` matched after every restore). Also ledgered C2-05 and C2-07 into
+`deferred-items.md` as dated, owned items 18/19 per locked decision D-C3-05 (ledger only, no code
+fix) — C2-05 reconciled against existing items 12/13 rather than restating them. **Scope honesty,
+repeated:** this plan does NOT close C2-01 and does NOT itself satisfy truth 8 (that was already
+satisfied by plan 34.9-26's pipe-conversion proof) — C2-04 is the narrower "is the step present and
+correctly ordered" guarantee. See `34.9-27-SUMMARY.md`. Next: **34.9-28-PLAN.md**, the closing plan
+of gap cycle 3's wave sequence.
 
 Prior phase-34.9 position (superseded by gap cycle 3 above, retained as history):
 
@@ -2933,6 +2946,12 @@ edit was needed there this time — coincidence, not a fix.
 > phase 34.9, describing a Phase 34.2 coincidence), reverted back to `95%` by hand. Confirms the
 > defect is still live in `gsd-sdk`, not merely a one-time occurrence from 34.10-25.
 
+> NOTE (34.9-27): recurred again, same line, same defect shape -- `state.update-progress` spliced
+> its own freshly-computed `96%` into this same historical narrative line a second time this
+> session, reverted back to `95%` by hand. `state.advance-plan` also jumped `completed_plans` by 2
+> (288 -> 290) for one completed plan, hand-corrected to `289`; `completed_phases`/`total_phases`
+> were untouched this time, so the top-level `percent: 67` needed no correction.
+
 > NOTE (34.10-25): `state.update-progress` spliced its own freshly-computed `92%` into this SAME
 > historical placeholder yet again this session (also miscomputed `completed_plans` as 246, +2 for
 > a single plan, and the top-level frontmatter `percent` as 61 -- both hand-corrected separately).
@@ -4084,6 +4103,7 @@ Closed/parked native-install phases:
 | Phase 34.9 P23 | 45min | 2 tasks | 1 files |
 | Phase 34.9 P25 | 26min | 2 tasks | 13 files |
 | Phase 34.9 P26 | 75min | 3 tasks | 2 files |
+| Phase 34.9 P27 | 20min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -4668,6 +4688,8 @@ Recent decisions affecting current work:
 - [Phase 34.9-23]: STATE.md frontmatter progress block was hand-corrected rather than trusted from gsd-sdk state.advance-plan/state.update-progress -- both calls reverted status/stopped_at/last_activity to stale plan-21 values and wrote inconsistent completed_plans/percent pairs across two separate invocations (284->286 then a JSON-report/file-write mismatch); reverted via git checkout -- .planning/STATE.md (twice) and hand-edited completed_plans 284->285, percent recomputed 285/303*100=94.06 rounds to 94 per this project's established plan-ratio convention (the committed percent:74 pre-dated this session and did not match either formula -- left as a pre-existing drift, not re-derived further, out of this plan's scope)
 - [Phase 34.9-25]: Converted all 13 census-matched esbuild|node pipe scripts in package.json to the --outfile=node_modules/.cache/<name>.cjs && node <same path> idiom (verify:updater-key's existing pattern); corrected 11 meta/*.ts comments the conversion made false about __dirname/require.main. Trusted the audit's Section 7 stale-comment inventory over this plan's own frontmatter file list where they disagreed (meta/machineFillGamelib.ts), per the plan's explicit instruction. Fix does not yet prove itself -- 34.9-26 owns that.
 - [Phase 34.9-26]: Defined F-34.9-26-01 as the gen-i18n-gate-scope catalogue-drift finding surfaced during Direction B (meta/i18nGateScope.json's committed snapshot is stale by 12 lines against the live source tree); opened deferred-items.md item 17 for it rather than leaving the frontmatter finding ID undefined and unledgered. — Frontmatter carried findings: [F-34.9-26-01] with no body definition and no ledger row -- the exact pattern that made verification truth 8 FAIL originally.
+- [Phase 34.9]: C2-04's package.json wiring pin duplicates cleanDistMac.test.ts's loadScripts() helper rather than importing it -- the pin belongs with the thing it pins, not a sibling meta script's test file
+- [Phase 34.9]: C2-05's ledger entry cross-references items 12/13 by number instead of restating them, adding only the two new details (live build-base.yml:48 CI invocation, -p always auto-publish exposure) per D-C3-05
 
 ### Pending Todos
 
@@ -4875,8 +4897,28 @@ Recent decisions affecting current work:
 > `--- prior session (34.9-20), preserved as history ---` prefix below, this session's own
 > `Stopped at:` now carries a full description with nothing trailing it.
 
-Last session: 2026-08-13T06:56:50.864Z
-Stopped at: Completed 34.9-26-PLAN.md -- ran the pipe-conversion proof (36/36 PASS), closed F-34.9-26-01 into deferred-items.md item 17.
+> NOTE (34.9-27): `state.record-session` correctly replaced BOTH the frontmatter `stopped_at` and
+> this body `Stopped at:` line with this session's own text -- no first-line-only truncation this
+> time. But the paragraph that had been sitting underneath the OLD `Stopped at: Completed
+> 34.9-26-PLAN.md` line (the "Verdict: **PASS**..." text below, which self-identifies as 34.9-21's
+> own content via "See 34.9-21-SUMMARY.md. Next: plan 34.9-22") was already orphaned and
+> misattributed to 34.9-26 BEFORE this session began -- a pre-existing instance of this cluster's
+> recurring defect that predates 34.9-27 and was never caught by plans 34.9-22 through 34.9-26.
+> Reconstructed below: the orphaned paragraph is given back a `Stopped at: Completed
+> 34.9-21-PLAN.md` prefix and demoted into its own "prior session (34.9-21)" block. Separately:
+> **no trace of plans 34.9-22, 34.9-23, 34.9-24, 34.9-25 or 34.9-26 ever having their own `Stopped
+> at:` entry was found anywhere in this file** (`grep -n "Completed 34.9-2[2-6]-PLAN"` returns
+> zero matches) -- five consecutive sessions' session-history is missing from this chain entirely,
+> not merely truncated. This session does not attempt to reconstruct that five-plan gap (would
+> require reading five SUMMARY.md files, outside this plan's own scope); flagged here for whoever
+> next does a history cleanup pass on this file.
+
+Last session: 2026-08-13T07:12:00.820Z
+Stopped at: Completed 34.9-27-PLAN.md -- closed C2-04 with a proven-red package.json wiring pin (all four mutations scored correctly on real hardware), ledgered C2-05 and C2-07 as dated deferrals per D-C3-05 (items 18/19). Does not close C2-01 / VERIFICATION.md truth 8.
+
+--- prior session (34.9-21), preserved as history (reconstructed 34.9-27 -- see NOTE above) ---
+
+Stopped at: Completed 34.9-21-PLAN.md -- ran `34.9-GUARD-PROOF.md` on real macOS arm64 hardware.
 Verdict: **PASS**, both directions scored strictly from disk evidence (never from a mutating
 command's own report): Direction A (`pnpm dist:mac` against a deliberately dereferenced
 `Python.framework`) exits 1, transcript carries the F-34.9-01 literal, Guard A's zero-skip line
