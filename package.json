@@ -70,7 +70,8 @@
     "build-runners-onedir": "esbuild --bundle --platform=node --target=node21 --outfile=node_modules/.cache/build-runners-onedir.cjs meta/buildRunnersOnedir.ts && node node_modules/.cache/build-runners-onedir.cjs",
     "verify:runner-bundle": "esbuild --bundle --platform=node --target=node21 --outfile=node_modules/.cache/verify-runner-bundle.cjs meta/verifyRunnerBundle.ts && node node_modules/.cache/verify-runner-bundle.cjs",
     "clean:dist-mac": "esbuild --bundle --platform=node --target=node21 --outfile=node_modules/.cache/clean-dist-mac.cjs meta/cleanDistMac.ts && node node_modules/.cache/clean-dist-mac.cjs",
-    "verify:updater-key": "esbuild --bundle --platform=node --target=node22 --outfile=node_modules/.cache/verify-updater-key.cjs meta/verifyUpdaterSigningKey.ts && node node_modules/.cache/verify-updater-key.cjs"
+    "verify:updater-key": "esbuild --bundle --platform=node --target=node22 --outfile=node_modules/.cache/verify-updater-key.cjs meta/verifyUpdaterSigningKey.ts && node node_modules/.cache/verify-updater-key.cjs",
+    "gen-tray-icon-variants": "esbuild --bundle --platform=node --target=node22 --outfile=node_modules/.cache/gen-tray-icon-variants.cjs meta/trayIconVariants.ts && node node_modules/.cache/gen-tray-icon-variants.cjs"
   },
   "dependencies": {
     "@fontsource/cabin": "^4.5.10",
