@@ -1,13 +1,25 @@
 /**
+ * DO NOT DELETE -- this file is KEPT ON PURPOSE. It is the work-list for
+ * **Phase 34.12** (onboarding tour rework), not an orphan left behind by the
+ * sidebar's removal. It is the only surviving file of the retired `Sidebar/`
+ * tree, and plan 34.10-09 Task 3 preserved it by name while deleting the
+ * other eleven files around it.
+ *
  * DISABLED by Phase 34.10 (D-13) -- not mounted by anything. The onboarding
  * tour this file drives depended on the retired left navigation (deleted by
  * 34.10-09 Task 3); this one file is deliberately kept on disk because it
- * plus its twelve `data-tour="sidebar-*"` step selectors below are the
- * deferred tour-rework phase's work-list -- re-anchoring each step against
- * the new two-tier shell. `NavShell/__tests__/tourDisabled.test.ts` proves
- * both of the retired navigation's tour entry points (this component's own
- * mount, and the second one -- the help button `HeroicVersion` used to
- * render, removed in 34.10-07) are unreachable.
+ * plus its twelve `data-tour="sidebar-*"` step selectors below are Phase
+ * 34.12's work-list -- re-anchoring each step against the new two-tier shell.
+ * `NavShell/__tests__/tourDisabled.test.ts` proves both of the retired
+ * navigation's tour entry points (this component's own mount, and the second
+ * one -- the help button `HeroicVersion` used to render, removed in 34.10-07)
+ * are unreachable.
+ *
+ * An empty-looking `Sidebar/` directory containing only this file is the
+ * EXPECTED end state, and it has already been mistaken for abandoned work
+ * once (a 2026-08-13 audit follow-up proposed deleting it before reading
+ * 34.10-09). Deleting it would destroy Phase 34.12's input, reverse D-13, and
+ * make `tourDisabled.test.ts`'s "no live importer" check vacuously true.
  *
  * Known pre-existing defect for the rework phase to fix, not to rediscover:
  * two different elements used to carry the SAME `data-tour="sidebar-downloads"`

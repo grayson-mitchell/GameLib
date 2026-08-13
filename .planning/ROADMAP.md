@@ -2631,8 +2631,10 @@ REQ-34.10-06, REQ-34.10-07, REQ-34.10-08, REQ-34.10-09, REQ-34.10-10, REQ-34.10-
 REQ-34.10-13, REQ-34.10-14, REQ-34.10-15, REQ-34.10-16
 **Depends on:** Phase 34.1 (app shell and window chrome — provides the window-control surface and
 the frameless drag-region runtime this rebuilds against)
-**Blocks:** Phase 34.11 (the filter panel needs the tier-2 slot to exist); the deferred
-onboarding-tour rework phase (34.10 disables `SidebarTour` per D-13 and does not rebuild it)
+**Blocks:** Phase 34.11 (the filter panel needs the tier-2 slot to exist); **Phase 34.12** — the
+onboarding-tour rework (34.10 disables `SidebarTour` per D-13 and does not rebuild it). That
+deferred phase was finally CREATED 2026-08-13; before then this line referenced a phase that
+existed nowhere, which is why `SidebarTour.tsx` read as an abandoned orphan on disk.
 **Plans:** 27/27 plans executed — **PHASE 34.10 COMPLETE, closed 2026-08-09.** Live gate **run 4**
 (plan 34.10-27, 2026-08-09) scored **5/5**: all five items PASS. **REQ-34.10-06 and REQ-34.10-16 → Complete.**
 
@@ -2755,7 +2757,9 @@ The pill-tab restyle is DEFERRED to separate follow-up work and is explicitly OU
 gap cycle 3 (its plans are listed above). **REQ-34.10-06's card/folder framing STANDS
 unchanged** — run 4 scores the tab shape as it
 currently ships (card/folder), not the pill variant. This is a SECOND deferred item alongside the
-onboarding-tour rework the phase already owes (CONTEXT.md D-13) — not a replacement for it.
+onboarding-tour rework the phase already owes (CONTEXT.md D-13) — not a replacement for it. That
+tour rework is now **Phase 34.12** (created 2026-08-13). The pill-tab restyle remains uncaptured —
+it is still a deferred item with no phase of its own.
 
 **Follow-up finding filed by the debug session, closed by plan 34.10-23:** the unscoped
 `.MuiTabs-root` leak class (see root cause above) had no regression guard anywhere in the app —
@@ -2936,6 +2940,52 @@ Plans:
 - Localisation is a standing BLOCKING gate: new keys use the `gamelib:` namespace via the literal `tGamelib` alias, and new files are registered in `meta/i18nGateScope.json`.
 - A grep assertion must be proven to FAIL against a known-bad input before it counts as passing.
 - Multi-theme survival: never validate against `midnightMirage` alone; `gruvbox_dark` and `dracula` are mandatory.
+
+### Phase 34.12: Onboarding tour rework — re-anchor the disabled SidebarTour against the two-tier NavShell (INSERTED)
+
+**Goal:** Rebuild the onboarding tour against the two-tier NavShell. Phase 34.10 DISABLED the
+sidebar tour under decision D-13 and deliberately did not rebuild it; this phase is the rebuild
+34.10 has owed since it closed. Each of `SidebarTour.tsx`'s twelve `data-tour="sidebar-*"` steps
+must be re-anchored to a surface that still exists in the new shell, or dropped with a reason.
+
+**Requirements**: TBD (run `/gsd-discuss-phase 34.12`)
+**Depends on:** Phase 34.10 (the two-tier shell the steps must anchor to) and Phase 34.11 (the
+filter panel — several retired steps pointed at library surfaces that 34.11 replaced)
+**Plans:** 0 plans
+
+**Why this phase exists — captured 2026-08-13.** It was referenced in three places but had never
+been created: ROADMAP.md listed "the deferred onboarding-tour rework phase" in Phase 34.10's
+`Blocks:` line, and 34.10's gap-cycle notes say the phase "already owes" it (CONTEXT.md D-13) —
+yet no phase heading existed anywhere. The dangling deferral is why
+`src/frontend/components/UI/Sidebar/components/SidebarTour.tsx` reads as an abandoned orphan on
+disk; a `/gsd-audit-uat` follow-up mistook it for exactly that before checking the plan that
+created the state.
+
+**Work-list (do not rediscover — this is the phase's input):**
+- `src/frontend/components/UI/Sidebar/components/SidebarTour.tsx` — the sole surviving file of the
+  retired `Sidebar/` tree, kept ON PURPOSE by plan 34.10-09 Task 3 ("the entire `Sidebar` tree
+  **except** `components/SidebarTour.tsx`"). Its 21-line header comment records its own status.
+  Its step text and i18n keys are this phase's input, unchanged since 34.10.
+- **Known pre-existing defect to FIX, not rediscover:** two different elements carried the same
+  `data-tour="sidebar-downloads"` value — the retired `Sidebar/index.tsx`'s `currentDownloads`
+  wrapper and the "Downloads" row inside the retired `SidebarLinks`. A selector matching two
+  elements is ambiguous; whichever the tour library picked first was never guaranteed to be the
+  intended one.
+- **34.10 IN-01** — dead `data-tour` props in `CategoryFilter`/`LibraryFilters` that `Dropdown`
+  never reads. Fold in here rather than leaving them as permanent noise.
+
+**Gate that must be retired as part of this phase:** `NavShell/__tests__/tourDisabled.test.ts`
+asserts the tour CANNOT start (no NavShell file references `SidebarTour`/`SIDEBAR_TOUR_ID`/
+`TourButton`/`data-tour`, and nothing imports `SidebarTour`). Re-enabling the tour necessarily
+falsifies it. Replace it with a positive gate — do not simply delete it, and do not let it become
+vacuously true, which is what deleting `SidebarTour.tsx` alone would have done.
+
+**Note on the `(INSERTED)` marker:** carried from the `phase.insert` tooling, which stamps every
+insertion as urgent. This phase is NOT urgent — it is deferred UI polish with no user-facing
+breakage while the tour stays disabled and unreachable.
+
+Plans:
+- [ ] TBD (run `/gsd-discuss-phase 34.12`, then `/gsd-plan-phase 34.12`)
 
 ### Phase 35: Electron cutover — remove the Electron build
 
