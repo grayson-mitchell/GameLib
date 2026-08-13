@@ -86,7 +86,7 @@ function buildPassCaseFixture(
 /**
  * Lays down a `Python.framework` inside `gogdl/_internal/` (the exact
  * location the live gate observed, 34.9-LIVE-GATE.md item 4), on top of an
- * otherwise well-formed three-runner pass-case tree, in one of five shapes.
+ * otherwise well-formed three-runner pass-case tree, in one of six shapes.
  *
  * `well-formed` reproduces the real shape verified on disk (34.9-13-PLAN.md
  * <interfaces>): a real Mach-O `Versions/3.14/Python`, a real
@@ -98,13 +98,16 @@ function buildPassCaseFixture(
  * root cause in the live gate (34.9-12-SUMMARY.md) -- which turns every
  * symlink inside the framework into a real copy.
  *
- * `stub-file`, `unresolvable-target` and `stub-absent` each malform exactly
- * one other structural property, independent of the dereferenced case.
- * `stub-absent` is the partial-copy shape (WR-02): the `Versions/Current`
- * symlink survived intact but the top-level stub link
+ * `stub-file`, `unresolvable-target`, `stub-absent` and `stub-dangling-target`
+ * each malform exactly one other structural property, independent of the
+ * dereferenced case. `stub-absent` is the partial-copy shape (WR-02): the
+ * `Versions/Current` symlink survived intact but the top-level stub link
  * (`Python.framework/Python`) was dropped entirely -- a real malformation a
  * partial dereferencing/copy failure can produce, distinct from `stub-file`
- * where the stub exists but as the wrong type.
+ * where the stub exists but as the wrong type. `stub-dangling-target` (C2-06)
+ * is distinct again: the stub link IS present and IS a symlink, but its
+ * target names a path that does not exist -- the shape none of the other
+ * four exercise.
  */
 function buildGogdlFrameworkFixture(
   root: string,
@@ -113,7 +116,8 @@ function buildGogdlFrameworkFixture(
     | 'dereferenced'
     | 'stub-file'
     | 'unresolvable-target'
-    | 'stub-absent',
+    | 'stub-absent'
+    | 'stub-dangling-target',
   arch: string = ARCH
 ): {
   darwinDir: string
@@ -175,6 +179,17 @@ function buildGogdlFrameworkFixture(
     // reflects. Nothing else is touched, so `Versions/Current` remains a
     // valid symlink -- the framework is malformed in exactly one respect.
     rmSync(join(frameworkDir, 'Python'))
+  } else if (shape === 'stub-dangling-target') {
+    // Replace ONLY the top-level stub symlink with one pointing at a
+    // lexically plausible target that does not exist anywhere in the tree
+    // (C2-06) -- distinct from `stub-absent` (no link at all) and
+    // `stub-file` (not a symlink). `Versions/Current` remains a valid
+    // symlink, so the framework is malformed in exactly one respect.
+    rmSync(join(frameworkDir, 'Python'))
+    symlinkSync(
+      'Versions/Current/PythonMissing',
+      join(frameworkDir, 'Python')
+    )
   }
 
   return { darwinDir, frameworkDir, binaryPaths }
@@ -354,10 +369,16 @@ describe('framework structural integrity (F-34.9-01)', () => {
     expect(gogdl?.frameworks).toHaveLength(1)
     expect(gogdl?.frameworks[0]?.name).toBe('Python.framework')
     expect(gogdl?.frameworks[0]?.versionsCurrentIsSymlink).toBe(true)
+    // C2-06 vacuity control: the new dangling-target branch must not fire
+    // against an otherwise well-formed stub.
+    expect(gogdl?.frameworks[0]?.resolvedTopLevelTargetExists).toBe(true)
 
     const summary = summarise(results)
     expect(summary.ok).toBe(true)
     expect(summary.failures).toEqual([])
+    expect(summary.failures.join(' ')).not.toMatch(
+      /does not resolve to an existing path/
+    )
   })
 
   it('dereferenced Versions/Current (the exact F-34.9-01 shape): ok becomes false, message names the framework path + Versions/Current', () => {
@@ -450,6 +471,49 @@ describe('framework structural integrity (F-34.9-01)', () => {
     const fwFailure = summary.failures.find((f) => f.includes(frameworkDir))
     expect(fwFailure).toBeDefined()
     expect(fwFailure).toMatch(/does not resolve/)
+  })
+
+  it('top-level stub is a symlink whose target does not resolve (dangling target, C2-06): ok becomes false, message names the target, and no other stub failure double-fires', () => {
+    root = mkdtempSync(
+      join(tmpdir(), 'verify-runner-bundle-fw-stub-dangling-')
+    )
+    const { frameworkDir } = buildGogdlFrameworkFixture(
+      root,
+      'stub-dangling-target'
+    )
+
+    const stubPath = join(frameworkDir, 'Python')
+    // Vacuity guard, asserted BEFORE inspectRunnerTree/summarise run: the
+    // stub IS present and IS a symlink, but its target resolves to nothing,
+    // and Versions/Current remains untouched -- the framework is malformed
+    // in exactly one respect.
+    expect(lstatSync(stubPath).isSymbolicLink()).toBe(true)
+    expect(existsSync(stubPath)).toBe(false)
+    expect(
+      lstatSync(join(frameworkDir, 'Versions', 'Current')).isSymbolicLink()
+    ).toBe(true)
+
+    const results = inspectRunnerTree(root, ARCH)
+    const gogdl = results.find((r) => r.runner === 'gogdl')
+    expect(gogdl?.frameworks[0]?.topLevelStubExists).toBe(true)
+    expect(gogdl?.frameworks[0]?.topLevelStubIsSymlink).toBe(true)
+    expect(gogdl?.frameworks[0]?.resolvedTopLevelTargetExists).toBe(false)
+
+    const summary = summarise(results)
+    expect(summary.ok).toBe(false)
+    const fwFailures = summary.failures.filter((f) =>
+      f.includes(frameworkDir)
+    )
+    expect(fwFailures).toHaveLength(1)
+    expect(fwFailures[0]).toContain('top-level stub')
+    expect(fwFailures[0]).toContain('Versions/Current/PythonMissing')
+    expect(fwFailures[0]).toContain(
+      'does not resolve to an existing path (F-34.9-01)'
+    )
+    // Proves the else-if chaining works: one defect yields exactly one
+    // failure, not the pre-existing "absent" or "wrong type" messages too.
+    expect(fwFailures[0]).not.toContain('does not exist (F-34.9-01)')
+    expect(fwFailures[0]).not.toContain('is a real file, not a symlink')
   })
 
   it('findFrameworks does not walk through a symlinked directory: a nested framework is counted once, not duplicated via the Versions/Current alias', () => {

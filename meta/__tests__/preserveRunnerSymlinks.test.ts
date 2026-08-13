@@ -267,6 +267,7 @@ describe('preserveRunnerSymlinks', () => {
 
     expect(result.restored).toEqual([])
     expect(result.skipped).toEqual([])
+    expect(result.rejected).toEqual([])
     expect(readFileSync(join(destRoot, 'other.txt'), 'utf-8')).toBe(before)
   })
 
