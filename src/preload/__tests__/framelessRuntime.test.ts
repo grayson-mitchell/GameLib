@@ -27,10 +27,27 @@ const electronIpcSendMock = jest.fn()
 
 const mockWindow = {
   setDecorations: jest.fn(),
+  setTitleBarStyle: jest.fn(),
   startDragging: jest.fn(),
   toggleMaximize: jest.fn()
 }
 const getCurrentWindow = jest.fn()
+
+// Phase 34.1 gap cycle 1 (plan 34.1-10, G4): sets the webview's reported platform
+// EXPLICITLY for a test. Stubs the INPUT `isMacWebview()` reads (via Node's built-in
+// `navigator.platform`), rather than mocking `platformDetect` itself -- per this
+// project's standing rule "a test must exercise the PRODUCTION call shape, not a
+// hand-built ideal one". `Object.defineProperty` is required (not a plain assignment)
+// because this Jest environment's Node runtime exposes `navigator.platform` as an
+// accessor property inherited from `Navigator.prototype`, not an own writable field.
+type WebviewPlatform = 'MacIntel' | 'Win32' | 'Linux x86_64'
+
+function setWebviewPlatform(platform: WebviewPlatform): void {
+  Object.defineProperty(navigator, 'platform', {
+    value: platform,
+    configurable: true
+  })
+}
 
 jest.mock('@tauri-apps/api/window', () => ({
   getCurrentWindow: () => getCurrentWindow()
@@ -48,10 +65,7 @@ jest.mock('../tauriTransport', () => ({
   listen: jest.fn()
 }))
 
-import {
-  applyFramelessDecorations,
-  installDragRegionHandlers
-} from '../api/tauriWindowChrome'
+import { applyFramelessDecorations, installDragRegionHandlers } from '../api/tauriWindowChrome'
 import { isTauri, snapshotGet } from '../tauriTransport'
 import { setSetting } from '../api/settings'
 
@@ -108,8 +122,7 @@ function chain(...elements: FakeElement[]): FakeElement {
     getComputedStyle: (el: unknown) => { getPropertyValue: (prop: string) => string }
   }
 ).getComputedStyle = (el: unknown) => ({
-  getPropertyValue: (prop: string) =>
-    prop === '-webkit-app-region' ? (el as FakeElement).appRegion : ''
+  getPropertyValue: (prop: string) => (prop === '-webkit-app-region' ? (el as FakeElement).appRegion : '')
 })
 
 const addEventListenerMock = jest.fn()
@@ -122,12 +135,28 @@ const addEventListenerMock = jest.fn()
 beforeEach(() => {
   getCurrentWindow.mockReturnValue(mockWindow)
   mockWindow.setDecorations.mockResolvedValue(undefined)
+  mockWindow.setTitleBarStyle.mockResolvedValue(undefined)
   mockWindow.startDragging.mockResolvedValue(undefined)
   mockWindow.toggleMaximize.mockResolvedValue(undefined)
   mockedIsTauri.mockReturnValue(true)
   mockedSnapshotGet.mockReturnValue(undefined)
+  // Phase 34.1 gap cycle 1 (plan 34.1-10, G4): default every test to a NON-macOS
+  // platform so no test inherits macOS by accident -- this Jest environment's Node
+  // runtime exposes a REAL `navigator.platform` reflecting the host OS (observed
+  // "MacIntel" on a macOS dev machine), which is exactly the unstated-dependency
+  // hazard this reset closes. Tests that need the macOS branch call
+  // setWebviewPlatform('MacIntel') explicitly.
+  setWebviewPlatform('Win32')
 })
 
+// Phase 34.1 gap cycle 1 (plan 34.1-10, G4): these ten assertions (this describe block's
+// six, plus the setSetting wrapper describe block's four) now pin the WINDOWS/LINUX
+// branch SPECIFICALLY -- they rely on the `beforeEach` default of a non-macOS platform,
+// which is now an explicit, asserted precondition rather than an accident of whatever
+// `navigator.platform` happens to report in the host Jest environment. Each case below
+// also asserts `setTitleBarStyle` was NOT called: without that assertion, a bug that
+// fired BOTH mechanisms on Windows/Linux would still pass every pre-existing assertion
+// here, because none of them ever inspected `setTitleBarStyle` at all.
 describe('applyFramelessDecorations (REQ-34.1-03)', () => {
   // CLARIFIED TEST CONTRACT (CR-02, Phase 34.1 code review). This assertion is correct
   // about the FUNCTION in isolation -- with no data, the default is DECORATED, matching
@@ -139,6 +168,7 @@ describe('applyFramelessDecorations (REQ-34.1-03)', () => {
   it('REQ-34.1-03: applyFramelessDecorations() with no settings snapshot yet (the pre-hydration paint) calls setDecorations(true)', () => {
     applyFramelessDecorations()
     expect(mockWindow.setDecorations).toHaveBeenCalledWith(true)
+    expect(mockWindow.setTitleBarStyle).not.toHaveBeenCalled()
   })
 
   // CR-02 regression guard: reproduces `src/frontend/index.tsx`'s real two-phase startup
@@ -157,24 +187,28 @@ describe('applyFramelessDecorations (REQ-34.1-03)', () => {
     applyFramelessDecorations()
     expect(mockWindow.setDecorations).toHaveBeenNthCalledWith(2, false)
     expect(mockWindow.setDecorations).toHaveBeenLastCalledWith(false)
+    expect(mockWindow.setTitleBarStyle).not.toHaveBeenCalled()
   })
 
   it('REQ-34.1-03: applyFramelessDecorations() with framelessWindow:false calls setDecorations(true)', () => {
     mockedSnapshotGet.mockReturnValue({ framelessWindow: false })
     applyFramelessDecorations()
     expect(mockWindow.setDecorations).toHaveBeenCalledWith(true)
+    expect(mockWindow.setTitleBarStyle).not.toHaveBeenCalled()
   })
 
   it('REQ-34.1-03: applyFramelessDecorations() with framelessWindow:true calls setDecorations(false)', () => {
     mockedSnapshotGet.mockReturnValue({ framelessWindow: true })
     applyFramelessDecorations()
     expect(mockWindow.setDecorations).toHaveBeenCalledWith(false)
+    expect(mockWindow.setTitleBarStyle).not.toHaveBeenCalled()
   })
 
   it('REQ-34.1-03: applyFramelessDecorations(true) calls setDecorations(false) regardless of snapshot', () => {
     mockedSnapshotGet.mockReturnValue({ framelessWindow: false })
     applyFramelessDecorations(true)
     expect(mockWindow.setDecorations).toHaveBeenCalledWith(false)
+    expect(mockWindow.setTitleBarStyle).not.toHaveBeenCalled()
   })
 
   it('REQ-34.1-03: a setDecorations rejection is caught and warned, and does not reject out of the function', async () => {
@@ -183,6 +217,94 @@ describe('applyFramelessDecorations (REQ-34.1-03)', () => {
     expect(() => applyFramelessDecorations()).not.toThrow()
     await Promise.resolve()
     await Promise.resolve()
+    expect(warnSpy).toHaveBeenCalled()
+    expect(mockWindow.setTitleBarStyle).not.toHaveBeenCalled()
+    warnSpy.mockRestore()
+  })
+})
+
+// Phase 34.1 gap cycle 1 (plan 34.1-10, G4): the macOS branch of `applyFramelessDecorations`
+// -- `framelessWindow` ON -> `setTitleBarStyle('overlay')`, OFF -> `setTitleBarStyle('visible')`,
+// `setDecorations` UNREACHABLE. Every case here calls `setWebviewPlatform('MacIntel')`
+// explicitly; nothing here relies on the `beforeEach` default.
+describe('applyFramelessDecorations (macOS branch, REQ-34.1-03/REQ-34.1-09, gap cycle 1 G4)', () => {
+  it('REQ-34.1-09: framelessWindow:true on macOS calls setTitleBarStyle("overlay") exactly once, and setDecorations ZERO times -- setDecorations(false) strips the native traffic lights (gap G4 / UAT test 9)', () => {
+    setWebviewPlatform('MacIntel')
+    mockedSnapshotGet.mockReturnValue({ framelessWindow: true })
+    applyFramelessDecorations()
+    expect(mockWindow.setTitleBarStyle).toHaveBeenCalledTimes(1)
+    expect(mockWindow.setTitleBarStyle).toHaveBeenCalledWith('overlay')
+    expect(mockWindow.setDecorations).not.toHaveBeenCalled()
+  })
+
+  it('REQ-34.1-09: framelessWindow:false on macOS calls setTitleBarStyle("visible") exactly once, and setDecorations ZERO times -- proves the setting is decoration-EFFECTING on macOS, not inert (REQ-34.1-03)', () => {
+    setWebviewPlatform('MacIntel')
+    mockedSnapshotGet.mockReturnValue({ framelessWindow: false })
+    applyFramelessDecorations()
+    expect(mockWindow.setTitleBarStyle).toHaveBeenCalledTimes(1)
+    expect(mockWindow.setTitleBarStyle).toHaveBeenCalledWith('visible')
+    expect(mockWindow.setDecorations).not.toHaveBeenCalled()
+  })
+
+  it('REQ-34.1-09: the explicit-argument form (the on-toggle path) maps true -> "overlay" on macOS with setDecorations untouched', () => {
+    setWebviewPlatform('MacIntel')
+    mockedSnapshotGet.mockReturnValue({ framelessWindow: false })
+    applyFramelessDecorations(true)
+    expect(mockWindow.setTitleBarStyle).toHaveBeenCalledWith('overlay')
+    expect(mockWindow.setDecorations).not.toHaveBeenCalled()
+  })
+
+  it('REQ-34.1-09: the explicit-argument form maps false -> "visible" on macOS with setDecorations untouched', () => {
+    setWebviewPlatform('MacIntel')
+    mockedSnapshotGet.mockReturnValue({ framelessWindow: true })
+    applyFramelessDecorations(false)
+    expect(mockWindow.setTitleBarStyle).toHaveBeenCalledWith('visible')
+    expect(mockWindow.setDecorations).not.toHaveBeenCalled()
+  })
+
+  it('REQ-34.1-09: the setTitleBarStyle argument is the exact lowercase literal, never the capitalised config-file spelling -- the JS API does not accept "Overlay"/"Visible"', () => {
+    setWebviewPlatform('MacIntel')
+    mockedSnapshotGet.mockReturnValue({ framelessWindow: true })
+    applyFramelessDecorations()
+    const [[calledWith]] = mockWindow.setTitleBarStyle.mock.calls
+    expect(calledWith).toBe('overlay')
+    expect(calledWith).not.toBe('Overlay')
+  })
+
+  it('REQ-34.1-09/CR-02: the pre-paint call then the post-hydration call both issue, in order, on macOS -- the second call is not suppressed by any memoisation', () => {
+    setWebviewPlatform('MacIntel')
+    // Phase 1 -- tauriAttach module body, empty snapshot -> resolves to false -> 'visible'.
+    mockedSnapshotGet.mockReturnValue(undefined)
+    applyFramelessDecorations()
+    expect(mockWindow.setTitleBarStyle).toHaveBeenNthCalledWith(1, 'visible')
+
+    // Phase 2 -- index.tsx, immediately after `await hydrateStoreSnapshot()`.
+    mockedSnapshotGet.mockReturnValue({ framelessWindow: true })
+    applyFramelessDecorations()
+    expect(mockWindow.setTitleBarStyle).toHaveBeenNthCalledWith(2, 'overlay')
+    expect(mockWindow.setTitleBarStyle).toHaveBeenCalledTimes(2)
+    expect(mockWindow.setDecorations).not.toHaveBeenCalled()
+  })
+
+  it('REQ-34.1-09: a setTitleBarStyle rejection on macOS is caught and warned, and does not reject out of the function (SEAM Invariant A holds on the new async failure site)', async () => {
+    setWebviewPlatform('MacIntel')
+    mockWindow.setTitleBarStyle.mockReturnValue(Promise.reject(new Error('denied')))
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(() => applyFramelessDecorations()).not.toThrow()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(warnSpy).toHaveBeenCalled()
+    expect(mockWindow.setDecorations).not.toHaveBeenCalled()
+    warnSpy.mockRestore()
+  })
+
+  it("REQ-34.1-09: on macOS, readFramelessSetting's backing store THROWING still returns normally (SEAM Invariant A)", () => {
+    setWebviewPlatform('MacIntel')
+    mockedSnapshotGet.mockImplementation(() => {
+      throw new Error('store unavailable')
+    })
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(() => applyFramelessDecorations()).not.toThrow()
     expect(warnSpy).toHaveBeenCalled()
     warnSpy.mockRestore()
   })
@@ -274,29 +396,38 @@ describe('installDragRegionHandlers (REQ-34.1-03)', () => {
   })
 })
 
+// Phase 34.1 gap cycle 1 (plan 34.1-10, G4): the four assertions below now pin the
+// WINDOWS/LINUX branch specifically, relying on the `beforeEach` default of a non-macOS
+// platform -- see the comment above the `applyFramelessDecorations` describe block for
+// why that default exists. The macOS case is covered by its own new test at the end of
+// this describe block.
 describe('setSetting wrapper (REQ-34.1-03)', () => {
   it('REQ-34.1-03: calls applyFramelessDecorations when the written key is framelessWindow under Tauri', () => {
     mockedIsTauri.mockReturnValue(true)
     setSetting({ appName: 'default', key: 'framelessWindow', value: true })
     expect(mockWindow.setDecorations).toHaveBeenCalledWith(false)
+    expect(mockWindow.setTitleBarStyle).not.toHaveBeenCalled()
   })
 
   it('REQ-34.1-03: does not call applyFramelessDecorations for a different key', () => {
     mockedIsTauri.mockReturnValue(true)
     setSetting({ appName: 'default', key: 'language', value: 'en' })
     expect(mockWindow.setDecorations).not.toHaveBeenCalled()
+    expect(mockWindow.setTitleBarStyle).not.toHaveBeenCalled()
   })
 
   it('REQ-34.1-03: does not call applyFramelessDecorations for a game-scoped write, even with a matching key', () => {
     mockedIsTauri.mockReturnValue(true)
     setSetting({ appName: 'some-game', key: 'framelessWindow', value: true })
     expect(mockWindow.setDecorations).not.toHaveBeenCalled()
+    expect(mockWindow.setTitleBarStyle).not.toHaveBeenCalled()
   })
 
   it('REQ-34.1-03: never calls applyFramelessDecorations on the Electron path', () => {
     mockedIsTauri.mockReturnValue(false)
     setSetting({ appName: 'default', key: 'framelessWindow', value: true })
     expect(mockWindow.setDecorations).not.toHaveBeenCalled()
+    expect(mockWindow.setTitleBarStyle).not.toHaveBeenCalled()
     expect(electronIpcSendMock).toHaveBeenCalledWith('setSetting', {
       appName: 'default',
       key: 'framelessWindow',
@@ -304,14 +435,25 @@ describe('setSetting wrapper (REQ-34.1-03)', () => {
     })
   })
 
+  // Phase 34.1 gap cycle 1 (plan 34.1-10, G4): the setSetting wrapper is NOT
+  // platform-branched -- it always routes through applyFramelessDecorations, which is
+  // where the platform branch lives. This proves that routing holds on macOS too: a
+  // write to framelessWindow results in setTitleBarStyle with the value matching what
+  // was written, and setDecorations is never touched.
+  it('REQ-34.1-09: on macOS, writing framelessWindow still routes through applyFramelessDecorations and results in setTitleBarStyle, never setDecorations', () => {
+    setWebviewPlatform('MacIntel')
+    mockedIsTauri.mockReturnValue(true)
+    setSetting({ appName: 'default', key: 'framelessWindow', value: true })
+    expect(mockWindow.setTitleBarStyle).toHaveBeenCalledWith('overlay')
+    expect(mockWindow.setDecorations).not.toHaveBeenCalled()
+  })
+
   // WR-05 regression guard: `setSetting` was a pure, never-throwing passthrough before
   // this slice. It is reachable from untyped renderer code, so a malformed call must
   // still be forwarded harmlessly rather than throwing a TypeError back into the caller
   // AFTER the IPC send has already gone out. The unguarded `const [{ appName, key,
   // value }] = args` ran on BOTH paths and broke that.
-  const malformed = [undefined, null] as unknown as [
-    Parameters<typeof setSetting>[0]
-  ]
+  const malformed = [undefined, null] as unknown as [Parameters<typeof setSetting>[0]]
 
   it('REQ-34.1-03/WR-05: a malformed argument does not throw on the ELECTRON path, and is still forwarded over IPC', () => {
     mockedIsTauri.mockReturnValue(false)
