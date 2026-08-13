@@ -386,3 +386,34 @@ it, so no CI run has ever executed the guard, in either direction.
 real digests), which unblocks `install-deps`.
 
 **OWNER:** the same follow-up phase that owns items 1-3, dated 2026-08-12.
+
+## Finding opened by the 2026-08-13 pipe-conversion proof run (plan 34.9-26)
+
+Plan 34.9-26 ran `34.9-PIPE-PROOF.md` (the C2-01 pipe-to-`&&` conversion proof authored by its own
+Task 1) on real macOS arm64 hardware -- Direction A 13/13 scripts PASS in both failure shapes,
+Direction B 8/8 RUN scripts PASS, both chain proofs PASS, restore audit independently recomputed and
+matched. One data-drift finding was opened during Direction B; it does not implicate the
+pipe-conversion under test (`meta/gen_i18n_gate_scope`'s own `--outfile=`/`&&` wiring is correct and
+scored PASS) -- it is about the *staleness of a tracked snapshot the script regenerates*.
+
+### 17. `meta/i18nGateScope.json`'s committed snapshot is stale against the live source tree
+
+**What it is:** `gen-i18n-gate-scope`'s Direction B run (34.9-26 Task 2) regenerated
+`meta/i18nGateScope.json` live and produced a 12-line diff against the committed snapshot
+(`generatedAt: 2026-08-08`).
+
+**Blocker (mechanism, not a summary):** new frontend source files have entered the tree since the
+snapshot was last committed (e.g. `src/frontend/screens/Library/filterEngine.ts`), and
+`gen-i18n-gate-scope` deterministically includes every in-scope file it finds at run time -- so the
+committed snapshot drifts out of date every time a new in-scope frontend file is added without a
+corresponding re-run of `pnpm gen-i18n-gate-scope` and a commit of its output. The script itself is
+correct; the drift was restored via `cp` from the pre-run backup and re-verified byte-identical by
+`shasum -a 256` immediately after (34.9-26's Task 3 independent restore audit re-confirmed
+`meta/i18nGateScope.json` untouched in the live tree).
+
+**Named precondition:** re-run `pnpm gen-i18n-gate-scope` and commit its output, either as a one-off
+catch-up or as a standing pre-commit/CI step that keeps the snapshot in sync with the frontend source
+tree going forward.
+
+**OWNER:** whichever plan or developer next touches the i18n gate scope or the frontend screens
+directory tree, dated 2026-08-13 (finding F-34.9-26-01).
