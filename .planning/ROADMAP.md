@@ -2411,7 +2411,7 @@ REQ-34.9-07, REQ-34.9-08, REQ-34.9-09, REQ-34.9-10, REQ-34.9-11 (minted 2026-08-
 ticked only by measured evidence)
 **Depends on:** Phase 34 (packaging/signing/notarization pipeline). Independent of the 34.1-34.8
 IPC slices. Runs before Phase 35, which will later delete the Electron half of the signing work.
-**Plans:** 28 total (17 original + 5 gap cycle 2 + 6 gap cycle 3) — 23/28 executed on disk as of
+**Plans:** 25/28 plans executed
 2026-08-13 (counted from `-SUMMARY.md` files present in this phase's directory), including gap
 cycle 3's first plan, 34.9-23 (audit-only, `34.9-PIPE-AUDIT.md`: derived the C2-01 pipe-swallow
 census by predicate — 13 instances, one more than gap-planning decision D-C3-01's 12-item list;
@@ -2441,7 +2441,7 @@ gap-cycle plans complete:
 
 - [x] 34.9-23-PLAN.md — derive the C2-01 defect census by predicate (never a line-range grep), enumerate every caller, and measure the __dirname/require.main deltas against real bundled output — **DONE 2026-08-13**, see `34.9-PIPE-AUDIT.md`, 34.9-23-SUMMARY.md
 - [x] 34.9-24-PLAN.md — close C2-06/C2-08: the top-level framework stub's missing resolved-target check, and the symlink-free-tree test's ignored third return-shape key — **DONE 2026-08-13**, see `34.9-24-SUMMARY.md`
-- [ ] 34.9-25-PLAN.md — convert every census instance from the exit-code-swallowing pipe to the `&&` idiom this repo already uses (`verify:updater-key`'s precedent), and correct every comment the conversion makes false
+- [x] 34.9-25-PLAN.md — convert every census instance from the exit-code-swallowing pipe to the `&&` idiom this repo already uses (`verify:updater-key`'s precedent), and correct every comment the conversion makes false
 - [ ] 34.9-26-PLAN.md — prove, both directions against a known-bad input, that plan 34.9-25's conversion actually converts silent success into loud failure, per script and at the `dist:mac` chain level
 - [ ] 34.9-27-PLAN.md — close C2-04 with a wiring-pin regression test for `verify:runner-bundle`'s position in `dist:mac`/`release:mac`; record C2-05/C2-07 as dated, owned deferred entries
 - [ ] 34.9-28-PLAN.md — close gap cycle 3: sweep all eight `34.9-REVIEW-CYCLE2.md` findings by set-difference, confirm each cycle-3 deliverable against the repository, leave `/gsd-verify-work 34.9` as the next step

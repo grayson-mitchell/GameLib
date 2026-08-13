@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: executing
-stopped_at: "Completed 34.9-24-PLAN.md -- closed C2-06 (top-level framework stub resolved-target check) and C2-08 (restoreSymlinks rejected-key assertion); 4 plans remain in gap cycle 3 (34.9-25..28)"
-last_updated: "2026-08-13T19:30:00.000Z"
-last_activity: 2026-08-13 -- Phase 34.9 gap cycle 3 plan 34.9-24 EXECUTED (2/2 tasks, resumed from interruption). Closed C2-06 (Python.framework top-level stub now gets the same resolved-target check as Versions/Current, proven RED/GREEN with a shasum-verified restore) and C2-08 (preserveRunnerSymlinks symlink-free-tree test now asserts all three return-shape keys). Full pnpm test:ci: 243/243 suites, 4763/4764 tests (1 pre-existing skip).
+status: verifying
+stopped_at: Completed 34.9-21-PLAN.md -- ran `34.9-GUARD-PROOF.md` on real macOS arm64 hardware.
+last_updated: "2026-08-13T05:10:00.545Z"
+last_activity: 2026-08-13
 progress:
-  total_phases: 23
-  completed_phases: 17
+  total_phases: 24
+  completed_phases: 16
   total_plans: 303
-  completed_plans: 286
-  percent: 94
+  completed_plans: 288
+  percent: 67
 ---
 
 # Project State
@@ -509,7 +509,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **gap cycle 3 IN
 PROGRESS, phase remains OPEN**
-Plan: 34.9-24 of 34.9-23..28 complete (2026-08-13). Gap cycle 3 was planned 2026-08-13 (6 plans,
+Plan: 34.9-25 of 34.9-23..28 complete (2026-08-13). Gap cycle 3 was planned 2026-08-13 (6 plans,
 5 waves, plan-checker PASSED) to close the sole remaining verification gap from gap cycle 2's
 re-verification: truth 8 / C2-01 (the `esbuild ... | node`/`| node -` pipe-swallow idiom — a
 compile failure in a wired guard script is invisible because `sh -c` has no `pipefail` and a
@@ -540,8 +540,23 @@ backup with `cp`, verify the restore with matching `shasum -a 256` — `git chec
 used). **C2-08** — `preserveRunnerSymlinks.test.ts`'s symlink-free-tree test now asserts all
 three keys (`restored`, `skipped`, `rejected`) of `restoreSymlinks`' return shape, not just the
 first two. `pnpm codecheck` exits 0; full `pnpm test:ci` is 243/243 suites, 4763/4764 tests (1
-pre-existing skip), no newly-failing suite. See `34.9-24-SUMMARY.md`. Next: **34.9-25-PLAN.md**,
-the next plan in gap cycle 3's wave sequence (the pipe-idiom conversion family, 34.9-25..28).
+pre-existing skip), no newly-failing suite. See `34.9-24-SUMMARY.md`.
+
+Plan 34.9-25 (wave 2, depends on 34.9-23/24) converted every one of the 13 census scripts from
+`esbuild --bundle ... | node`/`| node -` to `esbuild --bundle ... --outfile=node_modules/.cache/
+<name>.cjs <entry> && node node_modules/.cache/<name>.cjs`, matching the idiom `verify:updater-key`
+already used. Re-run of the audit's own census predicate against the modified `package.json`
+returns an empty bucket (a) — zero surviving pipe-to-node instances. Zero BLOCKED (Section 7's
+`__dirname`/`require.main` measurement found none). Appended `## 8. Conversion record` to
+`34.9-PIPE-AUDIT.md`. Task 2 corrected every `meta/*.ts` comment the conversion falsified — 11
+files (the audit's Section 7 inventory named `meta/machineFillGamelib.ts` beyond this plan's own
+frontmatter file list; per the plan's own instruction the audit won), plus one extra stale
+reference at `buildSteamBridgeShims.ts:135` found by this task's own grep sweep. Diff is
+comment-only (verified programmatically); `JEST_WORKER_ID` guards unchanged as code; the existing
+`doc-comment accuracy pins (IN-01/IN-02)` suite still passes. `pnpm codecheck` exits 0; `pnpm
+test:ci` 243/243 suites, 4763/4764 tests (1 pre-existing skip) — identical to 34.9-24's baseline.
+This plan does NOT prove the fix works — plan 34.9-26 owns that. See `34.9-25-SUMMARY.md`. Next:
+**34.9-26-PLAN.md**, the next plan in gap cycle 3's wave sequence.
 
 Prior phase-34.9 position (superseded by gap cycle 3 above, retained as history):
 
@@ -562,7 +577,7 @@ set-difference (CR-01, WR-01, WR-02, IN-01, IN-02 landed via 34.9-18..21; IN-03 
 UNPROVEN), corrected the overclaiming "automated tripwire ... cannot go silent again" prose in
 `34.9-LIVE-GATE-RERUN.md`, ROADMAP.md and REQUIREMENTS.md to carry that same scope in every passage,
 and reconciled ROADMAP.md's duplicate `34.9-17` row. See `34.9-22-SUMMARY.md`.
-Status: **`34.9-VERIFICATION.md` remains `status: gaps_found`.** Gap cycle 2 landed the fixes and
+Status: Phase complete — ready for verification
 the ledger this plan's own truth-8 gap named as missing, but this plan does not itself re-score that
 verification report. **Next step: `/gsd-verify-work 34.9`**, to re-score truth 8 against this
 landed evidence. The phase does not close until that re-verification runs.
@@ -3292,7 +3307,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-12 -- Phase 34.9 execution started
+Last activity: 2026-08-13
   cancels instead of erroring
   (pre-existing external-state reachability) and Test 7 (UI-level reachability, distinct from
   backend-logic reachability) to live-gate-contract-authoring.md's Structural Reachability Review,
@@ -4041,6 +4056,7 @@ Closed/parked native-install phases:
 | Phase 34.9 P20 | 55min | 3 tasks | 3 files |
 | Phase 34.9 P21 | 73min | 3 tasks | 3 files |
 | Phase 34.9 P23 | 45min | 2 tasks | 1 files |
+| Phase 34.9 P25 | 26min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -4623,6 +4639,7 @@ Recent decisions affecting current work:
 - [Phase 34.9-23]: All 12 distinct census entry files compile clean today (esbuild exit 0) and carry zero __dirname/require.main references in their emitted bundles (measured against the bundle, never source comments) -- no VACUOUS TODAY instance, no BLOCKER for plan 34.9-25's conversion
 - [Phase 34.9-23]: install-deps' pnpm download-helper-binaries throw (deferred-items.md item 13) is platform-unconditional, not macOS-scoped as item 13's own framing implied -- confirmed by reading downloadOnedirAsset(), which is never gated on process.platform -- so every one of the 9 workflow files referencing install-deps is currently BLOCKED UPSTREAM at the same step, not just the macOS legs
 - [Phase 34.9-23]: STATE.md frontmatter progress block was hand-corrected rather than trusted from gsd-sdk state.advance-plan/state.update-progress -- both calls reverted status/stopped_at/last_activity to stale plan-21 values and wrote inconsistent completed_plans/percent pairs across two separate invocations (284->286 then a JSON-report/file-write mismatch); reverted via git checkout -- .planning/STATE.md (twice) and hand-edited completed_plans 284->285, percent recomputed 285/303*100=94.06 rounds to 94 per this project's established plan-ratio convention (the committed percent:74 pre-dated this session and did not match either formula -- left as a pre-existing drift, not re-derived further, out of this plan's scope)
+- [Phase 34.9-25]: Converted all 13 census-matched esbuild|node pipe scripts in package.json to the --outfile=node_modules/.cache/<name>.cjs && node <same path> idiom (verify:updater-key's existing pattern); corrected 11 meta/*.ts comments the conversion made false about __dirname/require.main. Trusted the audit's Section 7 stale-comment inventory over this plan's own frontmatter file list where they disagreed (meta/machineFillGamelib.ts), per the plan's explicit instruction. Fix does not yet prove itself -- 34.9-26 owns that.
 
 ### Pending Todos
 
