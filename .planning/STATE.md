@@ -3763,8 +3763,24 @@ Closed/parked native-install phases:
 - **Phase 24** (macOS native Steam bridge, out-of-process steam_api proxy) — ✅ Complete
   2026-07-21 (17 plans). Gates 0/1/2/3 PASS on real hardware; gap cycles 24-11..24-16
   closed the shim-overwrite/install-poll and launch/sync clusters. Gate 4 (Hoard) out of
-  scope — the bridge proxies only ISteamUser + ISteamFriends. Remaining: human retest of
-  the Avernum 5 launch on the rebuilt .app
+  scope — the bridge proxies only ISteamUser + ISteamFriends. No open phase work —
+  RETEST RUN 3 (2026-07-21, `.app` rebuilt 19:02 with gap plan 24-17) closed Gates 2/3
+  against **Avernum 6**, and `24-UAT.md` is `status: complete` / `pending_gates: 0`.
+  Three items carry forward as deferred, not open: **D-UAT-24-09** — Hoard imports 8 bare
+  interface accessors and aborts on `unimplemented function steam_api.dll.SteamUtils`; it
+  was removed from `bridge-allowlist.json` (`30cdda6a`), and covering it needs 6 new
+  interface proxies (ISteamUtils/ISteamApps/ISteamUserStats/ISteamRemoteStorage/
+  ISteamMatchmaking/ISteamNetworking) — a follow-on phase, not a gap cycle. **WR-01** —
+  helper concurrency, skipped at code-review-fix time (`24-REVIEW-FIX.md` is
+  `status: partial`, 6 fixed / 1 skipped): the single-threaded helper serializes a second
+  concurrent bridge game, and the multiplexer rewrite was deferred as unverifiable
+  without live hardware. **D-UAT-24-08** — half unimplemented: the teardown IS wired
+  (`shutdownBridgeHelper()` from `app.on('before-quit')`, `src/backend/main.ts:716-722`),
+  but the recommended second half — detect a healthy helper already listening on
+  127.0.0.1:54550 and REUSE it instead of spawning a duplicate that FATALs on bind — was
+  never built (no EADDRINUSE/reuse path in
+  `src/backend/storeManagers/steam/bridge/helperProcess.ts`), and it was never formally
+  dispositioned in `24-UAT.md`.
 
 ## Native-Install Arc Phase Map (21–25)
 
@@ -3773,7 +3789,7 @@ Closed/parked native-install phases:
 | 21 | Steam Native Install (depot download) | 17 | 17 | ✅ Complete (2026-07-20) — code-review clean, secure-phase 41/41 threats_open:0; hardware UAT (7 native-install items) DEFERRED to Windows post-production + D-UAT-10 bottled-launch deferred as tracked macOS debt |
 | 22 | Steam Game Families (multiple bottle configs) | 8 | 0 | ⛔ **PARKED 2026-07-21 — superseded by Phase 24.** Bridge's one shared bottle (D-03) eliminates the per-family bottle matrix; plans retained unexecuted (`22-multiple-steam-bottles/PARKED.md`) |
 | 23 | Steam full-ownership install (StateFlags=4) | 10 | 6 | 🔄 In progress, NOT phase-complete — Gate 1 PASS (2026-07-19); Gate 2 CONDITIONAL PASS (2026-07-21, HUMANKIND Denuvo launch proven but only after a manual `chmod +x` workaround — blocker gap **G-23-02**, native install applies no execute bits); Gate 3 pending. Gap **G-23-01** (KCD2 `Blocked`-depot-key aborts whole install) also open. **23-06 executed** (trace-before-fix): added permanent `steam-flags-census` instrumentation (plan-build/download-entry/download-complete) + `23-TRACE.md` H1-H5 hypothesis matrix — no fix yet, per user-locked ordering. Next: 23-07 (live-run recording) → 23-08 (the gated fix). REQ-23-07 stays open until Gate 2 re-runs clean and Gate 3 passes (`/gsd-verify-work 23`) |
-| 24 | macOS native Steam bridge (steam_api proxy) | 17 | 17 | ✅ Complete 2026-07-21 — Gates 0/1/2/3 PASS on real hardware; gap cycles 24-11..24-16 closed shim-overwrite/install-poll + CrossOver-launch/library-sync clusters; secure-phase done (threats_open:0). Gate 4 (Hoard) out of scope — bridge proxies only ISteamUser + ISteamFriends. Open: human retest of Avernum 5 launch |
+| 24 | macOS native Steam bridge (steam_api proxy) | 17 | 17 | ✅ Complete 2026-07-21 — Gates 0/1/2/3 PASS on real hardware; gap cycles 24-11..24-16 closed shim-overwrite/install-poll + CrossOver-launch/library-sync clusters; secure-phase done (threats_open:0). Gate 4 (Hoard) out of scope — bridge proxies only ISteamUser + ISteamFriends. Gate 3 = **Avernum 6** (RETEST RUN 3, 19:02 rebuild w/ 24-17); `24-UAT.md` `status: complete`, `pending_gates: 0`. Deferred (not open): **D-UAT-24-09** full Hoard support needs 6 more interface proxies (follow-on phase; Hoard delisted `30cdda6a`); **WR-01** helper concurrency skipped at review-fix (`24-REVIEW-FIX.md` partial — single-threaded helper serializes a 2nd concurrent bridge game); **D-UAT-24-08** helper-reuse-on-bind never built (teardown wired at `main.ts:716-722`; no 127.0.0.1:54550 reuse path in `helperProcess.ts`), never dispositioned in `24-UAT.md` |
 | 25 | Steam depot multi-host fan-out (throughput) | 3 | 3 | ✅ Complete + HW-verified 2026-07-19 (hosts=3, ~10 MiB/s vs 1.5–2.9 baseline) |
 
 ## Earlier macOS-Compat Phase Map (17–19)
