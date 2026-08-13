@@ -2077,7 +2077,7 @@ all stay `[ ]` per D-08's no-partial-pass rule — item 3's own PASS does not ti
 > **What this dependency does and does not block.** The seam itself is BUILT and unit-proven — 8 of 9 of 34.4.1's plans are executed, the runner-agnostic child-window mechanism is deliberately Humble-agnostic, and 34.4.1-09 already **wired** all four OAuth runners via the new `oauthCaptureLogin` channel with a declared-blocked UI surface naming each runner's unported channel. So 34.5 may be **discussed and planned now**. What is still outstanding is 34.4.1's *live proof* (plan 08's blocking 4-item gate, plus item 3(b) already recorded BLOCKED-UNOBSERVABLE and headed for a gap cycle). 34.5 must not **ship** a real OAuth credential path on a seam whose live gate never ran.
 >
 > **Inherited obligation, not a note — `T-34.4.1-44b`.** nile and zoom capture via a **host-free param match** inherited from the Electron original. This is harmless in 34.4.1 only because the captured value is handed to a channel that rejects. **34.5 MUST host-anchor both before it mints a real credential.** Also inherited: navigation observation (NOT the cookie read) is the actual seam surface, and 34.4.1 RESEARCH Open Question 1 — in-app `on_navigation` cancellation timing — remains unobserved.
-**Plans:** 52/60 plans executed (48 of 48 pre-cycle-7 in-scope; 9 gap-cycle-7 plans 34.5-52..60 added 2026-08-13, 4 executed — 34.5-52, 34.5-53, 34.5-54, 34.5-55; 3 halted/superseded — see below)
+**Plans:** 53/60 plans executed (48 of 48 pre-cycle-7 in-scope; 9 gap-cycle-7 plans 34.5-52..60 added 2026-08-13, 5 executed — 34.5-52, 34.5-53, 34.5-54, 34.5-55, 34.5-57; 3 halted/superseded — see below; **34.5-59 BLOCKED pending `F-34.5-G6-22`, per `34.5-CYCLE7-REVIEW.md`'s `halt_gate: true`**)
 44 `*-SUMMARY.md`). **34.5-29/30/31 are HALTED and SUPERSEDED, not pending** — as of 2026-08-13 each
 carries a `type: superseded`, `executed: false` SUMMARY recording its disposition, so it no longer
 reports as outstanding work; their `[ ]` checkboxes stay deliberately unticked and their PLAN files
@@ -2194,6 +2194,37 @@ strings as exports in `declaredUnavailable.ts`, which the gate's scope file does
 explicitly to the source-level treatment only; `U-34.5-32` opened in the same commit for the
 live-observation half (mirrors `U-34.5-24`'s identical split for the EOS cluster), 32 rows.
 Nothing in this plan has been observed live under a real Tauri webview. Next: 34.5-56.
+
+**2026-08-14 — 34.5-57 EXECUTED** (cycle-7 code review, run BEFORE the gate and BEFORE the
+propagation sweep, per this project's own measured lesson that a review run after the sweep is
+unledgered by construction). Nine authoring-time defect-class passes run against the union of
+plans 34.5-52/-53/-54/-55's diffs — vacuous-assertion sweep, all twelve required RED captures
+individually verified PRESENT, both temporary-edit restoration proofs re-run from HEAD, production
+call-shape checks, grep-gate self-reference check, localisation/`hardcodedStringGate`, scope
+discipline on the HALTED 34.5-29/30/31, the full additive/reversible invariant (`tsc` clean;
+`cargo check`/`test` 147/0/1; `npm run test:ci` 4832/1/0 across 249 suites; both Python IPC gates
+exit 0), and the phase's own seven-class redaction sweep over the cycle's commits (clean, proven
+non-vacuous first). All nine PASS on the cycle's own diff — but an independent trace beyond the
+plan's own checklist, following `NileUser.login()`'s `runRunnerCommand` call into the shared
+`callRunner()` in `src/backend/launcher.ts`, found a real, currently-live leak:
+**`F-34.5-G6-22` (blocker)** — the PKCE `code_verifier` is written unredacted to `gamelib.log` on
+every real `NileUser.login()` call, via a pre-existing call site (`launcher.ts:1704`'s `logInfo`)
+that plan 34.5-53 never touched; `getRunnerCallWithoutCredentials` (`launcher.ts:1888`) only
+redacts `--code`/`--token` array members, never `--code-verifier`, and
+`nileCredentialRedaction.test.ts`'s Group A mocks `runRunnerCommand` entirely so it cannot reach
+this code path. This falsifies plan 34.5-53's own closing claim that neither the code nor the
+`code_verifier` reaches `gamelib.log` in cleartext any more — true only for the two call sites
+inside `nile/user.ts` itself. `F-34.5-G6-23` (note, non-blocking) also recorded: the
+`winetricksInstall` send-kind exemption in `Winetricks/index.tsx` is correct reasoning only while
+all three winetricks channels port atomically (currently true per `IPC-PORT-INVENTORY.md`'s
+Slice-9 grouping), flagged for Phase 34.6's own live verification. Recorded in
+`34.5-CYCLE7-REVIEW.md` with **`halt_gate: true`** — **plan 34.5-59 (the fifth blocking live gate)
+must NOT launch until `F-34.5-G6-22` is fixed by a new plan inserted before wave 5 and this review
+is amended to `halt_gate: false`.** The fix is not applied inline in plan 57 itself — this plan's
+own file scope is read-only-review (its own Task 1 `<files>` tag and Task 2's single-file
+`git diff --stat` acceptance criterion), overriding the plan's secondary "fixable within two
+files" allowance by deliberate decision, recorded in `34.5-57-SUMMARY.md`. Next: 34.5-56 and
+34.5-58 (independent of each other and of this plan); **34.5-59 BLOCKED pending `F-34.5-G6-22`.**
 
 **PHASE DOES NOT CLOSE.** The blocking 5-item live gate (`34.5-15-PLAN.md`) ran
 2026-08-01 and FAILED (0/5 PASS) — see `34.5-LIVE-GATE.md` and `34.5-15-SUMMARY.md`. Gap cycle
