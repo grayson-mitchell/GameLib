@@ -2411,9 +2411,11 @@ REQ-34.9-07, REQ-34.9-08, REQ-34.9-09, REQ-34.9-10, REQ-34.9-11 (minted 2026-08-
 ticked only by measured evidence)
 **Depends on:** Phase 34 (packaging/signing/notarization pipeline). Independent of the 34.1-34.8
 IPC slices. Runs before Phase 35, which will later delete the Electron half of the signing work.
-**Plans:** 27/28 plans executed
-2026-08-13 (counted from `-SUMMARY.md` files present in this phase's directory), including gap
-cycle 3's first plan, 34.9-23 (audit-only, `34.9-PIPE-AUDIT.md`: derived the C2-01 pipe-swallow
+**Plans:** 28 total (17 original + 5 gap cycle 2 + 6 gap cycle 3) — 28/28 executed on disk
+2026-08-13 (27 `-SUMMARY.md` files present in this phase's directory at edit time, plus this
+closing plan's own `34.9-28-SUMMARY.md`, written immediately after this reconciliation task, per
+the same derivation this line has documented since plan 34.9-22). Gap cycle 3's first plan, 34.9-23
+(audit-only, `34.9-PIPE-AUDIT.md`: derived the C2-01 pipe-swallow
 census by predicate — 13 instances, one more than gap-planning decision D-C3-01's 12-item list;
 no `VACUOUS TODAY`/`BLOCKER` instances found; every CI caller currently BLOCKED UPSTREAM). Gap
 cycle 3 (34.9-23..28, planned 2026-08-13, 5 waves) closes the sole remaining verification gap:
@@ -2436,15 +2438,18 @@ methodology findings on the proof contract's own commands opened as `deferred-it
 tripwire prose) are complete. **The phase does not close from gap cycle 2's own edits** —
 `34.9-VERIFICATION.md` remains `status: gaps_found` until the verifier re-scores truth 8 against
 this landed evidence: `/gsd-verify-work 34.9`.
-**Gap cycle 3 planned 2026-08-13** (`/gsd-plan-phase 34.9 --gaps`), 6 plans in 5 waves, 4/6
-gap-cycle plans complete:
+**Gap cycle 3 — planned 2026-08-13 at `/gsd-plan-phase 34.9 --gaps`.** 6 plans in 5 waves, 6/6
+gap-cycle plans complete. Closes `34.9-VERIFICATION.md` truth 8's second failure — C2-01, the
+`esbuild ... | node -` pipeline swallowing a compile failure — plus the seven other
+`34.9-REVIEW-CYCLE2.md` findings (C2-02 through C2-08) that appeared in no ledger at the
+2026-08-12 verification run:
 
 - [x] 34.9-23-PLAN.md — derive the C2-01 defect census by predicate (never a line-range grep), enumerate every caller, and measure the __dirname/require.main deltas against real bundled output — **DONE 2026-08-13**, see `34.9-PIPE-AUDIT.md`, 34.9-23-SUMMARY.md
 - [x] 34.9-24-PLAN.md — close C2-06/C2-08: the top-level framework stub's missing resolved-target check, and the symlink-free-tree test's ignored third return-shape key — **DONE 2026-08-13**, see `34.9-24-SUMMARY.md`
 - [x] 34.9-25-PLAN.md — convert every census instance from the exit-code-swallowing pipe to the `&&` idiom this repo already uses (`verify:updater-key`'s precedent), and correct every comment the conversion makes false
 - [x] 34.9-26-PLAN.md — prove, both directions against a known-bad input, that plan 34.9-25's conversion actually converts silent success into loud failure, per script and at the `dist:mac` chain level — **DONE 2026-08-13, verdict PASS 36/36** (Direction A 13/13 scripts both shapes, Direction B 8/8 RUN, both chain proofs, restore audit independently confirmed), see `34.9-PIPE-PROOF.md`, `34.9-26-SUMMARY.md`; one finding (F-34.9-26-01, `meta/i18nGateScope.json` catalogue drift) opened as `deferred-items.md` item 17
 - [x] 34.9-27-PLAN.md — close C2-04 with a wiring-pin regression test for `verify:runner-bundle`'s position in `dist:mac`/`release:mac`; record C2-05/C2-07 as dated, owned deferred entries — **DONE 2026-08-13** (proven red against all four mutations: M1/M2 presence, M3/M4 ordering, `package.json` restored byte-identical), see `34.9-27-SUMMARY.md`; does NOT close C2-01 / truth 8 (already satisfied by 34.9-26)
-- [ ] 34.9-28-PLAN.md — close gap cycle 3: sweep all eight `34.9-REVIEW-CYCLE2.md` findings by set-difference, confirm each cycle-3 deliverable against the repository, leave `/gsd-verify-work 34.9` as the next step
+- [x] 34.9-28-PLAN.md — close gap cycle 3: sweep all eight `34.9-REVIEW-CYCLE2.md` findings by set-difference, confirm each cycle-3 deliverable against the repository, leave `/gsd-verify-work 34.9` as the next step — **DONE 2026-08-13**, `34.9-C2-SWEEP-CHECK.cjs` (proven RED against the pre-content baseline and four deliberately-mutated inputs before going green) reports `C2-SWEEP-OK 8/8 mapped, unmapped 0`; see `deferred-items.md`'s `## Code-review finding disposition — gap cycle 2 review (2026-08-13)` section, `34.9-28-SUMMARY.md`. **This plan does not close Phase 34.9 and does not itself score truth 8** — the phase awaits re-verification: `/gsd-verify-work 34.9`.
 
 **Gap cycle 1 planned 2026-08-11**
 (`/gsd-plan-phase 34.9 --gaps`), 6 plans in 4 waves, 6/6 gap-cycle plans complete (17/17 overall):
@@ -2515,6 +2520,18 @@ items 2/3/5 were not invalidated (no DEV-side regression observed) and retain th
 verdicts. REQ-34.9-08 and REQ-34.9-11 ticked on this basis. A green 235-suite / 4598-test run never
 detected F-34.9-01 in the first place — the live gate is what caught it, and the live gate is what
 closed it. See `34.9-16-SUMMARY.md`.
+
+**2026-08-13 update — gap cycle 3 landed, phase still does not close.** Gap cycle 3 (34.9-23..28)
+landed: the pipe-idiom conversion across all 13 censused `package.json` scripts, not merely the two
+`34.9-VERIFICATION.md` originally named (34.9-25); its both-direction proof on real arm64 hardware,
+verdict PASS 36/36 (34.9-26, `34.9-PIPE-PROOF.md`); the C2-06 (`resolvedTopLevelTargetExists`) and
+C2-08 (`result.rejected` assertion) fixes (34.9-24); the C2-04 wiring-pin regression test, proven
+red against four mutations (34.9-27); the C2-05/C2-07 dated ledger entries, items 18/19 per locked
+decision D-C3-05 (34.9-27); and the eight-finding sweep closing this section's own precedent's
+pattern a second time, computed unmapped count 0 (34.9-28, `deferred-items.md`'s
+`## Code-review finding disposition — gap cycle 2 review (2026-08-13)` section). **Truth 8 must
+still be re-scored by the verifier against this landed evidence** — `/gsd-verify-work 34.9` is the
+next step; this paragraph does not itself close the phase.
 
 **The x64 leg remains permanently blocked FOR THIS PHASE, by a user decision recorded 2026-08-11 at
 gap-planning time** — this is a deliberate scope fence, not an unresolved gap. The CI leg was never

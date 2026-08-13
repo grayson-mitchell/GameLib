@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: verifying
-stopped_at: Completed 34.9-27-PLAN.md -- closed C2-04 with a proven-red package.json wiring pin (all four mutations scored correctly on real hardware), ledgered C2-05 and C2-07 as dated deferrals per D-C3-05 (items 18/19). Does not close C2-01 / VERIFICATION.md truth 8.
-last_updated: "2026-08-13T07:12:00.843Z"
-last_activity: 2026-08-13
+stopped_at: Completed 34.9-28-PLAN.md -- swept all eight 34.9-REVIEW-CYCLE2.md findings by set-difference (unmapped 0, 34.9-C2-SWEEP-CHECK.cjs proven RED against the pre-content baseline and four deliberate mutations before going green), reconciled ROADMAP/REQUIREMENTS/STATE to the post-cycle-3 truth. Does not close the phase -- 34.9-VERIFICATION.md remains status: gaps_found; /gsd-verify-work 34.9 is the next step.
+last_updated: "2026-08-13T07:27:58.000Z"
+last_activity: 2026-08-13 -- Phase 34.9 gap cycle 3 CLOSED (34.9-23..28, 6 plans / 5 waves). All eight 34.9-REVIEW-CYCLE2.md findings dispositioned (6 fixed and confirmed against repository state outside .planning/, 2 dated deferrals per D-C3-05); phase awaits re-verification.
 progress:
-  total_phases: 24
-  completed_phases: 16
+  total_phases: 23
+  completed_phases: 17
   total_plans: 303
-  completed_plans: 289
-  percent: 67
+  completed_plans: 290
+  percent: 94
 ---
 
 # Project State
@@ -507,9 +507,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **gap cycle 3 IN
-PROGRESS, phase remains OPEN**
-Plan: 34.9-27 of 34.9-23..28 complete (2026-08-13). Gap cycle 3 was planned 2026-08-13 (6 plans,
+Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **gap cycle 3
+COMPLETE, phase remains OPEN pending re-verification**
+Plan: 34.9-28 of 34.9-23..28 complete (2026-08-13) — all 6 gap-cycle-3 plans done. Gap cycle 3 was planned 2026-08-13 (6 plans,
 5 waves, plan-checker PASSED) to close the sole remaining verification gap from gap cycle 2's
 re-verification: truth 8 / C2-01 (the `esbuild ... | node`/`| node -` pipe-swallow idiom — a
 compile failure in a wired guard script is invisible because `sh -c` has no `pipefail` and a
@@ -594,8 +594,42 @@ assertion, presence still passing) before `package.json` was restored byte-ident
 fix) — C2-05 reconciled against existing items 12/13 rather than restating them. **Scope honesty,
 repeated:** this plan does NOT close C2-01 and does NOT itself satisfy truth 8 (that was already
 satisfied by plan 34.9-26's pipe-conversion proof) — C2-04 is the narrower "is the step present and
-correctly ordered" guarantee. See `34.9-27-SUMMARY.md`. Next: **34.9-28-PLAN.md**, the closing plan
-of gap cycle 3's wave sequence.
+correctly ordered" guarantee. See `34.9-27-SUMMARY.md`.
+
+**Plan 34.9-28 (wave 5, the closing plan of gap cycle 3) is now COMPLETE (2026-08-13).** Authored
+`34.9-C2-SWEEP-CHECK.cjs` (a dependency-free, re-pointable sweep predicate deriving list A live
+from `34.9-REVIEW-CYCLE2.md`'s own `### C2-NN` headings) and OBSERVED it RED against the
+pre-content baseline (`MISSING-DISPOSITION-HEADING`, exit 1) and against a review file with zero
+headings (`LIST-A-EMPTY`, exit 2) before writing any disposition content. Then appended
+`deferred-items.md`'s `## Code-review finding disposition — gap cycle 2 review (2026-08-13)`
+section: all eight `34.9-REVIEW-CYCLE2.md` findings mapped — C2-01/C2-02/C2-03 (34.9-25 conversion
++ 34.9-26 proof), C2-04 (34.9-27 wiring-pin test), C2-06/C2-08 (34.9-24) confirmed FIXED from
+repository state outside `.planning/` (package.json script strings, `meta/verifyRunnerBundle.ts`
+symbols, `meta/__tests__/*.ts` assertions, a live `pnpm test:ci` 243/243-suite run); C2-05/C2-07
+DEFERRED to the already-open ledger items 18/19 (opened by 34.9-27, unchanged here) — A minus B
+required no new item. `34.9-C2-SWEEP-CHECK.cjs` exits 0, `C2-SWEEP-OK 8/8 mapped, unmapped 0`.
+Non-vacuity proved: four scratch-copy mutations (never `git checkout --`) each drove the predicate
+red with the expected reason (M1 deleted row → `C2-01 NO-ROW`; M2 stripped `OWNER:` line → `C2-05
+ITEM-NOT-STRUCTURED`; M3 self-referential confirmation → `C2-06
+FIXED-NOT-CONFIRMED-OUTSIDE-PLANNING`; M4 mention-without-structure → `C2-05
+ITEM-DOES-NOT-NAME-FINDING`). Also recorded the truth-8 missing-list delivery-state table
+(three rows, quoted verbatim from `34.9-VERIFICATION.md`), cross-checked at script granularity
+between `34.9-PIPE-AUDIT.md`'s 13-script census and `34.9-PIPE-PROOF.md`'s Direction A/B matrix —
+no censused script unaccounted for. Reconciled `ROADMAP.md` (28 total plans, gap-cycle-3 block
+complete, dated 2026-08-13 status paragraph), `REQUIREMENTS.md` (dated addenda on both REQ-34.9-08
+locations, tick state unchanged), and `STATE.md` itself. **Frontmatter deviation (Rule 1, bug
+fix):** `total_phases`/`completed_phases`/`percent` were found corrupted (`24`/`16`/`67`) by a
+`gsd-sdk` `state.*` write during plan 34.9-25's execution (`git show 0f852a623` — the same commit
+also reverted `status` from `executing` to `verifying` and `stopped_at` to a stale 34.9-21-era
+value); the phase-axis fields were stable at `23`/`17` across this entire gap cycle both before and
+after that single anomalous commit (confirmed via `git log -p -- .planning/STATE.md`), so this plan
+restored them to `23`/`17`, and `percent` to `94` — the last value legitimately recorded
+(34.9-24's own commit, `1d7f5d518`) immediately before the corrupting write, not a plan-derived
+figure. `total_plans`/`completed_plans` use the plan's own baseline-plus-count formulas: `297 + 6 =
+303` (unchanged — `303` was already correct) and `284 + 5 + 1 = 290` (5 cycle-3 SUMMARY files on
+disk at edit time, plus this plan's own). This does not close Phase 34.9; `34.9-VERIFICATION.md`
+remains `status: gaps_found`. **Next step: `/gsd-verify-work 34.9`**, to re-score truth 8 against
+this landed evidence. See `34.9-28-SUMMARY.md`.
 
 Prior phase-34.9 position (superseded by gap cycle 3 above, retained as history):
 
