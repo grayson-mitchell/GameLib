@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: verifying
-stopped_at: Completed 34.9-28-PLAN.md -- swept all eight 34.9-REVIEW-CYCLE2.md findings by set-difference (unmapped 0, 34.9-C2-SWEEP-CHECK.cjs proven RED against the pre-content baseline and four deliberate mutations before going green), reconciled ROADMAP/REQUIREMENTS/STATE to the post-cycle-3 truth. Does not close the phase -- 34.9-VERIFICATION.md remains status: gaps_found; /gsd-verify-work 34.9 is the next step.
-last_updated: "2026-08-13T07:27:58.000Z"
-last_activity: 2026-08-13 -- Phase 34.9 gap cycle 3 CLOSED (34.9-23..28, 6 plans / 5 waves). All eight 34.9-REVIEW-CYCLE2.md findings dispositioned (6 fixed and confirmed against repository state outside .planning/, 2 dated deferrals per D-C3-05); phase awaits re-verification.
+status: executing
+stopped_at: Phase 34.9 gap cycle 4 PLANNED (34.9-29..33, 5 plans / 4 waves) -- closes the sole remaining 34.9-VERIFICATION.md gap: C3-01/C3-02/C3-03 from 34.9-REVIEW-CYCLE3.md have no disposition in any ledger. All three are FIXED (not risk-accepted) per locked decisions D-C4-01/02/03, and D-C4-04 breaks the review-after-sweep ordering loop that has produced this same gap four cycles running. Next step /gsd-execute-phase 34.9.
+last_updated: "2026-08-13T08:32:52.883Z"
+last_activity: 2026-08-13 -- Phase 34.9 gap cycle 4 planning complete (5 plans / 4 waves)
 progress:
   total_phases: 23
   completed_phases: 17
-  total_plans: 303
+  total_plans: 308
   completed_plans: 290
   percent: 94
 ---
@@ -650,7 +650,7 @@ set-difference (CR-01, WR-01, WR-02, IN-01, IN-02 landed via 34.9-18..21; IN-03 
 UNPROVEN), corrected the overclaiming "automated tripwire ... cannot go silent again" prose in
 `34.9-LIVE-GATE-RERUN.md`, ROADMAP.md and REQUIREMENTS.md to carry that same scope in every passage,
 and reconciled ROADMAP.md's duplicate `34.9-17` row. See `34.9-22-SUMMARY.md`.
-Status: Phase complete — ready for verification
+Status: Ready to execute
 the ledger this plan's own truth-8 gap named as missing, but this plan does not itself re-score that
 verification report. **Next step: `/gsd-verify-work 34.9`**, to re-score truth 8 against this
 landed evidence. The phase does not close until that re-verification runs.
