@@ -2451,6 +2451,39 @@ gap-cycle plans complete. Closes `34.9-VERIFICATION.md` truth 8's second failure
 - [x] 34.9-27-PLAN.md — close C2-04 with a wiring-pin regression test for `verify:runner-bundle`'s position in `dist:mac`/`release:mac`; record C2-05/C2-07 as dated, owned deferred entries — **DONE 2026-08-13** (proven red against all four mutations: M1/M2 presence, M3/M4 ordering, `package.json` restored byte-identical), see `34.9-27-SUMMARY.md`; does NOT close C2-01 / truth 8 (already satisfied by 34.9-26)
 - [x] 34.9-28-PLAN.md — close gap cycle 3: sweep all eight `34.9-REVIEW-CYCLE2.md` findings by set-difference, confirm each cycle-3 deliverable against the repository, leave `/gsd-verify-work 34.9` as the next step — **DONE 2026-08-13**, `34.9-C2-SWEEP-CHECK.cjs` (proven RED against the pre-content baseline and four deliberately-mutated inputs before going green) reports `C2-SWEEP-OK 8/8 mapped, unmapped 0`; see `deferred-items.md`'s `## Code-review finding disposition — gap cycle 2 review (2026-08-13)` section, `34.9-28-SUMMARY.md`. **This plan does not close Phase 34.9 and does not itself score truth 8** — the phase awaits re-verification: `/gsd-verify-work 34.9`.
 
+**Gap cycle 4 — planned 2026-08-13 at `/gsd-plan-phase 34.9 --gaps`.** 5 plans in 4 waves. Truth 8
+is VERIFIED 8/8 and is NOT reopened; this cycle closes the single remaining gap — gap cycle 3's own
+review findings (C3-01/C3-02/C3-03) had zero disposition in any of the four ledgers — and breaks the
+structural loop that produced it for the fourth time. Census correction made at planning time: the
+shared-outfile defect's own predicate matches **14** scripts, not the 13 gap cycle 3 converted;
+`verify:updater-key` predates the conversion and carries the identical hazard.
+
+- [ ] 34.9-29-PLAN.md — close C3-01: introduce `meta/runTs.cjs` (compile into a private
+  `mkdtempSync` directory, never run `node` on a failed compile, propagate the child's exit code) and
+  route all 14 exposed scripts through it, with a red-provable wiring pin
+- [ ] 34.9-30-PLAN.md — close C3-02 (the stale pipe/argv comment in `meta/lintTranslations.ts` AND
+  the `34.9-PIPE-AUDIT.md` Section 7 claim that no such comment exists) and C3-03 (polarity check),
+  and generalise the sweep to `34.9-REVIEW-SWEEP-CHECK.cjs` — cycle-agnostic, works against a review
+  file that does not exist yet
+- [ ] 34.9-31-PLAN.md — author `34.9-WRAPPER-PROOF.md` (author/runner separation: this plan may not
+  run any direction), including the mandatory Direction C positive control
+- [ ] 34.9-32-PLAN.md — run the three-direction proof on real macOS arm64 hardware and write its
+  verdict (human operator required)
+- [ ] 34.9-33-PLAN.md — ledger C3-01..C3-03, record the closure protocol, reconcile
+  ROADMAP/REQUIREMENTS/STATE, and carry the sweep PAST `code_review_gate` before
+  `/gsd-verify-work 34.9` runs
+
+**Closure protocol (recorded 2026-08-13, gap cycle 4).** `/gsd-execute-phase` runs all waves, THEN
+`code_review_gate`, THEN `regression_gate`, THEN `verify_phase_goal`. A phase's reconciliation sweep
+is its LAST WAVE, so it always runs *before* the review whose findings it is supposed to sweep —
+every cycle's review is unledgered by construction. This phase hit that shape four times (CR-01 /
+34.9-17, C2-01..08 / 34.9-22, C3-01..03 / 34.9-28, and cycle 4). The remedy is ordering, not
+diligence: re-run `34.9-REVIEW-SWEEP-CHECK.cjs` AFTER the review gate and ledger its findings BEFORE
+`/gsd-verify-work`. Plan 34.9-33's blocking checkpoint enforces this. Related hazard:
+`code_review_gate` writes to the FIXED path `{phase_dir}/{padded_phase}-REVIEW.md` and silently
+overwrites on re-review — the one-file-per-cycle convention only holds because the file was moved by
+hand each time.
+
 **Gap cycle 1 planned 2026-08-11**
 (`/gsd-plan-phase 34.9 --gaps`), 6 plans in 4 waves, 6/6 gap-cycle plans complete (17/17 overall):
 
