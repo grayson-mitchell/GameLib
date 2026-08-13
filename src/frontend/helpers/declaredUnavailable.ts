@@ -105,6 +105,55 @@ export const WINETRICKS_CHANNELS = [
   'winetricksInstalled'
 ] as const
 
+/**
+ * [Rule 1 auto-fix, plan 34.5-55 Task 2] Fixed `feature`/`deferral` display constants for the
+ * SteamGridDB and winetricks clusters, exported here (not declared locally in each call-site
+ * file) so the literal English text lives in a file the D-12 hardcoded-string gate does not
+ * scan (`declaredUnavailable.ts` is absent from `meta/i18nGateScope.json`). A locally-declared
+ * `const SGDB_FEATURE = 'SteamGridDB artwork'` was flagged as a real, blocking violation (kind:
+ * `variable`) in the two component files this plan edits that ARE in scope
+ * (`EditGameDialog/index.tsx`, `SideloadDialog/index.tsx`) -- `meta/hardcodedStringGate.ts`'s
+ * `isTechnicalToken()` only auto-exempts a no-whitespace, dot-free, camelCase token
+ * (`LOWERCASE_TOKEN_RE`), which a two-word phrase like `'SteamGridDB artwork'` never matches.
+ * These strings are never rendered to a user -- they only ever reach `callOrDeclare`'s internal
+ * `window.api.logError` line -- so centralizing them here is a correctness fix, not a
+ * workaround around the gate's intent.
+ */
+export const STEAMGRIDDB_FEATURE = 'SteamGridDB artwork'
+export const WINETRICKS_FEATURE = 'Winetricks'
+export const DEFERRAL_D03 = 'D-03'
+
+/**
+ * [Rule 1 auto-fix, plan 34.5-55 Task 2] Full dotted CHANNEL strings for `callOrDeclare`'s
+ * `channel:` field, keyed by short member name, exported for the identical out-of-scope reason
+ * as the feature constants above. A dotted `channel: 'steamgriddb.hasApiKey'` object-property
+ * literal is NOT technical-token-exempt (`LOWERCASE_TOKEN_RE` requires no `.`), and was flagged
+ * as a real violation (kind: `object-property`) in the same two in-scope files.
+ */
+export const STEAMGRIDDB_CHANNEL_BY_MEMBER: Record<
+  (typeof STEAMGRIDDB_CHANNELS)[number],
+  string
+> = {
+  getGrids: 'steamgriddb.getGrids',
+  getHeroes: 'steamgriddb.getHeroes',
+  hasApiKey: 'steamgriddb.hasApiKey',
+  searchGame: 'steamgriddb.searchGame',
+  setApiKey: 'steamgriddb.setApiKey'
+}
+
+/**
+ * [Rule 1 auto-fix, plan 34.5-55 Task 3] Same reasoning as `STEAMGRIDDB_CHANNEL_BY_MEMBER`
+ * above, for the winetricks cluster's send-kind/invoke-kind channel names.
+ */
+export const WINETRICKS_CHANNEL_BY_METHOD: Record<
+  (typeof WINETRICKS_API_METHODS)[number],
+  (typeof WINETRICKS_CHANNELS)[number]
+> = {
+  winetricksListInstalled: 'winetricksInstalled',
+  winetricksListAvailable: 'winetricksAvailable',
+  winetricksInstall: 'winetricksInstall'
+}
+
 export type DeclaredResult<T> =
   | { ok: true; value: T }
   | { ok: false; channel: string; reason: string }

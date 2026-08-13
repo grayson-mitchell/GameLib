@@ -11,6 +11,12 @@ import {
 import CachedImage from 'frontend/components/UI/CachedImage'
 import TextInputWithIconField from 'frontend/components/UI/TextInputWithIconField'
 import { SGDBGame, SGDBGrid } from 'common/types'
+import {
+  callOrDeclare,
+  STEAMGRIDDB_FEATURE,
+  STEAMGRIDDB_CHANNEL_BY_MEMBER,
+  DEFERRAL_D03
+} from 'frontend/helpers/declaredUnavailable'
 
 interface Props {
   initialTitle: string
@@ -46,31 +52,43 @@ export default function SteamGridDBPicker({
       setLoading(true)
       setError(null)
       setGrids([])
-      try {
-        const fetcher =
-          mode === 'heroes'
-            ? window.api.steamgriddb.getHeroes
-            : window.api.steamgriddb.getGrids
-        const fetchDims =
-          dimensions ?? (mode === 'heroes' ? [] : DEFAULT_GRID_DIMENSIONS)
-        const fetchStyles =
-          styles ?? (mode === 'heroes' ? [] : DEFAULT_GRID_STYLES)
-        const results = await fetcher({
-          gameId,
-          styles: fetchStyles,
-          dimensions: fetchDims
-        })
-        setGrids(results)
-        if (results.length === 0) {
-          setError(
-            t('steamgriddb.error.no-grids', 'No covers found for this game.')
+      const fetchDims =
+        dimensions ?? (mode === 'heroes' ? [] : DEFAULT_GRID_DIMENSIONS)
+      const fetchStyles =
+        styles ?? (mode === 'heroes' ? [] : DEFAULT_GRID_STYLES)
+      const fetchArgs = { gameId, styles: fetchStyles, dimensions: fetchDims }
+      // Two distinct declared call sites on purpose (not one ternary-selected thunk shared by
+      // a single wrapper) -- each names its own inventory channel, mirroring AdvancedSettings'
+      // per-channel callOrDeclare convention.
+      const result =
+        mode === 'heroes'
+          ? await callOrDeclare({
+              channel: STEAMGRIDDB_CHANNEL_BY_MEMBER.getHeroes,
+              feature: STEAMGRIDDB_FEATURE,
+              deferral: DEFERRAL_D03,
+              call: () => window.api.steamgriddb.getHeroes(fetchArgs)
+            })
+          : await callOrDeclare({
+              channel: STEAMGRIDDB_CHANNEL_BY_MEMBER.getGrids,
+              feature: STEAMGRIDDB_FEATURE,
+              deferral: DEFERRAL_D03,
+              call: () => window.api.steamgriddb.getGrids(fetchArgs)
+            })
+      setLoading(false)
+      if (!result.ok) {
+        setError(
+          t(
+            'steamgriddb.error.unavailable',
+            'SteamGridDB artwork is unavailable on this build'
           )
-        }
-      } catch (err) {
-        setError(t('steamgriddb.error.grids', 'Failed to fetch grids'))
-        console.error(err)
-      } finally {
-        setLoading(false)
+        )
+        return
+      }
+      setGrids(result.value)
+      if (result.value.length === 0) {
+        setError(
+          t('steamgriddb.error.no-grids', 'No covers found for this game.')
+        )
       }
     },
     [t, mode, dimensions, styles]
@@ -84,24 +102,28 @@ export default function SteamGridDBPicker({
       setGrids([])
       setGames([])
       setSelectedGameId(null)
-      try {
-        const results = await window.api.steamgriddb.searchGame(searchQuery)
-        setGames(results)
-        if (results.length === 1) {
-          void handleSelectGame(results[0].id)
-        } else if (results.length === 0) {
-          setError(t('steamgriddb.error.no-games', 'No games found.'))
-        }
-      } catch (err) {
+      const result = await callOrDeclare({
+        channel: STEAMGRIDDB_CHANNEL_BY_MEMBER.searchGame,
+        feature: STEAMGRIDDB_FEATURE,
+        deferral: DEFERRAL_D03,
+        call: () => window.api.steamgriddb.searchGame(searchQuery)
+      })
+      setLoading(false)
+      if (!result.ok) {
         setError(
           t(
-            'steamgriddb.error.search',
-            'Failed to search for games, please check your SteamGridDB API key and try again'
+            'steamgriddb.error.unavailable',
+            'SteamGridDB artwork is unavailable on this build'
           )
         )
-        console.error(err)
-      } finally {
-        setLoading(false)
+        return
+      }
+      const results = result.value
+      setGames(results)
+      if (results.length === 1) {
+        void handleSelectGame(results[0].id)
+      } else if (results.length === 0) {
+        setError(t('steamgriddb.error.no-games', 'No games found.'))
       }
     },
     [t, handleSelectGame]

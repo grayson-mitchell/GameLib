@@ -166,10 +166,14 @@ describe('SteamGridDB/winetricks decline call-site gate', () => {
   })
 
   it('each of the five files imports callOrDeclare from frontend/helpers/declaredUnavailable', () => {
+    // A single named-import brace, not necessarily solo -- unlike AdvancedSettings.tsx (which
+    // imports only `{ callOrDeclare }`), the SteamGridDB files also import the shared
+    // feature/channel/deferral constants from the same module in the same import statement, so
+    // an exact-literal match on the solo-import form would be a false negative here.
+    const importPattern =
+      /import \{[^}]*\bcallOrDeclare\b[^}]*\} from 'frontend\/helpers\/declaredUnavailable'/
     for (const path of Object.keys(EXPECTED_DEFERRED_CALL_SITES)) {
-      expect(collapsedByFile[path]).toContain(
-        "import { callOrDeclare } from 'frontend/helpers/declaredUnavailable'"
-      )
+      expect(collapsedByFile[path]).toMatch(importPattern)
     }
   })
 

@@ -30,6 +30,12 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import TextInputWithIconField from 'frontend/components/UI/TextInputWithIconField'
 import Folder from '@mui/icons-material/Folder'
 import { fileFilters, localImageFilters } from './filters'
+import {
+  callOrDeclare,
+  STEAMGRIDDB_FEATURE,
+  STEAMGRIDDB_CHANNEL_BY_MEMBER,
+  DEFERRAL_D03
+} from 'frontend/helpers/declaredUnavailable'
 
 type Props = {
   availablePlatforms: AvailablePlatforms
@@ -70,6 +76,10 @@ export default function SideloadDialog({
   const [addingApp, setAddingApp] = useState(false)
   const [sgdbTarget, setSgdbTarget] = useState<'cover' | 'square' | null>(null)
   const [hasSgdbKey, setHasSgdbKey] = useState(false)
+  // True once the hasApiKey probe declines under Tauri -- the "has key" answer is then
+  // UNKNOWN-AND-UNAVAILABLE rather than false, so neither the search affordance nor the "set an
+  // API key" prompt render (both would be false claims about backend state).
+  const [sgdbUnavailable, setSgdbUnavailable] = useState(false)
   const editMode = Boolean(appName)
 
   const { refreshLibrary, platform } = useContext(ContextProvider)
@@ -87,7 +97,20 @@ export default function SideloadDialog({
   const appPlatform = gameInfo.install?.platform || platformToInstall
 
   useEffect(() => {
-    window.api.steamgriddb.hasApiKey().then(setHasSgdbKey)
+    const checkSgdbKey = async () => {
+      const result = await callOrDeclare({
+        channel: STEAMGRIDDB_CHANNEL_BY_MEMBER.hasApiKey,
+        feature: STEAMGRIDDB_FEATURE,
+        deferral: DEFERRAL_D03,
+        call: () => window.api.steamgriddb.hasApiKey()
+      })
+      if (!result.ok) {
+        setSgdbUnavailable(true)
+        return
+      }
+      setHasSgdbKey(result.value)
+    }
+    void checkSgdbKey()
 
     if (appName) {
       void getGameInfo(appName, 'sideload').then((info) => {
@@ -403,7 +426,7 @@ export default function SideloadDialog({
                     onIconClick={() => handleSelectLocalImage('cover')}
                   />
                 </details>
-                {!hasSgdbKey && (
+                {!hasSgdbKey && !sgdbUnavailable && (
                   <WarningMessage>
                     {t(
                       'edit-game.sgdb.no-key-prefix',
@@ -418,6 +441,14 @@ export default function SideloadDialog({
                       {t('edit-game.sgdb.no-key-link', 'Settings → Advanced')}
                     </a>
                     .
+                  </WarningMessage>
+                )}
+                {sgdbUnavailable && (
+                  <WarningMessage>
+                    {t(
+                      'edit-game.sgdb.unavailable',
+                      'SteamGridDB artwork search is unavailable on this build.'
+                    )}
                   </WarningMessage>
                 )}
                 {!editMode && children}

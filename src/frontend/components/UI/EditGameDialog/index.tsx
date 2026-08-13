@@ -17,6 +17,12 @@ import fallbackImage from 'frontend/assets/gamelib_card.svg?url'
 import classNames from 'classnames'
 import ContentPaste from '@mui/icons-material/ContentPaste'
 import Clear from '@mui/icons-material/Clear'
+import {
+  callOrDeclare,
+  STEAMGRIDDB_FEATURE,
+  STEAMGRIDDB_CHANNEL_BY_MEMBER,
+  DEFERRAL_D03
+} from 'frontend/helpers/declaredUnavailable'
 
 type Props = {
   gameInfo: GameInfo
@@ -42,10 +48,26 @@ export default function EditGameDialog({ gameInfo, backdropClick }: Props) {
     gameInfo.overrides?.art_square || gameInfo.art_square
   )
   const [hasSgdbKey, setHasSgdbKey] = useState(false)
+  // True once the hasApiKey probe declines under Tauri -- see SideloadDialog/index.tsx's
+  // identical treatment for the reasoning (UNKNOWN-AND-UNAVAILABLE, not false).
+  const [sgdbUnavailable, setSgdbUnavailable] = useState(false)
   const [sgdbTarget, setSgdbTarget] = useState<SgdbTarget>(null)
 
   useEffect(() => {
-    void window.api.steamgriddb.hasApiKey().then(setHasSgdbKey)
+    const checkSgdbKey = async () => {
+      const result = await callOrDeclare({
+        channel: STEAMGRIDDB_CHANNEL_BY_MEMBER.hasApiKey,
+        feature: STEAMGRIDDB_FEATURE,
+        deferral: DEFERRAL_D03,
+        call: () => window.api.steamgriddb.hasApiKey()
+      })
+      if (!result.ok) {
+        setSgdbUnavailable(true)
+        return
+      }
+      setHasSgdbKey(result.value)
+    }
+    void checkSgdbKey()
   }, [])
 
   const handleSave = () => {
@@ -136,7 +158,7 @@ export default function EditGameDialog({ gameInfo, backdropClick }: Props) {
                 }
               />
             </details>
-            {!hasSgdbKey && (
+            {!hasSgdbKey && !sgdbUnavailable && (
               <WarningMessage>
                 {t(
                   'edit-game.sgdb.no-key-prefix',
@@ -151,6 +173,14 @@ export default function EditGameDialog({ gameInfo, backdropClick }: Props) {
                   {t('edit-game.sgdb.no-key-link', 'Settings → Advanced')}
                 </a>
                 .
+              </WarningMessage>
+            )}
+            {sgdbUnavailable && (
+              <WarningMessage>
+                {t(
+                  'edit-game.sgdb.unavailable',
+                  'SteamGridDB artwork search is unavailable on this build.'
+                )}
               </WarningMessage>
             )}
             {sgdbTarget && (
