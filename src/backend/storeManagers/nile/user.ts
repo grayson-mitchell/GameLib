@@ -38,6 +38,37 @@ function authLogSanitizer(line: string) {
 // "consistency" pass must NOT add the TTL value cache that the GOG sibling has.
 let inFlightLoginData: Promise<NileLoginData> | null = null
 
+// F-34.5-G6-20 (site 1 of the pair) -- nile login/register payload objects are never logged
+// whole. `NileLoginData` carries single-use PKCE material (`code_verifier`) plus the full OAuth
+// authorize URL, which itself carries `client_id` and the code challenge -- only the URL's host,
+// lengths, and presence booleans are safe to log.
+function redactNileLoginData(d: NileLoginData) {
+  let url_host: string
+  try {
+    url_host = new URL(d.url).host
+  } catch {
+    url_host = '<unparseable>'
+  }
+  return {
+    url_host,
+    code_verifier_len: d.code_verifier.length,
+    serial_present: Boolean(d.serial),
+    client_id_present: Boolean(d.client_id)
+  }
+}
+
+// F-34.5-G6-17 (site 2 of the pair) -- nile login/register payload objects are never logged
+// whole. `NileRegisterData` carries the single-use OAuth `code` and the PKCE `code_verifier` in
+// cleartext -- only lengths and presence booleans are safe to log.
+function redactNileRegisterData(d: NileRegisterData) {
+  return {
+    code_len: d.code.length,
+    code_verifier_len: d.code_verifier.length,
+    serial_present: Boolean(d.serial),
+    client_id_present: Boolean(d.client_id)
+  }
+}
+
 export class NileUser {
   static async getLoginData(): Promise<NileLoginData> {
     if (inFlightLoginData) {
@@ -59,7 +90,10 @@ export class NileUser {
       )
       const output: NileLoginData = JSON.parse(stdout)
 
-      logInfo(['Register data is:', output], LogPrefix.Nile)
+      logInfo(
+        ['Register data received (redacted):', redactNileLoginData(output)],
+        LogPrefix.Nile
+      )
       return output
     })()
 
@@ -88,7 +122,10 @@ export class NileUser {
   static async login(
     data: NileRegisterData
   ): Promise<{ status: 'done' | 'failed'; user: NileUserData | undefined }> {
-    logDebug(['Got register data:', data], LogPrefix.Nile)
+    logDebug(
+      ['Got register data (redacted):', redactNileRegisterData(data)],
+      LogPrefix.Nile
+    )
     const { code, code_verifier, serial, client_id } = data
     // Nile prints output to stderr
     const { stderr: output } = await libraryManagerMap['nile'].runRunnerCommand(
