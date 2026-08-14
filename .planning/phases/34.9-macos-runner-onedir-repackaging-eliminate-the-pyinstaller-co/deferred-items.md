@@ -818,3 +818,52 @@ This deferral is asymmetric with every other item in this file: it is deferred n
 is risky or unauthorized in principle, but because THIS plan's own acceptance criteria specifically
 forbid modifying the file that would need to change, and tightening a gate is the one direction this
 project's "never loosen the sweep to admit a row" rule does not prohibit.
+
+## Closure protocol — why every cycle's own review is unledgered by construction
+
+Recorded 2026-08-14 (gap cycle 4, plan 34.9-33), fuller than the abbreviated note `ROADMAP.md`'s
+Phase 34.9 section already carries — this section is the canonical version; `ROADMAP.md`
+cross-references it rather than duplicating it in full.
+
+**The mechanism.** `/gsd-execute-phase` orders its gates: run all waves, THEN `code_review_gate`,
+THEN `regression_gate`, THEN `verify_phase_goal`. A phase's reconciliation sweep IS its last wave, so
+it always runs *before* the review whose findings it is supposed to sweep. The review that produces
+a cycle's findings does not exist yet when that cycle's own sweep runs — the sweep is structurally
+incapable of seeing a document that has not been written. This is not a diligence problem, and
+improving the sweep's rigor cannot fix it: no amount of care in a wave-scheduled task can inspect a
+file `code_review_gate` has not written yet.
+
+**The four instances this phase hit this exact shape.**
+
+1. **CR-01** (`34.9-REVIEW.md`), missed by 34.9-17 — 34.9-17's own reconciliation ledgered 6 descoped
+   items, 2 UI defects and 1 PKCE note, and named zero code-review findings. Swept later by gap
+   cycle 2 (34.9-22).
+2. **C2-01..C2-08** (`34.9-REVIEW-CYCLE2.md`), missed by the cycle that produced it — no plan in gap
+   cycle 2 ran after `34.9-REVIEW-CYCLE2.md` existed. Swept later by gap cycle 3 (34.9-28,
+   `34.9-C2-SWEEP-CHECK.cjs`).
+3. **C3-01..C3-03** (`34.9-REVIEW-CYCLE3.md`), missed by 34.9-28 — a plan written specifically to
+   stop this recurring, dated the same day as the review it could not have swept (28-SUMMARY.md
+   mtime 19:32, `34.9-REVIEW-CYCLE3.md` mtime 19:45). Swept later by gap cycle 4 (this plan, 34.9-33).
+4. **This cycle** (`34.9-REVIEW-CYCLE4.md`, C4-01..C4-05) — produced by `code_review_gate` running
+   against gap cycle 4's own waves (34.9-29..32), and discovered live by this plan's own sweep
+   re-run rather than trusted from planning-time expectations (planning time measured 17 IDs / 3
+   unmapped; this plan's own live sweep found 22 IDs / 8 unmapped, because `34.9-REVIEW-CYCLE4.md`
+   did not exist at planning time). Swept in the same execution as C3-01..C3-03, above — the loop
+   broken in practice, not merely described, per this plan's own governing decision D-C4-04.
+
+**The remedy is ordering, not diligence.** Re-run the sweep tool AFTER the review gate has written
+that cycle's review, and ledger its findings BEFORE `/gsd-verify-work` runs. This plan's own
+blocking checkpoint (Task 3) is the mechanism that enforces this for gap cycle 4's own review going
+forward — a wave-scheduled task cannot carry the sweep past `code_review_gate`, because the wave
+always runs first; only a checkpoint that holds the phase open until the operator confirms the
+post-review sweep is green can.
+
+**Operational hazard: the fixed-path silent overwrite.** `code_review_gate` writes to the FIXED path
+`{phase_dir}/{padded_phase}-REVIEW.md` and **silently overwrites** on every re-review — there is no
+versioning, no append, no warning. This phase's one-file-per-cycle convention
+(`34.9-REVIEW.md`/`34.9-REVIEW-CYCLE2.md`/`34.9-REVIEW-CYCLE3.md`/`34.9-REVIEW-CYCLE4.md`) has only
+ever held because the newly-written file was moved by hand, immediately, before the next re-review
+could clobber it. A future cycle that forgets this step will lose the prior cycle's review text
+permanently, with no diagnostic — `git show HEAD:<path> > <path>` is the recovery if it is caught
+via `git status` before the next commit; there is no recovery once committed over without git
+history to fall back on.

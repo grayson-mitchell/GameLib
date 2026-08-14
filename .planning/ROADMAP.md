@@ -2612,10 +2612,13 @@ REQ-34.9-07, REQ-34.9-08, REQ-34.9-09, REQ-34.9-10, REQ-34.9-11 (minted 2026-08-
 ticked only by measured evidence)
 **Depends on:** Phase 34 (packaging/signing/notarization pipeline). Independent of the 34.1-34.8
 IPC slices. Runs before Phase 35, which will later delete the Electron half of the signing work.
-**Plans:** 28 total (17 original + 5 gap cycle 2 + 6 gap cycle 3) — 28/28 executed on disk
-2026-08-13 (27 `-SUMMARY.md` files present in this phase's directory at edit time, plus this
-closing plan's own `34.9-28-SUMMARY.md`, written immediately after this reconciliation task, per
-the same derivation this line has documented since plan 34.9-22). Gap cycle 3's first plan, 34.9-23
+**Plans:** 33 total (17 original + 5 gap cycle 2 + 6 gap cycle 3 + 5 gap cycle 4) — re-derived
+2026-08-14 from `.planning/phases/34.9-.../34.9-*-PLAN.md` on disk (33 files, `ls ... | wc -l` = 33;
+not incremented from the prior 28, since gap cycle 4's 5 plans (34.9-29..33) were already counted at
+gap-cycle-4 planning time) — **33/33 executed on disk** (32 `-SUMMARY.md` files present in this
+phase's directory at this line's edit time, plus this closing plan's own `34.9-33-SUMMARY.md`,
+written immediately after this reconciliation task, per the same derivation this line has documented
+since plan 34.9-22). Gap cycle 3's first plan, 34.9-23
 (audit-only, `34.9-PIPE-AUDIT.md`: derived the C2-01 pipe-swallow
 census by predicate — 13 instances, one more than gap-planning decision D-C3-01's 12-item list;
 no `VACUOUS TODAY`/`BLOCKER` instances found; every CI caller currently BLOCKED UPSTREAM). Gap
@@ -2650,7 +2653,7 @@ gap-cycle plans complete. Closes `34.9-VERIFICATION.md` truth 8's second failure
 - [x] 34.9-25-PLAN.md — convert every census instance from the exit-code-swallowing pipe to the `&&` idiom this repo already uses (`verify:updater-key`'s precedent), and correct every comment the conversion makes false
 - [x] 34.9-26-PLAN.md — prove, both directions against a known-bad input, that plan 34.9-25's conversion actually converts silent success into loud failure, per script and at the `dist:mac` chain level — **DONE 2026-08-13, verdict PASS 36/36** (Direction A 13/13 scripts both shapes, Direction B 8/8 RUN, both chain proofs, restore audit independently confirmed), see `34.9-PIPE-PROOF.md`, `34.9-26-SUMMARY.md`; one finding (F-34.9-26-01, `meta/i18nGateScope.json` catalogue drift) opened as `deferred-items.md` item 17
 - [x] 34.9-27-PLAN.md — close C2-04 with a wiring-pin regression test for `verify:runner-bundle`'s position in `dist:mac`/`release:mac`; record C2-05/C2-07 as dated, owned deferred entries — **DONE 2026-08-13** (proven red against all four mutations: M1/M2 presence, M3/M4 ordering, `package.json` restored byte-identical), see `34.9-27-SUMMARY.md`; does NOT close C2-01 / truth 8 (already satisfied by 34.9-26)
-- [x] 34.9-28-PLAN.md — close gap cycle 3: sweep all eight `34.9-REVIEW-CYCLE2.md` findings by set-difference, confirm each cycle-3 deliverable against the repository, leave `/gsd-verify-work 34.9` as the next step — **DONE 2026-08-13**, `34.9-C2-SWEEP-CHECK.cjs` (proven RED against the pre-content baseline and four deliberately-mutated inputs before going green) reports `C2-SWEEP-OK 8/8 mapped, unmapped 0`; see `deferred-items.md`'s `## Code-review finding disposition — gap cycle 2 review (2026-08-13)` section, `34.9-28-SUMMARY.md`. **This plan does not close Phase 34.9 and does not itself score truth 8** — the phase awaits re-verification: `/gsd-verify-work 34.9`.
+- [x] 34.9-28-PLAN.md — close gap cycle 3: sweep all eight `34.9-REVIEW-CYCLE2.md` findings by set-difference, confirm each cycle-3 deliverable against the repository, leave `/gsd-verify-work 34.9` as the next step — **DONE 2026-08-13**, this cycle's cycle-2-scoped sweep tool (renamed 2026-08-14 by plan 34.9-30 to `34.9-REVIEW-SWEEP-CHECK.cjs`, see below) (proven RED against the pre-content baseline and four deliberately-mutated inputs before going green) reports `C2-SWEEP-OK 8/8 mapped, unmapped 0`; see `deferred-items.md`'s `## Code-review finding disposition — gap cycle 2 review (2026-08-13)` section, `34.9-28-SUMMARY.md`. **This plan does not close Phase 34.9 and does not itself score truth 8** — the phase awaits re-verification: `/gsd-verify-work 34.9`.
 
 **Gap cycle 4 — planned 2026-08-13 at `/gsd-plan-phase 34.9 --gaps`.** 5 plans in 4 waves. Truth 8
 is VERIFIED 8/8 and is NOT reopened; this cycle closes the single remaining gap — gap cycle 3's own
@@ -2679,8 +2682,9 @@ shared-outfile defect's own predicate matches **14** scripts, not the 13 gap cyc
   scope is a deliberate convention, matching `verifyUpdaterSigningKey.ts`'s precedent, names no
   invocation mechanism); `34.9-PIPE-AUDIT.md` Section 7 retracts its own false "no stale claim to
   correct" conclusion and corrects the neighbouring "every `meta/*.ts` comment" overclaim to 11 of
-  12. `34.9-C2-SWEEP-CHECK.cjs` renamed (git mv, history preserved) to `34.9-REVIEW-SWEEP-CHECK.cjs`
-  and generalised: list A globs `*-REVIEW*.md` and parses every `### <ID>` heading (proven against a
+  12. The cycle-2-scoped sweep tool (authored by 34.9-28) was renamed (git mv, history preserved) to
+  `34.9-REVIEW-SWEEP-CHECK.cjs` and generalised: list A globs `*-REVIEW*.md` and parses every
+  `### <ID>` heading (proven against a
   synthetic `C9-01` heading in a throwaway file not yet existing at authoring time); list B is the
   union of `| <ID> |` rows across every disposition section in `deferred-items.md`, not one named
   section (a finding legitimately cross-referenced from two sections, e.g. C2-05/C2-07, is merged,
@@ -2726,20 +2730,37 @@ shared-outfile defect's own predicate matches **14** scripts, not the 13 gap cyc
   harness. Two honestly-recorded, non-blocking deviations (a live Tauri dev-instance precondition
   miss, and a bash-3.2 associative-array harness retry caught before any file mutation). Checkpoint
   approved by the operator after independent orchestrator verification. See `34.9-32-SUMMARY.md`.
-- [ ] 34.9-33-PLAN.md — ledger C3-01..C3-03, record the closure protocol, reconcile
+- [x] 34.9-33-PLAN.md — ledger C3-01..C3-03, record the closure protocol, reconcile
   ROADMAP/REQUIREMENTS/STATE, and carry the sweep PAST `code_review_gate` before
-  `/gsd-verify-work 34.9` runs
+  `/gsd-verify-work 34.9` runs — **DONE 2026-08-14.** Task 1 ledgered all three gap-cycle-3
+  findings (C3-01/02/03, all FIXED) AND, discovered live by the cycle-agnostic sweep since it globs
+  every `*-REVIEW*.md` (not just the cycle this plan was authored against), all five gap-cycle-4
+  findings from `34.9-REVIEW-CYCLE4.md` (C4-01..04 FIXED by quick task 260814-u2u commit
+  `fdc5b24e7`, C4-05 DEFERRED as `deferred-items.md` item 21). `34.9-REVIEW-SWEEP-CHECK.cjs` now
+  reports 0 unmapped, exit 0, across all 22 IDs in all four discovered review files — planning-time
+  `<expected_sweep_states>` (17 IDs / 3 unmapped) was stale against `34.9-REVIEW-CYCLE4.md`, which
+  did not exist at planning time; the live pre-Task-1 sweep found 22 IDs / 8 unmapped instead, and
+  this plan closed that real gap rather than the stale planned one. Task 2 recorded the fuller
+  closure protocol in `deferred-items.md`'s own `## Closure protocol` section (this ROADMAP note is
+  the abbreviated cross-reference) and reconciled REQUIREMENTS/STATE. See `34.9-33-SUMMARY.md`.
+  **This plan does not close Phase 34.9** — `/gsd-verify-work 34.9` is the next step, and per this
+  plan's own Task 3 checkpoint, must not run until the operator confirms gap cycle 4's OWN review
+  (produced by this execution's `code_review_gate`, distinct from `34.9-REVIEW-CYCLE4.md` above,
+  which this plan swept but did not itself trigger) is ledgered and the sweep is green.
 
-**Closure protocol (recorded 2026-08-13, gap cycle 4).** `/gsd-execute-phase` runs all waves, THEN
-`code_review_gate`, THEN `regression_gate`, THEN `verify_phase_goal`. A phase's reconciliation sweep
-is its LAST WAVE, so it always runs *before* the review whose findings it is supposed to sweep —
-every cycle's review is unledgered by construction. This phase hit that shape four times (CR-01 /
-34.9-17, C2-01..08 / 34.9-22, C3-01..03 / 34.9-28, and cycle 4). The remedy is ordering, not
-diligence: re-run `34.9-REVIEW-SWEEP-CHECK.cjs` AFTER the review gate and ledger its findings BEFORE
-`/gsd-verify-work`. Plan 34.9-33's blocking checkpoint enforces this. Related hazard:
-`code_review_gate` writes to the FIXED path `{phase_dir}/{padded_phase}-REVIEW.md` and silently
-overwrites on re-review — the one-file-per-cycle convention only holds because the file was moved by
-hand each time.
+**Closure protocol (recorded 2026-08-13, gap cycle 4; full version in `deferred-items.md`'s own
+`## Closure protocol — why every cycle's own review is unledgered by construction` section, added by
+plan 34.9-33).** `/gsd-execute-phase` runs all waves, THEN `code_review_gate`, THEN `regression_gate`,
+THEN `verify_phase_goal`. A phase's reconciliation sweep is its LAST WAVE, so it always runs *before*
+the review whose findings it is supposed to sweep — every cycle's review is unledgered by
+construction. This phase hit that shape four times (CR-01 / 34.9-17, C2-01..08 / 34.9-22, C3-01..03 /
+34.9-28, and C4-01..05 / 34.9-33). The remedy is ordering, not diligence: re-run
+`34.9-REVIEW-SWEEP-CHECK.cjs` (renamed 2026-08-14 from its cycle-2-scoped predecessor name, plan
+34.9-30, `D-C4-04a` — cycle-agnostic, not scoped to one named cycle) AFTER the review gate and ledger its
+findings BEFORE `/gsd-verify-work`. Plan 34.9-33's blocking checkpoint (Task 3) enforces this for
+THIS execution's own upcoming review. Related hazard: `code_review_gate` writes to the FIXED path
+`{phase_dir}/{padded_phase}-REVIEW.md` and silently overwrites on re-review — the one-file-per-cycle
+convention only holds because the file was moved by hand each time.
 
 **Gap cycle 1 planned 2026-08-11**
 (`/gsd-plan-phase 34.9 --gaps`), 6 plans in 4 waves, 6/6 gap-cycle plans complete (17/17 overall):
