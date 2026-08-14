@@ -1297,10 +1297,10 @@ Plans:
 
 **Goal:** A Steam game that needs a bottle opens GameLib's install modal — platform selection plus wine/bottle choice — the same way a GOG game does, instead of installing silently with hardcoded settings. Plus an opt-in setting to always show the form for every Steam install.
 
-**Requirements**: TBD (mint during `/gsd-discuss-phase 34.13`)
+**Requirements**: none minted — coverage is tracked against the 20 `D-NN` decisions in `34.13-CONTEXT.md` (all D-01…D-20 covered; verified by the blocking decision-coverage gate)
 **Depends on:** Phase 34
 **Must run BEFORE:** Phase 35 (Electron cutover) — 35 intentionally runs last
-**Plans:** 0 plans
+**Plans:** 14 plans
 
 **Scope decision (user, 2026-08-14):** the form appears for **bottle-requiring games by default**, plus an **opt-in setting** to always show it for every Steam install. Native macOS Steam games keep installing without a prompt by default, so locked decision **D-09** (zero-friction Steam install for 0/1 library) is preserved rather than reversed.
 
@@ -1321,7 +1321,20 @@ Plans:
 **Do not conflate:** `SteamBottleSetup` (frontend state + toast) is a **post-install** guided surface from Phase 17 (D-07), opened only by the backend's `steamBottleSetupRequired` push. It is not the install-time form this phase delivers.
 
 Plans:
-- [ ] TBD (run /gsd-discuss-phase 34.13, then /gsd-plan-phase 34.13 to break down)
+- [ ] 34.13-01 — Shared contracts (`types.ts`, `electronStores.ts`, config default) [D-13, D-17]
+- [ ] 34.13-02 — Steam backend read-side: `is_windows_native` capture + `checkBottleEligibility()` [D-07, D-09, D-17]
+- [ ] 34.13-03 — `WineSelector` Steam props + pure `engineFilter.ts` [D-05, D-16]
+- [ ] 34.13-04 — Always-show global setting (accessor + toggle) [D-13]
+- [ ] 34.13-05 — Pure section-gating + trigger predicate module [D-03, D-10, D-11, D-18, D-19, D-20]
+- [ ] 34.13-06 — `SteamGame.install()` honors the Windows-via-bottle override [D-17]
+- [ ] 34.13-07 — IPC surface, dual-registered (`isSteamBottleEligible`, `persistBottleWineVersion`) [D-09, D-14, D-15]
+- [ ] 34.13-08 — Trigger rewrite + `SteamInstallLocationPicker` retirement [D-04, D-10, D-11, D-12]
+- [ ] 34.13-09 — D-15 handoff: the guided setup READS the persisted choice [D-15]
+- [ ] 34.13-10 — The `SteamDialog` sibling component [D-01, D-02, D-06, D-08, D-14]
+- [ ] 34.13-11 — D-12 busy state on the origin controls [D-12]
+- [ ] 34.13-12 — `InstallModal` fifth branch + platform-row rework [D-01, D-03, D-05, D-16, D-17, D-18, D-19]
+- [ ] 34.13-13 — Localisation + blocking manual UAT gate (32 items, both runtimes) [D-06, D-20]
+- [ ] 34.13-14 — Persist the D-17 forced verdict so the install is durable [D-17, closes T-34.13-06-06]
 
 ### Phase 34.1: Tauri IPC re-plumb slice 4 — app shell and window chrome (INSERTED)
 
