@@ -2,7 +2,7 @@ import { existsSync } from 'graceful-fs'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { configStore } from './electronStores'
 import { STEAM_INSTALL_PATHS } from './constants'
-import { getTokenStore } from './tokenStore'
+import { getTokenStore, readTokenOutcome } from './tokenStore'
 import { withTimeout } from './withTimeout'
 import { platform } from 'process'
 import type {
@@ -167,8 +167,28 @@ export class SteamUser {
     }
     if (!this.isLoggedIn()) return false
 
-    const creds = await this.getCredentials()
-    if (!creds) {
+    // quick-260814-r2d: branch on the three-state outcome instead of the
+    // lossy getCredentials() collapse, so a keyring read that FAILED
+    // (timeout, or a Keychain Deny) is never reported the same way as a
+    // slot that was genuinely never written to. Scope note: this plan
+    // surfaces the retryable condition in the backend log and in the
+    // return value only — no new IPC channel and no frontend banner is
+    // added here, that is separate work.
+    const outcome = await readTokenOutcome(getTokenStore())
+    if (outcome.status === 'unreadable') {
+      // Deliberately does NOT contain the substring "no stored refresh
+      // token" — that string reads to a user/log-reader as "you are signed
+      // out", which is exactly the false state this fix closes. The
+      // session (isLoggedIn/userData) is left untouched; no clearToken()
+      // and no configStore.delete happen on this path.
+      logWarning(
+        `Steam: refresh token read failed (${outcome.reason}) — this is retryable, ` +
+          'keeping the signed-in session and NOT clearing any credentials',
+        LogPrefix.Steam
+      )
+      return false
+    }
+    if (outcome.status === 'absent') {
       logWarning(
         'Steam: logged in but no stored refresh token — cannot reconnect',
         LogPrefix.Steam
@@ -179,7 +199,7 @@ export class SteamUser {
     const start = Date.now()
     if (!this.connectingPromise) {
       this.connectingPromise = this.connectSteamUserClient(
-        creds.refreshToken
+        outcome.token
       ).finally(() => {
         this.connectingPromise = null
       })
@@ -289,9 +309,14 @@ export class SteamUser {
   // ── Credentials ────────────────────────────────────────────────────────────
 
   static async getCredentials(): Promise<{ refreshToken: string } | undefined> {
-    const token = await getTokenStore().getToken()
-    if (!token) return undefined
-    return { refreshToken: token }
+    // quick-260814-r2d: routed through readTokenOutcome so both `absent` and
+    // `unreadable` map to undefined here — this method's signature/return
+    // type and every other caller are unchanged. This keeps a single read
+    // path through the seam (ensureConnected() above uses the same call)
+    // rather than two divergent ones.
+    const outcome = await readTokenOutcome(getTokenStore())
+    if (outcome.status !== 'present') return undefined
+    return { refreshToken: outcome.token }
   }
 
   // ── Shared auth success path ───────────────────────────────────────────────
@@ -732,12 +757,15 @@ export class SteamUser {
     }
 
     try {
-      const { purchaseResultDetails, packageList } =
-        await client.redeemKey(key)
+      const { purchaseResultDetails, packageList } = await client.redeemKey(key)
       // purchaseResultDetails here should already be EPurchaseResult.OK (0) —
       // the promise would have rejected otherwise — but classify defensively
       // anyway rather than assuming.
-      return this.classifyPurchaseResult(store, purchaseResultDetails, packageList)
+      return this.classifyPurchaseResult(
+        store,
+        purchaseResultDetails,
+        packageList
+      )
     } catch (err) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const e = err as any

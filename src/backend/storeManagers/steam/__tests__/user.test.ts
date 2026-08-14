@@ -140,6 +140,7 @@ import { SteamUser } from '../user'
 import { safeStorage } from 'electron'
 import { existsSync } from 'graceful-fs'
 import { logInfo, logWarning, logError } from 'backend/logger'
+import { setTokenStore, ElectronTokenStore, TokenStore } from '../tokenStore'
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('SteamUser', () => {
@@ -1048,6 +1049,147 @@ describe('SteamUser', () => {
       const result = await SteamUser.ensureConnected()
       expect(result).toBe(true)
       expect(mockSteamUserInstance.logOn).not.toHaveBeenCalled()
+    })
+  })
+
+  // ── quick-260814-r2d: unreadable read is not logged-out ────────────────────
+  //
+  // Installs a fake TokenStore through the real setTokenStore() seam, matching
+  // production's adapter exactly: readToken() resolves the outcome under test,
+  // getToken() resolves '' (the lossy adapter's collapse for both absent and
+  // unreadable). setTokenStore() mutates module-global state, so every test in
+  // this describe restores the default ElectronTokenStore in afterEach --
+  // leaving the fake installed would make the OTHER describe blocks in this
+  // file (which assume the real ElectronTokenStore routed through
+  // mockConfigStore) order-dependent on whichever test ran last.
+  describe('ensureConnected() — unreadable read is not logged-out (quick-260814-r2d)', () => {
+    afterEach(() => {
+      setTokenStore(new ElectronTokenStore())
+    })
+
+    function installFakeStore(outcome: {
+      status: 'present' | 'absent' | 'unreadable'
+      token?: string
+      reason?: 'timeout' | 'unavailable'
+    }): TokenStore {
+      const fake: TokenStore = {
+        isAvailable: jest.fn().mockResolvedValue(true),
+        // Matches production's adapter exactly: getToken() collapses both
+        // absent AND unreadable to '', only present resolves the token.
+        getToken: jest
+          .fn()
+          .mockResolvedValue(outcome.status === 'present' ? outcome.token : ''),
+        setToken: jest.fn().mockResolvedValue(undefined),
+        clearToken: jest.fn().mockResolvedValue(undefined),
+        readToken: jest
+          .fn()
+          .mockResolvedValue(
+            outcome.status === 'present'
+              ? { status: 'present', token: outcome.token }
+              : outcome.status === 'absent'
+                ? { status: 'absent' }
+                : { status: 'unreadable', reason: outcome.reason }
+          )
+      }
+      setTokenStore(fake)
+      return fake
+    }
+
+    test('does NOT log "no stored refresh token" on an unreadable read, and DOES log a distinct retryable warning naming the reason', async () => {
+      await SteamUser.logout()
+      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
+        key === 'isLoggedIn' ? true : undefined
+      )
+      installFakeStore({ status: 'unreadable', reason: 'timeout' })
+
+      const result = await SteamUser.ensureConnected()
+
+      expect(result).toBe(false)
+      const warningLines = (logWarning as jest.Mock).mock.calls.map((c) =>
+        String(c[0])
+      )
+      expect(
+        warningLines.some((l) => l.includes('no stored refresh token'))
+      ).toBe(false)
+      expect(
+        warningLines.some((l) => /retry/i.test(l) && /timeout/.test(l))
+      ).toBe(true)
+    })
+
+    test('an unreadable read calls neither clearToken() on the store nor configStore.delete for isLoggedIn/userData — the session survives', async () => {
+      await SteamUser.logout()
+      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
+        key === 'isLoggedIn' ? true : undefined
+      )
+      mockConfigStore.delete.mockClear()
+      const fake = installFakeStore({
+        status: 'unreadable',
+        reason: 'unavailable'
+      })
+
+      await SteamUser.ensureConnected()
+
+      expect(fake.clearToken).not.toHaveBeenCalled()
+      expect(mockConfigStore.delete).not.toHaveBeenCalledWith('isLoggedIn')
+      expect(mockConfigStore.delete).not.toHaveBeenCalledWith('userData')
+    })
+
+    // Regression guard: the absent branch is unchanged -- still the original
+    // warning, still returns false. Already true pre-fix.
+    test('the absent branch still logs the original "no stored refresh token" warning and returns false', async () => {
+      await SteamUser.logout()
+      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
+        key === 'isLoggedIn' ? true : undefined
+      )
+      installFakeStore({ status: 'absent' })
+
+      const result = await SteamUser.ensureConnected()
+
+      expect(result).toBe(false)
+      const warningLines = (logWarning as jest.Mock).mock.calls.map((c) =>
+        String(c[0])
+      )
+      expect(
+        warningLines.some((l) => l.includes('no stored refresh token'))
+      ).toBe(true)
+    })
+
+    // Regression guard: the present branch is unchanged -- still reaches the
+    // connect path with the token. Already true pre-fix.
+    test('the present branch still reaches the connect path with the token', async () => {
+      await SteamUser.logout()
+      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
+        key === 'isLoggedIn' ? true : undefined
+      )
+      installFakeStore({ status: 'present', token: 'fake-outcome-token' })
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        process.nextTick(() => {
+          steamUserOnHandlers['loggedOn']?.({}, {})
+        })
+      })
+
+      const result = await SteamUser.ensureConnected()
+
+      expect(mockSteamUserInstance.logOn).toHaveBeenCalledWith({
+        refreshToken: 'fake-outcome-token'
+      })
+      expect(result).toBe(true)
+    })
+
+    // Regression guard: getCredentials()'s signature and mapping are
+    // unchanged -- present maps to { refreshToken }, both absent and
+    // unreadable map to undefined. Already true pre-fix.
+    test('getCredentials() still maps present to { refreshToken } and both absent/unreadable to undefined', async () => {
+      installFakeStore({ status: 'present', token: 'present-token' })
+      await expect(SteamUser.getCredentials()).resolves.toEqual({
+        refreshToken: 'present-token'
+      })
+
+      installFakeStore({ status: 'absent' })
+      await expect(SteamUser.getCredentials()).resolves.toBeUndefined()
+
+      installFakeStore({ status: 'unreadable', reason: 'timeout' })
+      await expect(SteamUser.getCredentials()).resolves.toBeUndefined()
     })
   })
 
