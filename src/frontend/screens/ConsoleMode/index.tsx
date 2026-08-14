@@ -29,6 +29,7 @@ import {
   getBackButtonLabel
 } from './controller'
 import { useColumnCount, useGamepadButtonPress, useGamepadInfo } from './hooks'
+import { selectConsoleGames } from './selectors'
 
 import type { TFunction } from 'i18next'
 import type { GameInfo, Runner } from 'common/types'
@@ -69,7 +70,8 @@ export default function ConsoleMode() {
     sideloadedLibrary,
     refreshLibrary,
     refreshing,
-    gameUpdates
+    gameUpdates,
+    hiddenGames
   } = useContext(ContextProvider)
 
   const [activeStore, setActiveStore] = useState<StoreKey>('all')
@@ -128,18 +130,15 @@ export default function ConsoleMode() {
       ...zoom.library,
       ...sideloadedLibrary
     ]
-    // GAP-B: exclude delisted Steam games from the grid (and, transitively, from
-    // storesWithGames/storeFilters — the Steam chip hides if all Steam games are delisted).
-    return all.filter(
-      (g) => !g.install?.is_dlc && !g.thirdPartyManagedApp && !g.is_delisted
-    )
+    return selectConsoleGames(all, hiddenGames.list)
   }, [
     epic.library,
     gog.library,
     amazon.library,
     steam.library,
     zoom.library,
-    sideloadedLibrary
+    sideloadedLibrary,
+    hiddenGames
   ])
 
   const visibleGames = useMemo(() => {
