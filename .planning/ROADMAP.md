@@ -2712,8 +2712,20 @@ shared-outfile defect's own predicate matches **14** scripts, not the 13 gap cyc
   plan is FORBIDDEN from concurrency harness execution). `directions_total: 43` filled as the sole
   deliberate exception to the unfilled-result-fields rule. `git status --porcelain -- meta/
   package.json` clean throughout. See `34.9-31-SUMMARY.md`.
-- [ ] 34.9-32-PLAN.md — run the three-direction proof on real macOS arm64 hardware and write its
-  verdict (human operator required)
+- [x] 34.9-32-PLAN.md — run the three-direction proof on real macOS arm64 hardware and write its
+  verdict (human operator required) — **DONE 2026-08-14.** Verdict **PASS, 43/43 directions, 0
+  failed**. Direction A: 30/30 rows PASS (all five criteria, all 14 entry files restored and
+  `shasum`-verified). Direction B: 10/10 full-run + 1/1 partial-run PASS — row 11
+  (`build-runners-onedir`) live-confirmed the C4-01 signal-forwarding fix (`meta/runTs.cjs`, commit
+  `fdc5b24e7`): the wrapper process was `SIGTERM`'d directly the instant its pre-network stdout
+  marker appeared, confirmed terminated, tmpdir removed, `public/bin/`/`build/bin/` byte-unchanged
+  before/after. Direction C: mandatory positive control run FIRST against the retired shared-outfile
+  idiom, reproduced cross-contamination in 60/60 trials (100% trial-level rate, matching the
+  reviewer's 60/60 and the verifier's 20/20) — only then did the new-idiom trials run, 0/120
+  cross-contamination across 60 trials. Scored **VALID and PASS**, not a bare PASS from an unproven
+  harness. Two honestly-recorded, non-blocking deviations (a live Tauri dev-instance precondition
+  miss, and a bash-3.2 associative-array harness retry caught before any file mutation). Checkpoint
+  approved by the operator after independent orchestrator verification. See `34.9-32-SUMMARY.md`.
 - [ ] 34.9-33-PLAN.md — ledger C3-01..C3-03, record the closure protocol, reconcile
   ROADMAP/REQUIREMENTS/STATE, and carry the sweep PAST `code_review_gate` before
   `/gsd-verify-work 34.9` runs
