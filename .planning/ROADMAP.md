@@ -1295,14 +1295,18 @@ Plans:
 
 ### Phase 34.13: Steam install-time wine/bottle form (GOG parity) (INSERTED)
 
-**Goal:** A Steam game that needs a bottle opens GameLib's install modal — platform selection plus wine/bottle choice — the same way a GOG game does, instead of installing silently with hardcoded settings. Plus an opt-in setting to always show the form for every Steam install.
+**Goal:** A Steam install offers a one-click quick install by default, targeting Steam's primary library, with an explicit "Install with options…" path — reachable via a caret or context-menu item — that opens GameLib's install modal for platform selection and wine/bottle choice. This gives Steam more control than GOG's always-modal default, not parity with it, while a bottle install still degrades safely into the options path when quick install's local checks fail.
 
-**Requirements**: none minted — coverage is tracked against the 20 `D-NN` decisions in `34.13-CONTEXT.md` (all D-01…D-20 covered; verified by the blocking decision-coverage gate)
+**Requirements**: none minted — coverage is tracked against the `D-NN` decisions in `34.13-CONTEXT.md` (D-01…D-28, with **D-13 RETIRED** by D-26; verified by the blocking decision-coverage gate)
 **Depends on:** Phase 34
 **Must run BEFORE:** Phase 35 (Electron cutover) — 35 intentionally runs last
-**Plans:** 14 plans
+**Plans:** 14 planned, being re-planned to 13 (see amendment below)
 
-**Scope decision (user, 2026-08-14):** the form appears for **bottle-requiring games by default**, plus an **opt-in setting** to always show it for every Steam install. Native macOS Steam games keep installing without a prompt by default, so locked decision **D-09** (zero-friction Steam install for 0/1 library) is preserved rather than reversed.
+**⚠ Title is superseded (D-28).** The "(GOG parity)" framing in the heading above no longer describes the phase — D-28 states the phase *overshoots* GOG parity rather than reaching it. The heading is left unchanged deliberately: the phase directory slug (`34.13-steam-install-time-wine-bottle-form-gog-parity`) is derived from it, and renaming one without the other desyncs phase lookup. Rename both together or neither.
+
+**Scope decision (user, 2026-08-14) — ⚠ AMENDED 2026-08-15 by D-21..D-28:** the original model auto-opened the form for **bottle-requiring games by default**, plus an **opt-in setting** to always show it. **D-22 retires the auto-open triggers** (the user is the trigger) and **D-26 cuts the always-show setting entirely**. What survives: native macOS Steam games still install without a prompt by default, so locked decision **D-09** (zero-friction Steam install for 0/1 library) is preserved rather than reversed — now via D-23's quick-install path.
+
+**Amendment (user, 2026-08-15) — quick-install split-button model (D-21..D-28):** the install control becomes a **split button** (primary = quick install, caret = "Install with options…"). Quick install always targets Steam's primary library (D-23) and degrades into the options dialog when that library is missing or full (D-24). The options dialog opens **instantly**, carrying eligibility loading state in the wine section (D-25). Quick install is **Steam-only** this phase (D-28). Full rationale and the per-plan impact table: `34.13-CONTEXT.md` §"Amendments — quick-install model".
 
 **Reported symptom:** "Steam does not open [the] form on install on games requiring bottle (like GOG does)."
 
@@ -1320,7 +1324,7 @@ Plans:
 
 **Do not conflate:** `SteamBottleSetup` (frontend state + toast) is a **post-install** guided surface from Phase 17 (D-07), opened only by the backend's `steamBottleSetupRequired` push. It is not the install-time form this phase delivers.
 
-Plans:
+Plans: *(⚠ the list below predates the D-21..D-28 amendment and is being re-planned. Per `34.13-CONTEXT.md`'s plan-set impact table: **04 is DELETED** by D-26 and its number stays a deliberate gap — no renumbering, because plans cross-reference each other by number; **05/08/11/13 are REWRITTEN**; the rest are substantially intact. Ends at 13 plans.)*
 - [ ] 34.13-01 — Shared contracts (`types.ts`, `electronStores.ts`, config default) [D-13, D-17]
 - [ ] 34.13-02 — Steam backend read-side: `is_windows_native` capture + `checkBottleEligibility()` [D-07, D-09, D-17]
 - [ ] 34.13-03 — `WineSelector` Steam props + pure `engineFilter.ts` [D-05, D-16]
