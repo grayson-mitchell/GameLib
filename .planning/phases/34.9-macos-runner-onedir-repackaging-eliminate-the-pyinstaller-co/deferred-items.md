@@ -643,3 +643,178 @@ reason unrelated to C3-01, and whichever future work addresses repo-wide lint de
 as its own item, not as unfinished work from 34.9-29.
 
 **OWNER:** unassigned (pre-existing repo-wide lint debt, not scoped to any phase-34.9 finding).
+
+## Code-review finding disposition — gap cycle 3 review (2026-08-13)
+
+`34.9-REVIEW-CYCLE3.md` (2026-08-13) opened three findings against gap cycle 3's own pipe-to-`&&`
+conversion and sweep tooling. `34.9-VERIFICATION.md`'s gaps[0] found the identical pattern a third
+time: a proven review finding with zero disposition in any of this phase's four ledgers
+(`deferred-items.md`, `STATE.md`, `ROADMAP.md`, `REQUIREMENTS.md`) — the same shape that produced
+the original truth-8 failure (CR-01) and the cycle-2 sweep gap (C2-01..C2-08). This section is that
+precedent's cycle-3 counterpart, at the same granularity: one row per finding ID. All three FIXED
+rows below cite repository state or a reproducible command's own observed result, confirmed live at
+THIS plan's execution time — never a plan SUMMARY's own words, per this project's standing rule that
+a mutating command's own report is never accepted as proof of its own effect.
+
+### List A — every finding ID in `34.9-REVIEW-CYCLE3.md`
+
+Obtained by `grep -n '^### C3-' 34.9-REVIEW-CYCLE3.md` (raw output, reproduced verbatim):
+
+```
+81:### C3-01: Concurrent invocations of the same pnpm script race on the shared `node_modules/.cache/<name>.cjs` outfile — one process silently runs the other's compiled code, exit 0, no diagnostic
+132:### C3-02: `meta/lintTranslations.ts:26`'s pipe/argv comment is now false, and the cycle's own "exhaustive" comment audit explicitly (and incorrectly) claims no such comment exists
+180:### C3-03: `34.9-C2-SWEEP-CHECK.cjs`'s FIXED-row "Independent confirmation" check never inspects the confirmation text's polarity — a contradicting cell passes
+```
+
+List A = `{C3-01, C3-02, C3-03}` — 3 IDs, confirmed by `grep -c '^### C3-' 34.9-REVIEW-CYCLE3.md` =
+3 (matches the review's own frontmatter `findings: {critical: 0, warning: 2, info: 1, total: 3}`).
+
+### List B — every finding ID with a landed fix, confirmed against the repository
+
+- **C3-01** — claimed by 34.9-29's own delivery (`meta/runTs.cjs`, the private-tmpdir compile
+  wrapper) and proven by 34.9-32 (`34.9-WRAPPER-PROOF.md`, run on real macOS arm64 hardware).
+  **Confirmation (repository, this execution):** `package.json`'s `scripts` object contains zero
+  occurrences of `node_modules/.cache` (`grep -c "node_modules/.cache" package.json` = 0) and 15
+  occurrences of `node meta/runTs.cjs` (`grep -c "node meta/runTs.cjs" package.json` = 15);
+  `meta/runTs.cjs:119` calls `fs.mkdtempSync(path.join(os.tmpdir(), 'gamelib-runts-'))`, a private
+  per-invocation directory, not a shared script-name-keyed path. `34.9-WRAPPER-PROOF.md`'s
+  frontmatter records observed verdict: PASS, directions_passed 43, directions_failed 0 (read
+  directly at execution time).
+- **C3-02** — claimed by 34.9-30's delivery (`meta/lintTranslations.ts` doc-comment correction).
+  **Confirmation (repository, this execution):** `meta/lintTranslations.ts:30-32`'s doc comment,
+  read live, states the earlier claim that argv was mechanically unreachable because of the
+  script's invocation mechanism was false and has been removed; the file's scope-from-env-var
+  convention is now described as a deliberate convention, not a mechanical necessity, and names no
+  invocation mechanism.
+- **C3-03** — claimed by 34.9-30's delivery (`34.9-REVIEW-SWEEP-CHECK.cjs`'s case-insensitive
+  `POLARITY_DENY_PATTERNS`). **Confirmation (repository, this execution), per this plan's own
+  `<polarity_self_trap>` (referenced indirectly, never quoted):** feeding the tool the verbatim
+  counter-example cited in `34.9-REVIEW-CYCLE3.md` finding C3-03 produces rejection token
+  `FIXED-CONFIRMATION-DENIES-FIX`, confirmed by direct invocation against that exact string at
+  execution time. Separately, `node 34.9-REVIEW-SWEEP-CHECK.cjs`, re-run against the real ledger at
+  execution time, reports an observed verdict: PASS (exit 0, `REVIEW-SWEEP-OK` line printed).
+
+List B = `{C3-01 → 34.9-29/32, C3-02 → 34.9-30, C3-03 → 34.9-30}` — 3 IDs mapped to a confirmed
+landed fix.
+
+### A minus B
+
+Empty. All three gap-cycle-3 findings map to a confirmed landed fix.
+
+### The table
+
+| Finding | Severity | Disposition | Evidence | Independent confirmation (non-.planning) |
+|---|---|---|---|---|
+| C3-01 | Warning | FIXED | 34.9-29 (`meta/runTs.cjs`, private-tmpdir compile wrapper) + 34.9-32 (`34.9-WRAPPER-PROOF.md`, observed verdict: PASS, 43/43 directions) | package.json: `node_modules/.cache` occurrences = 0, `node meta/runTs.cjs` occurrences = 15 (both counted live); meta/runTs.cjs:119 fs.mkdtempSync(path.join(os.tmpdir(), 'gamelib-runts-')) confirmed live |
+| C3-02 | Warning | FIXED | 34.9-30 (`meta/lintTranslations.ts` doc-comment correction) | meta/lintTranslations.ts:30-32 read live: earlier pipe/argv-unreachability claim stated false and removed; env-var scope now described as a deliberate convention, no invocation mechanism named |
+| C3-03 | Info | FIXED | 34.9-30 (`34.9-REVIEW-SWEEP-CHECK.cjs` polarity deny-list) | live re-run at execution time: the tool rejects the verbatim counter-example cited in 34.9-REVIEW-CYCLE3.md finding C3-03 with token FIXED-CONFIRMATION-DENIES-FIX; a fresh run against the real ledger reports observed verdict: PASS |
+
+**Count:** 3 IDs in list A. 3 mapped to a confirmed landed fix. Unmapped count: **0**.
+
+## Code-review finding disposition — gap cycle 4 review (2026-08-14)
+
+`34.9-REVIEW-CYCLE4.md` (2026-08-14T21:45:00Z) opened five findings against gap cycle 4's own
+`meta/runTs.cjs` wrapper and the `34.9-REVIEW-SWEEP-CHECK.cjs` sweep tool itself. Per this project's
+own closure protocol (recorded below), this section ledgers all five cycle-4 findings in the same
+execution that ledgers gap cycle 3's three findings above — closing the loop in practice, not merely
+describing it. Four of the five (C4-01 through C4-04) were fixed by quick task `260814-u2u` (commit
+`fdc5b24e7`), landed before this plan ran, and C4-01 was additionally independently live-confirmed by
+plan 34.9-32's `34.9-WRAPPER-PROOF.md` Direction B row 11. The fifth (C4-05) is deferred: this plan's
+own Task 1 acceptance criteria pin `34.9-REVIEW-SWEEP-CHECK.cjs` itself as unchanged by this plan, so
+fixing C4-05 — an asymmetry in the tool's own anti-loophole logic — is out of this task's scope, even
+though fixing it would tighten, not loosen, the gate.
+
+### List A — every finding ID in `34.9-REVIEW-CYCLE4.md`
+
+Obtained by `grep -n '^### C4-' 34.9-REVIEW-CYCLE4.md` (raw output, reproduced verbatim):
+
+```
+61:### C4-01: No signal handling in `meta/runTs.cjs` — orphans the child process and leaks the tmpdir; invalidates `34.9-WRAPPER-PROOF.md` Direction B row 11's own methodology
+112:### C4-02: `node_modules` junction creation runs outside the `try/catch` responsible for tmpdir cleanup — a `symlinkSync` failure leaks the tmpdir via an uncaught exception
+143:### C4-03: `spawnSync` launch failures are silently swallowed — no diagnostic is ever printed when the child never starts
+168:### C4-04: Signal-terminated and spawn-failed children are both collapsed to a flat exit code `1`, discarding signal-number fidelity
+192:### C4-05: `34.9-REVIEW-SWEEP-CHECK.cjs`'s FIXED-row self-citation ban is case-sensitive while its polarity deny-list is case-insensitive — an inconsistent evasion path in the tool that exists to close exactly this class of loophole
+```
+
+List A = `{C4-01, C4-02, C4-03, C4-04, C4-05}` — 5 IDs, confirmed by `grep -c '^### C4-'
+34.9-REVIEW-CYCLE4.md` = 5 (matches the review's own frontmatter `findings: {critical: 1, warning:
+4, info: 0, total: 5}`).
+
+### List B — every finding ID with a landed fix, confirmed against the repository
+
+- **C4-01, C4-02, C4-04** — fixed by quick task 260814-u2u, commit `fdc5b24e7`. **Confirmation
+  (repository, this execution):** `meta/runTs.cjs` contains zero live `spawnSync` calls (`grep -c
+  spawnSync meta/runTs.cjs` returns 3, all three inside the file's own doc comment describing the
+  prior defect, none in executable code — confirmed by reading each matched line); `const { spawn }
+  = require('node:child_process')` is the file's only child-process import; `FORWARDED_SIGNALS =
+  ['SIGTERM', 'SIGINT', 'SIGHUP']` (line 97) and a `process.on(sig, ...)` handler per signal (from
+  line 159) forward to the tracked child, with a bounded `KILL_ESCALATION_MS = 5000` (line 104)
+  SIGKILL escalation — C4-01. The `fs.symlinkSync` junction call sits inside the `try` block that
+  owns cleanup, per the file's own inline `C4-02` comment at that call site — C4-02. `exitCodeFor()`
+  (line 237) propagates `128 + signal number` for a signal-terminated child rather than a flat `1` —
+  C4-04. `meta/__tests__/runTsSignals.test.ts` exists on disk; a direct run of that suite (this
+  execution) reports 5/5 passed. C4-01 additionally independently live-confirmed by
+  `34.9-WRAPPER-PROOF.md` Direction B row 11 (34.9-32): the wrapper process was SIGTERM'd directly,
+  confirmed terminated, `$TMPDIR/gamelib-runts-*` confirmed absent afterward, `public/bin/`/
+  `build/bin/` byte-unchanged before and after the kill.
+- **C4-03** — fixed by the same commit `fdc5b24e7`, as a documented consequence of the async-spawn
+  rewrite (D7). **Confirmation (repository, this execution):** `meta/runTs.cjs`'s `runChild()`
+  reads `compile.error`/`run.error` and both call sites (lines 297-302, 313-315) log the
+  launch-failure diagnostic via `console.error` before `cleanupAndExit`, confirmed by reading the
+  file live at execution time.
+- **C4-05** — NOT claimed by any landed fix. This plan's own Task 1 acceptance criteria require
+  `34.9-REVIEW-SWEEP-CHECK.cjs` to stay unmodified by this plan ("The sweep tool itself is unchanged
+  by this task"), confirmed by `git diff --stat` on that file showing no modification at commit
+  time — so this finding is deferred, not fixed. See item 21 below.
+
+List B = `{C4-01 → 260814-u2u, C4-02 → 260814-u2u, C4-03 → 260814-u2u (D7 consequence), C4-04 →
+260814-u2u}` — 4 IDs mapped to a confirmed landed fix.
+
+### A minus B
+
+`{C4-05}` — deferred, not fixed, per this plan's own Task 1 acceptance criteria pinning the sweep
+tool unchanged. Receives item 21 below.
+
+### The table
+
+| Finding | Severity | Disposition | Evidence | Independent confirmation (non-.planning) |
+|---|---|---|---|---|
+| C4-01 | Critical | FIXED | quick task 260814-u2u (commit `fdc5b24e7`) + 34.9-32 (`34.9-WRAPPER-PROOF.md` Direction B row 11, live SIGTERM confirmation) | meta/runTs.cjs: FORWARDED_SIGNALS array plus per-signal process.on handlers forward to the tracked child with bounded SIGKILL escalation; zero live spawnSync calls (3 doc-comment mentions only); meta/__tests__/runTsSignals.test.ts 5/5 passed (this execution) |
+| C4-02 | Warning | FIXED | quick task 260814-u2u (commit `fdc5b24e7`); confirmed live by 34.9-33's own execution | meta/runTs.cjs: the fs.symlinkSync junction call now sits inside the try block that owns cleanup, confirmed live at execution time |
+| C4-03 | Warning | FIXED | quick task 260814-u2u (commit `fdc5b24e7`, D7 consequence); confirmed live by 34.9-33's own execution | meta/runTs.cjs: runChild() reads compile.error/run.error and both call sites log via console.error before cleanupAndExit, confirmed live |
+| C4-04 | Warning | FIXED | quick task 260814-u2u (commit `fdc5b24e7`); confirmed live by 34.9-33's own execution | meta/runTs.cjs: exitCodeFor() propagates 128+signal for a signal-terminated child instead of a flat 1, confirmed live |
+| C4-05 | Warning | DEFERRED | item 21 below | `### 21. C4-05 — the sweep tool's FIXED-row self-citation ban is case-sensitive while its polarity deny-list is case-insensitive` |
+
+**Count:** 5 IDs in list A. 4 mapped to a confirmed landed fix. 1 mapped to a ledger item (item 21).
+Unmapped count: **0**.
+
+### 21. C4-05 — the sweep tool's FIXED-row self-citation ban is case-sensitive while its polarity deny-list is case-insensitive
+
+**What it is:** `34.9-REVIEW-SWEEP-CHECK.cjs:157`'s FIXED-row citation-acceptance check (`const
+citesSummary = combined.includes('SUMMARY')`) is an exact-case substring match, while the polarity
+deny-list two functions over in the same file (`POLARITY_DENY_PATTERNS`, lines 66-75) is built with
+the case-insensitive `/i` flag on every entry. A future FIXED row citing a plan's own summary
+document with different capitalisation in its evidence prose (e.g. "documented in this plan's
+Summary.") would silently evade the self-citation ban while the polarity check next to it applies
+the stricter, case-insensitive standard to the identical class of self-assertion concern.
+
+**Blocker (mechanism, not a summary):** the fix (making the citation check case-insensitive, e.g.
+`/SUMMARY/i.test(combined)`) is squarely a change to `34.9-REVIEW-SWEEP-CHECK.cjs` itself, and this
+plan's own Task 1 acceptance criteria require the sweep tool to stay byte-unchanged by this plan
+("The sweep tool itself is unchanged by this task", verified by `git diff --stat` on that file at
+commit time). Fixing C4-05 now would violate that constraint even though the fix itself would
+tighten the gate, not loosen it — the reverse of the class of change this project's "fix the ROW,
+never the CHECK" rule prohibits. Checked against the real `deferred-items.md`: no current row
+exploits this gap (every mixed-case "Summary" occurrence found is prose, not an Evidence-cell
+citation of a `*-SUMMARY.md` path) — not a live false negative today, a latent inconsistency in the
+tool's own logic, per `34.9-REVIEW-CYCLE4.md`'s own finding text.
+
+**Named precondition:** a future plan authorized to modify `34.9-REVIEW-SWEEP-CHECK.cjs`'s own logic
+(i.e. one that does not carry this plan's "sweep tool unchanged" constraint) making the
+citation-acceptance check case-insensitive to match the polarity check's own convention.
+
+**OWNER:** whichever plan next touches `34.9-REVIEW-SWEEP-CHECK.cjs`'s own logic, dated 2026-08-14.
+This deferral is asymmetric with every other item in this file: it is deferred not because the fix
+is risky or unauthorized in principle, but because THIS plan's own acceptance criteria specifically
+forbid modifying the file that would need to change, and tightening a gate is the one direction this
+project's "never loosen the sweep to admit a row" rule does not prohibit.
