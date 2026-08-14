@@ -1293,6 +1293,36 @@ Plans:
 
 ---
 
+### Phase 34.13: Steam install-time wine/bottle form (GOG parity) (INSERTED)
+
+**Goal:** A Steam game that needs a bottle opens GameLib's install modal — platform selection plus wine/bottle choice — the same way a GOG game does, instead of installing silently with hardcoded settings. Plus an opt-in setting to always show the form for every Steam install.
+
+**Requirements**: TBD (mint during `/gsd-discuss-phase 34.13`)
+**Depends on:** Phase 34
+**Must run BEFORE:** Phase 35 (Electron cutover) — 35 intentionally runs last
+**Plans:** 0 plans
+
+**Scope decision (user, 2026-08-14):** the form appears for **bottle-requiring games by default**, plus an **opt-in setting** to always show it for every Steam install. Native macOS Steam games keep installing without a prompt by default, so locked decision **D-09** (zero-friction Steam install for 0/1 library) is preserved rather than reversed.
+
+**Reported symptom:** "Steam does not open [the] form on install on games requiring bottle (like GOG does)."
+
+**Root cause (traced 2026-08-14, pre-planning):**
+- `src/frontend/state/InstallGameModal.ts:71` — `openInstallGameModal` short-circuits **unconditionally** for `runner === 'steam' && action === 'install'`, calling `startSteamInstall` → `installSteamGame`, which hardcodes `platformToInstall: 'Windows'` and passes no wine version, prefix, or bottle. The modal is never rendered for Steam, so `WineSelector` never runs.
+- The bottle is not skipped — it is chosen *for* the user. `SteamGame.install()` (`games.ts:418`) consults `isBottleEligible()` and routes eligible games through the bottle silently, using `getSteamBottleSettings()` defaults.
+
+**Known blockers to design around:**
+1. `SteamLibraryManager.getInstallInfo()` (`library.ts:771-782`) is a stub returning `undefined`. This is *why* the short-circuit exists — its own comment notes the modal would loop forever on "Geting download size…" (`DownloadDialog/index.tsx:618`). Naively deleting the short-circuit hangs the dialog. Candidate fix: feed it `buildDepotPlan`'s `totalBytes`, which Phases 21/23 already compute. Note `buildDepotPlan` needs a Steam CM connection + PICS, so cost/latency is a real design input.
+2. `isBottleEligible()` is a **private** method on `SteamGame` (`games.ts:1328`) and is **not exposed over IPC**, so the frontend cannot branch on it today.
+
+**Already-built pieces to reuse (do not rebuild):**
+- `WineSelector` already carries a Steam-aware CrossOver branch — the `knownnottowork` advisory gated on `runner === 'steam' && showBottle` (`WineSelector/index.tsx:126`). It was written for this and is currently unreachable.
+- Backend bottle API is complete: `provisionBottle`, `getSteamBottleSettings`, `persistBottleWineVersion`, `bottleWineArch`, `isBottleProvisioned`, `isBottleReady` (`storeManagers/steam/bottle.ts`).
+
+**Do not conflate:** `SteamBottleSetup` (frontend state + toast) is a **post-install** guided surface from Phase 17 (D-07), opened only by the backend's `steamBottleSetupRequired` push. It is not the install-time form this phase delivers.
+
+Plans:
+- [ ] TBD (run /gsd-discuss-phase 34.13, then /gsd-plan-phase 34.13 to break down)
+
 ### Phase 34.1: Tauri IPC re-plumb slice 4 — app shell and window chrome (INSERTED)
 
 **Goal:** Port the **app shell and window chrome** IPC cluster (**33 channels** — `callTool` reassigned to Phase 34.5 by D-14) onto the Tauri build: window state and controls (minimize/maximize/unmaximize/close/fullscreen/frameless), zoom factor, title-bar overlay, tray colour, About window, language switching, custom themes/CSS, app version + changelog + releases, connectivity signal, gamepad input, and quit/lock/unlock. Establishes a **third port kind** — `renderer-side (Tauri JS)` — for window chrome (D-01/D-02), and is the **first slice to modify `src/backend/main.ts`** (D-07 body extraction), so the additive/reversible invariant becomes BEHAVIORAL rather than textual: `npm start` and `pnpm tauri:dev` must both still work.
@@ -2641,10 +2671,29 @@ shared-outfile defect's own predicate matches **14** scripts, not the 13 gap cyc
   locate a CLI tool's on-disk path to spawn as a subprocess), fixed by symlinking the project's
   `node_modules` into the private tmpdir (read-only, does not reintroduce the C3-01 race). `pnpm
   test:ci` 250/250 suites green (zero regressions). See `34.9-29-SUMMARY.md`.
-- [ ] 34.9-30-PLAN.md — close C3-02 (the stale pipe/argv comment in `meta/lintTranslations.ts` AND
+- [x] 34.9-30-PLAN.md — close C3-02 (the stale pipe/argv comment in `meta/lintTranslations.ts` AND
   the `34.9-PIPE-AUDIT.md` Section 7 claim that no such comment exists) and C3-03 (polarity check),
   and generalise the sweep to `34.9-REVIEW-SWEEP-CHECK.cjs` — cycle-agnostic, works against a review
-  file that does not exist yet
+  file that does not exist yet — **DONE 2026-08-14.** `meta/lintTranslations.ts`'s doc comment no
+  longer claims argv is mechanically unreachable via an `esbuild|node` pipe (states the env-var
+  scope is a deliberate convention, matching `verifyUpdaterSigningKey.ts`'s precedent, names no
+  invocation mechanism); `34.9-PIPE-AUDIT.md` Section 7 retracts its own false "no stale claim to
+  correct" conclusion and corrects the neighbouring "every `meta/*.ts` comment" overclaim to 11 of
+  12. `34.9-C2-SWEEP-CHECK.cjs` renamed (git mv, history preserved) to `34.9-REVIEW-SWEEP-CHECK.cjs`
+  and generalised: list A globs `*-REVIEW*.md` and parses every `### <ID>` heading (proven against a
+  synthetic `C9-01` heading in a throwaway file not yet existing at authoring time); list B is the
+  union of `| <ID> |` rows across every disposition section in `deferred-items.md`, not one named
+  section (a finding legitimately cross-referenced from two sections, e.g. C2-05/C2-07, is merged,
+  not rejected — only a genuine FIXED-vs-DEFERRED conflict trips DUPLICATE-ROW). FIXED-row
+  confirmation tightened per C3-03: a case-insensitive polarity deny-list rejects a citation whose
+  own text denies the fix, checked before and independent of citation acceptance — RED-proven against
+  the reviewer's verbatim counter-example on a temporary `deferred-items.md` copy (real file never
+  mutated), rejected `FIXED-CONFIRMATION-DENIES-FIX`. Run with no arguments from the phase directory:
+  discovers all 3 real review files, list A = 17 IDs, reports exactly 3 unmapped (C3-01/02/03, all
+  `NO-ROW`) and exits non-zero — the expected RED state at this plan, matching plan measured ground
+  truth exactly; the 14 already-dispositioned IDs are not in the unmapped list (no regression).
+  `pnpm test:ci` 250/250 suites green (4862/4863 tests, 1 pre-existing skip), `pnpm lint` unchanged
+  at the pre-existing 3544-problem/53-error baseline, `tsc --noEmit` clean. See `34.9-30-SUMMARY.md`.
 - [ ] 34.9-31-PLAN.md — author `34.9-WRAPPER-PROOF.md` (author/runner separation: this plan may not
   run any direction), including the mandatory Direction C positive control
 - [ ] 34.9-32-PLAN.md — run the three-direction proof on real macOS arm64 hardware and write its
