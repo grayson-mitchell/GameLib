@@ -23,9 +23,13 @@
  * pre-existing failures on Weblate-sourced data this fork does not own and
  * cannot fix -- a gate with unactionable noise stops being read. Scope is
  * read from `LINT_TRANSLATIONS_NAMESPACES` (comma-separated), not a CLI
- * flag: this script runs through an `esbuild --bundle | node` pipe, so argv
- * never reaches it -- the same env-var convention `meta/verifyUpdaterSigningKey.ts`
- * already uses for its own CI-facing configuration.
+ * flag. This is a DELIBERATE convention, not a mechanical necessity -- CLI
+ * argv is reachable via `process.argv` regardless of invocation form. It
+ * matches `meta/verifyUpdaterSigningKey.ts`'s own precedent of reading
+ * CI-facing configuration from the environment rather than a flag.
+ * (Correction, C3-02: an earlier version of this comment claimed argv was
+ * mechanically unreachable because of the script's invocation mechanism --
+ * that claim was false and has been removed.)
  */
 
 import { readdirSync, readFileSync } from 'graceful-fs'
