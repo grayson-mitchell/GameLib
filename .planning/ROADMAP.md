@@ -2694,8 +2694,24 @@ shared-outfile defect's own predicate matches **14** scripts, not the 13 gap cyc
   truth exactly; the 14 already-dispositioned IDs are not in the unmapped list (no regression).
   `pnpm test:ci` 250/250 suites green (4862/4863 tests, 1 pre-existing skip), `pnpm lint` unchanged
   at the pre-existing 3544-problem/53-error baseline, `tsc --noEmit` clean. See `34.9-30-SUMMARY.md`.
-- [ ] 34.9-31-PLAN.md — author `34.9-WRAPPER-PROOF.md` (author/runner separation: this plan may not
-  run any direction), including the mandatory Direction C positive control
+- [x] 34.9-31-PLAN.md — author `34.9-WRAPPER-PROOF.md` (author/runner separation: this plan may not
+  run any direction), including the mandatory Direction C positive control — **DONE 2026-08-14.**
+  Independently re-derived the wrapped-script census from the live `package.json` before writing
+  anything (**15**, agreeing with `34.9-29-SUMMARY.md`'s own count, not this plan's own stale
+  key-link of 14). Direction A: 30 rows (15 scripts x S1/S2 broken-compile shapes), a five-criterion
+  PASS bar including a private-tmpdir-absence check (`meta/runTs.cjs`'s `cleanupAndExit` discipline).
+  Direction B: 10 full-run + 1 partial-run (`build-runners-onedir`, argv-arrival only, `SIGTERM`'d
+  before its network/destructive step) + 4 named exclusions — all five required inclusions satisfied
+  (both argv-forwarding call sites, the `export`-prefixed script, the chained `build:sidecar-sea`,
+  node22 coverage). Direction C: a 60-trial concurrency race check plus a MANDATORY positive control
+  against the retired shared-outfile idiom, scored INVALID not PASS if the control fails to
+  reproduce the previously-measured ~100% rate. Contract Validation: all 6 distinct check shapes
+  specimen-validated pass+fail using the real `meta/runTs.cjs`/`esbuild` on throwaway scratchpad
+  files — including a genuine failing temp-dir specimen via `SIGKILL` and a Direction C
+  detector-logic validation using fabricated fixture pairs, never an actual concurrent run (this
+  plan is FORBIDDEN from concurrency harness execution). `directions_total: 43` filled as the sole
+  deliberate exception to the unfilled-result-fields rule. `git status --porcelain -- meta/
+  package.json` clean throughout. See `34.9-31-SUMMARY.md`.
 - [ ] 34.9-32-PLAN.md — run the three-direction proof on real macOS arm64 hardware and write its
   verdict (human operator required)
 - [ ] 34.9-33-PLAN.md — ledger C3-01..C3-03, record the closure protocol, reconcile
