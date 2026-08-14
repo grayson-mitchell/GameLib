@@ -887,6 +887,56 @@ built under.
 **OWNER:** whichever plan next extends `meta/__tests__/runTsSignals.test.ts`, dated 2026-08-14.
 Opened from `34.9-REVIEW-CYCLE5.md` finding C5-02.
 
+### 24. E-02 — twelve `meta/*.ts` files still document the retired `node_modules/.cache/*.cjs` execution path
+
+**What it is:** plan 34.9-25 corrected every source comment the pipe→`&&` conversion falsified, and
+left the `doc-comment accuracy pins (IN-01/IN-02)` suite green (still green today). Plan 34.9-29 then
+changed the execution mechanism a second time — `package.json` scripts now run
+`node meta/runTs.cjs …`, which compiles into a private
+`fs.mkdtempSync(path.join(os.tmpdir(), 'gamelib-runts-'))` directory — without re-running that
+stale-comment-correction discipline. Verified live: **zero** `package.json` scripts contain
+`--outfile=node_modules/.cache`, yet **12** files under `meta/` still assert that a bundle is written
+to `node_modules/.cache/<name>.cjs` and run as `node node_modules/.cache/<name>.cjs`:
+
+`buildCrossoverIndex.ts`, `buildRunnersOnedir.ts`, `buildSidecarSea.ts`, `buildSteamBridgeShims.ts`,
+`cleanDistMac.ts`, `downloadHelperBinaries.ts`, `genI18nGateScope.ts`, `gen_vtables.ts`,
+`i18nCatalogChurnGuard.ts`, `machineFillGamelib.ts`, `trayIconVariants.ts`, `verifyRunnerBundle.ts`.
+
+Census command (raw): `grep -rln "node_modules/\.cache" meta/*.ts` → 12 files.
+
+Two mechanisms keep this invisible. The `IN-01/IN-02` jest pins assert *prose about why `__dirname`
+is avoided*, not the path literal, so the suite stays green while the comment is factually wrong —
+the pin measures a different property than the one that drifted. And stale `.cjs` files from before
+plan 34.9-29 still sit in `node_modules/.cache/` as residue (`clean-dist-mac.cjs`,
+`gen-i18n-gate-scope.cjs`, `gen-vtables.cjs` and others are present on disk right now), so a reader
+who checks whether the documented path exists concludes the comment is accurate. The residue actively
+launders the drift.
+
+This is the third recurrence of this defect class in Phase 34.9: IN-01/IN-02 originally, the
+pipe-conversion instance plan 34.9-25 fixed, and now this one.
+
+**Blocker (mechanism, not a summary):** the fix is a comment rewrite across 12 files, four of which
+(`meta/runTs.cjs`'s neighbours `verifyRunnerBundle.ts`, `cleanDistMac.ts`, `buildRunnersOnedir.ts`,
+`downloadHelperBinaries.ts`) are named in `34.9-WRAPPER-PROOF.md` and `34.9-PIPE-PROOF.md`, whose
+recorded `verdict: PASS` describes the tree as it stands. More importantly, a rewrite that only
+corrects the prose would reproduce the same failure a fourth time on the next mechanism change: the
+durable fix is a pin that asserts the *path literal* against `package.json`'s actual script values,
+so the comment cannot drift silently again. That is plan-sized work with its own RED-proof
+requirement, and this run's authorization is to verify threat mitigations, not to edit
+implementation files.
+
+**Named precondition:** a plan authorized to modify comments across `meta/*.ts` AND to add a
+doc-accuracy pin that derives the expected execution path from `package.json` rather than restating
+it, so the assertion fails when the mechanism next changes. The plan should also decide whether to
+delete the stale `node_modules/.cache/*.cjs` residue, since its presence is what makes the wrong
+comments look right.
+
+**OWNER:** whichever plan next performs a doc-accuracy pass over `meta/*.ts`, dated 2026-08-15.
+Opened from `34.9-SECURITY.md` escalation E-02 (threat `T-34.9C3-19`, plan 34.9-25). Not a security
+control failure and not a live build defect — an evidence-surface defect. Note for the next reader:
+the security audit's first pass sampled two files and reported two; a census over all of `meta/*.ts`
+found twelve. The defect's unit is the file, and an audit whose unit is coarser cannot find it.
+
 ## Closure protocol — why every cycle's own review is unledgered by construction
 
 Recorded 2026-08-14 (gap cycle 4, plan 34.9-33), fuller than the abbreviated note `ROADMAP.md`'s
