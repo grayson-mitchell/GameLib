@@ -2625,13 +2625,40 @@ REQ-34.9-07, REQ-34.9-08, REQ-34.9-09, REQ-34.9-10, REQ-34.9-11 (minted 2026-08-
 ticked only by measured evidence)
 **Depends on:** Phase 34 (packaging/signing/notarization pipeline). Independent of the 34.1-34.8
 IPC slices. Runs before Phase 35, which will later delete the Electron half of the signing work.
-**Plans:** 33 total (17 original + 5 gap cycle 2 + 6 gap cycle 3 + 5 gap cycle 4) — re-derived
-2026-08-14 from `.planning/phases/34.9-.../34.9-*-PLAN.md` on disk (33 files, `ls ... | wc -l` = 33;
-not incremented from the prior 28, since gap cycle 4's 5 plans (34.9-29..33) were already counted at
-gap-cycle-4 planning time) — **33/33 executed on disk** (32 `-SUMMARY.md` files present in this
-phase's directory at this line's edit time, plus this closing plan's own `34.9-33-SUMMARY.md`,
-written immediately after this reconciliation task, per the same derivation this line has documented
-since plan 34.9-22). Gap cycle 3's first plan, 34.9-23
+**Plans:** 33/33 plans executed — **PHASE 34.9 COMPLETE, closed 2026-08-15.**
+`34.9-VERIFICATION.md` re-verified 2026-08-15 (gap cycle 4): `status: passed`, **8/8 truths
+verified, 0 gaps open**, 33/33 plans complete, no human verification outstanding. The gap that held
+the phase open across three re-verifications — gap-cycle-3's own review findings (C3-01/02/03)
+sitting in a review document with no ledger entry — is closed **by fix, not by deferral**. Every
+review finding in the phase is now dispositioned: `34.9-REVIEW-SWEEP-CHECK.cjs` reports
+`REVIEW-SWEEP-OK 24/24 mapped, unmapped 0`, exit 0, across all five review cycles, with the tool
+byte-unchanged (so the gate went green because rows were written, not because the check was
+loosened). Regression gate at closure: `pnpm test:ci` — 251/251 suites, 4867 passed / 1 skipped,
+exit 0. Closes with **3 deferred ledger items** (C4-05, C5-01, C5-02), none
+a live defect, each carrying `OWNER:`/precondition/blocker; the two C5 items touch `meta/runTs.cjs`,
+the subject of `34.9-WRAPPER-PROOF.md`'s PASS, so fixing them now would decouple the phase's headline
+evidence from the artifact it describes. **Scope fence unchanged:** REQ-34.9-02/03/04 (x64 CI leg,
+digest download path) and REQ-34.9-09 (per-runner cold-spawn ratio) remain descoped by recorded user
+decision — the phase closes on the **arm64 leg only**, and the honest headline is **~27–33x warm**
+(nile 32.5x, legendary 26.6x, gogdl 27.2x), cold UNMEASURED.
+
+**Structural outcome worth carrying forward:** gap cycle 4 also closed the *cause* of the repeated
+gap. `code_review_gate` runs AFTER a phase's reconciliation sweep, so every cycle's own review was
+unledgered by construction the moment it was written — four cycles running (CR-01/34.9-17,
+C2-01..08/34.9-22, C3-01..03/34.9-28, C4-01..05/34.9-33). Cycle 4 broke the ordering instead of
+trying to out-discipline it: the cycle-4 review was front-loaded, the sweep tool was generalised to
+be cycle-agnostic, and this execution's own review (`34.9-REVIEW-CYCLE5.md`) was run and ledgered
+*before* verification. Front-loading paid for itself immediately — it caught C4-01 (the wrapper
+installed no signal handlers, so a SIGTERM orphaned the child and leaked the tmpdir) *before*
+`34.9-WRAPPER-PROOF.md` was executed, and that contract's Direction B row 11 prescribes exactly that
+SIGTERM to abort a destructive/network step. A review that runs before an unrun gate contract can
+invalidate the **contract**, not just the code. Protocol recorded in `deferred-items.md`'s
+`## Closure protocol` section.
+
+Plan-count derivation (retained): 33 total = 17 original + 5 gap cycle 2 + 6 gap cycle 3 + 5 gap
+cycle 4 — re-derived 2026-08-14 from `.planning/phases/34.9-.../34.9-*-PLAN.md` on disk (33 files,
+`ls ... | wc -l` = 33; not incremented from the prior 28, since gap cycle 4's 5 plans (34.9-29..33)
+were already counted at gap-cycle-4 planning time). Gap cycle 3's first plan, 34.9-23
 (audit-only, `34.9-PIPE-AUDIT.md`: derived the C2-01 pipe-swallow
 census by predicate — 13 instances, one more than gap-planning decision D-C3-01's 12-item list;
 no `VACUOUS TODAY`/`BLOCKER` instances found; every CI caller currently BLOCKED UPSTREAM). Gap

@@ -4,8 +4,8 @@ milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
 stopped_at: Phase 34.13 context amended (D-21..D-28, quick-install split-button model; D-13 retired) -- 14 plans need replanning, none executed
-last_updated: "2026-08-14T20:10:22.000Z"
-last_activity: 2026-08-15 -- Phase 34.13 CONTEXT.md amended via /gsd-discuss-phase: the auto-open trigger model (D-10) is replaced by an explicit split-button choice -- primary = quick install, caret = "Install with options...". D-13 (global always-show setting) RETIRED and plan 34.13-04 deleted. Plans 05/08/11 need rewrite, 13 needs UAT re-derivation, 34.13-UI-SPEC.md section-gating matrix + D-12 busy-state contract superseded. ROADMAP.md phase goal still carries the pre-amendment wording. No plan executed yet (0/14).
+last_updated: "2026-08-15T00:00:00.000Z"
+last_activity: 2026-08-15 -- **PHASE 34.9 COMPLETE.** Gap cycle 4 (plans 34.9-29..33) executed in full; `34.9-VERIFICATION.md` re-verified `status: passed` -- 8/8 truths, 0 gaps open, 33/33 plans, no human verification outstanding. The gap that held the phase open across three re-verifications (gap-cycle-3's review findings C3-01/02/03 unledgered) is closed BY FIX: the shared script-name-keyed outfile is gone (`meta/runTs.cjs` compiles into a private per-invocation `mkdtempSync` dir; census re-derived programmatically = 15 wrapper-routed scripts / 0 `node_modules/.cache` / 0 pipe idioms), proven on real arm64 by `34.9-WRAPPER-PROOF.md` (PASS 43/43, Direction C's positive control reproducing the old race 60/60 BEFORE the new idiom measured 0/60); `meta/lintTranslations.ts`'s false comment corrected; the sweep tool's polarity check proven NON-VACUOUS against a known-bad fixture (red `FIXED-CONFIRMATION-DENIES-FIX` exit 1, green exit 0 on a polarity flip alone). **The structural cause is closed too:** `code_review_gate` runs AFTER a phase's reconciliation sweep, so every cycle's own review was unledgered by construction -- four cycles running. Cycle 4 broke the ordering rather than out-disciplining it: the cycle-4 review was front-loaded, the sweep generalised to be cycle-agnostic, and this execution's OWN review (`34.9-REVIEW-CYCLE5.md`) run and ledgered BEFORE verification. Front-loading paid for itself -- it caught C4-01 (no signal handlers, so SIGTERM orphaned the child and leaked the tmpdir) BEFORE `34.9-WRAPPER-PROOF.md` was run, and that contract's Direction B row 11 prescribes exactly that SIGTERM to abort a destructive/network step; a review that runs before an unrun gate contract can invalidate the CONTRACT, not just the code. Sweep now `REVIEW-SWEEP-OK 24/24 mapped, unmapped 0`, tool byte-unchanged. Closes with 3 deferred ledger items (C4-05, C5-01, C5-02), none a live defect; both C5 items touch `meta/runTs.cjs`, the subject of the proof's PASS, so fixing them now would decouple the evidence from the artifact it describes. Regression gate `pnpm test:ci` 251/251 suites, 4867 passed / 1 skipped, exit 0. Scope fence unchanged: REQ-34.9-02/03/04 + REQ-34.9-09 descoped, arm64 leg only, ~27-33x warm (cold UNMEASURED). Counter convention (incl. why decimal phases increment `completed_phases`) recorded in the progress block. NOTE: `stopped_at` above intentionally left describing the CONCURRENT Phase 34.13 session's position -- that session is active and owns it; this entry does not clobber it. Earlier: 2026-08-15 -- Phase 34.13 CONTEXT.md amended via /gsd-discuss-phase: the auto-open trigger model (D-10) is replaced by an explicit split-button choice -- primary = quick install, caret = "Install with options...". D-13 (global always-show setting) RETIRED and plan 34.13-04 deleted. Plans 05/08/11 need rewrite, 13 needs UAT re-derivation, 34.13-UI-SPEC.md section-gating matrix + D-12 busy-state contract superseded. ROADMAP.md phase goal still carries the pre-amendment wording. No plan executed yet (0/14).
 progress:
   # Hand-corrected after `state.begin-phase` corrupted these (recurring gsd-sdk defect).
   # Tool wrote 24/15/324/298/63 and also mangled three prose blocks (orphaned continuation
@@ -107,8 +107,30 @@ progress:
   # completed_plans increment was already applied above; 34.9-33 is one plan, not two, so no
   # further increment. Verified by hand before editing: completed_plans was 312 at read time,
   # matching this line's own claim -- not incremented again.
+  #
+  # [PHASE 34.9 CLOSED, 2026-08-15]: completed_phases 17 -> 18. No gsd-sdk state.* verb invoked
+  # (standing corruption defect); hand-applied and the whole `git diff` reviewed.
+  #
+  # THE COUNTER CONVENTION, derived from evidence 2026-08-15 and recorded here so no future session
+  # has to re-derive it (it has been silently corrupted and hand-repaired many times):
+  #   total_phases     = phases in the CURRENT MILESTONE only (v0.8), DECIMALS INCLUDED.
+  #                      v0.8 = {27,28,29,30,31,32,33,34, 34.1..34.12, 34.4.1, 34.4.2, 35} = exactly
+  #                      23. Cross-checked against the alternatives and both fail: ROADMAP.md has 51
+  #                      `### Phase ` headings and there are 45 phase dirs on disk, neither is 23.
+  #                      NOTE: this legitimately becomes 24 once Phase 34.13 is fully added to the
+  #                      roadmap -- that bump belongs to whoever lands 34.13, not to this phase.
+  #   completed_phases = how many of those are complete. DECIMAL PHASES DO COUNT -- proven by direct
+  #                      precedent, not inference: when Phase 34.10 (itself a decimal phase) closed
+  #                      on 2026-08-09, its own closing commit beeeb771b moved completed_phases
+  #                      14 -> 15. 34.9 is the same shape, hence 17 -> 18.
+  #   total_plans      = plans that EXIST. Moves when plans are PLANNED, never at execution time.
+  #   completed_plans  = plans with a landed SUMMARY.
+  #   percent          = floor(completed_plans / total_plans * 100) -- PLANS-based, NOT phases-based.
+  #                      312/316 = 98. This is the field the SDK most often corrupts: it recomputes
+  #                      from phases (17/23 = 74, or 18/23 = 78) and writes 63-74. A percent in the
+  #                      60s-70s next to a completed_plans in the 300s is the corruption signature.
   total_phases: 23
-  completed_phases: 17
+  completed_phases: 18
   total_plans: 316
   completed_plans: 312
   percent: 98
@@ -607,8 +629,17 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — **gap cycle 3
-COMPLETE, phase remains OPEN pending re-verification**
+Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — ✅ **COMPLETE
+2026-08-15.** Gap cycle 4 (34.9-29..33) closed the last gap; `34.9-VERIFICATION.md` re-verified
+2026-08-15 `status: passed`, 8/8 truths, 0 gaps, 33/33 plans, no human verification outstanding.
+Every review finding across all five cycles is dispositioned — `34.9-REVIEW-SWEEP-CHECK.cjs` reports
+`REVIEW-SWEEP-OK 24/24 mapped, unmapped 0` with the tool byte-unchanged. Closes with 3 deferred
+ledger items (C4-05, C5-01, C5-02), none a live defect. Scope fence unchanged: REQ-34.9-02/03/04 and
+REQ-34.9-09 stay descoped, arm64 leg only, ~27–33x warm (cold UNMEASURED). Historical record of the
+gap-cycle-3 state follows.
+
+Phase: 34.9 — **gap cycle 3
+COMPLETE, phase remained OPEN pending re-verification** (superseded 2026-08-15 by the block above)
 Plan: 34.9-28 of 34.9-23..28 complete (2026-08-13) — all 6 gap-cycle-3 plans done. Gap cycle 3 was planned 2026-08-13 (6 plans,
 5 waves, plan-checker PASSED) to close the sole remaining verification gap from gap cycle 2's
 re-verification: truth 8 / C2-01 (the `esbuild ... | node`/`| node -` pipe-swallow idiom — a
