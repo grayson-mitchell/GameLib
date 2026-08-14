@@ -617,3 +617,29 @@ that failed the 2026-08-12 re-verification run).
 | "Ledger entries for C2-01 through C2-08 in deferred-items.md (or a landed fix), so this finding does not repeat CR-01's own history of falling through a reconciliation step" | YES | This section: all eight IDs mapped, six to a confirmed landed fix, two (C2-05, C2-07) to dated, owned ledger items (18, 19, opened by 34.9-27 per locked decision D-C3-05). Computed unmapped count 0, agreeing with the stated count. | None — this section is the delivery of this exact missing-list item |
 
 **This plan does not score truth 8; that judgment belongs to `/gsd-verify-work 34.9`.**
+
+## Item 20 — pre-existing repo-wide `pnpm lint` failure, confirmed unrelated to plan 34.9-29 (2026-08-14)
+
+**What it is:** `pnpm lint` exits non-zero repo-wide: `3544 problems (53 errors, 3491 warnings)`,
+spread across dozens of unrelated `src/` files (unsafe-`any` warnings, unused eslint-disable
+directives, `require-await`, `no-duplicates`, etc.). Plan 34.9-29's own acceptance criteria and
+`<verification>` block both name `pnpm lint exits 0` as a check.
+
+**Why this is out of scope, not a Rule 1/2/3 fix:** the SCOPE BOUNDARY rule restricts auto-fixing to
+issues directly caused by the current task's changes. `meta/runTs.cjs` is a `.cjs` file and is
+excluded from lint entirely (`eslint.config.mjs:93`, `ignores: ['build/', '**/*.js', '**/*.cjs',
+'**/*.mjs']`), so it cannot contribute any of the 3544 problems. `meta/__tests__/runTs.test.ts`
+lints clean on its own (`npx eslint meta/__tests__/runTs.test.ts` exits 0). `package.json` is not a
+lint target at all (`files` glob is `**/*.ts`/`**/*.tsx` only).
+
+**Confirmed unrelated, not merely assumed:** the exact figure `3544 problems (53 errors, 3491
+warnings)` was observed identically both before Task 1's `meta/runTs.cjs` existed on disk (the
+very first `pnpm lint` run this plan's execution performed) and again after all three tasks were
+committed. Byte-identical count, before and after.
+
+**Disposition:** DEFERRED, pre-existing, out of this plan's scope. Not owned by this plan; not
+introduced by this plan. `pnpm lint`'s exit code as an overall gate for phase 34.9 stays red for a
+reason unrelated to C3-01, and whichever future work addresses repo-wide lint debt should treat this
+as its own item, not as unfinished work from 34.9-29.
+
+**OWNER:** unassigned (pre-existing repo-wide lint debt, not scoped to any phase-34.9 finding).
