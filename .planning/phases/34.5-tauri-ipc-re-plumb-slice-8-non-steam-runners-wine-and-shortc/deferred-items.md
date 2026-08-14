@@ -426,3 +426,60 @@ names.
     Names plan 34.5-55 as the fix. Cross-references this project's own standing lesson that a
     census must be parsed with the defect's own predicate, never with the names the previous
     document assumed.
+
+## Found during 34.5-61 (closing F-34.5-G6-22; census-derived redaction expansion)
+
+32. **`F-34.5-G6-24` — a SECOND, independently-discovered credential leak of the same class as the
+    blocker: GOG's private-branch `--password` (a user-chosen secret, not a single-use token) was
+    never in `getRunnerCallWithoutCredentials`'s redaction list**, so it reached `gamelib.log` in
+    cleartext on every install/update/library call that supplies a private-branch password. Four
+    call sites: `src/backend/storeManagers/gog/games.ts:373`, `:838`, `:1139`, and
+    `src/backend/storeManagers/gog/library.ts:692` (all `commandParts.push('--password',
+    privateBranchPassword)`). Found by a census of the real backend call sites
+    (`grep -rnE "'--(code|token|code-verifier|client-id|serial|password|secret|refresh-token|
+    api-key)'" --include='*.ts' src/backend | grep -v __tests__`), independently of
+    `F-34.5-G6-22`'s own nile-login-only trace. **Arguably more severe than `F-34.5-G6-22`**: a
+    PKCE `code_verifier` is single-use and worthless after the login flow completes, but a GOG
+    private-branch password is a password a user typed in, one they may well have reused
+    elsewhere, and it leaks on every private-branch operation, not just at login.
+    **Fixed** by plan 34.5-61's Task 1 (`fix(34.5-61): redact code-verifier/password/serial/
+    client-id from runner command logs`, commit `b83595581`), in the same array-literal change
+    that closed `F-34.5-G6-22`. RED-proven through the production `callRunner` logging path
+    before the fix (raw `SENTINEL_PW_xyz789` present in the emitted `logInfo` string), GREEN
+    after — see `34.5-61-SUMMARY.md` for the verbatim capture. Source-level only; live
+    confirmation is a separate, still-open obligation (see `34.5-UNTESTED-ITEMS.md` row
+    `U-34.5-33`, opened in the same commit as this finding per Ledger Rule 2).
+
+33. **`F-34.5-G6-25` — the PowerShell `-ArgumentList` redaction branch never actually redacted
+    ANYTHING, for ANY flag, including the pre-existing `--code`/`--token` — a THIRD, previously
+    unknown leak, Windows-only, predating this plan entirely.** Discovered while proving plan
+    34.5-61's Task 1 acceptance criterion ("verify BOTH branches redact each added flag"): the
+    regex `new RegExp(`"${sensitiveArg}","(.*?)"`)` (pre-fix `launcher.ts:1898`) assumes each
+    `-ArgumentList` member is wrapped as a bare `"value"`, but `callRunner`'s own
+    `argsAsString` construction (`launcher.ts:1681-1684`) wraps every argument as
+    `` `"\`"${part}\`""` `` — i.e. `` "`"value`"" ``, backtick-quoted. The regex's literal
+    `"${sensitiveArg}"` substring can never appear in that wrapped text, so the redaction
+    `.replace()` call was always a silent no-op on the PowerShell branch, for every flag that
+    branch has ever tried to redact. RED-proven live: a probe test driving `callRunner` with
+    `isWindows` mocked true (via `jest.doMock('backend/constants/environment', ...)`) and a
+    mocked `searchForExecutableOnPath` showed the raw `SENTINEL_CODE_ac91f3` sentinel present in
+    the PowerShell-shaped `logInfo` call, even for `--code` alone, against the UNCHANGED
+    pre-existing regex — proving this is not something plan 34.5-61 introduced, only something
+    it happened to be the first to actually drive the PowerShell branch against a real leak
+    check. **Fixed in the same commit as `F-34.5-G6-22`/`F-34.5-G6-24`** (`b83595581`): the
+    regex and its replacement were corrected to match the real backtick-quoted shape. This
+    project has no prior live Windows session in its own gate history (the four blocking gates
+    to date were all run on macOS), so this defect was never previously reachable by any live
+    observation — it was found by a unit-level probe, not a live session, and closing it here is
+    source-level only. `U-34.5-33` (below) folds the live-confirmation obligation for all three
+    findings (`F-34.5-G6-22`/`-24`/`-25`) into one row, since all three share the same fix commit
+    and the same "no live Windows session has ever run" caveat.
+
+**Note, not a finding: `authLogSanitizer` (`src/backend/storeManagers/nile/user.ts:13-24`) is
+confirmed NOT a mitigation for any of `F-34.5-G6-22`/`-24`/`-25`.** It parses a logged line as
+JSON and redacts `url`/`code_verifier`/`serial`/`client_id` keys — but it sanitizes the runner's
+**stdout** (passed only to `getLoginData()`'s own spawn options), never the **argv** string
+`callRunner` independently logs via `getRunnerCallWithoutCredentials`. The argv line is emitted
+by `callRunner` itself, before `authLogSanitizer` is ever consulted. Confirmed by direct read at
+34.5-61 planning time and re-confirmed here; not touched by this plan, per the plan's own
+constraint.
