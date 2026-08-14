@@ -87,6 +87,38 @@ function main() {
   // pre-creatable as a symlink by another local user (T-34.9-C4-01).
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gamelib-runts-'))
 
+  // A `node_modules` symlink INSIDE the private tmpdir, pointing at this
+  // project's real `node_modules`. Discovered empirically while authoring
+  // this file: at least two entries (`meta/buildSidecarSea.ts`,
+  // `meta/updaterSigningKey.ts`, the latter bundled into
+  // `verify:updater-key`) call runtime `require.resolve('<pkg>/<subpath>')`
+  // to locate a CLI tool's real on-disk path (so it can be spawned as a
+  // separate process, not `require()`d for its exports) -- esbuild leaves
+  // these calls as genuine runtime `require.resolve` calls rather than
+  // statically bundling them. Node's CJS resolution algorithm walks up
+  // parent directories from the CALLING FILE's own location looking for the
+  // project's dependency directory; when the compiled file lived inside the
+  // project's shared build-cache path (the pre-C3-01 idiom) that walk found
+  // the project's dependency tree one level up by construction. Once
+  // compiled into `os.tmpdir()`, that walk finds nothing and every such
+  // call throws.
+  // This symlink is read-only from the compiled script's perspective (it
+  // never writes through it) and points at the SAME immutable project tree
+  // every invocation already shares -- unlike the outfile itself, reading
+  // `node_modules` concurrently from many invocations is not a hazard, so
+  // this does not reintroduce anything C3-01 closed. `fs.rmSync` below does
+  // not follow the symlink when cleaning up (it unlinks the symlink entry
+  // itself, standard `rm -rf` semantics), so the real `node_modules` is
+  // never touched.
+  const repoNodeModules = path.join(__dirname, '..', 'node_modules')
+  if (fs.existsSync(repoNodeModules)) {
+    fs.symlinkSync(
+      repoNodeModules,
+      path.join(tmpDir, 'node_modules'),
+      'junction'
+    )
+  }
+
   // NOTE: `process.exit()` does NOT run pending `try/finally` blocks -- Node
   // terminates the process before the stack unwinds far enough for the
   // `finally` to execute (verified empirically while authoring this file).
