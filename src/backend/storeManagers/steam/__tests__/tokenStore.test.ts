@@ -92,7 +92,8 @@ import {
   TokenStore,
   ElectronTokenStore,
   setTokenStore,
-  getTokenStore
+  getTokenStore,
+  readTokenOutcome
 } from '../tokenStore'
 import { SteamUser } from '../user'
 
@@ -235,6 +236,62 @@ describe('tokenStore', () => {
 
       // The fake never touches configStore's TOKEN_STORE_KEY at all.
       expect(mockConfigStore.get_nodefault).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('readTokenOutcome (quick-260814-r2d)', () => {
+    it('on a store WITHOUT readToken(), a non-empty getToken() resolves { status: "present", token }', async () => {
+      const store: TokenStore = {
+        isAvailable: jest.fn().mockResolvedValue(true),
+        getToken: jest.fn().mockResolvedValue('abc'),
+        setToken: jest.fn().mockResolvedValue(undefined),
+        clearToken: jest.fn().mockResolvedValue(undefined)
+      }
+
+      await expect(readTokenOutcome(store)).resolves.toEqual({
+        status: 'present',
+        token: 'abc'
+      })
+    })
+
+    it('on a store WITHOUT readToken(), an empty getToken() resolves { status: "absent" }', async () => {
+      const store: TokenStore = {
+        isAvailable: jest.fn().mockResolvedValue(true),
+        getToken: jest.fn().mockResolvedValue(''),
+        setToken: jest.fn().mockResolvedValue(undefined),
+        clearToken: jest.fn().mockResolvedValue(undefined)
+      }
+
+      await expect(readTokenOutcome(store)).resolves.toEqual({ status: 'absent' })
+    })
+
+    it('on a store WITH readToken(), delegates to it verbatim and never calls getToken()', async () => {
+      const mockGetToken = jest.fn().mockResolvedValue('should-not-be-used')
+      const mockReadToken = jest
+        .fn()
+        .mockResolvedValue({ status: 'unreadable', reason: 'timeout' })
+      const store: TokenStore = {
+        isAvailable: jest.fn().mockResolvedValue(true),
+        getToken: mockGetToken,
+        setToken: jest.fn().mockResolvedValue(undefined),
+        clearToken: jest.fn().mockResolvedValue(undefined),
+        readToken: mockReadToken
+      }
+
+      await expect(readTokenOutcome(store)).resolves.toEqual({
+        status: 'unreadable',
+        reason: 'timeout'
+      })
+      expect(mockReadToken).toHaveBeenCalledTimes(1)
+      expect(mockGetToken).not.toHaveBeenCalled()
+    })
+
+    it('ElectronTokenStore satisfies TokenStore with no readToken() member (compile-level, asserted by tsc)', () => {
+      // Assigning to the TokenStore-typed variable is itself the compile-level
+      // proof that ElectronTokenStore satisfies the (now-widened) interface
+      // with readToken? absent — tsc would fail this file if it did not.
+      const store: TokenStore = new ElectronTokenStore()
+      expect('readToken' in store).toBe(false)
     })
   })
 

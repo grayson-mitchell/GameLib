@@ -39,17 +39,72 @@ import { TOKEN_PREFIX, TOKEN_STORE_KEY } from './constants'
 
 // ── The TokenStore contract ──────────────────────────────────────────────────
 
+/** Why a read could not be completed. Mirrors `classifyKeyringFailure()`'s
+ *  existing two-way split in `keyringTokenStore.ts` — do not invent a third. */
+export type TokenUnreadableReason = 'timeout' | 'unavailable'
+
+/**
+ * The three distinct outcomes of a token read (quick-260814-r2d). `getToken()`
+ * on `TokenStore` cannot express this — `''` does double duty for both "no
+ * token stored" and "could not read the store right now" and a caller cannot
+ * tell them apart. `readToken()`/`readTokenOutcome()` below make the third
+ * state explicit for callers that need to act on it differently (never treat
+ * `unreadable` as a signed-out signal).
+ */
+export type TokenReadOutcome =
+  | { status: 'present'; token: string }
+  | { status: 'absent' }
+  | { status: 'unreadable'; reason: TokenUnreadableReason }
+
 export interface TokenStore {
   /** Whether this store's underlying encryption/secure-storage mechanism is
    * currently usable. Does NOT indicate whether a token is present. */
   isAvailable(): Promise<boolean>
   /** Returns the stored refresh token, or `''` when none is stored OR the
-   * store is unavailable (D-06 semantics — callers treat both the same). */
+   * store is unavailable (D-06 semantics — callers treat both the same).
+   * KEPT verbatim for backward compatibility with `humbleSecretStore.ts`'s
+   * `getSecret()` and every existing caller — this method's contract does not
+   * change. A caller that needs to distinguish "nothing stored" from "could
+   * not read right now" must use `readToken()`/`readTokenOutcome()` instead. */
   getToken(): Promise<string>
   /** Persists a refresh token. */
   setToken(token: string): Promise<void>
   /** Removes any stored refresh token. */
   clearToken(): Promise<void>
+  /** OPTIONAL, additive (quick-260814-r2d). Implemented only by stores whose
+   *  read can FAIL as distinct from returning nothing — e.g. the Tauri
+   *  sidecar's keyring-backed store, where a Keychain timeout or a Deny is a
+   *  real failure, not an empty slot. Absent on `ElectronTokenStore` and
+   *  `DevVaultTokenStore`, which keep their existing `''`-only semantics
+   *  untouched (REQ-28-07 — their bodies are not modified by this seam). */
+  readToken?(): Promise<TokenReadOutcome>
+}
+
+/**
+ * The single entry point every caller that cares about the third state uses.
+ * Delegates to `store.readToken()` when the store implements it (the keyring
+ * path), so the outcome — including a genuine `unreadable` — is returned
+ * verbatim and `store.getToken()` is not called at all in that case.
+ *
+ * For a store WITHOUT `readToken()` (`ElectronTokenStore`, `DevVaultTokenStore`),
+ * this falls back to `store.getToken()` and maps a non-empty string to
+ * `present` and an empty string to `absent`. That fallback is deliberately
+ * byte-equivalent to today's conflating behaviour — those stores cannot fail
+ * this way, so there is nothing lost by collapsing their `''` to `absent`.
+ *
+ * Honest caveat: `ElectronTokenStore.getToken()` also returns `''` on a
+ * decrypt failure, so under this fallback path that case still maps to
+ * `absent`, not `unreadable`. That is unchanged, pre-existing behaviour,
+ * deliberately left alone here — changing it would breach REQ-28-07's
+ * byte-identical guarantee on `ElectronTokenStore`. The Tauri/keyring path is
+ * the one with the observed 9:1 failure rate and is what this seam fixes.
+ */
+export async function readTokenOutcome(
+  store: TokenStore
+): Promise<TokenReadOutcome> {
+  if (store.readToken) return store.readToken()
+  const token = await store.getToken()
+  return token ? { status: 'present', token } : { status: 'absent' }
 }
 
 // ── Electron implementation — byte-identical to the pre-seam behavior ───────
