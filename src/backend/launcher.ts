@@ -1884,19 +1884,44 @@ function getRunnerCallWithoutCredentials(
   }
 
   const modifiedCommand = [...command]
-  // Redact sensitive arguments (Authorization Code for Legendary, token for GOGDL)
-  for (const sensitiveArg of ['--code', '--token']) {
+  // Redact sensitive arguments reaching this shared logging path from ANY runner.
+  // Census-derived (34.5-61, F-34.5-G6-22/F-34.5-G6-24) via:
+  //   grep -rnE "'--(code|token|code-verifier|client-id|serial|password|secret|refresh-token|api-key)'" \
+  //     --include='*.ts' src/backend | grep -v __tests__
+  // --code (legendary auth, gog user, nile register) / --token (legendary): pre-existing.
+  // --code-verifier (nile PKCE verifier, F-34.5-G6-22) / --password (GOG private-branch
+  // password, F-34.5-G6-24, user-chosen secret reused across install/update/library calls) /
+  // --serial (nile device serial) / --client-id (nile OAuth client id): added here.
+  // Exact array-element match is kept deliberately (not prefix match) so `--code` can never
+  // swallow `--code-verifier` or vice versa -- each is redacted independently by its own
+  // exact-match loop iteration.
+  for (const sensitiveArg of [
+    '--code',
+    '--token',
+    '--code-verifier',
+    '--password',
+    '--serial',
+    '--client-id'
+  ]) {
     // PowerShell's argument formatting is quite different, instead of having
     // arguments as members of `command`, they're all in one specific member
     // (the one after "-ArgumentList")
     if (runnerPath === 'powershell') {
       const argumentListIndex = modifiedCommand.indexOf('-ArgumentList') + 1
       if (!argumentListIndex) continue
+      // Rule 1 fix (34.5-61): each `-ArgumentList` member is built by
+      // `` `"\`"${part}\`""` `` (callRunner, above) -- i.e. every argument is
+      // wrapped as `"`"value`""`, not the bare `"value"` this regex used to
+      // assume. The pre-fix pattern (`"${sensitiveArg}","(.*?)"`) could never
+      // match that wrapped shape, so NEITHER this new flag set NOR the
+      // original `--code`/`--token` were ever actually redacted on the
+      // PowerShell branch -- proven RED against the real wrapped shape via
+      // the production `callRunner` path (34.5-61-SUMMARY.md capture (c)).
       modifiedCommand[argumentListIndex] = modifiedCommand[
         argumentListIndex
       ].replace(
-        new RegExp(`"${sensitiveArg}","(.*?)"`),
-        `"${sensitiveArg}","<redacted>"`
+        new RegExp(`\`"${sensitiveArg}\`"","\`"(.*?)\`""`),
+        `\`"${sensitiveArg}\`"","\`"<redacted>\`""`
       )
     } else {
       const sensitiveArgIndex = modifiedCommand.indexOf(sensitiveArg)
