@@ -1,5 +1,9 @@
 import { logDebug, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import type { TokenStore } from 'backend/storeManagers/steam/tokenStore'
+import type {
+  TokenStore,
+  TokenReadOutcome,
+  TokenUnreadableReason
+} from 'backend/storeManagers/steam/tokenStore'
 import { requestRustInvoke } from './sidecarRpc'
 import {
   RUST_KEYRING_GET,
@@ -64,7 +68,7 @@ const KEYRING_FAILURE_MEMO_MS = 120_000
  * though they originate at different layers. Every other rejection (`keyring:unavailable:...`,
  * `keyring:bad-args`, `keyring:unknown-slot`) classifies as `'unavailable'`.
  */
-function classifyKeyringFailure(error: unknown): 'timeout' | 'unavailable' {
+function classifyKeyringFailure(error: unknown): TokenUnreadableReason {
   const message = errorMessage(error)
   return /timeout|timed out/i.test(message) ? 'timeout' : 'unavailable'
 }
@@ -162,13 +166,22 @@ export class SidecarKeyringSlotStore implements TokenStore {
    * `''` for that state, so a real empty-string-but-cached result (a confirmed no-entry/cleared
    * slot) is distinguishable from "never read". Never populated from a failed read. */
   private cachedToken: { value: string } | undefined
-  /** The in-flight `getToken()` fetch, shared by every concurrent caller until it settles. */
-  private pendingToken: Promise<string> | undefined
+  /** The in-flight `readToken()` fetch, shared by every concurrent caller until it settles.
+   * `getToken()` is now a thin adapter over `readToken()` (quick-260814-r2d), so this holds the
+   * outcome, not the lossy string. */
+  private pendingToken: Promise<TokenReadOutcome> | undefined
   /** `Date.now()` of the most recent FAILED `getToken()` read, or `undefined` if none is
    * memoized (never failed yet, the memo expired, or the cache was invalidated by a write/delete).
    * Holds a timestamp only — never a secret, never a value — see `KEYRING_FAILURE_MEMO_MS`'s doc
    * comment for why this exists and why it is time-bounded rather than permanent. */
   private failedTokenAt: number | undefined
+  /** The classification (`timeout`/`unavailable`) of the failure that armed `failedTokenAt`
+   * above (quick-260814-r2d, closing `keyring-read-timeout-reported-as-no-token.md`). A memo hit
+   * now answers `readToken()` with this recorded class rather than silently downgrading to
+   * `absent` — the memo still rate-limits the Keychain prompt (its entire original purpose,
+   * F-34.5-G6-06), it just no longer lies about WHY nothing was returned. Cleared everywhere
+   * `failedTokenAt` is cleared, including inside `invalidateCache()`. */
+  private failedTokenReason: TokenUnreadableReason | undefined
 
   /** Last successful `isAvailable()` result. Same `undefined`-means-uncached convention as
    * `cachedToken` above. */
@@ -189,7 +202,9 @@ export class SidecarKeyringSlotStore implements TokenStore {
 
   private async fetchAvailable(): Promise<boolean> {
     try {
-      const result = await requestRustInvoke(RUST_KEYRING_AVAILABLE, [this.slot])
+      const result = await requestRustInvoke(RUST_KEYRING_AVAILABLE, [
+        this.slot
+      ])
       const value = result === true
       // Only a SUCCESSFUL probe is cached -- including a successful "false" (D-06's honest
       // unavailable, not an error). A rejection is never cached as a value (see the method
@@ -205,7 +220,27 @@ export class SidecarKeyringSlotStore implements TokenStore {
     }
   }
 
+  /**
+   * `getToken()` — the pre-existing `TokenStore` contract member, retained ONLY for backward
+   * compatibility with `humbleSecretStore.ts`'s `getSecret()` and every other caller that still
+   * needs the lossy `''`-means-none-or-unavailable string (D-06 semantics, unchanged). A thin
+   * adapter over `readToken()`: `present` -> the token, `absent`/`unreadable` -> `''`. A NEW
+   * caller that can act on the present/absent/unreadable distinction must call `readToken()`
+   * directly instead (quick-260814-r2d) — see `tokenStore.ts`'s `TokenReadOutcome`.
+   */
   async getToken(): Promise<string> {
+    const outcome = await this.readToken()
+    return outcome.status === 'present' ? outcome.token : ''
+  }
+
+  /**
+   * The read primitive (quick-260814-r2d, closing `keyring-read-timeout-reported-as-no-token.md`).
+   * Returns the three distinct outcomes -- `present`/`absent`/`unreadable` -- instead of collapsing
+   * a failed read into the same `''` a genuinely empty slot returns. Holds the exact control flow
+   * `getToken()` used to hold directly: success-cache hit first, then in-flight dedupe, then the
+   * failure memo, then a fresh `fetchToken()`.
+   */
+  async readToken(): Promise<TokenReadOutcome> {
     // Success-path observability (F-34.5-G6-26). A cache hit issues NO `keyring_get` and therefore
     // CANNOT raise a Keychain prompt -- this line is what distinguishes "0 prompts because the fix
     // works" from "0 prompts because the value was already in memory". Before this existed, a live
@@ -216,6 +251,8 @@ export class SidecarKeyringSlotStore implements TokenStore {
         LogPrefix.Steam
       )
       return this.cachedToken.value
+        ? { status: 'present', token: this.cachedToken.value }
+        : { status: 'absent' }
     }
     if (this.pendingToken) {
       logDebug(
@@ -229,11 +266,21 @@ export class SidecarKeyringSlotStore implements TokenStore {
     // keyring_get -- and therefore without a second Keychain prompt. This is checked only after
     // both the success cache and the in-flight dedupe above have already missed, so it never
     // shadows a fresher successful read or an already-in-flight request.
+    //
+    // quick-260814-r2d: the memo hit now answers `unreadable` carrying the ORIGINAL failure's
+    // recorded classification, never `absent` -- a memoized failure is still a failure, not a
+    // confirmed empty slot. The window and the prompt-suppression effect (zero additional
+    // keyring_get) are unchanged; only the ANSWER served changes.
     if (
       this.failedTokenAt !== undefined &&
       Date.now() - this.failedTokenAt < KEYRING_FAILURE_MEMO_MS
     ) {
-      return ''
+      const reason = this.failedTokenReason ?? 'unavailable'
+      logDebug(
+        `SidecarKeyringSlotStore(${this.slot}).getToken(): memo hit, answering unreadable/${reason} without a second ${RUST_KEYRING_GET}`,
+        LogPrefix.Steam
+      )
+      return { status: 'unreadable', reason }
     }
     this.pendingToken = this.fetchToken()
     try {
@@ -243,7 +290,7 @@ export class SidecarKeyringSlotStore implements TokenStore {
     }
   }
 
-  private async fetchToken(): Promise<string> {
+  private async fetchToken(): Promise<TokenReadOutcome> {
     let result: unknown
     // Every REAL Keychain round trip is announced before it is issued (F-34.5-G6-26). This is the
     // only call in this class that can raise a macOS approval prompt, so the count of these lines
@@ -269,16 +316,18 @@ export class SidecarKeyringSlotStore implements TokenStore {
       // GlobalState a moment later -- does not repeat an identical doomed-to-timeout read and
       // trigger a second Keychain prompt for a decision the user has not finished making on the
       // first. This timestamp is never surfaced to a caller and never mistaken for a token value.
+      const reason = classifyKeyringFailure(error)
       this.failedTokenAt = Date.now()
+      this.failedTokenReason = reason
       // A second, memo-specific log line (34.5 gap cycle 4 plan 35, Routing item 3) -- distinct
       // from the warning just above -- naming the timeout/unavailable classification and the
       // window this failure is now memoized for. This is the line a live run greps to prove the
       // memo engaged; its absence on what should have been a second prompt would falsify the fix.
       logWarning(
-        `keyring failure memoized slot=${this.slot} class=${classifyKeyringFailure(error)} ms=${KEYRING_FAILURE_MEMO_MS}`,
+        `keyring failure memoized slot=${this.slot} class=${reason} ms=${KEYRING_FAILURE_MEMO_MS}`,
         LogPrefix.Steam
       )
-      return ''
+      return { status: 'unreadable', reason }
     }
     // `null` == no entry yet (healthy first-run case) -- NOT an error, not logged, and still
     // cached: a confirmed "nothing stored" is exactly as valid a cache entry as a confirmed
@@ -302,7 +351,8 @@ export class SidecarKeyringSlotStore implements TokenStore {
     // A SUCCESSFUL read clears any stale failure memo -- there is nothing left to bound once a
     // real value (or a confirmed no-entry) is cached above and short-circuits future calls first.
     this.failedTokenAt = undefined
-    return value
+    this.failedTokenReason = undefined
+    return value ? { status: 'present', token: value } : { status: 'absent' }
   }
 
   async setToken(token: string): Promise<void> {
@@ -369,6 +419,7 @@ export class SidecarKeyringSlotStore implements TokenStore {
     this.cachedToken = undefined
     this.cachedAvailable = undefined
     this.failedTokenAt = undefined
+    this.failedTokenReason = undefined
   }
 }
 

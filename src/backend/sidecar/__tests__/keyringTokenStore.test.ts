@@ -53,6 +53,7 @@ import {
   KEYRING_SLOT_HUMBLE_SESSION,
   KEYRING_SLOT_HUMBLE_CSRF
 } from '../keyringTokenStore'
+import { readTokenOutcome } from 'backend/storeManagers/steam/tokenStore'
 
 type ProgrammedOutcome =
   | { type: 'resolve'; value: unknown }
@@ -74,16 +75,20 @@ describe('SidecarKeyringTokenStore', () => {
     // resetMocks: true (jest.config.js) wipes even a factory-supplied implementation before
     // every test (same gotcha 28-03-SUMMARY.md documents for its configStore mock) — the
     // fake responder must be re-wired here, not only at module scope.
-    mockRequestRustInvoke.mockImplementation((channel: string, args: unknown[]) => {
-      callLog.push({ channel, args })
-      const outcome = program[channel]
-      if (!outcome) {
-        return Promise.reject(new Error(`no outcome programmed for channel: ${channel}`))
+    mockRequestRustInvoke.mockImplementation(
+      (channel: string, args: unknown[]) => {
+        callLog.push({ channel, args })
+        const outcome = program[channel]
+        if (!outcome) {
+          return Promise.reject(
+            new Error(`no outcome programmed for channel: ${channel}`)
+          )
+        }
+        return outcome.type === 'resolve'
+          ? Promise.resolve(outcome.value)
+          : Promise.reject(outcome.error)
       }
-      return outcome.type === 'resolve'
-        ? Promise.resolve(outcome.value)
-        : Promise.reject(outcome.error)
-    })
+    )
   })
 
   // Behavior 1: getToken() resolves 'abc' when the fake responder returns 'abc'. Slot-aware
@@ -136,7 +141,10 @@ describe('SidecarKeyringTokenStore', () => {
     await store.setToken('abc')
 
     expect(callLog).toStrictEqual([
-      { channel: 'keyring_set', args: ['abc', KEYRING_SLOT_STEAM_REFRESH_TOKEN] }
+      {
+        channel: 'keyring_set',
+        args: ['abc', KEYRING_SLOT_STEAM_REFRESH_TOKEN]
+      }
     ])
   })
 
@@ -151,7 +159,10 @@ describe('SidecarKeyringTokenStore', () => {
 
     await expect(store.setToken('abc')).resolves.toBeUndefined()
     expect(callLog).toStrictEqual([
-      { channel: 'keyring_set', args: ['abc', KEYRING_SLOT_STEAM_REFRESH_TOKEN] }
+      {
+        channel: 'keyring_set',
+        args: ['abc', KEYRING_SLOT_STEAM_REFRESH_TOKEN]
+      }
     ])
     expect(mockLogWarning).toHaveBeenCalledTimes(1)
   })
@@ -245,7 +256,10 @@ describe('SidecarKeyringTokenStore', () => {
     callLog = []
     await store.setToken('abc')
     expect(callLog).toStrictEqual([
-      { channel: 'keyring_set', args: ['abc', KEYRING_SLOT_STEAM_REFRESH_TOKEN] }
+      {
+        channel: 'keyring_set',
+        args: ['abc', KEYRING_SLOT_STEAM_REFRESH_TOKEN]
+      }
     ])
 
     callLog = []
@@ -329,8 +343,12 @@ describe('SidecarKeyringTokenStore', () => {
       expect(slot.length).toBeGreaterThan(0)
     }
     expect(KEYRING_SLOT_HUMBLE_SESSION).not.toEqual(KEYRING_SLOT_HUMBLE_CSRF)
-    expect(KEYRING_SLOT_HUMBLE_SESSION).not.toEqual(KEYRING_SLOT_STEAM_REFRESH_TOKEN)
-    expect(KEYRING_SLOT_HUMBLE_CSRF).not.toEqual(KEYRING_SLOT_STEAM_REFRESH_TOKEN)
+    expect(KEYRING_SLOT_HUMBLE_SESSION).not.toEqual(
+      KEYRING_SLOT_STEAM_REFRESH_TOKEN
+    )
+    expect(KEYRING_SLOT_HUMBLE_CSRF).not.toEqual(
+      KEYRING_SLOT_STEAM_REFRESH_TOKEN
+    )
   })
 
   it('a humble-csrf slot store sends the humble-csrf slot on setToken, distinct from humble-session', async () => {
@@ -348,8 +366,13 @@ describe('SidecarKeyringTokenStore', () => {
   // syntactic path to configStore, TOKEN_STORE_KEY, TOKEN_PREFIX, or a raw filesystem write --
   // its only storage reach is the four keyring channels over requestRustInvoke.
   it('source contains no reference to configStore/TOKEN_STORE_KEY/TOKEN_PREFIX/writeFileSync', () => {
-    const src = readFileSync(join(__dirname, '../keyringTokenStore.ts'), 'utf-8')
-    expect(src).not.toMatch(/configStore|TOKEN_STORE_KEY|TOKEN_PREFIX|writeFileSync/)
+    const src = readFileSync(
+      join(__dirname, '../keyringTokenStore.ts'),
+      'utf-8'
+    )
+    expect(src).not.toMatch(
+      /configStore|TOKEN_STORE_KEY|TOKEN_PREFIX|writeFileSync/
+    )
   })
 
   // Existing export name survives (D-04): bootstrap.ts must be able to keep calling
@@ -389,12 +412,14 @@ describe('SidecarKeyringTokenStore', () => {
   // bounded failure memo added below is layered ALONGSIDE this dedupe, not a replacement for it.
   it('concurrent getToken() calls before the first settles share ONE in-flight request (pins the pre-existing pendingToken dedupe, commit 2d1abe64a -- regression guard, not new behaviour)', async () => {
     let resolveInvoke: (value: unknown) => void = () => {}
-    mockRequestRustInvoke.mockImplementation((channel: string, args: unknown[]) => {
-      callLog.push({ channel, args })
-      return new Promise((resolve) => {
-        resolveInvoke = resolve
-      })
-    })
+    mockRequestRustInvoke.mockImplementation(
+      (channel: string, args: unknown[]) => {
+        callLog.push({ channel, args })
+        return new Promise((resolve) => {
+          resolveInvoke = resolve
+        })
+      }
+    )
     const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
 
     const first = store.getToken()
@@ -461,7 +486,9 @@ describe('SidecarKeyringTokenStore', () => {
         type: 'reject',
         error: new Error('keyring:timeout')
       })
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_STEAM_REFRESH_TOKEN)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+      )
 
       await expect(store.getToken()).resolves.toBe('')
       expect(callLog).toHaveLength(1)
@@ -543,7 +570,10 @@ describe('SidecarKeyringTokenStore', () => {
       jest.advanceTimersByTime(120_001)
 
       // The keyring has since recovered.
-      programChannel('keyring_get', { type: 'resolve', value: 'recovered-token' })
+      programChannel('keyring_get', {
+        type: 'resolve',
+        value: 'recovered-token'
+      })
       await expect(store.getToken()).resolves.toBe('recovered-token')
 
       // A second real request -- the memo expired and let this call reach the transport.
@@ -584,7 +614,10 @@ describe('SidecarKeyringTokenStore', () => {
       // Still well inside what would otherwise be the memo window -- but clearToken() must have
       // invalidated the memo too, so this call reaches the transport again rather than returning
       // the stale memoized failure.
-      programChannel('keyring_get', { type: 'resolve', value: 'post-signout-token' })
+      programChannel('keyring_get', {
+        type: 'resolve',
+        value: 'post-signout-token'
+      })
       await expect(store.getToken()).resolves.toBe('post-signout-token')
       expect(callLog.filter((c) => c.channel === 'keyring_get')).toHaveLength(2)
     } finally {
@@ -693,7 +726,10 @@ describe('SidecarKeyringTokenStore', () => {
   it('clearToken() invalidates the cache -- a subsequent read never resurrects the pre-disconnect value (the F-6-adjacent correctness floor)', async () => {
     const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
 
-    programChannel('keyring_get', { type: 'resolve', value: 'session-cookie-value' })
+    programChannel('keyring_get', {
+      type: 'resolve',
+      value: 'session-cookie-value'
+    })
     await expect(store.getToken()).resolves.toBe('session-cookie-value')
 
     programChannel('keyring_delete', { type: 'resolve', value: true })
@@ -709,7 +745,10 @@ describe('SidecarKeyringTokenStore', () => {
   it('a FAILED clearToken() still invalidates the cache rather than leaving the pre-disconnect value cached', async () => {
     const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
 
-    programChannel('keyring_get', { type: 'resolve', value: 'session-cookie-value' })
+    programChannel('keyring_get', {
+      type: 'resolve',
+      value: 'session-cookie-value'
+    })
     await expect(store.getToken()).resolves.toBe('session-cookie-value')
 
     programChannel('keyring_delete', {
@@ -721,8 +760,13 @@ describe('SidecarKeyringTokenStore', () => {
     // The delete failed -- we do NOT know the true state, so the cache must be left
     // invalidated (never optimistically treated as cleared, and never left holding the stale
     // pre-disconnect value either). The next getToken() issues a fresh read.
-    programChannel('keyring_get', { type: 'resolve', value: 'still-there-after-failed-delete' })
-    await expect(store.getToken()).resolves.toBe('still-there-after-failed-delete')
+    programChannel('keyring_get', {
+      type: 'resolve',
+      value: 'still-there-after-failed-delete'
+    })
+    await expect(store.getToken()).resolves.toBe(
+      'still-there-after-failed-delete'
+    )
     expect(callLog.filter((c) => c.channel === 'keyring_get')).toHaveLength(2)
   })
 
@@ -737,7 +781,9 @@ describe('SidecarKeyringTokenStore', () => {
     await store.setToken('x')
 
     await expect(store.isAvailable()).resolves.toBe(false)
-    expect(callLog.filter((c) => c.channel === 'keyring_available')).toHaveLength(2)
+    expect(
+      callLog.filter((c) => c.channel === 'keyring_available')
+    ).toHaveLength(2)
   })
 
   it('invalidateCache() is exposed and clears both cached values on demand', async () => {
@@ -823,7 +869,9 @@ describe('SidecarKeyringTokenStore', () => {
     await store.getToken()
     const afterFirst = callLog.filter((c) => c.channel === 'keyring_get').length
     await store.getToken()
-    const afterSecond = callLog.filter((c) => c.channel === 'keyring_get').length
+    const afterSecond = callLog.filter(
+      (c) => c.channel === 'keyring_get'
+    ).length
 
     expect(afterFirst).toBe(1)
     expect(afterSecond).toBe(1) // no second round trip => no second prompt possible
@@ -863,7 +911,9 @@ describe('SidecarKeyringTokenStore', () => {
 
     const infoLines = mockLogInfo.mock.calls.map((c) => String(c[0]))
     expect(
-      infoLines.some((l) => l.includes('keyring_set ok') && l.includes('len=14'))
+      infoLines.some(
+        (l) => l.includes('keyring_set ok') && l.includes('len=14')
+      )
     ).toBe(true)
 
     const allLines = [
@@ -887,6 +937,156 @@ describe('SidecarKeyringTokenStore', () => {
     expect(importLine).toBeDefined()
     expect(importLine).toContain('logInfo')
   })
+
+  /**
+   * `readToken()` — the timeout-vs-absent read primitive (quick-260814-r2d, closing
+   * `keyring-read-timeout-reported-as-no-token.md`). Every assertion below is written against
+   * `readTokenOutcome(store)` (the shared seam, not `store.readToken()` directly) per this
+   * task's own instruction — this is what makes it a valid RED-proof harness against the
+   * pre-fix fallback path, which routes through today's conflating `getToken()`.
+   *
+   * Nested INSIDE the outer `describe('SidecarKeyringTokenStore', ...)` block (not a sibling)
+   * so it inherits that describe's `beforeEach` (program/callLog reset + `mockRequestRustInvoke`
+   * re-wiring) — a sibling describe would silently run against an un-wired mock.
+   *
+   * Only THREE of the seven behaviours below are fix-proving (timeout, Deny/unavailable, memo
+   * hit) — the other four are forward-looking regression guards that are already correct under
+   * today's pre-fix code and must stay green throughout.
+   */
+  describe('readToken() / readTokenOutcome() — timeout-vs-absent (quick-260814-r2d)', () => {
+    // Fix-proving (1/3): a keyring:timeout rejection must be reported as unreadable/timeout, never
+    // as absent.
+    it('resolves { status: "unreadable", reason: "timeout" } when keyring_get rejects with keyring:timeout', async () => {
+      programChannel('keyring_get', {
+        type: 'reject',
+        error: new Error('keyring:timeout')
+      })
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+      )
+
+      await expect(readTokenOutcome(store)).resolves.toEqual({
+        status: 'unreadable',
+        reason: 'timeout'
+      })
+    })
+
+    // Fix-proving (2/3): a keyring:unavailable rejection (the Keychain Deny / PlatformFailure(-128)
+    // path) must be reported as unreadable/unavailable, never as absent.
+    it('resolves { status: "unreadable", reason: "unavailable" } when keyring_get rejects with keyring:unavailable:Platform secure storage failure', async () => {
+      programChannel('keyring_get', {
+        type: 'reject',
+        error: new Error('keyring:unavailable:Platform secure storage failure')
+      })
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+      )
+
+      await expect(readTokenOutcome(store)).resolves.toEqual({
+        status: 'unreadable',
+        reason: 'unavailable'
+      })
+    })
+
+    // Regression guard: the healthy first-run case is still absent, distinct from both unreadable
+    // reasons above. Already true pre-fix — a green result here is the correct outcome.
+    it('resolves { status: "absent" } when keyring_get resolves null (the healthy first-run case)', async () => {
+      programChannel('keyring_get', { type: 'resolve', value: null })
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+      )
+
+      await expect(readTokenOutcome(store)).resolves.toEqual({
+        status: 'absent'
+      })
+    })
+
+    // Regression guard: a genuine stored token still reports present with its value. Already true
+    // pre-fix — a green result here is the correct outcome.
+    it('resolves { status: "present", token } when keyring_get resolves a non-empty string', async () => {
+      programChannel('keyring_get', { type: 'resolve', value: 'abc' })
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+      )
+
+      await expect(readTokenOutcome(store)).resolves.toEqual({
+        status: 'present',
+        token: 'abc'
+      })
+    })
+
+    // Fix-proving (3/3): the load-bearing memo change. A second read inside the 120s memo window
+    // must answer unreadable (carrying the ORIGINAL failure's reason), never absent -- and must
+    // still issue ZERO additional keyring_get (F-34.5-G6-06's prompt-suppression effect stays
+    // intact).
+    it('a memo hit resolves { status: "unreadable" } carrying the ORIGINAL failure reason, and issues ZERO additional keyring_get', async () => {
+      jest.useFakeTimers()
+      try {
+        programChannel('keyring_get', {
+          type: 'reject',
+          error: new Error('keyring:timeout')
+        })
+        const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+        await expect(readTokenOutcome(store)).resolves.toEqual({
+          status: 'unreadable',
+          reason: 'timeout'
+        })
+        expect(callLog).toHaveLength(1)
+
+        // Second read, fully sequential, still inside the 120s memo window.
+        await expect(readTokenOutcome(store)).resolves.toEqual({
+          status: 'unreadable',
+          reason: 'timeout'
+        })
+
+        // Still exactly ONE request -- the memo answered without a second keyring_get / Keychain
+        // prompt.
+        expect(callLog).toHaveLength(1)
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    // Regression guard: a failed read must never trigger a delete or a write of any kind. Today's
+    // code already does nothing here on a failed read (this behaviour is not changed by this task)
+    // -- this guard proves the fix does not INTRODUCE one.
+    it('a failed read issues no keyring_delete and no keyring_set: the callLog contains only the one keyring_get', async () => {
+      programChannel('keyring_get', {
+        type: 'reject',
+        error: new Error('keyring:timeout')
+      })
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+      )
+
+      await readTokenOutcome(store)
+
+      expect(callLog).toStrictEqual([
+        { channel: 'keyring_get', args: [KEYRING_SLOT_STEAM_REFRESH_TOKEN] }
+      ])
+    })
+
+    // Regression guard: getToken()'s existing '' contract is unaffected by this task -- it stays
+    // the lossy adapter for both absent and unreadable, so humbleSecretStore.ts's getSecret() and
+    // every other existing caller keeps compiling and behaving identically.
+    it('getToken() still resolves "" for both absent and unreadable outcomes', async () => {
+      programChannel('keyring_get', { type: 'resolve', value: null })
+      const absentStore = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+      )
+      await expect(absentStore.getToken()).resolves.toBe('')
+
+      programChannel('keyring_get', {
+        type: 'reject',
+        error: new Error('keyring:timeout')
+      })
+      const unreadableStore = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_CSRF
+      )
+      await expect(unreadableStore.getToken()).resolves.toBe('')
+    })
+  })
 })
 
 /**
@@ -898,7 +1098,16 @@ describe('SidecarKeyringTokenStore', () => {
  * relationship must fail this test, naming both file paths.
  */
 describe('KEYRING_FAILURE_MEMO_MS vs KEYRING_READ_TIMEOUT ordering invariant (Routing item 3)', () => {
-  const MAIN_RS_PATH = join(__dirname, '..', '..', '..', '..', 'src-tauri', 'src', 'main.rs')
+  const MAIN_RS_PATH = join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    '..',
+    'src-tauri',
+    'src',
+    'main.rs'
+  )
   const KEYRING_TOKEN_STORE_PATH = join(__dirname, '..', 'keyringTokenStore.ts')
 
   function extractKeyringReadTimeoutMs(): number {
@@ -907,7 +1116,9 @@ describe('KEYRING_FAILURE_MEMO_MS vs KEYRING_READ_TIMEOUT ordering invariant (Ro
       /const KEYRING_READ_TIMEOUT: Duration = Duration::from_secs\((\d+)\);/
     )
     if (!match) {
-      throw new Error(`KEYRING_READ_TIMEOUT literal not found in ${MAIN_RS_PATH}`)
+      throw new Error(
+        `KEYRING_READ_TIMEOUT literal not found in ${MAIN_RS_PATH}`
+      )
     }
     return Number(match[1]) * 1000
   }
@@ -916,7 +1127,9 @@ describe('KEYRING_FAILURE_MEMO_MS vs KEYRING_READ_TIMEOUT ordering invariant (Ro
     const raw = readFileSync(KEYRING_TOKEN_STORE_PATH, 'utf-8')
     const match = raw.match(/const KEYRING_FAILURE_MEMO_MS = (\d[\d_]*)/)
     if (!match) {
-      throw new Error(`KEYRING_FAILURE_MEMO_MS literal not found in ${KEYRING_TOKEN_STORE_PATH}`)
+      throw new Error(
+        `KEYRING_FAILURE_MEMO_MS literal not found in ${KEYRING_TOKEN_STORE_PATH}`
+      )
     }
     return Number(match[1].replace(/_/g, ''))
   }
@@ -929,9 +1142,7 @@ describe('KEYRING_FAILURE_MEMO_MS vs KEYRING_READ_TIMEOUT ordering invariant (Ro
     // could not pass merely because both sides evaluated to 0/NaN.
     expect(readTimeoutMs).toBeGreaterThan(0)
 
-    expect(memoMs).toBeGreaterThanOrEqual(
-      2 * readTimeoutMs
-    )
+    expect(memoMs).toBeGreaterThanOrEqual(2 * readTimeoutMs)
     if (memoMs < 2 * readTimeoutMs) {
       throw new Error(
         `KEYRING_FAILURE_MEMO_MS (${memoMs}ms, src/backend/sidecar/keyringTokenStore.ts) must be ` +
