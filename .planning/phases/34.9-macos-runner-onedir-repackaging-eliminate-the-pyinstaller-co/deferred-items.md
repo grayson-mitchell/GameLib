@@ -819,6 +819,74 @@ is risky or unauthorized in principle, but because THIS plan's own acceptance cr
 forbid modifying the file that would need to change, and tightening a gate is the one direction this
 project's "never loosen the sweep to admit a row" rule does not prohibit.
 
+### 22. C5-01 — the tmpdir leaks if a signal arrives before the forwarded-signal handlers are installed
+
+**What it is:** `meta/runTs.cjs` creates its private tmpdir at `mkdtempSync` (line 119) but does not
+finish installing the `FORWARDED_SIGNALS` handlers until the `for` loop completes (lines 159-193).
+A `SIGTERM`/`SIGINT`/`SIGHUP` delivered inside that startup window finds no registered listener, so
+Node applies the signal's OS-default disposition and terminates the process **without emitting the
+`'exit'` event at all** — which means the `cleanup()` registered via `process.on('exit', ...)` at
+line 142 (itself inside the same unprotected window) never runs, and `$TMPDIR/gamelib-runts-*`
+survives. The file's own header comment at lines 121-131 calls the `'exit'` registration "a second,
+independent guarantee"; that claim assumes `'exit'` fires for every termination, and it does not.
+
+This is C4-01's failure family recurring in a narrower form: there the handlers existed but could
+never fire because `spawnSync` blocked the event loop; here the handlers are correct once installed,
+but installation is not instantaneous from process start.
+
+**Blocker (mechanism, not a summary):** the fix is a change to `meta/runTs.cjs` — moving the
+handler-registration loop to the first statements of `main()`, ahead of `mkdtempSync`, so the
+handlers exist before the resource they protect. That file is the exact subject of
+`34.9-WRAPPER-PROOF.md`, whose recorded `verdict: PASS` (43/43 directions, run on real macOS arm64
+hardware by plan 34.9-32) describes the file **as it stands now**. Editing it after the proof ran
+would leave the phase's headline evidence describing a version of the file that is no longer the one
+shipped, and this phase's own author/runner separation forbids the runner from re-scoring a contract
+it did not author. The change is therefore deferred to a plan that can re-run the affected directions
+against the edited file, not because the fix is wrong or risky in itself.
+
+Severity context, recorded so a future reader does not over- or under-react: the reviewer's five
+consecutive spawn-then-`kill -TERM` attempts against the real, unmodified file all exited `143` with
+no leak. Reproducing the leak required splicing an 800ms busy-wait after `mkdtempSync` to widen the
+window artificially, with a non-vacuity control at 1200ms (after the widened window closes) showing
+correct cleanup. The window in the shipped file is real but sub-practical — a low-probability gap,
+not a systemic one. It also does **not** reopen `34.9-WRAPPER-PROOF.md` Direction B row 11: that
+procedure signals only after observing the child's first stdout line, by which point the wrapper has
+long since passed line 193.
+
+**Named precondition:** a plan authorized to modify `meta/runTs.cjs` AND to re-run the
+`34.9-WRAPPER-PROOF.md` directions affected by the change (at minimum Direction B row 11 and the
+Direction A rows, whose PASS bars include a tmpdir-absence criterion), so the proof and the shipped
+file describe the same artifact again.
+
+**OWNER:** whichever plan next modifies `meta/runTs.cjs`, dated 2026-08-14. Opened from
+`34.9-REVIEW-CYCLE5.md` finding C5-01, execution-verified by the reviewer two independent ways.
+
+### 23. C5-02 — `SIGHUP` forwarding has no regression-test coverage
+
+**What it is:** `FORWARDED_SIGNALS` at `meta/runTs.cjs:97` includes `SIGHUP` alongside `SIGTERM` and
+`SIGINT`, and commit `fdc5b24e7` names `SIGHUP` as explicitly in scope (the terminal-closed case,
+which produces the same orphan-plus-leak shape). But `meta/__tests__/runTsSignals.test.ts` exercises
+only `SIGTERM` (T1), `SIGINT` (T2) and an external `SIGKILL` to the child (T4). No test sends
+`SIGHUP`, so that one forwarded signal has no pin against silent regression.
+
+**Blocker (mechanism, not a summary):** adding the test means editing
+`meta/__tests__/runTsSignals.test.ts`, and a new signal test in that file must be RED-proven against
+a pre-fix wrapper copy to be non-vacuous — the discipline every existing test in that file was held
+to. That is plan-sized work with its own restore-and-verify protocol, not an inline addition, and
+this orchestration run's authorization extends to ledgering review findings, not to writing new
+tests. Recorded rather than done, so it cannot be lost.
+
+Not a live defect: the reviewer verified `SIGHUP` behaves correctly by direct execution during the
+cycle-5 review — the wrapper exits `129` (128 + SIGHUP) and the tmpdir is removed, with no leak. This
+is an untested-path gap, not a broken one.
+
+**Named precondition:** a plan authorized to add tests to `meta/__tests__/runTsSignals.test.ts`,
+carrying the same RED-proof-against-a-pre-fix-copy requirement the file's existing five tests were
+built under.
+
+**OWNER:** whichever plan next extends `meta/__tests__/runTsSignals.test.ts`, dated 2026-08-14.
+Opened from `34.9-REVIEW-CYCLE5.md` finding C5-02.
+
 ## Closure protocol — why every cycle's own review is unledgered by construction
 
 Recorded 2026-08-14 (gap cycle 4, plan 34.9-33), fuller than the abbreviated note `ROADMAP.md`'s
@@ -867,3 +935,54 @@ could clobber it. A future cycle that forgets this step will lose the prior cycl
 permanently, with no diagnostic — `git show HEAD:<path> > <path>` is the recovery if it is caught
 via `git status` before the next commit; there is no recovery once committed over without git
 history to fall back on.
+
+## Code-review finding disposition — gap cycle 5 review (2026-08-14)
+
+`34.9-REVIEW-CYCLE5.md` is **the protocol recorded immediately above, executed for the first time.**
+It is this execution's own `code_review_gate` output, reviewed and ledgered *before*
+`/gsd-verify-work` rather than after — which is the whole point of D-C4-04. Its output path was
+redirected by hand to `34.9-REVIEW-CYCLE5.md`; the default fixed path would have silently clobbered
+`34.9-REVIEW.md` (gap cycle 1's review, `reviewed: 2026-08-11T03:22:49Z`, confirmed intact and
+untouched after this review ran). That clobber would have destroyed history *and* corrupted this
+sweep tool's own input set, since it parses every `*-REVIEW*.md` by filename.
+
+Scope reviewed: `meta/runTs.cjs` — which commit `fdc5b24e7` rewrote (+211/-49) **after**
+`34.9-REVIEW-CYCLE4.md` was written, so the shipped version had never been reviewed by anyone — plus
+the new `meta/__tests__/runTsSignals.test.ts` and `meta/__tests__/fixtures/runTsSignalFixture.ts`.
+`meta/__tests__/runTs.test.ts`, `meta/lintTranslations.ts` and `package.json` were confirmed
+unchanged since cycle 4 by git log, so their cycle-4 dispositions stand.
+
+Both findings are DEFERRED, and neither is a live defect. Recording why, because "deferred" has been
+used loosely in this file's history: C5-01 is a real but sub-practical startup race the reviewer
+could only reproduce by artificially widening the window; C5-02 is an untested-but-verified-correct
+path. Both fixes touch files whose current state is load-bearing evidence — `meta/runTs.cjs` is the
+subject of `34.9-WRAPPER-PROOF.md`'s `verdict: PASS`, and editing it after the proof ran would leave
+the phase's headline evidence describing a file that is no longer the one shipped.
+
+### List A — every finding ID in `34.9-REVIEW-CYCLE5.md`
+
+Obtained by `grep -n '^### C5-' 34.9-REVIEW-CYCLE5.md` (raw output, reproduced verbatim):
+
+```
+72:### C5-01: Tmpdir leaks if a signal arrives before the signal handlers are installed (startup-only race, real but narrow)
+132:### C5-02: `SIGHUP` forwarding has zero regression-test coverage
+```
+
+List A = `{C5-01, C5-02}` — 2 IDs, confirmed by `grep -c '^### C5-' 34.9-REVIEW-CYCLE5.md` = 2
+(matches the review's own frontmatter `findings: {critical: 0, warning: 1, info: 1, total: 2}`).
+
+### List B — every finding ID with a landed fix, confirmed against the repository
+
+Empty. Neither finding was fixed in this execution; both are mapped to ledger items instead.
+
+### A minus B
+
+`{C5-01, C5-02}` — both require a disposition row, and both have one below.
+
+| Finding | Severity | Disposition | Evidence | Independent confirmation (non-.planning) |
+|---|---|---|---|---|
+| C5-01 | Warning | DEFERRED | item 22 below | `### 22. C5-01 — the tmpdir leaks if a signal arrives before the forwarded-signal handlers are installed` |
+| C5-02 | Info | DEFERRED | item 23 below | `### 23. C5-02 — \`SIGHUP\` forwarding has no regression-test coverage` |
+
+**Count:** 2 IDs in list A. 0 mapped to a confirmed landed fix. 2 mapped to ledger items (items 22
+and 23). Unmapped count: **0**.
