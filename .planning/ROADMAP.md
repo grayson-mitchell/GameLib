@@ -2629,9 +2629,18 @@ structural loop that produced it for the fourth time. Census correction made at 
 shared-outfile defect's own predicate matches **14** scripts, not the 13 gap cycle 3 converted;
 `verify:updater-key` predates the conversion and carries the identical hazard.
 
-- [ ] 34.9-29-PLAN.md — close C3-01: introduce `meta/runTs.cjs` (compile into a private
+- [x] 34.9-29-PLAN.md — close C3-01: introduce `meta/runTs.cjs` (compile into a private
   `mkdtempSync` directory, never run `node` on a failed compile, propagate the child's exit code) and
-  route all 14 exposed scripts through it, with a red-provable wiring pin
+  route all 14 exposed scripts through it, with a red-provable wiring pin — **DONE 2026-08-14.**
+  Census re-derived at execution time found **15**, not 14 — `gen-tray-icon-variants` was added by
+  unrelated commit `49e891f58` (phase 34.1-13) after this cycle's planning-time census; converted per
+  the plan's own "scope by the predicate" principle. Two real bugs found and fixed live during
+  execution, both confined to `meta/runTs.cjs`: `process.exit()` does not run pending `finally`
+  blocks in Node (cleanup now explicit at every exit point), and compiling into `os.tmpdir()` broke
+  `require.resolve()` for two of the 15 scripts (`build:sidecar-sea`, `verify:updater-key` — both
+  locate a CLI tool's on-disk path to spawn as a subprocess), fixed by symlinking the project's
+  `node_modules` into the private tmpdir (read-only, does not reintroduce the C3-01 race). `pnpm
+  test:ci` 250/250 suites green (zero regressions). See `34.9-29-SUMMARY.md`.
 - [ ] 34.9-30-PLAN.md — close C3-02 (the stale pipe/argv comment in `meta/lintTranslations.ts` AND
   the `34.9-PIPE-AUDIT.md` Section 7 claim that no such comment exists) and C3-03 (polarity check),
   and generalise the sweep to `34.9-REVIEW-SWEEP-CHECK.cjs` — cycle-agnostic, works against a review
