@@ -356,8 +356,16 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // ── Gate 8 (REQ-34.2-14 do-not-touch, WR-01 replacement): electronUntouched
   // .test.ts is pinned to a committed sha256 digest of its own byte content --
   // same replacement reasoning as Gate 7 above. ──────────────────────────────
+  // Re-pinned 2026-08-14 by Phase 34.5 (F-34.5-G6-26), per this gate's own documented procedure.
+  // The ONLY change to the pinned file was adding `logDebug: jest.fn()` to its `backend/logger`
+  // mock (+3 lines, comment included): `SidecarKeyringSlotStore` gained DEBUG cache-hit lines, and
+  // this suite drives that class directly, so an incomplete mock made every cached read throw
+  // `logDebug is not a function`. No assertion, fixture or proof in the pinned file was altered,
+  // weakened or repurposed — the `safeStorage.isEncryptionAvailable` regression detector and the
+  // configStore byte-identity comparisons are untouched. Prior digest:
+  // 66645e8e33437a9da352619ce06b361450dcc78da294a6fc6161ef2cedc67f99
   const ELECTRON_UNTOUCHED_SHA256 =
-    '66645e8e33437a9da352619ce06b361450dcc78da294a6fc6161ef2cedc67f99'
+    'a23b666f9c290364d1bab43df786ce5883ef3fcb95176506224f99d385561502'
 
   it('REQ-34.2-14 Gate 8: electronUntouched.test.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, 'electronUntouched.test.ts')

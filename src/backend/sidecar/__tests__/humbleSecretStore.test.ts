@@ -37,6 +37,10 @@ const mockLogWarning = jest.fn()
 const mockLogInfo = jest.fn()
 jest.mock('../../logger', () => ({
   logInfo: (...args: unknown[]) => mockLogInfo(...args),
+  // `SidecarKeyringSlotStore` logs cache-hit / in-flight-join lines at DEBUG (F-34.5-G6-26), and
+  // this suite exercises that class through the shared SLOT_STORES singleton — omitting it here
+  // makes every cached read throw `logDebug is not a function`.
+  logDebug: jest.fn(),
   logError: jest.fn(),
   logWarning: (...args: unknown[]) => mockLogWarning(...args),
   LogPrefix: {

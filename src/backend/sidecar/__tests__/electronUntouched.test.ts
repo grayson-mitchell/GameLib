@@ -62,6 +62,9 @@ jest.mock('../sidecarRpc', () => ({
 // ── logger mock — mirrors keyringTokenStore.test.ts's existing convention ──
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
+  // `SidecarKeyringSlotStore` logs cache-hit lines at DEBUG (F-34.5-G6-26); this suite drives
+  // that class directly, so the mock must supply `logDebug` or a cached read throws.
+  logDebug: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
   LogPrefix: {

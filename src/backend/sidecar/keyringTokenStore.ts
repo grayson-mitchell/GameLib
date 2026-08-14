@@ -1,4 +1,4 @@
-import { logWarning, LogPrefix } from 'backend/logger'
+import { logDebug, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { TokenStore } from 'backend/storeManagers/steam/tokenStore'
 import { requestRustInvoke } from './sidecarRpc'
 import {
@@ -206,8 +206,24 @@ export class SidecarKeyringSlotStore implements TokenStore {
   }
 
   async getToken(): Promise<string> {
-    if (this.cachedToken) return this.cachedToken.value
-    if (this.pendingToken) return this.pendingToken
+    // Success-path observability (F-34.5-G6-26). A cache hit issues NO `keyring_get` and therefore
+    // CANNOT raise a Keychain prompt -- this line is what distinguishes "0 prompts because the fix
+    // works" from "0 prompts because the value was already in memory". Before this existed, a live
+    // session could not tell those apart, and the second was silently read as the first.
+    if (this.cachedToken) {
+      logDebug(
+        `SidecarKeyringSlotStore(${this.slot}).getToken(): served from cache, no ${RUST_KEYRING_GET} issued`,
+        LogPrefix.Steam
+      )
+      return this.cachedToken.value
+    }
+    if (this.pendingToken) {
+      logDebug(
+        `SidecarKeyringSlotStore(${this.slot}).getToken(): joined in-flight read, no additional ${RUST_KEYRING_GET} issued`,
+        LogPrefix.Steam
+      )
+      return this.pendingToken
+    }
     // Bounded negative-result memo (F-34.5-G6-06): a read that failed within the last
     // KEYRING_FAILURE_MEMO_MS is returned directly as the same failure, WITHOUT issuing a second
     // keyring_get -- and therefore without a second Keychain prompt. This is checked only after
@@ -229,6 +245,16 @@ export class SidecarKeyringSlotStore implements TokenStore {
 
   private async fetchToken(): Promise<string> {
     let result: unknown
+    // Every REAL Keychain round trip is announced before it is issued (F-34.5-G6-26). This is the
+    // only call in this class that can raise a macOS approval prompt, so the count of these lines
+    // per slot is the log-side counterpart an operator's observed prompt count is checked against
+    // -- `U-34.5-10`'s bar asks for exactly that cross-check, and before this line existed the log
+    // supplied no attempt record to check against. Logged at INFO, not DEBUG, because DEBUG output
+    // is settings-dependent and a gate line that may not be written is no better than no line.
+    logInfo(
+      `SidecarKeyringSlotStore(${this.slot}).getToken(): issuing ${RUST_KEYRING_GET} (may prompt)`,
+      LogPrefix.Steam
+    )
     try {
       result = await requestRustInvoke(RUST_KEYRING_GET, [this.slot])
     } catch (error) {
@@ -260,6 +286,19 @@ export class SidecarKeyringSlotStore implements TokenStore {
     // to close.
     const value = typeof result === 'string' ? result : ''
     this.cachedToken = { value }
+    // THE line `U-34.5-01`'s condition (4) needs (F-34.5-G6-26). Before this existed, a successful
+    // read emitted nothing at all -- `SidecarKeyringSlotStore` could appear in `gamelib.log` ONLY
+    // on a failure path -- so the condition "at least one read SUCCEEDS, recorded with the exact
+    // grep and its raw output" was unsatisfiable by construction. Three gate cycles recorded that
+    // condition as never held; it was never observable. `present` distinguishes a real stored
+    // secret from the healthy no-entry first-run case, which is a successful read either way.
+    // NEVER logs the value -- slot name, presence and length only.
+    logInfo(
+      `SidecarKeyringSlotStore(${this.slot}).getToken(): ${RUST_KEYRING_GET} ok present=${
+        value.length > 0
+      } len=${value.length}`,
+      LogPrefix.Steam
+    )
     // A SUCCESSFUL read clears any stale failure memo -- there is nothing left to bound once a
     // real value (or a confirmed no-entry) is cached above and short-circuits future calls first.
     this.failedTokenAt = undefined
@@ -274,6 +313,12 @@ export class SidecarKeyringSlotStore implements TokenStore {
       await requestRustInvoke(RUST_KEYRING_SET, [token, this.slot])
       // The write succeeded -- we now know the correct value without another round trip.
       this.cachedToken = { value: token }
+      // F-34.5-G6-26: a write is a real Keychain round trip and can prompt, so it must appear in
+      // the prompt-accounting alongside reads. Length only -- never the token.
+      logInfo(
+        `SidecarKeyringSlotStore(${this.slot}).setToken(): ${RUST_KEYRING_SET} ok len=${token.length}`,
+        LogPrefix.Steam
+      )
     } catch (error) {
       logWarning(
         `SidecarKeyringSlotStore(${this.slot}).setToken(): ${RUST_KEYRING_SET} failed: ${errorMessage(error)}`,
@@ -293,6 +338,13 @@ export class SidecarKeyringSlotStore implements TokenStore {
       await requestRustInvoke(RUST_KEYRING_DELETE, [this.slot])
       // The delete succeeded -- the slot is now confirmed empty.
       this.cachedToken = { value: '' }
+      // F-34.5-G6-26: this is the sign-out path, and a delete is a real Keychain round trip that
+      // can prompt. A 2026-08-14 session observed TWO prompts during a single Steam sign-out with
+      // no log line of any kind to attribute them to a slot; these lines make that attributable.
+      logInfo(
+        `SidecarKeyringSlotStore(${this.slot}).clearToken(): ${RUST_KEYRING_DELETE} ok`,
+        LogPrefix.Steam
+      )
     } catch (error) {
       logWarning(
         `SidecarKeyringSlotStore(${this.slot}).clearToken(): ${RUST_KEYRING_DELETE} failed: ${errorMessage(error)}`,

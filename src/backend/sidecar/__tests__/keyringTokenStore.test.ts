@@ -27,8 +27,10 @@ jest.mock('../sidecarRpc', () => ({
 // ── logger mock — mirrors tokenStore.test.ts's existing convention ──────────
 const mockLogWarning = jest.fn()
 const mockLogInfo = jest.fn()
+const mockLogDebug = jest.fn()
 jest.mock('backend/logger', () => ({
   logInfo: (...args: unknown[]) => mockLogInfo(...args),
+  logDebug: (...args: unknown[]) => mockLogDebug(...args),
   logError: jest.fn(),
   logWarning: (...args: unknown[]) => mockLogWarning(...args),
   LogPrefix: {
@@ -752,6 +754,138 @@ describe('SidecarKeyringTokenStore', () => {
     await store.getToken()
     await store.isAvailable()
     expect(callLog).toHaveLength(4)
+  })
+
+  // ── Success-path observability (F-34.5-G6-26) ──────────────────────────────
+  //
+  // Until 2026-08-14 this class logged ONLY on failure paths (the module imported `logWarning`
+  // and nothing else), so a SUCCESSFUL keyring read emitted nothing at all. `U-34.5-01`'s
+  // condition (4) -- "at least one `SidecarKeyringSlotStore` read SUCCEEDS for a real slot,
+  // recorded with the exact grep and its raw output" -- was therefore unsatisfiable by
+  // construction: that string could reach `gamelib.log` only when a read FAILED. Three gate
+  // cycles recorded condition (4) as never held; it was never observable. A 2026-08-14 operator
+  // session (arm=keyring, zero dev-vault lines, Steam library populated, four Keychain prompts
+  // approved) produced a log with no keyring line of any kind, which is what surfaced this.
+  it('a successful keyring_get logs an ok line naming the slot, and never the token value', async () => {
+    programChannel('keyring_get', {
+      type: 'resolve',
+      value: 'super-secret-token'
+    })
+    const store = new SidecarKeyringTokenStore()
+
+    await expect(store.getToken()).resolves.toBe('super-secret-token')
+
+    const infoLines = mockLogInfo.mock.calls.map((c) => String(c[0]))
+    expect(
+      infoLines.some(
+        (l) =>
+          l.includes(
+            `SidecarKeyringSlotStore(${KEYRING_SLOT_STEAM_REFRESH_TOKEN}).getToken()`
+          ) &&
+          l.includes('keyring_get ok') &&
+          l.includes('present=true')
+      )
+    ).toBe(true)
+
+    // Security floor: the secret itself must never reach the logger, at any level.
+    const allLines = [
+      ...mockLogInfo.mock.calls,
+      ...mockLogDebug.mock.calls,
+      ...mockLogWarning.mock.calls
+    ].map((c) => String(c[0]))
+    expect(allLines.some((l) => l.includes('super-secret-token'))).toBe(false)
+  })
+
+  it('the healthy no-entry case still logs a successful read, with present=false', async () => {
+    programChannel('keyring_get', { type: 'resolve', value: null })
+    const store = new SidecarKeyringTokenStore()
+
+    await expect(store.getToken()).resolves.toBe('')
+
+    const infoLines = mockLogInfo.mock.calls.map((c) => String(c[0]))
+    expect(
+      infoLines.some(
+        (l) => l.includes('keyring_get ok') && l.includes('present=false')
+      )
+    ).toBe(true)
+    // A confirmed "nothing stored" is a SUCCESSFUL read, not a failure (RESEARCH Pitfall 1).
+    expect(mockLogWarning).not.toHaveBeenCalled()
+  })
+
+  // This is the test that makes an observed prompt count interpretable. A cache hit issues no
+  // `keyring_get`, so it cannot raise a Keychain prompt -- which is why "0 prompts on re-login"
+  // is NOT by itself evidence that any timeout/memo fix works. Before these lines existed a live
+  // session could not distinguish the two, and the warm-cache case reads as a win.
+  it('a cache hit issues no second keyring_get and says so, so a warm cache cannot be misread as a prompt fix', async () => {
+    programChannel('keyring_get', { type: 'resolve', value: 'abc' })
+    const store = new SidecarKeyringTokenStore()
+
+    await store.getToken()
+    const afterFirst = callLog.filter((c) => c.channel === 'keyring_get').length
+    await store.getToken()
+    const afterSecond = callLog.filter((c) => c.channel === 'keyring_get').length
+
+    expect(afterFirst).toBe(1)
+    expect(afterSecond).toBe(1) // no second round trip => no second prompt possible
+
+    // Exactly one "issuing" line -- the log-side counterpart of an operator's prompt count.
+    const issuing = mockLogInfo.mock.calls
+      .map((c) => String(c[0]))
+      .filter((l) => l.includes('issuing keyring_get'))
+    expect(issuing).toHaveLength(1)
+
+    const debugLines = mockLogDebug.mock.calls.map((c) => String(c[0]))
+    expect(debugLines.some((l) => l.includes('served from cache'))).toBe(true)
+  })
+
+  it('a successful clearToken logs a delete-ok line naming the slot (the sign-out path)', async () => {
+    programChannel('keyring_delete', { type: 'resolve', value: null })
+    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+    await store.clearToken()
+
+    const infoLines = mockLogInfo.mock.calls.map((c) => String(c[0]))
+    expect(
+      infoLines.some(
+        (l) =>
+          l.includes(
+            `SidecarKeyringSlotStore(${KEYRING_SLOT_HUMBLE_SESSION}).clearToken()`
+          ) && l.includes('keyring_delete ok')
+      )
+    ).toBe(true)
+  })
+
+  it('a successful setToken logs a length, never the token value', async () => {
+    programChannel('keyring_set', { type: 'resolve', value: null })
+    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_CSRF)
+
+    await store.setToken('another-secret')
+
+    const infoLines = mockLogInfo.mock.calls.map((c) => String(c[0]))
+    expect(
+      infoLines.some((l) => l.includes('keyring_set ok') && l.includes('len=14'))
+    ).toBe(true)
+
+    const allLines = [
+      ...mockLogInfo.mock.calls,
+      ...mockLogDebug.mock.calls,
+      ...mockLogWarning.mock.calls
+    ].map((c) => String(c[0]))
+    expect(allLines.some((l) => l.includes('another-secret'))).toBe(false)
+  })
+
+  // Source-text guard for the regression shape that CREATED F-34.5-G6-26: a module whose only
+  // logger import was `logWarning`, making every success structurally unobservable.
+  it('keyringTokenStore imports a success-path logger, not only logWarning', () => {
+    const source = readFileSync(
+      join(__dirname, '..', 'keyringTokenStore.ts'),
+      'utf-8'
+    )
+    const importLine = source
+      .split('\n')
+      .find((l) => l.includes("from 'backend/logger'"))
+    expect(importLine).toBeDefined()
+    expect(importLine).toContain('logInfo')
   })
 })
 
