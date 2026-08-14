@@ -1,8 +1,9 @@
 ---
 created: 2026-07-25T14:20:00.000Z
-title: "Tray dark/light icons are byte-identical — icon swap is a visual no-op"
+title: "Tray dark/light icons are byte-identical (Windows/Linux) — icon swap is a visual no-op there"
 area: branding
 needs: artwork
+status: "RE-SCOPED 2026-08-14 -- CLOSED on macOS, OPEN on Windows/Linux. Do NOT close or move this todo: the Windows/Linux half is genuinely unfixed. See the dated resolution section below."
 files:
   - public/icon-dark.png
   - public/icon-dark@2x.png
@@ -98,3 +99,43 @@ the `send` transport leg are proven live.
 
 Full diagnosis: `.planning/debug/tray-icon-swap-noop.md`
 Discovered in: `.planning/phases/34.1-tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome/34.1-HUMAN-UAT.md` (test 6)
+
+## Resolution — macOS half CLOSED, Windows/Linux half OPEN (2026-08-14, plan 34.1-15)
+
+**macOS is fixed, but not by making the two assets differ.** Plan 34.1-13 (2026-08-13) tried the
+originally-proposed fix first — regenerate `icon-light*.png` as an RGB inversion of
+`icon-dark*.png` — and it was **rejected at a human checkpoint**: the artwork is a full-colour
+magenta gamer-cat over a starburst, so inverting RGB produced a full-colour *green* cat, equally
+illegible at 22px. The mean-luminance-delta gate that had passed (65.8/70.9/75.4 at the three
+scales) was non-vacuous and correctly computed, and still guarded nothing, because brightness is
+not the property menu-bar legibility depends on. Superseded with the fix this todo's own "Fix"
+section (item 4) named as worth considering: `public/icon-tray-template.png`, a monochrome AppKit
+template image (solid black RGB, glyph carried entirely in alpha) hue-segmented from
+`icon-dark.png`, applied via `TrayIcon::set_icon_with_as_template` (`src-tauri/src/main.rs`,
+`cfg(target_os = "macos")`-gated). AppKit auto-tints the template per the EFFECTIVE menu-bar
+appearance, so **`darkTrayIcon` is now vestigial on macOS by design** — the setting still
+round-trips through the sidecar unchanged, it simply has no visible effect there anymore, and
+that "nothing visibly changes" result is the CORRECT one, not the original defect recurring.
+
+**Live-confirmed 2026-08-14** (plan 34.1-14, operator, real hardware): glyph legible as a
+monochrome cat silhouette at menu-bar size (D4, "can see the silhoutte"); glyph auto-tints to
+match the effective menu-bar appearance, confirmed indistinguishable in tinting behaviour from
+the system's own template icons — "like all the others" (D5), the discriminating evidence that
+`set_icon_with_as_template` is honoured at runtime; toggling the setting produces no visible
+change, the expected vestigial-by-design result (D5b, "Nothing visibly changes"). New MD5s:
+`public/icon-tray-template.png` = `443da45470166e50d80fcbecadca14a8` (new, distinct from both
+dark/light). Residual, stated rather than glossed: the DARK/opaque-menu-bar rendering was never
+directly observed on this hardware, only the light/translucent-effectively-dark rendering — see
+`34.1-VERIFICATION.md`'s `human_verification` entry for the direct-observation follow-up
+(System Settings > Accessibility > Display > Reduce Transparency forces it).
+
+**Windows/Linux — UNCHANGED, still genuinely open.** `public/icon-dark.png`/`icon-light.png`
+(+ `@2x`/`@3x`) remain byte-identical at all three scales — plan 34.1-13's redirect explicitly
+did not touch this path; those platforms still select between the two (still-identical) colour
+files via the original `tray_icon.ts` mechanism, unchanged. **This todo stays OPEN and PENDING
+for that reason** — do not close it on the strength of the macOS fix. Needed: a genuinely
+distinct dark treatment of the gamer-cat artwork for `icon-dark*.png` (a design pass — do not
+auto-invert branded artwork, per the RGB-inversion rejection above), then re-sync into `build/`.
+The live swap behaviour there is adjudicated separately by `34.1-HUMAN-UAT.md` UAT item 6d
+(Windows/Linux half), which this asset work alone will not close without also confirming on real
+Windows/Linux hardware.
