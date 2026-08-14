@@ -50,3 +50,45 @@ currency model* too, on a screen that today handles currency correctly.
   Getting a price stale or wrong here has more weight than in an explicit search.
 
 See `.planning/notes/aggregated-store-search-foundations.md` for the full context.
+
+## Prior art: Heroic's deals implementations (reviewed 2026-08-15)
+
+Heroic v2.22.1 shipped **exactly the multi-provider generalization this seed anticipates**. Read
+it before designing GameLib's version — someone has already made these mistakes. Four relevant
+commits (Heroic upstream is git remote `origin`, so `git show <sha>` works locally):
+
+| Commit | What it did |
+|---|---|
+| `6d32bae8e` | Added **Green Man Gaming** deals — new `src/backend/discounts/gmg.ts`, `DiscountFilters` substantially reworked, `DiscountCard` +47, `helpers.ts` +74, `index.tsx` +386 |
+| `728bd197e` | Added **Humble Bundle** deals (new `src/backend/discounts/humble.ts`, 148 lines) — *and* simplified `gmg.ts` while **deleting** the `.github/scripts/mirror-gmg-feed.mjs` + `gmg-feed.yml` workflow it had introduced one commit earlier |
+| `43dd58cd6` | Resolves the **GOG deals region from the user's own GOG account** instead of guessing (backend +61) |
+| `c454aaa16` | Added new **GOG currencies** (`helpers.ts` +17/-15) |
+
+### The constraint that shapes any GameLib adoption
+
+Both the Humble and GMG providers fetch their feeds from
+
+```
+https://raw.githubusercontent.com/Heroic-Games-Launcher/deals-listing/{humble,gmg}-feed/...-discounts-{currency}.json
+```
+
+— a **Heroic-owned feed repository, whose affiliate codes are Heroic's**. Adopting their provider
+code as-is would make GameLib depend on Heroic infrastructure it doesn't control *and* route
+affiliate revenue to Heroic.
+
+**Operator decision 2026-08-15: do NOT port these.** Treat them as prior art for a GameLib-owned
+provider abstraction with its own feed. This is why the v2.22.1 upstream review closed the
+Humble/GMG items as "superseded by this seed" rather than as merge candidates.
+
+### The useful architectural signal
+
+Note the shape upstream converged on across those two commits: the `gmg-feed.yml` mirroring
+workflow started *inside the app repo* and then moved *out* to a separate feed repo. The end state
+is a **thin per-provider module consuming a pre-mirrored static JSON feed, one file per currency**,
+rather than each provider calling a live vendor API at request time.
+
+That split is the real lesson. The per-provider client is the easy half; **the mirroring layer is
+the part GameLib would need to own** — it's where rate limits, vendor API churn, currency fan-out,
+and affiliate attribution all actually live. Any plan that costs only the client half is
+underestimating the work.
+
