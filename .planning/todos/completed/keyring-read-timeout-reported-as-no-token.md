@@ -3,7 +3,9 @@ created: 2026-08-14T19:30:00.000Z
 title: "Steam under Tauri: a keyring_get TIMEOUT is reported as 'no stored refresh token' — false logged-out state and credential churn"
 area: auth
 needs: code-fix
-status: OPEN
+status: RESOLVED
+resolved: 2026-08-14T19:56:00.000Z
+resolved_by: quick-260814-r2d
 severity: major
 files:
   - src/backend/sidecar/keyringTokenStore.ts
@@ -95,6 +97,42 @@ it — 7 timeouts postdate that change. Raising the bound is not the fix.
 
 `keyring:unavailable:Platform secure storage failure` (×2) is the Keychain **Deny** path
 (PlatformFailure(-128)). Same conflation applies: a denial is not an absent token.
+
+## Resolution — 2026-08-14, quick task `260814-r2d`
+
+Commits `904dbd867`, `7020c22a9`, `8dc617b4b`. Fix directions **1–4 are done; 5 is NOT** — see below.
+
+- **1. Three states distinct in the type — DONE.** `TokenReadOutcome = present | absent | unreadable`
+  (`tokenStore.ts:54-57`), added as an OPTIONAL seam member (`readToken?()`) plus a shared
+  `readTokenOutcome()` fallback, so Humble's `getSecret()` and `ElectronTokenStore` keep their `''`
+  semantics and compile unchanged. `getToken()`'s `''` contract is byte-identical by design.
+- **2. Never treat `unreadable` as logged-out — DONE.** `ensureConnected()` branches on the outcome
+  and keeps the signed-in session (`user.ts:177-189`), logging a message that deliberately does not
+  contain "no stored refresh token".
+- **3. Never `clearToken()` on a failed read — DONE, and audited.** The transitive audit the todo
+  asked for was performed by grep over `clearToken(`/`clearSecrets(`/`SteamUser.logout`. Finding:
+  the sole caller clearing the Steam refresh token is `SteamUser.logout()` (`user.ts:276`), reachable
+  only from the user-facing sign-out action via the `logoutSteam` channel — registered in **two**
+  places (`main.ts:920` Electron, `steamAuthFlowRegistration.ts:184` Tauri sidecar; the second was a
+  correction to the plan's own reading). **No code path clears the token as a consequence of a failed
+  read.** The 19:14:25 delete in the timeline above was the user reacting to the false logged-out
+  state, i.e. downstream of fault 1, now fixed.
+- **4. Do not memoize a timeout as authoritative — DONE.** A memo hit answers
+  `unreadable/<original reason>`, never `absent` (`keyringTokenStore.ts:283`). The memo still
+  rate-limits the Keychain prompt — its original purpose, `F-34.5-G6-06` — because a memo hit issues
+  zero `keyring_get`. Only the answer served changed, not the window (still 120s) or the suppression.
+- **5. Lazy read at point-of-use — NOT DONE.** Carried forward as its own todo
+  (`keyring-read-lazy-at-point-of-use.md`). This one attacks *why* the prompt times out rather than
+  how the failure is reported, so the 9:1 failure ratio may well persist until it is addressed. What
+  this fix guarantees is that a failure no longer costs the user their token.
+
+No env-var/in-memory/plaintext fallback was introduced — an unreadable read fails closed (D-08 /
+`REQ-28-07` upheld), and `keyringTokenStore.ts` still imports no `configStore`/`TOKEN_STORE_KEY`
+(`REQ-28-02`). `src-tauri/src/main.rs` was NOT touched: the 45s `KEYRING_READ_TIMEOUT` stands, per
+this todo's own finding that raising the bound is not the fix.
+
+Full suite 249/249 suites, 4859 passed, `tsc --noEmit` clean. Independently re-verified after the
+fact: the three touched suites re-run 142/142 PASS.
 
 ## Reference
 
