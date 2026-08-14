@@ -2743,10 +2743,21 @@ shared-outfile defect's own predicate matches **14** scripts, not the 13 gap cyc
   this plan closed that real gap rather than the stale planned one. Task 2 recorded the fuller
   closure protocol in `deferred-items.md`'s own `## Closure protocol` section (this ROADMAP note is
   the abbreviated cross-reference) and reconciled REQUIREMENTS/STATE. See `34.9-33-SUMMARY.md`.
-  **This plan does not close Phase 34.9** — `/gsd-verify-work 34.9` is the next step, and per this
-  plan's own Task 3 checkpoint, must not run until the operator confirms gap cycle 4's OWN review
-  (produced by this execution's `code_review_gate`, distinct from `34.9-REVIEW-CYCLE4.md` above,
-  which this plan swept but did not itself trigger) is ledgered and the sweep is green.
+  **Task 3's checkpoint RESOLVED 2026-08-14 (operator response "swept").** This execution's own
+  `code_review_gate` output was redirected by hand to `34.9-REVIEW-CYCLE5.md` (avoiding the
+  fixed-path `34.9-REVIEW.md` silent-overwrite hazard the closure protocol names — `34.9-REVIEW.md`,
+  gap cycle 1's review, confirmed intact, `reviewed: 2026-08-11T03:22:49Z` unchanged), scoped to
+  `meta/runTs.cjs`'s post-cycle-4 rewrite (commit `fdc5b24e7`, never previously reviewed) plus its
+  new test/fixture. Two findings — C5-01 (Warning, a startup-window tmpdir leak between
+  `mkdtempSync` and signal-handler installation, only reproducible via an artificially widened
+  window) and C5-02 (Info, `SIGHUP` forwarding untested but manually verified correct) — both
+  DEFERRED as `deferred-items.md` items 22/23 rather than fixed, since both touch `meta/runTs.cjs`
+  or its test and that file is the subject of `34.9-WRAPPER-PROOF.md`'s `verdict: PASS`. Committed
+  `221a1fce8`. `34.9-REVIEW-SWEEP-CHECK.cjs` (byte-unchanged) now reports `REVIEW-SWEEP-OK 24/24
+  mapped, unmapped 0`. **This is the first time in this phase's history a cycle's own review was
+  ledgered BEFORE `/gsd-verify-work` rather than after** — the closure protocol's own non-vacuity
+  demonstration. Plan 34.9-33 is now fully complete (all 3 tasks). **This plan still does not close
+  Phase 34.9** — `/gsd-verify-work 34.9` is the orchestrator's own next step, not run by this plan.
 
 **Closure protocol (recorded 2026-08-13, gap cycle 4; full version in `deferred-items.md`'s own
 `## Closure protocol — why every cycle's own review is unledgered by construction` section, added by
