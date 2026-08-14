@@ -475,6 +475,52 @@ names.
     findings (`F-34.5-G6-22`/`-24`/`-25`) into one row, since all three share the same fix commit
     and the same "no live Windows session has ever run" caveat.
 
+34. **`F-34.5-G6-26` — `U-34.5-01`'s condition (4) was UNSATISFIABLE BY CONSTRUCTION: a successful
+    keyring read logged nothing at all.** `src/backend/sidecar/keyringTokenStore.ts` imported
+    **only** `logWarning` — every log call in `SidecarKeyringSlotStore` sat on a failure path
+    (`isAvailable()/getToken()/setToken()/clearToken() ... failed`), and `fetchToken()`'s success
+    path cached the value and returned it silently. The string `SidecarKeyringSlotStore` could
+    therefore reach `gamelib.log` **only when a read FAILED**. But `U-34.5-01`'s condition (4)
+    requires "at least one `SidecarKeyringSlotStore` read SUCCEEDS for a real slot ... recorded
+    with the exact grep and its raw output" — a grep that could never match on success. The same
+    defect blocks `U-34.5-10`, whose bar asks for an operator's per-slot prompt count
+    "cross-checked against the log's own read attempts": the log recorded no successful attempts,
+    so the cross-check was impossible even with perfect operator notes.
+
+    **This reframes three cycles of history.** Condition (4) has been recorded as "never held"
+    since gate 3. It was never *observable* — which is not the same claim, and the ledger has been
+    carrying the stronger one.
+
+    **How it was found (2026-08-14, operator session).** A real keyring-arm run — `[bootstrap]
+    secret stores: keyring`, zero `[dev-secret-vault]` lines, Steam library populated (377+ titles),
+    four Keychain prompts observed and approved (2 at launch, 2 at sign-out, 0 on re-login) —
+    produced a `gamelib.log` containing **no keyring line of any kind**: no success, no timeout, no
+    `keyring:unavailable`. Conditions (1)(2)(3) passed; (4) had no evidence to pass or fail on. The
+    session log is preserved at `keyring-session-capture/gamelib-current.log`.
+
+    **Second-order defect this exposed:** the observed "0 prompts on re-login" is NOT evidence that
+    the 45s-timeout / 120s-memo fix works. `getToken()` short-circuits on `this.cachedToken` before
+    issuing any `keyring_get`, so a warm in-memory cache raises no prompt by a completely different
+    mechanism. Before this fix a live session could not distinguish the two, and the warm-cache case
+    reads as a win — an inference this phase would otherwise have banked.
+
+    **Fixed here (source-level only).** `keyringTokenStore.ts` now logs, at INFO (not DEBUG —
+    DEBUG output is settings-dependent and a gate line that may not be written is no better than no
+    line): an `issuing keyring_get (may prompt)` line before every real round trip, a `keyring_get
+    ok present=<bool> len=<n>` line on success, and `keyring_set ok len=<n>` / `keyring_delete ok`
+    on the write and sign-out paths; plus DEBUG `served from cache` / `joined in-flight read` lines
+    that make a prompt-free call self-explaining. **No secret value is ever logged** — slot name,
+    presence and length only, asserted by two tests. Pinned by 6 tests in
+    `keyringTokenStore.test.ts`, each RED-proven: the two success-line tests against the stripped
+    line, the cache test against the stripped DEBUG line, and the import guard against the true
+    pre-fix `git show HEAD` state (`import { logWarning, LogPrefix }`), then restored byte-identical
+    (`cmp` clean).
+
+    **Consequence for plan 34.5-58:** its session record must not specify a grep for condition (4)
+    that could not match. The re-run is now measurable for the first time, and the operator's prompt
+    count has a log-side counterpart to be checked against. Both `U-34.5-01` and `U-34.5-10` stay
+    OPEN — this fix makes them measurable, it does not measure them.
+
 **Note, not a finding: `authLogSanitizer` (`src/backend/storeManagers/nile/user.ts:13-24`) is
 confirmed NOT a mitigation for any of `F-34.5-G6-22`/`-24`/`-25`.** It parses a logged line as
 JSON and redacts `url`/`code_verifier`/`serial`/`client_id` keys — but it sanitizes the runner's

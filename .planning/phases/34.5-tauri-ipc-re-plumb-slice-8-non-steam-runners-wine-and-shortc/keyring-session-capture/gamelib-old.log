@@ -1,0 +1,45 @@
+(08:43:15) [INFO]:    [Backend]:         [bootstrap] appRoot resolved=/Users/graysonmitchell/Projects/GameLib source=GAMELIB_APP_ROOT
+(08:43:15) [INFO]:    [Backend]:         [bootstrap] publicDir resolved=/Users/graysonmitchell/Projects/GameLib/public exists=true
+(08:43:15) [INFO]:    [Backend]:         [bootstrap] GAMELIB_SHELL_EXE received=/Users/graysonmitchell/Projects/GameLib/src-tauri/target/debug/gamelib-shell
+(08:43:15) [INFO]:    [Backend]:         [bootstrap] runner binary legendary path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/legendary exists=true
+(08:43:15) [INFO]:    [Backend]:         [bootstrap] runner binary gogdl path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl exists=true
+(08:43:15) [INFO]:    [Backend]:         [bootstrap] runner binary nile path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile exists=true
+(08:43:15) [INFO]:    [Backend]:         [bootstrap] runner binary comet path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/comet exists=true
+(08:43:15) [INFO]:    [Steam]:           Steam TokenStore implementation set to SidecarKeyringTokenStore
+(08:43:15) [INFO]:    [Backend]:         [bootstrap] Humble secret store installed: keyring-backed (humble-session/humble-csrf slots)
+(08:43:15) [INFO]:    [Backend]:         [bootstrap] secret stores: keyring
+(08:43:15) [INFO]:    [Connection]:      Connectivity: check-online
+(08:43:15) [INFO]:    [Connection]:      Pinging external endpoints
+(08:43:15) [INFO]:    [DownloadManager]: sidecar: boot-time download-queue auto-resume (main.ts:579-only, startup-flagged initQueue call) is deliberately disabled (D-05) — a persisted queue head stays resumable via the Resume button, never auto-started on sidecar boot
+(08:43:15) [INFO]:    [Connection]:      Connectivity: online
+(08:43:15) [INFO]:    [Nile]:            Saved user data to config file
+(08:43:15) [INFO]:    [Frontend]:        [refreshLibrary] runner=all origin=mount
+(08:43:15) [WARNING]: refresh not implemented on Sideload Library Manager
+(08:43:15) [INFO]:    [Legendary]:       Refreshing library...
+(08:43:15) [INFO]:    [Nile]:            Refreshing library...
+(08:43:15) [INFO]:    [Nile]:            Refreshing Amazon Games...
+(08:43:15) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/nile.log
+(08:43:15) [INFO]:    [Nile]:            Game list updated, got 0 games
+(08:43:15) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile library sync
+(08:43:15) [INFO]:    [Gog]:             Running command: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" auth
+(08:43:15) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/gog.log
+(08:43:15) [DEBUG]:   [Backend]:         Releases info ready, checking wine releases
+(08:43:15) [DEBUG]:   [Backend]:         Releases info ready, checking anticheat data
+(08:43:15) [DEBUG]:   [Backend]:         AreWeAnticheatYet data did not change. Skipping.
+(08:43:15) [INFO]:    [Gog]:             Getting GOG library
+(08:43:16) [INFO]:    [Gog]:             Saved games data
+(08:44:00) [WARNING]: [Steam]:           keyring failure memoized slot=steam-refresh-token class=timeout ms=120000
+(08:44:00) [WARNING]: [Steam]:           SidecarKeyringSlotStore(steam-refresh-token).getToken(): keyring_get failed: keyring:timeout
+(08:44:00) [WARNING]: [Steam]:           Steam: logged in but no stored refresh token — cannot reconnect
+(08:44:00) [WARNING]: [Steam]:           Steam client not ready, skipping library refresh
+(08:44:00) [INFO]:    [Backend]:         refreshLibrary complete runner=all managers=6
+(08:44:00) [WARNING]: listUpdateableGames not implemented on Sideload Library Manager
+(08:44:01) [INFO]:    [Gog]:             Found 0 game(s) to update
+(08:44:01) [INFO]:    [Nile]:            Looking for updates...
+(08:44:01) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile list-updates --json
+(08:44:01) [INFO]:    [Frontend]:        No cache found, getting data from nile...
+(08:44:01) [INFO]:    [Nile]:            Refreshing library...
+(08:44:01) [INFO]:    [Nile]:            Refreshing Amazon Games...
+(08:44:01) [INFO]:    [Nile]:            Game list updated, got 0 games
+(08:44:01) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile library sync
+(08:44:01) [INFO]:    [Nile]:            refreshLibrary complete runner=nile managers=1
