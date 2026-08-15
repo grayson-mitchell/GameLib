@@ -16,9 +16,28 @@
   // 34.11 can retune it in one place.
   --tier2-width: 204px;
 
-  // Nearest multiple of 8 to the sketch's 50px navbar height (UI-SPEC §
-  // Layout).
-  --navbar-height: 56px;
+  // 260815-j24: retuned from 56px to 42px, an arithmetic value, not a
+  // design-sketch one. Derivation (F5 in the plan):
+  //   - the tab strip is bottom-aligned by .NavShell__navbar's own
+  //     align-items: flex-end;
+  //   - .NavTabs .MuiTab-root's own min-height:
+  //     calc((2 * var(--space-xs)) + 1.25em + 1px) resolves to 37px at the
+  //     16px root, and its top: 1px shifts it down 1px;
+  //   - * { box-sizing: border-box } (App.css) puts the navbar's own 1px
+  //     border-bottom INSIDE this height;
+  //   - so the visible band above the tabs = 42 - 1 - 37 + 1 = 5px, the
+  //     requested value (down from the prior 56px's 19px band).
+  // Deliberately a LITERAL, not a calc() built from --space-xs/--text-md:
+  // duplicating the tab's min-height formula in a second place is exactly
+  // the hardcoded-value-that-drifts-from-the-token defect shellTokens.test.ts
+  // exists to prevent, and the `em` units in that formula resolve against a
+  // DIFFERENT font-size on .NavShell__navbar than on .MuiTab-root, so a
+  // shared token would compute wrong. appShellLayout.test.ts's Test E is the
+  // drift guard instead.
+  // 42px still clears --overlay-controls-height's 39px fallback
+  // (env(titlebar-area-height, 39px)), so the Windows/Linux WindowControls
+  // cluster sharing this grid row is not clipped (F6).
+  --navbar-height: 42px;
 
   // REQ-34.10-03 / D-01, REVISED by the D-06 reversal (34.1-10, 34.1-11,
   // gap G4). Plan 34.1-10 makes the macOS titlebar a function of
