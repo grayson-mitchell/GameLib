@@ -8,9 +8,26 @@ import LibraryContext from '../../LibraryContext'
 import ContextProvider from 'frontend/state/ContextProvider'
 import './index.css'
 import AddGameButton from '../AddGameButton'
+import { countGamesExcludingDlc } from './gameCount'
 
 type Props = {
   list: GameInfo[]
+  /**
+   * How many games would show with every filter cleared (260815-opt, D5).
+   *
+   * REQUIRED, not optional. An optional prop would let a future call site
+   * omit it and render "42 of undefined" with nothing failing -- and there
+   * is exactly one call site (`screens/Library/index.tsx`), so requiring it
+   * costs nothing.
+   *
+   * Accepted nuance (D8): the alphabet filter is applied AFTER the engine
+   * and contributes no `ActiveFilterDescriptor`. With only a letter picked,
+   * `activeFilterCount` is 0 and today's rendering is preserved exactly.
+   * With a letter AND a facet, the numerator is letter-narrowed while this
+   * denominator is not. That is the correct reading of "showing N of your M
+   * games" and is deliberate -- do not "fix" it.
+   */
+  totalGames: number
 }
 
 function formatRelativeTime(ms: number): string {
@@ -26,9 +43,13 @@ function formatRelativeTime(ms: number): string {
   return `${days} ${days === 1 ? 'day' : 'days'} ago`
 }
 
-export default React.memo(function LibraryHeader({ list }: Props) {
+export default React.memo(function LibraryHeader({ list, totalGames }: Props) {
   const { t } = useTranslation()
-  const { showFavourites } = useContext(LibraryContext)
+  // Dual hook, the same pattern `FilterChipRow` already uses: the shared
+  // 'translation' namespace for this header's pre-existing copy, 'gamelib'
+  // for the fork's own strings.
+  const { t: tGamelib } = useTranslation('gamelib')
+  const { showFavourites, activeFilterCount } = useContext(LibraryContext)
   const {
     refreshing,
     refreshingInTheBackground,
@@ -47,18 +68,10 @@ export default React.memo(function LibraryHeader({ list }: Props) {
     window.api.getSteamSyncedAt().then((ts) => setSyncedAt(ts))
   }, [connectivity.status])
 
-  const numberOfGames = useMemo(() => {
-    if (!list) {
-      return 0
-    }
-    // is_dlc is only applicable when the game is from legendary, but checking anyway doesn't cause errors and enable accurate counting in the 'ALL' game tab
-    const dlcCount = list.filter(
-      (lib) => lib.runner !== 'sideload' && lib.install.is_dlc
-    ).length
-
-    const total = list.length - dlcCount
-    return total > 0 ? `${total}` : 0
-  }, [list])
+  // The DLC-exclusion rule moved verbatim into `gameCount.ts` so the
+  // denominator below applies the identical predicate -- two copies could
+  // disagree and print `42 of 41` (D6).
+  const numberOfGames = useMemo(() => countGamesExcludingDlc(list), [list])
 
   // Show the spinner both during the library-list refresh AND while per-game
   // metadata/art is still streaming in the background (the long tail on a cold
@@ -88,7 +101,37 @@ export default React.memo(function LibraryHeader({ list }: Props) {
           {showFavourites
             ? t('favourites', 'Favourites')
             : t('title.allGames', 'All Games')}
-          <span className="numberOfgames">{numberOfGames}</span>
+          {/*
+            With nothing active this is BYTE-IDENTICAL to what shipped
+            before: same element, same class, same content. The bare count is
+            correct there -- an unfiltered library's shown count IS its
+            total, and "318 of 318" would be noise.
+
+            With something active the bare count is actively misleading: it
+            is the size of the ALREADY-FILTERED list sitting beside a title
+            that still reads "All Games", so `6` is indistinguishable from a
+            six-game library. The denominator is the discriminator. The title
+            itself is deliberately NOT rewritten (D7) -- `FilterChipRow` sits
+            directly beneath enumerating every active filter by name, and a
+            reworded title would collide with the showFavourites branch for
+            no information the chips do not already give.
+
+            Interpolated on `shown` / `total`. The name `count` is reserved by
+            i18next and would trigger plural key resolution (`_one`/`_other`),
+            neither of which exists in the catalog. Literal key AND literal
+            default, because i18next-parser resolves nothing else.
+          */}
+          {activeFilterCount > 0 ? (
+            <span className="numberOfgames numberOfgames--filtered">
+              {tGamelib(
+                'gamelib:library.header.filteredOfTotal',
+                '{{shown}} of {{total}}',
+                { shown: numberOfGames, total: totalGames }
+              )}
+            </span>
+          ) : (
+            <span className="numberOfgames">{numberOfGames}</span>
+          )}
           {isSteamSyncing && (
             <FontAwesomeIcon
               icon={faSyncAlt}

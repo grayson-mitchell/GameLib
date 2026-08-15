@@ -109,7 +109,7 @@ export default function FilterRunnabilityFacet() {
       // Literal key AND literal default at this call site, deliberately not
       // factored into a shared helper -- see the lexer comment at the top of
       // this file for why a variable key or a non-literal default silently
-      // produces blank UI text. `{{selected}}`, never `{{count}}`: `count`
+      // produces blank UI text. Interpolated on `selected`; the name `count`
       // is reserved by i18next and triggers plural key resolution.
       selectedCountLabel={
         selectedCount > 0

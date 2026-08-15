@@ -96,7 +96,7 @@ export default function FilterMoreGroup() {
       // only resolves STRING-LITERAL arguments, so a helper taking the key
       // as a variable extracts nothing and a non-literal default extracts an
       // EMPTY string that i18next then renders in preference to the
-      // call-site fallback. `{{selected}}`, never `{{count}}` -- `count` is
+      // call-site fallback. Interpolated on `selected`; the name `count` is
       // reserved and triggers plural key resolution (`_one`/`_other`).
       selectedCountLabel={
         selectedCount > 0

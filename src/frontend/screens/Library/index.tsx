@@ -22,6 +22,7 @@ import GamesList from './components/GamesList'
 import { FavouriteGame, GameInfo, HiddenGame, Runner } from 'common/types'
 import ErrorComponent from 'frontend/components/UI/ErrorComponent'
 import LibraryHeader from './components/LibraryHeader'
+import { countUnfilteredGames } from './components/LibraryHeader/gameCount'
 import {
   amazonCategories,
   epicCategories,
@@ -831,6 +832,34 @@ export default React.memo(function Library(): JSX.Element {
   )
   const activeFilterCount = activeFilterDescriptors.length
 
+  // D5: the library header's DENOMINATOR -- "how many games would I see if I
+  // cleared every filter". Deliberately a SEPARATE `filterLibrary` call
+  // against the default state rather than `libraryUnion.length`: the union
+  // carries hidden and non-available entries the default state never shows,
+  // so its length names a total the user can never reach by clearing
+  // filters. This number is reachable by definition -- it is exactly what
+  // `Clear all` produces -- and that self-consistency IS the feature.
+  //
+  // It also deliberately does NOT go through `buildGridPipeline`: that seam
+  // is pinned by `engineWiring.test.ts` to exactly three engine calls, and
+  // this pass skips no stage, so routing it through the pipeline would buy
+  // nothing and put a second caller on a contract built for one.
+  //
+  // The engine call itself lives in `countUnfilteredGames`, NOT inline here:
+  // `libraryPipeline.test.ts` gates this component against holding any
+  // `filterLibrary(`/`countFor(` call shape, because an engine call sitting
+  // in this file is one no behavioural test can reach with the real
+  // arguments (that was CR-01). The helper is unit-tested directly instead.
+  //
+  // Accepted nuance (D8): `alphabetFilterLetter` is applied downstream in
+  // `libraryToShow` and emits no `ActiveFilterDescriptor`, so it is not in
+  // this denominator. With only a letter picked, `activeFilterCount` is 0
+  // and the header renders exactly as it always has.
+  const unfilteredGameCount = useMemo(
+    () => countUnfilteredGames(libraryUnion, engineDeps),
+    [libraryUnion, engineDeps]
+  )
+
   // D-25: clears AND PERSISTS every filter to its default -- "whatever the
   // chip row shows is what comes back next launch". A non-persisting
   // implementation would silently restore the old filters on next launch,
@@ -951,7 +980,7 @@ export default React.memo(function Library(): JSX.Element {
           </>
         )}
 
-        <LibraryHeader list={libraryToShow} />
+        <LibraryHeader list={libraryToShow} totalGames={unfilteredGameCount} />
 
         {showAlphabetFilter && <AlphabetFilter />}
 

@@ -354,6 +354,43 @@ export function countFor(
 }
 
 /**
+ * Every filter at its default -- i.e. the state `clearAllFilters` restores
+ * (260815-opt Task 3, D5).
+ *
+ * Its purpose is the library header's DENOMINATOR. Running the union through
+ * this state answers "how many games would I see if I cleared every filter",
+ * which is a number the user can actually reach by clicking `Clear all`.
+ * `libraryUnion.length` cannot serve: the union carries hidden and
+ * non-available entries the default state never displays, so `of 318` would
+ * name a total no amount of clearing produces -- self-inconsistency in the
+ * one place the header exists to be consistent.
+ *
+ * INVARIANT this constant must satisfy, pinned by
+ * `__tests__/libraryHeaderVisibility.test.ts`:
+ *
+ *     describeActiveFilters(DEFAULT_FILTER_ENGINE_STATE, '') === []
+ *
+ * That is what ties the denominator to the header's `activeFilterCount > 0`
+ * gate: the state producing the total is BY CONSTRUCTION the state in which
+ * the filtered-vs-total form is not rendered at all. It is also the drift
+ * alarm -- add a field to `FilterEngineState` and forget to default it here,
+ * and `describeActiveFilters` will emit a descriptor for it. The test fails;
+ * the user never sees a denominator that was quietly filtered.
+ */
+export const DEFAULT_FILTER_ENGINE_STATE: FilterEngineState = {
+  view: 'all',
+  collection: null,
+  stores: [],
+  runnability: [],
+  searchMatchedKeys: null,
+  showHidden: 'off',
+  showNonAvailable: 'off',
+  showSupportOfflineOnly: false,
+  showThirdPartyManagedOnly: false,
+  showUpdatesOnly: false
+}
+
+/**
  * D-26: chips render for everything non-default, including views. Emits
  * nothing for a default value at each kind.
  */

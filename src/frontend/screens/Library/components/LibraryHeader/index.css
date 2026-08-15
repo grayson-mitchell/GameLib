@@ -30,6 +30,19 @@
   border-radius: var(--space-3xs);
 }
 
+/*
+ * 260815-opt. Deliberately NO colour change: `.numberOfgames` above already
+ * paints `var(--input-background)` behind inherited text, and recolouring
+ * the foreground would introduce a new foreground/background contrast pair
+ * to validate across all 11 themes -- for no informational gain, since the
+ * string "42 of 318" is itself the signal. `tabular-nums` is the whole
+ * point: without it the pill resizes as the numerator's digits change while
+ * the user types in the search box.
+ */
+.numberOfgames--filtered {
+  font-variant-numeric: tabular-nums;
+}
+
 .steamSyncSpinner {
   color: var(--text-secondary);
   margin-inline-start: var(--space-xs);

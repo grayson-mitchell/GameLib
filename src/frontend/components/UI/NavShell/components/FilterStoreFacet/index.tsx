@@ -51,7 +51,7 @@ export default function FilterStoreFacet() {
       // taking the key as a variable is invisible to extraction, and a
       // literal key with a non-literal default extracts an EMPTY default --
       // which i18next then renders in preference to the call-site fallback,
-      // i.e. blank UI text. `{{selected}}`, never `{{count}}`: `count` is
+      // i.e. blank UI text. Interpolated on `selected`; the name `count` is
       // reserved by i18next and triggers plural key resolution
       // (`_one`/`_other`), neither of which exists in the catalog.
       selectedCountLabel={

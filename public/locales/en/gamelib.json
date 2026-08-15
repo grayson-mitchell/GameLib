@@ -50,6 +50,9 @@
             "viewRecentlyPlayed": "Recently played",
             "wontRun": "Won't run"
         },
+        "header": {
+            "filteredOfTotal": "{{shown}} of {{total}}"
+        },
         "storeOther": "Other"
     },
     "login": {
