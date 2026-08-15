@@ -655,6 +655,15 @@ const IN_SCOPE_SUITES = [
  * for its own fixture generation and dimension probing. No containment surface exists for this
  * suite to opt into. A `readdirSync` recount at this plan's execution time puts the directory at
  * 45 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 41 below.
+ *
+ * `externalDynamicImportGate.test.ts` (quick/260815-vvz, Task 2) is classified as structurally
+ * contained: it declares NO `jest.mock(...)` of any kind. It reads real `.ts` source files off
+ * disk via plain `fs.readdirSync`/`fs.readFileSync` for static TS-AST analysis only -- it never
+ * imports, requires, or executes any backend module, so there is no `electron`/`electron-store`/
+ * `pathShim` import chain to contain in the first place, the same "contained by construction, no
+ * per-suite opt-in required" floor `seamBranchParity.test.ts`/`invokeReturnValueSweep.test.ts`
+ * already rely on. A `readdirSync` recount at this plan's execution time puts the directory at
+ * 46 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 42 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -668,6 +677,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'downloadQueueFlows.test.ts',
   'electronReachLedger.test.ts',
   'electronUntouched.test.ts',
+  'externalDynamicImportGate.test.ts',
   'fileStore.test.ts',
   'gameDetailsImportGate.test.ts',
   'humbleFlows.test.ts',
