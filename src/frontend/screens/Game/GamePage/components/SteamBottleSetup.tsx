@@ -132,7 +132,13 @@ const SteamBottleSetup = () => {
   }, [isOpen, appName])
 
   useEffect(() => {
-    if (!globalConfig || wineVersion || !enginesFetched || !persistedLookupSettled) return
+    if (
+      !globalConfig ||
+      wineVersion ||
+      !enginesFetched ||
+      !persistedLookupSettled
+    )
+      return
     // D-15 (34.13-09): a persisted engine (read above) wins verbatim over the
     // CrossOver-preferring derivation — the seeding effect latches on the
     // FIRST non-undefined engine it sets (guard above, `wineVersion` itself),
@@ -215,12 +221,30 @@ const SteamBottleSetup = () => {
   const handleConfirm = async () => {
     setPhase('provisioning')
     setProvisionError(undefined)
-    const result = await window.api.steamBottleProvision({
-      bottleName: crossoverBottle || undefined,
-      wineVersion
-    })
-    if (result.status === 'error') {
-      setProvisionError(result.error)
+    try {
+      const result = await window.api.steamBottleProvision({
+        bottleName: crossoverBottle || undefined,
+        wineVersion
+      })
+      if (result.status === 'error') {
+        setProvisionError(result.error)
+        setPhase('error')
+      }
+    } catch (error) {
+      // 34.13 review C-02. WR-03 attached a `.catch` to the 3s status POLL
+      // and stopped there, but the wedge WR-03 was filed for originates
+      // here: `steamBottleProvision` is `ipcRenderer.invoke` under Electron
+      // and the sidecar transport under Tauri, and BOTH reject on a backend
+      // throw, a dead sidecar or a transport timeout. Unhandled, that left
+      // `phase === 'provisioning'` forever -- the banner reading "Setting up
+      // Steam - this can take a while on first run." with no error, no "Try
+      // again" (that button only exists in the `error` phase) and the poll
+      // still armed. Exactly the reported symptom.
+      //
+      // NOTE the asymmetry with the poll's `.catch` below, and it is
+      // deliberate: a rejected status READ is merely an UNKNOWN verdict, so
+      // that one keeps polling. A rejected PROVISION is a FAILED provision.
+      setProvisionError(error instanceof Error ? error.message : String(error))
       setPhase('error')
     }
   }
@@ -273,10 +297,19 @@ const SteamBottleSetup = () => {
           />
         </DialogContent>
         <DialogFooter>
-          <button onClick={handleConfirm} className="button is-primary">
+          {/* C-02: `void` on the JSX attribute so no promise floats off an
+              event handler -- the try/catch inside handleConfirm makes it
+              non-rejecting, and this states that intent at the call site. */}
+          <button
+            onClick={() => void handleConfirm()}
+            className="button is-primary"
+          >
             {t('bottle.setup.confirm', 'Set up Steam')}
           </button>
-          <button onClick={handleCancel} className="button is-secondary outline">
+          <button
+            onClick={handleCancel}
+            className="button is-secondary outline"
+          >
             {t('bottle.setup.cancel', 'Not now')}
           </button>
         </DialogFooter>
@@ -337,7 +370,7 @@ const SteamBottleSetup = () => {
           <span className="steamBottleSetupMessage">
             {t(
               'bottle.setup.hangHint',
-              "If Steam appears stuck on \"Updating Steam\", it may be waiting on its own self-update — give it a few minutes before assuming it's frozen."
+              'If Steam appears stuck on "Updating Steam", it may be waiting on its own self-update — give it a few minutes before assuming it\'s frozen.'
             )}
           </span>
         </>

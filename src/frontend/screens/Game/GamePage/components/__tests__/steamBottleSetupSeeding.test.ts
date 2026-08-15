@@ -33,19 +33,114 @@ const stripped = stripSourceComments(readFileSync(sourcePath, 'utf-8'))
  * substring (e.g. `resolveSteamBottleSeedEngine`) must NOT satisfy this. */
 const OLD_DERIVATION_CALL = /(?<![A-Za-z])resolveSteamBottleEngine\(/g
 
-/** Locates the seeding effect's early-return guard line — the line
- * containing `enginesFetched` inside a `return` guard — so spec (d) can
- * assert the settle flag is consulted ON THAT LINE, not merely present
- * somewhere in the file. */
-function findSeedingGuardLine(source: string): string {
-  const line = source
-    .split('\n')
-    .find((l) => /enginesFetched/.test(l) && /return/.test(l))
-  if (!line) {
-    throw new Error('seeding effect guard line (enginesFetched + return) not found')
+/** Locates the seeding effect's early-return guard STATEMENT — the `if (...)
+ * return` whose condition mentions `enginesFetched` — so the RACE spec can
+ * assert the settle flag is consulted IN THAT GUARD, not merely present
+ * somewhere in the file.
+ *
+ * 34.13 review C-12: this used to search line-by-line, which made it a
+ * hostage to line length. The guard was 84 columns wide (one of the concrete
+ * prettier violations C-12 cited); running `prettier --write` on the file
+ * reflowed it across four lines and the gate failed with "guard line not
+ * found" — a formatter, not a behaviour change, breaking a behaviour gate.
+ * Whitespace is collapsed first so the gate measures the STATEMENT. */
+function findSeedingGuardStatement(source: string): string {
+  const flattened = source.replace(/\s+/g, ' ')
+  const match = flattened.match(/if \([^)]*enginesFetched[^)]*\) return/)
+  if (!match) {
+    throw new Error(
+      'seeding effect guard statement (if (... enginesFetched ...) return) not found'
+    )
   }
-  return line
+  return match[0]
 }
+
+/**
+ * Slices out `handleConfirm`'s body so the C-02 gate below measures THAT
+ * handler and not the file's other, correctly-guarded promises (the poll's
+ * `.catch`, the persisted-lookup's `.catch`). Bounded by the next top-level
+ * `const handleDone`, which immediately follows it.
+ */
+function sliceHandleConfirm(source: string): string {
+  const start = source.indexOf('const handleConfirm')
+  const end = source.indexOf('const handleDone', start)
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error('sliceHandleConfirm: handleConfirm body not locatable')
+  }
+  return source.slice(start, end)
+}
+
+/**
+ * 34.13 review C-02, as a THROWING helper driven against known-bad inputs
+ * DERIVED FROM THE REAL SOURCE.
+ *
+ * `steamBottleProvision` is `ipcRenderer.invoke` under Electron and the
+ * sidecar transport under Tauri; both REJECT on a backend throw or a dead
+ * channel. Unguarded, that leaves `phase === 'provisioning'` forever: the
+ * banner reads "Setting up Steam..." with no error and no retry affordance,
+ * because "Try again" only exists in the `error` phase. WR-03 fixed the 3s
+ * poll's rejection and left this one, which is where the wedge actually
+ * lives.
+ */
+function assertProvisionRejectionIsTerminal(handleConfirmBody: string) {
+  if (!handleConfirmBody.includes('steamBottleProvision(')) {
+    throw new Error(
+      'assertProvisionRejectionIsTerminal: handleConfirm no longer calls steamBottleProvision('
+    )
+  }
+  if (!/\btry\b/.test(handleConfirmBody)) {
+    throw new Error(
+      'assertProvisionRejectionIsTerminal: the provision await has no try/catch -- a rejected provision pins the wizard in the provisioning phase forever'
+    )
+  }
+  if (!/\bcatch\b/.test(handleConfirmBody)) {
+    throw new Error(
+      'assertProvisionRejectionIsTerminal: no catch clause -- see above'
+    )
+  }
+  // A catch that does not reach a TERMINAL phase is the same wedge with
+  // extra steps.
+  const catchBody = handleConfirmBody.slice(handleConfirmBody.indexOf('catch'))
+  if (!catchBody.includes("setPhase('error')")) {
+    throw new Error(
+      "assertProvisionRejectionIsTerminal: the catch clause does not reach setPhase('error') -- the wizard still has no terminal state on a rejected provision"
+    )
+  }
+}
+
+describe('C-02: a rejected steamBottleProvision reaches a terminal phase', () => {
+  it('the real handleConfirm satisfies the contract', () => {
+    expect(() =>
+      assertProvisionRejectionIsTerminal(sliceHandleConfirm(stripped))
+    ).not.toThrow()
+  })
+
+  it('RED: a known-bad input DERIVED FROM THE REAL SOURCE by removing the try/catch keywords is rejected -- this is the pre-fix shape', () => {
+    const body = sliceHandleConfirm(stripped)
+    const knownBad = body.replace(/\btry\b/g, '').replace(/\bcatch\b/g, '')
+    expect(knownBad).not.toBe(body)
+    expect(() => assertProvisionRejectionIsTerminal(knownBad)).toThrow(
+      /no try\/catch/
+    )
+  })
+
+  it("RED: a catch clause that does not reach setPhase('error') is rejected", () => {
+    const body = sliceHandleConfirm(stripped)
+    // Delete only the setPhase('error') that follows the catch keyword.
+    const catchIndex = body.indexOf('catch')
+    const knownBad =
+      body.slice(0, catchIndex) +
+      body.slice(catchIndex).replaceAll("setPhase('error')", '')
+    expect(knownBad).not.toBe(body)
+    expect(() => assertProvisionRejectionIsTerminal(knownBad)).toThrow(
+      /no terminal state/
+    )
+  })
+
+  it('the JSX attribute does not float the handler promise', () => {
+    expect(stripped).toMatch(/onClick=\{\(\) => void handleConfirm\(\)\}/)
+  })
+})
 
 describe('SteamBottleSetup.tsx seeding wiring (D-15 read half, 34.13-09)', () => {
   it('D-15: the seeding effect calls resolveSteamBottleSeedEngine', () => {
@@ -66,12 +161,23 @@ describe('SteamBottleSetup.tsx seeding wiring (D-15 read half, 34.13-09)', () =>
     expect(stripped).toMatch(/window\.api\s*\.isSteamBottleEligible\(/)
   })
 
-  it("D-15 RACE: the seeding effect does not run before the lookup settles", () => {
-    const guardLine = findSeedingGuardLine(stripped)
-    // The settle-flag identifier must appear ON the guard line itself — a
-    // flag that is set but never consulted in the guard is the vacuous
+  it('D-15 RACE: the seeding effect does not run before the lookup settles', () => {
+    const guard = findSeedingGuardStatement(stripped)
+    // The settle-flag identifier must appear IN the guard statement itself —
+    // a flag that is set but never consulted in the guard is the vacuous
     // version of this gate.
-    expect(guardLine).toMatch(/persistedLookupSettled/)
+    expect(guard).toMatch(/persistedLookupSettled/)
+  })
+
+  it('RED: the RACE gate rejects a guard DERIVED FROM THE REAL SOURCE with the settle flag removed', () => {
+    // Derived from the real source, whitespace-insensitively so a prettier
+    // reflow of the guard cannot turn this proof vacuous (the failure mode
+    // C-12 produced for the gate above).
+    const knownBad = stripped.replace(/\|\|\s*!persistedLookupSettled/, '')
+    expect(knownBad).not.toBe(stripped)
+    expect(findSeedingGuardStatement(knownBad)).not.toMatch(
+      /persistedLookupSettled/
+    )
   })
 
   it('D-15 LIVENESS: every terminal path settles', () => {
