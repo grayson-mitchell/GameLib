@@ -75,13 +75,10 @@ export async function getSteamBottleEligibilityVerdict(
 
   const eligible = await new SteamGame(appName).checkBottleEligibility()
 
-  const wineVersion = steamBottleConfigStore.get_nodefault('wineVersion') as
-    | WineInstallation
-    | undefined
+  const wineVersion = steamBottleConfigStore.get_nodefault('wineVersion')
   const bottleName =
-    (steamBottleConfigStore.get_nodefault('wineCrossoverBottle') as
-      | string
-      | undefined) ?? DEFAULT_STEAM_BOTTLE_NAME
+    steamBottleConfigStore.get_nodefault('wineCrossoverBottle') ??
+    DEFAULT_STEAM_BOTTLE_NAME
 
   return { eligible, wineVersion, bottleName }
 }
