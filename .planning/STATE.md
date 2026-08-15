@@ -232,11 +232,23 @@ progress:
   # state.*/roadmap.* verb invoked. total_plans UNCHANGED (330) -- 34.13's 14 plans were counted
   # once at phase-execution-start. percent = floor(323/330*100) = floor(97.87...) = 97 (unchanged;
   # floor, matching prior convention). Waves 1-4 COMPLETE (11/14); Wave 5 [12], 6 [11], 7 [13] remain.
+  #
+  # [34.13-12 execution + WAVE 5 CLOSE, 2026-08-15]: hand-applied. `gsd-sdk query state.begin-phase`
+  # was invoked ONCE at the start of this session and corrupted this file exactly as documented above
+  # -- it deleted this entire commented progress block (230 lines), wrote 25/17/339/324/68, reverted
+  # `stopped_at` to a stale Phase 34.5 banner, and mangled unrelated prose at 7 line ranges. Reverted
+  # byte-for-byte from a pre-call snapshot; no gsd-sdk state.*/roadmap.* verb has been invoked since,
+  # and none will be for the rest of this phase. Counter verified against artifacts on disk, not the
+  # commit: `ls .planning/phases/34.13-*/*-SUMMARY.md | wc -l` = 12, so completed_plans = 312 + 12 =
+  # 324. total_plans UNCHANGED (330). percent = floor(324/330*100) = floor(98.18...) = 98 (floor,
+  # matching prior convention). Wave 5 COMPLETE (12/14) -- plan 34.13-12 MOUNTED the phase, verified
+  # at HEAD (`<SteamDialog` renders at InstallModal/index.tsx:335), so the phase's surfaces are now
+  # reachable in the running app for the first time. Wave 6 [11], Wave 7 [13] remain.
   total_phases: 24
   completed_phases: 18
   total_plans: 330
-  completed_plans: 323
-  percent: 97
+  completed_plans: 324
+  percent: 98
 ---
 
 # Project State
