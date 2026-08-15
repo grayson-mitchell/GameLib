@@ -22,6 +22,37 @@
  * creation -- the pre-paint apply in `tauriAttach.ts`, the post-hydration re-apply in
  * `index.tsx`, and every user toggle -- is owned by the runtime `setTitleBarStyle` setter
  * (`src/preload/api/tauriWindowChrome.ts`), not by this config key.
+ *
+ * QUICK-260815-k25 (hide the painted native title without blanking the OS-level name):
+ *
+ * `setTitleBarStyle('overlay')` does NOT hide the title. In `tauri-runtime-wry-2.11.4`,
+ * `TitleBarStyle::Overlay` sets ONLY `titlebar_transparent(true)` + `fullsize_content_view(true)`
+ * -- at the creation path (`src/lib.rs:1211-1214`) AND at the runtime `SetTitleBarStyle` message
+ * handler (`src/lib.rs:3653-3656`). Neither path touches title visibility. So the frameless
+ * toggle makes the title bar transparent and lets the webview extend under it, while AppKit keeps
+ * painting the title text on top -- that was the whole symptom this quick task fixes.
+ *
+ * Title visibility is an INDEPENDENT, CREATION-ONLY knob: `hidden_title(bool)` ->
+ * `with_title_hidden` (`tauri-runtime-wry-2.11.4/src/lib.rs:1233-1234`) -> tao applies
+ * `ns_window.setTitleVisibility(NSWindowTitleVisibility::Hidden)`
+ * (`tao-0.35.3/src/platform_impl/macos/window.rs:269-271`). `WindowMessage` in
+ * `tauri-runtime-wry-2.11.4/src/lib.rs` has `SetTitle(String)` (line 1435) and
+ * `SetTitleBarStyle` (line 1471) but NO title-visibility variant -- there is no runtime setter.
+ * That is exactly why this is the right fix: applied once at window creation, it is structurally
+ * immune to every later frameless toggle, `setDecorations` call, and `setTitleBarStyle` call.
+ *
+ * `hiddenTitle` and `title` are ORTHOGONAL. `tauri-utils-2.9.3/src/config.rs:2066-2068`
+ * declares `pub hidden_title: bool` with `#[serde(default, alias = "hidden-title")]`; the struct
+ * carries `#[serde(rename_all = "camelCase", deny_unknown_fields)]` (`config.rs:1916-1917`), so
+ * the JSON key is camelCase `hiddenTitle` and defaults to `false` (`config.rs:2333`). On macOS,
+ * `setTitleVisibility(Hidden)` suppresses only the DRAWN text; `NSWindow.title` keeps its string.
+ * Mission Control, the Window menu, Cmd-Tab and VoiceOver all read the string, not the drawing.
+ *
+ * Division of labour, because of `deny_unknown_fields`: a misspelled key (`"hiddentitle"`,
+ * `"hidden_title"`) is a HARD `cargo check` build failure -- cargo owns key SPELLING. What cargo
+ * can NOT catch is the VALUE: `"hiddenTitle": false` compiles perfectly and does nothing. The
+ * jest gates below own the VALUE (`hiddenTitle === true` and `title === "GameLib"`); the human
+ * checkpoint owns "is the pixel actually gone" -- jest cannot observe AppKit's paint.
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -47,7 +78,9 @@ const CAPABILITIES_DEFAULT_PATH = join(
 
 interface TauriWindowConfig {
   label: string
+  title?: string
   titleBarStyle?: string
+  hiddenTitle?: boolean
   [key: string]: unknown
 }
 
@@ -105,5 +138,66 @@ describe('tauri.conf.json main window titleBarStyle (REQ-34.1-09, G4 mechanism r
       readFileSync(CAPABILITIES_DEFAULT_PATH, 'utf-8')
     ) as { windows: string[] }
     expect(capabilities.windows).toEqual(['main'])
+  })
+})
+
+describe('tauri.conf.json main window title rendering (QUICK-260815-k25)', () => {
+  test('the main window declares hiddenTitle exactly boolean true', () => {
+    const conf = loadTauriConf()
+    const mainWindow = findWindowByLabel(conf.app.windows, 'main')
+    expect(mainWindow).toBeDefined()
+    // toBe(true), not toBeTruthy(): the Rust field is a bool and the point of this gate
+    // is the VALUE -- "hiddenTitle": false compiles clean under deny_unknown_fields and
+    // does nothing (see header docstring's division-of-labour note).
+    expect(mainWindow?.hiddenTitle).toBe(true)
+  })
+
+  // SANITY (non-vacuity, two known-bad fixtures, neither arbitrary):
+  test('SANITY: the same lookup-and-assert helper FAILS against fixtures missing/defaulting hiddenTitle', () => {
+    // (i) the EXACT pre-change on-disk shape -- the key simply absent.
+    const preChangeFixture: TauriWindowConfig[] = [
+      { label: 'main', title: 'GameLib' }
+    ]
+    const preChangeWindow = findWindowByLabel(preChangeFixture, 'main')
+    expect(() => expect(preChangeWindow?.hiddenTitle).toBe(true)).toThrow()
+
+    // (ii) the serde default written out explicitly -- cargo check accepts this happily
+    // and it does nothing (F4 in the plan: cargo owns spelling, not value).
+    const explicitDefaultFixture: TauriWindowConfig[] = [
+      { label: 'main', title: 'GameLib', hiddenTitle: false }
+    ]
+    const explicitDefaultWindow = findWindowByLabel(explicitDefaultFixture, 'main')
+    expect(() => expect(explicitDefaultWindow?.hiddenTitle).toBe(true)).toThrow()
+  })
+
+  // Hiding the PAINTED title must not be confused with blanking the window's NAME.
+  // Blanking `title` was an option the user explicitly REJECTED; this test is the
+  // standing regression guard for that. Four consumers would silently lose the window's
+  // name if `title` were ever blanked instead of hidden: the macOS menu bar's Window
+  // menu, Mission Control (F3 / Ctrl-Up), Cmd-Tab / taskbar previews, and VoiceOver's
+  // window announcement -- all four read `NSWindow.title`, not the drawn text.
+  test('the main window\'s OS-level title is still exactly "GameLib"', () => {
+    const conf = loadTauriConf()
+    const mainWindow = findWindowByLabel(conf.app.windows, 'main')
+    expect(mainWindow).toBeDefined()
+    expect(mainWindow?.title).toBe('GameLib')
+  })
+
+  // SANITY (non-vacuity for the title=="GameLib" pin): the rejected "blank the title"
+  // implementation, and title dropped entirely, are both known-bad inputs.
+  test('SANITY: the same lookup-and-assert helper FAILS against fixtures with a blanked or missing title', () => {
+    // (i) the rejected "blank the title" implementation.
+    const blankedTitleFixture: TauriWindowConfig[] = [
+      { label: 'main', title: '', hiddenTitle: true }
+    ]
+    const blankedTitleWindow = findWindowByLabel(blankedTitleFixture, 'main')
+    expect(() => expect(blankedTitleWindow?.title).toBe('GameLib')).toThrow()
+
+    // (ii) title dropped entirely.
+    const missingTitleFixture: TauriWindowConfig[] = [
+      { label: 'main', hiddenTitle: true }
+    ]
+    const missingTitleWindow = findWindowByLabel(missingTitleFixture, 'main')
+    expect(() => expect(missingTitleWindow?.title).toBe('GameLib')).toThrow()
   })
 })
