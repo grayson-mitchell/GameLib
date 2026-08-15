@@ -380,8 +380,14 @@ describe('NavTabs stylesheet -- card/folder tab visuals (34.10-04 Task 2, D-04)'
     expect(knownBad).toMatch(HEX_COLOUR_PATTERN)
   })
 
-  it('keeps MUI-uppercased labels off -- text-transform: none is present', () => {
+  it('presents tab labels in all-caps via CSS -- text-transform: uppercase is present and the retired none override is gone', () => {
     const source = readStripped()
-    expect(source).toMatch(/text-transform:\s*none/)
+    expect(source).toMatch(/text-transform:\s*uppercase/)
+    expect(source).not.toMatch(TEXT_TRANSFORM_NONE_PATTERN)
+  })
+
+  it('SANITY: the text-transform none prohibition above fires against a known-bad input -- proves it is not vacuously true', () => {
+    const knownBad = '.MuiTab-root { text-transform: none; }'
+    expect(knownBad).toMatch(TEXT_TRANSFORM_NONE_PATTERN)
   })
 })

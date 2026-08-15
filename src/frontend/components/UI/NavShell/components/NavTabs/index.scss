@@ -191,9 +191,19 @@
     top: 1px;
     font-size: var(--text-md);
     font-weight: var(--regular);
-    // MUI uppercases tab labels by default, which would fight the
-    // translated strings' own casing (e.g. "Manage Accounts").
-    text-transform: none;
+    // Tier-1 tab labels are presented in all-caps (quick task 260815-lta).
+    // Deliberately a PRESENTATION decision in CSS, not content: baking caps
+    // into the English defaults or into public/locales/*/translation.json
+    // would force ASCII caps onto all 48 non-English catalogs and destroy the
+    // translators' own casing, whereas text-transform lets the engine apply
+    // each language's own uppercasing rules. It also keeps the shared,
+    // app-wide `stores` and `Settings` keys (the latter also consumed by
+    // SettingsModal/index.tsx) completely untouched -- changing THEIR values
+    // would have leaked well outside this tab strip. MUI's <Tab> happens to
+    // default to uppercase, but that default is NOT relied on: it is restated
+    // here so this file owns the decision and NavTabsComponent.test.tsx can
+    // assert it from source.
+    text-transform: uppercase;
     transition:
       color 0.12s ease,
       background-color 0.12s ease,
