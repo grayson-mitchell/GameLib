@@ -106,7 +106,7 @@ describe('FilterFacetRow', () => {
       (child) =>
         typeof child === 'object' &&
         child !== null &&
-        (child as AnyElement).props?.className === 'FilterFacetRow__count'
+        child.props?.className === 'FilterFacetRow__count'
     )
 
     expect(countElement).toBeUndefined()
@@ -125,13 +125,35 @@ describe('FilterFacetRow', () => {
       (child) =>
         typeof child === 'object' &&
         child !== null &&
-        (child as AnyElement).props?.className === 'FilterFacetRow__count'
+        child.props?.className === 'FilterFacetRow__count'
     ) as AnyElement
 
     expect(countElement).toBeDefined()
     expect(countElement.props.children).toBe(7)
   })
 })
+
+// A conditionally-rendered child leaves `false` in the fragment's children
+// array rather than removing the slot, so every assertion about WHICH
+// elements the header shows -- and in what order -- has to read the array
+// with falsy slots dropped. Reading raw indices instead would make the
+// "badge sits between the title and the caret" assertion pass or fail on
+// whether the conditional happens to be present, not on the ordering.
+function renderedTitleChildren(element: AnyElement): AnyElement[] {
+  const titleFragment = element.props.title as ReactElement<{
+    children: unknown[]
+  }>
+  return titleFragment.props.children.filter(Boolean) as AnyElement[]
+}
+
+function badgeOf(element: AnyElement): AnyElement | undefined {
+  return renderedTitleChildren(element).find(
+    (child) =>
+      typeof child === 'object' &&
+      child !== null &&
+      child.props?.className === 'FilterFacetGroup__badge'
+  )
+}
 
 describe('FilterFacetGroup', () => {
   it('renders a Dropdown whose className includes FilterFacetGroup and whose title contains the passed string', () => {
@@ -151,5 +173,74 @@ describe('FilterFacetGroup', () => {
     }>
 
     expect(titleSpan.props.children).toBe('Store')
+  })
+
+  it('selectedCount omitted renders the two-child header it renders today -- title span then caret, no badge', () => {
+    const element = FilterFacetGroup({
+      title: 'Store',
+      children: null
+    }) as AnyElement
+    const children = renderedTitleChildren(element)
+
+    expect(children).toHaveLength(2)
+    expect(children[0]?.props.className).toBe('FilterFacetGroup__title')
+    expect(children[1]?.props.className).toBe('FilterFacetGroup__caret')
+    expect(badgeOf(element)).toBeUndefined()
+  })
+
+  it('selectedCount={0} still renders NO badge -- a group with nothing selected is silent', () => {
+    const element = FilterFacetGroup({
+      title: 'Store',
+      children: null,
+      selectedCount: 0
+    }) as AnyElement
+
+    expect(renderedTitleChildren(element)).toHaveLength(2)
+    expect(badgeOf(element)).toBeUndefined()
+  })
+
+  it('selectedCount={3} renders a badge whose text child is the NUMBER 3, between the title and the caret', () => {
+    const element = FilterFacetGroup({
+      title: 'Store',
+      children: null,
+      selectedCount: 3
+    }) as AnyElement
+    const children = renderedTitleChildren(element)
+
+    expect(children).toHaveLength(3)
+    expect(children[0]?.props.className).toBe('FilterFacetGroup__title')
+    expect(children[1]?.props.className).toBe('FilterFacetGroup__badge')
+    expect(children[2]?.props.className).toBe('FilterFacetGroup__caret')
+    // The NUMBER, not the string -- `toBe` distinguishes them, and a
+    // stringified count would mean the caller had formatted it, which is
+    // where a locale-specific numeral would silently go missing.
+    expect(children[1]?.props.children).toBe(3)
+  })
+
+  it('selectedCountLabel supplies the badge accessible name via aria-label, title and role="img"', () => {
+    const element = FilterFacetGroup({
+      title: 'Store',
+      children: null,
+      selectedCount: 3,
+      selectedCountLabel: '3 selected'
+    }) as AnyElement
+    const badge = badgeOf(element)
+
+    expect(badge?.props['aria-label']).toBe('3 selected')
+    expect(badge?.props.title).toBe('3 selected')
+    expect(badge?.props.role).toBe('img')
+  })
+
+  it('selectedCountLabel omitted leaves aria-label and title undefined -- this file authors no copy of its own (C3)', () => {
+    const element = FilterFacetGroup({
+      title: 'Store',
+      children: null,
+      selectedCount: 3
+    }) as AnyElement
+    const badge = badgeOf(element)
+
+    expect(badge).toBeDefined()
+    expect(badge?.props['aria-label']).toBeUndefined()
+    expect(badge?.props.title).toBeUndefined()
   })
 })

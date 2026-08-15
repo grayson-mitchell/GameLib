@@ -109,6 +109,74 @@
     outline-offset: -2px;
   }
 
+  // 260815-opt. REQUIRED, not cosmetic: `.dropdownButton` above is
+  // `display: flex` with `justify-content: space-between`, which distributes
+  // free space BETWEEN children. With only two children (title, caret) that
+  // pins one to each end, which is the intent. Adding a third child (the
+  // selection badge) would otherwise put a gap between the badge and the
+  // caret as well, scattering three items across the row instead of leaving
+  // "STORE ......... 2 v". Making the title the single flexible child
+  // absorbs all the free space, so badge and caret sit together at the end.
+  //
+  // The truncation trio is the sibling `.FilterFacetRow__label` treatment
+  // verbatim: with `flex: 1 1 auto` the title can now be squeezed, and
+  // `min-width: 0` is what actually lets a flex item shrink below its
+  // content size (without it the item's automatic minimum size wins and the
+  // row overflows the 204px column rather than ellipsing). `text-align:
+  // start` because `.dropdownButton` is a `<button>`, whose UA default is
+  // centred text -- invisible while the title was the only sized child, and
+  // visible the moment it becomes a flexible one.
+  //
+  // Carries the `.FilterFacetGroup` ancestor for the same reason the
+  // `.FilterFacetRow` rules below do -- see the 260815-mk1 block. Three
+  // classes beats Dropdown's (0,2,1) on class count REGARDLESS of source
+  // order, which is the point: the two stylesheets are imported by different
+  // components, so nothing here controls which one is emitted first.
+  // Verified against the COMPILED output by
+  // `__tests__/facetGroupBadgeStyles.test.ts`, not assumed.
+  .FilterFacetGroup .FilterFacetGroup__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: start;
+  }
+
+  // The collapsed group's "this group is filtering something" indicator: a
+  // count, matching the panel's established numeric idiom
+  // (`.FilterFacetRow__count` below, sketch 004's `.item .ct`) rather than a
+  // dot, which would be a second and weaker vocabulary in the same 204px
+  // column and could not answer "how many".
+  //
+  // Coloured TEXT, deliberately NOT a filled pill. A filled accent pill
+  // needs a legible foreground ON the accent fill, i.e. a NEW
+  // foreground/background contrast pair to validate across all 11 themes --
+  // the exact defect class CR-03 (see this file's header comment) already
+  // produced here once, when the checked-checkbox fill silently stopped
+  // painting in 7 of 11 themes. Bold accent-coloured text on the panel
+  // background instead reuses `.FilterFacetRow--checked`'s already-shipped,
+  // already-live-swept `color: var(--filter-active-color)` relationship
+  // verbatim, so it introduces zero new contrast pairs.
+  //
+  // `--filter-active-color` is the file-local chain declared at the top of
+  // this block -- REUSED, not redeclared, and no new bare `--navbar-active`
+  // consumer is introduced, which is what keeps `themeTokens.test.ts`'s
+  // census gate green.
+  //
+  // `tabular-nums` matches `.FilterFacetRow__count` and stops the badge
+  // jittering as the number changes; `flex: 0 0 auto` keeps it from being
+  // the child that absorbs free space (the title is).
+  .FilterFacetGroup .FilterFacetGroup__badge {
+    flex: 0 0 auto;
+    margin-inline-end: var(--space-2xs);
+    font-size: var(--text-xs);
+    font-weight: var(--bold);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: var(--filter-active-color);
+  }
+
   .FilterFacetGroup__caret {
     transition: transform 0.12s ease;
   }
