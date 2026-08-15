@@ -117,3 +117,51 @@ export function resolveSteamBottleSeedEngine(
   }
   return resolveSteamBottleEngine(configuredWine, wineVersionList)
 }
+
+/**
+ * 34.13 review C-03 — the SUBMISSION boundary for the guided Steam-bottle
+ * wizard. Returns the armed engine only when it is one the bottle machinery
+ * can actually use; otherwise `undefined`, which `provisionBottle` already
+ * treats as "derive a sane engine yourself".
+ *
+ * WHY THIS EXISTS. The seed above can legitimately arm a NON-CrossOver
+ * engine by two routes, neither of them a user choice:
+ *
+ *  1. `resolveSteamBottleEngine`'s documented Phase-17 fallback returns
+ *     `configuredWine` — the user's GLOBAL engine — when the detected list
+ *     holds no CrossOver install. On a macOS host with Game Porting Toolkit
+ *     set globally that is GPTK's 64-bit-only `wine64`.
+ *  2. `isUsablePersistedEngine` deliberately accepts `type: 'toolkit'`
+ *     (D-15: a persisted value may be a real `checkWineBeforeLaunch`
+ *     correction, and discarding it is worse than honouring it).
+ *
+ * Before D-16 that engine was at least VISIBLE and changeable in the
+ * dropdown. D-16's CrossOver-only filter empties `engineOptions`, so the
+ * `SelectField` is disabled and its value matches no `MenuItem` — the armed
+ * engine became invisible, unselectable, and still submitted, to a
+ * provisioner hardcoded to CrossOver's `cxbottle`.
+ *
+ * The codebase already holds the verdict on whether that input is
+ * acceptable: `provisionBridgeBottle` rejects a non-CrossOver engine
+ * outright as "a broken bottle" (`bottle.ts`, D-08/T-24-09). This is the
+ * same rule applied to the sibling provisioner from the only side of the
+ * seam this fix could reach.
+ *
+ * Deliberately NOT implemented by narrowing `resolveSteamBottleEngine` or
+ * `isUsablePersistedEngine`: both encode locked, separately-justified
+ * decisions (Phase 17's fallback, D-15's verbatim precedence). Filtering at
+ * SUBMIT keeps the wizard's displayed state honest with what it sends
+ * without reopening either.
+ *
+ * KNOWN REMAINING GAP, recorded rather than silently left: `provisionBottle`
+ * step 6 re-reads `getSteamBottleSettings().wineVersion`, which falls back
+ * to the global engine when the store is empty — so a GPTK host can still
+ * reach `cxbottle` from the BACKEND side. Closing that needs the
+ * `provisionBottle` mirror of the `provisionBridgeBottle` guard, in
+ * `bottle.ts`, which this pass could not edit.
+ */
+export function resolveSubmittedBottleEngine(
+  armedWineVersion: WineInstallation | undefined
+): WineInstallation | undefined {
+  return armedWineVersion?.type === 'crossover' ? armedWineVersion : undefined
+}

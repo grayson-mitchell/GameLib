@@ -142,6 +142,23 @@ describe('C-02: a rejected steamBottleProvision reaches a terminal phase', () =>
   })
 })
 
+describe('C-03: the wizard never submits an engine its own D-16 filter rejects', () => {
+  const handleConfirm = sliceHandleConfirm(stripped)
+
+  it('the provision payload routes wineVersion through resolveSubmittedBottleEngine', () => {
+    expect(handleConfirm).toMatch(
+      /wineVersion:\s*resolveSubmittedBottleEngine\(wineVersion\)/
+    )
+  })
+
+  it('the bare state variable is NOT handed to steamBottleProvision', () => {
+    // The pre-fix shape was the shorthand property `wineVersion` on its own
+    // line inside the payload literal. `wineVersion,` / `wineVersion }` are
+    // the two ways that shorthand can appear; neither may survive.
+    expect(handleConfirm).not.toMatch(/wineVersion\s*[,}]/)
+  })
+})
+
 describe('SteamBottleSetup.tsx seeding wiring (D-15 read half, 34.13-09)', () => {
   it('D-15: the seeding effect calls resolveSteamBottleSeedEngine', () => {
     expect(stripped).toMatch(/resolveSteamBottleSeedEngine\(/)

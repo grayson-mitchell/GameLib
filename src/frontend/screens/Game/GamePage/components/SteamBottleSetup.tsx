@@ -12,7 +12,8 @@ import WineSelector from 'frontend/screens/Library/components/InstallModal/WineS
 import { useAwaited } from 'frontend/hooks/useAwaited'
 import {
   DEFAULT_STEAM_BOTTLE_NAME,
-  resolveSteamBottleSeedEngine
+  resolveSteamBottleSeedEngine,
+  resolveSubmittedBottleEngine
 } from './steamBottleDefaults'
 import './SteamBottleSetup.scss'
 
@@ -222,9 +223,17 @@ const SteamBottleSetup = () => {
     setPhase('provisioning')
     setProvisionError(undefined)
     try {
+      // 34.13 review C-03: never forward an engine the dialog's OWN D-16
+      // filter refuses to offer. A GPTK/plain-Wine engine can be armed here
+      // without any user choice (the Phase-17 global fallback, or a
+      // persisted correction), and since D-16 emptied `engineOptions` it is
+      // invisible and unselectable while still being submitted to a
+      // `cxbottle`-only provisioner. `undefined` makes `provisionBottle`
+      // derive its own engine, which is what the "GameLib will set one up
+      // when the install starts" notice already promises the user.
       const result = await window.api.steamBottleProvision({
         bottleName: crossoverBottle || undefined,
-        wineVersion
+        wineVersion: resolveSubmittedBottleEngine(wineVersion)
       })
       if (result.status === 'error') {
         setProvisionError(result.error)
