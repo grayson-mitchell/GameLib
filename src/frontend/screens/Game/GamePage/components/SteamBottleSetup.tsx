@@ -21,6 +21,13 @@ type Phase = 'consent' | 'provisioning' | 'error'
 
 const STATUS_POLL_INTERVAL_MS = 3000
 
+// 34.13 review C-20: ~10 minutes at STATUS_POLL_INTERVAL_MS. Generous enough
+// for a genuinely slow first-run Steam install on a cold CrossOver bottle, but
+// finite — a permanently-erroring `steamBottleStatus` channel must terminate
+// into the `error` phase (the only phase carrying a "Try again" button)
+// instead of looping with a "this can take a while" banner forever.
+const MAX_STATUS_POLL_ATTEMPTS = 200
+
 // Phase 17 (17-06), D-07/D-09: guided consent + engine-choice + login-prompt
 // surface, opened exclusively by the global SteamBottleSetup store (which is
 // itself only ever opened by the backend `steamBottleSetupRequired` signal —
@@ -56,6 +63,10 @@ const SteamBottleSetup = () => {
   const [persistedLookupSettled, setPersistedLookupSettled] = useState(false)
 
   const pollRef = useRef<ReturnType<typeof setInterval>>()
+  // C-20: attempt counter for the status poll's terminal bound. A ref, not
+  // state — incrementing it must not re-render (and must not restart the
+  // interval by changing the effect's dependency array).
+  const attemptsRef = useRef(0)
 
   const globalConfig = useAwaited(() => window.api.requestAppSettings())
 
@@ -226,6 +237,17 @@ const SteamBottleSetup = () => {
   // turns true, which never happens if the user cancelled the Steam
   // installer or the channel is erroring (the WR-03 `.catch` deliberately
   // keeps polling in that case).
+  //
+  // 34.13 review C-20: the C-05 fix scoped the poll's LIFETIME; it did not
+  // BOUND it, despite `ff5ac9e8a`'s subject saying "bound". With the surface
+  // open in `phase === 'provisioning'`, a `steamBottleStatus` channel that
+  // rejects on every call polled forever: the banner read "Setting up Steam —
+  // this can take a while on first run." indefinitely with no error, no "Try
+  // again" (that button exists only in the `error` phase) and no way to tell
+  // "slow" from "dead channel". The only terminal state reachable from
+  // `provisioning` was `provisioned === true`. MAX_STATUS_POLL_ATTEMPTS now
+  // terminates into the `error` phase, which is the one phase that offers a
+  // retry.
   useEffect(() => {
     if (!isOpen || phase !== 'provisioning') {
       if (pollRef.current) {
@@ -235,13 +257,33 @@ const SteamBottleSetup = () => {
       return
     }
 
+    attemptsRef.current = 0
+
     const poll = () => {
+      attemptsRef.current += 1
+      if (attemptsRef.current > MAX_STATUS_POLL_ATTEMPTS) {
+        if (pollRef.current) {
+          clearInterval(pollRef.current)
+          pollRef.current = undefined
+        }
+        setProvisionError(
+          t(
+            'gamelib:steam.bottle.statusPollTimeout',
+            'GameLib stopped hearing back about the Steam bottle setup. It may still be running — check for a Steam installer window, then try again.'
+          )
+        )
+        setPhase('error')
+        return
+      }
       void window.api
         .steamBottleStatus()
         .then((status) => {
           if (status.provisioned) {
             setProvisioned(true)
-            if (pollRef.current) clearInterval(pollRef.current)
+            if (pollRef.current) {
+              clearInterval(pollRef.current)
+              pollRef.current = undefined
+            }
           }
         })
         .catch(() => {
@@ -252,7 +294,9 @@ const SteamBottleSetup = () => {
           // provisioning phase. A rejected status READ is not proof the
           // provisioning failed, so keep polling (the interval is still
           // armed) and let the next tick answer -- but never leave the
-          // rejection unhandled.
+          // rejection unhandled. C-20 supplies the terminal the WR-03
+          // decision deliberately withholds from any single tick: the
+          // attempt bound above.
         })
     }
     poll()
@@ -264,7 +308,11 @@ const SteamBottleSetup = () => {
         pollRef.current = undefined
       }
     }
-  }, [isOpen, phase])
+    // `t` is included because C-20's terminal branch reads the catalog.
+    // react-i18next memoises `t` per namespace, so its identity changes only
+    // on a language switch — which legitimately should restart the poll (and
+    // its attempt counter) rather than leave a stale-language error queued.
+  }, [isOpen, phase, t])
 
   if (!isOpen) {
     return null
@@ -314,6 +362,14 @@ const SteamBottleSetup = () => {
   }
 
   const handleDone = () => {
+    // 34.13 review C-20 (second half): the session effect that resets `phase`
+    // begins `if (!isOpen) return`, so it resets on OPEN and never on close.
+    // Without this, dismissing the banner left `phase === 'provisioning'`
+    // describing an operation nobody is observing any more — the invariant
+    // "`phase` reflects a live operation" was false between sessions. Benign
+    // today only because `isOpen` gates every consumer; reset it explicitly
+    // rather than relying on that.
+    setPhase('consent')
     close()
   }
 

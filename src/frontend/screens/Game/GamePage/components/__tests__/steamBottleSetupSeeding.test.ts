@@ -163,12 +163,23 @@ function slicePollEffect(source: string): string {
 describe('C-05: the provisioning poll cannot outlive the surface', () => {
   const pollEffect = slicePollEffect(stripped)
 
+  /** The poll effect's dependency identifiers. Asserted as a SUPERSET rather
+   * than an exact list: C-20 legitimately added `t` (the terminal branch reads
+   * the catalog), and an exact-list gate would have failed for a reason that
+   * has nothing to do with the property C-05 measures. What must never
+   * regress is that `isOpen` is present. */
+  const pollDeps = /\}, \[([^\]]*)\]$/
+    .exec(pollEffect)![1]
+    .split(',')
+    .map((d) => d.trim())
+    .filter(Boolean)
+
   it('the poll effect is keyed on isOpen as well as phase', () => {
     // The component never unmounts (App.tsx mounts it permanently and
     // `isOpen: false` only returns null), and `phase` resets on OPEN, never
     // on close -- so `[phase]` alone left the 3s interval armed for the rest
     // of the app's life after the user clicked "Done".
-    expect(pollEffect).toMatch(/\}, \[\s*isOpen,\s*phase\s*\]/)
+    expect(pollDeps).toEqual(expect.arrayContaining(['isOpen', 'phase']))
   })
 
   it('the poll effect early-returns when the surface is closed', () => {
@@ -182,13 +193,82 @@ describe('C-05: the provisioning poll cannot outlive the surface', () => {
           "if (!isOpen || phase !== 'provisioning')",
           "if (phase !== 'provisioning')"
         )
-        .replace('}, [isOpen, phase])', '}, [phase])')
+        .replace(/\}, \[isOpen, phase(, t)?\]\)/, '}, [phase])')
     )
     expect(knownBad).not.toBe(pollEffect)
-    expect(knownBad).not.toMatch(/\}, \[\s*isOpen,\s*phase\s*\]/)
+    expect(
+      /\}, \[([^\]]*)\]$/
+        .exec(knownBad)![1]
+        .split(',')
+        .map((d) => d.trim())
+    ).not.toContain('isOpen')
     expect(knownBad).not.toMatch(
       /if \(\s*!isOpen \|\| phase !== 'provisioning'/
     )
+  })
+})
+
+describe('C-20: the provisioning poll has a TERMINAL bound, and phase is reset on close', () => {
+  const pollEffect = slicePollEffect(stripped)
+
+  it('the poll effect carries an attempt limit', () => {
+    // `ff5ac9e8a`'s subject said "bound the provisioning poll"; the diff
+    // contained no attempt/limit term of any kind. This is the gate that
+    // makes the subject true.
+    expect(pollEffect).toContain('MAX_STATUS_POLL_ATTEMPTS')
+    expect(pollEffect).toMatch(/attemptsRef\.current \+= 1/)
+    expect(pollEffect).toMatch(/attemptsRef\.current = 0/)
+  })
+
+  it('the limit is a real finite number, not a placeholder', () => {
+    const declared = stripped.match(
+      /const MAX_STATUS_POLL_ATTEMPTS = (\d+)/
+    )?.[1]
+    expect(declared).toBeDefined()
+    expect(Number(declared)).toBeGreaterThan(0)
+    expect(Number.isFinite(Number(declared))).toBe(true)
+  })
+
+  it('exceeding the limit reaches the ERROR phase — the only phase that offers a retry', () => {
+    const limitIdx = pollEffect.indexOf('> MAX_STATUS_POLL_ATTEMPTS')
+    expect(limitIdx).toBeGreaterThan(-1)
+    // Bounded slice: the terminal must be inside the limit branch, not merely
+    // somewhere in the effect (the `.catch` deliberately does NOT terminate).
+    const limitBranch = pollEffect.slice(limitIdx, limitIdx + 400)
+    expect(limitBranch).toContain("setPhase('error')")
+    expect(limitBranch).toContain('setProvisionError(')
+  })
+
+  it('the terminal message is a catalog lookup, never a bare literal', () => {
+    const limitIdx = pollEffect.indexOf('> MAX_STATUS_POLL_ATTEMPTS')
+    expect(pollEffect.slice(limitIdx, limitIdx + 400)).toContain(
+      "t( 'gamelib:steam.bottle.statusPollTimeout'"
+    )
+  })
+
+  it('handleDone resets phase before closing — phase must never describe an unobserved operation', () => {
+    const flattened = stripped.replace(/\s+/g, ' ')
+    const start = flattened.indexOf('const handleDone = () => {')
+    expect(start).toBeGreaterThan(-1)
+    const body = flattened.slice(start, flattened.indexOf('}', start) + 1)
+    expect(body).toContain("setPhase('consent')")
+    expect(body.indexOf("setPhase('consent')")).toBeLessThan(
+      body.indexOf('close()')
+    )
+  })
+
+  it('RED: a copy DERIVED FROM THE REAL SOURCE with the bound removed fails every obligation above', () => {
+    const boundStart = pollEffect.indexOf('attemptsRef.current += 1')
+    const boundEnd = pollEffect.indexOf('void window.api', boundStart)
+    expect(boundStart).toBeGreaterThan(-1)
+    expect(boundEnd).toBeGreaterThan(boundStart)
+    const knownBad = (
+      pollEffect.slice(0, boundStart) + pollEffect.slice(boundEnd)
+    ).replace('attemptsRef.current = 0', '')
+    expect(knownBad).not.toBe(pollEffect)
+    expect(knownBad).not.toContain('MAX_STATUS_POLL_ATTEMPTS')
+    expect(knownBad).not.toMatch(/attemptsRef\.current \+= 1/)
+    expect(knownBad.indexOf('> MAX_STATUS_POLL_ATTEMPTS')).toBe(-1)
   })
 })
 

@@ -94,6 +94,9 @@
         "checkingSteamInstallOptions": "Checking install options…"
     },
     "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib stopped hearing back about the Steam bottle setup. It may still be running — check for a Steam installer window, then try again."
+        },
         "install": {
             "bottleNameReadonlyHelper": "GameLib manages one shared CrossOver bottle for Steam. Naming a separate bottle per game isn't supported yet.",
             "contentLightNotice": "This installs through Steam's own client, so there's nothing to choose here. Turn on native Steam installs in Settings to manage install location and Windows compatibility from GameLib.",
