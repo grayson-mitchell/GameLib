@@ -2811,6 +2811,93 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
 
     assertExactlyOneRoute('native-protocol', terminals)
   })
+
+  // ── Override-PRESENT positive routing ────────────────────────────────────
+
+  it('F1: the headline D-17 behavior — mac-native + proven Windows depot + override → bottle dispatch', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true,
+      is_windows_native: true
+    })
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const terminals = spyOnAllTerminals(game)
+    await game.install(argsWith({ steamForceWindowsViaBottle: true }))
+
+    // Contrast with B1 above — the identical fixture minus the override,
+    // which routes 'native-protocol'. F1 and B1 differ in exactly one key:
+    // proof the override is the operative input, not the fixture shape.
+    assertExactlyOneRoute('bottle-dispatch', terminals)
+    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+      source: 'bottle'
+    })
+  })
+
+  it('F2: D-15 preserved on the forced path — un-provisioned bottle still defers to guided setup', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true,
+      is_windows_native: true
+    })
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(isBottleReady as jest.Mock).mockReturnValue(false)
+
+    const game = new SteamGame(APP_ID)
+    const terminals = spyOnAllTerminals(game)
+    const result = await game.install(
+      argsWith({ steamForceWindowsViaBottle: true })
+    )
+
+    assertExactlyOneRoute('deferred-to-setup', terminals)
+    expect(result).toEqual({ status: 'done', deferredToSetup: true })
+  })
+
+  it('F3: native install opt-in ON — a forced game depot-downloads into the BOTTLE, not the host', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true,
+      is_windows_native: true
+    })
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+
+    const game = new SteamGame(APP_ID)
+    const terminals = spyOnAllTerminals(game)
+    await game.install(argsWith({ steamForceWindowsViaBottle: true }))
+
+    assertExactlyOneRoute('bottle-native', terminals)
+  })
+
+  it('F8: additive, never subtractive — an ALREADY bottle-eligible game with the override set is unchanged from B3', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const terminals = spyOnAllTerminals(game)
+    await game.install(argsWith({ steamForceWindowsViaBottle: true }))
+
+    // The override is an OR; it can never remove a game from the bottle
+    // path — this is byte-identical to B3's outcome.
+    assertExactlyOneRoute('bottle-dispatch', terminals)
+  })
 })
 
 // ── Phase 17 Plan 09 (MACSTEAM-04 gap closure): ensurePlatformsCaptured() ────

@@ -681,6 +681,26 @@ export default class SteamGame implements Game {
    *
    * Phase 17 (D-10/D-11): a confirmed-not-native macOS game routes through the
    * bottled Steam client instead of native steam:// — see isBottleEligible().
+   *
+   * D-17 (34.13-06): an explicit install-time override
+   * (args.steamForceWindowsViaBottle) can additionally route a CONFIRMED
+   * mac-native game into that same bottled path. Read ONLY from this
+   * explicit InstallArgs field — never from platformToInstall, which
+   * installSteamGame() hardcodes to 'Windows' for EVERY Steam install and
+   * which this backend reads nowhere else; keying on it would flip every
+   * mac-native install into the bottle. Triple-gated at the top of the
+   * method body: the field is `=== true`, the host isMac (D-18 — GameLib
+   * owns no Windows-compat path for Steam on Linux/Windows), and the
+   * persisted steamMetadataStore is_windows_native verdict is `=== true`.
+   * false/undefined on any gate fails closed to today's routing. It is a
+   * boolean OR at the branch head — it can only turn a false
+   * isBottleEligible() verdict true, never remove an already-eligible game
+   * from the bottle path, and it deliberately does NOT extend
+   * isBridgeEligible() (a forced install never enters the Phase 24 bridge).
+   * ⚠ Unplanned lifecycle divergence (T-34.13-06-06): the override is
+   * install-time only and is not persisted, so getSettings()/isNative()/
+   * launch()/uninstall() remain unaware of a forced install after this call
+   * returns — see 34.13-06-SUMMARY.md's handoffs for the full escalation.
    */
   async install(args: InstallArgs): Promise<InstallResult> {
     // steam-startup-resume-crash (2026-07-18) / D-04 softened: a
@@ -705,7 +725,34 @@ export default class SteamGame implements Game {
     }
 
     await this.ensurePlatformsCaptured()
-    if (this.isBottleEligible()) {
+
+    // D-17 (34.13-06): whether the renderer explicitly requested the
+    // Windows-via-bottle override. The ONLY line in this method that reads
+    // args.steamForceWindowsViaBottle — see the method's own JSDoc above for
+    // why platformToInstall is never read instead.
+    const overrideRequested = args.steamForceWindowsViaBottle === true
+
+    // Triple-gated: overrideRequested AND isMac (host containment, D-18)
+    // AND the persisted Windows-depot verdict proven true. Any gate failing
+    // fails closed — routing stays byte-identical to today's.
+    const forceWindowsViaBottle =
+      overrideRequested &&
+      isMac &&
+      steamMetadataStore.get(this.appId)?.is_windows_native === true
+
+    // A silently-dropped user choice is a recurring defect class in this
+    // repo — log why a requested-but-rejected override fell through instead
+    // of failing silently.
+    if (overrideRequested && !forceWindowsViaBottle) {
+      logWarning(
+        `SteamGame: appId ${this.appId} requested a Windows-via-bottle install override but it was rejected (isMac=${isMac}) — falling through to legacy routing`,
+        LogPrefix.Steam
+      )
+    }
+
+    const routeThroughBottle = forceWindowsViaBottle || this.isBottleEligible()
+
+    if (routeThroughBottle) {
       // Phase 24 Plan 08 (R4/D-01): allowlisted-title bridge routing — the
       // FIRST check inside this block, BEFORE the Phase 17 isBottleReady()
       // gate below, because the bridge bottle has its own dedicated
