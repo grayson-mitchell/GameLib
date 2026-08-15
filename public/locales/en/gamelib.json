@@ -100,6 +100,8 @@
             "forceWindowsHelp": "This game has a native macOS version, but you can install the Windows version instead through a Wine bottle — useful if the native build is missing features or performs worse.",
             "libraryFullNotice": "Not enough space in your Steam library — choose another below or free up space.",
             "libraryMissingNotice": "Your Steam library couldn't be reached — choose another below.",
+            "libraryPickerLabel": "Choose Steam library",
+            "libraryPrimarySuffix": "default",
             "sharedBottleNotice": "The wine version you choose here is used for every Steam game that needs a bottle — not just this one. Changing it later will change how those games run too.",
             "withOptionsLabel": "Install with options…"
         }

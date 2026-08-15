@@ -251,7 +251,10 @@ export default function SteamDialog({
         {gating.libraryDropdown && (
           <SelectField
             htmlId="steamLibraryPick"
-            label={`${t('install.steam-location.title', 'Choose Steam library')}:`}
+            label={`${tGamelib(
+              'gamelib:steam.install.libraryPickerLabel',
+              'Choose Steam library'
+            )}:`}
             value={selectedPath}
             onChange={(e) => setSelectedPath(e.target.value)}
             afterSelect={
@@ -269,7 +272,10 @@ export default function SteamDialog({
             {steamLibraries.map((lib) => (
               <MenuItem key={lib.path} value={lib.path}>
                 {lib.isPrimary
-                  ? `${lib.path} (${t('install.steam-location.primary', 'default')})`
+                  ? `${lib.path} (${tGamelib(
+                      'gamelib:steam.install.libraryPrimarySuffix',
+                      'default'
+                    )})`
                   : lib.path}
               </MenuItem>
             ))}
