@@ -1386,7 +1386,7 @@ Plans: **14 plans, 8 waves** *(re-planned 2026-08-15 for D-21..D-29. `34.13-04` 
 **Needs a UAT gate** — this is a functional gap in 34.13's headline feature, not a review nit. The cold-cache window is not reproducible on demand from a warm library, so the gate must specify how to force an uncaptured state.
 
 Plans:
-- [ ] 34.14-01-PLAN.md — Wave 1. Widen `SteamBottleEligibilityVerdict` with two required booleans and populate them in the ONE shared IPC handler body (D-02/D-03).
+- [x] 34.14-01-PLAN.md — Wave 1. Widen `SteamBottleEligibilityVerdict` with two required booleans and populate them in the ONE shared IPC handler body (D-02/D-03). DONE 2026-08-16 (34.14-01-SUMMARY.md).
 - [ ] 34.14-02-PLAN.md — Wave 1. The pure gating fix: `'pending'` row mode, the D-03 read-order seam, `resolveDepotAvailability` (D-04 fail-open + D-05 seed/resolve), matrix expanded 96/8 rows → 144/10 with a Row 9/10 RED proof against unmodified HEAD.
 - [ ] 34.14-03-PLAN.md — Wave 2. Carry the depot pair through `EligibilityState`/`useSteamBottleEligibility`; correct the first stale "genuinely synchronous" doc-comment.
 - [ ] 34.14-04-PLAN.md — Wave 3. Wire the composition root; correct the second stale doc-comment; lock the wiring with a new source gate and three source-derived known-bads.
