@@ -59,9 +59,18 @@ const SteamClientSetup = () => {
     setError(undefined)
     gameInfoRef.current = null
     setPhase(reason === 'launch-once' ? 'waiting' : 'consent')
-    void window.api.getGameInfo(appName, 'steam').then((info) => {
-      gameInfoRef.current = info
-    })
+    void window.api
+      .getGameInfo(appName, 'steam')
+      .then((info) => {
+        gameInfoRef.current = info
+      })
+      .catch(() => {
+        // 34.13 review C-19, sibling instance: same bare-`void` shape as the
+        // poll. A rejected lookup leaves gameInfoRef null, which the 'ready'
+        // branch already treats as "nothing to retry" — so degrade silently
+        // rather than leaving the rejection unhandled.
+        gameInfoRef.current = null
+      })
   }, [isOpen, appName, reason])
 
   // Poll for readiness while the banner ('waiting') is open — covers BOTH
@@ -91,8 +100,10 @@ const SteamClientSetup = () => {
     }
 
     const poll = () => {
-      void window.api.steamClientSetupRecheck(appName).then((result) => {
-        if (result.status === 'ready') {
+      void window.api
+        .steamClientSetupRecheck(appName)
+        .then((result) => {
+          if (result.status !== 'ready') return
           if (pollRef.current) {
             clearInterval(pollRef.current)
             pollRef.current = undefined
@@ -106,8 +117,18 @@ const SteamClientSetup = () => {
             )
           }
           close()
-        }
-      })
+        })
+        .catch(() => {
+          // 34.13 review C-19(b), the WR-03 remedy carried across from
+          // SteamBottleSetup.tsx: a bare `void` silences no-floating-promises
+          // while attaching NO rejection handler. Under the Tauri sidecar an
+          // unported/erroring channel rejects, which produced an unhandled
+          // rejection every RECHECK_POLL_INTERVAL_MS. NOTE the deliberate
+          // asymmetry with handleConfirm below: a rejected readiness READ is
+          // merely an UNKNOWN verdict, so keep polling (the interval stays
+          // armed) and let the next tick answer — a rejected START is a FAILED
+          // start and is terminal.
+        })
     }
     poll()
     pollRef.current = setInterval(poll, RECHECK_POLL_INTERVAL_MS)
@@ -128,13 +149,26 @@ const SteamClientSetup = () => {
 
   const handleConfirm = async () => {
     setError(undefined)
-    const result = await window.api.steamClientSetupStart()
-    if (result.status === 'error') {
-      setError(result.error)
+    try {
+      const result = await window.api.steamClientSetupStart()
+      if (result.status === 'error') {
+        setError(result.error)
+        setPhase('error')
+        return
+      }
+      setPhase('waiting')
+    } catch (e) {
+      // 34.13 review C-19(a), the C-02 remedy carried across from
+      // SteamBottleSetup.tsx: `steamClientSetupStart` is a makeHandlerInvoker
+      // channel — `ipcRenderer.invoke` under Electron, the sidecar transport
+      // under Tauri — and BOTH reject on a backend throw, a dead sidecar or a
+      // transport timeout. Unhandled, that produced an unhandled rejection AND
+      // a silent dead click: `phase` stayed 'consent', no error surfaced, and
+      // the "Install Steam" button just did nothing. A rejected START is a
+      // FAILED start, so it is terminal (contrast the poll's `.catch` above).
+      setError(e instanceof Error ? e.message : String(e))
       setPhase('error')
-      return
     }
-    setPhase('waiting')
   }
 
   if (phase === 'consent') {

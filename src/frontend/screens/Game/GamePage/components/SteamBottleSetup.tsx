@@ -96,11 +96,22 @@ const SteamBottleSetup = () => {
   useEffect(() => {
     if (!isOpen) return
     let cancelled = false
-    void window.api.getAlternativeWine().then((list: WineInstallation[]) => {
-      if (cancelled) return
-      setWineVersionList(list)
-      setEnginesFetched(true)
-    })
+    void window.api
+      .getAlternativeWine()
+      .then((list: WineInstallation[]) => {
+        if (cancelled) return
+        setWineVersionList(list)
+        setEnginesFetched(true)
+      })
+      .catch(() => {
+        // 34.13 review C-19, sibling instance: the same bare-`void` shape the
+        // poll carried. A rejected engine list must still SETTLE, otherwise
+        // the seeding effect's `!enginesFetched` guard wedges the wizard
+        // forever (the C-18 failure mode, reached by a different route).
+        if (cancelled) return
+        setWineVersionList([])
+        setEnginesFetched(true)
+      })
     return () => {
       cancelled = true
     }

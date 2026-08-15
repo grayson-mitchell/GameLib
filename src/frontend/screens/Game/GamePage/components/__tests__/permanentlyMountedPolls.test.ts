@@ -144,9 +144,90 @@ export function depsOf(effect: string): string {
   return match[1]
 }
 
+/**
+ * 34.13 review C-19. Slices every `void window.api…` promise chain out of a
+ * flattened source by balanced-paren scan, following `.then(…)/.catch(…)`
+ * continuations, so each chain is measured whole. A bare `void` silences
+ * `no-floating-promises` while attaching NO rejection handler — under the
+ * Tauri sidecar an unported or erroring channel REJECTS, so every one of these
+ * is an unhandled rejection waiting on a transport this repo has ledgered as
+ * failing repeatedly.
+ */
+export interface VoidApiChain {
+  /** The whole chain text, for RED derivations. */
+  text: string
+  /**
+   * The TOP-LEVEL continuation names only (`then`, `catch`, …). Crucial: a
+   * `.catch(` nested inside a `.then(` callback belongs to a DIFFERENT promise
+   * (in SteamClientSetup that is `installSteamGame(...).catch(...)`), and a
+   * naive `text.includes('.catch(')` is satisfied by it — which would have let
+   * the real C-19 poll defect pass. Only depth-0 continuations count.
+   */
+  continuations: string[]
+}
+
+export function sliceVoidApiChains(source: string): VoidApiChain[] {
+  const flattened = source.replace(/\s+/g, ' ')
+  const marker = 'void window.api'
+  const chains: VoidApiChain[] = []
+  let idx = flattened.indexOf(marker)
+  while (idx !== -1) {
+    let i = idx + marker.length
+    let depth = 0
+    const continuations: string[] = []
+    for (; i < flattened.length; i++) {
+      const ch = flattened[i]
+      if (ch === '(') depth++
+      else if (ch === ')') {
+        depth--
+        if (depth === 0) {
+          let j = i + 1
+          while (flattened[j] === ' ') j++
+          if (flattened[j] === '.') {
+            const name = /^\.(\w+)/.exec(flattened.slice(j))?.[1]
+            if (name) continuations.push(name)
+            i = j
+            continue
+          }
+          break
+        }
+      }
+    }
+    chains.push({ text: flattened.slice(idx, i + 1), continuations })
+    idx = flattened.indexOf(marker, i)
+  }
+  return chains
+}
+
+/**
+ * 34.13 review C-19(a). Slices an `async` arrow handler's body by
+ * balanced-brace scan so the try/catch obligation is measured against THAT
+ * handler and not the file's other, correctly-guarded code.
+ */
+export function sliceAsyncHandler(source: string, name: string): string | null {
+  const flattened = source.replace(/\s+/g, ' ')
+  const start = flattened.indexOf(`const ${name} = async () => {`)
+  if (start === -1) return null
+  let depth = 0
+  for (let i = flattened.indexOf('{', start); i < flattened.length; i++) {
+    if (flattened[i] === '{') depth++
+    else if (flattened[i] === '}') {
+      depth--
+      if (depth === 0) return flattened.slice(start, i + 1)
+    }
+  }
+  return null
+}
+
 const census = censusPermanentlyMountedComponents()
 const pollingSurfaces = census.filter((c) =>
   c.stripped.includes('setInterval(')
+)
+const apiChainSurfaces = census.filter(
+  (c) => sliceVoidApiChains(c.stripped).length > 0
+)
+const asyncConfirmSurfaces = census.filter(
+  (c) => sliceAsyncHandler(c.stripped, 'handleConfirm') !== null
 )
 
 describe('C-17: permanently-mounted surfaces cannot outlive their own dismissal', () => {
@@ -217,3 +298,105 @@ describe('C-17: permanently-mounted surfaces cannot outlive their own dismissal'
     }
   )
 })
+
+describe('C-19: no permanently-mounted surface floats an unhandled IPC rejection', () => {
+  it('the chain census is non-vacuous', () => {
+    // Both Steam setup surfaces use the `void window.api…` idiom; if this
+    // drops to zero the obligations below are enrolled against nothing.
+    expect(apiChainSurfaces.map((c) => c.name).sort()).toEqual([
+      'SteamBottleSetup',
+      'SteamClientSetup'
+    ])
+    expect(
+      apiChainSurfaces.flatMap((c) => sliceVoidApiChains(c.stripped)).length
+    ).toBe(5)
+  })
+
+  describe.each(apiChainSurfaces.map((c) => [c.name, c] as const))(
+    '%s',
+    (name, component) => {
+      const chains = sliceVoidApiChains(component.stripped)
+
+      it.each(chains.map((chain, i) => [i, chain] as const))(
+        'void window.api chain #%i attaches a TOP-LEVEL rejection handler',
+        (_i, chain) => {
+          expect(chain.continuations).toContain('catch')
+        }
+      )
+
+      it(`RED: deleting the top-level .catch handlers from ${name} DERIVED FROM THE REAL SOURCE breaks the obligation`, () => {
+        // Derives the known-bad by balanced-scan removal of every top-level
+        // `.catch(…)` from the REAL source — never a hand-written specimen.
+        const knownBad = chains.reduce(
+          (acc, chain) => acc.replace(chain.text, stripCatch(chain.text)),
+          component.stripped.replace(/\s+/g, ' ')
+        )
+        expect(knownBad).not.toBe(component.stripped.replace(/\s+/g, ' '))
+        for (const chain of sliceVoidApiChains(knownBad)) {
+          expect(chain.continuations).not.toContain('catch')
+        }
+      })
+    }
+  )
+
+  describe.each(asyncConfirmSurfaces.map((c) => [c.name, c] as const))(
+    '%s handleConfirm',
+    (name, component) => {
+      const handler = sliceAsyncHandler(component.stripped, 'handleConfirm')!
+
+      it('awaits its window.api call inside a try', () => {
+        const tryIdx = handler.indexOf('try {')
+        const awaitIdx = handler.indexOf('await window.api')
+        expect(tryIdx).toBeGreaterThanOrEqual(0)
+        expect(awaitIdx).toBeGreaterThan(tryIdx)
+      })
+
+      it('reaches a TERMINAL phase from the catch — a rejected START is a FAILED start', () => {
+        const catchIdx = handler.indexOf('catch')
+        expect(catchIdx).toBeGreaterThan(0)
+        expect(handler.slice(catchIdx)).toContain("setPhase('error')")
+      })
+
+      it(`RED: removing the terminal setPhase from ${name}'s catch DERIVED FROM THE REAL SOURCE breaks the obligation`, () => {
+        const catchIdx = handler.indexOf('catch')
+        const knownBad =
+          handler.slice(0, catchIdx) +
+          handler.slice(catchIdx).replaceAll("setPhase('error')", '')
+        expect(knownBad).not.toBe(handler)
+        expect(knownBad.slice(catchIdx)).not.toContain("setPhase('error')")
+      })
+    }
+  )
+})
+
+/** Removes every TOP-LEVEL `.catch(…)` continuation from a sliced chain, by
+ * balanced scan — used to derive the C-19 known-bad from the real source.
+ * Nested `.catch(` calls (e.g. `installSteamGame(...).catch(...)` inside a
+ * `.then` body) are deliberately left alone: removing them would be a
+ * different mutation than the one C-19 describes. */
+function stripCatch(chain: string): string {
+  let out = chain
+  for (;;) {
+    let depth = 0
+    let at = -1
+    for (let i = 0; i < out.length; i++) {
+      if (out[i] === '(') depth++
+      else if (out[i] === ')') depth--
+      else if (depth === 0 && out.startsWith('.catch(', i)) {
+        at = i
+        break
+      }
+    }
+    if (at === -1) return out
+    let depth2 = 0
+    let i = at + '.catch'.length
+    for (; i < out.length; i++) {
+      if (out[i] === '(') depth2++
+      else if (out[i] === ')') {
+        depth2--
+        if (depth2 === 0) break
+      }
+    }
+    out = out.slice(0, at) + out.slice(i + 1)
+  }
+}
