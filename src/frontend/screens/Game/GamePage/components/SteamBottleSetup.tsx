@@ -12,7 +12,7 @@ import WineSelector from 'frontend/screens/Library/components/InstallModal/WineS
 import { useAwaited } from 'frontend/hooks/useAwaited'
 import {
   DEFAULT_STEAM_BOTTLE_NAME,
-  resolveSteamBottleEngine
+  resolveSteamBottleSeedEngine
 } from './steamBottleDefaults'
 import './SteamBottleSetup.scss'
 
@@ -44,6 +44,15 @@ const SteamBottleSetup = () => {
   const [wineVersionList, setWineVersionList] = useState<WineInstallation[]>([])
   const [enginesFetched, setEnginesFetched] = useState(false)
   const [crossoverBottle, setCrossoverBottle] = useState('')
+  // D-15 (34.13-09) read half: the wine engine persisted in
+  // steamBottleConfigStore, surfaced via 34.13-07's isSteamBottleEligible
+  // verdict. `undefined` legitimately means "nothing was ever persisted" —
+  // kept as its OWN boolean settle flag below rather than inferred from this
+  // being non-undefined, so "still loading" and "loaded, nothing persisted"
+  // stay distinguishable.
+  const [persistedWineVersion, setPersistedWineVersion] =
+    useState<WineInstallation>()
+  const [persistedLookupSettled, setPersistedLookupSettled] = useState(false)
 
   const pollRef = useRef<ReturnType<typeof setInterval>>()
 
@@ -56,6 +65,15 @@ const SteamBottleSetup = () => {
     setPhase('consent')
     setProvisionError(undefined)
     setProvisioned(false)
+    // D-15 (34.13-09): also clear the seeded engine and its persisted-lookup
+    // state. The seeding effect below latches on the first non-undefined
+    // engine it sets (guarded by `wineVersion` itself) and never seeds
+    // again — without this reset, a SECOND guided-setup session in the same
+    // app run would keep the FIRST session's engine forever and never
+    // consult the new session's persisted value (<verified_findings> item 3).
+    setWineVersion(undefined)
+    setPersistedWineVersion(undefined)
+    setPersistedLookupSettled(false)
   }, [isOpen, appName])
 
   // D-03: fetch the available compatibility engines. `enginesFetched` gates the
@@ -75,13 +93,62 @@ const SteamBottleSetup = () => {
     }
   }, [isOpen])
 
+  // D-15 (34.13-09) read half: fetch the persisted wine engine over 34.13-07's
+  // real IPC channel, keyed on the session (isOpen + appName) rather than
+  // useAwaited — useAwaited's [] dep list fires once at mount, before any
+  // session exists, so it would fetch for the wrong game exactly once,
+  // forever (<verified_findings> item 1). Mirrors the engine-fetch effect's
+  // own cancelled-guard shape immediately above.
   useEffect(() => {
-    if (!globalConfig || wineVersion || !enginesFetched) return
-    // Prefer CrossOver — the Steam bottle is created via CrossOver's cxbottle
-    // (17-01/17-04), so CrossOver is the correct default even when the user's
-    // global engine is plain Wine (17-06 UAT finding).
+    if (!isOpen) return
+    if (!appName) {
+      // No game to look up yet — settle immediately so the seeding effect
+      // below is never wedged waiting on a lookup that will never fire.
+      setPersistedLookupSettled(true)
+      return
+    }
+    let cancelled = false
+    void window.api
+      .isSteamBottleEligible(appName)
+      .then((verdict) => {
+        if (cancelled) return
+        // Only wineVersion is consumed here: `eligible` is already the
+        // reason the wizard is open (re-gating on it would be a frontend
+        // re-derivation of an authority D-09 places in the backend), and
+        // `bottleName` is 34.13-10's read-only concern, never this wizard's
+        // (<verified_findings> item 5).
+        setPersistedWineVersion(verdict.wineVersion)
+        setPersistedLookupSettled(true)
+      })
+      .catch(() => {
+        if (cancelled) return
+        // Degrade to today's derived default rather than hang — every
+        // terminal path (resolve, reject, skip) settles exactly once.
+        setPersistedLookupSettled(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, appName])
+
+  useEffect(() => {
+    if (!globalConfig || wineVersion || !enginesFetched || !persistedLookupSettled) return
+    // D-15 (34.13-09): a persisted engine (read above) wins verbatim over the
+    // CrossOver-preferring derivation — the seeding effect latches on the
+    // FIRST non-undefined engine it sets (guard above, `wineVersion` itself),
+    // so seeding before the persisted-lookup settles would make the derived
+    // default PERMANENT and silently discard the user's earlier answer. The
+    // CrossOver preference itself is unchanged: the bottle is created via
+    // CrossOver's cxbottle (17-01/17-04), so CrossOver is the correct default
+    // even when the user's global engine is plain Wine (17-06 UAT finding) —
+    // resolveSteamBottleSeedEngine delegates to that exact derivation when
+    // nothing is persisted.
     setWineVersion(
-      resolveSteamBottleEngine(globalConfig.wineVersion, wineVersionList)
+      resolveSteamBottleSeedEngine(
+        persistedWineVersion,
+        globalConfig.wineVersion,
+        wineVersionList
+      )
     )
     setWinePrefix(globalConfig.defaultWinePrefixDir)
     // ALWAYS the dedicated Steam bottle, never the user's shared GOG/Epic
@@ -89,7 +156,14 @@ const SteamBottleSetup = () => {
     // (17-02). Seeding the shared name here was the 17-06 UAT bug that would
     // have provisioned Steam into the shared bottle.
     setCrossoverBottle(DEFAULT_STEAM_BOTTLE_NAME)
-  }, [globalConfig, wineVersion, enginesFetched, wineVersionList])
+  }, [
+    globalConfig,
+    wineVersion,
+    enginesFetched,
+    wineVersionList,
+    persistedWineVersion,
+    persistedLookupSettled
+  ])
 
   // Background-task progress: poll steamBottleStatus while provisioning is
   // underway (D-02 — SteamSetup.exe runs non-silently / wait:false, so we
