@@ -241,6 +241,19 @@ export default function SteamDialog({
     }
     setSubmitting(true)
 
+    // 34.13 review B-WR-04: the persist step gets its OWN try, and the
+    // install dispatch below is deliberately OUTSIDE it. The B-CR-01 fix
+    // wrapped the whole handler in one `try` whose `catch` only released the
+    // latch — so for the THROW class of failure (as opposed to the rejection
+    // class the `.catch` already collapses) control jumped past
+    // `backdropClick()` and `installSteamGame()` and the user's install was
+    // silently dropped. `window.api.persistBottleWineVersion` being missing
+    // or hollow is not hypothetical on this preload surface: this repo has
+    // ledgered a dead `safeStorage` stub and a hollow `nativeImage` stub
+    // under the Tauri sidecar, and either shape makes `persisted.catch` throw
+    // a TypeError rather than reject. That inverted the rule stated ten lines
+    // below — "a failed persist degrades to today's behaviour rather than
+    // blocking the user's install."
     try {
       // D-14 -> D-15 ordering: persist BEFORE install, so the guided bottle
       // setup reads a store that is already written. Skipped when there is no
@@ -296,7 +309,20 @@ export default function SteamDialog({
           )
         }
       }
+    } catch (persistError) {
+      // D-15 again, for the THROW class: the guided bottle setup derives an
+      // engine when nothing was persisted, so NEITHER a rejection NOR a throw
+      // may block the install. Naming the cause (B-IN-01) without echoing the
+      // submitted engine object keeps T-34.13-08-05's "name the field, not
+      // the value" rule.
+      window.api.logError(
+        `34.13-10 SteamDialog: persistBottleWineVersion threw (${String(
+          persistError
+        )}) -- continuing to the install`
+      )
+    }
 
+    try {
       const destination = resolveSteamInstallPath(
         selectedPath,
         steamLibraries,
@@ -318,16 +344,22 @@ export default function SteamDialog({
         destination,
         gating.forceWindowsViaBottle
       ).catch(logSteamInstallDispatchFailure(appName))
-    } catch {
-      // B-CR-01 belt-and-braces: the `.catch` above already collapses the
-      // one KNOWN rejecting await, but this handler is exactly where a
-      // future await gets added, and the failure mode is a permanently dead
-      // Install button with nothing on screen. Releasing the latch here
-      // means the worst case is always "the click did nothing, try again",
-      // never "this dialog is bricked".
+    } catch (dispatchError) {
+      // B-CR-01 belt-and-braces, now scoped to the DISPATCH half only: the
+      // `.catch` above already collapses the one KNOWN rejecting await, but
+      // this is exactly where a future await gets added, and the failure mode
+      // is a permanently dead Install button with nothing on screen.
+      // Releasing the latch here means the worst case is always "the click
+      // did nothing, try again", never "this dialog is bricked".
+      // B-IN-01: bind the thrown value -- a bare `catch {` discarded the one
+      // thing a support log needs on a surface whose whole failure mode is
+      // "the click did nothing". `String(e)` carries no path and no
+      // `gameInfo`.
       setSubmitting(false)
       window.api.logError(
-        `34.13-10 SteamDialog: handleInstall threw for appName "${appName}" -- submit latch released so the button stays usable`
+        `34.13-10 SteamDialog: handleInstall dispatch threw (${String(
+          dispatchError
+        )}) for appName "${appName}" -- submit latch released so the button stays usable`
       )
     }
     // `backdropClick` and `submitting` added by WR-13 -- the callback reads

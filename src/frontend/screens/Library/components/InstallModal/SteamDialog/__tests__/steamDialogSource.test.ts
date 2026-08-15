@@ -188,6 +188,57 @@ function assertSubmitLatchCanBeReleased(stripped: string) {
       'assertSubmitLatchCanBeReleased: setSubmitting(true) is missing -- the WR-13 double-click guard was removed'
     )
   }
+  // 34.13 review B-WR-04, obligation 3 and the one the two above cannot see:
+  // the `try` that guards the persist must NOT span `installSteamGame(`.
+  // The B-CR-01 fix wrapped the whole handler in one `try`, so a THROWING
+  // (not rejecting) `persistBottleWineVersion` -- a hollow/missing preload
+  // stub, ledgered twice in this repo -- jumped past `backdropClick()` and
+  // `installSteamGame()` entirely and silently dropped the install,
+  // contradicting the D-15 rule the handler states in its own comments.
+  // Both obligations above test only string PRESENCE; this one is POSITIONAL.
+  assertInstallDispatchIsOutsideThePersistGuard(stripped)
+}
+
+/**
+ * The property: walking forward from `persistBottleWineVersion(`, the brace
+ * depth must return to the depth of the enclosing `try {` BEFORE
+ * `installSteamGame(` is reached. Equivalently: the persist's guard closes
+ * first, and the dispatch lives in its own statement.
+ */
+function assertInstallDispatchIsOutsideThePersistGuard(stripped: string) {
+  const flattened = stripped.replace(/\s+/g, ' ')
+  const persistIndex = flattened.indexOf('persistBottleWineVersion(')
+  const dispatchIndex = flattened.indexOf('installSteamGame(', persistIndex)
+  if (dispatchIndex === -1) {
+    throw new Error(
+      'assertInstallDispatchIsOutsideThePersistGuard: installSteamGame( does not appear after the persist'
+    )
+  }
+  const tryIndex = flattened.lastIndexOf('try {', persistIndex)
+  if (tryIndex === -1) {
+    throw new Error(
+      'assertInstallDispatchIsOutsideThePersistGuard: the persist is not inside a try block at all -- a throwing persist would escape handleInstall entirely'
+    )
+  }
+  // Depth relative to the persist's own `try {`. The guard must CLOSE (depth
+  // back to 0) somewhere strictly before `installSteamGame(` is reached.
+  let depth = 0
+  let guardClosed = false
+  for (let i = tryIndex + 'try'.length; i < dispatchIndex; i++) {
+    if (flattened[i] === '{') depth++
+    else if (flattened[i] === '}') {
+      depth--
+      if (depth === 0) {
+        guardClosed = true
+        break
+      }
+    }
+  }
+  if (!guardClosed) {
+    throw new Error(
+      'assertInstallDispatchIsOutsideThePersistGuard: installSteamGame( lies INSIDE the try that guards the persist -- a THROWING persist silently drops the install, inverting the D-15 rule the handler states in its own comment'
+    )
+  }
 }
 
 /**
@@ -672,6 +723,56 @@ describe('B-CR-01: the WR-13 submit latch can always be released', () => {
     expect(() => assertSubmitLatchCanBeReleased(knownBad)).toThrow(
       /double-click guard was removed/
     )
+  })
+
+  // ── 34.13 review B-WR-04 ─────────────────────────────────────────────────
+  it('B-WR-04: installSteamGame( sits OUTSIDE the try that guards the persist', () => {
+    expect(() =>
+      assertInstallDispatchIsOutsideThePersistGuard(stripped)
+    ).not.toThrow()
+  })
+
+  it('B-WR-04-RED: the pre-fix single-try shape DERIVED FROM THE REAL SOURCE is rejected', () => {
+    // Merge the two `try` blocks back into one, exactly as B-CR-01 left it:
+    // delete the persist guard's own `catch` and the dispatch guard's `try`,
+    // so `installSteamGame(` falls back inside the persist's `try`.
+    const flattened = stripped.replace(/\s+/g, ' ')
+    const catchStart = flattened.indexOf('} catch (persistError) {')
+    expect(catchStart).toBeGreaterThan(-1)
+    const dispatchTry = flattened.indexOf('try {', catchStart)
+    expect(dispatchTry).toBeGreaterThan(catchStart)
+    const knownBad =
+      flattened.slice(0, catchStart) +
+      flattened.slice(dispatchTry + 'try {'.length)
+    expect(knownBad).not.toBe(flattened)
+    // Sanity: the persist and the dispatch are both still present, so the
+    // rejection is about SCOPE and not about a missing call.
+    expect(knownBad).toContain('persistBottleWineVersion(')
+    expect(knownBad).toContain('installSteamGame(')
+    expect(() =>
+      assertInstallDispatchIsOutsideThePersistGuard(knownBad)
+    ).toThrow(/lies INSIDE the try that guards the persist/)
+    // ...and the two PRE-B-WR-04 obligations both still pass on that same
+    // input, which is the whole finding: the old gate could not see it.
+    expect(knownBad).toContain('setSubmitting(false)')
+    expect(knownBad).toContain('setSubmitting(true)')
+    expect(
+      knownBad
+        .slice(
+          knownBad.indexOf('persistBottleWineVersion('),
+          knownBad.indexOf('persistBottleWineVersion(') + 200
+        )
+        .includes('.catch(')
+    ).toBe(true)
+  })
+
+  it('B-IN-01: both catches bind the thrown value rather than discarding it', () => {
+    // `catch {` with no binding made the log line report only the appName on
+    // a surface whose whole failure mode is "the click did nothing".
+    const handler = stripped.slice(stripped.indexOf('setSubmitting(true)'))
+    expect(handler).not.toMatch(/\}\s*catch\s*\{/)
+    expect(handler).toMatch(/catch \(persistError\)/)
+    expect(handler).toMatch(/catch \(dispatchError\)/)
   })
 })
 
