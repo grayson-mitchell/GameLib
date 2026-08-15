@@ -1342,7 +1342,7 @@ Plans: **14 plans, 8 waves** *(re-planned 2026-08-15 for D-21..D-29. `34.13-04` 
 
 **Wave 4** *(blocked on Wave 3)*
 - [x] 34.13-09 — D-15 handoff: the guided setup READS the persisted choice [D-15]
-- [ ] 34.13-14 — Persist the D-17 forced verdict so the install is durable [D-17, closes T-34.13-06-06]
+- [x] 34.13-14 — Persist the D-17 forced verdict so the install is durable [D-17, closes T-34.13-06-06]
 
 **Wave 5** — [x] 34.13-10 — The `SteamDialog` sibling component + D-24 notice + Q6 notice [D-01, D-02, D-06, D-08, D-14, D-20, D-24]
 **Wave 6** — [ ] 34.13-12 — `InstallModal` fifth branch + platform-row rework [D-01, D-03, D-05, D-16, D-17, D-18, D-19]
