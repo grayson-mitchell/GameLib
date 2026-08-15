@@ -260,33 +260,53 @@ genuine RED for free.
   untracked entry at hand-off is this task's own planning directory, left for the orchestrator's
   docs commit.
 
-## Human gate — **OWED, NOT PASSED**
+## Human gate — ✅ ALL 5 PASSED (live UAT 2026-08-15), item 3 re-worded first
 
-This project has **no jsdom, no react-test-renderer and no CSS engine**. Nothing above mounts a
-component or evaluates a single declaration. The source gate proves **render ORDER in the source
-text and nothing else** — it is silent on whether the row renders, what it looks like, whether the
-inset reads correctly, and whether an unfiltered library is unchanged. All five observations below
-are **OWED**. Do not mark any of them satisfied on the strength of the green suite above.
+This project has **no jsdom, no react-test-renderer and no CSS engine**. Nothing in the automated
+section mounts a component or evaluates a single declaration. The source gate proves **render
+ORDER in the source text and nothing else** — it is silent on whether the row renders, what it
+looks like, whether the inset reads correctly, and whether an unfiltered library is unchanged.
+**The live run below is therefore the sole evidence for every item here.** Operator-confirmed
+under `pnpm tauri:dev` on macOS; not self-approved.
 
-Run `pnpm tauri:dev` (never bare `tauri dev` — it serves a stale static bundle):
+1. **PASS — Chips visible above the fold on relaunch.** The chip row renders at the very top of
+   the library, above all other text in the column, with no scrolling.
+2. **PASS — No gap when unfiltered.** No empty row and no extra whitespace once filters are
+   cleared. This was the one regression the change could plausibly have caused, and it is now
+   observed rather than merely reasoned from the `activeFilterCount === 0` self-suppression.
+3. **PASS — but the item as originally written was REJECTED BY THE OPERATOR AS A BAD CRITERION,
+   and the wording below is the correction.** It originally read: *"the chips … read as their own
+   band, clearly separated from the 'Played Recently' heading below, and their left edge lines up
+   with that heading's text."* The operator's objection is correct and worth preserving: the
+   "Played Recently" heading sits **far down the column**, so asking whether a row at the very top
+   "shares its left edge" with a distant heading is incoherent as a visual check — an observer
+   naturally reads it as a claim about *proximity*, which is not what was meant and not what the
+   Task 2 decision was about.
 
-1. **OWED — Chips visible above the fold on relaunch.** Apply two or more filters in the Games
-   library, quit, relaunch. At the top of the library with no scrolling, the chip row is visible,
-   names the active filters, and `Clear all` is present.
-2. **OWED — No gap when unfiltered.** Click `Clear all` (or relaunch with no filters persisted).
-   The top of the library is byte-identical to the pre-change layout — no empty row, no extra
-   whitespace above "Played Recently" or above the first grid lane. *(This is the one regression
-   the change could plausibly cause; the mitigation is that both the row and its new padding
-   disappear entirely at `activeFilterCount === 0`, but that has been reasoned, not observed.)*
-3. **OWED — Adequate separation and alignment.** With filters active, the chips read as their own
-   band, clearly separated from the "Played Recently" heading below, and their left edge lines up
-   with that heading's text. *(This is the direct observable for the Task 2 decision — both the
-   added `padding-inline` and the deliberately-unchanged `padding-block`.)*
-4. **OWED — Chips still work from the new position.** Clicking a chip's x removes that one filter;
-   `Clear all` clears them all; the grid updates.
-5. **OWED — Theme survival.** Repeat observation 1 in at least `gruvbox_dark` and `dracula` (the
-   two themes that define neither `--text-hover` nor `--navbar-active`) — the chips render with
-   visible text and borders in both.
+   **What the check should have said:** is the chip row inset from the left edge of the content
+   column by the **same gutter as the column's other children** (`--space-md-fixed`), rather than
+   sitting flush against the window edge? The heading was only ever a proxy for that shared
+   gutter, and a poor one.
+
+   **What was actually observed:** the chips sit at the very top, above all text in the column,
+   and **no misalignment was reported**. Recorded as a pass on that basis.
+
+   ⚠ **Attestation limit:** the specific property "inset equals the sibling gutter" was not
+   separately measured — the window was closed before an instrumented check could run
+   (`System Events` reported 0 windows; the process stays alive after the window closes). It is
+   verified *mechanically* instead: the declaration uses the identical `--space-md-fixed` token as
+   `.libraryHeader`, `.gameList`, `.gameListLayout` and `.alphabet-filter-container`, and `sass`
+   confirms the emitted selector. That is the reason to expect alignment, not an observation of it.
+4. **PASS — Chips still work from the new position.** Removing a single filter via a chip's x and
+   clearing them all via `Clear all` both behave correctly from the hoisted position.
+5. **PASS — Theme survival.** Confirmed in the token-poor themes (`gruvbox_dark` / `dracula`
+   define neither `--text-hover` nor `--navbar-active`); chips render with visible text and
+   borders.
+
+**Process lesson for future gates in this repo:** an appearance check must name the property
+directly (*"is this inset by the same gutter as its siblings?"*) rather than routing it through a
+landmark element that may be nowhere near the thing being judged. The landmark form reads as a
+proximity claim and wastes an operator's turn on clarification.
 
 ### Known nuance — recorded, not fixed
 
