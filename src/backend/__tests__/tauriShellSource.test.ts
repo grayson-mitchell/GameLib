@@ -336,7 +336,20 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // (the humble_login_cookies_for_domain_* cases) is the behavioral proof for its
       // direction; the describe block below this one pins that direction specifically. This
       // gate only pins that no OTHER, undeclared arm has crept in since.
-      'humble_login_cookies_for_domain'
+      'humble_login_cookies_for_domain',
+      // quick task 260815-vvz (commit 206a31db7, "wire electronStub app.hide to Tauri
+      // AppHandle::hide") legitimately added exactly this one arm; this gate only pins that no
+      // OTHER, undeclared arm has crept in since.
+      //
+      // PROOF STATUS -- deliberately weaker than every entry above, and recorded as such rather
+      // than papered over: main.rs's own #[cfg(test)] mod does NOT exercise app_hide, because
+      // there is no pure logic to exercise. The arm is a `#[cfg(target_os = "macos")]`
+      // `app.hide()` call (an AppHandle side effect) and a declared `eprintln!` no-op everywhere
+      // else. Its actual automated guard is quick-vvz's AST gate
+      // (`externalDynamicImportGate.test.ts`), which pins the static-import shape the arm's
+      // sidecar caller depends on -- that guards the CALLER, not this arm's behavior. The macOS
+      // hide itself is unproven by any automated test.
+      'app_hide'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)
