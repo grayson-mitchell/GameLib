@@ -78,12 +78,39 @@ function assertNoFilesystemPathOnScreen(source: string) {
   }
 }
 
+/**
+ * The identifiers `resolveConsoleActionIntent` destructures from its single
+ * object parameter, sorted. 34.13 review C-24: an ALLOWLIST, so a drift named
+ * anything at all is caught — the previous denylist (`/blocked|degrade/`) let
+ * a fourth parameter through as long as it was spelled differently.
+ */
+function destructuredIntentParams(source: string): string[] {
+  const signature = source.match(/resolveConsoleActionIntent\(\{([^}]*)\}/)?.[1]
+  if (signature === undefined) {
+    throw new Error(
+      'destructuredIntentParams: resolveConsoleActionIntent signature not locatable'
+    )
+  }
+  return signature
+    .split(',')
+    .map((p) => p.split(':')[0].trim())
+    .filter(Boolean)
+    .sort()
+}
+
 function assertCopyResolvedThroughTable(source: string) {
   if (!source.includes('steamBlockedMessage(')) {
     throw new Error(
       'assertCopyResolvedThroughTable: the render site does not call steamBlockedMessage('
     )
   }
+  // 34.13 review C-24: the denylist below screened only the two `===`
+  // equality forms, so a `switch (steamBlocked.reason) { case
+  // 'library-missing': ... }` re-branch passed cleanly -- the SAME class of
+  // defect the gate exists to stop, spelled differently. `switch (` on the
+  // reason is now forbidden too, and the primary obligation is now positive
+  // and counting rather than a list of banned spellings: `reason` may appear
+  // exactly once at the render site, as the argument to steamBlockedMessage.
   for (const localBranch of [
     "reason === 'library-missing'",
     "reason === 'library-full'"
@@ -93,6 +120,22 @@ function assertCopyResolvedThroughTable(source: string) {
         `assertCopyResolvedThroughTable: the render site re-branches locally on "${localBranch}" -- a third reason would fall into the wrong copy`
       )
     }
+  }
+  if (/switch\s*\(\s*[\w.?]*reason\s*\)/.test(source)) {
+    throw new Error(
+      'assertCopyResolvedThroughTable: the render site re-branches on `reason` with a switch -- a third reason would fall into the wrong copy'
+    )
+  }
+  const reasonMentions = source.match(/\breason\b/g)?.length ?? 0
+  if (reasonMentions !== 1) {
+    throw new Error(
+      `assertCopyResolvedThroughTable: \`reason\` appears ${reasonMentions} times at the render site -- it may appear exactly once, as the argument to steamBlockedMessage(`
+    )
+  }
+  if (!/steamBlockedMessage\([^)]*reason/.test(source)) {
+    throw new Error(
+      'assertCopyResolvedThroughTable: the single `reason` mention is not the argument to steamBlockedMessage('
+    )
   }
 }
 
@@ -348,15 +391,41 @@ describe('resolveConsoleActionIntent (the A-button bypass gate)', () => {
   // SteamQuickInstallDegrade` to the parameter, the exact drift the spec is
   // named for, left `.length` at 1 and the spec green. It could not fail for
   // the reason its name gave. Measure the destructured SHAPE instead.
-  it('B4: the parameter object carries no blocked/degrade key', () => {
-    const signature =
-      readStrippedTargetModule().match(
-        /resolveConsoleActionIntent\(\{[^}]*\}/
-      )?.[0] ?? ''
-    expect(signature).toContain('runner')
-    expect(signature).toContain('focused')
-    expect(signature).not.toMatch(/blocked|degrade/)
+  // 34.13 review C-24: the reworked B4 screened a DENYLIST
+  // (`not.toMatch(/blocked|degrade/)`), so a fourth parameter named anything
+  // else -- `verdict` was the concrete counter-example -- passed cleanly. The
+  // spec's own name is "carries no blocked/degrade key", so the name and the
+  // assertion agreed; the residual risk was that the drift need not be spelled
+  // `blocked` or `degrade`. Assert the key SET is exactly {runner, focused}
+  // instead: an allowlist cannot be defeated by choosing a different name.
+  it('B4: the parameter object destructures EXACTLY {runner, focused}', () => {
+    expect(destructuredIntentParams(readStrippedTargetModule())).toEqual([
+      'focused',
+      'runner'
+    ])
   })
+
+  it.each(['blocked', 'degrade', 'verdict'])(
+    'B4-C24-RED: a fourth parameter named "%s" DERIVED FROM THE REAL SOURCE trips the allowlist',
+    (extraName) => {
+      const knownBad = readStrippedTargetModule().replace(
+        /(resolveConsoleActionIntent\(\{[^}]*)\}/,
+        `$1,\n  ${extraName}\n}`
+      )
+      expect(knownBad).not.toBe(readStrippedTargetModule())
+      expect(destructuredIntentParams(knownBad)).not.toEqual([
+        'focused',
+        'runner'
+      ])
+      // `verdict` is the one the denylist version could NOT see -- proof the
+      // allowlist strictly dominates it.
+      if (extraName === 'verdict') {
+        const signature =
+          knownBad.match(/resolveConsoleActionIntent\(\{[^}]*\}/)?.[0] ?? ''
+        expect(signature).not.toMatch(/blocked|degrade/)
+      }
+    }
+  )
 
   it('B4-RED: the reworked gate trips against a signature DERIVED FROM THE REAL SOURCE with a blocked key added', () => {
     const knownBad = readStrippedTargetModule().replace(
@@ -544,6 +613,35 @@ describe('InstallOverlay/index.tsx source gates (D-29, comment-stripped)', () =>
       "\nconst x = steamBlocked.reason === 'library-full'"
     expect(() => assertCopyResolvedThroughTable(knownBad)).toThrow(
       /re-branches locally/
+    )
+  })
+
+  // ── 34.13 review C-24 ────────────────────────────────────────────────────
+  // The denylist above screened only the two `===` equality forms, so a
+  // `switch` re-branch — the SAME defect, spelled differently — passed
+  // cleanly. These two known-bads are the ones that defeated the pre-C-24
+  // gate; both are now rejected.
+  it('D7-C24-RED-a: a `switch (steamBlocked.reason)` re-branch is rejected', () => {
+    const knownBad =
+      readStrippedOverlay() +
+      "\nswitch (steamBlocked.reason) { case 'library-missing': return a; default: return b }"
+    // Proof the PRE-C24 gate could not see it: neither banned equality form
+    // appears anywhere in this input.
+    expect(knownBad).not.toContain("reason === 'library-missing'")
+    expect(knownBad).not.toContain("reason === 'library-full'")
+    expect(() => assertCopyResolvedThroughTable(knownBad)).toThrow(
+      /re-branches on `reason` with a switch|appears \d+ times/
+    )
+  })
+
+  it('D7-C24-RED-b: any SECOND mention of `reason` at the render site is rejected, however it is spelled', () => {
+    const knownBad =
+      readStrippedOverlay() + '\nconst copy = TABLE[steamBlocked.reason]'
+    expect(knownBad).not.toContain("reason === 'library-missing'")
+    expect(knownBad).not.toContain("reason === 'library-full'")
+    expect(knownBad).not.toMatch(/switch\s*\(\s*[\w.?]*reason\s*\)/)
+    expect(() => assertCopyResolvedThroughTable(knownBad)).toThrow(
+      /appears 2 times at the render site/
     )
   })
 
