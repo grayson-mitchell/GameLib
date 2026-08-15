@@ -2,7 +2,6 @@ import { ReactNode, useContext, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import classNames from 'classnames'
 
-import GameLibIcon from 'frontend/assets/gamelib-icon.png'
 import { Tier2PortalContext } from './Tier2PortalContext'
 import { resolveActiveTab } from './navTabs'
 import NavTabs from './components/NavTabs'
@@ -64,11 +63,6 @@ export default function NavShell() {
   return (
     <>
       <header className="NavShell__navbar">
-        <img
-          src={GameLibIcon}
-          className="NavShell__wordmark"
-          alt="GameLib"
-        />
         <NavTabs />
         <div className="NavShell__navRight">
           <DownloadsRing />

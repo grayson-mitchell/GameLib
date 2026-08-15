@@ -182,14 +182,6 @@
   );
 }
 
-.NavShell__wordmark {
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 // D-32 / CR-02. `.NavTabs` is owned by the NavTabs subcomponent
 // (`components/NavTabs/index.scss`), but this rule intentionally lives here
 // rather than there: `.NavShell__navbar`'s new `drag` region above is a
