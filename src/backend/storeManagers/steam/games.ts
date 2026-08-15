@@ -38,7 +38,8 @@ import {
   resumeInterruptedSteamInstall,
   markSteamInstallIncomplete,
   readAcfState,
-  pollUninstallOnce
+  pollUninstallOnce,
+  resolveInstallRoot
 } from './library'
 import {
   isBottleReady,
@@ -1908,82 +1909,123 @@ export default class SteamGame implements Game {
   }
 
   /**
-   * Delegates uninstall to the Steam client via the steam://uninstall protocol
-   * for NATIVE (non-bottle) Steam installs only.
+   * debug/steam-bottle-uninstall-reverts (OPERATOR PRODUCT DECISION, LOCKED):
+   * uninstall routing is driven SOLELY by where the library entry's own
+   * recorded `install.install_path` resolves (resolveInstallRoot(), library.ts)
+   * — never by title attributes (isBottleEligible() / forcedWindowsViaBottle /
+   * nativeBottleInstall). Those attributes may still legitimately decide OTHER
+   * things (install destination, getSettings()/launch() routing) — only the
+   * UNINSTALL routing decision changed here.
    *
-   * Does NOT show a GamerLib confirmation dialog — Steam owns its own confirm
-   * dialog (D-05). Install state is never optimistically flipped from a click
-   * (D-02); badges flip only after confirmed ACF data. After the URL fires we
-   * poll the ACF (D-07) so the badge updates to not-installed without a focus
-   * round-trip; the focus re-read (D-01) remains as a backstop.
+   * This closes a real data-loss defect: for a DUAL-installed title (one copy
+   * in the CrossOver bottle, one native — concretely reproduced with Hoard),
+   * title-attribute routing deleted whichever root the ATTRIBUTES pointed at,
+   * which could be the copy the user was NOT looking at, while the library
+   * entry (and its "uninstalled" toast) kept representing the OTHER, untouched
+   * copy. install_path is the single source of truth for what the user is
+   * actually looking at, so it is now the single source of truth for what gets
+   * deleted:
+   *   - resolves inside the bottle's steamapps/common/  -> direct bottle
+   *     deletion (uninstallBottleGameDirectly(), unchanged mechanism —
+   *     LIVE-CONFIRMED correct, do not re-diagnose)
+   *   - resolves inside ANY registered native Steam library's
+   *     steamapps/common/ (libraryfolders.vdf can register more than one) ->
+   *     native steam://uninstall delegation (unchanged mechanism, below)
+   *   - resolves inside NEITHER -> refuse and report an error, delete
+   *     nothing. A stale/empty/unresolvable install_path must never fall
+   *     through to deleting anything anyway — this is the branch that closes
+   *     the wrong-root defect for good.
    *
-   * debug/steam-bottle-uninstall-reverts (FINAL): every bottle-eligible,
-   * non-bridge title now routes to uninstallBottleGameDirectly() below
-   * UNCONDITIONALLY — delegating to the bottled Steam client's own
-   * steam://uninstall confirm dialog was PROVEN architecturally unworkable
-   * in this CrossOver bottle, not merely for GameLib-authored installs. Two
-   * independent live discriminators (Hoard, a genuinely Steam-authored
-   * title, on a fully warm/updated/CM-connected/logged-in client) showed
-   * the confirm dialog is created by CrossOver/Wine at an off-screen
-   * CW_USEDEFAULT garbage coordinate and never materializes as an
-   * addressable window — invisible to the user and to GameLib's AX-based
-   * raise tooling, with zero downstream app-state effect
-   * (content_log.txt). This reproduces identically regardless of manifest
-   * authorship, wine engine correctness, or client warmth, so there is no
-   * remaining bottle-eligible case for which delegation is viable. The
-   * former `nativeBottleInstall`-gated routing (only GameLib-authored
-   * installs got direct deletion; everything else fell through to
-   * tellBottledSteamToUninstall()) is retired — see
-   * uninstallBottleGameDirectly()'s own JSDoc for what `nativeBottleInstall`
-   * is still used for (provenance only, no longer routing).
+   * Two pre-existing routing checks are kept EXACTLY as before, ahead of the
+   * install_path decision (neither is part of the bottle-vs-native routing bug
+   * this fix addresses):
+   *   - Phase 24 bridge routing (isBridgeEligible()): the bridge bottle
+   *     (GameLibSteamBridge) is a THIRD, separately-provisioned root that
+   *     resolveInstallRoot() does not model — see its own JSDoc.
+   *   - bottle-eligible-but-unprovisioned (D-10/D-11): nothing could
+   *     legitimately be installed in a bottle that was never provisioned;
+   *     request guided setup rather than a generic refuse.
+   *
+   * Native delegation itself is unchanged: does NOT show a GamerLib
+   * confirmation dialog — Steam owns its own confirm dialog (D-05). Install
+   * state is never optimistically flipped from a click (D-02); badges flip
+   * only after confirmed ACF data. After the URL fires we poll the ACF (D-07)
+   * so the badge updates without a focus round-trip; the focus re-read (D-01)
+   * remains as a backstop.
    */
   async uninstall(_args: RemoveArgs): Promise<ExecResult> {
     await this.ensurePlatformsCaptured()
-    if (this.isBottleEligible()) {
-      // Phase 24 Plan 08 (R4/D-01): allowlisted-title bridge routing — the
-      // FIRST check inside this block, mirroring install()/launch()'s own
-      // bridge sub-branches above.
-      if (this.isBridgeEligible()) {
-        return this.uninstallBridgeGame()
-      }
 
-      if (!isBottleReady()) {
-        logInfo(
-          `SteamGame: appId ${this.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of uninstalling`,
-          LogPrefix.Steam
-        )
-        sendFrontendMessage('steamBottleSetupRequired', {
-          appName: this.appId
-        })
-        return { stdout: '', stderr: '' }
-      }
+    // Phase 24 Plan 08 (R4/D-01): allowlisted-title bridge routing — unaffected
+    // by the install_path routing fix below (see this method's own JSDoc).
+    if (this.isBridgeEligible()) {
+      return this.uninstallBridgeGame()
+    }
 
-      // debug/steam-bottle-uninstall-reverts (FINAL): every bottle-eligible,
-      // non-bridge title is uninstalled by direct deletion now — the bottled
-      // Steam client's own confirm-dialog flow is never consulted for
-      // uninstall (see this method's own JSDoc for why). No
-      // nativeBottleInstall/ownership check remains here; that distinction
-      // no longer changes routing.
+    // D-10/D-11: a bottle-eligible title whose CrossOver bottle was never
+    // provisioned has nothing installed there for install_path to resolve
+    // against — request guided setup instead of a generic refuse. Unaffected
+    // by the routing fix (orthogonal to WHERE install_path resolves).
+    if (this.isBottleEligible() && !isBottleReady()) {
+      logInfo(
+        `SteamGame: appId ${this.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of uninstalling`,
+        LogPrefix.Steam
+      )
+      sendFrontendMessage('steamBottleSetupRequired', {
+        appName: this.appId
+      })
+      return { stdout: '', stderr: '' }
+    }
+
+    // Reads the raw `library` Map entry directly rather than
+    // this.getGameInfo() — getGameInfo() has a fire-and-forget lazy
+    // metadata-fetch side effect (art_cover/platform capture) that an
+    // internal routing read must never trigger (D-01/D-02: uninstall() must
+    // not have side effects beyond the uninstall itself).
+    const installPath = library.get(this.appId)?.install?.install_path
+    const root = await resolveInstallRoot(installPath)
+
+    if (root === 'bottle') {
+      // debug/steam-bottle-uninstall-reverts (FINAL): direct deletion,
+      // mechanism LIVE-CONFIRMED correct — see uninstallBottleGameDirectly()'s
+      // own JSDoc. No nativeBottleInstall/ownership check remains here; that
+      // distinction no longer changes routing.
       return this.uninstallBottleGameDirectly()
     }
 
-    const url = buildSteamProtocolUrl('uninstall', this.appId)
-    if (!url) {
-      return { stdout: '', stderr: `Invalid appId: ${this.appId}` }
+    if (root === 'native') {
+      const url = buildSteamProtocolUrl('uninstall', this.appId)
+      if (!url) {
+        return { stdout: '', stderr: `Invalid appId: ${this.appId}` }
+      }
+
+      logInfo(
+        `SteamGame: delegating uninstall for appId ${this.appId} via ${url}`,
+        LogPrefix.Steam
+      )
+      await shell.openExternal(url)
+
+      // Poll ACF so the badge flips to not-installed when Steam removes the
+      // appmanifest, without requiring a focus round-trip (D-07). Symmetric to
+      // install polling. State is never optimistically flipped here (D-02).
+      startUninstallPolling(this.appId)
+
+      return { stdout: '', stderr: '' }
     }
 
-    logInfo(
-      `SteamGame: delegating uninstall for appId ${this.appId} via ${url}`,
+    // root === null: install_path resolves inside NEITHER the CrossOver
+    // bottle nor any registered native Steam library — refuse rather than
+    // guessing. This is the branch that closes the wrong-root data-loss
+    // defect: a stale/empty/unresolvable install_path must never fall
+    // through to deleting anything.
+    logWarning(
+      `SteamGame: uninstall() refused for appId ${this.appId} — install_path "${installPath}" does not resolve inside any known root (bottle or native library)`,
       LogPrefix.Steam
     )
-    await shell.openExternal(url)
-
-    // Poll ACF so the badge flips to not-installed when Steam removes the
-    // appmanifest, without requiring a focus round-trip (D-07). Symmetric to
-    // install polling. State is never optimistically flipped here (D-02).
-    startUninstallPolling(this.appId)
-
-    return { stdout: '', stderr: '' }
+    return {
+      stdout: '',
+      stderr: `Refused to uninstall: install_path does not resolve inside any known root for appId ${this.appId}`
+    }
   }
 
   /**
@@ -2112,6 +2154,18 @@ export default class SteamGame implements Game {
    * Phase 18) before deleting, since the ACF's on-disk `installdir` is
    * untrusted input.
    *
+   * PRIMARY GUARD (debug/steam-bottle-uninstall-reverts, OPERATOR PRODUCT
+   * DECISION, LOCKED, item 3): promoted from a nice-to-have to REQUIRED —
+   * before touching the ACF at all, re-verifies the library entry's own
+   * recorded install.install_path ALSO resolves inside this bottle root
+   * (resolveInstallRoot(), library.ts) and aborts, deleting nothing, if not.
+   * This is defense-in-depth on top of uninstall()'s own routing decision
+   * (the caller only reaches this method when that same check already
+   * returned 'bottle') — it answers "is this the install the user is
+   * actually looking at", a DIFFERENT question from the ACF-installdir
+   * containment check below ("is the ACF's own installdir safe to delete").
+   * Both guards are kept; neither replaces the other.
+   *
    * After deletion, reuses pollUninstallOnce('bottle')'s existing 'absent'
    * branch (badge flip, persist, notify, clear forcedWindowsViaBottle/
    * nativeBottleInstall) rather than re-implementing that completion
@@ -2121,8 +2175,27 @@ export default class SteamGame implements Game {
    * (no yield to the event loop in between), the readAcfState() re-read
    * inside pollUninstallOnce() reliably observes 'absent' from our own
    * write; it is not depending on winning a race against Steam.
+   * pollUninstallOnce() ALSO checks the native root for a surviving copy
+   * (dual-install partial removal, item 4/5) — see its own JSDoc.
    */
   private async uninstallBottleGameDirectly(): Promise<ExecResult> {
+    // Reads the raw `library` Map entry directly rather than
+    // this.getGameInfo() — see uninstall()'s own comment on the same
+    // pattern (avoids getGameInfo()'s fire-and-forget metadata-fetch side
+    // effect on what must be a side-effect-free routing/guard read).
+    const entryInstallPath = library.get(this.appId)?.install?.install_path
+    const entryRoot = await resolveInstallRoot(entryInstallPath)
+    if (entryRoot !== 'bottle') {
+      logWarning(
+        `SteamGame: uninstallBottleGameDirectly refused for appId ${this.appId} — the library entry's install_path "${entryInstallPath}" does not resolve inside the bottle root`,
+        LogPrefix.Steam
+      )
+      return {
+        stdout: '',
+        stderr: `Refused to uninstall: install_path does not resolve inside the bottle for appId ${this.appId}`
+      }
+    }
+
     const acfState = await readAcfState(this.appId, 'bottle')
     if (acfState.state !== 'installed' || !acfState.installPath) {
       logWarning(

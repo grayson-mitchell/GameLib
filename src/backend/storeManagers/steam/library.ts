@@ -118,6 +118,78 @@ function installPlatformForSource(source: AcfSource): InstallPlatform {
   return hostInstallPlatform()
 }
 
+/** resolve()+relative() containment idiom shared by resolveInstallRoot()
+ *  below and uninstallBottleGameDirectly()'s own ACF-installdir guard
+ *  (games.ts) — never string-prefix matching ("path.join is not
+ *  containment", Phase 18). `root` and `candidate` must already be resolve()'d
+ *  by the caller. An EMPTY relative path (candidate === root exactly) does
+ *  NOT count as contained — a title's install must occupy a real subpath,
+ *  never the common/ root itself. */
+function isPathContainedIn(root: string, candidate: string): boolean {
+  const rel = relative(root, candidate)
+  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)
+}
+
+/**
+ * debug/steam-bottle-uninstall-reverts (OPERATOR PRODUCT DECISION, LOCKED):
+ * determines which known install root — if any — `installPath` resolves
+ * inside. This is the SOLE source of truth for uninstall() routing
+ * (games.ts) — never title attributes (windows-only / bottle-eligible /
+ * forcedWindowsViaBottle / nativeBottleInstall), which may still legitimately
+ * drive OTHER decisions (install destination, launch path).
+ *
+ * Checks, in order:
+ *  1. the CrossOver bottle's steamapps/common/ (getBottleSteamappsRoot() —
+ *     the SAME root readAcfState('bottle')/pollUninstallOnce('bottle') use)
+ *  2. EVERY native Steam library root from getSteamLibraries()
+ *     (libraryfolders.vdf) — not just the default
+ *     ~/Library/Application Support/Steam path (a host can register more
+ *     than one native library)
+ *
+ * Returns null when installPath resolves inside NEITHER known root — the
+ * caller MUST refuse to delete rather than guessing (a stale, empty, or
+ * unresolvable install_path must never fall through to deleting anything).
+ * Containment-checked via isPathContainedIn() (resolve()+relative(), never
+ * string-prefix matching — "path.join is not containment", Phase 18).
+ *
+ * Deliberately does NOT model the Phase 24 bridge bottle (GameLibSteamBridge)
+ * — a THIRD, separately-provisioned root with its own dedicated
+ * uninstallBridgeGame()/resolveBridgeGameInstallRoot() removal path
+ * (games.ts), routed independently via isBridgeEligible() BEFORE this
+ * function is ever consulted. Not part of the bottle-vs-native routing bug
+ * this function fixes.
+ *
+ * The bottle check is unconditional on `isBottleProvisioned()` — this is a
+ * pure string/path containment check (no filesystem access), so an
+ * unprovisioned bottle simply never contains any real installPath, and
+ * skipping the provisioned-guard avoids an extra bottle-readiness dependency
+ * for what is otherwise a computation with zero side effects.
+ */
+export async function resolveInstallRoot(
+  installPath: string | undefined
+): Promise<'bottle' | 'native' | null> {
+  if (!installPath || !installPath.trim()) return null
+
+  const resolvedInstallPath = resolve(installPath)
+
+  if (isMac) {
+    const bottleCommonRoot = resolve(getBottleSteamappsRoot(), 'common')
+    if (isPathContainedIn(bottleCommonRoot, resolvedInstallPath)) {
+      return 'bottle'
+    }
+  }
+
+  const libraries = await getSteamLibraries()
+  for (const libraryPath of libraries) {
+    const nativeCommonRoot = resolve(libraryPath, 'steamapps', 'common')
+    if (isPathContainedIn(nativeCommonRoot, resolvedInstallPath)) {
+      return 'native'
+    }
+  }
+
+  return null
+}
+
 /**
  * D-UAT-24-02 (core, gap-closure plan 24-17): for a bridge-eligible Steam
  * title, install-state must be AUTHORITATIVE TO THE BRIDGE BOTTLE — a native
@@ -1972,17 +2044,36 @@ const STATE_UNINSTALLING = 2048
 
 /**
  * Executes one uninstall polling tick for appId:
- *   'absent'  → manifest gone = uninstall complete: flip the library entry to
- *               not-installed, send pushGameToLibrary + gameStatusUpdate { done },
- *               and stop the poll.
+ *   'absent'  → manifest gone on `source`'s root. debug/steam-bottle-
+ *               uninstall-reverts (OPERATOR PRODUCT DECISION, LOCKED): a
+ *               dual-installed title losing only the `source` copy is
+ *               CORRECT, expected behaviour — before flipping the badge,
+ *               check whether the OTHER known root (bottle<->native; the
+ *               bridge bottle is a separate, out-of-scope root never routed
+ *               through this poller — see resolveInstallRoot()'s own JSDoc)
+ *               still has a real install:
+ *                 - a surviving copy: install_path/install_size/platform are
+ *                   re-resolved to it, is_installed STAYS true (the badge is
+ *                   never forced to flip), and no "Game Uninstalled" toast
+ *                   fires — the success signal must not overstate what
+ *                   actually happened.
+ *                 - no surviving copy anywhere: flip the library entry to
+ *                   not-installed, send pushGameToLibrary + the confirmed
+ *                   "Game Uninstalled" toast.
+ *               Either way: send gameStatusUpdate { done } and stop the poll
+ *               (the frontend re-derives its badge from is_installed once a
+ *               non-active status arrives — deriveInstallStatusKind,
+ *               frontend/hooks/hasStatus.ts — so 'done' is correct for both
+ *               outcomes here).
  *   present   → still on disk: if actively uninstalling (StateFlags bit 0x800 set,
  *               or bit 4 cleared mid-removal) send gameStatusUpdate { uninstalling }.
  *               A plain installed manifest (no 0x800) means uninstall hasn't started
  *               or was cancelled — handled by the grace logic in startUninstallPolling.
  *
- * Install state is never optimistically flipped (D-02) — only an absent manifest
- * (confirmed removal) flips the badge. `source` selects the native (default) or
- * bottle-scoped ACF root — see readAcfState(). Exported for unit testing.
+ * Install state is never optimistically flipped (D-02) — only a confirmed-absent
+ * manifest (with no surviving copy elsewhere) flips the badge. `source` selects
+ * the native (default) or bottle-scoped ACF root — see readAcfState(). Exported
+ * for unit testing.
  */
 export async function pollUninstallOnce(
   appId: string,
@@ -2017,6 +2108,51 @@ export async function pollUninstallOnce(
       `Steam: uninstall-poll absent tick for appId ${appId} — library.get() ${existing ? 'HIT' : 'MISS'} (library.size=${library.size})`,
       LogPrefix.Steam
     )
+
+    // debug/steam-bottle-uninstall-reverts (OPERATOR PRODUCT DECISION,
+    // LOCKED, item 4/5): check the OTHER known root before declaring this
+    // title fully uninstalled — the bridge bottle is intentionally excluded
+    // (separate root, own uninstallBridgeGame()/markBridgeGameUninstalled()
+    // completion path, never routed through this poller).
+    const otherSource: 'native' | 'bottle' | null =
+      source === 'bottle' ? 'native' : source === 'native' ? 'bottle' : null
+    const survivor = otherSource
+      ? await readAcfState(appId, otherSource)
+      : ({ state: 'absent' } as const)
+
+    if (survivor.state === 'installed' && survivor.installPath && existing) {
+      // A copy on the OTHER root survives — re-resolve install_path/platform
+      // to it instead of orphaning the entry with a stale pointer at the
+      // copy we just removed (the exact re-resolution risk flagged by the
+      // operator decision). The badge is never forced to flip.
+      const updated: GameInfo = {
+        ...existing,
+        is_installed: true,
+        install: {
+          install_path: survivor.installPath,
+          install_size: getFileSize(Number(survivor.sizeOnDisk ?? '0')),
+          platform: installPlatformForSource(otherSource as AcfSource)
+        }
+      }
+      library.set(appId, updated)
+      steamLibraryStore.set('games', Array.from(library.values()))
+      sendFrontendMessage('pushGameToLibrary', updated)
+      sendFrontendMessage('gameStatusUpdate', {
+        appName: appId,
+        runner: 'steam',
+        status: 'done'
+      })
+      // The success signal must not lie: the title is legitimately still
+      // installed via the surviving copy, so no "Game Uninstalled" toast
+      // fires here — that would overstate what actually happened.
+      stopUninstallPolling(appId)
+      logInfo(
+        `Steam: uninstall polling complete for appId ${appId} — removed the ${source} copy; a ${otherSource} copy survives at "${survivor.installPath}", badge stays installed and install_path re-resolved to it`,
+        LogPrefix.Steam
+      )
+      return
+    }
+
     if (existing) {
       const updated: GameInfo = {
         ...existing,
@@ -2038,9 +2174,10 @@ export async function pollUninstallOnce(
       runner: 'steam',
       status: 'done'
     })
-    // GAME-03: fire the confirmed completion toast here (manifest confirmed absent) so
-    // the user gets exactly one "Game Uninstalled" notification per uninstall.
-    // The uninstaller callback toast is suppressed for steam — this is the sole source.
+    // GAME-03: fire the confirmed completion toast here (manifest confirmed absent
+    // on EVERY known root — no surviving copy) so the user gets exactly one
+    // "Game Uninstalled" notification per genuinely-complete uninstall. The
+    // uninstaller callback toast is suppressed for steam — this is the sole source.
     notify({
       title: existing?.title ?? '',
       body: i18next.t('notify.uninstalled', 'Game Uninstalled')

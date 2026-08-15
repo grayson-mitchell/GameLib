@@ -16,6 +16,7 @@ import SteamLibraryManager, {
   buildBottleInstalledMap,
   buildBridgeInstalledMap,
   readAcfState,
+  resolveInstallRoot,
   startInstallPolling,
   stopInstallPolling,
   pollInstallOnce,
@@ -2853,6 +2854,87 @@ describe('readAcfState(appId, "bottle") — bottle-scoped ACF root', () => {
   })
 })
 
+// ── debug/steam-bottle-uninstall-reverts (OPERATOR PRODUCT DECISION, LOCKED):
+// resolveInstallRoot() — the SOLE source of truth games.ts's uninstall()
+// consults for bottle-vs-native-vs-refuse routing. ──────────────────────────
+
+describe('resolveInstallRoot() (debug/steam-bottle-uninstall-reverts, OPERATOR DECISION LOCKED)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+
+  beforeEach(() => {
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    jest
+      .mocked(getSteamBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+    jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+  })
+
+  afterEach(() => {
+    envMock.isMac = false
+  })
+
+  it('returns "bottle" for an install_path inside the bottle steamapps/common/', async () => {
+    const installPath = join(BOTTLE_STEAMAPPS_ROOT, 'common', 'Hoard')
+    await expect(resolveInstallRoot(installPath)).resolves.toBe('bottle')
+  })
+
+  it('returns "native" for an install_path inside a registered native library steamapps/common/', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    const installPath = join('/steam', 'steamapps', 'common', 'CS:GO')
+    await expect(resolveInstallRoot(installPath)).resolves.toBe('native')
+  })
+
+  it('checks EVERY registered native library root, not just the first', async () => {
+    jest
+      .mocked(getSteamLibraries)
+      .mockResolvedValue(['/steam-primary', '/mnt/second-drive/SteamLibrary'])
+    const installPath = join(
+      '/mnt/second-drive/SteamLibrary',
+      'steamapps',
+      'common',
+      'CS:GO'
+    )
+    await expect(resolveInstallRoot(installPath)).resolves.toBe('native')
+  })
+
+  it('returns null for a stale/empty install_path — never falls through to a root', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    await expect(resolveInstallRoot(undefined)).resolves.toBeNull()
+    await expect(resolveInstallRoot('')).resolves.toBeNull()
+    await expect(resolveInstallRoot('   ')).resolves.toBeNull()
+  })
+
+  it('returns null for an install_path resolving OUTSIDE every known root (bottle AND all native libraries)', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    await expect(
+      resolveInstallRoot('/completely/unrelated/place/Game')
+    ).resolves.toBeNull()
+  })
+
+  it('never treats the bottle/native common/ root itself as "contained" (no installdir segment)', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue([])
+    await expect(
+      resolveInstallRoot(join(BOTTLE_STEAMAPPS_ROOT, 'common'))
+    ).resolves.toBeNull()
+  })
+
+  it('rejects a traversal attempt disguised as a bottle-common child ("path.join is not containment", Phase 18)', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue([])
+    const traversal = join(BOTTLE_STEAMAPPS_ROOT, 'common', '..', '..', 'etc', 'passwd')
+    await expect(resolveInstallRoot(traversal)).resolves.toBeNull()
+  })
+
+  it('never consults the bottle root at all on a non-mac host — a bottle-shaped path still resolves null there', async () => {
+    envMock.isMac = false
+    jest.mocked(getSteamLibraries).mockResolvedValue([])
+    const installPath = join(BOTTLE_STEAMAPPS_ROOT, 'common', 'Hoard')
+    await expect(resolveInstallRoot(installPath)).resolves.toBeNull()
+    expect(getSteamBottleSettings).not.toHaveBeenCalled()
+  })
+})
+
 // ── D-UAT-24-05 (24-12): readAcfState('bridge') — bridge-bottle-scoped ACF
 // root, distinct from both 'native' and the Phase 17 'bottle' root ─────────
 
@@ -4219,6 +4301,128 @@ describe('pollUninstallOnce()', () => {
     library.clear() // library.get('730') is now undefined — the Map MISS
     await pollUninstallOnce('730', 'bottle')
     expect(clearForcedSpy).toHaveBeenCalledWith('730')
+  })
+
+  // ── debug/steam-bottle-uninstall-reverts (OPERATOR PRODUCT DECISION,
+  // LOCKED, item 4/5): a dual-installed title losing only the just-removed
+  // copy is CORRECT, expected behaviour — the badge must never be forced to
+  // flip, install_path must correctly re-resolve to the surviving copy
+  // (verified here, not assumed), and the success signal must not lie: no
+  // "Game Uninstalled" toast fires while a represented install remains.
+
+  describe('dual-install partial removal (item 4/5)', () => {
+    beforeEach(() => {
+      jest.mocked(getFileSize).mockImplementation((bytes: unknown) => `${bytes} B`)
+    })
+
+    it('bottle copy removed, NATIVE copy survives: badge STAYS installed, install_path re-resolves to the native copy, no "Game Uninstalled" toast', async () => {
+      // Bottle manifest absent (the copy just removed); native manifest still
+      // fully installed — differentiate existsSync by the EXACT bottle
+      // manifest path so the native scan (a DIFFERENT root, /steam/steamapps)
+      // is unaffected.
+      ;(existsSync as jest.Mock).mockImplementation(
+        (path: string) => path !== '/bottle/steamapps/appmanifest_730.acf'
+      )
+      ;(readFileSync as jest.Mock).mockReturnValue('native manifest content')
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        AppState: {
+          appid: '730',
+          StateFlags: '4',
+          installdir: 'CS2Native',
+          SizeOnDisk: '99999'
+        }
+      })
+
+      startUninstallPolling('730', 60000)
+      await pollUninstallOnce('730', 'bottle')
+
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'pushGameToLibrary',
+        expect.objectContaining({
+          app_name: '730',
+          is_installed: true,
+          install: expect.objectContaining({
+            install_path: '/steam/steamapps/common/CS2Native'
+          })
+        })
+      )
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'gameStatusUpdate',
+        expect.objectContaining({
+          appName: '730',
+          runner: 'steam',
+          status: 'done'
+        })
+      )
+      // The badge is never forced to not-installed while a copy survives.
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'pushGameToLibrary',
+        expect.objectContaining({ is_installed: false })
+      )
+      // The success signal must not lie: no "uninstalled" toast while the
+      // title is legitimately still installed via the surviving copy.
+      expect(notify).not.toHaveBeenCalled()
+    })
+
+    it('native copy removed, BOTTLE copy survives: badge STAYS installed, install_path re-resolves to the bottle copy (platform Windows), no "Game Uninstalled" toast', async () => {
+      // Native manifest absent (the copy just removed) on EVERY registered
+      // native library root; bottle manifest still fully installed.
+      ;(existsSync as jest.Mock).mockImplementation(
+        (path: string) => path !== '/steam/steamapps/appmanifest_730.acf'
+      )
+      ;(readFileSync as jest.Mock).mockReturnValue('bottle manifest content')
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        AppState: {
+          appid: '730',
+          StateFlags: '4',
+          installdir: 'CS2Bottle',
+          SizeOnDisk: '55555'
+        }
+      })
+
+      startUninstallPolling('730', 60000)
+      await pollUninstallOnce('730') // default source: 'native'
+
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'pushGameToLibrary',
+        expect.objectContaining({
+          app_name: '730',
+          is_installed: true,
+          install: expect.objectContaining({
+            install_path: '/bottle/steamapps/common/CS2Bottle',
+            platform: 'Windows'
+          })
+        })
+      )
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'gameStatusUpdate',
+        expect.objectContaining({
+          appName: '730',
+          runner: 'steam',
+          status: 'done'
+        })
+      )
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'pushGameToLibrary',
+        expect.objectContaining({ is_installed: false })
+      )
+      expect(notify).not.toHaveBeenCalled()
+    })
+
+    it('NEITHER root has a surviving copy: falls through to the original full-uninstall behaviour (badge flips false, "Game Uninstalled" toast fires) — regression guard', async () => {
+      ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone everywhere
+      startUninstallPolling('730', 60000)
+      await pollUninstallOnce('730', 'bottle')
+
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'pushGameToLibrary',
+        expect.objectContaining({ app_name: '730', is_installed: false })
+      )
+      expect(notify).toHaveBeenCalledWith({
+        title: 'CS:GO',
+        body: 'Game Uninstalled'
+      })
+    })
   })
 })
 
