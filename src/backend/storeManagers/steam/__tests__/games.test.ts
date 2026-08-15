@@ -3015,6 +3015,256 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
   })
 })
 
+// ── D-17 forced-verdict durability (34.13-14) ────────────────────────────────
+//
+// 34.13-06 taught install() to honor args.steamForceWindowsViaBottle for a
+// single install call — but never persisted the verdict, so getSettings(),
+// isNative(), launch(), uninstall() and checkBottleEligibility() stayed
+// unaware of a forced install after it returned (T-34.13-06-06). This block
+// characterizes what "durable" means across all six consumers before any
+// source is touched (Task 1), then Task 2 appends the write-discipline
+// (W-series) specs once the persisted verdict and widened predicate exist.
+
+describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
+  let shellOpenExternal: jest.Mock
+  let startUninstallPollingSpy: jest.SpyInstance
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+
+  /** A game whose persisted entry WAS forced into the bottle by a prior
+   * successful D-17 override install (34.13-06) — the shape this plan makes
+   * durable. */
+  function forcedMeta(overrides: Record<string, unknown> = {}) {
+    return {
+      platformsCaptured: true,
+      is_mac_native: true,
+      is_windows_native: true,
+      forcedWindowsViaBottle: true,
+      ...overrides
+    }
+  }
+
+  /** The pre-34.13 upgrade shape: the field has never existed on this cache
+   * entry at all — deliberately does NOT set forcedWindowsViaBottle to any
+   * value. `undefined` (absent) and `false` (explicit, see explicitFalseMeta
+   * below) are different upgrade realities; a single merged fixture cannot
+   * distinguish them. */
+  function unforcedMeta(overrides: Record<string, unknown> = {}) {
+    return {
+      platformsCaptured: true,
+      is_mac_native: true,
+      is_windows_native: true,
+      ...overrides
+    }
+  }
+
+  /** A cache entry that explicitly stores forcedWindowsViaBottle: false —
+   * pins that only === true re-routes; a stored false must never be treated
+   * as a truthiness accident. */
+  function explicitFalseMeta(overrides: Record<string, unknown> = {}) {
+    return {
+      platformsCaptured: true,
+      is_mac_native: true,
+      is_windows_native: true,
+      forcedWindowsViaBottle: false,
+      ...overrides
+    }
+  }
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    envMock.isWindows = false
+    envMock.isLinux = false
+    const { shell } = jest.requireMock('electron')
+    shellOpenExternal = shell.openExternal as jest.Mock
+    shellOpenExternal.mockResolvedValue(undefined)
+    startUninstallPollingSpy = jest
+      .spyOn(libraryModule, 'startUninstallPolling')
+      .mockImplementation(() => {})
+    // Routing axes for this block — reset explicitly per spec rather than
+    // relying on resetMocks' implicit undefined/false default.
+    ;(isBottleReady as jest.Mock).mockReset()
+    ;(tellBottledSteamToLaunch as jest.Mock).mockReset()
+    ;(tellBottledSteamToUninstall as jest.Mock).mockReset()
+    ;(getSteamBottleSettings as jest.Mock).mockReset()
+    ;(bridgeAllowlist.has as jest.Mock).mockReset().mockReturnValue(false)
+  })
+
+  afterEach(() => {
+    startUninstallPollingSpy.mockRestore()
+  })
+
+  // ── D1-D6: durability discriminators, all against forcedMeta() ──────────
+
+  it('D1: getSettings() resolves the bottle settings for a forced game, never GameConfig.get', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
+    const bottleSettings = { wineCrossoverBottle: 'GameLibSteam' }
+    ;(getSteamBottleSettings as jest.Mock).mockReturnValue(bottleSettings)
+    const gameConfigGetMock = jest.requireMock('backend/game_config')
+      .GameConfig.get as jest.Mock
+    gameConfigGetMock.mockClear()
+
+    const game = new SteamGame(APP_ID)
+    const settings = await game.getSettings()
+
+    expect(settings).toBe(bottleSettings)
+    expect(gameConfigGetMock).not.toHaveBeenCalled()
+  })
+
+  it('D2: isNative() is false for a forced game — launcher.ts must run checkWineBeforeLaunch', () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
+    const game = new SteamGame(APP_ID)
+    expect(game.isNative()).toBe(false)
+  })
+
+  it('D3: launch() dispatches to the bottled Steam client, never steam://rungameid', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(tellBottledSteamToLaunch).toHaveBeenCalledWith(APP_ID)
+    // The load-bearing negative half: steam://rungameid reaching the host
+    // Steam client is the exact defect T-34.13-06-06 closes.
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(result).toBe(true)
+  })
+
+  it('D4: uninstall() dispatches to the bottled Steam client + bottle-scoped polling, never steam://uninstall', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToUninstall as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    await game.uninstall({} as any)
+
+    expect(tellBottledSteamToUninstall).toHaveBeenCalledWith(APP_ID)
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(startUninstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+      source: 'bottle'
+    })
+  })
+
+  it('D5: a forced+allowlisted game never enters the Phase 24 bridge (launch + uninstall) — currently a VACUOUS pass, see Task 2', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+    ;(tellBottledSteamToUninstall as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    // The forced bits live in the Phase 17 GameLibSteam bottle; the Phase 24
+    // GameLibSteamBridge bottle is a different filesystem root that has
+    // never held them — bridging a forced+allowlisted title would swap one
+    // broken launch for another, not fix anything.
+    //
+    // VACUITY (pre-Task-2): isBridgeEligible() composes isBottleEligible(),
+    // which is false for this mac-native fixture until Task 2 persists the
+    // forced verdict — so the entire bottle block (bridge sub-check
+    // included) is unreachable and these spies are never called for the
+    // wrong reason (nothing routes there at all, not because containment
+    // engaged). Task 2 re-proves this non-vacuously by reverting the bridge
+    // pin and observing BOTH halves fail.
+    const launchGame = new SteamGame(APP_ID)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const launchBridgeSpy = jest
+      .spyOn(launchGame as any, 'launchBridgeGame')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .mockResolvedValue(true as any)
+    await launchGame.launch({} as any)
+    expect(launchBridgeSpy).not.toHaveBeenCalled()
+
+    const uninstallGame = new SteamGame(APP_ID)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const uninstallBridgeSpy = jest
+      .spyOn(uninstallGame as any, 'uninstallBridgeGame')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .mockResolvedValue({ stdout: '', stderr: '' } as any)
+    await uninstallGame.uninstall({} as any)
+    expect(uninstallBridgeSpy).not.toHaveBeenCalled()
+  })
+
+  it('D6: checkBottleEligibility() resolves true for a forced game', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
+    const game = new SteamGame(APP_ID)
+    await expect(game.checkBottleEligibility()).resolves.toBe(true)
+  })
+
+  // ── N1-N3: fail-safe baselines — must pass BEFORE and AFTER Task 2 ───────
+
+  it('N1: absent flag (pre-34.13 upgrade shape) routes exactly as it does today', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(unforcedMeta())
+    const gameConfigGetMock = jest.requireMock('backend/game_config')
+      .GameConfig.get as jest.Mock
+    gameConfigGetMock.mockReturnValue({
+      config: undefined,
+      getSettings: jest.fn().mockResolvedValue({ autoSyncSaves: false })
+    })
+
+    const game = new SteamGame(APP_ID)
+    expect(game.isNative()).toBe(true)
+    await game.getSettings()
+    expect(gameConfigGetMock).toHaveBeenCalledWith(APP_ID)
+
+    const launchResult = await game.launch({} as any)
+    expect(shellOpenExternal).toHaveBeenCalledWith(
+      `steam://rungameid/${APP_ID}`,
+      { activate: false }
+    )
+    expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
+    expect(launchResult).toBe(true)
+
+    shellOpenExternal.mockClear()
+    await game.uninstall({} as any)
+    expect(shellOpenExternal).toHaveBeenCalledWith(
+      `steam://uninstall/${APP_ID}`
+    )
+    expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
+  })
+
+  it('N2: explicit false is byte-identical to N1 — only === true re-routes', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(explicitFalseMeta())
+
+    const game = new SteamGame(APP_ID)
+    expect(game.isNative()).toBe(true)
+
+    await game.launch({} as any)
+    expect(shellOpenExternal).toHaveBeenCalledWith(
+      `steam://rungameid/${APP_ID}`,
+      { activate: false }
+    )
+    expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
+  })
+
+  it('N3: a persisted flag can never resurrect a bottle path on a non-mac host (D-18)', async () => {
+    envMock.isMac = false
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
+
+    const game = new SteamGame(APP_ID)
+    expect(game.isNative()).toBe(true)
+
+    await game.launch({} as any)
+    expect(shellOpenExternal).toHaveBeenCalledWith(
+      `steam://rungameid/${APP_ID}`,
+      { activate: false }
+    )
+    expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
+  })
+})
+
 // ── Phase 17 Plan 09 (MACSTEAM-04 gap closure): ensurePlatformsCaptured() ────
 //
 // Closes UAT GAP 2: on macOS, an uncaptured Windows-only game's Install/Play
