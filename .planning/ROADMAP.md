@@ -1337,7 +1337,7 @@ Plans: **14 plans, 8 waves** *(re-planned 2026-08-15 for D-21..D-29. `34.13-04` 
 
 **Wave 3** *(blocked on Wave 2)*
 - [x] 34.13-06 — `SteamGame.install()` honors the Windows-via-bottle override [D-17]
-- [ ] 34.13-07 — IPC surface, dual-registered (`isSteamBottleEligible`, `persistBottleWineVersion`) [D-09, D-14, D-15]
+- [x] 34.13-07 — IPC surface, dual-registered (`isSteamBottleEligible`, `persistBottleWineVersion`) [D-09, D-14, D-15]
 - [ ] 34.13-15 — **`GameCard` menu Item + `GameSubMenu` entry + Console Mode D-24 check** [D-24, D-27, D-28, D-29]
 
 **Wave 4** *(blocked on Wave 3)*
