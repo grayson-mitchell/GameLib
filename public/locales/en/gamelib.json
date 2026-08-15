@@ -34,6 +34,7 @@
             "emptyBody": "No games match {{filters}}.",
             "emptyClearAll": "Clear all filters",
             "emptyHeading": "No games match your filters",
+            "groupSelectedCount": "{{selected}} selected",
             "manageCollections": "Manage collections",
             "moreFilters": "More filters",
             "newCollection": "+ New collection",

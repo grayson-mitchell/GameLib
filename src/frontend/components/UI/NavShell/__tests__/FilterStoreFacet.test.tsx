@@ -36,6 +36,7 @@ type MockContextValue = {
   storeFacet: string[]
   setStoreFacet: jest.Mock
   countForStore: jest.Mock
+  activeFilterDescriptors: { id: string; kind: string; value: string }[]
 }
 
 function makeContextValue(
@@ -46,6 +47,7 @@ function makeContextValue(
     storeFacet: [],
     setStoreFacet: jest.fn(),
     countForStore: jest.fn(() => 0),
+    activeFilterDescriptors: [],
     ...overrides
   }
 }
@@ -57,9 +59,26 @@ jest.mock('react', () => ({
   useContext: () => contextValue
 }))
 
+// The `t` mock now INTERPOLATES its options into the literal default. That
+// is what makes the badge-label assertion below able to tell
+// `{{selected}}` from `{{count}}`: with a plain echo mock, a call site that
+// used i18next's reserved `count` name (which silently triggers plural key
+// resolution -- `_one`/`_other` -- and would render a missing key in the
+// real app) would produce a string indistinguishable from a correct one.
+// Every pre-existing spec in this file calls `t` with no options, where
+// interpolation is a no-op.
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, defaultValue: string): string => defaultValue
+    t: (
+      _key: string,
+      defaultValue: string,
+      options?: Record<string, unknown>
+    ): string =>
+      options
+        ? defaultValue.replace(/\{\{(\w+)\}\}/g, (_match, name: string) =>
+            String(options[name])
+          )
+        : defaultValue
   })
 }))
 
@@ -153,6 +172,58 @@ describe('FilterStoreFacet', () => {
 
     ;(gogRow?.props.onToggle as () => void)()
     expect(contextValue.setStoreFacet).toHaveBeenCalledWith([])
+  })
+
+  // 260815-opt: the collapsed group's header badge. The number comes from
+  // the DESCRIPTOR list, never from `storeFacet.length` -- D3. These specs
+  // therefore leave `storeFacet` at its default and vary only
+  // `activeFilterDescriptors`, so a caller that regressed to counting its
+  // own facet array would read 0 and fail here.
+  it('with no active filters, passes selectedCount 0 so no badge renders', () => {
+    contextValue = makeContextValue({ connectedStores: ['gog', 'steam'] })
+
+    const tree = FilterStoreFacet() as unknown as ReactElement<AnyProps>
+
+    expect(tree.props.selectedCount).toBe(0)
+    expect(tree.props.selectedCountLabel).toBeUndefined()
+  })
+
+  it('counts only the store descriptors -- two stores and one runnability yields 2', () => {
+    contextValue = makeContextValue({
+      connectedStores: ['gog', 'steam'],
+      activeFilterDescriptors: [
+        { id: 'store:gog', kind: 'store', value: 'gog' },
+        { id: 'store:steam', kind: 'store', value: 'steam' },
+        { id: 'runnability:native', kind: 'runnability', value: 'native' }
+      ]
+    })
+
+    const tree = FilterStoreFacet() as unknown as ReactElement<AnyProps>
+
+    expect(tree.props.selectedCount).toBe(2)
+  })
+
+  it('supplies an already-translated badge label interpolated on {{selected}}, not {{count}}', () => {
+    contextValue = makeContextValue({
+      connectedStores: ['gog', 'steam'],
+      activeFilterDescriptors: [
+        { id: 'store:gog', kind: 'store', value: 'gog' },
+        { id: 'store:steam', kind: 'store', value: 'steam' }
+      ]
+    })
+
+    const tree = FilterStoreFacet() as unknown as ReactElement<AnyProps>
+
+    expect(tree.props.selectedCountLabel).toBe('2 selected')
+  })
+
+  it('every other prop is unchanged -- the group still renders its own title and className', () => {
+    contextValue = makeContextValue({ connectedStores: ['gog'] })
+
+    const tree = FilterStoreFacet() as unknown as ReactElement<AnyProps>
+
+    expect(tree.props.title).toBe('Store')
+    expect(tree.props.className).toBe('FilterStoreFacet')
   })
 
   it('each row count comes from countForStore, called once per rendered row', () => {

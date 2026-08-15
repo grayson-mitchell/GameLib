@@ -44,6 +44,7 @@ type MockContextValue = {
   setShowThirdPartyManagedOnly: jest.Mock
   showUpdatesOnly: boolean
   setShowUpdatesOnly: jest.Mock
+  activeFilterDescriptors: { id: string; kind: string; value: string }[]
 }
 
 function makeContextValue(
@@ -60,6 +61,7 @@ function makeContextValue(
     setShowThirdPartyManagedOnly: jest.fn(),
     showUpdatesOnly: false,
     setShowUpdatesOnly: jest.fn(),
+    activeFilterDescriptors: [],
     ...overrides
   }
 }
@@ -71,9 +73,23 @@ jest.mock('react', () => ({
   useContext: () => contextValue
 }))
 
+// The `t` mock INTERPOLATES its options into the literal default so the
+// badge-label spec below can tell `{{selected}}` from i18next's reserved
+// `{{count}}` (which silently triggers plural key resolution and would
+// render a missing key in the real app). Every pre-existing spec calls `t`
+// with no options, where interpolation is a no-op.
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, defaultValue: string): string => defaultValue
+    t: (
+      _key: string,
+      defaultValue: string,
+      options?: Record<string, unknown>
+    ): string =>
+      options
+        ? defaultValue.replace(/\{\{(\w+)\}\}/g, (_match, name: string) =>
+            String(options[name])
+          )
+        : defaultValue
   })
 }))
 
@@ -132,6 +148,54 @@ describe('FilterMoreGroup', () => {
     rowsOf(tree).forEach((row) => {
       expect(row.props.count).toBeUndefined()
     })
+  })
+
+  // 260815-opt: the collapsed group's header badge. This group is the one
+  // where D3 bites hardest -- the alternative was a five-term boolean tally
+  // over showHidden/showNonAvailable/showSupportOfflineOnly/
+  // showThirdPartyManagedOnly/showUpdatesOnly, a second implementation of
+  // "what is active" that could disagree with the chip row. These specs
+  // leave all five toggles at their defaults and vary only
+  // `activeFilterDescriptors`, so such a tally would read 0 and fail here.
+  it('with no active filters, passes selectedCount 0 so no badge renders', () => {
+    const tree = FilterMoreGroup() as unknown as ReactElement<AnyProps>
+
+    expect(tree.props.selectedCount).toBe(0)
+    expect(tree.props.selectedCountLabel).toBeUndefined()
+  })
+
+  it('counts only the More-filters descriptors -- two More plus one store yields 2', () => {
+    contextValue = makeContextValue({
+      activeFilterDescriptors: [
+        { id: 'showHidden:only', kind: 'showHidden', value: 'only' },
+        { id: 'showUpdatesOnly', kind: 'showUpdatesOnly', value: 'true' },
+        { id: 'store:gog', kind: 'store', value: 'gog' }
+      ]
+    })
+
+    const tree = FilterMoreGroup() as unknown as ReactElement<AnyProps>
+
+    expect(tree.props.selectedCount).toBe(2)
+  })
+
+  it('supplies an already-translated badge label interpolated on {{selected}}, not {{count}}', () => {
+    contextValue = makeContextValue({
+      activeFilterDescriptors: [
+        { id: 'showHidden:only', kind: 'showHidden', value: 'only' },
+        { id: 'showUpdatesOnly', kind: 'showUpdatesOnly', value: 'true' }
+      ]
+    })
+
+    const tree = FilterMoreGroup() as unknown as ReactElement<AnyProps>
+
+    expect(tree.props.selectedCountLabel).toBe('2 selected')
+  })
+
+  it('every other prop is unchanged -- the group still renders its own title and className', () => {
+    const tree = FilterMoreGroup() as unknown as ReactElement<AnyProps>
+
+    expect(tree.props.title).toBe('More filters')
+    expect(tree.props.className).toBe('FilterMoreGroup')
   })
 
   it.each<[FilterMode, boolean, boolean]>([

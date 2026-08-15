@@ -11,6 +11,10 @@ import { useTranslation } from 'react-i18next'
 import LibraryContext from 'frontend/screens/Library/LibraryContext'
 import type { FilterMode } from 'frontend/types'
 import FilterFacetGroup, { FilterFacetRow } from '../FilterFacetGroup'
+import {
+  MORE_FILTER_KINDS,
+  countDescriptorsOfKind
+} from '../FilterFacetGroup/selectionCount'
 import './index.scss'
 
 export default function FilterMoreGroup() {
@@ -26,8 +30,20 @@ export default function FilterMoreGroup() {
     showThirdPartyManagedOnly,
     setShowThirdPartyManagedOnly,
     showUpdatesOnly,
-    setShowUpdatesOnly
+    setShowUpdatesOnly,
+    activeFilterDescriptors
   } = useContext(LibraryContext)
+
+  // D3: the header badge's number comes from the DESCRIPTOR list, never
+  // from a local boolean tally over the five state values destructured
+  // above. That tally is the tempting implementation here -- it reads the
+  // data this component already holds -- and it is precisely the second
+  // implementation of "what counts as active" that can drift from the chip
+  // row, which renders the same descriptor list. See selectionCount.ts.
+  const selectedCount = countDescriptorsOfKind(
+    activeFilterDescriptors,
+    MORE_FILTER_KINDS
+  )
 
   // Cycle ported verbatim from LibraryFilters/index.tsx:50-68:
   // Off -> Show (row click), Show -> Off, Only -> Show.
@@ -74,6 +90,23 @@ export default function FilterMoreGroup() {
     <FilterFacetGroup
       title={tGamelib('gamelib:library.filterPanel.moreFilters', 'More filters')}
       className="FilterMoreGroup"
+      selectedCount={selectedCount}
+      // Literal key AND literal default, repeated verbatim at all three
+      // group call sites rather than factored into a helper: i18next-parser
+      // only resolves STRING-LITERAL arguments, so a helper taking the key
+      // as a variable extracts nothing and a non-literal default extracts an
+      // EMPTY string that i18next then renders in preference to the
+      // call-site fallback. `{{selected}}`, never `{{count}}` -- `count` is
+      // reserved and triggers plural key resolution (`_one`/`_other`).
+      selectedCountLabel={
+        selectedCount > 0
+          ? tGamelib(
+              'gamelib:library.filterPanel.groupSelectedCount',
+              '{{selected}} selected',
+              { selected: selectedCount }
+            )
+          : undefined
+      }
     >
       {triState(
         showHidden,

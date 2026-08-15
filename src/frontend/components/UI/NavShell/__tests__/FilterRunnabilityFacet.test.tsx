@@ -34,6 +34,7 @@ type MockContextValue = {
   runnabilityFacet: string[]
   setRunnabilityFacet: jest.Mock
   countForRunnability: jest.Mock
+  activeFilterDescriptors: { id: string; kind: string; value: string }[]
 }
 
 function makeContextValue(
@@ -44,6 +45,7 @@ function makeContextValue(
     runnabilityFacet: [],
     setRunnabilityFacet: jest.fn(),
     countForRunnability: jest.fn(() => 0),
+    activeFilterDescriptors: [],
     ...overrides
   }
 }
@@ -55,9 +57,23 @@ jest.mock('react', () => ({
   useContext: () => contextValue
 }))
 
+// The `t` mock INTERPOLATES its options into the literal default so the
+// badge-label spec below can tell `{{selected}}` from i18next's reserved
+// `{{count}}` (which silently triggers plural key resolution and would
+// render a missing key in the real app). Every pre-existing spec calls `t`
+// with no options, where interpolation is a no-op.
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, defaultValue: string): string => defaultValue
+    t: (
+      _key: string,
+      defaultValue: string,
+      options?: Record<string, unknown>
+    ): string =>
+      options
+        ? defaultValue.replace(/\{\{(\w+)\}\}/g, (_match, name: string) =>
+            String(options[name])
+          )
+        : defaultValue
   })
 }))
 
@@ -129,6 +145,56 @@ describe('FilterRunnabilityFacet', () => {
       "Won't run",
       'Not yet checked'
     ])
+  })
+
+  // 260815-opt: the collapsed group's header badge. `runnabilityFacet` is
+  // left at its default in these specs and only `activeFilterDescriptors`
+  // varies, so a caller that regressed to counting its own facet array
+  // would read 0 and fail here (D3).
+  it('with no active filters, passes selectedCount 0 so no badge renders', () => {
+    contextValue = makeContextValue({ runnabilityRows: ['native'] })
+
+    const tree = FilterRunnabilityFacet() as unknown as ReactElement<AnyProps>
+
+    expect(tree.props.selectedCount).toBe(0)
+    expect(tree.props.selectedCountLabel).toBeUndefined()
+  })
+
+  it('counts only the runnability descriptors -- two stores and one runnability yields 1', () => {
+    contextValue = makeContextValue({
+      runnabilityRows: ['native', 'bottle'],
+      activeFilterDescriptors: [
+        { id: 'store:gog', kind: 'store', value: 'gog' },
+        { id: 'store:steam', kind: 'store', value: 'steam' },
+        { id: 'runnability:native', kind: 'runnability', value: 'native' }
+      ]
+    })
+
+    const tree = FilterRunnabilityFacet() as unknown as ReactElement<AnyProps>
+
+    expect(tree.props.selectedCount).toBe(1)
+  })
+
+  it('supplies an already-translated badge label interpolated on {{selected}}, not {{count}}', () => {
+    contextValue = makeContextValue({
+      runnabilityRows: ['native', 'bottle'],
+      activeFilterDescriptors: [
+        { id: 'runnability:native', kind: 'runnability', value: 'native' }
+      ]
+    })
+
+    const tree = FilterRunnabilityFacet() as unknown as ReactElement<AnyProps>
+
+    expect(tree.props.selectedCountLabel).toBe('1 selected')
+  })
+
+  it('every other prop is unchanged -- the group still renders its own title and className', () => {
+    contextValue = makeContextValue({ runnabilityRows: ['native'] })
+
+    const tree = FilterRunnabilityFacet() as unknown as ReactElement<AnyProps>
+
+    expect(tree.props.title).toBe('Runnability')
+    expect(tree.props.className).toBe('FilterRunnabilityFacet')
   })
 
   it('each row count comes from countForRunnability, called once per rendered row', () => {

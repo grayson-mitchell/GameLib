@@ -17,6 +17,7 @@ import LibraryContext from 'frontend/screens/Library/LibraryContext'
 import { RUNNABILITY_LABELS } from 'frontend/screens/Library/facetLabels'
 import type { RunnabilityTier } from 'frontend/types'
 import FilterFacetGroup, { FilterFacetRow } from '../FilterFacetGroup'
+import { countDescriptorsOfKind } from '../FilterFacetGroup/selectionCount'
 
 // i18next-parser's JavascriptLexer only resolves string-literal arguments
 // to tGamelib() calls -- confirmed empirically in 34.11-06 (a lookup-array
@@ -68,8 +69,22 @@ if (process.env.NODE_ENV !== 'production') {
 
 export default function FilterRunnabilityFacet() {
   const { t: tGamelib } = useTranslation('gamelib')
-  const { runnabilityRows, runnabilityFacet, setRunnabilityFacet, countForRunnability } =
-    useContext(LibraryContext)
+  const {
+    runnabilityRows,
+    runnabilityFacet,
+    setRunnabilityFacet,
+    countForRunnability,
+    activeFilterDescriptors
+  } = useContext(LibraryContext)
+
+  // D3: the header badge's number comes from the DESCRIPTOR list, never
+  // from `runnabilityFacet.length` -- the descriptor list is the declared
+  // single source of truth for what is active (34.11 D-26) and is what the
+  // chip row renders, so counting it is what makes a header-vs-chips
+  // disagreement unrepresentable rather than merely absent.
+  const selectedCount = countDescriptorsOfKind(activeFilterDescriptors, [
+    'runnability'
+  ])
 
   // D-12 extension (resolved 2026-08-09): the shared per-game info model
   // exposes native-build signals for macOS and Linux but nothing
@@ -90,6 +105,21 @@ export default function FilterRunnabilityFacet() {
         'Runnability'
       )}
       className="FilterRunnabilityFacet"
+      selectedCount={selectedCount}
+      // Literal key AND literal default at this call site, deliberately not
+      // factored into a shared helper -- see the lexer comment at the top of
+      // this file for why a variable key or a non-literal default silently
+      // produces blank UI text. `{{selected}}`, never `{{count}}`: `count`
+      // is reserved by i18next and triggers plural key resolution.
+      selectedCountLabel={
+        selectedCount > 0
+          ? tGamelib(
+              'gamelib:library.filterPanel.groupSelectedCount',
+              '{{selected}} selected',
+              { selected: selectedCount }
+            )
+          : undefined
+      }
     >
       {runnabilityRows.map((tier: RunnabilityTier) => (
         <FilterFacetRow
