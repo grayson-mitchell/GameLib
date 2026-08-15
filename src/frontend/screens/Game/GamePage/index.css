@@ -367,7 +367,8 @@
           transition: transform 0.12s ease;
         }
 
-        .SteamInstallCaret .dropdownButton[aria-expanded='false']
+        .SteamInstallCaret
+          .dropdownButton[aria-expanded='false']
           .SteamInstallCaret__icon {
           transform: rotate(-90deg);
         }
