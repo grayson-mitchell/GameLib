@@ -75,6 +75,18 @@ const SteamBottleSetup = () => {
     setWineVersion(undefined)
     setPersistedWineVersion(undefined)
     setPersistedLookupSettled(false)
+    // 34.13 review C-06: the engine list and its own settle flag must reset
+    // too, and for the same reason. `enginesFetched` is the seeding effect's
+    // guard against "seed before the engine list is known" -- but it is
+    // already `true` on session 2 (session 1 set it and nothing cleared it),
+    // so the guard is INERT there: the seed can fire the instant
+    // `persistedLookupSettled` flips, computing its default against session
+    // 1's STALE `wineVersionList`, before the re-issued getAlternativeWine()
+    // resolves. If the user installed CrossOver between the two sessions,
+    // the derived default is computed from a list that does not contain it
+    // -- exactly the failure the guard was written for.
+    setEnginesFetched(false)
+    setWineVersionList([])
   }, [isOpen, appName])
 
   // D-03: fetch the available compatibility engines. `enginesFetched` gates the
@@ -177,9 +189,24 @@ const SteamBottleSetup = () => {
   // have no direct completion event to await). Stops polling once
   // provisioned flips true; the user still closes the surface manually so
   // they have time to read the login-prompt/same-account guidance below.
+  //
+  // 34.13 review C-05: keyed on `isOpen` as well as `phase`. This component
+  // is mounted PERMANENTLY in App.tsx -- `isOpen: false` only makes it
+  // `return null`, it never unmounts -- and `phase` is reset only by the
+  // session effect above, which begins `if (!isOpen) return` and therefore
+  // resets on OPEN, never on close. So clicking "Done" left `phase ===
+  // 'provisioning'`, the effect did not re-run, its cleanup never fired, and
+  // `steamBottleStatus()` kept being invoked every 3s for the remaining life
+  // of the app. The interval only self-clears when `status.provisioned`
+  // turns true, which never happens if the user cancelled the Steam
+  // installer or the channel is erroring (the WR-03 `.catch` deliberately
+  // keeps polling in that case).
   useEffect(() => {
-    if (phase !== 'provisioning') {
-      if (pollRef.current) clearInterval(pollRef.current)
+    if (!isOpen || phase !== 'provisioning') {
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = undefined
+      }
       return
     }
 
@@ -207,9 +234,12 @@ const SteamBottleSetup = () => {
     pollRef.current = setInterval(poll, STATUS_POLL_INTERVAL_MS)
 
     return () => {
-      if (pollRef.current) clearInterval(pollRef.current)
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = undefined
+      }
     }
-  }, [phase])
+  }, [isOpen, phase])
 
   if (!isOpen) {
     return null

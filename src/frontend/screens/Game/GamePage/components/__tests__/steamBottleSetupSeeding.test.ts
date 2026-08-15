@@ -142,6 +142,89 @@ describe('C-02: a rejected steamBottleProvision reaches a terminal phase', () =>
   })
 })
 
+/** Slices the status-poll effect (the one containing `steamBottleStatus`)
+ * out of the flattened source, bounded by its own dependency array, so the
+ * C-05 gate measures THAT effect's deps and not another's. */
+function slicePollEffect(source: string): string {
+  const flattened = source.replace(/\s+/g, ' ')
+  const marker = flattened.indexOf('steamBottleStatus')
+  if (marker === -1) {
+    throw new Error('slicePollEffect: the status poll is gone')
+  }
+  const start = flattened.lastIndexOf('useEffect(', marker)
+  const end = flattened.indexOf('}, [', marker)
+  if (start === -1 || end === -1) {
+    throw new Error('slicePollEffect: could not bound the poll effect')
+  }
+  // Include the dependency array itself.
+  return flattened.slice(start, flattened.indexOf(']', end) + 1)
+}
+
+describe('C-05: the provisioning poll cannot outlive the surface', () => {
+  const pollEffect = slicePollEffect(stripped)
+
+  it('the poll effect is keyed on isOpen as well as phase', () => {
+    // The component never unmounts (App.tsx mounts it permanently and
+    // `isOpen: false` only returns null), and `phase` resets on OPEN, never
+    // on close -- so `[phase]` alone left the 3s interval armed for the rest
+    // of the app's life after the user clicked "Done".
+    expect(pollEffect).toMatch(/\}, \[\s*isOpen,\s*phase\s*\]/)
+  })
+
+  it('the poll effect early-returns when the surface is closed', () => {
+    expect(pollEffect).toMatch(/if \(\s*!isOpen \|\| phase !== 'provisioning'/)
+  })
+
+  it('RED: the pre-fix dependency array DERIVED FROM THE REAL SOURCE fails both obligations', () => {
+    const knownBad = slicePollEffect(
+      stripped
+        .replace(
+          "if (!isOpen || phase !== 'provisioning')",
+          "if (phase !== 'provisioning')"
+        )
+        .replace('}, [isOpen, phase])', '}, [phase])')
+    )
+    expect(knownBad).not.toBe(pollEffect)
+    expect(knownBad).not.toMatch(/\}, \[\s*isOpen,\s*phase\s*\]/)
+    expect(knownBad).not.toMatch(
+      /if \(\s*!isOpen \|\| phase !== 'provisioning'/
+    )
+  })
+})
+
+describe('C-06: the session reset clears the engine-list guard too', () => {
+  const sessionReset = (() => {
+    const flattened = stripped.replace(/\s+/g, ' ')
+    const start = flattened.indexOf("setPhase('consent')")
+    const end = flattened.indexOf('}, [isOpen, appName])', start)
+    if (start === -1 || end === -1) {
+      throw new Error('C-06: session reset effect not locatable')
+    }
+    return flattened.slice(start, end)
+  })()
+
+  it.each([
+    'setEnginesFetched(false)',
+    'setWineVersionList([])',
+    'setWineVersion(undefined)',
+    'setPersistedLookupSettled(false)'
+  ])(
+    'the reset clears "%s" -- session 2 must not seed from session 1 state',
+    (setter) => {
+      expect(sessionReset).toContain(setter)
+    }
+  )
+
+  it('RED: dropping the engine-list resets from a copy DERIVED FROM THE REAL SOURCE makes the gate fail', () => {
+    const knownBad = sessionReset
+      .replace('setEnginesFetched(false)', '')
+      .replace('setWineVersionList([])', '')
+    expect(knownBad).not.toBe(sessionReset)
+    expect(knownBad).not.toContain('setEnginesFetched(false)')
+    expect(knownBad).not.toContain('setWineVersionList([])')
+  })
+})
+
 describe('C-03: the wizard never submits an engine its own D-16 filter rejects', () => {
   const handleConfirm = sliceHandleConfirm(stripped)
 
