@@ -1365,6 +1365,27 @@ export default class SteamGame implements Game {
   }
 
   /**
+   * D-09's single backend-authoritative bottle-eligibility seam, consumed
+   * over IPC by plan 34.13-07 (`isSteamBottleEligible`) and, through that
+   * channel, by 34.13-11's in-dialog eligibility probe (D-25 — the options
+   * dialog opens instantly and its wine section carries the loading state;
+   * the quick-install path deliberately never probes at all, because
+   * `install()` resolves eligibility itself). Composes the two private
+   * predicates below rather than widening either — the `isBridgeEligible()`
+   * pattern above, a third instance of it in this file, not a new one.
+   *
+   * The `await` is load-bearing: skipping it would let a cold metadata
+   * cache read as "not eligible" (the guided-setup-never-fires defect this
+   * seam exists to prevent). Worst-case latency is `ensurePlatformsCaptured`'s
+   * own bounded poll, capped at `METADATA_FETCH_TIMEOUT_MS` (15000ms,
+   * `state.ts:30`) — the number 34.13-11's D-25 loading row must cite.
+   */
+  async checkBottleEligibility(): Promise<boolean> {
+    await this.ensurePlatformsCaptured()
+    return this.isBottleEligible()
+  }
+
+  /**
    * Phase 17 Plan 09 (MACSTEAM-04 gap closure): forces platform data to be
    * resolved BEFORE install()/launch()/uninstall() consult isBottleEligible(),
    * decoupling bottle routing from the async fetchMetadataIfNeeded race
