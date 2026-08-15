@@ -40,15 +40,22 @@
  *     (`main.ts`'s `isSteamNativeInstallEnabled() ? listSteamLibraryTargets()
  *     : []`) exactly. This is the ACTUAL minimum read-gate the install
  *     button depends on (30-RESEARCH Q6) — NOT any of `DownloadDialog`'s six
- *     channels, which never mount for `runner === 'steam'`
- *     (`frontend/state/InstallGameModal.ts`'s own code comment: "Steam
- *     installs are delegated to the Steam client via steam://install — they
- *     never use GamerLib's install modal..."). `startSteamInstall`
- *     (`InstallGameModal.ts`) awaits this UNCAUGHT before `installSteamGame()`
- *     — i.e. before `window.api.install(...)` — ever fires, so leaving this
- *     channel unported would make the Install button silently never install
- *     (Invariant B keeps the rejection non-fatal, but the flow never
- *     progresses).
+ *     channels, which never mount for `runner === 'steam'`. 34.13-08
+ *     retired the auto-open trigger model this paragraph originally
+ *     described: Steam installs now default to a one-click quick install
+ *     (`startSteamQuickInstall`, `frontend/state/InstallGameModal.ts`) and
+ *     reach GameLib's install modal only when the user explicitly asks for
+ *     install options (or when the quick path's own local check degrades
+ *     into it, D-24) — and even then the modal renders a dedicated Steam
+ *     sibling dialog that calls none of `DownloadDialog`'s six channels.
+ *     The porting decision this paragraph justifies is UNCHANGED and gets
+ *     stronger. `startSteamQuickInstall` awaits this channel inside a
+ *     `try`/`catch` and falls back to a delegated install on rejection, so
+ *     it is no longer a single point of silent failure the way the retired
+ *     quick-install predecessor was — but it IS still the read that
+ *     decides whether GameLib has a local install target at all, so
+ *     leaving it unported would degrade every Tauri Steam install to the
+ *     delegated path. The minimum-read-gate conclusion stands.
  *
  * `uninstallGameCallback`/`checkGameUpdates`/`addToQueue` all "genuinely span
  * multiple store managers" (checklist step 2's own curated-import carve-out)
@@ -60,10 +67,13 @@
  * Phase 29 D-15 extracted `downloadManager`'s store declaration for exactly
  * this).
  *
- * Deliberately does NOT register any `DownloadDialog` channel
- * (`requestAppSettings`, `requestGameSettings`, `checkDiskSpace`,
- * `getGameOverride`, `getGameSdl`, `getPrivateBranchPassword`) — confirmed
- * unreachable on the Steam depot path. The five queue-management channels
+ * Deliberately does NOT register five of `DownloadDialog`'s six channels
+ * (`requestAppSettings`, `requestGameSettings`, `getGameOverride`,
+ * `getGameSdl`, `getPrivateBranchPassword`) — confirmed unreachable on the
+ * Steam depot path. The sixth, `checkDiskSpace`, IS now reachable on the
+ * Steam quick-install path as 34.13-08's D-24 local validity probe — but it
+ * needs no registration work here: it is already registered by a different
+ * module, `sidecar/shellFilesFlowRegistration.ts:317`. The five queue-management channels
  * (`getDMQueueInformation`, `removeFromDMQueue`, `pauseCurrentDownload`,
  * `resumeCurrentDownload`, `cancelDownload`) are registered by the separate
  * `downloadQueueFlowRegistration.ts` module (Phase 32 Plan 01, D-02) — not

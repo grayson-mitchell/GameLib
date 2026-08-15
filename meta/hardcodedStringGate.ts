@@ -115,7 +115,15 @@ export const EXCLUDED_ATTRIBUTES = [
   'i18nKey',
   'htmlId',
   'extraClass',
-  'partition'
+  'partition',
+  // 34.13-08: same category as `htmlId`/`extraClass` above -- this is
+  // `Dropdown`'s (`frontend/components/UI/Dropdown/index.tsx`) own prop
+  // name for the CSS class it applies to its internal `<button>`, not
+  // user-facing text. First hit a literal string value when the D-21 split
+  // button (`MainButton.tsx`'s `SteamInstallCaret`) passed
+  // `buttonClass="button mainBtn outline"` -- every prior `Dropdown`
+  // consumer (`FilterFacetGroup`) left this prop unset.
+  'buttonClass'
 ] as const
 
 function isExcludedAttribute(attributeName: string): boolean {

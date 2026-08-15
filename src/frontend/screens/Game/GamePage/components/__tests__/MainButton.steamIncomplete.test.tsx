@@ -35,7 +35,17 @@ jest.mock('frontend/hooks/useSetting', () => ({
 }))
 
 jest.mock('frontend/state/InstallGameModal', () => ({
-  openInstallGameModal: jest.fn()
+  openInstallGameModal: jest.fn(),
+  openSteamInstallOptions: jest.fn()
+}))
+
+// 34.13-08: Dropdown/index.tsx imports './index.scss', which is not
+// parseable under this node-env project (no jsdom/CSS transform) — mocked
+// here purely so the module resolves; this suite never exercises the D-21
+// caret itself (see MainButton.steamSplitButton.test.tsx for that).
+jest.mock('frontend/components/UI/Dropdown', () => ({
+  __esModule: true,
+  default: jest.fn()
 }))
 
 import MainButton from '../MainButton'

@@ -31,7 +31,6 @@ import HumbleExpiryToast from './components/UI/HumbleExpiryToast'
 import SteamBottleSetup from './screens/Game/GamePage/components/SteamBottleSetup'
 import SteamClientSetup from './screens/Game/GamePage/components/SteamClientSetup'
 import SteamBridgeSetup from './screens/Game/GamePage/components/SteamBridgeSetup'
-import SteamInstallLocationPicker from './screens/Game/GamePage/components/SteamInstallLocationPicker'
 
 function Root() {
   const {
@@ -139,7 +138,6 @@ function Root() {
                 <SteamBottleSetup />
                 <SteamClientSetup />
                 <SteamBridgeSetup />
-                <SteamInstallLocationPicker />
                 <SettingsModalWrapper />
                 <ExternalLinkDialog />
                 <RedeemSteamKeyDialog />

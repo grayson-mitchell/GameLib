@@ -5,8 +5,9 @@ import { create } from 'zustand'
  * The frontend mirror of the `listSteamLibraryTargets()` IPC element shape,
  * derived rather than re-declared so a change to the channel's return shape
  * (`src/common/types/ipc.ts:280-282`) is a compile error here instead of a
- * silent drift. Replaces the retiring `SteamLibraryOption`
- * (`frontend/state/SteamInstallLocation.ts`, deleted by this plan's Task 3).
+ * silent drift. Replaces the equivalent type the retired D-09 override
+ * picker used to declare for itself (deleted whole by this plan's Task 3,
+ * store and component both).
  */
 export type SteamInstallLibraryTarget = Awaited<
   ReturnType<typeof window.api.listSteamLibraryTargets>
@@ -95,8 +96,8 @@ interface OpenInstallGameModalParams {
  * Callers: `startSteamQuickInstall` below (always `path: ''`), 34.13-10's
  * dialog confirm handler (an explicit chosen library path), and
  * `SteamClientSetup.tsx`'s post-setup retry (2-arg legacy shape). The
- * now-deleted `SteamInstallLocationPicker.tsx`'s own confirm handler used to
- * be a third caller (3-arg shape) — Task 3 of this plan removes it.
+ * retired D-09 override picker's own confirm handler used to be a third
+ * caller (3-arg shape) — Task 3 of this plan deletes that component whole.
  */
 export const installSteamGame = (
   appName: string,

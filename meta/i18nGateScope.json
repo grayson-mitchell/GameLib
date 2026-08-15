@@ -73,7 +73,6 @@
     "src/frontend/screens/Game/GamePage/components/SteamBottleSetup.tsx",
     "src/frontend/screens/Game/GamePage/components/SteamBridgeSetup.tsx",
     "src/frontend/screens/Game/GamePage/components/SteamClientSetup.tsx",
-    "src/frontend/screens/Game/GamePage/components/SteamInstallLocationPicker.tsx",
     "src/frontend/screens/Game/GamePage/components/appleRating.ts",
     "src/frontend/screens/Game/GamePage/components/index.tsx",
     "src/frontend/screens/Game/GamePage/components/protonRating.ts",
@@ -153,7 +152,6 @@
     "src/frontend/state/SteamBottleSetup.ts",
     "src/frontend/state/SteamBridgeSetup.ts",
     "src/frontend/state/SteamClientSetup.ts",
-    "src/frontend/state/SteamInstallLocation.ts",
     "src/frontend/state/SteamSignOut.ts",
     "src/frontend/types.ts"
   ],
