@@ -79,6 +79,9 @@ import {
   persistInstallFormWineVersion
 } from '../installFormIpc'
 import type { WineInstallation } from 'common/types'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { join, relative } from 'node:path'
+import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 const mockedSteamGame = SteamGame as unknown as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
@@ -400,5 +403,104 @@ describe('installFormIpc.ts', () => {
       expect(logged).not.toContain(ATTACKER_PAYLOAD.bin)
       expect(logged).not.toContain('Downloads')
     })
+  })
+})
+
+/**
+ * Task 3 (D-02 no-fork invariant): makes "getSteamBottleEligibilityVerdict is
+ * defined in exactly ONE place" a CHECKABLE, permanent guard rather than a
+ * comment. `main.ts` and `steamAuthFlowRegistration.ts` are deliberately NOT
+ * edited by this plan — the widening reaches both runtimes by construction,
+ * because both import the identifier from this single shared body. This
+ * describe block proves that construction rather than merely asserting it.
+ *
+ * Scan scope is PRODUCTION source under `src/` (`__tests__`/`__mocks__`
+ * excluded, following `externalDynamicImportGate.test.ts`'s own
+ * `collectSourceFiles` convention) — this is also what keeps the
+ * non-vacuity spec's inline two-definition specimen from being picked up by
+ * the real scan: the specimen lives in THIS file, which is itself under
+ * `__tests__` and therefore out of scope for the real-source walk.
+ */
+const REPO_ROOT = join(__dirname, '../../../../..')
+const SRC_ROOT = join(REPO_ROOT, 'src')
+
+const HANDLER_DEFINITION_PATTERN =
+  /export async function getSteamBottleEligibilityVerdict\(/g
+
+function countHandlerDefinitions(source: string): number {
+  const stripped = stripSourceComments(source)
+  const matches = stripped.match(HANDLER_DEFINITION_PATTERN)
+  return matches ? matches.length : 0
+}
+
+function collectProductionSourceFiles(root: string): string[] {
+  const results: string[] = []
+
+  function walk(dir: string): void {
+    for (const entry of readdirSync(dir)) {
+      if (entry === '__tests__' || entry === '__mocks__') continue
+      const full = join(dir, entry)
+      const stats = statSync(full)
+      if (stats.isDirectory()) {
+        walk(full)
+      } else if (
+        (entry.endsWith('.ts') || entry.endsWith('.tsx')) &&
+        !entry.endsWith('.d.ts')
+      ) {
+        results.push(full)
+      }
+    }
+  }
+
+  walk(root)
+  return results
+}
+
+describe('D-02: the shared handler body is never forked', () => {
+  it('exactly ONE file under src/ (production source) declares export async function getSteamBottleEligibilityVerdict, and it is installFormIpc.ts', () => {
+    const files = collectProductionSourceFiles(SRC_ROOT)
+    const hits = files.filter(
+      (file) => countHandlerDefinitions(readFileSync(file, 'utf8')) > 0
+    )
+
+    expect(hits).toHaveLength(1)
+    expect(relative(REPO_ROOT, hits[0]).split('\\').join('/')).toBe(
+      'src/backend/storeManagers/steam/installFormIpc.ts'
+    )
+  })
+
+  it('main.ts and steamAuthFlowRegistration.ts each contain the IDENTIFIER but NOT the export async function definition of it', () => {
+    const mainSource = readFileSync(
+      join(REPO_ROOT, 'src/backend/main.ts'),
+      'utf8'
+    )
+    const sidecarSource = readFileSync(
+      join(REPO_ROOT, 'src/backend/sidecar/steamAuthFlowRegistration.ts'),
+      'utf8'
+    )
+
+    expect(stripSourceComments(mainSource)).toMatch(
+      /getSteamBottleEligibilityVerdict/
+    )
+    expect(countHandlerDefinitions(mainSource)).toBe(0)
+
+    expect(stripSourceComments(sidecarSource)).toMatch(
+      /getSteamBottleEligibilityVerdict/
+    )
+    expect(countHandlerDefinitions(sidecarSource)).toBe(0)
+  })
+
+  it('non-vacuity: the matcher counts 2 against a hand-built specimen containing a second definition -- proving the gate bites', () => {
+    const specimen = `
+      export async function getSteamBottleEligibilityVerdict(appName: unknown) {
+        return { eligible: false }
+      }
+
+      // A second, forked copy -- this is what the gate must catch.
+      export async function getSteamBottleEligibilityVerdict(appName: unknown) {
+        return { eligible: true }
+      }
+    `
+    expect(countHandlerDefinitions(specimen)).toBe(2)
   })
 })
