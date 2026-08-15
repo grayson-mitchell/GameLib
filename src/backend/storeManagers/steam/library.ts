@@ -689,13 +689,23 @@ export default class SteamLibraryManager implements LibraryManager {
         art_square: cachedMeta?.art_square ?? '',
         // DETAIL-01: seed native platform flags from the metadata cache so the
         // platform icons survive a resync (fetchMetadataIfNeeded populates these).
-        // D-17: is_windows_native seeds the same way, and its false default
-        // is load-bearing — an absent or never-captured cache entry proves
-        // nothing about a Windows depot, so false-when-unknown is the only
-        // safe direction; it must never default to true.
+        // D-17: is_windows_native is deliberately NOT defaulted (34.13
+        // review WR-16). Both `common/types.ts` and `electronStores.ts`
+        // document this field as THREE-valued: `undefined` means "never
+        // captured (pre-34.13 entry)", `false` means "confirmed no Windows
+        // depot", and only `=== true` permits offering a Windows install.
+        // Collapsing `undefined -> false` here destroyed the first state at
+        // the `GameInfo` boundary, so the renderer
+        // (`steamPlatformRow.ts`) could no longer tell a cold-cache game
+        // from a confirmed Windows-less one. Behaviour is unchanged today
+        // — the field is optional on `GameInfo` and EVERY consumer tests
+        // `=== true`, so an absent or never-captured entry still proves
+        // nothing about a Windows depot and still can never offer the
+        // option — but the documented contract is now preserved rather
+        // than contradicted.
         is_mac_native: cachedMeta?.is_mac_native ?? false,
         is_linux_native: cachedMeta?.is_linux_native ?? false,
-        is_windows_native: cachedMeta?.is_windows_native ?? false,
+        is_windows_native: cachedMeta?.is_windows_native,
         // GAP-B: seed the persisted delisted verdict so it survives a library resync
         is_delisted: cachedMeta?.is_delisted ?? false,
         // CR-01 fix: seed the persisted Mach-O ground-truth verdict so a

@@ -570,7 +570,16 @@ describe('SteamLibraryManager', () => {
     expect(pushed?.is_windows_native).toBe(true)
   })
 
-  it('D-17 false-safe: synced GameInfo carries is_windows_native:false when cachedMeta is absent', async () => {
+  // NARROWED by 34.13 review WR-16 (was: `toBe(false)`). The SAFETY
+  // property D-17 actually requires is "never `true` when nothing was
+  // captured" — every consumer tests `=== true`, so that is what makes a
+  // Windows install un-offerable. Pinning the literal `false` additionally
+  // asserted that a never-captured entry is INDISTINGUISHABLE from a
+  // confirmed-no-Windows-depot one, which contradicts the three-valued
+  // contract both `common/types.ts` and `electronStores.ts` document. The
+  // assertions below pin the safety property AND the preserved
+  // distinction.
+  it('D-17 false-safe: synced GameInfo never carries is_windows_native:true when cachedMeta is absent, and preserves undefined ("never captured")', async () => {
     const apps = [makeOwnedApp(570, 'Dota 2', 120)]
     const fakeClient = makeFakeClient(apps)
     jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
@@ -584,7 +593,33 @@ describe('SteamLibraryManager', () => {
       ([_msg, info]) => (info as any).app_name === '570'
     )?.[1] as any
 
+    // The load-bearing half: an uncaptured verdict can never offer Windows.
+    expect(pushed?.is_windows_native).not.toBe(true)
+    // The contract half: "never captured" stays distinguishable from
+    // "confirmed no Windows depot" (`false`).
+    expect(pushed?.is_windows_native).toBeUndefined()
+  })
+
+  it('D-17: a CONFIRMED-false cachedMeta stays false -- distinct from the never-captured case above', async () => {
+    const apps = [makeOwnedApp(570, 'Dota 2', 120)]
+    const fakeClient = makeFakeClient(apps)
+    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamLibraryStore.get).mockReturnValue([])
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true,
+      is_windows_native: false
+    })
+
+    await manager.refresh()
+
+    const calls = jest.mocked(sendFrontendMessage).mock.calls
+    const pushed = calls.find(
+      ([_msg, info]) => (info as any).app_name === '570'
+    )?.[1] as any
+
     expect(pushed?.is_windows_native).toBe(false)
+    expect(pushed?.is_windows_native).not.toBeUndefined()
   })
 
   // ── CR-01 gap closure (18-05): mac_arch survives refresh() resync ─────────
