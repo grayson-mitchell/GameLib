@@ -57,6 +57,10 @@ import {
   provisionBottle
 } from './storeManagers/steam/bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './storeManagers/steam/constants'
+import {
+  getSteamBottleEligibilityVerdict,
+  persistInstallFormWineVersion
+} from './storeManagers/steam/installFormIpc'
 import { shutdownBridgeHelper } from './storeManagers/steam/bridge/helperProcess'
 import { registerHumbleIpcHandlers } from './humble/ipc_handler'
 import { runHumbleValidation } from './humble/validation'
@@ -932,6 +936,17 @@ addHandler('steamBottleStatus', async () => ({
     steamBottleConfigStore.get_nodefault('bottleName') ??
     DEFAULT_STEAM_BOTTLE_NAME
 }))
+
+// Phase 34.13 (34.13-07), D-09/D-14/D-15: the install-form's only new IPC
+// surface. Both channels delegate to the single shared install-form seam,
+// which is ALSO imported by sidecar/steamAuthFlowRegistration.ts — the two
+// runtimes are mirrored, not independently reimplemented.
+addHandler('isSteamBottleEligible', async (event, appName) =>
+  getSteamBottleEligibilityVerdict(appName)
+)
+addHandler('persistBottleWineVersion', async (event, wineVersion) =>
+  persistInstallFormWineVersion(wineVersion)
+)
 
 // Phase 21 (21-10), D-10/D-11: native Steam-CLIENT guided install +
 // prompt-to-launch recheck — distinct from the bottle trio above (that is

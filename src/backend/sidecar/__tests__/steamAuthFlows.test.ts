@@ -115,7 +115,16 @@ jest.mock('../../storeManagers/steam/bottle')
 jest.mock('../../storeManagers/steam/clientSetup')
 jest.mock('../../storeManagers/steam/games')
 
+// ── Phase 34.13 Plan 07 addition — the shared install-form seam mocked at
+// the module boundary (its own logic is covered by
+// storeManagers/steam/__tests__/installFormIpc.test.ts). This suite proves
+// registration and transport only ─────────────────────────────────────────
+jest.mock('../../storeManagers/steam/installFormIpc')
+
 // ── Imports (after mocks) ────────────────────────────────────────────────────
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { init } from '../bootstrap'
 import { SteamUser } from '../../storeManagers/steam/user'
 import { getSteamLibraries } from 'backend/utils'
@@ -135,9 +144,15 @@ import {
 } from '../../storeManagers/steam/clientSetup'
 import { getSteamInstallSize } from '../../storeManagers/steam/games'
 import {
+  getSteamBottleEligibilityVerdict,
+  persistInstallFormWineVersion
+} from '../../storeManagers/steam/installFormIpc'
+import {
   UNPORTED_CHANNEL_MARKER,
   RUST_KEYRING_SET
 } from 'common/types/sidecarTransport'
+
+const MAIN_TS_PATH = join(__dirname, '../../main.ts')
 
 type Frame = Record<string, unknown>
 
@@ -663,6 +678,128 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         (frame) => frame.id === 'bottle-status-no-loggedin-1'
       ) as { result?: Record<string, unknown> } | undefined
       expect(response?.result).not.toHaveProperty('loggedIn')
+    })
+  })
+
+  // ── Phase 34.13 Plan 07 install-form channels (D-09/D-14/D-15) ──────────────
+  describe('Phase 34.13 install-form channels (D-09/D-14/D-15)', () => {
+    it('isSteamBottleEligible invoke round-trips the verdict object and delegates the bare appName', async () => {
+      jest.mocked(getSteamBottleEligibilityVerdict).mockResolvedValue({
+        eligible: true,
+        bottleName: 'GameLibSteam'
+      })
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'install-form-eligible-1', 'isSteamBottleEligible', [
+        '570'
+      ])
+      await flush()
+
+      const response = frames.find(
+        (frame) => frame.id === 'install-form-eligible-1'
+      )
+      expect(response).toMatchObject({
+        id: 'install-form-eligible-1',
+        ok: true,
+        result: { eligible: true, bottleName: 'GameLibSteam' }
+      })
+      expect(getSteamBottleEligibilityVerdict).toHaveBeenCalledTimes(1)
+      expect(getSteamBottleEligibilityVerdict).toHaveBeenCalledWith('570')
+    })
+
+    it('persistBottleWineVersion invoke round-trips the status object and delegates the payload unchanged', async () => {
+      jest
+        .mocked(persistInstallFormWineVersion)
+        .mockReturnValue({ status: 'done' })
+
+      const { input, frames } = startSidecar()
+      const engine = {
+        bin: '/opt/crossover/bin/wine',
+        name: 'CrossOver 24',
+        type: 'crossover'
+      }
+      writeInvoke(input, 'install-form-persist-1', 'persistBottleWineVersion', [
+        engine
+      ])
+      await flush()
+
+      const response = frames.find(
+        (frame) => frame.id === 'install-form-persist-1'
+      )
+      expect(response).toMatchObject({
+        id: 'install-form-persist-1',
+        ok: true,
+        result: { status: 'done' }
+      })
+      expect(persistInstallFormWineVersion).toHaveBeenCalledTimes(1)
+      expect(persistInstallFormWineVersion).toHaveBeenCalledWith(engine)
+    })
+
+    it('Invariant B guard: neither channel resolves the UNPORTED_CHANNEL_MARKER', async () => {
+      jest
+        .mocked(getSteamBottleEligibilityVerdict)
+        .mockResolvedValue({ eligible: false })
+      jest
+        .mocked(persistInstallFormWineVersion)
+        .mockReturnValue({ status: 'error', error: 'invalid-payload' })
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'install-form-marker-1', 'isSteamBottleEligible', [
+        '570'
+      ])
+      writeInvoke(
+        input,
+        'install-form-marker-2',
+        'persistBottleWineVersion',
+        [{}]
+      )
+      await flush()
+
+      const eligibleResponse = frames.find(
+        (frame) => frame.id === 'install-form-marker-1'
+      ) as { ok?: boolean; error?: string } | undefined
+      const persistResponse = frames.find(
+        (frame) => frame.id === 'install-form-marker-2'
+      ) as { ok?: boolean; error?: string } | undefined
+      // The marker lands in the response's `error` field (sidecarRpc.ts's
+      // dispatchInvoke, unregistered-channel branch: `ok: false`, `error:
+      // '${UNPORTED_CHANNEL_MARKER} No handler registered...'`), never in
+      // `result` — asserting against `result` would pass vacuously for any
+      // unregistered channel, since `result` is simply absent on that path.
+      expect(eligibleResponse?.ok).toBe(true)
+      expect(eligibleResponse?.error ?? '').not.toContain(
+        UNPORTED_CHANNEL_MARKER
+      )
+      expect(persistResponse?.ok).toBe(true)
+      expect(persistResponse?.error ?? '').not.toContain(
+        UNPORTED_CHANNEL_MARKER
+      )
+    })
+
+    it('main.ts registers isSteamBottleEligible delegating to the shared seam (comment-stripped source gate)', () => {
+      const stripped = stripSourceComments(readFileSync(MAIN_TS_PATH, 'utf-8'))
+      expect(stripped).toMatch(
+        /addHandler\(\s*['"]isSteamBottleEligible['"]\s*,\s*async\s*\([^)]*\)\s*=>\s*getSteamBottleEligibilityVerdict\(appName\)\s*\)/
+      )
+    })
+
+    it('main.ts registers persistBottleWineVersion delegating to the shared seam (comment-stripped source gate)', () => {
+      const stripped = stripSourceComments(readFileSync(MAIN_TS_PATH, 'utf-8'))
+      expect(stripped).toMatch(
+        /addHandler\(\s*['"]persistBottleWineVersion['"]\s*,\s*async\s*\([^)]*\)\s*=>\s*persistInstallFormWineVersion\(wineVersion\)\s*\)/
+      )
+    })
+
+    it('main.ts places isSteamBottleEligible inside the bottle block, between steamBottleStatus and steamClientSetupStart (placement gate)', () => {
+      const stripped = stripSourceComments(readFileSync(MAIN_TS_PATH, 'utf-8'))
+      const bottleStatusIndex = stripped.indexOf('steamBottleStatus')
+      const eligibleIndex = stripped.indexOf('isSteamBottleEligible')
+      const clientSetupIndex = stripped.indexOf('steamClientSetupStart')
+      expect(bottleStatusIndex).toBeGreaterThan(-1)
+      expect(eligibleIndex).toBeGreaterThan(-1)
+      expect(clientSetupIndex).toBeGreaterThan(-1)
+      expect(eligibleIndex).toBeGreaterThan(bottleStatusIndex)
+      expect(eligibleIndex).toBeLessThan(clientSetupIndex)
     })
   })
 

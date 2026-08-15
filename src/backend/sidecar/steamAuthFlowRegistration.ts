@@ -51,6 +51,12 @@
  *     `isBottleProvisioned()` — diverging from the store read would be a
  *     behavior change, not a port. Deliberately has NO `loggedIn` field
  *     (removed by 17-17/WR-02; D-04: bottled-Steam auth stays opaque).
+ *   - `isSteamBottleEligible` -> `getSteamBottleEligibilityVerdict(appName)`
+ *     (`main.ts:945-947`), Phase 34.13 Plan 07, D-09/D-15 exposure half —
+ *     both delegate to the shared install-form seam this file imports below.
+ *   - `persistBottleWineVersion` -> `persistInstallFormWineVersion(wineVersion)`
+ *     (`main.ts:948-950`), Phase 34.13 Plan 07, D-14 — same shared seam.
+ *     The trio above is now a trio plus these two install-form channels.
  *
  * Guided Steam-client install pair (Phase 34.4 Plan 02, REQ-34.4-04,
  * `ipcMain.handle`, `main.ts:958-961`):
@@ -120,6 +126,10 @@ import {
 } from '../storeManagers/steam/clientSetup'
 import { getSteamInstallSize } from '../storeManagers/steam/games'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../storeManagers/steam/constants'
+import {
+  getSteamBottleEligibilityVerdict,
+  persistInstallFormWineVersion
+} from '../storeManagers/steam/installFormIpc'
 
 /**
  * Registers the QR-login trio, the credential/SteamGuard/TOTP login trio,
@@ -239,6 +249,26 @@ export function registerSteamAuthFlows(): void {
         DEFAULT_STEAM_BOTTLE_NAME
     }
   })
+
+  // ── Phase 34.13 Plan 07 install-form channels (D-09/D-14/D-15,
+  // main.ts's own mirrored addHandler pair) — both delegate to the shared
+  // install-form seam imported below, the SAME import main.ts uses, so the
+  // two runtimes cannot drift. The write channel's payload is passed
+  // through UNCAST — the seam takes `unknown` by design, and casting here
+  // would defeat that guard at the type level. ─────────────────────────────
+  ipcMain.handle(
+    'isSteamBottleEligible',
+    async (_event: unknown, ...args: unknown[]) => {
+      return getSteamBottleEligibilityVerdict(args[0] as string)
+    }
+  )
+
+  ipcMain.handle(
+    'persistBottleWineVersion',
+    async (_event: unknown, ...args: unknown[]) => {
+      return persistInstallFormWineVersion(args[0])
+    }
+  )
 
   // ── Guided Steam-client install pair (REQ-34.4-04, main.ts:958-961) ───────
   ipcMain.handle('steamClientSetupStart', async () => {

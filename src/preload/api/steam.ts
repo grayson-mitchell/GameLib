@@ -22,6 +22,12 @@ export const isSteamBottleProvisioned = makeHandlerInvoker(
   'isSteamBottleProvisioned'
 )
 export const steamBottleStatus = makeHandlerInvoker('steamBottleStatus')
+// Phase 34.13 (34.13-07), D-09/D-14/D-15: the install-form's only new IPC
+// surface — registered on BOTH runtimes (main.ts + steamAuthFlowRegistration.ts).
+export const isSteamBottleEligible = makeHandlerInvoker('isSteamBottleEligible')
+export const persistBottleWineVersion = makeHandlerInvoker(
+  'persistBottleWineVersion'
+)
 // One-way push (17-05 emits, 17-06 subscribes) — no handler, listener only.
 export const handleSteamBottleSetupRequired = frontendListenerSlot(
   'steamBottleSetupRequired'
