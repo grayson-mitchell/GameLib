@@ -32,7 +32,7 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 222 |
+| Unique channels | 224 |
 | Ported to sidecar | 28 |
 | **Unported** | **183** |
 
@@ -62,9 +62,23 @@ the audit for the grep evidence) and 8 into the new "Late-discovered" section ow
 This +11 is arithmetically independent of the Phase 34.5 section's own 39+3+16=58 reconciliation
 below — none of the 11 belong to slice 8's four runner modules.
 
-## Already ported (31)
+**Unique channels raised 222 → 224 (plan 34.13-07, D-09/D-14/D-15, 2026-08-15):** `isSteamBottleEligible`
+and `persistBottleWineVersion` are two BRAND NEW channels created by Phase 34.13 (the install-form's
+only new IPC surface), not late-discovered pre-existing ones — unlike every prior "raised N → M" note
+above. Both were registered on Electron (`main.ts`, inside the Phase 17 bottle block) AND the Tauri
+sidecar (`steamAuthFlowRegistration.ts`, beside the bottle trio — NOT `installFlowRegistration.ts`, the
+file CONTEXT.md wrongly names for this work) in the same plan, so neither was ever unported for even one
+commit. Both are exposed through `src/preload/api/steam.ts` via `makeHandlerInvoker`. Filed under
+"Already ported" rather than a new phase section, matching the precedent 34.5-49 set for
+`oauthCaptureLogin`: these channels are born dual-registered, so they were never part of any
+per-phase Electron-only backlog this document's other sections enumerate. The `Ported to sidecar`
+(28) / `Unported` (183) rows below are deliberately UNCHANGED — per this document's own L44-51 note,
+that split is a frozen Phase 34.1-era snapshot, not re-tallied per phase; recording that explicitly
+here rather than leaving an apparent, unexplained arithmetic gap.
 
-`cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `getDMQueueInformation`, `get-connectivity-status`, `getLogContent`, `getMaxCpus`, `getSystemInfo`, `hasExecutable`, `health`, `install`, `isNative`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamPollQR`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
+## Already ported (33)
+
+`cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `getDMQueueInformation`, `get-connectivity-status`, `getLogContent`, `getMaxCpus`, `getSystemInfo`, `hasExecutable`, `health`, `install`, `isNative`, `isSteamBottleEligible`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `persistBottleWineVersion`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamPollQR`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
 
 `logError` was ported early by Phase 34.2 gap cycle 2 (plan 34.2-16) — see the Phase 34.3 list
 below, which now excludes it, and `34.2-PORTED-CHANNELS.md`'s gap-cycle-2 subsection for the full
