@@ -35,7 +35,7 @@ import {
   provisionBridgeBottle
 } from '../bottle'
 import { library, pendingFetches } from '../state'
-import type { GameInfo } from 'common/types'
+import type { GameInfo, InstallParams } from 'common/types'
 import { isSteamNativeInstallEnabled } from '../nativeInstallSetting'
 import { downloadSteamDepots } from '../depot'
 import { ensureSteamClientReady } from '../clientSetup'
@@ -2567,6 +2567,249 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       FALLBACK_TEST_APP_ID
     )
     expect(result).toEqual({ status: 'done' })
+  })
+})
+
+// ── 34.13-06 (D-17): SteamGame.install() Windows-via-bottle override ────────
+//
+// The regression trap this block exists to avoid (34.13-PLAN-OUTLINE.md note
+// 2): installSteamGame() hardcodes platformToInstall: 'Windows' for EVERY
+// Steam install, and the Steam backend reads that field nowhere. Every
+// pre-existing install() spec in this file calls game.install({} as any) —
+// an EMPTY args object, so {}.platformToInstall is undefined and those specs
+// are structurally blind to a naive platformToInstall-keyed implementation:
+// it would pass all of them while flipping every real mac-native install
+// into the bottle. This block's baseline specs use PRODUCTION_ARGS
+// (platformToInstall: 'Windows' present, matching every real Steam install)
+// specifically to close that blind spot.
+describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', () => {
+  let shellOpenExternal: jest.Mock
+  let startInstallPollingSpy: jest.SpyInstance
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+
+  // Transcribed field-for-field from installSteamGame()'s window.api.install
+  // literal (InstallGameModal.ts) — the production call shape for EVERY
+  // Steam install. Deliberately carries NO steamForceWindowsViaBottle key;
+  // argsWith() below is the only place a spec adds it.
+  const PRODUCTION_ARGS: InstallParams = {
+    appName: APP_ID,
+    path: '',
+    runner: 'steam',
+    installDlcs: [],
+    sdlList: [],
+    installLanguage: 'en-US',
+    platformToInstall: 'Windows',
+    gameInfo: makeEntry()
+  }
+
+  function argsWith(overrides: Partial<InstallParams> = {}): InstallParams {
+    return { ...PRODUCTION_ARGS, ...overrides }
+  }
+
+  /** Spies on all three private-method terminals install() can reach, each
+   * resolving { status: 'done' } like a real success — so a spec only has
+   * to name the ONE terminal it expects, via assertExactlyOneRoute(). */
+  function spyOnAllTerminals(game: SteamGame): {
+    installBridgeGame: jest.SpyInstance
+    installBottleNative: jest.SpyInstance
+    installNative: jest.SpyInstance
+  } {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const gameAny = game as any
+    const installBridgeGame = jest
+      .spyOn(gameAny, 'installBridgeGame')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .mockResolvedValue({ status: 'done' } as any)
+    const installBottleNative = jest
+      .spyOn(gameAny, 'installBottleNative')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .mockResolvedValue({ status: 'done' } as any)
+    const installNative = jest
+      .spyOn(gameAny, 'installNative')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .mockResolvedValue({ status: 'done' } as any)
+    return { installBridgeGame, installBottleNative, installNative }
+  }
+
+  type Terminal =
+    | 'bridge'
+    | 'deferred-to-setup'
+    | 'bottle-native'
+    | 'bottle-dispatch'
+    | 'native-depot'
+    | 'native-protocol'
+
+  /** The load-bearing regression guard: asserts the ONE expected terminal
+   * fired AND that none of the other five did. A helper that only checks
+   * the positive terminal cannot catch a routing change that fires two
+   * terminals, or the wrong one — the negative half is the entire point. */
+  function assertExactlyOneRoute(
+    expected: Terminal,
+    terminals: ReturnType<typeof spyOnAllTerminals>
+  ): void {
+    const fired: Record<Terminal, boolean> = {
+      bridge: terminals.installBridgeGame.mock.calls.length > 0,
+      'bottle-native': terminals.installBottleNative.mock.calls.length > 0,
+      'native-depot': terminals.installNative.mock.calls.length > 0,
+      'bottle-dispatch':
+        (tellBottledSteamToInstall as jest.Mock).mock.calls.length > 0,
+      'native-protocol': shellOpenExternal.mock.calls.some(
+        (call) => call[0] === `steam://install/${APP_ID}`
+      ),
+      'deferred-to-setup': (sendFrontendMessage as jest.Mock).mock.calls.some(
+        (call) => call[0] === 'steamBottleSetupRequired'
+      )
+    }
+    ;(Object.keys(fired) as Terminal[]).forEach((key) => {
+      expect(fired[key]).toBe(key === expected)
+    })
+  }
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    const { shell } = jest.requireMock('electron')
+    shellOpenExternal = shell.openExternal as jest.Mock
+    shellOpenExternal.mockResolvedValue(undefined)
+    library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
+    startInstallPollingSpy = jest
+      .spyOn(libraryModule, 'startInstallPolling')
+      .mockImplementation(() => {})
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    envMock.isWindows = false
+    envMock.isLinux = false
+    ;(isBottleReady as jest.Mock).mockReset()
+    ;(tellBottledSteamToInstall as jest.Mock).mockReset()
+    // Native-install ON/OFF is a routing axis in this block — every spec
+    // sets it explicitly below rather than relying on resetMocks' implicit
+    // undefined/false default, so it is never an accidental coupling.
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReset()
+    ;(bridgeAllowlist.has as jest.Mock).mockReset()
+  })
+
+  afterEach(() => {
+    startInstallPollingSpy.mockRestore()
+  })
+
+  // ── Override-ABSENT baseline: today's routing, byte-identical ───────────
+
+  it('B1: macOS mac-native game with a proven Windows depot NOT chosen — native install() unchanged', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true,
+      is_windows_native: true
+    })
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+
+    const game = new SteamGame(APP_ID)
+    const terminals = spyOnAllTerminals(game)
+    await game.install(PRODUCTION_ARGS)
+
+    assertExactlyOneRoute('native-protocol', terminals)
+  })
+
+  it('B2: macOS not-yet-captured game — native install() unchanged (D-11 BLOCKER invariant)', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: false,
+      is_mac_native: false
+    })
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+
+    const game = new SteamGame(APP_ID)
+    const terminals = spyOnAllTerminals(game)
+    await game.install(PRODUCTION_ARGS)
+
+    assertExactlyOneRoute('native-protocol', terminals)
+  })
+
+  it('B3: macOS bottle-eligible, provisioned — dispatches to the bottled Steam client', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const terminals = spyOnAllTerminals(game)
+    await game.install(PRODUCTION_ARGS)
+
+    assertExactlyOneRoute('bottle-dispatch', terminals)
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+      source: 'bottle'
+    })
+  })
+
+  it('B4: macOS bottle-eligible, un-provisioned — defers to guided setup', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(isBottleReady as jest.Mock).mockReturnValue(false)
+
+    const game = new SteamGame(APP_ID)
+    const terminals = spyOnAllTerminals(game)
+    const result = await game.install(PRODUCTION_ARGS)
+
+    assertExactlyOneRoute('deferred-to-setup', terminals)
+    expect(result).toEqual({ status: 'done', deferredToSetup: true })
+  })
+
+  it('B5: macOS bottle-eligible + allowlisted — routes to the bridge', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+
+    const game = new SteamGame(APP_ID)
+    const terminals = spyOnAllTerminals(game)
+    await game.install(PRODUCTION_ARGS)
+
+    assertExactlyOneRoute('bridge', terminals)
+  })
+
+  it('B6: macOS mac-native, native install opt-in ON — non-bottle depot-download opt-in unaffected', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true
+    })
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+
+    const game = new SteamGame(APP_ID)
+    const terminals = spyOnAllTerminals(game)
+    await game.install(PRODUCTION_ARGS)
+
+    assertExactlyOneRoute('native-depot', terminals)
+  })
+
+  it('B7: non-mac host — native install() unchanged regardless of eligibility signal', async () => {
+    envMock.isMac = false
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+
+    const game = new SteamGame(APP_ID)
+    const terminals = spyOnAllTerminals(game)
+    await game.install(PRODUCTION_ARGS)
+
+    assertExactlyOneRoute('native-protocol', terminals)
   })
 })
 
