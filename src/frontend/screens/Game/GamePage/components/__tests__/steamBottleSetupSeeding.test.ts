@@ -281,11 +281,52 @@ describe('SteamBottleSetup.tsx seeding wiring (D-15 read half, 34.13-09)', () =>
   })
 
   it('D-15 LIVENESS: every terminal path settles', () => {
-    const setterMatches = stripped.match(/setPersistedLookupSettled\(/g) ?? []
-    // resolve, catch, and the deliberately-skipped fetch (no appName) — three
-    // independent terminal paths, three setter call sites.
-    expect(setterMatches.length).toBeGreaterThanOrEqual(3)
+    // 34.13 review C-09: this used to be
+    // `stripped.match(/setPersistedLookupSettled\(/g).length >= 3`, with a
+    // comment claiming "three setter call sites". Three defects in one gate:
+    //
+    //  1. There are FOUR call sites, not three -- the session reset's
+    //     `(false)` was miscounted as one of the settles.
+    //  2. The regex did not distinguish `(true)` from `(false)`, so a
+    //     refactor that DELETED both real settles and added three more
+    //     resets would pass this gate while wedging the seeding effect
+    //     permanently -- the exact defect the spec is named after.
+    //  3. `>=` meant it could not detect the removal of a settle path at all.
+    //
+    // Counted exactly, by value.
+    const settles = stripped.match(/setPersistedLookupSettled\(true\)/g) ?? []
+    const resets = stripped.match(/setPersistedLookupSettled\(false\)/g) ?? []
+    // resolve, catch, and the deliberately-skipped fetch (no appName).
+    expect(settles).toHaveLength(3)
+    // the session reset, and only the session reset.
+    expect(resets).toHaveLength(1)
     expect(stripped).toMatch(/\.catch\(/)
+  })
+
+  it('D-15 LIVENESS RED: dropping one settle path from a copy DERIVED FROM THE REAL SOURCE breaks the count', () => {
+    // The pre-fix `>= 3` gate stayed GREEN on this same input (4 call sites
+    // minus 1 = 3), which is why it could not detect the removal.
+    const knownBad = stripped.replace('setPersistedLookupSettled(true)', '')
+    const preFixCount = (knownBad.match(/setPersistedLookupSettled\(/g) ?? [])
+      .length
+    expect(preFixCount).toBeGreaterThanOrEqual(3) // old gate: still green
+
+    const settles = knownBad.match(/setPersistedLookupSettled\(true\)/g) ?? []
+    expect(settles).toHaveLength(2) // new gate: RED
+  })
+
+  it('D-15 LIVENESS RED: replacing the settles with extra resets is rejected -- the wedge the old gate could not see', () => {
+    const knownBad = stripped.replaceAll(
+      'setPersistedLookupSettled(true)',
+      'setPersistedLookupSettled(false)'
+    )
+    const preFixCount = (knownBad.match(/setPersistedLookupSettled\(/g) ?? [])
+      .length
+    expect(preFixCount).toBeGreaterThanOrEqual(3) // old gate: still green
+
+    expect(
+      knownBad.match(/setPersistedLookupSettled\(true\)/g) ?? []
+    ).toHaveLength(0) // new gate: RED
   })
 
   it('D-15 does not use useAwaited for the verdict', () => {

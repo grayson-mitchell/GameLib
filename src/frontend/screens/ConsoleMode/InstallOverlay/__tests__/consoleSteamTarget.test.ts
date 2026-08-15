@@ -23,7 +23,10 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import type { Runner } from 'common/types'
-import type { SteamInstallLibraryTarget } from 'frontend/state/InstallGameModal'
+import type {
+  SteamInstallLibraryTarget,
+  SteamQuickInstallDegrade
+} from 'frontend/state/InstallGameModal'
 import {
   probeSteamQuickInstallTarget,
   resolveConsoleActionIntent,
@@ -32,8 +35,78 @@ import {
 
 const OVERLAY_PATH = join(__dirname, '..', 'index.tsx')
 
+const TARGET_MODULE_PATH = join(__dirname, '..', 'consoleSteamTarget.ts')
+
 function readStrippedOverlay(): string {
   return stripSourceComments(readFileSync(OVERLAY_PATH, 'utf8'))
+}
+
+function readStrippedTargetModule(): string {
+  return stripSourceComments(readFileSync(TARGET_MODULE_PATH, 'utf8'))
+}
+
+// --- Throwing gate helpers (34.13 review C-08) ----------------------------
+//
+// Every source gate below is a plain THROWING function, so the SAME code
+// path can be driven against the real source (expected not to throw) and
+// against a known-bad specimen (expected to throw). The previous shape --
+// an inline `expect(source).toContain(...)` in the gate spec, plus a
+// separate "RED" spec asserting that a hand-written string literal contains
+// a substring -- proved only that `String.prototype.includes` works. It
+// never invoked the gate, so nothing demonstrated the gate could trip.
+// This is the identical treatment commit 8d2a84839 applied to
+// `steamDialogSource.test.ts`'s `assertSingleEligibilityDisabledTerm`.
+
+function assertNoOptionsPath(source: string) {
+  for (const forbidden of [
+    'startSteamQuickInstall',
+    'openSteamInstallOptions'
+  ]) {
+    if (source.includes(forbidden)) {
+      throw new Error(
+        `assertNoOptionsPath: D-29 forbids an options path in Console Mode, found "${forbidden}"`
+      )
+    }
+  }
+}
+
+function assertNoFilesystemPathOnScreen(source: string) {
+  if (source.includes('libraryPath')) {
+    throw new Error(
+      'assertNoFilesystemPathOnScreen: libraryPath reaches the Console Mode overlay -- no filesystem path may render on a TV'
+    )
+  }
+}
+
+function assertCopyResolvedThroughTable(source: string) {
+  if (!source.includes('steamBlockedMessage(')) {
+    throw new Error(
+      'assertCopyResolvedThroughTable: the render site does not call steamBlockedMessage('
+    )
+  }
+  for (const localBranch of [
+    "reason === 'library-missing'",
+    "reason === 'library-full'"
+  ]) {
+    if (source.includes(localBranch)) {
+      throw new Error(
+        `assertCopyResolvedThroughTable: the render site re-branches locally on "${localBranch}" -- a third reason would fall into the wrong copy`
+      )
+    }
+  }
+}
+
+function assertSteamBranchMarshalsThroughInstallSteamGame(source: string) {
+  if (!source.includes('installSteamGame(game.app_name, game)')) {
+    throw new Error(
+      'assertSteamBranchMarshalsThroughInstallSteamGame: the Steam branch does not marshal through installSteamGame( with no path'
+    )
+  }
+  if (source.includes("installPath: 'default'")) {
+    throw new Error(
+      'assertSteamBranchMarshalsThroughInstallSteamGame: the Steam branch still passes installPath: \'default\' -- a second renderer-side definition of "primary" (D-23)'
+    )
+  }
 }
 
 function stubWindowApi(overrides: {
@@ -62,10 +135,13 @@ function makeTargets(n: number): SteamInstallLibraryTarget[] {
   })) as SteamInstallLibraryTarget[]
 }
 
-function makeDisk(overrides: {
-  free?: number
-  validPath?: boolean
-}): { free: number; diskSize: number; message: string; validPath: boolean; validFlatpakPath: boolean } {
+function makeDisk(overrides: { free?: number; validPath?: boolean }): {
+  free: number
+  diskSize: number
+  message: string
+  validPath: boolean
+  validFlatpakPath: boolean
+} {
   return {
     free: overrides.free ?? 2 * 1024 ** 3,
     diskSize: 100 * 1024 ** 3,
@@ -236,27 +312,27 @@ describe('resolveConsoleActionIntent (the A-button bypass gate)', () => {
   it.each(ALL_FOCUS_KEYS)(
     "B2: runner 'steam' with focused '%s' -> 'dismiss' for every FocusKey (no focus row survives the Steam branch)",
     (focused) => {
-      expect(
-        resolveConsoleActionIntent({ runner: 'steam', focused })
-      ).toBe('dismiss')
+      expect(resolveConsoleActionIntent({ runner: 'steam', focused })).toBe(
+        'dismiss'
+      )
     }
   )
 
   it.each(NON_STEAM_RUNNERS)(
     "B3 DISCRIMINATOR: D-28 -- non-Steam runner (%s) keeps today's behavior exactly",
     (runner) => {
-      expect(
-        resolveConsoleActionIntent({ runner, focused: 'install' })
-      ).toBe('install')
-      expect(
-        resolveConsoleActionIntent({ runner, focused: 'cancel' })
-      ).toBe('dismiss')
-      expect(
-        resolveConsoleActionIntent({ runner, focused: 'platform' })
-      ).toBe('none')
-      expect(
-        resolveConsoleActionIntent({ runner, focused: 'wine' })
-      ).toBe('none')
+      expect(resolveConsoleActionIntent({ runner, focused: 'install' })).toBe(
+        'install'
+      )
+      expect(resolveConsoleActionIntent({ runner, focused: 'cancel' })).toBe(
+        'dismiss'
+      )
+      expect(resolveConsoleActionIntent({ runner, focused: 'platform' })).toBe(
+        'none'
+      )
+      expect(resolveConsoleActionIntent({ runner, focused: 'wine' })).toBe(
+        'none'
+      )
     }
   )
 
@@ -264,7 +340,34 @@ describe('resolveConsoleActionIntent (the A-button bypass gate)', () => {
   // Steam in BOTH the transient "Opening Steam…" state and the D-29 failure
   // state -- an input the result does not depend on would invite a future
   // reader to treat it as load-bearing when it never was.
-  it('B4: the function signature carries no blocked/degrade parameter', () => {
+  //
+  // 34.13 review C-07: this used to assert
+  // `resolveConsoleActionIntent.length <= 1`. The function takes a SINGLE
+  // DESTRUCTURED OBJECT, so `Function.prototype.length` is 1 no matter how
+  // many properties that object grows -- adding `blocked:
+  // SteamQuickInstallDegrade` to the parameter, the exact drift the spec is
+  // named for, left `.length` at 1 and the spec green. It could not fail for
+  // the reason its name gave. Measure the destructured SHAPE instead.
+  it('B4: the parameter object carries no blocked/degrade key', () => {
+    const signature =
+      readStrippedTargetModule().match(
+        /resolveConsoleActionIntent\(\{[^}]*\}/
+      )?.[0] ?? ''
+    expect(signature).toContain('runner')
+    expect(signature).toContain('focused')
+    expect(signature).not.toMatch(/blocked|degrade/)
+  })
+
+  it('B4-RED: the reworked gate trips against a signature DERIVED FROM THE REAL SOURCE with a blocked key added', () => {
+    const knownBad = readStrippedTargetModule().replace(
+      'resolveConsoleActionIntent({\n  runner,\n  focused\n}',
+      'resolveConsoleActionIntent({\n  runner,\n  focused,\n  blocked\n}'
+    )
+    const signature =
+      knownBad.match(/resolveConsoleActionIntent\(\{[^}]*\}/)?.[0] ?? ''
+    expect(signature).toMatch(/blocked/)
+    // ...and the OLD assertion would still have passed on that same input,
+    // which is the whole finding.
     expect(resolveConsoleActionIntent.length).toBeLessThanOrEqual(1)
   })
 })
@@ -282,14 +385,62 @@ describe('steamBlockedMessageKey', () => {
     )
   })
 
-  it('C3: the mapping is exhaustive over every union member', () => {
-    const reasons: Array<'library-missing' | 'library-full'> = [
-      'library-missing',
-      'library-full'
-    ]
-    for (const reason of reasons) {
+  // 34.13 review C-07: this used to build a hand-written array typed with a
+  // hand-written union (`Array<'library-missing' | 'library-full'>`) and loop
+  // over it. A third reason added to `SteamQuickInstallDegrade` upstream left
+  // that literal untouched and the spec green -- it could not observe the
+  // exhaustiveness it was named for. Two independent replacements, because
+  // ts-jest here is TRANSPILE-ONLY and only one of them is visible to jest:
+  //
+  //  (1) a compile-time bidirectional-assignability pin, which `tsc --noEmit`
+  //      (the ONLY real type gate in this repo) must satisfy, and
+  //  (2) a runtime gate on the source, which jest can actually fail.
+  const ALL_REASONS = ['library-missing', 'library-full'] as const
+
+  // (1) Both directions: a NEW union member makes `_ForwardExhaustive` fail
+  // (the union no longer extends the literal tuple), and a member DELETED
+  // from ALL_REASONS makes `_BackwardExhaustive` fail. Invisible to jest; a
+  // `pnpm codecheck` obligation.
+  type _ForwardExhaustive =
+    SteamQuickInstallDegrade['reason'] extends (typeof ALL_REASONS)[number]
+      ? true
+      : never
+  type _BackwardExhaustive =
+    (typeof ALL_REASONS)[number] extends SteamQuickInstallDegrade['reason']
+      ? true
+      : never
+  const _forward: _ForwardExhaustive = true
+  const _backward: _BackwardExhaustive = true
+
+  it('C3: every member of the real union resolves to a real key (compile-pinned above)', () => {
+    expect(_forward).toBe(true)
+    expect(_backward).toBe(true)
+    for (const reason of ALL_REASONS) {
       expect(typeof steamBlockedMessageKey(reason)).toBe('string')
+      expect(steamBlockedMessageKey(reason).length).toBeGreaterThan(0)
     }
+  })
+
+  it('C3b: the source-level exhaustiveness mechanism is the Record<union, ...> type, not a hand-listed object', () => {
+    // This is the half jest CAN fail. If someone widens the table's type to
+    // `Partial<Record<...>>` or to a plain object literal type, the compile
+    // error a third reason would have produced disappears silently -- and
+    // ts-jest's transpile-only mode means no test would notice.
+    const source = readStrippedTargetModule()
+    expect(source).toMatch(
+      /Record<\s*SteamQuickInstallDegrade\['reason'\],\s*\[string, string\]\s*>/
+    )
+    expect(source).not.toMatch(/Partial<\s*Record<\s*SteamQuickInstallDegrade/)
+  })
+
+  it('C3b-RED: the C3b gate trips against a widening DERIVED FROM THE REAL SOURCE', () => {
+    const knownBad = readStrippedTargetModule().replace(
+      'Record<',
+      'Partial<Record<'
+    )
+    expect(knownBad).not.toMatch(
+      /(?<!Partial<)Record<\s*SteamQuickInstallDegrade\['reason'\],\s*\[string, string\]\s*>/
+    )
   })
 })
 
@@ -301,20 +452,39 @@ describe('InstallOverlay/index.tsx source gates (D-29, comment-stripped)', () =>
   })
 
   it('D2: the D-29 "no options path" proof -- zero startSteamQuickInstall, zero openSteamInstallOptions', () => {
-    const source = readStrippedOverlay()
-    expect((source.match(/startSteamQuickInstall/g) ?? []).length).toBe(0)
-    expect((source.match(/openSteamInstallOptions/g) ?? []).length).toBe(0)
+    expect(() => assertNoOptionsPath(readStrippedOverlay())).not.toThrow()
+  })
 
-    const knownBadSpecimen = 'onclick: () => openSteamInstallOptions(appName, gameInfo)'
-    expect(/openSteamInstallOptions/.test(knownBadSpecimen)).toBe(true)
+  it('D2-RED: the gate itself trips on a known-bad input DERIVED FROM THE REAL SOURCE', () => {
+    // Derived: the real overlay with its `installSteamGame(` call swapped for
+    // the D-29-forbidden options door, i.e. the regression this guards.
+    const knownBad = readStrippedOverlay().replace(
+      'installSteamGame(game.app_name, game)',
+      'openSteamInstallOptions(game.app_name, game)'
+    )
+    expect(knownBad).not.toBe(readStrippedOverlay())
+    expect(() => assertNoOptionsPath(knownBad)).toThrow(
+      /openSteamInstallOptions/
+    )
   })
 
   it('D3: no filesystem path may reach a TV screen -- zero occurrences of libraryPath', () => {
-    const source = readStrippedOverlay()
-    expect((source.match(/libraryPath/g) ?? []).length).toBe(0)
+    expect(() =>
+      assertNoFilesystemPathOnScreen(readStrippedOverlay())
+    ).not.toThrow()
+  })
 
-    const knownBadSpecimen = 'steamBlocked.libraryPath'
-    expect(/libraryPath/.test(knownBadSpecimen)).toBe(true)
+  it('D3-RED: the gate itself trips on a known-bad input DERIVED FROM THE REAL SOURCE', () => {
+    // Derived: the real overlay with the degrade record's path interpolated
+    // into the failure card, which is exactly how this leaks in practice.
+    const knownBad = readStrippedOverlay().replace(
+      'steamBlockedMessage(',
+      '(steamBlocked.libraryPath, steamBlockedMessage)('
+    )
+    expect(knownBad).not.toBe(readStrippedOverlay())
+    expect(() => assertNoFilesystemPathOnScreen(knownBad)).toThrow(
+      /libraryPath/
+    )
   })
 
   it('D4: the non-Steam path is untouched', () => {
@@ -347,23 +517,34 @@ describe('InstallOverlay/index.tsx source gates (D-29, comment-stripped)', () =>
   // future third reason into the library-full copy, i.e. exactly the defect
   // the exhaustive mapping advertises that it prevents.
   it('D7: the overlay RESOLVES the copy through steamBlockedMessage( and carries no local reason ternary', () => {
-    const source = readStrippedOverlay()
-    expect(source).toContain('steamBlockedMessage(')
-    expect(source).not.toContain("reason === 'library-missing'")
-    expect(source).not.toContain("reason === 'library-full'")
+    expect(() =>
+      assertCopyResolvedThroughTable(readStrippedOverlay())
+    ).not.toThrow()
   })
 
-  it('D7-RED: the D7 gate trips against the pre-fix render site (the inlined ternary)', () => {
-    // The known-bad input is the shape the reviewer actually found, not a
-    // synthetic one: a render site that branches locally instead of looking
-    // the pair up.
-    const knownBad = [
-      "{steamBlocked.reason === 'library-missing'",
-      "  ? tGamelib('gamelib:consoleMode.steamInstallLibraryMissing', 'a')",
-      "  : tGamelib('gamelib:consoleMode.steamInstallLibraryFull', 'b')}"
-    ].join('\n')
-    expect(knownBad).not.toContain('steamBlockedMessage(')
-    expect(knownBad).toContain("reason === 'library-missing'")
+  it('D7-RED: the D7 gate itself trips against the pre-fix render site, DERIVED FROM THE REAL SOURCE', () => {
+    // 34.13 review C-08: the previous version of this spec asserted that a
+    // hand-written string literal three lines above it contained a
+    // substring. It never invoked the gate, so nothing proved the gate could
+    // trip. Now the real source is mutated back into the pre-fix shape and
+    // driven through the identical helper the real gate uses.
+    const knownBad = readStrippedOverlay().replace(
+      'steamBlockedMessage(',
+      "steamBlocked.reason === 'library-missing' ? a : b; noSuchLookup("
+    )
+    expect(knownBad).not.toBe(readStrippedOverlay())
+    expect(() => assertCopyResolvedThroughTable(knownBad)).toThrow(
+      /does not call steamBlockedMessage/
+    )
+  })
+
+  it('D7-RED-b: a render site that keeps the lookup but ALSO re-branches locally is rejected', () => {
+    const knownBad =
+      readStrippedOverlay() +
+      "\nconst x = steamBlocked.reason === 'library-full'"
+    expect(() => assertCopyResolvedThroughTable(knownBad)).toThrow(
+      /re-branches locally/
+    )
   })
 
   // NARROWED BY 34.13 review WR-02 (was: `toBe(2)`). The Steam branch's
@@ -382,22 +563,27 @@ describe('InstallOverlay/index.tsx source gates (D-29, comment-stripped)', () =>
   })
 
   it('D8: the Steam branch marshals through installSteamGame( with no path argument (D-23) and never the generic helper', () => {
-    const source = readStrippedOverlay()
-    expect(source).toContain('installSteamGame(game.app_name, game)')
-    // The generic helper's Steam-path signature is what D-23 forbids: a
-    // renderer-side second definition of "primary".
-    expect(source).not.toContain("installPath: 'default'")
+    expect(() =>
+      assertSteamBranchMarshalsThroughInstallSteamGame(readStrippedOverlay())
+    ).not.toThrow()
   })
 
-  it('D8-RED: the D8 gate trips against the pre-fix Steam-branch call', () => {
-    const knownBad = [
-      'void install({',
-      '  gameInfo: game,',
-      "  installPath: 'default',",
-      "  platformToInstall: 'Windows',",
-      '})'
-    ].join('\n')
-    expect(knownBad).not.toContain('installSteamGame(game.app_name, game)')
-    expect(knownBad).toContain("installPath: 'default'")
+  it('D8-RED: the D8 gate itself trips against the pre-fix Steam-branch call, DERIVED FROM THE REAL SOURCE', () => {
+    const knownBad = readStrippedOverlay().replace(
+      'installSteamGame(game.app_name, game)',
+      "install({ gameInfo: game, installPath: 'default' })"
+    )
+    expect(knownBad).not.toBe(readStrippedOverlay())
+    expect(() =>
+      assertSteamBranchMarshalsThroughInstallSteamGame(knownBad)
+    ).toThrow(/does not marshal through installSteamGame/)
+  })
+
+  it("D8-RED-b: a Steam branch that keeps the call but re-adds installPath: 'default' is rejected", () => {
+    const knownBad =
+      readStrippedOverlay() + "\nconst y = { installPath: 'default' }"
+    expect(() =>
+      assertSteamBranchMarshalsThroughInstallSteamGame(knownBad)
+    ).toThrow(/installPath/)
   })
 })
