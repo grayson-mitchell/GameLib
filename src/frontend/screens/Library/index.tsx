@@ -958,6 +958,30 @@ export default React.memo(function Library(): JSX.Element {
 
       <div className="listing">
         <span id="top" />
+
+        {/*
+          Quick task 260815-qf0: the active-filter chips render FIRST inside
+          `.listing`, the scrolling container. They used to sit fifth (after
+          this lane, the Favourites lane, LibraryHeader and AlphabetFilter),
+          which put them below the fold on relaunch with filters persisted --
+          the library looked short and nothing on screen said why. The
+          governing rule is `Skill("sketch-findings-gamelib")` ->
+          `references/library-filtering.md`: do not hide filter state in the
+          panel alone.
+
+          KNOWN NUANCE -- do not "correct" this back. The chips now sit above
+          the Played Recently lane, which they only PARTLY govern: that lane
+          receives `showHidden` and `onlyInstalled`, but not the store or
+          runnability facets. The user was told this and chose the hoist
+          anyway; visibility above the fold is the point. Making the recent
+          lane honour the remaining facets is NOT the fix and is explicitly
+          out of scope. The row self-suppresses at `activeFilterCount === 0`,
+          so an unfiltered library's tree is unchanged.
+
+          Locked by `__tests__/filterChipRowPlacement.test.ts`.
+        */}
+        <FilterChipRow />
+
         {showRecentGames && (
           <RecentlyPlayed
             handleModal={handleModal}
@@ -983,8 +1007,6 @@ export default React.memo(function Library(): JSX.Element {
         <LibraryHeader list={libraryToShow} totalGames={unfilteredGameCount} />
 
         {showAlphabetFilter && <AlphabetFilter />}
-
-        <FilterChipRow />
 
         {refreshing && !refreshingInTheBackground && <UpdateComponent />}
 
