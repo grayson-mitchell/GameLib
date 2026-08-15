@@ -190,6 +190,67 @@ function assertSubmitLatchCanBeReleased(stripped: string) {
   }
 }
 
+/**
+ * 34.13 review B-WR-03: the free-space effect must CLEAR the previous
+ * library's value before probing the new one. The guard only cleared
+ * `diskSpace` when the effect was DISABLED, so after a library change the
+ * `afterSelect` render (gated only on `diskSpace && validPath &&
+ * validFlatpakPath`) showed library A's free space labelled as library B's
+ * for the whole duration of the round trip.
+ */
+function assertDiskSpaceClearedBeforeProbe(stripped: string) {
+  const probeIndex = stripped.indexOf('window.api.checkDiskSpace(')
+  if (probeIndex === -1) {
+    throw new Error(
+      'assertDiskSpaceClearedBeforeProbe: the free-space probe is gone'
+    )
+  }
+  // A COUNT is not enough (there are three `setDiskSpace(null)` calls: the
+  // disabled guard, this one, and the WR-03 rejection handler) -- the
+  // property is POSITIONAL. The clear must sit strictly between the effect's
+  // early-return guard and the `getSpace` declaration that wraps the probe.
+  const guardEnd = stripped.indexOf('let cancelled = false')
+  const probeDeclaration = stripped.indexOf('const getSpace', guardEnd)
+  if (guardEnd === -1 || probeDeclaration === -1) {
+    throw new Error(
+      'assertDiskSpaceClearedBeforeProbe: could not bound the free-space effect'
+    )
+  }
+  const between = stripped.slice(guardEnd, probeDeclaration)
+  if (!between.includes('setDiskSpace(null)')) {
+    throw new Error(
+      'assertDiskSpaceClearedBeforeProbe: only the disabled-guard clear exists -- a library change leaves the PREVIOUS library free-space value on screen while the new probe is in flight'
+    )
+  }
+}
+
+/**
+ * 34.13 review B-WR-08: the RUNTIME half of the CrossOver-only invariant.
+ * Before this, the only thing between a GPTK engine and
+ * `steamBottleConfigStore` was one JSX prop guarded by a source-text gate,
+ * and the backend seam deliberately stays permissive (it must, for
+ * `launcher.ts`'s self-heal).
+ */
+function assertNonCrossoverEngineIsNotPersisted(stripped: string) {
+  if (!stripped.includes('isBottleCapableEngine(')) {
+    throw new Error(
+      'assertNonCrossoverEngineIsNotPersisted: the handler does not consult isBottleCapableEngine -- zero runtime enforcement of D-16 remains'
+    )
+  }
+  const guardIndex = stripped.indexOf('isBottleCapableEngine(')
+  const persistIndex = stripped.indexOf('window.api.persistBottleWineVersion(')
+  if (persistIndex === -1) {
+    throw new Error(
+      'assertNonCrossoverEngineIsNotPersisted: the persist call is gone'
+    )
+  }
+  if (!(guardIndex < persistIndex)) {
+    throw new Error(
+      'assertNonCrossoverEngineIsNotPersisted: the guard does not precede the persist -- a guard after the write guards nothing'
+    )
+  }
+}
+
 function assertBoundedStatusDanger(stripped: string) {
   const occurrences = stripped.split('var(--status-danger)').length - 1
   if (occurrences !== 1) {
@@ -537,6 +598,46 @@ describe('persist happens before install', () => {
 // ---------------------------------------------------------------------
 // Block 4b -- 34.13 review B-CR-01: the submit latch is a guard, not a wedge
 // ---------------------------------------------------------------------
+
+describe('B-WR-03 / B-WR-08: stale free space, and the runtime CrossOver guard', () => {
+  const stripped = readDialogStripped()
+
+  it('B-WR-03: the previous library free-space value is cleared before the new probe', () => {
+    expect(() => assertDiskSpaceClearedBeforeProbe(stripped)).not.toThrow()
+  })
+
+  it('B-WR-03-RED: the gate trips on a known-bad input DERIVED FROM THE REAL SOURCE with the pre-probe clear removed', () => {
+    // Remove the pre-probe clear specifically -- the one between the
+    // effect's `let cancelled = false` and its `const getSpace` -- leaving
+    // both the disabled-guard clear and the WR-03 rejection clear in place.
+    // That is exactly the pre-fix shape, and it is why a COUNT-based gate
+    // would not have caught this.
+    const guardEnd = stripped.indexOf('let cancelled = false')
+    const probeDeclaration = stripped.indexOf('const getSpace', guardEnd)
+    const knownBad =
+      stripped.slice(0, guardEnd) +
+      stripped
+        .slice(guardEnd, probeDeclaration)
+        .replace('setDiskSpace(null)', '') +
+      stripped.slice(probeDeclaration)
+    expect(knownBad).not.toBe(stripped)
+    expect(() => assertDiskSpaceClearedBeforeProbe(knownBad)).toThrow(
+      /disabled-guard clear/
+    )
+  })
+
+  it('B-WR-08: a non-CrossOver engine cannot reach the bottle store from this dialog', () => {
+    expect(() => assertNonCrossoverEngineIsNotPersisted(stripped)).not.toThrow()
+  })
+
+  it('B-WR-08-RED: the gate trips on a known-bad input DERIVED FROM THE REAL SOURCE with the guard removed', () => {
+    const knownBad = stripped.replaceAll('isBottleCapableEngine(', 'noop(')
+    expect(knownBad).not.toBe(stripped)
+    expect(() => assertNonCrossoverEngineIsNotPersisted(knownBad)).toThrow(
+      /zero runtime enforcement/
+    )
+  })
+})
 
 describe('B-CR-01: the WR-13 submit latch can always be released', () => {
   const stripped = readDialogStripped()

@@ -484,7 +484,7 @@ const GameCard = ({
   const wrapperClasses = classNames(grid ? 'gameCard' : 'gameListItem', {
     installed: isInstalled,
     hidden: isHiddenGame,
-    notAvailable: notAvailable || isDelisted,  // LIB-08: Pitfall 4 fix
+    notAvailable: notAvailable || isDelisted, // LIB-08: Pitfall 4 fix
     gamepad: activeController,
     justPlayed: justPlayed
   })
@@ -563,7 +563,10 @@ const GameCard = ({
                 src={getImageFormatting(cover, runner)}
                 fallback={
                   art_cover && art_cover !== cover
-                    ? [getImageFormatting(art_cover, runner), fallBackImageMissing]
+                    ? [
+                        getImageFormatting(art_cover, runner),
+                        fallBackImageMissing
+                      ]
                     : fallBackImageMissing
                 }
                 className={imgClasses}
@@ -635,6 +638,36 @@ const GameCard = ({
   )
 
   async function handlePlay(runner: Runner) {
+    // 34.13 review B-WR-10: the generic `install()` helper below forwards
+    // `runner` verbatim and defaults `installPath` to GameLib's
+    // `defaultInstallPath` -- NOT a Steam library. WR-02 already proved that
+    // exact shape live once (Console Mode validated one directory and
+    // installed to another). `GamePage/index.tsx` guards its equivalent
+    // branch; this one excluded only `'sideload'`, never `'steam'`. Reported
+    // as LATENT rather than live -- the card renders the down-icon ->
+    // `buttonClick()` in the not-installed/not-queued state, so no rendered
+    // control was found that reaches here -- but the guard is one line and
+    // the E4 census in `InstallGameModal.test.ts` is file-scoped, so it
+    // cannot express "sole marshalling site" and would not catch a
+    // recurrence.
+    //
+    // DEVIATION from the review's literal prescription
+    // (`return startSteamQuickInstall(appName, gameInfo)`, mirroring
+    // `GamePage`): this file's own spec C5 in
+    // `helpers/__tests__/steamInstallOptionsEntry.test.ts` pins ZERO
+    // occurrences of `startSteamQuickInstall` here -- "no second route to
+    // the quick half". Calling it directly would satisfy the finding and
+    // break that locked decision. `openInstallGameModal` is the shared
+    // chokepoint every other install entry point on this card already uses,
+    // and it short-circuits `runner === 'steam' && action === 'install'` to
+    // `startSteamQuickInstall` itself -- so the user-visible outcome is the
+    // one the review asked for, reached through the one door D-27 sanctions
+    // instead of a new one.
+    if (!isInstalled && gameInfo.runner === 'steam') {
+      openInstallGameModal({ appName, runner: gameInfo.runner, gameInfo })
+      return
+    }
+
     if (!isInstalled && !isQueued && gameInfo.runner !== 'sideload') {
       return install({
         gameInfo,

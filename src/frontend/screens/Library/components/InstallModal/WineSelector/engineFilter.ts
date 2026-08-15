@@ -31,12 +31,30 @@ export function resolveCrossoverOnly(
   return crossoverOnly ?? runner === 'steam'
 }
 
+/**
+ * 34.13 review B-WR-08 / C-03: the ONE definition of "this engine can drive
+ * a Steam bottle".
+ *
+ * The Steam bottle is created with CrossOver's `cxbottle` and nothing else
+ * (17-01 LOCKED mechanism), so a non-CrossOver engine reaching it produces
+ * what this codebase's own `provisionBridgeBottle` calls "a broken bottle"
+ * and rejects outright. Extracted here rather than inlined at each site
+ * because the review found the invariant resting on the presence of a single
+ * JSX prop, guarded only by a source-text gate -- three call sites now share
+ * this predicate instead.
+ */
+export function isBottleCapableEngine(
+  version: WineInstallation | undefined
+): boolean {
+  return version?.type === 'crossover'
+}
+
 export function filterWineEngines(
   wineVersionList: WineInstallation[],
   crossoverOnly: boolean
 ): WineInstallation[] {
   if (!crossoverOnly) return wineVersionList
-  return wineVersionList.filter((version) => version.type === 'crossover')
+  return wineVersionList.filter(isBottleCapableEngine)
 }
 
 export function selectDefaultEngine(

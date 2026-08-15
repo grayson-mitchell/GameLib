@@ -8,10 +8,14 @@
  * cannot parse. See `engineFilter.ts`'s own header doc-comment and the
  * `SideloadDialog/filters.ts` precedent for the full rationale.
  */
+import { readFileSync } from 'fs'
+import { join } from 'path'
+import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { Runner, WineInstallation } from 'common/types'
 
 import {
   filterWineEngines,
+  isBottleCapableEngine,
   resolveBottleNameState,
   resolveCrossoverOnly,
   selectDefaultEngine
@@ -130,5 +134,84 @@ describe('resolveBottleNameState', () => {
       disabled: true,
       showReadOnlyHelper: true
     })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 34.13 review B-WR-07 / B-WR-08 — source gates over `index.tsx`.
+//
+// The component itself cannot be imported here (see this file's header), so
+// these read it as text. Each is a THROWING helper driven against a known-bad
+// input DERIVED FROM THE REAL SOURCE, never a hand-written replica.
+// ---------------------------------------------------------------------------
+describe('WineSelector/index.tsx source gates (34.13 review)', () => {
+  const WINE_SELECTOR_PATH = join(__dirname, '..', 'index.tsx')
+  const stripped = stripSourceComments(readFileSync(WINE_SELECTOR_PATH, 'utf8'))
+
+  function assertDetailsToggleIsLive(source: string) {
+    const start = source.indexOf('<details')
+    if (start === -1) throw new Error('assertDetailsToggleIsLive: no <details>')
+    const tag = source.slice(start, source.indexOf('>', start))
+    if (/onChange/.test(tag)) {
+      throw new Error(
+        'assertDetailsToggleIsLive: <details> carries onChange -- it fires a `toggle` event, never `change`, so the handler can never run'
+      )
+    }
+    if (!/onToggle/.test(tag)) {
+      throw new Error(
+        'assertDetailsToggleIsLive: <details> has no onToggle handler, so the controlled `open` attribute fights the browser and the section cannot collapse'
+      )
+    }
+    if (/setDetailsOpen\(detailsOpen\)/.test(source)) {
+      throw new Error(
+        'assertDetailsToggleIsLive: setDetailsOpen writes back its OWN current value -- React bails out and nothing changes'
+      )
+    }
+  }
+
+  it('B-WR-07: the <details> disclosure is genuinely controllable', () => {
+    expect(() => assertDetailsToggleIsLive(stripped)).not.toThrow()
+  })
+
+  it('B-WR-07-RED: the gate trips on the pre-fix shape, DERIVED FROM THE REAL SOURCE', () => {
+    const knownBad = stripped.replace(
+      /onToggle=\{[\s\S]*?\n\s*\}\n/,
+      'onChange={() => setDetailsOpen(detailsOpen)}\n'
+    )
+    expect(knownBad).not.toBe(stripped)
+    expect(() => assertDetailsToggleIsLive(knownBad)).toThrow(/onChange/)
+  })
+
+  it.each([
+    ['crossover' as const, true],
+    ['toolkit' as const, false],
+    ['wine' as const, false],
+    ['proton' as const, false]
+  ])(
+    'B-WR-08: isBottleCapableEngine(%s) === %s -- the runtime half of the D-16 invariant',
+    (type, expected) => {
+      expect(
+        isBottleCapableEngine({
+          name: 'X',
+          type,
+          bin: '/bin/x'
+        } as WineInstallation)
+      ).toBe(expected)
+    }
+  )
+
+  it('B-WR-08: an absent engine is not bottle-capable (the no-CrossOver-installed host)', () => {
+    expect(isBottleCapableEngine(undefined)).toBe(false)
+  })
+
+  it('B-WR-08: filterWineEngines delegates to the single isBottleCapableEngine predicate rather than inlining the type comparison', () => {
+    const moduleSource = stripSourceComments(
+      readFileSync(join(__dirname, '..', 'engineFilter.ts'), 'utf8')
+    )
+    expect(moduleSource).toContain('export function isBottleCapableEngine')
+    // Exactly ONE literal `'crossover'` comparison in the module: the
+    // predicate's own. A second one is a second definition of the invariant.
+    const comparisons = moduleSource.match(/=== 'crossover'/g) ?? []
+    expect(comparisons).toHaveLength(1)
   })
 })

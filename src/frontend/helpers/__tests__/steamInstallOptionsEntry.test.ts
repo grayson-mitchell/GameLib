@@ -229,6 +229,39 @@ describe('GameCard/index.tsx source gates (D-27 row 3, D-28 -- comment-stripped)
     const count = (source.match(/startSteamQuickInstall/g) ?? []).length
     expect(count).toBe(0)
   })
+
+  it('C6 (34.13 review B-WR-10): handlePlay routes an uninstalled STEAM game to the shared chokepoint before the generic install() helper can see it', () => {
+    // The generic helper forwards `runner` verbatim and defaults
+    // `installPath` to GameLib's `defaultInstallPath` -- NOT a Steam
+    // library. `handlePlay`'s pre-existing guard excluded only `'sideload'`,
+    // never `'steam'`, so a Steam game reaching it would install to the
+    // wrong directory: verbatim the shape WR-02 already proved live once in
+    // Console Mode. Reported LATENT (no rendered control was found that
+    // reaches `handlePlay` in the not-installed/not-queued state), so this
+    // gate exists to stop it becoming live.
+    const source = readStrippedGameCard()
+    const start = source.indexOf('async function handlePlay')
+    expect(start).toBeGreaterThan(-1)
+    const body = source.slice(start).replace(/\s+/g, ' ')
+
+    const steamGuard = body.indexOf("gameInfo.runner === 'steam'")
+    const genericInstall = body.indexOf('return install({')
+    expect(steamGuard).toBeGreaterThan(-1)
+    expect(genericInstall).toBeGreaterThan(-1)
+    // ORDER is the whole property: a guard placed after the generic call
+    // guards nothing.
+    expect(steamGuard).toBeLessThan(genericInstall)
+  })
+
+  it('C6-RED: the ordering gate trips on a known-bad input DERIVED FROM THE REAL SOURCE with the guard removed', () => {
+    const source = readStrippedGameCard()
+    const start = source.indexOf('async function handlePlay')
+    const knownBad = source
+      .slice(start)
+      .replace(/\s+/g, ' ')
+      .replace("gameInfo.runner === 'steam'", 'REMOVED')
+    expect(knownBad.indexOf("gameInfo.runner === 'steam'")).toBe(-1)
+  })
 })
 
 describe('GameSubMenu/index.tsx source gates (D-27 row 5, D-28 -- comment-stripped)', () => {

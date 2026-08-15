@@ -152,7 +152,8 @@ export default function WineSelector({
   // the filtered engine list is empty (no CrossOver install on the host),
   // and `undefined !== 'crossover'` is TRUE -- so the bottle-only path used
   // to sprout a prefix path box for a prefix it will never use.
-  const showPrefix = !effectiveCrossoverOnly && wineVersion?.type !== 'crossover'
+  const showPrefix =
+    !effectiveCrossoverOnly && wineVersion?.type !== 'crossover'
   const showBottle = wineVersion?.type === 'crossover'
 
   // The empty-state this path had none of: a macOS user with no CrossOver
@@ -186,7 +187,22 @@ export default function WineSelector({
 
   return (
     <>
-      <details open={detailsOpen} onChange={() => setDetailsOpen(detailsOpen)}>
+      {/* 34.13 review B-WR-07: two compounding defects on one line.
+          `<details>` fires a `toggle` event, never `change`, so React's
+          `onChange` was never invoked -- and even if it had been,
+          `setDetailsOpen(detailsOpen)` writes the state back to its OWN
+          current value, which React bails out of. `detailsOpen` was
+          write-only dead state pinned to `!!initiallyOpen`, while the
+          controlled `open` attribute fought the browser's native toggling:
+          the section could not be collapsed. Pre-existing upstream code, but
+          this phase made the Steam mount the first DEFAULT-OPEN caller on the
+          headline surface, which is what turned it from latent into visible. */}
+      <details
+        open={detailsOpen}
+        onToggle={(e) =>
+          setDetailsOpen((e.currentTarget as HTMLDetailsElement).open)
+        }
+      >
         <summary>
           {t('setting.show-wine-settings', 'Show Wine settings')}
         </summary>

@@ -66,6 +66,7 @@ import {
   defaultSteamLibraryPath,
   resolveSteamInstallPath
 } from './installTarget'
+import { isBottleCapableEngine } from '../WineSelector/engineFilter'
 
 interface Props {
   backdropClick: () => void
@@ -184,6 +185,15 @@ export default function SteamDialog({
       return
     }
     let cancelled = false
+    // 34.13 review B-WR-03: clear BEFORE probing. The guard above only
+    // cleared `diskSpace` when the effect was DISABLED, so changing library
+    // left the previous library's value in state until the new round trip
+    // resolved -- and the `afterSelect` render is gated only on
+    // `diskSpace && validPath && validFlatpakPath`, so for the whole
+    // duration of the probe the UI showed library A's free space labelled as
+    // library B's. On a slow or unmounted volume that is a materially wrong
+    // number attached to the drive the user is about to install onto.
+    setDiskSpace(null)
     const getSpace = async () => {
       const { message, validPath, validFlatpakPath } =
         await window.api.checkDiskSpace(selectedPath)
@@ -224,7 +234,28 @@ export default function SteamDialog({
       // setup reads a store that is already written. Skipped when there is no
       // wine section or no chosen engine -- persisting on a library-only
       // install would write a bottle setting for a path that never uses one.
-      if (gating.wineSection && wineVersion) {
+      // 34.13 review B-WR-08: `isBottleCapableEngine` is the RUNTIME half of
+      // the D-16 invariant. Before this, the only thing standing between a
+      // GPTK/plain-Wine engine and `steamBottleConfigStore` was the presence
+      // of the string `hideSharedPrefixToggle` in one JSX element, protected
+      // by a comment-stripped SOURCE gate that cannot observe behaviour --
+      // and `persistInstallFormWineVersion` validates the `type` only
+      // against the 4-literal union, deliberately (the backend must stay
+      // permissive for `launcher.ts`'s `checkWineBeforeLaunch` self-heal,
+      // which is a legitimate producer of a non-CrossOver persisted value).
+      // So the enforcement belongs here, on the one path that is a USER
+      // CHOICE. Skipping the persist is the correct degrade: D-15 already
+      // makes the guided bottle setup derive an engine when nothing was
+      // persisted.
+      if (
+        gating.wineSection &&
+        wineVersion &&
+        !isBottleCapableEngine(wineVersion)
+      ) {
+        window.api.logError(
+          '34.13 SteamDialog: refused to persist a non-CrossOver engine for the Steam bottle (D-16; the bottle is created with cxbottle and nothing else)'
+        )
+      } else if (gating.wineSection && wineVersion) {
         // B-CR-01: a REJECTED persist is the same class of outcome as a
         // resolved `{ status: 'error' }` -- the guided bottle setup still
         // derives an engine when nothing was persisted (D-15), so neither

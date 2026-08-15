@@ -23,8 +23,8 @@
  * flip from one that lands a microtask later, and the difference is exactly
  * the dead-click hazard D-25 exists to remove.
  */
-import { readFileSync } from 'fs'
-import { join } from 'path'
+import { readFileSync, readdirSync } from 'fs'
+import { join, sep } from 'path'
 
 import { GameInfo, DiskSpaceData, Runner } from 'common/types'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
@@ -548,9 +548,56 @@ describe('Group E: comment-stripped source gates', () => {
     expect(matches.length).toBe(1)
   })
 
-  it('E4: exactly ONE occurrence of window.api.install( — the single marshalling point', () => {
+  it('E4: exactly ONE occurrence of window.api.install( in THIS file', () => {
     const matches = strippedSource.match(/window\.api\.install\(/g) ?? []
     expect(matches.length).toBe(1)
+  })
+
+  it('E4b (34.13 review B-WR-10): repo-wide census — the set of files marshalling window.api.install( equals an explicit allowlist', () => {
+    // The doc comment above `installSteamGame` asserts it is "the SOLE
+    // marshalling site for `window.api.install` on the Steam path". E4 above
+    // reads ONLY this file, so it is structurally incapable of detecting a
+    // Steam install marshalled anywhere else -- a file-scoped gate cannot
+    // express "sole site". This is the same census shape
+    // `steamEligibilityWiring.test.ts` Group A already uses successfully.
+    const frontendRoot = join(__dirname, '..', '..')
+    const walk = (dir: string, out: string[] = []): string[] => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name)
+        if (entry.isDirectory()) walk(full, out)
+        else if (/\.(ts|tsx)$/.test(entry.name)) out.push(full)
+      }
+      return out
+    }
+
+    const hits = walk(frontendRoot)
+      .filter((file) => !file.includes('__tests__'))
+      .filter((file) =>
+        stripSourceComments(readFileSync(file, 'utf-8')).includes(
+          'window.api.install('
+        )
+      )
+      .map((file) =>
+        file
+          .slice(frontendRoot.length + 1)
+          .split(sep)
+          .join('/')
+      )
+
+    expect(hits.sort()).toEqual(
+      [
+        // The Steam path's sole marshalling site (this file).
+        'state/InstallGameModal.ts',
+        // The generic non-Steam helper. Forwards `runner` verbatim and
+        // defaults `installPath` to GameLib's own dir -- correct for
+        // Epic/GOG/Amazon/sideload, wrong for Steam, which is why every
+        // Steam-capable caller must route around it.
+        'helpers/library.ts',
+        // A retry that re-enqueues params the queue already stored: a
+        // RE-marshal of an existing element, not a new marshalling site.
+        'screens/DownloadManager/components/DownloadManagerItem/index.tsx'
+      ].sort()
+    )
   })
 
   it("E5: the RAW (unstripped) file does NOT contain the pre-existing false premise (note the 'GamerLib' typo, matched as it actually is)", () => {

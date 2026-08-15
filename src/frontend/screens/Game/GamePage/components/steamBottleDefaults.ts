@@ -1,4 +1,5 @@
 import { WineInstallation } from 'common/types'
+import { isBottleCapableEngine } from 'frontend/screens/Library/components/InstallModal/WineSelector/engineFilter'
 
 /**
  * Phase 17 (17-06 UAT fix): defaults for the guided Steam-bottle setup wizard.
@@ -163,5 +164,9 @@ export function resolveSteamBottleSeedEngine(
 export function resolveSubmittedBottleEngine(
   armedWineVersion: WineInstallation | undefined
 ): WineInstallation | undefined {
-  return armedWineVersion?.type === 'crossover' ? armedWineVersion : undefined
+  // Delegates to D-16's own module (34.13 review B-WR-08) so "which engine
+  // types can drive a cxbottle" has exactly ONE definition -- an inline
+  // `type === 'crossover'` here would be a second one, free to drift from
+  // the filter that decides what the dropdown offers.
+  return isBottleCapableEngine(armedWineVersion) ? armedWineVersion : undefined
 }
