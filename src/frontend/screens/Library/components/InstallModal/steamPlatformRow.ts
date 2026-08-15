@@ -82,11 +82,9 @@ export function hasSteamWindowsDepot(
  * Generic over `T` so it never needs to import `AvailablePlatforms` from
  * `index.tsx`.
  */
-export function selectSteamPlatformOptions<T extends { value: InstallPlatform }>(
-  mode: SteamPlatformRowMode,
-  platforms: T[],
-  hasWindowsDepot: boolean
-): T[] {
+export function selectSteamPlatformOptions<
+  T extends { value: InstallPlatform }
+>(mode: SteamPlatformRowMode, platforms: T[], hasWindowsDepot: boolean): T[] {
   switch (mode) {
     case 'absent':
       return []
@@ -150,4 +148,102 @@ export function readonlyPlatformValue(
     default:
       return undefined
   }
+}
+
+/**
+ * 34.14 D-05: whether the Windows-depot question was already answered at
+ * library-sync time, per `GameInfo.steamPlatformsCaptured` (populated for
+ * every game at sync time -- `library.ts:791`, `cachedMeta?.platformsCaptured
+ * ?? false`, so a never-synced entry seeds conservatively to "not captured",
+ * never to a false "captured" claim).
+ *
+ * Written exactly parallel to `hasSteamWindowsDepot`, for exactly the same
+ * reason: `index.tsx` must NOT name the raw `steamPlatformsCaptured` field
+ * itself (`installModalSource.test.ts:218-221` asserts zero occurrences of
+ * that token in `index.tsx`, and `steamEligibilityProbe.test.ts`'s source
+ * gate bans it there too). This helper is what keeps both of those shipped
+ * gates green and unmodified -- `index.tsx` calls this function instead of
+ * reading the field directly.
+ *
+ * `AppleWikiInfo.tsx:67`'s `gameInfo.steamPlatformsCaptured === true` check
+ * is the in-repo precedent for the `=== true` comparison (never a `!!`
+ * truthiness coercion, for the same "never captured must not coerce to a
+ * fact" reasoning `hasSteamWindowsDepot`'s own doc-comment states above).
+ */
+export function hasSteamDepotSignalCaptured(
+  gameInfo: { steamPlatformsCaptured?: boolean } | null | undefined
+): boolean {
+  return gameInfo?.steamPlatformsCaptured === true
+}
+
+/**
+ * 34.14 D-04/D-05: the single pure function that decides Windows-depot
+ * availability, folding two decisions the module's own header already
+ * claims as its exclusive territory ("the single place in the codebase
+ * where Windows-depot availability is decided") into one place:
+ *
+ * - D-05 (seed/resolve): the SAME fact -- is there a Windows depot, is that
+ *   answer captured -- read at two different times. The `gameInfo` seed
+ *   supplies the FIRST frame (so an already-captured game never flashes a
+ *   pending state); the live eligibility probe supplies the answer once it
+ *   lands. This is one function reading one fact twice, not two competing
+ *   sources.
+ * - D-04 (fail-open on unknown): what to do once the probe has TERMINALLY
+ *   settled (`probeSettled`) but the depot signal still was never captured
+ *   (offline, errored, or the 15s `METADATA_FETCH_TIMEOUT_MS` poll expired).
+ */
+export interface ResolveDepotAvailabilityInput {
+  seedHasWindowsDepot: boolean
+  seedDepotSignalCaptured: boolean
+  probeHasWindowsDepot: boolean
+  probeDepotSignalCaptured: boolean
+  probeSettled: boolean
+}
+
+export interface ResolveDepotAvailabilityOutput {
+  depotSignalResolved: boolean
+  windowsDepotOffered: boolean
+}
+
+export function resolveDepotAvailability(
+  input: ResolveDepotAvailabilityInput
+): ResolveDepotAvailabilityOutput {
+  // D-05 seed/resolve selection: the seed decides the FIRST frame so an
+  // already-captured game never flashes a pending state; the probe
+  // supplies the live answer once it lands. Same fact at two times, not
+  // two competing sources.
+  const hasWindowsDepot = input.probeSettled
+    ? input.probeHasWindowsDepot
+    : input.seedHasWindowsDepot
+  const depotSignalCaptured = input.probeSettled
+    ? input.probeDepotSignalCaptured
+    : input.seedDepotSignalCaptured
+
+  const depotSignalResolved = depotSignalCaptured || input.probeSettled
+
+  // D-04, documented in full (this asymmetry must NOT be "corrected"
+  // toward `applyEligibilityFailure`'s fail-CLOSED sibling in
+  // `steamEligibilityProbe.ts` -- a later reviewer finding only ONE of the
+  // two branches below, without this comment, is exactly the failure mode
+  // this documentation obligation exists to prevent):
+  //
+  // - `platformsCaptured === true && hasWindowsDepot !== true` -> OMIT
+  //   Windows. 34.13's fence is unchanged: a CONFIRMED absence of a Windows
+  //   depot never offers the Windows option.
+  // - `platformsCaptured === false` after the probe has TERMINALLY settled
+  //   (offline, errored, or the 15s `METADATA_FETCH_TIMEOUT_MS` poll
+  //   expired) -> OFFER Windows. This DELIBERATELY diverges from
+  //   `applyEligibilityFailure`'s fail-CLOSED resolution for bottle
+  //   eligibility in `steamEligibilityProbe.ts`.
+  //
+  // WHY the asymmetry is correct: bottle-eligibility failing closed costs
+  // you nothing -- you still get a native install. Depot availability
+  // failing closed costs you an option that almost certainly exists: per
+  // the operator-locked domain constraint, mac-only Steam games are
+  // effectively a null set, so fail-closed here would withhold Windows
+  // from a game that (per that constraint) almost certainly has it.
+  const windowsDepotOffered =
+    hasWindowsDepot || (input.probeSettled && !depotSignalCaptured)
+
+  return { depotSignalResolved, windowsDepotOffered }
 }

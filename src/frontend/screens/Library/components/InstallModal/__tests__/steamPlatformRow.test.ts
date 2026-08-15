@@ -1,7 +1,10 @@
 import {
   hasSteamWindowsDepot,
   selectSteamPlatformOptions,
-  readonlyPlatformValue
+  readonlyPlatformValue,
+  hasSteamDepotSignalCaptured,
+  resolveDepotAvailability,
+  ResolveDepotAvailabilityInput
 } from '../steamPlatformRow'
 import type { SteamPlatformRowMode } from '../steamSectionGating'
 import type { InstallPlatform } from 'common/types'
@@ -225,5 +228,172 @@ describe('the D-17 gates are not vacuous', () => {
 
     const real = selectSteamPlatformOptions('readonly-macos', platforms, true)
     expect(real).toHaveLength(1)
+  })
+})
+
+// ---------------------------------------------------------------------
+// Phase 34.14, Plan 02, Task 3 -- D-04's fail-open and D-05's seed/resolve
+// ---------------------------------------------------------------------
+
+describe('hasSteamDepotSignalCaptured -- D-05 captured-signal gate', () => {
+  it('steamPlatformsCaptured true -> true', () => {
+    expect(hasSteamDepotSignalCaptured({ steamPlatformsCaptured: true })).toBe(
+      true
+    )
+  })
+
+  it('steamPlatformsCaptured false -> false', () => {
+    expect(hasSteamDepotSignalCaptured({ steamPlatformsCaptured: false })).toBe(
+      false
+    )
+  })
+
+  it('steamPlatformsCaptured absent ({}) -> false', () => {
+    expect(hasSteamDepotSignalCaptured({})).toBe(false)
+  })
+
+  it('gameInfo undefined -> false', () => {
+    expect(hasSteamDepotSignalCaptured(undefined)).toBe(false)
+  })
+
+  it('gameInfo null -> false', () => {
+    expect(hasSteamDepotSignalCaptured(null)).toBe(false)
+  })
+})
+
+describe('resolveDepotAvailability -- D-04/D-05 in one pure function', () => {
+  // The six-row truth table from 34.14-02-PLAN.md Task 3, each row
+  // asserting BOTH output fields.
+  const rows: {
+    name: string
+    input: ResolveDepotAvailabilityInput
+    depotSignalResolved: boolean
+    windowsDepotOffered: boolean
+  }[] = [
+    {
+      name: 'D-05 seed: captured game never flashes pending',
+      input: {
+        seedDepotSignalCaptured: true,
+        seedHasWindowsDepot: true,
+        probeSettled: false,
+        probeDepotSignalCaptured: false,
+        probeHasWindowsDepot: false
+      },
+      depotSignalResolved: true,
+      windowsDepotOffered: true
+    },
+    {
+      name: "seed says captured-and-absent: 34.13's fence holds at first frame",
+      input: {
+        seedDepotSignalCaptured: true,
+        seedHasWindowsDepot: false,
+        probeSettled: false,
+        probeDepotSignalCaptured: false,
+        probeHasWindowsDepot: false
+      },
+      depotSignalResolved: true,
+      windowsDepotOffered: false
+    },
+    {
+      name: 'D-01: unresolved -> the pending row, Install disabled',
+      input: {
+        seedDepotSignalCaptured: false,
+        seedHasWindowsDepot: false,
+        probeSettled: false,
+        probeDepotSignalCaptured: false,
+        probeHasWindowsDepot: false
+      },
+      depotSignalResolved: false,
+      windowsDepotOffered: false
+    },
+    {
+      name: 'probe landed, depot present',
+      input: {
+        seedDepotSignalCaptured: false,
+        seedHasWindowsDepot: false,
+        probeSettled: true,
+        probeDepotSignalCaptured: true,
+        probeHasWindowsDepot: true
+      },
+      depotSignalResolved: true,
+      windowsDepotOffered: true
+    },
+    {
+      name: 'probe landed, depot CONFIRMED absent -> omit (D-04 branch a)',
+      input: {
+        seedDepotSignalCaptured: false,
+        seedHasWindowsDepot: false,
+        probeSettled: true,
+        probeDepotSignalCaptured: true,
+        probeHasWindowsDepot: false
+      },
+      depotSignalResolved: true,
+      windowsDepotOffered: false
+    },
+    {
+      name: 'probe settled UNCAPTURED -> FAIL OPEN (D-04 branch b)',
+      input: {
+        seedDepotSignalCaptured: false,
+        seedHasWindowsDepot: false,
+        probeSettled: true,
+        probeDepotSignalCaptured: false,
+        probeHasWindowsDepot: false
+      },
+      depotSignalResolved: true,
+      windowsDepotOffered: true
+    }
+  ]
+
+  for (const row of rows) {
+    it(`${row.name} -> depotSignalResolved: ${row.depotSignalResolved}, windowsDepotOffered: ${row.windowsDepotOffered}`, () => {
+      const result = resolveDepotAvailability(row.input)
+      expect(result.depotSignalResolved).toBe(row.depotSignalResolved)
+      expect(result.windowsDepotOffered).toBe(row.windowsDepotOffered)
+    })
+  }
+
+  it("failsClosedOnUnknown: a saboteur computing windowsDepotOffered = hasWindowsDepot alone (the fail-CLOSED shape, i.e. today's pre-34.14 behaviour) disagrees with the real function on the settled-uncaptured row -- proving D-04's fail-open direction is actually exercised", () => {
+    function failsClosedOnUnknown(input: ResolveDepotAvailabilityInput): {
+      depotSignalResolved: boolean
+      windowsDepotOffered: boolean
+    } {
+      const hasWindowsDepot = input.probeSettled
+        ? input.probeHasWindowsDepot
+        : input.seedHasWindowsDepot
+      const depotSignalCaptured = input.probeSettled
+        ? input.probeDepotSignalCaptured
+        : input.seedDepotSignalCaptured
+      const depotSignalResolved = depotSignalCaptured || input.probeSettled
+      // DEFECT (fail-CLOSED, the sibling `applyEligibilityFailure` shape):
+      // trusts only the captured signal, never offering Windows once the
+      // probe settles uncaptured.
+      const windowsDepotOffered = hasWindowsDepot
+      return { depotSignalResolved, windowsDepotOffered }
+    }
+
+    const settledUncapturedInput: ResolveDepotAvailabilityInput = {
+      seedDepotSignalCaptured: false,
+      seedHasWindowsDepot: false,
+      probeSettled: true,
+      probeDepotSignalCaptured: false,
+      probeHasWindowsDepot: false
+    }
+
+    const sabotaged = failsClosedOnUnknown(settledUncapturedInput)
+    expect(sabotaged.windowsDepotOffered).toBe(false)
+
+    const real = resolveDepotAvailability(settledUncapturedInput)
+    expect(real.windowsDepotOffered).toBe(true)
+  })
+
+  it('34.14 D-03: the meaningless pair (seed says captured=false but hasWindowsDepot=true, probe not settled) cannot leak into depotSignalResolved -- the row stays pending, never selectable', () => {
+    const result = resolveDepotAvailability({
+      seedDepotSignalCaptured: false,
+      seedHasWindowsDepot: true,
+      probeSettled: false,
+      probeDepotSignalCaptured: false,
+      probeHasWindowsDepot: false
+    })
+    expect(result.depotSignalResolved).toBe(false)
   })
 })
