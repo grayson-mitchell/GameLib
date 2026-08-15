@@ -483,6 +483,43 @@ describe('bottle.ts', () => {
 
       expect(settings.wineVersion).toEqual(storedWine)
     })
+
+    // ── 34.13 review A-20 ────────────────────────────────────────────────
+    // library.ts's getBottleSteamappsRoot() calls this getter SOLELY for
+    // `wineCrossoverBottle`, and that sits on readAcfState('bottle')'s hot
+    // path: every install poll tick, every uninstall poll tick,
+    // buildBottleInstalledMap, refreshInstallState. 539bc979c turned the
+    // previously-tolerant `storedWineVersion ?? globalSettings.wineVersion`
+    // into an UNGUARDED `.type` dereference, so a GlobalConfig.getSettings()
+    // result without a wineVersion turns pure path resolution into a
+    // TypeError propagating through the ACF readers. The sidecar's config
+    // layer is a different code path from Electron's and this repo has
+    // ledgered several hollow sidecar stubs. None of the three specs above
+    // covers this — all three supply a wineVersion.
+    test('A-20: does not throw when NEITHER a stored nor a global wineVersion exists, and still resolves the bottle name', () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      mockedGlobalConfigGet.mockReturnValue({
+        getSettings: () => ({}) as GameSettings
+      })
+      mockedExistsSync.mockReturnValue(false)
+
+      expect(() => getSteamBottleSettings()).not.toThrow()
+      expect(getSteamBottleSettings().wineCrossoverBottle).toBe(
+        DEFAULT_STEAM_BOTTLE_NAME
+      )
+    })
+
+    test('A-20: with no wineVersion anywhere but CrossOver ON DISK, the getter still resolves CrossOver', () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      mockedGlobalConfigGet.mockReturnValue({
+        getSettings: () => ({}) as GameSettings
+      })
+      mockedExistsSync.mockImplementation((path: string) =>
+        path.endsWith('/CrossOver/bin/wine')
+      )
+
+      expect(getSteamBottleSettings().wineVersion.type).toBe('crossover')
+    })
   })
 
   describe('provisionBottle', () => {
@@ -830,10 +867,7 @@ describe('bottle.ts', () => {
         'isLoggedIn',
         expect.anything()
       )
-      expect(mockedSet).not.toHaveBeenCalledWith(
-        'userData',
-        expect.anything()
-      )
+      expect(mockedSet).not.toHaveBeenCalledWith('userData', expect.anything())
     })
 
     // ── GAP-17-PROVISIONED-FLAG-STUCK: step 8 must never persist `false` ──────
@@ -919,9 +953,9 @@ describe('bottle.ts', () => {
       expect(killIdx).toBeGreaterThanOrEqual(0)
       expect(deleteIdx).toBeGreaterThanOrEqual(0)
       // Ordering by real invocation sequence: kill must precede delete.
-      expect(
-        mockedSpawnAsync.mock.invocationCallOrder[killIdx]
-      ).toBeLessThan(mockedSpawnAsync.mock.invocationCallOrder[deleteIdx])
+      expect(mockedSpawnAsync.mock.invocationCallOrder[killIdx]).toBeLessThan(
+        mockedSpawnAsync.mock.invocationCallOrder[deleteIdx]
+      )
     })
 
     test('GAP-17-CEF-RECREATE-RUNNING: wineserver -k is scoped to the target bottle WINEPREFIX (never the shared GameLib bottle) and sets CX_ROOT', async () => {
@@ -1025,7 +1059,9 @@ describe('bottle.ts', () => {
 
       expect(result.status).toBe('done')
       const { commandParts } = mockedRunWineCommand.mock.calls[0][0]
-      expect(commandParts[0]).toBe(getBottleSteamExePath(DEFAULT_STEAM_BOTTLE_NAME))
+      expect(commandParts[0]).toBe(
+        getBottleSteamExePath(DEFAULT_STEAM_BOTTLE_NAME)
+      )
       expect(commandParts).toContain('-applaunch')
       expect(commandParts).toContain(GOOD_APP_ID)
     })
@@ -1038,10 +1074,12 @@ describe('bottle.ts', () => {
 
       expect(result.status).toBe('done')
       const { commandParts } = mockedRunWineCommand.mock.calls[0][0]
-      expect(commandParts[0]).toBe(getBottleSteamExePath(DEFAULT_STEAM_BOTTLE_NAME))
-      expect(
-        commandParts.some((p: string) => p.includes(GOOD_APP_ID))
-      ).toBe(true)
+      expect(commandParts[0]).toBe(
+        getBottleSteamExePath(DEFAULT_STEAM_BOTTLE_NAME)
+      )
+      expect(commandParts.some((p: string) => p.includes(GOOD_APP_ID))).toBe(
+        true
+      )
     })
 
     test('uninstall dispatches steam://uninstall/<appId> targeting the bottle Steam.exe', async () => {
@@ -1052,10 +1090,12 @@ describe('bottle.ts', () => {
 
       expect(result.status).toBe('done')
       const { commandParts } = mockedRunWineCommand.mock.calls[0][0]
-      expect(commandParts[0]).toBe(getBottleSteamExePath(DEFAULT_STEAM_BOTTLE_NAME))
-      expect(
-        commandParts.some((p: string) => p.includes(GOOD_APP_ID))
-      ).toBe(true)
+      expect(commandParts[0]).toBe(
+        getBottleSteamExePath(DEFAULT_STEAM_BOTTLE_NAME)
+      )
+      expect(commandParts.some((p: string) => p.includes(GOOD_APP_ID))).toBe(
+        true
+      )
     })
   })
 

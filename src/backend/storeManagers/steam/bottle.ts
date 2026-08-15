@@ -26,11 +26,7 @@ import {
   logWarning,
   LogPrefix
 } from 'backend/logger'
-import {
-  checkWineBeforeLaunch,
-  downloadFile,
-  spawnAsync
-} from 'backend/utils'
+import { checkWineBeforeLaunch, downloadFile, spawnAsync } from 'backend/utils'
 // NOTE: `runWineCommand` is imported LAZILY (dynamic import inside the two
 // async functions that use it) rather than statically. Importing it at module
 // load pulls in backend/launcher -> the full storeManagers barrel (sideload ->
@@ -295,15 +291,24 @@ export function isBottleReady(bottleName?: string): boolean {
  */
 export function getSteamBottleSettings(): GameSettings {
   const globalSettings = GlobalConfig.get().getSettings()
-  const storedWineVersion =
-    steamBottleConfigStore.get_nodefault('wineVersion')
+  const storedWineVersion = steamBottleConfigStore.get_nodefault('wineVersion')
   const storedBottleName = steamBottleConfigStore.get_nodefault(
     'wineCrossoverBottle'
   )
 
   const candidateWineVersion = storedWineVersion ?? globalSettings.wineVersion
+  // 34.13 review A-20: OPTIONAL dereference. The pre-539bc979c body was
+  // `wineVersion: storedWineVersion ?? globalSettings.wineVersion` — tolerant
+  // of both being absent. `library.ts`'s getBottleSteamappsRoot() calls this
+  // getter SOLELY for `wineCrossoverBottle`, and that sits on
+  // readAcfState('bottle')'s hot path: every install poll tick, every
+  // uninstall poll tick, buildBottleInstalledMap, refreshInstallState. A
+  // `GlobalConfig.getSettings()` result without a `wineVersion` (the sidecar's
+  // config layer is a different code path from Electron's, and this repo has
+  // ledgered several hollow sidecar stubs) would turn pure path resolution
+  // into a TypeError propagating through the ACF readers.
   const wineVersion =
-    candidateWineVersion.type === 'crossover'
+    candidateWineVersion?.type === 'crossover'
       ? candidateWineVersion
       : (resolveCrossoverWine('CrossOver (Steam bottle runtime)') ??
         candidateWineVersion)
@@ -442,7 +447,10 @@ async function raiseFrontmostBottledProcess(
         return out && out !== 'none' ? out : null
       } catch (error) {
         logWarning(
-          [`raiseFrontmostBottledProcess [${context}]: osascript raise failed`, error],
+          [
+            `raiseFrontmostBottledProcess [${context}]: osascript raise failed`,
+            error
+          ],
           LogPrefix.Steam
         )
         return null
@@ -490,7 +498,10 @@ async function raiseFrontmostBottledProcess(
         app.hide()
       } catch (error) {
         logWarning(
-          [`raiseFrontmostBottledProcess [${context}]: app.hide fallback failed`, error],
+          [
+            `raiseFrontmostBottledProcess [${context}]: app.hide fallback failed`,
+            error
+          ],
           LogPrefix.Steam
         )
       }
@@ -504,9 +515,9 @@ async function raiseFrontmostBottledProcess(
 }
 
 async function raiseInstallerWindow(context: string): Promise<void> {
-  const nameClause = INSTALLER_PROCESS_NAMES.map(
-    (n) => `name is "${n}"`
-  ).join(' or ')
+  const nameClause = INSTALLER_PROCESS_NAMES.map((n) => `name is "${n}"`).join(
+    ' or '
+  )
   // GAP C (17-16): conservative focus reliability — filter to `visible is true`
   // processes (mirroring the already-working raiseBottledGameWindow) and pick
   // the FIRST visible match, so we never target a hidden/background helper of
