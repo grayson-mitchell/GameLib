@@ -39,7 +39,8 @@ import {
   markSteamInstallIncomplete,
   readAcfState,
   pollUninstallOnce,
-  resolveInstallRoot
+  resolveInstallRoot,
+  findOtherManifestsWithInstalldir
 } from './library'
 import {
   isBottleReady,
@@ -2270,6 +2271,49 @@ export default class SteamGame implements Game {
     // SharedDepots — see this method's own JSDoc.
     const installRoot = join(commonRoot, installdirSegment)
     const manifestPath = join(steamappsDir, `appmanifest_${this.appId}.acf`)
+
+    // 34.13 review A-13: the SharedDepots argument above is sound for the
+    // shape its real-filesystem regression test proves, and silently assumes
+    // away a different one — two installed appIds whose ACFs declare the SAME
+    // `installdir`. Steam does that routinely (a game and its
+    // dedicated-server/tool app, regional SKU variants, demo/base pairs), and
+    // in that shape installRoot resolves to the SHARED directory: the
+    // recursive rmSync would take the co-installed app's files with it while
+    // only THIS appId's manifest is removed, leaving the other app's manifest
+    // pointing at a now-empty path with Steam and GameLib both still believing
+    // it is installed. Remove the manifest only, and let the completion
+    // pipeline reconcile — a partial uninstall the user can retry beats
+    // deleting a game they did not ask about.
+    const conflicting = findOtherManifestsWithInstalldir(
+      steamappsDir,
+      installdirSegment,
+      this.appId
+    )
+    if (conflicting.length > 0) {
+      logWarning(
+        `SteamGame: uninstallBottleGameDirectly — installdir "${installdirSegment}" is shared with appId(s) ${conflicting.join(
+          ','
+        )}; removing this title's manifest only and leaving the shared directory in place`,
+        LogPrefix.Steam
+      )
+      try {
+        rmSync(manifestPath, { force: true })
+      } catch (error) {
+        logWarning(
+          [
+            `SteamGame: uninstallBottleGameDirectly failed to remove the manifest for appId ${this.appId}`,
+            error
+          ],
+          LogPrefix.Steam
+        )
+        return {
+          stdout: '',
+          stderr: `Failed to remove bottle install: ${String(error)}`
+        }
+      }
+      await pollUninstallOnce(this.appId, 'bottle')
+      return { stdout: '', stderr: '' }
+    }
 
     try {
       rmSync(installRoot, { recursive: true, force: true })

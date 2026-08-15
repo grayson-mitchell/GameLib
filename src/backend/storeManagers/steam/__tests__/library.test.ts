@@ -15,6 +15,7 @@ import SteamLibraryManager, {
   buildInstalledMap,
   buildBottleInstalledMap,
   buildBridgeInstalledMap,
+  findOtherManifestsWithInstalldir,
   readAcfState,
   resolveInstallRoot,
   startInstallPolling,
@@ -3192,6 +3193,110 @@ describe('markSteamInstallIncomplete()', () => {
     library.clear()
     expect(() => markSteamInstallIncomplete('nonexistent')).not.toThrow()
     expect(sendFrontendMessage).not.toHaveBeenCalled()
+  })
+})
+
+// ── 34.13 review A-13: findOtherManifestsWithInstalldir() ────────────────────
+//
+// uninstallBottleGameDirectly's JSDoc used to call over-deleting
+// "structurally impossible rather than runtime-checked". True for the
+// SharedDepots shape its real-filesystem test proves; false for the shape the
+// argument assumed away — two installed appIds declaring the SAME installdir.
+// This is the runtime check that makes the (now narrowed) claim true.
+
+describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
+  const STEAMAPPS = '/bottle/steamapps'
+
+  it('returns [] when the steamapps dir does not exist', () => {
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+    expect(
+      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+    ).toEqual([])
+  })
+
+  it('finds another appId declaring the SAME installdir', () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue([
+      'appmanifest_63000.acf',
+      'appmanifest_228980.acf'
+    ])
+    ;(readFileSync as jest.Mock).mockImplementation((path: string) =>
+      String(path).includes('228980') ? 'other' : 'self'
+    )
+    ;(vdf.parse as jest.Mock).mockImplementation((content: string) =>
+      content === 'other'
+        ? { AppState: { appid: '228980', installdir: 'Hoard' } }
+        : { AppState: { appid: '63000', installdir: 'Hoard' } }
+    )
+
+    expect(
+      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+    ).toEqual(['228980'])
+  })
+
+  it('DISCRIMINATOR: a SIBLING installdir (the SharedDepots shape) is not a conflict', () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue([
+      'appmanifest_63000.acf',
+      'appmanifest_228980.acf'
+    ])
+    ;(readFileSync as jest.Mock).mockReturnValue('x')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '228980',
+        installdir: 'Steamworks Common Redistributables'
+      }
+    })
+
+    expect(
+      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+    ).toEqual([])
+  })
+
+  it('never reports THIS appId as its own conflict', () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_63000.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('x')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { appid: '63000', installdir: 'Hoard' }
+    })
+
+    expect(
+      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+    ).toEqual([])
+  })
+
+  it('skips a corrupt ACF without throwing (T-2-01/T-17-05)', () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_228980.acf'])
+    ;(readFileSync as jest.Mock).mockImplementation(() => {
+      throw new Error('corrupt file')
+    })
+
+    expect(() =>
+      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+    ).not.toThrow()
+    expect(
+      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+    ).toEqual([])
+  })
+
+  it('ignores non-manifest files in the directory', () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue([
+      'common',
+      'downloading',
+      'libraryfolders.vdf'
+    ])
+    ;(readFileSync as jest.Mock).mockReturnValue('x')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { appid: '228980', installdir: 'Hoard' }
+    })
+
+    expect(
+      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+    ).toEqual([])
+    expect(readFileSync).not.toHaveBeenCalled()
   })
 })
 

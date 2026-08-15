@@ -4600,6 +4600,86 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
       ).toBe(true)
       expect(realExistsSync(siblingManifestPath)).toBe(true)
     })
+
+    // ── 34.13 review A-13 ──────────────────────────────────────────────────
+    // The SharedDepots argument above is sound for the shape it proves, and
+    // silently assumes away a DIFFERENT one: two installed appIds whose ACFs
+    // declare the SAME `installdir`. Steam does this routinely (a game and
+    // its dedicated-server/tool app, regional SKU variants, demo/base pairs).
+    // There `installRoot` resolves to the SHARED directory, so the recursive
+    // delete takes the co-installed app's files with it while only THIS
+    // appId's manifest is removed — the other app's manifest survives
+    // pointing at an empty path, and Steam and GameLib both still believe it
+    // is installed. Proven on a REAL filesystem, like the case above.
+    it("A-13: a shared installdir removes THIS title's manifest only — the co-installed app's files survive on disk", async () => {
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      readAcfStateSpy.mockResolvedValue({
+        state: 'installed',
+        installPath: hoardInstallDir
+      })
+      const conflictSpy = jest
+        .spyOn(libraryModule, 'findOtherManifestsWithInstalldir')
+        .mockReturnValue(['228980'])
+
+      const result = await new SteamGame(APP_ID).uninstall({} as any)
+
+      expect(result).toEqual({ stdout: '', stderr: '' })
+      // THIS title's manifest is gone...
+      expect(realExistsSync(hoardManifestPath)).toBe(false)
+      // ...and the shared directory, with the co-installed app's files in
+      // it, is untouched. Pre-fix this whole tree was recursively deleted.
+      expect(realExistsSync(hoardInstallDir)).toBe(true)
+      expect(realExistsSync(realJoin(hoardInstallDir, 'Hoard.exe'))).toBe(true)
+      expect(realExistsSync(siblingManifestPath)).toBe(true)
+      // The completion pipeline still runs, so the badge reconciles.
+      expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+
+      conflictSpy.mockRestore()
+    })
+
+    it('A-13 DISCRIMINATOR: with NO conflicting manifest the directory IS deleted (the check cannot pass by refusing everything)', async () => {
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      readAcfStateSpy.mockResolvedValue({
+        state: 'installed',
+        installPath: hoardInstallDir
+      })
+      const conflictSpy = jest
+        .spyOn(libraryModule, 'findOtherManifestsWithInstalldir')
+        .mockReturnValue([])
+
+      await new SteamGame(APP_ID).uninstall({} as any)
+
+      expect(realExistsSync(hoardInstallDir)).toBe(false)
+      expect(realExistsSync(hoardManifestPath)).toBe(false)
+
+      conflictSpy.mockRestore()
+    })
+
+    it("A-13: the conflict check is driven by THIS title's installdir segment and its own appId", async () => {
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      readAcfStateSpy.mockResolvedValue({
+        state: 'installed',
+        installPath: hoardInstallDir
+      })
+      const conflictSpy = jest
+        .spyOn(libraryModule, 'findOtherManifestsWithInstalldir')
+        .mockReturnValue([])
+
+      await new SteamGame(APP_ID).uninstall({} as any)
+
+      expect(conflictSpy).toHaveBeenCalledWith(steamappsDir, 'Hoard', APP_ID)
+
+      conflictSpy.mockRestore()
+    })
   })
 })
 

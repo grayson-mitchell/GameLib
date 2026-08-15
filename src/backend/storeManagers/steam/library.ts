@@ -1545,6 +1545,68 @@ export async function readAcfState(
 }
 
 /**
+ * 34.13 review A-13: every OTHER appId in `steamappsDir` whose manifest
+ * declares the same `installdir` as `installdirSegment`.
+ *
+ * WHY THIS EXISTS. `uninstallBottleGameDirectly`'s JSDoc argues its deletion
+ * is safe because a shared depot's files live under the OWNING app's own
+ * installdir — a SIBLING directory under common/ — and calls that
+ * "structurally impossible" to over-delete, "handled by construction". That
+ * holds for the SharedDepots case its real-filesystem regression test proves.
+ * It does NOT hold for the case the argument silently assumes away: two
+ * installed appIds whose ACFs declare the SAME `installdir`. Steam does this
+ * routinely — a game and its dedicated-server/tool app, regional SKU
+ * variants, demo/base pairs. In that shape `rmSync(installRoot,
+ * { recursive: true })` deletes the co-installed app's files, while only
+ * `appmanifest_<thisAppId>.acf` is removed, so the other app's manifest
+ * survives pointing at a now-empty path and both Steam and GameLib still
+ * believe it is installed.
+ *
+ * A claim stronger than the code supports is the more dangerous half — a
+ * later reader trusts it. This makes the claim true instead of narrowing it.
+ *
+ * Same corrupt-file discipline as every other manifest scan here
+ * (T-2-01/T-17-05): an unreadable or unparseable ACF is skipped, never
+ * thrown out of. Comparison is case-sensitive and exact, matching the way
+ * `installRoot` itself is built (`join(commonRoot, installdirSegment)`).
+ *
+ * Exported for unit testing.
+ */
+export function findOtherManifestsWithInstalldir(
+  steamappsDir: string,
+  installdirSegment: string,
+  selfAppId: string
+): string[] {
+  if (!existsSync(steamappsDir)) return []
+
+  let files: string[]
+  try {
+    files = readdirSync(steamappsDir)
+  } catch {
+    return []
+  }
+
+  const conflicting: string[] = []
+  for (const file of files) {
+    if (!file.startsWith('appmanifest_') || !file.endsWith('.acf')) continue
+    if (file === `appmanifest_${selfAppId}.acf`) continue
+
+    try {
+      const parsed = parse(readFileSync(join(steamappsDir, file), 'utf-8'))
+      const state = parsed?.AppState
+      if (!state) continue
+      if (state.installdir !== installdirSegment) continue
+      const appid = String(state.appid ?? '')
+      if (appid && appid !== selfAppId) conflicting.push(appid)
+    } catch {
+      /* skip corrupt ACF — T-2-01/T-17-05 mitigation */
+    }
+  }
+
+  return conflicting
+}
+
+/**
  * Bottle-scoped sibling of buildInstalledMap() — same StateFlags bitmask +
  * corrupt-file discipline (T-2-01/T-17-05), rooted at the dedicated CrossOver
  * bottle's own steamapps dir instead of the native defaultSteamPath (Pitfall 2).
