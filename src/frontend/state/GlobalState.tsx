@@ -1472,16 +1472,6 @@ class GlobalState extends PureComponent<Props> {
           const index = library.findIndex(
             (game) => game.app_name === args.app_name
           )
-          // debug/uninstall-game-vanishes: temporary diagnostic — confirms the
-          // renderer actually receives+applies the push, and whether it hit
-          // the upsert (index !== -1) or add branch, plus the resulting
-          // array length before/after. If a game "vanishes", the array
-          // length here should NEVER shrink from this handler (it only
-          // upserts) — a shrink logged here would mean something ELSE is
-          // wholesale-replacing state.steam.library.
-          window.api.logInfo(
-            `[handleGamePush/steam] app_name=${args.app_name} is_installed=${args.is_installed} is_delisted=${!!args.is_delisted} matchedIndex=${index} beforeLen=${prevState.steam.library.length}`
-          )
           if (index !== -1) {
             library[index] = args
           } else {
