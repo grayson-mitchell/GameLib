@@ -158,6 +158,54 @@ export function isNativeInstallInFlight(appId: string): boolean {
 }
 
 /**
+ * D-17 (34.13-14) durability writer pair — the write and the erase of
+ * `steamMetadataStore`'s `forcedWindowsViaBottle` field, kept next to each
+ * other so they read as one contract. Both use a read-modify-write spread
+ * (the GAP-B idiom, games.ts's `is_delisted` branch above) rather than a
+ * bare `steamMetadataStore.set` with a fresh object literal: `.set()`
+ * REPLACES the whole entry (T-18-02-04), so a bare write here would wipe the
+ * game's art/extra/platformsCaptured/mac_arch in one call.
+ *
+ * Called ONLY from install()'s two bottle-committing terminals, on a proven
+ * success — never on a deferral, a rejected dispatch, or a failed depot
+ * download (see install()'s own JSDoc for the two exact call sites).
+ */
+export function markForcedWindowsViaBottle(appId: string): void {
+  const existing = steamMetadataStore.get(appId)
+  steamMetadataStore.set(appId, {
+    ...(existing ?? { art_cover: '', art_square: '', extra: { reqs: [] } }),
+    forcedWindowsViaBottle: true
+  })
+  logInfo(
+    `SteamGame: appId ${appId} — persisted forced Windows-via-bottle verdict after a committed install`,
+    LogPrefix.Steam
+  )
+}
+
+/**
+ * The reversibility half of the pair above — cleared only on an
+ * ACF-CONFIRMED bottle uninstall (library.ts's pollUninstallOnce, Task 3),
+ * never at dispatch time. Early-returns when no metadata entry exists at
+ * all: without that guard, every native uninstall of a never-forced game
+ * would fabricate a metadata entry purely to record `false`.
+ */
+export function clearForcedWindowsViaBottle(appId: string): void {
+  const existing = steamMetadataStore.get(appId)
+  if (!existing) return
+  const wasForced = existing.forcedWindowsViaBottle === true
+  steamMetadataStore.set(appId, {
+    ...existing,
+    forcedWindowsViaBottle: false
+  })
+  if (wasForced) {
+    logInfo(
+      `SteamGame: appId ${appId} — cleared forced Windows-via-bottle verdict (bottle ACF confirmed absent)`,
+      LogPrefix.Steam
+    )
+  }
+}
+
+/**
  * Maps the host OS to Steam's depot `oslist` vocabulary ('windows'|'macos'|
  * 'linux') — the SAME strings depot/select.ts's DepotSelectOpts.os matches
  * PICS depot config.oslist against. NOT the InstallPlatform vocabulary
@@ -587,9 +635,11 @@ export default class SteamGame implements Game {
       // getGameInfo won't re-fetch this game again for platform data (self-heal once).
       // T-18-02-04: steamMetadataStore.set REPLACES the entire entry (electron-store
       // Store.set), so a Mach-O-verified verdict (mac_arch_verified/mac_arch_source)
-      // must be explicitly carried forward here — otherwise the NEXT
-      // fetchMetadataIfNeeded call (next launch/resync) would silently drop the
-      // verified flag and regress mac_arch back to the min-OS heuristic.
+      // AND the D-17 (34.13-14) persisted forcedWindowsViaBottle verdict must
+      // both be explicitly carried forward here — otherwise the NEXT
+      // fetchMetadataIfNeeded call (next launch/resync) would silently drop
+      // either flag: mac_arch would regress to the min-OS heuristic, and a
+      // forced game would revert to native routing intermittently.
       steamMetadataStore.set(this.appId, {
         art_cover,
         art_square,
@@ -609,7 +659,10 @@ export default class SteamGame implements Game {
             }
           : is_mac_native
             ? { mac_arch_source: 'minos' as const }
-            : {})
+            : {}),
+        ...(existingMeta?.forcedWindowsViaBottle === true
+          ? { forcedWindowsViaBottle: true as const }
+          : {})
       })
 
       // Update in-memory library so subsequent getGameInfo calls return enriched data
@@ -789,7 +842,18 @@ export default class SteamGame implements Game {
       // setup/launch/uninstall). OFF preserves the legacy
       // tellBottledSteamToInstall dispatch below byte-for-byte (D-13).
       if (isSteamNativeInstallEnabled()) {
-        return this.installBottleNative(args)
+        // D-17 (34.13-14): persist the forced verdict ONLY when this specific
+        // install was forced (never for a game that was already ordinarily
+        // bottle-eligible — that game needs no flag, and writing one would
+        // make the cache lie about how it got there) AND the depot download
+        // actually completed. installDepotDownload() is the shared engine —
+        // "successful" here means it reported status:'done' and finalized
+        // the ACF, not merely that it was dispatched.
+        const bottleNativeResult = await this.installBottleNative(args)
+        if (forceWindowsViaBottle && bottleNativeResult.status === 'done') {
+          markForcedWindowsViaBottle(this.appId)
+        }
+        return bottleNativeResult
       }
 
       logInfo(
@@ -804,6 +868,21 @@ export default class SteamGame implements Game {
       // with no poller.
       if (result.status !== 'done') {
         return { status: 'error', error: result.error }
+      }
+
+      // D-17 (34.13-14): persist the forced verdict ONLY when this specific
+      // install was forced. "Successful" here means the bottled Steam
+      // client ACCEPTED the install dispatch (the WR-01 guard above already
+      // returned on rejection) — not that the download has finished. From
+      // here the bits are committed to land in the bottle and the
+      // bottle-scoped poller below owns the outcome. The fail-safe direction
+      // is deliberately asymmetric: a flag set while a download later fails
+      // still routes launch()/uninstall() at the bottle where the partial
+      // bits actually are (recoverable — Task 3's uninstall path clears it),
+      // whereas an unset flag routes at a host Steam client that has
+      // nothing (the T-34.13-06-06 defect this plan closes).
+      if (forceWindowsViaBottle) {
+        markForcedWindowsViaBottle(this.appId)
       }
 
       // Start bottle-scoped ACF polling (D-07) — the bottle's own steamapps
@@ -1372,13 +1451,14 @@ export default class SteamGame implements Game {
   }
 
   /**
-   * True only for a CONFIRMED not-native macOS game (D-11) — the single
-   * source of truth for whether install/launch/uninstall should route through
-   * the bottled Steam client instead of the native steam:// path. Reused by
-   * isNative() here; Phase 17 Plan 05 Task 2 also reuses it from
-   * getSettings(), install(), launch(), and uninstall().
+   * D-11/MAC32 PLATFORM-derived half of the bottle-eligibility verdict —
+   * true only for a CONFIRMED not-native macOS game. Split from
+   * `isBottleEligible()` below by 34.13-14 so the Phase 24 bridge
+   * (`isBridgeEligible()`) can compose ONLY this platform signal and never
+   * the D-17 forced verdict (see `isBottleEligible()`'s own doc comment for
+   * why). Body is byte-identical to the pre-34.13-14 `isBottleEligible()`.
    */
-  private isBottleEligible(): boolean {
+  private isBottleEligibleFromPlatforms(): boolean {
     if (!isMac) return false
     const meta = steamMetadataStore.get(this.appId)
     // MAC32-02: a confirmed-32-bit mac build is bottle-eligible independent of
@@ -1393,6 +1473,37 @@ export default class SteamGame implements Game {
   }
 
   /**
+   * D-17 (34.13-14) durability half of the bottle-eligibility verdict — true
+   * only when a PRIOR install actually committed bits to the Phase 17
+   * bottle via the D-17 override (34.13-06's `forceWindowsViaBottle`) and
+   * that verdict was persisted (`markForcedWindowsViaBottle`,
+   * `fetchMetadataIfNeeded`'s carry-forward). `=== true` strict equality
+   * only — an absent or explicit-`false` field never re-routes. The `isMac`
+   * guard here is independent of `isBottleEligible()`'s own (not merely
+   * redundant with it): this method is reached on its own by the wrapper
+   * below, and D-18 means a renderer-era flag must never resurrect a bottle
+   * path on a host with no bottle at all.
+   */
+  private isForcedWindowsViaBottle(): boolean {
+    return (
+      isMac && steamMetadataStore.get(this.appId)?.forcedWindowsViaBottle === true
+    )
+  }
+
+  /**
+   * The single source of truth for whether getSettings()/isNative()/
+   * install()/launch()/uninstall() should route through the bottled Steam
+   * client instead of the native steam:// path — the OR of the platform-
+   * derived verdict and the D-17 persisted forced verdict. One seam, five
+   * consistent surfaces (34.13-14): all five callers below are unchanged by
+   * this split and become consistent together the moment either half
+   * changes.
+   */
+  private isBottleEligible(): boolean {
+    return this.isBottleEligibleFromPlatforms() || this.isForcedWindowsViaBottle()
+  }
+
+  /**
    * Phase 24 Plan 08 (D-01/D-02, R4): true only for an allowlisted,
    * bottle-eligible title that has NOT already failed the bridge earlier
    * this session (finding #3 — bridgeFailedThisSession, module-scoped
@@ -1402,10 +1513,19 @@ export default class SteamGame implements Game {
    * (24-PATTERNS.md). A non-allowlisted bottle-eligible title is unaffected
    * — it falls through to the existing D-15/D-13 opt-in branches below
    * (regression, R7).
+   *
+   * D-17 (34.13-14) pin: composes `isBottleEligibleFromPlatforms()`, NOT the
+   * widened `isBottleEligible()` wrapper above. A D-17 forced install writes
+   * into the Phase 17 `GameLibSteam` bottle; the Phase 24
+   * `GameLibSteamBridge` bottle is a SEPARATE filesystem root that has never
+   * held those bits. Widening this composition to the forced verdict would
+   * swap one broken launch (host Steam client that never had the game) for
+   * another (bridge launch resolving nothing in a bottle that was never
+   * written to) — not a fix.
    */
   private isBridgeEligible(): boolean {
     return (
-      this.isBottleEligible() &&
+      this.isBottleEligibleFromPlatforms() &&
       bridgeAllowlist.has(this.appId) &&
       !bridgeFailedThisSession.has(this.appId)
     )

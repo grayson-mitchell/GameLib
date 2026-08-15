@@ -3155,14 +3155,16 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     })
   })
 
-  it('D5: a forced+allowlisted game never enters the Phase 24 bridge (launch + uninstall) — currently a VACUOUS pass, see Task 2', async () => {
+  // D5 is split into two independent specs (launch/uninstall halves) rather
+  // than one `it()` with two assertions, so a mutation that only breaks ONE
+  // half is observable in the test report instead of being masked by jest
+  // stopping at the first failing expectation inside a single test.
+
+  it('D5a: a forced+allowlisted game never enters the Phase 24 bridge on launch() — currently a VACUOUS pass, see Task 2', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
     ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
-      status: 'done'
-    })
-    ;(tellBottledSteamToUninstall as jest.Mock).mockResolvedValue({
       status: 'done'
     })
 
@@ -3174,10 +3176,10 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     // VACUITY (pre-Task-2): isBridgeEligible() composes isBottleEligible(),
     // which is false for this mac-native fixture until Task 2 persists the
     // forced verdict — so the entire bottle block (bridge sub-check
-    // included) is unreachable and these spies are never called for the
-    // wrong reason (nothing routes there at all, not because containment
+    // included) is unreachable and this spy is never called for the wrong
+    // reason (nothing routes there at all, not because containment
     // engaged). Task 2 re-proves this non-vacuously by reverting the bridge
-    // pin and observing BOTH halves fail.
+    // pin and observing this spec fail.
     const launchGame = new SteamGame(APP_ID)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const launchBridgeSpy = jest
@@ -3186,7 +3188,18 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       .mockResolvedValue(true as any)
     await launchGame.launch({} as any)
     expect(launchBridgeSpy).not.toHaveBeenCalled()
+  })
 
+  it('D5b: a forced+allowlisted game never enters the Phase 24 bridge on uninstall() — currently a VACUOUS pass, see Task 2', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToUninstall as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    // Same rationale as D5a, mirrored for the uninstall() bridge sub-check
+    // — the bridge composition is consulted independently by each caller.
     const uninstallGame = new SteamGame(APP_ID)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const uninstallBridgeSpy = jest
@@ -3262,6 +3275,245 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       { activate: false }
     )
     expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
+  })
+
+  // ── W1-W7: write discipline — the verdict is written ONLY on a committed
+  // forced install, and survives a metadata re-fetch (Task 2) ─────────────
+
+  describe('write discipline (W1-W7)', () => {
+    // Transcribed field-for-field from 34.13-06's own local copy (which is
+    // itself transcribed from installSteamGame()'s window.api.install
+    // literal) — deliberately re-declared here rather than imported across
+    // describes, per this plan's own instruction.
+    const PRODUCTION_ARGS: InstallParams = {
+      appName: APP_ID,
+      path: '',
+      runner: 'steam',
+      installDlcs: [],
+      sdlList: [],
+      installLanguage: 'en-US',
+      platformToInstall: 'Windows',
+      gameInfo: makeEntry()
+    }
+
+    function argsWith(overrides: Partial<InstallParams> = {}): InstallParams {
+      return { ...PRODUCTION_ARGS, ...overrides }
+    }
+
+    /** Stateful steamMetadataStore double — .get() reflects the last .set()
+     * call, so a write-discipline spec can inspect the FINAL persisted
+     * entry after install() returns, not just whether .set() was called
+     * (a bare-set implementation could call .set() and still fail the
+     * neighboring-field-survival assertion in W1). Shape lifted from the
+     * ensurePlatformsCaptured/checkBottleEligibility describes' local copy
+     * — not imported across describes, per this plan's own instruction. */
+    function mockStatefulMetadataStore(initial: Record<string, unknown>) {
+      let state: Record<string, unknown> | undefined = initial
+      ;(steamMetadataStore.get as jest.Mock).mockImplementation(() => state)
+      ;(steamMetadataStore.set as jest.Mock).mockImplementation(
+        (_id, meta) => {
+          state = meta
+        }
+      )
+    }
+
+    let startInstallPollingSpy: jest.SpyInstance
+
+    beforeEach(() => {
+      startInstallPollingSpy = jest
+        .spyOn(libraryModule, 'startInstallPolling')
+        .mockImplementation(() => {})
+      ;(isSteamNativeInstallEnabled as jest.Mock).mockReset()
+    })
+
+    afterEach(() => {
+      startInstallPollingSpy.mockRestore()
+    })
+
+    it('W1: dispatch terminal (bottled-Steam client accepts) persists the flag AND survives neighboring fields', async () => {
+      mockStatefulMetadataStore({
+        art_cover: 'https://cdn/570/header.jpg',
+        art_square: 'https://cdn/570/library_600x900.jpg',
+        extra: { reqs: [] },
+        platformsCaptured: true,
+        is_mac_native: true,
+        is_windows_native: true
+      })
+      ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+        status: 'done'
+      })
+
+      const game = new SteamGame(APP_ID)
+      await game.install(argsWith({ steamForceWindowsViaBottle: true }))
+
+      const stored = steamMetadataStore.get(APP_ID) as unknown as Record<
+        string,
+        unknown
+      >
+      expect(stored.forcedWindowsViaBottle).toBe(true)
+      // T-18-02-04 guard: a bare-set implementation would wipe these.
+      expect(stored.art_cover).toBe('https://cdn/570/header.jpg')
+      expect(stored.art_square).toBe('https://cdn/570/library_600x900.jpg')
+      expect(stored.extra).toEqual({ reqs: [] })
+      expect(stored.platformsCaptured).toBe(true)
+    })
+
+    it('W2: depot terminal (native install opt-in ON) persists the flag', async () => {
+      mockStatefulMetadataStore({
+        platformsCaptured: true,
+        is_mac_native: true,
+        is_windows_native: true
+      })
+      ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+
+      const game = new SteamGame(APP_ID)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      jest
+        .spyOn(game as any, 'installBottleNative')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .mockResolvedValue({ status: 'done' } as any)
+
+      await game.install(argsWith({ steamForceWindowsViaBottle: true }))
+
+      expect(
+        (
+          steamMetadataStore.get(APP_ID) as {
+            forcedWindowsViaBottle?: boolean
+          }
+        )?.forcedWindowsViaBottle
+      ).toBe(true)
+    })
+
+    it('W3: depot terminal failure persists nothing', async () => {
+      mockStatefulMetadataStore({
+        platformsCaptured: true,
+        is_mac_native: true,
+        is_windows_native: true
+      })
+      ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+
+      const game = new SteamGame(APP_ID)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      jest
+        .spyOn(game as any, 'installBottleNative')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .mockResolvedValue({ status: 'error', error: 'boom' } as any)
+
+      await game.install(argsWith({ steamForceWindowsViaBottle: true }))
+
+      expect(
+        (
+          steamMetadataStore.get(APP_ID) as {
+            forcedWindowsViaBottle?: boolean
+          }
+        )?.forcedWindowsViaBottle
+      ).not.toBe(true)
+    })
+
+    it('W4: deferred-to-setup (bottle not provisioned) persists nothing — status:"done" here is NOT a success signal', async () => {
+      mockStatefulMetadataStore({
+        platformsCaptured: true,
+        is_mac_native: true,
+        is_windows_native: true
+      })
+      ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+      ;(isBottleReady as jest.Mock).mockReturnValue(false)
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.install(
+        argsWith({ steamForceWindowsViaBottle: true })
+      )
+
+      expect(result).toEqual({ status: 'done', deferredToSetup: true })
+      expect(
+        (
+          steamMetadataStore.get(APP_ID) as {
+            forcedWindowsViaBottle?: boolean
+          }
+        )?.forcedWindowsViaBottle
+      ).not.toBe(true)
+    })
+
+    it('W5: a rejected bottled-Steam dispatch persists nothing (the WR-01 guard returns first)', async () => {
+      mockStatefulMetadataStore({
+        platformsCaptured: true,
+        is_mac_native: true,
+        is_windows_native: true
+      })
+      ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+        status: 'error',
+        error: 'nope'
+      })
+
+      const game = new SteamGame(APP_ID)
+      await game.install(argsWith({ steamForceWindowsViaBottle: true }))
+
+      expect(
+        (
+          steamMetadataStore.get(APP_ID) as {
+            forcedWindowsViaBottle?: boolean
+          }
+        )?.forcedWindowsViaBottle
+      ).not.toBe(true)
+    })
+
+    it('W6: override absent — an ordinarily bottle-eligible game persists NO flag (it never needed one)', async () => {
+      mockStatefulMetadataStore({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+        status: 'done'
+      })
+
+      const game = new SteamGame(APP_ID)
+      await game.install(PRODUCTION_ARGS)
+
+      expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+      expect(
+        (
+          steamMetadataStore.get(APP_ID) as {
+            forcedWindowsViaBottle?: boolean
+          }
+        )?.forcedWindowsViaBottle
+      ).not.toBe(true)
+    })
+
+    it('W7: the persisted verdict survives a subsequent appdetails re-fetch (no T-18-02-04 silent drop)', async () => {
+      mockStatefulMetadataStore({
+        art_cover: '',
+        art_square: '',
+        extra: { reqs: [] },
+        platformsCaptured: true,
+        is_mac_native: true,
+        is_windows_native: true,
+        forcedWindowsViaBottle: true
+      })
+      ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+      // art_cover:'' (from makeEntry's default) triggers getGameInfo()'s own
+      // fire-and-forget fetchMetadataIfNeeded — the SAME re-fetch trigger
+      // LIB-04's specs already exercise, not a synthetic direct call.
+      library.set(APP_ID, makeEntry())
+
+      new SteamGame(APP_ID).getGameInfo()
+      await flushAsync()
+
+      expect(
+        (
+          steamMetadataStore.get(APP_ID) as {
+            forcedWindowsViaBottle?: boolean
+          }
+        )?.forcedWindowsViaBottle
+      ).toBe(true)
+    })
   })
 })
 
