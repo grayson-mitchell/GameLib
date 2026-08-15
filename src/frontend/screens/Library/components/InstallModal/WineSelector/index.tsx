@@ -147,8 +147,21 @@ export default function WineSelector({
     if (firstAvailableVersion) setWineVersion(firstAvailableVersion)
   }, [wineVersion, wineVersionList, effectiveCrossoverOnly, setWineVersion])
 
-  const showPrefix = wineVersion?.type !== 'crossover'
+  // 34.13 review WR-12: on the CrossOver-only (Steam bottle) path the
+  // WinePrefix picker must never render. `wineVersion` is `undefined` when
+  // the filtered engine list is empty (no CrossOver install on the host),
+  // and `undefined !== 'crossover'` is TRUE -- so the bottle-only path used
+  // to sprout a prefix path box for a prefix it will never use.
+  const showPrefix = !effectiveCrossoverOnly && wineVersion?.type !== 'crossover'
   const showBottle = wineVersion?.type === 'crossover'
+
+  // The empty-state this path had none of: a macOS user with no CrossOver
+  // install saw a present, empty, greyed-out engine dropdown and no
+  // explanation. The install itself is still correct (it proceeds into the
+  // guided bottle setup, which provisions CrossOver), so this is copy, not
+  // a gate.
+  const showNoCrossoverEngineNotice =
+    effectiveCrossoverOnly && engineOptions.length === 0
 
   // Phase 34.13-03 (D-05): the read-only-vs-shared-prefix-disable distinction
   // stays legible -- the shared-prefix disable never surfaces the read-only
@@ -230,6 +243,14 @@ export default function WineSelector({
                 </MenuItem>
               ))}
           </SelectField>
+          {showNoCrossoverEngineNotice && (
+            <span className="smallInputInfo">
+              {tGamelib(
+                'gamelib:steam.install.noCrossoverEngine',
+                'No CrossOver installation was found. GameLib will set one up when the install starts.'
+              )}
+            </span>
+          )}
           {isKnownNotToWork && (
             <div className="infoBox">
               <FontAwesomeIcon

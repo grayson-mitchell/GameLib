@@ -105,6 +105,7 @@
             "libraryMissingOnlyNotice": "Your Steam library couldn't be reached. Reconnect the drive, then try again.",
             "libraryPickerLabel": "Choose Steam library",
             "libraryPrimarySuffix": "default",
+            "noCrossoverEngine": "No CrossOver installation was found. GameLib will set one up when the install starts.",
             "sharedBottleNotice": "The wine version you choose here is used for every Steam game that needs a bottle — not just this one. Changing it later will change how those games run too.",
             "withOptionsLabel": "Install with options…"
         }
