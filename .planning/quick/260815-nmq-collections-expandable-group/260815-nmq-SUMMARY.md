@@ -85,13 +85,49 @@ em-relative token is the more correct value at non-default text sizes.
   on `mock.calls[0][0]` is pre-existing and unmodified.
 - `prettier --check` — clean after `--write`.
 
+## Live verification — PASSED 2026-08-15 (`pnpm tauri:dev`)
+
+Run on macOS, real window, driven via AppKit accessibility + `screencapture`.
+
+1. **It is a button, not a span.** The macOS accessibility tree resolves the
+   header as `button COLLECTIONS of group 2 of …` — independent confirmation
+   of the container swap that does not go through the DOM or the test suite.
+2. **Expands.** Clicking it revealed `Test`, `Uncategorized` (active),
+   `+ New collection`, `Manage collections`; the caret rotated `›` → `⌄`.
+3. **Collapses.** Clicking again removed the rows and rotated the caret back,
+   leaving `COLLECTIONS` / `STORE` / `RUNNABILITY` / `MORE FILTERS` as four
+   visually identical group headers.
+4. **The gutter fix holds — measured, not eyeballed.** Accessibility positions
+   for the whole column:
+
+   ```
+   COLLECTIONS x=1092   Test x=1092   Uncategorized x=1092
+   + New collection x=1092   Manage collections x=1092
+   STORE x=1092   RUNNABILITY x=1092   MORE FILTERS x=1092
+   All games x=1092   Installed x=1092   Favourites x=1092
+   ```
+
+   **Every element shares x=1092.** This is the exact measurement the Dropdown
+   leak would have broken: unreset, `.dropdownContainer .dropdown button` would
+   have pushed the four Collections rows ~21px right (0.5rem margin + 0.8rem
+   padding) while their header stayed at 1092.
+
+**Caveat on method:** the accessibility tree still lists the collapsed rows,
+because `Dropdown` collapses with `max-height: 0; overflow: hidden` and leaves
+them in the DOM. An AX-presence check is therefore NOT a collapse gate — the
+screenshot is the adjudicator. Anyone re-running this should compare images,
+not element lists.
+
 ## Not done
 
-- **No live/visual confirmation.** The specificity claim is verified
-  statically (compiled selector + arithmetic), not by running the app. Worth an
-  eyeball in `pnpm tauri:dev`: click the `Collections` header, confirm it
-  collapses and that the rows line up at the same 12px gutter as the header.
 - `pnpm test:ci` (full 258-suite run) not executed — only the frontend project.
+- Only the default theme was viewed. The change introduces no new colour
+  declaration (the header inherits `.dropdownButton`'s existing themed
+  treatment from 260815-mk1), so a per-theme sweep is not expected to be
+  load-bearing here — but it was not performed.
+- `Store`'s own toggle behaved inconsistently under synthetic clicks during
+  this session. Not investigated: it is pre-existing, unrelated to this change,
+  and did not reproduce for `Collections`.
 
 ## Concurrency note
 
