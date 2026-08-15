@@ -22,7 +22,9 @@ import SteamGame, {
   macArchFromMinOS,
   markBridgeFailedThisSession,
   clearBridgeFailedThisSession,
-  __resetBridgeFailedSessionForTests
+  __resetBridgeFailedSessionForTests,
+  markForcedWindowsViaBottle,
+  clearForcedWindowsViaBottle
 } from '../games'
 import SteamLibraryManager from '../library'
 import * as libraryModule from '../library'
@@ -3425,6 +3427,86 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
 
     afterEach(() => {
       startInstallPollingSpy.mockRestore()
+    })
+
+    // ── 34.13 review A-09 / A-14 ─────────────────────────────────────────
+    // Both defects were re-raised because the iteration-2 skip rationale
+    // ("games.ts is fenced") expired one commit later. Neither is observable
+    // through install(), because install() only reaches this writer on a path
+    // that guarantees an entry exists — which is exactly the point of the
+    // first one. Drive the exported functions directly.
+
+    it('A-14a: markForcedWindowsViaBottle REFUSES to fabricate an entry when none exists', () => {
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
+      ;(steamMetadataStore.set as jest.Mock).mockClear()
+
+      markForcedWindowsViaBottle(APP_ID)
+
+      // The pre-fix shape wrote `{ art_cover:'', art_square:'', extra:{reqs:[]},
+      // forcedWindowsViaBottle: true }` — an entry with NO platformsCaptured,
+      // i.e. strictly worse than the missing read it compensated for.
+      expect(steamMetadataStore.set as jest.Mock).not.toHaveBeenCalled()
+    })
+
+    it('A-14a: markForcedWindowsViaBottle still writes when an entry DOES exist (discriminator)', () => {
+      mockStatefulMetadataStore({
+        art_cover: 'https://cdn/570/header.jpg',
+        platformsCaptured: true
+      })
+      ;(steamMetadataStore.set as jest.Mock).mockClear()
+
+      markForcedWindowsViaBottle(APP_ID)
+
+      expect(steamMetadataStore.set as jest.Mock).toHaveBeenCalledTimes(1)
+      expect(
+        (
+          steamMetadataStore.get(APP_ID) as {
+            forcedWindowsViaBottle?: boolean
+            platformsCaptured?: boolean
+          }
+        ).forcedWindowsViaBottle
+      ).toBe(true)
+      // The neighbouring field survives — the read-modify-write spread is
+      // still required (T-18-02-04: .set REPLACES the whole entry).
+      expect(
+        (steamMetadataStore.get(APP_ID) as { platformsCaptured?: boolean })
+          .platformsCaptured
+      ).toBe(true)
+    })
+
+    it('A-14b: clearForcedWindowsViaBottle performs NO write when the flag was never set', () => {
+      mockStatefulMetadataStore({
+        art_cover: 'https://cdn/570/header.jpg',
+        platformsCaptured: true
+      })
+      ;(steamMetadataStore.set as jest.Mock).mockClear()
+
+      clearForcedWindowsViaBottle(APP_ID)
+
+      // The pre-fix shape computed `wasForced` and used it ONLY to gate the
+      // log line; the whole-entry rewrite ran regardless, on EVERY
+      // confirmed-absent bottle tick, to write a value the entry already had.
+      expect(steamMetadataStore.set as jest.Mock).not.toHaveBeenCalled()
+    })
+
+    it('A-14b: clearForcedWindowsViaBottle DOES write when the flag was set (discriminator)', () => {
+      mockStatefulMetadataStore({
+        art_cover: 'https://cdn/570/header.jpg',
+        platformsCaptured: true,
+        forcedWindowsViaBottle: true
+      })
+      ;(steamMetadataStore.set as jest.Mock).mockClear()
+
+      clearForcedWindowsViaBottle(APP_ID)
+
+      expect(steamMetadataStore.set as jest.Mock).toHaveBeenCalledTimes(1)
+      expect(
+        (
+          steamMetadataStore.get(APP_ID) as {
+            forcedWindowsViaBottle?: boolean
+          }
+        ).forcedWindowsViaBottle
+      ).toBe(false)
     })
 
     it('W1: dispatch terminal (bottled-Steam client accepts) persists the flag AND survives neighboring fields', async () => {

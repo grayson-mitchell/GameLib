@@ -168,14 +168,33 @@ export function isNativeInstallInFlight(appId: string): boolean {
  * REPLACES the whole entry (T-18-02-04), so a bare write here would wipe the
  * game's art/extra/platformsCaptured/mac_arch in one call.
  *
- * Called ONLY from install()'s two bottle-committing terminals, on a proven
+ * Called ONLY from install()'s bottle-committing terminal, on a proven
  * success — never on a deferral, a rejected dispatch, or a failed depot
- * download (see install()'s own JSDoc for the two exact call sites).
+ * download (see install()'s own JSDoc for the exact call site).
+ *
+ * 34.13 review A-09 / A-14: the fabrication fallback
+ * `?? { art_cover: '', art_square: '', extra: { reqs: [] } }` is REMOVED and
+ * replaced by an early return. It was unreachable — the only caller is
+ * install()'s bottle terminal, reached through
+ * `routeThroughBottle = forceWindowsViaBottle || this.isBottleEligible()`,
+ * every arm of which requires a `steamMetadataStore` entry to already exist —
+ * and it was also WRONG: the entry it fabricated would carry no
+ * `platformsCaptured`, i.e. a strictly worse state than the missing read it
+ * was compensating for, which `getGameInfo`'s self-heal would then have to
+ * undo. Refusing loudly is the correct behaviour for a precondition that
+ * cannot legitimately fail.
  */
 export function markForcedWindowsViaBottle(appId: string): void {
   const existing = steamMetadataStore.get(appId)
+  if (!existing) {
+    logWarning(
+      `SteamGame: appId ${appId} — refusing to fabricate a metadata entry to record the forced Windows-via-bottle verdict (no entry exists; this call site cannot be reached without one)`,
+      LogPrefix.Steam
+    )
+    return
+  }
   steamMetadataStore.set(appId, {
-    ...(existing ?? { art_cover: '', art_square: '', extra: { reqs: [] } }),
+    ...existing,
     forcedWindowsViaBottle: true
   })
   logInfo(
@@ -190,21 +209,26 @@ export function markForcedWindowsViaBottle(appId: string): void {
  * never at dispatch time. Early-returns when no metadata entry exists at
  * all: without that guard, every native uninstall of a never-forced game
  * would fabricate a metadata entry purely to record `false`.
+ *
+ * 34.13 review A-09 / A-14: it ALSO early-returns when the flag was never
+ * set. The previous shape computed `wasForced` and then used it only to gate
+ * the LOG LINE — the `steamMetadataStore.set` ran regardless. Since `.set()`
+ * REPLACES the whole entry (T-18-02-04), every confirmed-absent bottle tick
+ * performed a full read-rewrite of a game's metadata to write a value it
+ * already had. A-09 noted this was moot until A-01 landed, because nothing
+ * ever set the flag; A-01 landed in 996c192d1, so it is live.
  */
 export function clearForcedWindowsViaBottle(appId: string): void {
   const existing = steamMetadataStore.get(appId)
-  if (!existing) return
-  const wasForced = existing.forcedWindowsViaBottle === true
+  if (!existing || existing.forcedWindowsViaBottle !== true) return
   steamMetadataStore.set(appId, {
     ...existing,
     forcedWindowsViaBottle: false
   })
-  if (wasForced) {
-    logInfo(
-      `SteamGame: appId ${appId} — cleared forced Windows-via-bottle verdict (bottle ACF confirmed absent)`,
-      LogPrefix.Steam
-    )
-  }
+  logInfo(
+    `SteamGame: appId ${appId} — cleared forced Windows-via-bottle verdict (bottle ACF confirmed absent)`,
+    LogPrefix.Steam
+  )
 }
 
 /**
