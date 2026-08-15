@@ -59,6 +59,7 @@ import type { GetLogFileArgs } from 'backend/logger/paths'
 import type {
   RedeemKeyResult,
   SteamBottleConfig,
+  SteamBottleEligibilityVerdict,
   SteamUserData
 } from './steam'
 import type {
@@ -292,6 +293,18 @@ interface AsyncIPCFunctions {
   steamBottleStatus: () => Promise<
     Pick<SteamBottleConfig, 'provisioned' | 'bottleName'>
   >
+  // Phase 34.13 (34.13-07), D-09/D-15 (exposure half): backend-authoritative
+  // bottle-eligibility verdict for the install-form's wine section, carrying
+  // the PERSISTED wineVersion/bottleName (undefined when nothing was ever
+  // persisted — see installFormIpc.ts's own doc comment for why this never
+  // delegates to getSteamBottleSettings()). Registered on BOTH runtimes.
+  isSteamBottleEligible: (appName: string) => Promise<SteamBottleEligibilityVerdict>
+  // Phase 34.13 (34.13-07), D-14: persists the install form's chosen wine
+  // engine into steamBottleConfigStore via bottle.ts's own
+  // persistBottleWineVersion() primitive, after validating the untrusted
+  // renderer payload. Return shape reused verbatim from steamBottleProvision.
+  // Registered on BOTH runtimes.
+  persistBottleWineVersion: (wineVersion: WineInstallation) => Promise<{ status: 'done' | 'error'; error?: string }>
   // Phase 21 (21-10), D-10: on user consent, downloads + non-silently runs
   // (Win/macOS) or link-opens (Linux) the official native Steam client
   // installer. See clientSetup.ts's startGuidedClientInstall.
