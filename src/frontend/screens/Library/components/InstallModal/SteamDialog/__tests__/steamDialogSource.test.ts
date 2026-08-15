@@ -1,0 +1,446 @@
+import { readFileSync } from 'fs'
+import { join } from 'path'
+import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+
+/**
+ * Phase 34.13, Plan 10, Task 3 -- comment-stripped source gates locking
+ * every negative decision `SteamDialog/index.tsx` encodes, each proven
+ * against an executable known-bad specimen (below) so a passing gate is
+ * evidence, not decoration.
+ *
+ * This file NEVER imports `../index` -- doing so would pull the shared UI
+ * kit's transitive stylesheet imports into this project's jsdom-less Node
+ * jest environment and fail before a single assertion runs
+ * (`34.13-VALIDATION.md`). It reads the dialog as raw text instead.
+ *
+ * Stripping is mandatory and load-bearing here specifically: `index.tsx`'s
+ * own header comment legitimately NAMES `getInstallInfo`, `writeConfig`,
+ * `listSteamLibraryTargets`-shaped fetches and `--status-danger` while
+ * explaining why each is forbidden or permitted -- an UNSTRIPPED gate would
+ * fail on the dialog's own explanation of its own decisions (the
+ * self-invalidating-header defect class this repo has already ledgered
+ * against `steamSectionGating.ts`).
+ *
+ * TWO absence gates the retired D-12 model would have wanted here are
+ * DELIBERATELY NOT present, and this is a locked decision, not an
+ * oversight:
+ *
+ *  - `disabled` is NOT asserted absent. The retired truth was "the footer
+ *    Install button carries no `disabled` attribute in any render state,"
+ *    justified by the busy spinner living on the origin control. D-25
+ *    INVERTS that: the dialog's own Install button IS disabled while
+ *    eligibility pends, and 34.13-11 (wave 7) wires
+ *    `disabled={eligibilityPending}` into this very file. A blanket
+ *    absence gate here would make that locked, later decision fail CI.
+ *    D-06's actual substance -- never gated on SIZE -- is what the
+ *    "forbidden mechanisms" block gates instead.
+ *  - `--status-danger` is NOT asserted absent. The retired rule reserved
+ *    that shade for `WineSelector`'s `isKnownNotToWork` advisory alone.
+ *    D-24 now ALSO claims it for the degrade notice (a genuine local
+ *    failure, not a fact-stating aside). The gate below is a bounded,
+ *    POSITIVE one instead: exactly one occurrence, located inside the
+ *    `steamDegrade`-gated block.
+ */
+
+const DIALOG_PATH = join(__dirname, '..', 'index.tsx')
+
+function readDialogStripped(): string {
+  return stripSourceComments(readFileSync(DIALOG_PATH, 'utf8'))
+}
+
+// --- Shared, throwing assertion helpers -----------------------------------
+//
+// Plain functions (no jest matcher calls inside) so the SAME helper drives
+// both the real gate (called directly -- a throw fails the enclosing test
+// naturally) and the known-bad-specimen non-vacuity proofs below (wrapped
+// in `expect(() => ...).toThrow()` / `.not.toThrow()`).
+
+function expectAbsent(source: string, token: string, decisionNote: string) {
+  if (source.includes(token)) {
+    throw new Error(
+      `expectAbsent: forbidden token "${token}" found in stripped source (${decisionNote})`
+    )
+  }
+}
+
+function expectPresent(source: string, token: string, decisionNote: string) {
+  if (!source.includes(token)) {
+    throw new Error(
+      `expectPresent: required token "${token}" is missing from stripped source (${decisionNote})`
+    )
+  }
+}
+
+function assertOrderingPersistBeforeInstall(stripped: string) {
+  const persistIndex = stripped.indexOf('persistBottleWineVersion')
+  const installIndex = stripped.indexOf('installSteamGame(')
+  if (persistIndex === -1 || installIndex === -1) {
+    throw new Error(
+      'assertOrderingPersistBeforeInstall: a required token is missing'
+    )
+  }
+  if (!(persistIndex < installIndex)) {
+    throw new Error(
+      'assertOrderingPersistBeforeInstall: persistBottleWineVersion does not precede installSteamGame('
+    )
+  }
+}
+
+function assertForceWindowsViaBottlePrefixed(stripped: string) {
+  const matches = stripped.match(/.{7}forceWindowsViaBottle/g) ?? []
+  if (matches.length === 0) {
+    throw new Error(
+      'assertForceWindowsViaBottlePrefixed: forceWindowsViaBottle not found'
+    )
+  }
+  for (const match of matches) {
+    if (!match.endsWith('gating.forceWindowsViaBottle')) {
+      throw new Error(
+        `assertForceWindowsViaBottlePrefixed: an occurrence is not prefixed by "gating.": "${match}"`
+      )
+    }
+  }
+}
+
+function assertBoundedStatusDanger(stripped: string) {
+  const occurrences = stripped.split('var(--status-danger)').length - 1
+  if (occurrences !== 1) {
+    throw new Error(
+      `assertBoundedStatusDanger: expected exactly 1 occurrence of var(--status-danger), found ${occurrences}`
+    )
+  }
+  const degradeIndex = stripped.indexOf('steamDegrade')
+  const dangerIndex = stripped.indexOf('var(--status-danger)')
+  const sharedBottleIndex = stripped.indexOf(
+    'gamelib:steam.install.sharedBottleNotice'
+  )
+  const inBounds =
+    degradeIndex > -1 &&
+    dangerIndex > degradeIndex &&
+    dangerIndex < sharedBottleIndex
+  if (!inBounds) {
+    throw new Error(
+      'assertBoundedStatusDanger: the occurrence is not located inside the steamDegrade-gated block'
+    )
+  }
+}
+
+// ---------------------------------------------------------------------
+// Block 1 -- forbidden mechanisms
+// ---------------------------------------------------------------------
+
+describe('forbidden mechanisms (D-01/D-06/D-07/D-08/D-14, the zero-stylesheet decision)', () => {
+  const stripped = readDialogStripped()
+
+  it('never calls getInstallInfo -- the size-info stub can never hang this modal (D-06/D-07)', () => {
+    expectAbsent(stripped, 'getInstallInfo', 'D-06/D-07')
+  })
+
+  it("never calls writeConfig -- a bottle-eligible Steam game ignores per-game config (D-14)", () => {
+    expectAbsent(stripped, 'writeConfig', 'D-14')
+  })
+
+  it('never imports from frontend/helpers -- blocks both the generic install() helper and writeConfig in one assertion (D-01/D-14)', () => {
+    expectAbsent(stripped, 'frontend/helpers', 'D-01/D-14')
+  })
+
+  it('never fetches the Steam library list locally -- the field that gates its own dropdown cannot be computed from a fetch it itself gates', () => {
+    expectAbsent(
+      stripped,
+      'listSteamLibraryTargets',
+      'D-02 fetch-cycle prevention'
+    )
+  })
+
+  it('never reads diskSize (D-06)', () => {
+    expectAbsent(stripped, 'diskSize', 'D-06')
+  })
+
+  it('never reads notEnoughDiskSpace (D-08)', () => {
+    expectAbsent(stripped, 'notEnoughDiskSpace', 'D-08')
+  })
+
+  it('never renders a space-after-install projection (D-08)', () => {
+    expectAbsent(stripped, 'space-after-install', 'D-08')
+  })
+
+  it('never reads spaceLeftAfter (D-06/D-08)', () => {
+    expectAbsent(stripped, 'spaceLeftAfter', 'D-06/D-08')
+  })
+
+  it('imports no colocated stylesheet -- index.scss (the zero-stylesheet decision)', () => {
+    expectAbsent(stripped, 'index.scss', 'zero-stylesheet decision')
+  })
+
+  it('imports no colocated stylesheet -- index.css (the zero-stylesheet decision)', () => {
+    expectAbsent(stripped, 'index.css', 'zero-stylesheet decision')
+  })
+
+  // ⚠ `disabled` is deliberately NOT asserted absent here -- see file
+  // header. D-25 (34.13-11, wave 7) legitimately wires
+  // `disabled={eligibilityPending}` into this same file; a blanket ban
+  // would make that locked decision fail CI. D-06's actual substance --
+  // never gated on SIZE -- is re-asserted together below instead.
+  it('the Install button is never gated on SIZE (D-06) -- diskSize/spaceLeftAfter/notEnoughDiskSpace/getInstallInfo all absent', () => {
+    for (const token of [
+      'diskSize',
+      'spaceLeftAfter',
+      'notEnoughDiskSpace',
+      'getInstallInfo'
+    ]) {
+      expectAbsent(stripped, token, 'D-06 SIZE-gate ban')
+    }
+  })
+
+  // ⚠ `--status-danger` is deliberately NOT asserted absent here -- see
+  // file header. D-24's degrade notice legitimately claims it. This bounded
+  // POSITIVE gate replaces the old absence ban.
+  it('"var(--status-danger)" occurs exactly once, and only inside the steamDegrade-gated block (D-24 claims it; D-14 must not)', () => {
+    assertBoundedStatusDanger(stripped)
+  })
+})
+
+// ---------------------------------------------------------------------
+// Block 2 -- no locally re-derived section condition
+// (34.13-05's explicit review obligation against this plan)
+// ---------------------------------------------------------------------
+
+describe('no locally re-derived section condition (34.13-05 review obligation)', () => {
+  const stripped = readDialogStripped()
+
+  it('never re-derives platform availability locally (availablePlatforms.length)', () => {
+    expectAbsent(
+      stripped,
+      'availablePlatforms.length',
+      '34.13-05 review obligation'
+    )
+  })
+
+  it('never re-derives a second library count (libraryCount)', () => {
+    expectAbsent(stripped, 'libraryCount', '34.13-05 review obligation')
+  })
+
+  it('never re-derives a platform-selection section condition (platformToInstall ===)', () => {
+    expectAbsent(
+      stripped,
+      'platformToInstall ===',
+      '34.13-05 review obligation'
+    )
+  })
+})
+
+// ---------------------------------------------------------------------
+// Block 3 -- required wiring
+// ---------------------------------------------------------------------
+
+describe('required wiring', () => {
+  const stripped = readDialogStripped()
+
+  it.each([
+    'window.api.persistBottleWineVersion(',
+    'window.api.checkDiskSpace(',
+    'installSteamGame(',
+    'resolveSteamInstallPath(',
+    'steamLibraries',
+    'steamDegrade',
+    'gating.forceWindowsViaBottle',
+    'gating.wineSection',
+    'gating.libraryDropdown',
+    'gating.freeSpaceLine',
+    'gating.contentLightNotice',
+    'smallInputInfo',
+    'infoBox',
+    'faWarning',
+    'gamelib:steam.install.sharedBottleNotice',
+    'gamelib:steam.install.libraryMissingNotice',
+    'gamelib:steam.install.libraryFullNotice',
+    'gamelib:steam.install.contentLightNotice'
+  ])('requires "%s" in the stripped source', (token) => {
+    expectPresent(stripped, token, 'required wiring')
+  })
+
+  it('every occurrence of forceWindowsViaBottle is immediately preceded by "gating." -- the verdict field is passed through, never reconstructed', () => {
+    assertForceWindowsViaBottlePrefixed(stripped)
+  })
+})
+
+// ---------------------------------------------------------------------
+// Block 3b -- region ordering (layout contract)
+// ---------------------------------------------------------------------
+
+describe('region ordering (layout contract) -- regions 2/3/4 are mutually exclusive at runtime, so only the D-24 ordering is user-observable; the other two are pinned to keep the source readable in the order the layout contract fixes', () => {
+  const stripped = readDialogStripped()
+
+  it('the D-24 degrade notice (libraryMissingNotice) occurs BEFORE {children} -- the first thing in DialogContent', () => {
+    const degradeIndex = stripped.indexOf(
+      'gamelib:steam.install.libraryMissingNotice'
+    )
+    const childrenIndex = stripped.indexOf('{children}')
+    expect(degradeIndex).toBeGreaterThan(-1)
+    expect(childrenIndex).toBeGreaterThan(-1)
+    expect(degradeIndex).toBeLessThan(childrenIndex)
+  })
+
+  it('the D-14 shared-bottle notice occurs AFTER {children}', () => {
+    const childrenIndex = stripped.indexOf('{children}')
+    const sharedBottleIndex = stripped.indexOf(
+      'gamelib:steam.install.sharedBottleNotice'
+    )
+    expect(childrenIndex).toBeGreaterThan(-1)
+    expect(sharedBottleIndex).toBeGreaterThan(childrenIndex)
+  })
+
+  it('the Q6 content-light notice occurs AFTER the D-14 shared-bottle notice', () => {
+    const sharedBottleIndex = stripped.indexOf(
+      'gamelib:steam.install.sharedBottleNotice'
+    )
+    const contentLightIndex = stripped.indexOf(
+      'gamelib:steam.install.contentLightNotice'
+    )
+    expect(sharedBottleIndex).toBeGreaterThan(-1)
+    expect(contentLightIndex).toBeGreaterThan(sharedBottleIndex)
+  })
+})
+
+// ---------------------------------------------------------------------
+// Block 4 -- persist happens before install
+// ---------------------------------------------------------------------
+
+describe('persist happens before install', () => {
+  const stripped = readDialogStripped()
+
+  it('persistBottleWineVersion precedes installSteamGame( -- the D-14 -> D-15 ordering guarantee (the guided setup can only read a store that is already written)', () => {
+    // `installSteamGame(` deliberately carries the parenthesis -- the bare
+    // name also matches this file's own import statement, which would make
+    // the ordering assertion vacuously true regardless of the real call
+    // site's position (proven below).
+    assertOrderingPersistBeforeInstall(stripped)
+  })
+})
+
+// ---------------------------------------------------------------------
+// Block 5 -- the source gates reject a known-bad specimen (non-vacuity)
+// ---------------------------------------------------------------------
+//
+// The repo carries multiple ledgered instances of a correctly-written,
+// passing assertion that guarded nothing, and an unmatchable pattern passes
+// vacuously by construction. This block is the difference between a gate
+// and a decoration: every absence gate above is demonstrated to FAIL
+// against an executable specimen carrying the banned token in real code
+// position.
+
+describe('the source gates reject a known-bad specimen', () => {
+  const FORBIDDEN_TOKENS: Array<[string, string]> = [
+    ['getInstallInfo', 'D-06/D-07'],
+    ['writeConfig', 'D-14'],
+    ['frontend/helpers', 'D-01/D-14'],
+    ['listSteamLibraryTargets', 'D-02 fetch-cycle prevention'],
+    ['diskSize', 'D-06'],
+    ['notEnoughDiskSpace', 'D-08'],
+    ['space-after-install', 'D-08'],
+    ['spaceLeftAfter', 'D-06/D-08'],
+    ['availablePlatforms.length', '34.13-05 review obligation'],
+    ['libraryCount', '34.13-05 review obligation']
+  ]
+
+  it.each(FORBIDDEN_TOKENS)(
+    'expectAbsent throws when "%s" appears in executable position',
+    (token, decisionNote) => {
+      const specimen = `const x = '${token}'`
+      const stripped = stripSourceComments(specimen)
+      expect(() => expectAbsent(stripped, token, decisionNote)).toThrow()
+    }
+  )
+
+  it('expectAbsent throws when platformToInstall === appears in executable position', () => {
+    const specimen = "if (platformToInstall === 'Windows') {}"
+    const stripped = stripSourceComments(specimen)
+    expect(() =>
+      expectAbsent(stripped, 'platformToInstall ===', '34.13-05 review obligation')
+    ).toThrow()
+  })
+
+  // Stripper-integrity proof: for at least three of the tokens above, a
+  // specimen carrying the token ONLY inside a comment -- both the `//` form
+  // and the `/* */` form -- PASSES the gate. This is the direct evidence
+  // that `index.tsx`'s own header comment (which legitimately NAMES these
+  // tokens while explaining they are forbidden) cannot self-invalidate the
+  // gates that quote it.
+  const STRIPPER_PROOF_TOKENS = [
+    'getInstallInfo',
+    'writeConfig',
+    'listSteamLibraryTargets'
+  ]
+
+  it.each(STRIPPER_PROOF_TOKENS)(
+    'expectAbsent passes when "%s" appears only inside a // comment',
+    (token) => {
+      const specimen = `// mentions ${token} only to explain it is forbidden`
+      const stripped = stripSourceComments(specimen)
+      expect(() =>
+        expectAbsent(stripped, token, 'specimen proof')
+      ).not.toThrow()
+    }
+  )
+
+  it.each(STRIPPER_PROOF_TOKENS)(
+    'expectAbsent passes when "%s" appears only inside a /* */ block comment',
+    (token) => {
+      const specimen = `/* mentions ${token} only to explain it is forbidden */`
+      const stripped = stripSourceComments(specimen)
+      expect(() =>
+        expectAbsent(stripped, token, 'specimen proof')
+      ).not.toThrow()
+    }
+  )
+
+  it('assertForceWindowsViaBottlePrefixed throws on a specimen missing the "gating." prefix', () => {
+    const specimen = 'installSteamGame(a, b, c, forceWindowsViaBottle)'
+    const stripped = stripSourceComments(specimen)
+    expect(() => assertForceWindowsViaBottlePrefixed(stripped)).toThrow()
+  })
+
+  it('assertOrderingPersistBeforeInstall throws on a specimen with the two calls swapped', () => {
+    const specimen = [
+      'installSteamGame(appName, gameInfo, path, gating.forceWindowsViaBottle)',
+      'await window.api.persistBottleWineVersion(wineVersion)'
+    ].join('\n')
+    const stripped = stripSourceComments(specimen)
+    expect(() => assertOrderingPersistBeforeInstall(stripped)).toThrow()
+  })
+
+  it('the ordering check would be vacuous with a bare "installSteamGame" (no parenthesis) -- proven against a specimen where only the import line matches', () => {
+    const specimen = [
+      "import { installSteamGame } from 'frontend/state/InstallGameModal'",
+      'await window.api.persistBottleWineVersion(wineVersion)'
+    ].join('\n')
+    const stripped = stripSourceComments(specimen)
+    // The bare name (no parenthesis) matches the import line, which sits
+    // BEFORE the persist call -- a naive ordering check using the bare name
+    // would report "persist after install" as satisfied (WRONG) even
+    // though this specimen contains no real call site at all. Requiring
+    // the parenthesis avoids this vacuous match entirely.
+    const bareNameIndex = stripped.indexOf('installSteamGame')
+    const persistIndex = stripped.indexOf('persistBottleWineVersion')
+    expect(bareNameIndex).toBeGreaterThan(-1)
+    expect(bareNameIndex).toBeLessThan(persistIndex)
+    expect(stripped.indexOf('installSteamGame(')).toBe(-1)
+    // With the parenthesis required, `assertOrderingPersistBeforeInstall`
+    // correctly reports this specimen as missing a required token, rather
+    // than vacuously passing.
+    expect(() => assertOrderingPersistBeforeInstall(stripped)).toThrow()
+  })
+
+  it('assertBoundedStatusDanger throws when the token occurs TWICE', () => {
+    const specimen = [
+      'steamDegrade && <FontAwesomeIcon style={{ color: "var(--status-danger)" }} />',
+      '<FontAwesomeIcon style={{ color: "var(--status-danger)" }} />'
+    ].join('\n')
+    const stripped = stripSourceComments(specimen)
+    expect(() => assertBoundedStatusDanger(stripped)).toThrow()
+  })
+})
+
+// Finish with a full-suite run in Task 3's own <verify> command
+// (`pnpm test:ci`) -- this plan adds files only, so any suite that flips
+// red is a real regression, not an expected update.
