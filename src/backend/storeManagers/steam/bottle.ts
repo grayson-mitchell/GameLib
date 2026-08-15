@@ -15,6 +15,7 @@
  */
 import { dirname, join } from 'path'
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'graceful-fs'
+import { app } from 'electron'
 import type { GameInfo, GameSettings, WineInstallation } from 'common/types'
 import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
@@ -474,7 +475,18 @@ async function raiseFrontmostBottledProcess(
         LogPrefix.Steam
       )
       try {
-        const { app } = await import('electron')
+        // quick/260815-vvz (defect 1): this line used to destructure `app` off a native
+        // dynamic ESM import of the 'electron' module, awaited inline right here. That
+        // bypasses the sidecar's `Module._load` electron interception
+        // (`installElectronHook.ts`), because esbuild's `--external:electron` (package.json's
+        // `build:sidecar`) leaves such a dynamic import as a real ESM one in the CJS bundle
+        // rather than downleveling it to a `require()`. Node's ESM loader never consults
+        // `Module._load`, so the real `electron` npm package (whose CJS export is a bare path
+        // STRING) loaded instead, and `app` resolved to `undefined` -- this fallback threw
+        // `TypeError: Cannot read properties of undefined (reading 'hide')` instead of
+        // yielding. The static `app` import at the top of this file compiles to a plain
+        // `require()`, which the hook DOES intercept, and gets the real stub.
+        // `externalDynamicImportGate.test.ts` now guards this class of defect permanently.
         app.hide()
       } catch (error) {
         logWarning(

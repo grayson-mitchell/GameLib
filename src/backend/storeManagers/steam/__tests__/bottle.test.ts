@@ -16,8 +16,10 @@ import { existsSync, mkdirSync, readFileSync, rmSync } from 'graceful-fs'
 // `graceful-fs` `readFileSync` import above (manifest.test.ts precedent).
 import { readFileSync as readRealFile } from 'node:fs'
 import { join as joinPath } from 'node:path'
+import { app } from 'electron'
 import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
+import { logWarning } from 'backend/logger'
 import { checkWineBeforeLaunch, downloadFile, spawnAsync } from 'backend/utils'
 import { runWineCommand } from 'backend/launcher'
 import { steamBottleConfigStore } from '../electronStores'
@@ -47,7 +49,10 @@ jest.mock('electron', () => ({
   app: {
     getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
     // Plain method (survives resetMocks) -- publicDir resolves it at module load.
-    getAppPath: () => '/tmp/mock-path'
+    getAppPath: () => '/tmp/mock-path',
+    // quick/260815-vvz Task 2: bottle.ts now statically `import { app } from 'electron'`,
+    // so the raise-loop miss fallback's `app.hide()` call is reachable from this mock.
+    hide: jest.fn()
   }
 }))
 
@@ -111,6 +116,8 @@ const mockedSpawnAsync = spawnAsync as jest.Mock
 const mockedDownloadFile = downloadFile as jest.Mock
 const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
 const mockedRunWineCommand = runWineCommand as jest.Mock
+const mockedAppHide = app.hide as jest.Mock
+const mockedLogWarning = logWarning as jest.Mock
 
 const defaultWine: WineInstallation = {
   bin: '/usr/bin/wine',
@@ -1099,6 +1106,65 @@ describe('bottle.ts', () => {
       __stopBottledRaiseLoops()
       expect(jest.getTimerCount()).toBe(0)
 
+      jest.useRealTimers()
+    })
+  })
+
+  // ── quick/260815-vvz Task 2: raise-loop MISS branch calls app.hide() ───────
+  //
+  // IMPORTANT: these two tests are GREEN against the code as it stood BEFORE this plan's fix
+  // and therefore PROVE NOTHING about defect 1 (the dynamic-import bypass). Under ts-jest/CJS,
+  // `await import('electron')` downlevels to a `require()` through jest's own module registry,
+  // which resolves to the `jest.mock('electron', ...)` factory above -- so `app` was never
+  // `undefined` here even when bottle.ts's source still had the broken dynamic import. The
+  // production failure lived only in the esbuild output (a native ESM dynamic import that
+  // bypasses `Module._load`), which only `../../sidecar/__tests__/externalDynamicImportGate.test.ts`
+  // (the AST gate) and Task 3's production-shape `grep` check can see. Do not mistake these two
+  // tests for the defect-1 guard, and do not delete the AST gate as "redundant" with these --
+  // they cover a DIFFERENT property (the miss branch's behavioral shape once `app.hide` is
+  // reachable at all), not the compiled-artifact bypass.
+  describe('raise-loop MISS branch falls back to app.hide() (behavioral guard, not a defect-1 prover)', () => {
+    test('after all 12 poll iterations miss, app.hide() is called exactly once', async () => {
+      mockedExistsSync.mockReturnValue(true)
+      mockedGetNodefault.mockReturnValue(undefined)
+      // Default mockedSpawnAsync resolves { stdout: '' } (set in the outer beforeEach) -- tryRaise
+      // reads an empty/'' stdout as a miss, so every one of the 12 poll attempts misses.
+
+      jest.useFakeTimers()
+      void tellBottledSteamToUninstall('440')
+
+      for (let i = 0; i < 12; i++) {
+        await jest.advanceTimersByTimeAsync(1500)
+      }
+      // Flush any remaining microtasks queued by the final tryRaise() call.
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(mockedAppHide).toHaveBeenCalledTimes(1)
+
+      __stopBottledRaiseLoops()
+      jest.useRealTimers()
+    })
+
+    test('the miss is logged with the falling-back-to-app.hide() message', async () => {
+      mockedExistsSync.mockReturnValue(true)
+      mockedGetNodefault.mockReturnValue(undefined)
+
+      jest.useFakeTimers()
+      void tellBottledSteamToUninstall('440')
+
+      for (let i = 0; i < 12; i++) {
+        await jest.advanceTimersByTimeAsync(1500)
+      }
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(mockedLogWarning).toHaveBeenCalledWith(
+        expect.stringContaining('falling back to app.hide()'),
+        'Steam'
+      )
+
+      __stopBottledRaiseLoops()
       jest.useRealTimers()
     })
   })
