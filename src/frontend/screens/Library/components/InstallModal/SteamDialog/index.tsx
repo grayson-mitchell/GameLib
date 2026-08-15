@@ -247,15 +247,30 @@ export default function SteamDialog({
               icon={faWarning}
               style={{ color: 'var(--status-danger)' }}
             />
+            {/* WR-11: `onlyLibrary` is READ here, not merely written. Both
+                notices below used to promise "choose another below" —
+                which is false in the UI-SPEC's flagged <=1-library corner,
+                where the failing library IS the user's only one and the
+                dropdown this copy points at does not render at all. */}
             {steamDegrade.reason === 'library-missing'
-              ? tGamelib(
-                  'gamelib:steam.install.libraryMissingNotice',
-                  "Your Steam library couldn't be reached — choose another below."
-                )
-              : tGamelib(
-                  'gamelib:steam.install.libraryFullNotice',
-                  'Not enough space in your Steam library — choose another below or free up space.'
-                )}
+              ? steamDegrade.onlyLibrary
+                ? tGamelib(
+                    'gamelib:steam.install.libraryMissingOnlyNotice',
+                    "Your Steam library couldn't be reached. Reconnect the drive, then try again."
+                  )
+                : tGamelib(
+                    'gamelib:steam.install.libraryMissingNotice',
+                    "Your Steam library couldn't be reached — choose another below."
+                  )
+              : steamDegrade.onlyLibrary
+                ? tGamelib(
+                    'gamelib:steam.install.libraryFullOnlyNotice',
+                    'Not enough space in your Steam library. Free up space, then try again.'
+                  )
+                : tGamelib(
+                    'gamelib:steam.install.libraryFullNotice',
+                    'Not enough space in your Steam library — choose another below or free up space.'
+                  )}
           </div>
         )}
         {children}

@@ -35,7 +35,14 @@ export const LOW_SPACE_FLOOR_BYTES = 1024 ** 3
  *
  * `onlyLibrary` exists so the dialog can tell, without re-deriving it, that
  * it is in the UI-SPEC's flagged ≤1-library corner (the failing library IS
- * the user's only library, so there is nothing to offer in its place). Per
+ * the user's only library, so there is nothing to offer in its place) —
+ * `SteamDialog/index.tsx` reads it to pick between the "choose another
+ * below" copy and the copy that does not promise an alternative that does
+ * not exist (34.13 review WR-11). A sibling `freeBytes: number` field was
+ * REMOVED by that same finding: nothing outside `__tests__` ever read it,
+ * and D-06/D-08 forbid this surface from rendering or gating on size at
+ * all, so it was a struct field advertising a capability the design
+ * explicitly rules out. Per
  * D-08 ("no not-enough-space blocking") and D-06 ("Install is never gated on
  * diskSize"), the dialog's Install button stays ENABLED even in this corner
  * — the notice informs, the user retries after freeing space or
@@ -50,7 +57,6 @@ export const LOW_SPACE_FLOOR_BYTES = 1024 ** 3
 export interface SteamQuickInstallDegrade {
   reason: 'library-missing' | 'library-full'
   libraryPath: string
-  freeBytes: number
   onlyLibrary: boolean
 }
 
@@ -163,7 +169,6 @@ export function evaluateQuickInstallTarget(
       degrade: {
         reason: 'library-missing',
         libraryPath: target.path,
-        freeBytes: disk.free,
         onlyLibrary: libraryCount <= 1
       }
     }
@@ -174,7 +179,6 @@ export function evaluateQuickInstallTarget(
       degrade: {
         reason: 'library-full',
         libraryPath: target.path,
-        freeBytes: disk.free,
         onlyLibrary: libraryCount <= 1
       }
     }

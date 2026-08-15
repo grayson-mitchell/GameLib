@@ -180,7 +180,6 @@ describe('Group A: the pure D-24 decision', () => {
       expect(result.ok).toBe(false)
       if (!result.ok) {
         expect(result.degrade.libraryPath).toBe(target.path)
-        expect(result.degrade.freeBytes).toBe(42)
         expect(result.degrade.onlyLibrary).toBe(libraryCount <= 1)
       }
     }
@@ -309,7 +308,6 @@ describe('Group C: openSteamInstallOptions', () => {
     openSteamInstallOptions('570', makeGameInfo(), {
       reason: 'library-missing',
       libraryPath: target.path,
-      freeBytes: 0,
       onlyLibrary: true
     })
 
@@ -327,7 +325,6 @@ describe('Group C: openSteamInstallOptions', () => {
     openSteamInstallOptions('570', makeGameInfo(), {
       reason: 'library-full',
       libraryPath: '/steam/library-0',
-      freeBytes: 42,
       onlyLibrary: true
     })
 
@@ -341,7 +338,6 @@ describe('Group C: openSteamInstallOptions', () => {
     openSteamInstallOptions('570', makeGameInfo(), {
       reason: 'library-missing',
       libraryPath: '/steam/library-0',
-      freeBytes: 0,
       onlyLibrary: true
     })
     expect(useInstallGameModal.getState().steamDegrade?.onlyLibrary).toBe(
@@ -351,7 +347,6 @@ describe('Group C: openSteamInstallOptions', () => {
     openSteamInstallOptions('570', makeGameInfo(), {
       reason: 'library-missing',
       libraryPath: '/steam/library-0',
-      freeBytes: 0,
       onlyLibrary: false
     })
     expect(useInstallGameModal.getState().steamDegrade?.onlyLibrary).toBe(
@@ -363,7 +358,6 @@ describe('Group C: openSteamInstallOptions', () => {
     openSteamInstallOptions('570', makeGameInfo(), {
       reason: 'library-missing',
       libraryPath: '/steam/library-0',
-      freeBytes: 0,
       onlyLibrary: true
     })
     closeInstallGameModal()
