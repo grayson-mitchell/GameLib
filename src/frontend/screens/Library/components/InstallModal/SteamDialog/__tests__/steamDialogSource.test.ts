@@ -147,6 +147,49 @@ function assertSingleEligibilityDisabledTerm(source: string) {
   }
 }
 
+/**
+ * 34.13 review B-CR-01, as a THROWING helper so the identical code path can
+ * be driven against known-bad inputs DERIVED FROM THE REAL SOURCE (never a
+ * hand-written replica, which drifts silently).
+ *
+ * WR-13 added `setSubmitting(true)` with an explicit comment arguing the
+ * latch never needs releasing "because the component unmounts". That is only
+ * true on the success path: the handler's first `await` is an IPC round trip
+ * that rejects on a dead channel, and on rejection `backdropClick()` never
+ * runs, the component does NOT unmount, and the Install button is dead
+ * forever with nothing surfaced. Two independent obligations:
+ *
+ *  1. the persist round trip carries a rejection handler, and
+ *  2. `setSubmitting(false)` exists at all -- a latch with no release is a
+ *     wedge.
+ */
+function assertSubmitLatchCanBeReleased(stripped: string) {
+  const persistIndex = stripped.indexOf('persistBottleWineVersion(')
+  if (persistIndex === -1) {
+    throw new Error(
+      'assertSubmitLatchCanBeReleased: persistBottleWineVersion( is missing'
+    )
+  }
+  // The `.catch` must be attached to THIS call, not merely present somewhere
+  // else in the file (effect B has one of its own).
+  const windowAfterPersist = stripped.slice(persistIndex, persistIndex + 200)
+  if (!windowAfterPersist.includes('.catch(')) {
+    throw new Error(
+      'assertSubmitLatchCanBeReleased: the persistBottleWineVersion round trip has no rejection handler -- a rejected persist skips installSteamGame and wedges the latch'
+    )
+  }
+  if (!stripped.includes('setSubmitting(false)')) {
+    throw new Error(
+      'assertSubmitLatchCanBeReleased: setSubmitting(false) appears nowhere -- the submit latch has no release path at all'
+    )
+  }
+  if (!stripped.includes('setSubmitting(true)')) {
+    throw new Error(
+      'assertSubmitLatchCanBeReleased: setSubmitting(true) is missing -- the WR-13 double-click guard was removed'
+    )
+  }
+}
+
 function assertBoundedStatusDanger(stripped: string) {
   const occurrences = stripped.split('var(--status-danger)').length - 1
   if (occurrences !== 1) {
@@ -181,7 +224,7 @@ describe('forbidden mechanisms (D-01/D-06/D-07/D-08/D-14, the zero-stylesheet de
     expectAbsent(stripped, 'getInstallInfo', 'D-06/D-07')
   })
 
-  it("never calls writeConfig -- a bottle-eligible Steam game ignores per-game config (D-14)", () => {
+  it('never calls writeConfig -- a bottle-eligible Steam game ignores per-game config (D-14)', () => {
     expectAbsent(stripped, 'writeConfig', 'D-14')
   })
 
@@ -315,7 +358,11 @@ describe("D-25: the dialog's own footer Install button is disabled while eligibi
       'notEnoughDiskSpace',
       'getInstallInfo'
     ]) {
-      expectAbsent(stripped, token, 'D-06 SIZE-gate ban, re-asserted after D-25')
+      expectAbsent(
+        stripped,
+        token,
+        'D-06 SIZE-gate ban, re-asserted after D-25'
+      )
     }
   })
 })
@@ -439,6 +486,46 @@ describe('persist happens before install', () => {
 })
 
 // ---------------------------------------------------------------------
+// Block 4b -- 34.13 review B-CR-01: the submit latch is a guard, not a wedge
+// ---------------------------------------------------------------------
+
+describe('B-CR-01: the WR-13 submit latch can always be released', () => {
+  const stripped = readDialogStripped()
+
+  it('the real source satisfies both obligations (persist has a rejection handler; the latch has a release path)', () => {
+    expect(() => assertSubmitLatchCanBeReleased(stripped)).not.toThrow()
+  })
+
+  it('RED: a known-bad input DERIVED FROM THE REAL SOURCE by deleting the persist .catch is rejected', () => {
+    // Derived, not replicated: the pre-fix shape is exactly today's source
+    // with the `.catch(...)` continuation removed from the persist await.
+    const knownBad = stripped.replace(
+      /\.catch\(\(\) => \(\{\s*status: 'error' as const\s*\}\)\)/,
+      ''
+    )
+    expect(knownBad).not.toBe(stripped)
+    expect(() => assertSubmitLatchCanBeReleased(knownBad)).toThrow(
+      /no rejection handler/
+    )
+  })
+
+  it('RED: a known-bad input DERIVED FROM THE REAL SOURCE by deleting every setSubmitting(false) is rejected -- this is verbatim the pre-fix WR-13 shape', () => {
+    const knownBad = stripped.replaceAll('setSubmitting(false)', '')
+    expect(knownBad).not.toBe(stripped)
+    expect(() => assertSubmitLatchCanBeReleased(knownBad)).toThrow(
+      /no release path/
+    )
+  })
+
+  it('RED: deleting the latch itself is also rejected -- the gate cannot be satisfied by simply removing WR-13', () => {
+    const knownBad = stripped.replaceAll('setSubmitting(true)', '')
+    expect(() => assertSubmitLatchCanBeReleased(knownBad)).toThrow(
+      /double-click guard was removed/
+    )
+  })
+})
+
+// ---------------------------------------------------------------------
 // Block 5 -- the source gates reject a known-bad specimen (non-vacuity)
 // ---------------------------------------------------------------------
 //
@@ -476,7 +563,11 @@ describe('the source gates reject a known-bad specimen', () => {
     const specimen = "if (platformToInstall === 'Windows') {}"
     const stripped = stripSourceComments(specimen)
     expect(() =>
-      expectAbsent(stripped, 'platformToInstall ===', '34.13-05 review obligation')
+      expectAbsent(
+        stripped,
+        'platformToInstall ===',
+        '34.13-05 review obligation'
+      )
     ).toThrow()
   })
 

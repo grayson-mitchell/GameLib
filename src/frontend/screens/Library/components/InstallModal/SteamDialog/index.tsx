@@ -138,10 +138,19 @@ export default function SteamDialog({
 
   const [selectedPath, setSelectedPath] = useState('')
   const [diskSpace, setDiskSpace] = useState<DiskSpaceInfo | null>(null)
-  // WR-13: submit-in-flight latch. Never reset to false -- `handleInstall`
-  // ends by closing the dialog, so the component unmounts; leaving it
-  // latched is what makes the double-click impossible rather than merely
-  // unlikely.
+  // WR-13: submit-in-flight latch, so a double-click cannot fire
+  // `installSteamGame` twice across the `persistBottleWineVersion` await.
+  //
+  // 34.13 review B-CR-01: WR-13's original comment claimed the latch never
+  // needs resetting because "`handleInstall` ends by closing the dialog, so
+  // the component unmounts". That is true ONLY on the success path. The very
+  // first `await` in the handler is an IPC round trip with no rejection
+  // handler, and `ipcRenderer.invoke` / the Tauri sidecar transport BOTH
+  // reject on a dead channel or a throwing handler. On that path
+  // `backdropClick()` never runs, the component does NOT unmount, and the
+  // latch turns the Install button permanently dead with nothing surfaced --
+  // a wedge rather than a guard. The handler below now releases it on every
+  // non-success terminal path.
   const [submitting, setSubmitting] = useState(false)
 
   // D-24: `undefined` on a deliberate "Install with options..." click;
@@ -210,46 +219,74 @@ export default function SteamDialog({
     }
     setSubmitting(true)
 
-    // D-14 -> D-15 ordering: persist BEFORE install, so the guided bottle
-    // setup reads a store that is already written. Skipped when there is no
-    // wine section or no chosen engine -- persisting on a library-only
-    // install would write a bottle setting for a path that never uses one.
-    if (gating.wineSection && wineVersion) {
-      const result = await window.api.persistBottleWineVersion(wineVersion)
-      if (result.status === 'error') {
-        // Name the plan and the failing status only -- never echo the
-        // submitted engine object (mirrors 34.13-07's own "name the field,
-        // not the value" logging rule). The install proceeds anyway: the
-        // guided bottle setup still derives an engine when nothing was
-        // persisted (D-15), so a failed persist degrades to today's
-        // behaviour rather than blocking the user's install.
-        window.api.logError(
-          `34.13-10 SteamDialog: persistBottleWineVersion failed with status "${result.status}"`
-        )
+    try {
+      // D-14 -> D-15 ordering: persist BEFORE install, so the guided bottle
+      // setup reads a store that is already written. Skipped when there is no
+      // wine section or no chosen engine -- persisting on a library-only
+      // install would write a bottle setting for a path that never uses one.
+      if (gating.wineSection && wineVersion) {
+        // B-CR-01: a REJECTED persist is the same class of outcome as a
+        // resolved `{ status: 'error' }` -- the guided bottle setup still
+        // derives an engine when nothing was persisted (D-15), so neither
+        // may block the install. `persistBottleWineVersion` is
+        // `ipcRenderer.invoke` under Electron and the sidecar transport
+        // under Tauri; both REJECT on a dead channel or a throwing handler,
+        // and the pre-fix handler observed only the resolved error shape.
+        //
+        // Kept as two statements deliberately: the "required wiring" source
+        // gate pins the literal `window.api.persistBottleWineVersion(`, and
+        // a fluent `window.api\n.persistBottleWineVersion(...)` chain is
+        // split across lines by prettier, which silently breaks that token.
+        const persisted = window.api.persistBottleWineVersion(wineVersion)
+        const result = await persisted.catch(() => ({
+          status: 'error' as const
+        }))
+        if (result.status === 'error') {
+          // Name the plan and the failing status only -- never echo the
+          // submitted engine object (mirrors 34.13-07's own "name the field,
+          // not the value" logging rule). The install proceeds anyway: the
+          // guided bottle setup still derives an engine when nothing was
+          // persisted (D-15), so a failed persist degrades to today's
+          // behaviour rather than blocking the user's install.
+          window.api.logError(
+            `34.13-10 SteamDialog: persistBottleWineVersion failed with status "${result.status}"`
+          )
+        }
       }
+
+      const destination = resolveSteamInstallPath(
+        selectedPath,
+        steamLibraries,
+        gating.libraryDropdown
+      )
+
+      backdropClick()
+
+      // The verdict's own field, passed through verbatim -- never reconstruct
+      // `isMac && !bottleRequired && platformToInstall === 'Windows'` locally.
+      // 34.13 review B-WR-01: explicit fire-and-forget. The dialog is already
+      // closed by `backdropClick()` above, so there is no surface left to show
+      // an error on -- but the dispatch rejecting is exactly the "I clicked
+      // Install and nothing happened" outcome, so it must reach a log sink
+      // rather than floating off as an unhandled rejection.
+      installSteamGame(
+        appName,
+        gameInfo,
+        destination,
+        gating.forceWindowsViaBottle
+      ).catch(logSteamInstallDispatchFailure(appName))
+    } catch {
+      // B-CR-01 belt-and-braces: the `.catch` above already collapses the
+      // one KNOWN rejecting await, but this handler is exactly where a
+      // future await gets added, and the failure mode is a permanently dead
+      // Install button with nothing on screen. Releasing the latch here
+      // means the worst case is always "the click did nothing, try again",
+      // never "this dialog is bricked".
+      setSubmitting(false)
+      window.api.logError(
+        `34.13-10 SteamDialog: handleInstall threw for appName "${appName}" -- submit latch released so the button stays usable`
+      )
     }
-
-    const destination = resolveSteamInstallPath(
-      selectedPath,
-      steamLibraries,
-      gating.libraryDropdown
-    )
-
-    backdropClick()
-
-    // The verdict's own field, passed through verbatim -- never reconstruct
-    // `isMac && !bottleRequired && platformToInstall === 'Windows'` locally.
-    // 34.13 review B-WR-01: explicit fire-and-forget. The dialog is already
-    // closed by `backdropClick()` above, so there is no surface left to show
-    // an error on -- but the dispatch rejecting is exactly the "I clicked
-    // Install and nothing happened" outcome, so it must reach a log sink
-    // rather than floating off as an unhandled rejection.
-    installSteamGame(
-      appName,
-      gameInfo,
-      destination,
-      gating.forceWindowsViaBottle
-    ).catch(logSteamInstallDispatchFailure(appName))
     // `backdropClick` and `submitting` added by WR-13 -- the callback reads
     // both, and omitting `backdropClick` meant a re-created parent handler
     // left this callback closing over a stale one (ESLint
