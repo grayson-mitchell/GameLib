@@ -600,6 +600,32 @@ describe('required wiring', () => {
   })
 
   // ── 34.13 review B-WR-01 ─────────────────────────────────────────────────
+  // ── 34.13 review B-WR-03 ─────────────────────────────────────────────────
+  // The B-WR-04 fix landed real behaviour into this file and extended no gate
+  // here: the required-token list pins that `window.api.checkDiskSpace(` is
+  // PRESENT, but nothing pinned its ARGUMENT, so reverting to
+  // `checkDiskSpace(selectedPath)` re-opened the two-directories
+  // disagreement with every suite green (`installTarget.test.ts` keeps
+  // passing because it tests the pure function in isolation). The obligation
+  // is POSITIONAL: the resolver must sit INSIDE the probe call.
+  it('B-WR-03: the free-space probe passes resolveFreeSpaceProbeSubject(, not a bare selectedPath', () => {
+    expect(() => assertProbeSubjectIsResolved(stripped)).not.toThrow()
+  })
+
+  it('B-WR-03-RED: reverting the argument to selectedPath, DERIVED FROM THE REAL SOURCE, is rejected', () => {
+    const knownBad = stripped.replace(
+      /window\.api\.checkDiskSpace\(\s*resolveFreeSpaceProbeSubject\([^)]*\)\s*\)/,
+      'window.api.checkDiskSpace(selectedPath)'
+    )
+    expect(knownBad).not.toBe(stripped)
+    // The pre-B-WR-04 shape still satisfies the required-token list, which is
+    // the whole finding.
+    expect(knownBad).toContain('window.api.checkDiskSpace(')
+    expect(() => assertProbeSubjectIsResolved(knownBad)).toThrow(
+      /does not resolve its subject/
+    )
+  })
+
   it('B-WR-01: the degrade notice selects its copy on gating.libraryDropdown, never on steamDegrade.onlyLibrary', () => {
     expect(() =>
       assertDegradeCopyKeyedOnTheRenderedPicker(stripped)
@@ -618,6 +644,36 @@ describe('required wiring', () => {
     )
   })
 })
+
+/**
+ * 34.13 review B-WR-03 / B-WR-04. The dialog and the quick path must probe
+ * the SAME directory. Presence of `window.api.checkDiskSpace(` says nothing
+ * about that; the argument is the whole property.
+ */
+function assertProbeSubjectIsResolved(stripped: string) {
+  const flattened = stripped.replace(/\s+/g, ' ')
+  const probeIdx = flattened.indexOf('window.api.checkDiskSpace(')
+  if (probeIdx === -1) {
+    throw new Error(
+      'assertProbeSubjectIsResolved: the free-space probe is gone entirely'
+    )
+  }
+  const argStart = probeIdx + 'window.api.checkDiskSpace('.length
+  // The resolver must be the FIRST thing inside the call, not merely
+  // somewhere later in the file (it is also imported at the top).
+  if (
+    !flattened
+      .slice(argStart)
+      .trimStart()
+      .startsWith('resolveFreeSpaceProbeSubject(')
+  ) {
+    throw new Error(
+      `assertProbeSubjectIsResolved: window.api.checkDiskSpace( does not resolve its subject through resolveFreeSpaceProbeSubject( -- got "${flattened
+        .slice(argStart, argStart + 60)
+        .trim()}". The dialog would probe a different directory than the quick path and Console Mode (T-34.13-15-02)`
+    )
+  }
+}
 
 /**
  * 34.13 review B-WR-01. The two degrade sentences must branch on the thing

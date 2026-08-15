@@ -250,6 +250,89 @@ describe('Group B: the loading row is mounted, in the right slot, behind the rig
     const specimen = 'gating.wineSection && !pending'
     expect(specimen.includes('&& !pending')).toBe(true)
   })
+
+  // ── 34.13 review B-WR-03 ────────────────────────────────────────────────
+  //
+  // B-WR-05's whole premise is that this file locks every decision
+  // `InstallModal/index.tsx` encodes. B-WR-02's fix then landed real
+  // behaviour into that file WITHOUT extending any gate here: a repo-wide
+  // grep for `applyLibraryFetchPending` / `steamLibrariesSettled` outside
+  // `steamEligibilityProbe.test.ts` (which covers the PURE function only)
+  // returned nothing. So deleting the wrap and re-initialising to `[]`
+  // reproduced the exact pre-fix defect with all 308 partition-B tests still
+  // green — verbatim the B-WR-05 defect class, one commit later. B4's
+  // `applyEligibilityPending(` count of 1 survives that revert untouched, and
+  // B5's ban on `&& !pending` is not something a revert ADDS.
+  //
+  // A pure-function suite proves the function is CORRECT. These prove it is
+  // CALLED, which is the half that closes the finding.
+
+  it('B6 (B-WR-02): the raw verdict is wrapped by applyLibraryFetchPending, fed by steamLibrariesSettled', () => {
+    expect(countOccurrences(source, 'applyLibraryFetchPending(')).toBe(1)
+    const wrapIdx = source.indexOf('applyLibraryFetchPending(')
+    expect(source.slice(wrapIdx, wrapIdx + 200)).toContain(
+      'steamLibrariesSettled'
+    )
+  })
+
+  it('B7 (B-WR-02): the library fetch is a THREE-state discriminated union, and a REJECTION is settled', () => {
+    const flat = source.replace(/\s+/g, ' ')
+    // The union itself: pending / ok / failed. A two-state
+    // `SteamDialogLibraryOption[] | null` cannot express "asked and failed",
+    // which is how the round-1 fix suppressed the notice permanently.
+    expect(flat).toMatch(/\{ phase: 'pending' \}/)
+    expect(flat).toMatch(
+      /\{ phase: 'ok'; targets: SteamDialogLibraryOption\[\] \}/
+    )
+    expect(flat).toMatch(/\{ phase: 'failed' \}/)
+    // ...and `settled` must be "not pending", never "not the initial value".
+    expect(flat).toContain("libraryFetch.phase !== 'pending'")
+    // The rejection handler must reach 'failed'. Bounded to the `.catch(`
+    // that follows the fetch, so a `'failed'` written anywhere else in the
+    // file cannot satisfy this.
+    const fetchIdx = flat.indexOf('.listSteamLibraryTargets()')
+    expect(fetchIdx).toBeGreaterThan(-1)
+    const catchIdx = flat.indexOf('.catch(', fetchIdx)
+    expect(catchIdx).toBeGreaterThan(fetchIdx)
+    expect(flat.slice(catchIdx, catchIdx + 400)).toContain(
+      "setLibraryFetch({ phase: 'failed' })"
+    )
+    expect(flat.slice(catchIdx, catchIdx + 400)).not.toContain(
+      "setLibraryFetch({ phase: 'pending' })"
+    )
+  })
+
+  it('B6/B7-RED: known-bads DERIVED FROM THE REAL SOURCE break each obligation', () => {
+    // (a) delete the wrap -- the pre-B-WR-02 shape.
+    const noWrap = source.replace(
+      /applyLibraryFetchPending\(\s*([\s\S]*?),\s*steamLibrariesSettled\s*\)/,
+      '$1'
+    )
+    expect(noWrap).not.toBe(source)
+    expect(countOccurrences(noWrap, 'applyLibraryFetchPending(')).toBe(0)
+
+    // (b) send the rejection back to 'pending' -- the ITERATION-2 shape,
+    // which is the one that suppressed the notice forever. Note it leaves
+    // the union, `settled`, the wrap and B4/B5 all intact, so every OTHER
+    // gate in this file stays green on it: that is precisely why the defect
+    // shipped.
+    const rejectToPending = source.replace(
+      "setLibraryFetch({ phase: 'failed' })",
+      "setLibraryFetch({ phase: 'pending' })"
+    )
+    expect(rejectToPending).not.toBe(source)
+    const flat = rejectToPending.replace(/\s+/g, ' ')
+    const catchIdx = flat.indexOf(
+      '.catch(',
+      flat.indexOf('.listSteamLibraryTargets()')
+    )
+    expect(flat.slice(catchIdx, catchIdx + 400)).not.toContain(
+      "setLibraryFetch({ phase: 'failed' })"
+    )
+    expect(countOccurrences(rejectToPending, 'applyLibraryFetchPending(')).toBe(
+      1
+    )
+  })
 })
 
 // ---------------------------------------------------------------------
