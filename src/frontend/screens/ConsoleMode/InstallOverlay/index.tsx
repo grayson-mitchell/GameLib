@@ -20,6 +20,7 @@ import {
 } from './consoleSteamTarget'
 import {
   installSteamGame,
+  logSteamInstallDispatchFailure,
   type SteamQuickInstallDegrade
 } from 'frontend/state/InstallGameModal'
 
@@ -141,7 +142,12 @@ export default function InstallOverlay({
       // `resolveOverride()` refused the unregistered path and fell back to
       // primary. `installSteamGame` is D-23's stated sole marshalling site
       // for `window.api.install` on the Steam path.
-      installSteamGame(game.app_name, game)
+      // 34.13 review B-WR-01: `installSteamGame` returns the dispatch promise
+      // now, so the fire-and-forget intent is stated with an explicit
+      // rejection handler rather than a bare `void` that attached none.
+      installSteamGame(game.app_name, game).catch(
+        logSteamInstallDispatchFailure(game.app_name)
+      )
       timer = setTimeout(() => {
         if (!cancelled) onDismiss()
       }, 1500)
@@ -484,7 +490,10 @@ function SelectorRow({
           className="consoleInstallArrow"
           onClick={onPrev}
           disabled={disabled}
-          aria-label={tGamelib('gamelib:consoleMode.installPrevious', 'Previous')}
+          aria-label={tGamelib(
+            'gamelib:consoleMode.installPrevious',
+            'Previous'
+          )}
           tabIndex={-1}
         >
           ‹

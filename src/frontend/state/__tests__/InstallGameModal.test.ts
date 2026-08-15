@@ -78,6 +78,7 @@ function makeDisk(overrides: Partial<DiskSpaceData> = {}): DiskSpaceData {
 let installMock: jest.Mock
 let listSteamLibraryTargetsMock: jest.Mock
 let checkDiskSpaceMock: jest.Mock
+let logErrorMock: jest.Mock
 
 /** The established idiom for stubbing `window` in this node-env project
  * (`hasStatus.reconcile.test.ts:99-110`). Called fresh in `beforeEach` so
@@ -87,11 +88,13 @@ function stubWindowApi() {
   installMock = jest.fn().mockResolvedValue(undefined)
   listSteamLibraryTargetsMock = jest.fn().mockResolvedValue([])
   checkDiskSpaceMock = jest.fn().mockResolvedValue(makeDisk())
+  logErrorMock = jest.fn()
   ;(global as unknown as { window: unknown }).window = {
     api: {
       install: installMock,
       listSteamLibraryTargets: listSteamLibraryTargetsMock,
-      checkDiskSpace: checkDiskSpaceMock
+      checkDiskSpace: checkDiskSpaceMock,
+      logError: logErrorMock
     }
   }
 }
@@ -340,18 +343,14 @@ describe('Group C: openSteamInstallOptions', () => {
       libraryPath: '/steam/library-0',
       onlyLibrary: true
     })
-    expect(useInstallGameModal.getState().steamDegrade?.onlyLibrary).toBe(
-      true
-    )
+    expect(useInstallGameModal.getState().steamDegrade?.onlyLibrary).toBe(true)
 
     openSteamInstallOptions('570', makeGameInfo(), {
       reason: 'library-missing',
       libraryPath: '/steam/library-0',
       onlyLibrary: false
     })
-    expect(useInstallGameModal.getState().steamDegrade?.onlyLibrary).toBe(
-      false
-    )
+    expect(useInstallGameModal.getState().steamDegrade?.onlyLibrary).toBe(false)
   })
 
   it('C7: closeInstallGameModal clears steamDegrade', () => {
@@ -446,6 +445,73 @@ describe('Group D: the chokepoint and D-17 marshalling', () => {
     arg = installMock.mock.calls[0][0]
     expect(arg.path).toBe('/some/path')
     expect(arg.steamForceWindowsViaBottle).not.toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Group F — 34.13 review C-01 / B-WR-01: the RETURN CONTRACT.
+//
+// `installSteamGame` used to end with a bare `void window.api.install({...})`
+// and return `undefined`. That single character is what made
+// `SteamBridgeSetup`'s `await installSteamGame(...)` an ESLint
+// `await-thenable` hard error, killed its `try/catch`'s only way to observe a
+// failed fallback, and left `bridge.setup.fallbackError` as dead copy on a
+// failure-RECOVERY surface. Group D above cannot see any of it: every spec
+// there reads `installMock.mock.calls[0][0]`, i.e. the ARGUMENTS, and the
+// arguments were never the defect.
+//
+// Proven RED against the real pre-fix source (`void window.api.install(...)`
+// inside a braced body): F1 fails with "Received: undefined", F2 fails with
+// "installSteamGame(...).then is not a function", and F4's rejection is
+// re-raised as an unhandled rejection instead of being logged.
+// ---------------------------------------------------------------------------
+describe('Group F: installSteamGame returns a real, observable promise', () => {
+  it('F1: returns something (not undefined) — the exact regression C-01 named', () => {
+    expect(installSteamGame('570', makeGameInfo())).not.toBeUndefined()
+  })
+
+  it('F2: the returned value is thenable, so `await` on it is meaningful rather than an await-thenable error', () => {
+    const returned = installSteamGame('570', makeGameInfo()) as Promise<unknown>
+    expect(typeof returned.then).toBe('function')
+    return returned
+  })
+
+  it('F3: a REJECTED dispatch propagates to the caller — this is what lets SteamBridgeSetup surface bridge.setup.fallbackError again', async () => {
+    installMock.mockRejectedValue(new Error('sidecar channel dead'))
+
+    await expect(installSteamGame('570', makeGameInfo())).rejects.toThrow(
+      'sidecar channel dead'
+    )
+  })
+
+  it('F4: startSteamQuickInstall still never rejects on a rejected dispatch, and LOGS it rather than floating the rejection (B-WR-01)', async () => {
+    listSteamLibraryTargetsMock.mockResolvedValue([])
+    installMock.mockRejectedValue(new Error('sidecar channel dead'))
+
+    await expect(
+      startSteamQuickInstall('570', makeGameInfo())
+    ).resolves.toBeUndefined()
+    // The handler is attached synchronously but runs a microtask later.
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(logErrorMock).toHaveBeenCalledWith(
+      expect.stringContaining('the install dispatch REJECTED')
+    )
+    // The appId is named; nothing else about the install is echoed.
+    expect(logErrorMock.mock.calls[0][0]).toContain('570')
+  })
+
+  it('F5: the log line never echoes the install path or the gameInfo object', async () => {
+    listSteamLibraryTargetsMock.mockResolvedValue([])
+    installMock.mockRejectedValue(new Error('sidecar channel dead'))
+
+    await startSteamQuickInstall('570', makeGameInfo())
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(logErrorMock.mock.calls[0][0]).not.toContain('Dota 2')
+    expect(logErrorMock.mock.calls[0][0]).not.toContain('steamapps')
   })
 })
 

@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { GameInfo } from 'common/types'
 import { useSteamClientSetup } from 'frontend/state/SteamClientSetup'
-import { installSteamGame } from 'frontend/state/InstallGameModal'
+import {
+  installSteamGame,
+  logSteamInstallDispatchFailure
+} from 'frontend/state/InstallGameModal'
 import {
   Dialog,
   DialogContent,
@@ -75,7 +78,12 @@ const SteamClientSetup = () => {
         if (result.status === 'ready') {
           if (pollRef.current) clearInterval(pollRef.current)
           if (gameInfoRef.current) {
-            installSteamGame(appName, gameInfoRef.current)
+            // 34.13 review B-WR-01: explicit fire-and-forget with a real
+            // rejection handler (the function returns its dispatch promise
+            // now — a bare call would float).
+            installSteamGame(appName, gameInfoRef.current).catch(
+              logSteamInstallDispatchFailure(appName)
+            )
           }
           close()
         }

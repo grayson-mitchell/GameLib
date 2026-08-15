@@ -56,6 +56,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   installSteamGame,
+  logSteamInstallDispatchFailure,
   useInstallGameModal
 } from 'frontend/state/InstallGameModal'
 import { AvailablePlatforms } from '..'
@@ -238,12 +239,17 @@ export default function SteamDialog({
 
     // The verdict's own field, passed through verbatim -- never reconstruct
     // `isMac && !bottleRequired && platformToInstall === 'Windows'` locally.
+    // 34.13 review B-WR-01: explicit fire-and-forget. The dialog is already
+    // closed by `backdropClick()` above, so there is no surface left to show
+    // an error on -- but the dispatch rejecting is exactly the "I clicked
+    // Install and nothing happened" outcome, so it must reach a log sink
+    // rather than floating off as an unhandled rejection.
     installSteamGame(
       appName,
       gameInfo,
       destination,
       gating.forceWindowsViaBottle
-    )
+    ).catch(logSteamInstallDispatchFailure(appName))
     // `backdropClick` and `submitting` added by WR-13 -- the callback reads
     // both, and omitting `backdropClick` meant a re-created parent handler
     // left this callback closing over a stale one (ESLint

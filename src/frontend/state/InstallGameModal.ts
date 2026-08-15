@@ -104,14 +104,28 @@ interface OpenInstallGameModalParams {
  * `SteamClientSetup.tsx`'s post-setup retry (2-arg legacy shape). The
  * retired D-09 override picker's own confirm handler used to be a third
  * caller (3-arg shape) — Task 3 of this plan deletes that component whole.
+ *
+ * RETURNS THE INSTALL PROMISE (34.13 review C-01/B-WR-01). It used to swallow
+ * it with a bare `void`, which silenced `no-floating-promises` while
+ * attaching no handler at all — so a rejected dispatch was both an unhandled
+ * rejection AND invisible to every caller. Worse, `SteamBridgeSetup` (a
+ * failure-RECOVERY surface) `await`ed the `undefined` this returned, which
+ * made its own `try/catch` unable to observe a failed fallback and rendered
+ * its `bridge.setup.fallbackError` copy dead. ESLint caught it as a hard
+ * `@typescript-eslint/await-thenable` error.
+ *
+ * Callers that genuinely want fire-and-forget must say so EXPLICITLY by
+ * attaching `.catch(logSteamInstallDispatchFailure(appName))` — never a bare
+ * `void`. The rejection is a real user-visible outcome ("I clicked Install
+ * and nothing happened"), so it always reaches a log sink at minimum.
  */
 export const installSteamGame = (
   appName: string,
   gameInfo: GameInfo,
   path = '',
   forceWindowsViaBottle = false
-) => {
-  void window.api.install({
+): Promise<unknown> =>
+  window.api.install({
     appName,
     path,
     runner: 'steam',
@@ -122,6 +136,17 @@ export const installSteamGame = (
     steamForceWindowsViaBottle: forceWindowsViaBottle,
     gameInfo
   })
+
+/**
+ * The one rejection handler every fire-and-forget `installSteamGame` caller
+ * uses (34.13 review B-WR-01). Never echoes `path`, `gameInfo` or the engine
+ * — only the appId, matching this file's existing "name the field, not the
+ * value" logging discipline (T-34.13-08-05).
+ */
+export const logSteamInstallDispatchFailure = (appName: string) => () => {
+  window.api.logError(
+    `34.13 installSteamGame: the install dispatch REJECTED for appName "${appName}" — no queue entry was created`
+  )
 }
 
 /**
@@ -219,7 +244,9 @@ export const startSteamQuickInstall = async (
     // 0 libraries: either native install is OFF, or the backend has nothing
     // registered. Either way GameLib controls no local target — delegate to
     // steam://install with no path, exactly like today's zero-friction path.
-    installSteamGame(appName, gameInfo)
+    installSteamGame(appName, gameInfo).catch(
+      logSteamInstallDispatchFailure(appName)
+    )
     return
   }
 
@@ -236,7 +263,9 @@ export const startSteamQuickInstall = async (
     // resolves this exact primary target from an empty override — passing a
     // path here would create a second, driftable definition of "primary" in
     // the renderer (RESEARCH Q1).
-    installSteamGame(appName, gameInfo)
+    installSteamGame(appName, gameInfo).catch(
+      logSteamInstallDispatchFailure(appName)
+    )
     return
   }
 

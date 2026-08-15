@@ -81,9 +81,18 @@ const SteamBridgeSetup = () => {
         // bypassed here. Deliberately `installSteamGame`, NOT
         // `startSteamQuickInstall` — this is a post-failure retry inside a
         // setup surface, and degrading it into an options dialog on a D-24
-        // check would be new behavior this phase has no decision for. The
-        // outcome is byte-identical to the literal this replaces:
-        // `installSteamGame`'s hardcoded fields are the same eight.
+        // check would be new behavior this phase has no decision for.
+        //
+        // 34.13 review C-01: the original commit claimed this was
+        // "byte-identical to the literal it replaces". The FIELDS were; the
+        // RETURN CONTRACT was not. `installSteamGame` used to swallow the
+        // install promise with a bare `void` and return `undefined`, so this
+        // `await` was an ESLint `await-thenable` HARD ERROR, the enclosing
+        // `try/catch` could no longer observe a failed fallback, and
+        // `bridge.setup.fallbackError` below became dead copy on this branch
+        // — on the one surface whose entire job is recovering from a failure.
+        // `installSteamGame` now returns the real dispatch promise, so this
+        // `await` means what it reads as.
         await installSteamGame(appName, gameInfo)
       } else {
         // Same IPC channel the existing launch flow ultimately calls
@@ -96,8 +105,7 @@ const SteamBridgeSetup = () => {
     } catch (error) {
       setFallbackError(
         t('bridge.setup.fallbackError', {
-          defaultValue:
-            'Falling back to bottled Steam failed: {{error}}',
+          defaultValue: 'Falling back to bottled Steam failed: {{error}}',
           error: error instanceof Error ? error.message : String(error)
         })
       )
