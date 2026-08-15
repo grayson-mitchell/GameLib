@@ -1332,7 +1332,7 @@ Plans: **14 plans, 8 waves** *(re-planned 2026-08-15 for D-21..D-29. `34.13-04` 
 **Wave 2** *(blocked on Wave 1)*
 - [x] 34.13-02 — Steam backend read-side: `is_windows_native` capture + `checkBottleEligibility()` [D-07, D-09, D-17]
 - [x] 34.13-03 — `WineSelector` Steam props + pure `engineFilter.ts` [D-05, D-16]
-- [ ] 34.13-05 — Pure **section-gating** module — the trigger predicate is GONE [D-03, D-11, D-18, D-19, D-20, D-22, D-26]
+- [x] 34.13-05 — Pure **section-gating** module — the trigger predicate is GONE [D-03, D-11, D-18, D-19, D-20, D-22, D-26]
 - [ ] 34.13-08 — **Split button + real install routing** across every entry point [D-21, D-23, D-24, D-27, D-28]
 
 **Wave 3** *(blocked on Wave 2)*
