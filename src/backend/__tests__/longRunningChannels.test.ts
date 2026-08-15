@@ -346,23 +346,16 @@ describe('stripper integrity (WR-08)', () => {
     expect({ isEven, quoteCount }).toEqual({ isEven: true, quoteCount })
   })
 
-  test('the real file: every line of the stripped output has a balanced (even) "-count', () => {
-    // Raw strings are stripped from the FULL source BEFORE `.split('\n')` — a per-line pass
-    // cannot see a multi-line construct like `r#"..."#`, so reordering these two calls (splitting
-    // first, then trying to strip raw strings per-line) silently reverts this fix.
-    const strippedLines = stripRustRawStrings(loadMainRsCode()).split('\n')
-    const unbalancedLines = strippedLines
-      .map((line, index) => ({
-        index,
-        line,
-        quoteCount: (
-          stripRustCharLiterals(stripRustEscapes(line)).match(/"/g) ?? []
-        ).length
-      }))
-      .filter(({ quoteCount }) => quoteCount % 2 !== 0)
-    // Reporting the full list of unbalanced lines (not just a boolean) makes a future failure
+  test('the real file: every LOGICAL line of the stripped output has a balanced (even) "-count', () => {
+    // `findUnbalancedQuoteLines` now OWNS the ordering this test used to spell out inline: raw
+    // strings are stripped from the FULL source BEFORE any `.split('\n')` (a per-line pass cannot
+    // see a multi-line construct like `r#"..."#`), and escapes are stripped before the physical
+    // lines are folded into LOGICAL ones. Reordering any of those steps silently reverts a fix;
+    // each is pinned by its own discriminator in the battery below.
+    //
+    // It returns the full list of offending entries rather than a boolean so a future failure is
     // diagnosable at a glance rather than requiring a re-run with extra logging.
-    expect(unbalancedLines).toEqual([])
+    expect(findUnbalancedQuoteLines(loadMainRsCode())).toEqual([])
   })
 
   // Discriminator battery for `testUtils/rustQuoteBalance`'s logical-line joiner (quick task
@@ -382,15 +375,15 @@ describe('stripper integrity (WR-08)', () => {
   })
 
   test('joiner: a plain unterminated literal is STILL reported', () => {
-    expect(findUnbalancedQuoteLines('const BROKEN: &str = "unterminated;')).toEqual(
-      [
-        {
-          index: 0,
-          line: 'const BROKEN: &str = "unterminated;',
-          quoteCount: 1
-        }
-      ]
-    )
+    expect(
+      findUnbalancedQuoteLines('const BROKEN: &str = "unterminated;')
+    ).toEqual([
+      {
+        index: 0,
+        line: 'const BROKEN: &str = "unterminated;',
+        quoteCount: 1
+      }
+    ])
   })
 
   test('joiner: a `\\`-continued literal that IS properly closed reads as balanced (this is the app_hide shape)', () => {
@@ -441,9 +434,9 @@ describe('stripper integrity (WR-08)', () => {
     expect(stripRustCharLiterals(`assert!(!v.ends_with('"'));`)).not.toContain(
       '"'
     )
-    expect(stripRustCharLiterals(`assert!(!v.ends_with('\\''));`)).not.toContain(
-      "'"
-    )
+    expect(
+      stripRustCharLiterals(`assert!(!v.ends_with('\\''));`)
+    ).not.toContain("'")
     const truncated = stripRustCharLiterals('let s = "steam://')
     expect((truncated.match(/"/g) ?? []).length % 2).toBe(1)
   })
@@ -468,12 +461,20 @@ describe('stripper integrity (WR-08)', () => {
       (stripRustEscapes('let s = "steam://').match(/"/g) ?? []).length % 2
     ).toBe(1)
 
-    // A `\`-continued multi-line literal must STAY odd on its opening line: that shape is
-    // indistinguishable from a stripper-truncated literal and is a real finding to report. `.`
-    // not matching a newline is what preserves this.
+    // The trailing backslash of a `\`-continued literal SURVIVES escape-stripping, because `.`
+    // does not match a newline — and `joinContinuedLogicalLines` consumes that surviving
+    // backslash as its continuation signal. The assertion is unchanged; its REASON is not.
+    //
+    // This comment used to say the opening line staying odd was itself the point, on the grounds
+    // that a continued literal is "indistinguishable from a stripper-truncated literal and is a
+    // real finding to report". That premise was false — a continuation IS distinguishable from a
+    // truncation, by exactly the backslash asserted here — and it was the written form of the bug
+    // that made main.rs's app_hide message report as unbalanced. The fact held; the rationale
+    // rotted. Odd-on-the-opening-PHYSICAL-line is now an intermediate state, not the verdict.
     const continued = 'let s = "first half \\\n             second half";'
     const openingLine = stripRustEscapes(continued).split('\n')[0]
     expect((openingLine.match(/"/g) ?? []).length % 2).toBe(1)
+    expect(openingLine.endsWith('\\')).toBe(true)
   })
 
   // WR-08 is now RESOLVED rather than merely predicted (34.4.1 Plan 01 post-merge gate).
@@ -528,18 +529,17 @@ describe('stripper integrity (WR-08)', () => {
       '"#;',
       'const AFTER: &str = "sentinel";'
     ].join('\n')
-    const strippedLines = stripRustRawStrings(loadMainRsCode(syntheticSource)).split('\n')
-    const unbalancedLines = strippedLines
-      .map((line, index) => ({
-        index,
-        line,
-        quoteCount: (stripRustCharLiterals(line).match(/"/g) ?? []).length
-      }))
-      .filter(({ quoteCount }) => quoteCount % 2 !== 0)
-    expect(unbalancedLines).toEqual([])
+    expect(findUnbalancedQuoteLines(loadMainRsCode(syntheticSource))).toEqual(
+      []
+    )
     // Pins Task 1 rule 4 (newline-preserving replacement) — without it every reported `index`
     // in the real guard would shift once the literal collapsed, destroying diagnosability.
-    expect(strippedLines).toHaveLength(syntheticSource.split('\n').length)
+    // Deliberately NOT re-expressed through `findUnbalancedQuoteLines`: this asserts the
+    // raw-string pass preserves PHYSICAL newlines, which is a different property from quote
+    // balance, and logical-line count is not physical-line count once a continuation exists.
+    expect(
+      stripRustRawStrings(loadMainRsCode(syntheticSource)).split('\n')
+    ).toHaveLength(syntheticSource.split('\n').length)
   })
 
   // THIS IS THE MOST IMPORTANT TEST IN THE TASK. The WR-08 block's own history comment (above)
@@ -553,8 +553,11 @@ describe('stripper integrity (WR-08)', () => {
       'const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);',
       'const BROKEN: &str = "steam://unterminated;'
     ].join('\n')
-    const strippedLine = stripRustRawStrings(loadMainRsCode(syntheticSource)).split('\n')[1]
-    const quoteCount = (stripRustCharLiterals(strippedLine).match(/"/g) ?? []).length
+    const strippedLine = stripRustRawStrings(
+      loadMainRsCode(syntheticSource)
+    ).split('\n')[1]
+    const quoteCount = (stripRustCharLiterals(strippedLine).match(/"/g) ?? [])
+      .length
     expect(quoteCount % 2).toBe(1)
   })
 
@@ -566,25 +569,21 @@ describe('stripper integrity (WR-08)', () => {
       '"##;',
       'const AFTER: &str = "sentinel";'
     ].join('\n')
-    const stripped = stripRustRawStrings(loadMainRsCode(syntheticSource))
-    const unbalancedLines = stripped
-      .split('\n')
-      .map((line, index) => ({
-        index,
-        line,
-        quoteCount: (stripRustCharLiterals(line).match(/"/g) ?? []).length
-      }))
-      .filter(({ quoteCount }) => quoteCount % 2 !== 0)
-    expect(unbalancedLines).toEqual([])
+    expect(findUnbalancedQuoteLines(loadMainRsCode(syntheticSource))).toEqual(
+      []
+    )
     // Proves the closer matched `"##`, not the body's `"#` — a premature match would have eaten
-    // this trailing line along with the body.
-    expect(stripped).toContain('const AFTER: &str = "sentinel";')
+    // this trailing line along with the body. Needs the stripped TEXT, not the unbalanced list.
+    expect(stripRustRawStrings(loadMainRsCode(syntheticSource))).toContain(
+      'const AFTER: &str = "sentinel";'
+    )
   })
 
   test('self-test: the zero-hash r"..." form is removed', () => {
     const syntheticSource = 'const X: &str = r"plain";'
     const stripped = stripRustRawStrings(syntheticSource)
-    const quoteCount = (stripRustCharLiterals(stripped).match(/"/g) ?? []).length
+    const quoteCount = (stripRustCharLiterals(stripped).match(/"/g) ?? [])
+      .length
     expect(quoteCount % 2).toBe(0)
   })
 
@@ -654,7 +653,10 @@ const DEADLINE_CONSTANT_TABLE: Array<{
  * evaluator for trusted first-party source, not a general expression parser, and rejects
  * anything outside that character set rather than risk evaluating unexpected code.
  */
-function parseMsConstantFromSource(source: string, constantName: string): number {
+function parseMsConstantFromSource(
+  source: string,
+  constantName: string
+): number {
   const stripped = stripSourceComments(source)
     .split('\n')
     .map(stripTrailingLineComment)
@@ -675,13 +677,21 @@ function parseMsConstantFromSource(source: string, constantName: string): number
   // eslint-disable-next-line no-new-func -- expr is validated above to be numeric arithmetic only
   const value = Function(`"use strict"; return (${expr});`)() as unknown
   if (typeof value !== 'number' || Number.isNaN(value)) {
-    throw new Error(`${constantName}'s expression "${expr}" did not evaluate to a number`)
+    throw new Error(
+      `${constantName}'s expression "${expr}" did not evaluate to a number`
+    )
   }
   return value
 }
 
-function parseMsConstantFromFile(sourcePath: string, constantName: string): number {
-  return parseMsConstantFromSource(readFileSync(sourcePath, 'utf-8'), constantName)
+function parseMsConstantFromFile(
+  sourcePath: string,
+  constantName: string
+): number {
+  return parseMsConstantFromSource(
+    readFileSync(sourcePath, 'utf-8'),
+    constantName
+  )
 }
 
 /** Parses `INVOKE_TIMEOUT`'s seconds literal from `main.rs` and returns it in milliseconds. */
@@ -708,7 +718,10 @@ function assertDeadlinesAreExempted(
   invokeTimeoutMs: number
 ): void {
   for (const row of rows) {
-    if (row.deadlineMs > invokeTimeoutMs && !longRunningChannels.includes(row.channel)) {
+    if (
+      row.deadlineMs > invokeTimeoutMs &&
+      !longRunningChannels.includes(row.channel)
+    ) {
       throw new Error(
         `${row.channel}'s internal deadline (${row.deadlineMs}ms) exceeds INVOKE_TIMEOUT ` +
           `(${invokeTimeoutMs}ms) but is absent from LONG_RUNNING_CHANNELS`
@@ -756,7 +769,10 @@ describe('F-34.5-G6-02 standing guard: a channel whose internal deadline exceeds
   // was non-empty".
   test('self-test: the same synthetic channel does NOT trip the guard once added to LONG_RUNNING_CHANNELS', () => {
     const rows = [{ channel: 'probeChannel', deadlineMs: 300_000 }]
-    const longRunningChannelsWithProbe = [...extractLongRunningChannels(), 'probeChannel']
+    const longRunningChannelsWithProbe = [
+      ...extractLongRunningChannels(),
+      'probeChannel'
+    ]
 
     expect(() =>
       assertDeadlinesAreExempted(rows, longRunningChannelsWithProbe, 60_000)
@@ -780,12 +796,16 @@ describe('F-34.5-G6-02 standing guard: a channel whose internal deadline exceeds
       '// FAKE_DEADLINE_MS = 999_000 -- a comment naming a value that must NOT be read',
       'const FAKE_DEADLINE_MS = 300_000'
     ].join('\n')
-    expect(parseMsConstantFromSource(syntheticSource, 'FAKE_DEADLINE_MS')).toBe(300_000)
+    expect(parseMsConstantFromSource(syntheticSource, 'FAKE_DEADLINE_MS')).toBe(
+      300_000
+    )
   })
 
   test('parseMsConstantFromSource evaluates a multiplication expression (mirrors LOGIN_WATCH_TIMEOUT_MS = 10 * 60_000)', () => {
     const syntheticSource = 'export const FAKE_DEADLINE_MS = 10 * 60_000'
-    expect(parseMsConstantFromSource(syntheticSource, 'FAKE_DEADLINE_MS')).toBe(600_000)
+    expect(parseMsConstantFromSource(syntheticSource, 'FAKE_DEADLINE_MS')).toBe(
+      600_000
+    )
   })
 
   test('parseMsConstantFromSource rejects an expression containing characters outside the allowed numeric-arithmetic set', () => {
