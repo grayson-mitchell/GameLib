@@ -201,6 +201,49 @@ describe('forbidden mechanisms (D-01/D-06/D-07/D-08/D-14, the zero-stylesheet de
 })
 
 // ---------------------------------------------------------------------
+// Block 1b -- D-25 (34.13-11, wave 7): the dialog's OWN footer Install
+// button is the disabled one, and ONLY by that flag
+// ---------------------------------------------------------------------
+//
+// 34.13-10's own file header predicted this narrowing in advance: "D-25
+// adds exactly one legitimate `disabled` term (`disabled={eligibilityPending}`)
+// and 34.13-11 (wave 7) wires it into this same file... Do not read a
+// future `disabled` attribute here as a regression." This block is that
+// wire-up landing. Under the retired D-12 model the eligibility check ran
+// BEFORE the dialog opened, so the busy spinner belonged on the ORIGIN
+// control (34.13-10's own <objective> text: "the spinner belongs on the
+// origin control (34.13-11), never on this footer button"). D-25
+// (`34.13-CONTEXT.md` lines 277-286) INVERTS that premise: the dialog opens
+// INSTANTLY and its OWN footer Install button stays disabled until
+// eligibility resolves. D-06's substance -- never gated on SIZE -- is
+// preserved and re-asserted below alongside the new positive gate.
+describe("D-25: the dialog's own footer Install button is disabled while eligibility pends, and ONLY by that flag", () => {
+  const stripped = readDialogStripped()
+
+  it('disabled= appears exactly once, and it is disabled={eligibilityPending}', () => {
+    expect(stripped.split('disabled=').length - 1).toBe(1)
+    expect(stripped).toContain('disabled={eligibilityPending}')
+  })
+
+  it('the disabled= count check is non-vacuous -- a specimen with a second disabled= trips it', () => {
+    const specimen =
+      'disabled={eligibilityPending} ... disabled={notEnoughDiskSpace}'
+    expect(specimen.split('disabled=').length - 1).toBe(2)
+  })
+
+  it('D-06 still holds alongside the new disabled term -- diskSize/spaceLeftAfter/notEnoughDiskSpace/getInstallInfo remain absent', () => {
+    for (const token of [
+      'diskSize',
+      'spaceLeftAfter',
+      'notEnoughDiskSpace',
+      'getInstallInfo'
+    ]) {
+      expectAbsent(stripped, token, 'D-06 SIZE-gate ban, re-asserted after D-25')
+    }
+  })
+})
+
+// ---------------------------------------------------------------------
 // Block 2 -- no locally re-derived section condition
 // (34.13-05's explicit review obligation against this plan)
 // ---------------------------------------------------------------------

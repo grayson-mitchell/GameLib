@@ -40,6 +40,11 @@ import {
   readonlyPlatformValue
 } from './steamPlatformRow'
 import type { SteamDialogLibraryOption } from './SteamDialog/installTarget'
+import {
+  useSteamBottleEligibility,
+  applyEligibilityPending
+} from './steamEligibilityProbe'
+import EligibilityLoadingRow from './SteamDialog/EligibilityLoadingRow'
 
 type Props = {
   appName: string
@@ -68,19 +73,26 @@ export type AvailablePlatforms = {
 // has no jsdom, so a green source gate and a broken dialog are
 // indistinguishable to Jest (`34.13-VALIDATION.md`).
 //
-// D-25: the eligibility probe moves INSIDE the dialog. 34.13-11 (wave 7)
-// calls `useSteamBottleEligibility` in this file and replaces this constant
-// with the hook's resolved value. `false` is the correct fail-closed
-// placeholder here -- a wrongly-`true` value would mount a wine section for
-// a game that does not need one. Do NOT probe eligibility here: doing so
-// reintroduces the pre-dialog await D-25 retired.
-const BOTTLE_REQUIRED_UNTIL_34_13_11 = false
+// Phase 34.13, Plan 11 (D-25) -- the eligibility probe lives INSIDE this
+// component, below `InstallGameWrapper`'s `isOpen` mount gate (see that
+// function at the bottom of this file). This is the EXACT INVERSION of the
+// retired D-12 contract: the dialog opens INSTANTLY (nothing is awaited
+// before the first render) and the probe's IPC round trip happens in a
+// `useEffect` AFTER. The quick path never sets `isOpen`, so it structurally
+// can never reach the hook call below (T-34.13-11-06).
 
 function InstallModal({ appName, runner, gameInfo = null }: Props) {
   const { platform } = useContext(ContextProvider)
   const { t } = useTranslation('gamepage')
   const { t: tGamelib } = useTranslation('gamelib')
   const { action = 'install' } = useInstallGameModal()
+
+  // Plan 11, D-25: called UNCONDITIONALLY for every runner -- React forbids
+  // conditional hook calls. The IPC round trip is gated INSIDE the hook by
+  // `shouldProbeEligibility`, which returns `false` for any non-Steam
+  // runner, so this is a no-op call for GOG/Epic/Amazon/sideload, never a
+  // probe. Do NOT "fix" this into a conditional call.
+  const eligibility = useSteamBottleEligibility({ platform, runner, appName })
 
   const [winePrefix, setWinePrefix] = useState('...')
   const [wineVersion, setWineVersion] = useState<WineInstallation>()
@@ -206,13 +218,18 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   // file. One input object, one call -- there is no present/absent payload
   // branch (D-22/D-25 removed the payload the retired plan draft consumed)
   // and no hand-constructed verdict object anywhere below.
-  const steamGating: SteamSectionGatingVerdict = useMemo(
+  //
+  // Plan 11, D-25: `bottleRequired` is fed from the hook's resolved value
+  // (`eligibility.bottleRequired`), which is fail-closed `false` while
+  // pending -- that fail-closed default is `steamEligibilityProbe.ts`'s job
+  // (`initialEligibilityState`), not re-derived here.
+  const steamGatingRaw: SteamSectionGatingVerdict = useMemo(
     () =>
       resolveSteamSectionGating({
         hostPlatform: platform,
         selectedPlatform: platformToInstall,
         hasWindowsDepot,
-        bottleRequired: BOTTLE_REQUIRED_UNTIL_34_13_11,
+        bottleRequired: eligibility.bottleRequired,
         // Both IPC handlers are already gated on
         // `isSteamNativeInstallEnabled()` and return `[]` when native
         // install is OFF, so the empty array IS the OFF signal --
@@ -228,8 +245,26 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
       platformToInstall,
       hasWindowsDepot,
       steamLibraries,
-      isSteamManagedApp
+      isSteamManagedApp,
+      eligibility.bottleRequired
     ]
+  )
+
+  // Plan 11, D-25: wrap the raw verdict through ONE pure function -- never
+  // three inline `&& !pending` terms. FALSIFIED BRIEF (34.13-11-PLAN.md
+  // <falsified_briefs> item 1): the UI-SPEC claims the library dropdown and
+  // free-space line can render immediately alongside the loading row
+  // because they "depend only on nativeInstallOn/libraryCount". FALSE --
+  // 34.13-05's shipped formula is
+  // `libraryDropdown = !wineSection && nativeInstallOn && libraryCount > 1`,
+  // so both depend on the pending `bottleRequired` through `wineSection`.
+  // Rendering them immediately would produce a dropdown that appears and
+  // then VANISHES the instant eligibility resolves true. Suppressed here
+  // instead by `applyEligibilityPending`; `platformRow` is genuinely
+  // synchronous and passes through untouched.
+  const steamGating: SteamSectionGatingVerdict = applyEligibilityPending(
+    steamGatingRaw,
+    eligibility.pending
   )
 
   // F (34.13-12, D-03): `legacyPlatformRowMode` is the ONLY surviving
@@ -344,9 +379,18 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
             crossoverBottle={crossoverBottle}
             gating={steamGating}
             steamLibraries={steamLibraries}
+            eligibilityPending={eligibility.pending}
           >
             {platformSelection()}
-            {showWineSelector ? (
+            {/* Plan 11, D-25: the wine region's FIRST arm is the pending
+                loading row -- it occupies the exact DOM slot <WineSelector>
+                would otherwise take. Mutually exclusive with <WineSelector>
+                TWICE OVER: by this ternary AND by `applyEligibilityPending`
+                forcing `steamGating.wineSection: false` while pending
+                (belt-and-braces, deliberately). */}
+            {eligibility.pending ? (
+              <EligibilityLoadingRow />
+            ) : showWineSelector ? (
               <WineSelector
                 appName={appName}
                 winePrefix={winePrefix}

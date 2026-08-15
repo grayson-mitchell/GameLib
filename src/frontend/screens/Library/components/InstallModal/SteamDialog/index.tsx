@@ -29,16 +29,13 @@
  *
  * The Install button is never gated on SIZE (D-06) -- `getInstallInfo`,
  * `diskSize`, `spaceLeftAfter` and `notEnoughDiskSpace` appear nowhere in
- * this file. As shipped by THIS plan the button carries no `disabled` prop
- * in any state, but that is a fact about this plan's output, not a
- * permanent invariant: D-25 adds exactly one legitimate `disabled` term
- * (`disabled={eligibilityPending}`) and 34.13-11 (wave 7) wires it into
- * this same file, alongside the D-25 loading row. Do not read a future
- * `disabled` attribute here as a regression.
- *
- * This component is created, not mounted, by this plan -- the parent branch
- * that renders it is added by 34.13-12 in Wave 6. Nothing here is reachable
- * at runtime until then.
+ * this file. Plan 11 (D-25, wave 7) added exactly ONE legitimate `disabled`
+ * term -- `disabled={eligibilityPending}` on the footer Install button --
+ * the sole surviving piece of the retired D-12 busy contract, relocated
+ * from the origin control to this dialog's own footer. This is a PLANNED
+ * narrowing of 34.13-10's original "no disabled attribute in any state"
+ * claim, not a regression: see `__tests__/steamDialogSource.test.ts`'s own
+ * D-25 block for the inversion recorded in the test file itself.
  */
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faWarning } from '@fortawesome/free-solid-svg-icons'
@@ -96,10 +93,14 @@ interface Props {
   /** The parent's single Steam-library-targets IPC read (34.13-12), handed
    * down rather than re-fetched: the parent needs the library count to
    * compute `gating.libraryDropdown` in the first place, so a fetch here
-   * gated on that same field could never populate it. NOTE: 34.13-11 (wave
-   * 7) adds a THIRD prop, `eligibilityPending: boolean` -- not added here,
-   * and this prop set is not closed. */
+   * gated on that same field could never populate it. */
   steamLibraries: SteamDialogLibraryOption[]
+  /** Plan 11, D-25: true while `useSteamBottleEligibility`'s IPC round trip
+   * is in flight. The ONE surviving piece of the retired D-12 busy
+   * contract, relocated from the origin control to THIS dialog's own
+   * footer Install button. D-06 still holds alongside it -- this button is
+   * never gated on SIZE, and `getInstallInfo` is still never called. */
+  eligibilityPending: boolean
 }
 
 interface DiskSpaceInfo {
@@ -116,7 +117,8 @@ export default function SteamDialog({
   wineVersion,
   children,
   gating,
-  steamLibraries
+  steamLibraries,
+  eligibilityPending
 }: Props) {
   const { t } = useTranslation('gamepage')
   const { t: tGamelib } = useTranslation('gamelib')
@@ -284,7 +286,15 @@ export default function SteamDialog({
         )}
       </DialogContent>
       <DialogFooter>
-        <button className="button is-secondary" onClick={handleInstall}>
+        {/* Plan 11, D-25: the ONE legitimate `disabled` term on this
+            button -- relocated from the origin control (retired D-12) to
+            this dialog's own footer. D-06 still holds: never gated on
+            SIZE, `getInstallInfo` is still never called. */}
+        <button
+          className="button is-secondary"
+          onClick={handleInstall}
+          disabled={eligibilityPending}
+        >
           {t('button.install')}
         </button>
       </DialogFooter>
