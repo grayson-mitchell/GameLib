@@ -686,6 +686,8 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     it('isSteamBottleEligible invoke round-trips the verdict object and delegates the bare appName', async () => {
       jest.mocked(getSteamBottleEligibilityVerdict).mockResolvedValue({
         eligible: true,
+        hasWindowsDepot: false,
+        platformsCaptured: true,
         bottleName: 'GameLibSteam'
       })
 
@@ -736,9 +738,11 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     })
 
     it('Invariant B guard: neither channel resolves the UNPORTED_CHANNEL_MARKER', async () => {
-      jest
-        .mocked(getSteamBottleEligibilityVerdict)
-        .mockResolvedValue({ eligible: false })
+      jest.mocked(getSteamBottleEligibilityVerdict).mockResolvedValue({
+        eligible: false,
+        hasWindowsDepot: false,
+        platformsCaptured: false
+      })
       jest
         .mocked(persistInstallFormWineVersion)
         .mockResolvedValue({ status: 'error', error: 'invalid-payload' })

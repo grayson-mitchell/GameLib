@@ -58,6 +58,20 @@ export type SteamBottleConfig = {
 // channel is 34.13-07's edit to `src/common/types/ipc.ts`, not this plan's.
 export interface SteamBottleEligibilityVerdict {
   eligible: boolean
+  /** D-03 (34.14): the backend's `steamMetadataStore` read of
+   * `is_windows_native === true`, captured AFTER `checkBottleEligibility()`
+   * has already awaited `ensurePlatformsCaptured()`. MEANINGLESS on its own:
+   * this field must never be read without `platformsCaptured === true` also
+   * holding — see D-03's single-seam obligation, discharged by read order
+   * inside `resolveSteamSectionGating`. */
+  hasWindowsDepot: boolean
+  /** D-03 (34.14): whether the appdetails fetch actually landed. `false`
+   * covers offline, an errored fetch, AND the `METADATA_FETCH_TIMEOUT_MS`
+   * expiry — `ensurePlatformsCaptured()` returns unconditionally at its
+   * deadline, so without this field a timed-out probe is indistinguishable
+   * from a confirmed absent Windows depot, which is the exact defect Phase
+   * 34.14 exists to end. */
+  platformsCaptured: boolean
   wineVersion?: WineInstallation
   bottleName?: string
 }

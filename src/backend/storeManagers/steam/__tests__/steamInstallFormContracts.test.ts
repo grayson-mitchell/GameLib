@@ -188,14 +188,20 @@ describe('isSteamBottleEligible verdict shape', () => {
     )
   })
 
-  it('SteamBottleEligibilityVerdict is importable from common/types/steam and accepts { eligible: true } alone', () => {
-    const minimal: SteamBottleEligibilityVerdict = { eligible: true }
+  it('SteamBottleEligibilityVerdict requires eligible, hasWindowsDepot and platformsCaptured; wineVersion/bottleName stay optional', () => {
+    const minimal: SteamBottleEligibilityVerdict = {
+      eligible: true,
+      hasWindowsDepot: false,
+      platformsCaptured: false
+    }
     expect(minimal.eligible).toBe(true)
   })
 
-  it('documents that SteamBottleEligibilityVerdict carries eligible, wineVersion and bottleName (34.13 review A-07: the enforcing half is the compile pin below plus the source gate above)', () => {
+  it('documents that SteamBottleEligibilityVerdict carries eligible, hasWindowsDepot, platformsCaptured, wineVersion and bottleName (34.13 review A-07: the enforcing half is the compile pin below plus the source gate above)', () => {
     const full: SteamBottleEligibilityVerdict = {
       eligible: true,
+      hasWindowsDepot: true,
+      platformsCaptured: true,
       wineVersion: {
         bin: '/usr/bin/wine',
         name: 'GE-Proton',
@@ -219,7 +225,17 @@ describe('isSteamBottleEligible verdict shape', () => {
     const missingEligible: SteamBottleEligibilityVerdict = {}
     expect(missingEligible).toBeDefined()
 
-    const minimal: SteamBottleEligibilityVerdict = { eligible: false }
+    const minimal: SteamBottleEligibilityVerdict = {
+      eligible: false,
+      hasWindowsDepot: false,
+      platformsCaptured: false
+    }
     expect(minimal.eligible).toBe(false)
+  })
+
+  it('34.14 COMPILE PIN: hasWindowsDepot and platformsCaptured are REQUIRED — an optional pair would let a construction site silently reintroduce the undefined-vs-false collapse', () => {
+    // @ts-expect-error -- `hasWindowsDepot` and `platformsCaptured` are required
+    const missingDepotPair: SteamBottleEligibilityVerdict = { eligible: true }
+    expect(missingDepotPair).toBeDefined()
   })
 })

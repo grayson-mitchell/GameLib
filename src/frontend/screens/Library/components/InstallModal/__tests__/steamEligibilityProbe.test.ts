@@ -160,8 +160,16 @@ describe('shouldProbeEligibility / initialEligibilityState', () => {
 describe('applyEligibilityResponse / applyEligibilityFailure', () => {
   it('a resolved verdict for the current game ends the pending phase', () => {
     const pending: EligibilityState = { phase: 'pending', appName: '440' }
-    const trueVerdict: SteamBottleEligibilityVerdict = { eligible: true }
-    const falseVerdict: SteamBottleEligibilityVerdict = { eligible: false }
+    const trueVerdict: SteamBottleEligibilityVerdict = {
+      eligible: true,
+      hasWindowsDepot: false,
+      platformsCaptured: false
+    }
+    const falseVerdict: SteamBottleEligibilityVerdict = {
+      eligible: false,
+      hasWindowsDepot: false,
+      platformsCaptured: false
+    }
 
     const resolvedTrue = applyEligibilityResponse(pending, {
       appName: '440',
@@ -185,14 +193,14 @@ describe('applyEligibilityResponse / applyEligibilityFailure', () => {
 
     state = applyEligibilityResponse(state, {
       appName: '570',
-      verdict: { eligible: true }
+      verdict: { eligible: true, hasWindowsDepot: false, platformsCaptured: false }
     })
     expect(isEligibilityPending(state)).toBe(true)
     expect(state).not.toHaveProperty('bottleRequired')
 
     state = applyEligibilityResponse(state, {
       appName: '440',
-      verdict: { eligible: true }
+      verdict: { eligible: true, hasWindowsDepot: false, platformsCaptured: false }
     })
     expect(isEligibilityPending(state)).toBe(false)
     expect(state).toMatchObject({ bottleRequired: true })
