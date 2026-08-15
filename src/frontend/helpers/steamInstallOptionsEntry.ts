@@ -35,6 +35,14 @@ export interface SteamCardInstallOptionsState {
 export interface SteamSubMenuInstallOptionsState {
   runner: Runner
   isInstalled: boolean
+  /** 34.13 review WR-05. The card/submenu split above is justified by the
+   * submenu having no download-QUEUE concept and no installability
+   * vocabulary — it says nothing about delisted, and `gameInfo` (hence
+   * `is_delisted`) IS in scope at the submenu call site. A delisted Steam
+   * game is documented in `common/types.ts` as "confirmed unavailable on
+   * Steam … not activatable", so offering it an install-options door is
+   * offering a door to nothing. */
+  isDelisted: boolean
 }
 
 export function showSteamCardInstallOptions({
@@ -55,7 +63,8 @@ export function showSteamCardInstallOptions({
 
 export function showSteamSubMenuInstallOptions({
   runner,
-  isInstalled
+  isInstalled,
+  isDelisted
 }: SteamSubMenuInstallOptionsState): boolean {
-  return runner === 'steam' && !isInstalled
+  return runner === 'steam' && !isInstalled && !isDelisted
 }

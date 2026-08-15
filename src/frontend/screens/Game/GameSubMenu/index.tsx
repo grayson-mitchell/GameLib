@@ -330,7 +330,11 @@ export default function GamesSubmenu({
             GameSubMenu mounts this file for uninstalled games with no gate
             of its own, so this block is reachable, not dead code).
           */}
-          {showSteamSubMenuInstallOptions({ runner, isInstalled }) && (
+          {showSteamSubMenuInstallOptions({
+            runner,
+            isInstalled,
+            isDelisted: !!gameInfo.is_delisted
+          }) && (
             <button
               onClick={() => openSteamInstallOptions(appName, gameInfo)}
               className="link button is-text is-link buttonWithIcon"

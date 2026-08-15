@@ -120,7 +120,8 @@ describe('showSteamCardInstallOptions (D-27 row 3, D-28)', () => {
 
 const subMenuBaseState: SteamSubMenuInstallOptionsState = {
   runner: 'steam',
-  isInstalled: false
+  isInstalled: false,
+  isDelisted: false
 }
 
 describe('showSteamSubMenuInstallOptions (D-27 row 5, D-28)', () => {
@@ -146,6 +147,30 @@ describe('showSteamSubMenuInstallOptions (D-27 row 5, D-28)', () => {
     ).toBe(false)
   })
 
+  // 34.13 review WR-05: a delisted Steam game is "confirmed unavailable on
+  // Steam … not activatable" (common/types.ts). The submenu entry used to
+  // ignore `is_delisted` entirely even though `gameInfo` is in scope at its
+  // call site.
+  it('B3b: steam + isInstalled false + isDelisted true -> false', () => {
+    expect(
+      showSteamSubMenuInstallOptions({
+        ...subMenuBaseState,
+        isDelisted: true
+      })
+    ).toBe(false)
+  })
+
+  it('B3b-RED: the pre-fix predicate (runner && !isInstalled only) would have returned true for that same delisted state', () => {
+    // The known-bad implementation, written out so the discriminator is
+    // visible: this is what shipped, and it answers `true` for a game the
+    // fixed predicate correctly refuses.
+    const preFix = ({ runner, isInstalled }: { runner: string; isInstalled: boolean }) =>
+      runner === 'steam' && !isInstalled
+    const delistedState = { ...subMenuBaseState, isDelisted: true }
+    expect(preFix(delistedState)).toBe(true)
+    expect(showSteamSubMenuInstallOptions(delistedState)).toBe(false)
+  })
+
   it('B4: the two predicates are NOT the same function -- a state where the card is false and the submenu is true', () => {
     const state = {
       runner: 'steam' as const,
@@ -158,7 +183,8 @@ describe('showSteamSubMenuInstallOptions (D-27 row 5, D-28)', () => {
     expect(
       showSteamSubMenuInstallOptions({
         runner: state.runner,
-        isInstalled: state.isInstalled
+        isInstalled: state.isInstalled,
+        isDelisted: state.isDelisted
       })
     ).toBe(true)
   })
