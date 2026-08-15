@@ -72,8 +72,18 @@
 // The language picker sits on the same row as "Go to Library" (see
 // `.loginActions`), so it must not stretch to the full wrapper width the way
 // it does inside Settings.
+//
+// This MUST be a definite width, not `max-width`. SelectField paints its
+// arrow gutter -- the caret and the 1px divider left of it -- as background
+// gradients positioned from the right edge (`calc(100% - 40px)`, see
+// SelectField/index.css). A flex item with only `max-width` shrinks to fit
+// its text, so that 40px offset lands on top of the label instead of in the
+// gutter and the divider renders as a stray vertical line through the last
+// letter or two. 230px clears the widest label ("Português (Brasil)") plus
+// the 40px gutter.
 .loginPage .languageSelector {
-  max-width: 220px;
+  flex: 0 0 auto;
+  width: 230px;
   margin-block: 20px 10px;
 }
 
@@ -138,11 +148,15 @@
   color: var(--text-default);
 }
 
+// Now that the header holds only the centred icon (no "GameLib" heading),
+// the 40px `--message-padding` that separated heading text from the runner
+// tiles is oversized -- `--login-padding` matches the gap between the tiles
+// themselves.
 .runnerHeader {
   display: flex;
   justify-content: center;
   width: 100%;
-  padding-bottom: var(--message-padding);
+  padding-bottom: var(--login-padding);
 }
 
 .runnerHeaderIcon {
