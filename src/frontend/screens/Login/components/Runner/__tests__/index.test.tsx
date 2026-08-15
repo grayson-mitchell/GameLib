@@ -344,3 +344,86 @@ describe('Runner: deprecatedTile marker (quick task 260805-d62)', () => {
     ).toBeTruthy()
   })
 })
+
+function collectTextContent(node: ReactNode, out: string[] = []): string[] {
+  if (node === null || node === undefined || typeof node === 'boolean') {
+    return out
+  }
+  if (typeof node === 'string' || typeof node === 'number') {
+    out.push(String(node))
+    return out
+  }
+  if (Array.isArray(node)) {
+    node.forEach((child) => collectTextContent(child as ReactNode, out))
+    return out
+  }
+  if (typeof node === 'object' && 'type' in node) {
+    const element = node as ReactElement<PropsWithChildren>
+    if (element.props?.children !== undefined) {
+      collectTextContent(element.props.children, out)
+    }
+    return out
+  }
+  return out
+}
+
+describe('Runner: connected-state label (quick 260815-kt0)', () => {
+  it('logged in: an element with className including runnerConnected renders text "Connected"', () => {
+    const tree = mount(makeProps({ isLoggedIn: true }))
+    const connected = findByClassNamePart(tree, 'runnerConnected')!
+
+    expect(connected).toBeDefined()
+    expect(collectTextContent(connected.props.children).join('')).toBe(
+      'Connected'
+    )
+  })
+
+  it('logged in with an identity value passed through the soon-to-be-removed user slot: no element renders that identity anywhere in the tree', () => {
+    const tree = mount(makeProps({ isLoggedIn: true, user: 'Someone' }))
+    const allText = collectTextContent(tree).join('')
+
+    expect(allText).not.toContain('Someone')
+  })
+
+  it('logged in: the runnerConnected element is a descendant of an element whose className includes userData', () => {
+    const tree = mount(makeProps({ isLoggedIn: true }))
+    const userDataContainer = findByClassNamePart(tree, 'userData')!
+    const nestedConnected = collectElements(
+      userDataContainer.props.children
+    ).find((el) => {
+      const className = el.props?.className
+      return (
+        typeof className === 'string' &&
+        className.split(' ').includes('runnerConnected')
+      )
+    })
+
+    expect(userDataContainer).toBeDefined()
+    expect(nestedConnected).toBeDefined()
+  })
+
+  it('logged out: zero elements with className including runnerConnected or userData', () => {
+    const tree = mount(makeProps({ isLoggedIn: false }))
+
+    expect(findByClassNamePart(tree, 'runnerConnected')).toBeUndefined()
+    expect(findByClassNamePart(tree, 'userData')).toBeUndefined()
+  })
+
+  it('source text (localisation gate): index.tsx contains the gamelib:login.connected key and no bare JSX text node ">Connected<"', () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const fs = jest.requireActual<typeof import('fs')>('fs')
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const path = jest.requireActual<typeof import('path')>('path')
+    const source = fs.readFileSync(
+      path.join(__dirname, '../index.tsx'),
+      'utf-8'
+    )
+    const stripped = source
+      .split('\n')
+      .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
+      .join('\n')
+
+    expect(stripped).toContain('gamelib:login.connected')
+    expect(stripped).not.toMatch(/>Connected</)
+  })
+})

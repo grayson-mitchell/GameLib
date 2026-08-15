@@ -52,7 +52,7 @@
         "storeOther": "Other"
     },
     "login": {
-        "unknownUser": "Unknown"
+        "connected": "Connected"
     },
     "redeemKey": {
         "alreadyOwned": "",
