@@ -1363,7 +1363,7 @@ Plans: **14 plans, 8 waves** *(re-planned 2026-08-15 for D-21..D-29. `34.13-04` 
 **Requirements**: none minted yet — scope is carried by the verified mechanism below and by 34.13's `D-NN` decisions it must not break (notably D-02, D-17, D-19, D-23, D-25)
 **Depends on:** Phase 34.13
 **Must run BEFORE:** Phase 35 (Electron cutover)
-**Plans:** 2/5 plans executed
+**Plans:** 3/5 plans executed
 
 **Why this exists — a review finding that was mis-specified.** 34.13's code review filed **B-WR-06** (re-raise of B-WR-09) as a cosmetic gap: *"a reachable macOS gating combination renders one disabled control and nothing else"*, remedied by a 9th UI-SPEC row plus new copy. Investigation on 2026-08-16 confirmed the **symptom** and falsified the **cause**. B-WR-06 should be marked **superseded by 34.14**, not fixed as filed — shipping its copy would assert something false. Same failure shape as D-9o0-01 the same day: correct observation, wrong mechanism.
 
@@ -1388,7 +1388,7 @@ Plans: **14 plans, 8 waves** *(re-planned 2026-08-15 for D-21..D-29. `34.13-04` 
 Plans:
 - [x] 34.14-01-PLAN.md — Wave 1. Widen `SteamBottleEligibilityVerdict` with two required booleans and populate them in the ONE shared IPC handler body (D-02/D-03). DONE 2026-08-16 (34.14-01-SUMMARY.md).
 - [x] 34.14-02-PLAN.md — Wave 1. The pure gating fix: `'pending'` row mode, the D-03 read-order seam, `resolveDepotAvailability` (D-04 fail-open + D-05 seed/resolve), matrix expanded 96/8 rows → 144/10 with a Row 9/10 RED proof against unmodified HEAD.
-- [ ] 34.14-03-PLAN.md — Wave 2. Carry the depot pair through `EligibilityState`/`useSteamBottleEligibility`; correct the first stale "genuinely synchronous" doc-comment.
+- [x] 34.14-03-PLAN.md — Wave 2. Carry the depot pair through `EligibilityState`/`useSteamBottleEligibility`; correct the first stale "genuinely synchronous" doc-comment. DONE 2026-08-16 (34.14-03-SUMMARY.md).
 - [ ] 34.14-04-PLAN.md — Wave 3. Wire the composition root; correct the second stale doc-comment; lock the wiring with a new source gate and three source-derived known-bads.
 - [ ] 34.14-05-PLAN.md — Wave 4. Full-suite reconciliation + shipped-gate census + the BLOCKING D-08 UAT gate (both runtimes x network up/blocked).
 
