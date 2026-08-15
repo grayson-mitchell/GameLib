@@ -81,3 +81,40 @@ export function resolveSteamInstallPath(
   }
   return defaultSteamLibraryPath(libraries)
 }
+
+/**
+ * 34.13 review B-WR-04 — the FREE-SPACE PROBE SUBJECT, which is a different
+ * question from the WRITE TARGET above and was being answered differently by
+ * the dialog and the quick path.
+ *
+ * `startSteamQuickInstall` and `consoleSteamTarget.ts` both probe
+ * `target.steamappsDir`; this dialog's effect probed `selectedPath`, which is
+ * the library ROOT (`lib.path`). Those are different directories
+ * (`join(path, 'steamapps')` vs `path`), and `checkDiskSpace`'s `validPath`
+ * is a PER-DIRECTORY existence verdict. On a library whose root exists but
+ * whose `steamapps/` does not yet, the quick path degraded with
+ * `reason: 'library-missing'` while this dialog rendered a perfectly healthy
+ * free-space line for that same library — a self-contradicting UI.
+ *
+ * RESOLVED TOWARDS `steamappsDir`, deliberately, and this is a DEVIATION from
+ * the review's own suggestion that the dialog's `path` is "arguably right":
+ * `consoleSteamTarget.ts` records the `steamappsDir` choice as a threat
+ * control (T-34.13-15-02 — backend-enumerated and round-tripped unmodified,
+ * never renderer-composed) and `consoleSteamTarget.test.ts` B5 pins it. A
+ * review-fix pass should not silently invert a recorded threat control; the
+ * cheaper and safer way to make the two sites agree is to move THIS one onto
+ * the already-pinned subject. Note `free` is a per-VOLUME figure and is
+ * identical either way — only the `validPath` verdict differs, so the
+ * behavioural delta is that the free-space line is suppressed exactly when
+ * the quick path would have degraded, which is the agreement being bought.
+ *
+ * Falls back to the selection itself if it matches no known library, so the
+ * probe subject is never fabricated.
+ */
+export function resolveFreeSpaceProbeSubject(
+  selectedPath: string,
+  libraries: SteamDialogLibraryOption[]
+): string {
+  const match = libraries.find((lib) => lib.path === selectedPath)
+  return match?.steamappsDir ?? selectedPath
+}

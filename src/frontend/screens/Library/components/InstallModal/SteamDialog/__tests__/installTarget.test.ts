@@ -1,6 +1,7 @@
 import {
   SteamDialogLibraryOption,
   defaultSteamLibraryPath,
+  resolveFreeSpaceProbeSubject,
   resolveSteamInstallPath
 } from '../installTarget'
 
@@ -127,11 +128,7 @@ describe('resolveSteamInstallPath -- T-34.13-10-01 destination containment', () 
     // Deliberately the non-primary entry -- proves this is a containment
     // check, not a "always return the default" shortcut.
     expect(
-      resolveSteamInstallPath(
-        '/mnt/backup/SteamLibrary',
-        threeLibraries,
-        true
-      )
+      resolveSteamInstallPath('/mnt/backup/SteamLibrary', threeLibraries, true)
     ).toBe('/mnt/backup/SteamLibrary')
   })
 
@@ -173,21 +170,19 @@ describe('the containment gate is not vacuous', () => {
   }
 
   it('returns the hostile "/etc" value verbatim when libraryVisible is true (the real implementation never does)', () => {
-    expect(resolveWithoutContainment('/etc', threeLibraries, true)).toBe(
-      '/etc'
-    )
+    expect(resolveWithoutContainment('/etc', threeLibraries, true)).toBe('/etc')
     expect(resolveSteamInstallPath('/etc', threeLibraries, true)).not.toBe(
       '/etc'
     )
   })
 
   it('returns the hostile "../../etc" value verbatim when libraryVisible is true (the real implementation never does)', () => {
-    expect(
-      resolveWithoutContainment('../../etc', threeLibraries, true)
-    ).toBe('../../etc')
-    expect(
-      resolveSteamInstallPath('../../etc', threeLibraries, true)
-    ).not.toBe('../../etc')
+    expect(resolveWithoutContainment('../../etc', threeLibraries, true)).toBe(
+      '../../etc'
+    )
+    expect(resolveSteamInstallPath('../../etc', threeLibraries, true)).not.toBe(
+      '../../etc'
+    )
   })
 
   it('fails the SAME containment invariant block 3 proves the real implementation satisfies, run through the identical shared helper and case table', () => {
@@ -202,5 +197,57 @@ describe('the containment gate is not vacuous', () => {
     expect(() =>
       assertContainment(resolveWithoutContainment, threeLibraries)
     ).toThrow()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 34.13 review B-WR-04 — probe subject vs write target.
+//
+// The dialog probed the library ROOT while `startSteamQuickInstall` and
+// `consoleSteamTarget.ts` probed `steamappsDir`. `checkDiskSpace`'s
+// `validPath` is a PER-DIRECTORY existence verdict, so on a library whose
+// root exists but whose `steamapps/` does not, the quick path degraded with
+// `library-missing` while the dialog rendered a healthy free-space line for
+// the same library.
+// ---------------------------------------------------------------------------
+describe('resolveFreeSpaceProbeSubject (34.13 review B-WR-04)', () => {
+  it('resolves a known library selection to its steamappsDir, not its root', () => {
+    const selected = threeLibraries[0].path
+    expect(resolveFreeSpaceProbeSubject(selected, threeLibraries)).toBe(
+      threeLibraries[0].steamappsDir
+    )
+    expect(resolveFreeSpaceProbeSubject(selected, threeLibraries)).not.toBe(
+      selected
+    )
+  })
+
+  it('DISCRIMINATOR: agrees with the quick path for EVERY library in the list', () => {
+    // The quick path's subject is `resolveQuickInstallTarget(libs).steamappsDir`.
+    // Whichever library the dialog's dropdown selects, the two must name the
+    // same directory -- that agreement IS the finding.
+    for (const lib of threeLibraries) {
+      expect(resolveFreeSpaceProbeSubject(lib.path, threeLibraries)).toBe(
+        lib.steamappsDir
+      )
+    }
+  })
+
+  it('never fabricates a subject: an unrecognised selection is returned verbatim', () => {
+    // Deliberately NOT joined with "steamapps" -- composing a path in the
+    // renderer is what T-34.13-15-02 forbids. An unknown selection simply
+    // probes itself and the containment gate above owns the write target.
+    expect(resolveFreeSpaceProbeSubject('/nope', threeLibraries)).toBe('/nope')
+    expect(resolveFreeSpaceProbeSubject('', threeLibraries)).toBe('')
+  })
+
+  it('RED against the pre-fix behaviour: the old subject was the root, which differs for every library', () => {
+    for (const lib of threeLibraries) {
+      // The pre-fix code passed `selectedPath` straight through.
+      const preFixSubject = lib.path
+      expect(preFixSubject).not.toBe(lib.steamappsDir)
+      expect(resolveFreeSpaceProbeSubject(lib.path, threeLibraries)).not.toBe(
+        preFixSubject
+      )
+    }
   })
 })

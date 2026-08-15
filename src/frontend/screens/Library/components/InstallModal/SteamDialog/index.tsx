@@ -64,6 +64,7 @@ import type { SteamSectionGatingVerdict } from '../steamSectionGating'
 import {
   SteamDialogLibraryOption,
   defaultSteamLibraryPath,
+  resolveFreeSpaceProbeSubject,
   resolveSteamInstallPath
 } from './installTarget'
 import { isBottleCapableEngine } from '../WineSelector/engineFilter'
@@ -195,8 +196,15 @@ export default function SteamDialog({
     // number attached to the drive the user is about to install onto.
     setDiskSpace(null)
     const getSpace = async () => {
+      // 34.13 review B-WR-04: probe the SAME directory the quick path and
+      // Console Mode probe (`steamappsDir`), not the library root. Probing
+      // different directories for the same library let this dialog render a
+      // healthy free-space line for a library `startSteamQuickInstall` had
+      // just degraded as `library-missing`.
       const { message, validPath, validFlatpakPath } =
-        await window.api.checkDiskSpace(selectedPath)
+        await window.api.checkDiskSpace(
+          resolveFreeSpaceProbeSubject(selectedPath, steamLibraries)
+        )
       if (!cancelled) {
         setDiskSpace({ message, validPath, validFlatpakPath })
       }
@@ -213,7 +221,11 @@ export default function SteamDialog({
     return () => {
       cancelled = true
     }
-  }, [gating.freeSpaceLine, selectedPath])
+    // `steamLibraries` added by 34.13 review B-WR-04 -- the effect now reads
+    // it to resolve the probe subject, so a list that arrives after the
+    // first render must re-run the probe against the real `steamappsDir`
+    // rather than leaving a verdict computed from the root fallback.
+  }, [gating.freeSpaceLine, selectedPath, steamLibraries])
 
   const handleInstall = useCallback(async () => {
     // WR-13: re-entrancy guard. `handleInstall` awaits
