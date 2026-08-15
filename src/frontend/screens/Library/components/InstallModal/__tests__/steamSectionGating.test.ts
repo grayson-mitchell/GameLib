@@ -28,17 +28,7 @@ import {
 //      Task 3's saboteur suite depends on to name which rows a defect
 //      breaks.
 
-type RowLabel =
-  | '1'
-  | '2'
-  | '3'
-  | '4'
-  | '5'
-  | '6'
-  | '7'
-  | '8'
-  | '9'
-  | '10'
+type RowLabel = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10'
 
 const ROW_LABELS: RowLabel[] = [
   '1',
@@ -325,7 +315,8 @@ function buildCombinations(): SteamSectionGatingInput[] {
   const combinations: SteamSectionGatingInput[] = []
 
   for (const hostPlatform of hostPlatforms) {
-    const bottleRequiredValues = hostPlatform === 'darwin' ? [true, false] : [false]
+    const bottleRequiredValues =
+      hostPlatform === 'darwin' ? [true, false] : [false]
     for (const bottleRequired of bottleRequiredValues) {
       for (const nativeInstallOn of nativeInstallOnValues) {
         for (const libraryCount of libraryCounts) {
@@ -577,7 +568,8 @@ describe('the matrix harness rejects known-bad gating functions', () => {
       const real = resolveSteamSectionGating(input)
       // DEFECT: >= 1 instead of > 1 -- a single library already counts as
       // "a choice."
-      const sabotagedHasChoice = input.nativeInstallOn && input.libraryCount >= 1
+      const sabotagedHasChoice =
+        input.nativeInstallOn && input.libraryCount >= 1
       const libraryDropdown = !real.wineSection && sabotagedHasChoice
       return { ...real, libraryDropdown }
     }
@@ -861,7 +853,7 @@ describe('defensive normalisation (cases the matrix does not enumerate)', () => 
     expect(choiceCase.contentLightNotice).toBe(false)
   })
 
-  it('34.14 D-03: a stale/meaningless depot flag (hasWindowsDepot: true, depotSignalResolved: false) can never unlock the Windows option -- this combination is EXCLUDED from the 144-combination sweep (it cannot occur in practice) but must still fail closed to \'pending\', never \'selectable\'', () => {
+  it("34.14 D-03: a stale/meaningless depot flag (hasWindowsDepot: true, depotSignalResolved: false) can never unlock the Windows option -- this combination is EXCLUDED from the 144-combination sweep (it cannot occur in practice) but must still fail closed to 'pending', never 'selectable'", () => {
     const verdict = resolveSteamSectionGating({
       hostPlatform: 'darwin',
       bottleRequired: false,
