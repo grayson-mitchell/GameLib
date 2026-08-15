@@ -38,23 +38,17 @@ jest.mock('react', () => ({
 // measure what the app renders. `require` (not a module-scope import)
 // because jest hoists `jest.mock` factories above imports.
 jest.mock('react-i18next', () => {
-  const gamepage = jest.requireActual<Record<string, unknown>>(
-    '../../../../../../../public/locales/en/gamepage.json'
-  )
-  const lookup = (key: string): string | undefined =>
-    key.split('.').reduce<unknown>((node, part) => {
-      if (node && typeof node === 'object') {
-        return (node as Record<string, unknown>)[part]
-      }
-      return undefined
-    }, gamepage) as string | undefined
-
-  return {
-    useTranslation: () => ({
-      t: (key: string, defaultValue: string): string =>
-        lookup(key) ?? defaultValue
-    })
-  }
+  // 34.13 review C-21: the shared faithful mock, which is namespace-AWARE.
+  // The previous inline copy resolved `gamepage.json` only, so
+  // `t('gamelib:steam.install.withOptionsLabel', ...)` -- the one key in this
+  // component that crosses namespaces -- silently fell through to its inline
+  // default, falsifying the mock's own claim to reproduce i18next's real
+  // precedence. `jest.requireActual` because jest hoists this factory above
+  // every import.
+  const { faithfulReactI18next } = jest.requireActual<
+    typeof import('./faithfulTranslate')
+  >('./faithfulTranslate')
+  return faithfulReactI18next()
 })
 
 jest.mock('frontend/hooks/useSetting', () => ({
