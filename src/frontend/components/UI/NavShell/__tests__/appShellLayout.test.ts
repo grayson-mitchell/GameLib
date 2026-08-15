@@ -666,4 +666,22 @@ describe('260815-j24 -- navbar brand icon removed, tab strip flush to the tier-2
       /padding:\s*var\(--space-xs\)\s+var\(--space-md\)\s*;/
     )
   })
+
+  it('Test E: --navbar-height is 42px and is declared exactly once', () => {
+    // Mirrors shellTokens.test.ts's exactly-once idiom. 42px is the
+    // arithmetic result of navbarHeight - 1 (border) - 37 (tab min-height) +
+    // 1 (top offset) = 5px visible band above the tabs (F5).
+    const source = readStripped(NAVSHELL_SCSS)
+    const declarationPattern = /--navbar-height:/g
+    const valuePattern = /--navbar-height:\s*42px\s*;/g
+    expect(source.match(declarationPattern)?.length ?? 0).toBe(1)
+    expect(source.match(valuePattern)?.length ?? 0).toBe(1)
+  })
+
+  it('SANITY (Test F): the --navbar-height check above fails against the pre-change 56px value -- proves it is not vacuously true', () => {
+    // The pre-change value is the correct known-bad input, exactly as
+    // shellTokens.test.ts:93-98 does for the traffic-light retune.
+    const preChangeFixture = '--navbar-height: 56px;'
+    expect(preChangeFixture).not.toMatch(/--navbar-height:\s*42px\s*;/)
+  })
 })
