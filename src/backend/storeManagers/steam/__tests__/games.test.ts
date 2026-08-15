@@ -2898,6 +2898,121 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     // path — this is byte-identical to B3's outcome.
     assertExactlyOneRoute('bottle-dispatch', terminals)
   })
+
+  // ── Containment: a hostile or malformed override cannot reach the bottle ─
+
+  it('F4: Deferred Idea — no proven Windows depot (is_windows_native: false) falls through, logged', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true,
+      is_windows_native: false
+    })
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    const { logWarning } = jest.requireMock('backend/logger')
+
+    const game = new SteamGame(APP_ID)
+    const terminals = spyOnAllTerminals(game)
+    await game.install(argsWith({ steamForceWindowsViaBottle: true }))
+
+    assertExactlyOneRoute('native-protocol', terminals)
+    expect(logWarning).toHaveBeenCalled()
+  })
+
+  it('F5: Deferred Idea — never-captured depot signal (is_windows_native absent) falls through', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true
+      // is_windows_native deliberately absent — the pre-34.13 cache-entry
+      // shape every existing user has on upgrade. undefined and false are
+      // distinct upgrade realities, kept as separate specs (F4/F5).
+    })
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+
+    const game = new SteamGame(APP_ID)
+    const terminals = spyOnAllTerminals(game)
+    await game.install(argsWith({ steamForceWindowsViaBottle: true }))
+
+    assertExactlyOneRoute('native-protocol', terminals)
+  })
+
+  it('F6: host containment — non-mac hosts (Linux and Windows) never reach the bottle even with a proven depot + override', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true,
+      is_windows_native: true
+    })
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+
+    // Pass 1: Linux host.
+    envMock.isMac = false
+    envMock.isLinux = true
+    envMock.isWindows = false
+    let game = new SteamGame(APP_ID)
+    let terminals = spyOnAllTerminals(game)
+    await game.install(argsWith({ steamForceWindowsViaBottle: true }))
+    assertExactlyOneRoute('native-protocol', terminals)
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+
+    // Pass 2: Windows host — both non-mac hosts covered, not one assumed
+    // from the other.
+    envMock.isMac = false
+    envMock.isLinux = false
+    envMock.isWindows = true
+    game = new SteamGame(APP_ID)
+    terminals = spyOnAllTerminals(game)
+    await game.install(argsWith({ steamForceWindowsViaBottle: true }))
+    assertExactlyOneRoute('native-protocol', terminals)
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+  })
+
+  it('F7: value contract — an explicit false override is byte-identical to B1 (only === true has any effect)', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true,
+      is_windows_native: true
+    })
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+
+    const game = new SteamGame(APP_ID)
+    const terminals = spyOnAllTerminals(game)
+    await game.install(argsWith({ steamForceWindowsViaBottle: false }))
+
+    assertExactlyOneRoute('native-protocol', terminals)
+  })
+
+  it('F9: bridge non-interaction — a forced install never enters the Phase 24 bridge even when allowlisted', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true,
+      is_windows_native: true
+    })
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+    // isBridgeEligible() composes isBottleEligible(), which stays false for
+    // a forced mac-native game — so the bridge branch is structurally
+    // unreachable from the forced path even for an allowlisted title. This
+    // is deliberate, not an oversight: the allowlist is curated for
+    // confirmed-not-native titles and the bridge spawns a separate process.
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const terminals = spyOnAllTerminals(game)
+    await game.install(argsWith({ steamForceWindowsViaBottle: true }))
+
+    assertExactlyOneRoute('bottle-dispatch', terminals)
+    expect(terminals.installBridgeGame).not.toHaveBeenCalled()
+  })
 })
 
 // ── Phase 17 Plan 09 (MACSTEAM-04 gap closure): ensurePlatformsCaptured() ────
