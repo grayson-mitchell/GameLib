@@ -26,8 +26,8 @@ export default function FilterStoreFacet() {
   } = useContext(LibraryContext)
 
   // D3: the header badge's number comes from the DESCRIPTOR list, never
-  // from `storeFacet.length`. The two agree today, but the descriptor list
-  // is the declared single source of truth for what is active (34.11 D-26)
+  // from the length of this group's own facet array. The two agree today,
+  // but the descriptor list is the declared source of truth (34.11 D-26)
   // and is what the chip row renders, so counting it is what makes a
   // header-vs-chips disagreement unrepresentable rather than merely absent.
   const selectedCount = countDescriptorsOfKind(activeFilterDescriptors, [
