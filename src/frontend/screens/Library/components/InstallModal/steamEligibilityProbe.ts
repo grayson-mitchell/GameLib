@@ -214,7 +214,15 @@ export function useSteamBottleEligibility({
   }
 
   useEffect(() => {
-    if (!isEligibilityPending(state)) {
+    // WR-15: this used to read `isEligibilityPending(state)` while `state`
+    // was absent from the dep array below. It happened to be correct only
+    // because the render-phase re-seed above guarantees a fresh closure --
+    // a load-bearing invariant with no comment and no test, and exactly the
+    // shape ESLint flagged. `shouldProbeEligibility` is the SAME predicate
+    // `initialEligibilityState` uses to decide `pending` in the first
+    // place, so this is equivalent by construction rather than by timing,
+    // needs no `state` dependency, and cannot go stale.
+    if (!shouldProbeEligibility({ platform, runner, action })) {
       return
     }
     let cancelled = false

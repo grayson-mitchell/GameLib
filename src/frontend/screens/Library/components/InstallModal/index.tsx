@@ -257,12 +257,18 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
         nativeInstallOn: steamNativeInstallOn,
         libraryCount: steamLibraries.length
       }),
+    // WR-15: `isSteamManagedApp` was listed but never referenced by the memo
+    // body -- an unnecessary dependency ESLint flagged. Removed.
+    // `steamNativeInstallOn` IS referenced (it replaced the inline
+    // `steamLibraries.length > 0` in WR-04) and is therefore listed; it is
+    // derived from `steamLibraries`, which stays listed for
+    // `libraryCount`.
     [
       platform,
       platformToInstall,
       hasWindowsDepot,
       steamLibraries,
-      isSteamManagedApp,
+      steamNativeInstallOn,
       eligibility.bottleRequired
     ]
   )
@@ -317,15 +323,18 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
         const newWineList: WineInstallation[] =
           await window.api.getAlternativeWine()
         setWineVersionList(newWineList)
-        if (wineVersion?.bin) {
-          if (
-            !newWineList.some(
-              (newWine) => wineVersion && newWine.bin === wineVersion.bin
-            )
-          ) {
-            setWineVersion(undefined)
-          }
-        }
+        // WR-15: read the CURRENT selection through the functional setState
+        // form rather than closing over `wineVersion`. Adding `wineVersion`
+        // to this effect's dep array (ESLint's literal suggestion) would
+        // re-fire the `getAlternativeWine` IPC round trip on every engine
+        // selection, and the `setWineVersion(undefined)` below would feed
+        // straight back into that same dep -- a self-retriggering effect.
+        // The updater form has neither problem and needs no dep at all.
+        setWineVersion((current) =>
+          current?.bin && !newWineList.some((w) => w.bin === current.bin)
+            ? undefined
+            : current
+        )
       }
       // WR-03: a rejected getAlternativeWine leaves the engine list empty,
       // which the selector already renders as a disabled dropdown -- but a
