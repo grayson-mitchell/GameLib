@@ -1356,6 +1356,38 @@ Plans: **14 plans, 8 waves** *(re-planned 2026-08-15 for D-21..D-29. `34.13-04` 
 - New IPC must be registered on **both** Electron `main.ts` and the Tauri sidecar, and typed through the preload seam.
 - Every new user-facing string needs a `gamelib:` key; `pnpm lint-translations:gamelib` must stay green.
 
+### Phase 34.14: Steam platform-row depot signal — distinguish 'no Windows build' from 'metadata not captured' (INSERTED)
+
+**Goal:** On macOS, the Steam "Install with options…" dialog stops silently withholding the Windows/wine option from games that have a Windows build. The install-modal gating layer learns the difference between *"this game has no Windows depot"* and *"we have not fetched the depot signal yet"*, and renders the second as a pending platform row rather than as a settled macOS-only verdict.
+
+**Requirements**: none minted yet — scope is carried by the verified mechanism below and by 34.13's `D-NN` decisions it must not break (notably D-02, D-17, D-19, D-23, D-25)
+**Depends on:** Phase 34.13
+**Must run BEFORE:** Phase 35 (Electron cutover)
+**Plans:** 0 plans (run `/gsd-plan-phase 34.14`)
+
+**Why this exists — a review finding that was mis-specified.** 34.13's code review filed **B-WR-06** (re-raise of B-WR-09) as a cosmetic gap: *"a reachable macOS gating combination renders one disabled control and nothing else"*, remedied by a 9th UI-SPEC row plus new copy. Investigation on 2026-08-16 confirmed the **symptom** and falsified the **cause**. B-WR-06 should be marked **superseded by 34.14**, not fixed as filed — shipping its copy would assert something false. Same failure shape as D-9o0-01 the same day: correct observation, wrong mechanism.
+
+**Verified mechanism (each link checked against HEAD, not inferred):**
+1. `hasSteamWindowsDepot` (`InstallModal/steamPlatformRow.ts:54`) is `gameInfo?.is_windows_native === true` — deliberately default-deny; `steamPlatformRow.ts:42` explicitly rejects the `!== false` form.
+2. `is_windows_native` is written **only** after a successful Steam `appdetails` fetch (`storeManagers/steam/games.ts:647`), stamped `platformsCaptured: true`. `getGameInfo()` (`games.ts:525-545`) returns the *uncaptured* value immediately and fires `fetchMetadataIfNeeded()` fire-and-forget.
+3. An uncaptured game therefore routes to `platformRow: 'readonly-macos'` (`steamSectionGating.ts:190-194`), which drops the Windows entry from the picker (`steamPlatformRow.ts:103`). The option is **withheld**, not merely unexplained.
+4. The dialog **cannot recover while open.** `InstallGameWrapper` (`InstallModal/index.tsx:642-655`) subscribes to the store reactively, but `gameInfo` has exactly three writers — `openSteamInstallOptions` (`InstallGameModal.ts:293`), `openInstallGameModal` (`:326`), `closeInstallGameModal` (`:336`) — and is written **only at open time**. A fetch landing mid-dialog is never seen; the user must close and reopen, with nothing on screen saying so. Offline or a failed `appdetails` call makes it persist.
+
+**Operator domain constraint (locked).** Mac-only Steam games are effectively a null set — essentially every macOS Steam game also ships a Windows build, ported or dual-developed. So `readonly-macos` is in practice a **synonym for "metadata not loaded yet"**, and any copy asserting *"this game only has a macOS build"* would read as false nearly every time it rendered.
+
+**Scope:**
+- (a) Thread the already-existing `platformsCaptured` signal into the install-modal gating input so "no Windows build" and "not yet captured" stop collapsing into one boolean. Precedent already in-repo: `AppleWikiInfo.tsx:67` gates on `steamPlatformsCaptured === true` for this same reason.
+- (b) Render the not-captured case as a **pending** platform row, reusing the D-25 eligibility-pending pattern this dialog already has — not as macOS-only.
+- (c) Consider letting the open dialog's `gameInfo` snapshot refresh when the fetch lands. Weigh carefully: `closeInstallGameModal`'s own comment records that stale cross-game state has already bitten this store once.
+- (d) Deliberately write **no** new content-light copy for a genuinely mac-only game. Per the domain constraint that branch is near-dead; a sentence for it would be dead weight that reads as false whenever it appeared.
+
+**Affected route:** Steam **"Install with options…" only.** Per D-23 plain Install short-circuits to quick install (`openInstallGameModal:321-324`); the options dialog is reached only via `openSteamInstallOptions`.
+
+**Needs a UAT gate** — this is a functional gap in 34.13's headline feature, not a review nit. The cold-cache window is not reproducible on demand from a warm library, so the gate must specify how to force an uncaptured state.
+
+Plans:
+- [ ] TBD (run `/gsd-plan-phase 34.14` to break down)
+
 ### Phase 34.1: Tauri IPC re-plumb slice 4 — app shell and window chrome (INSERTED)
 
 **Goal:** Port the **app shell and window chrome** IPC cluster (**33 channels** — `callTool` reassigned to Phase 34.5 by D-14) onto the Tauri build: window state and controls (minimize/maximize/unmaximize/close/fullscreen/frameless), zoom factor, title-bar overlay, tray colour, About window, language switching, custom themes/CSS, app version + changelog + releases, connectivity signal, gamepad input, and quit/lock/unlock. Establishes a **third port kind** — `renderer-side (Tauri JS)` — for window chrome (D-01/D-02), and is the **first slice to modify `src/backend/main.ts`** (D-07 body extraction), so the additive/reversible invariant becomes BEHAVIORAL rather than textual: `npm start` and `pnpm tauri:dev` must both still work.
