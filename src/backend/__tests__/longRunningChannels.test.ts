@@ -27,6 +27,13 @@ import {
   stripSourceComments,
   stripTrailingLineComment
 } from '../testUtils/stripSourceComments'
+import {
+  findUnbalancedQuoteLines,
+  joinContinuedLogicalLines,
+  stripRustCharLiterals,
+  stripRustEscapes,
+  stripRustRawStrings
+} from '../testUtils/rustQuoteBalance'
 
 const MAIN_RS_PATH = join(
   __dirname,
@@ -145,90 +152,6 @@ function stripRustLineComments(source: string): string {
     .filter((line) => !line.trim().startsWith('//'))
     .map(stripTrailingLineComment)
     .join('\n')
-}
-
-/**
- * Removes Rust CHAR literals (`'a'`, `'"'`, `'\''`, `'\\'`) from `source`.
- *
- * The WR-08 quote-balance guards below count `"` occurrences to detect a string literal that the
- * comment stripper cut in half. A char literal holding a double-quote — `value.ends_with('"')`,
- * which `main.rs`'s `#[cfg(test)]` module uses to assert `GAMELIB_SHELL_EXE` is never quoted —
- * contributes exactly one `"` to its line and reads as "unbalanced" to a naive count, even though
- * nothing was truncated. Normalising char literals away keeps the guard measuring the property it
- * actually cares about (truncated STRING literals) instead of tripping on valid Rust.
- *
- * The pattern deliberately requires a closing `'` immediately after one char or escape, so Rust
- * lifetimes (`'static`, `'a,`) are left alone.
- */
-function stripRustCharLiterals(source: string): string {
-  return source.replace(/'(?:\\.|[^\\'])'/g, '')
-}
-
-/**
- * Removes Rust RAW string literals (`r"..."`, `r#"..."#`, `r##"..."##`, ...) from `source`.
- *
- * The WR-08 guards above measure ONE property: did the comment stripper cut an ORDINARY string
- * literal in half? A raw string is not that — it legitimately spans many lines, so its opening
- * delimiter (e.g. `r#"`) and closing delimiter (e.g. `"#;`) each carry exactly one bare `"` on
- * their own line even though nothing was truncated. `main.rs`'s
- * `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT: &str = r#"..."#` (commit `88c2043cc`) is exactly this case,
- * and without this pass its opener/closer lines read as "unbalanced" — a false positive in the
- * normalizer, not a real defect in the source.
- *
- * The `r` MUST sit at start-of-string or be preceded by a non-identifier character
- * (`[^A-Za-z0-9_]`). This is not defensive hedging: 14 lines in `main.rs` end an ORDINARY string
- * literal with the letter `r` — `"repair",`, `const KEYRING_SERVICE: &str =
- * "com.gamelib.launcher";`, `.unwrap_or("sidecar error")`, and friends. Without the boundary
- * check, the pattern would match the `r"` inside `"repair"` and delete everything up to the next
- * quote — real source, potentially including `LONG_RUNNING_CHANNELS` members. The boundary
- * character is re-emitted, never swallowed.
- *
- * The hash count of the closing delimiter must match the opener EXACTLY (`\3` backreferences the
- * captured hashes), so an `r##"..."##` body containing a `"#` sequence is not terminated early.
- *
- * The replacement strips every NON-NEWLINE character from the matched literal rather than
- * deleting it outright, so the line count is preserved. The per-line WR-08 guard reports `index`
- * values to make a real failure diagnosable; collapsing a 332-line literal to nothing would shift
- * every subsequent index and destroy that diagnosability.
- *
- * Accepted limitation (same register as `parseMsConstantFromSource`'s caveat below): this is a
- * narrow normalizer for trusted first-party source, not a Rust lexer. An `r#"` sequence
- * appearing INSIDE an ordinary string literal would be mis-detected. That failure mode is loud —
- * it unbalances quotes and the guard goes red — not silent.
- */
-function stripRustRawStrings(source: string): string {
-  return source.replace(
-    /(^|[^A-Za-z0-9_])(r(#*)"[\s\S]*?"\3)/g,
-    (_match, boundary: string, literal: string) =>
-      boundary + literal.replace(/[^\n]/g, '')
-  )
-}
-
-/**
- * Removes Rust ESCAPE SEQUENCES (`\"`, `\\`, `\n`, `\'`, ...) from `source`.
- *
- * Same class of false positive as the two normalizers above, third variant. The WR-08 guards count
- * bare `"` occurrences; an ESCAPED quote inside an ordinary string literal is not a delimiter, but
- * a naive count treats it as one. `main.rs`'s F-34.4.2-12 pin carries the canonical case —
- * `trimmed.ends_with("\" => {")` counts three `"` and reads as "unbalanced" even though the line is
- * perfectly balanced Rust. Without this pass the guard reports a defect in correct source.
- *
- * Removing the whole two-character escape (`\\.`) rather than just `\"` is what makes the ordering
- * safe: a literal backslash is written `\\`, so in `"\\"` the regex consumes the `\\` pair FIRST
- * (left-to-right) and leaves `""` balanced. Matching `\"` alone would instead consume the closing
- * delimiter of that same literal and manufacture the very imbalance this pass exists to remove.
- *
- * `.` deliberately does NOT match a newline, so a `\`-continued multi-line string literal keeps its
- * trailing backslash and its opening/closing lines still read as odd. That shape is a REAL finding
- * the guard is meant to report (it is indistinguishable from a stripper-truncated literal), so this
- * pass must not launder it away.
- *
- * MUST run after `stripRustRawStrings` — a raw string's body may contain backslashes that are not
- * escapes at all (`r"C:\path\n"`), and eating them there would corrupt the very text the raw-string
- * pass is careful to blank out while preserving line counts.
- */
-function stripRustEscapes(source: string): string {
-  return source.replace(/\\./g, '')
 }
 
 /**
@@ -440,6 +363,76 @@ describe('stripper integrity (WR-08)', () => {
     // Reporting the full list of unbalanced lines (not just a boolean) makes a future failure
     // diagnosable at a glance rather than requiring a re-run with extra logging.
     expect(unbalancedLines).toEqual([])
+  })
+
+  // Discriminator battery for `testUtils/rustQuoteBalance`'s logical-line joiner (quick task
+  // 260816-a5o). The guard above used to count `"` per PHYSICAL line, so `main.rs`'s
+  // `\`-continued `app_hide` no-op message (3381-3383) reported its opening AND closing lines as
+  // unbalanced — a false positive on legitimate Rust, and the SECOND one the per-line premise
+  // produced (`29e12621f` was the first). These six pin that removing the premise did not also
+  // remove the guard's ability to find a REAL truncation.
+  test('joiner: the real file is clean AND still contains the `\\`-continued literal the joiner exists for (a vacuous pass would mean the fixture-of-record vanished)', () => {
+    const continuedPhysicalLines = loadMainRsCode()
+      .split('\n')
+      .filter((line) => line.endsWith('\\')).length
+    expect({
+      unbalanced: findUnbalancedQuoteLines(loadMainRsCode()),
+      hasContinuation: continuedPhysicalLines > 0
+    }).toEqual({ unbalanced: [], hasContinuation: true })
+  })
+
+  test('joiner: a plain unterminated literal is STILL reported', () => {
+    expect(findUnbalancedQuoteLines('const BROKEN: &str = "unterminated;')).toEqual(
+      [
+        {
+          index: 0,
+          line: 'const BROKEN: &str = "unterminated;',
+          quoteCount: 1
+        }
+      ]
+    )
+  })
+
+  test('joiner: a `\\`-continued literal that IS properly closed reads as balanced (this is the app_hide shape)', () => {
+    const source = ['let s = "a \\', '   b";'].join('\n')
+    expect(findUnbalancedQuoteLines(source)).toEqual([])
+  })
+
+  test('joiner: a `\\`-continued literal that NEVER closes is STILL reported — the fix must not degenerate into "stop checking"', () => {
+    // The trailing backslash on the FINAL physical line must terminate the walk rather than read
+    // past the end, leaving the joined logical line odd.
+    const source = ['let s = "a \\', '   b;'].join('\n')
+    expect(
+      findUnbalancedQuoteLines(source).map(({ index, quoteCount }) => ({
+        index,
+        quoteCount
+      }))
+    ).toEqual([{ index: 0, quoteCount: 1 }])
+  })
+
+  test('joiner: ORDERING PROOF — stripRustEscapes must run BEFORE the join, so an escaped `\\\\` at end-of-line is NOT read as a continuation', () => {
+    // Direct analogue of the `\\.`-vs-`\\"` ordering proof above, same class of reason. `\\\\` is an
+    // ESCAPED BACKSLASH, not a line continuation: `stripRustEscapes` consumes it as a pair and
+    // leaves no trailing backslash, whereas a genuine continuation backslash is followed by a
+    // newline that `.` does not match and therefore survives. Join first and the two unrelated
+    // lines below would be spliced together, their two odd counts would cancel to an even one,
+    // and the truncated literal on line 0 would be laundered into "balanced".
+    const source = ['let s = "a\\\\', 'let t = "b";'].join('\n')
+    expect(
+      findUnbalancedQuoteLines(source).map(({ index, quoteCount }) => ({
+        index,
+        quoteCount
+      }))
+    ).toEqual([{ index: 0, quoteCount: 1 }])
+    // The mechanism, asserted directly: post-escape-strip there is no trailing backslash left for
+    // the joiner to act on, so both physical lines survive as separate logical lines.
+    expect(
+      joinContinuedLogicalLines(stripRustEscapes(source).split('\n'))
+    ).toHaveLength(2)
+  })
+
+  test('joiner: an ordinary balanced line is not reported', () => {
+    expect(findUnbalancedQuoteLines('let s = "ok";')).toEqual([])
   })
 
   test("stripRustCharLiterals removes '\"' and '\\'' without touching real string literals", () => {
