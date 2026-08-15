@@ -214,9 +214,10 @@ jest.mock('../depot', () => ({
   downloadSteamDepots: jest.fn(),
   buildDepotPlan: jest.fn(),
   healReconciledFileModes: jest.fn(),
-  formatEta: jest.requireActual<typeof import('../depot')>('../depot').formatEta,
-  rollingRateMiBs: jest.requireActual<typeof import('../depot')>('../depot')
-    .rollingRateMiBs
+  formatEta:
+    jest.requireActual<typeof import('../depot')>('../depot').formatEta,
+  rollingRateMiBs:
+    jest.requireActual<typeof import('../depot')>('../depot').rollingRateMiBs
 }))
 
 // ── depot/reconcile mock — reconcilePartialState (Phase 23, 23-03, D-04) ────
@@ -625,7 +626,7 @@ describe('SteamLibraryManager', () => {
 
   // ── CR-01 gap closure (18-05): mac_arch survives refresh() resync ─────────
 
-  it('CR-01: refresh() seeds mac_arch:\'32\' from cachedMeta so a cached Mach-O verdict survives resync', async () => {
+  it("CR-01: refresh() seeds mac_arch:'32' from cachedMeta so a cached Mach-O verdict survives resync", async () => {
     const apps = [
       makeOwnedApp(570, 'Old 32-bit Game', 120),
       makeOwnedApp(440, 'Never Checked Game', 60)
@@ -1523,7 +1524,9 @@ describe('SteamLibraryManager', () => {
         jest
           .mocked(getSteamBottleSettings)
           .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
-        jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+        jest
+          .mocked(getBottleSteamappsDir)
+          .mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
       })
 
       afterEach(() => {
@@ -1755,9 +1758,7 @@ describe('SteamLibraryManager', () => {
         // Native scan finds nothing; bridge scan finds the manifest.
         jest.mocked(getSteamLibraries).mockResolvedValue([])
         ;(existsSync as jest.Mock).mockReturnValue(true)
-        ;(readdirSync as jest.Mock).mockReturnValue([
-          'appmanifest_206040.acf'
-        ])
+        ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_206040.acf'])
         ;(readFileSync as jest.Mock).mockReturnValue('content')
         ;(vdf.parse as jest.Mock).mockReturnValue({
           AppState: {
@@ -1800,9 +1801,7 @@ describe('SteamLibraryManager', () => {
         // being consulted.
         jest.mocked(getSteamLibraries).mockResolvedValue([])
         ;(existsSync as jest.Mock).mockReturnValue(true)
-        ;(readdirSync as jest.Mock).mockReturnValue([
-          'appmanifest_206040.acf'
-        ])
+        ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_206040.acf'])
         ;(readFileSync as jest.Mock).mockReturnValue('content')
         ;(vdf.parse as jest.Mock).mockReturnValue({
           AppState: {
@@ -1836,11 +1835,9 @@ describe('SteamLibraryManager', () => {
         jest
           .mocked(getSteamBottleSettings)
           .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
-        jest
-          .mocked(getBridgeBottleSettings)
-          .mockReturnValue({
-            wineCrossoverBottle: 'GameLibSteamBridge'
-          } as any)
+        jest.mocked(getBridgeBottleSettings).mockReturnValue({
+          wineCrossoverBottle: 'GameLibSteamBridge'
+        } as any)
         jest
           .mocked(getBottleSteamappsDir)
           .mockImplementation((bottleName: string) =>
@@ -2341,13 +2338,23 @@ describe('SteamLibraryManager', () => {
       library.clear()
       setupDownloadingFixture('730', 'csgo')
 
-      const file = { filename: 'game.bin', size: 10, sha_content: 'x', chunks: [] }
+      const file = {
+        filename: 'game.bin',
+        size: 10,
+        sha_content: 'x',
+        chunks: []
+      }
       const plan = {
         appId: '730',
         name: 'CS:GO',
         buildid: '9044149',
         depots: [
-          { depotId: '111', gid: '9007199254740993', key: Buffer.from('key'), files: [file] }
+          {
+            depotId: '111',
+            gid: '9007199254740993',
+            key: Buffer.from('key'),
+            files: [file]
+          }
         ],
         totalBytes: 10
       }
@@ -2356,9 +2363,10 @@ describe('SteamLibraryManager', () => {
         .mocked(reconcilePartialState)
         .mockResolvedValue({ jobs: [], allFilesVerified: true } as never)
 
-      const realFinalizeToSteam = jest.requireActual<typeof import('../depot')>(
-        '../depot'
-      ).finalizeToSteam
+      const realFinalizeToSteam =
+        jest.requireActual<typeof import('../depot')>(
+          '../depot'
+        ).finalizeToSteam
       jest.mocked(finalizeToSteam).mockImplementation(realFinalizeToSteam)
 
       await resumeInterruptedSteamInstall('730')
@@ -2389,7 +2397,12 @@ describe('SteamLibraryManager', () => {
         name: 'CS:GO',
         buildid: '9044149',
         depots: [
-          { depotId: '111', gid: '9007199254740993', key: Buffer.from('key'), files: [file] }
+          {
+            depotId: '111',
+            gid: '9007199254740993',
+            key: Buffer.from('key'),
+            files: [file]
+          }
         ],
         totalBytes: 10
       }
@@ -2401,9 +2414,10 @@ describe('SteamLibraryManager', () => {
         .mocked(healReconciledFileModes)
         .mockResolvedValue({ allModesHealed: true, failures: [] } as never)
 
-      const realFinalizeToSteam = jest.requireActual<typeof import('../depot')>(
-        '../depot'
-      ).finalizeToSteam
+      const realFinalizeToSteam =
+        jest.requireActual<typeof import('../depot')>(
+          '../depot'
+        ).finalizeToSteam
       jest.mocked(finalizeToSteam).mockImplementation(realFinalizeToSteam)
 
       await resumeInterruptedSteamInstall('730')
@@ -2442,7 +2456,12 @@ describe('SteamLibraryManager', () => {
         name: 'CS:GO',
         buildid: '9044149',
         depots: [
-          { depotId: '111', gid: '9007199254740993', key: Buffer.from('key'), files: [file] }
+          {
+            depotId: '111',
+            gid: '9007199254740993',
+            key: Buffer.from('key'),
+            files: [file]
+          }
         ],
         totalBytes: 10
       }
@@ -2458,9 +2477,10 @@ describe('SteamLibraryManager', () => {
         failures: [{ file: 'game.bin', error: 'chmod EACCES' }]
       } as never)
 
-      const realFinalizeToSteam = jest.requireActual<typeof import('../depot')>(
-        '../depot'
-      ).finalizeToSteam
+      const realFinalizeToSteam =
+        jest.requireActual<typeof import('../depot')>(
+          '../depot'
+        ).finalizeToSteam
       jest.mocked(finalizeToSteam).mockImplementation(realFinalizeToSteam)
 
       await expect(
@@ -2481,13 +2501,23 @@ describe('SteamLibraryManager', () => {
       library.clear()
       setupDownloadingFixture('730', 'csgo')
 
-      const file = { filename: 'missing.bin', size: 10, sha_content: 'x', chunks: [] }
+      const file = {
+        filename: 'missing.bin',
+        size: 10,
+        sha_content: 'x',
+        chunks: []
+      }
       const plan = {
         appId: '730',
         name: 'CS:GO',
         buildid: '9044149',
         depots: [
-          { depotId: '111', gid: '9007199254740993', key: Buffer.from('key'), files: [file] }
+          {
+            depotId: '111',
+            gid: '9007199254740993',
+            key: Buffer.from('key'),
+            files: [file]
+          }
         ],
         totalBytes: 10
       }
@@ -2497,9 +2527,10 @@ describe('SteamLibraryManager', () => {
         allFilesVerified: false
       } as never)
 
-      const realFinalizeToSteam = jest.requireActual<typeof import('../depot')>(
-        '../depot'
-      ).finalizeToSteam
+      const realFinalizeToSteam =
+        jest.requireActual<typeof import('../depot')>(
+          '../depot'
+        ).finalizeToSteam
       jest.mocked(finalizeToSteam).mockImplementation(realFinalizeToSteam)
 
       await expect(
@@ -2786,7 +2817,8 @@ describe('readAcfState(appId, "bottle") — bottle-scoped ACF root', () => {
     // native root, this would incorrectly report 'installed'.
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockImplementation(
-      (path: string) => path === '/steam' || path === join('/steam', 'steamapps')
+      (path: string) =>
+        path === '/steam' || path === join('/steam', 'steamapps')
     )
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock).mockReturnValue({
@@ -2922,7 +2954,14 @@ describe('resolveInstallRoot() (debug/steam-bottle-uninstall-reverts, OPERATOR D
 
   it('rejects a traversal attempt disguised as a bottle-common child ("path.join is not containment", Phase 18)', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue([])
-    const traversal = join(BOTTLE_STEAMAPPS_ROOT, 'common', '..', '..', 'etc', 'passwd')
+    const traversal = join(
+      BOTTLE_STEAMAPPS_ROOT,
+      'common',
+      '..',
+      '..',
+      'etc',
+      'passwd'
+    )
     await expect(resolveInstallRoot(traversal)).resolves.toBeNull()
   })
 
@@ -2988,7 +3027,8 @@ describe('readAcfState(appId, "bridge") — bridge-bottle-scoped ACF root', () =
   it('returns state:"absent" for an ACF present only in the native root — proves no conflation with "native"', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockImplementation(
-      (path: string) => path === '/steam' || path === join('/steam', 'steamapps')
+      (path: string) =>
+        path === '/steam' || path === join('/steam', 'steamapps')
     )
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock).mockReturnValue({
@@ -3093,7 +3133,6 @@ describe('detector regression lock (D-UAT-09): buildInstalledMap / readAcfState 
 
     const incomplete = await readAcfState('100')
     expect(incomplete.state).toBe('downloading')
-
     ;(vdf.parse as jest.Mock).mockReturnValue({
       AppState: {
         appid: '200',
@@ -4221,6 +4260,38 @@ describe('pollUninstallOnce()', () => {
     )
   })
 
+  // 34.13 review A-10, the load-bearing half of the argument in games.ts:
+  // a 'downloading' manifest (StateFlags bit 4 UNSET — 1026 is the
+  // partial/handoff shape) ALSO takes pollUninstallOnce's `uninstalling`
+  // branch. That status is only ever cleared by a later tick of an ACTIVE
+  // poll, so any caller that reaches this branch WITHOUT registering a poll
+  // strands the tile on "Uninstalling" for the rest of the session. This spec
+  // pins the emission so uninstallBottleGameDirectly()'s refusal to call
+  // pollUninstallOnce for a mid-download manifest stays justified rather than
+  // becoming folklore.
+  it('A-10: sends gameStatusUpdate { status:"uninstalling" } for a DOWNLOADING manifest too, not only the 0x800 bit', async () => {
+    // 1026 = 1024 (update started) | 2 (update required) — bit 4 (installed)
+    // is NOT set, which is what readAcfState maps to state 'downloading'.
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '1026',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
+    })
+    startUninstallPolling('730', 60000)
+    await pollUninstallOnce('730')
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({
+        appName: '730',
+        runner: 'steam',
+        status: 'uninstalling'
+      })
+    )
+  })
+
   it('does NOT flip the badge while the game is still fully installed (no uninstalling bit)', async () => {
     ;(vdf.parse as jest.Mock).mockReturnValue({
       AppState: {
@@ -4312,7 +4383,9 @@ describe('pollUninstallOnce()', () => {
 
   describe('dual-install partial removal (item 4/5)', () => {
     beforeEach(() => {
-      jest.mocked(getFileSize).mockImplementation((bytes: unknown) => `${bytes} B`)
+      jest
+        .mocked(getFileSize)
+        .mockImplementation((bytes: unknown) => `${bytes} B`)
     })
 
     it('bottle copy removed, NATIVE copy survives: badge STAYS installed, install_path re-resolves to the native copy, no "Game Uninstalled" toast', async () => {
@@ -4643,7 +4716,8 @@ describe('readRunningAppId() — per-platform dispatch', () => {
     it('windowsRunningAppId: returns 0 when RunningAppID not present in output', () => {
       ;(spawnSync as jest.Mock).mockReturnValue({
         status: 0,
-        stdout: 'ERROR: The system was unable to find the specified registry key'
+        stdout:
+          'ERROR: The system was unable to find the specified registry key'
       })
       expect(readRunningAppId()).toBe(0)
     })
@@ -5337,7 +5411,6 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       canRunOffline: true,
       installable: true
     } as any)
-
     ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
       if (dir === INSTALL_PATH) return ['OldGame.app']
       if (dir === MACOS_DIR) return ['OldGame']

@@ -614,7 +614,11 @@ export default class SteamGame implements Game {
         const delistedInfo: GameInfo = { ...current, is_delisted: true }
         const existing = steamMetadataStore.get(this.appId)
         steamMetadataStore.set(this.appId, {
-          ...(existing ?? { art_cover: '', art_square: '', extra: { reqs: [] } }),
+          ...(existing ?? {
+            art_cover: '',
+            art_square: '',
+            extra: { reqs: [] }
+          }),
           is_delisted: delistedInfo.is_delisted
         })
         library.set(this.appId, delistedInfo)
@@ -1088,9 +1092,7 @@ export default class SteamGame implements Game {
    * fallback re-invocation of install() reaches the existing bottled path
    * instead of looping back into the same failing bridge (T-24-17).
    */
-  private async installBridgeGame(
-    args: InstallArgs
-  ): Promise<InstallResult> {
+  private async installBridgeGame(args: InstallArgs): Promise<InstallResult> {
     if (!isBridgeBottleReady()) {
       logInfo(
         `SteamGame: bridge bottle not yet provisioned for appId ${this.appId} — provisioning inline (BLOCKER 1, no consent dialog needed)`,
@@ -1148,7 +1150,10 @@ export default class SteamGame implements Game {
     }
 
     const shimResult = await placeShimForGame(this.appId, exePath)
-    if (shimResult.status === 'error' || shimResult.status === 'shim-not-built') {
+    if (
+      shimResult.status === 'error' ||
+      shimResult.status === 'shim-not-built'
+    ) {
       const shimError =
         shimResult.status === 'shim-not-built'
           ? 'Bridge shim has not been built yet (packaging step pending)'
@@ -1573,7 +1578,8 @@ export default class SteamGame implements Game {
    */
   private isForcedWindowsViaBottle(): boolean {
     return (
-      isMac && steamMetadataStore.get(this.appId)?.forcedWindowsViaBottle === true
+      isMac &&
+      steamMetadataStore.get(this.appId)?.forcedWindowsViaBottle === true
     )
   }
 
@@ -1587,7 +1593,9 @@ export default class SteamGame implements Game {
    * changes.
    */
   private isBottleEligible(): boolean {
-    return this.isBottleEligibleFromPlatforms() || this.isForcedWindowsViaBottle()
+    return (
+      this.isBottleEligibleFromPlatforms() || this.isForcedWindowsViaBottle()
+    )
   }
 
   /**
@@ -2197,6 +2205,39 @@ export default class SteamGame implements Game {
     }
 
     const acfState = await readAcfState(this.appId, 'bottle')
+
+    // 34.13 review A-10: readAcfState returns THREE states, and 'downloading'
+    // (StateFlags bit 4 unset — a partial install, an interrupted depot
+    // download, or a StateFlags-1026 handoff manifest) must never share the
+    // 'absent' branch below. Two independent reasons:
+    //   1. It is not safe to delete — a depot download may still be writing
+    //      into that directory, so this is a REFUSAL, not a silent success.
+    //   2. It must not reach pollUninstallOnce(), whose non-absent branch
+    //      emits `gameStatusUpdate { status: 'uninstalling' }`. Nothing on
+    //      this path terminates that status: uninstall() no longer calls
+    //      startUninstallPolling() for the bottle root, so activeUninstallPolls
+    //      is empty and no later tick or stopUninstallPolling() will ever run.
+    //      The tile would read "Uninstalling" for the rest of the session with
+    //      the files still on disk and no error surfaced.
+    // Emit an explicit terminal `done` so any status the click already put on
+    // the tile is cleared, and report a real stderr so the caller does not
+    // treat this as a completed uninstall.
+    if (acfState.state === 'downloading') {
+      logWarning(
+        `SteamGame: uninstallBottleGameDirectly refused for appId ${this.appId} — the bottle manifest is mid-download/partial, cancel the in-progress install first`,
+        LogPrefix.Steam
+      )
+      sendFrontendMessage('gameStatusUpdate', {
+        appName: this.appId,
+        runner: 'steam',
+        status: 'done'
+      })
+      return {
+        stdout: '',
+        stderr: `Refused to uninstall: the install for appId ${this.appId} is still in progress — cancel it before uninstalling`
+      }
+    }
+
     if (acfState.state !== 'installed' || !acfState.installPath) {
       logWarning(
         `SteamGame: uninstallBottleGameDirectly found no installed bottle manifest for appId ${this.appId} — nothing to remove`,
@@ -2303,7 +2344,11 @@ export default class SteamGame implements Game {
   async forceUninstall(): Promise<void> {
     const existing = library.get(this.appId)
     if (existing) {
-      const updated: GameInfo = { ...existing, is_installed: false, install: {} }
+      const updated: GameInfo = {
+        ...existing,
+        is_installed: false,
+        install: {}
+      }
       library.set(this.appId, updated)
       // GAP-17-BOTTLE-STORE-DIVERGENCE / GAP-18-06: persist immediately so the
       // not-installed (badge-preserving) state is not lost on the next persist.

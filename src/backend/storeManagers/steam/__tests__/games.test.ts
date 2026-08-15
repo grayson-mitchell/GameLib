@@ -458,7 +458,9 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
 
     const fetchSpy = jest
       .spyOn(SteamGame.prototype as any, 'fetchMetadataIfNeeded')
-      .mockRejectedValue(new Error('simulated crash inside fetchMetadataIfNeeded'))
+      .mockRejectedValue(
+        new Error('simulated crash inside fetchMetadataIfNeeded')
+      )
 
     library.set(APP_ID, makeEntry())
     new SteamGame(APP_ID).getGameInfo()
@@ -932,7 +934,6 @@ describe('SteamGame.launch() — GAME-01', () => {
     const url: string = calls[0][0]
     expect(url).toMatch(/^steam:\/\/rungameid\/\d+$/)
   })
-
 })
 
 // ── D-11: SteamGame.isNative() — per-OS confirmed-not-native ─────────────────
@@ -1415,7 +1416,9 @@ describe('SteamGame.stop() — D-02 native depot-download abort', () => {
     library.clear()
     pendingFetches.clear()
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
-    jest.spyOn(libraryModule, 'startInstallPolling').mockImplementation(() => {})
+    jest
+      .spyOn(libraryModule, 'startInstallPolling')
+      .mockImplementation(() => {})
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
     ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue({
       targetSteamappsDir: '/mock/steam/steamapps',
@@ -1521,7 +1524,7 @@ describe('SteamGame.install() — GAME-02', () => {
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
   })
 
-  it('GAME-02/focus: native install HANDS FOCUS to Steam — openExternal is called WITHOUT { activate: false }, so the steam:// protocol handler foregrounds the native Steam client (OS-delegated parity with the CrossOver path\'s raiseInstallerWindow() System Events raise); contrast launch() which passes { activate: false } to avoid stealing foreground', async () => {
+  it("GAME-02/focus: native install HANDS FOCUS to Steam — openExternal is called WITHOUT { activate: false }, so the steam:// protocol handler foregrounds the native Steam client (OS-delegated parity with the CrossOver path's raiseInstallerWindow() System Events raise); contrast launch() which passes { activate: false } to avoid stealing foreground", async () => {
     const game = new SteamGame(APP_ID)
     await game.install({} as any)
 
@@ -1622,7 +1625,10 @@ describe('SteamGame.install() — steam-startup-resume-crash resume-on-click (D-
   it('calls resumeInterruptedSteamInstall(appId) BEFORE proceeding to the normal install flow when steamResumePending is true', async () => {
     library.set(
       APP_ID,
-      makeEntry({ title: 'Dota 2', install: { steamResumePending: true } as any })
+      makeEntry({
+        title: 'Dota 2',
+        install: { steamResumePending: true } as any
+      })
     )
     const game = new SteamGame(APP_ID)
 
@@ -1648,7 +1654,10 @@ describe('SteamGame.install() — steam-startup-resume-crash resume-on-click (D-
     resumeSpy.mockRejectedValue(new Error('resume finalize exploded'))
     library.set(
       APP_ID,
-      makeEntry({ title: 'Dota 2', install: { steamResumePending: true } as any })
+      makeEntry({
+        title: 'Dota 2',
+        install: { steamResumePending: true } as any
+      })
     )
     const game = new SteamGame(APP_ID)
 
@@ -1676,7 +1685,10 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
   let shellOpenExternal: jest.Mock
   let startInstallPollingSpy: jest.SpyInstance
 
-  const TARGET = { targetSteamappsDir: '/mock/steam/steamapps', installdir: APP_ID }
+  const TARGET = {
+    targetSteamappsDir: '/mock/steam/steamapps',
+    installdir: APP_ID
+  }
 
   beforeEach(() => {
     library.clear()
@@ -1878,7 +1890,9 @@ describe('SteamGame.install() — single-flight guard (T-23-12/T-23-13)', () => 
       OTHER_APP_ID,
       makeEntry({ app_name: OTHER_APP_ID, title: 'Hogwarts Legacy' })
     )
-    jest.spyOn(libraryModule, 'startInstallPolling').mockImplementation(() => {})
+    jest
+      .spyOn(libraryModule, 'startInstallPolling')
+      .mockImplementation(() => {})
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
     ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue({
@@ -2314,9 +2328,12 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
 
     expect(downloadSteamDepots).not.toHaveBeenCalled()
     expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
-    expect(sendFrontendMessage).toHaveBeenCalledWith('steamBottleSetupRequired', {
-      appName: APP_ID
-    })
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'steamBottleSetupRequired',
+      {
+        appName: APP_ID
+      }
+    )
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
   })
 })
@@ -2372,16 +2389,12 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           : '/mock/bottle/steamapps'
     )
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
-    ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(
-      RESOLVED_TARGET
-    )
+    ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(RESOLVED_TARGET)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
     ;(createAbortController as jest.Mock).mockReturnValue({
       signal: 'mock-signal'
     })
-    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(
-      RESOLVED_EXE_PATH
-    )
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
     ;(placeShimForGame as jest.Mock).mockResolvedValue({
       status: 'placed',
       shimPath: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`
@@ -2591,9 +2604,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     expect(provisionBridgeBottle).not.toHaveBeenCalled()
     expect(downloadSteamDepots).not.toHaveBeenCalled()
-    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(
-      FALLBACK_TEST_APP_ID
-    )
+    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(FALLBACK_TEST_APP_ID)
     expect(result).toEqual({ status: 'done' })
   })
 })
@@ -3132,8 +3143,8 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
     const bottleSettings = { wineCrossoverBottle: 'GameLibSteam' }
     ;(getSteamBottleSettings as jest.Mock).mockReturnValue(bottleSettings)
-    const gameConfigGetMock = jest.requireMock('backend/game_config')
-      .GameConfig.get as jest.Mock
+    const gameConfigGetMock = jest.requireMock('backend/game_config').GameConfig
+      .get as jest.Mock
     gameConfigGetMock.mockClear()
 
     const game = new SteamGame(APP_ID)
@@ -3283,8 +3294,8 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
 
   it('N1: absent flag (pre-34.13 upgrade shape) routes exactly as it does today', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(unforcedMeta())
-    const gameConfigGetMock = jest.requireMock('backend/game_config')
-      .GameConfig.get as jest.Mock
+    const gameConfigGetMock = jest.requireMock('backend/game_config').GameConfig
+      .get as jest.Mock
     gameConfigGetMock.mockReturnValue({
       config: undefined,
       getSettings: jest.fn().mockResolvedValue({ autoSyncSaves: false })
@@ -3395,11 +3406,9 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     function mockStatefulMetadataStore(initial: Record<string, unknown>) {
       let state: Record<string, unknown> | undefined = initial
       ;(steamMetadataStore.get as jest.Mock).mockImplementation(() => state)
-      ;(steamMetadataStore.set as jest.Mock).mockImplementation(
-        (_id, meta) => {
-          state = meta
-        }
-      )
+      ;(steamMetadataStore.set as jest.Mock).mockImplementation((_id, meta) => {
+        state = meta
+      })
     }
 
     let startInstallPollingSpy: jest.SpyInstance
@@ -3804,9 +3813,12 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
 
     expect(axios.get).toHaveBeenCalled()
     expect(shellOpenExternal).not.toHaveBeenCalled()
-    expect(sendFrontendMessage).toHaveBeenCalledWith('steamBottleSetupRequired', {
-      appName: APP_ID
-    })
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'steamBottleSetupRequired',
+      {
+        appName: APP_ID
+      }
+    )
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
   })
 
@@ -3842,9 +3854,12 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
     await game.install({} as any)
 
     expect(axios.get).not.toHaveBeenCalled()
-    expect(sendFrontendMessage).toHaveBeenCalledWith('steamBottleSetupRequired', {
-      appName: APP_ID
-    })
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'steamBottleSetupRequired',
+      {
+        appName: APP_ID
+      }
+    )
   })
 })
 
@@ -4334,7 +4349,11 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
     expect(pollUninstallOnceSpy).not.toHaveBeenCalled()
   })
 
-  it('no installed manifest found (already absent/downloading) — syncs state via pollUninstallOnce instead of deleting', async () => {
+  // NOTE the name: this spec drives `{ state: 'absent' }` ONLY. It used to be
+  // named "(already absent/downloading)", advertising coverage of a branch it
+  // never reached — the 34.13 review A-10 defect sat directly underneath that
+  // claim. `downloading` now has its OWN branch and its own specs below.
+  it('no installed manifest found (already absent) — syncs state via pollUninstallOnce instead of deleting', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,
       is_mac_native: false
@@ -4347,6 +4366,56 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
     expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
     expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
     expect(result).toEqual({ stdout: '', stderr: '' })
+  })
+
+  // ── 34.13 review A-10 ─────────────────────────────────────────────────────
+  // Known-bad input: readAcfState('bottle') resolves
+  // `{ state: 'downloading', stateFlags: 1026 }` — a partial/handoff manifest.
+  // Against the pre-fix source (where 'downloading' fell into the
+  // `state !== 'installed'` branch) all three specs below fail: A10a because
+  // pollUninstallOnce IS called, A10b because the result is `{stderr: ''}`,
+  // and A10c because pollUninstallOnce's own non-absent branch emits
+  // `status: 'uninstalling'` with no poll registered to ever clear it.
+  describe('A-10: a mid-download bottle manifest is refused, not reported as a successful uninstall', () => {
+    const DOWNLOADING = { state: 'downloading' as const, stateFlags: 1026 }
+
+    beforeEach(() => {
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      readAcfStateSpy.mockResolvedValue(DOWNLOADING)
+    })
+
+    it('A10a: never reaches pollUninstallOnce — the completion pipeline must not run for an install that is still in progress', async () => {
+      const game = new SteamGame(APP_ID)
+      await game.uninstall({} as any)
+
+      expect(pollUninstallOnceSpy).not.toHaveBeenCalled()
+      expect(startUninstallPollingSpy).not.toHaveBeenCalled()
+    })
+
+    it('A10b: reports a real error rather than an empty-stderr success', async () => {
+      const game = new SteamGame(APP_ID)
+      const result = await game.uninstall({} as any)
+
+      expect(result.stderr).toContain('still in progress')
+      expect(result.stderr).not.toBe('')
+    })
+
+    it('A10c: emits a TERMINAL status frame and never a terminal-less `uninstalling` one', async () => {
+      ;(sendFrontendMessage as jest.Mock).mockClear()
+
+      const game = new SteamGame(APP_ID)
+      await game.uninstall({} as any)
+
+      const statusFrames = (sendFrontendMessage as jest.Mock).mock.calls
+        .filter(([channel]) => channel === 'gameStatusUpdate')
+        .map(([, payload]) => payload.status)
+
+      expect(statusFrames).not.toContain('uninstalling')
+      expect(statusFrames).toContain('done')
+    })
   })
 
   // ── SharedDepots hazard: a REAL filesystem regression test, not a mocked
@@ -4390,7 +4459,6 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
       )
       writeFileSync(hoardManifestPath, 'hoard manifest content')
       writeFileSync(siblingManifestPath, 'sibling manifest content')
-
       ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(steamappsDir)
       // Override the outer beforeEach's fake INSTALL_PATH — this nested
       // suite roots the bottle at a REAL tmp dir, so the library entry's own
@@ -4410,7 +4478,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
       realRmSync(tmp, { recursive: true, force: true })
     })
 
-    it('removes ONLY Hoard\'s own installdir + own manifest — the SharedDepots owner\'s sibling directory and manifest survive untouched', async () => {
+    it("removes ONLY Hoard's own installdir + own manifest — the SharedDepots owner's sibling directory and manifest survive untouched", async () => {
       ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
         platformsCaptured: true,
         is_mac_native: false
@@ -4561,7 +4629,10 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
     )
     const readAcfStateSpy = jest
       .spyOn(libraryModule, 'readAcfState')
-      .mockResolvedValue({ state: 'installed', installPath: BOTTLE_INSTALL_PATH })
+      .mockResolvedValue({
+        state: 'installed',
+        installPath: BOTTLE_INSTALL_PATH
+      })
     const pollUninstallOnceSpy = jest
       .spyOn(libraryModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
@@ -4595,7 +4666,10 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
     )
     const readAcfStateSpy = jest
       .spyOn(libraryModule, 'readAcfState')
-      .mockResolvedValue({ state: 'installed', installPath: BOTTLE_INSTALL_PATH })
+      .mockResolvedValue({
+        state: 'installed',
+        installPath: BOTTLE_INSTALL_PATH
+      })
     const pollUninstallOnceSpy = jest
       .spyOn(libraryModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
@@ -4638,7 +4712,10 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
     ;(getSteamLibraries as jest.Mock).mockResolvedValue([NATIVE_LIBRARY_ROOT])
     const readAcfStateSpy = jest
       .spyOn(libraryModule, 'readAcfState')
-      .mockResolvedValue({ state: 'installed', installPath: BOTTLE_INSTALL_PATH })
+      .mockResolvedValue({
+        state: 'installed',
+        installPath: BOTTLE_INSTALL_PATH
+      })
     const pollUninstallOnceSpy = jest
       .spyOn(libraryModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
@@ -4661,10 +4738,7 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
       is_mac_native: true
     })
     // makeEntry()'s default install:{} has no install_path.
-    library.set(
-      APP_ID,
-      makeEntry({ title: 'Dota 2', is_installed: true })
-    )
+    library.set(APP_ID, makeEntry({ title: 'Dota 2', is_installed: true }))
     const readAcfStateSpy = jest.spyOn(libraryModule, 'readAcfState')
 
     const game = new SteamGame(APP_ID)
@@ -4945,9 +5019,11 @@ describe('parseSteamMacMinOSVersion', () => {
     ).toEqual({ major: 10, minor: 6 })
   })
 
-  it('major > 10: No Man\'s Sky resolves to 12.3', () => {
+  it("major > 10: No Man's Sky resolves to 12.3", () => {
     expect(
-      parseSteamMacMinOSVersion('<li><strong>OS:</strong> macOS Monterey 12.3<br></li>')
+      parseSteamMacMinOSVersion(
+        '<li><strong>OS:</strong> macOS Monterey 12.3<br></li>'
+      )
     ).toEqual({ major: 12, minor: 3 })
   })
 
@@ -5010,7 +5086,9 @@ describe('macArchFromMinOS', () => {
 
   it('Terraria range shape resolves to "unknown" (lowest bound 10.9.5)', () => {
     expect(
-      macArchFromMinOS('<li><strong>OS: OSX 10.9.5 - 10.11.6</strong> <br></li>')
+      macArchFromMinOS(
+        '<li><strong>OS: OSX 10.9.5 - 10.11.6</strong> <br></li>'
+      )
     ).toBe('unknown')
   })
 
@@ -5207,7 +5285,10 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
     envMock.isMac = true
     envMock.isWindows = false
     envMock.isLinux = false
-    library.set(APP_ID, makeEntry({ title: 'Old 32-bit Game', is_installed: true }))
+    library.set(
+      APP_ID,
+      makeEntry({ title: 'Old 32-bit Game', is_installed: true })
+    )
     startInstallPollingSpy = jest
       .spyOn(libraryModule, 'startInstallPolling')
       .mockImplementation(() => {})
