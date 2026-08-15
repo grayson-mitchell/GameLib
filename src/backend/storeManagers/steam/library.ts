@@ -27,7 +27,10 @@ import {
 } from './electronStores'
 import { runOnceWhenOnline } from 'backend/online_monitor'
 import { library } from './state'
-import SteamGame, { isNativeInstallInFlight } from './games'
+import SteamGame, {
+  isNativeInstallInFlight,
+  clearForcedWindowsViaBottle
+} from './games'
 import {
   getBottleSteamappsDir,
   getSteamBottleSettings,
@@ -1978,6 +1981,14 @@ export async function pollUninstallOnce(
   const poll = activeUninstallPolls.get(appId)
 
   if (result.state === 'absent') {
+    // D-17 (34.13-14) reversibility: clear the forced verdict ONLY on a
+    // BOTTLE-scoped CONFIRMED-absent tick — never at dispatch time (a
+    // cancelled bottled-Steam confirm dialog leaves the manifest in place)
+    // — and BEFORE the `if (existing)` Map guard below, which the
+    // diagnostic note beneath it records as capable of MISSing.
+    if (source === 'bottle') {
+      clearForcedWindowsViaBottle(appId)
+    }
     const existing = library.get(appId)
     // debug/uninstall-game-vanishes: temporary diagnostic — confirms whether
     // the in-memory `library` Map actually holds an entry for this appId at

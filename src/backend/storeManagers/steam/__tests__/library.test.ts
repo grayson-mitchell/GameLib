@@ -1572,6 +1572,108 @@ describe('SteamLibraryManager', () => {
         expect(sendFrontendMessage).not.toHaveBeenCalled()
         expect(library.get('570')!.is_installed).toBe(false)
       })
+
+      // ── S1-S2: D-17 (34.13-14) install-state non-regression pin ──────────
+
+      it('S1: a forced game reconciles as installed from the BOTTLE map (platform Windows)', async () => {
+        jest.mocked(isBottleProvisioned).mockReturnValue(true)
+        ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+          platformsCaptured: true,
+          is_mac_native: true,
+          is_windows_native: true,
+          forcedWindowsViaBottle: true
+        })
+        library.set('570', {
+          runner: 'steam',
+          app_name: '570',
+          title: 'Dota 2',
+          is_installed: false,
+          install: {},
+          art_cover: '',
+          art_square: '',
+          extra: { reqs: [] },
+          canRunOffline: true,
+          installable: true
+        } as any)
+
+        jest.mocked(getSteamLibraries).mockResolvedValue([])
+        ;(existsSync as jest.Mock).mockReturnValue(true)
+        ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
+        ;(readFileSync as jest.Mock).mockReturnValue('content')
+        ;(vdf.parse as jest.Mock).mockReturnValue({
+          AppState: {
+            appid: '570',
+            StateFlags: '4',
+            installdir: 'dota2',
+            SizeOnDisk: '50000'
+          }
+        })
+
+        await manager.refreshInstallState()
+
+        expect(sendFrontendMessage).toHaveBeenCalledWith(
+          'pushGameToLibrary',
+          expect.objectContaining({
+            app_name: '570',
+            is_installed: true,
+            install: expect.objectContaining({ platform: 'Windows' })
+          })
+        )
+      })
+
+      it('S2: the Phase 24 bridge never becomes authoritative for a forced game, even when allowlisted', async () => {
+        jest.mocked(isBottleProvisioned).mockReturnValue(true)
+        jest.mocked(bridgeAllowlist.has).mockReturnValue(true)
+        ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+          platformsCaptured: true,
+          is_mac_native: true,
+          is_windows_native: true,
+          forcedWindowsViaBottle: true
+        })
+        library.set('570', {
+          runner: 'steam',
+          app_name: '570',
+          title: 'Dota 2',
+          is_installed: false,
+          install: {},
+          art_cover: '',
+          art_square: '',
+          extra: { reqs: [] },
+          canRunOffline: true,
+          installable: true
+        } as any)
+
+        // isBridgeBottleReady() stays false (default) — the bridge scan is
+        // never even attempted, matching an EMPTY bridge map. The persisted
+        // forced verdict deliberately does not flow into library.ts's
+        // duplicate predicate (isBridgeAuthoritativeForInstallState), which
+        // gates on is_mac_native===false and stays false for this
+        // mac-native fixture regardless of the flag or the allowlist —
+        // mirrors Task 2's isBridgeEligible() pin.
+        jest.mocked(getSteamLibraries).mockResolvedValue([])
+        ;(existsSync as jest.Mock).mockReturnValue(true)
+        ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
+        ;(readFileSync as jest.Mock).mockReturnValue('content')
+        ;(vdf.parse as jest.Mock).mockReturnValue({
+          AppState: {
+            appid: '570',
+            StateFlags: '4',
+            installdir: 'dota2',
+            SizeOnDisk: '50000'
+          }
+        })
+
+        await manager.refreshInstallState()
+
+        expect(sendFrontendMessage).toHaveBeenCalledWith(
+          'pushGameToLibrary',
+          expect.objectContaining({
+            app_name: '570',
+            is_installed: true,
+            install: expect.objectContaining({ platform: 'Windows' })
+          })
+        )
+      })
     })
 
     // ── D-UAT-24-07: refreshInstallState() must ALSO be bridge-aware ─────────
@@ -3917,6 +4019,13 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
 // ── D-07: pollUninstallOnce() ────────────────────────────────────────────────
 
 describe('pollUninstallOnce()', () => {
+  // D-17 (34.13-14) reversibility — `./games` is NOT mocked in this file
+  // (SteamGame/isNativeInstallInFlight are exercised for real elsewhere), so
+  // spy on ONLY the named export rather than a full jest.mock factory. The
+  // exact same pattern games.test.ts already uses for
+  // `jest.spyOn(libraryModule, 'startInstallPolling')`.
+  let clearForcedSpy: jest.SpyInstance
+
   beforeEach(() => {
     jest.useFakeTimers()
     library.clear()
@@ -3938,11 +4047,21 @@ describe('pollUninstallOnce()', () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
+    // R1/R3/R4 poll with source:'bottle' — readAcfState('bottle') resolves
+    // its root via getBottleSteamappsDir(getSteamBottleSettings()...).
+    jest
+      .mocked(getSteamBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+    jest.mocked(getBottleSteamappsDir).mockReturnValue('/bottle/steamapps')
+    clearForcedSpy = jest
+      .spyOn(gamesModule, 'clearForcedWindowsViaBottle')
+      .mockImplementation(() => {})
   })
 
   afterEach(() => {
     stopUninstallPolling('730')
     jest.useRealTimers()
+    clearForcedSpy.mockRestore()
   })
 
   it('flips the badge to not-installed + sends done when the manifest is absent (uninstall complete)', async () => {
@@ -4028,6 +4147,43 @@ describe('pollUninstallOnce()', () => {
     startUninstallPolling('730', 60000)
     await pollUninstallOnce('730')
     expect(notify).not.toHaveBeenCalled()
+  })
+
+  // ── R1-R4: D-17 (34.13-14) reversibility ──────────────────────────────────
+
+  it('R1: bottle uninstall confirmed-absent clears the forced verdict', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone
+    startUninstallPolling('730', 60000)
+    await pollUninstallOnce('730', 'bottle')
+    expect(clearForcedSpy).toHaveBeenCalledWith('730')
+  })
+
+  it('R2: a NATIVE uninstall confirmed-absent does NOT clear the forced verdict', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone
+    startUninstallPolling('730', 60000)
+    await pollUninstallOnce('730') // default source: 'native'
+    expect(clearForcedSpy).not.toHaveBeenCalled()
+  })
+
+  it('R3: a cancelled bottle uninstall (manifest still present) does NOT clear the forced verdict', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
+    })
+    startUninstallPolling('730', 60000)
+    await pollUninstallOnce('730', 'bottle')
+    expect(clearForcedSpy).not.toHaveBeenCalled()
+  })
+
+  it('R4: the clear survives a library-Map MISS (fails if placed inside the `if (existing)` guard)', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone
+    library.clear() // library.get('730') is now undefined — the Map MISS
+    await pollUninstallOnce('730', 'bottle')
+    expect(clearForcedSpy).toHaveBeenCalledWith('730')
   })
 })
 

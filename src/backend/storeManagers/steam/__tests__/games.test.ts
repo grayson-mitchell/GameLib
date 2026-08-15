@@ -4386,6 +4386,23 @@ describe('SteamGame.forceUninstall()', () => {
       })
     )
   })
+
+  it('R5 (D-17, 34.13-14): forceUninstall() does NOT clear the forced verdict — the bits were never removed', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true,
+      is_windows_native: true,
+      forcedWindowsViaBottle: true
+    })
+
+    const game = new SteamGame(APP_ID)
+    await game.forceUninstall()
+
+    // forceUninstall() only touches the library Map/steamLibraryStore — it
+    // never calls steamMetadataStore.set, so the persisted verdict is
+    // untouched (still true — the files are still in the bottle).
+    expect(steamMetadataStore.set).not.toHaveBeenCalled()
+  })
 })
 
 // ── MAC32-03 Task 3: promptI386Recovery — i386 recovery (CONTEXT D-6) ─────────
