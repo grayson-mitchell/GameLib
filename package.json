@@ -65,6 +65,7 @@
     "machine-fill-gamelib": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/machineFillGamelib.ts",
     "build-crossover-index": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/buildCrossoverIndex.ts",
     "gen-i18n-gate-scope": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/genI18nGateScope.ts",
+    "gen-i18n-scope:rewrite": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/genI18nGateScope.ts --rewrite-scope",
     "gen-vtables": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/gen_vtables.ts",
     "build-steam-bridge": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/buildSteamBridgeShims.ts",
     "build-runners-onedir": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/buildRunnersOnedir.ts",
