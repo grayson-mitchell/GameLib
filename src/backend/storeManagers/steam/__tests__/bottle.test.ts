@@ -400,6 +400,82 @@ describe('bottle.ts', () => {
       expect(settings.wineCrossoverBottle).toBe('CustomBottle')
       expect(settings.wineVersion).toEqual(storedWine)
     })
+
+    // ── debug/steam-bottle-uninstall-reverts root-cause regression ──────────
+    // A non-CrossOver wineVersion (typically Game Porting Toolkit, 'toolkit')
+    // can end up persisted in steamBottleConfigStore via an unguarded
+    // self-heal write (persistBottleWineVersion / provisionBottle step 6).
+    // setupWineEnvVars only wires CX_BOTTLE for type 'crossover' — any other
+    // type routes dispatchToBottledSteam's wine command through the wrong
+    // WINEPREFIX entirely, so every delegated install/launch/uninstall fails
+    // near-instantly. Mirrors getBridgeBottleSettings()'s existing D-UAT-24-06
+    // test trio.
+    const gptkStoredWine: WineInstallation = {
+      bin: '/Users/example/Library/Application Support/GameLib/tools/game-porting-toolkit/Game-Porting-Toolkit-latest/Contents/Resources/wine/bin/wine64',
+      name: 'Game-Porting-Toolkit-latest',
+      type: 'toolkit'
+    }
+
+    test('root-cause regression: resolves a CrossOver WineInstallation (not the stored GPTK/toolkit engine) when CrossOver is present on disk', () => {
+      mockedGetNodefault.mockImplementation((key: string) => {
+        if (key === 'wineVersion') return gptkStoredWine
+        return undefined
+      })
+      mockedGlobalConfigGet.mockReturnValue({
+        getSettings: () => ({ wineVersion: defaultWine }) as GameSettings
+      })
+      mockedExistsSync.mockImplementation((path: string) =>
+        path.endsWith('/CrossOver/bin/wine')
+      )
+
+      const settings = getSteamBottleSettings()
+
+      expect(settings.wineVersion.type).toBe('crossover')
+      expect(settings.wineVersion.bin).toMatch(/\/CrossOver\/bin\/wine$/)
+      expect(settings.wineVersion.wineserver).toMatch(
+        /\/CrossOver\/bin\/wineserver$/
+      )
+      expect(settings.wineVersion).not.toEqual(gptkStoredWine)
+      expect(settings.wineVersion.type).not.toBe('toolkit')
+    })
+
+    test('root-cause regression: falls back to the stored GPTK/toolkit engine when CrossOver is absent from disk', () => {
+      mockedGetNodefault.mockImplementation((key: string) => {
+        if (key === 'wineVersion') return gptkStoredWine
+        return undefined
+      })
+      mockedGlobalConfigGet.mockReturnValue({
+        getSettings: () => ({ wineVersion: defaultWine }) as GameSettings
+      })
+      mockedExistsSync.mockReturnValue(false)
+
+      const settings = getSteamBottleSettings()
+
+      expect(settings.wineVersion).toEqual(gptkStoredWine)
+    })
+
+    test('root-cause regression: an already-crossover stored wineVersion is kept as-is (no needless re-resolution)', () => {
+      const storedWine: WineInstallation = {
+        bin: '/opt/crossover/bin/wine',
+        name: 'CrossOver',
+        type: 'crossover'
+      }
+      mockedGetNodefault.mockImplementation((key: string) => {
+        if (key === 'wineVersion') return storedWine
+        return undefined
+      })
+      mockedGlobalConfigGet.mockReturnValue({
+        getSettings: () => ({ wineVersion: defaultWine }) as GameSettings
+      })
+      // If existsSync were consulted here it would resolve a DIFFERENT
+      // CrossOver binary path than the already-correct stored one — assert
+      // the stored value passes through untouched.
+      mockedExistsSync.mockReturnValue(true)
+
+      const settings = getSteamBottleSettings()
+
+      expect(settings.wineVersion).toEqual(storedWine)
+    })
   })
 
   describe('provisionBottle', () => {
@@ -998,6 +1074,28 @@ describe('bottle.ts', () => {
       expect(jest.getTimerCount()).toBeGreaterThan(0)
 
       // The teardown hook cancels the loop and clears every tracked timer.
+      __stopBottledRaiseLoops()
+      expect(jest.getTimerCount()).toBe(0)
+
+      jest.useRealTimers()
+    })
+
+    // debug/steam-bottle-uninstall-reverts: previously 'uninstall' raised NO
+    // window at all — Steam's own confirm dialog was left invisible behind
+    // GameLib's window, so it was never confirmed and the ACF poller's own
+    // grace-window fallback silently reverted the badge to installed ~60s
+    // later. Regression guard: uninstall must schedule a raise loop exactly
+    // like install does.
+    test('a fired uninstall dispatch ALSO schedules a raise-loop retry timer (regression: uninstall previously raised no window)', async () => {
+      mockedExistsSync.mockReturnValue(true)
+      mockedGetNodefault.mockReturnValue(undefined)
+
+      jest.useFakeTimers()
+      void tellBottledSteamToUninstall('440')
+      await flushMicrotasks()
+
+      expect(jest.getTimerCount()).toBeGreaterThan(0)
+
       __stopBottledRaiseLoops()
       expect(jest.getTimerCount()).toBe(0)
 

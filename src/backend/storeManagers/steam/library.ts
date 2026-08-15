@@ -29,7 +29,8 @@ import { runOnceWhenOnline } from 'backend/online_monitor'
 import { library } from './state'
 import SteamGame, {
   isNativeInstallInFlight,
-  clearForcedWindowsViaBottle
+  clearForcedWindowsViaBottle,
+  clearNativeBottleInstall
 } from './games'
 import {
   getBottleSteamappsDir,
@@ -1996,8 +1997,15 @@ export async function pollUninstallOnce(
     // cancelled bottled-Steam confirm dialog leaves the manifest in place)
     // — and BEFORE the `if (existing)` Map guard below, which the
     // diagnostic note beneath it records as capable of MISSing.
+    //
+    // debug/steam-bottle-uninstall-reverts: clearNativeBottleInstall rides
+    // the SAME confirmed-absent tick, for the SAME reason — a later
+    // (legacy-delegated) reinstall of this appId must not inherit a stale
+    // "route uninstall to direct deletion" verdict from a prior
+    // bottle-native install.
     if (source === 'bottle') {
       clearForcedWindowsViaBottle(appId)
+      clearNativeBottleInstall(appId)
     }
     const existing = library.get(appId)
     // debug/uninstall-game-vanishes: temporary diagnostic — confirms whether

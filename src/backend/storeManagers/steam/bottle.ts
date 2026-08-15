@@ -272,6 +272,25 @@ export function isBottleReady(bottleName?: string): boolean {
  * sourced from steamBottleConfigStore and falling back to
  * DEFAULT_STEAM_BOTTLE_NAME / the global default Wine engine. Used wherever
  * a bottled Steam operation needs a GameSettings to hand to runWineCommand.
+ *
+ * debug/steam-bottle-uninstall-reverts (root cause, mirrors D-UAT-24-06):
+ * the dedicated Steam bottle is created and populated entirely via
+ * CrossOver's own `cxbottle` mechanism (D-08 CrossOver-only lifecycle) and
+ * can only be correctly dispatched into by CrossOver's own `wine` binary —
+ * setupWineEnvVars (launcher.ts) sets `CX_BOTTLE` ONLY for
+ * `wineVersion.type === 'crossover'`; any other type (e.g. Game Porting
+ * Toolkit's `'toolkit'`, which can end up persisted here via an unguarded
+ * self-heal write — persistBottleWineVersion() / provisionBottle() step 6 —
+ * or simply inherited from globalSettings.wineVersion) instead routes
+ * through `WINEPREFIX = gameSettings.winePrefix`, which this function never
+ * overrides and which may not even point at a prefix that exists on disk.
+ * The result: every dispatchToBottledSteam call (install/launch/uninstall)
+ * fires the bottled steam.exe against the WRONG Wine environment and the
+ * process exits almost instantly, never becoming a resident Steam client.
+ * Resolve CrossOver's own engine whenever the candidate wineVersion isn't
+ * already type 'crossover' — falling back to the candidate only when
+ * CrossOver itself is absent from disk (dev/CI/non-macOS) — identical
+ * posture to getBridgeBottleSettings() below.
  */
 export function getSteamBottleSettings(): GameSettings {
   const globalSettings = GlobalConfig.get().getSettings()
@@ -281,10 +300,17 @@ export function getSteamBottleSettings(): GameSettings {
     'wineCrossoverBottle'
   )
 
+  const candidateWineVersion = storedWineVersion ?? globalSettings.wineVersion
+  const wineVersion =
+    candidateWineVersion.type === 'crossover'
+      ? candidateWineVersion
+      : (resolveCrossoverWine('CrossOver (Steam bottle runtime)') ??
+        candidateWineVersion)
+
   return {
     ...globalSettings,
     wineCrossoverBottle: storedBottleName ?? DEFAULT_STEAM_BOTTLE_NAME,
-    wineVersion: storedWineVersion ?? globalSettings.wineVersion
+    wineVersion
   }
 }
 
@@ -889,9 +915,17 @@ async function dispatchToBottledSteam(
     // the await so it runs concurrently — see provisionBottle note).
     //  - 'install': raise the guided installer UI (steam.exe/SteamSetup.exe).
     //  - 'launch' (GAP-17-LAUNCH-FOCUS): raise the launched game's own window.
-    //  - 'uninstall': no window to raise.
-    if (verb === 'install') {
-      void raiseInstallerWindow('install')
+    //  - 'uninstall' (debug/steam-bottle-uninstall-reverts): the bottled
+    //    steam.exe pops its own uninstall CONFIRMATION dialog on receipt of
+    //    steam://uninstall/<id> — reuse the same raise as 'install' (same
+    //    INSTALLER_PROCESS_NAMES, steam.exe is the owning process) so that
+    //    dialog isn't left behind GameLib's own window, unseen and
+    //    unconfirmed. Previously this verb raised nothing at all, so the
+    //    confirm dialog was invisible, the uninstall never proceeded, and
+    //    the ACF poller's own grace-window fallback silently reverted the
+    //    badge to installed ~60s later.
+    if (verb === 'install' || verb === 'uninstall') {
+      void raiseInstallerWindow(verb)
     } else if (verb === 'launch') {
       void raiseBottledGameWindow('launch')
     }
@@ -927,6 +961,28 @@ export function tellBottledSteamToLaunch(
   return dispatchToBottledSteam('launch', appId)
 }
 
+/**
+ * debug/steam-bottle-uninstall-reverts (FINAL): kept, deliberately, as an
+ * UNUSED-BUT-HARMLESS code path — games.ts's SteamGame.uninstall() no
+ * longer calls this for ANY bottle-eligible title (see its own JSDoc).
+ * Delegating uninstall to the bottled Steam client's own steam://uninstall
+ * confirm dialog was proven architecturally unworkable in this CrossOver
+ * bottle: CrossOver/Wine's resolution of Steam's CW_USEDEFAULT window-
+ * position sentinel places the dialog off-screen, so it never becomes an
+ * addressable window, for ANY title (Steam-authored or GameLib-authored,
+ * warm or cold client) — not merely a readiness or ownership gap this
+ * function could route around. This export (and the 'uninstall' case in
+ * dispatchToBottledSteam's verb switch below) is left in place rather than
+ * deleted because: (1) it is a small, shared, already-tested primitive —
+ * removing it means deleting real, independently-correct regression
+ * coverage in bottle.test.ts for behavior that itself works correctly
+ * (the URI dispatch and window-raise both fire; it's Steam's own dialog
+ * rendering that's broken); (2) it may become useful again if a future fix
+ * to the underlying CrossOver rendering defect makes delegation viable; and
+ * (3) no other caller in this codebase currently reaches it, so keeping it
+ * costs nothing beyond the export itself. If this file is ever refactored
+ * and this function still has zero callers, it is safe to delete then.
+ */
 export function tellBottledSteamToUninstall(
   appId: string
 ): Promise<BottledSteamResult> {
@@ -950,24 +1006,31 @@ export function isBridgeBottleReady(bottleName?: string): boolean {
 }
 
 /**
- * D-UAT-24-06 gap closure (24-15): resolves the CrossOver WineInstallation
- * that CREATED the bridge bottle — derived from the already-locked
- * CXBOTTLE_BIN root (sibling `wine` binary, exactly the path
- * backend/utils/compatibility_layers.ts's getCrossover() computes) — rather
- * than importing that async detector (which would force this getter async
- * and ripple to its synchronous callers, see module docstring above).
+ * D-UAT-24-06 gap closure (24-15) — GENERALIZED (debug/steam-bottle-
+ * uninstall-reverts): resolves CrossOver's OWN wine binary — derived from
+ * the already-locked CXBOTTLE_BIN root (sibling `wine` binary, exactly the
+ * path backend/utils/compatibility_layers.ts's getCrossover() computes) —
+ * rather than importing that async detector (which would force callers
+ * async and ripple to their synchronous callers, see module docstring
+ * above). Shared by BOTH the dedicated Steam bottle (getSteamBottleSettings)
+ * and the bridge bottle (getBridgeBottleSettings) below — both are
+ * CrossOver-created bottles (D-08 CrossOver-only lifecycle) and neither can
+ * be correctly dispatched into by a non-CrossOver engine (setupWineEnvVars
+ * only wires `CX_BOTTLE` for `type: 'crossover'`; anything else silently
+ * routes through `WINEPREFIX` instead, which these getters never point at
+ * the actual CrossOver bottle).
  *
  * Returns undefined when CrossOver's `wine` binary is not present on disk
- * (dev/CI/non-macOS), so the caller can fall back to globalSettings.wineVersion.
+ * (dev/CI/non-macOS), so the caller can fall back to another wineVersion.
  */
-function resolveBridgeCrossoverWine(): WineInstallation | undefined {
+function resolveCrossoverWine(label: string): WineInstallation | undefined {
   const crossoverWineBin = join(dirname(CXBOTTLE_BIN), 'wine')
   if (!existsSync(crossoverWineBin)) {
     return undefined
   }
   return {
     bin: crossoverWineBin,
-    name: 'CrossOver (bridge bottle runtime)',
+    name: label,
     type: 'crossover',
     wineserver: WINESERVER_BIN
   }
@@ -996,7 +1059,9 @@ export function getBridgeBottleSettings(): GameSettings {
   return {
     ...globalSettings,
     wineCrossoverBottle: DEFAULT_BRIDGE_BOTTLE_NAME,
-    wineVersion: resolveBridgeCrossoverWine() ?? globalSettings.wineVersion
+    wineVersion:
+      resolveCrossoverWine('CrossOver (bridge bottle runtime)') ??
+      globalSettings.wineVersion
   }
 }
 

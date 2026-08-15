@@ -47,6 +47,23 @@ import { resolveBridgeLaunchExe } from '../bridge/launchTarget'
 import { ensureBridgeHelperReady } from '../bridge/helperProcess'
 import { runWineCommand } from 'backend/launcher'
 import { existsSync } from 'graceful-fs'
+// Real (unmocked) fs/path/os — used only by the SharedDepots-scoping
+// regression test below, which proves uninstallBottleGameDirectly()'s
+// deletion is scoped correctly against a REAL temp directory tree, the
+// same "real-disk fixture" pattern library.test.ts's own startup-resume
+// reconciliation suite already uses (mkdtempSync + rmSync in
+// beforeEach/afterEach). games.ts's own rmSync (node:fs) is never mocked
+// anywhere in this file, so this is exercising real filesystem behavior,
+// not a mock.
+import {
+  mkdtempSync,
+  rmSync as realRmSync,
+  existsSync as realExistsSync,
+  writeFileSync,
+  mkdirSync
+} from 'node:fs'
+import { join as realJoin } from 'node:path'
+import { tmpdir } from 'node:os'
 import {
   createAbortController,
   callAbortController,
@@ -3138,21 +3155,38 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     expect(result).toBe(true)
   })
 
-  it('D4: uninstall() dispatches to the bottled Steam client + bottle-scoped polling, never steam://uninstall', async () => {
+  it('D4 (debug/steam-bottle-uninstall-reverts FINAL): uninstall() routes a forced-bottle game to direct deletion — never tellBottledSteamToUninstall, never steam://uninstall', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    ;(tellBottledSteamToUninstall as jest.Mock).mockResolvedValue({
-      status: 'done'
+    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+      wineCrossoverBottle: 'GameLibSteam'
     })
+    ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
+      '/mock/bottle/steamapps'
+    )
+    const readAcfStateSpy = jest
+      .spyOn(libraryModule, 'readAcfState')
+      .mockResolvedValue({
+        state: 'installed',
+        installPath: '/mock/bottle/steamapps/common/Dota 2'
+      })
+    const pollUninstallOnceSpy = jest
+      .spyOn(libraryModule, 'pollUninstallOnce')
+      .mockResolvedValue(undefined)
 
     const game = new SteamGame(APP_ID)
     await game.uninstall({} as any)
 
-    expect(tellBottledSteamToUninstall).toHaveBeenCalledWith(APP_ID)
+    expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
     expect(shellOpenExternal).not.toHaveBeenCalled()
-    expect(startUninstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
-      source: 'bottle'
-    })
+    expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    // The delegated path's own bottle-scoped poller is never started —
+    // direct deletion completes synchronously via pollUninstallOnce above.
+    expect(startUninstallPollingSpy).not.toHaveBeenCalled()
+
+    readAcfStateSpy.mockRestore()
+    pollUninstallOnceSpy.mockRestore()
   })
 
   // D5 is split into two independent specs (launch/uninstall halves) rather
@@ -3196,6 +3230,15 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
     ;(tellBottledSteamToUninstall as jest.Mock).mockResolvedValue({
       status: 'done'
+    })
+    // debug/steam-bottle-uninstall-reverts FINAL: uninstall() now always
+    // reaches uninstallBottleGameDirectly()'s readAcfState('bottle') call
+    // (never tellBottledSteamToUninstall), which unconditionally resolves
+    // getSteamBottleSettings() before it can even determine the manifest is
+    // absent — needs a return value here or the real (unmocked)
+    // readAcfState throws destructuring undefined.
+    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+      wineCrossoverBottle: 'GameLibSteam'
     })
 
     // Same rationale as D5a, mirrored for the uninstall() bridge sub-check
@@ -3512,6 +3555,122 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
             forcedWindowsViaBottle?: boolean
           }
         )?.forcedWindowsViaBottle
+      ).toBe(true)
+    })
+
+    // ── debug/steam-bottle-uninstall-reverts: nativeBottleInstall write
+    // discipline — mirrors W2/W6/W7 above, but for a flag set on EVERY
+    // committed installBottleNative() completion, not gated on the D-17
+    // override.
+
+    it('NBI-1: an ordinary (non-forced) bottle-eligible install via installBottleNative persists nativeBottleInstall:true', async () => {
+      mockStatefulMetadataStore({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+
+      const game = new SteamGame(APP_ID)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      jest
+        .spyOn(game as any, 'installBottleNative')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .mockResolvedValue({ status: 'done' } as any)
+
+      // No steamForceWindowsViaBottle override — an ordinary bottle-eligible
+      // (mac-incompatible) title with the native-install setting on.
+      await game.install(PRODUCTION_ARGS)
+
+      expect(
+        (
+          steamMetadataStore.get(APP_ID) as {
+            nativeBottleInstall?: boolean
+            forcedWindowsViaBottle?: boolean
+          }
+        )?.nativeBottleInstall
+      ).toBe(true)
+      // W6 pin still holds: no override means no forcedWindowsViaBottle.
+      expect(
+        (
+          steamMetadataStore.get(APP_ID) as {
+            forcedWindowsViaBottle?: boolean
+          }
+        )?.forcedWindowsViaBottle
+      ).not.toBe(true)
+    })
+
+    it('NBI-2: a failed installBottleNative() persists no nativeBottleInstall flag', async () => {
+      mockStatefulMetadataStore({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+
+      const game = new SteamGame(APP_ID)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      jest
+        .spyOn(game as any, 'installBottleNative')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .mockResolvedValue({ status: 'error', error: 'boom' } as any)
+
+      await game.install(PRODUCTION_ARGS)
+
+      expect(
+        (
+          steamMetadataStore.get(APP_ID) as {
+            nativeBottleInstall?: boolean
+          }
+        )?.nativeBottleInstall
+      ).not.toBe(true)
+    })
+
+    it('NBI-3: legacy tellBottledSteamToInstall delegation (opt-in OFF) persists no nativeBottleInstall flag', async () => {
+      mockStatefulMetadataStore({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+        status: 'done'
+      })
+
+      const game = new SteamGame(APP_ID)
+      await game.install(PRODUCTION_ARGS)
+
+      expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+      expect(
+        (
+          steamMetadataStore.get(APP_ID) as {
+            nativeBottleInstall?: boolean
+          }
+        )?.nativeBottleInstall
+      ).not.toBe(true)
+    })
+
+    it('NBI-4: the persisted nativeBottleInstall verdict survives a subsequent appdetails re-fetch (no T-18-02-04 silent drop)', async () => {
+      mockStatefulMetadataStore({
+        art_cover: '',
+        art_square: '',
+        extra: { reqs: [] },
+        platformsCaptured: true,
+        is_mac_native: false,
+        nativeBottleInstall: true
+      })
+      ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+      library.set(APP_ID, makeEntry())
+
+      new SteamGame(APP_ID).getGameInfo()
+      await flushAsync()
+
+      expect(
+        (
+          steamMetadataStore.get(APP_ID) as {
+            nativeBottleInstall?: boolean
+          }
+        )?.nativeBottleInstall
       ).toBe(true)
     })
   })
@@ -3877,26 +4036,14 @@ describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => 
     startUninstallPollingSpy.mockRestore()
   })
 
-  it('bottle-eligible + provisioned: uninstall() calls tellBottledSteamToUninstall + bottle-scoped startUninstallPolling, NOT shell.openExternal', async () => {
-    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
-      platformsCaptured: true,
-      is_mac_native: false
-    })
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    ;(tellBottledSteamToUninstall as jest.Mock).mockResolvedValue({
-      status: 'done'
-    })
-
-    const game = new SteamGame(APP_ID)
-    const result = await game.uninstall({} as any)
-
-    expect(shellOpenExternal).not.toHaveBeenCalled()
-    expect(tellBottledSteamToUninstall).toHaveBeenCalledWith(APP_ID)
-    expect(startUninstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
-      source: 'bottle'
-    })
-    expect(result).toEqual({ stdout: '', stderr: '' })
-  })
+  // NOTE (debug/steam-bottle-uninstall-reverts FINAL): the former
+  // "bottle-eligible + provisioned: uninstall() calls
+  // tellBottledSteamToUninstall" test used to live here. That routing is
+  // retired — EVERY bottle-eligible + provisioned title now uninstalls via
+  // direct deletion, never tellBottledSteamToUninstall. That behavior is
+  // now fully covered (with the readAcfState/pollUninstallOnce spies it
+  // needs) by the "direct deletion for ALL bottle-eligible titles" describe
+  // block below, so it is not duplicated here.
 
   it('bottle-eligible + un-provisioned: uninstall() does NOT call shell.openExternal and emits steamBottleSetupRequired', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
@@ -3963,6 +4110,238 @@ describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => 
   })
 })
 
+// ── debug/steam-bottle-uninstall-reverts (FINAL): direct deletion for ALL
+// bottle-eligible, non-bridge titles — delegating uninstall to the bottled
+// Steam client's own confirm dialog was PROVEN architecturally unworkable
+// in this CrossOver bottle for every bottle title (CW_USEDEFAULT
+// off-screen-window defect), not only GameLib-authored
+// (installBottleNative, D-15/SNI-08) ones. uninstall() therefore routes
+// EVERY bottle-eligible, non-bridge title to uninstallBottleGameDirectly()
+// UNCONDITIONALLY now — the nativeBottleInstall flag no longer changes
+// routing (see games.ts JSDoc; the flag itself is kept as provenance-only
+// metadata).
+
+describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titles (debug/steam-bottle-uninstall-reverts FINAL)', () => {
+  let shellOpenExternal: jest.Mock
+  let startUninstallPollingSpy: jest.SpyInstance
+  let readAcfStateSpy: jest.SpyInstance
+  let pollUninstallOnceSpy: jest.SpyInstance
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+
+  // Steam-authored installdir (Hoard, appId 63000) — deliberately NOT an
+  // 'app_<id>' GameLib-authored name, proving the naming-convention
+  // generalization: installRoot is derived purely from the ACF's own
+  // on-disk installdir, never FALLBACK_INSTALLDIR_PREFIX.
+  const INSTALL_PATH = '/mock/bottle/steamapps/common/Hoard'
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    const { shell } = jest.requireMock('electron')
+    shellOpenExternal = shell.openExternal as jest.Mock
+    shellOpenExternal.mockResolvedValue(undefined)
+    library.set(APP_ID, makeEntry({ title: 'Hoard', is_installed: true }))
+    startUninstallPollingSpy = jest
+      .spyOn(libraryModule, 'startUninstallPolling')
+      .mockImplementation(() => {})
+    readAcfStateSpy = jest.spyOn(libraryModule, 'readAcfState')
+    pollUninstallOnceSpy = jest
+      .spyOn(libraryModule, 'pollUninstallOnce')
+      .mockResolvedValue(undefined)
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    envMock.isWindows = false
+    envMock.isLinux = false
+    ;(isBottleReady as jest.Mock).mockReset().mockReturnValue(true)
+    ;(tellBottledSteamToUninstall as jest.Mock).mockReset()
+    ;(bridgeAllowlist.has as jest.Mock).mockReset().mockReturnValue(false)
+    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+      wineCrossoverBottle: 'GameLibSteam'
+    })
+    ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
+      '/mock/bottle/steamapps'
+    )
+  })
+
+  afterEach(() => {
+    startUninstallPollingSpy.mockRestore()
+    readAcfStateSpy.mockRestore()
+    pollUninstallOnceSpy.mockRestore()
+  })
+
+  it('nativeBottleInstall:true (GameLib-authored install) routes to direct deletion — never dispatches to the bottled Steam client', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false,
+      nativeBottleInstall: true
+    })
+    readAcfStateSpy.mockResolvedValue({
+      state: 'installed',
+      installPath: INSTALL_PATH
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.uninstall({} as any)
+
+    expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(startUninstallPollingSpy).not.toHaveBeenCalled()
+    expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    // Reuses the SAME confirmed-absent completion pipeline the delegated
+    // path's own poller uses — badge flip/persist/notify/flag-clear.
+    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(result).toEqual({ stdout: '', stderr: '' })
+  })
+
+  it('nativeBottleInstall:false (explicit — legacy-delegated/Steam-authored install, e.g. Hoard) ALSO routes to direct deletion — routing no longer depends on this flag', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false,
+      nativeBottleInstall: false
+    })
+    readAcfStateSpy.mockResolvedValue({
+      state: 'installed',
+      installPath: INSTALL_PATH
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.uninstall({} as any)
+
+    expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
+    expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(result).toEqual({ stdout: '', stderr: '' })
+  })
+
+  it('nativeBottleInstall absent (never set — pre-fix cache entry) ALSO routes to direct deletion — no title ever falls through to tellBottledSteamToUninstall anymore', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    readAcfStateSpy.mockResolvedValue({
+      state: 'installed',
+      installPath: INSTALL_PATH
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.uninstall({} as any)
+
+    expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
+    expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(result).toEqual({ stdout: '', stderr: '' })
+  })
+
+  it('containment: rejects an installPath outside the bottle common/ dir instead of deleting it', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    readAcfStateSpy.mockResolvedValue({
+      state: 'installed',
+      installPath: '/etc/passwd'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.uninstall({} as any)
+
+    expect(result.stderr).toContain('unsafe path')
+    expect(pollUninstallOnceSpy).not.toHaveBeenCalled()
+  })
+
+  it('no installed manifest found (already absent/downloading) — syncs state via pollUninstallOnce instead of deleting', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    readAcfStateSpy.mockResolvedValue({ state: 'absent' })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.uninstall({} as any)
+
+    expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
+    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(result).toEqual({ stdout: '', stderr: '' })
+  })
+
+  // ── SharedDepots hazard: a REAL filesystem regression test, not a mocked
+  // one — proves uninstallBottleGameDirectly()'s deletion is scoped to
+  // EXACTLY this title's own installdir + own manifest, and never touches
+  // a sibling directory another bottle title's SharedDepots points at
+  // (Hoard's real manifest declares SharedDepots 228987/228990 -> 228980,
+  // "Steamworks Common Redistributables" — see debug session evidence).
+  describe('SharedDepots hazard — real filesystem scoping proof', () => {
+    let tmp: string
+    let steamappsDir: string
+    let hoardInstallDir: string
+    let sharedDepotOwnerDir: string
+    let hoardManifestPath: string
+    let siblingManifestPath: string
+
+    beforeEach(() => {
+      tmp = mkdtempSync(
+        realJoin(tmpdir(), 'gamelib-uninstall-shareddepots-test-')
+      )
+      steamappsDir = realJoin(tmp, 'steamapps')
+      hoardInstallDir = realJoin(steamappsDir, 'common', 'Hoard')
+      // The SharedDepots OWNER app's own installdir — a SIBLING of
+      // Hoard's own installdir under common/, never a child of it. This is
+      // where 228987/228990's actual files live; uninstalling Hoard must
+      // never reach into it.
+      sharedDepotOwnerDir = realJoin(
+        steamappsDir,
+        'common',
+        'Steamworks Common Redistributables'
+      )
+      hoardManifestPath = realJoin(steamappsDir, `appmanifest_${APP_ID}.acf`)
+      siblingManifestPath = realJoin(steamappsDir, 'appmanifest_228980.acf')
+
+      mkdirSync(hoardInstallDir, { recursive: true })
+      mkdirSync(sharedDepotOwnerDir, { recursive: true })
+      writeFileSync(realJoin(hoardInstallDir, 'Hoard.exe'), 'binary-stub')
+      writeFileSync(
+        realJoin(sharedDepotOwnerDir, 'vcredist_x64.exe'),
+        'shared-redist-stub'
+      )
+      writeFileSync(hoardManifestPath, 'hoard manifest content')
+      writeFileSync(siblingManifestPath, 'sibling manifest content')
+
+      ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(steamappsDir)
+    })
+
+    afterEach(() => {
+      realRmSync(tmp, { recursive: true, force: true })
+    })
+
+    it('removes ONLY Hoard\'s own installdir + own manifest — the SharedDepots owner\'s sibling directory and manifest survive untouched', async () => {
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      readAcfStateSpy.mockResolvedValue({
+        state: 'installed',
+        installPath: hoardInstallDir
+      })
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.uninstall({} as any)
+
+      expect(result).toEqual({ stdout: '', stderr: '' })
+      // Hoard's own install dir + manifest are gone.
+      expect(realExistsSync(hoardInstallDir)).toBe(false)
+      expect(realExistsSync(hoardManifestPath)).toBe(false)
+      // The SharedDepots owner's sibling directory (and its content) and
+      // its own manifest survive completely untouched.
+      expect(realExistsSync(sharedDepotOwnerDir)).toBe(true)
+      expect(
+        realExistsSync(realJoin(sharedDepotOwnerDir, 'vcredist_x64.exe'))
+      ).toBe(true)
+      expect(realExistsSync(siblingManifestPath)).toBe(true)
+    })
+  })
+})
+
 // ── Phase 24 Plan 08 (R4/R6): allowlist-based bridge uninstall routing —
 // removes the game from the DEDICATED bridge bottle directly (no Steam
 // client to dispatch a verb to on this path), never touching the Phase 17
@@ -4022,18 +4401,32 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
     expect(library.get(APP_ID)?.is_installed).toBe(false)
   })
 
-  it('regression: a non-allowlisted title uninstall() is unchanged from Phase 17 (never consults resolveBridgeLaunchExe)', async () => {
+  it('regression: a non-allowlisted title uninstall() never consults resolveBridgeLaunchExe, and (debug/steam-bottle-uninstall-reverts FINAL) routes to direct deletion instead of tellBottledSteamToUninstall', async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    ;(tellBottledSteamToUninstall as jest.Mock).mockResolvedValue({
-      status: 'done'
+    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+      wineCrossoverBottle: 'GameLibSteam'
     })
+    const readAcfStateSpy = jest
+      .spyOn(libraryModule, 'readAcfState')
+      .mockResolvedValue({
+        state: 'installed',
+        installPath: '/mock/bottle/steamapps/common/Hoard'
+      })
+    const pollUninstallOnceSpy = jest
+      .spyOn(libraryModule, 'pollUninstallOnce')
+      .mockResolvedValue(undefined)
 
     const game = new SteamGame(APP_ID)
     await game.uninstall({} as any)
 
     expect(resolveBridgeLaunchExe).not.toHaveBeenCalled()
-    expect(tellBottledSteamToUninstall).toHaveBeenCalledWith(APP_ID)
+    expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
+    expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+
+    readAcfStateSpy.mockRestore()
+    pollUninstallOnceSpy.mockRestore()
   })
 
   // ── D-UAT-24-07 fold-in: markBridgeGameUninstalled() must emit a
