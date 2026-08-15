@@ -1,9 +1,10 @@
 ---
 slug: steam-bottle-uninstall-reverts
-status: awaiting_human_verify
+status: resolved
 trigger: "cant uninstall 'all will fall', when i try and uninstall it says uninstalling for a time, but then reverts back... tried to delete file on disk, still cant remove it."
 created: 2026-08-15
-updated: 2026-08-15T23:15:00Z
+updated: 2026-08-15T23:59:00Z
+resolved_by: [539bc979c, 60e89349a, cc320f258, fa9051a9e]
 goal: find_and_fix
 live_access: yes — operator is at the keyboard and can drive `pnpm tauri:dev`, paste logs, and answer questions
 ---
@@ -383,10 +384,26 @@ fix: "Layers (1) and (3)/(4)/mechanism: IMPLEMENTED, self-verified, LIVE-
   install_path/install_size/platform to a surviving copy and keeping
   is_installed:true (never forcing the badge to flip) instead of declaring
   the title fully uninstalled; the 'Game Uninstalled' toast is skipped in
-  that case so the success signal never overstates what happened. Bridge is
-  intentionally excluded from this survivor check — separate root, own
-  uninstallBridgeGame()/markBridgeGameUninstalled() completion path, out of
-  this fix's scope."
+  that case so the success signal never overstates what happened.
+
+  LAYER (6), found BY the live verification of layer (5) and fixed in
+  fa9051a9e: the survivor check above was PAIRWISE (bottle<->native) and
+  excluded the bridge bottle on the reasoning that it owns its own
+  uninstallBridgeGame()/markBridgeGameUninstalled() completion path. That
+  holds for a bridge-INITIATED uninstall but does NOT make a surviving
+  bridge copy invisible to a native- or bottle-scoped one. Live: HOARD was
+  installed on ALL THREE roots simultaneously, so removing the native copy
+  declared a complete uninstall and fired the toast while 277M survived in
+  GameLibSteamBridge. pollUninstallOnce() now probes EVERY root except the
+  one just uninstalled from, in a fixed order (native, bottle, bridge) so
+  the re-resolved install_path is deterministic when more than one
+  survives. Each probe is INDIVIDUALLY GUARDED: resolving the bridge root
+  calls getBridgeBottleSettings(), which returns nothing when the bridge
+  bottle was never provisioned — unguarded that threw straight out of the
+  poller and broke uninstall completion entirely, including for users with
+  no bridge bottle at all (it failed 5 pre-existing tests on the first
+  attempt). An unreadable root cannot confirm a survivor either way, so it
+  is logged and treated as absent."
 verification: "Layers (1) and (3)/(4) mechanism: self-verified AND
   live-verified against real data — confirmed correct, do not re-open.
   Layer (5): self-verified — tsc --noEmit clean, eslint 0 errors (pre-
@@ -398,12 +415,39 @@ verification: "Layers (1) and (3)/(4) mechanism: self-verified AND
   in both directions plus a no-survivor regression guard, 8 new
   resolveInstallRoot() unit tests covering containment/traversal/multi-
   library/non-mac cases), full repo suite 5561/5562 (1 pre-existing
-  unrelated skip, 0 regressions). NOT live-verified — live repro material
-  is scarce (Hoard is now native-only single-copy); a live dual-install
-  re-test would require the operator to reinstall Hoard's bottle copy
-  specifically. Awaiting human verification/confirmation before archiving;
-  self-verification is thorough enough that a live re-test is optional
-  confirmation, not a blocking gate."
+  unrelated skip, 0 regressions).
+
+  LAYER (5) LIVE-VERIFIED 2026-08-15 22:36-22:39 on HOARD (63000), in two
+  passes against a confirmed-fresh build (sidecar rebuilt 22:28:55,
+  resolveInstallRoot present, reverted diagnostics absent — the first
+  attempt was caught running a STALE build that predated the fix, so this
+  was checked before trusting anything):
+    Pass 1 (cancel, non-destructive): 'delegating uninstall for appId 63000
+    via steam://uninstall/63000' + 'starting uninstall polling ... source
+    native'. `source native` IS the discriminator — under the old
+    attribute-based routing this exact title (bottle-eligible, mac_arch
+    '32', forcedWindowsViaBottle) went to the BOTTLE. Native macOS Steam's
+    dialog rendered normally (confirming the CW_USEDEFAULT defect is
+    CrossOver-specific and delegation remains right on the native path).
+    Cancelling left everything intact; the grace window timed out correctly.
+    Pass 2 (confirm, destructive): native 574M copy and its manifest removed
+    by Steam, poller completed in 3s, install_path RE-RESOLVED to a
+    surviving copy. All seven other bottle titles and Steamworks Shared
+    untouched throughout; the SharedDepots containment guard held on real
+    data.
+  The operator reported 'did not flip' — investigation proved the badge was
+  CORRECT (a third copy survived) and surfaced layer (6) instead.
+
+  LAYER (6): self-verified only — steam suite 1014/1014, tsc clean, eslint
+  0 errors, new bridge-survivor test RED-proven against the pairwise check
+  TWICE (before and after its mocks were finalised, since the test itself
+  changed in between). The full-suite worker-teardown warning is pre-
+  existing: neither library.test.ts nor games.test.ts emits it alone. NOT
+  live-verified — its behaviour only triggers for a title on multiple
+  roots, and HOARD is now bridge-only, so a live re-test would require
+  reinstalling. Given the RED proof and that the guard fixed 5 real
+  pre-existing failures, a live re-test is optional confirmation, not a
+  blocking gate."
 files_changed:
   - src/backend/storeManagers/steam/games.ts (prior rounds: wine-engine-
     adjacent work + the generalized direct-deletion uninstall routing —
