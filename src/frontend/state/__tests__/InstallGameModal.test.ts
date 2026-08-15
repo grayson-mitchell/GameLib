@@ -477,7 +477,12 @@ describe('Group F: installSteamGame returns a real, observable promise', () => {
   })
 
   it('F2: the returned value is thenable, so `await` on it is meaningful rather than an await-thenable error', () => {
-    const returned = installSteamGame('570', makeGameInfo()) as Promise<unknown>
+    // 34.13 review pass 3 (hygiene): the `as Promise<unknown>` assertion
+    // C-01's fix left here became UNNECESSARY the moment installSteamGame
+    // started returning `Promise<unknown>` — eslint flagged it as a hard
+    // ERROR (@typescript-eslint/no-unnecessary-type-assertion), the only one
+    // across every file this pass touched.
+    const returned = installSteamGame('570', makeGameInfo())
     expect(typeof returned.then).toBe('function')
     return returned
   })
