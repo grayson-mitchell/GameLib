@@ -116,11 +116,23 @@ const ROW_TABLE: Record<
     // Row 5: Windows host, any Steam game, native OFF or ON-with-<=1.
     // Read-only "Windows" (D-19, only one option ever). No wine off-mac
     // (D-11/D-18). This is the content-light case (D-20/Q6).
+    //
+    // DISCREPANCY vs 34.13-05-PLAN.md's own <matrix_expectations> table
+    // (recorded for the SUMMARY, per that section's own instruction that
+    // the UI-SPEC wins on any disagreement): the plan's row-5/row-7 table
+    // entries list `freeSpaceLine: true` / `contentLightNotice: false`.
+    // That contradicts BOTH the live UI-SPEC table (`34.13-UI-SPEC.md`
+    // "Section-Gating Matrix" row 5's "Free-space line" cell is literally
+    // "NO") AND the plan's own prose two paragraphs below its table ("`CL`
+    // is true for exactly these two rows", "`FS` equals `LD` in every one
+    // of the 8 rows" -- `LD` is `false` here). Transcribed here from the
+    // live UI-SPEC + the plan's own stated invariants, not from the
+    // plan's literal table cells.
     expected: () => ({
       platformRow: 'readonly-windows',
       libraryDropdown: false,
       wineSection: false,
-      freeSpaceLine: true,
+      freeSpaceLine: false,
       contentLightNotice: true,
       forceWindowsViaBottle: false
     })
@@ -142,11 +154,15 @@ const ROW_TABLE: Record<
     // Row 7: Linux host (or any unrecognised host, fail-closed), native
     // OFF or ON-with-<=1. Platform row does not render at all (D-18,
     // unconditional). Content-light case (D-20/Q6).
+    //
+    // Same DISCREPANCY as row 5 above (see that comment) -- transcribed
+    // from the live UI-SPEC row 7's "Free-space line" cell (literally
+    // "NO") rather than the plan's own literal `matrix_expectations` cell.
     expected: () => ({
       platformRow: 'absent',
       libraryDropdown: false,
       wineSection: false,
-      freeSpaceLine: true,
+      freeSpaceLine: false,
       contentLightNotice: true,
       forceWindowsViaBottle: false
     })
