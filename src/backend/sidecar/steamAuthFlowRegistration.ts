@@ -253,19 +253,58 @@ export function registerSteamAuthFlows(): void {
   // ── Phase 34.13 Plan 07 install-form channels (D-09/D-14/D-15,
   // main.ts's own mirrored addHandler pair) — both delegate to the shared
   // install-form seam imported below, the SAME import main.ts uses, so the
-  // two runtimes cannot drift. BOTH channels' payloads are passed through
-  // UNCAST — both seams take `unknown` by design, and casting here would
-  // defeat that guard at the type level. (34.13 review WR-10: the read
+  // two runtimes cannot drift. THESE TWO channels' payloads are passed
+  // through UNCAST — both seams take `unknown` by design, and casting here
+  // would defeat that guard at the type level. (34.13 review WR-10: the read
   // channel used to cast `args[0] as string` while this very comment
   // claimed otherwise; the seam now carries the typeof guard so no cast is
-  // needed in either runtime.) ─────────────────────────────────────────────
-  ipcMain.handle('isSteamBottleEligible', async (_event: unknown, ...args: unknown[]) => {
-    return getSteamBottleEligibilityVerdict(args[0])
-  })
+  // needed in either runtime.)
+  //
+  // SCOPE OF THAT CLAIM — narrowed by 34.13 review A-05, which found this
+  // comment reading as though the whole FILE had adopted an uncast posture
+  // when only 2 of its 7 payload-carrying handlers have. The other five
+  // still cast, and each one's callee owns the guard that is missing:
+  //
+  //   getSteamInstallSize      -> `args[0] as string`; the callee's guard is
+  //                               `if (!/^\d+$/.test(appId))` in
+  //                               `steam/games.ts` — the IDENTICAL regex-only
+  //                               shape WR-10's own RED test writes out as
+  //                               the hole (`RegExp.prototype.test` COERCES,
+  //                               so `123` and `['570']` both pass). It also
+  //                               interpolates the rejected value into its
+  //                               log line.
+  //   steamClientSetupRecheck  -> `args[0] as string`
+  //   steamSubmitGuard         -> `args[0] as string`
+  //   steamStartCredentials    -> destructures `{username, password}` with no
+  //                               runtime shape check at all (a non-object
+  //                               payload throws at the destructure)
+  //   steamBottleProvision     -> casts to `provisionBottle`'s parameter,
+  //                               which carries a `bottleName` and a
+  //                               `wineVersion` and is therefore the same
+  //                               category of untrusted payload as the
+  //                               install-form seam, with no validation
+  //
+  // The FIX for each is to push the guard down into its own seam (the shape
+  // WR-10 established), so the cast disappears from BOTH runtimes at once —
+  // `main.ts` carries the identical casts, and hardening only this file
+  // would create a real Electron/Tauri behaviour divergence, which is worse
+  // than the uniform gap. Those seams (`steam/games.ts`, `steam/bottle.ts`)
+  // could not be edited in the pass that wrote this note; the pushdown is
+  // recorded here rather than half-applied.
+  // ─────────────────────────────────────────────────────────────────────────
+  ipcMain.handle(
+    'isSteamBottleEligible',
+    async (_event: unknown, ...args: unknown[]) => {
+      return getSteamBottleEligibilityVerdict(args[0])
+    }
+  )
 
-  ipcMain.handle('persistBottleWineVersion', async (_event: unknown, ...args: unknown[]) => {
-    return persistInstallFormWineVersion(args[0])
-  })
+  ipcMain.handle(
+    'persistBottleWineVersion',
+    async (_event: unknown, ...args: unknown[]) => {
+      return persistInstallFormWineVersion(args[0])
+    }
+  )
 
   // ── Guided Steam-client install pair (REQ-34.4-04, main.ts:958-961) ───────
   ipcMain.handle('steamClientSetupStart', async () => {

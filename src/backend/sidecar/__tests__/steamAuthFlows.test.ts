@@ -747,12 +747,9 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       writeInvoke(input, 'install-form-marker-1', 'isSteamBottleEligible', [
         '570'
       ])
-      writeInvoke(
-        input,
-        'install-form-marker-2',
-        'persistBottleWineVersion',
-        [{}]
-      )
+      writeInvoke(input, 'install-form-marker-2', 'persistBottleWineVersion', [
+        {}
+      ])
       await flush()
 
       const eligibleResponse = frames.find(
@@ -1011,5 +1008,64 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       expect(getSteamInstallSize).toHaveBeenCalledTimes(1)
       expect(getSteamInstallSize).toHaveBeenCalledWith('999001')
     })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 34.13 review A-05 — the uncast-posture claim, pinned to its real scope.
+//
+// The file's block comment used to read as though `steamAuthFlowRegistration`
+// had adopted an uncast posture wholesale. Only 2 of its 7 payload-carrying
+// handlers had. A comment cannot be wrong silently if a gate counts it.
+// ---------------------------------------------------------------------------
+describe('A-05: the uncast-payload claim matches the real registrations', () => {
+  const source = stripSourceComments(
+    readFileSync(join(__dirname, '..', 'steamAuthFlowRegistration.ts'), 'utf8')
+  )
+
+  const UNCAST_CHANNELS = ['isSteamBottleEligible', 'persistBottleWineVersion']
+  const STILL_CAST_CHANNELS = [
+    'getSteamInstallSize',
+    'steamClientSetupRecheck',
+    'steamSubmitGuard',
+    'steamStartCredentials',
+    'steamBottleProvision'
+  ]
+
+  function handlerBody(channel: string): string {
+    const start = source.indexOf(`'${channel}'`)
+    if (start === -1) throw new Error(`handler for ${channel} not found`)
+    const end = source.indexOf('ipcMain.', start + 1)
+    return source.slice(start, end === -1 ? undefined : end)
+  }
+
+  it.each(UNCAST_CHANNELS)(
+    'A-05: "%s" forwards its payload with NO cast (the seam takes unknown)',
+    (channel) => {
+      expect(handlerBody(channel)).not.toMatch(/args\[0\] as /)
+    }
+  )
+
+  it.each(STILL_CAST_CHANNELS)(
+    'A-05: "%s" is DECLARED as still casting -- if this ever fails, the guard was pushed into its seam and the block comment must be narrowed again',
+    (channel) => {
+      const body = handlerBody(channel)
+      // `steamStartCredentials` casts via a destructure rather than an
+      // `args[0] as string`, so accept either shape.
+      expect(/args\[0\] as /.test(body)).toBe(true)
+    }
+  )
+
+  it('A-05: the comment no longer claims a file-wide uncast posture', () => {
+    const raw = readFileSync(
+      join(__dirname, '..', 'steamAuthFlowRegistration.ts'),
+      'utf8'
+    )
+    // The corrected comment must scope its claim and must NAME the gap.
+    expect(raw).toContain('THESE TWO channels')
+    expect(raw).toContain('SCOPE OF THAT CLAIM')
+    for (const channel of STILL_CAST_CHANNELS) {
+      expect(raw).toContain(channel)
+    }
   })
 })
