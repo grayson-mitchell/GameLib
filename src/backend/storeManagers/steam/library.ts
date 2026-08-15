@@ -685,9 +685,14 @@ export default class SteamLibraryManager implements LibraryManager {
         art_cover: cachedMeta?.art_cover ?? '',
         art_square: cachedMeta?.art_square ?? '',
         // DETAIL-01: seed native platform flags from the metadata cache so the
-        // platform icons survive a resync (fetchMetadataIfNeeded populates these)
+        // platform icons survive a resync (fetchMetadataIfNeeded populates these).
+        // D-17: is_windows_native seeds the same way, and its false default
+        // is load-bearing — an absent or never-captured cache entry proves
+        // nothing about a Windows depot, so false-when-unknown is the only
+        // safe direction; it must never default to true.
         is_mac_native: cachedMeta?.is_mac_native ?? false,
         is_linux_native: cachedMeta?.is_linux_native ?? false,
+        is_windows_native: cachedMeta?.is_windows_native ?? false,
         // GAP-B: seed the persisted delisted verdict so it survives a library resync
         is_delisted: cachedMeta?.is_delisted ?? false,
         // CR-01 fix: seed the persisted Mach-O ground-truth verdict so a
@@ -768,6 +773,18 @@ export default class SteamLibraryManager implements LibraryManager {
     return steamLibraryStore.get('games', [])
   }
 
+  /**
+   * D-07 (phase 34.13): deliberate stub returning `undefined` — Steam
+   * exposes no pre-install size, and computing one for real would need an
+   * authenticated Steam CM connection plus per-depot round trips (D-06),
+   * far more than this call should ever cost.
+   * The Steam install dialog never calls the frontend `getInstallInfo`
+   * helper and never gates Install on `diskSize`, so this stub can't hang
+   * it — the historical failure mode it used to imply, `DownloadDialog`
+   * spinning forever on the "download size" string, can't recur here.
+   * `InstallGameModal.ts`'s short-circuit is no longer the only defense —
+   * the dialog's own D-06 contract is.
+   */
   async getInstallInfo(
     _appName: string,
     _installPlatform: InstallPlatform,

@@ -547,6 +547,46 @@ describe('SteamLibraryManager', () => {
     expect(pushed?.steamPlatformsCaptured).toBe(false)
   })
 
+  // ── D-17: is_windows_native hydration ──────────────────────────────────────
+
+  it('D-17: synced GameInfo carries is_windows_native:true when cachedMeta.is_windows_native is true', async () => {
+    const apps = [makeOwnedApp(570, 'Dota 2', 120)]
+    const fakeClient = makeFakeClient(apps)
+    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamLibraryStore.get).mockReturnValue([])
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true,
+      is_windows_native: true
+    })
+
+    await manager.refresh()
+
+    const calls = jest.mocked(sendFrontendMessage).mock.calls
+    const pushed = calls.find(
+      ([_msg, info]) => (info as any).app_name === '570'
+    )?.[1] as any
+
+    expect(pushed?.is_windows_native).toBe(true)
+  })
+
+  it('D-17 false-safe: synced GameInfo carries is_windows_native:false when cachedMeta is absent', async () => {
+    const apps = [makeOwnedApp(570, 'Dota 2', 120)]
+    const fakeClient = makeFakeClient(apps)
+    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamLibraryStore.get).mockReturnValue([])
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
+
+    await manager.refresh()
+
+    const calls = jest.mocked(sendFrontendMessage).mock.calls
+    const pushed = calls.find(
+      ([_msg, info]) => (info as any).app_name === '570'
+    )?.[1] as any
+
+    expect(pushed?.is_windows_native).toBe(false)
+  })
+
   // ── CR-01 gap closure (18-05): mac_arch survives refresh() resync ─────────
 
   it('CR-01: refresh() seeds mac_arch:\'32\' from cachedMeta so a cached Mach-O verdict survives resync', async () => {
