@@ -4,6 +4,7 @@ import { join } from 'path'
 
 import packageJson from '../../package.json'
 import scopeSnapshot from '../i18nGateScope.json'
+import forkTouchedSnapshot from '../i18nForkTouchedFiles.json'
 
 import {
   deriveScopeFiles,
@@ -35,6 +36,99 @@ const FIXTURE_DIFF_LINES = [
   'M\tsrc/backend/steam/library.ts',
   'R100\tsrc/frontend/screens/OldLogin/index.ts\tsrc/frontend/screens/Login/index.ts'
 ]
+
+const DECLARED_UNSCANNED_DEBT = [
+  'src/frontend/components/UI/ActionIcons/index.tsx',
+  'src/frontend/components/UI/LanguageSelector/index.tsx',
+  'src/frontend/components/UI/NavShell/components/FilterFacetGroup/selectionCount.ts',
+  'src/frontend/components/UI/SteamGridDBPicker/index.tsx',
+  'src/frontend/components/UI/Winetricks/index.tsx',
+  'src/frontend/helpers/declaredUnavailable.ts',
+  'src/frontend/screens/ConsoleMode/selectors.ts',
+  'src/frontend/screens/Library/components/FilterChipRow/chipLabels.ts',
+  'src/frontend/screens/Library/components/GamesList/index.tsx',
+  'src/frontend/screens/Library/components/LibraryHeader/gameCount.ts',
+  'src/frontend/screens/Library/engineWiring.ts',
+  'src/frontend/screens/Library/facetLabels.ts',
+  'src/frontend/screens/Library/filterEngine.ts',
+  'src/frontend/screens/Settings/components/EgsSettings.tsx',
+  'src/frontend/screens/Settings/components/SteamGridDbApiKey.tsx',
+  'src/frontend/screens/Settings/components/UseFramelessWindow.tsx',
+  'src/frontend/screens/Settings/sections/AdvancedSettings/index.tsx',
+  'src/frontend/screens/Settings/sections/GamesSettings/index.tsx'
+]
+
+/**
+ * 34.13 review A-17 — THE RATCHET, now runnable in CI.
+ *
+ * It previously sat inside `describeIfGitAvailable`, which resolves to
+ * `describe.skip` whenever `git diff <upstream merge-base> HEAD` fails.
+ * `actions/checkout@v6` clones at depth 1 with no Heroic remote, and
+ * `grep -rn "fetch-depth" .github/workflows/` returns NO MATCH, so that diff
+ * fails on every pipeline run — the ratchet was `describe.skip` in CI and the
+ * fix report's "new drift fails immediately by name" claim was true only on a
+ * developer machine that had fetched the merge-base. That is precisely the
+ * drift A-02 was: a new fork-touched file reaches main with nothing red,
+ * because the only mechanism that names it never executes in the pipeline.
+ *
+ * The ratchet now reads `meta/i18nForkTouchedFiles.json`, a COMMITTED artifact
+ * written by `pnpm gen-i18n-gate-scope` alongside the scope snapshot itself.
+ * No git, no network, no remote — it runs everywhere. The artifact cannot rot
+ * silently: the ANTI-ROT specs above assert it still equals the live git
+ * derivation wherever git can answer.
+ */
+describe('A-17 CI-READABLE RATCHET (no git required)', () => {
+  const committedScope = new Set(scopeSnapshot.files)
+  const unscanned = forkTouchedSnapshot.files.filter(
+    (file) => !committedScope.has(file)
+  )
+
+  it('sanity: the committed fork-touched artifact is non-empty and a superset of the committed scope', () => {
+    expect(forkTouchedSnapshot.files.length).toBeGreaterThan(0)
+    expect(forkTouchedSnapshot.files.length).toBeGreaterThanOrEqual(
+      scopeSnapshot.files.length
+    )
+  })
+
+  it('the artifact is pinned to the SAME upstream merge-base as package.json, so it cannot describe a different world', () => {
+    expect(forkTouchedSnapshot.baseCommit).toBe(packageJson.upstream.baseCommit)
+  })
+
+  it('A-03 RATCHET: the set of unscanned fork-touched files equals the DECLARED debt exactly -- any NEW drift fails here by name', () => {
+    expect(unscanned.sort()).toEqual([...DECLARED_UNSCANNED_DEBT].sort())
+  })
+
+  it('A-03 RATCHET non-vacuity: the ratchet DOES fail when a file drifts out of scope -- proven by removing a real, currently-in-scope path from a copy of the snapshot', () => {
+    const inScope = forkTouchedSnapshot.files.find((file) =>
+      committedScope.has(file)
+    )
+    expect(inScope).toBeDefined()
+
+    const sabotaged = new Set(
+      scopeSnapshot.files.filter((file) => file !== inScope)
+    )
+    const missing = forkTouchedSnapshot.files.filter(
+      (file) => !sabotaged.has(file)
+    )
+
+    expect(missing.sort()).not.toEqual([...DECLARED_UNSCANNED_DEBT].sort())
+    expect(missing).toContain(inScope)
+  })
+
+  it('A-17 non-vacuity: a NEW fork-touched file appearing in the artifact fails the ratchet by name', () => {
+    // The exact drift the CI-skipped version could not catch.
+    const drifted = [
+      ...forkTouchedSnapshot.files,
+      'src/frontend/screens/Brand/NewlyAddedByAFuturePhase.tsx'
+    ]
+    const missing = drifted.filter((file) => !committedScope.has(file))
+
+    expect(missing.sort()).not.toEqual([...DECLARED_UNSCANNED_DEBT].sort())
+    expect(missing).toContain(
+      'src/frontend/screens/Brand/NewlyAddedByAFuturePhase.tsx'
+    )
+  })
+})
 
 describe('genI18nGateScope', () => {
   describe('deriveScopeFiles', () => {
@@ -238,26 +332,6 @@ describe('genI18nGateScope', () => {
          *
          * The remaining eighteen are pre-existing debt from 34.11 and earlier.
          */
-        const DECLARED_UNSCANNED_DEBT = [
-          'src/frontend/components/UI/ActionIcons/index.tsx',
-          'src/frontend/components/UI/LanguageSelector/index.tsx',
-          'src/frontend/components/UI/NavShell/components/FilterFacetGroup/selectionCount.ts',
-          'src/frontend/components/UI/SteamGridDBPicker/index.tsx',
-          'src/frontend/components/UI/Winetricks/index.tsx',
-          'src/frontend/helpers/declaredUnavailable.ts',
-          'src/frontend/screens/ConsoleMode/selectors.ts',
-          'src/frontend/screens/Library/components/FilterChipRow/chipLabels.ts',
-          'src/frontend/screens/Library/components/GamesList/index.tsx',
-          'src/frontend/screens/Library/components/LibraryHeader/gameCount.ts',
-          'src/frontend/screens/Library/engineWiring.ts',
-          'src/frontend/screens/Library/facetLabels.ts',
-          'src/frontend/screens/Library/filterEngine.ts',
-          'src/frontend/screens/Settings/components/EgsSettings.tsx',
-          'src/frontend/screens/Settings/components/SteamGridDbApiKey.tsx',
-          'src/frontend/screens/Settings/components/UseFramelessWindow.tsx',
-          'src/frontend/screens/Settings/sections/AdvancedSettings/index.tsx',
-          'src/frontend/screens/Settings/sections/GamesSettings/index.tsx'
-        ]
 
         /**
          * 34.13 review A-03: a LIVE RATCHET, replacing the prose the skipped
@@ -275,30 +349,27 @@ describe('genI18nGateScope', () => {
          * fails, so the declaration cannot silently rot the way the six-file
          * comment did.
          */
-        it('A-03 RATCHET: the set of unscanned fork-touched files equals the DECLARED debt exactly -- any NEW drift fails here by name', () => {
-          const freshFiles = freshSnapshotFiles()
-          const committedSet = new Set(scopeSnapshot.files)
-          const missing = freshFiles.filter((file) => !committedSet.has(file))
-
-          expect(missing.sort()).toEqual([...DECLARED_UNSCANNED_DEBT].sort())
+        // 34.13 review A-17 MOVED the ratchet itself out of this
+        // git-dependent block -- see the CI-READABLE RATCHET describe below.
+        // What stays here is the ANTI-ROT half, which genuinely needs git:
+        // proving the committed artifact still equals the live derivation.
+        it('A-17 ANTI-ROT: the committed meta/i18nForkTouchedFiles.json equals the LIVE git derivation', () => {
+          // Without this, moving the ratchet onto a committed input would
+          // just relocate the staleness problem: a developer could let the
+          // artifact rot and the CI ratchet would happily measure yesterday's
+          // world. This runs wherever the merge-base IS fetched, so the
+          // artifact is checked on every developer machine and on any runner
+          // that fetches history.
+          expect([...forkTouchedSnapshot.files].sort()).toEqual(
+            [...freshSnapshotFiles()].sort()
+          )
         })
 
-        it('A-03 RATCHET non-vacuity: the ratchet DOES fail when a file drifts out of scope -- proven by removing a real, currently-in-scope path from a copy of the snapshot', () => {
-          const freshFiles = freshSnapshotFiles()
-          const inScope = freshFiles.find((file) =>
-            scopeSnapshot.files.includes(file)
+        it('A-17 ANTI-ROT non-vacuity: the anti-rot check DOES fail against a mutated copy of the committed artifact', () => {
+          const sabotaged = forkTouchedSnapshot.files.filter(
+            (_file, index) => index !== 0
           )
-          expect(inScope).toBeDefined()
-
-          const sabotaged = new Set(
-            scopeSnapshot.files.filter((file) => file !== inScope)
-          )
-          const missing = freshFiles.filter((file) => !sabotaged.has(file))
-
-          expect(missing.sort()).not.toEqual(
-            [...DECLARED_UNSCANNED_DEBT].sort()
-          )
-          expect(missing).toContain(inScope)
+          expect(sabotaged.sort()).not.toEqual([...freshSnapshotFiles()].sort())
         })
 
         // SKIPPED, NOT BROKEN -- this assertion is correct, non-vacuous (proven

@@ -245,9 +245,45 @@ export function main(): void {
   const outPath = join('meta', 'i18nGateScope.json')
   writeFileSync(outPath, JSON.stringify(snapshot, null, 2) + '\n')
 
+  // 34.13 review A-17: the staleness ratchet's INPUT, committed so it is
+  // readable in CI.
+  //
+  // The ratchet compares "every fork-touched file eligible for the gate's
+  // scope" against "every file actually in the committed scope". The first
+  // half was only ever obtainable from a live `git diff` against the upstream
+  // merge-base — and `actions/checkout@v6` clones at depth 1 with no Heroic
+  // remote, so that diff FAILS in CI and the whole guard degraded to
+  // `describe.skip` on every pipeline run. The enforcement existed only on a
+  // developer machine that had fetched the merge-base.
+  //
+  // Writing the derived set here moves the ratchet onto a committed,
+  // CI-readable input. The file cannot rot silently: when git IS available
+  // the suite additionally asserts this artifact equals the live derivation,
+  // so a stale copy fails locally and on any runner that does fetch history.
+  const forkTouchedPath = join('meta', 'i18nForkTouchedFiles.json')
+  writeFileSync(
+    forkTouchedPath,
+    JSON.stringify(
+      {
+        baseCommit,
+        baseVersion,
+        generatedAt: snapshot.generatedAt,
+        generatedBy: 'pnpm gen-i18n-gate-scope',
+        purpose:
+          'A-17: the CI-readable input to the i18n scope staleness ratchet — every fork-touched src/frontend source file eligible for the hardcoded-string gate (D-17 deferrals already removed, exactly the operand the ratchet compares against), INCLUDING those not yet listed in i18nGateScope.json. Regenerate with `pnpm gen-i18n-gate-scope`.',
+        files: snapshot.files
+      },
+      null,
+      2
+    ) + '\n'
+  )
+
   console.log(
     `Wrote ${outPath}: ${snapshot.files.length} files in scope, ` +
       `${snapshot.excluded.deferred.length} deferred (D-17).`
+  )
+  console.log(
+    `Wrote ${forkTouchedPath}: ${snapshot.files.length} fork-touched eligible files.`
   )
 }
 
