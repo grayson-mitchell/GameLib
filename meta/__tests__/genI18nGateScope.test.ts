@@ -1,5 +1,12 @@
 import { execFileSync } from 'child_process'
-import { existsSync } from 'fs'
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'fs'
+import { tmpdir } from 'os'
 import { join } from 'path'
 
 import packageJson from '../../package.json'
@@ -9,8 +16,14 @@ import forkTouchedSnapshot from '../i18nForkTouchedFiles.json'
 import {
   deriveScopeFiles,
   buildScopeSnapshot,
-  EmptyScopeError
+  EmptyScopeError,
+  GENERATOR_PROVENANCE,
+  isHandCuratedProvenance,
+  parseCliFlags,
+  readScopeProvenance,
+  writeArtifacts
 } from '../genI18nGateScope'
+import type { ScopeSnapshot } from '../genI18nGateScope'
 
 const DEFERRED_STEAM_LOGIN =
   'src/frontend/screens/Login/components/SteamLogin/index.tsx'
@@ -419,5 +432,217 @@ describe('genI18nGateScope', () => {
         })
       }
     )
+  })
+})
+
+/**
+ * quick-260816-9o0 — the clobber guard.
+ *
+ * `meta/genI18nGateScope.ts` used to write BOTH artifacts unconditionally.
+ * One of them, `meta/i18nGateScope.json`, is the input to the BLOCKING
+ * hardcoded-string gate and is hand-curated (160 files; its `generatedBy`
+ * records "hand-edited (34.13 review CR-02(b), then A-02/A-03)"). The other,
+ * `meta/i18nForkTouchedFiles.json`, was added by 34.13 review A-17 as the
+ * CI-readable input to the staleness ratchet directly above, and is routine
+ * to regenerate.
+ *
+ * A-17 therefore gave people a ROUTINE reason to run
+ * `pnpm gen-i18n-gate-scope`, and doing so silently widened the blocking gate
+ * from 160 to 178 files and destroyed the hand-edited provenance marker. That
+ * already cost real work twice: 34.13-08 removed two entries by hand rather
+ * than regenerate, and the A-17 fix agent had to restore the file with
+ * `git show HEAD:... >`.
+ *
+ * Every spec below drives the REAL writer against a `mkdtempSync` directory
+ * with REAL fs writes — never a hand-built replica of the write logic (a
+ * replica drifts silently), and never the real `meta/` directory. No spec
+ * calls `main()`: jest's rootDir is the repo root, and `main()`'s output
+ * paths are CWD-relative, so calling it under test would write the REAL
+ * artifacts.
+ */
+describe('--rewrite-scope guard', () => {
+  const REAL_SCOPE_PATH = join(__dirname, '..', 'i18nGateScope.json')
+  const REAL_SCOPE_BYTES = readFileSync(REAL_SCOPE_PATH, 'utf-8')
+
+  const tmpDirs: string[] = []
+
+  function makeTmpDir(): string {
+    const dir = mkdtempSync(join(tmpdir(), 'gamelib-scope-guard-'))
+    tmpDirs.push(dir)
+    return dir
+  }
+
+  /**
+   * A tmpdir seeded with the EXACT bytes of the committed hand-curated
+   * snapshot, optionally with `generatedBy` swapped (A3's positive control).
+   * Returns the seeded path and the bytes actually written, so a spec can
+   * assert byte-identity against what it seeded rather than against a
+   * re-serialisation.
+   */
+  function seedScope(overrideProvenance?: string): {
+    outDir: string
+    scopePath: string
+    seededBytes: string
+  } {
+    const outDir = makeTmpDir()
+    const scopePath = join(outDir, 'i18nGateScope.json')
+
+    let seededBytes = REAL_SCOPE_BYTES
+    if (overrideProvenance !== undefined) {
+      const parsed = JSON.parse(REAL_SCOPE_BYTES)
+      parsed.generatedBy = overrideProvenance
+      seededBytes = JSON.stringify(parsed, null, 2) + '\n'
+    }
+
+    writeFileSync(scopePath, seededBytes)
+    return { outDir, scopePath, seededBytes }
+  }
+
+  /**
+   * The snapshot a real regeneration would produce TODAY: the 178 files of
+   * the committed fork-touched artifact. Built from the committed artifacts
+   * rather than invented numbers, so the specs below assert the REAL
+   * 160 -> 178 delta this task exists to prevent.
+   */
+  function freshSnapshot(): ScopeSnapshot {
+    return {
+      baseCommit: packageJson.upstream.baseCommit,
+      baseVersion: packageJson.upstream.baseVersion,
+      generatedAt: FIXED_NOW.toISOString(),
+      generatedBy: GENERATOR_PROVENANCE,
+      files: [...forkTouchedSnapshot.files],
+      excluded: {
+        deferred: [DEFERRED_OAUTH_LOGIN, DEFERRED_STEAM_LOGIN].sort(),
+        reason: {
+          [DEFERRED_STEAM_LOGIN]: 'D-17 -- deferred',
+          [DEFERRED_OAUTH_LOGIN]: 'D-17 -- deferred'
+        }
+      }
+    }
+  }
+
+  afterAll(() => {
+    for (const dir of tmpDirs) {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('A0 fixture sanity: the seeded scope is the REAL 160-file hand-curated snapshot and the fresh snapshot is the REAL 178', () => {
+    expect(scopeSnapshot.files.length).toBe(160)
+    expect(forkTouchedSnapshot.files.length).toBe(178)
+    expect(freshSnapshot().files.length).toBe(178)
+    expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
+  })
+
+  it('A1 DEFAULT RUN IS SAFE: writes the fork-touched artifact and leaves the curated scope file byte-identical', () => {
+    const { outDir, scopePath, seededBytes } = seedScope()
+
+    const result = writeArtifacts({
+      snapshot: freshSnapshot(),
+      outDir,
+      rewriteScope: false
+    })
+
+    expect(existsSync(join(outDir, 'i18nForkTouchedFiles.json'))).toBe(true)
+    expect(result.wroteForkTouched).toBe(
+      join(outDir, 'i18nForkTouchedFiles.json')
+    )
+
+    // Byte comparison, not a parsed-object comparison: a re-serialisation
+    // that happened to round-trip the same values would still have destroyed
+    // whatever formatting/ordering the hand-curated file carries.
+    expect(readFileSync(scopePath, 'utf-8')).toBe(seededBytes)
+    expect(result.wroteScope).toBeNull()
+    expect(result.refusal).toBeNull()
+  })
+
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 160 -> 178 diff and writes nothing', () => {
+    const { outDir, scopePath, seededBytes } = seedScope()
+
+    const result = writeArtifacts({
+      snapshot: freshSnapshot(),
+      outDir,
+      rewriteScope: true
+    })
+
+    expect(readFileSync(scopePath, 'utf-8')).toBe(seededBytes)
+    expect(result.wroteScope).toBeNull()
+    expect(result.refusal).not.toBeNull()
+
+    const refusal = result.refusal!
+    expect(refusal.existingCount).toBe(scopeSnapshot.files.length)
+    expect(refusal.nextCount).toBe(forkTouchedSnapshot.files.length)
+    expect(refusal.added.slice().sort()).toEqual(
+      [...DECLARED_UNSCANNED_DEBT].sort()
+    )
+    expect(refusal.removed).toEqual([])
+    expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
+  })
+
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 178', () => {
+    // The load-bearing spec. Without it, A1/A2's "the file did not change"
+    // would be satisfied just as well by a writer that cannot write at all —
+    // a guard that refuses everything is not a fix, it is a different bug.
+    const { outDir, scopePath } = seedScope(GENERATOR_PROVENANCE)
+
+    const result = writeArtifacts({
+      snapshot: freshSnapshot(),
+      outDir,
+      rewriteScope: true
+    })
+
+    const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
+    expect(rewritten.files.length).toBe(178)
+    expect(result.wroteScope).toBe(scopePath)
+    expect(result.refusal).toBeNull()
+  })
+
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 178 files', () => {
+    const outDir = makeTmpDir()
+    const scopePath = join(outDir, 'i18nGateScope.json')
+    expect(existsSync(scopePath)).toBe(false)
+
+    const result = writeArtifacts({
+      snapshot: freshSnapshot(),
+      outDir,
+      rewriteScope: true
+    })
+
+    expect(result.refusal).toBeNull()
+    expect(result.wroteScope).toBe(scopePath)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(178)
+  })
+
+  it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
+    // Goes RED the day anyone clobbers the marker — which IS the failure this
+    // whole task exists to prevent, so it must be pinned against the real
+    // committed file, not a fixture.
+    expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
+    expect(isHandCuratedProvenance(GENERATOR_PROVENANCE)).toBe(false)
+    expect(isHandCuratedProvenance(null)).toBe(false)
+  })
+
+  it('A5b readScopeProvenance reads the real marker off disk, and answers null for absent/garbage files', () => {
+    expect(readScopeProvenance(REAL_SCOPE_PATH)).toBe(scopeSnapshot.generatedBy)
+
+    const dir = makeTmpDir()
+    expect(readScopeProvenance(join(dir, 'does-not-exist.json'))).toBeNull()
+
+    const garbage = join(dir, 'garbage.json')
+    writeFileSync(garbage, 'not json at all {{{')
+    expect(readScopeProvenance(garbage)).toBeNull()
+
+    const noProvenance = join(dir, 'no-provenance.json')
+    writeFileSync(noProvenance, JSON.stringify({ files: [] }))
+    expect(readScopeProvenance(noProvenance)).toBeNull()
+  })
+
+  it('A6 FLAG PARSING: only --rewrite-scope is recognised, and a typo throws by name rather than degrading into a no-op', () => {
+    expect(parseCliFlags([])).toEqual({ rewriteScope: false })
+    expect(parseCliFlags(['--rewrite-scope'])).toEqual({ rewriteScope: true })
+
+    // A typo silently parsing as "don't rewrite" would be the worst outcome:
+    // the operator believes they asked for a rewrite and gets a clean exit.
+    expect(() => parseCliFlags(['--rewritescope'])).toThrow('--rewritescope')
   })
 })
