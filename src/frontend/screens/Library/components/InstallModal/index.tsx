@@ -238,8 +238,7 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   // dialogs and is structurally unreachable from the Steam path, because
   // `platformRowMode` below selects `steamGating.platformRow` whenever
   // `isSteamManagedApp` is true.
-  const legacyPlatformRowMode: SteamPlatformRowMode =
-    availablePlatforms.length > 1 ? 'selectable' : 'absent'
+  const legacyPlatformRowMode: SteamPlatformRowMode = availablePlatforms.length > 1 ? 'selectable' : 'absent'
   const platformRowMode: SteamPlatformRowMode = isSteamManagedApp
     ? steamGating.platformRow
     : legacyPlatformRowMode
