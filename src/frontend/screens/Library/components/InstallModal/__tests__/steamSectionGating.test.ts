@@ -9,24 +9,49 @@ import {
   SteamSectionGatingVerdict
 } from '../steamSectionGating'
 
-// `34.13-UI-SPEC.md` "Section-Gating Matrix" (AMENDED, 8 rows, D-21..D-28)
-// executed exhaustively. No jsdom in this project (`jest.config.js`), so
-// this pure-function proof is the only part of the matrix Jest can verify
-// here -- see `steamSectionGating.ts`'s own header for the full rationale.
+// `34.13-UI-SPEC.md` "Section-Gating Matrix" (AMENDED, 8 rows, D-21..D-28),
+// extended by Phase 34.14 (D-01/D-03) with two `'pending'` rows (9/10) that
+// distinguish "depot signal not yet resolved" from "resolved, no Windows
+// depot" (`'readonly-macos'`) -- 10 rows total, 144 combinations. No jsdom
+// in this project (`jest.config.js`), so this pure-function proof is the
+// only part of the matrix Jest can verify here -- see `steamSectionGating.ts`'s
+// own header for the full rationale.
 //
-// Four parts, per 34.13-05-PLAN.md Task 1:
-//   1. The row table -- 8 labelled descriptors, transcribed cell-by-cell
-//      from the UI-SPEC, never borrowed from the implementation.
+// Four parts, per 34.13-05-PLAN.md Task 1 (extended by 34.14-02-PLAN.md Task 1):
+//   1. The row table -- 10 labelled descriptors, transcribed cell-by-cell
+//      from the UI-SPEC (rows 1-8) or from 34.14-02-PLAN.md's own row
+//      specification (rows 9/10), never borrowed from the implementation.
 //   2. The row classifier (`rowOf`) -- maps a combination to its matrix
 //      label using only the matrix's own stated conditions.
-//   3. The combination sweep -- the full reachable 96-input space.
+//   3. The combination sweep -- the full reachable 144-input space.
 //   4. `assertMatrix` -- the reusable, collecting-not-first-fail harness
 //      Task 3's saboteur suite depends on to name which rows a defect
 //      breaks.
 
-type RowLabel = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8'
+type RowLabel =
+  | '1'
+  | '2'
+  | '3'
+  | '4'
+  | '5'
+  | '6'
+  | '7'
+  | '8'
+  | '9'
+  | '10'
 
-const ROW_LABELS: RowLabel[] = ['1', '2', '3', '4', '5', '6', '7', '8']
+const ROW_LABELS: RowLabel[] = [
+  '1',
+  '2',
+  '3',
+  '4',
+  '5',
+  '6',
+  '7',
+  '8',
+  '9',
+  '10'
+]
 
 const FIELD_NAMES: (keyof SteamSectionGatingVerdict)[] = [
   'platformRow',
@@ -182,6 +207,44 @@ const ROW_TABLE: Record<
       contentLightNotice: false,
       forceWindowsViaBottle: false
     })
+  },
+  '9': {
+    // Row 9 (34.14 D-01/D-03): macOS, mac-native, depot signal NOT resolved
+    // yet, no library choice. Platform row is `'pending'` -- DISTINCT from
+    // `'readonly-macos'` by construction; collapsing the two is the exact
+    // defect Phase 34.14 exists to end. No wine section (pending is not
+    // selectable), no dropdown/free-space (no choice), not content-light
+    // (Q6 scopes that notice to non-mac rows only, unchanged by this
+    // phase), not a forced override.
+    expected: () => ({
+      platformRow: 'pending',
+      libraryDropdown: false,
+      wineSection: false,
+      freeSpaceLine: false,
+      contentLightNotice: false,
+      forceWindowsViaBottle: false
+    })
+  },
+  '10': {
+    // Row 10 (34.14 D-01/D-03): same as Row 9, but WITH a library choice
+    // (`nativeInstallOn && libraryCount > 1`). RESEARCH.md's Assumption A3
+    // proposed a single Row 9 on the premise that "D-01 suppresses the
+    // library dropdown while pending" -- that suppression lives in
+    // `applyEligibilityPending`, a POST-processing step one layer above
+    // this pure function. The matrix proves the pure function, which still
+    // emits the dropdown per `hasChoice` regardless of `platformRow`.
+    // Splitting by `hasChoice` also keeps this expectation closure literal
+    // rather than re-deriving the implementation's own
+    // `nativeInstallOn && libraryCount > 1` formula inside the expectation
+    // table, which this file's header explicitly forbids.
+    expected: () => ({
+      platformRow: 'pending',
+      libraryDropdown: true,
+      wineSection: false,
+      freeSpaceLine: true,
+      contentLightNotice: false,
+      forceWindowsViaBottle: false
+    })
   }
 }
 
@@ -192,6 +255,15 @@ function rowOf(input: SteamSectionGatingInput): RowLabel {
 
   if (input.hostPlatform === 'darwin') {
     if (input.bottleRequired) return '1'
+    // 34.14 D-01/D-03: the depot signal must be resolved (either captured
+    // at seed time or the eligibility probe has terminally settled) before
+    // the depot question is even reachable -- this mirrors the read-order
+    // seam `resolveSteamSectionGating` itself enforces (its own
+    // `!input.depotSignalResolved` branch sits BEFORE the `hasWindowsDepot`
+    // check). Rows 9/10 split on `hasChoice`, same as rows 2/3.
+    if (!input.depotSignalResolved) {
+      return hasChoice ? '10' : '9'
+    }
     // Row 4's guard includes `hasWindowsDepot`: a game with no Windows
     // depot has no Windows `MenuItem` to select at all (UI-SPEC
     // "Interaction Contract" step 6), so a `selectedPlatform: 'Windows'`
@@ -225,16 +297,29 @@ function rowOf(input: SteamSectionGatingInput): RowLabel {
 // `nativeInstallOn` in {false, true}; `libraryCount` in {0, 1, 2} (0 and 1
 // both exercise the "<=1" cells and are NOT interchangeable -- a `>= 1`
 // off-by-one is caught only by the `1` fixture); `hasWindowsDepot` in
-// {false, true}; `selectedPlatform` in {'Mac', 'Windows'}.
+// {false, true}; `depotSignalResolved` (34.14 D-01/D-03) in {false, true};
+// `selectedPlatform` in {'Mac', 'Windows'}.
 //
-// 48 darwin (2 bottleRequired * 2 nativeInstallOn * 3 libraryCount *
-// 2 hasWindowsDepot * 2 selectedPlatform) + 24 win32 + 24 linux = 96.
+// 34.14 excludes the meaningless `(hasWindowsDepot: true,
+// depotSignalResolved: false)` pair from the sweep -- a depot flag can only
+// have been written by a fetch that also stamped the captured flag (D-03).
+// That combination is covered instead by a dedicated spec in the
+// 'defensive normalisation' describe block below, per this plan's decision
+// (2). Per host, the surviving (hasWindowsDepot, depotSignalResolved) pairs
+// are (false,false), (false,true), (true,true) -- 3 of the 4 possible pairs.
+//
+// darwin: 2 bottleRequired * 2 nativeInstallOn * 3 libraryCount *
+//   3 (depot x resolved pairs) * 2 selectedPlatform = 72.
+// win32: 2 nativeInstallOn * 3 libraryCount * 3 * 2 selectedPlatform = 36.
+// linux: 2 nativeInstallOn * 3 libraryCount * 3 * 2 selectedPlatform = 36.
+// Total = 72 + 36 + 36 = 144.
 
 function buildCombinations(): SteamSectionGatingInput[] {
   const hostPlatforms = ['darwin', 'win32', 'linux']
   const nativeInstallOnValues = [false, true]
   const libraryCounts = [0, 1, 2]
   const hasWindowsDepotValues = [false, true]
+  const depotSignalResolvedValues = [false, true]
   const selectedPlatforms: InstallPlatform[] = ['Mac', 'Windows']
 
   const combinations: SteamSectionGatingInput[] = []
@@ -245,15 +330,24 @@ function buildCombinations(): SteamSectionGatingInput[] {
       for (const nativeInstallOn of nativeInstallOnValues) {
         for (const libraryCount of libraryCounts) {
           for (const hasWindowsDepot of hasWindowsDepotValues) {
-            for (const selectedPlatform of selectedPlatforms) {
-              combinations.push({
-                hostPlatform,
-                bottleRequired,
-                nativeInstallOn,
-                libraryCount,
-                hasWindowsDepot,
-                selectedPlatform
-              })
+            for (const depotSignalResolved of depotSignalResolvedValues) {
+              // The meaningless pair (D-03): a depot flag can only have
+              // been written by a fetch that also stamped the captured
+              // flag. Excluded from the sweep, covered separately below.
+              if (hasWindowsDepot && !depotSignalResolved) {
+                continue
+              }
+              for (const selectedPlatform of selectedPlatforms) {
+                combinations.push({
+                  hostPlatform,
+                  bottleRequired,
+                  nativeInstallOn,
+                  libraryCount,
+                  hasWindowsDepot,
+                  depotSignalResolved,
+                  selectedPlatform
+                })
+              }
             }
           }
         }
@@ -324,26 +418,34 @@ function assertMatrix(
 // --- Assertions --------------------------------------------------------
 
 describe('combination sweep construction', () => {
-  it('enumerates exactly 96 combinations (48 darwin + 24 win32 + 24 linux)', () => {
-    expect(ALL_COMBINATIONS.length).toBe(96)
+  it('enumerates exactly 144 combinations (72 darwin + 36 win32 + 36 linux)', () => {
+    expect(ALL_COMBINATIONS.length).toBe(144)
     expect(
       ALL_COMBINATIONS.filter((c) => c.hostPlatform === 'darwin').length
-    ).toBe(48)
+    ).toBe(72)
     expect(
       ALL_COMBINATIONS.filter((c) => c.hostPlatform === 'win32').length
-    ).toBe(24)
+    ).toBe(36)
     expect(
       ALL_COMBINATIONS.filter((c) => c.hostPlatform === 'linux').length
-    ).toBe(24)
+    ).toBe(36)
   })
 
   it('includes all three of libraryCount 0, 1 and 2', () => {
     const counts = new Set(ALL_COMBINATIONS.map((c) => c.libraryCount))
     expect(counts).toEqual(new Set([0, 1, 2]))
   })
+
+  it('34.14 D-03: the generator emits ZERO combinations where hasWindowsDepot is true and depotSignalResolved is false -- the meaningless pair is excluded from the sweep, not merely unasserted', () => {
+    expect(
+      ALL_COMBINATIONS.filter(
+        (c) => c.hasWindowsDepot && !c.depotSignalResolved
+      ).length
+    ).toBe(0)
+  })
 })
 
-describe('Section-Gating Matrix -- per-row proof (34.13-UI-SPEC.md, amended, 8 rows)', () => {
+describe('Section-Gating Matrix -- per-row proof (34.13-UI-SPEC.md amended 8 rows + 34.14 pending rows 9/10, 10 rows total)', () => {
   function runRow(label: RowLabel) {
     const slice = ALL_COMBINATIONS.filter((input) => rowOf(input) === label)
     // A row with zero matching combinations would make its own `it()`
@@ -364,10 +466,12 @@ describe('Section-Gating Matrix -- per-row proof (34.13-UI-SPEC.md, amended, 8 r
   it('Row 6', () => runRow('6'))
   it('Row 7', () => runRow('7'))
   it('Row 8', () => runRow('8'))
+  it('Row 9', () => runRow('9'))
+  it('Row 10', () => runRow('10'))
 })
 
 describe('assertMatrix over the full sweep', () => {
-  it('the real implementation passes the whole 96-combination harness in one run', () => {
+  it('the real implementation passes the whole 144-combination harness in one run', () => {
     expect(() => assertMatrix(resolveSteamSectionGating)).not.toThrow()
   })
 })
@@ -385,6 +489,7 @@ describe("Phase 21 D-09 zero-friction is NOT this module's concern", () => {
       nativeInstallOn: false,
       libraryCount: 0,
       hasWindowsDepot: false,
+      depotSignalResolved: true,
       selectedPlatform: 'Mac'
     })
     expect(Object.keys(verdict).sort()).toEqual([
@@ -429,15 +534,19 @@ function expectSaboteurBreaksExactlyRows(
     thrown = e as Error
   }
   expect(thrown).toBeDefined()
+  // 34.14 landmine C: the prior matcher used a SINGLE digit class, which
+  // captured "Row 10" as "Row 1", silently mis-reporting which rows a
+  // saboteur broke now that a two-digit row exists. Fixed below to match
+  // one-or-more digits.
   const mentionedRows = Array.from(
-    new Set((thrown as Error).message.match(/Row \d/g) ?? [])
+    new Set((thrown as Error).message.match(/Row \d+/g) ?? [])
   ).sort()
   const expected = expectedRows.map((row) => `Row ${row}`).sort()
   expect(mentionedRows).toEqual(expected)
 }
 
 describe('the matrix harness rejects known-bad gating functions', () => {
-  it('libraryDropdownIgnoresNativeInstall: drops the nativeInstallOn conjunct from hasChoice -- breaks Row 2, Row 5, Row 7', () => {
+  it('libraryDropdownIgnoresNativeInstall: drops the nativeInstallOn conjunct from hasChoice -- breaks Row 2, Row 5, Row 7, Row 9', () => {
     function libraryDropdownIgnoresNativeInstall(
       input: SteamSectionGatingInput
     ): SteamSectionGatingVerdict {
@@ -448,14 +557,20 @@ describe('the matrix harness rejects known-bad gating functions', () => {
       const libraryDropdown = !real.wineSection && sabotagedHasChoice
       return { ...real, libraryDropdown }
     }
+    // 34.14: Row 9 (the darwin pending "no choice" row) also breaks -- its
+    // "no dropdown" cell can be produced by nativeInstallOn=false with
+    // libraryCount>1, which this defect wrongly shows a dropdown for, same
+    // as Rows 2/5/7. Row 10 (pending "has choice") is unaffected -- its
+    // dropdown is already true.
     expectSaboteurBreaksExactlyRows(libraryDropdownIgnoresNativeInstall, [
       '2',
       '5',
-      '7'
+      '7',
+      '9'
     ])
   })
 
-  it('libraryDropdownOffByOne: uses libraryCount >= 1 instead of > 1 -- breaks Row 2, Row 5, Row 7', () => {
+  it('libraryDropdownOffByOne: uses libraryCount >= 1 instead of > 1 -- breaks Row 2, Row 5, Row 7, Row 9', () => {
     function libraryDropdownOffByOne(
       input: SteamSectionGatingInput
     ): SteamSectionGatingVerdict {
@@ -466,25 +581,42 @@ describe('the matrix harness rejects known-bad gating functions', () => {
       const libraryDropdown = !real.wineSection && sabotagedHasChoice
       return { ...real, libraryDropdown }
     }
-    expectSaboteurBreaksExactlyRows(libraryDropdownOffByOne, ['2', '5', '7'])
+    // 34.14: Row 9 also breaks, same reasoning as
+    // libraryDropdownIgnoresNativeInstall above -- a libraryCount of 1 with
+    // native install ON wrongly shows a dropdown on the pending "no choice"
+    // row.
+    expectSaboteurBreaksExactlyRows(libraryDropdownOffByOne, [
+      '2',
+      '5',
+      '7',
+      '9'
+    ])
   })
 
-  it('platformRowAlwaysReadonlyWindows: the un-amended D-03, before D-17/D-18/D-19 -- breaks Row 2, Row 3, Row 4, Row 7, Row 8', () => {
+  it('platformRowAlwaysReadonlyWindows: the un-amended D-03, before D-17/D-18/D-19 -- breaks Row 2, Row 3, Row 4, Row 7, Row 8, Row 9, Row 10', () => {
     function platformRowAlwaysReadonlyWindows(
       input: SteamSectionGatingInput
     ): SteamSectionGatingVerdict {
       const real = resolveSteamSectionGating(input)
       return { ...real, platformRow: 'readonly-windows' }
     }
+    // 34.14: Rows 9/10 also break -- their real platformRow is `'pending'`,
+    // which (like `'selectable'`/`'readonly-macos'`/`'absent'` on the other
+    // broken rows) differs from the sabotaged constant `'readonly-windows'`.
     expectSaboteurBreaksExactlyRows(platformRowAlwaysReadonlyWindows, [
       '2',
       '3',
       '4',
       '7',
-      '8'
+      '8',
+      '9',
+      '10'
     ])
   })
 
+  // 34.14: unchanged -- this defect's guard (`isLinuxFamily`) never matches
+  // a darwin host, so it cannot touch the new pending rows (9/10), both of
+  // which are darwin-only.
   it('linuxPlatformRowRenders: returns readonly-windows on the Linux-family bucket -- breaks Row 7, Row 8', () => {
     function linuxPlatformRowRenders(
       input: SteamSectionGatingInput
@@ -500,6 +632,9 @@ describe('the matrix harness rejects known-bad gating functions', () => {
     expectSaboteurBreaksExactlyRows(linuxPlatformRowRenders, ['7', '8'])
   })
 
+  // 34.14: unchanged -- rows 9/10 are darwin (isMac already true there), so
+  // dropping the `isMac &&` guard has no observable effect on them; only
+  // non-mac hosts (rows 5/6/7/8) are affected.
   it('windowsHostGetsWineSection: drops the isMac guard from wineSection -- breaks Row 5, Row 6, Row 7, Row 8', () => {
     function windowsHostGetsWineSection(
       input: SteamSectionGatingInput
@@ -528,7 +663,7 @@ describe('the matrix harness rejects known-bad gating functions', () => {
     ])
   })
 
-  it('selectableWithoutWindowsDepot: offers selectable when hasWindowsDepot is false -- breaks Row 2, Row 3', () => {
+  it('selectableWithoutWindowsDepot: offers selectable when hasWindowsDepot is false -- breaks Row 2, Row 3, Row 9, Row 10', () => {
     function selectableWithoutWindowsDepot(
       input: SteamSectionGatingInput
     ): SteamSectionGatingVerdict {
@@ -536,15 +671,27 @@ describe('the matrix harness rejects known-bad gating functions', () => {
       // DEFECT: every non-bottle-required mac-native combination becomes
       // selectable, even with no Windows depot (the Windows MenuItem must
       // be ABSENT, not present-but-disabled -- 34.13-01's `=== true`
-      // contract).
+      // contract). This defect's condition does not check
+      // `depotSignalResolved` at all, so it also wrongly forces the
+      // pending rows (9/10) to `'selectable'` -- exactly the D-03
+      // regression this phase exists to prevent.
       if (input.hostPlatform === 'darwin' && !input.bottleRequired) {
         return { ...real, platformRow: 'selectable' }
       }
       return real
     }
-    expectSaboteurBreaksExactlyRows(selectableWithoutWindowsDepot, ['2', '3'])
+    expectSaboteurBreaksExactlyRows(selectableWithoutWindowsDepot, [
+      '2',
+      '3',
+      '9',
+      '10'
+    ])
   })
 
+  // 34.14: unchanged -- rows 9/10 always have `wineSection: false` (pending
+  // joins the readonly-macos arm, never the wine branch), so dropping the
+  // `!wineSection` term has no effect on them; only wine-carrying rows
+  // (1/4) are affected.
   it('libraryDropdownDuringBottleInstall: drops the !wineSection term -- breaks Row 1, Row 4', () => {
     function libraryDropdownDuringBottleInstall(
       input: SteamSectionGatingInput
@@ -563,40 +710,48 @@ describe('the matrix harness rejects known-bad gating functions', () => {
     ])
   })
 
-  it('freeSpaceAlwaysShown: returns freeSpaceLine true unconditionally -- breaks Row 1, Row 2, Row 4, Row 5, Row 7', () => {
+  it('freeSpaceAlwaysShown: returns freeSpaceLine true unconditionally -- breaks Row 1, Row 2, Row 4, Row 5, Row 7, Row 9', () => {
     function freeSpaceAlwaysShown(
       input: SteamSectionGatingInput
     ): SteamSectionGatingVerdict {
       const real = resolveSteamSectionGating(input)
       return { ...real, freeSpaceLine: true }
     }
+    // 34.14: Row 9 also breaks -- its real freeSpaceLine is false (no
+    // library choice). Row 10 is unaffected -- its real value is already
+    // true.
     expectSaboteurBreaksExactlyRows(freeSpaceAlwaysShown, [
       '1',
       '2',
       '4',
       '5',
-      '7'
+      '7',
+      '9'
     ])
   })
 
-  it('contentLightNoticeEverywhere: returns contentLightNotice true unconditionally -- breaks Row 1, Row 2, Row 3, Row 4, Row 6, Row 8', () => {
+  it('contentLightNoticeEverywhere: returns contentLightNotice true unconditionally -- breaks Row 1, Row 2, Row 3, Row 4, Row 6, Row 8, Row 9, Row 10', () => {
     function contentLightNoticeEverywhere(
       input: SteamSectionGatingInput
     ): SteamSectionGatingVerdict {
       const real = resolveSteamSectionGating(input)
       return { ...real, contentLightNotice: true }
     }
+    // 34.14: Rows 9/10 also break -- their real contentLightNotice is false
+    // (Q6 scopes the notice to non-mac rows; rows 9/10 are darwin).
     expectSaboteurBreaksExactlyRows(contentLightNoticeEverywhere, [
       '1',
       '2',
       '3',
       '4',
       '6',
-      '8'
+      '8',
+      '9',
+      '10'
     ])
   })
 
-  it('contentLightNoticeOnMac: extends the notice to a macOS row with no sections -- breaks Row 2 and nothing else', () => {
+  it('contentLightNoticeOnMac: extends the notice to a macOS row with no sections -- breaks Row 2, Row 9', () => {
     function contentLightNoticeOnMac(
       input: SteamSectionGatingInput
     ): SteamSectionGatingVerdict {
@@ -605,7 +760,9 @@ describe('the matrix harness rejects known-bad gating functions', () => {
       // light too" -- it is not. Row 2 always carries a live, actionable
       // platform selector (Q6 deliberately scopes the notice to non-mac
       // rows only). Targeted at exactly Row 2's shape: mac host, no wine
-      // section, no library dropdown.
+      // section, no library dropdown. 34.14: Row 9 shares that exact shape
+      // (darwin, no wine, no dropdown) and also breaks; Row 10 has
+      // `libraryDropdown: true` so the condition never fires there.
       if (
         input.hostPlatform === 'darwin' &&
         !real.wineSection &&
@@ -615,7 +772,7 @@ describe('the matrix harness rejects known-bad gating functions', () => {
       }
       return real
     }
-    expectSaboteurBreaksExactlyRows(contentLightNoticeOnMac, ['2'])
+    expectSaboteurBreaksExactlyRows(contentLightNoticeOnMac, ['2', '9'])
   })
 })
 
@@ -624,7 +781,7 @@ describe('the matrix harness rejects known-bad gating functions', () => {
 // ---------------------------------------------------------------------
 
 describe('row coverage', () => {
-  it('the 96-combination sweep classifies to exactly the 8 expected labels, each hit at least once', () => {
+  it('the 144-combination sweep classifies to exactly the 10 expected labels, each hit at least once', () => {
     const distinctLabels = Array.from(
       new Set(ALL_COMBINATIONS.map((input) => rowOf(input)))
     ).sort()
@@ -636,12 +793,12 @@ describe('row coverage', () => {
     }
   })
 
-  it('rowOf never produces a letter-suffixed label or a label above 8 -- the concrete guard against re-importing the retired 16-row table', () => {
+  it('rowOf never produces a letter-suffixed label or a label above 10 -- the concrete guard against re-importing the retired 16-row table', () => {
     for (const input of ALL_COMBINATIONS) {
       const label = rowOf(input)
       expect(ROW_TABLE[label]).toBeDefined()
       expect(/^\d+[a-z]$/.test(label)).toBe(false)
-      expect(Number(label)).toBeLessThanOrEqual(8)
+      expect(Number(label)).toBeLessThanOrEqual(10)
     }
   })
 })
@@ -660,6 +817,7 @@ describe('defensive normalisation (cases the matrix does not enumerate)', () => 
         nativeInstallOn: false,
         libraryCount: 0,
         hasWindowsDepot: false,
+        depotSignalResolved: true,
         selectedPlatform: 'Windows'
       })
       expect(verdict.wineSection).toBe(false)
@@ -674,6 +832,7 @@ describe('defensive normalisation (cases the matrix does not enumerate)', () => 
       nativeInstallOn: false,
       libraryCount: 0,
       hasWindowsDepot: false,
+      depotSignalResolved: true,
       selectedPlatform: 'Mac'
     })
     expect(contentLightCase.platformRow).toBe('absent')
@@ -685,11 +844,26 @@ describe('defensive normalisation (cases the matrix does not enumerate)', () => 
       nativeInstallOn: true,
       libraryCount: 2,
       hasWindowsDepot: false,
+      depotSignalResolved: true,
       selectedPlatform: 'Mac'
     })
     expect(choiceCase.platformRow).toBe('absent')
     expect(choiceCase.libraryDropdown).toBe(true)
     expect(choiceCase.contentLightNotice).toBe(false)
+  })
+
+  it('34.14 D-03: a stale/meaningless depot flag (hasWindowsDepot: true, depotSignalResolved: false) can never unlock the Windows option -- this combination is EXCLUDED from the 144-combination sweep (it cannot occur in practice) but must still fail closed to \'pending\', never \'selectable\'', () => {
+    const verdict = resolveSteamSectionGating({
+      hostPlatform: 'darwin',
+      bottleRequired: false,
+      nativeInstallOn: false,
+      libraryCount: 0,
+      hasWindowsDepot: true,
+      depotSignalResolved: false,
+      selectedPlatform: 'Mac'
+    })
+    expect(verdict.platformRow).toBe('pending')
+    expect(verdict.platformRow).not.toBe('selectable')
   })
 
   it('selectedPlatform is invariant on every non-selectable row -- proves the effectivePlatform normalisation actually holds', () => {
@@ -720,6 +894,7 @@ describe('defensive normalisation (cases the matrix does not enumerate)', () => 
         nativeInstallOn: true,
         libraryCount,
         hasWindowsDepot: false,
+        depotSignalResolved: true,
         selectedPlatform: 'Windows'
       })
       expect(verdict.libraryDropdown).toBe(false)
