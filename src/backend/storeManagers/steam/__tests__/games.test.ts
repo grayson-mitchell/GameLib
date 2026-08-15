@@ -10,6 +10,9 @@
  *    cleared in beforeEach
  */
 import axios from 'axios'
+import { readFileSync } from 'fs'
+import { join } from 'path'
+import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { sendFrontendMessage } from '../../../ipc'
 import { steamMetadataStore, steamLibraryStore } from '../electronStores'
 import SteamGame, {
@@ -3609,12 +3612,23 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ).toBe(true)
     })
 
-    // ── debug/steam-bottle-uninstall-reverts: nativeBottleInstall write
-    // discipline — mirrors W2/W6/W7 above, but for a flag set on EVERY
-    // committed installBottleNative() completion, not gated on the D-17
-    // override.
-
-    it('NBI-1: an ordinary (non-forced) bottle-eligible install via installBottleNative persists nativeBottleInstall:true', async () => {
+    // ── 34.13 review A-19 ────────────────────────────────────────────────
+    // Four specs (NBI-1..NBI-4) used to pin a `nativeBottleInstall` flag's
+    // write discipline and its T-18-02-04 carry-forward. A repo-wide census
+    // found ZERO reads of that field feeding any branch — its own JSDoc said
+    // so ("PROVENANCE ONLY ... no longer load-bearing for uninstall
+    // routing") — while its writer performed a whole-entry
+    // steamMetadataStore rewrite on every committed bottle install and its
+    // eraser another on every confirmed-absent bottle tick. Field, pair,
+    // store declaration and carry-forward are removed; this repo's own
+    // convention (SteamBottleConfig's retired `loggedIn`,
+    // common/types/steam.ts) is that a dead always-false signal is deleted
+    // rather than kept, because leaving it only invites a future consumer to
+    // trust it.
+    //
+    // The replacement is a DELETION gate, not the absence of a gate: a
+    // re-introduction has to be deliberate.
+    it('A-19: the nativeBottleInstall provenance field is GONE — a committed bottle install writes no such key', async () => {
       mockStatefulMetadataStore({
         platformsCaptured: true,
         is_mac_native: false
@@ -3629,100 +3643,45 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .mockResolvedValue({ status: 'done' } as any)
 
-      // No steamForceWindowsViaBottle override — an ordinary bottle-eligible
-      // (mac-incompatible) title with the native-install setting on.
       await game.install(PRODUCTION_ARGS)
 
+      const entry = steamMetadataStore.get(APP_ID) as unknown as Record<
+        string,
+        unknown
+      >
+      expect(entry).toBeDefined()
+      expect(entry).not.toHaveProperty('nativeBottleInstall')
+      // Discriminator: the SIBLING D-17 flag is a live, read signal and must
+      // NOT have been collaterally removed. No override was passed here, so
+      // it must be absent for that reason and not because the pair is gone —
+      // W2 above covers the positive case.
+      expect(entry).not.toHaveProperty('nativeBottleInstall')
       expect(
-        (
-          steamMetadataStore.get(APP_ID) as {
-            nativeBottleInstall?: boolean
-            forcedWindowsViaBottle?: boolean
-          }
-        )?.nativeBottleInstall
-      ).toBe(true)
-      // W6 pin still holds: no override means no forcedWindowsViaBottle.
-      expect(
-        (
-          steamMetadataStore.get(APP_ID) as {
-            forcedWindowsViaBottle?: boolean
-          }
-        )?.forcedWindowsViaBottle
-      ).not.toBe(true)
+        Object.keys(entry).some((k) => k.includes('forcedWindowsViaBottle'))
+      ).toBe(false)
     })
 
-    it('NBI-2: a failed installBottleNative() persists no nativeBottleInstall flag', async () => {
-      mockStatefulMetadataStore({
-        platformsCaptured: true,
-        is_mac_native: false
-      })
-      ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
-      ;(isBottleReady as jest.Mock).mockReturnValue(true)
-
-      const game = new SteamGame(APP_ID)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      jest
-        .spyOn(game as any, 'installBottleNative')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .mockResolvedValue({ status: 'error', error: 'boom' } as any)
-
-      await game.install(PRODUCTION_ARGS)
-
-      expect(
-        (
-          steamMetadataStore.get(APP_ID) as {
-            nativeBottleInstall?: boolean
-          }
-        )?.nativeBottleInstall
-      ).not.toBe(true)
+    it('A-19: the source carries no writer, eraser or store declaration for it', () => {
+      // A census, so the deletion cannot be half-undone in one file. The
+      // three files that used to carry it are named explicitly.
+      for (const relative of ['games.ts', 'library.ts', 'electronStores.ts']) {
+        const source = stripSourceComments(
+          readFileSync(join(__dirname, '..', relative), 'utf8')
+        )
+        expect(source).not.toContain('nativeBottleInstall')
+        expect(source).not.toContain('markNativeBottleInstall')
+        expect(source).not.toContain('clearNativeBottleInstall')
+      }
     })
 
-    it('NBI-3: legacy tellBottledSteamToInstall delegation (opt-in OFF) persists no nativeBottleInstall flag', async () => {
-      mockStatefulMetadataStore({
-        platformsCaptured: true,
-        is_mac_native: false
-      })
-      ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
-      ;(isBottleReady as jest.Mock).mockReturnValue(true)
-      ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-        status: 'done'
-      })
-
-      const game = new SteamGame(APP_ID)
-      await game.install(PRODUCTION_ARGS)
-
-      expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
-      expect(
-        (
-          steamMetadataStore.get(APP_ID) as {
-            nativeBottleInstall?: boolean
-          }
-        )?.nativeBottleInstall
-      ).not.toBe(true)
-    })
-
-    it('NBI-4: the persisted nativeBottleInstall verdict survives a subsequent appdetails re-fetch (no T-18-02-04 silent drop)', async () => {
-      mockStatefulMetadataStore({
-        art_cover: '',
-        art_square: '',
-        extra: { reqs: [] },
-        platformsCaptured: true,
-        is_mac_native: false,
-        nativeBottleInstall: true
-      })
-      ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-      library.set(APP_ID, makeEntry())
-
-      new SteamGame(APP_ID).getGameInfo()
-      await flushAsync()
-
-      expect(
-        (
-          steamMetadataStore.get(APP_ID) as {
-            nativeBottleInstall?: boolean
-          }
-        )?.nativeBottleInstall
-      ).toBe(true)
+    it('A-19 RED: the census DOES trip on a specimen carrying the removed field', () => {
+      const specimen = stripSourceComments(
+        'export function markNativeBottleInstall(appId: string) {\n' +
+          '  steamMetadataStore.set(appId, { nativeBottleInstall: true })\n' +
+          '}\n'
+      )
+      expect(specimen).toContain('nativeBottleInstall')
+      expect(specimen).toContain('markNativeBottleInstall')
     })
   })
 })

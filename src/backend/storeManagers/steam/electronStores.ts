@@ -92,39 +92,6 @@ export interface SteamMetadataCacheEntry {
    * verdict is silently dropped on the next appdetails fetch and the forced
    * game reverts to native routing intermittently. */
   forcedWindowsViaBottle?: boolean
-  /** debug/steam-bottle-uninstall-reverts: the PERSISTED verdict that this
-   * appId's CURRENT bottle install was written directly by GameLib's own
-   * depot downloader (installBottleNative, D-15/SNI-08) rather than
-   * dispatched to the bottled Steam client (tellBottledSteamToInstall).
-   *
-   * PROVENANCE ONLY as of debug/steam-bottle-uninstall-reverts (FINAL):
-   * this flag no longer changes uninstall() ROUTING. It originally existed
-   * so uninstall() could tell whether the bottled Steam client had ever
-   * authored/adopted a given bottle install (its confirm dialog only ever
-   * had something to act on for installs it authored itself) — but that
-   * entire delegation mechanism was subsequently proven architecturally
-   * unworkable in this CrossOver bottle for EVERY bottle title, not only
-   * GameLib-authored ones (a CW_USEDEFAULT window-position defect makes
-   * Steam's own confirm dialog unreachable regardless of manifest
-   * authorship — see games.ts uninstall()'s own JSDoc for the full
-   * evidence chain). uninstall() now routes every bottle-eligible,
-   * non-bridge title to direct deletion unconditionally, so this flag's
-   * original routing purpose is moot. It is kept — not deleted — purely as
-   * install-provenance metadata that may be useful for future diagnostics
-   * (distinguishing a GameLib depot-download install from a Steam-client
-   * install).
-   *
-   * Who writes it: games.ts's install() bottle branch, only after
-   * installBottleNative() actually commits bits (status 'done') — never on
-   * a deferral or a failed download. Cleared once the bottle's appmanifest
-   * is confirmed absent (uninstall complete, pollUninstallOnce's 'absent'
-   * branch), so a later legacy-delegated reinstall does not inherit a stale
-   * verdict.
-   *
-   * ⚠ CARRY-FORWARD WARNING: `steamMetadataStore.set` REPLACES the whole
-   * entry (T-18-02-04) — any write that enumerates its payload field-by-field
-   * (games.ts fetchMetadataIfNeeded) must explicitly carry this forward. */
-  nativeBottleInstall?: boolean
   // GAP-B: persists the delisted verdict (appdetails success:false) across restarts.
   // Absent / false means "not known delisted"; true means confirmed unavailable on Steam.
   is_delisted?: boolean

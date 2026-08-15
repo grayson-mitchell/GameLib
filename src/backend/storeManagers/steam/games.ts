@@ -208,66 +208,6 @@ export function clearForcedWindowsViaBottle(appId: string): void {
 }
 
 /**
- * debug/steam-bottle-uninstall-reverts: writer/eraser pair for
- * steamMetadataStore's `nativeBottleInstall` field — co-located with (but
- * tracking a DIFFERENT fact than) the forcedWindowsViaBottle pair above.
- * This one records whether THIS appId's current bottle install was written
- * directly by GameLib's own depot downloader (installBottleNative, D-15/
- * SNI-08) rather than dispatched to the bottled Steam client
- * (tellBottledSteamToInstall).
- *
- * PROVENANCE ONLY as of debug/steam-bottle-uninstall-reverts (FINAL):
- * uninstall() no longer reads this flag to choose a routing branch — EVERY
- * bottle-eligible, non-bridge title now uninstalls via direct deletion
- * (uninstallBottleGameDirectly()) regardless of who authored the install,
- * since delegating to the bottled Steam client's own confirm dialog was
- * proven unworkable for ALL bottle titles, not only GameLib-authored ones
- * (see uninstall()'s own JSDoc). The writer/eraser pair is kept — not
- * deleted — because it remains true, useful install-provenance metadata
- * (distinguishing a GameLib depot-download install from a Steam-client
- * install) that may be useful for future diagnostics; it is simply no
- * longer load-bearing for uninstall routing.
- *
- * Unlike markForcedWindowsViaBottle, this is called on EVERY successful
- * installBottleNative() completion, not gated on the D-17 explicit-override
- * flag — installBottleNative() is reached whenever isSteamNativeInstallEnabled()
- * is on, override or not (see install()'s bottle branch).
- */
-export function markNativeBottleInstall(appId: string): void {
-  const existing = steamMetadataStore.get(appId)
-  steamMetadataStore.set(appId, {
-    ...(existing ?? { art_cover: '', art_square: '', extra: { reqs: [] } }),
-    nativeBottleInstall: true
-  })
-  logInfo(
-    `SteamGame: appId ${appId} — persisted native-bottle-install verdict after a committed depot-download install`,
-    LogPrefix.Steam
-  )
-}
-
-/**
- * The reversibility half of the pair above — cleared only on an
- * ACF-CONFIRMED bottle uninstall (library.ts's pollUninstallOnce, 'absent'
- * branch), never at dispatch time, mirroring clearForcedWindowsViaBottle's
- * own discipline exactly.
- */
-export function clearNativeBottleInstall(appId: string): void {
-  const existing = steamMetadataStore.get(appId)
-  if (!existing) return
-  const wasNative = existing.nativeBottleInstall === true
-  steamMetadataStore.set(appId, {
-    ...existing,
-    nativeBottleInstall: false
-  })
-  if (wasNative) {
-    logInfo(
-      `SteamGame: appId ${appId} — cleared native-bottle-install verdict (bottle ACF confirmed absent)`,
-      LogPrefix.Steam
-    )
-  }
-}
-
-/**
  * Maps the host OS to Steam's depot `oslist` vocabulary ('windows'|'macos'|
  * 'linux') — the SAME strings depot/select.ts's DepotSelectOpts.os matches
  * PICS depot config.oslist against. NOT the InstallPlatform vocabulary
@@ -700,15 +640,18 @@ export default class SteamGame implements Game {
       // platformsCaptured:true records that appdetails `platforms` was read, so
       // getGameInfo won't re-fetch this game again for platform data (self-heal once).
       // T-18-02-04: steamMetadataStore.set REPLACES the entire entry (electron-store
-      // Store.set), so a Mach-O-verified verdict (mac_arch_verified/mac_arch_source),
-      // the D-17 (34.13-14) persisted forcedWindowsViaBottle verdict, AND the
-      // debug/steam-bottle-uninstall-reverts nativeBottleInstall verdict must
-      // all be explicitly carried forward here — otherwise the NEXT
+      // Store.set), so a Mach-O-verified verdict (mac_arch_verified/mac_arch_source)
+      // AND the D-17 (34.13-14) persisted forcedWindowsViaBottle verdict must
+      // both be explicitly carried forward here — otherwise the NEXT
       // fetchMetadataIfNeeded call (next launch/resync) would silently drop
-      // any of them: mac_arch would regress to the min-OS heuristic, a
-      // forced game would revert to native routing intermittently, and a
-      // bottle-native install would wrongly re-route uninstall() back to
-      // the bottled Steam client delegation it can never act on.
+      // either: mac_arch would regress to the min-OS heuristic and a forced
+      // game would revert to native routing intermittently.
+      //
+      // 34.13 review A-19: a third carry-forward, `nativeBottleInstall`, was
+      // REMOVED with the field itself. Every carry-forward here is a standing
+      // obligation on every future writer of this payload, so a field with no
+      // reader is not free — it is a permanent tax plus an invitation to
+      // trust it.
       steamMetadataStore.set(this.appId, {
         art_cover,
         art_square,
@@ -731,9 +674,6 @@ export default class SteamGame implements Game {
             : {}),
         ...(existingMeta?.forcedWindowsViaBottle === true
           ? { forcedWindowsViaBottle: true as const }
-          : {}),
-        ...(existingMeta?.nativeBottleInstall === true
-          ? { nativeBottleInstall: true as const }
           : {})
       })
 
@@ -939,7 +879,6 @@ export default class SteamGame implements Game {
           // needs to know the bottled Steam client never authored/adopted
           // this manifest regardless of whether this specific install was
           // an explicit override or an ordinary bottle-eligible install.
-          markNativeBottleInstall(this.appId)
           if (forceWindowsViaBottle) {
             markForcedWindowsViaBottle(this.appId)
           }
@@ -1921,7 +1860,7 @@ export default class SteamGame implements Game {
    * uninstall routing is driven SOLELY by where the library entry's own
    * recorded `install.install_path` resolves (resolveInstallRoot(), library.ts)
    * — never by title attributes (isBottleEligible() / forcedWindowsViaBottle /
-   * nativeBottleInstall). Those attributes may still legitimately decide OTHER
+   * forcedWindowsViaBottle). Those attributes may still legitimately decide OTHER
    * things (install destination, getSettings()/launch() routing) — only the
    * UNINSTALL routing decision changed here.
    *
@@ -1996,8 +1935,9 @@ export default class SteamGame implements Game {
     if (root === 'bottle') {
       // debug/steam-bottle-uninstall-reverts (FINAL): direct deletion,
       // mechanism LIVE-CONFIRMED correct — see uninstallBottleGameDirectly()'s
-      // own JSDoc. No nativeBottleInstall/ownership check remains here; that
-      // distinction no longer changes routing.
+      // own JSDoc. No install-provenance/ownership check remains here; that
+      // distinction no longer changes routing (34.13 review A-19 removed the
+      // `nativeBottleInstall` field that used to record it).
       return this.uninstallBottleGameDirectly()
     }
 
@@ -2104,8 +2044,9 @@ export default class SteamGame implements Game {
    * for EVERY bottle-eligible, non-bridge title — GameLib-authored
    * (installBottleNative(), D-15/SNI-08) AND legacy-delegated/genuinely
    * Steam-authored titles (e.g. Hoard) alike. Formerly named
-   * `uninstallBottleNativeGame` and reached only when `nativeBottleInstall`
-   * was true; that gate is gone (uninstall() now calls this unconditionally
+   * `uninstallBottleNativeGame` and reached only when the (since-removed,
+   * 34.13 review A-19) `nativeBottleInstall` provenance flag was true; that
+   * gate is gone (uninstall() now calls this unconditionally
    * for every bottle-eligible non-bridge title) because delegating to the
    * bottled Steam client's own steam://uninstall confirm dialog was PROVEN
    * architecturally unworkable in this CrossOver bottle for ALL titles, not
@@ -2176,7 +2117,7 @@ export default class SteamGame implements Game {
    *
    * After deletion, reuses pollUninstallOnce('bottle')'s existing 'absent'
    * branch (badge flip, persist, notify, clear forcedWindowsViaBottle/
-   * nativeBottleInstall) rather than re-implementing that completion
+   * forcedWindowsViaBottle) rather than re-implementing that completion
    * pipeline a second time — the manifest is now confirmed absent, exactly
    * the condition that branch already handles for the delegated path's own
    * poller. Because our own rmSync() calls just completed synchronously
@@ -2303,7 +2244,7 @@ export default class SteamGame implements Game {
 
     // Manifest is now confirmed absent — reuse pollUninstallOnce's existing
     // 'absent' branch to flip the badge, persist, notify, and clear the
-    // forcedWindowsViaBottle/nativeBottleInstall flags (D-17 reversibility),
+    // forcedWindowsViaBottle flag (D-17 reversibility),
     // exactly as the delegated path's own poller does once it observes this.
     await pollUninstallOnce(this.appId, 'bottle')
 

@@ -29,8 +29,7 @@ import { runOnceWhenOnline } from 'backend/online_monitor'
 import { library } from './state'
 import SteamGame, {
   isNativeInstallInFlight,
-  clearForcedWindowsViaBottle,
-  clearNativeBottleInstall
+  clearForcedWindowsViaBottle
 } from './games'
 import {
   getBottleSteamappsDir,
@@ -135,7 +134,7 @@ function isPathContainedIn(root: string, candidate: string): boolean {
  * determines which known install root — if any — `installPath` resolves
  * inside. This is the SOLE source of truth for uninstall() routing
  * (games.ts) — never title attributes (windows-only / bottle-eligible /
- * forcedWindowsViaBottle / nativeBottleInstall), which may still legitimately
+ * forcedWindowsViaBottle), which may still legitimately
  * drive OTHER decisions (install destination, launch path).
  *
  * Checks, in order:
@@ -2089,14 +2088,13 @@ export async function pollUninstallOnce(
     // — and BEFORE the `if (existing)` Map guard below, which the
     // diagnostic note beneath it records as capable of MISSing.
     //
-    // debug/steam-bottle-uninstall-reverts: clearNativeBottleInstall rides
-    // the SAME confirmed-absent tick, for the SAME reason — a later
-    // (legacy-delegated) reinstall of this appId must not inherit a stale
-    // "route uninstall to direct deletion" verdict from a prior
-    // bottle-native install.
+    // 34.13 review A-19: a second eraser, clearNativeBottleInstall, used to
+    // ride this same tick. Its field had no reader anywhere — it recorded
+    // install provenance that stopped deciding uninstall routing — so it
+    // performed a full whole-entry steamMetadataStore rewrite on EVERY
+    // confirmed-absent bottle tick for no decision. Field and pair removed.
     if (source === 'bottle') {
       clearForcedWindowsViaBottle(appId)
-      clearNativeBottleInstall(appId)
     }
     const existing = library.get(appId)
 
@@ -2130,7 +2128,10 @@ export async function pollUninstallOnce(
     )) {
       try {
         const candidateState = await readAcfState(appId, candidate)
-        if (candidateState.state === 'installed' && candidateState.installPath) {
+        if (
+          candidateState.state === 'installed' &&
+          candidateState.installPath
+        ) {
           survivorSource = candidate
           survivor = candidateState
           break
