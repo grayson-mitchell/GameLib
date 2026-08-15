@@ -221,10 +221,21 @@ progress:
   # phase-execution-start (see the block above). Wave 4 IN PROGRESS (34.13-09/10 done; 14
   # remains). percent = floor(322/330*100) = floor(97.57...) = 97 (unchanged; floor, matching
   # prior convention).
+  #
+  # [34.13-14 execution + WAVE 4 CLOSE, 2026-08-15 -- ORCHESTRATOR CORRECTION]: plan 34.13-14's own
+  # tracking commit (4076e0e22) edited STATE.md (+6/-2) and correctly ticked its ROADMAP box, but
+  # did NOT increment this counter -- the same silent ledger-skip class already documented for
+  # 34.1-09..14 further up this block. Caught by the orchestrator's post-plan spot-check comparing
+  # the counter against SUMMARY files actually on disk, which is the check that finds this defect:
+  # `ls .planning/phases/34.13-*/*-SUMMARY.md | wc -l` = 11 (01,02,03,05,06,07,08,09,10,14,15),
+  # so completed_plans must be 312 + 11 = 323, not 322. Corrected here by hand; no gsd-sdk
+  # state.*/roadmap.* verb invoked. total_plans UNCHANGED (330) -- 34.13's 14 plans were counted
+  # once at phase-execution-start. percent = floor(323/330*100) = floor(97.87...) = 97 (unchanged;
+  # floor, matching prior convention). Waves 1-4 COMPLETE (11/14); Wave 5 [12], 6 [11], 7 [13] remain.
   total_phases: 24
   completed_phases: 18
   total_plans: 330
-  completed_plans: 322
+  completed_plans: 323
   percent: 97
 ---
 
