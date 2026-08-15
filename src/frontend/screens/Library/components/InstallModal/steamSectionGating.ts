@@ -138,20 +138,121 @@ export interface SteamSectionGatingVerdict {
  * 96-combination, 8-row proof this function must satisfy.
  */
 export function resolveSteamSectionGating(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   input: SteamSectionGatingInput
 ): SteamSectionGatingVerdict {
-  // TASK 1 PLACEHOLDER -- deliberately wrong, replaced by Task 2's real
-  // implementation. Returns "everything visible everywhere" unconditionally,
-  // which violates D-18 on Linux, D-11 off-mac, D-02's dropdown
-  // qualification on a bottled install, and D-20's content-light scoping
-  // all at once -- exercising the harness across every axis it must guard.
+  // Step 1 (D-18): host bucket. Only 'darwin' and 'win32' get their own
+  // branch; EVERYTHING else -- including 'linux' and ContextProvider's own
+  // 'unknown' fallback -- falls into the Linux-family bucket. This is a
+  // deliberate, fail-closed discretion call the UI-SPEC does not itself
+  // enumerate (it only names 'Linux (host)'): a host we cannot positively
+  // identify gets NO platform control rather than a possibly-wrong one,
+  // which is the conservative reading of D-18's "does not render at all."
+  const isMac = input.hostPlatform === 'darwin'
+  const isWinHost = input.hostPlatform === 'win32'
+
+  // Step 2: normalise bottleRequired off-mac. `isBottleEligible()` returns
+  // `false` for `!isMac` (`games.ts:1329`), so a `true` value off-mac is
+  // structurally impossible today -- normalising makes this module
+  // fail-closed if that ever changes, rather than sprouting a wine section
+  // on Windows (D-11) or Linux (D-18) from a caller-supplied `true`.
+  const effectiveBottleRequired = isMac && input.bottleRequired
+
+  // Step 3: whether a real library choice exists. Both conjuncts are kept
+  // even though the backend IPC gate (`main.ts:913-914`,
+  // `installFlowRegistration.ts:189-190`) already zeroes the list when
+  // native install is OFF, making `nativeInstallOn` redundant with
+  // `libraryCount > 1` alone today -- 34.13-RESEARCH.md Q5's own
+  // recommendation, so a future relocation of that backend gate cannot
+  // silently sprout a library dropdown here.
+  const hasChoice = input.nativeInstallOn && input.libraryCount > 1
+
+  // Step 4 (D-03/D-17/D-18/D-19): platformRow, in priority order.
+  let platformRow: SteamPlatformRowMode
+  if (!isMac && !isWinHost) {
+    // D-18: the row does not render on Linux (or any unrecognised host) at
+    // all -- unconditional, never gated on platform count (D-03).
+    platformRow = 'absent'
+  } else if (isWinHost) {
+    // D-19: on Windows there is only ever one option -- read-only.
+    platformRow = 'readonly-windows'
+  } else if (effectiveBottleRequired) {
+    // D-03 / Row 1: a bottle-required (non-native/32-bit) game has no
+    // macOS option at all -- the row exists precisely so the user can see
+    // why a bottle is being requested.
+    platformRow = 'readonly-windows'
+  } else if (input.hasWindowsDepot) {
+    // D-17, rows 2/3/4: UNCONDITIONAL on macOS for a mac-native game with a
+    // Windows depot -- no further gate (the retired model additionally
+    // required the always-show setting to be ON; the UI-SPEC's own "the
+    // old Row 4 discretion call is resolved by construction" note confirms
+    // that gate is gone).
+    platformRow = 'selectable'
+  } else {
+    // Rows 2/3 for a game with no Windows depot: the Windows `MenuItem` is
+    // absent from the list (not present-but-disabled), so the row degrades
+    // to read-only macOS.
+    platformRow = 'readonly-macos'
+  }
+
+  // Step 5: effectivePlatform, a local (not a verdict field). This is what
+  // makes the verdict invariant to a `selectedPlatform` the user could not
+  // actually have chosen -- e.g. a stale 'Windows' value left over from a
+  // different game, or a game whose depot signal changed underneath a
+  // still-open dialog. Only a `'selectable'` row may respond to it.
+  let effectivePlatform: InstallPlatform
+  if (platformRow === 'selectable') {
+    effectivePlatform = input.selectedPlatform
+  } else if (platformRow === 'readonly-macos') {
+    effectivePlatform = 'Mac'
+  } else {
+    // 'readonly-windows' and 'absent' both mean "not macOS-selectable" --
+    // treat as Windows for the purposes of steps 6/7 below (matches D-19's
+    // "only one option, ever" and D-18's "no macOS option renders at all").
+    effectivePlatform = 'Windows'
+  }
+
+  // Step 6 (D-11/D-18): wineSection. The `isMac` guard is load-bearing --
+  // the bottle never applies off-mac. 34.13-11 renders the D-25
+  // eligibility loading row in THIS field's DOM slot while the verdict is
+  // still pending, so this field's meaning is "the wine region belongs
+  // here," not merely "a <WineSelector> is mounted right now."
+  const wineSection =
+    isMac && (effectiveBottleRequired || effectivePlatform === 'Windows')
+
+  // Step 7 (D-17): forceWindowsViaBottle -- true only on row 4. `false` on
+  // row 1: a bottle-required game already routes to the bottle through
+  // `isBottleEligible()`, and 34.13-01 pins `undefined`/`false` as "legacy
+  // routing, byte-identical to today" for this field.
+  const forceWindowsViaBottle =
+    isMac && !effectiveBottleRequired && effectivePlatform === 'Windows'
+
+  // Step 8 (D-02): libraryDropdown. The `!wineSection` term is D-02's
+  // qualification -- `installBottleNative()` overrides the write target to
+  // `getBottleSteamappsDir(...)`, so a host-library dropdown on a bottled
+  // install would be a lie about where the game goes. This is also what
+  // makes row 4's dropdown false even when `hasChoice` holds.
+  const libraryDropdown = !wineSection && hasChoice
+
+  // Step 9 (D-08): freeSpaceLine. D-08 scopes free space to the SELECTED
+  // Steam library drive, so it renders exactly when a library destination
+  // is being shown -- the same rule rows 3/6/8 all confirm.
+  const freeSpaceLine = libraryDropdown
+
+  // Step 10 (D-20/Q6): contentLightNotice -- true on exactly rows 5 and 7.
+  // This is the home the UI-SPEC gives D-20's expectation-setting copy
+  // after D-26 cut the always-show tooltip it used to live in; owned by
+  // 34.13-10 to render (catalog key
+  // `gamelib:steam.install.contentLightNotice`). This is NOT an empty
+  // state -- D-20's "build no empty state" ruling still holds and this
+  // verdict carries no empty-state field.
+  const contentLightNotice = !isMac && !libraryDropdown
+
   return {
-    platformRow: 'readonly-windows',
-    libraryDropdown: true,
-    wineSection: true,
-    freeSpaceLine: true,
-    contentLightNotice: true,
-    forceWindowsViaBottle: true
+    platformRow,
+    libraryDropdown,
+    wineSection,
+    freeSpaceLine,
+    contentLightNotice,
+    forceWindowsViaBottle
   }
 }
