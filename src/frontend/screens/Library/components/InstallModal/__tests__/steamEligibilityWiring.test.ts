@@ -407,6 +407,156 @@ describe('Group D: no new spinner component, no new stylesheet', () => {
   })
 })
 
+// ---------------------------------------------------------------------
+// Group E (34.14) -- the depot resolution is CALLED, once, and feeds BOTH
+// consumers
+// ---------------------------------------------------------------------
+
+/**
+ * A pure-function suite (`steamPlatformRow.test.ts`) proves
+ * `resolveDepotAvailability` is CORRECT. These prove it is CALLED, exactly
+ * once, and that BOTH of its outputs reach the two places that must consume
+ * them -- the same "correct != called" gap `steamEligibilityWiring.test.ts`
+ * was created to close (34.13 review B-WR-02/B-WR-03).
+ *
+ * `flatten` collapses whitespace AND the space `prettier` inserts right
+ * after a wrapped `(` / right before a wrapped `)` -- 34.14's own
+ * `selectSteamPlatformOptions(...)` call site is long enough that `prettier`
+ * wraps each argument onto its own line, so a plain
+ * `.replace(/\s+/g, ' ')` (this file's Group B convention) would leave
+ * `selectSteamPlatformOptions( platformRowMode, platforms,
+ * windowsDepotOffered )` -- extra spaces the literal string match below
+ * would then miss even though the call is correct.
+ */
+function flatten(source: string): string {
+  return source
+    .replace(/\s+/g, ' ')
+    .replace(/\(\s+/g, '(')
+    .replace(/\s+\)/g, ')')
+}
+
+describe('Group E (34.14): the depot resolution is CALLED, once, and feeds BOTH consumers', () => {
+  const source = stripped('screens/Library/components/InstallModal/index.tsx')
+
+  it('E1: resolveDepotAvailability( appears exactly ONCE -- two calls would be two independent D-04 decisions that can disagree', () => {
+    expect(countOccurrences(source, 'resolveDepotAvailability(')).toBe(1)
+  })
+
+  it('E1-RED: deleting the call trips E1, against a known-bad DERIVED FROM THE REAL SOURCE', () => {
+    // The replacement breaks the exact token `resolveDepotAvailability(` by
+    // inserting text BEFORE the `(` (not merely prefixing the identifier --
+    // a prefix like `DELETED_resolveDepotAvailability(` still CONTAINS the
+    // token as a substring and would make this known-bad vacuous).
+    const knownBad = source.replace(
+      'resolveDepotAvailability(',
+      'resolveDepotAvailabilityDELETED('
+    )
+    expect(knownBad).not.toBe(source)
+    expect(countOccurrences(knownBad, 'resolveDepotAvailability(')).toBe(0)
+  })
+
+  it('E2: within the 400 characters following the call, all five ResolveDepotAvailabilityInput property names appear -- a call missing the seed pair silently loses D-05, a call missing probeSettled silently loses D-04', () => {
+    const callIdx = source.indexOf('resolveDepotAvailability(')
+    expect(callIdx).toBeGreaterThan(-1)
+    const window = source.slice(callIdx, callIdx + 400)
+    for (const prop of [
+      'seedHasWindowsDepot',
+      'seedDepotSignalCaptured',
+      'probeHasWindowsDepot',
+      'probeDepotSignalCaptured',
+      'probeSettled'
+    ]) {
+      expect(window).toContain(prop)
+    }
+  })
+
+  it('E3: windowsDepotOffered -- not the raw hasWindowsDepot -- is what reaches selectSteamPlatformOptions', () => {
+    const flat = flatten(source)
+    expect(flat).toContain(
+      'selectSteamPlatformOptions(platformRowMode, platforms, windowsDepotOffered)'
+    )
+    expect(flat).not.toContain(
+      'selectSteamPlatformOptions(platformRowMode, platforms, hasWindowsDepot)'
+    )
+  })
+
+  it('E3-RED: swapping the third argument back to hasWindowsDepot trips E3 -- this is the precise regression that would make D-04 fail-open render as no offer at all', () => {
+    // Regex-derived (not a hand-written literal): the real call site is
+    // wrapped across multiple lines by prettier, so a plain string replace
+    // of the flattened form would not exercise the real source shape.
+    const knownBad = source.replace(
+      /selectSteamPlatformOptions\(([\s\S]*?)windowsDepotOffered([\s\S]*?)\)/,
+      'selectSteamPlatformOptions($1hasWindowsDepot$2)'
+    )
+    expect(knownBad).not.toBe(source)
+    const flat = flatten(knownBad)
+    expect(flat).toContain(
+      'selectSteamPlatformOptions(platformRowMode, platforms, hasWindowsDepot)'
+    )
+  })
+
+  it("E4: depotSignalResolved appears inside the resolveSteamSectionGating( call's object literal AND inside its useMemo dependency array", () => {
+    // Bounded to the memo's own span: from resolveSteamSectionGating( to the
+    // FIRST `]` after it (the dep array's own closing bracket -- the object
+    // literal above it uses `{}`, never `[]`, so this cannot false-bound on
+    // an unrelated array written elsewhere in the file).
+    const startIdx = source.indexOf('resolveSteamSectionGating(')
+    expect(startIdx).toBeGreaterThan(-1)
+    const closeIdx = source.indexOf(']', startIdx)
+    expect(closeIdx).toBeGreaterThan(startIdx)
+    const span = source.slice(startIdx, closeIdx + 1)
+    expect(
+      countOccurrences(span, 'depotSignalResolved')
+    ).toBeGreaterThanOrEqual(2)
+  })
+
+  it("E4-RED: deleting depotSignalResolved from the dependency array (but NOT from the gating input object) trips E4 -- the stale-dep regression that pins the row at 'pending' forever", () => {
+    const knownBad = source.replace(
+      'depotSignalResolved,\n      steamLibraryList,',
+      'steamLibraryList,'
+    )
+    expect(knownBad).not.toBe(source)
+    const startIdx = knownBad.indexOf('resolveSteamSectionGating(')
+    const closeIdx = knownBad.indexOf(']', startIdx)
+    const span = knownBad.slice(startIdx, closeIdx + 1)
+    // Only the gating-input occurrence survives -- exactly 1, not 0, proving
+    // this known-bad targets the dep array specifically rather than
+    // deleting the field outright (which E2/E4's object-literal half would
+    // also catch, muddying which obligation actually tripped).
+    expect(countOccurrences(span, 'depotSignalResolved')).toBe(1)
+  })
+
+  // ── D-01 co-occurrence proof (VALIDATION.md) ──────────────────────────
+  //
+  // D-01 claims the Install disable and the pending row are driven by the
+  // SAME expression, not two flags that could desync. Asserting each
+  // independently (as B2/B4 already do for the loading row, and as Task 1's
+  // own acceptance criteria do for probeSettled) proves each EXISTS but not
+  // that they are the SAME expression -- two independently-correct flags
+  // fed from different sources would pass both existence checks and still
+  // desync. This co-occurrence spec is what actually proves D-01.
+
+  it("E5: eligibilityPending={eligibility.pending} (the Install-disable prop) and probeSettled: !eligibility.pending (resolveDepotAvailability's input) both read eligibility.pending -- the SAME expression, not two flags that could desync", () => {
+    expect(
+      countOccurrences(source, 'eligibilityPending={eligibility.pending}')
+    ).toBe(1)
+    expect(countOccurrences(source, 'probeSettled: !eligibility.pending')).toBe(
+      1
+    )
+  })
+
+  it('E5-RED: a known-bad DERIVED FROM THE REAL SOURCE feeding the Install-disable prop from a different identifier trips E5', () => {
+    const knownBad = source.replace(
+      'eligibilityPending={eligibility.pending}',
+      'eligibilityPending={someOtherEligibilityFlag}'
+    )
+    expect(knownBad).not.toBe(source)
+    expect(
+      countOccurrences(knownBad, 'eligibilityPending={eligibility.pending}')
+    ).toBe(0)
+  })
+})
+
 // Finish with a full-suite run in Task 3's own <verify> command
 // (`pnpm test:ci`) -- this task edits the dialog router every install flow
 // mounts, so any suite that flips red is a real regression.
