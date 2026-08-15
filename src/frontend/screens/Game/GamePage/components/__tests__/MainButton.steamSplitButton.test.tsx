@@ -212,10 +212,7 @@ describe('MainButton — D-21 split button (steam)', () => {
     // disabled-looking-but-present caret would still sit in the focus ring.
     resetContext()
     const enabledTree = invoke(makeGameInfo())
-    const enabledCaret = findAll(
-      enabledTree,
-      (n) => n.type === Dropdown
-    )[0]
+    const enabledCaret = findAll(enabledTree, (n) => n.type === Dropdown)[0]
     expect(
       (enabledCaret.props as { disabled?: unknown }).disabled
     ).toBeUndefined()
@@ -226,9 +223,8 @@ describe('MainButton — D-21 split button (steam)', () => {
     const installButtons = findInstallButtonsSpan(tree)
     expect(installButtons).toBeDefined()
 
-    const children = (
-      installButtons!.props as { children: unknown }
-    ).children as unknown[]
+    const children = (installButtons!.props as { children: unknown })
+      .children as unknown[]
     const flatChildren = Array.isArray(children) ? children : [children]
 
     const primaryIndex = flatChildren.findIndex(
@@ -275,11 +271,13 @@ describe('MainButton — D-21 split button (steam)', () => {
 
     const hiddenInTitle = findAll(
       titleNode,
-      (n) => (n.props as { 'aria-hidden'?: unknown })['aria-hidden'] !== undefined
+      (n) =>
+        (n.props as { 'aria-hidden'?: unknown })['aria-hidden'] !== undefined
     )
     const hiddenInPanel = findAll(
       (caret.props as { children: unknown }).children,
-      (n) => (n.props as { 'aria-hidden'?: unknown })['aria-hidden'] !== undefined
+      (n) =>
+        (n.props as { 'aria-hidden'?: unknown })['aria-hidden'] !== undefined
     )
     expect(hiddenInTitle).toHaveLength(0)
     expect(hiddenInPanel).toHaveLength(0)
@@ -296,7 +294,8 @@ describe('MainButton — D-21 split button (steam)', () => {
 
     const primaryButton = findAll(
       tree,
-      (n) => n.type === 'button' && !!(n.props as { autoFocus?: unknown }).autoFocus
+      (n) =>
+        n.type === 'button' && !!(n.props as { autoFocus?: unknown }).autoFocus
     )[0] as ReactElement<{ onClick: () => Promise<void> }>
 
     await primaryButton.props.onClick()
@@ -311,7 +310,8 @@ describe('MainButton — D-21 split button (steam)', () => {
       steamTree,
       (n) =>
         n.type === 'button' &&
-        (n.props as { className?: string }).className === 'button mainBtn outline'
+        (n.props as { className?: string }).className ===
+          'button mainBtn outline'
     )
     // The caret is a Dropdown node, not a bare <button>, so this predicate
     // (bare <button> with that class) matches only a surviving Import
@@ -326,8 +326,43 @@ describe('MainButton — D-21 split button (steam)', () => {
       gogTree,
       (n) =>
         n.type === 'button' &&
-        (n.props as { className?: string }).className === 'button mainBtn outline'
+        (n.props as { className?: string }).className ===
+          'button mainBtn outline'
     )
     expect(gogImport).toHaveLength(1)
+  })
+
+  it('S10 (34.13 review C-04): renders NO caret for a DELISTED Steam game', () => {
+    // `common/types.ts` documents a delisted game as "confirmed unavailable
+    // on Steam ... not activatable", so an install-options door is a door to
+    // nothing. The two sibling entries (GameCard, GameSubMenu) already gate
+    // on this; the caret was the only one that did not, and neither
+    // `notInstallable` (set only inside a `runner !== 'steam'` block) nor
+    // `notSupportedGame` (keys on thirdPartyManagedApp) covered it.
+    const tree = invoke(makeGameInfo({ is_delisted: true }))
+    expect(findAll(tree, (n) => n.type === Dropdown)).toHaveLength(0)
+  })
+
+  it('S10b: the DISCRIMINATOR — the same game NOT delisted still renders the caret', () => {
+    // Without this pair, S10 would also pass if the caret had been deleted
+    // outright or gated on something unrelated.
+    const tree = invoke(makeGameInfo({ is_delisted: false }))
+    expect(findAll(tree, (n) => n.type === Dropdown)).toHaveLength(1)
+  })
+
+  it('S11 (34.13 review C-11): the caret panel item carries the same class vocabulary as its GameSubMenu sibling', () => {
+    const tree = invoke(makeGameInfo())
+    const caret = findAll(tree, (n) => n.type === Dropdown)[0]
+    const button = (caret.props as { children: unknown })
+      .children as ReactElement<{ className?: string }>
+
+    const className = button.props.className ?? ''
+    // `Dropdown/index.scss`'s only rule reaching a panel child is
+    // `.dropdownContainer .dropdown button { margin/padding/font-size }` --
+    // spacing, with no surface, border, colour or hover state. These are the
+    // classes `GameSubMenu/index.tsx` gives the identical action.
+    for (const token of ['link', 'button', 'is-text', 'is-link']) {
+      expect(className.split(/\s+/)).toContain(token)
+    }
   })
 })

@@ -22,6 +22,7 @@ import classNames from 'classnames'
 import { GameInfo } from 'common/types'
 import useSetting from 'frontend/hooks/useSetting'
 import Dropdown from 'frontend/components/UI/Dropdown'
+import { showSteamMainButtonInstallOptions } from 'frontend/helpers/steamInstallOptionsEntry'
 
 interface Props {
   gameInfo: GameInfo
@@ -320,45 +321,62 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
               the focus ring — a present-but-unusable-looking control would
               still sit in it on one runtime and not the other (the repo's
               own ledgered lesson). */}
-          {gameInfo.runner === 'steam' &&
-            !is_installed &&
-            !is.queued &&
-            !disabledInstallButtons && (
-              <Dropdown
-                className="SteamInstallCaret"
-                /* WR-14: deliberately NOT `mainBtn` -- that class carries
+          {/* 34.13 review C-04: routed through the shared predicate module
+              instead of re-inlining the conjunct. The inline form was the
+              only one of the three "Install with options…" doors NOT gated
+              on `is_delisted`, and `gameInfo.is_delisted` was in scope right
+              here and simply unread. */}
+          {showSteamMainButtonInstallOptions({
+            runner: gameInfo.runner,
+            isInstalled: is_installed,
+            isQueued: is.queued,
+            isDelisted: !!gameInfo.is_delisted,
+            installDisabled: disabledInstallButtons
+          }) && (
+            <Dropdown
+              className="SteamInstallCaret"
+              /* WR-14: deliberately NOT `mainBtn` -- that class carries
                    `min-width: 200px`, which made this chevron as wide as
                    the Install button beside it and wrapped the pair onto
                    two rows in the `flex-wrap: wrap` container. The caret's
                    non-zero box (required by Tauri's gamepad focus
                    collector) is now explicit in index.css. */
-                buttonClass="button outline"
-                title={
-                  <span
-                    aria-label={t(
-                      'gamelib:steam.install.withOptionsLabel',
-                      'Install with options…'
-                    )}
-                  >
-                    <FontAwesomeIcon
-                      icon={faChevronDown}
-                      className="SteamInstallCaret__icon"
-                    />
-                  </span>
-                }
-              >
-                <button
-                  onClick={() =>
-                    openSteamInstallOptions(gameInfo.app_name, gameInfo)
-                  }
-                >
-                  {t(
+              buttonClass="button outline"
+              title={
+                <span
+                  aria-label={t(
                     'gamelib:steam.install.withOptionsLabel',
                     'Install with options…'
                   )}
-                </button>
-              </Dropdown>
-            )}
+                >
+                  <FontAwesomeIcon
+                    icon={faChevronDown}
+                    className="SteamInstallCaret__icon"
+                  />
+                </span>
+              }
+            >
+              {/* 34.13 review C-11: the same class vocabulary its
+                    `GameSubMenu` sibling carries for the identical action.
+                    Without it the only rule reaching this element is
+                    `Dropdown/index.scss`'s generic
+                    `.dropdownContainer .dropdown button` -- spacing only, no
+                    surface, border, colour or hover state -- because
+                    `MainButton` is the sole importer of that Dropdown and no
+                    precedent constrained it. */}
+              <button
+                className="link button is-text is-link buttonWithIcon"
+                onClick={() =>
+                  openSteamInstallOptions(gameInfo.app_name, gameInfo)
+                }
+              >
+                {t(
+                  'gamelib:steam.install.withOptionsLabel',
+                  'Install with options…'
+                )}
+              </button>
+            </Dropdown>
+          )}
           {/* Import makes no sense for Steam games — Steam owns install management */}
           {gameInfo.runner !== 'steam' && (
             <button

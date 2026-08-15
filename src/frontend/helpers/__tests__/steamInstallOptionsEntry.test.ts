@@ -25,8 +25,10 @@ import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import {
   showSteamCardInstallOptions,
+  showSteamMainButtonInstallOptions,
   showSteamSubMenuInstallOptions,
   type SteamCardInstallOptionsState,
+  type SteamMainButtonInstallOptionsState,
   type SteamSubMenuInstallOptionsState
 } from '../steamInstallOptionsEntry'
 
@@ -77,9 +79,9 @@ describe('showSteamCardInstallOptions (D-27 row 3, D-28)', () => {
   it.each(NON_STEAM_RUNNERS)(
     'A2 DISCRIMINATOR: D-28 -- no non-Steam runner (%s) ever sees this entry',
     (runner) => {
-      expect(
-        showSteamCardInstallOptions({ ...cardBaseState, runner })
-      ).toBe(false)
+      expect(showSteamCardInstallOptions({ ...cardBaseState, runner })).toBe(
+        false
+      )
     }
   )
 
@@ -164,8 +166,13 @@ describe('showSteamSubMenuInstallOptions (D-27 row 5, D-28)', () => {
     // The known-bad implementation, written out so the discriminator is
     // visible: this is what shipped, and it answers `true` for a game the
     // fixed predicate correctly refuses.
-    const preFix = ({ runner, isInstalled }: { runner: string; isInstalled: boolean }) =>
-      runner === 'steam' && !isInstalled
+    const preFix = ({
+      runner,
+      isInstalled
+    }: {
+      runner: string
+      isInstalled: boolean
+    }) => runner === 'steam' && !isInstalled
     const delistedState = { ...subMenuBaseState, isDelisted: true }
     expect(preFix(delistedState)).toBe(true)
     expect(showSteamSubMenuInstallOptions(delistedState)).toBe(false)
@@ -239,7 +246,7 @@ describe('GameSubMenu/index.tsx source gates (D-27 row 5, D-28 -- comment-stripp
     expect(source).toContain("t('button.edit-game', 'Edit Game')")
   })
 
-  it('D4: the new button carries the file\'s own class string -- pinned pre/post-edit counts', () => {
+  it("D4: the new button carries the file's own class string -- pinned pre/post-edit counts", () => {
     const source = readStrippedGameSubMenu()
     const count = (
       source.match(/link button is-text is-link buttonWithIcon/g) ?? []
@@ -251,5 +258,88 @@ describe('GameSubMenu/index.tsx source gates (D-27 row 5, D-28 -- comment-stripp
     const source = readStrippedGameSubMenu()
     expect((source.match(/Dropdown/g) ?? []).length).toBe(0)
     expect((source.match(/ContextMenu/g) ?? []).length).toBe(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 34.13 review C-04 — the THIRD door.
+//
+// This module's own doc claimed to be "the SINGLE site where `runner ===
+// 'steam'` is evaluated for these entries". The `MainButton` caret, added by
+// the same phase, inlined its own conjunct and was the only one of the three
+// not gated on `is_delisted`. These specs cover the new shared predicate; the
+// element-graph proof that the caret actually disappears for a delisted game
+// is `MainButton.steamSplitButton.test.tsx` S10/S10b.
+// ---------------------------------------------------------------------------
+const mainButtonBaseState: SteamMainButtonInstallOptionsState = {
+  runner: 'steam',
+  isInstalled: false,
+  isQueued: false,
+  isDelisted: false,
+  installDisabled: false
+}
+
+describe('showSteamMainButtonInstallOptions (34.13 review C-04)', () => {
+  it('E1: steam + not installed + not queued + not delisted + install enabled -> true', () => {
+    expect(showSteamMainButtonInstallOptions(mainButtonBaseState)).toBe(true)
+  })
+
+  it.each(NON_STEAM_RUNNERS)('E2: D-28: %s -> false', (runner) => {
+    expect(
+      showSteamMainButtonInstallOptions({ ...mainButtonBaseState, runner })
+    ).toBe(false)
+  })
+
+  it.each([
+    ['isInstalled', { isInstalled: true }],
+    ['isQueued', { isQueued: true }],
+    ['isDelisted', { isDelisted: true }],
+    ['installDisabled', { installDisabled: true }]
+  ] as Array<[string, Partial<SteamMainButtonInstallOptionsState>]>)(
+    'E3: %s alone suppresses the caret',
+    (_label, override) => {
+      expect(
+        showSteamMainButtonInstallOptions({
+          ...mainButtonBaseState,
+          ...override
+        })
+      ).toBe(false)
+    }
+  )
+
+  it('E4: DISCRIMINATOR — isDelisted is the term the pre-fix inline conjunct lacked, so it must flip the verdict on its own', () => {
+    // The pre-fix expression was exactly
+    // `runner === 'steam' && !isInstalled && !isQueued && !installDisabled`.
+    // Evaluated here against the SAME state, it says `true` for a delisted
+    // game; the shared predicate must say `false`. If this ever stops being
+    // a real difference, the fix has been reverted.
+    const delisted = { ...mainButtonBaseState, isDelisted: true }
+    const preFixVerdict =
+      delisted.runner === 'steam' &&
+      !delisted.isInstalled &&
+      !delisted.isQueued &&
+      !delisted.installDisabled
+    expect(preFixVerdict).toBe(true)
+    expect(showSteamMainButtonInstallOptions(delisted)).toBe(false)
+  })
+
+  it('E5: the MainButton caret no longer inlines the conjunct — it calls the shared predicate', () => {
+    const source = stripSourceComments(
+      readFileSync(
+        join(
+          __dirname,
+          '..',
+          '..',
+          'screens/Game/GamePage/components/MainButton.tsx'
+        ),
+        'utf8'
+      )
+    )
+    expect(source).toMatch(/showSteamMainButtonInstallOptions\(\{/)
+    // The pre-fix inline form, which this module's doc comment says must
+    // not exist in any component file.
+    expect(source).not.toMatch(
+      /gameInfo\.runner === 'steam' &&\s*!is_installed/
+    )
   })
 })
