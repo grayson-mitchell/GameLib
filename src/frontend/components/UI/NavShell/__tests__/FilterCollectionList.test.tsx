@@ -24,6 +24,32 @@ import { join } from 'path'
 
 jest.mock('../components/FilterCollectionList/index.scss', () => ({}))
 
+// 260815-nmq: the section is now wrapped in `FilterFacetGroup`, which pulls
+// in its own stylesheet, `Dropdown` and FontAwesome. Jest has no
+// `moduleNameMapper` for `.scss` and its `transform` key only matches
+// `.tsx?`, so an unmocked stylesheet import here is a hard SyntaxError at
+// require time, not a silent no-op. `Dropdown` is mocked wholesale (its
+// `useState` / gamepad side effect is out of scope for a direct-invocation
+// test) exactly as FilterStoreFacet.test.tsx and FilterFacetGroup.test.tsx
+// already do for this same import chain. `FilterFacetGroup` ITSELF stays
+// real -- it is the thing this file now asserts on.
+jest.mock('../components/FilterFacetGroup/index.scss', () => ({}))
+
+jest.mock('../../Dropdown', () => ({
+  __esModule: true,
+  default: (props: Record<string, unknown>) => ({
+    type: 'mock-dropdown',
+    props
+  })
+}))
+
+jest.mock('@fortawesome/react-fontawesome', () => ({
+  FontAwesomeIcon: (props: Record<string, unknown>) => ({
+    type: 'mock-fontawesome-icon',
+    props
+  })
+}))
+
 type MockContextValue = {
   customCategories: { listCategories: jest.Mock }
   currentCollection: string | null
@@ -72,6 +98,7 @@ jest.mock('../components/NavItem', () => ({
 // same mocked binding here lets tests assert type identity rather than
 // invoking the element's type.
 import NavItem from '../components/NavItem'
+import FilterFacetGroup from '../components/FilterFacetGroup'
 import FilterCollectionList from '../components/FilterCollectionList'
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
@@ -112,6 +139,25 @@ beforeEach(() => {
 })
 
 describe('FilterCollectionList', () => {
+  // 260815-nmq collapsibility gate. This is the assertion that fails if the
+  // section is ever reverted to a flat, always-open `<section>` with its own
+  // `<span>` header -- every other test in this file inspects rows and would
+  // stay green through that regression, because the rows themselves do not
+  // change. Asserting the ROOT is `FilterFacetGroup` (the shared wrapper the
+  // Store / Runnability / More-filters groups use) is what ties this section
+  // to their expand/collapse behaviour rather than to a lookalike of it.
+  it('renders as a collapsible FilterFacetGroup titled Collections, not a flat section', () => {
+    contextValue = makeContextValue({
+      customCategories: { listCategories: jest.fn(() => ['RPG']) }
+    })
+
+    const tree = FilterCollectionList() as unknown as AnyElement
+
+    expect(tree.type).toBe(FilterFacetGroup)
+    expect(tree.props.title).toBe('Collections')
+    expect(tree.props.className).toBe('FilterCollectionList')
+  })
+
   it('renders listCategories() rows verbatim, in order, with no name rewritten (D-17)', () => {
     contextValue = makeContextValue({
       customCategories: { listCategories: jest.fn(() => ['RPG', 'Backlog']) }
@@ -205,7 +251,10 @@ describe('FilterCollectionList', () => {
     expect(contextValue.setCurrentCollection).toHaveBeenCalledWith(null)
   })
 
-  it('given listCategories() returns [], the section still renders its header, the no_categories message, and both action rows', () => {
+  // Retitled 260815-nmq: the old name claimed this covered "its header", but
+  // the assertions below only ever reached the empty message and the row
+  // labels -- the header is covered by the FilterFacetGroup gate above.
+  it('given listCategories() returns [], the section still renders the no_categories message and both action rows', () => {
     contextValue = makeContextValue({
       customCategories: { listCategories: jest.fn(() => []) }
     })

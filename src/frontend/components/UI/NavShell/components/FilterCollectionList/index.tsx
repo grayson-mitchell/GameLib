@@ -7,6 +7,7 @@ import LibraryContext from 'frontend/screens/Library/LibraryContext'
 // raw in the chip row while this component rendered "Uncategorized".
 import { PRESET_UNCATEGORIZED } from 'frontend/screens/Library/filterEngine'
 import NavItem from '../NavItem'
+import FilterFacetGroup from '../FilterFacetGroup'
 import './index.scss'
 
 /**
@@ -20,6 +21,17 @@ import './index.scss'
  * `FilterViewList`'s row shape exactly (extended `NavItem`s, D-21), but
  * unlike Views a collection CAN be cleared: re-clicking the active row
  * calls `setCurrentCollection(null)` rather than re-selecting itself.
+ *
+ * 260815-nmq: the section is now a collapsible `FilterFacetGroup`, the same
+ * wrapper Store / Runnability / More-filters already use, rather than an
+ * always-open `<section>` with its own `<span>` header. The header text is
+ * the SAME `gamelib:library.filterPanel.collections` key it always was --
+ * only its rendering moved into the group's disclosure button, so no
+ * catalogue entry changes and D-18 below still holds verbatim. Rows keep
+ * `NavItem` (D-21) rather than converting to `FilterFacetRow`: collections
+ * are single-select with a clearable active row, not checkboxes, and
+ * `FilterFacetRow` carries `role="checkbox"` semantics that would be a lie
+ * here.
  *
  * D-18: this section's own header is a NEW panel-only key ("Collections").
  * The `CategoriesManager` dialog these action rows open keeps its existing
@@ -45,10 +57,10 @@ export default function FilterCollectionList() {
   }
 
   return (
-    <section className="FilterCollectionList">
-      <span className="FilterCollectionList__header">
-        {tGamelib('gamelib:library.filterPanel.collections', 'Collections')}
-      </span>
+    <FilterFacetGroup
+      title={tGamelib('gamelib:library.filterPanel.collections', 'Collections')}
+      className="FilterCollectionList"
+    >
       {categories.length === 0 && (
         <span className="FilterCollectionList__empty">
           {t(
@@ -97,6 +109,6 @@ export default function FilterCollectionList() {
         )}
         onClick={() => setShowCategories(true)}
       />
-    </section>
+    </FilterFacetGroup>
   )
 }

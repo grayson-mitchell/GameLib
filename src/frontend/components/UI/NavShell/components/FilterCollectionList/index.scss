@@ -1,7 +1,9 @@
-// Collections section box, header and empty-state text only (34.11-06
-// Task 2). Row padding, hover, active colour and font weight all come from
-// `.NavShell__tier2 .NavItem` (NavItem/index.scss) -- redeclaring any of
-// that here would fork the tier-2 row spec into two places. Scoped under
+// Collections empty-state text, plus one specificity reset that takes back
+// the metrics `Dropdown/index.scss` steals from these rows (34.11-06 Task 2,
+// amended 260815-nmq). Hover, active colour and font weight still come from
+// `.NavShell__tier2 .NavItem` (NavItem/index.scss) -- the reset below
+// restores NavItem's own values rather than inventing new ones, so the
+// tier-2 row spec is not forked into two places. Scoped under
 // `.NavShell__tier2Portal` (the Games panel's portal target, itself nested
 // inside `.NavShell__tier2` -- see NavShell/index.scss) rather than left
 // unscoped: an unscoped `.MuiTabs-root` rule once leaked 8px into every
@@ -12,17 +14,47 @@
 // panel's foreground. Adding a colour here would need an entry in all
 // eleven `themes.scss` blocks for no visual gain.
 .NavShell__tier2Portal {
-  .FilterCollectionList {
-    display: flex;
-    flex-direction: column;
-    margin-block-end: var(--space-sm);
-  }
+  // 260815-nmq. `.FilterCollectionList` now lands on `Dropdown`'s
+  // `.dropdownContainer` (the class is forwarded through `FilterFacetGroup`),
+  // so this file no longer declares a box of its own: the group header, the
+  // caret, the disclosure behaviour and `margin-block-end` all come from
+  // `.FilterFacetGroup` in FilterFacetGroup/index.scss, and the former
+  // `display: flex; flex-direction: column` here would have fought
+  // `.dropdownContainer`'s `position: relative` layout that every other facet
+  // group leaves untouched. The `.FilterCollectionList__header` rule is gone
+  // with the `<span>` it styled -- the header is a `.dropdownButton` now.
 
-  .FilterCollectionList__header {
-    font-size: var(--text-sm);
-    font-weight: var(--bold);
-    line-height: 1;
-    padding: var(--space-2xs) var(--tier2-row-padding-inline);
+  // Same defect `FilterFacetGroup/index.scss:122-139` documents for
+  // `.FilterFacetRow` (260815-mk1), hit again by a different row primitive:
+  // `Dropdown/index.scss` styles its panel's CONTENTS, and
+  //   `.dropdownContainer .dropdown button`  (0,2,1)
+  // sets `margin-inline-start: 0.5rem; align-self: center; font-size: 1rem;
+  // padding: 0.3rem 0.8rem` for the Game-page MainButton menu, Dropdown's
+  // other consumer. `NavItem`'s own rule is `.NavShell__tier2 .NavItem` at
+  // only (0,2,0), so the moment these rows moved inside a Dropdown panel the
+  // leak WON on all four properties -- rows would sit ~33px in with 0.8rem of
+  // their own padding while the header they belong to sat at 12px.
+  //
+  // Fixed by out-specifying rather than by editing Dropdown/index.scss, which
+  // MainButton depends on and which is not this task's to change. The
+  // selector below is (0,4,0), which beats (0,2,1) on class count regardless
+  // of source order -- that ordering independence is the point, since
+  // NavItem/index.scss and this file are imported by different components and
+  // neither can rely on loading after the other.
+  //
+  // These four declarations restore `NavItem`'s tier-2 values verbatim
+  // (NavItem/index.scss) rather than inventing new ones -- the row spec still
+  // lives in one place; this rule only takes back what the leak stole.
+  // Note it also outranks NavItem's `&:hover { padding-inline-start: 12px }`
+  // at (0,3,0). Nothing is lost: `--tier2-row-padding-inline` is
+  // `--space-sm` = 0.75em, i.e. exactly 12px at the default root size, so
+  // that hover indent was already a visual no-op -- and the em-relative token
+  // is the more correct value at non-default text sizes anyway.
+  .FilterCollectionList .dropdown .NavItem {
+    margin-inline-start: 0;
+    align-self: stretch;
+    font-size: var(--text-md);
+    padding: var(--space-xs) var(--tier2-row-padding-inline);
   }
 
   .FilterCollectionList__empty {
