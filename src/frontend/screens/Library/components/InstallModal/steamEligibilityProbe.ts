@@ -32,10 +32,28 @@ import type { SteamSectionGatingVerdict } from './steamSectionGating'
  * The discriminated state this module threads through a dialog session.
  * `'pending'` carries only `appName` (no verdict yet); `'resolved'` also
  * carries the resolved `bottleRequired` boolean, one round trip's answer.
+ *
+ * 34.14 D-02/D-03: the `'resolved'` variant additionally carries
+ * `hasWindowsDepot`/`depotSignalCaptured`, the two new
+ * `SteamBottleEligibilityVerdict` booleans, riding the SAME round trip --
+ * no second probe, no second IPC call site. Named `depotSignalCaptured`
+ * here (not `platformsCaptured`) so this module's vocabulary matches the
+ * gating vocabulary `steamPlatformRow.ts`/`steamSectionGating.ts` use; it is
+ * mapped 1:1 from `verdict.platformsCaptured` at the one place the verdict
+ * enters (`applyEligibilityResponse` below). The `'pending'` variant stays
+ * unchanged -- a pending state carries no depot answer by definition; the
+ * seed for an already-captured game is supplied by `index.tsx` (D-05), not
+ * by this module.
  */
 export type EligibilityState =
   | { phase: 'pending'; appName: string }
-  | { phase: 'resolved'; appName: string; bottleRequired: boolean }
+  | {
+      phase: 'resolved'
+      appName: string
+      bottleRequired: boolean
+      hasWindowsDepot: boolean
+      depotSignalCaptured: boolean
+    }
 
 /**
  * Whether the D-25 probe should run at all for the given host/runner. This
@@ -91,7 +109,21 @@ export function initialEligibilityState({
   if (shouldProbeEligibility({ platform, runner, action })) {
     return { phase: 'pending', appName }
   }
-  return { phase: 'resolved', appName, bottleRequired: false }
+  // 34.14: this branch is only reached off the Steam-install-on-
+  // non-Windows/Linux route (`shouldProbeEligibility` false), which is
+  // exactly the route where `isSteamManagedApp` is false in `index.tsx` and
+  // the Steam gating verdict is never consulted -- so this "settled and
+  // uncaptured" shape can never reach D-04's fail-open on a surface that
+  // renders it. Resolving immediately still requires an explicit depot
+  // answer; `false`/`false` is the only honest one to give when the probe
+  // never runs at all.
+  return {
+    phase: 'resolved',
+    appName,
+    bottleRequired: false,
+    hasWindowsDepot: false,
+    depotSignalCaptured: false
+  }
 }
 
 /**
@@ -112,7 +144,12 @@ export function applyEligibilityResponse(
   return {
     phase: 'resolved',
     appName: response.appName,
-    bottleRequired: response.verdict.eligible
+    bottleRequired: response.verdict.eligible,
+    // 34.14 D-02: the widened verdict's two booleans travel to the renderer
+    // on this SAME round trip -- no second guard needed, the appName check
+    // above already covers the whole (now wider) response object.
+    hasWindowsDepot: response.verdict.hasWindowsDepot,
+    depotSignalCaptured: response.verdict.platformsCaptured
   }
 }
 
@@ -133,7 +170,16 @@ export function applyEligibilityFailure(
   return {
     phase: 'resolved',
     appName: failure.appName,
-    bottleRequired: false
+    bottleRequired: false,
+    // 34.14: this is NOT a fail-closed depot decision -- it records "we
+    // never found out", not "no Windows depot exists". D-04's fail-open is
+    // applied downstream, in `resolveDepotAvailability`
+    // (`steamPlatformRow.ts`), which reads `probeSettled: true` together
+    // with `depotSignalCaptured: false` here and OFFERS Windows rather than
+    // hiding it. Without this note the pairing below reads as a
+    // contradiction of D-04 rather than its input.
+    hasWindowsDepot: false,
+    depotSignalCaptured: false
   }
 }
 
@@ -158,9 +204,17 @@ export function isEligibilityPending(state: EligibilityState): boolean {
  * VANISHES the instant eligibility resolves true -- worse than the
  * flicker-free snap D-25 asks for. Suppressed here instead.
  *
- * `platformRow` is deliberately NOT suppressed -- it is genuinely
- * synchronous (D-03/D-17/D-19), and hiding it would make the dialog look
- * empty on open, the D-20 corner this phase already decided not to create.
+ * `platformRow` is still deliberately NOT suppressed here, but as of 34.14
+ * it is NOT synchronous either -- it is synchronous only when the depot
+ * signal was already captured at open (34.14 D-05's seed case, the common
+ * path, where an already-captured game never flashes a pending state);
+ * otherwise `resolveSteamSectionGating` returns the `'pending'` mode from
+ * its own `depotSignalResolved` input (34.14 D-01/D-03), and
+ * `resolveDepotAvailability` resolves that mode once this probe settles
+ * (34.14 D-04). Suppressing `platformRow` here would still make the dialog
+ * look empty on open -- the D-20 corner 34.13 declined to create -- and
+ * would ALSO collapse the pending/`readonly-macos` distinction that
+ * Phase 34.14 exists to create.
  */
 export function applyEligibilityPending(
   verdict: SteamSectionGatingVerdict,
@@ -236,7 +290,12 @@ export function useSteamBottleEligibility({
   runner: Runner
   appName: string
   action: 'install' | 'import'
-}): { pending: boolean; bottleRequired: boolean } {
+}): {
+  pending: boolean
+  bottleRequired: boolean
+  hasWindowsDepot: boolean
+  depotSignalCaptured: boolean
+} {
   const identityRef = useRef<string>()
   // `action` participates in the identity (WR-08): switching between the
   // install and import dialogs for the same game must re-seed, not reuse a
@@ -300,6 +359,9 @@ export function useSteamBottleEligibility({
 
   return {
     pending: isEligibilityPending(state),
-    bottleRequired: state.phase === 'resolved' ? state.bottleRequired : false
+    bottleRequired: state.phase === 'resolved' ? state.bottleRequired : false,
+    hasWindowsDepot: state.phase === 'resolved' ? state.hasWindowsDepot : false,
+    depotSignalCaptured:
+      state.phase === 'resolved' ? state.depotSignalCaptured : false
   }
 }
