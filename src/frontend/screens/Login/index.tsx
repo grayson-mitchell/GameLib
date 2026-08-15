@@ -133,16 +133,6 @@ export default React.memo(function NewLogin() {
         <div className="runnerList">
           <div className="runnerHeader">
             <img src={GameLibIcon} className="runnerHeaderIcon" alt="GameLib" />
-            <div className="runnerHeaderText">
-              <h1 className="title">GameLib</h1>
-            </div>
-
-            {!loading && (
-              <LanguageSelector
-                flagPossition={FlagPosition.PREPEND}
-                showWeblateLink={true}
-              />
-            )}
           </div>
 
           {oldMac && <p className="disabledMessage">{oldMacMessage}</p>}
@@ -252,12 +242,19 @@ export default React.memo(function NewLogin() {
             </WarningMessage>
           )}
         </div>
-        <button
-          onClick={async () => handleLibraryClick()}
-          className="goToLibrary"
-        >
-          {t('button.go_to_library', 'Go to Library')}
-        </button>
+        <div className="loginActions">
+          <LanguageSelector
+            flagPossition={FlagPosition.PREPEND}
+            showWeblateLink={false}
+            hideLabel={true}
+          />
+          <button
+            onClick={async () => handleLibraryClick()}
+            className="goToLibrary"
+          >
+            {t('button.go_to_library', 'Go to Library')}
+          </button>
+        </div>
       </div>
     </div>
   )

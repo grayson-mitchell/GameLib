@@ -65,13 +65,22 @@
   min-width: 400px;
 }
 
-.loginPage .languageSelector {
-  max-width: 300px;
-  flex-basis: 50%;
+.runnerList {
+  width: 100%;
 }
 
-.runnerList,
-.languageSelector {
+// The language picker sits on the same row as "Go to Library" (see
+// `.loginActions`), so it must not stretch to the full wrapper width the way
+// it does inside Settings.
+.loginPage .languageSelector {
+  max-width: 220px;
+  margin-block: 20px 10px;
+}
+
+.loginActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md, 16px);
   width: 100%;
 }
 
@@ -105,10 +114,6 @@
   display: none;
 }
 
-.loginPage .languageSelector label {
-  margin-bottom: var(--space-xs);
-}
-
 .loginPage .smallLink {
   text-align: start;
   margin-top: var(--space-xs);
@@ -135,16 +140,9 @@
 
 .runnerHeader {
   display: flex;
-  column-gap: 8px;
+  justify-content: center;
   width: 100%;
   padding-bottom: var(--message-padding);
-}
-
-.runnerHeaderText {
-  text-align: start;
-  align-self: center;
-  white-space: nowrap;
-  flex-grow: 1;
 }
 
 .runnerHeaderIcon {

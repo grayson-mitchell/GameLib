@@ -16,6 +16,9 @@ export enum FlagPosition {
 interface Props {
   flagPossition?: FlagPosition
   showWeblateLink?: boolean
+  // Login screen renders the picker bare (no "Choose App Language" label)
+  // beside the "Go to Library" button; Settings keeps the labelled form.
+  hideLabel?: boolean
 }
 
 const languageLabels: { [key: string]: string } = {
@@ -112,7 +115,8 @@ const languageFlags: { [key: string]: string } = {
 
 export default function LanguageSelector({
   flagPossition = FlagPosition.NONE,
-  showWeblateLink = false
+  showWeblateLink = false,
+  hideLabel = false
 }: Props) {
   const { t, i18n } = useTranslation()
   const { language, setLanguage } = useContext(ContextProvider)
@@ -162,7 +166,9 @@ export default function LanguageSelector({
         htmlId="languageSelector"
         onChange={(event) => handleChangeLanguage(event.target.value)}
         value={currentLanguage}
-        label={t('setting.language', 'Choose App Language')}
+        label={
+          hideLabel ? undefined : t('setting.language', 'Choose App Language')
+        }
         extraClass="languageSelector"
         afterSelect={afterSelect}
       >
