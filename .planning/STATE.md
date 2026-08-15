@@ -244,10 +244,28 @@ progress:
   # matching prior convention). Wave 5 COMPLETE (12/14) -- plan 34.13-12 MOUNTED the phase, verified
   # at HEAD (`<SteamDialog` renders at InstallModal/index.tsx:335), so the phase's surfaces are now
   # reachable in the running app for the first time. Wave 6 [11], Wave 7 [13] remain.
+  #
+  # [34.13-11 execution + WAVE 6 CLOSE, 2026-08-15]: hand-applied; no gsd-sdk state.*/roadmap.* verb
+  # invoked. Counter verified against artifacts on disk, not the commit:
+  # `ls .planning/phases/34.13-*/*-SUMMARY.md | wc -l` = 13, so completed_plans = 312 + 13 = 325.
+  # total_plans UNCHANGED (330). percent = floor(325/330*100) = floor(98.48...) = 98 (unchanged;
+  # floor, matching prior convention). Wave 6 COMPLETE (13/14) -- D-25's eligibility loading state
+  # verified at HEAD, not on the executor's report: `<EligibilityLoadingRow />` renders at
+  # InstallModal/index.tsx:392, `disabled={eligibilityPending}` is at SteamDialog/index.tsx:296, and
+  # `src/frontend/state/InstallGameModal.ts` contains ZERO `isSteamBottleEligible` (the quick path
+  # fires no probe). ONLY 34.13-13 remains -- it is `autonomous: false`, a BLOCKING 36-item manual
+  # UAT gate across both runtimes, and it is now finally meaningful to run because plans 12 and 11
+  # made these surfaces reachable.
+  #
+  # CONCURRENT SESSION ACTIVE (2026-08-15, still): quick task `260815-opt-library-filter-visibility-
+  # facet-group-se` has an untracked directory in this shared working tree. It is NOT this phase's
+  # work and must not be staged. Both executors this session ran the mandatory pre-commit
+  # `git status --porcelain` staged-set check and left it untouched; `git stash list` is empty at
+  # every plan boundary. Keep using explicit per-file `git add` -- never `git add .`/`-A`.
   total_phases: 24
   completed_phases: 18
   total_plans: 330
-  completed_plans: 324
+  completed_plans: 325
   percent: 98
 ---
 
