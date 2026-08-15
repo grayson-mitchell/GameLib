@@ -520,6 +520,82 @@ describe('bottle.ts', () => {
 
       expect(getSteamBottleSettings().wineVersion.type).toBe('crossover')
     })
+
+    // ── 34.13 review A-21 ────────────────────────────────────────────────
+    // 539bc979c named the defect as "a GPTK engine WAS PERSISTED for the
+    // Steam bottle" and then fixed it in the GETTER, so the store kept the
+    // broken value and every OTHER reader of that key still saw it —
+    // notably getSteamBottleEligibilityVerdict, which reads
+    // steamBottleConfigStore directly and deliberately (installFormIpc.ts
+    // documents why), i.e. the surface the user chooses from on this very
+    // phase. The getter now self-heals the store ONCE.
+    test('A-21: the getter PERSISTS its CrossOver correction, so the store self-heals for every other reader', () => {
+      mockedGetNodefault.mockImplementation((key: string) =>
+        key === 'wineVersion' ? gptkStoredWine : undefined
+      )
+      mockedGlobalConfigGet.mockReturnValue({
+        getSettings: () => ({ wineVersion: defaultWine }) as GameSettings
+      })
+      mockedExistsSync.mockImplementation((path: string) =>
+        path.endsWith('/CrossOver/bin/wine')
+      )
+      mockedSet.mockClear()
+
+      const settings = getSteamBottleSettings()
+
+      expect(mockedSet).toHaveBeenCalledWith(
+        'wineVersion',
+        settings.wineVersion
+      )
+      expect(
+        (
+          mockedSet.mock.calls.find(([k]) => k === 'wineVersion')?.[1] as
+            | WineInstallation
+            | undefined
+        )?.type
+      ).toBe('crossover')
+    })
+
+    test('A-21 DISCRIMINATOR: an ALREADY-crossover stored engine is not needlessly re-written', () => {
+      const storedWine: WineInstallation = {
+        bin: '/opt/crossover/bin/wine',
+        name: 'CrossOver',
+        type: 'crossover'
+      }
+      mockedGetNodefault.mockImplementation((key: string) =>
+        key === 'wineVersion' ? storedWine : undefined
+      )
+      mockedGlobalConfigGet.mockReturnValue({
+        getSettings: () => ({ wineVersion: defaultWine }) as GameSettings
+      })
+      mockedExistsSync.mockReturnValue(true)
+      mockedSet.mockClear()
+
+      getSteamBottleSettings()
+
+      expect(mockedSet).not.toHaveBeenCalledWith(
+        'wineVersion',
+        expect.anything()
+      )
+    })
+
+    test('A-21 DISCRIMINATOR: when CrossOver is ABSENT the broken engine is NOT persisted back (no write of an uncorrected value)', () => {
+      mockedGetNodefault.mockImplementation((key: string) =>
+        key === 'wineVersion' ? gptkStoredWine : undefined
+      )
+      mockedGlobalConfigGet.mockReturnValue({
+        getSettings: () => ({ wineVersion: defaultWine }) as GameSettings
+      })
+      mockedExistsSync.mockReturnValue(false)
+      mockedSet.mockClear()
+
+      getSteamBottleSettings()
+
+      expect(mockedSet).not.toHaveBeenCalledWith(
+        'wineVersion',
+        expect.anything()
+      )
+    })
   })
 
   describe('provisionBottle', () => {

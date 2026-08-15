@@ -313,6 +313,28 @@ export function getSteamBottleSettings(): GameSettings {
       : (resolveCrossoverWine('CrossOver (Steam bottle runtime)') ??
         candidateWineVersion)
 
+  // 34.13 review A-21: the getter PERSISTS its own correction, so the store
+  // self-heals ONCE instead of every reader re-deriving it independently.
+  // 539bc979c's commit message names the defect as "a Game Porting Toolkit
+  // engine WAS PERSISTED for the Steam bottle" and then fixed it in the
+  // getter only — so steamBottleConfigStore kept accumulating non-CrossOver
+  // engines and every OTHER reader of that key still saw them. The concrete,
+  // provable consequence is on 34.13's own surface:
+  // getSteamBottleEligibilityVerdict reads the store DIRECTLY and
+  // deliberately (installFormIpc.ts documents why it does not use this
+  // getter), so the verdict handed to the install form still carried the
+  // un-healed engine. Guarded by an identity check so a store that is already
+  // correct is never needlessly re-written (the get_nodefault discipline used
+  // by the `provisioned` self-heal above).
+  if (
+    wineVersion &&
+    wineVersion !== storedWineVersion &&
+    wineVersion.type === 'crossover' &&
+    storedWineVersion?.type !== 'crossover'
+  ) {
+    steamBottleConfigStore.set('wineVersion', wineVersion)
+  }
+
   return {
     ...globalSettings,
     wineCrossoverBottle: storedBottleName ?? DEFAULT_STEAM_BOTTLE_NAME,
@@ -337,6 +359,21 @@ export function getSteamBottleSettings(): GameSettings {
  * reading the SAME broken wineVersion via getSteamBottleSettings().
  */
 export function persistBottleWineVersion(wineVersion: WineInstallation): void {
+  // 34.13 review A-21: this seam stays PERMISSIVE by an existing, recorded
+  // decision (review B-WR-08) — `launcher.ts`'s checkWineBeforeLaunch
+  // self-heal is a legitimate producer of a non-CrossOver value here, so
+  // rejecting outright would break the very recovery path this function
+  // exists to serve. The accumulation is instead made DIAGNOSABLE here and
+  // self-healing in getSteamBottleSettings() above, which now persists its
+  // own CrossOver correction once rather than leaving every other reader of
+  // this key (notably getSteamBottleEligibilityVerdict, which reads the store
+  // directly and deliberately) to re-derive it or not at all.
+  if (wineVersion.type !== 'crossover') {
+    logWarning(
+      `Steam: persisting a non-CrossOver engine (type "${wineVersion.type}") for the Steam bottle — D-08's lifecycle is CrossOver-only, so getSteamBottleSettings() will correct and re-persist this on the next read`,
+      LogPrefix.Steam
+    )
+  }
   steamBottleConfigStore.set('wineVersion', wineVersion)
 }
 
