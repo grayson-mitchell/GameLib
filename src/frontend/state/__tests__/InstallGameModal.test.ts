@@ -139,8 +139,7 @@ describe('Group A: the pure D-24 decision', () => {
     const target = makeTargets(1)[0]
     const result = evaluateQuickInstallTarget(
       target,
-      makeDisk({ validPath: false }),
-      1
+      makeDisk({ validPath: false })
     )
     expect(result.ok).toBe(false)
     if (!result.ok) {
@@ -152,8 +151,7 @@ describe('Group A: the pure D-24 decision', () => {
     const target = makeTargets(1)[0]
     const belowFloor = evaluateQuickInstallTarget(
       target,
-      makeDisk({ free: LOW_SPACE_FLOOR_BYTES - 1 }),
-      1
+      makeDisk({ free: LOW_SPACE_FLOOR_BYTES - 1 })
     )
     expect(belowFloor.ok).toBe(false)
     if (!belowFloor.ok) {
@@ -162,31 +160,40 @@ describe('Group A: the pure D-24 decision', () => {
 
     const atFloor = evaluateQuickInstallTarget(
       target,
-      makeDisk({ free: LOW_SPACE_FLOOR_BYTES }),
-      1
+      makeDisk({ free: LOW_SPACE_FLOOR_BYTES })
     )
     expect(atFloor.ok).toBe(true)
   })
 
   it('A5: DISCRIMINATOR: an UNKNOWN disk verdict is not a failed one', () => {
     const target = makeTargets(1)[0]
-    const result = evaluateQuickInstallTarget(target, undefined, 1)
+    const result = evaluateQuickInstallTarget(target, undefined)
     expect(result.ok).toBe(true)
   })
 
-  it.each([0, 1, 2])(
-    'A6: the degrade record carries libraryPath, freeBytes, and onlyLibrary computed from libraryCount=%i',
-    (libraryCount) => {
-      const target = makeTargets(1)[0]
-      const disk = makeDisk({ validPath: false, free: 42 })
-      const result = evaluateQuickInstallTarget(target, disk, libraryCount)
-      expect(result.ok).toBe(false)
-      if (!result.ok) {
-        expect(result.degrade.libraryPath).toBe(target.path)
-        expect(result.degrade.onlyLibrary).toBe(libraryCount <= 1)
-      }
+  // 34.13 review B-IN-03: this spec used to be named "carries libraryPath,
+  // freeBytes, and onlyLibrary computed from libraryCount" while its body
+  // asserted only two of those three -- `freeBytes` had been deleted outright
+  // by WR-11. B-WR-01 then deleted `onlyLibrary` too (it was computed here
+  // from this function's own library count, but the copy it selected depends
+  // on `gating.libraryDropdown`, a different predicate resolved elsewhere).
+  // The name now matches the body, and both deletions are PINNED rather than
+  // merely mis-described -- a name is not a gate.
+  it('A6: the degrade record carries libraryPath and NOTHING ELSE -- freeBytes and onlyLibrary are deleted, not merely unused', () => {
+    const target = makeTargets(1)[0]
+    const disk = makeDisk({ validPath: false, free: 42 })
+    const result = evaluateQuickInstallTarget(target, disk)
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.degrade.libraryPath).toBe(target.path)
+      expect(result.degrade).not.toHaveProperty('freeBytes')
+      expect(result.degrade).not.toHaveProperty('onlyLibrary')
+      expect(Object.keys(result.degrade).sort()).toEqual([
+        'libraryPath',
+        'reason'
+      ])
     }
-  )
+  })
 
   it('A7: LOW_SPACE_FLOOR_BYTES is exactly 1024 ** 3', () => {
     expect(LOW_SPACE_FLOOR_BYTES).toBe(1024 ** 3)
@@ -310,8 +317,7 @@ describe('Group C: openSteamInstallOptions', () => {
     const target = makeTargets(1)[0]
     openSteamInstallOptions('570', makeGameInfo(), {
       reason: 'library-missing',
-      libraryPath: target.path,
-      onlyLibrary: true
+      libraryPath: target.path
     })
 
     expect(installMock).not.toHaveBeenCalled()
@@ -327,8 +333,7 @@ describe('Group C: openSteamInstallOptions', () => {
   it('C5: full library → degrades into the dialog', () => {
     openSteamInstallOptions('570', makeGameInfo(), {
       reason: 'library-full',
-      libraryPath: '/steam/library-0',
-      onlyLibrary: true
+      libraryPath: '/steam/library-0'
     })
 
     expect(installMock).not.toHaveBeenCalled()
@@ -337,27 +342,28 @@ describe('Group C: openSteamInstallOptions', () => {
     )
   })
 
-  it('C6: the ≤1-library corner is CARRIED, not hidden', () => {
-    openSteamInstallOptions('570', makeGameInfo(), {
-      reason: 'library-missing',
-      libraryPath: '/steam/library-0',
-      onlyLibrary: true
-    })
-    expect(useInstallGameModal.getState().steamDegrade?.onlyLibrary).toBe(true)
-
-    openSteamInstallOptions('570', makeGameInfo(), {
-      reason: 'library-missing',
-      libraryPath: '/steam/library-0',
-      onlyLibrary: false
-    })
-    expect(useInstallGameModal.getState().steamDegrade?.onlyLibrary).toBe(false)
+  // 34.13 review B-WR-01: the ≤1-library corner is no longer expressed as a
+  // record field -- `onlyLibrary` is deleted, because the dialog's copy
+  // depends on `gating.libraryDropdown` (resolved in steamSectionGating.ts
+  // from wineSection/nativeInstallOn/libraryCount), not on the quick path's
+  // own library count. What the store must still carry verbatim is the
+  // libraryPath the notice renders, for BOTH reasons.
+  it('C6: the degrade record reaches the store verbatim, with no fabricated fields', () => {
+    for (const reason of ['library-missing', 'library-full'] as const) {
+      openSteamInstallOptions('570', makeGameInfo(), {
+        reason,
+        libraryPath: '/steam/library-0'
+      })
+      const stored = useInstallGameModal.getState().steamDegrade
+      expect(stored).toEqual({ reason, libraryPath: '/steam/library-0' })
+      expect(stored).not.toHaveProperty('onlyLibrary')
+    }
   })
 
   it('C7: closeInstallGameModal clears steamDegrade', () => {
     openSteamInstallOptions('570', makeGameInfo(), {
       reason: 'library-missing',
-      libraryPath: '/steam/library-0',
-      onlyLibrary: true
+      libraryPath: '/steam/library-0'
     })
     closeInstallGameModal()
 

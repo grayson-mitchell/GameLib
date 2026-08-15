@@ -396,29 +396,49 @@ export default function SteamDialog({
               icon={faWarning}
               style={{ color: 'var(--status-danger)' }}
             />
-            {/* WR-11: `onlyLibrary` is READ here, not merely written. Both
-                notices below used to promise "choose another below" —
-                which is false in the UI-SPEC's flagged <=1-library corner,
-                where the failing library IS the user's only one and the
-                dropdown this copy points at does not render at all. */}
+            {/* WR-11 established the rule: never promise "choose another
+                below" when the dropdown this copy points at does not render.
+                34.13 review B-WR-01 — it keyed that rule on the WRONG field.
+                `steamDegrade.onlyLibrary` is computed by
+                `startSteamQuickInstall` from ITS OWN library-list length
+                (`libraryCount <= 1`), whereas the thing that decides whether
+                a picker actually renders is `gating.libraryDropdown` =
+                `!wineSection && nativeInstallOn && libraryCount > 1`. Those
+                are different predicates and `wineSection` breaks the
+                implication, so WR-11 closed one of three corners. The two
+                reachable states it missed need NO IPC failure:
+                  A) macOS, bottle-required title, 3 libraries, primary drive
+                     unplugged -> wineSection true, libraryDropdown false,
+                     onlyLibrary false -> "choose another below." with
+                     nothing below. EVERY bottle-eligible macOS Steam game
+                     lands here.
+                  B) macOS, mac-native title with a Windows depot, user picks
+                     "Windows" -> same shape.
+                A third: with the library fetch unsettled or failed,
+                libraryCount is 0 and libraryDropdown false on ANY host while
+                a degrade record carrying onlyLibrary:false still selects the
+                "choose another" copy.
+                Both "Only" keys already exist and already say the right
+                thing, so this is a SELECTOR change — no new copy, no
+                UI-SPEC amendment. */}
             {steamDegrade.reason === 'library-missing'
-              ? steamDegrade.onlyLibrary
+              ? gating.libraryDropdown
                 ? tGamelib(
-                    'gamelib:steam.install.libraryMissingOnlyNotice',
-                    "Your Steam library couldn't be reached. Reconnect the drive, then try again."
-                  )
-                : tGamelib(
                     'gamelib:steam.install.libraryMissingNotice',
                     "Your Steam library couldn't be reached — choose another below."
                   )
-              : steamDegrade.onlyLibrary
-                ? tGamelib(
-                    'gamelib:steam.install.libraryFullOnlyNotice',
-                    'Not enough space in your Steam library. Free up space, then try again.'
-                  )
                 : tGamelib(
+                    'gamelib:steam.install.libraryMissingOnlyNotice',
+                    "Your Steam library couldn't be reached. Reconnect the drive, then try again."
+                  )
+              : gating.libraryDropdown
+                ? tGamelib(
                     'gamelib:steam.install.libraryFullNotice',
                     'Not enough space in your Steam library — choose another below or free up space.'
+                  )
+                : tGamelib(
+                    'gamelib:steam.install.libraryFullOnlyNotice',
+                    'Not enough space in your Steam library. Free up space, then try again.'
                   )}
           </div>
         )}

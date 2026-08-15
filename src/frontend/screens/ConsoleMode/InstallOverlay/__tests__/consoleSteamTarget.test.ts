@@ -281,26 +281,35 @@ describe('probeSteamQuickInstallTarget (D-29 inheriting D-24)', () => {
     expect(checkDiskSpace).not.toHaveBeenCalledWith(targets[1].path)
   })
 
-  it('A6: onlyLibrary is carried through -- true with one library, false with two', async () => {
-    stubWindowApi({
-      listSteamLibraryTargets: jest.fn().mockResolvedValue(makeTargets(1)),
-      checkDiskSpace: jest
-        .fn()
-        .mockResolvedValue(makeDisk({ validPath: false }))
-    })
-    const oneLib = await probeSteamQuickInstallTarget()
-    expect(oneLib.ok).toBe(false)
-    if (!oneLib.ok) expect(oneLib.degrade.onlyLibrary).toBe(true)
-
-    stubWindowApi({
-      listSteamLibraryTargets: jest.fn().mockResolvedValue(makeTargets(2)),
-      checkDiskSpace: jest
-        .fn()
-        .mockResolvedValue(makeDisk({ validPath: false }))
-    })
-    const twoLibs = await probeSteamQuickInstallTarget()
-    expect(twoLibs.ok).toBe(false)
-    if (!twoLibs.ok) expect(twoLibs.degrade.onlyLibrary).toBe(false)
+  // 34.13 review B-WR-01: this spec used to assert that `onlyLibrary` was
+  // carried through, true with one library and false with two. That field is
+  // GONE -- it was computed from the probe's own library count while the copy
+  // it selected depends on `gating.libraryDropdown`, a different predicate
+  // resolved in `steamSectionGating.ts`, so the dialog was branching on a
+  // field that could not answer the question. The obligation that replaces it
+  // is the one that still matters here: the degrade record the Console Mode
+  // probe produces carries EXACTLY the two fields the overlay renders from,
+  // independent of how many libraries exist.
+  it('A6: the degrade record carries exactly {reason, libraryPath}, for one library and for two', async () => {
+    for (const libraryCount of [1, 2]) {
+      stubWindowApi({
+        listSteamLibraryTargets: jest
+          .fn()
+          .mockResolvedValue(makeTargets(libraryCount)),
+        checkDiskSpace: jest
+          .fn()
+          .mockResolvedValue(makeDisk({ validPath: false }))
+      })
+      const verdict = await probeSteamQuickInstallTarget()
+      expect(verdict.ok).toBe(false)
+      if (!verdict.ok) {
+        expect(Object.keys(verdict.degrade).sort()).toEqual([
+          'libraryPath',
+          'reason'
+        ])
+        expect(verdict.degrade).not.toHaveProperty('onlyLibrary')
+      }
+    }
   })
 
   it('A7 DISCRIMINATOR: an UNKNOWN disk verdict is not a failed one -- a rejected checkDiskSpace yields ok', async () => {

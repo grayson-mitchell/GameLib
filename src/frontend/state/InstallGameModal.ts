@@ -33,13 +33,20 @@ export const LOW_SPACE_FLOOR_BYTES = 1024 ** 3
  * `openSteamInstallOptions` when the primary library fails a local check.
  * 34.13-10's dialog renders its notice from this record.
  *
- * `onlyLibrary` exists so the dialog can tell, without re-deriving it, that
- * it is in the UI-SPEC's flagged ≤1-library corner (the failing library IS
- * the user's only library, so there is nothing to offer in its place) —
- * `SteamDialog/index.tsx` reads it to pick between the "choose another
- * below" copy and the copy that does not promise an alternative that does
- * not exist (34.13 review WR-11). A sibling `freeBytes: number` field was
- * REMOVED by that same finding: nothing outside `__tests__` ever read it,
+ * 34.13 review B-WR-01 REMOVED an `onlyLibrary: boolean` field. It existed so
+ * the dialog could pick between the "choose another below" copy and the copy
+ * that does not promise an alternative (WR-11) — but it was computed HERE
+ * from this function's own `libraries.length`, while the thing that decides
+ * whether a picker actually renders is `gating.libraryDropdown` =
+ * `!wineSection && nativeInstallOn && libraryCount > 1`, resolved in
+ * `steamSectionGating.ts`. Those are different predicates, so the dialog was
+ * selecting its copy on a field that could not answer the question. The
+ * dialog now branches on `gating.libraryDropdown` directly, which left this
+ * field write-only — and this repo's own convention (see
+ * `SteamBottleConfig`'s retired `loggedIn`, common/types/steam.ts) is that a
+ * dead signal is REMOVED, because leaving it only invites a future consumer
+ * to trust it. A sibling `freeBytes: number` field was removed by WR-11 for
+ * the same class of reason: nothing outside `__tests__` ever read it,
  * and D-06/D-08 forbid this surface from rendering or gating on size at
  * all, so it was a struct field advertising a capability the design
  * explicitly rules out. Per
@@ -57,7 +64,6 @@ export const LOW_SPACE_FLOOR_BYTES = 1024 ** 3
 export interface SteamQuickInstallDegrade {
   reason: 'library-missing' | 'library-full'
   libraryPath: string
-  onlyLibrary: boolean
 }
 
 interface InstallGameModalState {
@@ -182,8 +188,7 @@ export function resolveQuickInstallTarget(
  */
 export function evaluateQuickInstallTarget(
   target: SteamInstallLibraryTarget,
-  disk: { free: number; validPath: boolean } | undefined,
-  libraryCount: number
+  disk: { free: number; validPath: boolean } | undefined
 ): { ok: true } | { ok: false; degrade: SteamQuickInstallDegrade } {
   if (disk === undefined) {
     return { ok: true }
@@ -193,8 +198,7 @@ export function evaluateQuickInstallTarget(
       ok: false,
       degrade: {
         reason: 'library-missing',
-        libraryPath: target.path,
-        onlyLibrary: libraryCount <= 1
+        libraryPath: target.path
       }
     }
   }
@@ -203,8 +207,7 @@ export function evaluateQuickInstallTarget(
       ok: false,
       degrade: {
         reason: 'library-full',
-        libraryPath: target.path,
-        onlyLibrary: libraryCount <= 1
+        libraryPath: target.path
       }
     }
   }
@@ -257,7 +260,7 @@ export const startSteamQuickInstall = async (
     disk = undefined
   }
 
-  const verdict = evaluateQuickInstallTarget(target, disk, libraries.length)
+  const verdict = evaluateQuickInstallTarget(target, disk)
   if (verdict.ok) {
     // D-23: NO path argument, ever. resolveOverride() on the backend already
     // resolves this exact primary target from an empty override — passing a

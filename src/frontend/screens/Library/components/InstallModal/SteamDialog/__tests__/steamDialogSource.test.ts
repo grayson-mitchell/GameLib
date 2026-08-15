@@ -545,9 +545,17 @@ describe('required wiring', () => {
     // only one, so "choose another below" is a false promise.
     'gamelib:steam.install.libraryMissingOnlyNotice',
     'gamelib:steam.install.libraryFullOnlyNotice',
-    // ...and the field that selects between them, so it is provably READ and
-    // not merely present in the destructure.
-    'steamDegrade.onlyLibrary',
+    // ...and the field that selects between them.
+    //
+    // 34.13 review B-WR-01: this token USED to be `steamDegrade.onlyLibrary`,
+    // which is exactly the wrong field. `onlyLibrary` is computed by
+    // `startSteamQuickInstall` from its OWN library-list length; the thing
+    // that decides whether a picker RENDERS is `gating.libraryDropdown`. So
+    // this list was pinning the wrong decision -- it would have kept a
+    // reverted-to-onlyLibrary selector green forever while the copy promised
+    // a dropdown that is not there. The B-WR-01 gate below asserts the
+    // ternaries branch on the right thing, positionally.
+    'gating.libraryDropdown',
     // WR-04: the "turn it on in Settings" sentence is only true when the
     // setting is actually OFF.
     'gamelib:steam.install.contentLightSingleLibraryNotice',
@@ -563,7 +571,7 @@ describe('required wiring', () => {
     const wr11Reverted = stripped
       .replaceAll('gamelib:steam.install.libraryMissingOnlyNotice', 'X')
       .replaceAll('gamelib:steam.install.libraryFullOnlyNotice', 'X')
-      .replaceAll('steamDegrade.onlyLibrary', 'X')
+      .replaceAll('gating.libraryDropdown', 'X')
     const wr04Reverted = stripped
       .replaceAll('gamelib:steam.install.contentLightSingleLibraryNotice', 'X')
       .replaceAll('nativeInstallOn', 'X')
@@ -571,7 +579,7 @@ describe('required wiring', () => {
     for (const token of [
       'gamelib:steam.install.libraryMissingOnlyNotice',
       'gamelib:steam.install.libraryFullOnlyNotice',
-      'steamDegrade.onlyLibrary'
+      'gating.libraryDropdown'
     ]) {
       expect(() => expectPresent(wr11Reverted, token, 'RED')).toThrow(
         /is missing/
@@ -590,7 +598,81 @@ describe('required wiring', () => {
   it('every occurrence of forceWindowsViaBottle is immediately preceded by "gating." -- the verdict field is passed through, never reconstructed', () => {
     assertForceWindowsViaBottlePrefixed(stripped)
   })
+
+  // ── 34.13 review B-WR-01 ─────────────────────────────────────────────────
+  it('B-WR-01: the degrade notice selects its copy on gating.libraryDropdown, never on steamDegrade.onlyLibrary', () => {
+    expect(() =>
+      assertDegradeCopyKeyedOnTheRenderedPicker(stripped)
+    ).not.toThrow()
+  })
+
+  it('B-WR-01-RED: the real pre-fix selector DERIVED FROM THE REAL SOURCE is rejected', () => {
+    // The literal WR-11 shape: both ternaries keyed on the record field.
+    const knownBad = stripped.replaceAll(
+      'gating.libraryDropdown\n',
+      'steamDegrade.onlyLibrary\n'
+    )
+    expect(knownBad).not.toBe(stripped)
+    expect(() => assertDegradeCopyKeyedOnTheRenderedPicker(knownBad)).toThrow(
+      /steamDegrade\.onlyLibrary/
+    )
+  })
 })
+
+/**
+ * 34.13 review B-WR-01. The two degrade sentences must branch on the thing
+ * that actually governs whether a picker renders (`gating.libraryDropdown`),
+ * not on `steamDegrade.onlyLibrary`, which the quick path computes from its
+ * own library-list length. A pure token-presence check cannot express this —
+ * both identifiers can legitimately appear in the file — so the obligation is
+ * POSITIONAL: inside the `steamDegrade &&` block, each of the four notice keys
+ * must be preceded by a `gating.libraryDropdown` test and never by an
+ * `onlyLibrary` one.
+ */
+function assertDegradeCopyKeyedOnTheRenderedPicker(stripped: string) {
+  const flattened = stripped.replace(/\s+/g, ' ')
+  const start = flattened.indexOf("steamDegrade.reason === 'library-missing'")
+  if (start === -1) {
+    throw new Error(
+      'assertDegradeCopyKeyedOnTheRenderedPicker: the degrade notice block is gone'
+    )
+  }
+  const end = flattened.indexOf('libraryFullNotice', start)
+  const block = flattened.slice(start, end === -1 ? start + 1200 : end + 200)
+  if (block.includes('onlyLibrary')) {
+    throw new Error(
+      'assertDegradeCopyKeyedOnTheRenderedPicker: the notice still branches on steamDegrade.onlyLibrary -- that field is computed from the quick path\'s own library count, not from whether the picker RENDERS, so "choose another below." ships with nothing below in every wineSection corner'
+    )
+  }
+  const selectorCount = (block.match(/gating\.libraryDropdown/g) ?? []).length
+  if (selectorCount !== 2) {
+    throw new Error(
+      `assertDegradeCopyKeyedOnTheRenderedPicker: expected exactly 2 gating.libraryDropdown selectors (one per reason), found ${selectorCount}`
+    )
+  }
+  // ...and the "choose another below" halves must sit on the TRUE arm.
+  for (const [selectorTail, promisingKey] of [
+    ['gating.libraryDropdown ?', 'libraryMissingNotice'],
+    ['gating.libraryDropdown ?', 'libraryFullNotice']
+  ] as const) {
+    void selectorTail
+    const keyIdx = block.indexOf(promisingKey)
+    const selIdx = block.lastIndexOf('gating.libraryDropdown ?', keyIdx)
+    const onlyKeyIdx = block.indexOf(
+      `${promisingKey.replace('Notice', '')}OnlyNotice`
+    )
+    if (keyIdx === -1 || selIdx === -1 || onlyKeyIdx === -1) {
+      throw new Error(
+        `assertDegradeCopyKeyedOnTheRenderedPicker: could not locate the ${promisingKey} ternary`
+      )
+    }
+    if (!(selIdx < keyIdx && keyIdx < onlyKeyIdx)) {
+      throw new Error(
+        `assertDegradeCopyKeyedOnTheRenderedPicker: ${promisingKey} ("choose another below") is not on the TRUE arm of gating.libraryDropdown -- the arms are inverted`
+      )
+    }
+  }
+}
 
 // ---------------------------------------------------------------------
 // Block 3b -- region ordering (layout contract)

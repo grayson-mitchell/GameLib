@@ -65,7 +65,7 @@ export async function probeSteamQuickInstallTarget(): Promise<ConsoleSteamVerdic
     disk = undefined
   }
 
-  return evaluateQuickInstallTarget(target, disk, libraries.length)
+  return evaluateQuickInstallTarget(target, disk)
 }
 
 /**
