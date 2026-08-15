@@ -44,7 +44,7 @@ completed: 2026-08-15
 
 - **Duration:** ~25 min
 - **Completed:** 2026-08-15
-- **Tasks:** 2 of 3 (Task 3 is a `checkpoint:human-verify` — see below)
+- **Tasks:** 3 of 3 (Task 3 `checkpoint:human-verify` PASSED 2026-08-15 — see below)
 - **Files modified:** 5
 
 ## Accomplishments
@@ -163,9 +163,14 @@ introduced by this task's diff," which is satisfied.
 
 None - no external service configuration required.
 
-## Checkpoint: Task 3 — Human Verification (NOT YET RUN)
+## Checkpoint: Task 3 — Human Verification ✅ PASSED (2026-08-15)
 
-**Status:** Paused. Awaiting human verification per the plan's `checkpoint:human-verify` gate.
+**Status:** RESOLVED. User ran the six verification steps and reported **all pass** — every signed-in
+tile shows the italic "Connected" with no identity text, Humble reads identically to the rest,
+signed-out tiles are unchanged, tile rhythm and Logout position are unmoved, and the label stays
+legible in **midnightMirage**, **gruvbox_dark** and **dracula**. No defects reported in any store or
+any theme. Task 3 edits no files (`<files>none</files>`), so no further commit of source was needed —
+the plan is complete at `0d54b16b7`.
 
 **Automated gates run before pausing (per the plan's `what-built` instruction):**
 
@@ -202,20 +207,29 @@ localised through `gamelib:login.connected` and the italics come from
    than the body); confirm the italic label stays legible against the tile background in all
    three.
 
-**Resume signal:** Type "approved", or describe what looks wrong (per store and per theme).
+**Resume signal received:** user reported "completed task 3 - all pass" on 2026-08-15.
 
 ## Next Phase Readiness
 
-Tasks 1 and 2 are complete, committed, and fully gated at the code level (scoped jest, tsc,
-eslint all green; the one `pnpm test:ci` failure is pre-existing and unrelated — see above). The
-plan cannot be marked complete until a human runs the six verification steps above across all
-three themes and returns the resume signal. A fresh agent should be spawned to handle the
-continuation once that signal arrives (per the executor's checkpoint protocol — this agent will
-not be resumed).
+All 3 tasks complete. Tasks 1 and 2 are committed and fully gated at the code level (scoped jest,
+tsc, eslint all green); Task 3's live visual gate is PASSED across all three themes. The one
+`pnpm test:ci` failure is pre-existing, unrelated, and belongs to a concurrent Phase 34.13 session —
+see Issues Encountered and `deferred-items.md`; it remains open and is NOT closed by this task.
+
+Two handoff items carried forward (neither is a defect, both are deliberate scope boundaries):
+
+1. **`login.humble_connected` in upstream-owned `translation.json` is now orphaned** — its only
+   consumer was deleted here. Left in place because `i18nCatalogChurnGuard.test.ts`'s live-tree
+   block would fail `pnpm test:ci` on any diff to `public/locales/en/translation.json`.
+2. **The per-store identity reads are still live** (`epic.username`, `gog.username`,
+   `zoom.username`, `steam?.username`, `amazon.user_id`) because they also compute the
+   `isLoggedIn…` state in `Login/index.tsx`. Retiring the identity fetch itself would first
+   require moving those runners onto an explicit `isLoggedIn` signal — out of scope for a quick
+   task, and it would touch IPC.
 
 ---
 *Quick task: 260815-kt0*
-*Completed (Tasks 1-2 only; Task 3 pending human verification): 2026-08-15*
+*Completed (all 3 tasks; Task 3 human-verified PASS across midnightMirage / gruvbox_dark / dracula): 2026-08-15*
 
 ## Self-Check: PASSED
 
