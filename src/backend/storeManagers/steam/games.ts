@@ -440,7 +440,7 @@ export function macArchFromMinOS(
  * appId is guarded with /^\d+$/ before any network request (T-06-01).
  */
 export async function getSteamInstallSize(
-  appId: string,
+  appId: unknown,
   gameInfo?: GameInfo
 ): Promise<string> {
   // Fast path: already installed — install_size is already formatted, return
@@ -449,10 +449,23 @@ export async function getSteamInstallSize(
     return gameInfo.install.install_size
   }
 
-  // Guard: non-numeric appId rejected before constructing any URL (T-06-01)
-  if (!/^\d+$/.test(appId)) {
+  // Guard: non-numeric appId rejected before constructing any URL (T-06-01).
+  //
+  // 34.13 review A-18 / WR-10: takes `unknown` and carries the `typeof` check
+  // itself, so BOTH runtime registrations (`main.ts` and
+  // `sidecar/steamAuthFlowRegistration.ts`) can drop their `args[0] as string`
+  // cast at once — the pushdown shape WR-10 established for
+  // `isSteamBottleEligible`. The regex ALONE was not a guard on an untrusted
+  // payload: `RegExp.prototype.test` coerces its argument, so `123` and
+  // `['570']` both passed `/^\d+$/.test(...)` and reached the URL builder as
+  // a non-string. Hardening only one runtime would have created a real
+  // Electron/Tauri behaviour divergence, which is why this belongs here.
+  //
+  // The rejected value is NO LONGER interpolated into the log line: it is
+  // untrusted renderer input, and naming the field is enough to diagnose.
+  if (typeof appId !== 'string' || !/^\d+$/.test(appId)) {
     logWarning(
-      `getSteamInstallSize: rejected non-numeric appId "${appId}" (T-06-01)`,
+      `getSteamInstallSize: rejected an appId that is not a numeric string (T-06-01)`,
       LogPrefix.Steam
     )
     return '?? MB'

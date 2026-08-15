@@ -220,7 +220,7 @@ export function registerSteamAuthFlows(): void {
   ipcMain.handle(
     'getSteamInstallSize',
     async (_event: unknown, ...args: unknown[]) => {
-      return getSteamInstallSize(args[0] as string)
+      return getSteamInstallSize(args[0])
     }
   )
 
@@ -265,14 +265,6 @@ export function registerSteamAuthFlows(): void {
   // when only 2 of its 7 payload-carrying handlers have. The other five
   // still cast, and each one's callee owns the guard that is missing:
   //
-  //   getSteamInstallSize      -> `args[0] as string`; the callee's guard is
-  //                               `if (!/^\d+$/.test(appId))` in
-  //                               `steam/games.ts` — the IDENTICAL regex-only
-  //                               shape WR-10's own RED test writes out as
-  //                               the hole (`RegExp.prototype.test` COERCES,
-  //                               so `123` and `['570']` both pass). It also
-  //                               interpolates the rejected value into its
-  //                               log line.
   //   steamClientSetupRecheck  -> `args[0] as string`
   //   steamSubmitGuard         -> `args[0] as string`
   //   steamStartCredentials    -> destructures `{username, password}` with no
@@ -288,9 +280,19 @@ export function registerSteamAuthFlows(): void {
   // WR-10 established), so the cast disappears from BOTH runtimes at once —
   // `main.ts` carries the identical casts, and hardening only this file
   // would create a real Electron/Tauri behaviour divergence, which is worse
-  // than the uniform gap. Those seams (`steam/games.ts`, `steam/bottle.ts`)
-  // could not be edited in the pass that wrote this note; the pushdown is
-  // recorded here rather than half-applied.
+  // than the uniform gap.
+  //
+  // 34.13 review A-18: `getSteamInstallSize` HAS now been pushed down and is
+  // no longer in the list above — it takes `unknown` and carries its own
+  // `typeof` check (`steam/games.ts`), and it no longer interpolates the
+  // rejected value into its log line. The note that these seams "could not be
+  // edited in the pass that wrote this note" was already false at HEAD:
+  // `games.ts` was edited by the very next commit.
+  //
+  // The gate on this block (steamAuthFlows.test.ts) asserts the declared list
+  // and the actual casting handlers AGREE — it does NOT require any
+  // particular channel to keep casting, so closing one is a green change and
+  // only DRIFT between the comment and the code is red.
   // ─────────────────────────────────────────────────────────────────────────
   ipcMain.handle(
     'isSteamBottleEligible',

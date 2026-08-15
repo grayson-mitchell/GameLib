@@ -1023,8 +1023,9 @@ describe('A-05: the uncast-payload claim matches the real registrations', () => 
     readFileSync(join(__dirname, '..', 'steamAuthFlowRegistration.ts'), 'utf8')
   )
 
-  const UNCAST_CHANNELS = ['isSteamBottleEligible', 'persistBottleWineVersion']
-  const STILL_CAST_CHANNELS = [
+  const ALL_PAYLOAD_CHANNELS = [
+    'isSteamBottleEligible',
+    'persistBottleWineVersion',
     'getSteamInstallSize',
     'steamClientSetupRecheck',
     'steamSubmitGuard',
@@ -1039,22 +1040,92 @@ describe('A-05: the uncast-payload claim matches the real registrations', () => 
     return source.slice(start, end === -1 ? undefined : end)
   }
 
-  it.each(UNCAST_CHANNELS)(
-    'A-05: "%s" forwards its payload with NO cast (the seam takes unknown)',
-    (channel) => {
-      expect(handlerBody(channel)).not.toMatch(/args\[0\] as /)
+  /**
+   * 34.13 review A-18 — the DECLARED casting channels, parsed out of the
+   * "SCOPE OF THAT CLAIM" comment block rather than hardcoded here.
+   *
+   * The previous shape hardcoded a STILL_CAST_CHANNELS list and asserted
+   * `/args\[0\] as /` was PRESENT for each. That required the un-guarded
+   * payload to REMAIN: applying the prescribed fix (push the typeof guard
+   * down into the seam and drop the cast, exactly what WR-10 did for the
+   * other two channels) made five specs FAIL. A ratchet that goes red when a
+   * security gap is CLOSED is a live disincentive to close it, and the next
+   * person to hit it is likelier to revert the hardening than to update the
+   * list. Proven by this very commit: closing `getSteamInstallSize` would
+   * have turned the suite red under the old gate.
+   *
+   * Inverted: the gate now asserts the comment and the code AGREE. Fixing a
+   * channel is green as long as its line leaves the comment; declaring one is
+   * green as long as it really casts; only DRIFT between the two is red.
+   */
+  function parseDeclaredCastingChannels(raw: string): string[] {
+    const blockStart = raw.indexOf('SCOPE OF THAT CLAIM')
+    if (blockStart === -1) {
+      throw new Error(
+        'parseDeclaredCastingChannels: the SCOPE OF THAT CLAIM block is gone'
+      )
     }
+    const blockEnd = raw.indexOf('The FIX for each is', blockStart)
+    const block = raw.slice(blockStart, blockEnd === -1 ? undefined : blockEnd)
+    return [...block.matchAll(/^\s*\/\/\s{3}(\w+)\s+->/gm)].map((m) => m[1])
+  }
+
+  const rawSource = readFileSync(
+    join(__dirname, '..', 'steamAuthFlowRegistration.ts'),
+    'utf8'
   )
 
-  it.each(STILL_CAST_CHANNELS)(
-    'A-05: "%s" is DECLARED as still casting -- if this ever fails, the guard was pushed into its seam and the block comment must be narrowed again',
-    (channel) => {
-      const body = handlerBody(channel)
-      // `steamStartCredentials` casts via a destructure rather than an
-      // `args[0] as string`, so accept either shape.
-      expect(/args\[0\] as /.test(body)).toBe(true)
-    }
-  )
+  function actuallyCasts(channel: string): boolean {
+    return /args\[0\] as /.test(handlerBody(channel))
+  }
+
+  it('A-18: the DECLARED casting channels and the ACTUAL ones agree exactly', () => {
+    const declared = parseDeclaredCastingChannels(rawSource).sort()
+    const actual = ALL_PAYLOAD_CHANNELS.filter(actuallyCasts).sort()
+
+    expect(actual).toEqual(declared)
+  })
+
+  it('A-18 non-vacuity: the parser really finds channels in the comment block', () => {
+    // A parser that silently returns [] would make the agreement check pass
+    // whenever the code stopped casting entirely, for the wrong reason.
+    const declared = parseDeclaredCastingChannels(rawSource)
+    expect(declared.length).toBeGreaterThan(0)
+    expect(declared.every((c) => ALL_PAYLOAD_CHANNELS.includes(c))).toBe(true)
+  })
+
+  it('A-18 RED: a channel that stops casting WITHOUT leaving the comment is caught as drift', () => {
+    const declared = parseDeclaredCastingChannels(rawSource)
+    expect(declared.length).toBeGreaterThan(0)
+    // Simulate the hardening being applied to a still-declared channel.
+    const actualAfterHardening = ALL_PAYLOAD_CHANNELS.filter(
+      (c) => actuallyCasts(c) && c !== declared[0]
+    ).sort()
+
+    expect(actualAfterHardening).not.toEqual([...declared].sort())
+  })
+
+  it('A-18 RED: a channel that starts casting WITHOUT being declared is caught as drift', () => {
+    const declared = parseDeclaredCastingChannels(rawSource)
+    const undeclared = ALL_PAYLOAD_CHANNELS.find((c) => !declared.includes(c))
+    expect(undeclared).toBeDefined()
+    const actualAfterRegression = [
+      ...ALL_PAYLOAD_CHANNELS.filter(actuallyCasts),
+      undeclared as string
+    ].sort()
+
+    expect(actualAfterRegression).not.toEqual([...declared].sort())
+  })
+
+  it('A-18: closing a gap is a GREEN change — getSteamInstallSize no longer casts and is no longer declared', () => {
+    // The concrete proof that the inversion works: this channel WAS in the
+    // hardcoded STILL_CAST list, was hardened in this same commit, and both
+    // halves moved together.
+    expect(actuallyCasts('getSteamInstallSize')).toBe(false)
+    expect(parseDeclaredCastingChannels(rawSource)).not.toContain(
+      'getSteamInstallSize'
+    )
+  })
 
   it('A-05: the comment no longer claims a file-wide uncast posture', () => {
     const raw = readFileSync(
@@ -1064,8 +1135,15 @@ describe('A-05: the uncast-payload claim matches the real registrations', () => 
     // The corrected comment must scope its claim and must NAME the gap.
     expect(raw).toContain('THESE TWO channels')
     expect(raw).toContain('SCOPE OF THAT CLAIM')
-    for (const channel of STILL_CAST_CHANNELS) {
+    // 34.13 review A-18: driven by the channels the comment DECLARES rather
+    // than a hardcoded list, so hardening one no longer requires editing this
+    // spec too (which is what made the old gate resist its own fix).
+    for (const channel of parseDeclaredCastingChannels(raw)) {
       expect(raw).toContain(channel)
     }
+    // ...and the gap must not be empty-by-omission: if every channel were
+    // hardened the block should be REMOVED, not silently emptied while the
+    // "SCOPE OF THAT CLAIM" heading still promises a list.
+    expect(parseDeclaredCastingChannels(raw).length).toBeGreaterThan(0)
   })
 })
