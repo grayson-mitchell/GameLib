@@ -187,7 +187,16 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
       return (
         <span className="buttonWithIcon">
           <FontAwesomeIcon icon={faSyncAlt} className="fa-spin" />
-          {t('status.steamInstalling', 'Steam installing')}
+          {/* 34.13 review C-10: the inline default now MATCHES the shipped
+              `gamepage.json` value ("Installing…"). It previously read
+              "Steam installing", which the running app never showed -- the
+              key exists, so i18next returns the catalog value and the
+              default is inert (the repo's ledgered "editing a t() DEFAULT is
+              a silent no-op when the key exists" trap). This is a
+              READABILITY fix with zero runtime effect: `gamepage.json` is
+              UPSTREAM-OWNED and must not be edited, so the source moves to
+              the catalog, not the other way round. */}
+          {t('status.steamInstalling', 'Installing…')}
         </span>
       )
     }

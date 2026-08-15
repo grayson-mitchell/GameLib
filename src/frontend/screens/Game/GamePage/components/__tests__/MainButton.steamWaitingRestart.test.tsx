@@ -19,11 +19,39 @@ jest.mock('react', () => ({
   useContext: () => ({ is: mockIs, statusContext: mockStatusContext })
 }))
 
-jest.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (_key: string, defaultValue: string): string => defaultValue
-  })
-}))
+// 34.13 review C-10: this mock USED to be
+// `t: (_key, defaultValue) => defaultValue`, so every assertion below
+// measured the inline DEFAULT ARGUMENT rather than the shipped label. That
+// is the repo's ledgered "editing a `t()` DEFAULT is a silent no-op when the
+// key exists" trap, seen from the test side: `status.steamInstalling`'s
+// catalog value is "Installing…" while the source default reads
+// "Steam installing", so these suites asserted a literal that appears
+// NOWHERE in the running UI and would have stayed green through any change
+// to the real catalog value.
+//
+// This mock now reproduces i18next's ACTUAL precedence -- catalog value if
+// the key resolves, inline default only if it does not -- so the assertions
+// measure what the app renders. `require` (not a module-scope import)
+// because jest hoists `jest.mock` factories above imports.
+jest.mock('react-i18next', () => {
+  const gamepage = jest.requireActual<Record<string, unknown>>(
+    '../../../../../../../public/locales/en/gamepage.json'
+  )
+  const lookup = (key: string): string | undefined =>
+    key.split('.').reduce<unknown>((node, part) => {
+      if (node && typeof node === 'object') {
+        return (node as Record<string, unknown>)[part]
+      }
+      return undefined
+    }, gamepage) as string | undefined
+
+  return {
+    useTranslation: () => ({
+      t: (key: string, defaultValue: string): string =>
+        lookup(key) ?? defaultValue
+    })
+  }
+})
 
 jest.mock('frontend/hooks/useSetting', () => ({
   __esModule: true,
@@ -48,7 +76,8 @@ import MainButton from '../MainButton'
 
 /** Recursively collect all string text nodes from a React element tree. */
 function collectText(node: unknown): string {
-  if (node === null || node === undefined || typeof node === 'boolean') return ''
+  if (node === null || node === undefined || typeof node === 'boolean')
+    return ''
   if (typeof node === 'string' || typeof node === 'number') return String(node)
   if (Array.isArray(node)) return node.map(collectText).join(' ')
   const el = node as ReactElement
@@ -118,14 +147,14 @@ describe('MainButton — steam-waiting-for-restart (D-UAT-07)', () => {
     mockStatusContext = 'steam-waiting-for-restart'
     const text = renderLabel()
     expect(text).toContain('Restart Steam to finish')
-    expect(text).not.toContain('Steam installing')
+    expect(text).not.toContain('Installing…')
   })
 
   it('shows the generic steam-installing label during an active install (no waiting context)', () => {
     mockIs = { ...baseIs, installing: true }
     mockStatusContext = undefined
     const text = renderLabel()
-    expect(text).toContain('Steam installing')
+    expect(text).toContain('Installing…')
     expect(text).not.toContain('Restart Steam to finish')
   })
 })
