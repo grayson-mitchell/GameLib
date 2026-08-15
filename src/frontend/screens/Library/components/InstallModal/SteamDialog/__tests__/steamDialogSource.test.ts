@@ -421,9 +421,58 @@ describe('required wiring', () => {
     'gamelib:steam.install.sharedBottleNotice',
     'gamelib:steam.install.libraryMissingNotice',
     'gamelib:steam.install.libraryFullNotice',
-    'gamelib:steam.install.contentLightNotice'
+    'gamelib:steam.install.contentLightNotice',
+    // 34.13 review B-WR-05: WR-11 and WR-04 each landed a real new BRANCH
+    // into this file and neither extended this list. None of the four tokens
+    // below is a substring of any token above, so reverting either fix left
+    // every gate here green -- the copy bugs WR-11 and WR-04 fixed could
+    // silently return. This file exists precisely to lock every decision the
+    // dialog encodes.
+    //
+    // WR-11: the <=1-library corner, where the failing library IS the user's
+    // only one, so "choose another below" is a false promise.
+    'gamelib:steam.install.libraryMissingOnlyNotice',
+    'gamelib:steam.install.libraryFullOnlyNotice',
+    // ...and the field that selects between them, so it is provably READ and
+    // not merely present in the destructure.
+    'steamDegrade.onlyLibrary',
+    // WR-04: the "turn it on in Settings" sentence is only true when the
+    // setting is actually OFF.
+    'gamelib:steam.install.contentLightSingleLibraryNotice',
+    'nativeInstallOn'
   ])('requires "%s" in the stripped source', (token) => {
     expectPresent(stripped, token, 'required wiring')
+  })
+
+  it('B-WR-05 RED: each newly-required token is genuinely absent from a copy DERIVED FROM THE REAL SOURCE with that branch reverted, so the gate can actually trip', () => {
+    // Reverting WR-11 means collapsing the onlyLibrary ternaries back to the
+    // two original notices; reverting WR-04 means collapsing the
+    // nativeInstallOn ternary back to the single content-light notice.
+    const wr11Reverted = stripped
+      .replaceAll('gamelib:steam.install.libraryMissingOnlyNotice', 'X')
+      .replaceAll('gamelib:steam.install.libraryFullOnlyNotice', 'X')
+      .replaceAll('steamDegrade.onlyLibrary', 'X')
+    const wr04Reverted = stripped
+      .replaceAll('gamelib:steam.install.contentLightSingleLibraryNotice', 'X')
+      .replaceAll('nativeInstallOn', 'X')
+
+    for (const token of [
+      'gamelib:steam.install.libraryMissingOnlyNotice',
+      'gamelib:steam.install.libraryFullOnlyNotice',
+      'steamDegrade.onlyLibrary'
+    ]) {
+      expect(() => expectPresent(wr11Reverted, token, 'RED')).toThrow(
+        /is missing/
+      )
+    }
+    for (const token of [
+      'gamelib:steam.install.contentLightSingleLibraryNotice',
+      'nativeInstallOn'
+    ]) {
+      expect(() => expectPresent(wr04Reverted, token, 'RED')).toThrow(
+        /is missing/
+      )
+    }
   })
 
   it('every occurrence of forceWindowsViaBottle is immediately preceded by "gating." -- the verdict field is passed through, never reconstructed', () => {

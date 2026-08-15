@@ -47,6 +47,42 @@ function countOccurrences(source: string, token: string): number {
   return source.split(token).length - 1
 }
 
+/**
+ * 34.13 review B-WR-06, as a THROWING helper bounded to the `<SteamDialog>`
+ * arm.
+ *
+ * The property that matters is "inside the STEAM arm, the loading row comes
+ * before the WineSelector mount". The previous inline assertion searched for
+ * `<WineSelector` with a START OFFSET of the loading row's own index, which
+ * makes the result mathematically incapable of being smaller -- it collapsed
+ * to "a <WineSelector exists somewhere at or after the loading row" and said
+ * nothing about the Steam arm at all. `installModalSource.test.ts`'s
+ * `assertSteamWineSelectorHidesSharedPrefix` already uses the correct
+ * pattern: bound the search to the arm first, then search WITHOUT an offset.
+ */
+function assertLoadingRowPrecedesSteamWineSelector(source: string): void {
+  const start = source.indexOf('<SteamDialog')
+  const end = source.indexOf('</SteamDialog>', start)
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error(
+      'assertLoadingRowPrecedesSteamWineSelector: the <SteamDialog> arm was not found'
+    )
+  }
+  const arm = source.slice(start, end)
+  const rowIndex = arm.indexOf('<EligibilityLoadingRow')
+  const wineSelectorIndex = arm.indexOf('<WineSelector') // NO start offset
+  if (rowIndex === -1 || wineSelectorIndex === -1) {
+    throw new Error(
+      'assertLoadingRowPrecedesSteamWineSelector: a required mount is missing from the Steam arm'
+    )
+  }
+  if (rowIndex > wineSelectorIndex) {
+    throw new Error(
+      'assertLoadingRowPrecedesSteamWineSelector: the loading row does not precede <WineSelector> inside the Steam arm'
+    )
+  }
+}
+
 // ---------------------------------------------------------------------
 // Group A -- the quick path can never fire a probe (D-25's load-bearing
 // negative; T-34.13-11-06)
@@ -59,9 +95,7 @@ describe('Group A: the quick path can never fire a probe', () => {
   })
 
   it('A2: the mount gate still exists -- InstallGameWrapper\'s "if (!installGameModalState.isOpen)" early return is WHY the quick path cannot probe: the component owning the hook does not mount unless the modal is open, and quick install never opens it', () => {
-    const source = stripped(
-      'screens/Library/components/InstallModal/index.tsx'
-    )
+    const source = stripped('screens/Library/components/InstallModal/index.tsx')
     expect(source).toContain('if (!installGameModalState.isOpen)')
   })
 
@@ -149,9 +183,7 @@ describe('Group A: the quick path can never fire a probe', () => {
 // ---------------------------------------------------------------------
 
 describe('Group B: the loading row is mounted, in the right slot, behind the right guard', () => {
-  const source = stripped(
-    'screens/Library/components/InstallModal/index.tsx'
-  )
+  const source = stripped('screens/Library/components/InstallModal/index.tsx')
 
   it('B1: <EligibilityLoadingRow appears exactly once, imported from SteamDialog/', () => {
     expect(countOccurrences(source, '<EligibilityLoadingRow')).toBe(1)
@@ -166,17 +198,42 @@ describe('Group B: the loading row is mounted, in the right slot, behind the rig
   })
 
   it('B3: <EligibilityLoadingRow precedes the Steam <WineSelector mount', () => {
-    const loadingRowIndex = source.indexOf('<EligibilityLoadingRow')
-    const wineSelectorIndex = source.indexOf('<WineSelector', loadingRowIndex)
-    expect(loadingRowIndex).toBeGreaterThan(-1)
-    expect(wineSelectorIndex).toBeGreaterThan(loadingRowIndex)
+    expect(() =>
+      assertLoadingRowPrecedesSteamWineSelector(source)
+    ).not.toThrow()
   })
 
-  it('B3 non-vacuity: an inverted specimen fails the same ordering check', () => {
-    const specimen = '<WineSelector /> ... later ... <EligibilityLoadingRow />'
-    const loadingRowIndex = specimen.indexOf('<EligibilityLoadingRow')
-    const wineSelectorIndex = specimen.indexOf('<WineSelector')
-    expect(wineSelectorIndex).toBeLessThan(loadingRowIndex)
+  it('B3-RED: the gate itself trips on a known-bad input DERIVED FROM THE REAL SOURCE with the two mounts swapped', () => {
+    // 34.13 review B-WR-06: the previous "non-vacuity" spec built a
+    // hand-written string literal and re-ran plain `indexOf` on it. It
+    // exercised `String.prototype.indexOf`, never B3's logic -- verbatim the
+    // WR-09 defect, left standing one directory away from where WR-09 was
+    // fixed. This drives the REAL helper against a specimen derived from the
+    // REAL source.
+    const knownBad = source
+      .replace('<EligibilityLoadingRow', '@@ROW@@')
+      .replace('<WineSelector', '<EligibilityLoadingRow')
+      .replace('@@ROW@@', '<WineSelector')
+    expect(knownBad).not.toBe(source)
+    expect(() => assertLoadingRowPrecedesSteamWineSelector(knownBad)).toThrow(
+      /does not precede/
+    )
+  })
+
+  it('B3-RED-b: the gate trips when the loading row is moved OUTSIDE the Steam arm -- the property the old offset-search version could not measure at all', () => {
+    // The old assertion searched for `<WineSelector` STARTING AT the loading
+    // row's index, which is mathematically incapable of returning a smaller
+    // number. It collapsed to "a <WineSelector exists somewhere at or after
+    // the loading row" and said nothing about the STEAM mount, so it would
+    // have passed just as happily with the row hoisted above the ThirdParty
+    // arm instead.
+    const armStart = source.indexOf('<SteamDialog')
+    const knownBad =
+      source.slice(0, armStart).replace(/$/, '<EligibilityLoadingRow />') +
+      source.slice(armStart).replace('<EligibilityLoadingRow', '<Placeholder')
+    expect(() => assertLoadingRowPrecedesSteamWineSelector(knownBad)).toThrow(
+      /a required mount is missing/
+    )
   })
 
   it('B4: useSteamBottleEligibility( appears exactly once and applyEligibilityPending( appears exactly once -- one hook call, one wrap, no second re-derivation', () => {
