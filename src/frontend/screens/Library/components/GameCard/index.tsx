@@ -55,7 +55,11 @@ import {
   VisibilityOff
 } from '@mui/icons-material'
 import EditGameDialog from 'frontend/components/UI/EditGameDialog'
-import { openInstallGameModal } from 'frontend/state/InstallGameModal'
+import {
+  openInstallGameModal,
+  openSteamInstallOptions
+} from 'frontend/state/InstallGameModal'
+import { showSteamCardInstallOptions } from 'frontend/helpers/steamInstallOptionsEntry'
 import CrossoverBadge from './CrossoverBadge'
 
 interface Card {
@@ -103,6 +107,7 @@ const GameCard = ({
 
   const { t } = useTranslation('gamepage')
   const { t: t2 } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
 
   const navigate = useNavigate()
 
@@ -371,6 +376,27 @@ const GameCard = ({
       onclick: () => buttonClick(),
       show: !isInstalled && !isQueued && isInstallable && !isDelisted,
       icon: <Download />
+    },
+    {
+      // install with options — NEW for D-27 row 3. D-27's own text cites
+      // GameCard/index.tsx:322 as an item to relabel; that line is inside
+      // handleEdit()'s sideload-only branch (RESEARCH Q4, plan 08's own
+      // call-site map) and is deliberately untouched here. This is an
+      // ADDITION beside the existing plain install entry above, gated
+      // Steam-only via the shared predicate so D-28 is enforced at one site.
+      label: tGamelib(
+        'gamelib:steam.install.withOptionsLabel',
+        'Install with options…'
+      ),
+      onclick: () => openSteamInstallOptions(appName, gameInfo),
+      show: showSteamCardInstallOptions({
+        runner,
+        isInstalled,
+        isQueued,
+        isInstallable,
+        isDelisted
+      }),
+      icon: <Settings />
     },
     {
       // cancel installation/update — hidden for Steam (GamerLib cannot cancel Steam's download)

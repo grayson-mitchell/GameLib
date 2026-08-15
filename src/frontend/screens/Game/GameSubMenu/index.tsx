@@ -12,7 +12,11 @@ import { NavLink } from 'react-router-dom'
 import { CircularProgress, SvgIcon } from '@mui/material'
 import UninstallModal from 'frontend/components/UI/UninstallModal'
 import GameContext from '../GameContext'
-import { openInstallGameModal } from 'frontend/state/InstallGameModal'
+import {
+  openInstallGameModal,
+  openSteamInstallOptions
+} from 'frontend/state/InstallGameModal'
+import { showSteamSubMenuInstallOptions } from 'frontend/helpers/steamInstallOptionsEntry'
 import useGlobalState from 'frontend/state/GlobalStateV2'
 import EditGameDialog from 'frontend/components/UI/EditGameDialog'
 import { reportRepairFailure } from './repairFailure'
@@ -22,6 +26,7 @@ import {
   CheckCircle as CheckCircleIcon,
   Delete as DeleteIcon,
   DesktopAccessDisabled as DesktopAccessDisabledIcon,
+  Download as DownloadIcon,
   DriveFileMove as DriveFileMoveIcon,
   Edit as EditIcon,
   FindInPage as FindInPageIcon,
@@ -86,6 +91,7 @@ export default function GamesSubmenu({
     `https://www.protondb.com/search?q=${title}`
   )
   const { t } = useTranslation('gamepage')
+  const { t: tGamelib } = useTranslation('gamelib')
   const isSideloaded = runner === 'sideload'
   const isSteam = runner === 'steam'
   const isThirdPartyManaged = !!gameInfo.thirdPartyManagedApp
@@ -309,6 +315,33 @@ export default function GamesSubmenu({
           />
         )}
         <div className={`submenu`}>
+          {/*
+            D-27 row 5 — a NEW control, NOT a relabel. D-27's own table says
+            "existing Install item… relabels to 'Install with options…'", but
+            RESEARCH Q4's full-file read and plan 08's <call_site_map> both
+            found no such item: the only "Install"-shaped affordance in this
+            file is handleEdit()'s sideload-only branch above (dead for a
+            non-sideload runner), and every other item here is either
+            isInstalled-gated (the cluster immediately below) or restricted
+            to ['legendary','gog']. This block is placed BEFORE that cluster
+            so it is the first, and for an uninstalled Steam game the only,
+            control in the menu — document order puts it first for
+            keyboard/gamepad traversal (GamePage:482 -> DotsMenu:41 ->
+            GameSubMenu mounts this file for uninstalled games with no gate
+            of its own, so this block is reachable, not dead code).
+          */}
+          {showSteamSubMenuInstallOptions({ runner, isInstalled }) && (
+            <button
+              onClick={() => openSteamInstallOptions(appName, gameInfo)}
+              className="link button is-text is-link buttonWithIcon"
+            >
+              <DownloadIcon />
+              {tGamelib(
+                'gamelib:steam.install.withOptionsLabel',
+                'Install with options…'
+              )}
+            </button>
+          )}
           {isInstalled && (
             <>
               <button
