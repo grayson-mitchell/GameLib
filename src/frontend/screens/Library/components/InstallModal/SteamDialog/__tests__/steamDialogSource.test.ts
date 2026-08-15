@@ -123,10 +123,27 @@ function assertSingleEligibilityDisabledTerm(source: string) {
       `assertSingleEligibilityDisabledTerm: expected exactly 1 disabled= term, found ${n}`
     )
   }
-  if (!source.includes('disabled={eligibilityPending}')) {
+  // WIDENED by 34.13 review WR-13: the single term is now
+  // `disabled={eligibilityPending || submitting}` -- `submitting` is a
+  // submit-in-flight latch (a double-click used to fire `installSteamGame`
+  // twice for the same appId across the `persistBottleWineVersion` await),
+  // NOT a size gate. The assertion still pins `eligibilityPending` as
+  // required, and the SIZE-token bans below are what actually enforce D-06.
+  if (!source.includes('disabled={eligibilityPending')) {
     throw new Error(
-      'assertSingleEligibilityDisabledTerm: the single disabled= term is not disabled={eligibilityPending} (D-06: never gated on SIZE)'
+      'assertSingleEligibilityDisabledTerm: the single disabled= term does not lead with eligibilityPending (D-06: never gated on SIZE)'
     )
+  }
+  for (const sizeToken of [
+    'diskSize',
+    'spaceLeftAfter',
+    'notEnoughDiskSpace'
+  ]) {
+    if (source.includes(`disabled={${sizeToken}`)) {
+      throw new Error(
+        `assertSingleEligibilityDisabledTerm: the disabled= term references the SIZE token "${sizeToken}" (D-06)`
+      )
+    }
   }
 }
 

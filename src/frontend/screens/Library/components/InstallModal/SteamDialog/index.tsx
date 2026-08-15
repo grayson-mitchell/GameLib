@@ -137,6 +137,11 @@ export default function SteamDialog({
 
   const [selectedPath, setSelectedPath] = useState('')
   const [diskSpace, setDiskSpace] = useState<DiskSpaceInfo | null>(null)
+  // WR-13: submit-in-flight latch. Never reset to false -- `handleInstall`
+  // ends by closing the dialog, so the component unmounts; leaving it
+  // latched is what makes the double-click impossible rather than merely
+  // unlikely.
+  const [submitting, setSubmitting] = useState(false)
 
   // D-24: `undefined` on a deliberate "Install with options..." click;
   // populated only when `startSteamQuickInstall` degraded into this dialog
@@ -191,6 +196,19 @@ export default function SteamDialog({
   }, [gating.freeSpaceLine, selectedPath])
 
   const handleInstall = useCallback(async () => {
+    // WR-13: re-entrancy guard. `handleInstall` awaits
+    // `persistBottleWineVersion` before it calls `backdropClick()`, and
+    // nothing disabled the button across that await --
+    // `disabled={eligibilityPending}` is already false by the time this
+    // handler can run at all -- so a double-click fired `installSteamGame`
+    // TWICE for the same appId. This is NOT a D-06 size gate: it is a
+    // submit-in-flight latch, the one thing D-06's "never gated on SIZE"
+    // rule has no opinion about.
+    if (submitting) {
+      return
+    }
+    setSubmitting(true)
+
     // D-14 -> D-15 ordering: persist BEFORE install, so the guided bottle
     // setup reads a store that is already written. Skipped when there is no
     // wine section or no chosen engine -- persisting on a library-only
@@ -226,7 +244,20 @@ export default function SteamDialog({
       destination,
       gating.forceWindowsViaBottle
     )
-  }, [appName, gameInfo, wineVersion, selectedPath, steamLibraries, gating])
+    // `backdropClick` and `submitting` added by WR-13 -- the callback reads
+    // both, and omitting `backdropClick` meant a re-created parent handler
+    // left this callback closing over a stale one (ESLint
+    // react-hooks/exhaustive-deps flagged it).
+  }, [
+    appName,
+    gameInfo,
+    wineVersion,
+    selectedPath,
+    steamLibraries,
+    gating,
+    backdropClick,
+    submitting
+  ])
 
   return (
     <>
@@ -345,7 +376,7 @@ export default function SteamDialog({
         <button
           className="button is-secondary"
           onClick={handleInstall}
-          disabled={eligibilityPending}
+          disabled={eligibilityPending || submitting}
         >
           {t('button.install')}
         </button>
