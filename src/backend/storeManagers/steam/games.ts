@@ -62,6 +62,12 @@ import { placeShimForGame } from './bridge/shimGenerate'
 import { resolveBridgeLaunchExe } from './bridge/launchTarget'
 import { ensureBridgeHelperReady } from './bridge/helperProcess'
 
+/** The project-wide appId shape guard (clientSetup.ts, installFormIpc.ts,
+ * bottle.ts, bridge/allowlist.ts all carry the identical regex). Used by
+ * uninstallBottleGameDirectly to validate a renderer-supplied appId before it
+ * is interpolated into a filesystem delete target — 34.13 review A-12. */
+const NUMERIC_APP_ID = /^\d+$/
+
 const STEAM_CDN_BASE = 'https://cdn.cloudflare.steamstatic.com/steam/apps'
 const STEAM_STORE_API = 'https://store.steampowered.com/api/appdetails'
 
@@ -2152,6 +2158,27 @@ export default class SteamGame implements Game {
    * (dual-install partial removal, item 4/5) — see its own JSDoc.
    */
   private async uninstallBottleGameDirectly(): Promise<ExecResult> {
+    // 34.13 review A-12: validate the appId BEFORE building either delete
+    // target. The method containment-checks `installRoot` with the full
+    // resolve()+relative()+isAbsolute() idiom, then deletes a SECOND path —
+    // `appmanifest_${this.appId}.acf` — that got none of it. `this.appId` is
+    // renderer-supplied (getGame(appName) off the `uninstall` IPC channel)
+    // and is validated nowhere else on this path: the sibling native branch
+    // validates it via buildSteamProtocolUrl, and getSteamBottleEligibilityVerdict
+    // carries NUMERIC_APP_ID for exactly this reason. `join` is not
+    // containment (Phase 18) — an appId containing `../` moves the manifest
+    // delete target out of steamapps/. One check at the top covers BOTH
+    // delete targets, which is also what makes this method's own JSDoc claim
+    // ("scoped to make over-deleting structurally impossible rather than
+    // runtime-checked") true for both halves rather than only one.
+    if (!NUMERIC_APP_ID.test(this.appId)) {
+      logWarning(
+        `SteamGame: uninstallBottleGameDirectly rejected a non-numeric appId`,
+        LogPrefix.Steam
+      )
+      return { stdout: '', stderr: 'Refused to uninstall: invalid appId' }
+    }
+
     // Reads the raw `library` Map entry directly rather than
     // this.getGameInfo() — see uninstall()'s own comment on the same
     // pattern (avoids getGameInfo()'s fire-and-forget metadata-fetch side

@@ -4409,6 +4409,62 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
     expect(result).toEqual({ stdout: '', stderr: '' })
   })
 
+  // ── 34.13 review A-12 ─────────────────────────────────────────────────────
+  // The method containment-checks `installRoot` with the full
+  // resolve()+relative()+isAbsolute() idiom and then deletes a SECOND path,
+  // `appmanifest_${appId}.acf`, built from a renderer-supplied appId that got
+  // none of it. `join` is not containment (Phase 18).
+  describe('A-12: a non-numeric appId is refused before either delete target is built', () => {
+    beforeEach(() => {
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+    })
+
+    it.each([
+      '../../../../etc',
+      '63000/../../..',
+      '63000; rm -rf /',
+      '',
+      'notanumber'
+    ])('refuses appId "%s" without touching the ACF at all', async (badId) => {
+      library.set(
+        badId,
+        makeEntry({
+          app_name: badId,
+          title: 'Hoard',
+          is_installed: true,
+          install: { install_path: INSTALL_PATH }
+        })
+      )
+      readAcfStateSpy.mockResolvedValue({
+        state: 'installed',
+        installPath: INSTALL_PATH
+      })
+
+      const result = await new SteamGame(badId).uninstall({} as any)
+
+      expect(result.stderr).toContain('invalid appId')
+      // The refusal is BEFORE the ACF read, so no delete target is ever
+      // constructed from the untrusted value.
+      expect(readAcfStateSpy).not.toHaveBeenCalled()
+      expect(pollUninstallOnceSpy).not.toHaveBeenCalled()
+    })
+
+    it('DISCRIMINATOR: a numeric appId is NOT refused (the gate cannot pass by refusing everything)', async () => {
+      readAcfStateSpy.mockResolvedValue({
+        state: 'installed',
+        installPath: INSTALL_PATH
+      })
+
+      const result = await new SteamGame(APP_ID).uninstall({} as any)
+
+      expect(result.stderr).not.toContain('invalid appId')
+      expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    })
+  })
+
   // ── 34.13 review A-10 ─────────────────────────────────────────────────────
   // Known-bad input: readAcfState('bottle') resolves
   // `{ state: 'downloading', stateFlags: 1026 }` — a partial/handoff manifest.
