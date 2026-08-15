@@ -67,16 +67,36 @@ const SteamClientSetup = () => {
   // Poll for readiness while the banner ('waiting') is open — covers BOTH
   // the post-consent D-10 install-in-progress case and the D-11
   // launch-once case. On 'ready', retry the install and close.
+  //
+  // 34.13 review C-17 (the C-05 shape, in this sibling component, WITH a side
+  // effect C-05 did not have): keyed on `isOpen` as well as `phase`. This
+  // component is mounted PERMANENTLY in App.tsx — `isOpen: false` only makes
+  // it `return null`, it never unmounts — and `close()` is
+  // `set({ isOpen: false })`, touching neither `phase` nor `appName`, while
+  // zustand's `close` identity is stable. So `[phase, appName, close]` never
+  // changed when the user dismissed the banner: the effect did not re-run,
+  // its cleanup never fired, and `steamClientSetupRecheck` kept being invoked
+  // every 3s for the remaining life of the app. Here the `'ready'` branch
+  // calls `installSteamGame(...)`, so the consequence was not a wasted timer:
+  // dismiss the banner, open Steam hours later for an unrelated reason, and
+  // GameLib silently queued a multi-GB download for a game the user
+  // explicitly walked away from.
   useEffect(() => {
-    if (phase !== 'waiting' || !appName) {
-      if (pollRef.current) clearInterval(pollRef.current)
+    if (!isOpen || phase !== 'waiting' || !appName) {
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = undefined
+      }
       return
     }
 
     const poll = () => {
       void window.api.steamClientSetupRecheck(appName).then((result) => {
         if (result.status === 'ready') {
-          if (pollRef.current) clearInterval(pollRef.current)
+          if (pollRef.current) {
+            clearInterval(pollRef.current)
+            pollRef.current = undefined
+          }
           if (gameInfoRef.current) {
             // 34.13 review B-WR-01: explicit fire-and-forget with a real
             // rejection handler (the function returns its dispatch promise
@@ -93,9 +113,12 @@ const SteamClientSetup = () => {
     pollRef.current = setInterval(poll, RECHECK_POLL_INTERVAL_MS)
 
     return () => {
-      if (pollRef.current) clearInterval(pollRef.current)
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = undefined
+      }
     }
-  }, [phase, appName, close])
+  }, [isOpen, phase, appName, close])
 
   if (!isOpen || !appName) {
     return null
