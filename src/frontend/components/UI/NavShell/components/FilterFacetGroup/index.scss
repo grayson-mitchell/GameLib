@@ -119,12 +119,39 @@
     transform: rotate(-90deg);
   }
 
-  .FilterFacetRow {
+  // 260815-mk1. `Dropdown/index.scss` styles not just its expanded panel but
+  // the panel's CONTENTS -- rules written for the Game-page MainButton menu,
+  // the component's other consumer. Two of them outrank this file:
+  //   `.dropdownContainer .dropdown`        (0,2,0) -- padding: var(--space-sm)
+  //   `.dropdownContainer .dropdown button` (0,2,1) -- margin-inline-start:
+  //       0.5rem; align-self: center; font-size: 1rem; padding: 0.3rem 0.8rem
+  // `.NavShell__tier2Portal .FilterFacetRow` is only (0,2,0), so the second
+  // one WON on every property it names: each facet row was inheriting a
+  // 0.5rem start margin and 0.8rem of its own padding on top of the panel's
+  // 12px gutter, landing the checkboxes ~33px in while the group header they
+  // belong to sat at 12px. Fixed by out-specifying rather than by editing
+  // Dropdown/index.scss, which MainButton depends on and which is not this
+  // task's to change.
+  //
+  // Adding the `.FilterFacetGroup` ancestor takes the row rule to (0,3,0),
+  // which beats (0,2,1) on class count regardless of source order -- the
+  // ordering independence is the point, since these two stylesheets are
+  // imported by different components.
+  .FilterFacetGroup .dropdown {
+    padding: 0;
+    gap: 0;
+  }
+
+  .FilterFacetGroup .FilterFacetRow {
     display: flex;
     align-items: center;
     gap: var(--space-2xs);
     width: 100%;
     min-width: 0;
+    // Both reset the Dropdown leak described above and would otherwise be
+    // absent from this rule, letting (0,2,1) supply them unopposed.
+    margin-inline-start: 0;
+    align-self: stretch;
     padding: var(--space-2xs) var(--tier2-row-padding-inline);
     border: 0;
     background: none;
@@ -149,7 +176,12 @@
     outline-offset: -2px;
   }
 
-  .FilterFacetRow--checked {
+  // Carries the same `.FilterFacetGroup` ancestor as the base rule above --
+  // NOT decoration. The base rule is now (0,3,0) and declares `background:
+  // none`; left at its old (0,2,0) this rule would lose that cascade and the
+  // checked row's highlight would silently stop painting. Same failure mode
+  // CR-03 already caused once for this exact element.
+  .FilterFacetGroup .FilterFacetRow--checked {
     color: var(--filter-active-color);
     font-weight: var(--bold);
     background: var(--navbar-active-background);

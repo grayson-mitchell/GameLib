@@ -154,7 +154,14 @@
     border-bottom: none;
     background: transparent;
     color: var(--navbar-inactive);
-    padding: var(--space-xs) var(--space-md);
+    // Inline padding is HALF of a parity contract, not a free value: it must
+    // equal `--tier2-row-padding-inline` (NavItem/index.scss) so a tab label
+    // and a tier-2 panel row label land at the same x once the brand icon is
+    // gone (260815-j24 Test C). Moved --space-md -> --space-sm alongside that
+    // token in 260815-mk1, to buy back the width `scrollbar-gutter: stable`
+    // now reserves in the tier-2 column. Changing one side alone silently
+    // breaks the alignment; Test C fails loudly if you try.
+    padding: var(--space-xs) var(--space-sm);
     // F-34.10-04 (34.10-19, implementing 34.10-F04-DIAGNOSIS.md's single
     // surviving hypothesis, H1). `node_modules/@mui/material/Tab/Tab.js`
     // applies `minHeight: 72` unconditionally whenever a `<Tab>` receives

@@ -400,8 +400,11 @@
   // which IS proven.
   overflow: hidden;
   // Replaces `--sidebar-horizontal-padding` (`Sidebar/index.scss:2`) for
-  // the ported tier-2 row rules in `components/NavItem/index.scss`.
-  --tier2-row-padding-inline: var(--space-md);
+  // the ported tier-2 row rules in `components/NavItem/index.scss`. Kept in
+  // lockstep with that file's own declaration and with `.MuiTab-root`'s
+  // inline padding -- see NavItem/index.scss for why all three move together
+  // (260815-mk1 / 260815-j24 Test C).
+  --tier2-row-padding-inline: var(--space-sm);
   transition:
     width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
     padding 0.22s ease,
@@ -500,6 +503,30 @@ body.dracula-classic .NavShell__tier2::after {
   // reachable instead of clipped by .NavShell__tier2's overflow: hidden.
   overflow-y: auto;
   overflow-x: hidden;
+
+  // 260815-mk1. Operator report: expanding a facet group far enough to
+  // introduce the scrollbar made "Manage collections" wrap onto a second
+  // line, shoving everything below it down. Cause is a width flip, not a
+  // wrapping bug -- with CLASSIC (non-overlay) scrollbars the bar is taken
+  // out of this container's content box the instant it appears, and at the
+  // old 16px gutter the panel's longest label sat right on the wrap
+  // threshold: 204 - 16 - 16 = 172px of text width, ~145px of label, and the
+  // ~15px the bar claims dropped it under.
+  //
+  // `stable` reserves that track unconditionally, so the content box is the
+  // same width scrolled or not and NOTHING can reflow on the transition.
+  // That reservation is not free -- it is paid for by
+  // `--tier2-row-padding-inline` dropping 16px -> 12px (NavItem/index.scss),
+  // which is why the two changes are one edit and not two. Reserving without
+  // paying would have made the wrap PERMANENT rather than intermittent, i.e.
+  // strictly worse than the reported defect.
+  //
+  // No-op where the platform draws overlay scrollbars (the macOS default --
+  // per spec `scrollbar-gutter` only applies to classic scrollbars), which
+  // is also why the defect only reproduces with "Show scroll bars: Always".
+  // Supported in WebKit from Safari 18.2; on an older engine it is ignored
+  // rather than mis-applied, leaving today's behaviour on a wider gutter.
+  scrollbar-gutter: stable;
 
   // 34.11-09 live-sweep fix (checks 1 and 5 of the midnightMirage sweep).
   // `Header/index.css`'s `.Header` rule predates this portal -- it was

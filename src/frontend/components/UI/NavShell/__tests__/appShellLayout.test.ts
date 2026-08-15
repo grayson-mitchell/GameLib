@@ -611,11 +611,18 @@ describe('App.tsx D-06 reversal: the two macOS booleans are pinned distinct (34.
 describe('260815-j24 -- navbar brand icon removed, tab strip flush to the tier-2 gutter', () => {
   // Task 1: unmounting the wordmark <img> moves .NavTabs to inline offset 0
   // with no CSS change (F1) -- and at offset 0, the tab's own inline padding
-  // (`.MuiTab-root`'s `padding: var(--space-xs) var(--space-md)`) already
-  // equals the tier-2 row's own inline gutter
-  // (`--tier2-row-padding-inline: var(--space-md)`, NavItem/index.scss), so
+  // (`.MuiTab-root`'s `padding: var(--space-xs) var(--space-sm)`) equals the
+  // tier-2 row's own inline gutter
+  // (`--tier2-row-padding-inline: var(--space-sm)`, NavItem/index.scss), so
   // the tab label and a tier-2 panel row's label land at the same x. Test C
   // locks that coincidence into a contract.
+  //
+  // 260815-mk1 moved BOTH sides --space-md -> --space-sm to buy back the
+  // width `.NavShell__tier2Portal`'s new `scrollbar-gutter: stable` reserves.
+  // The contract Test C guards is EQUALITY, not the literal 16px, so the
+  // value moving is not a violation -- one side moving alone is, which is the
+  // case this test exists to catch and the reason both regexes name the same
+  // token.
 
   it('Test A: the navbar renders no brand image (no NavShell__wordmark class, no gamelib-icon.png import)', () => {
     const source = readStripped(NAVSHELL_TSX)
@@ -639,12 +646,12 @@ describe('260815-j24 -- navbar brand icon removed, tab strip flush to the tier-2
     )
     expect(muiTabRootBlock).not.toBeNull()
     expect(muiTabRootBlock).toMatch(
-      /padding:\s*var\(--space-xs\)\s+var\(--space-md\)\s*;/
+      /padding:\s*var\(--space-xs\)\s+var\(--space-sm\)\s*;/
     )
 
     const navItemSource = readStripped(NAVITEM_SCSS)
     expect(navItemSource).toMatch(
-      /--tier2-row-padding-inline:\s*var\(--space-md\)\s*;/
+      /--tier2-row-padding-inline:\s*var\(--space-sm\)\s*;/
     )
   })
 
@@ -660,10 +667,23 @@ describe('260815-j24 -- navbar brand icon removed, tab strip flush to the tier-2
     expect(orphanedRuleFixture).toMatch(/\.NavShell__wordmark\s*\{/)
 
     // C's padding pattern MUST NOT match a fixture whose inline padding has
-    // drifted away from --space-md.
+    // drifted away from --space-sm.
     const driftedPaddingFixture = `.MuiTab-root { padding: var(--space-xs) var(--space-lg); }`
     expect(driftedPaddingFixture).not.toMatch(
-      /padding:\s*var\(--space-xs\)\s+var\(--space-md\)\s*;/
+      /padding:\s*var\(--space-xs\)\s+var\(--space-sm\)\s*;/
+    )
+
+    // The specific drift 260815-mk1 could plausibly have shipped -- tier-2
+    // trimmed to --space-sm while the tab strip was left behind at
+    // --space-md -- must ALSO be caught, otherwise this pair of regexes
+    // would have passed the exact half-migration they exist to prevent.
+    const halfMigratedTabFixture = `.MuiTab-root { padding: var(--space-xs) var(--space-md); }`
+    expect(halfMigratedTabFixture).not.toMatch(
+      /padding:\s*var\(--space-xs\)\s+var\(--space-sm\)\s*;/
+    )
+    const halfMigratedTokenFixture = `--tier2-row-padding-inline: var(--space-md);`
+    expect(halfMigratedTokenFixture).not.toMatch(
+      /--tier2-row-padding-inline:\s*var\(--space-sm\)\s*;/
     )
   })
 

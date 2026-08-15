@@ -17,7 +17,10 @@
   // Declared locally in this file so it does not depend on a sibling
   // stylesheet's declaration order; the themeTokens census gate asserts
   // every consumer file carries the identical chain, so copies cannot drift.
-  --filter-active-color: var(--navbar-active, var(--accent-overlay, var(--accent)));
+  --filter-active-color: var(
+    --navbar-active,
+    var(--accent-overlay, var(--accent))
+  );
 
   .FilterMoreGroup__triState {
     display: flex;
@@ -30,8 +33,16 @@
     min-width: 0;
   }
 
-  .FilterMoreGroup__only {
+  // `.FilterMoreGroup` ancestor added in 260815-mk1 to take this rule to
+  // (0,3,0). `Dropdown/index.scss`'s `.dropdownContainer .dropdown button`
+  // is (0,2,1) and sets `margin-inline-start`, `align-self`, `font-size` and
+  // `padding` on every button inside an expanded disclosure -- including this
+  // one -- so at (0,2,0) this rule lost all four. See
+  // FilterFacetGroup/index.scss for the full account of the leak.
+  .FilterMoreGroup .FilterMoreGroup__only {
     flex: 0 0 auto;
+    margin-inline-start: 0;
+    align-self: center;
     border: 0;
     background: none;
     cursor: pointer;

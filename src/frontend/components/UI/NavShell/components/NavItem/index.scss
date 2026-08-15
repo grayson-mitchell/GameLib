@@ -13,7 +13,16 @@
   // the ported `.Sidebar__item` padding rules consumed from their `.Sidebar`
   // ancestor. Declared locally so this stylesheet has no dependency on the
   // retired `.Sidebar` selector.
-  --tier2-row-padding-inline: var(--space-md);
+  //
+  // --space-md -> --space-sm (260815-mk1). `.NavShell__tier2Portal` now
+  // declares `scrollbar-gutter: stable`, which permanently reserves the
+  // ~15px classic-scrollbar track out of the column's content box; without
+  // buying that width back here, a row label that previously fit on one line
+  // would wrap FOREVER instead of only while scrolled. `.MuiTab-root`'s own
+  // inline padding (NavTabs/index.scss) MUST move with this token -- the two
+  // being equal is what lines a tier-1 tab label up with a tier-2 row label
+  // (260815-j24 Test C, which fails if they drift apart).
+  --tier2-row-padding-inline: var(--space-sm);
 
   .NavItem {
     --navitem-inactive-color: var(--navbar-inactive, var(--navbar-accent));
