@@ -60,3 +60,43 @@ Two options (not mutually exclusive):
   effectively a second bottle backend and overlaps conceptually with Phase 22.
 
 Recommend (a) as a standalone fix regardless of whether (b) is ever pursued.
+
+## Update 2026-08-14 — Phase 34.13-03 (partial)
+
+Option (a)'s **frontend-filter half shipped** as D-16, in
+`src/frontend/screens/Library/components/InstallModal/WineSelector/`
+(`engineFilter.ts` + `index.tsx`). `WineSelector` now offers only
+`type === 'crossover'` engines in its dropdown and seeds its default engine
+from that same filtered list whenever `runner === 'steam'` — covering both
+the new Steam install form (via `InstallModal/index.tsx`'s pass-through) and
+the existing guided `SteamBottleSetup.tsx` surface, which inherits the
+filter automatically through its `runner="steam"` prop with zero edits to
+that file (the `resolveCrossoverOnly` default). A user can no longer select
+GPTK/plain-Wine for a Steam bottle through this UI.
+
+**Still open — option (a)'s backend-rejection half did NOT ship:**
+`provisionBottle` in `src/backend/storeManagers/steam/bottle.ts` still
+accepts any `WineInstallation` unrejected; it does not validate
+`wineVersion.type === 'crossover'` before calling `cxbottle`. A `toolkit`/
+`wine` engine already persisted into the Steam bottle config store (e.g.
+from before this filter existed, or via direct config manipulation) still
+reaches `provisionBottle` unrejected and still silently produces the broken
+bottle described above.
+
+**Still open — the `resolveSteamBottleEngine` silent-override half did NOT
+ship:** `steamBottleDefaults.ts`'s `resolveSteamBottleEngine()` is
+untouched by this plan. This plan's D-16 filter only governs which engines
+are OFFERED and which is SEEDED when none is set — it deliberately does NOT
+add a corrective override that force-switches an already-set non-CrossOver
+`wineVersion` to a CrossOver one (that would be `resolveSteamBottleEngine`'s
+silent-override half, out of scope here by explicit plan-level prohibition).
+
+**Option (b)** (the prefix-based GPTK provisioning path) remains fully out
+of scope — untouched.
+
+**Todo stays in `pending/`, not closed.** The misleading UI affordance is
+now hidden for new selections, but the underlying engine mismatch in the
+backend is not fixed, so a user who has already persisted a `toolkit`
+engine into the bottle store (from before this filter shipped) is still
+exposed to the silent-broken-bottle failure mode on their next
+provision/launch.
