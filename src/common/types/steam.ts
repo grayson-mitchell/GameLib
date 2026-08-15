@@ -47,3 +47,17 @@ export type SteamBottleConfig = {
   // future consumer to trust it. steamBottleStatus surfaces provisioned +
   // bottleName only.
 }
+
+// D-17 (34.13-01): the return shape of the `isSteamBottleEligible` IPC
+// channel, registered by 34.13-07 in BOTH `main.ts` and
+// `steamAuthFlowRegistration.ts`. `wineVersion` / `bottleName` are shaped
+// after `getSteamBottleSettings()`'s own fields and exist so ONE round-trip
+// also closes D-15's exposure half — `SteamBottleSetup.tsx` (34.13-09) reads
+// the persisted `wineVersion` from here instead of re-deriving it via
+// `resolveSteamBottleEngine`. The `AsyncIPCFunctions` signature for the
+// channel is 34.13-07's edit to `src/common/types/ipc.ts`, not this plan's.
+export interface SteamBottleEligibilityVerdict {
+  eligible: boolean
+  wineVersion?: WineInstallation
+  bottleName?: string
+}

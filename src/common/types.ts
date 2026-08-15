@@ -226,6 +226,17 @@ export interface GameInfo {
    * both stay on native macOS handling. */
   mac_arch?: '32' | '64' | 'unknown'
   is_linux_native?: boolean
+  /** D-17: Windows-depot availability signal, mirroring
+   * `SteamMetadataCacheEntry.is_windows_native`. Sourced from
+   * `data.platforms.windows` on the SAME `appdetails` response that already
+   * yields `data.platforms.mac` / `data.platforms.linux` — persisted by
+   * 34.13-02, hydrated onto `GameInfo` in `library.ts`. Load-bearing
+   * contract: only `=== true` permits offering a Windows install. `undefined`
+   * means "never captured" (pre-34.13 cache entries) and MUST NOT be coerced
+   * to available — forcing a Windows install of a game with no Windows depot
+   * is an explicitly Deferred Idea. Per the UI-SPEC, the Windows `MenuItem`
+   * is ABSENT (never present-but-disabled) when this is not `=== true`. */
+  is_windows_native?: boolean
   /** Delisted = confirmed unavailable on Steam (appdetails success:false).
    * When true the game is hidden from Console and not activatable. */
   is_delisted?: boolean
@@ -408,6 +419,21 @@ export interface InstallArgs {
   branch?: string
   build?: string
   dependencies?: string[]
+  /** D-17: install-time override that routes a Steam install into the
+   * `GameLibSteam` Wine bottle instead of native macOS handling, EVEN THOUGH
+   * `platformToInstall` is hardcoded `'Windows'` for every Steam install
+   * already (`installSteamGame()`). This is a SEPARATE field, deliberately —
+   * `platformToInstall === 'Windows'` cannot distinguish a user's deliberate
+   * bottle choice from that legacy default, and the Steam backend reads
+   * `platformToInstall` nowhere, so reinterpreting it would route every
+   * mac-native install into the bottle. Value contract: only `=== true`
+   * overrides; `undefined` and `false` are both "legacy routing,
+   * byte-identical to today" (the invariant 34.13-06's regression guard
+   * pins). 34.13-08 is the sole writer; 34.13-06 is the sole reader. Plain
+   * `boolean` by design — it carries no path, name or command, so it can
+   * only SELECT among `SteamGame.install()`'s four existing branches, never
+   * widen the install surface. */
+  steamForceWindowsViaBottle?: boolean
 }
 
 export interface InstallParams extends InstallArgs {

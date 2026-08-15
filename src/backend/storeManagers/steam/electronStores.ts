@@ -37,10 +37,61 @@ export interface SteamMetadataCacheEntry {
   art_square: string
   extra: ExtraInfo
   // DETAIL-01: platform support captured from appdetails `platforms`. Persisted
-  // so the icons survive a restart / library resync. Windows is the implicit
-  // baseline (no flag); absent means "not known native".
+  // so the icons survive a restart / library resync. D-17 (34.13-01) retires
+  // the old "Windows is the implicit baseline (no flag)" premise: Windows
+  // availability is now an EXPLICIT captured flag (is_windows_native, below)
+  // because a mac-native game may or may not have a Windows depot, and the
+  // platform row's Windows option is gated on the answer. Absent means "not
+  // known native" for is_mac_native/is_linux_native, same as always.
   is_mac_native?: boolean
   is_linux_native?: boolean
+  /** D-17: the pre-install Windows-depot availability signal, captured from
+   * appdetails `data.platforms.windows` by 34.13-02 — mirrors
+   * `GameInfo.is_windows_native` (src/common/types.ts) across the cache
+   * boundary. Load-bearing contract, identical on both sides: only
+   * `=== true` permits offering a Windows install. `undefined` means "never
+   * captured" (every pre-34.13 cache entry) and MUST NOT be coerced to
+   * available. */
+  is_windows_native?: boolean
+  /** D-17: the PERSISTED verdict of a completed forced Windows-via-bottle
+   * install (34.13-14 is the sole reader/writer).
+   *
+   * What it means: this appId's CURRENT install was placed in the Phase 17
+   * `GameLibSteam` bottle by a D-17 forced Windows-via-bottle install. It is
+   * a fact about *where the bits are*, not a preference and not a capability.
+   *
+   * How it differs from `is_windows_native`: that field says the game HAS a
+   * Windows build (pre-install, from appdetails); this one says the
+   * installed copy IS the Windows build, in the bottle (post-install,
+   * written by GameLib). They are never interchangeable — collapsing them
+   * into one field would read every Windows-capable mac-native game as
+   * already-forced.
+   *
+   * Value contract, identical to `is_windows_native`'s: only `=== true` has
+   * any effect. `undefined` and `false` both mean "never forced". Absent is
+   * the shape of EVERY pre-34.13 cache entry, so the fail-safe direction is
+   * one-way: an unreadable or missing flag must route exactly as today,
+   * never into the bottle.
+   *
+   * Who writes it: 34.13-14 only, and only after a forced install actually
+   * committed bits to the bottle — never on a deferral, a rejected dispatch
+   * or a failed download. Cleared by 34.13-14 when the bottle's appmanifest
+   * is confirmed absent (uninstall complete), so a later native re-install
+   * does not inherit a stale verdict.
+   *
+   * Who reads it: 34.13-14's `isBottleEligible()` seam only — which is why
+   * `getSettings()`, `isNative()`, `launch()` and `uninstall()` all stay
+   * consistent with one another. The Phase 24 bridge predicates deliberately
+   * do NOT read it (the bridge bottle is a different filesystem root that
+   * never held these bits).
+   *
+   * ⚠ CARRY-FORWARD WARNING: `steamMetadataStore.set` REPLACES the whole
+   * entry (T-18-02-04), so this field must be explicitly carried forward by
+   * any write that enumerates its payload — exactly as `mac_arch_verified` /
+   * `mac_arch_source` already are. 34.13-14 owns that edit; without it the
+   * verdict is silently dropped on the next appdetails fetch and the forced
+   * game reverts to native routing intermittently. */
+  forcedWindowsViaBottle?: boolean
   // GAP-B: persists the delisted verdict (appdetails success:false) across restarts.
   // Absent / false means "not known delisted"; true means confirmed unavailable on Steam.
   is_delisted?: boolean
