@@ -14,7 +14,9 @@ import { BTN_ACTION, BTN_BACK } from '../controller'
 import { useGamepadButtonPress } from '../hooks'
 import {
   probeSteamQuickInstallTarget,
-  resolveConsoleActionIntent
+  resolveConsoleActionIntent,
+  steamBlockedMessage,
+  type ConsoleFocusKey as FocusKey
 } from './consoleSteamTarget'
 import type { SteamQuickInstallDegrade } from 'frontend/state/InstallGameModal'
 
@@ -23,7 +25,10 @@ type PlatformOption = {
   label: string
 }
 
-type FocusKey = 'platform' | 'wine' | 'cancel' | 'install'
+// `FocusKey` is imported from ./consoleSteamTarget as ConsoleFocusKey (34.13
+// review WR-01): `resolveConsoleActionIntent` takes that exact union, so a
+// second identical local declaration here was a silent drift hazard -- the
+// two could diverge and only the argument position would notice.
 
 export default function InstallOverlay({
   game,
@@ -315,6 +320,14 @@ export default function InstallOverlay({
       ? (wineVersion?.name ?? t('console.install.wineMissing', 'Not selected'))
       : t('console.install.wineLoading', 'Loading…')
 
+  // WR-01: ONE lookup through consoleSteamTarget's exhaustive
+  // `[key, default]` table. The render site must never re-branch on
+  // `reason` -- the ternary this replaces routed any future third reason
+  // into the library-full copy, silently.
+  const steamBlockedCopy = steamBlocked
+    ? steamBlockedMessage(steamBlocked.reason)
+    : undefined
+
   return (
     <div className="consoleInstallOverlay" role="dialog" aria-live="polite">
       <div className="consoleModal">
@@ -336,15 +349,11 @@ export default function InstallOverlay({
               </div>
               <div className="consoleModalGameTitle">{game.title}</div>
               <p className="consoleModalReason">
-                {steamBlocked.reason === 'library-missing'
-                  ? tGamelib(
-                      'gamelib:consoleMode.steamInstallLibraryMissing',
-                      "Your Steam library folder isn't available right now. Reconnect the drive and try again."
-                    )
-                  : tGamelib(
-                      'gamelib:consoleMode.steamInstallLibraryFull',
-                      "There isn't enough free space in your Steam library folder. Free up space and try again."
-                    )}
+                {steamBlockedCopy &&
+                  tGamelib(
+                    `gamelib:${steamBlockedCopy[0]}`,
+                    steamBlockedCopy[1]
+                  )}
               </p>
               <div className="consoleInstallButtons">
                 <button

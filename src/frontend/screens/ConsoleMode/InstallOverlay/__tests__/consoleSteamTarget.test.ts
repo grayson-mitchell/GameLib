@@ -331,6 +331,32 @@ describe('InstallOverlay/index.tsx source gates (D-29, comment-stripped)', () =>
     expect(timerIdx).toBeGreaterThan(probeIdx)
   })
 
+  // WR-01 (34.13 review): the exhaustive mapping is only worth anything if
+  // the RENDER SITE uses it. Before this gate, `steamBlockedMessageKey` was
+  // imported nowhere outside this test file and the overlay inlined its own
+  // `reason === 'library-missing' ? ... : ...` ternary -- which routes any
+  // future third reason into the library-full copy, i.e. exactly the defect
+  // the exhaustive mapping advertises that it prevents.
+  it('D7: the overlay RESOLVES the copy through steamBlockedMessage( and carries no local reason ternary', () => {
+    const source = readStrippedOverlay()
+    expect(source).toContain('steamBlockedMessage(')
+    expect(source).not.toContain("reason === 'library-missing'")
+    expect(source).not.toContain("reason === 'library-full'")
+  })
+
+  it('D7-RED: the D7 gate trips against the pre-fix render site (the inlined ternary)', () => {
+    // The known-bad input is the shape the reviewer actually found, not a
+    // synthetic one: a render site that branches locally instead of looking
+    // the pair up.
+    const knownBad = [
+      "{steamBlocked.reason === 'library-missing'",
+      "  ? tGamelib('gamelib:consoleMode.steamInstallLibraryMissing', 'a')",
+      "  : tGamelib('gamelib:consoleMode.steamInstallLibraryFull', 'b')}"
+    ].join('\n')
+    expect(knownBad).not.toContain('steamBlockedMessage(')
+    expect(knownBad).toContain("reason === 'library-missing'")
+  })
+
   it('D6: exactly TWO occurrences of install({ in the whole file -- the pre-existing non-Steam installGame() call (untouched) plus the single, now-gated Steam-branch call; no THIRD call introduced. DIVERGENCE FROM PLAN TEXT, recorded in the SUMMARY: the plan\'s own acceptance criteria states "returns 1", but the file has carried two install({ call sites (line 99 Steam branch, line 173 installGame()) since before this task -- verified via `grep -c "install({"` against HEAD before any edit in this task. The plan\'s own <objective> intends "no second install path on the Steam branch", which this count (unchanged at 2) proves; a literal "1" would be false even against the plan\'s own untouched-file baseline.', () => {
     const source = readStrippedOverlay()
     const count = (source.match(/install\(\{/g) ?? []).length

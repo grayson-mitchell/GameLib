@@ -100,23 +100,57 @@ export function resolveConsoleActionIntent({
 }
 
 /**
- * Exhaustive switch over `SteamQuickInstallDegrade['reason']` — a third
- * reason added upstream is a compile error here (the `never` branch), not a
- * silently missing catalog key.
+ * Exhaustive `[i18nKey, englishDefault]` table over
+ * `SteamQuickInstallDegrade['reason']`. A third reason added upstream is a
+ * compile error HERE (`Record<union, ...>` cannot be satisfied without the
+ * new member), not a silently missing catalog key.
+ *
+ * WHY the pair and not the key alone (34.13 review WR-01): the previous
+ * key-only export was never imported outside `__tests__`, and the real
+ * render site inlined its own
+ * `reason === 'library-missing' ? ... : ...` ternary — which routes ANY
+ * future third reason into the *library-full* copy, the exact defect the
+ * exhaustive mapping claims to prevent. Carrying the English default
+ * alongside the key is what makes the render site a single lookup with no
+ * branch left to get wrong.
+ *
+ * The tuple shape is also the gate-sanctioned one: `hardcodedStringGate.ts`'s
+ * Pattern 2 (`isKeyDefaultTupleElement`) exempts both elements of a
+ * `[dottedKey, defaultText]` pair, the same idiom `CrossoverBadge.tsx` and
+ * `stateLabels.ts` already use. A bare `return 'consoleMode.x'` is NOT
+ * exempt and is a blocking violation once this file enters
+ * `meta/i18nGateScope.json`.
+ */
+const STEAM_BLOCKED_MESSAGES: Record<
+  SteamQuickInstallDegrade['reason'],
+  [string, string]
+> = {
+  'library-missing': [
+    'consoleMode.steamInstallLibraryMissing',
+    "Your Steam library folder isn't available right now. Reconnect the drive and try again."
+  ],
+  'library-full': [
+    'consoleMode.steamInstallLibraryFull',
+    "There isn't enough free space in your Steam library folder. Free up space and try again."
+  ]
+}
+
+/**
+ * The `[key, default]` pair for a degrade reason. Callers pass both straight
+ * into `t()` — never re-branch on `reason` at the render site.
+ */
+export function steamBlockedMessage(
+  reason: SteamQuickInstallDegrade['reason']
+): [string, string] {
+  return STEAM_BLOCKED_MESSAGES[reason]
+}
+
+/**
+ * Back-compat accessor for the key alone. Kept because the exhaustiveness
+ * proof in `__tests__` asserts against it directly.
  */
 export function steamBlockedMessageKey(
   reason: SteamQuickInstallDegrade['reason']
 ): string {
-  switch (reason) {
-    case 'library-missing':
-      return 'consoleMode.steamInstallLibraryMissing'
-    case 'library-full':
-      return 'consoleMode.steamInstallLibraryFull'
-    default: {
-      const exhaustive: never = reason
-      throw new Error(
-        `Unhandled SteamQuickInstallDegrade reason: ${String(exhaustive)}`
-      )
-    }
-  }
+  return steamBlockedMessage(reason)[0]
 }
