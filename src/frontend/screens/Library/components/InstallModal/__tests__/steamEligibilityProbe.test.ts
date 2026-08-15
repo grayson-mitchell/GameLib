@@ -44,25 +44,27 @@ const distinctiveVerdict: SteamSectionGatingVerdict = {
 describe('shouldProbeEligibility / initialEligibilityState', () => {
   it('probes on macOS', () => {
     expect(
-      shouldProbeEligibility({ platform: 'darwin', runner: 'steam' })
+      shouldProbeEligibility({ platform: 'darwin', runner: 'steam', action: 'install' })
     ).toBe(true)
     const state = initialEligibilityState({
       platform: 'darwin',
       runner: 'steam',
-      appName: '440'
+      appName: '440',
+      action: 'install'
     })
     expect(isEligibilityPending(state)).toBe(true)
   })
 
   it('skips on Windows and on Linux', () => {
     for (const platform of ['win32', 'linux'] as const) {
-      expect(shouldProbeEligibility({ platform, runner: 'steam' })).toBe(
+      expect(shouldProbeEligibility({ platform, runner: 'steam', action: 'install' })).toBe(
         false
       )
       const state = initialEligibilityState({
         platform,
         runner: 'steam',
-        appName: '440'
+        appName: '440',
+        action: 'install'
       })
       expect(isEligibilityPending(state)).toBe(false)
       expect(state).toMatchObject({ bottleRequired: false })
@@ -76,26 +78,71 @@ describe('shouldProbeEligibility / initialEligibilityState', () => {
     // "not eligible" false negative
     // (`.planning/debug/steam-bottle-guided-setup-never-fires.md`).
     for (const platform of [undefined, '', 'freebsd']) {
-      expect(shouldProbeEligibility({ platform, runner: 'steam' })).toBe(
+      expect(shouldProbeEligibility({ platform, runner: 'steam', action: 'install' })).toBe(
         true
       )
       const state = initialEligibilityState({
         platform,
         runner: 'steam',
-        appName: '440'
+        appName: '440',
+        action: 'install'
       })
       expect(isEligibilityPending(state)).toBe(true)
     }
   })
 
+  // 34.13 review WR-08: `InstallModal`'s consuming branch requires
+  // `action === 'install'`, so the IMPORT dialog discards any verdict the
+  // probe produces -- but the probe still cost a real `appdetails` fetch
+  // and a poll bounded only by METADATA_FETCH_TIMEOUT_MS (15s).
+  it("WR-08: a Steam IMPORT on macOS never probes -- the branch that would consume the verdict requires action === 'install'", () => {
+    expect(
+      shouldProbeEligibility({
+        platform: 'darwin',
+        runner: 'steam',
+        action: 'import'
+      })
+    ).toBe(false)
+    const state = initialEligibilityState({
+      platform: 'darwin',
+      runner: 'steam',
+      appName: '440',
+      action: 'import'
+    })
+    expect(isEligibilityPending(state)).toBe(false)
+    expect(state).toMatchObject({ bottleRequired: false })
+  })
+
+  it('WR-08-RED: the pre-fix gate (platform+runner only) would have probed that same macOS import', () => {
+    // The shipped implementation, written out so the discriminator is
+    // visible rather than asserted: it answers `true` for exactly the case
+    // the fixed gate refuses.
+    const preFix = ({
+      platform,
+      runner
+    }: {
+      platform: string | undefined
+      runner: string
+    }) => runner === 'steam' && platform !== 'win32' && platform !== 'linux'
+    expect(preFix({ platform: 'darwin', runner: 'steam' })).toBe(true)
+    expect(
+      shouldProbeEligibility({
+        platform: 'darwin',
+        runner: 'steam',
+        action: 'import'
+      })
+    ).toBe(false)
+  })
+
   it('a non-steam runner never probes', () => {
-    expect(shouldProbeEligibility({ platform: 'darwin', runner: 'gog' })).toBe(
+    expect(shouldProbeEligibility({ platform: 'darwin', runner: 'gog', action: 'install' })).toBe(
       false
     )
     const state = initialEligibilityState({
       platform: 'darwin',
       runner: 'gog',
-      appName: '440'
+      appName: '440',
+      action: 'install'
     })
     expect(isEligibilityPending(state)).toBe(false)
   })

@@ -44,12 +44,22 @@ export type EligibilityState =
  */
 export function shouldProbeEligibility({
   platform,
-  runner
+  runner,
+  action
 }: {
   platform: string | undefined
   runner: Runner
+  /** 34.13 review WR-08. `InstallModal`'s consuming branch is
+   * `isSteamManagedApp = runner === 'steam' && action === 'install' &&
+   * gameInfo`, so an IMPORT dialog opened for a Steam game on macOS used to
+   * fire `isSteamBottleEligible` -> `checkBottleEligibility()` ->
+   * `ensurePlatformsCaptured()` -> a real outbound `appdetails` fetch and a
+   * poll bounded only by `METADATA_FETCH_TIMEOUT_MS` (15s), to produce a
+   * verdict nothing on that branch reads. Required (not optional-defaulted)
+   * so a new caller cannot silently re-open the gap. */
+  action: 'install' | 'import'
 }): boolean {
-  if (runner !== 'steam') {
+  if (runner !== 'steam' || action !== 'install') {
     return false
   }
   // Written as an explicit win32/linux SKIP, never as
@@ -70,13 +80,15 @@ export function shouldProbeEligibility({
 export function initialEligibilityState({
   platform,
   runner,
-  appName
+  appName,
+  action
 }: {
   platform: string | undefined
   runner: Runner
   appName: string
+  action: 'install' | 'import'
 }): EligibilityState {
-  if (shouldProbeEligibility({ platform, runner })) {
+  if (shouldProbeEligibility({ platform, runner, action })) {
     return { phase: 'pending', appName }
   }
   return { phase: 'resolved', appName, bottleRequired: false }
@@ -175,17 +187,22 @@ export function applyEligibilityPending(
 export function useSteamBottleEligibility({
   platform,
   runner,
-  appName
+  appName,
+  action
 }: {
   platform: string | undefined
   runner: Runner
   appName: string
+  action: 'install' | 'import'
 }): { pending: boolean; bottleRequired: boolean } {
   const identityRef = useRef<string>()
-  const currentIdentity = `${platform}::${runner}::${appName}`
+  // `action` participates in the identity (WR-08): switching between the
+  // install and import dialogs for the same game must re-seed, not reuse a
+  // verdict gathered under the other action.
+  const currentIdentity = `${platform}::${runner}::${appName}::${action}`
   const [state, setState] = useState<EligibilityState>(() => {
     identityRef.current = currentIdentity
-    return initialEligibilityState({ platform, runner, appName })
+    return initialEligibilityState({ platform, runner, appName, action })
   })
 
   if (identityRef.current !== currentIdentity) {
@@ -193,7 +210,7 @@ export function useSteamBottleEligibility({
     // state from a changed identity here (rather than in an effect) keeps
     // the re-seed on the same tick as the change, not a tick after paint.
     identityRef.current = currentIdentity
-    setState(initialEligibilityState({ platform, runner, appName }))
+    setState(initialEligibilityState({ platform, runner, appName, action }))
   }
 
   useEffect(() => {
@@ -230,7 +247,7 @@ export function useSteamBottleEligibility({
     return () => {
       cancelled = true
     }
-  }, [platform, runner, appName])
+  }, [platform, runner, appName, action])
 
   return {
     pending: isEligibilityPending(state),

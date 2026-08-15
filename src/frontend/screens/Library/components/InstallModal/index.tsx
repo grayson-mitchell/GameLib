@@ -92,7 +92,17 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   // `shouldProbeEligibility`, which returns `false` for any non-Steam
   // runner, so this is a no-op call for GOG/Epic/Amazon/sideload, never a
   // probe. Do NOT "fix" this into a conditional call.
-  const eligibility = useSteamBottleEligibility({ platform, runner, appName })
+  // WR-08: `action` is threaded in so the probe fires only for the branch
+  // that consumes it (`isSteamManagedApp` below requires
+  // `action === 'install'`). Without it, opening the IMPORT dialog for a
+  // Steam game on macOS ran a real `appdetails` fetch for a verdict nothing
+  // on that branch reads.
+  const eligibility = useSteamBottleEligibility({
+    platform,
+    runner,
+    appName,
+    action
+  })
 
   const [winePrefix, setWinePrefix] = useState('...')
   const [wineVersion, setWineVersion] = useState<WineInstallation>()
