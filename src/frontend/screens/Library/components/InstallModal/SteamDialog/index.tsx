@@ -164,7 +164,15 @@ export default function SteamDialog({
         setDiskSpace({ message, validPath, validFlatpakPath })
       }
     }
-    getSpace()
+    // WR-03: `.catch` (not a bare `void`) -- a rejected checkDiskSpace is an
+    // UNKNOWN free-space verdict, never a blocking one (D-08), so the line
+    // simply does not render. Leaving it floating produced an unhandled
+    // rejection under the Tauri sidecar.
+    getSpace().catch(() => {
+      if (!cancelled) {
+        setDiskSpace(null)
+      }
+    })
     return () => {
       cancelled = true
     }

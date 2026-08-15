@@ -177,12 +177,24 @@ const SteamBottleSetup = () => {
     }
 
     const poll = () => {
-      void window.api.steamBottleStatus().then((status) => {
-        if (status.provisioned) {
-          setProvisioned(true)
-          if (pollRef.current) clearInterval(pollRef.current)
-        }
-      })
+      void window.api
+        .steamBottleStatus()
+        .then((status) => {
+          if (status.provisioned) {
+            setProvisioned(true)
+            if (pollRef.current) clearInterval(pollRef.current)
+          }
+        })
+        .catch(() => {
+          // 34.13 review WR-03: `void` alone silences the lint rule but
+          // attaches NO rejection handler -- under the Tauri sidecar an
+          // unported/erroring channel rejects, which produced an unhandled
+          // rejection every STATUS_POLL_INTERVAL_MS for the whole
+          // provisioning phase. A rejected status READ is not proof the
+          // provisioning failed, so keep polling (the interval is still
+          // armed) and let the next tick answer -- but never leave the
+          // rejection unhandled.
+        })
     }
     poll()
     pollRef.current = setInterval(poll, STATUS_POLL_INTERVAL_MS)

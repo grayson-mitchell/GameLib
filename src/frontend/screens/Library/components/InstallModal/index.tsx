@@ -310,7 +310,15 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
           }
         }
       }
-      getWine()
+      // WR-03: a rejected getAlternativeWine leaves the engine list empty,
+      // which the selector already renders as a disabled dropdown -- but a
+      // floating promise here was an unhandled rejection under the Tauri
+      // sidecar.
+      getWine().catch(() => {
+        window.api.logError(
+          '34.13-12 InstallModal: getAlternativeWine failed; engine list left empty'
+        )
+      })
     }
   }, [showWineSelector])
 
