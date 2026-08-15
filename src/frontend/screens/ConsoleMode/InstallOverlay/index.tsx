@@ -18,7 +18,10 @@ import {
   steamBlockedMessage,
   type ConsoleFocusKey as FocusKey
 } from './consoleSteamTarget'
-import type { SteamQuickInstallDegrade } from 'frontend/state/InstallGameModal'
+import {
+  installSteamGame,
+  type SteamQuickInstallDegrade
+} from 'frontend/state/InstallGameModal'
 
 type PlatformOption = {
   value: InstallPlatform
@@ -126,16 +129,19 @@ export default function InstallOverlay({
         setSteamBlocked(verdict.degrade)
         return
       }
-      void install({
-        gameInfo: game,
-        previousProgress: null,
-        progress,
-        installPath: 'default',
-        isInstalling: false,
-        platformToInstall: 'Windows',
-        t,
-        showDialogModal: () => null
-      })
+      // D-23 / WR-01 (34.13 review WR-02): route through `installSteamGame`
+      // with NO path argument, exactly like the desktop quick-install path.
+      // The generic `install()` helper this replaces passed
+      // `installPath: 'default'`, which `helpers/library.ts` resolves to
+      // `AppSettings.defaultInstallPath` -- GameLib's generic install dir,
+      // NOT a Steam library. That made the free-space check above
+      // (`target.steamappsDir`) validate a directory the install would not
+      // write to, and produced a spurious `rejected install-path override`
+      // backend warning on EVERY Console Mode Steam install when
+      // `resolveOverride()` refused the unregistered path and fell back to
+      // primary. `installSteamGame` is D-23's stated sole marshalling site
+      // for `window.api.install` on the Steam path.
+      installSteamGame(game.app_name, game)
       timer = setTimeout(() => {
         if (!cancelled) onDismiss()
       }, 1500)

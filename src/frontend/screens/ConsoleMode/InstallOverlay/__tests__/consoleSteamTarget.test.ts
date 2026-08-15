@@ -320,7 +320,16 @@ describe('InstallOverlay/index.tsx source gates (D-29, comment-stripped)', () =>
   it('D4: the non-Steam path is untouched', () => {
     const source = readStrippedOverlay()
     expect(source).toContain("installPath: installPath || 'default'")
-    expect(source).toContain("platformToInstall: 'Windows'")
+    // CORRECTED by 34.13 review WR-02: this assertion used to read
+    // `toContain("platformToInstall: 'Windows'")` and was described as
+    // proving "the non-Steam path is untouched" -- but the non-Steam
+    // call passes the `platformToInstall` VARIABLE (line 225), never the
+    // literal. The only literal `platformToInstall: 'Windows'` in this
+    // file lived in the STEAM branch, so this assertion was measuring the
+    // opposite of the property it named, and WR-02's removal of that
+    // Steam-branch call is what exposed it. The non-Steam call's real
+    // shape is the variable pass-through.
+    expect(source).toContain('platformToInstall,')
   })
 
   it('D5: the timer is armed inside the ok branch, not at effect top level -- setTimeout( comes after probeSteamQuickInstallTarget( textually', () => {
@@ -357,9 +366,38 @@ describe('InstallOverlay/index.tsx source gates (D-29, comment-stripped)', () =>
     expect(knownBad).toContain("reason === 'library-missing'")
   })
 
-  it('D6: exactly TWO occurrences of install({ in the whole file -- the pre-existing non-Steam installGame() call (untouched) plus the single, now-gated Steam-branch call; no THIRD call introduced. DIVERGENCE FROM PLAN TEXT, recorded in the SUMMARY: the plan\'s own acceptance criteria states "returns 1", but the file has carried two install({ call sites (line 99 Steam branch, line 173 installGame()) since before this task -- verified via `grep -c "install({"` against HEAD before any edit in this task. The plan\'s own <objective> intends "no second install path on the Steam branch", which this count (unchanged at 2) proves; a literal "1" would be false even against the plan\'s own untouched-file baseline.', () => {
+  // NARROWED BY 34.13 review WR-02 (was: `toBe(2)`). The Steam branch's
+  // generic `install({ ... installPath: 'default' ... })` call is GONE --
+  // it resolved to `AppSettings.defaultInstallPath` (GameLib's generic
+  // install dir), not the Steam library the free-space check above had just
+  // validated, contradicting D-23. The Steam branch now calls
+  // `installSteamGame(...)` with no path, so exactly ONE `install({`
+  // remains: the pre-existing, untouched non-Steam `installGame()` call.
+  // The plan's original intent ("no second install path on the Steam
+  // branch") is now proven more directly by D8 below.
+  it('D6: exactly ONE occurrence of install({ -- only the pre-existing non-Steam installGame() call survives', () => {
     const source = readStrippedOverlay()
     const count = (source.match(/install\(\{/g) ?? []).length
-    expect(count).toBe(2)
+    expect(count).toBe(1)
+  })
+
+  it('D8: the Steam branch marshals through installSteamGame( with no path argument (D-23) and never the generic helper', () => {
+    const source = readStrippedOverlay()
+    expect(source).toContain('installSteamGame(game.app_name, game)')
+    // The generic helper's Steam-path signature is what D-23 forbids: a
+    // renderer-side second definition of "primary".
+    expect(source).not.toContain("installPath: 'default'")
+  })
+
+  it('D8-RED: the D8 gate trips against the pre-fix Steam-branch call', () => {
+    const knownBad = [
+      'void install({',
+      '  gameInfo: game,',
+      "  installPath: 'default',",
+      "  platformToInstall: 'Windows',",
+      '})'
+    ].join('\n')
+    expect(knownBad).not.toContain('installSteamGame(game.app_name, game)')
+    expect(knownBad).toContain("installPath: 'default'")
   })
 })
