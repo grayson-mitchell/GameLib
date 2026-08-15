@@ -538,11 +538,15 @@ export default class SteamGame implements Game {
         )
       }
 
-      // DETAIL-01: capture native platform support from appdetails.
-      // Windows is the implicit baseline (no GameInfo flag); only mac/linux
-      // native support is recorded onto the generic platform flags.
+      // DETAIL-01: capture native platform support from appdetails, for all
+      // three platforms. D-17: the Windows flag is a pre-install
+      // depot-availability signal for the install form's selectable macOS
+      // platform row — it comes from this SAME response, so it adds no new
+      // network call, no PICS query, and involves none of the four install
+      // branches' routing logic.
       const is_mac_native = !!data.platforms?.mac
       const is_linux_native = !!data.platforms?.linux
+      const is_windows_native = !!data.platforms?.windows
 
       // MAC32-01 (direction B): derive the pre-install arch hint from the
       // SAME appdetails response — no separate network/PICS call. Gated:
@@ -567,6 +571,7 @@ export default class SteamGame implements Game {
         art_square,
         is_mac_native,
         is_linux_native,
+        is_windows_native,
         mac_arch,
         // GAP-B: clear any stale delisted flag — the app is available again.
         is_delisted: false,
@@ -591,6 +596,7 @@ export default class SteamGame implements Game {
         extra,
         is_mac_native,
         is_linux_native,
+        is_windows_native,
         is_delisted: false,
         platformsCaptured: true,
         mac_arch,

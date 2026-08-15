@@ -469,6 +469,78 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     )
   })
 
+  // ── D-17: Windows depot-availability capture ──────────────────────────────
+
+  it('D-17: appdetails platforms.windows maps onto GameInfo.is_windows_native', async () => {
+    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+    library.set(APP_ID, makeEntry())
+
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    expect(library.get(APP_ID)!.is_windows_native).toBe(true)
+  })
+
+  it('D-17: is_windows_native is persisted to steamMetadataStore', async () => {
+    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+    library.set(APP_ID, makeEntry())
+
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    expect(steamMetadataStore.set).toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({ is_windows_native: true })
+    )
+  })
+
+  it('D-17 false-safe: platforms.windows false yields is_windows_native false on BOTH the GameInfo and the persisted entry', async () => {
+    const fixtureWindowsFalse = {
+      data: {
+        [APP_ID]: {
+          ...fixtureApiResponse.data[APP_ID],
+          data: {
+            ...fixtureApiResponse.data[APP_ID].data,
+            platforms: { windows: false, mac: true, linux: false }
+          }
+        }
+      }
+    }
+    ;(axios.get as jest.Mock).mockResolvedValue(fixtureWindowsFalse)
+    library.set(APP_ID, makeEntry())
+
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    expect(library.get(APP_ID)!.is_windows_native).toBe(false)
+    expect(steamMetadataStore.set).toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({ is_windows_native: false })
+    )
+  })
+
+  it('D-17 false-safe: an appdetails response with no platforms object yields false, never undefined', async () => {
+    const fixtureNoPlatforms = {
+      data: {
+        [APP_ID]: {
+          success: true,
+          data: {
+            name: 'Dota 2',
+            short_description: 'A multiplayer online battle arena game.',
+            genres: []
+          }
+        }
+      }
+    }
+    ;(axios.get as jest.Mock).mockResolvedValue(fixtureNoPlatforms)
+    library.set(APP_ID, makeEntry())
+
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    expect(library.get(APP_ID)!.is_windows_native).toBe(false)
+  })
+
   // ── MAC32-01: inline mac_arch derivation (direction B) ────────────────────
 
   function fixtureWithMacRequirements(minimumHtml: string | undefined) {
