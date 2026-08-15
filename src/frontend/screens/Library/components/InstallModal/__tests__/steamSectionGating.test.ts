@@ -1,4 +1,8 @@
+import { readFileSync } from 'fs'
+import { join } from 'path'
+
 import type { InstallPlatform } from 'common/types'
+import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import {
   resolveSteamSectionGating,
   SteamSectionGatingInput,
@@ -391,5 +395,399 @@ describe("Phase 21 D-09 zero-friction is NOT this module's concern", () => {
       'platformRow',
       'wineSection'
     ])
+  })
+})
+
+// ---------------------------------------------------------------------
+// Task 3, Block 1 -- the matrix harness rejects known-bad gating functions
+// ---------------------------------------------------------------------
+//
+// Permanent, in-CI answer to "an assertion that cannot fail against a
+// deliberately-broken gating function is not evidence" (34.13-VALIDATION.md
+// risk 4, "one click-through != coverage" -- pinned here at the unit level).
+// Each saboteur delegates to the real `resolveSteamSectionGating` and then
+// introduces ONE specific, named defect. Asserting a bare `.toThrow()`
+// would not be sufficient -- a saboteur that breaks the WRONG rows would
+// still pass it -- so every assertion below names the exact row labels the
+// thrown message must contain, and only those.
+
+/**
+ * Runs `assertMatrix(saboteur)`, asserts it throws, and asserts the thrown
+ * message names EXACTLY `expectedRows` -- no fewer, no more. This is what
+ * makes each saboteur test a proof that the harness bites on the SPECIFIC
+ * rows the saboteur is documented to break, not merely that it bites
+ * somewhere.
+ */
+function expectSaboteurBreaksExactlyRows(
+  saboteur: (input: SteamSectionGatingInput) => SteamSectionGatingVerdict,
+  expectedRows: RowLabel[]
+): void {
+  let thrown: Error | undefined
+  try {
+    assertMatrix(saboteur)
+  } catch (e) {
+    thrown = e as Error
+  }
+  expect(thrown).toBeDefined()
+  const mentionedRows = Array.from(
+    new Set((thrown as Error).message.match(/Row \d/g) ?? [])
+  ).sort()
+  const expected = expectedRows.map((row) => `Row ${row}`).sort()
+  expect(mentionedRows).toEqual(expected)
+}
+
+describe('the matrix harness rejects known-bad gating functions', () => {
+  it('libraryDropdownIgnoresNativeInstall: drops the nativeInstallOn conjunct from hasChoice -- breaks Row 2, Row 5, Row 7', () => {
+    function libraryDropdownIgnoresNativeInstall(
+      input: SteamSectionGatingInput
+    ): SteamSectionGatingVerdict {
+      const real = resolveSteamSectionGating(input)
+      // DEFECT: libraryCount > 1 alone shows a dropdown, ignoring whether
+      // native install is even ON.
+      const sabotagedHasChoice = input.libraryCount > 1
+      const libraryDropdown = !real.wineSection && sabotagedHasChoice
+      return { ...real, libraryDropdown }
+    }
+    expectSaboteurBreaksExactlyRows(libraryDropdownIgnoresNativeInstall, [
+      '2',
+      '5',
+      '7'
+    ])
+  })
+
+  it('libraryDropdownOffByOne: uses libraryCount >= 1 instead of > 1 -- breaks Row 2, Row 5, Row 7', () => {
+    function libraryDropdownOffByOne(
+      input: SteamSectionGatingInput
+    ): SteamSectionGatingVerdict {
+      const real = resolveSteamSectionGating(input)
+      // DEFECT: >= 1 instead of > 1 -- a single library already counts as
+      // "a choice."
+      const sabotagedHasChoice = input.nativeInstallOn && input.libraryCount >= 1
+      const libraryDropdown = !real.wineSection && sabotagedHasChoice
+      return { ...real, libraryDropdown }
+    }
+    expectSaboteurBreaksExactlyRows(libraryDropdownOffByOne, ['2', '5', '7'])
+  })
+
+  it('platformRowAlwaysReadonlyWindows: the un-amended D-03, before D-17/D-18/D-19 -- breaks Row 2, Row 3, Row 4, Row 7, Row 8', () => {
+    function platformRowAlwaysReadonlyWindows(
+      input: SteamSectionGatingInput
+    ): SteamSectionGatingVerdict {
+      const real = resolveSteamSectionGating(input)
+      return { ...real, platformRow: 'readonly-windows' }
+    }
+    expectSaboteurBreaksExactlyRows(platformRowAlwaysReadonlyWindows, [
+      '2',
+      '3',
+      '4',
+      '7',
+      '8'
+    ])
+  })
+
+  it('linuxPlatformRowRenders: returns readonly-windows on the Linux-family bucket -- breaks Row 7, Row 8', () => {
+    function linuxPlatformRowRenders(
+      input: SteamSectionGatingInput
+    ): SteamSectionGatingVerdict {
+      const real = resolveSteamSectionGating(input)
+      const isLinuxFamily =
+        input.hostPlatform !== 'darwin' && input.hostPlatform !== 'win32'
+      if (isLinuxFamily) {
+        return { ...real, platformRow: 'readonly-windows' }
+      }
+      return real
+    }
+    expectSaboteurBreaksExactlyRows(linuxPlatformRowRenders, ['7', '8'])
+  })
+
+  it('windowsHostGetsWineSection: drops the isMac guard from wineSection -- breaks Row 5, Row 6, Row 7, Row 8', () => {
+    function windowsHostGetsWineSection(
+      input: SteamSectionGatingInput
+    ): SteamSectionGatingVerdict {
+      const real = resolveSteamSectionGating(input)
+      const effectivePlatform: InstallPlatform =
+        real.platformRow === 'selectable'
+          ? input.selectedPlatform
+          : real.platformRow === 'readonly-macos'
+            ? 'Mac'
+            : 'Windows'
+      const effectiveBottleRequired =
+        input.hostPlatform === 'darwin' && input.bottleRequired
+      // DEFECT: the real formula is
+      // `isMac && (effectiveBottleRequired || effectivePlatform === 'Windows')`
+      // -- the `isMac &&` guard is dropped here.
+      const wineSection =
+        effectiveBottleRequired || effectivePlatform === 'Windows'
+      return { ...real, wineSection }
+    }
+    expectSaboteurBreaksExactlyRows(windowsHostGetsWineSection, [
+      '5',
+      '6',
+      '7',
+      '8'
+    ])
+  })
+
+  it('selectableWithoutWindowsDepot: offers selectable when hasWindowsDepot is false -- breaks Row 2, Row 3', () => {
+    function selectableWithoutWindowsDepot(
+      input: SteamSectionGatingInput
+    ): SteamSectionGatingVerdict {
+      const real = resolveSteamSectionGating(input)
+      // DEFECT: every non-bottle-required mac-native combination becomes
+      // selectable, even with no Windows depot (the Windows MenuItem must
+      // be ABSENT, not present-but-disabled -- 34.13-01's `=== true`
+      // contract).
+      if (input.hostPlatform === 'darwin' && !input.bottleRequired) {
+        return { ...real, platformRow: 'selectable' }
+      }
+      return real
+    }
+    expectSaboteurBreaksExactlyRows(selectableWithoutWindowsDepot, ['2', '3'])
+  })
+
+  it('libraryDropdownDuringBottleInstall: drops the !wineSection term -- breaks Row 1, Row 4', () => {
+    function libraryDropdownDuringBottleInstall(
+      input: SteamSectionGatingInput
+    ): SteamSectionGatingVerdict {
+      const real = resolveSteamSectionGating(input)
+      // DEFECT: the destination is the bottle's steamapps whenever
+      // wineSection is true (D-02), but this drops that qualification --
+      // a host-library dropdown would lie about where the game goes.
+      const hasChoice = input.nativeInstallOn && input.libraryCount > 1
+      const libraryDropdown = hasChoice
+      return { ...real, libraryDropdown }
+    }
+    expectSaboteurBreaksExactlyRows(libraryDropdownDuringBottleInstall, [
+      '1',
+      '4'
+    ])
+  })
+
+  it('freeSpaceAlwaysShown: returns freeSpaceLine true unconditionally -- breaks Row 1, Row 2, Row 4, Row 5, Row 7', () => {
+    function freeSpaceAlwaysShown(
+      input: SteamSectionGatingInput
+    ): SteamSectionGatingVerdict {
+      const real = resolveSteamSectionGating(input)
+      return { ...real, freeSpaceLine: true }
+    }
+    expectSaboteurBreaksExactlyRows(freeSpaceAlwaysShown, [
+      '1',
+      '2',
+      '4',
+      '5',
+      '7'
+    ])
+  })
+
+  it('contentLightNoticeEverywhere: returns contentLightNotice true unconditionally -- breaks Row 1, Row 2, Row 3, Row 4, Row 6, Row 8', () => {
+    function contentLightNoticeEverywhere(
+      input: SteamSectionGatingInput
+    ): SteamSectionGatingVerdict {
+      const real = resolveSteamSectionGating(input)
+      return { ...real, contentLightNotice: true }
+    }
+    expectSaboteurBreaksExactlyRows(contentLightNoticeEverywhere, [
+      '1',
+      '2',
+      '3',
+      '4',
+      '6',
+      '8'
+    ])
+  })
+
+  it('contentLightNoticeOnMac: extends the notice to a macOS row with no sections -- breaks Row 2 and nothing else', () => {
+    function contentLightNoticeOnMac(
+      input: SteamSectionGatingInput
+    ): SteamSectionGatingVerdict {
+      const real = resolveSteamSectionGating(input)
+      // DEFECT: "surely a mac row with nothing else showing is content-
+      // light too" -- it is not. Row 2 always carries a live, actionable
+      // platform selector (Q6 deliberately scopes the notice to non-mac
+      // rows only). Targeted at exactly Row 2's shape: mac host, no wine
+      // section, no library dropdown.
+      if (
+        input.hostPlatform === 'darwin' &&
+        !real.wineSection &&
+        !real.libraryDropdown
+      ) {
+        return { ...real, contentLightNotice: true }
+      }
+      return real
+    }
+    expectSaboteurBreaksExactlyRows(contentLightNoticeOnMac, ['2'])
+  })
+})
+
+// ---------------------------------------------------------------------
+// Task 3, Block 2 -- row coverage
+// ---------------------------------------------------------------------
+
+describe('row coverage', () => {
+  it('the 96-combination sweep classifies to exactly the 8 expected labels, each hit at least once', () => {
+    const distinctLabels = Array.from(
+      new Set(ALL_COMBINATIONS.map((input) => rowOf(input)))
+    ).sort()
+    expect(distinctLabels).toEqual([...ROW_LABELS].sort())
+    for (const label of ROW_LABELS) {
+      expect(ALL_COMBINATIONS.some((input) => rowOf(input) === label)).toBe(
+        true
+      )
+    }
+  })
+
+  it('rowOf never produces a letter-suffixed label or a label above 8 -- the concrete guard against re-importing the retired 16-row table', () => {
+    for (const input of ALL_COMBINATIONS) {
+      const label = rowOf(input)
+      expect(ROW_TABLE[label]).toBeDefined()
+      expect(/^\d+[a-z]$/.test(label)).toBe(false)
+      expect(Number(label)).toBeLessThanOrEqual(8)
+    }
+  })
+})
+
+// ---------------------------------------------------------------------
+// Task 3, Block 3 -- defensive normalisation (cases the matrix does not
+// enumerate)
+// ---------------------------------------------------------------------
+
+describe('defensive normalisation (cases the matrix does not enumerate)', () => {
+  it('bottleRequired true off-mac never produces a wine surface (isBottleEligible() is mac-only, games.ts:1329) -- structurally unreachable today, not a matrix row', () => {
+    for (const hostPlatform of ['win32', 'linux']) {
+      const verdict = resolveSteamSectionGating({
+        hostPlatform,
+        bottleRequired: true,
+        nativeInstallOn: false,
+        libraryCount: 0,
+        hasWindowsDepot: false,
+        selectedPlatform: 'Windows'
+      })
+      expect(verdict.wineSection).toBe(false)
+      expect(verdict.forceWindowsViaBottle).toBe(false)
+    }
+  })
+
+  it("hostPlatform 'unknown' behaves as the Linux-family bucket -- fail-closed per D-18, a discretion call the UI-SPEC does not itself enumerate", () => {
+    const contentLightCase = resolveSteamSectionGating({
+      hostPlatform: 'unknown',
+      bottleRequired: false,
+      nativeInstallOn: false,
+      libraryCount: 0,
+      hasWindowsDepot: false,
+      selectedPlatform: 'Mac'
+    })
+    expect(contentLightCase.platformRow).toBe('absent')
+    expect(contentLightCase.contentLightNotice).toBe(true)
+
+    const choiceCase = resolveSteamSectionGating({
+      hostPlatform: 'unknown',
+      bottleRequired: false,
+      nativeInstallOn: true,
+      libraryCount: 2,
+      hasWindowsDepot: false,
+      selectedPlatform: 'Mac'
+    })
+    expect(choiceCase.platformRow).toBe('absent')
+    expect(choiceCase.libraryDropdown).toBe(true)
+    expect(choiceCase.contentLightNotice).toBe(false)
+  })
+
+  it('selectedPlatform is invariant on every non-selectable row -- proves the effectivePlatform normalisation actually holds', () => {
+    for (const input of ALL_COMBINATIONS) {
+      const macVariant = resolveSteamSectionGating({
+        ...input,
+        selectedPlatform: 'Mac'
+      })
+      if (macVariant.platformRow === 'selectable') {
+        // Only a selectable row may legitimately respond to
+        // selectedPlatform -- that is rows 2/3 <-> 4, exercised by the
+        // per-row proof above, not this invariance check.
+        continue
+      }
+      const windowsVariant = resolveSteamSectionGating({
+        ...input,
+        selectedPlatform: 'Windows'
+      })
+      expect(windowsVariant).toEqual(macVariant)
+    }
+  })
+
+  it('NaN and negative libraryCount fail closed toward "no choice offered" (NaN > 1 evaluates false, the conservative direction)', () => {
+    for (const libraryCount of [Number.NaN, -1]) {
+      const verdict = resolveSteamSectionGating({
+        hostPlatform: 'win32',
+        bottleRequired: false,
+        nativeInstallOn: true,
+        libraryCount,
+        hasWindowsDepot: false,
+        selectedPlatform: 'Windows'
+      })
+      expect(verdict.libraryDropdown).toBe(false)
+      expect(verdict.freeSpaceLine).toBe(false)
+      expect(verdict.contentLightNotice).toBe(true)
+    }
+  })
+})
+
+// ---------------------------------------------------------------------
+// Task 3, Block 4 -- the two source gates (D-09, D-22/D-26)
+// ---------------------------------------------------------------------
+//
+// Both gates run over `stripSourceComments`-stripped source: the module's
+// own header comment legitimately NAMES `alwaysShowOn`, `opens` and
+// `is_mac_native` while explaining that they are retired or arrive as
+// pre-computed inputs, so an UNSTRIPPED assertion would fail on the
+// module's own explanation of why they are absent -- the
+// self-invalidating-header defect class this repo has already ledgered.
+// The stripper is proven non-vacuous first, against an inline specimen,
+// before either gate trusts it.
+
+const MODULE_PATH = join(__dirname, '..', 'steamSectionGating.ts')
+
+function readModuleStripped(): string {
+  return stripSourceComments(readFileSync(MODULE_PATH, 'utf8'))
+}
+
+describe('stripSourceComments is proven non-vacuous before either source gate trusts it', () => {
+  it('removes a banned identifier written inside a comment, keeps one written outside', () => {
+    const specimen = [
+      '// mentions alwaysShowOn only to explain it is retired',
+      'const opensCount = 1'
+    ].join('\n')
+    const stripped = stripSourceComments(specimen)
+    expect(stripped).not.toMatch(/alwaysShowOn/)
+    expect(stripped).toMatch(/opensCount/)
+  })
+})
+
+describe('D-09: no eligibility re-derivation in the renderer', () => {
+  it('is_mac_native, mac_arch, platformsCaptured, steamPlatformsCaptured appear nowhere in stripped source', () => {
+    const stripped = readModuleStripped()
+    for (const banned of [
+      'is_mac_native',
+      'mac_arch',
+      'platformsCaptured',
+      'steamPlatformsCaptured'
+    ]) {
+      expect(stripped).not.toMatch(new RegExp(banned))
+    }
+  })
+})
+
+describe('D-22/D-26: the retired trigger model is structurally absent', () => {
+  // Permanent guard against a future contributor re-adding an auto-open
+  // predicate here because a consumer "needed to know whether to render",
+  // silently resurrecting the auto-open triggers D-22 retired.
+  it('alwaysShow, alwaysShowOn, steamInstallFormOpens, SteamInstallTriggerInput and a bare `opens` identifier appear nowhere in stripped source', () => {
+    const stripped = readModuleStripped()
+    for (const banned of [
+      'alwaysShow',
+      'alwaysShowOn',
+      'steamInstallFormOpens',
+      'SteamInstallTriggerInput'
+    ]) {
+      expect(stripped).not.toMatch(new RegExp(banned))
+    }
+    expect(stripped).not.toMatch(/\bopens\b/)
   })
 })
