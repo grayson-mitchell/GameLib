@@ -49,6 +49,9 @@ jest.mock('../electronStores', () => ({
     get: jest.fn(),
     get_nodefault: jest.fn(),
     set: jest.fn()
+  },
+  steamMetadataStore: {
+    get: jest.fn()
   }
 }))
 
@@ -68,7 +71,7 @@ jest.mock('backend/config', () => ({
 }))
 
 import SteamGame from '../games'
-import { steamBottleConfigStore } from '../electronStores'
+import { steamBottleConfigStore, steamMetadataStore } from '../electronStores'
 import { persistBottleWineVersion, getSteamBottleSettings } from '../bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import {
@@ -79,6 +82,7 @@ import type { WineInstallation } from 'common/types'
 
 const mockedSteamGame = SteamGame as unknown as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
+const mockedMetadataGet = steamMetadataStore.get as jest.Mock
 const mockedPersistBottleWineVersion = persistBottleWineVersion as jest.Mock
 const mockedGetSteamBottleSettings = getSteamBottleSettings as jest.Mock
 
@@ -102,6 +106,9 @@ describe('installFormIpc.ts', () => {
       checkBottleEligibility: mockCheckBottleEligibility
     }))
     mockedGetNodefault.mockReturnValue(undefined)
+    // Default: uncaptured/absent cache entry — the timeout/offline shape.
+    // Specs that need a captured entry override this per-test.
+    mockedMetadataGet.mockReturnValue(undefined)
     // Default: the engine the persist specs submit IS detected, so the
     // pre-existing specs measure what they were written to measure.
     mockGetAlternativeWine.mockResolvedValue([
@@ -134,7 +141,11 @@ describe('installFormIpc.ts', () => {
       async (hostileAppName) => {
         const result = await getSteamBottleEligibilityVerdict(hostileAppName)
 
-        expect(result).toEqual({ eligible: false })
+        expect(result).toEqual({
+          eligible: false,
+          hasWindowsDepot: false,
+          platformsCaptured: false
+        })
         expect(mockedSteamGame).not.toHaveBeenCalled()
       }
     )
@@ -151,7 +162,11 @@ describe('installFormIpc.ts', () => {
       async (hostileAppName: unknown) => {
         const result = await getSteamBottleEligibilityVerdict(hostileAppName)
 
-        expect(result).toEqual({ eligible: false })
+        expect(result).toEqual({
+          eligible: false,
+          hasWindowsDepot: false,
+          platformsCaptured: false
+        })
         expect(mockedSteamGame).not.toHaveBeenCalled()
       }
     )
@@ -206,6 +221,44 @@ describe('installFormIpc.ts', () => {
       const verdict = await getSteamBottleEligibilityVerdict('570')
 
       expect(verdict.bottleName).toBe('FromWineCrossoverBottle')
+    })
+  })
+
+  describe('34.14 D-02/D-03: the depot pair is READ from steamMetadataStore, never hardcoded', () => {
+    it('a captured cache entry with a Windows depot yields hasWindowsDepot: true, platformsCaptured: true', async () => {
+      mockCheckBottleEligibility.mockResolvedValue(true)
+      mockedMetadataGet.mockReturnValue({
+        is_windows_native: true,
+        platformsCaptured: true
+      })
+
+      const verdict = await getSteamBottleEligibilityVerdict('570')
+
+      expect(verdict.hasWindowsDepot).toBe(true)
+      expect(verdict.platformsCaptured).toBe(true)
+    })
+
+    it('34.13 fence: a captured-and-absent entry yields hasWindowsDepot: false, platformsCaptured: true — the genuinely-absent case', async () => {
+      mockCheckBottleEligibility.mockResolvedValue(true)
+      mockedMetadataGet.mockReturnValue({
+        is_windows_native: false,
+        platformsCaptured: true
+      })
+
+      const verdict = await getSteamBottleEligibilityVerdict('570')
+
+      expect(verdict.hasWindowsDepot).toBe(false)
+      expect(verdict.platformsCaptured).toBe(true)
+    })
+
+    it('an absent/uncaptured cache entry yields hasWindowsDepot: false, platformsCaptured: false — the timeout/offline case', async () => {
+      mockCheckBottleEligibility.mockResolvedValue(true)
+      mockedMetadataGet.mockReturnValue(undefined)
+
+      const verdict = await getSteamBottleEligibilityVerdict('570')
+
+      expect(verdict.hasWindowsDepot).toBe(false)
+      expect(verdict.platformsCaptured).toBe(false)
     })
   })
 

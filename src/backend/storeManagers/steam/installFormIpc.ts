@@ -6,13 +6,20 @@
  * so the two runtimes are physically incapable of drifting — deliberately
  * NOT the `redeemSteamKey` "port the guard verbatim into both files"
  * precedent, which produced two copies of one trust boundary.
+ *
+ * Phase 34.14 (D-02/D-03) widened `getSteamBottleEligibilityVerdict`'s return
+ * with the `hasWindowsDepot` / `platformsCaptured` pair, read from
+ * `steamMetadataStore` immediately after `checkBottleEligibility()` has
+ * already forced and awaited `ensurePlatformsCaptured()`. Because this file
+ * is never forked, the widening reaches both runtimes at once with no
+ * further edit to either registration site.
  */
 import type { WineInstallation } from 'common/types'
 import type { SteamBottleEligibilityVerdict } from 'common/types/steam'
 import { logWarning, LogPrefix } from 'backend/logger'
 import { GlobalConfig } from 'backend/config'
 import SteamGame from './games'
-import { steamBottleConfigStore } from './electronStores'
+import { steamBottleConfigStore, steamMetadataStore } from './electronStores'
 import { persistBottleWineVersion } from './bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
 
@@ -81,17 +88,38 @@ export async function getSteamBottleEligibilityVerdict(
       'getSteamBottleEligibilityVerdict: rejected non-string or non-numeric appName (T-34.13-07-01)',
       LogPrefix.Steam
     )
-    return { eligible: false }
+    // An invalid appName is a REJECTED REQUEST, not an "unknown depot" state
+    // — eligible: false short-circuits routing before the depot question is
+    // ever asked, so this platformsCaptured: false must NOT be read as a
+    // D-04 fail-open trigger. Without this note a future reader will assume
+    // every platformsCaptured: false return means "offer Windows".
+    return { eligible: false, hasWindowsDepot: false, platformsCaptured: false }
   }
 
   const eligible = await new SteamGame(appName).checkBottleEligibility()
+
+  // No new fetch and no new await occur here: the checkBottleEligibility()
+  // call above has ALREADY driven ensurePlatformsCaptured() to completion or
+  // to its METADATA_FETCH_TIMEOUT_MS deadline (D-02's entire mechanism), so
+  // this is a read of an already-paid-for result. Both comparisons are
+  // `=== true` — undefined means "never captured" on BOTH fields and must
+  // never coerce.
+  const cached = steamMetadataStore.get(appName)
+  const hasWindowsDepot = cached?.is_windows_native === true
+  const platformsCaptured = cached?.platformsCaptured === true
 
   const wineVersion = steamBottleConfigStore.get_nodefault('wineVersion')
   const bottleName =
     steamBottleConfigStore.get_nodefault('wineCrossoverBottle') ??
     DEFAULT_STEAM_BOTTLE_NAME
 
-  return { eligible, wineVersion, bottleName }
+  return {
+    eligible,
+    hasWindowsDepot,
+    platformsCaptured,
+    wineVersion,
+    bottleName
+  }
 }
 
 /**

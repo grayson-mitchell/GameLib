@@ -193,14 +193,22 @@ describe('applyEligibilityResponse / applyEligibilityFailure', () => {
 
     state = applyEligibilityResponse(state, {
       appName: '570',
-      verdict: { eligible: true, hasWindowsDepot: false, platformsCaptured: false }
+      verdict: {
+        eligible: true,
+        hasWindowsDepot: false,
+        platformsCaptured: false
+      }
     })
     expect(isEligibilityPending(state)).toBe(true)
     expect(state).not.toHaveProperty('bottleRequired')
 
     state = applyEligibilityResponse(state, {
       appName: '440',
-      verdict: { eligible: true, hasWindowsDepot: false, platformsCaptured: false }
+      verdict: {
+        eligible: true,
+        hasWindowsDepot: false,
+        platformsCaptured: false
+      }
     })
     expect(isEligibilityPending(state)).toBe(false)
     expect(state).toMatchObject({ bottleRequired: true })
