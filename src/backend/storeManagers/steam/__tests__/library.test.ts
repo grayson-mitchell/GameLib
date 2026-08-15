@@ -4409,6 +4409,67 @@ describe('pollUninstallOnce()', () => {
       expect(notify).not.toHaveBeenCalled()
     })
 
+    it('native copy removed, only a BRIDGE copy survives: badge STAYS installed, install_path re-resolves to the bridge copy, no "Game Uninstalled" toast', async () => {
+      // RED against the previous PAIRWISE check, which probed only the single
+      // "other" root ('native' -> 'bottle') and never the bridge bottle. With
+      // native and bottle both absent it declared a complete uninstall and
+      // fired the toast while the bridge copy survived.
+      //
+      // Live case this reproduces (2026-08-15): HOARD (63000) was installed
+      // on all THREE roots at once; removing the native copy reported a full
+      // uninstall while 277M remained in GameLibSteamBridge.
+      jest
+        .mocked(getBridgeBottleSettings)
+        .mockReturnValue({ wineCrossoverBottle: 'GameLibSteamBridge' } as any)
+      // Distinguish by bottle name so the Phase 17 bottle and the bridge
+      // bottle resolve to DIFFERENT roots — otherwise "survives only in the
+      // bridge" is indistinguishable from "survives in the bottle".
+      jest
+        .mocked(getBottleSteamappsDir)
+        .mockImplementation((bottleName: string) =>
+          bottleName === 'GameLibSteamBridge'
+            ? '/bridge/steamapps'
+            : '/bottle/steamapps'
+        )
+      // Present ONLY in the bridge root — absent natively and in the Phase 17
+      // bottle, so a pairwise check finds no survivor and a three-root one does.
+      ;(existsSync as jest.Mock).mockImplementation((path: string) =>
+        path.startsWith('/bridge/')
+      )
+      ;(readFileSync as jest.Mock).mockReturnValue('bridge manifest content')
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        AppState: {
+          appid: '730',
+          StateFlags: '4',
+          installdir: 'CS2Bridge',
+          SizeOnDisk: '77777'
+        }
+      })
+
+      startUninstallPolling('730', 60000)
+      await pollUninstallOnce('730') // default source: 'native'
+
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'pushGameToLibrary',
+        expect.objectContaining({
+          app_name: '730',
+          is_installed: true,
+          install: expect.objectContaining({
+            install_path: '/bridge/steamapps/common/CS2Bridge',
+            platform: 'Windows'
+          })
+        })
+      )
+      // The badge is never forced to not-installed while a bridge copy survives.
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'pushGameToLibrary',
+        expect.objectContaining({ is_installed: false })
+      )
+      // The success signal must not lie — this is the assertion the old
+      // pairwise check failed.
+      expect(notify).not.toHaveBeenCalled()
+    })
+
     it('NEITHER root has a surviving copy: falls through to the original full-uninstall behaviour (badge flips false, "Game Uninstalled" toast fires) — regression guard', async () => {
       ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone everywhere
       startUninstallPolling('730', 60000)

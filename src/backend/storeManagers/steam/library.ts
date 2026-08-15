@@ -2101,17 +2101,49 @@ export async function pollUninstallOnce(
     const existing = library.get(appId)
 
     // debug/steam-bottle-uninstall-reverts (OPERATOR PRODUCT DECISION,
-    // LOCKED, item 4/5): check the OTHER known root before declaring this
-    // title fully uninstalled — the bridge bottle is intentionally excluded
-    // (separate root, own uninstallBridgeGame()/markBridgeGameUninstalled()
-    // completion path, never routed through this poller).
-    const otherSource: 'native' | 'bottle' | null =
-      source === 'bottle' ? 'native' : source === 'native' ? 'bottle' : null
-    const survivor = otherSource
-      ? await readAcfState(appId, otherSource)
-      : ({ state: 'absent' } as const)
+    // LOCKED, item 4/5): check EVERY other known root before declaring this
+    // title fully uninstalled — native, the GameLibSteam bottle, AND the
+    // dedicated GameLibSteamBridge bottle.
+    //
+    // The bridge was previously excluded here on the reasoning that it owns
+    // its own uninstallBridgeGame()/markBridgeGameUninstalled() completion
+    // path. That is true of a bridge-INITIATED uninstall, but it does not
+    // make a surviving bridge copy invisible to a native- or bottle-scoped
+    // one. Live 2026-08-15: HOARD (63000) was installed on all THREE roots
+    // simultaneously, so removing the native copy declared a complete
+    // uninstall — and fired the toast — while 277M survived in the bridge
+    // bottle. That is exactly the overstatement this branch exists to
+    // prevent, so the check must be exhaustive over roots, not pairwise.
+    //
+    // Probe order is fixed (native, bottle, bridge minus `source`) so the
+    // re-resolved install_path is deterministic when more than one survives.
+    // Each probe is individually guarded: a root that cannot be RESOLVED at
+    // all (e.g. the bridge bottle was never provisioned, so
+    // getBridgeBottleSettings() has nothing to hand back) must not take the
+    // whole uninstall completion down with it. An unreadable root cannot
+    // confirm a survivor either way, so it is treated as absent and logged —
+    // never allowed to throw out of the poller.
+    let survivorSource: AcfSource | null = null
+    let survivor: Awaited<ReturnType<typeof readAcfState>> = { state: 'absent' }
+    for (const candidate of (['native', 'bottle', 'bridge'] as const).filter(
+      (root) => root !== source
+    )) {
+      try {
+        const candidateState = await readAcfState(appId, candidate)
+        if (candidateState.state === 'installed' && candidateState.installPath) {
+          survivorSource = candidate
+          survivor = candidateState
+          break
+        }
+      } catch (error) {
+        logWarning(
+          `Steam: uninstall-poll could not read the ${candidate} root for appId ${appId} — treating it as no survivor: ${String(error)}`,
+          LogPrefix.Steam
+        )
+      }
+    }
 
-    if (survivor.state === 'installed' && survivor.installPath && existing) {
+    if (survivorSource && survivor.installPath && existing) {
       // A copy on the OTHER root survives — re-resolve install_path/platform
       // to it instead of orphaning the entry with a stale pointer at the
       // copy we just removed (the exact re-resolution risk flagged by the
@@ -2122,7 +2154,7 @@ export async function pollUninstallOnce(
         install: {
           install_path: survivor.installPath,
           install_size: getFileSize(Number(survivor.sizeOnDisk ?? '0')),
-          platform: installPlatformForSource(otherSource as AcfSource)
+          platform: installPlatformForSource(survivorSource)
         }
       }
       library.set(appId, updated)
@@ -2138,7 +2170,7 @@ export async function pollUninstallOnce(
       // fires here — that would overstate what actually happened.
       stopUninstallPolling(appId)
       logInfo(
-        `Steam: uninstall polling complete for appId ${appId} — removed the ${source} copy; a ${otherSource} copy survives at "${survivor.installPath}", badge stays installed and install_path re-resolved to it`,
+        `Steam: uninstall polling complete for appId ${appId} — removed the ${source} copy; a ${survivorSource} copy survives at "${survivor.installPath}", badge stays installed and install_path re-resolved to it`,
         LogPrefix.Steam
       )
       return

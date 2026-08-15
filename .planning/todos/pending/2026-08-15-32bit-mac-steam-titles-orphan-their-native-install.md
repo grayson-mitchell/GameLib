@@ -29,9 +29,18 @@ The orphan can never run on Apple Silicon, and `install()` has no already-instal
 (`games.ts:884` computes `routeThroughBottle` and proceeds regardless of what exists elsewhere), so
 nothing prevents or notices the second install.
 
-**Observed live 2026-08-15:** HOARD (appId 63000) held two complete installs — native
-`~/Library/Application Support/Steam/steamapps/common/Hoard` (574M, i386, unrunnable on an M5) and
-a CrossOver bottle copy (276M). Both carried a valid `appmanifest_63000.acf`.
+**Observed live 2026-08-15:** HOARD (appId 63000) held **three** complete installs, each with its
+own valid `appmanifest_63000.acf`:
+
+| root | size | notes |
+|---|---|---|
+| native macOS Steam (`~/Library/Application Support/Steam/steamapps`) | 574M | i386, unrunnable on an M5 |
+| `GameLibSteam` bottle (Phase 17) | 276M | |
+| `GameLibSteamBridge` bottle (Phase 24) | 277M | also holds Avernum 5 / Avernum 6 |
+
+Removing the game completely took **three** separate Uninstall actions, one per root, each
+re-resolving `install_path` to the next survivor. There are three install roots, not two — any fix
+here must enumerate all of them.
 
 ## Why it is not already covered
 
@@ -40,9 +49,9 @@ one `platform`, shared by every store. The filesystem permits N installs, the mo
 `install()` enforces 0. That mismatch is what let the two copies diverge silently.
 
 `60e89349a` makes uninstall route by `install_path` and re-resolve to a surviving copy, so the
-orphan **is** removable — but only on a second Uninstall pass, with an intermediate state where the
-badge correctly stays "installed" after the user clicked Uninstall. Correct, but it reads as a bug
-to anyone who does not know why.
+orphan **is** removable — but only on a further Uninstall pass per root, with an intermediate state
+where the badge correctly stays "installed" after the user clicked Uninstall. Correct, but it reads
+as a bug to anyone who does not know why. With three roots in play that is three clicks.
 
 ## Direction
 
@@ -53,6 +62,7 @@ The cheapest point to prevent the orphan is step 2 — the moment the Mach-O che
   i386 still runs — gate on host arch, not just the verdict)
 - leave it but surface it as reclaimable space with an explicit action
 - guard `install()` against installing a second copy while another is recorded
+- give the user a single "remove all copies" affordance, so a three-root title is not three clicks
 
 Do **not** implement by making the badge flip early — the badge is currently honest, and
 `60e89349a` deliberately stopped forcing it.
