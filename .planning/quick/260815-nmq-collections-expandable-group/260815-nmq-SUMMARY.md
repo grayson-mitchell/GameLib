@@ -121,10 +121,14 @@ not element lists.
 ## Not done
 
 - `pnpm test:ci` (full 258-suite run) not executed — only the frontend project.
-- Only the default theme was viewed. The change introduces no new colour
-  declaration (the header inherits `.dropdownButton`'s existing themed
-  treatment from 260815-mk1), so a per-theme sweep is not expected to be
-  load-bearing here — but it was not performed.
+- ~~Only the default theme was viewed.~~ **Themes confirmed good by the user
+  2026-08-15**, after the live UAT above. Recorded as a user-reported
+  observation, NOT an instrumented per-theme sweep: the themes checked were not
+  enumerated and no contrast values were measured. It is consistent with the
+  mechanism — this change adds no colour declaration of its own, and the header
+  inherits `.dropdownButton`'s already-themed treatment from 260815-mk1, so
+  there is no new token that could fail to resolve in a theme block. Treat the
+  confirmation as covering the themes the user happened to open.
 - `Store`'s own toggle behaved inconsistently under synthetic clicks during
   this session. Not investigated: it is pre-existing, unrelated to this change,
   and did not reproduce for `Collections`.
