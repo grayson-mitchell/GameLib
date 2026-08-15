@@ -78,7 +78,9 @@
 
 .userData {
   color: var(--text-secondary);
-  /* For longer nicknames */
+  /* Sizes the connected-state indicator (quick task 260815-kt0). The container is
+     retained -- unchanged from its original per-store nickname role -- purely for the
+     tile's flex balance; no layout reflow is intended by this change. */
   font-size: var(--text-lg);
   margin: var(--space-sm) 0px;
   padding: 0px 10px;
@@ -87,6 +89,13 @@
 .runnerButtons,
 .userData {
   flex: 1;
+}
+
+/* Quick task 260815-kt0: scoped to the component root (.runnerWrapper is
+   Runner-exclusive) so this rule cannot leak app-wide -- this repo has previously
+   been bitten by unscoped selectors leaking outside their owning component. */
+.runnerWrapper .runnerConnected {
+  font-style: italic;
 }
 
 /* Quick task 260805-d62: purely visual deletion-pending marker for the interactive

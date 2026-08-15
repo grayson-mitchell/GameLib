@@ -10,8 +10,6 @@ interface RunnerProps {
   icon: any
   isLoggedIn: boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  user: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   logoutAction: () => any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   alternativeLoginAction?: () => any
@@ -34,8 +32,8 @@ interface RunnerProps {
 }
 
 export default function Runner(props: RunnerProps) {
-  const maxNameLength = 20
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const navigate = useNavigate()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
@@ -97,11 +95,15 @@ export default function Runner(props: RunnerProps) {
         } ${primaryDeprecated ? 'deprecated' : ''}`}
       >
         <div className={`runnerIcon ${props.class}`}>{props.icon()}</div>
+        {/* Quick task 260815-kt0: per-store identity was structurally inconsistent across
+            runners (Humble exposed no username at all, Amazon fell back to a literal
+            "Unknown", Steam/Zoom could be undefined) and this screen never needed the
+            identity value in the first place -- only connection state. Every logged-in
+            tile now shows a single uniform indicator instead. */}
         {props.isLoggedIn && (
           <div className="userData">
-            <span>
-              {String(props.user).slice(0, maxNameLength) +
-                (String(props.user).length > maxNameLength ? '...' : '')}
+            <span className="runnerConnected">
+              {tGamelib('gamelib:login.connected', 'Connected')}
             </span>
           </div>
         )}

@@ -119,7 +119,6 @@ function makeProps(overrides: Record<string, unknown> = {}) {
     loginUrl: '/loginweb/legendary',
     icon: () => 'icon',
     isLoggedIn: false,
-    user: undefined,
     logoutAction: jest.fn(),
     disabled: false,
     ...overrides
@@ -292,7 +291,7 @@ describe('Runner: deprecatedTile marker (quick task 260805-d62)', () => {
 
   it('deprecatedTile: primary + isLoggedIn: true renders no deprecated class -- the logout tile is not a login entry point', () => {
     const tree = mount(
-      makeProps({ deprecatedTile: 'primary', isLoggedIn: true, user: 'Someone' })
+      makeProps({ deprecatedTile: 'primary', isLoggedIn: true })
     )
 
     expect(anyDeprecated(tree)).toBe(false)
@@ -410,9 +409,7 @@ describe('Runner: connected-state label (quick 260815-kt0)', () => {
   })
 
   it('source text (localisation gate): index.tsx contains the gamelib:login.connected key and no bare JSX text node ">Connected<"', () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const fs = jest.requireActual<typeof import('fs')>('fs')
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const path = jest.requireActual<typeof import('path')>('path')
     const source = fs.readFileSync(
       path.join(__dirname, '../index.tsx'),

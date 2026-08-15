@@ -38,7 +38,6 @@ export default React.memo(function NewLogin() {
   const { epic, gog, amazon, zoom, steam, humble, refreshLibrary } =
     useContext(ContextProvider)
   const { t } = useTranslation()
-  const { t: tGamelib } = useTranslation('gamelib')
 
   hasHelp(
     'login',
@@ -65,8 +64,10 @@ export default React.memo(function NewLogin() {
   //
   // D-02/D-16: connected state is driven by `isLoggedIn` (set once the
   // gamekeys endpoint validates a session), NOT `username` — identity is a
-  // best-effort fetch and is frequently absent (e.g. a 404), but the tile
-  // must still show connected via the generic "Connected" fallback below.
+  // best-effort fetch and is frequently absent (e.g. a 404). Quick task
+  // 260815-kt0: `Runner` no longer renders any identity value at all — every
+  // store's tile shows the same uniform "Connected" indicator once
+  // `isLoggedIn` is true, regardless of whether a username was ever fetched.
   const [isHumbleLoggedIn, setIsHumbleLoggedIn] = useState(
     Boolean(humble?.isLoggedIn) && !humble?.expired
   )
@@ -144,7 +145,6 @@ export default React.memo(function NewLogin() {
               loginUrl={epicLoginPath}
               icon={() => <EpicLogo />}
               isLoggedIn={isEpicLoggedIn}
-              user={epic.username}
               logoutAction={epic.logout}
               // F-34.5-G6-01 (2026-08-03): under Tauri, Epic's embedded WebKit login hits
               // Epic's Talon anti-bot 403 (see debug file `descriptor_findings_2026_08_03T09_00_00`),
@@ -177,7 +177,6 @@ export default React.memo(function NewLogin() {
               icon={() => <GOGLogo />}
               loginUrl={gogLoginPath}
               isLoggedIn={isGogLoggedIn}
-              user={gog.username}
               logoutAction={gog.logout}
               disabled={oldMac}
             />
@@ -187,10 +186,6 @@ export default React.memo(function NewLogin() {
               icon={() => <AmazonLogo />}
               loginUrl={amazonLoginPath}
               isLoggedIn={isAmazonLoggedIn}
-              user={
-                amazon.username ||
-                tGamelib('gamelib:login.unknownUser', 'Unknown')
-              }
               logoutAction={amazon.logout}
               disabled={oldMac}
             />
@@ -201,7 +196,6 @@ export default React.memo(function NewLogin() {
                 icon={() => <ZoomLogo />}
                 loginUrl={zoomLoginPath}
                 isLoggedIn={isZoomLoggedIn}
-                user={zoom.username}
                 logoutAction={zoom.logout}
                 disabled={oldMac}
               />
@@ -212,7 +206,6 @@ export default React.memo(function NewLogin() {
               icon={() => <SteamLogo />}
               loginUrl={steamLoginPath}
               isLoggedIn={isSteamLoggedIn}
-              user={steam?.username ?? undefined}
               logoutAction={steam?.logout ?? (() => Promise.resolve())}
               disabled={oldMac}
             />
@@ -226,9 +219,6 @@ export default React.memo(function NewLogin() {
               icon={() => <HumbleLogo />}
               loginUrl={humbleLoginPath}
               isLoggedIn={isHumbleLoggedIn}
-              user={
-                humble?.username ?? t('login.humble_connected', 'Connected')
-              }
               logoutAction={humble?.logout ?? (() => Promise.resolve())}
               disabled={oldMac}
             />
