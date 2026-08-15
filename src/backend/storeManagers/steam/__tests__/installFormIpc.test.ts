@@ -57,6 +57,16 @@ jest.mock('../bottle', () => ({
   getSteamBottleSettings: jest.fn()
 }))
 
+// 34.13 review A-04/A-15: the seam now cross-checks the submitted `bin`
+// against the engines GameLib itself detected, so the detector is part of
+// this trust boundary and must be drivable per-test.
+const mockGetAlternativeWine = jest.fn()
+jest.mock('backend/config', () => ({
+  GlobalConfig: {
+    get: () => ({ getAlternativeWine: mockGetAlternativeWine })
+  }
+}))
+
 import SteamGame from '../games'
 import { steamBottleConfigStore } from '../electronStores'
 import { persistBottleWineVersion, getSteamBottleSettings } from '../bottle'
@@ -92,6 +102,12 @@ describe('installFormIpc.ts', () => {
       checkBottleEligibility: mockCheckBottleEligibility
     }))
     mockedGetNodefault.mockReturnValue(undefined)
+    // Default: the engine the persist specs submit IS detected, so the
+    // pre-existing specs measure what they were written to measure.
+    mockGetAlternativeWine.mockResolvedValue([
+      persistedEngine,
+      sentinelGlobalEngine
+    ])
   })
 
   describe('getSteamBottleEligibilityVerdict — D-09 + D-15 exposure', () => {
@@ -194,8 +210,8 @@ describe('installFormIpc.ts', () => {
   })
 
   describe('persistInstallFormWineVersion — D-14', () => {
-    it('D-14: a valid CrossOver engine is persisted and returns done', () => {
-      const result = persistInstallFormWineVersion(persistedEngine)
+    it('D-14: a valid CrossOver engine is persisted and returns done', async () => {
+      const result = await persistInstallFormWineVersion(persistedEngine)
 
       expect(result).toEqual({ status: 'done' })
       expect(mockedPersistBottleWineVersion).toHaveBeenCalledTimes(1)
@@ -206,10 +222,10 @@ describe('installFormIpc.ts', () => {
       })
     })
 
-    it('D-14 containment: the renderer object is NOT persisted by reference and unknown keys are dropped', () => {
+    it('D-14 containment: the renderer object is NOT persisted by reference and unknown keys are dropped', async () => {
       const polluted = { ...persistedEngine, polluted: 'yes' }
 
-      persistInstallFormWineVersion(polluted)
+      await persistInstallFormWineVersion(polluted)
 
       const persistedArg = mockedPersistBottleWineVersion.mock.calls[0][0]
       expect(persistedArg).not.toBe(polluted)
@@ -228,19 +244,108 @@ describe('installFormIpc.ts', () => {
       { bin: '/x', name: 'X', type: 'crossover', lib: 7 }
     ])(
       'T-34.13-07-02: structurally invalid payload %p is rejected before the store write',
-      (badPayload) => {
-        const result = persistInstallFormWineVersion(badPayload)
+      async (badPayload) => {
+        const result = await persistInstallFormWineVersion(badPayload)
 
         expect(result.status).toBe('error')
         expect(mockedPersistBottleWineVersion).not.toHaveBeenCalled()
       }
     )
 
-    it('Deferred-idea guard: a toolkit (GPTK) engine is ACCEPTED by the backend', () => {
-      const result = persistInstallFormWineVersion(sentinelGlobalEngine)
+    it('Deferred-idea guard: a toolkit (GPTK) engine is ACCEPTED by the backend', async () => {
+      const result = await persistInstallFormWineVersion(sentinelGlobalEngine)
 
       expect(result).toEqual({ status: 'done' })
       expect(mockedPersistBottleWineVersion).toHaveBeenCalledTimes(1)
+    })
+
+    // ── 34.13 review A-04 / A-15: PROVENANCE ────────────────────────────────
+    //
+    // Everything above validates SHAPE. The end of this chain is a SPAWN:
+    // getSteamBottleSettings() hands the persisted value to runWineCommand,
+    // launcher.ts does `wineVersion.bin.replaceAll("'", '')` and executes it,
+    // and wineserver is spawned with no existence check at all. validWine()
+    // is purely existsSync(bin) — it proves the file is THERE, never that
+    // GameLib discovered it. 539bc979c's `type === 'crossover'` fast-path
+    // does not help: a payload DECLARING that type bypasses it entirely.
+    //
+    // The known-bad is the review's own literal:
+    //   { bin: '/Users/x/Downloads/anything', name: 'X', type: 'crossover' }
+    const ATTACKER_PAYLOAD: WineInstallation = {
+      bin: '/Users/x/Downloads/anything',
+      name: 'X',
+      type: 'crossover'
+    }
+
+    it('A-15: a well-SHAPED payload whose bin is not among the detected engines is refused', async () => {
+      mockGetAlternativeWine.mockResolvedValue([persistedEngine])
+
+      const result = await persistInstallFormWineVersion(ATTACKER_PAYLOAD)
+
+      expect(result).toEqual({ status: 'error', error: 'unknown-bin' })
+      expect(mockedPersistBottleWineVersion).not.toHaveBeenCalled()
+    })
+
+    it('A-15: declaring type "crossover" does not buy a bypass — the SHAPE guards all pass and it is still refused', async () => {
+      mockGetAlternativeWine.mockResolvedValue([persistedEngine])
+
+      // Prove the payload is structurally valid: every field the pre-A-15
+      // seam checked is well-formed, so the ONLY thing rejecting it is
+      // provenance.
+      expect(typeof ATTACKER_PAYLOAD.bin).toBe('string')
+      expect(ATTACKER_PAYLOAD.bin.length).toBeGreaterThan(0)
+      expect(typeof ATTACKER_PAYLOAD.name).toBe('string')
+      expect(ATTACKER_PAYLOAD.type).toBe('crossover')
+
+      const result = await persistInstallFormWineVersion(ATTACKER_PAYLOAD)
+
+      expect(result.error).toBe('unknown-bin')
+    })
+
+    it('A-15 DISCRIMINATOR: a DETECTED engine is still persisted — the gate cannot pass by refusing everything', async () => {
+      mockGetAlternativeWine.mockResolvedValue([
+        persistedEngine,
+        ATTACKER_PAYLOAD
+      ])
+
+      const result = await persistInstallFormWineVersion(persistedEngine)
+
+      expect(result).toEqual({ status: 'done' })
+      expect(mockedPersistBottleWineVersion).toHaveBeenCalledTimes(1)
+    })
+
+    it('A-15: fails CLOSED when the detector rejects — an unavailable detector cannot vouch for anything', async () => {
+      mockGetAlternativeWine.mockRejectedValue(new Error('detector exploded'))
+
+      const result = await persistInstallFormWineVersion(persistedEngine)
+
+      expect(result).toEqual({ status: 'error', error: 'unknown-bin' })
+      expect(mockedPersistBottleWineVersion).not.toHaveBeenCalled()
+    })
+
+    it('A-15: fails CLOSED when the detector returns an empty list', async () => {
+      mockGetAlternativeWine.mockResolvedValue([])
+
+      const result = await persistInstallFormWineVersion(persistedEngine)
+
+      expect(result.status).toBe('error')
+      expect(mockedPersistBottleWineVersion).not.toHaveBeenCalled()
+    })
+
+    it('A-15: the rejection never echoes the submitted bin path', async () => {
+      mockGetAlternativeWine.mockResolvedValue([persistedEngine])
+      const { logWarning } = jest.requireMock('backend/logger')
+      ;(logWarning as jest.Mock).mockClear()
+
+      await persistInstallFormWineVersion(ATTACKER_PAYLOAD)
+
+      const logged = (logWarning as jest.Mock).mock.calls
+        .flat()
+        .map(String)
+        .join(' ')
+      expect(logged).toContain('provenance half')
+      expect(logged).not.toContain(ATTACKER_PAYLOAD.bin)
+      expect(logged).not.toContain('Downloads')
     })
   })
 })

@@ -710,7 +710,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     it('persistBottleWineVersion invoke round-trips the status object and delegates the payload unchanged', async () => {
       jest
         .mocked(persistInstallFormWineVersion)
-        .mockReturnValue({ status: 'done' })
+        .mockResolvedValue({ status: 'done' })
 
       const { input, frames } = startSidecar()
       const engine = {
@@ -741,7 +741,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         .mockResolvedValue({ eligible: false })
       jest
         .mocked(persistInstallFormWineVersion)
-        .mockReturnValue({ status: 'error', error: 'invalid-payload' })
+        .mockResolvedValue({ status: 'error', error: 'invalid-payload' })
 
       const { input, frames } = startSidecar()
       writeInvoke(input, 'install-form-marker-1', 'isSteamBottleEligible', [

@@ -10,6 +10,7 @@
 import type { WineInstallation } from 'common/types'
 import type { SteamBottleEligibilityVerdict } from 'common/types/steam'
 import { logWarning, LogPrefix } from 'backend/logger'
+import { GlobalConfig } from 'backend/config'
 import SteamGame from './games'
 import { steamBottleConfigStore } from './electronStores'
 import { persistBottleWineVersion } from './bottle'
@@ -113,13 +114,40 @@ export async function getSteamBottleEligibilityVerdict(
  * folded GPTK todo's backend half stays open). Do not harden this into scope
  * creep.
  *
+ * 34.13 review A-04 / A-15 — PROVENANCE, which is a different question from
+ * TYPE and is why the `type: 'crossover'` fast-path added by 539bc979c does
+ * not close this. Everything this seam validated was SHAPE, so
+ * `{ bin: '/Users/x/Downloads/anything', name: 'X', type: 'crossover' }` was
+ * accepted, persisted DURABLY into `steamBottleConfigStore`, and then spawned
+ * on the next bottled Steam operation: `getSteamBottleSettings()` hands it to
+ * `runWineCommand`, `launcher.ts` does `wineVersion.bin.replaceAll("'", '')`
+ * and spawns it, and `wineserver` is spawned with no existence check at all.
+ * `validWine()` is purely `existsSync(bin)` — it proves the file is THERE,
+ * never that GameLib discovered it. Every legitimate value on this path comes
+ * from `getAlternativeWine()`, so membership in that list is the check that
+ * was missing.
+ *
+ * FAILS CLOSED, and that is safe here rather than a wedge: refusing the
+ * persist degrades to exactly the behaviour D-15 already guarantees — the
+ * guided bottle setup derives its own engine when nothing was persisted —
+ * which is what `SteamDialog.handleInstall`'s own comment states as the
+ * contract for a failed persist. So an empty or unavailable detection list
+ * costs the user nothing beyond re-choosing.
+ *
+ * Async because `getAlternativeWine()` is. Both registrations
+ * (`main.ts`, `sidecar/steamAuthFlowRegistration.ts`) already wrap the call in
+ * an `async` handler that `return`s it, so the returned promise is awaited by
+ * the IPC layer with no call-site change — the "signature change ripples
+ * through two runtime registrations" concern recorded when A-04 was skipped
+ * does not apply.
+ *
  * Never logs the submitted `bin` path — a rejection names the failing field,
  * never the submitted value.
  */
-export function persistInstallFormWineVersion(input: unknown): {
+export async function persistInstallFormWineVersion(input: unknown): Promise<{
   status: 'done' | 'error'
   error?: string
-} {
+}> {
   if (typeof input !== 'object' || input === null) {
     logWarning(
       'persistInstallFormWineVersion: rejected a non-object payload (T-34.13-07-02)',
@@ -175,6 +203,29 @@ export function persistInstallFormWineVersion(input: unknown): {
       LogPrefix.Steam
     )
     return { status: 'error', error: 'invalid-wineserver' }
+  }
+
+  // PROVENANCE (A-04/A-15): the `bin` must be one GameLib itself detected.
+  // A rejecting/throwing detector is treated as "cannot vouch" and fails
+  // closed — see this function's own JSDoc for why that degrades safely.
+  let detected: WineInstallation[]
+  try {
+    detected = await GlobalConfig.get().getAlternativeWine()
+  } catch (error) {
+    logWarning(
+      `persistInstallFormWineVersion: could not enumerate detected wine engines, refusing to persist (${String(
+        error
+      )})`,
+      LogPrefix.Steam
+    )
+    return { status: 'error', error: 'unknown-bin' }
+  }
+  if (!detected.some((engine) => engine.bin === bin)) {
+    logWarning(
+      'persistInstallFormWineVersion: rejected a payload whose "bin" is not among the engines GameLib detected (T-34.13-07-02 provenance half)',
+      LogPrefix.Steam
+    )
+    return { status: 'error', error: 'unknown-bin' }
   }
 
   const rebuilt: WineInstallation = {
