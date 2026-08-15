@@ -40,28 +40,81 @@
   // copy of the chain so none of them depends on another file's declaration
   // order. The census gate asserts each file matches the same chain, so the
   // copies cannot drift.
-  --filter-active-color: var(--navbar-active, var(--accent-overlay, var(--accent)));
+  --filter-active-color: var(
+    --navbar-active,
+    var(--accent-overlay, var(--accent))
+  );
 
   .FilterFacetGroup {
     margin-block-end: var(--space-sm);
   }
 
+  // `Dropdown` renders its disclosure as a bare `<button class="dropdownButton">`
+  // and `components/UI/Dropdown/index.scss` styles the container, the panel and
+  // the panel's CONTENTS -- but never `.dropdownButton` itself. This rule is the
+  // only `.dropdownButton` declaration in the codebase, and until now it set
+  // layout and typography only. With `background`, `border` and `color` left
+  // unset, the user-agent button chrome survived (grey `buttonface` fill plus a
+  // beveled border) and `styles/_buttons.scss:7`'s global `button` rule painted
+  // `color: #161616` on top of it -- so the Store, Runnability and More-filters
+  // headers rendered as OS push-buttons inside a themed dark panel, identically
+  // in all 11 themes. That theme-invariance is the tell: this was a missing
+  // declaration, not a token that failed to resolve.
+  //
+  // The reset below is deliberately paired with `color:` in the same rule --
+  // `appearance: none` alone leaves the inherited `#161616`, which is *less*
+  // legible on the panel than the grey button was.
+  //
+  // Uppercase / --text-xs / 0.1em tracking is sketch 004's validated
+  // `.grp-label` section-header treatment (sketch-findings-gamelib,
+  // references/library-filtering.md), so these headers read as section labels
+  // rather than as another clickable row.
+  //
+  // Hover and focus reuse the sibling `.FilterFacetRow` pair verbatim
+  // (`--navbar-active-background` + `--filter-active-color`, and the same 2px
+  // `--accent` inset ring) so the header responds exactly like the rows it
+  // governs. `--filter-active-color` is the file-local chain declared above --
+  // reused, not redeclared, and no new bare `--navbar-active` consumer is
+  // introduced, which is what keeps the themeTokens census gate green.
   .FilterFacetGroup .dropdownButton {
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    font-size: var(--text-sm);
+    appearance: none;
+    background: none;
+    border: 0;
+    border-radius: var(--space-3xs);
+    color: var(--navbar-accent);
+    cursor: pointer;
+    user-select: none;
+    font-size: var(--text-xs);
     font-weight: var(--bold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     line-height: 1;
     padding: var(--space-2xs) var(--tier2-row-padding-inline);
+    transition:
+      background-color 0.12s ease,
+      color 0.12s ease;
+  }
+
+  .FilterFacetGroup .dropdownButton:hover {
+    background: var(--navbar-active-background);
+    color: var(--filter-active-color);
+  }
+
+  .FilterFacetGroup .dropdownButton:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
   }
 
   .FilterFacetGroup__caret {
     transition: transform 0.12s ease;
   }
 
-  .FilterFacetGroup .dropdownButton[aria-expanded='false']
+  .FilterFacetGroup
+    .dropdownButton[aria-expanded='false']
     .FilterFacetGroup__caret {
     transform: rotate(-90deg);
   }
