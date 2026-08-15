@@ -42,7 +42,8 @@ import {
 import type { SteamDialogLibraryOption } from './SteamDialog/installTarget'
 import {
   useSteamBottleEligibility,
-  applyEligibilityPending
+  applyEligibilityPending,
+  applyLibraryFetchPending
 } from './steamEligibilityProbe'
 import EligibilityLoadingRow from './SteamDialog/EligibilityLoadingRow'
 
@@ -111,9 +112,20 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   const [sideloadTitle, setSideloadTitle] = useState(
     t('sideload.field.title', 'Title')
   )
+  // 34.13 review B-WR-02: TRI-STATE. `null` means "the fetch has not settled"
+  // and is distinct from a settled `[]` ("GameLib controls no local Steam
+  // target"). It used to initialise to `[]`, which made "not yet known"
+  // indistinguishable from "native install is OFF" and painted the
+  // "Turn on native Steam installs in Settings…" instruction on the first
+  // frame of every Steam options open on a non-mac host.
   const [steamLibraries, setSteamLibraries] = useState<
-    SteamDialogLibraryOption[]
-  >([])
+    SteamDialogLibraryOption[] | null
+  >(null)
+  const steamLibrariesSettled = steamLibraries !== null
+  // The array every downstream consumer wants. Kept as ONE derivation so no
+  // call site re-invents `?? []`, and memoised so the `null` case does not
+  // hand a fresh `[]` identity to the gating memo on every render.
+  const steamLibraryList = useMemo(() => steamLibraries ?? [], [steamLibraries])
 
   const isLinuxNative = Boolean(gameInfo?.is_linux_native)
   const isMacNative = Boolean(gameInfo?.is_mac_native)
@@ -217,7 +229,11 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
         window.api.logError(
           `34.13-12 InstallModal: Steam library target fetch failed for appName "${appName}"`
         )
-        setSteamLibraries([])
+        // 34.13 review B-WR-02: stays `null` (UNKNOWN), never a settled `[]`.
+        // A transport failure is not evidence that native Steam installs are
+        // switched off, and the content-light copy would tell the user to go
+        // enable an already-enabled setting on the strength of it.
+        setSteamLibraries(null)
       })
     return () => {
       cancelled = true
@@ -238,7 +254,12 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   // Both IPC handlers are server-gated on `isSteamNativeInstallEnabled()`
   // and return `[]` when native install is OFF, so a non-empty list IS the
   // ON signal -- RESEARCH.md Pitfall 4 forbids a second settings read.
-  const steamNativeInstallOn = steamLibraries.length > 0
+  // (34.13 review B-WR-02: reads the derived list, so an UNSETTLED fetch is
+  // `false` here exactly as an empty settled one is -- the difference is
+  // carried by `steamLibrariesSettled` and consumed only by
+  // `applyLibraryFetchPending` below, which is the one place the distinction
+  // changes what the user is told.)
+  const steamNativeInstallOn = steamLibraryList.length > 0
 
   const steamGatingRaw: SteamSectionGatingVerdict = useMemo(
     () =>
@@ -255,7 +276,7 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
         // identically, so this derivation is not merely convenient, it is
         // indistinguishable by construction.
         nativeInstallOn: steamNativeInstallOn,
-        libraryCount: steamLibraries.length
+        libraryCount: steamLibraryList.length
       }),
     // WR-15: `isSteamManagedApp` was listed but never referenced by the memo
     // body -- an unnecessary dependency ESLint flagged. Removed.
@@ -267,7 +288,7 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
       platform,
       platformToInstall,
       hasWindowsDepot,
-      steamLibraries,
+      steamLibraryList,
       steamNativeInstallOn,
       eligibility.bottleRequired
     ]
@@ -285,9 +306,13 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   // then VANISHES the instant eligibility resolves true. Suppressed here
   // instead by `applyEligibilityPending`; `platformRow` is genuinely
   // synchronous and passes through untouched.
-  const steamGating: SteamSectionGatingVerdict = applyEligibilityPending(
-    steamGatingRaw,
-    eligibility.pending
+  // 34.13 review B-WR-02: composed with a SECOND pure suppression, not an
+  // inline `&& steamLibrariesSettled` at the render site -- the same rule
+  // Plan 11 already applied to `applyEligibilityPending` ("wrap the raw
+  // verdict through ONE pure function, never three inline terms").
+  const steamGating: SteamSectionGatingVerdict = applyLibraryFetchPending(
+    applyEligibilityPending(steamGatingRaw, eligibility.pending),
+    steamLibrariesSettled
   )
 
   // F (34.13-12, D-03): `legacyPlatformRowMode` is the ONLY surviving
@@ -296,7 +321,8 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   // dialogs and is structurally unreachable from the Steam path, because
   // `platformRowMode` below selects `steamGating.platformRow` whenever
   // `isSteamManagedApp` is true.
-  const legacyPlatformRowMode: SteamPlatformRowMode = availablePlatforms.length > 1 ? 'selectable' : 'absent'
+  const legacyPlatformRowMode: SteamPlatformRowMode =
+    availablePlatforms.length > 1 ? 'selectable' : 'absent'
   const platformRowMode: SteamPlatformRowMode = isSteamManagedApp
     ? steamGating.platformRow
     : legacyPlatformRowMode
@@ -412,7 +438,7 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
             gameInfo={gameInfo}
             crossoverBottle={crossoverBottle}
             gating={steamGating}
-            steamLibraries={steamLibraries}
+            steamLibraries={steamLibraryList}
             nativeInstallOn={steamNativeInstallOn}
             eligibilityPending={eligibility.pending}
           >

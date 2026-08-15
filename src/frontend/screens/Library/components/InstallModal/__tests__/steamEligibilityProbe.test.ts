@@ -10,6 +10,7 @@ import {
   applyEligibilityFailure,
   isEligibilityPending,
   applyEligibilityPending,
+  applyLibraryFetchPending,
   type EligibilityState
 } from '../steamEligibilityProbe'
 
@@ -44,7 +45,11 @@ const distinctiveVerdict: SteamSectionGatingVerdict = {
 describe('shouldProbeEligibility / initialEligibilityState', () => {
   it('probes on macOS', () => {
     expect(
-      shouldProbeEligibility({ platform: 'darwin', runner: 'steam', action: 'install' })
+      shouldProbeEligibility({
+        platform: 'darwin',
+        runner: 'steam',
+        action: 'install'
+      })
     ).toBe(true)
     const state = initialEligibilityState({
       platform: 'darwin',
@@ -57,9 +62,9 @@ describe('shouldProbeEligibility / initialEligibilityState', () => {
 
   it('skips on Windows and on Linux', () => {
     for (const platform of ['win32', 'linux'] as const) {
-      expect(shouldProbeEligibility({ platform, runner: 'steam', action: 'install' })).toBe(
-        false
-      )
+      expect(
+        shouldProbeEligibility({ platform, runner: 'steam', action: 'install' })
+      ).toBe(false)
       const state = initialEligibilityState({
         platform,
         runner: 'steam',
@@ -71,16 +76,16 @@ describe('shouldProbeEligibility / initialEligibilityState', () => {
     }
   })
 
-  it("DISCRIMINATOR: an unknown platform still asks the backend — the gate is written as an explicit win32/linux skip, never as !== darwin", () => {
+  it('DISCRIMINATOR: an unknown platform still asks the backend — the gate is written as an explicit win32/linux skip, never as !== darwin', () => {
     // An implementation written as `platform === 'darwin'` or
     // `platform !== 'darwin'` passes the two specs above and fails ONLY
     // this one -- the inverted form is the historical shape of a cold-cache
     // "not eligible" false negative
     // (`.planning/debug/steam-bottle-guided-setup-never-fires.md`).
     for (const platform of [undefined, '', 'freebsd']) {
-      expect(shouldProbeEligibility({ platform, runner: 'steam', action: 'install' })).toBe(
-        true
-      )
+      expect(
+        shouldProbeEligibility({ platform, runner: 'steam', action: 'install' })
+      ).toBe(true)
       const state = initialEligibilityState({
         platform,
         runner: 'steam',
@@ -135,9 +140,13 @@ describe('shouldProbeEligibility / initialEligibilityState', () => {
   })
 
   it('a non-steam runner never probes', () => {
-    expect(shouldProbeEligibility({ platform: 'darwin', runner: 'gog', action: 'install' })).toBe(
-      false
-    )
+    expect(
+      shouldProbeEligibility({
+        platform: 'darwin',
+        runner: 'gog',
+        action: 'install'
+      })
+    ).toBe(false)
     const state = initialEligibilityState({
       platform: 'darwin',
       runner: 'gog',
@@ -218,7 +227,9 @@ describe('applyEligibilityPending', () => {
     expect(result.libraryDropdown).toBe(false)
     expect(result.freeSpaceLine).toBe(false)
     expect(result.platformRow).toBe(distinctiveVerdict.platformRow)
-    expect(result.contentLightNotice).toBe(distinctiveVerdict.contentLightNotice)
+    expect(result.contentLightNotice).toBe(
+      distinctiveVerdict.contentLightNotice
+    )
     expect(result.forceWindowsViaBottle).toBe(
       distinctiveVerdict.forceWindowsViaBottle
     )
@@ -238,6 +249,68 @@ describe('applyEligibilityPending', () => {
   })
 })
 
+// ---------------------------------------------------------------------------
+// 34.13 review B-WR-02 — the content-light notice must not fire on an
+// UNSETTLED library fetch.
+//
+// `nativeInstallOn` is derived from `steamLibraries.length > 0`, and that
+// array used to initialise to `[]`. On Windows/Linux `eligibility.pending` is
+// already `false` on the first render (`shouldProbeEligibility` skips those
+// hosts), so nothing suppressed the notice and the dialog painted "Turn on
+// native Steam installs in Settings…" on the very first frame of every Steam
+// options open. A thin dialog for one tick was an accepted design decision;
+// a WRONG, ACTIONABLE INSTRUCTION for one tick is not.
+// ---------------------------------------------------------------------------
+describe('applyLibraryFetchPending (34.13 review B-WR-02)', () => {
+  it('is identity once the library fetch has settled', () => {
+    expect(applyLibraryFetchPending(distinctiveVerdict, true)).toEqual(
+      distinctiveVerdict
+    )
+  })
+
+  it('suppresses ONLY contentLightNotice while the fetch is unsettled', () => {
+    const result = applyLibraryFetchPending(distinctiveVerdict, false)
+    expect(result.contentLightNotice).toBe(false)
+    // Every other field passes through byte-identical: the dropdown, free
+    // space and wine gates are already false for an empty list by their own
+    // formulas, so touching them here would be a second derivation.
+    expect(result.platformRow).toBe(distinctiveVerdict.platformRow)
+    expect(result.libraryDropdown).toBe(distinctiveVerdict.libraryDropdown)
+    expect(result.wineSection).toBe(distinctiveVerdict.wineSection)
+    expect(result.freeSpaceLine).toBe(distinctiveVerdict.freeSpaceLine)
+    expect(result.forceWindowsViaBottle).toBe(
+      distinctiveVerdict.forceWindowsViaBottle
+    )
+  })
+
+  it('DISCRIMINATOR: composes with applyEligibilityPending without either undoing the other', () => {
+    // The shipped composition in `InstallModal/index.tsx` is
+    // `applyLibraryFetchPending(applyEligibilityPending(raw, pending), settled)`.
+    // An implementation of either that returned a fresh default verdict
+    // rather than a spread would pass its own specs and fail here.
+    const composed = applyLibraryFetchPending(
+      applyEligibilityPending(distinctiveVerdict, true),
+      false
+    )
+    expect(composed.contentLightNotice).toBe(false)
+    expect(composed.wineSection).toBe(false)
+    expect(composed.libraryDropdown).toBe(false)
+    expect(composed.freeSpaceLine).toBe(false)
+    expect(composed.platformRow).toBe(distinctiveVerdict.platformRow)
+    expect(composed.forceWindowsViaBottle).toBe(true)
+  })
+
+  it('RED against the pre-fix behaviour: with NO suppression the notice would render on an unsettled fetch', () => {
+    // The pre-fix code had no equivalent of this function at all: the
+    // verdict reached the dialog with `contentLightNotice` intact while
+    // `steamLibraries` was still the initial `[]`.
+    expect(distinctiveVerdict.contentLightNotice).toBe(true)
+    expect(
+      applyLibraryFetchPending(distinctiveVerdict, false).contentLightNotice
+    ).toBe(false)
+  })
+})
+
 describe('source gates', () => {
   const MODULE_PATH = join(__dirname, '..', 'steamEligibilityProbe.ts')
   const stripped = stripSourceComments(readFileSync(MODULE_PATH, 'utf8'))
@@ -254,7 +327,7 @@ describe('source gates', () => {
 
   it('the same three searches DO hit an inline known-bad specimen -- proving the gate above is non-vacuous', () => {
     const specimen = stripSourceComments(
-      "const a = gameInfo?.is_mac_native\nconst b = mac_arch\nconst c = steamPlatformsCaptured"
+      'const a = gameInfo?.is_mac_native\nconst b = mac_arch\nconst c = steamPlatformsCaptured'
     )
     for (const token of [
       'is_mac_native',
@@ -266,9 +339,15 @@ describe('source gates', () => {
   })
 
   it('window.api.isSteamBottleEligible( appears exactly once -- the ONLY IPC call site', () => {
-    expect(
-      stripped.split('window.api.isSteamBottleEligible(').length - 1
-    ).toBe(1)
+    // 34.13 review C-12: `window.api\n  .isSteamBottleEligible(appName)` is
+    // the fluent form prettier produces once the statement exceeds the print
+    // width, and this gate used to match the flat text only -- so a purely
+    // cosmetic reflow made it report ZERO call sites (a "the IPC is gone"
+    // failure for a file that had not changed behaviour at all). Tolerate the
+    // line break the same way `steamBottleSetupSeeding.test.ts` already does.
+    const matches =
+      stripped.match(/window\.api\s*\.isSteamBottleEligible\(/g) ?? []
+    expect(matches).toHaveLength(1)
   })
 
   it('zero matches of a second /^\\d+$/-style appId validation -- 34.13-07 owns the guard, never duplicated here', () => {

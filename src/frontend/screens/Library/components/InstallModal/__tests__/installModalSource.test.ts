@@ -36,7 +36,7 @@ import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
  *    `steamSectionGating.ts` in Task 2's upstream-contract check). An
  *    absolute zero-match gate would fail against Task 2's own mandated
  *    code. The gate below excludes exactly the single input-object
- *    property-key line (`libraryCount: steamLibraries.length`) using the
+ *    property-key line (`libraryCount: steamLibraryList.length`) using the
  *    same visible line-exclusion technique the neighbouring `length > 1`
  *    and `platformToInstall ===` gates already use, and is proven
  *    non-vacuous against a specimen containing a SECOND, illegitimate
@@ -83,15 +83,17 @@ function countOccurrences(source: string, token: string): number {
 describe('D-03: the availablePlatforms.length > 1 guard is REPLACED, not supplemented', () => {
   const stripped = readIndexStripped()
 
-  it('the stripped source contains exactly ONE occurrence of availablePlatforms.length > 1, and its line also contains legacyPlatformRowMode', () => {
-    expect(countOccurrences(stripped, 'availablePlatforms.length > 1')).toBe(
-      1
+  it('the stripped source contains exactly ONE occurrence of availablePlatforms.length > 1, and it belongs to the legacyPlatformRowMode DECLARATION', () => {
+    expect(countOccurrences(stripped, 'availablePlatforms.length > 1')).toBe(1)
+    // 34.13 review C-12: this used to find the LINE containing the guard and
+    // assert `legacyPlatformRowMode` was on that same line. The declaration
+    // is 82 columns wide, so the first `prettier --write` to touch this file
+    // split it across two lines and the gate failed -- a formatter, not a
+    // behaviour change, breaking a behaviour gate. Measure the STATEMENT.
+    const flattened = stripped.replace(/\s+/g, ' ')
+    expect(flattened).toMatch(
+      /const legacyPlatformRowMode: SteamPlatformRowMode = availablePlatforms\.length > 1/
     )
-    const line = stripped
-      .split('\n')
-      .find((l) => l.includes('availablePlatforms.length > 1'))
-    expect(line).toBeDefined()
-    expect(line).toContain('legacyPlatformRowMode')
   })
 
   it("platformSelection's body contains zero occurrences of availablePlatforms", () => {
@@ -153,21 +155,20 @@ describe('D-17: the Windows MenuItem is omitted, never disabled', () => {
 describe('34.13-05 review obligation: no locally re-derived section condition', () => {
   const stripped = readIndexStripped()
 
-  it('zero matches of /length\\s*>\\s*1/ once the single legacyPlatformRowMode line is excluded', () => {
-    const filtered = excludingLines(stripped, (line) =>
-      line.includes('legacyPlatformRowMode')
-    )
+  it('zero matches of /length\\s*>\\s*1/ once the single legacy guard is excluded', () => {
+    // 34.13 review C-12: line-based exclusion again. Prettier split the
+    // legacy declaration so `availablePlatforms.length > 1` now sits on a
+    // line that does NOT contain `legacyPlatformRowMode`, and the exclusion
+    // stopped matching it. Exclude the guard EXPRESSION instead, which is
+    // what the gate actually means, and which no reflow can separate.
+    const filtered = stripped.replaceAll('availablePlatforms.length > 1', '')
     expect(/length\s*>\s*1/.test(filtered)).toBe(false)
   })
 
-  it('the length>1 filtered-match check is non-vacuous -- a specimen with an unrelated length>1 line on a NON-legacyPlatformRowMode line still trips it', () => {
-    const specimen = [
-      'const legacyPlatformRowMode = availablePlatforms.length > 1',
-      'const sneakyGuard = libraries.length > 1'
-    ].join('\n')
-    const filtered = excludingLines(specimen, (line) =>
-      line.includes('legacyPlatformRowMode')
-    )
+  it('the length>1 filtered-match check is non-vacuous -- a specimen DERIVED FROM THE REAL SOURCE with a second, illegitimate length>1 guard still trips it', () => {
+    const knownBad =
+      stripped + '\n  const sneakyGuard = steamLibraryList.length > 1'
+    const filtered = knownBad.replaceAll('availablePlatforms.length > 1', '')
     expect(/length\s*>\s*1/.test(filtered)).toBe(true)
   })
 
@@ -180,18 +181,18 @@ describe('34.13-05 review obligation: no locally re-derived section condition', 
     // occurrence of `libraryCount` in the file would be a real
     // re-derivation and must still trip this gate.
     const filtered = excludingLines(stripped, (line) =>
-      line.includes('libraryCount: steamLibraries.length')
+      line.includes('libraryCount: steamLibraryList.length')
     )
     expect(filtered.includes('libraryCount')).toBe(false)
   })
 
   it('the libraryCount filtered-match check is non-vacuous -- a second, illegitimate libraryCount occurrence still trips it', () => {
     const specimen = [
-      'libraryCount: steamLibraries.length',
+      'libraryCount: steamLibraryList.length',
       'const sneakyLibraryCount = libraryCount > 1'
     ].join('\n')
     const filtered = excludingLines(specimen, (line) =>
-      line.includes('libraryCount: steamLibraries.length')
+      line.includes('libraryCount: steamLibraryList.length')
     )
     expect(filtered.includes('libraryCount')).toBe(true)
   })
@@ -321,9 +322,9 @@ describe('D-16 / D-05: the WineSelector props', () => {
       line.trim().startsWith('hideSharedPrefixToggle')
     )
     expect(knownBad).not.toContain('hideSharedPrefixToggle')
-    expect(() =>
-      assertSteamWineSelectorHidesSharedPrefix(knownBad)
-    ).toThrow(/found 0/)
+    expect(() => assertSteamWineSelectorHidesSharedPrefix(knownBad)).toThrow(
+      /found 0/
+    )
   })
 
   it('the hideSharedPrefixToggle gate also trips on a SECOND occurrence inside the arm', () => {
@@ -387,9 +388,7 @@ describe('the stripper is load-bearing', () => {
       "const legacyPlatformRowMode = availablePlatforms.length > 1 ? 'selectable' : 'absent'"
     ].join('\n')
     const stripped = stripSourceComments(specimen)
-    expect(countOccurrences(stripped, 'availablePlatforms.length > 1')).toBe(
-      1
-    )
+    expect(countOccurrences(stripped, 'availablePlatforms.length > 1')).toBe(1)
   })
 })
 

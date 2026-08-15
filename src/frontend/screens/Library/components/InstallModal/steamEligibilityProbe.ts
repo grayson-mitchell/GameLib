@@ -178,6 +178,48 @@ export function applyEligibilityPending(
 }
 
 /**
+ * 34.13 review B-WR-02 — suppress the content-light NOTICE until the Steam
+ * library list is actually known.
+ *
+ * The notice's copy branches on `nativeInstallOn`, which is derived from
+ * `steamLibraries.length > 0`. On the first render that array is `[]` by
+ * initialisation, and on Windows/Linux `eligibility.pending` is already
+ * `false` (`shouldProbeEligibility` skips those hosts), so nothing suppressed
+ * the notice: the dialog painted "Turn on native Steam installs in Settings
+ * …" on the very first frame of EVERY Steam options open on a non-mac host,
+ * before the fetch resolved. `InstallModal/index.tsx` accepts "a
+ * content-light form for one tick" as a design decision — but WR-04 turned
+ * that tick into a WRONG, ACTIONABLE INSTRUCTION, which is a different thing.
+ *
+ * The same suppression covers a REJECTED fetch: `[]` from a transport failure
+ * is not evidence the setting is off, and telling a user to go enable an
+ * already-enabled setting because an IPC channel died is worse than saying
+ * nothing.
+ *
+ * Only `contentLightNotice` is touched. The dropdown/free-space/wine gates
+ * are already `false` for an unknown-or-empty list by their own formulas, so
+ * suppressing them here would be a second, redundant derivation.
+ *
+ * KNOWN RESIDUAL, recorded rather than silently left: this makes the notice
+ * honest about "not yet known", but it still cannot distinguish "the setting
+ * is OFF" from "the setting is ON and Steam registers zero libraries" —
+ * `listSteamLibraryTargets()` answers `[]` for both. Distinguishing them
+ * needs the channel to return `{ enabled, targets }`, i.e. one read and two
+ * facts, which is an IPC CONTRACT change across both runtimes (and
+ * `SteamInstallLibraryTarget` is derived from that return type) — out of
+ * scope for a review-fix pass.
+ */
+export function applyLibraryFetchPending(
+  verdict: SteamSectionGatingVerdict,
+  librariesSettled: boolean
+): SteamSectionGatingVerdict {
+  if (librariesSettled) {
+    return verdict
+  }
+  return { ...verdict, contentLightNotice: false }
+}
+
+/**
  * The razor-thin hook composing the pure functions above. Seeds `useState`
  * synchronously (nothing is awaited before the first paint) and re-seeds,
  * during render (not in an effect), whenever `platform`/`runner`/`appName`
@@ -232,12 +274,11 @@ export function useSteamBottleEligibility({
     // SteamGame), and a frontend copy would be unenforceable and would
     // drift, the same `redeemSteamKey` two-copies-of-one-guard pattern this
     // repo already treats as an anti-pattern.
-    window.api.isSteamBottleEligible(appName)
+    window.api
+      .isSteamBottleEligible(appName)
       .then((verdict) => {
         if (cancelled) return
-        setState((prev) =>
-          applyEligibilityResponse(prev, { appName, verdict })
-        )
+        setState((prev) => applyEligibilityResponse(prev, { appName, verdict }))
       })
       .catch(() => {
         // Fail-closed on rejection or timeout (UI-SPEC: "a timeout is not
