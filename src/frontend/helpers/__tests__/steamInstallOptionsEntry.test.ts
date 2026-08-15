@@ -262,7 +262,79 @@ describe('GameCard/index.tsx source gates (D-27 row 3, D-28 -- comment-stripped)
       .replace("gameInfo.runner === 'steam'", 'REMOVED')
     expect(knownBad.indexOf("gameInfo.runner === 'steam'")).toBe(-1)
   })
+
+  // ── 34.13 review B-WR-05 ────────────────────────────────────────────────
+  //
+  // C6 pinned the guard's ORDER relative to the generic install() and nothing
+  // about its CONJUNCTS. The B-WR-10 guard dropped `!isQueued` (which the
+  // branch it replaced for Steam carried) and `!isDelisted` (which every
+  // sibling install route on this card enforces), and sat ABOVE the
+  // `if (isQueued) { removeFromDMQueue }` handler -- so a queued,
+  // not-installed Steam game would dispatch a SECOND install where the
+  // pre-fix code dequeued.
+  it('C7 (B-WR-05): the Steam guard carries !isInstalled, !isQueued and !isDelisted', () => {
+    expect(() =>
+      assertSteamGuardConjuncts(readStrippedGameCard())
+    ).not.toThrow()
+  })
+
+  it.each(['!isQueued', '!isDelisted', '!isInstalled'])(
+    'C7-RED: deleting "%s" from the guard, DERIVED FROM THE REAL SOURCE, is rejected',
+    (conjunct) => {
+      // `sliceSteamGuard` works on FLATTENED text, so the derivation must
+      // too -- otherwise `replace` silently finds nothing and this RED spec
+      // degenerates into a tautology.
+      const source = readStrippedGameCard().replace(/\s+/g, ' ')
+      const guard = sliceSteamGuard(source)
+      const knownBad = source.replace(
+        guard,
+        guard.replace(`${conjunct} &&`, '')
+      )
+      expect(knownBad).not.toBe(source)
+      expect(() => assertSteamGuardConjuncts(knownBad)).toThrow(
+        new RegExp(`missing ${conjunct.replace('!', '\\!')}`)
+      )
+      // ...and C6's ordering obligation still passes on that same input,
+      // which is why the conjuncts could go missing unnoticed.
+      const body = knownBad
+        .slice(knownBad.indexOf('async function handlePlay'))
+        .replace(/\s+/g, ' ')
+      expect(body.indexOf("gameInfo.runner === 'steam'")).toBeLessThan(
+        body.indexOf('return install({')
+      )
+    }
+  )
 })
+
+/** The `if (...)` condition of handlePlay's Steam guard, flattened. */
+function sliceSteamGuard(source: string): string {
+  const flattened = source.replace(/\s+/g, ' ')
+  const marker = flattened.indexOf(
+    "gameInfo.runner === 'steam' ) { openInstallGameModal("
+  )
+  const at =
+    marker === -1 ? flattened.indexOf("gameInfo.runner === 'steam'") : marker
+  if (at === -1) {
+    throw new Error('sliceSteamGuard: the Steam guard is gone')
+  }
+  const start = flattened.lastIndexOf('if (', at)
+  const end = flattened.indexOf(')', at)
+  if (start === -1 || end === -1) {
+    throw new Error('sliceSteamGuard: could not bound the Steam guard')
+  }
+  return flattened.slice(start, end + 1)
+}
+
+function assertSteamGuardConjuncts(source: string) {
+  const guard = sliceSteamGuard(source)
+  for (const conjunct of ['!isInstalled', '!isQueued', '!isDelisted']) {
+    if (!guard.includes(conjunct)) {
+      throw new Error(
+        `assertSteamGuardConjuncts: handlePlay's Steam guard is missing ${conjunct} -- got "${guard}". Every sibling install route on this card enforces all three (items menu \`show: … && !isDelisted\`, showSteamCardInstallOptions, renderIcon's \`if (isDelisted) return null\`), and the branch this guard replaced carried !isQueued.`
+      )
+    }
+  }
+}
 
 describe('GameSubMenu/index.tsx source gates (D-27 row 5, D-28 -- comment-stripped)', () => {
   it('D1: uses the shared predicate', () => {

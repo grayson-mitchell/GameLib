@@ -663,7 +663,23 @@ const GameCard = ({
     // `startSteamQuickInstall` itself -- so the user-visible outcome is the
     // one the review asked for, reached through the one door D-27 sanctions
     // instead of a new one.
-    if (!isInstalled && gameInfo.runner === 'steam') {
+    // 34.13 review B-WR-05: `!isQueued` and `!isDelisted` are BOTH required.
+    // The branch this replaced for Steam carried `!isQueued`, and this guard
+    // sits ABOVE the `if (isQueued) { removeFromDMQueue }` handler below — so
+    // for a queued, not-installed Steam game it dispatched a SECOND install
+    // where the pre-fix code dequeued. `!isDelisted` is enforced by every
+    // other install route on this card (the items-menu entry at `show: … &&
+    // !isDelisted`, `showSteamCardInstallOptions`, and `renderIcon`'s
+    // `if (isDelisted) return null`) against D-05's own rule that
+    // `steam://install` returns a silent error for delisted games. A guard
+    // that is unreachable today is exactly the kind that gets wired up later,
+    // and it must not encode two decisions opposite to the rest of the file.
+    if (
+      !isInstalled &&
+      !isQueued &&
+      !isDelisted &&
+      gameInfo.runner === 'steam'
+    ) {
       openInstallGameModal({ appName, runner: gameInfo.runner, gameInfo })
       return
     }
