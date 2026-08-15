@@ -342,6 +342,26 @@
           flex-wrap: wrap;
         }
 
+        /* D-21 split-button caret rotation — scoped copy of
+           FilterFacetGroup/index.scss:60-67's exact idiom. The caret's own
+           box must stay non-zero on both axes: Tauri's gamepad focus
+           collector (tauriGamepadInput.ts:47-58) drops any element whose
+           getBoundingClientRect() has zero width or height, which would
+           make the caret unreachable on Tauri only while every Electron
+           check still passed. `.mainBtn { min-width: 200px }` below
+           currently guarantees this — narrowing the caret's box requires an
+           explicit non-zero min-inline-size/min-block-size replacement, and
+           narrowing the class itself is a UI-SPEC amendment, not something
+           to do here. */
+        .SteamInstallCaret__icon {
+          transition: transform 0.12s ease;
+        }
+
+        .SteamInstallCaret .dropdownButton[aria-expanded='false']
+          .SteamInstallCaret__icon {
+          transform: rotate(-90deg);
+        }
+
         & .mainBtn {
           min-width: 200px;
           font-size: var(--text-md);

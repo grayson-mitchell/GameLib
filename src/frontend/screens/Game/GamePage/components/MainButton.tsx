@@ -1,6 +1,9 @@
 import React, { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
-import { openInstallGameModal } from 'frontend/state/InstallGameModal'
+import {
+  openInstallGameModal,
+  openSteamInstallOptions
+} from 'frontend/state/InstallGameModal'
 import GameContext from '../../GameContext'
 import {
   ArrowBackIosNew,
@@ -14,10 +17,11 @@ import {
   Warning
 } from '@mui/icons-material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSyncAlt } from '@fortawesome/free-solid-svg-icons'
+import { faChevronDown, faSyncAlt } from '@fortawesome/free-solid-svg-icons'
 import classNames from 'classnames'
 import { GameInfo } from 'common/types'
 import useSetting from 'frontend/hooks/useSetting'
+import Dropdown from 'frontend/components/UI/Dropdown'
 
 interface Props {
   gameInfo: GameInfo
@@ -307,6 +311,48 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
           >
             {getButtonLabel()}
           </button>
+          {/* D-21 split-button caret — Steam only. Takes the visual slot the
+              Import button leaves empty for Steam (its own gate is just
+              below, unchanged). The unusable-state gate below is
+              deliberate: Dropdown's Props type carries no interaction-
+              blocking attribute (and the approved UI-SPEC forbids adding
+              one), so unmounting is the only way to take the caret out of
+              the focus ring — a present-but-unusable-looking control would
+              still sit in it on one runtime and not the other (the repo's
+              own ledgered lesson). */}
+          {gameInfo.runner === 'steam' &&
+            !is_installed &&
+            !is.queued &&
+            !disabledInstallButtons && (
+              <Dropdown
+                className="SteamInstallCaret"
+                buttonClass="button mainBtn outline"
+                title={
+                  <span
+                    aria-label={t(
+                      'gamelib:steam.install.withOptionsLabel',
+                      'Install with options…'
+                    )}
+                  >
+                    <FontAwesomeIcon
+                      icon={faChevronDown}
+                      className="SteamInstallCaret__icon"
+                    />
+                  </span>
+                }
+              >
+                <button
+                  onClick={() =>
+                    openSteamInstallOptions(gameInfo.app_name, gameInfo)
+                  }
+                >
+                  {t(
+                    'gamelib:steam.install.withOptionsLabel',
+                    'Install with options…'
+                  )}
+                </button>
+              </Dropdown>
+            )}
           {/* Import makes no sense for Steam games — Steam owns install management */}
           {gameInfo.runner !== 'steam' && (
             <button

@@ -78,7 +78,10 @@ import { hasHelp } from 'frontend/hooks/hasHelp'
 import Genres from './components/Genres'
 import ReleaseDate from './components/ReleaseDate'
 import { hasKnownFixes } from 'frontend/hooks/hasKnownFixes'
-import { openInstallGameModal } from 'frontend/state/InstallGameModal'
+import {
+  openInstallGameModal,
+  startSteamQuickInstall
+} from 'frontend/state/InstallGameModal'
 import useSettingsContext from 'frontend/hooks/useSettingsContext'
 import SettingsContext from 'frontend/screens/Settings/SettingsContext'
 import useGlobalState from 'frontend/state/GlobalStateV2'
@@ -673,18 +676,17 @@ export default React.memo(function GamePage(): JSX.Element | null {
     // for the corresponding button/status reflection).
     if (settingUpBottle) return
 
-    // Steam: bypass install-location modal — delegate straight to SteamGame.install() (D-04)
+    // 34.13-08 (D-23/D-24, RESEARCH Q4 — the seventh, uncounted call site):
+    // this is the path the game page's Install button actually takes. It
+    // used to bypass openInstallGameModal, startSteamInstall AND
+    // installSteamGame with its own hardcoded window.api.install(...) —
+    // meaning D-23's primary-library targeting and D-24's local validity
+    // check never applied to this button at all. Routing it through
+    // startSteamQuickInstall closes that gap: it resolves Steam's primary
+    // library, runs the local check, and either installs with no friction
+    // or degrades into the options dialog carrying the reason.
     if (gameInfo.runner === 'steam' && !is_installed) {
-      return window.api.install({
-        appName,
-        path: '',
-        runner: 'steam',
-        installDlcs: [],
-        sdlList: [],
-        installLanguage: 'en-US',
-        platformToInstall: 'Windows',
-        gameInfo
-      })
+      return startSteamQuickInstall(appName, gameInfo)
     }
 
     if (!is_installed && !isInstalling) {

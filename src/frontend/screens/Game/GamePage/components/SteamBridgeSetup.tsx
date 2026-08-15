@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getGameInfo } from 'frontend/helpers'
 import { useSteamBridgeSetup } from 'frontend/state/SteamBridgeSetup'
+import { installSteamGame } from 'frontend/state/InstallGameModal'
 import {
   Dialog,
   DialogContent,
@@ -73,19 +74,17 @@ const SteamBridgeSetup = () => {
       }
 
       if (!gameInfo.is_installed) {
-        // Same direct Steam-install invocation GamePage's handleInstall
-        // uses for `runner === 'steam'` (D-04) — the existing non-bridge
-        // install() branch, not a new bespoke channel.
-        await window.api.install({
-          appName,
-          path: '',
-          runner: 'steam',
-          installDlcs: [],
-          sdlList: [],
-          installLanguage: 'en-US',
-          platformToInstall: 'Windows',
-          gameInfo
-        })
+        // 34.13-08 (D-17 marshalling, site 9 — the fourth hardcoded Steam
+        // install-args literal found while planning this rewrite): routes
+        // through the same single marshalling point every other Steam
+        // install caller now uses, so a future D-17 override can never be
+        // bypassed here. Deliberately `installSteamGame`, NOT
+        // `startSteamQuickInstall` — this is a post-failure retry inside a
+        // setup surface, and degrading it into an options dialog on a D-24
+        // check would be new behavior this phase has no decision for. The
+        // outcome is byte-identical to the literal this replaces:
+        // `installSteamGame`'s hardcoded fields are the same eight.
+        await installSteamGame(appName, gameInfo)
       } else {
         // Same IPC channel the existing launch flow ultimately calls
         // (frontend/helpers/library.ts's checkLaunchOptionsAndLaunch) — the
