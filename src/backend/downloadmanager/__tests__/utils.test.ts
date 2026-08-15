@@ -305,6 +305,79 @@ describe('installQueueElement — D-01b: belt-and-suspenders install watchdog', 
   })
 })
 
+/**
+ * 34.13 review A-01. The seventeen D-17 specs in
+ * `storeManagers/steam/__tests__/games.test.ts` all call `game.install(...)`
+ * DIRECTLY with a fixture documented as "the production call shape", and all
+ * seventeen were green while the feature was completely inert in production —
+ * because `installQueueElement` sits between the renderer's
+ * `window.api.install({...})` and `SteamGame.install(args)` and REBUILDS the
+ * argument object from a fixed field list. Anything not named in that list is
+ * dropped, invisibly to `tsc` (the field is optional on `InstallArgs`).
+ *
+ * These specs therefore drive `installQueueElement` itself — the one function
+ * that performs the reshape — and assert on the object it hands to
+ * `.install()`. Proven RED against the real pre-fix source (the destructure
+ * and the object literal with `steamForceWindowsViaBottle` removed): the
+ * first spec fails with `Received: undefined`.
+ */
+describe('installQueueElement — 34.13 A-01: the reshape must not drop InstallArgs fields', () => {
+  beforeEach(() => {
+    getGameInfoMock.mockReturnValue({ title: 'Test Game' })
+    ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+      install: installMock,
+      getGameInfo: getGameInfoMock
+    })
+    ;(libraryManagerMap.gog.getGame as jest.Mock).mockReturnValue({
+      install: installMock,
+      getGameInfo: getGameInfoMock
+    })
+    ;(isOnline as jest.Mock).mockReturnValue(true)
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+  })
+
+  it('A-01: steamForceWindowsViaBottle: true survives the queue hop and reaches .install()', async () => {
+    installMock.mockResolvedValue({ status: 'done' })
+
+    await installQueueElement(makeParams({ steamForceWindowsViaBottle: true }))
+
+    expect(installMock).toHaveBeenCalledTimes(1)
+    expect(installMock.mock.calls[0][0].steamForceWindowsViaBottle).toBe(true)
+  })
+
+  it('A-01: an explicit false is forwarded as false (distinguishable from "never asked")', async () => {
+    installMock.mockResolvedValue({ status: 'done' })
+
+    await installQueueElement(makeParams({ steamForceWindowsViaBottle: false }))
+
+    expect(installMock.mock.calls[0][0].steamForceWindowsViaBottle).toBe(false)
+  })
+
+  it('A-01: the legacy no-override shape stays undefined — the field is not fabricated', async () => {
+    installMock.mockResolvedValue({ status: 'done' })
+
+    await installQueueElement(makeParams())
+
+    expect(
+      installMock.mock.calls[0][0].steamForceWindowsViaBottle
+    ).toBeUndefined()
+  })
+
+  it('A-01: the forward is runner-agnostic — a non-Steam runner receives the field untouched rather than having it stripped', async () => {
+    installMock.mockResolvedValue({ status: 'done' })
+
+    await installQueueElement(
+      makeParams({
+        runner: 'gog',
+        gameInfo: { app_name: '1091500', runner: 'gog' } as never,
+        steamForceWindowsViaBottle: true
+      })
+    )
+
+    expect(installMock.mock.calls[0][0].steamForceWindowsViaBottle).toBe(true)
+  })
+})
+
 describe('installQueueElement — WR-03/D-12: error-path regression coverage', () => {
   beforeEach(() => {
     getGameInfoMock.mockReturnValue({ title: 'Test Game' })

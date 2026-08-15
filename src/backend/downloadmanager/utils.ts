@@ -47,7 +47,16 @@ async function installQueueElement(params: InstallParams): Promise<{
     installLanguage,
     platformToInstall,
     build,
-    branch
+    branch,
+    // 34.13 review A-01 (D-17): the Steam "force Windows via bottle"
+    // override. This destructure and the `.install()` literal below are a
+    // FIXED field list — the object built at the call site is the ONLY thing
+    // any runner's `install()` ever sees, so a field omitted here is silently
+    // dropped between the renderer's `window.api.install(...)` and
+    // `SteamGame.install(args)`. `tsc` cannot see the drop because the field
+    // is optional on `InstallArgs`. Kept runner-agnostic (forwarded for every
+    // runner, exactly like `build`/`branch`) — non-Steam managers ignore it.
+    steamForceWindowsViaBottle
   } = params
   // Imported lazily to break a circular dependency (downloadmanager/utils.ts
   // <-> storeManagers/index.ts) — see the load-bearing comment in
@@ -148,7 +157,12 @@ async function installQueueElement(params: InstallParams): Promise<{
         platformToInstall,
         installLanguage,
         build,
-        branch
+        branch,
+        // 34.13 review A-01: see the destructure above. Omitting this line
+        // makes `SteamGame.install()`'s `overrideRequested` permanently
+        // false and the whole D-17 contract inert, with a green suite and a
+        // clean `tsc`.
+        steamForceWindowsViaBottle
       }),
       INSTALL_WATCHDOG_MS,
       'installQueueElement install watchdog'
