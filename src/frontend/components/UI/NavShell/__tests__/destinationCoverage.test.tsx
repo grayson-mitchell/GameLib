@@ -25,9 +25,9 @@
  *     flat single-column list -- there is no longer a single flat list, so
  *     "first label" has no meaning in the two-tier tree this phase settles.
  *   - "Manage Accounts immediately before Accessibility" described adjacency
- *     inside that same flat list -- Manage Accounts is now a tier-1 tab and
- *     Accessibility is a tier-2 Settings row; the two no longer share a list
- *     to be adjacent within.
+ *     inside that same flat list -- Accounts (formerly labelled "Manage
+ *     Accounts") is now a tier-1 tab and Accessibility is a tier-2 Settings
+ *     row; the two no longer share a list to be adjacent within.
  * The Redeem-a-Steam-key gating claim (button element, onClick calls
  * `handleRedeemKeyDialog(true)`, hidden without a Steam session) is already
  * asserted directly by `StoresPanel.test.tsx` and is not duplicated here.
@@ -247,8 +247,8 @@ describe('Destination coverage -- the settled tree', () => {
     ]
 
     expect(union).toEqual([
-      'Manage Accounts',
-      'Games',
+      'Accounts',
+      'Library',
       'Stores',
       'Settings',
       'GOG Store',
@@ -287,7 +287,7 @@ describe('Destination coverage -- the settled tree', () => {
   })
 })
 
-describe('Manage Accounts entry point (re-homed from the deleted suite)', () => {
+describe('Accounts entry point (re-homed from the deleted suite)', () => {
   it('targets /login in both logged-out and logged-in context states, and no collected label anywhere equals "Login"', () => {
     contextValue = makeContextValue()
     const loggedOutAccountsTab = tabElements().find(

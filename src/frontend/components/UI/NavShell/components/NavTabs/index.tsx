@@ -26,6 +26,11 @@ import './index.scss'
  * the Stores item (with its default-store cascade), the Settings item, and
  * the separate Manage Accounts item -- onto a reskinned MUI `<Tabs>`.
  *
+ * Quick task 260815-lta: the strip now reads ACCOUNTS / LIBRARY / STORES /
+ * SETTINGS. The first two labels are re-keyed content (`nav.tabs.accounts`,
+ * `nav.tabs.library`); the all-caps presentation is applied by the colocated
+ * stylesheet's `text-transform: uppercase`, not by any string here.
+ *
  * MUI is used **only** as the accessibility primitive here: roving
  * `tabIndex`, arrow-key navigation, `role="tablist"`/`role="tab"`,
  * `aria-selected`. `<Tabs>` here carries no controlled-selection handler --
@@ -87,7 +92,7 @@ export default function NavTabs() {
         to="/login"
         value="accounts"
         id={`tab-${NAV_TAB_INDEX.accounts}`}
-        label={t('userselector.manageaccounts', 'Manage Accounts')}
+        label={t('nav.tabs.accounts', 'Accounts')}
         icon={<FontAwesomeIcon icon={faUserAlt} />}
         iconPosition="start"
         disableRipple
@@ -97,7 +102,7 @@ export default function NavTabs() {
         to="/"
         value="games"
         id={`tab-${NAV_TAB_INDEX.games}`}
-        label={t('nav.tabs.games', 'Games')}
+        label={t('nav.tabs.library', 'Library')}
         icon={<FontAwesomeIcon icon={faGamepad} />}
         iconPosition="start"
         disableRipple

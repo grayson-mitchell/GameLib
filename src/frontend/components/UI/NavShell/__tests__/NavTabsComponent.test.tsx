@@ -30,6 +30,9 @@ const BARE_LABEL_PATTERN = /label=["']/
 const TIER2_ROW_TOKEN_PATTERN = /--navbar-active-background/
 const SEMIBOLD_TOKEN_PATTERN = /--semibold/
 const HEX_COLOUR_PATTERN = /#[0-9a-fA-F]{3,8}/
+const RETIRED_LABEL_KEY_PATTERN = /nav\.tabs\.games|userselector\.manageaccounts/
+const BAKED_CAPS_PATTERN = /'(ACCOUNTS|LIBRARY|STORES|SETTINGS)'/
+const TEXT_TRANSFORM_NONE_PATTERN = /text-transform:\s*none/
 
 type MockContextValue = {
   epic: { username?: string; library: unknown[] }
@@ -167,11 +170,11 @@ describe('NavTabs', () => {
     ])
   })
 
-  it('resolves labels to Manage Accounts, Games, Stores, Settings in that order', () => {
+  it('resolves labels to Accounts, Library, Stores, Settings in that order', () => {
     const tabs = tabsOf(callNavTabs())
     expect(tabs.map((tab) => tab.props.label)).toEqual([
-      'Manage Accounts',
-      'Games',
+      'Accounts',
+      'Library',
       'Stores',
       'Settings'
     ])
@@ -268,17 +271,28 @@ describe('NavTabs', () => {
     expect(refreshLibrary).not.toHaveBeenCalled()
   })
 
-  it('mints exactly one nav.tabs.games key in the source and no gamelib: prefix', () => {
-    const source = readFileSync(
-      join(__dirname, '..', 'components', 'NavTabs', 'index.tsx'),
-      'utf8'
+  it('mints exactly one nav.tabs.accounts and one nav.tabs.library key, references no retired label key, and uses no gamelib: prefix', () => {
+    const source = stripSourceComments(
+      readFileSync(
+        join(__dirname, '..', 'components', 'NavTabs', 'index.tsx'),
+        'utf8'
+      )
     )
-    expect((source.match(/nav\.tabs\.games/g) ?? []).length).toBe(1)
+    expect((source.match(/nav\.tabs\.accounts/g) ?? []).length).toBe(1)
+    expect((source.match(/nav\.tabs\.library/g) ?? []).length).toBe(1)
+    expect(source).not.toMatch(RETIRED_LABEL_KEY_PATTERN)
     expect(source).not.toMatch(GAMELIB_PREFIX_PATTERN)
   })
 
+  it('SANITY: the retired-label-key prohibition above fires against a known-bad input -- proves it is not vacuously true', () => {
+    expect("t('nav.tabs.games', 'Library')").toMatch(RETIRED_LABEL_KEY_PATTERN)
+    expect("t('userselector.manageaccounts', 'Accounts')").toMatch(
+      RETIRED_LABEL_KEY_PATTERN
+    )
+  })
+
   it('SANITY: the gamelib: prefix prohibition above fires against a known-bad input -- proves it is not vacuously true', () => {
-    const knownBad = "t('gamelib:nav.tabs.games', 'Games')"
+    const knownBad = "t('gamelib:nav.tabs.library', 'Library')"
     expect(knownBad).toMatch(GAMELIB_PREFIX_PATTERN)
   })
 
@@ -291,8 +305,22 @@ describe('NavTabs', () => {
   })
 
   it('SANITY: the bare label= prohibition above fires against a known-bad input -- proves it is not vacuously true', () => {
-    const knownBad = '<Tab label="Games" value="games" />'
+    const knownBad = '<Tab label="Library" value="games" />'
     expect(knownBad).toMatch(BARE_LABEL_PATTERN)
+  })
+
+  it('never bakes the all-caps presentation into a source string literal -- the caps are CSS', () => {
+    const source = stripSourceComments(
+      readFileSync(
+        join(__dirname, '..', 'components', 'NavTabs', 'index.tsx'),
+        'utf8'
+      )
+    )
+    expect(source).not.toMatch(BAKED_CAPS_PATTERN)
+  })
+
+  it('SANITY: the baked-caps prohibition above fires against a known-bad input -- proves it is not vacuously true', () => {
+    expect("t('nav.tabs.library', 'LIBRARY')").toMatch(BAKED_CAPS_PATTERN)
   })
 })
 

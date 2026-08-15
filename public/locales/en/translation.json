@@ -727,7 +727,8 @@
     },
     "nav": {
         "tabs": {
-            "games": "Games"
+            "accounts": "Accounts",
+            "library": "Library"
         }
     },
     "next": "Next",
