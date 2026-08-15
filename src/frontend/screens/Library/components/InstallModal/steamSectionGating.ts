@@ -2,13 +2,15 @@ import type { InstallPlatform } from 'common/types'
 
 /**
  * The executable form of `34.13-UI-SPEC.md`'s Section-Gating Matrix (the
- * AMENDED, 8-row table) -- for a Steam game's install-options dialog, given
- * the dialog is ALREADY OPEN, which of five independently-gated regions
- * render, and what mode the platform row itself is in.
+ * AMENDED, 8-row table), extended by Phase 34.14 (D-01/D-03) with two
+ * `'pending'` rows (9/10) -- for a Steam game's install-options dialog,
+ * given the dialog is ALREADY OPEN, which of five independently-gated
+ * regions render, and what mode the platform row itself is in.
  *
- * (a) This module implements ALL 8 matrix rows. `34.13-UI-SPEC.md`
- *     "Section-Gating Matrix" is the source of truth; every branch below
- *     cites the row number(s) and decision ID(s) it implements.
+ * (a) This module implements ALL 10 matrix rows. `34.13-UI-SPEC.md`
+ *     "Section-Gating Matrix" is the source of truth for rows 1-8;
+ *     34.14-02-PLAN.md is the source of truth for rows 9/10. Every branch
+ *     below cites the row number(s) and decision ID(s) it implements.
  *
  * (b) WHY this is a standalone, zero-runtime-import module rather than an
  *     if/else chain inside `SteamDialog/index.tsx` / `InstallModal/index.tsx`:
@@ -56,7 +58,7 @@ import type { InstallPlatform } from 'common/types'
  */
 
 /**
- * The four states the platform row can render in. `'absent'` means the row
+ * The five states the platform row can render in. `'absent'` means the row
  * does not render at all (D-18, Linux-family hosts, unconditional).
  */
 export type SteamPlatformRowMode =
@@ -64,6 +66,12 @@ export type SteamPlatformRowMode =
   | 'readonly-windows'
   | 'readonly-macos'
   | 'selectable'
+  /**
+   * 34.14 D-01/D-03: the depot signal has not been resolved yet. DISTINCT
+   * from `'readonly-macos'` by construction -- collapsing the two is the
+   * exact defect Phase 34.14 exists to end.
+   */
+  | 'pending'
 
 /**
  * Every fact the resolver needs. Deliberately a single flat interface with
@@ -105,12 +113,35 @@ export interface SteamSectionGatingInput {
    */
   libraryCount: number
   /**
-   * D-17: the caller's `gameInfo.is_windows_native === true` comparison.
+   * 34.14 D-03/D-05: whether the Windows-depot answer is KNOWN -- either it
+   * was already captured (the `gameInfo` seed) or the eligibility probe has
+   * terminally settled (D-04's fail-open point). Computed by
+   * `resolveDepotAvailability` in `steamPlatformRow.ts`, never here and
+   * never in `index.tsx`. Deliberately NOT named after the store's own
+   * `platformsCaptured` field: this module's D-09 source gate
+   * (`steamSectionGating.test.ts`) bans raw store field names from this
+   * file, exactly as `hasWindowsDepot` is named for `is_windows_native`.
+   *
+   * Placed immediately before `hasWindowsDepot` so the struct's field order
+   * mirrors the read order the priority chain below enforces: this module
+   * reads `depotSignalResolved` and branches to `'pending'` BEFORE it ever
+   * reads `hasWindowsDepot` -- see the D-03 seam comment in step 4.
+   */
+  depotSignalResolved: boolean
+  /**
+   * D-17: the caller's `gameInfo.is_windows_native === true` comparison
+   * (post-34.14, folded through `resolveDepotAvailability`'s
+   * `windowsDepotOffered`, which itself applies D-04's fail-open). This
+   * boolean is the OFFER decision -- it is MEANINGLESS unless
+   * `depotSignalResolved` is also `true`; the priority chain below enforces
+   * that read order structurally (step 4's `!input.depotSignalResolved`
+   * branch runs before this one), so no consumer of this module can read
+   * `hasWindowsDepot` without having already passed the resolved gate.
    * `34.13-01-SUMMARY.md` pins `=== true` as the only value permitting a
-   * Windows install to be offered; `undefined` (never captured) must never
-   * coerce to available. This module never reads `is_windows_native`
-   * itself -- it consumes this pre-computed boolean, which is what keeps
-   * the D-09 source gate meaningful (nothing here needs the raw field).
+   * Windows install to be offered when the signal IS resolved; this module
+   * never reads `is_windows_native` itself -- it consumes this pre-computed
+   * boolean, which is what keeps the D-09 source gate meaningful (nothing
+   * here needs the raw field).
    */
   hasWindowsDepot: boolean
   /** The live `platformToInstall` state value (`InstallModal/index.tsx:104`). */
@@ -132,10 +163,11 @@ export interface SteamSectionGatingVerdict {
 }
 
 /**
- * The executable form of `34.13-UI-SPEC.md`'s Section-Gating Matrix. See
- * the module header above for what this deliberately does NOT do (decide
- * whether the dialog opens) and `steamSectionGating.test.ts` for the
- * 96-combination, 8-row proof this function must satisfy.
+ * The executable form of `34.13-UI-SPEC.md`'s Section-Gating Matrix,
+ * extended by Phase 34.14. See the module header above for what this
+ * deliberately does NOT do (decide whether the dialog opens) and
+ * `steamSectionGating.test.ts` for the 144-combination, 10-row proof this
+ * function must satisfy.
  */
 export function resolveSteamSectionGating(
   input: SteamSectionGatingInput
@@ -180,6 +212,16 @@ export function resolveSteamSectionGating(
     // macOS option at all -- the row exists precisely so the user can see
     // why a bottle is being requested.
     platformRow = 'readonly-windows'
+  } else if (!input.depotSignalResolved) {
+    // 34.14 D-03: THE SINGLE ENFORCED SEAM. This branch sits structurally
+    // BEFORE the `hasWindowsDepot` branch below, which makes it impossible
+    // to read `hasWindowsDepot` without having already passed the resolved
+    // gate -- no consumer, and no future edit to this function, can reach
+    // the depot question while the signal is still unresolved. A future
+    // refactor that reorders these two branches must be treated as
+    // reintroducing the 34.14 defect (readonly-macos and pending
+    // collapsing into one state). Rows 9/10.
+    platformRow = 'pending'
   } else if (input.hasWindowsDepot) {
     // D-17, rows 2/3/4: UNCONDITIONAL on macOS for a mac-native game with a
     // Windows depot -- no further gate (the retired model additionally
@@ -202,7 +244,10 @@ export function resolveSteamSectionGating(
   let effectivePlatform: InstallPlatform
   if (platformRow === 'selectable') {
     effectivePlatform = input.selectedPlatform
-  } else if (platformRow === 'readonly-macos') {
+  } else if (platformRow === 'readonly-macos' || platformRow === 'pending') {
+    // 34.14: `'pending'` joins the `'readonly-macos'` arm here -- a pending
+    // row offers no Windows selection yet, so treating it as Windows would
+    // mount a wine section (step 6) under a row the user cannot act on.
     effectivePlatform = 'Mac'
   } else {
     // 'readonly-windows' and 'absent' both mean "not macOS-selectable" --

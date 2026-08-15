@@ -632,10 +632,17 @@ describe('the matrix harness rejects known-bad gating functions', () => {
     expectSaboteurBreaksExactlyRows(linuxPlatformRowRenders, ['7', '8'])
   })
 
-  // 34.14: unchanged -- rows 9/10 are darwin (isMac already true there), so
-  // dropping the `isMac &&` guard has no observable effect on them; only
-  // non-mac hosts (rows 5/6/7/8) are affected.
-  it('windowsHostGetsWineSection: drops the isMac guard from wineSection -- breaks Row 5, Row 6, Row 7, Row 8', () => {
+  // 34.14 REVISED FINDING (superseding the original "unchanged" call): this
+  // saboteur's OWN local `effectivePlatform` re-derivation is a two-armed
+  // if/else ('selectable' -> selectedPlatform, 'readonly-macos' -> 'Mac',
+  // else -> 'Windows') written before `'pending'` existed. It does not know
+  // about `'pending'`, so it falls into the `else -> 'Windows'` arm for
+  // rows 9/10, which combined with the dropped `isMac &&` guard makes
+  // `wineSection` wrongly `true` there too -- independent of, and in
+  // addition to, the isMac-guard defect on the non-mac rows (5/6/7/8). Rows
+  // 9/10 therefore also break, caught only by re-running this saboteur
+  // AFTER Task 2 landed 'pending' (not from static reasoning alone).
+  it('windowsHostGetsWineSection: drops the isMac guard from wineSection -- breaks Row 5, Row 6, Row 7, Row 8, Row 9, Row 10', () => {
     function windowsHostGetsWineSection(
       input: SteamSectionGatingInput
     ): SteamSectionGatingVerdict {
@@ -659,7 +666,9 @@ describe('the matrix harness rejects known-bad gating functions', () => {
       '5',
       '6',
       '7',
-      '8'
+      '8',
+      '9',
+      '10'
     ])
   })
 

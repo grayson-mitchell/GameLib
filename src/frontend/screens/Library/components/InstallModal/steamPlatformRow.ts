@@ -105,6 +105,21 @@ export function selectSteamPlatformOptions<T extends { value: InstallPlatform }>
         : undefined
       return [macEntry, windowsEntry].filter((p): p is T => Boolean(p))
     }
+    case 'pending': {
+      // 34.14: DELIBERATE (Claude's Discretion, --skip-ui) -- the pending
+      // row reuses the existing read-only-macOS projection rather than
+      // mounting a second `<EligibilityLoadingRow />`. The pending-
+      // platform-row window is a strict SUBSET of the `eligibility.pending`
+      // window (both are answered by the same single round-trip), so a
+      // second mount would render two identical "Checking install
+      // options…" rows simultaneously -- and would break
+      // `steamEligibilityWiring.test.ts`'s B1 gate ("`<EligibilityLoadingRow`
+      // appears exactly once"). The wait is already explained on screen by
+      // the existing mount; the Install button is already disabled by
+      // D-01/34.13 D-25.
+      const macEntry = platforms.find((p) => p.value === 'Mac')
+      return macEntry ? [macEntry] : []
+    }
   }
 }
 
@@ -123,6 +138,14 @@ export function readonlyPlatformValue(
     case 'readonly-windows':
       return 'Windows'
     case 'readonly-macos':
+      return 'Mac'
+    case 'pending':
+      // 34.14: explicit and deliberate, not a silent fallthrough into
+      // `default` -- this codebase's convention is to name every case
+      // rather than let the union member ride on the catch-all below. A
+      // pending row pins its value to 'Mac' for the same reason
+      // 'readonly-macos' does (step 5's effectivePlatform normalisation in
+      // `steamSectionGating.ts` treats both identically).
       return 'Mac'
     default:
       return undefined
