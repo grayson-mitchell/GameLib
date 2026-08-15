@@ -410,6 +410,21 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
                 // without being edited.
                 runner="steam"
                 bottleNameReadOnly
+                // D-16 / Phase 17 CR-01 (34.13 review CR-01): the shared
+                // GOG/Epic prefix+engine must NEVER be selectable for the
+                // dedicated Steam bottle. Without this prop the "Use shared
+                // Wine prefix" toggle renders here and writes
+                // `globalConfig.wineVersion` -- the user's GLOBAL engine,
+                // commonly GPTK/`toolkit` on macOS -- straight past
+                // `filterWineEngines`' CrossOver-only filter and on into
+                // `persistBottleWineVersion`, which the backend deliberately
+                // does not reject. `resolveSteamBottleSeedEngine` then returns
+                // that persisted engine verbatim, seeding the guided bottle
+                // wizard with an engine `engineFilter.ts` describes as one
+                // that "would silently produce a broken bottle."
+                // `SteamBottleSetup.tsx` passes this same prop for exactly
+                // this reason.
+                hideSharedPrefixToggle
               />
             ) : null}
           </SteamDialog>

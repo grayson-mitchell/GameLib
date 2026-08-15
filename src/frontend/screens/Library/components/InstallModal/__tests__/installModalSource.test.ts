@@ -271,6 +271,72 @@ describe('D-16 / D-05: the WineSelector props', () => {
   it('zero occurrences of crossoverOnly -- D-16 arrives through resolveCrossoverOnly\'s "??" runner-derived default (engineFilter.ts), never an explicit prop', () => {
     expect(countOccurrences(stripped, 'crossoverOnly')).toBe(0)
   })
+
+  // -------------------------------------------------------------------
+  // D-16 / Phase 17 CR-01 -- the shared-prefix toggle must NOT render on
+  // the Steam path (34.13 review CR-01).
+  //
+  // The two count gates above were the gap that let this ship: they count
+  // the props that ARE present and say nothing about the one that was
+  // MISSING. This gate is written as a throwing helper (matching
+  // `assertBoundedStatusDanger`'s shape in the sibling SteamDialog source
+  // gate) so the SAME code path can be driven against a known-bad input
+  // and observed to fail -- a count assertion inlined into an `it` can
+  // never be proven RED.
+  // -------------------------------------------------------------------
+
+  function assertSteamWineSelectorHidesSharedPrefix(source: string): void {
+    // Bound the search to the Steam arm specifically. `index.tsx` mounts
+    // <WineSelector> four more times (ThirdParty/Download/Sideload), and
+    // those callers must stay byte-for-byte unchanged -- a whole-file
+    // count would pass just as happily if the prop landed on the wrong
+    // one.
+    const start = source.indexOf('<SteamDialog')
+    const end = source.indexOf('</SteamDialog>', start)
+    if (start === -1 || end === -1 || end <= start) {
+      throw new Error(
+        'could not locate the <SteamDialog> ... </SteamDialog> arm -- the gate cannot be evaluated'
+      )
+    }
+    const arm = source.slice(start, end)
+    const n = countOccurrences(arm, 'hideSharedPrefixToggle')
+    if (n !== 1) {
+      throw new Error(
+        `expected exactly 1 hideSharedPrefixToggle inside the SteamDialog arm, found ${n}`
+      )
+    }
+  }
+
+  it('the Steam <WineSelector> passes hideSharedPrefixToggle -- the shared GOG/Epic engine can never reach persistBottleWineVersion (D-16 / 17 CR-01)', () => {
+    expect(() =>
+      assertSteamWineSelectorHidesSharedPrefix(stripped)
+    ).not.toThrow()
+  })
+
+  it('the hideSharedPrefixToggle gate is non-vacuous -- it THROWS against the real pre-fix source (this file with the prop line deleted)', () => {
+    // Not a hand-built replica: this is the shipped source with exactly
+    // the one prop line removed, i.e. byte-for-byte the state the review
+    // found. A replica would drift silently from the production shape.
+    const knownBad = excludingLines(stripped, (line) =>
+      line.trim().startsWith('hideSharedPrefixToggle')
+    )
+    expect(knownBad).not.toContain('hideSharedPrefixToggle')
+    expect(() =>
+      assertSteamWineSelectorHidesSharedPrefix(knownBad)
+    ).toThrow(/found 0/)
+  })
+
+  it('the hideSharedPrefixToggle gate also trips on a SECOND occurrence inside the arm', () => {
+    const specimen = [
+      '<SteamDialog>',
+      '<WineSelector runner="steam" hideSharedPrefixToggle />',
+      '<WineSelector hideSharedPrefixToggle />',
+      '</SteamDialog>'
+    ].join('\n')
+    expect(() => assertSteamWineSelectorHidesSharedPrefix(specimen)).toThrow(
+      /found 2/
+    )
+  })
 })
 
 // ---------------------------------------------------------------------
