@@ -123,6 +123,34 @@ describe('installFormIpc.ts', () => {
       }
     )
 
+    // 34.13 review WR-10. The regex-only guard was `NUMERIC_APP_ID.test(x)`,
+    // and `RegExp.prototype.test` COERCES its argument to a string — so a
+    // numeric `123` (or a `['123']`, or a `{toString: () => '123'}`) passed
+    // the guard and reached `new SteamGame(...)`, where `this.appId` is then
+    // a non-string for every downstream `steamMetadataStore.get(this.appId)`
+    // and template-literal path. The seam now takes `unknown` and rejects on
+    // `typeof !== 'string'` BEFORE the regex.
+    it.each<unknown>([123, ['570'], null, undefined, {}])(
+      'WR-10: a non-STRING appName %p fails closed and never constructs a SteamGame',
+      async (hostileAppName: unknown) => {
+        const result = await getSteamBottleEligibilityVerdict(hostileAppName)
+
+        expect(result).toEqual({ eligible: false })
+        expect(mockedSteamGame).not.toHaveBeenCalled()
+      }
+    )
+
+    it('WR-10-RED: the pre-fix regex-only guard ACCEPTED those same non-string values -- proving the typeof term is load-bearing', () => {
+      // The shipped guard, written out. `test()` coerces, so every one of
+      // these is a false ACCEPT the new typeof term now refuses.
+      const preFixGuard = (x: unknown) => /^\d+$/.test(x as string)
+      expect(preFixGuard(123)).toBe(true)
+      expect(preFixGuard(['570'])).toBe(true)
+      // ...and the fixed guard's own typeof term refuses both.
+      expect(typeof 123 === 'string').toBe(false)
+      expect(typeof ['570'] === 'string').toBe(false)
+    })
+
     it('D-15 exposure: a persisted wineVersion is surfaced', async () => {
       mockCheckBottleEligibility.mockResolvedValue(true)
       mockedGetNodefault.mockImplementation((key: string) => {

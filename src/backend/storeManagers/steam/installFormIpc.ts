@@ -63,11 +63,21 @@ type WineInstallationType = (typeof WINE_INSTALLATION_TYPES)[number]
  * writes both to the same value) but are not interchangeable sources.
  */
 export async function getSteamBottleEligibilityVerdict(
-  appName: string
+  appName: unknown
 ): Promise<SteamBottleEligibilityVerdict> {
-  if (!NUMERIC_APP_ID.test(appName)) {
+  // Takes `unknown`, not `string` (34.13 review WR-10) — the same reason
+  // `persistInstallFormWineVersion` below does. The Tauri registration used
+  // to cast (`args[0] as string`) while the file's own block comment claimed
+  // the payload was "passed through UNCAST", which made the comment false
+  // AND left a real hole: `NUMERIC_APP_ID.test(123)` coerces the number to
+  // `'123'` and PASSES, after which `new SteamGame(123 as unknown as string)`
+  // carries a number as `this.appId` through every downstream
+  // `steamMetadataStore.get(this.appId)` and template-literal path. One
+  // typeof guard here covers BOTH runtimes, so neither registration needs a
+  // cast.
+  if (typeof appName !== 'string' || !NUMERIC_APP_ID.test(appName)) {
     logWarning(
-      'getSteamBottleEligibilityVerdict: rejected non-numeric appName (T-34.13-07-01)',
+      'getSteamBottleEligibilityVerdict: rejected non-string or non-numeric appName (T-34.13-07-01)',
       LogPrefix.Steam
     )
     return { eligible: false }
