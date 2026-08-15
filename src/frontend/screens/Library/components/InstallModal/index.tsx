@@ -47,6 +47,18 @@ import {
 } from './steamEligibilityProbe'
 import EligibilityLoadingRow from './SteamDialog/EligibilityLoadingRow'
 
+/**
+ * 34.13 review B-WR-02 (iteration 3): the Steam library fetch's three states.
+ * `'pending'` and `'failed'` are BOTH "we have no list", but only `'pending'`
+ * may suppress the dialog's explanatory copy — collapsing them (round 1 set
+ * the initial value on rejection) suppressed it forever and left
+ * `<DialogContent>` structurally empty on Linux.
+ */
+export type SteamLibraryFetch =
+  | { phase: 'pending' }
+  | { phase: 'ok'; targets: SteamDialogLibraryOption[] }
+  | { phase: 'failed' }
+
 type Props = {
   appName: string
   runner: Runner
@@ -112,20 +124,40 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   const [sideloadTitle, setSideloadTitle] = useState(
     t('sideload.field.title', 'Title')
   )
-  // 34.13 review B-WR-02: TRI-STATE. `null` means "the fetch has not settled"
-  // and is distinct from a settled `[]` ("GameLib controls no local Steam
-  // target"). It used to initialise to `[]`, which made "not yet known"
-  // indistinguishable from "native install is OFF" and painted the
-  // "Turn on native Steam installs in Settings…" instruction on the first
-  // frame of every Steam options open on a non-mac host.
-  const [steamLibraries, setSteamLibraries] = useState<
-    SteamDialogLibraryOption[] | null
-  >(null)
-  const steamLibrariesSettled = steamLibraries !== null
+  // 34.13 review B-WR-02, THEN re-raised as B-WR-02 in iteration 3.
+  //
+  // Round 1 made this a two-state `SteamDialogLibraryOption[] | null`, where
+  // `null` meant "not settled". That closed the first-frame lie (initialising
+  // to `[]` made "not yet known" indistinguishable from "native install is
+  // OFF" and painted "Turn on native Steam installs in Settings…" on the
+  // first frame of every Steam options open on a non-mac host) — but it
+  // collapsed two very different unsettled states into one PERMANENT one: the
+  // rejection handler set `null`, i.e. the INITIAL value, so
+  // `steamLibrariesSettled` stayed false forever and the only explanatory
+  // content in the dialog was suppressed forever. On Linux
+  // (`platformRow: 'absent'`, no wine section, no dropdown, no loading row)
+  // that leaves `<DialogContent>` rendering NOTHING AT ALL, permanently, with
+  // no explanation and no retry — strictly worse than the pre-fix
+  // "possibly-wrong sentence". `listSteamLibraryTargets` rejecting is not
+  // hypothetical: this repo has ledgered sidecar channel failures repeatedly,
+  // and the handler exists precisely because that happens.
+  //
+  // THREE states, because a rejection is a SETTLED — if unhelpful — answer
+  // and must not masquerade as pending. `'failed'` currently renders the same
+  // content-light copy a settled-empty fetch does (no new user-facing string,
+  // so no UI-SPEC amendment); it is a distinct state so a future third
+  // sentence has somewhere to attach without re-deriving the distinction.
+  const [libraryFetch, setLibraryFetch] = useState<SteamLibraryFetch>({
+    phase: 'pending'
+  })
+  const steamLibrariesSettled = libraryFetch.phase !== 'pending'
   // The array every downstream consumer wants. Kept as ONE derivation so no
-  // call site re-invents `?? []`, and memoised so the `null` case does not
-  // hand a fresh `[]` identity to the gating memo on every render.
-  const steamLibraryList = useMemo(() => steamLibraries ?? [], [steamLibraries])
+  // call site re-invents `?? []`, and memoised so a re-render does not hand a
+  // fresh `[]` identity to the gating memo.
+  const steamLibraryList = useMemo(
+    () => (libraryFetch.phase === 'ok' ? libraryFetch.targets : []),
+    [libraryFetch]
+  )
 
   const isLinuxNative = Boolean(gameInfo?.is_linux_native)
   const isMacNative = Boolean(gameInfo?.is_mac_native)
@@ -213,11 +245,15 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
       return
     }
     let cancelled = false
+    // A NEW session (different appName) must re-enter `pending`, otherwise the
+    // previous game's settled answer is read while this game's fetch is still
+    // in flight.
+    setLibraryFetch({ phase: 'pending' })
     window.api
       .listSteamLibraryTargets()
       .then((libraries) => {
         if (cancelled) return
-        setSteamLibraries(libraries)
+        setLibraryFetch({ phase: 'ok', targets: libraries })
       })
       .catch(() => {
         if (cancelled) return
@@ -229,11 +265,11 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
         window.api.logError(
           `34.13-12 InstallModal: Steam library target fetch failed for appName "${appName}"`
         )
-        // 34.13 review B-WR-02: stays `null` (UNKNOWN), never a settled `[]`.
-        // A transport failure is not evidence that native Steam installs are
-        // switched off, and the content-light copy would tell the user to go
-        // enable an already-enabled setting on the strength of it.
-        setSteamLibraries(null)
+        // 34.13 review B-WR-02 (iteration 3): `'failed'`, never back to
+        // `'pending'`. Round 1 set the INITIAL value here, which made the
+        // suppression permanent and emptied the dialog outright on Linux. A
+        // rejection is a settled answer; it just is not a helpful one.
+        setLibraryFetch({ phase: 'failed' })
       })
     return () => {
       cancelled = true
