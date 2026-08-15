@@ -36,6 +36,8 @@ import {
 } from './steamSectionGating'
 import {
   hasSteamWindowsDepot,
+  hasSteamDepotSignalCaptured,
+  resolveDepotAvailability,
   selectSteamPlatformOptions,
   readonlyPlatformValue
 } from './steamPlatformRow'
@@ -179,6 +181,32 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   // would be the drift 34.13-05's verification section warns against.
   const hasWindowsDepot = hasSteamWindowsDepot(gameInfo)
 
+  // 34.14 D-05: the seed half of the depot-availability resolution below --
+  // whether the Windows-depot answer was already captured at library-sync
+  // time. Read through this helper, never by the raw `steamPlatformsCaptured`
+  // field name: `installModalSource.test.ts` bans that token in this file,
+  // and a second raw reader here would be exactly the drift
+  // `steamPlatformRow.ts`'s own header warns against.
+  const seedDepotSignalCaptured = hasSteamDepotSignalCaptured(gameInfo)
+
+  // 34.14 D-04/D-05: the ONE call to `resolveDepotAvailability` in this
+  // file. All of D-04's fail-open-on-unknown and D-05's seed/probe
+  // selection live inside that pure function -- this file contains no
+  // behavioural conditional for either decision, deliberately, because this
+  // file cannot be unit-tested (no jsdom, `import './index.scss'` on line 1
+  // above). `probeSettled` is `!eligibility.pending`, the SAME expression
+  // that disables the dialog's Install button (D-01), so the pending row
+  // and the Install disable can never desync onto two different flags.
+  const { depotSignalResolved, windowsDepotOffered } = resolveDepotAvailability(
+    {
+      seedHasWindowsDepot: hasWindowsDepot,
+      seedDepotSignalCaptured,
+      probeHasWindowsDepot: eligibility.hasWindowsDepot,
+      probeDepotSignalCaptured: eligibility.depotSignalCaptured,
+      probeSettled: !eligibility.pending
+    }
+  )
+
   const platforms: AvailablePlatforms = [
     {
       name: 'Linux',
@@ -302,7 +330,18 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
       resolveSteamSectionGating({
         hostPlatform: platform,
         selectedPlatform: platformToInstall,
-        hasWindowsDepot,
+        // 34.14 D-01/D-03: whether the depot question is even answerable
+        // yet. Placed BEFORE `hasWindowsDepot` in this object -- mirroring
+        // `SteamSectionGatingInput`'s own field order -- so the resolver's
+        // D-03 read-order seam is visible at every call site, not just
+        // inside the resolver itself.
+        depotSignalResolved,
+        // 34.14 D-04: the OFFER decision, not the raw seed -- folds in
+        // D-04's fail-open-on-unknown. Passing the raw `hasWindowsDepot`
+        // here instead would make the fail-open path render as no offer at
+        // all, the exact regression `steamEligibilityWiring.test.ts`'s
+        // Group E (34.14) E3 gate exists to catch.
+        hasWindowsDepot: windowsDepotOffered,
         bottleRequired: eligibility.bottleRequired,
         // Both IPC handlers are already gated on
         // `isSteamNativeInstallEnabled()` and return `[]` when native
@@ -320,10 +359,16 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
     // `steamLibraries.length > 0` in WR-04) and is therefore listed; it is
     // derived from `steamLibraries`, which stays listed for
     // `libraryCount`.
+    // 34.14: `hasWindowsDepot` replaced by `windowsDepotOffered` (the
+    // memo body now reads the OFFER decision, not the raw seed) and
+    // `depotSignalResolved` added. A stale dep here means the row never
+    // leaves `'pending'` when the probe lands -- the exact bug this phase
+    // fixes, reintroduced through a dependency array.
     [
       platform,
       platformToInstall,
-      hasWindowsDepot,
+      windowsDepotOffered,
+      depotSignalResolved,
       steamLibraryList,
       steamNativeInstallOn,
       eligibility.bottleRequired
@@ -340,8 +385,15 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   // so both depend on the pending `bottleRequired` through `wineSection`.
   // Rendering them immediately would produce a dropdown that appears and
   // then VANISHES the instant eligibility resolves true. Suppressed here
-  // instead by `applyEligibilityPending`; `platformRow` is genuinely
-  // synchronous and passes through untouched.
+  // instead by `applyEligibilityPending`. `platformRow` still passes
+  // through `applyEligibilityPending` untouched, but as of 34.14 it is NOT
+  // synchronous -- it is synchronous only when the depot signal was
+  // already captured at open (34.14 D-05's seed case); otherwise it starts
+  // as `'pending'` and is resolved by `resolveDepotAvailability` feeding
+  // `depotSignalResolved`/`windowsDepotOffered` into the `steamGatingRaw`
+  // memo above (34.14 D-01/D-04/D-05). This is the SECOND of the two stale
+  // comments 34.14 corrects (the first, `steamEligibilityProbe.ts:161-163`
+  // at the time it was fixed, was 34.14-03's).
   // 34.13 review B-WR-02: composed with a SECOND pure suppression, not an
   // inline `&& steamLibrariesSettled` at the render site -- the same rule
   // Plan 11 already applied to `applyEligibilityPending` ("wrap the raw
@@ -368,8 +420,17 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   // D-17 must not trust, and a `'readonly-macos'` verdict resolved against
   // `availablePlatforms` could yield an empty option list for a
   // non-mac-native game.
+  // 34.14: the third argument is `windowsDepotOffered`, not the raw seed
+  // `hasWindowsDepot` -- passing the raw seed here would let the D-04
+  // fail-open path set `platformRowMode` to `'selectable'` while this
+  // projection still dropped the Windows entry, an offer that renders as
+  // no offer at all. Do not "simplify" this back to `hasWindowsDepot`.
   const platformRowOptions = isSteamManagedApp
-    ? selectSteamPlatformOptions(platformRowMode, platforms, hasWindowsDepot)
+    ? selectSteamPlatformOptions(
+        platformRowMode,
+        platforms,
+        windowsDepotOffered
+      )
     : availablePlatforms
 
   // G (34.13-12, design_decisions item 4): gated on `steamGating.wineSection`
