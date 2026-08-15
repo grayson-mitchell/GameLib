@@ -36,9 +36,14 @@ const FRONTEND_ROOT = join(__dirname, '..', '..', '..', '..')
 const APP_CSS = join(FRONTEND_ROOT, 'App.css')
 const APP_TSX = join(FRONTEND_ROOT, 'App.tsx')
 const NAVSHELL_SCSS = join(FRONTEND_ROOT, 'components/UI/NavShell/index.scss')
+const NAVSHELL_TSX = join(FRONTEND_ROOT, 'components/UI/NavShell/index.tsx')
 const NAVTABS_SCSS = join(
   FRONTEND_ROOT,
   'components/UI/NavShell/components/NavTabs/index.scss'
+)
+const NAVITEM_SCSS = join(
+  FRONTEND_ROOT,
+  'components/UI/NavShell/components/NavItem/index.scss'
 )
 const THEMES_SCSS = join(FRONTEND_ROOT, 'themes.scss')
 
@@ -600,5 +605,65 @@ describe('App.tsx D-06 reversal: the two macOS booleans are pinned distinct (34.
     )
     expect(definitionMatch?.[1]).not.toMatch(/&&/)
     expect(definitionMatch?.[1]).not.toMatch(/isFrameless/)
+  })
+})
+
+describe('260815-j24 -- navbar brand icon removed, tab strip flush to the tier-2 gutter', () => {
+  // Task 1: unmounting the wordmark <img> moves .NavTabs to inline offset 0
+  // with no CSS change (F1) -- and at offset 0, the tab's own inline padding
+  // (`.MuiTab-root`'s `padding: var(--space-xs) var(--space-md)`) already
+  // equals the tier-2 row's own inline gutter
+  // (`--tier2-row-padding-inline: var(--space-md)`, NavItem/index.scss), so
+  // the tab label and a tier-2 panel row's label land at the same x. Test C
+  // locks that coincidence into a contract.
+
+  it('Test A: the navbar renders no brand image (no NavShell__wordmark class, no gamelib-icon.png import)', () => {
+    const source = readStripped(NAVSHELL_TSX)
+    expect(source).not.toMatch(/NavShell__wordmark/)
+    expect(source).not.toMatch(/gamelib-icon\.png/)
+  })
+
+  it('Test B: no orphaned .NavShell__wordmark rule remains in NavShell/index.scss', () => {
+    const source = readStripped(NAVSHELL_SCSS)
+    expect(source).not.toMatch(/\.NavShell__wordmark\s*\{/)
+  })
+
+  it('Test C: tab inline padding equals the tier-2 row inline gutter -- this is what makes the tab label line up with the panel row label once the brand icon is gone', () => {
+    // .MuiTab-root is NESTED inside .NavTabs { ... } in NavTabs/index.scss,
+    // so the anchor pattern must not be column-0-anchored (it would never
+    // match a nested rule).
+    const navTabsSource = readStripped(NAVTABS_SCSS)
+    const muiTabRootBlock = extractBlock(
+      navTabsSource,
+      /^\s*\.MuiTab-root\s*\{/m
+    )
+    expect(muiTabRootBlock).not.toBeNull()
+    expect(muiTabRootBlock).toMatch(
+      /padding:\s*var\(--space-xs\)\s+var\(--space-md\)\s*;/
+    )
+
+    const navItemSource = readStripped(NAVITEM_SCSS)
+    expect(navItemSource).toMatch(
+      /--tier2-row-padding-inline:\s*var\(--space-md\)\s*;/
+    )
+  })
+
+  it('SANITY (Test D): Tests A/B/C regexes behave correctly against known-bad fixtures -- proves they are not vacuously true', () => {
+    // A's forbidden pattern MUST match a fixture that still carries the
+    // wordmark markup.
+    const wordmarkFixture = `<img className="NavShell__wordmark" alt="GameLib" />`
+    expect(wordmarkFixture).toMatch(/NavShell__wordmark/)
+
+    // B's forbidden pattern MUST match a fixture that still declares the
+    // orphaned rule.
+    const orphanedRuleFixture = `.NavShell__wordmark {\n  width: 30px;\n}`
+    expect(orphanedRuleFixture).toMatch(/\.NavShell__wordmark\s*\{/)
+
+    // C's padding pattern MUST NOT match a fixture whose inline padding has
+    // drifted away from --space-md.
+    const driftedPaddingFixture = `.MuiTab-root { padding: var(--space-xs) var(--space-lg); }`
+    expect(driftedPaddingFixture).not.toMatch(
+      /padding:\s*var\(--space-xs\)\s+var\(--space-md\)\s*;/
+    )
   })
 })
