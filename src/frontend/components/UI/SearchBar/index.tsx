@@ -60,9 +60,17 @@ export default function SearchBar({
 
   return (
     <div className="SearchBar" data-testid="searchBar">
+      {/* Padding lives in index.scss's `.searchButton`, not here. An inline
+          `style={{ padding: 'var(--space-2xs) var(--space-sm)' }}` used to sit
+          on this element; inline styles beat any selector, so it silently
+          shadowed that rule (leaving it dead code) and doubled the icon's
+          horizontal padding to 12px a side -- the "massive margin before the
+          magnifying glass and after" reported against the Games filter panel.
+          Both `loading` states resolve to the same `.searchButton` class, so
+          the spinner and the glass still occupy identical boxes and neither
+          jumps when they swap. */}
       <FontAwesomeIcon
         className={loading ? 'searchButton fa-spin-pulse' : 'searchButton'}
-        style={{ padding: 'var(--space-2xs) var(--space-sm)' }}
         tabIndex={-1}
         icon={loading ? faSpinner : faSearch}
       />

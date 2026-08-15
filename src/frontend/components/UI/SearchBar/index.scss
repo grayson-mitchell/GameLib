@@ -51,8 +51,18 @@
     display: none;
   }
 
+  // This rule was DEAD until 260815-mk1: an inline style on the same element
+  // (index.tsx) set `padding: var(--space-2xs) var(--space-sm)` and inline
+  // styles outrank every selector, so nothing here applied. The `0` bottom
+  // padding below is therefore a value no one has actually seen rendered
+  // since that inline style landed -- it is dropped rather than revived,
+  // because reviving it would be a NEW 3px upward nudge presented as a
+  // restoration. Vertical padding stays 6px top and bottom, exactly what the
+  // inline style was already producing; only the horizontal 12px -> 6px is a
+  // deliberate change.
   .searchButton {
-    padding: var(--space-2xs) var(--space-2xs) 0 var(--space-2xs);
+    padding: var(--space-2xs);
+    align-self: center;
   }
 
   .clearSearchButton {
@@ -72,7 +82,11 @@
     appearance: none;
     background: transparent;
     font: var(--font-secondary-bold);
-    padding: 0 var(--space-2xs);
+    // Inline-start is 0, not --space-2xs: the icon's own 6px trailing padding
+    // already separates the glyph from the text, and stacking both put 18px
+    // between them. The end side keeps its 6px -- that one buffers the text
+    // against the clear button, which has no leading padding of its own.
+    padding: 0 var(--space-2xs) 0 0;
     border: none;
     outline: none;
     transition: color 250ms;
