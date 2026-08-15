@@ -1300,7 +1300,7 @@ Plans:
 **Requirements**: none minted — coverage is tracked against the `D-NN` decisions in `34.13-CONTEXT.md` (D-01…D-28, with **D-13 RETIRED** by D-26; verified by the blocking decision-coverage gate)
 **Depends on:** Phase 34
 **Must run BEFORE:** Phase 35 (Electron cutover) — 35 intentionally runs last
-**Plans:** 14 planned, being re-planned to 13 (see amendment below)
+**Plans:** 14 plans (01-03, 05-15; 04 is a permanent gap), 8 waves
 
 **⚠ Title is superseded (D-28).** The "(GOG parity)" framing in the heading above no longer describes the phase — D-28 states the phase *overshoots* GOG parity rather than reaching it. The heading is left unchanged deliberately: the phase directory slug (`34.13-steam-install-time-wine-bottle-form-gog-parity`) is derived from it, and renaming one without the other desyncs phase lookup. Rename both together or neither.
 
@@ -1324,21 +1324,37 @@ Plans:
 
 **Do not conflate:** `SteamBottleSetup` (frontend state + toast) is a **post-install** guided surface from Phase 17 (D-07), opened only by the backend's `steamBottleSetupRequired` push. It is not the install-time form this phase delivers.
 
-Plans: *(⚠ the list below predates the D-21..D-28 amendment and is being re-planned. Per `34.13-CONTEXT.md`'s plan-set impact table: **04 is DELETED** by D-26 and its number stays a deliberate gap — no renumbering, because plans cross-reference each other by number; **05/08/11/13 are REWRITTEN**; the rest are substantially intact. Ends at 13 plans.)*
-- [ ] 34.13-01 — Shared contracts (`types.ts`, `electronStores.ts`, config default) [D-13, D-17]
+Plans: **14 plans, 8 waves** *(re-planned 2026-08-15 for D-21..D-29. `34.13-04` is **DELETED** by D-26 and its number is a **permanent gap** — nothing was renumbered, because plans cross-reference each other by number. `34.13-15` was added for scope the amendment left unowned.)*
+
+**Wave 1**
+- [ ] 34.13-01 — Shared contracts (`types.ts`, `electronStores.ts`) [D-17, D-26]
+
+**Wave 2** *(blocked on Wave 1)*
 - [ ] 34.13-02 — Steam backend read-side: `is_windows_native` capture + `checkBottleEligibility()` [D-07, D-09, D-17]
 - [ ] 34.13-03 — `WineSelector` Steam props + pure `engineFilter.ts` [D-05, D-16]
-- [ ] 34.13-04 — Always-show global setting (accessor + toggle) [D-13]
-- [ ] 34.13-05 — Pure section-gating + trigger predicate module [D-03, D-10, D-11, D-18, D-19, D-20]
+- [ ] 34.13-05 — Pure **section-gating** module — the trigger predicate is GONE [D-03, D-11, D-18, D-19, D-20, D-22, D-26]
+- [ ] 34.13-08 — **Split button + real install routing** across every entry point [D-21, D-23, D-24, D-27, D-28]
+
+**Wave 3** *(blocked on Wave 2)*
 - [ ] 34.13-06 — `SteamGame.install()` honors the Windows-via-bottle override [D-17]
 - [ ] 34.13-07 — IPC surface, dual-registered (`isSteamBottleEligible`, `persistBottleWineVersion`) [D-09, D-14, D-15]
-- [ ] 34.13-08 — Trigger rewrite + `SteamInstallLocationPicker` retirement [D-04, D-10, D-11, D-12]
+- [ ] 34.13-15 — **`GameCard` menu Item + `GameSubMenu` entry + Console Mode D-24 check** [D-24, D-27, D-28, D-29]
+
+**Wave 4** *(blocked on Wave 3)*
 - [ ] 34.13-09 — D-15 handoff: the guided setup READS the persisted choice [D-15]
-- [ ] 34.13-10 — The `SteamDialog` sibling component [D-01, D-02, D-06, D-08, D-14]
-- [ ] 34.13-11 — D-12 busy state on the origin controls [D-12]
-- [ ] 34.13-12 — `InstallModal` fifth branch + platform-row rework [D-01, D-03, D-05, D-16, D-17, D-18, D-19]
-- [ ] 34.13-13 — Localisation + blocking manual UAT gate (32 items, both runtimes) [D-06, D-20]
 - [ ] 34.13-14 — Persist the D-17 forced verdict so the install is durable [D-17, closes T-34.13-06-06]
+
+**Wave 5** — [ ] 34.13-10 — The `SteamDialog` sibling component + D-24 notice + Q6 notice [D-01, D-02, D-06, D-08, D-14, D-20, D-24]
+**Wave 6** — [ ] 34.13-12 — `InstallModal` fifth branch + platform-row rework [D-01, D-03, D-05, D-16, D-17, D-18, D-19]
+**Wave 7** — [ ] 34.13-11 — **D-25 in-dialog eligibility loading state** (inverts the retired D-12 contract) [D-25, D-11, D-06]
+**Wave 8** — [ ] 34.13-13 — Localisation catalog (11 keys) + blocking manual UAT gate (**36 items**, both runtimes) [D-06, D-20]
+
+**Cross-cutting constraints:**
+- **D-13 is RETIRED** (D-26). No always-show setting is built; `settings`/`help.alwaysShowSteamInstallForm` are banned identifiers.
+- **D-22 retired every auto-open trigger** — nothing computes whether the dialog opens; the user is the trigger.
+- **D-25 inverts D-12**: the dialog opens instantly and the loading state lives *inside* it. A half-rendered dialog is CORRECT. Origin-control busy state is a violation.
+- New IPC must be registered on **both** Electron `main.ts` and the Tauri sidecar, and typed through the preload seam.
+- Every new user-facing string needs a `gamelib:` key; `pnpm lint-translations:gamelib` must stay green.
 
 ### Phase 34.1: Tauri IPC re-plumb slice 4 — app shell and window chrome (INSERTED)
 
