@@ -31,6 +31,27 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-md);
+
+  // Quick task 260815-qf0 (the hoist to first-child of `.listing`).
+  //
+  // INLINE: `.listing` supplies no padding of its own, so every child insets
+  // itself, and they all agree on the same gutter -- `.libraryHeader`
+  // `padding: var(--space-md-fixed)`, `.gameList`
+  // `padding: 0 var(--space-md-fixed) ...`, `.gameListLayout`
+  // `margin: 0 var(--space-md-fixed)`, `.alphabet-filter-container`
+  // `margin: 8px var(--space-md-fixed)`. This row carried NO inline inset,
+  // which was tolerable sandwiched mid-column but is not now that it is the
+  // container's first visible child: it sits directly above the "Played
+  // Recently" heading and establishes the top-left reading edge. Same token
+  // as every neighbour -- do not "clean up" back to flush-left.
+  padding-inline: var(--space-md-fixed);
+
+  // BLOCK: deliberately left at the pre-hoist value. `.libraryHeader` pads
+  // all four sides by var(--space-md-fixed), so 16px of the heading's own
+  // padding already sits above its text; raising this would double-count
+  // separation the neighbour supplies, and `padding-block` is symmetric --
+  // more here also pushes the chips down and eats the above-the-fold
+  // headroom this hoist exists to reclaim.
   padding-block: var(--space-2xs);
 
   .FilterChipRow__chip {
