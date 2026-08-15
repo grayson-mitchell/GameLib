@@ -144,8 +144,15 @@ const SteamBridgeSetup = () => {
       </DialogContent>
       <DialogFooter>
         {fallbackAvailable ? (
+          /* 34.13 review C-23: `void` on the JSX attribute so no promise
+             floats off an event handler — the same rule C-02's fix wrote into
+             SteamBottleSetup.tsx one file over. `handleFallback` is safe today
+             only incidentally (its body is entirely inside try/catch/finally
+             and its only pre-`try` statements are setState calls); one future
+             `await` moved above the `try` would reintroduce a floating
+             rejection on a failure-RECOVERY surface. */
           <button
-            onClick={handleFallback}
+            onClick={() => void handleFallback()}
             disabled={fallingBack}
             className="button is-primary"
           >

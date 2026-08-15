@@ -230,6 +230,36 @@ const asyncConfirmSurfaces = census.filter(
   (c) => sliceAsyncHandler(c.stripped, 'handleConfirm') !== null
 )
 
+/**
+ * 34.13 review C-23. Every `const <name> = async` declaration in a source,
+ * paired with whether that name is ALSO wired bare to an `onClick`.
+ */
+export function asyncHandlerWirings(
+  source: string
+): { name: string; wiredBare: boolean }[] {
+  const flattened = source.replace(/\s+/g, ' ')
+  const names = [...flattened.matchAll(/const (\w+) = async /g)].map(
+    (m) => m[1]
+  )
+  return names.map((name) => ({
+    name,
+    wiredBare: new RegExp(`onClick=\\{${name}\\}`).test(flattened)
+  }))
+}
+
+const asyncHandlerSurfaces = census.filter(
+  (c) => asyncHandlerHavingOnClick(c.stripped).length > 0
+)
+
+function asyncHandlerHavingOnClick(
+  source: string
+): { name: string; wiredBare: boolean }[] {
+  const flattened = source.replace(/\s+/g, ' ')
+  return asyncHandlerWirings(source).filter((h) =>
+    new RegExp(`onClick=\\{(\\(\\) => void )?${h.name}`).test(flattened)
+  )
+}
+
 describe('C-17: permanently-mounted surfaces cannot outlive their own dismissal', () => {
   it('the census actually found the App.tsx mount block (non-vacuity)', () => {
     // If this ever drops to zero the whole file silently guards nothing.
@@ -364,6 +394,49 @@ describe('C-19: no permanently-mounted surface floats an unhandled IPC rejection
           handler.slice(catchIdx).replaceAll("setPhase('error')", '')
         expect(knownBad).not.toBe(handler)
         expect(knownBad.slice(catchIdx)).not.toContain("setPhase('error')")
+      })
+    }
+  )
+})
+
+describe('C-23: no async handler is wired bare to an onClick', () => {
+  it('the census is non-vacuous', () => {
+    // C-02's fix established the `onClick={() => void handler()}` rule in
+    // SteamBottleSetup.tsx and the same pass edited SteamBridgeSetup.tsx
+    // without applying it. All three Steam setup surfaces carry an async
+    // handler behind a button, so all three must be enrolled.
+    expect(asyncHandlerSurfaces.map((c) => c.name).sort()).toEqual([
+      'SteamBottleSetup',
+      'SteamBridgeSetup',
+      'SteamClientSetup'
+    ])
+  })
+
+  describe.each(asyncHandlerSurfaces.map((c) => [c.name, c] as const))(
+    '%s',
+    (_name, component) => {
+      it.each(
+        asyncHandlerHavingOnClick(component.stripped).map(
+          (h) => [h.name, h] as const
+        )
+      )('%s is invoked through `() => void`, not passed bare', (_n, wiring) => {
+        expect(wiring.wiredBare).toBe(false)
+      })
+
+      it('RED: rewiring the handler bare DERIVED FROM THE REAL SOURCE breaks the obligation', () => {
+        const handlers = asyncHandlerHavingOnClick(component.stripped)
+        const knownBad = handlers.reduce(
+          (acc, h) =>
+            acc.replace(
+              new RegExp(`onClick=\\{\\(\\) => void ${h.name}\\(\\)\\}`, 'g'),
+              `onClick={${h.name}}`
+            ),
+          component.stripped
+        )
+        expect(knownBad).not.toBe(component.stripped)
+        expect(
+          asyncHandlerHavingOnClick(knownBad).some((h) => h.wiredBare)
+        ).toBe(true)
       })
     }
   )
