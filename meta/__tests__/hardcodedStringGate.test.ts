@@ -491,7 +491,11 @@ describe('hardcodedStringGate', () => {
       // in the scope rendering `<Anything buttonClass="Some real prose">` is
       // silently exempt -- a real widening of the gate's blind spot, added
       // without the proof every sibling entry carries. Added here.
-      it.each(['i18nKey', 'htmlId', 'extraClass', 'partition', 'buttonClass'])(
+      // 34.13 review A-16: `buttonClass` is REMOVED from this blanket list --
+      // it is now tag-scoped to `Dropdown` (isDropdownButtonClassProp), so a
+      // `<div buttonClass=...>` fixture would no longer be exempt and must
+      // not claim to be. Its scoped fixtures are the two specs below.
+      it.each(['i18nKey', 'htmlId', 'extraClass', 'partition'])(
         'never flags the "%s" attribute',
         (attribute) => {
           const source = `
@@ -516,12 +520,58 @@ describe('hardcodedStringGate', () => {
         // so the zero above is an exemption decision, not a blind spot. (A
         // count of `result.exempted` would NOT prove this -- excluded
         // attributes are skipped before that counter is touched.)
+        //
+        // 34.13 review A-16: this assertion USED to be
+        // `expect(sameValueUnexcluded.violations.length).toBeGreaterThanOrEqual(0)`
+        // -- true for every array. The comment above it asserted a proof that
+        // was never performed, in the fix for a finding ABOUT gates that
+        // cannot fail. Running the real scanner on this exact input yields
+        // exactly ONE violation, so the real assertion was available all
+        // along.
         const sameValueUnexcluded = scanSource(
           'fixture.tsx',
           `export const Example = () => <Dropdown title="button outline" />`,
           EMPTY_GLOSSARY
         )
-        expect(sameValueUnexcluded.violations.length).toBeGreaterThanOrEqual(0)
+        expect(sameValueUnexcluded.violations).toHaveLength(1)
+        expect(sameValueUnexcluded.violations[0]).toMatchObject({
+          kind: 'jsx-attribute',
+          attribute: 'title'
+        })
+      })
+
+      // ── 34.13 review A-16, second half ───────────────────────────────────
+      // The blanket `buttonClass` entry did not just lack a fixture, it
+      // WIDENED the gate's blind spot: any component anywhere in the 164-file
+      // scope could carry real prose in a `buttonClass` and go unflagged. The
+      // iteration-2 fix documented that hole rather than closing it. The
+      // exemption is now tag-scoped to `Dropdown`, mirroring
+      // `isInfoBoxTextKeyProp`'s `text`/`InfoBox` scoping and its stated
+      // reason ("too generic an attribute name to exempt everywhere").
+      it('A-16: real prose in buttonClass on a NON-Dropdown component is FLAGGED', () => {
+        const result = scanSource(
+          'fixture.tsx',
+          `export const Example = () => <Anything buttonClass="Install with options now" />`,
+          EMPTY_GLOSSARY
+        )
+
+        expect(result.violations).toHaveLength(1)
+        expect(result.violations[0]).toMatchObject({
+          kind: 'jsx-attribute',
+          attribute: 'buttonClass'
+        })
+      })
+
+      it('A-16 DISCRIMINATOR: the SAME prose in buttonClass on Dropdown itself stays exempt', () => {
+        // Proves the narrowing did not simply delete the exemption -- the
+        // real shipped consumer is still covered.
+        const result = scanSource(
+          'fixture.tsx',
+          `export const Example = () => <Dropdown buttonClass="Install with options now" />`,
+          EMPTY_GLOSSARY
+        )
+
+        expect(result.violations).toHaveLength(0)
       })
 
       it('A-06 BOUNDARY: the exemption is attribute-name-driven, so real prose in a NEIGHBOURING attribute on the same element is still flagged', () => {

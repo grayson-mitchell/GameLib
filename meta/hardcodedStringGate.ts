@@ -115,15 +115,18 @@ export const EXCLUDED_ATTRIBUTES = [
   'i18nKey',
   'htmlId',
   'extraClass',
-  'partition',
-  // 34.13-08: same category as `htmlId`/`extraClass` above -- this is
-  // `Dropdown`'s (`frontend/components/UI/Dropdown/index.tsx`) own prop
-  // name for the CSS class it applies to its internal `<button>`, not
-  // user-facing text. First hit a literal string value when the D-21 split
-  // button (`MainButton.tsx`'s `SteamInstallCaret`) passed
-  // `buttonClass="button mainBtn outline"` -- every prior `Dropdown`
-  // consumer (`FilterFacetGroup`) left this prop unset.
-  'buttonClass'
+  'partition'
+  // 34.13 review A-16 MOVED `buttonClass` out of this list. It is
+  // `Dropdown`'s own prop name for the CSS class it applies to its internal
+  // `<button>` (frontend/components/UI/Dropdown/index.tsx), so the exemption
+  // itself is right -- but as a BLANKET attribute-name entry it also exempted
+  // `buttonClass` on every other component in the 164-file scope, where real
+  // prose would then be silently unflagged (measured: `<Dropdown
+  // buttonClass="Install with options now" />` scored 0 violations). It is now
+  // scoped to the `Dropdown` family by `isDropdownButtonClassProp` below,
+  // exactly the way `isInfoBoxTextKeyProp` scopes `text` to `InfoBox` and for
+  // the identical stated reason ("too generic an attribute name to exempt
+  // everywhere").
 ] as const
 
 function isExcludedAttribute(attributeName: string): boolean {
@@ -201,8 +204,7 @@ const KEBAB_OR_SNAKE_RE = /^[A-Za-z0-9]+([-_][A-Za-z0-9]+)+$/
 // `--primary-font-family`, `var(--accent)`, `2px`, or `blur(10px)`.
 const CSS_CUSTOM_PROPERTY_RE = /^--[a-zA-Z0-9-]+$/
 const CSS_VAR_FUNCTION_RE = /^var\(--[a-zA-Z0-9-]+(,\s*.+)?\)$/
-const CSS_LENGTH_RE =
-  /^-?\d+(\.\d+)?(px|em|rem|vh|vw|vmin|vmax|%|s|ms|deg)$/
+const CSS_LENGTH_RE = /^-?\d+(\.\d+)?(px|em|rem|vh|vw|vmin|vmax|%|s|ms|deg)$/
 const CSS_FUNCTION_RE = /^[a-zA-Z-]+\([^()]*\)$/
 // Plan 06 (34.8-06): a bracketed CSS attribute selector (`[data-tour="sidebar-menu"]`,
 // `SidebarTour.tsx`/`LibraryTour.tsx`'s `intro.js` step targets) — content-shape,
@@ -440,7 +442,8 @@ function isKeyboardEventKeyComparison(node: Node): boolean {
   if (Node.isBinaryExpression(parent)) {
     const op = parent.getOperatorToken().getText()
     if (!['===', '!==', '==', '!='].includes(op)) return false
-    const other = parent.getLeft() === node ? parent.getRight() : parent.getLeft()
+    const other =
+      parent.getLeft() === node ? parent.getRight() : parent.getLeft()
     return isDotKeyAccess(other)
   }
 
@@ -485,6 +488,36 @@ function isWithinTransComponentChildren(node: Node): boolean {
  * `text="Some real prose"` on an arbitrary OTHER component would be a real
  * violation, so this must not become a blanket `text`-attribute exemption.
  */
+/**
+ * 34.13 review A-16: `buttonClass` is `Dropdown`'s own prop name for the CSS
+ * class applied to its internal `<button>` (`frontend/components/UI/Dropdown/
+ * index.tsx`), first hit when the D-21 split button (`MainButton.tsx`'s
+ * `SteamInstallCaret`) passed `buttonClass="button outline"`. TAG-SCOPED, not
+ * a blanket attribute exemption: `buttonClass` is a generic enough name that a
+ * future component could legitimately carry real prose in it, and the blanket
+ * form measurably created that blind spot across all 164 scoped files. Mirrors
+ * `isInfoBoxTextKeyProp` below, including its rationale.
+ */
+function isDropdownButtonClassProp(node: Node): boolean {
+  const attribute = node.getFirstAncestor(Node.isJsxAttribute)
+  if (!attribute || attribute.getNameNode().getText() !== 'buttonClass') {
+    return false
+  }
+  return jsxTagNameOf(attribute) === 'Dropdown'
+}
+
+/** The tag name of the JSX element owning `attribute`, or undefined. */
+function jsxTagNameOf(attribute: Node): string | undefined {
+  const jsxElement = attribute.getFirstAncestor(
+    (n): n is Node => Node.isJsxElement(n) || Node.isJsxSelfClosingElement(n)
+  )
+  if (!jsxElement) return undefined
+  const tagNameNode = Node.isJsxElement(jsxElement)
+    ? jsxElement.getOpeningElement().getTagNameNode()
+    : jsxElement.getTagNameNode()
+  return tagNameNode.getText()
+}
+
 function isInfoBoxTextKeyProp(node: Node): boolean {
   const attribute = node.getFirstAncestor(Node.isJsxAttribute)
   if (!attribute || attribute.getNameNode().getText() !== 'text') return false
@@ -783,6 +816,7 @@ function isStructuralNonCandidate(
   if (isKeyboardEventKeyComparison(node)) return true
   if (isWithinTransComponentChildren(node)) return true
   if (isInfoBoxTextKeyProp(node)) return true
+  if (isDropdownButtonClassProp(node)) return true
   if (isConfigStoreKeyArgument(node)) return true
   if (isTechnicalDomApiArgument(node)) return true
   if (isInternalStringComparisonArgument(node)) return true
@@ -1131,6 +1165,7 @@ function isAssignedThenPassedToT(
       isConsoleArgument(reference) ||
       isWindowApiLogArgument(reference) ||
       isNestedInExcludedJsxAttribute(reference) ||
+      isDropdownButtonClassProp(reference) ||
       // Plan 10 (34.8-10): `WebView/index.tsx`'s `userAgent` binding
       // (assigned via ternary, referenced only at `webview.setUserAgent(
       // userAgent)`) — the SAME "never rendered through this binding" claim,
@@ -1355,7 +1390,10 @@ export function scanSource(
       return
     }
 
-    if (Node.isStringLiteral(node) || Node.isNoSubstitutionTemplateLiteral(node)) {
+    if (
+      Node.isStringLiteral(node) ||
+      Node.isNoSubstitutionTemplateLiteral(node)
+    ) {
       const classification = classify(node)
       record(node, node.getLiteralText(), classification)
       return
@@ -1491,10 +1529,7 @@ export function scanScope(
     )
   }
 
-  const allowlist = readJsonSafely<AllowlistEntry[]>(
-    allowlistPath,
-    'allowlist'
-  )
+  const allowlist = readJsonSafely<AllowlistEntry[]>(allowlistPath, 'allowlist')
   if (!Array.isArray(allowlist)) {
     throw new ScopeLoadError(`allowlist at "${allowlistPath}" is not an array`)
   }
