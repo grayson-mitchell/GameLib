@@ -205,75 +205,148 @@ describe('genI18nGateScope', () => {
       )
     }
 
-    describeIfGitAvailable('with a real git diff against the upstream merge-base', () => {
-      function freshSnapshotFiles(): string[] {
-        return buildScopeSnapshot({
-          diffLines: diffLines as string[],
-          baseCommit: packageJson.upstream.baseCommit,
-          baseVersion: packageJson.upstream.baseVersion,
-          now: FIXED_NOW
-        }).files
+    describeIfGitAvailable(
+      'with a real git diff against the upstream merge-base',
+      () => {
+        function freshSnapshotFiles(): string[] {
+          return buildScopeSnapshot({
+            diffLines: diffLines as string[],
+            baseCommit: packageJson.upstream.baseCommit,
+            baseVersion: packageJson.upstream.baseVersion,
+            now: FIXED_NOW
+          }).files
+        }
+
+        it('sanity: the real fork diff yields a non-empty scope-eligible file set', () => {
+          expect(freshSnapshotFiles().length).toBeGreaterThan(0)
+        })
+
+        /**
+         * The DECLARED, measured debt: fork-touched files that are eligible for
+         * the blocking hardcoded-string gate's scope but are not in the
+         * committed snapshot, so nothing has ever scanned them.
+         *
+         * 34.13 review A-03 CORRECTED THIS. The comment that used to sit here
+         * named SIX files "as of 34.11". The real count at 34.13 was TWENTY,
+         * and the comment had no way to notice: the guard below it was
+         * `it.skip`'d, so the number was prose, not a measurement. Two of the
+         * twenty were this phase's own output
+         * (`InstallModal/index.tsx`, edited by five of iteration 1's seventeen
+         * fix commits, and `WineSelector/engineFilter.ts`, created by D-16);
+         * both were added to `meta/i18nGateScope.json` by the A-02 fix and are
+         * therefore absent from this list.
+         *
+         * The remaining eighteen are pre-existing debt from 34.11 and earlier.
+         */
+        const DECLARED_UNSCANNED_DEBT = [
+          'src/frontend/components/UI/ActionIcons/index.tsx',
+          'src/frontend/components/UI/LanguageSelector/index.tsx',
+          'src/frontend/components/UI/NavShell/components/FilterFacetGroup/selectionCount.ts',
+          'src/frontend/components/UI/SteamGridDBPicker/index.tsx',
+          'src/frontend/components/UI/Winetricks/index.tsx',
+          'src/frontend/helpers/declaredUnavailable.ts',
+          'src/frontend/screens/ConsoleMode/selectors.ts',
+          'src/frontend/screens/Library/components/FilterChipRow/chipLabels.ts',
+          'src/frontend/screens/Library/components/GamesList/index.tsx',
+          'src/frontend/screens/Library/components/LibraryHeader/gameCount.ts',
+          'src/frontend/screens/Library/engineWiring.ts',
+          'src/frontend/screens/Library/facetLabels.ts',
+          'src/frontend/screens/Library/filterEngine.ts',
+          'src/frontend/screens/Settings/components/EgsSettings.tsx',
+          'src/frontend/screens/Settings/components/SteamGridDbApiKey.tsx',
+          'src/frontend/screens/Settings/components/UseFramelessWindow.tsx',
+          'src/frontend/screens/Settings/sections/AdvancedSettings/index.tsx',
+          'src/frontend/screens/Settings/sections/GamesSettings/index.tsx'
+        ]
+
+        /**
+         * 34.13 review A-03: a LIVE RATCHET, replacing the prose the skipped
+         * guard below carried.
+         *
+         * The review's preferred fix was to un-skip the full guard and accept
+         * a permanent RED. That was rejected for the reason the original
+         * comment itself gives: a permanently red suite masks unrelated
+         * regressions. This is the version that keeps the invariant
+         * ENFORCEABLE without going red -- the existing debt is declared
+         * explicitly above, and any file that drifts out of scope from here on
+         * fails immediately, by name.
+         *
+         * A file LEAVING the list (added to the snapshot, or deleted) also
+         * fails, so the declaration cannot silently rot the way the six-file
+         * comment did.
+         */
+        it('A-03 RATCHET: the set of unscanned fork-touched files equals the DECLARED debt exactly -- any NEW drift fails here by name', () => {
+          const freshFiles = freshSnapshotFiles()
+          const committedSet = new Set(scopeSnapshot.files)
+          const missing = freshFiles.filter((file) => !committedSet.has(file))
+
+          expect(missing.sort()).toEqual([...DECLARED_UNSCANNED_DEBT].sort())
+        })
+
+        it('A-03 RATCHET non-vacuity: the ratchet DOES fail when a file drifts out of scope -- proven by removing a real, currently-in-scope path from a copy of the snapshot', () => {
+          const freshFiles = freshSnapshotFiles()
+          const inScope = freshFiles.find((file) =>
+            scopeSnapshot.files.includes(file)
+          )
+          expect(inScope).toBeDefined()
+
+          const sabotaged = new Set(
+            scopeSnapshot.files.filter((file) => file !== inScope)
+          )
+          const missing = freshFiles.filter((file) => !sabotaged.has(file))
+
+          expect(missing.sort()).not.toEqual(
+            [...DECLARED_UNSCANNED_DEBT].sort()
+          )
+          expect(missing).toContain(inScope)
+        })
+
+        // SKIPPED, NOT BROKEN -- this assertion is correct, non-vacuous (proven
+        // by the SANITY test directly below, which stays live) and currently
+        // RED against real HEAD, naming the 18 files listed in
+        // DECLARED_UNSCANNED_DEBT above. The RATCHET above is what actually
+        // enforces the invariant day to day; this one is the end state.
+        //
+        // The obvious fix -- `pnpm gen-i18n-gate-scope` -- is blocked on
+        // WR-17 (34.11-REVIEW.md): `pnpm i18n` carries pre-existing catalog
+        // drift that must be triaged FIRST, or a regeneration silently drops
+        // the 8 new panel files from the localisation gate along with the
+        // catalog keys. (The snapshot's own provenance fields were false too;
+        // 34.13 review A-03 corrected them to say "hand-edited".)
+        //
+        // UN-SKIP THIS (delete the `.skip`) the moment WR-17 is triaged and
+        // the snapshot is legitimately regenerated, and delete the ratchet
+        // above with it.
+        it.skip('every fork-touched source file the real diff surfaces is present in the committed meta/i18nGateScope.json snapshot -- re-run `pnpm gen-i18n-gate-scope` if this fails', () => {
+          const freshFiles = freshSnapshotFiles()
+          const committedSet = new Set(scopeSnapshot.files)
+          const missing = freshFiles.filter((file) => !committedSet.has(file))
+
+          // jest's own array-diff on a failing toEqual([]) prints every
+          // unexpected surviving entry, which is exactly the "name the
+          // un-snapshotted paths" failure mode this guard exists to produce.
+          expect(missing).toEqual([])
+        })
+
+        it('SANITY: the staleness guard above actually detects an absence -- proves it is not vacuously true', () => {
+          const freshFiles = freshSnapshotFiles()
+          expect(freshFiles.length).toBeGreaterThan(0)
+
+          // Simulate a stale snapshot by fabricating one with a real,
+          // currently-in-scope file removed from it, then re-run the exact
+          // same detection logic the test above uses against that fabricated
+          // snapshot.
+          const knownFile = freshFiles[0]
+          const fakeStaleCommittedSet = new Set(
+            scopeSnapshot.files.filter((file) => file !== knownFile)
+          )
+          const missing = freshFiles.filter(
+            (file) => !fakeStaleCommittedSet.has(file)
+          )
+
+          expect(missing).toContain(knownFile)
+        })
       }
-
-      it('sanity: the real fork diff yields a non-empty scope-eligible file set', () => {
-        expect(freshSnapshotFiles().length).toBeGreaterThan(0)
-      })
-
-      // SKIPPED, NOT BROKEN -- this assertion is correct, non-vacuous (proven
-      // by the SANITY test directly below, which stays live) and currently
-      // RED against real HEAD. It names 6 fork-touched files absent from the
-      // committed snapshot:
-      //   src/frontend/screens/Library/components/FilterChipRow/chipLabels.ts
-      //   src/frontend/screens/Library/components/GamesList/index.tsx
-      //   src/frontend/screens/Library/engineWiring.ts
-      //   src/frontend/screens/Library/facetLabels.ts
-      //   src/frontend/screens/Library/filterEngine.ts
-      //   src/frontend/screens/Settings/sections/GamesSettings/index.tsx
-      // All six landed in Phase 34.11 commits AFTER the snapshot's last
-      // regeneration, so none of them has ever been scanned by the blocking
-      // hardcoded-string gate. Phase 34.10's own contribution is clean: all
-      // 17 NavShell/ source files ARE present.
-      //
-      // The obvious fix -- `pnpm gen-i18n-gate-scope` -- is blocked on
-      // WR-17 (34.11-REVIEW.md): this snapshot's generatedBy/baseCommit
-      // provenance is already false (hand-edited across three commits), and
-      // `pnpm i18n` carries pre-existing catalog drift that must be triaged
-      // FIRST, or a regeneration silently drops the 8 new panel files from
-      // the localisation gate along with the catalog keys.
-      //
-      // UN-SKIP THIS (delete the `.skip`) the moment WR-17 is triaged and
-      // the snapshot is legitimately regenerated. Skipping keeps the
-      // invariant written down and one keystroke from live, instead of
-      // parking a red suite that would mask unrelated regressions.
-      it.skip('every fork-touched source file the real diff surfaces is present in the committed meta/i18nGateScope.json snapshot -- re-run `pnpm gen-i18n-gate-scope` if this fails', () => {
-        const freshFiles = freshSnapshotFiles()
-        const committedSet = new Set(scopeSnapshot.files)
-        const missing = freshFiles.filter((file) => !committedSet.has(file))
-
-        // jest's own array-diff on a failing toEqual([]) prints every
-        // unexpected surviving entry, which is exactly the "name the
-        // un-snapshotted paths" failure mode this guard exists to produce.
-        expect(missing).toEqual([])
-      })
-
-      it('SANITY: the staleness guard above actually detects an absence -- proves it is not vacuously true', () => {
-        const freshFiles = freshSnapshotFiles()
-        expect(freshFiles.length).toBeGreaterThan(0)
-
-        // Simulate a stale snapshot by fabricating one with a real,
-        // currently-in-scope file removed from it, then re-run the exact
-        // same detection logic the test above uses against that fabricated
-        // snapshot.
-        const knownFile = freshFiles[0]
-        const fakeStaleCommittedSet = new Set(
-          scopeSnapshot.files.filter((file) => file !== knownFile)
-        )
-        const missing = freshFiles.filter(
-          (file) => !fakeStaleCommittedSet.has(file)
-        )
-
-        expect(missing).toContain(knownFile)
-      })
-    })
+    )
   })
 })

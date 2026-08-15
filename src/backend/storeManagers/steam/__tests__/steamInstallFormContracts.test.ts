@@ -43,6 +43,14 @@ import { join } from 'node:path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import type { GameInfo, InstallArgs } from 'common/types'
 import type { SteamBottleEligibilityVerdict } from 'common/types/steam'
+// 34.13 review A-07: a TYPE-ONLY import of the production interface. This is
+// deliberately `import type`, so nothing pulls `electron-store` into the
+// Backend jest project at runtime -- the constraint this file's header
+// records for `../electronStores` still holds; only the compile-time shape
+// crosses the boundary, which is exactly what the replaced hand-built
+// replica was standing in for.
+import type { SteamMetadataCacheEntry } from '../electronStores'
+import type { ExtraInfo } from 'common/types'
 
 const commonTypesSource = stripSourceComments(
   readFileSync(join(__dirname, '../../../../common/types.ts'), 'utf8')
@@ -83,20 +91,20 @@ describe('D-17: Windows-via-bottle install override', () => {
     // back into platformToInstall would route every mac-native install into
     // the bottle, because installSteamGame() hardcodes platformToInstall:
     // 'Windows' for every Steam install already.
-    expect(commonTypesSource).toMatch(
-      /platformToInstall:\s*InstallPlatform/
-    )
+    expect(commonTypesSource).toMatch(/platformToInstall:\s*InstallPlatform/)
   })
 
   it('declares InstallArgs.steamForceWindowsViaBottle?: boolean in common/types.ts source', () => {
-    expect(commonTypesSource).toMatch(
-      /steamForceWindowsViaBottle\?:\s*boolean/
-    )
+    expect(commonTypesSource).toMatch(/steamForceWindowsViaBottle\?:\s*boolean/)
   })
 })
 
 describe('D-17: Windows depot-availability signal and forced-install verdict', () => {
-  it('accepts GameInfo.is_windows_native: true', () => {
+  it('documents GameInfo.is_windows_native: true (the ENFORCING half is the source gate below -- 34.13 review A-07)', () => {
+    // Renamed from "accepts …": a `Partial<GameInfo>` literal cannot measure
+    // acceptance under ts-jest's transpile-only mode, and would pass even if
+    // the field were deleted. The `toMatch` gate below is the load-bearing
+    // half; this stays for editor/documentation value only.
     const info: Partial<GameInfo> = {
       app_name: 'test-app',
       is_windows_native: true
@@ -113,21 +121,44 @@ describe('D-17: Windows depot-availability signal and forced-install verdict', (
   })
 
   it('declares SteamMetadataCacheEntry.forcedWindowsViaBottle?: boolean in electronStores.ts source', () => {
-    expect(electronStoresSource).toMatch(
-      /forcedWindowsViaBottle\?:\s*boolean/
-    )
+    expect(electronStoresSource).toMatch(/forcedWindowsViaBottle\?:\s*boolean/)
   })
 
-  it('accepts a forcedWindowsViaBottle: true literal and also compiles with the key entirely absent (pinning optionality)', () => {
-    type SteamMetadataCacheEntryShape = {
-      forcedWindowsViaBottle?: boolean
-    }
-    const withFlag: SteamMetadataCacheEntryShape = {
+  it("pins forcedWindowsViaBottle's optionality against the REAL SteamMetadataCacheEntry (34.13 review A-07)", () => {
+    // A-07: this spec used to declare its OWN local
+    // `type SteamMetadataCacheEntryShape = { forcedWindowsViaBottle?: boolean }`
+    // and assert against that. It never referenced the production type at
+    // all -- a hand-built replica that cannot drift-detect by construction,
+    // in a repo whose ledger records "a test must exercise the production
+    // call shape, not a hand-built replica". Both literals below are typed
+    // with the REAL imported interface, so `pnpm codecheck` (the only real
+    // type gate here -- ts-jest is transpile-only) must satisfy them.
+    const withFlag: SteamMetadataCacheEntry = {
+      art_cover: '',
+      art_square: '',
+      extra: { about: undefined, reqs: [] } as unknown as ExtraInfo,
       forcedWindowsViaBottle: true
     }
-    const withoutFlag: SteamMetadataCacheEntryShape = {}
+    const withoutFlag: SteamMetadataCacheEntry = {
+      art_cover: '',
+      art_square: '',
+      extra: { about: undefined, reqs: [] } as unknown as ExtraInfo
+    }
     expect(withFlag.forcedWindowsViaBottle).toBe(true)
     expect(withoutFlag.forcedWindowsViaBottle).toBeUndefined()
+  })
+
+  it('A-07 COMPILE PIN: the three structurally required SteamMetadataCacheEntry fields really are required', () => {
+    // `@ts-expect-error` is bidirectional: if these fields ever become
+    // optional, the suppressed error disappears and `tsc --noEmit` FAILS on
+    // the unused directive. That is a real compile assertion, unlike the
+    // `typeof x === 'boolean'` shape A-07 flagged, which passes whatever the
+    // type says.
+    // @ts-expect-error -- art_cover/art_square/extra are required
+    const missing: SteamMetadataCacheEntry = {
+      forcedWindowsViaBottle: true
+    }
+    expect(missing.forcedWindowsViaBottle).toBe(true)
   })
 })
 
@@ -141,7 +172,7 @@ describe('D-26: the always-show setting is RETIRED, not declared', () => {
   // pre-edit (RED) tree, because the key was never declared — this block
   // is a regression gate against revival, not a RED-proven declaration
   // gate, and is deliberately excluded from the four-identifier RED proof.
-  it('D-26 cut the setting because D-21\'s caret puts the options dialog one click away on every surface — AppSettings declares no alwaysShowSteamInstallForm key', () => {
+  it("D-26 cut the setting because D-21's caret puts the options dialog one click away on every surface — AppSettings declares no alwaysShowSteamInstallForm key", () => {
     expect(commonTypesSource).not.toMatch(/alwaysShowSteamInstallForm/)
   })
 
@@ -162,7 +193,7 @@ describe('isSteamBottleEligible verdict shape', () => {
     expect(minimal.eligible).toBe(true)
   })
 
-  it('SteamBottleEligibilityVerdict accepts eligible, wineVersion and bottleName fully populated', () => {
+  it('documents that SteamBottleEligibilityVerdict carries eligible, wineVersion and bottleName (34.13 review A-07: the enforcing half is the compile pin below plus the source gate above)', () => {
     const full: SteamBottleEligibilityVerdict = {
       eligible: true,
       wineVersion: {
@@ -176,8 +207,19 @@ describe('isSteamBottleEligible verdict shape', () => {
     expect(full.bottleName).toBe('GameLib')
   })
 
-  it('requires eligible: boolean (minimal literal must supply it)', () => {
+  it('A-07 COMPILE PIN: eligible is REQUIRED on SteamBottleEligibilityVerdict', () => {
+    // A-07: the old version of this spec was named "requires eligible:
+    // boolean (minimal literal must supply it)" and asserted
+    // `typeof minimal.eligible === 'boolean'` on a literal the test itself
+    // wrote -- it would pass unchanged if `eligible` were made optional, so
+    // it measured a different property than its name claimed. This
+    // `@ts-expect-error` is the assertion that actually fails (at
+    // `tsc --noEmit`) the moment `eligible` stops being required.
+    // @ts-expect-error -- `eligible` is required
+    const missingEligible: SteamBottleEligibilityVerdict = {}
+    expect(missingEligible).toBeDefined()
+
     const minimal: SteamBottleEligibilityVerdict = { eligible: false }
-    expect(typeof minimal.eligible).toBe('boolean')
+    expect(minimal.eligible).toBe(false)
   })
 })

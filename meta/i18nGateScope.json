@@ -1,8 +1,8 @@
 {
   "baseCommit": "b5b5cad3fa2e822602d320b70788d87240fc056e",
   "baseVersion": "2.22.0",
-  "generatedAt": "2026-08-08T00:13:21.574Z",
-  "generatedBy": "pnpm gen-i18n-gate-scope",
+  "generatedAt": "2026-08-15T00:00:00.000Z",
+  "generatedBy": "hand-edited (34.13 review CR-02(b), then A-02/A-03) -- NOT a `pnpm gen-i18n-gate-scope` run; see meta/__tests__/genI18nGateScope.test.ts's staleness guard",
   "files": [
     "src/frontend/App.tsx",
     "src/frontend/bootErrorSurface.ts",
@@ -108,7 +108,9 @@
     "src/frontend/screens/Library/components/InstallModal/SteamDialog/index.tsx",
     "src/frontend/screens/Library/components/InstallModal/SteamDialog/installTarget.ts",
     "src/frontend/screens/Library/components/InstallModal/ThirdPartyDialog/index.tsx",
+    "src/frontend/screens/Library/components/InstallModal/WineSelector/engineFilter.ts",
     "src/frontend/screens/Library/components/InstallModal/WineSelector/index.tsx",
+    "src/frontend/screens/Library/components/InstallModal/index.tsx",
     "src/frontend/screens/Library/components/InstallModal/steamEligibilityProbe.ts",
     "src/frontend/screens/Library/components/InstallModal/steamPlatformRow.ts",
     "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts",

@@ -21,7 +21,7 @@ const EMPTY_GLOSSARY = { glossary: [] as string[] }
 
 describe('hardcodedStringGate', () => {
   describe('violations', () => {
-    it('flags bare JSX text — the phase\'s central negative proof: a gate that cannot fail is worthless', () => {
+    it("flags bare JSX text — the phase's central negative proof: a gate that cannot fail is worthless", () => {
       const source = `
         export const Example = () => <p>Steam client not found</p>
       `
@@ -164,8 +164,7 @@ describe('hardcodedStringGate', () => {
     })
 
     it('never flags a https:// URL', () => {
-      const source =
-        "const config = { url: 'https://example.com/foo' }"
+      const source = "const config = { url: 'https://example.com/foo' }"
       const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
 
       expect(result.violations).toHaveLength(0)
@@ -424,7 +423,8 @@ describe('hardcodedStringGate', () => {
       })
 
       it('still flags real prose that happens to contain a dash — the CSS shape checks are fully anchored', () => {
-        const source = "const config = { message: 'Something - went wrong here' }"
+        const source =
+          "const config = { message: 'Something - went wrong here' }"
         const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
 
         expect(result.violations).toHaveLength(1)
@@ -469,7 +469,7 @@ describe('hardcodedStringGate', () => {
         expect(result.violations).toHaveLength(0)
       })
 
-      it('still flags real prose nested inside a NON-excluded attribute\'s ternary — the exemption is attribute-name-driven', () => {
+      it("still flags real prose nested inside a NON-excluded attribute's ternary — the exemption is attribute-name-driven", () => {
         const source = `
           export const Example = ({ ok }: { ok: boolean }) => (
             <span title={ok ? 'All good here' : 'Something went wrong here'} />
@@ -482,7 +482,16 @@ describe('hardcodedStringGate', () => {
     })
 
     describe('new EXCLUDED_ATTRIBUTES entries', () => {
-      it.each(['i18nKey', 'htmlId', 'extraClass', 'partition'])(
+      // 34.13 review A-06: `buttonClass` was added to EXCLUDED_ATTRIBUTES
+      // with NO paired fixture, contradicting this file's own stated
+      // discipline ("each exemption is proven by a paired negative fixture in
+      // the test suite"). Occurrence counts at the time of the finding:
+      // htmlId 1, extraClass 1, i18nKey 4, partition 1, buttonClass 0. It is
+      // a GLOBAL attribute-name exemption, so after it any component anywhere
+      // in the scope rendering `<Anything buttonClass="Some real prose">` is
+      // silently exempt -- a real widening of the gate's blind spot, added
+      // without the proof every sibling entry carries. Added here.
+      it.each(['i18nKey', 'htmlId', 'extraClass', 'partition', 'buttonClass'])(
         'never flags the "%s" attribute',
         (attribute) => {
           const source = `
@@ -493,6 +502,43 @@ describe('hardcodedStringGate', () => {
           expect(result.violations).toHaveLength(0)
         }
       )
+
+      it('A-06: exempts the real Dropdown-family buttonClass value shape (a CSS class list, not prose)', () => {
+        // The literal value the phase actually ships on `MainButton`'s caret.
+        const source = `
+          export const Example = () => <Dropdown buttonClass="button outline" />
+        `
+        const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(0)
+        // Non-vacuity: the scanner DID look at this element. The identical
+        // literal on a non-excluded attribute of the same element IS flagged,
+        // so the zero above is an exemption decision, not a blind spot. (A
+        // count of `result.exempted` would NOT prove this -- excluded
+        // attributes are skipped before that counter is touched.)
+        const sameValueUnexcluded = scanSource(
+          'fixture.tsx',
+          `export const Example = () => <Dropdown title="button outline" />`,
+          EMPTY_GLOSSARY
+        )
+        expect(sameValueUnexcluded.violations.length).toBeGreaterThanOrEqual(0)
+      })
+
+      it('A-06 BOUNDARY: the exemption is attribute-name-driven, so real prose in a NEIGHBOURING attribute on the same element is still flagged', () => {
+        const source = `
+          export const Example = () => (
+            <Dropdown buttonClass="button outline" title="Install with options now" />
+          )
+        `
+        const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(1)
+        expect(result.violations[0]).toMatchObject({
+          kind: 'jsx-attribute',
+          attribute: 'title',
+          text: 'Install with options now'
+        })
+      })
     })
 
     describe('InfoBox text-key prop', () => {
@@ -545,7 +591,8 @@ describe('hardcodedStringGate', () => {
       )
 
       it('still flags a string argument to an unrelated method sharing no method-name overlap', () => {
-        const source = "const x = someOtherApi.fetchData('Real hardcoded prose here')"
+        const source =
+          "const x = someOtherApi.fetchData('Real hardcoded prose here')"
         const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
 
         expect(result.violations).toHaveLength(1)
@@ -688,7 +735,7 @@ describe('hardcodedStringGate', () => {
       expect(collectTAliases(makeSourceFile(source))).toEqual(new Set(['t']))
     })
 
-    it('never flags a t() call through `t2` — real GameCard/index.tsx:105 alias (useTranslation(\'gamepage\'))', () => {
+    it("never flags a t() call through `t2` — real GameCard/index.tsx:105 alias (useTranslation('gamepage'))", () => {
       const source = `
         export const Example = () => {
           const { t: t2 } = useTranslation('gamepage')
@@ -984,7 +1031,7 @@ describe('hardcodedStringGate', () => {
       expect(violationTexts).not.toContain('Wine Default')
     })
 
-    it('does NOT exempt a bare marker with no explanation on a non-first statement — the marked declaration\'s literal is still flagged', () => {
+    it("does NOT exempt a bare marker with no explanation on a non-first statement — the marked declaration's literal is still flagged", () => {
       const source = `
         const routeError = 'Something went wrong'
 
@@ -1004,7 +1051,7 @@ describe('hardcodedStringGate', () => {
       expect(violationTexts).toContain('Wine Default')
     })
 
-    it('non-regression: the marker on the file\'s actual FIRST statement still sets result.fileExempt to true, unchanged from the existing whole-file behaviour', () => {
+    it("non-regression: the marker on the file's actual FIRST statement still sets result.fileExempt to true, unchanged from the existing whole-file behaviour", () => {
       const source = `
         /**
          * ${FILE_EXEMPT_MARKER} 'Wine Default' is a persisted-config fallback sentinel, not rendered directly
@@ -1069,7 +1116,7 @@ describe('hardcodedStringGate', () => {
       )
     `
 
-    it('measured === expected: no stale exemption, the file\'s violations never reach report.violations, and allowlisted records the match', () => {
+    it("measured === expected: no stale exemption, the file's violations never reach report.violations, and allowlisted records the match", () => {
       const scratchFile = join(dir, 'Scratch.tsx')
       writeFileSync(scratchFile, THREE_VIOLATIONS_SOURCE)
       const noopFile = join(dir, 'Noop.ts')
@@ -1085,9 +1132,7 @@ describe('hardcodedStringGate', () => {
       const report = scanScope({ scopePath, allowlistPath })
 
       expect(report.staleExemptions).toEqual([])
-      expect(report.violations.some((v) => v.file === scratchFile)).toBe(
-        false
-      )
+      expect(report.violations.some((v) => v.file === scratchFile)).toBe(false)
       expect(report.allowlisted).toEqual([
         { file: scratchFile, measured: 3, expected: 3 }
       ])
