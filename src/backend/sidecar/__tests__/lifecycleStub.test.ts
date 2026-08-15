@@ -61,6 +61,7 @@ import {
 import { requestRustInvoke } from '../sidecarRpc'
 import {
   RUST_APP_EXIT,
+  RUST_APP_HIDE,
   RUST_APP_RELAUNCH,
   RUST_CLIPBOARD_READ_TEXT,
   RUST_CLIPBOARD_WRITE_TEXT,
@@ -259,6 +260,99 @@ describe('electronStub clipboard.writeText real forwarding (Phase 34.3 Plan 05, 
     expect(String(warnSpy.mock.calls[0][0])).toContain(
       RUST_CLIPBOARD_WRITE_TEXT
     )
+  })
+})
+
+describe('electronStub app.hide (quick/260815-vvz, raiseFrontmostBottledProcess yield fallback)', () => {
+  // Test 1a: app.hide is a callable member. RED today: `app.hide` is `undefined`
+  // (member does not exist on the exported `app` object).
+  it('is a callable member', () => {
+    expect(typeof app.hide).toBe('function')
+  })
+
+  // Test 1b: happy path forwards the channel. RED today: nothing is called
+  // (1a throws first, since `app.hide` is not a function).
+  it('forwards RUST_APP_HIDE with an empty args array exactly once', async () => {
+    program = { type: 'resolve', value: null }
+
+    app.hide()
+    await flushMicrotasks()
+
+    expect(callLog).toEqual([{ channel: RUST_APP_HIDE, args: [] }])
+    expect(warnSpy).not.toHaveBeenCalled()
+  })
+
+  // Test 1c: RUST_APP_HIDE is a member of the RUST_INVOKE_CHANNELS allowlist --
+  // requestRustInvoke pre-rejects any channel not on this list (sidecarRpc.ts:292),
+  // so forgetting this entry silently prevents the forward from ever reaching Rust.
+  // RED today (compile-time): `RUST_APP_HIDE` does not exist as an export, so the
+  // import resolves to `undefined`. After adding the constant but BEFORE adding it
+  // to the array, this assertion goes RED again for a DIFFERENT (runtime) reason --
+  // `.includes(RUST_APP_HIDE)` is false because the array genuinely lacks the member.
+  // That second observation is what proves this assertion is non-vacuous rather than
+  // merely unresolvable. Both observations are recorded in the SUMMARY.
+  it('is a member of RUST_INVOKE_CHANNELS', () => {
+    const channels = RUST_INVOKE_CHANNELS as readonly string[]
+    expect(channels.includes(RUST_APP_HIDE)).toBe(true)
+  })
+
+  // Test 1d: failure is logged, never thrown. Copies app.quit()'s existing
+  // failure-path test verbatim in shape.
+  it('never throws and logs a warning when requestRustInvoke rejects', async () => {
+    program = { type: 'reject', error: new Error('rustInvoke: timeout') }
+
+    expect(() => app.hide()).not.toThrow()
+    await flushMicrotasks()
+
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+    const [warningArg] = warnSpy.mock.calls[0]
+    expect(String(warningArg)).toContain(RUST_APP_HIDE)
+  })
+
+  // Test 1e: app.hide() is NOT suppressed by the relaunchInFlight guard -- hide is
+  // not a teardown-ownership operation, so the D-06 quit/exit suppression must not
+  // be copy-pasted onto it. This pins that deliberate asymmetry so a future reader
+  // does not "fix" the missing guard. Uses the same jest.isolateModules() pattern as
+  // the dedicated 'app.relaunch/quit race guard' describe block below, so this test's
+  // fresh relaunchInFlight state cannot be poisoned by any other describe block in
+  // this file (none of which call relaunch() before this one runs) nor poison any
+  // that run after it.
+  it('still forwards after app.relaunch() has already been called (not suppressed by relaunchInFlight)', async () => {
+    let result!: {
+      app: typeof import('../electronStub').app
+      mockInvoke: jest.Mock
+    }
+    jest.isolateModules(() => {
+      /* eslint-disable @typescript-eslint/no-require-imports */
+      const sidecarRpc = require('../sidecarRpc') as {
+        requestRustInvoke: jest.Mock
+      }
+      const freshElectronStub =
+        require('../electronStub') as typeof import('../electronStub')
+      /* eslint-enable @typescript-eslint/no-require-imports */
+      sidecarRpc.requestRustInvoke.mockImplementation(() =>
+        Promise.resolve(null)
+      )
+      result = {
+        app: freshElectronStub.app,
+        mockInvoke: sidecarRpc.requestRustInvoke
+      }
+    })
+    const { app: freshApp, mockInvoke } = result
+
+    freshApp.relaunch()
+    await flushMicrotasks()
+    freshApp.hide()
+    await flushMicrotasks()
+
+    const calls = mockInvoke.mock.calls.map(([channel, args]) => ({
+      channel,
+      args
+    }))
+    expect(calls).toEqual([
+      { channel: RUST_APP_RELAUNCH, args: [] },
+      { channel: RUST_APP_HIDE, args: [] }
+    ])
   })
 })
 
