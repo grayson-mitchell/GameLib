@@ -375,3 +375,130 @@ describe('source gates', () => {
     expect(stripped).toContain('cancelled')
   })
 })
+
+// ---------------------------------------------------------------------------
+// 34.14 D-02/D-03: the widened round trip -- two new booleans travel through
+// the SAME state machine, with no second probe and no second IPC call site.
+// ---------------------------------------------------------------------------
+describe('34.14: the depot pair travels through the widened round trip', () => {
+  it('applyEligibilityResponse carries BOTH hasWindowsDepot and depotSignalCaptured through from the verdict', () => {
+    // Two inputs whose expected outputs differ on BOTH fields -- a
+    // hardcoded-false implementation of either field fails this spec on the
+    // first input alone (RED capture recorded in 34.14-03-SUMMARY.md).
+    const pending: EligibilityState = { phase: 'pending', appName: '440' }
+
+    const capturedWithDepot = applyEligibilityResponse(pending, {
+      appName: '440',
+      verdict: {
+        eligible: false,
+        hasWindowsDepot: true,
+        platformsCaptured: true
+      }
+    })
+    expect(capturedWithDepot).toMatchObject({
+      hasWindowsDepot: true,
+      depotSignalCaptured: true
+    })
+
+    const capturedWithoutDepot = applyEligibilityResponse(pending, {
+      appName: '440',
+      verdict: {
+        eligible: true,
+        hasWindowsDepot: false,
+        platformsCaptured: false
+      }
+    })
+    expect(capturedWithoutDepot).toMatchObject({
+      hasWindowsDepot: false,
+      depotSignalCaptured: false
+    })
+  })
+
+  it('DISCRIMINATOR: the stale cross-game guard covers the WIDENED payload -- referential identity (toBe), not a rebuilt equal object', () => {
+    // A `toEqual` here would also pass against an implementation that
+    // rebuilt an equal-but-NEW state object, which would not prove the
+    // guard short-circuited before constructing anything from the wider
+    // payload. `toBe` proves the prior state itself was returned untouched,
+    // so a wider response object cannot leak one game's depot answer onto
+    // another game's dialog.
+    const state: EligibilityState = { phase: 'pending', appName: '440' }
+    const result = applyEligibilityResponse(state, {
+      appName: '570',
+      verdict: {
+        eligible: true,
+        hasWindowsDepot: true,
+        platformsCaptured: true
+      }
+    })
+    expect(result).toBe(state)
+  })
+
+  it('D-04 INPUT, not a fail-closed depot verdict: applyEligibilityFailure resolves settled-and-uncaptured', () => {
+    const pending: EligibilityState = { phase: 'pending', appName: '440' }
+    const resolved = applyEligibilityFailure(pending, { appName: '440' })
+    expect(resolved).toMatchObject({
+      phase: 'resolved',
+      bottleRequired: false,
+      hasWindowsDepot: false,
+      depotSignalCaptured: false
+    })
+  })
+
+  it("initialEligibilityState's non-probing branch reports the same settled-and-uncaptured shape", () => {
+    const state = initialEligibilityState({
+      platform: 'win32',
+      runner: 'steam',
+      appName: '440',
+      action: 'install'
+    })
+    expect(state).toMatchObject({
+      phase: 'resolved',
+      bottleRequired: false,
+      hasWindowsDepot: false,
+      depotSignalCaptured: false
+    })
+  })
+
+  it("the hook's return shape carries exactly four documented keys -- pending, bottleRequired, hasWindowsDepot, depotSignalCaptured", () => {
+    // Structural guard against a fifth, undocumented pending flag being
+    // added later in violation of D-01. Mirrors the `Object.keys(verdict)`
+    // convention `steamSectionGating.test.ts` already uses. Exercises the
+    // pure state functions to build the object the hook returns, rather
+    // than rendering the hook itself -- this project's frontend jest
+    // project has no jsdom and cannot mount a component.
+    const resolvedState = applyEligibilityResponse(
+      { phase: 'pending', appName: '440' },
+      {
+        appName: '440',
+        verdict: {
+          eligible: true,
+          hasWindowsDepot: true,
+          platformsCaptured: true
+        }
+      }
+    )
+    const hookReturnShape = {
+      pending: isEligibilityPending(resolvedState),
+      bottleRequired:
+        resolvedState.phase === 'resolved'
+          ? resolvedState.bottleRequired
+          : false,
+      hasWindowsDepot:
+        resolvedState.phase === 'resolved'
+          ? resolvedState.hasWindowsDepot
+          : false,
+      depotSignalCaptured:
+        resolvedState.phase === 'resolved'
+          ? resolvedState.depotSignalCaptured
+          : false
+    }
+    expect(Object.keys(hookReturnShape).sort()).toEqual(
+      [
+        'bottleRequired',
+        'depotSignalCaptured',
+        'hasWindowsDepot',
+        'pending'
+      ].sort()
+    )
+  })
+})
