@@ -223,6 +223,13 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   // (`eligibility.bottleRequired`), which is fail-closed `false` while
   // pending -- that fail-closed default is `steamEligibilityProbe.ts`'s job
   // (`initialEligibilityState`), not re-derived here.
+  // Hoisted (34.13 review WR-04) so the resolver input and `SteamDialog`'s
+  // content-light copy selection read ONE expression, not two copies of it.
+  // Both IPC handlers are server-gated on `isSteamNativeInstallEnabled()`
+  // and return `[]` when native install is OFF, so a non-empty list IS the
+  // ON signal -- RESEARCH.md Pitfall 4 forbids a second settings read.
+  const steamNativeInstallOn = steamLibraries.length > 0
+
   const steamGatingRaw: SteamSectionGatingVerdict = useMemo(
     () =>
       resolveSteamSectionGating({
@@ -237,7 +244,7 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
         // it, and 34.13-05's matrix renders OFF and ON-with-<=1-library
         // identically, so this derivation is not merely convenient, it is
         // indistinguishable by construction.
-        nativeInstallOn: steamLibraries.length > 0,
+        nativeInstallOn: steamNativeInstallOn,
         libraryCount: steamLibraries.length
       }),
     [
@@ -387,6 +394,7 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
             crossoverBottle={crossoverBottle}
             gating={steamGating}
             steamLibraries={steamLibraries}
+            nativeInstallOn={steamNativeInstallOn}
             eligibilityPending={eligibility.pending}
           >
             {platformSelection()}

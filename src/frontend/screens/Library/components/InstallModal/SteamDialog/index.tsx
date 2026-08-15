@@ -95,6 +95,17 @@ interface Props {
    * compute `gating.libraryDropdown` in the first place, so a fetch here
    * gated on that same field could never populate it. */
   steamLibraries: SteamDialogLibraryOption[]
+  /** 34.13 review WR-04: whether Settings > Steam > "Enable Steam native
+   * install" is ON, computed by the parent from the SAME single IPC read
+   * that feeds `gating` (never re-derived here). `contentLightNotice` is
+   * `!isMac && !libraryDropdown`, which is true BOTH when the setting is
+   * off AND when it is on with exactly one library -- 34.13-05's own
+   * comment notes the matrix "renders OFF and ON-with-<=1-library
+   * identically". The verdict is right; the COPY is not, because one of
+   * those two states must not be told to go turn the setting on. This flag
+   * picks between the two sentences without adding a verdict field (the
+   * resolver's 8-row/96-combination contract is untouched). */
+  nativeInstallOn: boolean
   /** Plan 11, D-25: true while `useSteamBottleEligibility`'s IPC round trip
    * is in flight. The ONE surviving piece of the retired D-12 busy
    * contract, relocated from the origin control to THIS dialog's own
@@ -118,6 +129,7 @@ export default function SteamDialog({
   children,
   gating,
   steamLibraries,
+  nativeInstallOn,
   eligibilityPending
 }: Props) {
   const { t } = useTranslation('gamepage')
@@ -292,10 +304,21 @@ export default function SteamDialog({
         {gating.contentLightNotice && (
           <div className="infoBox">
             <FontAwesomeIcon icon={faWarning} />
-            {tGamelib(
-              'gamelib:steam.install.contentLightNotice',
-              "This installs through Steam's own client, so there's nothing to choose here. Turn on native Steam installs in Settings to manage install location and Windows compatibility from GameLib."
-            )}
+            {/* WR-04: the "turn it on in Settings" sentence is only true
+                when the setting is actually OFF. With native installs ON
+                and exactly one Steam library the verdict is identical, but
+                telling that user to go enable an already-enabled setting
+                is wrong -- and there is no second library to choose
+                anyway. */}
+            {nativeInstallOn
+              ? tGamelib(
+                  'gamelib:steam.install.contentLightSingleLibraryNotice',
+                  "There's only one Steam library on this system, so there's nothing to choose here — GameLib will install this game into it."
+                )
+              : tGamelib(
+                  'gamelib:steam.install.contentLightNotice',
+                  "This installs through Steam's own client, so there's nothing to choose here. Turn on native Steam installs in Settings to manage install location and Windows compatibility from GameLib."
+                )}
           </div>
         )}
       </DialogContent>
