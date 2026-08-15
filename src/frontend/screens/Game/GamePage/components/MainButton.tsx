@@ -96,7 +96,14 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
       return (
         <span className="buttonWithIcon">
           <PlayArrow data-icon="play" />
-          {t('label.playing.start_with_logs', 'Play (with logs)')}
+          {/* 34.13 review C-22: this default MUST match the catalog. The key
+              exists, so the default is inert at runtime — but the same key is
+              called again 20 lines below with a DIFFERENT default, and only
+              one of the two was what the app renders. A reader of this line
+              was told the label reads "Play (with logs)" when it reads
+              "Play Now (with logs)". Pinned by the mainButtonCatalogDefaults
+              gate, which now checks EVERY t() default in this file. */}
+          {t('label.playing.start_with_logs', 'Play Now (with logs)')}
         </span>
       )
     }
