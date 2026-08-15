@@ -788,17 +788,27 @@ export default class SteamGame implements Game {
     // Triple-gated: overrideRequested AND isMac (host containment, D-18)
     // AND the persisted Windows-depot verdict proven true. Any gate failing
     // fails closed — routing stays byte-identical to today's.
+    // Read ONCE and reused by the rejection log below (34.13 review WR-07):
+    // the log has to be able to name WHICH gate refused, and the most likely
+    // one in practice is a cold/absent metadata cache, not the host check.
+    const windowsDepotVerdict = steamMetadataStore.get(
+      this.appId
+    )?.is_windows_native
+
     const forceWindowsViaBottle =
-      overrideRequested &&
-      isMac &&
-      steamMetadataStore.get(this.appId)?.is_windows_native === true
+      overrideRequested && isMac && windowsDepotVerdict === true
 
     // A silently-dropped user choice is a recurring defect class in this
     // repo — log why a requested-but-rejected override fell through instead
-    // of failing silently.
+    // of failing silently. Both gates are named: logging `isMac` alone
+    // produced `isMac=true` with no explanation whenever the real cause was
+    // an uncaptured `is_windows_native`, which actively misdirects
+    // diagnosis. `undefined` (never captured) and `false` (confirmed no
+    // Windows depot) are deliberately distinguishable in the output.
     if (overrideRequested && !forceWindowsViaBottle) {
       logWarning(
-        `SteamGame: appId ${this.appId} requested a Windows-via-bottle install override but it was rejected (isMac=${isMac}) — falling through to legacy routing`,
+        `SteamGame: appId ${this.appId} requested a Windows-via-bottle install override but it was rejected ` +
+          `(isMac=${isMac}, is_windows_native=${String(windowsDepotVerdict)}) — falling through to legacy routing`,
         LogPrefix.Steam
       )
     }
