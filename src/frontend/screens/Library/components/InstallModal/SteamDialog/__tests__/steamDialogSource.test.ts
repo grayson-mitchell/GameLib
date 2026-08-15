@@ -102,6 +102,34 @@ function assertForceWindowsViaBottlePrefixed(stripped: string) {
   }
 }
 
+/**
+ * D-25's `disabled` contract as a THROWING helper (34.13 review WR-09), so
+ * the identical code path can be driven against known-bad specimens and
+ * observed to fail. An assertion inlined into an `it` block can never be
+ * proven RED -- which is exactly how the old "non-vacuity" spec below ended
+ * up asserting that `String.prototype.split` works.
+ *
+ * Two independent obligations, both load-bearing:
+ *  1. exactly ONE `disabled=` term (a second one is almost certainly a
+ *     re-introduced SIZE gate, which D-06 forbids), and
+ *  2. that term is `disabled={eligibilityPending}` specifically -- a pure
+ *     count check is satisfied by `disabled={notEnoughDiskSpace}`, the very
+ *     thing D-06 bans.
+ */
+function assertSingleEligibilityDisabledTerm(source: string) {
+  const n = source.split('disabled=').length - 1
+  if (n !== 1) {
+    throw new Error(
+      `assertSingleEligibilityDisabledTerm: expected exactly 1 disabled= term, found ${n}`
+    )
+  }
+  if (!source.includes('disabled={eligibilityPending}')) {
+    throw new Error(
+      'assertSingleEligibilityDisabledTerm: the single disabled= term is not disabled={eligibilityPending} (D-06: never gated on SIZE)'
+    )
+  }
+}
+
 function assertBoundedStatusDanger(stripped: string) {
   const occurrences = stripped.split('var(--status-danger)').length - 1
   if (occurrences !== 1) {
@@ -221,14 +249,46 @@ describe("D-25: the dialog's own footer Install button is disabled while eligibi
   const stripped = readDialogStripped()
 
   it('disabled= appears exactly once, and it is disabled={eligibilityPending}', () => {
-    expect(stripped.split('disabled=').length - 1).toBe(1)
-    expect(stripped).toContain('disabled={eligibilityPending}')
+    assertSingleEligibilityDisabledTerm(stripped)
   })
 
-  it('the disabled= count check is non-vacuous -- a specimen with a second disabled= trips it', () => {
+  // REWRITTEN by 34.13 review WR-09. The previous "non-vacuity" spec read:
+  //
+  //   const specimen = 'disabled={eligibilityPending} ... disabled={notEnoughDiskSpace}'
+  //   expect(specimen.split('disabled=').length - 1).toBe(2)
+  //
+  // ...which asserts that `String.prototype.split` works. It never invoked
+  // the real gate (that assertion was inlined into the `it` above, not
+  // extracted into anything callable), so it proved nothing about the
+  // gate's ability to DETECT a second `disabled=`. Every other non-vacuity
+  // proof in this file correctly drives the real helper through
+  // `expect(() => assertX(specimen)).toThrow()`; this one was the odd one
+  // out, in a repo that has already ledgered "a gate can be non-vacuous,
+  // correctly computed, RED-proven -- and still guard NOTHING". The gate is
+  // now a throwing helper (above) and BOTH the real source and the
+  // known-bad specimens go through it.
+  it('WR-09: the real gate THROWS against a specimen carrying a second disabled= term', () => {
     const specimen =
       'disabled={eligibilityPending} ... disabled={notEnoughDiskSpace}'
-    expect(specimen.split('disabled=').length - 1).toBe(2)
+    expect(() => assertSingleEligibilityDisabledTerm(specimen)).toThrow(
+      /found 2/
+    )
+  })
+
+  it('WR-09: the real gate THROWS when the single term is the WRONG one -- a count check alone would pass this', () => {
+    const specimen = 'disabled={notEnoughDiskSpace}'
+    // Exactly one `disabled=`, so a pure count gate is satisfied -- but it
+    // is a SIZE gate, which D-06 forbids outright.
+    expect(specimen.split('disabled=').length - 1).toBe(1)
+    expect(() => assertSingleEligibilityDisabledTerm(specimen)).toThrow(
+      /eligibilityPending/
+    )
+  })
+
+  it('WR-09: the real gate THROWS when no disabled term is present at all', () => {
+    expect(() => assertSingleEligibilityDisabledTerm('<button />')).toThrow(
+      /found 0/
+    )
   })
 
   it('D-06 still holds alongside the new disabled term -- diskSize/spaceLeftAfter/notEnoughDiskSpace/getInstallInfo remain absent', () => {
