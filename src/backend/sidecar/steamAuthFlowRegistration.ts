@@ -256,19 +256,13 @@ export function registerSteamAuthFlows(): void {
   // two runtimes cannot drift. The write channel's payload is passed
   // through UNCAST — the seam takes `unknown` by design, and casting here
   // would defeat that guard at the type level. ─────────────────────────────
-  ipcMain.handle(
-    'isSteamBottleEligible',
-    async (_event: unknown, ...args: unknown[]) => {
-      return getSteamBottleEligibilityVerdict(args[0] as string)
-    }
-  )
+  ipcMain.handle('isSteamBottleEligible', async (_event: unknown, ...args: unknown[]) => {
+    return getSteamBottleEligibilityVerdict(args[0] as string)
+  })
 
-  ipcMain.handle(
-    'persistBottleWineVersion',
-    async (_event: unknown, ...args: unknown[]) => {
-      return persistInstallFormWineVersion(args[0])
-    }
-  )
+  ipcMain.handle('persistBottleWineVersion', async (_event: unknown, ...args: unknown[]) => {
+    return persistInstallFormWineVersion(args[0])
+  })
 
   // ── Guided Steam-client install pair (REQ-34.4-04, main.ts:958-961) ───────
   ipcMain.handle('steamClientSetupStart', async () => {
