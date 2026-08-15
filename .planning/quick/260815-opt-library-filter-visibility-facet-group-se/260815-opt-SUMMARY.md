@@ -328,31 +328,43 @@ forbidden token makes every future grep for that token ambiguous.
 
 ---
 
-## Human gate — OWED, NOT PASSED
+## Human gate — ✅ ALL 4 PASSED (live UAT 2026-08-15)
 
-**No automated evidence in this task speaks to rendering, layout, or per-theme legibility.**
-The jest project has no jsdom and no CSS engine; the style gate inspects compiled selector text
-only, and the component gates inspect React-element objects and source text. Nothing below has
-been observed. All four are **OWED**.
+**Discharged by the operator, not self-approved.** Run under `pnpm tauri:dev` on macOS against
+the build carrying all four commits; the user reported "1, 2, 3, 4 passed" and no defect in any
+item. Recorded below as observed.
 
-1. **OWED** — Collapse the `STORE` group with 2 stores ticked: a `2` appears on the header, left
+**No automated evidence in this task ever spoke to rendering, layout, or per-theme legibility** —
+the jest project has no jsdom and no CSS engine; the style gate inspects compiled selector text
+only, and the component gates inspect React-element objects and source text. The live run is the
+sole evidence for all four.
+
+1. **PASS** — Collapse the `STORE` group with 2 stores ticked: a `2` appears on the header, left
    of the caret, and the header title is not pushed off-centre or truncated prematurely.
-2. **OWED** — Untick both: the badge disappears entirely (no `0`, no empty gap).
-3. **OWED** — Cycle every shipped theme with a badge visible and a filtered header; the badge
-   stays legible on the panel surface in all of them. This is the repeatedly-burned failure mode
-   (CR-03); `gruvbox_dark` and `dracula` are the two that historically lack tokens. Mitigated by
-   design (the badge reuses `.FilterFacetRow--checked`'s already-live-swept
-   `var(--filter-active-color)` relationship verbatim and introduces zero new contrast pairs),
-   but **mitigation is not observation**.
-4. **OWED** — Apply one store facet: the header reads e.g. `42 of 318`; click `Clear all`: the
+2. **PASS** — Untick both: the badge disappears entirely (no `0`, no empty gap).
+3. **PASS** — Badge stays legible on the panel surface with a badge visible and a filtered
+   header. This is the repeatedly-burned failure mode (CR-03); `gruvbox_dark` and `dracula` are
+   the two that historically lack tokens. ⚠ **Attestation caveat: delivered as a blanket pass,
+   not a per-theme sweep** — themes were not enumerated one question per theme (the elicitation
+   discipline from 34.10), and no contrast was measured. Consistent with the mechanism, since the
+   badge reuses `.FilterFacetRow--checked`'s already-live-swept `var(--filter-active-color)`
+   relationship verbatim and introduces zero new contrast pairs, so there is no new token that
+   could fail to resolve in a theme block — but that is the *reason to expect* the pass, not the
+   evidence for it.
+4. **PASS** — Apply one store facet: the header reads e.g. `42 of 318`; click `Clear all`: the
    header returns to the bare `318` in today's exact form and that number **matches** the
    denominator that was showing.
 
-Note for item 4: the denominator's correctness is unit-proven against fixtures
-(`countUnfilteredGames` excludes hidden, non-available and DLC in one pass, and the
-`describeActiveFilters(DEFAULT_FILTER_ENGINE_STATE, '') === []` invariant ties it to the render
-gate), but that the two numbers agree **on the real library in the running app** has not been
-observed.
+Item 4 is the one whose live result adds the most: the denominator's correctness was already
+unit-proven against fixtures (`countUnfilteredGames` excludes hidden, non-available and DLC in
+one pass, and the `describeActiveFilters(DEFAULT_FILTER_ENGINE_STATE, '') === []` invariant ties
+it to the render gate), but that the two numbers **agree on the real library in the running app**
+could only be observed live — and now has been.
+
+**Not covered by this run:** the `RUNNABILITY` and `MORE FILTERS` groups were offered for
+observation but not separately reported on. They route through the same shared
+`countDescriptorsOfKind` helper and the same `FilterFacetGroup` primitive as `STORE`, so the
+mechanism is identical — but only `STORE` was actually attested.
 
 ---
 
