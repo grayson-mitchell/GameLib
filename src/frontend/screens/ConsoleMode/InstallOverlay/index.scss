@@ -45,6 +45,24 @@
   text-transform: uppercase;
   letter-spacing: 0.2em;
   margin-bottom: var(--space-md);
+
+  // D-29: the Console Mode failure card's title, matching the shade the
+  // UI-SPEC reserves for the desktop D-24 notice so both degrades read as
+  // the same condition.
+  &.blocked {
+    color: var(--status-danger);
+  }
+}
+
+// D-29: the failure card's static reason line. Every value copied from a
+// sibling rule in this file (.consoleModalTitle / .consoleInstallPath /
+// .consoleModalGameTitle) -- no new scale, no new hex beyond the existing
+// fallback idiom.
+.consoleModalReason {
+  font-size: 1rem;
+  color: var(--text-default, #eae8e5);
+  max-width: 80vw;
+  text-align: center;
 }
 
 .consoleModalGameTitle {

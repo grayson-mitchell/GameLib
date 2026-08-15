@@ -12,6 +12,11 @@ import type { GameInfo, InstallPlatform, WineInstallation } from 'common/types'
 
 import { BTN_ACTION, BTN_BACK } from '../controller'
 import { useGamepadButtonPress } from '../hooks'
+import {
+  probeSteamQuickInstallTarget,
+  resolveConsoleActionIntent
+} from './consoleSteamTarget'
+import type { SteamQuickInstallDegrade } from 'frontend/state/InstallGameModal'
 
 type PlatformOption = {
   value: InstallPlatform
@@ -28,6 +33,7 @@ export default function InstallOverlay({
   onDismiss: () => void
 }) {
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const { platform } = useContext(ContextProvider)
   const [progress] = hasProgress(game.app_name, game.runner)
 
@@ -71,6 +77,8 @@ export default function InstallOverlay({
   const [focused, setFocused] = useState<FocusKey>('install')
   const installButtonRef = useRef<HTMLButtonElement | null>(null)
   const cancelButtonRef = useRef<HTMLButtonElement | null>(null)
+  const [steamBlocked, setSteamBlocked] =
+    useState<SteamQuickInstallDegrade | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -89,29 +97,47 @@ export default function InstallOverlay({
     return () => document.body.classList.remove('console-modal-open')
   }, [])
 
-  // Steam install handoff: fire the runner-agnostic install() helper (which
-  // routes to the validated backend steam/games.ts → the install protocol),
-  // then auto-dismiss after 1500ms. Escape still dismisses immediately via the
-  // existing keydown handler. No raw Steam protocol URL is constructed here.
+  // Steam install handoff: D-29 runs D-24's local check FIRST, using the
+  // same pure decision functions the desktop quick-install path uses
+  // (composed by ./consoleSteamTarget.ts -- deliberately NOT the desktop
+  // quick-install door itself, whose degrade branch would open the desktop
+  // options dialog underneath this full-screen overlay, which D-29
+  // forbids). On a not-ok
+  // verdict, this shows the D-29 in-place failure card and returns WITHOUT
+  // calling install() and WITHOUT arming any timer -- an unconditionally
+  // armed timer would make the failure message vanish after 1.5s, a silent
+  // failure. Only on an ok verdict does the existing install() call fire
+  // (routing to the validated backend steam/games.ts -> the install
+  // protocol; no raw Steam protocol URL is constructed here), and only then
+  // is the 1500ms auto-dismiss timer armed. Escape/Backspace still dismiss
+  // immediately via the existing keydown handler on either path.
   useEffect(() => {
     if (game.runner !== 'steam') return
     let cancelled = false
-    void install({
-      gameInfo: game,
-      previousProgress: null,
-      progress,
-      installPath: 'default',
-      isInstalling: false,
-      platformToInstall: 'Windows',
-      t,
-      showDialogModal: () => null
+    let timer: ReturnType<typeof setTimeout> | undefined
+    void probeSteamQuickInstallTarget().then((verdict) => {
+      if (cancelled) return
+      if (!verdict.ok) {
+        setSteamBlocked(verdict.degrade)
+        return
+      }
+      void install({
+        gameInfo: game,
+        previousProgress: null,
+        progress,
+        installPath: 'default',
+        isInstalling: false,
+        platformToInstall: 'Windows',
+        t,
+        showDialogModal: () => null
+      })
+      timer = setTimeout(() => {
+        if (!cancelled) onDismiss()
+      }, 1500)
     })
-    const timer = setTimeout(() => {
-      if (!cancelled) onDismiss()
-    }, 1500)
     return () => {
       cancelled = true
-      clearTimeout(timer)
+      if (timer) clearTimeout(timer)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -150,6 +176,15 @@ export default function InstallOverlay({
           : null
     btn?.focus({ preventScroll: true })
   }, [focused])
+
+  // D-29: the failure card's Dismiss chip is the only control it renders --
+  // land the controller on it directly, since the Steam branch's own
+  // FocusKey rows (above) never include it.
+  useEffect(() => {
+    if (steamBlocked) {
+      cancelButtonRef.current?.focus({ preventScroll: true })
+    }
+  }, [steamBlocked])
 
   const cycle =
     (length: number, setIndex: (fn: (i: number) => number) => void) =>
@@ -195,7 +230,8 @@ export default function InstallOverlay({
     cyclePlatform,
     cycleWine,
     installGame,
-    onDismiss
+    onDismiss,
+    runner: game.runner
   })
   handlersRef.current = {
     focused,
@@ -203,7 +239,8 @@ export default function InstallOverlay({
     cyclePlatform,
     cycleWine,
     installGame,
-    onDismiss
+    onDismiss,
+    runner: game.runner
   }
 
   useEffect(() => {
@@ -248,10 +285,14 @@ export default function InstallOverlay({
         return
       }
       if (e.key === 'Enter' || e.key === ' ') {
-        if (h.focused === 'install') {
+        const intent = resolveConsoleActionIntent({
+          runner: h.runner,
+          focused: h.focused
+        })
+        if (intent === 'install') {
           e.preventDefault()
           void h.installGame()
-        } else if (h.focused === 'cancel') {
+        } else if (intent === 'dismiss') {
           e.preventDefault()
           h.onDismiss()
         }
@@ -262,8 +303,9 @@ export default function InstallOverlay({
   }, [])
 
   useGamepadButtonPress(BTN_ACTION, () => {
-    if (focused === 'install') void installGame()
-    else if (focused === 'cancel') onDismiss()
+    const intent = resolveConsoleActionIntent({ runner: game.runner, focused })
+    if (intent === 'install') void installGame()
+    else if (intent === 'dismiss') onDismiss()
   })
   useGamepadButtonPress(BTN_BACK, onDismiss)
 
@@ -277,12 +319,51 @@ export default function InstallOverlay({
     <div className="consoleInstallOverlay" role="dialog" aria-live="polite">
       <div className="consoleModal">
         {game.runner === 'steam' ? (
-          <>
-            <div className="consoleModalTitle">
-              {t('console.steam.installing', 'Opening Steam to install…')}
-            </div>
-            <div className="consoleModalGameTitle">{game.title}</div>
-          </>
+          steamBlocked ? (
+            // D-29's resolved open question: an in-place TERMINAL failure
+            // card, reusing classes already in this file. No platform row,
+            // no wine row, no path row, no install control, no new
+            // FocusKey -- this is provably not an options path, structurally
+            // rather than by promise. No filesystem path is interpolated
+            // into any string here (see consoleSteamTarget.ts's doc comment
+            // and this task's D3 source gate).
+            <>
+              <div className="consoleModalTitle blocked">
+                {tGamelib(
+                  'gamelib:consoleMode.steamInstallBlockedTitle',
+                  "Can't start this install"
+                )}
+              </div>
+              <div className="consoleModalGameTitle">{game.title}</div>
+              <p className="consoleModalReason">
+                {steamBlocked.reason === 'library-missing'
+                  ? tGamelib(
+                      'gamelib:consoleMode.steamInstallLibraryMissing',
+                      "Your Steam library folder isn't available right now. Reconnect the drive and try again."
+                    )
+                  : tGamelib(
+                      'gamelib:consoleMode.steamInstallLibraryFull',
+                      "There isn't enough free space in your Steam library folder. Free up space and try again."
+                    )}
+              </p>
+              <div className="consoleInstallButtons">
+                <button
+                  ref={cancelButtonRef}
+                  className="consoleChip active"
+                  onClick={onDismiss}
+                >
+                  {t('button.dismiss', 'Dismiss')}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="consoleModalTitle">
+                {t('console.steam.installing', 'Opening Steam to install…')}
+              </div>
+              <div className="consoleModalGameTitle">{game.title}</div>
+            </>
+          )
         ) : (
           <>
             <div className="consoleModalTitle">
