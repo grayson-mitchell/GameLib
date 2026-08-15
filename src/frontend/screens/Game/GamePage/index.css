@@ -348,11 +348,21 @@
            collector (tauriGamepadInput.ts:47-58) drops any element whose
            getBoundingClientRect() has zero width or height, which would
            make the caret unreachable on Tauri only while every Electron
-           check still passed. `.mainBtn { min-width: 200px }` below
-           currently guarantees this — narrowing the caret's box requires an
-           explicit non-zero min-inline-size/min-block-size replacement, and
-           narrowing the class itself is a UI-SPEC amendment, not something
-           to do here. */
+           check still passed. This USED to be guaranteed incidentally by
+           `.mainBtn { min-width: 200px }` below — but that made the caret a
+           200px-wide chevron sitting beside a 200px Install button inside a
+           `flex-wrap: wrap` container, which wraps onto a second row on
+           narrow game pages (34.13 review WR-14). The caret no longer
+           borrows `.mainBtn`; it carries the explicit non-zero box the
+           comment above always said a narrowing would require. */
+        .SteamInstallCaret .dropdownButton {
+          min-inline-size: 44px;
+          min-block-size: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
         .SteamInstallCaret__icon {
           transition: transform 0.12s ease;
         }

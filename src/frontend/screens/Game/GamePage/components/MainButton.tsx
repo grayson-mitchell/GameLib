@@ -326,7 +326,13 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
             !disabledInstallButtons && (
               <Dropdown
                 className="SteamInstallCaret"
-                buttonClass="button mainBtn outline"
+                /* WR-14: deliberately NOT `mainBtn` -- that class carries
+                   `min-width: 200px`, which made this chevron as wide as
+                   the Install button beside it and wrapped the pair onto
+                   two rows in the `flex-wrap: wrap` container. The caret's
+                   non-zero box (required by Tauri's gamepad focus
+                   collector) is now explicit in index.css. */
+                buttonClass="button outline"
                 title={
                   <span
                     aria-label={t(

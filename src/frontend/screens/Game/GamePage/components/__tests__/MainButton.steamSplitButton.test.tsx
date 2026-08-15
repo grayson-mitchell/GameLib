@@ -313,10 +313,12 @@ describe('MainButton — D-21 split button (steam)', () => {
         n.type === 'button' &&
         (n.props as { className?: string }).className === 'button mainBtn outline'
     )
-    // The caret ALSO uses buttonClass "button mainBtn outline" per the
-    // UI-SPEC — but the caret is a Dropdown node, not a bare <button>, so
-    // this predicate (bare <button> with that class) matches only a
-    // surviving Import button, never the caret itself.
+    // The caret is a Dropdown node, not a bare <button>, so this predicate
+    // (bare <button> with that class) matches only a surviving Import
+    // button, never the caret itself. NOTE (34.13 review WR-14): the caret
+    // no longer uses "button mainBtn outline" at all — it dropped `mainBtn`
+    // because that class's `min-width: 200px` wrapped the split button onto
+    // two rows. So this predicate is now doubly unable to match it.
     expect(steamImport).toHaveLength(0)
 
     const gogTree = invoke(makeGameInfo({ runner: 'gog' }))
