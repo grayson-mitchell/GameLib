@@ -1327,7 +1327,7 @@ Plans:
 Plans: **14 plans, 8 waves** *(re-planned 2026-08-15 for D-21..D-29. `34.13-04` is **DELETED** by D-26 and its number is a **permanent gap** — nothing was renumbered, because plans cross-reference each other by number. `34.13-15` was added for scope the amendment left unowned.)*
 
 **Wave 1**
-- [ ] 34.13-01 — Shared contracts (`types.ts`, `electronStores.ts`) [D-17, D-26]
+- [x] 34.13-01 — Shared contracts (`types.ts`, `electronStores.ts`) [D-17, D-26]
 
 **Wave 2** *(blocked on Wave 1)*
 - [ ] 34.13-02 — Steam backend read-side: `is_windows_native` capture + `checkBottleEligibility()` [D-07, D-09, D-17]
