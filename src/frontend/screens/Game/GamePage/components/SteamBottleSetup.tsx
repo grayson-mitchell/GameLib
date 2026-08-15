@@ -93,6 +93,20 @@ const SteamBottleSetup = () => {
   // seeding effect below so we only choose a default engine once the list is
   // known — otherwise a CrossOver engine that loads after globalConfig would be
   // missed (the seed runs once and is guarded by `wineVersion`).
+  //
+  // 34.13 review C-18: this effect MUST track the same session key as the
+  // reset effect above (`[isOpen, appName]`), not a strict subset of it. The
+  // reset clears `enginesFetched`/`wineVersionList`, and this is their ONLY
+  // writer. Keyed on `[isOpen]` alone, an `appName` change with `isOpen`
+  // already true — `open(appName)` is `set({ isOpen: true, appName })`, and
+  // the backend emits `steamBottleSetupRequired` from three sites on both
+  // install() and launch() while this deliberately-non-modal banner is up —
+  // zeroed both and nothing ever refilled them. The seeding effect's
+  // `!enginesFetched` guard then returned forever: `wineVersion` stayed
+  // undefined (D-15's persisted engine never seeded), `WineSelector` got an
+  // empty list so the engine field was disabled and the "no CrossOver engine
+  // detected" notice showed to users who have one, and `handleConfirm`
+  // submitted `wineVersion: undefined`.
   useEffect(() => {
     if (!isOpen) return
     let cancelled = false
@@ -115,7 +129,7 @@ const SteamBottleSetup = () => {
     return () => {
       cancelled = true
     }
-  }, [isOpen])
+  }, [isOpen, appName])
 
   // D-15 (34.13-09) read half: fetch the persisted wine engine over 34.13-07's
   // real IPC channel, keyed on the session (isOpen + appName) rather than

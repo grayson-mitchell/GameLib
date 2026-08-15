@@ -225,6 +225,79 @@ describe('C-06: the session reset clears the engine-list guard too', () => {
   })
 })
 
+/**
+ * 34.13 review C-18 — the missing half of the C-06 gate.
+ *
+ * C-06's gate asserts the session reset CLEARS `enginesFetched` /
+ * `wineVersionList`. Nothing asserted they can be SET AGAIN. The reset is keyed
+ * `[isOpen, appName]` and the only writer was keyed `[isOpen]`, so an
+ * `appName` change with `isOpen` already true zeroed both and nothing refilled
+ * them — a permanent wedge, and the gate was green on exactly that input.
+ *
+ * The property, stated generally: for every piece of state the session reset
+ * clears, the effect that WRITES that state must depend on a SUPERSET of the
+ * reset's own dependency array. Anything less means some session key can clear
+ * it without re-triggering its writer.
+ */
+function effectDepsContaining(source: string, token: string): string[] {
+  const flattened = source.replace(/\s+/g, ' ')
+  const at = flattened.indexOf(token)
+  if (at === -1) {
+    throw new Error(`C-18: writer token "${token}" not found in the source`)
+  }
+  const start = flattened.lastIndexOf('useEffect(', at)
+  const depsStart = flattened.indexOf('}, [', at)
+  const depsEnd = flattened.indexOf(']', depsStart)
+  if (start === -1 || depsStart === -1 || depsEnd === -1) {
+    throw new Error(`C-18: could not bound the effect writing "${token}"`)
+  }
+  return flattened
+    .slice(depsStart + '}, ['.length, depsEnd)
+    .split(',')
+    .map((d) => d.trim())
+    .filter(Boolean)
+}
+
+describe('C-18: every writer of reset-cleared state tracks the same session key as the reset', () => {
+  const resetDeps = ['isOpen', 'appName']
+
+  it('the reset effect really is keyed on the session (non-vacuity for the superset claim below)', () => {
+    expect(effectDepsContaining(stripped, "setPhase('consent')")).toEqual(
+      resetDeps
+    )
+  })
+
+  it.each(['setEnginesFetched(true)', 'setWineVersionList(list)'])(
+    'the effect writing "%s" depends on a SUPERSET of the reset deps',
+    (writerToken) => {
+      expect(effectDepsContaining(stripped, writerToken)).toEqual(
+        expect.arrayContaining(resetDeps)
+      )
+    }
+  )
+
+  it('RED: deleting appName from the engine-fetch deps DERIVED FROM THE REAL SOURCE makes the superset claim fail', () => {
+    // The literal pre-fix source: the engine-fetch effect ended `}, [isOpen])`.
+    // Derived positionally from the REAL source — replace only the dependency
+    // array that closes the effect containing `getAlternativeWine`.
+    const anchor = stripped.indexOf('getAlternativeWine')
+    expect(anchor).toBeGreaterThan(-1)
+    const depsAt = stripped.indexOf('}, [isOpen, appName])', anchor)
+    expect(depsAt).toBeGreaterThan(anchor)
+    const knownBad =
+      stripped.slice(0, depsAt) +
+      '}, [isOpen])' +
+      stripped.slice(depsAt + '}, [isOpen, appName])'.length)
+    expect(knownBad).not.toBe(stripped)
+    expect(effectDepsContaining(knownBad, 'setEnginesFetched(true)')).toEqual([
+      'isOpen'
+    ])
+    expect(
+      effectDepsContaining(knownBad, 'setEnginesFetched(true)')
+    ).not.toEqual(expect.arrayContaining(resetDeps))
+  })
+})
+
 describe('C-03: the wizard never submits an engine its own D-16 filter rejects', () => {
   const handleConfirm = sliceHandleConfirm(stripped)
 
