@@ -220,6 +220,17 @@ export const RUST_APP_EXIT = 'app_exit' as const
 export const RUST_APP_RELAUNCH = 'app_relaunch' as const
 
 /**
+ * Rust-side channel name: hide the real Tauri application via `AppHandle::hide()`
+ * (quick/260815-vvz). Backs `electronStub.ts`'s `app.hide()` — the yield-fallback
+ * `raiseFrontmostBottledProcess` (Steam bottle install/uninstall, bottle.ts) reaches
+ * when no matching installer/uninstaller window could be raised within ~18s, so
+ * GameLib at least steps aside instead of staying in front of an invisible dialog.
+ * No-op off macOS by design (`AppHandle::hide()` does not exist there) — exact parity
+ * with real Electron's own `app.hide()`, which is macOS-only.
+ */
+export const RUST_APP_HIDE = 'app_hide' as const
+
+/**
  * Rust-side channel name: write text to the OS clipboard via `tauri-plugin-clipboard-manager`
  * (Phase 34.3 Plan 03, D-01/D-02). Backs `electronStub.ts`'s `clipboard.writeText()`.
  * Fire-and-forget from the caller's perspective (D-03, mirrors real Electron's void-returning
@@ -373,6 +384,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_SHELL_OPEN_PATH,
   RUST_APP_EXIT,
   RUST_APP_RELAUNCH,
+  RUST_APP_HIDE,
   RUST_CLIPBOARD_WRITE_TEXT,
   RUST_CLIPBOARD_READ_TEXT,
   RUST_TRAY_SET_ICON,

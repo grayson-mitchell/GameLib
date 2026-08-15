@@ -34,7 +34,13 @@ const app = {
   getVersion(): string {
     // TODO: What should we return here?
     return '1.0.0'
-  }
+  },
+  // quick/260815-vvz: `bottle.ts` now statically `import { app } from 'electron'`
+  // (Task 2) so its `raiseFrontmostBottledProcess` yield fallback calls `app.hide()`
+  // through this manual mock (auto-applied to every src/backend suite via
+  // jest.config.js's `roots: ['<rootDir>/src/backend']`) rather than getting a
+  // TypeError from an undefined member.
+  hide: jest.fn()
 }
 
 class Notification {

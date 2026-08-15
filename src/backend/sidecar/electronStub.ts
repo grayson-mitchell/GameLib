@@ -40,6 +40,7 @@ import { getPath } from './pathShim'
 import { requestRustInvoke } from './sidecarRpc'
 import {
   RUST_APP_EXIT,
+  RUST_APP_HIDE,
   RUST_APP_RELAUNCH,
   RUST_CLIPBOARD_WRITE_TEXT,
   RUST_DIALOG_MESSAGE,
@@ -283,7 +284,29 @@ export const app = {
     })
   },
   requestSingleInstanceLock: (): boolean => true,
-  setAsDefaultProtocolClient: (): boolean => true
+  setAsDefaultProtocolClient: (): boolean => true,
+  // quick/260815-vvz: `raiseFrontmostBottledProcess`'s (bottle.ts) yield fallback --
+  // when the ~18s poll for a matching bottled Steam installer/uninstaller window comes up
+  // empty, it calls `app.hide()` so GameLib at least steps aside instead of staying in front
+  // of an invisible Steam confirm dialog. Byte-shaped on quit()'s forward above: fire-and-
+  // forget `requestRustInvoke(RUST_APP_HIDE, [])`, forwarded to Tauri's real
+  // `AppHandle::hide()` (macOS-only, `main.rs`'s `app_hide` arm). Two deliberate differences
+  // from quit()/exit(), both load-bearing:
+  //   - No `relaunchInFlight` suppression. That guard exists so quit/exit cannot win a
+  //     process-teardown race against an in-flight relaunch. Hiding a window is not teardown
+  //     and cannot win (or need to win) that race -- suppressing it here would just make the
+  //     yield fallback silently do nothing during a relaunch, with no correctness benefit.
+  //   - Never throws (same total-method convention as every other member here) -- a failed
+  //     hide is a best-effort UX nicety, not something that may affect the install/uninstall
+  //     flow that calls it.
+  hide: (): void => {
+    requestRustInvoke(RUST_APP_HIDE, []).catch((error) => {
+      console.warn(
+        `[electronStub] app.hide(): ${RUST_APP_HIDE} failed:`,
+        error instanceof Error ? error.message : String(error)
+      )
+    })
+  }
 }
 
 // ---- dialog --------------------------------------------------------------------

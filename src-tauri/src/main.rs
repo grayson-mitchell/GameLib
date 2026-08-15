@@ -3350,6 +3350,41 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         "app_relaunch" => {
             app.restart();
         }
+        // Hide the real Tauri application (quick/260815-vvz) via `AppHandle::hide()`. Backs
+        // `electronStub.ts`'s `app.hide()`, whose one reachable caller is
+        // `raiseFrontmostBottledProcess`'s (`bottle.ts`) ~18s-miss yield fallback for bottled
+        // Steam install/uninstall -- when no matching installer/uninstaller window can be
+        // raised within that window, GameLib steps aside instead of staying in front of an
+        // invisible Steam confirm dialog (the root cause `steam-bottle-uninstall-reverts.md`
+        // records).
+        //
+        // `AppHandle::hide()` (tauri 2.11.5, `src/app.rs:1095-1104`) only exists
+        // `#[cfg(target_os = "macos")]` -- exact parity with real Electron's own `app.hide()`,
+        // which is macOS-only there too. An ungated call would not compile off macOS, so the
+        // two branches are `#[cfg]`-split; the non-macOS branch is a loud `eprintln!` declaring
+        // the no-op (never a silent lie), converging on the same `Ok(Value::Null)`.
+        //
+        // Thread-safety: `dispatch_rust_channel` always runs on a `thread::spawn`'d worker
+        // thread (see `clipboard_read_text`'s comment above and `start_reader`), never the
+        // main/reader thread -- so `AppHandle::hide()` always takes its
+        // `RuntimeOrDispatch::RuntimeHandle(h) => h.hide()?` branch, which posts to the real
+        // event loop rather than calling the runtime directly. Same mechanism the already-
+        // shipped `app_exit`/`app_relaunch` arms above rely on.
+        "app_hide" => {
+            #[cfg(target_os = "macos")]
+            {
+                app.hide().map_err(|e| e.to_string())?;
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                eprintln!(
+                    "[dispatch_rust_channel] app_hide: declared no-op off macOS -- \
+                     AppHandle::hide() does not exist on this platform, exact parity with real \
+                     Electron's own macOS-only app.hide()"
+                );
+            }
+            Ok(Value::Null)
+        }
         // Swap the real Tauri tray's icon (Phase 34.1 Plan 06, D-11). Backs the sidecar's
         // `changeTrayColor` registration (`appShellFlowRegistration.ts`), which reads
         // `darkTrayIcon` from `GlobalConfig` and forwards it here as `{ dark }`. This is the
