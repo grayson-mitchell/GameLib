@@ -1392,14 +1392,14 @@ Plans:
 - [x] 34.14-04-PLAN.md — Wave 3. Wire the composition root; correct the second stale doc-comment; lock the wiring with a new source gate and three source-derived known-bads.
 - [x] 34.14-05-PLAN.md — Wave 4. Full-suite reconciliation + shipped-gate census + the BLOCKING D-08 UAT gate (both runtimes x network up/blocked). DONE 2026-08-16 (34.14-05-SUMMARY.md) — D-08 PASSED.
 
-### Phase 34.15: Steam platform-signal and sync integrity (INSERTED)
+### Phase 34.15: Steam platform-signal and sync integrity (INSERTED) — COMPLETE 2026-08-16
 
 **Goal:** Close the three pre-existing Steam defects that Phase 34.14's D-08 UAT gate surfaced but which 34.14 never claimed to fix. 34.14 made the renderer behave **safely** when the depot signal is missing; this phase reduces how often it is missing, gives the library sync a **terminal failure state**, and applies 34.14's own *absent-is-not-negative* principle to the **mac** side, where it was never applied.
 
 **Requirements**: TBD — no REQ-IDs minted. Coverage is tracked by the 16 CONTEXT.md decision IDs (D-01..D-16), all of which map to a plan.
 **Depends on:** Phase 34.14 (COMPLETE) and quick task `260816-hdg` — the read-boundary normalization in `steam/metadataCapture.ts` (`depotSignalCaptured`) that item 1 must not regress
 **Blocks:** nothing. Independent of Phase 35.
-**Plans:** 9 plans in 4 waves
+**Plans:** 9/9 plans executed — **PHASE COMPLETE 2026-08-16.** `34.15-VERIFICATION.md` `status: passed`, 16/16 (16 CONTEXT decisions D-01..D-16 + all 3 ROADMAP scope items), traced against code rather than SUMMARY claims. BLOCKING D-16 UAT gate **PASSED (4 pass / 2 n-a / 0 fail)** on a real 378-game Steam + 7-game GOG library across **both runtimes**: bulk PICS capture returned `scoped=378 captured=363 skipped=15 failed=false` **identically** on Electron and Tauri (~5s / ~2s), taking `is_windows_native` from **0 of 381 entries to 377 of 378 real apps** at a **96.0% `oslist` presence rate** — which empirically CONFIRMS RESEARCH.md assumption A2 and validates the MEDIUM-confidence wire shape; and a Steam sync failure rendered as an inline, non-self-clearing row with a `runner=steam`-scoped retry while GOG's games stayed visible and clickable behind it. Code review was **front-loaded before the human gate** and caught 1 BLOCKER (CR-01 — D-13's gate controlled WHEN the glyph row rendered, not WHAT; the row still drew from the stale seed) plus WR-01, both fixed with RED-proven content-asserting tests (`77f094bfd`, `dabd1ccc4`). Three review findings deliberately left open and now filed as a todo (WR-02 two platform-signal writers with no precedence rule — the root mechanism behind CR-01; WR-03; WR-04). Full detail: `34.15-VERIFICATION.md`, `34.15-UAT.md`, `34.15-REVIEW.md`.
 
 **Why this exists.** 34.14's gate was designed to prove one renderer fix and instead surfaced four pre-existing Steam defects. One (the pre-D-17 `steam_metadata` residue) was closed by quick task `260816-hdg`. Three remain, and all three were re-verified against source on 2026-08-16 — each has a pending todo carrying file:line evidence. A fourth Steam todo (32-bit-mac orphaned installs) is **deliberately excluded**: it is install-lifecycle, a different axis.
 
@@ -1436,7 +1436,7 @@ Plans:
 - [x] 34.15-08-PLAN.md — D-08/D-09/D-10/D-11. The inline two-mode `SteamSyncNotice` with a Steam-scoped retry, its `gamelib:` namespace strings (BLOCKING localisation gate), the `Library/index.tsx` guard replacement, and a source gate RED-proven against the verbatim `:1013-1018` expression. The D-11-fenced global overlay stays byte-identical.
 
 **Wave 4** *(depends on everything; NOT autonomous)*
-- [ ] 34.15-09-PLAN.md — D-16. Full-suite + typecheck + lint reconciliation, a shipped-gate census proven BY DIFF (metadataCapture.ts, the three D-17 saboteurs, Group B/B1, the D-11 overlay, the three sibling dialogs), the D-05 non-weakening audit, and the ONE BLOCKING human UAT gate with a concrete forcing procedure per branch (`api.steampowered.com` -> TEST-NET-3 `203.0.113.1`, verified by `curl` exit 28).
+- [x] 34.15-09-PLAN.md — D-16. Full-suite + typecheck + lint reconciliation, a shipped-gate census proven BY DIFF (metadataCapture.ts, the three D-17 saboteurs, Group B/B1, the D-11 overlay, the three sibling dialogs), the D-05 non-weakening audit, and the ONE BLOCKING human UAT gate with a concrete forcing procedure per branch (`api.steampowered.com` -> TEST-NET-3 `203.0.113.1`, verified by `curl` exit 28).
 
 ### Phase 34.1: Tauri IPC re-plumb slice 4 — app shell and window chrome (INSERTED)
 

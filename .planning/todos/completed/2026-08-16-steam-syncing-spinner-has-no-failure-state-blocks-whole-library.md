@@ -4,6 +4,8 @@ title: "\"Syncing your Steam library…\" spinner has no failure state and block
 area: steam
 severity: high
 found_by: "Phase 34.14 D-08 UAT, Run 2 setup (operator observation, 2026-08-16)"
+resolved: 2026-08-16
+resolved_by: "Phase 34.15 -- steam-platform-signal-and-sync-integrity (VERIFICATION.md status: passed, 16/16; D-16 human UAT gate PASSED 4/2/0 on both runtimes)"
 files:
   - src/frontend/screens/Library/index.tsx
   - src/frontend/state/GlobalState.tsx

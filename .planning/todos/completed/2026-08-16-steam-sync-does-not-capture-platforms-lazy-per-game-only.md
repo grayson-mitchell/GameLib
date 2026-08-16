@@ -4,6 +4,8 @@ title: "Steam library sync captures NO platform data — it only reads the cache
 area: steam
 severity: high
 found_by: "Operator, during Phase 34.14 D-08 UAT (2026-08-16) — architectural observation, then confirmed in source"
+resolved: 2026-08-16
+resolved_by: "Phase 34.15 -- steam-platform-signal-and-sync-integrity (VERIFICATION.md status: passed, 16/16; D-16 human UAT gate PASSED 4/2/0 on both runtimes)"
 files:
   - src/backend/storeManagers/steam/library.ts
   - src/backend/storeManagers/steam/games.ts

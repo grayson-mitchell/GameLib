@@ -4,6 +4,8 @@ title: "Absent `is_mac_native` is treated as \"no Mac build\" — the exact mirr
 area: steam
 severity: medium
 found_by: "Phase 34.14 D-08 UAT, Run 2 observation 2.0 (operator, 2026-08-16)"
+resolved: 2026-08-16
+resolved_by: "Phase 34.15 -- steam-platform-signal-and-sync-integrity (VERIFICATION.md status: passed, 16/16; D-16 human UAT gate PASSED 4/2/0 on both runtimes)"
 files:
   - src/frontend/screens/Library/components/InstallModal/index.tsx
   - src/frontend/screens/Library/components/InstallModal/steamPlatformRow.ts
