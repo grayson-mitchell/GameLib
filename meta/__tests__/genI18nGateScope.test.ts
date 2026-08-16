@@ -440,18 +440,21 @@ describe('genI18nGateScope', () => {
  *
  * `meta/genI18nGateScope.ts` used to write BOTH artifacts unconditionally.
  * One of them, `meta/i18nGateScope.json`, is the input to the BLOCKING
- * hardcoded-string gate and is hand-curated (160 files; its `generatedBy`
- * records "hand-edited (34.13 review CR-02(b), then A-02/A-03)"). The other,
- * `meta/i18nForkTouchedFiles.json`, was added by 34.13 review A-17 as the
- * CI-readable input to the staleness ratchet directly above, and is routine
- * to regenerate.
+ * hardcoded-string gate and is hand-curated (162 files as of 34.15-09; its
+ * `generatedBy` records "hand-edited (34.13 review CR-02(b), then
+ * A-02/A-03)"). The other, `meta/i18nForkTouchedFiles.json`, was added by
+ * 34.13 review A-17 as the CI-readable input to the staleness ratchet
+ * directly above, and is routine to regenerate.
  *
  * A-17 therefore gave people a ROUTINE reason to run
  * `pnpm gen-i18n-gate-scope`, and doing so silently widened the blocking gate
- * from 160 to 178 files and destroyed the hand-edited provenance marker. That
- * already cost real work twice: 34.13-08 removed two entries by hand rather
- * than regenerate, and the A-17 fix agent had to restore the file with
- * `git show HEAD:... >`.
+ * (160 -> 178 at 34.13; 162 -> 180 at 34.15-09, when this phase's own two new
+ * fork-touched files -- `Library/components/SteamSyncNotice/index.tsx` and
+ * `Library/librarySyncIndicator.ts` -- were folded into the hand-curated
+ * scope rather than left as unscanned debt) and destroyed the hand-edited
+ * provenance marker. That already cost real work twice: 34.13-08 removed two
+ * entries by hand rather than regenerate, and the A-17 fix agent had to
+ * restore the file with `git show HEAD:... >`.
  *
  * Every spec below drives the REAL writer against a `mkdtempSync` directory
  * with REAL fs writes — never a hand-built replica of the write logic (a
@@ -499,10 +502,11 @@ describe('--rewrite-scope guard', () => {
   }
 
   /**
-   * The snapshot a real regeneration would produce TODAY: the 178 files of
-   * the committed fork-touched artifact. Built from the committed artifacts
-   * rather than invented numbers, so the specs below assert the REAL
-   * 160 -> 178 delta this task exists to prevent.
+   * The snapshot a real regeneration would produce TODAY: the 180 files of
+   * the committed fork-touched artifact (34.15-09: 178 -> 180, this phase's
+   * own `SteamSyncNotice/index.tsx` and `librarySyncIndicator.ts`). Built
+   * from the committed artifacts rather than invented numbers, so the specs
+   * below assert the REAL 162 -> 180 delta this task exists to prevent.
    */
   function freshSnapshot(): ScopeSnapshot {
     return {
@@ -527,10 +531,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 160-file hand-curated snapshot and the fresh snapshot is the REAL 178', () => {
-    expect(scopeSnapshot.files.length).toBe(160)
-    expect(forkTouchedSnapshot.files.length).toBe(178)
-    expect(freshSnapshot().files.length).toBe(178)
+  it('A0 fixture sanity: the seeded scope is the REAL 162-file hand-curated snapshot and the fresh snapshot is the REAL 180', () => {
+    expect(scopeSnapshot.files.length).toBe(162)
+    expect(forkTouchedSnapshot.files.length).toBe(180)
+    expect(freshSnapshot().files.length).toBe(180)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -556,7 +560,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 160 -> 178 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 162 -> 180 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -579,7 +583,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 178', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 180', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -592,12 +596,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(178)
+    expect(rewritten.files.length).toBe(180)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 178 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 180 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -610,7 +614,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(178)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(180)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
