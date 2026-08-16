@@ -69,9 +69,53 @@ Evidence log preserved at
   off. Now it is killed at 8:00. That fix is correct on its own terms — the defect is the
   watchdog's *scope*, not the abort. Do not fix this by reverting the abort.
 
-## Solution
+## Resolution
 
-TBD — decide the shape before planning. Candidate directions:
+**CODE FIX LANDED 2026-08-17 by quick task `260817-dib`** — commits `e92d0dc03` (RED),
+`8738b6422` (GREEN), `4d2b319e8` (wire-up), `f021b6a7d` (live-gate recipe), `33744c33d` (docs).
+**Option 1 was chosen.** This todo **stays in `pending/`** because the property it names is
+about elapsed wall-clock against a real download and is therefore **not closable by jest** —
+see `## Verification` below. It closes only when Gate A of
+`.planning/quick/260817-dib-make-the-install-watchdog-a-progress-bas/LIVE-GATE.md` passes on
+hardware, which the operator runs as part of phase 23 wave 10.
+
+What shipped:
+
+- New runner-agnostic `src/backend/downloadmanager/installStallWatchdog.ts` exporting
+  `withStallTimeout`, `isStallError`, and `INSTALL_NO_PROGRESS_TIMEOUT_MS`. `installQueueElement`
+  now uses it in place of the total-duration `withTimeout`.
+- **The threshold VALUE is unchanged at 480,000ms — it was re-semantified, not raised.** As a
+  no-progress window it must still clear the pre-download phase's ~320s of legitimate silence
+  (50s `resolveSteamInstallTarget` + 90s `STEAM_PICS_BULK_TIMEOUT_MS` × 3 attempts) and must sit
+  *above* the depot layer's own inner `STALL_TIMEOUT_MS` of 3 min (`steam/depot/stallTracker.ts:46`)
+  so the inner detector gives up first. Because the number does not move, the change adds zero new
+  false-trip risk for any runner.
+- **Anti-vacuity is the load-bearing detail.** `depot.ts:1952-1958` runs a 1s
+  `PROGRESS_HEARTBEAT_MS` interval that emits an honest ~0 MB/s `progressUpdate` *regardless of
+  chunk activity*. A watchdog re-armed on event **ARRIVAL** would therefore never trip for Steam —
+  non-vacuous, correctly computed, and guarding **nothing**. `withStallTimeout` re-arms only on an
+  observed **ADVANCE** (`percent` increased OR the `bytes` string changed), pinned by a spec that
+  replays depot.ts's literal heartbeat payload for 400 ticks and asserts it **still trips**.
+- Steam's progress was not reaching the bus at all: `depot.ts:1912` called
+  `sendFrontendMessage('progressUpdate', …)` raw, bypassing `sendProgressUpdate`. Now routed
+  through it, with the `appId`/`appName` identity traced end-to-end — a mismatch there would have
+  left the watchdog silently blind for Steam.
+- `260816-vgc`'s abort block (`downloadmanager/utils.ts:193-277`) is **byte-identical**; a stall
+  trip reaches it through the same `status = 'error'` assignment. The new `isStallError` branch
+  sits *ahead* of `isTimeoutError`, so `connection may be stale` survives only on the inner
+  `withTimeout` branch where it is accurate. New i18n key `box.error.install.stalled` uses
+  `{{minutes}}` (never the i18next-reserved `{{count}}`).
+- No runner loses its bound. sideload has no progress emitter and degrades to exactly today's
+  fixed ceiling; gog/legendary/nile/zoom already route through `sendProgressUpdate` and gain the
+  same relief Steam does.
+
+174/174 jest across 4 suites, `codecheck` clean, eslint 0 errors on touched files,
+`lint-translations` exit 0 — all re-run by the orchestrator rather than accepted from agent
+self-reports. VERIFICATION passed 6/6.
+
+## Solution (chosen: option 1)
+
+Candidate directions as originally filed:
 
 1. **Make the watchdog a stall detector instead of a duration cap.** Reset the deadline on
    observed progress (bytes written / chunk completions) rather than timing the whole call.
