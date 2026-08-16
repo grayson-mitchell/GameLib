@@ -455,19 +455,45 @@ describe('Group E (34.14): the depot resolution is CALLED, once, and feeds BOTH 
     expect(countOccurrences(knownBad, 'resolveDepotAvailability(')).toBe(0)
   })
 
-  it('E2: within the 400 characters following the call, all five ResolveDepotAvailabilityInput property names appear -- a call missing the seed pair silently loses D-05, a call missing probeSettled silently loses D-04', () => {
+  it('E2: within the 600 characters following the call, all SEVEN ResolveDepotAvailabilityInput property names appear -- a call missing the Windows seed pair silently loses D-05, a call missing probeSettled silently loses D-04, and a call missing the 34.15 D-12 mac seed pair silently loses D-12 the same way', () => {
+    // 34.15 D-12 reconciliation: this gate was widened from FIVE property
+    // names / a 400-char window to SEVEN / 600 chars. As shipped by 34.15-04,
+    // this test would have stayed GREEN if `seedHasMacDepot` and
+    // `probeHasMacDepot` had been silently dropped from the call -- it only
+    // asserted presence of the five names it already knew about. The window
+    // was widened (not merely the property list) because the larger object
+    // literal -- now seven properties instead of five -- needs the extra
+    // room to fit; the real distance measured against the shipped source is
+    // 354 characters, so 600 carries real headroom, not a guess that the
+    // current source already exceeds.
     const callIdx = source.indexOf('resolveDepotAvailability(')
     expect(callIdx).toBeGreaterThan(-1)
-    const window = source.slice(callIdx, callIdx + 400)
+    const window = source.slice(callIdx, callIdx + 600)
     for (const prop of [
       'seedHasWindowsDepot',
+      'seedHasMacDepot',
       'seedDepotSignalCaptured',
       'probeHasWindowsDepot',
+      'probeHasMacDepot',
       'probeDepotSignalCaptured',
       'probeSettled'
     ]) {
       expect(window).toContain(prop)
     }
+  })
+
+  it('E2-RED (34.15 D-12): deleting the mac seed pair from the call trips E2, against a known-bad DERIVED FROM THE REAL SOURCE -- this is the reconciliation obligation itself, proven', () => {
+    const knownBad = source
+      .replace('seedHasMacDepot: hasMacDepot,\n      ', '')
+      .replace('probeHasMacDepot: eligibility.hasMacDepot,\n      ', '')
+    expect(knownBad).not.toBe(source)
+    expect(knownBad).not.toContain('seedHasMacDepot')
+    expect(knownBad).not.toContain('probeHasMacDepot')
+    const callIdx = knownBad.indexOf('resolveDepotAvailability(')
+    expect(callIdx).toBeGreaterThan(-1)
+    const window = knownBad.slice(callIdx, callIdx + 600)
+    expect(window).not.toContain('seedHasMacDepot')
+    expect(window).not.toContain('probeHasMacDepot')
   })
 
   it('E3: windowsDepotOffered -- not the raw hasWindowsDepot -- is what reaches selectSteamPlatformOptions', () => {
@@ -554,6 +580,56 @@ describe('Group E (34.14): the depot resolution is CALLED, once, and feeds BOTH 
     expect(
       countOccurrences(knownBad, 'eligibilityPending={eligibility.pending}')
     ).toBe(0)
+  })
+
+  // ── 34.15 D-12/D-13 ──────────────────────────────────────────────────
+  //
+  // E6: `macDepotOffered`'s resolution moment (`depotSignalResolved`) must
+  // also reach `SteamDialog`, so its header's glyph row (D-13) and this
+  // file's own platform selector read the SAME resolution moment rather
+  // than two independently-drifting ones.
+
+  it('E6: depotSignalResolved={depotSignalResolved} reaches the <SteamDialog mount', () => {
+    expect(
+      countOccurrences(source, 'depotSignalResolved={depotSignalResolved}')
+    ).toBe(1)
+  })
+
+  it('E6-RED: deleting the prop from the <SteamDialog mount trips E6, against a known-bad DERIVED FROM THE REAL SOURCE', () => {
+    const knownBad = source.replace(
+      'depotSignalResolved={depotSignalResolved}\n          ',
+      ''
+    )
+    expect(knownBad).not.toBe(source)
+    expect(
+      countOccurrences(knownBad, 'depotSignalResolved={depotSignalResolved}')
+    ).toBe(0)
+  })
+})
+
+// ---------------------------------------------------------------------
+// Group F (34.15 D-15) -- 34.14's pending-row pin is NOT reopened by this
+// phase's mac-side changes
+// ---------------------------------------------------------------------
+//
+// 34.14's `readonlyPlatformValue('pending')` deliberately pins the disabled
+// selector to display macOS during the same window in which D-13 (this
+// phase) now suppresses the SteamDialog glyph row. That looks inconsistent
+// and 34.15-CONTEXT.md D-15 records that it WAS considered: the selector is
+// disabled, Install is disabled, and an `EligibilityLoadingRow` is on
+// screen explaining the wait, so the displayed value is INERT, not an
+// offer. This makes "we did not reopen 34.14's decision" a CHECKED
+// property rather than a claim in a summary file.
+
+describe("34.15 D-15: 34.14's pending-row pin is not reopened", () => {
+  const source = stripped('screens/Library/components/InstallModal/index.tsx')
+
+  it('readonlyPlatformValue( is still called in InstallModal/index.tsx', () => {
+    expect(source).toContain('readonlyPlatformValue(')
+  })
+
+  it('<EligibilityLoadingRow still appears exactly once, unchanged from 34.14/34.13-11 (B1)', () => {
+    expect(countOccurrences(source, '<EligibilityLoadingRow')).toBe(1)
   })
 })
 

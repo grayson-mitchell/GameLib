@@ -1041,6 +1041,67 @@ describe('the source gates reject a known-bad specimen', () => {
   })
 })
 
+// ---------------------------------------------------------------------
+// Block 6 (34.15 D-13) -- the header glyph row is gated on the resolved
+// depot signal
+// ---------------------------------------------------------------------
+//
+// `SteamDialog/index.tsx:380-391` (pre-34.15) rendered its header row from
+// `availablePlatforms` unconditionally, including a Windows entry that
+// `InstallModal/index.tsx` marks `available: true` with no signal read at
+// all. On a Mac host with an unresolved depot signal that rendered exactly
+// one Windows glyph -- an assertion about the game the app could not back.
+// D-13 suppresses the WHOLE row (including Windows) while
+// `depotSignalResolved` is false. `flat` normalises the whitespace prettier
+// inserts when it wraps the `&&` onto its own line (this dialog's own
+// `.map()` argument list is short enough that prettier does this here,
+// unlike Group E's `selectSteamPlatformOptions(...)` call in
+// `steamEligibilityWiring.test.ts`, which additionally needed the
+// paren-boundary collapse `flatten()` there provides).
+
+describe('34.15 D-13: the glyph row is gated on the resolved depot signal', () => {
+  const flat = readDialogStripped().replace(/\s+/g, ' ')
+
+  it('the header glyph row is gated on depotSignalResolved', () => {
+    expectPresent(
+      flat,
+      'depotSignalResolved && availablePlatforms.map',
+      '34.15 D-13'
+    )
+  })
+
+  it('RED: a known-bad specimen DERIVED FROM THE REAL SOURCE with the gate removed trips the same helper', () => {
+    const knownBad = flat.replace(
+      'depotSignalResolved && availablePlatforms.map',
+      'availablePlatforms.map'
+    )
+    expect(knownBad).not.toBe(flat)
+    expect(() =>
+      expectPresent(
+        knownBad,
+        'depotSignalResolved && availablePlatforms.map',
+        '34.15 D-13'
+      )
+    ).toThrow()
+  })
+
+  it('the suppression is never implemented by filtering the shared array locally -- the array must stay unfiltered for DownloadDialog/ImportDialog/ThirdPartyDialog', () => {
+    expectAbsent(
+      readDialogStripped(),
+      'availablePlatforms.filter',
+      '34.15 D-13 -- the shared array must not be filtered inside this dialog'
+    )
+  })
+
+  it('non-vacuity: expectAbsent throws when availablePlatforms.filter appears in executable position', () => {
+    const specimen = 'const x = availablePlatforms.filter(() => true)'
+    const stripped = stripSourceComments(specimen)
+    expect(() =>
+      expectAbsent(stripped, 'availablePlatforms.filter', '34.15 D-13')
+    ).toThrow()
+  })
+})
+
 // Finish with a full-suite run in Task 3's own <verify> command
 // (`pnpm test:ci`) -- this plan adds files only, so any suite that flips
 // red is a real regression, not an expected update.
