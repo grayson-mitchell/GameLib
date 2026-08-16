@@ -528,6 +528,21 @@ function wrapDepotKeyError(
   if (typeof eresult === 'number') {
     ;(wrapped as Error & { eresult?: number }).eresult = eresult
   }
+  // G-23-01 (23-09, observability half only): log at the failure site — not
+  // only inside the eventual install-failed message — naming the depot id,
+  // the owning appId, and the EResult, so a blocked/terminal depot-key
+  // failure is diagnosable without waiting for the whole install to fail and
+  // get classified. Never logs the decryption key, the manifest GID payload,
+  // or any account identifier (T-23-31) — only the three fields above, the
+  // same ones wrapDepotKeyError's own message already composes.
+  const ownershipNote =
+    eresult === 40
+      ? ' — GameLib selected this depot via the package-ownership gate; owning a depot does not guarantee Steam will issue its key'
+      : ''
+  logWarning(
+    `fetchDepotPlanEntry: couldn't get ${what} for depot ${descriptor.id} (app ${descriptor.ownerAppId}): eresult=${eresult ?? 'unknown'}${ownershipNote}`,
+    LogPrefix.Steam
+  )
   return wrapped
 }
 

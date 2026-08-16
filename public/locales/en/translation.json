@@ -771,6 +771,7 @@
         "refresh": {
             "error": "Couldn't fetch releases from upstream, maybe because of Github API restrictions! Try again later."
         },
+        "uninstallNotConfirmed": "Uninstall not confirmed by Steam — please check Steam and try again",
         "uninstalled": "Uninstalled",
         "update": {
             "canceled": "Update Canceled",
@@ -1215,6 +1216,7 @@
         "download": {
             "error": {
                 "connectionDropped": "Steam servers dropped the connection. Retry to continue.",
+                "depotBlocked": "This depot appears to be blocked for your account or region right now. The game may still be installable directly through the Steam client.",
                 "depotUnavailable": "This game's content isn't available to download right now.",
                 "diskFull": "Out of disk space.",
                 "generic": "The Steam download failed. Retry to continue.",

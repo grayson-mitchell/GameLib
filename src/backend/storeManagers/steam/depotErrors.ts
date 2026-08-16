@@ -79,6 +79,31 @@ export function classifyDepotError(err: unknown): ClassifiedDepotError {
   // wrapped with the same "couldn't get..." prefix for context) must fall
   // through to the connection-dropped branch below, unchanged.
   if (isNonRetryableDepotError(err)) {
+    // G-23-01 (23-09, observability half only): EResult 40 (Blocked) gets its
+    // own dedicated copy, checked FIRST inside this branch so ordering
+    // relative to the connection-dropped pattern below is unchanged. Owning a
+    // depot via the package-ownership gate does not guarantee Steam will
+    // issue its decryption key — a region/DRM-gated depot can be Blocked at
+    // key-request time even though the account owns it. Every other terminal
+    // EResult in NON_RETRYABLE_ERESULTS still falls through to the generic
+    // depotUnavailable copy below, unchanged.
+    const eresult = (err as { eresult?: unknown }).eresult
+    if (eresult === 40) {
+      // Composed OUTSIDE i18next.t for the same reason as depotUnavailable
+      // below — the depot id survives even where i18next is stubbed without
+      // interpolation support (never a raw stack trace or internal path,
+      // T-21-14; just the same depot/app/eresult context wrapDepotKeyError
+      // already composed).
+      const base = i18next.t(
+        'steam.download.error.depotBlocked',
+        'This depot appears to be blocked for your account or region right now. The game may still be installable directly through the Steam client.'
+      )
+      return {
+        key: 'steam.download.error.depotBlocked',
+        message: `${base} (${text})`
+      }
+    }
+
     // Composed OUTSIDE i18next.t (rather than via {{detail}} interpolation)
     // so the depot id + owning appId + real EResult name are always present
     // in the final message even where i18next.t is stubbed/mocked without

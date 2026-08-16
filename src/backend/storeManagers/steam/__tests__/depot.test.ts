@@ -861,6 +861,50 @@ describe('buildDepotPlan', () => {
       expect(PLAN_BUILD_MAX_ATTEMPTS).toBeGreaterThan(1) // sanity: the bound this test proves we did NOT hit
     })
 
+    it('G-23-01: a Blocked (eresult=40) depot-key rejection logs a warning naming the depot id, owning appId, and EResult at the failure site, before the error propagates', async () => {
+      const fakeClient = makeFakeClient()
+      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+      jest
+        .mocked(selectAllDepots)
+        .mockReturnValue([
+          {
+            id: '1771304',
+            manifest: '9007199254740993',
+            size: 0,
+            ownerAppId: '1771300'
+          }
+        ])
+
+      jest
+        .mocked(fakeClient.getDepotDecryptionKey)
+        .mockImplementation(
+          (
+            _appId: number,
+            _depotId: number,
+            cb: (err: Error | null, key: Buffer) => void
+          ) => {
+            const err = new Error('Blocked') as Error & { eresult?: number }
+            err.eresult = 40 // EResult.Blocked — region/content blocked
+            cb(err, undefined as unknown as Buffer)
+          }
+        )
+
+      await expect(buildDepotPlan(APP_ID, BASE_OPTS)).rejects.toThrow(
+        /couldn't get decryption key/i
+      )
+
+      const warningCalls = jest.mocked(logWarning).mock.calls
+      const matchingCall = warningCalls.find(
+        (call) =>
+          typeof call[0] === 'string' &&
+          call[0].includes('1771304') &&
+          call[0].includes('1771300')
+      )
+      expect(matchingCall).toBeDefined()
+      expect(matchingCall?.[0]).toMatch(/eresult=40/)
+    })
+
     it('a non-terminal error (no eresult / not in the terminal set) still retries normally — non-retryable classification does not over-broaden', async () => {
       const fakeClient = makeFakeClient()
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
@@ -2347,6 +2391,26 @@ describe('classifyDepotError', () => {
     )
     expect(result.key).toBe('steam.download.error.connectionDropped')
     expect(result.message).toMatch(/dropped the connection/i)
+  })
+
+  it('G-23-01: a wrapDepotKeyError-shaped message carrying eresult=40 (Blocked) is classified as depotBlocked, names the blocked depot id, and tells the user the game may still be installable through Steam directly', () => {
+    const err = new Error(
+      "couldn't get decryption key for depot 1771304 (app 1771300): Blocked"
+    ) as Error & { eresult?: number }
+    err.eresult = 40
+    const result = classifyDepotError(err)
+    expect(result.key).toBe('steam.download.error.depotBlocked')
+    expect(result.message).toMatch(/1771304/)
+    expect(result.message).toMatch(/installable directly through the steam client/i)
+  })
+
+  it('G-23-01: other terminal EResults (8, 9, 15, 17, 42, 43) are unaffected by the new Blocked branch — only 40 gets depotBlocked', () => {
+    for (const eresult of [8, 9, 15, 17, 42, 43]) {
+      const err = new Error('x') as Error & { eresult?: number }
+      err.eresult = eresult
+      const result = classifyDepotError(err)
+      expect(result.key).toBe('steam.download.error.depotUnavailable')
+    }
   })
 })
 
