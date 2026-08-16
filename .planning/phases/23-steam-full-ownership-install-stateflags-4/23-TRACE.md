@@ -183,6 +183,67 @@ reused/degraded prior install) with the new `steam-flags-census` logging in plac
 compare its `stage=plan-build` / `stage=download-entry` / `stage=download-complete` census lines
 against a fresh HUMANKIND (or equivalent Denuvo native title) re-install's census lines.
 
+---
+
+### RESOLVED 2026-08-16 by 23-07 Task 2 — **VERDICT: MASKED**
+
+**Observation 1 — the planned cold-launch test is not performable.** Cyberpunk 2077's install is
+unchanged from the 2026-07-21 offline pass: `52` regular files, `0` with `+x`, **no `.app` bundle and
+no Mach-O binary anywhere under the install root**, `.acf` `StateFlags 36` (FullyInstalled +
+FilesMissing) with `SizeOnDisk` still claiming ~84GB. Task 2's step 1 anticipated the "binaries do
+NOT carry `+x`" branch; the actual state is stronger — **there is no binary to launch at all.** A
+GameLib cold launch would therefore fail for reasons unrelated to execute bits and would return no
+signal, so it was deliberately **not attempted**. Consequently the two conditions Task 2's acceptance
+criteria ask to record — whether the Steam client was confirmed not running before the launch, and
+whether Steam auto-started during it — are **not applicable: no launch was performed.**
+
+**Observation 2 — operator recall (step 3).** Asked directly whether the 2026-07-19 Gate 1 launch was
+performed via the Steam client's Play button or via GameLib, the operator answered: **cannot recall
+confidently.** Recorded as an honest UNKNOWN per step 3's explicit instruction not to reconstruct it.
+
+**Observation 3 — the decisive measurement, substituted for unavailable recall.** Rather than resting
+the verdict on memory, Cyberpunk's own manifest was censused using the same before-any-bytes technique
+that closed Task 1: a GameLib install was started and cancelled immediately after `buildDepotPlan`
+returned.
+
+```
+(21:49:53) [INFO]:    [Steam]:           steam-flags-census stage=plan-build appId=1091500 depots=3 totalFiles=133 flagBearing=32 executableFlagged=0 readonlyFlagged=0 hiddenFlagged=0 directoryEntries=32 symlinkEntries=0 zeroSizeEntries=32 distinctFlagValues=[64]
+(21:49:53) [INFO]:    [Steam]:           steam-flags-census stage=download-entry appId=1091500 totalFiles=133 flagBearing=32 executableFlagged=0 readonlyFlagged=0 hiddenFlagged=0 directoryEntries=32 symlinkEntries=0 zeroSizeEntries=32 distinctFlagValues=[64]
+```
+
+**`executableFlagged=0`, `distinctFlagValues=[64]` across all three depots** — the identical signature
+to HUMANKIND. Cyberpunk 2077's manifest carries no executable flags either.
+
+**Verdict: MASKED.** A GameLib `StateFlags=4` install of Cyberpunk 2077 would land **zero** executable
+files, exactly as HUMANKIND's did. Therefore the successful launch Gate 1 recorded on 2026-07-19
+**cannot** be explained by execute bits GameLib applied — the writer had none to apply. Something
+outside GameLib's install path supplied them (or the launch did not originate from a GameLib-authored
+`StateFlags=4` install at all). **Gate 1's launch half does not stand** and needs the cheap
+re-confirmation planned in 23-10.
+
+**Honesty limit — what this does NOT establish.** This proves what did *not* launch Cyberpunk; it does
+not identify what did. The specific mechanism — Steam UI Play button, versus a `steam://` handoff that
+starts the Steam client which then re-applies modes — remains **unobserved**, and is no longer
+observable on this machine (no binary survives, and the install has since been overwritten by the
+Task 2 census run). 23-10 should confirm Gate 1 against a title that is *freshly* installed by GameLib
+and launched with the Steam client verified not running, rather than attempting to reconstruct the
+2026-07-19 event.
+
+### Cross-title pattern (all `stage=plan-build` censuses gathered by this trace)
+
+| Title | appId | depots | totalFiles | flagBearing | executableFlagged | distinctFlagValues |
+|---|---|---|---|---|---|---|
+| WazHack | 264160 | 1 | 198 | 28 | **1** | `[32,64]` |
+| HUMANKIND | 1124300 | 2 | 18949 | 140 | **0** | `[64]` |
+| Cyberpunk 2077 | 1091500 | 3 | 133 | 32 | **0** | `[64]` |
+
+In every case `flagBearing` equals `directoryEntries` exactly, except WazHack's single extra
+executable. **Two of three native macOS titles carry no executable flag whatsoever, and the third
+carries exactly one** — so a manifest bearing usable execute bits is the exception, not the rule.
+This generalises Task 1's finding beyond the single failing title: 23-08's fix cannot treat missing
+executable flags as an anomaly to special-case, because it is the normal condition. Note the depot
+counts (1, 2, 3) also rule out any depot-count-dependent cause across the whole observed range.
+
 ## Live run 1 — WazHack (264160), single-depot native control
 
 Recorded 2026-08-16. Electron runtime (the Tauri sidecar's file logger is not readable — stdout is

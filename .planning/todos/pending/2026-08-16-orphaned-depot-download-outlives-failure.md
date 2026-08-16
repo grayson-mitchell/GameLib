@@ -27,6 +27,28 @@ consumed by a worker nobody was tracking.
 No `appmanifest_1124300.acf` was ever written, so the orphaned run also cannot be resumed or
 reconciled through the normal path — it is invisible to every code path that keys off the `.acf`.
 
+## The abort path EXISTS and WORKS — the failure path just doesn't call it
+
+Measured the same session, 2026-08-16, cancelling a Cyberpunk 2077 (`1091500`) install by hand:
+
+```
+(21:50:44) [INFO]:    [Steam]: SteamGame: aborting in-flight native depot download for appId 1091500
+(21:50:44) [WARNING]: [DownloadManager]: Installation of 1091500 aborted!
+```
+
+`chunk-stream stats` stopped immediately (last line `@51s`), and the on-disk file count froze at 24
+and stayed there. **An explicit user Cancel aborts the in-flight depot download correctly.**
+
+So this is not a missing-abort-mechanism defect. The machinery is present and effective; the
+`install did not settle — connection may be stale` failure path simply never invokes it. That should
+make the fix small: route the failure path through the same abort that Cancel already uses. Contrast
+the two runs directly — same build, same session, ~14 minutes apart:
+
+| Path | Abort log line | chunk loop | Outcome |
+|---|---|---|---|
+| Failure (`1124300`, 21:36:40) | **absent** | ran ~5 more minutes | 4,486 orphaned files, no `.acf` |
+| User Cancel (`1091500`, 21:50:44) | present | stopped same second | 24 files, frozen |
+
 ## Suspected trigger (inference — not investigated)
 
 The failure timestamp coincides with a concurrent library sync on the same Steam connection:

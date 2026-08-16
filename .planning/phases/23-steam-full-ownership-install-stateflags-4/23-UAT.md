@@ -115,6 +115,18 @@ monotonic progress through a pause/resume cycle, no flicker) were hardware-confi
 day. The prior run's ~2.5h multi-depot download-time blocker cleared with the Phase 25 host fan-out fix
 now on this branch, letting the download finish so 4–6 could be observed. Gate 1 CLOSED.
 
+**⚠ Gate 1's LAUNCH HALF REOPENED 2026-08-16 — trustworthiness verdict: MASKED** (23-07 Task 2, see
+`23-TRACE.md` §"Gate 1 trustworthiness assessment"). Cyberpunk 2077's own manifest was censused and
+carries **no executable flags** (`stage=plan-build appId=1091500 depots=3 flagBearing=32
+executableFlagged=0 distinctFlagValues=[64]`), so a GameLib `StateFlags=4` install of it would land
+zero executable files — exactly as HUMANKIND's did. The launch recorded here therefore **cannot** be
+explained by execute bits GameLib applied, and does not demonstrate that the native install path
+produces a launchable game. The adoption half of this gate (StateFlags=4 accepted, no verify pass, no
+re-download) is **unaffected and still stands**. The launch half must be re-confirmed by 23-10 against
+a freshly GameLib-installed title with the Steam client verified not running. The operator could not
+recall whether the 2026-07-19 launch was started from GameLib or the Steam client (honest UNKNOWN),
+and it is no longer reconstructable — Cyberpunk retains no Mach-O binary on disk.
+
 _Historical (fix landing, superseded by the PASS above):_ Plan 23-05 closed the diagnosed root
 cause: `installDepotDownload` now has a single-flight guard (join a LIVE entry instead of starting
 a second `downloadSteamDepots`), fail-safe registry cleanup on every exit path (success/error/
@@ -370,7 +382,7 @@ reconciliation genuinely could not prove completeness — record which), the gam
 
 | # | Gate | Requirement | Result | Notes |
 |---|------|-------------|--------|-------|
-| 1 | Multi-depot StateFlags=4 (no verify/re-download) | REQ-23-07 (D-07.1) | ✅ **PASS (HW)** | Hardware-confirmed 2026-07-19: `StateFlags=4`, Steam adopted multi-depot install with no verify/re-download, launched. Plan 23-05 fix (single-flight guard + pause/resume abort + reconciliation) held; Phase 25 fan-out cleared the download-time blocker so steps 4–6 could complete. |
+| 1 | Multi-depot StateFlags=4 (no verify/re-download) | REQ-23-07 (D-07.1) | ⚠️ **PARTIAL — adoption PASS (HW), launch half REOPENED** | Adoption hardware-confirmed 2026-07-19 and still stands: `StateFlags=4`, Steam adopted the multi-depot install with no verify/re-download. Plan 23-05 fix (single-flight guard + pause/resume abort + reconciliation) held; Phase 25 fan-out cleared the download-time blocker so steps 4–6 could complete. **Launch half downgraded 2026-08-16 by 23-07 Task 2 — verdict MASKED:** Cyberpunk's manifest carries `executableFlagged=0`, so that launch cannot have run on GameLib-applied execute bits. Re-confirm in 23-10 against a fresh GameLib install with Steam verified not running. |
 | 2 | Hard-DRM launch under StateFlags=4 | REQ-23-07 (D-07.2) | ✅ PASS (HW, conditional) | HUMANKIND (1124300, Denuvo) installed to StateFlags=4, no verify/re-download, **Denuvo launched to main menu** — DRM hypothesis proven. Conditional: launch needed a manual +x workaround (blocker gap G-23-02, native install applies no execute bits). Attempt 1 (KCD2) diverged on a `Blocked` depot key (gap G-23-01). Re-run clean after G-23-02 fix. |
 | 3 | Interrupt-resume reconciled StateFlags=4 + launch + no re-download + no bottle auto-open | REQ-23-07 (D-07.3) + D-04 | PENDING | Gate 1's hardware re-run now PASS; ready to run |
 
@@ -398,7 +410,7 @@ reconciliation genuinely could not prove completeness — record which), the gam
   reason: "HUMANKIND (1124300) installed to StateFlags=4 cleanly (steps 1-4 pass) but 0 of 18,809 files carry +x. Main binary Humankind.app/Contents/MacOS/Humankind landed -rw-r--r--; macOS launch fails with 'os error 256'. The StateFlags=4 path (which skips Steam's own verify pass) is supposed to apply the manifest's EDepotFileFlag modes via applyEDepotFileModes (chmod 0o755 on EXECUTABLE_FLAG=32/CUSTOM_EXECUTABLE_FLAG=128) but applied nothing for this install."
   surfaced_by: gate-2 (attempt 2, HUMANKIND, native path)
   root_cause: "CONFIRMED 2026-08-16 by 23-07 live hardware trace (23-TRACE.md, verdict H2). HUMANKIND's Steam manifest carries NO executable flags at all: stage=plan-build reported depots=2 totalFiles=18949 flagBearing=140 executableFlagged=0 distinctFlagValues=[64] — the only EDepotFileFlag value present across both depots is 64 (Directory), and the 140 flag-bearing entries are exactly the 140 directory entries. GameLib applied precisely what the manifest specified, which was nothing executable. The writer is NOT defective: the WazHack (264160) control reproduced Steam's own mode layout byte-for-byte (171 files, 1 +x, same file, same modes), with a clean 1:1 executableFlagged=1 -> chmodAttempts=1 -> one -rwxr-xr-x file on disk. The real defect is architectural: EDepotFileFlag is not a sufficient source of executability on macOS. Steam's own HUMANKIND install carries 18,002 of 18,809 files +x (per-file, not blanket) despite the manifest supplying zero — the official client derives execute bits by some other means. Under StateFlags=4 no verify pass ever runs, so nothing supplies them."
-  open_question: "Gate 1 (Cyberpunk 2077, also native macOS) recorded a successful launch on 2026-07-19 — why did it launch when HUMANKIND could not? The 'manifest flags are absent per-file' branch of this question is now CONFIRMED for HUMANKIND, which makes the Steam-UI-mediated-launch explanation the leading remaining candidate for Gate 1 (a Steam-mediated launch would supply the bits GameLib cannot). Still to determine by observation, NOT inference: whether Gate 1's launch was a GameLib cold launch or Steam-mediated. Owned by 23-07 Task 2; resolve before trusting Gate 1's launch half."
+  open_question: "ANSWERED 2026-08-16 by 23-07 Task 2 — verdict MASKED. Cyberpunk 2077's own manifest was censused (stage=plan-build appId=1091500 depots=3 totalFiles=133 flagBearing=32 executableFlagged=0 distinctFlagValues=[64]) and carries NO executable flags, the identical signature to HUMANKIND. A GameLib StateFlags=4 install of Cyberpunk would therefore land zero executable files, so Gate 1's recorded 2026-07-19 launch CANNOT have run on execute bits GameLib applied. Gate 1's launch half does not stand; its adoption half (StateFlags=4 accepted, no verify, no re-download) is unaffected. HONESTY LIMIT: this establishes what did NOT launch it, not what did — the specific mechanism (Steam UI Play vs a steam:// handoff starting Steam, which then re-applies modes) is UNOBSERVED and no longer observable here (Cyberpunk retains no Mach-O binary on disk, and the operator could not recall which was used — honest UNKNOWN, not reconstructed). 23-10 must re-confirm the launch half against a freshly GameLib-installed title with the Steam client verified not running, rather than reconstructing the 2026-07-19 event."
   artifacts:
     - "src/backend/storeManagers/steam/depot.ts:1195 (if (file.flags) guard -> applyEDepotFileModes) — NOT the defect: the guard is correct, but the manifest supplies no executable flags for it to act on (corrects this entry's original 2026-07-21 supposition that flags were 'empty for all files'; flags were present, just directory-only)"
     - "src/backend/storeManagers/steam/depot.ts:524-531 (flags: f.flags copied from steam-user content_manifest parser mappings) — EXONERATED, mapping populates flags correctly in both traced runs"
@@ -412,13 +424,20 @@ reconciliation genuinely could not prove completeness — record which), the gam
     - "Fail closed per REQ-23-01: while executability cannot be established for a title, canWriteFullOwnership(...) must decline StateFlags=4 and fall back to Phase 21's 1026 verify-handoff so Steam's own verify pass supplies the bits. Run 2 wrote no .acf at all, so the gate's live behavior on this path is UNOBSERVED."
 ```
 
-**Gate status:** NOT CLOSED. 2 of 3 gates have a hardware PASS (Gate 1 2026-07-19; Gate 2 2026-07-21,
-conditional). Gate 2's Denuvo-launch hypothesis is proven, but the launch only worked after a manual
-+x workaround — blocker gap **G-23-02** (native StateFlags=4 install applies NO execute bits → every
-native macOS game is unlaunchable) must be fixed and Gate 2 re-run clean. Gap **G-23-01** (KCD2
-`Blocked` depot key aborts the whole install) also open. Gate 3 (interrupt-resume) still to run — note
-its launch step will also hit G-23-02 until fixed. Phase 23 cannot be marked complete/verified until
-G-23-02 is fixed, Gate 2 re-runs clean, and Gate 3 passes. Gaps route to `/gsd-debug` / `/gsd-plan-phase 23 --gaps`.
+**Gate status:** NOT CLOSED. Revised 2026-08-16 after 23-07's hardware trace. **No gate now has a
+clean unconditional PASS on its launch half.** Gate 1's *adoption* half is hardware-confirmed
+(2026-07-19) and stands; its *launch* half was downgraded to MASKED by 23-07 Task 2 — Cyberpunk's
+manifest carries `executableFlagged=0`, so that launch cannot have run on GameLib-applied execute
+bits. Gate 2's Denuvo-launch hypothesis is proven, but only after a manual `+x` workaround. Both
+launch results therefore trace to the same cause: blocker gap **G-23-02**, whose root cause is now
+CONFIRMED (verdict H2, `23-TRACE.md`) — Steam manifests for native macOS titles generally carry **no**
+executable flags at all (2 of the 3 titles censused carry none; the third carries exactly one), so a
+writer that only replays `EDepotFileFlag` cannot produce a launchable install, and `StateFlags=4`
+guarantees no verify pass will repair it. Gap **G-23-01** (KCD2 `Blocked` depot key aborts the whole
+install) also open. Gate 3 (interrupt-resume) still to run — its launch step will hit G-23-02 too.
+Phase 23 cannot be marked complete/verified until G-23-02 is FIXED (23-08), Gate 2 re-runs clean
+without a manual chmod, Gate 1's launch half is re-confirmed on a fresh GameLib install with Steam
+verified not running (23-10), and Gate 3 passes. Gaps route to `/gsd-debug` / `/gsd-plan-phase 23 --gaps`.
 
 **Windows/Linux coverage:** Explicitly deferred, not dropped (per D-07 in `23-CONTEXT.md`). Not
 tracked in this document — file a follow-up todo if/when that work is scheduled.
