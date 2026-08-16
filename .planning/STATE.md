@@ -333,10 +333,28 @@ progress:
   # confirmed). See 34.14-05-SUMMARY.md for full detail.
   # percent = floor(330/335*100) = floor(98.51) = 98 (unchanged; floor, matching prior
   # convention).
-  total_phases: 25
+  # [PHASE 34.15 EXECUTED 2026-08-16, /gsd-execute-phase 34.15] Hand-applied; NO gsd-sdk
+  # state.*/roadmap.* verb was invoked this session (orchestrator skipped them outright and
+  # forbade all 10 executors from calling them -- this file took zero SDK corruption this run).
+  # total_phases 25 -> 26: correcting a MISSED insert-time bump. Phase 34.15 has been a real
+  #  heading in ROADMAP.md since 830fbc1d0, but total_phases read 25 through
+  # that commit and every commit since (verified by walking the value across the last 6 STATE.md
+  # commits). Per the convention above, total_phases counts CURRENT-MILESTONE phases with
+  # DECIMALS INCLUDED, so 34.15 must be counted.
+  # total_plans 335 -> 344 (+9): correcting a MISSED planning-time bump, same shape as the
+  # 34.13 316 -> 330 correction recorded above. Per the convention, total_plans moves when plans
+  # are PLANNED -- 34.15s 9 plan files all landed in 426fe26bc ("create phase plan -- 9 plans in
+  # 4 waves"), yet total_plans read 335 through that commit.
+  # completed_plans 330 -> 339 (+9): all nine 34.15 SUMMARY.md files exist on disk
+  # (       9 = 9).
+  # completed_phases 19 UNCHANGED: Phase 34.15 is NOT complete. Its D-16 BLOCKING human UAT gate
+  # (34.15-UAT.md, status: human_needed) is undischarged, so phase verification was deliberately
+  # NOT run and the phase was NOT closed. Do not let 9/9 plans done read as phase complete.
+  # percent = floor(339/344*100) = floor(98.54) = 98 (unchanged; floor, matching prior convention).
+  total_phases: 26
   completed_phases: 19
-  total_plans: 335
-  completed_plans: 330
+  total_plans: 344
+  completed_plans: 339
   percent: 98
 ---
 
