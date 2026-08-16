@@ -29,6 +29,9 @@
  * leans on a type error surfacing as a jest failure. Every assertion is a
  * runtime assertion or a comment-stripped source-text match.
  */
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { depotSignalCaptured } from '../metadataCapture'
 
 describe('depotSignalCaptured: the 9-cell truth table', () => {
@@ -123,5 +126,94 @@ describe('depotSignalCaptured: non-vacuity — it discriminates against the raw 
       ])
     }
     expect(depotSignalCaptured(undefined)).toBe(readsRawFlag(undefined))
+  })
+})
+
+/**
+ * Source gate over all five read sites plus the frontend prohibition.
+ *
+ * Every assertion below runs against COMMENT-STRIPPED source, which is
+ * load-bearing twice over:
+ *   - `steamPlatformRow.ts`'s own header quotes the forbidden inverted
+ *     comparison verbatim while explaining why it is forbidden. Without
+ *     stripping, the absence assertion would fail against a correct file.
+ *   - The rationale comments added at each normalized site are WHOLE-LINE
+ *     comments precisely so this stripper removes them; a trailing `// ...`
+ *     appended to a code line survives `stripSourceComments` by design (see
+ *     that util's own header), and a surviving comment that restated the raw
+ *     expression would let this gate match its own explanatory prose.
+ *
+ * Matching is on the EXPRESSION with tolerant whitespace, never on a line
+ * number — the plan's line references drift with every edit above them.
+ */
+const readStripped = (relPath: string): string =>
+  stripSourceComments(readFileSync(join(__dirname, relPath), 'utf8'))
+
+const gamesSource = readStripped('../games.ts')
+const librarySource = readStripped('../library.ts')
+const installFormIpcSource = readStripped('../installFormIpc.ts')
+const steamPlatformRowSource = readStripped(
+  '../../../../frontend/screens/Library/components/InstallModal/steamPlatformRow.ts'
+)
+
+const IMPORTS_HELPER =
+  /import\s*\{\s*depotSignalCaptured\s*\}\s*from\s*'\.\/metadataCapture'/
+
+describe('source gate: the three depot-signal reads are normalized', () => {
+  it('library.ts seeds GameInfo.steamPlatformsCaptured through the helper', () => {
+    expect(librarySource).toMatch(
+      /steamPlatformsCaptured:\s*depotSignalCaptured\(cachedMeta\)/
+    )
+  })
+
+  it('library.ts imports depotSignalCaptured from ./metadataCapture', () => {
+    expect(librarySource).toMatch(IMPORTS_HELPER)
+  })
+
+  it('installFormIpc.ts builds SteamBottleEligibilityVerdict.platformsCaptured through the helper', () => {
+    expect(installFormIpcSource).toMatch(
+      /platformsCaptured\s*=\s*depotSignalCaptured\(cached\)/
+    )
+  })
+
+  it('installFormIpc.ts imports depotSignalCaptured from ./metadataCapture', () => {
+    expect(installFormIpcSource).toMatch(IMPORTS_HELPER)
+  })
+
+  it("games.ts gates getGameInfo's self-heal refetch on the helper", () => {
+    expect(gamesSource).toMatch(/!\s*depotSignalCaptured\(cached\)/)
+  })
+
+  it('games.ts imports depotSignalCaptured from ./metadataCapture', () => {
+    expect(gamesSource).toMatch(IMPORTS_HELPER)
+  })
+})
+
+describe('source gate: the deliberate non-changes stay raw', () => {
+  const MAC_GATE =
+    /platformsCaptured === true && meta\?\.is_mac_native === false/
+
+  it('games.ts isBottleEligibleFromPlatforms still reads the raw flag for the MAC question', () => {
+    expect(gamesSource).toMatch(MAC_GATE)
+  })
+
+  it('library.ts isBridgeAuthoritativeForInstallState still reads the raw flag for the MAC question', () => {
+    expect(librarySource).toMatch(MAC_GATE)
+  })
+
+  it("games.ts ensurePlatformsCaptured's alreadyCaptured (the fourth site) still reads the raw flag", () => {
+    expect(gamesSource).toMatch(
+      /steamMetadataStore\.get\(this\.appId\)\?\.platformsCaptured === true/
+    )
+  })
+})
+
+describe('source gate: the HARD PROHIBITION on steamPlatformRow.ts', () => {
+  it('hasSteamWindowsDepot keeps its strict equality against the depot field', () => {
+    expect(steamPlatformRowSource).toMatch(/is_windows_native === true/)
+  })
+
+  it('does NOT contain the treatsAbsentAsAvailable inverted comparison', () => {
+    expect(steamPlatformRowSource).not.toMatch(/is_windows_native !== false/)
   })
 })

@@ -49,6 +49,7 @@ import {
 import { reconcilePartialState } from './depot/reconcile'
 import { sanitizeInstalldir } from './installLocation'
 import { bridgeAllowlist } from './bridge/allowlist'
+import { depotSignalCaptured } from './metadataCapture'
 
 /**
  * Which Steam client's steamapps root an ACF scan/poll should target.
@@ -222,6 +223,12 @@ function isBridgeAuthoritativeForInstallState(appIdStr: string): boolean {
   if (!bridgeAllowlist.has(appIdStr)) return false
   const meta = steamMetadataStore.get(appIdStr)
   if (meta?.mac_arch === '32') return true
+  // Quick task 260816-hdg PIN — this gate deliberately keeps the raw read and
+  // must NOT be routed through depotSignalCaptured. It asks the MAC question,
+  // and a pre-D-17 residue entry genuinely did capture its mac answer;
+  // narrowing here would de-route bottle/bridge-eligible games for a fact the
+  // cache already knows. A source assertion in metadataCapture.test.ts holds
+  // this line in place so it cannot be silently "corrected" later.
   return meta?.platformsCaptured === true && meta?.is_mac_native === false
 }
 
@@ -786,9 +793,18 @@ export default class SteamLibraryManager implements LibraryManager {
         // coerced into a 32-bit verdict (T-18-05-02, false-flag-safe
         // invariant from MAC32-01).
         mac_arch: cachedMeta?.mac_arch ?? 'unknown',
-        // Phase 17 D-08 reconciliation: mirrors platformsCaptured so the
-        // frontend bottle indicator matches the backend D-11 routing gate.
-        steamPlatformsCaptured: cachedMeta?.platformsCaptured ?? false,
+        // Phase 17 D-08 reconciliation, NARROWED by quick task 260816-hdg.
+        // This field no longer mirrors the D-11 routing gate, and the
+        // divergence is deliberate: it seeds the frontend's
+        // `hasSteamDepotSignalCaptured`, which asks the DEPOT question, while
+        // the D-11 gate (isBridgeAuthoritativeForInstallState, above in this
+        // file) asks the MAC question and is unchanged. Routed through
+        // depotSignalCaptured so a pre-D-17 residue entry — which flagged the
+        // platforms fetch complete without ever writing the Windows field —
+        // stops claiming a depot signal it never captured. Consequence,
+        // accepted: AppleWikiInfo.tsx's section hides for such a game until
+        // getGameInfo's self-heal refetch lands, which is one fetch away.
+        steamPlatformsCaptured: depotSignalCaptured(cachedMeta),
         is_installed: !!installedData,
         install: installedData
           ? {

@@ -254,6 +254,23 @@ describe('installFormIpc.ts', () => {
       expect(verdict.platformsCaptured).toBe(true)
     })
 
+    it('260816-hdg: a PRE-D-17 RESIDUE entry (platformsCaptured:true, no is_windows_native) yields platformsCaptured: FALSE, so D-04 fail-open can offer Windows', async () => {
+      mockCheckBottleEligibility.mockResolvedValue(true)
+      // THE 370-ENTRY RESIDUE SHAPE. Before this fix the verdict reported
+      // captured:true / depot:false — the worst pair, because it settles the
+      // question as "no Windows build" with full confidence and suppresses the
+      // 34.14 fail-open. hasWindowsDepot stays false (absent is never coerced
+      // to available); only the CAPTURED claim is cleared.
+      mockedMetadataGet.mockReturnValue({
+        platformsCaptured: true
+      })
+
+      const verdict = await getSteamBottleEligibilityVerdict('570')
+
+      expect(verdict.hasWindowsDepot).toBe(false)
+      expect(verdict.platformsCaptured).toBe(false)
+    })
+
     it('an absent/uncaptured cache entry yields hasWindowsDepot: false, platformsCaptured: false — the timeout/offline case', async () => {
       mockCheckBottleEligibility.mockResolvedValue(true)
       mockedMetadataGet.mockReturnValue(undefined)

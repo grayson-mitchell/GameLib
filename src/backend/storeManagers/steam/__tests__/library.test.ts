@@ -518,6 +518,35 @@ describe('SteamLibraryManager', () => {
     const fakeClient = makeFakeClient(apps)
     jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
+    // Quick task 260816-hdg: `is_windows_native` is what makes this fixture
+    // mean what its name says — a LEGITIMATELY-WRITTEN post-D-17 entry. Every
+    // real write persists it in the same object literal as `platformsCaptured`
+    // (games.ts fetchMetadataIfNeeded), so an entry without it is pre-D-17
+    // residue, not a captured entry. See the residue counterpart below.
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_windows_native: true,
+      is_mac_native: false
+    })
+
+    await manager.refresh()
+
+    const calls = jest.mocked(sendFrontendMessage).mock.calls
+    const pushed = calls.find(
+      ([_msg, info]) => (info as any).app_name === '570'
+    )?.[1] as any
+
+    expect(pushed?.steamPlatformsCaptured).toBe(true)
+  })
+
+  it('260816-hdg: synced GameInfo carries steamPlatformsCaptured:FALSE for a pre-D-17 residue entry (platformsCaptured:true, no is_windows_native)', async () => {
+    const apps = [makeOwnedApp(570, 'Dota 2', 120)]
+    const fakeClient = makeFakeClient(apps)
+    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamLibraryStore.get).mockReturnValue([])
+    // THE 370-ENTRY RESIDUE SHAPE. The mac answer is real and is left alone;
+    // only the depot claim is cleared, so the frontend stops being told a
+    // depot signal was captured when the field that fetch owes is absent.
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,
       is_mac_native: false
@@ -530,7 +559,7 @@ describe('SteamLibraryManager', () => {
       ([_msg, info]) => (info as any).app_name === '570'
     )?.[1] as any
 
-    expect(pushed?.steamPlatformsCaptured).toBe(true)
+    expect(pushed?.steamPlatformsCaptured).toBe(false)
   })
 
   it('D-08 reconciliation: synced GameInfo carries steamPlatformsCaptured:false when cachedMeta is absent (never synced)', async () => {

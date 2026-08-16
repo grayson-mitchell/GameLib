@@ -356,8 +356,13 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     library.set(APP_ID, entry)
     // A fully-enriched cache entry has platforms already captured (DETAIL-01
     // gap-fix), so getGameInfo must NOT trigger a self-heal re-fetch.
+    // Quick task 260816-hdg: `is_windows_native` is what makes this fixture
+    // actually mean "fully enriched". Without it the entry is pre-D-17 residue
+    // and the self-heal correctly DOES fire — see the residue counterpart
+    // below. The field was added rather than the predicate weakened.
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
-      platformsCaptured: true
+      platformsCaptured: true,
+      is_windows_native: true
     })
 
     const result = new SteamGame(APP_ID).getGameInfo()
@@ -382,6 +387,41 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     await flushAsync()
 
     expect(axios.get).toHaveBeenCalledTimes(1)
+  })
+
+  it('260816-hdg self-heal: getGameInfo re-fetches a PRE-D-17 RESIDUE entry (platformsCaptured:true, no is_windows_native)', async () => {
+    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+    // THE 370-ENTRY RESIDUE SHAPE — art present AND the flag claims platforms
+    // were captured, so both of the original guards would skip. The depot
+    // field that fetch owes is absent, so this entry never actually answered
+    // the depot question and the self-heal must fire.
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true
+    })
+    library.set(APP_ID, makeEntry({ art_cover: 'https://example.com/art.jpg' }))
+
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    expect(axios.get).toHaveBeenCalledTimes(1)
+  })
+
+  it('260816-hdg convergence: getGameInfo does NOT re-fetch once the refetch has written is_windows_native (one fetch per game, no loop)', async () => {
+    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+    // The post-refetch shape. games.ts writes is_windows_native via a `!!`
+    // coercion, so it is ALWAYS present after a successful fetch — including
+    // when the answer is `false`. That is what bounds the self-heal at exactly
+    // one fetch per appId rather than a per-render loop.
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_windows_native: false
+    })
+    library.set(APP_ID, makeEntry({ art_cover: 'https://example.com/art.jpg' }))
+
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    expect(axios.get).not.toHaveBeenCalled()
   })
 
   it('DETAIL-01 self-heal: getGameInfo does NOT re-fetch a delisted cached game (avoids loop)', async () => {
@@ -977,6 +1017,22 @@ describe('SteamGame.isNative() — D-11 per-OS confirmed-not-native', () => {
 
     const game = new SteamGame(APP_ID)
     expect(game.isNative()).toBe(false)
+  })
+
+  it('260816-hdg non-change: a PRE-D-17 RESIDUE entry still routes to the bottle — the mac gate deliberately keeps the raw read', () => {
+    envMock.isMac = true
+    // Residue on the DEPOT axis (no is_windows_native) but complete on the MAC
+    // axis. The mac question was genuinely answered, so bottle routing must be
+    // byte-for-byte what it was before the depot normalization — narrowing this
+    // gate too would de-route bottle-eligible games over a fact already cached.
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+
+    const game = new SteamGame(APP_ID)
+    expect(game.isNative()).toBe(false)
+    expect(game.isBottleEligible()).toBe(true)
   })
 
   it('D-11 (BLOCKER): macOS NOT-yet-captured (platformsCaptured not true) — isNative() returns true (do not bottle an unconfirmed game)', () => {

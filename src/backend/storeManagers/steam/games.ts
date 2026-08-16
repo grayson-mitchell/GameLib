@@ -25,6 +25,7 @@ import {
 } from 'backend/utils/aborthandler/aborthandler'
 import { sendFrontendMessage } from '../../ipc'
 import { steamMetadataStore, steamLibraryStore } from './electronStores'
+import { depotSignalCaptured } from './metadataCapture'
 import {
   library,
   pendingFetches,
@@ -534,8 +535,16 @@ export default class SteamGame implements Game {
     // capturing platforms (avoids a re-fetch loop). fetchMetadataIfNeeded's
     // pendingFetches dedup (T-2-03) absorbs repeated calls while a fetch is in flight.
     const cached = steamMetadataStore.get(this.appId)
+    // Quick task 260816-hdg: resolved via depotSignalCaptured rather than the
+    // bare flag, so a pre-D-17 residue entry (flagged complete, missing the
+    // depot field the fetch was obliged to write) is recognised as NOT captured
+    // and this existing self-heal refetch engages for it. Convergence is exactly
+    // one fetch per appId, not a loop: the refetch writes the depot field
+    // unconditionally (the `!!` coercion in fetchMetadataIfNeeded below), so the
+    // predicate flips true on the next read, with pendingFetches dedup and
+    // acquireMetadataSlot already bounding the burst across a library render.
     const platformsNeverCaptured =
-      !existing.is_delisted && cached?.platformsCaptured !== true
+      !existing.is_delisted && !depotSignalCaptured(cached)
     if (!existing.art_cover || platformsNeverCaptured) {
       // steam-startup-resume-crash (2026-07-18) hardening: fetchMetadataIfNeeded
       // already catches its own axios call internally, but this is the ONE
@@ -1544,6 +1553,11 @@ export default class SteamGame implements Game {
     // post-install Mach-O ground-truth check — but the wiring lands now so
     // routing goes live the moment 18-03 caches a '32' verdict.
     if (meta?.mac_arch === '32') return true
+    // Quick task 260816-hdg PIN — this gate deliberately keeps the raw read and
+    // must NOT be routed through depotSignalCaptured. It asks the MAC question,
+    // which a pre-D-17 residue entry genuinely did answer; narrowing here would
+    // de-route bottle-eligible games over a fact already in the cache. A source
+    // assertion in metadataCapture.test.ts holds this line in place.
     return meta?.platformsCaptured === true && meta?.is_mac_native === false
   }
 
@@ -1655,6 +1669,21 @@ export default class SteamGame implements Game {
   private async ensurePlatformsCaptured(): Promise<void> {
     if (!isMac) return
 
+    // Quick task 260816-hdg PIN — the FOURTH read site, and the one that stays
+    // RAW. Three reasons, all load-bearing:
+    //  1. Its only consumer is checkBottleEligibility() -> isBottleEligible(),
+    //     which asks the MAC question. A pre-D-17 residue entry genuinely
+    //     captured its mac answer, so this early return is answering from real
+    //     data, not from a stale claim.
+    //  2. Narrowing it would push every residue game through the bounded
+    //     METADATA_FETCH_TIMEOUT_MS poll below, on the install/launch hot path,
+    //     for a fact the cache already holds.
+    //  3. Convergence does not depend on it. getGameInfo()'s normalized
+    //     self-heal gate fires the refetch on library render, and until that
+    //     lands installFormIpc reports the depot signal as not-captured, which
+    //     is exactly what lets Phase 34.14's D-04 fail-open offer Windows. The
+    //     install form is correct DURING the window and correct after it.
+    // A source assertion in metadataCapture.test.ts holds this line in place.
     const alreadyCaptured = (): boolean =>
       steamMetadataStore.get(this.appId)?.platformsCaptured === true
 

@@ -21,6 +21,7 @@ import { GlobalConfig } from 'backend/config'
 import SteamGame from './games'
 import { steamBottleConfigStore, steamMetadataStore } from './electronStores'
 import { persistBottleWineVersion } from './bottle'
+import { depotSignalCaptured } from './metadataCapture'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
 
 // T-21-05 pattern, reused a fourth time in this directory (depot.ts,
@@ -101,12 +102,20 @@ export async function getSteamBottleEligibilityVerdict(
   // No new fetch and no new await occur here: the checkBottleEligibility()
   // call above has ALREADY driven ensurePlatformsCaptured() to completion or
   // to its METADATA_FETCH_TIMEOUT_MS deadline (D-02's entire mechanism), so
-  // this is a read of an already-paid-for result. Both comparisons are
-  // `=== true` — undefined means "never captured" on BOTH fields and must
-  // never coerce.
+  // this is a read of an already-paid-for result.
+  //
+  // The two reads below are no longer symmetric (quick task 260816-hdg
+  // corrected the older "both comparisons are `=== true`" note). hasWindowsDepot
+  // stays a strict equality against the depot field: undefined means "never
+  // captured" and must never coerce to available. platformsCaptured is now
+  // resolved by depotSignalCaptured, because a pre-D-17 residue entry flags the
+  // platforms fetch complete while the depot field it was obliged to write is
+  // absent — reporting that as captured is what suppresses Phase 34.14's D-04
+  // fail-open and makes the install form withhold Windows with false
+  // confidence. Reporting it as not-captured is what lets the fail-open engage.
   const cached = steamMetadataStore.get(appName)
   const hasWindowsDepot = cached?.is_windows_native === true
-  const platformsCaptured = cached?.platformsCaptured === true
+  const platformsCaptured = depotSignalCaptured(cached)
 
   const wineVersion = steamBottleConfigStore.get_nodefault('wineVersion')
   const bottleName =
