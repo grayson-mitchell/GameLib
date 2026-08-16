@@ -100,6 +100,32 @@ export interface SteamMetadataCacheEntry {
   // distinguish "platform support never captured" from a genuine Windows-only
   // (is_mac_native/is_linux_native === false) verdict, so it can self-heal exactly once.
   platformsCaptured?: boolean
+  /** Quick task 260816-qcn (WR-02/CR-01 root cause): provenance stamp for the
+   * three platform booleans above, written by BOTH platform-signal writers —
+   * `games.ts`'s per-game `appdetails` fetch and `platformCapture.ts`'s bulk
+   * PICS `oslist` capture — on every write `resolvePlatformWrite`
+   * (`./platformPrecedence`) ACCEPTS. Records WHO wrote the signal last so a
+   * lost/overridden write is inspectable after the fact.
+   *
+   * Honesty limit (D-B, do not weaken this comment): this does NOT reconcile
+   * a genuine `appdetails`-vs-PICS disagreement. When the two sources
+   * disagree about an app, the surviving answer still depends on which sync
+   * ran most recently — what changes is that the outcome is now inspectable
+   * via this field and `platformsCapturedAt` below, not that the conflict is
+   * resolved or closed. Absent on every pre-this-task cache entry; treated
+   * as indefinitely old by `resolvePlatformWrite`, so a legacy entry is
+   * writable by either source (D-D — no `Migration` was added).
+   *
+   * ⚠ CARRY-FORWARD WARNING applies to this field too: `steamMetadataStore.set`
+   * REPLACES the whole entry (T-18-02-04), so any writer that enumerates its
+   * payload (rather than spreading `...existing`) must explicitly carry this
+   * field forward — see `mac_arch_verified` / `forcedWindowsViaBottle` above
+   * for the standing precedent this follows. */
+  platformsSource?: 'appdetails' | 'pics'
+  /** Epoch ms companion to `platformsSource` above — WHEN the surviving
+   * platform write was captured. Same D-B honesty limit, same D-D legacy
+   * handling, same carry-forward obligation. */
+  platformsCapturedAt?: number
   /** MAC32-01/03: resolved macOS build architecture. 'unknown' default is
    * implicit (absent key) — NEVER infer '32' from a low/unparseable min-OS
    * signal (the false-flag trap, see games.ts isBottleEligible). Direction B
