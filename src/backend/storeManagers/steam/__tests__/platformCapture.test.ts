@@ -386,4 +386,26 @@ describe('captureOwnedAppPlatforms (D-03/D-04)', () => {
 
     jest.useRealTimers()
   })
+
+  it('34.15-09 reconciliation (D-07 finding #2): fail-soft even when the depotSignalCaptured/steamMetadataStore.get FILTER STEP itself throws -- never getProductInfo, proving the try/catch now covers the filter, not just the PICS call', async () => {
+    mockedGet.mockImplementation(() => {
+      throw new Error('store read exploded')
+    })
+
+    const getProductInfo = jest.fn()
+    const client: PlatformCapturePicsClient = { getProductInfo }
+
+    // Must not reject -- a rejection here is exactly the unhandled-rejection
+    // hole D-07 exists to close, since library.ts's call site has no
+    // try/catch of its own around this call.
+    const result = await captureOwnedAppPlatforms(client, [1, 2])
+
+    expect(result.failed).toBe(true)
+    expect(result.capturedCount).toBe(0)
+    expect(result.skippedCount).toBe(0)
+    // The PICS call must never be reached -- the throw happened during
+    // scoping, before there was anything to fetch.
+    expect(getProductInfo).not.toHaveBeenCalled()
+    expect(mockedSet).not.toHaveBeenCalled()
+  })
 })

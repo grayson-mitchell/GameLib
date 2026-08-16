@@ -215,21 +215,50 @@ export async function captureOwnedAppPlatforms(
   client: PlatformCapturePicsClient,
   appIds: number[]
 ): Promise<PlatformCaptureSummary> {
-  // D-04: reuse depotSignalCaptured() verbatim — never re-derive its logic.
-  // This is what makes "what the bulk job repairs" and "what the install
-  // form calls unresolved" the same set BY CONSTRUCTION.
-  const scoped = appIds.filter(
-    (id) => !depotSignalCaptured(steamMetadataStore.get(String(id)))
-  )
-
-  if (scoped.length === 0) {
-    // Converging steady state: after the first sync repairs the residue +
-    // never-fetched games, subsequent syncs ask for little or nothing, and
-    // this branch means literally no PICS call is made.
-    return { scopedCount: 0, capturedCount: 0, skippedCount: 0, failed: false }
-  }
-
+  // 34.15-09 reconciliation (D-07 orchestrator finding #2): the `try` below
+  // now starts BEFORE the `depotSignalCaptured`/`steamMetadataStore.get`
+  // filter step, not after it. This function's own doc comment above says
+  // it "MUST NOT throw under any input" -- but the filter step used to run
+  // OUTSIDE the try, so a synchronous throw from `steamMetadataStore.get()`
+  // (however unlikely for an in-memory electron-store read) would have
+  // propagated as a rejected promise straight through `library.ts`'s
+  // Step 1.5 call site, which carries NO try/catch of its own precisely
+  // because this function is contracted never to need one. On the unscoped
+  // mount-time path (`init()`'s `runOnceWhenOnline(() => this.refresh())`,
+  // no `.catch` anywhere in the chain) that would have been exactly the
+  // silent unhandled-rejection hole D-07 exists to close. Moving the `try`
+  // up closes the gap completely rather than leaving it as a documented but
+  // unclosed exception to the function's own contract.
+  //
+  // `scopedCount` is a mutable OUTER binding (rather than reading
+  // `scoped.length` from inside the catch) precisely because `scoped` itself
+  // may never be computed if the filter step is what throws -- the catch
+  // needs a value that is always defined. It starts at `appIds.length` (the
+  // most honest answer when the filter never completed: "every id was
+  // still unresolved as far as this call could tell") and is narrowed to
+  // the real scoped count the moment the filter succeeds.
+  let scopedCount = appIds.length
   try {
+    // D-04: reuse depotSignalCaptured() verbatim — never re-derive its
+    // logic. This is what makes "what the bulk job repairs" and "what the
+    // install form calls unresolved" the same set BY CONSTRUCTION.
+    const scoped = appIds.filter(
+      (id) => !depotSignalCaptured(steamMetadataStore.get(String(id)))
+    )
+    scopedCount = scoped.length
+
+    if (scoped.length === 0) {
+      // Converging steady state: after the first sync repairs the residue +
+      // never-fetched games, subsequent syncs ask for little or nothing,
+      // and this branch means literally no PICS call is made.
+      return {
+        scopedCount: 0,
+        capturedCount: 0,
+        skippedCount: 0,
+        failed: false
+      }
+    }
+
     const response = await withTimeout(
       client.getProductInfo(scoped, [], true),
       STEAM_PICS_BULK_TIMEOUT_MS,
@@ -285,7 +314,7 @@ export async function captureOwnedAppPlatforms(
     // proceeds to today's cache-only hydration on a failed capture.
     logError(['Steam bulk platform capture failed:', err], LogPrefix.Steam)
     return {
-      scopedCount: scoped.length,
+      scopedCount,
       capturedCount: 0,
       skippedCount: 0,
       failed: true
