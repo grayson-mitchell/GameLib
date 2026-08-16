@@ -3,9 +3,10 @@ phase: 23-steam-full-ownership-install-stateflags-4
 plan: 06
 artifact: trace
 gap: G-23-02
-status: awaiting-live-run
+status: verdict-recorded
+verdict: H2
 requirements: [REQ-23-06, REQ-23-07]
-last_updated: 2026-07-21
+last_updated: 2026-08-16
 ---
 
 # G-23-02 Root-Cause Trace: EDepotFileFlag Mode Application
@@ -182,30 +183,225 @@ reused/degraded prior install) with the new `steam-flags-census` logging in plac
 compare its `stage=plan-build` / `stage=download-entry` / `stage=download-complete` census lines
 against a fresh HUMANKIND (or equivalent Denuvo native title) re-install's census lines.
 
-## Live-run recording template (23-07 fills in)
+## Live run 1 — WazHack (264160), single-depot native control
 
-**Title / appId used:**
+Recorded 2026-08-16. Electron runtime (the Tauri sidecar's file logger is not readable — stdout is
+the RPC pipe), `enableSteamNativeInstall` ON, no `GAMELIB_SPIKE_STATEFLAGS4` env flag.
+
+**T-23-22 freshness — established by the census itself, not by trusting the uninstall.** The prior
+copy was uninstalled first and a pre-run baseline captured to
+`~/Library/Logs/GameLib/23-07-archive/wazhack-pre-uninstall-baseline.txt` (2026-08-14T08:28:20Z).
+That uninstall is, however, the subject of an open concurrent debug session
+(`.planning/debug/wazhack-uninstall-reverts.md`, 2026-08-16): the UI reported completion and then
+reverted to showing the title installed. So the uninstall's *own report* cannot be used to certify a
+fresh run — precisely the stale-prior-install scenario T-23-22 warns produces a falsely-confirmed H4.
+
+The census settles it independently: `jobCount=198` equals `totalFiles=198` with
+`reconciledSkipped=0`. Every entry was downloaded and the reconciler skipped nothing. Had files
+survived the uninstall, 23-03's reconciler would have sha1-verified and skipped them, driving
+`reconciledSkipped>0` and `jobCount<198`. **Inference (mechanism not separately investigated):** the
+uninstall did delete from disk and only the library's *displayed* install state reverted — which is
+consistent with the debug session's own symptom description. Either way the run is certified fresh by
+direct measurement, so H4's refutation below does not rest on the uninstall having worked.
+
+**Title / appId used:** WazHack / `264160` — single depot (`264162`), native macOS.
 
 **`steam-flags-census` log lines (all three stages, verbatim from `~/Library/Logs/GameLib/gamelib.log`):**
 
 - `stage=plan-build`:
+```
+(21:13:03) [INFO]:    [Steam]:           steam-flags-census stage=plan-build appId=264160 depots=1 totalFiles=198 flagBearing=28 executableFlagged=1 readonlyFlagged=0 hiddenFlagged=0 directoryEntries=27 symlinkEntries=0 zeroSizeEntries=27 distinctFlagValues=[32,64]
+```
 - `stage=download-entry`:
+```
+(21:13:03) [INFO]:    [Steam]:           steam-flags-census stage=download-entry appId=264160 totalFiles=198 flagBearing=28 executableFlagged=1 readonlyFlagged=0 hiddenFlagged=0 directoryEntries=27 symlinkEntries=0 zeroSizeEntries=27 distinctFlagValues=[32,64]
+```
 - `stage=download-complete`:
+```
+(21:13:15) [INFO]:    [Steam]:           steam-flags-census stage=download-complete appId=264160 totalFiles=198 flagBearing=28 executableFlagged=1 readonlyFlagged=0 hiddenFlagged=0 directoryEntries=27 symlinkEntries=0 zeroSizeEntries=27 chmodAttempts=1 modeCallsites=1 jobCount=198 reconciledSkipped=0 distinctFlagValues=[32,64]
+```
 
-**Verdict — which single hypothesis (H1-H5) is confirmed:**
+**Execute-bit census of the landed install (read-only, no chmod performed):**
 
-**Supporting reasoning (which census field(s) matched the confirm/refute criteria above):**
+| Measure | Value |
+|---|---|
+| Total regular files | `171` |
+| Files with any `+x` | `1` |
+| Primary binary | `-rwxr-xr-x .../WazHack.app/Contents/MacOS/WazHack` |
 
-**Implied fix shape (handed to 23-08):**
+`198` census `totalFiles` = `171` regular files + `27` directory entries, self-consistent.
 
-**Did the two `stage=plan-build`/`stage=download-entry` census lines match exactly, or diverge (H5)?**
+**Written `.acf` (`inspect-acf.mjs`):** `StateFlags 4`, `BytesToDownload 117426878`,
+`BytesDownloaded 117426878`, `SizeOnDisk 117426878`, `buildid 9044149` — fully self-consistent,
+Steam treats it as FullyInstalled with no verify pending. (`LastOwner` deliberately not transcribed,
+per T-23-20.)
 
-**`jobCount` / `reconciledSkipped` from `stage=download-complete` (H4 check):**
+### Verdict for run 1: H1, H3, H4, H5 all REFUTED — the defect did NOT reproduce
 
-**`chmodAttempts` / `modeCallsites` from `stage=download-complete` (H3 check — did chmod even fire?):**
+| ID | Status | Refuting field value |
+|----|--------|----------------------|
+| H1 | **REFUTED** | `stage=plan-build flagBearing=28` (not `0`), `distinctFlagValues=[32,64]`, and `chmodAttempts=1` (not `0`). The steam-user parser mapping at depot.ts:524-531 **does** populate `EDepotFileFlag`. |
+| H2 | **not applicable to this title** | `executableFlagged=1`, not `0`. H2's predicate is unmet here; it is neither confirmed nor refuted for the *failing* title. See "surviving hypothesis" below. |
+| H3 | **REFUTED** | `chmodAttempts=1` **and** the landed binary is `-rwxr-xr-x`. Modes were applied and retained, at the correct path. Exact 1:1 correspondence: 1 `executableFlagged` → 1 `chmodAttempt` → 1 `+x` file on disk. |
+| H4 | **REFUTED** | `jobCount=198` equals `totalFiles=198` and `reconciledSkipped=0` — every entry was downloaded, the reconciler skipped nothing. |
+| H5 | **REFUTED** | `plan-build flagBearing=28` == `download-entry flagBearing=28`, with identical `distinctFlagValues=[32,64]` and identical every-field values. No serialization boundary drops flags. |
+
+**Cross-check against Steam's own output — the strongest single result of this run.** The 2026-08-14
+pre-uninstall baseline captured the *Steam-installed* WazHack: `171` regular files, `1` with `+x`,
+that one being `Contents/MacOS/WazHack` at `-rwxr-xr-x`, with
+`PlugIns/unitypurchasing.bundle/Contents/MacOS/unitypurchasing` at `-rw-r--r--`. GameLib's native
+install reproduced that layout **exactly** — same counts, same file, same modes, same
+`-rw-r--r--` on `unitypurchasing`. (`file` reports `unitypurchasing` as a Mach-O *bundle*, which is
+`dlopen`'d rather than `exec`'d and correctly needs no execute bit; Steam does not set one either.)
+The mode pipeline is not merely internally consistent — on this title it is byte-for-byte identical
+to the reference implementation.
+
+**Surviving hypothesis: H2, or a shape the H1-H5 matrix does not cover.** Because the pipeline is
+proven faithful — it applies exactly the flags the manifest carries, no more and no less — HUMANKIND's
+recorded `0 of 18,809 +x` implies its manifest carried no executable flags for those paths, which is
+H2. **This run cannot establish that**, and one structural limit must be recorded rather than glossed:
+
+> **The control is single-depot (`depots=1`); the failing title is multi-depot.** A defect that only
+> manifests when flags are merged across multiple depots would be invisible to this run and is not
+> represented anywhere in the H1-H5 matrix. The matrix was built on the premise (§Hypothesis matrix)
+> that H1 is a property of the parser mapping and therefore title-independent — that premise held and
+> H1 is now refuted, but refuting it moves the surviving space into title- and depot-shape-specific
+> causes that a single-depot control is by construction unable to reach.
+
+Per this plan's step 7 (`flagBearing > 0` ⇒ escalate to the failing title), run 2 was performed
+against HUMANKIND. **Its `stage=plan-build` line returned `executableFlagged=0`, confirming H2** —
+see the verdict below. Both concerns raised in this section are settled there: the cause is manifest
+content, and the `depots=2` census shows no multi-depot merge defect.
+
+*(Method note for future traces: the decisive line is emitted at `buildDepotPlan` return —
+depot.ts:748 — **before any bytes download**. Run 2's install failed at 17% yet still yielded a
+complete verdict, so this observation never requires a full re-download.)*
+
+## Live run 2 — HUMANKIND (1124300), the failing multi-depot title
+
+**Status: CENSUS CAPTURED 2026-08-16. Verdict closed — H2 CONFIRMED.**
+
+Fresh run, certified by direct measurement: HUMANKIND was uninstalled first (Steam handled the
+prompt), and before the install the install directory was **gone**, residual file count **0**,
+`appmanifest_1124300.acf` **absent**, no `downloading/1124300` staging directory, and
+`libraryfolders.vdf` lists a single library so no second copy could hide elsewhere. T-23-22 satisfied.
+
+The install later failed partway (see "Incidental defect" below), but **both pre-download census
+stages had already been emitted**, and those are the stages the verdict depends on.
+
+**`steam-flags-census` log lines (verbatim from `~/Library/Logs/GameLib/gamelib.log`):**
+
+- `stage=plan-build`:
+```
+(21:28:43) [INFO]:    [Steam]:           steam-flags-census stage=plan-build appId=1124300 depots=2 totalFiles=18949 flagBearing=140 executableFlagged=0 readonlyFlagged=0 hiddenFlagged=0 directoryEntries=140 symlinkEntries=0 zeroSizeEntries=146 distinctFlagValues=[64]
+```
+- `stage=download-entry`:
+```
+(21:28:43) [INFO]:    [Steam]:           steam-flags-census stage=download-entry appId=1124300 totalFiles=18949 flagBearing=140 executableFlagged=0 readonlyFlagged=0 hiddenFlagged=0 directoryEntries=140 symlinkEntries=0 zeroSizeEntries=146 distinctFlagValues=[64]
+```
+- `stage=download-complete`: **not emitted** — the run did not reach completion. Not required for the
+  verdict: H2's predicate is evaluated entirely on `plan-build`.
+
+### VERDICT: **H2 CONFIRMED**
+
+> **H2 — flags populated, but this manifest carries no executable bits.**
+
+Confirming field values: `flagBearing=140` (> 0, so flags *are* populated) **and**
+`executableFlagged=0`. Decisively corroborated by `distinctFlagValues=[64]` — across **both** depots
+(`depots=2`) the only `EDepotFileFlag` value present anywhere in HUMANKIND's manifest is `64`
+(`Directory`). There is no `32` (`Executable`) and no `128` (`CustomExecutable`). The 140
+flag-bearing entries are exactly the 140 `directoryEntries`.
+
+This closes G-23-02: GameLib applied precisely the modes HUMANKIND's manifest specified, and the
+manifest specified no executable bits for any of its 18,949 entries. The `0 of 18,809 files +x`
+recorded at the original launch failure is the writer behaving **correctly** against a manifest that
+carries nothing to apply. Under `StateFlags=4` Steam runs no verify pass, so nothing downstream ever
+supplies the missing bits — the title is unlaunchable.
+
+**Refutations of the other four hypotheses** (run 1 = WazHack `264160`, run 2 = HUMANKIND `1124300`):
+
+| ID | Status | Field value that refutes it |
+|----|--------|------------------------------|
+| H1 | **REFUTED** | run 2 `flagBearing=140`, not `0` — the parser mapping populates flags for this title too; run 1 additionally showed `chmodAttempts=1`. The defect is not a dead mapping. |
+| H3 | **REFUTED** | run 1 `chmodAttempts=1` with the landed binary at `-rwxr-xr-x` — modes are applied and retained at the correct path. Run 2 has no executable flags to attempt, so no "applied then lost" case exists. |
+| H4 | **REFUTED** | run 1 `jobCount=198` = `totalFiles=198` with `reconciledSkipped=0` on a certified-fresh install — the reconciler skips nothing. Run 2 was likewise certified fresh (empty install root, no `.acf`, no staging dir). |
+| H5 | **REFUTED** | In **both** runs `plan-build` and `download-entry` are field-for-field identical (run 1 `flagBearing=28`/`[32,64]`; run 2 `flagBearing=140`/`[64]`). No serialization boundary drops flags. |
+
+The single-depot-control concern raised in run 1 is also now **resolved**: run 2's `depots=2` census
+shows flags surviving a two-depot merge intact (140 directory flags carried through to
+`download-entry` unchanged). There is no multi-depot-specific defect — the cause is the manifest
+content itself.
+
+### Implied fix shape (handed to 23-08)
+
+**`EDepotFileFlag` is not a sufficient source of executability on macOS, and must stop being treated
+as one.** The decisive cross-run evidence:
+
+| | WazHack (264160) | HUMANKIND (1124300) |
+|---|---|---|
+| Manifest `executableFlagged` | `1` | `0` |
+| Steam's own install, files with `+x` | `1` of `171` | **`18,002`** of `18,809` |
+
+Steam's own installed HUMANKIND carries 18,002 execute bits — per-file, not blanket (`.wem`, `.txt`,
+`.dll`, `.manifest` are excluded; and `freetype6.dylib` is `+x` while `freetype6` beside it is not),
+captured to `~/Library/Logs/GameLib/23-07-archive/humankind-pre-uninstall-baseline.txt`. Since the
+manifest supplies **zero** executable flags, **the real Steam client is demonstrably deriving those
+bits from something other than `EDepotFileFlag`.** A writer that only replays manifest flags cannot
+reproduce Steam's result, and `StateFlags=4` guarantees no later verify pass will repair it.
+
+This selects **23-08's H2 branch**, including its Task 3 secondary fallback: derive executability by
+**Mach-O magic-byte detection, never by path** (23-08's own grep gate requires
+`grep -c "Contents/MacOS"` to return `0`). Note run 1's constraint on any such heuristic — Steam
+leaves Mach-O *bundles* (`unitypurchasing`, `freetype6`) non-executable while marking executables and
+dylibs `+x`, so magic-byte detection must discriminate Mach-O subtype, not merely "is Mach-O".
+
+**Fail-closed interaction (REQ-23-01).** Until executability can be established, `StateFlags=4` is
+unsafe for such a title: `canWriteFullOwnership(...)` should decline and fall back to Phase 21's
+`1026` verify-handoff, letting Steam's verify pass supply the bits. Run 2 never wrote an `.acf` at
+all (`no acf` on disk after the failure), so this trace does not observe the gate's live behavior.
+
+### Incidental defect found during run 2 — orphaned depot download (NOT G-23-02)
+
+`(21:36:40) [ERROR]: [DownloadManager]: Installation of 1124300 failed with: install did not settle —
+connection may be stale`, immediately followed by `Installation of 1124300 failed!`. **The depot
+chunk-stream loop did not stop.** `[Timing] chunk-stream stats` continued past the failure through at
+least `@696s` (21:40:20, `percent=17%`), with the on-disk file count still climbing (4,297 files
+observed after the reported failure) — the download outlived the DownloadManager's own abort.
+
+The failure timestamp coincides with a concurrent library sync on the same connection
+(`SteamUser.ensureConnected: already connected (fast path, canary OK)` 21:36:40,
+`Steam: fetched 378 owned games` 21:36:41, `Steam library sync complete: 378 games` 21:36:43),
+so the settle-check plausibly lost a race with the connection canary. **Inference, not fact — no
+mechanism was investigated.** This is adjacent to 23-05's single-flight/abort-before-restart work but
+is a distinct shape: not two concurrent installs, but one install whose failure path fails to cancel
+its own worker. Recorded here for triage; it is **out of scope for G-23-02 and for this plan.**
+
+**Contamination warning — HUMANKIND's current on-disk state is NOT admissible evidence.** Read-only
+census taken 2026-08-16 alongside run 1:
+
+| Measure | 2026-07-21 (this document, §Offline evidence) | 2026-08-16 (today) |
+|---|---|---|
+| Total regular files | `1967` | `18809` |
+| Files with any `+x` | `0` | `18002` |
+| `Contents/MacOS/Humankind` | absent (directory empty) | present, `-rwxr-xr-x` |
+| `ZFGameBrowser` helper | absent | present, `-rwxr-xr-x` |
+| `.acf` `BytesDownloaded` | `0` | `15166122928` |
+
+The install has gone from partially-deleted to fully present with execute bits since the trace was
+written, and the file count now matches the UAT's original `18,809` exactly. **Inference, not fact
+(no mechanism was investigated):** this is consistent with a full Steam-mediated re-download/repair in
+the interim, rather than with mode-only re-application to the files GameLib originally wrote — a
+mode-only repair would not restore binaries that §Offline evidence recorded as *absent*. Either way,
+nothing about GameLib's writer can be read off this install today. Note also `SizeOnDisk`
+(`37592580261`) still exceeds `BytesDownloaded` (`15166122928`), so Steam's own bookkeeping for this
+title remains internally inconsistent.
+
+**Required to close the verdict:** HUMANKIND's `stage=plan-build` census line (`depots`,
+`flagBearing`, `executableFlagged`), captured from a GameLib native install that may be cancelled as
+soon as the line appears.
 
 **Gate 1 re-run comparison (if performed): did a fresh multi-depot native install's census match or
-diverge from the single-depot HUMANKIND-equivalent census?**
+diverge from the single-depot control's census?** — pending run 2.
 
 ## Scope fence
 
