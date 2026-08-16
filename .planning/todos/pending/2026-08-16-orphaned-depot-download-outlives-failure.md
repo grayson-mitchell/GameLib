@@ -86,3 +86,63 @@ also block a legitimate retry until the fail-safe cleanup fires).
 Recorded in `.planning/phases/23-steam-full-ownership-install-stateflags-4/23-TRACE.md`
 ("Incidental defect found during run 2"). Explicitly **out of scope** for G-23-02 and for plan 23-07,
 which is why it is filed here rather than closed inline.
+
+## Resolution
+
+Addressed by quick task `260816-vgc` (`fix(steam): abort in-flight depot download on install
+failure`), commit `d33300b62` (implementation) and `604bf99f2` (RED regression specs).
+
+**Files changed:**
+- `src/backend/downloadmanager/utils.ts`
+- `src/backend/downloadmanager/__tests__/utils.test.ts`
+
+**"What good looks like" bullets — closed:**
+
+- "A `DownloadManager` install failure aborts the underlying depot download deterministically"
+  — CLOSED. `installQueueElement`'s `finally` block now issues `callAbortController(appName)`
+  for every runner, and `getGame(appName).stop(false)` for the steam runner, from the single
+  convergence point all three failure shapes (watchdog trip, resolved `{status:'error'}`,
+  thrown/rejected `install()`) reach.
+- "The abort is verified by absence of further `chunk-stream stats` lines after the failure
+  line, not by the canceller's own report" — the unit specs prove the failure path INVOKES
+  the abort primitives. The absence-of-further-activity property itself is a live-only
+  verification (see recipe below) — **not run as part of this quick task**.
+- "`nativeInstallsInFlight` is released on the failure path so a retry is immediately
+  possible" — CLOSED. `SteamGame.stop()` flips the in-flight entry's `aborted` flag; the
+  unwinding `runNativeDepotDownload` run's `finally` deletes the `nativeInstallsInFlight`
+  entry, so an immediate retry starts a fresh run instead of joining a tearing-down one.
+
+**"What good looks like" bullet — deferred:**
+
+- "Partial bytes left by an aborted run are either cleaned up or made reconcilable" — NOT
+  closed. Split into
+  `.planning/todos/pending/2026-08-16-aborted-depot-residue-has-no-acf.md` with an explicit,
+  reasoned deferral (touches `depot.ts`'s manifest-write ordering, which Phase 23 hardened
+  over ten plans; not safe to bolt onto an abort-routing fix).
+
+**Bonus, confirmed but not code-changed:** routing the failure through the abort also makes
+`downloadSteamDepots` return `'cancelled'`, so `runNativeDepotDownload`'s cancelled branch
+(`games.ts` L1509-1518) calls `markSteamInstallIncomplete(appId)` — the persisted library
+entry becomes incomplete/resumable rather than silently stale on a failure, not just on a
+user Cancel.
+
+**Live verification recipe (NOT run — the only proof the chunk loop actually stops):**
+
+The fix cannot be proven by the canceller's own report. Prove it by absence.
+
+1. Start a native Steam install and let it fail (or force a watchdog trip).
+2. In the app log, find the failure line `Installation of <appId> failed with:`.
+3. Assert the new `Aborting in-flight download for <appId> after terminal install failure`
+   line appears within the same second, followed by `SteamGame: aborting in-flight native
+   depot download for appId <appId>`.
+4. Assert ZERO `[Timing] chunk-stream stats` lines for that appId appear AFTER the failure
+   line. This absence is the proof — not the abort log line, which is a mutating call's
+   self-report.
+5. Assert the on-disk file count under `steamapps/common/<installdir>` freezes: run
+   `find <dir> -type f | wc -l` twice, 60s apart, same number.
+6. Assert an immediate retry starts a NEW run (a fresh `[Timing]
+   runNativeDepotDownload: ensureSteamClientReady` line) rather than returning instantly.
+
+`jest` cannot reach the properties in steps 4-6 — the unit specs prove the failure path
+*invokes* the abort primitives; only this log-absence check proves the chunk loop *actually
+stops*. This todo stays in `pending/` until that live gate is run.
