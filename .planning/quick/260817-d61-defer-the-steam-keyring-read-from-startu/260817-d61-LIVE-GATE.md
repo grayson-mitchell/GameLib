@@ -134,7 +134,7 @@ a null result as a pass.
 | Gate | Date | Outcome | Notes |
 |------|------|---------|-------|
 | A | 2026-08-17 | **PASS** | Unattended, on real hardware. See below. |
-| B | | not yet run | Needs a deliberate Steam action; app was owned by a concurrent session. |
+| B | 2026-08-17 | **PASS** | One `keyring_get`, `trigger=user-refresh`, fired ~6 min after boot on operator click. See below. |
 | C | 2026-08-17 | **RETIRED — ill-posed** | Cannot discriminate deferral from dev-signing ACL churn on either build type. See Finding 2. |
 
 ### Gate A evidence (2026-08-17 11:38, build started 11:38:20 — 10 min after Task 3 `21f4f4767` at 11:28:24)
@@ -152,6 +152,42 @@ humble slots issuing at startup                      : 2    (expected — untouc
 Grep calibrated: the same pattern returns `1` against pre-fix `gamelib.run3.log`, so the zero is a
 real absence, not a broken pattern. The deferral line proves the Steam path RAN and chose to defer,
 rather than never running — the zero is non-vacuous.
+
+### Gate A, second independent run (2026-08-17 11:46, operator's own rebuild)
+
+Reproduced unattended on a separate launch. Preserved at `gamelib.log.pre-d61-gateB`:
+
+```
+(11:46:09) humble-session  issuing keyring_get (may prompt) trigger=unspecified
+(11:46:09) Steam: library refresh deferred until a deliberate Steam action — no keyring_get issued (trigger=startup)
+(11:46:30) humble-csrf     issuing keyring_get (may prompt) trigger=unspecified
+```
+
+Zero `steam-refresh-token` lines. This run also **accounts for the operator's reported boot prompts**:
+two came from GameLib (both Humble), the remainder from the dev-ACL path. Steam contributed none.
+
+### Gate B evidence (2026-08-17 11:51, same session, operator clicked the Games tab)
+
+```
+(11:51:59) steam-refresh-token issuing keyring_get (may prompt) trigger=user-refresh
+(11:52:24) steam-refresh-token keyring_get ok present=true len=498 trigger=user-refresh elapsed=24518ms
+```
+
+- **Exactly one** `keyring_get` in the entire session, on the Steam slot.
+- `trigger=user-refresh`, never `startup` — the Games tab maps via `nav-tabs-games-tab` in the
+  allowlist. Correct attribution.
+- Fired ~6 minutes after app start: unambiguously click-driven, not boot-driven.
+- **The read SUCCEEDED** (`present=true len=498`).
+
+**The decisive detail — two dialogs, ONE `keyring_get`, `elapsed=24518ms`.** The operator saw two
+Keychain prompts for a single read. That is precisely the ad-hoc-signature behaviour
+`keyring-timeout-races-keychain-approval` documents: the ACL grant will not persist on an unstable
+dev code identity, so macOS re-requests authorization mid-read. The 24.5 s spans both dialogs.
+
+**Under the former 8 s `KEYRING_READ_TIMEOUT` this read would have TIMED OUT.** It succeeded only
+because the bound is now 45 s. This is a live, single-run demonstration that the 9:1 ratio was
+driven by dev-signing ACL churn rather than by prompt context — independent corroboration for
+retiring Gate C below. On a stable-identity production build this is one dialog, once.
 
 ---
 

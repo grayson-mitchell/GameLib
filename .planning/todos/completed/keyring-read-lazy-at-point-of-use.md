@@ -3,7 +3,9 @@ created: 2026-08-14T20:10:00.000Z
 title: 'Steam keyring read is issued at bootstrap, not at point-of-use — the Keychain prompt arrives without user context and times out'
 area: auth
 needs: design-then-code-fix
-status: OPEN
+status: RESOLVED
+resolved: 2026-08-17
+resolved_by: quick-260817-d61
 severity: minor
 files:
   - src/backend/sidecar/keyringTokenStore.ts
@@ -83,3 +85,56 @@ or be disproven in a jest suite. What remains is the operator measurement
 session on real hardware (`U-34.5-01` / `U-34.5-10`, plan `34.5-58`),
 reading the `trigger=`/`elapsed=` lines this quick task now emits — not
 further code.
+
+---
+
+## Resolution (2026-08-17, quick task `260817-d61`)
+
+**Shipped and gate-proven on real hardware.** Commits `95428a1a6`, `42e7a25e2`, `1c0f23e63`,
+`21f4f4767`. Live gate: `.planning/quick/260817-d61-.../260817-d61-LIVE-GATE.md`.
+
+| Gate | Outcome |
+|---|---|
+| A — startup issues no Steam keyring read | **PASS**, reproduced on two independent launches |
+| B — a deliberate Steam action unlocks it | **PASS**, one read, `trigger=user-refresh`, succeeded |
+| C — re-measure the 9:1 ratio | **RETIRED — ill-posed** (see below) |
+
+The read is deferred off **both** startup paths (the mount-time `refreshLibrary` *and* `init()`'s
+`runOnceWhenOnline`, which never passes through an IPC handler and would have been missed by a
+handler-only guard). Unlock is sticky, process-scoped, and driven by an origin **allowlist**.
+
+### The hypothesis this todo was built on is NOT confirmed — and cannot be, by this work
+
+This todo's premise was that a context-free bootstrap prompt caused the observed **9 failed : 1
+success** read ratio. **That premise was already known to be wrong, and this todo did not account
+for it.** The standing record — memory `keyring-timeout-races-keychain-approval`, written before
+this todo — attributes the ratio to **ad-hoc dev code-signing**: a `cargo run` / `tauri dev` binary
+has an unstable code identity, so macOS will not persist the Keychain ACL grant and every read
+re-requests authorization.
+
+Gate B corroborated this live and by accident: the operator saw **two dialogs for one
+`keyring_get`**, `elapsed=24518ms`. Under the former 8 s bound that read would have timed out; it
+succeeded only because the bound is now 45 s.
+
+So Gate C cannot discriminate. On `tauri dev` it measures ACL churn; on a packaged build it measures
+the stable signature. Neither isolates prompt timing. It is retired rather than left open as a task
+nobody can meaningfully perform.
+
+### What this change is actually worth, stated honestly
+
+Not a failure-rate improvement. The value is the **UX property**, which Gates A and B do prove: on a
+production build, where the prompt fires once, the Keychain dialog now arrives attached to a
+deliberate Steam action instead of unattended at boot. Closing on that basis, not on the basis this
+todo originally claimed.
+
+### Two gaps found while gating — NOT closed here
+
+1. **`keyring_available` is a silent prompt channel.** `src-tauri/src/main.rs:3131` calls
+   `entry.get_password()` — a real secret read that prompts — but `fetchAvailable()`
+   (`keyringTokenStore.ts:203-221`) logs **only on failure**, so a successful probe is invisible to
+   the log *and* to Gate A's grep. Every caller today is Humble (`humble/user.ts:115`,
+   `humbleSecretStore.ts:73`), so Steam is unaffected — but a future Steam-side `isAvailable()`
+   would prompt at boot undetected.
+2. **`humble-session` and `humble-csrf` still read unattended at startup** (measured 6688 ms +
+   5887 ms). This task deferred one slot of three, so the boot-prompt symptom the user actually
+   experiences is only partly addressed — and is now the larger remaining share of it.

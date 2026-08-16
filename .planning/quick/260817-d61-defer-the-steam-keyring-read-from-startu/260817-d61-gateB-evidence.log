@@ -1,0 +1,30 @@
+(11:51:58) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/legendary.log
+(11:51:58) [INFO]:    [Legendary]:       Running command: LEGENDARY_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/legendaryConfig/legendary" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/legendary/legendary --version
+(11:51:58) [INFO]:    [Gog]:             Running command: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" --version
+(11:51:58) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile --version
+(11:51:58) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/gog.log
+(11:51:59) [INFO]:    [Frontend]:        [refreshLibrary] runner=all origin=nav-tabs-games-tab
+(11:51:59) [INFO]:    [Nile]:            Refreshing library...
+(11:51:59) [WARNING]: refresh not implemented on Sideload Library Manager
+(11:51:59) [INFO]:    [Legendary]:       Refreshing library...
+(11:51:59) [INFO]:    [Nile]:            Refreshing Amazon Games...
+(11:51:59) [INFO]:    [Steam]:           SidecarKeyringSlotStore(steam-refresh-token).getToken(): issuing keyring_get (may prompt) trigger=user-refresh
+(11:51:59) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile library sync
+(11:51:59) [INFO]:    [Nile]:            Game list updated, got 0 games
+(11:51:59) [INFO]:    [Gog]:             Running command: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" auth
+(11:52:00) [INFO]:    [Gog]:             Getting GOG library
+(11:52:01) [INFO]:    [Gog]:             Saved games data
+(11:52:24) [INFO]:    [Steam]:           SidecarKeyringSlotStore(steam-refresh-token).getToken(): keyring_get ok present=true len=498 trigger=user-refresh elapsed=24518ms
+(11:52:25) [INFO]:    [Steam]:           [Timing] SteamUser.loggedOn: cellID=22 publicIP=203.211.110.123
+(11:52:25) [INFO]:    [Steam]:           [Timing] SteamUser.ensureConnected: cold-connect path took 1156ms
+(11:52:25) [INFO]:    [Steam]:           Steam: fetched 378 owned games
+(11:52:25) [INFO]:    [Steam]:           Steam bulk platform capture: scoped=1 captured=0 skipped=1
+(11:52:25) [INFO]:    [Steam]:           Steam bulk platform capture: scoped=1 captured=0 skipped=1 failed=false
+(11:52:25) [INFO]:    [Steam]:           Steam library sync complete: 378 games
+(11:52:25) [INFO]:    [Backend]:         refreshLibrary complete runner=all managers=6
+(11:52:25) [INFO]:    [Frontend]:        No cache found, getting data from nile...
+(11:52:25) [INFO]:    [Nile]:            Refreshing library...
+(11:52:25) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile library sync
+(11:52:25) [INFO]:    [Nile]:            Game list updated, got 0 games
+(11:52:25) [INFO]:    [Nile]:            Refreshing Amazon Games...
+(11:52:25) [INFO]:    [Nile]:            refreshLibrary complete runner=nile managers=1
