@@ -65,6 +65,18 @@ export interface SteamBottleEligibilityVerdict {
    * holding — see D-03's single-seam obligation, discharged by read order
    * inside `resolveSteamSectionGating`. */
   hasWindowsDepot: boolean
+  /** D-12 (34.15): the backend's `steamMetadataStore` read of
+   * `is_mac_native === true`, captured on the SAME round trip and after the
+   * SAME `ensurePlatformsCaptured()` await as `hasWindowsDepot` above.
+   * MEANINGLESS on its own, exactly like `hasWindowsDepot`: it must never be
+   * read without `platformsCaptured === true` also holding.
+   *
+   * It exists because `library.ts:785` collapses `is_mac_native ?? false` at
+   * the `GameInfo`-build boundary, so the renderer's seed cannot distinguish
+   * "no mac build" from "never captured". The Windows field is deliberately
+   * NOT collapsed there; the mac one is. This verdict field is how the mac
+   * question reaches the renderer un-collapsed. */
+  hasMacDepot: boolean
   /** D-03 (34.14): whether the appdetails fetch actually landed. `false`
    * covers offline, an errored fetch, AND the `METADATA_FETCH_TIMEOUT_MS`
    * expiry — `ensurePlatformsCaptured()` returns unconditionally at its

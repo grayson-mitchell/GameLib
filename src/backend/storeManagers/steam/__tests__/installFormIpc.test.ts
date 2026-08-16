@@ -147,6 +147,7 @@ describe('installFormIpc.ts', () => {
         expect(result).toEqual({
           eligible: false,
           hasWindowsDepot: false,
+          hasMacDepot: false,
           platformsCaptured: false
         })
         expect(mockedSteamGame).not.toHaveBeenCalled()
@@ -168,6 +169,7 @@ describe('installFormIpc.ts', () => {
         expect(result).toEqual({
           eligible: false,
           hasWindowsDepot: false,
+          hasMacDepot: false,
           platformsCaptured: false
         })
         expect(mockedSteamGame).not.toHaveBeenCalled()
@@ -279,6 +281,54 @@ describe('installFormIpc.ts', () => {
 
       expect(verdict.hasWindowsDepot).toBe(false)
       expect(verdict.platformsCaptured).toBe(false)
+    })
+  })
+
+  describe('34.15 D-12: hasMacDepot rides the SAME round trip as hasWindowsDepot', () => {
+    it('a cached entry with is_mac_native: true yields hasMacDepot: true in the verdict', async () => {
+      mockCheckBottleEligibility.mockResolvedValue(true)
+      mockedMetadataGet.mockReturnValue({
+        is_mac_native: true,
+        platformsCaptured: true
+      })
+
+      const verdict = await getSteamBottleEligibilityVerdict('570')
+
+      expect(verdict.hasMacDepot).toBe(true)
+    })
+
+    it('a cached entry with is_mac_native: undefined yields hasMacDepot: false AND platformsCaptured: false — the pair, not the field alone, carries meaning', async () => {
+      mockCheckBottleEligibility.mockResolvedValue(true)
+      mockedMetadataGet.mockReturnValue({
+        is_mac_native: undefined
+      })
+
+      const verdict = await getSteamBottleEligibilityVerdict('570')
+
+      expect(verdict.hasMacDepot).toBe(false)
+      expect(verdict.platformsCaptured).toBe(false)
+    })
+
+    it('the eligible: false early return includes hasMacDepot: false', async () => {
+      const result = await getSteamBottleEligibilityVerdict('not-numeric')
+
+      expect(result).toMatchObject({ eligible: false, hasMacDepot: false })
+    })
+
+    // ROADMAP hard prohibition, named explicitly: the mac-side reproduction
+    // of the treatsAbsentAsAvailable saboteur shape three shipped
+    // steamPlatformRow.test.ts gates already reject on the Windows side.
+    it('SABOTEUR: macTreatsAbsentAsAvailable disagrees with the real read on an undefined is_mac_native', () => {
+      const macTreatsAbsentAsAvailable = (
+        cached: { is_mac_native?: boolean } | undefined
+      ): boolean => cached?.is_mac_native !== false
+
+      const cached = { is_mac_native: undefined }
+      const realRead = cached?.is_mac_native === true
+
+      expect(macTreatsAbsentAsAvailable(cached)).toBe(true)
+      expect(realRead).toBe(false)
+      expect(macTreatsAbsentAsAvailable(cached)).not.toBe(realRead)
     })
   })
 

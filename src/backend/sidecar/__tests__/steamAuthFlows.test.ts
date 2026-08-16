@@ -687,6 +687,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       jest.mocked(getSteamBottleEligibilityVerdict).mockResolvedValue({
         eligible: true,
         hasWindowsDepot: false,
+        hasMacDepot: false,
         platformsCaptured: true,
         bottleName: 'GameLibSteam'
       })
@@ -741,6 +742,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       jest.mocked(getSteamBottleEligibilityVerdict).mockResolvedValue({
         eligible: false,
         hasWindowsDepot: false,
+        hasMacDepot: false,
         platformsCaptured: false
       })
       jest

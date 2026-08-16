@@ -93,8 +93,16 @@ export async function getSteamBottleEligibilityVerdict(
     // — eligible: false short-circuits routing before the depot question is
     // ever asked, so this platformsCaptured: false must NOT be read as a
     // D-04 fail-open trigger. Without this note a future reader will assume
-    // every platformsCaptured: false return means "offer Windows".
-    return { eligible: false, hasWindowsDepot: false, platformsCaptured: false }
+    // every platformsCaptured: false return means "offer Windows". The same
+    // reading applies to hasMacDepot: false below (34.15 D-12) — it is
+    // paired with platformsCaptured: false and must NOT be read as a
+    // confirmed absent mac depot.
+    return {
+      eligible: false,
+      hasWindowsDepot: false,
+      hasMacDepot: false,
+      platformsCaptured: false
+    }
   }
 
   const eligible = await new SteamGame(appName).checkBottleEligibility()
@@ -115,6 +123,12 @@ export async function getSteamBottleEligibilityVerdict(
   // confidence. Reporting it as not-captured is what lets the fail-open engage.
   const cached = steamMetadataStore.get(appName)
   const hasWindowsDepot = cached?.is_windows_native === true
+  // 34.15 D-12: the mac sibling of hasWindowsDepot, read from the SAME
+  // cache entry on the SAME round trip. Strict `=== true` — never
+  // `!== false` — so an absent `is_mac_native` (never captured) does not
+  // coerce to "mac depot available". This is `resolveDepotAvailability`'s
+  // (Plan 04) `probeHasMacDepot` input.
+  const hasMacDepot = cached?.is_mac_native === true
   const platformsCaptured = depotSignalCaptured(cached)
 
   const wineVersion = steamBottleConfigStore.get_nodefault('wineVersion')
@@ -125,6 +139,7 @@ export async function getSteamBottleEligibilityVerdict(
   return {
     eligible,
     hasWindowsDepot,
+    hasMacDepot,
     platformsCaptured,
     wineVersion,
     bottleName

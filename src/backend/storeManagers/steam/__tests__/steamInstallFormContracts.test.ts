@@ -188,19 +188,21 @@ describe('isSteamBottleEligible verdict shape', () => {
     )
   })
 
-  it('SteamBottleEligibilityVerdict requires eligible, hasWindowsDepot and platformsCaptured; wineVersion/bottleName stay optional', () => {
+  it('SteamBottleEligibilityVerdict requires eligible, hasWindowsDepot, hasMacDepot and platformsCaptured; wineVersion/bottleName stay optional', () => {
     const minimal: SteamBottleEligibilityVerdict = {
       eligible: true,
       hasWindowsDepot: false,
+      hasMacDepot: false,
       platformsCaptured: false
     }
     expect(minimal.eligible).toBe(true)
   })
 
-  it('documents that SteamBottleEligibilityVerdict carries eligible, hasWindowsDepot, platformsCaptured, wineVersion and bottleName (34.13 review A-07: the enforcing half is the compile pin below plus the source gate above)', () => {
+  it('documents that SteamBottleEligibilityVerdict carries eligible, hasWindowsDepot, hasMacDepot, platformsCaptured, wineVersion and bottleName (34.13 review A-07: the enforcing half is the compile pin below plus the source gate above)', () => {
     const full: SteamBottleEligibilityVerdict = {
       eligible: true,
       hasWindowsDepot: true,
+      hasMacDepot: true,
       platformsCaptured: true,
       wineVersion: {
         bin: '/usr/bin/wine',
@@ -228,14 +230,25 @@ describe('isSteamBottleEligible verdict shape', () => {
     const minimal: SteamBottleEligibilityVerdict = {
       eligible: false,
       hasWindowsDepot: false,
+      hasMacDepot: false,
       platformsCaptured: false
     }
     expect(minimal.eligible).toBe(false)
   })
 
   it('34.14 COMPILE PIN: hasWindowsDepot and platformsCaptured are REQUIRED — an optional pair would let a construction site silently reintroduce the undefined-vs-false collapse', () => {
-    // @ts-expect-error -- `hasWindowsDepot` and `platformsCaptured` are required
+    // @ts-expect-error -- `hasWindowsDepot`, `hasMacDepot` and `platformsCaptured` are required
     const missingDepotPair: SteamBottleEligibilityVerdict = { eligible: true }
     expect(missingDepotPair).toBeDefined()
+  })
+
+  it('34.15 D-12 COMPILE PIN: hasMacDepot is REQUIRED — mirrors the 34.14 pin above so the mac field cannot silently become optional', () => {
+    // @ts-expect-error -- `hasMacDepot` is required
+    const missingMacDepot: SteamBottleEligibilityVerdict = {
+      eligible: true,
+      hasWindowsDepot: false,
+      platformsCaptured: false
+    }
+    expect(missingMacDepot).toBeDefined()
   })
 })
