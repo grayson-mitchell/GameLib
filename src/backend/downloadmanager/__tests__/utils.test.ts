@@ -72,19 +72,29 @@ jest.mock('../../online_monitor', () => ({
   isOnline: jest.fn().mockReturnValue(true)
 }))
 
+// mockT is spy-able (jest.fn) so the honest-copy spec below can assert on
+// the KEY i18next.t was called with, not on rendered English -- but
+// jest.config's `resetMocks: true` wipes even an implementation passed
+// directly to `jest.fn(impl)` at factory-eval time (confirmed empirically),
+// so the fallback-interpolation behavior every OTHER spec in this file
+// depends on must be re-applied in a file-scope `beforeEach` below.
+const mockT = jest.fn(
+  (
+    _key: string,
+    fallback = '',
+    options?: Record<string, string | number>
+  ) =>
+    options
+      ? fallback.replace(/{{(\w+)}}/g, (match: string, token: string) =>
+          token in options ? String(options[token]) : match
+        )
+      : fallback
+)
+
 jest.mock('i18next', () => ({
   __esModule: true,
   default: {
-    t: (
-      _key: string,
-      fallback = '',
-      options?: Record<string, string | number>
-    ) =>
-      options
-        ? fallback.replace(/{{(\w+)}}/g, (match, token) =>
-            token in options ? String(options[token]) : match
-          )
-        : fallback
+    t: mockT
   }
 }))
 
@@ -109,7 +119,8 @@ import { existsSync } from 'graceful-fs'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
 import { logWarning } from 'backend/logger'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
-import type { InstallParams } from 'common/types'
+import { backendEvents } from 'backend/backend_events'
+import type { InstallParams, GameStatus } from 'common/types'
 
 function makeParams(overrides: Partial<InstallParams> = {}): InstallParams {
   return {
@@ -121,6 +132,38 @@ function makeParams(overrides: Partial<InstallParams> = {}): InstallParams {
     ...overrides
   }
 }
+
+function emitAdvance(
+  appName: string,
+  progress: { percent?: number; bytes?: string }
+) {
+  const payload: GameStatus = {
+    appName,
+    runner: 'steam',
+    status: 'installing',
+    progress: { bytes: '', eta: '', ...progress }
+  }
+  backendEvents.emit(`progressUpdate-${appName}`, payload)
+}
+
+// File-scope, applies to every test in this file (registered outside any
+// describe): resetMocks:true wipes mockT's implementation before EACH test,
+// including the very first one -- re-apply it here rather than duplicating
+// this block into every describe's own beforeEach.
+beforeEach(() => {
+  mockT.mockImplementation(
+    (
+      _key: string,
+      fallback = '',
+      options?: Record<string, string | number>
+    ) =>
+      options
+        ? fallback.replace(/{{(\w+)}}/g, (match: string, token: string) =>
+            token in options ? String(options[token]) : match
+          )
+        : fallback
+  )
+})
 
 describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clearing on abort', () => {
   beforeEach(() => {
@@ -258,7 +301,7 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
   })
 })
 
-describe('installQueueElement — D-01b: belt-and-suspenders install watchdog', () => {
+describe('installQueueElement — 260817-dib: no-progress (stall) install watchdog', () => {
   beforeEach(() => {
     getGameInfoMock.mockReturnValue({ title: 'Test Game' })
     stopMock.mockResolvedValue(undefined)
@@ -316,6 +359,79 @@ describe('installQueueElement — D-01b: belt-and-suspenders install watchdog', 
 
     await jest.advanceTimersByTimeAsync(30000)
     await assertion
+  })
+
+  it('RED (the defect): advancing progress every 100s keeps a native Steam install running past 20 minutes of fake time -- no error, no dialog', async () => {
+    jest.useFakeTimers()
+    installMock.mockReturnValue(new Promise(() => {}))
+
+    const resultPromise = installQueueElement(makeParams())
+    let settled = false
+    resultPromise.then(() => (settled = true))
+
+    let percent = 0
+    // 12 * 100s = 1200s = 20 minutes, each tick reports a genuine advance.
+    for (let i = 0; i < 12; i++) {
+      await jest.advanceTimersByTimeAsync(100_000)
+      percent += 1
+      emitAdvance('1091500', { percent, bytes: `${percent} MB` })
+    }
+
+    expect(settled).toBe(false)
+    expect(sendGameStatusUpdateMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'done' })
+    )
+    expect(showDialogBoxModalAuto).not.toHaveBeenCalled()
+  })
+
+  it('stall trip still aborts (locked decision 4): callAbortController + steam-gated stop(false) still fire on a stall trip', async () => {
+    jest.useFakeTimers()
+    installMock.mockReturnValue(new Promise(() => {}))
+
+    const resultPromise = installQueueElement(makeParams())
+    const assertion = resultPromise.then((result) => {
+      expect(result.status).toBe('error')
+      expect(callAbortController).toHaveBeenCalledWith('1091500')
+      expect(stopMock).toHaveBeenCalledWith(false)
+    })
+
+    // No progress events at all -- a genuine stall.
+    await jest.advanceTimersByTimeAsync(9 * 60 * 1000)
+    await assertion
+  })
+
+  it('honest copy: a stall trip uses box.error.install.stalled and the dialog does not say "connection may be stale"', async () => {
+    jest.useFakeTimers()
+    installMock.mockReturnValue(new Promise(() => {}))
+
+    const resultPromise = installQueueElement(makeParams())
+    const assertion = resultPromise.then(() => {
+      expect(mockT).toHaveBeenCalledWith(
+        'box.error.install.stalled',
+        expect.any(String),
+        expect.objectContaining({ minutes: expect.any(Number) })
+      )
+      const dialogCall = (showDialogBoxModalAuto as jest.Mock).mock
+        .calls[0][0] as { message: string }
+      expect(dialogCall.message).not.toMatch(/connection may be stale/)
+    })
+
+    await jest.advanceTimersByTimeAsync(9 * 60 * 1000)
+    await assertion
+  })
+
+  it('inner CM timeout copy is preserved: an install() that REJECTS with isTimeout:true still produces the "connection may be stale" reason', async () => {
+    installMock.mockRejectedValue(
+      Object.assign(new Error('CM socket stale'), { isTimeout: true as const })
+    )
+
+    await installQueueElement(makeParams())
+
+    expect(showDialogBoxModalAuto).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining('connection may be stale')
+      })
+    )
   })
 })
 

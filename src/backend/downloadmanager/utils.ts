@@ -15,25 +15,47 @@ import { existsSync, mkdirSync, rmSync } from 'graceful-fs'
 import { storeMap } from 'common/utils'
 import { gogdlConfigPath } from 'backend/storeManagers/gog/constants'
 import { fixesPath } from 'backend/constants/paths'
+import { isTimeoutError } from 'backend/storeManagers/steam/withTimeout'
 import {
-  withTimeout,
-  isTimeoutError
-} from 'backend/storeManagers/steam/withTimeout'
+  withStallTimeout,
+  isStallError,
+  INSTALL_NO_PROGRESS_TIMEOUT_MS
+} from 'backend/downloadmanager/installStallWatchdog'
 
 /**
- * D-01b (33-01): belt-and-suspenders bound around the WHOLE `.install()`
- * await in `installQueueElement`, defense-in-depth for any never-settling
- * downstream await that the pre-download PICS bounds (Phase 30 30-07) don't
- * reach. Must sit comfortably ABOVE the summed pre-download bounds — 50s
- * `resolveSteamInstallTarget` (STEAM_PICS_TIMEOUT_MS*2) + up to 90s×3
- * `buildDepotPlan` retries (STEAM_PICS_BULK_TIMEOUT_MS *
- * PLAN_BUILD_MAX_ATTEMPTS) = ~320s worst case — and must NEVER fire during
- * the real (unbounded-by-design) depot download phase. Kept runner-agnostic
- * per 33-RESEARCH (lower-risk: Electron's fresh CM connection has never
- * hung this way), at 8 minutes — comfortably above the ~5.3min worst-case
- * pre-download sum while still bounding a genuinely stuck install.
+ * 260817-dib: D-01b (33-01) was originally a belt-and-suspenders bound
+ * around the WHOLE `.install()` await in `installQueueElement` -- a TOTAL
+ * DURATION ceiling. For Steam that await includes the entire depot download,
+ * so it was never a stall detector: it was a hard ceiling on total install
+ * duration, killing any native Steam install slower than 8 minutes end to
+ * end regardless of whether it was still making progress.
+ *
+ * `INSTALL_NO_PROGRESS_TIMEOUT_MS` (re-exported from
+ * `installStallWatchdog.ts`, imported here for the doc comment's sake) is
+ * the SAME 480_000ms value, re-semantified as a NO-PROGRESS window,
+ * re-armed by `backendEvents`' `progressUpdate-${appName}` payloads. Only
+ * the clock's MEANING changed:
+ *
+ *  - The window must still clear the summed pre-download bound -- 50s
+ *    `resolveSteamInstallTarget` (STEAM_PICS_TIMEOUT_MS*2) + up to 90s×3
+ *    `buildDepotPlan` retries (STEAM_PICS_BULK_TIMEOUT_MS *
+ *    PLAN_BUILD_MAX_ATTEMPTS) = ~320s worst case, because the pre-download
+ *    phase emits NO progress at all -- the initial (call-time) arming of
+ *    the window still bounds it exactly as D-01b originally intended.
+ *  - The value is deliberately UNCHANGED from D-01b's original 8 minutes,
+ *    so no runner gains any new false-trip risk -- only runs that were
+ *    previously killed purely for taking too long (while still healthy) are
+ *    now spared.
+ *  - It sits comfortably above `steam/depot/stallTracker.ts`'s own 180s
+ *    inner stall bound, so the depot layer's own honest give-up always gets
+ *    to fire first rather than being pre-empted by this outer watchdog.
+ *
+ * Kept runner-agnostic (`installStallWatchdog.ts` imports nothing from
+ * `storeManagers/steam`) per 33-RESEARCH -- a never-settling downstream
+ * await for ANY runner (not just Steam) is still bounded, and a runner that
+ * never reports progress (sideload today) degrades exactly to the OLD fixed
+ * ceiling.
  */
-const INSTALL_WATCHDOG_MS = 8 * 60 * 1000
 
 async function installQueueElement(params: InstallParams): Promise<{
   status: DMStatus
@@ -150,7 +172,7 @@ async function installQueueElement(params: InstallParams): Promise<{
   try {
     downloadFixesFor(appName, runner)
 
-    const installResult: InstallResult = await withTimeout(
+    const installResult: InstallResult = await withStallTimeout(
       libraryManagerMap[runner].getGame(appName).install({
         path: path.replaceAll("'", ''),
         installDlcs,
@@ -165,8 +187,9 @@ async function installQueueElement(params: InstallParams): Promise<{
         // clean `tsc`.
         steamForceWindowsViaBottle
       }),
-      INSTALL_WATCHDOG_MS,
-      'installQueueElement install watchdog'
+      appName,
+      INSTALL_NO_PROGRESS_TIMEOUT_MS,
+      'installQueueElement install stall watchdog'
     )
     const { status: resultStatus, error } = installResult
 
@@ -181,6 +204,28 @@ async function installQueueElement(params: InstallParams): Promise<{
 
     return { status: resultStatus }
   } catch (error) {
+    // 260817-dib: distinguish a genuine STALL trip (no observed progress
+    // for the whole window) from an inner CM timeout (a stale-but-present
+    // socket) from an ordinary install rejection, so the log/dialog gives a
+    // more actionable reason -- but all three converge on the exact same
+    // terminal-error path below.
+    if (isStallError(error)) {
+      // The log line (errorMessage below) is a STABLE English diagnostic
+      // naming the observed no-progress window -- the live gate greps this
+      // exact text, so it is deliberately NOT i18n'd.
+      const observedSeconds = Math.round(error.msSinceProgress / 1000)
+      const windowMinutes = Math.round(INSTALL_NO_PROGRESS_TIMEOUT_MS / 60000)
+      status = 'error'
+      installErrorReason = i18next.t(
+        'box.error.install.stalled',
+        'No download progress for {{minutes}} minutes — the install was stopped',
+        { minutes: windowMinutes }
+      )
+      errorMessage(
+        `install stalled — no progress observed for ${observedSeconds}s (no-progress bound ${windowMinutes}m)`
+      )
+      return { status: 'error' }
+    }
     // D-01b: distinguish a genuine watchdog trip from an ordinary install
     // rejection so the log/dialog gives a more actionable reason, but both
     // converge on the exact same terminal-error path below.

@@ -26,8 +26,7 @@ import {
 import { createReadStream } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve, relative, dirname, isAbsolute, join } from 'path'
-import { getFileSize } from 'backend/utils'
-import { sendFrontendMessage } from '../../ipc'
+import { getFileSize, sendProgressUpdate } from 'backend/utils'
 import { SteamUser } from './user'
 import {
   selectAllDepots,
@@ -1909,7 +1908,15 @@ export async function downloadDepotFiles(
 
       // Exact shape library.ts's pollInstallOnce() (L944-953) already speaks —
       // the DownloadManager needs zero changes for the native depot-download path.
-      sendFrontendMessage('progressUpdate', {
+      // 260817-dib: routed through sendProgressUpdate (backend/utils) rather
+      // than a raw sendFrontendMessage -- it performs the SAME
+      // sendFrontendMessage('progressUpdate', payload) call AND emits onto
+      // backendEvents' `progressUpdate-${appName}` bus, which is the seam
+      // installStallWatchdog.ts's withStallTimeout re-arms on. Without this,
+      // Steam's native depot download had no progress signal reaching
+      // backendEvents at all, and the stall watchdog could never re-arm for
+      // a healthy, advancing Steam install.
+      sendProgressUpdate({
         appName: plan.appId,
         runner: 'steam',
         status: 'installing',

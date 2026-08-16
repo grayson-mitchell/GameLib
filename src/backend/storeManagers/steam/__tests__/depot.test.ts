@@ -64,6 +64,7 @@ import { fetchChunk, type LzmaModule } from '../depot/decompress'
 import { CdnAuthTokenCache } from '../depot/cdnAuth'
 import { StallTracker } from '../depot/stallTracker'
 import { sendFrontendMessage } from '../../../ipc'
+import { sendProgressUpdate } from 'backend/utils'
 import { classifyDepotError, isNonRetryableDepotError } from '../depotErrors'
 import { applyDepotFileFlags } from '../depot/fileAttributes'
 import {
@@ -89,8 +90,23 @@ jest.mock('../user')
 //    heavy gog/library.ts transitive chain via the real utils.ts module,
 //    same pattern as library.test.ts). Progress tests below don't assert on
 //    the formatted `bytes` string, so no implementation needs re-establishing.
+//
+// 260817-dib: sendProgressUpdate is ALSO mocked wholesale here (this factory
+// does not jest.requireActual), so the real sendProgressUpdate -- the only
+// thing that calls backendEvents.emit(...) -- never runs in this file. This
+// jest.fn()'s own call arguments are sufficient proof that depot.ts now
+// calls the correct function with the correct payload shape;
+// sendProgressUpdate's own emit-to-bus behaviour is pre-existing unchanged
+// code already relied on by the gog/legendary/nile/zoom runners (see
+// downloadmanager/__tests__/utils.test.ts, which exercises the real bus).
+// Its implementation is re-established in the 'downloadDepotFiles' describe
+// block's beforeEach below (resetMocks:true wipes even a `jest.fn(impl)`
+// implementation before every test, including the first) so the three
+// PRE-EXISTING sendFrontendMessage('progressUpdate', …) assertions stay
+// green without being rewritten.
 jest.mock('backend/utils', () => ({
-  getFileSize: jest.fn()
+  getFileSize: jest.fn(),
+  sendProgressUpdate: jest.fn()
 }))
 
 // ── depot/select mock — selectAllDepots is a jest.fn(); dlcAppIds stays real ─
@@ -2453,6 +2469,22 @@ describe('downloadDepotFiles', () => {
 
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), 'gamelib-depot-test-'))
+    // 260817-dib: resetMocks:true wipes sendProgressUpdate's implementation
+    // before every test (even one passed directly to jest.fn(impl) at
+    // module-factory-eval time) -- re-establish the forward to the
+    // ALREADY-mocked ipc module here so the three pre-existing
+    // sendFrontendMessage('progressUpdate', …) assertions in this describe
+    // block stay green without being rewritten. A jest.mock factory may not
+    // close over out-of-scope variables, so `sendFrontendMessage` is
+    // resolved lazily inside the function body via
+    // jest.requireMock('backend/ipc') rather than the imported binding.
+    ;(sendProgressUpdate as jest.Mock).mockImplementation(
+      (payload: unknown) => {
+        const mockedIpc: { sendFrontendMessage: jest.Mock } =
+          jest.requireMock('backend/ipc')
+        mockedIpc.sendFrontendMessage('progressUpdate', payload)
+      }
+    )
   })
 
   afterEach(() => {
@@ -2684,6 +2716,51 @@ describe('downloadDepotFiles', () => {
     expect(
       progress.eta === '' || /^\d{2}:\d{2}:\d{2}$/.test(progress.eta as string)
     ).toBe(true)
+  })
+
+  it('260817-dib: routes progress through sendProgressUpdate (backend/utils) instead of a raw sendFrontendMessage', async () => {
+    const chunkBuf = Buffer.from('x')
+    jest.mocked(fetchChunk).mockResolvedValue(chunkBuf)
+
+    const file: DepotPlanFile = {
+      filename: 'a.bin',
+      size: 1,
+      sha_content: sha1Hex(chunkBuf),
+      chunks: [{ sha: 's-a', cb_original: 1, offset: 0 }]
+    }
+    const plan: DepotPlan = {
+      appId: '12345',
+      name: 'SomeGame',
+      depots: [
+        { depotId: '111', gid: 'g1', key: Buffer.from('key'), files: [file] }
+      ],
+      totalBytes: 1
+    }
+
+    await downloadDepotFiles(plan, {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      hosts: HOSTS
+    })
+
+    // Note: this file mocks 'backend/utils' wholesale (no
+    // jest.requireActual), so the real sendProgressUpdate -- the only thing
+    // that calls backendEvents.emit(...) -- never runs here. Asserting on
+    // this jest.fn()'s own call arguments is sufficient proof that depot.ts
+    // now calls the correct function with the correct payload shape;
+    // sendProgressUpdate's emit-to-bus behaviour is pre-existing unchanged
+    // code, exercised for real in downloadmanager/__tests__/utils.test.ts.
+    const mockedSendProgressUpdate = sendProgressUpdate as jest.Mock
+    expect(mockedSendProgressUpdate).toHaveBeenCalled()
+    const lastCall =
+      mockedSendProgressUpdate.mock.calls[
+        mockedSendProgressUpdate.mock.calls.length - 1
+      ]
+    expect(lastCall[0]).toMatchObject({
+      appName: '12345',
+      runner: 'steam',
+      status: 'installing'
+    })
   })
 
   it('D-02: halts new chunk fetches once AbortSignal fires and returns a cancelled outcome promptly', async () => {
