@@ -1392,7 +1392,7 @@ Plans:
 - [x] 34.14-04-PLAN.md — Wave 3. Wire the composition root; correct the second stale doc-comment; lock the wiring with a new source gate and three source-derived known-bads.
 - [x] 34.14-05-PLAN.md — Wave 4. Full-suite reconciliation + shipped-gate census + the BLOCKING D-08 UAT gate (both runtimes x network up/blocked). DONE 2026-08-16 (34.14-05-SUMMARY.md) — D-08 PASSED.
 
-### Phase 34.15: Steam platform-signal and sync integrity (INSERTED) — COMPLETE 2026-08-16
+### Phase 34.15: Steam platform-signal and sync integrity (INSERTED) — ✅ COMPLETE 2026-08-16
 
 **Goal:** Close the three pre-existing Steam defects that Phase 34.14's D-08 UAT gate surfaced but which 34.14 never claimed to fix. 34.14 made the renderer behave **safely** when the depot signal is missing; this phase reduces how often it is missing, gives the library sync a **terminal failure state**, and applies 34.14's own *absent-is-not-negative* principle to the **mac** side, where it was never applied.
 
