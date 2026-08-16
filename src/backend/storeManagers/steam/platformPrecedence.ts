@@ -108,7 +108,7 @@ export function resolvePlatformWrite(
     Number.isFinite(existingCapturedAt)
 
   const existingIsStrictlyNewer =
-    hasValidExistingTimestamp && (existingCapturedAt as number) > capturedAt
+    hasValidExistingTimestamp && existingCapturedAt > capturedAt
 
   if (existingIsStrictlyNewer && existing && hasCompleteTriple(existing)) {
     // DECLINE: the existing capture is strictly newer and complete. On
@@ -124,7 +124,7 @@ export function resolvePlatformWrite(
         is_linux_native: existing.is_linux_native as boolean
       },
       platformsSource: existing.platformsSource ?? source,
-      platformsCapturedAt: existingCapturedAt as number,
+      platformsCapturedAt: existingCapturedAt,
       accepted: false
     }
   }
