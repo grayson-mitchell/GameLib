@@ -1242,6 +1242,25 @@ async function downloadSingleFile(
     }
     const empty = await open(dest, 'w')
     await empty.close()
+
+    // Phase 23 (23-08 Task 2b): a zero-byte manifest entry can still carry
+    // an Executable/CustomExecutable/ReadOnly/Hidden flag — this early
+    // return used to skip mode application entirely, unlike the non-empty
+    // path below (the `if (file.flags)` block after the sha1 check), so a
+    // zero-byte executable-flagged entry landed without +x. The
+    // Directory(64)/Symlink(512) branches above already returned before
+    // this point (WR-01), so any flags reaching here are safe to hand to
+    // applyEDepotFileModes. A mode-application failure is recorded the same
+    // way the non-empty path already does (T-23-03) — never a silent
+    // success.
+    if (file.flags) {
+      const modeResult = await applyEDepotFileModes(dest, file.flags, counters)
+      if (!modeResult.ok) {
+        throw new Error(
+          `downloadDepotFiles: failed to apply file mode flags for ${file.filename}: ${modeResult.error}`
+        )
+      }
+    }
     return
   }
 
@@ -1838,11 +1857,48 @@ export async function downloadDepotFiles(
       LogPrefix.Steam
     )
 
+    // Phase 23 (23-08 Task 2a): `allModesApplied` used to be vacuously
+    // `failures.length === 0` — true even when ZERO mode applications were
+    // ever attempted (T-23-27). Fail closed: if the manifest claims
+    // executable-flagged entries (finalCensus.executableFlagged > 0) but
+    // THIS RUN's own chmodAttempts is 0, the completeness gate must decline
+    // StateFlags=4 regardless of `failures` being empty — forcing the
+    // byte-identical StateFlags=1026 verify-handoff (D-01) instead of an
+    // unproven `4`. Reads ONLY this run's own modeCounters (never
+    // module-level, see the DepotModeCounters doc comment) so a concurrent
+    // install of a DIFFERENT appId (23-05 supports this) can never satisfy
+    // this run's gate on another run's behalf.
+    //
+    // Deliberately NOT triggered when executableFlagged === 0 (T-23-28): a
+    // manifest that genuinely has no executable-flagged entries (a pure
+    // data depot, or — per 23-TRACE.md's H2 verdict — a native macOS title
+    // whose manifest never carries Executable/CustomExecutable bits at all)
+    // must still earn allModesApplied: true here; an over-strict gate would
+    // force every such install to 1026 and silently destroy the whole
+    // phase's value. G-23-02's fix for THAT case is 23-08 Task 3's
+    // narrowly-scoped Mach-O fallback, which operates independently of this
+    // gate.
+    const executableClaimedByManifest = finalCensus.executableFlagged > 0
+    const modesActuallyAppliedThisRun = modeCounters.chmodAttempts > 0
+    const allModesApplied =
+      failures.length === 0 &&
+      (!executableClaimedByManifest || modesActuallyAppliedThisRun)
+
+    if (executableClaimedByManifest && !modesActuallyAppliedThisRun) {
+      logWarning(
+        `downloadDepotFiles: appId=${plan.appId} manifest claims ` +
+          `executableFlagged=${finalCensus.executableFlagged} but this ` +
+          `run's chmodAttempts=0 — failing closed to StateFlags=1026 ` +
+          `instead of an unproven StateFlags=4 (G-23-02/T-23-27)`,
+        LogPrefix.Steam
+      )
+    }
+
     return {
       outcome: opts.signal?.aborted ? 'cancelled' : 'completed',
       failures,
       allFilesVerifiedThisRun: allJobsAttempted && failures.length === 0,
-      allModesApplied: failures.length === 0
+      allModesApplied
     }
   } finally {
     // No workers leak across installs — shutdown() is safe to call even if
