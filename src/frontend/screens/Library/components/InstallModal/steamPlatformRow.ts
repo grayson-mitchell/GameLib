@@ -31,6 +31,12 @@ import type { SteamPlatformRowMode } from './steamSectionGating'
  * windowsDepotOffered, macDepotOffered }`. It is the same function, not a
  * sibling -- two readers of the same fact is exactly the drift this header
  * already warns against, one level out.
+ *
+ * 34.15 gap-closure round, code review WR-01, post-execution:
+ * `selectSteamPlatformOptions`'s `'selectable'` branch was found to still
+ * offer macOS unconditionally, reading none of `resolveDepotAvailability`'s
+ * output at all. `hasMacDepot`, added below, closes that gap additively --
+ * see that function's own doc comment.
  */
 
 /**
@@ -111,12 +117,33 @@ export function hasSteamMacDepot(
  * when `hasWindowsDepot` is false, the `'selectable'` branch's returned
  * array simply contains no `'Windows'`-valued entry at all.
  *
+ * 34.15 gap-closure (code review WR-01): the `'selectable'` branch's
+ * `macEntry` used to be unconditional -- unlike `windowsEntry`, which was
+ * already correctly gated on `hasWindowsDepot`. That directly contradicted
+ * 34.15 D-14's own rule for `macDepotOffered` ("must never be loosened -- an
+ * uncaptured or unresolved signal yields `false`, full stop"): a game whose
+ * eligibility probe TIMED OUT reaches `'selectable'` with
+ * `platformsCaptured: false` (so `effectiveBottleRequired` fails closed to
+ * `false`) while `windowsDepotOffered` fails OPEN to `true` (34.14 D-04) --
+ * and the unconditional `macEntry` offered "macOS" for a game whose mac
+ * depot was never confirmed. `hasMacDepot` mirrors `hasWindowsDepot`'s
+ * existing gate exactly, applied to the ONE branch WR-01 named
+ * (`'readonly-macos'`/`'pending'` are unaffected -- both already resolve to
+ * a single, confirmed-by-construction macOS entry via
+ * `resolveSteamSectionGating`'s own branch ordering, not via this
+ * parameter).
+ *
  * Generic over `T` so it never needs to import `AvailablePlatforms` from
  * `index.tsx`.
  */
 export function selectSteamPlatformOptions<
   T extends { value: InstallPlatform }
->(mode: SteamPlatformRowMode, platforms: T[], hasWindowsDepot: boolean): T[] {
+>(
+  mode: SteamPlatformRowMode,
+  platforms: T[],
+  hasWindowsDepot: boolean,
+  hasMacDepot: boolean
+): T[] {
   switch (mode) {
     case 'absent':
       return []
@@ -129,7 +156,12 @@ export function selectSteamPlatformOptions<
       return macEntry ? [macEntry] : []
     }
     case 'selectable': {
-      const macEntry = platforms.find((p) => p.value === 'Mac')
+      // 34.15 WR-01: gated on hasMacDepot, mirroring the pre-existing
+      // hasWindowsDepot gate immediately below -- see the doc comment above
+      // this function for why the unconditional prior form was wrong.
+      const macEntry = hasMacDepot
+        ? platforms.find((p) => p.value === 'Mac')
+        : undefined
       const windowsEntry = hasWindowsDepot
         ? platforms.find((p) => p.value === 'Windows')
         : undefined

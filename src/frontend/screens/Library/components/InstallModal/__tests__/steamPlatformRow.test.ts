@@ -74,20 +74,32 @@ describe('hasSteamWindowsDepot -- D-17 depot gate', () => {
 describe('selectSteamPlatformOptions -- omission, never disablement', () => {
   // The full cross-product: all four SteamPlatformRowMode members x
   // hasWindowsDepot both ways -- eight cases, the whole space.
+  //
+  // 34.15 gap-closure round (code review WR-01) added a fourth parameter,
+  // `hasMacDepot`. It is meaningful ONLY to the `'selectable'` branch (see
+  // that branch's own dedicated 2x2 matrix below) -- every other mode below
+  // passes a fixed `true` for it and asserts the result is UNCHANGED,
+  // proving the parameter genuinely has no effect on those branches rather
+  // than merely being unused by coincidence.
 
   it("'absent' with hasWindowsDepot false returns []", () => {
-    expect(selectSteamPlatformOptions('absent', platforms, false)).toEqual([])
+    expect(
+      selectSteamPlatformOptions('absent', platforms, false, true)
+    ).toEqual([])
   })
 
   it("'absent' with hasWindowsDepot true returns [] -- D-18's Linux row and the legacy one-platform case", () => {
-    expect(selectSteamPlatformOptions('absent', platforms, true)).toEqual([])
+    expect(selectSteamPlatformOptions('absent', platforms, true, true)).toEqual(
+      []
+    )
   })
 
   it("'readonly-windows' with hasWindowsDepot false returns exactly one entry", () => {
     const result = selectSteamPlatformOptions(
       'readonly-windows',
       platforms,
-      false
+      false,
+      true
     )
     expect(result).toEqual([windowsEntry])
   })
@@ -96,22 +108,42 @@ describe('selectSteamPlatformOptions -- omission, never disablement', () => {
     const withFalse = selectSteamPlatformOptions(
       'readonly-windows',
       platforms,
-      false
+      false,
+      true
     )
     const withTrue = selectSteamPlatformOptions(
       'readonly-windows',
       platforms,
+      true,
       true
     )
     expect(withTrue).toEqual(withFalse)
     expect(withTrue).toEqual([windowsEntry])
   })
 
+  it("'readonly-windows' is invariant to hasMacDepot too -- neither depot flag may leak into a row the user cannot change", () => {
+    const withMacFalse = selectSteamPlatformOptions(
+      'readonly-windows',
+      platforms,
+      true,
+      false
+    )
+    const withMacTrue = selectSteamPlatformOptions(
+      'readonly-windows',
+      platforms,
+      true,
+      true
+    )
+    expect(withMacFalse).toEqual(withMacTrue)
+    expect(withMacFalse).toEqual([windowsEntry])
+  })
+
   it("'readonly-macos' with hasWindowsDepot false returns exactly one entry", () => {
     const result = selectSteamPlatformOptions(
       'readonly-macos',
       platforms,
-      false
+      false,
+      true
     )
     expect(result).toEqual([macEntry])
   })
@@ -120,50 +152,134 @@ describe('selectSteamPlatformOptions -- omission, never disablement', () => {
     const withFalse = selectSteamPlatformOptions(
       'readonly-macos',
       platforms,
-      false
+      false,
+      true
     )
     const withTrue = selectSteamPlatformOptions(
       'readonly-macos',
       platforms,
+      true,
       true
     )
     expect(withTrue).toEqual(withFalse)
     expect(withTrue).toEqual([macEntry])
   })
 
-  it("'selectable' with hasWindowsDepot false returns no entry whose value is 'Windows'", () => {
-    const result = selectSteamPlatformOptions('selectable', platforms, false)
-    expect(result.some((p) => p.value === 'Windows')).toBe(false)
-    expect(result).toHaveLength(1)
+  it("'readonly-macos' is invariant to hasMacDepot too -- this row is reached only when the game IS mac-native (steamSectionGating's own branch ordering), so this parameter has no additional gate to apply here", () => {
+    const withMacFalse = selectSteamPlatformOptions(
+      'readonly-macos',
+      platforms,
+      true,
+      false
+    )
+    const withMacTrue = selectSteamPlatformOptions(
+      'readonly-macos',
+      platforms,
+      true,
+      true
+    )
+    expect(withMacFalse).toEqual(withMacTrue)
+    expect(withMacFalse).toEqual([macEntry])
   })
 
-  it("'selectable' with hasWindowsDepot true returns ['Mac', 'Windows'] in that order -- macOS first, matching UI-SPEC row 5's 'macOS (default, pre-selected)'", () => {
-    const result = selectSteamPlatformOptions('selectable', platforms, true)
+  // 34.15 gap-closure round (code review WR-01) -- full 2x2 matrix. Prior to
+  // this fix, `'selectable'`'s macEntry was unconditional (see the
+  // `macIncludedRegardless` saboteur in the non-vacuity block below); this
+  // matrix REPLACES the two single-dimension tests that used to pin that
+  // unconditional shape.
+
+  it("'selectable' with hasWindowsDepot false and hasMacDepot false returns []", () => {
+    const result = selectSteamPlatformOptions(
+      'selectable',
+      platforms,
+      false,
+      false
+    )
+    expect(result).toEqual([])
+  })
+
+  it("'selectable' with hasWindowsDepot true and hasMacDepot false returns only 'Windows' -- 34.15 WR-01: the mac entry is no longer offered unconditionally for a game whose mac depot was never confirmed", () => {
+    const result = selectSteamPlatformOptions(
+      'selectable',
+      platforms,
+      true,
+      false
+    )
+    expect(result.map((p) => p.value)).toEqual(['Windows'])
+  })
+
+  it("'selectable' with hasWindowsDepot false and hasMacDepot true returns only 'Mac'", () => {
+    const result = selectSteamPlatformOptions(
+      'selectable',
+      platforms,
+      false,
+      true
+    )
+    expect(result.map((p) => p.value)).toEqual(['Mac'])
+  })
+
+  it("'selectable' with hasWindowsDepot true and hasMacDepot true returns ['Mac', 'Windows'] in that order -- macOS first, matching UI-SPEC row 5's 'macOS (default, pre-selected)'", () => {
+    const result = selectSteamPlatformOptions(
+      'selectable',
+      platforms,
+      true,
+      true
+    )
     expect(result.map((p) => p.value)).toEqual(['Mac', 'Windows'])
   })
 
   it("'pending' with hasWindowsDepot false returns exactly the macOS entry", () => {
-    const result = selectSteamPlatformOptions('pending', platforms, false)
+    const result = selectSteamPlatformOptions('pending', platforms, false, true)
     expect(result).toEqual([macEntry])
   })
 
   it("'pending' with hasWindowsDepot true is invariant to the depot flag -- the depot flag can never leak into a row the user cannot change", () => {
-    const withFalse = selectSteamPlatformOptions('pending', platforms, false)
-    const withTrue = selectSteamPlatformOptions('pending', platforms, true)
+    const withFalse = selectSteamPlatformOptions(
+      'pending',
+      platforms,
+      false,
+      true
+    )
+    const withTrue = selectSteamPlatformOptions(
+      'pending',
+      platforms,
+      true,
+      true
+    )
     expect(withTrue).toEqual(withFalse)
     expect(withTrue).toEqual([macEntry])
+  })
+
+  it("'pending' is invariant to hasMacDepot too -- the pending row's macOS pin (34.14 D-15) does not read this parameter at all", () => {
+    const withMacFalse = selectSteamPlatformOptions(
+      'pending',
+      platforms,
+      true,
+      false
+    )
+    const withMacTrue = selectSteamPlatformOptions(
+      'pending',
+      platforms,
+      true,
+      true
+    )
+    expect(withMacFalse).toEqual(withMacTrue)
+    expect(withMacFalse).toEqual([macEntry])
   })
 
   it('every returned entry is a member (by reference) of the supplied platforms array -- the function can never fabricate an option', () => {
     for (const mode of ALL_MODES) {
       for (const hasWindowsDepot of [false, true]) {
-        const result = selectSteamPlatformOptions(
-          mode,
-          platforms,
-          hasWindowsDepot
-        )
-        for (const entry of result) {
-          expect(platforms).toContain(entry)
+        for (const hasMacDepot of [false, true]) {
+          const result = selectSteamPlatformOptions(
+            mode,
+            platforms,
+            hasWindowsDepot,
+            hasMacDepot
+          )
+          for (const entry of result) {
+            expect(platforms).toContain(entry)
+          }
         }
       }
     }
@@ -211,9 +327,10 @@ describe('the D-17 gates are not vacuous', () => {
   })
 
   it("includesWindowsRegardless ignores hasWindowsDepot in the 'selectable' branch and returns a 'Windows' entry for ('selectable', platforms, false)", () => {
-    function includesWindowsRegardless<
-      T extends { value: InstallPlatform }
-    >(mode: SteamPlatformRowMode, ps: T[]): T[] {
+    function includesWindowsRegardless<T extends { value: InstallPlatform }>(
+      mode: SteamPlatformRowMode,
+      ps: T[]
+    ): T[] {
       if (mode !== 'selectable') return []
       const mac = ps.find((p) => p.value === 'Mac')
       const win = ps.find((p) => p.value === 'Windows')
@@ -223,7 +340,17 @@ describe('the D-17 gates are not vacuous', () => {
     const sabotaged = includesWindowsRegardless('selectable', platforms)
     expect(sabotaged.some((p) => p.value === 'Windows')).toBe(true)
 
-    const real = selectSteamPlatformOptions('selectable', platforms, false)
+    // 34.15 gap-closure round (WR-01) added a required 4th parameter
+    // (`hasMacDepot`) to the real function's signature -- mechanical only,
+    // this saboteur/assertion pair is otherwise untouched. `true` is passed
+    // because this assertion concerns Windows omission only and is
+    // invariant to the mac parameter's value.
+    const real = selectSteamPlatformOptions(
+      'selectable',
+      platforms,
+      false,
+      true
+    )
     expect(real.some((p) => p.value === 'Windows')).toBe(false)
   })
 
@@ -244,8 +371,77 @@ describe('the D-17 gates are not vacuous', () => {
     const sabotaged = readonlyRowLeaksDepot('readonly-macos', platforms, true)
     expect(sabotaged).toHaveLength(2)
 
-    const real = selectSteamPlatformOptions('readonly-macos', platforms, true)
+    // 34.15 gap-closure round (WR-01): mechanical 4th-argument addition
+    // only -- 'readonly-macos' does not read hasMacDepot at all (see the
+    // "is invariant to hasMacDepot too" test above), so its value here is
+    // arbitrary.
+    const real = selectSteamPlatformOptions(
+      'readonly-macos',
+      platforms,
+      true,
+      true
+    )
     expect(real).toHaveLength(1)
+  })
+})
+
+// ---------------------------------------------------------------------
+// 34.15 gap-closure round -- code review WR-01: the 'selectable' branch's
+// macEntry is no longer unconditional
+// ---------------------------------------------------------------------
+//
+// Pre-fix, `selectSteamPlatformOptions`'s 'selectable' case included the Mac
+// entry regardless of `hasMacDepot` -- unlike the Windows entry immediately
+// beside it, which was already correctly gated on `hasWindowsDepot`. This
+// let the dropdown offer "macOS" for a game whose mac depot was never
+// confirmed: `resolveSteamSectionGating` enters `'selectable'` whenever
+// `windowsDepotOffered` is true (which 34.14 D-04 fails OPEN to when the
+// eligibility probe times out) with NO corresponding check that the game's
+// mac depot was ever confirmed. That directly contradicted 34.15 D-14's own
+// rule for `macDepotOffered` ("an uncaptured or unresolved signal yields
+// `false`, full stop") -- honored for the platform DEFAULT, but not for the
+// option LIST.
+
+describe("34.15 WR-01: 'selectable' no longer offers macOS unconditionally", () => {
+  it('macIncludedRegardless (the exact pre-fix shape) disagrees with the real function on the reachable WR-01 state: windowsDepotOffered true (D-04 fail-open) + macDepotOffered false (never confirmed)', () => {
+    function macIncludedRegardless<T extends { value: InstallPlatform }>(
+      mode: SteamPlatformRowMode,
+      ps: T[],
+      hasWindowsDepot: boolean
+    ): T[] {
+      if (mode !== 'selectable') return []
+      // DEFECT (the exact pre-fix production shape): the Mac entry was
+      // found unconditionally, never gated on a mac-depot flag at all.
+      const mac = ps.find((p) => p.value === 'Mac')
+      const win = hasWindowsDepot
+        ? ps.find((p) => p.value === 'Windows')
+        : undefined
+      return [mac, win].filter((p): p is T => Boolean(p))
+    }
+
+    // The reachable state the code review named: the eligibility probe
+    // timed out, so `platformsCaptured` stays false -> `macDepotOffered`
+    // stays false (D-14's conservative rule) -- but `windowsDepotOffered`
+    // fails OPEN to true (34.14 D-04), so `resolveSteamSectionGating` still
+    // routes to `'selectable'`.
+    const windowsDepotOffered = true
+    const macDepotOffered = false
+
+    const sabotaged = macIncludedRegardless(
+      'selectable',
+      platforms,
+      windowsDepotOffered
+    )
+    expect(sabotaged.some((p) => p.value === 'Mac')).toBe(true)
+
+    const real = selectSteamPlatformOptions(
+      'selectable',
+      platforms,
+      windowsDepotOffered,
+      macDepotOffered
+    )
+    expect(real.some((p) => p.value === 'Mac')).toBe(false)
+    expect(real.map((p) => p.value)).toEqual(['Windows'])
   })
 })
 

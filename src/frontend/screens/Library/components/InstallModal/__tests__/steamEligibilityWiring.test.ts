@@ -497,12 +497,16 @@ describe('Group E (34.14): the depot resolution is CALLED, once, and feeds BOTH 
   })
 
   it('E3: windowsDepotOffered -- not the raw hasWindowsDepot -- is what reaches selectSteamPlatformOptions', () => {
+    // 34.15 gap-closure round (code review WR-01) added a 4th argument,
+    // macDepotOffered, to this call -- the literal below was widened to
+    // match; the property under test (the THIRD argument is
+    // windowsDepotOffered, never the raw hasWindowsDepot) is unchanged.
     const flat = flatten(source)
     expect(flat).toContain(
-      'selectSteamPlatformOptions(platformRowMode, platforms, windowsDepotOffered)'
+      'selectSteamPlatformOptions(platformRowMode, platforms, windowsDepotOffered, macDepotOffered)'
     )
     expect(flat).not.toContain(
-      'selectSteamPlatformOptions(platformRowMode, platforms, hasWindowsDepot)'
+      'selectSteamPlatformOptions(platformRowMode, platforms, hasWindowsDepot, macDepotOffered)'
     )
   })
 
@@ -517,7 +521,26 @@ describe('Group E (34.14): the depot resolution is CALLED, once, and feeds BOTH 
     expect(knownBad).not.toBe(source)
     const flat = flatten(knownBad)
     expect(flat).toContain(
-      'selectSteamPlatformOptions(platformRowMode, platforms, hasWindowsDepot)'
+      'selectSteamPlatformOptions(platformRowMode, platforms, hasWindowsDepot, macDepotOffered)'
+    )
+  })
+
+  it('E3b (34.15 WR-01): macDepotOffered -- not a raw seed or omitted entirely -- is what reaches selectSteamPlatformOptions as the 4th argument', () => {
+    const flat = flatten(source)
+    expect(flat).toContain(
+      'selectSteamPlatformOptions(platformRowMode, platforms, windowsDepotOffered, macDepotOffered)'
+    )
+  })
+
+  it('E3b-RED: deleting the macDepotOffered argument trips E3b, against a known-bad DERIVED FROM THE REAL SOURCE', () => {
+    const knownBad = source.replace(
+      /selectSteamPlatformOptions\(([\s\S]*?),\s*macDepotOffered\s*\)/,
+      'selectSteamPlatformOptions($1)'
+    )
+    expect(knownBad).not.toBe(source)
+    const flat = flatten(knownBad)
+    expect(flat).not.toContain(
+      'selectSteamPlatformOptions(platformRowMode, platforms, windowsDepotOffered, macDepotOffered)'
     )
   })
 

@@ -472,11 +472,16 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   // fail-open path set `platformRowMode` to `'selectable'` while this
   // projection still dropped the Windows entry, an offer that renders as
   // no offer at all. Do not "simplify" this back to `hasWindowsDepot`.
+  // 34.15 gap-closure round, code review WR-01: `macDepotOffered` is now
+  // passed alongside `windowsDepotOffered` so the `'selectable'` branch can
+  // gate its mac entry on the resolved signal too, instead of offering
+  // macOS unconditionally. See `selectSteamPlatformOptions`'s doc comment.
   const platformRowOptions = isSteamManagedApp
     ? selectSteamPlatformOptions(
         platformRowMode,
         platforms,
-        windowsDepotOffered
+        windowsDepotOffered,
+        macDepotOffered
       )
     : availablePlatforms
 
