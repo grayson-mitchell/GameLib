@@ -573,6 +573,23 @@ interface AsyncIPCFunctions {
   }) => Promise<Array<{ id: number; url: string; thumb: string }>>
 }
 
+// Phase 34.15 (34.15-02), D-06/D-07: the Steam library sync tri-state and its
+// failure-reason vocabulary. Reason codes are one per distinguishable backend
+// failure (Claude's Discretion under D-07), chosen so the inline notice can
+// say something more useful than "failed":
+//   - 'client-not-ready': the Steam session could not be re-established.
+//   - 'owned-apps-failed': the CM was reached but the owned-app list did not
+//     arrive -- the cached library is being served instead.
+//   - 'sync-failed': the owned-app list arrived but hydration threw.
+// Both runtimes (Electron main + the Tauri sidecar) represent plain string
+// unions identically, satisfying D-07's cross-runtime representability
+// constraint.
+export type SteamSyncStatus = 'idle' | 'syncing' | 'failed'
+export type SteamSyncFailureReason =
+  | 'client-not-ready'
+  | 'owned-apps-failed'
+  | 'sync-failed'
+
 interface FrontendMessages {
   gameStatusUpdate: (status: GameStatus) => void
   wineVersionsUpdated: () => void
@@ -630,6 +647,17 @@ interface FrontendMessages {
   // background (throttled). `syncing: true` when the first fetch starts,
   // `false` once the last one finishes — drives the library sync indicator.
   steamMetadataSyncing: (payload: { syncing: boolean }) => void
+  // Phase 34.15 (34.15-02), D-06/D-07: pushed on EVERY exit path of
+  // SteamLibraryManager.refresh() (all four -- see Plan 05), mirroring
+  // steamMetadataSyncing verbatim. Replaces refreshingInTheBackground (which
+  // defaults true and resets to true after every unscoped refresh, so it
+  // never actually meant "a refresh is running") as the driver of the Steam
+  // sync indicator's terminal state. `reason` is present only when
+  // `status === 'failed'`.
+  steamSyncStatus: (payload: {
+    status: SteamSyncStatus
+    reason?: SteamSyncFailureReason
+  }) => void
   progressOfWinetricks: (payload: {
     messages: string[]
     installingComponent: string
