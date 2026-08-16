@@ -39,6 +39,7 @@ import gogPresence from './storeManagers/gog/presence'
 import { NileUser } from './storeManagers/nile/user'
 import { ZoomUser } from './storeManagers/zoom/user'
 import { SteamUser } from './storeManagers/steam/user'
+import { noteRefreshTrigger } from './storeManagers/steam/authTrigger'
 import { stopRunningPoll } from './storeManagers/steam/library'
 import { library as steamLibrary } from './storeManagers/steam/state'
 import {
@@ -1044,7 +1045,12 @@ if (existsSync(legendaryInstalled)) {
   })
 }
 
-addHandler('refreshLibrary', async (e, library?) => {
+addHandler('refreshLibrary', async (e, library?, origin?) => {
+  // quick-260817-d61: records the deferral trigger BEFORE any manager's
+  // refresh() runs — noteRefreshTrigger() itself no-ops for a named non-Steam
+  // runner (T-d61-03), so this line is safe to call unconditionally on every
+  // dispatch shape this handler already supports.
+  noteRefreshTrigger(library ?? null, origin)
   if (library !== undefined && library !== 'all') {
     await libraryManagerMap[library].refresh()
   } else {

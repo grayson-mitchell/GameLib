@@ -415,7 +415,13 @@ interface AsyncIPCFunctions {
   requestAppSettings: () => AppSettings
   requestGameSettings: (appName: string) => Promise<GameSettings>
   writeConfig: (args: { appName: string; config: Partial<AppSettings> }) => void
-  refreshLibrary: (library?: Runner | 'all') => Promise<void>
+  // `origin` (quick-260817-d61) is observability + the Steam keyring deferral
+  // trigger ONLY — it must never carry user data. GlobalState.tsx already
+  // computes it for every refreshLibrary() call; this just lets it cross the
+  // IPC boundary so both backend handlers (Electron's addHandler and the
+  // Tauri sidecar's steamFlowRegistration.ts) can attribute a deferred vs.
+  // deliberate Steam refresh to what triggered it.
+  refreshLibrary: (library?: Runner | 'all', origin?: string) => Promise<void>
   launch: (args: LaunchParams) => StatusPromise
   openDialog: (args: OpenDialogOptions) => Promise<string | false>
   install: (args: InstallParams) => Promise<void>

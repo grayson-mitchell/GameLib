@@ -90,6 +90,7 @@
 // — so the direct-import hazard this docstring describes cannot recur here
 // by construction, not merely by convention.
 import { libraryManagerMap } from '../storeManagers'
+import { noteRefreshTrigger } from '../storeManagers/steam/authTrigger'
 
 import { ipcMain } from './electronStub'
 // launchEventCallback: the real Wine/GameConfig/DownloadManager pipeline
@@ -146,6 +147,13 @@ async function handleRefreshLibrary(
   // "simplify" this back to a single `!== undefined` check; the JSON
   // transport is the reason both need to be excluded.
   const rawRunner = args[0] as string | undefined | null
+  // quick-260817-d61: the SECOND arg is the renderer's `origin` — observability +
+  // the Steam keyring deferral trigger only. Read immediately after rawRunner and
+  // BEFORE the single-runner branch below so every dispatch shape (single-runner,
+  // all-runners, and the null/undefined JSON-transport cases documented above)
+  // records its trigger the same way main.ts's own handler does.
+  const rawOrigin = args[1] as string | undefined | null
+  noteRefreshTrigger(rawRunner, rawOrigin)
 
   // Single-runner branch — reproduces main.ts:1051-1053's
   // `library !== undefined && library !== 'all'` gate, extended to also

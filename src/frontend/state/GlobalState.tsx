@@ -1144,7 +1144,7 @@ class GlobalState extends PureComponent<Props> {
     }
 
     try {
-      await window.api.refreshLibrary(library)
+      await window.api.refreshLibrary(library, origin)
       return await this.refresh(library, checkForUpdates)
     } catch (error) {
       window.api.logError(`Library refresh failed: ${String(error)}`)
