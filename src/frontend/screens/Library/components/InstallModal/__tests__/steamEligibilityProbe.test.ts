@@ -163,11 +163,13 @@ describe('applyEligibilityResponse / applyEligibilityFailure', () => {
     const trueVerdict: SteamBottleEligibilityVerdict = {
       eligible: true,
       hasWindowsDepot: false,
+      hasMacDepot: false,
       platformsCaptured: false
     }
     const falseVerdict: SteamBottleEligibilityVerdict = {
       eligible: false,
       hasWindowsDepot: false,
+      hasMacDepot: false,
       platformsCaptured: false
     }
 
@@ -196,6 +198,7 @@ describe('applyEligibilityResponse / applyEligibilityFailure', () => {
       verdict: {
         eligible: true,
         hasWindowsDepot: false,
+        hasMacDepot: false,
         platformsCaptured: false
       }
     })
@@ -207,6 +210,7 @@ describe('applyEligibilityResponse / applyEligibilityFailure', () => {
       verdict: {
         eligible: true,
         hasWindowsDepot: false,
+        hasMacDepot: false,
         platformsCaptured: false
       }
     })
@@ -392,6 +396,7 @@ describe('34.14: the depot pair travels through the widened round trip', () => {
       verdict: {
         eligible: false,
         hasWindowsDepot: true,
+        hasMacDepot: false,
         platformsCaptured: true
       }
     })
@@ -405,6 +410,7 @@ describe('34.14: the depot pair travels through the widened round trip', () => {
       verdict: {
         eligible: true,
         hasWindowsDepot: false,
+        hasMacDepot: false,
         platformsCaptured: false
       }
     })
@@ -427,6 +433,7 @@ describe('34.14: the depot pair travels through the widened round trip', () => {
       verdict: {
         eligible: true,
         hasWindowsDepot: true,
+        hasMacDepot: true,
         platformsCaptured: true
       }
     })
@@ -459,8 +466,8 @@ describe('34.14: the depot pair travels through the widened round trip', () => {
     })
   })
 
-  it("the hook's return shape carries exactly four documented keys -- pending, bottleRequired, hasWindowsDepot, depotSignalCaptured", () => {
-    // Structural guard against a fifth, undocumented pending flag being
+  it("the hook's return shape carries exactly five documented keys -- pending, bottleRequired, hasWindowsDepot, hasMacDepot, depotSignalCaptured", () => {
+    // Structural guard against a sixth, undocumented pending flag being
     // added later in violation of D-01. Mirrors the `Object.keys(verdict)`
     // convention `steamSectionGating.test.ts` already uses. Exercises the
     // pure state functions to build the object the hook returns, rather
@@ -473,6 +480,7 @@ describe('34.14: the depot pair travels through the widened round trip', () => {
         verdict: {
           eligible: true,
           hasWindowsDepot: true,
+          hasMacDepot: true,
           platformsCaptured: true
         }
       }
@@ -487,6 +495,10 @@ describe('34.14: the depot pair travels through the widened round trip', () => {
         resolvedState.phase === 'resolved'
           ? resolvedState.hasWindowsDepot
           : false,
+      hasMacDepot:
+        resolvedState.phase === 'resolved'
+          ? resolvedState.hasMacDepot
+          : false,
       depotSignalCaptured:
         resolvedState.phase === 'resolved'
           ? resolvedState.depotSignalCaptured
@@ -496,9 +508,85 @@ describe('34.14: the depot pair travels through the widened round trip', () => {
       [
         'bottleRequired',
         'depotSignalCaptured',
+        'hasMacDepot',
         'hasWindowsDepot',
         'pending'
       ].sort()
     )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 34.15 D-12: hasMacDepot rides the SAME widened round trip as
+// hasWindowsDepot -- the mac sibling gap neither RESEARCH.md nor
+// PATTERNS.md surfaced.
+// ---------------------------------------------------------------------------
+describe('34.15 D-12: hasMacDepot travels through the probe state machine', () => {
+  it('applyEligibilityResponse maps verdict.hasMacDepot onto the resolved state (both true and false)', () => {
+    const pending: EligibilityState = { phase: 'pending', appName: '440' }
+
+    const macTrue = applyEligibilityResponse(pending, {
+      appName: '440',
+      verdict: {
+        eligible: true,
+        hasWindowsDepot: false,
+        hasMacDepot: true,
+        platformsCaptured: true
+      }
+    })
+    expect(macTrue).toMatchObject({ hasMacDepot: true })
+
+    const macFalse = applyEligibilityResponse(pending, {
+      appName: '440',
+      verdict: {
+        eligible: true,
+        hasWindowsDepot: true,
+        hasMacDepot: false,
+        platformsCaptured: true
+      }
+    })
+    expect(macFalse).toMatchObject({ hasMacDepot: false })
+  })
+
+  it('applyEligibilityFailure yields hasMacDepot: false TOGETHER WITH depotSignalCaptured: false -- the "we never found out" pair, not the field alone', () => {
+    const pending: EligibilityState = { phase: 'pending', appName: '440' }
+    const resolved = applyEligibilityFailure(pending, { appName: '440' })
+    expect(resolved).toMatchObject({
+      hasMacDepot: false,
+      depotSignalCaptured: false
+    })
+  })
+
+  it('DISCRIMINATOR: the stale cross-game guard still holds for hasMacDepot -- a response for a different appName leaves the previous hasMacDepot untouched', () => {
+    const state: EligibilityState = {
+      phase: 'resolved',
+      appName: '440',
+      bottleRequired: false,
+      hasWindowsDepot: false,
+      hasMacDepot: true,
+      depotSignalCaptured: true
+    }
+    const result = applyEligibilityResponse(state, {
+      appName: '570',
+      verdict: {
+        eligible: true,
+        hasWindowsDepot: true,
+        hasMacDepot: false,
+        platformsCaptured: true
+      }
+    })
+    expect(result).toBe(state)
+    expect((result as typeof state).hasMacDepot).toBe(true)
+  })
+
+  it("initialEligibilityState's probing branch still returns only { phase: 'pending' } -- no depot fields at all, hasMacDepot included", () => {
+    const state = initialEligibilityState({
+      platform: 'darwin',
+      runner: 'steam',
+      appName: '440',
+      action: 'install'
+    })
+    expect(state).toEqual({ phase: 'pending', appName: '440' })
+    expect(state).not.toHaveProperty('hasMacDepot')
   })
 })

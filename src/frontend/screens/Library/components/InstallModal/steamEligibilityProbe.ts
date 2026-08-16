@@ -34,13 +34,14 @@ import type { SteamSectionGatingVerdict } from './steamSectionGating'
  * carries the resolved `bottleRequired` boolean, one round trip's answer.
  *
  * 34.14 D-02/D-03: the `'resolved'` variant additionally carries
- * `hasWindowsDepot`/`depotSignalCaptured`, the two new
- * `SteamBottleEligibilityVerdict` booleans, riding the SAME round trip --
- * no second probe, no second IPC call site. Named `depotSignalCaptured`
- * here (not `platformsCaptured`) so this module's vocabulary matches the
- * gating vocabulary `steamPlatformRow.ts`/`steamSectionGating.ts` use; it is
- * mapped 1:1 from `verdict.platformsCaptured` at the one place the verdict
- * enters (`applyEligibilityResponse` below). The `'pending'` variant stays
+ * `hasWindowsDepot`/`depotSignalCaptured`, and 34.15 D-12 adds a third,
+ * `hasMacDepot` -- three `SteamBottleEligibilityVerdict` booleans, riding the
+ * SAME round trip -- no second probe, no second IPC call site. Named
+ * `depotSignalCaptured` here (not `platformsCaptured`) so this module's
+ * vocabulary matches the gating vocabulary `steamPlatformRow.ts`/
+ * `steamSectionGating.ts` use; it is mapped 1:1 from
+ * `verdict.platformsCaptured` at the one place the verdict enters
+ * (`applyEligibilityResponse` below). The `'pending'` variant stays
  * unchanged -- a pending state carries no depot answer by definition; the
  * seed for an already-captured game is supplied by `index.tsx` (D-05), not
  * by this module.
@@ -52,6 +53,7 @@ export type EligibilityState =
       appName: string
       bottleRequired: boolean
       hasWindowsDepot: boolean
+      hasMacDepot: boolean
       depotSignalCaptured: boolean
     }
 
@@ -116,12 +118,14 @@ export function initialEligibilityState({
   // uncaptured" shape can never reach D-04's fail-open on a surface that
   // renders it. Resolving immediately still requires an explicit depot
   // answer; `false`/`false` is the only honest one to give when the probe
-  // never runs at all.
+  // never runs at all. 34.15 D-12: `hasMacDepot` joins the same
+  // settled-and-uncaptured shape for the same reason.
   return {
     phase: 'resolved',
     appName,
     bottleRequired: false,
     hasWindowsDepot: false,
+    hasMacDepot: false,
     depotSignalCaptured: false
   }
 }
@@ -145,10 +149,12 @@ export function applyEligibilityResponse(
     phase: 'resolved',
     appName: response.appName,
     bottleRequired: response.verdict.eligible,
-    // 34.14 D-02: the widened verdict's two booleans travel to the renderer
-    // on this SAME round trip -- no second guard needed, the appName check
-    // above already covers the whole (now wider) response object.
+    // 34.14 D-02 / 34.15 D-12: the widened verdict's three booleans travel
+    // to the renderer on this SAME round trip -- no second guard needed, the
+    // appName check above already covers the whole (now wider) response
+    // object.
     hasWindowsDepot: response.verdict.hasWindowsDepot,
+    hasMacDepot: response.verdict.hasMacDepot,
     depotSignalCaptured: response.verdict.platformsCaptured
   }
 }
@@ -177,8 +183,12 @@ export function applyEligibilityFailure(
     // (`steamPlatformRow.ts`), which reads `probeSettled: true` together
     // with `depotSignalCaptured: false` here and OFFERS Windows rather than
     // hiding it. Without this note the pairing below reads as a
-    // contradiction of D-04 rather than its input.
+    // contradiction of D-04 rather than its input. 34.15 D-12: `hasMacDepot`
+    // is covered by the SAME reading -- this records "we never found out",
+    // NOT "no Mac build exists". Its downstream fail-open equivalent is
+    // applied in the widened `resolveDepotAvailability` (Plan 04).
     hasWindowsDepot: false,
+    hasMacDepot: false,
     depotSignalCaptured: false
   }
 }
@@ -294,6 +304,7 @@ export function useSteamBottleEligibility({
   pending: boolean
   bottleRequired: boolean
   hasWindowsDepot: boolean
+  hasMacDepot: boolean
   depotSignalCaptured: boolean
 } {
   const identityRef = useRef<string>()
@@ -361,6 +372,7 @@ export function useSteamBottleEligibility({
     pending: isEligibilityPending(state),
     bottleRequired: state.phase === 'resolved' ? state.bottleRequired : false,
     hasWindowsDepot: state.phase === 'resolved' ? state.hasWindowsDepot : false,
+    hasMacDepot: state.phase === 'resolved' ? state.hasMacDepot : false,
     depotSignalCaptured:
       state.phase === 'resolved' ? state.depotSignalCaptured : false
   }
