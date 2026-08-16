@@ -100,3 +100,70 @@ backend is not fixed, so a user who has already persisted a `toolkit`
 engine into the bottle store (from before this filter shipped) is still
 exposed to the silent-broken-bottle failure mode on their next
 provision/launch.
+
+## Update 2026-08-16 — mostly closed by Phase 34.13; one guard left
+
+**Scope shrinks. Impact downgrades.** The note above is out of date: it was written
+mid-34.13, and the rest of that phase landed three further changes it does not account
+for. What is left is a single missing guard, not the multi-part defect this todo was
+filed as.
+
+### Landed since the 2026-08-14 note
+
+1. **`getSteamBottleSettings()` now self-heals AND re-persists** (`bottle.ts:310-336`,
+   34.13 review A-21). Any candidate `wineVersion` whose `type` is not `'crossover'` is
+   replaced with CrossOver's own engine via `resolveCrossoverWine()`, and — the part the
+   earlier fix `539bc979c` missed — the correction is written back to
+   `steamBottleConfigStore` once, so every *other* reader of that key sees the healed
+   value too. `getSteamBottleEligibilityVerdict` reads the store directly and deliberately
+   (`installFormIpc.ts`), and was previously served the un-healed engine.
+2. **Submission-boundary filter** (`steamBottleDefaults.ts:164-172`, review C-03).
+   `resolveSubmittedBottleEngine` returns the armed engine only when
+   `isBottleCapableEngine` accepts it, otherwise `undefined` — which `provisionBottle`
+   already treats as "derive a sane engine yourself". This closes the hole D-16's
+   dropdown filter opened: an engine armed by the Phase-17 fallback or by D-15's
+   persisted-value precedence became *invisible and unselectable* yet still submitted.
+3. **Non-CrossOver writes are now diagnosable** (`bottle.ts:371-377`).
+   `persistBottleWineVersion` logs a warning rather than silently accepting. It stays
+   permissive by an explicit recorded decision (review B-WR-08): `launcher.ts`'s
+   `checkWineBeforeLaunch` self-heal is a legitimate producer of a non-CrossOver value
+   here, so rejecting outright would break the recovery path the function exists to serve.
+
+### The only thing still open
+
+`provisionBottle` persists `opts.wineVersion` **unchecked**:
+
+```ts
+// bottle.ts:702-704 — step (2), "Persist the chosen wine/bottle identity"
+if (opts?.wineVersion) {
+  steamBottleConfigStore.set('wineVersion', opts.wineVersion)
+}
+```
+
+Its sibling provisioner already rejects at the same point — `provisionBridgeBottle`,
+`bottle.ts:1166-1175`, D-08 / T-24-09, *"do not silently create a broken GPTK/toolkit
+bottle"*. `steamBottleDefaults.ts:157-162` names this exact asymmetry in a KNOWN
+REMAINING GAP comment, and says why it was not closed there: that pass could not edit
+`bottle.ts`.
+
+The fix is the `provisionBridgeBottle` guard mirrored into `provisionBottle`, placed
+before step 2's store write.
+
+### Impact: downgraded to defense-in-depth
+
+**This is no longer a live failure path.** Change 1 above means a non-CrossOver engine
+reaching the store is corrected and re-persisted on the next `getSteamBottleSettings()`
+read — and `provisionBottle`'s own step 6 re-reads through that getter. The self-heal
+only declines when `resolveCrossoverWine()` finds no CrossOver on disk, and in that case
+Steam bottling cannot function at all (creation is hardcoded to CrossOver's `cxbottle`),
+so there is no working configuration left to break.
+
+What the missing guard still costs: the store transiently holds a wrong value, the
+rejection is implicit (silent correction) rather than an explicit error the caller can
+surface, and the two sibling provisioners disagree about the same rule — which is how the
+original defect got in. Worth closing as a small standalone task; no longer urgent.
+
+**Option (b)** (a prefix-based `toolkit`/`wine` Steam provisioning path so GPTK genuinely
+works as a Steam runner) remains fully out of scope and untouched.
+
+Verified against source 2026-08-16 during quick task `260816-i8a`.
