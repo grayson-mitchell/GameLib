@@ -32,7 +32,7 @@ import {
   rmSync,
   writeFileSync
 } from 'node:fs'
-import { open } from 'node:fs/promises'
+import { open, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { logWarning, logInfo } from 'backend/logger'
@@ -49,6 +49,9 @@ import {
   CHUNK_FETCH_ATTEMPTS,
   PLAN_BUILD_MAX_ATTEMPTS,
   reduceContentServers,
+  DIRECTORY_FLAG,
+  SYMLINK_FLAG,
+  EXECUTABLE_FLAG,
   type DepotPlan,
   type DepotPlanFile,
   type DepotDownloadFailure,
@@ -3054,6 +3057,57 @@ describe('downloadDepotFiles', () => {
       expect(result.failures[0].error).toMatch(
         /mode-application failure|simulated mode-application failure/i
       )
+    })
+  })
+
+  // ── G-23-02 (23-08 Task 1, VERDICT: H2) ─────────────────────────────────
+  // 23-TRACE.md's "Live run 2 — HUMANKIND" section: "### VERDICT: H2
+  // CONFIRMED" — "Confirming field values: flagBearing=140 (> 0, so flags
+  // *are* populated) and executableFlagged=0 ... GameLib applied precisely
+  // what the manifest specified, which was nothing executable." H2's own
+  // Task 1 action is explicit: "There is no mapping bug to fix here — leave
+  // Task 1's code unchanged". No source change was made for this task.
+  //
+  // This is the plan's "branch-independent, the acceptance behavior" test,
+  // required for every verdict branch. For H1/H5 it would need to be RED
+  // before the fix; for H2 there is no fix, and (per WazHack's control
+  // evidence in 23-TRACE.md Live run 1: chmodAttempts=1, landed binary
+  // -rwxr-xr-x, byte-for-byte identical to Steam's own install) the writer
+  // already applies EXECUTABLE_FLAG correctly. This test is therefore an
+  // honest confirming regression guard, not a RED-then-GREEN proof — it was
+  // already GREEN before this plan touched anything. See 23-08-SUMMARY.md
+  // for the full accounting of why RED-first does not apply to the H2
+  // branch.
+  describe('G-23-02 (23-08 Task 1, H2): EXECUTABLE_FLAG lands +x through the real download path', () => {
+    it('a fresh downloadDepotFiles run over an EXECUTABLE_FLAG(32)-only manifest entry leaves the landed file with a non-zero execute bit', async () => {
+      const content = Buffer.from('exec-only-bytes')
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+
+      const file: DepotPlanFile = {
+        filename: 'game-only-exec.bin',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [
+          { sha: 'sha-exec-only', cb_original: content.length, offset: 0 }
+        ],
+        flags: EXECUTABLE_FLAG // 32, no other bits — the H2-relevant shape
+      }
+      const plan = makePlan(
+        [
+          { depotId: '676', gid: 'g74', key: Buffer.from('key'), files: [file] }
+        ],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      const dest = join(dir, 'common', 'SomeGame', 'game-only-exec.bin')
+      expect((await stat(dest)).mode & 0o111).not.toBe(0)
     })
   })
 
