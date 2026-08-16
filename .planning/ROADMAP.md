@@ -1392,6 +1392,36 @@ Plans:
 - [x] 34.14-04-PLAN.md — Wave 3. Wire the composition root; correct the second stale doc-comment; lock the wiring with a new source gate and three source-derived known-bads.
 - [x] 34.14-05-PLAN.md — Wave 4. Full-suite reconciliation + shipped-gate census + the BLOCKING D-08 UAT gate (both runtimes x network up/blocked). DONE 2026-08-16 (34.14-05-SUMMARY.md) — D-08 PASSED.
 
+### Phase 34.15: Steam platform-signal and sync integrity (INSERTED)
+
+**Goal:** Close the three pre-existing Steam defects that Phase 34.14's D-08 UAT gate surfaced but which 34.14 never claimed to fix. 34.14 made the renderer behave **safely** when the depot signal is missing; this phase reduces how often it is missing, gives the library sync a **terminal failure state**, and applies 34.14's own *absent-is-not-negative* principle to the **mac** side, where it was never applied.
+
+**Requirements**: TBD (run `/gsd-discuss-phase 34.15`)
+**Depends on:** Phase 34.14 (COMPLETE) and quick task `260816-hdg` — the read-boundary normalization in `steam/metadataCapture.ts` (`depotSignalCaptured`) that item 1 must not regress
+**Blocks:** nothing. Independent of Phase 35.
+**Plans:** 0 plans (not yet planned)
+
+**Why this exists.** 34.14's gate was designed to prove one renderer fix and instead surfaced four pre-existing Steam defects. One (the pre-D-17 `steam_metadata` residue) was closed by quick task `260816-hdg`. Three remain, and all three were re-verified against source on 2026-08-16 — each has a pending todo carrying file:line evidence. A fourth Steam todo (32-bit-mac orphaned installs) is **deliberately excluded**: it is install-lifecycle, a different axis.
+
+**Scope — three items.**
+
+**(1) HIGH — the Steam sync captures NO platform data.** Todo: `.planning/todos/pending/2026-08-16-steam-sync-does-not-capture-platforms-lazy-per-game-only.md`. The sync only **reads** the cache (`library.ts:785-787`); `getOwnedApps()` returns appIds and names only. Platform flags are populated **lazily, one game at a time**, via `store.steampowered.com/api/appdetails` (`games.ts:647`, persisted `games.ts:704`). So across most of a ~378-game library `is_windows_native` is `undefined` — which means **34.14's D-04 fail-open is load-bearing in ORDINARY use**, not merely a network-outage safety net. That is an argument *for* 34.14, and also the reason this data gap is worth closing on its own terms. Direction: bulk capture at sync time (the endpoint accepts `?appids=a,b,c`) or a post-sync background backfill; rate-limited and resumable. The endpoint is undocumented and rate-limits aggressively — **measure before choosing a batch size**.
+
+> **Hard constraint:** keep the three-valued contract intact — `undefined` = never captured, `false` = confirmed no depot, `true` = depot present. Do **not** collapse `undefined → false` to make the data look complete. `library.ts:764-776` documents at length why that collapse was removed, and 34.14's entire gating layer depends on the distinction surviving.
+
+**(2) HIGH — the sync spinner has no failure state, and blocks the WHOLE library.** Todo: `.planning/todos/pending/2026-08-16-steam-syncing-spinner-has-no-failure-state-blocks-whole-library.md`. Two distinct defects, neither touched by 34.14. **(a) No terminal state:** the guard at `Library/index.tsx:1013-1019` clears only when the library populates; `refreshingInTheBackground` defaults `true` (`GlobalState.tsx:295`) and `steam.library` starts `[]`, so on a refresh **failure** it spins forever. The backend logs `Steam client not ready` (`library.ts:670`) and gives up, but nothing propagates to the UI. This is the **sibling of an already-fixed bug** documented at `GlobalState.tsx:1508-1515` — that fix ensured refresh *runs*; it did not add a terminal state for refresh running and then *failing*. **(b) Unscoped overlay:** the centred `UpdateComponent` is not scoped to the Steam section, so an unreachable Steam hides other runners' games — reproduced live with 6 GOG games invisible behind it. Direction: clear on failure and surface the real error; scope the overlay to Steam; add a regression test for refresh **running-and-failing** specifically (existing coverage only proves the spinner appears and clears on success — exactly the gap that let the sibling bug recur in a new form).
+
+**(3) MEDIUM — absent `is_mac_native` is read as "no Mac build".** Todo: `.planning/todos/pending/2026-08-16-absent-is-mac-native-treated-as-no-mac-build-mirror-of-34-14.md`. The exact mirror of the conflation 34.14 was created to eliminate, in the half 34.14 did not cover. `InstallModal/index.tsx:165` (`Boolean(gameInfo?.is_mac_native)`) and `:242` (`isMac && gameInfo?.is_mac_native`) both collapse "unknown" into "false". Observed during 34.14's own UAT: on a cold cache the dialog rendered a confident **Windows-only** icon row for Terraria (105600), which genuinely ships both, and defaulted the selector away from a real native Mac build. The icon row is an **assertion about the game**; under an uncaptured signal it asserts what the app cannot know. Direction: extend the pure resolver in `steamPlatformRow.ts` to return a mac availability triple the way `resolveDepotAvailability` already does for Windows; **suppress the icon row entirely** while the signal is unresolved rather than rendering a confident subset (no icons is honest, a Windows-only icon is not); and decide `getDefaultplatform`'s uncaptured-case behaviour **explicitly**, with the rationale commented — Windows-via-bottle always works, so it is arguably the safer fallback, but it should be a decision, not a fallthrough.
+
+> **Hard prohibition:** do **not** fix (3) by loosening the comparison to `is_mac_native !== false`. That is the `treatsAbsentAsAvailable` saboteur shape that **three shipped gates in `steamPlatformRow.test.ts` exist to reject**, and the same trap applies on the mac side.
+
+**Explicitly out of scope:** the 32-bit-mac orphaned-install todo (`2026-08-15-32bit-mac-steam-titles-orphan-their-native-install.md` — install-lifecycle, stays pending) and the `provisionBottle` CrossOver guard remaining in the GPTK broken-bottle todo.
+
+**Likely needs a UAT gate** for items 1 and 2 — both are about behaviour under conditions a warm, online library cannot reproduce on demand, which is the same constraint that shaped 34.14's D-08 gate. Decide during discuss-phase.
+
+Plans:
+- [ ] TBD (run `/gsd-discuss-phase 34.15`, then `/gsd-plan-phase 34.15`)
+
 ### Phase 34.1: Tauri IPC re-plumb slice 4 — app shell and window chrome (INSERTED)
 
 **Goal:** Port the **app shell and window chrome** IPC cluster (**33 channels** — `callTool` reassigned to Phase 34.5 by D-14) onto the Tauri build: window state and controls (minimize/maximize/unmaximize/close/fullscreen/frameless), zoom factor, title-bar overlay, tray colour, About window, language switching, custom themes/CSS, app version + changelog + releases, connectivity signal, gamepad input, and quit/lock/unlock. Establishes a **third port kind** — `renderer-side (Tauri JS)` — for window chrome (D-01/D-02), and is the **first slice to modify `src/backend/main.ts`** (D-07 body extraction), so the additive/reversible invariant becomes BEHAVIORAL rather than textual: `npm start` and `pnpm tauri:dev` must both still work.
