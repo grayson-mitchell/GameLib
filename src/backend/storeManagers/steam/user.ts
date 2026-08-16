@@ -3,6 +3,7 @@ import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { configStore } from './electronStores'
 import { STEAM_INSTALL_PATHS } from './constants'
 import { getTokenStore, readTokenOutcome } from './tokenStore'
+import { currentTriggerLabel } from './authTrigger'
 import { withTimeout } from './withTimeout'
 import { platform } from 'process'
 import type {
@@ -174,7 +175,7 @@ export class SteamUser {
     // surfaces the retryable condition in the backend log and in the
     // return value only — no new IPC channel and no frontend banner is
     // added here, that is separate work.
-    const outcome = await readTokenOutcome(getTokenStore())
+    const outcome = await readTokenOutcome(getTokenStore(), currentTriggerLabel())
     if (outcome.status === 'unreadable') {
       // Deliberately does NOT contain the substring "no stored refresh
       // token" — that string reads to a user/log-reader as "you are signed
@@ -314,7 +315,7 @@ export class SteamUser {
     // type and every other caller are unchanged. This keeps a single read
     // path through the seam (ensureConnected() above uses the same call)
     // rather than two divergent ones.
-    const outcome = await readTokenOutcome(getTokenStore())
+    const outcome = await readTokenOutcome(getTokenStore(), currentTriggerLabel())
     if (outcome.status !== 'present') return undefined
     return { refreshToken: outcome.token }
   }

@@ -229,6 +229,10 @@ export class SidecarKeyringSlotStore implements TokenStore {
    * directly instead (quick-260814-r2d) — see `tokenStore.ts`'s `TokenReadOutcome`.
    */
   async getToken(): Promise<string> {
+    // Zero-arg by contract (D-04 -- Humble and every existing caller keep
+    // calling this with no arguments). Internally routes through the SAME
+    // `readToken()` seam as every trigger-aware caller, with no trigger to
+    // report -- logged as `trigger=unspecified`, never a third read path.
     const outcome = await this.readToken()
     return outcome.status === 'present' ? outcome.token : ''
   }
@@ -239,15 +243,21 @@ export class SidecarKeyringSlotStore implements TokenStore {
    * a failed read into the same `''` a genuinely empty slot returns. Holds the exact control flow
    * `getToken()` used to hold directly: success-cache hit first, then in-flight dedupe, then the
    * failure memo, then a fresh `fetchToken()`.
+   *
+   * `context` (quick-260817-d61) is an OPTIONAL trigger label -- what deliberate Steam action, if
+   * any, caused this read -- forwarded to `fetchToken()` and appended to every log line below.
+   * Never a secret. `getToken()` calls this with no context (`undefined` -> `'unspecified'` at the
+   * log site); Steam's own callers (`user.ts`) pass one through `readTokenOutcome(store, context)`.
    */
-  async readToken(): Promise<TokenReadOutcome> {
+  async readToken(context?: string): Promise<TokenReadOutcome> {
+    const label = context ?? 'unspecified'
     // Success-path observability (F-34.5-G6-26). A cache hit issues NO `keyring_get` and therefore
     // CANNOT raise a Keychain prompt -- this line is what distinguishes "0 prompts because the fix
     // works" from "0 prompts because the value was already in memory". Before this existed, a live
     // session could not tell those apart, and the second was silently read as the first.
     if (this.cachedToken) {
       logDebug(
-        `SidecarKeyringSlotStore(${this.slot}).getToken(): served from cache, no ${RUST_KEYRING_GET} issued`,
+        `SidecarKeyringSlotStore(${this.slot}).getToken(): served from cache, no ${RUST_KEYRING_GET} issued trigger=${label}`,
         LogPrefix.Steam
       )
       return this.cachedToken.value
@@ -256,7 +266,7 @@ export class SidecarKeyringSlotStore implements TokenStore {
     }
     if (this.pendingToken) {
       logDebug(
-        `SidecarKeyringSlotStore(${this.slot}).getToken(): joined in-flight read, no additional ${RUST_KEYRING_GET} issued`,
+        `SidecarKeyringSlotStore(${this.slot}).getToken(): joined in-flight read, no additional ${RUST_KEYRING_GET} issued trigger=${label}`,
         LogPrefix.Steam
       )
       return this.pendingToken
@@ -277,12 +287,12 @@ export class SidecarKeyringSlotStore implements TokenStore {
     ) {
       const reason = this.failedTokenReason ?? 'unavailable'
       logDebug(
-        `SidecarKeyringSlotStore(${this.slot}).getToken(): memo hit, answering unreadable/${reason} without a second ${RUST_KEYRING_GET}`,
+        `SidecarKeyringSlotStore(${this.slot}).getToken(): memo hit, answering unreadable/${reason} without a second ${RUST_KEYRING_GET} trigger=${label}`,
         LogPrefix.Steam
       )
       return { status: 'unreadable', reason }
     }
-    this.pendingToken = this.fetchToken()
+    this.pendingToken = this.fetchToken(context)
     try {
       return await this.pendingToken
     } finally {
@@ -290,7 +300,9 @@ export class SidecarKeyringSlotStore implements TokenStore {
     }
   }
 
-  private async fetchToken(): Promise<TokenReadOutcome> {
+  private async fetchToken(context?: string): Promise<TokenReadOutcome> {
+    const started = Date.now()
+    const label = context ?? 'unspecified'
     let result: unknown
     // Every REAL Keychain round trip is announced before it is issued (F-34.5-G6-26). This is the
     // only call in this class that can raise a macOS approval prompt, so the count of these lines
@@ -298,15 +310,18 @@ export class SidecarKeyringSlotStore implements TokenStore {
     // -- `U-34.5-10`'s bar asks for exactly that cross-check, and before this line existed the log
     // supplied no attempt record to check against. Logged at INFO, not DEBUG, because DEBUG output
     // is settings-dependent and a gate line that may not be written is no better than no line.
+    // `trigger=` (quick-260817-d61) names what deliberate Steam action, if any, caused this
+    // specific Keychain round trip -- the input the deferred operator session
+    // (U-34.5-01/U-34.5-10, plan 34.5-58) cross-checks an observed prompt against.
     logInfo(
-      `SidecarKeyringSlotStore(${this.slot}).getToken(): issuing ${RUST_KEYRING_GET} (may prompt)`,
+      `SidecarKeyringSlotStore(${this.slot}).getToken(): issuing ${RUST_KEYRING_GET} (may prompt) trigger=${label}`,
       LogPrefix.Steam
     )
     try {
       result = await requestRustInvoke(RUST_KEYRING_GET, [this.slot])
     } catch (error) {
       logWarning(
-        `SidecarKeyringSlotStore(${this.slot}).getToken(): ${RUST_KEYRING_GET} failed: ${errorMessage(error)}`,
+        `SidecarKeyringSlotStore(${this.slot}).getToken(): ${RUST_KEYRING_GET} failed: ${errorMessage(error)} trigger=${label} elapsed=${Date.now() - started}ms`,
         LogPrefix.Steam
       )
       // NOT cached as a VALUE -- a failed/unavailable read must not poison subsequent reads
@@ -324,7 +339,7 @@ export class SidecarKeyringSlotStore implements TokenStore {
       // window this failure is now memoized for. This is the line a live run greps to prove the
       // memo engaged; its absence on what should have been a second prompt would falsify the fix.
       logWarning(
-        `keyring failure memoized slot=${this.slot} class=${reason} ms=${KEYRING_FAILURE_MEMO_MS}`,
+        `keyring failure memoized slot=${this.slot} class=${reason} ms=${KEYRING_FAILURE_MEMO_MS} trigger=${label}`,
         LogPrefix.Steam
       )
       return { status: 'unreadable', reason }
@@ -341,11 +356,13 @@ export class SidecarKeyringSlotStore implements TokenStore {
     // grep and its raw output" was unsatisfiable by construction. Three gate cycles recorded that
     // condition as never held; it was never observable. `present` distinguishes a real stored
     // secret from the healthy no-entry first-run case, which is a successful read either way.
-    // NEVER logs the value -- slot name, presence and length only.
+    // NEVER logs the value -- slot name, presence and length only. `trigger=`/`elapsed=`
+    // (quick-260817-d61) are APPENDED after the pre-existing `present=`/`len=` tokens -- never
+    // reordered, never renamed; every pre-existing grep substring stays load-bearing verbatim.
     logInfo(
       `SidecarKeyringSlotStore(${this.slot}).getToken(): ${RUST_KEYRING_GET} ok present=${
         value.length > 0
-      } len=${value.length}`,
+      } len=${value.length} trigger=${label} elapsed=${Date.now() - started}ms`,
       LogPrefix.Steam
     )
     // A SUCCESSFUL read clears any stale failure memo -- there is nothing left to bound once a

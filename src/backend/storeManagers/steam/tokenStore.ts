@@ -76,8 +76,15 @@ export interface TokenStore {
    *  sidecar's keyring-backed store, where a Keychain timeout or a Deny is a
    *  real failure, not an empty slot. Absent on `ElectronTokenStore` and
    *  `DevVaultTokenStore`, which keep their existing `''`-only semantics
-   *  untouched (REQ-28-07 — their bodies are not modified by this seam). */
-  readToken?(): Promise<TokenReadOutcome>
+   *  untouched (REQ-28-07 — their bodies are not modified by this seam).
+   *
+   *  `context` (quick-260817-d61) is an OPTIONAL trigger label — what
+   *  deliberate Steam action, if any, caused this read — forwarded verbatim
+   *  to the implementation for log annotation only. Never a secret, never
+   *  interpreted by this module. An implementation that ignores it is exactly
+   *  as correct as one that logs it; the parameter exists so the keyring
+   *  implementation CAN log it without a second, divergent read path. */
+  readToken?(context?: string): Promise<TokenReadOutcome>
 }
 
 /**
@@ -100,9 +107,10 @@ export interface TokenStore {
  * the one with the observed 9:1 failure rate and is what this seam fixes.
  */
 export async function readTokenOutcome(
-  store: TokenStore
+  store: TokenStore,
+  context?: string
 ): Promise<TokenReadOutcome> {
-  if (store.readToken) return store.readToken()
+  if (store.readToken) return store.readToken(context)
   const token = await store.getToken()
   return token ? { status: 'present', token } : { status: 'absent' }
 }

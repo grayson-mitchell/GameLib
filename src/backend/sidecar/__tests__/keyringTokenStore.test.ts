@@ -18,6 +18,7 @@
 
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 // ── sidecarRpc mock — fake Rust responder, in-memory program + call log ─────
 jest.mock('../sidecarRpc', () => ({
@@ -518,8 +519,11 @@ describe('SidecarKeyringTokenStore', () => {
         .map(([arg]) => String(arg))
         .find((line) => line.includes('keyring failure memoized slot='))
       expect(memoLine).toBeDefined()
+      // quick-260817-d61: `trigger=` is APPENDED after the pre-existing
+      // `slot=`/`class=`/`ms=` tokens -- `getToken()` calls with no context,
+      // so the label is the documented `unspecified` fallback.
       expect(memoLine).toBe(
-        `keyring failure memoized slot=${KEYRING_SLOT_HUMBLE_SESSION} class=timeout ms=120000`
+        `keyring failure memoized slot=${KEYRING_SLOT_HUMBLE_SESSION} class=timeout ms=120000 trigger=unspecified`
       )
     } finally {
       jest.useRealTimers()
@@ -541,8 +545,11 @@ describe('SidecarKeyringTokenStore', () => {
         .map(([arg]) => String(arg))
         .find((line) => line.includes('keyring failure memoized slot='))
       expect(memoLine).toBeDefined()
+      // quick-260817-d61: `trigger=` is APPENDED after the pre-existing
+      // `slot=`/`class=`/`ms=` tokens -- `getToken()` calls with no context,
+      // so the label is the documented `unspecified` fallback.
       expect(memoLine).toBe(
-        `keyring failure memoized slot=${KEYRING_SLOT_HUMBLE_CSRF} class=unavailable ms=120000`
+        `keyring failure memoized slot=${KEYRING_SLOT_HUMBLE_CSRF} class=unavailable ms=120000 trigger=unspecified`
       )
     } finally {
       jest.useRealTimers()
@@ -1085,6 +1092,239 @@ describe('SidecarKeyringTokenStore', () => {
         KEYRING_SLOT_HUMBLE_CSRF
       )
       await expect(unreadableStore.getToken()).resolves.toBe('')
+    })
+  })
+
+  /**
+   * `trigger=`/`elapsed=` annotation (quick task 260817-d61). `readToken(context)` now forwards
+   * `context` through to every `keyring_get` issue/outcome/memo log line, so a live operator
+   * session can attribute an observed prompt to what triggered it. These tests are additive on
+   * top of the pre-existing log-shape tests above (which pin the UNANNOTATED substrings still
+   * appearing verbatim) -- nothing here replaces those.
+   */
+  describe('trigger= / elapsed= annotation (quick-260817-d61)', () => {
+    it('a fresh readToken("user-install") issues exactly ONE requestRustInvoke and logs the issue line with trigger=user-install', async () => {
+      programChannel('keyring_get', { type: 'resolve', value: 'abc' })
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+      )
+
+      await expect(readTokenOutcome(store, 'user-install')).resolves.toEqual({
+        status: 'present',
+        token: 'abc'
+      })
+      expect(callLog).toHaveLength(1)
+
+      const infoLines = mockLogInfo.mock.calls.map((c) => String(c[0]))
+      expect(
+        infoLines.some((l) =>
+          l.includes('issuing keyring_get (may prompt) trigger=user-install')
+        )
+      ).toBe(true)
+    })
+
+    it('the success line still contains the exact pre-existing substrings, with trigger= and elapsed= appended after them, never reordered', async () => {
+      programChannel('keyring_get', { type: 'resolve', value: 'abc' })
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+      )
+
+      await readTokenOutcome(store, 'user-install')
+
+      const infoLines = mockLogInfo.mock.calls.map((c) => String(c[0]))
+      const okLine = infoLines.find((l) => l.includes('keyring_get ok'))
+      expect(okLine).toBeDefined()
+      expect(okLine).toContain('keyring_get ok present=true')
+      expect(okLine).toContain('len=3')
+      // Order-sensitive: present=/len= must appear BEFORE trigger=/elapsed=, never after.
+      const presentIdx = okLine!.indexOf('present=')
+      const triggerIdx = okLine!.indexOf('trigger=')
+      const elapsedIdx = okLine!.indexOf('elapsed=')
+      expect(presentIdx).toBeGreaterThanOrEqual(0)
+      expect(triggerIdx).toBeGreaterThan(presentIdx)
+      expect(elapsedIdx).toBeGreaterThan(triggerIdx)
+      expect(okLine).toContain('trigger=user-install')
+      expect(okLine).toMatch(/elapsed=\d+ms/)
+    })
+
+    it('a second readToken() after a SUCCESS (cache hit) issues no additional requestRustInvoke -- call count stays 1', async () => {
+      programChannel('keyring_get', { type: 'resolve', value: 'abc' })
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+      )
+
+      await readTokenOutcome(store, 'user-install')
+      expect(callLog).toHaveLength(1)
+
+      await readTokenOutcome(store, 'user-install')
+      expect(callLog).toHaveLength(1)
+    })
+
+    it('two concurrent readToken() calls in the same tick issue exactly ONE requestRustInvoke -- call count is 1, not 2', async () => {
+      let resolveInvoke: (value: unknown) => void = () => {}
+      mockRequestRustInvoke.mockImplementation(
+        (channel: string, args: unknown[]) => {
+          callLog.push({ channel, args })
+          return new Promise((resolve) => {
+            resolveInvoke = resolve
+          })
+        }
+      )
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+      )
+
+      const first = readTokenOutcome(store, 'user-install')
+      const second = readTokenOutcome(store, 'user-install')
+
+      expect(callLog).toHaveLength(1)
+      resolveInvoke('concurrent-token')
+
+      await expect(first).resolves.toEqual({
+        status: 'present',
+        token: 'concurrent-token'
+      })
+      await expect(second).resolves.toEqual({
+        status: 'present',
+        token: 'concurrent-token'
+      })
+      expect(callLog).toHaveLength(1)
+    })
+
+    it('after a rejected read, a second readToken() inside 120s (memo hit) issues no additional requestRustInvoke and carries the ORIGINAL classification', async () => {
+      jest.useFakeTimers()
+      try {
+        programChannel('keyring_get', {
+          type: 'reject',
+          error: new Error('keyring:timeout')
+        })
+        const store = new SidecarKeyringSlotStore(
+          KEYRING_SLOT_STEAM_REFRESH_TOKEN
+        )
+
+        await expect(readTokenOutcome(store, 'user-refresh')).resolves.toEqual(
+          {
+            status: 'unreadable',
+            reason: 'timeout'
+          }
+        )
+        expect(callLog).toHaveLength(1)
+
+        // Second read, still inside the memo window, a DIFFERENT trigger this time -- the memo
+        // answer must still carry the ORIGINAL classification and issue no additional invoke.
+        await expect(readTokenOutcome(store, 'game-page')).resolves.toEqual({
+          status: 'unreadable',
+          reason: 'timeout'
+        })
+        expect(callLog).toHaveLength(1)
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    it('the memo-armed warning still contains the exact pre-existing substrings with trigger= appended, for a real trigger context (not just "unspecified")', async () => {
+      programChannel('keyring_get', {
+        type: 'reject',
+        error: new Error('keyring:timeout')
+      })
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+      await readTokenOutcome(store, 'user-play')
+
+      const memoLine = mockLogWarning.mock.calls
+        .map(([arg]) => String(arg))
+        .find((line) => line.includes('keyring failure memoized slot='))
+      expect(memoLine).toBeDefined()
+      expect(memoLine).toContain('keyring failure memoized slot=')
+      expect(memoLine).toContain('class=')
+      expect(memoLine).toContain('ms=')
+      expect(memoLine).toBe(
+        `keyring failure memoized slot=${KEYRING_SLOT_HUMBLE_SESSION} class=timeout ms=120000 trigger=user-play`
+      )
+    })
+
+    it('no log line anywhere in the module contains the token value, proven with a distinctive literal', async () => {
+      const DISTINCTIVE_TOKEN = 'zzz-never-log-this-value-zzz'
+      programChannel('keyring_get', {
+        type: 'resolve',
+        value: DISTINCTIVE_TOKEN
+      })
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+      )
+
+      await readTokenOutcome(store, 'user-install')
+
+      const allLines = [
+        ...mockLogInfo.mock.calls,
+        ...mockLogDebug.mock.calls,
+        ...mockLogWarning.mock.calls
+      ].map((c) => String(c[0]))
+      expect(allLines.some((l) => l.includes(DISTINCTIVE_TOKEN))).toBe(false)
+    })
+  })
+
+  /**
+   * Hard constraints 3/4 (D-08/REQ-28-07, REQ-28-02) — grep-gate hygiene (binding, per the plan's
+   * own instruction): every assertion here strips comments first (the doc comments this plan adds
+   * mention `configStore`/`process.env` BY NAME and would self-invalidate an unfiltered count) and
+   * is RED-proven against a specimen DERIVED from the real source by insertion, never hand-authored.
+   */
+  describe('grep-gate hygiene: no configStore / TOKEN_STORE_KEY / process.env reach (D-08/REQ-28-02/REQ-28-07)', () => {
+    const KEYRING_TOKEN_STORE_SRC_PATH = join(
+      __dirname,
+      '..',
+      'keyringTokenStore.ts'
+    )
+    const USER_SRC_PATH = join(
+      __dirname,
+      '..',
+      '..',
+      'storeManagers',
+      'steam',
+      'user.ts'
+    )
+
+    it('comment-stripped keyringTokenStore.ts contains zero configStore, zero TOKEN_STORE_KEY, zero process.env', () => {
+      const stripped = stripSourceComments(
+        readFileSync(KEYRING_TOKEN_STORE_SRC_PATH, 'utf-8')
+      )
+      expect(stripped).not.toMatch(/configStore/)
+      expect(stripped).not.toMatch(/TOKEN_STORE_KEY/)
+      expect(stripped).not.toMatch(/process\.env/)
+    })
+
+    it('RED-proof: the configStore/TOKEN_STORE_KEY/process.env check trips against a specimen derived by inserting the forbidden line into the real keyringTokenStore.ts source', () => {
+      const real = readFileSync(KEYRING_TOKEN_STORE_SRC_PATH, 'utf-8')
+      const configStoreSpecimen = stripSourceComments(
+        `${real}\nconst x = configStore.get('leak')\n`
+      )
+      expect(configStoreSpecimen).toMatch(/configStore/)
+
+      const tokenStoreKeySpecimen = stripSourceComments(
+        `${real}\nconst y = TOKEN_STORE_KEY\n`
+      )
+      expect(tokenStoreKeySpecimen).toMatch(/TOKEN_STORE_KEY/)
+
+      const processEnvSpecimen = stripSourceComments(
+        `${real}\nconst z = process.env.STEAM_TOKEN\n`
+      )
+      expect(processEnvSpecimen).toMatch(/process\.env/)
+    })
+
+    it('comment-stripped user.ts contains zero process.env', () => {
+      const stripped = stripSourceComments(
+        readFileSync(USER_SRC_PATH, 'utf-8')
+      )
+      expect(stripped).not.toMatch(/process\.env/)
+    })
+
+    it('RED-proof: the user.ts process.env check trips against a specimen derived by inserting the forbidden line into the real source', () => {
+      const real = readFileSync(USER_SRC_PATH, 'utf-8')
+      const specimen = stripSourceComments(
+        `${real}\nconst leak = process.env.STEAM_REFRESH_TOKEN\n`
+      )
+      expect(specimen).toMatch(/process\.env/)
     })
   })
 })
