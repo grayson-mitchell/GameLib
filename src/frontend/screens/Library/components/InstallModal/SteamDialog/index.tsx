@@ -79,7 +79,6 @@ interface Props {
    * already carries the resolved D-17 platform decision, so this dialog
    * never reads the live `platformToInstall` state directly. */
   platformToInstall: InstallPlatform
-  availablePlatforms: AvailablePlatforms
   /** Accepted for parity; unused here -- D-14 routes the wine choice through
    * the shared bottle config store rather than per-game config, so this
    * dialog never reads `winePrefix`. */
@@ -116,26 +115,32 @@ interface Props {
    * never gated on SIZE, and `getInstallInfo` is still never called. */
   eligibilityPending: boolean
   /** 34.15 D-13: while `false`, this dialog's header renders NO platform
-   * glyphs at all -- including the Windows one, which `InstallModal/
-   * index.tsx`'s `platforms` array marks `available: true` unconditionally
-   * and reads no signal to do so.
+   * glyphs at all -- including the Windows one.
    *
    * The row is an ASSERTION about the game. With the signal unresolved the
-   * app cannot make it, and a bare Windows glyph is the strongest possible
-   * form of a claim it cannot back. Dropping the unconditional Windows
-   * glyph along with the rest is CORRECT, not collateral -- it too is
-   * unbacked.
-   *
-   * SCOPE: this dialog only. `DownloadDialog` / `ImportDialog` /
-   * `ThirdPartyDialog` consume the same `availablePlatforms` array with the
-   * same `.map()` shape and have no depot-signal-uncertainty concept, so the
-   * array itself must never be filtered upstream. `PlatformSupport.tsx` on
-   * the game page stays deferred by 34.14's route fence.
+   * app cannot make it. No icons is honest.
    *
    * Computed by the parent so both this row and the parent's platform
    * selector read ONE resolution moment (`resolveDepotAvailability`'s
    * single call, E1) rather than two. */
   depotSignalResolved: boolean
+  /** 34.15 gap-closure round, code review CR-01: the header glyph row's
+   * CONTENT once `depotSignalResolved` gates it open. Computed by the
+   * parent via `resolveSteamHeaderPlatforms(platforms, windowsDepotOffered,
+   * macDepotOffered)` -- the SAME resolved fact `depotSignalResolved` above
+   * and the parent's platform selector both already read -- rather than the
+   * seed-derived `available` flag.
+   *
+   * NOT `availablePlatforms`. `availablePlatforms` is derived from
+   * `gameInfo`'s SEED `is_mac_native`/unconditional-`true`-Windows, frozen
+   * at modal open; it never re-derives once the live probe resolves a
+   * different answer, which is exactly the "gate opens, wrong glyphs
+   * render" defect CR-01 found. `DownloadDialog` / `ImportDialog` /
+   * `ThirdPartyDialog` still consume the real `availablePlatforms` array
+   * unchanged -- this prop is a SEPARATE, Steam-only projection that never
+   * replaces it upstream. `PlatformSupport.tsx` on the game page stays
+   * deferred by 34.14's route fence. */
+  headerPlatforms: AvailablePlatforms
 }
 
 interface DiskSpaceInfo {
@@ -147,7 +152,6 @@ interface DiskSpaceInfo {
 export default function SteamDialog({
   appName,
   gameInfo,
-  availablePlatforms,
   backdropClick,
   wineVersion,
   children,
@@ -155,7 +159,8 @@ export default function SteamDialog({
   steamLibraries,
   nativeInstallOn,
   eligibilityPending,
-  depotSignalResolved
+  depotSignalResolved,
+  headerPlatforms
 }: Props) {
   const { t } = useTranslation('gamepage')
   const { t: tGamelib } = useTranslation('gamelib')
@@ -404,7 +409,7 @@ export default function SteamDialog({
       <DialogHeader onClose={backdropClick}>
         {gameInfo.overrides?.title || gameInfo.title}
         {depotSignalResolved &&
-          availablePlatforms.map((p) => (
+          headerPlatforms.map((p) => (
             <FontAwesomeIcon
               className="InstallModal__platformIcon"
               icon={p.icon}

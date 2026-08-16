@@ -48,6 +48,10 @@ function readDialogStripped(): string {
   return stripSourceComments(readFileSync(DIALOG_PATH, 'utf8'))
 }
 
+function countOccurrences(source: string, token: string): number {
+  return source.split(token).length - 1
+}
+
 // --- Shared, throwing assertion helpers -----------------------------------
 //
 // Plain functions (no jest matcher calls inside) so the SAME helper drives
@@ -1058,6 +1062,19 @@ describe('the source gates reject a known-bad specimen', () => {
 // unlike Group E's `selectSteamPlatformOptions(...)` call in
 // `steamEligibilityWiring.test.ts`, which additionally needed the
 // paren-boundary collapse `flatten()` there provides).
+//
+// 34.15 gap-closure round (code review CR-01) renamed this dialog's prop
+// from `availablePlatforms` to `headerPlatforms` -- the parent
+// (`InstallModal/index.tsx`) now computes a Steam-specific projection
+// (`resolveSteamHeaderPlatforms`, proven correct and RED-tested in
+// `steamPlatformRow.test.ts`, and proven to be the one thing threaded into
+// this mount in `steamEligibilityWiring.test.ts`'s Group G) rather than
+// handing this dialog the stale, seed-derived `availablePlatforms` array.
+// This file's gates below only prove the row is GATED on
+// `depotSignalResolved` and that this dialog never filters its own array
+// locally -- see `steamPlatformRow.test.ts`'s
+// `resolveSteamHeaderPlatforms` describe block for what the row's CONTENT
+// actually is, which this file (no jsdom) cannot observe.
 
 describe('34.15 D-13: the glyph row is gated on the resolved depot signal', () => {
   const flat = readDialogStripped().replace(/\s+/g, ' ')
@@ -1065,40 +1082,49 @@ describe('34.15 D-13: the glyph row is gated on the resolved depot signal', () =
   it('the header glyph row is gated on depotSignalResolved', () => {
     expectPresent(
       flat,
-      'depotSignalResolved && availablePlatforms.map',
+      'depotSignalResolved && headerPlatforms.map',
       '34.15 D-13'
     )
   })
 
   it('RED: a known-bad specimen DERIVED FROM THE REAL SOURCE with the gate removed trips the same helper', () => {
     const knownBad = flat.replace(
-      'depotSignalResolved && availablePlatforms.map',
-      'availablePlatforms.map'
+      'depotSignalResolved && headerPlatforms.map',
+      'headerPlatforms.map'
     )
     expect(knownBad).not.toBe(flat)
     expect(() =>
       expectPresent(
         knownBad,
-        'depotSignalResolved && availablePlatforms.map',
+        'depotSignalResolved && headerPlatforms.map',
         '34.15 D-13'
       )
     ).toThrow()
   })
 
-  it('the suppression is never implemented by filtering the shared array locally -- the array must stay unfiltered for DownloadDialog/ImportDialog/ThirdPartyDialog', () => {
+  it('the suppression is never implemented by filtering the array locally inside this dialog -- filtering belongs to the parent-computed resolveSteamHeaderPlatforms, never re-derived here', () => {
     expectAbsent(
       readDialogStripped(),
-      'availablePlatforms.filter',
-      '34.15 D-13 -- the shared array must not be filtered inside this dialog'
+      'headerPlatforms.filter',
+      '34.15 D-13 -- this dialog must never locally re-filter the platform list it is handed'
     )
   })
 
-  it('non-vacuity: expectAbsent throws when availablePlatforms.filter appears in executable position', () => {
-    const specimen = 'const x = availablePlatforms.filter(() => true)'
+  it('non-vacuity: expectAbsent throws when headerPlatforms.filter appears in executable position', () => {
+    const specimen = 'const x = headerPlatforms.filter(() => true)'
     const stripped = stripSourceComments(specimen)
     expect(() =>
-      expectAbsent(stripped, 'availablePlatforms.filter', '34.15 D-13')
+      expectAbsent(stripped, 'headerPlatforms.filter', '34.15 D-13')
     ).toThrow()
+  })
+
+  it('34.15 CR-01: availablePlatforms is no longer read anywhere in this file -- the prop was renamed, not merely supplemented', () => {
+    expect(countOccurrences(readDialogStripped(), 'availablePlatforms')).toBe(0)
+  })
+
+  it('the availablePlatforms-absence gate is non-vacuous -- a specimen containing the old prop name still trips it', () => {
+    const specimen = 'availablePlatforms.map((p) => p)'
+    expect(countOccurrences(specimen, 'availablePlatforms')).toBeGreaterThan(0)
   })
 })
 

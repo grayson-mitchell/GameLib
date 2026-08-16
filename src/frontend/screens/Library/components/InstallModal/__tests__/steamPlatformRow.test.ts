@@ -5,6 +5,7 @@ import {
   readonlyPlatformValue,
   hasSteamDepotSignalCaptured,
   resolveDepotAvailability,
+  resolveSteamHeaderPlatforms,
   ResolveDepotAvailabilityInput
 } from '../steamPlatformRow'
 import type { SteamPlatformRowMode } from '../steamSectionGating'
@@ -741,5 +742,121 @@ describe('resolveDepotAvailability -- D-04/D-05 in one pure function, widened by
       probeHasMacDepot: false
     })
     expect(result.depotSignalResolved).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------
+// 34.15 gap-closure round -- code review CR-01: the SteamDialog header glyph
+// row's CONTENT, not merely its gate
+// ---------------------------------------------------------------------
+//
+// `steamDialogSource.test.ts`'s D-13 block (pre-existing) proves the header
+// row is GATED on `depotSignalResolved` -- it asserts nothing about what the
+// row shows once that gate opens. `resolveSteamHeaderPlatforms` is the pure
+// function that decides the CONTENT; these tests are the ones that actually
+// close CR-01, run against a FILLED specimen (the module-level `platforms`
+// fixture above, which mirrors the real `index.tsx` shape exactly: Windows
+// `available: true` unconditionally, Mac `available: false` -- the stale,
+// seed-derived answer for a game whose `gameInfo.is_mac_native` is
+// undefined/false).
+
+describe('resolveSteamHeaderPlatforms -- 34.15 CR-01: header content reads the RESOLVED signal, not the stale seed', () => {
+  it('the reachable CR-01 state: macDepotOffered true while the seed platforms entry says Mac unavailable -- the header now includes Mac', () => {
+    // This is the exact defect: `platforms[1]` (Mac) is `available: false`
+    // in this fixture -- the frozen `gameInfo.is_mac_native` seed -- while
+    // the live probe has since resolved `macDepotOffered: true`. A
+    // pre-fix reader of `availablePlatforms` (== `platforms.filter(p =>
+    // p.available)`) would omit Mac here; the real function must not.
+    const result = resolveSteamHeaderPlatforms(platforms, true, true)
+    expect(result.map((p) => p.value)).toContain('Mac')
+  })
+
+  it("the mirror CR-01 state: platformRow === 'readonly-macos' shape (windowsDepotOffered false, macDepotOffered true) -- the header must NOT show a Windows glyph, even though the seed's Windows entry is available: true unconditionally", () => {
+    const result = resolveSteamHeaderPlatforms(platforms, false, true)
+    expect(result.map((p) => p.value)).not.toContain('Windows')
+    expect(result.map((p) => p.value)).toEqual(['Mac'])
+  })
+
+  it('both depots unresolved/absent (windowsDepotOffered false, macDepotOffered false) -- the header shows neither, matching D-13\'s "no icons is honest" rule for the content half of the row', () => {
+    const result = resolveSteamHeaderPlatforms(platforms, false, false)
+    expect(result.map((p) => p.value)).toEqual([])
+  })
+
+  it('both depots confirmed (windowsDepotOffered true, macDepotOffered true) -- the header shows both, in platforms array order', () => {
+    const result = resolveSteamHeaderPlatforms(platforms, true, true)
+    expect(result.map((p) => p.value)).toEqual(['Mac', 'Windows'])
+  })
+
+  it('Linux and Browser entries pass through on their own available flag, untouched by either depot parameter -- neither has a depot-signal-uncertainty concept', () => {
+    const allFalse = resolveSteamHeaderPlatforms(platforms, false, false)
+    const allTrue = resolveSteamHeaderPlatforms(platforms, true, true)
+    // The fixture's Linux/Browser entries are both `available: false` --
+    // absent from every combination above and below.
+    expect(allFalse.map((p) => p.value)).not.toContain('linux')
+    expect(allFalse.map((p) => p.value)).not.toContain('Browser')
+    expect(allTrue.map((p) => p.value)).not.toContain('linux')
+    expect(allTrue.map((p) => p.value)).not.toContain('Browser')
+
+    const sideloadLikePlatforms: PlatformFixture[] = [
+      { name: 'Linux', available: true, value: 'linux' },
+      { name: 'macOS', available: false, value: 'Mac' },
+      { name: 'Windows', available: true, value: 'Windows' },
+      { name: 'Browser', available: true, value: 'Browser' }
+    ]
+    const withLinuxAndBrowserAvailable = resolveSteamHeaderPlatforms(
+      sideloadLikePlatforms,
+      false,
+      false
+    )
+    // Linux/Browser still pass through on `available` even while BOTH depot
+    // params are false -- proving they are genuinely independent of the two
+    // gated entries, not merely coincidentally absent above.
+    expect(withLinuxAndBrowserAvailable.map((p) => p.value)).toEqual([
+      'linux',
+      'Browser'
+    ])
+  })
+
+  it('RED: readAvailableFlag (the exact pre-fix behaviour -- `platforms.filter(p => p.available)`, i.e. what availablePlatforms itself computes) disagrees with the real function on the reachable CR-01 state', () => {
+    function readAvailableFlag<T extends { available: boolean }>(ps: T[]): T[] {
+      return ps.filter((p) => p.available)
+    }
+
+    // Same reachable state as the first test above: seed says Mac
+    // unavailable, live probe says macDepotOffered true.
+    const sabotaged = readAvailableFlag(platforms)
+    expect(sabotaged.map((p) => p.value)).not.toContain('Mac')
+
+    const real = resolveSteamHeaderPlatforms(platforms, true, true)
+    expect(real.map((p) => p.value)).toContain('Mac')
+    expect(sabotaged).not.toEqual(real)
+  })
+
+  it('RED: readAvailableFlag also disagrees with the real function on the mirror state -- the seed Windows entry is available: true unconditionally and would leak through', () => {
+    function readAvailableFlag<T extends { available: boolean }>(ps: T[]): T[] {
+      return ps.filter((p) => p.available)
+    }
+
+    const sabotaged = readAvailableFlag(platforms)
+    expect(sabotaged.map((p) => p.value)).toContain('Windows')
+
+    const real = resolveSteamHeaderPlatforms(platforms, false, true)
+    expect(real.map((p) => p.value)).not.toContain('Windows')
+    expect(sabotaged).not.toEqual(real)
+  })
+
+  it('every returned entry is a member (by reference) of the supplied platforms array -- the function can never fabricate an entry', () => {
+    for (const windowsDepotOffered of [false, true]) {
+      for (const macDepotOffered of [false, true]) {
+        const result = resolveSteamHeaderPlatforms(
+          platforms,
+          windowsDepotOffered,
+          macDepotOffered
+        )
+        for (const entry of result) {
+          expect(platforms).toContain(entry)
+        }
+      }
+    }
   })
 })

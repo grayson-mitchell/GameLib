@@ -345,3 +345,52 @@ export function resolveDepotAvailability(
 
   return { depotSignalResolved, windowsDepotOffered, macDepotOffered }
 }
+
+/**
+ * 34.15 gap-closure round, code review CR-01 -- the SteamDialog header glyph
+ * row's CONTENT, resolved from the SAME `windowsDepotOffered`/
+ * `macDepotOffered` this function's caller already computed via
+ * `resolveDepotAvailability`, never from `platforms`' `available` flag.
+ *
+ * The defect this closes: `InstallModal/index.tsx`'s `platforms` array
+ * computes `available` from the SEED (`gameInfo?.is_mac_native` /
+ * unconditional `true` for Windows) -- a fact frozen at modal open. D-13
+ * (34.15-07) gated the header row's *visibility* on `depotSignalResolved`
+ * but never re-pointed its *content* at the resolved answer, so once the
+ * gate opened the row kept rendering from the stale seed. Two independent
+ * backend writers (`games.ts`'s per-game `appdetails` fetch and
+ * `platformCapture.ts`'s bulk PICS sync, 34.15 D-01/D-02) write
+ * `is_mac_native`/`is_windows_native` from two different Steam data sources
+ * with no reconciliation rule, so "the seed disagrees with the live probe"
+ * is not a rare corner case -- see 34.15-CONTEXT.md D-05.
+ *
+ * SCOPE: the SteamDialog header only. The caller MUST keep feeding the
+ * UNFILTERED `availablePlatforms` array to `DownloadDialog`, `ImportDialog`,
+ * `ThirdPartyDialog` and the sideload path unchanged -- this function's
+ * output is a SEPARATE, Steam-specific projection, never a replacement for
+ * `availablePlatforms` itself (mirrors `steamPlatformRow.ts`'s own
+ * `selectSteamPlatformOptions` doc comment, which states the identical rule
+ * for the platform SELECTOR).
+ *
+ * Linux and Browser entries pass through on `available` unchanged --
+ * neither has a depot-signal-uncertainty concept (Linux is never a Steam
+ * native target on macOS/Windows hosts, Browser is sideload-only), so
+ * re-deriving them from a resolved signal would be inventing one that does
+ * not exist.
+ *
+ * Generic over `T` for the same reason `selectSteamPlatformOptions` is --
+ * it never needs to import `AvailablePlatforms` from `index.tsx`.
+ */
+export function resolveSteamHeaderPlatforms<
+  T extends { value: InstallPlatform; available: boolean }
+>(platforms: T[], windowsDepotOffered: boolean, macDepotOffered: boolean): T[] {
+  return platforms.filter((p) => {
+    if (p.value === 'Mac') {
+      return macDepotOffered
+    }
+    if (p.value === 'Windows') {
+      return windowsDepotOffered
+    }
+    return p.available
+  })
+}

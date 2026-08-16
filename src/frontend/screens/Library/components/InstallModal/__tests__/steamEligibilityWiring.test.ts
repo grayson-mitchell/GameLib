@@ -656,6 +656,86 @@ describe("34.15 D-15: 34.14's pending-row pin is not reopened", () => {
   })
 })
 
+// ---------------------------------------------------------------------
+// Group G (34.15 gap-closure round, code review CR-01) -- the SteamDialog
+// header's CONTENT is fed from the resolved signal, and the other four
+// dialogs' availablePlatforms stays UNTOUCHED
+// ---------------------------------------------------------------------
+//
+// A pure-function suite (`steamPlatformRow.test.ts`) proves
+// `resolveSteamHeaderPlatforms` is CORRECT. These prove it is CALLED, once,
+// and that its result -- not the stale `availablePlatforms` -- is what
+// reaches `<SteamDialog`, mirroring Group E's "correct != called" pattern
+// for `resolveDepotAvailability`.
+
+describe('Group G (34.15 CR-01): the header content resolver is called once and feeds ONLY the SteamDialog mount', () => {
+  const source = stripped('screens/Library/components/InstallModal/index.tsx')
+
+  it('G1: resolveSteamHeaderPlatforms( appears exactly ONCE', () => {
+    expect(countOccurrences(source, 'resolveSteamHeaderPlatforms(')).toBe(1)
+  })
+
+  it('G1-RED: deleting the call trips G1, against a known-bad DERIVED FROM THE REAL SOURCE', () => {
+    const knownBad = source.replace(
+      'resolveSteamHeaderPlatforms(',
+      'resolveSteamHeaderPlatformsDELETED('
+    )
+    expect(knownBad).not.toBe(source)
+    expect(countOccurrences(knownBad, 'resolveSteamHeaderPlatforms(')).toBe(0)
+  })
+
+  it('G2: within the 200 characters following the call, all three arguments (platforms, windowsDepotOffered, macDepotOffered) appear', () => {
+    const callIdx = source.indexOf('resolveSteamHeaderPlatforms(')
+    expect(callIdx).toBeGreaterThan(-1)
+    const window = source.slice(callIdx, callIdx + 200)
+    for (const arg of ['platforms', 'windowsDepotOffered', 'macDepotOffered']) {
+      expect(window).toContain(arg)
+    }
+  })
+
+  it('G3: headerPlatforms={steamHeaderPlatforms} reaches the <SteamDialog mount', () => {
+    expect(
+      countOccurrences(source, 'headerPlatforms={steamHeaderPlatforms}')
+    ).toBe(1)
+  })
+
+  it('G3-RED: reverting the <SteamDialog prop back to availablePlatforms trips G3, against a known-bad DERIVED FROM THE REAL SOURCE -- this is the precise CR-01 regression', () => {
+    const knownBad = source.replace(
+      'headerPlatforms={steamHeaderPlatforms}',
+      'availablePlatforms={availablePlatforms}'
+    )
+    expect(knownBad).not.toBe(source)
+    expect(
+      countOccurrences(knownBad, 'headerPlatforms={steamHeaderPlatforms}')
+    ).toBe(0)
+  })
+
+  it('G4: availablePlatforms={availablePlatforms} appears exactly FOUR times -- DownloadDialog, ImportDialog, ThirdPartyDialog and SideloadDialog, and NOWHERE inside the <SteamDialog arm', () => {
+    expect(
+      countOccurrences(source, 'availablePlatforms={availablePlatforms}')
+    ).toBe(4)
+    const steamStart = source.indexOf('<SteamDialog')
+    const steamEnd = source.indexOf('</SteamDialog>', steamStart)
+    expect(steamStart).toBeGreaterThan(-1)
+    expect(steamEnd).toBeGreaterThan(steamStart)
+    const steamArm = source.slice(steamStart, steamEnd)
+    expect(steamArm.includes('availablePlatforms={availablePlatforms}')).toBe(
+      false
+    )
+  })
+
+  it('G4-RED: a FIFTH occurrence of availablePlatforms={availablePlatforms} inside the Steam arm trips G4, against a known-bad DERIVED FROM THE REAL SOURCE', () => {
+    const knownBad = source.replace(
+      'headerPlatforms={steamHeaderPlatforms}',
+      'availablePlatforms={availablePlatforms}'
+    )
+    expect(knownBad).not.toBe(source)
+    expect(
+      countOccurrences(knownBad, 'availablePlatforms={availablePlatforms}')
+    ).toBe(5)
+  })
+})
+
 // Finish with a full-suite run in Task 3's own <verify> command
 // (`pnpm test:ci`) -- this task edits the dialog router every install flow
 // mounts, so any suite that flips red is a real regression.

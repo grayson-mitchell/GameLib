@@ -39,6 +39,7 @@ import {
   hasSteamMacDepot,
   hasSteamDepotSignalCaptured,
   resolveDepotAvailability,
+  resolveSteamHeaderPlatforms,
   selectSteamPlatformOptions,
   readonlyPlatformValue
 } from './steamPlatformRow'
@@ -250,6 +251,22 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
 
   const availablePlatforms: AvailablePlatforms = platforms.filter(
     (p) => p.available
+  )
+
+  // 34.15 gap-closure round, code review CR-01: the SteamDialog header's
+  // glyph row content, projected from `platforms` through
+  // `windowsDepotOffered`/`macDepotOffered` -- the SAME resolved fact the
+  // platform selector below already reads -- rather than from the stale
+  // `available` seed `availablePlatforms` carries. `availablePlatforms`
+  // itself stays UNCHANGED and is still what feeds DownloadDialog /
+  // ImportDialog / ThirdPartyDialog / SideloadDialog; this is a SEPARATE,
+  // Steam-only projection, never a replacement for it. See
+  // `resolveSteamHeaderPlatforms`'s doc comment in `steamPlatformRow.ts` for
+  // the full defect writeup.
+  const steamHeaderPlatforms: AvailablePlatforms = resolveSteamHeaderPlatforms(
+    platforms,
+    windowsDepotOffered,
+    macDepotOffered
   )
 
   // 34.15 D-14: Windows is the unknown-case answer -- Windows-via-bottle
@@ -585,7 +602,7 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
             runner={runner}
             winePrefix={winePrefix}
             wineVersion={wineVersion}
-            availablePlatforms={availablePlatforms}
+            headerPlatforms={steamHeaderPlatforms}
             backdropClick={closeModal}
             platformToInstall={platformToInstall}
             gameInfo={gameInfo}
