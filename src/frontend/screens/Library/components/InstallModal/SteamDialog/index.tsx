@@ -115,6 +115,27 @@ interface Props {
    * footer Install button. D-06 still holds alongside it -- this button is
    * never gated on SIZE, and `getInstallInfo` is still never called. */
   eligibilityPending: boolean
+  /** 34.15 D-13: while `false`, this dialog's header renders NO platform
+   * glyphs at all -- including the Windows one, which `InstallModal/
+   * index.tsx`'s `platforms` array marks `available: true` unconditionally
+   * and reads no signal to do so.
+   *
+   * The row is an ASSERTION about the game. With the signal unresolved the
+   * app cannot make it, and a bare Windows glyph is the strongest possible
+   * form of a claim it cannot back. Dropping the unconditional Windows
+   * glyph along with the rest is CORRECT, not collateral -- it too is
+   * unbacked.
+   *
+   * SCOPE: this dialog only. `DownloadDialog` / `ImportDialog` /
+   * `ThirdPartyDialog` consume the same `availablePlatforms` array with the
+   * same `.map()` shape and have no depot-signal-uncertainty concept, so the
+   * array itself must never be filtered upstream. `PlatformSupport.tsx` on
+   * the game page stays deferred by 34.14's route fence.
+   *
+   * Computed by the parent so both this row and the parent's platform
+   * selector read ONE resolution moment (`resolveDepotAvailability`'s
+   * single call, E1) rather than two. */
+  depotSignalResolved: boolean
 }
 
 interface DiskSpaceInfo {
@@ -133,7 +154,8 @@ export default function SteamDialog({
   gating,
   steamLibraries,
   nativeInstallOn,
-  eligibilityPending
+  eligibilityPending,
+  depotSignalResolved
 }: Props) {
   const { t } = useTranslation('gamepage')
   const { t: tGamelib } = useTranslation('gamelib')
@@ -381,13 +403,14 @@ export default function SteamDialog({
     <>
       <DialogHeader onClose={backdropClick}>
         {gameInfo.overrides?.title || gameInfo.title}
-        {availablePlatforms.map((p) => (
-          <FontAwesomeIcon
-            className="InstallModal__platformIcon"
-            icon={p.icon}
-            key={p.value}
-          />
-        ))}
+        {depotSignalResolved &&
+          availablePlatforms.map((p) => (
+            <FontAwesomeIcon
+              className="InstallModal__platformIcon"
+              icon={p.icon}
+              key={p.value}
+            />
+          ))}
       </DialogHeader>
       <DialogContent>
         {steamDegrade && (
