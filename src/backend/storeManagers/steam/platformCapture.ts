@@ -2,6 +2,7 @@ import { logInfo, logError, LogPrefix } from 'backend/logger'
 import { steamMetadataStore, SteamMetadataCacheEntry } from './electronStores'
 import { depotSignalCaptured } from './metadataCapture'
 import { withTimeout, STEAM_PICS_BULK_TIMEOUT_MS } from './withTimeout'
+import { resolvePlatformWrite } from './platformPrecedence'
 
 /**
  * Phase 34.15 Plan 01 — D-01's bulk PICS platform-capture writer.
@@ -145,12 +146,38 @@ export function parseOslistPlatforms(
  * `./electronStores` (Claude's Discretion, D-02): a new shared merge surface
  * invites a future writer to misuse it for a different cache shape's
  * carry-forward rules, which do not generalise.
+ *
+ * Quick task 260816-qcn (WR-02/CR-01): this writer no longer clobbers
+ * unconditionally. `resolvePlatformWrite` (`./platformPrecedence`) decides,
+ * by strict timestamp comparison, whether THIS PICS capture or the entry
+ * already on disk survives. When declined, this function returns WITHOUT
+ * calling `.set()` at all — a rewrite would only burn two
+ * `notifyStoreChanged` IPC messages persisting values already there. See
+ * `./platformPrecedence`'s header for the full D-A/D-B rule: the ordering is
+ * now explicit and auditable, and a silently-lost write is impossible, but a
+ * genuine appdetails-vs-PICS disagreement is NOT reconciled by this — which
+ * answer survives still depends on which sync ran last; `platformsSource` /
+ * `platformsCapturedAt` are what make that inspectable. Do not describe
+ * WR-02 as closed.
  */
 export function mergePlatformCapture(
   appId: string,
   platforms: CapturedPlatforms
 ): void {
   const existing = steamMetadataStore.get(appId)
+
+  const resolution = resolvePlatformWrite(
+    existing,
+    platforms,
+    'pics',
+    Date.now()
+  )
+
+  if (!resolution.accepted) {
+    // Declined: `existing` already carries a strictly newer, complete
+    // platform capture. Do not rewrite it.
+    return
+  }
 
   // `art_cover`/`art_square`/`extra` are typed as REQUIRED on
   // SteamMetadataCacheEntry because every existing writer (games.ts) only
@@ -163,13 +190,51 @@ export function mergePlatformCapture(
   // partial entry is a legitimate runtime shape, not a corruption.
   const merged = {
     ...existing,
-    is_windows_native: platforms.is_windows_native,
-    is_mac_native: platforms.is_mac_native,
-    is_linux_native: platforms.is_linux_native,
-    platformsCaptured: true
+    is_windows_native: resolution.platforms.is_windows_native,
+    is_mac_native: resolution.platforms.is_mac_native,
+    is_linux_native: resolution.platforms.is_linux_native,
+    platformsCaptured: true,
+    platformsSource: resolution.platformsSource,
+    platformsCapturedAt: resolution.platformsCapturedAt
   } as SteamMetadataCacheEntry
 
   steamMetadataStore.set(appId, merged)
+}
+
+// ── D-C serialisation: a module-local promise-chain mutex ───────────────────
+//
+// Quick task 260816-qcn: `captureOwnedAppPlatforms`'s scope-then-write is a
+// read-modify-write that must be atomic with respect to ANOTHER BULK RUN of
+// itself. Without this, two concurrent calls both scope off the SAME stale
+// snapshot of `steamMetadataStore`, and the second run cannot see the
+// first's writes -- the exact shape of the 34.15 D-16 UAT finding F-2, where
+// a single Electron `origin=mount` fired two concurrent `refresh()` calls
+// and the second re-scoped all 378 apps. This lock does NOT exclude the
+// `appdetails` writer in `games.ts` -- that writer's own read-modify-write
+// is synchronous and therefore already atomic on its own, and cross-writer
+// ordering between the two DIFFERENT writers is `resolvePlatformWrite`'s
+// job, not this lock's.
+let platformCaptureChain: Promise<unknown> = Promise.resolve()
+
+/**
+ * Runs `section` after every previously-queued section has settled,
+ * REGARDLESS of that prior section's outcome (resolved or rejected). The
+ * module-local chain is re-pointed at a swallowed-outcome continuation
+ * BEFORE this call returns, so a rejected section can never poison the
+ * chain for every later caller -- the caller of THIS call still observes
+ * the real (un-swallowed) rejection via the returned promise.
+ *
+ * Exported for the test that proves the lock does not wedge (T-qcn-02).
+ */
+export async function withPlatformCaptureLock<T>(
+  section: () => Promise<T>
+): Promise<T> {
+  const run = platformCaptureChain.then(section, section)
+  platformCaptureChain = run.then(
+    () => undefined,
+    () => undefined
+  )
+  return run
 }
 
 /** Narrow STRUCTURAL client interface (not the real `steam-user` type) so
@@ -239,74 +304,84 @@ export async function captureOwnedAppPlatforms(
   // the real scoped count the moment the filter succeeds.
   let scopedCount = appIds.length
   try {
-    // D-04: reuse depotSignalCaptured() verbatim — never re-derive its
-    // logic. This is what makes "what the bulk job repairs" and "what the
-    // install form calls unresolved" the same set BY CONSTRUCTION.
-    const scoped = appIds.filter(
-      (id) => !depotSignalCaptured(steamMetadataStore.get(String(id)))
-    )
-    scopedCount = scoped.length
+    // D-C: the scope-then-write below runs inside `withPlatformCaptureLock`
+    // so a concurrent call to this same function cannot scope off a stale
+    // snapshot -- see the lock's own doc comment above for the F-2 shape
+    // this closes. Placed INSIDE this `try` (not around the whole function)
+    // for the same D-07 finding #2 reason the filter step itself was moved
+    // in here: the lock/queue primitive is new, and this function's
+    // never-throws contract must cover it too.
+    return await withPlatformCaptureLock(async () => {
+      // D-04: reuse depotSignalCaptured() verbatim — never re-derive its
+      // logic. This is what makes "what the bulk job repairs" and "what the
+      // install form calls unresolved" the same set BY CONSTRUCTION.
+      const scoped = appIds.filter(
+        (id) => !depotSignalCaptured(steamMetadataStore.get(String(id)))
+      )
+      scopedCount = scoped.length
 
-    if (scoped.length === 0) {
-      // Converging steady state: after the first sync repairs the residue +
-      // never-fetched games, subsequent syncs ask for little or nothing,
-      // and this branch means literally no PICS call is made.
+      if (scoped.length === 0) {
+        // Converging steady state: after the first sync repairs the
+        // residue + never-fetched games, subsequent syncs ask for little
+        // or nothing, and this branch means literally no PICS call is
+        // made.
+        return {
+          scopedCount: 0,
+          capturedCount: 0,
+          skippedCount: 0,
+          failed: false
+        }
+      }
+
+      const response = await withTimeout(
+        client.getProductInfo(scoped, [], true),
+        STEAM_PICS_BULK_TIMEOUT_MS,
+        'captureOwnedAppPlatforms getProductInfo'
+      )
+
+      let capturedCount = 0
+      let skippedCount = 0
+
+      for (const id of scoped) {
+        // An id that came back in `unknownApps` (delisted / token-gated) is
+        // treated identically to an entirely absent entry — skip, do not
+        // trust whatever (if anything) `apps` happens to hold for it.
+        const isUnknownApp = response.unknownApps?.includes(id) === true
+        const entry = isUnknownApp ? undefined : response.apps?.[id]
+        const appinfo = entry?.appinfo as AppCommonOslist | undefined
+        const parsed = appinfo
+          ? parseOslistPlatforms(appinfo.common?.oslist)
+          : null
+
+        // Missing entry, missing appinfo, missing common, or an
+        // absent/empty/unrecognised oslist all collapse to the same "write
+        // nothing for this app" outcome via parseOslistPlatforms's null
+        // return. This deliberately DIVERGES from fetchAppInfo's single-app
+        // precedent (`depot.ts:456-460`), which THROWS on a missing entry —
+        // that throwing shape must not be copied into this fail-soft bulk
+        // path; a missing/ambiguous per-app answer here is an ordinary,
+        // expected outcome, not an error.
+        if (!parsed) {
+          skippedCount += 1
+          continue
+        }
+
+        mergePlatformCapture(String(id), parsed)
+        capturedCount += 1
+      }
+
+      logInfo(
+        `Steam bulk platform capture: scoped=${scoped.length} captured=${capturedCount} skipped=${skippedCount}`,
+        LogPrefix.Steam
+      )
+
       return {
-        scopedCount: 0,
-        capturedCount: 0,
-        skippedCount: 0,
+        scopedCount: scoped.length,
+        capturedCount,
+        skippedCount,
         failed: false
       }
-    }
-
-    const response = await withTimeout(
-      client.getProductInfo(scoped, [], true),
-      STEAM_PICS_BULK_TIMEOUT_MS,
-      'captureOwnedAppPlatforms getProductInfo'
-    )
-
-    let capturedCount = 0
-    let skippedCount = 0
-
-    for (const id of scoped) {
-      // An id that came back in `unknownApps` (delisted / token-gated) is
-      // treated identically to an entirely absent entry — skip, do not
-      // trust whatever (if anything) `apps` happens to hold for it.
-      const isUnknownApp = response.unknownApps?.includes(id) === true
-      const entry = isUnknownApp ? undefined : response.apps?.[id]
-      const appinfo = entry?.appinfo as AppCommonOslist | undefined
-      const parsed = appinfo
-        ? parseOslistPlatforms(appinfo.common?.oslist)
-        : null
-
-      // Missing entry, missing appinfo, missing common, or an
-      // absent/empty/unrecognised oslist all collapse to the same "write
-      // nothing for this app" outcome via parseOslistPlatforms's null
-      // return. This deliberately DIVERGES from fetchAppInfo's single-app
-      // precedent (`depot.ts:456-460`), which THROWS on a missing entry —
-      // that throwing shape must not be copied into this fail-soft bulk
-      // path; a missing/ambiguous per-app answer here is an ordinary,
-      // expected outcome, not an error.
-      if (!parsed) {
-        skippedCount += 1
-        continue
-      }
-
-      mergePlatformCapture(String(id), parsed)
-      capturedCount += 1
-    }
-
-    logInfo(
-      `Steam bulk platform capture: scoped=${scoped.length} captured=${capturedCount} skipped=${skippedCount}`,
-      LogPrefix.Steam
-    )
-
-    return {
-      scopedCount: scoped.length,
-      capturedCount,
-      skippedCount,
-      failed: false
-    }
+    })
   } catch (err) {
     // T-34.15-01-03 / D-03: a PICS timeout or error (including the bulk
     // socket itself rejecting) logs and returns a failure summary. This

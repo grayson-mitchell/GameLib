@@ -12,6 +12,7 @@ import {
   parseOslistPlatforms,
   mergePlatformCapture,
   captureOwnedAppPlatforms,
+  withPlatformCaptureLock,
   CapturedPlatforms,
   PlatformCapturePicsClient
 } from '../platformCapture'
@@ -57,13 +58,13 @@ describe('parseOslistPlatforms', () => {
   })
 
   it("'unknowntoken,linux' -> linux only (unrecognised token does not block a real one)", () => {
-    expect(parseOslistPlatforms('unknowntoken,linux')).toEqual<CapturedPlatforms>(
-      {
-        is_windows_native: false,
-        is_mac_native: false,
-        is_linux_native: true
-      }
-    )
+    expect(
+      parseOslistPlatforms('unknowntoken,linux')
+    ).toEqual<CapturedPlatforms>({
+      is_windows_native: false,
+      is_mac_native: false,
+      is_linux_native: true
+    })
   })
 
   it("'windows' -> windows only", () => {
@@ -109,13 +110,13 @@ describe('parseOslistPlatforms', () => {
   })
 
   it("' Windows , MacOS ' (whitespace + case) -> windows + mac", () => {
-    expect(parseOslistPlatforms(' Windows , MacOS ')).toEqual<CapturedPlatforms>(
-      {
-        is_windows_native: true,
-        is_mac_native: true,
-        is_linux_native: false
-      }
-    )
+    expect(
+      parseOslistPlatforms(' Windows , MacOS ')
+    ).toEqual<CapturedPlatforms>({
+      is_windows_native: true,
+      is_mac_native: true,
+      is_linux_native: false
+    })
   })
 
   describe('non-vacuity: the "write nothing" branch is not vacuous', () => {
@@ -125,13 +126,19 @@ describe('parseOslistPlatforms', () => {
      *  discriminates rather than being an untested no-op. */
     function treatsAbsentAsAvailable(oslist: unknown): CapturedPlatforms {
       if (typeof oslist === 'string' && oslist.trim().length > 0) {
-        return parseOslistPlatforms(oslist) ?? {
-          is_windows_native: true,
-          is_mac_native: true,
-          is_linux_native: true
-        }
+        return (
+          parseOslistPlatforms(oslist) ?? {
+            is_windows_native: true,
+            is_mac_native: true,
+            is_linux_native: true
+          }
+        )
       }
-      return { is_windows_native: true, is_mac_native: true, is_linux_native: true }
+      return {
+        is_windows_native: true,
+        is_mac_native: true,
+        is_linux_native: true
+      }
     }
 
     it('the saboteur DISAGREES with the real function on an empty string', () => {
@@ -250,6 +257,98 @@ describe('mergePlatformCapture (D-02)', () => {
     const [, realWrite] = mockedSet.mock.calls[0]
     expect(realWrite.forcedWindowsViaBottle).toBe(true)
   })
+
+  // ── Quick task 260816-qcn: freshest-write-wins precedence ────────────────
+
+  it('QCN-01: an accepted merge stamps platformsSource "pics" and a numeric platformsCapturedAt', () => {
+    mockedGet.mockReturnValue(undefined)
+
+    mergePlatformCapture('111', {
+      is_windows_native: true,
+      is_mac_native: true,
+      is_linux_native: false
+    })
+
+    expect(mockedSet).toHaveBeenCalledTimes(1)
+    const [, written] = mockedSet.mock.calls[0]
+    expect(written.platformsSource).toBe('pics')
+    expect(typeof written.platformsCapturedAt).toBe('number')
+  })
+
+  it('QCN-01: declines to overwrite an entry carrying a strictly newer, complete appdetails capture -- no .set() call at all', () => {
+    mockedGet.mockReturnValue({
+      is_windows_native: true,
+      is_mac_native: false,
+      is_linux_native: true,
+      platformsSource: 'appdetails',
+      platformsCapturedAt: Date.now() + 60_000
+    })
+
+    mergePlatformCapture('222', {
+      is_windows_native: false,
+      is_mac_native: true,
+      is_linux_native: false
+    })
+
+    expect(mockedSet).not.toHaveBeenCalled()
+  })
+
+  it('QCN-01: accepts and flips platformsSource to "pics" when the existing capture is older, preserving all eight carry-forwards', () => {
+    mockedGet.mockReturnValue({
+      art_cover: 'https://example.test/cover.jpg',
+      art_square: 'https://example.test/square.jpg',
+      extra: { about: { description: 'x', shortDescription: 'y' }, genres: [] },
+      is_delisted: false,
+      mac_arch: '64',
+      mac_arch_verified: true,
+      mac_arch_source: 'macho',
+      forcedWindowsViaBottle: true,
+      is_windows_native: false,
+      is_mac_native: false,
+      is_linux_native: false,
+      platformsSource: 'appdetails',
+      platformsCapturedAt: Date.now() - 60_000
+    })
+
+    mergePlatformCapture('333', {
+      is_windows_native: true,
+      is_mac_native: true,
+      is_linux_native: false
+    })
+
+    expect(mockedSet).toHaveBeenCalledTimes(1)
+    const [, written] = mockedSet.mock.calls[0]
+    expect(written.is_windows_native).toBe(true)
+    expect(written.is_mac_native).toBe(true)
+    expect(written.is_linux_native).toBe(false)
+    expect(written.platformsSource).toBe('pics')
+    expect(written.art_cover).toBe('https://example.test/cover.jpg')
+    expect(written.art_square).toBe('https://example.test/square.jpg')
+    expect(written.extra).toEqual({
+      about: { description: 'x', shortDescription: 'y' },
+      genres: []
+    })
+    expect(written.is_delisted).toBe(false)
+    expect(written.mac_arch).toBe('64')
+    expect(written.mac_arch_verified).toBe(true)
+    expect(written.mac_arch_source).toBe('macho')
+    expect(written.forcedWindowsViaBottle).toBe(true)
+  })
+
+  it('QCN-01: a legacy entry with no platformsCapturedAt is writable', () => {
+    mockedGet.mockReturnValue({
+      platformsCaptured: true,
+      is_windows_native: false
+    })
+
+    mergePlatformCapture('444', {
+      is_windows_native: true,
+      is_mac_native: false,
+      is_linux_native: false
+    })
+
+    expect(mockedSet).toHaveBeenCalledTimes(1)
+  })
 })
 
 // ── captureOwnedAppPlatforms (Task 3, D-03/D-04) ─────────────────────────────
@@ -361,7 +460,9 @@ describe('captureOwnedAppPlatforms (D-03/D-04)', () => {
   it('fail-soft on rejection: a rejecting getProductInfo resolves to failed:true, never throws, and never writes', async () => {
     mockedGet.mockReturnValue(undefined)
 
-    const getProductInfo = jest.fn().mockRejectedValue(new Error('CM socket dropped'))
+    const getProductInfo = jest
+      .fn()
+      .mockRejectedValue(new Error('CM socket dropped'))
     const client: PlatformCapturePicsClient = { getProductInfo }
 
     const result = await captureOwnedAppPlatforms(client, [1])
@@ -407,5 +508,79 @@ describe('captureOwnedAppPlatforms (D-03/D-04)', () => {
     // scoping, before there was anything to fetch.
     expect(getProductInfo).not.toHaveBeenCalled()
     expect(mockedSet).not.toHaveBeenCalled()
+  })
+
+  // ── Quick task 260816-qcn (D-C): serialised bulk critical section ────────
+
+  it("QCN-01 serialisation: two concurrent captureOwnedAppPlatforms calls for the same appIds issue exactly ONE getProductInfo -- the second observes the first's writes and scopes to zero", async () => {
+    // A real in-memory store (not a jest.fn() returning a fixed value) so
+    // writes from the first call are actually visible to the second call's
+    // scoping filter -- without the lock, the second run would scope BOTH
+    // ids and re-write, the exact F-2 shape (34.15 D-16 UAT finding) this
+    // proves impossible.
+    const store = new Map<string, unknown>()
+    mockedGet.mockImplementation((appId: string) => store.get(appId))
+    mockedSet.mockImplementation((appId: string, value: unknown) => {
+      store.set(appId, value)
+    })
+
+    let resolveDeferred: (value: {
+      apps: Record<number, { appinfo: unknown }>
+    }) => void = () => {}
+    const deferred = new Promise<{
+      apps: Record<number, { appinfo: unknown }>
+    }>((resolve) => {
+      resolveDeferred = resolve
+    })
+    const getProductInfo = jest.fn().mockReturnValue(deferred)
+    const client: PlatformCapturePicsClient = { getProductInfo }
+
+    const first = captureOwnedAppPlatforms(client, [1, 2])
+    const second = captureOwnedAppPlatforms(client, [1, 2])
+
+    resolveDeferred({
+      apps: {
+        1: { appinfo: { common: { oslist: 'windows' } } },
+        2: { appinfo: { common: { oslist: 'linux' } } }
+      }
+    })
+
+    const [firstResult, secondResult] = await Promise.all([first, second])
+
+    expect(getProductInfo).toHaveBeenCalledTimes(1)
+    expect(firstResult.scopedCount).toBe(2)
+    expect(secondResult.scopedCount).toBe(0)
+  })
+
+  it('QCN-01 lock does not wedge: a throwing locked section still lets the NEXT section run', async () => {
+    await expect(
+      withPlatformCaptureLock(async () => {
+        throw new Error('x')
+      })
+    ).rejects.toThrow('x')
+
+    const result = await withPlatformCaptureLock(async () => 'ok')
+    expect(result).toBe('ok')
+  })
+
+  it('QCN-01 fail-soft with the lock in place: a captureOwnedAppPlatforms call made immediately after a failing one still resolves (no rejection, no wedge)', async () => {
+    mockedGet.mockReturnValue(undefined)
+
+    const failingClient: PlatformCapturePicsClient = {
+      getProductInfo: jest
+        .fn()
+        .mockRejectedValue(new Error('CM socket dropped'))
+    }
+    const healthyClient: PlatformCapturePicsClient = {
+      getProductInfo: jest.fn().mockResolvedValue({ apps: {} })
+    }
+
+    const failing = captureOwnedAppPlatforms(failingClient, [1])
+    const healthy = captureOwnedAppPlatforms(healthyClient, [2])
+
+    const [failingResult, healthyResult] = await Promise.all([failing, healthy])
+
+    expect(failingResult.failed).toBe(true)
+    expect(healthyResult.failed).toBe(false)
   })
 })
