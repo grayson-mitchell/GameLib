@@ -1320,6 +1320,12 @@ async function downloadSingleFile(
       )
     }
   }
+
+  // Phase 23 (23-08 Task 3, G-23-02 VERDICT: H2): SECONDARY Mach-O fallback,
+  // never the primary fix — only ever supplements a manifest that supplied
+  // no Executable/CustomExecutable flag for this file. See
+  // applyMachOExecutableFallback's own doc comment for the full rationale.
+  await applyMachOExecutableFallback(dest, file.filename, file.flags)
 }
 
 /**
@@ -1357,6 +1363,180 @@ async function applyEDepotFileModes(
   }
 
   return { ok: true }
+}
+
+// ── Phase 23 (23-08 Task 3, G-23-02 VERDICT: H2) — Mach-O executable
+// fallback ──────────────────────────────────────────────────────────────
+// SECONDARY compensator, never the primary fix. 23-TRACE.md's Live run 2
+// VERDICT is H2 CONFIRMED: HUMANKIND's own manifest carries flagBearing=140
+// but executableFlagged=0 (distinctFlagValues=[64], Directory only) — the
+// manifest genuinely has no EDepotFileFlag executable bits for this
+// fallback's primary sibling (applyEDepotFileModes) to apply, and this is
+// the NORMAL case for native macOS titles per the trace's cross-title
+// census (2 of 3 censused titles carry zero executable flags, the third
+// exactly one), not an anomaly to special-case. Steam's own HUMANKIND
+// install carries 18,002/18,809 files +x despite its manifest supplying
+// zero — the real client derives execute bits by some OTHER means for these
+// titles. This fallback narrows that gap for POSIX platforms only, by
+// reading the already-landed file's own Mach-O magic bytes — content-gated,
+// NEVER path-gated (this file contains zero non-comment "Contents/MacOS"
+// occurrences — the 23-08 grep gate). The manifest's own EDepotFileFlag
+// executable bits remain the PRIMARY contract; this only fires when the
+// manifest supplied none for a file that IS a genuine Mach-O executable.
+
+/** Mach-O / fat-binary magic constants (mach-o/loader.h, mach-o/fat.h). */
+const MH_MAGIC = 0xfeedface
+const MH_MAGIC_64 = 0xfeedfacf
+const FAT_MAGIC = 0xcafebabe
+
+/** mach_header/mach_header_64 `filetype` values this fallback treats as
+ *  "should carry +x". MH_EXECUTE is a real executable; MH_DYLIB is a shared
+ *  library — 23-TRACE.md's own Live run 1 evidence shows Steam marks BOTH
+ *  +x (freetype6.dylib lands -rwxr-xr-x beside freetype6.bundle, which does
+ *  not). MH_BUNDLE (0x8) is deliberately excluded: Steam leaves Mach-O
+ *  bundles WITHOUT +x (WazHack's unitypurchasing.bundle, HUMANKIND's own
+ *  freetype6.bundle) since they are dlopen'd, never exec'd — a naive "any
+ *  Mach-O gets +x" rule would over-apply relative to Steam's own behavior,
+ *  which is exactly the subtype-discrimination constraint 23-TRACE.md
+ *  raises for this fallback. */
+const MH_EXECUTE = 0x2
+const MH_DYLIB = 0x6
+
+/** Reads a mach_header/mach_header_64's `filetype` field (the 4th uint32,
+ *  right after magic/cputype/cpusubtype) at `headerOffset`, in whichever
+ *  byte order `detectMachOEndianness` already determined for this header —
+ *  the two functions must never disagree on endianness. */
+function readMachOFiletype(
+  buf: Buffer,
+  headerOffset: number,
+  bigEndian: boolean
+): number | undefined {
+  const filetypeOffset = headerOffset + 12
+  if (buf.length < filetypeOffset + 4) return undefined
+  return bigEndian
+    ? buf.readUInt32BE(filetypeOffset)
+    : buf.readUInt32LE(filetypeOffset)
+}
+
+/** Detects a thin (single-architecture) Mach-O header at `offset` and
+ *  returns its byte order — little-endian first (the normal case on
+ *  today's Intel/Apple-Silicon Macs, where MH_MAGIC_64 (0xfeedfacf) is
+ *  stored in the host's own little-endian order), then big-endian (legacy
+ *  PowerPC-era files; included since the plan explicitly calls for both
+ *  orderings). Returns undefined for anything that isn't a recognized
+ *  Mach-O magic at this offset. */
+function detectMachOEndianness(
+  buf: Buffer,
+  offset: number
+): boolean | undefined {
+  if (buf.length < offset + 4) return undefined
+  const magicLE = buf.readUInt32LE(offset)
+  if (magicLE === MH_MAGIC || magicLE === MH_MAGIC_64) return false
+  const magicBE = buf.readUInt32BE(offset)
+  if (magicBE === MH_MAGIC || magicBE === MH_MAGIC_64) return true
+  return undefined
+}
+
+/**
+ * Determines whether the first bytes of an already-landed file (`buf`,
+ * however many bytes were actually read — never the whole file, T-21-02
+ * discipline) represent a Mach-O EXECUTE or DYLIB image. Content-gated
+ * ONLY — magic bytes, never a path pattern. Handles both a thin
+ * (single-arch) Mach-O header and a fat (universal) binary's first
+ * architecture slice, per 23-TRACE.md's own subtype-discrimination
+ * constraint (bundle vs executable/dylib), not merely "is this file
+ * Mach-O at all".
+ */
+function isExecutableMachO(buf: Buffer): boolean {
+  const thinBigEndian = detectMachOEndianness(buf, 0)
+  if (thinBigEndian !== undefined) {
+    const filetype = readMachOFiletype(buf, 0, thinBigEndian)
+    return filetype === MH_EXECUTE || filetype === MH_DYLIB
+  }
+
+  // fat_header/fat_arch are always written big-endian on disk, per Apple's
+  // own spec, regardless of the contained architectures' byte order
+  // (mach-o/fat.h). Only the FIRST slice is inspected — a universal
+  // binary's slices share one filetype in practice (all EXECUTE or all
+  // DYLIB).
+  if (buf.length >= 8 && buf.readUInt32BE(0) === FAT_MAGIC) {
+    const nfatArch = buf.readUInt32BE(4)
+    const fatArchOffset = 8 // sizeof(fat_header)
+    if (nfatArch >= 1 && buf.length >= fatArchOffset + 20) {
+      // fat_arch: cputype(4) cpusubtype(4) offset(4) size(4) align(4)
+      const sliceOffset = buf.readUInt32BE(fatArchOffset + 8)
+      const sliceBigEndian = detectMachOEndianness(buf, sliceOffset)
+      if (sliceBigEndian !== undefined) {
+        const filetype = readMachOFiletype(buf, sliceOffset, sliceBigEndian)
+        return filetype === MH_EXECUTE || filetype === MH_DYLIB
+      }
+    }
+  }
+
+  return false
+}
+
+/** Bytes read from the landed file's head to decide Mach-O-ness. Bounded and
+ *  small (T-21-02's "never RAM-buffer a whole file" discipline) — reads via
+ *  a single positional FileHandle.read, never the whole file. */
+const MACHO_PROBE_BYTES = 4096
+
+/**
+ * SECONDARY, POSIX-only compensator (23-08 Task 3, G-23-02 H2 verdict):
+ * applies chmod 0o755 to an already-landed, already-manifest-mode-applied
+ * file if (a) the manifest did NOT already flag it Executable/
+ * CustomExecutable, and (b) its own bytes are a Mach-O EXECUTE or DYLIB
+ * image. No-op on Windows (no POSIX exec bit there). Never invoked for
+ * Directory(64)/Symlink(512) manifest entries — those return from
+ * `downloadSingleFile` before this function is ever called (WR-01's own
+ * discipline, reused here rather than reimplemented). Resolves via the
+ * caller's already-`resolveContainedPath`-resolved `dest`; never
+ * `path.join` (T-23-08). No subprocess is ever spawned — this is a
+ * built-in `chmod`, not a shelled-out command. Every failure (read or
+ * chmod) is swallowed and logged, never thrown: this is a best-effort
+ * secondary measure and must never fail a file whose PRIMARY manifest-
+ * driven contract already succeeded above. Logs loudly whenever it DOES
+ * fire, so a manifest missing its own executable flags stays VISIBLE
+ * rather than silently patched over.
+ */
+async function applyMachOExecutableFallback(
+  dest: string,
+  filename: string,
+  flags: number | undefined
+): Promise<void> {
+  if (process.platform === 'win32') return
+  if (flags && flags & (EXECUTABLE_FLAG | CUSTOM_EXECUTABLE_FLAG)) return
+
+  try {
+    const handle = await open(dest, 'r')
+    let bytesRead: number
+    const buf = Buffer.alloc(MACHO_PROBE_BYTES)
+    try {
+      ;({ bytesRead } = await handle.read(buf, 0, MACHO_PROBE_BYTES, 0))
+    } finally {
+      await handle.close()
+    }
+    if (bytesRead < 8 || !isExecutableMachO(buf.subarray(0, bytesRead))) {
+      return
+    }
+
+    await chmod(dest, 0o755)
+    logWarning(
+      `downloadDepotFiles: applied secondary Mach-O executable fallback ` +
+        `(chmod 0o755) to "${filename}" — its manifest carried no ` +
+        `Executable/CustomExecutable flag, but its own bytes are a ` +
+        `Mach-O EXECUTE/DYLIB image (G-23-02 H2 verdict, 23-TRACE.md)`,
+      LogPrefix.Steam
+    )
+  } catch (err) {
+    logWarning(
+      [
+        `downloadDepotFiles: Mach-O executable fallback failed for ${filename}, continuing without it:`,
+        err
+      ],
+      LogPrefix.Steam
+    )
+  }
 }
 
 /**
