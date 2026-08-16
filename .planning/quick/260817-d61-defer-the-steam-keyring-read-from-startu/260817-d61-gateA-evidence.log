@@ -1,0 +1,46 @@
+(11:38:35) [INFO]:    [Backend]:         [bootstrap] appRoot resolved=/Users/graysonmitchell/Projects/GameLib source=GAMELIB_APP_ROOT
+(11:38:35) [INFO]:    [Backend]:         [bootstrap] GAMELIB_SHELL_EXE received=/Users/graysonmitchell/Projects/GameLib/src-tauri/target/debug/gamelib-shell
+(11:38:35) [INFO]:    [Backend]:         [bootstrap] publicDir resolved=/Users/graysonmitchell/Projects/GameLib/public exists=true
+(11:38:35) [INFO]:    [Backend]:         [bootstrap] runner binary gogdl path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl exists=true
+(11:38:35) [INFO]:    [Backend]:         [bootstrap] runner binary nile path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile exists=true
+(11:38:35) [INFO]:    [Backend]:         [bootstrap] runner binary legendary path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/legendary exists=true
+(11:38:35) [INFO]:    [Backend]:         [bootstrap] runner binary comet path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/comet exists=true
+(11:38:35) [INFO]:    [Backend]:         [bootstrap] Humble secret store installed: keyring-backed (humble-session/humble-csrf slots)
+(11:38:35) [INFO]:    [Backend]:         [bootstrap] secret stores: keyring
+(11:38:35) [INFO]:    [Connection]:      Connectivity: check-online
+(11:38:35) [INFO]:    [Connection]:      Pinging external endpoints
+(11:38:35) [INFO]:    [Steam]:           Steam TokenStore implementation set to SidecarKeyringTokenStore
+(11:38:35) [INFO]:    [DownloadManager]: sidecar: boot-time download-queue auto-resume (main.ts:579-only, startup-flagged initQueue call) is deliberately disabled (D-05) — a persisted queue head stays resumable via the Resume button, never auto-started on sidecar boot
+(11:38:35) [INFO]:    [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): issuing keyring_get (may prompt) trigger=unspecified
+(11:38:35) [INFO]:    [Nile]:            Saved user data to config file
+(11:38:35) [INFO]:    [Frontend]:        [refreshLibrary] runner=all origin=mount
+(11:38:35) [WARNING]: refresh not implemented on Sideload Library Manager
+(11:38:35) [INFO]:    [Legendary]:       Refreshing library...
+(11:38:35) [INFO]:    [Nile]:            Refreshing library...
+(11:38:35) [INFO]:    [Nile]:            Refreshing Amazon Games...
+(11:38:35) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/nile.log
+(11:38:35) [INFO]:    [Steam]:           Steam: library refresh deferred until a deliberate Steam action — no keyring_get issued (trigger=startup)
+(11:38:35) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile library sync
+(11:38:35) [INFO]:    [Backend]:         refreshLibrary complete runner=all managers=6
+(11:38:35) [INFO]:    [Nile]:            Game list updated, got 0 games
+(11:38:35) [WARNING]: listUpdateableGames not implemented on Sideload Library Manager
+(11:38:35) [INFO]:    [Nile]:            Looking for updates...
+(11:38:35) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile list-updates --json
+(11:38:35) [INFO]:    [Connection]:      Connectivity: online
+(11:38:35) [DEBUG]:   [Backend]:         Releases info ready, checking wine releases
+(11:38:35) [DEBUG]:   [Backend]:         Releases info ready, checking anticheat data
+(11:38:35) [DEBUG]:   [Backend]:         AreWeAnticheatYet data did not change. Skipping.
+(11:38:36) [INFO]:    [Frontend]:        No cache found, getting data from nile...
+(11:38:36) [INFO]:    [Nile]:            Refreshing library...
+(11:38:36) [INFO]:    [Nile]:            Refreshing Amazon Games...
+(11:38:36) [INFO]:    [Nile]:            refreshLibrary complete runner=nile managers=1
+(11:38:36) [INFO]:    [Nile]:            Game list updated, got 0 games
+(11:38:36) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile library sync
+(11:38:42) [INFO]:    [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): keyring_get ok present=true len=208 trigger=unspecified elapsed=6688ms
+(11:38:43) [INFO]:    [Steam]:           SidecarKeyringSlotStore(humble-csrf).getToken(): issuing keyring_get (may prompt) trigger=unspecified
+(11:38:48) [INFO]:    [Steam]:           SidecarKeyringSlotStore(humble-csrf).getToken(): keyring_get ok present=true len=29 trigger=unspecified elapsed=5887ms
+(11:38:48) [DEBUG]:   [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): served from cache, no keyring_get issued trigger=unspecified
+(11:38:49) [INFO]:    [Backend]:         Humble sync: order has keys with no extractable expiration: wKrVcDU4xqzVSNBt tpksMissingExpiration=1 candidateFields=[is_expired,key_type,human_name,machine_name,keyindex,gamekey,exclusive_countries,num_days_until_expired,disallowed_countries,show_custom_instructions_in_user_libraries,visible,sold_out,instructions_html,display_separately,direct_redeem,+6 more]
+(11:38:51) [INFO]:    [Backend]:         Humble sync: order has keys with no extractable expiration: UPcpetxeqmV2uPAF tpksMissingExpiration=1 candidateFields=[is_expired,key_type,human_name,machine_name,keyindex,exclusive_countries,gamekey,custom_instructions_html,disallowed_countries,show_custom_instructions_in_user_libraries,visible,sold_out,display_separately,direct_redeem,key_type_human_name,+3 more]
+(11:38:51) [INFO]:    [Backend]:         Humble sync: order has keys with no extractable expiration: kySCdN5SvVpwXK2v tpksMissingExpiration=1 candidateFields=[is_expired,key_type,human_name,machine_name,keyindex,gamekey,exclusive_countries,num_days_until_expired,disallowed_countries,show_custom_instructions_in_user_libraries,visible,sold_out,instructions_html,display_separately,direct_redeem,+6 more]
+(11:38:51) [INFO]:    [Backend]:         Humble sync finished: gamekeys=31 fetched=7/7 frozen=24 ok=7 schema_error=0 denied=0 expired=0 transient=0 zeroKeyOrders=0 keysCached=31
