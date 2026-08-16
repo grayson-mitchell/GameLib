@@ -1030,9 +1030,12 @@ describe('SteamGame.isNative() — D-11 per-OS confirmed-not-native', () => {
       is_mac_native: false
     })
 
+    // isNative() is the public wrapper — its body is `!this.isBottleEligible()`,
+    // so a false here IS the bottle-routing verdict. Asserted through the
+    // wrapper rather than the private method, which `tsc --noEmit` rejects
+    // (ts-jest is transpile-only in this repo and would not have caught it).
     const game = new SteamGame(APP_ID)
     expect(game.isNative()).toBe(false)
-    expect(game.isBottleEligible()).toBe(true)
   })
 
   it('D-11 (BLOCKER): macOS NOT-yet-captured (platformsCaptured not true) — isNative() returns true (do not bottle an unconfirmed game)', () => {
