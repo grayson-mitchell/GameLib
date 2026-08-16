@@ -11,9 +11,22 @@
 import {
   parseOslistPlatforms,
   mergePlatformCapture,
-  CapturedPlatforms
+  captureOwnedAppPlatforms,
+  CapturedPlatforms,
+  PlatformCapturePicsClient
 } from '../platformCapture'
 import { steamMetadataStore } from '../electronStores'
+import { STEAM_PICS_BULK_TIMEOUT_MS } from '../withTimeout'
+
+jest.mock('backend/logger', () => ({
+  logInfo: jest.fn(),
+  logError: jest.fn(),
+  logWarning: jest.fn(),
+  LogPrefix: {
+    Steam: 'Steam',
+    Backend: 'Backend'
+  }
+}))
 
 jest.mock('../electronStores', () => ({
   steamMetadataStore: {
@@ -236,5 +249,141 @@ describe('mergePlatformCapture (D-02)', () => {
     })
     const [, realWrite] = mockedSet.mock.calls[0]
     expect(realWrite.forcedWindowsViaBottle).toBe(true)
+  })
+})
+
+// ── captureOwnedAppPlatforms (Task 3, D-03/D-04) ─────────────────────────────
+
+describe('captureOwnedAppPlatforms (D-03/D-04)', () => {
+  beforeEach(() => {
+    mockedGet.mockReset()
+    mockedSet.mockReset()
+    jest.useRealTimers()
+  })
+
+  function capturedEntry(isWindowsNative: boolean) {
+    return { platformsCaptured: true, is_windows_native: isWindowsNative }
+  }
+
+  it('D-04 scoping: excludes already-captured appIds from the getProductInfo argument array', async () => {
+    mockedGet.mockImplementation((appId: string) => {
+      if (appId === '1') return capturedEntry(true)
+      return undefined
+    })
+
+    const getProductInfo = jest.fn().mockResolvedValue({ apps: {} })
+    const client: PlatformCapturePicsClient = { getProductInfo }
+
+    const result = await captureOwnedAppPlatforms(client, [1, 2, 3])
+
+    expect(getProductInfo).toHaveBeenCalledTimes(1)
+    expect(getProductInfo).toHaveBeenCalledWith([2, 3], [], true)
+    expect(result.scopedCount).toBe(2)
+  })
+
+  it('zero-scope short-circuit: all captured -> getProductInfo is not called at all', async () => {
+    mockedGet.mockReturnValue(capturedEntry(false))
+
+    const getProductInfo = jest.fn()
+    const client: PlatformCapturePicsClient = { getProductInfo }
+
+    const result = await captureOwnedAppPlatforms(client, [1, 2])
+
+    expect(getProductInfo).not.toHaveBeenCalled()
+    expect(result).toEqual({
+      scopedCount: 0,
+      capturedCount: 0,
+      skippedCount: 0,
+      failed: false
+    })
+  })
+
+  it('zero chunking: 500 uncaptured ids -> getProductInfo called exactly ONCE with all 500', async () => {
+    mockedGet.mockReturnValue(undefined)
+    const ids = Array.from({ length: 500 }, (_, i) => i + 1)
+
+    const getProductInfo = jest.fn().mockResolvedValue({ apps: {} })
+    const client: PlatformCapturePicsClient = { getProductInfo }
+
+    const result = await captureOwnedAppPlatforms(client, ids)
+
+    expect(getProductInfo).toHaveBeenCalledTimes(1)
+    expect(getProductInfo).toHaveBeenCalledWith(ids, [], true)
+    expect(result.scopedCount).toBe(500)
+    expect(result.skippedCount).toBe(500)
+  })
+
+  it('missing entry / unknownApps / missing appinfo / missing common / empty oslist all skip without throwing or writing', async () => {
+    mockedGet.mockReturnValue(undefined)
+
+    const getProductInfo = jest.fn().mockResolvedValue({
+      apps: {
+        // 1: missing entirely from `apps`
+        2: { appinfo: {} }, // missing common
+        3: { appinfo: { common: {} } }, // missing oslist
+        4: { appinfo: { common: { oslist: '' } } }, // empty oslist
+        5: { appinfo: { common: { oslist: 'windows' } } } // in unknownApps below
+      },
+      unknownApps: [5]
+    })
+    const client: PlatformCapturePicsClient = { getProductInfo }
+
+    const result = await captureOwnedAppPlatforms(client, [1, 2, 3, 4, 5])
+
+    expect(mockedSet).not.toHaveBeenCalled()
+    expect(result.skippedCount).toBe(5)
+    expect(result.capturedCount).toBe(0)
+    expect(result.failed).toBe(false)
+  })
+
+  it('a well-formed entry is captured via mergePlatformCapture', async () => {
+    mockedGet.mockReturnValue(undefined)
+
+    const getProductInfo = jest.fn().mockResolvedValue({
+      apps: {
+        7: { appinfo: { common: { oslist: 'windows,linux' } } }
+      }
+    })
+    const client: PlatformCapturePicsClient = { getProductInfo }
+
+    const result = await captureOwnedAppPlatforms(client, [7])
+
+    expect(mockedSet).toHaveBeenCalledTimes(1)
+    const [key, written] = mockedSet.mock.calls[0]
+    expect(key).toBe('7')
+    expect(written.is_windows_native).toBe(true)
+    expect(written.is_linux_native).toBe(true)
+    expect(written.platformsCaptured).toBe(true)
+    expect(result.capturedCount).toBe(1)
+    expect(result.skippedCount).toBe(0)
+  })
+
+  it('fail-soft on rejection: a rejecting getProductInfo resolves to failed:true, never throws, and never writes', async () => {
+    mockedGet.mockReturnValue(undefined)
+
+    const getProductInfo = jest.fn().mockRejectedValue(new Error('CM socket dropped'))
+    const client: PlatformCapturePicsClient = { getProductInfo }
+
+    const result = await captureOwnedAppPlatforms(client, [1])
+
+    expect(result.failed).toBe(true)
+    expect(mockedSet).not.toHaveBeenCalled()
+  })
+
+  it('fail-soft on timeout: a never-settling getProductInfo resolves to failed:true after STEAM_PICS_BULK_TIMEOUT_MS, never throws', async () => {
+    mockedGet.mockReturnValue(undefined)
+    jest.useFakeTimers()
+
+    const getProductInfo = jest.fn().mockReturnValue(new Promise(() => {}))
+    const client: PlatformCapturePicsClient = { getProductInfo }
+
+    const resultPromise = captureOwnedAppPlatforms(client, [1])
+    await jest.advanceTimersByTimeAsync(STEAM_PICS_BULK_TIMEOUT_MS)
+    const result = await resultPromise
+
+    expect(result.failed).toBe(true)
+    expect(mockedSet).not.toHaveBeenCalled()
+
+    jest.useRealTimers()
   })
 })

@@ -1,4 +1,7 @@
+import { logInfo, logError, LogPrefix } from 'backend/logger'
 import { steamMetadataStore, SteamMetadataCacheEntry } from './electronStores'
+import { depotSignalCaptured } from './metadataCapture'
+import { withTimeout, STEAM_PICS_BULK_TIMEOUT_MS } from './withTimeout'
 
 /**
  * Phase 34.15 Plan 01 — D-01's bulk PICS platform-capture writer.
@@ -167,4 +170,125 @@ export function mergePlatformCapture(
   } as SteamMetadataCacheEntry
 
   steamMetadataStore.set(appId, merged)
+}
+
+/** Narrow STRUCTURAL client interface (not the real `steam-user` type) so
+ *  this module is unit-testable with a plain object and no `steam-user`
+ *  import. `library.ts` casts the real authenticated client to this shape
+ *  (Plan 05), mirroring `depot.ts`'s narrow-cast convention for undocumented
+ *  or partially-typed `steam-user` surfaces. */
+export interface PlatformCapturePicsClient {
+  getProductInfo(
+    apps: number[],
+    packages: number[],
+    inclTokens?: boolean
+  ): Promise<{
+    apps?: Record<number, { appinfo?: unknown }>
+    unknownApps?: number[]
+  }>
+}
+
+export interface PlatformCaptureSummary {
+  scopedCount: number
+  capturedCount: number
+  skippedCount: number
+  failed: boolean
+}
+
+/**
+ * D-04-scoped, D-03 fail-soft bulk PICS platform capture. Scopes to apps
+ * whose depot signal was never captured, fetches `appinfo.common.oslist` for
+ * all of them in ONE `getProductInfo` call (no chunking — mirrors
+ * `depot.ts:466-486`'s `fetchDlcInfos` zero-chunking precedent verbatim,
+ * bounded only by `STEAM_PICS_BULK_TIMEOUT_MS`, sized against node-steam-user
+ * issue #144's documented large-library PICS slowness), and merges each
+ * result via `mergePlatformCapture`.
+ *
+ * This function MUST NOT throw under any input — D-03 requires the sync to
+ * fail soft and continue on a PICS timeout or error. Fail-CLOSED is this
+ * repo's house default; this is the SECOND deliberate exception (34.14 D-04's
+ * depot fail-open is the first). Aborting the sync on a PICS failure would
+ * trade "incomplete metadata" for "no library" — defect 2's exact shape. A
+ * later reviewer must not "fix" this back to fail-closed.
+ */
+export async function captureOwnedAppPlatforms(
+  client: PlatformCapturePicsClient,
+  appIds: number[]
+): Promise<PlatformCaptureSummary> {
+  // D-04: reuse depotSignalCaptured() verbatim — never re-derive its logic.
+  // This is what makes "what the bulk job repairs" and "what the install
+  // form calls unresolved" the same set BY CONSTRUCTION.
+  const scoped = appIds.filter(
+    (id) => !depotSignalCaptured(steamMetadataStore.get(String(id)))
+  )
+
+  if (scoped.length === 0) {
+    // Converging steady state: after the first sync repairs the residue +
+    // never-fetched games, subsequent syncs ask for little or nothing, and
+    // this branch means literally no PICS call is made.
+    return { scopedCount: 0, capturedCount: 0, skippedCount: 0, failed: false }
+  }
+
+  try {
+    const response = await withTimeout(
+      client.getProductInfo(scoped, [], true),
+      STEAM_PICS_BULK_TIMEOUT_MS,
+      'captureOwnedAppPlatforms getProductInfo'
+    )
+
+    let capturedCount = 0
+    let skippedCount = 0
+
+    for (const id of scoped) {
+      // An id that came back in `unknownApps` (delisted / token-gated) is
+      // treated identically to an entirely absent entry — skip, do not
+      // trust whatever (if anything) `apps` happens to hold for it.
+      const isUnknownApp = response.unknownApps?.includes(id) === true
+      const entry = isUnknownApp ? undefined : response.apps?.[id]
+      const appinfo = entry?.appinfo as AppCommonOslist | undefined
+      const parsed = appinfo
+        ? parseOslistPlatforms(appinfo.common?.oslist)
+        : null
+
+      // Missing entry, missing appinfo, missing common, or an
+      // absent/empty/unrecognised oslist all collapse to the same "write
+      // nothing for this app" outcome via parseOslistPlatforms's null
+      // return. This deliberately DIVERGES from fetchAppInfo's single-app
+      // precedent (`depot.ts:456-460`), which THROWS on a missing entry —
+      // that throwing shape must not be copied into this fail-soft bulk
+      // path; a missing/ambiguous per-app answer here is an ordinary,
+      // expected outcome, not an error.
+      if (!parsed) {
+        skippedCount += 1
+        continue
+      }
+
+      mergePlatformCapture(String(id), parsed)
+      capturedCount += 1
+    }
+
+    logInfo(
+      `Steam bulk platform capture: scoped=${scoped.length} captured=${capturedCount} skipped=${skippedCount}`,
+      LogPrefix.Steam
+    )
+
+    return {
+      scopedCount: scoped.length,
+      capturedCount,
+      skippedCount,
+      failed: false
+    }
+  } catch (err) {
+    // T-34.15-01-03 / D-03: a PICS timeout or error (including the bulk
+    // socket itself rejecting) logs and returns a failure summary. This
+    // function never throws — the caller (Plan 05's refresh() wiring)
+    // proceeds to today's cache-only hydration on a failed capture.
+    logError(['Steam bulk platform capture failed:', err], LogPrefix.Steam)
+    return {
+      scopedCount: scoped.length,
+      capturedCount: 0,
+      skippedCount: 0,
+      failed: true
+    }
+  }
 }
