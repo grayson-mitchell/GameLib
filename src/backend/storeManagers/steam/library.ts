@@ -672,6 +672,14 @@ export default class SteamLibraryManager implements LibraryManager {
    * timestamp.  Falls back to the cached library if the CM call fails (D-09).
    */
   async refresh(): Promise<ExecResult | null> {
+    // 34.15 D-06/D-07: emitted as the very first statement of refresh() —
+    // this is what gives the Steam sync tri-state STRUCTURAL meaning ("a
+    // refresh is currently running"), a property the boolean this tri-state
+    // replaces (GlobalState.tsx's old background-refresh flag) never had —
+    // that flag defaulted true and was reset to true after every unscoped
+    // refresh, so it could never distinguish "running" from anything else.
+    sendFrontendMessage('steamSyncStatus', { status: 'syncing' })
+
     // The steam-user client is in-memory and dies on app restart — reconnect
     // from the persisted refresh token before syncing.
     const connected = await SteamUser.ensureConnected()
@@ -681,6 +689,11 @@ export default class SteamLibraryManager implements LibraryManager {
         'Steam client not ready, skipping library refresh',
         LogPrefix.Steam
       )
+      // 34.15 D-07 exit path 1 of 4.
+      sendFrontendMessage('steamSyncStatus', {
+        status: 'failed',
+        reason: 'client-not-ready'
+      })
       return null
     }
 
@@ -704,6 +717,14 @@ export default class SteamLibraryManager implements LibraryManager {
       // Offline / CM-unreachable fallback — serve cached library (D-09)
       const cached = steamLibraryStore.get('games', [])
       cached.forEach((g) => sendFrontendMessage('pushGameToLibrary', g))
+      // 34.15 D-07 exit path 2 of 4. Emitted AFTER the cached-library push
+      // loop above so the renderer already has the cached games in hand
+      // before it is told the sync failed — the notice must render above a
+      // populated grid, never an empty one.
+      sendFrontendMessage('steamSyncStatus', {
+        status: 'failed',
+        reason: 'owned-apps-failed'
+      })
       return { stdout: '', stderr: String(err) }
     }
 
@@ -726,13 +747,13 @@ export default class SteamLibraryManager implements LibraryManager {
     // four durable paths keep an unresolved signal reachable for a game that
     // is VISIBLE in the library — (1) this step failing soft; (2) a per-app
     // absent/empty `oslist` correctly writing nothing; (3) the cached-library
-    // early returns above (the client-not-ready guard and this catch block),
-    // neither of which runs this step while games still render; (4) `init()`
-    // pushing the persisted list to the frontend independently of
-    // `refresh()`, so the library is on screen from the first frame of every
-    // cold start. Therefore 34.14's D-04 fail-open, the pending row, and the
-    // Install-disable ALL remain load-bearing and must not be weakened,
-    // removed, or "simplified" on the grounds that the data is complete now.
+    // early returns above (exit paths 1 and 2), neither of which runs this
+    // step while games still render; (4) `init()` pushing the persisted list
+    // to the frontend independently of `refresh()`, so the library is on
+    // screen from the first frame of every cold start. Therefore 34.14's
+    // D-04 fail-open, the pending row, and the Install-disable ALL remain
+    // load-bearing and must not be weakened, removed, or "simplified" on the
+    // grounds that the data is complete now.
     const appIds = ownedApps.map((app) => app.appid)
     const captureSummary = await captureOwnedAppPlatforms(
       client as unknown as PlatformCapturePicsClient,
@@ -743,152 +764,183 @@ export default class SteamLibraryManager implements LibraryManager {
       LogPrefix.Steam
     )
 
-    // ── Step 2: build install-state map(s) from ACF manifests on disk ─────
-    // Bottle-aware (GAP-17-BOTTLE-PLAY-REVERT): this full resync can be
-    // triggered mid-session (e.g. the launch-completion 'done' status), so it
-    // must reconcile bottle-installed games the same way refreshInstallState()
-    // does — otherwise a bottle-only-installed game's is_installed gets
-    // clobbered back to false by this native-only scan every time it runs.
-    const installedMap = await buildInstalledMap()
-    const bottleInstalledMap =
-      isMac && isBottleProvisioned() ? await buildBottleInstalledMap() : null
-    // D-UAT-24-07: consult the bridge bottle too, so a bridge-installed game
-    // (24-12's install poll flips is_installed:true on install) stays
-    // installed across this periodic sync instead of being clobbered back to
-    // false — gated the same way as the Phase 17 bottle map (isMac +
-    // provisioned check), so non-mac/unprovisioned environments skip this
-    // scan entirely (no new failing scan, native/bottle behavior unchanged).
-    const bridgeInstalledMap =
-      isMac && isBridgeBottleReady() ? await buildBridgeInstalledMap() : null
-    // WR-01 (21-17): the incomplete-on-disk set (native ACF present, bit 4
-    // unset — e.g. a 1026 cancel handoff). Because this rebuild does
-    // library.clear() below and derives each GameInfo purely from the ACF
-    // scan, the same-session steamResumePending marker (markSteamInstallIncomplete)
-    // would otherwise be silently wiped on the first mid-session resync,
-    // reverting "Finish in Steam" back to a bare "Install" (the D-UAT-09
-    // symptom). Deriving the flag from on-disk state here makes it durable
-    // across any number of refreshes.
-    const incompleteSet = await buildIncompleteInstallSet()
+    // 34.15 D-07 exit path 4 of 4 — the previously UNDOCUMENTED one. Steps 2-4
+    // below carried NO try/catch at HEAD, so a hydration-loop exception (e.g.
+    // a corrupt ACF file, a throwing map builder) became an unhandled
+    // rejection with ZERO ui signal on the unscoped mount-time path
+    // (init()'s `runOnceWhenOnline(() => this.refresh())`;
+    // online_monitor.ts's runOnceWhenOnline discards the callback's return
+    // value with no `.catch` anywhere in the chain). The two obvious
+    // `return`s above are NOT the exhaustive exit census — this wraps the
+    // ~140-line uncovered span. Re-throwing after emitting preserves the
+    // existing main.ts refreshLibrary IPC-rejection shape for the scoped
+    // caller (GlobalState's own catch already handles it); the emit is what
+    // closes the silent mount-time path.
+    try {
+      // ── Step 2: build install-state map(s) from ACF manifests on disk ─────
+      // Bottle-aware (GAP-17-BOTTLE-PLAY-REVERT): this full resync can be
+      // triggered mid-session (e.g. the launch-completion 'done' status), so it
+      // must reconcile bottle-installed games the same way refreshInstallState()
+      // does — otherwise a bottle-only-installed game's is_installed gets
+      // clobbered back to false by this native-only scan every time it runs.
+      const installedMap = await buildInstalledMap()
+      const bottleInstalledMap =
+        isMac && isBottleProvisioned() ? await buildBottleInstalledMap() : null
+      // D-UAT-24-07: consult the bridge bottle too, so a bridge-installed game
+      // (24-12's install poll flips is_installed:true on install) stays
+      // installed across this periodic sync instead of being clobbered back to
+      // false — gated the same way as the Phase 17 bottle map (isMac +
+      // provisioned check), so non-mac/unprovisioned environments skip this
+      // scan entirely (no new failing scan, native/bottle behavior unchanged).
+      const bridgeInstalledMap =
+        isMac && isBridgeBottleReady() ? await buildBridgeInstalledMap() : null
+      // WR-01 (21-17): the incomplete-on-disk set (native ACF present, bit 4
+      // unset — e.g. a 1026 cancel handoff). Because this rebuild does
+      // library.clear() below and derives each GameInfo purely from the ACF
+      // scan, the same-session steamResumePending marker (markSteamInstallIncomplete)
+      // would otherwise be silently wiped on the first mid-session resync,
+      // reverting "Finish in Steam" back to a bare "Install" (the D-UAT-09
+      // symptom). Deriving the flag from on-disk state here makes it durable
+      // across any number of refreshes.
+      const incompleteSet = await buildIncompleteInstallSet()
 
-    // ── Step 3: build and push one GameInfo per owned game ────────────────
-    library.clear()
-    for (const app of ownedApps) {
-      const appIdStr = String(app.appid)
-      const nativeInstalledData = installedMap.get(app.appid)
-      const bottleInstalledData = bottleInstalledMap?.get(app.appid)
-      const bridgeInstalledData = bridgeInstalledMap?.get(app.appid)
-      // D-UAT-24-02 (24-17): for a bridge-eligible title, install-state is
-      // authoritative to the bridge bottle ONLY — native/Phase-17-bottle
-      // copies must not shadow the bridge (they'd show Play while the
-      // bridge bottle doesn't have the game, dead-ending the launch).
-      // Precedence for NON-eligible titles is unchanged: native wins, then
-      // Phase 17 bottle, then bridge — never double-count/conflate the
-      // three roots (mirrors refreshInstallState()'s reconciliation;
-      // D-UAT-24-07 adds the bridge tier last so native/bottle behavior is
-      // byte-for-byte unchanged when they match).
-      const bridgeAuthoritative = isBridgeAuthoritativeForInstallState(appIdStr)
-      const installedData = bridgeAuthoritative
-        ? bridgeInstalledData
-        : (nativeInstalledData ?? bottleInstalledData ?? bridgeInstalledData)
-      const source: AcfSource = bridgeAuthoritative
-        ? 'bridge'
-        : nativeInstalledData
-          ? 'native'
-          : bottleInstalledData
-            ? 'bottle'
-            : 'bridge'
-      const cachedMeta = steamMetadataStore.get(appIdStr)
+      // ── Step 3: build and push one GameInfo per owned game ────────────────
+      library.clear()
+      for (const app of ownedApps) {
+        const appIdStr = String(app.appid)
+        const nativeInstalledData = installedMap.get(app.appid)
+        const bottleInstalledData = bottleInstalledMap?.get(app.appid)
+        const bridgeInstalledData = bridgeInstalledMap?.get(app.appid)
+        // D-UAT-24-02 (24-17): for a bridge-eligible title, install-state is
+        // authoritative to the bridge bottle ONLY — native/Phase-17-bottle
+        // copies must not shadow the bridge (they'd show Play while the
+        // bridge bottle doesn't have the game, dead-ending the launch).
+        // Precedence for NON-eligible titles is unchanged: native wins, then
+        // Phase 17 bottle, then bridge — never double-count/conflate the
+        // three roots (mirrors refreshInstallState()'s reconciliation;
+        // D-UAT-24-07 adds the bridge tier last so native/bottle behavior is
+        // byte-for-byte unchanged when they match).
+        const bridgeAuthoritative = isBridgeAuthoritativeForInstallState(appIdStr)
+        const installedData = bridgeAuthoritative
+          ? bridgeInstalledData
+          : (nativeInstalledData ?? bottleInstalledData ?? bridgeInstalledData)
+        const source: AcfSource = bridgeAuthoritative
+          ? 'bridge'
+          : nativeInstalledData
+            ? 'native'
+            : bottleInstalledData
+              ? 'bottle'
+              : 'bridge'
+        const cachedMeta = steamMetadataStore.get(appIdStr)
 
-      const gameInfo: GameInfo = {
-        runner: 'steam',
-        app_name: appIdStr,
-        title: app.name,
-        // Seed artwork from metadata cache so previously fetched art survives resync
-        art_cover: cachedMeta?.art_cover ?? '',
-        art_square: cachedMeta?.art_square ?? '',
-        // DETAIL-01: seed native platform flags from the metadata cache so the
-        // platform icons survive a resync (fetchMetadataIfNeeded populates these).
-        // D-17: is_windows_native is deliberately NOT defaulted (34.13
-        // review WR-16). Both `common/types.ts` and `electronStores.ts`
-        // document this field as THREE-valued: `undefined` means "never
-        // captured (pre-34.13 entry)", `false` means "confirmed no Windows
-        // depot", and only `=== true` permits offering a Windows install.
-        // Collapsing `undefined -> false` here destroyed the first state at
-        // the `GameInfo` boundary, so the renderer
-        // (`steamPlatformRow.ts`) could no longer tell a cold-cache game
-        // from a confirmed Windows-less one. Behaviour is unchanged today
-        // — the field is optional on `GameInfo` and EVERY consumer tests
-        // `=== true`, so an absent or never-captured entry still proves
-        // nothing about a Windows depot and still can never offer the
-        // option — but the documented contract is now preserved rather
-        // than contradicted.
-        is_mac_native: cachedMeta?.is_mac_native ?? false,
-        is_linux_native: cachedMeta?.is_linux_native ?? false,
-        is_windows_native: cachedMeta?.is_windows_native,
-        // GAP-B: seed the persisted delisted verdict so it survives a library resync
-        is_delisted: cachedMeta?.is_delisted ?? false,
-        // CR-01 fix: seed the persisted Mach-O ground-truth verdict so a
-        // cached '32' survives every startup/resync. Default MUST be
-        // 'unknown' (never '32') — a missing/blank cache can never be
-        // coerced into a 32-bit verdict (T-18-05-02, false-flag-safe
-        // invariant from MAC32-01).
-        mac_arch: cachedMeta?.mac_arch ?? 'unknown',
-        // Phase 17 D-08 reconciliation, NARROWED by quick task 260816-hdg.
-        // This field no longer mirrors the D-11 routing gate, and the
-        // divergence is deliberate: it seeds the frontend's
-        // `hasSteamDepotSignalCaptured`, which asks the DEPOT question, while
-        // the D-11 gate (isBridgeAuthoritativeForInstallState, above in this
-        // file) asks the MAC question and is unchanged. Routed through
-        // depotSignalCaptured so a pre-D-17 residue entry — which flagged the
-        // platforms fetch complete without ever writing the Windows field —
-        // stops claiming a depot signal it never captured. Consequence,
-        // accepted: AppleWikiInfo.tsx's section hides for such a game until
-        // getGameInfo's self-heal refetch lands, which is one fetch away.
-        steamPlatformsCaptured: depotSignalCaptured(cachedMeta),
-        is_installed: !!installedData,
-        install: installedData
-          ? {
-              install_path: installedData.installPath,
-              install_size: getFileSize(Number(installedData.sizeOnDisk)),
-              // GAP-17-BOTTLE-PLAY-REVERT: platform must reflect which root
-              // actually matched (native vs bottle), never hardcoded — a
-              // bottle-installed game must always report 'Windows' (Pitfall 3).
-              platform: installPlatformForSource(source)
-            }
-          : // WR-01 (21-17): no fully-installed manifest, but an incomplete
-            // (bit-4-unset) native ACF is on disk — durably re-surface the
-            // "Finish in Steam" resume affordance. is_installed stays false
-            // (installedData is falsy here), so the no-regression Play-safety
-            // truth holds; a fully-installed ACF took the branch above and
-            // still yields is_installed=true + Play.
-            incompleteSet.has(app.appid)
-            ? { steamResumePending: true }
-            : {},
-        extra: {
-          reqs: [],
-          // cachedMeta.extra preserves about/genres/art metadata from prior fetches.
-          // Playtime and last-played must reflect the latest sync (fresh wins over stale),
-          // so dynamic Steam fields are placed AFTER the spread to override any cached values.
-          ...(cachedMeta?.extra ?? {}),
-          steamPlaytimeMinutes: app.playtime_forever,
-          steamLastPlayed: app.rtime_last_played ?? 0
-        },
-        canRunOffline: true,
-        installable: true,
-        store_url: `https://store.steampowered.com/app/${app.appid}/`
+        const gameInfo: GameInfo = {
+          runner: 'steam',
+          app_name: appIdStr,
+          title: app.name,
+          // Seed artwork from metadata cache so previously fetched art survives resync
+          art_cover: cachedMeta?.art_cover ?? '',
+          art_square: cachedMeta?.art_square ?? '',
+          // DETAIL-01: seed native platform flags from the metadata cache so the
+          // platform icons survive a resync (fetchMetadataIfNeeded populates these).
+          // D-17: is_windows_native is deliberately NOT defaulted (34.13
+          // review WR-16). Both `common/types.ts` and `electronStores.ts`
+          // document this field as THREE-valued: `undefined` means "never
+          // captured (pre-34.13 entry)", `false` means "confirmed no Windows
+          // depot", and only `=== true` permits offering a Windows install.
+          // Collapsing `undefined -> false` here destroyed the first state at
+          // the `GameInfo` boundary, so the renderer
+          // (`steamPlatformRow.ts`) could no longer tell a cold-cache game
+          // from a confirmed Windows-less one. Behaviour is unchanged today
+          // — the field is optional on `GameInfo` and EVERY consumer tests
+          // `=== true`, so an absent or never-captured entry still proves
+          // nothing about a Windows depot and still can never offer the
+          // option — but the documented contract is now preserved rather
+          // than contradicted.
+          is_mac_native: cachedMeta?.is_mac_native ?? false,
+          is_linux_native: cachedMeta?.is_linux_native ?? false,
+          is_windows_native: cachedMeta?.is_windows_native,
+          // GAP-B: seed the persisted delisted verdict so it survives a library resync
+          is_delisted: cachedMeta?.is_delisted ?? false,
+          // CR-01 fix: seed the persisted Mach-O ground-truth verdict so a
+          // cached '32' survives every startup/resync. Default MUST be
+          // 'unknown' (never '32') — a missing/blank cache can never be
+          // coerced into a 32-bit verdict (T-18-05-02, false-flag-safe
+          // invariant from MAC32-01).
+          mac_arch: cachedMeta?.mac_arch ?? 'unknown',
+          // Phase 17 D-08 reconciliation, NARROWED by quick task 260816-hdg.
+          // This field no longer mirrors the D-11 routing gate, and the
+          // divergence is deliberate: it seeds the frontend's
+          // `hasSteamDepotSignalCaptured`, which asks the DEPOT question, while
+          // the D-11 gate (isBridgeAuthoritativeForInstallState, above in this
+          // file) asks the MAC question and is unchanged. Routed through
+          // depotSignalCaptured so a pre-D-17 residue entry — which flagged the
+          // platforms fetch complete without ever writing the Windows field —
+          // stops claiming a depot signal it never captured. Consequence,
+          // accepted: AppleWikiInfo.tsx's section hides for such a game until
+          // getGameInfo's self-heal refetch lands, which is one fetch away.
+          steamPlatformsCaptured: depotSignalCaptured(cachedMeta),
+          is_installed: !!installedData,
+          install: installedData
+            ? {
+                install_path: installedData.installPath,
+                install_size: getFileSize(Number(installedData.sizeOnDisk)),
+                // GAP-17-BOTTLE-PLAY-REVERT: platform must reflect which root
+                // actually matched (native vs bottle), never hardcoded — a
+                // bottle-installed game must always report 'Windows' (Pitfall 3).
+                platform: installPlatformForSource(source)
+              }
+            : // WR-01 (21-17): no fully-installed manifest, but an incomplete
+              // (bit-4-unset) native ACF is on disk — durably re-surface the
+              // "Finish in Steam" resume affordance. is_installed stays false
+              // (installedData is falsy here), so the no-regression Play-safety
+              // truth holds; a fully-installed ACF took the branch above and
+              // still yields is_installed=true + Play.
+              incompleteSet.has(app.appid)
+              ? { steamResumePending: true }
+              : {},
+          extra: {
+            reqs: [],
+            // cachedMeta.extra preserves about/genres/art metadata from prior fetches.
+            // Playtime and last-played must reflect the latest sync (fresh wins over stale),
+            // so dynamic Steam fields are placed AFTER the spread to override any cached values.
+            ...(cachedMeta?.extra ?? {}),
+            steamPlaytimeMinutes: app.playtime_forever,
+            steamLastPlayed: app.rtime_last_played ?? 0
+          },
+          canRunOffline: true,
+          installable: true,
+          store_url: `https://store.steampowered.com/app/${app.appid}/`
+        }
+
+        library.set(appIdStr, gameInfo)
+        sendFrontendMessage('pushGameToLibrary', gameInfo)
       }
 
-      library.set(appIdStr, gameInfo)
-      sendFrontendMessage('pushGameToLibrary', gameInfo)
+      // ── Step 4: persist library list and sync timestamp ───────────────────
+      steamLibraryStore.set('games', Array.from(library.values()))
+      steamSyncStore.set('syncedAt', Date.now())
+    } catch (err) {
+      logError(
+        ['Steam library sync failed during hydration:', err],
+        LogPrefix.Steam
+      )
+      // 34.15 D-07 exit path 4 of 4 (see the try's own doc comment above for
+      // why this path was previously silent). Re-thrown after emitting so
+      // main.ts's refreshLibrary IPC handler still rejects for a
+      // scoped-refresh caller, exactly as before this plan — only the emit
+      // is new.
+      sendFrontendMessage('steamSyncStatus', {
+        status: 'failed',
+        reason: 'sync-failed'
+      })
+      throw err
     }
-
-    // ── Step 4: persist library list and sync timestamp ───────────────────
-    steamLibraryStore.set('games', Array.from(library.values()))
-    steamSyncStore.set('syncedAt', Date.now())
     logInfo(
       `Steam library sync complete: ${library.size} games`,
       LogPrefix.Steam
     )
+    // 34.15 D-07 exit path 3 of 4 (success).
+    sendFrontendMessage('steamSyncStatus', { status: 'idle' })
     return { stdout: `${library.size} games synced`, stderr: '' }
   }
 

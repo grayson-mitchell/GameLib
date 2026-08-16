@@ -448,7 +448,15 @@ describe('SteamLibraryManager', () => {
 
     await manager.refresh()
 
-    expect(sendFrontendMessage).toHaveBeenCalledTimes(2)
+    // 34.15 D-07: refresh() now ALSO emits on the steamSyncStatus channel
+    // (entry 'syncing' + terminal 'idle'), so the total sendFrontendMessage
+    // call count is no longer 1:1 with pushGameToLibrary pushes — filter to
+    // the pushGameToLibrary channel specifically, matching this test's own
+    // name and intent.
+    const pushCalls = jest
+      .mocked(sendFrontendMessage)
+      .mock.calls.filter(([channel]) => channel === 'pushGameToLibrary')
+    expect(pushCalls).toHaveLength(2)
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'pushGameToLibrary',
       expect.objectContaining({
