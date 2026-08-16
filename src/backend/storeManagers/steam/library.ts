@@ -50,6 +50,10 @@ import { reconcilePartialState } from './depot/reconcile'
 import { sanitizeInstalldir } from './installLocation'
 import { bridgeAllowlist } from './bridge/allowlist'
 import { depotSignalCaptured } from './metadataCapture'
+import {
+  captureOwnedAppPlatforms,
+  type PlatformCapturePicsClient
+} from './platformCapture'
 
 /**
  * Which Steam client's steamapps root an ACF scan/poll should target.
@@ -702,6 +706,42 @@ export default class SteamLibraryManager implements LibraryManager {
       cached.forEach((g) => sendFrontendMessage('pushGameToLibrary', g))
       return { stdout: '', stderr: String(err) }
     }
+
+    // ── Step 1.5: bulk-capture platform data from PICS (34.15 D-01..D-04) ──
+    // WHY HERE (D-03): the CM client is already connected and the owned-app
+    // id list is already in hand, so this is one bulk call on a live socket.
+    // Placing it before the Step 3 hydration loop means every `GameInfo` is
+    // correct on its FIRST push — no re-push, no second IPC event, no
+    // convergence window, no resumability machinery.
+    //
+    // WHY FAIL-SOFT: the bulk capture call below never throws by contract; on
+    // timeout or error it returns `failed: true` and the sync continues to
+    // today's cache-only hydration below. Fail-closed is this repo's house
+    // default and 34.14 D-04's depot fail-open is the first documented
+    // exception; this is the SECOND. Aborting here would trade "incomplete
+    // metadata" for "no library", which is defect 2's exact shape — a later
+    // reviewer must not "fix" this back to fail-closed.
+    //
+    // WHY THIS DOES NOT MAKE THE DATA COMPLETE (D-05 — the non-consequence):
+    // four durable paths keep an unresolved signal reachable for a game that
+    // is VISIBLE in the library — (1) this step failing soft; (2) a per-app
+    // absent/empty `oslist` correctly writing nothing; (3) the cached-library
+    // early returns above (the client-not-ready guard and this catch block),
+    // neither of which runs this step while games still render; (4) `init()`
+    // pushing the persisted list to the frontend independently of
+    // `refresh()`, so the library is on screen from the first frame of every
+    // cold start. Therefore 34.14's D-04 fail-open, the pending row, and the
+    // Install-disable ALL remain load-bearing and must not be weakened,
+    // removed, or "simplified" on the grounds that the data is complete now.
+    const appIds = ownedApps.map((app) => app.appid)
+    const captureSummary = await captureOwnedAppPlatforms(
+      client as unknown as PlatformCapturePicsClient,
+      appIds
+    )
+    logInfo(
+      `Steam bulk platform capture: scoped=${captureSummary.scopedCount} captured=${captureSummary.capturedCount} skipped=${captureSummary.skippedCount} failed=${captureSummary.failed}`,
+      LogPrefix.Steam
+    )
 
     // ── Step 2: build install-state map(s) from ACF manifests on disk ─────
     // Bottle-aware (GAP-17-BOTTLE-PLAY-REVERT): this full resync can be
