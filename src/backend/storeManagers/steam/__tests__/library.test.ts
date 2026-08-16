@@ -4105,6 +4105,58 @@ describe('pollInstallOnce()', () => {
     )
   })
 
+  // ── debug/wazhack-uninstall-reverts: restart-Steam notify must also fire ──
+  // for the StateFlags=4 fast path, not just the 1026 handoff path. Before
+  // this fix, GAMELIB_HANDOFF_STATE_FLAGS (1026) gated the ONLY "restart
+  // Steam" notify() call, and that check lived inside the 'downloading'
+  // branch — a fast-path install (canWriteFullOwnership, Phase 23) never
+  // passes through 'downloading' at all, since readAcfState() returns
+  // state:'installed' the very first time isFullyInstalledStateFlags(4) is
+  // true. The notification was therefore structurally unreachable for this
+  // path (see Round 3's root-cause writeup).
+
+  it('fires the "Restart Steam to finish installing" notify on the "installed" branch (StateFlags=4 fast path) when isNativeHandoff is true', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
+    })
+    // Mirrors games.ts's runNativeDepotDownload() call site: isNativeHandoff
+    // is set true immediately after GameLib's OWN depot download finishes,
+    // BEFORE it's known whether the resulting ACF lands on 1026 or the
+    // StateFlags=4 fast path — see games.ts ~L1543-1550.
+    startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
+    await pollInstallOnce('730')
+    // i18next mock (top of file) returns the fallback string verbatim,
+    // ignoring interpolation options — matches this file's existing
+    // convention for asserting notify() body text.
+    expect(notify).toHaveBeenCalledWith({
+      title: 'CS:GO',
+      body: 'Restart Steam to finish installing {{game}}'
+    })
+  })
+
+  it('does NOT fire the "Restart Steam" notify on the "installed" branch for an OFF-path poll (Steam owns the download, isNativeHandoff false/absent) — no regression on the ordinary install-finished flow', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
+    })
+    startInstallPolling('730', 60000) // OFF-path, no isNativeHandoff
+    await pollInstallOnce('730')
+    expect(notify).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining('Restart Steam to finish installing')
+      })
+    )
+  })
+
   // ── debug/steam-1026-download-restart: the 1026-collision regression ──────
 
   it('regression: an OFF-path poll (Steam owns the download, no isNativeHandoff) at StateFlags 1026 with advancing bytes emits normal "installing" progress, NEVER "steam-waiting-for-restart"', async () => {

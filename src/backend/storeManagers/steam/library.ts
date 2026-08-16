@@ -2041,6 +2041,36 @@ export async function pollInstallOnce(
       title: existing?.title ?? '',
       body: i18next.t('notify.install.finished', 'Installation Finished')
     })
+
+    // debug/wazhack-uninstall-reverts: the "restart Steam to finish
+    // installing" notify previously lived ONLY inside the 'downloading'
+    // branch above, gated on StateFlags===GAMELIB_HANDOFF_STATE_FLAGS
+    // (1026). That check is structurally unreachable here — the Phase 23
+    // "trustworthy 4" fast path (canWriteFullOwnership) writes StateFlags=4
+    // directly via finalizeToSteam, so readAcfState() returns
+    // state:'installed' on the very first poll and this branch is reached
+    // WITHOUT ever passing through 'downloading' at all. isNativeHandoff is
+    // the correct signal here too — it is set true by games.ts the moment
+    // GameLib's OWN depot download finishes (runNativeDepotDownload,
+    // ~L1543-1550), BEFORE it's known whether the resulting ACF lands on
+    // 1026 or on the StateFlags=4 fast path — so it identifies "GameLib
+    // wrote this manifest directly, Steam has not yet adopted it" uniformly
+    // across both completion shapes. Fire-once per poll via
+    // notifiedWaiting, mirroring the 'downloading' branch's own guard
+    // (T-21-16-03), even though this branch itself only ever runs once
+    // before stopInstallPolling() below tears the poll down.
+    if (poll?.isNativeHandoff === true && !poll.notifiedWaiting) {
+      poll.notifiedWaiting = true
+      notify({
+        title: existing?.title ?? '',
+        body: i18next.t(
+          'steam.waitingForSteam.notify',
+          'Restart Steam to finish installing {{game}}',
+          { game: existing?.title ?? '' }
+        )
+      })
+    }
+
     stopInstallPolling(appId)
     logInfo(
       `Steam: install polling complete for appId ${appId} — badge flipped to installed`,
