@@ -349,6 +349,40 @@ describe('mergePlatformCapture (D-02)', () => {
 
     expect(mockedSet).toHaveBeenCalledTimes(1)
   })
+
+  // ── WR-01: mergePlatformCapture reports its own outcome ──────────────────
+
+  it('WR-01: returns true when the write is genuinely persisted', () => {
+    mockedGet.mockReturnValue(undefined)
+
+    const result = mergePlatformCapture('555', {
+      is_windows_native: true,
+      is_mac_native: false,
+      is_linux_native: false
+    })
+
+    expect(result).toBe(true)
+    expect(mockedSet).toHaveBeenCalledTimes(1)
+  })
+
+  it('WR-01: returns false (not true) when resolvePlatformWrite declines the write -- no .set() call', () => {
+    mockedGet.mockReturnValue({
+      is_windows_native: true,
+      is_mac_native: false,
+      is_linux_native: true,
+      platformsSource: 'appdetails',
+      platformsCapturedAt: Date.now() + 60_000
+    })
+
+    const result = mergePlatformCapture('666', {
+      is_windows_native: false,
+      is_mac_native: true,
+      is_linux_native: false
+    })
+
+    expect(result).toBe(false)
+    expect(mockedSet).not.toHaveBeenCalled()
+  })
 })
 
 // ── captureOwnedAppPlatforms (Task 3, D-03/D-04) ─────────────────────────────
@@ -455,6 +489,47 @@ describe('captureOwnedAppPlatforms (D-03/D-04)', () => {
     expect(written.platformsCaptured).toBe(true)
     expect(result.capturedCount).toBe(1)
     expect(result.skippedCount).toBe(0)
+  })
+
+  it('WR-01: a precedence-declined merge during the bulk loop is NOT counted as captured -- lands in skippedCount instead', async () => {
+    let getCallCount = 0
+    mockedGet.mockImplementation(() => {
+      getCallCount += 1
+      if (getCallCount === 1) {
+        // Scoping snapshot: appId 1 had no captured signal yet, so it is
+        // included in `scoped`.
+        return undefined
+      }
+      // By the time mergePlatformCapture's own read runs, a concurrent
+      // per-game appdetails write has already landed a strictly newer,
+      // complete capture for this appId -- the exact race WR-01 describes
+      // (a concurrent writer lands between the PICS response arriving and
+      // this loop reaching the id). resolvePlatformWrite must decline.
+      return {
+        is_windows_native: true,
+        is_mac_native: false,
+        is_linux_native: true,
+        platformsSource: 'appdetails',
+        platformsCapturedAt: Date.now() + 60_000
+      }
+    })
+
+    const getProductInfo = jest.fn().mockResolvedValue({
+      apps: {
+        1: { appinfo: { common: { oslist: 'windows,linux' } } }
+      }
+    })
+    const client: PlatformCapturePicsClient = { getProductInfo }
+
+    const result = await captureOwnedAppPlatforms(client, [1])
+
+    // The declined merge must never call .set() and must never be counted
+    // as "captured" -- pre-fix, capturedCount incremented unconditionally
+    // after mergePlatformCapture() regardless of whether it actually wrote.
+    expect(mockedSet).not.toHaveBeenCalled()
+    expect(result.scopedCount).toBe(1)
+    expect(result.capturedCount).toBe(0)
+    expect(result.skippedCount).toBe(1)
   })
 
   it('fail-soft on rejection: a rejecting getProductInfo resolves to failed:true, never throws, and never writes', async () => {

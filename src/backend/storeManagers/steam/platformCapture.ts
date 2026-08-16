@@ -159,11 +159,18 @@ export function parseOslistPlatforms(
  * answer survives still depends on which sync ran last; `platformsSource` /
  * `platformsCapturedAt` are what make that inspectable. Do not describe
  * WR-02 as closed.
+ *
+ * Quick task 260816-qcn (WR-01): returns `true` only when this call actually
+ * persisted a write, `false` when `resolvePlatformWrite` declined it. The
+ * caller (`captureOwnedAppPlatforms`'s bulk loop) needs this to keep its
+ * `captured=`/`skipped=` diagnostic honest — that log line is this project's
+ * own load-bearing evidence of PICS-capture health (see `MEMORY.md`), so a
+ * declined-but-parsed entry must never be counted as "captured".
  */
 export function mergePlatformCapture(
   appId: string,
   platforms: CapturedPlatforms
-): void {
+): boolean {
   const existing = steamMetadataStore.get(appId)
 
   const resolution = resolvePlatformWrite(
@@ -176,7 +183,7 @@ export function mergePlatformCapture(
   if (!resolution.accepted) {
     // Declined: `existing` already carries a strictly newer, complete
     // platform capture. Do not rewrite it.
-    return
+    return false
   }
 
   // `art_cover`/`art_square`/`extra` are typed as REQUIRED on
@@ -199,6 +206,7 @@ export function mergePlatformCapture(
   } as SteamMetadataCacheEntry
 
   steamMetadataStore.set(appId, merged)
+  return true
 }
 
 // ── D-C serialisation: a module-local promise-chain mutex ───────────────────
@@ -366,8 +374,27 @@ export async function captureOwnedAppPlatforms(
           continue
         }
 
-        mergePlatformCapture(String(id), parsed)
-        capturedCount += 1
+        // Quick task 260816-qcn (WR-01): `mergePlatformCapture` now reports
+        // whether it genuinely persisted a write. A `false` here means
+        // `resolvePlatformWrite` declined this parse in favour of an
+        // existing, strictly-newer, complete capture (e.g. a concurrent
+        // per-game `appdetails` fetch landed a newer stamp for this appId
+        // between the PICS response arriving and this loop reaching it).
+        // Deliberately folded into `skippedCount` rather than a separate
+        // `declinedCount`: from this log line's perspective both outcomes
+        // mean the same thing -- "nothing new was written to the cache for
+        // this appId this run" -- and folding them keeps the counters'
+        // invariant (`captured + skipped === scoped.length`) true without
+        // adding a fourth number a reader has to reconcile by hand. If a
+        // future reader needs to distinguish "no signal" from "declined by
+        // precedence", split this back out into its own counter rather than
+        // silently re-widening `capturedCount`'s meaning.
+        const wasWritten = mergePlatformCapture(String(id), parsed)
+        if (wasWritten) {
+          capturedCount += 1
+        } else {
+          skippedCount += 1
+        }
       }
 
       logInfo(
