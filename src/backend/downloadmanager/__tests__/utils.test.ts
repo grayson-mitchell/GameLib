@@ -129,6 +129,7 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
     // .mockReturnValue at first `require()`) is wiped before EACH test, not
     // just once. Re-apply every implementation this suite depends on here.
     getGameInfoMock.mockReturnValue({ title: 'Test Game' })
+    stopMock.mockResolvedValue(undefined)
     ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
       install: installMock,
       getGameInfo: getGameInfoMock,
@@ -260,6 +261,7 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
 describe('installQueueElement — D-01b: belt-and-suspenders install watchdog', () => {
   beforeEach(() => {
     getGameInfoMock.mockReturnValue({ title: 'Test Game' })
+    stopMock.mockResolvedValue(undefined)
     ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
       install: installMock,
       getGameInfo: getGameInfoMock,
@@ -336,6 +338,7 @@ describe('installQueueElement — D-01b: belt-and-suspenders install watchdog', 
 describe('installQueueElement — 34.13 A-01: the reshape must not drop InstallArgs fields', () => {
   beforeEach(() => {
     getGameInfoMock.mockReturnValue({ title: 'Test Game' })
+    stopMock.mockResolvedValue(undefined)
     ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
       install: installMock,
       getGameInfo: getGameInfoMock,
@@ -395,6 +398,7 @@ describe('installQueueElement — 34.13 A-01: the reshape must not drop InstallA
 describe('installQueueElement — WR-03/D-12: error-path regression coverage', () => {
   beforeEach(() => {
     getGameInfoMock.mockReturnValue({ title: 'Test Game' })
+    stopMock.mockResolvedValue(undefined)
     ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
       install: installMock,
       getGameInfo: getGameInfoMock,
@@ -460,6 +464,7 @@ describe('installQueueElement — WR-03/D-12: error-path regression coverage', (
 describe('installQueueElement — orphaned-depot abort: a terminal install failure routes through the same abort as user Cancel', () => {
   beforeEach(() => {
     getGameInfoMock.mockReturnValue({ title: 'Test Game' })
+    stopMock.mockResolvedValue(undefined)
     ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
       install: installMock,
       getGameInfo: getGameInfoMock,

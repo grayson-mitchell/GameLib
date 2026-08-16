@@ -1,9 +1,10 @@
-import { logError, LogPrefix, logWarning } from 'backend/logger'
+import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
 import {
   downloadFile,
   isEpicServiceOffline,
   sendGameStatusUpdate
 } from '../utils'
+import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { DMStatus, InstallParams, Runner } from 'common/types'
 import { InstallResult } from 'common/types/game_manager'
 import i18next from 'i18next'
@@ -206,6 +207,50 @@ async function installQueueElement(params: InstallParams): Promise<{
     // the G-30-02 live install-hang. Per D-03, this is paired with a
     // failure dialog below so the badge-clear and the user-facing failure
     // story land together as one coherent surface.
+    // quick task 260816-vgc: a terminal install failure (watchdog trip,
+    // resolved {status:'error'}, or a thrown/rejected install()) must abort
+    // its OWN in-flight depot download, the same way a user Cancel already
+    // does via downloadqueue.ts's stopCurrentDownload(). Without this, the
+    // 8-minute watchdog above rejects only the OUTER await — the inner
+    // install() run (and, for Steam, its chunk-stream loop) keeps running
+    // and writing to disk unbounded. Observed live 2026-08-16: a HUMANKIND
+    // install declared failed at 21:36:40 kept downloading for ~5 more
+    // minutes, writing 4,486 orphaned files with no appmanifest_*.acf ever
+    // written — see .planning/todos/pending/2026-08-16-orphaned-depot-
+    // download-outlives-failure.md.
+    //
+    // `.stop(false)` is required IN ADDITION to `callAbortController` for
+    // Steam: only SteamGame.stop() flips the in-flight entry's `aborted`
+    // flag on `nativeInstallsInFlight` (games.ts). Without that flag, an
+    // immediate retry would JOIN the still-tearing-down run instead of
+    // starting a fresh one (games.ts installDepotDownload, ~L1388-1400).
+    //
+    // `.stop()` is gated to `runner === 'steam'` only — legendary's stop()
+    // calls killPattern('legendary'), which kills EVERY legendary process on
+    // Windows, not just this install's. That blast radius is acceptable for
+    // a deliberate user Cancel but not as an automatic reaction to any
+    // install error. `callAbortController` alone is the correct, targeted
+    // kill for non-steam (gogdl/legendary) child processes and stays
+    // runner-agnostic.
+    if (status === 'error') {
+      logInfo(
+        `Aborting in-flight download for ${appName} after terminal install failure`,
+        LogPrefix.DownloadManager
+      )
+      callAbortController(appName)
+      if (runner === 'steam') {
+        libraryManagerMap[runner]
+          .getGame(appName)
+          .stop(false)
+          .catch((error: unknown) => {
+            logWarning(
+              `SteamGame.stop() failed while aborting in-flight download for ${appName}: ${error}`,
+              LogPrefix.DownloadManager
+            )
+          })
+      }
+    }
+
     if (
       runner !== 'steam' ||
       deferredToSetup ||
