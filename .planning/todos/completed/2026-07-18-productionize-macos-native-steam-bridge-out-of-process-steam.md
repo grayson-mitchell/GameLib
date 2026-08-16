@@ -49,3 +49,39 @@ productionization work (all beyond the proven backbone):
    only dry-runs in this env). Bottle run: `CX_BOTTLE=<bottle> <CrossOver>/bin/wine "C:\prog.exe"`.
 
 Prior art: samdotson61/L4D2-launcher (working shallow bridge), natbro/kaon (deep lsteamclient, stuck).
+
+## Resolution 2026-08-16 — SUPERSEDED by Phase 24 (quick task 260816-i8a)
+
+This todo asked for a dedicated phase "when resourced". That phase was scoped, planned and
+executed as **Phase 24 — macOS native Steam bridge (out-of-process steam_api proxy)**, whose
+ROADMAP entry cites *this file by name* as one of its own sources. 16/17 plans shipped;
+implementation lives at `src/backend/storeManagers/steam/bridge/` and `native/steam-bridge/`.
+
+Mapping this todo's own numbered productionization list to what closed it:
+
+| # | This todo's item | Closed by |
+|---|---|---|
+| 1 | **C++ vtable ABI** — called "the right next frontier spike" | Spike 006, then plan 24-01 (vtable+flat shim generator, GameLib-authored manifest, `__thiscall`/`ret N`/sret marshaling). Spike 007 ran a real commercial game (Avernum 4) on it. |
+| 2 | API/callback breadth | **Deliberately scoped to 2 interfaces** — see residual below |
+| 3 | P2P multiplayer join | Not attempted; still the known-hard gap this todo describes |
+| 4 | Persistent channel | 24-02 (native helper, InitFlat-once, loopback-only **persistent** channel) |
+| 5 | Packaging/portability | 24-07 (pinned zig download, clang helper, `zig cc` PE shim into `public/bin/${arch}/darwin`); per-bottle shim placement via 24-05 |
+| — | Routing/lifecycle (not in the list) | 24-08 `isBridgeEligible` + install/launch/uninstall branches; 24-04 CrossOver-only bridge bottle with no Windows Steam client (R6) |
+
+**On "16/17":** the plan without a SUMMARY.md is 24-10, the *human UAT gate* (`autonomous: false`),
+whose artifact is `24-UAT.md` rather than a summary. That UAT is `status: complete` — 3 gates
+passed, 0 failed, 1 blocked out-of-scope. The bridge mechanism is proven end-to-end (vtable
+round-trip + Avernum 6 playable through the bundled helper).
+
+**Residual, tracked elsewhere — do not reopen this todo to carry it.** Item 2 (API/callback
+breadth) is the one blocked gate, recorded as **D-UAT-24-09**: Hoard imports 8 bare old-style
+interface accessors, while the phase-24 shim + helper deliberately cover only `ISteamUser` +
+`ISteamFriends`. Full coverage needs 6 more interface proxies (Utils / Apps / UserStats /
+RemoteStorage / Matchmaking / Networking) in both the 24-01 generator and the 24-02 helper —
+explicitly dispositioned as a follow-on milestone, not a gap-cycle tweak. Hoard was removed from
+the bridge allowlist (`30cdda6a`) so no user is handed a title that installs then crashes.
+Item 3 (P2P) remains untouched and unclaimed.
+
+Closed as superseded. A future bridge-coverage effort should start from `24-UAT.md`'s D-UAT-24-09
+disposition, which quantifies exactly what is missing — not from this note, which predates the
+phase and treats the vtable ABI as still unproven.

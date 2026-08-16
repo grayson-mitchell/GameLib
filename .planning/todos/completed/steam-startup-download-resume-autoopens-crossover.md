@@ -37,3 +37,30 @@ surprising. It reads as "the app did something on its own."
 
 **Do NOT** fold into Phase 18 gap closure — this is Phase 3/17 territory. Triage under
 the CrossOver-bottle install UX when that area is next revisited.
+
+## Resolution 2026-08-16 — FIXED, more completely than this todo asked (quick task 260816-i8a)
+
+This todo offered three escalating options: a notify/toast, a confirm gate, or at minimum a log
+line. What shipped is stronger than all three — **the startup auto-resume was removed outright**,
+so the silent bottle-Steam launch this note describes can no longer occur at all.
+
+Current behaviour, `src/backend/storeManagers/steam/library.ts:536-584`:
+
+- The `scanDownloadingAppIds()` loop no longer calls `startInstallPolling(appId)`. It only
+  **surfaces** the interrupted install: sets `install.steamResumePending: true` on the cached
+  `GameInfo`, writes it back, and pushes it to the frontend via `pushGameToLibrary`.
+- It logs `"has an interrupted install detected on startup — surfacing as resumable, NOT
+  auto-resuming"` (satisfying the "at minimum" option).
+- It fires a notification, `steam.resumeAvailable.notify` — *"An interrupted install for {{game}}
+  is ready to resume — click Install to continue"* (satisfying the notify option).
+- The actual resume moved into `resumeInterruptedSteamInstall()`, which the surrounding comment
+  states *"only runs when the user explicitly triggers it (their own Install click — see
+  `SteamGame.install()`)"* (satisfying, and exceeding, the confirm-gate option).
+
+Two hardening details landed alongside, worth knowing if this area is revisited: the loop skips
+any appId already owned by a live in-process install (`isNativeInstallInFlight`, T-23-14), and it
+is wrapped in outer *and* per-appId try/catch so neither a scan failure nor one game's surface
+step can block startup.
+
+Closed as fixed. The remaining Steam-startup concern in this area is tracked separately and is
+about crash mitigation, not auto-launch.
