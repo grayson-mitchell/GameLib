@@ -42,3 +42,47 @@ teardown/process-exit issue, not a functional test failure.
 `jest.clearAllTimers()` (or an explicit `stopInstallPolling`/interval-clear call
 in `afterEach`) around whichever test starts `pollInstallOnce`'s interval without
 stopping it.
+
+## Skip-and-warn policy for a Blocked key on a non-essential owned depot (G-23-01) — GATED on the official-Steam-client diagnostic
+
+**Found during:** 23-04 Gate 2 Attempt 1 (KCD2, appId 1771300), diagnosed by
+23-09's observability-only fix.
+
+**Symptom:** KCD2's install aborted entirely because Steam returned `EResult 40
+(Blocked)` for depot 1771304's decryption key. GameLib had selected 1771304 via
+the package-ownership gate (`select.ts:174`), but owning a depot does not
+guarantee Steam will issue its key — for region/DRM-gated depots, Steam
+re-checks at key-request time and can return `Blocked` even for an owned
+depot. `classifyDepotError` treats EResult 40 as non-retryable and fails the
+WHOLE install (`depotErrors.ts`), rather than skipping a non-essential blocked
+depot and continuing.
+
+**Why out of scope this cycle:** User-locked decision (23-09-PLAN.md
+objective): diagnostic + observability ONLY this cycle. Required-vs-optional
+depot classification at selection time is an explicit non-goal — 23-09
+shipped only a dedicated Blocked classification (`steam.download.error.depotBlocked`)
+and a failure-site log naming the depot, so whatever the diagnostic finds, the
+next occurrence is legible. No change to `select.ts`, to
+`NON_RETRYABLE_ERESULTS`, or to any retry/abort behavior.
+
+**The two branches the diagnostic decides** (23-10 Task 3 runs it — install
+KCD2 in the OFFICIAL Steam client on this same account/region and observe
+whether depot 1771304 downloads):
+
+1. **Official Steam client ALSO cannot fetch depot 1771304** ⇒ genuine
+   region/account block. Close `G-23-01` as not-a-bug — GameLib's
+   fail-the-whole-install behavior is correct; there is no depot to skip
+   because the official client can't get it either.
+2. **Official client installs KCD2 fully** (silently skipping or substituting
+   for 1771304, or the depot isn't actually required) ⇒ GameLib
+   over-selection / hard-fail defect confirmed. Follow-up work: introduce a
+   required-vs-optional depot distinction at selection time in
+   `depot/select.ts`, plus a skip-and-warn path (continue the install, warn
+   the user which depot was skipped) instead of a whole-install abort on a
+   Blocked key for a non-essential depot.
+
+**Recommendation / GATE: do not start this work until 23-10 Task 3 records the
+diagnostic verdict.** The correct fix depends entirely on which branch the
+diagnostic lands on — building the skip-and-warn selection-policy change
+before knowing whether depot 1771304 is actually skippable would be guessing
+at Steam's own selection rules.

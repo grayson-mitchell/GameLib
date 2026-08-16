@@ -396,12 +396,14 @@ reconciliation genuinely could not prove completeness — record which), the gam
   severity: unknown  # major IF 1771304 is optional/region-alternate (official client skips it); not-a-bug IF 1771304 is required and genuinely region-blocked for this account
   surfaced_by: gate-2 (attempt 1, KCD2)
   decisive_diagnostic: "Install KCD2 in the official Steam client on this account/region; observe whether depot 1771304 downloads. Blocked there too => genuine region block (not a GameLib bug). Downloads fine => GameLib over-selection/hard-fail defect."
+  observability_shipped_23_09: "23-09 shipped the diagnostic + observability half only (user-locked scope, no selection-policy change): classifyDepotError now gives EResult 40 (Blocked) a dedicated steam.download.error.depotBlocked message naming the specific blocked depot id and stating the game may still be installable directly through the Steam client, and wrapDepotKeyError now logs a warning at the failure site naming the depot id, owning appId, and EResult before the error propagates (previously this context was only visible once the whole install failed and got classified). No change to select.ts, NON_RETRYABLE_ERESULTS, or retry/abort behavior -- a Blocked key still fails the install exactly as before, only the message and the log improved. Whatever the 23-10 Task 3 diagnostic finds, this occurrence (and the next one) is now legible."
   artifacts:
     - "src/backend/storeManagers/steam/depot/select.ts:174 (ownership gate includes owned-but-key-blocked depot)"
     - "src/backend/storeManagers/steam/depotErrors.ts:52 (EResult 40 non-retryable -> whole-install abort)"
     - "~/Library/Logs/GameLib/gamelib.log 22:01:29 (couldn't get decryption key for depot 1771304 (app 1771300): Blocked)"
   missing:
     - "Decide policy: should a Blocked key on a non-essential owned depot skip-and-warn (continue install) rather than abort? Requires distinguishing required vs optional/region-alternate depots at selection time."
+    - "The conditional required-vs-optional depot selection-policy follow-up is recorded in deferred-items.md ('Skip-and-warn policy for a Blocked key on a non-essential owned depot (G-23-01)'), explicitly GATED on 23-10 Task 3's diagnostic verdict -- do not start until that verdict is recorded."
 
 - id: G-23-02
   truth: "A native macOS game installed via the StateFlags=4 full-ownership path is launchable (its Mach-O executables land with the execute bit)"
