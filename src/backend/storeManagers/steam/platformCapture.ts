@@ -1,3 +1,5 @@
+import { steamMetadataStore, SteamMetadataCacheEntry } from './electronStores'
+
 /**
  * Phase 34.15 Plan 01 — D-01's bulk PICS platform-capture writer.
  *
@@ -115,4 +117,54 @@ export function parseOslistPlatforms(
   // token) is indistinguishable from "we learned nothing" — write nothing,
   // same as an absent oslist, rather than falsely claiming all-false.
   return recognisedAny ? captured : null
+}
+
+/**
+ * Read-modify-write merge of `platforms` into `steamMetadataStore`'s entry
+ * for `appId` (D-02). T-18-02-04 / T-34.15-01-02: `CacheStore.set()`
+ * (`backend/cache.ts:108`) REPLACES the entire stored value — there is no
+ * merge method — so a wholesale `set()` with only the new fields would
+ * silently drop `mac_arch_verified` / `mac_arch_source` /
+ * `forcedWindowsViaBottle`, exactly the integrity failure `games.ts:692-731`
+ * documents at length for the sibling per-game writer. Reading `existing`
+ * FIRST and spreading it before the new fields is what makes every other
+ * carry-forward field survive automatically, including ones added to
+ * `SteamMetadataCacheEntry` after this module was written.
+ *
+ * Fields that MUST survive this merge (spread forward from `existing`, never
+ * reconstructed field by field): `art_cover`, `art_square`, `extra`,
+ * `is_delisted`, `mac_arch`, `mac_arch_verified`, `mac_arch_source`,
+ * `forcedWindowsViaBottle`. `mac_arch` is NEVER inferred from PICS — this
+ * writer never assigns it, so an absent `mac_arch` on `existing` stays
+ * absent after the merge.
+ *
+ * Kept LOCAL to this module rather than added as a new named helper on
+ * `./electronStores` (Claude's Discretion, D-02): a new shared merge surface
+ * invites a future writer to misuse it for a different cache shape's
+ * carry-forward rules, which do not generalise.
+ */
+export function mergePlatformCapture(
+  appId: string,
+  platforms: CapturedPlatforms
+): void {
+  const existing = steamMetadataStore.get(appId)
+
+  // `art_cover`/`art_square`/`extra` are typed as REQUIRED on
+  // SteamMetadataCacheEntry because every existing writer (games.ts) only
+  // ever writes them alongside a freshly-fetched appdetails response. This
+  // bulk PICS writer has no art source at all, and per D-04 its whole
+  // purpose is to reach apps NO writer has touched yet — so `existing` can
+  // legitimately be absent here where it never is for the per-game writer.
+  // The narrow local cast documents that gap rather than inventing
+  // placeholder art data; the on-disk store itself is untyped JSON, so a
+  // partial entry is a legitimate runtime shape, not a corruption.
+  const merged = {
+    ...existing,
+    is_windows_native: platforms.is_windows_native,
+    is_mac_native: platforms.is_mac_native,
+    is_linux_native: platforms.is_linux_native,
+    platformsCaptured: true
+  } as SteamMetadataCacheEntry
+
+  steamMetadataStore.set(appId, merged)
 }
