@@ -56,6 +56,12 @@
         "header": {
             "filteredOfTotal": "{{shown}} of {{total}}"
         },
+        "steamSync": {
+            "failedBody": "Your other libraries are still available. Try again, or check that Steam is reachable.",
+            "failedTitle": "Couldn't sync your Steam library",
+            "retry": "Retry Steam sync",
+            "syncing": "Syncing your Steam library…"
+        },
         "storeOther": "Other"
     },
     "login": {

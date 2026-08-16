@@ -1,0 +1,54 @@
+// The inline Steam sync notice (34.15 D-08/D-10) -- one widget, two modes,
+// always in normal document flow. NEVER set `position` to anything but the
+// implicit `static` default here: this stylesheet is the other half of the
+// structural fix for defect 2b (a centred overlay spinner that hid 6 GOG
+// games). If this rule is ever widened to include `absolute`/`fixed`, the
+// widget can once again cover the merged library grid.
+//
+// Unscoped-selector lesson (34.10's `.MuiTabs-root` incident): every
+// selector below nests under `.SteamSyncNotice`.
+.SteamSyncNotice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md-fixed);
+  margin-block-end: var(--space-2xs);
+  border-radius: var(--space-3xs);
+  background: var(--navbar-background);
+  border: 1px solid var(--neutral-04);
+  color: var(--text-default);
+  font-size: var(--text-sm);
+
+  & > svg {
+    flex-shrink: 0;
+    font-size: var(--text-lg);
+  }
+
+  .SteamSyncNotice__text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xs);
+    flex: 1;
+  }
+
+  .button {
+    flex-shrink: 0;
+  }
+
+  &--syncing > svg {
+    animation: SteamSyncNotice-spin 1.5s infinite;
+  }
+
+  &--failed > svg {
+    color: var(--status-danger, orange);
+  }
+}
+
+@keyframes SteamSyncNotice-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
