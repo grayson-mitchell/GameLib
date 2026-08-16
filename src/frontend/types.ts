@@ -19,6 +19,7 @@ import {
 import { NileLoginData, NileRegisterData } from 'common/types/nile'
 import { HumbleKey } from 'common/types/humble'
 import type { OAuthLoginCompletionPayload } from 'frontend/screens/WebView/useTauriOAuthLogin'
+import type { SteamSyncStatus } from 'common/types/ipc'
 
 export type Category =
   | 'all'
@@ -57,6 +58,11 @@ export interface ContextType {
   refreshingByRunner: Partial<Record<Runner, boolean>>
   // True while Steam per-game metadata/art is streaming in the background.
   steamMetadataSyncing: boolean
+  // Phase 34.15 (34.15-02), D-06: the Steam library sync's own tri-state,
+  // fed by the steamSyncStatus channel. Replaces refreshingInTheBackground
+  // as the driver of the Steam sync indicator -- see GlobalState.tsx's
+  // StateProps.steamSyncStatus doc comment for the full rationale.
+  steamSyncStatus: SteamSyncStatus
   hiddenGames: {
     list: HiddenGame[]
     add: (appNameToHide: string, appTitle: string) => void

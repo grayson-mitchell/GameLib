@@ -43,6 +43,7 @@ import {
 import { IpcRendererEvent } from 'electron'
 import { NileRegisterData } from 'common/types/nile'
 import { HumbleKey, HumbleSyncState } from 'common/types/humble'
+import { SteamSyncStatus } from 'common/types/ipc'
 import useGlobalState from './GlobalStateV2'
 import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
@@ -128,6 +129,19 @@ interface StateProps {
   // just because one platform logged in or out.
   refreshingByRunner: Partial<Record<Runner, boolean>>
   steamMetadataSyncing: boolean
+  // Phase 34.15 (34.15-02), D-06: REPLACES the old background-refresh
+  // boolean (see the constructor default and its post-refresh reset,
+  // `:308`/`:1080` below) as the driver of the Steam sync indicator. That
+  // boolean defaults `true` and is reset to `true` after EVERY unscoped
+  // refresh, so it never actually means "a refresh is running" -- the old
+  // guard reduced to "Steam is logged in AND the Steam library is empty",
+  // permanently, on failure and on a genuinely empty library alike. A
+  // tri-state makes the terminal state STRUCTURAL rather than a boolean
+  // that happens to clear. `refreshingByRunner.steam` was rejected as the
+  // carrier because it is a boolean (cannot distinguish "failed" from
+  // "succeeded-and-empty"), and the mount-time refresh is UNSCOPED, so it
+  // would never be set on the path where the bug reproduces.
+  steamSyncStatus: SteamSyncStatus
   hiddenGames: HiddenGame[]
   favouriteGames: FavouriteGame[]
   customCategories: Record<string, string[]>
@@ -295,6 +309,7 @@ class GlobalState extends PureComponent<Props> {
     refreshingInTheBackground: true,
     refreshingByRunner: {},
     steamMetadataSyncing: false,
+    steamSyncStatus: 'idle',
     hiddenGames: configStore.get('games.hidden', []),
     currentCustomCategories: loadCurrentCategories(),
     sidebarCollapsed: JSON.parse(
@@ -1311,6 +1326,16 @@ class GlobalState extends PureComponent<Props> {
 
     window.api.handleSteamMetadataSyncing((e, { syncing }) => {
       this.setState({ steamMetadataSyncing: syncing })
+    })
+
+    // Phase 34.15 (34.15-02), D-06/D-07: mirrors handleSteamMetadataSyncing
+    // above. Deliberately does NOT read or touch the old background-refresh
+    // flag it replaces (see StateProps.steamSyncStatus doc comment). The
+    // payload's `reason` is not stored here; the resolver's mode is what
+    // drives rendering (Plan 06) and the notice copy is reason-agnostic in
+    // its first form.
+    window.api.handleSteamSyncStatus((e, { status }) => {
+      this.setState({ steamSyncStatus: status })
     })
 
     window.api.handleRefreshLibrary((e, runner) => {

@@ -60,6 +60,7 @@ const initialContext: ContextType = {
   refreshingInTheBackground: true,
   refreshingByRunner: {},
   steamMetadataSyncing: false,
+  steamSyncStatus: 'idle',
   isRTL: false,
   isFullscreen: false,
   isFrameless: false,
