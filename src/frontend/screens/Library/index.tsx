@@ -57,6 +57,8 @@ import FilterZeroResult from './components/FilterZeroResult'
 import { openInstallGameModal } from 'frontend/state/InstallGameModal'
 import { Tier2PortalContext } from 'frontend/components/UI/NavShell/Tier2PortalContext'
 import { configStore } from 'frontend/helpers/electronStores'
+import SteamSyncNotice from './components/SteamSyncNotice'
+import { resolveSteamSyncIndicator } from './librarySyncIndicator'
 // Namespace import: filterEngine's helpers are referenced as
 // `filterEngine.xxx` throughout this file rather than named imports, so a
 // call site is this identifier's only appearance in the file (see the
@@ -104,7 +106,8 @@ export default React.memo(function Library(): JSX.Element {
     platform,
     customCategories,
     hiddenGames,
-    gameUpdates
+    gameUpdates,
+    steamSyncStatus
   } = useContext(ContextProvider)
 
   hasHelp(
@@ -880,6 +883,16 @@ export default React.memo(function Library(): JSX.Element {
     setFilterText('')
   }
 
+  // 34.15 D-06/D-08/D-09/D-10: the render decision is delegated wholesale to
+  // the pure resolver in `librarySyncIndicator.ts` -- this file must never
+  // re-inline the boolean it replaces. See that module's header for the
+  // verbatim shipped-defect expression this computation supersedes.
+  const { mode: steamSyncMode } = resolveSteamSyncIndicator({
+    steamLoggedIn: Boolean(steam?.username),
+    steamSyncStatus,
+    steamLibraryCount: steam?.library?.length ?? 0
+  })
+
   if (!epic && !gog && !amazon && !zoom) {
     return (
       <ErrorComponent
@@ -1010,13 +1023,7 @@ export default React.memo(function Library(): JSX.Element {
 
         {refreshing && !refreshingInTheBackground && <UpdateComponent />}
 
-        {steam?.username &&
-          steam?.library?.length === 0 &&
-          refreshingInTheBackground && (
-            <UpdateComponent
-              message={t('steam.syncing', 'Syncing your Steam library…')}
-            />
-          )}
+        {steamSyncMode !== 'hidden' && <SteamSyncNotice mode={steamSyncMode} />}
 
         {libraryToShow.length === 0 &&
           (activeFilterCount > 0 ? (
