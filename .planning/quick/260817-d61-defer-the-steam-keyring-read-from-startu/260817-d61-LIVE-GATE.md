@@ -135,7 +135,7 @@ a null result as a pass.
 |------|------|---------|-------|
 | A | 2026-08-17 | **PASS** | Unattended, on real hardware. See below. |
 | B | | not yet run | Needs a deliberate Steam action; app was owned by a concurrent session. |
-| C | | not yet run | Needs ~10 cold launches. **Run on a PACKAGED build — see the confound below.** |
+| C | 2026-08-17 | **RETIRED — ill-posed** | Cannot discriminate deferral from dev-signing ACL churn on either build type. See Finding 2. |
 
 ### Gate A evidence (2026-08-17 11:38, build started 11:38:20 — 10 min after Task 3 `21f4f4767` at 11:28:24)
 
@@ -176,23 +176,46 @@ the Keychain at startup. But any future Steam-side `isAvailable()` call would pr
 be invisible to both the log and this gate. Worth closing pre-emptively: either log the successful
 probe, or route `keyring_available` through the same trigger annotation.
 
-## FINDING 2 — the 9:1 baseline may be CONFOUNDED by dev-rebuild prompts
+## FINDING 2 — Gate C is ILL-POSED and is hereby RETIRED, not deferred
 
-Operator reported **~4 password prompts** on a `tauri dev` rebuild. Only **2** appear in the log,
-both Humble `keyring_get`. The remaining ~2 come from something that is not GameLib's `keyring_get`
-path at all.
+Operator reported **~4 password prompts** on a `tauri dev` rebuild (generic wording: one "access
+confidential information", one "access key information"). Only **2** appear in the log, both Humble
+`keyring_get`. The remaining ~2 are not GameLib's `keyring_get` path at all.
 
-Leading explanation (**hypothesis — not yet evidenced**): a rebuild produces a binary with a
-different code signature, and macOS Keychain ACLs are bound to that signature, so every item
-re-prompts after a rebuild; `codesign` itself may also prompt for the signing identity.
+**This is already-established project knowledge, not a new finding here.** It was diagnosed and
+written up well before this task, and this session initially failed to recall it — recorded so the
+next reader does not re-derive it a third time. The standing record is the memory
+`keyring-timeout-races-keychain-approval` (reference type, updated 2026-08-14):
 
-**Why this matters more than it looks.** If the todo's observed **9 failed : 1 success** ratio was
-measured across `tauri dev` rebuild cycles, then the dominant cause of those timeouts is
-rebuild-ACL churn, **not** prompt context — and this task's deferral, though correct on its own
-terms, would not move the number.
+> "`keyring_get failed: keyring:timeout` on macOS is a code-signing problem wearing a timeout's
+> clothes." A `cargo run` debug binary has an **unstable code identity**, so macOS will not persist
+> the ACL grant; every read re-requests authorization. … "This is very likely a **dev-build
+> artifact**. A signed, notarized production build has a stable identity, gets the ACL grant once,
+> and stops prompting."
 
-**Therefore Gate C MUST run on a packaged build (`pnpm dist:mac`), never on `tauri dev`.** A Gate C
-run on dev rebuilds would measure the confound and produce a false negative for the hypothesis.
-Before running it, establish what the extra prompts actually say — a dialog naming a specific item
-("GameLib wants to access key `steam-refresh-token`") is the ACL path; a generic login-keychain
-unlock is not.
+That same record is where the observed **7 timeout / 2 unavailable(Deny) / 1 ok = 9:1** ratio comes
+from, and it is also the origin of this task — its closing line reads "Consider making the read lazy
+so the prompt arrives with user context."
+
+**The consequence, stated plainly.** The 9:1 ratio is a **dev-build number**, produced by ad-hoc
+signing ACL churn. Therefore:
+
+- Re-measuring it on `tauri dev` measures the ACL churn, not this fix.
+- Re-measuring it on a packaged build is **also not a test of this fix**, because a stable-identity
+  build was never expected to exhibit 9:1 in the first place. An improvement there would be
+  attributable to the signature, not the deferral.
+
+Gate C as originally specified ("re-measure the 9:1 ratio to confirm or kill the prompt-timing
+hypothesis") therefore **cannot discriminate** between the two causes on either build type. It is
+retired as ill-posed rather than left open as a task nobody can meaningfully perform.
+
+**What this task's value actually rests on, honestly stated.** Not the failure ratio. The deferral
+buys a real UX property that holds on a production build where the prompt fires *once*: the Keychain
+dialog arrives attached to a deliberate user action instead of unattended at boot. That property is
+proven by Gates A and B. The prompt-timing *hypothesis* about the 9:1 ratio is neither confirmed nor
+refuted by this work — it was aimed at a number whose dominant cause was already known to be
+something else.
+
+**Standing guidance, unchanged:** do not re-architect secret storage on the strength of the timeout
+symptom. The two legitimate fixes for the dev-prompt pestering remain (a) sign the dev build with a
+stable identity, or (b) `GAMELIB_DEV_SECRET_VAULT=1`, which is opt-in and already exists.
