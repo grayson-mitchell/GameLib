@@ -24,6 +24,13 @@ import type { SteamPlatformRowMode } from './steamSectionGating'
  * where Windows-depot availability is decided. A second copy anywhere else
  * would be precisely the drift 34.13-05's verification section warns
  * against.
+ *
+ * 34.15 D-12 widened that claim to cover mac too: `resolveDepotAvailability`
+ * below is the single pure function answering BOTH platform questions from
+ * one resolution moment, returning `{ depotSignalResolved,
+ * windowsDepotOffered, macDepotOffered }`. It is the same function, not a
+ * sibling -- two readers of the same fact is exactly the drift this header
+ * already warns against, one level out.
  */
 
 /**
@@ -52,6 +59,31 @@ export function hasSteamWindowsDepot(
   gameInfo: { is_windows_native?: boolean } | null | undefined
 ): boolean {
   return gameInfo?.is_windows_native === true
+}
+
+/**
+ * 34.15 D-12: the mac-side mirror of `hasSteamWindowsDepot`, written in the
+ * identical shape and for the identical reason. Read this doc comment
+ * before touching `resolveDepotAvailability`'s mac branch below -- it
+ * records an asymmetry a reader will otherwise trip on.
+ *
+ * `library.ts:785` builds `GameInfo.is_mac_native` as `cachedMeta?.is_mac_native
+ * ?? false` -- a DELIBERATE collapse at that boundary, unlike
+ * `is_windows_native`, which is left three-valued there on purpose. So this
+ * reader's `false` means "either no mac build OR never captured" and CANNOT,
+ * on its own, distinguish those two cases. The captured question is answered
+ * separately -- by `hasSteamDepotSignalCaptured` (via
+ * `GameInfo.steamPlatformsCaptured`, which IS preserved three-valued) --
+ * exactly the same two-read split the Windows side already uses via
+ * `hasSteamWindowsDepot` + `hasSteamDepotSignalCaptured`. Anyone gating on
+ * `is_mac_native === undefined` is writing dead code: by the time a
+ * `GameInfo` reaches the frontend, that field has already been forced to
+ * `false` if it was ever `undefined`.
+ */
+export function hasSteamMacDepot(
+  gameInfo: { is_mac_native?: boolean } | null | undefined
+): boolean {
+  return gameInfo?.is_mac_native === true
 }
 
 /**
@@ -177,25 +209,30 @@ export function hasSteamDepotSignalCaptured(
 }
 
 /**
- * 34.14 D-04/D-05: the single pure function that decides Windows-depot
- * availability, folding two decisions the module's own header already
- * claims as its exclusive territory ("the single place in the codebase
- * where Windows-depot availability is decided") into one place:
+ * 34.14 D-04/D-05, widened by 34.15 D-12: the single pure function that
+ * decides BOTH Windows- and mac-depot availability, folding the decisions
+ * the module's own header already claims as its exclusive territory ("the
+ * single place in the codebase where [depot] availability is decided") into
+ * one place -- one function, one resolution moment, for both platforms. D-12
+ * widens this function's OUTPUT; it does not add a sibling.
  *
- * - D-05 (seed/resolve): the SAME fact -- is there a Windows depot, is that
- *   answer captured -- read at two different times. The `gameInfo` seed
- *   supplies the FIRST frame (so an already-captured game never flashes a
- *   pending state); the live eligibility probe supplies the answer once it
- *   lands. This is one function reading one fact twice, not two competing
- *   sources.
- * - D-04 (fail-open on unknown): what to do once the probe has TERMINALLY
- *   settled (`probeSettled`) but the depot signal still was never captured
- *   (offline, errored, or the 15s `METADATA_FETCH_TIMEOUT_MS` poll expired).
+ * - D-05 (seed/resolve): the SAME fact -- is there a depot, is that answer
+ *   captured -- read at two different times, for each platform. The
+ *   `gameInfo` seed supplies the FIRST frame (so an already-captured game
+ *   never flashes a pending state); the live eligibility probe supplies the
+ *   answer once it lands. This is one function reading one fact twice per
+ *   platform, not two competing sources.
+ * - D-04 (fail-open on unknown, WINDOWS ONLY -- see the asymmetry comment
+ *   below): what to do once the probe has TERMINALLY settled
+ *   (`probeSettled`) but the depot signal still was never captured (offline,
+ *   errored, or the 15s `METADATA_FETCH_TIMEOUT_MS` poll expired).
  */
 export interface ResolveDepotAvailabilityInput {
   seedHasWindowsDepot: boolean
+  seedHasMacDepot: boolean
   seedDepotSignalCaptured: boolean
   probeHasWindowsDepot: boolean
+  probeHasMacDepot: boolean
   probeDepotSignalCaptured: boolean
   probeSettled: boolean
 }
@@ -203,6 +240,7 @@ export interface ResolveDepotAvailabilityInput {
 export interface ResolveDepotAvailabilityOutput {
   depotSignalResolved: boolean
   windowsDepotOffered: boolean
+  macDepotOffered: boolean
 }
 
 export function resolveDepotAvailability(
@@ -211,10 +249,15 @@ export function resolveDepotAvailability(
   // D-05 seed/resolve selection: the seed decides the FIRST frame so an
   // already-captured game never flashes a pending state; the probe
   // supplies the live answer once it lands. Same fact at two times, not
-  // two competing sources.
+  // two competing sources. Windows and mac each get their own selection
+  // line, using the IDENTICAL idiom, because they are the same read
+  // repeated for two fields -- not two different decisions.
   const hasWindowsDepot = input.probeSettled
     ? input.probeHasWindowsDepot
     : input.seedHasWindowsDepot
+  const hasMacDepot = input.probeSettled
+    ? input.probeHasMacDepot
+    : input.seedHasMacDepot
   const depotSignalCaptured = input.probeSettled
     ? input.probeDepotSignalCaptured
     : input.seedDepotSignalCaptured
@@ -245,5 +288,28 @@ export function resolveDepotAvailability(
   const windowsDepotOffered =
     hasWindowsDepot || (input.probeSettled && !depotSignalCaptured)
 
-  return { depotSignalResolved, windowsDepotOffered }
+  // 34.15 D-12: `macDepotOffered` is DELIBERATELY NOT symmetric with
+  // `windowsDepotOffered` above -- this is the one place in this function
+  // where "widen it the same way" would be wrong, and it must stay that way
+  // even though the two lines sit right next to each other and look like
+  // they should match.
+  //
+  // `windowsDepotOffered` fails OPEN when the probe settles uncaptured
+  // (`|| (probeSettled && !depotSignalCaptured)`) because 34.14 D-04 decided
+  // that offering Windows-via-bottle when the signal never resolved is
+  // still a WORKING option most of the time (mac-only Steam games are
+  // effectively a null set per the operator-locked domain constraint), so
+  // withholding it costs more than offering it.
+  //
+  // `macDepotOffered` does NOT get that clause, and must never gain it.
+  // Offering a macOS install for a game with no confirmed mac build does
+  // not degrade gracefully the way Windows-via-bottle does -- it produces a
+  // BROKEN install, not a working-but-suboptimal one. So the mac side stays
+  // conservative: `macDepotOffered` is `true` ONLY when the signal was
+  // genuinely captured AND said yes. An uncaptured or unresolved signal
+  // yields `false` here, full stop -- never loosened toward `!== false`,
+  // and never given the fail-open disjunct above.
+  const macDepotOffered = hasMacDepot && depotSignalCaptured
+
+  return { depotSignalResolved, windowsDepotOffered, macDepotOffered }
 }
