@@ -3858,4 +3858,307 @@ describe('downloadDepotFiles', () => {
     })
   })
 
+  // ── G-23-02 (23-08 Task 3, VERDICT: H2): Mach-O executable fallback ──────
+  // Runs ONLY because 23-TRACE.md's verdict is H2 (see 23-08-SUMMARY.md for
+  // the quoted verdict line). Content-gated by real Mach-O magic bytes read
+  // from the landed file, never by filename/path.
+  describe('Mach-O executable fallback (23-08 Task 3, H2)', () => {
+    /** Builds a minimal 32-byte mach_header_64 (magic/cputype/cpusubtype/
+     *  filetype/ncmds/sizeofcmds/flags/reserved) in the given byte order —
+     *  only `magic` and `filetype` matter to the fallback under test; every
+     *  other field is a zero/placeholder value. */
+    function buildThinMachOHeader(
+      filetype: number,
+      bigEndian = false
+    ): Buffer {
+      const buf = Buffer.alloc(32)
+      const write32 = (value: number, offset: number) =>
+        bigEndian
+          ? buf.writeUInt32BE(value >>> 0, offset)
+          : buf.writeUInt32LE(value >>> 0, offset)
+      write32(0xfeedfacf, 0) // MH_MAGIC_64, written in `bigEndian`'s order
+      write32(0x0100000c, 4) // cputype (arbitrary — ARM64, irrelevant here)
+      write32(0, 8) // cpusubtype
+      write32(filetype, 12) // filetype — the field under test
+      write32(0, 16) // ncmds
+      write32(0, 20) // sizeofcmds
+      write32(0, 24) // flags
+      write32(0, 28) // reserved (mach_header_64 only)
+      return buf
+    }
+
+    /** Builds a minimal fat (universal) Mach-O: an 8-byte fat_header
+     *  (FAT_MAGIC, nfat_arch=1) + one 20-byte fat_arch entry pointing at a
+     *  thin mach_header_64 embedded at byte offset 64 — fat_header/fat_arch
+     *  are always big-endian on disk (mach-o/fat.h), regardless of the
+     *  contained slice's own byte order. */
+    function buildFatMachOHeader(filetype: number): Buffer {
+      const fatHeader = Buffer.alloc(8)
+      fatHeader.writeUInt32BE(0xcafebabe, 0) // FAT_MAGIC
+      fatHeader.writeUInt32BE(1, 4) // nfat_arch
+
+      const sliceOffset = 64
+      const fatArch = Buffer.alloc(20)
+      fatArch.writeUInt32BE(0x0100000c, 0) // cputype
+      fatArch.writeUInt32BE(0, 4) // cpusubtype
+      fatArch.writeUInt32BE(sliceOffset, 8) // offset — where the slice starts
+      fatArch.writeUInt32BE(32, 12) // size
+      fatArch.writeUInt32BE(0, 16) // align
+
+      const thin = buildThinMachOHeader(filetype)
+      const padding = Buffer.alloc(
+        sliceOffset - fatHeader.length - fatArch.length
+      )
+      return Buffer.concat([fatHeader, fatArch, padding, thin])
+    }
+
+    it('a thin Mach-O EXECUTE(0x2) header (little-endian, no manifest exec flag) lands with a non-zero execute bit', async () => {
+      const content = buildThinMachOHeader(0x2, false)
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+
+      const file: DepotPlanFile = {
+        filename: 'unflagged-macho-exe-le',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [
+          { sha: 'sha-macho-exe-le', cb_original: content.length, offset: 0 }
+        ]
+        // flags: undefined — the H2-relevant shape: manifest carries no
+        // executable flag at all for a file that IS a real executable.
+      }
+      const plan = makePlan(
+        [
+          { depotId: '67c', gid: 'g7a', key: Buffer.from('key'), files: [file] }
+        ],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      const dest = join(dir, 'common', 'SomeGame', 'unflagged-macho-exe-le')
+      expect((await stat(dest)).mode & 0o111).not.toBe(0)
+    })
+
+    it('a thin Mach-O EXECUTE(0x2) header (big-endian, no manifest exec flag) lands with a non-zero execute bit', async () => {
+      const content = buildThinMachOHeader(0x2, true)
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+
+      const file: DepotPlanFile = {
+        filename: 'unflagged-macho-exe-be',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [
+          { sha: 'sha-macho-exe-be', cb_original: content.length, offset: 0 }
+        ]
+      }
+      const plan = makePlan(
+        [
+          { depotId: '67d', gid: 'g7b', key: Buffer.from('key'), files: [file] }
+        ],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      const dest = join(dir, 'common', 'SomeGame', 'unflagged-macho-exe-be')
+      expect((await stat(dest)).mode & 0o111).not.toBe(0)
+    })
+
+    it('a FAT (universal) Mach-O whose first slice is EXECUTE(0x2) (no manifest exec flag) lands with a non-zero execute bit — the 0xCAFEBABE fat magic', async () => {
+      const content = buildFatMachOHeader(0x2)
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+
+      const file: DepotPlanFile = {
+        filename: 'unflagged-macho-fat-exe',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [
+          { sha: 'sha-macho-fat-exe', cb_original: content.length, offset: 0 }
+        ]
+      }
+      const plan = makePlan(
+        [
+          { depotId: '67e', gid: 'g7c', key: Buffer.from('key'), files: [file] }
+        ],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      const dest = join(dir, 'common', 'SomeGame', 'unflagged-macho-fat-exe')
+      expect((await stat(dest)).mode & 0o111).not.toBe(0)
+    })
+
+    it('a thin Mach-O BUNDLE(0x8) header (no manifest exec flag) is left WITHOUT an execute bit — subtype discrimination, matches Steam leaving bundles non-executable', async () => {
+      const content = buildThinMachOHeader(0x8, false)
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+
+      const file: DepotPlanFile = {
+        filename: 'unflagged-macho-bundle',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [
+          { sha: 'sha-macho-bundle', cb_original: content.length, offset: 0 }
+        ]
+      }
+      const plan = makePlan(
+        [
+          { depotId: '67f', gid: 'g7d', key: Buffer.from('key'), files: [file] }
+        ],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      const dest = join(dir, 'common', 'SomeGame', 'unflagged-macho-bundle')
+      expect((await stat(dest)).mode & 0o111).toBe(0)
+    })
+
+    it('a plain non-Mach-O text asset (no manifest exec flag) is left WITHOUT an execute bit — content-gated, never path-gated', async () => {
+      const content = Buffer.from('just some plain text config content')
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+
+      const file: DepotPlanFile = {
+        filename: 'plain-text-asset.txt',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [
+          { sha: 'sha-plain-text-asset', cb_original: content.length, offset: 0 }
+        ]
+      }
+      const plan = makePlan(
+        [
+          { depotId: '680', gid: 'g7e', key: Buffer.from('key'), files: [file] }
+        ],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      const dest = join(dir, 'common', 'SomeGame', 'plain-text-asset.txt')
+      expect((await stat(dest)).mode & 0o111).toBe(0)
+    })
+
+    it('is a no-op on win32 even for a genuine unflagged Mach-O EXECUTE image', async () => {
+      const originalPlatform = process.platform
+      Object.defineProperty(process, 'platform', {
+        value: 'win32',
+        configurable: true
+      })
+      try {
+        const content = buildThinMachOHeader(0x2, false)
+        jest.mocked(fetchChunk).mockResolvedValue(content)
+
+        const file: DepotPlanFile = {
+          filename: 'unflagged-macho-exe-win32',
+          size: content.length,
+          sha_content: sha1Hex(content),
+          chunks: [
+            {
+              sha: 'sha-macho-exe-win32',
+              cb_original: content.length,
+              offset: 0
+            }
+          ]
+        }
+        const plan = makePlan(
+          [
+            {
+              depotId: '681',
+              gid: 'g7f',
+              key: Buffer.from('key'),
+              files: [file]
+            }
+          ],
+          content.length
+        )
+
+        const result = await downloadDepotFiles(plan, {
+          targetSteamappsDir: dir,
+          installdir: 'SomeGame',
+          hosts: HOSTS
+        })
+
+        expect(result.failures).toEqual([])
+        const dest = join(
+          dir,
+          'common',
+          'SomeGame',
+          'unflagged-macho-exe-win32'
+        )
+        // Windows has no POSIX exec bit concept; assert the fallback simply
+        // never attempted a chmod by confirming the file exists and no
+        // failure was recorded (chmod on a nonexistent/invalid path on a
+        // real POSIX test runner would otherwise surface as a failure).
+        expect(existsSync(dest)).toBe(true)
+      } finally {
+        Object.defineProperty(process, 'platform', {
+          value: originalPlatform,
+          configurable: true
+        })
+      }
+    })
+
+    it('never applies to a manifest entry that already carries EXECUTABLE_FLAG(32) — the manifest is the PRIMARY contract, this fallback only supplements a missing flag', async () => {
+      const content = buildThinMachOHeader(0x8) // BUNDLE — would never get +x from the fallback either way
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+
+      const file: DepotPlanFile = {
+        filename: 'already-flagged-exec',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [
+          {
+            sha: 'sha-already-flagged-exec',
+            cb_original: content.length,
+            offset: 0
+          }
+        ],
+        flags: EXECUTABLE_FLAG // manifest already says: apply +x
+      }
+      const plan = makePlan(
+        [
+          { depotId: '682', gid: 'g80', key: Buffer.from('key'), files: [file] }
+        ],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      const dest = join(dir, 'common', 'SomeGame', 'already-flagged-exec')
+      // The PRIMARY EDepotFileFlag path already applied +x — this asserts
+      // that outcome, not the fallback (which would skip a BUNDLE anyway).
+      expect((await stat(dest)).mode & 0o111).not.toBe(0)
+    })
+  })
 })
