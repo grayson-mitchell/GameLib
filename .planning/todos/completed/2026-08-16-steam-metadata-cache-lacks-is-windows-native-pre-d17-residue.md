@@ -67,3 +67,50 @@ Option 2 reuses machinery this phase already shipped and needs no new fetch logi
 **Do NOT** fix this by loosening `hasSteamWindowsDepot`'s `=== true` comparison to
 `!== false`. That inverted comparison is the `treatsAbsentAsAvailable` saboteur which three
 shipped gates in `steamPlatformRow.test.ts` exist specifically to reject.
+
+---
+
+## Resolution — quick task 260816-hdg (2026-08-16)
+
+**Shipped: read-boundary normalization, not a migration.** New dependency-free module
+`src/backend/storeManagers/steam/metadataCapture.ts` exports one predicate,
+`depotSignalCaptured(entry)`, true only when `platformsCaptured === true` AND
+`is_windows_native !== undefined`. It is applied at exactly three depot-signal read
+boundaries, so the false "captured" claim is cleared at the point of use rather than
+rewritten on disk:
+
+| Site | Effect |
+|---|---|
+| `library.ts` GameInfo seed | `steamPlatformsCaptured` now reports `false` for a residue entry |
+| `installFormIpc.ts` verdict | `platformsCaptured: false` lets Phase 34.14's D-04 fail-open engage, so Windows is offered again |
+| `games.ts` `getGameInfo()` self-heal gate | the existing refetch now fires for residue; the refetch writes `is_windows_native` unconditionally (`!!` coercion), so it converges after exactly one fetch per appId |
+
+**Why neither of this todo's own "How to fix" options was taken.** Option 1 (cache version
+bump) and option 2 (startup migration) both need a startup hook, and there is none in the
+shipping runtime: `MigrationSystem.get().applyMigrations()` is wired ONLY into
+`src/backend/main.ts:418`, inside Electron's `app.whenReady()`. The Tauri sidecar never runs
+that block — `src/backend/sidecar/bootstrap.ts` replicates the `whenReady` inits one by one and
+migrations are not among them. A `Migration` class would have been dead code. Normalizing at
+the read boundary reaches both runtimes with no bootstrap change at all, and is idempotent.
+
+**The "Do NOT" warning above was honoured.** `steamPlatformRow.ts` is byte-identical
+(`git diff --exit-code` clean); `hasSteamWindowsDepot` keeps its `=== true` comparison. A source
+gate in `metadataCapture.test.ts` now asserts, from the backend side, that the file still
+contains `is_windows_native === true` and never `is_windows_native !== false` — so the
+prohibition no longer depends on the frontend project's own gates being run.
+
+**Deliberate non-changes, pinned by source assertions.** Three raw reads of `platformsCaptured`
+survive on purpose, because they ask the MAC question rather than the DEPOT question and a
+residue entry genuinely did capture its mac answer: `games.ts`
+`isBottleEligibleFromPlatforms()`, `library.ts` `isBridgeAuthoritativeForInstallState()`, and
+`games.ts` `ensurePlatformsCaptured()`'s `alreadyCaptured()`. Bottle/bridge routing for residue
+entries is unchanged.
+
+**Not closed by this work:** the mirror problem on the mac axis,
+`.planning/todos/pending/2026-08-16-absent-is-mac-native-treated-as-no-mac-build-mirror-of-34-14.md`.
+This task's non-changes deliberately preserve exactly the two gates that todo concerns.
+
+**Accepted consequence:** `GameInfo.steamPlatformsCaptured`'s second consumer,
+`src/frontend/screens/Game/GamePage/components/AppleWikiInfo.tsx:67`, hides its section for a
+residue game until the self-heal refetch lands — benign, temporary, self-healing, and one fetch
+away.
