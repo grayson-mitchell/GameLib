@@ -26,6 +26,7 @@ import {
 import { sendFrontendMessage } from '../../ipc'
 import { steamMetadataStore, steamLibraryStore } from './electronStores'
 import { depotSignalCaptured } from './metadataCapture'
+import { resolvePlatformWrite } from './platformPrecedence'
 import {
   library,
   pendingFetches,
@@ -655,19 +656,52 @@ export default class SteamGame implements Game {
       const is_linux_native = !!data.platforms?.linux
       const is_windows_native = !!data.platforms?.windows
 
+      // Quick task 260816-qcn (WR-02/CR-01): this appdetails fetch is one of
+      // TWO independent writers of the platform triple — platformCapture.ts's
+      // bulk PICS `oslist` capture is the other. resolvePlatformWrite (D-A)
+      // decides, by strict timestamp comparison, whether THIS write's triple
+      // or the EXISTING cached triple is the one actually used below. See
+      // `./platformPrecedence`'s header for the full rule and its honesty
+      // limit (D-B): freshest-write-wins makes the ordering explicit and
+      // auditable and makes a silently-lost write impossible — it does NOT
+      // reconcile a genuine appdetails-vs-PICS disagreement. When the two
+      // sources disagree about an app, the surviving answer still depends on
+      // which sync ran most recently; `platformsSource`/`platformsCapturedAt`
+      // are what make that outcome inspectable after the fact. Do not
+      // describe WR-02 as closed.
+      const existingMeta = steamMetadataStore.get(this.appId)
+      const resolution = resolvePlatformWrite(
+        existingMeta,
+        { is_windows_native, is_mac_native, is_linux_native },
+        'appdetails',
+        Date.now()
+      )
+      // The EFFECTIVE triple — NEVER the raw appdetails values above — is
+      // used everywhere downstream in this function. A declined cache write
+      // that still pushed the raw appdetails triple to the frontend would
+      // recreate CR-01's exact shape (a stale seed reaching the install
+      // dialog's glyph row) with the polarity flipped.
+      const {
+        is_windows_native: effectiveIsWindowsNative,
+        is_mac_native: effectiveIsMacNative,
+        is_linux_native: effectiveIsLinuxNative
+      } = resolution.platforms
+
       // MAC32-01 (direction B): derive the pre-install arch hint from the
       // SAME appdetails response — no separate network/PICS call. Gated:
       //  1. Never overwrite a Mach-O-verified entry (post-install ground
       //     truth always wins — a cheap heuristic must not regress a
       //     confirmed fact, T-18-02-04).
-      //  2. Only compute when is_mac_native is true (Pitfall 2) — a false
+      //  2. Only compute when the EFFECTIVE is_mac_native is true (Pitfall 2;
+      //     quick task 260816-qcn: gated on the EFFECTIVE flag, never the raw
+      //     appdetails one, so a declined write cannot derive mac_arch from a
+      //     platform triple that just lost the precedence decision) — a false
       //     is_mac_native already routes correctly via the existing
       //     isBottleEligible() D-11 OR-branch, making this signal moot.
-      const existingMeta = steamMetadataStore.get(this.appId)
       const macArchVerified = existingMeta?.mac_arch_verified === true
       const mac_arch: GameInfo['mac_arch'] = macArchVerified
         ? existingMeta.mac_arch
-        : is_mac_native
+        : effectiveIsMacNative
           ? macArchFromMinOS(data.mac_requirements?.minimum)
           : existingMeta?.mac_arch
 
@@ -676,9 +710,9 @@ export default class SteamGame implements Game {
         title: data.name ?? current.title,
         art_cover,
         art_square,
-        is_mac_native,
-        is_linux_native,
-        is_windows_native,
+        is_mac_native: effectiveIsMacNative,
+        is_linux_native: effectiveIsLinuxNative,
+        is_windows_native: effectiveIsWindowsNative,
         mac_arch,
         // GAP-B: clear any stale delisted flag — the app is available again.
         is_delisted: false,
@@ -705,15 +739,24 @@ export default class SteamGame implements Game {
       // obligation on every future writer of this payload, so a field with no
       // reader is not free — it is a permanent tax plus an invitation to
       // trust it.
+      //
+      // Quick task 260816-qcn: `platformsSource`/`platformsCapturedAt` are two
+      // MORE standing carry-forward obligations, added by resolvePlatformWrite
+      // (D-A). This literal is ENUMERATED, not a `...existing` spread, so both
+      // MUST be listed explicitly here or a declined write would erase the
+      // stamp it is honouring — the exact T-18-02-04 trap this comment block
+      // already documents at length for the fields above.
       steamMetadataStore.set(this.appId, {
         art_cover,
         art_square,
         extra,
-        is_mac_native,
-        is_linux_native,
-        is_windows_native,
+        is_mac_native: effectiveIsMacNative,
+        is_linux_native: effectiveIsLinuxNative,
+        is_windows_native: effectiveIsWindowsNative,
         is_delisted: false,
         platformsCaptured: true,
+        platformsSource: resolution.platformsSource,
+        platformsCapturedAt: resolution.platformsCapturedAt,
         mac_arch,
         ...(macArchVerified
           ? {
@@ -722,7 +765,7 @@ export default class SteamGame implements Game {
                 ? { mac_arch_source: existingMeta.mac_arch_source }
                 : {})
             }
-          : is_mac_native
+          : effectiveIsMacNative
             ? { mac_arch_source: 'minos' as const }
             : {}),
         ...(existingMeta?.forcedWindowsViaBottle === true

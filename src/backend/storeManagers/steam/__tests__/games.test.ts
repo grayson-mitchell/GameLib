@@ -616,6 +616,168 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     expect(library.get(APP_ID)!.is_windows_native).toBe(false)
   })
 
+  // ── Quick task 260816-qcn: freshest-write-wins precedence (WR-02/CR-01) ──
+
+  describe('260816-qcn: appdetails writer honours resolvePlatformWrite precedence', () => {
+    // fixtureApiResponse gives windows:true, mac:true, linux:false. This
+    // fixture disagrees on every field so the two sources genuinely
+    // conflict, rather than coincidentally agreeing.
+    const CONFLICTING_PICS_TRIPLE = {
+      is_windows_native: true,
+      is_mac_native: false,
+      is_linux_native: true
+    }
+
+    it('declined: an existing strictly-newer PICS capture survives on BOTH the cache write and the pushed GameInfo (split-brain check)', async () => {
+      ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        ...CONFLICTING_PICS_TRIPLE,
+        platformsCaptured: true,
+        platformsSource: 'pics',
+        platformsCapturedAt: Date.now() + 60_000
+      })
+      library.set(APP_ID, makeEntry())
+
+      new SteamGame(APP_ID).getGameInfo()
+      await flushAsync()
+
+      const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
+      expect(written.is_windows_native).toBe(
+        CONFLICTING_PICS_TRIPLE.is_windows_native
+      )
+      expect(written.is_mac_native).toBe(CONFLICTING_PICS_TRIPLE.is_mac_native)
+      expect(written.is_linux_native).toBe(
+        CONFLICTING_PICS_TRIPLE.is_linux_native
+      )
+      expect(written.platformsSource).toBe('pics')
+
+      const pushed = library.get(APP_ID)!
+      expect(pushed.is_windows_native).toBe(
+        CONFLICTING_PICS_TRIPLE.is_windows_native
+      )
+      expect(pushed.is_mac_native).toBe(CONFLICTING_PICS_TRIPLE.is_mac_native)
+      expect(pushed.is_linux_native).toBe(
+        CONFLICTING_PICS_TRIPLE.is_linux_native
+      )
+
+      const pushedMessage = (sendFrontendMessage as jest.Mock).mock.calls.find(
+        ([channel]) => channel === 'pushGameToLibrary'
+      )
+      expect(pushedMessage![1].is_windows_native).toBe(
+        CONFLICTING_PICS_TRIPLE.is_windows_native
+      )
+      expect(pushedMessage![1].is_mac_native).toBe(
+        CONFLICTING_PICS_TRIPLE.is_mac_native
+      )
+      expect(pushedMessage![1].is_linux_native).toBe(
+        CONFLICTING_PICS_TRIPLE.is_linux_native
+      )
+    })
+
+    it('accepted: appdetails wins over an OLDER PICS capture -- persisted triple is the appdetails one, platformsSource flips to appdetails', async () => {
+      ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        ...CONFLICTING_PICS_TRIPLE,
+        platformsCaptured: true,
+        platformsSource: 'pics',
+        platformsCapturedAt: Date.now() - 60_000
+      })
+      library.set(APP_ID, makeEntry())
+
+      new SteamGame(APP_ID).getGameInfo()
+      await flushAsync()
+
+      const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
+      // fixtureApiResponse: windows:true, mac:true, linux:false
+      expect(written.is_windows_native).toBe(true)
+      expect(written.is_mac_native).toBe(true)
+      expect(written.is_linux_native).toBe(false)
+      expect(written.platformsSource).toBe('appdetails')
+      expect(written.platformsCapturedAt).toBeGreaterThanOrEqual(
+        Date.now() - 60_000
+      )
+    })
+
+    it('legacy: an existing entry with no platformsCapturedAt is writable by appdetails and gets stamped', async () => {
+      ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_windows_native: false
+        // no platformsCapturedAt -- pre-this-task legacy entry
+      })
+      library.set(APP_ID, makeEntry())
+
+      new SteamGame(APP_ID).getGameInfo()
+      await flushAsync()
+
+      const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
+      expect(written.is_windows_native).toBe(true)
+      expect(written.platformsSource).toBe('appdetails')
+      expect(typeof written.platformsCapturedAt).toBe('number')
+    })
+
+    it('carry-forward on the DECLINED path: mac_arch/mac_arch_verified/mac_arch_source/forcedWindowsViaBottle all survive', async () => {
+      ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        ...CONFLICTING_PICS_TRIPLE,
+        platformsCaptured: true,
+        platformsSource: 'pics',
+        platformsCapturedAt: Date.now() + 60_000,
+        mac_arch: '64',
+        mac_arch_verified: true,
+        mac_arch_source: 'macho',
+        forcedWindowsViaBottle: true
+      })
+      library.set(APP_ID, makeEntry())
+
+      new SteamGame(APP_ID).getGameInfo()
+      await flushAsync()
+
+      const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
+      expect(written.mac_arch).toBe('64')
+      expect(written.mac_arch_verified).toBe(true)
+      expect(written.mac_arch_source).toBe('macho')
+      expect(written.forcedWindowsViaBottle).toBe(true)
+    })
+
+    it('260816-qcn additional gap: mac_arch is derived from the EFFECTIVE is_mac_native, never the raw appdetails one, when precedence declines and is_mac_native is false on the winning side', async () => {
+      // fixtureApiResponse claims mac:true (raw appdetails is_mac_native
+      // would be true), but the existing PICS capture is strictly newer,
+      // complete, AND says is_mac_native:false. If mac_arch were derived
+      // from the raw appdetails is_mac_native instead of the EFFECTIVE
+      // (post-precedence) one, this would incorrectly compute a mac_arch
+      // heuristic for a game whose winning platform answer says it has no
+      // mac build at all -- the exact silent-regression window flagged by
+      // the plan checker gap.
+      ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        is_windows_native: true,
+        is_mac_native: false,
+        is_linux_native: true,
+        platformsCaptured: true,
+        platformsSource: 'pics',
+        platformsCapturedAt: Date.now() + 60_000
+        // no mac_arch on the existing entry, no mac_arch_verified
+      })
+      library.set(APP_ID, makeEntry())
+
+      new SteamGame(APP_ID).getGameInfo()
+      await flushAsync()
+
+      const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
+      // Declined write: the effective is_mac_native is false (PICS' verdict
+      // won), so mac_arch must NOT be derived via macArchFromMinOS -- it
+      // must stay whatever the (absent) existingMeta.mac_arch was: undefined.
+      expect(written.is_mac_native).toBe(false)
+      expect(written.mac_arch).toBeUndefined()
+      expect(written.mac_arch_source).toBeUndefined()
+
+      const pushed = library.get(APP_ID)!
+      expect(pushed.is_mac_native).toBe(false)
+      expect(pushed.mac_arch).toBeUndefined()
+    })
+  })
+
   // ── MAC32-01: inline mac_arch derivation (direction B) ────────────────────
 
   function fixtureWithMacRequirements(minimumHtml: string | undefined) {
