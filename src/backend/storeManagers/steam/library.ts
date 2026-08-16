@@ -820,7 +820,8 @@ export default class SteamLibraryManager implements LibraryManager {
         // three roots (mirrors refreshInstallState()'s reconciliation;
         // D-UAT-24-07 adds the bridge tier last so native/bottle behavior is
         // byte-for-byte unchanged when they match).
-        const bridgeAuthoritative = isBridgeAuthoritativeForInstallState(appIdStr)
+        const bridgeAuthoritative =
+          isBridgeAuthoritativeForInstallState(appIdStr)
         const installedData = bridgeAuthoritative
           ? bridgeInstalledData
           : (nativeInstalledData ?? bottleInstalledData ?? bridgeInstalledData)

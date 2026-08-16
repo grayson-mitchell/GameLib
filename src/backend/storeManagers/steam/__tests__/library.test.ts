@@ -78,6 +78,7 @@ import { join } from 'path'
 import { library } from '../state'
 import * as gamesModule from '../games'
 import { bridgeAllowlist } from '../bridge/allowlist'
+import { captureOwnedAppPlatforms } from '../platformCapture'
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 jest.mock('backend/logger', () => ({
@@ -240,6 +241,16 @@ jest.mock('../bridge/allowlist', () => ({
   bridgeAllowlist: { has: jest.fn() }
 }))
 
+// ── platformCapture mock — captureOwnedAppPlatforms (34.15 D-03/D-04) ──────
+// This module is unit-tested in isolation (Plan 01's own suite). Mocking it
+// here isolates refresh()'s own wiring/instrumentation from the real bulk
+// PICS scoping and merge logic — the shared beforeEach below defaults it to
+// a no-op success so every pre-existing refresh() test is unaffected; the
+// 'D-03 fail-soft' describe block below overrides this default per-test.
+jest.mock('../platformCapture', () => ({
+  captureOwnedAppPlatforms: jest.fn()
+}))
+
 /** Bottle steamapps root used consistently across the bottle-path tests below. */
 const BOTTLE_STEAMAPPS_ROOT = join(
   '/Users/tester/Library/Application Support/CrossOver/Bottles',
@@ -319,6 +330,15 @@ describe('SteamLibraryManager', () => {
     // Default: no game is bridge-eligible (D-UAT-24-02, 24-17) — every
     // pre-existing test keeps the native ?? bottle ?? bridge precedence.
     jest.mocked(bridgeAllowlist.has).mockReturnValue(false)
+    // Default: the bulk platform capture (34.15 D-03/D-04) reports a
+    // no-op success — every pre-existing refresh() test is unaffected.
+    // Individual tests below override this per-case.
+    jest.mocked(captureOwnedAppPlatforms).mockResolvedValue({
+      scopedCount: 0,
+      capturedCount: 0,
+      skippedCount: 0,
+      failed: false
+    })
   })
 
   // ── LIB-02: install state via ACF StateFlags (Task 1 — green) ─────────────
@@ -727,6 +747,154 @@ describe('SteamLibraryManager', () => {
     )
     // Should NOT write a new list to the store on failure
     expect(steamLibraryStore.set).not.toHaveBeenCalled()
+  })
+
+  // ── 34.15 D-07: refresh() sync status emission, one test per exit path ─────
+
+  /** Filters the sendFrontendMessage mock's calls to the steamSyncStatus
+   *  channel and returns the payloads in call order, so every assertion
+   *  below reads as an ordered SEQUENCE rather than a magic call index. */
+  const steamSyncEmits = () =>
+    jest
+      .mocked(sendFrontendMessage)
+      .mock.calls.filter(([channel]) => channel === 'steamSyncStatus')
+      .map(([, payload]) => payload)
+
+  describe('SteamLibraryManager.refresh() sync status emission (34.15 D-07)', () => {
+    it('exit path 1 (client not ready): emits [syncing, failed/client-not-ready] and resolves null', async () => {
+      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(false)
+
+      const result = await manager.refresh()
+
+      expect(result).toBeNull()
+      expect(steamSyncEmits()).toEqual([
+        { status: 'syncing' },
+        { status: 'failed', reason: 'client-not-ready' }
+      ])
+    })
+
+    it('exit path 2 (getUserOwnedApps throws): emits [syncing, failed/owned-apps-failed] AFTER cached games are pushed', async () => {
+      const cachedGames = [
+        { runner: 'steam', app_name: '570', title: 'Dota 2' } as any,
+        { runner: 'steam', app_name: '440', title: 'Team Fortress 2' } as any
+      ]
+      const fakeClient = {
+        steamID: 'STEAMID_TEST',
+        getUserOwnedApps: jest
+          .fn()
+          .mockRejectedValue(new Error('CM unreachable'))
+      }
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamLibraryStore.get).mockReturnValue(cachedGames)
+
+      await manager.refresh()
+
+      expect(steamSyncEmits()).toEqual([
+        { status: 'syncing' },
+        { status: 'failed', reason: 'owned-apps-failed' }
+      ])
+      // The "notice renders above a populated grid" requirement: both cached
+      // games must have been pushed BEFORE the failure emit, not after.
+      const calls = jest.mocked(sendFrontendMessage).mock.calls
+      const pushIndices = calls
+        .map(([channel], i) => (channel === 'pushGameToLibrary' ? i : -1))
+        .filter((i) => i !== -1)
+      const failedEmitIndex = calls.findIndex(
+        ([channel, payload]) =>
+          channel === 'steamSyncStatus' && (payload as any).status === 'failed'
+      )
+      expect(pushIndices).toHaveLength(2)
+      expect(Math.max(...pushIndices)).toBeLessThan(failedEmitIndex)
+    })
+
+    it('exit path 3 (success): emits [syncing, idle] and NO failed payload', async () => {
+      const apps = [makeOwnedApp(570, 'Dota 2', 120)]
+      const fakeClient = makeFakeClient(apps)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+      await manager.refresh()
+
+      expect(steamSyncEmits()).toEqual([
+        { status: 'syncing' },
+        { status: 'idle' }
+      ])
+    })
+
+    it('exit path 4 (previously-uncaught Steps 2-4 hydration span): emits [syncing, failed/sync-failed], rejects, and NEVER emits idle', async () => {
+      const apps = [makeOwnedApp(570, 'Dota 2', 120)]
+      const fakeClient = makeFakeClient(apps)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamLibraryStore.get).mockReturnValue([])
+      // Forcing seam: steamLibraryStore.set is called at the tail of the
+      // Steps 2-4 span with no catch above it at HEAD — this is exactly the
+      // previously-silent unhandled-rejection path reachable from init()'s
+      // unscoped runOnceWhenOnline(() => this.refresh()).
+      jest.mocked(steamLibraryStore.set).mockImplementation(() => {
+        throw new Error('disk write failed')
+      })
+
+      await expect(manager.refresh()).rejects.toThrow('disk write failed')
+
+      expect(steamSyncEmits()).toEqual([
+        { status: 'syncing' },
+        { status: 'failed', reason: 'sync-failed' }
+      ])
+      // Negative gate: the regression a `finally` block would introduce.
+      expect(steamSyncEmits()).not.toContainEqual({ status: 'idle' })
+    })
+  })
+
+  // ── 34.15 D-03 fail-soft: the library survives a dead/failing PICS call ────
+
+  describe('D-03 fail-soft', () => {
+    it('refresh() still completes normally when captureOwnedAppPlatforms reports failed:true', async () => {
+      jest.mocked(captureOwnedAppPlatforms).mockResolvedValue({
+        scopedCount: 3,
+        capturedCount: 0,
+        skippedCount: 3,
+        failed: true
+      })
+      const apps = [makeOwnedApp(570, 'Dota 2', 120)]
+      const fakeClient = makeFakeClient(apps)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+      const result = await manager.refresh()
+
+      expect(result).toEqual({ stdout: '1 games synced', stderr: '' })
+      expect(steamSyncEmits()).toEqual([
+        { status: 'syncing' },
+        { status: 'idle' }
+      ])
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'pushGameToLibrary',
+        expect.objectContaining({ app_name: '570' })
+      )
+    })
+
+    it('pins current behaviour when captureOwnedAppPlatforms itself rejects (contract violation, defence in depth): the call sits OUTSIDE the Step 2-4 try, so the rejection propagates un-emitted, not as exit path 4', async () => {
+      jest
+        .mocked(captureOwnedAppPlatforms)
+        .mockRejectedValue(new Error('PICS contract violated'))
+      const apps = [makeOwnedApp(570, 'Dota 2', 120)]
+      const fakeClient = makeFakeClient(apps)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+      // Pinned, not silently absorbed: captureOwnedAppPlatforms's own
+      // contract is "never throws" (Plan 01) -- refresh() deliberately does
+      // NOT add a second, redundant try/catch around a call that is already
+      // contracted not to need one. A violation therefore does NOT surface
+      // as exit path 4 (that try starts at the Step 2 banner, AFTER this
+      // call) -- it propagates as an un-emitted rejection, exactly as any
+      // other unexpected exception upstream of Step 2 always has. This is a
+      // deliberately narrower net than "catch everything downstream of
+      // owned-apps", not a silent-absorption gap: the module this call
+      // reaches into is unit-tested (Plan 01) to never take this branch.
+      await expect(manager.refresh()).rejects.toThrow('PICS contract violated')
+      expect(steamSyncEmits()).toEqual([{ status: 'syncing' }])
+    })
   })
 
   // ── GAP-17-BOTTLE-PLAY-REVERT: refresh() must be bottle-aware ──────────────
