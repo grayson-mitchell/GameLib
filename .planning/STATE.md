@@ -3721,7 +3721,29 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-16 -- Phase 34.14 plan 04 EXECUTED (4/5 plans done, Waves 1-3
+Last activity: 2026-08-16 -- **Phase 34.14 COMPLETE (5/5 plans)**, then quick task
+`260816-hdg` landed on top of it. The phase closed with verification 20/20 and the BLOCKING
+D-08 UAT gate PASSED (20 pass / 8 unarbitrable / 0 fail, Electron x Tauri x network-up x
+appdetails-blocked); its real yield was 4 PRE-EXISTING Steam defects filed as todos, not as
+34.14 gaps. Quick task `260816-hdg` then closed one of those four: a survey of the real cache
+(`store_cache/steam_metadata.json`, 380 entries) found **370 with `platformsCaptured: true` and
+ZERO with `is_windows_native`** -- pre-D-17 residue, which reads as CAPTURED (so D-04's
+fail-open correctly does not engage) while `hasSteamWindowsDepot()` returns false, making 370
+games assert "no Windows build" with full confidence. **34.14 passed its own UAT while reaching
+none of the installed base**, because a fresh-fetch test cannot produce the residue shape.
+Fixed by read-boundary normalization -- new `steam/metadataCapture.ts` exporting
+`depotSignalCaptured` = `platformsCaptured === true && is_windows_native !== undefined`, applied
+at three read sites (`library.ts:807`, `installFormIpc.ts:118`, `games.ts:547`). NOT the startup
+migration the todo proposed: `applyMigrations()` is wired only into `main.ts:418`'s
+`app.whenReady()`, which the Tauri sidecar never runs, so a `Migration` class would have been
+dead code in the shipping runtime (filed separately as a latent Legendary-migration todo).
+Backend 152 suites / 3466 tests pass (baseline 151/3437), `tsc --noEmit` exit 0, and
+`steamPlatformRow.ts` byte-identical -- the `treatsAbsentAsAvailable` saboteur never approached.
+Commits `a57849b3b`, `61ba95426`, `7367dfaea`, `2e20cf02c`, `79c0d7861`. Three of the four
+34.14-UAT todos remain OPEN, notably `steam-sync-does-not-capture-platforms-lazy-per-game-only`
+(makes the fail-open load-bearing in ORDINARY use, not just for stale caches). Next: Phase 35
+(Electron cutover) -- and `secure-phase` is still owed on 34.14.
+Earlier: 2026-08-16 -- Phase 34.14 plan 04 EXECUTED (4/5 plans done, Waves 1-3
 COMPLETE). `InstallModal/index.tsx` wired to the pure gating layer (34.14-02) and the widened
 probe (34.14-03): `resolveDepotAvailability` called ONCE, feeding `windowsDepotOffered` into
 `selectSteamPlatformOptions` and `depotSignalResolved` into `resolveSteamSectionGating`'s
