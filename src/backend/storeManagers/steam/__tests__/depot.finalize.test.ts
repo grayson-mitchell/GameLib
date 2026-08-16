@@ -31,7 +31,11 @@ import { createHash } from 'node:crypto'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { downloadSteamDepots } from '../depot'
+import {
+  downloadSteamDepots,
+  DIRECTORY_FLAG,
+  EXECUTABLE_FLAG
+} from '../depot'
 import { SteamUser } from '../user'
 import { selectAllDepots } from '../depot/select'
 import { decryptFilename } from '../depot/crypto'
@@ -279,5 +283,41 @@ describe('D-UAT-09 (21-17): abort-aware finalize — cancel can never write Stat
     expect(result.status).toBe('done')
     const acfText = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
     expect(acfText).toMatch(/"StateFlags"\s+"4"/)
+  })
+
+  it('Test E (23-08 Task 2a, G-23-02/T-23-27): a run whose manifest claims an executable-flagged entry but never actually chmods it (Directory|Executable combo routes it away, WR-01) finalizes StateFlags "1026", never "4", even though zero failures were recorded', async () => {
+    const fakeClient = makeFakeClient()
+    setupPlanPlumbing(fakeClient)
+
+    const contentManifest = jest.requireMock(
+      'steam-user/components/content_manifest.js'
+    )
+    jest.mocked(contentManifest.parse).mockReturnValue({
+      files: [
+        {
+          filename: 'weird-dir',
+          size: '0',
+          sha_content: '',
+          chunks: [],
+          // Directory(64) | Executable(32): downloadSingleFile's Directory
+          // guard (WR-01) returns before ever calling applyEDepotFileModes,
+          // so this run's chmodAttempts stays 0 even though the manifest
+          // census counts this entry as executableFlagged. No failure is
+          // recorded (mkdir succeeds) — the pre-fix vacuous-truth shape.
+          flags: DIRECTORY_FLAG | EXECUTABLE_FLAG
+        }
+      ]
+    })
+
+    const result = await downloadSteamDepots('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      os: 'windows'
+    })
+
+    expect(result.status).toBe('done')
+    const acfText = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
+    expect(acfText).toMatch(/"StateFlags"\s+"1026"/)
+    expect(acfText).not.toMatch(/"StateFlags"\s+"4"/)
   })
 })

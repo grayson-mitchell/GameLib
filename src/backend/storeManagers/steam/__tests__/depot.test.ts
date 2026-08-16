@@ -3612,4 +3612,250 @@ describe('downloadDepotFiles', () => {
       await runBothOrders(false, 'order-b')
     })
   })
+
+  // ── G-23-02 (23-08 Task 2): fail-closed allModesApplied (T-23-27/T-23-28)
+  // + zero-byte executable-flagged entries get their modes too ─────────────
+  describe('allModesApplied fail-closed gate (23-08 Task 2a) + zero-byte exec modes (Task 2b)', () => {
+    it('Task 2b: a zero-byte manifest entry with EXECUTABLE_FLAG(32) still lands with a non-zero execute bit', async () => {
+      const file: DepotPlanFile = {
+        filename: 'zero-byte-exec',
+        size: 0,
+        sha_content: '',
+        chunks: [],
+        flags: EXECUTABLE_FLAG
+      }
+      const plan = makePlan(
+        [
+          { depotId: '677', gid: 'g75', key: Buffer.from('key'), files: [file] }
+        ],
+        0
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      const dest = join(dir, 'common', 'SomeGame', 'zero-byte-exec')
+      expect((await stat(dest)).mode & 0o111).not.toBe(0)
+    })
+
+    it('Task 2b: a zero-byte Directory(64) entry still takes the directory branch and is never chmod-touched (WR-01 preserved)', async () => {
+      const file: DepotPlanFile = {
+        filename: 'zero-byte-dir',
+        size: 0,
+        sha_content: '',
+        chunks: [],
+        flags: DIRECTORY_FLAG
+      }
+      const plan = makePlan(
+        [
+          { depotId: '678', gid: 'g76', key: Buffer.from('key'), files: [file] }
+        ],
+        0
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      const dest = join(dir, 'common', 'SomeGame', 'zero-byte-dir')
+      expect(lstatSync(dest).isDirectory()).toBe(true)
+    })
+
+    it('Task 2b: a zero-byte Symlink(512) entry still takes the symlink branch and is never chmod-touched (WR-01 preserved)', async () => {
+      const file: DepotPlanFile = {
+        filename: 'zero-byte-link',
+        size: 0,
+        sha_content: '',
+        chunks: [],
+        flags: SYMLINK_FLAG,
+        linktarget: 'zero-byte-exec'
+      }
+      const plan = makePlan(
+        [
+          { depotId: '679', gid: 'g77', key: Buffer.from('key'), files: [file] }
+        ],
+        0
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      const dest = join(dir, 'common', 'SomeGame', 'zero-byte-link')
+      expect(lstatSync(dest).isSymbolicLink()).toBe(true)
+    })
+
+    it('Task 2a: a plan whose only executable-flagged entry never reaches chmod (Directory|Executable combo, WR-01 routes it away) returns allModesApplied: false, never the pre-fix vacuous true', async () => {
+      // A manifest entry combining Directory(64) with Executable(32) is an
+      // unusual but bitwise-valid EDepotFileFlag value: summarizeDepotFlags
+      // counts it as executableFlagged (a plain `flags &
+      // (EXECUTABLE_FLAG|CUSTOM_EXECUTABLE_FLAG)` match, independent of the
+      // Directory bit), but downloadSingleFile's Directory guard returns
+      // BEFORE ever reaching applyEDepotFileModes (WR-01) — so chmodAttempts
+      // stays 0 for this plan's only file, with zero failures recorded (mkdir
+      // succeeds). This is the deliberately-constructed "manifest claims
+      // executable, zero modes actually applied, no failure" shape the gate
+      // must catch — reproducing it via a genuine download failure would
+      // ALSO trip the pre-existing `failures.length === 0` check and prove
+      // nothing new about this fix.
+      const file: DepotPlanFile = {
+        filename: 'weird-dir',
+        size: 0,
+        sha_content: '',
+        chunks: [],
+        flags: DIRECTORY_FLAG | EXECUTABLE_FLAG
+      }
+      const plan = makePlan(
+        [
+          { depotId: '67a', gid: 'g78', key: Buffer.from('key'), files: [file] }
+        ],
+        0
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      expect(result.allModesApplied).toBe(false)
+    })
+
+    it('Task 2a: a plan with NO executable-flagged entries at all still returns allModesApplied: true (no false-positive downgrade, T-23-28)', async () => {
+      const content = Buffer.from('plain-config-bytes')
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+      const file: DepotPlanFile = {
+        filename: 'plain.cfg',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [{ sha: 'sha-plain', cb_original: content.length, offset: 0 }]
+        // flags: undefined — no executable claim at all.
+      }
+      const plan = makePlan(
+        [
+          { depotId: '67b', gid: 'g79', key: Buffer.from('key'), files: [file] }
+        ],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      expect(result.allModesApplied).toBe(true)
+    })
+
+    it('Task 2a CONCURRENCY: two runs for DIFFERENT appIds — one legitimately applying real chmods, one legitimately applying zero against an executable-claiming plan — each reports its own uncorrupted allModesApplied in either start order (the test that would fail against module-level counters)', async () => {
+      const content = Buffer.from('concurrency-gate-real-exec-bytes')
+      jest
+        .mocked(fetchChunk)
+        .mockImplementation(async (_hosts, _depotId, chunk) => {
+          const isReal = String(chunk.sha).startsWith('sha-gate-real')
+          await new Promise((r) => setTimeout(r, isReal ? 5 : 15))
+          return content
+        })
+
+      function buildRealExecPlan(appId: string): DepotPlan {
+        const file: DepotPlanFile = {
+          filename: 'real-exec.bin',
+          size: content.length,
+          sha_content: sha1Hex(content),
+          chunks: [
+            { sha: `sha-gate-real-${appId}`, cb_original: content.length, offset: 0 }
+          ],
+          flags: EXECUTABLE_FLAG
+        }
+        return {
+          appId,
+          name: 'GateRealExecGame',
+          depots: [
+            {
+              depotId: `d-gate-real-${appId}`,
+              gid: `g-gate-real-${appId}`,
+              key: Buffer.from('key'),
+              files: [file]
+            }
+          ],
+          totalBytes: content.length
+        }
+      }
+
+      function buildFalseExecPlan(appId: string): DepotPlan {
+        const file: DepotPlanFile = {
+          filename: 'false-exec-dir',
+          size: 0,
+          sha_content: '',
+          chunks: [],
+          flags: DIRECTORY_FLAG | EXECUTABLE_FLAG
+        }
+        return {
+          appId,
+          name: 'GateFalseExecGame',
+          depots: [
+            {
+              depotId: `d-gate-false-${appId}`,
+              gid: `g-gate-false-${appId}`,
+              key: Buffer.from('key'),
+              files: [file]
+            }
+          ],
+          totalBytes: 0
+        }
+      }
+
+      async function runBothOrders(
+        realFirst: boolean,
+        suffix: string
+      ): Promise<void> {
+        const realAppId = `gate-real-${suffix}`
+        const falseAppId = `gate-false-${suffix}`
+        const realPlan = buildRealExecPlan(realAppId)
+        const falsePlan = buildFalseExecPlan(falseAppId)
+
+        const runReal = () =>
+          downloadDepotFiles(realPlan, {
+            targetSteamappsDir: dir,
+            installdir: `GateRealGame-${suffix}`,
+            hosts: HOSTS
+          })
+        const runFalse = () =>
+          downloadDepotFiles(falsePlan, {
+            targetSteamappsDir: dir,
+            installdir: `GateFalseGame-${suffix}`,
+            hosts: HOSTS
+          })
+
+        // Overlapping in time, and the FIRST-invoked call is the one whose
+        // synchronous prefix (up to its first await) runs before the other's.
+        const p1 = realFirst ? runReal() : runFalse()
+        const p2 = realFirst ? runFalse() : runReal()
+        const [r1, r2] = await Promise.all([p1, p2])
+        const realResult = realFirst ? r1 : r2
+        const falseResult = realFirst ? r2 : r1
+
+        expect(realResult.allModesApplied).toBe(true)
+        expect(falseResult.allModesApplied).toBe(false)
+      }
+
+      // Both start orders — proves run A's real chmod activity never
+      // satisfies run B's own (legitimately zero) gate, in either direction.
+      await runBothOrders(true, 'order-a')
+      await runBothOrders(false, 'order-b')
+    })
+  })
+
 })
