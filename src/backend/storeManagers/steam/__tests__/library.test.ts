@@ -4952,6 +4952,70 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
     expect(setIntervalSpy).toHaveBeenCalledTimes(2)
     setIntervalSpy.mockRestore()
   })
+
+  // debug/wazhack-uninstall-reverts: the manifest stays 'installed' the whole
+  // time (Steam's confirm dialog was never answered — never surfaced, or
+  // dismissed) so `seenUninstalling` is never set. Before this fix the grace-
+  // window timeout sent a bare gameStatusUpdate{done} with NO notify() call,
+  // making a silently-abandoned uninstall indistinguishable from "nothing
+  // happened at all" — the exact reported symptom. Now it must also fire a
+  // distinct, honest toast.
+  it('notifies the user (and does not flip the badge) when the grace window expires with the manifest still installed', async () => {
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      title: 'CS:GO',
+      is_installed: true,
+      install: {
+        install_path: '/steam/steamapps/common/csgo',
+        platform: 'Windows'
+      },
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4', // fully installed — Steam never started the uninstall
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+    jest.mocked(sendFrontendMessage).mockClear()
+    ;(notify as jest.Mock).mockClear()
+
+    const interval = 10
+    startUninstallPolling('730', interval)
+    // GRACE_TICKS (20) + 1 ticks so the grace branch fires
+    await jest.advanceTimersByTimeAsync(interval * 21)
+
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'CS:GO',
+        body: expect.any(String)
+      })
+    )
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({
+        appName: '730',
+        runner: 'steam',
+        status: 'done'
+      })
+    )
+    // Badge must never flip on a mere timeout — only a confirmed-absent
+    // manifest may do that (D-02).
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({ is_installed: false })
+    )
+  })
 })
 
 // ── D-07: scanDownloadingAppIds() ────────────────────────────────────────────

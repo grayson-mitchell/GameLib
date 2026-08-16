@@ -2514,6 +2514,20 @@ export function startUninstallPolling(
         runner: 'steam',
         status: 'done'
       })
+      // debug/wazhack-uninstall-reverts: this branch previously gave the user
+      // ZERO feedback — a bare gameStatusUpdate{done} with no notify() call —
+      // so a native uninstall whose Steam confirm dialog was never answered
+      // (never surfaced, or dismissed) looked identical to "nothing happened
+      // at all", the exact reported symptom. The badge correctly stays
+      // installed (D-02); the user now gets an honest, distinct toast saying
+      // so instead of a silent revert.
+      notify({
+        title: library.get(appId)?.title ?? '',
+        body: i18next.t(
+          'notify.uninstallNotConfirmed',
+          'Uninstall not confirmed by Steam — please check Steam and try again'
+        )
+      })
       stopUninstallPolling(appId)
     }
   }, intervalMs)
