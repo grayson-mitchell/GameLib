@@ -1,5 +1,6 @@
 import {
   hasSteamWindowsDepot,
+  hasSteamMacDepot,
   selectSteamPlatformOptions,
   readonlyPlatformValue,
   hasSteamDepotSignalCaptured,
@@ -278,96 +279,224 @@ describe('hasSteamDepotSignalCaptured -- D-05 captured-signal gate', () => {
   })
 })
 
-describe('resolveDepotAvailability -- D-04/D-05 in one pure function', () => {
-  // The six-row truth table from 34.14-02-PLAN.md Task 3, each row
-  // asserting BOTH output fields.
+// 34.15 D-12 RECONCILIATION (reconciles CONTEXT.md D-12's claim that this
+// widening "widens a function whose behaviour three shipped saboteur gates
+// pin" against what the test file actually shows):
+//
+// Reading `describe('the D-17 gates are not vacuous', ...)` above shows that
+// mapping is not accurate. `treatsAbsentAsAvailable` targets
+// `hasSteamWindowsDepot`; `includesWindowsRegardless` and
+// `readonlyRowLeaksDepot` target `selectSteamPlatformOptions`'s
+// `'selectable'` and `'readonly-macos'` branches. NONE of the three reaches
+// `resolveDepotAvailability`. Their fixtures (the shared `platforms` array
+// and bare `{}`/`undefined` gameInfo shapes) are untouched by adding a mac
+// output to this function, so all three stay green with ZERO changes -- and
+// that block above is, in fact, byte-identical (verified via
+// `git diff -U0` at task acceptance). The block below is the one D-12
+// actually widens.
+describe('resolveDepotAvailability -- D-04/D-05 in one pure function, widened by 34.15 D-12 for mac', () => {
+  // The six-row truth table from 34.14-02-PLAN.md Task 3, each row now also
+  // carrying seedHasMacDepot/probeHasMacDepot and asserting macDepotOffered.
+  // Every row's original Windows assertion is UNCHANGED -- these rows still
+  // pin exactly the Windows behaviour they always pinned.
   const rows: {
     name: string
     input: ResolveDepotAvailabilityInput
     depotSignalResolved: boolean
     windowsDepotOffered: boolean
+    macDepotOffered: boolean
   }[] = [
     {
       name: 'D-05 seed: captured game never flashes pending',
       input: {
         seedDepotSignalCaptured: true,
         seedHasWindowsDepot: true,
+        seedHasMacDepot: true,
         probeSettled: false,
         probeDepotSignalCaptured: false,
-        probeHasWindowsDepot: false
+        probeHasWindowsDepot: false,
+        probeHasMacDepot: false
       },
       depotSignalResolved: true,
-      windowsDepotOffered: true
+      windowsDepotOffered: true,
+      macDepotOffered: true
     },
     {
       name: "seed says captured-and-absent: 34.13's fence holds at first frame",
       input: {
         seedDepotSignalCaptured: true,
         seedHasWindowsDepot: false,
+        seedHasMacDepot: false,
         probeSettled: false,
         probeDepotSignalCaptured: false,
-        probeHasWindowsDepot: false
+        probeHasWindowsDepot: false,
+        probeHasMacDepot: false
       },
       depotSignalResolved: true,
-      windowsDepotOffered: false
+      windowsDepotOffered: false,
+      macDepotOffered: false
     },
     {
-      name: 'D-01: unresolved -> the pending row, Install disabled',
+      name: 'D-01: unresolved -> the pending row, Install disabled (seed uncaptured, probe unsettled)',
       input: {
         seedDepotSignalCaptured: false,
         seedHasWindowsDepot: false,
+        seedHasMacDepot: false,
         probeSettled: false,
         probeDepotSignalCaptured: false,
-        probeHasWindowsDepot: false
+        probeHasWindowsDepot: false,
+        probeHasMacDepot: false
       },
       depotSignalResolved: false,
-      windowsDepotOffered: false
+      windowsDepotOffered: false,
+      macDepotOffered: false
     },
     {
       name: 'probe landed, depot present',
       input: {
         seedDepotSignalCaptured: false,
         seedHasWindowsDepot: false,
+        seedHasMacDepot: false,
         probeSettled: true,
         probeDepotSignalCaptured: true,
-        probeHasWindowsDepot: true
+        probeHasWindowsDepot: true,
+        probeHasMacDepot: true
       },
       depotSignalResolved: true,
-      windowsDepotOffered: true
+      windowsDepotOffered: true,
+      macDepotOffered: true
     },
     {
       name: 'probe landed, depot CONFIRMED absent -> omit (D-04 branch a)',
       input: {
         seedDepotSignalCaptured: false,
         seedHasWindowsDepot: false,
+        seedHasMacDepot: false,
         probeSettled: true,
         probeDepotSignalCaptured: true,
-        probeHasWindowsDepot: false
+        probeHasWindowsDepot: false,
+        probeHasMacDepot: false
       },
       depotSignalResolved: true,
-      windowsDepotOffered: false
+      windowsDepotOffered: false,
+      macDepotOffered: false
     },
     {
-      name: 'probe settled UNCAPTURED -> FAIL OPEN (D-04 branch b)',
+      name: '34.15 D-12 ASYMMETRY ROW: probe settled UNCAPTURED -> Windows FAILS OPEN (D-04 branch b) but mac stays conservative even though probeHasMacDepot is true',
       input: {
         seedDepotSignalCaptured: false,
         seedHasWindowsDepot: false,
+        seedHasMacDepot: false,
         probeSettled: true,
         probeDepotSignalCaptured: false,
-        probeHasWindowsDepot: false
+        probeHasWindowsDepot: false,
+        // Deliberately true: proves macDepotOffered is false NOT because
+        // hasMacDepot is false, but because the signal was never captured --
+        // the same distinction D-04's fail-open makes for Windows, resolved
+        // the opposite way for mac.
+        probeHasMacDepot: true
       },
       depotSignalResolved: true,
-      windowsDepotOffered: true
+      windowsDepotOffered: true,
+      macDepotOffered: false
+    },
+    {
+      name: 'mac: seed captured true, probe unsettled -> macDepotOffered true',
+      input: {
+        seedDepotSignalCaptured: true,
+        seedHasWindowsDepot: false,
+        seedHasMacDepot: true,
+        probeSettled: false,
+        probeDepotSignalCaptured: false,
+        probeHasWindowsDepot: false,
+        probeHasMacDepot: false
+      },
+      depotSignalResolved: true,
+      windowsDepotOffered: false,
+      macDepotOffered: true
+    },
+    {
+      name: 'mac: seed captured false, probe unsettled -> macDepotOffered false',
+      input: {
+        seedDepotSignalCaptured: true,
+        seedHasWindowsDepot: false,
+        seedHasMacDepot: false,
+        probeSettled: false,
+        probeDepotSignalCaptured: false,
+        probeHasWindowsDepot: false,
+        probeHasMacDepot: false
+      },
+      depotSignalResolved: true,
+      windowsDepotOffered: false,
+      macDepotOffered: false
+    },
+    {
+      name: 'mac: seed uncaptured, probe settled + captured + mac true -> macDepotOffered true',
+      input: {
+        seedDepotSignalCaptured: false,
+        seedHasWindowsDepot: false,
+        seedHasMacDepot: false,
+        probeSettled: true,
+        probeDepotSignalCaptured: true,
+        probeHasWindowsDepot: false,
+        probeHasMacDepot: true
+      },
+      depotSignalResolved: true,
+      windowsDepotOffered: false,
+      macDepotOffered: true
     }
   ]
 
   for (const row of rows) {
-    it(`${row.name} -> depotSignalResolved: ${row.depotSignalResolved}, windowsDepotOffered: ${row.windowsDepotOffered}`, () => {
+    it(`${row.name} -> depotSignalResolved: ${row.depotSignalResolved}, windowsDepotOffered: ${row.windowsDepotOffered}, macDepotOffered: ${row.macDepotOffered}`, () => {
       const result = resolveDepotAvailability(row.input)
       expect(result.depotSignalResolved).toBe(row.depotSignalResolved)
       expect(result.windowsDepotOffered).toBe(row.windowsDepotOffered)
+      expect(result.macDepotOffered).toBe(row.macDepotOffered)
     })
   }
+
+  it('macTreatsAbsentAsAvailable: a saboteur that copies the Windows fail-open clause onto the mac side disagrees with the real function on the D-04 fail-open row -- proving the asymmetry is non-vacuous', () => {
+    function macTreatsAbsentAsAvailable(
+      input: ResolveDepotAvailabilityInput
+    ): boolean {
+      const hasMacDepot = input.probeSettled
+        ? input.probeHasMacDepot
+        : input.seedHasMacDepot
+      const depotSignalCaptured = input.probeSettled
+        ? input.probeDepotSignalCaptured
+        : input.seedDepotSignalCaptured
+      // DEFECT: copies windowsDepotOffered's fail-open clause onto mac,
+      // which 34.15 D-12 explicitly forbids.
+      return hasMacDepot || (input.probeSettled && !depotSignalCaptured)
+    }
+
+    const failOpenRow: ResolveDepotAvailabilityInput = {
+      seedDepotSignalCaptured: false,
+      seedHasWindowsDepot: false,
+      seedHasMacDepot: false,
+      probeSettled: true,
+      probeDepotSignalCaptured: false,
+      probeHasWindowsDepot: false,
+      probeHasMacDepot: true
+    }
+
+    expect(macTreatsAbsentAsAvailable(failOpenRow)).toBe(true)
+
+    const real = resolveDepotAvailability(failOpenRow)
+    expect(real.macDepotOffered).toBe(false)
+  })
+
+  it('macLoosensToNotFalse: a saboteur reading is_mac_native !== false (the ROADMAP-prohibited shape) disagrees with the real hasSteamMacDepot on {}', () => {
+    function macLoosensToNotFalse(
+      gameInfo: { is_mac_native?: boolean } | null | undefined
+    ): boolean {
+      return gameInfo?.is_mac_native !== false
+    }
+
+    expect(macLoosensToNotFalse({})).toBe(true)
+    expect(hasSteamMacDepot({})).toBe(false)
+  })
 
   it("failsClosedOnUnknown: a saboteur computing windowsDepotOffered = hasWindowsDepot alone (the fail-CLOSED shape, i.e. today's pre-34.14 behaviour) disagrees with the real function on the settled-uncaptured row -- proving D-04's fail-open direction is actually exercised", () => {
     function failsClosedOnUnknown(input: ResolveDepotAvailabilityInput): {
@@ -391,9 +520,11 @@ describe('resolveDepotAvailability -- D-04/D-05 in one pure function', () => {
     const settledUncapturedInput: ResolveDepotAvailabilityInput = {
       seedDepotSignalCaptured: false,
       seedHasWindowsDepot: false,
+      seedHasMacDepot: false,
       probeSettled: true,
       probeDepotSignalCaptured: false,
-      probeHasWindowsDepot: false
+      probeHasWindowsDepot: false,
+      probeHasMacDepot: false
     }
 
     const sabotaged = failsClosedOnUnknown(settledUncapturedInput)
@@ -407,9 +538,11 @@ describe('resolveDepotAvailability -- D-04/D-05 in one pure function', () => {
     const result = resolveDepotAvailability({
       seedDepotSignalCaptured: false,
       seedHasWindowsDepot: true,
+      seedHasMacDepot: false,
       probeSettled: false,
       probeDepotSignalCaptured: false,
-      probeHasWindowsDepot: false
+      probeHasWindowsDepot: false,
+      probeHasMacDepot: false
     })
     expect(result.depotSignalResolved).toBe(false)
   })
