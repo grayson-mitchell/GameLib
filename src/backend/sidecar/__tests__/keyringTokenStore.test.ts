@@ -1202,12 +1202,10 @@ describe('SidecarKeyringTokenStore', () => {
           KEYRING_SLOT_STEAM_REFRESH_TOKEN
         )
 
-        await expect(readTokenOutcome(store, 'user-refresh')).resolves.toEqual(
-          {
-            status: 'unreadable',
-            reason: 'timeout'
-          }
-        )
+        await expect(readTokenOutcome(store, 'user-refresh')).resolves.toEqual({
+          status: 'unreadable',
+          reason: 'timeout'
+        })
         expect(callLog).toHaveLength(1)
 
         // Second read, still inside the memo window, a DIFFERENT trigger this time -- the memo
@@ -1313,9 +1311,7 @@ describe('SidecarKeyringTokenStore', () => {
     })
 
     it('comment-stripped user.ts contains zero process.env', () => {
-      const stripped = stripSourceComments(
-        readFileSync(USER_SRC_PATH, 'utf-8')
-      )
+      const stripped = stripSourceComments(readFileSync(USER_SRC_PATH, 'utf-8'))
       expect(stripped).not.toMatch(/process\.env/)
     })
 

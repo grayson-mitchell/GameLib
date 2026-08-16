@@ -157,7 +157,10 @@ export class ElectronTokenStore implements TokenStore {
       const buf = Buffer.from(stored.slice(TOKEN_PREFIX.length), 'base64')
       return safeStorage.decryptString(buf)
     } catch (err) {
-      logWarning(['Failed to decrypt Steam refresh token:', err], LogPrefix.Steam)
+      logWarning(
+        ['Failed to decrypt Steam refresh token:', err],
+        LogPrefix.Steam
+      )
       return ''
     }
   }

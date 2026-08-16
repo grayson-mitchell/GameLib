@@ -109,9 +109,7 @@ describe('mapRefreshOriginToTrigger', () => {
   })
 
   it('maps nav-tabs-games-tab and redeem-steam-key and game-status to user-refresh', () => {
-    expect(mapRefreshOriginToTrigger('nav-tabs-games-tab')).toBe(
-      'user-refresh'
-    )
+    expect(mapRefreshOriginToTrigger('nav-tabs-games-tab')).toBe('user-refresh')
     expect(mapRefreshOriginToTrigger('redeem-steam-key')).toBe('user-refresh')
     expect(mapRefreshOriginToTrigger('game-status')).toBe('user-refresh')
   })
