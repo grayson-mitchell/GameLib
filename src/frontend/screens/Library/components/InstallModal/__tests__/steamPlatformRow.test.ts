@@ -44,7 +44,8 @@ const ALL_MODES: SteamPlatformRowMode[] = [
   'absent',
   'readonly-windows',
   'readonly-macos',
-  'selectable'
+  'selectable',
+  'pending'
 ]
 
 describe('hasSteamWindowsDepot -- D-17 depot gate', () => {
@@ -140,6 +141,18 @@ describe('selectSteamPlatformOptions -- omission, never disablement', () => {
     expect(result.map((p) => p.value)).toEqual(['Mac', 'Windows'])
   })
 
+  it("'pending' with hasWindowsDepot false returns exactly the macOS entry", () => {
+    const result = selectSteamPlatformOptions('pending', platforms, false)
+    expect(result).toEqual([macEntry])
+  })
+
+  it("'pending' with hasWindowsDepot true is invariant to the depot flag -- the depot flag can never leak into a row the user cannot change", () => {
+    const withFalse = selectSteamPlatformOptions('pending', platforms, false)
+    const withTrue = selectSteamPlatformOptions('pending', platforms, true)
+    expect(withTrue).toEqual(withFalse)
+    expect(withTrue).toEqual([macEntry])
+  })
+
   it('every returned entry is a member (by reference) of the supplied platforms array -- the function can never fabricate an option', () => {
     for (const mode of ALL_MODES) {
       for (const hasWindowsDepot of [false, true]) {
@@ -171,6 +184,10 @@ describe('readonlyPlatformValue', () => {
 
   it("'selectable' -> undefined", () => {
     expect(readonlyPlatformValue('selectable')).toBeUndefined()
+  })
+
+  it("'pending' -> 'Mac'", () => {
+    expect(readonlyPlatformValue('pending')).toBe('Mac')
   })
 })
 
