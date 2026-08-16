@@ -1,7 +1,7 @@
 import { faApple, faLinux, faWindows } from '@fortawesome/free-brands-svg-icons'
 import { IconDefinition, faGlobe } from '@fortawesome/free-solid-svg-icons'
 
-import { useContext, useEffect, useMemo, useState } from 'react'
+import { useContext, useEffect, useMemo, useRef, useState } from 'react'
 
 import ContextProvider from 'frontend/state/ContextProvider'
 import {
@@ -36,6 +36,7 @@ import {
 } from './steamSectionGating'
 import {
   hasSteamWindowsDepot,
+  hasSteamMacDepot,
   hasSteamDepotSignalCaptured,
   resolveDepotAvailability,
   selectSteamPlatformOptions,
@@ -181,6 +182,13 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   // would be the drift 34.13-05's verification section warns against.
   const hasWindowsDepot = hasSteamWindowsDepot(gameInfo)
 
+  // 34.15 D-12: the mac-side seed read, mirroring the Windows one directly
+  // above -- both feed the ONE `resolveDepotAvailability` call below. This
+  // does not replace `isMacNative` above, which still feeds the `platforms`
+  // array's `available` computation -- a separate question from what the
+  // Steam header/selector may OFFER.
+  const hasMacDepot = hasSteamMacDepot(gameInfo)
+
   // 34.14 D-05: the seed half of the depot-availability resolution below --
   // whether the Windows-depot answer was already captured at library-sync
   // time. Read through this helper, never by the raw `steamPlatformsCaptured`
@@ -197,15 +205,21 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   // above). `probeSettled` is `!eligibility.pending`, the SAME expression
   // that disables the dialog's Install button (D-01), so the pending row
   // and the Install disable can never desync onto two different flags.
-  const { depotSignalResolved, windowsDepotOffered } = resolveDepotAvailability(
-    {
+  // 34.15 D-12: widened IN PLACE to feed the mac seed/probe pair alongside
+  // the Windows pair -- this stays the ONE call site in this file
+  // (`steamEligibilityWiring.test.ts` E1 asserts exactly one occurrence). A
+  // second call here would be a second, independently-drifting resolution
+  // moment for the same fact.
+  const { depotSignalResolved, windowsDepotOffered, macDepotOffered } =
+    resolveDepotAvailability({
       seedHasWindowsDepot: hasWindowsDepot,
+      seedHasMacDepot: hasMacDepot,
       seedDepotSignalCaptured,
       probeHasWindowsDepot: eligibility.hasWindowsDepot,
+      probeHasMacDepot: eligibility.hasMacDepot,
       probeDepotSignalCaptured: eligibility.depotSignalCaptured,
       probeSettled: !eligibility.pending
-    }
-  )
+    })
 
   const platforms: AvailablePlatforms = [
     {
@@ -238,16 +252,49 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
     (p) => p.available
   )
 
-  const getDefaultplatform = (): InstallPlatform => {
-    if (isMac && gameInfo?.is_mac_native) {
-      return 'Mac'
+  // 34.15 D-14: Windows is the unknown-case answer -- Windows-via-bottle
+  // always works and most Steam titles are Windows-only. The
+  // operator-locked constraint that mac-ONLY Steam games are a null set
+  // does NOT imply most games HAVE a Mac build -- do not misread it as an
+  // argument for defaulting to Mac.
+  //
+  // This is a `useState` INITIALIZER (below), so on its own it would run
+  // ONCE at open, from the frozen seed, and stay 'Windows' even after the
+  // probe resolves "this game IS mac-native" -- the observed Terraria
+  // (105600) symptom: a game that genuinely ships both builds defaulted
+  // away from its own native Mac build. The `useEffect` immediately below
+  // re-derives once `depotSignalResolved` flips true, reading the SAME
+  // resolved `macDepotOffered` this function takes as a parameter, so the
+  // initializer and the re-derivation can never disagree.
+  //
+  // Re-deriving after open is SAFE only because Install stays DISABLED for
+  // the entire pending window (34.14 D-01, `eligibilityPending`) -- the
+  // value can never change out from under a user mid-commit.
+  //
+  // Per 34.15 D-05, unresolved-at-open remains a REACHABLE state even after
+  // the bulk PICS capture ships (fail-soft sync, absent `oslist`,
+  // cached-library early returns, cold start) -- this branch is not a rare
+  // corner case and must not be treated as one.
+  const getDefaultplatform = (macOffered: boolean): InstallPlatform =>
+    isMac && macOffered ? 'Mac' : 'Windows'
+
+  const [platformToInstall, setPlatformToInstall] = useState<InstallPlatform>(
+    getDefaultplatform(macDepotOffered)
+  )
+
+  // 34.15 D-14: set `true` in the single place the user changes the value
+  // (`platformSelection()`'s `onChange` handler below) -- guards the
+  // re-derivation effect so an explicit user choice is never silently
+  // overwritten once the depot signal resolves.
+  const userChosePlatformRef = useRef(false)
+
+  useEffect(() => {
+    if (!depotSignalResolved || userChosePlatformRef.current) {
+      return
     }
-
-    return 'Windows'
-  }
-
-  const [platformToInstall, setPlatformToInstall] =
-    useState<InstallPlatform>(getDefaultplatform())
+    setPlatformToInstall(getDefaultplatform(macDepotOffered))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [depotSignalResolved, macDepotOffered, isMac])
 
   const hasWine = platformToInstall === 'Windows' && !isWin
 
@@ -482,9 +529,13 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
         htmlId="platformPick"
         value={readonlyPlatformValue(platformRowMode) ?? platformToInstall}
         disabled={platformRowMode !== 'selectable' || disabledPlatformSelection}
-        onChange={(e) =>
+        onChange={(e) => {
+          // 34.15 D-14: the user has now made an explicit choice -- the
+          // re-derivation effect above must never overwrite it once the
+          // depot signal resolves.
+          userChosePlatformRef.current = true
           setPlatformToInstall(e.target.value as InstallPlatform)
-        }
+        }}
         afterSelect={
           isSteamManagedApp && platformRowMode === 'selectable' ? (
             <InfoIcon
@@ -538,6 +589,7 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
             steamLibraries={steamLibraryList}
             nativeInstallOn={steamNativeInstallOn}
             eligibilityPending={eligibility.pending}
+            depotSignalResolved={depotSignalResolved}
           >
             {platformSelection()}
             {/* Plan 11, D-25: the wine region's FIRST arm is the pending
