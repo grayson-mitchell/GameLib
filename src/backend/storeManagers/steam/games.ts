@@ -55,6 +55,13 @@ import {
   provisionBridgeBottle
 } from './bottle'
 import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
+import { noteSteamAuthTrigger } from './authTrigger'
+// quick-260817-d61: verified during planning that user.ts imports nothing
+// from games.ts (no import of './games' anywhere in user.ts), so this
+// introduces no cycle. Used ONLY by getExtraInfo()'s fire-and-forget
+// locked->unlocked transition below — install()/update()/launch() only need
+// noteSteamAuthTrigger, not SteamUser itself.
+import { SteamUser } from './user'
 import { downloadSteamDepots } from './depot'
 import { ensureSteamClientReady } from './clientSetup' // Plan 10 seam
 import { resolveSteamInstallTarget } from './installLocation' // Plan 09 seam
@@ -799,6 +806,26 @@ export default class SteamGame implements Game {
    * Analog: nile/games.ts lines 95-107.
    */
   async getExtraInfo(): Promise<ExtraInfo> {
+    // quick-260817-d61: opening a game page is a deliberate Steam action, so
+    // it unlocks the keyring deferral gate. On the locked->unlocked
+    // TRANSITION ONLY (noteSteamAuthTrigger returns true exactly once) this
+    // fires a bounded, fire-and-forget ensureConnected() so the read genuinely
+    // happens at page-open, per the locked design decision — never awaited
+    // (this method is on the render path and must not block it), and its own
+    // rejection is swallowed here so a failed reconnect never surfaces as a
+    // getExtraInfo() failure. A second (or later) getExtraInfo() call fires
+    // none — the transition already happened.
+    if (noteSteamAuthTrigger('game-page')) {
+      void SteamUser.ensureConnected().catch((err) => {
+        logWarning(
+          [
+            `SteamGame: getExtraInfo() locked->unlocked ensureConnected() failed (appId: ${this.appId}), never blocks page render:`,
+            err
+          ],
+          LogPrefix.Steam
+        )
+      })
+    }
     const info = this.getGameInfo()
     return (
       info.extra ?? {
@@ -864,6 +891,10 @@ export default class SteamGame implements Game {
    * returns — see 34.13-06-SUMMARY.md's handoffs for the full escalation.
    */
   async install(args: InstallArgs): Promise<InstallResult> {
+    // quick-260817-d61: Install is a deliberate Steam action — unlock the
+    // keyring deferral gate as the first statement, before anything else in
+    // this method runs.
+    noteSteamAuthTrigger('user-install')
     // steam-startup-resume-crash (2026-07-18) / D-04 softened: a
     // startup-detected interrupted install is surfaced (steamResumePending)
     // but never auto-driven — the user's own Install click IS the resume
@@ -1787,6 +1818,10 @@ export default class SteamGame implements Game {
     _args?: string[],
     _skipVersionCheck?: boolean
   ): Promise<boolean> {
+    // quick-260817-d61: Play is a deliberate Steam action — unlock the
+    // keyring deferral gate before ensurePlatformsCaptured() or anything
+    // else in this method runs.
+    noteSteamAuthTrigger('user-play')
     await this.ensurePlatformsCaptured()
     if (this.isBottleEligible()) {
       // Phase 24 Plan 08 (R4/D-01): allowlisted-title bridge routing — the
@@ -2432,6 +2467,9 @@ export default class SteamGame implements Game {
   }
 
   async update(): Promise<InstallResult> {
+    // quick-260817-d61: Update is a deliberate Steam action — unlock the
+    // keyring deferral gate as the first statement.
+    noteSteamAuthTrigger('user-install')
     logWarning(
       `SteamGame.update not implemented until Phase 2 (appId: ${this.appId})`,
       LogPrefix.Steam

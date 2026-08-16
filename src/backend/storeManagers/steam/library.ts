@@ -21,6 +21,11 @@ import { notify } from '../../dialog/dialog'
 import i18next from 'i18next'
 import { SteamUser } from './user'
 import {
+  isSteamAuthUnlocked,
+  currentTriggerLabel,
+  noteSteamAuthTrigger
+} from './authTrigger'
+import {
   steamLibraryStore,
   steamMetadataStore,
   steamSyncStore
@@ -606,8 +611,12 @@ export default class SteamLibraryManager implements LibraryManager {
       )
     }
 
-    // Background sync once per session (D-01 / D-03)
+    // Background sync once per session (D-01 / D-03). quick-260817-d61: names
+    // the deferral's log line 'startup' rather than an empty label — the gate
+    // itself lives at the top of refresh() below, not here; this call never
+    // unlocks anything (noteSteamAuthTrigger('startup') is never deliberate).
     if (SteamUser.isLoggedIn()) {
+      noteSteamAuthTrigger('startup')
       runOnceWhenOnline(() => this.refresh())
     }
 
@@ -672,6 +681,27 @@ export default class SteamLibraryManager implements LibraryManager {
    * timestamp.  Falls back to the cached library if the CM call fails (D-09).
    */
   async refresh(): Promise<ExecResult | null> {
+    // quick-260817-d61: exit path 0 of the five now on this method — checked
+    // BEFORE the 'syncing' emit below, so an automatic (unattended) refresh
+    // never touches the keyring at all. `init()` has ALREADY pushed the
+    // cached library to the frontend by the time this can be reached from
+    // startup (see init() above), so emitting 'idle' here — rather than
+    // emitting nothing — renders a populated grid, never an empty one, and
+    // also clears any stale 'syncing' a prior run left behind. Deliberate
+    // Steam actions (Install/Play/game-page-open/explicit-Refresh/login) call
+    // `noteSteamAuthTrigger`/`noteRefreshTrigger` before reaching here, which
+    // unlocks the gate for the rest of this process's lifetime (sticky —
+    // see authTrigger.ts's own doc comment for why a non-sticky gate would be
+    // a worse bug than the one this plan fixes).
+    if (!isSteamAuthUnlocked()) {
+      logInfo(
+        `Steam: library refresh deferred until a deliberate Steam action — no keyring_get issued (trigger=${currentTriggerLabel()})`,
+        LogPrefix.Steam
+      )
+      sendFrontendMessage('steamSyncStatus', { status: 'idle' })
+      return null
+    }
+
     // 34.15 D-06/D-07: emitted as the very first statement of refresh() —
     // this is what gives the Steam sync tri-state STRUCTURAL meaning ("a
     // refresh is currently running"), a property the boolean this tri-state

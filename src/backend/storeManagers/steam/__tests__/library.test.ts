@@ -53,6 +53,7 @@ import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import { SteamUser } from '../user'
+import { noteSteamAuthTrigger } from '../authTrigger'
 import {
   steamLibraryStore,
   steamMetadataStore,
@@ -313,6 +314,14 @@ describe('SteamLibraryManager', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     manager = new SteamLibraryManager()
+    // quick-260817-d61: this suite tests refresh()'s BEHAVIOR (playtime,
+    // install-state merge, bridge reconciliation, etc.), not the keyring
+    // deferral gate itself — that gate has its own dedicated suite
+    // (steamStartupKeyringDeferral.test.ts). Unlock it here so every
+    // pre-existing test below keeps exercising refresh()'s full body exactly
+    // as it did before this task, instead of short-circuiting on the new
+    // exit path 0.
+    noteSteamAuthTrigger('user-refresh')
     // Default: client reconnect succeeds so refresh() proceeds past the guard
     jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
     // Default: getSteamLibraries returns empty so buildInstalledMap is fast

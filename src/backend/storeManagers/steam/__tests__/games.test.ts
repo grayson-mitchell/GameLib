@@ -40,6 +40,7 @@ import {
   provisionBridgeBottle
 } from '../bottle'
 import { library, pendingFetches } from '../state'
+import { SteamUser } from '../user'
 import type { GameInfo, InstallParams } from 'common/types'
 import { isSteamNativeInstallEnabled } from '../nativeInstallSetting'
 import { downloadSteamDepots } from '../depot'
@@ -183,8 +184,17 @@ jest.mock('backend/utils', () => ({
   getSteamLibraries: jest.fn(),
   getFileSize: jest.fn()
 }))
+// quick-260817-d61: ensureConnected added -- getExtraInfo()'s locked->unlocked
+// keyring-deferral transition now fire-and-forgets a call to it. Defaulted to
+// a resolved promise so resetMocks:true (which wipes even a factory-supplied
+// implementation before every test) never leaves it undefined, which would
+// throw synchronously before the fire-and-forget .catch() is even reached.
 jest.mock('../user', () => ({
-  SteamUser: { isLoggedIn: jest.fn(), getClient: jest.fn() }
+  SteamUser: {
+    isLoggedIn: jest.fn(),
+    getClient: jest.fn(),
+    ensureConnected: jest.fn().mockResolvedValue(true)
+  }
 }))
 jest.mock('backend/online_monitor', () => ({
   runOnceWhenOnline: jest.fn(),
@@ -5762,6 +5772,12 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
     library.clear()
     pendingFetches.clear()
     existsSyncMock = jest.requireMock('graceful-fs').existsSync as jest.Mock
+    // quick-260817-d61: re-establish SteamUser.ensureConnected() (resetMocks:
+    // true wipes the factory-supplied mockResolvedValue before every test) --
+    // getExtraInfo()'s locked->unlocked transition fire-and-forgets a call to
+    // it, and a bare jest.fn() with no implementation returns undefined,
+    // which would throw synchronously on .catch().
+    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
     // Re-establish GameConfig mock (resetMocks: true clears return values between tests)
     const mockSettings = {
       autoSyncSaves: false,

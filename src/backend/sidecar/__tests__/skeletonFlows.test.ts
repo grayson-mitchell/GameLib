@@ -240,7 +240,20 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
 
     const { input, frames } = startSidecar()
-    writeInvoke(input, 'read-1', 'refreshLibrary', [])
+    // quick-260817-d61: the Steam keyring deferral gate defers an automatic
+    // ('startup'-shaped, no origin) refresh — this test proves the READ FLOW
+    // mechanics (a refreshLibrary invoke reaches the real steam-user path and
+    // pushes a notification), so it must dispatch with a DELIBERATE origin,
+    // the same shape a real Refresh-button click sends
+    // (`action-icons-refresh-button` -> `noteRefreshTrigger` -> `user-refresh`,
+    // an allowlisted deliberate trigger). An empty args array would otherwise
+    // be classified as an unattended startup call and correctly deferred —
+    // that deferral is exercised by its own dedicated suite
+    // (steamStartupKeyringDeferral.test.ts), not this one.
+    writeInvoke(input, 'read-1', 'refreshLibrary', [
+      undefined,
+      'action-icons-refresh-button'
+    ])
     await flush()
 
     const pushes = frames.filter(
