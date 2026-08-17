@@ -8,6 +8,7 @@
 // hardware reproduction even though no request ever timed out.
 
 import {
+  DEMOTED_PROBE_INTERVAL,
   HostHealthTracker,
   MAX_CONSECUTIVE_FAILURES,
   MIN_SAMPLES_FOR_UNHEALTHY,
@@ -362,6 +363,147 @@ describe('HostHealthTracker', () => {
       expect(tracker.pickHost(hosts, 0, 2)).toBe('host-c')
       expect(tracker.pickHost(hosts, 0, 3)).toBe('host-d')
       expect(tracker.pickHost(hosts, 2, 0)).toBe('host-c')
+    })
+  })
+
+  // Quick 260817-ihr (IHR-01): bounded probe-based recovery for a demoted
+  // host. Root cause: pickHost's attempt-0 fan-out draws from `healthy`
+  // ONLY, so a host demoted by MAX_CONSECUTIVE_FAILURES never receives
+  // another attempt-0 pick, therefore never records another success,
+  // therefore never clears its streak -- the "half-open circuit breaker"
+  // documented on MutableHostStats.consecutiveFailures is unreachable in
+  // production without this. See the 2026-08-17 HUMANKIND hardware log:
+  // two hosts at 99.5%/99.8% lifetime success frozen UNHEALTHY with
+  // byte-identical attempt counters across two stats lines 13 minutes apart.
+  describe('demoted-host probe recovery (IHR-01)', () => {
+    it('exports DEMOTED_PROBE_INTERVAL', () => {
+      expect(DEMOTED_PROBE_INTERVAL).toBeGreaterThan(1)
+    })
+
+    it('a demoted host receives exactly one attempt-0 probe pick within DEMOTED_PROBE_INTERVAL consecutive attempt-0 calls (a dead host stays cheap)', () => {
+      const tracker = new HostHealthTracker()
+      const hosts = ['host-a', 'host-b', 'host-c', 'host-d']
+
+      // Demote host-a via a raw consecutive-failure streak; b/c/d stay
+      // healthy (cold, zero history).
+      for (let i = 0; i < MAX_CONSECUTIVE_FAILURES; i++) {
+        tracker.record('host-a', 'error', 100)
+      }
+      expect(tracker.snapshot('host-a').unhealthy).toBe(true)
+
+      // Do NOT record anything else -- host-a stays demoted for the whole
+      // window (mirrors "a genuinely dead host costs at most 1 in
+      // DEMOTED_PROBE_INTERVAL first attempts").
+      let probePicks = 0
+      for (let call = 0; call < DEMOTED_PROBE_INTERVAL; call++) {
+        if (tracker.pickHost(hosts, 0, 0, 0) === 'host-a') probePicks++
+      }
+      expect(probePicks).toBe(1)
+    })
+
+    it('after a probed demoted host is recorded as a success, its streak clears and it rejoins the normal top-N fan-out on the next attempt-0 call', () => {
+      const tracker = new HostHealthTracker()
+      // Only 3 hosts, so TOP_N_FANOUT (3) covers the ENTIRE healthy set once
+      // every host is healthy -- healthy[workerSlot % N] for slot 0..2 is
+      // then guaranteed to include host-a once it recovers, regardless of
+      // its relative composite-score rank.
+      const hosts = ['host-a', 'host-b', 'host-c']
+
+      // Strong prior track record for host-a (mirrors the real 99.5%/99.8%
+      // hosts) BEFORE a short failure streak demotes it -- isolates the
+      // consecutive-failure fast path exactly like the existing
+      // "half-open circuit breaker" test above.
+      for (let i = 0; i < 20; i++) tracker.record('host-a', 'success', 100)
+      for (let i = 0; i < MAX_CONSECUTIVE_FAILURES; i++) {
+        tracker.record('host-a', 'error', 100)
+      }
+      for (let i = 0; i < 6; i++) {
+        tracker.record('host-b', 'success', 150)
+        tracker.record('host-c', 'success', 200)
+      }
+      expect(tracker.snapshot('host-a').unhealthy).toBe(true)
+
+      // Drive the internal attempt-0 counter up to its DEMOTED_PROBE_INTERVAL-th
+      // call -- that call is the probe, a healthy alternative exists (b, c),
+      // so it returns the demoted host.
+      let probePick: string | undefined
+      for (let call = 0; call < DEMOTED_PROBE_INTERVAL; call++) {
+        probePick = tracker.pickHost(hosts, 0, 0, 0)
+      }
+      expect(probePick).toBe('host-a')
+
+      // The probe succeeds.
+      tracker.record('host-a', 'success', 90)
+      expect(tracker.snapshot('host-a').unhealthy).toBe(false)
+      expect(tracker.snapshot('host-a').consecutiveFailures).toBe(0)
+
+      // Next attempt-0 call (counter no longer a multiple of
+      // DEMOTED_PROBE_INTERVAL) falls through to the normal top-N fan-out.
+      // All 3 hosts are now healthy, N=min(3,3)=3, so slots 0/1/2 must cover
+      // the full healthy set -- host-a is reachable again, not permanently
+      // stuck behind the unhealthy bucket.
+      const picks = new Set([0, 1, 2].map((slot) => tracker.pickHost(hosts, 0, 0, slot)))
+      expect(picks).toEqual(new Set(['host-a', 'host-b', 'host-c']))
+    })
+
+    it('with every host healthy, attempt-0 fan-out is unchanged (healthy[workerSlot % N]) — no probe fires when there is nothing to probe', () => {
+      const tracker = new HostHealthTracker()
+      const hosts = ['host-a', 'host-b', 'host-c', 'host-d']
+      for (let i = 0; i < 6; i++) tracker.record('host-a', 'success', 50)
+      for (let i = 0; i < 6; i++) tracker.record('host-b', 'success', 150)
+      for (let i = 0; i < 6; i++) tracker.record('host-c', 'success', 300)
+      for (let i = 0; i < 6; i++) tracker.record('host-d', 'success', 450)
+
+      // Drive the internal attempt-0 counter well past a DEMOTED_PROBE_INTERVAL
+      // boundary -- with zero demoted hosts, the exact same explicit picks
+      // must hold on every single call, proving no probe ever diverts here.
+      for (let call = 0; call < DEMOTED_PROBE_INTERVAL + 5; call++) {
+        expect(tracker.pickHost(hosts, 0, 0, 0)).toBe('host-a')
+        expect(tracker.pickHost(hosts, 0, 0, 1)).toBe('host-b')
+        expect(tracker.pickHost(hosts, 0, 0, 2)).toBe('host-c')
+      }
+    })
+
+    it('attemptIndex > 0 selection is unaffected by the probe counter or demoted-host state', () => {
+      const tracker = new HostHealthTracker()
+      const hosts = ['host-a', 'host-b', 'host-c', 'host-d']
+      for (let i = 0; i < MAX_CONSECUTIVE_FAILURES; i++) {
+        tracker.record('host-a', 'error', 100)
+      }
+
+      // Advance the internal attempt-0 probe counter across several calls,
+      // including past a DEMOTED_PROBE_INTERVAL boundary, without recording
+      // any new outcomes -- host-a stays demoted throughout. This must not
+      // perturb attemptIndex > 0 selection (full ordered-list rotation) at all.
+      for (let call = 0; call < DEMOTED_PROBE_INTERVAL + 3; call++) {
+        tracker.pickHost(hosts, 0, 0, 0)
+      }
+
+      // ordered = [...healthy(b,c,d), ...unhealthy(a)] -- attemptIndex=3
+      // wraps to the still-demoted host-a, exactly like the pre-existing
+      // "reaches MAX_CONSECUTIVE_FAILURES" behavior, unaffected by however
+      // many probe/non-probe attempt-0 calls happened in between.
+      expect(tracker.pickHost(hosts, 0, 1)).toBe('host-c')
+      expect(tracker.pickHost(hosts, 0, 2)).toBe('host-d')
+      expect(tracker.pickHost(hosts, 0, 3)).toBe('host-a')
+    })
+
+    it('one healthy host and zero demoted hosts: unchanged, no crash', () => {
+      const tracker = new HostHealthTracker()
+      const hosts = ['host-a']
+      for (let i = 0; i < DEMOTED_PROBE_INTERVAL + 2; i++) {
+        expect(tracker.pickHost(hosts, 0, 0)).toBe('host-a')
+      }
+      expect(tracker.pickHost(hosts, 0, 1)).toBe('host-a')
+    })
+
+    it('empty hosts list still throws regardless of probe state (unchanged)', () => {
+      const tracker = new HostHealthTracker()
+      const hosts = ['host-a']
+      // Drive some attempt-0 calls on a real pool first so the internal
+      // counter is non-zero, then confirm an empty-list call still throws.
+      for (let i = 0; i < 3; i++) tracker.pickHost(hosts, 0, 0)
+      expect(() => tracker.pickHost([], 0, 0)).toThrow(/empty hosts list/)
     })
   })
 })

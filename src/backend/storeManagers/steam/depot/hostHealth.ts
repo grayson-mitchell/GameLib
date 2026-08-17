@@ -138,6 +138,26 @@ export const PRIOR_HALFLIFE_SAMPLES = MIN_SAMPLES_FOR_UNHEALTHY
  *  disproportionate one. */
 export const TOP_N_FANOUT = 3
 
+/** Quick 260817-ihr (IHR-01): number of consecutive attempt-0 `pickHost`
+ *  calls between probe picks that give a demoted (unhealthy) host one more
+ *  first-attempt shot. Root cause this fixes: attempt-0 fan-out (above)
+ *  draws from `healthy` ONLY, so a host demoted by MAX_CONSECUTIVE_FAILURES
+ *  never receives another attempt-0 pick, therefore never records another
+ *  success, therefore never clears its streak -- the "half-open circuit
+ *  breaker" documented on `MutableHostStats.consecutiveFailures` ("Resets to
+ *  0 on ANY success") was UNREACHABLE in production before this. Evidence:
+ *  the 2026-08-17 HUMANKIND hardware log's 12:52:57 `chunk-stream stats`
+ *  line showed cache1-akl-edgx (99.5% lifetime success) and cache1-akl-tpwr
+ *  (99.8%) both flagged UNHEALTHY, with attempt counters byte-identical
+ *  (`a=2848`, `a=3079`) between that line and the one 13 minutes earlier --
+ *  proof they received zero further attempts of any kind while demoted.
+ *  Cost bound: at most 1 in DEMOTED_PROBE_INTERVAL first attempts is spent
+ *  on a demoted host (under 3.2% of attempt-0 traffic at 32), while a
+ *  recovering host rejoins after a single recorded success. 32 is chosen as
+ *  roughly one probe per full sweep of the 32-slot worker pool
+ *  (TARGET_INFLIGHT_CHUNKS in depot.ts). */
+export const DEMOTED_PROBE_INTERVAL = 32
+
 /** Converts a directory `weightedload` value into a 0..1 PRIOR score, higher
  *  is better (mirrors the empirical `score` scale below so the two blend
  *  meaningfully). Exported for direct unit testing of the calibration. */
@@ -223,6 +243,12 @@ export class HostHealthTracker {
   private readonly stats = new Map<string, MutableHostStats>()
   private readonly weightedLoads: ReadonlyMap<string, number>
 
+  /** Quick 260817-ihr (IHR-01): monotonic counter incremented once per
+   *  `pickHost` call with `attemptIndex === 0` (never on retries -- retries
+   *  already rotate through the full ordered list, demoted hosts included).
+   *  Drives the DEMOTED_PROBE_INTERVAL cadence below. */
+  private attemptZeroCounter = 0
+
   constructor(weightedLoads?: ReadonlyMap<string, number>) {
     this.weightedLoads = weightedLoads ?? new Map()
   }
@@ -288,6 +314,19 @@ export class HostHealthTracker {
    * omitting it (every pre-Phase-25 caller/test) defaults it to 0, which,
    * combined with `healthy[0 % N] === healthy[0] === ordered[0]`, reproduces
    * the exact pre-Phase-25 selection byte-for-byte.
+   *
+   * Quick 260817-ihr (IHR-01): the "half-open circuit breaker" documented on
+   * `MutableHostStats.consecutiveFailures` was UNREACHABLE in production
+   * before this fix -- a demoted host got no attempt-0 traffic (fan-out
+   * above draws from `healthy` only), so it could never record the success
+   * that would clear its streak, and a brief blip became a permanent
+   * demotion for the rest of the run. Every DEMOTED_PROBE_INTERVAL-th
+   * attempt-0 call (counted per tracker instance, POST-increment, so the
+   * very first attempt-0 call after a fresh demotion is never diverted --
+   * this preserves every pre-260817-ihr caller/test's immediate-first-pick
+   * expectation), when a demoted host AND a healthy alternative both exist,
+   * sends that one call to the best-scoring demoted host instead of the
+   * normal fan-out -- the probe is what makes the circuit breaker real.
    */
   pickHost(hosts: string[], seed: number, attemptIndex: number, workerSlot = 0): string {
     if (!hosts.length) {
@@ -312,6 +351,31 @@ export class HostHealthTracker {
     // back of the queue -- so a transient CDN-wide outage (every host
     // temporarily unhealthy) still has a candidate list to retry against.
     const ordered = [...healthy, ...unhealthy]
+
+    // Quick 260817-ihr (IHR-01): bounded probe for a demoted host's
+    // recovery, checked BEFORE the Phase 25 fan-out below so a probe call
+    // never also falls through to fan-out logic. Only on attempt-0 (retries
+    // already see the demoted host via `ordered` below); only when a
+    // healthy alternative genuinely exists (`healthy.length > 0`), so this
+    // never double-serves the last-resort `ordered` fallback that already
+    // covers the all-unhealthy case; and only once every
+    // DEMOTED_PROBE_INTERVAL attempt-0 calls. Incremented BEFORE the modulo
+    // check (post-increment) so the very first attempt-0 call on a fresh
+    // tracker is never itself a probe -- every pre-260817-ihr caller/test
+    // exercises exactly this "first pick after a demotion avoids the
+    // demoted host" shape, and this ordering keeps that byte-for-byte
+    // unchanged while still guaranteeing a probe within any
+    // DEMOTED_PROBE_INTERVAL-length run of attempt-0 calls.
+    if (attemptIndex === 0) {
+      this.attemptZeroCounter++
+      if (
+        unhealthy.length > 0 &&
+        healthy.length > 0 &&
+        this.attemptZeroCounter % DEMOTED_PROBE_INTERVAL === 0
+      ) {
+        return unhealthy[0]
+      }
+    }
 
     // Phase 25 fan-out: ONLY on the first attempt, and only when there are
     // genuinely more than one healthy host to spread across, distribute
