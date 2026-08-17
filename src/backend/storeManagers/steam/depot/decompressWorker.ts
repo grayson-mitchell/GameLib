@@ -7,6 +7,27 @@
 // decrypted/decompressed bytes are NEVER logged/console'd here. Only
 // decodeChunk's verified output crosses back to the main thread, transferred
 // (not copied) as an ArrayBuffer. The key is never posted back.
+//
+// Debug/dev-mode-decompress-worker-electron-hook: this worker's import chain
+// (./decompress -> backend/logger -> ... -> constants/paths.ts) reaches a
+// module-scope `app.getPath('appData')` call, so `require('electron')` must
+// resolve to a headless stub inside THIS worker's own isolate -- a
+// worker_threads.Worker gets a fresh V8 isolate/module registry and does not
+// inherit the `Module._load` runtime hook `bootstrap.ts` installs for the
+// sidecar's main thread. A first-import runtime-hook approach (mirroring
+// bootstrap.ts) does NOT work here: electron-vite/Rollup's CJS output for a
+// multi-entry build hoists ALL requires -- including a shared chunk this
+// entry's code shares with `main.js` -- to the TOP of the generated file,
+// executing them before ANY of this module's own body statements (a
+// first-line hook-install included) ever run. Confirmed empirically: adding
+// such an import here still reproduced the crash when the built file was
+// spawned as a real worker_threads.Worker. The actual fix lives at BUILD
+// TIME instead (`meta/buildDecompressWorkerDev.ts`, `pnpm
+// build:decompress-worker-dev`), which esbuild-aliases `electron` directly
+// to `electronStub.ts` -- mirroring the packaged SEA worker bundle's own
+// `--alias:electron` fix (quick-260817-pkx) -- so there is no runtime
+// require('electron') left to intercept, in either bundler's chunking
+// behavior.
 
 import { parentPort } from 'node:worker_threads'
 import { decodeChunk, type LzmaModule } from './decompress'

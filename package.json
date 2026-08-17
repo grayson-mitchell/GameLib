@@ -30,8 +30,9 @@
   "packageManager": "pnpm@10.28.0",
   "scripts": {
     "start": "electron-vite dev --watch",
-    "tauri:dev": "electron-vite build && pnpm build:sidecar && tauri dev",
+    "tauri:dev": "electron-vite build && pnpm build:sidecar && pnpm build:decompress-worker-dev && tauri dev",
     "build:sidecar": "esbuild --bundle --platform=node --target=node22 --format=cjs --packages=external --external:electron --external:electron-store --outfile=build/main/sidecar.js src/sidecar/index.ts",
+    "build:decompress-worker-dev": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildDecompressWorkerDev.ts",
     "build:sidecar-sea": "pnpm build:sidecar && node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildSidecarSea.ts",
     "debug:react": "pnpm start & react-devtools",
     "codecheck": "tsc --noEmit",

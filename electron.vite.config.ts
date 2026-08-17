@@ -35,16 +35,23 @@ export default defineConfig(({ mode }) => ({
   main: {
     build: {
       rollupOptions: {
-        // Object map (not a bare string) — Phase 21 gap closure (21-15) adds
-        // the DecompressPool's worker_threads entry as a second emitted
-        // bundle, `decompressWorker.js`, co-located with `main.js` in
-        // build/main/ (dev AND packaged asar builds). The `main` key is
-        // named to match package.json's `"main": "build/main/main.js"` — do
-        // not rename it, output filenames follow the object's keys.
-        input: {
-          main: 'src/backend/main.ts',
-          decompressWorker: 'src/backend/storeManagers/steam/depot/decompressWorker.ts'
-        }
+        // Debug/dev-mode-decompress-worker-electron-hook: `decompressWorker`
+        // used to be a second entry here (Phase 21 gap closure 21-15),
+        // sharing this block's Rollup build with `main.js`. Rollup's CJS
+        // output for a multi-entry build extracts code reachable from BOTH
+        // entries into a shared chunk and `require()`s it BEFORE either
+        // entry's own body runs — silently defeating `decompressWorker.ts`'s
+        // module-scope ordering requirements (it needs `require('electron')`
+        // resolved to a headless stub before its `backend/logger` import
+        // chain reaches `constants/paths.ts`'s module-scope `app.getPath()`
+        // call). `decompressWorker.js` is now built standalone by
+        // `meta/buildDecompressWorkerDev.ts` (`pnpm
+        // build:decompress-worker-dev`), which esbuild-aliases `electron` at
+        // BUILD TIME instead — see that file's header for the full trail.
+        // `main` stays a bare string (not an object map) since there is only
+        // one entry left; its key still matches package.json's
+        // `"main": "build/main/main.js"`.
+        input: 'src/backend/main.ts'
       },
       outDir: 'build/main',
       minify: true,

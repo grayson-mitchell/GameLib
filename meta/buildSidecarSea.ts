@@ -106,7 +106,6 @@
  *    runtime consumer and the debug file for the full evidence trail.
  */
 
-import { spawn } from 'node:child_process'
 import {
   chmod,
   copyFile,
@@ -118,6 +117,26 @@ import {
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
+// Debug/dev-mode-decompress-worker-electron-hook: these four were extracted
+// into a side-effect-free shared module so `meta/buildDecompressWorkerDev.ts`
+// can reuse them WITHOUT importing this file directly -- importing this file
+// runs the full SEA build as a module-scope side effect (see this module's
+// own bottom guard), which is safe only under jest (`JEST_WORKER_ID`), never
+// from another CLI script. Re-exported below so this file's own existing
+// imports/tests are unaffected.
+import {
+  DECOMPRESS_WORKER_ENTRY_PATH,
+  resolveEsbuildCli,
+  seaEsbuildFlags,
+  spawnArgv
+} from './esbuildWorkerBundleShared'
+
+export {
+  DECOMPRESS_WORKER_ENTRY_PATH,
+  resolveEsbuildCli,
+  seaEsbuildFlags,
+  spawnArgv
+}
 
 // Official/fixed sentinel fuse string -- do not alter
 // (https://nodejs.org/api/single-executable-applications.html).
@@ -152,14 +171,6 @@ const SEA_WORKER_BUNDLE_PATH = join(
   'main',
   'decompressWorker-sea-bundle.js'
 )
-const DECOMPRESS_WORKER_ENTRY_PATH = join(
-  'src',
-  'backend',
-  'storeManagers',
-  'steam',
-  'depot',
-  'decompressWorker.ts'
-)
 /** SEA asset key both this build script and decompressPool.ts's runtime
  *  `sea.getAsset()` call must agree on verbatim -- exported so a test can
  *  assert the two sides never drift apart. */
@@ -184,18 +195,11 @@ const SIDECAR_BIN_DIR = join('src-tauri', 'binaries')
  * run through `process.execPath` -- the already-running Node interpreter,
  * which is never looked up via `PATH`/PATHEXT and is therefore spawnable
  * identically on every OS. This is also shell-free and platform-neutral.
+ *
+ * `resolveEsbuildCli()` itself now lives in `esbuildWorkerBundleShared.ts`
+ * (imported/re-exported above) -- `resolvePostjectCli()` below stays here,
+ * it is SEA-packaging-only and has no dev-mode-worker-bundle consumer.
  */
-export function resolveEsbuildCli(): string {
-  try {
-    return require.resolve('esbuild/bin/esbuild')
-  } catch (error) {
-    throw new Error(
-      `COMPILE GATE FAILED (D-06/CR-02): cannot resolve esbuild/bin/esbuild -- ` +
-        `is the dependency installed? (${(error as Error).message})`
-    )
-  }
-}
-
 export function resolvePostjectCli(): string {
   try {
     return require.resolve('postject/dist/cli.js')
@@ -303,33 +307,14 @@ export function buildPostjectArgv(
  * only by outfile/entry) instead of re-listing them and risking the two
  * bundles silently drifting apart. `buildEsbuildArgv()`'s own signature and
  * output stay verbatim unchanged -- its existing tests need no edits.
+ *
+ * Debug/dev-mode-decompress-worker-electron-hook: `seaEsbuildFlags()` itself
+ * now lives in `esbuildWorkerBundleShared.ts` (imported/re-exported above),
+ * so `meta/buildDecompressWorkerDev.ts` (the dev-mode worker bundle) can
+ * reuse these EXACT flags without importing this file directly (which would
+ * trigger the full SEA build as a module-scope side effect -- see this
+ * module's own bottom guard).
  */
-function seaEsbuildFlags(outfile: string, entry: string): string[] {
-  return [
-    '--bundle',
-    '--platform=node',
-    '--target=node22',
-    '--format=cjs',
-    '--alias:electron=./src/backend/sidecar/electronStub.ts',
-    // 34.3-09 D-13 live-gate fix: esbuild resolves an `import` specifier's
-    // package.json `exports` map via the `import` condition regardless of
-    // the bundle's own `--format=cjs` output -- a dual-package hazard, not
-    // an esbuild bug. `i18next-fs-backend`'s `.` export's `import`/`default`
-    // condition points at `./esm/index.js`, whose `writeFile.js`/
-    // `readFile.js` use a top-level `await import(...)` Deno-detection
-    // guard -- unsupported in a cjs bundle, so `bootstrap.ts`'s
-    // `import Backend from 'i18next-fs-backend'` (added by 34.2-01's sidecar
-    // i18next init, D-02) broke this SEA bundle the moment it was reached.
-    // The package's OWN `./cjs` subpath export is plain CJS
-    // (`require('node:fs')`, no top-level await) -- alias forces esbuild to
-    // resolve there instead, matching the electron alias above.
-    '--alias:i18next-fs-backend=i18next-fs-backend/cjs',
-    '--inject:./meta/sidecarSeaFsShim.ts',
-    `--outfile=${outfile}`,
-    entry
-  ]
-}
-
 export function buildEsbuildArgv(
   platform: NodeJS.Platform = process.platform
 ): { command: string; args: string[] } {
@@ -389,24 +374,9 @@ export function buildCodesignArgv(
 // Argv-form spawn (T-24-06) -- never a shell string. Resolves with the exit
 // code + captured output rather than throwing, so callers decide what a
 // non-zero exit means (compile-gate failure vs. a plain build error).
-function spawnArgv(
-  command: string,
-  args: string[]
-): Promise<{ code: number | null; stdout: string; stderr: string }> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] })
-    let stdout = ''
-    let stderr = ''
-    child.stdout?.on('data', (d) => {
-      stdout += d.toString()
-    })
-    child.stderr?.on('data', (d) => {
-      stderr += d.toString()
-    })
-    child.on('error', reject)
-    child.on('close', (code) => resolve({ code, stdout, stderr }))
-  })
-}
+// Debug/dev-mode-decompress-worker-electron-hook: `spawnArgv()` itself now
+// lives in `esbuildWorkerBundleShared.ts` (imported/re-exported above), for
+// the same reason as `seaEsbuildFlags()`.
 
 /** Matches the plan's verify-command host-triple resolution exactly. */
 export function hostTriple(): string {
