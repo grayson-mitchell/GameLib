@@ -862,6 +862,20 @@ Plans:
 
 **Open gaps (2026-07-21):** G-23-01 (KCD2 `Blocked`-depot-key aborts whole install), G-23-02 (native install applies no execute bits — Gate 2 only CONDITIONAL PASS after a manual `chmod +x`). Gate 3 not yet run. REQ-23-07 stays open until Gate 2 re-runs clean and Gate 3 passes (`/gsd-verify-work 23`).
 
+### Phase 23.1: Native LZMA depot decode via node-liblzma (INSERTED)
+
+**Goal:** Replace the pure-JS `lzma` npm package decode path with the native `lzma-native` package (CONTEXT.md's `node-liblzma` pick was OVERTURNED by 23.1-RESEARCH.md — it cannot decode Steam's `lzma_alone`/VZ container at all) to close the confirmed decode-throughput bottleneck in Steam native depot installs, with the pure-JS decoder retained as a logged fallback. Full context, findings, and open risks in `.planning/phases/23.1-native-lzma-depot-decode-via-node-liblzma/23.1-CONTEXT.md` and `23.1-RESEARCH.md`.
+**Requirements**: TBD (none mapped — inserted urgent-work phase)
+**Depends on:** Phase 23 (independent of 23-10's remaining human-gate item — do not block on it), Phase 25, quick tasks 260817-ihr and 260817-pkx (all already shipped)
+**Plans:** 5 plans in 4 waves
+
+Plans:
+- [ ] 23.1-01-PLAN.md — Wave 1 spike: prove `getRawAsset()` + `process.dlopen()` of a native addon from inside a `{ eval: true }` worker in a REAL compiled SEA binary, measure real-chunk speedup, blocking go/no-go
+- [ ] 23.1-02-PLAN.md — Wave 2: adopt `lzma-native@8.0.6` (exact pin) and embed the target-triple-resolved prebuild as a second SEA asset in `meta/buildSidecarSea.ts`
+- [ ] 23.1-03-PLAN.md — Wave 3: `lzmaNativeBinding.ts`, the SEA-aware `node-gyp-build` replacement, wired via a shared `--alias:node-gyp-build` esbuild flag
+- [ ] 23.1-04-PLAN.md — Wave 3: `lzmaLoader.ts` native-first decoder with loud pure-JS fallback, routed into both the pooled workers and `DecompressPool.inlineDecode()`
+- [ ] 23.1-05-PLAN.md — Wave 4: cold SEA build + byte-level proof the addon shipped, then a blocking live-hardware depot-install gate
+
 ### Phase 24: macOS native Steam bridge (out-of-process steam_api proxy)
 
 **Goal:** Productionize the Proton-style macOS Steam bridge — run bottled Windows Steam games against ONE native macOS Steam client (one login) via an out-of-process `steam_api.dll` shim → TCP → native helper loading `libsteam_api.dylib`, instead of bottling a full Windows Steam client per bottle. This is the parked Steam-Game-Families phase's preferred long-term successor; it superseded and PARKED that phase's multi-bottle machinery (one native client, cheap per-game prefixes, one login) — see `## Parked / Superseded Phases` below.
