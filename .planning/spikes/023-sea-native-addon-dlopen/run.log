@@ -38,3 +38,14 @@
 [bench] result: {"byteIdentical":true,"sha1Match":true,"sha1Native":"2e461366a896f36a8e47f583f2e79d96c676bb5b","expectedSha1":"2e461366a896f36a8e47f583f2e79d96c676bb5b","nativeMs":14.883625,"pureJsMs":98.823917,"nativeAllMs":[15.83575,16.240041,14.871125,14.883625,14.531833],"pureJsAllMs":[95.040166,104.768625,155.624334,98.823917,88.431458],"speedup":6.639774718860492,"runs":5,"uncompressedSize":1048576}
 [bench] JSON_VERDICT: {"task":"bench-eval-worker","byteIdentical":true,"sha1Match":true,"pureJsMs":98.823917,"nativeMs":14.883625,"speedup":6.639774718860492,"runs":5,"uncompressedSize":1048576}
 [bench] PASSED
+{"task":"sea-main-startup","isSea":true,"nodeVersion":"v26.2.0","platform":"darwin","arch":"arm64","mode":"eval"}
+[binding-shim] resolveNativeBinding called with dir="." (NOTE: not used for path resolution -- see file header finding)
+[binding-shim] SEA branch: getRawAsset + dlopen
+{"task":"sea-main-verdict","mode":"eval","isSea":true,"nodeVersion":"v26.2.0","dlopenFromEvalWorker":true,"sha1Match":true,"decodeMs":28.28925,"error":null,"stage":null}
+
+===== 2026-08-17T23:51:32Z :: additional spike-sea-bin runs (SEA-path decodeMs sampling, eval mode) =====
+{"task":"sea-main-verdict","mode":"eval","isSea":true,"nodeVersion":"v26.2.0","dlopenFromEvalWorker":true,"sha1Match":true,"decodeMs":27.2,"error":null,"stage":null}
+{"task":"sea-main-verdict","mode":"eval","isSea":true,"nodeVersion":"v26.2.0","dlopenFromEvalWorker":true,"sha1Match":true,"decodeMs":26.799166,"error":null,"stage":null}
+{"task":"sea-main-verdict","mode":"eval","isSea":true,"nodeVersion":"v26.2.0","dlopenFromEvalWorker":true,"sha1Match":true,"decodeMs":30.027125,"error":null,"stage":null}
+{"task":"sea-main-verdict","mode":"eval","isSea":true,"nodeVersion":"v26.2.0","dlopenFromEvalWorker":true,"sha1Match":true,"decodeMs":27.874791,"error":null,"stage":null}
+{"task":"sea-main-verdict","mode":"eval","isSea":true,"nodeVersion":"v26.2.0","dlopenFromEvalWorker":true,"sha1Match":true,"decodeMs":30.323708,"error":null,"stage":null}

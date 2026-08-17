@@ -3,7 +3,7 @@ spike: 023
 name: sea-native-addon-dlopen
 type: standard
 validates: "Given a native .node addon (lzma-native@8.0.6) embedded as a Node SEA asset, when it is extracted with sea.getRawAsset() and process.dlopen()'d from inside a worker spawned via new Worker(source, { eval: true }) in a REAL compiled SEA binary, then the load succeeds and decodes a real-entropy Steam VZ chunk byte-identically to the pure-JS lzma path"
-verdict: PENDING
+verdict: VALIDATED
 related: [002]
 tags: [steam, depot, lzma, native, sea, dlopen, worker_threads]
 ---
@@ -136,11 +136,94 @@ per-run timings): see `run.log`.
 
 ## Task 3: Real Compiled SEA Binary — dlopen() From an Eval'd Worker
 
-_(pending)_
+**Result: VALIDATED.** A real compiled SEA binary was built (esbuild → sea-config →
+`--experimental-sea-config` → postject → codesign strip/re-sign, mirroring
+`meta/buildSidecarSea.ts`'s own pipeline) and run 10 times. Every run:
+
+```json
+{"task":"sea-main-verdict","mode":"eval","isSea":true,"nodeVersion":"v26.2.0","dlopenFromEvalWorker":true,"sha1Match":true,"decodeMs":29.365708,"error":null,"stage":null}
+```
+
+- `isSea: true` — confirms the binary genuinely ran as a Single Executable Application, not
+  plain `node`.
+- `dlopenFromEvalWorker: true` (field present unconditionally on every run, success or
+  failure, so a crash cannot be misread as a pass) — `process.dlopen()` of a
+  `sea.getRawAsset('lzma_native.node')`-extracted `.node` addon succeeded from inside a
+  worker spawned via `new Worker(source, { eval: true })`, the exact production packaged-SEA
+  spawn shape.
+- `sha1Match: true` — the native-decoded output matches task 2's recorded uncompressed sha1
+  exactly.
+- `decodeMs`: 25.4–30.3ms across 10 runs (median ~27ms) for the SEA path, vs. ~14–15ms for
+  the non-SEA eval'd-worker path (task 2) — SEA-path overhead (mostly the per-call
+  `getRawAsset()` + temp-file write + `dlopen()`, which the production design would want to
+  do ONCE per worker lifetime, not once per decode) accounts for the difference. This spike's
+  harness re-does the extract+dlopen on every worker spawn for simplicity; plans 23.1-03/04
+  should dlopen once per worker and reuse the binding for the worker's lifetime.
+
+### Mechanism (as actually built, with one deviation from the plan's literal description)
+
+The core mechanism matches the plan: esbuild-bundle `lzma-native`'s JS wrapper normally while
+aliasing `node-gyp-build` (`--alias:node-gyp-build=./binding-shim.cjs`) to a shim that
+resolves the binding itself via `sea.getRawAsset()` + `process.dlopen()` (SEA) or a direct
+`process.dlopen()` of the on-disk prebuild (dev). `sea-config.json`'s `assets` map has
+exactly two keys: `worker.js` and `lzma_native.node`.
+
+**One load-bearing finding not anticipated by the plan text:** esbuild does not preserve each
+bundled source file's own `__dirname` — once `lzma-native/index.js` and `binding-shim.cjs`
+are bundled into one output file, EVERY `__dirname` reference inside that bundle reflects the
+single OUTPUT file's own location at runtime, not each file's original on-disk directory.
+Confirmed two ways: (1) a minimal two-file esbuild repro (a nested module's own `__dirname`
+tracked the *outfile's* directory and changed when the outfile moved, not the nested file's
+source directory); (2) directly inside this spike's real bundle — `binding-shim.cjs`'s
+`resolveNativeBinding(dir)` logged `dir="."` when called from inside the compiled SEA
+binary's eval'd worker (an eval'd worker has no backing file at all, so `__dirname` there
+degenerates to `.`). This means the plan's literal "Dev branch: compute
+`<lzma-native package root>/prebuilds/...`" step **cannot use the `dir` argument
+`node-gyp-build`'s caller passes in** — that argument is not trustworthy post-bundle. Fix
+applied: `build-sea.mjs` resolves `lzma-native`'s real package root and observed prebuild
+filename at BUILD TIME (before esbuild ever runs) and writes them into a small generated CJS
+data module (`resolved-paths.generated.cjs`) that `binding-shim.cjs` requires directly — a
+plain data require has no `__dirname` dependency of its own, so it survives bundling intact.
+Carried forward to `.planning/spikes/MANIFEST.md`'s Requirements as a load-bearing rule for
+plans 23.1-03/04 (the production `binding-shim`/`lzmaLoader.ts` equivalent must NOT derive its
+prebuild-resolution path from `__dirname` inside the bundled module either).
+
+The SEA main script embeds the task-2 fixture (VZ chunk bytes) as a base64 string literal in
+a second generated file (`fixture-embedded.generated.cjs`), required by `sea-main.cjs` and
+compiled directly into the SEA blob's `main` script — this keeps `sea-config.json`'s
+`assets` map at exactly the two keys the plan's acceptance criteria require (a third
+"fixture.bin" asset was deliberately avoided).
+
+`process.dlopen()` succeeding on the first attempt meant the plan's REFUTED-path branch
+(control runs isolating SEA vs. eval'd-worker vs. native-addon as the responsible variable)
+was not needed — `sea-main.cjs` still implements both controls (`--argv[2]=main-thread` /
+`file-worker`) for completeness and future debugging, but they were not exercised this spike.
+
+Full evidence (all 10 runs' JSON verdict lines, `sea-config.json` contents, binding-shim's
+per-run `[binding-shim]` diagnostic lines): see `run.log`.
 
 ## Task 4: Go/No-Go Decision
 
-_(pending — awaiting Task 3's verdict)_
+**Status: AWAITING OPERATOR DECISION.** This is a `checkpoint:decision` gate — the executor
+does not self-select an option. Task 3's evidence is summarized here for the decision:
+
+- RESEARCH.md Assumption A1 (HIGH risk) is now a measured VALIDATED fact on darwin-arm64:
+  `process.dlopen()` of a SEA-embedded native addon succeeds from inside a
+  `{ eval: true }`-spawned worker in a real compiled SEA binary, byte-identical output,
+  10/10 runs.
+- The real-chunk speedup (~5.8–6.6x) is materially below RESEARCH.md's ~47x synthetic
+  estimate, but still a clear win over the current pure-JS path (~87–99ms → ~14–30ms per
+  ~1 MiB chunk).
+- Corrections plans 23.1-02 through 23.1-05 must carry forward regardless of which option is
+  chosen: the real prebuild filename is `node.napi.node` (not `lzma_native.node` — that
+  string is only the SEA asset-map key); do not resolve `lzma-native`'s package root via
+  `__dirname` inside a bundled module (see Task 3's finding); dlopen once per worker
+  lifetime, not once per decode call; cite ~5.8–6.6x, not 47x.
+- linux-x64/win32-x64 prebuild loading remains UNVERIFIED (RESEARCH.md Assumption A2) — this
+  spike only ran on darwin-arm64.
+
+See the plan's Task 4 `<options>` block (`proceed` / `replan-mainthread` / `abandon` /
+`proceed-anyway`) for the full decision framing relayed to the operator.
 
 ## Files
 

@@ -57,6 +57,28 @@ Design decisions established so far. Non-negotiable for the real build.
 - **Never write `StateFlags = 4` for a manifest with a wrong `InstalledDepots` set.** A wrong
   depot set is the one condition that provokes a re-download. Any manifest writer must be
   able to prove its depot selection before writing. *(Established by spike 001.)*
+- **SEA native-addon `dlopen()` from an eval'd worker WORKS.** `getRawAsset()` +
+  `process.dlopen()` succeeds inside `new Worker(source, { eval: true })` — the packaged-SEA
+  worker-spawn shape `decompressPool.ts` actually uses — in a REAL compiled SEA binary, not
+  just a normal `new Worker(path)` dev-mode spawn. Confirmed 10/10 runs. *(Spike 023.)*
+- **`lzma-native`'s real prebuild filename is `node.napi.node`, NOT `lzma_native.node`.**
+  Every triple also ships a separate `electron.napi.node` variant beside it (plans must
+  resolve the plain-Node one, not the Electron one). The string `lzma_native.node` is only
+  usable as an arbitrary SEA asset-map key — it does not need to, and does not, match the
+  real on-disk prebuild filename. Win32 additionally ships a companion `liblzma.dll`.
+  *(Spike 023.)*
+- **esbuild flattens `__dirname` across every file in one bundle to the OUTPUT file's own
+  location — do NOT use `__dirname` to locate a bundled package's own resources at
+  runtime.** Confirmed empirically (a nested source file's `__dirname` tracked the *outfile's*
+  directory, not its own, and changed when the outfile moved) and reproduced for real inside
+  `lzma-native`'s own `require('node-gyp-build')(__dirname)` call once bundled — `dir` arrived
+  as `"."` inside the compiled SEA binary's eval'd worker. Resolve any such path at BUILD TIME
+  instead and bake it into a small generated data module the runtime code just `require()`s.
+  *(Spike 023.)*
+- **Real Steam-chunk native-LZMA speedup is ~5.8–6.6x, not RESEARCH.md's 47x synthetic
+  figure.** Measured against a 1 MiB slice of real installed-game bytes (not text+random) on
+  darwin-arm64: pure-JS ~87–99ms, native ~14–15ms per chunk. Still a clear win, but plans
+  citing "47x" should cite this number instead. *(Spike 023.)*
 
 ## Spikes
 
@@ -65,6 +87,7 @@ Design decisions established so far. Non-negotiable for the real build.
 | 001 | acf-adoption | standard | Given a real Steam install, when GameLib writes its own `appmanifest.acf`, then Steam adopts it and launches the game with no re-download | ✓ VALIDATED | steam, appmanifest, acf, depot, vdf |
 | 002 | steam-user-depot-download | standard | Given an authenticated `steam-user` connection, when we fetch a depot manifest and download every chunk, then all files land on disk SHA1-verified and byte-identical to Steam's own install | ✓ VALIDATED | steam, depot, download, cdn, lzma, crypto |
 | 003 | stateflags4-full-ownership | standard | Given a 100%-downloaded (per-chunk sha1-verified) WazHack macOS depot, when GameLib writes StateFlags=4 + consistent bytes + current buildid, then Steam shows it Installed with NO verify/re-download and it launches with DRM intact | ✓ VALIDATED (Steam trusts 4; exec-bit fix → launches) | steam, appmanifest, stateflags, full-ownership, d-2-reversal |
+| 023 | sea-native-addon-dlopen | standard | Given `lzma-native`'s native `.node` addon embedded as a Node SEA asset, when extracted via `sea.getRawAsset()` and `process.dlopen()`'d from inside a worker spawned via `new Worker(source, { eval: true })` in a REAL compiled SEA binary, then the load succeeds and decodes a real Steam VZ chunk byte-identically to the pure-JS `lzma` path | ✓ VALIDATED (real SEA binary: isSea=true, dlopenFromEvalWorker=true, sha1Match=true, 10/10 runs; real-chunk speedup ~5.8–6.6x, below the 47x synthetic estimate) | steam, depot, lzma, native, sea, dlopen, worker_threads |
 
 > **⚠ Spike 003 deliberately RE-OPENS two locked requirements** — "Write StateFlags=1026, never 4" and D-2 ("Steam owns completion; GameLib owns only first install"). Justification: Phase 21 shipped a per-chunk sha1 integrity gate, so "our download was byte-perfect" is now checkable. Note spike 001 found `Bytes*`/`buildid` were "free" ONLY because Steam recomputed them during its 1026 verify pass — under StateFlags=4 (no verify) they are expected to become load-bearing. If 003 INVALIDATES, the 1026 requirement stands.
 

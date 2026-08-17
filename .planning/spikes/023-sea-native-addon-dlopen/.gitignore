@@ -2,3 +2,8 @@ node_modules/
 package-lock.json
 build/
 fixtures/*.bin
+# Written by build-sea.mjs at build time: machine-specific absolute paths
+# (resolved-paths.generated.cjs) and a base64 copy of the gitignored fixture
+# (fixture-embedded.generated.cjs) -- both fully reproducible via
+# `node build-sea.mjs`, neither meant to be committed.
+*.generated.cjs
