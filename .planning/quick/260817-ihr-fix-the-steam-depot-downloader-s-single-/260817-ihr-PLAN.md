@@ -377,5 +377,3 @@ Do not edit or re-litigate any existing section of the doc — append only.
 <output>
 Create `.planning/quick/260817-ihr-fix-the-steam-depot-downloader-s-single-/260817-ihr-SUMMARY.md` when done.
 </output>
-</content>
-</invoke>
