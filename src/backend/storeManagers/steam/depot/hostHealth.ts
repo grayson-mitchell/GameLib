@@ -130,13 +130,42 @@ export const PRIOR_HALFLIFE_SAMPLES = MIN_SAMPLES_FOR_UNHEALTHY
  *  rotation once scores differentiate -- every attempt-0 call converges on
  *  `ordered[0]`, so all concurrent workers hammer the single top-scored host
  *  even when several hosts are genuinely healthy (cycle-5's diagnosis showed
- *  6 hosts in the pool, only 1 ever attempted at attempt-0). Kept small (3)
- *  so fan-out stays confined to the genuinely-good hosts -- mirrors cycle-5's
- *  local-vs-CDN-fallback weightedload gap, where only the low-weightedload
- *  local edges should absorb the bulk of first-attempt load; a merely-
- *  healthy-but-mediocre host still only receives fan-out share, never a
- *  disproportionate one. */
-export const TOP_N_FANOUT = 3
+ *  6 hosts in the pool, only 1 ever attempted at attempt-0).
+ *
+ *  Debug/humankind-depot-full-stall (2026-08-17): raised 3 -> 8. The
+ *  original value of 3 was calibrated against the pre-260817-ihr concurrency
+ *  regime, where FILE_CONCURRENCY's own silent single-chunk-file bug capped
+ *  real run-wide concurrency at ~8 (see FILE_CONCURRENCY's doc comment in
+ *  depot.ts) -- ~2.67 concurrent workers per fanned-out host. Quick
+ *  260817-ihr (IHR-02) raised the REAL enforced budget
+ *  (TARGET_INFLIGHT_CHUNKS) to 32, but this constant was never revisited: a
+ *  fresh HUMANKIND hardware run on the IHR-01/IHR-02 build showed `hosts=3`
+ *  fixed for the entire 279s capture (zero timeouts, zero errors -- every
+ *  attempt succeeded) while per-host avgMs climbed steadily (615ms -> 1128ms)
+ *  and Little's Law on the run's own numbers (4366 attempts / 279s x ~1.1s
+ *  avg latency) gives only ~17 concurrent in-flight, well under the 32
+ *  budget -- with 3 of the 6 directory-listed hosts (the CDN fallbacks)
+ *  sitting completely idle the whole run, reachable only via a failure-driven
+ *  rotation or the demoted-host probe, neither of which a 100%-success host
+ *  ever triggers. 32 workers concentrated onto 3 origins (~10-11 each,
+ *  4x the original per-host share) is a materially different load profile
+ *  than the ~2.67-per-host share this constant was tuned for, and matches
+ *  the user's own "1.5hr vs 5min" complaint far better than a total stall
+ *  (see .planning/debug/humankind-depot-full-stall.md -- that run was a
+ *  manual cancel, never a freeze). Raised to 8 (above the typical ~6-host
+ *  directory response) so fan-out is bounded only by `healthy.length` in
+ *  practice -- i.e. every CURRENTLY healthy host participates, not an
+ *  arbitrary top-3 subset. Safety is preserved by the pre-existing circuit
+ *  breaker (`isUnhealthy`/`MAX_CONSECUTIVE_FAILURES`, unchanged): a
+ *  genuinely bad host (e.g. cycle-3's observed 0%-success alibaba edge)
+ *  still gets demoted out of `healthy` after 5 consecutive failures
+ *  regardless of this constant, so widening fan-out does not remove that
+ *  protection -- it only stops ARTIFICIALLY excluding good hosts the
+ *  directory already offered. UNVERIFIED against real hardware as of this
+ *  change -- needs a fresh HUMANKIND (or similarly large-depot) live
+ *  re-test confirming `hosts` > 3 and materially higher aggregate
+ *  downSpeedMiBs with timeouts/errors still near zero. */
+export const TOP_N_FANOUT = 8
 
 /** Quick 260817-ihr (IHR-01): number of consecutive attempt-0 `pickHost`
  *  calls between probe picks that give a demoted (unhealthy) host one more

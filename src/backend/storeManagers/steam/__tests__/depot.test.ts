@@ -1484,12 +1484,12 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     expect(fetchChunk).toHaveBeenCalledTimes(1)
     // fetchChunk(hosts, depotId, chunk, key, lzma, attempts, decode,
     // onNetworkBytes, onAttempt, hostHealth, cdnAuth, hostMeta, signal,
-    // workerSlot) — cdnAuth is the 11th positional argument (index 10);
-    // hostMeta (cycle 7) is the 12th; signal (debug/steam-cancel-abort-
-    // thread-a) is the 13th; workerSlot (Phase 25 multi-host fan-out) is now
-    // the 14th/last.
+    // workerSlot, limiter) — cdnAuth is the 11th positional argument (index
+    // 10); hostMeta (cycle 7) is the 12th; signal (debug/steam-cancel-abort-
+    // thread-a) is the 13th; workerSlot (Phase 25 multi-host fan-out) is the
+    // 14th; limiter (debug/humankind-depot-full-stall) is now the 15th/last.
     const callArgs = jest.mocked(fetchChunk).mock.calls[0]
-    const cdnAuth = callArgs[callArgs.length - 4]
+    const cdnAuth = callArgs[callArgs.length - 5]
     expect(cdnAuth).toBeInstanceOf(CdnAuthTokenCache)
 
     // Prove it's bound to the REAL client + the numeric form of the appId
@@ -1526,7 +1526,7 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     // defaults to false (fetchChunk must never call getCDNAuthToken for this
     // host on its own; the call above proves the CACHE itself still works
     // when a caller explicitly invokes getToken directly).
-    const hostMeta = callArgs[callArgs.length - 3] as Map<
+    const hostMeta = callArgs[callArgs.length - 4] as Map<
       string,
       { httpsSupport?: string; usetokenauth?: boolean; type?: string }
     >
@@ -2333,7 +2333,10 @@ describe('downloadFileChunks (cycle 7): completion robustness via StallTracker',
 
     expect(fetchChunk).toHaveBeenCalled()
     for (const callArgs of jest.mocked(fetchChunk).mock.calls) {
-      expect(callArgs[callArgs.length - 2]).toBe(controller.signal)
+      // signal is now the 3rd-from-last positional arg — workerSlot and the
+      // new trailing `limiter` param (debug/humankind-depot-full-stall)
+      // follow it.
+      expect(callArgs[callArgs.length - 3]).toBe(controller.signal)
     }
   })
 })

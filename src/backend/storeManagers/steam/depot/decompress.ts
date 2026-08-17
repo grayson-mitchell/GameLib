@@ -11,6 +11,7 @@ import { createHash } from 'node:crypto'
 import { steamDecrypt } from './crypto'
 import { HostHealthTracker } from './hostHealth'
 import { CdnAuthTokenCache } from './cdnAuth'
+import { InflightLimiter } from './inflightLimiter'
 import { logWarning, LogPrefix } from 'backend/logger'
 
 /** Minimal surface of the `lzma` npm package this module depends on. */
@@ -414,6 +415,26 @@ export interface ChunkAttemptEvent {
   attempt: number
   outcome: ChunkAttemptOutcome
   ms: number
+  /** Debug/humankind-depot-full-stall (2026-08-17, network-vs-decode split):
+   *  wall-clock time from `attemptStart` to the network response body being
+   *  fully read (`res.arrayBuffer()` resolving) -- i.e. the PURE network
+   *  portion of `ms`, excluding `decode()`. Only populated on `outcome ===
+   *  'success'` (every other outcome either never reaches that point, or --
+   *  for a decode-stage failure -- already has the network leg complete by
+   *  definition, but is left `undefined` here to avoid implying a timing
+   *  guarantee this event type never made for non-success outcomes before).
+   *  Added because every existing timing signal in this codebase (`ms`,
+   *  `avgMs`, `downSpeedMiBs`) is gated behind BOTH the fetch AND `decode()`
+   *  finishing (decode must run before a chunk's bytes can be trusted enough
+   *  to report/write -- see this file's own SECURITY note above) -- so none
+   *  of them can, by themselves, distinguish "the network was slow" from
+   *  "decode was slow" for a given attempt. `ms - netMs` is this attempt's
+   *  own decode-stage duration (decode() + any DecompressPool queue-wait),
+   *  computed by the caller (see depot.ts's `[Timing] chunk-stream stats`
+   *  `avgNetMs`/`avgDecodeMs`). Purely observational: never read by any
+   *  retry/backoff/selection logic in this function or hostHealth's scoring
+   *  (hostHealth.record still receives the unchanged, combined `ms`). */
+  netMs?: number
   message?: string
   /** Debug/steam-install-slow-start (diagnostic re-open, cycle 9): a short,
    *  aggregatable label for WHY a non-success attempt failed -- the numeric
@@ -841,7 +862,19 @@ export async function fetchChunk(
    *  `?:`) so it stays a plain `number` under strict mode. Optional,
    *  additive: omitting it — every pre-Phase-25 caller/test — defaults to
    *  pickHost's workerSlot=0, reproducing the exact ordered[0] pick. */
-  workerSlot: number = 0
+  workerSlot: number = 0,
+  /** Debug/humankind-depot-full-stall (2026-08-17): shared, per-DOWNLOAD-RUN
+   *  network in-flight budget — see depot/inflightLimiter.ts. Acquired
+   *  immediately before the network `fetch()` below and released right
+   *  after the response body is read, NEVER held across `decode()` — see
+   *  the acquire/release call sites' own doc comment for the root-cause
+   *  writeup (a whole-fetchChunk wrap silently capped real network
+   *  concurrency at DecompressPool's much smaller, independently-bounded
+   *  worker count). Optional, additive: omitting it (every pre-fix
+   *  caller/test, and the prior 260817-ihr `limiter.run(doFetch)` call site
+   *  which this replaces) makes every acquire()/release() call below a
+   *  no-op, reproducing the exact unthrottled pre-260817-ihr behavior. */
+  limiter?: InflightLimiter
 ): Promise<Buffer> {
   const sha = Buffer.isBuffer(chunk.sha)
     ? chunk.sha.toString('hex')
@@ -899,6 +932,15 @@ export async function fetchChunk(
     // this assignment).
     let res: Response | undefined
     let encrypted: Buffer | undefined
+    // Debug/humankind-depot-full-stall (2026-08-17): tracks whether THIS
+    // attempt currently owns an acquired `limiter` slot, so the `finally`
+    // below can safely release on every error path (including one that
+    // throws between `acquire()` and the early release right after the
+    // response body is read) without ever double-releasing the
+    // already-released success-path slot. Always `false` when `limiter` is
+    // undefined (every pre-fix caller/test), so the finally's guard never
+    // fires and behavior is byte-for-byte unchanged.
+    let heldSlot = false
     try {
       // Debug/steam-install-slow-start (cycle 7 PART 1 REVERT, WIDENED in the
       // CDN-auth implementation cycle, PART 2): gated on
@@ -912,11 +954,34 @@ export async function fetchChunk(
       // steam-user's own usage convention. `cdnAuth.getToken` NEVER throws
       // and NEVER blocks past its own bounded timeout (depot/cdnAuth.ts
       // PART 3) — a hanging/failing token fetch degrades to `''` and this
-      // attempt proceeds token-less, exactly like every other host.
+      // attempt proceeds token-less, exactly like every other host. Runs
+      // BEFORE acquiring `limiter`'s slot -- it has its own bounded timeout
+      // and was never part of the network budget this limiter tracks.
       const token =
         wantsCdnAuthToken(meta) && cdnAuth
           ? await cdnAuth.getToken(depotId, host)
           : ''
+      // Debug/humankind-depot-full-stall (2026-08-17): acquire the network
+      // slot immediately before the actual depot chunk fetch -- see this
+      // param's own doc comment above and inflightLimiter.ts's `run()` doc
+      // comment for why this must NOT wrap `decode()` below. Guarded by
+      // `if (limiter)` rather than an unconditional `await limiter?.acquire()`
+      // -- an `await` always yields at least one microtask turn even when
+      // the awaited value is `undefined`, which would insert a NEW
+      // suspension point between the (synchronous, no-limiter) token
+      // resolution above and the `fetch()` call below for every caller that
+      // omits `limiter`. That shifted timing broke the external-cancel
+      // tests (depotPrimitives.test.ts): they rely on fetchChunk running
+      // synchronously through to `fetch()` (and the mock's abort-listener
+      // registration) in the SAME microtask turn the caller invokes
+      // fetchChunk in, so `controller.abort()` — called synchronously right
+      // after — always fires AFTER the listener is attached, never before.
+      // This guard makes every no-limiter call (every pre-fix caller/test)
+      // byte-for-byte identical to the pre-fix control flow.
+      if (limiter) {
+        await limiter.acquire()
+        heldSlot = true
+      }
       res = await fetch(
         `${scheme}${host}/depot/${depotId}/chunk/${sha}${token}`,
         {
@@ -944,11 +1009,29 @@ export async function fetchChunk(
       }
 
       encrypted = Buffer.from(await res.arrayBuffer())
-      const data = await decode(encrypted, key, sha, chunk.cb_original)
+      // Debug/humankind-depot-full-stall (2026-08-17): release the network
+      // slot as soon as the response body is fully read -- BEFORE the
+      // CPU-bound `decode()` call, which is independently bounded by
+      // DecompressPool's own worker count. Holding the slot any longer would
+      // silently cap real network concurrency at that smaller budget again.
+      limiter?.release()
+      heldSlot = false
+      // Debug/humankind-depot-full-stall (2026-08-17, network-vs-decode
+      // split): both `netMs` and `onNetworkBytes` are captured HERE, right
+      // as the network leg finishes -- previously both fired only after
+      // `decode()` also completed below, which never changed what value
+      // either eventually reported (the outer downloadFileChunks loop only
+      // reads them after this whole function resolves regardless -- decode
+      // must finish before verified bytes can be returned/written at all,
+      // see this file's own SECURITY note above), but DID mean neither was
+      // available as an independent network-only signal. Moving the capture
+      // point earlier costs nothing and makes `netMs` meaningful.
+      const netMs = Date.now() - attemptStart
       onNetworkBytes?.(encrypted.length)
+      const data = await decode(encrypted, key, sha, chunk.cb_original)
       const ms = Date.now() - attemptStart
       hostHealth?.record(host, 'success', ms)
-      onAttempt?.({ host, attempt: i, outcome: 'success', ms })
+      onAttempt?.({ host, attempt: i, outcome: 'success', ms, netMs })
       return data
     } catch (err) {
       lastErr = err as Error
@@ -1019,6 +1102,12 @@ export async function fetchChunk(
         ) // 200,400,800,1600,3000,3000,...
       }
     } finally {
+      // Debug/humankind-depot-full-stall (2026-08-17): releases a slot this
+      // attempt acquired but never reached the early release for (e.g. the
+      // fetch itself threw/timed out, or `res.ok` was false) -- `heldSlot`
+      // is only ever true here on an error path; the success path already
+      // released and reset it to `false` above, so this never double-frees.
+      if (heldSlot) limiter?.release()
       clearTimeout(timeoutId)
       signal?.removeEventListener('abort', onExternalAbort)
     }

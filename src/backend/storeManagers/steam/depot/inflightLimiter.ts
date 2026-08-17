@@ -51,6 +51,20 @@ export class InflightLimiter {
    * `finally`, so a task that throws or returns a rejected promise still
    * frees it for the next queued task; `fn`'s resolved value or rejection
    * reason is returned/propagated to the caller completely unchanged.
+   *
+   * NOTE (debug/humankind-depot-full-stall, 2026-08-17): only appropriate
+   * when the ENTIRE `fn` body is the network-bound work this budget is
+   * meant to bracket. `fetchChunk` (depot/decompress.ts) is NOT such a
+   * caller -- it awaits a CPU-bound `decode()` (dispatched to the
+   * independently-bounded DecompressPool, depot/decompressPool.ts) before
+   * returning, so wrapping the whole call couples two unrelated bounded
+   * resources: a chunk-worker that finishes its network fetch but is queued
+   * behind DecompressPool's fixed worker count would hold this NETWORK slot
+   * hostage for the whole decode-queue wait, silently capping real network
+   * concurrency at the decode pool's (much smaller) size regardless of this
+   * limiter's own `max`. `fetchChunk` uses the public `acquire()`/
+   * `release()` below directly, bracketing ONLY its network fetch, for
+   * exactly this reason -- see its own call site for the full writeup.
    */
   async run<T>(fn: () => Promise<T>): Promise<T> {
     await this.acquire()
@@ -61,7 +75,15 @@ export class InflightLimiter {
     }
   }
 
-  private acquire(): Promise<void> {
+  /** Resolves once a slot is available (immediately if the run-wide budget
+   *  isn't exhausted, otherwise queued FIFO). Public so a caller whose work
+   *  spans non-network stages (e.g. fetchChunk's fetch-then-decode) can
+   *  bracket only the stage this budget is actually meant to bound, instead
+   *  of holding a slot across unrelated work via `run()`. Every `acquire()`
+   *  MUST be paired with exactly one `release()` (typically in a
+   *  try/finally) -- an unreleased slot permanently shrinks the effective
+   *  budget for the rest of the run. */
+  acquire(): Promise<void> {
     if (this.active < this.max) {
       this.active++
       return Promise.resolve()
@@ -76,7 +98,10 @@ export class InflightLimiter {
     })
   }
 
-  private release(): void {
+  /** Frees the slot acquired by a matching `acquire()`, granting it to the
+   *  longest-queued waiter (FIFO) if any. Public -- see `acquire()`'s doc
+   *  comment. */
+  release(): void {
     this.active--
     // FIFO: the longest-queued waiter gets the freed slot next.
     const next = this.queue.shift()

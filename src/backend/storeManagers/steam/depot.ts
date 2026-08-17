@@ -1095,46 +1095,53 @@ export async function downloadFileChunks(
         // download rate); data.length = decompressed bytes written to disk.
         let netBytes = 0
         try {
-          // Quick 260817-ihr (IHR-02): the ONLY thing `limiter` ever wraps
-          // is this network call — never the decode, `fd.write`, or the
-          // stall-tracker call below, since the run-wide budget this
-          // enforces is specifically a NETWORK budget (see
-          // depot/inflightLimiter.ts's own doc comment for the root cause).
-          // Omitting `limiter` (every pre-260817-ihr caller/test) calls
-          // fetchChunk directly, byte-for-byte unchanged.
-          const doFetch = () =>
-            fetchChunk(
-              hosts,
-              depotId,
-              depotChunk,
-              key,
-              lzma,
-              CHUNK_FETCH_ATTEMPTS,
-              decode,
-              (n) => {
-                netBytes = n
-              },
-              onAttempt,
-              hostHealth,
-              cdnAuth,
-              hostMeta,
-              // debug/steam-cancel-abort-thread-a: threads the cancel signal
-              // INTO fetchChunk's own retry/backoff loop (previously this
-              // worker loop only checked signal?.aborted before/after calling
-              // fetchChunk, never while it was mid-retry — the ~62s hardware
-              // hang) so a cancel interrupts an in-flight attempt immediately
-              // instead of waiting for it to naturally exhaust or succeed.
-              signal,
-              // Phase 25 (multi-host fan-out): combines this file's own
-              // FILE_CONCURRENCY-pool slot with this chunk worker's own
-              // CHUNK_CONCURRENCY-pool index so every concurrently-running
-              // worker across the whole run maps to a distinct small integer
-              // — see RESEARCH.md Assumptions Log A2. Both operands are plain
-              // `number` (default-param / Array.from index), so the raw
-              // arithmetic needs no `?? 0` coalesce under strict mode.
-              fileWorkerSlot * CHUNK_CONCURRENCY + chunkWorkerSlot
-            )
-          const data = limiter ? await limiter.run(doFetch) : await doFetch()
+          // Quick 260817-ihr (IHR-02), corrected by
+          // debug/humankind-depot-full-stall (2026-08-17): `limiter` is now
+          // forwarded INTO fetchChunk itself (its own last param), which
+          // brackets ONLY its network fetch — acquiring right before it and
+          // releasing right after the response body is read, NEVER across
+          // `decode()`. The original design here (`limiter.run(doFetch)`,
+          // wrapping the WHOLE fetchChunk call) held the network slot across
+          // decode too, which is CPU-bound and independently bounded by
+          // DecompressPool's own (much smaller) worker count — silently
+          // capping real network concurrency at that smaller budget
+          // regardless of `limiter`'s own max. See fetchChunk's `limiter`
+          // param and inflightLimiter.ts's `run()` doc comment for the full
+          // writeup. Omitting `limiter` (every pre-260817-ihr caller/test)
+          // makes fetchChunk's internal acquire()/release() calls no-ops,
+          // byte-for-byte unchanged.
+          const data = await fetchChunk(
+            hosts,
+            depotId,
+            depotChunk,
+            key,
+            lzma,
+            CHUNK_FETCH_ATTEMPTS,
+            decode,
+            (n) => {
+              netBytes = n
+            },
+            onAttempt,
+            hostHealth,
+            cdnAuth,
+            hostMeta,
+            // debug/steam-cancel-abort-thread-a: threads the cancel signal
+            // INTO fetchChunk's own retry/backoff loop (previously this
+            // worker loop only checked signal?.aborted before/after calling
+            // fetchChunk, never while it was mid-retry — the ~62s hardware
+            // hang) so a cancel interrupts an in-flight attempt immediately
+            // instead of waiting for it to naturally exhaust or succeed.
+            signal,
+            // Phase 25 (multi-host fan-out): combines this file's own
+            // FILE_CONCURRENCY-pool slot with this chunk worker's own
+            // CHUNK_CONCURRENCY-pool index so every concurrently-running
+            // worker across the whole run maps to a distinct small integer
+            // — see RESEARCH.md Assumptions Log A2. Both operands are plain
+            // `number` (default-param / Array.from index), so the raw
+            // arithmetic needs no `?? 0` coalesce under strict mode.
+            fileWorkerSlot * CHUNK_CONCURRENCY + chunkWorkerSlot,
+            limiter
+          )
           if (signal?.aborted) return
 
           await fd.write(data, 0, data.length, Number(chunk.offset))
@@ -1828,6 +1835,18 @@ export async function downloadDepotFiles(
     let totalRotations = 0 // attempt index > 0 -- a chunk that needed >1 host
     let totalTimeouts = 0
     let firstByteMs: number | undefined
+    // Debug/humankind-depot-full-stall (2026-08-17, network-vs-decode split):
+    // run-wide (not per-host, to keep the log line bounded) accumulators for
+    // ChunkAttemptEvent.netMs -- the pure network-fetch portion of a
+    // successful attempt's `ms`, now populated by decompress.ts's fetchChunk.
+    // `successSamples` doubles as the denominator for BOTH `totalSuccessMs`
+    // and `totalNetMs` since every 'success' event now carries `netMs`.
+    // Purely observational: read only by logChunkStreamStats below, never by
+    // any retry/backoff/selection/hostHealth logic (hostHealth.record still
+    // only ever receives the unchanged, combined `ev.ms`).
+    let totalSuccessMs = 0
+    let totalNetMs = 0
+    let successSamples = 0
     const onAttempt: OnChunkAttempt = (ev) => {
       totalAttempts++
       if (ev.attempt > 0) totalRotations++
@@ -1842,8 +1861,12 @@ export async function downloadDepotFiles(
       }
       stat.attempts++
       stat.totalMs += ev.ms
-      if (ev.outcome === 'success') stat.successes++
-      else if (ev.outcome === 'timeout') stat.timeouts++
+      if (ev.outcome === 'success') {
+        stat.successes++
+        totalSuccessMs += ev.ms
+        successSamples++
+        if (ev.netMs !== undefined) totalNetMs += ev.netMs
+      } else if (ev.outcome === 'timeout') stat.timeouts++
       else {
         stat.errors++
         if (ev.reason)
@@ -1917,10 +1940,32 @@ export async function downloadDepotFiles(
             `${s.type ? ` type=${s.type}` : ''}${s.unhealthy ? ' UNHEALTHY' : ''}]`
         )
         .join(' ')
+      // Debug/humankind-depot-full-stall (2026-08-17, network-vs-decode
+      // split): avgMs (success-only, run-wide) is the SAME combined
+      // fetch+decode duration this file has logged since cycle 2 -- kept
+      // here for direct continuity with every prior hardware run's numbers.
+      // avgNetMs/avgDecodeMs are NEW: the first time this codebase can
+      // report the network-fetch and decode-stage portions of that duration
+      // SEPARATELY, instead of inferring the split via Little's Law against
+      // an assumed worker count. `poolStats` (below) is DecompressPool's own
+      // live saturation snapshot -- lets a hardware run directly confirm (or
+      // refute) whether the decode pool is actually the thing running out of
+      // headroom, instead of inferring it from timing alone.
+      const avgMsAll = successSamples
+        ? Math.round(totalSuccessMs / successSamples)
+        : 0
+      const avgNetMs = successSamples
+        ? Math.round(totalNetMs / successSamples)
+        : 0
+      const avgDecodeMs = avgMsAll - avgNetMs
+      const poolStats = pool.stats()
       logInfo(
         `[Timing] chunk-stream stats @${elapsedSec}s: percent=${percent}% ` +
           `downSpeedMiBs=${lastDownSpeed.toFixed(2)} diskSpeedMiBs=${lastDiskSpeed.toFixed(2)} ` +
           `totalAttempts=${totalAttempts} rotations=${totalRotations} timeouts=${totalTimeouts} ` +
+          `avgMs=${avgMsAll} avgNetMs=${avgNetMs} avgDecodeMs=${avgDecodeMs} ` +
+          `pool[size=${poolStats.size} busy=${poolStats.busy} idle=${poolStats.idle} ` +
+          `queued=${poolStats.queued} inline=${poolStats.inlineFallback}] ` +
           `hosts=${hostStats.size} worstHosts=[${worst}]`,
         LogPrefix.Steam
       )
