@@ -113,6 +113,45 @@ What shipped:
 `lint-translations` exit 0 — all re-run by the orchestrator rather than accepted from agent
 self-reports. VERIFICATION passed 6/6.
 
+### Live evidence — 2026-08-17 (Age of Wonders: Planetfall)
+
+Age of Wonders: Planetfall (appId `718850`, Mac-native, ~17.15 GB) was freshly uninstalled and
+reinstalled 2026-08-17 through GameLib's native Steam depot path, on a build carrying both
+`260817-ihr` (TOP_N_FANOUT / InflightLimiter throughput fix) and `260817-pkx` (SEA-sidecar
+decompress-worker embedded as a Node SEA asset). Readings below are from
+`~/Library/Logs/GameLib/gamelib.log`.
+
+- Total duration: 1029s (17m09s) — well past the old 8-minute (480,000ms) ceiling.
+- Proof by absence, both greps returned EMPTY:
+
+  ```bash
+  grep -n "Installation of 718850 failed with:" ~/Library/Logs/GameLib/gamelib.log
+  grep -n "Aborting in-flight download for 718850" ~/Library/Logs/GameLib/gamelib.log
+  ```
+
+  Neither command produced any output. The watchdog never tripped.
+- `.acf` written cleanly: `StateFlags="4"`, `SizeOnDisk="17151298416"` — full-ownership manifest,
+  no manual chmod needed.
+- `pool[...inline=false]` on every `[Timing] chunk-stream stats` sample from `@15s` through
+  completion — decode workers really spawning via worker_threads inside the packaged SEA
+  sidecar binary.
+- New observation: `avgDecodeMs` climbed steadily across the run (1287ms -> 1738ms -> 2692ms)
+  while `avgNetMs` stayed flat (~250-283ms). Decode is the dominant cost by the end (~9.5x net).
+  The decode queue backed up early (`queued=51` at `@15s`).
+- Rough throughput: ~60s/GB. Extrapolated to HUMANKIND's ~37 GB that is roughly ~37 minutes if
+  the rate holds, versus the pre-fix ~93-minute projection.
+
+**Gate A's PROPERTY is now demonstrated generically**: a Mac-native install survived well past
+8 minutes without tripping, reached 100%, and wrote a clean `StateFlags=4` manifest. The
+re-semantified no-progress watchdog behaved exactly as `260817-dib` intended on real hardware.
+
+This **does not** move this todo to `completed/`. It stays in `pending/`. `LIVE-GATE.md`'s
+Gate A is written entirely against appId `1124300`, and its precondition 4 binds that run to
+phase `23-10` Task 1's fresh-install precondition — so only the canonical HUMANKIND run closes
+this, and it has not happened yet. Two items stay open: (1) Phase 23's `23-10` Task 1 — Gate 2
+must re-run CLEAN on HUMANKIND (`1124300`) specifically; (2) this todo's own closure, which
+still requires that HUMANKIND-specific live gate run, not a substitute title.
+
 ## Solution (chosen: option 1)
 
 Candidate directions as originally filed:
