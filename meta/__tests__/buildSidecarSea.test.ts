@@ -17,6 +17,9 @@ import {
   buildPostjectArgv,
   buildCodesignArgv,
   buildEsbuildArgv,
+  buildWorkerEsbuildArgv,
+  buildSeaConfig,
+  SEA_WORKER_ASSET_KEY,
   sidecarOutputPath,
   hostTriple,
   resolveTriple,
@@ -421,5 +424,140 @@ describe('the tested argv is the executed argv (WR-10 guard)', () => {
       const stripped = loadStrippedBuildScript()
       expect(stripped).toMatch(/seaBlobArgv\.command/)
     })
+  })
+})
+
+// ── Quick task 260817-pkx: decompress-worker SEA asset embedding ──────────
+// (debug/humankind-depot-full-stall.md) ────────────────────────────────────
+
+describe('buildWorkerEsbuildArgv (decompress-worker SEA bundle)', () => {
+  test('flags equal buildEsbuildArgv()\'s flags except --outfile= and the trailing entry (diffed, not re-listed)', () => {
+    for (const platform of ['darwin', 'linux', 'win32'] as const) {
+      const sidecarArgv = buildEsbuildArgv(platform)
+      const workerArgv = buildWorkerEsbuildArgv(platform)
+
+      const sidecarFlags = sidecarArgv.args
+      const workerFlags = workerArgv.args
+
+      expect(workerFlags.length).toBe(sidecarFlags.length)
+
+      workerFlags.forEach((flag, i) => {
+        const sidecarFlag = sidecarFlags[i]
+        if (flag.startsWith('--outfile=') || i === workerFlags.length - 1) {
+          // --outfile= and the trailing entry path are the ONLY two
+          // positions allowed to differ between the two bundles.
+          return
+        }
+        expect(flag).toBe(sidecarFlag)
+      })
+    }
+  })
+
+  test('the worker argv outfile is build/main/decompressWorker-sea-bundle.js', () => {
+    const argv = buildWorkerEsbuildArgv('darwin')
+    const outfileFlag = argv.args.find((a) => a.startsWith('--outfile='))
+    expect(outfileFlag).toBe(
+      `--outfile=${join('build', 'main', 'decompressWorker-sea-bundle.js')}`
+    )
+  })
+
+  test('the worker argv entry is the decompressWorker.ts path', () => {
+    const argv = buildWorkerEsbuildArgv('darwin')
+    const entry = argv.args[argv.args.length - 1]
+    expect(entry).toBe(
+      join(
+        'src',
+        'backend',
+        'storeManagers',
+        'steam',
+        'depot',
+        'decompressWorker.ts'
+      )
+    )
+  })
+
+  test('contains no --packages=external (would crash the SEA runtime with ERR_UNKNOWN_BUILTIN_MODULE)', () => {
+    const argv = buildWorkerEsbuildArgv('darwin')
+    expect(argv.args).not.toEqual(
+      expect.arrayContaining(['--packages=external'])
+    )
+  })
+
+  // WR-06 rule: never gate a branch assertion on the host platform -- both
+  // branches asserted unconditionally on every host.
+  test('WR-06: the win32 branch runs the worker esbuild CLI through process.execPath', () => {
+    const argv = buildWorkerEsbuildArgv('win32')
+    expect(argv.command).toBe(process.execPath)
+    expect(argv.args[0]).toMatch(/esbuild[\\/]bin[\\/]esbuild$/)
+    expect(existsSync(argv.args[0])).toBe(true)
+  })
+
+  test('WR-06: the non-win32 branches spawn the worker esbuild binary directly', () => {
+    for (const platform of ['darwin', 'linux'] as const) {
+      const argv = buildWorkerEsbuildArgv(platform)
+      expect(argv.command).toMatch(/esbuild[\\/]bin[\\/]esbuild$/)
+      expect(argv.command).not.toBe(process.execPath)
+      expect(existsSync(argv.command)).toBe(true)
+      expect(argv.args[0]).toBe('--bundle')
+    }
+  })
+
+  test('the default parameter follows the host platform', () => {
+    expect(buildWorkerEsbuildArgv()).toEqual(
+      buildWorkerEsbuildArgv(process.platform)
+    )
+  })
+})
+
+describe('buildSeaConfig (decompress-worker asset wiring)', () => {
+  test('assets maps exactly SEA_WORKER_ASSET_KEY -> the worker bundle output path', () => {
+    const config = buildSeaConfig()
+    expect(Object.keys(config.assets)).toEqual([SEA_WORKER_ASSET_KEY])
+    expect(config.assets[SEA_WORKER_ASSET_KEY]).toBe(
+      join('build', 'main', 'decompressWorker-sea-bundle.js')
+    )
+  })
+
+  test('SEA_WORKER_ASSET_KEY is the literal "decompressWorker.js" (must agree with decompressPool.ts\'s runtime sea.getAsset() call)', () => {
+    expect(SEA_WORKER_ASSET_KEY).toBe('decompressWorker.js')
+  })
+
+  test('main/output/disableExperimentalSEAWarning are unchanged by the asset addition', () => {
+    const config = buildSeaConfig()
+    expect(config.main).toBe(join('build', 'main', 'sidecar-sea-bundle.js'))
+    expect(config.output).toBe(join('build', 'sidecar-prep.blob'))
+    expect(config.disableExperimentalSEAWarning).toBe(true)
+  })
+})
+
+describe('WR-10-style source-scan guard: the inline-fallback warning cannot come back', () => {
+  function loadStrippedBuildScriptSource(): string {
+    const source = readFileSync(
+      join(__dirname, '..', 'buildSidecarSea.ts'),
+      'utf-8'
+    )
+    return source
+      .split('\n')
+      .filter((line) => !/^\s*(\*|\/\/|\/\*)/.test(line))
+      .join('\n')
+  }
+
+  test('the current source contains no console.warn(...) mentioning "inline single-thread"', () => {
+    const stripped = loadStrippedBuildScriptSource()
+    expect(stripped).not.toMatch(/console\.warn\(/)
+  })
+
+  // Proves this matcher CAN fail, against the exact pre-change warning text
+  // -- a grep gate that cannot fail on a known-bad input guards nothing.
+  test('the matcher rejects the OLD (pre-fix) Pitfall-1 warning text', () => {
+    const oldWarningSource = [
+      "  console.warn(",
+      "    '[build:sidecar-sea] Note (Pitfall 1): decompressPool worker_threads ' +",
+      "      'spawn falls back to inline single-thread decode inside the compiled ' +",
+      "      'SEA sidecar (no build/main/decompressWorker.js companion file is ' +",
+      "      'shipped). Accepted throughput regression -- see 34-RESEARCH.md.'",
+      "  )"
+    ].join('\n')
+    expect(oldWarningSource).toMatch(/console\.warn\(/)
   })
 })
