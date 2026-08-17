@@ -1,0 +1,177 @@
+---
+spike: 023
+name: sea-native-addon-dlopen
+type: standard
+validates: "Given a native .node addon (lzma-native@8.0.6) embedded as a Node SEA asset, when it is extracted with sea.getRawAsset() and process.dlopen()'d from inside a worker spawned via new Worker(source, { eval: true }) in a REAL compiled SEA binary, then the load succeeds and decodes a real-entropy Steam VZ chunk byte-identically to the pure-JS lzma path"
+verdict: PENDING
+related: [002]
+tags: [steam, depot, lzma, native, sea, dlopen, worker_threads]
+---
+
+# Spike 023: SEA Native Addon `dlopen()` From an Eval'd Worker
+
+## What This Validates
+
+**Given** `lzma-native`'s native `.node` addon embedded as a Node SEA asset,
+**when** it is extracted at runtime via `sea.getRawAsset()` and loaded with
+`process.dlopen()` from inside a worker spawned via
+`new Worker(source, { eval: true })` (this project's actual packaged-SEA
+worker-spawn mode, NOT `new Worker(path)`) in a **real compiled SEA binary**,
+**then** the load succeeds and the addon decodes a real-entropy Steam VZ
+depot chunk byte-identically to the project's current pure-JS `lzma` path.
+
+Secondary: measure the native-vs-pure-JS decode multiplier against REAL Steam
+game bytes on this machine (RESEARCH.md's ~47x figure came from a synthetic
+text+random payload).
+
+This decides Phase 23.1's central open risk (RESEARCH.md Assumption A1,
+rated HIGH): whether the native-addon integration design in plans 23.1-02
+through 23.1-05 is viable at all, or whether the phase needs to fall back to
+main-thread-only decode / a different packaging strategy / abandonment in
+favor of a WASM route.
+
+## Task 1: Package Legitimacy Gate
+
+**Status: APPROVED by human operator.** Confirmed npm listing (v8.0.6 latest,
+repo resolves to `github.com/addaleax/lzma-native`, no `postinstall`
+script), confirmed the GitHub repo is real and matches the npm listing
+(author `addaleax` = Anna Henningsen, former Node.js TSC member), and
+accepted the native-code memory-safety risk as scoped in RESEARCH.md's
+Security Domain section (mitigated downstream by `decodeChunk()`'s existing
+sha1/size integrity gate).
+
+## Task 2: Scaffold + Real-Entropy Fixture + Non-SEA Eval'd-Worker Benchmark
+
+### Install
+
+`lzma-native@8.0.6` was installed with
+`npm --prefix .planning/spikes/023-sea-native-addon-dlopen install`, scoped
+entirely to this spike directory. `git status --porcelain package.json
+pnpm-lock.yaml pnpm-workspace.yaml` was empty both before and after the
+install — the repo's own dependency manifests were not touched.
+
+### Prebuild Inventory
+
+Observed by listing `node_modules/lzma-native/prebuilds/` after install (this
+replaces RESEARCH.md/PATTERNS.md's ASSUMPTION that the filename is
+`lzma_native.node` with an OBSERVED FACT — it is not):
+
+| Triple directory | `.node` filename(s) |
+|---|---|
+| `darwin-arm64` | `node.napi.node`, `electron.napi.node` |
+| `darwin-x64` | `node.napi.node`, `electron.napi.node` |
+| `linux-x64` | `node.napi.node`, `electron.napi.node` |
+| `linux-arm64` | `node.napi.node`, `electron.napi.node` |
+| `win32-x64` | `node.napi.node`, `electron.napi.node`, `liblzma.dll` |
+| `win32-ia32` | `node.napi.node`, `electron.napi.node`, `liblzma.dll` |
+
+Every triple ships BOTH a plain-Node NAPI build (`node.napi.node`) and an
+Electron-flavored NAPI build (`electron.napi.node`) side by side — plans
+23.1-03/04 must resolve `node.napi.node` specifically (the sidecar is a
+plain-Node SEA binary, not Electron) and must NOT assume the filename is
+`lzma_native.node`; that string is only used below as the SEA **asset key**
+(the dictionary key `sea-config.json`'s `assets` map uses), which is
+independent of, and does not need to match, the real on-disk prebuild
+filename.
+
+Win32 additionally ships a companion `liblzma.dll` beside the `.node` file —
+plans 23.1-03/04 must account for this as a second binary to embed/dlopen
+correctly on Windows if that triple is pursued; out of this spike's
+darwin-arm64 scope to verify further.
+
+### Real-Entropy Fixture
+
+Route taken: **local real game bytes** (not live CDN capture — the live
+route was not attempted this spike; a local-bytes fixture was sufficient to
+answer this spike's questions without a Steam auth session).
+
+- Source file: `Humankind.app/Contents/PlugIns/libEOSSDK-Mac-Shipping.dylib`
+  (a real installed Steam title's compiled binary, 50,968,672 bytes on disk)
+- Slice: 1,048,576 bytes (1 MiB) starting at offset 2,097,152 (well past the
+  Mach-O header region)
+- Compressed with this repo's own pinned `lzma@2.3.2` package to an
+  `lzma_alone` stream, then wrapped in the Steam VZ container layout
+  (`make-chunk.mjs`)
+- Uncompressed size: 1,048,576 bytes
+- Compressed (lzma_alone) size: 451,554 bytes
+- VZ container total size: 451,563 bytes
+- sha1 of uncompressed bytes: `2e461366a896f36a8e47f583f2e79d96c676bb5b`
+
+Fixture written to `fixtures/real-vz-chunk.bin` (gitignored — reproducible
+via `node make-chunk.mjs` on a machine with the same Steam library, or any
+machine with a large installed Steam title by editing
+`CANDIDATE_SOURCE_FILES`).
+
+### Non-SEA Eval'd-Worker Benchmark Result
+
+`node bench-eval-worker.mjs` spawns a worker via
+`new Worker(source, { eval: true })` — the exact production packaged-SEA
+spawn shape, with no SEA packaging involved yet — decodes the real-entropy
+VZ fixture with both `lzma-native` and the pure-JS `lzma` package inside that
+worker, and asserts `Buffer.compare(...) === 0` plus a sha1 match against the
+fixture's recorded uncompressed sha1.
+
+```json
+{"task":"bench-eval-worker","byteIdentical":true,"sha1Match":true,"pureJsMs":86.962667,"nativeMs":15.088375,"speedup":5.763554193211661,"runs":5,"uncompressedSize":1048576}
+```
+
+**Result: PASS.** `lzma-native` loads and decodes correctly inside an
+eval'd-source worker (non-SEA), byte-identical to the pure-JS path.
+
+**Measured real-chunk speedup: ~5.76x** (median of 5 runs each:
+pure-JS 86.96ms, native 15.09ms, for a 1 MiB uncompressed / 451,554-byte
+compressed chunk). This is **materially lower than RESEARCH.md's ~47x
+synthetic text+random benchmark** — RESEARCH.md's own Assumption A3 flagged
+this exact gap ("no one has yet benchmarked... against a real captured Steam
+depot LZMA chunk") and this measurement closes it with a real number, not a
+better one. A likely explanation (not independently verified this spike):
+real compiled-binary bytes have different entropy/compressibility
+characteristics than a text+random synthetic mix, which can change the ratio
+of time spent in each decoder's inner loop vs. its I/O/stream-plumbing
+overhead. **This number is the one Task 4's go/no-go decision must weigh**,
+not the synthetic 47x figure.
+
+Full evidence (worker spawn shapes, resolved paths, both decoders' raw
+per-run timings): see `run.log`.
+
+## Task 3: Real Compiled SEA Binary — dlopen() From an Eval'd Worker
+
+_(pending)_
+
+## Task 4: Go/No-Go Decision
+
+_(pending — awaiting Task 3's verdict)_
+
+## Files
+
+| File | Role |
+|---|---|
+| `package.json` | private spike package, exactly one dependency: `lzma-native@8.0.6` (exact-pinned) |
+| `make-chunk.mjs` | builds `fixtures/real-vz-chunk.bin` from real game bytes |
+| `bench-eval-worker.mjs` | non-SEA eval'd-worker benchmark (task 2) |
+| `binding-shim.cjs` | (task 3) node-gyp-build replacement: getRawAsset()+dlopen() in SEA, direct dlopen() in dev |
+| `sea-worker-entry.cjs` | (task 3) the worker's bundled source, decodes the fixture via lzma-native |
+| `sea-main.cjs` | (task 3) SEA main entry: reads the bundled worker back out, spawns it eval'd |
+| `build-sea.mjs` | (task 3) miniature build pipeline mirroring `meta/buildSidecarSea.ts` |
+| `run.log` | dual-sink forensic evidence log (all invocations, appended) |
+
+## Investigation Trail
+
+1. Task 1's package-legitimacy checkpoint approved by the human operator
+   before any install ran.
+2. Scaffolded the spike directory per `.planning/spikes/CONVENTIONS.md`;
+   installed `lzma-native@8.0.6` scoped to the spike dir only
+   (`npm --prefix ... install`); confirmed the repo's own `package.json`/
+   `pnpm-lock.yaml`/`pnpm-workspace.yaml` were untouched.
+3. Inventoried the installed prebuilds — found the assumed
+   `lzma_native.node` filename does NOT exist on disk; the real filename is
+   `node.napi.node` (plus a separate `electron.napi.node` variant per
+   triple, an assumption-correcting finding for plans 23.1-03/04).
+4. Built a real-entropy VZ fixture from a 1 MiB slice of an actual installed
+   Steam title's compiled binary (`Humankind`'s `libEOSSDK-Mac-Shipping.dylib`),
+   compressed with this repo's own pinned `lzma@2.3.2`.
+5. Ran the non-SEA eval'd-worker benchmark: `lzma-native` decodes the real
+   fixture correctly (byte-identical + sha1-match) inside a
+   `new Worker(source, { eval: true })` spawn. Measured speedup ~5.76x —
+   well below the 47x synthetic figure, recorded as the real number to carry
+   forward.

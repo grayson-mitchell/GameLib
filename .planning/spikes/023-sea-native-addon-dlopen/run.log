@@ -1,0 +1,40 @@
+
+===== 2026-08-17T23:45:29.927Z :: bench-eval-worker.mjs invocation =====
+[bench] fixture: /Users/graysonmitchell/Projects/GameLib/.planning/spikes/023-sea-native-addon-dlopen/fixtures/real-vz-chunk.bin
+[bench] fixture meta: {"route":"local-real-bytes","sourceFile":"/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/Humankind/Humankind.app/Contents/PlugIns/libEOSSDK-Mac-Shipping.dylib","sliceOffset":2097152,"uncompressedSize":1048576,"compressedSize":451554,"vzContainerSize":451563,"sha1Uncompressed":"2e461366a896f36a8e47f583f2e79d96c676bb5b"}
+[bench] lzma-native resolved at: /Users/graysonmitchell/Projects/GameLib/.planning/spikes/023-sea-native-addon-dlopen/node_modules/lzma-native/index.js
+[bench] pure-JS lzma resolved at: /Users/graysonmitchell/Projects/GameLib/node_modules/lzma/index.js
+[bench] worker spawn mode: new Worker(source, { eval: true }) -- production packaged-SEA shape
+[bench] result: {"byteIdentical":true,"sha1Match":true,"sha1Native":"2e461366a896f36a8e47f583f2e79d96c676bb5b","expectedSha1":"2e461366a896f36a8e47f583f2e79d96c676bb5b","nativeMs":15.088375,"pureJsMs":86.962667,"nativeAllMs":[15.724042,15.593291,15.088375,14.391542,14.434333],"pureJsAllMs":[95.254,107.980584,86.962667,86.001542,83.641917],"speedup":5.763554193211661,"runs":5,"uncompressedSize":1048576}
+[bench] JSON_VERDICT: {"task":"bench-eval-worker","byteIdentical":true,"sha1Match":true,"pureJsMs":86.962667,"nativeMs":15.088375,"speedup":5.763554193211661,"runs":5,"uncompressedSize":1048576}
+[bench] PASSED
+
+===== 2026-08-17T23:46:20.769Z :: bench-eval-worker.mjs invocation =====
+[bench] fixture: /Users/graysonmitchell/Projects/GameLib/.planning/spikes/023-sea-native-addon-dlopen/fixtures/real-vz-chunk.bin
+[bench] fixture meta: {"route":"local-real-bytes","sourceFile":"/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/Humankind/Humankind.app/Contents/PlugIns/libEOSSDK-Mac-Shipping.dylib","sliceOffset":2097152,"uncompressedSize":1048576,"compressedSize":451554,"vzContainerSize":451563,"sha1Uncompressed":"2e461366a896f36a8e47f583f2e79d96c676bb5b"}
+[bench] lzma-native resolved at: /Users/graysonmitchell/Projects/GameLib/.planning/spikes/023-sea-native-addon-dlopen/node_modules/lzma-native/index.js
+[bench] pure-JS lzma resolved at: /Users/graysonmitchell/Projects/GameLib/node_modules/lzma/index.js
+[bench] worker spawn mode: new Worker(source, { eval: true }) -- production packaged-SEA shape
+[bench] result: {"byteIdentical":true,"sha1Match":true,"sha1Native":"2e461366a896f36a8e47f583f2e79d96c676bb5b","expectedSha1":"2e461366a896f36a8e47f583f2e79d96c676bb5b","nativeMs":14.981833,"pureJsMs":88.523458,"nativeAllMs":[15.076625,15.160167,14.536291,14.519625,14.981833],"pureJsAllMs":[89.835917,113.123708,88.523458,85.260792,83.647291],"speedup":5.908720114554741,"runs":5,"uncompressedSize":1048576}
+[bench] JSON_VERDICT: {"task":"bench-eval-worker","byteIdentical":true,"sha1Match":true,"pureJsMs":88.523458,"nativeMs":14.981833,"speedup":5.908720114554741,"runs":5,"uncompressedSize":1048576}
+[bench] PASSED
+
+===== 2026-08-17T23:46:25.334Z :: bench-eval-worker.mjs invocation =====
+[bench] fixture: /Users/graysonmitchell/Projects/GameLib/.planning/spikes/023-sea-native-addon-dlopen/fixtures/real-vz-chunk.bin
+[bench] fixture meta: {"route":"local-real-bytes","sourceFile":"/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/Humankind/Humankind.app/Contents/PlugIns/libEOSSDK-Mac-Shipping.dylib","sliceOffset":2097152,"uncompressedSize":1048576,"compressedSize":451554,"vzContainerSize":451563,"sha1Uncompressed":"2e461366a896f36a8e47f583f2e79d96c676bb5b"}
+[bench] lzma-native resolved at: /Users/graysonmitchell/Projects/GameLib/.planning/spikes/023-sea-native-addon-dlopen/node_modules/lzma-native/index.js
+[bench] pure-JS lzma resolved at: /Users/graysonmitchell/Projects/GameLib/node_modules/lzma/index.js
+[bench] worker spawn mode: new Worker(source, { eval: true }) -- production packaged-SEA shape
+[bench] result: {"byteIdentical":true,"sha1Match":true,"sha1Native":"2e461366a896f36a8e47f583f2e79d96c676bb5b","expectedSha1":"2e461366a896f36a8e47f583f2e79d96c676bb5b","nativeMs":14.271791,"pureJsMs":90.747125,"nativeAllMs":[14.460833,14.271791,14.125541,14.333208,14.270042],"pureJsAllMs":[87.637708,101.234959,91.50375,90.747125,86.632417],"speedup":6.358495930889122,"runs":5,"uncompressedSize":1048576}
+[bench] JSON_VERDICT: {"task":"bench-eval-worker","byteIdentical":true,"sha1Match":true,"pureJsMs":90.747125,"nativeMs":14.271791,"speedup":6.358495930889122,"runs":5,"uncompressedSize":1048576}
+[bench] PASSED
+
+===== 2026-08-17T23:46:30.882Z :: bench-eval-worker.mjs invocation =====
+[bench] fixture: /Users/graysonmitchell/Projects/GameLib/.planning/spikes/023-sea-native-addon-dlopen/fixtures/real-vz-chunk.bin
+[bench] fixture meta: {"route":"local-real-bytes","sourceFile":"/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/Humankind/Humankind.app/Contents/PlugIns/libEOSSDK-Mac-Shipping.dylib","sliceOffset":2097152,"uncompressedSize":1048576,"compressedSize":451554,"vzContainerSize":451563,"sha1Uncompressed":"2e461366a896f36a8e47f583f2e79d96c676bb5b"}
+[bench] lzma-native resolved at: /Users/graysonmitchell/Projects/GameLib/.planning/spikes/023-sea-native-addon-dlopen/node_modules/lzma-native/index.js
+[bench] pure-JS lzma resolved at: /Users/graysonmitchell/Projects/GameLib/node_modules/lzma/index.js
+[bench] worker spawn mode: new Worker(source, { eval: true }) -- production packaged-SEA shape
+[bench] result: {"byteIdentical":true,"sha1Match":true,"sha1Native":"2e461366a896f36a8e47f583f2e79d96c676bb5b","expectedSha1":"2e461366a896f36a8e47f583f2e79d96c676bb5b","nativeMs":14.883625,"pureJsMs":98.823917,"nativeAllMs":[15.83575,16.240041,14.871125,14.883625,14.531833],"pureJsAllMs":[95.040166,104.768625,155.624334,98.823917,88.431458],"speedup":6.639774718860492,"runs":5,"uncompressedSize":1048576}
+[bench] JSON_VERDICT: {"task":"bench-eval-worker","byteIdentical":true,"sha1Match":true,"pureJsMs":98.823917,"nativeMs":14.883625,"speedup":6.639774718860492,"runs":5,"uncompressedSize":1048576}
+[bench] PASSED
