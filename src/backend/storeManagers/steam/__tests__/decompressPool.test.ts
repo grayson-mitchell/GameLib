@@ -463,6 +463,67 @@ describe('DecompressPool', () => {
   })
 })
 
+// ── GAMELIB_DECOMPRESS_POOL_SIZE override (debug/humankind-depot-full-stall,
+// P/E-core saturation hypothesis continuation) ── constructor-only, no
+// worker spawn needed: `stats().size` reflects the resolved `this.size`
+// the moment the pool is constructed.
+
+describe('DecompressPool GAMELIB_DECOMPRESS_POOL_SIZE override', () => {
+  const ENV_KEY = 'GAMELIB_DECOMPRESS_POOL_SIZE'
+  const original = process.env[ENV_KEY]
+
+  afterEach(() => {
+    if (original === undefined) {
+      delete process.env[ENV_KEY]
+    } else {
+      process.env[ENV_KEY] = original
+    }
+  })
+
+  it('uses the env override when set to a valid positive integer and no explicit size is given', () => {
+    process.env[ENV_KEY] = '4'
+    const pool = new DecompressPool({ workerPath: POOL_TEST_WORKER_PATH })
+    expect(pool.stats().size).toBe(4)
+  })
+
+  it('falls through to the unchanged default when the env var is unset', () => {
+    delete process.env[ENV_KEY]
+    const defaultPool = new DecompressPool({ workerPath: POOL_TEST_WORKER_PATH })
+    const expectedDefault = defaultPool.stats().size
+    expect(expectedDefault).toBeGreaterThan(0)
+  })
+
+  it.each(['0', '-1', 'abc', '3.5', ''])(
+    'ignores an invalid env value (%p) and falls through to the unchanged default',
+    (invalid) => {
+      delete process.env[ENV_KEY]
+      const before = new DecompressPool({
+        workerPath: POOL_TEST_WORKER_PATH
+      }).stats().size
+
+      if (invalid === '') {
+        delete process.env[ENV_KEY]
+      } else {
+        process.env[ENV_KEY] = invalid
+      }
+      const after = new DecompressPool({
+        workerPath: POOL_TEST_WORKER_PATH
+      }).stats().size
+
+      expect(after).toBe(before)
+    }
+  )
+
+  it('an explicit opts.size still wins over the env override', () => {
+    process.env[ENV_KEY] = '4'
+    const pool = new DecompressPool({
+      size: 2,
+      workerPath: POOL_TEST_WORKER_PATH
+    })
+    expect(pool.stats().size).toBe(2)
+  })
+})
+
 // ── resolveWorkerSpec (quick task 260817-pkx, debug/humankind-depot-full-stall) ──
 
 type WorkerSpecPeek = { resolveWorkerSpec: () => { kind: string; value: string } }

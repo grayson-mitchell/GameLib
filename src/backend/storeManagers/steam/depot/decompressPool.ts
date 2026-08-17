@@ -95,6 +95,61 @@ const DEFAULT_TASK_TIMEOUT_MS = 30_000
  */
 export const DECOMPRESS_POOL_MAX_WORKERS = 16
 
+/** Debug/humankind-depot-full-stall (2026-08-17), P/E-core saturation
+ *  hypothesis (Current Focus blind_spots item 1, reopened once
+ *  `resolveWorkerSpec()`'s SEA-asset fix -- quick 260817-pkx -- made the
+ *  pool genuinely spawn on real hardware): lets a live-hardware run cap (or
+ *  raise) the decode pool size WITHOUT a rebuild-per-candidate-value cycle.
+ *  Node `worker_threads` has NO P/E-core affinity API on macOS, so the only
+ *  way to test "does keeping decode off the E-cores help or hurt real
+ *  throughput" is empirically, via worker COUNT (e.g. capping to this
+ *  machine's confirmed 4 P-cores), never placement.
+ *
+ *  Mirrors this codebase's existing `GAMELIB_*`-prefixed env-var tuning
+ *  precedent (`GAMELIB_DEV_SECRET_VAULT`, `GAMELIB_SIDECAR_SELFTEST`) --
+ *  confirmed via direct read of `src-tauri/src/main.rs`'s
+ *  `spawn_sidecar()`/`spawn_sidecar_packaged()`: neither calls
+ *  `.env_clear()`, so `std::process::Command`'s default env-INHERIT
+ *  behavior means a value set in the shell that launches GameLib (dev OR
+ *  packaged) reaches this sidecar process unchanged -- no Rust-side change
+ *  needed to make this testable.
+ *
+ *  Deliberately fails closed: unset, non-numeric, non-integer, zero, or
+ *  negative values are IGNORED (falls through to the byte-for-byte
+ *  UNCHANGED `min(cpus, DECOMPRESS_POOL_MAX_WORKERS)` default) -- this must
+ *  never be able to silently zero out or invert the pool's size for a
+ *  normal user who has never heard of this variable. `opts.size` (the
+ *  existing test-only constructor param) still wins over this when both are
+ *  present -- this is a NEW, LOWER-priority fallback, not a replacement for
+ *  the existing override mechanism.
+ *
+ *  RESULT (2026-08-17, live HUMANKIND run with `GAMELIB_DECOMPRESS_POOL_SIZE
+ *  =4`, capping to this hardware's confirmed 4 P-cores): mechanism (a)
+ *  CONFIRMED, mechanism (b) REFUTED -- capping decode workers made aggregate
+ *  throughput WORSE, not better, in rough proportion to the worker-count cut
+ *  (10->4 workers predicted ~2.5x slower per the falsification test; observed
+ *  ~2.4x slower per-GB against the 10-worker Planetfall/718850 baseline, with
+ *  the decode queue never draining and per-chunk decode latency still
+ *  climbing at the last sample -- a lower bound on the true gap). Saturating
+ *  every core does NOT starve the main thread's own event-loop work badly
+ *  enough to offset the lost decode parallelism; fewer pure-JS decode workers
+ *  is simply fewer decode workers. DO NOT set this to a value below the
+ *  `min(cpus, DECOMPRESS_POOL_MAX_WORKERS)` default in production -- this
+ *  remains a diagnostic-only knob for exactly this kind of live-hardware A/B
+ *  test, not a tuning lever for end users. See
+ *  .planning/debug/humankind-depot-full-stall.md for the full evidence
+ *  trail. */
+function resolvePoolSizeOverride(): number | undefined {
+  const raw = process.env.GAMELIB_DECOMPRESS_POOL_SIZE
+  if (!raw) return undefined
+  // `Number(...)`, not `Number.parseInt(...)`, deliberately: parseInt would
+  // silently TRUNCATE a fractional or trailing-garbage value ("3.5" -> 3,
+  // "4abc" -> 4) instead of rejecting it -- Number() rejects both as NaN,
+  // matching this function's own "ignore, don't guess" contract.
+  const n = Number(raw)
+  return Number.isInteger(n) && n > 0 ? n : undefined
+}
+
 interface PendingTask {
   resolve: (data: Buffer) => void
   reject: (err: Error) => void
@@ -115,9 +170,12 @@ interface QueuedTask {
 export interface DecompressPoolOpts {
   /** Debug/humankind-depot-full-stall (2026-08-17, follow-up to the
    *  refuted InflightLimiter/decode-decouple fix): defaults to
+   *  `GAMELIB_DECOMPRESS_POOL_SIZE` env override if set and valid, else
    *  min(os.cpus().length, DECOMPRESS_POOL_MAX_WORKERS) -- raised from a
    *  hardcoded `8` (see DECOMPRESS_POOL_MAX_WORKERS's own doc comment for
-   *  the full evidence trail). */
+   *  the full evidence trail). This explicit `size` always wins over both
+   *  (see `resolvePoolSizeOverride()`'s own doc comment for the env-var
+   *  fallback's rationale -- the P/E-core saturation hypothesis). */
   size?: number
   /** Per-task timeout before a stalled worker is terminated + replaced. */
   taskTimeoutMs?: number
@@ -191,7 +249,10 @@ export class DecompressPool {
   private workerSpecCache: WorkerSpec | undefined
 
   constructor(opts: DecompressPoolOpts = {}) {
-    this.size = opts.size ?? Math.min(os.cpus().length, DECOMPRESS_POOL_MAX_WORKERS)
+    this.size =
+      opts.size ??
+      resolvePoolSizeOverride() ??
+      Math.min(os.cpus().length, DECOMPRESS_POOL_MAX_WORKERS)
     this.taskTimeoutMs = opts.taskTimeoutMs ?? DEFAULT_TASK_TIMEOUT_MS
     this.workerPathOverride = opts.workerPath
   }
