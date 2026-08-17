@@ -1,0 +1,61 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-08-17T02:03:44.027Z",
+  "phase": "23",
+  "phase_name": "steam-full-ownership-install-stateflags-4",
+  "phase_dir": ".planning/phases/23-steam-full-ownership-install-stateflags-4",
+  "plan": 10,
+  "task": 1,
+  "total_tasks": 3,
+  "status": "paused",
+  "completed_tasks": [],
+  "remaining_tasks": [
+    {
+      "id": 1,
+      "name": "Gate 2 CLEAN re-run — HUMANKIND installs and launches with NO manual chmod",
+      "status": "in_progress",
+      "progress": "Two full HUMANKIND install attempts this session, both aborted before completion. Attempt A stalled completely at 29% for 13min (watchdog correctly aborted, StateFlags fell back to 1026) -- root-caused to two real defects in the depot downloader, NOT the StateFlags/chmod logic under test. Attempt B (after the fix landed) ran cleanly with zero failures but throughput still plateaued well below Steam's own client, so it was cancelled mid-download to investigate further rather than let it run to completion. Gate 2's actual census/log/launch steps have not been run against a completed install yet."
+    },
+    { "id": 2, "name": "Gate 3 (INTERRUPT-RESUME) — first execution", "status": "not_started" },
+    { "id": 3, "name": "Gate 1 launch re-confirmation + G-23-01 official-Steam-client diagnostic", "status": "not_started" }
+  ],
+  "blockers": [
+    {
+      "description": "HUMANKIND native install throughput is well below the official Steam client's (spot-checked: 489 Mbps / ~5min under real Steam vs ~4-12 MiB/s / rising latency under GameLib, even after the concurrency fix landed). Root cause NOT yet found. Ruled out: undici's default per-origin connection pool is unbounded (verified by reading node_modules/undici/lib/dispatcher/pool.js directly), so this is not an HTTP connection-reuse cap. Two live hypotheses, neither confirmed: (a) InflightLimiter only wraps the network fetch phase, so workers mid-decode/mid-disk-write don't count toward the 32 budget, naturally under-utilizing it; (b) genuine capacity/congestion on the 3 regional SteamCache nodes that won host selection fairly (lowest weightedload) over the generic CDN edges.",
+      "type": "technical",
+      "workaround": "None applied. Options for the resuming session: (1) accept current throughput as sufficient since it does NOT stall/fail, and let a full HUMANKIND install run to completion to get Gate 2's actual data, or (2) open a proper debug session (packet capture / compare request pattern against the official client) to chase the remaining throughput gap before re-attempting Gate 2."
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "Decide whether to (a) just let a full HUMANKIND install run to completion on the current code and gather Gate 2's data despite the slower-than-Steam throughput, or (b) open a debug session to chase the throughput gap first.",
+      "context": "23-10 Task 1 cannot be marked done without a completed, workaround-free HUMANKIND install and its census/log/.acf/launch evidence recorded in 23-UAT.md.",
+      "blocking": true
+    },
+    {
+      "action": "Full uninstall before any retry: remove ~/Library/Application Support/Steam/steamapps/common/Humankind AND appmanifest_1124300.acf, quit Steam.",
+      "context": "Current on-disk state from the cancelled attempt is 2,674 files with a stale appmanifest_1124300.acf present -- reusing it would produce a false PASS or a confusing partial-state census.",
+      "blocking": true
+    },
+    {
+      "action": "Test only via `pnpm tauri:dev` (never bare `tauri dev`, which serves a stale static bundle).",
+      "context": "Confirmed convention from quick task 260817-dib's own LIVE-GATE.md; this session's fix (quick task 260817-ihr, commits f77de7c57/a0e2f07f4/d89059e06) is already in the build/main/sidecar.js bundle as of this session.",
+      "blocking": false
+    }
+  ],
+  "decisions": [
+    {
+      "decision": "Fixed the real depot throughput bugs (host-demotion one-way-door + accidental 8-request concurrency ceiling) via quick task 260817-ihr rather than re-implementing the fan-out fix the task was originally filed against.",
+      "rationale": "The filed premise ('pickHost sends every attempt-0 to one host') was disproven by the stalled run's own chunk-stream-stats log -- that fix already shipped as Phase 25 (commit 9923545e3). Re-planning found two different, evidenced defects instead.",
+      "phase": "23"
+    },
+    {
+      "decision": "Corrected the stale steam-install-slow-start-outcome memory and filed a new memory (steam-depot-throughput-real-bottlenecks) documenting both the disproven premise and the two real defects.",
+      "rationale": "The stale 'never implemented' memory is what caused this session to initially mis-diagnose the live stall; leaving it uncorrected would mislead a future session the same way.",
+      "phase": "23"
+    }
+  ],
+  "uncommitted_files": [],
+  "next_action": "Ask the user (or decide, if given autonomy) whether to just let a full HUMANKIND install run to completion now that the concurrency fix has landed and is stall-free, or to open a debug session first to chase the remaining throughput gap vs the official Steam client. Either way, start with a full uninstall of HUMANKIND (install dir + appmanifest_1124300.acf) before the next install attempt.",
+  "context_notes": "This session's actual scope creep: started as phase 23 plan 23-10 Task 1 (a pure hardware-verification checkpoint, no code changes expected), but Task 1's own install kept failing/stalling on infrastructure rather than the StateFlags=4/chmod logic the gate is meant to test -- so real code fixes (quick task 260817-ihr) were required first via /gsd-quick, which IS the correct routing per this project's GSD workflow enforcement. The StateFlags=4/execute-bit/chmod logic itself (23-08's fix) has NOT been contradicted by anything found this session -- all evidence points to it being correct; the blocker is purely about getting a download to actually finish without the no-progress watchdog (working as designed) killing it first."
+}
