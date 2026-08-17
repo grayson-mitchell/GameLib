@@ -462,3 +462,99 @@ describe('DecompressPool', () => {
     }
   })
 })
+
+// ── resolveWorkerSpec (quick task 260817-pkx, debug/humankind-depot-full-stall) ──
+
+type WorkerSpecPeek = { resolveWorkerSpec: () => { kind: string; value: string } }
+
+describe('DecompressPool resolveWorkerSpec (SEA-asset worker resolution)', () => {
+  afterEach(() => {
+    jest.resetModules()
+    jest.dontMock('node:sea')
+  })
+
+  it('resolves a source-kind spec from node:sea.getAsset() when isSea() is true and no workerPath override is given', () => {
+    jest.doMock('node:sea', () => ({
+      isSea: () => true,
+      getAsset: () => 'module.exports = {}'
+    }))
+    // Re-require after the mock so decompressPool.ts's own `require('node:sea')`
+    // (evaluated lazily inside resolveWorkerSpec(), not at module load) picks it up.
+    jest.isolateModules(() => {
+      const {
+        DecompressPool: MockedPool
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+      } = require('../depot/decompressPool') as {
+        DecompressPool: new (opts?: { size?: number }) => WorkerSpecPeek
+      }
+      const pool = new MockedPool({ size: 1 })
+      const spec = (pool as unknown as WorkerSpecPeek).resolveWorkerSpec()
+      expect(spec.kind).toBe('source')
+    })
+  })
+
+  it('resolves a path-kind spec ending in decompressWorker.js when isSea() is false', () => {
+    jest.doMock('node:sea', () => ({
+      isSea: () => false,
+      getAsset: () => {
+        throw new Error('should not be called when isSea() is false')
+      }
+    }))
+    jest.isolateModules(() => {
+      const {
+        DecompressPool: MockedPool
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+      } = require('../depot/decompressPool') as {
+        DecompressPool: new (opts?: { size?: number }) => WorkerSpecPeek
+      }
+      const pool = new MockedPool({ size: 1 })
+      const spec = (pool as unknown as WorkerSpecPeek).resolveWorkerSpec()
+      expect(spec.kind).toBe('path')
+      expect(spec.value.endsWith('decompressWorker.js')).toBe(true)
+    })
+  })
+
+  it('an explicit workerPath override still wins over an isSea()=true mock (regression guard for every other test in this file)', () => {
+    jest.doMock('node:sea', () => ({
+      isSea: () => true,
+      getAsset: () => 'module.exports = {}'
+    }))
+    jest.isolateModules(() => {
+      const {
+        DecompressPool: MockedPool
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+      } = require('../depot/decompressPool') as {
+        DecompressPool: new (opts?: {
+          size?: number
+          workerPath?: string
+        }) => WorkerSpecPeek
+      }
+      const pool = new MockedPool({
+        size: 1,
+        workerPath: POOL_TEST_WORKER_PATH
+      })
+      const spec = (pool as unknown as WorkerSpecPeek).resolveWorkerSpec()
+      expect(spec.kind).toBe('path')
+      expect(spec.value).toBe(POOL_TEST_WORKER_PATH)
+    })
+  })
+
+  it('requests the exact asset key "decompressWorker.js" (same literal buildSidecarSea.ts exports as SEA_WORKER_ASSET_KEY)', () => {
+    const getAsset = jest.fn(() => 'module.exports = {}')
+    jest.doMock('node:sea', () => ({
+      isSea: () => true,
+      getAsset
+    }))
+    jest.isolateModules(() => {
+      const {
+        DecompressPool: MockedPool
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+      } = require('../depot/decompressPool') as {
+        DecompressPool: new (opts?: { size?: number }) => WorkerSpecPeek
+      }
+      const pool = new MockedPool({ size: 1 })
+      ;(pool as unknown as WorkerSpecPeek).resolveWorkerSpec()
+    })
+    expect(getAsset).toHaveBeenCalledWith('decompressWorker.js', 'utf8')
+  })
+})

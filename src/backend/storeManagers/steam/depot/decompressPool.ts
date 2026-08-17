@@ -1,6 +1,9 @@
 // Phase 21 gap closure (21-15, D-UAT-03): worker_threads pool for depot
-// chunk decode. Bounded fan-out (min(cores,8)), transferable ArrayBuffers,
-// a per-task timeout with terminate+replace recovery, and a transparent
+// chunk decode. Bounded fan-out (min(cores,DECOMPRESS_POOL_MAX_WORKERS) --
+// raised 8->16, debug/humankind-depot-full-stall 2026-08-17, see that
+// constant's own doc comment for the full evidence trail), transferable
+// ArrayBuffers, a per-task timeout with terminate+replace recovery, and a
+// transparent
 // inline main-thread fallback if the pool cannot initialize — LZMA/zlib
 // decompression moves off the Electron main thread without changing
 // fetchChunk's cross-server retry contract (decode is just an injected fn).
@@ -33,7 +36,64 @@ function isReadyMessage(msg: unknown): msg is DecompressWorkerReady {
   )
 }
 
+/** Debug/humankind-depot-full-stall (2026-08-17): where the pool's worker
+ *  script actually comes from -- see `resolveWorkerSpec()`'s own doc
+ *  comment. `'path'` spawns `new Worker(value)` (the pre-existing
+ *  dev/Electron and test-override behavior); `'source'` spawns
+ *  `new Worker(value, { eval: true })` against an inline SEA-asset source
+ *  string. */
+type WorkerSpec = { kind: 'path'; value: string } | { kind: 'source'; value: string }
+const SEA_WORKER_ASSET_KEY = 'decompressWorker.js'
+
 const DEFAULT_TASK_TIMEOUT_MS = 30_000
+
+/**
+ * Debug/humankind-depot-full-stall (2026-08-17): the CONFIRMED throughput
+ * ceiling for native Steam depot installs, isolated by static/quantitative
+ * tracing after TWO live-hardware-refuted network-layer hypotheses (widening
+ * `TOP_N_FANOUT` 3->8, and decoupling `InflightLimiter`'s held slot from
+ * `decode()` -- both real, correct, RETAINED fixes, neither moved
+ * throughput). Three independent live HUMANKIND runs with drastically
+ * different network-layer configurations (3-host baseline, 6-host fan-out,
+ * fan-out+decode-decoupled) all converged on the SAME ~15.6-16.7
+ * attempts/sec ceiling, with zero timeouts/errors throughout every run --
+ * ruling out network/host causes entirely. Little's Law on all three runs'
+ * own numbers (attempts/elapsed-sec) backs out an average per-chunk decode
+ * time of ~490-513ms against the *previous* hardcoded 8-worker cap --
+ * matching this file's own DEFAULT_TASK_TIMEOUT_MS neighbor,
+ * decompressWorker.ts's own header comment ("the pure-JS LZMA decompressor
+ * (~5 MB/s single-threaded)"), and this codebase's ~1MB max compressed
+ * chunk size (depot.ts) almost exactly: an aggregate decode ceiling of
+ * `poolSize * perWorkerMBps` chunks/sec, entirely independent of network
+ * concurrency, host count, or the InflightLimiter's budget -- decode was
+ * ALREADY the binding constraint before and after both refuted fixes, which
+ * is exactly why neither moved the needle.
+ *
+ * This constant removes the ARTIFICIAL portion of that ceiling: the pool
+ * hard-capped concurrent decode workers at 8 regardless of actual core
+ * count, silently discarding real headroom on any machine with more than 8
+ * cores (confirmed via `sysctl -n hw.ncpu` on this project's own dev
+ * hardware: 10 physical cores, 2 of which sat idle under the old cap).
+ * Raised to 16 -- a real, evidence-backed, safe increase for today's
+ * consumer multi-core hardware (many current Apple Silicon/desktop CPUs
+ * exceed 8 cores) -- while still bounding worst-case worker_threads
+ * fan-out on an unusually high-core-count machine (this remains a `min()`
+ * with `os.cpus().length`, so a <=8-core machine's behavior is COMPLETELY
+ * unchanged).
+ *
+ * IMPORTANT, honestly scoped: this does NOT fully close the gap to Steam's
+ * own native client. Per-worker decode throughput is fundamentally bounded
+ * by the PURE-JAVASCRIPT `lzma` npm package's own decompression speed
+ * (decompressWorker.ts's own comment: "~5 MB/s single-threaded") -- adding
+ * workers only helps up to the machine's real core count; it cannot make
+ * each worker's own decode faster. On this project's 10-core dev machine,
+ * this fix raises the effective pool size 8->10 (a ~25% throughput
+ * increase), not the order-of-magnitude gap a native/WASM LZMA decoder
+ * would close. That replacement is a substantially larger, separately-
+ * scoped follow-up (new dependency evaluation, cross-platform build/test
+ * risk) -- deliberately NOT attempted in this fix's blast radius.
+ */
+export const DECOMPRESS_POOL_MAX_WORKERS = 16
 
 interface PendingTask {
   resolve: (data: Buffer) => void
@@ -53,7 +113,11 @@ interface QueuedTask {
 }
 
 export interface DecompressPoolOpts {
-  /** Defaults to min(os.cpus().length, 8). */
+  /** Debug/humankind-depot-full-stall (2026-08-17, follow-up to the
+   *  refuted InflightLimiter/decode-decouple fix): defaults to
+   *  min(os.cpus().length, DECOMPRESS_POOL_MAX_WORKERS) -- raised from a
+   *  hardcoded `8` (see DECOMPRESS_POOL_MAX_WORKERS's own doc comment for
+   *  the full evidence trail). */
   size?: number
   /** Per-task timeout before a stalled worker is terminated + replaced. */
   taskTimeoutMs?: number
@@ -119,17 +183,81 @@ export class DecompressPool {
   private readonly size: number
   private readonly taskTimeoutMs: number
   private readonly workerPathOverride?: string
+  /** Debug/humankind-depot-full-stall (2026-08-17): resolveWorkerSpec()'s
+   *  own result, cached on first call -- a SEA asset source string can be a
+   *  multi-MB bundle, and replaceWorker() may run many times across a long
+   *  install; re-reading `sea.getAsset()` on every recovery would be
+   *  wasteful and pointless (the asset never changes within a process). */
+  private workerSpecCache: WorkerSpec | undefined
 
   constructor(opts: DecompressPoolOpts = {}) {
-    this.size = opts.size ?? Math.min(os.cpus().length, 8)
+    this.size = opts.size ?? Math.min(os.cpus().length, DECOMPRESS_POOL_MAX_WORKERS)
     this.taskTimeoutMs = opts.taskTimeoutMs ?? DEFAULT_TASK_TIMEOUT_MS
     this.workerPathOverride = opts.workerPath
   }
 
-  private resolveWorkerPath(): string {
-    return (
-      this.workerPathOverride ?? path.join(__dirname, 'decompressWorker.js')
-    )
+  /**
+   * Debug/humankind-depot-full-stall (2026-08-17): resolves WHERE the
+   * pool's worker script comes from. Cached on first call
+   * (`workerSpecCache`).
+   *
+   * 1. `workerPathOverride` (test-only hook) always wins -- every existing
+   *    pool test passes `workerPath`, so their behavior stays untouched.
+   * 2. Inside a compiled SEA binary (`node:sea.isSea()`), read the worker
+   *    bundle back from the SEA asset `meta/buildSidecarSea.ts`'s
+   *    `bundleWorkerForSea()` step embeds under `SEA_WORKER_ASSET_KEY`
+   *    (`'decompressWorker.js'`) and spawn it with `{ eval: true }`. This
+   *    mechanism was chosen over shipping a companion file next to the
+   *    binary specifically because a companion file needs: a Tauri
+   *    `externalBin`/bundle-resources entry, a per-triple copy step in the
+   *    release matrix, and correct `__dirname`/`process.execPath`
+   *    resolution on every target OS -- three places for this to silently
+   *    diverge per platform. A SEA asset has none of that: it travels
+   *    inside the same blob the executable already is, so there is nothing
+   *    to carry, copy, or resolve. Access to `node:sea` mirrors
+   *    `isPackagedSidecar()` (`src/backend/sidecar/humbleFlowRegistration.ts`)
+   *    exactly -- same guarded try/catch shape, same fail-safe default. See
+   *    `.planning/debug/humankind-depot-full-stall.md` for the evidence
+   *    trail this replaces (the pool NEVER engaged in a packaged SEA
+   *    sidecar before this fix -- every chunk decoded inline,
+   *    single-threaded, on the sidecar's own main thread).
+   * 3. Otherwise (dev/Electron build, or `node:sea` unavailable/`isSea()`
+   *    false/`getAsset()` throws), the unchanged `__dirname`-relative
+   *    companion-file path -- byte-for-byte the pre-existing dev/Electron
+   *    behavior.
+   */
+  private resolveWorkerSpec(): WorkerSpec {
+    if (this.workerSpecCache) return this.workerSpecCache
+
+    if (this.workerPathOverride) {
+      this.workerSpecCache = { kind: 'path', value: this.workerPathOverride }
+      return this.workerSpecCache
+    }
+
+    try {
+      // node:sea is a Node builtin; a guarded runtime require (not a
+      // relative/alias path) is the deliberate mechanism here, mirroring
+      // humbleFlowRegistration.ts's isPackagedSidecar(), not an oversight.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const nodeSea = require('node:sea') as {
+        isSea: () => boolean
+        getAsset: (key: string, encoding: string) => string
+      }
+      if (nodeSea.isSea()) {
+        const source = nodeSea.getAsset(SEA_WORKER_ASSET_KEY, 'utf8')
+        this.workerSpecCache = { kind: 'source', value: source }
+        return this.workerSpecCache
+      }
+    } catch {
+      // node:sea unavailable (older/dev Node), or getAsset() threw (asset
+      // missing from this blob) -- fall through to the path spec below.
+    }
+
+    this.workerSpecCache = {
+      kind: 'path',
+      value: path.join(__dirname, 'decompressWorker.js')
+    }
+    return this.workerSpecCache
   }
 
   /**
@@ -137,23 +265,63 @@ export class DecompressPool {
    * terminates whatever partially spawned — `decode()` then transparently
    * runs inline on the main thread (LOCKED requirement: installs still
    * complete if the pool cannot initialize).
+   *
+   * Debug/humankind-depot-full-stall (2026-08-17, 5th live run): this catch
+   * block previously had NO runtime logging at all -- the ONLY place this
+   * fallback was ever mentioned was a one-time `console.warn` in
+   * `meta/buildSidecarSea.ts`'s build-time output. That build-time warning
+   * is invisible in any shipped gamelib.log -- this session's live
+   * DecompressPool.stats() instrumentation (`pool[busy=0 idle=0 queued=0
+   * inline=true]`, sustained for an entire 128s+ HUMANKIND run, 5th live
+   * test) is what actually surfaced that EVERY decode in every one of this
+   * debug session's live runs has been running inline, single-threaded, on
+   * the sidecar's own main thread -- making the separate decode-pool-cap
+   * fix (DECOMPRESS_POOL_MAX_WORKERS) provably inert on the real packaged
+   * binary this whole session. Logging it HERE, at the moment the pool
+   * actually falls back, means any future gamelib.log directly shows this
+   * without needing another live-hardware forensic round-trip. Purely
+   * observational: never read by any dispatch/queue/replace logic in this
+   * file, and does not change the fallback's own behavior.
+   *
+   * Quick task 260817-pkx: with `resolveWorkerSpec()`'s SEA-asset path in
+   * place, a fallback inside a PACKAGED SEA sidecar is now a genuine defect
+   * (the asset either failed to embed at build time or failed to
+   * eval-spawn at runtime) -- not the accepted tradeoff it was previously
+   * logged as. The log line below says so and never prints the resolved
+   * `source` string itself (it can be a multi-MB bundle) -- only
+   * `spec.kind`, and the path when `spec.kind === 'path'`.
    */
   async init(): Promise<void> {
-    const workerPath = this.resolveWorkerPath()
+    const spec = this.resolveWorkerSpec()
     const spawned: Worker[] = []
     try {
       for (let i = 0; i < this.size; i++) {
-        spawned.push(await this.spawnWorker(workerPath))
+        spawned.push(await this.spawnWorker(spec))
       }
       this.workers = spawned
       this.idle = [...spawned]
-    } catch {
+    } catch (err) {
       this.inlineFallback = true
       await Promise.all(
         spawned.map((w) => w.terminate().catch(() => undefined))
       )
       this.workers = []
       this.idle = []
+      logWarning(
+        [
+          'DecompressPool: worker_threads pool failed to initialize',
+          `(size=${this.size}, spec.kind=${spec.kind}` +
+            (spec.kind === 'path' ? `, workerPath=${spec.value}` : '') +
+            ') -- falling back to',
+          'INLINE single-thread decode for this entire download run.',
+          `Cause: ${(err as Error)?.message ?? String(err)}.`,
+          'If this is a packaged SEA sidecar, this is a REAL DEFECT (no',
+          "longer an accepted tradeoff) -- check the SEA asset",
+          "'decompressWorker.js' and meta/buildSidecarSea.ts's",
+          'bundleWorkerForSea() step.'
+        ],
+        LogPrefix.Steam
+      )
     }
   }
 
@@ -166,12 +334,15 @@ export class DecompressPool {
    * mistake a worker that is about to fail for a successfully spawned one,
    * defeating the fallback guarantee below.
    */
-  private spawnWorker(workerPath: string): Promise<Worker> {
+  private spawnWorker(spec: WorkerSpec): Promise<Worker> {
     return new Promise((resolvePromise, reject) => {
       let settled = false
       let worker: Worker
       try {
-        worker = new Worker(workerPath)
+        worker = new Worker(
+          spec.value,
+          spec.kind === 'source' ? { eval: true } : undefined
+        )
       } catch (err) {
         reject(err as Error)
         return
@@ -270,7 +441,7 @@ export class DecompressPool {
   private async replaceWorker(): Promise<void> {
     if (this.inlineFallback || this.shuttingDown) return
     try {
-      const worker = await this.spawnWorker(this.resolveWorkerPath())
+      const worker = await this.spawnWorker(this.resolveWorkerSpec())
       // shutdown() may have been called WHILE this spawn was in flight — a
       // worker that only just finished spawning must never be onboarded
       // into a pool that's already tearing down; terminate it immediately
@@ -442,6 +613,34 @@ export class DecompressPool {
         this.queue.push(task)
       }
     })
+  }
+
+  /**
+   * Debug/humankind-depot-full-stall (2026-08-17, network-vs-decode split):
+   * a live, point-in-time saturation snapshot -- `busy` derived as
+   * `workers.length - idle.length` (never tracked as its own counter, so it
+   * can never drift out of sync with `workers`/`idle`). Lets a hardware run
+   * directly confirm whether the pool is actually the thing running out of
+   * headroom (busy===size AND queued>0, sustained) instead of inferring
+   * saturation from timing alone (see decompress.ts's `ChunkAttemptEvent.netMs`
+   * doc comment for the matching network-side half of this split). Purely
+   * observational: never read by any dispatch/queue/replace logic in this
+   * file.
+   */
+  stats(): {
+    size: number
+    busy: number
+    idle: number
+    queued: number
+    inlineFallback: boolean
+  } {
+    return {
+      size: this.size,
+      busy: this.workers.length - this.idle.length,
+      idle: this.idle.length,
+      queued: this.queue.length,
+      inlineFallback: this.inlineFallback
+    }
   }
 
   /** Clears every pending timer and terminates + AWAITS every worker this

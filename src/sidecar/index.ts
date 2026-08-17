@@ -20,10 +20,29 @@
  * Ordering (Phase 34.2 Plan 09, T-34.2-39): `installUnhandledRejectionGuard()` must run
  * BEFORE `init()` — the guard must be live before `bootstrap.ts`'s module scope and `init()`
  * can produce any rejection.
+ *
+ * Quick task 260817-pkx (debug/humankind-depot-full-stall.md): a second,
+ * non-RPC entry branch. `GAMELIB_SIDECAR_SELFTEST=decompress-pool` runs a
+ * synthetic VZ/LZMA decode round trip through `DecompressPool` and exits —
+ * this lets a COMPILED SEA binary prove its worker_threads pool actually
+ * spawns real workers (`resolveWorkerSpec()`'s SEA-asset path) without
+ * needing a real game install to reach it. `runDecompressPoolSelfTest` is a
+ * STATIC import (never `await import(...)`): ts-jest downlevels dynamic
+ * imports through jest's own module registry, so a dynamic-import defect
+ * that only exists in the esbuild-bundled SEA binary would be structurally
+ * invisible to the jest suite (see MEMORY.md
+ * jest-cannot-see-dynamic-import-defects). The RPC loop must NOT start in
+ * self-test mode — stdout is the RPC pipe, and the self-test writes plain
+ * `SELFTEST ...` lines to it.
  */
 
 import { init } from 'backend/sidecar/bootstrap'
 import { installUnhandledRejectionGuard } from 'backend/sidecar/processGuards'
+import { runDecompressPoolSelfTest } from 'backend/storeManagers/steam/depot/decompressPoolSelfTest'
 
-installUnhandledRejectionGuard()
-init()
+if (process.env.GAMELIB_SIDECAR_SELFTEST === 'decompress-pool') {
+  void runDecompressPoolSelfTest().then((code) => process.exit(code))
+} else {
+  installUnhandledRejectionGuard()
+  init()
+}
