@@ -2287,3 +2287,72 @@ files_changed:
 (c) Pre-existing leaked-install-poller test-hygiene issue (`library.ts:923`) — separate issue, not a regression from this bundle.
 
 **Session status: RESOLVED.** Archived to `.planning/debug/resolved/steam-install-slow-start.md`.
+
+## 2026-08-17 follow-up — the Thread C "fan-out never implemented" lead is CLOSED, and what the stall actually was
+
+**Thread C's fan-out fix DID ship — Phase 25, commit `9923545e3`, ancestor of HEAD.** The
+"(b) Thread C client-side host fan-out gap fix (`pickHost`, `depot/hostHealth.ts:267`) —
+diagnosis-closed, fix not implemented" line above (2026-07 era) is a STALE LEAD. Anyone
+reading it is reading a premise that was disproven by quick task `260817-ihr`'s own
+investigation before any code was written for that task. `TOP_N_FANOUT`, the `workerSlot`
+parameter, and the full `fileWorkerSlot * CHUNK_CONCURRENCY + chunkWorkerSlot` wiring from
+`downloadDepotFiles` -> `downloadSingleFile` -> `downloadFileChunks` -> `fetchChunk` are all
+present and working as of Phase 25. Do not re-plan this fix.
+
+**Evidence: the 2026-08-17 12:52:57 HUMANKIND `chunk-stream stats` log line** (from a stalled
+native-install run on real hardware):
+
+```
+totalAttempts=16138 rotations=37 timeouts=33 hosts=5
+cache2-akl-tpwr [a=5219 ok=5202 to=13 err=4  avgMs=1000 wl=27]
+cache1-akl-edgx [a=2848 ok=2835 to=11 err=2  avgMs=770  wl=7   UNHEALTHY]
+cache1-akl-tpwr [a=3079 ok=3072 to=7  err=0  avgMs=681  wl=25  UNHEALTHY]
+steampipe.akamaized.net [a=2051 ok=2050 to=1 err=0 avgMs=1204 wl=130]
+alibaba.cdn... [a=2941 ok=2940 to=1 err=0 avgMs=1514 wl=130]
+```
+
+The five-way attempt distribution (5219 / 2848 / 3079 / 2051 / 2941) is direct proof fan-out
+works — a single-host-only bug would show one host absorbing nearly all 16,138 attempts, not
+five hosts each in the low-to-mid thousands. Per-host success is ~99.7% overall with
+`rotations=37` out of 16,138 total attempts — proof essentially nothing was failing at the
+per-request level.
+
+**Defect 1 (FIXED this task, IHR-01) — the circuit breaker was a one-way door.** Two hosts at
+99.5%/99.8% lifetime success (`cache1-akl-edgx`, `cache1-akl-tpwr`) were flagged `UNHEALTHY`
+above, and their attempt counters were byte-frozen (`a=2848`, `a=3079`) between the 12:39:30
+and 12:52:57 stats lines — 13 minutes with zero further attempts of any kind, while the three
+surviving hosts kept moving. Root cause: `pickHost`'s attempt-0 fan-out drew from `healthy`
+only, so a demoted host never received another first attempt, never recorded another success,
+and never cleared its `consecutiveFailures` streak — the "half-open circuit breaker"
+documented on `MutableHostStats` was unreachable in production. Fixed by
+`DEMOTED_PROBE_INTERVAL` (`depot/hostHealth.ts`): every 32nd attempt-0 `pickHost` call probes
+the best-scoring demoted host instead of the normal fan-out, giving it a real chance to earn
+back its place once it starts responding again.
+
+**Defect 2 (FIXED this task, IHR-02) — effective concurrency was 8, not the intended 32.**
+Little's Law on the same log: 16092 attempts / 1334s = 12.06 attempts/sec x 692ms avg latency
+= 8.35 requests actually in flight — exactly the old `FILE_CONCURRENCY` value of 8, not
+`FILE_CONCURRENCY * CHUNK_CONCURRENCY = 32` the pool-size design always intended. Cause:
+`downloadFileChunks` derived `workerCount = Math.min(CHUNK_CONCURRENCY, queue.length)`, so a
+single-chunk file ran exactly ONE chunk-worker — and HUMANKIND's 18,949 files are
+overwhelmingly single-chunk against ~16k total chunks in this run. Fixed by
+`TARGET_INFLIGHT_CHUNKS` / `InflightLimiter` (`depot/inflightLimiter.ts`): an explicit,
+run-scoped FIFO limiter enforced at the actual network-request boundary, with
+`FILE_CONCURRENCY` raised 8 -> 32 so single-chunk files can actually reach that budget without
+letting a multi-chunk file explode past it.
+
+**What this task did NOT fix — an open lead for a future debug session.** During the
+12:39:30 -> 12:52:57 stall window, only **46 attempts** were issued across 806 seconds, and
+`timeouts` moved only 31 -> 33 (two timeouts in over 13 minutes). `CHUNK_FETCH_TIMEOUT_MS` is
+15s and its `clearTimeout` sits in the `finally` AFTER `res.arrayBuffer()`, so it bounds both
+headers AND body — if the ~8 concurrently-running workers of that era were genuinely wedged
+inside `fetchChunk` itself, that would produce hundreds of timeouts in 806s, not two. Therefore
+the workers were **not blocked inside `fetchChunk` at all** during that stall window. Suspects
+to check first in a future session: the `DecompressPool` worker-thread queue, and `fd.write`.
+The no-progress watchdog itself behaved correctly during this run (aborted at 804s, safely
+above its 8-minute bound; the ACF fell back to StateFlags 1026, never a false StateFlags 4) and
+is NOT implicated in this stall.
+
+**Not touched, still the confirmed phantom:** the `CdnAuthTokenCache: empty token field`
+warnings present in the same log remain the already-confirmed phantom from earlier in this
+doc — not re-investigated by this task.
