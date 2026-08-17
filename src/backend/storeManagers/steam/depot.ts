@@ -49,6 +49,7 @@ import {
 import { HostHealthTracker } from './depot/hostHealth'
 import { CdnAuthTokenCache } from './depot/cdnAuth'
 import { StallTracker } from './depot/stallTracker'
+import { InflightLimiter } from './depot/inflightLimiter'
 import { DecompressPool } from './depot/decompressPool'
 import { writeAppManifest } from './depot/manifest'
 import { applyDepotFileFlags } from './depot/fileAttributes'
@@ -791,10 +792,40 @@ export async function buildDepotPlan(
 
 /** Bounded chunk-level concurrency PER FILE — never an unbounded fan-out over
  *  every chunk in one go (T-21-02). Small on purpose: a single multi-GB file
- *  can hold thousands of ~1MB chunks. */
+ *  can hold thousands of ~1MB chunks.
+ *
+ *  Quick 260817-ihr (IHR-02): the REAL run-wide network concurrency bound is
+ *  now `TARGET_INFLIGHT_CHUNKS` (below), enforced by `InflightLimiter` at
+ *  the actual fetch boundary — CHUNK_CONCURRENCY * FILE_CONCURRENCY no
+ *  longer describes an accurate ceiling on its own (it never did in
+ *  practice: see FILE_CONCURRENCY's own doc comment for the 2026-08-17
+ *  evidence this was silently capped at 8, not 32). */
 export const CHUNK_CONCURRENCY = 4
-/** Bounded file-level concurrency across ALL depots' files (spike-proven queue pattern). */
-export const FILE_CONCURRENCY = 8
+/** Bounded file-level concurrency across ALL depots' files (spike-proven
+ *  queue pattern).
+ *
+ *  Quick 260817-ihr (IHR-02): raised 8 -> 32. The pre-260817-ihr value of 8
+ *  combined with CHUNK_CONCURRENCY=4 to describe an INTENDED 32 concurrent
+ *  requests, but `downloadFileChunks` derives its own per-file worker count
+ *  as `Math.min(CHUNK_CONCURRENCY, queue.length)`, so a single-chunk file —
+ *  the overwhelming majority of files in a modern game depot — only ever
+ *  ran ONE chunk-worker. The 2026-08-17 HUMANKIND hardware log proved the
+ *  real-world consequence directly: Little's Law on that run's own numbers
+ *  (16092 attempts / 1334s = 12.06 attempts/sec x 0.692s avg latency) gives
+ *  8.35 requests actually in flight — exactly FILE_CONCURRENCY's old value
+ *  of 8, not the intended 32. Raising FILE_CONCURRENCY alone (with no
+ *  separate cap) would let a multi-chunk file explode past 32 in flight (up
+ *  to FILE_CONCURRENCY x CHUNK_CONCURRENCY = 128); the real bound is now
+ *  `TARGET_INFLIGHT_CHUNKS`, enforced by `InflightLimiter` at the network
+ *  boundary, not the product of these two pool sizes. */
+export const FILE_CONCURRENCY = 32
+/** Quick 260817-ihr (IHR-02): the explicit run-wide in-flight chunk-fetch
+ *  budget — the concurrency the pre-existing FILE_CONCURRENCY *
+ *  CHUNK_CONCURRENCY design always intended (8 x 4 = 32) and never actually
+ *  achieved (see FILE_CONCURRENCY's doc comment). Enforced by one
+ *  `InflightLimiter` instance per download run, constructed in
+ *  `downloadDepotFiles` alongside the run's `HostHealthTracker`. */
+export const TARGET_INFLIGHT_CHUNKS = 32
 /** Debug/steam-install-slow-start gap closure: per-chunk retry budget passed to
  *  fetchChunk (host-rotating retry across content servers). fetchChunk's own
  *  docstring documents a ~16% per-chunk transient failure rate at
@@ -1032,7 +1063,15 @@ export async function downloadFileChunks(
    *  plain `number` under strict mode. Optional, additive: omitting it —
    *  every pre-Phase-25 caller/test — combines as 0, reproducing the exact
    *  chunk-pool-only slot. */
-  fileWorkerSlot: number = 0
+  fileWorkerSlot: number = 0,
+  /** Quick 260817-ihr (IHR-02): shared, per-DOWNLOAD-RUN in-flight-request
+   *  budget — see depot/inflightLimiter.ts. Optional, additive: omitting it
+   *  (every pre-260817-ihr caller/test) leaves every fetchChunk call
+   *  completely unwrapped, byte-for-byte the pre-260817-ihr behavior. When
+   *  supplied, wraps ONLY the fetchChunk network call below — never the
+   *  decode, the `fd.write`, or the stall-tracker call — the budget is a
+   *  NETWORK budget, not a general chunk-processing throttle. */
+  limiter?: InflightLimiter
 ): Promise<void> {
   const queue = [...file.chunks]
   const workerCount = Math.min(CHUNK_CONCURRENCY, queue.length)
@@ -1056,37 +1095,46 @@ export async function downloadFileChunks(
         // download rate); data.length = decompressed bytes written to disk.
         let netBytes = 0
         try {
-          const data = await fetchChunk(
-            hosts,
-            depotId,
-            depotChunk,
-            key,
-            lzma,
-            CHUNK_FETCH_ATTEMPTS,
-            decode,
-            (n) => {
-              netBytes = n
-            },
-            onAttempt,
-            hostHealth,
-            cdnAuth,
-            hostMeta,
-            // debug/steam-cancel-abort-thread-a: threads the cancel signal
-            // INTO fetchChunk's own retry/backoff loop (previously this
-            // worker loop only checked signal?.aborted before/after calling
-            // fetchChunk, never while it was mid-retry — the ~62s hardware
-            // hang) so a cancel interrupts an in-flight attempt immediately
-            // instead of waiting for it to naturally exhaust or succeed.
-            signal,
-            // Phase 25 (multi-host fan-out): combines this file's own
-            // FILE_CONCURRENCY-pool slot with this chunk worker's own
-            // CHUNK_CONCURRENCY-pool index so every concurrently-running
-            // worker across the whole run maps to a distinct small integer
-            // — see RESEARCH.md Assumptions Log A2. Both operands are plain
-            // `number` (default-param / Array.from index), so the raw
-            // arithmetic needs no `?? 0` coalesce under strict mode.
-            fileWorkerSlot * CHUNK_CONCURRENCY + chunkWorkerSlot
-          )
+          // Quick 260817-ihr (IHR-02): the ONLY thing `limiter` ever wraps
+          // is this network call — never the decode, `fd.write`, or the
+          // stall-tracker call below, since the run-wide budget this
+          // enforces is specifically a NETWORK budget (see
+          // depot/inflightLimiter.ts's own doc comment for the root cause).
+          // Omitting `limiter` (every pre-260817-ihr caller/test) calls
+          // fetchChunk directly, byte-for-byte unchanged.
+          const doFetch = () =>
+            fetchChunk(
+              hosts,
+              depotId,
+              depotChunk,
+              key,
+              lzma,
+              CHUNK_FETCH_ATTEMPTS,
+              decode,
+              (n) => {
+                netBytes = n
+              },
+              onAttempt,
+              hostHealth,
+              cdnAuth,
+              hostMeta,
+              // debug/steam-cancel-abort-thread-a: threads the cancel signal
+              // INTO fetchChunk's own retry/backoff loop (previously this
+              // worker loop only checked signal?.aborted before/after calling
+              // fetchChunk, never while it was mid-retry — the ~62s hardware
+              // hang) so a cancel interrupts an in-flight attempt immediately
+              // instead of waiting for it to naturally exhaust or succeed.
+              signal,
+              // Phase 25 (multi-host fan-out): combines this file's own
+              // FILE_CONCURRENCY-pool slot with this chunk worker's own
+              // CHUNK_CONCURRENCY-pool index so every concurrently-running
+              // worker across the whole run maps to a distinct small integer
+              // — see RESEARCH.md Assumptions Log A2. Both operands are plain
+              // `number` (default-param / Array.from index), so the raw
+              // arithmetic needs no `?? 0` coalesce under strict mode.
+              fileWorkerSlot * CHUNK_CONCURRENCY + chunkWorkerSlot
+            )
+          const data = limiter ? await limiter.run(doFetch) : await doFetch()
           if (signal?.aborted) return
 
           await fd.write(data, 0, data.length, Number(chunk.offset))
@@ -1196,7 +1244,10 @@ async function downloadSingleFile(
    *  counters, forwarded to applyEDepotFileModes. Optional, additive:
    *  omitting it (every pre-23-06 caller/test) leaves mode-application
    *  behavior byte-for-byte unchanged — counting is side-channel only. */
-  counters?: DepotModeCounters
+  counters?: DepotModeCounters,
+  /** Quick 260817-ihr (IHR-02): forwarded to downloadFileChunks — see
+   *  depot/inflightLimiter.ts. Optional, additive. */
+  limiter?: InflightLimiter
 ): Promise<void> {
   const dest = resolveContainedPath(installRoot, file.filename)
   await mkdir(dirname(dest), { recursive: true })
@@ -1297,7 +1348,8 @@ async function downloadSingleFile(
       cdnAuth,
       hostMeta,
       stallTracker,
-      fileWorkerSlot
+      fileWorkerSlot,
+      limiter
     )
   } finally {
     await fd.close()
@@ -1734,6 +1786,14 @@ export async function downloadDepotFiles(
     // favors the local, low-weightedload edges immediately.
     const hostHealth = new HostHealthTracker(opts.hostWeightedLoads)
 
+    // Quick 260817-ihr (IHR-02): ONE explicit in-flight-request budget for
+    // this whole download run, shared across every file/depot — see
+    // depot/inflightLimiter.ts. Replaces the accidental ~8-request ceiling
+    // that emerged from FILE_CONCURRENCY alone once most files turned out to
+    // be single-chunk (see FILE_CONCURRENCY's own doc comment for the
+    // 2026-08-17 evidence).
+    const limiter = new InflightLimiter(TARGET_INFLIGHT_CHUNKS)
+
     // Debug/steam-install-slow-start (cycle 7): ONE forward-progress clock
     // for this whole download run, shared across every file/depot — see
     // depot/stallTracker.ts. Lets downloadFileChunks re-queue an exhausted
@@ -2013,7 +2073,10 @@ export async function downloadDepotFiles(
                 // 23-06: this RUN's own mode-application counters (G-23-02
                 // trace instrumentation) — scoped per invocation, see
                 // DepotModeCounters doc comment.
-                modeCounters
+                modeCounters,
+                // Quick 260817-ihr (IHR-02): this RUN's own in-flight-request
+                // budget — see depot/inflightLimiter.ts.
+                limiter
               )
             } catch (err) {
               failures.push({
