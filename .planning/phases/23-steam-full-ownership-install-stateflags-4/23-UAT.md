@@ -9,7 +9,7 @@ passed_items: 2
 failed_items: 0
 blocked_items: 0
 open_gaps: [G-23-01]
-notes: "Gate 2 re-ran CLEAN on real hardware 2026-08-19 (attempt 3) — HUMANKIND installed to StateFlags=4, Steam adopted with no verify/re-download, and the game LAUNCHED with NO manual chmod. Blocker gap G-23-02 is RESOLVED; it took THREE fixes, not one (260818-v81 reconcile-heal reach, 260819-b1q fat-binary probe, both needed; 23-08 alone was insufficient). Phase still NOT closable: Gate 3 (interrupt-resume) has never been run, Gate 1's launch half is still MASKED pending re-confirmation, G-23-01's KCD2 diagnostic is unrun, and the launch MECHANISM for attempt 3 (GameLib vs Steam UI) was not recorded — see Gate 2 attempt 3."
+notes: "Gates 1 and 2 both PASS on real hardware as of 2026-08-19. Gate 2 re-ran CLEAN (attempt 3) — HUMANKIND installed to StateFlags=4, Steam adopted with no verify/re-download, game LAUNCHED with NO manual chmod; blocker gap G-23-02 RESOLVED, and it took THREE fixes, not one (23-08 + 260818-v81 reconcile-heal reach + 260819-b1q fat-binary probe). Gate 1's launch half — MASKED since 2026-08-16 because neither whose-execute-bits nor which-client was known — was re-confirmed the same day (23-10 Task 3): +x count held at 21/18,809 across a COLD Steam start with byte-identical file lists (Steam's own layout is 18,002/18,809, so Steam supplied zero bits), and GameLib logged the steam://rungameid handoff at 09:42:10, the same second steam_osx started. Phase still NOT closable: Gate 3 (interrupt-resume) has never been run and G-23-01's KCD2 diagnostic is unrun."
 requirements: [REQ-23-07]
 run_via: "/gsd:verify-work 23"
 last_updated: 2026-08-19
@@ -126,6 +126,66 @@ re-download) is **unaffected and still stands**. The launch half must be re-conf
 a freshly GameLib-installed title with the Steam client verified not running. The operator could not
 recall whether the 2026-07-19 launch was started from GameLib or the Steam client (honest UNKNOWN),
 and it is no longer reconstructable — Cyberpunk retains no Mach-O binary on disk.
+
+### ✅ LAUNCH HALF RE-CONFIRMED 2026-08-19 — MASK LIFTED (23-10 Task 3)
+
+**Title used: HUMANKIND (appId 1124300)** — not Cyberpunk. A deliberate substitution: Gate 1 requires a
+multi-depot title, and HUMANKIND qualifies (`InstalledDepots` = 1124302 + 1124303). It is also the only
+title on this machine carrying a *freshly GameLib-authored* `StateFlags=4` install, which the gate's
+re-confirmation clause explicitly requires. Cyberpunk could not be used: it retains no Mach-O binary on
+disk, which is what made the 2026-07-19 event unreconstructable in the first place.
+
+**What masked this gate, restated:** the recorded launch could not be attributed. It was impossible to
+say whether GameLib's execute bits ran the game or whether Steam repaired the install first — and
+Cyberpunk's `executableFlagged=0` manifest proved GameLib's bits could not have been the explanation.
+Two independent facts were missing: *whose bits* and *which client*. This run establishes both, measured
+at the time rather than reconstructed.
+
+**Fact 1 — the execute bits are provably GameLib's, across a COLD Steam start.**
+
+| Moment | Steam state | Files with `+x` |
+|---|---|---|
+| 2026-08-19 09:22 (Gate 2 attempt 3) | running since 23:14 prev. day, never rescanned | **21** / 18,809 |
+| 2026-08-19 09:38:35 (this gate, pre-launch baseline) | **not running** (`pgrep` clean) | **21** / 18,809 |
+| 2026-08-19 09:42:53 (post-launch) | cold-started 09:42:10, full startup scan done | **21** / 18,809 |
+
+The pre- and post-launch file *lists* were captured and diffed: **byte-identical, zero drift**. Steam's
+own HUMANKIND install carries **18,002 of 18,809** files `+x` (`23-07-archive/humankind-pre-uninstall-baseline.txt`),
+so an adoption or repair pass that supplied execute bits would have moved this number by three orders of
+magnitude. Across a full cold start — process launch, startup scan, manifest adoption, ACF rewrite at
+09:42, game launch — **Steam applied exactly zero execute bits.** The running binary is
+`Humankind.app/Contents/MacOS/Humankind` (pid 96330), one of the 21 files GameLib chmod'd.
+
+**Fact 2 — the launching client was GameLib, logged at the moment of the launch.**
+
+```
+(09:42:10) [INFO]: [Steam]: SteamGame: launching appId 1124300 via steam://rungameid/1124300
+```
+
+`steam_osx` process start: `Wed Aug 19 09:42:10 2026` — the same second. Steam was not running before
+this line and was started *by* it. The operator clicked Play in GameLib; the Steam UI was never used.
+
+**Adoption half re-observed on the same run (independent of the 2026-07-19 Cyberpunk result):**
+`StateFlags "4"` survived Steam's cold startup scan unchanged (ACF rewritten by Steam at 09:42, flags
+still `4`); `SizeOnDisk` 37,592,580,261 == exact sum of both depot sizes (37,342,725,351 + 249,854,910);
+`buildid` 23181593 non-zero; `InstalledDepots` lists **both** depot GIDs, not just the base; no
+`steamapps/downloading/1124300` directory; appid present in `libraryfolders.vdf` apps map at full size.
+No verify pass, no re-download, on either depot.
+
+**Result:** ✅ **PASS — launch half re-confirmed unconditionally.** The mask is lifted.
+
+**Honesty limits, stated rather than papered over:**
+1. **Steam is still in the launch path.** GameLib does not exec the binary directly — it hands off via
+   `steam://rungameid/`, which cold-started Steam. That was never the masking concern, which was
+   specifically *whose execute bits ran the game*; Fact 1 answers that decisively and Steam's presence
+   in the path does not weaken it. But this run does NOT demonstrate a Steam-free launch, and no claim
+   to that effect should be read into it.
+2. **Different title from the original 2026-07-19 run.** The adoption half recorded above on Cyberpunk
+   (3 depots) is untouched and still stands on its own; this run re-observes adoption on HUMANKIND
+   (2 depots) as corroboration, not replacement.
+3. **A cold Steam start applying no modes is an observation, not a guarantee.** It is strong evidence
+   for this title on this build; it does not prove Steam never repairs modes under other conditions
+   (e.g. a user-initiated Verify, which is exactly what `StateFlags=4` exists to skip).
 
 _Historical (fix landing, superseded by the PASS above):_ Plan 23-05 closed the diagnosed root
 cause: `installDepotDownload` now has a single-flight guard (join a LIVE entry instead of starting
@@ -433,7 +493,7 @@ reconciliation genuinely could not prove completeness — record which), the gam
 
 | # | Gate | Requirement | Result | Notes |
 |---|------|-------------|--------|-------|
-| 1 | Multi-depot StateFlags=4 (no verify/re-download) | REQ-23-07 (D-07.1) | ⚠️ **PARTIAL — adoption PASS (HW), launch half REOPENED** | Adoption hardware-confirmed 2026-07-19 and still stands: `StateFlags=4`, Steam adopted the multi-depot install with no verify/re-download. Plan 23-05 fix (single-flight guard + pause/resume abort + reconciliation) held; Phase 25 fan-out cleared the download-time blocker so steps 4–6 could complete. **Launch half downgraded 2026-08-16 by 23-07 Task 2 — verdict MASKED:** Cyberpunk's manifest carries `executableFlagged=0`, so that launch cannot have run on GameLib-applied execute bits. Re-confirm in 23-10 against a fresh GameLib install with Steam verified not running. |
+| 1 | Multi-depot StateFlags=4 (no verify/re-download) | REQ-23-07 (D-07.1) | ✅ **PASS — BOTH HALVES (HW; adoption 2026-07-19, launch re-confirmed 2026-08-19)** | Adoption hardware-confirmed 2026-07-19 (Cyberpunk, 3 depots) and still stands: `StateFlags=4`, Steam adopted the multi-depot install with no verify/re-download. Plan 23-05 fix (single-flight guard + pause/resume abort + reconciliation) held; Phase 25 fan-out cleared the download-time blocker so steps 4–6 could complete. **Launch half was downgraded 2026-08-16 by 23-07 Task 2 (verdict MASKED)** — Cyberpunk's manifest carries `executableFlagged=0`, so that launch could not have run on GameLib-applied execute bits. **MASK LIFTED 2026-08-19 (23-10 Task 3)** on HUMANKIND (1124300, 2 depots, freshly GameLib-installed): `+x` held at **21/18,809 pre-launch with Steam not running → 21/18,809 after a COLD Steam start**, file lists byte-identical — against Steam's own 18,002/18,809 layout, so Steam supplied **zero** execute bits; and the launching client was logged at the moment (`09:42:10 SteamGame: launching appId 1124300 via steam://rungameid/1124300`, `steam_osx` started the same second). Both missing facts — whose bits, which client — established at the time, not reconstructed. Honesty limits in the Gate 1 section (Steam remains in the launch path via `steam://`; title differs from the 2026-07-19 run). |
 | 2 | Hard-DRM launch under StateFlags=4 | REQ-23-07 (D-07.2) | ✅ **PASS — UNCONDITIONAL (HW, 2026-08-19)** | **Attempt 3 is the clean re-run.** HUMANKIND (1124300, Denuvo) installed to StateFlags=4 (18,809 files), Steam adopted with no verify/re-download, **launched with NO manual chmod**. Execute bits: 0 Mach-O EXECUTE/DYLIB missing `+x`; fallback fired 42× vs 7 previously; the lone remaining fat binary is an MH_BUNDLE, correctly declined. Closes blocker gap **G-23-02**, which needed THREE fixes (23-08 + quick `260818-v81` + quick `260819-b1q`), not one. Attempt 1 (KCD2) diverged on a `Blocked` depot key — gap G-23-01, still open. Launch MECHANISM (GameLib vs Steam UI) NOT recorded, so this does **not** re-confirm Gate 1's launch half. |
 | 3 | Interrupt-resume reconciled StateFlags=4 + launch + no re-download + no bottle auto-open | REQ-23-07 (D-07.3) + D-04 | PENDING | Never executed. G-23-02 no longer blocks its launch step. Note: a *de facto* partial resume did occur during the 2026-08-19 Gate 2 run — an interrupted 88%/31GB install was reconciled, ~21GB reused, ~10GB of unverifiable mid-write files discarded and re-fetched, finishing at StateFlags=4 — but that was incidental, unplanned, and does NOT satisfy this gate's recorded step list (no deliberate mid-download kill, no bottle-auto-open check). Run it as written. |
 
@@ -488,12 +548,13 @@ blocker gap **G-23-02 is RESOLVED** — a GameLib-authored `StateFlags=4` native
 launchable with no manual `chmod`. That closes the single defect that had downgraded or conditioned
 every launch result in this document.
 
-**Three items still stand between here and phase closure:**
+**Updated later the same day (2026-08-19): Gate 1 has since CLOSED on both halves.** Its launch half was
+re-confirmed deliberately in 23-10 Task 3 — HUMANKIND, Steam verified not running beforehand, `+x` count
+and file list pinned before and after a cold Steam start (21/18,809, byte-identical, against Steam's own
+18,002/18,809), and the launching client logged at the moment of launch. See the Gate 1 section. **Two
+items now stand between here and phase closure, not three:**
 1. **Gate 3 (interrupt-resume) has never been executed.** G-23-02 no longer blocks its launch step.
-2. **Gate 1's launch half remains MASKED.** Attempt 3 does NOT re-confirm it — the launch mechanism
-   (GameLib vs Steam UI) was not recorded, which is the very distinction that masked Gate 1. Re-confirm
-   deliberately, with the launch client recorded at the time rather than reconstructed afterwards.
-3. **G-23-01 is still open** — the KCD2 decisive diagnostic (install 1771300 in the official Steam
+2. **G-23-01 is still open** — the KCD2 decisive diagnostic (install 1771300 in the official Steam
    client, observe whether depot 1771304 downloads) has not been run. 23-09 shipped its observability
    half only; the selection-policy follow-up stays gated on that verdict.
 
