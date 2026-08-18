@@ -145,10 +145,10 @@ function resolveNativeBinding(dir: string): unknown {
   if (!dirBelongsToLzmaNative(dir)) {
     throw new Error(
       `[lzmaNativeBinding] refusing to resolve a native binding for directory "${dir}" -- ` +
-        `this shim is aliased in (--alias:node-gyp-build) for lzma-native ONLY, and the ` +
-        `alias is global to the whole bundle. Some OTHER bundled package reached it here, ` +
-        `so this must be surfaced loudly rather than silently handing that package ` +
-        `lzma-native's native binding (or lzma-native some other package's).`
+        `this shim is aliased in at esbuild bundle time for lzma-native ONLY, and the alias ` +
+        `is global to the whole bundle. Some OTHER bundled package reached it here, so this ` +
+        `must be surfaced loudly rather than silently handing that package lzma-native's ` +
+        `native binding (or lzma-native some other package's).`
     )
   }
 
