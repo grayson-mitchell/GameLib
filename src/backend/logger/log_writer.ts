@@ -42,16 +42,41 @@ export default class LogWriter {
    */
   #messageWaitPromise: Promise<unknown>
 
+  /**
+   * Phase 23.1 plan 05 (coordinator-directed fix, worker-thread logger
+   * initialization defect): `skipInitialArchive` seeds {@link #wasWrittenTo}
+   * as already-true instead of `false`, so THIS writer's own first write
+   * never triggers {@link #archiveOldLogFile}. Exists for exactly one
+   * caller shape: multiple independent `LogWriter` instances -- one per
+   * `worker_threads.Worker` spawned by `DecompressPool`, up to
+   * `DECOMPRESS_POOL_MAX_WORKERS` of them, plus the sidecar's own
+   * main-thread writer -- all constructed against the SAME physical
+   * `logFilePath` (`getLogFilePath({})`, `gamelib.log`) within the same
+   * live process. `#archiveOldLogFile`'s rotate-on-first-write behavior is
+   * correct for exactly one writer per file per process lifetime (the
+   * sidecar main thread's own boot-time writer, unchanged, still defaults
+   * `skipInitialArchive` to `false`); without this flag, every ADDITIONAL
+   * worker's writer would independently rename the CURRENT, actively-
+   * written-to `gamelib.log` to `gamelib.log.old` on its own first log
+   * call -- a genuine multi-writer log-corruption race (each subsequent
+   * worker's first write clobbering whatever the previous writer/thread had
+   * just started), not merely a cosmetic rotation. Workers with this flag
+   * set simply append to whatever `heroicLogWriter` (the main thread's
+   * writer, which already ran its own one-time archive at boot) already
+   * created -- the same thing every SUBSEQUENT call on that main-thread
+   * writer already does once its own `#wasWrittenTo` flips true.
+   */
   public constructor(
     logFilePath: string,
     outputToOsStreams: boolean,
-    logsDisabled: boolean
+    logsDisabled: boolean,
+    skipInitialArchive: boolean = false
   ) {
     this.logFilePath = logFilePath
     this.#outputToOsStreams = outputToOsStreams
     this.#logsDisabled = logsDisabled
     this.#isGeneralLog = logFilePath === getLogFilePath({})
-    this.#wasWrittenTo = false
+    this.#wasWrittenTo = skipInitialArchive
     this.#isClosed = false
     this.#messageWaitPromise = Promise.resolve()
   }

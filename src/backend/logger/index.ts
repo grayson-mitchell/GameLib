@@ -129,8 +129,23 @@ async function createGameLogWriter(
  * machinery the sidecar doesn't have. `init()` itself is completely
  * unmodified — the Electron main process's own startup path is unaffected.
  */
-function initHeadless(): void {
-  heroicLogWriter = new LogWriter(getLogFilePath({}), false, false)
+function initHeadless(skipInitialArchive: boolean = false): void {
+  // Phase 23.1 plan 05 (coordinator-directed fix): also the ONLY init path a
+  // DecompressPool-spawned worker_threads.Worker can use -- a worker's own
+  // V8 isolate gets a fresh, independent module registry that never runs
+  // the sidecar main thread's call to this function, so decompressWorker.ts
+  // calls it too, as the first statement inside its own `if (parentPort)`
+  // block (see that file). `skipInitialArchive` is forwarded to LogWriter
+  // unchanged (see its own doc comment on the same parameter) -- the
+  // sidecar's main-thread call site (bootstrap.ts) is unaffected, still
+  // defaulting to `false`; decompressWorker.ts is the one caller that
+  // passes `true`.
+  heroicLogWriter = new LogWriter(
+    getLogFilePath({}),
+    false,
+    false,
+    skipInitialArchive
+  )
 }
 
 function init() {

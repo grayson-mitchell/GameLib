@@ -36,6 +36,14 @@ import {
   lzmaDecoderKind,
   type LzmaDecoderKind
 } from './lzmaLoader'
+// Phase 23.1 plan 05 (coordinator-directed fix, live-hardware finding
+// 2026-08-18): imported (not called) at module scope -- calling it here
+// unconditionally would throw under decompressPool.test.ts's
+// `jest.mock('backend/logger', ...)` factory (it does not export
+// `initHeadless`), which directly imports this module without ever going
+// through a real worker_threads.Worker. See the `if (parentPort)` block
+// below for the actual call site and its full rationale.
+import { initHeadless as initLogger } from 'backend/logger'
 
 export interface DecompressWorkerRequest {
   id: number
@@ -136,6 +144,54 @@ export async function handleDecodeMessage(
 // module be imported directly by tests (handleDecodeMessage above) without
 // side effects.
 if (parentPort) {
+  // Phase 23.1 plan 05 (coordinator-directed fix): `backend/logger`'s
+  // `logInfo`/`logWarning`/`logError` (called by `lzmaLoader.ts`'s
+  // `loadLzmaModule()` below -- its one-time native-vs-pure-JS decoder log
+  // line, this worker's own import graph's first real runtime caller of
+  // either) dereference a module-scope `heroicLogWriter` singleton that is
+  // ONLY ever assigned by that module's exported `init()`/`initHeadless()`.
+  // Exactly like `bootstrap.ts` does for the sidecar's MAIN thread, THIS
+  // worker's own isolate must call one of them itself: a
+  // `worker_threads.Worker` gets a fresh, independent Node module registry
+  // that never runs the main thread's call. Before this fix, the very
+  // first `logInfo`/`logWarning` call inside a live worker threw `Cannot
+  // read properties of undefined (reading 'logWarning')` the instant it
+  // fired -- `DecompressPool.init()`'s catch-all treated the whole worker
+  // as failed to spawn, collapsing the ENTIRE pool to single-threaded
+  // inline decode for the whole download run (a REAL, live-hardware
+  // regression this plan's own byte-offset-proven binary reproduced on a
+  // real HUMANKIND install, 2026-08-18 --
+  // .planning/debug/humankind-depot-full-stall.md). The install still
+  // completed (decode fell back to inline, never dropped), so no jest test
+  // asserting on end-to-end correctness caught it -- see
+  // decompressWorkerRealBuild.test.ts for the regression test this finding
+  // added, which spawns the REAL esbuild-compiled worker bundle (the one
+  // property no in-process/mocked test can see).
+  //
+  // Confirmed safe to call as a plain runtime statement here (unlike the
+  // sibling `dev-mode-decompress-worker-electron-hook` defect's own
+  // runtime-hook attempt, which Rollup's multi-entry chunk-hoisting
+  // defeated): this worker bundle is a STANDALONE esbuild `--bundle`
+  // output (both the dev and SEA bundles, `meta/esbuildWorkerBundleShared
+  // .ts`'s `seaEsbuildFlags()`), never a Rollup shared-chunk build, so a
+  // plain function-call statement placed here executes in the module's own
+  // real source order -- after every import above it has resolved, before
+  // anything below it runs. Verified via a real esbuild-compiled-and-
+  // spawned `worker_threads.Worker`, not inferred from reading the bundler
+  // output (decompressWorkerRealBuild.test.ts).
+  //
+  // `initLogger(true)` -- the `skipInitialArchive` param (`backend/logger`
+  // `initHeadless`/`LogWriter`, see both doc comments) -- is load-bearing:
+  // the DEFAULT `initHeadless()` behavior archives (renames) any EXISTING
+  // log file at this same path on its own writer's first write, correct
+  // for the sidecar's ONE main-thread writer at process boot, but wrong
+  // here, where up to `DECOMPRESS_POOL_MAX_WORKERS` independent
+  // `LogWriter` instances (one per spawned worker, each its own isolate)
+  // would each try to "rotate" the SAME live, actively-written
+  // `gamelib.log` out from under the main thread and every sibling worker
+  // on their own first log call.
+  initLogger(true)
+
   const port = parentPort
   port.on('message', async (msg: DecompressWorkerRequest) => {
     const response = await handleDecodeMessage(msg)

@@ -32,6 +32,13 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
+  // Phase 23.1 plan 05: decompressWorker.ts (imported directly below, on the
+  // main jest thread -- `parentPort` is always null here, so this mock is
+  // never actually invoked, only resolved) now also imports `initHeadless`.
+  // Included here so the binding resolves to a real jest.fn() rather than
+  // `undefined`, matching this factory's own existing discipline of mocking
+  // every export decompressWorker.ts's import graph touches.
+  initHeadless: jest.fn(),
   LogPrefix: {
     Steam: 'Steam',
     Backend: 'Backend'
