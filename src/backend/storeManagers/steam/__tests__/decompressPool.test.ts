@@ -11,9 +11,19 @@ import { deflateRawSync } from 'node:zlib'
 import * as path from 'node:path'
 import * as lzma from 'lzma'
 
-import { decodeChunk, sha1, type LzmaModule } from '../depot/decompress'
+import {
+  decodeChunk,
+  decompressChunk,
+  sha1,
+  type LzmaModule
+} from '../depot/decompress'
 import { handleDecodeMessage } from '../depot/decompressWorker'
 import { DecompressPool } from '../depot/decompressPool'
+import {
+  loadLzmaModule,
+  lzmaDecoderKind,
+  resetLzmaLoaderForTests
+} from '../depot/lzmaLoader'
 
 // decompressPool.ts logs replaceWorker failures (WR-02) via backend/logger,
 // whose heroicLogWriter is not initialized in the jest environment — factory
@@ -27,6 +37,12 @@ jest.mock('backend/logger', () => ({
     Backend: 'Backend'
   }
 }))
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const mockedLogger = require('backend/logger') as {
+  logInfo: jest.Mock
+  logWarning: jest.Mock
+}
 
 /** Real worker_threads fixture (plain CommonJS — see the file's own header
  *  comment for why the pool tests below cannot spawn the project's own
@@ -617,5 +633,124 @@ describe('DecompressPool resolveWorkerSpec (SEA-asset worker resolution)', () =>
       ;(pool as unknown as WorkerSpecPeek).resolveWorkerSpec()
     })
     expect(getAsset).toHaveBeenCalledWith('decompressWorker.js', 'utf8')
+  })
+})
+
+// ── lzmaLoader (Phase 23.1 plan 04: native-first decode, pure-JS fallback) ──
+
+describe('lzmaLoader (native-first decode with pure-JS fallback)', () => {
+  beforeEach(() => {
+    resetLzmaLoaderForTests()
+    mockedLogger.logInfo.mockClear()
+    mockedLogger.logWarning.mockClear()
+  })
+
+  afterEach(() => {
+    jest.resetModules()
+    jest.dontMock('lzma-native')
+    resetLzmaLoaderForTests()
+  })
+
+  it('loadLzmaModule() resolves an LzmaModule whose decompressChunk output is byte-identical to the pure-JS lzma package', async () => {
+    const data = Buffer.from(
+      'lzmaLoader byte-equivalence fixture. '.repeat(30),
+      'utf8'
+    )
+    const compressed = await compressAsync(data)
+    const vzChunk = buildVZChunk(data, compressed)
+
+    const nativeOut = await decompressChunk(vzChunk, await loadLzmaModule())
+    const pureJsOut = await decompressChunk(vzChunk, asLzmaModule)
+
+    expect(Buffer.compare(nativeOut, pureJsOut)).toBe(0)
+    expect(nativeOut.equals(data)).toBe(true)
+  })
+
+  it('lzmaDecoderKind() reports "native" after a successful load on this dev machine, logged exactly once (logInfo, never logWarning)', async () => {
+    await loadLzmaModule()
+
+    expect(lzmaDecoderKind()).toBe('native')
+    expect(mockedLogger.logInfo).toHaveBeenCalledTimes(1)
+    expect(mockedLogger.logWarning).not.toHaveBeenCalled()
+  })
+
+  it('two loadLzmaModule() calls in the same isolate return the identical object reference and log at most once total', async () => {
+    const first = await loadLzmaModule()
+    const second = await loadLzmaModule()
+
+    expect(second).toBe(first)
+    expect(
+      mockedLogger.logInfo.mock.calls.length +
+        mockedLogger.logWarning.mock.calls.length
+    ).toBeLessThanOrEqual(1)
+  })
+
+  it("drives the adapter's error path (a garbage LZMA payload) and asserts decompressChunk rejects rather than resolving with empty bytes", async () => {
+    const data = Buffer.from('irrelevant expected-size placeholder', 'utf8')
+    // 64 bytes that are NOT a valid lzma_alone stream (real compressed data
+    // never looks like this) — exercises the native adapter's 'error' event
+    // path against a REAL lzma-native decoder, not a mock.
+    const garbageCompressed = Buffer.alloc(64, 0xab)
+    const vzChunk = buildVZChunk(data, garbageCompressed)
+
+    await expect(
+      decompressChunk(vzChunk, await loadLzmaModule())
+    ).rejects.toThrow()
+  })
+
+  it('falls back to the pure-JS decoder when lzma-native fails to import, loadLzmaModule() still resolves, and lzmaDecoderKind() reports "pure-js"', async () => {
+    jest.doMock('lzma-native', () => {
+      throw new Error('simulated lzma-native import failure')
+    })
+
+    let isolatedLoadLzmaModule: (() => Promise<LzmaModule>) | undefined
+    let isolatedLzmaDecoderKind: (() => string) | undefined
+    let isolatedLogWarning: jest.Mock | undefined
+
+    jest.isolateModules(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const logger = require('backend/logger') as { logWarning: jest.Mock }
+      isolatedLogWarning = logger.logWarning
+      const loader = require('../depot/lzmaLoader') as {
+        loadLzmaModule: () => Promise<LzmaModule>
+        lzmaDecoderKind: () => string
+      }
+      isolatedLoadLzmaModule = loader.loadLzmaModule
+      isolatedLzmaDecoderKind = loader.lzmaDecoderKind
+    })
+
+    const resolved = await isolatedLoadLzmaModule?.()
+
+    expect(resolved).toBeDefined()
+    expect(isolatedLzmaDecoderKind?.()).toBe('pure-js')
+    expect(isolatedLogWarning).toHaveBeenCalledTimes(1)
+  })
+
+  it('the fallback warning names lzma-native, states decode runs on the slow pure-JS path, and carries no absolute filesystem path outside node_modules', async () => {
+    jest.doMock('lzma-native', () => {
+      throw new Error('simulated lzma-native import failure')
+    })
+
+    let isolatedLoadLzmaModule: (() => Promise<LzmaModule>) | undefined
+    let isolatedLogWarning: jest.Mock | undefined
+
+    jest.isolateModules(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const logger = require('backend/logger') as { logWarning: jest.Mock }
+      isolatedLogWarning = logger.logWarning
+      const loader = require('../depot/lzmaLoader') as {
+        loadLzmaModule: () => Promise<LzmaModule>
+      }
+      isolatedLoadLzmaModule = loader.loadLzmaModule
+    })
+
+    await isolatedLoadLzmaModule?.()
+
+    const loggedText = (isolatedLogWarning?.mock.calls[0] ?? [])
+      .flat(Infinity)
+      .join(' ')
+    expect(loggedText).toMatch(/lzma-native/)
+    expect(loggedText).toMatch(/pure-js/)
+    expect(loggedText).not.toContain(process.cwd())
   })
 })
