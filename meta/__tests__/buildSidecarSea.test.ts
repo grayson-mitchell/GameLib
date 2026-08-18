@@ -379,10 +379,20 @@ describe('the tested argv is the executed argv (WR-10 guard)', () => {
     return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
   }
 
+  // 23.1-02: the second assertion here used to be a blanket
+  // `not.toMatch(/node_modules/)` -- banning the STRING "node_modules"
+  // anywhere in the file, not just the CR-02 `.bin` spawn-path construction
+  // this guard is named for and dated. That blanket ban would have wrongly
+  // failed on `LZMA_NATIVE_PREBUILDS_ROOT = join('node_modules',
+  // 'lzma-native', 'prebuilds')` -- a legitimate DATA-file path (locating
+  // lzma-native's own prebuilt addon on disk), unrelated to spawning a
+  // node_modules/.bin/<tool> CLI binary. Narrowed (Rule 1: the old matcher
+  // was overly broad for its own stated purpose) to the actual dangerous
+  // shape: `node_modules` immediately followed by a `.bin` path segment.
   test('the source contains no node_modules/.bin path construction (comment-stripped)', () => {
     const stripped = loadStrippedBuildScript()
     expect(stripped).not.toMatch(/['"]\.bin['"]/)
-    expect(stripped).not.toMatch(/node_modules/)
+    expect(stripped).not.toMatch(/node_modules['"]\s*,\s*['"]\.bin/)
   })
 
   test('injectBlob() consumes postjectArgv.command, not a separate constant', () => {

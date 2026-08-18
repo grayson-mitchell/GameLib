@@ -176,6 +176,48 @@ const SEA_WORKER_BUNDLE_PATH = join(
  *  assert the two sides never drift apart. */
 export const SEA_WORKER_ASSET_KEY = 'decompressWorker.js'
 
+// 23.1-02 (spike 023 VALIDATED, 23.1-01-SUMMARY): the native lzma-native
+// addon, embedded as a SECOND named SEA asset alongside the decompress
+// worker. `LZMA_NATIVE_ASSET_KEY` is the arbitrary dictionary key the SEA
+// blob's `assets` map uses -- exported (like SEA_WORKER_ASSET_KEY above) so
+// a test can assert the two sides never drift apart. Plan 23.1-03's
+// `lzmaNativeBinding.ts` passes this SAME literal to `sea.getRawAsset()` at
+// runtime; the runtime side duplicates the literal rather than importing it
+// because `src/` cannot import from `meta/` -- exactly the same arrangement
+// SEA_WORKER_ASSET_KEY and decompressPool.ts already have.
+export const LZMA_NATIVE_ASSET_KEY = 'lzma_native.node'
+
+// 23.1-01-SUMMARY's spike OBSERVED this filename by listing
+// node_modules/lzma-native/prebuilds/ after a real install -- it is NOT the
+// `lzma_native.node` value PATTERNS.md originally assumed. The asset KEY
+// above and this on-disk FILENAME are deliberately independent values and
+// do not need to match; every triple also ships an `electron.napi.node`
+// sibling this project never touches (the sidecar is plain Node, not
+// Electron).
+const LZMA_NATIVE_ADDON_FILENAME = 'node.napi.node'
+
+const LZMA_NATIVE_PREBUILDS_ROOT = join(
+  'node_modules',
+  'lzma-native',
+  'prebuilds'
+)
+
+/**
+ * The shipping sidecar triples for which a MISSING lzma-native prebuild is
+ * a hard build failure rather than a silent throughput degrade. Populated
+ * from the intersection of the four shipping sidecar triples and 23.1-01's
+ * reconciled prebuild inventory (Task 1 of this plan) -- every one of the
+ * four has a reconciled prebuild, so none are excluded. If a future
+ * shipping triple's prebuild ever went missing from that inventory, it
+ * would be named here as excluded rather than added to this list.
+ */
+export const NATIVE_LZMA_REQUIRED_TRIPLES: readonly string[] = [
+  'aarch64-apple-darwin',
+  'x86_64-apple-darwin',
+  'x86_64-unknown-linux-gnu',
+  'x86_64-pc-windows-msvc'
+]
+
 const SIDECAR_BIN_DIR = join('src-tauri', 'binaries')
 
 /**
@@ -468,6 +510,90 @@ export function nodeDistName(triple: string): string {
 }
 
 /**
+ * Maps a target triple to node-gyp-build's own `<platform>-<arch>` prebuild
+ * directory naming -- deliberately a SEPARATE switch from `nodeDistName()`
+ * above, not a delegation to it. `nodeDistName()` returns Node's own dist
+ * naming (`win-x64`), while `node-gyp-build` computes
+ * `${process.platform}-${process.arch}`, which on Windows is `win32-x64`.
+ * Reusing `nodeDistName()` here would silently produce a path that never
+ * exists and degrade every Windows release leg to pure-JS decode with no
+ * build-time signal -- exactly the trap this function exists to avoid (see
+ * the regression test asserting the two functions disagree on Windows).
+ * Pure; never reads `process.platform`/`process.arch` (CR-01 host-vs-target
+ * discipline -- driven only by the TARGET triple parameter).
+ */
+export function lzmaNativePrebuildDir(triple: string): string {
+  switch (triple) {
+    case 'aarch64-apple-darwin':
+      return 'darwin-arm64'
+    case 'x86_64-apple-darwin':
+      return 'darwin-x64'
+    case 'x86_64-unknown-linux-gnu':
+      return 'linux-x64'
+    case 'aarch64-unknown-linux-gnu':
+      return 'linux-arm64'
+    case 'x86_64-pc-windows-msvc':
+      return 'win32-x64'
+    default:
+      throw new Error(`unsupported sidecar target triple: ${triple}`)
+  }
+}
+
+/**
+ * The on-disk path to lzma-native's prebuilt native addon for a target
+ * triple. Pure -- no filesystem access, no `process.platform`/
+ * `process.arch` read anywhere (CR-01 discipline). Existence is checked
+ * separately by `resolveNativeLzmaAsset()` below, keeping this function
+ * usable in a plain unit test with no real `node_modules` tree required.
+ */
+export function lzmaNativePrebuildPath(triple: string): string {
+  return join(
+    LZMA_NATIVE_PREBUILDS_ROOT,
+    lzmaNativePrebuildDir(triple),
+    LZMA_NATIVE_ADDON_FILENAME
+  )
+}
+
+/**
+ * The only impure piece of the native-LZMA asset resolution. Computes the
+ * expected prebuild path for `triple` and checks it on disk:
+ *   - present -> returns the path, to be embedded as a second SEA asset;
+ *   - absent AND `triple` is in `NATIVE_LZMA_REQUIRED_TRIPLES` -> throws a
+ *     COMPILE GATE failure, mirroring `bundleWorkerForSea()`'s throw-loud
+ *     discipline verbatim. This project has just spent an entire debug arc
+ *     (see file header, fix note 6) discovering that a decode path was
+ *     silently degraded in every shipped build -- a required triple losing
+ *     its prebuild must break the build, not the throughput;
+ *   - absent AND `triple` is NOT required -> returns `undefined` after a
+ *     single loud `console.warn`, so an unsupported triple's release leg
+ *     degrades to the existing pure-JS `lzma` decode path instead of
+ *     bricking entirely. Loud, not silent -- what the COMPILE GATE
+ *     discipline actually requires.
+ */
+async function resolveNativeLzmaAsset(
+  triple: string
+): Promise<string | undefined> {
+  const prebuildPath = lzmaNativePrebuildPath(triple)
+  if (existsSync(prebuildPath)) {
+    return prebuildPath
+  }
+  if (NATIVE_LZMA_REQUIRED_TRIPLES.includes(triple)) {
+    throw new Error(
+      `COMPILE GATE FAILED (D-06): missing required lzma-native prebuild ` +
+        `for target triple ${triple} at ${prebuildPath} -- this triple is ` +
+        `declared native-capable (NATIVE_LZMA_REQUIRED_TRIPLES) and must ` +
+        'not silently ship a pure-JS-only decode path'
+    )
+  }
+  console.warn(
+    `[build:sidecar-sea] NATIVE LZMA UNAVAILABLE for ${triple} -- no ` +
+      `prebuild found at ${prebuildPath}; this release leg will ship with ` +
+      'pure-JS lzma decode only.'
+  )
+  return undefined
+}
+
+/**
  * Resolves the official nodejs.org dist archive/checksum/inner-binary
  * locations for a target triple. `version` defaults to `process.version`
  * (already `v`-prefixed) -- the base binary MUST match the Node version
@@ -511,22 +637,37 @@ export function nodeDistUrls(
  * `node --experimental-sea-config` embeds the file at that path into the
  * blob under that key, and decompressPool.ts's `resolveWorkerSpec()` reads
  * it back at runtime via `sea.getAsset(SEA_WORKER_ASSET_KEY, 'utf8')`.
+ *
+ * 23.1-02: `nativeLzmaPath` is optional -- when provided (a resolved,
+ * on-disk lzma-native prebuild path), a second `LZMA_NATIVE_ASSET_KEY`
+ * entry is added to `assets`; when omitted, `assets` carries only the
+ * worker entry (the degraded, native-unavailable shape). Stays pure --
+ * no `existsSync()` here; the existence decision belongs to
+ * `resolveNativeLzmaAsset()`, so this config shape stays unit-testable
+ * without a filesystem, matching this file's established pure-argv-builder
+ * discipline.
  */
-export function buildSeaConfig(): {
+export function buildSeaConfig(nativeLzmaPath?: string): {
   main: string
   output: string
   disableExperimentalSEAWarning: boolean
   assets: Record<string, string>
 } {
+  const assets: Record<string, string> = {
+    [SEA_WORKER_ASSET_KEY]: SEA_WORKER_BUNDLE_PATH
+  }
+  if (typeof nativeLzmaPath === 'string' && nativeLzmaPath.length > 0) {
+    assets[LZMA_NATIVE_ASSET_KEY] = nativeLzmaPath
+  }
   return {
     main: SEA_BUNDLE_PATH,
     output: SEA_BLOB_PATH,
     disableExperimentalSEAWarning: true,
-    assets: { [SEA_WORKER_ASSET_KEY]: SEA_WORKER_BUNDLE_PATH }
+    assets
   }
 }
 
-async function writeSeaConfig(): Promise<void> {
+async function writeSeaConfig(nativeLzmaPath?: string): Promise<void> {
   if (!existsSync(SEA_BUNDLE_PATH)) {
     throw new Error(
       `Missing ${SEA_BUNDLE_PATH} -- bundleForSea() must run before writeSeaConfig()`
@@ -538,7 +679,10 @@ async function writeSeaConfig(): Promise<void> {
     )
   }
   await mkdir(join('build'), { recursive: true })
-  await writeFile(SEA_CONFIG_PATH, JSON.stringify(buildSeaConfig(), null, 2))
+  await writeFile(
+    SEA_CONFIG_PATH,
+    JSON.stringify(buildSeaConfig(nativeLzmaPath), null, 2)
+  )
 }
 
 /**
@@ -887,9 +1031,21 @@ export async function main(): Promise<void> {
         : ' (native build)')
   )
 
+  // 23.1-02 (spike 023 VALIDATED): resolve the native lzma-native asset by
+  // TARGET triple before any bundling starts, so a required-triple failure
+  // fails fast rather than after paying for two esbuild bundles.
+  const nativeLzmaPath = await resolveNativeLzmaAsset(triple)
+  console.log(
+    nativeLzmaPath
+      ? `[build:sidecar-sea] native LZMA addon embedded as SEA asset ` +
+          `"${LZMA_NATIVE_ASSET_KEY}" from ${nativeLzmaPath}`
+      : `[build:sidecar-sea] native LZMA addon NOT embedded for ${triple} ` +
+          '-- this leg ships pure-JS lzma decode only.'
+  )
+
   await bundleForSea()
   await bundleWorkerForSea()
-  await writeSeaConfig()
+  await writeSeaConfig(nativeLzmaPath)
   await generateSeaBlob()
   const outputPath = await copyNodeBinary(triple)
   await injectBlob(outputPath, triple)
