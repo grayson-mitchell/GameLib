@@ -1684,9 +1684,8 @@ async function applyMachOExecutableFallback(
   try {
     const handle = await open(dest, 'r')
     try {
-      let bytesRead: number
       const buf = Buffer.alloc(MACHO_PROBE_BYTES)
-      ;({ bytesRead } = await handle.read(buf, 0, MACHO_PROBE_BYTES, 0))
+      const { bytesRead } = await handle.read(buf, 0, MACHO_PROBE_BYTES, 0)
       if (bytesRead < 8) return
 
       let verdict = classifyMachOProbe(buf.subarray(0, bytesRead))
