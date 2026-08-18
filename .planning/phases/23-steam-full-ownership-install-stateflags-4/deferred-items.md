@@ -43,7 +43,7 @@ teardown/process-exit issue, not a functional test failure.
 in `afterEach`) around whichever test starts `pollInstallOnce`'s interval without
 stopping it.
 
-## Skip-and-warn policy for a Blocked key on a non-essential owned depot (G-23-01) — GATED on the official-Steam-client diagnostic
+## Skip-and-warn policy for a Blocked key on a non-essential owned depot (G-23-01) — UNGATED 2026-08-19 (branch 2 confirmed)
 
 **Found during:** 23-04 Gate 2 Attempt 1 (KCD2, appId 1771300), diagnosed by
 23-09's observability-only fix.
@@ -81,8 +81,42 @@ whether depot 1771304 downloads):
    the user which depot was skipped) instead of a whole-install abort on a
    Blocked key for a non-essential depot.
 
-**Recommendation / GATE: do not start this work until 23-10 Task 3 records the
-diagnostic verdict.** The correct fix depends entirely on which branch the
-diagnostic lands on — building the skip-and-warn selection-policy change
-before knowing whether depot 1771304 is actually skippable would be guessing
-at Steam's own selection rules.
+**GATE RELEASED 2026-08-19 (23-10 Task 3b) — branch 2 confirmed. This work is now
+UNGATED and should be planned as its own gap cycle.** The verdict was read from the
+official client's own artifacts rather than a fresh install (operator-sanctioned; a
+re-run would regenerate the identical manifest and log lines). Evidence, all from the
+`GameLibSteam` CrossOver bottle's real Valve Windows client — the only official client
+that can install this Windows-only title — on the **same account** (`LastOwner` byte-identical
+to the macOS `appmanifest_1124300.acf`; value withheld per T-23-37):
+
+- `steamapps/appmanifest_1771300.acf` (mtime 2026-08-15 20:47): `StateFlags "4"`,
+  `SizeOnDisk "96422090071"` (~90G, matches `du` on `common/KingdomComeDeliverance2`),
+  `buildid "23914554"`, `InstalledDepots` = **1771302, 1771303, 1771306**. Depot
+  **1771304 is ABSENT** — the official client installed KCD2 **completely without it**.
+- `logs/content_log.txt`, spanning 2026-07-11 → 2026-08-15 (i.e. covering the whole
+  install): **zero** occurrences of `1771304`, against 1771302 ×3, 1771303 ×5966,
+  1771306 ×3. The official client never even *requested* 1771304's decryption key.
+
+So depot 1771304 is **not required** for this account/region/platform, and GameLib's
+whole-install abort on its Blocked key is a genuine over-selection + hard-fail defect,
+not a region block. `G-23-01`: `severity: major`, `status: open`.
+
+**Honesty limit:** this proves 1771304 is not *needed*; it does NOT prove Steam would
+have issued its key to the official client, which never asked. That distinction does not
+change the disposition — the decision rule turned on whether the official client completes
+without the depot, and it does.
+
+**Second divergence found by the same evidence, and IN SCOPE for this follow-up:** the
+official client installs depot **1771306** (13,650,395,848 bytes), which GameLib's plan-build
+never mentioned (23-UAT.md Gate 2 Attempt 1 records GameLib resolving only 1771302, 1771303,
+1771304). GameLib's selection therefore differs from the official client's in **both**
+directions — it picks up a depot Steam skips *and* appears to miss one Steam installs. Whether
+1771306 was genuinely unselected or merely never reached before the 1771304 abort is
+UNCONFIRMED and must be established first; a `stage=plan-build` census from a
+started-then-cancelled KCD2 install answers it before any bytes download.
+
+**Scope when planned:** introduce a required-vs-optional depot distinction at selection time
+in `depot/select.ts`, plus a skip-and-warn path (continue the install, warn the user which
+depot was skipped) instead of a whole-install abort on a Blocked key for a non-essential
+depot — and reconcile GameLib's selected depot set against the official client's for this
+title in both directions.

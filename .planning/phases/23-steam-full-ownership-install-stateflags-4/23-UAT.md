@@ -345,6 +345,38 @@ Notes:
   as gap `G-23-01` below. This is title/region-specific, so a different hard-DRM title still gives a
   valid Gate 2 result.
 
+**Decisive diagnostic ANSWERED 2026-08-19 (23-10 Task 3b) — GameLib defect, not a region block.**
+Read from the official client's own artifacts rather than a fresh 90 GB re-install (operator-sanctioned
+2026-08-19; a re-run regenerates the identical manifest and log lines, and Steam's own manifest + content
+log are the ground truth this project already relies on for the bottle). The official client here is the
+real Valve **Windows** Steam client in the `GameLibSteam` CrossOver bottle — the only official client that
+can install this Windows-only title. Same account: its `LastOwner` is byte-identical to the macOS
+`appmanifest_1124300.acf` (value withheld per T-23-37).
+
+- Bottle `steamapps/appmanifest_1771300.acf` (mtime 2026-08-15 20:47): `StateFlags "4"`,
+  `SizeOnDisk "96422090071"` (~90G, matches `du` on `common/KingdomComeDeliverance2`),
+  `buildid "23914554"`, `InstalledDepots` = **1771302, 1771303, 1771306**.
+  **Depot 1771304 is ABSENT.** The official client installed KCD2 **completely without it.**
+- Bottle `logs/content_log.txt`, spanning 2026-07-11 → 2026-08-15 (covering the whole install):
+  **zero** occurrences of `1771304`, against 1771302 ×3, 1771303 ×5966, 1771306 ×3.
+  The official client never even *requested* 1771304's decryption key.
+
+**Verdict:** depot 1771304 is **not required** for this account/region/platform. GameLib's whole-install
+abort on its Blocked key is a genuine **over-selection + hard-fail defect** — `G-23-01` `severity: major`,
+`status: open`, and the deferred skip-and-warn selection-policy follow-up in `deferred-items.md` is now
+**UNGATED**. Not implemented here (23-10 explicitly forbids it); it routes to its own gap cycle.
+
+**Honesty limit:** this proves 1771304 is not *needed*, NOT that Steam would have issued its key to the
+official client — it never asked. The decision rule turned on whether the official client completes
+without the depot, so the disposition is unaffected.
+
+**A second divergence, found by the same evidence:** the official client installs depot **1771306**
+(13,650,395,848 bytes), which GameLib's plan-build never mentioned above. GameLib's selection differs
+from Steam's in **both** directions — it picks up a depot Steam skips *and* appears to miss one Steam
+installs. Whether 1771306 was genuinely unselected or merely never reached before the 1771304 abort is
+UNCONFIRMED; a `stage=plan-build` census from a started-then-cancelled KCD2 install settles it before any
+bytes download. Folded into the same follow-up.
+
 **Attempt 2 — HUMANKIND (appId 1124300), Denuvo, NATIVE depot path (2026-07-21):**
 **Result:** PASS (DRM hypothesis) — CONDITIONAL on G-23-02 fix. StateFlags=4 adoption + Denuvo launch
 both confirmed; the launch required a manual +x workaround (G-23-02), so this is not yet a clean
@@ -504,9 +536,12 @@ reconciliation genuinely could not prove completeness — record which), the gam
   truth: "A native depot install completes when the user owns the game, even if one owned depot's decryption key is Blocked (region/DRM-gated)"
   status: open
   reason: "KCD2 (appId 1771300) install aborted entirely because Steam returned EResult 40 (Blocked) for depot 1771304's decryption key. GameLib selected 1771304 via the package-ownership gate (select.ts:174), but owning a depot != Steam granting its key. classifyDepotError treats EResult 40 as non-retryable and fails the WHOLE install (depotErrors.ts:52), rather than skipping a non-essential blocked depot and continuing."
-  severity: unknown  # major IF 1771304 is optional/region-alternate (official client skips it); not-a-bug IF 1771304 is required and genuinely region-blocked for this account
+  severity: major  # RESOLVED 2026-08-19 from unknown: the official client installs KCD2 fully WITHOUT 1771304, so the depot is optional and GameLib's whole-install abort is a defect
   surfaced_by: gate-2 (attempt 1, KCD2)
-  decisive_diagnostic: "Install KCD2 in the official Steam client on this account/region; observe whether depot 1771304 downloads. Blocked there too => genuine region block (not a GameLib bug). Downloads fine => GameLib over-selection/hard-fail defect."
+  decisive_diagnostic: "ANSWERED 2026-08-19 (23-10 Task 3b). Rule was: install KCD2 in the official Steam client on this account/region; observe whether depot 1771304 downloads. Blocked there too => genuine region block (not a GameLib bug). Official client installs the game without it => GameLib over-selection/hard-fail defect."
+  diagnostic_verdict: "GameLib DEFECT, not a region block. Read from the official client's own artifacts rather than a fresh 90GB re-install (operator-sanctioned; a re-run regenerates identical data, and Steam's own manifest + content log are the ground truth this project already uses for the bottle). Official client = the real Valve WINDOWS Steam client in the GameLibSteam CrossOver bottle, the only official client that can install this Windows-only title; same account, LastOwner byte-identical to the macOS appmanifest_1124300.acf (value withheld per T-23-37). (1) Bottle steamapps/appmanifest_1771300.acf, mtime 2026-08-15 20:47: StateFlags \"4\", SizeOnDisk 96422090071 (~90G, matches du on common/KingdomComeDeliverance2), buildid 23914554, InstalledDepots = 1771302, 1771303, 1771306 -- depot 1771304 ABSENT, i.e. the official client installed KCD2 COMPLETELY WITHOUT IT. (2) Bottle logs/content_log.txt spanning 2026-07-11 to 2026-08-15 (covering the whole install): ZERO occurrences of 1771304, against 1771302 x3, 1771303 x5966, 1771306 x3 -- the official client never even REQUESTED 1771304's decryption key. Therefore 1771304 is not required for this account/region/platform and GameLib's whole-install abort on its Blocked key is an over-selection + hard-fail defect. The deferred skip-and-warn selection-policy follow-up in deferred-items.md is now UNGATED and routes to its own gap cycle; NOT implemented in 23-10, which forbids it."
+  diagnostic_honesty_limit: "This proves 1771304 is not NEEDED; it does NOT prove Steam would have issued its key to the official client, which never asked. The decision rule turned on whether the official client completes without the depot, so the disposition is unaffected."
+  second_divergence_found: "The official client installs depot 1771306 (13650395848 bytes), which GameLib's plan-build never mentioned (Gate 2 Attempt 1 records GameLib resolving only 1771302, 1771303, 1771304). GameLib's selection differs from Steam's in BOTH directions -- it picks up a depot Steam skips AND appears to miss one Steam installs. Whether 1771306 was genuinely unselected or merely never reached before the 1771304 abort is UNCONFIRMED; a stage=plan-build census from a started-then-cancelled KCD2 install settles it before any bytes download. Folded into the same follow-up."
   observability_shipped_23_09: "23-09 shipped the diagnostic + observability half only (user-locked scope, no selection-policy change): classifyDepotError now gives EResult 40 (Blocked) a dedicated steam.download.error.depotBlocked message naming the specific blocked depot id and stating the game may still be installable directly through the Steam client, and wrapDepotKeyError now logs a warning at the failure site naming the depot id, owning appId, and EResult before the error propagates (previously this context was only visible once the whole install failed and got classified). No change to select.ts, NON_RETRYABLE_ERESULTS, or retry/abort behavior -- a Blocked key still fails the install exactly as before, only the message and the log improved. Whatever the 23-10 Task 3 diagnostic finds, this occurrence (and the next one) is now legible."
   artifacts:
     - "src/backend/storeManagers/steam/depot/select.ts:174 (ownership gate includes owned-but-key-blocked depot)"
@@ -514,7 +549,7 @@ reconciliation genuinely could not prove completeness — record which), the gam
     - "~/Library/Logs/GameLib/gamelib.log 22:01:29 (couldn't get decryption key for depot 1771304 (app 1771300): Blocked)"
   missing:
     - "Decide policy: should a Blocked key on a non-essential owned depot skip-and-warn (continue install) rather than abort? Requires distinguishing required vs optional/region-alternate depots at selection time."
-    - "The conditional required-vs-optional depot selection-policy follow-up is recorded in deferred-items.md ('Skip-and-warn policy for a Blocked key on a non-essential owned depot (G-23-01)'), explicitly GATED on 23-10 Task 3's diagnostic verdict -- do not start until that verdict is recorded."
+    - "UNGATED 2026-08-19: the required-vs-optional depot selection-policy follow-up in deferred-items.md ('Skip-and-warn policy for a Blocked key on a non-essential owned depot (G-23-01)') is released by the Task 3b verdict above and ready to plan as its own gap cycle. Its scope now also covers the 1771306 divergence. NOT started in 23-10, which explicitly forbids implementing it."
 
 - id: G-23-02
   truth: "A native macOS game installed via the StateFlags=4 full-ownership path is launchable (its Mach-O executables land with the execute bit)"
@@ -554,9 +589,15 @@ and file list pinned before and after a cold Steam start (21/18,809, byte-identi
 18,002/18,809), and the launching client logged at the moment of launch. See the Gate 1 section. **Two
 items now stand between here and phase closure, not three:**
 1. **Gate 3 (interrupt-resume) has never been executed.** G-23-02 no longer blocks its launch step.
-2. **G-23-01 is still open** — the KCD2 decisive diagnostic (install 1771300 in the official Steam
-   client, observe whether depot 1771304 downloads) has not been run. 23-09 shipped its observability
-   half only; the selection-policy follow-up stays gated on that verdict.
+2. **G-23-01 is still open, but its diagnostic is now ANSWERED (2026-08-19, 23-10 Task 3b).** The
+   official Windows Steam client in the `GameLibSteam` bottle installed KCD2 in full — `StateFlags "4"`,
+   ~90G, `InstalledDepots` 1771302/1771303/**1771306** — **without depot 1771304**, and its
+   `content_log.txt` never mentions 1771304 at all across the whole install. So the depot is not
+   required and GameLib's whole-install abort is a real **over-selection + hard-fail defect**
+   (`severity: major`). 23-09 shipped only the observability half; the selection-policy follow-up in
+   `deferred-items.md` is now **UNGATED** and routes to its own gap cycle. Since the fix is deliberately
+   out of 23-10's scope, this gap stays `open` at phase close — REQ-23-07's contract is the three
+   hardware gates, not G-23-01's remediation.
 
 Also carried forward, NOT part of this gate's contract: the DecompressPool decode stall that killed two
 earlier install attempts at 88% did not recur on 2026-08-19, but nothing was fixed — treat it as open
