@@ -115,7 +115,7 @@ export function createRedistDMQueueElement(): DMQueueElement {
   // break a circular dependency (gog/redist.ts <-> storeManagers/index.ts)
   // — see the load-bearing comment on getGame() in backend/utils.ts. This
   // function is synchronous, so `await import()` isn't an option here.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { libraryManagerMap } = require('..') as {
     libraryManagerMap: {
       gog: { getGame: (id: string) => { getGameInfo: () => GameInfo } }

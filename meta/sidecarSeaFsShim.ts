@@ -28,7 +28,7 @@
 // patching a property here is visible everywhere. An ESM
 // `import * as fsModule from 'node:fs'` binding is read-only and cannot be
 // reassigned (esbuild rejects `Imports are immutable in JavaScript`).
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const fsModule = require('node:fs') as typeof import('node:fs')
 
 // Verbatim contents of node_modules/@doctormckay/steam-crypto/system.pem

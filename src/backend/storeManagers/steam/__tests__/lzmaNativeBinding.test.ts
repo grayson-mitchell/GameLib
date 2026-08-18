@@ -127,10 +127,15 @@ describe('lzmaNativeBinding SEA branch', () => {
       lzmaNativeBinding = loadFresh()
     })
 
+    // Spying on the ESM namespace binding (`import * as nodeFs from 'node:fs'`) throws
+    // "Cannot redefine property" under this repo's ts-jest CJS transform (confirmed by
+    // hand); `require()` returns the mutable CJS module object jest.spyOn can patch.
     const writeFileSyncSpy = jest
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- see comment above
       .spyOn(require('node:fs'), 'writeFileSync')
       .mockImplementation(() => undefined)
     const rmSyncSpy = jest
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- see comment above
       .spyOn(require('node:fs'), 'rmSync')
       .mockImplementation(() => undefined)
     const dlopenSpy = jest.spyOn(process, 'dlopen').mockImplementation(() => undefined)

@@ -207,7 +207,7 @@ async function waitFor(
  * sandbox (see module docstring for why this is required, not cosmetic), configures the
  * isolated `GlobalConfig` stub, and returns the handles this suite's tests need.
  *
- * `eslint-disable @typescript-eslint/no-var-requires` throughout: `jest.isolateModules()`'s
+ * `eslint-disable @typescript-eslint/no-require-imports` throughout: `jest.isolateModules()`'s
  * callback must run synchronously, so these must be CommonJS `require()` calls, not dynamic
  * `import()` (mirrors appShellFlows.test.ts's own single precedent use of this pattern).
  */

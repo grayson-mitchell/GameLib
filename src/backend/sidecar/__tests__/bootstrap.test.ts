@@ -231,13 +231,19 @@ describe('sidecar bootstrap (headless boot)', () => {
   // handler (bootstrap's own ./handlers import) is recorded in the
   // electronStub registry.
   it('imports real backend modules headlessly under the installed stub', () => {
+    // The assertion is literally that this require call does not throw; a static
+    // import would move the load to module-eval time and destroy the test.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     expect(() => require('backend/electron_store')).not.toThrow()
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { TypeCheckedStoreBackend } = require('backend/electron_store')
     const store = new TypeCheckedStoreBackend('configStore', { cwd: 'store' })
     expect(typeof store.get).toBe('function')
     expect(typeof store.set).toBe('function')
 
+    // The assertion is literally that this require call does not throw; a static
+    // import would move the load to module-eval time and destroy the test.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     expect(() => require('backend/storeManagers/steam/library')).not.toThrow()
 
     expect(handlerRegistry.has('health')).toBe(true)
@@ -339,10 +345,10 @@ describe('sidecar bootstrap (headless boot)', () => {
       let result!: { defectCalls: unknown[][]; lines: string[] }
       jest.isolateModules(() => {
         jest.doMock('electron', () => jest.requireActual('../electronStub'))
-        /* eslint-disable @typescript-eslint/no-var-requires */
+        /* eslint-disable @typescript-eslint/no-require-imports */
         const isolatedLogger = require('../../logger')
         const { init: isolatedInit } = require('../bootstrap')
-        /* eslint-enable @typescript-eslint/no-var-requires */
+        /* eslint-enable @typescript-eslint/no-require-imports */
 
         const logErrorSpy = jest.spyOn(isolatedLogger, 'logError')
 

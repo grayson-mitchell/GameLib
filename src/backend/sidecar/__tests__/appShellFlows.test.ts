@@ -761,6 +761,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       // fresh backend/config mock instance -- so this test's own registration can
       // never leak into the shared suite state.
       jest.isolateModules(() => {
+        // Inside jest.isolateModules: a static import would resolve against the shared registry.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedConfigGet = require('backend/config').GlobalConfig
           .get as jest.Mock
         isolatedConfigGet.mockReturnValue({
@@ -769,10 +771,14 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           set: jest.fn(),
           flush: jest.fn()
         })
+        // Inside jest.isolateModules: a static import would resolve against the shared registry.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedRequestRustInvoke = require('../sidecarRpc')
           .requestRustInvoke as jest.Mock
         isolatedRequestRustInvoke.mockResolvedValue(undefined)
 
+        // Inside jest.isolateModules: a static import would resolve against the shared registry.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { registerAppShellFlows } = require('../appShellFlowRegistration')
         registerAppShellFlows()
         jest.runAllTimers()

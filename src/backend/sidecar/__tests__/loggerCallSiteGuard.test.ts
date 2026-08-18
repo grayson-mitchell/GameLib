@@ -79,9 +79,7 @@ jest
 // redirect. getLogFilePath({}) resolves inside the blocked file written
 // above, so LogWriter's own first mkdir genuinely fails with ENOTDIR. ───────
 jest.mock('backend/logger/paths', () => {
-  /* eslint-disable @typescript-eslint/no-var-requires */
   const actualPath = jest.requireActual<typeof import('path')>('path')
-  /* eslint-enable @typescript-eslint/no-var-requires */
   return {
     getLogFilePath: () =>
       actualPath.join(mockScratchDir, 'blocked', 'logs', 'gamelib.log')

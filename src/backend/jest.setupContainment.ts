@@ -195,9 +195,7 @@ declare global {
 // this module is about to mock both specifiers for every OTHER consumer in
 // this test file's module graph, and must not accidentally consume its own
 // not-yet-installed mock.
-/* eslint-disable @typescript-eslint/no-var-requires */
 const realOs: typeof import('os') = jest.requireActual('os')
-/* eslint-enable @typescript-eslint/no-var-requires */
 
 // Capture the REAL OS temp root before any redirection below. `tmpdir()`
 // reads `TMPDIR` (or platform equivalents), never `HOME`/`USERPROFILE`, so

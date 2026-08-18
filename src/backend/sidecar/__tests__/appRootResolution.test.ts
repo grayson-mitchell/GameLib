@@ -221,7 +221,7 @@ describe('real-filesystem sidecar-conditions: publicDir resolution under cwd=src
     let isolatedPaths!: typeof import('../../constants/paths')
     jest.isolateModules(() => {
       jest.doMock('electron', () => jest.requireActual('../electronStub'))
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       isolatedPaths = require('../../constants/paths')
     })
     return isolatedPaths

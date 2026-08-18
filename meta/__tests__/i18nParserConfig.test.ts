@@ -1,6 +1,6 @@
 // D-03: pins the i18next-parser.config.js settings that a fork-safe `pnpm i18n` run depends
 // on. `require`, not `import` — the config file is CommonJS.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const config = require('../../i18next-parser.config')
 
 describe('i18next-parser config', () => {

@@ -72,7 +72,6 @@ jest.mock('../runnersOnedirDigests.json', () => ({
   }
 }))
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 import { spawn } from 'child_process'
 import { chmod, mkdir, readFile, rm, stat, writeFile } from 'fs/promises'
 

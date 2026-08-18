@@ -158,10 +158,10 @@ import { runHumbleValidation } from '../humble/validation'
  */
 export function isPackagedSidecar(): boolean {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires -- node:sea
-    // is a Node builtin; a guarded runtime require (not a relative/alias
+    // node:sea is a Node builtin; a guarded runtime require (not a relative/alias
     // path) is the deliberate mechanism here, not an oversight. See the
     // docstring above.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const nodeSea = require('node:sea') as { isSea: () => boolean }
     return nodeSea.isSea()
   } catch (err) {

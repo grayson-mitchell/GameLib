@@ -1012,11 +1012,11 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       jest.resetModules()
       jest.doMock('node:sea', () => ({ isSea: () => false }))
 
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const fresh = require('../humbleFlowRegistration') as {
         registerHumbleFlows: () => void
       }
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const freshStub = require('../electronStub') as {
         handlerRegistry: Map<string, unknown>
       }
@@ -1029,11 +1029,11 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       jest.resetModules()
       jest.doMock('node:sea', () => ({ isSea: () => true }))
 
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const fresh = require('../humbleFlowRegistration') as {
         registerHumbleFlows: () => void
       }
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const freshStub = require('../electronStub') as {
         handlerRegistry: Map<string, unknown>
       }
@@ -1051,11 +1051,11 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         .spyOn(console, 'warn')
         .mockImplementation(() => {})
 
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const fresh = require('../humbleFlowRegistration') as {
         registerHumbleFlows: () => void
       }
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const freshStub = require('../electronStub') as {
         handlerRegistry: Map<string, unknown>
       }
@@ -1117,7 +1117,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       const { HumbleUser: RealHumbleUser }: {
         HumbleUser: { disconnect: () => Promise<void> }
       } = jest.requireActual('../../humble/user')
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const realStores = require('../../humble/electronStores') as {
         configStore: {
           set: (key: string, value: unknown) => void
