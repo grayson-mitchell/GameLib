@@ -41,6 +41,90 @@ import type { LzmaNativeStream } from 'lzma-native'
 
 export type LzmaDecoderKind = 'native' | 'pure-js' | 'unresolved'
 
+/**
+ * KILL SWITCH (Phase 23.1 plan 05, THIRD finding, 2026-08-18 -- coordinator/
+ * human-operator directed, after two earlier rounds of this same plan
+ * genuinely fixed the worker-thread logger crash AND the identity-guard
+ * that had been rejecting the real bundled resolveNativeBinding() call).
+ * With BOTH of those fixed, a real cold-built, packaged SEA binary's
+ * DecompressPool self-test (`GAMELIB_SIDECAR_SELFTEST=decompress-pool`)
+ * showed native resolution AND its own smoke-test decode genuinely
+ * succeeding (`inlineFallback:false`, `nativeWorkers` matching pool size)
+ * -- but decoding a REAL-SIZED (64KB) chunk through that same resolved
+ * native binding then HANGS until DecompressPool's own per-task timeout
+ * fires, inside a genuinely compiled/postject-injected SEA binary
+ * specifically. `smokeTest()` below only exercises a ~30-byte fixture and
+ * cannot catch this -- it is NOT a trustworthy safety net for this failure
+ * class, which is exactly why this separate, explicit switch exists rather
+ * than relying on the smoke test to keep gating things correctly.
+ *
+ * Full investigation (what was ruled out, what wasn't, current status):
+ * `.planning/debug/sea-native-lzma-real-chunk-decode-hang.md`.
+ *
+ * Effect when `false` (the shipped default): `resolveLzmaModule()` below
+ * never even ATTEMPTS to import/smoke-test `lzma-native` -- it goes
+ * straight to the pure-JS `lzma` package, unconditionally, every process.
+ * This is deliberately a HARDER gate than "let the smoke test catch it" --
+ * the smoke test's own proven blind spot is the whole reason this exists.
+ *
+ * IMPORTANT, do not oversell what this switch fixes: gating native OFF
+ * removes lzma-native's own binding resolution as a contributing/
+ * confounding variable (it is now provably correct at build time -- see
+ * lzmaNativeBinding.ts) and closes the specific "native resolves, then
+ * hangs" failure mode. It does NOT, by itself, prove a packaged SEA
+ * binary's worker-pool decode path is safe end-to-end: the SAME real-sized
+ * decode task hang was reproduced AGAIN with this switch OFF (`nativeWorkers
+ * :0` confirmed, pure-JS path, still `decompress_pool_timeout`) -- see the
+ * debug file's own "CRITICAL CORRECTION" entry. The underlying hang is not
+ * lzma-native-specific; this switch narrows the search space, it does not
+ * close the investigation.
+ *
+ * HOW TO SAFELY RE-ENABLE (do not just flip this to `true`):
+ *   1. The debug file above must reach a `status: resolved` (or at minimum
+ *      record a specific, understood root cause and fix) for the real-chunk
+ *      decode hang -- not merely "the identity guard is fixed" (that is a
+ *      DIFFERENT, already-closed defect; see that file's own round history).
+ *   2. Re-run this exact self-test discipline against a REAL, cold
+ *      `pnpm build:sidecar-sea` binary (`GAMELIB_SIDECAR_SELFTEST=
+ *      decompress-pool`) and confirm BOTH `inlineFallback:false` AND
+ *      `SELFTEST decode=ok ... match=true` -- the pool spawning/resolving
+ *      correctly is NOT sufficient proof by itself (that was this exact
+ *      finding's own false signal).
+ *   3. Un-skip `lzmaNativeSeaRealBuild.test.ts`'s second test and confirm
+ *      it passes for real, then flip this constant, then re-run a live
+ *      Steam depot install end-to-end before considering this closed.
+ */
+const NATIVE_LZMA_DECODE_ENABLED = false
+
+/**
+ * Mutable copy of the kill switch above -- exists ONLY so
+ * {@link setNativeLzmaDecodeEnabledForTests} (test-only) can override it
+ * per-test without touching the documented, single-source-of-truth
+ * production constant above. Production code must never write to this
+ * directly; always go through {@link resolveLzmaModule}'s own read via
+ * {@link isNativeLzmaDecodeEnabled}.
+ */
+let nativeLzmaDecodeEnabledOverride: boolean | undefined
+
+function isNativeLzmaDecodeEnabled(): boolean {
+  return nativeLzmaDecodeEnabledOverride ?? NATIVE_LZMA_DECODE_ENABLED
+}
+
+/**
+ * Test-only: overrides the kill switch above so this file's own tests can
+ * still prove the native adapter itself is correct (byte-equivalence
+ * against the pure-JS package, the real error path, `lzmaDecoderKind()`
+ * reporting `'native'`) without flipping the SHIPPING default. Named so
+ * its test-only purpose is unmistakable, mirroring
+ * {@link resetLzmaLoaderForTests}'s own convention. Pass `undefined` to
+ * fall back to the real, documented `NATIVE_LZMA_DECODE_ENABLED` constant.
+ */
+export function setNativeLzmaDecodeEnabledForTests(
+  enabled: boolean | undefined
+): void {
+  nativeLzmaDecodeEnabledOverride = enabled
+}
+
 let decoderKind: LzmaDecoderKind = 'unresolved'
 let lzmaModulePromise: Promise<LzmaModule> | undefined
 
@@ -67,6 +151,12 @@ export function lzmaDecoderKind(): LzmaDecoderKind {
 export function resetLzmaLoaderForTests(): void {
   lzmaModulePromise = undefined
   decoderKind = 'unresolved'
+  // Phase 23.1 plan 05: also clears any test-set kill-switch override, so a
+  // test that called setNativeLzmaDecodeEnabledForTests(true) can never
+  // leak that override into a later test/file that forgot to reset it --
+  // the safe failure mode is always "falls back to the real, shipped
+  // default," never "silently stays enabled."
+  nativeLzmaDecodeEnabledOverride = undefined
 }
 
 // Known-good tiny lzma_alone stream + its expected plaintext, used ONLY to
@@ -162,6 +252,28 @@ async function resolvePureJs(): Promise<LzmaModule> {
 }
 
 async function resolveLzmaModule(): Promise<LzmaModule> {
+  if (!isNativeLzmaDecodeEnabled()) {
+    decoderKind = 'pure-js'
+    logWarning(
+      [
+        'lzmaLoader: native lzma-native decode is explicitly DISABLED by',
+        'this build (NATIVE_LZMA_DECODE_ENABLED=false, lzmaLoader.ts) --',
+        'running the pure-JS lzma package for THE REST OF THIS PROCESS.',
+        'This is a deliberate, temporary kill switch, not an import/',
+        'smoke-test failure: a real cold-built packaged SEA binary showed',
+        'native resolution AND its own small smoke-test decode genuinely',
+        'succeeding, but decoding a real-sized chunk through that same',
+        'binding then hangs until DecompressPool\'s own task timeout fires',
+        '-- a failure class the smoke test below is proven unable to',
+        'catch, so this switch does not rely on it. See',
+        '.planning/debug/sea-native-lzma-real-chunk-decode-hang.md for the',
+        'full investigation and the criteria for safely re-enabling this.'
+      ],
+      LogPrefix.Steam
+    )
+    return resolvePureJs()
+  }
+
   try {
     const mod = await import('lzma-native')
     const native = ((mod as { default?: unknown }).default ?? mod) as {
