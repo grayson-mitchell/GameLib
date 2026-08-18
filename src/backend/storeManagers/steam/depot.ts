@@ -1635,6 +1635,22 @@ async function applyMachOExecutableFallback(
  * by this plan) leaves behavior byte-for-byte identical; `downloadDepotFiles`
  * threads its own per-run counters through here so the download-complete
  * census also reflects modes applied while healing reconciled files.
+ *
+ * G-23-02 (23-08 Task 3 gap, closed by this plan, quick-260818-v81): this
+ * heal loop now applies BOTH compensators, mirroring the fresh-download call
+ * site (downloadSingleFile) exactly, in the same order — EDepotFileFlag
+ * modes first, then the Mach-O fallback. Previously the loop's own
+ * `!file.flags` early-continue skipped every flagless manifest entry before
+ * either compensator ever ran; that early-continue WAS the G-23-02 defect.
+ * A flagless manifest is the NORMAL case for native macOS titles, not an
+ * edge case — 23-TRACE.md's H2 verdict found HUMANKIND's own manifest
+ * carries flagBearing=140 out of 18,949 entries, executableFlagged=0,
+ * distinctFlagValues=[64] (Directory only) — so skipping flagless entries
+ * skipped essentially the entire install, including the main game binary
+ * (`Contents/MacOS/Humankind`). Fixing this widens the loop body from ~140
+ * entries to ~18.5k for a title like HUMANKIND: each now costs one bounded
+ * 4KB positional read (`MACHO_PROBE_BYTES`) via applyMachOExecutableFallback,
+ * a deliberate, accepted pre-download cost on the resume path (T-v81-05).
  */
 export async function healReconciledFileModes(
   plan: DepotPlan,
@@ -1647,17 +1663,36 @@ export async function healReconciledFileModes(
 
   for (const depot of plan.depots) {
     for (const file of depot.files) {
-      if (jobFiles.has(file) || !file.flags) continue
-      if (file.flags & (DIRECTORY_FLAG | SYMLINK_FLAG)) continue
-      const dest = resolveContainedPath(installRoot, file.filename)
-      const modeResult = await applyEDepotFileModes(dest, file.flags, counters)
-      if (!modeResult.ok) {
-        allModesHealed = false
-        failures.push({
-          file: file.filename,
-          error: `failed to re-apply file mode flags on reconciled file: ${modeResult.error}`
-        })
+      if (jobFiles.has(file)) continue
+      if (
+        file.flags !== undefined &&
+        file.flags & (DIRECTORY_FLAG | SYMLINK_FLAG)
+      ) {
+        continue
       }
+      const dest = resolveContainedPath(installRoot, file.filename)
+
+      if (file.flags) {
+        const modeResult = await applyEDepotFileModes(
+          dest,
+          file.flags,
+          counters
+        )
+        if (!modeResult.ok) {
+          allModesHealed = false
+          failures.push({
+            file: file.filename,
+            error: `failed to re-apply file mode flags on reconciled file: ${modeResult.error}`
+          })
+        }
+      }
+
+      // G-23-02 (23-08 Task 3, VERDICT: H2): SECONDARY Mach-O fallback, run
+      // unconditionally for every reconciled file that reaches this point —
+      // never wrapped in try/catch (it swallows and logs its own errors) and
+      // never allowed to influence allModesHealed/failures, matching the
+      // fresh-download call site's contract exactly.
+      await applyMachOExecutableFallback(dest, file.filename, file.flags)
     }
   }
 
