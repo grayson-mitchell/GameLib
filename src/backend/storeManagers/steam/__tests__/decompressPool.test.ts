@@ -218,6 +218,35 @@ describe('decompressWorker handleDecodeMessage', () => {
     }
   })
 
+  // Phase 23.1 plan 04: handleDecodeMessage()'s own getLzma() now delegates
+  // to lzmaLoader.ts's loadLzmaModule() (native-first, pure-JS fallback)
+  // instead of its own dedicated import('lzma') memoization -- this test
+  // proves that swap didn't change handleDecodeMessage()'s VZ round-trip
+  // behavior at all (the PK case above already covers the non-LZMA branch).
+  it('handleDecodeMessage still round-trips a VZ (LZMA, now native-first) chunk to its expected decompressed bytes', async () => {
+    const data = Buffer.from(
+      'worker message VZ fixture data. '.repeat(15),
+      'utf8'
+    )
+    const compressed = await compressAsync(data)
+    const vzChunk = buildVZChunk(data, compressed)
+    const encrypted = steamEncrypt(vzChunk, key)
+    const expectedSha = sha1(data)
+
+    const response = await handleDecodeMessage({
+      id: 4,
+      encrypted: toArrayBuffer(encrypted),
+      key: toArrayBuffer(key),
+      expectedSha,
+      cbOriginal: data.length
+    })
+
+    expect(response.ok).toBe(true)
+    if (response.ok) {
+      expect(Buffer.from(response.data).equals(data)).toBe(true)
+    }
+  })
+
   it('posts an {error} message on any throw (never crashes/hangs the worker)', async () => {
     const bogus = Buffer.from('XXbad-container-bytes', 'utf8')
     const encrypted = steamEncrypt(bogus, key)
@@ -537,6 +566,65 @@ describe('DecompressPool GAMELIB_DECOMPRESS_POOL_SIZE override', () => {
       workerPath: POOL_TEST_WORKER_PATH
     })
     expect(pool.stats().size).toBe(2)
+  })
+})
+
+// ── stats().nativeWorkers (Phase 23.1 plan 04) ──────────────────────────
+
+const NATIVE_POOL_TEST_WORKER_PATH = path.join(
+  __dirname,
+  'fixtures',
+  'poolTestWorkerNative.js'
+)
+
+describe('DecompressPool stats().nativeWorkers (Phase 23.1 plan 04)', () => {
+  it('stats() includes a nativeWorkers number field alongside the pre-existing five fields', async () => {
+    const pool = new DecompressPool({
+      size: 2,
+      workerPath: POOL_TEST_WORKER_PATH
+    })
+    await pool.init()
+    try {
+      const stats = pool.stats()
+      expect(stats).toEqual({
+        size: 2,
+        busy: 0,
+        idle: 2,
+        queued: 0,
+        inlineFallback: false,
+        nativeWorkers: 0
+      })
+    } finally {
+      await pool.shutdown()
+    }
+  })
+
+  it('a ready message lacking lzmaKind is still accepted as a successful spawn (back-compat with an older worker bundle)', async () => {
+    const pool = new DecompressPool({
+      size: 2,
+      workerPath: POOL_TEST_WORKER_PATH
+    })
+    await pool.init()
+    try {
+      expect(pool.stats().inlineFallback).toBe(false)
+      expect(pool.stats().idle).toBe(2)
+      expect(pool.stats().nativeWorkers).toBe(0)
+    } finally {
+      await pool.shutdown()
+    }
+  })
+
+  it('stats().nativeWorkers counts workers whose ready message reports lzmaKind "native"', async () => {
+    const pool = new DecompressPool({
+      size: 2,
+      workerPath: NATIVE_POOL_TEST_WORKER_PATH
+    })
+    await pool.init()
+    try {
+      expect(pool.stats().nativeWorkers).toBe(2)
+    } finally {
+      await pool.shutdown()
+    }
   })
 })
 
