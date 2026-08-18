@@ -674,7 +674,9 @@ function parseMsConstantFromSource(
       `${constantName}'s expression "${expr}" contains characters outside the allowed numeric-arithmetic set`
     )
   }
-  // eslint-disable-next-line no-new-func -- expr is validated above to be numeric arithmetic only
+  // expr is validated above to be numeric arithmetic only; line 672's regex gate is what
+  // makes it safe.
+  // eslint-disable-next-line no-new-func, @typescript-eslint/no-implied-eval
   const value = Function(`"use strict"; return (${expr});`)() as unknown
   if (typeof value !== 'number' || Number.isNaN(value)) {
     throw new Error(

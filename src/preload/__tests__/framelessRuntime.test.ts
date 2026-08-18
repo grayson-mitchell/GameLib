@@ -101,7 +101,8 @@ class FakeElement {
   }
 
   closest(selector: string): FakeElement | null {
-    let el: FakeElement | null = this
+    if (this.matches(selector)) return this
+    let el: FakeElement | null = this.parentElement
     while (el) {
       if (el.matches(selector)) return el
       el = el.parentElement
