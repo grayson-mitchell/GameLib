@@ -51,11 +51,15 @@ export function getStatusLabel({
     }`,
     // D-UAT-09 (21-17): an incomplete steam install (same-session cancel or
     // a startup-surfaced interrupted download, threaded via statusContext —
-    // see hasStatus.ts's notInstalled branch) reads as "needs Steam to
-    // finish", never the generic not-installed copy.
+    // see hasStatus.ts's notInstalled branch) reads as a resumable install,
+    // never the generic not-installed copy.
+    // quick-260819-ch5: GameLib resumes this itself via
+    // resumeInterruptedSteamInstall — the label no longer sends the user to
+    // Steam. `gamelib:` prefix is required to cross into the fork-owned
+    // namespace from this `TFunction<'gamepage'>`-typed call site.
     notInstalled:
       runner === 'steam' && statusContext === 'steam-incomplete'
-        ? t('gamepage:status.steamFinishInSteam', 'Finish in Steam')
+        ? t('gamelib:steam.status.resumeInstall', 'Resume Install')
         : t('gamepage:status.notinstalled'),
     launching: t('gamepage:status.launching', 'Launching'),
     winetricks: t('gamepage:status.winetricks', 'Applying Winetricks fixes'),

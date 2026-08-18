@@ -1383,7 +1383,7 @@ describe('SteamLibraryManager', () => {
   // from buildInstalledMap() (bit-4-set only). A mid-session resync
   // (reachable via the launch-completion 'done' status) therefore silently
   // wiped the same-session steamResumePending marker set by
-  // markSteamInstallIncomplete — reverting the distinct "Finish in Steam"
+  // markSteamInstallIncomplete — reverting the distinct "Resume Install"
   // affordance back to a bare "Install" (the D-UAT-09 symptom). The flag is
   // now derived durably from the on-disk incomplete (bit-4-unset) manifest,
   // so it survives any number of refreshes.

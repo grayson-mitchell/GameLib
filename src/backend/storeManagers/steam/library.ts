@@ -829,7 +829,7 @@ export default class SteamLibraryManager implements LibraryManager {
       // library.clear() below and derives each GameInfo purely from the ACF
       // scan, the same-session steamResumePending marker (markSteamInstallIncomplete)
       // would otherwise be silently wiped on the first mid-session resync,
-      // reverting "Finish in Steam" back to a bare "Install" (the D-UAT-09
+      // reverting "Resume Install" back to a bare "Install" (the D-UAT-09
       // symptom). Deriving the flag from on-disk state here makes it durable
       // across any number of refreshes.
       const incompleteSet = await buildIncompleteInstallSet()
@@ -922,7 +922,7 @@ export default class SteamLibraryManager implements LibraryManager {
               }
             : // WR-01 (21-17): no fully-installed manifest, but an incomplete
               // (bit-4-unset) native ACF is on disk — durably re-surface the
-              // "Finish in Steam" resume affordance. is_installed stays false
+              // "Resume Install" resume affordance. is_installed stays false
               // (installedData is falsy here), so the no-regression Play-safety
               // truth holds; a fully-installed ACF took the branch above and
               // still yields is_installed=true + Play.

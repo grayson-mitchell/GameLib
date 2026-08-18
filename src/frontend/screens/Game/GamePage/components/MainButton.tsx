@@ -230,11 +230,14 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
 
     // D-UAT-09 (21-17): an incomplete on-disk native install (StateFlags bit
     // 4 unset, e.g. a same-session cancel via markSteamInstallIncomplete or
-    // init()'s startup-surface scan) must read as "needs Steam to finish" —
+    // init()'s startup-surface scan) must read as a resumable install —
     // never a bare "Install" (which would read as a fresh, from-scratch
     // download) and never Play (gated off separately by is_installed above).
-    // The click handler below already routes steam to handleInstall (the
-    // correct resume action) unconditionally — no change needed there.
+    // quick-260819-ch5: GameLib's own native depot downloader
+    // (resumeInterruptedSteamInstall) resumes this on-disk install itself,
+    // so the copy no longer sends the user to Steam to finish it — only the
+    // words changed here, the click handler below still routes steam to
+    // handleInstall (the correct resume action) unconditionally.
     if (
       gameInfo.runner === 'steam' &&
       !gameInfo.is_installed &&
@@ -245,7 +248,7 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
       return (
         <span className="buttonWithIcon">
           <Warning />
-          {t('status.steamFinishInSteam', 'Finish in Steam')}
+          {t('gamelib:steam.status.resumeInstall', 'Resume Install')}
         </span>
       )
     }

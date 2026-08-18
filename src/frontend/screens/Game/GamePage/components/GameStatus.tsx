@@ -137,10 +137,16 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
     }
 
     // D-UAT-09 (21-17): an incomplete on-disk native install (not currently
-    // installing — this is the not-installing tail) reads as "needs Steam to
-    // finish", never the generic "This game is not installed" copy.
+    // installing — this is the not-installing tail) reads as a resumable
+    // install, never the generic "This game is not installed" copy.
+    // quick-260819-ch5: GameLib resumes this itself via
+    // resumeInterruptedSteamInstall — the hint now tells the user that,
+    // instead of sending them to Steam.
     if (runner === 'steam' && !is_installed && statusContext === 'steam-incomplete') {
-      return t('status.steamFinishInSteam', 'Finish in Steam')
+      return t(
+        'gamelib:steam.status.resumeInstallHint',
+        'Install incomplete — resume the download in GameLib'
+      )
     }
 
     return t('status.notinstalled')
