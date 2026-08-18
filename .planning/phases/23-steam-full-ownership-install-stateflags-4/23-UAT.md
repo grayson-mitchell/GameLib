@@ -8,11 +8,11 @@ pending_items: 1
 passed_items: 2
 failed_items: 0
 blocked_items: 0
-open_gaps: [G-23-01, G-23-02]
-notes: "Gate 2 PASS is CONDITIONAL — Denuvo launch proven but required a manual +x workaround (blocker gap G-23-02, native install applies no execute bits). Phase NOT closable until G-23-02 fixed + Gate 2 re-run clean, and Gate 3 run."
+open_gaps: [G-23-01]
+notes: "Gate 2 re-ran CLEAN on real hardware 2026-08-19 (attempt 3) — HUMANKIND installed to StateFlags=4, Steam adopted with no verify/re-download, and the game LAUNCHED with NO manual chmod. Blocker gap G-23-02 is RESOLVED; it took THREE fixes, not one (260818-v81 reconcile-heal reach, 260819-b1q fat-binary probe, both needed; 23-08 alone was insufficient). Phase still NOT closable: Gate 3 (interrupt-resume) has never been run, Gate 1's launch half is still MASKED pending re-confirmation, G-23-01's KCD2 diagnostic is unrun, and the launch MECHANISM for attempt 3 (GameLib vs Steam UI) was not recorded — see Gate 2 attempt 3."
 requirements: [REQ-23-07]
 run_via: "/gsd:verify-work 23"
-last_updated: 2026-07-21
+last_updated: 2026-08-19
 ---
 
 # Phase 23 — Steam Full-Ownership Install (StateFlags=4): Real-Hardware UAT
@@ -313,6 +313,57 @@ hard-DRM hypothesis: a Denuvo title trusts a GameLib-authored StateFlags=4 insta
 was only reachable after manually setting +x (G-23-02) — the native install itself is not yet
 end-to-end launchable without that fix.
 
+**Attempt 3 — HUMANKIND (appId 1124300), Denuvo, NATIVE depot path (2026-08-19) — THE CLEAN RE-RUN:**
+**Result:** ✅ **PASS — UNCONDITIONAL.** Installed to `StateFlags=4`, Steam adopted it with no verify
+and no re-download, and **the game launched with NO manual chmod anywhere.** This is the workaround-free
+end-to-end native install attempt 2 could not produce, and it closes G-23-02.
+**Title/AppID used:** HUMANKIND (1124300), Denuvo, native Apple-Silicon `.app` (same title as attempt 2)
+**Steps 1–4:** PASS — 18,809 files / 35G under
+`~/Library/Application Support/Steam/steamapps/common/Humankind`; `appmanifest_1124300.acf` written
+`StateFlags 4`, `BytesDownloaded == BytesToDownload == SizeOnDisk == 37592580261`.
+**Execute bits (the G-23-02 property):** PASS — **0 Mach-O EXECUTE/DYLIB files left without `+x`**
+across all 18,809. `Humankind.app/Contents/MacOS/Humankind` landed `-rwxr-xr-x`. The Mach-O fallback
+fired **42 times** this run (vs **7** on every prior run). The one fat binary still without `+x`,
+`Contents/PlugIns/AkSoundEngine.bundle/Contents/MacOS/AkSoundEngine`, is an **MH_BUNDLE — correctly
+declined by design** (Steam leaves dlopen'd bundles non-executable; the subtype-discrimination
+constraint this gap's `missing:` list required).
+**Verify/re-download observed?** No. Steam accepted `StateFlags=4` unchanged on its startup scan —
+`.acf` byte-identical before and after, appid written into `libraryfolders.vdf`'s apps map at full
+size (`"1124300" "37592580261"`), nothing under `steamapps/downloading/1124300`.
+**Launch confirmed with DRM intact?** YES — operator-confirmed 2026-08-19, no manual chmod.
+
+**Two honesty limits on this result, neither of which weakens the G-23-02 closure:**
+
+1. **The launch MECHANISM was not recorded.** Whether the operator launched from GameLib or from the
+   Steam UI is UNKNOWN — not reconstructed. This is the same distinction that downgraded Gate 1's
+   launch half to MASKED, so attempt 3 must NOT be read as re-confirming Gate 1 (see the Summary
+   Table's Gate 1 row, unchanged).
+   **However, the execute bits are provably GameLib's work regardless of launch mechanism:** they were
+   measured on disk at 09:22 while the Steam client had been running continuously since 23:14 the
+   previous evening — i.e. Steam had never rescanned and could not have applied them. That timestamped
+   pre-adoption measurement is stronger evidence than "Steam not running at launch" would have been,
+   and it is what closes G-23-02. What it does not establish is which client started the process.
+2. **Steam initially did NOT see the install** and offered a full 37.6 GB re-download, surfacing as a
+   misleading "not enough space" error (disk was 97% full). Cause: Steam adopts a GameLib-written
+   `.acf` only at its next STARTUP scan, and this Steam session predated the install by ~10 hours.
+   Resolved by quitting and restarting Steam — the `.acf` survived the quit byte-identical. This is
+   pre-existing documented Steam behavior, NOT a regression and NOT part of this gate's contract, but
+   it is what made the broken test installs *appear* accepted while the good one did not: Steam was
+   restarted between the earlier attempts and so rescanned, but not this time.
+
+**What actually fixed G-23-02 — 23-08 alone was NOT sufficient.** Three defects had to be closed, and
+the first two each looked sufficient in isolation:
+- **23-08** shipped the Mach-O magic-byte fallback, but wired it only into the fresh-download call site.
+- **quick `260818-v81`** — `healReconciledFileModes`'s `jobFiles.has(file) || !file.flags` early-continue
+  skipped EVERY flagless manifest entry, so the reconcile-heal path (which nearly every real
+  multi-session install takes) never reached mode application at all.
+- **quick `260819-b1q`** — the actual cause of the launch failure: `applyMachOExecutableFallback` read
+  only `MACHO_PROBE_BYTES = 4096`, then tried to inspect a fat binary's first slice header *at its file
+  offset* out of that same 4096-byte buffer. HUMANKIND's first slice sits at `0x4000` = **16384**, so
+  `detectMachOEndianness` bailed and **every universal binary was silently classified non-executable**
+  — including the main game binary. The deterministic signature was exactly 7 `+x` files, the identical
+  list on both a completed and a partial install, all 7 THIN Mach-O.
+
 ---
 
 ## Gate 3 — INTERRUPT-RESUME: killed mid-download, resumed, reconciles to Steam-trusted StateFlags=4
@@ -383,8 +434,8 @@ reconciliation genuinely could not prove completeness — record which), the gam
 | # | Gate | Requirement | Result | Notes |
 |---|------|-------------|--------|-------|
 | 1 | Multi-depot StateFlags=4 (no verify/re-download) | REQ-23-07 (D-07.1) | ⚠️ **PARTIAL — adoption PASS (HW), launch half REOPENED** | Adoption hardware-confirmed 2026-07-19 and still stands: `StateFlags=4`, Steam adopted the multi-depot install with no verify/re-download. Plan 23-05 fix (single-flight guard + pause/resume abort + reconciliation) held; Phase 25 fan-out cleared the download-time blocker so steps 4–6 could complete. **Launch half downgraded 2026-08-16 by 23-07 Task 2 — verdict MASKED:** Cyberpunk's manifest carries `executableFlagged=0`, so that launch cannot have run on GameLib-applied execute bits. Re-confirm in 23-10 against a fresh GameLib install with Steam verified not running. |
-| 2 | Hard-DRM launch under StateFlags=4 | REQ-23-07 (D-07.2) | ✅ PASS (HW, conditional) | HUMANKIND (1124300, Denuvo) installed to StateFlags=4, no verify/re-download, **Denuvo launched to main menu** — DRM hypothesis proven. Conditional: launch needed a manual +x workaround (blocker gap G-23-02, native install applies no execute bits). Attempt 1 (KCD2) diverged on a `Blocked` depot key (gap G-23-01). Re-run clean after G-23-02 fix. |
-| 3 | Interrupt-resume reconciled StateFlags=4 + launch + no re-download + no bottle auto-open | REQ-23-07 (D-07.3) + D-04 | PENDING | Gate 1's hardware re-run now PASS; ready to run |
+| 2 | Hard-DRM launch under StateFlags=4 | REQ-23-07 (D-07.2) | ✅ **PASS — UNCONDITIONAL (HW, 2026-08-19)** | **Attempt 3 is the clean re-run.** HUMANKIND (1124300, Denuvo) installed to StateFlags=4 (18,809 files), Steam adopted with no verify/re-download, **launched with NO manual chmod**. Execute bits: 0 Mach-O EXECUTE/DYLIB missing `+x`; fallback fired 42× vs 7 previously; the lone remaining fat binary is an MH_BUNDLE, correctly declined. Closes blocker gap **G-23-02**, which needed THREE fixes (23-08 + quick `260818-v81` + quick `260819-b1q`), not one. Attempt 1 (KCD2) diverged on a `Blocked` depot key — gap G-23-01, still open. Launch MECHANISM (GameLib vs Steam UI) NOT recorded, so this does **not** re-confirm Gate 1's launch half. |
+| 3 | Interrupt-resume reconciled StateFlags=4 + launch + no re-download + no bottle auto-open | REQ-23-07 (D-07.3) + D-04 | PENDING | Never executed. G-23-02 no longer blocks its launch step. Note: a *de facto* partial resume did occur during the 2026-08-19 Gate 2 run — an interrupted 88%/31GB install was reconciled, ~21GB reused, ~10GB of unverifiable mid-write files discarded and re-fetched, finishing at StateFlags=4 — but that was incidental, unplanned, and does NOT satisfy this gate's recorded step list (no deliberate mid-download kill, no bottle-auto-open check). Run it as written. |
 
 ## Gaps
 
@@ -407,8 +458,13 @@ reconciliation genuinely could not prove completeness — record which), the gam
 
 - id: G-23-02
   truth: "A native macOS game installed via the StateFlags=4 full-ownership path is launchable (its Mach-O executables land with the execute bit)"
-  status: open
-  severity: blocker  # any native macOS (and likely Linux) game is unlaunchable via native install
+  status: resolved
+  resolved_on: 2026-08-19
+  resolved_by: "23-08 (Mach-O magic-byte fallback) + quick 260818-v81 (reconcile-heal reach) + quick 260819-b1q (fat-binary slice probe) — ALL THREE were required; 23-08 alone did not close it, and each of the first two looked sufficient in isolation."
+  proven_by: "Gate 2 attempt 3, real macOS hardware 2026-08-19 (see Gate 2 above). HUMANKIND 1124300: 18,809 files at StateFlags=4, ZERO Mach-O EXECUTE/DYLIB files without +x, Humankind.app/Contents/MacOS/Humankind -rwxr-xr-x, fallback fired 42x (vs 7 on every prior run), Steam adopted with no verify/re-download, game LAUNCHED with no manual chmod. The +x bits were measured on disk at 09:22 while the Steam client had been running continuously since 23:14 the previous evening and had never rescanned — so the bits are provably GameLib-applied, not Steam-applied."
+  severity: blocker  # was: any native macOS (and likely Linux) game unlaunchable via native install
+  final_root_cause: "TWO stacked defects beyond 23-08's original scope, both found 2026-08-18/19. (1) reconcile-heal REACH: healReconciledFileModes's compound guard `jobFiles.has(file) || !file.flags` early-continued on every FLAGLESS manifest entry, so on the reconcile path — which nearly every real multi-session/resumed install takes — mode application never ran AT ALL, not merely the fallback. Fixed by quick 260818-v81. (2) FAT-BINARY BLINDNESS, the actual cause of the launch failure: applyMachOExecutableFallback read only MACHO_PROBE_BYTES=4096 bytes, then for a fat binary read fat_arch.offset and tried to inspect the contained slice's Mach-O header AT THAT FILE OFFSET out of the same 4096-byte buffer. detectMachOEndianness's `if (buf.length < offset + 4) return undefined` bailed, so isExecutableMachO returned false for EVERY universal binary. HUMANKIND's main binary begins `cafebabe 00000002 01000007 00000003 00004000` — first slice at 16384, 4x past the probe. Fixed by quick 260819-b1q via a second bounded 32-byte positional read at the slice offset (NOT a larger constant — a slice offset is arbitrary and file-dependent)."
+  why_it_hid: "The count invited a wrong story. Exactly 7 files carried +x, which reads naturally as 'only the files freshly downloaded in the last pass got it' — a timing explanation that fits the number and is false. The thin-vs-fat split is visible ONLY by comparing the magic bytes of the files that SUCCEEDED against those that FAILED; the same 7-file list appeared on both a fully-completed install and a later 88% partial, i.e. deterministic, not timing. Compounding it, depot.test.ts's buildFatMachOHeader hardcoded `sliceOffset = 64` — inside the 4096 probe — so the existing fat-binary tests were GREEN AGAINST THE DEFECT, exercising a case that cannot occur in the wild. 260819-b1q's regression pin therefore places a slice at 1 MiB, making 'just raise the constant' behaviourally impossible to pass."
   reason: "HUMANKIND (1124300) installed to StateFlags=4 cleanly (steps 1-4 pass) but 0 of 18,809 files carry +x. Main binary Humankind.app/Contents/MacOS/Humankind landed -rw-r--r--; macOS launch fails with 'os error 256'. The StateFlags=4 path (which skips Steam's own verify pass) is supposed to apply the manifest's EDepotFileFlag modes via applyEDepotFileModes (chmod 0o755 on EXECUTABLE_FLAG=32/CUSTOM_EXECUTABLE_FLAG=128) but applied nothing for this install."
   surfaced_by: gate-2 (attempt 2, HUMANKIND, native path)
   root_cause: "CONFIRMED 2026-08-16 by 23-07 live hardware trace (23-TRACE.md, verdict H2). HUMANKIND's Steam manifest carries NO executable flags at all: stage=plan-build reported depots=2 totalFiles=18949 flagBearing=140 executableFlagged=0 distinctFlagValues=[64] — the only EDepotFileFlag value present across both depots is 64 (Directory), and the 140 flag-bearing entries are exactly the 140 directory entries. GameLib applied precisely what the manifest specified, which was nothing executable. The writer is NOT defective: the WazHack (264160) control reproduced Steam's own mode layout byte-for-byte (171 files, 1 +x, same file, same modes), with a clean 1:1 executableFlagged=1 -> chmodAttempts=1 -> one -rwxr-xr-x file on disk. The real defect is architectural: EDepotFileFlag is not a sufficient source of executability on macOS. Steam's own HUMANKIND install carries 18,002 of 18,809 files +x (per-file, not blanket) despite the manifest supplying zero — the official client derives execute bits by some other means. Under StateFlags=4 no verify pass ever runs, so nothing supplies them."
@@ -426,8 +482,30 @@ reconciliation genuinely could not prove completeness — record which), the gam
     - "Fail closed per REQ-23-01: while executability cannot be established for a title, canWriteFullOwnership(...) must decline StateFlags=4 and fall back to Phase 21's 1026 verify-handoff so Steam's own verify pass supplies the bits. Run 2 wrote no .acf at all, so the gate's live behavior on this path is UNOBSERVED."
 ```
 
-**Gate status:** NOT CLOSED. Revised 2026-08-16 after 23-07's hardware trace. **No gate now has a
-clean unconditional PASS on its launch half.** Gate 1's *adoption* half is hardware-confirmed
+**Gate status (revised 2026-08-19): STILL NOT CLOSED, but the blocker is gone.** Gate 2 now holds a
+clean **unconditional** PASS on both its adoption and launch halves (attempt 3, real hardware), and
+blocker gap **G-23-02 is RESOLVED** — a GameLib-authored `StateFlags=4` native macOS install is
+launchable with no manual `chmod`. That closes the single defect that had downgraded or conditioned
+every launch result in this document.
+
+**Three items still stand between here and phase closure:**
+1. **Gate 3 (interrupt-resume) has never been executed.** G-23-02 no longer blocks its launch step.
+2. **Gate 1's launch half remains MASKED.** Attempt 3 does NOT re-confirm it — the launch mechanism
+   (GameLib vs Steam UI) was not recorded, which is the very distinction that masked Gate 1. Re-confirm
+   deliberately, with the launch client recorded at the time rather than reconstructed afterwards.
+3. **G-23-01 is still open** — the KCD2 decisive diagnostic (install 1771300 in the official Steam
+   client, observe whether depot 1771304 downloads) has not been run. 23-09 shipped its observability
+   half only; the selection-policy follow-up stays gated on that verdict.
+
+Also carried forward, NOT part of this gate's contract: the DecompressPool decode stall that killed two
+earlier install attempts at 88% did not recur on 2026-08-19, but nothing was fixed — treat it as open
+(it is a live recurrence of the hang Phase 23.1 closed as "unreproduced", which was itself the stated
+criterion for reopening).
+
+---
+
+**Superseded assessment (2026-08-16, retained for history):** Revised after 23-07's hardware trace.
+**No gate then had a clean unconditional PASS on its launch half.** Gate 1's *adoption* half is hardware-confirmed
 (2026-07-19) and stands; its *launch* half was downgraded to MASKED by 23-07 Task 2 — Cyberpunk's
 manifest carries `executableFlagged=0`, so that launch cannot have run on GameLib-applied execute
 bits. Gate 2's Denuvo-launch hypothesis is proven, but only after a manual `+x` workaround. Both
