@@ -22,6 +22,7 @@ jest.mock('../constants', () => ({
 }))
 
 import { deriveInstallStatusKind } from '../hasStatus'
+import { makeFaithfulT } from '../../screens/Game/GamePage/components/__tests__/faithfulTranslate'
 
 describe('deriveInstallStatusKind (GAP-17-BOTTLE-INSTALL-DONE-DESYNC done-transition)', () => {
   it('cleared statusEntry (as after the poller\'s "done") + is_installed:true resolves "installed" (Play)', () => {
@@ -90,10 +91,20 @@ describe('deriveInstallStatusKind (GAP-17-BOTTLE-INSTALL-DONE-DESYNC done-transi
  * touch throwing in this jsdom-less env — see file docstring). To exercise
  * the REAL implementation here, stub `window.localStorage` first and pull
  * it in via `jest.requireActual`, which bypasses the mock factory above.
+ *
+ * quick-260819-ch5: `fakeT` used to be
+ * `(key, fallback) => fallback ?? key` — a defaults-returning mock. That is
+ * this repo's ledgered "editing a `t()` DEFAULT is a silent no-op when the
+ * key exists" trap, seen from the test side: it measured the INLINE DEFAULT
+ * argument, not the catalog value i18next actually renders, so this suite
+ * sat outside `labelSuiteI18nCensus`'s scan directory and would have stayed
+ * green through the "Finish in Steam" -> "Resume Install" catalog change.
+ * Replaced with the shared `makeFaithfulT`, which resolves against the real
+ * `gamepage.json`/`gamelib.json` catalogs the same way i18next does.
  */
 describe('getStatusLabel (real implementation, T-21-16 waiting-hint + copy fix)', () => {
   let getStatusLabelReal: (typeof import('../constants'))['getStatusLabel']
-  const fakeT = ((key: string, fallback?: string) => fallback ?? key) as never
+  const fakeT = makeFaithfulT('gamepage') as never
 
   beforeAll(() => {
     ;(global as unknown as { window: unknown }).window = {
@@ -161,14 +172,16 @@ describe('getStatusLabel (real implementation, T-21-16 waiting-hint + copy fix)'
   })
 
   // D-UAT-09 (21-17): notInstalled + steam + steam-incomplete resume signal
-  it('returns "Finish in Steam" for status notInstalled + runner steam + statusContext steam-incomplete', () => {
+  // quick-260819-ch5: retargeted from "Finish in Steam" — GameLib resumes
+  // this install itself now.
+  it('returns "Resume Install" for status notInstalled + runner steam + statusContext steam-incomplete', () => {
     const label = getStatusLabelReal({
       status: 'notInstalled',
       runner: 'steam',
       statusContext: 'steam-incomplete',
       t: fakeT
     })
-    expect(label).toBe('Finish in Steam')
+    expect(label).toBe('Resume Install')
   })
 
   it('a non-steam notInstalled game returns the plain notinstalled copy, even with steam-incomplete context', () => {
@@ -178,7 +191,7 @@ describe('getStatusLabel (real implementation, T-21-16 waiting-hint + copy fix)'
       statusContext: 'steam-incomplete',
       t: fakeT
     })
-    expect(label).toBe('gamepage:status.notinstalled')
+    expect(label).toBe('This game is not installed')
   })
 
   it('a steam notInstalled game with no resume context returns the plain notinstalled copy (no regression)', () => {
@@ -188,6 +201,25 @@ describe('getStatusLabel (real implementation, T-21-16 waiting-hint + copy fix)'
       statusContext: undefined,
       t: fakeT
     })
-    expect(label).toBe('gamepage:status.notinstalled')
+    expect(label).toBe('This game is not installed')
+  })
+
+  // quick-260819-ch5: sentinel proving the mock is faithful — a t that
+  // returned its inline default instead of the catalog value could not make
+  // the 'Resume Install' assertions above pass by accident, because the key
+  // `gamelib:steam.status.resumeInstall` already resolves in the catalog.
+  it('sentinel: makeFaithfulT resolves gamelib:steam.status.resumeInstall through the catalog, not the inline default', () => {
+    expect(
+      makeFaithfulT('gamepage')(
+        'gamelib:steam.status.resumeInstall',
+        'INLINE-DEFAULT-SENTINEL'
+      )
+    ).toBe('Resume Install')
+    expect(
+      makeFaithfulT('gamepage')(
+        'gamelib:steam.status.resumeInstall',
+        'INLINE-DEFAULT-SENTINEL'
+      )
+    ).not.toBe('INLINE-DEFAULT-SENTINEL')
   })
 })

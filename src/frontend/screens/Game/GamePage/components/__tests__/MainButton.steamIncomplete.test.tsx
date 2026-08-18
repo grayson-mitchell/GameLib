@@ -2,10 +2,16 @@
  * D-UAT-09 (21-17): the GamePage primary action button must never render
  * "Play" for an incomplete native Steam install (StateFlags bit 4 unset,
  * install.steamResumePending true) — it must surface a distinct
- * "Finish in Steam" resume affordance instead, never the generic "Install"
+ * "Resume Install" resume affordance instead, never the generic "Install"
  * download label. A genuinely-installed game (StateFlags=4) and the
  * existing steam-waiting-for-restart handoff must both keep working
  * unchanged.
+ *
+ * quick-260819-ch5: retargeted from the old "Finish in Steam" copy —
+ * GameLib's own native depot downloader (resumeInterruptedSteamInstall,
+ * Phase 23) resumes this install itself, so the label no longer sends the
+ * user to Steam. Only the words changed; the branch condition and click
+ * routing are untouched.
  *
  * Follows the same no-jsdom pattern as MainButton.steamWaitingRestart.test.tsx
  * — 'react' (useContext), 'react-i18next' (useTranslation) and useSetting are
@@ -141,7 +147,7 @@ function renderTree(gameInfo: GameInfo): { text: string; tree: ReactElement } {
 }
 
 describe('MainButton — incomplete native steam install (D-UAT-09, 21-17)', () => {
-  it('incomplete install (is_installed=false, steamResumePending=true, not installing/queued): renders NO Play button and "Finish in Steam"', () => {
+  it('incomplete install (is_installed=false, steamResumePending=true, not installing/queued): renders NO Play button and "Resume Install"', () => {
     mockIs = { ...baseIs }
     mockStatusContext = undefined
     const { text } = renderTree(
@@ -151,9 +157,14 @@ describe('MainButton — incomplete native steam install (D-UAT-09, 21-17)', () 
       })
     )
 
-    expect(text).toContain('Finish in Steam')
+    expect(text).toContain('Resume Install')
     expect(text).not.toContain('Play')
     expect(text).not.toMatch(/^Install$/m)
+    // quick-260819-ch5: standing regression pin — 'in Steam' is the stronger
+    // assertion, since it fails for any resurrection of the "go do it in
+    // Steam" framing, not just the exact retired string.
+    expect(text).not.toContain('Finish in Steam')
+    expect(text).not.toContain('in Steam')
   })
 
   it('installed (StateFlags=4 equivalent — is_installed=true): still renders Play, no regression', () => {
@@ -162,7 +173,7 @@ describe('MainButton — incomplete native steam install (D-UAT-09, 21-17)', () 
     const { text } = renderTree(steamGameInfo({ is_installed: true }))
 
     expect(text).toContain('Play')
-    expect(text).not.toContain('Finish in Steam')
+    expect(text).not.toContain('Resume Install')
   })
 
   it('mid-install, steam-waiting-for-restart: still renders "Restart Steam to finish", unaffected by the new branch', () => {
@@ -173,10 +184,10 @@ describe('MainButton — incomplete native steam install (D-UAT-09, 21-17)', () 
     )
 
     expect(text).toContain('Restart Steam to finish')
-    expect(text).not.toContain('Finish in Steam')
+    expect(text).not.toContain('Resume Install')
   })
 
-  it('steam-paused: unaffected — still shows the generic steam-installing label, not "Finish in Steam"', () => {
+  it('steam-paused: unaffected — still shows the generic steam-installing label, not "Resume Install"', () => {
     mockIs = { ...baseIs, installing: true }
     mockStatusContext = 'steam-paused'
     const { text } = renderTree(
@@ -184,17 +195,17 @@ describe('MainButton — incomplete native steam install (D-UAT-09, 21-17)', () 
     )
 
     expect(text).toContain('Installing…')
-    expect(text).not.toContain('Finish in Steam')
+    expect(text).not.toContain('Resume Install')
   })
 
-  it('a bare not-installed steam game (no steamResumePending) never renders "Finish in Steam" or "Play" (falls through to the generic Install label)', () => {
+  it('a bare not-installed steam game (no steamResumePending) never renders "Resume Install" or "Play" (falls through to the generic Install label)', () => {
     mockIs = { ...baseIs }
     mockStatusContext = undefined
     const { text } = renderTree(
       steamGameInfo({ is_installed: false, install: {} })
     )
 
-    expect(text).not.toContain('Finish in Steam')
+    expect(text).not.toContain('Resume Install')
     expect(text).not.toContain('Play')
   })
 })
