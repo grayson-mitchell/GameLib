@@ -39,11 +39,11 @@ const ALL_NAMESPACES = ['gamelib', 'gamepage', 'login', 'translation'] as const
 type Namespace = (typeof ALL_NAMESPACES)[number]
 
 const namespaceScope: Namespace[] = process.env.LINT_TRANSLATIONS_NAMESPACES
-  ? (process.env.LINT_TRANSLATIONS_NAMESPACES.split(',')
+  ? process.env.LINT_TRANSLATIONS_NAMESPACES.split(',')
       .map((ns) => ns.trim())
       .filter((ns): ns is Namespace =>
         (ALL_NAMESPACES as readonly string[]).includes(ns)
-      ) as Namespace[])
+      )
   : [...ALL_NAMESPACES]
 
 // there are many extra keys in translation files without a matching

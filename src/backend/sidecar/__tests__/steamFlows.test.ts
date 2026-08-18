@@ -92,7 +92,6 @@ jest.mock('../../launcher', () => ({
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────────────────
 import { init } from '../bootstrap'
-import { SteamUser } from '../../storeManagers/steam/user'
 import { getSteamLibraries } from 'backend/utils'
 
 type Frame = Record<string, unknown>

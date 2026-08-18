@@ -299,7 +299,7 @@ function resolveRawStore(name: string): Record<string, unknown> {
       name,
       clearInvalidConfig: true
     })
-    return cacheBackedStore.store as Record<string, unknown>
+    return cacheBackedStore.store
   }
 
   process.stderr.write(
@@ -337,9 +337,7 @@ ipcMain.handle(
       return {}
     }
 
-    const isUniverseMember = (STORE_UNIVERSE as readonly string[]).includes(
-      storeName
-    )
+    const isUniverseMember = STORE_UNIVERSE.includes(storeName)
     const isSyntacticallyValidName = CACHE_STORE_NAME_PATTERN.test(storeName)
 
     if (!isUniverseMember && !isSyntacticallyValidName) {

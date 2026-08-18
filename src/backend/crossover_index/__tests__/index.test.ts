@@ -26,9 +26,8 @@ jest.mock('../normalize', () => ({
 
 // Mutable reference to the mocked module so tests can flip the gate flag
 // per-test without re-registering the mock factory.
-const normalizeMock = jest.requireMock('../normalize') as {
-  NAME_MATCHING_SHIPS: boolean
-}
+const normalizeMock: { NAME_MATCHING_SHIPS: boolean } =
+  jest.requireMock('../normalize')
 
 // ── backend/crossover_index/fetcher mock — loadIndex replaced so the test
 // controls exactly what the "index" is without a network/gunzip round-trip.

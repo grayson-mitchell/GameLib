@@ -134,9 +134,8 @@ describe('matchOAuthRedirect — the four REQ-34.4.1-08 redirect shapes', () => 
   })
 
   it('nile: a rejected off-origin candidate carrying the param logs the origin exactly once, and never the code value', () => {
-    const loggerModule = jest.requireMock('backend/logger') as {
-      logWarning: jest.Mock
-    }
+    const loggerModule: { logWarning: jest.Mock } =
+      jest.requireMock('backend/logger')
     loggerModule.logWarning.mockClear()
 
     matchOAuthRedirect(
@@ -547,7 +546,8 @@ describe('captureOAuthLogin — nav host logging (plan 34.5-24 Task 1)', () => {
     mockSeamTakeEvents.mockResolvedValue([])
     mockSeamClose.mockResolvedValue(true)
     setLoginWindowSeam(fakeSeam)
-    const loggerModule = jest.requireMock('backend/logger') as { logInfo: jest.Mock }
+    const loggerModule: { logInfo: jest.Mock } =
+      jest.requireMock('backend/logger')
     loggerModule.logInfo.mockClear()
   })
 
@@ -556,7 +556,8 @@ describe('captureOAuthLogin — nav host logging (plan 34.5-24 Task 1)', () => {
   })
 
   function navHostLines(): string[] {
-    const loggerModule = jest.requireMock('backend/logger') as { logInfo: jest.Mock }
+    const loggerModule: { logInfo: jest.Mock } =
+      jest.requireMock('backend/logger')
     return loggerModule.logInfo.mock.calls
       .map(([msg]: [unknown]) => String(msg))
       .filter((msg: string) => msg.includes('nav host='))
@@ -614,10 +615,8 @@ describe('captureOAuthLogin — nav host logging (plan 34.5-24 Task 1)', () => {
   })
 
   it('never logs a captured code value (SECRETVALUE) in any logged line, even on a matching event', async () => {
-    const loggerModule = jest.requireMock('backend/logger') as {
-      logInfo: jest.Mock
-      logWarning: jest.Mock
-    }
+    const loggerModule: { logInfo: jest.Mock; logWarning: jest.Mock } =
+      jest.requireMock('backend/logger')
 
     mockSeamTakeEvents.mockResolvedValue([
       { event: 'finished', url: 'http://localhost:8080/?code=SECRETVALUE' }
@@ -716,7 +715,8 @@ describe('resolveUserAgent — diagnostic UA override, exercised via captureOAut
   })
 
   it('logs exactly one user-agent-override line naming the runner and the override LENGTH (never the value) when an override is in effect', async () => {
-    const loggerModule = jest.requireMock('backend/logger') as { logInfo: jest.Mock }
+    const loggerModule: { logInfo: jest.Mock } =
+      jest.requireMock('backend/logger')
     loggerModule.logInfo.mockClear()
     const override = 'Mozilla/5.0 TestOverrideAgent'
     process.env.GAMELIB_OAUTH_UA_LEGENDARY = override

@@ -3,8 +3,7 @@ import { getFileSize, removeFolder, sendGameStatusUpdate } from '../utils'
 import {
   DMQueueElement,
   DMStatus,
-  DownloadManagerState,
-  Runner
+  DownloadManagerState
 } from 'common/types'
 import { installQueueElement, updateQueueElement } from './utils'
 import { sendFrontendMessage } from '../ipc'

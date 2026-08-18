@@ -55,7 +55,7 @@ let mockLogError: jest.SpyInstance
 // `app.getPath('appData'|'userData')` at MODULE SCOPE — a full-replacement mock (Task 1's
 // original, pre-Task-2 shape) would throw on that call the instant anything in this file
 // imports the real `./handlers` graph (Task 2's bootstrap wiring block does, via `../bootstrap`). ─
-const realPathShim = jest.requireActual('../pathShim') as typeof import('../pathShim')
+const realPathShim: typeof import('../pathShim') = jest.requireActual('../pathShim')
 const mockGetPath = jest.fn()
 jest.mock('../pathShim', () => ({
   getPath: (name: string) => mockGetPath(name)

@@ -318,7 +318,7 @@ describe('preserveRunnerSymlinks', () => {
 
   it('vacuity guard: buildOrphanDestFixture genuinely produces a skipped condition (no restore is possible)', () => {
     const { sourceRoot, destRoot, relPaths } = buildOrphanDestFixture()
-    const firstRelPath = relPaths[0] as string
+    const firstRelPath = relPaths[0]
     expect(existsSync(join(destRoot, ...firstRelPath.split('/')))).toBe(false)
 
     const { restored, skipped } = restoreSymlinks(sourceRoot, destRoot)

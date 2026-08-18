@@ -109,10 +109,10 @@ export function bindTransport(next: ElectronStubTransport): void {
 
 // ---- ipcMain recorder --------------------------------------------------------
 
-export type IpcHandler = (
-  event: unknown,
-  ...args: unknown[]
-) => unknown | Promise<unknown>
+// Return type is `unknown` — this collapses `unknown | Promise<unknown>` (the union is
+// redundant since `unknown` already subsumes `Promise<unknown>`), but the handler is still
+// permitted to return a Promise; callers `await` the result regardless.
+export type IpcHandler = (event: unknown, ...args: unknown[]) => unknown
 export type IpcListener = (event: unknown, ...args: unknown[]) => void
 
 /** channel -> registered `ipcMain.handle` handler (req/resp — sidecarRpc dispatches here). */

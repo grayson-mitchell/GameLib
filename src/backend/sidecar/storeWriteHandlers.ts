@@ -120,7 +120,7 @@ export function applyStoreWrite(
   // `RECOGNIZED_CACHE_STORE_NAMES` makes the guard mean what it says. The four D-13
   // names plus `humble_library` are the ONLY dynamic cache stores the frontend ever
   // constructs (`new CacheStore(...)`, src/frontend/helpers/electronStores.ts).
-  const isUniverseMember = (STORE_UNIVERSE as readonly string[]).includes(storeName)
+  const isUniverseMember = STORE_UNIVERSE.includes(storeName)
   const isRecognizedCacheName = RECOGNIZED_CACHE_STORE_NAMES.includes(storeName)
   if (!isUniverseMember && !isRecognizedCacheName) {
     process.stderr.write(

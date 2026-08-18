@@ -41,18 +41,6 @@ const CAPABILITIES_PATH = join(
   'default.json'
 )
 
-// Phase 34.4.2 Plan 03, Test 8 (REQ-34.4.2-10): reads Cargo.toml directly rather than through
-// `loadMainRsCode` -- this is a config-shape assertion (the `objc2-web-kit` feature array),
-// not a main.rs source assertion, mirroring `cargoFeatures.test.ts`'s own convention.
-const CARGO_TOML_PATH = join(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  'src-tauri',
-  'Cargo.toml'
-)
-
 /**
  * Reads main.rs (or `source` if provided — the self-tests below drive this SAME code path
  * with synthetic input rather than reimplementing the stripping algorithm) and strips
@@ -1434,7 +1422,7 @@ describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes
     ]
     expect(registerMatches.length).toBeGreaterThanOrEqual(2)
     for (const match of registerMatches) {
-      expect(match.index as number).toBeGreaterThan(retainIdx)
+      expect(match.index).toBeGreaterThan(retainIdx)
     }
   })
 

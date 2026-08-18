@@ -301,7 +301,7 @@ export function sidecarOutputPath(triple: string): string {
 export function buildPostjectArgv(
   binaryPath: string,
   blobPath: string,
-  platform: NodeJS.Platform | string = process.platform
+  platform: NodeJS.Platform = process.platform
 ): { command: string; args: string[] } {
   const args = [
     resolvePostjectCli(),
@@ -406,7 +406,7 @@ export function buildWorkerEsbuildArgv(
  */
 export function buildCodesignArgv(
   binaryPath: string,
-  platform: NodeJS.Platform | string = process.platform
+  platform: NodeJS.Platform = process.platform
 ): Array<{ command: string; args: string[] }> {
   if (platform !== 'darwin') {
     return []

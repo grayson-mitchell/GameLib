@@ -309,9 +309,8 @@ describe('callTool branch dispatch — winetricks/winecfg/runExe, the gog post-s
 
     expect(mockWinetricksRun).toHaveBeenCalledWith('legendary', 'fake-app')
     expect(mockRunWineCommandOnGame).not.toHaveBeenCalled()
-    const { sendGameStatusUpdate } = jest.requireMock('backend/utils') as {
-      sendGameStatusUpdate: jest.Mock
-    }
+    const { sendGameStatusUpdate }: { sendGameStatusUpdate: jest.Mock } =
+      jest.requireMock('backend/utils')
     expect(sendGameStatusUpdate).toHaveBeenCalledWith({
       appName: 'fake-app',
       runner: 'legendary',
@@ -336,9 +335,8 @@ describe('callTool branch dispatch — winetricks/winecfg/runExe, the gog post-s
       }
     )
     expect(mockWinetricksRun).not.toHaveBeenCalled()
-    const { sendGameStatusUpdate } = jest.requireMock('backend/utils') as {
-      sendGameStatusUpdate: jest.Mock
-    }
+    const { sendGameStatusUpdate }: { sendGameStatusUpdate: jest.Mock } =
+      jest.requireMock('backend/utils')
     expect(sendGameStatusUpdate).toHaveBeenCalledWith({
       appName: 'fake-app',
       runner: 'legendary',
@@ -364,9 +362,8 @@ describe('callTool branch dispatch — winetricks/winecfg/runExe, the gog post-s
         startFolder: '/games/fake-game/bin'
       }
     )
-    const { sendGameStatusUpdate } = jest.requireMock('backend/utils') as {
-      sendGameStatusUpdate: jest.Mock
-    }
+    const { sendGameStatusUpdate }: { sendGameStatusUpdate: jest.Mock } =
+      jest.requireMock('backend/utils')
     expect(sendGameStatusUpdate).toHaveBeenCalledWith({
       appName: 'fake-app',
       runner: 'legendary',
@@ -383,9 +380,8 @@ describe('callTool branch dispatch — winetricks/winecfg/runExe, the gog post-s
 
     expect(mockRunWineCommandOnGame).not.toHaveBeenCalled()
     expect(mockWinetricksRun).not.toHaveBeenCalled()
-    const { sendGameStatusUpdate } = jest.requireMock('backend/utils') as {
-      sendGameStatusUpdate: jest.Mock
-    }
+    const { sendGameStatusUpdate }: { sendGameStatusUpdate: jest.Mock } =
+      jest.requireMock('backend/utils')
     expect(sendGameStatusUpdate).toHaveBeenCalledWith({
       appName: 'fake-app',
       runner: 'legendary',

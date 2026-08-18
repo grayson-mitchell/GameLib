@@ -316,7 +316,7 @@ async function handleLaunch(
     return { status: 'error' }
   }
 
-  const runner = rawRunner as Runner
+  const runner = rawRunner
 
   // Steam keeps TODAY'S curated behaviour byte-for-byte: SteamGame.launch()'s
   // native branch already funnels through buildSteamProtocolUrl (T-27-08's

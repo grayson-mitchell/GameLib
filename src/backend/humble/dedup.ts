@@ -1,11 +1,6 @@
 import { GameInfo } from 'common/types'
 import { HumbleKey } from 'common/types/humble'
-import {
-  normalizeTitle,
-  titleSimilarity,
-  isDlcFalsePositiveRisk,
-  fuzzyMatch
-} from 'common/matching/titleMatch'
+import { fuzzyMatch } from 'common/matching/titleMatch'
 
 /**
  * Pure ownership-matching module (HDEDUP-01, D-44/D-45). No I/O, no logging,

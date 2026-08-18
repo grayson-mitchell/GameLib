@@ -172,7 +172,7 @@ describe('lzmaNativeBinding dev branch', () => {
     lzmaNativeBinding!(REAL_LZMA_NATIVE_DIR)
 
     expect(dlopenSpy).toHaveBeenCalledTimes(1)
-    const dlopenPath = dlopenSpy.mock.calls[0][1] as string
+    const dlopenPath = dlopenSpy.mock.calls[0][1]
     expect(dlopenPath).toContain('prebuilds')
     expect(dlopenPath).toContain(`${process.platform}-${process.arch}`)
     expect(getRawAsset).not.toHaveBeenCalled()
@@ -193,7 +193,7 @@ describe('lzmaNativeBinding dev branch', () => {
     lzmaNativeBinding!(REAL_LZMA_NATIVE_DIR)
 
     expect(dlopenSpy).toHaveBeenCalledTimes(1)
-    const dlopenPath = dlopenSpy.mock.calls[0][1] as string
+    const dlopenPath = dlopenSpy.mock.calls[0][1]
     expect(dlopenPath).toContain('prebuilds')
   })
 })
