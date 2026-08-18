@@ -20,6 +20,10 @@ import {
   buildWorkerEsbuildArgv,
   buildSeaConfig,
   SEA_WORKER_ASSET_KEY,
+  LZMA_NATIVE_ASSET_KEY,
+  NATIVE_LZMA_REQUIRED_TRIPLES,
+  lzmaNativePrebuildDir,
+  lzmaNativePrebuildPath,
   sidecarOutputPath,
   hostTriple,
   resolveTriple,
@@ -510,7 +514,7 @@ describe('buildWorkerEsbuildArgv (decompress-worker SEA bundle)', () => {
 })
 
 describe('buildSeaConfig (decompress-worker asset wiring)', () => {
-  test('assets maps exactly SEA_WORKER_ASSET_KEY -> the worker bundle output path', () => {
+  test('called with no argument (the native-unavailable/degraded shape), assets maps exactly SEA_WORKER_ASSET_KEY -> the worker bundle output path', () => {
     const config = buildSeaConfig()
     expect(Object.keys(config.assets)).toEqual([SEA_WORKER_ASSET_KEY])
     expect(config.assets[SEA_WORKER_ASSET_KEY]).toBe(
@@ -528,6 +532,80 @@ describe('buildSeaConfig (decompress-worker asset wiring)', () => {
     expect(config.output).toBe(join('build', 'sidecar-prep.blob'))
     expect(config.disableExperimentalSEAWarning).toBe(true)
   })
+
+  test('called with a native lzma path, assets maps exactly two keys: SEA_WORKER_ASSET_KEY and LZMA_NATIVE_ASSET_KEY', () => {
+    const config = buildSeaConfig('some/path.node')
+    const keys = Object.keys(config.assets)
+    expect(keys).toHaveLength(2)
+    expect(keys).toEqual(
+      expect.arrayContaining([SEA_WORKER_ASSET_KEY, LZMA_NATIVE_ASSET_KEY])
+    )
+    expect(config.assets[LZMA_NATIVE_ASSET_KEY]).toBe('some/path.node')
+    expect(config.assets[SEA_WORKER_ASSET_KEY]).toBe(
+      join('build', 'main', 'decompressWorker-sea-bundle.js')
+    )
+  })
+
+  test('LZMA_NATIVE_ASSET_KEY is the literal "lzma_native.node" recorded by 23.1-01-SUMMARY (must agree with plan 23.1-03\'s runtime sea.getRawAsset() call)', () => {
+    expect(LZMA_NATIVE_ASSET_KEY).toBe('lzma_native.node')
+  })
+})
+
+describe('lzmaNativePrebuildDir (target-triple -> node-gyp-build prebuild dir)', () => {
+  test('maps each of the five supported triples to node-gyp-build\'s own <platform>-<arch> naming', () => {
+    expect(lzmaNativePrebuildDir('aarch64-apple-darwin')).toBe('darwin-arm64')
+    expect(lzmaNativePrebuildDir('x86_64-apple-darwin')).toBe('darwin-x64')
+    expect(lzmaNativePrebuildDir('x86_64-unknown-linux-gnu')).toBe(
+      'linux-x64'
+    )
+    expect(lzmaNativePrebuildDir('aarch64-unknown-linux-gnu')).toBe(
+      'linux-arm64'
+    )
+    expect(lzmaNativePrebuildDir('x86_64-pc-windows-msvc')).toBe('win32-x64')
+  })
+
+  test('the Windows triple maps to "win32-x64", NOT "win-x64" -- regression guard against reusing nodeDistName()\'s Node-dist naming for a node-gyp-build path', () => {
+    expect(lzmaNativePrebuildDir('x86_64-pc-windows-msvc')).not.toBe(
+      nodeDistName('x86_64-pc-windows-msvc')
+    )
+  })
+
+  test('throws on an unsupported triple', () => {
+    expect(() => lzmaNativePrebuildDir('mips-unknown-none')).toThrow()
+  })
+})
+
+describe('lzmaNativePrebuildPath (pure, triple-driven, no process.platform/process.arch)', () => {
+  test('returns a path under node_modules/lzma-native/prebuilds/<dir>/ ending in the observed prebuild filename', () => {
+    const result = lzmaNativePrebuildPath('aarch64-apple-darwin')
+    expect(result).toBe(
+      join(
+        'node_modules',
+        'lzma-native',
+        'prebuilds',
+        'darwin-arm64',
+        'node.napi.node'
+      )
+    )
+  })
+
+  test('throws on an unsupported triple (delegates to lzmaNativePrebuildDir)', () => {
+    expect(() => lzmaNativePrebuildPath('mips-unknown-none')).toThrow()
+  })
+})
+
+describe('NATIVE_LZMA_REQUIRED_TRIPLES (reconciled against the 23.1-01 prebuild inventory)', () => {
+  test('contains all four shipping sidecar triples -- every one has a reconciled prebuild', () => {
+    expect(NATIVE_LZMA_REQUIRED_TRIPLES).toEqual(
+      expect.arrayContaining([
+        'aarch64-apple-darwin',
+        'x86_64-apple-darwin',
+        'x86_64-unknown-linux-gnu',
+        'x86_64-pc-windows-msvc'
+      ])
+    )
+    expect(NATIVE_LZMA_REQUIRED_TRIPLES).toHaveLength(4)
+  })
 })
 
 describe('WR-10-style source-scan guard: the inline-fallback warning cannot come back', () => {
@@ -542,9 +620,18 @@ describe('WR-10-style source-scan guard: the inline-fallback warning cannot come
       .join('\n')
   }
 
+  // 23.1-02: this matcher was previously `not.toMatch(/console\.warn\(/)`,
+  // banning EVERY console.warn(...) call in the file forever -- not just
+  // the specific "inline single-thread" Pitfall-1 warning the describe
+  // block is named for. That blanket ban would have wrongly failed on
+  // resolveNativeLzmaAsset()'s unrelated "NATIVE LZMA UNAVAILABLE"
+  // console.warn (an intentional, loud, non-silent degrade-path signal
+  // added by this plan -- see the file header's fix note 6). Narrowed to
+  // the actual phrase this guard exists to catch, per Rule 1 (the old
+  // matcher was an in-scope bug: overly broad for its own stated purpose).
   test('the current source contains no console.warn(...) mentioning "inline single-thread"', () => {
     const stripped = loadStrippedBuildScriptSource()
-    expect(stripped).not.toMatch(/console\.warn\(/)
+    expect(stripped).not.toMatch(/inline single-thread/)
   })
 
   // Proves this matcher CAN fail, against the exact pre-change warning text
@@ -558,6 +645,6 @@ describe('WR-10-style source-scan guard: the inline-fallback warning cannot come
       "      'shipped). Accepted throughput regression -- see 34-RESEARCH.md.'",
       "  )"
     ].join('\n')
-    expect(oldWarningSource).toMatch(/console\.warn\(/)
+    expect(oldWarningSource).toMatch(/inline single-thread/)
   })
 })
