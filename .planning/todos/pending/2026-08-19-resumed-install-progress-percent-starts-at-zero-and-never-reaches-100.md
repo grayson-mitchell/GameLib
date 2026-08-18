@@ -46,8 +46,22 @@ interrupted run had fetched mostly small files and left the bulk assets. Resume 
 ```
 
 Full series: `.planning/phases/23-steam-full-ownership-install-stateflags-4/23-UAT.md` Gate 3 record.
-**Observed terminal percent: _(fill in when the run completes — this is the ceiling, and it is the
-cleanest evidence of the defect)_.**
+
+**Observed terminal percent: 76%.** The install COMPLETED SUCCESSFULLY at that reading —
+`StateFlags 4`, `BytesDownloaded == SizeOnDisk == 37592580261`, all 18,809 files present. The last
+`chunk-stream stats` line before the manifest write reads:
+
+```
+[Timing] chunk-stream stats @2181s: percent=76% downSpeedMiBs=0.00 diskSpeedMiBs=0.00
+  totalAttempts=33267 rotations=2 timeouts=0 ... pool[size=10 busy=0 idle=10 queued=0 ...]
+(11:50:16) Writing StateFlags=4 full-ownership manifest for appId 1124300
+  (sizeOnDisk=37592580261, buildid=23181593)
+```
+
+So a fully successful resumed install's final user-visible progress reading was **76%**, and the
+24-point gap is exactly the reconciled-skip bytes. The corresponding census line quantifies the skip
+directly: `jobCount=3306 reconciledSkipped=15643` (of `totalFiles=18949`) — 82.6% of files skipped but
+only ~24% of bytes, since the skipped files were the small ones.
 
 Note the file-count-vs-bytes gap is itself the reason a naive "it looked ~83% done" intuition is
 wrong; any fix must reason in bytes.
