@@ -4032,16 +4032,36 @@ describe('downloadDepotFiles', () => {
     }
 
     /** Builds a minimal fat (universal) Mach-O: an 8-byte fat_header
-     *  (FAT_MAGIC, nfat_arch=1) + one 20-byte fat_arch entry pointing at a
-     *  thin mach_header_64 embedded at byte offset 64 — fat_header/fat_arch
-     *  are always big-endian on disk (mach-o/fat.h), regardless of the
-     *  contained slice's own byte order. */
-    function buildFatMachOHeader(filetype: number): Buffer {
+     *  (FAT_MAGIC, nfat_arch) + one 20-byte fat_arch entry pointing at a
+     *  thin mach_header_64 embedded at byte offset `sliceOffset` —
+     *  fat_header/fat_arch are always big-endian on disk (mach-o/fat.h),
+     *  regardless of the contained slice's own byte order.
+     *
+     *  `sliceOffset` used to be hardcoded at 64 — comfortably inside
+     *  `MACHO_PROBE_BYTES = 4096`, so the embedded slice header was ALWAYS
+     *  present in the 4096-byte probe buffer and `detectMachOEndianness`
+     *  always succeeded reading straight out of it. That is exactly why
+     *  these fat tests were green while every real fat binary on disk was
+     *  silently declined: HUMANKIND's own `CFBundleExecutable`
+     *  (`Humankind.app/Contents/MacOS/Humankind`) carries a first
+     *  `fat_arch.offset` of 16384 — four times beyond the probe — and a
+     *  Mach-O census of a live HUMANKIND install found all 15 of its 15 fat
+     *  binaries missed by the fallback. 16384 is the realistic value pinned
+     *  below by the new beyond-probe tests; 1 MiB (1048576) is pinned
+     *  specifically so this cannot be "fixed" by merely enlarging
+     *  `MACHO_PROBE_BYTES` to some other fixed constant — a fixed buffer is
+     *  always a guess that fails again for the first binary whose slice
+     *  sits beyond it. Defaulting `sliceOffset` to 64 keeps every
+     *  pre-existing call site's fixture byte-for-byte unchanged. */
+    function buildFatMachOHeader(
+      filetype: number,
+      sliceOffset = 64,
+      nfatArch = 1
+    ): Buffer {
       const fatHeader = Buffer.alloc(8)
       fatHeader.writeUInt32BE(0xcafebabe, 0) // FAT_MAGIC
-      fatHeader.writeUInt32BE(1, 4) // nfat_arch
+      fatHeader.writeUInt32BE(nfatArch, 4) // nfat_arch
 
-      const sliceOffset = 64
       const fatArch = Buffer.alloc(20)
       fatArch.writeUInt32BE(0x0100000c, 0) // cputype
       fatArch.writeUInt32BE(0, 4) // cpusubtype
@@ -4050,9 +4070,14 @@ describe('downloadDepotFiles', () => {
       fatArch.writeUInt32BE(0, 16) // align
 
       const thin = buildThinMachOHeader(filetype)
-      const padding = Buffer.alloc(
-        sliceOffset - fatHeader.length - fatArch.length
-      )
+      const paddingLength = sliceOffset - fatHeader.length - fatArch.length
+      if (paddingLength < 0) {
+        throw new Error(
+          `buildFatMachOHeader: sliceOffset (${sliceOffset}) must be >= ` +
+            `fat_header + fat_arch (${fatHeader.length + fatArch.length})`
+        )
+      }
+      const padding = Buffer.alloc(paddingLength)
       return Buffer.concat([fatHeader, fatArch, padding, thin])
     }
 
@@ -4146,6 +4171,221 @@ describe('downloadDepotFiles', () => {
       expect(result.failures).toEqual([])
       const dest = join(dir, 'common', 'SomeGame', 'unflagged-macho-fat-exe')
       expect((await stat(dest)).mode & 0o111).not.toBe(0)
+    })
+
+    // ── quick-260819-b1q: beyond-probe fat fixtures ─────────────────────
+    // The test above uses sliceOffset=64 (inside MACHO_PROBE_BYTES=4096) and
+    // was therefore green against a defect: it never exercised the real
+    // failure mode. The four tests below use realistic (16384, HUMANKIND's
+    // own CFBundleExecutable) and adversarial (1 MiB) slice offsets that sit
+    // beyond the probe, plus a bounds-rejection case. RED against unmodified
+    // depot.ts — this is the actual defect this plan closes.
+    it('a FAT Mach-O whose first slice is EXECUTE(0x2) at a realistic beyond-probe offset (16384, the real HUMANKIND value) lands with a non-zero execute bit', async () => {
+      const content = buildFatMachOHeader(0x2, 16384)
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+
+      const file: DepotPlanFile = {
+        filename: 'unflagged-macho-fat-exe-beyond-probe',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [
+          {
+            sha: 'sha-macho-fat-exe-beyond-probe',
+            cb_original: content.length,
+            offset: 0
+          }
+        ]
+      }
+      const plan = makePlan(
+        [
+          { depotId: '683', gid: 'g81', key: Buffer.from('key'), files: [file] }
+        ],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      const dest = join(
+        dir,
+        'common',
+        'SomeGame',
+        'unflagged-macho-fat-exe-beyond-probe'
+      )
+      expect((await stat(dest)).mode & 0o111).not.toBe(0)
+    })
+
+    it('a FAT Mach-O whose first slice is DYLIB(0x6) at a realistic beyond-probe offset (16384) lands with a non-zero execute bit', async () => {
+      const content = buildFatMachOHeader(0x6, 16384)
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+
+      const file: DepotPlanFile = {
+        filename: 'unflagged-macho-fat-dylib-beyond-probe',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [
+          {
+            sha: 'sha-macho-fat-dylib-beyond-probe',
+            cb_original: content.length,
+            offset: 0
+          }
+        ]
+      }
+      const plan = makePlan(
+        [
+          { depotId: '684', gid: 'g82', key: Buffer.from('key'), files: [file] }
+        ],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      const dest = join(
+        dir,
+        'common',
+        'SomeGame',
+        'unflagged-macho-fat-dylib-beyond-probe'
+      )
+      expect((await stat(dest)).mode & 0o111).not.toBe(0)
+    })
+
+    it('a FAT Mach-O whose first slice is EXECUTE(0x2) at a 1 MiB offset lands with a non-zero execute bit — pins against a "just enlarge the fixed probe buffer" non-fix', async () => {
+      const content = buildFatMachOHeader(0x2, 1048576)
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+
+      const file: DepotPlanFile = {
+        filename: 'unflagged-macho-fat-exe-1mib',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [
+          {
+            sha: 'sha-macho-fat-exe-1mib',
+            cb_original: content.length,
+            offset: 0
+          }
+        ]
+      }
+      const plan = makePlan(
+        [
+          { depotId: '685', gid: 'g83', key: Buffer.from('key'), files: [file] }
+        ],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      const dest = join(
+        dir,
+        'common',
+        'SomeGame',
+        'unflagged-macho-fat-exe-1mib'
+      )
+      expect((await stat(dest)).mode & 0o111).not.toBe(0)
+    })
+
+    it('a FAT Mach-O whose first slice is BUNDLE(0x8) at a beyond-probe offset (16384) is left WITHOUT an execute bit — subtype discrimination survives the second read', async () => {
+      const content = buildFatMachOHeader(0x8, 16384)
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+
+      const file: DepotPlanFile = {
+        filename: 'unflagged-macho-fat-bundle-beyond-probe',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [
+          {
+            sha: 'sha-macho-fat-bundle-beyond-probe',
+            cb_original: content.length,
+            offset: 0
+          }
+        ]
+      }
+      const plan = makePlan(
+        [
+          { depotId: '686', gid: 'g84', key: Buffer.from('key'), files: [file] }
+        ],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      const dest = join(
+        dir,
+        'common',
+        'SomeGame',
+        'unflagged-macho-fat-bundle-beyond-probe'
+      )
+      expect((await stat(dest)).mode & 0o111).toBe(0)
+    })
+
+    it('a FAT header claiming a slice offset past EOF is declined without throwing and without recording a failure', async () => {
+      // A structurally valid fat_header (nfat_arch=1) + fat_arch, then the
+      // offset field is overwritten with an absurd value (0xF0000000) and no
+      // slice body is appended — the file stays tiny. This must decline
+      // cleanly rather than attempt a read past the end of the file.
+      const fatHeader = Buffer.alloc(8)
+      fatHeader.writeUInt32BE(0xcafebabe, 0) // FAT_MAGIC
+      fatHeader.writeUInt32BE(1, 4) // nfat_arch
+      const fatArch = Buffer.alloc(20)
+      fatArch.writeUInt32BE(0x0100000c, 0) // cputype
+      fatArch.writeUInt32BE(0, 4) // cpusubtype
+      fatArch.writeUInt32BE(0xf0000000, 8) // offset — past EOF for this tiny file
+      fatArch.writeUInt32BE(32, 12) // size
+      fatArch.writeUInt32BE(0, 16) // align
+      const content = Buffer.concat([fatHeader, fatArch])
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+
+      const file: DepotPlanFile = {
+        filename: 'unflagged-macho-fat-offset-past-eof',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [
+          {
+            sha: 'sha-macho-fat-offset-past-eof',
+            cb_original: content.length,
+            offset: 0
+          }
+        ]
+      }
+      const plan = makePlan(
+        [
+          { depotId: '687', gid: 'g85', key: Buffer.from('key'), files: [file] }
+        ],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      const dest = join(
+        dir,
+        'common',
+        'SomeGame',
+        'unflagged-macho-fat-offset-past-eof'
+      )
+      expect((await stat(dest)).mode & 0o111).toBe(0)
     })
 
     it('a thin Mach-O BUNDLE(0x8) header (no manifest exec flag) is left WITHOUT an execute bit — subtype discrimination, matches Steam leaving bundles non-executable', async () => {
@@ -4346,6 +4586,63 @@ describe('downloadDepotFiles', () => {
             {
               depotId: '902a',
               gid: 'g92a',
+              key: Buffer.from('key'),
+              files: [file]
+            }
+          ],
+          content.length
+        )
+
+        const result = await downloadDepotFiles(plan, {
+          targetSteamappsDir: dir,
+          installdir: 'SomeGame',
+          hosts: HOSTS
+        })
+
+        expect(jest.mocked(fetchChunk)).not.toHaveBeenCalled()
+        expect(result.failures).toEqual([])
+        expect(lstatSync(destPath).mode & 0o111).not.toBe(0)
+      })
+
+      // quick-260819-b1q: proves the second call site (healReconciledFileModes)
+      // benefits from the beyond-probe fix with ZERO edits to that call site —
+      // same fat fixture (slice at 16384) as the fresh-download tests above,
+      // but driven through the heal path instead.
+      it('a reconciled flagless file whose on-disk bytes are a FAT Mach-O EXECUTE image at a beyond-probe offset (16384) ends up with a non-zero execute bit after the heal loop runs', async () => {
+        const content = buildFatMachOHeader(0x2, 16384)
+        mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
+        const destPath = join(
+          dir,
+          'common',
+          'SomeGame',
+          'reconciled-flagless-fat-exe-beyond-probe'
+        )
+        writeFileSync(destPath, content)
+        // Deliberately WRONG starting mode so the heal assertion is
+        // meaningful — a reconciled file that was never freshly downloaded
+        // this run still needs its execute bit repaired.
+        chmodSync(destPath, 0o644)
+
+        jest
+          .mocked(fetchChunk)
+          .mockRejectedValue(
+            new Error('fetchChunk must never be called for a reconciled file')
+          )
+
+        const file: DepotPlanFile = {
+          filename: 'reconciled-flagless-fat-exe-beyond-probe',
+          size: content.length,
+          sha_content: sha1Hex(content),
+          chunks: [
+            { sha: 'sha-902-d', cb_original: content.length, offset: 0 }
+          ]
+          // flags: omitted entirely — the HUMANKIND shape.
+        }
+        const plan = makePlan(
+          [
+            {
+              depotId: '902d',
+              gid: 'g92d',
               key: Buffer.from('key'),
               files: [file]
             }
