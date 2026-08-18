@@ -204,26 +204,36 @@ per-run `[binding-shim]` diagnostic lines): see `run.log`.
 
 ## Task 4: Go/No-Go Decision
 
-**Status: AWAITING OPERATOR DECISION.** This is a `checkpoint:decision` gate — the executor
-does not self-select an option. Task 3's evidence is summarized here for the decision:
+**Decision: `proceed`** — verdict VALIDATED. Selected by the human operator (relayed via the
+orchestrator) after reviewing Task 3's evidence.
 
+Rationale, as given:
 - RESEARCH.md Assumption A1 (HIGH risk) is now a measured VALIDATED fact on darwin-arm64:
   `process.dlopen()` of a SEA-embedded native addon succeeds from inside a
   `{ eval: true }`-spawned worker in a real compiled SEA binary, byte-identical output,
   10/10 runs.
 - The real-chunk speedup (~5.8–6.6x) is materially below RESEARCH.md's ~47x synthetic
-  estimate, but still a clear win over the current pure-JS path (~87–99ms → ~14–30ms per
-  ~1 MiB chunk).
-- Corrections plans 23.1-02 through 23.1-05 must carry forward regardless of which option is
-  chosen: the real prebuild filename is `node.napi.node` (not `lzma_native.node` — that
-  string is only the SEA asset-map key); do not resolve `lzma-native`'s package root via
-  `__dirname` inside a bundled module (see Task 3's finding); dlopen once per worker
-  lifetime, not once per decode call; cite ~5.8–6.6x, not 47x.
-- linux-x64/win32-x64 prebuild loading remains UNVERIFIED (RESEARCH.md Assumption A2) — this
-  spike only ran on darwin-arm64.
+  estimate, but still a clear, non-marginal win over the current pure-JS path (~87–99ms →
+  ~14–30ms per ~1 MiB chunk) — not the `proceed-anyway` scenario's "marginal speedup" concern.
 
-See the plan's Task 4 `<options>` block (`proceed` / `replan-mainthread` / `abandon` /
-`proceed-anyway`) for the full decision framing relayed to the operator.
+Plans 23.1-02 through 23.1-05 **execute as written**, carrying forward two corrected details
+from this spike:
+1. The real prebuild filename is `node.napi.node`, **not** `lzma_native.node` — that string
+   remains valid only as the SEA asset-map key (`sea-config.json`'s `assets` dictionary key),
+   independent of the on-disk filename it was embedded from.
+2. The SEA-aware binding shim / `lzmaLoader.ts` equivalent in plans 23.1-03/04 must resolve
+   `lzma-native`'s package root **at build time**, not via a runtime `__dirname` reference
+   inside the bundled module — esbuild flattens `__dirname` for every file merged into one
+   output bundle to that output file's own location (confirmed empirically this spike; see
+   Task 3's Mechanism section). The same fix this spike applied (bake the resolved path into
+   a small generated data module the runtime code plainly `require()`s) is the pattern to
+   reuse in production.
+
+Additionally carried forward: linux-x64/win32-x64 native-prebuild loading remains
+**UNVERIFIED** (RESEARCH.md Assumption A2) — this spike ran on darwin-arm64 only. Those two
+triples stay on the existing pure-JS `lzma` fallback path until CI independently proves the
+native path loads correctly there; this is the existing, already-implemented safety net
+(`DecompressPool`'s inline-fallback discipline), not new scope.
 
 ## Files
 
