@@ -867,14 +867,14 @@ Plans:
 **Goal:** Replace the pure-JS `lzma` npm package decode path with the native `lzma-native` package (CONTEXT.md's `node-liblzma` pick was OVERTURNED by 23.1-RESEARCH.md — it cannot decode Steam's `lzma_alone`/VZ container at all) to close the confirmed decode-throughput bottleneck in Steam native depot installs, with the pure-JS decoder retained as a logged fallback. Full context, findings, and open risks in `.planning/phases/23.1-native-lzma-depot-decode-via-node-liblzma/23.1-CONTEXT.md` and `23.1-RESEARCH.md`.
 **Requirements**: TBD (none mapped — inserted urgent-work phase)
 **Depends on:** Phase 23 (independent of 23-10's remaining human-gate item — do not block on it), Phase 25, quick tasks 260817-ihr and 260817-pkx (all already shipped)
-**Plans:** 5 plans in 4 waves
+**Plans:** 5 plans in 4 waves — ALL COMPLETE (2026-08-18). **Native decode ships GATED OFF by default** (`NATIVE_LZMA_DECODE_ENABLED = false` in `lzmaLoader.ts`): plan 05's live-hardware gate surfaced a real-chunk decode-pipeline hang inside the genuinely compiled SEA sidecar binary that reproduces on BOTH the native and pure-JS paths (not native-specific), only inside a real postject-injected binary, not any isolated repro. Tracked as its own open investigation: `.planning/debug/sea-native-lzma-real-chunk-decode-hang.md`. The identity-guard fix (lzma-native's build-time package-root resolution) and the worker-thread logger-init fix both landed as genuine, verified improvements independent of that open question.
 
 Plans:
-- [ ] 23.1-01-PLAN.md — Wave 1 spike: prove `getRawAsset()` + `process.dlopen()` of a native addon from inside a `{ eval: true }` worker in a REAL compiled SEA binary, measure real-chunk speedup, blocking go/no-go
-- [ ] 23.1-02-PLAN.md — Wave 2: adopt `lzma-native@8.0.6` (exact pin) and embed the target-triple-resolved prebuild as a second SEA asset in `meta/buildSidecarSea.ts`
-- [ ] 23.1-03-PLAN.md — Wave 3: `lzmaNativeBinding.ts`, the SEA-aware `node-gyp-build` replacement, wired via a shared `--alias:node-gyp-build` esbuild flag
-- [ ] 23.1-04-PLAN.md — Wave 3: `lzmaLoader.ts` native-first decoder with loud pure-JS fallback, routed into both the pooled workers and `DecompressPool.inlineDecode()`
-- [ ] 23.1-05-PLAN.md — Wave 4: cold SEA build + byte-level proof the addon shipped, then a blocking live-hardware depot-install gate
+- [x] 23.1-01-PLAN.md — Wave 1 spike: prove `getRawAsset()` + `process.dlopen()` of a native addon from inside a `{ eval: true }` worker in a REAL compiled SEA binary, measure real-chunk speedup, blocking go/no-go. VALIDATED — 10/10 runs, ~5.8-6.6x real-chunk speedup on darwin-arm64. Operator decision: proceed.
+- [x] 23.1-02-PLAN.md — Wave 2: adopt `lzma-native@8.0.6` (exact pin) and embed the target-triple-resolved prebuild as a second SEA asset in `meta/buildSidecarSea.ts`
+- [x] 23.1-03-PLAN.md — Wave 3: `lzmaNativeBinding.ts`, the SEA-aware `node-gyp-build` replacement, wired via a shared `--alias:node-gyp-build` esbuild flag
+- [x] 23.1-04-PLAN.md — Wave 3: `lzmaLoader.ts` native-first decoder with loud pure-JS fallback, routed into both the pooled workers and `DecompressPool.inlineDecode()`
+- [x] 23.1-05-PLAN.md — Wave 4: cold SEA build + byte-level proof the addon shipped, then a blocking live-hardware depot-install gate. Gate surfaced 3 real defects fixed live (worker-thread logger crash, lzma-native identity-guard runtime-dir collapse) and 1 still-open (the real-chunk decode-pipeline hang above) — native decode gated off pending that fix, not a false pass.
 
 ### Phase 24: macOS native Steam bridge (out-of-process steam_api proxy)
 
