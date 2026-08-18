@@ -67,7 +67,9 @@ import {
   DECOMPRESS_WORKER_ENTRY_PATH,
   resolveEsbuildCli,
   seaEsbuildFlags,
-  spawnArgv
+  spawnArgv,
+  assertNodeGypBuildSingleConsumer,
+  writeLzmaNativeResolvedPaths
 } from './esbuildWorkerBundleShared'
 
 /** Dev/Electron-mode output path -- `DecompressPool.resolveWorkerSpec()`'s
@@ -108,6 +110,12 @@ async function bundleWorkerForDev(): Promise<void> {
     )
   }
   await mkdir(join('build', 'main'), { recursive: true })
+  // Phase 23.1 plan 05: same two build-time steps buildSidecarSea.ts's
+  // bundleWorkerForSea() now runs, before its esbuild invocation too -- see
+  // that call site and esbuildWorkerBundleShared.ts's own header comment
+  // for the full rationale (both worker bundles share this exact defect).
+  assertNodeGypBuildSingleConsumer()
+  writeLzmaNativeResolvedPaths()
   const esbuildArgv = buildDevWorkerEsbuildArgv()
   const result = await spawnArgv(esbuildArgv.command, esbuildArgv.args)
   if (result.code !== 0) {

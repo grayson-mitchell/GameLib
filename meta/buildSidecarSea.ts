@@ -128,14 +128,18 @@ import {
   DECOMPRESS_WORKER_ENTRY_PATH,
   resolveEsbuildCli,
   seaEsbuildFlags,
-  spawnArgv
+  spawnArgv,
+  assertNodeGypBuildSingleConsumer,
+  writeLzmaNativeResolvedPaths
 } from './esbuildWorkerBundleShared'
 
 export {
   DECOMPRESS_WORKER_ENTRY_PATH,
   resolveEsbuildCli,
   seaEsbuildFlags,
-  spawnArgv
+  spawnArgv,
+  assertNodeGypBuildSingleConsumer,
+  writeLzmaNativeResolvedPaths
 }
 
 // Official/fixed sentinel fuse string -- do not alter
@@ -733,6 +737,20 @@ async function bundleWorkerForSea(): Promise<void> {
     )
   }
   await mkdir(join('build', 'main'), { recursive: true })
+  // Phase 23.1 plan 05: MUST run before the esbuild invocation below --
+  // esbuild resolves lzmaNativeBinding.ts's relative
+  // `require('./lzmaNativeResolvedPaths.generated.cjs')` by reading the
+  // file's real on-disk content at BUILD TIME, so the generated file must
+  // already exist. assertNodeGypBuildSingleConsumer() is the T-23.1-03-02
+  // security check, relocated to build time -- see
+  // esbuildWorkerBundleShared.ts's own header comment for why the runtime
+  // `dir`-based version this replaces could never actually work once
+  // genuinely bundled.
+  assertNodeGypBuildSingleConsumer()
+  const lzmaNativePkgRoot = writeLzmaNativeResolvedPaths()
+  console.log(
+    `[build:sidecar-sea] lzma-native resolved paths baked for the worker bundle (root=${lzmaNativePkgRoot})`
+  )
   const esbuildArgv = buildWorkerEsbuildArgv()
   const result = await spawnArgv(esbuildArgv.command, esbuildArgv.args)
   if (result.code !== 0) {

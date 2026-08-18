@@ -42,29 +42,49 @@
  * output file, `__dirname` inside BOTH files stops reflecting each file's
  * ORIGINAL on-disk location and instead reflects the single bundled OUTPUT
  * file's location at runtime -- confirmed empirically by the spike with a
- * minimal two-file esbuild repro and reproduced live inside a real compiled
- * SEA binary's eval'd worker (`dir` arrived as `"."`, since an eval'd worker
- * has no backing file at all). This plan's `dir` argument is therefore NOT a
- * reliable way to locate `lzma-native`'s real package root once this shim is
- * reached via the ALIASED indirect path from inside a bundled worker -- it is
- * only reliable when a caller passes `dir` directly and un-bundled (this
- * file's own unit tests; a hypothetical un-bundled dev caller). Carrying this
- * forward explicitly for whichever future plan reaches this shim from inside
- * an actual bundled worker isolate: if the dev branch below throws or
- * `dlopen()`s the wrong path in that context, this is the documented,
- * pre-known cause, not a new defect -- the fix (bake the resolved root into a
- * build-time-generated data module, exactly as the spike's `build-sea.mjs`
- * does with `resolved-paths.generated.cjs`) was deliberately NOT ported into
- * this shim because this plan's task text scopes the shim to resolving `dir`
- * as received, and plan 23.1-04/23.1-05 are where that gets exercised
- * end-to-end. See 23.1-03-SUMMARY.md's "Next Phase Readiness" for the
- * pointer.
+ * minimal two-file esbuild repro, and CONFIRMED LIVE twice this phase (plan
+ * 23.1-05, 2026-08-18): a real compiled SEA binary's eval'd worker (`dir`
+ * arrived as `"."`, since an eval'd worker has no backing file at all) and a
+ * real dev-mode `pnpm tauri:dev` build (`dir` arrived as the worker bundle's
+ * own OUTPUT directory, `.../build/main`) -- two DIFFERENT collapsed values,
+ * neither `lzma-native`'s real package root, confirming this is not a
+ * single fixable edge case but a structural property of bundling: `dir` is
+ * NOT a reliable way to locate `lzma-native`'s real package root once this
+ * shim is reached via the ALIASED indirect path from inside a bundled
+ * worker, in EITHER build.
+ *
+ * FIX (plan 23.1-05, reusing spike 023's own proven mechanism rather than
+ * reinventing it): the real package root is now resolved at BUILD TIME
+ * (`meta/esbuildWorkerBundleShared.ts`'s `writeLzmaNativeResolvedPaths()`,
+ * called by both `buildSidecarSea.ts` and `buildDecompressWorkerDev.ts`
+ * before their esbuild invocations) and baked into a generated data module,
+ * `lzmaNativeResolvedPaths.generated.cjs` -- exactly the `resolved-paths
+ * .generated.cjs` pattern the spike's `build-sea.mjs` used, ported into
+ * this project's real build pipeline instead of the plan-03 placeholder
+ * that deferred it. `dir` is no longer used for PATH RESOLUTION at all (see
+ * `resolveLzmaNativePkgRoot()` below) -- only the SEA/dev-mode BRANCH
+ * decision (`sea.isSea()`) still matters, and that was never `dir`-derived.
+ *
+ * The T-23.1-03-02 (Spoofing) SECURITY property `dir`-based rejection used
+ * to provide -- some OTHER bundled package's own `node-gyp-build` call must
+ * not silently receive lzma-native's native binding -- is NOT dropped, it
+ * is RELOCATED to build time, where it can actually be evaluated reliably:
+ * `assertNodeGypBuildSingleConsumer()` (same shared module) scans the REAL,
+ * unbundled dependency tree for any other `node-gyp-build` consumer and
+ * fails the build loudly if one exists, BEFORE either worker bundle is even
+ * produced. This is strictly MORE reliable than the runtime check it
+ * replaces: once bundled, EVERY caller reaching this alias -- lzma-native or
+ * a hypothetical other package -- passes the exact same collapsed `dir`
+ * value, so no runtime inspection of `dir` could ever have distinguished
+ * them anyway, a fact this exact live-hardware finding demonstrates
+ * directly (two different real builds, two different collapsed values,
+ * neither meaningful).
  */
 
-import { randomBytes } from 'node:crypto'
 import { writeFileSync, rmSync } from 'node:fs'
+import { randomBytes } from 'node:crypto'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 
 /**
  * SEA asset key literal -- MUST equal `meta/buildSidecarSea.ts`'s
@@ -108,19 +128,34 @@ function nativeAddonTempPath(): string {
 }
 
 /**
- * T-23.1-03-02 (Spoofing) guard: `--alias:node-gyp-build` is GLOBAL to each
- * bundle it is applied to, so any OTHER bundled package that also happens to
- * call `require('node-gyp-build')(dir)` would land here too. Comparing on a
- * normalized path SEGMENT (not a raw string suffix) means a trailing
- * separator or a Windows-style path (backslash-separated, even when this
- * code itself runs on a POSIX host, e.g. under a test that hands in a
- * synthetic Windows path) cannot defeat the check by accident.
+ * Phase 23.1 plan 05: replaces the retired `dir`-based
+ * `dirBelongsToLzmaNative()` guard for the DEV branch's path resolution --
+ * see this file's own header for why `dir` is structurally unusable for
+ * this once bundled. Prefers the build-time-generated data module (the
+ * REAL mechanism inside either compiled worker bundle -- this `require()`
+ * of a relative, no-`__dirname`-dependency specifier gets resolved by
+ * esbuild reading the file's actual on-disk content at BUILD TIME and
+ * inlining it as a literal object, immune to the collapse). Falls back to
+ * resolving it live via this (unbundled) module's own real `__dirname`/
+ * module resolution when the generated file is absent -- the case for this
+ * file's own unit tests (never bundled by esbuild) and a fresh checkout
+ * whose build pipeline hasn't run yet.
  */
-function dirBelongsToLzmaNative(dir: string): boolean {
-  return dir
-    .split(/[\\/]+/)
-    .filter((segment) => segment.length > 0)
-    .includes('lzma-native')
+function resolveLzmaNativePkgRoot(): string {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const generated = require('./lzmaNativeResolvedPaths.generated.cjs') as {
+      LZMA_NATIVE_PKG_ROOT?: string
+    }
+    if (generated?.LZMA_NATIVE_PKG_ROOT) {
+      return generated.LZMA_NATIVE_PKG_ROOT
+    }
+  } catch {
+    // Generated file absent -- fall through to a live resolution below.
+    // Not logged: this is the EXPECTED path for this file's own unit tests,
+    // which never run through the esbuild alias at all.
+  }
+  return dirname(require.resolve('lzma-native/package.json'))
 }
 
 /** Module-scope memoization -- matches `getLzma()`'s once-per-isolate
@@ -135,23 +170,24 @@ let cachedBinding: unknown
  * see the file header for why an ES `export` of any kind (including `export
  * default`) would break that shape once bundled.
  *
- * This function throws on ANY failure (identity guard trip, missing SEA
- * asset, missing dev-mode prebuild, a `dlopen()` failure). It never degrades
- * to a pure-JS fallback itself -- plan 23.1-04's loader is the one layer that
- * catches and degrades, so that decision lives in exactly one place and is
- * logged there (not duplicated/silently re-decided here).
+ * This function throws on ANY failure (missing SEA asset, missing/unresolved
+ * dev-mode prebuild, a `dlopen()` failure). It never degrades to a pure-JS
+ * fallback itself -- plan 23.1-04's loader is the one layer that catches and
+ * degrades, so that decision lives in exactly one place and is logged there
+ * (not duplicated/silently re-decided here).
+ *
+ * Phase 23.1 plan 05: `dir` is accepted (matches `lzma-native`'s own
+ * `require('node-gyp-build')(__dirname)` call shape) but deliberately NOT
+ * used for path resolution or as an identity gate anymore -- see this
+ * file's header comment for the live-hardware finding that made the
+ * previous `dirBelongsToLzmaNative()` throw-gate reject the legitimate
+ * call, and why no runtime `dir` inspection can distinguish callers once
+ * genuinely bundled. The T-23.1-03-02 security property this used to
+ * provide now lives at BUILD TIME (`assertNodeGypBuildSingleConsumer()`,
+ * `meta/esbuildWorkerBundleShared.ts`, called before either worker bundle
+ * is produced).
  */
-function resolveNativeBinding(dir: string): unknown {
-  if (!dirBelongsToLzmaNative(dir)) {
-    throw new Error(
-      `[lzmaNativeBinding] refusing to resolve a native binding for directory "${dir}" -- ` +
-        `this shim is aliased in at esbuild bundle time for lzma-native ONLY, and the alias ` +
-        `is global to the whole bundle. Some OTHER bundled package reached it here, so this ` +
-        `must be surfaced loudly rather than silently handing that package lzma-native's ` +
-        `native binding (or lzma-native some other package's).`
-    )
-  }
-
+function resolveNativeBinding(_dir: string): unknown {
   if (cachedBinding !== undefined) {
     return cachedBinding
   }
@@ -206,8 +242,13 @@ function resolveNativeBinding(dir: string): unknown {
   // THIS file, so a `require('node-gyp-build')` call at this point would
   // recurse infinitely (T-23.1-03-03). This is the single most likely thing
   // a future maintainer would "simplify" back into that infinite loop.
+  //
+  // Phase 23.1 plan 05: resolves the package root via
+  // `resolveLzmaNativePkgRoot()` (build-time-baked, or a live fallback for
+  // this file's own unit tests) instead of the `dir` argument -- see this
+  // file's header for why `dir` cannot be trusted here once bundled.
   const addonPath = join(
-    dir,
+    resolveLzmaNativePkgRoot(),
     'prebuilds',
     `${process.platform}-${process.arch}`,
     LZMA_NATIVE_ADDON_FILENAME

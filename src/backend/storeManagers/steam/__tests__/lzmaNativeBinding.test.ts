@@ -32,27 +32,57 @@ function loadFresh(): LzmaNativeBindingResolver {
 const REAL_LZMA_NATIVE_DIR = join('some', 'root', 'node_modules', 'lzma-native')
 const NOT_LZMA_NATIVE_DIR = join('some', 'root', 'node_modules', 'not-lzma-native')
 
-describe('lzmaNativeBinding identity guard', () => {
+// Phase 23.1 plan 05 (coordinator-directed fix, live-hardware finding
+// 2026-08-18): the `dir`-based throw-gate this describe block used to test
+// was REMOVED. A real packaged SEA install (Planetfall, real gamelib.log)
+// reproduced exactly what this file's own header comment had already
+// predicted from the spike: `dir` collapses to `"."` once genuinely
+// bundled, has NO 'lzma-native' segment, and the throw-gate rejected the
+// LEGITIMATE call before it ever reached the SEA-asset-loading branch --
+// Task 1's byte-offset proof that the addon shipped correctly inside the
+// binary was true and irrelevant, because this guard never let execution
+// reach it. A real dev-mode build separately showed `dir` collapsing to a
+// DIFFERENT, also-wrong value (the worker bundle's own output directory) --
+// confirming `dir` carries no usable identity information in EITHER build,
+// not a single fixable edge case. The T-23.1-03-02 security property this
+// guard existed for is not gone -- it moved to build time
+// (`assertNodeGypBuildSingleConsumer()`, covered by
+// `meta/__tests__/esbuildWorkerBundleShared.test.ts`, including a
+// known-bad-input case). These tests now assert the actual current
+// contract: `dir`'s content has NO effect on the outcome.
+describe('lzmaNativeBinding no longer gates on dir (Phase 23.1 plan 05)', () => {
   afterEach(() => {
     jest.resetModules()
     jest.dontMock('node:sea')
+    jest.restoreAllMocks()
   })
 
-  it('throws when called with a directory that does not belong to lzma-native', () => {
+  it('succeeds identically for a directory that does NOT belong to lzma-native -- dir is not an identity gate', () => {
     const lzmaNativeBinding = loadFresh()
-    expect(() => lzmaNativeBinding(NOT_LZMA_NATIVE_DIR)).toThrow()
+    jest.doMock('node:sea', () => ({
+      isSea: () => false,
+      getRawAsset: () => {
+        throw new Error('should not be called in the dev branch')
+      }
+    }))
+    jest.spyOn(process, 'dlopen').mockImplementation(() => undefined)
+    expect(() => lzmaNativeBinding(NOT_LZMA_NATIVE_DIR)).not.toThrow()
   })
 
-  it('the thrown message names both the offending directory and "lzma-native"', () => {
+  it('succeeds for the exact degenerate values a real bundled call site produces ("." and a real build output directory)', () => {
     const lzmaNativeBinding = loadFresh()
-    expect(() => lzmaNativeBinding(NOT_LZMA_NATIVE_DIR)).toThrow(
-      new RegExp(
-        `${NOT_LZMA_NATIVE_DIR.replace(/[\\/]/g, '.')}.*lzma-native|lzma-native.*${NOT_LZMA_NATIVE_DIR.replace(/[\\/]/g, '.')}`
-      )
-    )
+    jest.doMock('node:sea', () => ({
+      isSea: () => false,
+      getRawAsset: () => {
+        throw new Error('should not be called in the dev branch')
+      }
+    }))
+    jest.spyOn(process, 'dlopen').mockImplementation(() => undefined)
+    // "." -- the real eval'd SEA worker's collapsed __dirname
+    expect(() => lzmaNativeBinding('.')).not.toThrow()
   })
 
-  it('does not defeat the guard with a trailing separator', () => {
+  it('does not depend on dir formatting (trailing separator / Windows-style backslash path) -- retained as a general robustness check', () => {
     const lzmaNativeBinding = loadFresh()
     jest.doMock('node:sea', () => ({
       isSea: () => false,
@@ -62,10 +92,8 @@ describe('lzmaNativeBinding identity guard', () => {
     }))
     jest.spyOn(process, 'dlopen').mockImplementation(() => undefined)
     expect(() => lzmaNativeBinding(`${REAL_LZMA_NATIVE_DIR}${join('/')}`)).not.toThrow()
-  })
-
-  it('does not defeat the guard with a Windows-style backslash path', () => {
-    const lzmaNativeBinding = loadFresh()
+    jest.resetModules()
+    const lzmaNativeBinding2 = loadFresh()
     jest.doMock('node:sea', () => ({
       isSea: () => false,
       getRawAsset: () => {
@@ -74,7 +102,7 @@ describe('lzmaNativeBinding identity guard', () => {
     }))
     jest.spyOn(process, 'dlopen').mockImplementation(() => undefined)
     const windowsPath = 'C:\\some\\root\\node_modules\\lzma-native'
-    expect(() => lzmaNativeBinding(windowsPath)).not.toThrow()
+    expect(() => lzmaNativeBinding2(windowsPath)).not.toThrow()
   })
 })
 

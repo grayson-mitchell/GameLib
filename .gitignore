@@ -49,6 +49,12 @@ native/steam-bridge/generated/*.dll
 # extracts is a build-time-only tool, never bundled/committed.
 /.build-tools/
 
+# Phase 23.1 plan 05: lzma-native's real on-disk package root, resolved and
+# baked in fresh by every build (meta/esbuildWorkerBundleShared.ts's
+# writeLzmaNativeResolvedPaths()) -- machine-specific, regenerated every
+# time, never committed. Mirrors spike 023's own resolved-paths.generated.cjs.
+src/backend/storeManagers/steam/depot/lzmaNativeResolvedPaths.generated.cjs
+
 # Knowledge graphs. graphify-out/ is the live standalone-`graphify`-CLI graph
 # (large, regenerable via `graphify update .`, never committed).
 # .planning/graphs/ is the retired GSD-skill duplicate -- ignored so it cannot
