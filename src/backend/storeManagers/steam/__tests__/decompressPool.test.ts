@@ -711,6 +711,7 @@ describe('lzmaLoader (native-first decode with pure-JS fallback)', () => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const logger = require('backend/logger') as { logWarning: jest.Mock }
       isolatedLogWarning = logger.logWarning
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const loader = require('../depot/lzmaLoader') as {
         loadLzmaModule: () => Promise<LzmaModule>
         lzmaDecoderKind: () => string
@@ -738,6 +739,7 @@ describe('lzmaLoader (native-first decode with pure-JS fallback)', () => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const logger = require('backend/logger') as { logWarning: jest.Mock }
       isolatedLogWarning = logger.logWarning
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const loader = require('../depot/lzmaLoader') as {
         loadLzmaModule: () => Promise<LzmaModule>
       }
@@ -750,7 +752,7 @@ describe('lzmaLoader (native-first decode with pure-JS fallback)', () => {
       .flat(Infinity)
       .join(' ')
     expect(loggedText).toMatch(/lzma-native/)
-    expect(loggedText).toMatch(/pure-js/)
+    expect(loggedText).toMatch(/pure-js/i)
     expect(loggedText).not.toContain(process.cwd())
   })
 })
