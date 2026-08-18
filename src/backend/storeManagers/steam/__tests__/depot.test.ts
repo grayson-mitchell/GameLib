@@ -4304,5 +4304,174 @@ describe('downloadDepotFiles', () => {
       // that outcome, not the fallback (which would skip a BUNDLE anyway).
       expect((await stat(dest)).mode & 0o111).not.toBe(0)
     })
+
+    // ── G-23-02 gap pin: the reconciled (skipped-download) heal path never
+    // reaches this fallback at all today, because healReconciledFileModes's
+    // `!file.flags` early-continue skips every flagless manifest entry
+    // before applyMachOExecutableFallback is ever called — exactly the
+    // HUMANKIND shape (flagBearing=140/18949, all Directory-only). ──────────
+    describe('reconciled (skipped-download) files — G-23-02 heal path', () => {
+      it('THE GAP PIN: a reconciled flagless file whose on-disk bytes are a Mach-O EXECUTE image ends up with a non-zero execute bit after the heal loop runs', async () => {
+        const content = buildThinMachOHeader(0x2)
+        mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
+        const destPath = join(
+          dir,
+          'common',
+          'SomeGame',
+          'reconciled-flagless-exe'
+        )
+        writeFileSync(destPath, content)
+        // Deliberately WRONG starting mode so the heal assertion is
+        // meaningful — a reconciled file that was never freshly downloaded
+        // this run still needs its execute bit repaired.
+        chmodSync(destPath, 0o644)
+
+        jest
+          .mocked(fetchChunk)
+          .mockRejectedValue(
+            new Error('fetchChunk must never be called for a reconciled file')
+          )
+
+        const file: DepotPlanFile = {
+          filename: 'reconciled-flagless-exe',
+          size: content.length,
+          sha_content: sha1Hex(content),
+          chunks: [
+            { sha: 'sha-902-a', cb_original: content.length, offset: 0 }
+          ]
+          // flags: omitted entirely — the HUMANKIND shape.
+        }
+        const plan = makePlan(
+          [
+            {
+              depotId: '902a',
+              gid: 'g92a',
+              key: Buffer.from('key'),
+              files: [file]
+            }
+          ],
+          content.length
+        )
+
+        const result = await downloadDepotFiles(plan, {
+          targetSteamappsDir: dir,
+          installdir: 'SomeGame',
+          hosts: HOSTS
+        })
+
+        expect(jest.mocked(fetchChunk)).not.toHaveBeenCalled()
+        expect(result.failures).toEqual([])
+        expect(lstatSync(destPath).mode & 0o111).not.toBe(0)
+      })
+
+      // Vacuous-today / meaningful-after: this test already passes against
+      // unmodified depot.ts, but for the WRONG reason — the flagless entry
+      // never reaches applyMachOExecutableFallback at all, so nothing runs
+      // and the file simply stays at its non-executable starting mode. It
+      // only becomes a real, non-vacuous pin once Task 2 wires the fallback
+      // in unconditionally: from that point on it proves the fallback is
+      // content-gated (declines plain text), not merely untouched.
+      it('a reconciled flagless file whose bytes are plain text is still left WITHOUT an execute bit — content-gated, never path-gated', async () => {
+        const content = Buffer.from('plain text config')
+        mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
+        const destPath = join(
+          dir,
+          'common',
+          'SomeGame',
+          'reconciled-flagless-text'
+        )
+        writeFileSync(destPath, content)
+        chmodSync(destPath, 0o644)
+
+        jest
+          .mocked(fetchChunk)
+          .mockRejectedValue(
+            new Error('fetchChunk must never be called for a reconciled file')
+          )
+
+        const file: DepotPlanFile = {
+          filename: 'reconciled-flagless-text',
+          size: content.length,
+          sha_content: sha1Hex(content),
+          chunks: [
+            { sha: 'sha-902-b', cb_original: content.length, offset: 0 }
+          ]
+        }
+        const plan = makePlan(
+          [
+            {
+              depotId: '902b',
+              gid: 'g92b',
+              key: Buffer.from('key'),
+              files: [file]
+            }
+          ],
+          content.length
+        )
+
+        const result = await downloadDepotFiles(plan, {
+          targetSteamappsDir: dir,
+          installdir: 'SomeGame',
+          hosts: HOSTS
+        })
+
+        expect(jest.mocked(fetchChunk)).not.toHaveBeenCalled()
+        expect(result.failures).toEqual([])
+        expect(lstatSync(destPath).mode & 0o111).toBe(0)
+      })
+
+      // Vacuous-today / meaningful-after: same caveat as the plain-text test
+      // above — passes today because nothing runs, must stay green after
+      // Task 2 for the right reason (subtype discrimination: BUNDLE declines
+      // even though it IS Mach-O).
+      it('a reconciled flagless file whose bytes are a Mach-O BUNDLE(0x8) is still left WITHOUT an execute bit — subtype discrimination survives on the heal path', async () => {
+        const content = buildThinMachOHeader(0x8)
+        mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
+        const destPath = join(
+          dir,
+          'common',
+          'SomeGame',
+          'reconciled-flagless-bundle'
+        )
+        writeFileSync(destPath, content)
+        chmodSync(destPath, 0o644)
+
+        jest
+          .mocked(fetchChunk)
+          .mockRejectedValue(
+            new Error('fetchChunk must never be called for a reconciled file')
+          )
+
+        const file: DepotPlanFile = {
+          filename: 'reconciled-flagless-bundle',
+          size: content.length,
+          sha_content: sha1Hex(content),
+          chunks: [
+            { sha: 'sha-902-c', cb_original: content.length, offset: 0 }
+          ]
+        }
+        const plan = makePlan(
+          [
+            {
+              depotId: '902c',
+              gid: 'g92c',
+              key: Buffer.from('key'),
+              files: [file]
+            }
+          ],
+          content.length
+        )
+
+        const result = await downloadDepotFiles(plan, {
+          targetSteamappsDir: dir,
+          installdir: 'SomeGame',
+          hosts: HOSTS
+        })
+
+        expect(jest.mocked(fetchChunk)).not.toHaveBeenCalled()
+        expect(result.failures).toEqual([])
+        expect(lstatSync(destPath).mode & 0o111).toBe(0)
+      })
+    })
   })
 })
