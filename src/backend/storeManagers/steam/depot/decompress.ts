@@ -14,7 +14,17 @@ import { CdnAuthTokenCache } from './cdnAuth'
 import { InflightLimiter } from './inflightLimiter'
 import { logWarning, LogPrefix } from 'backend/logger'
 
-/** Minimal surface of the `lzma` npm package this module depends on. */
+/** Decoder-agnostic callback shape this module depends on -- satisfied
+ *  either directly by the pure-JS `lzma` npm package, or (Phase 23.1 plan
+ *  04) by `lzmaLoader.ts`'s adapter over `lzma-native`'s
+ *  `createStream('aloneDecoder')` stream API. Keeping this one callback
+ *  shape stable across BOTH decoders is exactly why the native swap needed
+ *  zero edits to `decompressChunk()`'s VZ branch below -- `lzmaLoader.ts`
+ *  owns adapting `lzma-native`'s stream events into this same
+ *  `decompress(input, callback)` call, so this interface, and every
+ *  existing call site (decompressWorker.ts's `handleDecodeMessage()`,
+ *  decompressPool.ts's `inlineDecode()`, every test in
+ *  decompressPool.test.ts), stays untouched. */
 export interface LzmaModule {
   decompress(
     input: Buffer,

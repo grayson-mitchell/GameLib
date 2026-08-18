@@ -20,7 +20,8 @@
 import { Worker } from 'node:worker_threads'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { decodeChunk, type LzmaModule } from './decompress'
+import { decodeChunk } from './decompress'
+import { loadLzmaModule } from './lzmaLoader'
 import { logWarning, LogPrefix } from 'backend/logger'
 import type {
   DecompressWorkerRequest,
@@ -237,7 +238,18 @@ export class DecompressPool {
   private nextId = 0
   private inlineFallback = false
   private shuttingDown = false
-  private lzmaPromise: Promise<LzmaModule> | undefined
+  /** Phase 23.1 plan 04: workers whose spawn-time `loadLzmaModule()` call
+   *  resolved a NATIVE decoder (reported via the ready handshake's optional
+   *  `lzmaKind` field — decompressWorker.ts). Tracked as a Set, not a bare
+   *  increment/decrement counter, so `removeWorker()` can only decrement
+   *  for a worker that was ACTUALLY counted as native — a worker whose
+   *  ready message carried no `lzmaKind` (an old bundle, or a genuinely
+   *  pure-JS worker) must never cause an incorrect decrement.
+   *  `stats().nativeWorkers` reports this set's size — purely
+   *  observational, same "never read by any dispatch/queue/replace logic"
+   *  discipline every other `stats()` field's own doc comment already
+   *  carries. */
+  private nativeWorkerSet = new Set<Worker>()
   private readonly size: number
   private readonly taskTimeoutMs: number
   private readonly workerPathOverride?: string
@@ -258,6 +270,21 @@ export class DecompressPool {
   }
 
   /**
+   * Phase 23.1 plan 04: this deliberately does NOT resolve `lzma-native`'s
+   * native addon -- a `.node` binding must be `dlopen()`ed INSIDE the
+   * isolate that calls it, and cannot be transferred across a
+   * `worker_threads` boundary once loaded, so main-thread resolution here
+   * would help no worker at all. The addon is resolved per-isolate instead,
+   * inside each worker, through plan 23.1-03's `--alias:node-gyp-build`
+   * shim (`lzmaNativeBinding.ts`) -- reached transitively via
+   * `lzmaLoader.ts`'s `loadLzmaModule()`, called from `decompressWorker.ts`
+   * (pooled workers) and this class's own `inlineDecode()` (main-thread
+   * fallback) alike. Recorded here explicitly because without this note
+   * the apparent omission -- a worker-spec resolver that resolves every
+   * OTHER part of the worker's environment but not this one -- reads like a
+   * bug the next maintainer would "fix" back into a no-op main-thread
+   * dlopen().
+   *
    * Debug/humankind-depot-full-stall (2026-08-17): resolves WHERE the
    * pool's worker script comes from. Cached on first call
    * (`workerSpecCache`).
@@ -414,6 +441,16 @@ export class DecompressPool {
         settled = true
         worker.off('message', onMessage)
         worker.off('error', onError)
+        // Phase 23.1 plan 04: `lzmaKind` is OPTIONAL on the ready message
+        // (decompressWorker.ts's DecompressWorkerReady doc comment) -- a
+        // worker whose bundle predates this change, or whose own
+        // loadLzmaModule() resolved 'pure-js'/'unresolved', simply never
+        // joins this set. A slow (pure-JS) worker is still a successfully
+        // spawned worker -- this bookkeeping is purely observational and
+        // never gates spawn success.
+        if (msg.lzmaKind === 'native') {
+          this.nativeWorkerSet.add(worker)
+        }
         this.wireWorker(worker)
         resolvePromise(worker)
       }
@@ -497,6 +534,10 @@ export class DecompressPool {
   private removeWorker(worker: Worker): void {
     this.workers = this.workers.filter((w) => w !== worker)
     this.idle = this.idle.filter((w) => w !== worker)
+    // Phase 23.1 plan 04: Set#delete() on a worker never added (a pure-JS
+    // or pre-plan-04 worker) is a documented no-op -- this can never
+    // decrement past zero or decrement a worker that was never counted.
+    this.nativeWorkerSet.delete(worker)
   }
 
   private async replaceWorker(): Promise<void> {
@@ -622,20 +663,20 @@ export class DecompressPool {
     worker.postMessage(message, [encryptedArrayBuffer])
   }
 
+  /** Phase 23.1 plan 04: delegates to lzmaLoader.ts's `loadLzmaModule()` --
+   *  the SAME native-first, pure-JS-fallback loader `decompressWorker.ts`'s
+   *  `getLzma()` uses, so the main-thread inline-fallback path and the
+   *  pooled worker path can never diverge on which decoder either one is
+   *  actually using. This method's own dedicated `import('lzma')`
+   *  memoization (pre-plan-04, the `lzmaPromise` field) is gone -- the
+   *  loader owns that now. */
   private async inlineDecode(
     encrypted: Buffer,
     key: Buffer,
     expectedSha: string,
     cbOriginal: number | string
   ): Promise<Buffer> {
-    if (!this.lzmaPromise) {
-      this.lzmaPromise = import('lzma').then(
-        (mod) =>
-          ((mod as { default?: LzmaModule }).default ??
-            mod) as unknown as LzmaModule
-      )
-    }
-    const lzma = await this.lzmaPromise
+    const lzma = await loadLzmaModule()
     return decodeChunk(encrypted, key, expectedSha, cbOriginal, lzma)
   }
 
@@ -687,6 +728,16 @@ export class DecompressPool {
    * doc comment for the matching network-side half of this split). Purely
    * observational: never read by any dispatch/queue/replace logic in this
    * file.
+   *
+   * Phase 23.1 plan 04: `nativeWorkers` is the equivalent instrument for a
+   * different question -- not "is the pool saturated" but "is the native
+   * decoder actually engaged". This session's own live `DecompressPool`
+   * instrumentation is what finally surfaced that every decode had been
+   * running inline (see `init()`'s doc comment above); `nativeWorkers` lets
+   * a future live run answer 23.1-05's own gate from a running install's
+   * state directly, instead of another forensic round-trip. Same
+   * discipline as every other field here: purely observational, never read
+   * by any dispatch/queue/replace logic.
    */
   stats(): {
     size: number
@@ -694,13 +745,15 @@ export class DecompressPool {
     idle: number
     queued: number
     inlineFallback: boolean
+    nativeWorkers: number
   } {
     return {
       size: this.size,
       busy: this.workers.length - this.idle.length,
       idle: this.idle.length,
       queued: this.queue.length,
-      inlineFallback: this.inlineFallback
+      inlineFallback: this.inlineFallback,
+      nativeWorkers: this.nativeWorkerSet.size
     }
   }
 

@@ -31,6 +31,11 @@
 
 import { parentPort } from 'node:worker_threads'
 import { decodeChunk, type LzmaModule } from './decompress'
+import {
+  loadLzmaModule,
+  lzmaDecoderKind,
+  type LzmaDecoderKind
+} from './lzmaLoader'
 
 export interface DecompressWorkerRequest {
   id: number
@@ -50,24 +55,31 @@ export type DecompressWorkerResponse =
  *  entry path still fires 'online' BEFORE the module-not-found error
  *  surfaces (Node worker_threads pitfall), so 'online' alone is not a safe
  *  success signal. Sending this message only after the module's own require
- *  graph has resolved makes success detection deterministic. */
+ *  graph has resolved makes success detection deterministic.
+ *
+ *  Phase 23.1 plan 04: `lzmaKind` is OPTIONAL so an in-flight worker bundle
+ *  built BEFORE this change still satisfies this type and
+ *  `isReadyMessage()` (decompressPool.ts) keeps matching on
+ *  `type === 'ready'` alone. Reports which decoder THIS worker's own
+ *  `loadLzmaModule()` call resolved (lzmaLoader.ts) so
+ *  `DecompressPool.stats().nativeWorkers` can answer "is native decode
+ *  actually engaged" from a running install's own state, without another
+ *  forensic round-trip (see decompressPool.ts's own doc comment on that
+ *  field). */
 export interface DecompressWorkerReady {
   type: 'ready'
+  lzmaKind?: LzmaDecoderKind
 }
 
-let lzmaPromise: Promise<LzmaModule> | undefined
-
-/** Lazily loads the pure-JS `lzma` codec once per worker (module-load-scoped
- *  cache), mirroring downloadDepotFiles' own once-per-install load pattern. */
+/** Phase 23.1 plan 04: delegates to lzmaLoader.ts's `loadLzmaModule()` --
+ *  the codec is now native-first (`lzma-native`) with a pure-JS fallback,
+ *  memoized and logged in exactly ONE place shared with
+ *  `decompressPool.ts`'s own `inlineDecode()`, so neither consumer can
+ *  silently diverge on which decoder it's actually using. This function's
+ *  own dedicated `import('lzma')` memoization (pre-plan-04) is gone -- the
+ *  loader owns that now. */
 function getLzma(): Promise<LzmaModule> {
-  if (!lzmaPromise) {
-    lzmaPromise = import('lzma').then(
-      (mod) =>
-        ((mod as { default?: LzmaModule }).default ??
-          mod) as unknown as LzmaModule
-    )
-  }
-  return lzmaPromise
+  return loadLzmaModule()
 }
 
 /**
@@ -133,9 +145,23 @@ if (parentPort) {
       port.postMessage(response)
     }
   })
-  // Sent once, after the listener above is registered — see
-  // DecompressWorkerReady's doc comment for why this replaces 'online' as
-  // the pool's spawn-success signal.
-  const ready: DecompressWorkerReady = { type: 'ready' }
-  port.postMessage(ready)
+  // Phase 23.1 plan 04: the decoder is resolved EAGERLY here, right after
+  // the 'message' listener above is registered, rather than lazily on the
+  // first decode — so `dlopen()` (if the native path engages) happens ONCE
+  // at spawn, and a native-load problem surfaces at pool init instead of
+  // mid-download. `loadLzmaModule()` NEVER rejects (lzmaLoader.ts's own
+  // contract), so this `.then()` always fires and 'ready' is always sent —
+  // a native-load FAILURE must still be treated as a successfully spawned,
+  // merely slower, worker: treating it as a failed worker would collapse
+  // the whole pool to inline decode (DecompressPool.init()'s own fallback),
+  // making this phase's own regression worse than the baseline it exists to
+  // fix. See DecompressWorkerReady's doc comment for why this replaces
+  // 'online' as the pool's spawn-success signal.
+  void getLzma().then(() => {
+    const ready: DecompressWorkerReady = {
+      type: 'ready',
+      lzmaKind: lzmaDecoderKind()
+    }
+    port.postMessage(ready)
+  })
 }
