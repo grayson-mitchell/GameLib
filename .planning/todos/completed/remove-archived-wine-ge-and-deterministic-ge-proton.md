@@ -3,7 +3,9 @@ created: 2026-08-15T08:50:00.000Z
 title: "Remove archived Wine-GE from the Wine Manager + make GE-Proton downloads deterministic"
 area: wine/linux
 needs: port
-status: OPEN
+status: RESOLVED
+resolved: 2026-08-19
+resolved_by: quick-260819-snf
 severity: minor
 upstream:
   - bdafb95ff (Heroic v2.22.1 — Remove Wine-GE from the wine manager options, #5251)
