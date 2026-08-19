@@ -894,10 +894,20 @@ Plans:
 
 **Already shipped, reuse it — do not rebuild:** 23-09 landed G-23-01's observability half. `classifyDepotError` already gives EResult 40 a dedicated `steam.download.error.depotBlocked` message naming the specific blocked depot id, and `wrapDepotKeyError` already logs depot id / owning appId / EResult at the failure site. Only the *policy* is missing.
 
-**Requirements**: TBD — to be minted during discuss/plan (G-23-01 closure; no existing REQ covers depot selection policy)
+**Requirements**: REQ-23.2-01, REQ-23.2-02, REQ-23.2-03, REQ-23.2-04, REQ-23.2-05, REQ-23.2-06, REQ-23.2-07, REQ-23.2-08 (minted 2026-08-19 during `/gsd-plan-phase 23.2`, 1:1 from 23.2-CONTEXT.md D-01..D-08 — see REQUIREMENTS.md)
 **Depends on:** Phase 23 (CLOSED 2026-08-19) for the depot install path, and 23-09's shipped observability
 **Artifacts:** `.planning/phases/23-steam-full-ownership-install-stateflags-4/23-UAT.md` (`G-23-01` YAML entry, Gate 2 Attempt 1 narrative) and that phase's `deferred-items.md` (scope + gate-release note)
-**Plans:** not yet planned
+**Plans:** 4 plans in 4 waves
+
+Plans:
+- [ ] 23.2-01-PLAN.md — settle the D-08 manifest-write contradiction from source and close the SizeOnDisk lead (docs only; runs before any code change so it reads the pre-fix source)
+- [ ] 23.2-02-PLAN.md — D-08 fix: a run that downloaded zero bytes never writes a manifest, behind the `shouldFinalizeAfterThrow` gate, with a bottle-path content-asserting regression test proven red first
+- [ ] 23.2-03-PLAN.md — skip-and-warn core: reduce the plan on an EResult-40 key/manifest refusal, record `skippedDepots`, keep all six other non-retryable codes aborting
+- [ ] 23.2-04-PLAN.md — D-06/D-07: new `steam.download.notify.depotSkipped` key, deliberate disposition for `depotBlocked`, and the completion notice naming the skipped depot
+
+**Wave structure:** strictly sequential (1 → 2 → 3 → 4). Waves 2 and 3 both modify `src/backend/storeManagers/steam/depot.ts`, so they cannot run in parallel; wave 1 must precede wave 2 because it establishes the failure-path taxonomy against the **unmodified** source; wave 4 consumes the `DepotDownloadOutcome.skippedDepots` contract wave 3 creates.
+
+**Scope fences carried into every plan:** the diagnostic is DONE and no plan may re-run it (90 GB, identical data); `depot/select.ts` is unchanged (D-02 — no essentiality signal exists in appinfo); `canWriteFullOwnership` is unchanged (D-04 — no escape hatch); no retry/repair path, no persisted skipped-depot marker, no new user-facing toggle; the "second divergence" (GameLib not selecting 1771306) was RAISED then DISPROVEN by a live plan-build census and must not be chased. **Honesty limit:** the evidence proves 1771304 is not *needed*; it does not prove Steam would have granted its key.
 
 ### Phase 24: macOS native Steam bridge (out-of-process steam_api proxy)
 
