@@ -1,12 +1,92 @@
 ---
 slug: uninstall-game-vanishes
-status: parked
+status: investigating
 trigger: "bug, when you uninstall a game it now disappears from the library.  I have to resart app to see it again."
 created: 2026-07-21
-updated: 2026-07-22
+updated: 2026-08-19
 parked: 2026-07-22
+unparked: 2026-08-19
 parked_reason: "User parked pending planned daemon-based rearchitecture — intends to re-test this symptom once the app no longer carries Electron's renderer/state complexity."
+unpark_reason: "Parking condition MET (app is now Tauri) and the symptom RECURRED on the install side as G-23.2-01 during /gsd-verify-work 23.2."
+also_tracked_as: G-23.2-01 (.planning/phases/23.2-.../23.2-HUMAN-UAT.md)
 branch: fix/steam-native-install-stability
+---
+
+## UNPARKED 2026-08-19 — READ THIS SECOND (after the section below)
+
+**Two things changed, and the second one invalidates part of this file.**
+
+**1. The symptom is NOT uninstall-specific. It recurred on INSTALL.** During
+`/gsd-verify-work 23.2`, a live GameLib install of KCD2 (appId 1771300) completed
+successfully at 17:17:54 and the game then **vanished from the library, search included**.
+Restarting the app brought it back. Filed as gap `G-23.2-01`. So the trigger is an
+`is_installed` TRANSITION delivered by a single `pushGameToLibrary` upsert — in either
+direction — not the uninstall path specifically. Any hypothesis scoped to uninstall-only
+code (`pollUninstallOnce`, `SteamGame.uninstall()`, `ensurePlatformsCaptured`) now has to
+explain the install case too, or it is wrong. **This is a significantly stronger repro:
+installing is cheap and repeatable** (move the `.acf` aside, reinstall — the content is
+already on disk, so it takes ~70s and downloads nothing; see the 23.2 UAT for the recipe).
+
+**2. The parking condition was met, AND phase 34.11 deleted this file's surviving lead.**
+The app is now Tauri. But `Library/index.tsx` was rewritten wholesale by phases 34.10/34.11
+(13+ commits since the park). **`gamesForAlphabetFilter` NO LONGER EXISTS.** The "Current
+Focus" below points at a memo chain at `index.tsx:724-730` that is gone. Today's file has
+`libraryUnion`, `searchMatchedKeys`, `FilterEngineDeps`, `FilterEngineState`, `gridPipeline`,
+facet counts and removable filter chips instead.
+
+### ⚠ ELIMINATIONS THAT ARE NO LONGER SAFE
+
+These were verified against pre-34.11 code **that has since been deleted**. Their premise is
+dead, so their conclusions do not carry over. **Re-test each against the new filter engine
+before trusting it:**
+
+- platform filter (`filterByPlatform`, cited at `index.tsx:333-382`) — that function's rating
+  branch was explicitly retired by `6452d4666` ("rewire grid onto filterLibrary; retire
+  filterByPlatform rating branch")
+- `isNonAvailable`/delisted filter (cited at `index.tsx:601-628`)
+- installed/installing/notInstalled partition (cited at `index.tsx:711-723`)
+- alphabet filter (the mechanism itself may no longer exist)
+- the search-term-matching elimination — search is now `searchMatchedKeys` (`index.tsx:641`),
+  a different implementation entirely
+
+### ✅ EVIDENCE THAT STILL HOLDS (re-confirmed 2026-08-19 against current source)
+
+- **The Steam library is push-only.** `refreshLibrary`'s state merge in `GlobalState.tsx`
+  (~L1039) has branches for epic/gog/zoom/amazon/sideload and **no steam branch** —
+  `includesSteam`, `next.steam`, `loadSteamLibrary`, `steamLibraryStore` all return zero hits
+  in that file. `state.steam.library` is built solely by `handleGamePush`
+  (`GlobalState.tsx:1494-1511`), with the backend re-pushing every cached game on refresh
+  (`library.ts:752`).
+- **`handleGamePush`'s steam branch cannot remove an entry.** It uses the functional
+  `setState(prevState => ...)` form and only replaces-by-index or appends. So a vanish means
+  `state.steam.library` was RESET and not re-populated, **or** a render-time filter excluded
+  it. Those remain the only two families.
+- **The stale-closure elimination holds** — steam still uses the functional updater (gog/zoom
+  still do not).
+- **Backend data is correct while the game is invisible** — re-confirmed for KCD2:
+  `store_cache/steam_library.json` had `is_installed: true`, `is_windows_native: true`,
+  `steamPlatformsCaptured: true`, `is_delisted: false` and a full `install` object,
+  structurally identical to appId 2457220 (Avowed), which renders fine.
+
+### The tension any root cause must still resolve
+
+Unchanged from the park, and now sharper: **a stale memo yields a STALE entry, not a vanished
+one.** The mechanism must explain BOTH the disappearance AND why a refresh with unchanged
+filter state fixes it — and now also why it happens on install and uninstall alike.
+
+### Census trap that cost time today
+
+Grepping the frontend for the CHANNEL name `pushGameToLibrary` returns **zero hits**. The
+frontend subscribes via the preload API-METHOD name `handleGamePush`
+(`src/preload/api/library.ts:14`). A census keyed on the channel name concludes, wrongly, that
+there is no subscriber at all.
+
+### Diagnostic logging status
+
+**Gone / reverted.** The temporary logging this file records as "now committed" is no longer in
+`library.ts` or `GlobalState.tsx`. If re-added, note the `GlobalState` one emitted ~378 lines
+per refresh, and it must be reverted before any merge.
+
 ---
 
 ## PARKED 2026-07-22 — READ THIS FIRST ON RESUME
@@ -85,6 +165,49 @@ stuck-spinner bug it fixed. Establish which of (a)/(b) is true with evidence fir
   `buildBridgeInstalledMap` in the Steam library refresh path.
 
 ## Current Focus
+
+- hypothesis: the vanish is a render-time exclusion by the POST-34.11 filter engine
+  (`filterLibrary` / `FilterEngineState` / `gridPipeline` in Library/index.tsx), not a
+  state loss — because `handleGamePush`'s steam branch structurally cannot remove an
+  entry and the backend data is provably correct while the game is invisible. The
+  distinguishing factor is that a single upsert changes ONE element's identity inside
+  `state.steam.library` while a full refresh re-pushes all ~378, and something in the
+  facet/filter pipeline (facet counts, `searchMatchedKeys`, the connected-store union,
+  or a memoised filter result) is not recomputing for a single-element change. NOTE the
+  prior eliminations of platform/delisted/partition/alphabet/search filters were made
+  against DELETED pre-34.11 code and must be re-tested, not inherited.
+- test: reproduce on the INSTALL side (cheap, ~70s, zero download — see recipe below),
+  and instrument what `state.steam.library` contains versus what the grid pipeline emits
+  at the moment the game is invisible. Compare the single-upsert path against the
+  full-refresh path through the new filter engine.
+- expecting: either (1) a memoised stage in the new filter/facet pipeline whose
+  dependency array misses the library array itself (so a single-element upsert does not
+  invalidate it, while a full refresh does — because the whole array's identity changes),
+  or (2) a facet/chip state computed once over a snapshot union that a single upsert does
+  not refresh, excluding the changed game until recomputed.
+- next_action: read the CURRENT Library/index.tsx filter pipeline end-to-end —
+  `libraryUnion` (L623), `searchMatchedKeys` (L641), `engineDeps` (L685),
+  `FilterEngineState` (L710), `gridPipeline` (L753+) — recording every dependency array
+  and its source. Then determine what differs, reference-identity-wise, between a
+  one-element upsert and a full re-push.
+- repro_recipe: |
+    Cheap and repeatable, from the 23.2 UAT. Quit the bottle's steam.exe. Move
+    `appmanifest_<appid>.acf` out of the CrossOver bottle's `steamapps/` (back it up
+    first). GameLib then shows the title as not-installed. Click Install — because the
+    content is already on disk, `reconcilePartialState` sha1-verifies and skips
+    everything (`jobCount=0`), so it completes in ~70s having downloaded nothing, and the
+    game vanishes. Verified with KCD2 (appId 1771300) on 2026-08-19.
+- reasoning_checkpoint:
+    hypothesis: "NOT CONFIRMED — this is a direction, not a finding. Root cause is open."
+    confirming_evidence: []
+    falsification_test: "N/A — no fix proposed yet."
+    fix_rationale: "N/A"
+    blind_spots: "The 34.11 filter engine has not been read yet at all. It is entirely
+      possible the cause is a state reset rather than a filter, which this hypothesis
+      under-weights — the two families named in the surviving evidence are both still
+      open, and the reset family has NOT been ruled out."
+
+## Superseded Current Focus — DEAD, targets code deleted by 34.11 (kept for continuity)
 
 - hypothesis: since a plain refresh (not a restart) fixes it, and the persisted entry's
   DATA looks correct even before the refresh, the bug is NOT in what data
