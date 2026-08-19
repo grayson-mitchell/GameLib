@@ -43,7 +43,27 @@ teardown/process-exit issue, not a functional test failure.
 in `afterEach`) around whichever test starts `pollInstallOnce`'s interval without
 stopping it.
 
-## Skip-and-warn policy for a Blocked key on a non-essential owned depot (G-23-01) — UNGATED 2026-08-19 (branch 2 confirmed)
+## Skip-and-warn policy for a Blocked key on a non-essential owned depot (G-23-01) — ✅ CLOSED 2026-08-19 (shipped in Phase 23.2, proven on real hardware)
+
+> **CLOSED 2026-08-19.** Planned and executed as **Phase 23.2** (4/4 plans), then proven on
+> real macOS hardware the same day. A live GameLib install of appId 1771300 at
+> 17:16:39–17:17:54 NZST hit the real `eresult=40` refusal on depot 1771304, logged
+> `buildDepotPlan: skipping depot 1771304 ... the install is continuing without it`, and
+> **completed** — writing a bottle `appmanifest_1771300.acf` that matches the official
+> Windows client on every benchmark field (`StateFlags 4`, `SizeOnDisk 96422090071`,
+> `buildid 23914554`, `InstalledDepots` = 1771302/1771303/1771306 byte-identical, **1771304
+> absent**). The user was shown the skip notice for real: three distinct OS notifications
+> coexisted (depot-skip, "Restart Steam to finish installing", "Installation Finished").
+> Full evidence and honesty limits: `.planning/phases/23.2-.../23.2-HUMAN-UAT.md` items 1–2,
+> and the `proven_by:` line on `G-23-01` in `23-UAT.md`.
+>
+> **Note on branch 2's prescription below:** the shipped fix deliberately did **not**
+> "introduce a required-vs-optional depot distinction at selection time in
+> `depot/select.ts`". `select.ts` is byte-identical to the planning commit (REQ-23.2-02);
+> the plan is reduced downstream inside `buildDepotPlan`'s loop instead. The outcome branch 2
+> asked for was delivered; the mechanism it guessed at was not the one adopted.
+>
+> Everything below is retained as the historical record that released this gate.
 
 **Found during:** 23-04 Gate 2 Attempt 1 (KCD2, appId 1771300), diagnosed by
 23-09's observability-only fix.
@@ -99,7 +119,7 @@ to the macOS `appmanifest_1124300.acf`; value withheld per T-23-37):
 
 So depot 1771304 is **not required** for this account/region/platform, and GameLib's
 whole-install abort on its Blocked key is a genuine over-selection + hard-fail defect,
-not a region block. `G-23-01`: `severity: major`, `status: open`.
+not a region block. `G-23-01`: `severity: major`, ~~`status: open`~~ → **`status: resolved` 2026-08-19** (see the closure note at the top of this section).
 
 **Honesty limit:** this proves 1771304 is not *needed*; it does NOT prove Steam would
 have issued its key to the official client, which never asked. That distinction does not
