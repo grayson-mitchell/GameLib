@@ -2271,7 +2271,7 @@ No new REQ ID was minted, deleted, or renumbered by gap cycle 3's own run; REQ-3
 all stay `[ ]` per D-08's no-partial-pass rule — item 3's own PASS does not tick 04/05 while item
 6 FAILs elsewhere in the same contract.
 
-### Phase 34.5: Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts (INSERTED)
+### Phase 34.5: Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts (INSERTED) — ✅ COMPLETE 2026-08-20
 
 **Goal:** Port the **inherited non-Steam runner surface** (**57 channels** — the largest slice): Epic/GOG/Amazon/Zoom auth, sign-out, saves sync and CLI versions; the EOS overlay cluster; Wine version/runtime management and tooling (DXVK, VKD3D, winetricks); desktop shortcuts, add-to-Steam and SteamGridDB artwork. Carried across rather than dropped per the Phase 35 discussion — the keep/drop call is deliberately deferred to this phase own discuss-phase. Additive and reversible — the Electron build keeps working unchanged.
 
@@ -2285,7 +2285,7 @@ all stay `[ ]` per D-08's no-partial-pass rule — item 3's own PASS does not ti
 > **What this dependency does and does not block.** The seam itself is BUILT and unit-proven — 8 of 9 of 34.4.1's plans are executed, the runner-agnostic child-window mechanism is deliberately Humble-agnostic, and 34.4.1-09 already **wired** all four OAuth runners via the new `oauthCaptureLogin` channel with a declared-blocked UI surface naming each runner's unported channel. So 34.5 may be **discussed and planned now**. What is still outstanding is 34.4.1's *live proof* (plan 08's blocking 4-item gate, plus item 3(b) already recorded BLOCKED-UNOBSERVABLE and headed for a gap cycle). 34.5 must not **ship** a real OAuth credential path on a seam whose live gate never ran.
 >
 > **Inherited obligation, not a note — `T-34.4.1-44b`.** nile and zoom capture via a **host-free param match** inherited from the Electron original. This is harmless in 34.4.1 only because the captured value is handed to a channel that rejects. **34.5 MUST host-anchor both before it mints a real credential.** Also inherited: navigation observation (NOT the cookie read) is the actual seam surface, and 34.4.1 RESEARCH Open Question 1 — in-app `on_navigation` cancellation timing — remains unobserved.
-**Plans:** 53/60 plans executed (48 of 48 pre-cycle-7 in-scope; 9 gap-cycle-7 plans 34.5-52..60 added 2026-08-13, 5 executed — 34.5-52, 34.5-53, 34.5-54, 34.5-55, 34.5-57; 3 halted/superseded — see below; **34.5-59 BLOCKED pending `F-34.5-G6-22`, per `34.5-CYCLE7-REVIEW.md`'s `halt_gate: true`**)
+**Plans:** 58/61 plans executed (48 of 48 pre-cycle-7 in-scope; 10 cycle-7 plans executed — 34.5-52, 34.5-53, 34.5-54, 34.5-55, 34.5-56, 34.5-57, 34.5-58, 34.5-59, 34.5-60, plus 34.5-61 authored mid-cycle to close `F-34.5-G6-22`; 3 halted/superseded — see below, and 58+3=61 accounts for every plan file on disk). The `34.5-59 BLOCKED pending F-34.5-G6-22` note recorded here through 2026-08-14 is DISCHARGED: plan 34.5-61 closed that blocker, `34.5-CYCLE7-REVIEW.md`'s `halt_gate` was read and satisfied by plan 34.5-59's own preflight, and the gate then ran.
 44 `*-SUMMARY.md`). **34.5-29/30/31 are HALTED and SUPERSEDED, not pending** — as of 2026-08-13 each
 carries a `type: superseded`, `executed: false` SUMMARY recording its disposition, so it no longer
 reports as outstanding work; their `[ ]` checkboxes stay deliberately unticked and their PLAN files
@@ -2610,6 +2610,41 @@ the transport would have produced a third FAIL for a different reason (F-34.5-G6
 - [x] 34.5-41-PLAN.md — **BLOCKING live gate, third run**, all five items on real hardware, verdict + four-way arithmetic (gap-5 wave 4, non-autonomous) — **RAN 2026-08-02, VERDICT FAIL 0/5** (`items_passed=0`, `items_failed=2` [item 2 GOG, item 4 shortcuts], `items_blocked=1` [item 1 Epic], `items_not_attempted=2` [item 3 Amazon, item 5 Wine]). Both run-1/run-2 root causes CONFIRMED CLOSED a second time (F-34.5-G6-02 closes: GOG's full backend chain — capture → CLI auth → dispatch → persistence, 7 games — now works end to end); a THIRD, new frontend-render-only failure blocks GOG's Library UI. Items 4 and 5 each got a real result for the first time this phase: item 4 FAIL (three new structural sidecar defects, F-34.5-G6-07/08/09 — `nativeImage` stub, `addToSteam` return type, no single-instance detection); item 5 NOT ATTEMPTED (no `wine`-type Wine version downloaded). U-34.5-09 RETIRES. All four standing research claims remain STANDING. Nine new findings (`F-34.5-G6-07..15`). See `34.5-LIVE-GATE-RERUN-2.md` and `34.5-41-SUMMARY.md`. **Phase 34.5 STILL DOES NOT CLOSE** — gap cycle 6 required.
 - [x] 34.5-42-PLAN.md — Propagate the verdict everywhere, resolve the untested-items ledger row by row, close the cycle (gap-5 wave 5) — DONE 2026-08-02; verdict propagated to `34.5-PORTED-CHANNELS.md`, `deferred-items.md`, `IPC-PORT-INVENTORY.md`, `ROADMAP.md` and `STATE.md`; ledger resolved row by row; `34.5-CYCLE5-ROUTING.md` § Outcome filled
 
+**Gap cycle 7 plan lines (34.5-52..61), added 2026-08-20 by plan 34.5-60.** Note the checkbox list
+above stops at 34.5-42: **gap cycle 6's plans 34.5-43..51 have never had checkbox lines here.** That
+is a pre-existing gap in this document, not something this cycle introduced, and it is recorded
+rather than silently patched — plan 34.5-60's scope is cycle 7's lines, and writing nine cycle-6
+lines would have meant summarising SUMMARYs this plan did not read. A future pass owns it.
+
+- [x] 34.5-52-PLAN.md — D-CYCLE7-A: replace the structurally-invisible `NSWindow` origin title with an **in-page origin banner** reusing the cancel strip's live-PASSED injection mechanism (`F-34.5-G6-16`); RE-TARGET `U-34.5-05` and OPEN `U-34.5-31` in the same commit (Ledger Rule 2) — DONE 2026-08-14
+- [x] 34.5-53-PLAN.md — `F-34.5-G6-17`/`F-34.5-G6-20`: redact the raw OAuth `code` and `code_verifier` from nile's DEBUG **and INFO** log paths — DONE 2026-08-14
+- [x] 34.5-54-PLAN.md — `F-34.5-G6-18`/`F-34.5-G6-19`: correct the DXVK evidence line the gate contract cited, and pin it against behavioural drift — DONE 2026-08-14
+- [x] 34.5-55-PLAN.md — routing item 8 (`U-34.5-25`): SteamGridDB/winetricks honest-decline sweep, census corrected to **10 call sites, not 8**; opens `U-34.5-32` for the LIVE half — DONE 2026-08-14
+- [x] 34.5-56-PLAN.md — authors `34.5-LIVE-GATE-RERUN-4.md`, the **fifth** blocking gate contract, `verdict: null`, under the seven-test Structural Reachability Review (Tests 6 and 7 applied for the first time) — DONE 2026-08-14
+- [x] 34.5-57-PLAN.md — cycle-7 code review **sequenced BEFORE the propagation sweep** (wave 3, not last), so its findings are ledgerable; raised `halt_gate: true` on `F-34.5-G6-22` — DONE 2026-08-14
+- [x] 34.5-61-PLAN.md — authored mid-cycle to discharge 34.5-57's `halt_gate`: makes argv redaction correct and drift-resistant in source, and finds **two further leaks** (`F-34.5-G6-24` GOG `--password` at four call sites; `F-34.5-G6-25` the never-redacting PowerShell `-ArgumentList` branch); opens `U-34.5-33` for the live half — DONE 2026-08-14
+- [x] 34.5-58-PLAN.md — **non-blocking** keyring-arm live session (D-CYCLE7-C), run without `GAMELIB_DEV_SECRET_VAULT=1`, screen unlocked — `result: PARTIAL`. **RETIRES `U-34.5-01` on the first successful keyring READ in this phase's history**; `U-34.5-10` recorded **OPEN/UNMEASURABLE, not FAIL** (`F-34.5-G6-27`: the macOS Keychain dialog names no item, so its bar is unsatisfiable by any operator) — DONE 2026-08-19
+- [x] 34.5-59-PLAN.md — **RUNS the fifth blocking live gate** on real macOS hardware. **VERDICT PASS — 4 PASS / 0 FAIL / 0 BLOCKED / 0 NOT ATTEMPTED**, the first clean 4-of-4 in five runs. Two item-1 clauses STRUCK as unperformable (contract-defect tally 2), both operator-ratified, no FAIL softened — DONE 2026-08-19
+- [x] 34.5-60-PLAN.md — propagate the verdict to every status document and resolve the ledger row by row; **Branch A** (clean 4/4) closes `34.5-CYCLE7-ROUTING.md` and unlocks the Phase 34.6 / Phase 35 dependency lines — DONE 2026-08-20
+- [ ] 34.5-43..51-PLAN.md — gap cycle 6's nine plans: **executed**, each carrying its own SUMMARY, but never given checkbox lines in this document (see the note above). Left unticked as an honest record that the line is missing, NOT as a claim the work is outstanding.
+
+**2026-08-20 — GAP CYCLE 7 CLOSED, PHASE 34.5 COMPLETE.** The fifth blocking live gate
+(`34.5-LIVE-GATE-RERUN-4.md`, run by plan 34.5-59 at HEAD `f279856e7`) returned **PASS: 4 PASS /
+0 FAIL / 0 BLOCKED / 0 NOT ATTEMPTED**, arithmetic `4+0+0+0 = 4 = items_total` with **no shortfall**
+— the first clean 4-of-4 after four consecutive FAILs (0/5, 0/5, 0P/2F/1B/2NA, 2P/1F/0B/1NA). Per
+**D-08** this closes Phase 34.5 and **there is no gap cycle 8**. All four items passed: GOG login,
+Amazon login, `addToSteam` + the macOS `.app` shortcut at both `exe` call sites, and
+`runWineCommand` for a non-Steam runner. **Item 4 had gone unmeasured for four runs because the
+machine had no non-Steam Wine target at all** — a hardware-state gap, not a process failure;
+installing a Windows GOG title created one. **Two item-1 clauses were STRUCK as unperformable**
+(the account surface no longer renders a username after quick task `260815-kt0` landed ~28 hours
+after the contract was authored; and the login sheet tears down in the same second as the origin
+transition, so the banner never re-texts) — each evidenced, each operator-ratified before scoring,
+both counted in the **contract-defect tally of 2** rather than reinterpreted. **No FAIL was
+softened.** Ledger: 33 rows, **RETIRED 15 → 18, OPEN 18 → 15**. Findings `F-34.5-G6-31`/`-32`/`-33`
+opened and deliberately **not** diagnosed. **Still owed on this phase:** `/gsd-verify-phase 34.5`
+and `/gsd-secure-phase 34.5` — which is why the milestone's `completed_phases` counter stays at 20.
+
 ### Phase 34.6: Tauri IPC re-plumb slice 9 — EOS overlay, SteamGridDB artwork and winetricks (INSERTED)
 
 **Goal:** Port the **16 channels** deferred by Phase 34.5's **D-03** — EOS overlay (8):
@@ -2632,7 +2667,15 @@ the three dedicated IPC channels above, not about making winetricks work at all.
 *Inserted by Phase 34.5 plan 03, 2026-07-29, per 34.5 D-03/D-05.*
 
 **Requirements:** TBD — mint at `/gsd-plan-phase 34.6`
-**Depends on:** Phase 34.5
+**Depends on:** Phase 34.5 — **SATISFIED 2026-08-20.** Phase 34.5 closed on a clean 4-of-4 fifth
+blocking live gate (`34.5-LIVE-GATE-RERUN-4.md`, verdict PASS, 4/0/0/0). Edited by plan 34.5-60
+under the only condition that permits it; the four prior FAILs each left this line untouched
+(`T-34.5-C7-37`). **This phase inherits three named residuals from 34.5, none of them closed by that
+PASS:** the 16 deferred channel ports (8 EOS, 5 SteamGridDB, 3 winetricks), `getDefaultSavePath`,
+and `U-34.5-32` — whether SteamGridDB and winetricks **visibly** decline under Tauri. Note the
+distinction 34.5 was careful about: plan 34.5-55 proved the honest decline **at source level** over
+a corrected census of **10** call sites (not 8), but **no live session has ever opened one of those
+surfaces**, so "declines honestly" is a source claim here, never an observed one.
 **Blocks:** Phase 35 (the IPC re-plumb must be COMPLETE before cutover)
 **Plans:** 0 plans
 
@@ -3528,6 +3571,16 @@ Plans:
 
 **Goal:** Retire the Electron build: delete `electron-vite`/`electron-builder` config, the preload contextBridge path, and the `isTauri()` branches, leaving Tauri as the only shell. This is the one phase that deliberately breaks the additive/reversible invariant every prior phase preserved — so it runs last, and only once the `session`/`powerSaveBlocker` parity gaps are resolved or explicitly accepted, and the parked Electron-renderer bugs (see `debug-uninstall-game-vanishes-parked`) have been re-tested against Tauri rather than fixed in Electron.
 **Depends on:** Phase 34 (all three platforms shipping on Tauri first) **and Phases 34.1–34.7** (the IPC re-plumb must be complete, plus the Epic device-auth single-path consolidation — see `.planning/IPC-PORT-INVENTORY.md`). As of 2026-07-25 only 27 of 210 IPC channels are on the sidecar; cutting over before the port finishes would strand ~183 channels. Also blocked on migrating the renderer off `electron-vite` onto plain Vite, since `tauri:dev` currently shells out to `electron-vite build` and `tauri.conf.json` serves its `build/` output as `frontendDist`.
+
+> **Phase 34.5's leg of this dependency is SATISFIED as of 2026-08-20.** Edited by plan 34.5-60
+> under the ONE condition that permits it: the fifth blocking live gate returned a clean **4 PASS /
+> 0 FAIL / 0 BLOCKED / 0 NOT ATTEMPTED**. Four prior gate FAILs each left this line deliberately
+> untouched, because moving it early would let a non-closing phase unblock the cutover
+> (`T-34.5-C7-37`). **The other legs are unchanged and still gate this phase** — 34.1–34.4 and
+> 34.6–34.7 in particular, with Epic, `egsSync` and legendary save sync owned by **34.7** per
+> D-CYCLE6-A, and the 16 deferred channels plus `getDefaultSavePath` owned by **34.6**. Note also
+> that 34.5's PASS was measured on a **dev** build: `R-34.5-G1-PKG`, the packaged-build asset root,
+> is untouched by it.
 **Requirements:** TBD — mint at `/gsd-plan-phase 35`
 **Plans:** 0 plans
 
