@@ -72,6 +72,7 @@ import {
   CContentServerDirectory_GetCDNAuthToken_Request,
   CContentServerDirectory_GetCDNAuthToken_Response
 } from 'steam-user/protobufs/generated/_load.js'
+import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 // ── Logger mock (factory form) ────────────────────────────────────────────────
 jest.mock('backend/logger', () => ({
@@ -1135,6 +1136,496 @@ describe('buildDepotPlan', () => {
       // WR-02: single attempt — a mid-plan hang is bounded once and fails
       // fast, not retried PLAN_BUILD_MAX_ATTEMPTS times.
       expect(fakeClient.getDepotDecryptionKey).toHaveBeenCalledTimes(1)
+    })
+  })
+})
+
+/**
+ * Unit tests for the 23.2-03 (G-23-01) skip-and-warn policy — closes G-23-01
+ * by dropping exactly one EResult-40-blocked depot from the plan and letting
+ * the install continue with the rest. D-01's trigger boundary is pinned in
+ * BOTH directions here: a case proving 40 skips, and a parameterised case
+ * proving every OTHER terminal EResult still aborts (the red-proof — a test
+ * suite asserting only "40 skips" would pass equally well against an
+ * implementation that skips everything, which is precisely what D-01
+ * forbids).
+ */
+describe('23.2-03 (G-23-01): skip-and-warn EResult 40 Blocked depots', () => {
+  describe('buildDepotPlan reduction (D-01)', () => {
+    const FOUR_DEPOTS = [
+      { id: '111', manifest: '9007199254740993', size: 0, ownerAppId: '12345' },
+      { id: '222', manifest: '9007199254740994', size: 0, ownerAppId: '12345' },
+      { id: '333', manifest: '9007199254740995', size: 0, ownerAppId: '12345' },
+      { id: '444', manifest: '9007199254740996', size: 0, ownerAppId: '12345' }
+    ]
+    const BLOCKED_ID = '222'
+
+    /** Every depot's manifest reports a single 100-byte file, keyed off the
+     *  `raw-${depotId}` buffer getRawManifest returns for it — matches the
+     *  existing "manifest + total" describe block's per-depot-parse idiom. */
+    function mockFourDepotManifestParse(contentManifest: {
+      parse: jest.Mock
+    }) {
+      jest.mocked(contentManifest.parse).mockImplementation((raw: Buffer) => {
+        const depotId = raw.toString().replace('raw-', '')
+        return {
+          files: [
+            {
+              filename: `enc-${depotId}`,
+              size: '100',
+              sha_content: `sha-${depotId}`,
+              chunks: []
+            }
+          ]
+        }
+      })
+    }
+
+    it('23.2-03 (D-01): a Blocked (eresult=40) getDepotDecryptionKey rejection on ONE of several owned depots skips only that depot — the other three remain, and totalBytes sums only the KEPT depots', async () => {
+      const fakeClient = makeFakeClient()
+      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+      jest.mocked(selectAllDepots).mockReturnValue(FOUR_DEPOTS)
+
+      jest
+        .mocked(fakeClient.getDepotDecryptionKey)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            cb: (err: Error | null, key: Buffer) => void
+          ) => {
+            if (String(depotId) === BLOCKED_ID) {
+              const err = new Error('Blocked') as Error & { eresult?: number }
+              err.eresult = 40
+              cb(err, undefined as unknown as Buffer)
+              return
+            }
+            cb(null, Buffer.from(`key-${depotId}`))
+          }
+        )
+      jest
+        .mocked(fakeClient.getRawManifest)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            _gid: string,
+            _branch: string,
+            cb: (err: Error | null, raw: Buffer) => void
+          ) => cb(null, Buffer.from(`raw-${depotId}`))
+        )
+
+      const contentManifest = jest.requireMock(
+        'steam-user/components/content_manifest.js'
+      )
+      mockFourDepotManifestParse(contentManifest)
+      jest
+        .mocked(decryptFilename)
+        .mockImplementation((b64: string) => `decrypted-${b64}`)
+
+      const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
+
+      expect(plan.depots.map((d) => d.depotId).sort()).toEqual(
+        ['111', '333', '444'].sort()
+      )
+      expect(plan.skippedDepots).toEqual([BLOCKED_ID])
+      // 100 bytes/depot * 3 kept depots = 300 — NOT 400 (all four).
+      expect(plan.totalBytes).toBe(300)
+    })
+
+    it('23.2-03 (D-01): a Blocked (eresult=40) getRawManifest rejection on ONE of several owned depots also skips it — both wrapDepotKeyError reject paths (key AND manifest) must skip, or a future refactor could silently lose half the behaviour', async () => {
+      const fakeClient = makeFakeClient()
+      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+      jest.mocked(selectAllDepots).mockReturnValue(FOUR_DEPOTS)
+
+      jest
+        .mocked(fakeClient.getDepotDecryptionKey)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            cb: (err: Error | null, key: Buffer) => void
+          ) => cb(null, Buffer.from(`key-${depotId}`))
+        )
+      jest
+        .mocked(fakeClient.getRawManifest)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            _gid: string,
+            _branch: string,
+            cb: (err: Error | null, raw: Buffer) => void
+          ) => {
+            if (String(depotId) === BLOCKED_ID) {
+              const err = new Error('Blocked') as Error & { eresult?: number }
+              err.eresult = 40
+              cb(err, undefined as unknown as Buffer)
+              return
+            }
+            cb(null, Buffer.from(`raw-${depotId}`))
+          }
+        )
+
+      const contentManifest = jest.requireMock(
+        'steam-user/components/content_manifest.js'
+      )
+      mockFourDepotManifestParse(contentManifest)
+      jest
+        .mocked(decryptFilename)
+        .mockImplementation((b64: string) => `decrypted-${b64}`)
+
+      const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
+
+      expect(plan.depots.map((d) => d.depotId).sort()).toEqual(
+        ['111', '333', '444'].sort()
+      )
+      expect(plan.skippedDepots).toEqual([BLOCKED_ID])
+      expect(plan.totalBytes).toBe(300)
+    })
+
+    // D-01 RED-PROOF: this is the boundary in the OTHER direction. A test
+    // suite that only asserted "40 skips" would pass just as well against an
+    // implementation that skips EVERY terminal EResult — exactly the outcome
+    // D-01 forbids, since 15 (AccessDenied) / 17 (Banned) plausibly signal a
+    // genuine account/ownership problem that must never be silently
+    // downgraded to "skipped a depot". Verified by temporarily widening
+    // depot.ts's `eresult === 40` check to `isNonRetryableDepotError(err)`
+    // and observing this case fail — recorded in the 23.2-03 SUMMARY.
+    it.each([8, 9, 15, 17, 42, 43])(
+      '23.2-03 (D-01) RED-PROOF: EResult %i still aborts the whole plan build — never silently skipped',
+      async (eresult) => {
+        const fakeClient = makeFakeClient()
+        jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+        jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+        jest.mocked(selectAllDepots).mockReturnValue(FOUR_DEPOTS)
+
+        jest
+          .mocked(fakeClient.getDepotDecryptionKey)
+          .mockImplementation(
+            (
+              _appId: number,
+              depotId: number,
+              cb: (err: Error | null, key: Buffer) => void
+            ) => {
+              if (String(depotId) === BLOCKED_ID) {
+                const err = new Error(`EResult ${eresult}`) as Error & {
+                  eresult?: number
+                }
+                err.eresult = eresult
+                cb(err, undefined as unknown as Buffer)
+                return
+              }
+              cb(null, Buffer.from(`key-${depotId}`))
+            }
+          )
+        jest
+          .mocked(fakeClient.getRawManifest)
+          .mockImplementation(
+            (
+              _appId: number,
+              depotId: number,
+              _gid: string,
+              _branch: string,
+              cb: (err: Error | null, raw: Buffer) => void
+            ) => cb(null, Buffer.from(`raw-${depotId}`))
+          )
+
+        const contentManifest = jest.requireMock(
+          'steam-user/components/content_manifest.js'
+        )
+        mockFourDepotManifestParse(contentManifest)
+        jest
+          .mocked(decryptFilename)
+          .mockImplementation((b64: string) => `decrypted-${b64}`)
+
+        await expect(buildDepotPlan(APP_ID, BASE_OPTS)).rejects.toThrow()
+      }
+    )
+
+    it('23.2-03: a transient ECONNRESET on the first key attempt for a depot is still RETRIED into success — produces a complete four-depot plan with an empty skippedDepots, proving the skip did not swallow the existing withPlanBuildRetry recovery', async () => {
+      const fakeClient = makeFakeClient()
+      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+      jest.mocked(selectAllDepots).mockReturnValue(FOUR_DEPOTS)
+
+      let attemptsForFlakeyDepot = 0
+      jest
+        .mocked(fakeClient.getDepotDecryptionKey)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            cb: (err: Error | null, key: Buffer) => void
+          ) => {
+            if (String(depotId) === BLOCKED_ID) {
+              attemptsForFlakeyDepot++
+              if (attemptsForFlakeyDepot === 1) {
+                cb(new Error('ECONNRESET'), undefined as unknown as Buffer)
+                return
+              }
+            }
+            cb(null, Buffer.from(`key-${depotId}`))
+          }
+        )
+      jest
+        .mocked(fakeClient.getRawManifest)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            _gid: string,
+            _branch: string,
+            cb: (err: Error | null, raw: Buffer) => void
+          ) => cb(null, Buffer.from(`raw-${depotId}`))
+        )
+
+      const contentManifest = jest.requireMock(
+        'steam-user/components/content_manifest.js'
+      )
+      mockFourDepotManifestParse(contentManifest)
+      jest
+        .mocked(decryptFilename)
+        .mockImplementation((b64: string) => `decrypted-${b64}`)
+
+      const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
+
+      expect(plan.depots).toHaveLength(4)
+      expect(plan.skippedDepots).toEqual([])
+      expect(attemptsForFlakeyDepot).toBe(2)
+    })
+  })
+
+  describe('all-skipped / mid-loop cancel via downloadSteamDepots', () => {
+    let dir: string
+
+    beforeEach(() => {
+      dir = mkdtempSync(join(tmpdir(), 'gamelib-skip-orchestrate-test-'))
+    })
+
+    afterEach(() => {
+      rmSync(dir, { recursive: true, force: true })
+    })
+
+    /** Sibling to the outer orchestration describe block's setupPlanPlumbing
+     *  (23.2-03): accepts an explicit depot LIST instead of hardcoding one,
+     *  so a test can express a multi-depot skip scenario. */
+    function setupMultiDepotPlanPlumbing(
+      fakeClient: ReturnType<typeof makeFakeClient>,
+      depots: Array<{
+        id: string
+        manifest: string
+        size: number
+        ownerAppId: string
+      }>
+    ) {
+      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+      jest.mocked(selectAllDepots).mockReturnValue(depots)
+      jest
+        .mocked(fakeClient.getRawManifest)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            _gid: string,
+            _branch: string,
+            cb: (err: Error | null, raw: Buffer) => void
+          ) => cb(null, Buffer.from(`raw-${depotId}`))
+        )
+      jest.mocked(decryptFilename).mockReturnValue('game.bin')
+      const contentManifest = jest.requireMock(
+        'steam-user/components/content_manifest.js'
+      )
+      jest.mocked(contentManifest.parse).mockImplementation((raw: Buffer) => ({
+        files: [
+          {
+            filename: `enc-${raw.toString()}`,
+            size: '5',
+            sha_content: 'sha-irrelevant-for-this-block',
+            chunks: [{ sha: 'chunk-sha', cb_original: 5, offset: 0 }]
+          }
+        ]
+      }))
+    }
+
+    it('23.2-03 (T-23.2-16): an install where EVERY selected depot is Blocked (eresult=40) resolves status error, never done, and never calls fetchChunk — an install that downloaded nothing must never be reported a success', async () => {
+      const fakeClient = makeFakeClient()
+      const depots = [
+        { id: '111', manifest: '9007199254740993', size: 0, ownerAppId: '12345' },
+        { id: '222', manifest: '9007199254740994', size: 0, ownerAppId: '12345' }
+      ]
+      setupMultiDepotPlanPlumbing(fakeClient, depots)
+      jest
+        .mocked(fakeClient.getDepotDecryptionKey)
+        .mockImplementation(
+          (
+            _appId: number,
+            _depotId: number,
+            cb: (err: Error | null, key: Buffer) => void
+          ) => {
+            const err = new Error('Blocked') as Error & { eresult?: number }
+            err.eresult = 40
+            cb(err, undefined as unknown as Buffer)
+          }
+        )
+
+      const result = await downloadSteamDepots('12345', {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        os: 'windows'
+      })
+
+      expect(result.status).toBe('error')
+      expect(fetchChunk).not.toHaveBeenCalled()
+      // The all-skipped throw happens INSIDE buildDepotPlan, before it ever
+      // returns a plan — so downloadSteamDepots' skippedDepots local is
+      // never assigned (Case A: a throw before the plan exists has nothing
+      // to report), per the plan's own documented contract.
+      expect(result.skippedDepots).toBeUndefined()
+    })
+
+    it('23.2-03: a cancel issued mid-plan-build DEPOT LOOP (between two depot fetches, after the first succeeds) still resolves cancelled — never swallowed as a skip by the new eresult===40 catch branch', async () => {
+      const fakeClient = makeFakeClient()
+      const depots = [
+        { id: '111', manifest: '9007199254740993', size: 0, ownerAppId: '12345' },
+        { id: '222', manifest: '9007199254740994', size: 0, ownerAppId: '12345' }
+      ]
+      setupMultiDepotPlanPlumbing(fakeClient, depots)
+
+      const controller = new AbortController()
+      let keyCalls = 0
+      jest
+        .mocked(fakeClient.getDepotDecryptionKey)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            cb: (err: Error | null, key: Buffer) => void
+          ) => {
+            keyCalls++
+            if (keyCalls === 1) {
+              // Abort lands right after the FIRST depot's key resolves —
+              // throwIfAborted at the top of the loop's next iteration must
+              // still fire before a second depot is ever attempted.
+              controller.abort()
+            }
+            cb(null, Buffer.from(`key-${depotId}`))
+          }
+        )
+
+      const result = await downloadSteamDepots('12345', {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        os: 'windows',
+        signal: controller.signal
+      })
+
+      expect(result.status).toBe('cancelled')
+      expect(keyCalls).toBe(1)
+      expect(fetchChunk).not.toHaveBeenCalled()
+      // Case A abort (23.2-02, D-08): no manifest written, a pre-existing
+      // install left untouched.
+      expect(existsSync(join(dir, 'appmanifest_12345.acf'))).toBe(false)
+    })
+  })
+
+  describe('D-02/D-04/D-05 source censuses (no essentiality axis at selection time, no bypass parameter on the completeness gate, no skip-driven recovery path)', () => {
+    it('D-02: select.ts (after stripSourceComments) has no eresult reference and no essentiality/required/optional depot-selection-time classification — there is no such signal in appinfo, and D-02 explicitly rejects inventing one', () => {
+      const source = stripSourceComments(
+        readFileSync(join(__dirname, '..', 'depot', 'select.ts'), 'utf8')
+      )
+      expect(source).not.toMatch(/eresult|essential|required|optional/i)
+    })
+
+    it('D-02 RED: the census DOES trip on a known-bad specimen that adds an essentiality classification', () => {
+      const specimen = stripSourceComments(
+        'export function classifyEssential(depotId: string): boolean {\n' +
+          '  return isEssential(depotId)\n' +
+          '}\n'
+      )
+      expect(specimen).toMatch(/eresult|essential|required|optional/i)
+    })
+
+    /** Extracts canWriteFullOwnership's `opts: { ... }` parameter block text
+     *  straight out of the given source, so this census reads the REAL
+     *  declared field set rather than re-typing it as a separate literal
+     *  that could silently drift from the function it is meant to guard. */
+    function extractCanWriteFullOwnershipFieldNames(source: string): string[] {
+      const match = source.match(
+        /canWriteFullOwnership\(opts: \{([\s\S]*?)\}\): boolean \{/
+      )
+      if (!match) return []
+      return match[1]
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map((l) => l.match(/^(\w+)\??:/))
+        .filter((m): m is RegExpMatchArray => m !== null)
+        .map((m) => m[1])
+    }
+
+    it("D-04: canWriteFullOwnership's parameter object declares EXACTLY the five Phase 23 fields — outcome, failures, buildid, allFilesVerified, allModesApplied — and nothing resembling a skip/bypass/override parameter", () => {
+      const source = readFileSync(join(__dirname, '..', 'depot.ts'), 'utf8')
+      const fieldNames = extractCanWriteFullOwnershipFieldNames(source)
+
+      expect(fieldNames.length).toBeGreaterThan(0)
+      expect([...fieldNames].sort()).toEqual(
+        [
+          'allFilesVerified',
+          'allModesApplied',
+          'buildid',
+          'failures',
+          'outcome'
+        ].sort()
+      )
+      expect(fieldNames.join(' ')).not.toMatch(/skip|bypass|override/i)
+    })
+
+    it('D-04 RED: the census DOES trip on a known-bad specimen carrying a bolted-on bypass field', () => {
+      const specimen = `canWriteFullOwnership(opts: {
+  outcome: 'completed' | 'cancelled'
+  failures: DepotDownloadFailure[]
+  buildid?: string
+  allFilesVerified: boolean
+  allModesApplied: boolean
+  skipCompletenessCheck?: boolean
+}): boolean {`
+      const fieldNames = extractCanWriteFullOwnershipFieldNames(specimen)
+      expect(fieldNames).toContain('skipCompletenessCheck')
+      expect(fieldNames.join(' ')).toMatch(/skip|bypass|override/i)
+    })
+
+    it('D-05: depot.ts (after stripSourceComments) has no retry/repair/re-check path keyed on skippedDepots — the skipped set is read for reporting only (D-05: no recovery path)', () => {
+      const source = stripSourceComments(
+        readFileSync(join(__dirname, '..', 'depot.ts'), 'utf8')
+      )
+      const skipLines = source
+        .split('\n')
+        .filter((l) => l.includes('skippedDepots'))
+
+      // The census must have something to examine — an empty match set
+      // would make the assertion below vacuously true.
+      expect(skipLines.length).toBeGreaterThan(0)
+      for (const line of skipLines) {
+        expect(line).not.toMatch(/retry|repair|re-?check/i)
+      }
+    })
+
+    it('D-05 RED: the census DOES trip on a known-bad specimen that keys a retry off skippedDepots', () => {
+      const specimen = stripSourceComments(
+        'if (skippedDepots.length) {\n' +
+          '  await retrySkippedDepots(skippedDepots)\n' +
+          '}\n'
+      )
+      const skipLines = specimen
+        .split('\n')
+        .filter((l) => l.includes('skippedDepots'))
+      expect(
+        skipLines.some((l) => /retry|repair|re-?check/i.test(l))
+      ).toBe(true)
     })
   })
 })
