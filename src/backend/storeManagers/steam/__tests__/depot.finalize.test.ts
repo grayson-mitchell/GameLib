@@ -28,9 +28,15 @@
  * depot.test.ts precedent — jest.mock cannot reliably intercept them).
  */
 import { createHash } from 'node:crypto'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, relative, sep } from 'node:path'
 import {
   downloadSteamDepots,
   DIRECTORY_FLAG,
@@ -40,12 +46,16 @@ import { SteamUser } from '../user'
 import { selectAllDepots } from '../depot/select'
 import { decryptFilename } from '../depot/crypto'
 import { fetchChunk } from '../depot/decompress'
+import { getBottleDir, getBottleSteamappsDir } from '../bottle'
+import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
+import { buildAppManifestText } from '../depot/manifest'
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
+  getRunnerLogWriter: jest.fn().mockReturnValue({}),
   LogPrefix: {
     Steam: 'Steam',
     Backend: 'Backend'
@@ -55,9 +65,38 @@ jest.mock('backend/logger', () => ({
 // ── SteamUser mock — controls ensureConnected()/getClient() return values ────
 jest.mock('../user')
 
-// ── backend/utils mock — provides getFileSize() ───────────────────────────────
+// ── backend/utils mock — provides getFileSize() plus the bottle.ts imports
+//    (checkWineBeforeLaunch/downloadFile/spawnAsync) needed for the D-08
+//    describe block below, which imports getBottleDir/getBottleSteamappsDir
+//    for real (unmocked) — none of these three are called by those two
+//    functions, so no-op jest.fn()s are sufficient to satisfy the import. ──
 jest.mock('backend/utils', () => ({
-  getFileSize: jest.fn()
+  getFileSize: jest.fn(),
+  checkWineBeforeLaunch: jest.fn(),
+  downloadFile: jest.fn(),
+  spawnAsync: jest.fn()
+}))
+
+// ── electron mock — bottle.ts's transitive import chain (backend/constants/
+//    paths.ts) calls app.getPath() at module load. ──────────────────────────
+jest.mock('electron', () => ({
+  app: {
+    getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
+    getAppPath: () => '/tmp/mock-path',
+    hide: jest.fn()
+  }
+}))
+
+// ── ../electronStores mock — avoids real TypeCheckedStoreBackend/CacheStore
+//    instantiation at module load (bottle.ts imports steamBottleConfigStore). ─
+jest.mock('../electronStores', () => ({
+  steamBottleConfigStore: { get: jest.fn(), get_nodefault: jest.fn(), set: jest.fn() }
+}))
+
+// ── backend/config mock — bottle.ts imports GlobalConfig; not called by
+//    getBottleDir/getBottleSteamappsDir, but the import must resolve safely. ─
+jest.mock('backend/config', () => ({
+  GlobalConfig: { get: jest.fn() }
 }))
 
 // ── depot/select mock — selectAllDepots is a jest.fn(); dlcAppIds stays real ─
@@ -319,5 +358,171 @@ describe('D-UAT-09 (21-17): abort-aware finalize — cancel can never write Stat
     const acfText = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
     expect(acfText).toMatch(/"StateFlags"\s+"1026"/)
     expect(acfText).not.toMatch(/"StateFlags"\s+"4"/)
+  })
+})
+
+/**
+ * D-08: the catch-path `finalize()` (depot.ts's `downloadSteamDepots`, the
+ * `catch (err)` block) must not clobber a COMPLETE prior install's
+ * `appmanifest_*.acf` with a zero-byte-download stub when `buildDepotPlan`
+ * throws before its depot-accumulation loop ever runs (Case A in
+ * 23.2-MANIFEST-WRITE-TAXONOMY.md) — the 2026-08-19 KCD2 reproduction.
+ *
+ * Anti-vacuity discipline (23.2-02-PLAN.md):
+ *  - the target directory is a genuinely bottle-shaped path, computed from
+ *    the REAL (unmocked) getBottleDir/getBottleSteamappsDir — not a
+ *    hardcoded lookalike — because checking the macOS steamapps directory
+ *    instead of the CrossOver bottle is the most likely reason this defect
+ *    went unnoticed for a month (23.2-01's adjudication note).
+ *  - the primary assertion is EXACT manifest text equality against a real
+ *    prior manifest seeded via buildAppManifestText — never a bare
+ *    `toMatch(/"InstalledDepots"/)`, which is VACUOUS: buildAppManifestText
+ *    emits that key unconditionally, even for an empty array (present-but-
+ *    empty block, manifest.ts:174-177). A bare key-name match would pass
+ *    against the exact stub this test exists to catch.
+ */
+describe('D-08: catch-path finalize must not clobber a complete install (bottle-path)', () => {
+  const BOTTLE_NAME = DEFAULT_STEAM_BOTTLE_NAME
+  const KCD2_APP_ID = '1771300'
+  const KCD2_INSTALLDIR = 'KingdomComeDeliverance2'
+
+  let root: string
+  let targetSteamappsDir: string
+  let manifestPath: string
+  let seededManifestText: string
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'gamelib-d08-bottle-clobber-'))
+
+    // Genuinely bottle-shaped target dir — derived from the REAL, unmocked
+    // bottle.ts helpers, not a hardcoded lookalike path.
+    const bottleSuffix = relative(
+      getBottleDir(BOTTLE_NAME),
+      getBottleSteamappsDir(BOTTLE_NAME)
+    )
+    targetSteamappsDir = join(root, bottleSuffix)
+    mkdirSync(targetSteamappsDir, { recursive: true })
+
+    // Structural assertion: prove the computed suffix is actually
+    // bottle-shaped (contains drive_c, ends with steamapps) — not a
+    // trivially-satisfied relative path.
+    const segments = bottleSuffix.split(sep)
+    expect(segments).toContain('drive_c')
+    expect(segments[segments.length - 1]).toBe('steamapps')
+
+    // Seed a real, complete prior install's manifest — StateFlags 4,
+    // real buildid, three installed depots — the exact shape a genuine
+    // official-client KCD2 install leaves behind.
+    seededManifestText = buildAppManifestText({
+      appId: KCD2_APP_ID,
+      installdir: KCD2_INSTALLDIR,
+      name: 'Kingdom Come: Deliverance II',
+      sizeOnDisk: '96422090071',
+      buildid: '23914554',
+      lastOwner: '76561198012345678',
+      stateFlags: '4',
+      bytes: '96422090071',
+      installedDepots: [
+        { depotId: '1771302', manifest: '1111111111111111111', size: 32000000000 },
+        { depotId: '1771303', manifest: '2222222222222222222', size: 4000000000 },
+        { depotId: '1771306', manifest: '3333333333333333333', size: 60422090071 }
+      ]
+    })
+    manifestPath = join(targetSteamappsDir, `appmanifest_${KCD2_APP_ID}.acf`)
+    writeFileSync(manifestPath, seededManifestText, 'utf8')
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('a plan-build throw from selectAllDepots (zero depots ever selected) leaves the complete prior manifest byte-for-byte untouched', async () => {
+    const fakeClient = makeFakeClient({
+      getProductInfo: jest.fn().mockResolvedValue({
+        apps: {
+          1771300: {
+            appinfo: {
+              depots: { branches: { public: { buildid: '23914554' } } },
+              extended: {}
+            }
+          }
+        },
+        packages: {},
+        unknownApps: [],
+        unknownPackages: []
+      })
+    })
+    setupPlanPlumbing(fakeClient)
+    jest.mocked(selectAllDepots).mockImplementation(() => {
+      throw new Error('selectAllDepots: simulated plan-build failure')
+    })
+
+    const result = await downloadSteamDepots(KCD2_APP_ID, {
+      targetSteamappsDir,
+      installdir: KCD2_INSTALLDIR,
+      os: 'windows'
+    })
+
+    expect(result.status).toBe('error')
+    expect(fetchChunk).not.toHaveBeenCalled()
+
+    const acfText = readFileSync(manifestPath, 'utf8')
+    // Primary assertion: exact text equality — never `toMatch(/"InstalledDepots"/)`,
+    // which is vacuous (see file-header comment above this describe block).
+    expect(acfText).toBe(seededManifestText)
+    // Diagnostic sub-assertions, named per the plan:
+    expect(acfText).toMatch(/"StateFlags"\s+"4"/)
+    expect(acfText).toMatch(/"buildid"\s+"23914554"/)
+    expect(acfText).not.toMatch(/"buildid"\s+"0"/)
+    expect(acfText).toMatch(/"1771302"/)
+  })
+
+  it('a plan-build throw from getDepotDecryptionKey rejecting with eresult 40 (the 2026-08-19 KCD2 reproduction) leaves the complete prior manifest byte-for-byte untouched', async () => {
+    const fakeClient = makeFakeClient({
+      getProductInfo: jest.fn().mockResolvedValue({
+        apps: {
+          1771300: {
+            appinfo: {
+              depots: { branches: { public: { buildid: '23914554' } } },
+              extended: {}
+            }
+          }
+        },
+        packages: {},
+        unknownApps: [],
+        unknownPackages: []
+      })
+    })
+    setupPlanPlumbing(fakeClient)
+    jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
+      (
+        _appId: number,
+        _depotId: number,
+        cb: (err: Error | null, key?: Buffer) => void
+      ) => {
+        const err = new Error('Blocked') as Error & { eresult?: number }
+        err.eresult = 40
+        cb(err, undefined)
+      }
+    )
+
+    const result = await downloadSteamDepots(KCD2_APP_ID, {
+      targetSteamappsDir,
+      installdir: KCD2_INSTALLDIR,
+      os: 'windows'
+    })
+
+    expect(result.status).toBe('error')
+    expect(fetchChunk).not.toHaveBeenCalled()
+
+    const acfText = readFileSync(manifestPath, 'utf8')
+    // Primary assertion: exact text equality — never `toMatch(/"InstalledDepots"/)`,
+    // which is vacuous (see file-header comment above this describe block).
+    expect(acfText).toBe(seededManifestText)
+    // Diagnostic sub-assertions, named per the plan:
+    expect(acfText).toMatch(/"StateFlags"\s+"4"/)
+    expect(acfText).toMatch(/"buildid"\s+"23914554"/)
+    expect(acfText).not.toMatch(/"buildid"\s+"0"/)
+    expect(acfText).toMatch(/"1771302"/)
   })
 })
