@@ -38,6 +38,7 @@ import {
   zoomInstalledGamesStore,
   zoomLibraryStore,
   steamConfigStore,
+  steamLibraryStore,
   humbleConfigStore
 } from '../helpers/electronStores'
 import { IpcRendererEvent } from 'electron'
@@ -234,6 +235,12 @@ class GlobalState extends PureComponent<Props> {
     return applyGameOverrides(games, overrides)
   }
 
+  loadSteamLibrary = (
+    overrides: Record<string, GameOverride> = currentOverrides()
+  ): Array<GameInfo> => {
+    const games = steamLibraryStore.get('games', [])
+    return applyGameOverrides(games, overrides)
+  }
   loadZoomLibrary = (
     overrides: Record<string, GameOverride> = currentOverrides()
   ): Array<GameInfo> => {
@@ -271,7 +278,7 @@ class GlobalState extends PureComponent<Props> {
       enabled: !!globalSettings?.experimentalFeatures?.zoomPlatform
     },
     steam: {
-      library: [],
+      library: this.loadSteamLibrary(),
       username: steamConfigStore.get_nodefault('userData')?.username
     },
     humble: {
@@ -1569,7 +1576,8 @@ class GlobalState extends PureComponent<Props> {
           epic.library.length !== 0 ||
           gog.library.length !== 0 ||
           amazon.library.length !== 0 ||
-          ((this.state.zoom.enabled && zoom.library) || []).length !== 0,
+          ((this.state.zoom.enabled && zoom.library) || []).length !== 0 ||
+          this.state.steam.library.length !== 0,
         origin: 'mount'
       })
     }
