@@ -876,6 +876,23 @@ Plans:
 - [x] 23.1-04-PLAN.md — Wave 3: `lzmaLoader.ts` native-first decoder with loud pure-JS fallback, routed into both the pooled workers and `DecompressPool.inlineDecode()`
 - [x] 23.1-05-PLAN.md — Wave 4: cold SEA build + byte-level proof the addon shipped, then a blocking live-hardware depot-install gate. Gate surfaced 3 real defects fixed live (worker-thread logger crash, lzma-native identity-guard runtime-dir collapse) and 1 still-open (the real-chunk decode-pipeline hang above) — native decode gated off pending that fix, not a false pass.
 
+### Phase 23.2: Steam depot selection — required-vs-optional depots and skip-and-warn on a Blocked key (INSERTED)
+
+**Goal:** Close **G-23-01**. GameLib's depot selection currently disagrees with the official Steam client in BOTH directions for the same title, and a single `Blocked` decryption key aborts the entire install. Make a non-essential owned depot whose key Steam refuses a **skip-and-warn** (install continues, user is told which depot was skipped) instead of a whole-install abort, and reconcile GameLib's selected depot set against the official client's.
+
+**Why this is its own phase, not a Phase 23 gap cycle:** Phase 23's contract (REQ-23-07 — a Steam-trusted `StateFlags=4` install) is SATISFIED and the phase is CLOSED with all three hardware gates passed. G-23-01 is a defect in a different subsystem (`depot/select.ts`, depot *selection*), was explicitly descoped from 23-09 (user-locked to observability only) and from 23-10 (which forbade implementing it), and both `23-UAT.md` and `deferred-items.md` already record that it "routes to its own gap cycle".
+
+**The diagnostic is already ANSWERED — do not re-run it.** (23-10 Task 3b, 2026-08-19.) The official Valve **Windows** Steam client in the `GameLibSteam` CrossOver bottle, same account, installed KCD2 (appId 1771300) **in full without depot 1771304**: `appmanifest_1771300.acf` shows `StateFlags "4"`, `SizeOnDisk 96422090071` (~90G), `InstalledDepots` = **1771302, 1771303, 1771306**, and its `content_log.txt` never mentions 1771304 once across the whole 2026-07-11→08-15 install. So 1771304 is **not required** for this account/region/platform and GameLib's abort is a confirmed **over-selection + hard-fail defect** (`severity: major`). Honesty limit: this proves 1771304 is not NEEDED, not that Steam would have granted its key — the official client never asked.
+
+**SECOND divergence, unresolved and IN SCOPE — settle it FIRST, it is free.** The official client installs depot **1771306** (13,650,395,848 bytes) which GameLib's plan-build never mentioned (Gate 2 Attempt 1 records GameLib resolving only 1771302, 1771303, 1771304). Whether GameLib genuinely fails to select 1771306 or merely never reached it before the 1771304 abort is **UNCONFIRMED**, and it changes the fix. A `stage=plan-build` census answers it **before any bytes download** (it is emitted at `buildDepotPlan` return), so a started-then-cancelled KCD2 install settles it at zero download cost. Do this before designing the selection policy.
+
+**Already shipped, reuse it — do not rebuild:** 23-09 landed G-23-01's observability half. `classifyDepotError` already gives EResult 40 a dedicated `steam.download.error.depotBlocked` message naming the specific blocked depot id, and `wrapDepotKeyError` already logs depot id / owning appId / EResult at the failure site. Only the *policy* is missing.
+
+**Requirements**: TBD — to be minted during discuss/plan (G-23-01 closure; no existing REQ covers depot selection policy)
+**Depends on:** Phase 23 (CLOSED 2026-08-19) for the depot install path, and 23-09's shipped observability
+**Artifacts:** `.planning/phases/23-steam-full-ownership-install-stateflags-4/23-UAT.md` (`G-23-01` YAML entry, Gate 2 Attempt 1 narrative) and that phase's `deferred-items.md` (scope + gate-release note)
+**Plans:** not yet planned
+
 ### Phase 24: macOS native Steam bridge (out-of-process steam_api proxy)
 
 **Goal:** Productionize the Proton-style macOS Steam bridge — run bottled Windows Steam games against ONE native macOS Steam client (one login) via an out-of-process `steam_api.dll` shim → TCP → native helper loading `libsteam_api.dylib`, instead of bottling a full Windows Steam client per bottle. This is the parked Steam-Game-Families phase's preferred long-term successor; it superseded and PARKED that phase's multi-bottle machinery (one native client, cheap per-game prefixes, one login) — see `## Parked / Superseded Phases` below.
