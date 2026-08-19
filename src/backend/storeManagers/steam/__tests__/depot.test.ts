@@ -878,7 +878,7 @@ describe('buildDepotPlan', () => {
       expect(PLAN_BUILD_MAX_ATTEMPTS).toBeGreaterThan(1) // sanity: the bound this test proves we did NOT hit
     })
 
-    it('G-23-01: a Blocked (eresult=40) depot-key rejection logs a warning naming the depot id, owning appId, and EResult at the failure site, before the error propagates', async () => {
+    it('23.2-03 (G-23-01, D-01/T-23.2-16): a Blocked (eresult=40) depot-key rejection on the ONLY selected depot still logs a warning naming the depot id, owning appId, and EResult at the failure site, then fails plan-build via the all-skipped guard (not the raw decryption-key error) because zero depots remain', async () => {
       const fakeClient = makeFakeClient()
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
@@ -907,10 +907,17 @@ describe('buildDepotPlan', () => {
           }
         )
 
+      // 23.2-03: a SINGLE selected depot blocked with eresult=40 is skipped
+      // (not rethrown raw) by the new D-01 skip-and-reduce logic — but that
+      // reduction leaves zero depots in the plan, so T-23.2-16's all-skipped
+      // guard fires instead, still carrying eresult=40 for classification.
       await expect(buildDepotPlan(APP_ID, BASE_OPTS)).rejects.toThrow(
-        /couldn't get decryption key/i
+        /every selected depot.*blocked by Steam \(eresult=40\).*1771304/
       )
 
+      // wrapDepotKeyError's failure-site logWarning still fires BEFORE the
+      // skip decision is made — this observability half of G-23-01 is
+      // unchanged by 23.2-03's skip-and-continue behavior.
       const warningCalls = jest.mocked(logWarning).mock.calls
       const matchingCall = warningCalls.find(
         (call) =>
@@ -2594,7 +2601,13 @@ describe('downloadDepotFiles', () => {
     depots: DepotPlan['depots'],
     totalBytes: number
   ): DepotPlan {
-    return { appId: '12345', depots, totalBytes, name: 'SomeGame' }
+    return {
+      appId: '12345',
+      depots,
+      totalBytes,
+      name: 'SomeGame',
+      skippedDepots: []
+    }
   }
 
   it('streams chunks to disk via positional writes at their exact offsets (no whole-file Buffer.alloc)', async () => {
@@ -2774,7 +2787,8 @@ describe('downloadDepotFiles', () => {
       // Artificially large vs. the 2-byte real payload — forces the throttle
       // to hold every emit but the final forced one, proving emits are
       // throttled rather than fired per-chunk.
-      totalBytes: 400
+      totalBytes: 400,
+      skippedDepots: []
     }
 
     await downloadDepotFiles(plan, {
@@ -2827,7 +2841,8 @@ describe('downloadDepotFiles', () => {
       depots: [
         { depotId: '111', gid: 'g1', key: Buffer.from('key'), files: [file] }
       ],
-      totalBytes: 1
+      totalBytes: 1,
+      skippedDepots: []
     }
 
     await downloadDepotFiles(plan, {
@@ -3479,7 +3494,8 @@ describe('downloadDepotFiles', () => {
             files: [fileA, fileB]
           }
         ],
-        totalBytes: contentA.length + contentB.length
+        totalBytes: contentA.length + contentB.length,
+        skippedDepots: []
       }
 
       const result = await downloadDepotFiles(plan, {
@@ -3730,7 +3746,8 @@ describe('downloadDepotFiles', () => {
         depots: [
           { depotId: `d-noflags-${appId}`, gid: `g-noflags-${appId}`, key: Buffer.from('key'), files: [file] }
         ],
-        totalBytes: content.length
+        totalBytes: content.length,
+        skippedDepots: []
       }
     }
 
@@ -3750,7 +3767,8 @@ describe('downloadDepotFiles', () => {
         depots: [
           { depotId: `d-exec-${appId}`, gid: `g-exec-${appId}`, key: Buffer.from('key'), files: [file] }
         ],
-        totalBytes: content.length
+        totalBytes: content.length,
+        skippedDepots: []
       }
     }
 
@@ -4024,7 +4042,8 @@ describe('downloadDepotFiles', () => {
               files: [file]
             }
           ],
-          totalBytes: content.length
+          totalBytes: content.length,
+          skippedDepots: []
         }
       }
 
@@ -4047,7 +4066,8 @@ describe('downloadDepotFiles', () => {
               files: [file]
             }
           ],
-          totalBytes: 0
+          totalBytes: 0,
+          skippedDepots: []
         }
       }
 

@@ -170,6 +170,15 @@ export interface DepotPlan {
    *  "0"/absent buildid makes Steam flag UpdateRequired and always fails the
    *  gate. Never re-derived by a second PICS read (RESEARCH.md Pitfall 4). */
   buildid?: string
+  /** 23.2-03 (G-23-01, D-01/D-02/D-03): depot ids that were selected and
+   *  owned, but dropped from this plan because Steam refused their
+   *  decryption key or manifest with `EResult 40 (Blocked)`. Required (not
+   *  optional) so every construction site must decide it explicitly — the
+   *  same discipline `canWriteFullOwnership`'s fail-closed shape uses.
+   *  STRINGS end-to-end, never coerced through `Number()` (T-21-04). Reported
+   *  downstream via `DepotDownloadOutcome.skippedDepots`; never used to drive
+   *  any retry/repair path (D-05 — no recovery). */
+  skippedDepots: string[]
 }
 
 /** Narrow, ADDITIONAL view of PICS appinfo's `common.name` field — not part of
@@ -721,14 +730,20 @@ export async function buildDepotPlan(
       depots: [],
       totalBytes: 0,
       name: displayName,
-      buildid
+      buildid,
+      // Nothing was ever selected here (descriptors.length === 0), so there
+      // is nothing to have skipped — distinct from the all-skipped guard
+      // below, which only fires when descriptors existed and every one of
+      // them was blocked.
+      skippedDepots: []
     }
     // 23-06: census logged on the returned plan before it leaves plan-build —
     // paired with downloadDepotFiles' stage=download-entry census so a
     // flags-dropping serialization boundary is directly observable (H5).
     logInfo(
       `steam-flags-census stage=plan-build appId=${appId} depots=0 ` +
-        formatDepotFlagsCensus(summarizeDepotFlags(emptyPlan)),
+        formatDepotFlagsCensus(summarizeDepotFlags(emptyPlan)) +
+        ` skipped=${emptyPlan.skippedDepots.join(',')}`,
       LogPrefix.Steam
     )
     return emptyPlan
@@ -737,16 +752,68 @@ export async function buildDepotPlan(
   const parser = await loadContentManifestParser()
 
   const depots: DepotPlanEntry[] = []
+  // G-23-01 (D-01/D-02/D-03): depot ids Steam refused with EResult 40
+  // (Blocked) — dropped from the plan, install continues without them.
+  const skippedDepots: string[] = []
   let totalBytes = 0
   for (const descriptor of descriptors) {
     throwIfAborted(opts.signal)
-    const entry = await withPlanBuildRetry(
-      opts.signal,
-      (client) => fetchDepotPlanEntry(client, descriptor, parser),
-      `fetchDepotPlanEntry:${descriptor.id}`
-    )
+    let entry: DepotPlanEntry
+    try {
+      entry = await withPlanBuildRetry(
+        opts.signal,
+        (client) => fetchDepotPlanEntry(client, descriptor, parser),
+        `fetchDepotPlanEntry:${descriptor.id}`
+      )
+    } catch (err) {
+      // D-01: narrowed to the LITERAL 40, never isNonRetryableDepotError —
+      // that set also contains 8/9/15/17/42/43, and 15 (AccessDenied) / 17
+      // (Banned) plausibly signal a genuine account/ownership problem that
+      // must not be silently downgraded to "skipped a depot". Every other
+      // non-retryable code rethrows unchanged and still aborts the whole
+      // install, exactly as before this phase.
+      const eresult = (err as Error & { eresult?: number }).eresult
+      if (eresult === 40) {
+        // logInfo, not logWarning — a skip is informational (the install is
+        // continuing), unlike wrapDepotKeyError's own logWarning at the
+        // failure site moments ago. Never logs the decryption key, the
+        // manifest GID payload, or any account identifier (T-23-31) — only
+        // the same depot id / owning appId / eresult fields
+        // wrapDepotKeyError's failure-site log already composed. States what
+        // happened, not what Steam would have done for another client.
+        logInfo(
+          `buildDepotPlan: skipping depot ${descriptor.id} (app ${descriptor.ownerAppId}) for appId ${appId} — Steam refused the key/manifest with eresult=40 (Blocked); the install is continuing without it`,
+          LogPrefix.Steam
+        )
+        skippedDepots.push(descriptor.id)
+        continue
+      }
+      throw err
+    }
     depots.push(entry)
+    // D-03: totalBytes is downstream of the `continue` above — a skipped
+    // depot's files never reach this accumulation, so the reduced plan's
+    // byte total is correct FOR FREE, no compensating arithmetic needed.
+    // SizeOnDisk is a separate, measured (not summed) number
+    // (measureInstalledBytes) and needs no change either.
     totalBytes += entry.files.reduce((sum, f) => sum + Number(f.size), 0)
+  }
+
+  // T-23.2-16: without this guard, a plan reduced to zero depots would fall
+  // through downloadSteamDepots' zero-depot early return and report
+  // { status: 'done' } — an install that downloaded NOTHING reported as a
+  // success. eresult is set to 40 so classifyDepotError still maps this to
+  // the existing steam.download.error.depotBlocked copy, which remains
+  // correct for this residual case. This throw lands in downloadSteamDepots'
+  // catch block with downloadAttempted === false, so 23.2-02's
+  // shouldFinalizeAfterThrow gate correctly leaves any existing manifest
+  // untouched (D-05: no recovery path either way).
+  if (!depots.length && skippedDepots.length) {
+    const allSkippedErr = new Error(
+      `buildDepotPlan: every selected depot for appId ${appId} was blocked by Steam (eresult=40) and had to be skipped: ${skippedDepots.join(', ')}`
+    ) as Error & { eresult?: number }
+    allSkippedErr.eresult = 40
+    throw allSkippedErr
   }
 
   logInfo(
@@ -754,13 +821,23 @@ export async function buildDepotPlan(
     LogPrefix.Steam
   )
 
-  const plan: DepotPlan = { appId, depots, totalBytes, name: displayName, buildid }
+  const plan: DepotPlan = {
+    appId,
+    depots,
+    totalBytes,
+    name: displayName,
+    buildid,
+    skippedDepots
+  }
   // 23-06: census logged on the returned plan before it leaves plan-build —
   // paired with downloadDepotFiles' stage=download-entry census so a
   // flags-dropping serialization boundary is directly observable (H5).
+  // 23.2-03: skipped-depot ids appended so a skip is observable before any
+  // bytes download, even on a subsequently cancelled install.
   logInfo(
     `steam-flags-census stage=plan-build appId=${appId} depots=${depots.length} ` +
-      formatDepotFlagsCensus(summarizeDepotFlags(plan)),
+      formatDepotFlagsCensus(summarizeDepotFlags(plan)) +
+      ` skipped=${skippedDepots.join(',')}`,
     LogPrefix.Steam
   )
 
@@ -2713,6 +2790,13 @@ async function getContentServerHosts(
 export interface DepotDownloadOutcome {
   status: 'done' | 'error' | 'cancelled'
   error?: string
+  /** 23.2-03 (G-23-01): depot ids skipped by the EResult-40 skip-and-warn
+   *  policy (DepotPlan.skippedDepots), threaded out so plan 23.2-04 can
+   *  surface a user-facing completion notice. Populated on every return path
+   *  that occurs AFTER buildDepotPlan resolved — 'done', 'error' and
+   *  'cancelled' alike. Left undefined on a throw before the plan ever
+   *  existed (nothing to report). */
+  skippedDepots?: string[]
 }
 
 /**
@@ -2749,6 +2833,11 @@ export async function downloadSteamDepots(
   // shouldFinalizeAfterThrow, the catch block's only gate on whether
   // finalize() is even called.
   let downloadAttempted = false
+  // 23.2-03 (G-23-01): captured from plan.skippedDepots immediately after
+  // buildDepotPlan resolves, alongside displayName/buildid. Stays undefined
+  // if buildDepotPlan itself threw (Case A) — a throw before the plan exists
+  // has nothing to report.
+  let skippedDepots: string[] | undefined
 
   // D-UAT-09 (21-17): an aborted signal forces the outcome threaded into
   // finalizeToSteam to 'cancelled' regardless of what lastResult.outcome
@@ -2778,6 +2867,7 @@ export async function downloadSteamDepots(
     const plan = await buildDepotPlan(appId, opts)
     displayName = plan.name
     buildid = plan.buildid
+    skippedDepots = plan.skippedDepots
 
     for (const d of plan.depots) {
       attempted.push({
@@ -2807,8 +2897,8 @@ export async function downloadSteamDepots(
       // it through the SAME abort->cancelled->mark chain (is_installed=false,
       // steamResumePending=true) as the other two abort return paths.
       return opts.signal?.aborted === true
-        ? { status: 'cancelled' }
-        : { status: 'done' }
+        ? { status: 'cancelled', skippedDepots }
+        : { status: 'done', skippedDepots }
     }
 
     const client = getDepotClient()
@@ -2853,7 +2943,7 @@ export async function downloadSteamDepots(
     await finalize()
 
     if (result.outcome === 'cancelled' || opts.signal?.aborted === true) {
-      return { status: 'cancelled' }
+      return { status: 'cancelled', skippedDepots }
     }
     if (result.failures.length) {
       // D-06: surface the CLASSIFIED, plain-language message — never the raw
@@ -2862,10 +2952,11 @@ export async function downloadSteamDepots(
       // the connection", not a stack trace).
       return {
         status: 'error',
-        error: classifyDepotError(result.failures[0].error).message
+        error: classifyDepotError(result.failures[0].error).message,
+        skippedDepots
       }
     }
-    return { status: 'done' }
+    return { status: 'done', skippedDepots }
   } catch (err) {
     // Any thrown failure — plan-build error, content-server resolution
     // failure, anything — still funnels through the SAME finalize path
@@ -2902,8 +2993,12 @@ export async function downloadSteamDepots(
     // downloadDepotFiles's own signal-aborted -> 'cancelled' outcome instead
     // of surfacing a spurious error/Retry UI for a user-requested stop.
     if (opts.signal?.aborted) {
-      return { status: 'cancelled' }
+      return { status: 'cancelled', skippedDepots }
     }
-    return { status: 'error', error: classifyDepotError(err).message }
+    return {
+      status: 'error',
+      error: classifyDepotError(err).message,
+      skippedDepots
+    }
   }
 }

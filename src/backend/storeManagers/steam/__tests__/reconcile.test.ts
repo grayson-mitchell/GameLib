@@ -54,7 +54,7 @@ function sha1Hex(buf: Buffer): string {
 }
 
 function makePlan(depots: DepotPlan['depots']): DepotPlan {
-  return { appId: '12345', depots, totalBytes: 0, name: 'SomeGame' }
+  return { appId: '12345', depots, totalBytes: 0, name: 'SomeGame', skippedDepots: [] }
 }
 
 describe('reconcilePartialState', () => {
