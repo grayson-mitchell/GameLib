@@ -375,6 +375,28 @@ abort on its Blocked key is a genuine **over-selection + hard-fail defect** — 
 official client — it never asked. The decision rule turned on whether the official client completes
 without the depot, so the disposition is unaffected.
 
+**Amendment (2026-08-19, phase 23.2-01) — the "before any `.acf` was written" half of this Attempt 1
+narrative is WRONG.** Read from `downloadSteamDepots`'s source (full derivation in
+`.planning/phases/23.2-steam-depot-selection-required-vs-optional-depots-and-skip-a/23.2-MANIFEST-WRITE-TAXONOMY.md`
+Case A): a `buildDepotPlan` throw — exactly what happened here, an `EResult 40 Blocked` key request
+during plan-build — routes through the catch block's unconditional `finalize()` call
+(`depot.ts:2836`), which DOES write a manifest: `StateFlags "1026"`, `buildid "0"`, and a
+present-but-empty `InstalledDepots` block. This code path (commit `eacbc7ccf`, 2026-07-15) already
+existed on 2026-07-21, six days before this Attempt 1 was run, and is unchanged in shape through
+2026-08-19 — so **a `.acf` almost certainly WAS written** on this run, contradicting the original
+"before any `.acf` was written" claim. This is corrected in place per this project's rule against
+silent rewrites; the original sentence above is left unmodified. **This amendment does NOT alter or
+weaken the EResult 40 / depot 1771304 finding** — the region/key-block observation and the resulting
+G-23-01 gap disposition are unaffected; only the "no `.acf`" half of the narrative is wrong.
+Whether this specific 2026-07-21 run's `.acf` was checked in the macOS `steamapps` (KCD2 is a
+Windows title and installs into the CrossOver bottle's `steamapps` via
+`opts.targetSteamappsDirOverride`, `games.ts:1525-1526`, not the macOS library) is **NOT
+established from any recorded evidence** — no artifact from that run states which directory was
+inspected. See the adjudication in
+`.planning/todos/pending/2026-08-19-failed-plan-build-writes-1026-stub-manifest-clobbering-a-complete-install.md`
+for the full three-explanation writeup; this is recorded as the most likely unfalsified
+explanation, not as an established fact.
+
 **A suspected second divergence — RAISED, then DISPROVEN 2026-08-19.** The official client installs
 depot **1771306** (13,650,395,848 bytes), which this Attempt 1 narrative does not mention, so it looked
 as though GameLib's selection might differ from Steam's in *both* directions. It does not. A live

@@ -147,14 +147,54 @@ total    97,157,946,159
                                                 complete 3-depot install
 ```
 
-So GameLib's failure path **already computes a completion size that correctly excludes the depot it
-could not fetch**, and that figure agrees byte-for-byte with what the official client reports for a
-genuinely complete install. Two consequences:
+~~So GameLib's failure path **already computes a completion size that correctly excludes the depot it
+could not fetch**~~ — **this inference is retired, see `## Resolution` below.** That figure does agree
+byte-for-byte with what the official client reports for a genuinely complete install, but not for the
+reason originally inferred. Two consequences, one retained and one retired:
 
 - Independent corroboration that depot 1771304 is genuinely not part of a complete KCD2 install
-  (see G-23-01 / Phase 23.2).
-- The size accounting needed for **skip-and-warn** may already exist. Establish where this number is
-  computed before designing Phase 23.2's policy — the fix may be far smaller than it looks.
+  (see G-23-01 / Phase 23.2). **Retained.**
+- ~~The size accounting needed for **skip-and-warn** may already exist. Establish where this number is
+  computed before designing Phase 23.2's policy — the fix may be far smaller than it looks.~~
+  **Retired — see `## Resolution` below: no new size accounting is needed, but not because the
+  failure path is depot-aware. It measures real files on disk, which happened to include the
+  official client's own complete install.**
+
+## Resolution (2026-08-19, phase 23.2-01)
+
+**Source of the `96,422,090,071` figure: `measureInstalledBytes` (`depot.ts:2439-2457`), called
+from `finalizeToSteam` (`depot.ts:2479`).** It is a recursive `readdir`/`stat` walk of
+`resolve(targetSteamappsDir, 'common', installdir)` — it sums REAL BYTES PHYSICALLY PRESENT ON
+DISK at that path. It is NOT a sum over `opts.depots` or `plan.depots`, and it has no knowledge of
+the depot plan, the blocked depot, or which depots GameLib selected at all.
+
+**Why the three numbers (selected-minus-blocked sum, stub `SizeOnDisk`, official client's
+`SizeOnDisk`) agree byte-for-byte:** the official Windows Steam client's own complete 90 GB
+install was still physically present at that exact bottle path when GameLib's failed plan-build
+run measured it (the manifest was moved aside for this diagnostic capture, not the game files —
+see "Observed, 2026-08-19" above). `measureInstalledBytes` measured **Steam's files**, not
+GameLib's plan. The arithmetic coincidence (selected-depot sum minus the blocked depot equalling
+that measured total) is a consequence of depot 1771304 genuinely not being part of the complete
+install (the G-23-01 finding, corroborated independently here) — not evidence of any depot-plan-
+aware size computation inside the failure path. There is no such computation; `measureInstalledBytes`
+never inspects `opts.depots`.
+
+**Consequence for skip-and-warn (D-03): no new size accounting is required.**
+`measureInstalledBytes` measures reality — when depot 1771304's bytes are skipped, they are simply
+absent from disk and therefore absent from the measurement, automatically, with zero code changes.
+The "size accounting Phase 23.2 needs may already exist" question is answered: yes, for
+`SizeOnDisk`, because it was never plan-derived in the first place and needed no accounting to
+begin with.
+
+**What this does NOT establish:** `DepotPlan.totalBytes` (the download-progress denominator used
+for percent-complete reporting) IS plan-derived, unlike `SizeOnDisk`. This resolution says nothing
+about it — that number remains plan 23.2-03's concern, handled there by simply never adding a
+skipped depot's bytes to the accumulator in the first place, not by any change to
+`measureInstalledBytes` or `finalizeToSteam`.
+
+Cross-referenced from
+`.planning/phases/23.2-steam-depot-selection-required-vs-optional-depots-and-skip-a/23.2-MANIFEST-WRITE-TAXONOMY.md`'s
+"Size accounting" section.
 
 ## Fix direction (not prescriptive)
 
