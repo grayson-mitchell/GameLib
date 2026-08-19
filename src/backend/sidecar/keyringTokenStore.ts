@@ -189,6 +189,13 @@ export class SidecarKeyringSlotStore implements TokenStore {
   /** The in-flight `isAvailable()` probe, shared by every concurrent caller until it settles. */
   private pendingAvailable: Promise<boolean> | undefined
 
+  /** A monotonic cache generation, bumped by `invalidateCache()`. `fetchToken()`/`fetchAvailable()`
+   * capture this at entry and refuse to write their result back if it has moved by the time the
+   * round trip resolves -- this is what makes a sign-out survive a read that was already in flight
+   * when it fired (`T-34.5-G6-14`, quick-260820-fyl). It holds a counter only -- never a value,
+   * never a secret. */
+  private cacheEpoch = 0
+
   async isAvailable(): Promise<boolean> {
     if (this.cachedAvailable) return this.cachedAvailable.value
     if (this.pendingAvailable) return this.pendingAvailable
@@ -201,6 +208,7 @@ export class SidecarKeyringSlotStore implements TokenStore {
   }
 
   private async fetchAvailable(): Promise<boolean> {
+    const epoch = this.cacheEpoch
     try {
       const result = await requestRustInvoke(RUST_KEYRING_AVAILABLE, [
         this.slot
@@ -208,8 +216,11 @@ export class SidecarKeyringSlotStore implements TokenStore {
       const value = result === true
       // Only a SUCCESSFUL probe is cached -- including a successful "false" (D-06's honest
       // unavailable, not an error). A rejection is never cached as a value (see the method
-      // below).
-      this.cachedAvailable = { value }
+      // below). Also guarded by the cache-epoch captured at entry, above -- a probe still in
+      // flight when invalidateCache() bumps it must not write its result back over cleared state.
+      if (epoch === this.cacheEpoch) {
+        this.cachedAvailable = { value }
+      }
       return value
     } catch (error) {
       logWarning(
@@ -302,6 +313,7 @@ export class SidecarKeyringSlotStore implements TokenStore {
 
   private async fetchToken(context?: string): Promise<TokenReadOutcome> {
     const started = Date.now()
+    const epoch = this.cacheEpoch
     const label = context ?? 'unspecified'
     let result: unknown
     // Every REAL Keychain round trip is announced before it is issued (F-34.5-G6-26). This is the
@@ -332,8 +344,13 @@ export class SidecarKeyringSlotStore implements TokenStore {
       // trigger a second Keychain prompt for a decision the user has not finished making on the
       // first. This timestamp is never surfaced to a caller and never mistaken for a token value.
       const reason = classifyKeyringFailure(error)
-      this.failedTokenAt = Date.now()
-      this.failedTokenReason = reason
+      // Guarded by the cache-epoch captured at entry (T-34.5-G6-14, quick-260820-fyl):
+      // invalidateCache()'s own doc comment already requires that a memoized failure never survive
+      // a write or delete, and a superseded read arming one afterwards violates exactly that.
+      if (epoch === this.cacheEpoch) {
+        this.failedTokenAt = Date.now()
+        this.failedTokenReason = reason
+      }
       // A second, memo-specific log line (34.5 gap cycle 4 plan 35, Routing item 3) -- distinct
       // from the warning just above -- naming the timeout/unavailable classification and the
       // window this failure is now memoized for. This is the line a live run greps to prove the
@@ -349,7 +366,9 @@ export class SidecarKeyringSlotStore implements TokenStore {
     // secret is, and re-probing it on every call is the read-count problem this cache exists
     // to close.
     const value = typeof result === 'string' ? result : ''
-    this.cachedToken = { value }
+    if (epoch === this.cacheEpoch) {
+      this.cachedToken = { value }
+    }
     // THE line `U-34.5-01`'s condition (4) needs (F-34.5-G6-26). Before this existed, a successful
     // read emitted nothing at all -- `SidecarKeyringSlotStore` could appear in `gamelib.log` ONLY
     // on a failure path -- so the condition "at least one read SUCCEEDS, recorded with the exact
@@ -367,8 +386,12 @@ export class SidecarKeyringSlotStore implements TokenStore {
     )
     // A SUCCESSFUL read clears any stale failure memo -- there is nothing left to bound once a
     // real value (or a confirmed no-entry) is cached above and short-circuits future calls first.
-    this.failedTokenAt = undefined
-    this.failedTokenReason = undefined
+    // Guarded by the same cache-epoch check for the mirror-image reason: a stale success must not
+    // erase a fresher failure memo armed after the invalidation (T-34.5-G6-14, quick-260820-fyl).
+    if (epoch === this.cacheEpoch) {
+      this.failedTokenAt = undefined
+      this.failedTokenReason = undefined
+    }
     return value ? { status: 'present', token: value } : { status: 'absent' }
   }
 
@@ -427,16 +450,21 @@ export class SidecarKeyringSlotStore implements TokenStore {
    * must never survive a write or a delete any more than a cached value may, since a caller
    * reading immediately after a sign-out must always reach the keyring fresh, never a stale memo.
    * Also public so a test (or a future singleton-holding caller, e.g. `humbleSecretStore.ts`'s
-   * `SLOT_STORES`) can force invalidation without reaching into private state. Does NOT touch an
-   * in-flight `pendingToken`/`pendingAvailable` promise — that request was already sent and will
-   * resolve (and cache) independently; there is no way to un-send it, and this mirrors the same
-   * best-effort reasoning `bounded_keyring_read`'s "abandoned, not cancelled" doc comment uses
-   * on the Rust side for exactly the same class of already-in-flight operation. */
+   * `SLOT_STORES`) can force invalidation without reaching into private state. Does NOT cancel an
+   * in-flight `pendingToken`/`pendingAvailable` promise — that request was already sent and cannot
+   * be un-sent, and this mirrors the same best-effort reasoning `bounded_keyring_read`'s
+   * "abandoned, not cancelled" doc comment uses on the Rust side for exactly the same class of
+   * already-in-flight operation. A caller already joined to it still receives its result -- but
+   * the `cacheEpoch` bump below means that result can no longer be written back over the state
+   * this call just cleared (`T-34.5-G6-14`, quick-260820-fyl). */
   invalidateCache(): void {
     this.cachedToken = undefined
     this.cachedAvailable = undefined
     this.failedTokenAt = undefined
     this.failedTokenReason = undefined
+    // Bumped last -- any fetch that captured the epoch before this call now sees a mismatch and
+    // withholds its write (T-34.5-G6-14, quick-260820-fyl).
+    this.cacheEpoch += 1
   }
 }
 

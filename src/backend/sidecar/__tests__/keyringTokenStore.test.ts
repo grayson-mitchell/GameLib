@@ -69,6 +69,45 @@ function programChannel(channel: string, outcome: ProgrammedOutcome): void {
   program[channel] = outcome
 }
 
+// `beforeEach`'s responder above answers every channel from `program`, which cannot hold a
+// request open -- it always resolves/rejects synchronously off the programmed outcome. This
+// helper re-installs `mockRequestRustInvoke.mockImplementation` so the FIRST call to `target`
+// returns a promise the test settles by hand, while EVERY other call -- including later calls to
+// `target` itself -- falls through to the existing `program`/`callLog` behaviour verbatim. The
+// first-call-only arming is load-bearing: without it, a follow-up read to the SAME channel would
+// hang on a second never-settled promise instead of asserting anything (used by the cache-epoch
+// concurrency tests below, T-34.5-G6-14, quick-260820-fyl).
+function deferFirstCall(target: string): {
+  resolve: (value: unknown) => void
+  reject: (error: Error) => void
+} {
+  let armed = false
+  let resolveDeferred: (value: unknown) => void = () => {}
+  let rejectDeferred: (error: Error) => void = () => {}
+  const fallThrough = mockRequestRustInvoke.getMockImplementation()
+  mockRequestRustInvoke.mockImplementation(
+    (channel: string, args: unknown[]) => {
+      if (channel === target && !armed) {
+        armed = true
+        callLog.push({ channel, args })
+        return new Promise((resolve, reject) => {
+          resolveDeferred = resolve
+          rejectDeferred = reject
+        })
+      }
+      return fallThrough
+        ? fallThrough(channel, args)
+        : Promise.reject(
+            new Error(`no outcome programmed for channel: ${channel}`)
+          )
+    }
+  )
+  return {
+    resolve: (value: unknown) => resolveDeferred(value),
+    reject: (error: Error) => rejectDeferred(error)
+  }
+}
+
 describe('SidecarKeyringTokenStore', () => {
   beforeEach(() => {
     program = {}
@@ -791,6 +830,83 @@ describe('SidecarKeyringTokenStore', () => {
     expect(
       callLog.filter((c) => c.channel === 'keyring_available')
     ).toHaveLength(2)
+  })
+
+  // The two pre-existing invalidation tests above (`clearToken() invalidates a memoized failure`
+  // and `clearToken() invalidates the cache`) are strictly SEQUENTIAL -- `await store.clearToken()`
+  // fully settles before `getToken()` is called -- and that is precisely why this defect survived.
+  // These tests drive a genuinely CONCURRENT in-flight read across clearToken() instead.
+  describe('in-flight read superseded by clearToken() -- cache epoch guard (quick-260820-fyl, T-34.5-G6-14)', () => {
+    it('an in-flight readToken() that resolves AFTER a successful clearToken() must not resurrect the pre-signout token (T-34.5-G6-14)', async () => {
+      const deferred = deferFirstCall('keyring_get')
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+      const inFlight = store.getToken()
+      expect(callLog.filter((c) => c.channel === 'keyring_get')).toHaveLength(1)
+
+      programChannel('keyring_delete', { type: 'resolve', value: true })
+      await store.clearToken()
+
+      deferred.resolve('pre-signout-token')
+
+      // The superseded caller STILL receives what it asked for, deliberately and by decision --
+      // this line pins that non-change, it is not an oversight (see the plan's <out_of_scope>).
+      await expect(inFlight).resolves.toBe('pre-signout-token')
+
+      await expect(store.getToken()).resolves.toBe('')
+      // The follow-up read is served by clearToken()'s own confirmed-empty cache, so no second
+      // Keychain round trip is issued either way -- the VALUE is the discriminator, not the count.
+      expect(callLog.filter((c) => c.channel === 'keyring_get')).toHaveLength(1)
+    })
+
+    it('an in-flight readToken() that REJECTS after clearToken() must not arm a failure memo that suppresses the next real read (T-34.5-G6-14)', async () => {
+      const deferred = deferFirstCall('keyring_get')
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+      const inFlight = store.getToken()
+
+      // The FAILED delete is deliberate: a SUCCESSFUL clearToken() repopulates cachedToken with a
+      // confirmed-empty value, which would serve the follow-up read from cache and mask the memo
+      // entirely. With a failed delete the cache is left fully invalidated, so a resurrected memo
+      // is the ONLY thing that can suppress the next read -- this mirrors the pre-existing
+      // sequential test 'clearToken() invalidates a memoized failure' above.
+      programChannel('keyring_delete', {
+        type: 'reject',
+        error: new Error('keyring:unavailable:PlatformFailure')
+      })
+      await store.clearToken()
+
+      // No fake timers here and no clock advance: the point is that the memo is FRESH and would
+      // therefore hit if it were allowed to arm.
+      deferred.reject(new Error('keyring:timeout'))
+      await expect(inFlight).resolves.toBe('')
+
+      programChannel('keyring_get', {
+        type: 'resolve',
+        value: 'post-signout-token'
+      })
+      await expect(store.getToken()).resolves.toBe('post-signout-token')
+      expect(callLog.filter((c) => c.channel === 'keyring_get')).toHaveLength(2)
+    })
+
+    it('an in-flight isAvailable() probe that resolves AFTER clearToken() must not resurrect the pre-signout availability cache (T-34.5-G6-14)', async () => {
+      const deferred = deferFirstCall('keyring_available')
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+      const inFlight = store.isAvailable()
+
+      programChannel('keyring_delete', { type: 'resolve', value: true })
+      await store.clearToken()
+
+      deferred.resolve(true)
+      await expect(inFlight).resolves.toBe(true)
+
+      programChannel('keyring_available', { type: 'resolve', value: false })
+      await expect(store.isAvailable()).resolves.toBe(false)
+      expect(
+        callLog.filter((c) => c.channel === 'keyring_available')
+      ).toHaveLength(2)
+    })
   })
 
   it('invalidateCache() is exposed and clears both cached values on demand', async () => {
