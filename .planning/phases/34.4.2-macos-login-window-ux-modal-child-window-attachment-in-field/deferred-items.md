@@ -1034,3 +1034,61 @@ empty, ran no harness, and launched no app. All six prior gate documents are byt
 REQ-34.4.2-09 both stay `[ ]`; D-08's no-partial-pass rule is untouched. `git diff --stat -- src
 src-tauri/src` is empty for this task. **Next: a human operator session runs
 `34.4.2-LIVE-GATE-RERUN-6.md`.** No GSD command advances this phase.
+
+## RERUN-6 RAN — verdict PASS 5/5, the phase's first full PASS; two NEW contract defects (2026-08-19)
+
+**`34.4.2-LIVE-GATE-RERUN-6.md` ran on real macOS hardware: `verdict: PASS`, `items_passed: 5/5`,
+`run_date: 2026-08-19`.** Ninth gate attempt across eight contracts. Verdict history:
+FAIL 0/6 → FAIL → FAIL 5/6 → FAIL 5/6 → FAIL 1/6 → FAIL 0/5 → **PASS 5/5**.
+
+**Item 6(a) — the only never-measured behaviour in this phase — PASSED.** Unreached across eight
+prior attempts. All three required transcript absences held as deltas against a pre-disconnect
+baseline; the cookie census recorded `matched=38 → 0, deleted=38, survivingNonHumble=29`; and
+`config.json` transitioned 75 B @ 16:38:52 → 2 B @ 16:42:24 on an independent filesystem channel.
+No wedge. **F-34.4.2-12's fix `6bad86227` is live-discharged; T-34.4.2-43 discharges.**
+
+**CLOSED by this run:**
+- **F-34.4.2-10** — taking-condition MET. The record-only sub-check fired the SUCCESS line
+  (`cleared storage — localStorage=63, sessionStorage=0, indexedDB=1, caches=0, serviceWorkers=0`),
+  not the timeout, establishing for the first time that `clearHumbleStorage`'s path is reached live
+  and succeeds. The bounded-timeout debt is discharged, not deferred a fourth time.
+- **F-34.4.2-20** — retired to a standing note by D-G5 rather than fixed, as planned.
+- **T-34.4.2-43, T-34.4.2-44** — discharged (the latter held at all three assertion points).
+
+**NEW, found BY the run:**
+- **F-34.4.2-25 — a required literal can be stale by BEHAVIOUR, not just by line number.** RERUN-6's
+  item 2 required `Humble login-window cookie read UNSUPPORTED_OR_ERROR … aborting watch`
+  (`user.ts:544`). It fired **0** times. Diagnosed, not scored blindly: that literal is gated on a
+  cookie-read verdict, not a window-closed event, and commit `f3b9e6da5` — the F-34.4.2-19 fix,
+  whose subject line reads "surface Humble login watch error/timeout/**closed** outcomes" — added a
+  dedicated closed handler at `user.ts:487` that cancellation now settles through. Both
+  cancellations were positively evidenced there, per window label, by a strictly stronger literal
+  naming both window and cause. **Root cause: RERUN-6's authoring re-resolved every literal's LINE
+  NUMBER (which correctly caught F-34.4.2-24) but verified only that each literal EXISTS, never that
+  it still FIRES on the route the item drives. Existence is not reachability.** The fix commit's own
+  subject line announced the change and was not followed through to its consequence.
+  **Standing instruction, stronger than F-34.4.2-24's:** for every required literal, re-resolve the
+  line number AND confirm the emitting path is the one the item's gesture actually takes; where a
+  recent fix changed control flow, read that fix's diff for emitters it added or bypassed.
+- **F-34.4.2-26 — Humble's login includes an out-of-band 2FA email round-trip**, recorded by no
+  prior contract in this phase. It interacts directly with F-34.4.2-21's 10-minute
+  `LOGIN_WATCH_TIMEOUT_MS`: waiting for the email and switching apps to fetch the code consumed most
+  of the budget, and this run came within roughly three minutes of the deadline. Any future contract
+  requiring a completed Humble login must budget for it inside its own hold-time bound.
+
+**Diagnosed and explicitly NOT filed as a defect:** a repeating `Humble login still waiting (status
+unchanged; 6 rejection(s) suppressed): session_expired` signature, ~every 31s, while the login form
+sat unsubmitted. Operator confirmed the sheet showed a FORM, not an authenticated page. This is the
+watch correctly polling a stale cookie — **explicitly not the F-34.4.2-19 shape**, which featured an
+apparently-authenticated page with no detection at all. Recorded because the signature alarms on
+first sight. Distinguishing question: *does the sheet show an authenticated page, or a form?*
+
+**Three deviations from the contract as written**, each recorded in the document rather than
+smoothed over: item 6(a) run FIRST (a deliberate risk decision to bank the never-measured item);
+the preparatory sequence starting from an already-logged-in state; and an unscored login at 16:38:52
+preceding item 4's own scored login at 16:56:42.
+
+**All ten REQ-34.4.2 boxes are now ticked.** REQ-34.4.2-04 and -09 ticked by this run; -05 was
+retired by D-G4. **Still owed before formal closure: `34.4.2-VERIFICATION.md` reads `gaps_found`
+against RERUN-5 and must be amended IN PLACE — it was hand-corrected in `7e1781fbb`, so
+regenerating it destroys that correction.**
