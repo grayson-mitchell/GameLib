@@ -529,3 +529,76 @@ JSON and redacts `url`/`code_verifier`/`serial`/`client_id` keys — but it sani
 by `callRunner` itself, before `authLogSanitizer` is ever consulted. Confirmed by direct read at
 34.5-61 planning time and re-confirmed here; not touched by this plan, per the plan's own
 constraint.
+
+---
+
+## Found by the keyring-arm live session (2026-08-19, plan 34.5-58) — four findings
+
+Session record: `34.5-KEYRING-ARM-SESSION.md` (`result: PARTIAL`, `affects_gate: false`). Two
+launches on the real `keyring` arm, operator present, screen unlocked. Archived logs live in the
+scratchpad session dir `keyring-session-20260819T090321Z` and are NOT in git (T-34.5-C7-27).
+**None of these findings can change plan 34.5-59's required 4/0/0/0.**
+
+35. **`F-34.5-G6-27` — `U-34.5-10`'s bar demands an observation macOS CANNOT PRODUCE.**
+    The row requires a **per-slot** operator-observed Keychain prompt count, and plan 34.5-58
+    Task 2 elevated per-prompt item-name transcription to a mandatory acceptance criterion ("an
+    integer count alone is not sufficient"). **The dialog names no item.** Operator transcription,
+    verbatim: the prompts were *"fairly generic, slight variations, theme `gamelib-shell wants
+    access ...`, nothing referring to humble, steam or anything meaningful."*
+    This is a **contract defect, not an operator failure** — and it is the SECOND time the same
+    impossible thing was asked. `keyring-session-capture/README.md` records the 2026-08-14 pilot as
+    unscorable because "item names not recorded", phrasing that attributes it to the operator; the
+    pilot could not have recorded them either. Plan 34.5-58 then re-specified the same criterion in
+    bold, citing the pilot's failure as the reason it was mandatory.
+    **Fix:** re-specify `U-34.5-10` against the log's slot-attributed
+    `issuing keyring_get (may prompt)` count, which already exists and is per-slot by construction.
+    Until then the row is **OPEN/UNMEASURABLE, not FAIL** — a FAIL would assert the product failed a
+    test it was never given.
+    *Class: a bar that is precise, non-vacuous and unsatisfiable. Cf.
+    `gate-can-be-nonvacuous-and-measure-wrong-property`,
+    `appearance-gate-must-name-the-property-not-a-landmark`.*
+
+36. **`F-34.5-G6-28` — 4 observed approval dialogs vs 2 logged `keyring_get` calls (launch 2).**
+    Launch 2's archived log contains exactly two `issuing keyring_get (may prompt)` lines, one per
+    Humble slot. The operator observed **four** dialogs and entered a password in each. The 2:1
+    ratio is unexplained. Recorded as a MISMATCH per plan 34.5-58 Task 3's own instruction ("any
+    mismatch is recorded, not reconciled by judgement"). Attribution is blocked by `F-34.5-G6-27`.
+    Worth determining whether macOS presents two dialogs per item ACL check, or whether a second
+    code path issues reads that bypass `SidecarKeyringSlotStore`'s logging entirely — the latter
+    would be a logging-coverage gap of the same family as `F-34.5-G6-26`.
+
+37. **`F-34.5-G6-29` — `keyring_delete` REPORTS FAILURE on an operation that SUCCEEDED.**
+    ```
+    (21:12:05) SidecarKeyringSlotStore(humble-csrf).clearToken(): keyring_delete failed: rustInvoke timed out after 60000ms: keyring_delete
+    ```
+    `humble-csrf` was verified **present** in the Keychain before launch 1 and verified **absent**
+    after sign-out (`security find-generic-password -s com.gamelib.launcher -a humble-csrf`, which
+    does not prompt without `-w`). Exactly ONE delete was attempted for that slot in the entire
+    session (launch-1 log line 52, confirmed by grep over the full archive). **The Keychain mutation
+    completed; only the RPC response did not arrive in time.**
+    This is a **FOURTH failure class** the session contract's failure-class section does not name:
+    the sidecar->Rust RPC envelope expiring at **60000ms**, distinct from `keyring:timeout` (45s,
+    Rust-side `bounded_keyring_read`) and from `keyring:unavailable` / dark wake.
+    It fails in the *reassuring* direction — a reader concludes a secret survived sign-out when it
+    did not. **The inverse (reporting `ok` on a mutation that never happened) is NOT ruled out by
+    this session and should be audited**, because that direction is a real secret-hygiene defect.
+    *Class: never accept a mutating call's own report as proof — here the report was a false
+    NEGATIVE. Cf. `live-gate-beats-green-suite-three-times`.*
+
+38. **`F-34.5-G6-30` — a 45s read failure with NO approval UI presented; 34.5-35's rationale does
+    not explain it, though its constant is vindicated for a different reason.**
+    Launch 1: `humble-session` read issued 21:08:05, failed `keyring:timeout` 21:08:50,
+    `elapsed=45012ms`. **The operator observed ZERO dialogs in that window**, screen unlocked
+    throughout, `In dark wake, no UI possible` count = 0.
+    Plan 34.5-35 raised `KEYRING_READ_TIMEOUT` 8s -> 45s expressly to close a "keyring read-timeout /
+    human-approval race". **There was no race to lose: no approval UI was ever presented, so no
+    timeout value would have helped.** The stated rationale does not cover this failure mode.
+    The constant is nevertheless load-bearing for a DIFFERENT reason, proven in the same session:
+    launch 2's successful `humble-session` read took **12860ms**, exceeding the old 8s bound — it
+    would have failed pre-34.5-35. So the raise helps **slow-completing reads**, not human approval
+    latency.
+    **Same slot, same binary, same session, screen unlocked: one read hung 45s with no UI, another
+    completed in 12.9s.** That variance is unexplained and is the strongest live evidence yet behind
+    the standing 9:1 keyring failure-rate observation.
+    *Class: a pin asserting the RATIONALE cannot detect that the FACT drifted. Cf.
+    `pin-asserting-rationale-cannot-detect-fact-drift`, `keyring-timeout-races-keychain-approval`.*
