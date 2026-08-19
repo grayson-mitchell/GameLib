@@ -1003,6 +1003,30 @@ export function canWriteFullOwnership(opts: {
 }
 
 /**
+ * 23.2-02 (D-08): the single completeness gate deciding whether
+ * downloadSteamDepots's catch-path finalize() may run at all. Fails CLOSED —
+ * writing a manifest is the destructive action here (an atomic rename that
+ * unconditionally replaces whatever `.acf` was already at that path), so an
+ * omitted/undefined input resolves to false, never true. This is the ONLY
+ * place this decision is made.
+ *
+ * Distinguishes "nothing was attempted this run" (Case A,
+ * 23.2-MANIFEST-WRITE-TAXONOMY.md: buildDepotPlan itself threw before its
+ * depot-accumulation loop ran — attempted stays [] and buildid stays
+ * undefined) from "downloaded but unverified" (Case B: the plan was built
+ * and downloadDepotFiles at least started, so attempted is populated even on
+ * a subsequent failure/cancel). The Phase 21 `1026` verify-handoff
+ * (commit eacbc7ccf) depends on Case B returning true here — that path's
+ * `downloadAttempted` is set true before downloadDepotFiles is awaited, so a
+ * post-plan-build failure/cancel still finalizes its honest 1026 record.
+ */
+export function shouldFinalizeAfterThrow(opts: {
+  downloadAttempted?: boolean
+}): boolean {
+  return opts.downloadAttempted === true
+}
+
+/**
  * Bounded chunk-level worker pool for ONE file. Never an unbounded fan-out
  * over every chunk in one go — peak in-flight fetchChunk calls is capped at
  * CHUNK_CONCURRENCY regardless of how many chunks the file has (T-21-02).
@@ -2719,6 +2743,12 @@ export async function downloadSteamDepots(
   // correctly fail CLOSED to the 1026 fallback via finalizeToSteam's own
   // opts-omitted defaults.
   let lastResult: DepotDownloadResult | undefined
+  // 23.2-02 (D-08): true once downloadDepotFiles is about to be invoked —
+  // set BEFORE that await, not after, so a throw inside downloadDepotFiles
+  // with bytes already on disk still counts as "attempted." Feeds
+  // shouldFinalizeAfterThrow, the catch block's only gate on whether
+  // finalize() is even called.
+  let downloadAttempted = false
 
   // D-UAT-09 (21-17): an aborted signal forces the outcome threaded into
   // finalizeToSteam to 'cancelled' regardless of what lastResult.outcome
@@ -2760,6 +2790,12 @@ export async function downloadSteamDepots(
     if (!plan.depots.length) {
       // Nothing owned/matching this OS — still finalize (honest, empty
       // state) so a dangling prior partial attempt is never left unresolved.
+      // 23.2-02 (D-08): this write's serialized shape (empty InstalledDepots
+      // block) is the SAME shape the D-08 stub produces, but this call site
+      // is deliberately OUT OF SCOPE for that fix — buildDepotPlan already
+      // returned successfully here (a real, honest "zero owned depots"
+      // result), unlike the catch-path case D-08 targets, where
+      // buildDepotPlan never returned at all.
       await finalize()
       // WR-02 (21-17): honor an abort on this early return exactly like the
       // main path (L2119) and the thrown-error path (L2152) do. If the signal
@@ -2800,6 +2836,7 @@ export async function downloadSteamDepots(
     // hostMeta also threads https_support so fetchChunk can build the exact
     // steam-user URL scheme per host (unlocks http-only edges like alibaba).
     const cdnAuth = new CdnAuthTokenCache(client, Number(appId))
+    downloadAttempted = true
     const result = await downloadDepotFiles(plan, {
       targetSteamappsDir: opts.targetSteamappsDir,
       installdir: opts.installdir,
@@ -2832,16 +2869,32 @@ export async function downloadSteamDepots(
   } catch (err) {
     // Any thrown failure — plan-build error, content-server resolution
     // failure, anything — still funnels through the SAME finalize path
-    // (Pattern 5): write whatever landed, never rethrow.
-    await finalize().catch((finalizeErr) => {
+    // (Pattern 5): write whatever landed, never rethrow. 23.2-02 (D-08):
+    // EXCEPT when nothing was ever attempted this run (buildDepotPlan threw
+    // before downloadDepotFiles was ever reached, Case A,
+    // 23.2-MANIFEST-WRITE-TAXONOMY.md) — in that case attempted is still []
+    // and buildid is still undefined, so finalize() would write a
+    // StateFlags=1026/buildid=0/empty-InstalledDepots stub over whatever
+    // `.acf` already existed, even a complete prior install. Gated behind
+    // shouldFinalizeAfterThrow (the only place this decision is made) so the
+    // Phase 21 1026 verify-handoff (Case B: plan built, download attempted,
+    // then failed/cancelled) is untouched — downloadAttempted is true there.
+    if (shouldFinalizeAfterThrow({ downloadAttempted })) {
+      await finalize().catch((finalizeErr) => {
+        logWarning(
+          [
+            `downloadSteamDepots: finalizeToSteam itself failed for appId ${appId}:`,
+            finalizeErr
+          ],
+          LogPrefix.Steam
+        )
+      })
+    } else {
       logWarning(
-        [
-          `downloadSteamDepots: finalizeToSteam itself failed for appId ${appId}:`,
-          finalizeErr
-        ],
+        `downloadSteamDepots: plan-build failed for appId ${appId} before any depot was attempted — manifest deliberately left untouched (D-08)`,
         LogPrefix.Steam
       )
-    })
+    }
     // D-UAT-05: a cancel issued during plan-building throws
     // DepotPlanAbortedError (or races with some OTHER thrown error while the
     // signal is already aborted) — checked via opts.signal?.aborted rather

@@ -72,6 +72,13 @@ jest.mock('../user')
 //    functions, so no-op jest.fn()s are sufficient to satisfy the import. ──
 jest.mock('backend/utils', () => ({
   getFileSize: jest.fn(),
+  // 23.2-02: was missing prior to this plan — depot.ts's own emitProgress
+  // heartbeat (a setInterval) calls sendProgressUpdate every tick and, left
+  // undefined, throws repeatedly for the rest of the run (never cleared
+  // before the test's own timeout), a pre-existing latent bug in this
+  // file's mock that eventually OOMs a full-suite run. depot.test.ts's own
+  // backend/utils mock already includes this (established precedent).
+  sendProgressUpdate: jest.fn(),
   checkWineBeforeLaunch: jest.fn(),
   downloadFile: jest.fn(),
   spawnAsync: jest.fn()
