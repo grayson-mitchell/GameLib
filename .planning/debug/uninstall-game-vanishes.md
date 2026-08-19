@@ -1,6 +1,8 @@
 ---
 slug: uninstall-game-vanishes
-status: investigating
+status: parked
+reparked: 2026-08-19
+repark_reason: "UNREPRODUCED across 2 instrumented attempts. Not abandoned and not fixed — parked by user decision after the symptom declined to appear with logging in place. Root cause still OPEN."
 trigger: "bug, when you uninstall a game it now disappears from the library.  I have to resart app to see it again."
 created: 2026-07-21
 updated: 2026-08-19
@@ -10,6 +12,70 @@ parked_reason: "User parked pending planned daemon-based rearchitecture — inte
 unpark_reason: "Parking condition MET (app is now Tauri) and the symptom RECURRED on the install side as G-23.2-01 during /gsd-verify-work 23.2."
 also_tracked_as: G-23.2-01 (.planning/phases/23.2-.../23.2-HUMAN-UAT.md)
 branch: fix/steam-native-install-stability
+---
+
+## RE-PARKED 2026-08-19 (same day) — UNREPRODUCED, READ THIS FIRST
+
+**The bug did not appear in two instrumented attempts.** Root cause remains OPEN. Nothing
+was fixed. Do not read this park as a resolution.
+
+### What was run
+
+| # | Setup | Result |
+|---|---|---|
+| 1 | `pnpm tauri:dev` with instrumentation; bottle `steam.exe` quit; ACF moved aside; install KCD2; **stayed on the Library screen throughout** | **No vanish** |
+| 2 | Same, but navigated **away to Downloads and back** after completion — the condition present during the original 17:16 vanish | **No vanish** |
+
+A third, free check was also run: navigating away from Library and back **without** any
+install. No vanish — as the user expected, having done that many times without incident.
+That rules out remount-alone as a sufficient trigger.
+
+### The two findings that DO survive
+
+Both attempts produced clean negative evidence for one of the two open families:
+
+- **`libraryUnion` never shrank** — held at 385 across every logged render in both runs.
+- **`[DIAG-vanish] handleGamePush steam SHRANK library` never fired once**, which was the
+  unconditional probe on the only code path that could remove an entry at its source.
+
+So **family (a) — state reset / loss — has zero supporting evidence** after two live runs.
+That is a real narrowing even though the bug stayed away. Family (b), render-time exclusion,
+is neither confirmed nor eliminated.
+
+### ⚠ THE INSTRUMENTATION WAS DEFECTIVE — fix before reusing it
+
+Both probes were commented "anomaly-only". **They were not.** Both fire on ordinary search
+narrowing:
+
+- count-based: `if (gridDelta < 0 && gridDelta !== unionDelta)`
+- identity-based: any `app_name` in the union but newly absent from the grid
+
+Typing in the search box produced exactly that shape and flooded the log —
+`gridPipeline.games shrank (375 -> 65)`, then `65 -> 43 -> 20 -> 12 -> 6 -> 3`, each with a
+long list of "newly excluded" app_names, all while `libraryUnion` sat at 385. Every one of
+those lines is a **false positive**. They are "any narrowing" detectors, not anomaly
+detectors, and a real vanish would have been indistinguishable from search noise in that log.
+
+**A correct probe must key on the ONE appId whose install state just changed**, not on
+aggregate counts or whole-set diffs: at the moment `handleGamePush` lands an
+`is_installed` transition for appId X, log whether X is present in `libraryUnion` and
+whether X is present in `gridPipeline.games`. Silent otherwise. That is precise, survives a
+remount, and cannot be triggered by the user filtering.
+
+### Housekeeping
+
+**All diagnostic code is REVERTED** — `git grep DIAG-vanish` over `src/` returns nothing.
+Unlike the 2026-07-22 park, this leaves **no merge landmine**. Reapply a corrected probe
+(see above) rather than restoring the old one.
+
+### Conditions worth capturing on the next real sighting
+
+The original vanish (17:16–17:17) and the two clean runs differed in ways not yet isolated.
+On any future occurrence, record: whether the bottle's `steam.exe` was running; how long the
+app had been up; whether the game was mid-`Steam bulk platform capture: scoped=1 captured=0
+skipped=1` (this fired in the original AND in both clean runs, so it is **not** sufficient on
+its own); and the exact navigation sequence including time away from the app.
+
 ---
 
 ## UNPARKED 2026-08-19 — READ THIS SECOND (after the section below)
@@ -164,48 +230,92 @@ stuck-spinner bug it fixed. Establish which of (a)/(b) is true with evidence fir
 - Recently touched adjacent code: `buildInstalledMap` / `buildBottleInstalledMap` /
   `buildBridgeInstalledMap` in the Steam library refresh path.
 
-## Current Focus
+## Current Focus (updated 2026-08-19, resumed session)
 
-- hypothesis: the vanish is a render-time exclusion by the POST-34.11 filter engine
-  (`filterLibrary` / `FilterEngineState` / `gridPipeline` in Library/index.tsx), not a
-  state loss — because `handleGamePush`'s steam branch structurally cannot remove an
-  entry and the backend data is provably correct while the game is invisible. The
-  distinguishing factor is that a single upsert changes ONE element's identity inside
-  `state.steam.library` while a full refresh re-pushes all ~378, and something in the
-  facet/filter pipeline (facet counts, `searchMatchedKeys`, the connected-store union,
-  or a memoised filter result) is not recomputing for a single-element change. NOTE the
-  prior eliminations of platform/delisted/partition/alphabet/search filters were made
-  against DELETED pre-34.11 code and must be re-tested, not inherited.
-- test: reproduce on the INSTALL side (cheap, ~70s, zero download — see recipe below),
-  and instrument what `state.steam.library` contains versus what the grid pipeline emits
-  at the moment the game is invisible. Compare the single-upsert path against the
-  full-refresh path through the new filter engine.
-- expecting: either (1) a memoised stage in the new filter/facet pipeline whose
-  dependency array misses the library array itself (so a single-element upsert does not
-  invalidate it, while a full refresh does — because the whole array's identity changes),
-  or (2) a facet/chip state computed once over a snapshot union that a single upsert does
-  not refresh, excluding the changed game until recomputed.
-- next_action: read the CURRENT Library/index.tsx filter pipeline end-to-end —
-  `libraryUnion` (L623), `searchMatchedKeys` (L641), `engineDeps` (L685),
-  `FilterEngineState` (L710), `gridPipeline` (L753+) — recording every dependency array
-  and its source. Then determine what differs, reference-identity-wise, between a
-  one-element upsert and a full re-push.
+- hypothesis: NEITHER family is confirmed. A full, line-by-line re-read of the CURRENT
+  (post-34.11) filter/render pipeline found it structurally sound end-to-end — every
+  memo dependency array is complete for the fields that change on a push, and the
+  `handleGamePush` steam branch, `refreshLibrary()`, and `this.refresh()` were all
+  re-verified against current code and still cannot explain a removal. Static reading has
+  been exhausted; the remaining candidates require OBSERVING a live repro. Minimal,
+  anomaly-only diagnostic logging has been added (see files_changed) that will pin family
+  (a) vs (b) directly from one repro's log tail, or refute both if it stays silent.
+- test: user performs the install-side repro (cheap, ~70s, zero download — see
+  repro_recipe below) with the new diagnostic logging in place, then shares the
+  `gamelib.log` tail spanning the install-completion event.
+- expecting: exactly one of three outcomes —
+  (1) `[DIAG-vanish] handleGamePush steam SHRANK library` fires → family (a), a removal
+      path exists inside `handleGamePush` itself that this reading missed (would be
+      surprising given the code's structure, but the log is unconditional so it would
+      catch it regardless of mechanism);
+  (2) `[DIAG-vanish] libraryUnion SHRANK` fires with no push-shrink line → family (a) via
+      a different route (a state reset elsewhere, or `steam?.username` flipping falsy so
+      `makeLibrary()` excludes the whole array momentarily);
+  (3) `[DIAG-vanish] gridPipeline.games shrank ... family b candidate` fires → family (b),
+      a genuine render-time exclusion, and the accompanying `libraryUnion`/`gridPipeline`
+      counts in that line will show which stage did it (compare against `engineState` at
+      that moment — would need a follow-up log if this fires, since state/deps aren't
+      printed by this instrumentation);
+  (4) ADDED BY ORCHESTRATOR 2026-08-19, after the three above were written — a FOURTH
+      probe now exists, and it closes a real blind spot in (1)-(3). All three fire only on
+      a COUNT change, so all three stay SILENT in the count-neutral case: the engine drops
+      one game and admits another on the same render, net delta 0. That is exactly the
+      shape a facet/filter recompute can produce, so it is not a remote edge case. The new
+      probe is IDENTITY-based rather than count-based — it diffs the set of steam
+      `app_name`s present in `libraryUnion` but absent from `gridPipeline.games` between
+      renders, and logs:
+      `[DIAG-vanish] steam app_name(s) NEWLY excluded by the grid pipeline while still
+      present in libraryUnion: <ids> (family b -- render-time exclusion, count-neutral)`.
+      If this fires and (3) does not, the cause is a count-neutral render-time exclusion
+      and the logged app_name names the victim directly. Tracker var: `__diagPrevDropped`
+      (module scope, alongside the two length counters). `tsc --noEmit` clean.
+  If NONE fire, the vanish is not reproducible via this recipe as currently understood,
+  or happens through a path this instrumentation doesn't observe (e.g. a full component
+  unmount/remount of `Library`, which would reset the module-scope tracker vars silently
+  rather than log a delta — note this blind spot to the user if outcome is "nothing
+  logged, still vanished").
+- next_action: CHECKPOINT — ask user to run the repro with the new logging active and
+  report the `gamelib.log` tail (or the console, if running via `pnpm tauri:dev`) from
+  around the install/uninstall completion timestamp.
 - repro_recipe: |
     Cheap and repeatable, from the 23.2 UAT. Quit the bottle's steam.exe. Move
     `appmanifest_<appid>.acf` out of the CrossOver bottle's `steamapps/` (back it up
     first). GameLib then shows the title as not-installed. Click Install — because the
     content is already on disk, `reconcilePartialState` sha1-verifies and skips
     everything (`jobCount=0`), so it completes in ~70s having downloaded nothing, and the
-    game vanishes. Verified with KCD2 (appId 1771300) on 2026-08-19.
+    game vanishes. Verified with KCD2 (appId 1771300) on 2026-08-19. (The original
+    uninstall-side repro — uninstall any game, watch it vanish from the plain list view —
+    is equally valid and exercises the same push/refresh machinery.)
 - reasoning_checkpoint:
-    hypothesis: "NOT CONFIRMED — this is a direction, not a finding. Root cause is open."
-    confirming_evidence: []
-    falsification_test: "N/A — no fix proposed yet."
-    fix_rationale: "N/A"
-    blind_spots: "The 34.11 filter engine has not been read yet at all. It is entirely
-      possible the cause is a state reset rather than a filter, which this hypothesis
-      under-weights — the two families named in the surviving evidence are both still
-      open, and the reset family has NOT been ruled out."
+    hypothesis: "NOT CONFIRMED — static analysis of the current filter/push/refresh
+      pipeline is exhausted without finding a mechanism. Root cause remains open;
+      escalating to observation via targeted, anomaly-only diagnostic logging."
+    confirming_evidence:
+      - "libraryUnion/searchMatchedKeys/engineDeps/engineState/gridPipeline memo chain
+        (index.tsx:623-756) has complete, correct dependency arrays for every field a
+        push or refresh changes — re-read in full, no missing-dep bug found."
+      - "handleGamePush's steam branch (GlobalState.tsx:1494-1513) uses the functional
+        setState form, creates a NEW array and a NEW `steam` object every call, and can
+        only hold length steady or grow by 1 — re-verified line by line."
+      - "this.refresh() (GlobalState.tsx:922-1096) has no steam branch at all — confirmed
+        again against current code, not just inherited from the 2026-07-21 note."
+      - "SteamLibraryManager.refresh() (library.ts:588-955) does an unconditional,
+        per-game rebuild+push for every entry in `ownedApps` on every call — a missed or
+        delayed push would explain a STALE entry, not a REMOVED one, so this alone cannot
+        be the mechanism either, matching the file's own standing tension."
+    falsification_test: "The diagnostic log staying completely silent across a
+      successfully-reproduced vanish would falsify BOTH remaining hypothesis families as
+      currently scoped, and point at something outside this instrumented surface (e.g. a
+      Library component remount, an error swallowed before either memo runs, or a repro
+      that isn't actually exercising this code path)."
+    fix_rationale: "N/A — no fix proposed; this is an observation step, not a confirmed
+      root cause."
+    blind_spots: "The instrumentation cannot see a full unmount/remount of the Library
+      component (would silently reset the module-scope trackers, producing a false
+      negative). It also does not capture facet/view/search state at the moment of a
+      family-(b) hit — a second, more targeted log may be needed if outcome (3) fires.
+      Still have not obtained a single live, instrumented repro since the file was
+      unparked."
 
 ## Superseded Current Focus — DEAD, targets code deleted by 34.11 (kept for continuity)
 
@@ -381,6 +491,66 @@ stuck-spinner bug it fixed. Establish which of (a)/(b) is true with evidence fir
 
 ## Eliminated
 
+- hypothesis (RE-TESTED 2026-08-19 against current post-34.11 code): the new filter
+  engine's memo chain (`libraryUnion` → `searchMatchedKeys` → `engineDeps` →
+  `engineState` → `gridPipeline`, index.tsx:623-756) has a dependency array that misses
+  the library array itself, so a single-element upsert fails to invalidate a downstream
+  memo the way a full replace does.
+  evidence: read every dependency array in the chain directly against current source.
+  `libraryUnion`'s deps include `steam?.library` (623-633); `searchMatchedKeys`'s deps
+  include `libraryUnion` (676); `engineDeps`'s deps include `libraryUnion` (698-707);
+  `engineState`'s deps list every facet field (726-737); `gridPipeline`'s deps are
+  exactly `[libraryUnion, engineState, engineDeps]` (755). Every stage's deps are
+  complete for what it consumes — no missing-dependency bug found in this chain.
+  timestamp: 2026-08-19
+
+- hypothesis (RE-TESTED 2026-08-19): `filterLibrary`'s unconditional DLC guard
+  (`if (game.install.is_dlc) return false`, filterEngine.ts:299-302, and the
+  redundant copy in GamesList/index.tsx:177-184) throws or wrongly excludes a
+  steam-pushed entry because the backend never sets `install.is_dlc`.
+  evidence: `is_dlc` is typed `boolean` (required) on `InstallInfo`
+  (common/types.ts:364) but grep of every steam backend push site
+  (library.ts:870-951, 1123-1134, 2063-2075, 2439, 2468) confirms none of them ever set
+  `is_dlc` — so at runtime it is always `undefined` on a steam `GameInfo`, which is
+  falsy. `game.install` itself is never undefined/null at any push site (always `{}` or
+  a populated object), so `game.install.is_dlc` cannot throw either. This can only ever
+  under-exclude (never wrongly filters), so it is not the vanish mechanism — though it
+  is a latent type-contract violation worth a follow-up ticket on its own merits.
+  timestamp: 2026-08-19
+
+- hypothesis (RE-TESTED 2026-08-19): the `is_delisted` false-positive mechanism
+  (`fetchMetadataIfNeeded`'s `{success:false}` gap, already known-active from the
+  2026-07-21 investigation) is the trigger for the CURRENT (KCD2/G-23.2-01) vanish.
+  evidence: this session's own "EVIDENCE THAT STILL HOLDS" note (top of this file)
+  already re-confirmed `store_cache/steam_library.json` showed `is_delisted: false` for
+  KCD2 at the moment it was invisible. `isNonAvailableGame` (filterEngine.ts:232-237)
+  only excludes on `is_delisted === true`, so this cannot be the mechanism for THIS
+  occurrence, matching the 2026-07-21 elimination for the WazHack occurrence. Still a
+  real, independently-confirmed bug worth fixing on its own merits.
+  timestamp: 2026-08-19
+
+- hypothesis (RE-TESTED 2026-08-19): backend `library.ts` uninstall/install
+  push-object construction (library.ts:2063-2081 install-completion tick;
+  2439-2474 uninstall-completion tick; 1123-1143 focus-reconciliation) replaces the
+  ENTIRE `install` sub-object wholesale (`install: {...}`, not
+  `install: {...existing.install, ...}`), which could drop a field some OTHER stage
+  depends on.
+  evidence: cross-referenced every field `filterLibrary`/`passesMore`/
+  `deriveRunnabilityTier`/`GamesList` read off `game.install` — only `is_dlc`
+  (never set by steam, see above) and `install_path`/`install_size`/`platform`/
+  `steamResumePending` (all display-only, none gate visibility) are read from
+  `game.install` anywhere in the current pipeline. No visibility-gating field is lost by
+  this wholesale replacement.
+  timestamp: 2026-08-19
+
+- hypothesis: `Map<number,...>` vs `Map<string,...>` key-type mismatch in one of the
+  install/uninstall poll tick functions causes a `library.get(appId)` miss, silently
+  skipping the push for that specific game.
+  evidence: every `library.get`/`library.set` call site in library.ts (grep across the
+  whole file) is typed `appId: string`/keys via `String(app.appid)` consistently — no
+  call site passes a raw number. Ruled out on inspection.
+  timestamp: 2026-08-19
+
 - hypothesis: a plain manual library refresh requires an app RESTART to restore
   visibility (i.e. the fix must involve rehydration-on-boot).
   evidence: user directly confirmed "i confirmed that a refresh made wazhack 'reappear'
@@ -478,21 +648,92 @@ stuck-spinner bug it fixed. Establish which of (a)/(b) is true with evidence fir
   and it appeared. Alphabet filtering is fully excluded as an explanation.
   timestamp: 2026-07-22
 
+## Evidence (2026-08-19, resumed session)
+
+- timestamp: 2026-08-19
+  checked: full re-read of `Library/index.tsx`'s current (post-34.11) memo chain
+  (`libraryUnion`, `searchMatchedKeys`, `engineDeps`, `engineState`, `gridPipeline`,
+  `libraryToShow`), `engineWiring.ts`'s `buildGridPipeline`/`buildEngineDeps`/
+  `buildFavouriteKeys`, and `filterEngine.ts`'s `filterLibrary`/`passesView`/
+  `passesCollection`/`passesStore`/`passesRunnability`/`passesMore`/
+  `isNonAvailableGame`/`isHiddenGame`, using graphify to orient first.
+  found: every stage's dependency array is complete; `filterLibrary` is a plain AND
+  chain over explicit, inspectable predicates with no hidden state; default filter
+  state (`DEFAULT_FILTER_ENGINE_STATE`) passes every game through unless
+  hidden/non-available/DLC/facet-restricted. No render-time exclusion mechanism found
+  by static reading that would explain a single game disappearing from an otherwise
+  correctly-rendering, default-filtered list.
+  implication: family (b) (render-time exclusion) is NOT eliminated, but static
+  reading of the CURRENT engine did not surface a candidate the way the pre-34.11 code
+  might have. The search for family (b) needs either a live repro or a mechanism this
+  reading hasn't considered yet (e.g. something outside `Library/index.tsx` entirely).
+
+- timestamp: 2026-08-19
+  checked: `GlobalState.tsx`'s `handleGamePush` steam branch (1494-1513), `refreshLibrary`
+  (1098-1173), and `refresh` (922-1096) against current source, line by line, not
+  inherited from the 2026-07-21 note.
+  found: `handleGamePush`'s steam branch structurally cannot shrink the array (functional
+  setState, findIndex-replace-or-push, new array/object references every call).
+  `refreshLibrary` calls the backend full resync then `this.refresh()`; `this.refresh()`
+  has NO steam branch anywhere in its body — confirmed still true against current code.
+  implication: family (a) (state reset without repopulation) also was NOT found by
+  static reading of the currently-reachable code paths in these two functions. Combined
+  with the previous entry, static analysis of the obvious surfaces is exhausted.
+
+- timestamp: 2026-08-19
+  checked: `SteamLibraryManager.refresh()` (library.ts:588-955) in full — the exact
+  function `refreshLibrary({library:'steam'})` invokes on the backend after every
+  install/uninstall 'done'/'error' status (via `handleGameStatus`, GlobalState.tsx:1252).
+  found: it does `library.clear()` (backend in-memory Map only, line 841) then, for
+  EVERY app in a freshly-fetched `ownedApps` list, unconditionally builds a fresh
+  `GameInfo` and calls `sendFrontendMessage('pushGameToLibrary', gameInfo)` — one IPC
+  message per owned game (line 949-950), ~378 individual pushes for this library. No
+  "remove games no longer present" step exists; a game simply absent from one resync's
+  `ownedApps` (if that ever happens) would leave its frontend entry untouched, not
+  remove it.
+  implication: this path, even if flawed (e.g. a partial/incomplete `ownedApps` result,
+  or the previously-confirmed concurrency hazard of two overlapping resyncs), can only
+  explain a STALE entry (a missed push leaves the old data in place), never a REMOVED
+  one — which is exactly the file's own standing tension, now re-confirmed against the
+  CURRENT backend code rather than assumed to still hold from the 2026-07-21 read.
+
+- timestamp: 2026-08-19
+  checked: whether static code reading (frontend memo chain, filter predicates, push
+  handlers, refresh orchestration, backend resync) can identify the vanish mechanism
+  without a live, observed reproduction.
+  found: it cannot — every surface examined is either structurally incapable of
+  removing an entry (confirmed by code inspection) or provably unrelated (is_delisted,
+  is_dlc, Map key types, wholesale install-object replacement). No further un-inspected
+  surface is apparent in this file's tracked candidate list.
+  implication: escalated to observation. Added minimal, anomaly-only diagnostic logging
+  (see files_changed) that fires ONLY on the exact anomaly shapes each remaining family
+  would produce, and requested a live, instrumented repro via CHECKPOINT.
+
 ## Resolution
 
-- root_cause: NOT YET CONFIRMED. Two adjacent, independently-verified defects were
-  found during investigation (SteamLibraryManager.refresh() has no concurrency guard,
-  proven to double-fire in this app's own logs; fetchMetadataIfNeeded()'s is_delisted
-  false-positive from Steam Store API `{success:false}`, proven active on 9 real
-  library entries right now) but NEITHER is confirmed as the trigger for the exact
-  reported symptom (uninstall → vanish → restart fixes it). Diagnostic logging has been
-  added (uncommitted, see files_changed) to pin the mechanism on the next reproduction.
-- fix: none applied yet — pending confirmation from a fresh, logged reproduction.
+- root_cause: NOT YET CONFIRMED. Two adjacent, independently-verified but SEPARATE
+  defects remain known-active (SteamLibraryManager.refresh() has no concurrency guard;
+  fetchMetadataIfNeeded()'s is_delisted false-positive from Steam Store API
+  `{success:false}`) but both are re-confirmed (2026-07-21 and 2026-08-19) as NOT the
+  trigger for the exact reported symptom. A full re-read of the current post-34.11
+  filter/push/refresh pipeline (2026-08-19) found no static candidate for either
+  remaining hypothesis family (state reset without repopulation / render-time
+  exclusion). Escalated to observation: minimal, anomaly-only diagnostic logging added
+  (uncommitted, see files_changed) that pins the mechanism directly from one live,
+  logged reproduction. AWAITING that reproduction — see CHECKPOINT.
+- fix: none applied yet — pending a live, instrumented reproduction.
 - verification:
 - files_changed:
-  - src/backend/storeManagers/steam/library.ts (temporary diagnostic logInfo in
-    pollUninstallOnce's 'absent' branch — HIT/MISS on library.get(), confirms the
-    pushGameToLibrary send)
-  - src/frontend/state/GlobalState.tsx (temporary diagnostic window.api.logInfo in
-    handleGamePush's steam branch — confirms renderer receipt + upsert vs. add + array
-    length)
+  - src/frontend/screens/Library/index.tsx (2026-08-19, uncommitted, TEMP DIAGNOSTIC:
+    module-scope `__diagPrevUnionLen`/`__diagPrevGridLen` trackers + an anomaly-only
+    `window.api.logInfo` in the `gridPipeline` memo — fires only if `libraryUnion`
+    shrinks (family a candidate) or `gridPipeline.games` shrinks while `libraryUnion`
+    did not shrink correspondingly (family b candidate). Silent on every ordinary
+    render. MUST be reverted before merge.)
+  - src/frontend/state/GlobalState.tsx (2026-08-19, uncommitted, TEMP DIAGNOSTIC:
+    anomaly-only `window.api.logInfo` inside `handleGamePush`'s steam branch — fires
+    only if a single push shrinks `state.steam.library`, which current logic should
+    never do. Silent on every ordinary push. MUST be reverted before merge. Distinct
+    from the OLDER, already-reverted per-push receipt log this file's PARKED section
+    describes — this one is anomaly-gated, not unconditional, so it will NOT emit ~378
+    lines per refresh.)
