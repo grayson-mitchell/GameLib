@@ -171,7 +171,7 @@ Phase 23 productionizes spike-003: GameLib authors a `StateFlags=4` (FullyInstal
 - [x] **REQ-23-04** (D-04): GameLib owns resume/interrupted-download recovery — a new sha1-gated `reconcilePartialState` re-verifies every already-present file (existence is never sufficient), downloads only missing/mismatched files, re-applies file modes idempotently, and earns a trustworthy `StateFlags=4` on a reconciled-complete resume; startup resume **never** silently auto-opens Steam-in-CrossOver (bottle root never scanned, `tellBottledSteamToInstall` never called — regression-tested).
 - [x] **REQ-23-05** (D-05): Updates remain **Steam's** job — no delta-patching, no integrity-repair ownership; reconciliation fills first-install/resume gaps only, and an already-complete install re-downloads nothing.
 - [x] **REQ-23-06** (D-06): The depot writer replicates the full `EDepotFileFlag` mode set on all OSes — POSIX `Executable(32)`/`CustomExecutable(128)` (+x) plus `ReadOnly(8)`/`Hidden(16)` via chmod (Hidden = documented POSIX no-op), Windows `ReadOnly`/`Hidden` via an argv-form `attrib.exe` subprocess — since `StateFlags=4` skips the verify pass that used to apply these.
-- [ ] **REQ-23-07** (D-07): Ships only after real-hardware (**macOS-first**) validation of three gates recorded in `23-UAT.md`: a multi-depot larger title under `StateFlags=4` (no verify/re-download), a confirmed hard-DRM title launching under `StateFlags=4`, and an interrupt-then-resume run yielding a Steam-trusted `4` with no full re-download and no silent Steam-in-CrossOver auto-open. Windows/Linux coverage is a deferred follow-up, not a Phase 23 gate.
+- [x] **REQ-23-07** (D-07): Ships only after real-hardware (**macOS-first**) validation of three gates recorded in `23-UAT.md`: a multi-depot larger title under `StateFlags=4` (no verify/re-download), a confirmed hard-DRM title launching under `StateFlags=4`, and an interrupt-then-resume run yielding a Steam-trusted `4` with no full re-download and no silent Steam-in-CrossOver auto-open. Windows/Linux coverage is a deferred follow-up, not a Phase 23 gate.
 
 ## Phase 25 Requirements — Steam Depot Multi-Host Fan-Out (Throughput)
 
@@ -327,7 +327,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | REQ-23-04 | Phase 23 | Complete |
 | REQ-23-05 | Phase 23 | Complete |
 | REQ-23-06 | Phase 23 | Complete |
-| REQ-23-07 | Phase 23 | Pending |
+| REQ-23-07 | Phase 23 | Complete |
 | MHOST-01 | Phase 25 | Complete |
 | MHOST-02 | Phase 25 | Complete |
 | MHOST-03 | Phase 25 | Complete |

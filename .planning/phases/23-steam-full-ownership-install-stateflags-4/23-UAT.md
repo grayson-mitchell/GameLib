@@ -2,7 +2,7 @@
 phase: 23-steam-full-ownership-install-stateflags-4
 plan: 05
 artifact: uat
-status: passed
+status: complete
 total_items: 3
 pending_items: 0
 passed_items: 3
