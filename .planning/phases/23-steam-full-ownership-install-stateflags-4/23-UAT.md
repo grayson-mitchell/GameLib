@@ -2,14 +2,14 @@
 phase: 23-steam-full-ownership-install-stateflags-4
 plan: 05
 artifact: uat
-status: testing
+status: passed
 total_items: 3
-pending_items: 1
-passed_items: 2
+pending_items: 0
+passed_items: 3
 failed_items: 0
 blocked_items: 0
 open_gaps: [G-23-01]
-notes: "Gates 1 and 2 both PASS on real hardware as of 2026-08-19. Gate 2 re-ran CLEAN (attempt 3) — HUMANKIND installed to StateFlags=4, Steam adopted with no verify/re-download, game LAUNCHED with NO manual chmod; blocker gap G-23-02 RESOLVED, and it took THREE fixes, not one (23-08 + 260818-v81 reconcile-heal reach + 260819-b1q fat-binary probe). Gate 1's launch half — MASKED since 2026-08-16 because neither whose-execute-bits nor which-client was known — was re-confirmed the same day (23-10 Task 3): +x count held at 21/18,809 across a COLD Steam start with byte-identical file lists (Steam's own layout is 18,002/18,809, so Steam supplied zero bits), and GameLib logged the steam://rungameid handoff at 09:42:10, the same second steam_osx started. Phase still NOT closable: Gate 3 (interrupt-resume) has never been run and G-23-01's KCD2 diagnostic is unrun."
+notes: "ALL THREE GATES PASS on real hardware as of 2026-08-19 — REQ-23-07 is CLOSABLE. Gate 3 (interrupt-resume) executed for the first time 2026-08-19: HUMANKIND force-quit at 15,538/18,809 files with no .acf, user-initiated resume skipped 15,643 of 18,949 files (jobCount=3306, terminal percent=76% on a fully successful install), earned StateFlags=4 not a fail-closed 1026, applied 21 +x via healReconciledFileModes with zero manual chmod (measured 11:52, before Steam started 11:54:20), Steam adopted with 'Verifying file sizes only'/'Verification complete' in the same second and no re-download, reached main menu, no CrossOver auto-open. Two honesty limits recorded: the Gate 3 launch was Steam-UI-mediated (Gate 1 separately re-proved GameLib's own launch path the same day), and the first no-auto-open check was VACUOUS (pgrep for 'crossover' cannot see processes named services.exe/winedevice.exe) and was discarded and replaced with two proven-firing checks. G-23-01 stays OPEN by decision, not by oversight: its decisive diagnostic is ANSWERED (the official Windows Steam client installed KCD2 in full WITHOUT depot 1771304 and never requested its key), making it a confirmed over-selection + hard-fail defect at severity major, whose fix is explicitly out of 23-10's scope and routes to its own gap cycle. One new defect filed by Gate 3: a resumed install's progress can never reach 100%. PRIOR: Gates 1 and 2 both PASS as of 2026-08-19. Gate 2 re-ran CLEAN (attempt 3) — HUMANKIND installed to StateFlags=4, Steam adopted with no verify/re-download, game LAUNCHED with NO manual chmod; blocker gap G-23-02 RESOLVED, and it took THREE fixes, not one (23-08 + 260818-v81 reconcile-heal reach + 260819-b1q fat-binary probe). Gate 1's launch half — MASKED since 2026-08-16 because neither whose-execute-bits nor which-client was known — was re-confirmed the same day (23-10 Task 3): +x count held at 21/18,809 across a COLD Steam start with byte-identical file lists (Steam's own layout is 18,002/18,809, so Steam supplied zero bits), and GameLib logged the steam://rungameid handoff at 09:42:10, the same second steam_osx started. Phase still NOT closable: Gate 3 (interrupt-resume) has never been run and G-23-01's KCD2 diagnostic is unrun."
 requirements: [REQ-23-07]
 run_via: "/gsd:verify-work 23"
 last_updated: 2026-08-19
@@ -23,8 +23,11 @@ Steam "do not verify" — the only way to prove Steam actually trusts a GameLib-
 real risk surface is real hardware. These three checks cannot be automated (they require a live Steam
 client, real owned titles, and real depots) and they **BLOCK phase completion**.
 
-**Status: NOT YET RUN.** This document is the prepared test list + recording template. Every result
-below is a placeholder until a human runs the corresponding flow on real hardware and reports back.
+**Status: ALL THREE GATES RUN AND PASSED on real macOS hardware (Gate 1 2026-07-19 + 2026-08-19,
+Gate 2 2026-08-19, Gate 3 2026-08-19).** REQ-23-07 is closable — see **FINAL GATE STATUS** near the end
+of this document. Nothing below is a placeholder any more; every `Result:` carries real recorded
+observations, and the failed/superseded attempts are retained above their replacements rather than
+overwritten.
 
 **Scope note:** Prove on **macOS first** (where spikes 001-003 ran). Windows/Linux OS coverage is a
 **deferred follow-up** (per D-07 in `23-CONTEXT.md`) — it is explicitly NOT a Phase 23 gate. Do not
@@ -269,7 +272,9 @@ Secondary (cosmetic, NOT the flicker): "slow-then-fast, ~0.5s graph" cadence is 
 **Gaps (structured for /gsd-plan-phase 23 --gaps):**
 ```yaml
 - truth: "A depot install runs exactly one download per appId with a single, monotonic progress percent"
-  status: failed
+  status: resolved  # was: failed — left stale after the fix landed; reconciled 2026-08-19 by 23-10 Task 3c
+  resolved_by: "23-05 (single-flight guard + pause/resume abort-before-restart + stale-1026 reconciliation), hardware-confirmed on the Gate 1 re-run — the flip-flop was GONE (see the Gate 1 narrative above)"
+  see_also: "The 'monotonic progress percent' half of this truth is STILL not fully satisfied, by a DIFFERENT defect in the same expression this entry already names in its artifacts (depot.ts percent = doneBytes/plan.totalBytes). Gate 3 found on 2026-08-19 that on a RESUMED install the numerator is run-scoped while the denominator is plan-scoped, so progress starts at 0% and can never reach 100% — measured: a fully successful install finished at 76%. Filed at .planning/todos/pending/2026-08-19-resumed-install-progress-percent-starts-at-zero-and-never-reaches-100.md. Same expression, distinct defect: this entry was TWO CONCURRENT RUNS flip-flopping; that one is ONE RUN under-counting."
   reason: "SteamGame.installDepotDownload (games.ts:735) adds appId to nativeInstallsInFlight but never rejects a second concurrent entry (the set is only read by stop() at 1102). Two concurrent downloadDepotFiles runs for one appId each emit progressUpdate with independent doneBytes/plan.totalBytes, so the single progress.percent flip-flops between two climbing figures (confirmed 2%<->16%, later 6%<->27%). Confirmed precondition: a stale StateFlags=1026 appmanifest_990080.acf in the CrossOver bottle marks 990080 resumable."
   severity: major
   test: gate-1-multi-depot
@@ -509,15 +514,133 @@ files), produces a Steam-trusted `StateFlags "4"` (or an honest, non-crashing `1
 reconciliation genuinely could not prove completeness — record which), the game launches, and there is
 **no silent Steam-in-CrossOver auto-open** at any point in the resume flow.
 
-**Result:** PENDING
-**Title/AppID used:** _(record here)_
-**Partial-state confirmed before resume?** _(describe what was present/missing on disk)_
-**Resume behavior observed:** _(re-downloaded everything / skipped already-correct files — describe)_
-**`.acf` StateFlags after resume:** _(4, or 1026 fallback — record which, and if 1026, why)_
-**`.acf` field dump:** _(paste inspect-acf.mjs output or snapshot path)_
-**No full re-download confirmed?** _(yes/no)_
-**No silent Steam-in-CrossOver auto-open observed?** _(yes/no — describe if it occurred)_
-**Launch confirmed?** _(yes/no)_
+**Result:** ✅ **PASS — real macOS hardware, 2026-08-19 (23-10 Task 2, first and only execution).**
+The resume reconciled a genuine partial download, skipped the already-correct files, earned a
+Steam-trusted `StateFlags "4"` (not a fail-closed `1026`), applied execute bits through the
+`healReconciledFileModes` path with **no manual chmod**, was adopted by Steam with a size-only check and
+no re-download, and launched to the main menu. No Steam-in-CrossOver auto-open.
+
+**Title/AppID used:** HUMANKIND (1124300), native Apple-Silicon `.app`, 2 depots, Denuvo. Reused on a
+FULL fresh uninstall — explicitly permitted by this gate's preconditions ("or reuse Gate 1's title on a
+fresh uninstall"). Install dir, `appmanifest_1124300.acf`, and `steamapps/downloading/1124300` all
+removed, with Steam quit, before step 1.
+
+**Partial-state confirmed before resume?** YES. GameLib force-quit (`kill -9` on the app AND its node
+sidecar — a simulated crash, NOT the graceful Cancel path) at **15,538 of 18,809 files**, and
+`appmanifest_1124300.acf` was confirmed ABSENT on disk. Note the partial was ~83% by FILE COUNT but only
+~26% by BYTES — the interrupted run had fetched mostly small files and left the bulk assets. That
+asymmetry matters for reading every number below.
+
+**Resume behavior observed:** RESUMED, did not restart from zero. Relaunch did NOT auto-drive recovery
+(correct — per D-04's 2026-07-18 softening, `init()` only DETECTS and flags `steamResumePending`); the
+operator's own Install click triggered it. Two independent confirmations:
+1. The on-disk file count climbed **from** the 15,538 kill baseline and never dropped toward zero
+   (sampled every 30s: 16,237 @11:15:32 → 18,809 @11:23:35, then flat while the large files filled).
+2. `healReconciledFileModes` ran FIRST: 21 `applied secondary Mach-O executable fallback (chmod 0o755)`
+   lines at 11:13:53–11:13:55, **before** `downloadDepotFiles: first bytes written after 420ms` at
+   11:13:55. Mode application to files already on disk is only reachable for entries reconcile
+   classified as present-and-correct. This is the exact path quick `260818-v81` fixed, and Gate 3 is the
+   first deliberate exercise of it.
+
+**`.acf` StateFlags after resume:** **`4`** — the reconciled-complete outcome, NOT the fail-closed
+`1026`. Written at 11:50:16:
+`Writing StateFlags=4 full-ownership manifest for appId 1124300 (sizeOnDisk=37592580261, buildid=23181593)`
+
+**`.acf` field dump:** `StateFlags 4`; `BytesToDownload == BytesDownloaded == SizeOnDisk ==
+37592580261`; `buildid 23181593`; `installdir Humankind`. Tool verdict: *"StateFlags==4? true, bytes
+consistent? true, bytes non-zero? true, buildid set? true → Steam is treating this as FullyInstalled
+(no verify pending)."* Snapshot (pre-Steam):
+`.planning/spikes/003-stateflags4-full-ownership/snapshot-gate3-resume.acf`. `LastOwner` deliberately
+not inlined (T-23-37).
+
+**No full re-download confirmed?** YES — and by direct instrumentation, not inference. The final census
+line quantifies the skip:
+```
+steam-flags-census stage=download-complete appId=1124300 totalFiles=18949 flagBearing=140
+  executableFlagged=0 chmodAttempts=0 modeCallsites=0 jobCount=3306 reconciledSkipped=15643
+  distinctFlagValues=[64]
+```
+**`reconciledSkipped=15643` of 18,949, with only `jobCount=3306` fetched.** Corroborated by the terminal
+`chunk-stream stats @2181s: percent=76% totalAttempts=33267 rotations=2 timeouts=0` — a fully successful
+install whose progress reading topped out at 76%, the missing 24% being precisely the reconciled-skip
+bytes. (That ceiling is a real user-facing defect, filed separately — see "Defect found by this gate".)
+
+**Execute-bit census on the RESUMED install** (distinct code path from Gate 2's — `healReconciledFileModes`,
+not `downloadSingleFile`): 18,809 total files, **21 with `+x`**, matching Gate 1's and Gate 2's baseline
+exactly.
+```
+-rwxr-xr-x  Humankind.app/Contents/MacOS/Humankind
+-rwxr-xr-x  Humankind.app/Contents/Frameworks/ZFGameBrowser.app/Contents/MacOS/ZFGameBrowser
+```
+**NO manual `chmod` was applied at any point in this run.** `chmodAttempts=0` is correct and expected —
+HUMANKIND's manifest is flagless (`executableFlagged=0`, `distinctFlagValues=[64]`, the H2 verdict), so
+all 21 bits came from the Mach-O magic-byte fallback, none from `EDepotFileFlag`.
+
+**Steam adoption (step 7):** PASS, no re-download. Steam started 11:54:20 (first start since before the
+resume began) and its own `content_log.txt` records the whole check in a single second:
+```
+[2026-08-19 11:54:20] Verifying installation...
+[2026-08-19 11:54:20] Verifying file sizes only
+[2026-08-19 11:54:20] Verification complete
+```
+**"Verifying file sizes only"** — a size sanity check, not a content re-hash of 35 GB, and no
+`Update Required` / `Update Running` / re-download entry anywhere today. `StateFlags` remained `4` after
+adoption and after launch. The operator saw a brief "validating" message and judged it acceptable; the
+log shows the content check was sub-second, and the ~35s between Steam start and game start
+(11:54:24→11:54:59) is ordinary pre-launch housekeeping (workshop items, parental settings, subscription
+list, AutoCloud sync, stats), most likely surfacing as `Validating parental settings` at 11:54:26.
+
+**No silent Steam-in-CrossOver auto-open observed?** **YES — none.** See the method note below: the
+first check used for this was VACUOUS and was replaced.
+- 0 bottle-shaped processes (`*.exe` / `wineserver` / `wine64`) started on 2026-08-19. The check is
+  proven capable of firing: it detects 8 such processes running continuously since 2026-08-15 20:46.
+- 0 files touched anywhere under `CrossOver/Bottles` between 11:13 and 11:56. Control: the same query
+  reports 11,824 files touched in the preceding 30 days, so it demonstrably fires.
+- `CrossOver.app` `kMDItemLastUsedDate` = 2026-07-20, i.e. the GUI was never launched.
+
+**Launch confirmed?** YES — reached the **main menu**, operator quit it deliberately (Steam:
+`App Running` 11:55:00 → `Fully Installed` 11:55:55). Denuvo accepted the reconciled, GameLib-authored
+`StateFlags=4` file set with no DRM error and no forced re-validation.
+
+---
+
+### Honesty limits on Gate 3
+
+1. **The launch was Steam-mediated.** The operator clicked **Play in the Steam UI**, not GameLib's Play
+   action, so this run does NOT independently establish GameLib's own launch path. It does not need to:
+   Gate 1's launch half was re-confirmed deliberately earlier the same day (see the Gate 1 section).
+   Recording the launching client at the time — rather than reconstructing it later — is the specific
+   discipline whose absence masked Gate 1 for three days and left Gate 2 attempt 3 unable to speak to it.
+2. **The execute bits are still provably GameLib's, regardless of launch client.** The 21 `+x` were
+   measured on disk at ~11:52, and Steam did not start until **11:54:20** — so no Steam process existed
+   that could have applied them. Same argument that closed G-23-02 in Gate 2 attempt 3, established here
+   by timestamp rather than by inference.
+3. **The first no-auto-open check was VACUOUS and its result was discarded.** A 30s-interval sampler ran
+   `pgrep -qif crossover` for 72 consecutive samples (11:15:32→11:51:18) and reported "none" every time —
+   but bottled processes present as `C:\windows\system32\services.exe`, `winedevice.exe`, `wineserver`,
+   none of which contain the string "crossover". It reported "none" while 8 such processes had been
+   running continuously since 2026-08-15, i.e. it could not have detected an auto-open. It was never
+   proven to fail against a known-bad input. Replaced with the two proven-firing checks recorded above.
+   Same shape as [gate-can-be-nonvacuous-and-measure-wrong-property] and the standing "a grep assertion
+   must FAIL against a known-bad input" lesson.
+4. **Sampling gap at the start.** Automated sampling began at 11:15:32, ~97 seconds after the resume
+   started at 11:13:55. One manual check at 11:14:24 covers part of that gap. The retrospective
+   bottle-mtime and process-start-time evidence (points above) is not sample-based and covers the whole
+   window, so this gap does not weaken the conclusion.
+5. **`reconciledSkipped=15643` is the depot writer's own report** of what it skipped. It is corroborated
+   by two independent observations (the file-count floor never dropping, and the 76% terminal progress
+   matching the byte split), but it is not a third-party measurement of what was fetched over the wire.
+
+### Defect found by this gate (filed, not fixed here)
+
+**A resumed install's progress reports from 0% and can never reach 100%** —
+`.planning/todos/pending/2026-08-19-resumed-install-progress-percent-starts-at-zero-and-never-reaches-100.md`,
+severity major. `depot.ts:2044` computes `percent = doneBytes / totalBytes` where the numerator is
+run-scoped (`:1938`, initialized to 0 AFTER `healReconciledFileModes` at `:1930`, so reconciled-skip
+bytes never count) and the denominator is plan-scoped (`plan.totalBytes`, `:1915`). This run is the
+measurement: a fully successful install finished at **76%**. Reporting-only — it does not affect what
+lands on disk, the reconcile skip, mode application, or the `StateFlags` decision, so it is outside this
+gate's contract and does not qualify the PASS.
 
 ---
 
@@ -527,7 +650,7 @@ reconciliation genuinely could not prove completeness — record which), the gam
 |---|------|-------------|--------|-------|
 | 1 | Multi-depot StateFlags=4 (no verify/re-download) | REQ-23-07 (D-07.1) | ✅ **PASS — BOTH HALVES (HW; adoption 2026-07-19, launch re-confirmed 2026-08-19)** | Adoption hardware-confirmed 2026-07-19 (Cyberpunk, 3 depots) and still stands: `StateFlags=4`, Steam adopted the multi-depot install with no verify/re-download. Plan 23-05 fix (single-flight guard + pause/resume abort + reconciliation) held; Phase 25 fan-out cleared the download-time blocker so steps 4–6 could complete. **Launch half was downgraded 2026-08-16 by 23-07 Task 2 (verdict MASKED)** — Cyberpunk's manifest carries `executableFlagged=0`, so that launch could not have run on GameLib-applied execute bits. **MASK LIFTED 2026-08-19 (23-10 Task 3)** on HUMANKIND (1124300, 2 depots, freshly GameLib-installed): `+x` held at **21/18,809 pre-launch with Steam not running → 21/18,809 after a COLD Steam start**, file lists byte-identical — against Steam's own 18,002/18,809 layout, so Steam supplied **zero** execute bits; and the launching client was logged at the moment (`09:42:10 SteamGame: launching appId 1124300 via steam://rungameid/1124300`, `steam_osx` started the same second). Both missing facts — whose bits, which client — established at the time, not reconstructed. Honesty limits in the Gate 1 section (Steam remains in the launch path via `steam://`; title differs from the 2026-07-19 run). |
 | 2 | Hard-DRM launch under StateFlags=4 | REQ-23-07 (D-07.2) | ✅ **PASS — UNCONDITIONAL (HW, 2026-08-19)** | **Attempt 3 is the clean re-run.** HUMANKIND (1124300, Denuvo) installed to StateFlags=4 (18,809 files), Steam adopted with no verify/re-download, **launched with NO manual chmod**. Execute bits: 0 Mach-O EXECUTE/DYLIB missing `+x`; fallback fired 42× vs 7 previously; the lone remaining fat binary is an MH_BUNDLE, correctly declined. Closes blocker gap **G-23-02**, which needed THREE fixes (23-08 + quick `260818-v81` + quick `260819-b1q`), not one. Attempt 1 (KCD2) diverged on a `Blocked` depot key — gap G-23-01, still open. Launch MECHANISM (GameLib vs Steam UI) NOT recorded, so this does **not** re-confirm Gate 1's launch half. |
-| 3 | Interrupt-resume reconciled StateFlags=4 + launch + no re-download + no bottle auto-open | REQ-23-07 (D-07.3) + D-04 | PENDING | Never executed. G-23-02 no longer blocks its launch step. Note: a *de facto* partial resume did occur during the 2026-08-19 Gate 2 run — an interrupted 88%/31GB install was reconciled, ~21GB reused, ~10GB of unverifiable mid-write files discarded and re-fetched, finishing at StateFlags=4 — but that was incidental, unplanned, and does NOT satisfy this gate's recorded step list (no deliberate mid-download kill, no bottle-auto-open check). Run it as written. |
+| 3 | Interrupt-resume reconciled StateFlags=4 + launch + no re-download + no bottle auto-open | REQ-23-07 (D-07.3) + D-04 | ✅ **PASS (HW, 2026-08-19)** | **Executed for the first time, as written.** HUMANKIND (1124300) on a fresh uninstall; GameLib force-quit (`kill -9`, not Cancel) at 15,538/18,809 files with no `.acf` on disk; user-initiated Install click resumed it (auto-drive correctly absent per D-04's softening). Reconcile skipped **15,643 of 18,949 files** (`jobCount=3306`), corroborated by a terminal `percent=76%` on a fully successful install — the 24-point gap is the skipped bytes. Earned `StateFlags "4"`, NOT a fail-closed 1026; `BytesToDownload == BytesDownloaded == SizeOnDisk == 37592580261`, `buildid 23181593`. Execute bits via the distinct `healReconciledFileModes` path: 21 `+x`, both named binaries `-rwxr-xr-x`, **zero manual chmod** — and measured at ~11:52, before Steam started at 11:54:20, so provably GameLib-applied. Steam adopted with `"Verifying file sizes only" / "Verification complete"` in the same second and no re-download. Reached the main menu; operator quit deliberately. No CrossOver auto-open (0 bottle processes started today, 0 bottle writes in-window, both checks proven to fire). **Honesty limits:** the launch was **Steam-UI-mediated**, so this does not independently re-prove GameLib's launch path (Gate 1 did that separately the same day); and the first no-auto-open check was vacuous and was discarded and replaced. Surfaced one new defect, filed not fixed: resumed-install progress can never reach 100%. |
 
 ## Gaps
 
@@ -586,9 +709,47 @@ every launch result in this document.
 **Updated later the same day (2026-08-19): Gate 1 has since CLOSED on both halves.** Its launch half was
 re-confirmed deliberately in 23-10 Task 3 — HUMANKIND, Steam verified not running beforehand, `+x` count
 and file list pinned before and after a cold Steam start (21/18,809, byte-identical, against Steam's own
-18,002/18,809), and the launching client logged at the moment of launch. See the Gate 1 section. **Two
-items now stand between here and phase closure, not three:**
+18,002/18,809), and the launching client logged at the moment of launch. See the Gate 1 section.
+
+---
+
+## FINAL GATE STATUS (2026-08-19, end of 23-10) — ALL THREE GATES PASS. REQ-23-07 IS CLOSABLE.
+
+Gate 3 was executed for the first time on 2026-08-19 and **PASSED on every sub-field** (see its section
+above). With Gates 1 and 2 already holding unconditional hardware passes, **the D-07 real-hardware
+validation gate is satisfied and REQ-23-07 — the last open requirement of Phase 23 — can close.** Phase
+23 is ready for `/gsd-verify-work 23`.
+
+What the three gates jointly establish: a GameLib-authored `StateFlags=4` native macOS install is
+trusted by the real Steam client without a verify pass or re-download, across a multi-depot title
+(Gate 1), a hard-DRM/Denuvo title (Gate 2), and an interrupted-then-reconciled install (Gate 3) — and in
+all three cases the resulting install is **launchable with no manual `chmod`**, which is what blocker gap
+G-23-02 had denied until three separate fixes closed it.
+
+**Two items remain open, both deliberately and neither blocking REQ-23-07:**
+
+1. **G-23-01 stays `open` BY DECISION, not by oversight.** Its decisive diagnostic is ANSWERED (23-10
+   Task 3b, below) and it is now a confirmed GameLib **over-selection + hard-fail defect** at
+   `severity: major`. 23-10's scope explicitly forbids implementing the fix, so the skip-and-warn
+   selection-policy work is UNGATED and routes to its own gap cycle. REQ-23-07's contract is the three
+   hardware gates, not G-23-01's remediation.
+2. **A new defect filed by Gate 3:** a resumed install's progress reading starts at 0% and can never
+   reach 100% (it topped out at 76% on this fully successful run). Reporting-only — it does not affect
+   what lands on disk, the reconcile skip, mode application, or the `StateFlags` decision. Filed at
+   `.planning/todos/pending/2026-08-19-resumed-install-progress-percent-starts-at-zero-and-never-reaches-100.md`.
+
+**Method note carried forward from Gate 3, worth more than the gate itself:** the first
+"no Steam-in-CrossOver auto-open" check was **vacuous** — it grepped process lists for the string
+`crossover` while bottled processes present as `services.exe` / `winedevice.exe` / `wineserver`, and it
+returned a clean "none" for 72 consecutive samples while 8 such processes had been running continuously
+for four days. It was caught only by asking "can this check fail?" and testing it against a known-bad
+input. Every negative result in this document should be read with that question applied.
+
+**Superseded assessment (2026-08-19, earlier the same day, retained for history):**
+**Gate status: STILL NOT CLOSED, but the blocker is gone.** Two items then stood between here and phase
+closure, not three:
 1. **Gate 3 (interrupt-resume) has never been executed.** G-23-02 no longer blocks its launch step.
+   *(CLOSED later the same day — Gate 3 ran and PASSED; see the FINAL GATE STATUS block above.)*
 2. **G-23-01 is still open, but its diagnostic is now ANSWERED (2026-08-19, 23-10 Task 3b).** The
    official Windows Steam client in the `GameLibSteam` bottle installed KCD2 in full — `StateFlags "4"`,
    ~90G, `InstalledDepots` 1771302/1771303/**1771306** — **without depot 1771304**, and its
@@ -625,4 +786,5 @@ verified not running (23-10), and Gate 3 passes. Gaps route to `/gsd-debug` / `/
 tracked in this document — file a follow-up todo if/when that work is scheduled.
 
 ---
-*Prepared: 2026-07-17 by Plan 23-04 (autonomous prep). Awaiting human execution on real macOS hardware.*
+*Prepared: 2026-07-17 by Plan 23-04 (autonomous prep). Executed on real macOS hardware across
+2026-07-19 → 2026-08-19; completed by Plan 23-10 on 2026-08-19 with all three gates PASSED.*
