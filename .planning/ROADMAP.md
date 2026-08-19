@@ -876,7 +876,7 @@ Plans:
 - [x] 23.1-04-PLAN.md — Wave 3: `lzmaLoader.ts` native-first decoder with loud pure-JS fallback, routed into both the pooled workers and `DecompressPool.inlineDecode()`
 - [x] 23.1-05-PLAN.md — Wave 4: cold SEA build + byte-level proof the addon shipped, then a blocking live-hardware depot-install gate. Gate surfaced 3 real defects fixed live (worker-thread logger crash, lzma-native identity-guard runtime-dir collapse) and 1 still-open (the real-chunk decode-pipeline hang above) — native decode gated off pending that fix, not a false pass.
 
-### Phase 23.2: Steam depot selection — required-vs-optional depots and skip-and-warn on a Blocked key (INSERTED)
+### Phase 23.2: Steam depot selection — required-vs-optional depots and skip-and-warn on a Blocked key (INSERTED) — ✅ COMPLETE 2026-08-19
 
 **Goal:** Close **G-23-01**. GameLib's depot selection currently disagrees with the official Steam client in BOTH directions for the same title, and a single `Blocked` decryption key aborts the entire install. Make a non-essential owned depot whose key Steam refuses a **skip-and-warn** (install continues, user is told which depot was skipped) instead of a whole-install abort, and reconcile GameLib's selected depot set against the official client's.
 
@@ -898,6 +898,8 @@ Plans:
 **Depends on:** Phase 23 (CLOSED 2026-08-19) for the depot install path, and 23-09's shipped observability
 **Artifacts:** `.planning/phases/23-steam-full-ownership-install-stateflags-4/23-UAT.md` (`G-23-01` YAML entry, Gate 2 Attempt 1 narrative) and that phase's `deferred-items.md` (scope + gate-release note)
 **Plans:** 4/4 plans complete
+
+**Outcome — ✅ COMPLETE 2026-08-19.** All four gates discharged: `23.2-REVIEW.md` `clean` (0 critical / 0 warning / 2 info across 12 files), `23.2-VERIFICATION.md` `passed` 9/9, `23.2-HUMAN-UAT.md` `complete` 3/3 on real hardware, `23.2-SECURITY.md` `verified` with `threats_open: 0` (23/23 threats closed, 4 accepted risks). **G-23-01 is RESOLVED** — the acceptance benchmark, unobserved through execution and verification by design, was finally observed: a live GameLib install of KCD2 (appId 1771300) hit the real `eresult=40` refusal on depot 1771304, SKIPPED it, and COMPLETED, writing a manifest matching the official Windows client on every benchmark field (`StateFlags 4` / `SizeOnDisk 96422090071` / `buildid 23914554` / `InstalledDepots 1771302,1771303,1771306`, 1771304 absent), with the skip notice actually shown to the user. It cost **71.5 seconds and zero bytes** rather than the assumed 90 GB: the content was already on disk, so moving the `.acf` aside and resuming made `reconcilePartialState` sha1-verify all 138 entries (`jobCount=0`, `reconciledSkipped=138`). Steam later adopted that manifest unchanged at its next startup, re-adding `SharedDepots` itself, which downgraded the SharedDepots omission from a possible defect to benign. Two honesty limits stand, recorded not buried: the run was a RESUME, so the bulk download path is not re-proven (the defect under test fires in `buildDepotPlan` before any bytes transfer, so it is fully exercised); and GameLib's manifest is not byte-identical to Valve's outside the benchmark fields. One defect surfaced during the run and was routed OUT of this phase to its own debug session (`G-23.2-01`, library-vanish — quick task `260819-r4k`); this phase's `open_gaps` is `[]`.
 
 Plans:
 - [x] 23.2-01-PLAN.md — settle the D-08 manifest-write contradiction from source and close the SizeOnDisk lead (docs only; runs before any code change so it reads the pre-fix source)
