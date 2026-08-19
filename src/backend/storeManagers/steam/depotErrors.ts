@@ -89,6 +89,23 @@ export function classifyDepotError(err: unknown): ClassifiedDepotError {
     // depotUnavailable copy below, unchanged.
     const eresult = (err as { eresult?: unknown }).eresult
     if (eresult === 40) {
+      // 23.2-04 disposition: as of plan 23.2-03, a per-depot EResult 40
+      // (Blocked) no longer reaches this branch at all -- buildDepotPlan
+      // now skips that single depot and continues (skip-and-warn, D-01/D-02
+      // of phase 23.2), reporting it upstream via
+      // DepotDownloadOutcome.skippedDepots and surfaced to the user through
+      // steam.download.notify.depotSkipped, not this key. This branch is
+      // now the RESIDUAL TERMINAL path only: it is reached solely when the
+      // all-skipped guard fires (every selected depot came back Blocked, so
+      // buildDepotPlan throws an Error with .eresult = 40 instead of
+      // resolving to a zero-depot plan) -- a genuine "nothing could be
+      // installed" failure for which this copy's wording ("blocked...may
+      // still be installable directly through the Steam client") remains
+      // correct. NON_RETRYABLE_ERESULTS (above) deliberately still
+      // contains 40 so withPlanBuildRetry keeps failing fast on it instead
+      // of burning PLAN_BUILD_MAX_ATTEMPTS reconnects before the
+      // all-skipped guard gets a chance to run.
+      //
       // Composed OUTSIDE i18next.t for the same reason as depotUnavailable
       // below — the depot id survives even where i18next is stubbed without
       // interpolation support (never a raw stack trace or internal path,

@@ -1222,6 +1222,9 @@
                 "generic": "The Steam download failed. Retry to continue.",
                 "unsafePath": "The download contained an unsafe file path and was stopped.",
                 "verifyFailed": "A downloaded file failed verification."
+            },
+            "notify": {
+                "depotSkipped": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
             }
         },
         "lastSynced": "Steam library last synced {{time}} ago",
