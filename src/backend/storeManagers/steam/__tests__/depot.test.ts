@@ -43,6 +43,7 @@ import {
   downloadFileChunks,
   finalizeToSteam,
   canWriteFullOwnership,
+  shouldFinalizeAfterThrow,
   formatEta,
   rollingRateMiBs,
   CHUNK_CONCURRENCY,
@@ -1188,6 +1189,28 @@ describe('canWriteFullOwnership', () => {
 })
 
 /**
+ * Unit tests for shouldFinalizeAfterThrow (23.2-02, D-08) — the single gate
+ * deciding whether downloadSteamDepots's catch-path finalize() may run at
+ * all. Fails CLOSED: an omitted/undefined downloadAttempted resolves to
+ * false, never true, since writing a manifest is the destructive action
+ * (an atomic rename unconditionally replacing whatever `.acf` already sat
+ * at that path).
+ */
+describe('shouldFinalizeAfterThrow', () => {
+  it('downloadAttempted omitted -> false (fails closed)', () => {
+    expect(shouldFinalizeAfterThrow({})).toBe(false)
+  })
+
+  it('downloadAttempted explicitly false -> false', () => {
+    expect(shouldFinalizeAfterThrow({ downloadAttempted: false })).toBe(false)
+  })
+
+  it('downloadAttempted explicitly true -> true', () => {
+    expect(shouldFinalizeAfterThrow({ downloadAttempted: true })).toBe(true)
+  })
+})
+
+/**
  * Unit tests for finalizeToSteam (Phase 21-06) — the SINGLE recovery function
  * cancel/failure/success all converge on (Pattern 5, D-04/D-07). Runs against
  * a REAL tmpdir (manifest.test.ts's established precedent).
@@ -1607,6 +1630,56 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     expect(acfText).toMatch(/"StateFlags"\s+"1026"/)
   })
 
+  it('23.2-02 (D-08) Case B pin: a run whose plan-build succeeds and whose downloadDepotFiles genuinely runs then fails still finalizes StateFlags "1026" with a non-empty InstalledDepots block naming the attempted depot — this must NOT regress when Case A stops finalizing', async () => {
+    const fakeClient = makeFakeClient()
+    setupPlanPlumbing(fakeClient)
+
+    const contentManifest = jest.requireMock(
+      'steam-user/components/content_manifest.js'
+    )
+    jest.mocked(contentManifest.parse).mockReturnValue({
+      files: [
+        {
+          filename: 'enc-game',
+          size: '5',
+          sha_content: 'sha-that-will-never-match',
+          chunks: [{ sha: 'chunk-sha', cb_original: 5, offset: 0 }]
+        }
+      ]
+    })
+    // A genuine content-verification failure (SHA1 mismatch) during the real
+    // chunk fetch — downloadAttempted is already true by the time this
+    // resolves, since it's set immediately before the downloadDepotFiles
+    // await (depot.ts). This is Case B (23.2-MANIFEST-WRITE-TAXONOMY.md):
+    // plan built, download attempted, then failed — distinct from the Case A
+    // throws elsewhere in this describe block that now correctly write
+    // nothing. (fetchChunk deliberately RESOLVES here rather than rejects —
+    // a rejecting mock drives depot.ts's own host-rotation/stall-recovery
+    // retry loop, which is unbounded against a mock that always rejects and
+    // OOMs the process; that retry loop is real production behaviour against
+    // a real fetchChunk with its own bounded CHUNK_FETCH_ATTEMPTS, and is out
+    // of this plan's scope.)
+    jest.mocked(fetchChunk).mockResolvedValue(Buffer.from('wrong'))
+
+    const result = await downloadSteamDepots('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      os: 'windows'
+    })
+
+    expect(result.status).toBe('error')
+    expect(existsSync(join(dir, 'appmanifest_12345.acf'))).toBe(true)
+    const acfText = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
+    expect(acfText).toMatch(/"StateFlags"\s+"1026"/)
+    // Depot-id ENTRY match (id key followed by its manifest field), not a
+    // bare key-name/InstalledDepots substring match — the latter would be
+    // vacuous since buildAppManifestText emits "InstalledDepots" unconditionally
+    // even when empty (23.2-01 finding).
+    expect(acfText).toMatch(
+      /"111"\s*\{\s*"manifest"\s+"11111111111111111"/
+    )
+  })
+
   it('D-UAT-05: a cancel issued WHILE the plan is still being built (e.g. during the CM connect wait) resolves with status cancelled — never error — and never reaches downloadDepotFiles/fetchChunk', async () => {
     const fakeClient = makeFakeClient()
     setupPlanPlumbing(fakeClient)
@@ -1629,7 +1702,13 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
 
     expect(result.status).toBe('cancelled')
     expect(fetchChunk).not.toHaveBeenCalled()
-    expect(existsSync(join(dir, 'appmanifest_12345.acf'))).toBe(true)
+    // 23.2-02 (D-08): this is a Case A abort — plan-build never reached
+    // downloadDepotFiles, so downloadAttempted stays false and
+    // shouldFinalizeAfterThrow gates the catch-path finalize() off. No
+    // manifest is written; a pre-existing complete install's .acf (if any)
+    // is left byte-for-byte untouched rather than clobbered with a
+    // StateFlags=1026/buildid=0/empty-InstalledDepots stub.
+    expect(existsSync(join(dir, 'appmanifest_12345.acf'))).toBe(false)
   })
 
   it('D-UAT-06: a transient CM drop during plan-build recovers via reconnect+retry — the install still completes as status done, not error', async () => {
@@ -1704,11 +1783,16 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     expect(result.error).toBe(
       classifyDepotError(new Error('ECONNRESET')).message
     )
-    // Still converges on finalizeToSteam (Pattern 5) — never left unresolved.
-    expect(existsSync(join(dir, 'appmanifest_12345.acf'))).toBe(true)
+    // 23.2-02 (D-08): getDepotDecryptionKey is exhausted entirely inside
+    // buildDepotPlan — a Case A throw, before downloadDepotFiles is ever
+    // reached — so downloadAttempted stays false and shouldFinalizeAfterThrow
+    // gates finalize() off. The caller still resolves (never an unhandled
+    // throw/rejection) with a classified, actionable error message; it just
+    // no longer writes a manifest for a run that attempted zero bytes.
+    expect(existsSync(join(dir, 'appmanifest_12345.acf'))).toBe(false)
   })
 
-  it('a thrown plan-orchestration error (e.g. content-server resolution failure) also funnels through finalizeToSteam and NEVER rejects the caller', async () => {
+  it('a thrown plan-orchestration error (e.g. content-server resolution failure) NEVER rejects the caller, and leaves no manifest behind since nothing was ever attempted', async () => {
     const fakeClient = makeFakeClient({
       getContentServers: jest
         .fn()
@@ -1733,7 +1817,13 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     })
 
     expect(result.status).toBe('error')
-    expect(existsSync(join(dir, 'appmanifest_12345.acf'))).toBe(true)
+    // 23.2-02 (D-08): getContentServerHosts fails after buildDepotPlan but
+    // still strictly before downloadAttempted is set true (depot.ts sets it
+    // immediately before the downloadDepotFiles await) — a Case A throw.
+    // shouldFinalizeAfterThrow gates the catch-path finalize() off, so this
+    // orchestration failure resolves (never rejects) without writing a
+    // manifest at all.
+    expect(existsSync(join(dir, 'appmanifest_12345.acf'))).toBe(false)
   })
 
   it('never writes StateFlags "4" anywhere in depot.ts (T-21-07)', () => {
