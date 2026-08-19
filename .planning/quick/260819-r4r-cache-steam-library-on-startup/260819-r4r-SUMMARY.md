@@ -168,6 +168,37 @@ plan. Logged here per the scope-boundary rule rather than investigated further.
    went RED as expected — then restored the fix and confirmed green again with no diff
    against the committed state.
 
+## Live verification (orchestrator, 2026-08-19 19:56–20:05)
+
+Ran the real app via `pnpm tauri:dev` and confirmed the user-visible behaviour.
+
+**PASS — Steam games render at cold start.** 344 Steam titles in the library grid
+(`All Games 344 of 350` with the Store filter narrowed to Steam; GOG contributes the other 6).
+
+**Proof it came from the cache, not a live sync** — the decisive evidence is file mtimes, not the
+log (sidecar `console.*` is invisible, so a quiet log cannot prove a quiet network):
+- `store_cache/steam_library.json` mtime stayed **19:41:00** across both app launches (19:56, 20:02)
+  and still holds 378 entries — no Steam library refresh ran or wrote.
+- `store_cache/gog_library.json` was rewritten at **20:02:04** during the same run — refresh
+  machinery was demonstrably active and does write; Steam simply never synced.
+- The runtime log shows the renderer constructing the new store:
+  `[storeWriteHandlers] storeNew ... for 'steam_library'`, alongside the other four libraries, and
+  **no** `no live store instance for 'steam_library'` line (which would have been the
+  silent-failure signature of a missed `handlers.ts` registration).
+
+**Success criterion 2 of the plan is WRONG as written and is NOT met.** It required the count at
+first paint to equal the cached `games` length (378). Actual: 344. The 34-entry difference is
+`src/frontend/screens/Library/filterEngine.ts:232-237`, which excludes delisted Steam games (9 in
+this library) plus anything in the `nonAvailableGames` / hidden localStorage lists (~25 here). That
+filter is pre-existing, shared with every runner, and applied *after* the seed — `applyGameOverrides`
+is `attachGameOverrides`, which attaches overrides and never filters, so the seed does pass all 378
+into state. The criterion should have been stated against the post-filter count.
+
+**Not verified:** a sub-second first-frame screenshot. The attempt to launch
+`target/debug/gamelib-shell` directly for a fast relaunch failed — `build/main/sidecar.js` had been
+removed between runs (concurrent session rebuild), so that instance came up with `entry_exists=false`
+and no backend at all. The mtime evidence above substitutes for it and is stronger.
+
 ## Known Stubs
 
 None.
