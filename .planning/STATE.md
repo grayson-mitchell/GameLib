@@ -408,6 +408,44 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > The earlier v0.5-vs-v0.7 taxonomy split is resolved: macOS-compat = v0.5 (complete),
 > native-install = **v0.7** (this milestone). `package.json` set to 0.7.0.
 
+> # ✅ PHASE 34.4.2 COMPLETE — 2026-08-19. BLOCKING LIVE GATE: **PASS 5/5**.
+>
+> `34.4.2-LIVE-GATE-RERUN-6.md` PASSED on real macOS hardware — the **first full PASS in this
+> phase's history**, on the **ninth gate attempt across eight contracts**. Verdict history:
+> **FAIL 0/6 → FAIL → FAIL 5/6 → FAIL 5/6 → FAIL 1/6 → FAIL 0/5 → PASS 5/5.**
+>
+> | Item | Result |
+> |---|---|
+> | 1 — sheet presentation + minimize/restore | PASS |
+> | 2 — dismissability | PASS |
+> | 3(a) — no injected affordance | PASS |
+> | 4 — Cmd+V as sole credential route | PASS |
+> | 6(a) — Humble disconnect route | PASS |
+>
+> **Item 6(a) was the only never-measured behaviour in the phase**, unreached across eight prior
+> attempts. Its PASS live-discharges F-34.4.2-12's fix `6bad86227` and T-34.4.2-43, and meets
+> F-34.4.2-10's taking-condition (storage-clear SUCCESS line fired, not the timeout).
+>
+> **What made it winnable was DELETING work, not doing more.** D-G4 retired REQ-34.4.2-05 and
+> REQ-34.4.2-04's glyph half — a retirement ORDERED on 2026-08-05 when the mechanism was deleted,
+> but never actioned, leaving both requirements awaiting a live discharge of code that did not
+> exist. That dropped sub-checks 3(b)/3(c) as unfalsifiable; 3(c) alone had justified an entire app
+> launch and had never run in eight attempts. D-G5 inherited item 6(b), retiring F-34.4.2-20.
+> Five launches collapsed to one.
+>
+> **All 10/10 REQ-34.4.2 boxes ticked. `34.4.2-VERIFICATION.md` amended IN PLACE to
+> `status: passed`** (10/11 truths verified, 1 uncertain by design, 0 failed) — never regenerated,
+> because `7e1781fbb` had hand-corrected it.
+>
+> **Two NEW findings the run produced:** F-34.4.2-25 — a required literal can go stale by
+> **BEHAVIOUR**, not just line number (verifying it EXISTS ≠ verifying it FIRES on the route the
+> item drives); F-34.4.2-26 — Humble's login has an out-of-band 2FA email round-trip that nearly
+> consumed `LOGIN_WATCH_TIMEOUT_MS`.
+>
+> **Next action:** Phase 34.4.2 needs nothing further. Outstanding elsewhere: the 34.13 UAT gate
+> (paused at row 5 of 72, awaiting a USB drive for the multi-library fixture) and Phase 23.2 wave 4.
+
+
 ## Current Position
 
 > **⛔ ACTIVE BLOCKER — Phase 34.5's blocking live gate RAN A FOURTH TIME 2026-08-12
