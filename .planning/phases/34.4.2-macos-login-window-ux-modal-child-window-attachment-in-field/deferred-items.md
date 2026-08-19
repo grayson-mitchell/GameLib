@@ -974,3 +974,63 @@ CLOSED as a diagnosed-and-fixed defect, but Phase 34.4.2's own six gate items (i
 `34.4.2-LIVE-GATE-RERUN-5.md` and any successor contract) have not been re-scored since this fix
 landed. A fresh live-gate run is the phase's own next step, and is separate work from this debug
 session — this session performed diagnosis and fix only, not phase-gate closure.
+
+## RERUN-6 authored — D-G4/D-G5 locked, two findings retired, one NEW finding (2026-08-19)
+
+**Disposition: contract authored (`34.4.2-LIVE-GATE-RERUN-6.md`), requirements amended, no source
+changed.** Quick task `260819-m9f`. Author/runner separation held (T-34.4.2-25): this task wrote
+`verdict: null`, `run_date: null`, `items_passed: null`, left every `Observed:`/`Verdict:` field
+empty, ran no harness, and launched no app. All six prior gate documents are byte-unchanged.
+
+- **D-G4 (locked operator decision) — REQ-34.4.2-05 RETIRED; REQ-34.4.2-04's glyph half RETIRED.**
+  Decision D-A already ordered this on 2026-08-05 when plan 13 deleted the poster; **the order was
+  never actioned**, so both requirements spent two weeks being re-pointed at successive gate
+  contracts awaiting a live discharge of a deleted mechanism. REQ-34.4.2-05 is now `[x]`
+  RESOLVED-BY-RETIREMENT (explicitly *not* delivered — it has no second half, so no gate could ever
+  discharge it and `[ ]` would have blocked closure permanently). REQ-34.4.2-04 stays `[ ]` because
+  its non-glyph half — the disconnect route, item 6(a) — is still owed.
+- **Sub-checks 3(b) and 3(c) DROPPED as unfalsifiable.** Both are guaranteed to pass against
+  current source: 3(b) greps for three literals whose emitters do not exist, 3(c) spends a
+  dedicated app launch proving an env var with **no reader** does nothing. RERUN-5's own text
+  conceded both facts at authoring while still scheduling the checks. 3(c) is the sub-check that
+  never ran across **eight** consecutive gate attempts and was the sole reason a whole launch
+  existed. This is the project's standing bar applied: *a grep assertion must be provable to FAIL
+  against a known-bad input.* The mutation-proven `PHASE_34_4_2_REMOVED_AUTOFILL_SYMBOLS` guard is
+  strictly stronger than either and runs free in CI.
+- **D-G5 (locked operator decision) — item 6(b) INHERITED, not re-measured.** REQ-34.4.2-10 is
+  already ticked and 6(b) recorded the phase's first measured live PASS in RERUN-4. **This retires
+  F-34.4.2-20 from blocking to a standing note** — its label-attribution gap affected 6(b)'s
+  absence check only, and no scored item in RERUN-6 attributes an absence by window label. The
+  candidate eighth Structural-Reachability-Review test class (*label-attribution completeness*) is
+  carried forward unused. Relaxes D-G3 for this run only, and only for 6(b).
+- **F-34.4.2-24 — NEW, contract-integrity defect, found and FIXED during this authoring: every
+  machine-evidence line number in RERUN-5 is STALE.** The F-34.4.2-19 fix moved `src-tauri/src/main.rs`
+  by ~208 lines and `src/backend/humble/user.ts` by ~85. Ten of the fourteen cited locations
+  drifted: `main.rs` 2436→2644, 3698→3976, 1486→1694, 2579→2787, 2589→2797, 3355→3629, 4500→4780;
+  `user.ts` 461→544, 635→721, 1043→1135, 1125→1211, 1139→1225; `library.ts` 952→954;
+  `Runner/index.tsx` 99→111. **A contract that copied RERUN-5's citations forward would have
+  pointed every evidence check at the wrong line while still looking correct** — the same shape as
+  this project's standing lesson that a passing check guards nothing once its premise moves.
+  RERUN-6 re-resolved all fourteen by grep at authoring and carries the drift table inline.
+  **Standing instruction for future gate authors: re-resolve every quoted line number by grep at
+  authoring time; never inherit a predecessor's citations.**
+- **F-34.4.2-21 promoted from a logged hazard into a contract rule (D-G6).** No single login sheet
+  may be held open longer than **8 minutes**, under `LOGIN_WATCH_TIMEOUT_MS`'s 10-minute deadline
+  (`user.ts:71`). Every prior contract asked operators to hold a sheet open for measurement without
+  naming this bound. RERUN-6 also states that a self-closing sheet with a `{status: 'waiting'}`
+  settle is **the deadline firing, not a defect** — so it is re-run, not filed as a finding.
+- **The LogWriter ordering caveat is now written into the contract.** Because
+  `LogWriter.writeString()` races its own gate reassignment, on-disk log ORDER is not call-order
+  evidence. Every PASS bar in RERUN-6 is presence/absence of a literal, never an ordering between
+  two sidecar lines; the single ordering requirement (item 1's `attached=` before
+  `sheet_presented=`) is between two transcript lines from the same Rust process, which the defect
+  cannot affect.
+- **Single-launch design removes two historical evidence hazards outright.** All five items' sidecar
+  evidence lands in ONE un-rotated `gamelib.log` (no cross-launch archive step to get wrong,
+  closing F-34.4.2-11's class), and the item-4→item-6(a) ordering that item 6(a)'s three-point
+  filesystem proof depends on now holds by sequence alone rather than spanning two launches.
+
+**No requirement box was ticked by this task except REQ-34.4.2-05's retirement.** REQ-34.4.2-04 and
+REQ-34.4.2-09 both stay `[ ]`; D-08's no-partial-pass rule is untouched. `git diff --stat -- src
+src-tauri/src` is empty for this task. **Next: a human operator session runs
+`34.4.2-LIVE-GATE-RERUN-6.md`.** No GSD command advances this phase.

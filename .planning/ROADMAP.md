@@ -1788,7 +1788,7 @@ F-10 ∥ F-9 ∥ housekeeping → sweeps → THIRD blocking live gate.**
 
 ### Phase 34.4.2: macOS login-window UX — modal child-window attachment + in-field autofill affordance (INSERTED)
 
-**Status:** ⛔ BLOCKED — gap cycle 5 live gate FAILED 0/5 on 2026-08-06, no launch scorable; F-34.4.2-19 is fixed and live-confirmed but the gate has not been re-run. Full banner below.
+**Status:** 🟡 AWAITING OPERATOR GATE RUN — the blocker is GONE and a successor contract is ready. F-34.4.2-19 was diagnosed, fixed and live-confirmed 2026-08-08 (cookie-domain leading-dot blindness; commits `0dfd08044`, `f3b9e6da5`), so the stale "Next: `/gsd-debug`" below is DISCHARGED. `34.4.2-LIVE-GATE-RERUN-6.md` was authored 2026-08-19 (quick `260819-m9f`): **five scored items in ONE launch** — 1, 2, 3(a), 4, 6(a) — down from five launches, after two locked operator decisions retired the vacuous work (**D-G4**: REQ-34.4.2-05 and REQ-34.4.2-04's glyph half RETIRED, sub-checks 3(b)/3(c) dropped as unfalsifiable against current source; **D-G5**: item 6(b) INHERITED from RERUN-4's measured PASS, which sidesteps F-34.4.2-20 entirely). **Item 6(a) — the Humble disconnect route — is the only never-measured behaviour in the phase** and the run's real prize. **Next: a human operator session runs the contract.** No GSD command advances this phase. Full banner below.
 
 **Goal (ORIGINAL 2026-08-04, PARTIALLY STRUCK 2026-08-05 by plan 16 per this block's own Status —
 see the corrected goal immediately below):** Ship the two spike-validated (019–022, 2026-08-04)
@@ -1820,7 +1820,7 @@ in-field autofill affordance is DELETED, not shipped** (operator decision D-A, 2
 spike 022's Recommendation #4. **Cmd+V and Edit ▸ Paste are the sole credential-entry route.**
 **Requirements**: REQ-34.4.2-01, REQ-34.4.2-02, REQ-34.4.2-03, REQ-34.4.2-04, REQ-34.4.2-05, REQ-34.4.2-06, REQ-34.4.2-07, REQ-34.4.2-08, REQ-34.4.2-09, REQ-34.4.2-10 (minted by plan 34.4.2-01; the ID rows themselves land in `REQUIREMENTS.md` when that plan executes. **REQ-34.4.2-10 is the Epic descope**, minted so the exclusion is machine-enforceable rather than a comment; 01/04/06 were narrowed from "both login surfaces" to the Tauri-managed surface. No ID was deleted or renumbered.)
 **Depends on:** Phase 34.4.1 (the login-window seam these behaviors attach to — COMPLETE)
-**Plans:** 25/25 plans executed — recounted from the phase directory 2026-08-06 (25 `*-PLAN.md`, 25 `*-SUMMARY.md`). **All plans are complete; the PHASE is not** — plan 24's blocking live gate measured FAIL 0/5, so D-08's no-partial-pass rule keeps 34.4.2 open. Next: `/gsd-debug` (F-34.4.2-19).
+**Plans:** 25/25 plans executed — recounted from the phase directory 2026-08-06 (25 `*-PLAN.md`, 25 `*-SUMMARY.md`). **All plans are complete; the PHASE is not** — plan 24's blocking live gate measured FAIL 0/5, so D-08's no-partial-pass rule keeps 34.4.2 open. ~~Next: `/gsd-debug` (F-34.4.2-19).~~ **SUPERSEDED 2026-08-19** — that debug ran and RESOLVED F-34.4.2-19 on 2026-08-08 (`.planning/debug/resolved/humble-isloggedin-never-set.md`). The phase's owed work is now a single operator gate run against `34.4.2-LIVE-GATE-RERUN-6.md`; no plan and no GSD command remains.
 a genuine full gate PASS has never been achieved in this phase's six-gate history — plan 20's own
 run FAILED, 1/6 — so the phase does not close. **Gap cycle 5 EXECUTING 2026-08-06 (plans 21-25, 4
 waves, 2/5 executed — plan 21 added Tests 6/7 + a coverage map to the standing Structural
