@@ -73,11 +73,14 @@ export type AcfSource = 'native' | 'bottle' | 'bridge'
 
 /** Shared options shape for both install/uninstall poller start functions.
  *  `isNativeHandoff` is install-poller-only (ignored by startUninstallPolling)
- *  — see activePolls' isNativeHandoff field docstring for its meaning. */
+ *  — see activePolls' isNativeHandoff field docstring for its meaning.
+ *  `skippedDepots` is likewise install-poller-only, ignored by
+ *  startUninstallPolling — see activePolls' skippedDepots field docstring. */
 type PollOptions = {
   intervalMs?: number
   source?: AcfSource
   isNativeHandoff?: boolean
+  skippedDepots?: string[]
 }
 
 /**
@@ -1583,6 +1586,23 @@ const activePolls = new Map<
      *  Root cause of the 1026-collision bug: this distinction cannot be made
      *  from the ACF alone, only from which call site started the poll. */
     isNativeHandoff: boolean
+    /** 23.2-04 (D-06/D-07): depot ids GameLib's own downloadSteamDepots run
+     *  dropped because Steam refused their decryption key (skip-and-warn,
+     *  phase 23.2). Threaded from the DepotDownloadOutcome through
+     *  startInstallPolling's PollOptions. Always [] on an OFF-path poll
+     *  (Steam owns the download and GameLib has no skipped-depot knowledge
+     *  for it) — see the isNativeHandoff docstring above for the same
+     *  native-vs-OFF distinction. */
+    skippedDepots: string[]
+    /** Fire-once guard for the skip completion notice, mirroring the
+     *  "restart Steam" toast's own fire-once flag immediately above —
+     *  deliberately a SEPARATE flag. Reusing that flag would make the
+     *  "Restart Steam" toast and the skip notice mutually exclusive:
+     *  whichever notify() ran first would permanently suppress the other,
+     *  and a native-handoff install with a skipped depot (this phase's
+     *  exact scenario) would silently lose one of the two notices it must
+     *  show. */
+    notifiedDepotSkipped: boolean
   }
 >()
 
@@ -2072,6 +2092,33 @@ export async function pollInstallOnce(
       body: i18next.t('notify.install.finished', 'Installation Finished')
     })
 
+    // 23.2-04 (D-06/D-07): a completion notice naming any depot GameLib's
+    // own downloadSteamDepots run dropped because Steam refused its key
+    // (skip-and-warn, phase 23.2) — fired IN ADDITION to the ordinary
+    // Installation Finished toast above, never instead of it. Log-only was
+    // explicitly rejected: a silently reduced install that reports plain
+    // success is the exact failure class this project has repeatedly been
+    // bitten by.
+    //
+    // Gated on a SEPARATE notifiedDepotSkipped flag, deliberately NOT the
+    // "restart Steam" toast's own fire-once flag below. Reusing that flag
+    // here would make the two notices mutually exclusive: whichever
+    // notify() ran first would permanently suppress the other, and a
+    // native-handoff install with a skipped depot — this phase's exact
+    // scenario — would silently lose one of them. Always empty on an
+    // OFF-path poll (Steam owns the download), so this never fires there.
+    if (poll?.skippedDepots?.length && !poll.notifiedDepotSkipped) {
+      poll.notifiedDepotSkipped = true
+      notify({
+        title: existing?.title ?? '',
+        body: i18next.t(
+          'steam.download.notify.depotSkipped',
+          "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+          { depots: poll.skippedDepots.join(', ') }
+        )
+      })
+    }
+
     // debug/wazhack-uninstall-reverts: the "restart Steam to finish
     // installing" notify previously lived ONLY inside the 'downloading'
     // branch above, gated on StateFlags===GAMELIB_HANDOFF_STATE_FLAGS
@@ -2147,26 +2194,30 @@ export function startInstallPolling(
   const {
     intervalMs,
     source,
-    isNativeHandoff
+    isNativeHandoff,
+    skippedDepots
   }: {
     intervalMs: number
     source: AcfSource
     isNativeHandoff: boolean
+    skippedDepots: string[]
   } =
     typeof intervalMsOrOptions === 'number'
       ? {
           intervalMs: intervalMsOrOptions,
           source: 'native',
-          isNativeHandoff: false
+          isNativeHandoff: false,
+          skippedDepots: []
         }
       : {
           intervalMs: intervalMsOrOptions.intervalMs ?? 3000,
           source: intervalMsOrOptions.source ?? 'native',
-          isNativeHandoff: intervalMsOrOptions.isNativeHandoff ?? false
+          isNativeHandoff: intervalMsOrOptions.isNativeHandoff ?? false,
+          skippedDepots: intervalMsOrOptions.skippedDepots ?? []
         }
 
   logInfo(
-    `Steam: starting install polling for appId ${appId} (interval ${intervalMs}ms, source ${source}, isNativeHandoff ${isNativeHandoff})`,
+    `Steam: starting install polling for appId ${appId} (interval ${intervalMs}ms, source ${source}, isNativeHandoff ${isNativeHandoff}, skippedDepots ${skippedDepots.length})`,
     LogPrefix.Steam
   )
 
@@ -2176,7 +2227,9 @@ export function startInstallPolling(
     seenDownloading: false,
     notifiedWaiting: false,
     stalledTicks: 0,
-    isNativeHandoff
+    isNativeHandoff,
+    skippedDepots,
+    notifiedDepotSkipped: false
   }
 
   const timer = setInterval(async () => {

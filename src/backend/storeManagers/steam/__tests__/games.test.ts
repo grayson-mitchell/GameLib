@@ -1993,7 +1993,8 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     // depot.ts download finished — isNativeHandoff:true so StateFlags 1026 is
     // correctly read as "waiting for Steam restart", not an active download.
     expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
-      isNativeHandoff: true
+      isNativeHandoff: true,
+      skippedDepots: []
     })
     expect(result).toEqual({ status: 'done' })
   })
@@ -2520,7 +2521,8 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
     // for Steam restart", not an active download.
     expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
       source: 'bottle',
-      isNativeHandoff: true
+      isNativeHandoff: true,
+      skippedDepots: []
     })
     expect(result).toEqual({ status: 'done' })
   })
@@ -2675,7 +2677,8 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
       source: 'bridge',
-      isNativeHandoff: true
+      isNativeHandoff: true,
+      skippedDepots: []
     })
     expect(startInstallPollingSpy).not.toHaveBeenCalledWith(
       APP_ID,

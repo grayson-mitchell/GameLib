@@ -1571,13 +1571,23 @@ export default class SteamGame implements Game {
       // in install() (steam://install handoff / tellBottledSteamToInstall) —
       // those hand the ENTIRE download off to Steam, so a 1026 seen there is
       // Steam's own ordinary active-download state, not a handoff.
+      //
+      // 23.2-04 (D-06/D-07): thread outcome.skippedDepots through the same
+      // way, and for the same reason — meaningful only on the native path,
+      // because it comes from GameLib's own downloadSteamDepots run above.
+      // The OFF-path calls in install() have no skipped-depot knowledge
+      // (Steam owns those downloads) and must NOT receive it.
       if (opts.pollerSource) {
         startInstallPolling(this.appId, {
           source: opts.pollerSource,
-          isNativeHandoff: true
+          isNativeHandoff: true,
+          skippedDepots: outcome.skippedDepots ?? []
         })
       } else {
-        startInstallPolling(this.appId, { isNativeHandoff: true })
+        startInstallPolling(this.appId, {
+          isNativeHandoff: true,
+          skippedDepots: outcome.skippedDepots ?? []
+        })
       }
 
       return { status: 'done' }
