@@ -533,3 +533,232 @@ describe('D-08: catch-path finalize must not clobber a complete install (bottle-
     expect(acfText).toMatch(/"1771302"/)
   })
 })
+
+/**
+ * Task 3 (23.2-03, G-23-01): end-to-end proof that the skip-and-warn policy
+ * produces the acceptance-benchmark manifest shape from the plan's own
+ * objective — GameLib's selected KCD2 (appId 1771300) depot set
+ * {1771302, 1771303, 1771304, 1771306} minus the Blocked (eresult=40) depot
+ * 1771304 equals the official Windows client's own installed set exactly.
+ *
+ * Drives the REAL downloadSteamDepots end to end (not a canWriteFullOwnership
+ * unit call) so the reduced plan's totals genuinely flow through
+ * downloadDepotFiles -> finalizeToSteam -> the real (unmocked) fs writes
+ * measureInstalledBytes reads back from.
+ *
+ * Anti-vacuity discipline: the InstalledDepots absence assertion targets
+ * 1771304 as a BLOCK KEY (`\t\t"1771304"\n\t\t{`), never a bare substring —
+ * the id could legitimately appear elsewhere in a future field without that
+ * meaning the depot was installed (manifest.ts's buildInstalledDepotsBlock
+ * writes only `depotId`/`manifest`/`size` per entry today, but a bare
+ * substring check would silently stop meaning what it says the moment that
+ * changes).
+ */
+describe('Task 3 (23.2-03, G-23-01): a skipped depot still earns StateFlags=4, absent from InstalledDepots', () => {
+  const KCD2_APP_ID = '1771300'
+  const KCD2_INSTALLDIR = 'KingdomComeDeliverance2'
+  const KCD2_BUILDID = '23914554'
+  const BLOCKED_ID = '1771304'
+  const KEPT_DEPOTS = [
+    { id: '1771302', manifest: '1111111111111111111', content: Buffer.from('A'.repeat(1000)) },
+    { id: '1771303', manifest: '2222222222222222222', content: Buffer.from('B'.repeat(500)) },
+    { id: '1771306', manifest: '4444444444444444444', content: Buffer.from('C'.repeat(250)) }
+  ]
+  const ALL_DEPOT_DESCRIPTORS = [
+    { id: '1771302', manifest: '1111111111111111111', size: 0, ownerAppId: KCD2_APP_ID },
+    { id: '1771303', manifest: '2222222222222222222', size: 0, ownerAppId: KCD2_APP_ID },
+    { id: BLOCKED_ID, manifest: '3333333333333333333', size: 0, ownerAppId: KCD2_APP_ID },
+    { id: '1771306', manifest: '4444444444444444444', size: 0, ownerAppId: KCD2_APP_ID }
+  ]
+
+  let dir: string
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'gamelib-23-2-03-task3-finalize-test-'))
+  })
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  /** Wires selectAllDepots/getProductInfo/getDepotDecryptionKey/getRawManifest/
+   *  content_manifest.parse/decryptFilename/fetchChunk for the KCD2 four-depot
+   *  shape, with 1771304's key request rejecting eresult=40. `corruptDepotId`,
+   *  when supplied, makes that KEPT depot's on-disk bytes diverge from its
+   *  declared sha_content — a whole-file SHA1 mismatch downloadSingleFile
+   *  records as a DepotDownloadFailure (depot.ts:1471-1476) — so the D-04
+   *  sibling case can prove the completeness gate still fails closed on top
+   *  of a skip, rather than the skip becoming an unconditional StateFlags=4
+   *  escape hatch. */
+  function setupKCD2SkipPlumbing(
+    fakeClient: ReturnType<typeof makeFakeClient>,
+    corruptDepotId?: string
+  ) {
+    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+    jest.mocked(selectAllDepots).mockReturnValue(ALL_DEPOT_DESCRIPTORS)
+
+    jest
+      .mocked(fakeClient.getDepotDecryptionKey)
+      .mockImplementation(
+        (
+          _appId: number,
+          depotId: number,
+          cb: (err: Error | null, key?: Buffer) => void
+        ) => {
+          if (String(depotId) === BLOCKED_ID) {
+            const err = new Error('Blocked') as Error & { eresult?: number }
+            err.eresult = 40
+            cb(err, undefined)
+            return
+          }
+          cb(null, Buffer.from(`key-${depotId}`))
+        }
+      )
+    jest
+      .mocked(fakeClient.getRawManifest)
+      .mockImplementation(
+        (
+          _appId: number,
+          depotId: number,
+          _gid: string,
+          _branch: string,
+          cb: (err: Error | null, raw: Buffer) => void
+        ) => cb(null, Buffer.from(`raw-${depotId}`))
+      )
+
+    const contentManifest = jest.requireMock(
+      'steam-user/components/content_manifest.js'
+    )
+    jest.mocked(contentManifest.parse).mockImplementation((raw: Buffer) => {
+      const depotId = raw.toString().replace('raw-', '')
+      const kept = KEPT_DEPOTS.find((d) => d.id === depotId)
+      if (!kept) {
+        throw new Error(
+          `test setup error: content_manifest.parse called for unexpected depot ${depotId}`
+        )
+      }
+      // The corrupted depot declares a sha1 that does NOT match the bytes
+      // fetchChunk will actually hand back below — same size, wrong content
+      // — so only the whole-file SHA1 gate (not a size mismatch) trips.
+      const shaContent =
+        depotId === corruptDepotId
+          ? sha1Hex(Buffer.from('x'.repeat(kept.content.length)))
+          : sha1Hex(kept.content)
+      return {
+        files: [
+          {
+            filename: `enc-${depotId}`,
+            size: String(kept.content.length),
+            sha_content: shaContent,
+            chunks: [
+              { sha: 'chunk-sha', cb_original: kept.content.length, offset: 0 }
+            ]
+          }
+        ]
+      }
+    })
+    jest
+      .mocked(decryptFilename)
+      .mockImplementation((encName: string) => encName.replace('enc-', 'game-') + '.bin')
+    jest.mocked(fetchChunk).mockImplementation(async (_hosts, depotId: string) => {
+      const kept = KEPT_DEPOTS.find((d) => d.id === depotId)
+      if (!kept) {
+        throw new Error(
+          `test setup error: fetchChunk called for unexpected depot ${depotId}`
+        )
+      }
+      return kept.content
+    })
+  }
+
+  it('all three kept depots download, 1771304 is dropped, and the manifest earns StateFlags=4 with 1771304 absent as an InstalledDepots block key', async () => {
+    const fakeClient = makeFakeClient({
+      getProductInfo: jest.fn().mockResolvedValue({
+        apps: {
+          [KCD2_APP_ID]: {
+            appinfo: {
+              depots: { branches: { public: { buildid: KCD2_BUILDID } } },
+              extended: {}
+            }
+          }
+        },
+        packages: {},
+        unknownApps: [],
+        unknownPackages: []
+      })
+    })
+    setupKCD2SkipPlumbing(fakeClient)
+
+    const result = await downloadSteamDepots(KCD2_APP_ID, {
+      targetSteamappsDir: dir,
+      installdir: KCD2_INSTALLDIR,
+      os: 'windows'
+    })
+
+    expect(result.status).toBe('done')
+    expect(result.skippedDepots).toEqual([BLOCKED_ID])
+
+    const acfText = readFileSync(join(dir, `appmanifest_${KCD2_APP_ID}.acf`), 'utf8')
+
+    expect(acfText).toMatch(/"StateFlags"\s+"4"/)
+    for (const kept of KEPT_DEPOTS) {
+      expect(acfText).toMatch(
+        new RegExp(`\\t\\t"${kept.id}"\\r?\\n\\t\\t\\{`)
+      )
+    }
+    // Absence targets 1771304 as an InstalledDepots BLOCK KEY, never a bare
+    // substring — the id must not appear as `\t\t"1771304"\n\t\t{`.
+    expect(acfText).not.toMatch(
+      new RegExp(`\\t\\t"${BLOCKED_ID}"\\r?\\n\\t\\t\\{`)
+    )
+
+    expect(acfText).toMatch(new RegExp(`"buildid"\\s+"${KCD2_BUILDID}"`))
+    expect(acfText).not.toMatch(/"buildid"\s+"0"/)
+
+    const totalKeptBytes = KEPT_DEPOTS.reduce(
+      (sum, d) => sum + d.content.length,
+      0
+    )
+    const bytesToDownload = acfText.match(/"BytesToDownload"\s+"(\d+)"/)?.[1]
+    const bytesDownloaded = acfText.match(/"BytesDownloaded"\s+"(\d+)"/)?.[1]
+    const sizeOnDisk = acfText.match(/"SizeOnDisk"\s+"(\d+)"/)?.[1]
+    expect(bytesToDownload).toBe(String(totalKeptBytes))
+    expect(bytesDownloaded).toBe(String(totalKeptBytes))
+    expect(sizeOnDisk).toBe(String(totalKeptBytes))
+  })
+
+  it('D-04: the same skip PLUS one additional completeness failure (a sha1 mismatch on a KEPT depot) still falls back to StateFlags=1026 — the skip is not an escape hatch from the completeness gate', async () => {
+    const fakeClient = makeFakeClient({
+      getProductInfo: jest.fn().mockResolvedValue({
+        apps: {
+          [KCD2_APP_ID]: {
+            appinfo: {
+              depots: { branches: { public: { buildid: KCD2_BUILDID } } },
+              extended: {}
+            }
+          }
+        },
+        packages: {},
+        unknownApps: [],
+        unknownPackages: []
+      })
+    })
+    // 1771303 is a KEPT depot (not the skipped 1771304) whose declared sha1
+    // will not match the bytes fetchChunk hands back.
+    setupKCD2SkipPlumbing(fakeClient, '1771303')
+
+    const result = await downloadSteamDepots(KCD2_APP_ID, {
+      targetSteamappsDir: dir,
+      installdir: KCD2_INSTALLDIR,
+      os: 'windows'
+    })
+
+    expect(result.status).toBe('error')
+    expect(result.skippedDepots).toEqual([BLOCKED_ID])
+
+    const acfText = readFileSync(join(dir, `appmanifest_${KCD2_APP_ID}.acf`), 'utf8')
+    expect(acfText).toMatch(/"StateFlags"\s+"1026"/)
+    expect(acfText).not.toMatch(/"StateFlags"\s+"4"/)
+  })
+})
