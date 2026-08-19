@@ -19,11 +19,44 @@ a declared failure.
 
 **It does not make the residue reconcilable or clean it up.** An aborted/failed native depot
 run still leaves partial bytes under `steamapps/common/<installdir>` with **no**
-`appmanifest_*.acf` ever written — the `.acf` is only written on a successful completion.
+`appmanifest_*.acf` ever written — ~~the `.acf` is only written on a successful completion~~
+**(this sentence is FALSE as a generalisation — see the `## Correction` section below).**
 Phase 23-03's reconciler keys off the presence of an `.acf` to identify installed/resumable
 Steam games, so a partial directory with no manifest is invisible to it: not resumable
 through the normal path, not cleaned up, not surfaced to the user as anything other than
 silent disk usage.
+
+## Correction (2026-08-19, phase 23.2-01)
+
+This Correction retracts the sentence struck above without deleting it, per this project's
+standing rule that a wrong record must remain readable, not silently rewritten.
+
+`.planning/phases/23.2-steam-depot-selection-required-vs-optional-depots-and-skip-a/23.2-MANIFEST-WRITE-TAXONOMY.md`
+(source-anchored, `downloadSteamDepots`/`finalizeToSteam`/`buildAppManifestText`) establishes three
+distinguishable outcomes, not the two this todo assumed:
+
+- **Case A — `buildDepotPlan` throws (plan-build failure, zero bytes downloaded).** The catch
+  block's unconditional `finalize()` call (`depot.ts:2836`) DOES write a manifest here — a
+  `StateFlags "1026"` / `buildid "0"` / present-but-empty-`InstalledDepots` stub. This is FALSE
+  for "only written on a successful completion" — nothing succeeded, and a manifest was still
+  written. (This is the defect the 2026-08-19 todo tracks, folded into D-08 of phase 23.2.)
+- **Case B — a graceful failure or cancel AFTER the plan was built.** Also writes a manifest — the
+  legitimate Phase 21 `1026` verify-handoff, with the real attempted-depot list. Also FALSE for
+  "only written on a successful completion."
+- **Case C — the process dies (`kill -9`, crash, power loss).** No `.acf` is written, because no
+  JS runs to reach `finalize()` at all. **This is the ONLY case where the original sentence is
+  true**, and 23-UAT.md Gate 3 (2026-08-19) is the recorded instance of it.
+
+**The corrected premise, and what survives of this todo's argument:** a manifest IS written for
+cases A and B, so the reconciler CAN see that residue via the `.acf` for those cases — this todo's
+reconciler-invisibility argument does NOT generalise to every aborted/failed install as originally
+written. It only holds for case C (a hard process kill). The todo stays OPEN because case C's
+residue concern is real and unaddressed; its scope is narrower than originally stated.
+
+**One correction of a related detail, because it affects a future fix's test assertions:** the
+"present but EMPTY `InstalledDepots` block" language above is deliberate — `buildAppManifestText`
+(`depot/manifest.ts:174-177`) emits the `InstalledDepots` key unconditionally even for zero
+entries. A test asserting mere key presence would be vacuous against a case-A stub.
 
 ## What `260816-vgc` DID buy
 

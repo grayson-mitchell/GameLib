@@ -23,8 +23,18 @@ A native depot install that **fails during plan-build and downloads zero bytes**
 StateFlags       "1026"      # verify/repair me
 buildid          "0"
 SizeOnDisk       "96422090071"
-InstalledDepots  <ABSENT ENTIRELY>
+InstalledDepots  <PRESENT BUT EMPTY — see Correction below; NOT absent entirely>
 ```
+
+**Correction (2026-08-19, phase 23.2-01):** the original symptom line above read `InstalledDepots
+<ABSENT ENTIRELY>`. That is wrong. `buildAppManifestText` (`depot/manifest.ts:174-177`) emits the
+`"InstalledDepots" { }` block UNCONDITIONALLY, even for zero entries — the key is always present,
+only its contents are empty. This matters because a test assertion of the form
+`toMatch(/"InstalledDepots"/)` PASSES against this exact stub and would be vacuous; any regression
+test plan 23.2-02 writes for this defect must assert on the block's CONTENTS (a specific depot id
+present) not merely the key's presence. See
+`.planning/phases/23.2-steam-depot-selection-required-vs-optional-depots-and-skip-a/23.2-MANIFEST-WRITE-TAXONOMY.md`
+Case A for the full source-anchored derivation.
 
 402 bytes, versus the 989-byte real manifest it replaced.
 
@@ -76,6 +86,49 @@ Today's run contradicts both. Three candidate explanations, none yet established
 
 Resolve which, and correct whichever record is wrong — a stale "no manifest is ever written" belief is
 load-bearing for the reconciler argument in the related todo.
+
+## Adjudication (2026-08-19, phase 23.2-01)
+
+Read from source (`downloadSteamDepots`/`finalizeToSteam`/`buildAppManifestText`; full derivation
+in
+`.planning/phases/23.2-steam-depot-selection-required-vs-optional-depots-and-skip-a/23.2-MANIFEST-WRITE-TAXONOMY.md`).
+Each of the three candidate explanations above, adjudicated:
+
+- **"Behaviour changed between 2026-07-21 and now" — RULED OUT.**
+  `git log --oneline -S "await finalize().catch" -- src/backend/storeManagers/steam/depot.ts`
+  returns exactly one commit, `eacbc7ccf` ("feat(21-06): add finalizeToSteam single 1026 handoff
+  for cancel/failure/success"), dated **2026-07-15 23:05 +1200** — six days BEFORE Gate 2 Attempt
+  1 (2026-07-21). The catch block's unconditional `finalize()` call, and therefore case A's stub
+  write, was already present and unchanged in shape on 2026-07-21. Every subsequent commit
+  touching `depot.ts` before 2026-08-19 (`1a2d7076c`, `0aeb42052`, `8894e10ec`, `b26a11d1d`,
+  `a09baab86`, `3e6fbe9c4`, `4d2b319e8`, `a0e2f07f4`, `6913442b1`, `343b74518`, `9f0b2fa6c`,
+  `3f85ffdae`) is execute-bit fallback, timeout/watchdog, or depot-error-copy work — none touch the
+  catch-path `finalize()` call. Behaviour did not change; both dates hit the identical code path.
+- **"The two failure modes differ" — ESTABLISHED, but only for case A vs case C, and does NOT by
+  itself explain the 2026-07-21 vs 2026-08-19 contradiction.** The taxonomy confirms cases A
+  (plan-build throw) and C (hard process kill) genuinely differ: A writes a stub, C writes nothing.
+  23-UAT.md Gate 3's `kill -9` (case C, no `.acf`) and the 2026-08-19 KCD2 stub observation (case
+  A, stub `.acf`) are both correctly explained by this. **But** Gate 2 Attempt 1 (2026-07-21) was
+  ALSO a plan-build failure (`EResult 40 Blocked` on a depot key request during `buildDepotPlan`)
+  — the SAME case A as the 2026-08-19 observation, not case C. Since explanation 1 (behaviour
+  changed) is ruled out and both dates are case A, this explanation alone cannot account for why
+  2026-07-21 recorded "no `.acf`" and 2026-08-19 recorded a stub `.acf` for the same code path.
+- **"The 2026-07-21 negative was checked in the wrong directory" — NOT ESTABLISHED FROM RECORDED
+  EVIDENCE; the most likely unfalsified explanation, given the other two are ruled out or
+  insufficient.** KCD2 is a Windows title; `runNativeDepotDownload` resolves its write target via
+  `opts.targetSteamappsDirOverride ?? resolved.targetSteamappsDir` (`games.ts:1525-1526`) — for a
+  bottled Windows title this override is the CrossOver bottle's `steamapps`, not the macOS Steam
+  library's `steamapps`. 23-UAT.md's own later analysis (`23-UAT.md:357-359`, the "Decisive
+  diagnostic ANSWERED 2026-08-19" addendum) independently confirms KCD2 installs into the bottle:
+  "The official client here is the real Valve **Windows** Steam client in the `GameLibSteam`
+  CrossOver bottle — the only official client that can install this Windows-only title." Neither
+  Gate 2 Attempt 1's narrative (`23-UAT.md:328-352`) nor any other recorded artifact states which
+  directory was inspected when concluding "before any `.acf` was written" — that check, whatever
+  it was, is not itself preserved in the record. **What would settle it:** a contemporaneous shell
+  history, screenshot, or log line from 2026-07-21 showing the exact path checked. None is
+  available. Given explanation 1 is ruled out by git history and explanation 2 does not cover this
+  specific pair of observations, this is recorded as the most likely unfalsified explanation, not
+  as an established fact.
 
 ## Lead worth following first — the size field is already correct
 
