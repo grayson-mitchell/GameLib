@@ -50,6 +50,7 @@ import {
   applyLibraryFetchPending
 } from './steamEligibilityProbe'
 import EligibilityLoadingRow from './SteamDialog/EligibilityLoadingRow'
+import { DEFAULT_STEAM_BOTTLE_NAME } from 'frontend/screens/Game/GamePage/components/steamBottleDefaults'
 
 /**
  * 34.13 review B-WR-02 (iteration 3): the Steam library fetch's three states.
@@ -511,6 +512,20 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
 
   useEffect(() => {
     if (showWineSelector) {
+      // G-D05-BOTTLENAME (quick 260819-s8p): the read-only bottle-name field
+      // must never render blank on the Steam branch. `isSteamManagedApp` is
+      // the required guard here -- `showWineSelector` alone is also true on
+      // the plain non-Steam `hasWine` arm, which must stay byte-for-byte
+      // unchanged. ALWAYS the dedicated Steam bottle, never the user's
+      // shared GOG/Epic bottle (globalConfig.wineCrossoverBottle) -- the two
+      // must stay distinct (17-02). Seeding the shared name here was the
+      // 17-06 UAT bug that would have provisioned Steam into the shared
+      // bottle. The functional-updater form never clobbers an already-set
+      // value and needs no `crossoverBottle` dependency (mirrors the
+      // `setWineVersion` updater form's WR-15 reasoning below).
+      if (isSteamManagedApp) {
+        setCrossoverBottle((current) => current || DEFAULT_STEAM_BOTTLE_NAME)
+      }
       const getWine = async () => {
         const newWineList: WineInstallation[] =
           await window.api.getAlternativeWine()
@@ -538,7 +553,7 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
         )
       })
     }
-  }, [showWineSelector])
+  }, [showWineSelector, isSteamManagedApp])
 
   function platformSelection() {
     if (platformRowMode === 'absent') {
