@@ -52,6 +52,7 @@ import { dialog, shell } from 'electron'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
+import i18next from 'i18next'
 import { SteamUser } from '../user'
 import { noteSteamAuthTrigger } from '../authTrigger'
 import {
@@ -118,10 +119,16 @@ jest.mock('../../../dialog/dialog', () => ({
 }))
 
 // ── i18next mock — returns the fallback string for body assertions ────────────
+// 23.2-04: t is a jest.fn (not a plain function) so its call args are
+// inspectable — the fallback-string return value is unchanged, so every
+// pre-existing body-text assertion in this file keeps passing byte-for-byte.
+// This is what makes the interpolation options object provable: the fallback
+// alone can only ever show the raw {{depots}} placeholder, never the actual
+// depot id.
 jest.mock('i18next', () => ({
   __esModule: true,
   default: {
-    t: (_key: string, fallback = '') => fallback
+    t: jest.fn((_key: string, fallback = '') => fallback)
   }
 }))
 
@@ -297,6 +304,20 @@ const makeOwnedApp = (
   playtime_forever,
   rtime_last_played,
   img_icon_url: ''
+})
+
+// 23.2-04: this project's jest config sets `resetMocks: true`, which strips
+// jest.fn() implementations (not just call history) before EVERY test — so
+// the i18next.t mock's fallback-returning implementation (set once at
+// jest.mock() factory time, above) must be re-established file-wide, or any
+// test anywhere in this file that asserts on a notify() body derived from
+// i18next.t would see `undefined` instead of the fallback string. A plain
+// (non-jest.fn) function is immune to resetMocks, which is why this was not
+// needed before this key was added to observe the call args.
+beforeEach(() => {
+  ;(i18next.t as jest.Mock).mockImplementation(
+    (_key: string, fallback = '') => fallback
+  )
 })
 
 const makeFakeClient = (apps: ReturnType<typeof makeOwnedApp>[]) => ({
@@ -4165,6 +4186,204 @@ describe('pollInstallOnce()', () => {
       })
     )
   })
+
+  // ── 23.2-04 (D-06/D-07): the depot-skip completion notice ─────────────────
+  // The i18next mock (top of file) returns the fallback string verbatim,
+  // discarding interpolation options — so an assertion on notify()'s body
+  // text can only ever see the literal {{depots}} placeholder. It proves the
+  // call site fired, and proves NOTHING about the depot id reaching the
+  // user. The non-vacuous assertion in every case below is on the captured
+  // i18next.t call's OPTIONS object, not the notify() body.
+
+  it('23.2-04: fires the skip notice and names the depot via the i18next.t options object (not just the fallback body)', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
+    })
+    startInstallPolling('730', {
+      intervalMs: 60000,
+      isNativeHandoff: true,
+      skippedDepots: ['1771304']
+    })
+    await pollInstallOnce('730')
+
+    expect(notify).toHaveBeenCalledWith({
+      title: 'CS:GO',
+      body: "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+    })
+    // The non-vacuous half: without this assertion, a body-only check would
+    // pass equally well against an implementation that never interpolates
+    // anything at all.
+    expect(i18next.t).toHaveBeenCalledWith(
+      'steam.download.notify.depotSkipped',
+      expect.any(String),
+      { depots: '1771304' }
+    )
+  })
+
+  it("23.2-04: the depotSkipped interpolation options object never carries a 'count' key — i18next reserves it for pluralization", async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
+    })
+    startInstallPolling('730', {
+      intervalMs: 60000,
+      isNativeHandoff: true,
+      skippedDepots: ['1771304']
+    })
+    await pollInstallOnce('730')
+
+    const depotSkippedCall = (i18next.t as jest.Mock).mock.calls.find(
+      ([key]) => key === 'steam.download.notify.depotSkipped'
+    )
+    expect(depotSkippedCall).toBeDefined()
+    const options = depotSkippedCall![2]
+    expect(options).not.toHaveProperty('count')
+  })
+
+  it('23.2-04: joins several skipped depot ids into a single comma-separated interpolation value', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
+    })
+    startInstallPolling('730', {
+      intervalMs: 60000,
+      isNativeHandoff: true,
+      skippedDepots: ['1771304', '1771310']
+    })
+    await pollInstallOnce('730')
+
+    expect(i18next.t).toHaveBeenCalledWith(
+      'steam.download.notify.depotSkipped',
+      expect.any(String),
+      { depots: '1771304, 1771310' }
+    )
+  })
+
+  it('23.2-04: fires all THREE notices in one confirmed-installed tick (finished, skipped, restart Steam) — this is the regression guard for the shared-guard trap', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
+    })
+    startInstallPolling('730', {
+      intervalMs: 60000,
+      isNativeHandoff: true,
+      skippedDepots: ['1771304']
+    })
+    await pollInstallOnce('730')
+
+    expect(notify).toHaveBeenCalledTimes(3)
+    expect(notify).toHaveBeenNthCalledWith(1, {
+      title: 'CS:GO',
+      body: 'Installation Finished'
+    })
+    expect(notify).toHaveBeenNthCalledWith(2, {
+      title: 'CS:GO',
+      body: "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+    })
+    expect(notify).toHaveBeenNthCalledWith(3, {
+      title: 'CS:GO',
+      body: 'Restart Steam to finish installing {{game}}'
+    })
+  })
+
+  it('23.2-04: fires the skip notice at most once — two consecutive pollInstallOnce calls against the same poll produce exactly one skip notice', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
+    })
+    startInstallPolling('730', {
+      intervalMs: 60000,
+      isNativeHandoff: true,
+      skippedDepots: ['1771304']
+    })
+    await pollInstallOnce('730')
+    // pollInstallOnce's confirmed-installed branch calls stopInstallPolling()
+    // itself once the ACF confirms installed, so this second call — with no
+    // re-registration in between — is the literal "two consecutive
+    // pollInstallOnce calls" the plan specifies. Without notifiedDepotSkipped
+    // this would double-fire whenever a caller invokes pollInstallOnce twice
+    // before the interval-driven poll loop has a chance to notice the entry
+    // is gone (e.g. an overlapping manual re-check from a frontend refresh).
+    await pollInstallOnce('730')
+
+    const skipNoticeCalls = (i18next.t as jest.Mock).mock.calls.filter(
+      ([key]) => key === 'steam.download.notify.depotSkipped'
+    )
+    expect(skipNoticeCalls).toHaveLength(1)
+  })
+
+  it('23.2-04: silent when no depot was skipped — an empty skippedDepots list fires no skip notice and leaves the ordinary Installation Finished toast unaffected', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
+    })
+    startInstallPolling('730', {
+      intervalMs: 60000,
+      isNativeHandoff: true,
+      skippedDepots: []
+    })
+    await pollInstallOnce('730')
+
+    expect(i18next.t).not.toHaveBeenCalledWith(
+      'steam.download.notify.depotSkipped',
+      expect.anything(),
+      expect.anything()
+    )
+    expect(notify).toHaveBeenCalledWith({
+      title: 'CS:GO',
+      body: 'Installation Finished'
+    })
+  })
+
+  it('23.2-04: silent on an OFF-path poll (Steam owns the download, bare-number call signature) — mirrors the existing OFF-path negative test shape', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
+    })
+    startInstallPolling('730', 60000) // bare-number signature, OFF-path
+    await pollInstallOnce('730')
+
+    expect(i18next.t).not.toHaveBeenCalledWith(
+      'steam.download.notify.depotSkipped',
+      expect.anything(),
+      expect.anything()
+    )
+  })
+
+  // ── RED-proof: reusing notifiedWaiting for the skip guard fails the
+  // coexistence case above. Observed by temporarily replacing
+  // notifiedDepotSkipped with notifiedWaiting at both the guard-read and
+  // guard-write sites in library.ts's confirmed-installed branch, rerunning
+  // just the coexistence test, and reverting. Recorded in the plan SUMMARY.
 
   // ── debug/steam-1026-download-restart: the 1026-collision regression ──────
 

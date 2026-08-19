@@ -1999,6 +1999,40 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     expect(result).toEqual({ status: 'done' })
   })
 
+  it("23.2-04: a downloadSteamDepots outcome carrying skippedDepots threads through to startInstallPolling's options object", async () => {
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+      status: 'done',
+      skippedDepots: ['1771304']
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+      isNativeHandoff: true,
+      skippedDepots: ['1771304']
+    })
+    expect(result).toEqual({ status: 'done' })
+  })
+
+  it('23.2-04: a downloadSteamDepots outcome with no skippedDepots field threads through as [], never undefined', async () => {
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+      isNativeHandoff: true,
+      skippedDepots: []
+    })
+    const call = (startInstallPollingSpy as jest.Mock).mock.calls.find(
+      ([appId]) => appId === APP_ID
+    )
+    expect(call![1].skippedDepots).not.toBeUndefined()
+  })
+
   it('D-06/D-07 error surface reuse: a { status: "error", error } depot outcome maps to an InstallResult.error carrying the EXACT classified message — no steam-specific error/Retry UI, downloadqueue.ts uninvolved', async () => {
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     const classifiedMessage = 'Steam servers dropped the connection'
