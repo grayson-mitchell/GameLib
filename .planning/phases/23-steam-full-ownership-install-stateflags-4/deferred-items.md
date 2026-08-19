@@ -106,14 +106,33 @@ have issued its key to the official client, which never asked. That distinction 
 change the disposition — the decision rule turned on whether the official client completes
 without the depot, and it does.
 
-**Second divergence found by the same evidence, and IN SCOPE for this follow-up:** the
-official client installs depot **1771306** (13,650,395,848 bytes), which GameLib's plan-build
-never mentioned (23-UAT.md Gate 2 Attempt 1 records GameLib resolving only 1771302, 1771303,
-1771304). GameLib's selection therefore differs from the official client's in **both**
-directions — it picks up a depot Steam skips *and* appears to miss one Steam installs. Whether
-1771306 was genuinely unselected or merely never reached before the 1771304 abort is
-UNCONFIRMED and must be established first; a `stage=plan-build` census from a
-started-then-cancelled KCD2 install answers it before any bytes download.
+**A suspected second divergence was raised, then DISPROVEN 2026-08-19 — this follow-up is
+NARROWER than it briefly appeared.** Because the official client installs depot **1771306**
+(13,650,395,848 bytes) and 23-UAT.md's Gate 2 Attempt 1 narrative doesn't mention it, it looked
+as though GameLib's selection might differ from Steam's in *both* directions. A live plan-build
+selection census settled it:
+
+```
+Steam depot selection: os=windows arch=64 language=english branch=public -> depots
+  [1771302(size=199419496), 1771303(size=82572274727),
+   1771304(size=735856088), 1771306(size=13650395848)]
+Steam depot selection: selectAllDepots union across base + DLC apps -> 4 depot(s)
+```
+
+**GameLib DOES select 1771306**, at a size byte-identical to the official client's
+`InstalledDepots` entry — it was merely never reached before the 1771304 abort. The false
+inference read Attempt 1's list of depots whose *keys were resolved* as the *selected* set.
+
+**Consequences for this work — all of them narrowing:**
+- **No depot-enumeration gap, no silently-incomplete-install risk.** Scope stays "don't hard-fail
+  on a Blocked key"; it does NOT expand to "select depots we currently miss".
+- **GameLib's selected set minus 1771304 equals Steam's installed set EXACTLY**, so skip-and-warn
+  is provably sufficient for this title rather than merely plausible.
+- **Classification machinery already exists and works.** `selectDepots` already filters on
+  `oslist`/`osarch`/`language` and logs every skip with its reason (verified in the same census:
+  1771305 czech, 1771307 french, 1771308 german, 1771309 japanese, 3118101 spanish all correctly
+  skipped). This work extends an existing filter with a required-vs-optional axis rather than
+  building classification from nothing.
 
 **Scope when planned:** introduce a required-vs-optional depot distinction at selection time
 in `depot/select.ts`, plus a skip-and-warn path (continue the install, warn the user which

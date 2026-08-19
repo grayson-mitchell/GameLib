@@ -1,0 +1,25 @@
+"AppState"
+{
+	"appid"		"1771300"
+	"Universe"		"1"
+	"StateFlags"		"1026"
+	"installdir"		"KingdomComeDeliverance2"
+	"name"		"KingdomComeDeliverance2"
+	"LastUpdated"		"1787100795"
+	"SizeOnDisk"		"96422090071"
+	"buildid"		"0"
+	"LastOwner"		"76561197995867096"
+	"BytesToDownload"		"0"
+	"BytesDownloaded"		"0"
+	"AutoUpdateBehavior"		"0"
+	"InstalledDepots"
+	{
+
+	}
+	"UserConfig"
+	{
+	}
+	"MountedDepots"
+	{
+	}
+}

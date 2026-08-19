@@ -198,8 +198,10 @@ required; this section records what happened.
   **without** depot 1771304 and never requested its key, making GameLib's whole-install abort a confirmed
   **over-selection + hard-fail defect** (`severity: major`). Fix explicitly out of 23-10's scope; the
   skip-and-warn selection-policy follow-up is UNGATED and routes to its own gap cycle. Its scope now also
-  covers a second divergence: the official client installs depot **1771306** (13.65 GB) that GameLib's
-  plan-build never mentioned.
+  briefly appeared to cover a second divergence (depot **1771306**, 13.65 GB), but that was **DISPROVEN
+  2026-08-19** by a live plan-build selection census — GameLib *does* select 1771306; it was merely never
+  reached before the 1771304 abort. Net effect narrows the follow-up: GameLib's selected set minus
+  1771304 equals Steam's installed set exactly.
 - **Resumed-install progress percent** can never reach 100% (measured 76% on a fully successful install) —
   filed in `todos/pending/`, reporting-only.
 - **DecompressPool decode stall** — did not recur 2026-08-19 but nothing was fixed; treat as open.

@@ -116,11 +116,12 @@ expression.
 ## Still open after this plan, deliberately
 
 1. **G-23-01** — confirmed defect, `severity: major`, fix explicitly out of scope, routes to its own gap
-   cycle. Its scope now also covers a **second divergence** the same evidence exposed: the official client
-   installs depot **1771306** (13.65 GB), which GameLib's plan-build never mentioned. GameLib's selection
-   differs from Steam's in *both* directions. Whether 1771306 was genuinely unselected or merely never
-   reached before the 1771304 abort is UNCONFIRMED — a `stage=plan-build` census from a
-   started-then-cancelled KCD2 install settles it before any bytes download.
+   cycle (now **Phase 23.2**). A suspected **second divergence** was raised here and **DISPROVEN
+   2026-08-19** by the plan-build selection census this summary recommended: GameLib **does** select depot
+   1771306 (size byte-identical to the official client's entry) — it was merely never reached before the
+   1771304 abort. The false inference read Attempt 1's *keys-resolved* list as the *selected* set. Net
+   effect is narrowing: no enumeration gap, no silently-incomplete installs, and GameLib's selected set
+   minus 1771304 equals Steam's installed set exactly, so skip-and-warn is provably sufficient.
 2. **The resumed-progress defect** above.
 3. **The DecompressPool decode stall** noted in 23-UAT.md — did not recur on 2026-08-19, but nothing was
    fixed; treat as open.
