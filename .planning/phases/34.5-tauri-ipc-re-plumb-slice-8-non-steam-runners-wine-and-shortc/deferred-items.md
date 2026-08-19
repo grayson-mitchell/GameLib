@@ -602,3 +602,80 @@ scratchpad session dir `keyring-session-20260819T090321Z` and are NOT in git (T-
     the standing 9:1 keyring failure-rate observation.
     *Class: a pin asserting the RATIONALE cannot detect that the FACT drifted. Cf.
     `pin-asserting-rationale-cannot-detect-fact-drift`, `keyring-timeout-races-keychain-approval`.*
+
+---
+
+## Found during the fifth blocking live gate (2026-08-19, plan 34.5-59)
+
+**VERDICT: PASS — 4 PASS / 0 FAIL / 0 BLOCKED / 0 NOT ATTEMPTED.** Arithmetic reconciles
+(4+0+0+0 = 4 = `items_total`). Evidence: `34.5-LIVE-GATE-RERUN-4.md`, executed at HEAD `f279856e7`.
+Prior runs for contrast: 0/5, 0/5, 0P/2F/1B/2NA, 2P/1F/0B/1NA. **Per D-08 this closes Phase 34.5 at
+plan 34.5-60; no gap cycle 8 is required by this gate.**
+
+**Contract-defect tally (T-34.4.2-42) for this run: 2** — recorded as its own item below, per the
+plan's requirement that the number surface every run including when it is zero.
+
+Recorded, not diagnosed. IDs continue from `-30`; **the next free id is `F-34.5-G6-34`.**
+
+39. **`F-34.5-G6-31` — macOS shortcut generation loses a race with its own icon download.**
+    On install completion the auto-shortcut path calls `convertToIcns` against an icon file that has
+    not finished downloading. Observed 22:17:07 for Empire Earth Gold Edition:
+    `Generating macOS shortcut` -> `[ERROR] Error generating MacOS App` -> `[ERROR] Error converting
+    icon to icns: ENOENT … /icons/1207658777…` -> `Temporary MacOS App removed`. The icon's own
+    download completed at **22:17:08**, one second later. Verified from disk: `1207658777.png` exists
+    (31,036 bytes) and **no Empire Earth `.app` was ever created** — the user silently gets no
+    shortcut. Triggered through `addStartMenuShortcuts=true`.
+    **NOT determined:** whether a retry succeeds now the icon is present; whether the manual "Add
+    shortcut" button path is affected (item 3's own target succeeded cleanly at 22:32:49, so at
+    minimum the manual path is not universally broken); whether other runners race identically.
+    **Scoring note:** `Error generating MacOS App` is item 3's disqualifying literal. It was scoped
+    to item 3's own target rather than grepped session-wide — failing item 3 for a different game's
+    auto-shortcut would have measured the wrong thing. Stated explicitly in the item's Result rather
+    than handled by a quietly narrowed grep.
+
+40. **`F-34.5-G6-32` — precondition 12 has no step for a freshly-installed game, and the DXVK guard
+    reports success while doing nothing.**
+    12(b) instructs enumerating INSTALLED non-Steam games and repointing one, which presumes an
+    existing Wine prefix. A game installed *in order to satisfy* 12(b) has none. The DXVK toggle then
+    hits `tools/index.ts:232-243`, whose `isValidPrefix` gates on `${winePrefix}/.update-timestamp`,
+    logs `DXVK cannot be installed on a Proton or a invalid prefix!` — **and `return true`s anyway**
+    (its own comment: "otherwise the toggle will be stuck and the prefix might just not be crated
+    yet"). The toggle flips, the config persists, and the UI is indistinguishable from a real
+    install. Resolution used this run: launch the game once so `wineboot --init` creates the prefix,
+    then re-confirm the OFF premise from disk before the scored click.
+    **NOT determined:** whether this silent-success guard is why item 4 read as unmeasurable in runs
+    1-4. It is a strong candidate — a toggle that always reports success cannot be distinguished from
+    a working one without reading the log or the prefix — but earlier runs' logs were not re-examined
+    for this signature and the claim is not made.
+
+41. **`F-34.5-G6-33` — two identically-named `.app` bundles make item 3's launch step ambiguous.**
+    `~/Applications/<title>.app` (the SHORTCUT, `Contents/MacOS/run.sh`) and `~/GameLib/<title>.app`
+    (the INSTALLED GAME, a real executable) are both indexed by macOS, so Launchpad and Spotlight
+    show two identical entries. The first launch attempt hit the game bundle and produced **zero**
+    log lines of any kind; the shortcut bundle produced the full
+    `[ProtocolHandler] -> Launching -> gogdl launch` chain. The total silence is itself the
+    discriminator, and it cost one round of confusion before being diagnosed.
+    **NOT determined:** whether any UI affordance distinguishes them for a user, or whether the
+    shortcut bundle should be named differently. Mitigation used this run: launch by explicit path
+    (`open "~/Applications/<title>.app"`), recorded in item 3's Result as a considered substitution
+    for a Finder double-click, not a silent deviation.
+
+42. **Contract-defect tally (T-34.4.2-42) — this run's count is 2.**
+    Recorded as its own numbered item because the plan requires this number to surface every run,
+    including when it is zero. Both are STRUCK clauses in item 1; **no clause was struck in items 2,
+    3 or 4.**
+    - **Item 1 clause (e)** ("the account surface showing the signed-in username") — invalidated by
+      quick task `260815-kt0` (`0d54b16b7`, 2026-08-15 15:20), which removed per-store identity
+      rendering for a uniform "Connected" indicator. This contract was authored 2026-08-14 11:38, so
+      the clause was satisfiable when written and died ~28 hours later. Shared by items 1 and 2,
+      **counted once**.
+    - **Item 1 clause (i), second transcription** — unperformable for the GOG flow: the sheet tears
+      down in the same second as the origin transition, so the banner never re-texts to
+      `embed.gog.com`. Proven by screen frames spanning the transition second, by zero
+      post-transition `origin banner updated` events, and by the operator's own observation.
+    **Neither was struck for convenience** — each has positive evidence that the observation cannot
+    be made, and both were ratified by the operator before scoring. **Two structural impossibilities
+    survived a seven-test Structural Reachability Review**, which is the signal this tally exists to
+    give a future author; both are of the family Tests 4 and 7 are meant to catch. Note clause (i) is
+    the SECOND consecutive retarget of the same observation to land on an impossibility —
+    D-CYCLE7-A moved it off the `NSWindow` title (`F-34.5-G6-16`) for exactly the same reason.
