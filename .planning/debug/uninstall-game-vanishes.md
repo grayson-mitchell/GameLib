@@ -10,9 +10,25 @@ parked: 2026-07-22
 unparked: 2026-08-19
 parked_reason: "User parked pending planned daemon-based rearchitecture — intends to re-test this symptom once the app no longer carries Electron's renderer/state complexity."
 unpark_reason: "Parking condition MET (app is now Tauri) and the symptom RECURRED on the install side as G-23.2-01 during /gsd-verify-work 23.2."
-also_tracked_as: G-23.2-01 (.planning/phases/23.2-.../23.2-HUMAN-UAT.md)
+also_tracked_as: "G-23.2-01 (.planning/phases/23.2-.../23.2-HUMAN-UAT.md) -- ROUTED OUT of that ledger 2026-08-19 (quick task 260819-r4k); the entry there is retained at status `routed` and that phase's open_gaps is now []"
+sole_owner: true  # since 2026-08-19 this file is the ONLY live record of the vanish defect. No phase ledger carries it as open, so /gsd-audit-uat will not resurface it. Do not archive or close this session until the bug recurs and is fixed.
 branch: fix/steam-native-install-stability
 ---
+
+## THIS FILE IS THE SOLE LIVE RECORD (2026-08-19)
+
+`G-23.2-01` was **routed out** of `23.2-HUMAN-UAT.md` on 2026-08-19 (quick task
+`260819-r4k`). Phase 23.2's four gates were all discharged and this defect — surfaced
+during its UAT run but belonging to a different subsystem, and explicitly scoped as not
+affecting any of that phase's truths — was the only thing keeping its ledger non-empty.
+The entry is retained there at `status: routed` with its full triage intact; that phase's
+`open_gaps` is now `[]`.
+
+**Nothing about the defect changed.** It is not fixed, not reproduced, and not
+understood. What changed is that no phase ledger will surface it any more, so a
+cross-phase sweep (`/gsd-audit-uat`) cannot resurface it either — **this file is the only
+thing that will.** Keep it `parked`; do not archive or close it until there is a
+recurrence and a fix.
 
 ## RE-PARKED 2026-08-19 (same day) — UNREPRODUCED, READ THIS FIRST
 
