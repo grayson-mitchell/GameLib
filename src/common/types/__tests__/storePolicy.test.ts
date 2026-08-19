@@ -50,7 +50,8 @@ const BOOT_SET_CACHE_STORE_NAMES = [
   'legendary_library',
   'gog_library',
   'nile_library',
-  'zoom_library'
+  'zoom_library',
+  'steam_library'
 ]
 
 describe('allow-list', () => {
