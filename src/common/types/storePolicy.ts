@@ -175,14 +175,15 @@ export const STORE_ALLOWLIST: Record<string, readonly string[] | '*'> = {
 export const DENIED_CACHE_STORES: readonly string[] = ['humble_library']
 
 /**
- * D-13: the four dynamically-named `CacheStore`s that are part of the synchronous boot
+ * D-13: the five dynamically-named `CacheStore`s that are part of the synchronous boot
  * read path even though they are not `ValidStoreName`s. See `BOOT_SET_STORES` below.
  */
 const BOOT_SET_CACHE_STORE_NAMES: readonly string[] = [
   'legendary_library',
   'gog_library',
   'nile_library',
-  'zoom_library'
+  'zoom_library',
+  'steam_library'
 ]
 
 /**

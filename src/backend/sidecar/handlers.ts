@@ -228,7 +228,7 @@ registerStoreWriteHandlers()
 // ---- Store layer read path (Plan 04, D-02 / D-03 / D-08) -------------------
 
 /**
- * D-13's four dynamically-named `CacheStore` names carried inside
+ * D-13's five dynamically-named `CacheStore` names carried inside
  * `BOOT_SET_STORES`/`STORE_UNIVERSE` that are NOT `ValidStoreName`s —
  * mirrors `storePolicy.ts`'s own (unexported) boot-set cache-store name
  * list. Declared here rather than exported from `storePolicy.ts`, to avoid
@@ -252,6 +252,7 @@ const CACHE_BACKED_STORE_NAMES: readonly string[] = [
   'gog_library',
   'nile_library',
   'zoom_library',
+  'steam_library',
   'wikigameinfo'
 ]
 

@@ -218,7 +218,7 @@ describe('round-trip', () => {
     }
   )
 
-  // D-13's four dynamically-named CacheStore names that are part of the
+  // D-13's five dynamically-named CacheStore names that are part of the
   // synchronous boot read path even though they are not `ValidStoreName`s,
   // PLUS `wikigameinfo` (a `ValidStoreName` that is nonetheless constructed
   // as a `CacheStore` in the real backend — see the comment above) —
@@ -229,6 +229,7 @@ describe('round-trip', () => {
     'gog_library',
     'nile_library',
     'zoom_library',
+    'steam_library',
     'wikigameinfo'
   ] as const
 
