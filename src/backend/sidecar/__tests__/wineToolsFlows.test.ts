@@ -2,7 +2,7 @@
  * Bidirectional registration-kind proof for the sidecar's Wine execution + Wine-version-
  * management + DXVK/VKD3D toggle channel cluster (Phase 34.5 Plans 05/09, REQ-34.5-03).
  *
- * Five describe blocks:
+ * Six describe blocks:
  *   1. Registration kind — all 9 channels (`runWineCommand`, `getAlternativeWine`,
  *      `wine.isValidVersion`, `installWineVersion`, `refreshWineVersionInfo`, `removeWineVersion`,
  *      `toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`) are `ipcMain.handle`, never `ipcMain.on`,
@@ -29,6 +29,12 @@
  *      `toggleVKD3D` handler can be proven to forward the literal `'vkd3d'`, not `'dxvk'` (a
  *      copy-paste error in the three near-identical toggle bodies would otherwise be silent,
  *      T-34.5-31).
+ *
+ *   6. Platform-branch absence gate (T-34.5-17 plan 34.5-05, T-34.5-32 plan 34.5-09, root cause
+ *      R2 in `34.5-SECURITY.md`) — both rows declared a `grep` assertion that no
+ *      `process.platform`/`isMac`/`isLinux` branch was introduced outside comments in
+ *      `wineToolsFlowRegistration.ts`, but the assertion never existed. This builds it, RED-proven
+ *      against specimens derived by inserting real branch shapes into the real source text.
  *
  * `runnerSliceRegistration.test.ts` (plan 34.5-04) is intentionally NOT edited by this plan — its
  * containment pin is growth-tolerant and keeps passing as this cluster fills in; its own
@@ -254,7 +260,9 @@ describe('D-15/T-34.5-30 dialog safety pin — showDialogBoxModalAuto never prop
 // forwards its own literal, not a neighbour's.
 describe("tool-literal proof — toggleVKD3D forwards the literal 'vkd3d', not 'dxvk'", () => {
   it("T-34.5-31 the registered 'toggleVKD3D' handler forwards gameSettings and the literal 'vkd3d' to DXVK.installRemove", async () => {
-    const fakeGameSettings = { marker: 'fake-game-settings-for-toggleVKD3D-test' }
+    const fakeGameSettings = {
+      marker: 'fake-game-settings-for-toggleVKD3D-test'
+    }
     const mockGetSettings = jest.fn().mockResolvedValue(fakeGameSettings)
     ;(GameConfig.get as jest.Mock).mockReturnValue({
       getSettings: mockGetSettings
@@ -284,4 +292,97 @@ describe("tool-literal proof — toggleVKD3D forwards the literal 'vkd3d', not '
     expect(forwardedTool).not.toBe('dxvk')
     expect(forwardedAction).toBe('backup')
   })
+})
+
+// ── Describe 6: Platform-branch absence gate (T-34.5-17, T-34.5-32 — root cause R2) ───────────
+// Both rows in `34.5-SECURITY.md` declared, verbatim: "grep asserts no process.platform/isMac/
+// isLinux branch was introduced outside comments" in `wineToolsFlowRegistration.ts`. The
+// invariant was true but the assertion never existed. This builds the control the rows already
+// claimed to have.
+describe('T-34.5-17 / T-34.5-32 (plans 34.5-05 / 34.5-09, root cause R2) — platform-branch absence gate over wineToolsFlowRegistration.ts', () => {
+  // Shared by every assertion below so the RED-proof and the live assertion exercise the exact
+  // same code path -- proving the patterns fire is the same act as proving the gate fires. No
+  // assertion in this block restates a regex literal inline; all go through platformTokenHits().
+  //
+  // `\bisMac\b` / `\bisLinux\b` are word-boundary-anchored deliberately: this codebase already
+  // contains longer real identifiers such as `isMacNative` and `isLinuxFamily` (also
+  // `isMacOSUpToDate`, `isLinuxNative`, `effectiveIsMacNative`) that a naive `includes()` check
+  // would falsely match. `process.platform` needs no anchor -- the `.` already makes it
+  // unambiguous -- but the `.` itself must be escaped so it doesn't match any character.
+  const PLATFORM_PATTERNS: { name: string; pattern: RegExp }[] = [
+    { name: 'process.platform', pattern: /process\.platform/ },
+    { name: 'isMac', pattern: /\bisMac\b/ },
+    { name: 'isLinux', pattern: /\bisLinux\b/ }
+  ]
+
+  // Takes ALREADY-PREPARED text (stripped or raw -- the caller decides) and does no stripping
+  // itself. This is the anti-vacuity mechanism: every assertion in this block, live or RED-proof,
+  // routes through this one function.
+  function platformTokenHits(sourceText: string): string[] {
+    return PLATFORM_PATTERNS.filter(({ pattern }) =>
+      pattern.test(sourceText)
+    ).map(({ name }) => name)
+  }
+
+  const WINE_TOOLS_REGISTRATION_SRC_PATH = join(
+    __dirname,
+    '..',
+    'wineToolsFlowRegistration.ts'
+  )
+  const realSource = readFileSync(WINE_TOOLS_REGISTRATION_SRC_PATH, 'utf-8')
+
+  it('T-34.5-17 / T-34.5-32 comment-stripped wineToolsFlowRegistration.ts contains zero process.platform, isMac, isLinux hits', () => {
+    expect(platformTokenHits(stripSourceComments(realSource))).toEqual([])
+  })
+
+  // Filled-specimen / stripper-integrity control: the RAW module genuinely contains all three
+  // tokens (in the D-13 rationale comments at lines 204, 207, 218, 220, 222 -- five lines, not
+  // the three the original R2 finding text lists). This is what makes the gate above non-vacuous:
+  // a broken stripSourceComments turns the invariant test RED instead of silently green. This
+  // assertion is expected to change if the D-13 comments are ever reworded -- if it does, the
+  // correct response is to re-derive it against the new raw source, never to delete it.
+  it('filled-specimen control: the RAW (unstripped) source contains all three tokens, proving the gate above is stripper-dependent, not vacuous', () => {
+    expect(platformTokenHits(realSource)).toEqual([
+      'process.platform',
+      'isMac',
+      'isLinux'
+    ])
+  })
+
+  it('RED-proof: the platform-token gate trips against a specimen derived by inserting the forbidden branch into the real wineToolsFlowRegistration.ts source', () => {
+    const isMacSpecimen = stripSourceComments(
+      `${realSource}\nif (isMac) { return true }\n`
+    )
+    expect(platformTokenHits(isMacSpecimen)).toEqual(['isMac'])
+
+    const isLinuxSpecimen = stripSourceComments(
+      `${realSource}\nif (!isLinux) { return }\n`
+    )
+    expect(platformTokenHits(isLinuxSpecimen)).toEqual(['isLinux'])
+
+    const processPlatformSpecimen = stripSourceComments(
+      `${realSource}\nif (process.platform === 'darwin') { return true }\n`
+    )
+    expect(platformTokenHits(processPlatformSpecimen)).toEqual([
+      'process.platform'
+    ])
+  })
+
+  // False-positive control: the word-boundary anchoring on isMac/isLinux must reject every one
+  // of these longer identifiers, which really exist elsewhere in this codebase.
+  it.each([
+    'isMacNative',
+    'isMacOSUpToDate',
+    'isLinuxNative',
+    'isLinuxFamily',
+    'effectiveIsMacNative'
+  ])(
+    'false-positive control: %s does not trip the gate',
+    (lookalikeIdentifier) => {
+      const specimen = stripSourceComments(
+        `${realSource}\nconst ${lookalikeIdentifier} = true\n`
+      )
+      expect(platformTokenHits(specimen)).toEqual([])
+    }
+  )
 })
