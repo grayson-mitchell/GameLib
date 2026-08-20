@@ -3632,6 +3632,50 @@ v0.8: 27 (depends on the Phase 1-26 backend lineage + spikes 009-012)
 | 26. Steam Key Redemption | 5/5 | Complete | 2026-07-20 |
 | 27. Tauri Shell Walking Skeleton | 5/5 | Complete | 2026-07-21 |
 
+### Phase 36: Login-to-Steam crossfade and explicit login-in-flight mitigation
+
+**Goal:** Clicking the Steam tile plays ONE continuous motion: the login panel (`.loginContentWrapper`) slides up and out of view while the Steam sign-in Dialog slides up into position, with `.loginBackground` remaining painted underneath the whole time. Both surfaces are on screen simultaneously and cross in flight — so the Steam flow becomes an OVERLAY on `/login` rather than a navigation to the sibling route `loginweb/steam`.
+
+**Requirements**: TBD
+**Depends on:** Phase 35
+**Plans:** 0 plans
+
+**COUPLED SECURITY WORK — NOT OPTIONAL, AND NOT SEPARABLE FROM THE ANIMATION.**
+Retiring the navigation removes the unmount that is *currently the entire frontend mitigation* for
+**T-34.4.2-39** (spoofing — an unrequested second login sheet) and **T-34.4.2-41** (DoS — a
+single-flight latch that never clears). Per
+`src/frontend/screens/Login/__tests__/loginInFlightUiReachability.test.tsx`, the mechanism in force
+today is that clicking any login tile *navigates away and unmounts all six tiles at once* — and the
+tiles' `disabled` prop is wired **only** to `oldMac`, with no login-in-flight state anywhere in
+`Login/index.tsx`. Once the panel stays mounted behind the overlay, those five other tiles are
+clickable again unless something explicitly stops them.
+
+This phase must therefore ALSO:
+1. Introduce real login-in-flight state on the Login screen — the other tiles `disabled`,
+   `pointer-events: none`, and `inert` while the Steam flow is open.
+2. Rewrite `loginInFlightUiReachability.test.tsx` to pin the NEW mechanism. Its current prose
+   documents the unmount as the mitigation; leaving that in place would make it a passing test that
+   describes something no longer true.
+3. Update the threat register for T-34.4.2-39 / T-34.4.2-41 — basis changes from incidental unmount
+   to an explicit, stated guard.
+
+Operator explicitly approved this threat-model change on 2026-08-20, choosing it over a cheaper
+sequential handoff, on the grounds that an explicit guard is stronger than an incidental one.
+
+**Anchors (verified 2026-08-20):**
+- `Login/index.tsx:123-133` already separates `.loginBackground` from `.loginContentWrapper` — the
+  background layer is independent, so "background remains" needs no new element.
+- The shared `Dialog` primitive already slides up at 500ms via `TransitionComponent`
+  (quick task `260820-kq0`, commit `1b7fa0eaa`). The entrance half of the motion exists; the exit
+  half and the co-mounting do not.
+- `App.tsx:236-239` is where `loginweb/steam` is registered as a sibling route today.
+- Backdrop is NOT the problem: MUI's default is `rgba(0,0,0,0.5)` with no override in the repo. The
+  flat-grey appearance is caused by the Login screen being unmounted, leaving nothing behind the
+  scrim. This phase fixes that as a side effect.
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 36 to break down)
+
 ---
 
 ## Parked / Superseded Phases
