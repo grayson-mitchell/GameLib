@@ -1,4 +1,5 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
+import classNames from 'classnames'
 import './index.scss'
 import Runner from './components/Runner'
 import { useTranslation } from 'react-i18next'
@@ -18,6 +19,7 @@ import {
 } from '../../components/UI'
 import { FlagPosition } from '../../components/UI/LanguageSelector'
 import SIDLogin from './components/SIDLogin'
+import SteamLogin from './components/SteamLogin'
 import ContextProvider from '../../state/ContextProvider'
 import { useAwaited } from '../../hooks/useAwaited'
 import { hasHelp } from 'frontend/hooks/hasHelp'
@@ -34,6 +36,11 @@ export const steamLoginPath = '/loginweb/steam'
 // toast (HumbleExpiryToast) imports it from here too.
 export const humbleLoginPath = '/loginweb/humble'
 
+// Mirrors Dialog.tsx's `transitionDuration={500}` (its Slide exit transition
+// needs a full 500ms of mounted time to play). loginCrossfade.test.ts asserts
+// these two literals agree.
+const STEAM_DIALOG_EXIT_MS = 500
+
 export default React.memo(function NewLogin() {
   const { epic, gog, amazon, zoom, steam, humble, refreshLibrary } =
     useContext(ContextProvider)
@@ -48,6 +55,25 @@ export default React.memo(function NewLogin() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [showSidLogin, setShowSidLogin] = useState(false)
+  // Steam sign-in overlay lifecycle (Task 2, 36-01). `steamOverlayMounted`
+  // controls whether <SteamLogin> is in the tree at all; `steamFlowOpen` is
+  // the semantic "the Steam sign-in surface is up" flag that feeds
+  // `loginInFlight` below and clears synchronously on dismiss (see
+  // dismissSteamOverlay). `steamMountKey` forces a fresh `<SteamLogin>` mount
+  // on reopen so a reopen during the teardown window never resurrects a
+  // stale `Step`. `steamUnmountTimerRef` holds the pending deferred-unmount
+  // timer handle.
+  const [steamOverlayMounted, setSteamOverlayMounted] = useState(false)
+  const [steamFlowOpen, setSteamFlowOpen] = useState(false)
+  const [steamMountKey, setSteamMountKey] = useState(0)
+  const steamUnmountTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  )
+  // The explicit, stated guard this phase's ROADMAP obligation asks for.
+  // Named separately rather than inlined so the six tile call sites read the
+  // guard's intent directly -- this is the seam a future phase widens when a
+  // second store adopts the overlay shape.
+  const loginInFlight = steamFlowOpen
   const [isEpicLoggedIn, setIsEpicLoggedIn] = useState(Boolean(epic.username))
   const [isGogLoggedIn, setIsGogLoggedIn] = useState(Boolean(gog.username))
   const [isAmazonLoggedIn, setIsAmazonLoggedIn] = useState(
@@ -110,6 +136,45 @@ export default React.memo(function NewLogin() {
     t
   ])
 
+  // Cleanup: a pending deferred-unmount timer must never fire against an
+  // unmounted component.
+  useEffect(() => {
+    return () => {
+      if (steamUnmountTimerRef.current) {
+        clearTimeout(steamUnmountTimerRef.current)
+      }
+    }
+  }, [])
+
+  function openSteamOverlay() {
+    // Clear any pending unmount timer and bump the mount key so a reopen
+    // during the teardown window remounts SteamLogin at its first Step
+    // instead of resurrecting the previous open's state -- Dialog mounts
+    // with `open` initialised to `true`, so a remount is the only way to
+    // reopen it.
+    if (steamUnmountTimerRef.current) {
+      clearTimeout(steamUnmountTimerRef.current)
+      steamUnmountTimerRef.current = null
+    }
+    setSteamMountKey((key) => key + 1)
+    setSteamOverlayMounted(true)
+    setSteamFlowOpen(true)
+  }
+
+  function dismissSteamOverlay() {
+    // T-34.4.2-41: the semantic flag clears on the dismiss action itself,
+    // synchronously and immediately -- never on the teardown timer -- so
+    // the guard can never stay latched.
+    setSteamFlowOpen(false)
+    if (steamUnmountTimerRef.current) {
+      clearTimeout(steamUnmountTimerRef.current)
+    }
+    steamUnmountTimerRef.current = setTimeout(() => {
+      setSteamOverlayMounted(false)
+      steamUnmountTimerRef.current = null
+    }, STEAM_DIALOG_EXIT_MS)
+  }
+
   async function handleLibraryClick() {
     await refreshLibrary({ runInBackground: false, origin: 'login-screen' })
     navigate('/')
@@ -120,7 +185,7 @@ export default React.memo(function NewLogin() {
   }
 
   return (
-    <div className="loginPage">
+    <div className={classNames('loginPage', { steamFlowOpen })}>
       {showSidLogin && (
         <SIDLogin
           backdropClick={() => {
@@ -129,8 +194,24 @@ export default React.memo(function NewLogin() {
         />
       )}
       <div className="loginBackground"></div>
+      {steamOverlayMounted && (
+        <SteamLogin key={steamMountKey} dismiss={dismissSteamOverlay} />
+      )}
 
-      <div className="loginContentWrapper">
+      {/* T-34.4.2-39/-41: `inert` is the React-18 string-empty form (boolean
+          `inert` is React-19-only; this project pins react@^18.3.1). No
+          `tabIndex` here -- the tiles are bare `<div onClick>` with no
+          tabIndex/role, already outside the tab order, so a container
+          tabIndex would protect nothing (operator-dropped lock, see
+          36-01-PLAN.md locked_decisions). No `aria-hidden` here either --
+          this wrapper holds two genuinely focusable controls
+          (LanguageSelector, goToLibrary) and `aria-hidden` over focusable
+          descendants is an ARIA violation; MUI's Dialog focus trap covers
+          the pre-Safari-15.5 slice where `inert` does not. */}
+      <div
+        className="loginContentWrapper"
+        inert={loginInFlight ? '' : undefined}
+      >
         <div className="runnerList">
           <div className="runnerHeader">
             <img src={GameLibIcon} className="runnerHeaderIcon" alt="GameLib" />
@@ -169,7 +250,7 @@ export default React.memo(function NewLogin() {
               // is the ALTERNATIVE tile and under Electron it is the PRIMARY tile, so this
               // ternary names the embedded web login in both shells -- SIDLogin is never red.
               deprecatedTile={isTauri() ? 'alternative' : 'primary'}
-              disabled={oldMac}
+              disabled={oldMac || loginInFlight}
             />
             <Runner
               class="gog"
@@ -178,7 +259,7 @@ export default React.memo(function NewLogin() {
               loginUrl={gogLoginPath}
               isLoggedIn={isGogLoggedIn}
               logoutAction={gog.logout}
-              disabled={oldMac}
+              disabled={oldMac || loginInFlight}
             />
             <Runner
               class="nile"
@@ -187,7 +268,7 @@ export default React.memo(function NewLogin() {
               loginUrl={amazonLoginPath}
               isLoggedIn={isAmazonLoggedIn}
               logoutAction={amazon.logout}
-              disabled={oldMac}
+              disabled={oldMac || loginInFlight}
             />
             {zoom.enabled && (
               <Runner
@@ -197,7 +278,7 @@ export default React.memo(function NewLogin() {
                 loginUrl={zoomLoginPath}
                 isLoggedIn={isZoomLoggedIn}
                 logoutAction={zoom.logout}
-                disabled={oldMac}
+                disabled={oldMac || loginInFlight}
               />
             )}
             <Runner
@@ -207,7 +288,8 @@ export default React.memo(function NewLogin() {
               loginUrl={steamLoginPath}
               isLoggedIn={isSteamLoggedIn}
               logoutAction={steam?.logout ?? (() => Promise.resolve())}
-              disabled={oldMac}
+              primaryLoginAction={openSteamOverlay}
+              disabled={oldMac || loginInFlight}
             />
             <Runner
               class="humble"
@@ -220,7 +302,7 @@ export default React.memo(function NewLogin() {
               loginUrl={humbleLoginPath}
               isLoggedIn={isHumbleLoggedIn}
               logoutAction={humble?.logout ?? (() => Promise.resolve())}
-              disabled={oldMac}
+              disabled={oldMac || loginInFlight}
             />
           </div>
           {humble?.encryptionDegraded && (
