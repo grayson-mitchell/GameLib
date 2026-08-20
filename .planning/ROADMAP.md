@@ -3638,7 +3638,7 @@ v0.8: 27 (depends on the Phase 1-26 backend lineage + spikes 009-012)
 
 **Requirements**: REQ-36-01, REQ-36-02, REQ-36-03, REQ-36-04, REQ-36-05
 **Depends on:** Phase 35
-**Plans:** 5 plans
+**Plans:** 3 plans
 
 **COUPLED SECURITY WORK — NOT OPTIONAL, AND NOT SEPARABLE FROM THE ANIMATION.**
 Retiring the navigation removes the unmount that is *currently the entire frontend mitigation* for
@@ -3674,11 +3674,9 @@ sequential handoff, on the grounds that an explicit guard is stronger than an in
   scrim. This phase fixes that as a side effect.
 
 Plans:
-- [ ] 36-01-PLAN.md — Retire the `loginweb/steam` route: SteamLogin becomes a dismiss-by-callback overlay co-mounted on /login
-- [ ] 36-02-PLAN.md — Explicit `loginInFlight` guard on all six tiles + full rewrite of `loginInFlightUiReachability.test.tsx`
-- [ ] 36-03-PLAN.md — The crossfade motion in `Login/index.scss` + `loginCrossfade.test.ts` duration-agreement gate
-- [ ] 36-04-PLAN.md — Fourteenth threat-register update (T-34.4.2-39/-41 basis change) + mint REQ-36-01..05
-- [ ] 36-05-PLAN.md — BLOCKING human visual + reachability gate (the animation is the deliverable; no source gate can see it)
+- [ ] 36-01-PLAN.md — Overlay conversion + explicit `loginInFlight` guard + crossfade, in one plan: the guard replaces the unmount inside a single task, so no unguarded window exists
+- [ ] 36-02-PLAN.md — Fourteenth threat-register update (T-34.4.2-39/-41 basis change) + mint REQ-36-01..05
+- [ ] 36-03-PLAN.md — BLOCKING human visual + reachability gate (the animation is the deliverable; no source gate can see it)
 
 ---
 
