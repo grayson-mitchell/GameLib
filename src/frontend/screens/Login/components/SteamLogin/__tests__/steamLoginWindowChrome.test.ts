@@ -80,7 +80,53 @@ describe('quick-260820-kq0: SteamLogin renders inside a single shared Dialog win
     // shared closeWindow handler.
     expect(source).toMatch(/showCloseButton=\{true\}/)
     expect(source).toMatch(/onClose=\{closeWindow\}/)
-    expect(source).toContain("const closeWindow = () => navigate('/login')")
+    // 36-01: closeWindow no longer navigates the router away from the
+    // overlay -- it delegates to the `dismiss` callback prop supplied by
+    // Login/index.tsx, which clears steamFlowOpen synchronously and defers
+    // the actual unmount so the Dialog's own exit transition can play.
+    expect(source).toContain('const closeWindow = () => dismiss()')
+  })
+
+  it('SOURCE GATE (PRESENCE) -- 36-01: SteamLogin is dismissed via a `dismiss` callback prop, not a router navigation', () => {
+    const source = read(STEAM_LOGIN_TSX)
+
+    // Breaks if: the component signature stops destructuring `dismiss` from
+    // its Props (e.g. reverts to a bare `SteamLogin()` with no dismissal
+    // callback, or renames the prop).
+    expect(source).toMatch(/export default function SteamLogin\(\{\s*dismiss\s*\}: Props\)/)
+  })
+
+  it('SOURCE GATE (ABSENCE) -- 36-01: no react-router navigation remains anywhere in the overlay -- dismissal is entirely callback-driven', () => {
+    const source = read(STEAM_LOGIN_TSX)
+
+    // Breaks if: any call site (or the import that would make one possible)
+    // reintroduces navigate('/login') as a dismissal path -- the exact
+    // regression Login/index.tsx's new loginInFlight guard and deferred
+    // unmount are built to replace.
+    expect((source.match(/\bnavigate\(/g) ?? []).length).toBe(0)
+    expect((source.match(/\buseNavigate\b/g) ?? []).length).toBe(0)
+  })
+
+  it('SOURCE GATE (PRESENCE, census) -- closeWindow has exactly one definition and exactly three non-calling consumers (Class C), matching the verified 8-site dismissal census', () => {
+    const source = read(STEAM_LOGIN_TSX)
+
+    // Class A: the one definition itself.
+    expect((source.match(/const closeWindow = \(\) => dismiss\(\)/g) ?? []).length).toBe(1)
+
+    // Class C: sites that reference (rather than call) closeWindow -- the
+    // "Return to Login" click handler, the Dialog's own onClose, and
+    // DialogHeader's onClose (the last of these is structurally inert dead
+    // code -- DialogHeader destructures only `children` -- and must stay
+    // that way, not be "fixed").
+    const consumerSites =
+      (source.match(/onClick=\{closeWindow\}/g) ?? []).length +
+      (source.match(/onClose=\{closeWindow\}/g) ?? []).length
+    expect(consumerSites).toBe(3)
+
+    // Total identifier occurrences: 1 definition + 4 Class B calls + 3 Class
+    // C consumers = 8, the plan's full verified dismissal census for this
+    // file.
+    expect((source.match(/closeWindow/g) ?? []).length).toBe(8)
   })
 
   it('SOURCE GATE (ABSENCE) -- the old bare, unadorned panel root is gone from both the component and its stylesheet', () => {

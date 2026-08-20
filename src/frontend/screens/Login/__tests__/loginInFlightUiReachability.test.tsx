@@ -1,8 +1,27 @@
 /**
- * F-34.4.2-17 / D-G1 layer (b): pins the frontend behaviour that actually
- * prevents a second store's sign-in control from being clicked while
- * another login is in flight, so withdrawing gate item 5 (RERUN-4) does not
- * leave T-34.4.2-39/-41 with a silent regression path.
+ * F-34.4.2-17 / D-G1 layer (b), REWRITTEN by plan 36-01 Task 4: this file
+ * used to pin the OLD mechanism -- unmount-via-navigation -- that made a
+ * second store's sign-in control unreachable while one login was in flight.
+ * Plan 36-01 replaces that incidental mitigation with an EXPLICIT
+ * `loginInFlight` guard (Login/index.tsx, Task 2) for the Steam flow
+ * specifically: the Steam tile no longer navigates away from `/login` at
+ * all -- it opens a co-mounted overlay -- so the old "clicking any tile
+ * unmounts the whole runnerGroup" mechanism no longer covers Steam. This
+ * file now pins BOTH mechanisms as they currently coexist:
+ *
+ *   - Amazon/GOG/Zoom/Humble (no `primaryLoginAction`) still navigate away
+ *     via `Runner.handleLogin()` -> `navigate(props.loginUrl)`, still
+ *     unmounting the whole `runnerGroup` (assertions 1, 3, 4).
+ *   - Steam (and Epic-under-Tauri via SIDLogin, out of scope here per
+ *     F-36-01) uses `primaryLoginAction`, which returns BEFORE the navigate
+ *     call -- no navigation, no unmount. Its own tile's disable comes from
+ *     the shared `oldMac || loginInFlight` expression now fed to ALL SIX
+ *     tiles uniformly (assertion 2), not from unmounting.
+ *
+ * F-36-01 (accept, DEFERRED): Epic-under-Tauri's SIDLogin path also uses
+ * `primaryLoginAction` but is NOT wired into `loginInFlight` by this plan --
+ * every universal assertion below is scoped to what the Steam flow actually
+ * changed, not to Epic.
  *
  * SOURCE GATES, NOT RENDER TESTS. This jest project
  * (`src/frontend/jest.config.js`) is `testEnvironment: 'node'` -- there is
@@ -10,76 +29,33 @@
  * here. Every assertion below reads a source file with `readFileSync`,
  * strips comments with `stripSourceComments`, and matches text. These prove
  * the SOURCE SHAPE the six-tile Login screen implements, not anything about
- * a rendered document tree or a real live click.
- *
- * MECHANISM, AS DERIVED FROM SOURCE (not assumed) -- this CORRECTS the
- * "the frontend disables/clears the other login buttons while one login is
- * in flight" characterisation recorded in `deferred-items.md` and
- * `ROADMAP.md`. That characterisation is WRONG. What the source actually
- * does, confirmed by direct inspection at plan 34.4.2-22 execution time:
- *
- *   1. Every one of the six Runner tiles on the Login screen
- *      (`Login/index.tsx`) passes `disabled={oldMac}` and NOTHING else --
- *      `oldMac` derives solely from a macOS-major-version check
- *      (`systemInfo?.OS.platform === 'darwin'` and version < 12). No
- *      login-in-flight, pending-login, or is-logging-in state feeds
- *      `disabled` anywhere in this file. Clicking Amazon does not disable
- *      or grey out the Humble tile -- it stays exactly as clickable as it
- *      was a moment before.
- *   2. `Runner.handleLogin()` (`Runner/index.tsx`), for every tile with no
- *      `primaryLoginAction` (the GOG/Amazon/Steam/Zoom/Humble shape --
- *      Epic under Tauri is the sole exception via `primaryLoginAction`, out
- *      of scope here per this phase's own Epic-deferred boundary), calls
- *      `navigate(props.loginUrl)` -- a full React Router navigation.
- *   3. `loginweb/:runner` is registered as a SIBLING route of `login`
- *      itself, inside the same top-level `children` array of the same
- *      `createHashRouter` tree (`App.tsx`) -- not a nested or overlay
- *      route. React Router therefore UNMOUNTS the whole `NewLogin`
- *      component -- and with it the single `runnerGroup` container holding
- *      all six tiles -- and mounts the WebView screen in its place.
- *
- * So the reason a second store's sign-in control is unreachable during
- * Amazon's ~7-8s nile spawn delay is not that Humble's button became
- * disabled -- it is that clicking Amazon's tile NAVIGATES AWAY from the
- * screen the Humble tile lives on, taking every tile with it at once. A
- * future document citing this mechanism should say "clicking a login tile
- * navigates away from the Login screen, unmounting every tile including the
- * one the user would otherwise click next" -- not "disables/clears the
- * other login buttons."
+ * a rendered document tree or a real live click (T-34.4.2-26 -- a green test
+ * suite has never once caught one of this phase's blocking live defects).
+ * Human visual verification of the actual overlay/crossfade is 36-03's job,
+ * not this file's.
  *
  * DISCHARGE BASIS, STATED HONESTLY: this file does NOT live-discharge
- * T-34.4.2-39 (spoofing -- an unrequested second login sheet) or
- * T-34.4.2-41 (denial of service -- a single-flight latch that never
- * clears). Both stay `mitigate` with basis UNIT-PROVEN (plan 14's
- * mutation-proven guard-ordering test,
- * `src/backend/__tests__/tauriShellSource.test.ts`, untouched by this file)
- * PLUS UI-PINNED (this file). Neither threat is, or will be after D-G1
- * withdraws gate item 5, LIVE-DISCHARGED by this phase's gate. A green run
- * of this file proves the source text below has this shape; it proves
- * nothing about what actually renders or what a real click actually does at
- * runtime (T-34.4.2-26 -- a green test suite has never once caught one of
- * this phase's blocking live defects).
+ * T-34.4.2-39/-41, T-36-01, or T-36-02. All stay `mitigate`/`accept` with
+ * basis UNIT-PROVEN plus UI-PINNED (this file). A green run proves the
+ * source text below has this shape; it proves nothing about what actually
+ * renders at runtime.
  *
- * FALSIFIABILITY (recorded per pin, per this phase's own regression-gate
- * register): ALL FIVE assertions below were confirmed, by a temporary local
- * mutation of the file each one guards and then a revert before commit, to
- * actually fail against the mutated shape -- full mutation text and the
- * observed Jest failure output for each of the four independent pins (the
- * disabled= set, the oldMac derivation, the runnerGroup container, the
- * loginweb/:runner sibling route) is recorded in 34.4.2-22-SUMMARY.md,
- * with every mutated file confirmed restored via `git diff --quiet` before
- * the next mutation began. What NO source-text gate in this file can ever
- * catch: a behaviour change made in a file this suite does not read, or a
- * runtime state change that leaves the source text of these three files
- * byte-identical (for example, a new state variable that happens to always
- * evaluate to `false` at the moment it is read -- exactly the shape of the
- * `const isLoggingIn = false` mutation used to prove the third pin above).
+ * FALSIFIABILITY (recorded per assertion in 36-01-SUMMARY.md): every
+ * assertion below was confirmed, by a temporary local mutation of the file
+ * it guards and then a revert before commit, to actually fail against the
+ * mutated shape. Per the executing task's explicit instruction, restoration
+ * was verified via a SHA-256 checksum of the pristine file taken before each
+ * mutation and compared after each revert -- NOT `git diff --quiet`, which
+ * this repo has an open, documented false-negative trap against. Full
+ * mutation text and observed Jest failure output for each assertion is
+ * recorded in 36-01-SUMMARY.md.
+ *
  * Each test below is individually labelled PRESENCE (a specific token must
- * exist -- the stronger kind, satisfied by fewer unrelated edits) or
- * ABSENCE (a token or shape must NOT exist -- the weaker kind, since many
- * unrelated edits also satisfy an absence). No assertion in this file
- * counts occurrences over unstripped source; every count and match below
- * operates on `stripSourceComments`'s output.
+ * exist -- the stronger kind, satisfied by fewer unrelated edits) or ABSENCE
+ * (a token or shape must NOT exist -- the weaker kind, since many unrelated
+ * edits also satisfy an absence). No assertion in this file counts
+ * occurrences over unstripped source; every count and match below operates
+ * on `stripSourceComments`'s output.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -92,10 +68,11 @@ const read = (relPath: string) =>
 
 const RUNNER_TSX = 'src/frontend/screens/Login/components/Runner/index.tsx'
 const LOGIN_TSX = 'src/frontend/screens/Login/index.tsx'
+const LOGIN_SCSS = 'src/frontend/screens/Login/index.scss'
 const APP_TSX = 'src/frontend/App.tsx'
 
-describe('F-34.4.2-17 / D-G1: what actually makes a second login tile unreachable while one login is in flight', () => {
-  it('SOURCE GATE (PRESENCE, strong) -- Runner.handleLogin(), for the no-primaryLoginAction shape (Amazon/GOG/Steam/Zoom/Humble), terminates by calling navigate(props.loginUrl). This proves the literal call sequence is in the function body, not that a real click occurred or that a screen actually changed.', () => {
+describe('F-34.4.2-17 / D-G1, 36-01: what makes a second login tile unreachable while one login is in flight', () => {
+  it('SOURCE GATE (PRESENCE, strong) -- Runner.handleLogin() guards on props.disabled FIRST, then the primaryLoginAction branch returns BEFORE the no-primaryLoginAction navigate(props.loginUrl) fallback', () => {
     const source = read(RUNNER_TSX)
     const start = source.indexOf('function handleLogin()')
     const end = source.indexOf('function handleAltLogin()')
@@ -103,29 +80,37 @@ describe('F-34.4.2-17 / D-G1: what actually makes a second login tile unreachabl
     expect(end).toBeGreaterThan(start)
     const body = source.slice(start, end)
 
-    // Breaks if: the primaryLoginAction branch's early return is removed, or
-    // the no-primaryLoginAction path stops calling navigate(props.loginUrl)
-    // -- either would change what actually happens when the Humble/Amazon/
-    // GOG/Steam/Zoom tile is clicked.
+    // Breaks if: the disabled guard is removed or moved after the
+    // primaryLoginAction check (a disabled tile could still fire its
+    // action), or the primaryLoginAction branch's early return is removed
+    // (Steam's overlay-open call would fall through into a navigate as
+    // well), or the no-primaryLoginAction path stops calling
+    // navigate(props.loginUrl).
+    const disabledGuardIndex = body.indexOf('if (props.disabled) {\n      return\n    }')
+    const primaryActionIndex = body.indexOf('if (props.primaryLoginAction) {')
+    const navigateIndex = body.indexOf('navigate(props.loginUrl)')
+
+    expect(disabledGuardIndex).toBeGreaterThan(-1)
+    expect(primaryActionIndex).toBeGreaterThan(disabledGuardIndex)
+    expect(navigateIndex).toBeGreaterThan(primaryActionIndex)
     expect(body).toMatch(
-      /if\s*\(props\.primaryLoginAction\)\s*\{\s*props\.primaryLoginAction\(\)\s*return\s*\}\s*navigate\(props\.loginUrl\)/
+      /if\s*\(props\.primaryLoginAction\)\s*\{\s*props\.primaryLoginAction\(\)\s*return\s*\}/
     )
   })
 
-  it('SOURCE GATE (ABSENCE, weak -- stated explicitly) -- disabled={oldMac} is the exact and ONLY expression fed to every one of the six Runner tiles on the Login screen; no other identifier or expression is ever passed as disabled=. This is the pin that matters most: it fails the moment anyone introduces a login-in-flight disable, which is precisely the change that would alter whether a UI-driven single-flight scenario becomes performable again -- forcing a deliberate re-derivation of this file rather than a silent drift. An absence assertion is weaker than a presence one (many unrelated edits also leave a set at size 1), which is why the presence-style count/uniqueness check below is paired with it.', () => {
+  it('SOURCE GATE (PRESENCE, inverted by 36-01) -- disabled={oldMac || loginInFlight} is the exact and ONLY expression fed to every one of the six Runner tiles on the Login screen; this is the explicit ROADMAP-required guard replacing the old incidental unmount-only mitigation. It fails the moment any tile stops carrying the shared guard, or carries a differently-derived one.', () => {
     const source = read(LOGIN_TSX)
     const disabledExpressions = source.match(/disabled=\{[^}]*\}/g) ?? []
 
     // Breaks if: a Runner tile is added/removed (count moves off 6), or any
-    // tile's disabled= expression stops being the literal token `oldMac`
-    // (uniqueness or literal-value check fails) -- e.g. a login-in-flight
-    // state variable feeding even one tile's disabled prop.
+    // tile's disabled= expression stops being the literal token
+    // `oldMac || loginInFlight` (uniqueness or literal-value check fails).
     expect(disabledExpressions.length).toBe(6)
     expect(new Set(disabledExpressions).size).toBe(1)
-    expect(disabledExpressions[0]).toBe('disabled={oldMac}')
+    expect(disabledExpressions[0]).toBe('disabled={oldMac || loginInFlight}')
   })
 
-  it('SOURCE GATE (PRESENCE + ABSENCE) -- oldMac itself is derived solely from a macOS-version check, never from a login/pending/in-flight state variable', () => {
+  it('SOURCE GATE (PRESENCE + ABSENCE) -- oldMac itself is still derived solely from a macOS-version check; loginInFlight is a SEPARATE, explicitly named identifier, never folded into oldMac\'s own derivation', () => {
     const source = read(LOGIN_TSX)
     const start = source.indexOf('let oldMac = false')
     const end = source.indexOf('useEffect(')
@@ -134,19 +119,25 @@ describe('F-34.4.2-17 / D-G1: what actually makes a second login tile unreachabl
     const body = source.slice(start, end)
 
     // Breaks if: the macOS-version-check expression is removed or renamed
-    // (presence half), or a login/pending/in-flight-shaped identifier is
-    // introduced into oldMac's own derivation (absence half).
+    // (presence half), or loginInFlight/pending/isLoggingIn-shaped
+    // identifiers are folded directly into oldMac's own derivation instead
+    // of staying a separately named, separately combined guard (absence
+    // half) -- collapsing the two would make the "explicit, separately
+    // named guard" claim in Login/index.tsx's own comment false.
     expect(body).toMatch(/systemInfo\?\.OS\.platform === 'darwin'/)
-    expect(body).not.toMatch(/pending|inFlight|isLoggingIn|loginInProgress/i)
+    expect(body).not.toMatch(/loginInFlight|pending|inFlight|isLoggingIn|loginInProgress/i)
   })
 
-  it('SOURCE GATE (PRESENCE) -- exactly one runnerGroup container holds all six tiles, so unmounting it (via the navigation pinned above) takes every tile at once, not just the one that was clicked', () => {
+  it('SOURCE GATE (PRESENCE) -- exactly one runnerGroup container holds all six tiles, so a non-primaryLoginAction tile\'s navigation still unmounts every tile at once, not just the one clicked', () => {
     const source = read(LOGIN_TSX)
     const matches = source.match(/runnerGroup/g) ?? []
 
     // Breaks if: a second runnerGroup-named container is introduced (the
     // "one shared container" claim would no longer hold), the container is
-    // renamed, or any of the six tile class markers goes missing.
+    // renamed, or any of the six tile class markers goes missing. Note this
+    // no longer covers Steam's own unreachability -- Steam's tile stays
+    // in-tree and reachable-in-principle after being clicked, protected only
+    // by the explicit loginInFlight guard pinned above, not by unmount.
     expect(matches.length).toBe(1)
     expect(source).toMatch(/<div className="runnerGroup">/)
     for (const runnerClass of [
@@ -161,7 +152,7 @@ describe('F-34.4.2-17 / D-G1: what actually makes a second login tile unreachabl
     }
   })
 
-  it('SOURCE GATE (PRESENCE) -- loginweb/:runner is registered as a SIBLING route of login itself, inside the same top-level children array of the same single router tree -- confirming navigate(loginUrl) replaces the Login screen rather than overlaying it', () => {
+  it('SOURCE GATE (PRESENCE + ABSENCE, 36-01) -- loginweb/:runner remains a SIBLING route of login (still true for Amazon/GOG/Zoom/Humble), while loginweb/steam is gone from the router entirely -- Steam no longer has a route at all, only the co-mounted overlay', () => {
     const source = read(APP_TSX)
     const routesStart = source.indexOf('const router = createHashRouter([')
     const routesEnd = source.indexOf('export default function App()')
@@ -169,11 +160,12 @@ describe('F-34.4.2-17 / D-G1: what actually makes a second login tile unreachabl
     expect(routesEnd).toBeGreaterThan(routesStart)
     const routesBody = source.slice(routesStart, routesEnd)
 
-    // Breaks if: either route is removed or renamed (presence half), a
-    // second createHashRouter/route-tree root is introduced (the "same
-    // single router tree" claim would no longer hold), or the ordering
+    // Breaks if: either remaining route is removed or renamed (presence
+    // half), a second createHashRouter/route-tree root is introduced (the
+    // "same single router tree" claim would no longer hold), the ordering
     // moves login/loginweb:runner outside the root path's own children
-    // array (they would no longer be siblings).
+    // array, or the loginweb/steam route is reintroduced anywhere in the
+    // file (absence half -- this is the literal regression Task 2 removes).
     expect((source.match(/createHashRouter\(/g) ?? []).length).toBe(1)
     expect((routesBody.match(/errorElement:/g) ?? []).length).toBe(1)
 
@@ -188,5 +180,44 @@ describe('F-34.4.2-17 / D-G1: what actually makes a second login tile unreachabl
     expect(loginIndex).toBeGreaterThan(rootPathIndex)
     expect(loginwebRunnerIndex).toBeGreaterThan(loginIndex)
     expect(catchAllIndex).toBeGreaterThan(loginwebRunnerIndex)
+
+    expect((source.match(/loginweb\/steam/g) ?? []).length).toBe(0)
+  })
+
+  it('SOURCE GATE (ABSENCE, load-bearing for the inert argument) -- Runner\'s tiles carry zero tabIndex, zero <button, zero <a -- they are bare untabbable divs, which is WHY a container-level inert (pinned below) protects the two genuinely-focusable controls it wraps without needing to also fight a tabIndex lock', () => {
+    const source = read(RUNNER_TSX)
+
+    // Breaks if: any tile becomes a real focusable element (a <button>, an
+    // <a>, or a div with an explicit tabIndex) -- at that point the
+    // "disabled prop is the primary JS layer, inert is near-zero-impact for
+    // tiles specifically" analysis in 36-01-PLAN.md's
+    // verified_guard_layer_analysis would no longer hold, and the retired
+    // tabIndex lock would need to be reconsidered, not left dropped.
+    expect((source.match(/\btabIndex\b/g) ?? []).length).toBe(0)
+    expect((source.match(/<button/g) ?? []).length).toBe(0)
+    expect((source.match(/<a\s/g) ?? []).length).toBe(0)
+  })
+
+  it('SOURCE GATE (PRESENCE, paired ABSENCE, 36-01) -- .loginContentWrapper carries the React-18 string-form inert literal and the scss carries pointer-events: none for the same steamFlowOpen state, while Login/index.tsx carries neither tabIndex nor aria-hidden anywhere', () => {
+    const tsxSource = read(LOGIN_TSX)
+    const scssSource = read(LOGIN_SCSS)
+
+    // Presence half: the exact React-18 string-form literal (boolean
+    // `inert={true}` is React-19-only and this project pins react@^18.3.1 --
+    // a boolean form here would silently no-op), and the CSS layer that
+    // backs it up for the pointer-events case specifically.
+    expect(tsxSource).toContain("inert={loginInFlight ? '' : undefined}")
+    expect(scssSource).toMatch(
+      /\.loginPage\.steamFlowOpen \.loginContentWrapper\s*\{[^}]*pointer-events:\s*none/
+    )
+
+    // Absence half: tabIndex was an operator-dropped lock (36-01-PLAN.md
+    // locked_decisions) and must not be reinstated; aria-hidden was
+    // explicitly rejected because .loginContentWrapper wraps two genuinely
+    // focusable descendants (LanguageSelector, goToLibrary) and aria-hidden
+    // over focusable descendants is an ARIA violation. Both reappearing here
+    // would silently reintroduce a rejected design.
+    expect((tsxSource.match(/\btabIndex\b/g) ?? []).length).toBe(0)
+    expect((tsxSource.match(/aria-hidden/g) ?? []).length).toBe(0)
   })
 })
