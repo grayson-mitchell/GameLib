@@ -157,4 +157,7 @@ remained unstaged/untracked and untouched:
 - ` M .planning/STATE.md`
 - `?? .planning/quick/260819-p2d-uat-3413-bottle-prefill-note/`
 
-Commit SHA: `c1783b30d` (see final response to orchestrator for `git show --stat HEAD`).
+Commit SHA: `c8fd84385` -- `test(quick-260820-ic0): add the missing platform-branch absence gate
+(T-34.5-17, T-34.5-32)`. `git show --stat --oneline HEAD` lists exactly the four intended paths:
+`34.5-SECURITY.md` (53 changes), this task's `PLAN.md` (457 new), this task's `SUMMARY.md` (new),
+and `wineToolsFlows.test.ts` (105 changes) -- 4 files changed, 764 insertions(+), 11 deletions(-).
