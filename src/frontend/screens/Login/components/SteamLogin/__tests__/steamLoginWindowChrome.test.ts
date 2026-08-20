@@ -162,3 +162,89 @@ describe('quick-260820-kq0: SteamLogin renders inside a single shared Dialog win
   // SteamLogin-specific shape assertions (single mount, dismissal wiring,
   // dead-panel absence, render-branch funnel).
 })
+
+/**
+ * Quick task 260820-u29: fixes two cosmetic defects recorded in
+ * `36-03-SUMMARY.md`, both pre-existing in the Steam sign-in form and both
+ * newly visible now that the form presents as a centred window:
+ *
+ * 1. The `Username & Password` tab label clips because `<Tabs>` uses
+ *    `variant="scrollable" scrollButtons="auto"`, which reserves space for
+ *    scroll buttons instead of letting the row size to fit two tabs.
+ * 2. The window changes height at the instant the QR code renders, because
+ *    nothing reserves the QR panel's space beforehand.
+ *
+ * SOURCE GATE, NOT A RENDER TEST -- see the file-header note above. This
+ * jest project is `testEnvironment: 'node'`; nothing here can see clipping,
+ * a resize, or any cascade outcome. Only the plan's Task 4 human gate can.
+ */
+const TAB_PANEL_TSX = 'src/frontend/components/UI/TabPanel/index.tsx'
+
+describe('quick-260820-u29: SteamLogin tabs size to fit their labels, and the QR panel height is reserved up front', () => {
+  it('FILLED-SPECIMEN GUARD (raw, unstripped) -- index.scss actually contains the literal "steamQrContainer" token, so a broken comment stripper turns every other scss assertion in this block RED rather than vacuously green', () => {
+    const raw = readRaw(STEAM_LOGIN_SCSS)
+    expect(raw).toMatch(/steamQrContainer/)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- Tabs uses variant="fullWidth" so exactly two tabs size to fill the row instead of clipping', () => {
+    const source = read(STEAM_LOGIN_TSX)
+
+    // Breaks if: the Tabs element reverts to variant="scrollable" (or drops
+    // fullWidth entirely), which is the exact prior shape that let the
+    // longer "Username & Password" label clip.
+    expect(source).toMatch(/variant="fullWidth"/)
+  })
+
+  it('SOURCE GATE (ABSENCE) -- the scrollable variant and its scroll-button prop are both gone, not just one of them', () => {
+    const source = read(STEAM_LOGIN_TSX)
+
+    // Breaks if: either token is reintroduced. scrollButtons is meaningless
+    // outside the scrollable/auto variants, so leaving it behind inert would
+    // be a silent half-revert.
+    expect((source.match(/scrollButtons/g) ?? []).length).toBe(0)
+    expect((source.match(/variant="scrollable"/g) ?? []).length).toBe(0)
+  })
+
+  it('SOURCE GATE (ABSENCE) -- the styleless .tabsWrapper div is deleted from both the component and its stylesheet, not given a new rule', () => {
+    const tsxSource = read(STEAM_LOGIN_TSX)
+    const scssSource = read(STEAM_LOGIN_SCSS)
+
+    // Breaks if: .tabsWrapper is reintroduced anywhere in either file. This
+    // class had no reachable rule for this screen -- its only definition is
+    // nested under `.wineManager` in WineManager/index.css -- which is why
+    // it was deleted rather than given a scoped rule of its own.
+    expect((tsxSource.match(/tabsWrapper/g) ?? []).length).toBe(0)
+    expect((scssSource.match(/tabsWrapper/g) ?? []).length).toBe(0)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- the QR tab panel reserves a deterministic min-height, scoped to the Steam body', () => {
+    const source = read(STEAM_LOGIN_SCSS)
+
+    // Breaks if: the selector stops targeting TabPanel's inner div, or the
+    // reservation's pixel value changes without updating this pin -- both
+    // are the exact regression that would let the resize return.
+    expect(source).toContain('#tabpanel-qr > div')
+    expect(source).toContain('min-height: 310px')
+  })
+
+  it('SOURCE GATE (PRESENCE) -- the QR svg is forced to display:block, removing the inline baseline gap the 310px arithmetic assumes away', () => {
+    const source = read(STEAM_LOGIN_SCSS)
+
+    // Breaks if: this rule is removed. react-qr-code emits a bare inline
+    // <svg> with no display of its own inside a display:inline-block white
+    // wrapper, which otherwise adds an unpredictable descender gap on top
+    // of the QR's own 200px height, breaking the reservation's exactness.
+    expect(source).toMatch(/\.steamQrContainer svg\s*\{[^}]*display:\s*block/)
+  })
+
+  it('SOURCE GATE (PRESENCE, PREMISE PIN) -- TabPanel still emits `id={`tabpanel-${index}`}` and wraps its children in a bare inner <div>, which the #tabpanel-qr > div selector above depends on', () => {
+    const source = read(TAB_PANEL_TSX)
+
+    // Breaks if: TabPanel stops emitting this id template, or stops
+    // wrapping its children in a bare div -- either change would make the
+    // scss selector above silently stop matching anything, and the resize
+    // would return with every other test in this block still green.
+    expect(source).toContain('id={`tabpanel-${index}`}')
+    expect(source).toMatch(/<div>\{children\}<\/div>/)
+  })
+})
