@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom'
 import QRCode from 'react-qr-code'
 import TabPanel from 'frontend/components/UI/TabPanel'
 import ContextProvider from 'frontend/state/ContextProvider'
+import { Dialog, DialogHeader } from 'frontend/components/UI/Dialog'
 import './index.scss'
 
 type Step =
@@ -25,6 +26,7 @@ type Step =
 export default function SteamLogin() {
   const { steam } = useContext(ContextProvider)
   const navigate = useNavigate()
+  const closeWindow = () => navigate('/login')
 
   const [step, setStep] = useState<Step>('checking')
   const [activeTab, setActiveTab] = useState<'qr' | 'credentials'>('qr')
@@ -266,64 +268,6 @@ export default function SteamLogin() {
     if (val === 'qr') {
       // startQRFlow will be triggered by the effect above
     }
-  }
-
-  // --- Render: State 1 (not installed) ---
-  if (step === 'not-installed') {
-    return (
-      <div className="steamLoginPanel">
-        <div className="steamNotFound">
-          <FontAwesomeIcon
-            icon={faTriangleExclamation}
-            style={{ color: 'var(--status-warning)', fontSize: 'var(--text-lg)', marginBottom: 'var(--space-xs)' }}
-          />
-          <h2
-            style={{
-              fontSize: 'var(--text-lg)',
-              fontWeight: 'var(--bold)',
-              fontFamily: 'var(--primary-font-family)',
-              color: 'var(--text-default)',
-              marginBottom: 'var(--space-xs)'
-            }}
-          >
-            Steam client not found
-          </h2>
-          <p
-            style={{
-              fontSize: 'var(--text-md)',
-              color: 'var(--text-default)',
-              marginBottom: 'var(--space-lg)'
-            }}
-          >
-            GameLib requires the Steam client to authenticate and launch games.
-          </p>
-          <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
-            <button
-              className="button is-secondary"
-              aria-label="Download Steam client from steampowered.com"
-              onClick={() => window.api.openExternalUrl('https://store.steampowered.com/about/')}
-            >
-              Download Steam
-            </button>
-            <button
-              className="button is-tertiary"
-              onClick={() => navigate('/login')}
-            >
-              Return to Login
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // --- Render: checking state ---
-  if (step === 'checking') {
-    return (
-      <div className="steamLoginPanel">
-        <FontAwesomeIcon icon={faSyncAlt} spin style={{ fontSize: '2em' }} />
-      </div>
-    )
   }
 
   // --- Render: QR tab content ---
@@ -570,62 +514,102 @@ export default function SteamLogin() {
     )
   }
 
+  // --- Render: State 1 (not installed) ---
+  // --- Render: checking state ---
   // --- Render: main tabs view (State 2-9) ---
+  // All three top-level branches are selected here and rendered inside the
+  // single Dialog window shell mounted below, so the window itself never
+  // unmounts/remounts as `step` changes.
+  function renderWindowBody() {
+    if (step === 'not-installed') {
+      return (
+        <div className="steamNotFound">
+          <FontAwesomeIcon
+            icon={faTriangleExclamation}
+            style={{ color: 'var(--status-warning)', fontSize: 'var(--text-lg)', marginBottom: 'var(--space-xs)' }}
+          />
+          <h2
+            style={{
+              fontSize: 'var(--text-lg)',
+              fontWeight: 'var(--bold)',
+              fontFamily: 'var(--primary-font-family)',
+              color: 'var(--text-default)',
+              marginBottom: 'var(--space-xs)'
+            }}
+          >
+            Steam client not found
+          </h2>
+          <p
+            style={{
+              fontSize: 'var(--text-md)',
+              color: 'var(--text-default)',
+              marginBottom: 'var(--space-lg)'
+            }}
+          >
+            GameLib requires the Steam client to authenticate and launch games.
+          </p>
+          <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+            <button
+              className="button is-secondary"
+              aria-label="Download Steam client from steampowered.com"
+              onClick={() => window.api.openExternalUrl('https://store.steampowered.com/about/')}
+            >
+              Download Steam
+            </button>
+            <button
+              className="button is-tertiary"
+              onClick={closeWindow}
+            >
+              Return to Login
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    if (step === 'checking') {
+      return <FontAwesomeIcon icon={faSyncAlt} spin style={{ fontSize: '2em' }} />
+    }
+
+    return (
+      <>
+        <div className="tabsWrapper">
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+          >
+            <Tab
+              value="qr"
+              label="QR Code"
+              id="tab-qr"
+              aria-controls="tabpanel-qr"
+            />
+            <Tab
+              value="credentials"
+              label="Username & Password"
+              id="tab-credentials"
+              aria-controls="tabpanel-credentials"
+            />
+          </Tabs>
+        </div>
+
+        <TabPanel value={activeTab} index="qr">
+          {renderQRContent()}
+        </TabPanel>
+
+        <TabPanel value={activeTab} index="credentials">
+          {renderCredentialsContent()}
+        </TabPanel>
+      </>
+    )
+  }
+
   return (
-    <div className="steamLoginPanel">
-      <button
-        className="button is-link"
-        onClick={() => {
-          clearPollInterval()
-          clearQrRefreshTimer()
-          navigate('/login')
-        }}
-        style={{ alignSelf: 'flex-start' }}
-      >
-        Back to Login
-      </button>
-
-      <h1
-        style={{
-          fontSize: 'var(--text-lg)',
-          fontWeight: 'var(--bold)',
-          fontFamily: 'var(--primary-font-family)',
-          color: 'var(--text-default)',
-          margin: 0
-        }}
-      >
-        Sign in to Steam
-      </h1>
-
-      <div className="tabsWrapper">
-        <Tabs
-          value={activeTab}
-          onChange={handleTabChange}
-          variant="scrollable"
-          scrollButtons="auto"
-        >
-          <Tab
-            value="qr"
-            label="QR Code"
-            id="tab-qr"
-            aria-controls="tabpanel-qr"
-          />
-          <Tab
-            value="credentials"
-            label="Username & Password"
-            id="tab-credentials"
-            aria-controls="tabpanel-credentials"
-          />
-        </Tabs>
-      </div>
-
-      <TabPanel value={activeTab} index="qr">
-        {renderQRContent()}
-      </TabPanel>
-
-      <TabPanel value={activeTab} index="credentials">
-        {renderCredentialsContent()}
-      </TabPanel>
-    </div>
+    <Dialog showCloseButton={true} onClose={closeWindow} className="steamLoginDialog">
+      <DialogHeader onClose={closeWindow}>Sign in to Steam</DialogHeader>
+      <div className="steamLoginBody">{renderWindowBody()}</div>
+    </Dialog>
   )
 }
