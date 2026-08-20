@@ -27,31 +27,29 @@
   display: block;
 }
 
-// Reserves the qr-active height so the window is already QR-sized while the
-// "Generating QR code..." spinner is up, instead of growing when the code lands.
-// Targets TabPanel's INNER div (`{value === index && <div>{children}</div>}`),
-// which exists only while the QR tab is selected -- NOT `.steamQrContainer`,
-// which is itself gated on `challengeUrl` and so appears at the same instant
-// as the QR it was meant to reserve for.
-//   16px  .steamQrContainer padding-top     (--space-md = 1em @ 16px root)
-//    8px  white wrapper padding-top
-//  200px  <QRCode size={200}/>              (svg height attr; display:block above
-//         removes the inline baseline gap that would otherwise be added here)
-//    8px  white wrapper padding-bottom
-//   16px  .steamQrContainer padding-bottom
-//  ----   248px deterministic block
-//   19.2px  first <p> line box              (--text-md 16px x line-height normal ~1.2)
-//   16px    that <p>'s margin-bottom        (--space-md = 1em @ its own 16px)
-//   11.11px second <p>'s UA margin-top      (1em @ --text-xs 11.11px; collapses with
-//           .steamQrContainer's 0 bottom margin to max(0, 11.11))
-//   13.3px  second <p> line box             (11.11px x ~1.2)
-//  ----   308.4px total; the first <p>'s UA margin-top collapses OUT through the
-//         un-padded wrappers to #tabpanel-qr's outer edge, and the last <p>'s UA
-//         margin-bottom likewise, so neither is inside this box.
-// 310px = 308.4 rounded up to whole px. The reservation must be >= the natural
-// height or the growth returns; the ~1.6px slack is deliberate.
-.steamLoginBody #tabpanel-qr > div {
-  min-height: 310px;
+// Quick task 260820-u29 (re-run 2): a computed `min-height` reservation used
+// to live here (see git history, commit 4df8c4395), sized by assuming
+// `line-height: normal` (browser/font-dependent, ~1.2) for the surrounding
+// <p> metrics. The operator observed the resize shrink but not disappear,
+// proving that assumption was inexact -- so instead of re-tuning the number
+// upward, the loading and qr-active states were restructured (index.tsx,
+// renderQRContent()) to render the IDENTICAL markup shape: same top/bottom
+// <p> (now both given an explicit `lineHeight: 1.4` instead of the
+// UA-default `normal`, removing the font-metric guess entirely), and the
+// SAME .steamQrContainer > .steamQrBox nesting in both states, swapping only
+// the box's child (spinner vs QR code) and the bottom caption's text. Since
+// `.steamQrBox` below is a fixed-size box regardless of which child it
+// holds, the two states are equal-height by construction -- no reservation
+// rule is needed here any more. `.steamQrBox`'s 216px = 200px <QRCode> +
+// 8px padding on each side, matching the box this replaced.
+.steamQrBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 216px;
+  height: 216px;
+  background: #ffffff;
+  border-radius: var(--space-3xs);
 }
 
 // Quick task 260820-u29 (Task 4): MUI's shared `createTheme()` in App.tsx sets

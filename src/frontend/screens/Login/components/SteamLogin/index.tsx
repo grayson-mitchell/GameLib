@@ -274,16 +274,59 @@ export default function SteamLogin({ dismiss }: Props) {
 
   // --- Render: QR tab content ---
   function renderQRContent() {
-    if (isQRLoading) {
+    // Quick task 260820-u29 (re-run 2): the loading state and the qr-active
+    // state now share ONE markup shape -- same top/bottom <p>, same
+    // .steamQrContainer > .steamQrBox nesting -- swapping only the box's
+    // inner child (spinner vs QR code) and the bottom caption's text. The
+    // box itself is a fixed-size CSS class (index.scss), so its footprint
+    // never changes between the two children it can hold, and neither <p>
+    // depends on which branch is active. This means the QR's arrival now
+    // contributes exactly zero height delta by construction, instead of via
+    // a computed reservation on a differently-shaped loading state (see
+    // index.scss for why that reservation was removed rather than re-tuned).
+    if (isQRLoading || (step === 'qr-active' && challengeUrl)) {
+      const showQr = !isQRLoading && !!challengeUrl
       return (
-        <div style={{ textAlign: 'center', padding: 'var(--space-lg) 0' }}>
-          <FontAwesomeIcon
-            icon={faSyncAlt}
-            spin
-            style={{ fontSize: '2.5em', color: 'var(--text-default)', marginBottom: 'var(--space-sm)' }}
-          />
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-            Generating QR code...
+        <div>
+          <p
+            style={{
+              fontSize: 'var(--text-md)',
+              color: 'var(--text-default)',
+              marginBottom: 'var(--space-md)',
+              lineHeight: 1.4
+            }}
+          >
+            Open Steam on your phone and scan this code.
+          </p>
+          <div className="steamQrContainer">
+            <div className="steamQrBox">
+              {!isQRLoading && challengeUrl ? (
+                <QRCode
+                  value={challengeUrl}
+                  size={200}
+                  fgColor="#000000"
+                  bgColor="#ffffff"
+                  aria-label="Steam QR code for mobile login"
+                  role="img"
+                />
+              ) : (
+                <FontAwesomeIcon
+                  icon={faSyncAlt}
+                  spin
+                  style={{ fontSize: '2.5em', color: 'var(--text-default)' }}
+                />
+              )}
+            </div>
+          </div>
+          <p
+            style={{
+              fontSize: 'var(--text-xs)',
+              color: 'var(--text-secondary)',
+              textAlign: 'center',
+              lineHeight: 1.4
+            }}
+          >
+            {showQr ? 'QR code refreshes automatically.' : 'Generating QR code...'}
           </p>
         </div>
       )
@@ -298,44 +341,6 @@ export default function SteamLogin({ dismiss }: Props) {
           />
           <p style={{ fontSize: 'var(--text-md)', color: 'var(--text-default)' }}>
             QR scanned. Completing sign-in...
-          </p>
-        </div>
-      )
-    }
-
-    if (step === 'qr-active' && challengeUrl) {
-      return (
-        <div>
-          <p style={{ fontSize: 'var(--text-md)', color: 'var(--text-default)', marginBottom: 'var(--space-md)' }}>
-            Open Steam on your phone and scan this code.
-          </p>
-          <div className="steamQrContainer">
-            <div
-              style={{
-                background: '#ffffff',
-                padding: '8px',
-                display: 'inline-block',
-                borderRadius: 'var(--space-3xs)'
-              }}
-            >
-              <QRCode
-                value={challengeUrl}
-                size={200}
-                fgColor="#000000"
-                bgColor="#ffffff"
-                aria-label="Steam QR code for mobile login"
-                role="img"
-              />
-            </div>
-          </div>
-          <p
-            style={{
-              fontSize: 'var(--text-xs)',
-              color: 'var(--text-secondary)',
-              textAlign: 'center'
-            }}
-          >
-            QR code refreshes automatically.
           </p>
         </div>
       )

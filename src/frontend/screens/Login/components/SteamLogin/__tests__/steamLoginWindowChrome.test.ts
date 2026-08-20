@@ -178,9 +178,8 @@ describe('quick-260820-kq0: SteamLogin renders inside a single shared Dialog win
  * jest project is `testEnvironment: 'node'`; nothing here can see clipping,
  * a resize, or any cascade outcome. Only the plan's Task 4 human gate can.
  */
-const TAB_PANEL_TSX = 'src/frontend/components/UI/TabPanel/index.tsx'
 
-describe('quick-260820-u29: SteamLogin tabs size to fit their labels, and the QR panel height is reserved up front', () => {
+describe('quick-260820-u29: SteamLogin tabs size to fit their labels, and the QR panel does not resize when the code lands', () => {
   it('FILLED-SPECIMEN GUARD (raw, unstripped) -- index.scss actually contains the literal "steamQrContainer" token, so a broken comment stripper turns every other scss assertion in this block RED rather than vacuously green', () => {
     const raw = readRaw(STEAM_LOGIN_SCSS)
     expect(raw).toMatch(/steamQrContainer/)
@@ -217,35 +216,66 @@ describe('quick-260820-u29: SteamLogin tabs size to fit their labels, and the QR
     expect((scssSource.match(/tabsWrapper/g) ?? []).length).toBe(0)
   })
 
-  it('SOURCE GATE (PRESENCE) -- the QR tab panel reserves a deterministic min-height, scoped to the Steam body', () => {
+  it('SOURCE GATE (ABSENCE) -- the old computed min-height reservation (commit 4df8c4395) is gone, not left behind alongside the new fixed-size box', () => {
     const source = read(STEAM_LOGIN_SCSS)
 
-    // Breaks if: the selector stops targeting TabPanel's inner div, or the
-    // reservation's pixel value changes without updating this pin -- both
-    // are the exact regression that would let the resize return.
-    expect(source).toContain('#tabpanel-qr > div')
-    expect(source).toContain('min-height: 310px')
+    // Breaks if: the #tabpanel-qr > div min-height rule is reintroduced.
+    // That rule's arithmetic assumed line-height: normal for the
+    // surrounding <p> metrics, which the operator's re-run proved
+    // imprecise (a smaller resize still occurred) -- it was replaced with a
+    // structural fix below, not re-tuned, so it must not come back.
+    expect(source).not.toContain('#tabpanel-qr > div')
+    expect(source).not.toContain('min-height: 310px')
   })
 
-  it('SOURCE GATE (PRESENCE) -- the QR svg is forced to display:block, removing the inline baseline gap the 310px arithmetic assumes away', () => {
+  it('SOURCE GATE (PRESENCE) -- the QR box is a fixed-size element that holds either the spinner or the QR code, so swapping its child never changes its footprint', () => {
+    const source = read(STEAM_LOGIN_SCSS)
+
+    // Breaks if: `.steamQrBox`'s literal width/height changes or is
+    // removed -- both the loading spinner and the QR code render inside
+    // this exact class (index.tsx), so a footprint that depends on which
+    // child is present would let the resize this whole task fixes return.
+    expect(source).toMatch(/\.steamQrBox\s*\{[^}]*width:\s*216px/)
+    expect(source).toMatch(/\.steamQrBox\s*\{[^}]*height:\s*216px/)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- the QR svg is forced to display:block, removing the inline baseline gap that would otherwise make the QR-holding box taller than the spinner-holding one', () => {
     const source = read(STEAM_LOGIN_SCSS)
 
     // Breaks if: this rule is removed. react-qr-code emits a bare inline
-    // <svg> with no display of its own inside a display:inline-block white
-    // wrapper, which otherwise adds an unpredictable descender gap on top
-    // of the QR's own 200px height, breaking the reservation's exactness.
+    // <svg> with no display of its own, which otherwise adds an
+    // unpredictable descender gap on top of the QR's own 200px height --
+    // still load-bearing under the new fixed-size .steamQrBox, since that
+    // gap would make the qr-active box taller than the loading box.
     expect(source).toMatch(/\.steamQrContainer svg\s*\{[^}]*display:\s*block/)
   })
 
-  it('SOURCE GATE (PRESENCE, PREMISE PIN) -- TabPanel still emits `id={`tabpanel-${index}`}` and wraps its children in a bare inner <div>, which the #tabpanel-qr > div selector above depends on', () => {
-    const source = read(TAB_PANEL_TSX)
+  it('SOURCE GATE (PRESENCE) -- the loading and qr-active QR-tab states are one merged branch, not two separately-shaped ones', () => {
+    const source = read(STEAM_LOGIN_TSX)
 
-    // Breaks if: TabPanel stops emitting this id template, or stops
-    // wrapping its children in a bare div -- either change would make the
-    // scss selector above silently stop matching anything, and the resize
-    // would return with every other test in this block still green.
-    expect(source).toContain('id={`tabpanel-${index}`}')
-    expect(source).toMatch(/<div>\{children\}<\/div>/)
+    // Breaks if: the merged `isQRLoading || (step === 'qr-active' &&
+    // challengeUrl)` condition is split back into two branches with
+    // different DOM shapes -- the exact prior structure whose differing
+    // shape caused the resize this fix removes.
+    expect(source).toMatch(/isQRLoading \|\| \(step === 'qr-active' && challengeUrl\)/)
+    expect((source.match(/className="steamQrBox"/g) ?? []).length).toBe(1)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- both QR-tab captions set an explicit lineHeight instead of relying on the browser default the removed arithmetic assumed', () => {
+    const source = read(STEAM_LOGIN_TSX)
+
+    // Breaks if: either `lineHeight: 1.4` is removed -- falling back to
+    // `line-height: normal` reintroduces the exact font-metric guess the
+    // operator's re-run proved was imprecise.
+    expect((source.match(/lineHeight: 1\.4/g) ?? []).length).toBe(2)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- all three existing QR-tab captions are reused verbatim, not replaced with new copy, keeping the i18n gate\'s expectedCount stable', () => {
+    const source = read(STEAM_LOGIN_TSX)
+
+    expect(source).toContain('Generating QR code...')
+    expect(source).toContain('QR code refreshes automatically.')
+    expect(source).toContain('Open Steam on your phone and scan this code.')
   })
 
   it('SOURCE GATE (PRESENCE) -- the unselected tab label uses a theme token, not the MUI light-mode default that is unreadable on dark themes', () => {
