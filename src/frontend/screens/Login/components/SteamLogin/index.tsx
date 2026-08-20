@@ -575,27 +575,24 @@ export default function SteamLogin({ dismiss }: Props) {
 
     return (
       <>
-        <div className="tabsWrapper">
-          <Tabs
-            value={activeTab}
-            onChange={handleTabChange}
-            variant="scrollable"
-            scrollButtons="auto"
-          >
-            <Tab
-              value="qr"
-              label="QR Code"
-              id="tab-qr"
-              aria-controls="tabpanel-qr"
-            />
-            <Tab
-              value="credentials"
-              label="Username & Password"
-              id="tab-credentials"
-              aria-controls="tabpanel-credentials"
-            />
-          </Tabs>
-        </div>
+        <Tabs
+          value={activeTab}
+          onChange={handleTabChange}
+          variant="fullWidth"
+        >
+          <Tab
+            value="qr"
+            label="QR Code"
+            id="tab-qr"
+            aria-controls="tabpanel-qr"
+          />
+          <Tab
+            value="credentials"
+            label="Username & Password"
+            id="tab-credentials"
+            aria-controls="tabpanel-credentials"
+          />
+        </Tabs>
 
         <TabPanel value={activeTab} index="qr">
           {renderQRContent()}

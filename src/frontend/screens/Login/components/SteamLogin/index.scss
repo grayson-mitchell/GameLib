@@ -23,6 +23,37 @@
   padding: var(--space-md) 0;
 }
 
+.steamQrContainer svg {
+  display: block;
+}
+
+// Reserves the qr-active height so the window is already QR-sized while the
+// "Generating QR code..." spinner is up, instead of growing when the code lands.
+// Targets TabPanel's INNER div (`{value === index && <div>{children}</div>}`),
+// which exists only while the QR tab is selected -- NOT `.steamQrContainer`,
+// which is itself gated on `challengeUrl` and so appears at the same instant
+// as the QR it was meant to reserve for.
+//   16px  .steamQrContainer padding-top     (--space-md = 1em @ 16px root)
+//    8px  white wrapper padding-top
+//  200px  <QRCode size={200}/>              (svg height attr; display:block above
+//         removes the inline baseline gap that would otherwise be added here)
+//    8px  white wrapper padding-bottom
+//   16px  .steamQrContainer padding-bottom
+//  ----   248px deterministic block
+//   19.2px  first <p> line box              (--text-md 16px x line-height normal ~1.2)
+//   16px    that <p>'s margin-bottom        (--space-md = 1em @ its own 16px)
+//   11.11px second <p>'s UA margin-top      (1em @ --text-xs 11.11px; collapses with
+//           .steamQrContainer's 0 bottom margin to max(0, 11.11))
+//   13.3px  second <p> line box             (11.11px x ~1.2)
+//  ----   308.4px total; the first <p>'s UA margin-top collapses OUT through the
+//         un-padded wrappers to #tabpanel-qr's outer edge, and the last <p>'s UA
+//         margin-bottom likewise, so neither is inside this box.
+// 310px = 308.4 rounded up to whole px. The reservation must be >= the natural
+// height or the growth returns; the ~1.6px slack is deliberate.
+.steamLoginBody #tabpanel-qr > div {
+  min-height: 310px;
+}
+
 .sid-input {
   color: var(--text-secondary);
   font-size: var(--text-md);
