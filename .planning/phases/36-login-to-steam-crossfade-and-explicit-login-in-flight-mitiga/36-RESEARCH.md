@@ -552,11 +552,21 @@ enabled.
 | A2 | `loginInFlight` as local `useState` on `Login/index.tsx` resets safely on remount and needs no explicit TTL, unlike its Rust-side `T-34.4.2-41` analog | Known Threat Patterns table | Medium — if `Login/index.tsx`'s memoized component (`React.memo`) somehow persists state across what looks like a fresh navigation (it should not, given `React.memo` only memoizes render output, not unmount lifecycle — but this project's own memory has recorded a `React.memo`-adjacent stale-snapshot defect (`tauri-renderer-store-snapshot-stale.md`) before), a stuck `loginInFlight=true` could re-lock the tiles. Should be verified during planning/execution, not assumed. |
 | A3 | Optional `prefers-reduced-motion` scoping to this phase's new CSS only, not a repo-wide rollout | Reduced Motion | Low — explicitly labelled optional/discretionary in that section, not a locked recommendation. |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+*Both questions below were resolved by the operator on 2026-08-20 and propagated into the plan
+set. The original text is retained verbatim; resolutions are marked inline.*
 
 1. **Should the threat-register update (§5 of `34.4.2-PLATFORM-SCOPE.md`) also reopen the
    live-discharge question for T-34.4.2-39/-41's original item 5 contract, now that the UI no longer
    structurally forecloses it?**
+   - **RESOLVED (operator, 2026-08-20): DOCUMENTATION-ONLY — matches this file's own recommendation
+     below.** Record the basis change; note factually that live discharge is no longer structurally
+     impossible; do NOT author a new live-gate contract, do NOT re-instate item 5, do NOT change the
+     WITHDRAWN disposition. Decided in, and carried by, `36-02-PLAN.md`'s
+     `<locked_decision_documentation_only>` block, which also requires the non-goal be stated inside
+     the Fourteenth update's own narrative preamble so a future reader sees it was asked and
+     answered rather than overlooked.
    - What we know: the prior "WITHDRAWN, permanently" disposition was explicitly reasoned on the
      grounds that the scenario was UI-unreachable by construction (`F-34.4.2-17`). That construction
      (navigation-triggered unmount) is exactly what this phase removes.
@@ -571,6 +581,16 @@ enabled.
 
 2. **Does `inert`'s narrow gap (macOS 12.0–12.3, pre-15.5 Safari, see Pitfall 2) need an explicit
    fallback, or is it an acceptable residual given the other two guard layers?**
+   - **RESOLVED: ACCEPTABLE RESIDUAL, recorded as F-36-02 with an `accept` disposition** in
+     `36-01-PLAN.md`'s threat model and entered into the register by `36-02-PLAN.md` Task 1. The
+     operator first locked a cheap `tabIndex={-1}` fallback, then RETIRED that lock on 2026-08-20
+     once planning disproved its premise from source: the tiles are bare `<div onClick>` with no
+     `tabIndex` and no `role`, so they are already outside the tab order, and container-level
+     `tabIndex={-1}` does not remove focusable descendants in any case. `aria-hidden` was also
+     declined (the container holds focusable children). What actually holds on that slice is MUI's
+     Dialog focus trap. The residual is therefore near-zero for the tiles, and the premise that
+     makes that true is now pinned directly by a `Runner/index.tsx` assertion in `36-01-PLAN.md`
+     Task 4, which goes RED if those divs ever become real buttons.
    - What we know: `disabled` and `pointer-events: none` are universally supported and remain
      effective on that OS range; only the accessibility-tree/tab-order removal half of the mitigation
      is unavailable there.
