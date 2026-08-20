@@ -54,6 +54,49 @@
   min-height: 310px;
 }
 
+// Quick task 260820-u29 (Task 4): MUI's shared `createTheme()` in App.tsx sets
+// no `palette` key at all, so MUI defaults to LIGHT mode and MuiTab's
+// unselected colour resolves to a hardcoded `rgba(0, 0, 0, 0.6)` -- readable
+// on nord-light's light background, unreadable on every dark theme
+// (midnightMirage, gruvbox_dark, dracula). Pre-existing, not caused by the
+// variant="fullWidth"/`.tabsWrapper` deletion above -- neither touches colour.
+// The real fix is a `palette` on the shared theme, which is out of scope here
+// (it would change MUI defaults app-wide and needs its own phase) -- tracked
+// as a follow-up candidate, not papered over. This scopes the same colour
+// fix every OTHER Tabs consumer in the app already carries.
+//
+// Deviates from the WineManager/index.css convention it would otherwise
+// mirror: that file's `&.Mui-selected`/`:hover` rules use `var(--text-primary)`,
+// but `--text-primary` is never defined anywhere in this codebase (verified:
+// `grep -rn -- "--text-primary:" src/frontend` returns zero results) -- an
+// already-dead token that happens to look fine there only because an invalid
+// `color` value falls back to the inherited colour. Using `--text-default`
+// instead, which is guaranteed defined on every theme (set at the base `body`
+// selector in themes.scss and overridden per-theme), matches the OTHER two
+// working Tabs consumers in the app (DownloadManager/index.css,
+// GamesSettings/index.scss), both of which use `--text-default` +
+// `--accent` rather than WineManager's dead-token pair.
+.steamLoginBody .MuiTab-root {
+  color: var(--text-secondary);
+}
+
+.steamLoginBody .MuiTab-root.Mui-selected {
+  color: var(--text-default);
+}
+
+.steamLoginBody .MuiTab-root:hover:not(.Mui-selected) {
+  color: var(--text-default);
+}
+
+// Without this, the selected-tab underline inherits MUI's own default
+// `theme.palette.primary.main` -- a hardcoded literal blue, not a theme
+// token, and exactly the class of bug this whole task fixes. Matches
+// DownloadManager/index.css and GamesSettings/index.scss, both of which
+// scope this identically.
+.steamLoginBody .MuiTabs-indicator {
+  background-color: var(--accent);
+}
+
 .sid-input {
   color: var(--text-secondary);
   font-size: var(--text-md);

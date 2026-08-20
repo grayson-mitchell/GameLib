@@ -247,4 +247,45 @@ describe('quick-260820-u29: SteamLogin tabs size to fit their labels, and the QR
     expect(source).toContain('id={`tabpanel-${index}`}')
     expect(source).toMatch(/<div>\{children\}<\/div>/)
   })
+
+  it('SOURCE GATE (PRESENCE) -- the unselected tab label uses a theme token, not the MUI light-mode default that is unreadable on dark themes', () => {
+    const source = read(STEAM_LOGIN_SCSS)
+
+    // Breaks if: `.steamLoginBody .MuiTab-root`'s color declaration is
+    // removed or reverts to relying on MUI's own default (rgba(0,0,0,0.6)
+    // in light mode, which App.tsx's paletteless createTheme() falls back
+    // to) -- the exact defect the operator reported across midnightMirage,
+    // gruvbox_dark, and dracula.
+    expect(source).toMatch(/\.steamLoginBody \.MuiTab-root\s*\{[^}]*color:\s*var\(--text-secondary\)/)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- the selected tab and its hover state use a REAL, defined theme token (--text-default), not the dead --text-primary token WineManager uses', () => {
+    const source = read(STEAM_LOGIN_SCSS)
+
+    // Breaks if: either rule is removed, or `--text-default` is swapped for
+    // `--text-primary` -- verified (grep -rn -- "--text-primary:"
+    // src/frontend) to be defined NOWHERE in this codebase, so using it here
+    // would silently fall back to inherited color rather than fixing anything.
+    expect(source).toMatch(/\.steamLoginBody \.MuiTab-root\.Mui-selected\s*\{[^}]*color:\s*var\(--text-default\)/)
+    expect(source).toMatch(/\.steamLoginBody \.MuiTab-root:hover:not\(\.Mui-selected\)\s*\{[^}]*color:\s*var\(--text-default\)/)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- the selected-tab indicator uses the theme accent token instead of MUI\'s hardcoded default primary colour', () => {
+    const source = read(STEAM_LOGIN_SCSS)
+
+    // Breaks if: this rule is removed, leaving the indicator to fall back to
+    // MUI's own theme.palette.primary.main -- a hardcoded literal, not a
+    // theme token, matching DownloadManager/index.css and
+    // GamesSettings/index.scss's identical scoping of this same rule.
+    expect(source).toMatch(/\.steamLoginBody \.MuiTabs-indicator\s*\{[^}]*background-color:\s*var\(--accent\)/)
+  })
+
+  it('SOURCE GATE (ABSENCE) -- none of the new tab-colour rules reference the dead --text-primary token', () => {
+    const source = read(STEAM_LOGIN_SCSS)
+
+    // Breaks if: --text-primary is reintroduced anywhere in this stylesheet
+    // -- it is defined nowhere in the codebase (verified by repo-wide grep),
+    // so any reliance on it silently no-ops rather than fixing readability.
+    expect((source.match(/--text-primary/g) ?? []).length).toBe(0)
+  })
 })
