@@ -104,4 +104,15 @@ describe('quick-260820-kq0: SteamLogin renders inside a single shared Dialog win
     expect(source).toMatch(/function renderWindowBody\(\)/)
     expect((source.match(/renderWindowBody\(/g) ?? []).length).toBe(2)
   })
+
+  // Round 2 (human gate FAIL on 2a, sharp corners) briefly fixed this HERE,
+  // scoped to only the Steam dialog, via a `.MuiDialog-paper.steamLoginDialog`
+  // compound selector in SteamLogin/index.scss. Round 3: the operator
+  // overrode that scope decision ("fix the primitive properly for all of
+  // them") -- the Steam-scoped rule was removed from index.scss, and the
+  // radius + entrance-transition fix now lives in the shared primitive
+  // itself (`frontend/components/UI/Dialog`), covered by
+  // `Dialog/__tests__/dialogWindowChrome.test.ts`. This file keeps only the
+  // SteamLogin-specific shape assertions (single mount, dismissal wiring,
+  // dead-panel absence, render-branch funnel).
 })
