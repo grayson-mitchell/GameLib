@@ -8,6 +8,8 @@ files:
   - src/backend/storeManagers/steam/depot/decompress.ts
   - src/backend/storeManagers/steam/depot.ts
   - src/backend/storeManagers/steam/depot/decompressPool.ts
+resolves_phase: 37
+planned_as: 37-01
 ---
 
 ## Symptom

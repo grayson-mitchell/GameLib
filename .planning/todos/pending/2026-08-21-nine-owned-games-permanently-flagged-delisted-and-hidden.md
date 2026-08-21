@@ -6,6 +6,8 @@ status: OPEN
 severity: major
 files:
   - src/backend/storeManagers/steam/games.ts
+resolves_phase: 37
+planned_as: 37-03
 ---
 
 ## Symptom

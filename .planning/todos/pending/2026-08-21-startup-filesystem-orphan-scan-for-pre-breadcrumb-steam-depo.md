@@ -5,6 +5,8 @@ area: steam-depot
 files:
   - src/backend/storeManagers/steam/library.ts
   - src/backend/storeManagers/steam/installLocation.ts
+resolves_phase: 37
+planned_as: 37-07
 ---
 
 ## Problem

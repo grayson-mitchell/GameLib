@@ -3701,6 +3701,46 @@ followup (credentials/QR tab height-matching) to its own future task.
 rests on 36-03's operator gate), no code-review or secure-phase artifacts, and `36-VALIDATION.md`
 remains `status: draft` deliberately.
 
+### Phase 37: Steam defect cluster — depot decode failure, false-delisted games, and install-error reporting
+
+**Goal:** Close the seven open Steam defects surfaced by the 34.13 UAT gate and the 2026-08-21 install attempts, so that (a) a native depot install of a mac-depot title either succeeds or fails with a message naming its actual cause, (b) no owned, non-delisted game is hidden from the library by a flag nothing can clear, and (c) every failure surface names the game it is talking about.
+
+**Requirements**: REQ-37-01..07 to be minted during `/gsd-plan-phase 37`
+**Depends on:** Phase 36
+**Plans:** 8 plans
+
+**This phase is a defect cluster, not a feature.** Every item below is an open todo in
+`.planning/todos/pending/`, and **all seven were re-verified live at HEAD on 2026-08-22** before
+this entry was written — including the two whose files carry adjacent fixes (`decompress.ts`'s
+zstd/`VS` container branch and `aborthandler.ts`'s double-abort guard, both commit-dated
+**2026-07-19**, a month BEFORE the 2026-08-21 observations, so neither one covers these).
+
+**Phase-wide constraint — no `Migration` may be used as a repair path.** Two items (37-03, 37-06)
+need to repair state already written into users' caches. `MigrationSystem` is dead code under
+Tauri (`applyMigrations()` is wired only into Electron's `app.whenReady()`), so a new `Migration`
+ships as a silent no-op. **Both repairs must self-heal at the READ boundary.**
+
+**Sequencing note:** 37-02 does NOT depend on 37-01. A decode-stage failure must never be reported
+as a dropped connection *regardless* of why the chunk failed to decode, so the classifier fix is
+correct and testable before the root cause is known.
+
+Plans:
+- [ ] 37-01-PLAN.md — **DIAGNOSIS-GATED.** Depot chunks fail to decode with `Z_DATA_ERROR` on every one of six CDN hosts (appid 259130, depots 259132/259134; 142 failures; deterministic, reproduced twice). All six hosts returned HTTP 200 with byte-identical content, so this is not a CDN, network or host-selection fault. The todo's leading hypothesis — a wrong/missing depot decryption key producing garbage that matches no container magic — is **NOT established**, and a prior investigation ruled the CDN-auth arc a PHANTOM *for a different symptom*, a verdict that must not be assumed to transfer. **Run `/gsd-debug` and name the cause before authoring a fix task.** Also check why the existing `depotSkipped` path did not engage instead of retrying for 3.5 minutes.
+- [ ] 37-02-PLAN.md — `depotErrors.ts:175` classifies on a `failed after \d+ attempts` term that describes the *shape* of a failure, not its cause, so decode-stage exhaustion inherits network copy ("Steam servers dropped the connection"). `decompress.ts` already raises a typed `ChunkDecodeError` with reason codes; carry that distinction through the exhaustion wrapper and branch on cause. **Test that fails first:** feed the classifier a retry-exhaustion message originating from `ChunkDecodeError` and assert it does NOT return `steam.download.error.connectionDropped`.
+- [ ] 37-03-PLAN.md — `games.ts:640` treats a Steam Store `{success: false}` as a **permanent** `is_delisted` verdict while the adjacent `!data` branch at `:659` explicitly refuses to. Nine owned, non-delisted games are hidden by the default `showNonAvailable: 'off'` filter, **one of them installed** (91310, Dead Island). Re-measured live 2026-08-21: still exactly 9, unchanged since the 2026-07-22 sighting. Mirror the `!data` guard, then clear the already-written flags at the read boundary.
+- [ ] 37-04-PLAN.md — `downloadmanager/utils.ts:317` gives `error` a fallback but not `title`, so a failed Steam install renders "The installation of  failed". Fall back to `appName` (the appid) rather than an empty string, **then find why `title` is empty on the Steam error path** — the fallback treats the symptom.
+- [ ] 37-05-PLAN.md — A terminal install failure logs `[ERROR] Aborting not possible. Could not find a matching abort controller`. The 2026-07-19 fix covered the *double-abort* case (controller found but already aborted); this is the remaining **genuine lookup miss**. First thing to check: whether a **user-initiated cancel** hits the same miss, which is the case where a non-aborting download actually matters.
+- [ ] 37-06-PLAN.md — `resolvePlatformWrite` degrades a non-finite `platformsCapturedAt` to "indefinitely old" but does not bound it from **above**, so a clock-skewed stamp outranks every later write for that appId permanently, with no repair path (WR-02). The incoming `capturedAt` is not validated the way the existing one is (IN-01). Apply the same bound to both. **Do not "fix" this by ranking the two sources** — freshest-write-wins was chosen deliberately over "appdetails always wins"/"PICS always wins".
+- [ ] 37-07-PLAN.md — **DESIGN-GATED; the only non-defect item here and the natural split-out.** A user-invoked filesystem scan for depot residue predating the `260821-rb5` breadcrumb, which has no ACF, no breadcrumb and no in-memory trace. Settled and not to be re-litigated: user-invoked (never at startup), never auto-deletes, must not touch `depot.ts`'s manifest-write ordering. Three open questions remain (where it surfaces, whether it attempts appId attribution at all given there is no offline `installdir -> appId` map, and how it avoids flagging the bottle/bridge steamapps roots). **Run `/gsd-discuss-phase 37` before planning this one.**
+- [ ] 37-08-PLAN.md — **FOUND LIVE 2026-08-22; root cause known; fix already in flight as quick task `260822-b05`.** A game that becomes UNINSTALLED is trapped on `nonAvailableGames` forever: `isGameAvailable()` returns `false` for a not-installed game in **all four** runners (steam/gog/nile/legendary, verified by source reading), and `reconcileNonAvailableGames()` heals an entry only when that predicate returns `true` — so the entry can never leave, the game stays hidden, its card never mounts, and the card's own removal path never runs. Observed end to end: a manual refresh corrected the backend **perfectly** (`Steam library sync complete: 378 games`, store rewritten to `is_installed: false`) and the game was **still invisible**. Reproduces in two `mv` commands, every launch. Very likely the root cause of `uninstall-game-vanishes`, **parked since 2026-07-22 for want of exactly this reproduction**. After `260822-b05` lands, this plan owes: live re-verification with the repro (not a green suite), confirmation that the cross-runner claim is measured rather than merely reasoned, and closing the parked debug session. **Must not over-correct** — an installed game with a genuinely missing `install_path` still has to be excluded, or the fix silently deletes the feature while passing every test.
+
+**Live gate — folds in an already-owed confirmation.** The sibling todo "22 owned Steam games never
+reach the rendered library" was **fixed on 2026-08-22** (commit `51b175d74`, a hydration race plus
+the self-sealing `nonAvailableGames` list) and is left OPEN only pending a **full clean app restart**
+(not a reload — a reload can preserve pre-existing localStorage) confirming the count holds at first
+paint. 37-01's root-cause repro needs a live `pnpm tauri:dev` session anyway; discharge both in the
+same run. Note that 37-03 explains **9** of those 22 games and closing it will NOT close that item.
+
 ---
 
 ## Parked / Superseded Phases

@@ -7,6 +7,8 @@ found_by: "Quick task 260816-qcn code review (WR-02 + IN-01), deferred deliberat
 source: ".planning/quick/260816-qcn-steam-platform-signal-precedence-rule-an/260816-qcn-REVIEW.md"
 files:
   - src/backend/storeManagers/steam/platformPrecedence.ts
+resolves_phase: 37
+planned_as: 37-06
 ---
 
 ## Problem

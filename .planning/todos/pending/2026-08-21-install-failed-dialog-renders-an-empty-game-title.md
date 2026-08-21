@@ -6,6 +6,8 @@ status: OPEN
 severity: minor
 files:
   - src/backend/downloadmanager/utils.ts
+resolves_phase: 37
+planned_as: 37-04
 ---
 
 ## Symptom

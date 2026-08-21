@@ -6,6 +6,8 @@ status: OPEN
 severity: minor
 files:
   - src/backend/storeManagers/steam/depotErrors.ts
+resolves_phase: 37
+planned_as: 37-02
 ---
 
 ## Symptom

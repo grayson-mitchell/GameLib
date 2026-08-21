@@ -7,6 +7,8 @@ severity: minor
 files:
   - src/backend/downloadmanager/downloadqueue.ts
   - src/backend/storeManagers/steam/depot.ts
+resolves_phase: 37
+planned_as: 37-05
 ---
 
 ## Symptom
