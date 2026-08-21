@@ -7331,7 +7331,8 @@ mod tests {
         assert!(!script.contains("keydown"));
     }
 
-    // ---- login_chrome_css_script (quick task 260822-di1, T-di1-01..06) ----
+    // ---- login_chrome_css_script (quick task 260822-di1, T-di1-01..06; extended by
+    // 260822-eib, T-eib-01..05) ----
     //
     // RED direction (mirrors this file's own convention, established above): (a) swapping
     // `style.textContent` for an HTML-fragment-write API in `build()` would fail
@@ -7339,19 +7340,21 @@ mod tests {
     // idempotence flag would fail
     // `login_chrome_css_script_top_frame_guard_precedes_the_host_gate_and_the_idempotence_flag`;
     // (c) swapping the anchored `.slice(-SUFFIX.length)` comparison for `.indexOf(` would fail
-    // `login_chrome_css_script_is_scoped_to_humblebundle_by_suffix_not_substring`.
+    // `login_chrome_css_script_is_scoped_to_humblebundle_by_suffix_not_substring`; (d) dropping
+    // either CSS rule from the `concat!` literal below (or letting it diverge from the
+    // TypeScript constant) would fail the byte-equality drift pin on the jest side
+    // (`loginChromeCssInjection.test.ts`'s `DRIFT PIN (T-di1-06)` describe) -- 260822-eib's
+    // Task 1 OBSERVED this LIVE: landing the two-rule CSS with the gates below still unflipped
+    // produced exactly the three real failures this task's SUMMARY records verbatim, not a
+    // reasoned prediction.
 
     #[test]
-    fn login_chrome_css_script_hides_the_marketing_footer_and_nothing_else() {
+    fn login_chrome_css_script_hides_the_footer_and_navbar_leaving_the_four_protected_selectors_untouched(
+    ) {
         let script = login_chrome_css_script();
         assert!(script.contains("footer.site-footer { display: none !important; }"));
-        for forbidden in [
-            "#flash",
-            "page-top-messages",
-            "grayout",
-            "simple-navbar",
-            "zdconsent",
-        ] {
+        assert!(script.contains(".simple-navbar { display: none !important; }"));
+        for forbidden in ["#flash", "page-top-messages", "grayout", "zdconsent"] {
             assert!(!script.contains(forbidden));
         }
     }

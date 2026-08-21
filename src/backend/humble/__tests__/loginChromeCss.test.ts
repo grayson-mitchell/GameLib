@@ -13,9 +13,15 @@ import {
 } from 'common/humble/loginChromeCss'
 
 describe('HUMBLE_LOGIN_CHROME_CSS', () => {
-  test('is exactly the one footer-hiding rule', () => {
+  test('is exactly the two chrome-hiding rules (footer and navbar)', () => {
     expect(HUMBLE_LOGIN_CHROME_CSS).toBe(
-      'footer.site-footer { display: none !important; }'
+      'footer.site-footer { display: none !important; } .simple-navbar { display: none !important; }'
+    )
+  })
+
+  test('names the .simple-navbar rule', () => {
+    expect(HUMBLE_LOGIN_CHROME_CSS).toContain(
+      '.simple-navbar { display: none !important; }'
     )
   })
 
@@ -23,7 +29,6 @@ describe('HUMBLE_LOGIN_CHROME_CSS', () => {
     '#flash',
     'page-top-messages',
     'grayout',
-    'simple-navbar',
     'zdconsent',
     'showConsentTool',
     'js-view-body',
@@ -61,9 +66,7 @@ describe('isHumbleLoginChromeHost', () => {
     const naivePredicate = (hostname: string): boolean =>
       hostname.indexOf('humblebundle.com') !== -1
     expect(naivePredicate('humblebundle.com.evil.example')).toBe(true)
-    expect(isHumbleLoginChromeHost('humblebundle.com.evil.example')).toBe(
-      false
-    )
+    expect(isHumbleLoginChromeHost('humblebundle.com.evil.example')).toBe(false)
   })
 })
 

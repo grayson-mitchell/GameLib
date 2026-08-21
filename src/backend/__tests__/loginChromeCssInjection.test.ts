@@ -223,6 +223,14 @@ describe('DRIFT PIN (T-di1-06): the Rust literal and the TypeScript constant are
     const syntheticFnBody = 'fn login_chrome_css_script() { return; }'
     expect(extractCssLiteral(syntheticFnBody)).toBeNull()
   })
+
+  test("RED proof: di1's shipped one-rule literal (a half-applied 260822-eib update, footer updated but navbar rule forgotten on the Rust side) extracts but does NOT equal the current constant", () => {
+    const syntheticFnBody =
+      "fn login_chrome_css_script() { style.textContent = 'footer.site-footer { display: none !important; }'; }"
+    const extracted = extractCssLiteral(syntheticFnBody)
+    expect(extracted).not.toBeNull()
+    expect(extracted).not.toBe(HUMBLE_LOGIN_CHROME_CSS)
+  })
 })
 
 describe('WR-08 local guard: every line of the login_chrome_css_script fn body keeps an even raw " count', () => {
