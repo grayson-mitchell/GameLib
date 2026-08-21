@@ -154,7 +154,7 @@ export type SaveFolderVariable =
 // of that endpoint's response body. Deliberately narrowed to the only three
 // fields the codebase actually reads (see the blast-radius sweep in
 // .planning/quick/260821-o34-switch-the-gog-user-api-off-embed-gog-co/) --
-// this used to be a passthrough of https://embed.gog.com/userData.json, which
+// this used to be a passthrough of GOG's old "embed" userData endpoint, which
 // embeds the account's entire wishlist/friends/checksum payload and fails
 // outright for accounts with large wishlists.
 export interface UserData {
