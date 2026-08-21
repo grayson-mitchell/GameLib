@@ -298,3 +298,50 @@ files_changed:
   - "src/backend/storeManagers/steam/depot/decompress.ts"
   - "src/backend/storeManagers/steam/__tests__/depotPrimitives.test.ts"
   - "src/backend/storeManagers/steam/__tests__/decompressPool.test.ts (unchanged this cycle; already carries cycle 1's fix)"
+
+---
+
+## LIVE GATE PASSED — SESSION RESOLVED 2026-08-22 09:11 (operator-run, real hardware)
+
+**The install completed AND the game launched.** First time GameLib has ever installed and
+launched a native macOS Steam game.
+
+| gate | result |
+|---|---|
+| `Finished Installation of 259130` | PASS — 428 files, `symlinkEntries=6`, zero decode failures |
+| `Z_DATA_ERROR` | 0 (was 142) |
+| `sha1_mismatch` | 0 (was ~8/747) |
+| All 6 symlinks resolve | PASS — targets identical to Steam's own install |
+| `codesign --verify --deep` | PASS — `valid on disk` / `satisfies its Designated Requirement` |
+| `diff -r` vs Steam's own install | IDENTICAL — 395 files / 6 links, no content differences |
+| Game launches | **PASS** |
+
+The `diff -r` "Directory loop detected" lines now appear **symmetrically on BOTH trees** — that is
+the signature of CORRECT framework symlinks (`Versions/Current -> A` is a genuine cycle). Before
+the fix the errors were asymmetric ("No such file or directory", ours only). That asymmetry is a
+cheap, reusable oracle for this defect class.
+
+### Three defects, each hidden behind the previous one
+
+1. **`Z_DATA_ERROR`** (cycle 1) — the PK branch never read the ZIP compression-method field at
+   offset 8, so Stored (method 0) chunks were force-fed to `zlib.inflateRawSync`.
+2. **`sha1_mismatch`** (cycle 2) — the Stored branch's `body` ran to the buffer END, absorbing the
+   central directory + EOCD as payload. Invisible for Deflate because `inflateRawSync` stops at
+   its own stream end and ignores trailing bytes.
+3. **"is damaged and can't be opened"** (37-09, quick `260822-bp4`) — `linktarget` was never
+   decrypted, so raw AES ciphertext was written as the symlink target.
+
+Only #1 was on the original todo. #2 and #3 were each unreachable until its predecessor was fixed
+— which is why the native macOS install path had never produced a launchable bundle for ANY
+framework-shipping title.
+
+### The reusable lesson
+
+Every one of the three was masked by a test fixture that encoded the same wrong assumption as the
+code under test (zero-filled method byte; missing central directory; then a plaintext `filename`
+in the linktarget fixture, which threw `ERR_CRYPTO_INVALID_IV` before the code under test was even
+reached). **Four fixture traps in one file in one day.** The decisive evidence in every cycle came
+from real artifacts — the logged `rawSha1`, and Steam's own install of the same title kept on disk
+as a known-good oracle.
+
+resolution_verified_by: "operator live run 2026-08-22 09:11 — install completed, all symlinks resolve, codesign valid, game launched"

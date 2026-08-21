@@ -2,7 +2,7 @@
 created: 2026-08-21
 title: "Steam depot chunks fail to decode (Z_DATA_ERROR) on every CDN host — install dies after 211s"
 area: steam-depot
-status: OPEN
+status: CLOSED
 severity: major
 files:
   - src/backend/storeManagers/steam/depot/decompress.ts
@@ -72,3 +72,21 @@ the manifest-write path.
 ## Repro
 
 macOS, Steam client quit, appid 259130 not installed, primary-half install click.
+
+## CLOSED 2026-08-22 — live gate PASSED
+
+Root-caused and fixed over two cycles of debug session `steam-depot-decode-z-data` (archived in
+`.planning/debug/resolved/`). The leading hypothesis in this todo — a wrong/missing depot
+decryption key — was **WRONG and is explicitly disproven**: `Z_DATA_ERROR` is a zlib-only code
+that in this codebase can only come from the single `inflateRawSync()` call in the `PK` branch,
+which PROVES the post-decrypt plaintext started with ASCII `PK` and therefore that decryption
+SUCCEEDED. The CDN-auth `GetCDNAuthToken` signal noted here was likewise a red herring — it still
+appears on fully successful installs.
+
+Actual causes, both in `decompress.ts`'s PK branch: (1) the ZIP compression-method field at
+offset 8 was never read, so Stored (method 0) chunks were force-fed to `inflateRawSync`
+(commit `f3f63fd72`'s predecessor); (2) the Stored body ran to the buffer END, absorbing the
+central directory + EOCD as payload (`f3f63fd72`).
+
+Live gate 2026-08-22 09:11: install completed, 428 files, `Z_DATA_ERROR` 0, `sha1_mismatch` 0,
+content byte-identical to Steam's own install of the same title, game launches.

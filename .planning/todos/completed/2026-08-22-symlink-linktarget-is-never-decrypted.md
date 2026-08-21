@@ -2,7 +2,7 @@
 created: 2026-08-22T08:30:00.000Z
 title: "Symlink `linktarget` is never decrypted — the raw AES ciphertext is written as the symlink target, so every macOS .app with a framework installs DANGLING and macOS reports 'is damaged and can't be opened'"
 area: steam-depot
-status: AWAITING_LIVE_GATE
+status: CLOSED
 severity: blocker
 resolves_phase: 37
 planned_as: 37-09
@@ -168,3 +168,19 @@ Steam adopts a GameLib-written ACF only at its next startup scan, so compare the
 against Steam's process start before concluding anything about adoption.
 
 Do not mark this todo resolved until all three commands above have been run and PASS.
+
+## CLOSED 2026-08-22 — LIVE GATE PASSED
+
+Fix `e47650a26` confirmed on real hardware 09:11. All six symlinks resolve with targets identical
+to Steam's own install; `codesign --verify --deep` reports `valid on disk` / `satisfies its
+Designated Requirement` (same verdict as Steam's copy); `diff -r` against Steam's install shows
+395 files / 6 links and NO content differences; **the game launches**.
+
+Useful oracle discovered while verifying: `diff -r`'s `Directory loop detected` errors now appear
+SYMMETRICALLY on both trees, which is the signature of CORRECT framework symlinks
+(`Versions/Current -> A` is a real cycle). Pre-fix the errors were ASYMMETRIC (`No such file or
+directory`, ours only). Cheap and reusable for this defect class.
+
+The secondary exec-bit divergence remains UNEXPLAINED and OPEN (see below): this run again logged
+`executableFlagged=0 chmodAttempts=0` while Steam sets +x on all 395 files. It did not block the
+launch. Not folded into this fix; needs its own evidence before anyone acts on it.

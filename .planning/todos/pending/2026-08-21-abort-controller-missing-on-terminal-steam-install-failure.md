@@ -34,3 +34,19 @@ was NOT tested; that is the first thing to check.
 
 Trigger any terminal Steam depot install failure. Observed 2026-08-21 under `pnpm tauri:dev`,
 appid 259130, reproduced on both attempts (20:35:52 and 20:41:36).
+
+## NARROWED by the 2026-08-22 live runs — not tied to a terminal DOWNLOAD failure
+
+This todo's framing ("immediately after a terminal Steam install failure") is too narrow. On
+2026-08-22 the same `Aborting not possible. Could not find a matching abort controller for 259130`
+fired on a plan-build failure that aborted in **1ms, before any download started** (no CM
+connection). It fired again on a second click 16s later.
+
+So the controller is missing whenever the install fails, INCLUDING before any download exists to
+abort — which makes "the teardown path asks to abort a download whose controller was already
+removed" unlikely as the sole mechanism. More likely the controller is never REGISTERED on paths
+that fail before streaming begins. Check registration timing relative to `runNativeDepotDownload`,
+not just the teardown order. The user-initiated-cancel question in this todo remains untested.
+
+Note the 2026-07-19 double-abort fix (`aborthandler.ts`) is NOT this: that covered a controller
+that was FOUND but already aborted. This is a genuine lookup miss.
