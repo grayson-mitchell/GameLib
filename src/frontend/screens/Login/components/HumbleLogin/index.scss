@@ -1,0 +1,23 @@
+.humbleLoginBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  // Deliberately no fixed width here (unlike .steamLoginBody's `width: min(480px, 95%)`):
+  // the Tauri in-progress panel and the Electron embedded webview need very
+  // different footprints, and MuiDialog's Paper shrink-wraps to whichever
+  // child ends up widest. `margin-inline: auto` self-corrects to whatever
+  // free space exists on either side, mirroring the centring fix
+  // .steamLoginBody already carries (quick task 260820-u29 followup 1).
+  margin-inline: auto;
+}
+
+// The Electron <webview> collapses to zero height inside the Dialog without
+// an explicit box. Under Tauri this class never renders (HumbleLoginSurface
+// returns TauriLoginPanel instead), so the Tauri panel keeps its natural
+// auto size and is unaffected by this rule.
+.HumbleLoginSurface__webview {
+  display: flex;
+  width: min(900px, 80vw);
+  height: min(700px, 70vh);
+  border: 0;
+}
