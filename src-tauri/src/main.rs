@@ -1671,6 +1671,107 @@ fn login_origin_banner_update_script(origin: &str) -> String {
     template.replace("@@ORIGIN@@", &origin_js)
 }
 
+/// Builds the JS injected as an `initialization_script()` into the Tauri-managed login
+/// surface's VISIBLE builder ONLY (`humble_login_open`'s `if visible` block) -- but, unlike
+/// its two neighbours above, deliberately WITHOUT a `#[cfg(target_os = "macos")]` gate (D-2,
+/// quick task 260822-di1). `login_cancel_strip_script`/`login_origin_banner_script` substitute
+/// for macOS *sheet* chrome -- a sheet renders no title bar and no close button, so they exist
+/// only where that gap exists. This script substitutes for nothing platform-specific: Humble's
+/// marketing footer is visual noise on the login page on Windows and Linux too, so it is
+/// injected on every platform, unconditionally, inside the `if visible` block.
+///
+/// Purpose: CSS hiding is chosen over DOM surgery because it is fail-safe -- if Humble re-skins
+/// and `footer.site-footer` stops matching, the page renders unchanged instead of breaking.
+/// Reversal is a one-line edit to a single shared constant
+/// (`src/common/humble/loginChromeCss.ts`'s `HUMBLE_LOGIN_CHROME_CSS`, this function's
+/// drift-pinned counterpart). The optional wrapper-padding tighten from the originating task
+/// brief was declined (D-1, `loginChromeCss.ts`'s own doc comment) -- there is no measured
+/// baseline for that padding, so any override would be an unverifiable guess, and this stays
+/// scoped to exactly one selector.
+///
+/// Takes no arguments and interpolates nothing -- unlike its two neighbours, there is no
+/// `serde_json::to_string` placeholder-token step here, because there is no untrusted or
+/// caller-supplied value anywhere in this script's body. This is the one convention it
+/// legitimately drops relative to `login_cancel_strip_script`/`login_origin_banner_script`.
+///
+/// Contract this script implements (T-di1-01..06, quick task 260822-di1's threat register):
+/// - **Top-frame only.** The FIRST statement inside the try is `if (window.top !== window) {
+///   return; }`, identical discipline to its two neighbours (spike 013 measured 5 of 8
+///   navigation events on Humble's real login page as third-party iframes).
+/// - **Host gate runs BEFORE the idempotence flag (D-3).** This is a deliberate divergence
+///   from `login_origin_banner_script`'s flag-then-work order: on `accounts.google.com` (or
+///   any other host this runner-agnostic window opens -- `humble_login_open` takes no
+///   `runner` argument) the script returns immediately after the host check and touches
+///   NOTHING, not even a `window` property -- the same "a non-participating document leaves
+///   no state behind" discipline the top-frame guard above already encodes for subframes.
+///   Anchored via `host.slice(-SUFFIX.length) !== SUFFIX`, never `indexOf` -- a substring test
+///   would also match the look-alike host `humblebundle.com.evil.example` (T-di1-02).
+/// - Idempotent via `window.__GAMELIB_LOGIN_CHROME_CSS__`, set before any further DOM work.
+/// - Sets exactly ONE `<style>` element's `.textContent` -- never an HTML-fragment-write API
+///   of any kind. The CSS text below is byte-identical to `HUMBLE_LOGIN_CHROME_CSS`
+///   (`src/common/humble/loginChromeCss.ts`); `loginChromeCssInjection.test.ts` pins this with
+///   a byte-equality drift check, proven RED against a synthetic mismatched literal (T-di1-06).
+/// - **Retry for document-start root absence (D-4), not for a hostile page.** An
+///   `initialization_script` runs at document-start, when `document.head` may not exist yet,
+///   so a bare `build()` would silently no-op and the CSS would never apply for that document.
+///   The `document.readyState === 'loading'` -> `document.onreadystatechange` arm (a PROPERTY
+///   ASSIGNMENT, never `addEventListener`) closes that gap the same way
+///   `login_origin_banner_script` does, and the debounced `MutationObserver` -- the same house
+///   pattern this exact page already uses for two other scripts -- closes the re-append case
+///   for free.
+/// - Registers NO listener of any kind, of ANY type -- `document.onreadystatechange` is a
+///   property assignment, not a registration -- so REQ-34.4.2-06 (Cmd+V into the password
+///   field must keep working) holds by construction here, not merely by omission of the
+///   specific key names (T-di1-01).
+/// - Never reads any input's `value`, transmits nothing anywhere, creates no iframe
+///   (T-di1-01).
+/// - Whole body in exactly ONE top-level `try { } catch (e) { }` (T-di1-03) -- a throwing
+///   script must never break a live, credential-bearing login page.
+/// - Pure: calling this twice yields byte-identical output.
+///
+/// Uses this file's `concat!`-of-single-line-pieces discipline (matching its two neighbours'
+/// own convention) -- every JS string literal below is single-quoted, so every piece keeps an
+/// EVEN raw `"`-count on its own source line (`longRunningChannels.test.ts`'s WR-08
+/// stripper-integrity guard).
+fn login_chrome_css_script() -> String {
+    concat!(
+        "(function() { ",
+        "try { ",
+        "if (window.top !== window) { return; } ",
+        "var SUFFIX = '.humblebundle.com'; ",
+        "var host = location.hostname || ''; ",
+        "if (host !== 'humblebundle.com' && host.slice(-SUFFIX.length) !== SUFFIX) { return; } ",
+        "if (window.__GAMELIB_LOGIN_CHROME_CSS__) { return; } ",
+        "window.__GAMELIB_LOGIN_CHROME_CSS__ = true; ",
+        "var ID = '__gamelib_login_chrome_css__'; ",
+        "function build() { ",
+        "var buildRoot = document.head || document.documentElement; ",
+        "if (!buildRoot) { return; } ",
+        "var style = document.createElement('style'); ",
+        "style.id = ID; ",
+        "style.textContent = 'footer.site-footer { display: none !important; }'; ",
+        "buildRoot.appendChild(style); ",
+        "} ",
+        "function ensure() { ",
+        "if (!document.getElementById(ID)) { build(); } ",
+        "} ",
+        "if (document.readyState === 'loading') { ",
+        "document.onreadystatechange = function() { ensure(); }; ",
+        "} ",
+        "var debounceTimer = null; ",
+        "function scheduleEnsure() { ",
+        "if (debounceTimer) { return; } ",
+        "debounceTimer = setTimeout(function() { debounceTimer = null; ensure(); }, 200); ",
+        "} ",
+        "var observer = new MutationObserver(function() { scheduleEnsure(); }); ",
+        "observer.observe(document.documentElement, { childList: true, subtree: true }); ",
+        "ensure(); ",
+        "} catch (e) { } ",
+        "})();"
+    )
+    .to_string()
+}
+
 /// The SINGLE dismissal entry point both the cancel-strip sentinel (below, in the
 /// `.on_navigation(` closure) and the Esc monitor (Task 2, `main()`'s `.setup()`) call.
 /// `#[cfg(target_os = "macos")]` -- dismissing a sheet is a macOS-only concept (Plan 07).
@@ -3740,6 +3841,15 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                         "[shell] humble_login_open: login origin banner injected for '{label}'"
                     );
                 }
+                // Login-chrome CSS injection (quick task 260822-di1, D-2). Deliberately NOT
+                // `#[cfg(target_os = "macos")]`, unlike the two blocks immediately above: the
+                // cancel strip and origin banner substitute for macOS *sheet* chrome (a sheet
+                // renders no title bar and no close button), while this substitutes for
+                // nothing platform-specific -- Humble's marketing footer is visual noise on
+                // Windows and Linux too, so it runs unconditionally inside this `if visible`
+                // block on every platform.
+                builder = builder.initialization_script(&login_chrome_css_script());
+                eprintln!("[shell] humble_login_open: login chrome CSS injected for '{label}'");
                 // F-4 machine record (Phase 34.4.1 Plan 24): `.focused(true)` above is
                 // a ONE-SHOT raise-on-creation with no persistent state to inspect
                 // afterwards, so without this line there is no record of what
@@ -7216,6 +7326,89 @@ mod tests {
         let script = login_origin_banner_update_script(TEST_LOGIN_ORIGIN);
         assert!(!script.contains("addEventListener"));
         assert!(!script.contains("keydown"));
+    }
+
+    // ---- login_chrome_css_script (quick task 260822-di1, T-di1-01..06) ----
+    //
+    // RED direction (mirrors this file's own convention, established above): (a) swapping
+    // `style.textContent` for an HTML-fragment-write API in `build()` would fail
+    // `login_chrome_css_script_never_uses_innerhtml`; (b) reordering the host gate after the
+    // idempotence flag would fail
+    // `login_chrome_css_script_top_frame_guard_precedes_the_host_gate_and_the_idempotence_flag`;
+    // (c) swapping the anchored `.slice(-SUFFIX.length)` comparison for `.indexOf(` would fail
+    // `login_chrome_css_script_is_scoped_to_humblebundle_by_suffix_not_substring`.
+
+    #[test]
+    fn login_chrome_css_script_hides_the_marketing_footer_and_nothing_else() {
+        let script = login_chrome_css_script();
+        assert!(script.contains("footer.site-footer { display: none !important; }"));
+        for forbidden in [
+            "#flash",
+            "page-top-messages",
+            "grayout",
+            "simple-navbar",
+            "zdconsent",
+        ] {
+            assert!(!script.contains(forbidden));
+        }
+    }
+
+    #[test]
+    fn login_chrome_css_script_is_scoped_to_humblebundle_by_suffix_not_substring() {
+        let script = login_chrome_css_script();
+        assert!(script.contains(".humblebundle.com"));
+        assert!(script.contains("slice("));
+        assert!(!script.contains("indexOf("));
+    }
+
+    #[test]
+    fn login_chrome_css_script_binds_no_keyboard_listener() {
+        let script = login_chrome_css_script();
+        assert!(!script.contains("keydown"));
+        assert!(!script.contains("keyup"));
+        assert!(!script.contains("keypress"));
+        assert!(!script.contains("addEventListener"));
+    }
+
+    #[test]
+    fn login_chrome_css_script_never_uses_innerhtml() {
+        let script = login_chrome_css_script();
+        assert!(!script.contains("innerHTML"));
+        assert!(!script.contains("outerHTML"));
+        assert!(!script.contains("insertAdjacentHTML"));
+        assert!(!script.contains("document.write"));
+    }
+
+    #[test]
+    fn login_chrome_css_script_never_reads_field_value() {
+        let script = login_chrome_css_script();
+        assert!(!script.contains(".value"));
+    }
+
+    #[test]
+    fn login_chrome_css_script_top_frame_guard_precedes_the_host_gate_and_the_idempotence_flag()
+    {
+        let script = login_chrome_css_script();
+        let guard_idx = script.find("window.top !== window");
+        let host_idx = script.find(".humblebundle.com");
+        let flag_idx = script.find("__GAMELIB_LOGIN_CHROME_CSS__");
+        assert!(guard_idx.is_some());
+        assert!(host_idx.is_some());
+        assert!(flag_idx.is_some());
+        assert!(guard_idx.unwrap() < host_idx.unwrap());
+        assert!(host_idx.unwrap() < flag_idx.unwrap());
+    }
+
+    #[test]
+    fn login_chrome_css_script_is_wrapped_in_a_single_top_level_try_catch() {
+        assert_eq!(login_chrome_css_script().matches("try {").count(), 1);
+    }
+
+    #[test]
+    fn login_chrome_css_script_is_pure_same_output_every_call() {
+        let a = login_chrome_css_script();
+        let b = login_chrome_css_script();
+        assert_eq!(a, b);
     }
 
     // ---- shell_exe_env_value (Phase 34.5 Plan 01, REQ-34.5-01, D-10) ----
