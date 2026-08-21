@@ -50,6 +50,27 @@ const FIXTURE_DIFF_LINES = [
   'R100\tsrc/frontend/screens/OldLogin/index.ts\tsrc/frontend/screens/Login/index.ts'
 ]
 
+/**
+ * 2026-08-21: four entries added when `pnpm gen-i18n-gate-scope` was finally
+ * re-run, taking i18nForkTouchedFiles.json from 181 -> 185. They are debt only
+ * in the bookkeeping sense; all four were MEASURED against the real gate
+ * (`scanScope({ extraFiles })`, audit mode, committed scope untouched):
+ *
+ *   ConsoleMode/controller.ts, HumbleLogin/index.tsx,
+ *   WebView/components/HumbleLoginSurface.tsx  -- ZERO violations. These three
+ *   could be folded straight into the hand-curated meta/i18nGateScope.json
+ *   with no gate change at all; they sit here only because that file is
+ *   hand-curated and widening it is a deliberate act (see the clobber-guard
+ *   comment below for what accidental widening has already cost twice).
+ *
+ *   helpers/gamepad.ts -- 3 violations, ALL of them CSS selector string
+ *   literals ('.MuiPopover-root' at :323, '.MuiDialog-root' at :370 and :377).
+ *   These are gate false positives, not untranslated UI text, so they must NOT
+ *   be parked in meta/i18nGateAllowlist.json -- that file is a DEFERRAL
+ *   register (`expectedCount` + a blocking reason), and a false positive
+ *   recorded there would read as real deferred debt forever. The right fix is
+ *   in the gate: stop flagging CSS-selector-shaped literals.
+ */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/components/UI/ActionIcons/index.tsx',
   'src/frontend/components/UI/Dialog/components/Dialog.tsx',
@@ -58,6 +79,8 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/components/UI/SteamGridDBPicker/index.tsx',
   'src/frontend/components/UI/Winetricks/index.tsx',
   'src/frontend/helpers/declaredUnavailable.ts',
+  'src/frontend/helpers/gamepad.ts',
+  'src/frontend/screens/ConsoleMode/controller.ts',
   'src/frontend/screens/ConsoleMode/selectors.ts',
   'src/frontend/screens/Library/components/FilterChipRow/chipLabels.ts',
   'src/frontend/screens/Library/components/GamesList/index.tsx',
@@ -65,11 +88,13 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/screens/Library/engineWiring.ts',
   'src/frontend/screens/Library/facetLabels.ts',
   'src/frontend/screens/Library/filterEngine.ts',
+  'src/frontend/screens/Login/components/HumbleLogin/index.tsx',
   'src/frontend/screens/Settings/components/EgsSettings.tsx',
   'src/frontend/screens/Settings/components/SteamGridDbApiKey.tsx',
   'src/frontend/screens/Settings/components/UseFramelessWindow.tsx',
   'src/frontend/screens/Settings/sections/AdvancedSettings/index.tsx',
-  'src/frontend/screens/Settings/sections/GamesSettings/index.tsx'
+  'src/frontend/screens/Settings/sections/GamesSettings/index.tsx',
+  'src/frontend/screens/WebView/components/HumbleLoginSurface.tsx'
 ]
 
 /**
@@ -503,11 +528,11 @@ describe('--rewrite-scope guard', () => {
   }
 
   /**
-   * The snapshot a real regeneration would produce TODAY: the 181 files of
+   * The snapshot a real regeneration would produce TODAY: the 185 files of
    * the committed fork-touched artifact (34.15-09: 178 -> 180, this phase's
    * own `SteamSyncNotice/index.tsx` and `librarySyncIndicator.ts`). Built
    * from the committed artifacts rather than invented numbers, so the specs
-   * below assert the REAL 162 -> 181 delta this task exists to prevent.
+   * below assert the REAL 162 -> 185 delta this task exists to prevent.
    */
   function freshSnapshot(): ScopeSnapshot {
     return {
@@ -532,10 +557,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 162-file hand-curated snapshot and the fresh snapshot is the REAL 181', () => {
+  it('A0 fixture sanity: the seeded scope is the REAL 162-file hand-curated snapshot and the fresh snapshot is the REAL 185', () => {
     expect(scopeSnapshot.files.length).toBe(162)
-    expect(forkTouchedSnapshot.files.length).toBe(181)
-    expect(freshSnapshot().files.length).toBe(181)
+    expect(forkTouchedSnapshot.files.length).toBe(185)
+    expect(freshSnapshot().files.length).toBe(185)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -561,7 +586,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 162 -> 181 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 162 -> 185 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -584,7 +609,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 181', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 185', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -597,12 +622,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(181)
+    expect(rewritten.files.length).toBe(185)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 181 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 185 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -615,7 +640,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(181)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(185)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
