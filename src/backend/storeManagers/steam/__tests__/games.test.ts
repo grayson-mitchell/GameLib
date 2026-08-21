@@ -28,6 +28,11 @@ import SteamGame, {
 } from '../games'
 import SteamLibraryManager from '../library'
 import * as libraryModule from '../library'
+// 260821-rb5: namespace import so isNativeInstallInFlight (a games.ts export
+// consumed by library.ts's init()) can be spied per-test to simulate a
+// process restart's cleared in-memory registry — mirrors the same pattern
+// library.test.ts already uses for the reverse direction (T-23-14).
+import * as gamesModule from '../games'
 import {
   isBottleReady,
   tellBottledSteamToInstall,
@@ -54,6 +59,10 @@ import { ensureBridgeHelperReady } from '../bridge/helperProcess'
 import { runWineCommand } from 'backend/launcher'
 import { existsSync } from 'graceful-fs'
 import { getSteamLibraries } from 'backend/utils'
+// 260821-rb5: only needed by this task's case-C self-heal test (2) —
+// asserts init()'s startup surfacing loop against a StateFlags=4 ACF.
+import { notify } from 'backend/dialog/dialog'
+import { parse } from '@node-steam/vdf'
 // Real (unmocked) fs/path/os — used only by the SharedDepots-scoping
 // regression test below, which proves uninstallBottleGameDirectly()'s
 // deletion is scoped correctly against a REAL temp directory tree, the
@@ -110,7 +119,12 @@ jest.mock('../electronStores', () => ({
   },
   steamMetadataStore: {
     get: jest.fn(),
-    set: jest.fn()
+    set: jest.fn(),
+    // 260821-rb5: SteamLibraryManager.init() unconditionally calls
+    // migrateStaleArtUrls(), which iterates steamMetadataStore.entries() —
+    // needed by the new case-C breadcrumb tests below, which are the first
+    // tests in this file to exercise a real init() call.
+    entries: jest.fn().mockReturnValue([])
   },
   steamSyncStore: {
     get: jest.fn(),
@@ -2136,6 +2150,254 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
 
       expect(result).toEqual({ status: 'done' })
     })
+  })
+})
+
+// ── 260821-rb5: case-C residue breadcrumb ────────────────────────────────────
+//
+// Closes case C of the aborted-depot-residue todo
+// (.planning/todos/pending/2026-08-16-aborted-depot-residue-has-no-acf.md): a
+// hard kill (kill -9, crash, power loss) mid native-depot-download means no
+// JS ever runs at teardown, so no appmanifest_*.acf is written and
+// scanDownloadingAppIds (library.ts) can never see the residue. This block
+// proves an install-start breadcrumb persisted to steamLibraryStore makes
+// the residue SURFACED on the next init(), not merely that a helper ran.
+
+describe('260821-rb5 — case-C residue breadcrumb', () => {
+  let startInstallPollingSpy: jest.SpyInstance
+
+  const TARGET = {
+    targetSteamappsDir: '/mock/steam/steamapps',
+    installdir: APP_ID
+  }
+
+  // Reads the PERSISTED store (never the in-memory Map) — the mock is
+  // set(key, value); confirm arity against the mock's own recorded calls.
+  const persisted = () =>
+    jest
+      .mocked(steamLibraryStore.set)
+      .mock.calls.filter((c) => c[0] === 'games')
+      .at(-1)?.[1] as GameInfo[]
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
+    ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(TARGET)
+    ;(createAbortController as jest.Mock).mockReturnValue({
+      signal: 'mock-signal'
+    })
+    // resetMocks: true strips jest.fn() implementations (not just call
+    // history) before EVERY test, including the mock factory's default
+    // above — this describe block is the first in the file to exercise a
+    // real init() call, whose migrateStaleArtUrls() iterates
+    // steamMetadataStore.entries() unconditionally.
+    ;(steamMetadataStore.entries as jest.Mock).mockReturnValue([])
+    library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
+    startInstallPollingSpy = jest
+      .spyOn(libraryModule, 'startInstallPolling')
+      .mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    startInstallPollingSpy.mockRestore()
+    libraryModule.stopRunningPoll()
+  })
+
+  it('a hard-killed native install (finalize never called) persists a breadcrumb, and a fresh init() surfaces it as resumable with an EMPTY ACF scan', async () => {
+    // Simulates "no JS ran at teardown": downloadSteamDepots never settles,
+    // so no cancelled/error/done branch runs and the finally block never
+    // runs either. The resolver is held and fired at the END of this test
+    // (after every assertion) so games.ts's own nativeInstallsInFlight
+    // registry — module-private, no test reset hook — releases APP_ID
+    // before the next test runs; otherwise a later test reusing APP_ID
+    // would join this permanently-unsettled promise via the T-23-12
+    // single-flight guard instead of exercising its own scenario.
+    let resolveDownload!: (value: { status: 'done' }) => void
+    ;(downloadSteamDepots as jest.Mock).mockReturnValue(
+      new Promise((resolve) => {
+        resolveDownload = resolve
+      })
+    )
+
+    const game = new SteamGame(APP_ID)
+    const installPromise = game.install({} as any)
+    // Flush the pre-download microtask hops until downloadSteamDepots has
+    // been called (asserted below as the load-bearing precondition).
+    await flushAsync()
+
+    // Deviation (Rule 1 — test bug found writing this RED-proof, not a
+    // production fix): the settle-and-drain cleanup below is wrapped in
+    // try/finally so it always runs, even when an assertion in this test
+    // fails (expected during RED). Without this, a failed assertion skips
+    // straight to the `it` block's catch, leaving downloadSteamDepots's
+    // promise — and therefore games.ts's module-private
+    // nativeInstallsInFlight entry for APP_ID — permanently unsettled for
+    // the rest of the file, which hung a LATER test (single-flight guard
+    // joining a promise that can never resolve) instead of failing it.
+    try {
+      expect(downloadSteamDepots).toHaveBeenCalled()
+
+      const afterStart = persisted()
+      const startedEntry = afterStart?.find((g) => g.app_name === APP_ID)
+      expect(startedEntry?.install?.steamResumePending).toBe(true)
+      expect(startedEntry?.install?.steamResumeTargetSteamappsDir).toBe(
+        TARGET.targetSteamappsDir
+      )
+      expect(startedEntry?.install?.steamResumeInstalldir).toBe(
+        TARGET.installdir
+      )
+
+      // ── Simulate the process restart ────────────────────────────────────
+      library.clear()
+      jest.mocked(steamLibraryStore.get).mockReturnValue(afterStart)
+      jest.mocked(getSteamLibraries).mockResolvedValue([])
+      ;(existsSync as jest.Mock).mockReturnValue(false)
+      ;(SteamUser.isLoggedIn as jest.Mock).mockReturnValue(false)
+      // A restart wipes the in-memory nativeInstallsInFlight registry — the
+      // real (unmocked) games.ts map still shows APP_ID in-flight within
+      // THIS test process (its promise hasn't settled yet), so this spy
+      // stands in for the memory reset a real kill -9 + relaunch would
+      // cause.
+      const inFlightSpy = jest
+        .spyOn(gamesModule, 'isNativeInstallInFlight')
+        .mockReturnValue(false)
+
+      // Load-bearing precondition: an empty ACF scan is what makes this a
+      // breadcrumb-only surfacing, not an ACF-derived one.
+      const scanResult = await libraryModule.scanDownloadingAppIds()
+      expect(scanResult).toEqual([])
+
+      await new SteamLibraryManager().init()
+
+      expect(library.get(APP_ID)?.install?.steamResumePending).toBe(true)
+      expect(notify).toHaveBeenCalled()
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'pushGameToLibrary',
+        expect.objectContaining({
+          app_name: APP_ID,
+          install: expect.objectContaining({ steamResumePending: true })
+        })
+      )
+
+      inFlightSpy.mockRestore()
+    } finally {
+      resolveDownload({ status: 'done' })
+      await installPromise.catch(() => undefined)
+    }
+  })
+
+  it('a breadcrumb whose appId has an on-disk StateFlags=4 ACF is CLEARED at startup, not surfaced', async () => {
+    const breadcrumbEntry: GameInfo = {
+      ...makeEntry({ title: 'Dota 2' }),
+      install: {
+        steamResumePending: true,
+        steamResumeTargetSteamappsDir: TARGET.targetSteamappsDir,
+        steamResumeInstalldir: TARGET.installdir
+      }
+    }
+    library.clear()
+    jest.mocked(steamLibraryStore.get).mockReturnValue([breadcrumbEntry])
+    jest.mocked(getSteamLibraries).mockResolvedValue([])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(
+      jest.requireMock('graceful-fs').readFileSync as jest.Mock
+    ).mockReturnValue('installed-content')
+    ;(parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: APP_ID,
+        StateFlags: '4',
+        installdir: TARGET.installdir
+      }
+    })
+    ;(SteamUser.isLoggedIn as jest.Mock).mockReturnValue(false)
+    const inFlightSpy = jest
+      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .mockReturnValue(false)
+
+    await new SteamLibraryManager().init()
+
+    expect(notify).not.toHaveBeenCalled()
+    expect(library.get(APP_ID)?.install?.steamResumePending).toBeFalsy()
+    expect(
+      library.get(APP_ID)?.install?.steamResumeTargetSteamappsDir
+    ).toBeUndefined()
+    expect(
+      library.get(APP_ID)?.install?.steamResumeInstalldir
+    ).toBeUndefined()
+
+    // The clear must be durable — present in the last persisted array too,
+    // not merely the in-memory Map.
+    const finalPersisted = persisted()
+    const finalEntry = finalPersisted?.find((g) => g.app_name === APP_ID)
+    expect(finalEntry?.install?.steamResumePending).toBeFalsy()
+    expect(finalEntry?.install?.steamResumeTargetSteamappsDir).toBeUndefined()
+    expect(finalEntry?.install?.steamResumeInstalldir).toBeUndefined()
+
+    inFlightSpy.mockRestore()
+  })
+
+  it('a successful native depot run clears the breadcrumb before the poller starts', async () => {
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    const finalPersisted = persisted()
+    const finalEntry = finalPersisted?.find((g) => g.app_name === APP_ID)
+    expect(finalEntry?.install?.steamResumeInstalldir).toBeUndefined()
+    expect(finalEntry?.install?.steamResumeTargetSteamappsDir).toBeUndefined()
+    expect(finalEntry?.install?.steamResumePending).toBeFalsy()
+
+    // Ordering: the clearing persist ('games'-keyed steamLibraryStore.set
+    // call whose entry has no breadcrumb fields left) must land at or before
+    // startInstallPolling. Derived purely from steamLibraryStore.set's own
+    // mock call/order data — no spy on the not-yet-existing
+    // clearSteamResumeBreadcrumb export required, so this stays RED-safe
+    // (fails on content, not on missing-export setup crash) and GREEN-safe.
+    const gamesSetCalls = jest
+      .mocked(steamLibraryStore.set)
+      .mock.calls.map((call, index) => ({ call, index }))
+      .filter(({ call }) => call[0] === 'games')
+    const clearingCallIndex = gamesSetCalls.find(({ call }) => {
+      const arr = call[1] as GameInfo[]
+      const entry = arr.find((g) => g.app_name === APP_ID)
+      return (
+        entry !== undefined &&
+        !entry.install?.steamResumePending &&
+        !entry.install?.steamResumeTargetSteamappsDir &&
+        !entry.install?.steamResumeInstalldir
+      )
+    })?.index
+    expect(clearingCallIndex).toBeDefined()
+    const clearOrder = jest.mocked(steamLibraryStore.set).mock
+      .invocationCallOrder[clearingCallIndex as number]
+    const pollOrder = startInstallPollingSpy.mock.invocationCallOrder[0]
+    expect(clearOrder).toBeLessThan(pollOrder)
+  })
+
+  it('an appId with no breadcrumb and no incomplete ACF is NOT surfaced by init()', async () => {
+    library.clear()
+    jest.mocked(steamLibraryStore.get).mockReturnValue([
+      makeEntry({ title: 'Dota 2' })
+    ])
+    jest.mocked(getSteamLibraries).mockResolvedValue([])
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+    ;(SteamUser.isLoggedIn as jest.Mock).mockReturnValue(false)
+    const inFlightSpy = jest
+      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .mockReturnValue(false)
+
+    const scanResult = await libraryModule.scanDownloadingAppIds()
+    expect(scanResult).toEqual([])
+
+    await new SteamLibraryManager().init()
+
+    expect(notify).not.toHaveBeenCalled()
+    expect(library.get(APP_ID)?.install?.steamResumePending).toBeFalsy()
+
+    inFlightSpy.mockRestore()
   })
 })
 

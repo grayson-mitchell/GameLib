@@ -1521,6 +1521,79 @@ describe('SteamLibraryManager', () => {
     })
   })
 
+  // ── 260821-rb5: refresh() must not wipe an install-start breadcrumb ────────
+  //
+  // Closes case C of aborted-depot-residue todo
+  // (.planning/todos/pending/2026-08-16-aborted-depot-residue-has-no-acf.md):
+  // a hard-killed native install has no `.acf` at all, so unlike WR-01's
+  // bit-4-unset manifest, `buildIncompleteInstallSet` can never see it. The
+  // ONLY record of it is the breadcrumb this quick task adds to the
+  // in-memory `library` entry (and steamLibraryStore). refresh() rebuilds
+  // every GameInfo from ACF + ownership data and unconditionally
+  // `library.clear()`s first (library.ts ~L842) — the same wipe shape
+  // WR-01/D-UAT-09 already had to fix for the ACF-derived flag, but for a
+  // field ACF can never re-derive, so it must be captured from the PRIOR
+  // library entry before the clear, not recomputed from disk.
+  describe('260821-rb5: refresh() preserves an install-start breadcrumb', () => {
+    const BREADCRUMB_APP_ID = '570'
+    const TARGET = {
+      targetSteamappsDir: '/mock/steam/steamapps',
+      installdir: 'Dota 2'
+    }
+
+    it('a still-not-installed game (no fully-installed ACF, no incomplete ACF) keeps its steamResumePending breadcrumb through refresh()', async () => {
+      // No ACF at all for this appId — buildInstalledMap AND
+      // buildIncompleteInstallSet both come back empty (default outer
+      // beforeEach: getSteamLibraries → []). This is the load-bearing
+      // precondition that distinguishes this from WR-01's ACF-derived case.
+      library.set(BREADCRUMB_APP_ID, {
+        runner: 'steam',
+        app_name: BREADCRUMB_APP_ID,
+        title: 'Dota 2',
+        is_installed: false,
+        install: {
+          steamResumePending: true,
+          steamResumeTargetSteamappsDir: TARGET.targetSteamappsDir,
+          steamResumeInstalldir: TARGET.installdir
+        },
+        art_cover: '',
+        art_square: '',
+        extra: { reqs: [] },
+        canRunOffline: true,
+        installable: true
+      } as any)
+
+      const apps = [makeOwnedApp(570, 'Dota 2', 120)]
+      const fakeClient = makeFakeClient(apps)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+      await manager.refresh()
+
+      const rebuilt = library.get(BREADCRUMB_APP_ID)
+      expect(rebuilt?.install?.steamResumePending).toBe(true)
+      expect(rebuilt?.install?.steamResumeTargetSteamappsDir).toBe(
+        TARGET.targetSteamappsDir
+      )
+      expect(rebuilt?.install?.steamResumeInstalldir).toBe(TARGET.installdir)
+
+      const persistedCall = jest
+        .mocked(steamLibraryStore.set)
+        .mock.calls.find(([key]) => key === 'games')
+      const persistedGames = persistedCall?.[1] as any[]
+      const persisted = persistedGames?.find(
+        (g) => g.app_name === BREADCRUMB_APP_ID
+      )
+      expect(persisted?.install?.steamResumePending).toBe(true)
+      expect(persisted?.install?.steamResumeTargetSteamappsDir).toBe(
+        TARGET.targetSteamappsDir
+      )
+      expect(persisted?.install?.steamResumeInstalldir).toBe(
+        TARGET.installdir
+      )
+    })
+  })
+
   // ── Art URL migration (capsule_616x353 → library_600x900) ──────────────────
 
   describe('init() migrates stale cover art URLs', () => {
