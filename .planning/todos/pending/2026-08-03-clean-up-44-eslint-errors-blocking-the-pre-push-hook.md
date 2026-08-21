@@ -1,45 +1,92 @@
 ---
 created: 2026-08-03T05:51:50.702Z
-title: Clean up 44 eslint errors blocking the pre-push hook
+revised: 2026-08-21
+title: "Unblock the pre-push hook — eslint half DONE, prettier partly fixed, i18n still red"
 area: tooling
+status: OPEN
+severity: minor
 files:
-  - src/backend/sidecar/__tests__/bootstrap.test.ts
-  - src/backend/sidecar/__tests__/devSecretVault.test.ts:58
-  - src/backend/sidecar/__tests__/humbleFlows.test.ts:89
-  - src/backend/sidecar/__tests__/oauthLoginCapture.test.ts
-  - src/backend/sidecar/__tests__/runnerMiscFlows.test.ts
-  - src/backend/sidecar/electronStub.ts:114
-  - src/backend/sidecar/handlers.ts:302
-  - src/backend/sidecar/humbleFlowRegistration.ts:165
-  - src/backend/sidecar/storeWriteHandlers.ts:123
-  - src/backend/storeManagers/gog/redist.ts:119
-  - src/preload/__tests__/framelessRuntime.test.ts:90
+  - .prettierignore
+  - src/preload/.prettierrc
+  - .editorconfig
 ---
 
-## Problem
+## Original problem (2026-08-03)
 
-The pre-push hook (`codecheck` + `lint`) fails on 44 pre-existing eslint errors accumulated on
-`fix/steam-native-install-stability`, so every push currently requires `--no-verify` (used for the
-2026-08-03 ship that updated fork PR #3). The errors are branch debt, none from the 2026-08-03
-debug fixes. Reproduce the exact list with `npx eslint --cache --quiet .`.
+The pre-push hook failed on 44 pre-existing eslint errors, so every push needed
+`--no-verify`. The hook is:
 
-Breakdown:
-- ~20× `@typescript-eslint/no-require-imports`, almost all in sidecar jest tests. CAUTION: these
-  are dynamic re-requires after `jest.resetModules`/`jest.isolateModules` and are likely
-  intentional — the right fix is targeted `eslint-disable` comments or a rule exception for test
-  files, NOT conversion to static imports (that would change test semantics).
-- ~15× `@typescript-eslint/no-unnecessary-type-assertion` — auto-fixable (`eslint --fix`).
-- 1× `no-this-alias` (framelessRuntime.test.ts:90)
-- 1× `no-redundant-type-constituents` (electronStub.ts:114 — `unknown` overriding a union)
-- 1× `no-unused-vars` (`registerHumbleFlows`, humbleFlows.test.ts:89)
-- a few `no-require-imports` in real source: humbleFlowRegistration.ts:165, gog/redist.ts:119 —
-  CAUTION: memory gotcha "sync require of alias/relative unresolved in build" — a require here may
-  be deliberate; check before converting.
+```bash
+pnpm codecheck && pnpm lint && pnpm prettier && pnpm i18n --fail-on-update
+```
 
-## Solution
+## Measured state 2026-08-21 (all four gates run in place, on b4725bb99)
 
-1. `npx eslint --fix` for the auto-fixable assertions, then verify jest suite stays green (3685+).
-2. Add a test-file override for `no-require-imports` in the eslint config (or per-line disables
-   with a one-word reason) for the sidecar test dynamic requires.
-3. Hand-fix the remaining singles.
-4. Confirm `git push` passes the hook without `--no-verify`.
+| gate | command | result |
+|---|---|---|
+| codecheck | `tsc --noEmit` | **PASS** |
+| lint | `eslint --cache .` | **PASS** — 0 errors, 3939 warnings |
+| prettier | `prettier --check .` | **FAIL** — 280 files |
+| i18n | `i18next --silent --fail-on-update` | **FAIL** — 60 added / 63 unreferenced keys |
+
+### 1. eslint — RESOLVED, close this part
+
+0 errors repo-wide, confirmed with `eslint -f json` filtered on `severity === 2`
+(the only unambiguous probe — plain output interleaves warnings with errors).
+The last 9 went in `acab0e0b4`. The 44 in the original breakdown are gone; the
+feared `no-require-imports` conversions never had to happen.
+
+### 2. prettier — HALF FIXED in `bf308698b`
+
+The gate was traversing generated output: 2791 files under
+`src-tauri/target/.fingerprint/`, plus `.planning/` (1969) and `.claude/` (66).
+4826 of 5110 flagged files were not source. It took **11m23s**.
+`.prettierignore` now excludes `src-tauri/target`, `src-tauri/gen`, `.planning`,
+`.claude`, `graphify-out` → **9.6s, 280 files, all genuine**.
+
+**Still open:** those 280 files are really unformatted. 253 are under `src/`
+(134 backend, 101 frontend, 14 preload, 4 common); the rest are `meta/` (20),
+`spike/` (2), `scripts/`, `public/`, `README.md`, `CLAUDE.md`, `.github/`.
+Measured in place: **+4287 / −3041 across 253 files**, concentrated in test
+files (`releaseWorkflow.test.ts` +415/−358, `tauriConf.test.ts` +353/−303).
+
+Do this as **one pure-formatting commit with no behavioural change** (see
+`260821-ooq/deferred-items.md`). Two known landmines, neither blocking:
+- `src/preload/.prettierrc` sets `printWidth: 120`; root `.prettierrc.json` sets
+  none, so root defaults to 80. `--write` honours both, so the gate goes green
+  either way — but preload stays formatted differently from everything else.
+  Decide whether that override is wanted before or after, not during.
+- `.editorconfig`'s `[{*.ts, *.tsx, *.js}]` has a space after each comma.
+  EditorConfig treats brace alternatives literally, so ` *.tsx` and ` *.js`
+  match nothing — that section only ever applies to `*.ts`.
+
+**Do NOT measure prettier drift on a temp copy.** Tried 2026-08-21: config
+resolution differs outside the repo and `--write` on a copy reported *zero*
+changes against a tree with 253 dirty files. Measure in place and
+`git restore` after (that fires the failing post-checkout hook — noisy, ~30s,
+harmless).
+
+Unrelated pre-existing oddity found while measuring:
+`src/backend/crossover_index/__tests__/normalize.test.ts` contains a literal NUL
+byte at line 82 — a deliberate adversarial-input fixture for `normalize()`. Git
+therefore renders the whole file as binary in every diff. Legitimate; noted only
+so nobody "fixes" it.
+
+### 3. i18n — STILL RED, and this is the real remaining blocker
+
+`translation` +55/57 unreferenced, `gamepage` +4/4, `gamelib` 0/2, `login` +1/0.
+Exits 1 without writing anything (working tree verified clean afterwards).
+
+**Do not just run `pnpm i18n` and commit the result.** The parser logged
+**23 × "Key is not a string literal"**, so it cannot see dynamically-built keys —
+some of those 63 "unreferenced" keys are live, and letting the extractor drop
+them would break rendering silently while every gate stays green. This is the
+same drift that blocks [[pull-upstream-i18n-catalog-refreshes]]; triage belongs
+there, once, not in two places.
+
+## Remaining steps
+
+1. One pure-formatting commit for the 280 prettier files (decision: sweep now, or
+   after the fork PR merges — it churns `git blame` across 253 source files).
+2. Triage the i18n drift under [[pull-upstream-i18n-catalog-refreshes]].
+3. Then confirm `git push` passes the hook without `--no-verify`.
