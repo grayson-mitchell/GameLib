@@ -3,7 +3,9 @@ created: 2026-08-19T13:10:00.000Z
 title: "A native install that fails at plan-build still writes a StateFlags=1026 stub manifest — with buildid 0 and NO InstalledDepots — which can clobber a complete install's manifest"
 area: steam-depot
 needs: code-fix
-status: OPEN
+status: CLOSED
+closed: 2026-08-21
+closed_by: "Phase 23.2 plan 02 (fixed 2026-08-19); verified and closed 2026-08-21"
 severity: major
 surfaced_by: "Phase 23.2 prep — the KCD2 plan-build selection census, 2026-08-19"
 files:
@@ -210,3 +212,66 @@ Windows title as well as the macOS path — checking only the macOS `steamapps` 
 went unnoticed for a month (see explanation 3 above). Assert on the manifest's *content*
 (`InstalledDepots` present, `buildid` non-zero) rather than merely on file presence: presence checks are
 what let the clobber look like a successful restore during this session.
+
+---
+
+## Closure — 2026-08-21 (verified, no new code)
+
+**CLOSED. This was fixed on 2026-08-19 by phase 23.2 plan 02, hours after the todo was
+filed** — the todo stayed open only because `resolves_phase:` was absent from its
+frontmatter, so GSD's todo auto-close never saw it. No code was written on 2026-08-21;
+this section records the verification that closed it.
+
+**The fix, live at HEAD:**
+
+- `shouldFinalizeAfterThrow` (`depot.ts:1100-1104`) — an exported predicate returning
+  `opts.downloadAttempted === true`, the single place this decision is made.
+- `downloadAttempted` (`depot.ts:2852`) is set true at `depot.ts:2946`, **before** the
+  `downloadDepotFiles` await. That ordering is the load-bearing detail: a throw from
+  *inside* `downloadDepotFiles` (Case B — bytes may already be on disk) still counts as
+  attempted and still earns the Phase 21 `1026` verify-handoff, which the fix direction
+  above required must not regress.
+- The catch block's `finalize()` is gated behind that predicate (`depot.ts:2990`), with a
+  `logWarning` on the no-write branch. Case A (plan-build throw, `attempted === []`,
+  `buildid === undefined`) now writes nothing and leaves any existing `.acf` byte-identical.
+
+Commits `93c8c3b77` (RED) and `03c069278` (GREEN), both ancestors of HEAD. Verified
+2026-08-21: `depot.finalize.test.ts` 8/8 green.
+
+**Both anti-vacuity guards this todo demanded were honored by 23.2-02:**
+
+1. *Assert on content, not presence.* The regression tests seed a real prior manifest via
+   `buildAppManifestText` at the KCD2 benchmark values (`StateFlags 4`, `buildid
+   23914554`, three `InstalledDepots` entries) and assert **exact text equality** against
+   that seed, plus named sub-assertions that `buildid` is still `"23914554"` and not
+   `"0"` and that depot `1771302` is still present. The Case-B pin matches a depot-id
+   ENTRY inside `InstalledDepots`, not the bare key — which matters precisely because, as
+   the Correction section above establishes, `buildAppManifestText` emits the
+   `"InstalledDepots" { }` block unconditionally, so `toMatch(/"InstalledDepots"/)` would
+   have passed against the stub.
+2. *Test the bottle path, not just macOS.* The test derives its target `steamapps`
+   directory from `bottle.ts`'s real, unmocked `getBottleDir`/`getBottleSteamappsDir`,
+   with a structural assertion that the computed suffix contains a `drive_c` segment and
+   ends with `steamapps`. One of the two cases is the literal 2026-08-19 KCD2
+   reproduction (`getDepotDecryptionKey` rejecting with `eresult: 40`).
+
+**The record contradiction is also resolved.** Phase 23.2-01's adjudication (above) ruled
+out "behaviour changed" from git history, established that cases A and C genuinely differ,
+and recorded the wrong-directory explanation as the most likely unfalsified one. The
+sibling todo `2026-08-16-aborted-depot-residue-has-no-acf.md` has had its false sentence
+("the `.acf` is only written on a successful completion") struck in place with its own
+`## Correction` section, so the stale belief is no longer load-bearing anywhere.
+
+## Residual, deliberately out of scope — NOT covered by this closure
+
+`downloadSteamDepots`' **zero-depot early return** still calls `finalize()` ungated and
+can therefore emit the same `StateFlags=1026`/empty-`InstalledDepots` shape. 23.2-02 left
+it unchanged on purpose, with a source comment naming it as a sibling case: it serves a
+real purpose (resolving a dangling prior partial attempt), and that phase had no evidence
+justifying a change.
+
+This is a narrower hazard than the one closed here — it needs a plan that legitimately
+selects zero depots, not merely a plan-build throw — but the clobber shape is identical,
+so it is the same data-destruction risk on a rarer route. **Not yet filed as its own
+todo.** If it is to be fixed, it wants its own task and its own red-first test, and the
+same two anti-vacuity guards apply verbatim.
