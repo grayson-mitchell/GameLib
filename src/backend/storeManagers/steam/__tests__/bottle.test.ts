@@ -743,6 +743,77 @@ describe('bottle.ts', () => {
       })
     })
 
+    // ── (1c): CrossOver-only guard, mirroring provisionBridgeBottle's D-08 ──
+    // guard. Uses bottleName 'GameLibSteam' (not the shared 'GameLib') so the
+    // CR-01 guard above cannot be the one that fires — the shared value is
+    // primed to 'GameLib' precisely to demonstrate that.
+    describe('D-08: CrossOver-only guard (mirrors provisionBridgeBottle)', () => {
+      test('rejects a non-CrossOver wineVersion (toolkit/GPTK) before any store write or cxbottle call', async () => {
+        mockedGetNodefault.mockReturnValue(undefined)
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () =>
+            ({
+              wineVersion: defaultWine,
+              wineCrossoverBottle: 'GameLib'
+            }) as GameSettings
+        })
+        setBottleFs({ conf: false, steamExe: false, steamSetupExe: false })
+        const gptk: WineInstallation = {
+          bin: '/usr/bin/gptk-wine',
+          name: 'Game Porting Toolkit',
+          type: 'toolkit'
+        }
+
+        const result = await provisionBottle({
+          bottleName: 'GameLibSteam',
+          wineVersion: gptk
+        })
+
+        expect(result.status).toBe('error')
+        expect(result.error).toMatch(/crossover/i)
+        expect(mockedSet).not.toHaveBeenCalled()
+        expect(mockedSpawnAsync).not.toHaveBeenCalled()
+        expect(mockedRmSync).not.toHaveBeenCalled()
+        expect(mockedDownloadFile).not.toHaveBeenCalled()
+      })
+
+      // Discriminator: without this, a guard that rejected UNCONDITIONALLY
+      // would also pass the test above.
+      test('does NOT over-fire: a CrossOver wineVersion is still persisted', async () => {
+        mockedGetNodefault.mockReturnValue(undefined)
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () =>
+            ({
+              wineVersion: defaultWine,
+              wineCrossoverBottle: 'GameLib'
+            }) as GameSettings
+        })
+        const flags: FsFlags = {
+          conf: false,
+          steamExe: false,
+          steamSetupExe: false
+        }
+        setBottleFs(flags)
+        mockedSpawnAsync.mockImplementation(async () => {
+          flags.conf = true
+          return { code: 0, stdout: '', stderr: '' }
+        })
+        const crossover: WineInstallation = {
+          bin: '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine',
+          name: 'CrossOver',
+          type: 'crossover'
+        }
+
+        const result = await provisionBottle({
+          bottleName: 'GameLibSteam',
+          wineVersion: crossover
+        })
+
+        expect(result.status).toBe('done')
+        expect(mockedSet).toHaveBeenCalledWith('wineVersion', crossover)
+      })
+    })
+
     test('short-circuits to {status:"done"} when the bottle is fully ready — conf + steam.exe (no download, no create)', async () => {
       mockedGetNodefault.mockReturnValue(undefined)
       setBottleFs({ conf: true, steamExe: true, steamSetupExe: false })
