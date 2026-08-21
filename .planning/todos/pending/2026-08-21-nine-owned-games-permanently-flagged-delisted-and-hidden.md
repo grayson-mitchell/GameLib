@@ -1,8 +1,8 @@
 ---
 created: 2026-08-21
-title: "Nine owned, non-delisted games are permanently flagged is_delisted and hidden from the library"
+title: "A store-availability flag is used as a library-visibility filter: nine OWNED games are hidden by is_delisted, one of them INSTALLED and unlaunchable (Dead Island). The flag itself is CORRECT -- the hiding is the defect."
 area: steam
-status: "OPEN -- BUT THE FILED CAUSE IS DISPROVEN (2026-08-22). The nine persistently return success:false from a cold curl, with a passing control, so this is NOT a transient blip and the prescribed retry+migration fix CANNOT work. Real defect is the filter policy (an owned, INSTALLED game is hidden by a store flag). Needs a product decision before planning -- see the CORRECTION section."
+status: "OPEN -- DECIDED 2026-08-22: option 2, is_delisted becomes a user-driven FILTER FACET + badge, never a forced hide. Detection is correct and unchanged; NO migration. Ready to plan."
 severity: major
 files:
   - src/backend/storeManagers/steam/games.ts
@@ -137,3 +137,39 @@ The fix direction depends on a product call:
 
 Re-titled in spirit: this is not "nine games are wrongly flagged", it is "a store-availability
 flag is being used as a library-visibility filter for games the user owns".
+
+## DECISION 2026-08-22 (user) — option 2: delisted is a FILTER, not a hide
+
+> "2, this should just be filterable"
+
+`is_delisted` is demoted from a forced-hide to **user-controlled filterable state**. An owned game
+is never hidden by its store status by default; the user can filter on it if they want to.
+
+**What this means concretely:**
+
+- Remove `(runner === 'steam' && !!is_delisted)` from `filterEngine.isNonAvailableGame`
+  (`filterEngine.ts:241-249`). That OR clause is the whole defect — it is why Dead Island is
+  installed on disk and invisible.
+- Keep computing and persisting `is_delisted`. The detection is CORRECT (see the CORRECTION
+  section above — all nine genuinely return `success: false`, with a passing control). Nothing
+  about the fetch path changes, and **no migration is needed** — the stored flags are accurate.
+- Surface it as a **filter facet** the user drives, alongside the existing runnability/store
+  facets, plus a badge on the card so the state is legible without opening a filter.
+- Default: **showing**. An owned game appears in the library unless the user filters it out.
+
+**Do NOT:**
+- change `fetchMetadataIfNeeded`'s `success === false` branch — it is not the bug;
+- write a migration clearing `is_delisted` — it would be recording a falsehood;
+- route the new facet through `nonAvailableGames`. That list means "an INSTALLED game whose
+  install_path went missing" and has exactly one writer; reusing it collides at every existing
+  reader (see the 37-08 todo, and `reusing-a-state-field-collides-at-existing-readers`).
+
+**Verification must include the live case:** Dead Island (91310) is installed and currently
+invisible. After the fix it must appear in the grid, be launchable, and disappear only when the
+user actively filters delisted titles out. A green suite does not prove this.
+
+**Still open, deliberately deferred:** option 3 (using PICS/appinfo to tell a genuinely-withdrawn
+product apart from a beta-branch entry that never had a store page, e.g. `Starbound - Unstable`,
+`Rust - Staging Branch`). That is a labelling refinement and is no longer urgent once nothing is
+hidden — but it is what would stop the badge from saying "Delisted" on something that was never
+listed.
