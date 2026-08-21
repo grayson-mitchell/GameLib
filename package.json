@@ -73,7 +73,8 @@
     "verify:runner-bundle": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/verifyRunnerBundle.ts",
     "clean:dist-mac": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/cleanDistMac.ts",
     "verify:updater-key": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/verifyUpdaterSigningKey.ts",
-    "gen-tray-icon-variants": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/trayIconVariants.ts"
+    "gen-tray-icon-variants": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/trayIconVariants.ts",
+    "graph:viz": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/graphifyCodeViz.ts"
   },
   "dependencies": {
     "@fontsource/cabin": "^4.5.10",
