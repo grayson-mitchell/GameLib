@@ -66,3 +66,41 @@ launcher silently omitting owned games from the library is invisible to every ex
 Add a startup (or dev-only) assertion that the renderer's per-runner library length matches the
 persisted store's, and log loudly on mismatch. That check is what turns this class of defect
 from "a user notices a game is missing" into a failing gate.
+
+## Resolution (2026-08-21)
+
+Root cause was two compounding defects, NOT the send-drop/IPC hypothesis this todo's leading
+hypothesis proposed (that was live-tested and refuted — `libraryUnion` held all 400 entries
+including both named-missing appIds; the loss was inside `filterLibrary`, not transport):
+
+1. **Backend hydration race** — `SteamGame.getGameInfo()` (`steam/games.ts`) returned `{}` for any
+   appId not yet in the in-memory `library` Map, which happens before
+   `SteamLibraryManager.refresh()`'s async CM sync finishes populating it. Any `isGameAvailable()`
+   call landing in that window resolved `false` for an owned, correctly-installed game.
+2. **Stuck-forever exclusion** — that false negative gets written to the `nonAvailableGames`
+   localStorage list, which `filterEngine.isNonAvailableGame` excludes from BOTH the grid and the
+   header's own "unfiltered" denominator (default state, no visible filter chip) — producing
+   exactly `356 of 356` with nothing showing as filtered. Nothing ever re-checked a listed appName,
+   because the only re-check call site is the excluded game's own `GameCard`, which the exclusion
+   itself prevents from mounting again.
+
+Fix: (1) `getGameInfo()` now falls back to the persisted `steamLibraryStore` cache and self-heals
+the in-memory Map on hit. (2) Added `reconcileNonAvailableGames()`
+(`src/frontend/hooks/constants.ts`), driven from `Library/index.tsx` (not the excluded card), so a
+stale entry can leave the list once the underlying condition resolves. (3) Added the blind-spot
+guard this todo's "How to apply" section asked for:
+`findSilentlyExcludedGames`/`gameCount.ts` + a `Library/index.tsx` effect that `logError`s if any
+Steam/non-DLC/non-delisted game is still silently excluded after reconciliation — scoped narrower
+than a full renderer-vs-store length assertion (Steam-only, since that's the mechanism proven
+broken) but targets the exact defect class this todo raised.
+
+Self-verified: `npx tsc --noEmit -p .` clean; `src/backend/storeManagers/steam/` (39 suites, 1366
+passed) and `src/frontend/screens/Library/` (21 suites, 579 passed) all green, including 4 new
+regression tests for the `getGameInfo()` persisted-cache fallback.
+
+**Still open:** a live full-app-restart confirmation from the operator that the fix holds in the
+real environment (not just at first paint) — see
+`.planning/debug/resolved/steam-library-22-games-missing.md` (or
+`.planning/debug/steam-library-22-games-missing.md` if not yet archived) for the exact ask. This
+todo is left OPEN (not closed) until that confirmation lands; the debug session tracks the
+checkpoint.
