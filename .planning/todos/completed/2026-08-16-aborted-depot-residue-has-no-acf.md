@@ -184,3 +184,17 @@ scan — the only option that catches residue predating this breadcrumb (i.e. an
 already killed before this fix shipped) — remains unaddressed. This todo stays pending for
 that reason; it is not being closed. See `.planning/quick/260821-rb5-steam-case-c-residue-persist-a-resume-br/260821-rb5-SUMMARY.md`
 for the full task-by-task execution record.
+
+## Closed (2026-08-21)
+
+Closing this todo. Cases A and B were resolved by 23.2-02 and the Phase 21 `1026` verify-handoff
+respectively (see `## Correction`); case C was resolved by quick task `260821-rb5` (see
+`## Resolution`). The sole remaining scope — the DEFERRED startup filesystem orphan scan, which
+covers residue predating the `260821-rb5` breadcrumb — has been split into its own todo rather
+than left to keep this one open indefinitely:
+
+`.planning/todos/pending/2026-08-21-startup-filesystem-orphan-scan-for-pre-breadcrumb-steam-depo.md`
+
+That todo carries forward the two constraints established here that a naive scan would violate:
+a `.acf`-less directory is not self-evidently residue, and there is no offline
+`installdir -> appId` map.
