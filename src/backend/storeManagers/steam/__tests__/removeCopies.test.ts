@@ -463,11 +463,11 @@ describe('enumerateSteamInstallCopies', () => {
       installdir: 'HOARD',
       SizeOnDisk: '12345'
     })
-    const bottleMock = jest.requireMock('../bottle') as {
+    const bottleMock = jest.requireMock<{
       getSteamBottleSettings: jest.Mock
       getBridgeBottleSettings: jest.Mock
       getBottleSteamappsDir: jest.Mock
-    }
+    }>('../bottle')
     bottleMock.getSteamBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'B'
     })
@@ -517,11 +517,11 @@ describe('enumerateSteamInstallCopies', () => {
       order.push('native')
       return [NATIVE_LIB]
     })
-    const bottleMock = jest.requireMock('../bottle') as {
+    const bottleMock = jest.requireMock<{
       getSteamBottleSettings: jest.Mock
       getBridgeBottleSettings: jest.Mock
       getBottleSteamappsDir: jest.Mock
-    }
+    }>('../bottle')
     bottleMock.getSteamBottleSettings.mockImplementation(() => {
       order.push('bottle')
       throw new Error('unprovisioned bridge bottle')
@@ -532,9 +532,9 @@ describe('enumerateSteamInstallCopies', () => {
     })
     bottleMock.getBottleSteamappsDir.mockReturnValue('/bridge/steamapps')
 
-    const { logWarning } = jest.requireMock('backend/logger') as {
-      logWarning: jest.Mock
-    }
+    const { logWarning } = jest.requireMock<{ logWarning: jest.Mock }>(
+      'backend/logger'
+    )
 
     const copies = await libraryModule.enumerateSteamInstallCopies('63000')
 
@@ -728,12 +728,14 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
     // removeDemotedNativeOrphan has run, without needing to drive the whole
     // depot-download pipeline: not bridge-eligible, bottle not provisioned
     // -> install() returns { status: 'done', deferredToSetup: true }.
-    ;(jest.requireMock('../bridge/allowlist') as { bridgeAllowlist: { has: jest.Mock } }).bridgeAllowlist.has.mockReturnValue(
-      false
-    )
-    ;(jest.requireMock('../bottle') as { isBottleReady: jest.Mock }).isBottleReady.mockReturnValue(
-      false
-    )
+    jest
+      .requireMock<{
+        bridgeAllowlist: { has: jest.Mock }
+      }>('../bridge/allowlist')
+      .bridgeAllowlist.has.mockReturnValue(false)
+    jest
+      .requireMock<{ isBottleReady: jest.Mock }>('../bottle')
+      .isBottleReady.mockReturnValue(false)
   })
 
   it("mac_arch:'32' + isAppleSiliconMac + native installed -> removeSteamInstallCopy called exactly once, install proceeds", async () => {
@@ -769,10 +771,8 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
     const removeSpy = jest.spyOn(libraryModule, 'removeSteamInstallCopy')
 
     // Flip the mutable environment double for this one test only.
-    ;(
-      jest.requireMock('backend/constants/environment') as {
-        isAppleSiliconMac: boolean
-      }
+    jest.requireMock<{ isAppleSiliconMac: boolean }>(
+      'backend/constants/environment'
     ).isAppleSiliconMac = false
 
     await new SteamGame(APP_ID).install({} as any)
@@ -780,10 +780,8 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
     expect(removeSpy).not.toHaveBeenCalled()
 
     // Restore the module default for subsequent tests.
-    ;(
-      jest.requireMock('backend/constants/environment') as {
-        isAppleSiliconMac: boolean
-      }
+    jest.requireMock<{ isAppleSiliconMac: boolean }>(
+      'backend/constants/environment'
     ).isAppleSiliconMac = true
     removeSpy.mockRestore()
   })
@@ -827,9 +825,9 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
     const removeSpy = jest
       .spyOn(libraryModule, 'removeSteamInstallCopy')
       .mockRejectedValue(new Error('disk error'))
-    const { logWarning } = jest.requireMock('backend/logger') as {
-      logWarning: jest.Mock
-    }
+    const { logWarning } = jest.requireMock<{ logWarning: jest.Mock }>(
+      'backend/logger'
+    )
 
     const result = await new SteamGame(APP_ID).install({} as any)
 
@@ -980,9 +978,9 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
     const pollSpy = jest
       .spyOn(libraryModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
-    const { logWarning } = jest.requireMock('backend/logger') as {
-      logWarning: jest.Mock
-    }
+    const { logWarning } = jest.requireMock<{ logWarning: jest.Mock }>(
+      'backend/logger'
+    )
 
     const result = await removeAllSteamInstallCopies(APP_ID)
 
