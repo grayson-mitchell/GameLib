@@ -4738,6 +4738,11 @@ describe('pollInstallOnce()', () => {
 // ── D-07: startInstallPolling / stopInstallPolling ────────────────────────────
 
 describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
+  // 260822-dkf: isolated per-test so no test below (the CR-01 grace test at
+  // 4785, or the bottle-source test after it) inherits a mocked
+  // isNativeInstallInFlight registry from a test above it.
+  let isNativeInstallInFlightSpy: jest.SpyInstance | undefined
+
   beforeEach(() => {
     jest.useFakeTimers()
     library.clear()
@@ -4758,6 +4763,9 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
 
   afterEach(() => {
     stopInstallPolling('730')
+    stopInstallPolling('731')
+    isNativeInstallInFlightSpy?.mockRestore()
+    isNativeInstallInFlightSpy = undefined
     jest.useRealTimers()
   })
 
@@ -4797,6 +4805,180 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
         status: 'done'
       })
     )
+  })
+
+  // ── 260822-dkf: the grace window's provenance test ─────────────────────────
+  // D-01: the discriminator is isNativeInstallInFlight(appId), NOT
+  // isNativeHandoff (three of four startInstallPolling call sites leave
+  // isNativeHandoff false, and two of those three are exactly the paths
+  // whose cancel detection Test B below protects). Read PER-TICK, never
+  // captured at poll-start — resumeInterruptedSteamInstall's poll is created
+  // BEFORE the native depot run registers itself as in-flight.
+
+  // Test A (RED at HEAD — 260822-dkf): a live native download must survive
+  // the grace window. D-08: GameLib deliberately writes the ACF only at
+  // finalize, so `existsSync` staying false for the whole download is NORMAL
+  // for this path, not a cancellation signal — the fixture sets BOTH halves
+  // (no manifest on disk AND the download registered as live) because the
+  // defect is precisely that the code cannot tell those two states apart. If
+  // this test can be made to pass without changing the grace condition, the
+  // fixture is wrong (per PLAN.md's falsifier).
+  it('Test A (260822-dkf, regression pin): a live native depot download survives the grace window — never emits terminal "done" and keeps polling past GRACE_TICKS', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(false) // D-08: no manifest yet is NORMAL mid-download on this path
+    isNativeInstallInFlightSpy = jest
+      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .mockReturnValue(true) // GameLib's own depot run is streaming chunks right now
+    jest.mocked(sendFrontendMessage).mockClear()
+
+    const interval = 10
+    startInstallPolling('730', interval)
+    // GRACE_TICKS (20) + 1 ticks — the point where the (defective) grace
+    // branch would fire.
+    await jest.advanceTimersByTimeAsync(interval * 21)
+
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({
+        appName: '730',
+        status: 'done'
+      })
+    )
+
+    // Behavioural "the loop is still running" proof — assert on ticks
+    // continuing to happen (existsSync is called once per tick inside
+    // readAcfState), never on activePolls/clearInterval internals.
+    const ticksSoFar = (existsSync as jest.Mock).mock.calls.length
+    await jest.advanceTimersByTimeAsync(interval * 5)
+    expect((existsSync as jest.Mock).mock.calls.length).toBeGreaterThan(
+      ticksSoFar
+    )
+  })
+
+  // Test B (GREEN at HEAD, must STAY GREEN — pair-partner of Test A): the
+  // steam://install / bottle path's cancel detection is untouched.
+  // isNativeInstallInFlight is spied explicitly (rather than relying on the
+  // ambient default) so this pin cannot pass by accident — it protects the
+  // grace window's original CR-01 purpose.
+  it('Test B (260822-dkf, interaction pin): a poll with no live native download still stops with "done" after the grace window — cancel detection is intact', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+    isNativeInstallInFlightSpy = jest
+      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .mockReturnValue(false) // Steam (or the bottle) owns this download, not GameLib
+    jest.mocked(sendFrontendMessage).mockClear()
+
+    const interval = 10
+    startInstallPolling('730', interval)
+    await jest.advanceTimersByTimeAsync(interval * 21)
+
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({
+        appName: '730',
+        runner: 'steam',
+        status: 'done'
+      })
+    )
+  })
+
+  // Test C (RED at HEAD — D-02): the finalize-time handoff start
+  // (games.ts:1720/1726) arrives WHILE the download poll from
+  // resumeInterruptedSteamInstall is still registered. Before this task, the
+  // grace window killed that download poll first, so the handoff call always
+  // landed on an EMPTY registry and created a fresh entry. Once Test A's fix
+  // lets the download poll survive, this call must UPGRADE the existing
+  // entry instead of no-opping — otherwise isNativeHandoff/skippedDepots
+  // never reach it and library.ts:2351/2547's restart-notify and the
+  // skippedDepots notice silently stop firing.
+  it('Test C (260822-dkf, D-02 regression pin): the finalize-time handoff start upgrades a live download poll instead of no-opping', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    isNativeInstallInFlightSpy = jest
+      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .mockReturnValue(true)
+
+    // Call 1 — mirrors resumeInterruptedSteamInstall's bare download poll.
+    startInstallPolling('730', 10)
+    // Call 2 — mirrors games.ts:1720/1726's finalize-time handoff start,
+    // arriving while call 1's entry is still registered.
+    startInstallPolling('730', {
+      intervalMs: 10,
+      isNativeHandoff: true,
+      skippedDepots: []
+    })
+
+    // Drive readAcfState to the 'installed' shape — same fixture shape as
+    // the existing 'fires the "Restart Steam..." isNativeHandoff true' test
+    // above (StateFlags=4 fast path).
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
+    })
+
+    await jest.advanceTimersByTimeAsync(10)
+
+    // The observable proxy for entry.isNativeHandoff === true at
+    // library.ts:2547 — only fires if call 2 actually reached the entry.
+    expect(notify).toHaveBeenCalledWith({
+      title: 'CS:GO',
+      body: 'Restart Steam to finish installing {{game}}'
+    })
+  })
+
+  // Test D (GREEN at HEAD, must STAY GREEN — interaction pin with Test C): a
+  // bare call arriving AFTER the finalize-time handoff upgrade must not
+  // downgrade isNativeHandoff back to false, and must not create a second
+  // interval. Framed as a before/after COMPARISON (not a fixed expected
+  // value) via the 'downloading'-branch context field — which is recomputed
+  // every tick with no fire-once guard, unlike notify() — so this stays
+  // green whether or not the upgrade itself is fixed (that is Test C's job)
+  // and would only fail if a bare call actively cleared the flag.
+  it('Test D (260822-dkf, interaction pin): a bare call after the handoff upgrade does not clear isNativeHandoff, and never creates a second interval', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '1026',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '5000000',
+        BytesToDownload: '10000000'
+      }
+    })
+    jest.mocked(sendFrontendMessage).mockClear()
+    const setIntervalSpy = jest.spyOn(global, 'setInterval')
+
+    startInstallPolling('730', 10) // call 1: bare download poll
+    startInstallPolling('730', {
+      intervalMs: 10,
+      isNativeHandoff: true,
+      skippedDepots: []
+    }) // call 2: finalize-time handoff upgrade
+    await jest.advanceTimersByTimeAsync(10) // tick — observe state BEFORE the extra bare call
+
+    const gameStatusCalls = () =>
+      (sendFrontendMessage as jest.Mock).mock.calls.filter(
+        ([channel]) => channel === 'gameStatusUpdate'
+      )
+    const contextBefore = gameStatusCalls().at(-1)?.[1]?.context
+
+    startInstallPolling('730', 10) // call 3: the extra bare call under test
+
+    await jest.advanceTimersByTimeAsync(10) // tick — observe state AFTER
+    const contextAfter = gameStatusCalls().at(-1)?.[1]?.context
+
+    expect(contextAfter).toBe(contextBefore)
+    expect(setIntervalSpy).toHaveBeenCalledTimes(1)
+
+    setIntervalSpy.mockRestore()
   })
 
   // ── 17-03: startInstallPolling(appId, { source: 'bottle' }) ────────────────
