@@ -8,10 +8,11 @@ import {
 } from 'common/types'
 import { LibraryManager } from 'common/types/game_manager'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
-import { join, resolve, relative, isAbsolute } from 'path'
+import { join, resolve, relative, isAbsolute, sep } from 'path'
 import { dialog } from 'electron'
 import { spawnSync, execFileSync } from 'child_process'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
+import { rmSync } from 'node:fs'
 import { parse } from '@node-steam/vdf'
 import { isWindows, isMac, isLinux } from 'backend/constants/environment'
 import { userHome } from 'backend/constants/paths'
@@ -1763,6 +1764,189 @@ export function findOtherManifestsWithInstalldir(
   }
 
   return conflicting
+}
+
+/**
+ * One entry in the multi-root inventory `enumerateSteamInstallCopies`
+ * returns — mirrors the fields `readAcfState`'s 'installed' branch already
+ * carries, narrowed to what `removeAllSteamInstallCopies` (removeAllCopies.ts)
+ * and the submenu's "Remove all copies…" confirm dialog need.
+ */
+export interface SteamInstallCopy {
+  source: AcfSource
+  installPath: string
+  sizeOnDisk: string
+}
+
+const ALL_ACF_SOURCES: AcfSource[] = ['native', 'bottle', 'bridge']
+
+/**
+ * quick-260821-le0: the shared multi-root enumeration primitive the todo
+ * asked for — probes the SAME fixed `['native','bottle','bridge']` order
+ * `pollUninstallOnce` already probes below (D-UAT-24-05/Pitfall 2), the
+ * exact set that made HOARD/63000's three-root orphan visible. Does not
+ * re-derive per-source steamapps paths; `readAcfState` already owns that
+ * mapping. Each probe is individually try/catch-guarded and logged on
+ * failure — an unprovisioned bridge bottle throwing must not take the whole
+ * enumeration down. `'downloading'` is deliberately excluded: a copy still
+ * being written is not a removable install.
+ *
+ * Exported for unit testing.
+ */
+export async function enumerateSteamInstallCopies(
+  appId: string
+): Promise<SteamInstallCopy[]> {
+  const copies: SteamInstallCopy[] = []
+
+  for (const source of ALL_ACF_SOURCES) {
+    try {
+      const acfState = await readAcfState(appId, source)
+      if (acfState.state === 'installed' && acfState.installPath) {
+        copies.push({
+          source,
+          installPath: acfState.installPath,
+          sizeOnDisk: acfState.sizeOnDisk ?? '0'
+        })
+      }
+    } catch (error) {
+      logWarning(
+        [
+          `SteamLibraryManager: enumerateSteamInstallCopies probe failed for appId ${appId} source '${source}'`,
+          error
+        ],
+        LogPrefix.Steam
+      )
+    }
+  }
+
+  return copies
+}
+
+/** quick-260821-le0: outcome of a single-root `removeSteamInstallCopy` call. */
+export type RemoveCopyResult =
+  | { status: 'removed'; source: AcfSource; manifestOnly: boolean }
+  | { status: 'absent'; source: AcfSource }
+  | { status: 'refused'; source: AcfSource; reason: string }
+
+/** Shared appId shape guard (34.13 review A-12) — mirrors games.ts's own
+ *  NUMERIC_APP_ID and installFormIpc.ts's own copy; each file in this repo
+ *  carries its own local copy of this regex by established convention. */
+const NUMERIC_APP_ID = /^\d+$/
+
+/**
+ * quick-260821-le0: deletes ONE root's install copy for `appId`. Ports the
+ * guard set from games.ts's `uninstallBottleGameDirectly` verbatim in
+ * intent — those guards encode already-paid-for review findings, not
+ * reinvented here:
+ *  - NUMERIC_APP_ID-shaped check on appId FIRST, before either delete
+ *    target (installRoot / manifestPath) is built (34.13 review A-12):
+ *    `join` is not containment (Phase 18) — an appId containing `../` would
+ *    otherwise relocate the manifest delete target with nothing else
+ *    catching it.
+ *  - `'downloading'` is an explicit REFUSAL, never folded into the
+ *    `'absent'` success branch (34.13 review A-10) — a depot download may
+ *    still be writing into the directory.
+ *  - `installdirSegment` is derived via the resolve()+relative()+
+ *    isAbsolute() containment idiom against THIS root's own `common/`,
+ *    rejecting an empty, `..`-prefixed, or absolute result.
+ *  - `findOtherManifestsWithInstalldir` guards the SharedDepots/co-installed
+ *    hazard (34.13 review A-13): when another appId's manifest declares the
+ *    same installdir, only the manifest is removed and the shared directory
+ *    is left alone.
+ *
+ * `uninstallBottleGameDirectly` is NOT routed through this function in this
+ * plan — it is a LIVE-CONFIRMED path and its own dedup is a separate
+ * refactor. TODO(dedup): route uninstallBottleGameDirectly through this
+ * function once that refactor is scheduled.
+ *
+ * Exported for unit testing.
+ */
+export async function removeSteamInstallCopy(
+  appId: string,
+  source: AcfSource
+): Promise<RemoveCopyResult> {
+  if (!NUMERIC_APP_ID.test(appId)) {
+    logWarning(
+      `SteamLibraryManager: removeSteamInstallCopy rejected non-numeric appId (source '${source}')`,
+      LogPrefix.Steam
+    )
+    return { status: 'refused', source, reason: 'invalid appId' }
+  }
+
+  const acfState = await readAcfState(appId, source)
+
+  if (acfState.state === 'absent') {
+    return { status: 'absent', source }
+  }
+
+  if (acfState.state === 'downloading') {
+    logWarning(
+      `SteamLibraryManager: removeSteamInstallCopy refused appId ${appId} source '${source}' — install still in progress`,
+      LogPrefix.Steam
+    )
+    return { status: 'refused', source, reason: 'install in progress' }
+  }
+
+  if (!acfState.installPath) {
+    // 'installed' with no installPath cannot happen from readAcfState's own
+    // contract (its 'installed' branch always builds one), but a missing
+    // delete target must never fall through to guessing — refuse.
+    return { status: 'refused', source, reason: 'no install path' }
+  }
+
+  // readAcfState's 'installed' branch builds installPath as
+  // join(steamappsDir, 'common', installdir) — recover steamappsDir from it
+  // rather than re-deriving the per-source library/bottle lookup a second
+  // time (readAcfState already owns that mapping).
+  const steamappsDir = resolve(acfState.installPath, '..', '..')
+  const commonRoot = resolve(steamappsDir, 'common')
+  const resolvedInstallPath = resolve(acfState.installPath)
+  const relFromCommon = relative(commonRoot, resolvedInstallPath)
+  const installdirSegment = relFromCommon.split(sep)[0]
+
+  if (
+    !installdirSegment ||
+    relFromCommon.startsWith('..') ||
+    isAbsolute(relFromCommon)
+  ) {
+    logWarning(
+      `SteamLibraryManager: removeSteamInstallCopy refused appId ${appId} source '${source}' — install path "${acfState.installPath}" does not resolve inside common/`,
+      LogPrefix.Steam
+    )
+    return {
+      status: 'refused',
+      source,
+      reason: 'install path outside common/'
+    }
+  }
+
+  const installRoot = join(commonRoot, installdirSegment)
+  const manifestPath = join(steamappsDir, `appmanifest_${appId}.acf`)
+
+  const conflicting = findOtherManifestsWithInstalldir(
+    steamappsDir,
+    installdirSegment,
+    appId
+  )
+
+  if (conflicting.length > 0) {
+    logWarning(
+      `SteamLibraryManager: removeSteamInstallCopy — installdir "${installdirSegment}" (source '${source}') is shared with appId(s) ${conflicting.join(',')}; removing appId ${appId}'s manifest only`,
+      LogPrefix.Steam
+    )
+    rmSync(manifestPath, { force: true })
+    return { status: 'removed', source, manifestOnly: true }
+  }
+
+  rmSync(installRoot, { recursive: true, force: true })
+  rmSync(manifestPath, { force: true })
+
+  logInfo(
+    `SteamLibraryManager: removeSteamInstallCopy removed appId ${appId} source '${source}' at "${installRoot}"`,
+    LogPrefix.Steam
+  )
+
+  return { status: 'removed', source, manifestOnly: false }
 }
 
 /**
