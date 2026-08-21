@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import ContextProvider from 'frontend/state/ContextProvider'
 import TauriLoginPanel from './TauriLoginPanel'
 import type { TauriOAuthLoginState } from '../useTauriOAuthLogin'
+import { attachHumbleLoginChromeCss } from './humbleLoginChromeCss'
 
 interface Props {
   onDone: () => void
@@ -153,6 +154,18 @@ export default function HumbleLoginSurface({ onDone, onCancelled }: Props) {
           onHumbleLoginNavigate
         )
       }
+    }
+    return
+  }, [webviewRef.current])
+
+  // Login-chrome CSS (quick task 260822-di1, D-1): hides Humble's marketing footer so the
+  // sign-in page reads as app UI. Delegates entirely to attachHumbleLoginChromeCss
+  // (WebView/components/humbleLoginChromeCss.ts), which wires dom-ready -> insertCSS and is
+  // re-applied on every navigation (Electron drops inserted CSS on navigation).
+  useLayoutEffect(() => {
+    const webview = webviewRef.current
+    if (webview) {
+      return attachHumbleLoginChromeCss(webview)
     }
     return
   }, [webviewRef.current])
