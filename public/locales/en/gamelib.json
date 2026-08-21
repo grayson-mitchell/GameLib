@@ -121,6 +121,11 @@
         "status": {
             "resumeInstall": "Resume Install",
             "resumeInstallHint": "Install incomplete — resume the download in GameLib"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "This removes every installed copy of this game across all install locations. This cannot be undone.",
+            "removeAllCopiesConfirmTitle": "Remove all copies?",
+            "removeAllCopiesLabel": "Remove all copies…"
         }
     },
     "themeSelector": {

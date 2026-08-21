@@ -26,6 +26,9 @@ export const steamBottleStatus = makeHandlerInvoker('steamBottleStatus')
 // surface — registered on BOTH runtimes (main.ts + steamAuthFlowRegistration.ts).
 export const isSteamBottleEligible = makeHandlerInvoker('isSteamBottleEligible')
 export const persistBottleWineVersion = makeHandlerInvoker('persistBottleWineVersion')
+// quick-260821-le0 (Task 3): sweeps every recorded install root for a Steam
+// title in one action — registered on BOTH runtimes.
+export const steamRemoveAllCopies = makeHandlerInvoker('steamRemoveAllCopies')
 // One-way push (17-05 emits, 17-06 subscribes) — no handler, listener only.
 export const handleSteamBottleSetupRequired = frontendListenerSlot(
   'steamBottleSetupRequired'

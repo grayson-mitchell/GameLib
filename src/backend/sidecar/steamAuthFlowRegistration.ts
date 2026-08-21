@@ -57,6 +57,9 @@
  *   - `persistBottleWineVersion` -> `persistInstallFormWineVersion(wineVersion)`
  *     (`main.ts:948-950`), Phase 34.13 Plan 07, D-14 — same shared seam.
  *     The trio above is now a trio plus these two install-form channels.
+ *   - `steamRemoveAllCopies` -> `removeAllSteamInstallCopies(appName)`,
+ *     quick-260821-le0 Task 3 — sweeps every recorded install root for a
+ *     Steam title in one action, same shared-seam pattern as the pair above.
  *
  * Guided Steam-client install pair (Phase 34.4 Plan 02, REQ-34.4-04,
  * `ipcMain.handle`, `main.ts:958-961`):
@@ -130,6 +133,7 @@ import {
   getSteamBottleEligibilityVerdict,
   persistInstallFormWineVersion
 } from '../storeManagers/steam/installFormIpc'
+import { removeAllSteamInstallCopies } from '../storeManagers/steam/removeAllCopies'
 
 /**
  * Registers the QR-login trio, the credential/SteamGuard/TOTP login trio,
@@ -305,6 +309,15 @@ export function registerSteamAuthFlows(): void {
     'persistBottleWineVersion',
     async (_event: unknown, ...args: unknown[]) => {
       return persistInstallFormWineVersion(args[0])
+    }
+  )
+
+  // quick-260821-le0 (Task 3): sweeps every recorded install root for a
+  // Steam title in one action. Mirrored on the Electron runtime (main.ts).
+  ipcMain.handle(
+    'steamRemoveAllCopies',
+    async (_event: unknown, ...args: unknown[]) => {
+      return removeAllSteamInstallCopies(args[0])
     }
   )
 

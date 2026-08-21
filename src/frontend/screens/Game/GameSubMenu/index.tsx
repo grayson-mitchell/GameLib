@@ -167,6 +167,33 @@ export default function GamesSubmenu({
     })
   }
 
+  // quick-260821-le0 (Task 3): sweeps EVERY recorded install root for this
+  // Steam title in one confirmed action — additive alongside the per-root
+  // Uninstall button above, which stays exactly as-is (D-05 direct
+  // delegation to Steam's own uninstall dialog).
+  async function onRemoveAllCopiesYesClick() {
+    await window.api.steamRemoveAllCopies(appName)
+    await refresh(runner)
+  }
+
+  function handleRemoveAllCopies() {
+    showDialogModal({
+      showDialog: true,
+      title: tGamelib(
+        'gamelib:steam.uninstall.removeAllCopiesConfirmTitle',
+        'Remove all copies?'
+      ),
+      message: tGamelib(
+        'gamelib:steam.uninstall.removeAllCopiesConfirmMessage',
+        'This removes every installed copy of this game across all install locations. This cannot be undone.'
+      ),
+      buttons: [
+        { text: t('box.yes'), onClick: onRemoveAllCopiesYesClick },
+        { text: t('box.no') }
+      ]
+    })
+  }
+
   function handleShortcuts() {
     if (hasShortcuts) {
       window.api.removeShortcut(appName, runner)
@@ -381,6 +408,19 @@ export default function GamesSubmenu({
                 <DeleteIcon />
                 {t('button.uninstall', 'Uninstall')}
               </button>{' '}
+              {isSteam && (
+                <button
+                  onClick={() => handleRemoveAllCopies()}
+                  className="link button is-text is-link buttonWithIcon"
+                  disabled={is.playing}
+                >
+                  <DeleteIcon />
+                  {tGamelib(
+                    'gamelib:steam.uninstall.removeAllCopiesLabel',
+                    'Remove all copies…'
+                  )}
+                </button>
+              )}{' '}
               {!isSideloaded && !isSteam && !isThirdPartyManaged && (
                 <button
                   onClick={async () => handleUpdate()}

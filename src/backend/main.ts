@@ -62,6 +62,7 @@ import {
   getSteamBottleEligibilityVerdict,
   persistInstallFormWineVersion
 } from './storeManagers/steam/installFormIpc'
+import { removeAllSteamInstallCopies } from './storeManagers/steam/removeAllCopies'
 import { shutdownBridgeHelper } from './storeManagers/steam/bridge/helperProcess'
 import { registerHumbleIpcHandlers } from './humble/ipc_handler'
 import { runHumbleValidation } from './humble/validation'
@@ -947,6 +948,11 @@ addHandler('isSteamBottleEligible', async (event, appName) =>
 )
 addHandler('persistBottleWineVersion', async (event, wineVersion) =>
   persistInstallFormWineVersion(wineVersion)
+)
+// quick-260821-le0 (Task 3): sweeps every recorded install root for a Steam
+// title in one action. Mirrored on the sidecar/Tauri runtime below.
+addHandler('steamRemoveAllCopies', async (event, appName) =>
+  removeAllSteamInstallCopies(appName)
 )
 
 // Phase 21 (21-10), D-10/D-11: native Steam-CLIENT guided install +

@@ -20,6 +20,10 @@
 
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { rmSync } from 'node:fs'
+// Plain 'fs' (not 'node:fs', not 'graceful-fs') is never mocked in this file
+// — used ONLY by the Task 3 IPC-seam census test below to read real source
+// files off disk, deliberately bypassing every fixture double above it.
+import { readFileSync as readSourceFile } from 'fs'
 import { join } from 'path'
 import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries } from 'backend/utils'
@@ -27,6 +31,7 @@ import * as libraryModule from '../library'
 import { library } from '../state'
 import { steamMetadataStore } from '../electronStores'
 import SteamGame from '../games'
+import { removeAllSteamInstallCopies } from '../removeAllCopies'
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 jest.mock('backend/logger', () => ({
@@ -853,5 +858,237 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
     expect(library.get(APP_ID)?.is_installed).toBe(false)
 
     librarySetSpy.mockRestore()
+  })
+})
+
+// ── Task 3: removeAllSteamInstallCopies ──────────────────────────────────────
+describe('removeAllSteamInstallCopies (Task 3)', () => {
+  const APP_ID = '63000'
+
+  function mockCopy(source: libraryModule.AcfSource): libraryModule.SteamInstallCopy {
+    return {
+      source,
+      installPath: `/${source}/steamapps/common/HOARD`,
+      sizeOnDisk: '1'
+    }
+  }
+
+  it('non-numeric-string appName -> {removed:0, refused:0, error} without enumerating or removing anything', async () => {
+    const enumerateSpy = jest.spyOn(libraryModule, 'enumerateSteamInstallCopies')
+    const removeSpy = jest.spyOn(libraryModule, 'removeSteamInstallCopy')
+
+    const result = await removeAllSteamInstallCopies('../evil')
+
+    expect(result).toEqual({
+      removed: 0,
+      refused: 0,
+      error: expect.stringMatching(/invalid/i)
+    })
+    expect(enumerateSpy).not.toHaveBeenCalled()
+    expect(removeSpy).not.toHaveBeenCalled()
+
+    enumerateSpy.mockRestore()
+    removeSpy.mockRestore()
+  })
+
+  it('non-string appName (e.g. a raw number from a malformed IPC payload) -> rejected the same way', async () => {
+    const result = await removeAllSteamInstallCopies(63000 as unknown)
+
+    expect(result).toEqual({
+      removed: 0,
+      refused: 0,
+      error: expect.stringMatching(/invalid/i)
+    })
+  })
+
+  it('three installed roots -> removeSteamInstallCopy called once per root in enumerate order, {removed:3, refused:0}', async () => {
+    const enumerateSpy = jest
+      .spyOn(libraryModule, 'enumerateSteamInstallCopies')
+      .mockResolvedValue([
+        mockCopy('native'),
+        mockCopy('bottle'),
+        mockCopy('bridge')
+      ])
+    const removeSpy = jest
+      .spyOn(libraryModule, 'removeSteamInstallCopy')
+      .mockImplementation(async (appId, source) => ({
+        status: 'removed',
+        source,
+        manifestOnly: false
+      }))
+    const pollSpy = jest
+      .spyOn(libraryModule, 'pollUninstallOnce')
+      .mockResolvedValue(undefined)
+
+    const result = await removeAllSteamInstallCopies(APP_ID)
+
+    expect(removeSpy).toHaveBeenCalledTimes(3)
+    expect(removeSpy).toHaveBeenNthCalledWith(1, APP_ID, 'native')
+    expect(removeSpy).toHaveBeenNthCalledWith(2, APP_ID, 'bottle')
+    expect(removeSpy).toHaveBeenNthCalledWith(3, APP_ID, 'bridge')
+    expect(result).toEqual({ removed: 3, refused: 0 })
+
+    enumerateSpy.mockRestore()
+    removeSpy.mockRestore()
+    pollSpy.mockRestore()
+  })
+
+  it('one root refuses (mid-download) + two remove -> {removed:2, refused:1}, the refusal does not abort the sweep', async () => {
+    const enumerateSpy = jest
+      .spyOn(libraryModule, 'enumerateSteamInstallCopies')
+      .mockResolvedValue([
+        mockCopy('native'),
+        mockCopy('bottle'),
+        mockCopy('bridge')
+      ])
+    const removeSpy = jest
+      .spyOn(libraryModule, 'removeSteamInstallCopy')
+      .mockImplementation(async (appId, source) => {
+        if (source === 'bottle') {
+          return {
+            status: 'refused',
+            source,
+            reason: 'uninstall already in progress'
+          }
+        }
+        return { status: 'removed', source, manifestOnly: false }
+      })
+    const pollSpy = jest
+      .spyOn(libraryModule, 'pollUninstallOnce')
+      .mockResolvedValue(undefined)
+
+    const result = await removeAllSteamInstallCopies(APP_ID)
+
+    expect(removeSpy).toHaveBeenCalledTimes(3)
+    expect(result).toEqual({ removed: 2, refused: 1 })
+
+    enumerateSpy.mockRestore()
+    removeSpy.mockRestore()
+    pollSpy.mockRestore()
+  })
+
+  it('a root throwing mid-sweep is tallied as refused and does not abort the remaining roots (T-LE0-06)', async () => {
+    const enumerateSpy = jest
+      .spyOn(libraryModule, 'enumerateSteamInstallCopies')
+      .mockResolvedValue([mockCopy('native'), mockCopy('bridge')])
+    const removeSpy = jest
+      .spyOn(libraryModule, 'removeSteamInstallCopy')
+      .mockImplementation(async (appId, source) => {
+        if (source === 'native') throw new Error('disk error')
+        return { status: 'removed', source, manifestOnly: false }
+      })
+    const pollSpy = jest
+      .spyOn(libraryModule, 'pollUninstallOnce')
+      .mockResolvedValue(undefined)
+    const { logWarning } = jest.requireMock('backend/logger') as {
+      logWarning: jest.Mock
+    }
+
+    const result = await removeAllSteamInstallCopies(APP_ID)
+
+    expect(result).toEqual({ removed: 1, refused: 1 })
+    expect(logWarning).toHaveBeenCalled()
+
+    enumerateSpy.mockRestore()
+    removeSpy.mockRestore()
+    pollSpy.mockRestore()
+  })
+
+  it('zero copies -> {removed:0, refused:0}, no throw, removeSteamInstallCopy never called', async () => {
+    const enumerateSpy = jest
+      .spyOn(libraryModule, 'enumerateSteamInstallCopies')
+      .mockResolvedValue([])
+    const removeSpy = jest.spyOn(libraryModule, 'removeSteamInstallCopy')
+    const pollSpy = jest
+      .spyOn(libraryModule, 'pollUninstallOnce')
+      .mockResolvedValue(undefined)
+
+    const result = await removeAllSteamInstallCopies(APP_ID)
+
+    expect(removeSpy).not.toHaveBeenCalled()
+    expect(result).toEqual({ removed: 0, refused: 0 })
+
+    enumerateSpy.mockRestore()
+    removeSpy.mockRestore()
+    pollSpy.mockRestore()
+  })
+
+  it('finishes with exactly one pollUninstallOnce(appId, \'native\') call AFTER the sweep, never per-root', async () => {
+    const enumerateSpy = jest
+      .spyOn(libraryModule, 'enumerateSteamInstallCopies')
+      .mockResolvedValue([mockCopy('native'), mockCopy('bottle')])
+    const removeSpy = jest
+      .spyOn(libraryModule, 'removeSteamInstallCopy')
+      .mockImplementation(async (appId, source) => ({
+        status: 'removed',
+        source,
+        manifestOnly: false
+      }))
+    const pollSpy = jest
+      .spyOn(libraryModule, 'pollUninstallOnce')
+      .mockResolvedValue(undefined)
+
+    await removeAllSteamInstallCopies(APP_ID)
+
+    expect(pollSpy).toHaveBeenCalledTimes(1)
+    expect(pollSpy).toHaveBeenCalledWith(APP_ID, 'native')
+
+    enumerateSpy.mockRestore()
+    removeSpy.mockRestore()
+    pollSpy.mockRestore()
+  })
+
+  it('enumerateSteamInstallCopies itself throwing -> swallowed, {removed:0, refused:0, error}, pollUninstallOnce never reached', async () => {
+    const enumerateSpy = jest
+      .spyOn(libraryModule, 'enumerateSteamInstallCopies')
+      .mockRejectedValue(new Error('fs error'))
+    const pollSpy = jest
+      .spyOn(libraryModule, 'pollUninstallOnce')
+      .mockResolvedValue(undefined)
+
+    const result = await removeAllSteamInstallCopies(APP_ID)
+
+    expect(result).toEqual({
+      removed: 0,
+      refused: 0,
+      error: expect.stringMatching(/sweep failed/i)
+    })
+    expect(pollSpy).not.toHaveBeenCalled()
+
+    enumerateSpy.mockRestore()
+    pollSpy.mockRestore()
+  })
+})
+
+// ── Task 3: steamRemoveAllCopies IPC seam census ─────────────────────────────
+// A source-level assertion (not just a passing behavioral test) that the
+// channel string is wired into all FOUR seam files this repo requires for
+// any IPC handler (installFormIpc.ts's own persistBottleWineVersion is the
+// established precedent) — comment-only occurrences (e.g. a stray mention in
+// a docstring) do not count, so this cannot be satisfied by documenting the
+// feature without registering it.
+describe('steamRemoveAllCopies IPC seam census (Task 3)', () => {
+  const SEAM_FILES = [
+    'src/common/types/ipc.ts',
+    'src/backend/main.ts',
+    'src/backend/sidecar/steamAuthFlowRegistration.ts',
+    'src/preload/api/steam.ts'
+  ]
+
+  it('the steamRemoveAllCopies channel string appears in non-comment code in all four IPC seam files', () => {
+    const repoRoot = join(__dirname, '..', '..', '..', '..', '..')
+
+    for (const relPath of SEAM_FILES) {
+      const contents = readSourceFile(join(repoRoot, relPath), 'utf-8')
+      const codeOnly = contents
+        .split('\n')
+        .filter((line) => {
+          const trimmed = line.trim()
+          return !trimmed.startsWith('//') && !trimmed.startsWith('*')
+        })
+        .join('\n')
+
+      expect(codeOnly).toEqual(expect.stringContaining('steamRemoveAllCopies'))
+    }
   })
 })

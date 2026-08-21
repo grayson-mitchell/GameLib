@@ -299,6 +299,14 @@ interface AsyncIPCFunctions {
   // persisted — see installFormIpc.ts's own doc comment for why this never
   // delegates to getSteamBottleSettings()). Registered on BOTH runtimes.
   isSteamBottleEligible: (appName: string) => Promise<SteamBottleEligibilityVerdict>
+  // quick-260821-le0 (Task 3): sweeps EVERY recorded install root for a
+  // Steam title in one action — see removeAllCopies.ts's own doc comment.
+  // Registered on BOTH runtimes.
+  steamRemoveAllCopies: (appName: string) => Promise<{
+    removed: number
+    refused: number
+    error?: string
+  }>
   // Phase 34.13 (34.13-07), D-14: persists the install form's chosen wine
   // engine into steamBottleConfigStore via bottle.ts's own
   // persistBottleWineVersion() primitive, after validating the untrusted
