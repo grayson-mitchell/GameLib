@@ -2323,9 +2323,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
     expect(
       library.get(APP_ID)?.install?.steamResumeTargetSteamappsDir
     ).toBeUndefined()
-    expect(
-      library.get(APP_ID)?.install?.steamResumeInstalldir
-    ).toBeUndefined()
+    expect(library.get(APP_ID)?.install?.steamResumeInstalldir).toBeUndefined()
 
     // The clear must be durable — present in the last persisted array too,
     // not merely the in-memory Map.
@@ -2382,9 +2380,9 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
 
   it('an appId with no breadcrumb and no incomplete ACF is NOT surfaced by init()', async () => {
     library.clear()
-    jest.mocked(steamLibraryStore.get).mockReturnValue([
-      makeEntry({ title: 'Dota 2' })
-    ])
+    jest
+      .mocked(steamLibraryStore.get)
+      .mockReturnValue([makeEntry({ title: 'Dota 2' })])
     jest.mocked(getSteamLibraries).mockResolvedValue([])
     ;(existsSync as jest.Mock).mockReturnValue(false)
     ;(SteamUser.isLoggedIn as jest.Mock).mockReturnValue(false)

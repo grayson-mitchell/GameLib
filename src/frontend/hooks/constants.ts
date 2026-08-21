@@ -165,10 +165,7 @@ export async function reconcileNonAvailableGames(
       // Not (yet) in the union -- nothing to reconcile against here; leave
       // it for the next pass rather than guessing a runner.
       if (!game) return null
-      const gameAvailable = await handleNonAvailableGames(
-        appName,
-        game.runner
-      )
+      const gameAvailable = await handleNonAvailableGames(appName, game.runner)
       return gameAvailable ? appName : null
     })
   )

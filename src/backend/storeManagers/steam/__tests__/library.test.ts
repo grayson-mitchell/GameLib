@@ -1588,9 +1588,7 @@ describe('SteamLibraryManager', () => {
       expect(persisted?.install?.steamResumeTargetSteamappsDir).toBe(
         TARGET.targetSteamappsDir
       )
-      expect(persisted?.install?.steamResumeInstalldir).toBe(
-        TARGET.installdir
-      )
+      expect(persisted?.install?.steamResumeInstalldir).toBe(TARGET.installdir)
     })
   })
 
