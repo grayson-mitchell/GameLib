@@ -77,6 +77,22 @@ const storage = window.localStorage
 const nonAvailbleGames = storage.getItem('nonAvailableGames') || '[]'
 const nonAvailbleGamesArray = JSON.parse(nonAvailbleGames)
 
+/**
+ * The ONE place that mutates `nonAvailbleGamesArray` and persists the
+ * result. Removes `appName` if present. Returns `true` if it was present
+ * (and thus removed), `false` if there was nothing to do. Extracted from
+ * `handleNonAvailableGames`'s `else` branch (quick task 260822-b05) so
+ * `reconcileNonAvailableGames`'s not-installed heal branch below can drop an
+ * entry without an `isGameAvailable` IPC round-trip.
+ */
+function dropFromNonAvailableGames(appName: string): boolean {
+  const index = nonAvailbleGamesArray.indexOf(appName)
+  if (index === -1) return false
+  nonAvailbleGamesArray.splice(index, 1)
+  storage.setItem('nonAvailableGames', JSON.stringify(nonAvailbleGamesArray))
+  return true
+}
+
 export async function handleNonAvailableGames(appName: string, runner: Runner) {
   const gameAvailable = await window.api.isGameAvailable({
     appName,
@@ -92,13 +108,7 @@ export async function handleNonAvailableGames(appName: string, runner: Runner) {
       )
     }
   } else {
-    if (nonAvailbleGamesArray.includes(appName)) {
-      nonAvailbleGamesArray.splice(nonAvailbleGamesArray.indexOf(appName), 1)
-      storage.setItem(
-        'nonAvailableGames',
-        JSON.stringify(nonAvailbleGamesArray)
-      )
-    }
+    dropFromNonAvailableGames(appName)
   }
   return gameAvailable
 }
@@ -127,16 +137,38 @@ export async function handleNonAvailableGames(appName: string, runner: Runner) {
  * renders regardless of whether any given game is currently excluded, not
  * from the excluded card itself. For every appName currently on the
  * `nonAvailableGames` list that is ALSO present in the union (so we have a
- * `runner` to check it with), it re-runs the exact same
- * `handleNonAvailableGames` check GameCard would have run. If the game is
- * available now, the existing self-heal branch above removes it from the
- * list on this call, same as it always has for a freshly-mounted card.
+ * `runner` to check it with) there are now TWO independent heal paths (quick
+ * task 260822-b05):
+ *
+ * 1. If the game is now NOT INSTALLED, its list entry is meaningless by
+ *    construction -- the list only ever means "an INSTALLED game whose
+ *    install_path went missing" (see `handleNonAvailableGames`'s
+ *    `!gameAvailable` branch, which is the only writer), and a not-installed
+ *    game can never return `true` from `isGameAvailable()` in ANY of the
+ *    four runners. Without this branch such an entry was trapped forever:
+ *    excluded from the grid, so its GameCard (the only other caller of
+ *    `handleNonAvailableGames`) never mounts to re-check it. This branch
+ *    drops it via `dropFromNonAvailableGames` directly, skipping the
+ *    `isGameAvailable` IPC round-trip entirely -- there is nothing for it to
+ *    tell us here. Verified independent of the delisted exclusion clause
+ *    (`filterEngine.isNonAvailableGame`, `filterEngine.ts:241-249`): that
+ *    clause is `deps.nonAvailableAppNames.includes(...) || (runner ===
+ *    'steam' && !!is_delisted)`, an OR, not routed through this list, so
+ *    dropping a delisted game's entry here cannot make it visible -- the
+ *    delisted clause keeps hiding it regardless.
+ * 2. Otherwise (still installed), it re-runs the exact same
+ *    `handleNonAvailableGames` check GameCard would have run. If the game is
+ *    available now, the self-heal branch inside `handleNonAvailableGames`
+ *    removes it from the list on this call (via `dropFromNonAvailableGames`,
+ *    the same single mutator/persister both heal paths share), same as it
+ *    always has for a freshly-mounted card.
  *
  * Deliberately narrow: only re-checks appNames already on the list (usually
  * a handful, never the whole library), so this cannot become a per-render
  * flood of isGameAvailable() IPC calls -- the list only shrinks from here,
- * never grows (only `handleNonAvailableGames`'s own `installed` branch adds
- * to it), so repeated invocations converge to a no-op once the race clears.
+ * never grows (the only add path is `handleNonAvailableGames`'s own
+ * `!gameAvailable` branch), so repeated invocations converge to a no-op once
+ * the race clears.
  *
  * Returns the appNames actually healed (removed from the list) by this
  * call, or `[]` if none. This is NOT just informational: the caller's
@@ -165,6 +197,13 @@ export async function reconcileNonAvailableGames(
       // Not (yet) in the union -- nothing to reconcile against here; leave
       // it for the next pass rather than guessing a runner.
       if (!game) return null
+      // A not-installed game's entry is meaningless by construction (the
+      // list only ever means "installed but install_path went missing") and
+      // can never self-heal via isGameAvailable -- see the doc comment
+      // above. Drop it directly, skipping the IPC round-trip.
+      if (!game.is_installed) {
+        return dropFromNonAvailableGames(appName) ? appName : null
+      }
       const gameAvailable = await handleNonAvailableGames(appName, game.runner)
       return gameAvailable ? appName : null
     })
