@@ -115,16 +115,26 @@ export class GOGUser {
     // SECOND `gogdl auth` subprocess (via `getCredentials()`) just to re-derive the same
     // value. Measured live (debug/manage-accounts-slow-update.md): that redundant call
     // cost a reproducible ~5s on the critical path between the OAuth window closing and
-    // the frontend's in-progress screen clearing.
-    const userDetails = await this.getUserDetails(data.access_token)
+    // the frontend's in-progress screen clearing. `data.user_id` is threaded through too,
+    // since the api.gog.com endpoint below is keyed by it -- nothing new is spawned to
+    // obtain it, it's already in this exchange's own parsed stdout.
+    const userDetails = await this.getUserDetails({
+      access_token: data.access_token,
+      user_id: data.user_id
+    })
     return { status: 'done', data: userDetails }
   }
 
-  // `accessToken`: when the caller already has a fresh token in hand (only `login()`,
+  // `credentials`: when the caller already has a fresh token in hand (only `login()`,
   // immediately after a `gogdl auth --code` exchange), pass it here to skip
   // `getCredentials()`'s own `gogdl auth` CLI subprocess call. Omit it (as the boot-time
-  // caller in main.ts does) to keep the existing disk-read/refresh behavior.
-  public static async getUserDetails(accessToken?: string) {
+  // caller in main.ts does) to keep the existing disk-read/refresh behavior. It carries
+  // `user_id` alongside `access_token` because the api.gog.com/users/{user_id} endpoint
+  // below is keyed by it -- passing both here means the caller's already-known user_id is
+  // reused rather than re-derived, so nothing new is spawned to obtain it.
+  public static async getUserDetails(
+    credentials?: Pick<GOGCredentials, 'access_token' | 'user_id'>
+  ) {
     if (!isOnline()) {
       logError('Unable to login information, Heroic offline', LogPrefix.Gog)
       return
@@ -134,13 +144,22 @@ export class GOGUser {
       logWarning('User is not logged in', LogPrefix.Gog)
       return
     }
-    const token = accessToken ?? (await this.getCredentials())?.access_token
+    const resolved = credentials ?? (await this.getCredentials())
+    const token = resolved?.access_token
     if (!token) {
       logError("No credentials, can't get login information", LogPrefix.Gog)
       return
     }
+    const userId = resolved?.user_id
+    if (!userId) {
+      logError(
+        "No user_id in credentials, can't get login information",
+        LogPrefix.Gog
+      )
+      return
+    }
     const response = await axios
-      .get(`https://embed.gog.com/userData.json`, {
+      .get(`https://api.gog.com/users/${encodeURIComponent(userId)}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           'User-Agent': `HeroicGamesLauncher/${app.getVersion()}`
@@ -154,10 +173,30 @@ export class GOGUser {
       return
     }
 
-    const data: UserData = response.data
+    const username: string | undefined = response.data?.username
+    if (!username) {
+      logError(
+        'No username in api.gog.com/users response, not persisting userData',
+        LogPrefix.Gog
+      )
+      return
+    }
 
-    //Exclude email, it won't be needed
-    delete data.email
+    // T-Q34-01 -- galaxyUserId/userId are sourced from our own resolved credentials,
+    // NEVER from the response body, so a manipulated response cannot redirect the
+    // playtime session URL to another user's id.
+    const previous = configStore.get_nodefault('userData')
+    if (previous?.galaxyUserId && previous.galaxyUserId !== userId) {
+      logWarning(
+        [
+          'GOG userData.galaxyUserId drifted from a previously stored value -- GOG playtime',
+          `session URLs are about to change. previous=${previous.galaxyUserId} new=${userId}`
+        ].join(' '),
+        LogPrefix.Gog
+      )
+    }
+
+    const data: UserData = { userId, username, galaxyUserId: userId }
 
     configStore.set('userData', data)
     logInfo('Saved username to config file', LogPrefix.Gog)

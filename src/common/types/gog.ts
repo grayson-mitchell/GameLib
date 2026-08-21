@@ -149,61 +149,18 @@ export type SaveFolderVariable =
   | 'DOCUMENTS'
   | 'APPLICATION_SUPPORT'
 
-// Data returned from https://embed.gog.com/userData.json
+// Assembled in gog/user.ts from https://api.gog.com/users/{user_id} (a small
+// fixed-size document) plus the credential's own user_id -- NOT a passthrough
+// of that endpoint's response body. Deliberately narrowed to the only three
+// fields the codebase actually reads (see the blast-radius sweep in
+// .planning/quick/260821-o34-switch-the-gog-user-api-off-embed-gog-co/) --
+// this used to be a passthrough of https://embed.gog.com/userData.json, which
+// embeds the account's entire wishlist/friends/checksum payload and fails
+// outright for accounts with large wishlists.
 export interface UserData {
-  country: string
-  currencies: Currency[]
-  selectedCurrency: Currency
-  preferredLanguage: {
-    code: string
-    name: string
-  }
-  ratingBrand: string
-  isLoggedIn: true
-  checksum: {
-    cart: string | null
-    games: string | null
-    wishlist: string | null
-    reviews_votes: string | null
-    games_rating: string | null
-  }
-  updates: {
-    messages: number
-    pendingFriendRequests: number
-    unreadChatMessages: number
-    products: number
-    total: number
-  }
   userId: string
   username: string
   galaxyUserId: string
-  email?: string
-  // NOTE: This URL doesn't seem to work?
-  avatar: string
-  walletBalancy: {
-    currency: string
-    amount: number
-  }
-  purchasedItems: {
-    games: number
-    movies: number
-  }
-  whishlistedItems: number
-  friends: Friend[]
-  personalizedProductPrices: []
-  personalizedSeriesPrices: []
-}
-
-interface Currency {
-  code: string
-  symbol: string
-}
-
-interface Friend {
-  username: string
-  userSince: number
-  galaxyId: string
-  avatar: string
 }
 
 // Data returned by https://gamesdb.gog.com/platforms/$PLATFORM/external_releases/$APP_ID
