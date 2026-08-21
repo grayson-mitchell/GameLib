@@ -20,6 +20,7 @@ import {
 import { FlagPosition } from '../../components/UI/LanguageSelector'
 import SIDLogin from './components/SIDLogin'
 import SteamLogin from './components/SteamLogin'
+import HumbleLogin from './components/HumbleLogin'
 import ContextProvider from '../../state/ContextProvider'
 import { useAwaited } from '../../hooks/useAwaited'
 import { hasHelp } from 'frontend/hooks/hasHelp'
@@ -37,9 +38,12 @@ export const steamLoginPath = '/loginweb/steam'
 export const humbleLoginPath = '/loginweb/humble'
 
 // Mirrors Dialog.tsx's `transitionDuration={500}` (its Slide exit transition
-// needs a full 500ms of mounted time to play). loginCrossfade.test.ts asserts
-// these two literals agree.
-const STEAM_DIALOG_EXIT_MS = 500
+// needs a full 500ms of mounted time to play), for BOTH the Steam and Humble
+// overlays. loginCrossfade.test.ts asserts this and the two other sources
+// (Dialog.tsx's own literal, Login/index.scss's transition duration) agree.
+const LOGIN_DIALOG_EXIT_MS = 500
+
+type LoginOverlay = 'steam' | 'humble'
 
 export default React.memo(function NewLogin() {
   const { epic, gog, amazon, zoom, steam, humble, refreshLibrary } =
@@ -55,25 +59,30 @@ export default React.memo(function NewLogin() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [showSidLogin, setShowSidLogin] = useState(false)
-  // Steam sign-in overlay lifecycle (Task 2, 36-01). `steamOverlayMounted`
-  // controls whether <SteamLogin> is in the tree at all; `steamFlowOpen` is
-  // the semantic "the Steam sign-in surface is up" flag that feeds
-  // `loginInFlight` below and clears synchronously on dismiss (see
-  // dismissSteamOverlay). `steamMountKey` forces a fresh `<SteamLogin>` mount
-  // on reopen so a reopen during the teardown window never resurrects a
-  // stale `Step`. `steamUnmountTimerRef` holds the pending deferred-unmount
-  // timer handle.
-  const [steamOverlayMounted, setSteamOverlayMounted] = useState(false)
-  const [steamFlowOpen, setSteamFlowOpen] = useState(false)
-  const [steamMountKey, setSteamMountKey] = useState(0)
-  const steamUnmountTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+  // Login overlay lifecycle (Task 2, 36-01; generalised beyond Steam-only by
+  // quick task 260821-iri Task 3). `mountedOverlay` controls whether an
+  // overlay (SteamLogin or HumbleLogin) is in the tree at all; `openOverlay`
+  // is the semantic "a sign-in surface is up" flag that feeds `loginInFlight`
+  // below and clears synchronously on dismiss (see dismissLoginOverlay).
+  // `overlayMountKey` forces a fresh overlay mount on reopen so a reopen
+  // during the teardown window never resurrects stale internal state --
+  // `Dialog` mounts with `open` initialised to `true`, so a remount is the
+  // only way to reopen it, and for Humble it is additionally what restarts
+  // the login watch. `overlayUnmountTimerRef` holds the pending
+  // deferred-unmount timer handle.
+  const [mountedOverlay, setMountedOverlay] = useState<LoginOverlay | null>(
+    null
+  )
+  const [openOverlay, setOpenOverlay] = useState<LoginOverlay | null>(null)
+  const [overlayMountKey, setOverlayMountKey] = useState(0)
+  const overlayUnmountTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   )
   // The explicit, stated guard this phase's ROADMAP obligation asks for.
   // Named separately rather than inlined so the six tile call sites read the
   // guard's intent directly -- this is the seam a future phase widens when a
-  // second store adopts the overlay shape.
-  const loginInFlight = steamFlowOpen
+  // third store adopts the overlay shape.
+  const loginInFlight = openOverlay !== null
   const [isEpicLoggedIn, setIsEpicLoggedIn] = useState(Boolean(epic.username))
   const [isGogLoggedIn, setIsGogLoggedIn] = useState(Boolean(gog.username))
   const [isAmazonLoggedIn, setIsAmazonLoggedIn] = useState(
@@ -140,39 +149,40 @@ export default React.memo(function NewLogin() {
   // unmounted component.
   useEffect(() => {
     return () => {
-      if (steamUnmountTimerRef.current) {
-        clearTimeout(steamUnmountTimerRef.current)
+      if (overlayUnmountTimerRef.current) {
+        clearTimeout(overlayUnmountTimerRef.current)
       }
     }
   }, [])
 
-  function openSteamOverlay() {
+  function openLoginOverlay(which: LoginOverlay) {
     // Clear any pending unmount timer and bump the mount key so a reopen
-    // during the teardown window remounts SteamLogin at its first Step
+    // during the teardown window remounts the overlay at its initial state
     // instead of resurrecting the previous open's state -- Dialog mounts
     // with `open` initialised to `true`, so a remount is the only way to
-    // reopen it.
-    if (steamUnmountTimerRef.current) {
-      clearTimeout(steamUnmountTimerRef.current)
-      steamUnmountTimerRef.current = null
+    // reopen it. For Humble, the remount is additionally what restarts the
+    // login watch.
+    if (overlayUnmountTimerRef.current) {
+      clearTimeout(overlayUnmountTimerRef.current)
+      overlayUnmountTimerRef.current = null
     }
-    setSteamMountKey((key) => key + 1)
-    setSteamOverlayMounted(true)
-    setSteamFlowOpen(true)
+    setOverlayMountKey((key) => key + 1)
+    setMountedOverlay(which)
+    setOpenOverlay(which)
   }
 
-  function dismissSteamOverlay() {
+  function dismissLoginOverlay() {
     // T-34.4.2-41: the semantic flag clears on the dismiss action itself,
     // synchronously and immediately -- never on the teardown timer -- so
     // the guard can never stay latched.
-    setSteamFlowOpen(false)
-    if (steamUnmountTimerRef.current) {
-      clearTimeout(steamUnmountTimerRef.current)
+    setOpenOverlay(null)
+    if (overlayUnmountTimerRef.current) {
+      clearTimeout(overlayUnmountTimerRef.current)
     }
-    steamUnmountTimerRef.current = setTimeout(() => {
-      setSteamOverlayMounted(false)
-      steamUnmountTimerRef.current = null
-    }, STEAM_DIALOG_EXIT_MS)
+    overlayUnmountTimerRef.current = setTimeout(() => {
+      setMountedOverlay(null)
+      overlayUnmountTimerRef.current = null
+    }, LOGIN_DIALOG_EXIT_MS)
   }
 
   async function handleLibraryClick() {
@@ -185,7 +195,7 @@ export default React.memo(function NewLogin() {
   }
 
   return (
-    <div className={classNames('loginPage', { steamFlowOpen })}>
+    <div className={classNames('loginPage', { loginFlowOpen: loginInFlight })}>
       {showSidLogin && (
         <SIDLogin
           backdropClick={() => {
@@ -194,8 +204,11 @@ export default React.memo(function NewLogin() {
         />
       )}
       <div className="loginBackground"></div>
-      {steamOverlayMounted && (
-        <SteamLogin key={steamMountKey} dismiss={dismissSteamOverlay} />
+      {mountedOverlay === 'steam' && (
+        <SteamLogin key={overlayMountKey} dismiss={dismissLoginOverlay} />
+      )}
+      {mountedOverlay === 'humble' && (
+        <HumbleLogin key={overlayMountKey} dismiss={dismissLoginOverlay} />
       )}
 
       {/* T-34.4.2-39/-41: `inert` is the React-18 string-empty form (boolean
@@ -288,7 +301,7 @@ export default React.memo(function NewLogin() {
               loginUrl={steamLoginPath}
               isLoggedIn={isSteamLoggedIn}
               logoutAction={steam?.logout ?? (() => Promise.resolve())}
-              primaryLoginAction={openSteamOverlay}
+              primaryLoginAction={() => openLoginOverlay('steam')}
               disabled={oldMac || loginInFlight}
             />
             <Runner
@@ -302,6 +315,7 @@ export default React.memo(function NewLogin() {
               loginUrl={humbleLoginPath}
               isLoggedIn={isHumbleLoggedIn}
               logoutAction={humble?.logout ?? (() => Promise.resolve())}
+              primaryLoginAction={() => openLoginOverlay('humble')}
               disabled={oldMac || loginInFlight}
             />
           </div>

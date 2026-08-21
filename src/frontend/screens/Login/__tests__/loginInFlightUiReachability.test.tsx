@@ -1,27 +1,26 @@
 /**
- * F-34.4.2-17 / D-G1 layer (b), REWRITTEN by plan 36-01 Task 4: this file
- * used to pin the OLD mechanism -- unmount-via-navigation -- that made a
- * second store's sign-in control unreachable while one login was in flight.
- * Plan 36-01 replaces that incidental mitigation with an EXPLICIT
- * `loginInFlight` guard (Login/index.tsx, Task 2) for the Steam flow
- * specifically: the Steam tile no longer navigates away from `/login` at
- * all -- it opens a co-mounted overlay -- so the old "clicking any tile
- * unmounts the whole runnerGroup" mechanism no longer covers Steam. This
- * file now pins BOTH mechanisms as they currently coexist:
+ * F-34.4.2-17 / D-G1 layer (b), REWRITTEN by plan 36-01 Task 4, updated
+ * again by quick task 260821-iri Task 3: this file used to pin the OLD
+ * mechanism -- unmount-via-navigation -- that made a second store's sign-in
+ * control unreachable while one login was in flight. Plan 36-01 replaced
+ * that incidental mitigation with an EXPLICIT `loginInFlight` guard
+ * (Login/index.tsx) for the Steam flow; quick task 260821-iri extended the
+ * SAME guard to Humble. This file now pins BOTH mechanisms as they
+ * currently coexist:
  *
- *   - Amazon/GOG/Zoom/Humble (no `primaryLoginAction`) still navigate away
- *     via `Runner.handleLogin()` -> `navigate(props.loginUrl)`, still
- *     unmounting the whole `runnerGroup` (assertions 1, 3, 4).
- *   - Steam (and Epic-under-Tauri via SIDLogin, out of scope here per
- *     F-36-01) uses `primaryLoginAction`, which returns BEFORE the navigate
- *     call -- no navigation, no unmount. Its own tile's disable comes from
- *     the shared `oldMac || loginInFlight` expression now fed to ALL SIX
- *     tiles uniformly (assertion 2), not from unmounting.
+ *   - Amazon/GOG/Zoom (no `primaryLoginAction`) still navigate away via
+ *     `Runner.handleLogin()` -> `navigate(props.loginUrl)`, still unmounting
+ *     the whole `runnerGroup` (assertions 1, 3, 4).
+ *   - Steam AND Humble (and Epic-under-Tauri via SIDLogin, out of scope here
+ *     per F-36-01) use `primaryLoginAction`, which returns BEFORE the
+ *     navigate call -- no navigation, no unmount. Their tiles' disable comes
+ *     from the shared `oldMac || loginInFlight` expression now fed to ALL
+ *     SIX tiles uniformly (assertion 2), not from unmounting.
  *
  * F-36-01 (accept, DEFERRED): Epic-under-Tauri's SIDLogin path also uses
- * `primaryLoginAction` but is NOT wired into `loginInFlight` by this plan --
- * every universal assertion below is scoped to what the Steam flow actually
- * changed, not to Epic.
+ * `primaryLoginAction` but is NOT wired into `loginInFlight` -- every
+ * universal assertion below is scoped to what the Steam/Humble flows
+ * actually changed, not to Epic.
  *
  * SOURCE GATES, NOT RENDER TESTS. This jest project
  * (`src/frontend/jest.config.js`) is `testEnvironment: 'node'` -- there is
@@ -198,17 +197,21 @@ describe('F-34.4.2-17 / D-G1, 36-01: what makes a second login tile unreachable 
     expect((source.match(/<a\s/g) ?? []).length).toBe(0)
   })
 
-  it('SOURCE GATE (PRESENCE, paired ABSENCE, 36-01) -- .loginContentWrapper carries the React-18 string-form inert literal and the scss carries pointer-events: none for the same steamFlowOpen state, while Login/index.tsx carries neither tabIndex nor aria-hidden anywhere', () => {
+  it('SOURCE GATE (PRESENCE, paired ABSENCE, 36-01, selector renamed by 260821-iri) -- .loginContentWrapper carries the React-18 string-form inert literal and the scss carries pointer-events: none for the same loginFlowOpen state, while Login/index.tsx carries neither tabIndex nor aria-hidden anywhere', () => {
     const tsxSource = read(LOGIN_TSX)
     const scssSource = read(LOGIN_SCSS)
 
     // Presence half: the exact React-18 string-form literal (boolean
     // `inert={true}` is React-19-only and this project pins react@^18.3.1 --
     // a boolean form here would silently no-op), and the CSS layer that
-    // backs it up for the pointer-events case specifically.
+    // backs it up for the pointer-events case specifically. The selector was
+    // renamed steamFlowOpen -> loginFlowOpen by quick task 260821-iri Task 3
+    // (Login/index.scss) when the overlay lifecycle generalised beyond
+    // Steam-only; this assertion follows that rename so it does not go RED
+    // against the current source shape.
     expect(tsxSource).toContain("inert={loginInFlight ? '' : undefined}")
     expect(scssSource).toMatch(
-      /\.loginPage\.steamFlowOpen \.loginContentWrapper\s*\{[^}]*pointer-events:\s*none/
+      /\.loginPage\.loginFlowOpen \.loginContentWrapper\s*\{[^}]*pointer-events:\s*none/
     )
 
     // Absence half: tabIndex was an operator-dropped lock (36-01-PLAN.md

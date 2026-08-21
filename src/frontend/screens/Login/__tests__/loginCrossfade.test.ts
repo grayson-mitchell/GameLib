@@ -1,8 +1,9 @@
 /**
- * Plan 36-01 Task 5: pins the CSS-only crossfade motion between
- * `.loginContentWrapper` and the co-mounted Steam Dialog overlay (Task 3),
- * and the three-way duration agreement between `Dialog.tsx`'s own
- * `transitionDuration={500}`, `Login/index.tsx`'s `STEAM_DIALOG_EXIT_MS`
+ * Plan 36-01 Task 5, generalised beyond Steam-only by quick task 260821-iri
+ * Task 3: pins the CSS-only crossfade motion between `.loginContentWrapper`
+ * and WHICHEVER co-mounted login overlay (Steam or Humble) is open, and the
+ * three-way duration agreement between `Dialog.tsx`'s own
+ * `transitionDuration={500}`, `Login/index.tsx`'s `LOGIN_DIALOG_EXIT_MS`
  * (the deferred-unmount timer), and `Login/index.scss`'s transition
  * duration -- all three MUST stay in lockstep, or the overlay either
  * unmounts before its own exit animation finishes playing, or the login
@@ -46,15 +47,15 @@ const readRaw = (relPath: string) =>
 const read = (relPath: string) => stripSourceComments(readRaw(relPath))
 
 describe('36-01 Task 5: the login panel crossfades against the co-mounted Steam overlay', () => {
-  it('FILLED-SPECIMEN GUARD (raw, unstripped) -- index.scss actually contains the literal "steamFlowOpen" token, so a broken comment stripper turns every other assertion in this file RED rather than vacuously green', () => {
+  it('FILLED-SPECIMEN GUARD (raw, unstripped) -- index.scss actually contains the literal "loginFlowOpen" token, so a broken comment stripper turns every other assertion in this file RED rather than vacuously green', () => {
     const raw = readRaw(LOGIN_SCSS)
-    expect(raw).toMatch(/steamFlowOpen/)
+    expect(raw).toMatch(/loginFlowOpen/)
   })
 
-  it('SOURCE GATE (PRESENCE) -- .loginPage.steamFlowOpen .loginContentWrapper declares transform, opacity, AND pointer-events by NAME, not just via a landmark selector matching', () => {
+  it('SOURCE GATE (PRESENCE) -- .loginPage.loginFlowOpen .loginContentWrapper declares transform, opacity, AND pointer-events by NAME, not just via a landmark selector matching', () => {
     const source = read(LOGIN_SCSS)
     const ruleMatch = source.match(
-      /\.loginPage\.steamFlowOpen \.loginContentWrapper\s*\{([^}]*)\}/
+      /\.loginPage\.loginFlowOpen \.loginContentWrapper\s*\{([^}]*)\}/
     )
 
     // Breaks if: the rule is removed entirely, or any of the three named
@@ -82,13 +83,13 @@ describe('36-01 Task 5: the login panel crossfades against the co-mounted Steam 
     expect(ruleBody).not.toMatch(/transition:[^;]*!important/)
   })
 
-  it('SOURCE GATE (PRESENCE, three-way agreement) -- Dialog.tsx\'s transitionDuration, Login/index.tsx\'s STEAM_DIALOG_EXIT_MS, and Login/index.scss\'s transition duration are all the SAME extracted numeric value, not three independently-typed literals that happen to currently agree', () => {
+  it('SOURCE GATE (PRESENCE, three-way agreement) -- Dialog.tsx\'s transitionDuration, Login/index.tsx\'s LOGIN_DIALOG_EXIT_MS, and Login/index.scss\'s transition duration are all the SAME extracted numeric value, not three independently-typed literals that happen to currently agree', () => {
     const dialogSource = read(DIALOG_TSX)
     const loginSource = read(LOGIN_TSX)
     const scssSource = read(LOGIN_SCSS)
 
     const dialogMatch = dialogSource.match(/transitionDuration=\{(\d+)\}/)
-    const loginMatch = loginSource.match(/STEAM_DIALOG_EXIT_MS = (\d+)/)
+    const loginMatch = loginSource.match(/LOGIN_DIALOG_EXIT_MS = (\d+)/)
     const scssMatch = scssSource.match(
       /\.loginContentWrapper\s*\{[^}]*transition:\s*transform (\d+)ms/
     )
@@ -144,5 +145,23 @@ describe('36-01 Task 5: the login panel crossfades against the co-mounted Steam 
     const ruleBody = ruleMatch?.[1] ?? ''
     expect(ruleBody).toMatch(/position:\s*absolute/)
     expect(ruleBody).toMatch(/inset:\s*0/)
+  })
+
+  it("SOURCE GATE (PRESENCE + ABSENCE) -- the Humble tile opens the co-mounted overlay and never routes", () => {
+    const source = read(LOGIN_TSX)
+
+    // Breaks if: either tile stops calling openLoginOverlay with its own
+    // store name, or Humble regains a navigate(humbleLoginPath) call, or the
+    // mountedOverlay === 'humble' branch is removed from the render tree.
+    expect(source).toMatch(
+      /primaryLoginAction=\{\(\) => openLoginOverlay\('humble'\)\}/
+    )
+    expect(source).toMatch(
+      /primaryLoginAction=\{\(\) => openLoginOverlay\('steam'\)\}/
+    )
+    expect((source.match(/navigate\(humbleLoginPath\)/g) ?? []).length).toBe(
+      0
+    )
+    expect(source).toMatch(/mountedOverlay === 'humble'/)
   })
 })
