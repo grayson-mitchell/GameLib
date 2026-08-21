@@ -2361,7 +2361,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
       .mock.calls.map((call, index) => ({ call, index }))
       .filter(({ call }) => call[0] === 'games')
     const clearingCallIndex = gamesSetCalls.find(({ call }) => {
-      const arr = call[1] as GameInfo[]
+      const arr = call[1]
       const entry = arr.find((g) => g.app_name === APP_ID)
       return (
         entry !== undefined &&
@@ -2371,8 +2371,11 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
       )
     })?.index
     expect(clearingCallIndex).toBeDefined()
+    if (clearingCallIndex === undefined) {
+      throw new Error('unreachable: clearingCallIndex asserted defined above')
+    }
     const clearOrder = jest.mocked(steamLibraryStore.set).mock
-      .invocationCallOrder[clearingCallIndex as number]
+      .invocationCallOrder[clearingCallIndex]
     const pollOrder = startInstallPollingSpy.mock.invocationCallOrder[0]
     expect(clearOrder).toBeLessThan(pollOrder)
   })

@@ -43,6 +43,8 @@ import {
   startUninstallPolling,
   resumeInterruptedSteamInstall,
   markSteamInstallIncomplete,
+  markSteamNativeInstallStarted,
+  clearSteamResumeBreadcrumb,
   readAcfState,
   pollUninstallOnce,
   resolveInstallRoot,
@@ -909,7 +911,22 @@ export default class SteamGame implements Game {
     // fall through into the normal install flow below, which will pick up
     // and complete anything the reconcile pass left as a gap. A failure here
     // must never block the real install attempt beneath it (hardening).
-    if (library.get(this.appId)?.install?.steamResumePending) {
+    //
+    // 260821-rb5 (Rule 1 fix, found writing this quick task): the same flag
+    // is now ALSO set at install START (markSteamNativeInstallStarted,
+    // runNativeDepotDownload) for the case-C crash-survival breadcrumb, so
+    // steamResumePending can be true while a native download is genuinely
+    // still LIVE for this appId — e.g. a second install() call joining the
+    // T-23-12 single-flight guard, or a real double-click. Without the
+    // isNativeInstallInFlight guard here, that live call would misread its
+    // OWN in-flight download as "a leftover from a previous session" and run
+    // resumeInterruptedSteamInstall's locate/finalize pass concurrently with
+    // it — the same live-install-owns-this-appId rule init()'s startup
+    // surfacing loop already applies.
+    if (
+      library.get(this.appId)?.install?.steamResumePending &&
+      !isNativeInstallInFlight(this.appId)
+    ) {
       await resumeInterruptedSteamInstall(this.appId).catch((err) => {
         logWarning(
           [
@@ -1603,6 +1620,18 @@ export default class SteamGame implements Game {
       const targetSteamappsDir =
         opts.targetSteamappsDirOverride ?? resolved.targetSteamappsDir
 
+      // 260821-rb5: persist a crash-surviving breadcrumb BEFORE the
+      // downloadSteamDepots await below — this ordering IS the fix. A hard
+      // kill (kill -9, crash, power loss) from this point on runs no JS at
+      // all, so no appmanifest_*.acf is ever written (case C of
+      // .planning/todos/pending/2026-08-16-aborted-depot-residue-has-no-acf.md);
+      // this breadcrumb is the ONLY record of the residue that survives.
+      // Must stay synchronous and above the await.
+      markSteamNativeInstallStarted(this.appId, {
+        targetSteamappsDir,
+        installdir: resolved.installdir
+      })
+
       const downloadStart = Date.now()
       const outcome = await downloadSteamDepots(this.appId, {
         targetSteamappsDir,
@@ -1633,6 +1662,16 @@ export default class SteamGame implements Game {
         )
         return { status: 'error', error: outcome.error }
       }
+
+      // 260821-rb5: downloadSteamDepots has finished and written its own
+      // manifest at this point, so the ACF-derived path
+      // (scanDownloadingAppIds) now covers this appId — the breadcrumb has
+      // served its purpose, and keeping it would double-surface. Clear it
+      // BEFORE polling starts. The 'cancelled' and 'error' branches above
+      // deliberately do NOT clear it — a cancelled or errored run leaves
+      // residue too (markSteamInstallIncomplete's 'cancelled' spread
+      // already preserves the breadcrumb fields).
+      clearSteamResumeBreadcrumb(this.appId)
 
       // Start ACF polling so Steam's own verify/repair pass (which flips
       // StateFlags 1026 -> 4) is reflected in the UI, same as the legacy

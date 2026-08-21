@@ -4,6 +4,7 @@ import {
   InstallArgs,
   InstallPlatform,
   InstallInfo,
+  InstalledInfo,
   LaunchOption
 } from 'common/types'
 import { LibraryManager } from 'common/types/game_manager'
@@ -513,6 +514,152 @@ export function markSteamInstallIncomplete(appId: string): void {
   sendFrontendMessage('pushGameToLibrary', updated)
 }
 
+/**
+ * 260821-rb5: persists a crash-surviving breadcrumb the MOMENT a native
+ * depot download starts (games.ts's runNativeDepotDownload, synchronously
+ * before the downloadSteamDepots await), so a hard kill (kill -9, crash,
+ * power loss) — which leaves partial bytes on disk with NO appmanifest_*.acf
+ * (case C of
+ * .planning/todos/pending/2026-08-16-aborted-depot-residue-has-no-acf.md) —
+ * still leaves a record somewhere init() can find it. `targetSteamappsDir`
+ * and `installdir` are the values ACTUALLY resolved for this run (including
+ * a bottle-root override), never re-derived or guessed later.
+ *
+ * Deliberately does NOT set `is_installed: false`, unlike
+ * markSteamInstallIncomplete above — this runs at install START, and on an
+ * update/reinstall the existing complete install is still launchable at
+ * this moment, so dropping Play here would be a lie. The interrupted-update
+ * sub-case self-heals instead (its .acf still has bit 4 set, so the startup
+ * self-heal in init() below clears the breadcrumb rather than surfacing
+ * it) — that is the conservative, non-nagging outcome and is intended, not
+ * an oversight.
+ *
+ * No-op (never throws) when the appId has no in-memory library entry —
+ * matches every other per-appId surfacing helper in this file. Persists
+ * IMMEDIATELY (same markSteamInstallIncomplete sequence) so a kill
+ * microseconds later already finds it on disk.
+ */
+export function markSteamNativeInstallStarted(
+  appId: string,
+  breadcrumb: { targetSteamappsDir: string; installdir: string }
+): void {
+  const existing = library.get(appId)
+  if (!existing) return
+
+  const updated: GameInfo = {
+    ...existing,
+    install: {
+      ...existing.install,
+      steamResumePending: true,
+      steamResumeTargetSteamappsDir: breadcrumb.targetSteamappsDir,
+      steamResumeInstalldir: breadcrumb.installdir
+    }
+  }
+  library.set(appId, updated)
+  steamLibraryStore.set('games', Array.from(library.values()))
+  sendFrontendMessage('pushGameToLibrary', updated)
+}
+
+/**
+ * 260821-rb5: clears the install-start breadcrumb above. Called both on a
+ * successful native depot run (the ACF-derived path now covers this appId,
+ * so keeping the breadcrumb would double-surface it) and at startup by
+ * init()'s self-heal (a breadcrumb whose appId turns out to already have a
+ * fully-installed on-disk manifest — see breadcrumbAppIsFullyInstalledOnDisk
+ * below).
+ *
+ * Strips both breadcrumb fields by deleting them rather than setting them to
+ * '' — absence is the discriminator getSteamResumeBreadcrumbAppIds reads.
+ * No-op when there is no entry, or when the entry carries neither breadcrumb
+ * field nor steamResumePending, avoiding a pointless whole-library
+ * re-persist on every success.
+ */
+export function clearSteamResumeBreadcrumb(appId: string): void {
+  const existing = library.get(appId)
+  if (!existing) return
+  if (
+    !existing.install?.steamResumePending &&
+    !existing.install?.steamResumeTargetSteamappsDir &&
+    !existing.install?.steamResumeInstalldir
+  ) {
+    return
+  }
+
+  const install = { ...existing.install }
+  delete install.steamResumeTargetSteamappsDir
+  delete install.steamResumeInstalldir
+
+  const updated: GameInfo = {
+    ...existing,
+    install: { ...install, steamResumePending: false }
+  }
+  library.set(appId, updated)
+  steamLibraryStore.set('games', Array.from(library.values()))
+  sendFrontendMessage('pushGameToLibrary', updated)
+}
+
+/**
+ * 260821-rb5: pure in-memory read over `library` — returns appIds whose
+ * install-start breadcrumb is present (both steamResumeInstalldir AND
+ * steamResumeTargetSteamappsDir set). Cannot throw. Exported for unit
+ * testing, and consumed by init() to union with the ACF-derived
+ * scanDownloadingAppIds() result — case C by definition leaves no ACF, so
+ * the breadcrumb is the ONLY record for that case.
+ */
+export function getSteamResumeBreadcrumbAppIds(): string[] {
+  const ids: string[] = []
+  for (const [appId, info] of library.entries()) {
+    if (
+      info.install?.steamResumeInstalldir &&
+      info.install?.steamResumeTargetSteamappsDir
+    ) {
+      ids.push(appId)
+    }
+  }
+  return ids
+}
+
+/**
+ * 260821-rb5 self-heal predicate: is a breadcrumb-carrying appId ALREADY
+ * fully installed on disk? Checked at the breadcrumb's OWN persisted
+ * `steamResumeTargetSteamappsDir` rather than re-scanning
+ * getSteamLibraries() — the only way a bottle-rooted install
+ * (targetSteamappsDirOverride) is checkable at all here. Reuses
+ * isFullyInstalledStateFlags so the installed/incomplete bit logic can
+ * never diverge from buildInstalledMap/buildIncompleteInstallSet.
+ *
+ * False (never surfaces a false-positive clear) when the breadcrumb dir is
+ * absent, when no ACF exists yet (the case-C path — no manifest means
+ * SURFACE, not clear), or on any throw / corrupt ACF / NaN StateFlags — fail
+ * toward surfacing, since surfacing is non-destructive (matches the "skip
+ * corrupt ACF" discipline used elsewhere in this file).
+ */
+function breadcrumbAppIsFullyInstalledOnDisk(
+  appId: string,
+  install: Partial<InstalledInfo> | undefined
+): boolean {
+  if (!install?.steamResumeTargetSteamappsDir) return false
+
+  try {
+    const manifest = join(
+      install.steamResumeTargetSteamappsDir,
+      `appmanifest_${appId}.acf`
+    )
+    if (!existsSync(manifest)) return false
+
+    const content = readFileSync(manifest, 'utf-8')
+    const parsed = parse(content) as {
+      AppState?: { StateFlags?: string }
+    }
+    const stateFlags = parseInt(parsed?.AppState?.StateFlags ?? '', 10)
+    if (Number.isNaN(stateFlags)) return false
+
+    return isFullyInstalledStateFlags(stateFlags)
+  } catch {
+    return false
+  }
+}
+
 export default class SteamLibraryManager implements LibraryManager {
   /**
    * On startup: load the cached library immediately, SURFACE (never
@@ -551,60 +698,21 @@ export default class SteamLibraryManager implements LibraryManager {
     // Install click — see SteamGame.install()). Wrapped in try/catch (outer
     // AND per-appId inner) so neither a scan failure nor a single game's
     // surface step can ever block startup or take down the others.
+    // 260821-rb5: case C of the aborted-depot-residue todo (a hard kill —
+    // kill -9, crash, power loss — mid native-depot-download) leaves NO
+    // appmanifest_*.acf at all, so scanDownloadingAppIds() below can never
+    // see it. getSteamResumeBreadcrumbAppIds() is the in-memory (never
+    // throws) counterpart, sourced from the install-start breadcrumb
+    // (markSteamNativeInstallStarted, games.ts). Unioning the two lists is
+    // load-bearing, not additive convenience: without it, case C has no
+    // record ANYWHERE after a restart. The ACF scan is narrowed to its own
+    // try so a scan failure (which case C triggers by definition — there IS
+    // no ACF) can never skip breadcrumb surfacing.
+    const breadcrumbIds = getSteamResumeBreadcrumbAppIds()
+    const breadcrumbSet = new Set(breadcrumbIds)
+    let downloadingIds: string[] = []
     try {
-      const downloadingIds = await scanDownloadingAppIds()
-      for (const appId of downloadingIds) {
-        // T-23-14: a stale on-disk StateFlags=1026 manifest for an appId
-        // already owned by a LIVE in-process install (games.ts's
-        // nativeInstallsInFlight) must never spawn a phantom concurrent
-        // resume path racing it — skip entirely and let the live install own
-        // this appId's finalize + poll start (installDepotDownload calls
-        // startInstallPolling itself once its own run completes).
-        if (isNativeInstallInFlight(appId)) {
-          logInfo(
-            `Steam: skipping startup resume-surface for appId ${appId} — already owned by a live in-process install`,
-            LogPrefix.Steam
-          )
-          continue
-        }
-
-        // Per-appId hardening: surfacing one game's resumable state must
-        // never throw out of this loop and never block startup or the
-        // other appIds in this list.
-        try {
-          const existing = library.get(appId)
-          if (existing) {
-            const updated: GameInfo = {
-              ...existing,
-              install: { ...existing.install, steamResumePending: true }
-            }
-            library.set(appId, updated)
-            sendFrontendMessage('pushGameToLibrary', updated)
-          }
-
-          logInfo(
-            `Steam: appId ${appId} has an interrupted install detected on startup — surfacing as resumable, NOT auto-resuming`,
-            LogPrefix.Steam
-          )
-
-          notify({
-            title: existing?.title ?? '',
-            body: i18next.t(
-              'steam.resumeAvailable.notify',
-              'An interrupted install for {{game}} is ready to resume — click Install to continue',
-              { game: existing?.title ?? '' }
-            )
-          })
-        } catch (surfaceErr) {
-          logWarning(
-            [
-              `Steam: failed to surface resumable install for appId ${appId} (never blocks startup):`,
-              surfaceErr
-            ],
-            LogPrefix.Steam
-          )
-        }
-      }
+      downloadingIds = await scanDownloadingAppIds()
     } catch (err) {
       logWarning(
         [
@@ -613,6 +721,80 @@ export default class SteamLibraryManager implements LibraryManager {
         ],
         LogPrefix.Steam
       )
+    }
+
+    for (const appId of new Set([...downloadingIds, ...breadcrumbIds])) {
+      // T-23-14: a stale on-disk StateFlags=1026 manifest for an appId
+      // already owned by a LIVE in-process install (games.ts's
+      // nativeInstallsInFlight) must never spawn a phantom concurrent
+      // resume path racing it — skip entirely and let the live install own
+      // this appId's finalize + poll start (installDepotDownload calls
+      // startInstallPolling itself once its own run completes).
+      if (isNativeInstallInFlight(appId)) {
+        logInfo(
+          `Steam: skipping startup resume-surface for appId ${appId} — already owned by a live in-process install`,
+          LogPrefix.Steam
+        )
+        continue
+      }
+
+      // Per-appId hardening: surfacing one game's resumable state must
+      // never throw out of this loop and never block startup or the
+      // other appIds in this list.
+      try {
+        const existing = library.get(appId)
+
+        // 260821-rb5 self-heal: a breadcrumb-carrying appId whose on-disk
+        // manifest turns out to be fully installed (e.g. Steam itself
+        // finished the download after the kill, or a stale breadcrumb from
+        // a completed update) must be CLEARED, not surfaced. Without this,
+        // a killed-then-Steam-completed install would nag "resume" on
+        // every launch forever — the breadcrumb has no other clear point,
+        // since case C never reaches the success-route clear in
+        // runNativeDepotDownload.
+        if (
+          breadcrumbSet.has(appId) &&
+          breadcrumbAppIsFullyInstalledOnDisk(appId, existing?.install)
+        ) {
+          clearSteamResumeBreadcrumb(appId)
+          logInfo(
+            `Steam: appId ${appId} carried a 260821-rb5 install-start breadcrumb but its on-disk manifest is fully installed — clearing the breadcrumb instead of surfacing it`,
+            LogPrefix.Steam
+          )
+          continue
+        }
+
+        if (existing) {
+          const updated: GameInfo = {
+            ...existing,
+            install: { ...existing.install, steamResumePending: true }
+          }
+          library.set(appId, updated)
+          sendFrontendMessage('pushGameToLibrary', updated)
+        }
+
+        logInfo(
+          `Steam: appId ${appId} has an interrupted install detected on startup — surfacing as resumable, NOT auto-resuming`,
+          LogPrefix.Steam
+        )
+
+        notify({
+          title: existing?.title ?? '',
+          body: i18next.t(
+            'steam.resumeAvailable.notify',
+            'An interrupted install for {{game}} is ready to resume — click Install to continue',
+            { game: existing?.title ?? '' }
+          )
+        })
+      } catch (surfaceErr) {
+        logWarning(
+          [
+            `Steam: failed to surface resumable install for appId ${appId} (never blocks startup):`,
+            surfaceErr
+          ],
+          LogPrefix.Steam
+        )
+      }
     }
 
     // Background sync once per session (D-01 / D-03). quick-260817-d61: names
@@ -838,6 +1020,31 @@ export default class SteamLibraryManager implements LibraryManager {
       // across any number of refreshes.
       const incompleteSet = await buildIncompleteInstallSet()
 
+      // 260821-rb5: capture install-start breadcrumbs BEFORE library.clear()
+      // below wipes the in-memory Map. refresh() rebuilds every GameInfo
+      // purely from the ACF scan + ownership data, and a case-C breadcrumb
+      // has NO ACF by definition — the same wipe shape WR-01/D-UAT-09
+      // already had to fix for the ACF-derived steamResumePending flag
+      // above, but for a field the ACF scan can never re-derive. Without
+      // this, the first mid-session resync — which init() itself kicks off
+      // via runOnceWhenOnline(() => this.refresh()) — silently wipes the
+      // breadcrumb and the whole fix evaporates.
+      const breadcrumbs = new Map<
+        string,
+        { targetSteamappsDir: string; installdir: string }
+      >()
+      for (const [appId, info] of library.entries()) {
+        if (
+          info.install?.steamResumeTargetSteamappsDir &&
+          info.install?.steamResumeInstalldir
+        ) {
+          breadcrumbs.set(appId, {
+            targetSteamappsDir: info.install.steamResumeTargetSteamappsDir,
+            installdir: info.install.steamResumeInstalldir
+          })
+        }
+      }
+
       // ── Step 3: build and push one GameInfo per owned game ────────────────
       library.clear()
       for (const app of ownedApps) {
@@ -945,6 +1152,23 @@ export default class SteamLibraryManager implements LibraryManager {
           canRunOffline: true,
           installable: true,
           store_url: `https://store.steampowered.com/app/${app.appid}/`
+        }
+
+        // 260821-rb5: re-apply a captured breadcrumb (see above, before
+        // library.clear()). Property-mutation after construction, rather
+        // than a fourth arm on the `install:` ternary above, to keep this
+        // diff surgical against an already 100-line object literal. The
+        // `!installedData` guard is the SAME self-heal rule as init()'s
+        // startup self-heal: a game that is now fully installed drops its
+        // breadcrumb instead of carrying it forward.
+        const breadcrumb = breadcrumbs.get(appIdStr)
+        if (breadcrumb && !installedData) {
+          gameInfo.install = {
+            ...gameInfo.install,
+            steamResumePending: true,
+            steamResumeTargetSteamappsDir: breadcrumb.targetSteamappsDir,
+            steamResumeInstalldir: breadcrumb.installdir
+          }
         }
 
         library.set(appIdStr, gameInfo)
