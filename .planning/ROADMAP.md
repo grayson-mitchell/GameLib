@@ -3632,7 +3632,7 @@ v0.8: 27 (depends on the Phase 1-26 backend lineage + spikes 009-012)
 | 26. Steam Key Redemption | 5/5 | Complete | 2026-07-20 |
 | 27. Tauri Shell Walking Skeleton | 5/5 | Complete | 2026-07-21 |
 
-### Phase 36: Login-to-Steam crossfade and explicit login-in-flight mitigation
+### Phase 36: Login-to-Steam crossfade and explicit login-in-flight mitigation — ✅ COMPLETE 2026-08-21
 
 **Goal:** Clicking the Steam tile plays ONE continuous motion: the login panel (`.loginContentWrapper`) slides up and out of view while the Steam sign-in Dialog slides up into position, with `.loginBackground` remaining painted underneath the whole time. Both surfaces are on screen simultaneously and cross in flight — so the Steam flow becomes an OVERLAY on `/login` rather than a navigation to the sibling route `loginweb/steam`.
 
@@ -3674,9 +3674,32 @@ sequential handoff, on the grounds that an explicit guard is stronger than an in
   scrim. This phase fixes that as a side effect.
 
 Plans:
-- [ ] 36-01-PLAN.md — Overlay conversion + explicit `loginInFlight` guard + crossfade, in one plan: the guard replaces the unmount inside a single task, so no unguarded window exists
-- [ ] 36-02-PLAN.md — Fourteenth threat-register update (T-34.4.2-39/-41 basis change) + mint REQ-36-01..05
-- [ ] 36-03-PLAN.md — BLOCKING human visual + reachability gate (the animation is the deliverable; no source gate can see it)
+- [x] 36-01-PLAN.md — Overlay conversion + explicit `loginInFlight` guard + crossfade, in one plan: the guard replaces the unmount inside a single task, so no unguarded window exists
+- [x] 36-02-PLAN.md — Fourteenth threat-register update (T-34.4.2-39/-41 basis change) + mint REQ-36-01..05
+- [x] 36-03-PLAN.md — BLOCKING human visual + reachability gate (the animation is the deliverable; no source gate can see it)
+
+**Outcome (2026-08-21):** 3/3 plans executed. The BLOCKING human gate (36-03) scored
+**PRECONDITION PASS and 10/10 items PASS** on 2026-08-20, run against a freshly-built
+`pnpm tauri:dev` (PID 23762) — a stale pre-existing instance was found first and the run was
+**aborted and relaunched** rather than scored against it.
+
+Steam sign-in is now a co-mounted **overlay** on `/login`: `App.tsx`'s `loginweb/steam` route is
+deleted (`loginweb/:runner` untouched), and the incidental route-unmount that was previously the
+*entire* frontend mitigation for **T-34.4.2-39** and **T-34.4.2-41** is replaced by an explicit
+`loginInFlight` guard — all six tiles carry `disabled={oldMac || loginInFlight}`, and
+`.loginContentWrapper` carries React-18 string-form `inert` plus `pointer-events: none`. Route
+removal and guard install landed in the **same task** (36-01 Task 2), so no unguarded interval
+ever existed. Task 4 did execute: `loginInFlightUiReachability.test.tsx` was rewritten from the
+`disabled={oldMac}`-only pin to the uniform-guard PRESENCE check, after sitting RED **by design**
+between Task 2 and Task 4 exactly as the plan required. Login suite: 5 suites / 60 tests green.
+
+Two cosmetic defects found **outside** the 10 declared items (QR-code resize, tab-label clipping)
+were routed to quick task `260820-u29`, which closed them over three gate rounds and deferred one
+followup (credentials/QR tab height-matching) to its own future task.
+
+**Still owed, not blocking:** no `36-VERIFICATION.md` (`/gsd-verify-work 36` never ran — the phase
+rests on 36-03's operator gate), no code-review or secure-phase artifacts, and `36-VALIDATION.md`
+remains `status: draft` deliberately.
 
 ---
 
