@@ -74,9 +74,16 @@ interface SpawnResult {
   stderr: string
 }
 
-function spawnCapture(command: string, args: string[], env: NodeJS.ProcessEnv): Promise<SpawnResult> {
+function spawnCapture(
+  command: string,
+  args: string[],
+  env: NodeJS.ProcessEnv
+): Promise<SpawnResult> {
   return new Promise((resolvePromise, rejectPromise) => {
-    const child = spawn(command, args, { env, stdio: ['ignore', 'pipe', 'pipe'] })
+    const child = spawn(command, args, {
+      env,
+      stdio: ['ignore', 'pipe', 'pipe']
+    })
     let stdout = ''
     let stderr = ''
     child.stdout.on('data', (d) => {
@@ -108,7 +115,9 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
       stdio: 'pipe'
     })
 
-    const bins = readdirSync(BINARIES_DIR).filter((f) => f.startsWith('gamelib-sidecar-'))
+    const bins = readdirSync(BINARIES_DIR).filter((f) =>
+      f.startsWith('gamelib-sidecar-')
+    )
     if (bins.length !== 1) {
       throw new Error(
         `Expected exactly one gamelib-sidecar-* binary in ${BINARIES_DIR}, found: ${bins.join(', ')}`
@@ -116,7 +125,9 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
     }
     binaryPath = join(BINARIES_DIR, bins[0])
 
-    fakeHome = mkdtempSync(join(tmpdir(), 'gamelib-lzmaNativeSeaRealBuild-home-'))
+    fakeHome = mkdtempSync(
+      join(tmpdir(), 'gamelib-lzmaNativeSeaRealBuild-home-')
+    )
   }, 180000)
 
   afterAll(() => {
@@ -133,39 +144,35 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
   // cleanly (the FIRST round's fix, unaffected by this gate) but must now
   // report `nativeWorkers:0` -- proving the kill switch is honored
   // end-to-end inside a genuinely compiled binary, not just in a jest mock.
-  test(
-    'the REAL compiled SEA binary\'s worker pool spawns cleanly, with native decode correctly gated OFF (inlineFallback=false, nativeWorkers=0)',
-    async () => {
-      const result = await spawnCapture(binaryPath, [], {
-        ...process.env,
-        GAMELIB_SIDECAR_SELFTEST: 'decompress-pool',
-        HOME: fakeHome,
-        USERPROFILE: fakeHome,
-        XDG_STATE_HOME: join(fakeHome, '.local', 'state'),
-        LOCALAPPDATA: join(fakeHome, 'AppData', 'Local')
-      })
+  test("the REAL compiled SEA binary's worker pool spawns cleanly, with native decode correctly gated OFF (inlineFallback=false, nativeWorkers=0)", async () => {
+    const result = await spawnCapture(binaryPath, [], {
+      ...process.env,
+      GAMELIB_SIDECAR_SELFTEST: 'decompress-pool',
+      HOME: fakeHome,
+      USERPROFILE: fakeHome,
+      XDG_STATE_HOME: join(fakeHome, '.local', 'state'),
+      LOCALAPPDATA: join(fakeHome, 'AppData', 'Local')
+    })
 
-      const poolLine = result.stdout
-        .split('\n')
-        .find((line) => line.startsWith('SELFTEST pool='))
+    const poolLine = result.stdout
+      .split('\n')
+      .find((line) => line.startsWith('SELFTEST pool='))
 
-      // Before round 1's fix, this self-test reported inlineFallback=true
-      // (the worker-thread logger crash -- the pool never spawned at all).
-      // Before this gate landed, a fixed pool + fixed identity guard
-      // reported nativeWorkers=size (see this test's own prior assertion,
-      // git history) -- genuinely true, but native then hung on a
-      // real-sized decode (the still-open finding the gate exists for).
-      expect(poolLine).toBeDefined()
-      const stats = JSON.parse(poolLine!.slice('SELFTEST pool='.length)) as {
-        size: number
-        inlineFallback: boolean
-        nativeWorkers: number
-      }
-      expect(stats.inlineFallback).toBe(false)
-      expect(stats.nativeWorkers).toBe(0)
-    },
-    30000
-  )
+    // Before round 1's fix, this self-test reported inlineFallback=true
+    // (the worker-thread logger crash -- the pool never spawned at all).
+    // Before this gate landed, a fixed pool + fixed identity guard
+    // reported nativeWorkers=size (see this test's own prior assertion,
+    // git history) -- genuinely true, but native then hung on a
+    // real-sized decode (the still-open finding the gate exists for).
+    expect(poolLine).toBeDefined()
+    const stats = JSON.parse(poolLine!.slice('SELFTEST pool='.length)) as {
+      size: number
+      inlineFallback: boolean
+      nativeWorkers: number
+    }
+    expect(stats.inlineFallback).toBe(false)
+    expect(stats.nativeWorkers).toBe(0)
+  }, 30000)
 
   // CRITICAL CORRECTION, found while writing THIS test (2026-08-18, same
   // session, after the gate above was implemented and verified): the
@@ -197,29 +204,25 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
   // Left as `test.skip`, not deleted: same reasoning as the native-path
   // case below -- this is the correct, currently-true target, not
   // something to weaken or hide.
-  test.skip(
-    'the REAL compiled SEA binary correctly decodes a real-sized (64KB) chunk via the gated (pure-JS) path -- KNOWN FAILING (see CRITICAL CORRECTION comment above: this is NOT native-specific), do not un-skip without a real fix + real green run',
-    async () => {
-      const result = await spawnCapture(binaryPath, [], {
-        ...process.env,
-        GAMELIB_SIDECAR_SELFTEST: 'decompress-pool',
-        HOME: fakeHome,
-        USERPROFILE: fakeHome,
-        XDG_STATE_HOME: join(fakeHome, '.local', 'state'),
-        LOCALAPPDATA: join(fakeHome, 'AppData', 'Local')
-      })
+  test.skip('the REAL compiled SEA binary correctly decodes a real-sized (64KB) chunk via the gated (pure-JS) path -- KNOWN FAILING (see CRITICAL CORRECTION comment above: this is NOT native-specific), do not un-skip without a real fix + real green run', async () => {
+    const result = await spawnCapture(binaryPath, [], {
+      ...process.env,
+      GAMELIB_SIDECAR_SELFTEST: 'decompress-pool',
+      HOME: fakeHome,
+      USERPROFILE: fakeHome,
+      XDG_STATE_HOME: join(fakeHome, '.local', 'state'),
+      LOCALAPPDATA: join(fakeHome, 'AppData', 'Local')
+    })
 
-      const decodeLine = result.stdout
-        .split('\n')
-        .find((line) => line.startsWith('SELFTEST decode='))
+    const decodeLine = result.stdout
+      .split('\n')
+      .find((line) => line.startsWith('SELFTEST decode='))
 
-      expect(decodeLine).toBeDefined()
-      expect(decodeLine).toContain('decode=ok')
-      expect(decodeLine).toContain('match=true')
-      expect(result.code).toBe(0)
-    },
-    30000
-  )
+    expect(decodeLine).toBeDefined()
+    expect(decodeLine).toContain('decode=ok')
+    expect(decodeLine).toContain('match=true')
+    expect(result.code).toBe(0)
+  }, 30000)
 
   // Phase 23.1 plan 05, THIRD finding (2026-08-18, same session): fixing the
   // identity-guard defect above (test passes -- native resolution and the
@@ -296,27 +299,23 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
   // a temporary, local, uncommitted flip of NATIVE_LZMA_DECODE_ENABLED to
   // `true` before rebuilding, same as any other investigation step
   // described in the debug file.
-  test.skip(
-    'the REAL compiled SEA binary correctly decodes a real-sized (64KB) chunk via the NATIVE path once the kill switch is (locally, temporarily) forced back on -- KNOWN FAILING, see comment above and the linked debug file, do not un-skip without a real fix + real green run',
-    async () => {
-      const result = await spawnCapture(binaryPath, [], {
-        ...process.env,
-        GAMELIB_SIDECAR_SELFTEST: 'decompress-pool',
-        HOME: fakeHome,
-        USERPROFILE: fakeHome,
-        XDG_STATE_HOME: join(fakeHome, '.local', 'state'),
-        LOCALAPPDATA: join(fakeHome, 'AppData', 'Local')
-      })
+  test.skip('the REAL compiled SEA binary correctly decodes a real-sized (64KB) chunk via the NATIVE path once the kill switch is (locally, temporarily) forced back on -- KNOWN FAILING, see comment above and the linked debug file, do not un-skip without a real fix + real green run', async () => {
+    const result = await spawnCapture(binaryPath, [], {
+      ...process.env,
+      GAMELIB_SIDECAR_SELFTEST: 'decompress-pool',
+      HOME: fakeHome,
+      USERPROFILE: fakeHome,
+      XDG_STATE_HOME: join(fakeHome, '.local', 'state'),
+      LOCALAPPDATA: join(fakeHome, 'AppData', 'Local')
+    })
 
-      const decodeLine = result.stdout
-        .split('\n')
-        .find((line) => line.startsWith('SELFTEST decode='))
+    const decodeLine = result.stdout
+      .split('\n')
+      .find((line) => line.startsWith('SELFTEST decode='))
 
-      expect(decodeLine).toBeDefined()
-      expect(decodeLine).toContain('decode=ok')
-      expect(decodeLine).toContain('match=true')
-      expect(result.code).toBe(0)
-    },
-    30000
-  )
+    expect(decodeLine).toBeDefined()
+    expect(decodeLine).toContain('decode=ok')
+    expect(decodeLine).toContain('match=true')
+    expect(result.code).toBe(0)
+  }, 30000)
 })

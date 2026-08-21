@@ -1114,7 +1114,9 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       // "received value must be a promise", because the automocked
       // `disconnect()` returns `undefined`, not a Promise). `requireActual`
       // is the one call that genuinely bypasses the registered mock.
-      const { HumbleUser: RealHumbleUser }: {
+      const {
+        HumbleUser: RealHumbleUser
+      }: {
         HumbleUser: { disconnect: () => Promise<void> }
       } = jest.requireActual('../../humble/user')
       // eslint-disable-next-line @typescript-eslint/no-require-imports

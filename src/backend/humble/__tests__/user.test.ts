@@ -125,10 +125,7 @@ import {
   VALIDATION_THROTTLE_MS,
   COOKIE_POLL_INTERVAL_MS
 } from '../user'
-import {
-  setLoginWindowSeam,
-  type LoginWindowSeam
-} from '../loginWindowSeam'
+import { setLoginWindowSeam, type LoginWindowSeam } from '../loginWindowSeam'
 import { HUMBLE_BASE_URL, HUMBLE_LOGIN_URL } from '../constants'
 
 const flushAsync = async () => new Promise((r) => setImmediate(r))
@@ -778,7 +775,9 @@ describe('HumbleUser', () => {
       mockGetGamekeys.mockRejectedValue(new Error('ECONNREFUSED'))
 
       // Must NOT reject — health is unknown, not expired.
-      await expect(HumbleUser.checkHealthAndFlagExpiry()).resolves.toBeUndefined()
+      await expect(
+        HumbleUser.checkHealthAndFlagExpiry()
+      ).resolves.toBeUndefined()
 
       expect(mockConfigStore.set).not.toHaveBeenCalled()
       expect(mockSendFrontendMessage).not.toHaveBeenCalled()
@@ -822,7 +821,10 @@ describe('HumbleUser', () => {
       expect(csrfCall![1]).not.toBe('backfilled-csrf-value')
 
       // Redaction: the raw token value must never reach a log call.
-      for (const call of [...mockLogWarning.mock.calls, ...mockLogInfo.mock.calls]) {
+      for (const call of [
+        ...mockLogWarning.mock.calls,
+        ...mockLogInfo.mock.calls
+      ]) {
         expect(JSON.stringify(call)).not.toContain('backfilled-csrf-value')
       }
     })
@@ -1414,9 +1416,7 @@ describe('HumbleUser', () => {
         const loginPromise = HumbleUser.startLogin()
         await flushAsync()
 
-        mockSeamTakeEvents.mockResolvedValueOnce([
-          { event: 'closed', url: '' }
-        ])
+        mockSeamTakeEvents.mockResolvedValueOnce([{ event: 'closed', url: '' }])
         jest.advanceTimersByTime(1500)
         await flushAsync()
 
@@ -1502,62 +1502,62 @@ describe('HumbleUser', () => {
     test('captures csrf_cookie through the seam during a completed login, using the SAME window label as the session-cookie read', async () => {
       jest.useFakeTimers({ doNotFake: ['setImmediate'] })
       try {
-      mockSeamCookies.mockImplementation(
-        async (_label: string, _host: string, names: string[]) => {
-          if (names.includes('csrf_cookie')) {
+        mockSeamCookies.mockImplementation(
+          async (_label: string, _host: string, names: string[]) => {
+            if (names.includes('csrf_cookie')) {
+              return {
+                total: 4,
+                matched: [
+                  {
+                    name: 'csrf_cookie',
+                    domain: 'humblebundle.com',
+                    value: 'seam-csrf-value'
+                  }
+                ]
+              }
+            }
             return {
               total: 4,
               matched: [
                 {
-                  name: 'csrf_cookie',
+                  name: '_simpleauth_sess',
                   domain: 'humblebundle.com',
-                  value: 'seam-csrf-value'
+                  value: 'seam-session-value'
                 }
               ]
             }
           }
-          return {
-            total: 4,
-            matched: [
-              {
-                name: '_simpleauth_sess',
-                domain: 'humblebundle.com',
-                value: 'seam-session-value'
-              }
-            ]
-          }
+        )
+
+        const loginPromise = HumbleUser.startLogin()
+        await flushAsync()
+        jest.advanceTimersByTime(1500)
+        await flushAsync()
+        const result = await loginPromise
+        expect(result.status).toBe('done')
+
+        const csrfCall = mockConfigStore.set.mock.calls.find(
+          ([key]) => key === 'csrfToken'
+        )
+        expect(csrfCall).toBeDefined()
+        expect(csrfCall![1]).toMatch(/^humble:v1:/)
+
+        // Same window label used for every seam.cookies() call in this login.
+        const labelsUsed = new Set(
+          mockSeamCookies.mock.calls.map(([label]) => label)
+        )
+        expect(labelsUsed.size).toBe(1)
+        expect(labelsUsed.has('login-humble-0')).toBe(true)
+
+        // Never logs the raw csrf value.
+        const loggerCalls = [
+          ...mockLogInfo.mock.calls,
+          ...mockLogError.mock.calls,
+          ...mockLogWarning.mock.calls
+        ]
+        for (const call of loggerCalls) {
+          expect(JSON.stringify(call)).not.toContain('seam-csrf-value')
         }
-      )
-
-      const loginPromise = HumbleUser.startLogin()
-      await flushAsync()
-      jest.advanceTimersByTime(1500)
-      await flushAsync()
-      const result = await loginPromise
-      expect(result.status).toBe('done')
-
-      const csrfCall = mockConfigStore.set.mock.calls.find(
-        ([key]) => key === 'csrfToken'
-      )
-      expect(csrfCall).toBeDefined()
-      expect(csrfCall![1]).toMatch(/^humble:v1:/)
-
-      // Same window label used for every seam.cookies() call in this login.
-      const labelsUsed = new Set(
-        mockSeamCookies.mock.calls.map(([label]) => label)
-      )
-      expect(labelsUsed.size).toBe(1)
-      expect(labelsUsed.has('login-humble-0')).toBe(true)
-
-      // Never logs the raw csrf value.
-      const loggerCalls = [
-        ...mockLogInfo.mock.calls,
-        ...mockLogError.mock.calls,
-        ...mockLogWarning.mock.calls
-      ]
-      for (const call of loggerCalls) {
-        expect(JSON.stringify(call)).not.toContain('seam-csrf-value')
-      }
       } finally {
         jest.useRealTimers()
       }
@@ -1738,7 +1738,9 @@ describe('HumbleUser', () => {
             return 'humble:v1:' + Buffer.from('cookie').toString('base64')
           }
           if (key === 'csrfToken') {
-            return 'humble:v1:' + Buffer.from('already-cached').toString('base64')
+            return (
+              'humble:v1:' + Buffer.from('already-cached').toString('base64')
+            )
           }
           return undefined
         })
@@ -1858,7 +1860,9 @@ describe('HumbleUser', () => {
       })
 
       test('F-6: a rejecting clearStorage step still leaves disconnect() resolving, and the cookie step ran anyway', async () => {
-        mockSeamClearStorage.mockRejectedValue(new Error('rust storage clear failed'))
+        mockSeamClearStorage.mockRejectedValue(
+          new Error('rust storage clear failed')
+        )
         mockSeamClearCookies.mockResolvedValue(2)
 
         await expect(HumbleUser.disconnect()).resolves.toBeUndefined()
@@ -1868,7 +1872,9 @@ describe('HumbleUser', () => {
       })
 
       test('F-6: a rejecting clearCookies step does not prevent the storage step from running', async () => {
-        mockSeamClearCookies.mockRejectedValue(new Error('rust cookie clear failed'))
+        mockSeamClearCookies.mockRejectedValue(
+          new Error('rust cookie clear failed')
+        )
         mockSeamClearStorage.mockResolvedValue({
           localStorage: 0,
           sessionStorage: 0,
@@ -1908,7 +1914,9 @@ describe('HumbleUser', () => {
         for (const call of loggerCalls) {
           const serialized = JSON.stringify(call)
           // No raw storage key/value ever appears -- only the numeric/'unsupported' counts.
-          expect(serialized).not.toMatch(/localStorage-key|session-storage-value/)
+          expect(serialized).not.toMatch(
+            /localStorage-key|session-storage-value/
+          )
         }
       })
 
@@ -2017,7 +2025,9 @@ describe('HumbleUser', () => {
         })
 
         test('a rejecting census read does not block the clear and disconnect() still resolves', async () => {
-          mockSeamCookiesForDomain.mockRejectedValue(new Error('census read failed'))
+          mockSeamCookiesForDomain.mockRejectedValue(
+            new Error('census read failed')
+          )
           mockSeamClearCookies.mockResolvedValue(0)
 
           await expect(HumbleUser.disconnect()).resolves.toBeUndefined()
@@ -2060,7 +2070,9 @@ describe('HumbleUser', () => {
 
         test('the window is closed exactly once, after the census, on the census-failure path too', async () => {
           mockSeamOpen.mockResolvedValue('disconnect-window-census')
-          mockSeamCookiesForDomain.mockRejectedValue(new Error('census read failed'))
+          mockSeamCookiesForDomain.mockRejectedValue(
+            new Error('census read failed')
+          )
           mockSeamClearCookies.mockResolvedValue(0)
 
           await HumbleUser.disconnect()

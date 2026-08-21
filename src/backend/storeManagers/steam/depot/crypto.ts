@@ -20,15 +20,23 @@ import * as nodeCrypto from 'node:crypto'
 export function steamDecrypt(ciphertext: Buffer, key: Buffer): Buffer {
   const ivDec = nodeCrypto.createDecipheriv('aes-256-ecb', key, null)
   ivDec.setAutoPadding(false)
-  const iv = Buffer.concat([ivDec.update(ciphertext.subarray(0, 16)), ivDec.final()])
+  const iv = Buffer.concat([
+    ivDec.update(ciphertext.subarray(0, 16)),
+    ivDec.final()
+  ])
 
   const dec = nodeCrypto.createDecipheriv('aes-256-cbc', key, iv)
   dec.setAutoPadding(false)
-  const plain = Buffer.concat([dec.update(ciphertext.subarray(16)), dec.final()])
+  const plain = Buffer.concat([
+    dec.update(ciphertext.subarray(16)),
+    dec.final()
+  ])
 
   const pad = plain[plain.length - 1]
   const padOk =
-    pad >= 1 && pad <= 16 && plain.subarray(plain.length - pad).every((b) => b === pad)
+    pad >= 1 &&
+    pad <= 16 &&
+    plain.subarray(plain.length - pad).every((b) => b === pad)
   return padOk ? plain.subarray(0, plain.length - pad) : plain
 }
 

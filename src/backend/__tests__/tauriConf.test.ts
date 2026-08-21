@@ -11,7 +11,14 @@
  * a config that (re-)derives the updater feed from Heroic upstream.
  */
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -80,7 +87,9 @@ describe('tauri.conf.json bundle shape (D-01 / D-02 -- real installable build, a
   test('bundle.targets includes nsis, appimage, and dmg', () => {
     const conf = loadTauriConf()
     const bundle = conf.bundle as Record<string, unknown>
-    expect(bundle.targets).toEqual(expect.arrayContaining(['nsis', 'appimage', 'dmg']))
+    expect(bundle.targets).toEqual(
+      expect.arrayContaining(['nsis', 'appimage', 'dmg'])
+    )
   })
 
   test('bundle.externalBin includes binaries/gamelib-sidecar (D-06)', () => {
@@ -349,104 +358,110 @@ exit 99
 const DOWNLOAD_STEP_NAME = 'Download latest.json from the published release'
 const describeOnPosix = process.platform === 'win32' ? describe.skip : describe
 
-describeOnPosix('promote-updater-feed.yml download step, executed (WR-07 regression guard)', () => {
-  let workdir: string
-  let binDir: string
+describeOnPosix(
+  'promote-updater-feed.yml download step, executed (WR-07 regression guard)',
+  () => {
+    let workdir: string
+    let binDir: string
 
-  beforeEach(() => {
-    workdir = mkdtempSync(join(tmpdir(), 'gamelib-promote-'))
-    binDir = join(workdir, 'stub-bin')
-    mkdirSync(binDir, { recursive: true })
-    writeStubExecutable(binDir, 'gh', GH_STUB)
-  })
-
-  afterEach(() => {
-    rmSync(workdir, { recursive: true, force: true })
-  })
-
-  function runDownloadStep(env: Record<string, string>): {
-    status: number | null
-    stdout: string
-    outputs: string
-    ghCalls: string
-  } {
-    const script = substituteExpressions(
-      extractRunBlock(
-        readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8'),
-        DOWNLOAD_STEP_NAME
-      ),
-      { 'github.event.release.tag_name': 'v0.7.0' }
-    )
-    const outputPath = join(workdir, 'github-output')
-    writeFileSync(outputPath, '')
-    const result = runStepScript(script, workdir, {
-      GITHUB_OUTPUT: outputPath,
-      TAG: 'v0.7.0',
-      PATH: `${binDir}:${process.env.PATH ?? ''}`,
-      ...env
+    beforeEach(() => {
+      workdir = mkdtempSync(join(tmpdir(), 'gamelib-promote-'))
+      binDir = join(workdir, 'stub-bin')
+      mkdirSync(binDir, { recursive: true })
+      writeStubExecutable(binDir, 'gh', GH_STUB)
     })
-    const ghCallsPath = join(workdir, 'gh-calls.log')
-    return {
-      status: result.status,
-      stdout: result.stdout,
-      outputs: readFileSync(outputPath, 'utf-8'),
-      ghCalls: existsSync(ghCallsPath)
-        ? readFileSync(ghCallsPath, 'utf-8')
-        : ''
-    }
-  }
 
-  test('a release that really carries latest.json is downloaded and marked found=true', () => {
-    const result = runDownloadStep({
-      GH_STUB_ASSETS: JSON.stringify({
-        assets: [{ name: 'latest.json' }, { name: 'GameLib_0.7.0_amd64.AppImage' }]
-      }),
-      GH_STUB_MANIFEST: JSON.stringify({ version: '0.7.0' })
+    afterEach(() => {
+      rmSync(workdir, { recursive: true, force: true })
     })
-    expect(result.status).toBe(0)
-    expect(result.outputs).toContain('found=true')
-    expect(existsSync(join(workdir, 'feed', 'latest.json'))).toBe(true)
-  })
 
-  test('an Electron-only release (no latest.json asset) skips quietly and stays green', () => {
-    const result = runDownloadStep({
-      GH_STUB_ASSETS: JSON.stringify({
-        assets: [{ name: 'GameLib-0.7.0-macOS-arm64.dmg' }]
+    function runDownloadStep(env: Record<string, string>): {
+      status: number | null
+      stdout: string
+      outputs: string
+      ghCalls: string
+    } {
+      const script = substituteExpressions(
+        extractRunBlock(
+          readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8'),
+          DOWNLOAD_STEP_NAME
+        ),
+        { 'github.event.release.tag_name': 'v0.7.0' }
+      )
+      const outputPath = join(workdir, 'github-output')
+      writeFileSync(outputPath, '')
+      const result = runStepScript(script, workdir, {
+        GITHUB_OUTPUT: outputPath,
+        TAG: 'v0.7.0',
+        PATH: `${binDir}:${process.env.PATH ?? ''}`,
+        ...env
       })
+      const ghCallsPath = join(workdir, 'gh-calls.log')
+      return {
+        status: result.status,
+        stdout: result.stdout,
+        outputs: readFileSync(outputPath, 'utf-8'),
+        ghCalls: existsSync(ghCallsPath)
+          ? readFileSync(ghCallsPath, 'utf-8')
+          : ''
+      }
+    }
+
+    test('a release that really carries latest.json is downloaded and marked found=true', () => {
+      const result = runDownloadStep({
+        GH_STUB_ASSETS: JSON.stringify({
+          assets: [
+            { name: 'latest.json' },
+            { name: 'GameLib_0.7.0_amd64.AppImage' }
+          ]
+        }),
+        GH_STUB_MANIFEST: JSON.stringify({ version: '0.7.0' })
+      })
+      expect(result.status).toBe(0)
+      expect(result.outputs).toContain('found=true')
+      expect(existsSync(join(workdir, 'feed', 'latest.json'))).toBe(true)
     })
-    expect(result.status).toBe(0)
-    expect(result.outputs).toContain('found=false')
-    expect(result.stdout).toContain('::notice::')
-    // It must not even attempt the download when the asset is known absent.
-    expect(result.ghCalls).not.toContain('release download')
-  })
 
-  test('WR-07: an unreadable release (auth/network/rate-limit) FAILS the job instead of reporting "nothing to promote"', () => {
-    const result = runDownloadStep({ GH_STUB_VIEW_STATUS: '1' })
-    expect(result.status).not.toBe(0)
-    expect(result.stdout).toContain('::error::')
-    // The misleading "nothing to promote" NOTICE must not be emitted for an
-    // API failure -- only the error is.
-    expect(result.stdout).not.toContain('::notice::')
-    expect(result.outputs).not.toContain('found=')
-  })
-
-  test('WR-07: an API failure never silently marks the feed as up to date', () => {
-    const result = runDownloadStep({ GH_STUB_VIEW_STATUS: '8' })
-    expect(result.status).not.toBe(0)
-    expect(result.outputs).not.toContain('found=true')
-    expect(existsSync(join(workdir, 'feed', 'latest.json'))).toBe(false)
-  })
-
-  test('a download that fails AFTER the asset was confirmed present still fails the job', () => {
-    const result = runDownloadStep({
-      GH_STUB_ASSETS: JSON.stringify({ assets: [{ name: 'latest.json' }] }),
-      GH_STUB_DOWNLOAD_STATUS: '1'
+    test('an Electron-only release (no latest.json asset) skips quietly and stays green', () => {
+      const result = runDownloadStep({
+        GH_STUB_ASSETS: JSON.stringify({
+          assets: [{ name: 'GameLib-0.7.0-macOS-arm64.dmg' }]
+        })
+      })
+      expect(result.status).toBe(0)
+      expect(result.outputs).toContain('found=false')
+      expect(result.stdout).toContain('::notice::')
+      // It must not even attempt the download when the asset is known absent.
+      expect(result.ghCalls).not.toContain('release download')
     })
-    expect(result.status).not.toBe(0)
-    expect(result.outputs).not.toContain('found=true')
-  })
-})
+
+    test('WR-07: an unreadable release (auth/network/rate-limit) FAILS the job instead of reporting "nothing to promote"', () => {
+      const result = runDownloadStep({ GH_STUB_VIEW_STATUS: '1' })
+      expect(result.status).not.toBe(0)
+      expect(result.stdout).toContain('::error::')
+      // The misleading "nothing to promote" NOTICE must not be emitted for an
+      // API failure -- only the error is.
+      expect(result.stdout).not.toContain('::notice::')
+      expect(result.outputs).not.toContain('found=')
+    })
+
+    test('WR-07: an API failure never silently marks the feed as up to date', () => {
+      const result = runDownloadStep({ GH_STUB_VIEW_STATUS: '8' })
+      expect(result.status).not.toBe(0)
+      expect(result.outputs).not.toContain('found=true')
+      expect(existsSync(join(workdir, 'feed', 'latest.json'))).toBe(false)
+    })
+
+    test('a download that fails AFTER the asset was confirmed present still fails the job', () => {
+      const result = runDownloadStep({
+        GH_STUB_ASSETS: JSON.stringify({ assets: [{ name: 'latest.json' }] }),
+        GH_STUB_DOWNLOAD_STATUS: '1'
+      })
+      expect(result.status).not.toBe(0)
+      expect(result.outputs).not.toContain('found=true')
+    })
+  }
+)
 
 /**
  * 34-REVIEW.md (gap cycle 2) WR-08: the promotion's only guard was the `v*` tag prefix.
@@ -459,136 +474,159 @@ describeOnPosix('promote-updater-feed.yml download step, executed (WR-07 regress
  */
 const PUBLISH_STEP_NAME = 'Publish the manifest to the stable feed location'
 
-describeOnPosix('promote-updater-feed.yml publish step, executed (WR-08 regression guard)', () => {
-  let workdir: string
-  let binDir: string
+describeOnPosix(
+  'promote-updater-feed.yml publish step, executed (WR-08 regression guard)',
+  () => {
+    let workdir: string
+    let binDir: string
 
-  beforeEach(() => {
-    workdir = mkdtempSync(join(tmpdir(), 'gamelib-publish-'))
-    binDir = join(workdir, 'stub-bin')
-    mkdirSync(binDir, { recursive: true })
-    writeStubExecutable(binDir, 'gh', GH_STUB)
-    mkdirSync(join(workdir, 'feed'), { recursive: true })
-  })
+    beforeEach(() => {
+      workdir = mkdtempSync(join(tmpdir(), 'gamelib-publish-'))
+      binDir = join(workdir, 'stub-bin')
+      mkdirSync(binDir, { recursive: true })
+      writeStubExecutable(binDir, 'gh', GH_STUB)
+      mkdirSync(join(workdir, 'feed'), { recursive: true })
+    })
 
-  afterEach(() => {
-    rmSync(workdir, { recursive: true, force: true })
-  })
+    afterEach(() => {
+      rmSync(workdir, { recursive: true, force: true })
+    })
 
-  function runPublishStep(options: {
-    newVersion: string | null
-    currentVersion?: string
-    tag?: string
-  }): {
-    status: number | null
-    stdout: string
-    outputs: string
-    uploaded: boolean
-  } {
-    const tag = options.tag ?? `v${options.newVersion ?? '0.0.0'}`
-    writeFileSync(
-      join(workdir, 'feed', 'latest.json'),
-      JSON.stringify(
-        options.newVersion === null ? { notes: 'no version here' } : { version: options.newVersion }
+    function runPublishStep(options: {
+      newVersion: string | null
+      currentVersion?: string
+      tag?: string
+    }): {
+      status: number | null
+      stdout: string
+      outputs: string
+      uploaded: boolean
+    } {
+      const tag = options.tag ?? `v${options.newVersion ?? '0.0.0'}`
+      writeFileSync(
+        join(workdir, 'feed', 'latest.json'),
+        JSON.stringify(
+          options.newVersion === null
+            ? { notes: 'no version here' }
+            : { version: options.newVersion }
+        )
       )
-    )
-    const script = substituteExpressions(
-      extractRunBlock(
-        readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8'),
-        PUBLISH_STEP_NAME
-      ),
-      { 'github.event.release.tag_name': tag }
-    )
-    const outputPath = join(workdir, 'github-output')
-    writeFileSync(outputPath, '')
-    const env: Record<string, string> = {
-      GITHUB_OUTPUT: outputPath,
-      TAG: tag,
-      PATH: `${binDir}:${process.env.PATH ?? ''}`
+      const script = substituteExpressions(
+        extractRunBlock(
+          readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8'),
+          PUBLISH_STEP_NAME
+        ),
+        { 'github.event.release.tag_name': tag }
+      )
+      const outputPath = join(workdir, 'github-output')
+      writeFileSync(outputPath, '')
+      const env: Record<string, string> = {
+        GITHUB_OUTPUT: outputPath,
+        TAG: tag,
+        PATH: `${binDir}:${process.env.PATH ?? ''}`
+      }
+      if (options.currentVersion !== undefined) {
+        env.GH_STUB_CURRENT_MANIFEST = JSON.stringify({
+          version: options.currentVersion
+        })
+      }
+      const result = runStepScript(script, workdir, env)
+      const ghCallsPath = join(workdir, 'gh-calls.log')
+      const ghCalls = existsSync(ghCallsPath)
+        ? readFileSync(ghCallsPath, 'utf-8')
+        : ''
+      return {
+        status: result.status,
+        stdout: result.stdout,
+        outputs: readFileSync(outputPath, 'utf-8'),
+        uploaded: ghCalls.includes('release upload updater')
+      }
     }
-    if (options.currentVersion !== undefined) {
-      env.GH_STUB_CURRENT_MANIFEST = JSON.stringify({
-        version: options.currentVersion
+
+    test('a newer manifest is promoted over the current feed version', () => {
+      const result = runPublishStep({
+        newVersion: '0.7.0',
+        currentVersion: '0.6.0'
       })
-    }
-    const result = runStepScript(script, workdir, env)
-    const ghCallsPath = join(workdir, 'gh-calls.log')
-    const ghCalls = existsSync(ghCallsPath)
-      ? readFileSync(ghCallsPath, 'utf-8')
-      : ''
-    return {
-      status: result.status,
-      stdout: result.stdout,
-      outputs: readFileSync(outputPath, 'utf-8'),
-      uploaded: ghCalls.includes('release upload updater')
-    }
+      expect(result.status).toBe(0)
+      expect(result.uploaded).toBe(true)
+      expect(result.outputs).toContain('promoted=true')
+    })
+
+    test('WR-08: an OLDER manifest is refused, leaving the newer feed in place', () => {
+      const result = runPublishStep({
+        newVersion: '0.7.0',
+        currentVersion: '0.8.0'
+      })
+      expect(result.status).toBe(0)
+      expect(result.uploaded).toBe(false)
+      expect(result.outputs).toContain('promoted=false')
+      expect(result.stdout).toContain('::warning::')
+    })
+
+    test('WR-08: version ordering is semantic, not lexicographic (0.10.0 beats 0.9.0)', () => {
+      const older = runPublishStep({
+        newVersion: '0.9.0',
+        currentVersion: '0.10.0'
+      })
+      expect(older.uploaded).toBe(false)
+
+      const newer = runPublishStep({
+        newVersion: '0.10.0',
+        currentVersion: '0.9.0'
+      })
+      expect(newer.uploaded).toBe(true)
+    })
+
+    test('the first ever promotion (no feed-holder release yet) uploads unconditionally', () => {
+      const result = runPublishStep({ newVersion: '0.7.0' })
+      expect(result.status).toBe(0)
+      expect(result.uploaded).toBe(true)
+      expect(result.outputs).toContain('promoted=true')
+    })
+
+    test('re-promoting the SAME version is allowed (byte-identical, idempotent clobber)', () => {
+      const result = runPublishStep({
+        newVersion: '0.7.0',
+        currentVersion: '0.7.0'
+      })
+      expect(result.status).toBe(0)
+      expect(result.uploaded).toBe(true)
+    })
+
+    test('WR-08: a manifest whose version does not match the published tag is flagged', () => {
+      const result = runPublishStep({
+        newVersion: '0.6.0',
+        currentVersion: '0.5.0',
+        tag: 'v0.7.0'
+      })
+      expect(result.stdout).toContain('::warning::')
+      expect(result.stdout).toContain('0.6.0')
+      // Still promoted -- a prerelease tag legitimately differs from the version.
+      expect(result.uploaded).toBe(true)
+    })
+
+    test('a matching tag/version pair promotes without any warning', () => {
+      const result = runPublishStep({
+        newVersion: '0.7.0',
+        currentVersion: '0.6.0',
+        tag: 'v0.7.0'
+      })
+      expect(result.stdout).not.toContain('::warning::')
+      expect(result.uploaded).toBe(true)
+    })
+
+    test('a manifest with no version field is refused rather than promoted blind', () => {
+      const result = runPublishStep({
+        newVersion: null,
+        currentVersion: '0.6.0'
+      })
+      expect(result.status).not.toBe(0)
+      expect(result.stdout).toContain('::error::')
+      expect(result.uploaded).toBe(false)
+    })
   }
-
-  test('a newer manifest is promoted over the current feed version', () => {
-    const result = runPublishStep({ newVersion: '0.7.0', currentVersion: '0.6.0' })
-    expect(result.status).toBe(0)
-    expect(result.uploaded).toBe(true)
-    expect(result.outputs).toContain('promoted=true')
-  })
-
-  test('WR-08: an OLDER manifest is refused, leaving the newer feed in place', () => {
-    const result = runPublishStep({ newVersion: '0.7.0', currentVersion: '0.8.0' })
-    expect(result.status).toBe(0)
-    expect(result.uploaded).toBe(false)
-    expect(result.outputs).toContain('promoted=false')
-    expect(result.stdout).toContain('::warning::')
-  })
-
-  test('WR-08: version ordering is semantic, not lexicographic (0.10.0 beats 0.9.0)', () => {
-    const older = runPublishStep({ newVersion: '0.9.0', currentVersion: '0.10.0' })
-    expect(older.uploaded).toBe(false)
-
-    const newer = runPublishStep({ newVersion: '0.10.0', currentVersion: '0.9.0' })
-    expect(newer.uploaded).toBe(true)
-  })
-
-  test('the first ever promotion (no feed-holder release yet) uploads unconditionally', () => {
-    const result = runPublishStep({ newVersion: '0.7.0' })
-    expect(result.status).toBe(0)
-    expect(result.uploaded).toBe(true)
-    expect(result.outputs).toContain('promoted=true')
-  })
-
-  test('re-promoting the SAME version is allowed (byte-identical, idempotent clobber)', () => {
-    const result = runPublishStep({ newVersion: '0.7.0', currentVersion: '0.7.0' })
-    expect(result.status).toBe(0)
-    expect(result.uploaded).toBe(true)
-  })
-
-  test('WR-08: a manifest whose version does not match the published tag is flagged', () => {
-    const result = runPublishStep({
-      newVersion: '0.6.0',
-      currentVersion: '0.5.0',
-      tag: 'v0.7.0'
-    })
-    expect(result.stdout).toContain('::warning::')
-    expect(result.stdout).toContain('0.6.0')
-    // Still promoted -- a prerelease tag legitimately differs from the version.
-    expect(result.uploaded).toBe(true)
-  })
-
-  test('a matching tag/version pair promotes without any warning', () => {
-    const result = runPublishStep({
-      newVersion: '0.7.0',
-      currentVersion: '0.6.0',
-      tag: 'v0.7.0'
-    })
-    expect(result.stdout).not.toContain('::warning::')
-    expect(result.uploaded).toBe(true)
-  })
-
-  test('a manifest with no version field is refused rather than promoted blind', () => {
-    const result = runPublishStep({ newVersion: null, currentVersion: '0.6.0' })
-    expect(result.status).not.toBe(0)
-    expect(result.stdout).toContain('::error::')
-    expect(result.uploaded).toBe(false)
-  })
-})
+)
 
 /**
  * 34-REVIEW.md (gap cycle 2) WR-09: the "audit trail" step was a bare
@@ -609,115 +647,127 @@ const SHA256SUM_SHIM = `#!/usr/bin/env bash
 shasum -a 256 "$@"
 `
 
-describeOnPosix('promote-updater-feed.yml checksum audit trail, executed (WR-09 regression guard)', () => {
-  let workdir: string
-  let binDir: string
+describeOnPosix(
+  'promote-updater-feed.yml checksum audit trail, executed (WR-09 regression guard)',
+  () => {
+    let workdir: string
+    let binDir: string
 
-  beforeEach(() => {
-    workdir = mkdtempSync(join(tmpdir(), 'gamelib-digest-'))
-    binDir = join(workdir, 'stub-bin')
-    mkdirSync(binDir, { recursive: true })
-    writeStubExecutable(binDir, 'gh', GH_STUB)
-    if (runStepScript('command -v sha256sum', workdir).status !== 0) {
-      writeStubExecutable(binDir, 'sha256sum', SHA256SUM_SHIM)
-    }
-    mkdirSync(join(workdir, 'feed'), { recursive: true })
-  })
-
-  afterEach(() => {
-    rmSync(workdir, { recursive: true, force: true })
-  })
-
-  function stepEnv(extra: Record<string, string> = {}): Record<string, string> {
-    return {
-      TAG: 'v0.7.0',
-      PATH: `${binDir}:${process.env.PATH ?? ''}`,
-      ...extra
-    }
-  }
-
-  function runStep(
-    stepName: string,
-    env: Record<string, string>
-  ): { status: number | null; stdout: string; outputs: string; summary: string } {
-    const script = substituteExpressions(
-      extractRunBlock(readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8'), stepName),
-      {
-        'github.event.release.tag_name': 'v0.7.0',
-        'steps.digest.outputs.sha256': env.EXPECTED_SHA256 ?? ''
+    beforeEach(() => {
+      workdir = mkdtempSync(join(tmpdir(), 'gamelib-digest-'))
+      binDir = join(workdir, 'stub-bin')
+      mkdirSync(binDir, { recursive: true })
+      writeStubExecutable(binDir, 'gh', GH_STUB)
+      if (runStepScript('command -v sha256sum', workdir).status !== 0) {
+        writeStubExecutable(binDir, 'sha256sum', SHA256SUM_SHIM)
       }
-    )
-    const outputPath = join(workdir, `github-output-${Math.random()}`)
-    const summaryPath = join(workdir, `github-summary-${Math.random()}`)
-    writeFileSync(outputPath, '')
-    writeFileSync(summaryPath, '')
-    const result = runStepScript(script, workdir, {
-      ...env,
-      GITHUB_OUTPUT: outputPath,
-      GITHUB_STEP_SUMMARY: summaryPath
+      mkdirSync(join(workdir, 'feed'), { recursive: true })
     })
-    return {
-      status: result.status,
-      stdout: result.stdout,
-      outputs: readFileSync(outputPath, 'utf-8'),
-      summary: readFileSync(summaryPath, 'utf-8')
+
+    afterEach(() => {
+      rmSync(workdir, { recursive: true, force: true })
+    })
+
+    function stepEnv(
+      extra: Record<string, string> = {}
+    ): Record<string, string> {
+      return {
+        TAG: 'v0.7.0',
+        PATH: `${binDir}:${process.env.PATH ?? ''}`,
+        ...extra
+      }
     }
-  }
 
-  /** sha256 of the manifest bytes the tests write, computed independently. */
-  function digestOf(contents: string): string {
-    return createHash('sha256').update(contents).digest('hex')
-  }
-
-  test('WR-09: the digest is exported as a step output, not just printed to a log', () => {
-    const manifest = JSON.stringify({ version: '0.7.0' })
-    writeFileSync(join(workdir, 'feed', 'latest.json'), manifest)
-    const result = runStep(DIGEST_STEP_NAME, stepEnv())
-    expect(result.status).toBe(0)
-    expect(result.outputs).toContain(`sha256=${digestOf(manifest)}`)
-  })
-
-  test('WR-09: the digest is persisted to the run summary, not an expiring job log', () => {
-    const manifest = JSON.stringify({ version: '0.7.0' })
-    writeFileSync(join(workdir, 'feed', 'latest.json'), manifest)
-    const result = runStep(DIGEST_STEP_NAME, stepEnv())
-    expect(result.summary).toContain(digestOf(manifest))
-    expect(result.summary).toContain('v0.7.0')
-  })
-
-  test('WR-09: the promoted feed is re-hashed and accepted when it matches', () => {
-    const manifest = JSON.stringify({ version: '0.7.0' })
-    const result = runStep(
-      VERIFY_STEP_NAME,
-      stepEnv({
-        EXPECTED_SHA256: digestOf(manifest),
-        GH_STUB_CURRENT_MANIFEST: manifest
+    function runStep(
+      stepName: string,
+      env: Record<string, string>
+    ): {
+      status: number | null
+      stdout: string
+      outputs: string
+      summary: string
+    } {
+      const script = substituteExpressions(
+        extractRunBlock(readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8'), stepName),
+        {
+          'github.event.release.tag_name': 'v0.7.0',
+          'steps.digest.outputs.sha256': env.EXPECTED_SHA256 ?? ''
+        }
+      )
+      const outputPath = join(workdir, `github-output-${Math.random()}`)
+      const summaryPath = join(workdir, `github-summary-${Math.random()}`)
+      writeFileSync(outputPath, '')
+      writeFileSync(summaryPath, '')
+      const result = runStepScript(script, workdir, {
+        ...env,
+        GITHUB_OUTPUT: outputPath,
+        GITHUB_STEP_SUMMARY: summaryPath
       })
-    )
-    expect(result.status).toBe(0)
-    expect(result.summary).toContain(digestOf(manifest))
-  })
+      return {
+        status: result.status,
+        stdout: result.stdout,
+        outputs: readFileSync(outputPath, 'utf-8'),
+        summary: readFileSync(summaryPath, 'utf-8')
+      }
+    }
 
-  test('WR-09: a feed serving DIFFERENT bytes than were recorded fails the job', () => {
-    const recorded = JSON.stringify({ version: '0.7.0' })
-    const served = JSON.stringify({ version: '0.7.0', tampered: true })
-    const result = runStep(
-      VERIFY_STEP_NAME,
-      stepEnv({
-        EXPECTED_SHA256: digestOf(recorded),
-        GH_STUB_CURRENT_MANIFEST: served
-      })
-    )
-    expect(result.status).not.toBe(0)
-    expect(result.stdout).toContain('::error::')
-  })
+    /** sha256 of the manifest bytes the tests write, computed independently. */
+    function digestOf(contents: string): string {
+      return createHash('sha256').update(contents).digest('hex')
+    }
 
-  test('WR-09: the verify step is gated on an actual promotion having happened', () => {
-    const promote = stripComments(readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8'))
-    expect(promote).toContain("steps.publish.outputs.promoted == 'true'")
-    // ...and it must run AFTER the upload, or it would verify stale bytes.
-    expect(promote.indexOf('gh release upload updater')).toBeLessThan(
-      promote.indexOf(VERIFY_STEP_NAME)
-    )
-  })
-})
+    test('WR-09: the digest is exported as a step output, not just printed to a log', () => {
+      const manifest = JSON.stringify({ version: '0.7.0' })
+      writeFileSync(join(workdir, 'feed', 'latest.json'), manifest)
+      const result = runStep(DIGEST_STEP_NAME, stepEnv())
+      expect(result.status).toBe(0)
+      expect(result.outputs).toContain(`sha256=${digestOf(manifest)}`)
+    })
+
+    test('WR-09: the digest is persisted to the run summary, not an expiring job log', () => {
+      const manifest = JSON.stringify({ version: '0.7.0' })
+      writeFileSync(join(workdir, 'feed', 'latest.json'), manifest)
+      const result = runStep(DIGEST_STEP_NAME, stepEnv())
+      expect(result.summary).toContain(digestOf(manifest))
+      expect(result.summary).toContain('v0.7.0')
+    })
+
+    test('WR-09: the promoted feed is re-hashed and accepted when it matches', () => {
+      const manifest = JSON.stringify({ version: '0.7.0' })
+      const result = runStep(
+        VERIFY_STEP_NAME,
+        stepEnv({
+          EXPECTED_SHA256: digestOf(manifest),
+          GH_STUB_CURRENT_MANIFEST: manifest
+        })
+      )
+      expect(result.status).toBe(0)
+      expect(result.summary).toContain(digestOf(manifest))
+    })
+
+    test('WR-09: a feed serving DIFFERENT bytes than were recorded fails the job', () => {
+      const recorded = JSON.stringify({ version: '0.7.0' })
+      const served = JSON.stringify({ version: '0.7.0', tampered: true })
+      const result = runStep(
+        VERIFY_STEP_NAME,
+        stepEnv({
+          EXPECTED_SHA256: digestOf(recorded),
+          GH_STUB_CURRENT_MANIFEST: served
+        })
+      )
+      expect(result.status).not.toBe(0)
+      expect(result.stdout).toContain('::error::')
+    })
+
+    test('WR-09: the verify step is gated on an actual promotion having happened', () => {
+      const promote = stripComments(
+        readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8')
+      )
+      expect(promote).toContain("steps.publish.outputs.promoted == 'true'")
+      // ...and it must run AFTER the upload, or it would verify stale bytes.
+      expect(promote.indexOf('gh release upload updater')).toBeLessThan(
+        promote.indexOf(VERIFY_STEP_NAME)
+      )
+    })
+  }
+)

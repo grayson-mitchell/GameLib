@@ -35,7 +35,11 @@ export async function runHumbleValidation(): Promise<HumbleValidationReport> {
           schemaValid: false,
           advisory: true
         },
-        { path: '/api/v1/user/order', status: 'not_attempted', schemaValid: false },
+        {
+          path: '/api/v1/user/order',
+          status: 'not_attempted',
+          schemaValid: false
+        },
         {
           path: '/api/v1/order/{gamekey}',
           status: 'not_attempted',

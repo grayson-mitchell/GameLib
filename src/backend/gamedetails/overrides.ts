@@ -34,10 +34,7 @@
  * including `backend/ipc`.
  */
 
-import {
-  getAllGameOverrides,
-  setGameOverrides
-} from '../game_overrides'
+import { getAllGameOverrides, setGameOverrides } from '../game_overrides'
 import type { GameMetadataOverride } from '../game_overrides/electronStores'
 import { logWarning, LogPrefix } from '../logger'
 
@@ -65,9 +62,7 @@ let metadataChangedNotifier: MetadataChangedNotifier = () => {
  * scope; the sidecar registration module installs one backed by
  * `electronStub`'s own relay.
  */
-export function setMetadataChangedNotifier(
-  fn: MetadataChangedNotifier
-): void {
+export function setMetadataChangedNotifier(fn: MetadataChangedNotifier): void {
   metadataChangedNotifier = fn
 }
 

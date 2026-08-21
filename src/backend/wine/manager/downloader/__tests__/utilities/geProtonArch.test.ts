@@ -13,7 +13,8 @@ const geProtonPayload = {
     {
       tag_name: 'GE-Proton10-1',
       published_at: '2026-01-01T00:00:00Z',
-      html_url: 'https://github.com/GloriousEggroll/proton-ge-custom/releases/tag/GE-Proton10-1',
+      html_url:
+        'https://github.com/GloriousEggroll/proton-ge-custom/releases/tag/GE-Proton10-1',
       assets: [
         {
           name: 'GE-Proton10-1.sha512sum',

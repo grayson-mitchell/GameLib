@@ -141,9 +141,9 @@ let trayColorTimer: NodeJS.Timeout | undefined
 function syncTrayIcon(): void {
   try {
     const { darkTrayIcon } = GlobalConfig.get().getSettings()
-    requestRustInvoke(RUST_TRAY_SET_ICON, [{ dark: Boolean(darkTrayIcon) }]).catch(
-      (error) => logSendFailure('changeTrayColor', error)
-    )
+    requestRustInvoke(RUST_TRAY_SET_ICON, [
+      { dark: Boolean(darkTrayIcon) }
+    ]).catch((error) => logSendFailure('changeTrayColor', error))
   } catch (error) {
     logSendFailure('changeTrayColor', error)
   }
@@ -166,10 +166,8 @@ export function registerAppShellFlows(
 
   ipcMain.handle('getCustomThemes', async () => getCustomThemes())
 
-  ipcMain.handle(
-    'getThemeCSS',
-    async (_event: unknown, ...args: unknown[]) =>
-      getThemeCSS(args[0] as string)
+  ipcMain.handle('getThemeCSS', async (_event: unknown, ...args: unknown[]) =>
+    getThemeCSS(args[0] as string)
   )
 
   ipcMain.handle('getCustomCSS', async () => getCustomCSS())
@@ -188,7 +186,7 @@ export function registerAppShellFlows(
     if (!webviewPreloadPathWarned) {
       webviewPreloadPathWarned = true
       console.warn(
-        '[appShellFlowRegistration] getWebviewPreloadPath(): declared-empty return (D-12) -- Tauri has no <webview> tag; the login-webview story is Phase 34.4\'s'
+        "[appShellFlowRegistration] getWebviewPreloadPath(): declared-empty return (D-12) -- Tauri has no <webview> tag; the login-webview story is Phase 34.4's"
       )
     }
     return ''
@@ -292,7 +290,7 @@ export function registerAppShellFlows(
   // -- a declared, logged no-op. Never throws.
   ipcMain.on('setTitleBarOverlay', () => {
     console.warn(
-      '[appShellFlowRegistration] setTitleBarOverlay(): logged no-op (D-13) -- no native titlebar overlay survives under Tauri once D-06 puts GameLib\'s own buttons on every platform when frameless'
+      "[appShellFlowRegistration] setTitleBarOverlay(): logged no-op (D-13) -- no native titlebar overlay survives under Tauri once D-06 puts GameLib's own buttons on every platform when frameless"
     )
   })
 

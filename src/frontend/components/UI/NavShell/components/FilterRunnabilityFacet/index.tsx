@@ -38,13 +38,22 @@ function runnabilityLabel(
 ): string {
   switch (tier) {
     case 'native':
-      return tGamelib('gamelib:library.filterPanel.runsNatively', 'Runs natively')
+      return tGamelib(
+        'gamelib:library.filterPanel.runsNatively',
+        'Runs natively'
+      )
     case 'bottle':
-      return tGamelib('gamelib:library.filterPanel.runsViaBottle', 'Runs via bottle')
+      return tGamelib(
+        'gamelib:library.filterPanel.runsViaBottle',
+        'Runs via bottle'
+      )
     case 'wontRun':
       return tGamelib('gamelib:library.filterPanel.wontRun', "Won't run")
     case 'notChecked':
-      return tGamelib('gamelib:library.filterPanel.notYetChecked', 'Not yet checked')
+      return tGamelib(
+        'gamelib:library.filterPanel.notYetChecked',
+        'Not yet checked'
+      )
   }
 }
 

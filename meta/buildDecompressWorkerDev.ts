@@ -77,7 +77,11 @@ import {
  *  decompressPool.ts`). Deliberately separate from the packaged SEA bundle's
  *  `build/main/decompressWorker-sea-bundle.js` -- "extend, do NOT replace",
  *  matching this codebase's existing SEA-vs-dev convention. */
-export const DEV_WORKER_BUNDLE_PATH = join('build', 'main', 'decompressWorker.js')
+export const DEV_WORKER_BUNDLE_PATH = join(
+  'build',
+  'main',
+  'decompressWorker.js'
+)
 
 /**
  * Argv-form (never a shell string, T-24-06 convention) esbuild invocation,
@@ -89,7 +93,10 @@ export function buildDevWorkerEsbuildArgv(
   platform: NodeJS.Platform = process.platform
 ): { command: string; args: string[] } {
   const esbuildCli = resolveEsbuildCli()
-  const flags = seaEsbuildFlags(DEV_WORKER_BUNDLE_PATH, DECOMPRESS_WORKER_ENTRY_PATH)
+  const flags = seaEsbuildFlags(
+    DEV_WORKER_BUNDLE_PATH,
+    DECOMPRESS_WORKER_ENTRY_PATH
+  )
   if (platform === 'win32') {
     return { command: process.execPath, args: [esbuildCli, ...flags] }
   }

@@ -35,10 +35,7 @@ export async function queryLocalFontsSafe(
 
   try {
     const systemFonts = await queryLocalFonts()
-    return [
-      ...defaultFonts,
-      ...new Set(systemFonts.map((font) => font.family))
-    ]
+    return [...defaultFonts, ...new Set(systemFonts.map((font) => font.family))]
   } catch (error) {
     window.api.logError(
       `Accessibility: queryLocalFonts threw (${String(error)}) -- using default fonts`

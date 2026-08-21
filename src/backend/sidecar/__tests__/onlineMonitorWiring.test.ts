@@ -39,7 +39,10 @@ jest.mock('os', () => {
   return {
     ...actual,
     homedir: () =>
-      path.join(actual.tmpdir(), `gamelib-onlinemonitorwiring-test-home-${process.pid}`)
+      path.join(
+        actual.tmpdir(),
+        `gamelib-onlinemonitorwiring-test-home-${process.pid}`
+      )
   }
 })
 
@@ -89,7 +92,8 @@ describe('sidecar bootstrap wires the online monitor for real (fix/steam-native-
 
   it('is idempotent: calling init() again does not re-register connectivity-changed/set-connectivity-online listeners', () => {
     init(new PassThrough(), new PassThrough())
-    const changedBefore = (listenerRegistry.get('connectivity-changed') ?? []).length
+    const changedBefore = (listenerRegistry.get('connectivity-changed') ?? [])
+      .length
     const setOnlineBefore = (
       listenerRegistry.get('set-connectivity-online') ?? []
     ).length
@@ -104,9 +108,9 @@ describe('sidecar bootstrap wires the online monitor for real (fix/steam-native-
     expect((listenerRegistry.get('connectivity-changed') ?? []).length).toBe(
       changedBefore
     )
-    expect(
-      (listenerRegistry.get('set-connectivity-online') ?? []).length
-    ).toBe(setOnlineBefore)
+    expect((listenerRegistry.get('set-connectivity-online') ?? []).length).toBe(
+      setOnlineBefore
+    )
   })
 
   it('regression guard: with net.isOnline() -> true and a healthy ping, the connectivity path reaches online, never gets stuck at offline', async () => {

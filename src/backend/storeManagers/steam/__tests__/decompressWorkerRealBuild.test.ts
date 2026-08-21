@@ -39,8 +39,17 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
 const REPO_ROOT = resolve(__dirname, '..', '..', '..', '..', '..')
-const DEV_WORKER_BUNDLE_PATH = join(REPO_ROOT, 'build', 'main', 'decompressWorker.js')
-const CHILD_FIXTURE_PATH = join(__dirname, 'fixtures', 'decompressWorkerRealBuildChild.js')
+const DEV_WORKER_BUNDLE_PATH = join(
+  REPO_ROOT,
+  'build',
+  'main',
+  'decompressWorker.js'
+)
+const CHILD_FIXTURE_PATH = join(
+  __dirname,
+  'fixtures',
+  'decompressWorkerRealBuildChild.js'
+)
 
 interface ChildResult {
   ok: boolean
@@ -97,16 +106,20 @@ describe('decompressWorker.ts real compiled worker spawn (Phase 23.1 plan 05 reg
 
   function runChildFixture(): Promise<ChildResult> {
     return new Promise((resolvePromise, rejectPromise) => {
-      const child: ChildProcess = fork(CHILD_FIXTURE_PATH, [DEV_WORKER_BUNDLE_PATH], {
-        env: {
-          ...process.env,
-          HOME: fakeHome,
-          USERPROFILE: fakeHome,
-          XDG_STATE_HOME: join(fakeHome, '.local', 'state'),
-          LOCALAPPDATA: join(fakeHome, 'AppData', 'Local')
-        },
-        stdio: ['ignore', 'pipe', 'pipe', 'ipc']
-      })
+      const child: ChildProcess = fork(
+        CHILD_FIXTURE_PATH,
+        [DEV_WORKER_BUNDLE_PATH],
+        {
+          env: {
+            ...process.env,
+            HOME: fakeHome,
+            USERPROFILE: fakeHome,
+            XDG_STATE_HOME: join(fakeHome, '.local', 'state'),
+            LOCALAPPDATA: join(fakeHome, 'AppData', 'Local')
+          },
+          stdio: ['ignore', 'pipe', 'pipe', 'ipc']
+        }
+      )
 
       let settled = false
       let stderr = ''
@@ -138,23 +151,19 @@ describe('decompressWorker.ts real compiled worker spawn (Phase 23.1 plan 05 reg
     })
   }
 
-  test(
-    'the REAL esbuild-compiled decompressWorker.js sends a ready handshake -- does NOT crash -- when loadLzmaModule() first calls backend/logger',
-    async () => {
-      const result = await runChildFixture()
+  test('the REAL esbuild-compiled decompressWorker.js sends a ready handshake -- does NOT crash -- when loadLzmaModule() first calls backend/logger', async () => {
+    const result = await runChildFixture()
 
-      // Before this plan's fix, this would be `{ ok: false, reason: 'worker
-      // error event', message: "Cannot read properties of undefined
-      // (reading 'logWarning')" }` -- the exact live-hardware failure
-      // signature.
-      expect(result.ok).toBe(true)
-      expect(result.ready?.type).toBe('ready')
-      // lzmaKind is optional in the wire type, but this build always
-      // resolves loadLzmaModule() (native-first, pure-JS fallback, never
-      // rejects) before sending 'ready' -- so it must be present and one of
-      // the two known decoder kinds.
-      expect(['native', 'pure-js']).toContain(result.ready?.lzmaKind)
-    },
-    30000
-  )
+    // Before this plan's fix, this would be `{ ok: false, reason: 'worker
+    // error event', message: "Cannot read properties of undefined
+    // (reading 'logWarning')" }` -- the exact live-hardware failure
+    // signature.
+    expect(result.ok).toBe(true)
+    expect(result.ready?.type).toBe('ready')
+    // lzmaKind is optional in the wire type, but this build always
+    // resolves loadLzmaModule() (native-first, pure-JS fallback, never
+    // rejects) before sending 'ready' -- so it must be present and one of
+    // the two known decoder kinds.
+    expect(['native', 'pure-js']).toContain(result.ready?.lzmaKind)
+  }, 30000)
 })

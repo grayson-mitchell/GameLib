@@ -72,7 +72,9 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
     const promise = requestRustInvoke(RUST_KEYRING_GET, [])
     await flush()
 
-    const rustInvokeLines = lines.filter((line) => line.includes('"kind":"rustInvoke"'))
+    const rustInvokeLines = lines.filter((line) =>
+      line.includes('"kind":"rustInvoke"')
+    )
     expect(rustInvokeLines).toHaveLength(1)
     const parsed = JSON.parse(rustInvokeLines[0])
     expect(parsed.kind).toBe('rustInvoke')
@@ -82,7 +84,9 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
     expect(parsed.id.length).toBeGreaterThan(0)
 
     // Settle the pending promise so no timer/rejection leaks past this test.
-    input.write(`${JSON.stringify({ id: parsed.id, ok: true, result: null })}\n`)
+    input.write(
+      `${JSON.stringify({ id: parsed.id, ok: true, result: null })}\n`
+    )
     await expect(promise).resolves.toBeNull()
   })
 
@@ -96,7 +100,9 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
     const promise = requestRustInvoke(RUST_KEYRING_GET, [])
     await flush()
 
-    const rustInvokeLine = lines.find((line) => line.includes('"kind":"rustInvoke"'))
+    const rustInvokeLine = lines.find((line) =>
+      line.includes('"kind":"rustInvoke"')
+    )
     const { id } = JSON.parse(rustInvokeLine as string)
 
     input.write(`${JSON.stringify({ id, ok: true, result: 'hunter2' })}\n`)
@@ -114,7 +120,9 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
     const promise = requestRustInvoke(RUST_KEYRING_GET, [])
     await flush()
 
-    const rustInvokeLine = lines.find((line) => line.includes('"kind":"rustInvoke"'))
+    const rustInvokeLine = lines.find((line) =>
+      line.includes('"kind":"rustInvoke"')
+    )
     const { id } = JSON.parse(rustInvokeLine as string)
 
     input.write(
@@ -158,7 +166,9 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
     )
     await flush()
 
-    const responseLine = lines.find((line) => line.includes('"id":"health-check-1"'))
+    const responseLine = lines.find((line) =>
+      line.includes('"id":"health-check-1"')
+    )
     expect(responseLine).toBeDefined()
     expect(JSON.parse(responseLine as string)).toEqual({
       id: 'health-check-1',
@@ -203,7 +213,9 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
 
     await flush()
 
-    const rustInvokeLines = lines.filter((line) => line.includes('"kind":"rustInvoke"'))
+    const rustInvokeLines = lines.filter((line) =>
+      line.includes('"kind":"rustInvoke"')
+    )
     expect(rustInvokeLines).toHaveLength(0)
   })
 

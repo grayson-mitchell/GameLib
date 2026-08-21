@@ -78,7 +78,10 @@ const mockInstalledGamesStoreGet = jest.fn()
 const mockInstallInfoStoreHas = jest.fn()
 const mockPrivateBranchesStoreGet = jest.fn()
 jest.mock('../electronStores', () => ({
-  libraryStore: { get: (...a: unknown[]) => mockLibraryStoreGet(...a), set: jest.fn() },
+  libraryStore: {
+    get: (...a: unknown[]) => mockLibraryStoreGet(...a),
+    set: jest.fn()
+  },
   installedGamesStore: {
     get: (...a: unknown[]) => mockInstalledGamesStoreGet(...a),
     set: jest.fn()
@@ -94,9 +97,16 @@ jest.mock('../electronStores', () => ({
     use_in_memory: jest.fn(),
     commit: jest.fn()
   },
-  privateBranchesStore: { get: (...a: unknown[]) => mockPrivateBranchesStoreGet(...a) },
+  privateBranchesStore: {
+    get: (...a: unknown[]) => mockPrivateBranchesStoreGet(...a)
+  },
   configStore: { get_nodefault: jest.fn(), set: jest.fn(), clear: jest.fn() },
-  playtimeSyncQueue: { has: jest.fn(), get: jest.fn(), set: jest.fn(), delete: jest.fn() }
+  playtimeSyncQueue: {
+    has: jest.fn(),
+    get: jest.fn(),
+    set: jest.fn(),
+    delete: jest.fn()
+  }
 }))
 
 jest.mock('../redist', () => ({ checkForRedistUpdates: jest.fn() }))
@@ -227,9 +237,7 @@ describe('debug/gog-spawn-reduction fix 2 -- credentials threaded through getGal
     const getGalaxyLibrarySpy = jest
       .spyOn(
         GOGLibraryManager.prototype as unknown as {
-          getGalaxyLibrary: (
-            credentials: GOGCredentials
-          ) => Promise<unknown[]>
+          getGalaxyLibrary: (credentials: GOGCredentials) => Promise<unknown[]>
         },
         'getGalaxyLibrary'
       )
@@ -278,7 +286,11 @@ describe('debug/gog-spawn-reduction fix 4 -- getInstallInfo() login gate is isLo
     // Simulate the CLI call aborting so the function returns cleanly right
     // after the credentials-free login gate + the runRunnerCommand call --
     // the size-calculation code below is out of scope for this regression.
-    mockCallRunner.mockResolvedValueOnce({ stdout: '', stderr: '', abort: true })
+    mockCallRunner.mockResolvedValueOnce({
+      stdout: '',
+      stderr: '',
+      abort: true
+    })
 
     const result = await manager.getInstallInfo('123')
 

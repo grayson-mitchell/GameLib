@@ -36,10 +36,7 @@ import { join, relative } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..', '..', '..')
-const NAVSHELL_DIR = join(
-  REPO_ROOT,
-  'src/frontend/components/UI/NavShell'
-)
+const NAVSHELL_DIR = join(REPO_ROOT, 'src/frontend/components/UI/NavShell')
 const FRONTEND_DIR = join(REPO_ROOT, 'src/frontend')
 const SIDEBAR_TOUR_PATH = join(
   REPO_ROOT,
@@ -87,10 +84,12 @@ describe('NavShell source files never reference the disabled tour', () => {
 describe('SidebarTour.tsx has no live importer', () => {
   it('no file under src/frontend outside SidebarTour.tsx itself and the retired Sidebar tree imports it -- what actually proves the tour cannot start', () => {
     const candidateFiles = walk(FRONTEND_DIR, ['.ts', '.tsx']).filter(
-      (path) => path !== SIDEBAR_TOUR_PATH && !path.startsWith(RETIRED_SIDEBAR_DIR)
+      (path) =>
+        path !== SIDEBAR_TOUR_PATH && !path.startsWith(RETIRED_SIDEBAR_DIR)
     )
 
-    const importPattern = /(?:from\s+['"][^'"]*SidebarTour['"]|require\(\s*['"][^'"]*SidebarTour['"]\s*\))/
+    const importPattern =
+      /(?:from\s+['"][^'"]*SidebarTour['"]|require\(\s*['"][^'"]*SidebarTour['"]\s*\))/
 
     const importers = candidateFiles.filter((path) =>
       importPattern.test(readStripped(path))

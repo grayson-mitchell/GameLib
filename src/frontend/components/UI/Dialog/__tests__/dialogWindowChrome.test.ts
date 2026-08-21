@@ -39,8 +39,7 @@ import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..', '..', '..')
 
-const DIALOG_TSX =
-  'src/frontend/components/UI/Dialog/components/Dialog.tsx'
+const DIALOG_TSX = 'src/frontend/components/UI/Dialog/components/Dialog.tsx'
 
 const readRaw = (relPath: string) =>
   readFileSync(join(REPO_ROOT, relPath), 'utf8')
@@ -53,7 +52,7 @@ describe('quick-260820-kq0 round 3: the shared Dialog primitive carries a rounde
     expect(raw).toMatch(/Slide/)
   })
 
-  it('SOURCE GATE (PRESENCE) -- MUI\'s Slide transition is imported from the shared @mui/material barrel', () => {
+  it("SOURCE GATE (PRESENCE) -- MUI's Slide transition is imported from the shared @mui/material barrel", () => {
     const source = read(DIALOG_TSX)
 
     // Breaks if: the Slide import is removed or renamed away.
@@ -69,11 +68,13 @@ describe('quick-260820-kq0 round 3: the shared Dialog primitive carries a rounde
     // value drifts from 10px (the value the dead .Dialog__element rule and
     // every other literal radius in this codebase already use).
     expect(source).toMatch(/const StyledPaper = styled\(Paper\)/)
-    const styledPaperBlock = source.split('const StyledPaper')[1]?.split(')))')[0]
+    const styledPaperBlock = source
+      .split('const StyledPaper')[1]
+      ?.split(')))')[0]
     expect(styledPaperBlock).toMatch(/borderRadius:\s*'10px'/)
   })
 
-  it("SOURCE GATE (PRESENCE) -- MuiDialog is wired to a directional Slide transition (not the library default Fade) at a 500ms duration", () => {
+  it('SOURCE GATE (PRESENCE) -- MuiDialog is wired to a directional Slide transition (not the library default Fade) at a 500ms duration', () => {
     const source = read(DIALOG_TSX)
 
     // Breaks if: TransitionComponent stops pointing at the Slide-based
@@ -94,7 +95,7 @@ describe('quick-260820-kq0 round 3: the shared Dialog primitive carries a rounde
     )
   })
 
-  it('SOURCE GATE (ABSENCE) -- no second, competing backdrop is introduced alongside MUI\'s own .MuiBackdrop-root (BackdropComponent/BackdropProps stay unset on MuiDialog)', () => {
+  it("SOURCE GATE (ABSENCE) -- no second, competing backdrop is introduced alongside MUI's own .MuiBackdrop-root (BackdropComponent/BackdropProps stay unset on MuiDialog)", () => {
     const source = read(DIALOG_TSX)
 
     // Breaks if: a BackdropComponent or BackdropProps prop is added to

@@ -39,9 +39,7 @@ jest.mock('react', () => {
       const idx = stateCursor++
       if (idx >= stateSlots.length) {
         stateSlots[idx] =
-          typeof initial === 'function'
-            ? (initial as () => unknown)()
-            : initial
+          typeof initial === 'function' ? (initial as () => unknown)() : initial
       }
       const setState = (updater: unknown) => {
         stateSlots[idx] =
@@ -162,7 +160,6 @@ describe('Dropdown disclosure behaviour', () => {
 
     expect(gamepadAction).toHaveBeenCalledTimes(1)
     expect(gamepadAction).toHaveBeenCalledWith({ action: 'tab' })
-
     ;(button(tree).props.onClick as () => void)()
     reinvoke()
 
@@ -207,10 +204,7 @@ describe('Dropdown panel geometry (source gate)', () => {
   // nothing about the rendered result -- there is no jsdom / CSS engine in
   // this jest project to compute a box or resolve a custom property.
   function readScssStripped(): string {
-    const raw = readFileSync(
-      join(__dirname, '..', 'index.scss'),
-      'utf8'
-    )
+    const raw = readFileSync(join(__dirname, '..', 'index.scss'), 'utf8')
     return stripSourceComments(raw)
       .split('\n')
       .map(stripTrailingLineComment)
@@ -248,10 +242,7 @@ describe('Dropdown panel surface (F-34.10-05 source gate)', () => {
   // source text is right, not that a browser resolves it correctly. That
   // proof is routed to plan 34.10-22's live gate item 3.
   function readScssStripped(): string {
-    const raw = readFileSync(
-      join(__dirname, '..', 'index.scss'),
-      'utf8'
-    )
+    const raw = readFileSync(join(__dirname, '..', 'index.scss'), 'utf8')
     return stripSourceComments(raw)
       .split('\n')
       .map(stripTrailingLineComment)
@@ -262,7 +253,7 @@ describe('Dropdown panel surface (F-34.10-05 source gate)', () => {
     expect(readScssStripped()).not.toMatch(/background:\s*var\(--background\)/)
   })
 
-  it('contains no hex colour literal -- an absolute colour here is invisible in midnightMirage (panel and column coincide) and wrong in dracula, per navigation-shell.md § 3\'s navbar-lighter-than-body table', () => {
+  it("contains no hex colour literal -- an absolute colour here is invisible in midnightMirage (panel and column coincide) and wrong in dracula, per navigation-shell.md § 3's navbar-lighter-than-body table", () => {
     expect(readScssStripped()).not.toMatch(/#[0-9a-fA-F]{3,8}/)
   })
 

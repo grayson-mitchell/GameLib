@@ -72,8 +72,7 @@ const CachedImage = (props: Props) => {
     props.onLoad?.(e)
   }
 
-  const currentSource =
-    fallbackIndex < 0 ? props.src : fallbacks[fallbackIndex]
+  const currentSource = fallbackIndex < 0 ? props.src : fallbacks[fallbackIndex]
   const src =
     useCache && currentSource
       ? `imagecache://${encodeURIComponent(currentSource)}`

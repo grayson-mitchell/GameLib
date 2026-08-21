@@ -27,7 +27,10 @@ const COMBINING_DIACRITIC_RE = /[̀-ͯ]/g
  * each candidate below can choose its own punctuation policy.
  */
 function baseTransform(title: string): string {
-  return title.normalize('NFKD').replace(COMBINING_DIACRITIC_RE, '').toLowerCase()
+  return title
+    .normalize('NFKD')
+    .replace(COMBINING_DIACRITIC_RE, '')
+    .toLowerCase()
 }
 
 /**

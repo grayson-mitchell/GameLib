@@ -2,25 +2,25 @@ name: Build CrossOver compatibility index
 
 on:
   schedule:
-    - cron: '0 6 * * *'    # daily, after CodeWeavers' refresh
-  workflow_dispatch:        # always manually runnable, even while the fork's schedule is disabled
+    - cron: '0 6 * * *' # daily, after CodeWeavers' refresh
+  workflow_dispatch: # always manually runnable, even while the fork's schedule is disabled
 
 permissions:
-  contents: write           # required to create the release + upload the asset
+  contents: write # required to create the release + upload the asset
 
 jobs:
   build-index:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: ./.github/actions/install-deps      # the project's existing composite action
+      - uses: ./.github/actions/install-deps # the project's existing composite action
 
       - name: Build index from the CodeWeavers dump
-        run: pnpm build-crossover-index           # meta/buildCrossoverIndex.ts
+        run: pnpm build-crossover-index # meta/buildCrossoverIndex.ts
 
       - name: Publish to the rolling release
         env:
-          GH_TOKEN: ${{ github.token }}           # default token suffices; no custom secret needed
+          GH_TOKEN: ${{ github.token }} # default token suffices; no custom secret needed
         run: |
           # gh release upload requires the release to already exist.
           # Tag is NOT v*. Published as a PRERELEASE so GitHub never badges it

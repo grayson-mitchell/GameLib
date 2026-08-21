@@ -81,9 +81,10 @@ describe('sidecar/pathShim getPath()', () => {
     })
   })
 
-  describe("exe — GAMELIB_SHELL_EXE contract (D-10, T-34.5-01/02)", () => {
+  describe('exe — GAMELIB_SHELL_EXE contract (D-10, T-34.5-01/02)', () => {
     it('returns exactly the value of GAMELIB_SHELL_EXE when set to a non-empty string', () => {
-      process.env.GAMELIB_SHELL_EXE = '/Applications/GameLib.app/Contents/MacOS/GameLib'
+      process.env.GAMELIB_SHELL_EXE =
+        '/Applications/GameLib.app/Contents/MacOS/GameLib'
       expect(getPath('exe')).toBe(
         '/Applications/GameLib.app/Contents/MacOS/GameLib'
       )

@@ -40,11 +40,9 @@ export function redeemOutcomeCopy(
         let message =
           'Key redeemed! {{packageName}} has been added to your Steam library.'
         try {
-          message = t(
-            'gamelib:redeemKey.successWithPackage',
-            message,
-            { packageName }
-          )
+          message = t('gamelib:redeemKey.successWithPackage', message, {
+            packageName
+          })
         } catch {
           // keep the hardcoded English fallback -- a throwing `t` must
           // still yield a rendered dialog
@@ -70,7 +68,8 @@ export function redeemOutcomeCopy(
       return { tone: 'error', message }
     }
     case 'invalid': {
-      let message = "This key doesn't look right. Double-check it and try again."
+      let message =
+        "This key doesn't look right. Double-check it and try again."
       try {
         message = t('gamelib:redeemKey.invalid', message)
       } catch {

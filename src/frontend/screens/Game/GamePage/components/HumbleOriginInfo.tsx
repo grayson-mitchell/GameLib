@@ -35,11 +35,9 @@ const HumbleOriginInfo = ({ gameInfo }: Props) => {
 
   return (
     <div className="humbleOriginInfo">
-      {t(
-        'info.humbleOrigin',
-        'Includes a key from Humble Bundle: {{origin}}',
-        { origin: matchedKey.origin }
-      )}
+      {t('info.humbleOrigin', 'Includes a key from Humble Bundle: {{origin}}', {
+        origin: matchedKey.origin
+      })}
     </div>
   )
 }

@@ -82,7 +82,9 @@ describe('DXVK install/restore evidence-line gate (F-34.5-G6-18 correction, F-34
 
   it('fact 2: the dispatch marker precedes the already-installed early return', () => {
     const dispatchIndex = toolsIndexCollapsed.indexOf(INSTALL_DISPATCH_MARKER)
-    const earlyReturnIndex = toolsIndexCollapsed.indexOf(ALREADY_INSTALLED_MARKER)
+    const earlyReturnIndex = toolsIndexCollapsed.indexOf(
+      ALREADY_INSTALLED_MARKER
+    )
     expect(dispatchIndex).toBeGreaterThan(-1)
     expect(earlyReturnIndex).toBeGreaterThan(-1)
     // This ordering is what makes the marker a reliable "the guards were all passed and the
@@ -123,7 +125,10 @@ describe('DXVK install/restore evidence-line gate (F-34.5-G6-18 correction, F-34
   })
 
   it('fact 6: the "Running Wine command:" emitter is a logDebug, exactly once, at the cited call site', () => {
-    const count = countOccurrences(launcherCollapsed, RUNNING_WINE_COMMAND_LITERAL)
+    const count = countOccurrences(
+      launcherCollapsed,
+      RUNNING_WINE_COMMAND_LITERAL
+    )
     expect(count).toBeGreaterThan(0)
     expect(count).toBe(1)
 

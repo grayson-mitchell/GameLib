@@ -267,9 +267,7 @@ describe('isCrossoverIndexEligible', () => {
 
   test('a non-steam game returns NAME_MATCHING_SHIPS=true', () => {
     normalizeMock.NAME_MATCHING_SHIPS = true
-    expect(isCrossoverIndexEligible(makeGameInfo({ runner: 'gog' }))).toBe(
-      true
-    )
+    expect(isCrossoverIndexEligible(makeGameInfo({ runner: 'gog' }))).toBe(true)
   })
 
   test('a non-steam game returns NAME_MATCHING_SHIPS=false', () => {

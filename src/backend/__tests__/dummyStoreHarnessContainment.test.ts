@@ -101,7 +101,9 @@ describe('DummyStore harness containment (Phase 34.4.2 Plan 05, REQ-34.4.2-07, T
     expect(
       offenders.length === 0
         ? []
-        : [`references found in: ${offenders.map((f) => f.replace(REPO_ROOT + '/', '')).join(', ')}`]
+        : [
+            `references found in: ${offenders.map((f) => f.replace(REPO_ROOT + '/', '')).join(', ')}`
+          ]
     ).toEqual([])
   })
 
@@ -113,7 +115,9 @@ describe('DummyStore harness containment (Phase 34.4.2 Plan 05, REQ-34.4.2-07, T
     expect(
       offenders.length === 0
         ? []
-        : [`references found in: ${offenders.map((f) => f.replace(REPO_ROOT + '/', '')).join(', ')}`]
+        : [
+            `references found in: ${offenders.map((f) => f.replace(REPO_ROOT + '/', '')).join(', ')}`
+          ]
     ).toEqual([])
   })
 

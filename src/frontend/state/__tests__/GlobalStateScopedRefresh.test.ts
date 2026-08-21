@@ -73,14 +73,8 @@ function logoutBlockNeverReloadsWindow(block: string): boolean {
   return !/window\.location\.reload\s*\(/.test(block)
 }
 
-function logoutClearsOwnRunnerState(
-  block: string,
-  runnerKey: string
-): boolean {
-  const pattern = new RegExp(
-    `${runnerKey}:\\s*{\\s*library:\\s*\\[\\]`,
-    'm'
-  )
+function logoutClearsOwnRunnerState(block: string, runnerKey: string): boolean {
+  const pattern = new RegExp(`${runnerKey}:\\s*{\\s*library:\\s*\\[\\]`, 'm')
   return pattern.test(block)
 }
 
@@ -167,7 +161,10 @@ function refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(
 
   const globalFlagIdx = block.indexOf('refreshing: true,')
   if (globalFlagIdx === -1) return false
-  const windowBefore = block.slice(Math.max(0, globalFlagIdx - 300), globalFlagIdx)
+  const windowBefore = block.slice(
+    Math.max(0, globalFlagIdx - 300),
+    globalFlagIdx
+  )
   const globalFlagGuardedByElse =
     /if\s*\(scopedRunner\)\s*{/.test(windowBefore) &&
     /}\s*else\s*{/.test(windowBefore)
@@ -178,7 +175,9 @@ function refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(
     )
 
   return (
-    derivesScopedRunner && globalFlagGuardedByElse && writesByRunnerTrueWhenScoped
+    derivesScopedRunner &&
+    globalFlagGuardedByElse &&
+    writesByRunnerTrueWhenScoped
   )
 }
 
@@ -199,7 +198,7 @@ describe('GlobalState.tsx refreshLibrary — scopes the global refreshing flags 
       '{',
       '  if (this.state.refreshing) return',
       "  const runnerScope = library ?? 'all'",
-      '  const scopedRunner = library && library !== \'all\' ? library : undefined',
+      "  const scopedRunner = library && library !== 'all' ? library : undefined",
       '  if (scopedRunner && this.state.refreshingByRunner[scopedRunner]) return',
       '',
       '  if (scopedRunner) {',
@@ -218,9 +217,9 @@ describe('GlobalState.tsx refreshLibrary — scopes the global refreshing flags 
       '}'
     ].join('\n')
 
-    expect(refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(correctShape)).toBe(
-      true
-    )
+    expect(
+      refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(correctShape)
+    ).toBe(true)
   })
 
   it('self-test: the gate REJECTS the pre-fix shape that set the global flags unconditionally for every call, scoped or not', () => {
@@ -245,7 +244,7 @@ describe('GlobalState.tsx refreshLibrary — scopes the global refreshing flags 
     const unguardedShape = [
       '{',
       '  if (this.state.refreshing) return',
-      '  const scopedRunner = library && library !== \'all\' ? library : undefined',
+      "  const scopedRunner = library && library !== 'all' ? library : undefined",
       '  this.setState({',
       '    refreshing: true,',
       '    refreshingInTheBackground: runInBackground',
@@ -377,10 +376,10 @@ describe('GlobalState.tsx refresh() — a scoped library arg only overwrites tha
       "  const includesGog = !scopedRunner || scopedRunner === 'gog'",
       "  const includesZoom = !scopedRunner || scopedRunner === 'zoom'",
       "  const includesAmazon = !scopedRunner || scopedRunner === 'nile'",
-      '  if (includesEpic) { epicLibrary = libraryStore.get(\'library\', []) }',
+      "  if (includesEpic) { epicLibrary = libraryStore.get('library', []) }",
       '  if (includesGog) { gogLibrary = this.loadGOGLibrary(overrides) }',
       '  if (includesZoom) { zoomLibrary = this.loadZoomLibrary(overrides) }',
-      '  if (includesAmazon) { amazonLibrary = nileLibraryStore.get(\'library\', []) }',
+      "  if (includesAmazon) { amazonLibrary = nileLibraryStore.get('library', []) }",
       '  this.setState({',
       '    epic: { library: epicLibrary, username: epic.username },',
       '    gog: { library: gogLibrary, username: gog.username },',

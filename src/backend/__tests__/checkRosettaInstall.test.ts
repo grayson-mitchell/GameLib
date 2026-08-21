@@ -43,7 +43,9 @@ describe('backend/utils.ts: checkRosettaInstall', () => {
   })
 
   test('does not throw when the arch spawn succeeds with empty stdout', async () => {
-    mockedExec.mockImplementation((_cmd, cb) => cb(null, { stdout: '', stderr: '' }))
+    mockedExec.mockImplementation((_cmd, cb) =>
+      cb(null, { stdout: '', stderr: '' })
+    )
 
     await expect(checkRosettaInstall()).resolves.toBeUndefined()
   })

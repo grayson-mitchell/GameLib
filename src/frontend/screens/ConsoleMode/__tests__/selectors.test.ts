@@ -21,10 +21,7 @@ describe('ConsoleMode/selectors: selectConsoleGames', () => {
     const hidden = makeGameInfo({ app_name: 'hidden-1', title: 'Hidden Game' })
     const kept = makeGameInfo({ app_name: 'kept-1', title: 'Kept Game' })
 
-    const result = selectConsoleGames(
-      [hidden, kept],
-      [{ appName: 'hidden-1' }]
-    )
+    const result = selectConsoleGames([hidden, kept], [{ appName: 'hidden-1' }])
 
     expect(result).toEqual([kept])
   })
@@ -49,7 +46,10 @@ describe('ConsoleMode/selectors: selectConsoleGames', () => {
   })
 
   it('is a no-op when a hidden entry names an app_name not in the library', () => {
-    const unrelated = makeGameInfo({ app_name: 'unrelated', title: 'Unrelated' })
+    const unrelated = makeGameInfo({
+      app_name: 'unrelated',
+      title: 'Unrelated'
+    })
 
     const result = selectConsoleGames(
       [unrelated],

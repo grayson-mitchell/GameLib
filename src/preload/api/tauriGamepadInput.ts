@@ -24,8 +24,7 @@
  */
 import type { GamepadActionArgs } from 'common/types'
 
-const FOCUSABLE_SELECTOR =
-  'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"]), [role="button"]'
+const FOCUSABLE_SELECTOR = 'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"]), [role="button"]'
 
 const KEY_CODES: Record<string, number> = {
   Tab: 9,
@@ -74,12 +73,7 @@ function activeElement(): HTMLElement | null {
  * must be attached with `defineProperty` after construction -- assigning them directly
  * silently no-ops on a getter-only property.
  */
-function makeKeyboardEvent(
-  type: 'keydown' | 'keyup',
-  key: string,
-  keyCode: number,
-  shiftKey: boolean
-): KeyboardEvent {
+function makeKeyboardEvent(type: 'keydown' | 'keyup', key: string, keyCode: number, shiftKey: boolean): KeyboardEvent {
   const event = new KeyboardEvent(type, {
     key,
     code: key,
@@ -98,16 +92,10 @@ function makeKeyboardEvent(
  * `keydown` was prevented -- `EventTarget.dispatchEvent()` returns `false` when a
  * cancelable event was prevented, so `defaultPrevented` is the negation of that.
  */
-function dispatchKey(
-  target: EventTarget,
-  key: string,
-  opts?: { shiftKey?: boolean }
-): boolean {
+function dispatchKey(target: EventTarget, key: string, opts?: { shiftKey?: boolean }): boolean {
   const keyCode = KEY_CODES[key] ?? 0
   const shiftKey = opts?.shiftKey === true
-  const keydownNotPrevented = target.dispatchEvent(
-    makeKeyboardEvent('keydown', key, keyCode, shiftKey)
-  )
+  const keydownNotPrevented = target.dispatchEvent(makeKeyboardEvent('keydown', key, keyCode, shiftKey))
   target.dispatchEvent(makeKeyboardEvent('keyup', key, keyCode, shiftKey))
   return !keydownNotPrevented
 }
@@ -145,7 +133,7 @@ function doTab(shift: boolean): void {
     nextIndex = shift ? list.length - 1 : 0
   } else {
     const delta = shift ? -1 : 1
-    nextIndex = ((currentIndex + delta) % list.length + list.length) % list.length
+    nextIndex = (((currentIndex + delta) % list.length) + list.length) % list.length
   }
   list[nextIndex]?.focus()
 }
@@ -162,12 +150,7 @@ function doBack(): void {
   window.history.back()
 }
 
-function dispatchPointerSequence(
-  target: Element,
-  clientX: number,
-  clientY: number,
-  button: 0 | 2
-): void {
+function dispatchPointerSequence(target: Element, clientX: number, clientY: number, button: 0 | 2): void {
   const base: MouseEventInit = { bubbles: true, cancelable: true, clientX, clientY, button }
   // jsdom -- and, more importantly, some real webview test surfaces -- has no
   // `PointerEvent` global by default, so every step here is a `MouseEvent`, including
@@ -185,11 +168,7 @@ function dispatchPointerSequence(
   }
 }
 
-function doClick(
-  metadata: { x: number; y: number } | undefined,
-  button: 0 | 2,
-  actionName: string
-): void {
+function doClick(metadata: { x: number; y: number } | undefined, button: 0 | 2, actionName: string): void {
   if (!metadata) {
     warn(`${actionName} requires metadata but none was provided`)
     return
@@ -354,9 +333,7 @@ function moveFocusDirectionally(direction: Direction): void {
 
   // WR-03: with nothing focused, seed from the viewport edge opposite `direction`
   // rather than a zero rect at (0,0) -- see `viewportOriginFor`.
-  const origin = current
-    ? current.getBoundingClientRect()
-    : viewportOriginFor(direction)
+  const origin = current ? current.getBoundingClientRect() : viewportOriginFor(direction)
   const candidates = getFocusableElements().filter((el) => el !== current)
 
   let best: HTMLElement | null = null
@@ -409,11 +386,7 @@ export function tauriGamepadAction(args: GamepadActionArgs): Promise<void> {
       case 'leftStickDown':
       case 'leftStickLeft':
       case 'leftStickRight': {
-        const direction = args.action.replace(/pad|leftStick/, '') as
-          | 'Up'
-          | 'Down'
-          | 'Left'
-          | 'Right'
+        const direction = args.action.replace(/pad|leftStick/, '') as 'Up' | 'Down' | 'Left' | 'Right'
         moveFocusDirectionally(direction)
         break
       }

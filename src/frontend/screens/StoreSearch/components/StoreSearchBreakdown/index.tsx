@@ -59,9 +59,7 @@ const StoreSearchBreakdown = ({ gameId, title, onFetchFailed }: Props) => {
       <div className="storeSearchRow__breakdown">
         <div className="storeSearchRow__loading">
           <FontAwesomeIcon className="fa-spin-pulse" icon={faSpinner} />
-          <span>
-            {t('storeSearch.loadingStores', 'Loading store prices…')}
-          </span>
+          <span>{t('storeSearch.loadingStores', 'Loading store prices…')}</span>
         </div>
       </div>
     )

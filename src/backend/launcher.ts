@@ -244,9 +244,8 @@ const launchEventCallback: (args: LaunchParams) => StatusPromise = async ({
     // game, so this block is unreachable for native Steam games (Linux/
     // Windows) and for every other runner.
     if (runner === 'steam') {
-      const { persistBottleWineVersion } = await import(
-        'backend/storeManagers/steam/bottle'
-      )
+      const { persistBottleWineVersion } =
+        await import('backend/storeManagers/steam/bottle')
       persistBottleWineVersion(gameSettings.wineVersion)
     }
   }

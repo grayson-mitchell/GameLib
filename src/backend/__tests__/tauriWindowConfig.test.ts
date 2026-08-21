@@ -166,8 +166,13 @@ describe('tauri.conf.json main window title rendering (QUICK-260815-k25)', () =>
     const explicitDefaultFixture: TauriWindowConfig[] = [
       { label: 'main', title: 'GameLib', hiddenTitle: false }
     ]
-    const explicitDefaultWindow = findWindowByLabel(explicitDefaultFixture, 'main')
-    expect(() => expect(explicitDefaultWindow?.hiddenTitle).toBe(true)).toThrow()
+    const explicitDefaultWindow = findWindowByLabel(
+      explicitDefaultFixture,
+      'main'
+    )
+    expect(() =>
+      expect(explicitDefaultWindow?.hiddenTitle).toBe(true)
+    ).toThrow()
   })
 
   // Hiding the PAINTED title must not be confused with blanking the window's NAME.

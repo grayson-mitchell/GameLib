@@ -56,17 +56,15 @@ describe('titleSimilarity', () => {
   })
 
   it('a DLC title scores well below threshold against its base game', () => {
-    expect(titleSimilarity('Game X: Season Pass', 'Game X')).toBeLessThan(
-      0.85
-    )
+    expect(titleSimilarity('Game X: Season Pass', 'Game X')).toBeLessThan(0.85)
   })
 })
 
 describe('isDlcFalsePositiveRisk', () => {
   it('flags Terraria vs Terraria Soundtrack DLC (keyword in longer, not shorter)', () => {
-    expect(
-      isDlcFalsePositiveRisk('Terraria', 'Terraria Soundtrack DLC')
-    ).toBe(true)
+    expect(isDlcFalsePositiveRisk('Terraria', 'Terraria Soundtrack DLC')).toBe(
+      true
+    )
   })
 
   it('flags when the longer raw title carries a DLC keyword the shorter lacks', () => {
@@ -121,9 +119,7 @@ describe('fuzzyMatch', () => {
       fuzzyMatch('Assault Android Cactus+', 'Assault Android Cactus')
     ).toBe(true)
     expect(fuzzyMatch('FRAMED Collection', 'Framed Collection')).toBe(true)
-    expect(fuzzyMatch('Into the Breach', 'Into The Breach (Steam)')).toBe(
-      true
-    )
+    expect(fuzzyMatch('Into the Breach', 'Into The Breach (Steam)')).toBe(true)
   })
 
   it('returns false whenever isDlcFalsePositiveRisk is true, regardless of score', () => {
@@ -134,9 +130,7 @@ describe('fuzzyMatch', () => {
 
   it('regression: other edition suffixes still match unaffected (Deluxe Edition, (Steam) qualifier)', () => {
     expect(fuzzyMatch('Portal 2', 'Portal 2 Deluxe Edition')).toBe(true)
-    expect(fuzzyMatch('Into the Breach', 'Into The Breach (Steam)')).toBe(
-      true
-    )
+    expect(fuzzyMatch('Into the Breach', 'Into The Breach (Steam)')).toBe(true)
   })
 })
 

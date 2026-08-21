@@ -192,10 +192,7 @@ function buildGogdlFrameworkFixture(
     // `stub-file` (not a symlink). `Versions/Current` remains a valid
     // symlink, so the framework is malformed in exactly one respect.
     rmSync(join(frameworkDir, 'Python'))
-    symlinkSync(
-      'Versions/Current/PythonMissing',
-      join(frameworkDir, 'Python')
-    )
+    symlinkSync('Versions/Current/PythonMissing', join(frameworkDir, 'Python'))
   }
 
   return { darwinDir, frameworkDir, binaryPaths }
@@ -251,9 +248,7 @@ describe('verifyRunnerBundle', () => {
     const summary = summarise(results)
 
     expect(summary.ok).toBe(false)
-    const gogdlFailure = summary.failures.find((f) =>
-      f.startsWith('gogdl:')
-    )
+    const gogdlFailure = summary.failures.find((f) => f.startsWith('gogdl:'))
     expect(gogdlFailure).toBeDefined()
     expect(gogdlFailure).toMatch(/exec bit/)
   })
@@ -423,9 +418,7 @@ describe('framework structural integrity (F-34.9-01)', () => {
   })
 
   it('top-level stub is absent entirely (partial-copy shape): ok becomes false', () => {
-    root = mkdtempSync(
-      join(tmpdir(), 'verify-runner-bundle-fw-stub-absent-')
-    )
+    root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-fw-stub-absent-'))
     const { frameworkDir } = buildGogdlFrameworkFixture(root, 'stub-absent')
 
     // Vacuity guard, asserted BEFORE inspectRunnerTree/summarise are called:
@@ -436,9 +429,9 @@ describe('framework structural integrity (F-34.9-01)', () => {
     expect(
       lstatSync(join(frameworkDir, 'Versions', 'Current')).isSymbolicLink()
     ).toBe(true)
-    expect(
-      existsSync(join(frameworkDir, 'Versions', '3.14', 'Python'))
-    ).toBe(true)
+    expect(existsSync(join(frameworkDir, 'Versions', '3.14', 'Python'))).toBe(
+      true
+    )
 
     const results = inspectRunnerTree(root, ARCH)
     const gogdl = results.find((r) => r.runner === 'gogdl')
@@ -448,19 +441,15 @@ describe('framework structural integrity (F-34.9-01)', () => {
 
     const summary = summarise(results)
     expect(summary.ok).toBe(false)
-    const fwFailures = summary.failures.filter((f) =>
-      f.includes(frameworkDir)
-    )
+    const fwFailures = summary.failures.filter((f) => f.includes(frameworkDir))
     expect(fwFailures).toHaveLength(1)
     expect(fwFailures[0]).toContain('top-level stub')
     expect(fwFailures[0]).toContain('"Python"')
     expect(fwFailures[0]).toContain('does not exist (F-34.9-01)')
   })
 
-  it("Versions/Current symlink target does not resolve to an existing Versions/ directory: ok becomes false", () => {
-    root = mkdtempSync(
-      join(tmpdir(), 'verify-runner-bundle-fw-unresolvable-')
-    )
+  it('Versions/Current symlink target does not resolve to an existing Versions/ directory: ok becomes false', () => {
+    root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-fw-unresolvable-'))
     const { frameworkDir } = buildGogdlFrameworkFixture(
       root,
       'unresolvable-target'
@@ -480,9 +469,7 @@ describe('framework structural integrity (F-34.9-01)', () => {
   })
 
   it('top-level stub is a symlink whose target does not resolve (dangling target, C2-06): ok becomes false, message names the target, and no other stub failure double-fires', () => {
-    root = mkdtempSync(
-      join(tmpdir(), 'verify-runner-bundle-fw-stub-dangling-')
-    )
+    root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-fw-stub-dangling-'))
     const { frameworkDir } = buildGogdlFrameworkFixture(
       root,
       'stub-dangling-target'
@@ -507,9 +494,7 @@ describe('framework structural integrity (F-34.9-01)', () => {
 
     const summary = summarise(results)
     expect(summary.ok).toBe(false)
-    const fwFailures = summary.failures.filter((f) =>
-      f.includes(frameworkDir)
-    )
+    const fwFailures = summary.failures.filter((f) => f.includes(frameworkDir))
     expect(fwFailures).toHaveLength(1)
     expect(fwFailures[0]).toContain('top-level stub')
     expect(fwFailures[0]).toContain('Versions/Current/PythonMissing')
@@ -523,9 +508,7 @@ describe('framework structural integrity (F-34.9-01)', () => {
   })
 
   it('findFrameworks does not walk through a symlinked directory: a nested framework is counted once, not duplicated via the Versions/Current alias', () => {
-    root = mkdtempSync(
-      join(tmpdir(), 'verify-runner-bundle-fw-symlink-walk-')
-    )
+    root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-fw-symlink-walk-'))
     const { frameworkDir } = buildGogdlFrameworkFixture(root, 'well-formed')
 
     // Plant a SECOND framework nested inside Versions/3.14/Resources --

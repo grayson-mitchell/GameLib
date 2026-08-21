@@ -298,7 +298,9 @@ interface AsyncIPCFunctions {
   // the PERSISTED wineVersion/bottleName (undefined when nothing was ever
   // persisted — see installFormIpc.ts's own doc comment for why this never
   // delegates to getSteamBottleSettings()). Registered on BOTH runtimes.
-  isSteamBottleEligible: (appName: string) => Promise<SteamBottleEligibilityVerdict>
+  isSteamBottleEligible: (
+    appName: string
+  ) => Promise<SteamBottleEligibilityVerdict>
   // quick-260821-le0 (Task 3): sweeps EVERY recorded install root for a
   // Steam title in one action — see removeAllCopies.ts's own doc comment.
   // Registered on BOTH runtimes.
@@ -312,7 +314,9 @@ interface AsyncIPCFunctions {
   // persistBottleWineVersion() primitive, after validating the untrusted
   // renderer payload. Return shape reused verbatim from steamBottleProvision.
   // Registered on BOTH runtimes.
-  persistBottleWineVersion: (wineVersion: WineInstallation) => Promise<{ status: 'done' | 'error'; error?: string }>
+  persistBottleWineVersion: (
+    wineVersion: WineInstallation
+  ) => Promise<{ status: 'done' | 'error'; error?: string }>
   // Phase 21 (21-10), D-10: on user consent, downloads + non-silently runs
   // (Win/macOS) or link-opens (Linux) the official native Steam client
   // installer. See clientSetup.ts's startGuidedClientInstall.

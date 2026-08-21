@@ -90,11 +90,7 @@ describe('queryLocalFontsSafe', () => {
     const result = await queryLocalFontsSafe(DEFAULT_FONTS)
     await flushRejectionTracking()
 
-    expect(result).toEqual([
-      ...DEFAULT_FONTS,
-      'Arial',
-      'Times New Roman'
-    ])
+    expect(result).toEqual([...DEFAULT_FONTS, 'Arial', 'Times New Roman'])
     expect(unhandledRejections).toEqual([])
     expect(logErrorMock).not.toHaveBeenCalled()
   })

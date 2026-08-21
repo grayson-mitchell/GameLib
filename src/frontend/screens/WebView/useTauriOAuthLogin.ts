@@ -76,11 +76,17 @@ const OAUTH_CHANNEL_BY_RUNNER: Record<OAuthRunner, string> = {
   zoom: 'authZoom'
 }
 
-const OAUTH_RUNNERS: readonly OAuthRunner[] = ['legendary', 'gog', 'nile', 'zoom']
+const OAUTH_RUNNERS: readonly OAuthRunner[] = [
+  'legendary',
+  'gog',
+  'nile',
+  'zoom'
+]
 
 function isOAuthRunner(value: unknown): value is OAuthRunner {
   return (
-    typeof value === 'string' && (OAUTH_RUNNERS as readonly string[]).includes(value)
+    typeof value === 'string' &&
+    (OAUTH_RUNNERS as readonly string[]).includes(value)
   )
 }
 
@@ -275,7 +281,9 @@ export function useTauriOAuthLogin(
       }
 
       if (outcome.status === 'cancelled') {
-        window.api.logInfo(`[useTauriOAuthLogin] runner=${activeRunner} phase=cancelled`)
+        window.api.logInfo(
+          `[useTauriOAuthLogin] runner=${activeRunner} phase=cancelled`
+        )
         reachedTerminal = true
         // Quick task 260803-eee Task 4: called directly, NOT routed through `safeSetState`'s own
         // `!cancelled` gate -- the navigation this drives in WebView/index.tsx cannot be
@@ -289,13 +297,17 @@ export function useTauriOAuthLogin(
         return
       }
       if (outcome.status === 'timeout') {
-        window.api.logInfo(`[useTauriOAuthLogin] runner=${activeRunner} phase=timeout`)
+        window.api.logInfo(
+          `[useTauriOAuthLogin] runner=${activeRunner} phase=timeout`
+        )
         reachedTerminal = true
         safeSetState({ phase: 'timeout' })
         return
       }
       if (outcome.status === 'unsupported') {
-        window.api.logInfo(`[useTauriOAuthLogin] runner=${activeRunner} phase=error (unsupported)`)
+        window.api.logInfo(
+          `[useTauriOAuthLogin] runner=${activeRunner} phase=error (unsupported)`
+        )
         reachedTerminal = true
         safeSetState({
           phase: 'error',
@@ -304,7 +316,9 @@ export function useTauriOAuthLogin(
         return
       }
       if (outcome.status === 'error') {
-        window.api.logInfo(`[useTauriOAuthLogin] runner=${activeRunner} phase=error`)
+        window.api.logInfo(
+          `[useTauriOAuthLogin] runner=${activeRunner} phase=error`
+        )
         reachedTerminal = true
         safeSetState({ phase: 'error', message: outcome.message })
         return
@@ -415,7 +429,9 @@ export function useTauriOAuthLogin(
           safeSetState({ phase: 'blocked', runner: activeRunner, channel })
         } else {
           // A REAL backend failure must never be mislabelled as "waiting for Phase 34.5".
-          window.api.logInfo(`[useTauriOAuthLogin] runner=${activeRunner} phase=error`)
+          window.api.logInfo(
+            `[useTauriOAuthLogin] runner=${activeRunner} phase=error`
+          )
           reachedTerminal = true
           safeSetState({ phase: 'error', message })
         }

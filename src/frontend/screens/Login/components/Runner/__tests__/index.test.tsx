@@ -178,7 +178,9 @@ describe('Runner: primaryLoginAction set (Epic under Tauri, F-34.5-G6-01)', () =
   it('STILL renders the "Alternative Login Method" tile -- the embedded login stays reachable', () => {
     const primaryLoginAction = jest.fn()
     const alternativeLoginAction = jest.fn()
-    const tree = mount(makeProps({ primaryLoginAction, alternativeLoginAction }))
+    const tree = mount(
+      makeProps({ primaryLoginAction, alternativeLoginAction })
+    )
 
     expect(findAltTile(tree)).toBeDefined()
   })
@@ -186,7 +188,9 @@ describe('Runner: primaryLoginAction set (Epic under Tauri, F-34.5-G6-01)', () =
   it('the alternative tile invokes alternativeLoginAction on click (the embedded navigation)', () => {
     const primaryLoginAction = jest.fn()
     const alternativeLoginAction = jest.fn()
-    const tree = mount(makeProps({ primaryLoginAction, alternativeLoginAction }))
+    const tree = mount(
+      makeProps({ primaryLoginAction, alternativeLoginAction })
+    )
     const altTile = findByClassNamePart(tree, 'alternative')!
     // The clickable alternative button is the descendant carrying the onClick handler.
     const clickable = collectElements(tree).find((el) => {
@@ -216,7 +220,9 @@ describe('Runner: primaryLoginAction set (Epic under Tauri, F-34.5-G6-01)', () =
 
 function hasDeprecatedClass(el: ReactElement<PropsWithChildren>) {
   const className = el.props?.className
-  return typeof className === 'string' && className.split(' ').includes('deprecated')
+  return (
+    typeof className === 'string' && className.split(' ').includes('deprecated')
+  )
 }
 
 function anyDeprecated(tree: ReactNode) {
@@ -299,7 +305,9 @@ describe('Runner: deprecatedTile marker (quick task 260805-d62)', () => {
 
   it('clicking a marked primary tile invokes exactly the same action as an unmarked one', () => {
     const primaryLoginAction = jest.fn()
-    const tree = mount(makeProps({ primaryLoginAction, deprecatedTile: 'primary' }))
+    const tree = mount(
+      makeProps({ primaryLoginAction, deprecatedTile: 'primary' })
+    )
     const primary = findClickablePrimary(tree)!
     ;(primary.props as unknown as { onClick: () => void }).onClick()
 
@@ -335,9 +343,7 @@ describe('Runner: deprecatedTile marker (quick task 260805-d62)', () => {
     const primary = findClickablePrimary(tree)!
     const alternative = findClickableAlternative(tree)!
 
-    expect(
-      (primary.props as unknown as { title?: string }).title
-    ).toBeFalsy()
+    expect((primary.props as unknown as { title?: string }).title).toBeFalsy()
     expect(
       (alternative.props as unknown as { title?: string }).title
     ).toBeTruthy()

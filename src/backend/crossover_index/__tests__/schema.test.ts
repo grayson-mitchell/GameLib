@@ -77,9 +77,7 @@ describe('crossoverIndexSchema', () => {
 
   test('rejects a non-object / garbage payload without throwing', () => {
     expect(() => crossoverIndexSchema.safeParse('not an object')).not.toThrow()
-    expect(crossoverIndexSchema.safeParse('not an object').success).toBe(
-      false
-    )
+    expect(crossoverIndexSchema.safeParse('not an object').success).toBe(false)
     expect(crossoverIndexSchema.safeParse(null).success).toBe(false)
     expect(crossoverIndexSchema.safeParse(undefined).success).toBe(false)
     expect(crossoverIndexSchema.safeParse(42).success).toBe(false)

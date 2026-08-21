@@ -76,9 +76,7 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
     const currentProgress =
       getProgress(progress) >= 99
         ? ''
-        : `${
-            percent && bytes ? `${percent}% [${bytes}] ${etaText}` : '...'
-          }`
+        : `${percent && bytes ? `${percent}% [${bytes}] ${etaText}` : '...'}`
 
     if (is.updating && is_installed) {
       if (!currentProgress) {
@@ -142,7 +140,11 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
     // quick-260819-ch5: GameLib resumes this itself via
     // resumeInterruptedSteamInstall — the hint now tells the user that,
     // instead of sending them to Steam.
-    if (runner === 'steam' && !is_installed && statusContext === 'steam-incomplete') {
+    if (
+      runner === 'steam' &&
+      !is_installed &&
+      statusContext === 'steam-incomplete'
+    ) {
       return t(
         'gamelib:steam.status.resumeInstallHint',
         'Install incomplete — resume the download in GameLib'

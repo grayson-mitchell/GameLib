@@ -67,7 +67,10 @@ function extractBlock(source: string, marker: string): string {
 
 describe('WebView Tauri OAuth post-login navigation', () => {
   const source = stripSourceComments(readFileSync(indexPath, 'utf-8'))
-  const successHandler = extractBlock(source, 'handleTauriOAuthSuccess = useCallback')
+  const successHandler = extractBlock(
+    source,
+    'handleTauriOAuthSuccess = useCallback'
+  )
   const cancelledHandler = extractBlock(
     source,
     'handleTauriOAuthCancelled = useCallback'
@@ -126,12 +129,13 @@ describe('WebView Tauri OAuth post-login navigation', () => {
 
     it('detects a handler that guards navigation on cancelled', () => {
       const regressed =
-        '{ completeOAuthLogin(payload); if (!cancelled) navigate(\'/login\') }'
+        "{ completeOAuthLogin(payload); if (!cancelled) navigate('/login') }"
       expect(regressed).toMatch(/\bcancelled\b/)
     })
 
     it('detects the hook being wired back to the bare callback', () => {
-      const regressed = 'const oauthLoginState = useTauriOAuthLogin(runner, completeOAuthLogin)'
+      const regressed =
+        'const oauthLoginState = useTauriOAuthLogin(runner, completeOAuthLogin)'
       expect(regressed).not.toContain('handleTauriOAuthSuccess')
     })
   })

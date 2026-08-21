@@ -308,7 +308,9 @@ describe('send-body safety — each of the 3 send channels guards its own promis
     try {
       mockGetGame.mockReturnValue({
         getGameInfo: () => makeGameInfo(),
-        addShortcuts: jest.fn().mockRejectedValue(new Error('boom-addShortcuts')),
+        addShortcuts: jest
+          .fn()
+          .mockRejectedValue(new Error('boom-addShortcuts')),
         removeShortcuts: jest.fn()
       })
 
@@ -520,7 +522,8 @@ describe("addShortcut's darwin GAMELIB_SHELL_EXE pin (T-34.5-65/66, D-10 rejects
   // (`shortcuts.ts`'s `gamelibUrl` built from the raw, un-encoded `app_name`/`runner`), this exact
   // test FAILED -- see 34.5-45-SUMMARY.md for the verbatim failure output. Restored, it passes.
   it('a malicious app_name cannot inject a shell command into run.sh (RED-proven, see SUMMARY for the failing-run transcript)', async () => {
-    process.env.GAMELIB_SHELL_EXE = '/Applications/GameLib.app/Contents/MacOS/GameLib'
+    process.env.GAMELIB_SHELL_EXE =
+      '/Applications/GameLib.app/Contents/MacOS/GameLib'
     const maliciousAppName = 'x&runner=gog;touch /tmp/gamelib-pwned'
     const title = 'Injection Pin Game'
 
@@ -748,7 +751,10 @@ describe('F-34.5-G6-08 discriminator — addToSteam over the REAL RPC frame path
     tmpDir = dirSync({ unsafeCleanup: true })
     steamUserConfigDir = join(tmpDir.name, 'userdata', 'steam_user', 'config')
     mkdirSync(steamUserConfigDir, { recursive: true })
-    writeFileSync(join(steamUserConfigDir, 'shortcuts.vdf'), EMPTY_SHORTCUTS_VDF)
+    writeFileSync(
+      join(steamUserConfigDir, 'shortcuts.vdf'),
+      EMPTY_SHORTCUTS_VDF
+    )
 
     mockGlobalConfigGet.mockReturnValue({
       getSettings: () => ({
@@ -763,7 +769,8 @@ describe('F-34.5-G6-08 discriminator — addToSteam over the REAL RPC frame path
     })
 
     savedShellExe = process.env.GAMELIB_SHELL_EXE
-    process.env.GAMELIB_SHELL_EXE = '/Applications/GameLib.app/Contents/MacOS/GameLib'
+    process.env.GAMELIB_SHELL_EXE =
+      '/Applications/GameLib.app/Contents/MacOS/GameLib'
   })
 
   afterEach(() => {

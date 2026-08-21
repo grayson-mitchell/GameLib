@@ -59,10 +59,13 @@ function installUnhandledRejectionGuard(
   unhandledRejectionGuardInstalled = true
 
   target.on('unhandledRejection', (reason: unknown) => {
-    let message = '[sidecar] unhandled promise rejection: <unstringifiable reason>'
+    let message =
+      '[sidecar] unhandled promise rejection: <unstringifiable reason>'
     try {
       message = `[sidecar] unhandled promise rejection: ${
-        reason instanceof Error ? (reason.stack ?? reason.message) : String(reason)
+        reason instanceof Error
+          ? (reason.stack ?? reason.message)
+          : String(reason)
       }`
     } catch {
       // keep the fallback message

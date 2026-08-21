@@ -170,7 +170,8 @@ describe('tokenStore', () => {
     })
 
     it('getToken returns "" when decryptString throws', async () => {
-      backingStore['refreshToken'] = 'steam:v1:' + Buffer.from('x').toString('base64')
+      backingStore['refreshToken'] =
+        'steam:v1:' + Buffer.from('x').toString('base64')
       mockDecryptString.mockImplementationOnce(() => {
         throw new Error('corrupt ciphertext')
       })
@@ -262,7 +263,9 @@ describe('tokenStore', () => {
         clearToken: jest.fn().mockResolvedValue(undefined)
       }
 
-      await expect(readTokenOutcome(store)).resolves.toEqual({ status: 'absent' })
+      await expect(readTokenOutcome(store)).resolves.toEqual({
+        status: 'absent'
+      })
     })
 
     it('on a store WITH readToken(), delegates to it verbatim and never calls getToken()', async () => {

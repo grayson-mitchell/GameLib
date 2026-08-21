@@ -95,7 +95,9 @@ function assertNumericId(id: string, label: string): void {
 function assertNumericBuildid(buildid: string): void {
   if (buildid === '0') return
   if (!NUMERIC_ID.test(buildid)) {
-    throw new Error(`writeAppManifest: rejected non-numeric buildid "${buildid}"`)
+    throw new Error(
+      `writeAppManifest: rejected non-numeric buildid "${buildid}"`
+    )
   }
 }
 

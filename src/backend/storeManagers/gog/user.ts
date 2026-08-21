@@ -220,7 +220,8 @@ export class GOGUser {
     if (
       cachedCredentials &&
       Date.now() - cachedCredentialsFetchedAt <
-        cachedCredentials.expires_in * 1000 - CREDENTIALS_EXPIRY_SAFETY_MARGIN_MS
+        cachedCredentials.expires_in * 1000 -
+          CREDENTIALS_EXPIRY_SAFETY_MARGIN_MS
     ) {
       return cachedCredentials
     }

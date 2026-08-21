@@ -31,7 +31,11 @@ import { createHash } from 'node:crypto'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { builtBridgeShimPath } from 'backend/constants/paths'
-import { DEFAULT_BRIDGE_BOTTLE_NAME, getBottleDir, sanitizeBottleName } from '../bottle'
+import {
+  DEFAULT_BRIDGE_BOTTLE_NAME,
+  getBottleDir,
+  sanitizeBottleName
+} from '../bottle'
 import { scanSteamApiImports } from './importScan'
 
 // Pattern repeated verbatim across bottle.ts:836, clientSetup.ts:40,
@@ -83,7 +87,10 @@ export type PlaceShimResult =
  * `path.join`/string-prefix checks are NOT containment -- use
  * `path.resolve` + `path.relative` and reject `..`/absolute results).
  */
-function isContainedWithin(rootAbsPath: string, candidateAbsPath: string): boolean {
+function isContainedWithin(
+  rootAbsPath: string,
+  candidateAbsPath: string
+): boolean {
   const rel = relative(rootAbsPath, candidateAbsPath)
   return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)
 }

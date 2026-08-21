@@ -105,11 +105,7 @@ jest.mock('backend/constants/environment', () => mockEnvironment)
 jest.mock('i18next', () => ({
   __esModule: true,
   default: {
-    t: (
-      _key: string,
-      fallback: string,
-      options?: Record<string, unknown>
-    ) => {
+    t: (_key: string, fallback: string, options?: Record<string, unknown>) => {
       if (!options) return fallback
       return fallback.replace(/{{(\w+)}}/g, (_match, token: string) =>
         String(options[token] ?? '')
@@ -171,7 +167,9 @@ describe('detectAndNotifyExpirationTransitions', () => {
   test('null -> date on a non-baseline sync: pushed to newlyExpiring, store updated, one notification fires', () => {
     const key = makeKey({ expiration: '2026-08-01' })
 
-    detectAndNotifyExpirationTransitions([key], { suppressNotifications: false })
+    detectAndNotifyExpirationTransitions([key], {
+      suppressNotifications: false
+    })
 
     expect(mockNotifiedExpirationStore.set).toHaveBeenCalledWith(
       `${key.gamekey}:${key.machineName}`,
@@ -186,7 +184,9 @@ describe('detectAndNotifyExpirationTransitions', () => {
       expiration: '2026-08-01'
     })
 
-    detectAndNotifyExpirationTransitions([key], { suppressNotifications: false })
+    detectAndNotifyExpirationTransitions([key], {
+      suppressNotifications: false
+    })
 
     expect(mockNotificationShow).not.toHaveBeenCalled()
   })
@@ -197,7 +197,9 @@ describe('detectAndNotifyExpirationTransitions', () => {
       expiration: '2026-08-01'
     })
 
-    detectAndNotifyExpirationTransitions([key], { suppressNotifications: false })
+    detectAndNotifyExpirationTransitions([key], {
+      suppressNotifications: false
+    })
 
     expect(mockNotifiedExpirationStore.set).toHaveBeenCalledWith(
       `${key.gamekey}:${key.machineName}`,
@@ -326,7 +328,9 @@ describe('detectAndNotifyExpirationTransitions', () => {
     // composite-key migration.
     notifiedExpirationData.set('legacy_steam', { expiration: '2026-08-01' })
 
-    detectAndNotifyExpirationTransitions([key], { suppressNotifications: false })
+    detectAndNotifyExpirationTransitions([key], {
+      suppressNotifications: false
+    })
 
     expect(mockNotificationShow).not.toHaveBeenCalled()
     expect(notifiedExpirationData.get('order-a:legacy_steam')).toEqual({
@@ -337,7 +341,9 @@ describe('detectAndNotifyExpirationTransitions', () => {
   test('D-90: a single affected key uses the singular digest body naming the game title', () => {
     const key = makeKey({ title: 'Solo Game', expiration: '2026-08-01' })
 
-    detectAndNotifyExpirationTransitions([key], { suppressNotifications: false })
+    detectAndNotifyExpirationTransitions([key], {
+      suppressNotifications: false
+    })
 
     expect(mockNotificationCtor).toHaveBeenCalledTimes(1)
     const opts = mockNotificationCtor.mock.calls[0][0]
@@ -360,7 +366,9 @@ describe('detectAndNotifyExpirationTransitions', () => {
   test('D-91: clicking the notification focuses the window then navigates to /humble-keys/waiting', () => {
     const key = makeKey({ expiration: '2026-08-01' })
 
-    detectAndNotifyExpirationTransitions([key], { suppressNotifications: false })
+    detectAndNotifyExpirationTransitions([key], {
+      suppressNotifications: false
+    })
 
     expect(lastClickHandler).toBeDefined()
     lastClickHandler?.()
@@ -376,7 +384,9 @@ describe('detectAndNotifyExpirationTransitions', () => {
     mockNotifyHumbleExpirations = false
     const key = makeKey({ expiration: '2026-08-01' })
 
-    detectAndNotifyExpirationTransitions([key], { suppressNotifications: false })
+    detectAndNotifyExpirationTransitions([key], {
+      suppressNotifications: false
+    })
 
     expect(mockNotifiedExpirationStore.set).toHaveBeenCalledWith(
       `${key.gamekey}:${key.machineName}`,
@@ -389,7 +399,9 @@ describe('detectAndNotifyExpirationTransitions', () => {
     mockIsSupported = false
     const key = makeKey({ expiration: '2026-08-01' })
 
-    detectAndNotifyExpirationTransitions([key], { suppressNotifications: false })
+    detectAndNotifyExpirationTransitions([key], {
+      suppressNotifications: false
+    })
 
     expect(mockNotifiedExpirationStore.set).toHaveBeenCalledWith(
       `${key.gamekey}:${key.machineName}`,
@@ -402,7 +414,9 @@ describe('detectAndNotifyExpirationTransitions', () => {
     mockEnvironment.isSteamDeckGameMode = true
     const key = makeKey({ expiration: '2026-08-01' })
 
-    detectAndNotifyExpirationTransitions([key], { suppressNotifications: false })
+    detectAndNotifyExpirationTransitions([key], {
+      suppressNotifications: false
+    })
 
     expect(mockNotifiedExpirationStore.set).toHaveBeenCalledWith(
       `${key.gamekey}:${key.machineName}`,
@@ -418,7 +432,9 @@ describe('detectAndNotifyExpirationTransitions', () => {
       revealedKeyValue: 'SECRET-KEY-VALUE'
     } as HumbleKey & { keyindex: number; revealedKeyValue: string }
 
-    detectAndNotifyExpirationTransitions([key], { suppressNotifications: false })
+    detectAndNotifyExpirationTransitions([key], {
+      suppressNotifications: false
+    })
 
     const opts = mockNotificationCtor.mock.calls[0][0]
     expect(opts.body).not.toContain('SECRET-KEY-VALUE')
@@ -429,7 +445,9 @@ describe('detectAndNotifyExpirationTransitions', () => {
   test('no newly-expiring keys: no notification, no store writes', () => {
     const key = makeKey({ expiration: null })
 
-    detectAndNotifyExpirationTransitions([key], { suppressNotifications: false })
+    detectAndNotifyExpirationTransitions([key], {
+      suppressNotifications: false
+    })
 
     expect(mockNotifiedExpirationStore.set).not.toHaveBeenCalled()
     expect(mockNotificationShow).not.toHaveBeenCalled()

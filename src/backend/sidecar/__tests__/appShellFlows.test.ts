@@ -81,7 +81,10 @@ jest.mock('os', () => {
   return {
     ...actual,
     homedir: () =>
-      path.join(actual.tmpdir(), `gamelib-appshellflows-test-home-${process.pid}`)
+      path.join(
+        actual.tmpdir(),
+        `gamelib-appshellflows-test-home-${process.pid}`
+      )
   }
 })
 
@@ -436,10 +439,9 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     ])
     await flush()
 
-    expect(mockRequestRustInvoke).toHaveBeenCalledWith(
-      RUST_NOTIFICATION_SHOW,
-      [{ title: 'GameLib', body: 'Install complete' }]
-    )
+    expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_NOTIFICATION_SHOW, [
+      { title: 'GameLib', body: 'Install complete' }
+    ])
   })
 
   it('REQ-34.1-05 quit (send) reaches handleExit() -> app.exit() -> the existing app_exit rustInvoke arm', async () => {
@@ -474,7 +476,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     // locally as the `safeIndex` fail-safe default. So `cancelId: 0` cannot be asserted
     // on the wire; the second test below asserts its BEHAVIOUR instead, which is the
     // property that actually matters.
-    it('REQ-34.1-05/CR-04: the confirm dialog reaches Rust with NON-BLANK labels even though this suite\'s i18next has no t()', async () => {
+    it("REQ-34.1-05/CR-04: the confirm dialog reaches Rust with NON-BLANK labels even though this suite's i18next has no t()", async () => {
       const { input } = startSidecar()
       writeSend(input, 'quit-pending-1', 'quit', [])
       await flush()
@@ -595,7 +597,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     await flush()
     expect(
       warnSpy.mock.calls.some(
-        ([msg]) => String(msg).includes('unlock') && String(msg).includes('D-08')
+        ([msg]) =>
+          String(msg).includes('unlock') && String(msg).includes('D-08')
       )
     ).toBe(true)
   })
@@ -627,7 +630,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
   // ── Zero-new-Rust-arms guard ───────────────────────────────────────────────
 
-  it('REQ-34.1-05 zero new Rust arms: every requestRustInvoke channel used by this plan\'s flows is a member of the existing RUST_INVOKE_CHANNELS set', async () => {
+  it("REQ-34.1-05 zero new Rust arms: every requestRustInvoke channel used by this plan's flows is a member of the existing RUST_INVOKE_CHANNELS set", async () => {
     const { input } = startSidecar()
     writeSend(input, 'notify-guard', 'notify', [
       { title: 'GameLib', body: 'test' }
@@ -637,9 +640,9 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
     expect(mockRequestRustInvoke.mock.calls.length).toBeGreaterThan(0)
     for (const [channel] of mockRequestRustInvoke.mock.calls) {
-      expect((RUST_INVOKE_CHANNELS as readonly string[]).includes(channel)).toBe(
-        true
-      )
+      expect(
+        (RUST_INVOKE_CHANNELS as readonly string[]).includes(channel)
+      ).toBe(true)
     }
 
     // Plan 06/D-11: tray_set_icon is the ONE legitimate new arm this slice adds --
@@ -784,9 +787,10 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         jest.runAllTimers()
 
         expect(isolatedRequestRustInvoke).toHaveBeenCalledTimes(1)
-        expect(isolatedRequestRustInvoke).toHaveBeenCalledWith(RUST_TRAY_SET_ICON, [
-          { dark: false }
-        ])
+        expect(isolatedRequestRustInvoke).toHaveBeenCalledWith(
+          RUST_TRAY_SET_ICON,
+          [{ dark: false }]
+        )
       })
     })
   })
@@ -856,9 +860,9 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
     writeInvoke(input, 'health-after-change-lang-throw', 'health', [])
     await flush()
-    expect(frames.find((f) => f.id === 'health-after-change-lang-throw')).toMatchObject(
-      { ok: true, result: 'ok' }
-    )
+    expect(
+      frames.find((f) => f.id === 'health-after-change-lang-throw')
+    ).toMatchObject({ ok: true, result: 'ok' })
 
     emitSpy.mockRestore()
   })

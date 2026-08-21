@@ -176,7 +176,9 @@ function findSiblingKey(
       const dashMatch = line.match(/^\s*-\s+(.*)$/)
       const content = dashMatch ? dashMatch[1] : line.trim()
       const kv = content.match(
-        new RegExp(`^${keyName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:\\s*(.*)$`)
+        new RegExp(
+          `^${keyName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:\\s*(.*)$`
+        )
       )
       if (kv) return kv[1].trim()
       if (dashMatch) break // "- name: ..." start-of-step line -- stop here

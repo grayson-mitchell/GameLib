@@ -86,7 +86,9 @@ describe('Library pipeline has exactly one implementation', () => {
   })
 
   it('reads the grid list and both count accessors off that single pipeline object, never recomputing either', () => {
-    expect(libraryTsx).toMatch(/gamesForAlphabetFilter\s*=\s*gridPipeline\.games/)
+    expect(libraryTsx).toMatch(
+      /gamesForAlphabetFilter\s*=\s*gridPipeline\.games/
+    )
     expect(libraryTsx).toMatch(
       /\{\s*countForStore,\s*countForRunnability\s*\}\s*=\s*gridPipeline/
     )
@@ -133,9 +135,9 @@ describe('engineWiring passes the UNFILTERED union to every engine call (CR-01)'
     expect(
       engineWiringTs.match(/filterEngine\.filterLibrary\(/g) ?? []
     ).toHaveLength(1)
-    expect(engineWiringTs.match(/filterEngine\.countFor\(/g) ?? []).toHaveLength(
-      2
-    )
+    expect(
+      engineWiringTs.match(/filterEngine\.countFor\(/g) ?? []
+    ).toHaveLength(2)
   })
 
   it('never reassigns libraryUnion -- the list reaching every call is the one the caller passed', () => {

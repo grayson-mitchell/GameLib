@@ -23,7 +23,8 @@ import { defaultThemes, resolveThemeLabel } from '../themeLabels'
 
 // Copy-preserving proof: a `t` that returns its own second (English
 // default) argument unchanged.
-const echoT = ((_key: string, defaultValue: string) => defaultValue) as unknown as TFunction
+const echoT = ((_key: string, defaultValue: string) =>
+  defaultValue) as unknown as TFunction
 
 // Genuine-routing proof: a `t` that ignores its default and returns a
 // distinct sentinel -- proves the label flows through `t`, not a hardcoded

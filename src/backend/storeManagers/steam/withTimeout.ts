@@ -57,7 +57,9 @@ export interface TimeoutError extends Error {
 
 export function isTimeoutError(err: unknown): err is TimeoutError {
   return (
-    !!err && typeof err === 'object' && (err as { isTimeout?: unknown }).isTimeout === true
+    !!err &&
+    typeof err === 'object' &&
+    (err as { isTimeout?: unknown }).isTimeout === true
   )
 }
 

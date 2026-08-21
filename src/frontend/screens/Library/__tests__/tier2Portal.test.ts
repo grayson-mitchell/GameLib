@@ -175,7 +175,9 @@ describe('Library portals Header into the tier-2 target (Task 2, REQ-34.10-09)',
   const libraryTsx = read(LIBRARY_TSX)
 
   it('imports createPortal from react-dom', () => {
-    expect(libraryTsx).toMatch(/import\s*\{\s*createPortal\s*\}\s*from\s*'react-dom'/)
+    expect(libraryTsx).toMatch(
+      /import\s*\{\s*createPortal\s*\}\s*from\s*'react-dom'/
+    )
   })
 
   it('references Tier2PortalContext', () => {
@@ -219,9 +221,7 @@ describe('Library portals Header into the tier-2 target (Task 2, REQ-34.10-09)',
   })
 
   it('LibraryHeader and the alphabet strip stay unmoved in the render tree (import + JSX usage still present)', () => {
-    expect(libraryTsx.match(/LibraryHeader/g)?.length).toBeGreaterThanOrEqual(
-      2
-    )
+    expect(libraryTsx.match(/LibraryHeader/g)?.length).toBeGreaterThanOrEqual(2)
     expect(libraryTsx).toMatch(/AlphabetFilter/)
   })
 })

@@ -129,7 +129,10 @@ export default function ProgressHeader(props: {
               >
                 {props.state === 'running'
                   ? (progress.eta ?? '00.00.00')
-                  : tGamelib('gamelib:downloadManager.progressPaused', 'Paused')}
+                  : tGamelib(
+                      'gamelib:downloadManager.progressPaused',
+                      'Paused'
+                    )}
               </Typography>
             </Box>
           </Box>

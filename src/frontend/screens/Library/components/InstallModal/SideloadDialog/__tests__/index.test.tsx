@@ -23,7 +23,8 @@ import { fileFilters, localImageFilters } from '../filters'
 
 // Copy-preserving proof: a `t` that returns its own second (English
 // default) argument unchanged.
-const echoT = ((_key: string, defaultValue: string) => defaultValue) as unknown as TFunction
+const echoT = ((_key: string, defaultValue: string) =>
+  defaultValue) as unknown as TFunction
 
 // Genuine-routing proof: a `t` that ignores its default and returns a
 // distinct sentinel -- proves each `name`/extension flows through `t`, not
@@ -90,11 +91,7 @@ describe('fileFilters', () => {
   )
 
   it('routes every name and every stringly-typed extension through t -- sentinel proof', () => {
-    const platformsWithEntries: InstallPlatform[] = [
-      'Windows',
-      'linux',
-      'osx'
-    ]
+    const platformsWithEntries: InstallPlatform[] = ['Windows', 'linux', 'osx']
     for (const platform of platformsWithEntries) {
       const filters = fileFilters(platform, sentinelT)
       expect(filters).toBeDefined()

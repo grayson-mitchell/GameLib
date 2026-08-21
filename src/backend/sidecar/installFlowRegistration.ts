@@ -108,7 +108,12 @@ import { checkGameUpdates } from '../utils/checkGameUpdates'
 import { listSteamLibraryTargets } from '../storeManagers/steam/installLocation'
 import { isSteamNativeInstallEnabled } from '../storeManagers/steam/nativeInstallSetting'
 import { addToQueue } from '../downloadmanager/downloadqueue'
-import type { DMQueueElement, InstallParams, Runner, UpdateParams } from 'common/types'
+import type {
+  DMQueueElement,
+  InstallParams,
+  Runner,
+  UpdateParams
+} from 'common/types'
 
 /**
  * Registers the five install-slice invoke handlers. Called once from
@@ -183,7 +188,11 @@ export function registerInstallFlows(): void {
       // shape to `install` above — derive path/platformToInstall from
       // gameInfo.install, then enqueue via addToQueue().
       const dmQueueElement: DMQueueElement = {
-        params: { ...params, path: install_path!, platformToInstall: platform! },
+        params: {
+          ...params,
+          path: install_path!,
+          platformToInstall: platform!
+        },
         type: 'update',
         addToQueueTime: Date.now(),
         endTime: 0,

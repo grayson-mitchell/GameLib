@@ -73,7 +73,9 @@ function emittedRules(): EmittedRule[] {
         declarations: chunk.slice(braceIndex + 1).trim()
       }
     })
-    .filter((rule): rule is EmittedRule => rule !== null && rule.selector !== '')
+    .filter(
+      (rule): rule is EmittedRule => rule !== null && rule.selector !== ''
+    )
 }
 
 /**

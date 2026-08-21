@@ -19,9 +19,7 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
   const { wikiInfo, is, refreshWikiInfo } = useContext(GameContext)
   const [refreshing, setRefreshing] = useState(false)
 
-  const onClickRefresh = async (
-    event: MouseEvent<HTMLButtonElement>
-  ) => {
+  const onClickRefresh = async (event: MouseEvent<HTMLButtonElement>) => {
     // Stop the parent <a onClick={onClickCrossover}> from opening CodeWeavers.
     event.stopPropagation()
     event.preventDefault()

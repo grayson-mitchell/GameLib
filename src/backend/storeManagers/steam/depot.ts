@@ -55,7 +55,10 @@ import { writeAppManifest } from './depot/manifest'
 import { applyDepotFileFlags } from './depot/fileAttributes'
 import { reconcilePartialState } from './depot/reconcile'
 import { classifyDepotError, isNonRetryableDepotError } from './depotErrors'
-import { summarizeDepotFlags, formatDepotFlagsCensus } from './depot/flagsCensus'
+import {
+  summarizeDepotFlags,
+  formatDepotFlagsCensus
+} from './depot/flagsCensus'
 import {
   withTimeout,
   isTimeoutError,

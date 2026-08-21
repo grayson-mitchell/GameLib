@@ -55,12 +55,7 @@ const FILES = {
     '..',
     'components/UI/SteamGridDBPicker/index.tsx'
   ),
-  winetricks: join(
-    __dirname,
-    '..',
-    '..',
-    'components/UI/Winetricks/index.tsx'
-  )
+  winetricks: join(__dirname, '..', '..', 'components/UI/Winetricks/index.tsx')
 } as const
 
 /** Collapses every run of whitespace to a single space -- a whitespace WINDOW, not a line. */

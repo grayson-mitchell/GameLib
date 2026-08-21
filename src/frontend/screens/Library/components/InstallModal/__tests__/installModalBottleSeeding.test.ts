@@ -40,7 +40,10 @@ function countOccurrences(source: string, token: string): number {
  * Returns `''` when either the call or an enclosing `if (` cannot be found,
  * so a mis-anchored gate fails loudly rather than passing vacuously.
  */
-function enclosingIfGuardSpan(flattenedSource: string, callToken: string): string {
+function enclosingIfGuardSpan(
+  flattenedSource: string,
+  callToken: string
+): string {
   const callIdx = flattenedSource.indexOf(callToken)
   if (callIdx === -1) {
     return ''
@@ -61,9 +64,7 @@ describe('G-D05-BOTTLENAME: the Steam bottle-name field is seeded, never left bl
     // `setCrossoverBottle={setCrossoverBottle}`, which has NO open paren
     // immediately after the identifier -- so this matcher is red on the
     // unseeded `useState('')` version by construction (see spec 6 below).
-    expect(countOccurrences(stripped, 'setCrossoverBottle(')).toBeGreaterThan(
-      0
-    )
+    expect(countOccurrences(stripped, 'setCrossoverBottle(')).toBeGreaterThan(0)
   })
 
   it('spec 2 -- the seed uses the dedicated constant, IMPORTED rather than redefined locally', () => {
@@ -94,7 +95,7 @@ describe('G-D05-BOTTLENAME: the Steam bottle-name field is seeded, never left bl
 
   it('spec 4 non-vacuity -- the same guard-span check fails against an inline specimen where the seed sits OUTSIDE any isSteamManagedApp guard', () => {
     const knownBadSpecimen =
-      "if (showWineSelector) { setCrossoverBottle((current) => current || DEFAULT_STEAM_BOTTLE_NAME) }"
+      'if (showWineSelector) { setCrossoverBottle((current) => current || DEFAULT_STEAM_BOTTLE_NAME) }'
     const flattened = knownBadSpecimen.replace(/\s+/g, ' ')
     const guardSpan = enclosingIfGuardSpan(flattened, 'setCrossoverBottle(')
     expect(guardSpan).not.toBe('')
@@ -105,7 +106,7 @@ describe('G-D05-BOTTLENAME: the Steam bottle-name field is seeded, never left bl
     expect(countOccurrences(stripped, 'bottleNameReadOnly')).toBe(1)
   })
 
-  it('spec 6 -- PRE-FIX SPECIMEN CONTROL: an inline specimen reproducing the real pre-fix shape does NOT satisfy spec 1\'s matcher', () => {
+  it("spec 6 -- PRE-FIX SPECIMEN CONTROL: an inline specimen reproducing the real pre-fix shape does NOT satisfy spec 1's matcher", () => {
     // A grep assertion that cannot fail against a known-bad input guards
     // nothing. This specimen reproduces the pre-fix shape byte-for-byte in
     // spirit: the bare useState('') initialiser, the JSX prop pass-through,

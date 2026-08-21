@@ -110,7 +110,10 @@ const LEADING_OR_TRAILING_DOT = /^\.|\.$/
  * this is the single sanitizer both callers must funnel through so they can
  * never silently diverge on this discipline.
  */
-export function sanitizeInstalldir(candidate: string | undefined, appId: string): string {
+export function sanitizeInstalldir(
+  candidate: string | undefined,
+  appId: string
+): string {
   const fallback = `${FALLBACK_INSTALLDIR_PREFIX}${safeFallbackId(appId)}`
   if (!candidate || !candidate.trim()) {
     return fallback

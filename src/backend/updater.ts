@@ -49,9 +49,7 @@ async function showAutoupdateDialog() {
     autoUpdater.downloadUpdate()
   }
   if (response === 2) {
-    shell.openExternal(
-      'https://github.com/grayson-mitchell/GameLib/releases'
-    )
+    shell.openExternal('https://github.com/grayson-mitchell/GameLib/releases')
     showAutoupdateDialog()
   }
 }

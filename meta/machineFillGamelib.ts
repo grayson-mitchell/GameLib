@@ -210,14 +210,19 @@ function escapeRegExp(value: string): string {
 // Loose (case-insensitive) presence check, used to decide whether a
 // glossary rule even applies to this source string.
 function containsTermLoose(text: string, term: string): boolean {
-  const re = new RegExp(`(?<![A-Za-z0-9_])${escapeRegExp(term)}(?![A-Za-z0-9_])`, 'i')
+  const re = new RegExp(
+    `(?<![A-Za-z0-9_])${escapeRegExp(term)}(?![A-Za-z0-9_])`,
+    'i'
+  )
   return re.test(text)
 }
 
 // Verbatim (case-sensitive) presence check -- glossed terms must survive
 // translation EXACTLY, not just case-insensitively.
 function containsTermVerbatim(text: string, term: string): boolean {
-  const re = new RegExp(`(?<![A-Za-z0-9_])${escapeRegExp(term)}(?![A-Za-z0-9_])`)
+  const re = new RegExp(
+    `(?<![A-Za-z0-9_])${escapeRegExp(term)}(?![A-Za-z0-9_])`
+  )
   return re.test(text)
 }
 
@@ -253,7 +258,10 @@ export function validateTranslation(
   }
 
   for (const term of glossary) {
-    if (containsTermLoose(source, term) && !containsTermVerbatim(target, term)) {
+    if (
+      containsTermLoose(source, term) &&
+      !containsTermVerbatim(target, term)
+    ) {
       problems.push(
         `translation drops or alters glossary term "${term}" present in the source -- glossary terms must survive verbatim`
       )
@@ -314,8 +322,10 @@ export function mergeFill(
 // ---------------------------------------------------------------------------
 
 function pluralSiblingOf(keyPath: string): string | null {
-  if (keyPath.endsWith('_one')) return `${keyPath.slice(0, -'_one'.length)}_other`
-  if (keyPath.endsWith('_other')) return `${keyPath.slice(0, -'_other'.length)}_one`
+  if (keyPath.endsWith('_one'))
+    return `${keyPath.slice(0, -'_one'.length)}_other`
+  if (keyPath.endsWith('_other'))
+    return `${keyPath.slice(0, -'_other'.length)}_one`
   return null
 }
 
@@ -427,7 +437,11 @@ export async function fillLocale(
     }
   }
 
-  const { merged, manifest: rawManifest } = mergeFill(target, filled, priorManifest)
+  const { merged, manifest: rawManifest } = mergeFill(
+    target,
+    filled,
+    priorManifest
+  )
   const manifest: MtManifest = {
     locale,
     model,
@@ -628,12 +642,16 @@ function readGlossary(): string[] {
 }
 
 function buildMemoryFor(locale: string) {
-  const enTranslation = readJsonFile(join(LOCALES_DIR, 'en', 'translation.json'))
+  const enTranslation = readJsonFile(
+    join(LOCALES_DIR, 'en', 'translation.json')
+  )
   const localeTranslation = readJsonFile(
     join(LOCALES_DIR, locale, 'translation.json')
   )
   const enGamepage = readJsonFile(join(LOCALES_DIR, 'en', 'gamepage.json'))
-  const localeGamepage = readJsonFile(join(LOCALES_DIR, locale, 'gamepage.json'))
+  const localeGamepage = readJsonFile(
+    join(LOCALES_DIR, locale, 'gamepage.json')
+  )
   const enLogin = readJsonFile(join(LOCALES_DIR, 'en', 'login.json'))
   const localeLogin = readJsonFile(join(LOCALES_DIR, locale, 'login.json'))
 

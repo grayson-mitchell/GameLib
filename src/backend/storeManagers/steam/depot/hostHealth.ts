@@ -240,7 +240,8 @@ function score(stats: MutableHostStats, prior: number | undefined): number {
   // ENTIRELY independent of prior and can demote a good-prior host
   // (cache1-akl-edgx, weightedload=20) the moment it racks up
   // MAX_CONSECUTIVE_FAILURES real failures, regardless of this blend.
-  const priorWeight = PRIOR_HALFLIFE_SAMPLES / (PRIOR_HALFLIFE_SAMPLES + stats.attempts)
+  const priorWeight =
+    PRIOR_HALFLIFE_SAMPLES / (PRIOR_HALFLIFE_SAMPLES + stats.attempts)
   return priorWeight * prior + (1 - priorWeight) * empirical
 }
 
@@ -296,7 +297,9 @@ export class HostHealthTracker {
    *  `undefined` is distinct from "prior=1"). */
   private priorFor(host: string): number | undefined {
     const weightedload = this.weightedLoads.get(host)
-    return weightedload === undefined ? undefined : priorScoreFromWeightedLoad(weightedload)
+    return weightedload === undefined
+      ? undefined
+      : priorScoreFromWeightedLoad(weightedload)
   }
 
   private compositeScore(host: string): number {
@@ -357,7 +360,12 @@ export class HostHealthTracker {
    * sends that one call to the best-scoring demoted host instead of the
    * normal fan-out -- the probe is what makes the circuit breaker real.
    */
-  pickHost(hosts: string[], seed: number, attemptIndex: number, workerSlot = 0): string {
+  pickHost(
+    hosts: string[],
+    seed: number,
+    attemptIndex: number,
+    workerSlot = 0
+  ): string {
     if (!hosts.length) {
       throw new Error('HostHealthTracker.pickHost: empty hosts list')
     }

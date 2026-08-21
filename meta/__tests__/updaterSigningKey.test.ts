@@ -43,21 +43,45 @@ describe('updaterSigningKey', () => {
     const keyAPath = join(fixturesDir, 'keyA')
     const genA = spawnSync(
       process.execPath,
-      [tauriCli, 'signer', 'generate', '--ci', '-p', 'pw-alpha', '-w', keyAPath, '-f'],
+      [
+        tauriCli,
+        'signer',
+        'generate',
+        '--ci',
+        '-p',
+        'pw-alpha',
+        '-w',
+        keyAPath,
+        '-f'
+      ],
       { encoding: 'utf-8' }
     )
     if (genA.status !== 0) {
-      throw new Error(`fixture setup: failed to generate keypair A: ${genA.stderr}`)
+      throw new Error(
+        `fixture setup: failed to generate keypair A: ${genA.stderr}`
+      )
     }
 
     const keyBPath = join(fixturesDir, 'keyB')
     const genB = spawnSync(
       process.execPath,
-      [tauriCli, 'signer', 'generate', '--ci', '-p', 'pw-beta', '-w', keyBPath, '-f'],
+      [
+        tauriCli,
+        'signer',
+        'generate',
+        '--ci',
+        '-p',
+        'pw-beta',
+        '-w',
+        keyBPath,
+        '-f'
+      ],
       { encoding: 'utf-8' }
     )
     if (genB.status !== 0) {
-      throw new Error(`fixture setup: failed to generate keypair B: ${genB.stderr}`)
+      throw new Error(
+        `fixture setup: failed to generate keypair B: ${genB.stderr}`
+      )
     }
 
     keyAContent = readFileSync(keyAPath, 'utf-8')
@@ -67,19 +91,25 @@ describe('updaterSigningKey', () => {
     confWithPubkeyA = join(fixturesDir, 'conf-pubkey-a.json')
     writeFileSync(
       confWithPubkeyA,
-      JSON.stringify({ plugins: { updater: { pubkey: keyAPubContent.trim() } } })
+      JSON.stringify({
+        plugins: { updater: { pubkey: keyAPubContent.trim() } }
+      })
     )
 
     confWithPubkeyB = join(fixturesDir, 'conf-pubkey-b.json')
     writeFileSync(
       confWithPubkeyB,
-      JSON.stringify({ plugins: { updater: { pubkey: keyBPubContent.trim() } } })
+      JSON.stringify({
+        plugins: { updater: { pubkey: keyBPubContent.trim() } }
+      })
     )
 
     confWithBadPubkey = join(fixturesDir, 'conf-bad-pubkey.json')
     writeFileSync(
       confWithBadPubkey,
-      JSON.stringify({ plugins: { updater: { pubkey: 'not-base64-minisign' } } })
+      JSON.stringify({
+        plugins: { updater: { pubkey: 'not-base64-minisign' } }
+      })
     )
   })
 
@@ -126,7 +156,9 @@ describe('updaterSigningKey', () => {
       expect(result.pubkeyKeyId).toMatch(/^[0-9a-f]{16}$/)
       expect(result.signatureKeyId).not.toBe(result.pubkeyKeyId)
     } else {
-      throw new Error(`expected kind "pubkey-mismatch", got ${JSON.stringify(result)}`)
+      throw new Error(
+        `expected kind "pubkey-mismatch", got ${JSON.stringify(result)}`
+      )
     }
   })
 
@@ -159,7 +191,7 @@ describe('updaterSigningKey', () => {
     }
   })
 
-  test('keyIdFromMinisignFile returns the same id for keypair A\'s .pub content and for a signature produced by keypair A', () => {
+  test("keyIdFromMinisignFile returns the same id for keypair A's .pub content and for a signature produced by keypair A", () => {
     const pubkeyId = keyIdFromMinisignFile(keyAPubContent)
 
     const result = verifyUpdaterSigningKeypair({

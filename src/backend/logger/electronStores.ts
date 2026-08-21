@@ -7,8 +7,11 @@
 // not zero, and not worth an execution-time judgement call.
 import { TypeCheckedStoreBackend } from '../electron_store'
 
-export const uploadedLogFileStore = new TypeCheckedStoreBackend('uploadedLogs', {
-  cwd: 'store',
-  name: 'uploadedLogs',
-  accessPropertiesByDotNotation: false
-})
+export const uploadedLogFileStore = new TypeCheckedStoreBackend(
+  'uploadedLogs',
+  {
+    cwd: 'store',
+    name: 'uploadedLogs',
+    accessPropertiesByDotNotation: false
+  }
+)

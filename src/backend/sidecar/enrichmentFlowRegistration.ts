@@ -165,10 +165,8 @@ export function registerEnrichmentFlows(): void {
       gameAnticheatInfo(args[0] as string)
   )
 
-  ipcMain.handle(
-    'getKnownFixes',
-    async (_event: unknown, ...args: unknown[]) =>
-      readKnownFixes(args[0] as string, args[1] as Runner)
+  ipcMain.handle('getKnownFixes', async (_event: unknown, ...args: unknown[]) =>
+    readKnownFixes(args[0] as string, args[1] as Runner)
   )
 
   // D-10: exempted from the 60s invoke bound in main.rs's
@@ -180,10 +178,8 @@ export function registerEnrichmentFlows(): void {
   // storeSearch/handlers.ts (Phase 34.2 Plan 13, closes WR-09), which carry
   // the Phase 20 D-14 try/log/RETHROW contract. A bare pass-through would
   // silently change the error-propagation contract the frontend depends on.
-  ipcMain.handle(
-    'searchStores',
-    async (_event: unknown, ...args: unknown[]) =>
-      handleSearchStores(args[0] as string)
+  ipcMain.handle('searchStores', async (_event: unknown, ...args: unknown[]) =>
+    handleSearchStores(args[0] as string)
   )
 
   ipcMain.handle(
@@ -199,9 +195,7 @@ export function registerEnrichmentFlows(): void {
   // Imports ONLY removeRecentGame from recent_games.ts — not
   // getRecentGames/addRecentGame/maxRecentGames (curated-import
   // discipline, D-04).
-  ipcMain.handle(
-    'removeRecent',
-    async (_event: unknown, ...args: unknown[]) =>
-      removeRecentGame(args[0] as string)
+  ipcMain.handle('removeRecent', async (_event: unknown, ...args: unknown[]) =>
+    removeRecentGame(args[0] as string)
   )
 }

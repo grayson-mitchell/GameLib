@@ -224,8 +224,8 @@ describe('HumbleLibrary against the real CacheStore (electron-store backed)', ()
     expect(mockSendFrontendMessage).toHaveBeenCalledTimes(1)
     const [channel, keys] = mockSendFrontendMessage.mock.calls[0]
     expect(channel).toBe('humbleKeysUpdated')
-    expect((keys as Array<{ gamekey: string }>).map((k) => k.gamekey)).toEqual(
-      ['gk1']
-    )
+    expect((keys as Array<{ gamekey: string }>).map((k) => k.gamekey)).toEqual([
+      'gk1'
+    ])
   })
 })

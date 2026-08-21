@@ -26,9 +26,18 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { cleanDistMac, macArtifactEntries, MAC_ARTIFACT_TOKEN } from '../cleanDistMac'
+import {
+  cleanDistMac,
+  macArtifactEntries,
+  MAC_ARTIFACT_TOKEN
+} from '../cleanDistMac'
 
-const ELECTRON_BUILDER_PATH = join(__dirname, '..', '..', 'electron-builder.yml')
+const ELECTRON_BUILDER_PATH = join(
+  __dirname,
+  '..',
+  '..',
+  'electron-builder.yml'
+)
 const PACKAGE_JSON_PATH = join(__dirname, '..', '..', 'package.json')
 const CLEAN_DIST_MAC_SOURCE_PATH = join(__dirname, '..', 'cleanDistMac.ts')
 
@@ -41,7 +50,9 @@ interface ElectronBuilderConfig {
 function parseElectronBuilder(): ElectronBuilderConfig {
   // readFileSync(ELECTRON_BUILDER_PATH) reads electron-builder.yml; loadYaml
   // (js-yaml) parses it structurally rather than regexing the raw text.
-  return loadYaml(readFileSync(ELECTRON_BUILDER_PATH, 'utf-8')) as ElectronBuilderConfig
+  return loadYaml(
+    readFileSync(ELECTRON_BUILDER_PATH, 'utf-8')
+  ) as ElectronBuilderConfig
 }
 
 // The five macOS artifact files a real dist:mac run leaves behind, per the
@@ -111,7 +122,9 @@ describe('macArtifactEntries', () => {
   })
 
   test('returns [] for a distDir that does not exist', () => {
-    const entries = macArtifactEntries(join(tmpdir(), 'clean-dist-mac-does-not-exist-xyz'))
+    const entries = macArtifactEntries(
+      join(tmpdir(), 'clean-dist-mac-does-not-exist-xyz')
+    )
     expect(entries).toEqual([])
   })
 })
@@ -164,7 +177,9 @@ describe('cleanDistMac', () => {
     distDir = mkdtempSync(join(tmpdir(), 'clean-dist-mac-symlink-'))
     mkdirSync(distDir, { recursive: true })
 
-    const outsideDir = mkdtempSync(join(tmpdir(), 'clean-dist-mac-symlink-target-'))
+    const outsideDir = mkdtempSync(
+      join(tmpdir(), 'clean-dist-mac-symlink-target-')
+    )
     const targetFile = join(outsideDir, 'real-target.dmg')
     writeFileSync(targetFile, 'the real bytes live outside distDir')
 
@@ -211,14 +226,18 @@ describe('package.json wiring pin', () => {
   }
 
   function loadScripts(): Record<string, string> {
-    return (JSON.parse(readFileSync(PACKAGE_JSON_PATH, 'utf-8')) as PackageJsonScripts).scripts
+    return (
+      JSON.parse(readFileSync(PACKAGE_JSON_PATH, 'utf-8')) as PackageJsonScripts
+    ).scripts
   }
 
   test('dist:mac contains clean:dist-mac, positioned before electron-builder', () => {
     const scripts = loadScripts()
     const distMac = scripts['dist:mac']
     expect(distMac).toContain('clean:dist-mac')
-    expect(distMac.indexOf('clean:dist-mac')).toBeLessThan(distMac.indexOf('electron-builder'))
+    expect(distMac.indexOf('clean:dist-mac')).toBeLessThan(
+      distMac.indexOf('electron-builder')
+    )
   })
 
   test('release:mac contains clean:dist-mac, positioned before electron-builder', () => {

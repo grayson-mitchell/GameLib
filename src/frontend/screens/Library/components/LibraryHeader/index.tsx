@@ -92,7 +92,8 @@ export default React.memo(function LibraryHeader({ list, totalGames }: Props) {
   const showStaleIndicator =
     connectivity.status !== 'online' && syncedAt !== null
 
-  const staleTime = syncedAt !== null ? formatRelativeTime(Date.now() - syncedAt) : ''
+  const staleTime =
+    syncedAt !== null ? formatRelativeTime(Date.now() - syncedAt) : ''
 
   return (
     <h5 className="libraryHeader" data-tour="library-header">

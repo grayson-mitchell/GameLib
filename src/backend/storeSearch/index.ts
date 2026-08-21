@@ -21,6 +21,4 @@ addHandler('getStoreSearchDeals', async (_event, gameId) =>
   handleGetStoreSearchDeals(gameId)
 )
 
-addHandler('getStoreSearchStoreMap', async () =>
-  handleGetStoreSearchStoreMap()
-)
+addHandler('getStoreSearchStoreMap', async () => handleGetStoreSearchStoreMap())

@@ -165,15 +165,12 @@ export function registerShortcutsFlows(): void {
   // `addNonSteamGame`. That comment and its test pins are NOT duplicated or relocated here.
   // Live-gate item 4 exercises BOTH channels: `addShortcut`'s `.app` path and this channel's VDF
   // path.
-  ipcMain.handle(
-    'addToSteam',
-    async (_event: unknown, ...args: unknown[]) => {
-      const appName = args[0] as string
-      const runner = args[1] as Runner
-      const game = getGame(appName, runner)
-      return addNonSteamGame(game)
-    }
-  )
+  ipcMain.handle('addToSteam', async (_event: unknown, ...args: unknown[]) => {
+    const appName = args[0] as string
+    const runner = args[1] as Runner
+    const game = getGame(appName, runner)
+    return addNonSteamGame(game)
+  })
 
   ipcMain.handle(
     'removeFromSteam',

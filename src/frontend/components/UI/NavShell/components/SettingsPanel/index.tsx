@@ -62,10 +62,7 @@ export default function SettingsPanel() {
       {!isWin && (
         <NavItem
           url="/settings/games_settings"
-          label={t(
-            'settings.navbar.games_settings_defaults',
-            'Game Defaults'
-          )}
+          label={t('settings.navbar.games_settings_defaults', 'Game Defaults')}
         />
       )}
       <NavItem
@@ -89,16 +86,10 @@ export default function SettingsPanel() {
         icon={faTv}
         label={t('sidebar.console', 'Console Mode')}
       />
-      <NavItem
-        url="/settings/log"
-        label={t('settings.navbar.log', 'Log')}
-      />
+      <NavItem url="/settings/log" label={t('settings.navbar.log', 'Log')} />
       <NavItem
         url="/settings/systeminfo"
-        label={t(
-          'settings.navbar.systemInformation',
-          'System Information'
-        )}
+        label={t('settings.navbar.systemInformation', 'System Information')}
       />
       <NavItem
         url="/wiki"
@@ -109,7 +100,7 @@ export default function SettingsPanel() {
         elementType="button"
         onClick={handleKofiClick}
         icon={faCoffee}
-        label='Ko-fi'
+        label="Ko-fi"
       />
       <QuitButton />
     </div>

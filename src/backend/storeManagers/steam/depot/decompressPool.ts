@@ -43,7 +43,9 @@ function isReadyMessage(msg: unknown): msg is DecompressWorkerReady {
  *  dev/Electron and test-override behavior); `'source'` spawns
  *  `new Worker(value, { eval: true })` against an inline SEA-asset source
  *  string. */
-type WorkerSpec = { kind: 'path'; value: string } | { kind: 'source'; value: string }
+type WorkerSpec =
+  | { kind: 'path'; value: string }
+  | { kind: 'source'; value: string }
 const SEA_WORKER_ASSET_KEY = 'decompressWorker.js'
 
 const DEFAULT_TASK_TIMEOUT_MS = 30_000
@@ -404,7 +406,7 @@ export class DecompressPool {
           'INLINE single-thread decode for this entire download run.',
           `Cause: ${(err as Error)?.message ?? String(err)}.`,
           'If this is a packaged SEA sidecar, this is a REAL DEFECT (no',
-          "longer an accepted tradeoff) -- check the SEA asset",
+          'longer an accepted tradeoff) -- check the SEA asset',
           "'decompressWorker.js' and meta/buildSidecarSea.ts's",
           'bundleWorkerForSea() step.'
         ],

@@ -62,9 +62,7 @@ jest.mock('react', () => {
       const idx = cursor++
       if (idx >= slots.length) {
         slots[idx] =
-          typeof initial === 'function'
-            ? (initial as () => unknown)()
-            : initial
+          typeof initial === 'function' ? (initial as () => unknown)() : initial
       }
       const setState = (updater: unknown) => {
         slots[idx] =

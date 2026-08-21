@@ -49,7 +49,8 @@ function extractNileEffectBody(source: string): string {
   if (markerIdx === -1) throw new Error(`marker not found: ${marker}`)
   const closeMarker = '}, [pathname])'
   const closeIdx = source.indexOf(closeMarker, markerIdx)
-  if (closeIdx === -1) throw new Error(`closing marker not found after: ${marker}`)
+  if (closeIdx === -1)
+    throw new Error(`closing marker not found after: ${marker}`)
   return source.slice(markerIdx, closeIdx + closeMarker.length)
 }
 

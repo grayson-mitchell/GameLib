@@ -128,10 +128,7 @@ function labelsOf(tree: ReactNode): string[] {
     .filter((l): l is string => typeof l === 'string')
 }
 
-function findNavItem(
-  tree: ReactNode,
-  label: string
-): AnyElement | undefined {
+function findNavItem(tree: ReactNode, label: string): AnyElement | undefined {
   return collectElements(tree).find(
     (el) => el.type === NavItem && el.props?.label === label
   )
@@ -190,12 +187,10 @@ describe('SettingsPanel', () => {
     const tree = SettingsPanel() as unknown as ReactElement
     const labels = labelsOf(tree)
 
-    expect(labels.indexOf('System Information')).toBe(
-      labels.indexOf('Log') + 1
-    )
+    expect(labels.indexOf('System Information')).toBe(labels.indexOf('Log') + 1)
   })
 
-  it("Ko-fi is a button whose onClick calls handleExternalLinkDialog when the stored preference is absent", () => {
+  it('Ko-fi is a button whose onClick calls handleExternalLinkDialog when the stored preference is absent', () => {
     storedPreference = null
     const handleExternalLinkDialog = jest.fn()
     contextValue = makeContextValue({ handleExternalLinkDialog })

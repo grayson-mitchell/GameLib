@@ -6,37 +6,37 @@ dependencies). Sequential requests, ~1.5s delay, desktop Chrome User-Agent.
 
 ## Sample titles and generated slugs
 
-| Title | Slug |
-|---|---|
-| Hades | `hades` |
-| 007 Nightfire | `007-nightfire` |
-| Half-Life 2 | `half-life-2` |
-| Baldur's Gate 3 | `baldur-s-gate-3` |
-| The Witcher 3: Wild Hunt | `the-witcher-3-wild-hunt` |
-| Pokémon | `pokemon` |
-| Ori and the Blind Forest | `ori-and-the-blind-forest` |
-| Call of Duty: Modern Warfare II | `call-of-duty-modern-warfare-ii` |
-| Marvel's Spider-Man Remastered | `marvel-s-spider-man-remastered` |
-| Elden Ring | `elden-ring` |
+| Title                           | Slug                              |
+| ------------------------------- | --------------------------------- |
+| Hades                           | `hades`                           |
+| 007 Nightfire                   | `007-nightfire`                   |
+| Half-Life 2                     | `half-life-2`                     |
+| Baldur's Gate 3                 | `baldur-s-gate-3`                 |
+| The Witcher 3: Wild Hunt        | `the-witcher-3-wild-hunt`         |
+| Pokémon                         | `pokemon`                         |
+| Ori and the Blind Forest        | `ori-and-the-blind-forest`        |
+| Call of Duty: Modern Warfare II | `call-of-duty-modern-warfare-ii`  |
+| Marvel's Spider-Man Remastered  | `marvel-s-spider-man-remastered`  |
+| Elden Ring                      | `elden-ring`                      |
 | Definitely Not A Real Game 9000 | `definitely-not-a-real-game-9000` |
-| Grand Theft Auto V | `grand-theft-auto-v` |
+| Grand Theft Auto V              | `grand-theft-auto-v`              |
 
 ## Captured per-title results (live run)
 
-| Title | Slug | HTTP Status | Hit/Miss | ratingValue | ratingCount |
-|---|---|---|---|---|---|
-| Hades | hades | 200 | HIT | 5 | 1 |
-| 007 Nightfire | 007-nightfire | 200 | HIT | 3.5 | 2 |
-| Half-Life 2 | half-life-2 | 200 | HIT | 4.5 | 2 |
-| Baldur's Gate 3 | baldur-s-gate-3 | 200 (soft-404) | MISS | - | - |
-| The Witcher 3: Wild Hunt | the-witcher-3-wild-hunt | 200 | HIT | 3.5 | 2 |
-| Pokémon | pokemon | 200 (soft-404) | MISS | - | - |
-| Ori and the Blind Forest | ori-and-the-blind-forest | 200 | HIT | 4.5 | 2 |
-| Call of Duty: Modern Warfare II | call-of-duty-modern-warfare-ii | 200 (soft-404) | MISS | - | - |
-| Marvel's Spider-Man Remastered | marvel-s-spider-man-remastered | 200 | HIT | 4 | 1 |
-| Elden Ring | elden-ring | 200 | HIT | 3.5 | 2 |
-| Definitely Not A Real Game 9000 | definitely-not-a-real-game-9000 | 200 (soft-404) | MISS | - | - |
-| Grand Theft Auto V | grand-theft-auto-v | 200 | HIT | 5 | 2 |
+| Title                           | Slug                            | HTTP Status    | Hit/Miss | ratingValue | ratingCount |
+| ------------------------------- | ------------------------------- | -------------- | -------- | ----------- | ----------- |
+| Hades                           | hades                           | 200            | HIT      | 5           | 1           |
+| 007 Nightfire                   | 007-nightfire                   | 200            | HIT      | 3.5         | 2           |
+| Half-Life 2                     | half-life-2                     | 200            | HIT      | 4.5         | 2           |
+| Baldur's Gate 3                 | baldur-s-gate-3                 | 200 (soft-404) | MISS     | -           | -           |
+| The Witcher 3: Wild Hunt        | the-witcher-3-wild-hunt         | 200            | HIT      | 3.5         | 2           |
+| Pokémon                         | pokemon                         | 200 (soft-404) | MISS     | -           | -           |
+| Ori and the Blind Forest        | ori-and-the-blind-forest        | 200            | HIT      | 4.5         | 2           |
+| Call of Duty: Modern Warfare II | call-of-duty-modern-warfare-ii  | 200 (soft-404) | MISS     | -           | -           |
+| Marvel's Spider-Man Remastered  | marvel-s-spider-man-remastered  | 200            | HIT      | 4           | 1           |
+| Elden Ring                      | elden-ring                      | 200            | HIT      | 3.5         | 2           |
+| Definitely Not A Real Game 9000 | definitely-not-a-real-game-9000 | 200 (soft-404) | MISS     | -           | -           |
+| Grand Theft Auto V              | grand-theft-auto-v              | 200            | HIT      | 5           | 2           |
 
 **Measured overall match rate: 8/12 hits = 66.7%**
 

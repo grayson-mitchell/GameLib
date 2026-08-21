@@ -1,15 +1,17 @@
 # GameLib
 
-GameLib is a derivative of Heroic Games Launcher (https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher).  Key Differentiators are:
-* Support for Steam Games
-* Stronger CrossOver integration (Playing Games on macOS)
+GameLib is a derivative of Heroic Games Launcher (https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher). Key Differentiators are:
+
+- Support for Steam Games
+- Stronger CrossOver integration (Playing Games on macOS)
 
 GameLib is an Open Source Game Library Manager for Linux, Windows and macOS.  
-It supports games from: 
-* Epic Games Store
-* GOG Games 
-* Amazon Games
-* Steam 
+It supports games from:
+
+- Epic Games Store
+- GOG Games
+- Amazon Games
+- Steam
 
 GameLib is built with Web Technologies:  
 [![Typescript](https://img.shields.io/badge/Typescript-3178c6?style=for-the-badge&logo=typescript&labelColor=gray)](https://www.typescriptlang.org/)

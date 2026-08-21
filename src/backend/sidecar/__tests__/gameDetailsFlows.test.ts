@@ -911,11 +911,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
     gogManager.getInstallInfo.mockResolvedValue(undefined)
 
     const { input, frames } = startSidecar()
-    writeInvoke(input, 'gii-3', 'getInstallInfo', [
-      'appName',
-      'gog',
-      'windows'
-    ])
+    writeInvoke(input, 'gii-3', 'getInstallInfo', ['appName', 'gog', 'windows'])
     await flush()
 
     const response = findResponse(frames, 'gii-3')
@@ -929,11 +925,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
     )
 
     const { input, frames } = startSidecar()
-    writeInvoke(input, 'gii-4', 'getInstallInfo', [
-      'appName',
-      'gog',
-      'windows'
-    ])
+    writeInvoke(input, 'gii-4', 'getInstallInfo', ['appName', 'gog', 'windows'])
     await flush()
 
     await expect(
@@ -961,11 +953,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
     })
 
     const { input, frames } = startSidecar()
-    writeInvoke(input, 'gii-6', 'getInstallInfo', [
-      'appName',
-      'gog',
-      'windows'
-    ])
+    writeInvoke(input, 'gii-6', 'getInstallInfo', ['appName', 'gog', 'windows'])
     await flush()
 
     expect(handlerRegistry.has('getInstallInfo')).toBe(true)

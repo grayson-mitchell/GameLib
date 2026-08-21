@@ -364,7 +364,10 @@ function getSignatureState(filePath: string): string {
 // inspectRunnerTree / summarise
 // ---------------------------------------------------------------------------
 
-function inspectRunner(darwinRoot: string, runner: RunnerName): RunnerInspection {
+function inspectRunner(
+  darwinRoot: string,
+  runner: RunnerName
+): RunnerInspection {
   const runnerDir = join(darwinRoot, runner)
   const binaryPath = join(runnerDir, runner)
   const exists = existsSync(binaryPath)
@@ -525,9 +528,7 @@ function parseCliArgs(argv: string[]): {
 }
 
 function printTable(results: RunnerInspection[]): void {
-  console.log(
-    'Runner       Exists  Exec   Mach-O  Files  Mach-O files'
-  )
+  console.log('Runner       Exists  Exec   Mach-O  Files  Mach-O files')
   for (const r of results) {
     console.log(
       `${r.runner.padEnd(13)}${String(r.exists).padEnd(8)}${String(

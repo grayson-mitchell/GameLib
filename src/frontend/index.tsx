@@ -66,7 +66,9 @@ if (isTauri()) {
         setTimeout(
           () =>
             reject(
-              new Error('sidecar store-snapshot hydration timed out after 8000ms')
+              new Error(
+                'sidecar store-snapshot hydration timed out after 8000ms'
+              )
             ),
           8000
         )

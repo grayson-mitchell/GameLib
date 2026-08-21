@@ -138,8 +138,8 @@ describe('AdvancedSettings EOS decline call-site gate', () => {
     it('the non-vacuity anchor fires on a synthetic source with fewer EOS call sites', () => {
       const regressed = collapse(
         source.replace(
-          "call: () => window.api.removeEosOverlay()",
-          "call: () => Promise.resolve(true)"
+          'call: () => window.api.removeEosOverlay()',
+          'call: () => Promise.resolve(true)'
         )
       )
       const indices = findEosCallSiteIndices(regressed)
@@ -153,7 +153,10 @@ describe('AdvancedSettings EOS decline call-site gate', () => {
       const indices = findEosCallSiteIndices(injected)
       expect(indices.length).toBeGreaterThan(0)
       const [index] = indices
-      const preceding = injected.slice(Math.max(0, index - CALL_SITE_WINDOW), index)
+      const preceding = injected.slice(
+        Math.max(0, index - CALL_SITE_WINDOW),
+        index
+      )
       expect(preceding).not.toContain('callOrDeclare(')
     })
 
@@ -173,9 +176,9 @@ describe('AdvancedSettings EOS decline call-site gate', () => {
         }
         return count
       }
-      expect(countOccurrences(withoutWrapper, '{!eosOverlayUnavailable && (')).toBe(
-        0
-      )
+      expect(
+        countOccurrences(withoutWrapper, '{!eosOverlayUnavailable && (')
+      ).toBe(0)
     })
   })
 })

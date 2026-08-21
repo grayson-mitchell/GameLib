@@ -63,7 +63,14 @@ export default function StoreSearch() {
       )
     }
     return map
-  }, [results, steam.library, gog.library, epic.library, amazon.library, keysWaiting])
+  }, [
+    results,
+    steam.library,
+    gog.library,
+    epic.library,
+    amazon.library,
+    keysWaiting
+  ])
 
   return (
     <div className="storeSearchScreen">
@@ -83,7 +90,10 @@ export default function StoreSearch() {
       {status === 'error' && (
         <div className="storeSearchScreen__errorBanner">
           <span className="storeSearchScreen__errorMessage">
-            {t('storeSearch.error.provider', "Couldn't reach the price provider.")}
+            {t(
+              'storeSearch.error.provider',
+              "Couldn't reach the price provider."
+            )}
           </span>
           <button
             type="button"

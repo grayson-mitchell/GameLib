@@ -85,7 +85,9 @@ describe('F-34.4.2-17 / D-G1, 36-01: what makes a second login tile unreachable 
     // (Steam's overlay-open call would fall through into a navigate as
     // well), or the no-primaryLoginAction path stops calling
     // navigate(props.loginUrl).
-    const disabledGuardIndex = body.indexOf('if (props.disabled) {\n      return\n    }')
+    const disabledGuardIndex = body.indexOf(
+      'if (props.disabled) {\n      return\n    }'
+    )
     const primaryActionIndex = body.indexOf('if (props.primaryLoginAction) {')
     const navigateIndex = body.indexOf('navigate(props.loginUrl)')
 
@@ -109,7 +111,7 @@ describe('F-34.4.2-17 / D-G1, 36-01: what makes a second login tile unreachable 
     expect(disabledExpressions[0]).toBe('disabled={oldMac || loginInFlight}')
   })
 
-  it('SOURCE GATE (PRESENCE + ABSENCE) -- oldMac itself is still derived solely from a macOS-version check; loginInFlight is a SEPARATE, explicitly named identifier, never folded into oldMac\'s own derivation', () => {
+  it("SOURCE GATE (PRESENCE + ABSENCE) -- oldMac itself is still derived solely from a macOS-version check; loginInFlight is a SEPARATE, explicitly named identifier, never folded into oldMac's own derivation", () => {
     const source = read(LOGIN_TSX)
     const start = source.indexOf('let oldMac = false')
     const end = source.indexOf('useEffect(')
@@ -124,10 +126,12 @@ describe('F-34.4.2-17 / D-G1, 36-01: what makes a second login tile unreachable 
     // half) -- collapsing the two would make the "explicit, separately
     // named guard" claim in Login/index.tsx's own comment false.
     expect(body).toMatch(/systemInfo\?\.OS\.platform === 'darwin'/)
-    expect(body).not.toMatch(/loginInFlight|pending|inFlight|isLoggingIn|loginInProgress/i)
+    expect(body).not.toMatch(
+      /loginInFlight|pending|inFlight|isLoggingIn|loginInProgress/i
+    )
   })
 
-  it('SOURCE GATE (PRESENCE) -- exactly one runnerGroup container holds all six tiles, so a non-primaryLoginAction tile\'s navigation still unmounts every tile at once, not just the one clicked', () => {
+  it("SOURCE GATE (PRESENCE) -- exactly one runnerGroup container holds all six tiles, so a non-primaryLoginAction tile's navigation still unmounts every tile at once, not just the one clicked", () => {
     const source = read(LOGIN_TSX)
     const matches = source.match(/runnerGroup/g) ?? []
 
@@ -171,9 +175,7 @@ describe('F-34.4.2-17 / D-G1, 36-01: what makes a second login tile unreachable 
     const rootPathIndex = routesBody.indexOf("path: '/'")
     const catchAllIndex = routesBody.indexOf("path: '*'")
     const loginIndex = routesBody.indexOf("path: 'login'")
-    const loginwebRunnerIndex = routesBody.indexOf(
-      "path: 'loginweb/:runner'"
-    )
+    const loginwebRunnerIndex = routesBody.indexOf("path: 'loginweb/:runner'")
 
     expect(rootPathIndex).toBeGreaterThan(-1)
     expect(loginIndex).toBeGreaterThan(rootPathIndex)
@@ -183,7 +185,7 @@ describe('F-34.4.2-17 / D-G1, 36-01: what makes a second login tile unreachable 
     expect((source.match(/loginweb\/steam/g) ?? []).length).toBe(0)
   })
 
-  it('SOURCE GATE (ABSENCE, load-bearing for the inert argument) -- Runner\'s tiles carry zero tabIndex, zero <button, zero <a -- they are bare untabbable divs, which is WHY a container-level inert (pinned below) protects the two genuinely-focusable controls it wraps without needing to also fight a tabIndex lock', () => {
+  it("SOURCE GATE (ABSENCE, load-bearing for the inert argument) -- Runner's tiles carry zero tabIndex, zero <button, zero <a -- they are bare untabbable divs, which is WHY a container-level inert (pinned below) protects the two genuinely-focusable controls it wraps without needing to also fight a tabIndex lock", () => {
     const source = read(RUNNER_TSX)
 
     // Breaks if: any tile becomes a real focusable element (a <button>, an

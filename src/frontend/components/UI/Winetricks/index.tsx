@@ -212,9 +212,7 @@ export default function Winetricks({ onClose, runner }: Props) {
             )}
           </span>
         )}
-        {!declined && !loadingInstalled && (
-          <span>{installed.join(', ')}</span>
-        )}
+        {!declined && !loadingInstalled && <span>{installed.join(', ')}</span>}
       </div>
     </>
   )

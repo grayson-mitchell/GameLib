@@ -10,11 +10,7 @@
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import {
-  chipLabelSpec,
-  joinChipLabels,
-  ChipLabelSpec
-} from '../chipLabels'
+import { chipLabelSpec, joinChipLabels, ChipLabelSpec } from '../chipLabels'
 import { PRESET_UNCATEGORIZED } from '../../../filterEngine'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { RunnerToStore, RUNNABILITY_LABELS } from '../../../facetLabels'
@@ -120,7 +116,11 @@ describe('chipLabels', () => {
   })
 
   it('search:witcher is a literal spec, quoted with straight double quotes', () => {
-    const spec = chipLabelSpec({ id: 'search', kind: 'search', value: 'witcher' })
+    const spec = chipLabelSpec({
+      id: 'search',
+      kind: 'search',
+      value: 'witcher'
+    })
 
     expect(literalOf(spec)).toBe('"witcher"')
   })
@@ -432,7 +432,8 @@ function collectElements(node: unknown, out: AnyElement[] = []): AnyElement[] {
 
 function removeButtonsOf(tree: unknown): AnyElement[] {
   return collectElements(tree).filter(
-    (el) => el.type === 'button' && el.props.className === 'FilterChipRow__remove'
+    (el) =>
+      el.type === 'button' && el.props.className === 'FilterChipRow__remove'
   )
 }
 
@@ -527,7 +528,6 @@ describe('FilterChipRow', () => {
 
     expect(removeButtons).toHaveLength(1)
     expect(removeButtons[0]?.props['aria-label']).toContain('Runs via bottle')
-
     ;(removeButtons[0]?.props.onClick as () => void)()
     expect(chipRowContextValue.setRunnabilityFacet).toHaveBeenCalledWith([])
   })
@@ -570,7 +570,9 @@ describe('FilterChipRow', () => {
     const [removeButton] = removeButtonsOf(tree)
     ;(removeButton?.props.onClick as () => void)()
 
-    expect(chipRowContextValue.setStoreFacet).toHaveBeenCalledWith(['legendary'])
+    expect(chipRowContextValue.setStoreFacet).toHaveBeenCalledWith([
+      'legendary'
+    ])
   })
 
   it('clicking the × on a view:installed chip calls setLibraryView("all")', () => {
@@ -710,10 +712,7 @@ describe('FilterChipRow', () => {
 })
 
 describe('FilterChipRow -- D-08 source gate (sort/layout/alphabet are not filters)', () => {
-  const source = readFileSync(
-    join(__dirname, '..', 'index.tsx'),
-    'utf8'
-  )
+  const source = readFileSync(join(__dirname, '..', 'index.tsx'), 'utf8')
 
   it('the component source never references sort/layout/alphabet vocabulary', () => {
     expect(source).not.toMatch(
@@ -743,7 +742,7 @@ jest.mock('../../FilterZeroResult/index.scss', () => ({}))
 import FilterZeroResultImport from '../../FilterZeroResult'
 
 describe('FilterZeroResult', () => {
-  it('body is exactly D-30\'s own example sentence for view:installed + store:gog + search:witcher', () => {
+  it("body is exactly D-30's own example sentence for view:installed + store:gog + search:witcher", () => {
     const descriptors: ActiveFilterDescriptor[] = [
       { id: 'view:installed', kind: 'view', value: 'installed' },
       { id: 'store:gog', kind: 'store', value: 'gog' },
@@ -859,7 +858,11 @@ describe('FilterZeroResult', () => {
   it('a hostile collection name containing i18next nesting syntax ($t(...)) renders literally, including the $t( run', () => {
     const hostileName = 'Backlog $t(header.uncategorized)'
     const descriptors: ActiveFilterDescriptor[] = [
-      { id: `collection:${hostileName}`, kind: 'collection', value: hostileName }
+      {
+        id: `collection:${hostileName}`,
+        kind: 'collection',
+        value: hostileName
+      }
     ]
     chipRowContextValue = makeChipRowContextValue({
       activeFilterDescriptors: descriptors,
@@ -877,7 +880,11 @@ describe('FilterZeroResult', () => {
   it('a hostile collection name containing a literal {{filters}} token renders literally, not re-interpolated', () => {
     const hostileName = 'Backlog {{filters}}'
     const descriptors: ActiveFilterDescriptor[] = [
-      { id: `collection:${hostileName}`, kind: 'collection', value: hostileName }
+      {
+        id: `collection:${hostileName}`,
+        kind: 'collection',
+        value: hostileName
+      }
     ]
     chipRowContextValue = makeChipRowContextValue({
       activeFilterDescriptors: descriptors,

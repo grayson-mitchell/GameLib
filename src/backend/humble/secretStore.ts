@@ -122,7 +122,10 @@ export class ElectronHumbleSecretStore implements HumbleSecretStore {
     }
     if (!this.encryptionAvailable()) return ''
     try {
-      const buf = Buffer.from(stored.slice(HUMBLE_TOKEN_PREFIX.length), 'base64')
+      const buf = Buffer.from(
+        stored.slice(HUMBLE_TOKEN_PREFIX.length),
+        'base64'
+      )
       return safeStorage.decryptString(buf)
     } catch (err) {
       logWarning(

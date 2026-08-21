@@ -88,12 +88,16 @@ describe('WebView humble login watch error/timeout handling (F-34.4.2-19)', () =
 
   it('handles status === "error" by setting a phase: "error" state, never silently returning', () => {
     expect(watchFn).toContain("result.status === 'error'")
-    expect(watchFn).toMatch(/result\.status === 'error'[\s\S]{0,300}phase:\s*'error'/)
+    expect(watchFn).toMatch(
+      /result\.status === 'error'[\s\S]{0,300}phase:\s*'error'/
+    )
   })
 
   it('handles status === "waiting" by setting a phase: "timeout" state, never silently returning', () => {
     expect(watchFn).toContain("result.status === 'waiting'")
-    expect(watchFn).toMatch(/result\.status === 'waiting'[\s\S]{0,300}phase:\s*'timeout'/)
+    expect(watchFn).toMatch(
+      /result\.status === 'waiting'[\s\S]{0,300}phase:\s*'timeout'/
+    )
   })
 
   it('logs both new terminal outcomes ("logged, never silent")', () => {
@@ -129,8 +133,11 @@ describe('WebView humble login watch error/timeout handling (F-34.4.2-19)', () =
     })
 
     it('detects an error branch that never sets phase: "error"', () => {
-      const regressed = "if (result.status === 'error') { console.error('oops') }"
-      expect(regressed).not.toMatch(/result\.status === 'error'[\s\S]{0,300}phase:\s*'error'/)
+      const regressed =
+        "if (result.status === 'error') { console.error('oops') }"
+      expect(regressed).not.toMatch(
+        /result\.status === 'error'[\s\S]{0,300}phase:\s*'error'/
+      )
     })
 
     it('detects a waiting branch that never sets phase: "timeout"', () => {

@@ -37,7 +37,10 @@ import { logInfo, logWarning, LogPrefix } from '../logger'
 // oauthCaptureLogin entry (Task 2) can reference both without common/ importing FROM
 // backend/sidecar — the import direction is always common -> backend/frontend, never the
 // reverse. Re-exported here so every existing caller of this module is unaffected.
-import type { OAuthRunner, OAuthCaptureOutcome } from '../../common/types/oauthLogin'
+import type {
+  OAuthRunner,
+  OAuthCaptureOutcome
+} from '../../common/types/oauthLogin'
 
 export type { OAuthRunner, OAuthCaptureOutcome }
 
@@ -125,7 +128,10 @@ export function matchOAuthRedirect(
       // embed.gog.com/on_login_success. This matcher requires both explicitly. The Electron
       // `<webview>` path keeps L74's original regex untouched — this tightening applies only to
       // this new capture path (T-34.4.1-44a).
-      if (parsed.hostname !== 'embed.gog.com' || parsed.pathname !== '/on_login_success') {
+      if (
+        parsed.hostname !== 'embed.gog.com' ||
+        parsed.pathname !== '/on_login_success'
+      ) {
         return null
       }
       const code = parsed.searchParams.get('code')
@@ -215,7 +221,10 @@ export function captureOAuthLogin(
     // Quick task 260803-eee Task 5: `reason` is optional and additive -- every EXISTING call site
     // below is unchanged (no `reason` argument), so their log line is byte-identical to before.
     // Only the new `'closed'`-event branch in `poll()` below passes one.
-    async function settle(outcome: OAuthCaptureOutcome, reason?: string): Promise<void> {
+    async function settle(
+      outcome: OAuthCaptureOutcome,
+      reason?: string
+    ): Promise<void> {
       if (settled) return
       settled = true
       if (pollInterval !== null) clearInterval(pollInterval)
@@ -226,7 +235,10 @@ export function captureOAuthLogin(
           await activeSeam.close(labelToClose)
         } catch (err) {
           logWarning(
-            [`[oauthLoginCapture] runner=${runner} close failed (non-fatal):`, err],
+            [
+              `[oauthLoginCapture] runner=${runner} close failed (non-fatal):`,
+              err
+            ],
             LogPrefix.Backend
           )
         }
@@ -276,7 +288,10 @@ export function captureOAuthLogin(
           }
           if (navHost !== lastLoggedHost) {
             lastLoggedHost = navHost
-            logInfo(`[oauthLoginCapture] runner=${runner} nav host=${navHost}`, LogPrefix.Backend)
+            logInfo(
+              `[oauthLoginCapture] runner=${runner} nav host=${navHost}`,
+              LogPrefix.Backend
+            )
           }
 
           const match = matchOAuthRedirect(runner, event.url)
@@ -312,14 +327,20 @@ export function captureOAuthLogin(
           // close the now-orphaned window immediately rather than leaking it.
           activeSeam.close(openedLabel).catch((err) => {
             logWarning(
-              [`[oauthLoginCapture] runner=${runner} close failed (non-fatal):`, err],
+              [
+                `[oauthLoginCapture] runner=${runner} close failed (non-fatal):`,
+                err
+              ],
               LogPrefix.Backend
             )
           })
           return
         }
         label = openedLabel
-        logInfo(`[oauthLoginCapture] runner=${runner} label=${openedLabel}`, LogPrefix.Backend)
+        logInfo(
+          `[oauthLoginCapture] runner=${runner} label=${openedLabel}`,
+          LogPrefix.Backend
+        )
         pollInterval = setInterval(() => void poll(), pollMs)
         void poll()
       })

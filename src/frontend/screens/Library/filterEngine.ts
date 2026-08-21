@@ -139,7 +139,9 @@ export function deriveRunnabilityTier(
  * The rows the Runnability facet group may render on this host. `'win32'`
  * returns `[]` — the caller renders no group at all, not an empty one.
  */
-export function runnabilityRowsForHost(hostPlatform: string): RunnabilityTier[] {
+export function runnabilityRowsForHost(
+  hostPlatform: string
+): RunnabilityTier[] {
   if (hostPlatform === 'win32') {
     return []
   }
@@ -192,7 +194,10 @@ export function passesCollection(
 
 // D-01: opt-in — an empty selection means no constraint. D-03: OR within a
 // kind — any selected store matches.
-export function passesStore(game: GameInfo, stores: StoreFacetValue[]): boolean {
+export function passesStore(
+  game: GameInfo,
+  stores: StoreFacetValue[]
+): boolean {
   if (stores.length === 0) {
     return true
   }
@@ -207,7 +212,11 @@ export function passesRunnability(
   if (runnability.length === 0) {
     return true
   }
-  const tier = deriveRunnabilityTier(game, deps.crossoverRatings, deps.hostPlatform)
+  const tier = deriveRunnabilityTier(
+    game,
+    deps.crossoverRatings,
+    deps.hostPlatform
+  )
   return tier !== null && runnability.includes(tier)
 }
 

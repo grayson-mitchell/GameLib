@@ -256,13 +256,15 @@ describe('steamSyncStatus wiring -- the five-touchpoint chain (34.15-02, D-06/D-
 // ---------------------------------------------------------------------------
 
 describe('RED proofs -- each gate demonstrably trips against a source-derived known-bad specimen', () => {
-  it('W2 trips when the frontendListenerSlot(\'steamSyncStatus\') line is deleted from preload/api/steam.ts (derived by line-removal from the real source)', () => {
+  it("W2 trips when the frontendListenerSlot('steamSyncStatus') line is deleted from preload/api/steam.ts (derived by line-removal from the real source)", () => {
     const realSource = readGated(PRELOAD_STEAM_PATH)
     expect(realSource).toContain("frontendListenerSlot('steamSyncStatus')")
 
     const missingSlotSpecimen = realSource
       .split('\n')
-      .filter((line) => !line.includes("frontendListenerSlot('steamSyncStatus')"))
+      .filter(
+        (line) => !line.includes("frontendListenerSlot('steamSyncStatus')")
+      )
       .join('\n')
 
     expect(() =>
@@ -311,7 +313,9 @@ describe('RED proofs -- each gate demonstrably trips against a source-derived kn
       'REMOVED_DECLARATION'
     )
 
-    expect(() => gateW1_ipcDeclaresChannel(missingDeclarationSpecimen)).toThrow()
+    expect(() =>
+      gateW1_ipcDeclaresChannel(missingDeclarationSpecimen)
+    ).toThrow()
   })
 
   it('W4 trips when steamSyncStatus is removed from ContextProvider.tsx while frontend/types.ts still declares it (derived by string-removal, proving the lockstep pair is checked, not just one side)', () => {

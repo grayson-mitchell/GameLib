@@ -35,7 +35,9 @@ jest.mock('@fortawesome/react-fontawesome', () => ({
 // Imported after the mocks above (textual order -- this project's ts-jest
 // setup does not hoist jest.mock like babel-jest).
 import Dropdown from '../../Dropdown'
-import FilterFacetGroup, { FilterFacetRow } from '../components/FilterFacetGroup'
+import FilterFacetGroup, {
+  FilterFacetRow
+} from '../components/FilterFacetGroup'
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
 type AnyElement = ReactElement<AnyProps> & { props: AnyProps }

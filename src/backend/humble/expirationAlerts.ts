@@ -43,7 +43,8 @@ export function detectAndNotifyExpirationTransitions(
     }
 
     const current = key.expiration
-    const last = humbleNotifiedExpirationStore.get(composite)?.expiration ?? null
+    const last =
+      humbleNotifiedExpirationStore.get(composite)?.expiration ?? null
 
     if (current !== null && current !== last) {
       newlyExpiring.push(key)

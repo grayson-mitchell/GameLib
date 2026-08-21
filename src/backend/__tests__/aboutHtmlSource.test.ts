@@ -18,7 +18,14 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-const ABOUT_HTML_PATH = join(__dirname, '..', '..', '..', 'public', 'about.html')
+const ABOUT_HTML_PATH = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'public',
+  'about.html'
+)
 
 function loadAboutHtml(): string {
   return readFileSync(ABOUT_HTML_PATH, 'utf-8')
@@ -44,10 +51,12 @@ describe('public/about.html source gate (REQ-34.1-08, GAP-2 / D-12, T-34.1-29)',
   test('the repository URL is present as inert text, not a link', () => {
     // Guards against the negative gate above passing vacuously because the URL was
     // simply deleted rather than kept as plain text.
-    expect(loadAboutHtml()).toContain('https://github.com/grayson-mitchell/GameLib')
+    expect(loadAboutHtml()).toContain(
+      'https://github.com/grayson-mitchell/GameLib'
+    )
   })
 
-  test('carries a restrictive default-src \'self\' CSP meta tag', () => {
+  test("carries a restrictive default-src 'self' CSP meta tag", () => {
     const html = loadAboutHtml()
     expect(html).toMatch(
       /<meta\s+http-equiv="Content-Security-Policy"\s+content="[^"]*default-src 'self'[^"]*"/

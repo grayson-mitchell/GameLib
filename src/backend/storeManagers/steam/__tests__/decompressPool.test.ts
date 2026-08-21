@@ -541,7 +541,9 @@ describe('DecompressPool GAMELIB_DECOMPRESS_POOL_SIZE override', () => {
 
   it('falls through to the unchanged default when the env var is unset', () => {
     delete process.env[ENV_KEY]
-    const defaultPool = new DecompressPool({ workerPath: POOL_TEST_WORKER_PATH })
+    const defaultPool = new DecompressPool({
+      workerPath: POOL_TEST_WORKER_PATH
+    })
     const expectedDefault = defaultPool.stats().size
     expect(expectedDefault).toBeGreaterThan(0)
   })
@@ -638,7 +640,9 @@ describe('DecompressPool stats().nativeWorkers (Phase 23.1 plan 04)', () => {
 
 // ── resolveWorkerSpec (quick task 260817-pkx, debug/humankind-depot-full-stall) ──
 
-type WorkerSpecPeek = { resolveWorkerSpec: () => { kind: string; value: string } }
+type WorkerSpecPeek = {
+  resolveWorkerSpec: () => { kind: string; value: string }
+}
 
 describe('DecompressPool resolveWorkerSpec (SEA-asset worker resolution)', () => {
   afterEach(() => {
@@ -827,7 +831,9 @@ describe('lzmaLoader (native-first decode with pure-JS fallback)', () => {
       const loader = require('../depot/lzmaLoader') as {
         loadLzmaModule: () => Promise<LzmaModule>
         lzmaDecoderKind: () => string
-        setNativeLzmaDecodeEnabledForTests: (enabled: boolean | undefined) => void
+        setNativeLzmaDecodeEnabledForTests: (
+          enabled: boolean | undefined
+        ) => void
       }
       loader.setNativeLzmaDecodeEnabledForTests(true)
       isolatedLoadLzmaModule = loader.loadLzmaModule
@@ -856,7 +862,9 @@ describe('lzmaLoader (native-first decode with pure-JS fallback)', () => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const loader = require('../depot/lzmaLoader') as {
         loadLzmaModule: () => Promise<LzmaModule>
-        setNativeLzmaDecodeEnabledForTests: (enabled: boolean | undefined) => void
+        setNativeLzmaDecodeEnabledForTests: (
+          enabled: boolean | undefined
+        ) => void
       }
       loader.setNativeLzmaDecodeEnabledForTests(true)
       isolatedLoadLzmaModule = loader.loadLzmaModule
@@ -909,9 +917,7 @@ describe('lzmaLoader native-decode kill switch (default-off, Phase 23.1 plan 05)
       .flat(Infinity)
       .join(' ')
     expect(loggedText).toMatch(/NATIVE_LZMA_DECODE_ENABLED/)
-    expect(loggedText).toMatch(
-      /sea-native-lzma-real-chunk-decode-hang\.md/
-    )
+    expect(loggedText).toMatch(/sea-native-lzma-real-chunk-decode-hang\.md/)
     // Distinguishes the GATE's own message from the (still-real,
     // still-tested-above) import/smoke-test-failure message -- a future
     // reader grepping gamelib.log must be able to tell "deliberately
@@ -920,7 +926,10 @@ describe('lzmaLoader native-decode kill switch (default-off, Phase 23.1 plan 05)
   })
 
   it('a real, correctly-formed VZ chunk still decodes correctly through the gated-off (pure-JS) path -- the kill switch must not break installs, only skip native', async () => {
-    const data = Buffer.from('kill-switch pure-JS round-trip fixture. '.repeat(20), 'utf8')
+    const data = Buffer.from(
+      'kill-switch pure-JS round-trip fixture. '.repeat(20),
+      'utf8'
+    )
     const compressed = await compressAsync(data)
     const vzChunk = buildVZChunk(data, compressed)
 

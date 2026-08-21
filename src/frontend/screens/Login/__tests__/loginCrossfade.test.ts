@@ -69,7 +69,7 @@ describe('36-01 Task 5: the login panel crossfades against the co-mounted Steam 
     expect(ruleBody).toMatch(/pointer-events:\s*none/)
   })
 
-  it("SOURCE GATE (PRESENCE) -- .loginContentWrapper itself declares a transition property (a plain, non-!important one, so the app-wide body:has(.disableAnimations) universal-selector override in App.css can always win the cascade and switch the crossfade off)", () => {
+  it('SOURCE GATE (PRESENCE) -- .loginContentWrapper itself declares a transition property (a plain, non-!important one, so the app-wide body:has(.disableAnimations) universal-selector override in App.css can always win the cascade and switch the crossfade off)', () => {
     const source = read(LOGIN_SCSS)
     const ruleMatch = source.match(/\.loginContentWrapper\s*\{([^}]*)\}/)
 
@@ -83,7 +83,7 @@ describe('36-01 Task 5: the login panel crossfades against the co-mounted Steam 
     expect(ruleBody).not.toMatch(/transition:[^;]*!important/)
   })
 
-  it('SOURCE GATE (PRESENCE, three-way agreement) -- Dialog.tsx\'s transitionDuration, Login/index.tsx\'s LOGIN_DIALOG_EXIT_MS, and Login/index.scss\'s transition duration are all the SAME extracted numeric value, not three independently-typed literals that happen to currently agree', () => {
+  it("SOURCE GATE (PRESENCE, three-way agreement) -- Dialog.tsx's transitionDuration, Login/index.tsx's LOGIN_DIALOG_EXIT_MS, and Login/index.scss's transition duration are all the SAME extracted numeric value, not three independently-typed literals that happen to currently agree", () => {
     const dialogSource = read(DIALOG_TSX)
     const loginSource = read(LOGIN_TSX)
     const scssSource = read(LOGIN_SCSS)
@@ -125,12 +125,8 @@ describe('36-01 Task 5: the login panel crossfades against the co-mounted Steam 
     // it, not add a second, independent one).
     expect((loginSource.match(/startViewTransition/g) ?? []).length).toBe(0)
     expect((scssSource.match(/startViewTransition/g) ?? []).length).toBe(0)
-    expect(
-      (loginSource.match(/prefers-reduced-motion/g) ?? []).length
-    ).toBe(0)
-    expect(
-      (scssSource.match(/prefers-reduced-motion/g) ?? []).length
-    ).toBe(0)
+    expect((loginSource.match(/prefers-reduced-motion/g) ?? []).length).toBe(0)
+    expect((scssSource.match(/prefers-reduced-motion/g) ?? []).length).toBe(0)
   })
 
   it('SOURCE GATE (PRESENCE, F-10 regression guard) -- .loginBackground still declares position: absolute and inset: 0, byte-shape unchanged by the crossfade work (Task 3 was explicitly instructed not to touch it -- F-10 was a live-gate-caught regression the last time this rule moved)', () => {
@@ -147,7 +143,7 @@ describe('36-01 Task 5: the login panel crossfades against the co-mounted Steam 
     expect(ruleBody).toMatch(/inset:\s*0/)
   })
 
-  it("SOURCE GATE (PRESENCE + ABSENCE) -- the Humble tile opens the co-mounted overlay and never routes", () => {
+  it('SOURCE GATE (PRESENCE + ABSENCE) -- the Humble tile opens the co-mounted overlay and never routes', () => {
     const source = read(LOGIN_TSX)
 
     // Breaks if: either tile stops calling openLoginOverlay with its own
@@ -159,9 +155,7 @@ describe('36-01 Task 5: the login panel crossfades against the co-mounted Steam 
     expect(source).toMatch(
       /primaryLoginAction=\{\(\) => openLoginOverlay\('steam'\)\}/
     )
-    expect((source.match(/navigate\(humbleLoginPath\)/g) ?? []).length).toBe(
-      0
-    )
+    expect((source.match(/navigate\(humbleLoginPath\)/g) ?? []).length).toBe(0)
     expect(source).toMatch(/mountedOverlay === 'humble'/)
   })
 })

@@ -169,9 +169,13 @@ export default function HumbleKeyRow({
       {giftAction &&
         (giftAction.giftedAt !== null ? (
           <span className="humbleKeyGiftedAnnotation">
-            {t('humbleKeys.giftedAnnotation', 'Opened Humble gift page {{date}}', {
-              date: new Date(giftAction.giftedAt).toLocaleDateString()
-            })}
+            {t(
+              'humbleKeys.giftedAnnotation',
+              'Opened Humble gift page {{date}}',
+              {
+                date: new Date(giftAction.giftedAt).toLocaleDateString()
+              }
+            )}
           </span>
         ) : (
           <button

@@ -1,4 +1,8 @@
-import { HumbleKey, HumbleKeyState, HumbleOrderCacheEntry } from 'common/types/humble'
+import {
+  HumbleKey,
+  HumbleKeyState,
+  HumbleOrderCacheEntry
+} from 'common/types/humble'
 import { OrderDetail } from './adapter'
 
 /**
@@ -352,7 +356,11 @@ export function classifyOrder(
   const keyIndexByComposite: Record<string, string | number> = {}
   const revealedKeyValueByComposite: Record<string, string> = {}
   const rawProduct = rawOrder.product as
-    | { category?: string | null; choice_url?: string | null; human_name?: string | null }
+    | {
+        category?: string | null
+        choice_url?: string | null
+        human_name?: string | null
+      }
     | null
     | undefined
   const orderLabel =
@@ -473,7 +481,10 @@ export function classifyOrder(
   // Never throws when choice_url/deadline are absent; simply omits the
   // pseudo-entry (Pitfall 2 defensive handling, Assumption A1/A2).
   if (keys.length === 0 && rawProduct) {
-    if (rawProduct.category === 'subscriptioncontent' && rawProduct.choice_url) {
+    if (
+      rawProduct.category === 'subscriptioncontent' &&
+      rawProduct.choice_url
+    ) {
       // WR-07: normalize the deadline through the SAME tolerant helper as
       // every tpk expiration. The field name is speculative (Assumption A2),
       // so an unparseable live value must degrade to null (-> the

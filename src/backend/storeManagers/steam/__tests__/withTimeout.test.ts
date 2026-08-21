@@ -64,7 +64,11 @@ describe('withTimeout', () => {
       // CM socket that queues the job and never answers.
     })
 
-    const race = withTimeout(neverSettles, 5000, 'fetchInstalldir getProductInfo')
+    const race = withTimeout(
+      neverSettles,
+      5000,
+      'fetchInstalldir getProductInfo'
+    )
     const assertion = expect(race).rejects.toThrow(
       /fetchInstalldir getProductInfo timed out after 5000ms/
     )
@@ -78,7 +82,11 @@ describe('withTimeout', () => {
     const originalError = new Error('boom: ECONNRESET')
 
     await expect(
-      withTimeout(Promise.reject(originalError), 5000, 'fetchInstalldir getProductInfo')
+      withTimeout(
+        Promise.reject(originalError),
+        5000,
+        'fetchInstalldir getProductInfo'
+      )
     ).rejects.toBe(originalError)
 
     // The race settled on the promise branch, not the timeout branch — the

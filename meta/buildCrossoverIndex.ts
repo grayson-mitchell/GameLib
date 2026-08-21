@@ -24,7 +24,8 @@ import { gunzipSync, gzipSync } from 'node:zlib'
 
 import { XMLParser } from 'fast-xml-parser'
 
-const DUMP_URL = 'https://ftp.codeweavers.com/pub/crossover/tie/crossover.tie.gz'
+const DUMP_URL =
+  'https://ftp.codeweavers.com/pub/crossover/tie/crossover.tie.gz'
 const DEFAULT_OUT_DIR = 'dist-index'
 
 // ---------------------------------------------------------------------------
@@ -214,8 +215,7 @@ export function extractRecords(parsed: RawDump): DumpRecord[] {
       label: text(best) ?? '',
       cxversion: String(best['@_version'] ?? ''),
       num: Number(best['@_num'] ?? 0),
-      steamid:
-        profile.steamid !== undefined ? text(profile.steamid) : undefined
+      steamid: profile.steamid !== undefined ? text(profile.steamid) : undefined
     })
   }
 

@@ -37,7 +37,11 @@ describe('parseEpicAuthCode', () => {
       null,
       'JSON with null authorizationCode'
     ],
-    ['{not valid json at all', null, 'malformed JSON starting with "{" (does not throw)'],
+    [
+      '{not valid json at all',
+      null,
+      'malformed JSON starting with "{" (does not throw)'
+    ],
     ['', null, 'empty string'],
     ['   ', null, 'whitespace-only string'],
     ['hello', null, 'short implausible string (below plausible code length)']

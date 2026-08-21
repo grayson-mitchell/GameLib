@@ -213,7 +213,9 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
     await flush()
     const frame = frames.find((f) => f.channel === RUST_HUMBLE_LOGIN_OPEN)
 
-    input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: null })}\n`)
+    input.write(
+      `${JSON.stringify({ id: frame?.id, ok: true, result: null })}\n`
+    )
     await expect(promise).rejects.toThrow(/malformed response/)
   })
 
@@ -241,7 +243,11 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
         result: {
           total: 33,
           matched: [
-            { name: '_simpleauth_sess', domain: 'humblebundle.com', value: 'abc' }
+            {
+              name: '_simpleauth_sess',
+              domain: 'humblebundle.com',
+              value: 'abc'
+            }
           ]
         }
       })}\n`
@@ -278,7 +284,11 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
     const { input, frames } = startTransport()
     const seam = createRustLoginWindowSeam()
 
-    const promise = seam.cookiesForDomain('login-humble-1', 'humblebundle.com', [])
+    const promise = seam.cookiesForDomain(
+      'login-humble-1',
+      'humblebundle.com',
+      []
+    )
     await flush()
 
     const frame = frames.find(
@@ -295,7 +305,11 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
         result: {
           total: 33,
           matched: [
-            { name: '_simpleauth_sess', domain: '.humblebundle.com', value: 'abc' }
+            {
+              name: '_simpleauth_sess',
+              domain: '.humblebundle.com',
+              value: 'abc'
+            }
           ]
         }
       })}\n`
@@ -316,7 +330,11 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
     const { input, frames } = startTransport()
     const seam = createRustLoginWindowSeam()
 
-    const promise = seam.cookiesForDomain('login-humble-1', 'humblebundle.com', [])
+    const promise = seam.cookiesForDomain(
+      'login-humble-1',
+      'humblebundle.com',
+      []
+    )
     await flush()
     const frame = frames.find(
       (f) => f.channel === RUST_HUMBLE_LOGIN_COOKIES_FOR_DOMAIN
@@ -386,7 +404,9 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
     const promise = seam.takeEvents('oauth-capture-0')
     await flush()
 
-    const frame = frames.find((f) => f.channel === RUST_HUMBLE_LOGIN_TAKE_EVENTS)
+    const frame = frames.find(
+      (f) => f.channel === RUST_HUMBLE_LOGIN_TAKE_EVENTS
+    )
     expect(frame).toBeDefined()
 
     input.write(
@@ -406,13 +426,17 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
     const promise = seam.takeEvents('login-humble-1')
     await flush()
 
-    const frame = frames.find((f) => f.channel === RUST_HUMBLE_LOGIN_TAKE_EVENTS)
+    const frame = frames.find(
+      (f) => f.channel === RUST_HUMBLE_LOGIN_TAKE_EVENTS
+    )
 
     input.write(
       `${JSON.stringify({
         id: frame?.id,
         ok: true,
-        result: [{ event: 'something-else', url: 'https://www.humblebundle.com/x' }]
+        result: [
+          { event: 'something-else', url: 'https://www.humblebundle.com/x' }
+        ]
       })}\n`
     )
     await expect(promise).resolves.toEqual([
@@ -431,7 +455,9 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
     expect(frame).toBeDefined()
     expect(frame?.args).toEqual(['login-humble-1'])
 
-    input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: true })}\n`)
+    input.write(
+      `${JSON.stringify({ id: frame?.id, ok: true, result: true })}\n`
+    )
     await expect(promise).resolves.toBe(true)
   })
 
@@ -463,7 +489,9 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
     )
     await flush()
 
-    const frame = frames.find((f) => f.channel === RUST_HUMBLE_LOGIN_CLEAR_STORAGE)
+    const frame = frames.find(
+      (f) => f.channel === RUST_HUMBLE_LOGIN_CLEAR_STORAGE
+    )
     expect(frame).toBeDefined()
     expect(frame?.kind).toBe('rustInvoke')
     expect(frame?.args).toEqual([
@@ -505,7 +533,9 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
       FAKE_USER_AGENT
     )
     await flush()
-    const frame = frames.find((f) => f.channel === RUST_HUMBLE_LOGIN_CLEAR_STORAGE)
+    const frame = frames.find(
+      (f) => f.channel === RUST_HUMBLE_LOGIN_CLEAR_STORAGE
+    )
 
     input.write(
       `${JSON.stringify({
@@ -534,7 +564,9 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
       FAKE_USER_AGENT
     )
     await flush()
-    const frame = frames.find((f) => f.channel === RUST_HUMBLE_LOGIN_CLEAR_STORAGE)
+    const frame = frames.find(
+      (f) => f.channel === RUST_HUMBLE_LOGIN_CLEAR_STORAGE
+    )
 
     input.write(
       `${JSON.stringify({ id: frame?.id, ok: true, result: { localStorage: true } })}\n`
@@ -551,7 +583,9 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
       FAKE_USER_AGENT
     )
     await flush()
-    const frame = frames.find((f) => f.channel === RUST_HUMBLE_LOGIN_CLEAR_STORAGE)
+    const frame = frames.find(
+      (f) => f.channel === RUST_HUMBLE_LOGIN_CLEAR_STORAGE
+    )
 
     input.write(
       `${JSON.stringify({

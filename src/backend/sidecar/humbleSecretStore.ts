@@ -41,7 +41,10 @@
 
 import { logInfo, logWarning, LogPrefix } from '../logger'
 import { requestRustInvoke } from './sidecarRpc'
-import { RUST_KEYRING_GET, RUST_KEYRING_SET } from 'common/types/sidecarTransport'
+import {
+  RUST_KEYRING_GET,
+  RUST_KEYRING_SET
+} from 'common/types/sidecarTransport'
 import {
   SidecarKeyringSlotStore,
   KEYRING_SLOT_HUMBLE_SESSION,
@@ -128,7 +131,10 @@ const MIGRATION_TARGETS: Record<
   HumbleSecretKey,
   { configKey: 'sessionCookie' | 'csrfToken'; slot: string }
 > = {
-  sessionCookie: { configKey: HUMBLE_TOKEN_STORE_KEY, slot: KEYRING_SLOT_HUMBLE_SESSION },
+  sessionCookie: {
+    configKey: HUMBLE_TOKEN_STORE_KEY,
+    slot: KEYRING_SLOT_HUMBLE_SESSION
+  },
   csrfToken: { configKey: 'csrfToken', slot: KEYRING_SLOT_HUMBLE_CSRF }
 }
 

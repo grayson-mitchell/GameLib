@@ -192,8 +192,10 @@ function resolveNativeBinding(_dir: string): unknown {
     return cachedBinding
   }
 
-  let sea: { isSea: () => boolean; getRawAsset: (key: string) => ArrayBuffer } | null =
-    null
+  let sea: {
+    isSea: () => boolean
+    getRawAsset: (key: string) => ArrayBuffer
+  } | null = null
   try {
     // node:sea is a Node builtin; a guarded runtime require (not a
     // relative/alias path) is the deliberate mechanism here, mirroring

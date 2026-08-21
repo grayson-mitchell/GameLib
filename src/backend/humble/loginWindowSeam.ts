@@ -119,9 +119,16 @@ export interface LoginWindowStorageClearResult {
  */
 export interface LoginWindowSeam {
   /** Opens a login window on `url`. Resolves the window's generated label. */
-  open(url: string, options: { visible: boolean; userAgent: string }): Promise<string>
+  open(
+    url: string,
+    options: { visible: boolean; userAgent: string }
+  ): Promise<string>
   /** Reads the login window's cookie jar, filtered by `host` (domain-suffix match) and `names`. */
-  cookies(label: string, host: string, names: string[]): Promise<LoginWindowCookieRead>
+  cookies(
+    label: string,
+    host: string,
+    names: string[]
+  ): Promise<LoginWindowCookieRead>
   /**
    * Reads the login window's cookie jar, filtered by `domain` in the OPPOSITE direction from
    * `cookies()` above (Phase 34.4.1 Plan 22, F-6 Defect A, REQ-34.4.1-GAP-07). `cookies()`

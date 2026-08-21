@@ -54,7 +54,12 @@ export async function getWikiGameInfo(
         (isMac &&
           cachedResponse.codeweavers.macRating === null &&
           crossoverIndexHas(gameInfo)))
-    if (!forceRefresh && cachedResponse && !staleAppleData && !staleCrossoverData) {
+    if (
+      !forceRefresh &&
+      cachedResponse &&
+      !staleAppleData &&
+      !staleCrossoverData
+    ) {
       logInfo(
         [`Using cached ExtraGameInfo data for ${title}`],
         LogPrefix.ExtraGameInfo
@@ -71,8 +76,8 @@ export async function getWikiGameInfo(
         isMac ? getInfoFromAppleGamingWiki(title) : null,
         isLinux ? getUmuId(appName, runner) : null,
         isMac
-          ? (await getCodeweaversFromIndex(gameInfo)) ??
-            getInfoFromCodeweavers(title)
+          ? ((await getCodeweaversFromIndex(gameInfo)) ??
+            getInfoFromCodeweavers(title))
           : isLinux
             ? getInfoFromCodeweavers(title)
             : null

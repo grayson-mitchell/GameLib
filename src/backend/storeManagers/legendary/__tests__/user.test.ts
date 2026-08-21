@@ -100,7 +100,8 @@ jest.mock('../..', () => ({
 
 // ── ../../../humble/userAgent mock (standardBrowserUserAgent) ────────────────────────────
 jest.mock('../../../humble/userAgent', () => ({
-  standardBrowserUserAgent: () => 'Mozilla/5.0 (Test) Chrome/100.0 Safari/537.36'
+  standardBrowserUserAgent: () =>
+    'Mozilla/5.0 (Test) Chrome/100.0 Safari/537.36'
 }))
 
 import { LegendaryUser } from '../user'
@@ -268,7 +269,9 @@ describe('LegendaryUser.logout()', () => {
 
   it('REQ-34.5-04 (T-34.5-20): with a seam installed, clearCookies is called with the Epic host and the window is closed even when the clear rejects', async () => {
     const seam = makeMockSeam({
-      clearCookies: jest.fn().mockRejectedValue(new Error('rust-side clear failed'))
+      clearCookies: jest
+        .fn()
+        .mockRejectedValue(new Error('rust-side clear failed'))
     })
     setLoginWindowSeam(seam)
 
@@ -279,7 +282,10 @@ describe('LegendaryUser.logout()', () => {
       expect.stringContaining('epicgames.com'),
       expect.objectContaining({ visible: false })
     )
-    expect(seam.clearCookies).toHaveBeenCalledWith('window-label-1', 'epicgames.com')
+    expect(seam.clearCookies).toHaveBeenCalledWith(
+      'window-label-1',
+      'epicgames.com'
+    )
     expect(seam.close).toHaveBeenCalledWith('window-label-1')
     // Credential-side cleanup still ran despite the rejected clear.
     expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
@@ -327,8 +333,12 @@ describe('LegendaryUser.logout()', () => {
 
   it('F-6 twin: the credential-side cleanup runs even when BOTH the cookie step and the storage step reject', async () => {
     const seam = makeMockSeam({
-      clearCookies: jest.fn().mockRejectedValue(new Error('rust cookie clear failed')),
-      clearStorage: jest.fn().mockRejectedValue(new Error('rust storage clear failed'))
+      clearCookies: jest
+        .fn()
+        .mockRejectedValue(new Error('rust cookie clear failed')),
+      clearStorage: jest
+        .fn()
+        .mockRejectedValue(new Error('rust storage clear failed'))
     })
     setLoginWindowSeam(seam)
 
@@ -341,7 +351,9 @@ describe('LegendaryUser.logout()', () => {
 
   it('F-6 twin: a rejecting clearStorage step still leaves logout() resolving, and the cookie step ran anyway', async () => {
     const seam = makeMockSeam({
-      clearStorage: jest.fn().mockRejectedValue(new Error('rust storage clear failed'))
+      clearStorage: jest
+        .fn()
+        .mockRejectedValue(new Error('rust storage clear failed'))
     })
     setLoginWindowSeam(seam)
 
@@ -353,7 +365,9 @@ describe('LegendaryUser.logout()', () => {
 
   it('F-6 twin: a rejecting clearCookies step does not prevent the storage step from running', async () => {
     const seam = makeMockSeam({
-      clearCookies: jest.fn().mockRejectedValue(new Error('rust cookie clear failed'))
+      clearCookies: jest
+        .fn()
+        .mockRejectedValue(new Error('rust cookie clear failed'))
     })
     setLoginWindowSeam(seam)
 

@@ -171,7 +171,9 @@ let protocolUrlHandlerRegistered = false
  * function with a synthetic argv instead of reconstructing the call site
  * (`test-must-exercise-production-call-shape`).
  */
-export function deliverStartupProtocolUrl(argv: string[] = process.argv): boolean {
+export function deliverStartupProtocolUrl(
+  argv: string[] = process.argv
+): boolean {
   const hasProtocolUrl = argv.some((arg) => arg.startsWith('gamelib://'))
   if (!hasProtocolUrl) return false
 
@@ -215,18 +217,21 @@ export function deliverStartupProtocolUrl(argv: string[] = process.argv): boolea
 export function registerProtocolUrlHandler(): void {
   if (protocolUrlHandlerRegistered) return
   protocolUrlHandlerRegistered = true
-  electronStub.ipcMain.handle('handleProtocolUrl', (_event: unknown, url?: unknown) => {
-    if (typeof url !== 'string' || !url.startsWith('gamelib://')) {
-      throw new Error('handleProtocolUrl: rejected a non-gamelib argument')
+  electronStub.ipcMain.handle(
+    'handleProtocolUrl',
+    (_event: unknown, url?: unknown) => {
+      if (typeof url !== 'string' || !url.startsWith('gamelib://')) {
+        throw new Error('handleProtocolUrl: rejected a non-gamelib argument')
+      }
+      void Promise.resolve(handleProtocol([url])).catch((error) => {
+        logError(
+          `[bootstrap] registerProtocolUrlHandler: handleProtocol rejected: ${error}`,
+          LogPrefix.Backend
+        )
+      })
+      return true
     }
-    void Promise.resolve(handleProtocol([url])).catch((error) => {
-      logError(
-        `[bootstrap] registerProtocolUrlHandler: handleProtocol rejected: ${error}`,
-        LogPrefix.Backend
-      )
-    })
-    return true
-  })
+  )
 }
 
 export function init(

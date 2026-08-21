@@ -3,12 +3,7 @@
 import type { IpcRendererEvent } from 'electron'
 
 import type { AsyncIPCFunctions, SyncIPCFunctions, FrontendMessages } from 'common/types/ipc'
-import {
-  isTauri,
-  invoke as tauriInvoke,
-  send as tauriSend,
-  listen as tauriListen
-} from './tauriTransport'
+import { isTauri, invoke as tauriInvoke, send as tauriSend, listen as tauriListen } from './tauriTransport'
 
 // Creates a Promise<T> only if T isn't already a promise
 type PromiseOnce<T> = T extends Promise<unknown> ? T : Promise<T>
@@ -51,10 +46,7 @@ function frontendListenerSlot<ChannelName extends keyof FrontendMessages>(channe
   return (listener: (e: IpcRendererEvent, ...args: Parameters<FrontendMessages[ChannelName]>) => void) => {
     if (isTauri()) {
       return tauriListen(channel, (...args) =>
-        listener(
-          undefined as unknown as IpcRendererEvent,
-          ...(args as Parameters<FrontendMessages[ChannelName]>)
-        )
+        listener(undefined as unknown as IpcRendererEvent, ...(args as Parameters<FrontendMessages[ChannelName]>))
       )
     }
 

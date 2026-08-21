@@ -79,11 +79,7 @@ jest.mock('../../online_monitor', () => ({
 // so the fallback-interpolation behavior every OTHER spec in this file
 // depends on must be re-applied in a file-scope `beforeEach` below.
 const mockT = jest.fn(
-  (
-    _key: string,
-    fallback = '',
-    options?: Record<string, string | number>
-  ) =>
+  (_key: string, fallback = '', options?: Record<string, string | number>) =>
     options
       ? fallback.replace(/{{(\w+)}}/g, (match: string, token: string) =>
           token in options ? String(options[token]) : match
@@ -152,11 +148,7 @@ function emitAdvance(
 // this block into every describe's own beforeEach.
 beforeEach(() => {
   mockT.mockImplementation(
-    (
-      _key: string,
-      fallback = '',
-      options?: Record<string, string | number>
-    ) =>
+    (_key: string, fallback = '', options?: Record<string, string | number>) =>
       options
         ? fallback.replace(/{{(\w+)}}/g, (match: string, token: string) =>
             token in options ? String(options[token]) : match

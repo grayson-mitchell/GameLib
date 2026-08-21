@@ -267,9 +267,7 @@ describe('NavShell', () => {
     )
     expect(navRight).toBeDefined()
     const navRightChildren = collectElements(navRight?.props.children)
-    expect(navRightChildren.some((el) => el.type === DownloadsRing)).toBe(
-      true
-    )
+    expect(navRightChildren.some((el) => el.type === DownloadsRing)).toBe(true)
   })
 
   it('subscribes to window.api.handleGoToScreen on mount and returns its unsubscribe from the effect', () => {

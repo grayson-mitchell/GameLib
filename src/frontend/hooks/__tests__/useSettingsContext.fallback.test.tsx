@@ -58,7 +58,10 @@ describe('shouldWithholdContext (30-06 SEAM Invariant B)', () => {
 
   it('does NOT withhold once a load has been attempted and resolved real settings', () => {
     expect(
-      shouldWithholdContext({ language: 'en', defaultInstallPath: '/foo' }, true)
+      shouldWithholdContext(
+        { language: 'en', defaultInstallPath: '/foo' },
+        true
+      )
     ).toBe(false)
   })
 

@@ -8,10 +8,7 @@
  */
 
 import { spawnAsync } from 'backend/utils'
-import {
-  parseSteamApiImports,
-  scanSteamApiImports
-} from '../importScan'
+import { parseSteamApiImports, scanSteamApiImports } from '../importScan'
 import {
   AVERNUM_4_OBJDUMP_OUTPUT,
   HOARD_REUBEN_OBJDUMP_OUTPUT,
@@ -82,7 +79,10 @@ describe('importScan', () => {
         stderr: ''
       })
 
-      await scanSteamApiImports('1234', '/bottle/Program Files/Avernum 4/Avernum 4.exe')
+      await scanSteamApiImports(
+        '1234',
+        '/bottle/Program Files/Avernum 4/Avernum 4.exe'
+      )
 
       expect(mockedSpawnAsync).toHaveBeenCalledTimes(1)
       expect(mockedSpawnAsync).toHaveBeenCalledWith('/usr/bin/objdump', [

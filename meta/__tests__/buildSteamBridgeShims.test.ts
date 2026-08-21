@@ -159,9 +159,7 @@ describe('buildSteamBridgeShims', () => {
         expect(steamAppIdOutputPath()).toBe(
           join('public', 'bin', 'x64', 'darwin', 'steam_appid.txt')
         )
-        expect(helperOutputPath()).not.toContain(
-          join('bin', 'arm64', 'darwin')
-        )
+        expect(helperOutputPath()).not.toContain(join('bin', 'arm64', 'darwin'))
       } finally {
         if (previous === undefined) {
           delete process.env.GAMELIB_BRIDGE_TARGET_ARCH

@@ -74,7 +74,11 @@ export default function FilterMoreGroup() {
     onOnly: () => void
   ) => (
     <div className="FilterMoreGroup__triState">
-      <FilterFacetRow label={label} checked={value !== 'off'} onToggle={onToggle} />
+      <FilterFacetRow
+        label={label}
+        checked={value !== 'off'}
+        onToggle={onToggle}
+      />
       <button
         type="button"
         className="FilterMoreGroup__only"
@@ -88,7 +92,10 @@ export default function FilterMoreGroup() {
 
   return (
     <FilterFacetGroup
-      title={tGamelib('gamelib:library.filterPanel.moreFilters', 'More filters')}
+      title={tGamelib(
+        'gamelib:library.filterPanel.moreFilters',
+        'More filters'
+      )}
       className="FilterMoreGroup"
       selectedCount={selectedCount}
       // Literal key AND literal default, repeated verbatim at all three
@@ -121,14 +128,22 @@ export default function FilterMoreGroup() {
         setNonAvailableOnly
       )}
       <FilterFacetRow
-        label={t('header.show_support_offline_only', 'Show offline-supported only')}
+        label={t(
+          'header.show_support_offline_only',
+          'Show offline-supported only'
+        )}
         checked={showSupportOfflineOnly}
         onToggle={() => setShowSupportOfflineOnly(!showSupportOfflineOnly)}
       />
       <FilterFacetRow
-        label={t('header.show_third_party_managed_only', 'Show third-party managed only')}
+        label={t(
+          'header.show_third_party_managed_only',
+          'Show third-party managed only'
+        )}
         checked={showThirdPartyManagedOnly}
-        onToggle={() => setShowThirdPartyManagedOnly(!showThirdPartyManagedOnly)}
+        onToggle={() =>
+          setShowThirdPartyManagedOnly(!showThirdPartyManagedOnly)
+        }
       />
       <FilterFacetRow
         label={t('header.show_updates_only', 'Show games with updates only')}

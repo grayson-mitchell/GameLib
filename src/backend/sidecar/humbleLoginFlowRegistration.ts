@@ -103,7 +103,11 @@ function logSendFailure(channel: string, error: unknown): void {
 
 /** Coerces one raw cookie entry from a `humble_login_cookies` response into `LoginWindowCookie`. */
 function coerceCookie(raw: unknown): LoginWindowCookie {
-  const entry = raw as { name?: unknown; domain?: unknown; value?: unknown } | null
+  const entry = raw as {
+    name?: unknown
+    domain?: unknown
+    value?: unknown
+  } | null
   return {
     name: typeof entry?.name === 'string' ? entry.name : '',
     domain: typeof entry?.domain === 'string' ? entry.domain : null,
@@ -125,7 +129,9 @@ function coerceCookie(raw: unknown): LoginWindowCookie {
 function coerceNavEvent(raw: unknown): LoginWindowNavEvent {
   const entry = raw as { event?: unknown; url?: unknown } | null
   const event =
-    entry?.event === 'started' || entry?.event === 'finished' || entry?.event === 'closed'
+    entry?.event === 'started' ||
+    entry?.event === 'finished' ||
+    entry?.event === 'closed'
       ? entry.event
       : 'finished'
   return {
@@ -208,11 +214,10 @@ export function createRustLoginWindowSeam(): LoginWindowSeam {
     // guard as `cookies()`, deliberately: a missing/non-numeric `total` here would recreate
     // F-6's exact silent-degradation shape one layer down.
     async cookiesForDomain(label, domain, names) {
-      const result = await requestRustInvoke(RUST_HUMBLE_LOGIN_COOKIES_FOR_DOMAIN, [
-        label,
-        domain,
-        names
-      ])
+      const result = await requestRustInvoke(
+        RUST_HUMBLE_LOGIN_COOKIES_FOR_DOMAIN,
+        [label, domain, names]
+      )
       const record = result as { total?: unknown; matched?: unknown } | null
       if (
         !record ||
@@ -364,21 +369,24 @@ export function registerHumbleLoginFlows(): void {
   // app.userAgentFallback), so no try/catch is needed here.
   ipcMain.handle('humbleGetLoginUserAgent', () => standardBrowserUserAgent())
 
-  ipcMain.handle('humbleRevealKey', async (_event: unknown, ...args: unknown[]) => {
-    const params = args[0] as { gamekey: string; machineName: string }
-    try {
-      return await HumbleLibrary.revealKey(params.gamekey, params.machineName)
-    } catch (error) {
-      console.warn(
-        '[humbleLoginFlowRegistration] humbleRevealKey failed:',
-        error instanceof Error ? error.message : String(error)
-      )
-      // Same typed failure outcome shape revealKey()'s own internal defensive
-      // default already returns (library.ts's concurrent-duplicate guard) --
-      // never a bare reject.
-      return { status: 'failed' }
+  ipcMain.handle(
+    'humbleRevealKey',
+    async (_event: unknown, ...args: unknown[]) => {
+      const params = args[0] as { gamekey: string; machineName: string }
+      try {
+        return await HumbleLibrary.revealKey(params.gamekey, params.machineName)
+      } catch (error) {
+        console.warn(
+          '[humbleLoginFlowRegistration] humbleRevealKey failed:',
+          error instanceof Error ? error.message : String(error)
+        )
+        // Same typed failure outcome shape revealKey()'s own internal defensive
+        // default already returns (library.ts's concurrent-duplicate guard) --
+        // never a bare reject.
+        return { status: 'failed' }
+      }
     }
-  })
+  )
 
   // ── send (2) ────────────────────────────────────────────────────────────────────────────────
 

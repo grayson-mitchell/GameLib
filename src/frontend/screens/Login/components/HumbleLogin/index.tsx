@@ -21,7 +21,11 @@ export default function HumbleLogin({ dismiss }: Props) {
   const { t } = useTranslation()
 
   return (
-    <Dialog showCloseButton={true} onClose={dismiss} className="humbleLoginDialog">
+    <Dialog
+      showCloseButton={true}
+      onClose={dismiss}
+      className="humbleLoginDialog"
+    >
       <DialogHeader onClose={dismiss}>
         {t('login.humble_dialog_title', 'Sign in to Humble Bundle')}
       </DialogHeader>

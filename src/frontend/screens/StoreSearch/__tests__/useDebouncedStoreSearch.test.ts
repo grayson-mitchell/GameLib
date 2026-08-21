@@ -51,9 +51,7 @@ jest.mock('react', () => {
       const idx = stateCursor++
       if (idx >= stateSlots.length) {
         stateSlots[idx] =
-          typeof initial === 'function'
-            ? (initial as () => unknown)()
-            : initial
+          typeof initial === 'function' ? (initial as () => unknown)() : initial
       }
       const setState = (updater: unknown) => {
         stateSlots[idx] =
@@ -157,7 +155,9 @@ async function settle(current: Hook): Promise<Hook> {
   return value
 }
 
-function makeResult(overrides: Partial<StoreSearchResult> = {}): StoreSearchResult {
+function makeResult(
+  overrides: Partial<StoreSearchResult> = {}
+): StoreSearchResult {
   return {
     gameId: 'game-1',
     title: 'Portal',

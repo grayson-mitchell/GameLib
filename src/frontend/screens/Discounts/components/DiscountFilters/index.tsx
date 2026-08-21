@@ -428,9 +428,13 @@ const DiscountFilters = ({
                 </span>
                 {maxPegiAge !== null && (
                   <span className="discountFilters__labelValue">
-                    {tGamelib('gamelib:discounts.pegiPrefix', 'PEGI ≤ {{value}}', {
-                      value: maxPegiAge
-                    })}
+                    {tGamelib(
+                      'gamelib:discounts.pegiPrefix',
+                      'PEGI ≤ {{value}}',
+                      {
+                        value: maxPegiAge
+                      }
+                    )}
                   </span>
                 )}
               </label>

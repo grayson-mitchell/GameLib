@@ -109,11 +109,7 @@ import {
   LogPrefix,
   logWarning
 } from './logger'
-import {
-  launchEventCallback,
-  runWineCommand,
-  validWine
-} from './launcher'
+import { launchEventCallback, runWineCommand, validWine } from './launcher'
 import { readKnownFixes } from './knownFixes'
 import { initQueue } from './downloadmanager/downloadqueue'
 import {
@@ -194,11 +190,7 @@ import MigrationSystem from './migration'
 // bodies -- the sidecar imports these same modules directly. These
 // registrations below stay one-line delegations so the registration site
 // remains auditable in one place.
-import {
-  getCustomThemes,
-  getThemeCSS,
-  getCustomCSS
-} from './appshell/themes'
+import { getCustomThemes, getThemeCSS, getCustomCSS } from './appshell/themes'
 import {
   getLatestReleasesForStartup,
   getCurrentChangelogEntry
@@ -1522,9 +1514,7 @@ addHandler('setPrivateBranchPassword', (e, appName, password) =>
   libraryManagerMap['gog'].getGame(appName).setBranchPassword(password)
 )
 
-addHandler('getAvailableCyberpunkMods', async () =>
-  getAvailableCyberpunkMods()
-)
+addHandler('getAvailableCyberpunkMods', async () => getAvailableCyberpunkMods())
 addHandler('setCyberpunkModConfig', async (e, props) =>
   setCyberpunkModConfig(props)
 )

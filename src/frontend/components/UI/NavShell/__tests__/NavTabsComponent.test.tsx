@@ -30,7 +30,8 @@ const BARE_LABEL_PATTERN = /label=["']/
 const TIER2_ROW_TOKEN_PATTERN = /--navbar-active-background/
 const SEMIBOLD_TOKEN_PATTERN = /--semibold/
 const HEX_COLOUR_PATTERN = /#[0-9a-fA-F]{3,8}/
-const RETIRED_LABEL_KEY_PATTERN = /nav\.tabs\.games|userselector\.manageaccounts/
+const RETIRED_LABEL_KEY_PATTERN =
+  /nav\.tabs\.games|userselector\.manageaccounts/
 const BAKED_CAPS_PATTERN = /'(ACCOUNTS|LIBRARY|STORES|SETTINGS)'/
 const TEXT_TRANSFORM_NONE_PATTERN = /text-transform:\s*none/
 
@@ -92,7 +93,6 @@ jest.mock('@fortawesome/react-fontawesome', () => ({
     props
   })
 }))
-
 ;(globalThis as unknown as { sessionStorage: Storage }).sessionStorage = {
   getItem: jest.fn().mockReturnValue(null),
   setItem: jest.fn(),
@@ -181,7 +181,9 @@ describe('NavTabs', () => {
   })
 
   it('targets /login, /, /store/{default store}, /settings/general respectively', () => {
-    contextValue = makeContextValue({ gog: { username: 'TestUser', library: [] } })
+    contextValue = makeContextValue({
+      gog: { username: 'TestUser', library: [] }
+    })
     const tabs = tabsOf(callNavTabs())
     expect(tabs.map((tab) => tab.props.to)).toEqual([
       '/login',

@@ -46,7 +46,8 @@ const APP_TSX = 'src/frontend/App.tsx'
 const APP_CSS = 'src/frontend/App.css'
 const INDEX_TSX = 'src/frontend/index.tsx'
 const LOADING_TSX = 'src/frontend/screens/Loading/index.tsx'
-const UPDATE_COMPONENT_TSX = 'src/frontend/components/UI/UpdateComponent/index.tsx'
+const UPDATE_COMPONENT_TSX =
+  'src/frontend/components/UI/UpdateComponent/index.tsx'
 
 /**
  * Returns the declaration body of the FIRST top-level rule whose selector
@@ -71,7 +72,7 @@ function cssBlock(source: string, selector: string): string {
   throw new Error(`unterminated block for ${selector}`)
 }
 
-describe('F-10: no percentage height may resolve against .App\'s 1fr row', () => {
+describe("F-10: no percentage height may resolve against .App's 1fr row", () => {
   it('REGRESSION GATE — .App .content declares no percentage min-height (this is the declaration that caused F-10; fails against the pre-fix stylesheet)', () => {
     const block = cssBlock(read(APP_CSS), '.App .content')
 
@@ -118,9 +119,11 @@ describe('F-10: no percentage height may resolve against .App\'s 1fr row', () =>
 })
 
 describe('no pending state on the /login path can present as an empty window', () => {
-  it('SOURCE GATE — Login\'s loading branch returns UpdateComponent rather than null (asserts the branch text, not a rendered tree)', () => {
+  it("SOURCE GATE — Login's loading branch returns UpdateComponent rather than null (asserts the branch text, not a rendered tree)", () => {
     const source = read(LOGIN_TSX)
-    expect(source).toMatch(/if\s*\(loading\)\s*\{\s*return\s*<UpdateComponent\s*\/>/)
+    expect(source).toMatch(
+      /if\s*\(loading\)\s*\{\s*return\s*<UpdateComponent\s*\/>/
+    )
   })
 
   it('SOURCE GATE — UpdateComponent, the thing that loading branch renders, returns visible content and not a fragment or null', () => {
@@ -195,7 +198,7 @@ describe('deprecatedTile marker follows the embedded web-login tile, not a fixed
     )
   })
 
-  it("SOURCE GATE — deprecatedTile occurs exactly once in comment-stripped Login/index.tsx -- no other runner is marked", () => {
+  it('SOURCE GATE — deprecatedTile occurs exactly once in comment-stripped Login/index.tsx -- no other runner is marked', () => {
     const source = read(LOGIN_TSX)
     const matches = source.match(/deprecatedTile/g) ?? []
     expect(matches.length).toBe(1)
@@ -234,16 +237,12 @@ describe('the login.message paragraph is gone from the Manage Accounts page (qui
     expect(source).not.toMatch(/loginMessage/)
     expect(source).not.toMatch(/login\.message/)
     expect(source).not.toMatch(/runnerMessage/)
-    expect(source).not.toContain(
-      'You can login to more than one platform'
-    )
+    expect(source).not.toContain('You can login to more than one platform')
   })
 
   it('POSITIVE CONTROL — the disabledMessage paragraph, runnerGroup container, and all six runner tiles survived the removal', () => {
     const source = read(LOGIN_TSX)
-    expect(source).toMatch(
-      /\{oldMac && <p className="disabledMessage">/
-    )
+    expect(source).toMatch(/\{oldMac && <p className="disabledMessage">/)
     expect(source).toMatch(/<div className="runnerGroup">/)
     for (const runnerClass of [
       'epic',
@@ -253,9 +252,7 @@ describe('the login.message paragraph is gone from the Manage Accounts page (qui
       'steam',
       'humble'
     ]) {
-      expect(source).toMatch(
-        new RegExp(`class="${runnerClass}"`)
-      )
+      expect(source).toMatch(new RegExp(`class="${runnerClass}"`))
     }
   })
 })

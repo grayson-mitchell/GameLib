@@ -130,10 +130,7 @@ import {
   setGameMetadataOverride,
   setMetadataChangedNotifier
 } from '../gamedetails/overrides'
-import {
-  getGameOverrides,
-  getAllGameOverrides
-} from '../game_overrides'
+import { getGameOverrides, getAllGameOverrides } from '../game_overrides'
 import type {
   MoveGameArgs,
   GameInfo,
@@ -169,16 +166,12 @@ export function registerGameDetailsFlows(): void {
 
   // ── invoke (15) ───────────────────────────────────────────────────────
 
-  ipcMain.handle(
-    'getGameInfo',
-    async (_event: unknown, ...args: unknown[]) =>
-      getGameInfo(args[0] as string, args[1] as Runner)
+  ipcMain.handle('getGameInfo', async (_event: unknown, ...args: unknown[]) =>
+    getGameInfo(args[0] as string, args[1] as Runner)
   )
 
-  ipcMain.handle(
-    'getExtraInfo',
-    async (_event: unknown, ...args: unknown[]) =>
-      getExtraInfo(args[0] as string, args[1] as Runner)
+  ipcMain.handle('getExtraInfo', async (_event: unknown, ...args: unknown[]) =>
+    getExtraInfo(args[0] as string, args[1] as Runner)
   )
 
   ipcMain.handle(
@@ -222,17 +215,13 @@ export function registerGameDetailsFlows(): void {
       getLaunchOptions(args[0] as string, args[1] as Runner)
   )
 
-  ipcMain.handle(
-    'kill',
-    async (_event: unknown, ...args: unknown[]) =>
-      kill(args[0] as string, args[1] as Runner)
+  ipcMain.handle('kill', async (_event: unknown, ...args: unknown[]) =>
+    kill(args[0] as string, args[1] as Runner)
   )
 
   // INVOKE despite feeling fire-and-forget — main.ts:1110 is addHandler.
-  ipcMain.handle(
-    'repair',
-    async (_event: unknown, ...args: unknown[]) =>
-      repair(args[0] as string, args[1] as Runner)
+  ipcMain.handle('repair', async (_event: unknown, ...args: unknown[]) =>
+    repair(args[0] as string, args[1] as Runner)
   )
 
   // Single {appName, path, runner} OBJECT argument, not positional args.
@@ -242,18 +231,14 @@ export function registerGameDetailsFlows(): void {
       changeInstallPath(args[0] as MoveGameArgs)
   )
 
-  ipcMain.handle(
-    'readConfig',
-    async (_event: unknown, ...args: unknown[]) =>
-      readConfig(args[0] as 'library' | 'user')
+  ipcMain.handle('readConfig', async (_event: unknown, ...args: unknown[]) =>
+    readConfig(args[0] as 'library' | 'user')
   )
 
   ipcMain.handle('getGameOverride', async () => getGameOverride())
 
-  ipcMain.handle(
-    'getGameSdl',
-    async (_event: unknown, ...args: unknown[]) =>
-      getGameSdl(args[0] as string)
+  ipcMain.handle('getGameSdl', async (_event: unknown, ...args: unknown[]) =>
+    getGameSdl(args[0] as string)
   )
 
   ipcMain.handle('getAvailableCyberpunkMods', async () =>

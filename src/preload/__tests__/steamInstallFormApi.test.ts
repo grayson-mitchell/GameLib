@@ -51,20 +51,14 @@ describe('steam.ts install-form preload exports (Phase 34.13 Plan 07)', () => {
     it('isSteamBottleEligible invokes the exact channel name with args SPREAD', () => {
       isSteamBottleEligible('570')
 
-      expect(mockIpcRendererInvoke).toHaveBeenCalledWith(
-        'isSteamBottleEligible',
-        '570'
-      )
+      expect(mockIpcRendererInvoke).toHaveBeenCalledWith('isSteamBottleEligible', '570')
       expect(mockedTauriInvoke).not.toHaveBeenCalled()
     })
 
     it('persistBottleWineVersion invokes the exact channel name with args SPREAD', () => {
       persistBottleWineVersion(engine)
 
-      expect(mockIpcRendererInvoke).toHaveBeenCalledWith(
-        'persistBottleWineVersion',
-        engine
-      )
+      expect(mockIpcRendererInvoke).toHaveBeenCalledWith('persistBottleWineVersion', engine)
       expect(mockedTauriInvoke).not.toHaveBeenCalled()
     })
   })
@@ -78,19 +72,14 @@ describe('steam.ts install-form preload exports (Phase 34.13 Plan 07)', () => {
     it('isSteamBottleEligible invokes the exact channel name with args as an ARRAY', () => {
       isSteamBottleEligible('570')
 
-      expect(mockedTauriInvoke).toHaveBeenCalledWith('isSteamBottleEligible', [
-        '570'
-      ])
+      expect(mockedTauriInvoke).toHaveBeenCalledWith('isSteamBottleEligible', ['570'])
       expect(mockIpcRendererInvoke).not.toHaveBeenCalled()
     })
 
     it('persistBottleWineVersion invokes the exact channel name with args as an ARRAY', () => {
       persistBottleWineVersion(engine)
 
-      expect(mockedTauriInvoke).toHaveBeenCalledWith(
-        'persistBottleWineVersion',
-        [engine]
-      )
+      expect(mockedTauriInvoke).toHaveBeenCalledWith('persistBottleWineVersion', [engine])
       expect(mockIpcRendererInvoke).not.toHaveBeenCalled()
     })
   })

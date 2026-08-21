@@ -9,7 +9,11 @@ import {
   HumbleSyncState
 } from 'common/types/humble'
 
-import { getGamekeys, getOrderDetail, revealKey as adapterRevealKey } from './adapter'
+import {
+  getGamekeys,
+  getOrderDetail,
+  revealKey as adapterRevealKey
+} from './adapter'
 import {
   classifyOrder,
   describeZeroKeyOrder,
@@ -268,9 +272,7 @@ async function fetchAndCommitOrder(
       (key) => {
         const priorKey = priorKeysByMachineName.get(key.machineName)
         const keyindex =
-          classified.keyIndexByComposite[
-            compositeKey(gamekey, key.machineName)
-          ]
+          classified.keyIndexByComposite[compositeKey(gamekey, key.machineName)]
         // CR-01 (14-REVIEW re-review): a key revealed on Humble's WEBSITE has
         // no local reveal record and no prior revealedKeyValue — carry the
         // SERVER-provided value (classify.ts side-channel) onto the
@@ -424,7 +426,10 @@ async function runBounded(
     if (i >= items.length) return
     const result = await worker(items[i])
     results.push(result)
-    if (result.outcome === 'access_denied' || result.outcome === 'session_expired') {
+    if (
+      result.outcome === 'access_denied' ||
+      result.outcome === 'session_expired'
+    ) {
       aborted = true
       return
     }
@@ -722,8 +727,7 @@ function getClaimAnnotations(): Record<string, ClaimAnnotation> {
       result[composite] = {
         revealedAt: humbleRevealedStore.get(key.machineName)?.revealedAt,
         redeemedAt: humbleLocalRedeemedStore.get(composite)?.redeemedAt,
-        keyindexResolved:
-          lookupKeyindex(gamekey, key.machineName) !== undefined
+        keyindexResolved: lookupKeyindex(gamekey, key.machineName) !== undefined
       }
     }
   }
@@ -848,7 +852,10 @@ async function runSync(): Promise<SyncOutcome> {
 
   if (gamekeysResult.status === 'access_denied') {
     logWarning(
-      ['Humble sync: getGamekeys access_denied, cache untouched:', gamekeysResult.status],
+      [
+        'Humble sync: getGamekeys access_denied, cache untouched:',
+        gamekeysResult.status
+      ],
       LogPrefix.Backend
     )
     // CR-01: never write into a store a mid-sync disconnect just wiped.
@@ -961,9 +968,7 @@ async function runSync(): Promise<SyncOutcome> {
     LogPrefix.Backend
   )
 
-  const sawSessionExpired = results.some(
-    (r) => r.outcome === 'session_expired'
-  )
+  const sawSessionExpired = results.some((r) => r.outcome === 'session_expired')
   if (sawSessionExpired) {
     // Phase 10 owns expiry — no syncError/cooldown, matches the
     // gamekeys-level session_expired branch above.
@@ -1147,7 +1152,11 @@ async function doRevealKey(
     // must never reach the adapter call — surfaced as ineligible so the
     // wizard can show "Sync to enable claiming".
     logWarning(
-      ['Humble reveal: ineligible (keyindex unresolved):', gamekey, machineName],
+      [
+        'Humble reveal: ineligible (keyindex unresolved):',
+        gamekey,
+        machineName
+      ],
       LogPrefix.Backend
     )
     return { status: 'ineligible' }
@@ -1272,7 +1281,11 @@ async function doRevealKey(
     // distinguish a live Humble denial from any of the local silent
     // shortcircuits above. Status only (never a body/cookie/key value).
     logWarning(
-      ['Humble reveal: definitive failure, status=' + result.status, gamekey, machineName],
+      [
+        'Humble reveal: definitive failure, status=' + result.status,
+        gamekey,
+        machineName
+      ],
       LogPrefix.Backend
     )
     if (result.status === 'access_denied') {

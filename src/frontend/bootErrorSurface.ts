@@ -83,8 +83,11 @@ window.addEventListener('error', (event: ErrorEvent) => {
   renderBootError('window.error', event.error ?? event.message)
 })
 
-window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
-  renderBootError('unhandledrejection', event.reason)
-})
+window.addEventListener(
+  'unhandledrejection',
+  (event: PromiseRejectionEvent) => {
+    renderBootError('unhandledrejection', event.reason)
+  }
+)
 
 export {}

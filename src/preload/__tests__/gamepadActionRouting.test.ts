@@ -33,8 +33,10 @@ jest.mock('../api/tauriGamepadInput', () => ({
 
 const mockedIpcInvoke = jest.fn()
 jest.mock('../ipc', () => ({
-  makeHandlerInvoker: (channel: string) => (...args: unknown[]) =>
-    mockedIpcInvoke(channel, ...args),
+  makeHandlerInvoker:
+    (channel: string) =>
+    (...args: unknown[]) =>
+      mockedIpcInvoke(channel, ...args),
   makeListenerCaller: () => () => undefined,
   frontendListenerSlot: () => () => undefined
 }))

@@ -24,7 +24,11 @@ import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { reconcilePartialState } from '../depot/reconcile'
-import { PathTraversalError, type DepotPlan, type DepotPlanFile } from '../depot'
+import {
+  PathTraversalError,
+  type DepotPlan,
+  type DepotPlanFile
+} from '../depot'
 
 // ── Transitive-dependency mocks (depot.ts's own module graph) ───────────────
 jest.mock('backend/logger', () => ({
@@ -41,7 +45,9 @@ jest.mock('../depot/select', () => ({
 }))
 jest.mock('../depot/crypto', () => ({ decryptFilename: jest.fn() }))
 jest.mock('../depot/fileAttributes', () => ({ applyDepotFileFlags: jest.fn() }))
-jest.mock('steam-user/components/content_manifest.js', () => ({ parse: jest.fn() }))
+jest.mock('steam-user/components/content_manifest.js', () => ({
+  parse: jest.fn()
+}))
 jest.mock('../depot/decompress', () => ({ fetchChunk: jest.fn() }))
 jest.mock('../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 jest.mock('i18next', () => ({
@@ -54,7 +60,13 @@ function sha1Hex(buf: Buffer): string {
 }
 
 function makePlan(depots: DepotPlan['depots']): DepotPlan {
-  return { appId: '12345', depots, totalBytes: 0, name: 'SomeGame', skippedDepots: [] }
+  return {
+    appId: '12345',
+    depots,
+    totalBytes: 0,
+    name: 'SomeGame',
+    skippedDepots: []
+  }
 }
 
 describe('reconcilePartialState', () => {
@@ -78,7 +90,9 @@ describe('reconcilePartialState', () => {
       sha_content: sha1Hex(content),
       chunks: [{ sha: 's', cb_original: content.length, offset: 0 }]
     }
-    const plan = makePlan([{ depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }])
+    const plan = makePlan([
+      { depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }
+    ])
 
     const result = await reconcilePartialState(plan, dir)
 
@@ -93,7 +107,9 @@ describe('reconcilePartialState', () => {
       sha_content: 'irrelevant',
       chunks: [{ sha: 's', cb_original: 10, offset: 0 }]
     }
-    const plan = makePlan([{ depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }])
+    const plan = makePlan([
+      { depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }
+    ])
 
     const result = await reconcilePartialState(plan, dir)
 
@@ -110,7 +126,9 @@ describe('reconcilePartialState', () => {
       sha_content: 'irrelevant',
       chunks: [{ sha: 's', cb_original: 999, offset: 0 }]
     }
-    const plan = makePlan([{ depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }])
+    const plan = makePlan([
+      { depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }
+    ])
 
     const result = await reconcilePartialState(plan, dir)
 
@@ -129,7 +147,9 @@ describe('reconcilePartialState', () => {
       sha_content: sha1Hex(realContent),
       chunks: [{ sha: 's', cb_original: realContent.length, offset: 0 }]
     }
-    const plan = makePlan([{ depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }])
+    const plan = makePlan([
+      { depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }
+    ])
 
     const result = await reconcilePartialState(plan, dir)
 
@@ -145,9 +165,13 @@ describe('reconcilePartialState', () => {
       sha_content: '',
       chunks: []
     }
-    const plan = makePlan([{ depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }])
+    const plan = makePlan([
+      { depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }
+    ])
 
-    await expect(reconcilePartialState(plan, dir)).rejects.toThrow(PathTraversalError)
+    await expect(reconcilePartialState(plan, dir)).rejects.toThrow(
+      PathTraversalError
+    )
   })
 
   it('a mix of verified/missing/mismatched files across two depots reduces jobs to only the missing+mismatched set', async () => {
@@ -176,7 +200,12 @@ describe('reconcilePartialState', () => {
 
     const plan = makePlan([
       { depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [fileGood] },
-      { depotId: '2', gid: 'g2', key: Buffer.from('key'), files: [fileMissing, fileBad] }
+      {
+        depotId: '2',
+        gid: 'g2',
+        key: Buffer.from('key'),
+        files: [fileMissing, fileBad]
+      }
     ])
 
     const result = await reconcilePartialState(plan, dir)
@@ -199,14 +228,16 @@ describe('reconcilePartialState', () => {
       sha_content: 'irrelevant',
       chunks: [{ sha: 's', cb_original: 10, offset: 0 }]
     }
-    const plan = makePlan([{ depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }])
+    const plan = makePlan([
+      { depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }
+    ])
 
     const result = await reconcilePartialState(plan, dir)
 
     expect(result.skippedBytes).toBe(0)
   })
 
-  it('quick-260821-nyh: skippedBytes sums exactly the verified entries\' sizes, excluding missing/mismatched ones', async () => {
+  it("quick-260821-nyh: skippedBytes sums exactly the verified entries' sizes, excluding missing/mismatched ones", async () => {
     const good = Buffer.from('good-content') // 12 bytes, verified/skipped
     writeFileSync(join(dir, 'good.bin'), good)
     const fileGood: DepotPlanFile = {
@@ -232,7 +263,12 @@ describe('reconcilePartialState', () => {
 
     const plan = makePlan([
       { depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [fileGood] },
-      { depotId: '2', gid: 'g2', key: Buffer.from('key'), files: [fileMissing, fileBad] }
+      {
+        depotId: '2',
+        gid: 'g2',
+        key: Buffer.from('key'),
+        files: [fileMissing, fileBad]
+      }
     ])
 
     const result = await reconcilePartialState(plan, dir)
@@ -259,7 +295,12 @@ describe('reconcilePartialState', () => {
       flags: 64
     }
     const plan = makePlan([
-      { depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [presentDir, missingDir] }
+      {
+        depotId: '1',
+        gid: 'g1',
+        key: Buffer.from('key'),
+        files: [presentDir, missingDir]
+      }
     ])
 
     const result = await reconcilePartialState(plan, dir)
@@ -287,7 +328,12 @@ describe('reconcilePartialState', () => {
       linktarget: 'game.exe'
     }
     const plan = makePlan([
-      { depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [goodLink, badLink] }
+      {
+        depotId: '1',
+        gid: 'g1',
+        key: Buffer.from('key'),
+        files: [goodLink, badLink]
+      }
     ])
 
     const result = await reconcilePartialState(plan, dir)
@@ -303,7 +349,9 @@ describe('reconcilePartialState', () => {
       sha_content: '',
       chunks: []
     }
-    const plan = makePlan([{ depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }])
+    const plan = makePlan([
+      { depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }
+    ])
 
     const result = await reconcilePartialState(plan, dir)
 

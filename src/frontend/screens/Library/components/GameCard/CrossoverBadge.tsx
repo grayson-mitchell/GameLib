@@ -44,7 +44,10 @@ const CrossoverBadge = ({ rating }: Props) => {
 
   const labelKeyByTier: Record<Tier, [string, string]> = {
     gold: ['library.crossover_gold', 'Runs great on CrossOver (gold rating)'],
-    silver: ['library.crossover_silver', 'Runs well on CrossOver (silver rating)'],
+    silver: [
+      'library.crossover_silver',
+      'Runs well on CrossOver (silver rating)'
+    ],
     bronze: [
       'library.crossover_bronze',
       'Runs with issues on CrossOver (bronze rating)'

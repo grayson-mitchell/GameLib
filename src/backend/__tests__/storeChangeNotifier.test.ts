@@ -300,9 +300,9 @@ describe('backend/storeChangeNotifier.ts', () => {
     })
 
     test("link 3 (negative, non-vacuous): isAllowedStoreField('gogInstalledGamesStore', 'credentials') is false — a secret-shaped field on this store IS dropped", () => {
-      expect(
-        isAllowedStoreField('gogInstalledGamesStore', 'credentials')
-      ).toBe(false)
+      expect(isAllowedStoreField('gogInstalledGamesStore', 'credentials')).toBe(
+        false
+      )
     })
   })
 })

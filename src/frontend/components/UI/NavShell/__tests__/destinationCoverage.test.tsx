@@ -152,7 +152,6 @@ jest.mock('../components/HeroicVersion', () => ({
   __esModule: true,
   default: () => ({ type: 'mock-heroicversion', props: {} })
 }))
-
 ;(globalThis as unknown as { sessionStorage: Storage }).sessionStorage = {
   getItem: jest.fn().mockReturnValue(null),
   setItem: jest.fn(),
@@ -322,7 +321,7 @@ describe('Community links (re-homed from the deleted suite)', () => {
 
 describe('Version mount (re-homed from the deleted suite)', () => {
   it.each(['accounts', 'games', 'stores', 'settings', null] as const)(
-    'HeroicVersion is present in the tier-2 column of NavShell()\'s tree for activeTab %s',
+    "HeroicVersion is present in the tier-2 column of NavShell()'s tree for activeTab %s",
     (tab) => {
       pathname =
         tab === 'accounts'

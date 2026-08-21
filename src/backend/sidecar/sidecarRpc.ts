@@ -169,7 +169,12 @@ function handleFrame(line: string): void {
     Object.prototype.hasOwnProperty.call(value, 'ok') &&
     !Object.prototype.hasOwnProperty.call(value, 'kind')
   ) {
-    const response = value as { id?: unknown; ok: boolean; result?: unknown; error?: unknown }
+    const response = value as {
+      id?: unknown
+      ok: boolean
+      result?: unknown
+      error?: unknown
+    }
     const id = typeof response.id === 'string' ? response.id : undefined
     const pending = id ? rustPending.get(id) : undefined
     if (!pending) {
@@ -245,10 +250,7 @@ export function startRpcServer(
  * unmodified `backend/ipc.ts`'s `sendFrontendMessage` -> `getMainWindow()`
  * chain produces a well-formed `SidecarNotification` frame headlessly.
  */
-export function pushFrontendMessage(
-  channel: string,
-  ...args: unknown[]
-): void {
+export function pushFrontendMessage(channel: string, ...args: unknown[]): void {
   const notification: SidecarNotification = {
     kind: 'frontendMessage',
     channel,
@@ -290,7 +292,9 @@ export function requestRustInvoke(
   args: unknown[]
 ): Promise<unknown> {
   if (!(RUST_INVOKE_CHANNELS as readonly string[]).includes(channel)) {
-    return Promise.reject(new Error(`rustInvoke: channel not allowed: ${String(channel)}`))
+    return Promise.reject(
+      new Error(`rustInvoke: channel not allowed: ${String(channel)}`)
+    )
   }
   return new Promise((resolve, reject) => {
     const id = randomUUID()
@@ -299,7 +303,11 @@ export function requestRustInvoke(
     if (!UNBOUNDED_RUST_CHANNELS.includes(channel)) {
       timer = setTimeout(() => {
         rustPending.delete(id)
-        reject(new Error(`rustInvoke timed out after ${RUST_INVOKE_TIMEOUT_MS}ms: ${channel}`))
+        reject(
+          new Error(
+            `rustInvoke timed out after ${RUST_INVOKE_TIMEOUT_MS}ms: ${channel}`
+          )
+        )
       }, RUST_INVOKE_TIMEOUT_MS)
       // Don't let a pending rustInvoke keep the process alive on its own -- the sidecar's
       // stdin listener is what actually keeps the event loop running; this timer should

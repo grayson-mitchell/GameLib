@@ -519,12 +519,7 @@ export default function WebView() {
       // drive TauriLoginPanel instead: Humble gets an honest in-progress
       // surface, and the four OAuth runners get a declared-blocked one
       // naming the exact backend channel and Phase 34.5.
-      return (
-        <TauriLoginPanel
-          runner={runner}
-          state={oauthLoginState}
-        />
-      )
+      return <TauriLoginPanel runner={runner} state={oauthLoginState} />
     }
     if (isTauri()) {
       // D-05: in-app store and wiki browsing was never this phase's job --
@@ -560,9 +555,7 @@ export default function WebView() {
         key={store}
         ref={webviewRef}
         className="WebView__webview"
-        partition={`persist:${
-          startUrl === epicLoginUrl ? 'epicstore' : store
-        }`}
+        partition={`persist:${startUrl === epicLoginUrl ? 'epicstore' : store}`}
         src={startUrl}
         allowpopups={trueAsStr}
         preload={webviewPreloadPath}

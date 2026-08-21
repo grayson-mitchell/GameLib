@@ -221,24 +221,30 @@ describe('useTauriOAuthLogin — opens the capture and reports awaiting', () => 
       'gog',
       'https://auth.gog.com/auth?client_id=46899977096215655&redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&response_type=code&layout=galaxy'
     ],
-    ['zoom', 'https://www.zoom-platform.com/login?li=heroic&return_li_token=true']
-  ])('runner=%s calls oauthCaptureLogin once with that runner and its login url', async (runner, expectedUrl) => {
-    mockApi.oauthCaptureLogin.mockImplementation(
-      () => new Promise(() => {}) // never resolves -- only asserting the call shape here
-    )
+    [
+      'zoom',
+      'https://www.zoom-platform.com/login?li=heroic&return_li_token=true'
+    ]
+  ])(
+    'runner=%s calls oauthCaptureLogin once with that runner and its login url',
+    async (runner, expectedUrl) => {
+      mockApi.oauthCaptureLogin.mockImplementation(
+        () => new Promise(() => {}) // never resolves -- only asserting the call shape here
+      )
 
-    let hook = mount(runner)
-    expect(hook).toEqual({ phase: 'idle' })
-    await flushPromises()
-    hook = rerender(runner)
+      let hook = mount(runner)
+      expect(hook).toEqual({ phase: 'idle' })
+      await flushPromises()
+      hook = rerender(runner)
 
-    expect(hook).toEqual({ phase: 'awaiting' })
-    expect(mockApi.oauthCaptureLogin).toHaveBeenCalledTimes(1)
-    expect(mockApi.oauthCaptureLogin).toHaveBeenCalledWith({
-      runner,
-      url: expectedUrl
-    })
-  })
+      expect(hook).toEqual({ phase: 'awaiting' })
+      expect(mockApi.oauthCaptureLogin).toHaveBeenCalledTimes(1)
+      expect(mockApi.oauthCaptureLogin).toHaveBeenCalledWith({
+        runner,
+        url: expectedUrl
+      })
+    }
+  )
 
   it("runner='nile' fetches getAmazonLoginData() first and forwards its .url", async () => {
     mockApi.oauthCaptureLogin.mockImplementation(() => new Promise(() => {}))
@@ -273,7 +279,9 @@ describe('useTauriOAuthLogin — captured -> auth channel -> blocked (D-04)', ()
         redirectUrl: 'https://example.com/?code=CODE123'
       })
       mockApi[apiMethod].mockRejectedValue(
-        new Error(`${UNPORTED_CHANNEL_MARKER} No handler registered for channel '${apiMethod}'`)
+        new Error(
+          `${UNPORTED_CHANNEL_MARKER} No handler registered for channel '${apiMethod}'`
+        )
       )
       const onLoginSuccess = jest.fn()
 
@@ -283,7 +291,11 @@ describe('useTauriOAuthLogin — captured -> auth channel -> blocked (D-04)', ()
         mount(runner, onLoginSuccess)
         const hook = await settle(runner, onLoginSuccess)
 
-        expect(hook).toEqual({ phase: 'blocked', runner, channel: expectedChannel })
+        expect(hook).toEqual({
+          phase: 'blocked',
+          runner,
+          channel: expectedChannel
+        })
         expect(mockApi[apiMethod]).toHaveBeenCalledTimes(1)
       } finally {
         process.off('unhandledRejection', unhandled)
@@ -331,7 +343,8 @@ describe('useTauriOAuthLogin — captured -> auth channel -> blocked (D-04)', ()
       status: 'captured',
       runner: 'nile',
       code: 'NILE-CODE',
-      redirectUrl: 'https://amazon.com/ap/signin?openid.oa2.authorization_code=NILE-CODE'
+      redirectUrl:
+        'https://amazon.com/ap/signin?openid.oa2.authorization_code=NILE-CODE'
     })
     mockApi.authAmazon.mockRejectedValue(new Error(UNPORTED_CHANNEL_MARKER))
 
@@ -358,7 +371,9 @@ describe('useTauriOAuthLogin — captured -> auth channel -> blocked (D-04)', ()
     mount('zoom')
     await settle('zoom')
 
-    expect(mockApi.authZoom).toHaveBeenCalledWith('https://www.zoom-platform.com/?li_token=ZTOK')
+    expect(mockApi.authZoom).toHaveBeenCalledWith(
+      'https://www.zoom-platform.com/?li_token=ZTOK'
+    )
   })
 
   it('a non-marker rejection from the auth channel becomes { phase: "error" }, never "blocked"', async () => {
@@ -402,7 +417,10 @@ describe('useTauriOAuthLogin — captured -> auth channel -> completion (Phase 3
       code: 'GOG-CODE',
       redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
     })
-    mockApi.authGOG.mockResolvedValue({ status: 'done', data: { username: 'grayson' } })
+    mockApi.authGOG.mockResolvedValue({
+      status: 'done',
+      data: { username: 'grayson' }
+    })
     const onLoginSuccess = jest.fn()
 
     mount('gog', onLoginSuccess)
@@ -426,7 +444,11 @@ describe('useTauriOAuthLogin — captured -> auth channel -> completion (Phase 3
     })
     mockApi.login.mockResolvedValue({
       status: 'done',
-      data: { account_id: 'acc-1', displayName: 'Epic Grayson', user: 'epic-user' }
+      data: {
+        account_id: 'acc-1',
+        displayName: 'Epic Grayson',
+        user: 'epic-user'
+      }
     })
     const onLoginSuccess = jest.fn()
 
@@ -445,7 +467,8 @@ describe('useTauriOAuthLogin — captured -> auth channel -> completion (Phase 3
       status: 'captured',
       runner: 'nile',
       code: 'NILE-CODE',
-      redirectUrl: 'https://amazon.com/ap/signin?openid.oa2.authorization_code=NILE-CODE'
+      redirectUrl:
+        'https://amazon.com/ap/signin?openid.oa2.authorization_code=NILE-CODE'
     })
     mockApi.authAmazon.mockResolvedValue({
       status: 'done',
@@ -532,7 +555,9 @@ describe('useTauriOAuthLogin — captured -> auth channel -> completion (Phase 3
     expect(onLoginSuccess).not.toHaveBeenCalled()
 
     const matching = mockApi.logInfo.mock.calls.filter(
-      ([line]) => typeof line === 'string' && line.includes('auth channel refused: status=failed')
+      ([line]) =>
+        typeof line === 'string' &&
+        line.includes('auth channel refused: status=failed')
     )
     expect(matching).toHaveLength(1)
   })
@@ -558,11 +583,14 @@ describe('useTauriOAuthLogin — completion callback drives the real GlobalState
   function wireCompletionCallback() {
     const setState = jest.fn()
     const handleSuccessfulLogin = jest.fn()
-    const onLoginSuccess = createOAuthLoginCompletion({ setState, handleSuccessfulLogin })
+    const onLoginSuccess = createOAuthLoginCompletion({
+      setState,
+      handleSuccessfulLogin
+    })
     return { setState, handleSuccessfulLogin, onLoginSuccess }
   }
 
-  it('the wired handleSuccessfulLogin -> refreshLibrary chain receives { library: runner } (mirrors GlobalState.tsx\'s own handleSuccessfulLogin body)', async () => {
+  it("the wired handleSuccessfulLogin -> refreshLibrary chain receives { library: runner } (mirrors GlobalState.tsx's own handleSuccessfulLogin body)", async () => {
     const setState = jest.fn()
     const refreshLibrary = jest.fn()
     // Mirrors GlobalState.tsx's own handleSuccessfulLogin body EXACTLY --
@@ -573,7 +601,10 @@ describe('useTauriOAuthLogin — completion callback drives the real GlobalState
     function handleSuccessfulLogin(runner: OAuthRunner): void {
       refreshLibrary({ runInBackground: false, library: runner })
     }
-    const onLoginSuccess = createOAuthLoginCompletion({ setState, handleSuccessfulLogin })
+    const onLoginSuccess = createOAuthLoginCompletion({
+      setState,
+      handleSuccessfulLogin
+    })
 
     mockApi.oauthCaptureLogin.mockResolvedValue({
       status: 'captured',
@@ -581,7 +612,10 @@ describe('useTauriOAuthLogin — completion callback drives the real GlobalState
       code: 'GOG-CODE',
       redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
     })
-    mockApi.authGOG.mockResolvedValue({ status: 'done', data: { username: 'grayson' } })
+    mockApi.authGOG.mockResolvedValue({
+      status: 'done',
+      data: { username: 'grayson' }
+    })
 
     mount('gog', onLoginSuccess)
     await settle('gog', onLoginSuccess)
@@ -594,7 +628,8 @@ describe('useTauriOAuthLogin — completion callback drives the real GlobalState
   })
 
   it('a successful GOG capture calls setState with the gog slice and handleSuccessfulLogin with "gog"', async () => {
-    const { setState, handleSuccessfulLogin, onLoginSuccess } = wireCompletionCallback()
+    const { setState, handleSuccessfulLogin, onLoginSuccess } =
+      wireCompletionCallback()
 
     mockApi.oauthCaptureLogin.mockResolvedValue({
       status: 'captured',
@@ -602,14 +637,19 @@ describe('useTauriOAuthLogin — completion callback drives the real GlobalState
       code: 'GOG-CODE',
       redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
     })
-    mockApi.authGOG.mockResolvedValue({ status: 'done', data: { username: 'grayson' } })
+    mockApi.authGOG.mockResolvedValue({
+      status: 'done',
+      data: { username: 'grayson' }
+    })
 
     mount('gog', onLoginSuccess)
     await settle('gog', onLoginSuccess)
 
     // Asserted by VALUE, not merely "was called" -- a future change that refreshed the wrong
     // library would still make a bare "was called" assertion pass.
-    expect(setState).toHaveBeenCalledWith({ gog: { library: [], username: 'grayson' } })
+    expect(setState).toHaveBeenCalledWith({
+      gog: { library: [], username: 'grayson' }
+    })
     expect(handleSuccessfulLogin).toHaveBeenCalledTimes(1)
     expect(handleSuccessfulLogin).toHaveBeenCalledWith('gog')
     // No other runner's slice was ever touched by this single GOG login.
@@ -625,13 +665,15 @@ describe('useTauriOAuthLogin — completion callback drives the real GlobalState
   })
 
   it('a successful nile capture sets both user_id and username, leaving other runners untouched', async () => {
-    const { setState, handleSuccessfulLogin, onLoginSuccess } = wireCompletionCallback()
+    const { setState, handleSuccessfulLogin, onLoginSuccess } =
+      wireCompletionCallback()
 
     mockApi.oauthCaptureLogin.mockResolvedValue({
       status: 'captured',
       runner: 'nile',
       code: 'NILE-CODE',
-      redirectUrl: 'https://amazon.com/ap/signin?openid.oa2.authorization_code=NILE-CODE'
+      redirectUrl:
+        'https://amazon.com/ap/signin?openid.oa2.authorization_code=NILE-CODE'
     })
     mockApi.authAmazon.mockResolvedValue({
       status: 'done',
@@ -651,14 +693,17 @@ describe('useTauriOAuthLogin — completion callback drives the real GlobalState
       amazon: { library: [], user_id: 'nile-user-1', username: 'Nile Grayson' }
     })
     expect(handleSuccessfulLogin).toHaveBeenCalledWith('nile')
-    expect(setState).not.toHaveBeenCalledWith(expect.objectContaining({ gog: expect.anything() }))
+    expect(setState).not.toHaveBeenCalledWith(
+      expect.objectContaining({ gog: expect.anything() })
+    )
     expect(setState).not.toHaveBeenCalledWith(
       expect.objectContaining({ epic: expect.anything() })
     )
   })
 
   it('a capture that ends { phase: "blocked" } never calls setState or handleSuccessfulLogin', async () => {
-    const { setState, handleSuccessfulLogin, onLoginSuccess } = wireCompletionCallback()
+    const { setState, handleSuccessfulLogin, onLoginSuccess } =
+      wireCompletionCallback()
 
     mockApi.oauthCaptureLogin.mockResolvedValue({
       status: 'captured',
@@ -671,13 +716,18 @@ describe('useTauriOAuthLogin — completion callback drives the real GlobalState
     mount('gog', onLoginSuccess)
     const hook = await settle('gog', onLoginSuccess)
 
-    expect(hook).toEqual({ phase: 'blocked', runner: 'gog', channel: 'authGOG' })
+    expect(hook).toEqual({
+      phase: 'blocked',
+      runner: 'gog',
+      channel: 'authGOG'
+    })
     expect(setState).not.toHaveBeenCalled()
     expect(handleSuccessfulLogin).not.toHaveBeenCalled()
   })
 
   it('a capture that ends { phase: "error" } (resolved-but-refused) never calls setState or handleSuccessfulLogin', async () => {
-    const { setState, handleSuccessfulLogin, onLoginSuccess } = wireCompletionCallback()
+    const { setState, handleSuccessfulLogin, onLoginSuccess } =
+      wireCompletionCallback()
 
     mockApi.oauthCaptureLogin.mockResolvedValue({
       status: 'captured',
@@ -765,7 +815,10 @@ describe('useTauriOAuthLogin — onCancelled callback (quick task 260803-eee Tas
       code: 'GOG-CODE',
       redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
     })
-    mockApi.authGOG.mockResolvedValue({ status: 'done', data: { username: 'grayson' } })
+    mockApi.authGOG.mockResolvedValue({
+      status: 'done',
+      data: { username: 'grayson' }
+    })
     const onCancelled = jest.fn()
     const onLoginSuccess = jest.fn()
 
@@ -812,7 +865,9 @@ describe('useTauriOAuthLogin — onCancelled callback (quick task 260803-eee Tas
 
 describe('useTauriOAuthLogin — capture-transport-failed (F-34.5-G6-02, plan 34.5-23)', () => {
   it('a rejected oauthCaptureLogin settles on { phase: "error", message } instead of staying "awaiting"', async () => {
-    mockApi.oauthCaptureLogin.mockRejectedValue(new Error('sidecar invoke timed out'))
+    mockApi.oauthCaptureLogin.mockRejectedValue(
+      new Error('sidecar invoke timed out')
+    )
 
     const unhandled = jest.fn()
     process.on('unhandledRejection', unhandled)
@@ -820,7 +875,10 @@ describe('useTauriOAuthLogin — capture-transport-failed (F-34.5-G6-02, plan 34
       mount('gog')
       const hook = await settle('gog')
 
-      expect(hook).toEqual({ phase: 'error', message: 'sidecar invoke timed out' })
+      expect(hook).toEqual({
+        phase: 'error',
+        message: 'sidecar invoke timed out'
+      })
     } finally {
       process.off('unhandledRejection', unhandled)
     }
@@ -830,13 +888,16 @@ describe('useTauriOAuthLogin — capture-transport-failed (F-34.5-G6-02, plan 34
   })
 
   it('emits exactly one logInfo line containing capture-transport-failed and the runner name', async () => {
-    mockApi.oauthCaptureLogin.mockRejectedValue(new Error('sidecar invoke timed out'))
+    mockApi.oauthCaptureLogin.mockRejectedValue(
+      new Error('sidecar invoke timed out')
+    )
 
     mount('gog')
     await settle('gog')
 
-    const matching = mockApi.logInfo.mock.calls.filter(([line]) =>
-      typeof line === 'string' && line.includes('capture-transport-failed')
+    const matching = mockApi.logInfo.mock.calls.filter(
+      ([line]) =>
+        typeof line === 'string' && line.includes('capture-transport-failed')
     )
     expect(matching).toHaveLength(1)
     expect(matching[0][0]).toContain('runner=gog')
@@ -965,13 +1026,17 @@ describe('useTauriOAuthLogin — cancellation-window instrumentation (Plan 34.5-
       code: 'GOG-CODE',
       redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
     })
-    mockApi.authGOG.mockResolvedValue({ status: 'done', data: { username: 'grayson' } })
+    mockApi.authGOG.mockResolvedValue({
+      status: 'done',
+      data: { username: 'grayson' }
+    })
 
     mount('gog')
     await settle('gog')
 
     const matching = mockApi.logInfo.mock.calls.filter(
-      ([line]) => typeof line === 'string' && line.includes('cancelled-midflight')
+      ([line]) =>
+        typeof line === 'string' && line.includes('cancelled-midflight')
     )
     expect(matching).toHaveLength(0)
   })
@@ -1006,7 +1071,8 @@ describe('useTauriOAuthLogin — cancellation-window instrumentation (Plan 34.5-
       status: 'captured',
       runner: 'nile',
       code: 'NILE-SECRET-CODE',
-      redirectUrl: 'https://amazon.com/ap/signin?openid.oa2.authorization_code=NILE-SECRET-CODE'
+      redirectUrl:
+        'https://amazon.com/ap/signin?openid.oa2.authorization_code=NILE-SECRET-CODE'
     })
     mockApi.authAmazon.mockResolvedValue({
       status: 'done',
@@ -1022,15 +1088,29 @@ describe('useTauriOAuthLogin — cancellation-window instrumentation (Plan 34.5-
     mount('nile')
     await settle('nile')
 
-    const permittedKeys = ['runner', 'phase', 'at', 'authStatus', 'inflight', 'channel', 'message']
-    const forbidden = ['NILE-SECRET-CODE', 'SecretUsername', 'authorization_code']
+    const permittedKeys = [
+      'runner',
+      'phase',
+      'at',
+      'authStatus',
+      'inflight',
+      'channel',
+      'message'
+    ]
+    const forbidden = [
+      'NILE-SECRET-CODE',
+      'SecretUsername',
+      'authorization_code'
+    ]
 
     for (const [line] of mockApi.logInfo.mock.calls) {
       expect(typeof line).toBe('string')
       for (const banned of forbidden) {
         expect(line as string).not.toContain(banned)
       }
-      const keysInLine = permittedKeys.filter((key) => (line as string).includes(`${key}=`))
+      const keysInLine = permittedKeys.filter((key) =>
+        (line as string).includes(`${key}=`)
+      )
       // Every logged line uses `key=value` tokens drawn only from the permitted vocabulary --
       // this loop asserts no OTHER `=`-delimited token sneaks in unnoticed.
       const allTokens = (line as string).match(/(\w+)=/g) ?? []
@@ -1109,7 +1189,8 @@ describe('useTauriOAuthLogin — finalizing (capture complete, exchange in fligh
 
       expect(hook.phase).not.toBe('finalizing')
       const finalizingLines = mockApi.logInfo.mock.calls.filter(
-        ([line]) => typeof line === 'string' && line.includes('phase=finalizing')
+        ([line]) =>
+          typeof line === 'string' && line.includes('phase=finalizing')
       )
       expect(finalizingLines).toHaveLength(0)
     }
@@ -1127,7 +1208,11 @@ describe('useTauriOAuthLogin — finalizing (capture complete, exchange in fligh
     mount('gog')
     const hook = await settle('gog')
 
-    expect(hook).toEqual({ phase: 'blocked', runner: 'gog', channel: 'authGOG' })
+    expect(hook).toEqual({
+      phase: 'blocked',
+      runner: 'gog',
+      channel: 'authGOG'
+    })
   })
 
   it('emits exactly one logInfo line containing phase=finalizing and the runner name per captured login', async () => {
@@ -1137,7 +1222,10 @@ describe('useTauriOAuthLogin — finalizing (capture complete, exchange in fligh
       code: 'GOG-CODE',
       redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
     })
-    mockApi.authGOG.mockResolvedValue({ status: 'done', data: { username: 'grayson' } })
+    mockApi.authGOG.mockResolvedValue({
+      status: 'done',
+      data: { username: 'grayson' }
+    })
 
     mount('gog')
     await settle('gog')
@@ -1218,12 +1306,17 @@ describe('useTauriOAuthLogin — preparing (quick task 260806-teb)', () => {
   )
 
   it('a getAmazonLoginData() rejection still lands { phase: "error" } and logs the existing failed-to-resolve line -- preparing is not terminal', async () => {
-    mockApi.getAmazonLoginData.mockRejectedValue(new Error('nile auth exited non-zero'))
+    mockApi.getAmazonLoginData.mockRejectedValue(
+      new Error('nile auth exited non-zero')
+    )
 
     mount('nile')
     const hook = await settle('nile')
 
-    expect(hook).toEqual({ phase: 'error', message: 'nile auth exited non-zero' })
+    expect(hook).toEqual({
+      phase: 'error',
+      message: 'nile auth exited non-zero'
+    })
     const matching = mockApi.logInfo.mock.calls.filter(
       ([line]) =>
         typeof line === 'string' &&
@@ -1331,7 +1424,10 @@ describe('useTauriOAuthLogin — cancellation suppresses state updates only (Pla
           resolveCapture = resolve
         })
     )
-    mockApi.authGOG.mockResolvedValue({ status: 'done', data: { username: 'grayson' } })
+    mockApi.authGOG.mockResolvedValue({
+      status: 'done',
+      data: { username: 'grayson' }
+    })
 
     mount('gog')
     await flushPromises()
@@ -1384,7 +1480,9 @@ describe('useTauriOAuthLogin — cancellation suppresses state updates only (Pla
   })
 
   it('after teardown, the hook never performs a setState -- no console warning, and no observable state change across a flush', async () => {
-    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleError = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {})
     try {
       mockApi.oauthCaptureLogin.mockResolvedValue({
         status: 'captured',

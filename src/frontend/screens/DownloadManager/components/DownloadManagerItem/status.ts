@@ -38,7 +38,8 @@ export function classifyDMItemStatus(
 ): DMItemStatusInfo {
   const finished = status === 'done'
   const isSteamError = runner === 'steam' && status === 'error'
-  const canceled = !isSteamError && (status === 'error' || (status === 'abort' && !current))
+  const canceled =
+    !isSteamError && (status === 'error' || (status === 'abort' && !current))
   const showRemoveAction = isSteamError && !current
 
   return { finished, isSteamError, canceled, showRemoveAction }

@@ -24,7 +24,14 @@
 // below is used both for real-tmpdir fixture assertions AND, in the
 // BLOCKER 2 test, to grep shimGenerate.ts's own source text (24-04
 // precedent: a real source-slice test, not a runtime mock assertion).
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -122,7 +129,7 @@ describe('shimGenerate', () => {
     )
   })
 
-  it('OVERWRITES a byte-different file already at shimPath (D-UAT-24-04: the game\'s own depot-shipped steam_api.dll must not survive)', async () => {
+  it("OVERWRITES a byte-different file already at shimPath (D-UAT-24-04: the game's own depot-shipped steam_api.dll must not survive)", async () => {
     // Pre-seed a byte-different "game's own dll" stub at the shim
     // destination -- this is the exact scenario D-UAT-24-04 found: the
     // depot download runs BEFORE placeShimForGame and leaves its own

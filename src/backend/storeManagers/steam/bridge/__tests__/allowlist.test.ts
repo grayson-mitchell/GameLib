@@ -1,9 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import {
-  bridgeAllowlist,
-  bridgeAllowlistSchema
-} from '../allowlist'
+import { bridgeAllowlist, bridgeAllowlistSchema } from '../allowlist'
 
 // Real AppIDs (confirmed against the Steam store API, cross-referenced
 // against the spike READMEs' developer names -- Spiderweb Software /

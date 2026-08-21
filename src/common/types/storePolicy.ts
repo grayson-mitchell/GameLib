@@ -126,7 +126,12 @@ export const STORE_ALLOWLIST: Record<string, readonly string[] | '*'> = {
   // `sessionCookie` (safeStorage-encrypted 'humble:v1:' ciphertext) and `csrfToken`
   // (StoreStructure: "Main-process-only — never included in any sendFrontendMessage
   // payload or HumbleAuthState") are both omitted — see header comment.
-  humbleConfigStore: ['isLoggedIn', 'userData', 'encryptionDegraded', 'expired'],
+  humbleConfigStore: [
+    'isLoggedIn',
+    'userData',
+    'encryptionDegraded',
+    'expired'
+  ],
   sideloadedStore: ['games', 'installed'],
   downloadManager: ['queue', 'finished'],
   // Open index signatures — no secret fields exist on any of these shapes.
@@ -244,7 +249,10 @@ export function isAllowedStoreField(storeName: string, key: string): boolean {
   // `snapshotHas`, tauriTransport.ts) — SEAM Load-Bearing Invariant A: a preload throw
   // blanks the window. An own-property lookup restores fail-closed by construction for
   // EVERY prototype-chain name, without special-casing individual key names.
-  const policy = Object.prototype.hasOwnProperty.call(STORE_ALLOWLIST, storeName)
+  const policy = Object.prototype.hasOwnProperty.call(
+    STORE_ALLOWLIST,
+    storeName
+  )
     ? STORE_ALLOWLIST[storeName]
     : undefined
 

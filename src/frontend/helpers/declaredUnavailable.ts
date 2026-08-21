@@ -40,7 +40,8 @@
  * decision to decline visibly*. The live gate greps for this marker specifically, and must
  * never accidentally match the transport-level one.
  */
-export const DECLARED_UNAVAILABLE_MARKER = '[GAMELIB_DECLARED_UNAVAILABLE]' as const
+export const DECLARED_UNAVAILABLE_MARKER =
+  '[GAMELIB_DECLARED_UNAVAILABLE]' as const
 
 /**
  * The 8 deferred EOS overlay channels (D-03), verified against

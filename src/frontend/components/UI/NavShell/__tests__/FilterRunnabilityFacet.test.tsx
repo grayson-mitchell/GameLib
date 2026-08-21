@@ -200,14 +200,20 @@ describe('FilterRunnabilityFacet', () => {
   it('each row count comes from countForRunnability, called once per rendered row', () => {
     contextValue = makeContextValue({
       runnabilityRows: ['native', 'bottle'],
-      countForRunnability: jest.fn((tier: string) => (tier === 'native' ? 12 : 3))
+      countForRunnability: jest.fn((tier: string) =>
+        tier === 'native' ? 12 : 3
+      )
     })
 
     const tree = FilterRunnabilityFacet() as unknown as ReactElement
     const rows = rowsOf(tree)
 
-    expect(rows.find((r) => r.props.label === 'Runs natively')?.props.count).toBe(12)
-    expect(rows.find((r) => r.props.label === 'Runs via bottle')?.props.count).toBe(3)
+    expect(
+      rows.find((r) => r.props.label === 'Runs natively')?.props.count
+    ).toBe(12)
+    expect(
+      rows.find((r) => r.props.label === 'Runs via bottle')?.props.count
+    ).toBe(3)
     expect(contextValue.countForRunnability).toHaveBeenCalledTimes(2)
   })
 
@@ -227,7 +233,6 @@ describe('FilterRunnabilityFacet', () => {
       'native',
       'bottle'
     ])
-
     ;(nativeRow?.props.onToggle as () => void)()
     expect(contextValue.setRunnabilityFacet).toHaveBeenCalledWith([])
   })

@@ -48,7 +48,10 @@ function resolveLabel(spec: ChipLabelSpec, t: TFunc, tGamelib: TFunc): string {
 
   switch (spec.key) {
     case 'gamelib:library.filterPanel.chipHiddenOnly':
-      return tGamelib('gamelib:library.filterPanel.chipHiddenOnly', 'Hidden only')
+      return tGamelib(
+        'gamelib:library.filterPanel.chipHiddenOnly',
+        'Hidden only'
+      )
     case 'gamelib:library.filterPanel.chipHiddenIncluded':
       return tGamelib(
         'gamelib:library.filterPanel.chipHiddenIncluded',
@@ -119,7 +122,9 @@ export default function FilterChipRow() {
         break
       case 'store':
         setStoreFacet(
-          storeFacet.filter((value) => value !== (descriptor.value as StoreFacetValue))
+          storeFacet.filter(
+            (value) => value !== (descriptor.value as StoreFacetValue)
+          )
         )
         break
       case 'runnability':

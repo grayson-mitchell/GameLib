@@ -38,7 +38,7 @@ export function RingProgress({
   runner: Runner
 }) {
   const [progress] = hasProgress(appName, runner)
-  const percent = appName ? progress.percent ?? 0 : 0
+  const percent = appName ? (progress.percent ?? 0) : 0
 
   return (
     <span

@@ -295,10 +295,7 @@ async function main() {
       entry
     ])
     if (compile.error) {
-      console.error(
-        'meta/runTs.cjs: failed to launch esbuild:',
-        compile.error
-      )
+      console.error('meta/runTs.cjs: failed to launch esbuild:', compile.error)
     }
 
     if (compile.status !== 0) {

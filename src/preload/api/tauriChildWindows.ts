@@ -115,9 +115,7 @@ async function resolveAboutVersion(): Promise<string> {
   try {
     return await Promise.race([
       window.api.getHeroicVersion(),
-      new Promise<string>((resolve) =>
-        setTimeout(() => resolve('unknown'), ABOUT_VERSION_TIMEOUT_MS)
-      )
+      new Promise<string>((resolve) => setTimeout(() => resolve('unknown'), ABOUT_VERSION_TIMEOUT_MS))
     ])
   } catch (error) {
     warn('showAboutWindow:getHeroicVersion', error)

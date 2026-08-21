@@ -94,7 +94,9 @@ const CANONICAL_HANDLER_ENTRIES: ReadonlyArray<[string, IpcHandler]> = [
 ]
 const CANONICAL_LISTENER_ENTRIES: ReadonlyArray<[string, IpcListener[]]> = [
   ...listenerRegistry.entries()
-].map(([channel, listeners]) => [channel, [...listeners]] as [string, IpcListener[]])
+].map(
+  ([channel, listeners]) => [channel, [...listeners]] as [string, IpcListener[]]
+)
 
 /** Restores both registries to the canonical, fully-registered snapshot captured above —
  * the only reliable way to get "all four modules genuinely registered" back after a test has
@@ -213,7 +215,10 @@ describe('callable export — each of the four modules exports a callable regist
 
 // ── Describe 2: "imported but never called" guard (T-34.5-11) ─────────────────────────────────
 describe('handlers.ts wiring — imported but never called guard', () => {
-  const handlersSource = readFileSync(join(__dirname, '..', 'handlers.ts'), 'utf-8')
+  const handlersSource = readFileSync(
+    join(__dirname, '..', 'handlers.ts'),
+    'utf-8'
+  )
 
   it.each(MODULES.map((m) => m.name))(
     'T-34.5-11 %s appears exactly twice in handlers.ts (one import + one call) — an import-only wiring must fail this test',
@@ -236,7 +241,9 @@ describe('handlers.ts wiring — imported but never called guard', () => {
 
 // ── Describe 3: Idempotence (T-34.5-13's own precondition) ────────────────────────────────────
 describe('idempotence — calling registerXFlows() twice does not throw or stack duplicate listeners', () => {
-  it.each(MODULES.map((m) => [m.name, m.register, m.declaredChannels] as const))(
+  it.each(
+    MODULES.map((m) => [m.name, m.register, m.declaredChannels] as const)
+  )(
     '%s can be called twice without throwing, and listenerRegistry counts stay stable',
     (_name, register, declaredChannels) => {
       // Plan 34.5-06 fix (Rule 1 — pre-existing bug, invisible until a real send-kind channel
@@ -344,7 +351,9 @@ describe("containment pin — each module registers only its own declared channe
   // SIBLING module's own legitimate registrations as a leak the moment any cluster plan lands
   // (e.g. wineTools's real `runWineCommand` registration would look like a "leak" when checked
   // from runnerAuth's perspective, even though runnerAuth registered nothing at all).
-  it.each(MODULES.map((m) => [m.name, m.register, m.declaredChannels] as const))(
+  it.each(
+    MODULES.map((m) => [m.name, m.register, m.declaredChannels] as const)
+  )(
     'T-34.5-13 %s, called in isolation, registers only a subset of its own declared channel set and nothing outside the 38',
     (_name, register, declaredChannels) => {
       handlerRegistry.clear()
@@ -392,7 +401,12 @@ describe("containment pin — each module registers only its own declared channe
 // every cluster plan (34.5-05 through 34.5-12) has now landed. Unlike Describe 5 above, this
 // block registers all four modules TOGETHER against a single cleared pair of registries, because
 // the property under test here is the union across all four, not any one module in isolation.
-const SEND_CHANNELS = ['logoutGOG', 'addShortcut', 'processShortcut', 'removeShortcut']
+const SEND_CHANNELS = [
+  'logoutGOG',
+  'addShortcut',
+  'processShortcut',
+  'removeShortcut'
+]
 
 describe('completeness — all 38 channels are registered with the right kind, across all four modules together (Phase 34.5 Plan 13, REQ-34.5-10)', () => {
   beforeAll(() => {
@@ -427,7 +441,9 @@ describe('completeness — all 38 channels are registered with the right kind, a
     (_name, declaredChannels) => {
       for (const channel of declaredChannels) {
         if (SEND_CHANNELS.includes(channel)) {
-          expect((listenerRegistry.get(channel) ?? []).length).toBeGreaterThan(0)
+          expect((listenerRegistry.get(channel) ?? []).length).toBeGreaterThan(
+            0
+          )
           expect(handlerRegistry.has(channel)).toBe(false)
         } else {
           expect(handlerRegistry.has(channel)).toBe(true)

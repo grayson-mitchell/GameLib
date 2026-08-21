@@ -140,11 +140,13 @@ describe('buildRunnersOnedir', () => {
       )
 
       const result = extractUpstreamPyinstallerCommand(fixtureDir)
-      expect(result.command).toBe('pyinstaller --onefile --name legendary cli.py')
+      expect(result.command).toBe(
+        'pyinstaller --onefile --name legendary cli.py'
+      )
       expect(result.workingDirectory).toBeUndefined()
     })
 
-    it('captures a step-level working-directory: sibling key (legendary\'s real shape)', () => {
+    it("captures a step-level working-directory: sibling key (legendary's real shape)", () => {
       fixtureDir = mkdtempSync(join(tmpdir(), 'onedir-fixture-workdir-'))
       const workflowsDir = join(fixtureDir, '.github', 'workflows')
       mkdirSync(workflowsDir, { recursive: true })

@@ -56,11 +56,16 @@ describe('nativeInstallSetting.ts', () => {
   // ── Phase 23 (23-02, D-03): no new user-facing toggle ───────────────────
   describe('D-03: StateFlags=4 inherits the D-13 opt-in, no new setting', () => {
     it('nativeInstallSetting.ts exports ONLY isSteamNativeInstallEnabled — no second StateFlags4-specific accessor was added', () => {
-      expect(Object.keys(nativeInstallSettingModule)).toEqual(['isSteamNativeInstallEnabled'])
+      expect(Object.keys(nativeInstallSettingModule)).toEqual([
+        'isSteamNativeInstallEnabled'
+      ])
     })
 
     it('no StateFlags4/full-ownership-specific setting key exists on AppSettings', () => {
-      const source = readFileSync(join(__dirname, '../../../../common/types.ts'), 'utf8')
+      const source = readFileSync(
+        join(__dirname, '../../../../common/types.ts'),
+        'utf8'
+      )
       expect(source).not.toMatch(/stateFlags4/i)
       expect(source).not.toMatch(/fullOwnership/i)
       expect(source).not.toMatch(/enableSteamFullOwnership/i)

@@ -7,7 +7,13 @@
  * this module family).
  */
 import { spawnSync } from 'child_process'
-import { chmodSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import {
+  chmodSync,
+  mkdtempSync,
+  rmSync,
+  statSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { applyDepotFileFlags } from '../depot/fileAttributes'
@@ -46,7 +52,11 @@ describe('applyDepotFileFlags — POSIX (darwin/linux)', () => {
   })
 
   it('ReadOnly + Executable → chmod 0o555 (read+execute, no write)', async () => {
-    const result = await applyDepotFileFlags(filePath, READONLY_FLAG | EXECUTABLE_FLAG, 'darwin')
+    const result = await applyDepotFileFlags(
+      filePath,
+      READONLY_FLAG | EXECUTABLE_FLAG,
+      'darwin'
+    )
     expect(result.ok).toBe(true)
     expect(statSync(filePath).mode & 0o777).toBe(0o555)
   })
@@ -80,16 +90,20 @@ describe('applyDepotFileFlags — POSIX (darwin/linux)', () => {
 
   it('neither ReadOnly nor Hidden set → no-op, mode left untouched', async () => {
     chmodSync(filePath, 0o644)
-    const result = await applyDepotFileFlags(filePath, EXECUTABLE_FLAG, 'darwin')
+    const result = await applyDepotFileFlags(
+      filePath,
+      EXECUTABLE_FLAG,
+      'darwin'
+    )
     expect(result.ok).toBe(true)
     expect(statSync(filePath).mode & 0o777).toBe(0o644)
   })
 
   it('a chmod failure (nonexistent path) is reported via { ok: false }, never thrown', async () => {
     const missing = join(dir, 'does-not-exist.bin')
-    await expect(applyDepotFileFlags(missing, READONLY_FLAG, 'darwin')).resolves.toEqual(
-      expect.objectContaining({ ok: false })
-    )
+    await expect(
+      applyDepotFileFlags(missing, READONLY_FLAG, 'darwin')
+    ).resolves.toEqual(expect.objectContaining({ ok: false }))
   })
 })
 
@@ -100,7 +114,11 @@ describe('applyDepotFileFlags — Windows (win32)', () => {
 
   it('ReadOnly set → spawnSync("attrib", ["+R", path]) argv-form, windowsHide true', async () => {
     ;(spawnSync as jest.Mock).mockReturnValue({ status: 0 })
-    const result = await applyDepotFileFlags('C:\\Games\\game.exe', READONLY_FLAG, 'win32')
+    const result = await applyDepotFileFlags(
+      'C:\\Games\\game.exe',
+      READONLY_FLAG,
+      'win32'
+    )
     expect(result.ok).toBe(true)
     expect(spawnSync).toHaveBeenCalledWith(
       'attrib',
@@ -111,7 +129,11 @@ describe('applyDepotFileFlags — Windows (win32)', () => {
 
   it('Hidden set → spawnSync("attrib", ["+H", path])', async () => {
     ;(spawnSync as jest.Mock).mockReturnValue({ status: 0 })
-    const result = await applyDepotFileFlags('C:\\Games\\game.exe', HIDDEN_FLAG, 'win32')
+    const result = await applyDepotFileFlags(
+      'C:\\Games\\game.exe',
+      HIDDEN_FLAG,
+      'win32'
+    )
     expect(result.ok).toBe(true)
     expect(spawnSync).toHaveBeenCalledWith(
       'attrib',
@@ -140,7 +162,11 @@ describe('applyDepotFileFlags — Windows (win32)', () => {
       status: 1,
       stderr: Buffer.from('access denied')
     })
-    const result = await applyDepotFileFlags('C:\\Games\\game.exe', READONLY_FLAG, 'win32')
+    const result = await applyDepotFileFlags(
+      'C:\\Games\\game.exe',
+      READONLY_FLAG,
+      'win32'
+    )
     expect(result.ok).toBe(false)
   })
 
@@ -149,7 +175,11 @@ describe('applyDepotFileFlags — Windows (win32)', () => {
       status: null,
       error: new Error('spawnSync attrib ENOENT')
     })
-    const result = await applyDepotFileFlags('C:\\Games\\game.exe', READONLY_FLAG, 'win32')
+    const result = await applyDepotFileFlags(
+      'C:\\Games\\game.exe',
+      READONLY_FLAG,
+      'win32'
+    )
     expect(result.ok).toBe(false)
   })
 
@@ -163,7 +193,11 @@ describe('applyDepotFileFlags — Windows (win32)', () => {
   })
 
   it('neither ReadOnly nor Hidden set → spawnSync never called', async () => {
-    const result = await applyDepotFileFlags('C:\\Games\\game.exe', EXECUTABLE_FLAG, 'win32')
+    const result = await applyDepotFileFlags(
+      'C:\\Games\\game.exe',
+      EXECUTABLE_FLAG,
+      'win32'
+    )
     expect(result.ok).toBe(true)
     expect(spawnSync).not.toHaveBeenCalled()
   })

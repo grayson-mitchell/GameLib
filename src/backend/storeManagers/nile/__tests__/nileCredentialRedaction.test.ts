@@ -64,7 +64,8 @@ const SENTINEL_CODE = 'SENTINEL_CODE_ac91f3'
 const SENTINEL_VERIFIER = 'SENTINEL_VERIFIER_7d02be'
 const SENTINEL_SERIAL = 'SENTINEL_SERIAL_11'
 const SENTINEL_CLIENT_ID = 'SENTINEL_CLIENT_22'
-const SENTINEL_URL = 'https://amazon.example/authorize?client_id=SENTINEL_CLIENT_22'
+const SENTINEL_URL =
+  'https://amazon.example/authorize?client_id=SENTINEL_CLIENT_22'
 
 function allLoggerCalls(): unknown[][] {
   return [
@@ -130,7 +131,9 @@ describe('nile credential redaction -- Group A: behavioral', () => {
 
     const serialized = serializeAllCalls()
     expect(serialized).toContain(`"code_len":${SENTINEL_CODE.length}`)
-    expect(serialized).toContain(`"code_verifier_len":${SENTINEL_VERIFIER.length}`)
+    expect(serialized).toContain(
+      `"code_verifier_len":${SENTINEL_VERIFIER.length}`
+    )
   })
 
   it('the redacted login-data log carries url_host instead of the full authorize URL', async () => {

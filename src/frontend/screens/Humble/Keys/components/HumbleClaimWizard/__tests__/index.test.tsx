@@ -61,9 +61,7 @@ jest.mock('react', () => {
       const idx = cursor++
       if (idx >= slots.length) {
         slots[idx] =
-          typeof initial === 'function'
-            ? (initial as () => unknown)()
-            : initial
+          typeof initial === 'function' ? (initial as () => unknown)() : initial
       }
       const setState = (updater: unknown) => {
         slots[idx] =
@@ -163,9 +161,7 @@ function findByClassNamePart(
   return collectElements(tree).find((el) => {
     const className = el.props?.className
     return typeof className === 'string' && className.split(' ').includes(part)
-  }) as
-    | ReactElement<PropsWithChildren & { onClick?: () => void }>
-    | undefined
+  }) as ReactElement<PropsWithChildren & { onClick?: () => void }> | undefined
 }
 
 function textContent(node: ReactNode): string {
@@ -179,7 +175,9 @@ function textContent(node: ReactNode): string {
     return node.map((child) => textContent(child as ReactNode)).join('')
   }
   if (typeof node === 'object' && 'props' in node) {
-    return textContent((node as ReactElement<PropsWithChildren>).props?.children)
+    return textContent(
+      (node as ReactElement<PropsWithChildren>).props?.children
+    )
   }
   return ''
 }

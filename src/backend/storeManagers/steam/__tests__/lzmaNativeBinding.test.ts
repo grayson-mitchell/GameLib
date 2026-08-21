@@ -30,7 +30,12 @@ function loadFresh(): LzmaNativeBindingResolver {
 }
 
 const REAL_LZMA_NATIVE_DIR = join('some', 'root', 'node_modules', 'lzma-native')
-const NOT_LZMA_NATIVE_DIR = join('some', 'root', 'node_modules', 'not-lzma-native')
+const NOT_LZMA_NATIVE_DIR = join(
+  'some',
+  'root',
+  'node_modules',
+  'not-lzma-native'
+)
 
 // Phase 23.1 plan 05 (coordinator-directed fix, live-hardware finding
 // 2026-08-18): the `dir`-based throw-gate this describe block used to test
@@ -91,7 +96,9 @@ describe('lzmaNativeBinding no longer gates on dir (Phase 23.1 plan 05)', () => 
       }
     }))
     jest.spyOn(process, 'dlopen').mockImplementation(() => undefined)
-    expect(() => lzmaNativeBinding(`${REAL_LZMA_NATIVE_DIR}${join('/')}`)).not.toThrow()
+    expect(() =>
+      lzmaNativeBinding(`${REAL_LZMA_NATIVE_DIR}${join('/')}`)
+    ).not.toThrow()
     jest.resetModules()
     const lzmaNativeBinding2 = loadFresh()
     jest.doMock('node:sea', () => ({
@@ -138,7 +145,9 @@ describe('lzmaNativeBinding SEA branch', () => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports -- see comment above
       .spyOn(require('node:fs'), 'rmSync')
       .mockImplementation(() => undefined)
-    const dlopenSpy = jest.spyOn(process, 'dlopen').mockImplementation(() => undefined)
+    const dlopenSpy = jest
+      .spyOn(process, 'dlopen')
+      .mockImplementation(() => undefined)
 
     lzmaNativeBinding!(REAL_LZMA_NATIVE_DIR)
 
@@ -172,7 +181,9 @@ describe('lzmaNativeBinding dev branch', () => {
       lzmaNativeBinding = loadFresh()
     })
 
-    const dlopenSpy = jest.spyOn(process, 'dlopen').mockImplementation(() => undefined)
+    const dlopenSpy = jest
+      .spyOn(process, 'dlopen')
+      .mockImplementation(() => undefined)
 
     lzmaNativeBinding!(REAL_LZMA_NATIVE_DIR)
 
@@ -193,7 +204,9 @@ describe('lzmaNativeBinding dev branch', () => {
       lzmaNativeBinding = loadFresh()
     })
 
-    const dlopenSpy = jest.spyOn(process, 'dlopen').mockImplementation(() => undefined)
+    const dlopenSpy = jest
+      .spyOn(process, 'dlopen')
+      .mockImplementation(() => undefined)
 
     lzmaNativeBinding!(REAL_LZMA_NATIVE_DIR)
 
@@ -221,9 +234,11 @@ describe('lzmaNativeBinding memoization', () => {
       lzmaNativeBinding = loadFresh()
     })
 
-    const dlopenSpy = jest.spyOn(process, 'dlopen').mockImplementation((mod) => {
-      ;(mod as { exports: unknown }).exports = { marker: 'binding' }
-    })
+    const dlopenSpy = jest
+      .spyOn(process, 'dlopen')
+      .mockImplementation((mod) => {
+        ;(mod as { exports: unknown }).exports = { marker: 'binding' }
+      })
 
     const first = lzmaNativeBinding!(REAL_LZMA_NATIVE_DIR)
     const second = lzmaNativeBinding!(REAL_LZMA_NATIVE_DIR)
@@ -245,8 +260,10 @@ describe('lzmaNativeBinding.nativeAddonTempPath', () => {
 })
 
 describe('lzmaNativeBinding asset-key drift guard', () => {
-  it('LZMA_NATIVE_SEA_ASSET_KEY strictly equals meta/buildSidecarSea.ts\'s LZMA_NATIVE_ASSET_KEY', () => {
+  it("LZMA_NATIVE_SEA_ASSET_KEY strictly equals meta/buildSidecarSea.ts's LZMA_NATIVE_ASSET_KEY", () => {
     const lzmaNativeBinding = loadFresh()
-    expect(lzmaNativeBinding.LZMA_NATIVE_SEA_ASSET_KEY).toBe(LZMA_NATIVE_ASSET_KEY)
+    expect(lzmaNativeBinding.LZMA_NATIVE_SEA_ASSET_KEY).toBe(
+      LZMA_NATIVE_ASSET_KEY
+    )
   })
 })

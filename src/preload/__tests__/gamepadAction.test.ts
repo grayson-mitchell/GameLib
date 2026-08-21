@@ -133,7 +133,6 @@ beforeEach(() => {
   fakeDocument.querySelectorAll.mockReturnValue([])
   fakeDocument.elementFromPoint.mockReturnValue(null)
   fakeWindow = { history: { back: jest.fn() }, innerWidth: 800, innerHeight: 600 }
-
   ;(globalThis as unknown as { document: FakeDocument }).document = fakeDocument
   ;(globalThis as unknown as { window: typeof fakeWindow }).window = fakeWindow
   ;(
@@ -141,10 +140,8 @@ beforeEach(() => {
       getComputedStyle: (el: FakeElement) => { overflowY: string }
     }
   ).getComputedStyle = (el) => ({ overflowY: el.overflowY })
-  ;(globalThis as unknown as { KeyboardEvent: typeof FakeKeyboardEvent }).KeyboardEvent =
-    FakeKeyboardEvent
-  ;(globalThis as unknown as { MouseEvent: typeof FakeMouseEvent }).MouseEvent =
-    FakeMouseEvent
+  ;(globalThis as unknown as { KeyboardEvent: typeof FakeKeyboardEvent }).KeyboardEvent = FakeKeyboardEvent
+  ;(globalThis as unknown as { MouseEvent: typeof FakeMouseEvent }).MouseEvent = FakeMouseEvent
 })
 
 import { tauriGamepadAction } from '../api/tauriGamepadInput'
@@ -199,13 +196,7 @@ describe('tauriGamepadAction (REQ-34.1-06)', () => {
     const hidden = new FakeElement('button')
     hidden.setAttribute('aria-hidden', 'true')
     const next = new FakeElement('button')
-    fakeDocument.querySelectorAll.mockReturnValue([
-      visible,
-      disabled,
-      zeroArea,
-      hidden,
-      next
-    ])
+    fakeDocument.querySelectorAll.mockReturnValue([visible, disabled, zeroArea, hidden, next])
     fakeDocument.activeElement = visible
 
     await tauriGamepadAction({ action: 'tab' })
@@ -319,12 +310,7 @@ describe('tauriGamepadAction directional focus movement (REQ-34.1-06)', () => {
       right: 200,
       bottom: 100
     })
-    fakeDocument.querySelectorAll.mockReturnValue([
-      topLeft,
-      topRight,
-      bottomLeft,
-      bottomRight
-    ])
+    fakeDocument.querySelectorAll.mockReturnValue([topLeft, topRight, bottomLeft, bottomRight])
 
     fakeDocument.activeElement = topLeft
     await tauriGamepadAction({ action: 'padRight' })

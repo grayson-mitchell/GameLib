@@ -69,7 +69,11 @@ describe('isSteamBottleSetupActiveFor selector (17-11, GAP 3 gap-closure)', () =
     useSteamBottleSetup.getState().open('440')
 
     expect(
-      isSteamBottleSetupActiveFor(useSteamBottleSetup.getState(), '440', 'steam')
+      isSteamBottleSetupActiveFor(
+        useSteamBottleSetup.getState(),
+        '440',
+        'steam'
+      )
     ).toBe(true)
   })
 
@@ -77,7 +81,11 @@ describe('isSteamBottleSetupActiveFor selector (17-11, GAP 3 gap-closure)', () =
     useSteamBottleSetup.getState().open('440')
 
     expect(
-      isSteamBottleSetupActiveFor(useSteamBottleSetup.getState(), '730', 'steam')
+      isSteamBottleSetupActiveFor(
+        useSteamBottleSetup.getState(),
+        '730',
+        'steam'
+      )
     ).toBe(false)
   })
 
@@ -94,7 +102,11 @@ describe('isSteamBottleSetupActiveFor selector (17-11, GAP 3 gap-closure)', () =
     useSteamBottleSetup.getState().close()
 
     expect(
-      isSteamBottleSetupActiveFor(useSteamBottleSetup.getState(), '440', 'steam')
+      isSteamBottleSetupActiveFor(
+        useSteamBottleSetup.getState(),
+        '440',
+        'steam'
+      )
     ).toBe(false)
   })
 })

@@ -54,7 +54,9 @@ describe('CrossoverBadge', () => {
     const element = CrossoverBadge({ rating: null }) as Rendered
 
     expect(element).not.toBeNull()
-    expect(element?.props.className).toContain('gameCardCrossoverBadge--unknown')
+    expect(element?.props.className).toContain(
+      'gameCardCrossoverBadge--unknown'
+    )
     expect(element?.props.title).toBe('CrossOver compatibility unknown')
   })
 

@@ -36,12 +36,23 @@
 
 import { ipcMain } from './electronStub'
 import { captureOAuthLogin } from './oauthLoginCapture'
-import type { OAuthRunner, OAuthCaptureOutcome } from '../../common/types/oauthLogin'
+import type {
+  OAuthRunner,
+  OAuthCaptureOutcome
+} from '../../common/types/oauthLogin'
 
-const KNOWN_RUNNERS: readonly OAuthRunner[] = ['legendary', 'gog', 'nile', 'zoom']
+const KNOWN_RUNNERS: readonly OAuthRunner[] = [
+  'legendary',
+  'gog',
+  'nile',
+  'zoom'
+]
 
 function isKnownRunner(value: unknown): value is OAuthRunner {
-  return typeof value === 'string' && (KNOWN_RUNNERS as readonly string[]).includes(value)
+  return (
+    typeof value === 'string' &&
+    (KNOWN_RUNNERS as readonly string[]).includes(value)
+  )
 }
 
 function isHttpsUrl(value: unknown): value is string {
@@ -65,35 +76,38 @@ function isHttpsUrl(value: unknown): value is string {
  * (`sidecar-dialog-reject-crashes`).
  */
 export function registerOAuthLoginFlows(): void {
-  ipcMain.handle('oauthCaptureLogin', async (_event: unknown, ...args: unknown[]) => {
-    const params = args[0] as { runner?: unknown; url?: unknown } | undefined
+  ipcMain.handle(
+    'oauthCaptureLogin',
+    async (_event: unknown, ...args: unknown[]) => {
+      const params = args[0] as { runner?: unknown; url?: unknown } | undefined
 
-    if (!isKnownRunner(params?.runner)) {
-      const outcome: OAuthCaptureOutcome = {
-        status: 'error',
-        message: `oauthCaptureLogin: unknown runner (expected one of ${KNOWN_RUNNERS.join(', ')})`
+      if (!isKnownRunner(params?.runner)) {
+        const outcome: OAuthCaptureOutcome = {
+          status: 'error',
+          message: `oauthCaptureLogin: unknown runner (expected one of ${KNOWN_RUNNERS.join(', ')})`
+        }
+        return outcome
       }
-      return outcome
-    }
-    if (!isHttpsUrl(params?.url)) {
-      const outcome: OAuthCaptureOutcome = {
-        status: 'error',
-        message: 'oauthCaptureLogin: url must be a non-empty https URL'
+      if (!isHttpsUrl(params?.url)) {
+        const outcome: OAuthCaptureOutcome = {
+          status: 'error',
+          message: 'oauthCaptureLogin: url must be a non-empty https URL'
+        }
+        return outcome
       }
-      return outcome
-    }
 
-    try {
-      return await captureOAuthLogin(params.runner, params.url)
-    } catch (error) {
-      // captureOAuthLogin() itself never rejects (it resolves a typed { status: 'error' }
-      // outcome on every internal failure) -- this catch exists only as an outer fail-safe so a
-      // future regression there can never propagate into an unhandled rejection here.
-      const outcome: OAuthCaptureOutcome = {
-        status: 'error',
-        message: error instanceof Error ? error.message : String(error)
+      try {
+        return await captureOAuthLogin(params.runner, params.url)
+      } catch (error) {
+        // captureOAuthLogin() itself never rejects (it resolves a typed { status: 'error' }
+        // outcome on every internal failure) -- this catch exists only as an outer fail-safe so a
+        // future regression there can never propagate into an unhandled rejection here.
+        const outcome: OAuthCaptureOutcome = {
+          status: 'error',
+          message: error instanceof Error ? error.message : String(error)
+        }
+        return outcome
       }
-      return outcome
     }
-  })
+  )
 }

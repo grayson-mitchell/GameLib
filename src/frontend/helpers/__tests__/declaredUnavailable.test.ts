@@ -18,8 +18,9 @@ import {
 } from '../declaredUnavailable'
 
 function stubWindowApi(logError: jest.Mock): void {
-  ;(globalThis as unknown as { window: { api: { logError: jest.Mock } } }).window =
-    { api: { logError } }
+  ;(
+    globalThis as unknown as { window: { api: { logError: jest.Mock } } }
+  ).window = { api: { logError } }
 }
 
 function deleteWindow(): void {

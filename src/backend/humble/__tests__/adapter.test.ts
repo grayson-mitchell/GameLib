@@ -42,7 +42,12 @@ class FakeIncomingMessage extends EventEmitter {
 }
 
 type QueuedNetBehavior =
-  | { type: 'response'; status: number; body: string; headers: Record<string, string> }
+  | {
+      type: 'response'
+      status: number
+      body: string
+      headers: Record<string, string>
+    }
   | { type: 'error'; error: Error }
 
 let nextNetBehavior: QueuedNetBehavior | undefined
@@ -77,7 +82,10 @@ class FakeClientRequest extends EventEmitter {
         this.emit('error', behavior.error)
         return
       }
-      const response = new FakeIncomingMessage(behavior.status, behavior.headers)
+      const response = new FakeIncomingMessage(
+        behavior.status,
+        behavior.headers
+      )
       this.emit('response', response)
       process.nextTick(() => {
         if (behavior.body.length > 0) {
@@ -155,10 +163,7 @@ import {
   getAccountIdentity,
   revealKey
 } from '../adapter'
-import {
-  setLoginWindowSeam,
-  type LoginWindowSeam
-} from '../loginWindowSeam'
+import { setLoginWindowSeam, type LoginWindowSeam } from '../loginWindowSeam'
 
 const COOKIE = 'super-secret-cookie-value'
 
@@ -559,7 +564,9 @@ describe('getAccountIdentity', () => {
   // request PATH and HTTP status before falling through to the existing
   // generic rethrow.
   test('F-3: a 404 (unmapped status) logs the request path and HTTP status, then still rethrows', async () => {
-    mockGet.mockRejectedValue(makeAxiosError(404, { data: { error: 'not found' } }))
+    mockGet.mockRejectedValue(
+      makeAxiosError(404, { data: { error: 'not found' } })
+    )
     await expect(getAccountIdentity(COOKIE)).rejects.toThrow()
     const call = mockLogWarning.mock.calls.find((c) =>
       JSON.stringify(c).includes('HTTP failure diagnostic')
@@ -635,7 +642,9 @@ describe('getGamekeys — per-entry tolerance (round 2)', () => {
       JSON.stringify(call).includes('schema validation')
     )
     expect(warnCall).toBeDefined()
-    expect(JSON.stringify(warnCall)).toContain('no entry carried a string gamekey')
+    expect(JSON.stringify(warnCall)).toContain(
+      'no entry carried a string gamekey'
+    )
   })
 })
 
@@ -716,9 +725,8 @@ describe('getOrderDetail — realistic plain store-purchase payload (round 2, sp
 
     // End-to-end into the real classifier: a plain purchased Steam key must
     // classify to exactly one UNREVEALED steam entry — never an empty order.
-    const { classifyOrder } = jest.requireActual<
-      typeof import('../classify')
-    >('../classify')
+    const { classifyOrder } =
+      jest.requireActual<typeof import('../classify')>('../classify')
     const entry = classifyOrder(result.data, () => false)
     expect(entry.keys).toHaveLength(1)
     expect(entry.keys[0]).toMatchObject({
@@ -862,9 +870,7 @@ describe('revealKey', () => {
   })
 
   test('round 5: getGamekeys (no diagnostic context) does NOT log an HTTP failure diagnostic on a 403 (opt-in only, unchanged behavior)', async () => {
-    mockGet.mockRejectedValue(
-      makeAxiosError(403, { data: '<html></html>' })
-    )
+    mockGet.mockRejectedValue(makeAxiosError(403, { data: '<html></html>' }))
     await getGamekeys(COOKIE)
     const call = mockLogWarning.mock.calls.find((c) =>
       JSON.stringify(c).includes('HTTP failure diagnostic')
@@ -998,7 +1004,9 @@ describe('revealKey', () => {
   // (`backend/humble/loginWindowSeam.ts`) and would otherwise leak into every OTHER test file
   // that imports the real (unmocked) module in the same jest worker.
   describe('revealKey via the Tauri login-window seam (D-07)', () => {
-    function fakeSeam(revealPost: LoginWindowSeam['revealPost']): LoginWindowSeam {
+    function fakeSeam(
+      revealPost: LoginWindowSeam['revealPost']
+    ): LoginWindowSeam {
       return {
         open: jest.fn(),
         cookies: jest.fn(),
@@ -1057,7 +1065,9 @@ describe('revealKey', () => {
 
     test('a seam rejection propagates exactly as a network-level error does on the Electron path', async () => {
       setLoginWindowSeam(
-        fakeSeam(jest.fn().mockRejectedValue(new Error('humble_reveal_post:timeout')))
+        fakeSeam(
+          jest.fn().mockRejectedValue(new Error('humble_reveal_post:timeout'))
+        )
       )
       await expect(revealKey(undefined, params())).rejects.toThrow(
         'humble_reveal_post:timeout'

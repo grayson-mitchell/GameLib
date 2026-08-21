@@ -279,7 +279,6 @@ describe('tier2 divider (--divider finding, 34.11-09 FIFTH fix -- pseudo-element
     // iterate the SAME 11 theme blocks rather than two hand-maintained
     // lists that could drift apart.
     const dividerDeclaringCount = themeSelectors.filter((selector) =>
-
       /--divider:/.test(cssBlock(themesScss, selector))
     ).length
 
@@ -317,15 +316,15 @@ describe('dracula-only divider override (34.11-09 FIFTH fix, --neutral-04 collis
   })
 
   it('the override does not need a :not(.NavShell__tier2--collapsed) exclusion -- the collapse rule suppresses the pseudo-element via content: none, which the override cannot out-cascade because the box it would paint never exists', () => {
-    const dracula = navShellScss.match(
-      /body\.dracula \.NavShell__tier2::after/
-    )
+    const dracula = navShellScss.match(/body\.dracula \.NavShell__tier2::after/)
     expect(dracula).not.toBeNull()
     // Negative half of the same claim: no `:not(...)` guard was added here,
     // because none is needed -- unlike the border-mechanism version of this
     // override, which DID need one (a real specificity bug this project
     // found and fixed in the prior fix).
-    const draculaLine = navShellScss.match(/body\.dracula \.NavShell__tier2[^\n{,]*/)
+    const draculaLine = navShellScss.match(
+      /body\.dracula \.NavShell__tier2[^\n{,]*/
+    )
     expect(draculaLine?.[0]).not.toMatch(/:not\(/)
   })
 })
@@ -380,6 +379,8 @@ describe('Header background is overridden inside the tier-2 portal (34.11-09 liv
     // neutralises it from the portal side instead. `> .Header` (two
     // classes) beats `.Header` (one class) regardless of stylesheet import
     // order.
-    expect(portalBlock).toMatch(/>\s*\.Header\s*{[^}]*background:\s*transparent/)
+    expect(portalBlock).toMatch(
+      />\s*\.Header\s*{[^}]*background:\s*transparent/
+    )
   })
 })

@@ -146,7 +146,11 @@ describe('getWikiGameInfo — D-10/D-11/D-13 index-first CrossOver wiring', () =
     envMock.isMac = true
     wikiGameInfoStore.set('Half-Life 2', {
       pcgamingwiki: null,
-      applegamingwiki: { crossoverRating: '', wineRating: '', crossoverLink: '' },
+      applegamingwiki: {
+        crossoverRating: '',
+        wineRating: '',
+        crossoverLink: ''
+      },
       codeweavers: { macRating: null, linuxRating: null, slug: 'half-life-2' },
       howlongtobeat: null,
       gamesdb: null,
@@ -175,7 +179,11 @@ describe('getWikiGameInfo — D-10/D-11/D-13 index-first CrossOver wiring', () =
     envMock.isMac = true
     const cached = {
       pcgamingwiki: null,
-      applegamingwiki: { crossoverRating: '', wineRating: '', crossoverLink: '' },
+      applegamingwiki: {
+        crossoverRating: '',
+        wineRating: '',
+        crossoverLink: ''
+      },
       codeweavers: { macRating: null, linuxRating: null, slug: 'half-life-2' },
       howlongtobeat: null,
       gamesdb: null,

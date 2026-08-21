@@ -169,7 +169,6 @@ describe('FilterStoreFacet', () => {
 
     ;(steamRow?.props.onToggle as () => void)()
     expect(contextValue.setStoreFacet).toHaveBeenCalledWith(['gog', 'steam'])
-
     ;(gogRow?.props.onToggle as () => void)()
     expect(contextValue.setStoreFacet).toHaveBeenCalledWith([])
   })

@@ -12,7 +12,13 @@
  */
 
 import childProcess from 'node:child_process'
-import { readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs'
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  mkdtempSync,
+  rmSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { nativeImage } from '../nativeImageShim'
@@ -31,7 +37,13 @@ function probePngDimensions(png: Buffer): { width: number; height: number } {
     const path = join(dir, 'probe.png')
     writeFileSync(path, png)
     const out = childProcess
-      .execFileSync('/usr/bin/sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', path])
+      .execFileSync('/usr/bin/sips', [
+        '-g',
+        'pixelWidth',
+        '-g',
+        'pixelHeight',
+        path
+      ])
       .toString()
     const width = Number(/pixelWidth:\s*(\d+)/.exec(out)?.[1] ?? 0)
     const height = Number(/pixelHeight:\s*(\d+)/.exec(out)?.[1] ?? 0)
@@ -169,7 +181,10 @@ describe('nativeImageShim (F-34.5-G6-07) — real sips-backed conversion, nothin
   })
 
   it('createFromPath(nonexistent path) does not throw at construction, and isEmpty() is true', () => {
-    const nonexistent = join(tmpdir(), `gamelib-nativeimage-does-not-exist-${Date.now()}`)
+    const nonexistent = join(
+      tmpdir(),
+      `gamelib-nativeimage-does-not-exist-${Date.now()}`
+    )
     expect(existsSync(nonexistent)).toBe(false)
     let image: ReturnType<typeof nativeImage.createFromPath> | undefined
     expect(() => {

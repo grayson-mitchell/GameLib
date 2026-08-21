@@ -84,18 +84,24 @@ export function registerWineToolsFlows(): void {
   //
   // Pass-through only: no wine-environment reconstruction, no platform branch, no retry logic.
   // `runWineCommand` itself owns all of that (D-13, below).
-  ipcMain.handle('runWineCommand', async (_event: unknown, ...args: unknown[]) => {
-    return runWineCommand(args[0] as WineCommandArgs)
-  })
+  ipcMain.handle(
+    'runWineCommand',
+    async (_event: unknown, ...args: unknown[]) => {
+      return runWineCommand(args[0] as WineCommandArgs)
+    }
+  )
 
   // ── Wine probe pair (main.ts:973, main.ts:1532) ─────────────────────────────────────────────
   ipcMain.handle('getAlternativeWine', async () => {
     return GlobalConfig.get().getAlternativeWine()
   })
 
-  ipcMain.handle('wine.isValidVersion', async (_event: unknown, ...args: unknown[]) => {
-    return validWine(args[0] as WineInstallation)
-  })
+  ipcMain.handle(
+    'wine.isValidVersion',
+    async (_event: unknown, ...args: unknown[]) => {
+      return validWine(args[0] as WineInstallation)
+    }
+  )
 
   // ── Wine-version-management trio (wine/manager/ipc_handler.ts:14,46,56) ─────────────────────
   //
@@ -104,58 +110,68 @@ export function registerWineToolsFlows(): void {
   // `refreshWineVersionInfo`'s catch. Never imports `wine/manager/ipc_handler.ts` itself (that
   // file double-registers these same channels onto Electron's real `ipcMain`); the underlying
   // logic is imported directly from `wine/manager/utils.ts`.
-  ipcMain.handle('installWineVersion', async (_event: unknown, ...args: unknown[]) => {
-    const release = args[0] as WineVersionInfo
+  ipcMain.handle(
+    'installWineVersion',
+    async (_event: unknown, ...args: unknown[]) => {
+      const release = args[0] as WineVersionInfo
 
-    const onProgress = (state: WineManagerStatus) => {
-      sendFrontendMessage('progressOfWineManager', release.version, state)
+      const onProgress = (state: WineManagerStatus) => {
+        sendFrontendMessage('progressOfWineManager', release.version, state)
+      }
+
+      notify({ title: release.version, body: t('notify.install.startInstall') })
+      onProgress({
+        status: 'downloading',
+        percentage: 0,
+        avgSpeed: 0,
+        eta: '00:00:00'
+      })
+
+      const result = await installWineVersionForRelease(release, onProgress)
+
+      let notifyBody: string | null = null
+      switch (result) {
+        case 'error':
+          notifyBody = t('notify.install.error')
+          break
+        case 'abort':
+          notifyBody = t('notify.install.canceled')
+          break
+        case 'success':
+          notifyBody = t('notify.install.finished')
+      }
+      if (notifyBody) notify({ title: release.version, body: notifyBody })
+      onProgress({
+        status: 'idle'
+      })
     }
-
-    notify({ title: release.version, body: t('notify.install.startInstall') })
-    onProgress({
-      status: 'downloading',
-      percentage: 0,
-      avgSpeed: 0,
-      eta: '00:00:00'
-    })
-
-    const result = await installWineVersionForRelease(release, onProgress)
-
-    let notifyBody: string | null = null
-    switch (result) {
-      case 'error':
-        notifyBody = t('notify.install.error')
-        break
-      case 'abort':
-        notifyBody = t('notify.install.canceled')
-        break
-      case 'success':
-        notifyBody = t('notify.install.finished')
-    }
-    if (notifyBody) notify({ title: release.version, body: notifyBody })
-    onProgress({
-      status: 'idle'
-    })
-  })
+  )
 
   // Source: wine/manager/ipc_handler.ts:46 — the swallow-and-return-undefined shape on both the
   // success and catch paths is inherited behaviour, kept as-is (not this port's decision to make).
-  ipcMain.handle('refreshWineVersionInfo', async (_event: unknown, ...args: unknown[]) => {
-    const fetch = args[0] as boolean | undefined
-    try {
-      await updateWineVersionInfos(fetch)
-      return
-    } catch (error) {
-      logError(error, LogPrefix.WineDownloader)
-      return
+  ipcMain.handle(
+    'refreshWineVersionInfo',
+    async (_event: unknown, ...args: unknown[]) => {
+      const fetch = args[0] as boolean | undefined
+      try {
+        await updateWineVersionInfos(fetch)
+        return
+      } catch (error) {
+        logError(error, LogPrefix.WineDownloader)
+        return
+      }
     }
-  })
+  )
 
-  ipcMain.handle('removeWineVersion', async (_event: unknown, ...args: unknown[]) => {
-    const release = args[0] as WineVersionInfo
-    const result = await removeWineVersionForRelease(release)
-    if (result) notify({ title: release.version, body: t('notify.uninstalled') })
-  })
+  ipcMain.handle(
+    'removeWineVersion',
+    async (_event: unknown, ...args: unknown[]) => {
+      const release = args[0] as WineVersionInfo
+      const result = await removeWineVersionForRelease(release)
+      if (result)
+        notify({ title: release.version, body: t('notify.uninstalled') })
+    }
+  )
 
   // Source: wine/manager/ipc_handler.ts:61-64 — NOT an IPC channel (no entry in the declared 9),
   // but co-located with the trio above and the only caller of `updateWineListsIfOutdated`. The
@@ -192,14 +208,17 @@ export function registerWineToolsFlows(): void {
     return DXVK.installRemove(gameSettings, 'dxvk', action)
   })
 
-  ipcMain.handle('toggleDXVKNVAPI', async (_event: unknown, ...args: unknown[]) => {
-    const { appName, action } = args[0] as {
-      appName: string
-      action: 'backup' | 'restore'
+  ipcMain.handle(
+    'toggleDXVKNVAPI',
+    async (_event: unknown, ...args: unknown[]) => {
+      const { appName, action } = args[0] as {
+        appName: string
+        action: 'backup' | 'restore'
+      }
+      const gameSettings = await GameConfig.get(appName).getSettings()
+      return DXVK.installRemove(gameSettings, 'dxvk-nvapi', action)
     }
-    const gameSettings = await GameConfig.get(appName).getSettings()
-    return DXVK.installRemove(gameSettings, 'dxvk-nvapi', action)
-  })
+  )
 
   // D-13: on macOS, `tools/index.ts:228` (`if (isMac && tool !== 'dxvk') return true`) already
   // permits `dxvk` only and already excludes `vkd3d` before any file I/O runs — VKD3D is therefore

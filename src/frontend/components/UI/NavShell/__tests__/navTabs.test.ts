@@ -15,7 +15,6 @@ import {
   resolveDefaultStore,
   type NavStoreSessions
 } from '../navTabs'
-
 ;(globalThis as unknown as { sessionStorage: Storage }).sessionStorage = {
   getItem: jest.fn().mockReturnValue(null),
   setItem: jest.fn(),
@@ -187,9 +186,7 @@ describe('navTabs', () => {
 
     it("returns 'steam' when only steam.username is set", () => {
       expect(
-        resolveDefaultStore(
-          makeSessions({ steam: { username: 'steam-user' } })
-        )
+        resolveDefaultStore(makeSessions({ steam: { username: 'steam-user' } }))
       ).toBe('steam')
     })
 

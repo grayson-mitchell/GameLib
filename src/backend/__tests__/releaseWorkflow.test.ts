@@ -131,7 +131,7 @@ describe('release-tauri.yml draft/prerelease flags (D-09 regression guard)', () 
 })
 
 describe('release-tauri.yml Windows signing graceful-skip conditional (D-04, Pitfall 4)', () => {
-  test('gates Windows cert import behind env.WINDOWS_CERTIFICATE != \'\'', () => {
+  test("gates Windows cert import behind env.WINDOWS_CERTIFICATE != ''", () => {
     const source = loadReleaseWorkflow()
     expect(source).toContain("env.WINDOWS_CERTIFICATE != ''")
   })
@@ -146,7 +146,9 @@ describe('release-tauri.yml per-OS "Signing skipped" clear-warning steps (D-04 r
   // resolved $GITHUB_ENV content instead of source text.
   test('emits ::warning::Signing skipped when WINDOWS_CERTIFICATE is empty', () => {
     const source = loadReleaseWorkflow()
-    expect(source).toMatch(/env\.WINDOWS_CERTIFICATE == ''[\s\S]*?::warning::Signing skipped/)
+    expect(source).toMatch(
+      /env\.WINDOWS_CERTIFICATE == ''[\s\S]*?::warning::Signing skipped/
+    )
   })
 })
 
@@ -160,7 +162,9 @@ describe('release-tauri.yml never regresses to Heroic', () => {
 describe('release-tauri.yml per-leg sidecar target triple (CR-01 regression guard)', () => {
   test('wires GAMELIB_SIDECAR_TARGET_TRIPLE from matrix.sidecar_triple', () => {
     const source = loadReleaseWorkflow()
-    expect(source).toContain('GAMELIB_SIDECAR_TARGET_TRIPLE: ${{ matrix.sidecar_triple }}')
+    expect(source).toContain(
+      'GAMELIB_SIDECAR_TARGET_TRIPLE: ${{ matrix.sidecar_triple }}'
+    )
   })
 
   test('declares all four target triples across the matrix legs', () => {
@@ -193,7 +197,9 @@ describe('release-tauri.yml Windows cert material cleanup (WR-02 regression guar
 
   test('the removal always follows the Import-PfxCertificate call', () => {
     const source = loadReleaseWorkflow()
-    expect(source).toMatch(/Import-PfxCertificate[\s\S]*?Remove-Item -Path cert\.pfx -Force/)
+    expect(source).toMatch(
+      /Import-PfxCertificate[\s\S]*?Remove-Item -Path cert\.pfx -Force/
+    )
   })
 
   test('the removal sits in a finally block', () => {
@@ -249,10 +255,12 @@ describe('release-tauri.yml Windows cert material cleanup (WR-02 regression guar
     test('the finally block still removes the file', () => {
       const block = extractRunBlock(CERT_STEP_NAME)
       const finallyIndex = block.indexOf('finally {')
-      expect(finallyIndex).toBeGreaterThan(block.indexOf('Import-PfxCertificate'))
-      expect(block.indexOf('Remove-Item -Path cert.pfx -Force')).toBeGreaterThan(
-        finallyIndex
+      expect(finallyIndex).toBeGreaterThan(
+        block.indexOf('Import-PfxCertificate')
       )
+      expect(
+        block.indexOf('Remove-Item -Path cert.pfx -Force')
+      ).toBeGreaterThan(finallyIndex)
     })
   })
 
@@ -280,7 +288,9 @@ describe('release-tauri.yml renderer + asset build steps (CR-01 / GAP-1 regressi
 
   test('the renderer build step precedes tauri-action', () => {
     const source = loadReleaseWorkflow()
-    expect(source).toMatch(/run: pnpm exec electron-vite build[\s\S]*?uses: tauri-apps\/tauri-action/)
+    expect(source).toMatch(
+      /run: pnpm exec electron-vite build[\s\S]*?uses: tauri-apps\/tauri-action/
+    )
   })
 
   test('builds the macOS Steam bridge shims, gated to macOS legs', () => {
@@ -292,7 +302,9 @@ describe('release-tauri.yml renderer + asset build steps (CR-01 / GAP-1 regressi
 
   test('the steam-bridge build step precedes the renderer build', () => {
     const source = loadReleaseWorkflow()
-    expect(source).toMatch(/run: pnpm build-steam-bridge[\s\S]*?run: pnpm exec electron-vite build/)
+    expect(source).toMatch(
+      /run: pnpm build-steam-bridge[\s\S]*?run: pnpm exec electron-vite build/
+    )
   })
 
   test('fetches the bundled CrossOver index snapshot', () => {
@@ -311,7 +323,9 @@ describe('release-tauri.yml renderer + asset build steps (CR-01 / GAP-1 regressi
 
   test('the crossover index fetch tolerates a missing published index', () => {
     const source = loadReleaseWorkflow()
-    expect(source).toMatch(/gh release download crossover-index[^\n]*\n?[^\n]*\|\|\s*echo/)
+    expect(source).toMatch(
+      /gh release download crossover-index[^\n]*\n?[^\n]*\|\|\s*echo/
+    )
   })
 
   test('the header states the pipeline is unproven live, not verified fact', () => {
@@ -321,7 +335,9 @@ describe('release-tauri.yml renderer + asset build steps (CR-01 / GAP-1 regressi
 
   test('invariant guard: the SEA sidecar build step still precedes tauri-action', () => {
     const source = loadReleaseWorkflow()
-    expect(source).toMatch(/run: pnpm build:sidecar-sea[\s\S]*?uses: tauri-apps\/tauri-action/)
+    expect(source).toMatch(
+      /run: pnpm build:sidecar-sea[\s\S]*?uses: tauri-apps\/tauri-action/
+    )
   })
 })
 
@@ -349,7 +365,10 @@ describe('release-tauri.yml steam-bridge target arch (CR-01 regression guard)', 
    * strict: an expression shape this cannot parse fails the test rather than
    * silently returning a default.
    */
-  function evaluateBridgeArch(expression: string, sidecarTriple: string): string {
+  function evaluateBridgeArch(
+    expression: string,
+    sidecarTriple: string
+  ): string {
     const match = expression.match(
       /^\$\{\{\s*matrix\.sidecar_triple\s*==\s*'([^']+)'\s*&&\s*'([^']+)'\s*\|\|\s*'([^']+)'\s*\}\}$/
     )
@@ -406,108 +425,120 @@ describe('release-tauri.yml steam-bridge target arch (CR-01 regression guard)', 
 const PRUNE_STEP_NAME = 'Prune non-frontend build intermediates before bundling'
 const describeOnPosix = process.platform === 'win32' ? describe.skip : describe
 
-describeOnPosix('release-tauri.yml prunes frontendDist before bundling (CR-02 regression guard)', () => {
-  let workdir: string
+describeOnPosix(
+  'release-tauri.yml prunes frontendDist before bundling (CR-02 regression guard)',
+  () => {
+    let workdir: string
 
-  /** Mirrors the build/ contents observed after renderer build + SEA build. */
-  function seedBuildTree(root: string, { withBridge }: { withBridge: boolean }): void {
-    touch(root, join('build', 'index.html'), '<!doctype html>')
-    touch(root, join('build', 'assets', 'index-abc123.js'))
-    touch(root, join('build', 'assets', 'index-abc123.css'))
-    touch(root, join('build', 'node-dist', 'node-v26.2.0-darwin-x64.tar.gz'))
-    touch(root, join('build', 'node-dist', 'node-v26.2.0-darwin-x64', 'bin', 'node'))
-    touch(root, join('build', 'main', 'sidecar-sea-bundle.js'))
-    touch(root, join('build', 'main', 'sidecar.js'))
-    touch(root, join('build', 'main', 'main.js'))
-    touch(root, join('build', 'main', 'chunks', 'chunk-1.js'))
-    touch(root, join('build', 'main', 'decompressWorker.js'))
-    touch(root, join('build', 'preload', 'index.js'))
-    touch(root, join('build', 'sea-config.json'), '{}')
-    touch(root, join('build', 'sidecar-prep.blob'))
-    if (withBridge) {
-      touch(root, join('build', 'bin', 'x64', 'darwin', 'steam-bridge-helper'))
-      touch(root, join('build', 'bin', 'x64', 'darwin', 'steam_api.dll'))
-    }
-  }
-
-  beforeEach(() => {
-    workdir = mkdtempSync(join(tmpdir(), 'gamelib-prune-'))
-  })
-
-  afterEach(() => {
-    rmSync(workdir, { recursive: true, force: true })
-  })
-
-  test('the prune step runs after the SEA build and before tauri-action', () => {
-    const source = loadReleaseWorkflow()
-    expect(source).toMatch(
-      new RegExp(
-        `run: pnpm build:sidecar-sea[\\s\\S]*?${PRUNE_STEP_NAME}[\\s\\S]*?uses: tauri-apps/tauri-action`
+    /** Mirrors the build/ contents observed after renderer build + SEA build. */
+    function seedBuildTree(
+      root: string,
+      { withBridge }: { withBridge: boolean }
+    ): void {
+      touch(root, join('build', 'index.html'), '<!doctype html>')
+      touch(root, join('build', 'assets', 'index-abc123.js'))
+      touch(root, join('build', 'assets', 'index-abc123.css'))
+      touch(root, join('build', 'node-dist', 'node-v26.2.0-darwin-x64.tar.gz'))
+      touch(
+        root,
+        join('build', 'node-dist', 'node-v26.2.0-darwin-x64', 'bin', 'node')
       )
-    )
-  })
-
-  test('executing it removes every SEA/Electron intermediate from frontendDist', () => {
-    seedBuildTree(workdir, { withBridge: true })
-    const result = runStepScript(extractRunBlock(PRUNE_STEP_NAME), workdir, {
-      IS_MACOS: 'true'
-    })
-    expect(result.status).toBe(0)
-
-    for (const leftover of [
-      join('build', 'node-dist'),
-      join('build', 'main'),
-      join('build', 'preload'),
-      join('build', 'sea-config.json'),
-      join('build', 'sidecar-prep.blob')
-    ]) {
-      expect(existsSync(join(workdir, leftover))).toBe(false)
+      touch(root, join('build', 'main', 'sidecar-sea-bundle.js'))
+      touch(root, join('build', 'main', 'sidecar.js'))
+      touch(root, join('build', 'main', 'main.js'))
+      touch(root, join('build', 'main', 'chunks', 'chunk-1.js'))
+      touch(root, join('build', 'main', 'decompressWorker.js'))
+      touch(root, join('build', 'preload', 'index.js'))
+      touch(root, join('build', 'sea-config.json'), '{}')
+      touch(root, join('build', 'sidecar-prep.blob'))
+      if (withBridge) {
+        touch(
+          root,
+          join('build', 'bin', 'x64', 'darwin', 'steam-bridge-helper')
+        )
+        touch(root, join('build', 'bin', 'x64', 'darwin', 'steam_api.dll'))
+      }
     }
-  })
 
-  test('executing it leaves the renderer output and the bundled bridge assets intact', () => {
-    seedBuildTree(workdir, { withBridge: true })
-    const result = runStepScript(extractRunBlock(PRUNE_STEP_NAME), workdir, {
-      IS_MACOS: 'true'
+    beforeEach(() => {
+      workdir = mkdtempSync(join(tmpdir(), 'gamelib-prune-'))
     })
-    expect(result.status).toBe(0)
 
-    for (const kept of [
-      join('build', 'index.html'),
-      join('build', 'assets', 'index-abc123.js'),
-      join('build', 'assets', 'index-abc123.css'),
-      join('build', 'bin', 'x64', 'darwin', 'steam-bridge-helper'),
-      join('build', 'bin', 'x64', 'darwin', 'steam_api.dll')
-    ]) {
-      expect(existsSync(join(workdir, kept))).toBe(true)
-    }
-  })
-
-  test('it fails loudly if the prune ate the renderer entrypoint', () => {
-    seedBuildTree(workdir, { withBridge: true })
-    rmSync(join(workdir, 'build', 'index.html'))
-    const result = runStepScript(extractRunBlock(PRUNE_STEP_NAME), workdir, {
-      IS_MACOS: 'true'
+    afterEach(() => {
+      rmSync(workdir, { recursive: true, force: true })
     })
-    expect(result.status).not.toBe(0)
-  })
 
-  test('it fails loudly on a macOS leg whose bridge assets never reached build/ (CR-01 interlock)', () => {
-    seedBuildTree(workdir, { withBridge: false })
-    const result = runStepScript(extractRunBlock(PRUNE_STEP_NAME), workdir, {
-      IS_MACOS: 'true'
+    test('the prune step runs after the SEA build and before tauri-action', () => {
+      const source = loadReleaseWorkflow()
+      expect(source).toMatch(
+        new RegExp(
+          `run: pnpm build:sidecar-sea[\\s\\S]*?${PRUNE_STEP_NAME}[\\s\\S]*?uses: tauri-apps/tauri-action`
+        )
+      )
     })
-    expect(result.status).not.toBe(0)
-  })
 
-  test('the bridge-asset guard does not fire on the non-macOS legs', () => {
-    seedBuildTree(workdir, { withBridge: false })
-    const result = runStepScript(extractRunBlock(PRUNE_STEP_NAME), workdir, {
-      IS_MACOS: 'false'
+    test('executing it removes every SEA/Electron intermediate from frontendDist', () => {
+      seedBuildTree(workdir, { withBridge: true })
+      const result = runStepScript(extractRunBlock(PRUNE_STEP_NAME), workdir, {
+        IS_MACOS: 'true'
+      })
+      expect(result.status).toBe(0)
+
+      for (const leftover of [
+        join('build', 'node-dist'),
+        join('build', 'main'),
+        join('build', 'preload'),
+        join('build', 'sea-config.json'),
+        join('build', 'sidecar-prep.blob')
+      ]) {
+        expect(existsSync(join(workdir, leftover))).toBe(false)
+      }
     })
-    expect(result.status).toBe(0)
-  })
-})
+
+    test('executing it leaves the renderer output and the bundled bridge assets intact', () => {
+      seedBuildTree(workdir, { withBridge: true })
+      const result = runStepScript(extractRunBlock(PRUNE_STEP_NAME), workdir, {
+        IS_MACOS: 'true'
+      })
+      expect(result.status).toBe(0)
+
+      for (const kept of [
+        join('build', 'index.html'),
+        join('build', 'assets', 'index-abc123.js'),
+        join('build', 'assets', 'index-abc123.css'),
+        join('build', 'bin', 'x64', 'darwin', 'steam-bridge-helper'),
+        join('build', 'bin', 'x64', 'darwin', 'steam_api.dll')
+      ]) {
+        expect(existsSync(join(workdir, kept))).toBe(true)
+      }
+    })
+
+    test('it fails loudly if the prune ate the renderer entrypoint', () => {
+      seedBuildTree(workdir, { withBridge: true })
+      rmSync(join(workdir, 'build', 'index.html'))
+      const result = runStepScript(extractRunBlock(PRUNE_STEP_NAME), workdir, {
+        IS_MACOS: 'true'
+      })
+      expect(result.status).not.toBe(0)
+    })
+
+    test('it fails loudly on a macOS leg whose bridge assets never reached build/ (CR-01 interlock)', () => {
+      seedBuildTree(workdir, { withBridge: false })
+      const result = runStepScript(extractRunBlock(PRUNE_STEP_NAME), workdir, {
+        IS_MACOS: 'true'
+      })
+      expect(result.status).not.toBe(0)
+    })
+
+    test('the bridge-asset guard does not fire on the non-macOS legs', () => {
+      seedBuildTree(workdir, { withBridge: false })
+      const result = runStepScript(extractRunBlock(PRUNE_STEP_NAME), workdir, {
+        IS_MACOS: 'false'
+      })
+      expect(result.status).toBe(0)
+    })
+  }
+)
 
 // 34-VERIFICATION.md truth #7 PARTIAL / 34-REVIEW.md WR-03: the Windows signing override
 // gate tests only `-n "$WINDOWS_CERTIFICATE"` and never `WINDOWS_CERT_THUMBPRINT`. Enrolling
@@ -560,7 +591,9 @@ describe('release-tauri.yml Windows signing gate requires BOTH secrets (WR-03 / 
 
   test('Test 4: the warn-and-skip branch does not fail the job (no exit 1)', () => {
     const stripped = loadStrippedReleaseWorkflow()
-    const elifMatch = stripped.match(/elif[\s\S]*?WINDOWS_CERT_THUMBPRINT[\s\S]*?fi\b/)
+    const elifMatch = stripped.match(
+      /elif[\s\S]*?WINDOWS_CERT_THUMBPRINT[\s\S]*?fi\b/
+    )
     expect(elifMatch).not.toBeNull()
     expect(elifMatch?.[0]).not.toMatch(/exit 1/)
   })
@@ -571,7 +604,8 @@ describe('release-tauri.yml Windows signing gate requires BOTH secrets (WR-03 / 
       .split('\n')
       .find(
         (line) =>
-          line.trim().startsWith('if:') && line.includes("env.WINDOWS_CERTIFICATE != ''")
+          line.trim().startsWith('if:') &&
+          line.includes("env.WINDOWS_CERTIFICATE != ''")
       )
     expect(ifLine).toBeDefined()
     expect(ifLine).toContain("env.WINDOWS_CERT_THUMBPRINT != ''")
@@ -607,7 +641,9 @@ describe('release-tauri.yml Windows signing gate requires BOTH secrets (WR-03 / 
   // unaffected and out of scope for this gap.
   test('Test 8 (D-04 invariant guard): existing Windows Signing-skipped warning still present', () => {
     const source = loadReleaseWorkflow()
-    expect(source).toMatch(/env\.WINDOWS_CERTIFICATE == ''[\s\S]*?::warning::Signing skipped/)
+    expect(source).toMatch(
+      /env\.WINDOWS_CERTIFICATE == ''[\s\S]*?::warning::Signing skipped/
+    )
   })
 
   test('Test 9 (34-11 regression guard): cert.pfx cleanup still sits in a finally block', () => {
@@ -636,7 +672,7 @@ describe('release-tauri.yml updater signing key preflight (WR-03 regression guar
     return conf.bundle?.createUpdaterArtifacts === true
   }
 
-  test('createUpdaterArtifacts: true implies a TAURI_SIGNING_PRIVATE_KEY == \'\' guard exists', () => {
+  test("createUpdaterArtifacts: true implies a TAURI_SIGNING_PRIVATE_KEY == '' guard exists", () => {
     if (!updaterArtifactsEnabled()) {
       return
     }
@@ -697,7 +733,9 @@ describe('release-tauri.yml updater signing key preflight (WR-03 regression guar
 
   test('GAP-B: the decode preflight runs after install-deps but before every expensive build step', () => {
     const stripped = loadStrippedWorkflow()
-    const installDepsIndex = stripped.indexOf('uses: ./.github/actions/install-deps')
+    const installDepsIndex = stripped.indexOf(
+      'uses: ./.github/actions/install-deps'
+    )
     const preflightIndex = stripped.indexOf('run: pnpm verify:updater-key')
     expect(installDepsIndex).toBeGreaterThanOrEqual(0)
     expect(preflightIndex).toBeGreaterThan(installDepsIndex)
@@ -730,152 +768,160 @@ describe('release-tauri.yml updater signing key preflight (WR-03 regression guar
 const BUILD_ARGS_STEP_NAME =
   'Compute tauri-action build args (Windows signing override merge)'
 
-describeOnPosix('release-tauri.yml build-args secret gating, executed (WR-02 regression guard)', () => {
-  let workdir: string
+describeOnPosix(
+  'release-tauri.yml build-args secret gating, executed (WR-02 regression guard)',
+  () => {
+    let workdir: string
 
-  beforeEach(() => {
-    workdir = mkdtempSync(join(tmpdir(), 'gamelib-buildargs-'))
-  })
+    beforeEach(() => {
+      workdir = mkdtempSync(join(tmpdir(), 'gamelib-buildargs-'))
+    })
 
-  afterEach(() => {
-    rmSync(workdir, { recursive: true, force: true })
-  })
+    afterEach(() => {
+      rmSync(workdir, { recursive: true, force: true })
+    })
 
-  /** Reads back the `args<<DELIM` heredoc GitHub's $GITHUB_OUTPUT protocol uses. */
-  function readArgsOutput(outputPath: string): string {
-    const lines = readFileSync(outputPath, 'utf-8').split('\n')
-    const header = lines[0].match(/^args<<(.+)$/)
-    expect(header).not.toBeNull()
-    const delimiter = (header as RegExpMatchArray)[1]
-    const body: string[] = []
-    for (let index = 1; index < lines.length; index += 1) {
-      if (lines[index] === delimiter) {
-        return body.join('\n')
+    /** Reads back the `args<<DELIM` heredoc GitHub's $GITHUB_OUTPUT protocol uses. */
+    function readArgsOutput(outputPath: string): string {
+      const lines = readFileSync(outputPath, 'utf-8').split('\n')
+      const header = lines[0].match(/^args<<(.+)$/)
+      expect(header).not.toBeNull()
+      const delimiter = (header as RegExpMatchArray)[1]
+      const body: string[] = []
+      for (let index = 1; index < lines.length; index += 1) {
+        if (lines[index] === delimiter) {
+          return body.join('\n')
+        }
+        body.push(lines[index])
       }
-      body.push(lines[index])
+      throw new Error(`unterminated args heredoc (delimiter ${delimiter})`)
     }
-    throw new Error(`unterminated args heredoc (delimiter ${delimiter})`)
-  }
 
-  function runBuildArgs(
-    secrets: Record<string, string>,
-    platform = 'windows-latest',
-    matrixArgs = ''
-  ): { status: number | null; stdout: string; args: string; rawOutput: string } {
-    const script = substituteMatrixExpressions(
-      extractRunBlock(BUILD_ARGS_STEP_NAME),
-      { platform, args: matrixArgs }
-    )
-    const outputPath = join(workdir, `github-output-${Math.random()}`)
-    writeFileSync(outputPath, '')
-    const result = runStepScript(script, workdir, {
-      GITHUB_OUTPUT: outputPath,
-      WINDOWS_CERTIFICATE: '',
-      WINDOWS_CERT_THUMBPRINT: '',
-      WINDOWS_CERTIFICATE_PASSWORD: '',
-      ...secrets
-    })
-    return {
-      status: result.status,
-      stdout: result.stdout,
-      args: readArgsOutput(outputPath),
-      rawOutput: readFileSync(outputPath, 'utf-8')
+    function runBuildArgs(
+      secrets: Record<string, string>,
+      platform = 'windows-latest',
+      matrixArgs = ''
+    ): {
+      status: number | null
+      stdout: string
+      args: string
+      rawOutput: string
+    } {
+      const script = substituteMatrixExpressions(
+        extractRunBlock(BUILD_ARGS_STEP_NAME),
+        { platform, args: matrixArgs }
+      )
+      const outputPath = join(workdir, `github-output-${Math.random()}`)
+      writeFileSync(outputPath, '')
+      const result = runStepScript(script, workdir, {
+        GITHUB_OUTPUT: outputPath,
+        WINDOWS_CERTIFICATE: '',
+        WINDOWS_CERT_THUMBPRINT: '',
+        WINDOWS_CERTIFICATE_PASSWORD: '',
+        ...secrets
+      })
+      return {
+        status: result.status,
+        stdout: result.stdout,
+        args: readArgsOutput(outputPath),
+        rawOutput: readFileSync(outputPath, 'utf-8')
+      }
     }
-  }
 
-  test('all three Windows secrets present -> the signing override is merged in', () => {
-    const result = runBuildArgs({
-      WINDOWS_CERTIFICATE: 'BASE64CERT',
-      WINDOWS_CERT_THUMBPRINT: 'AABBCCDD',
-      WINDOWS_CERTIFICATE_PASSWORD: 'hunter2'
-    })
-    expect(result.status).toBe(0)
-    expect(result.args).toContain('"certificateThumbprint":"AABBCCDD"')
-    expect(result.args).toContain('"digestAlgorithm":"sha256"')
-  })
-
-  test('WR-02: cert + thumbprint but NO password -> warn and ship unsigned, job stays green', () => {
-    const result = runBuildArgs({
-      WINDOWS_CERTIFICATE: 'BASE64CERT',
-      WINDOWS_CERT_THUMBPRINT: 'AABBCCDD'
-    })
-    expect(result.status).toBe(0)
-    expect(result.args).not.toContain('certificateThumbprint')
-    expect(result.stdout).toContain('::warning::')
-    expect(result.stdout).toContain('WINDOWS_CERTIFICATE_PASSWORD')
-  })
-
-  test('cert + password but NO thumbprint -> warn and ship unsigned, job stays green', () => {
-    const result = runBuildArgs({
-      WINDOWS_CERTIFICATE: 'BASE64CERT',
-      WINDOWS_CERTIFICATE_PASSWORD: 'hunter2'
-    })
-    expect(result.status).toBe(0)
-    expect(result.args).not.toContain('certificateThumbprint')
-    expect(result.stdout).toContain('WINDOWS_CERT_THUMBPRINT')
-  })
-
-  test('no Windows secrets at all -> matrix.args passes through untouched (D-04 default)', () => {
-    const result = runBuildArgs({}, 'windows-latest', '--verbose')
-    expect(result.status).toBe(0)
-    expect(result.args.trim()).toBe('--verbose')
-    expect(result.stdout).not.toContain('::warning::')
-  })
-
-  test('WR-02: thumbprint/password present but NO cert -> warn naming the cert, ship unsigned, job stays green', () => {
-    const result = runBuildArgs({
-      WINDOWS_CERT_THUMBPRINT: 'AABBCCDD',
-      WINDOWS_CERTIFICATE_PASSWORD: 'hunter2'
-    })
-    expect(result.status).toBe(0)
-    expect(result.args).not.toContain('certificateThumbprint')
-    expect(result.stdout).toContain('::warning::')
-    expect(result.stdout).toContain('WINDOWS_CERTIFICATE is missing')
-  })
-
-  test('a non-Windows leg never merges a signing override even with secrets enrolled', () => {
-    const result = runBuildArgs(
-      {
+    test('all three Windows secrets present -> the signing override is merged in', () => {
+      const result = runBuildArgs({
         WINDOWS_CERTIFICATE: 'BASE64CERT',
         WINDOWS_CERT_THUMBPRINT: 'AABBCCDD',
         WINDOWS_CERTIFICATE_PASSWORD: 'hunter2'
-      },
-      'macos-latest',
-      '--target x86_64-apple-darwin'
-    )
-    expect(result.status).toBe(0)
-    expect(result.args.trim()).toBe('--target x86_64-apple-darwin')
-    expect(result.args).not.toContain('certificateThumbprint')
-  })
-
-  // WR-04: the previous `expect(source).toContain('$RANDOM')` assertion was satisfied by
-  // the step's own comment prose and would have stayed green against a fixed delimiter.
-  // Running the block twice proves the delimiter really varies per run.
-  test('the $GITHUB_OUTPUT heredoc delimiter is randomised per run, not a fixed literal', () => {
-    const secrets = { WINDOWS_CERTIFICATE: '', WINDOWS_CERT_THUMBPRINT: '' }
-    const first = runBuildArgs(secrets).rawOutput.split('\n')[0]
-    const second = runBuildArgs(secrets).rawOutput.split('\n')[0]
-    expect(first).toMatch(/^args<<\S+$/)
-    expect(second).toMatch(/^args<<\S+$/)
-    expect(first).not.toBe(second)
-  })
-
-  test('a newline-bearing thumbprint secret cannot inject extra step outputs', () => {
-    const result = runBuildArgs({
-      WINDOWS_CERTIFICATE: 'BASE64CERT',
-      WINDOWS_CERT_THUMBPRINT: 'AABBCCDD\nevil=pwned',
-      WINDOWS_CERTIFICATE_PASSWORD: 'hunter2'
+      })
+      expect(result.status).toBe(0)
+      expect(result.args).toContain('"certificateThumbprint":"AABBCCDD"')
+      expect(result.args).toContain('"digestAlgorithm":"sha256"')
     })
-    expect(result.status).toBe(0)
-    // The injected line lands INSIDE the heredoc body (part of args), never
-    // as a sibling `evil=pwned` output key.
-    expect(result.args).toContain('evil=pwned')
-    expect(result.rawOutput.split('\n')[0]).toMatch(/^args<</)
-    const delimiter = result.rawOutput.split('\n')[0].replace('args<<', '')
-    const trailing = result.rawOutput.split(`\n${delimiter}\n`)[1] ?? ''
-    expect(trailing.trim()).toBe('')
-  })
-})
+
+    test('WR-02: cert + thumbprint but NO password -> warn and ship unsigned, job stays green', () => {
+      const result = runBuildArgs({
+        WINDOWS_CERTIFICATE: 'BASE64CERT',
+        WINDOWS_CERT_THUMBPRINT: 'AABBCCDD'
+      })
+      expect(result.status).toBe(0)
+      expect(result.args).not.toContain('certificateThumbprint')
+      expect(result.stdout).toContain('::warning::')
+      expect(result.stdout).toContain('WINDOWS_CERTIFICATE_PASSWORD')
+    })
+
+    test('cert + password but NO thumbprint -> warn and ship unsigned, job stays green', () => {
+      const result = runBuildArgs({
+        WINDOWS_CERTIFICATE: 'BASE64CERT',
+        WINDOWS_CERTIFICATE_PASSWORD: 'hunter2'
+      })
+      expect(result.status).toBe(0)
+      expect(result.args).not.toContain('certificateThumbprint')
+      expect(result.stdout).toContain('WINDOWS_CERT_THUMBPRINT')
+    })
+
+    test('no Windows secrets at all -> matrix.args passes through untouched (D-04 default)', () => {
+      const result = runBuildArgs({}, 'windows-latest', '--verbose')
+      expect(result.status).toBe(0)
+      expect(result.args.trim()).toBe('--verbose')
+      expect(result.stdout).not.toContain('::warning::')
+    })
+
+    test('WR-02: thumbprint/password present but NO cert -> warn naming the cert, ship unsigned, job stays green', () => {
+      const result = runBuildArgs({
+        WINDOWS_CERT_THUMBPRINT: 'AABBCCDD',
+        WINDOWS_CERTIFICATE_PASSWORD: 'hunter2'
+      })
+      expect(result.status).toBe(0)
+      expect(result.args).not.toContain('certificateThumbprint')
+      expect(result.stdout).toContain('::warning::')
+      expect(result.stdout).toContain('WINDOWS_CERTIFICATE is missing')
+    })
+
+    test('a non-Windows leg never merges a signing override even with secrets enrolled', () => {
+      const result = runBuildArgs(
+        {
+          WINDOWS_CERTIFICATE: 'BASE64CERT',
+          WINDOWS_CERT_THUMBPRINT: 'AABBCCDD',
+          WINDOWS_CERTIFICATE_PASSWORD: 'hunter2'
+        },
+        'macos-latest',
+        '--target x86_64-apple-darwin'
+      )
+      expect(result.status).toBe(0)
+      expect(result.args.trim()).toBe('--target x86_64-apple-darwin')
+      expect(result.args).not.toContain('certificateThumbprint')
+    })
+
+    // WR-04: the previous `expect(source).toContain('$RANDOM')` assertion was satisfied by
+    // the step's own comment prose and would have stayed green against a fixed delimiter.
+    // Running the block twice proves the delimiter really varies per run.
+    test('the $GITHUB_OUTPUT heredoc delimiter is randomised per run, not a fixed literal', () => {
+      const secrets = { WINDOWS_CERTIFICATE: '', WINDOWS_CERT_THUMBPRINT: '' }
+      const first = runBuildArgs(secrets).rawOutput.split('\n')[0]
+      const second = runBuildArgs(secrets).rawOutput.split('\n')[0]
+      expect(first).toMatch(/^args<<\S+$/)
+      expect(second).toMatch(/^args<<\S+$/)
+      expect(first).not.toBe(second)
+    })
+
+    test('a newline-bearing thumbprint secret cannot inject extra step outputs', () => {
+      const result = runBuildArgs({
+        WINDOWS_CERTIFICATE: 'BASE64CERT',
+        WINDOWS_CERT_THUMBPRINT: 'AABBCCDD\nevil=pwned',
+        WINDOWS_CERTIFICATE_PASSWORD: 'hunter2'
+      })
+      expect(result.status).toBe(0)
+      // The injected line lands INSIDE the heredoc body (part of args), never
+      // as a sibling `evil=pwned` output key.
+      expect(result.args).toContain('evil=pwned')
+      expect(result.rawOutput.split('\n')[0]).toMatch(/^args<</)
+      const delimiter = result.rawOutput.split('\n')[0].replace('args<<', '')
+      const trailing = result.rawOutput.split(`\n${delimiter}\n`)[1] ?? ''
+      expect(trailing.trim()).toBe('')
+    })
+  }
+)
 
 // GAP-A (live run 30084918812): both macOS legs failed with `failed to run command
 // security import: failed to import keychain certificate` even though NO Apple cert
@@ -890,154 +936,165 @@ describeOnPosix('release-tauri.yml build-args secret gating, executed (WR-02 reg
 const APPLE_GATE_STEP_NAME =
   'Enable Apple signing only when a complete cert secret set is enrolled'
 
-describeOnPosix('release-tauri.yml Apple signing env gate, executed (GAP-A regression guard)', () => {
-  let workdir: string
+describeOnPosix(
+  'release-tauri.yml Apple signing env gate, executed (GAP-A regression guard)',
+  () => {
+    let workdir: string
 
-  beforeEach(() => {
-    workdir = mkdtempSync(join(tmpdir(), 'gamelib-applegate-'))
-  })
+    beforeEach(() => {
+      workdir = mkdtempSync(join(tmpdir(), 'gamelib-applegate-'))
+    })
 
-  afterEach(() => {
-    rmSync(workdir, { recursive: true, force: true })
-  })
+    afterEach(() => {
+      rmSync(workdir, { recursive: true, force: true })
+    })
 
-  type AppleGateInput = Partial<
-    Record<
-      | 'IN_APPLE_CERTIFICATE'
-      | 'IN_APPLE_CERTIFICATE_PASSWORD'
-      | 'IN_APPLE_SIGNING_IDENTITY'
-      | 'IN_APPLE_ID'
-      | 'IN_APPLE_PASSWORD'
-      | 'IN_APPLE_TEAM_ID',
-      string
+    type AppleGateInput = Partial<
+      Record<
+        | 'IN_APPLE_CERTIFICATE'
+        | 'IN_APPLE_CERTIFICATE_PASSWORD'
+        | 'IN_APPLE_SIGNING_IDENTITY'
+        | 'IN_APPLE_ID'
+        | 'IN_APPLE_PASSWORD'
+        | 'IN_APPLE_TEAM_ID',
+        string
+      >
     >
-  >
 
-  function runAppleGate(inputs: AppleGateInput): {
-    status: number | null
-    stdout: string
-    rawEnv: string
-    env: Record<string, string>
-  } {
-    const envFilePath = join(workdir, `github-env-${Math.random()}`)
-    writeFileSync(envFilePath, '')
-    const result = runStepScript(extractRunBlock(APPLE_GATE_STEP_NAME), workdir, {
-      GITHUB_ENV: envFilePath,
-      IN_APPLE_CERTIFICATE: '',
-      IN_APPLE_CERTIFICATE_PASSWORD: '',
-      IN_APPLE_SIGNING_IDENTITY: '',
-      IN_APPLE_ID: '',
-      IN_APPLE_PASSWORD: '',
-      IN_APPLE_TEAM_ID: '',
-      ...inputs
-    })
-    const rawEnv = readFileSync(envFilePath, 'utf-8')
-    return {
-      status: result.status,
-      stdout: result.stdout,
-      rawEnv,
-      env: readGithubEnv(envFilePath)
+    function runAppleGate(inputs: AppleGateInput): {
+      status: number | null
+      stdout: string
+      rawEnv: string
+      env: Record<string, string>
+    } {
+      const envFilePath = join(workdir, `github-env-${Math.random()}`)
+      writeFileSync(envFilePath, '')
+      const result = runStepScript(
+        extractRunBlock(APPLE_GATE_STEP_NAME),
+        workdir,
+        {
+          GITHUB_ENV: envFilePath,
+          IN_APPLE_CERTIFICATE: '',
+          IN_APPLE_CERTIFICATE_PASSWORD: '',
+          IN_APPLE_SIGNING_IDENTITY: '',
+          IN_APPLE_ID: '',
+          IN_APPLE_PASSWORD: '',
+          IN_APPLE_TEAM_ID: '',
+          ...inputs
+        }
+      )
+      const rawEnv = readFileSync(envFilePath, 'utf-8')
+      return {
+        status: result.status,
+        stdout: result.stdout,
+        rawEnv,
+        env: readGithubEnv(envFilePath)
+      }
     }
+
+    test('Test A (the live failure): all Apple secrets empty -> nothing exported, warned', () => {
+      const result = runAppleGate({})
+      expect(result.status).toBe(0)
+      expect(result.rawEnv).not.toMatch(/^APPLE_/m)
+      expect(result.stdout).toContain(
+        '::warning::Signing skipped — no Apple cert secret set; shipping unsigned artifact'
+      )
+    })
+
+    test('Test B: full signing trio exports exactly those three, nothing else', () => {
+      const result = runAppleGate({
+        IN_APPLE_CERTIFICATE: 'CERTDATA',
+        IN_APPLE_CERTIFICATE_PASSWORD: 'certpass',
+        IN_APPLE_SIGNING_IDENTITY: 'Developer ID Application: Foo'
+      })
+      expect(result.status).toBe(0)
+      expect(result.env.APPLE_CERTIFICATE).toBe('CERTDATA')
+      expect(result.env.APPLE_CERTIFICATE_PASSWORD).toBe('certpass')
+      expect(result.env.APPLE_SIGNING_IDENTITY).toBe(
+        'Developer ID Application: Foo'
+      )
+      expect(result.env.APPLE_ID).toBeUndefined()
+      expect(result.env.APPLE_PASSWORD).toBeUndefined()
+      expect(result.env.APPLE_TEAM_ID).toBeUndefined()
+    })
+
+    test('Test C (partial set, D-04): cert set but password empty -> warn, ship unsigned', () => {
+      const result = runAppleGate({ IN_APPLE_CERTIFICATE: 'CERTDATA' })
+      expect(result.status).toBe(0)
+      expect(result.rawEnv).not.toMatch(/^APPLE_/m)
+      expect(result.stdout).toContain('::warning::')
+      expect(result.stdout).toContain('APPLE_CERTIFICATE_PASSWORD')
+    })
+
+    test('Test D (partial set): cert + password set, identity empty -> warn, ship unsigned', () => {
+      const result = runAppleGate({
+        IN_APPLE_CERTIFICATE: 'CERTDATA',
+        IN_APPLE_CERTIFICATE_PASSWORD: 'certpass'
+      })
+      expect(result.status).toBe(0)
+      expect(result.rawEnv).not.toMatch(/^APPLE_/m)
+      expect(result.stdout).toContain('APPLE_SIGNING_IDENTITY')
+    })
+
+    test('Test E (notarization): full signing trio + full notarization trio -> all six exported', () => {
+      const result = runAppleGate({
+        IN_APPLE_CERTIFICATE: 'CERTDATA',
+        IN_APPLE_CERTIFICATE_PASSWORD: 'certpass',
+        IN_APPLE_SIGNING_IDENTITY: 'Developer ID Application: Foo',
+        IN_APPLE_ID: 'dev@example.com',
+        IN_APPLE_PASSWORD: 'app-specific-pw',
+        IN_APPLE_TEAM_ID: 'TEAM1234'
+      })
+      expect(result.status).toBe(0)
+      expect(result.env.APPLE_CERTIFICATE).toBe('CERTDATA')
+      expect(result.env.APPLE_CERTIFICATE_PASSWORD).toBe('certpass')
+      expect(result.env.APPLE_SIGNING_IDENTITY).toBe(
+        'Developer ID Application: Foo'
+      )
+      expect(result.env.APPLE_ID).toBe('dev@example.com')
+      expect(result.env.APPLE_PASSWORD).toBe('app-specific-pw')
+      expect(result.env.APPLE_TEAM_ID).toBe('TEAM1234')
+    })
+
+    test('Test F (never notarize an unsigned bundle): notarization trio set but no cert -> nothing exported', () => {
+      const result = runAppleGate({
+        IN_APPLE_ID: 'dev@example.com',
+        IN_APPLE_PASSWORD: 'app-specific-pw',
+        IN_APPLE_TEAM_ID: 'TEAM1234'
+      })
+      expect(result.status).toBe(0)
+      expect(result.rawEnv).not.toMatch(/^APPLE_/m)
+    })
+
+    test('Test G (injection, mirrors WR-03): a newline-bearing identity cannot inject an extra GITHUB_ENV key', () => {
+      // PRECONDITION: cert + password must also be set, or the signing branch
+      // (and its write_env call) is never reached -- see the plan's note on
+      // why an identity-only variant of this test would pass vacuously.
+      const result = runAppleGate({
+        IN_APPLE_CERTIFICATE: 'CERTDATA',
+        IN_APPLE_CERTIFICATE_PASSWORD: 'certpass',
+        IN_APPLE_SIGNING_IDENTITY: 'Developer ID Application: Foo\nEVIL=pwned'
+      })
+      expect(result.status).toBe(0)
+      expect(result.env.APPLE_SIGNING_IDENTITY).toContain('EVIL=pwned')
+      expect(result.env.EVIL).toBeUndefined()
+    })
+
+    test('Test I (WR-02): cert absent but a secondary Apple secret present -> nothing exported, cert named as the missing one', () => {
+      const result = runAppleGate({
+        IN_APPLE_CERTIFICATE_PASSWORD: 'certpass',
+        IN_APPLE_SIGNING_IDENTITY: 'Developer ID Application: Foo'
+      })
+      expect(result.status).toBe(0)
+      expect(result.rawEnv).not.toMatch(/^APPLE_/m)
+      expect(result.stdout).toContain('::warning::')
+      expect(result.stdout).toContain('APPLE_CERTIFICATE is missing')
+      // The misdiagnosis WR-02 flags: a partial set must NOT read as the all-empty
+      // "no Apple cert secret set" case (that string belongs to Test A only).
+      expect(result.stdout).not.toContain('no Apple cert secret set')
+    })
   }
-
-  test('Test A (the live failure): all Apple secrets empty -> nothing exported, warned', () => {
-    const result = runAppleGate({})
-    expect(result.status).toBe(0)
-    expect(result.rawEnv).not.toMatch(/^APPLE_/m)
-    expect(result.stdout).toContain(
-      '::warning::Signing skipped — no Apple cert secret set; shipping unsigned artifact'
-    )
-  })
-
-  test('Test B: full signing trio exports exactly those three, nothing else', () => {
-    const result = runAppleGate({
-      IN_APPLE_CERTIFICATE: 'CERTDATA',
-      IN_APPLE_CERTIFICATE_PASSWORD: 'certpass',
-      IN_APPLE_SIGNING_IDENTITY: 'Developer ID Application: Foo'
-    })
-    expect(result.status).toBe(0)
-    expect(result.env.APPLE_CERTIFICATE).toBe('CERTDATA')
-    expect(result.env.APPLE_CERTIFICATE_PASSWORD).toBe('certpass')
-    expect(result.env.APPLE_SIGNING_IDENTITY).toBe('Developer ID Application: Foo')
-    expect(result.env.APPLE_ID).toBeUndefined()
-    expect(result.env.APPLE_PASSWORD).toBeUndefined()
-    expect(result.env.APPLE_TEAM_ID).toBeUndefined()
-  })
-
-  test('Test C (partial set, D-04): cert set but password empty -> warn, ship unsigned', () => {
-    const result = runAppleGate({ IN_APPLE_CERTIFICATE: 'CERTDATA' })
-    expect(result.status).toBe(0)
-    expect(result.rawEnv).not.toMatch(/^APPLE_/m)
-    expect(result.stdout).toContain('::warning::')
-    expect(result.stdout).toContain('APPLE_CERTIFICATE_PASSWORD')
-  })
-
-  test('Test D (partial set): cert + password set, identity empty -> warn, ship unsigned', () => {
-    const result = runAppleGate({
-      IN_APPLE_CERTIFICATE: 'CERTDATA',
-      IN_APPLE_CERTIFICATE_PASSWORD: 'certpass'
-    })
-    expect(result.status).toBe(0)
-    expect(result.rawEnv).not.toMatch(/^APPLE_/m)
-    expect(result.stdout).toContain('APPLE_SIGNING_IDENTITY')
-  })
-
-  test('Test E (notarization): full signing trio + full notarization trio -> all six exported', () => {
-    const result = runAppleGate({
-      IN_APPLE_CERTIFICATE: 'CERTDATA',
-      IN_APPLE_CERTIFICATE_PASSWORD: 'certpass',
-      IN_APPLE_SIGNING_IDENTITY: 'Developer ID Application: Foo',
-      IN_APPLE_ID: 'dev@example.com',
-      IN_APPLE_PASSWORD: 'app-specific-pw',
-      IN_APPLE_TEAM_ID: 'TEAM1234'
-    })
-    expect(result.status).toBe(0)
-    expect(result.env.APPLE_CERTIFICATE).toBe('CERTDATA')
-    expect(result.env.APPLE_CERTIFICATE_PASSWORD).toBe('certpass')
-    expect(result.env.APPLE_SIGNING_IDENTITY).toBe('Developer ID Application: Foo')
-    expect(result.env.APPLE_ID).toBe('dev@example.com')
-    expect(result.env.APPLE_PASSWORD).toBe('app-specific-pw')
-    expect(result.env.APPLE_TEAM_ID).toBe('TEAM1234')
-  })
-
-  test('Test F (never notarize an unsigned bundle): notarization trio set but no cert -> nothing exported', () => {
-    const result = runAppleGate({
-      IN_APPLE_ID: 'dev@example.com',
-      IN_APPLE_PASSWORD: 'app-specific-pw',
-      IN_APPLE_TEAM_ID: 'TEAM1234'
-    })
-    expect(result.status).toBe(0)
-    expect(result.rawEnv).not.toMatch(/^APPLE_/m)
-  })
-
-  test('Test G (injection, mirrors WR-03): a newline-bearing identity cannot inject an extra GITHUB_ENV key', () => {
-    // PRECONDITION: cert + password must also be set, or the signing branch
-    // (and its write_env call) is never reached -- see the plan's note on
-    // why an identity-only variant of this test would pass vacuously.
-    const result = runAppleGate({
-      IN_APPLE_CERTIFICATE: 'CERTDATA',
-      IN_APPLE_CERTIFICATE_PASSWORD: 'certpass',
-      IN_APPLE_SIGNING_IDENTITY: 'Developer ID Application: Foo\nEVIL=pwned'
-    })
-    expect(result.status).toBe(0)
-    expect(result.env.APPLE_SIGNING_IDENTITY).toContain('EVIL=pwned')
-    expect(result.env.EVIL).toBeUndefined()
-  })
-
-  test('Test I (WR-02): cert absent but a secondary Apple secret present -> nothing exported, cert named as the missing one', () => {
-    const result = runAppleGate({
-      IN_APPLE_CERTIFICATE_PASSWORD: 'certpass',
-      IN_APPLE_SIGNING_IDENTITY: 'Developer ID Application: Foo'
-    })
-    expect(result.status).toBe(0)
-    expect(result.rawEnv).not.toMatch(/^APPLE_/m)
-    expect(result.stdout).toContain('::warning::')
-    expect(result.stdout).toContain('APPLE_CERTIFICATE is missing')
-    // The misdiagnosis WR-02 flags: a partial set must NOT read as the all-empty
-    // "no Apple cert secret set" case (that string belongs to Test A only).
-    expect(result.stdout).not.toContain('no Apple cert secret set')
-  })
-})
+)
 
 // The other half of the GAP-A invariant: even a flawless gate step is defeated if the
 // job-level `env:` block still maps an APPLE_* secret directly (reintroducing the

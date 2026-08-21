@@ -20,18 +20,18 @@
 // ---------------------------------------------------------------------------
 
 const SAMPLE_TITLES = [
-  "Hades", // plain title
-  "007 Nightfire", // numeric/subtitle title
-  "Half-Life 2", // punctuation (hyphen + number)
+  'Hades', // plain title
+  '007 Nightfire', // numeric/subtitle title
+  'Half-Life 2', // punctuation (hyphen + number)
   "Baldur's Gate 3", // apostrophe
-  "The Witcher 3: Wild Hunt", // colon + edition-style subtitle
-  "Pokémon", // diacritic
-  "Ori and the Blind Forest", // diacritic-adjacent, multi-word
-  "Call of Duty: Modern Warfare II", // colon + roman numeral, likely miss (trademark/branding heavy)
+  'The Witcher 3: Wild Hunt', // colon + edition-style subtitle
+  'Pokémon', // diacritic
+  'Ori and the Blind Forest', // diacritic-adjacent, multi-word
+  'Call of Duty: Modern Warfare II', // colon + roman numeral, likely miss (trademark/branding heavy)
   "Marvel's Spider-Man Remastered", // apostrophe + hyphen + edition suffix, likely miss
-  "Elden Ring", // plain, likely hit
-  "Definitely Not A Real Game 9000", // deliberate oddball, expected miss
-  "Grand Theft Auto V", // roman numeral as "V"
+  'Elden Ring', // plain, likely hit
+  'Definitely Not A Real Game 9000', // deliberate oddball, expected miss
+  'Grand Theft Auto V' // roman numeral as "V"
 ]
 
 // ---------------------------------------------------------------------------
@@ -40,20 +40,20 @@ const SAMPLE_TITLES = [
 
 function slugify(title) {
   return title
-    .normalize("NFKD") // decompose accented chars into base + combining marks
-    .replace(/[̀-ͯ]/g, "") // strip combining diacritical marks
+    .normalize('NFKD') // decompose accented chars into base + combining marks
+    .replace(/[̀-ͯ]/g, '') // strip combining diacritical marks
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-") // any run of non-alphanumeric -> single hyphen
-    .replace(/^-+|-+$/g, "") // trim leading/trailing hyphens
+    .replace(/[^a-z0-9]+/g, '-') // any run of non-alphanumeric -> single hyphen
+    .replace(/^-+|-+$/g, '') // trim leading/trailing hyphens
 }
 
 // Self-check: known-good examples from CodeWeavers site verification.
 // A wrong slugifier must fail loudly here rather than silently producing
 // bad URLs for the whole sample run.
 const KNOWN_GOOD = [
-  ["007 Nightfire", "007-nightfire"],
-  ["10,000,000", "10-000-000"],
-  ["001 Game Creator", "001-game-creator"],
+  ['007 Nightfire', '007-nightfire'],
+  ['10,000,000', '10-000-000'],
+  ['001 Game Creator', '001-game-creator']
 ]
 
 for (const [input, expected] of KNOWN_GOOD) {
@@ -66,16 +66,16 @@ for (const [input, expected] of KNOWN_GOOD) {
     )
   }
 }
-console.log("slugify self-check passed (3/3 known-good examples).\n")
+console.log('slugify self-check passed (3/3 known-good examples).\n')
 
 // ---------------------------------------------------------------------------
 // 3. Fetch + parse
 // ---------------------------------------------------------------------------
 
 const CHROME_UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
 
-const BASE_URL = "https://www.codeweavers.com/compatibility/crossover"
+const BASE_URL = 'https://www.codeweavers.com/compatibility/crossover'
 const DELAY_MS = 1500 // polite inter-request delay
 
 function sleep(ms) {
@@ -96,14 +96,16 @@ function extractVideoGameJsonLd(html) {
     return { parseError: String(err && err.message ? err.message : err) }
   }
 
-  const graph = Array.isArray(data["@graph"]) ? data["@graph"] : [data]
+  const graph = Array.isArray(data['@graph']) ? data['@graph'] : [data]
   const videoGame = graph.find((node) => {
-    const type = node && node["@type"]
+    const type = node && node['@type']
     if (!type) return false
-    return Array.isArray(type) ? type.includes("VideoGame") : type === "VideoGame"
+    return Array.isArray(type)
+      ? type.includes('VideoGame')
+      : type === 'VideoGame'
   })
 
-  if (!videoGame) return { parseError: "no VideoGame node in @graph" }
+  if (!videoGame) return { parseError: 'no VideoGame node in @graph' }
 
   const aggregateRating = videoGame.aggregateRating || null
 
@@ -113,7 +115,7 @@ function extractVideoGameJsonLd(html) {
     applicationCategory: videoGame.applicationCategory,
     operatingSystem: videoGame.operatingSystem,
     publisherName: videoGame.publisher ? videoGame.publisher.name : undefined,
-    sameAs: videoGame.sameAs,
+    sameAs: videoGame.sameAs
   }
 }
 
@@ -137,12 +139,12 @@ async function lookupTitle(title) {
   let hit = false
   let ratingValue
   let ratingCount
-  let note = ""
+  let note = ''
 
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": CHROME_UA },
-      redirect: "follow",
+      headers: { 'User-Agent': CHROME_UA },
+      redirect: 'follow'
     })
     status = res.status
 
@@ -153,13 +155,14 @@ async function lookupTitle(title) {
         // Real miss: site answers with HTTP 200 + a "404 Not Found" title
         // page instead of a real 404 status.
         hit = false
-        status = "200 (soft-404)"
+        status = '200 (soft-404)'
       } else {
         try {
           const parsed = extractVideoGameJsonLd(html)
           if (!parsed) {
             hit = false
-            note = "200 but no JSON-LD block found and no soft-404 marker (ambiguous, not counted as clean hit/miss)"
+            note =
+              '200 but no JSON-LD block found and no soft-404 marker (ambiguous, not counted as clean hit/miss)'
           } else if (parsed.parseError) {
             hit = false
             note = `200 but unparsed: ${parsed.parseError} (ambiguous, not counted as clean hit/miss)`
@@ -168,7 +171,7 @@ async function lookupTitle(title) {
             ratingValue = parsed.ratingValue
             ratingCount = parsed.ratingCount
             if (ratingValue === undefined) {
-              note = "hit, parsed, but no aggregateRating present"
+              note = 'hit, parsed, but no aggregateRating present'
             }
           }
         } catch (err) {
@@ -184,7 +187,7 @@ async function lookupTitle(title) {
       note = `unexpected status ${status} (not counted as clean hit/miss)`
     }
   } catch (err) {
-    status = "ERROR"
+    status = 'ERROR'
     note = `fetch failed: ${err.message}`
   }
 
@@ -204,28 +207,35 @@ async function main() {
     results.push(result)
     console.log(
       `[${i + 1}/${SAMPLE_TITLES.length}] ${title} -> ${result.slug} -> ${result.status} ${
-        result.hit ? "HIT" : "MISS"
-      }${result.note ? ` (${result.note})` : ""}`
+        result.hit ? 'HIT' : 'MISS'
+      }${result.note ? ` (${result.note})` : ''}`
     )
     if (i < SAMPLE_TITLES.length - 1) {
       await sleep(DELAY_MS)
     }
   }
 
-  console.log("\n--- Per-title results ---")
-  const header = ["Title", "Slug", "Status", "Hit/Miss", "RatingValue", "RatingCount"]
-  console.log(header.join(" | "))
-  console.log(header.map(() => "---").join(" | "))
+  console.log('\n--- Per-title results ---')
+  const header = [
+    'Title',
+    'Slug',
+    'Status',
+    'Hit/Miss',
+    'RatingValue',
+    'RatingCount'
+  ]
+  console.log(header.join(' | '))
+  console.log(header.map(() => '---').join(' | '))
   for (const r of results) {
     console.log(
       [
         r.title,
         r.slug,
         String(r.status),
-        r.hit ? "HIT" : "MISS",
-        r.ratingValue !== undefined ? String(r.ratingValue) : "-",
-        r.ratingCount !== undefined ? String(r.ratingCount) : "-",
-      ].join(" | ")
+        r.hit ? 'HIT' : 'MISS',
+        r.ratingValue !== undefined ? String(r.ratingValue) : '-',
+        r.ratingCount !== undefined ? String(r.ratingCount) : '-'
+      ].join(' | ')
     )
   }
 
@@ -233,25 +243,27 @@ async function main() {
   const total = results.length
   const pct = ((hits / total) * 100).toFixed(1)
 
-  console.log(
-    `\nSUMMARY: match rate = ${hits}/${total} hits (${pct}%)`
-  )
+  console.log(`\nSUMMARY: match rate = ${hits}/${total} hits (${pct}%)`)
 
-  const ambiguous = results.filter((r) => (r.note || "").includes("ambiguous"))
+  const ambiguous = results.filter((r) => (r.note || '').includes('ambiguous'))
   if (ambiguous.length > 0) {
     console.log(
       `NOTE: ${ambiguous.length} title(s) returned HTTP 200 with content that was neither a recognizable VideoGame JSON-LD hit nor the known soft-404 marker. They are counted as MISS above but flagged here for manual review: ${ambiguous
         .map((r) => r.title)
-        .join(", ")}`
+        .join(', ')}`
     )
   }
 
-  const errorStatuses = results.filter((r) => r.status === "ERROR" || (typeof r.status === "number" && r.status !== 200 && r.status !== 404))
+  const errorStatuses = results.filter(
+    (r) =>
+      r.status === 'ERROR' ||
+      (typeof r.status === 'number' && r.status !== 200 && r.status !== 404)
+  )
   if (errorStatuses.length > 0) {
     console.log(
       `NOTE: ${errorStatuses.length} title(s) returned a network error or unexpected status (not a clean 200/404): ${errorStatuses
         .map((r) => `${r.title} (${r.status})`)
-        .join(", ")}`
+        .join(', ')}`
     )
   }
 
@@ -259,6 +271,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("Spike run failed:", err)
+  console.error('Spike run failed:', err)
   process.exitCode = 1
 })

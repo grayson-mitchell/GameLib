@@ -278,7 +278,10 @@ describe('classifyTpk — real-world is_expired flag', () => {
 
 describe('classifyOrder — real-world payload shapes', () => {
   test('direct purchase (real field set, no redeemed_key_val) -> 1 UNREVEALED steam key', () => {
-    const entry = classifyOrder(realWorldUnrevealedPurchaseOrder, NEVER_REVEALED)
+    const entry = classifyOrder(
+      realWorldUnrevealedPurchaseOrder,
+      NEVER_REVEALED
+    )
     expect(entry.keys).toHaveLength(1)
     expect(entry.keys[0].state).toBe('UNREVEALED')
     expect(entry.keys[0].platform).toBe('steam')
@@ -380,7 +383,9 @@ describe('classifyOrder — download entitlements without key_type (D-29)', () =
           human_name: 'Humble Choice — May 2026'
         },
         tpkd_dict: {
-          all_tpks: [{ machine_name: 'wallpaper_pack', human_name: 'Wallpapers' }]
+          all_tpks: [
+            { machine_name: 'wallpaper_pack', human_name: 'Wallpapers' }
+          ]
         }
       },
       NEVER_REVEALED
@@ -588,7 +593,12 @@ describe('describeZeroKeyOrder — no-key_type skip reasons (round 5)', () => {
     const diagnosis = describeZeroKeyOrder({
       gamekey: 'gk',
       tpkd_dict: {
-        all_tpks: [{ machine_name: 'SECRET-NAME-MUST-NOT-LEAK-AS-VALUE', secret: 'SECRET-VALUE' }]
+        all_tpks: [
+          {
+            machine_name: 'SECRET-NAME-MUST-NOT-LEAK-AS-VALUE',
+            secret: 'SECRET-VALUE'
+          }
+        ]
       }
     })
     expect(diagnosis.detail).toContain('machine_name')
@@ -609,7 +619,9 @@ describe('describeSkippedEntitlements — mixed-order discoverability (round 5)'
   })
 
   test('an order whose tpks are ALL keys reports nothing (null)', () => {
-    expect(describeSkippedEntitlements(realWorldUnrevealedPurchaseOrder)).toBeNull()
+    expect(
+      describeSkippedEntitlements(realWorldUnrevealedPurchaseOrder)
+    ).toBeNull()
   })
 
   test('C5 redaction: field NAMES only, never field values', () => {
@@ -660,9 +672,9 @@ describe('extractExpiration — real-world field tolerance', () => {
   })
 
   test('no recognized field -> null', () => {
-    expect(extractExpiration({ some_unknown_date_field: '2027-01-01' }, NOW)).toBe(
-      null
-    )
+    expect(
+      extractExpiration({ some_unknown_date_field: '2027-01-01' }, NOW)
+    ).toBe(null)
   })
 
   test('unparseable date string -> null, never throws', () => {
@@ -688,21 +700,33 @@ describe('classifyOrder — real-world expiration wiring (round 4)', () => {
   const NOW = new Date('2026-07-06T00:00:00Z')
 
   test('future `expiry_date` -> UNREVEALED with a populated ISO expiration (row display + sort)', () => {
-    const entry = classifyOrder(realWorldFutureExpiryDateOrder, NEVER_REVEALED, NOW)
+    const entry = classifyOrder(
+      realWorldFutureExpiryDateOrder,
+      NEVER_REVEALED,
+      NOW
+    )
     expect(entry.keys).toHaveLength(1)
     expect(entry.keys[0].state).toBe('UNREVEALED')
     expect(entry.keys[0].expiration).toBe('2026-08-03T00:00:00.000Z')
   })
 
   test('past `expiry_date` (no is_expired flag) -> UNREDEEMABLE via the date alone', () => {
-    const entry = classifyOrder(realWorldPastExpiryDateOrder, NEVER_REVEALED, NOW)
+    const entry = classifyOrder(
+      realWorldPastExpiryDateOrder,
+      NEVER_REVEALED,
+      NOW
+    )
     expect(entry.keys).toHaveLength(1)
     expect(entry.keys[0].state).toBe('UNREDEEMABLE')
     expect(entry.keys[0].expiration).toBe('2020-01-01T00:00:00.000Z')
   })
 
   test('relative `num_days_until_expired` -> absolute expiration from sync time', () => {
-    const entry = classifyOrder(realWorldRelativeExpiryOrder, NEVER_REVEALED, NOW)
+    const entry = classifyOrder(
+      realWorldRelativeExpiryOrder,
+      NEVER_REVEALED,
+      NOW
+    )
     expect(entry.keys).toHaveLength(1)
     expect(entry.keys[0].expiration).toBe('2026-08-05T00:00:00.000Z')
     expect(entry.keys[0].state).toBe('UNREVEALED')
@@ -713,7 +737,10 @@ describe('describeMissingExpirationTpks — round 4 date-field discovery', () =>
   const NOW = new Date('2026-07-06T00:00:00Z')
 
   test('active key with no recognized date field -> surfaces its candidate field names', () => {
-    const detail = describeMissingExpirationTpks(realWorldUndatableActiveOrder, NOW)
+    const detail = describeMissingExpirationTpks(
+      realWorldUndatableActiveOrder,
+      NOW
+    )
     expect(detail).not.toBeNull()
     expect(detail).toContain('tpksMissingExpiration=1')
     expect(detail).toContain('some_unknown_date_field')
@@ -1179,9 +1206,7 @@ describe('isFreezeEligible (14-08 gap closure, single-sourced freeze predicate)'
   })
 
   test('REDEEMED is always eligible regardless of expiration — no expiry guard added (behavior preserved)', () => {
-    expect(isFreezeEligible({ state: 'REDEEMED', expiration: null })).toBe(
-      true
-    )
+    expect(isFreezeEligible({ state: 'REDEEMED', expiration: null })).toBe(true)
     expect(
       isFreezeEligible({
         state: 'REDEEMED',
@@ -1191,9 +1216,9 @@ describe('isFreezeEligible (14-08 gap closure, single-sourced freeze predicate)'
   })
 
   test('UNREDEEMABLE is always eligible regardless of expiration — no expiry guard added (behavior preserved)', () => {
-    expect(
-      isFreezeEligible({ state: 'UNREDEEMABLE', expiration: null })
-    ).toBe(true)
+    expect(isFreezeEligible({ state: 'UNREDEEMABLE', expiration: null })).toBe(
+      true
+    )
     expect(
       isFreezeEligible({
         state: 'UNREDEEMABLE',

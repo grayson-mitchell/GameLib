@@ -9,7 +9,13 @@
 // runtime once genuinely bundled -- see esbuildWorkerBundleShared.ts's own
 // header comment for the full finding).
 
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -34,7 +40,10 @@ describe('resolveLzmaNativePkgRoot / writeLzmaNativeResolvedPaths', () => {
 
   it('writes a generated CJS module that lzmaNativeBinding.ts can require() by a plain relative specifier, containing the resolved root', () => {
     const returned = writeLzmaNativeResolvedPaths()
-    const written = readFileSync(LZMA_NATIVE_RESOLVED_PATHS_MODULE_PATH, 'utf-8')
+    const written = readFileSync(
+      LZMA_NATIVE_RESOLVED_PATHS_MODULE_PATH,
+      'utf-8'
+    )
     expect(written).toContain('GENERATED')
     expect(written).toContain('do not edit by hand')
     expect(written).toContain(returned.replace(/\\/g, '\\\\'))
@@ -48,7 +57,7 @@ describe('resolveLzmaNativePkgRoot / writeLzmaNativeResolvedPaths', () => {
 })
 
 describe('findOtherNodeGypBuildConsumers / assertNodeGypBuildSingleConsumer (T-23.1-03-02, relocated to build time)', () => {
-  it('reports zero offenders against this project\'s REAL node_modules -- the alias is currently safe', () => {
+  it("reports zero offenders against this project's REAL node_modules -- the alias is currently safe", () => {
     expect(findOtherNodeGypBuildConsumers()).toEqual([])
     expect(() => assertNodeGypBuildSingleConsumer()).not.toThrow()
   })
@@ -80,9 +89,13 @@ describe('findOtherNodeGypBuildConsumers / assertNodeGypBuildSingleConsumer (T-2
     }
 
     it('DOES detect a second, unrelated package that declares a node-gyp-build dependency -- the assertion must fail against a known-bad input, not just pass against the (currently clean) real tree', () => {
-      fixtureRoot = mkdtempSync(join(tmpdir(), 'gamelib-node-gyp-build-fixture-'))
+      fixtureRoot = mkdtempSync(
+        join(tmpdir(), 'gamelib-node-gyp-build-fixture-')
+      )
       const nodeModulesDir = join(fixtureRoot, 'node_modules')
-      writeFixturePkg(nodeModulesDir, 'lzma-native', { 'node-gyp-build': '^4.0.0' })
+      writeFixturePkg(nodeModulesDir, 'lzma-native', {
+        'node-gyp-build': '^4.0.0'
+      })
       writeFixturePkg(nodeModulesDir, 'some-other-native-pkg', {
         'node-gyp-build': '^4.0.0'
       })
@@ -99,9 +112,13 @@ describe('findOtherNodeGypBuildConsumers / assertNodeGypBuildSingleConsumer (T-2
     })
 
     it('correctly walks scoped packages (@scope/name) one level deeper', () => {
-      fixtureRoot = mkdtempSync(join(tmpdir(), 'gamelib-node-gyp-build-fixture-scoped-'))
+      fixtureRoot = mkdtempSync(
+        join(tmpdir(), 'gamelib-node-gyp-build-fixture-scoped-')
+      )
       const nodeModulesDir = join(fixtureRoot, 'node_modules')
-      writeFixturePkg(nodeModulesDir, 'lzma-native', { 'node-gyp-build': '^4.0.0' })
+      writeFixturePkg(nodeModulesDir, 'lzma-native', {
+        'node-gyp-build': '^4.0.0'
+      })
       writeFixturePkg(join(nodeModulesDir, '@somescope'), 'native-thing', {
         'node-gyp-build': '^4.0.0'
       })
@@ -111,7 +128,10 @@ describe('findOtherNodeGypBuildConsumers / assertNodeGypBuildSingleConsumer (T-2
     })
 
     it('returns empty (not a throw) against a nonexistent node_modules directory -- callers passing a synthetic/incomplete fixture in other tests must not spuriously fail here', () => {
-      const bogusDir = join(tmpdir(), 'gamelib-nonexistent-node-modules-' + Date.now())
+      const bogusDir = join(
+        tmpdir(),
+        'gamelib-nonexistent-node-modules-' + Date.now()
+      )
       expect(findOtherNodeGypBuildConsumers(bogusDir)).toEqual([])
     })
   })

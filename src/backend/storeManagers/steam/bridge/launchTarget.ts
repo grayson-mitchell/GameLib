@@ -123,10 +123,7 @@ export async function resolveBridgeLaunchExe(
       return undefined
     }
 
-    const installdir = sanitizeInstalldir(
-      appinfo?.config?.installdir,
-      appId
-    )
+    const installdir = sanitizeInstalldir(appinfo?.config?.installdir, appId)
     const bottleName = getBridgeBottleSettings().wineCrossoverBottle
     const gameInstallDir = join(
       getBottleSteamappsDir(bottleName),

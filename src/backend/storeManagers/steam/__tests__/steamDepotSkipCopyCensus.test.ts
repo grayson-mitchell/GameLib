@@ -77,7 +77,8 @@ describe('steamDepotSkipCopyCensus (23.2-04, D-06/D-07): the depot-skip notice c
     })
 
     it('RED: a known-bad specimen missing {{depots}} trips the presence predicate', () => {
-      const knownBad = "Installed without a depot. Steam wouldn't release its key."
+      const knownBad =
+        "Installed without a depot. Steam wouldn't release its key."
       expect(knownBad.includes('{{depots}}')).toBe(false)
     })
   })
@@ -134,9 +135,7 @@ describe('steamDepotSkipCopyCensus (23.2-04, D-06/D-07): the depot-skip notice c
         ''
       )
       expect(knownBad).not.toBe(depotErrorsSource)
-      expect(knownBad.includes('steam.download.error.depotBlocked')).toBe(
-        false
-      )
+      expect(knownBad.includes('steam.download.error.depotBlocked')).toBe(false)
     })
   })
 })

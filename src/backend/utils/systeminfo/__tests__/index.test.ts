@@ -28,7 +28,9 @@ const mockGetGogdlVersion = jest.fn()
 const mockGetCometVersion = jest.fn()
 const mockGetNileVersion = jest.fn()
 
-jest.mock('../gpu', () => ({ getGpuInfo: (...a: unknown[]) => mockGetGpuInfo(...a) }))
+jest.mock('../gpu', () => ({
+  getGpuInfo: (...a: unknown[]) => mockGetGpuInfo(...a)
+}))
 jest.mock('../memory', () => ({
   getMemoryInfo: (...a: unknown[]) => mockGetMemoryInfo(...a)
 }))
@@ -54,9 +56,8 @@ import { getSystemInfo, __resetSystemInfoCacheForTests } from '../index'
 // `process.getSystemVersion` is an Electron-injected extension, not part of plain
 // Node's `process` -- stub it so `fetchSystemInfo()`'s `OS.version` read doesn't throw
 // under Jest's plain Node environment.
-;(
-  process as unknown as { getSystemVersion: () => string }
-).getSystemVersion = jest.fn(() => '1.0.0')
+;(process as unknown as { getSystemVersion: () => string }).getSystemVersion =
+  jest.fn(() => '1.0.0')
 
 /** Resolves on the next microtask tick, letting queued promise chains settle. */
 function flushMicrotasks() {

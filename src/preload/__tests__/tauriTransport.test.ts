@@ -23,9 +23,7 @@ let mockElectronRequireCount = 0
 
 jest.mock('electron', () => {
   mockElectronRequireCount += 1
-  throw new Error(
-    'electron must never be resolved on the Tauri renderer path (T-27-07)'
-  )
+  throw new Error('electron must never be resolved on the Tauri renderer path (T-27-07)')
 })
 
 jest.mock('@tauri-apps/api/core', () => ({
@@ -48,11 +46,7 @@ import {
   hydrateStoreSnapshot,
   registerStore
 } from '../tauriTransport'
-import {
-  STORE_FETCH_CHANNEL,
-  STORE_CHANGED_CHANNEL,
-  STORE_LAZY_MISS_MARKER
-} from 'common/types/sidecarTransport'
+import { STORE_FETCH_CHANNEL, STORE_CHANGED_CHANNEL, STORE_LAZY_MISS_MARKER } from 'common/types/sidecarTransport'
 
 const mockedInvoke = coreInvoke as jest.MockedFunction<typeof coreInvoke>
 const mockedListen = eventListen as jest.MockedFunction<typeof eventListen>
@@ -99,9 +93,7 @@ describe('Tauri renderer bridge contract (spike 012 parity)', () => {
 
   it('delivers a pushed frontend message to a frontendListenerSlot subscription, and the returned unsubscribe fn stops delivery', async () => {
     const mockUnlisten = jest.fn()
-    let registeredHandler:
-      | ((event: { payload: { channel: string; args: unknown[] } }) => void)
-      | undefined
+    let registeredHandler: ((event: { payload: { channel: string; args: unknown[] } }) => void) | undefined
 
     mockedListen.mockImplementation((async (_event: unknown, handler: unknown) => {
       registeredHandler = handler as typeof registeredHandler
@@ -244,9 +236,7 @@ describe('lazy hydrate', () => {
 })
 
 describe('change events', () => {
-  let storeChangedHandler:
-    | ((event: { payload: { channel: string; args: unknown[] } }) => void)
-    | undefined
+  let storeChangedHandler: ((event: { payload: { channel: string; args: unknown[] } }) => void) | undefined
 
   beforeAll(() => {
     // The previous describe block's last test may have left `mockedInvoke` rejecting
@@ -256,10 +246,7 @@ describe('change events', () => {
     // rejecting implementation there would surface as an unhandled promise rejection.
     mockedInvoke.mockReset()
 
-    mockedListen.mockImplementation((async (
-      _event: unknown,
-      handler: unknown
-    ) => {
+    mockedListen.mockImplementation((async (_event: unknown, handler: unknown) => {
       storeChangedHandler = handler as typeof storeChangedHandler
       return jest.fn()
     }) as unknown as typeof mockedListen)
@@ -398,9 +385,7 @@ describe('allow-list', () => {
 describe('CR-03: dot-notation write/read symmetry', () => {
   it('a dot-notation write is readable through the nested read path in the same session', () => {
     snapshotSet('configStore', 'games.hidden', [{ appName: 'a', title: 'A' }])
-    expect(snapshotGet('configStore', 'games.hidden')).toEqual([
-      { appName: 'a', title: 'A' }
-    ])
+    expect(snapshotGet('configStore', 'games.hidden')).toEqual([{ appName: 'a', title: 'A' }])
     expect(snapshotHas('configStore', 'games.hidden')).toBe(true)
     // The nested container itself must be a real object, not a flat `'games.hidden'` key.
     expect(snapshotGet('configStore', 'games')).toEqual({

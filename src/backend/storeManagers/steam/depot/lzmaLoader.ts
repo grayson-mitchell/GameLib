@@ -263,7 +263,7 @@ async function resolveLzmaModule(): Promise<LzmaModule> {
         'smoke-test failure: a real cold-built packaged SEA binary showed',
         'native resolution AND its own small smoke-test decode genuinely',
         'succeeding, but decoding a real-sized chunk through that same',
-        'binding then hangs until DecompressPool\'s own task timeout fires',
+        "binding then hangs until DecompressPool's own task timeout fires",
         '-- a failure class the smoke test below is proven unable to',
         'catch, so this switch does not rely on it. See',
         '.planning/debug/sea-native-lzma-real-chunk-decode-hang.md for the',
@@ -287,13 +287,13 @@ async function resolveLzmaModule(): Promise<LzmaModule> {
       [
         'lzmaLoader: native lzma-native decoder engaged for Steam VZ depot',
         'chunk decode (23.1-01 spike measured ~5.8-6.6x real-chunk speedup',
-        'over the pure-JS path on darwin-arm64; CONTEXT.md\'s live',
-        'measurement found decode, not network, was this codebase\'s actual',
+        "over the pure-JS path on darwin-arm64; CONTEXT.md's live",
+        "measurement found decode, not network, was this codebase's actual",
         'throughput bottleneck). This line is logged exactly once per',
-        'process -- its ABSENCE from a run\'s gamelib.log, with only the',
+        "process -- its ABSENCE from a run's gamelib.log, with only the",
         'fallback warning below present instead, is how a silently-degraded',
-        'decode path (this debug arc\'s own prior defect, closed for the',
-        'worker pool via decompressPool.ts\'s DecompressPool.init() logging)',
+        "decode path (this debug arc's own prior defect, closed for the",
+        "worker pool via decompressPool.ts's DecompressPool.init() logging)",
         'is caught without another forensic round-trip.'
       ],
       LogPrefix.Steam
@@ -305,12 +305,12 @@ async function resolveLzmaModule(): Promise<LzmaModule> {
       [
         'lzmaLoader: lzma-native failed to load or smoke-test-decode --',
         'falling back to the pure-JS lzma package for THE REST OF THIS',
-        'PROCESS. Decode will run at the pure-JS package\'s throughput',
-        '(materially slower than native, see decompressWorker.ts\'s own',
+        "PROCESS. Decode will run at the pure-JS package's throughput",
+        "(materially slower than native, see decompressWorker.ts's own",
         'header comment) but installs will still complete -- this fallback',
         'is a locked requirement, not a defect by itself. If unexpected,',
         'check that the lzma_native.node SEA asset embedded correctly',
-        '(meta/buildSidecarSea.ts\'s native-asset step) and that this',
+        "(meta/buildSidecarSea.ts's native-asset step) and that this",
         'platform/arch ships an lzma-native prebuild.',
         `Cause: ${(err as Error)?.message ?? String(err)}.`
       ],

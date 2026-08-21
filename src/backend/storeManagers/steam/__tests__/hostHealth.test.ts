@@ -43,7 +43,9 @@ describe('HostHealthTracker', () => {
     // host-a fails MAX_CONSECUTIVE_FAILURES times in a row (below
     // MIN_SAMPLES_FOR_UNHEALTHY, so the success-rate path alone would not
     // yet condemn it — only the consecutive-failure streak does).
-    expect(MAX_CONSECUTIVE_FAILURES).toBeLessThanOrEqual(MIN_SAMPLES_FOR_UNHEALTHY)
+    expect(MAX_CONSECUTIVE_FAILURES).toBeLessThanOrEqual(
+      MIN_SAMPLES_FOR_UNHEALTHY
+    )
     for (let i = 0; i < MAX_CONSECUTIVE_FAILURES; i++) {
       tracker.record('host-a', 'error', 100)
     }
@@ -110,7 +112,9 @@ describe('HostHealthTracker', () => {
   it('a single early failure does not condemn a host below MIN_SAMPLES_FOR_UNHEALTHY — one bad first attempt must never permanently sink a host', () => {
     const tracker = new HostHealthTracker()
     tracker.record('host-a', 'error', 100)
-    expect(tracker.snapshot('host-a').attempts).toBeLessThan(MIN_SAMPLES_FOR_UNHEALTHY)
+    expect(tracker.snapshot('host-a').attempts).toBeLessThan(
+      MIN_SAMPLES_FOR_UNHEALTHY
+    )
     expect(tracker.snapshot('host-a').unhealthy).toBe(false)
   })
 
@@ -146,7 +150,9 @@ describe('HostHealthTracker', () => {
     expect(tracker.snapshot('host-a').unhealthy).toBe(true)
     expect(tracker.snapshot('host-b').unhealthy).toBe(false)
 
-    const order = [0, 1, 2, 3].map((i) => tracker.pickHost(['host-a', 'host-b'], 0, i))
+    const order = [0, 1, 2, 3].map((i) =>
+      tracker.pickHost(['host-a', 'host-b'], 0, i)
+    )
     // host-b (healthy) must be tried before host-a (unhealthy, deprioritized
     // to the back), regardless of host-a's much lower latency.
     expect(order[0]).toBe('host-b')
@@ -187,7 +193,9 @@ describe('HostHealthTracker', () => {
 
     // Confirms snapshot() truly never mutates: pickHost's cold-start ordering
     // for this exact host set is unaffected by having snapshotted it first.
-    expect(tracker.pickHost(['never-seen-host', 'host-x'], 0, 0)).toBe('never-seen-host')
+    expect(tracker.pickHost(['never-seen-host', 'host-x'], 0, 0)).toBe(
+      'never-seen-host'
+    )
   })
 
   // Debug/steam-install-slow-start (cycle 5): weightedload-aware host
@@ -196,7 +204,12 @@ describe('HostHealthTracker', () => {
   // 20/37/48, global CDN fallbacks (alibaba/fastly/akamaized) weightedload
   // 130 each.
   describe('weightedload-aware selection (cycle 5)', () => {
-    const auckland = ['cache1-akl-edgx', 'cache1-akl-tpwr', 'cache2-akl-tpwr', 'alibaba-cdn']
+    const auckland = [
+      'cache1-akl-edgx',
+      'cache1-akl-tpwr',
+      'cache2-akl-tpwr',
+      'alibaba-cdn'
+    ]
     const weightedLoads = new Map<string, number>([
       ['cache1-akl-edgx', 20],
       ['cache1-akl-tpwr', 37],
@@ -284,19 +297,34 @@ describe('HostHealthTracker', () => {
       // possible because the prior's influence on tpwr's OWN blended score
       // has faded, letting its excellent empirical evidence win outright.
       expect(tracker.snapshot('cache1-akl-edgx').unhealthy).toBe(false)
-      const first = tracker.pickHost(['cache1-akl-edgx', 'cache1-akl-tpwr'], 0, 0)
+      const first = tracker.pickHost(
+        ['cache1-akl-edgx', 'cache1-akl-tpwr'],
+        0,
+        0
+      )
       expect(first).toBe('cache1-akl-tpwr')
     })
 
     it('priorScoreFromWeightedLoad is monotonically decreasing — a lower weightedload always scores at least as high as a higher one', () => {
-      expect(priorScoreFromWeightedLoad(20)).toBeGreaterThan(priorScoreFromWeightedLoad(37))
-      expect(priorScoreFromWeightedLoad(37)).toBeGreaterThan(priorScoreFromWeightedLoad(48))
-      expect(priorScoreFromWeightedLoad(48)).toBeGreaterThan(priorScoreFromWeightedLoad(130))
+      expect(priorScoreFromWeightedLoad(20)).toBeGreaterThan(
+        priorScoreFromWeightedLoad(37)
+      )
+      expect(priorScoreFromWeightedLoad(37)).toBeGreaterThan(
+        priorScoreFromWeightedLoad(48)
+      )
+      expect(priorScoreFromWeightedLoad(48)).toBeGreaterThan(
+        priorScoreFromWeightedLoad(130)
+      )
     })
 
     it('omitting weightedLoads entirely (every pre-cycle-5 caller) reproduces the exact cycle-3/4 neutral cold-start order — no regression', () => {
       const tracker = new HostHealthTracker()
-      const pool = ['cache1-akl-edgx', 'cache1-akl-tpwr', 'cache2-akl-tpwr', 'alibaba-cdn']
+      const pool = [
+        'cache1-akl-edgx',
+        'cache1-akl-tpwr',
+        'cache2-akl-tpwr',
+        'alibaba-cdn'
+      ]
       // Same assertions as the original "cold start preserves round-robin"
       // test above, just with these hostnames instead of host-a..d.
       expect(tracker.pickHost(pool, 0, 0)).toBe('cache1-akl-edgx')
@@ -327,7 +355,9 @@ describe('HostHealthTracker', () => {
       for (let i = 0; i < 6; i++) tracker.record('host-c', 'success', 300)
       for (let i = 0; i < 6; i++) tracker.record('host-d', 'success', 450)
 
-      const picks = [0, 1, 2].map((workerSlot) => tracker.pickHost(hosts, 0, 0, workerSlot))
+      const picks = [0, 1, 2].map((workerSlot) =>
+        tracker.pickHost(hosts, 0, 0, workerSlot)
+      )
       expect(new Set(picks).size).toBeGreaterThan(1)
       // Every pick must come from within the top-N healthy bucket, never an
       // off-list host (T-25-01) -- and TOP_N_FANOUT itself bounds N.
@@ -442,7 +472,9 @@ describe('HostHealthTracker', () => {
       // All 3 hosts are now healthy, N=min(3,3)=3, so slots 0/1/2 must cover
       // the full healthy set -- host-a is reachable again, not permanently
       // stuck behind the unhealthy bucket.
-      const picks = new Set([0, 1, 2].map((slot) => tracker.pickHost(hosts, 0, 0, slot)))
+      const picks = new Set(
+        [0, 1, 2].map((slot) => tracker.pickHost(hosts, 0, 0, slot))
+      )
       expect(picks).toEqual(new Set(['host-a', 'host-b', 'host-c']))
     })
 

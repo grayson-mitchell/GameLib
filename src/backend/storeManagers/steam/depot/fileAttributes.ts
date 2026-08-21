@@ -107,7 +107,10 @@ function applyWindowsAttributes(
   args.push(filePath)
 
   try {
-    const result = spawnSync('attrib', args, { windowsHide: true, timeout: 2000 })
+    const result = spawnSync('attrib', args, {
+      windowsHide: true,
+      timeout: 2000
+    })
     if (result.error) {
       return { ok: false, error: result.error.message }
     }

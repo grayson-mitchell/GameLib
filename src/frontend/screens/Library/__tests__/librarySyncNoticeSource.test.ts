@@ -125,8 +125,7 @@ function assertOldGuardGoneAndFenceIntact(source: string): void {
     )
   }
 
-  const occurrences = (source.match(/refreshingInTheBackground/g) || [])
-    .length
+  const occurrences = (source.match(/refreshingInTheBackground/g) || []).length
   if (occurrences !== 3) {
     throw new Error(
       `G3 FAILED: refreshingInTheBackground occurs ${occurrences} times, ` +
@@ -180,9 +179,7 @@ function assertPlacementAboveGrid(source: string): void {
   const noticeIdx = source.indexOf('<SteamSyncNotice')
 
   if (alphabetIdx === -1 || noticeIdx === -1) {
-    throw new Error(
-      'G5 FAILED: <AlphabetFilter or <SteamSyncNotice not found.'
-    )
+    throw new Error('G5 FAILED: <AlphabetFilter or <SteamSyncNotice not found.')
   }
   if (!(noticeIdx > alphabetIdx)) {
     throw new Error(

@@ -3,7 +3,11 @@ import { session } from 'electron'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
 
-import { configStore, humbleLibraryStore, humbleSyncStore } from './electronStores'
+import {
+  configStore,
+  humbleLibraryStore,
+  humbleSyncStore
+} from './electronStores'
 import {
   HUMBLE_BASE_URL,
   HUMBLE_LOGIN_PARTITION,
@@ -353,7 +357,8 @@ export class HumbleUser {
         const now = Date.now()
         if (
           lastCandidateNotFoundLogAt === 0 ||
-          now - lastCandidateNotFoundLogAt >= LOGIN_WATCH_LIVENESS_LOG_INTERVAL_MS
+          now - lastCandidateNotFoundLogAt >=
+            LOGIN_WATCH_LIVENESS_LOG_INTERVAL_MS
         ) {
           logWarning(
             suppressedSinceLastCandidateNotFoundLog > 0
@@ -503,8 +508,11 @@ export class HumbleUser {
             if (settled || validationInFlight) return
 
             let total: number | null
-            let matched: Array<{ name: string; domain: string | null; value: string }> =
-              []
+            let matched: Array<{
+              name: string
+              domain: string | null
+              value: string
+            }> = []
             try {
               // Deliberate host: the Rust arm does a proper domain-SUFFIX
               // match, so the apex-domain `_simpleauth_sess` cookie IS
@@ -818,7 +826,10 @@ export class HumbleUser {
       // rejection on every offline start. Message/status only — never the
       // cookie.
       logWarning(
-        ['Humble startup health check failed (transient, health unknown):', err],
+        [
+          'Humble startup health check failed (transient, health unknown):',
+          err
+        ],
         LogPrefix.Backend
       )
       return
@@ -873,10 +884,7 @@ export class HumbleUser {
           }
         } catch (err) {
           logWarning(
-            [
-              'Humble csrf_cookie backfill failed (non-fatal, optional):',
-              err
-            ],
+            ['Humble csrf_cookie backfill failed (non-fatal, optional):', err],
             LogPrefix.Backend
           )
         }
@@ -908,10 +916,7 @@ export class HumbleUser {
           }
         } catch (err) {
           logWarning(
-            [
-              'Humble csrf_cookie backfill failed (non-fatal, optional):',
-              err
-            ],
+            ['Humble csrf_cookie backfill failed (non-fatal, optional):', err],
             LogPrefix.Backend
           )
         } finally {
@@ -1124,10 +1129,13 @@ export class HumbleUser {
 
               const fmtSide = (c: Census) =>
                 c.total === null
-                  ? 'total=unavailable, matched=unavailable, verdict=' + c.verdict
+                  ? 'total=unavailable, matched=unavailable, verdict=' +
+                    c.verdict
                   : `total=${c.total}, matched=${c.matched}, verdict=${c.verdict}`
               const survivingNonHumble =
-                after.total === null ? 'unavailable' : after.total - after.matched
+                after.total === null
+                  ? 'unavailable'
+                  : after.total - after.matched
 
               // The one census log line plan 20's gate greps for. Exact
               // format recorded verbatim in this plan's SUMMARY.

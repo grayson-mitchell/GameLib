@@ -180,9 +180,7 @@ export default React.memo(function Library(): JSX.Element {
   // D-17: macOS-only CrossOver-rating filter, same persisted-object shape as
   // platformsFilters (default all true — opt-out, not tri-state).
   let initialCrossoverRatingFilters: CrossoverRatingFilters
-  const crossoverRatingFiltersString = storage.getItem(
-    'crossoverRatingFilters'
-  )
+  const crossoverRatingFiltersString = storage.getItem('crossoverRatingFilters')
   if (crossoverRatingFiltersString) {
     initialCrossoverRatingFilters = JSON.parse(
       crossoverRatingFiltersString
@@ -217,9 +215,8 @@ export default React.memo(function Library(): JSX.Element {
       ? (stored as LibraryView)
       : 'all'
   }
-  const [libraryView, setLibraryView_] = useState<LibraryView>(
-    initialLibraryView
-  )
+  const [libraryView, setLibraryView_] =
+    useState<LibraryView>(initialLibraryView)
   const setLibraryViewPersisted = (value: LibraryView) => {
     storage.setItem('libraryView', value)
     setLibraryView_(value)
@@ -241,13 +238,12 @@ export default React.memo(function Library(): JSX.Element {
 
   // D-01: opt-in runnability facet, migrated from the legacy
   // platformsFilters shape.
-  const [runnabilityFacet, setRunnabilityFacet_] = useState<
-    RunnabilityTier[]
-  >(() =>
-    filterEngine.migrateRunnabilityFacetSelection(
-      storage.getItem('runnabilityFacet'),
-      storage.getItem('platformsFilters')
-    )
+  const [runnabilityFacet, setRunnabilityFacet_] = useState<RunnabilityTier[]>(
+    () =>
+      filterEngine.migrateRunnabilityFacetSelection(
+        storage.getItem('runnabilityFacet'),
+        storage.getItem('platformsFilters')
+      )
   )
   const setRunnabilityFacetPersisted = (value: RunnabilityTier[]) => {
     storage.setItem('runnabilityFacet', JSON.stringify(value))
@@ -299,7 +295,14 @@ export default React.memo(function Library(): JSX.Element {
     if (zoom.enabled && zoom.username) stores.push('zoom')
     if (steam?.username) stores.push('steam')
     return stores
-  }, [gog.username, epic.username, amazon.username, zoom.enabled, zoom.username, steam?.username])
+  }, [
+    gog.username,
+    epic.username,
+    amazon.username,
+    zoom.enabled,
+    zoom.username,
+    steam?.username
+  ])
 
   // The Runnability rows this host can compute (plan 01). Empty on Windows.
   const runnabilityRows = useMemo(
@@ -313,10 +316,14 @@ export default React.memo(function Library(): JSX.Element {
   const [filterText, setFilterText] = useState('')
 
   // Migration helper: maps legacy 'true'/'false'/null to FilterMode
-  const migrateFilterMode = (key: string, defaultValue: FilterMode): FilterMode => {
+  const migrateFilterMode = (
+    key: string,
+    defaultValue: FilterMode
+  ): FilterMode => {
     const stored = storage.getItem(key)
-    if (stored === 'show' || stored === 'only' || stored === 'off') return stored
-    return defaultValue  // handles 'true', 'false', null, undefined
+    if (stored === 'show' || stored === 'only' || stored === 'off')
+      return stored
+    return defaultValue // handles 'true', 'false', null, undefined
   }
 
   const [showHidden, setShowHidden] = useState<FilterMode>(
@@ -964,9 +971,7 @@ export default React.memo(function Library(): JSX.Element {
         countForRunnability
       }}
     >
-      {tier2PortalTarget
-        ? createPortal(<Header />, tier2PortalTarget)
-        : null}
+      {tier2PortalTarget ? createPortal(<Header />, tier2PortalTarget) : null}
       <LibraryTour />
 
       <div className="listing">

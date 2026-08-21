@@ -3,7 +3,10 @@
  * instrumentation). Pure function over a DepotPlan: no filesystem, no
  * network, no mocks needed.
  */
-import { summarizeDepotFlags, formatDepotFlagsCensus } from '../depot/flagsCensus'
+import {
+  summarizeDepotFlags,
+  formatDepotFlagsCensus
+} from '../depot/flagsCensus'
 import type { DepotPlan, DepotPlanFile } from '../depot'
 
 function makeFile(overrides: Partial<DepotPlanFile> = {}): DepotPlanFile {
@@ -17,7 +20,13 @@ function makeFile(overrides: Partial<DepotPlanFile> = {}): DepotPlanFile {
 }
 
 function makePlan(depots: DepotPlan['depots']): DepotPlan {
-  return { appId: '12345', depots, totalBytes: 0, name: 'SomeGame', skippedDepots: [] }
+  return {
+    appId: '12345',
+    depots,
+    totalBytes: 0,
+    name: 'SomeGame',
+    skippedDepots: []
+  }
 }
 
 describe('summarizeDepotFlags', () => {

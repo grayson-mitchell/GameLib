@@ -101,8 +101,7 @@ describe('EligibilityLoadingRow', () => {
 
     it('gamelib:status.checkingSteamInstallOptions appears exactly once -- the key survives even though the mocked t hides it above', () => {
       expect(
-        stripped.split('gamelib:status.checkingSteamInstallOptions').length -
-          1
+        stripped.split('gamelib:status.checkingSteamInstallOptions').length - 1
       ).toBe(1)
     })
 

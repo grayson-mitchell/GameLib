@@ -62,7 +62,9 @@ function collectClassNames(node: unknown): string[] {
     return node.flatMap(collectClassNames)
   }
   if (typeof node === 'object' && node !== null && 'props' in node) {
-    const props = (node as AnyReactElement & { props?: { className?: unknown } }).props
+    const props = (
+      node as AnyReactElement & { props?: { className?: unknown } }
+    ).props
     const own = typeof props?.className === 'string' ? [props.className] : []
     return [...own, ...collectClassNames(props?.children)]
   }
@@ -256,7 +258,10 @@ describe('TauriLoginPanel — finalizing surface [quick task 260803-eee]', () =>
 
   it('logs one [TauriLoginPanel] runner=<runner> phase=finalizing line', () => {
     mockApi.logInfo.mockClear()
-    TauriLoginPanel({ runner: 'gog', state: { phase: 'finalizing', runner: 'gog' } })
+    TauriLoginPanel({
+      runner: 'gog',
+      state: { phase: 'finalizing', runner: 'gog' }
+    })
 
     expect(mockApi.logInfo).toHaveBeenCalledTimes(1)
     const [message] = mockApi.logInfo.mock.calls[0]
@@ -295,7 +300,10 @@ describe('TauriLoginPanel — preparing surface (quick task 260806-teb)', () => 
 
   it('logs one [TauriLoginPanel] runner=<runner> phase=preparing line', () => {
     mockApi.logInfo.mockClear()
-    TauriLoginPanel({ runner: 'nile', state: { phase: 'preparing', runner: 'nile' } })
+    TauriLoginPanel({
+      runner: 'nile',
+      state: { phase: 'preparing', runner: 'nile' }
+    })
 
     expect(mockApi.logInfo).toHaveBeenCalledTimes(1)
     const [message] = mockApi.logInfo.mock.calls[0]

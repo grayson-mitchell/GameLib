@@ -64,7 +64,9 @@ interface WritableStoreBackend {
  * the name by hand (29-RESEARCH Pitfall 4) and never accepts `cwd`/`name` from the RPC
  * frame; the cache-store branch below is the ONLY construction shape it will ever use.
  */
-function resolveWritableStore(storeName: string): WritableStoreBackend | undefined {
+function resolveWritableStore(
+  storeName: string
+): WritableStoreBackend | undefined {
   // WR-09: the deny list is load-bearing on the write path too — a denied cache store
   // has no resolvable write target, independently of guard (c).
   if (DENIED_CACHE_STORES.includes(storeName)) {
@@ -135,7 +137,10 @@ export function applyStoreWrite(
   // Electron and would silently sign the real user out of the shipped app. Unconditional
   // — tracks the `TOKEN_STORE_KEY` constant rather than a duplicated literal, so a rename
   // of that constant can never quietly reopen this guard.
-  if (storeName === 'steamConfigStore' && key.split('.')[0] === TOKEN_STORE_KEY) {
+  if (
+    storeName === 'steamConfigStore' &&
+    key.split('.')[0] === TOKEN_STORE_KEY
+  ) {
     process.stderr.write(
       `[storeWriteHandlers] rejected write — steamConfigStore.${TOKEN_STORE_KEY} is Keychain-owned (D-04/REQ-28-02), key '${key}'\n`
     )
@@ -249,7 +254,10 @@ function pushStoreChanged(payload: StoreChangedPayload): void {
   // renderer to re-fetch, and that re-fetch goes through `STORE_FETCH_CHANNEL`, which is
   // already filtered sidecar-side. It is therefore safe and must NOT be gated on a key
   // that does not exist.
-  if (!payload.invalidated && !isAllowedStoreField(payload.store, payload.key)) {
+  if (
+    !payload.invalidated &&
+    !isAllowedStoreField(payload.store, payload.key)
+  ) {
     return
   }
 

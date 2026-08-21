@@ -71,7 +71,9 @@ describe('MacArchBadge', () => {
     }) as Rendered
 
     expect(element?.props.className).toContain('macArchBadge--warning')
-    expect(element?.props.className).not.toContain('macArchBadge--informational')
+    expect(element?.props.className).not.toContain(
+      'macArchBadge--informational'
+    )
   })
 
   it('applies the informational/neutral class when isMac is false', () => {

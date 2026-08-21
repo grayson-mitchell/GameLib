@@ -24,7 +24,9 @@ function makeEntries(count: number) {
   }))
 }
 
-function makeValidIndex(overrides: Partial<CrossoverIndex> = {}): CrossoverIndex {
+function makeValidIndex(
+  overrides: Partial<CrossoverIndex> = {}
+): CrossoverIndex {
   return {
     version: 1,
     generatedAt: new Date().toISOString(),
@@ -88,7 +90,11 @@ describe('loadIndex', () => {
       data: lastGood,
       fetchedAt: Date.now() - 1000 * 60 * 60 * 25 // stale, past TTL
     })
-    const invalidPayload = { version: 1, generatedAt: 'not-a-date', entries: [] }
+    const invalidPayload = {
+      version: 1,
+      generatedAt: 'not-a-date',
+      entries: []
+    }
     jest
       .spyOn(axiosClient, 'get')
       .mockResolvedValueOnce({ data: gzippedJson(invalidPayload) })
@@ -106,7 +112,11 @@ describe('loadIndex', () => {
   test('when there is no last-good AND safeParse fails, falls back to the bundled snapshot AND persists it into the store (WR-01)', async () => {
     const bundledData = makeValidIndex()
     mockedReadFileSync.mockReturnValueOnce(gzippedJson(bundledData))
-    const invalidPayload = { version: 1, generatedAt: 'not-a-date', entries: [] }
+    const invalidPayload = {
+      version: 1,
+      generatedAt: 'not-a-date',
+      entries: []
+    }
     jest
       .spyOn(axiosClient, 'get')
       .mockResolvedValueOnce({ data: gzippedJson(invalidPayload) })

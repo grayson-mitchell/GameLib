@@ -53,9 +53,9 @@ const mockedGetHeroicVersion = jest.fn()
 // The preload jest project's testEnvironment is 'node' (see windowChrome.test.ts's own
 // documented constraint). tauriChildWindows.ts reads `window.api.getHeroicVersion` only
 // inside a function body (never at import time), so a minimal manual stub suffices.
-;(
-  globalThis as unknown as { window: { api: { getHeroicVersion: () => Promise<string> } } }
-).window = { api: { getHeroicVersion: () => mockedGetHeroicVersion() } }
+;(globalThis as unknown as { window: { api: { getHeroicVersion: () => Promise<string> } } }).window = {
+  api: { getHeroicVersion: () => mockedGetHeroicVersion() }
+}
 
 // Flush the microtask queue so tauriShowAboutWindow's floated internal promise settles
 // before assertions run (it is intentionally fire-and-forget from the caller's side).
@@ -184,10 +184,7 @@ describe('tauriChildWindows (REQ-34.1-08)', () => {
 
   it('REQ-34.1-08/WR-07: a createNewWindow child carries NO hard-coded title, so the remote page titles itself (Electron parity)', () => {
     tauriCreateNewWindow('https://evil.example/looks-official')
-    const [, options] = webviewWindowCtor.mock.calls[0] as [
-      string,
-      Record<string, unknown>
-    ]
+    const [, options] = webviewWindowCtor.mock.calls[0] as [string, Record<string, unknown>]
 
     expect(options.title).toBeUndefined()
   })
@@ -196,10 +193,7 @@ describe('tauriChildWindows (REQ-34.1-08)', () => {
     tauriShowAboutWindow()
     await flush()
 
-    const [, options] = webviewWindowCtor.mock.calls[0] as [
-      string,
-      Record<string, unknown>
-    ]
+    const [, options] = webviewWindowCtor.mock.calls[0] as [string, Record<string, unknown>]
     expect(options.title).toBe('About GameLib')
   })
 
@@ -217,10 +211,7 @@ describe('tauriChildWindows (REQ-34.1-08)', () => {
     await jest.advanceTimersByTimeAsync(1000)
 
     expect(webviewWindowCtor).toHaveBeenCalledTimes(1)
-    const [, options] = webviewWindowCtor.mock.calls[0] as [
-      string,
-      { url: string }
-    ]
+    const [, options] = webviewWindowCtor.mock.calls[0] as [string, { url: string }]
     expect(options.url).toBe('about.html?v=unknown')
 
     jest.useRealTimers()
@@ -247,9 +238,7 @@ describe('tauriChildWindows (REQ-34.1-08)', () => {
       tauriCreateNewWindow(`https://www.protondb.com/app/${i}`)
     }
 
-    const labels = webviewWindowCtor.mock.calls.map(
-      ([label]) => label as string
-    )
+    const labels = webviewWindowCtor.mock.calls.map(([label]) => label as string)
     expect(labels).toHaveLength(5)
     expect(new Set(labels).size).toBe(5)
   })
@@ -259,9 +248,7 @@ describe('tauriChildWindows (REQ-34.1-08)', () => {
       tauriCreateNewWindow('https://www.protondb.com/app/1')
     }
 
-    const labels = webviewWindowCtor.mock.calls.map(
-      ([label]) => label as string
-    )
+    const labels = webviewWindowCtor.mock.calls.map(([label]) => label as string)
     expect(new Set(labels).size).toBe(5)
   })
 
@@ -276,16 +263,14 @@ describe('tauriChildWindows (REQ-34.1-08)', () => {
       tauriCreateNewWindow(url)
     }
 
-    const labels = webviewWindowCtor.mock.calls.map(
-      ([label]) => label as string
-    )
+    const labels = webviewWindowCtor.mock.calls.map(([label]) => label as string)
     for (const label of labels) {
       expect(label).not.toBe('main')
       expect(label).not.toBe('about')
     }
   })
 
-  it('REQ-34.1-08/T-34.1-27: no generated label contains any substring of the url\'s host, including a humblebundle.com url', () => {
+  it("REQ-34.1-08/T-34.1-27: no generated label contains any substring of the url's host, including a humblebundle.com url", () => {
     tauriCreateNewWindow('https://www.humblebundle.com/store/some-game')
     const [label] = webviewWindowCtor.mock.calls[0] as [string, unknown]
 
@@ -301,10 +286,7 @@ describe('tauriChildWindows (REQ-34.1-08)', () => {
     createNewWindow('https://www.protondb.com/app/1')
 
     expect(mockIpcRendererSend).toHaveBeenCalledWith('showAboutWindow')
-    expect(mockIpcRendererSend).toHaveBeenCalledWith(
-      'createNewWindow',
-      'https://www.protondb.com/app/1'
-    )
+    expect(mockIpcRendererSend).toHaveBeenCalledWith('createNewWindow', 'https://www.protondb.com/app/1')
     expect(webviewWindowCtor).not.toHaveBeenCalled()
     expect(getByLabelMock).not.toHaveBeenCalled()
   })

@@ -22,7 +22,10 @@
  */
 import type { ReactElement, ReactNode } from 'react'
 
-import type { StoreSearchDeal, StoreSearchResult } from 'common/types/storeSearch'
+import type {
+  StoreSearchDeal,
+  StoreSearchResult
+} from 'common/types/storeSearch'
 import type { StoreOwnershipMatch } from 'common/discounts/badges'
 
 // Colocated CSS side-effect import used by both components under test.
@@ -91,9 +94,7 @@ jest.mock('react', () => {
       const idx = cursor++
       if (idx >= slots.length) {
         slots[idx] =
-          typeof initial === 'function'
-            ? (initial as () => unknown)()
-            : initial
+          typeof initial === 'function' ? (initial as () => unknown)() : initial
       }
       const setState = (updater: unknown) => {
         slots[idx] =
@@ -256,7 +257,9 @@ function textContent(node: ReactNode): string {
   return ''
 }
 
-function makeResult(overrides: Partial<StoreSearchResult> = {}): StoreSearchResult {
+function makeResult(
+  overrides: Partial<StoreSearchResult> = {}
+): StoreSearchResult {
   return {
     gameId: 'game-1',
     title: 'Some Game',
@@ -301,7 +304,9 @@ describe('StoreSearchRow', () => {
       badges: { owned: [], keyAvailable: false }
     })
 
-    expect(findByClassNamePart(tree, 'discountCard__badge--owned')).toBeUndefined()
+    expect(
+      findByClassNamePart(tree, 'discountCard__badge--owned')
+    ).toBeUndefined()
     expect(
       findByClassNamePart(tree, 'discountCard__badge--keyAvailable')
     ).toBeUndefined()
@@ -319,11 +324,17 @@ describe('StoreSearchRow', () => {
       }
     })
 
-    const ownedPills = findAllByClassNamePart(tree, 'discountCard__badge--owned')
+    const ownedPills = findAllByClassNamePart(
+      tree,
+      'discountCard__badge--owned'
+    )
     expect(ownedPills).toHaveLength(1)
     expect(textContent(ownedPills[0])).toBe('Owned on Steam, GOG')
 
-    const keyPill = findByClassNamePart(tree, 'discountCard__badge--keyAvailable')
+    const keyPill = findByClassNamePart(
+      tree,
+      'discountCard__badge--keyAvailable'
+    )
     expect(keyPill).toBeDefined()
     expect(textContent(keyPill)).toBe('Key available')
   })
@@ -335,7 +346,10 @@ describe('StoreSearchRow', () => {
     })
 
     expect(findByType(tree, StoreSearchBreakdown)).toBeUndefined()
-    const chevronButton = findByClassNamePart(tree, 'storeSearchRow__expandButton')
+    const chevronButton = findByClassNamePart(
+      tree,
+      'storeSearchRow__expandButton'
+    )
     expect(chevronButton?.props['aria-expanded']).toBe(false)
   })
 
@@ -409,7 +423,12 @@ describe('StoreSearchBreakdown', () => {
 
   it('renders each deal as a sub-row with the "$X USD" price structure and StoreLogos only when runner is defined', async () => {
     mockApi.getStoreSearchDeals.mockResolvedValue([
-      makeDeal({ storeId: '1', storeName: 'Steam', runner: 'steam', price: '14.99' }),
+      makeDeal({
+        storeId: '1',
+        storeName: 'Steam',
+        runner: 'steam',
+        price: '14.99'
+      }),
       makeDeal({
         storeId: '99',
         storeName: 'Fanatical',
@@ -437,9 +456,12 @@ describe('StoreSearchBreakdown', () => {
     expect(findByType(items[1], StoreLogos)).toBeUndefined()
   })
 
-  it('clicking a sub-row calls window.api.openExternalUrl with that deal\'s buyUrl (D-08/D-09)', async () => {
+  it("clicking a sub-row calls window.api.openExternalUrl with that deal's buyUrl (D-08/D-09)", async () => {
     mockApi.getStoreSearchDeals.mockResolvedValue([
-      makeDeal({ storeId: '1', buyUrl: 'https://www.cheapshark.com/redirect?dealID=deal-1' })
+      makeDeal({
+        storeId: '1',
+        buyUrl: 'https://www.cheapshark.com/redirect?dealID=deal-1'
+      })
     ])
 
     const props = {

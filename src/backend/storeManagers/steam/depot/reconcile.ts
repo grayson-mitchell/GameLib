@@ -69,7 +69,10 @@ async function directoryVerified(dest: string): Promise<boolean> {
   }
 }
 
-async function symlinkVerified(dest: string, linktarget?: string): Promise<boolean> {
+async function symlinkVerified(
+  dest: string,
+  linktarget?: string
+): Promise<boolean> {
   if (!linktarget) return false
   try {
     const st = await lstat(dest)
@@ -94,7 +97,10 @@ async function zeroSizeVerified(dest: string): Promise<boolean> {
   }
 }
 
-async function regularFileVerified(dest: string, file: DepotPlanFile): Promise<boolean> {
+async function regularFileVerified(
+  dest: string,
+  file: DepotPlanFile
+): Promise<boolean> {
   let st
   try {
     st = await stat(dest)

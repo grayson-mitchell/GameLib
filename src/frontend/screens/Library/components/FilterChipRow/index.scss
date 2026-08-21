@@ -26,7 +26,10 @@
   // already uses for this token. Declared locally in this file so it does
   // not depend on any other stylesheet; the themeTokens census gate asserts
   // every consumer file carries the identical chain, so copies cannot drift.
-  --filter-active-color: var(--navbar-active, var(--accent-overlay, var(--accent)));
+  --filter-active-color: var(
+    --navbar-active,
+    var(--accent-overlay, var(--accent))
+  );
 
   display: flex;
   flex-wrap: wrap;

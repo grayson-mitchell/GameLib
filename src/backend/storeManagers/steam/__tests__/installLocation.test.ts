@@ -50,8 +50,7 @@ function makeFakeClient(overrides: Record<string, unknown> = {}) {
 }
 
 function mockProductInfo(appId: number, installdir: string | undefined) {
-  const appinfo =
-    installdir === undefined ? {} : { config: { installdir } }
+  const appinfo = installdir === undefined ? {} : { config: { installdir } }
   return jest.fn().mockResolvedValue({
     apps: { [appId]: { appinfo } },
     packages: {},
@@ -88,13 +87,11 @@ describe('listSteamLibraryTargets', () => {
 describe('resolveSteamInstallTarget', () => {
   it('with one registered library, defaults to that library, no override needed', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest
-      .mocked(SteamUser.getClient)
-      .mockReturnValue(
-        makeFakeClient({
-          getProductInfo: mockProductInfo(12345, 'MyGame')
-        }) as never
-      )
+    jest.mocked(SteamUser.getClient).mockReturnValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(12345, 'MyGame')
+      }) as never
+    )
 
     const result = await resolveSteamInstallTarget(APP_ID, {
       path: '',
@@ -111,13 +108,11 @@ describe('resolveSteamInstallTarget', () => {
     jest
       .mocked(getSteamLibraries)
       .mockResolvedValue(['/lib/primary', '/lib/secondary'])
-    jest
-      .mocked(SteamUser.getClient)
-      .mockReturnValue(
-        makeFakeClient({
-          getProductInfo: mockProductInfo(12345, 'MyGame')
-        }) as never
-      )
+    jest.mocked(SteamUser.getClient).mockReturnValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(12345, 'MyGame')
+      }) as never
+    )
 
     const result = await resolveSteamInstallTarget(APP_ID, {
       path: '/lib/secondary',
@@ -131,13 +126,11 @@ describe('resolveSteamInstallTarget', () => {
     jest
       .mocked(getSteamLibraries)
       .mockResolvedValue(['/lib/primary', '/lib/secondary'])
-    jest
-      .mocked(SteamUser.getClient)
-      .mockReturnValue(
-        makeFakeClient({
-          getProductInfo: mockProductInfo(12345, 'MyGame')
-        }) as never
-      )
+    jest.mocked(SteamUser.getClient).mockReturnValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(12345, 'MyGame')
+      }) as never
+    )
 
     const result = await resolveSteamInstallTarget(APP_ID, {
       path: '/some/unregistered/arbitrary/path',
@@ -150,13 +143,11 @@ describe('resolveSteamInstallTarget', () => {
 
   it('T-21-01: a hostile PICS installdir (traversal) is sanitized to a safe fallback', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest
-      .mocked(SteamUser.getClient)
-      .mockReturnValue(
-        makeFakeClient({
-          getProductInfo: mockProductInfo(12345, '../../etc/passwd')
-        }) as never
-      )
+    jest.mocked(SteamUser.getClient).mockReturnValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(12345, '../../etc/passwd')
+      }) as never
+    )
 
     const result = await resolveSteamInstallTarget(APP_ID, {
       path: '',
@@ -170,13 +161,11 @@ describe('resolveSteamInstallTarget', () => {
 
   it('T-21-01: a hostile PICS installdir (path separator) is sanitized to a safe fallback', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest
-      .mocked(SteamUser.getClient)
-      .mockReturnValue(
-        makeFakeClient({
-          getProductInfo: mockProductInfo(12345, 'foo/bar')
-        }) as never
-      )
+    jest.mocked(SteamUser.getClient).mockReturnValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(12345, 'foo/bar')
+      }) as never
+    )
 
     const result = await resolveSteamInstallTarget(APP_ID, {
       path: '',
@@ -188,13 +177,11 @@ describe('resolveSteamInstallTarget', () => {
 
   it('falls back to a safe appId-derived installdir when PICS returns nothing', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest
-      .mocked(SteamUser.getClient)
-      .mockReturnValue(
-        makeFakeClient({
-          getProductInfo: mockProductInfo(12345, undefined)
-        }) as never
-      )
+    jest.mocked(SteamUser.getClient).mockReturnValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(12345, undefined)
+      }) as never
+    )
 
     const result = await resolveSteamInstallTarget(APP_ID, {
       path: '',
@@ -256,13 +243,11 @@ describe('resolveSteamInstallTarget', () => {
 
   it('WR-04: a quote-containing installdir falls back to a safe appId-derived name', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest
-      .mocked(SteamUser.getClient)
-      .mockReturnValue(
-        makeFakeClient({
-          getProductInfo: mockProductInfo(12345, 'Foo"bar')
-        }) as never
-      )
+    jest.mocked(SteamUser.getClient).mockReturnValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(12345, 'Foo"bar')
+      }) as never
+    )
 
     const result = await resolveSteamInstallTarget(APP_ID, {
       path: '',
@@ -275,13 +260,11 @@ describe('resolveSteamInstallTarget', () => {
 
   it('WR-04: a control-char/newline-containing installdir falls back to a safe appId-derived name', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest
-      .mocked(SteamUser.getClient)
-      .mockReturnValue(
-        makeFakeClient({
-          getProductInfo: mockProductInfo(12345, 'Foo\nBar')
-        }) as never
-      )
+    jest.mocked(SteamUser.getClient).mockReturnValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(12345, 'Foo\nBar')
+      }) as never
+    )
 
     const result = await resolveSteamInstallTarget(APP_ID, {
       path: '',
@@ -293,13 +276,11 @@ describe('resolveSteamInstallTarget', () => {
 
   it('WR-04: a Windows drive-relative installdir (colon, no separator) falls back to a safe appId-derived name', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest
-      .mocked(SteamUser.getClient)
-      .mockReturnValue(
-        makeFakeClient({
-          getProductInfo: mockProductInfo(12345, 'C:foo')
-        }) as never
-      )
+    jest.mocked(SteamUser.getClient).mockReturnValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(12345, 'C:foo')
+      }) as never
+    )
 
     const result = await resolveSteamInstallTarget(APP_ID, {
       path: '',
@@ -311,13 +292,11 @@ describe('resolveSteamInstallTarget', () => {
 
   it('WR-04: a well-formed installdir with spaces/dots/dashes/underscores passes through unchanged', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest
-      .mocked(SteamUser.getClient)
-      .mockReturnValue(
-        makeFakeClient({
-          getProductInfo: mockProductInfo(12345, 'Half-Life 2')
-        }) as never
-      )
+    jest.mocked(SteamUser.getClient).mockReturnValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(12345, 'Half-Life 2')
+      }) as never
+    )
 
     const result = await resolveSteamInstallTarget(APP_ID, {
       path: '',
@@ -331,7 +310,10 @@ describe('resolveSteamInstallTarget', () => {
     jest.mocked(getSteamLibraries).mockResolvedValue([])
 
     await expect(
-      resolveSteamInstallTarget(APP_ID, { path: '', platformToInstall: 'Windows' })
+      resolveSteamInstallTarget(APP_ID, {
+        path: '',
+        platformToInstall: 'Windows'
+      })
     ).rejects.toThrow(/no registered Steam libraries/i)
   })
 })

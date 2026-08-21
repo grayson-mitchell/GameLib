@@ -26,7 +26,10 @@ function makeSteamGame(appId: string, title: string): GameInfo {
 export const steamOwnedPortal2 = makeSteamGame('620', 'Portal 2')
 
 /** Should fuzzy-match Humble "Assault Android Cactus+" (trailing `+`). */
-export const steamOwnedCactus = makeSteamGame('250110', 'Assault Android Cactus')
+export const steamOwnedCactus = makeSteamGame(
+  '250110',
+  'Assault Android Cactus'
+)
 
 /** Should fuzzy-match Humble "FRAMED Collection" (case + edition suffix). */
 export const steamOwnedFramed = makeSteamGame('388390', 'Framed Collection')

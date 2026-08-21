@@ -52,7 +52,9 @@ function makeDeps(overrides: Partial<FilterEngineDeps> = {}): FilterEngineDeps {
   }
 }
 
-function makeState(overrides: Partial<FilterEngineState> = {}): FilterEngineState {
+function makeState(
+  overrides: Partial<FilterEngineState> = {}
+): FilterEngineState {
   return {
     view: 'all',
     collection: null,
@@ -234,7 +236,12 @@ describe('count', () => {
 
 describe('runnability', () => {
   it.each<
-    [boolean, GameInfo['mac_arch'], number | null | undefined, RunnabilityTier | null]
+    [
+      boolean,
+      GameInfo['mac_arch'],
+      number | null | undefined,
+      RunnabilityTier | null
+    ]
   >([
     [true, undefined, 1, 'native'], // D-09: native takes priority over a wontRun rating
     [false, '32', 1, 'bottle'], // D-11: 32-bit mac build is always a bottle
@@ -334,9 +341,7 @@ describe('migration', () => {
   })
 
   it('malformed JSON yields [] and does not throw', () => {
-    expect(() =>
-      migrateStoreFacetSelection('{not json', null)
-    ).not.toThrow()
+    expect(() => migrateStoreFacetSelection('{not json', null)).not.toThrow()
     expect(migrateStoreFacetSelection('{not json', null)).toEqual([])
     expect(migrateRunnabilityFacetSelection('{not json', null)).toEqual([])
   })
@@ -369,14 +374,8 @@ describe('empty', () => {
   })
 
   it("a tri-state at 'only' produces a descriptor whose value is 'only', and one at 'show' produces one whose value is 'show'", () => {
-    const only = describeActiveFilters(
-      makeState({ showHidden: 'only' }),
-      ''
-    )
-    const show = describeActiveFilters(
-      makeState({ showHidden: 'show' }),
-      ''
-    )
+    const only = describeActiveFilters(makeState({ showHidden: 'only' }), '')
+    const show = describeActiveFilters(makeState({ showHidden: 'show' }), '')
 
     expect(only.find((d) => d.kind === 'showHidden')?.value).toBe('only')
     expect(show.find((d) => d.kind === 'showHidden')?.value).toBe('show')

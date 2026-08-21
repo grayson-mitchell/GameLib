@@ -28,10 +28,7 @@
  */
 import { GameInfo } from 'common/types'
 import { FilterEngineDeps } from 'frontend/types'
-import {
-  DEFAULT_FILTER_ENGINE_STATE,
-  filterLibrary
-} from '../../filterEngine'
+import { DEFAULT_FILTER_ENGINE_STATE, filterLibrary } from '../../filterEngine'
 
 export function countGamesExcludingDlc(
   list: GameInfo[] | undefined | null

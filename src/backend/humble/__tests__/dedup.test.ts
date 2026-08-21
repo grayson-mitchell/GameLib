@@ -72,19 +72,16 @@ describe('recomputeOwnership — fuzzy match tier (D-45)', () => {
     ['Assault Android Cactus+', 'Assault Android Cactus'],
     ['FRAMED Collection', 'Framed Collection'],
     ['Into the Breach', 'Into The Breach (Steam)']
-  ])(
-    'fuzzy match: %s matches owned %s at 85%%+',
-    (humbleTitle) => {
-      const key = makeKey({ steamAppId: undefined, title: humbleTitle })
-      const [result] = recomputeOwnership(
-        [key],
-        ownedSteamLibrary,
-        NEVER_OVERRIDDEN
-      )
-      expect(result.ownedElsewhere).toBe(true)
-      expect(result.matchConfidence).toBe('fuzzy')
-    }
-  )
+  ])('fuzzy match: %s matches owned %s at 85%%+', (humbleTitle) => {
+    const key = makeKey({ steamAppId: undefined, title: humbleTitle })
+    const [result] = recomputeOwnership(
+      [key],
+      ownedSteamLibrary,
+      NEVER_OVERRIDDEN
+    )
+    expect(result.ownedElsewhere).toBe(true)
+    expect(result.matchConfidence).toBe('fuzzy')
+  })
 
   it('fuzzy match: unrelated title does not match anything', () => {
     const key = makeKey({ steamAppId: undefined, title: 'Totally Different' })
@@ -288,9 +285,9 @@ describe('isDlcFalsePositiveRisk', () => {
 
 describe('fuzzyMatch', () => {
   it('accepts documented should-match pairs at the 85% threshold', () => {
-    expect(fuzzyMatch('Assault Android Cactus+', 'Assault Android Cactus')).toBe(
-      true
-    )
+    expect(
+      fuzzyMatch('Assault Android Cactus+', 'Assault Android Cactus')
+    ).toBe(true)
     expect(fuzzyMatch('FRAMED Collection', 'Framed Collection')).toBe(true)
     expect(fuzzyMatch('Into the Breach', 'Into The Breach (Steam)')).toBe(true)
   })

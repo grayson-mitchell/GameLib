@@ -459,7 +459,7 @@ describe('the tested argv is the executed argv (WR-10 guard)', () => {
 // (debug/humankind-depot-full-stall.md) ────────────────────────────────────
 
 describe('buildWorkerEsbuildArgv (decompress-worker SEA bundle)', () => {
-  test('flags equal buildEsbuildArgv()\'s flags except --outfile= and the trailing entry (diffed, not re-listed)', () => {
+  test("flags equal buildEsbuildArgv()'s flags except --outfile= and the trailing entry (diffed, not re-listed)", () => {
     for (const platform of ['darwin', 'linux', 'win32'] as const) {
       const sidecarArgv = buildEsbuildArgv(platform)
       const workerArgv = buildWorkerEsbuildArgv(platform)
@@ -583,12 +583,10 @@ describe('buildSeaConfig (decompress-worker asset wiring)', () => {
 })
 
 describe('lzmaNativePrebuildDir (target-triple -> node-gyp-build prebuild dir)', () => {
-  test('maps each of the five supported triples to node-gyp-build\'s own <platform>-<arch> naming', () => {
+  test("maps each of the five supported triples to node-gyp-build's own <platform>-<arch> naming", () => {
     expect(lzmaNativePrebuildDir('aarch64-apple-darwin')).toBe('darwin-arm64')
     expect(lzmaNativePrebuildDir('x86_64-apple-darwin')).toBe('darwin-x64')
-    expect(lzmaNativePrebuildDir('x86_64-unknown-linux-gnu')).toBe(
-      'linux-x64'
-    )
+    expect(lzmaNativePrebuildDir('x86_64-unknown-linux-gnu')).toBe('linux-x64')
     expect(lzmaNativePrebuildDir('aarch64-unknown-linux-gnu')).toBe(
       'linux-arm64'
     )
@@ -669,12 +667,12 @@ describe('WR-10-style source-scan guard: the inline-fallback warning cannot come
   // -- a grep gate that cannot fail on a known-bad input guards nothing.
   test('the matcher rejects the OLD (pre-fix) Pitfall-1 warning text', () => {
     const oldWarningSource = [
-      "  console.warn(",
+      '  console.warn(',
       "    '[build:sidecar-sea] Note (Pitfall 1): decompressPool worker_threads ' +",
       "      'spawn falls back to inline single-thread decode inside the compiled ' +",
       "      'SEA sidecar (no build/main/decompressWorker.js companion file is ' +",
       "      'shipped). Accepted throughput regression -- see 34-RESEARCH.md.'",
-      "  )"
+      '  )'
     ].join('\n')
     expect(oldWarningSource).toMatch(/inline single-thread/)
   })

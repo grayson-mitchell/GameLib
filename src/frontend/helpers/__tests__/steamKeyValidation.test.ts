@@ -11,7 +11,11 @@ describe('isObviouslyMalformed', () => {
     ['', true, 'empty string'],
     ['   ', true, 'whitespace-only string'],
     ['AAAAA-BBBBB-CCCCC', false, 'standard 5-5-5 shape (accepted)'],
-    ['aaaaa-bbbbb-ccccc', false, 'lowercase 5-5-5, normalized first (accepted)'],
+    [
+      'aaaaa-bbbbb-ccccc',
+      false,
+      'lowercase 5-5-5, normalized first (accepted)'
+    ],
     [
       'ABCDE1234567890ABCDEFGHIJ',
       false,

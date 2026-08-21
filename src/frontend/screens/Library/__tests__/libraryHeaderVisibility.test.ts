@@ -307,7 +307,9 @@ describe('LibraryHeader source gate -- filtered-vs-total count', () => {
 
   it('SANITY: the inline-DLC-filter prohibition fires against the predicate it replaced', () => {
     expect(
-      gateSource("list.filter((lib) => lib.runner !== 'sideload' && lib.install.is_dlc)")
+      gateSource(
+        "list.filter((lib) => lib.runner !== 'sideload' && lib.install.is_dlc)"
+      )
     ).toContain('install.is_dlc')
   })
 })
@@ -335,7 +337,9 @@ describe('Library/index.tsx source gate -- denominator wiring', () => {
       '<LibraryHeader list={libraryToShow} totalGames={libraryUnion.length} />'
     )
 
-    expect(knownBad).not.toContain('countUnfilteredGames(libraryUnion, engineDeps)')
+    expect(knownBad).not.toContain(
+      'countUnfilteredGames(libraryUnion, engineDeps)'
+    )
     expect(knownBad).toMatch(/totalGames=\{libraryUnion\.length\}/)
   })
 

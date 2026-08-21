@@ -394,16 +394,14 @@ describe('buildDepotPlan', () => {
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
 
-      jest
-        .mocked(selectAllDepots)
-        .mockReturnValue([
-          {
-            id: '333',
-            manifest: '18446744073709551615',
-            size: 0,
-            ownerAppId: '12345'
-          }
-        ])
+      jest.mocked(selectAllDepots).mockReturnValue([
+        {
+          id: '333',
+          manifest: '18446744073709551615',
+          size: 0,
+          ownerAppId: '12345'
+        }
+      ])
 
       jest
         .mocked(fakeClient.getDepotDecryptionKey)
@@ -543,16 +541,14 @@ describe('buildDepotPlan', () => {
       const fakeClient = makeFakeClient()
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
-      jest
-        .mocked(selectAllDepots)
-        .mockReturnValue([
-          {
-            id: '111',
-            manifest: '9007199254740993',
-            size: 0,
-            ownerAppId: '12345'
-          }
-        ])
+      jest.mocked(selectAllDepots).mockReturnValue([
+        {
+          id: '111',
+          manifest: '9007199254740993',
+          size: 0,
+          ownerAppId: '12345'
+        }
+      ])
 
       let keyCalls = 0
       jest
@@ -611,16 +607,14 @@ describe('buildDepotPlan', () => {
       const fakeClient = makeFakeClient()
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
-      jest
-        .mocked(selectAllDepots)
-        .mockReturnValue([
-          {
-            id: '111',
-            manifest: '9007199254740993',
-            size: 0,
-            ownerAppId: '12345'
-          }
-        ])
+      jest.mocked(selectAllDepots).mockReturnValue([
+        {
+          id: '111',
+          manifest: '9007199254740993',
+          size: 0,
+          ownerAppId: '12345'
+        }
+      ])
 
       jest
         .mocked(fakeClient.getDepotDecryptionKey)
@@ -649,16 +643,14 @@ describe('buildDepotPlan', () => {
       const fakeClient = makeFakeClient()
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
-      jest
-        .mocked(selectAllDepots)
-        .mockReturnValue([
-          {
-            id: '111',
-            manifest: '9007199254740993',
-            size: 0,
-            ownerAppId: '12345'
-          }
-        ])
+      jest.mocked(selectAllDepots).mockReturnValue([
+        {
+          id: '111',
+          manifest: '9007199254740993',
+          size: 0,
+          ownerAppId: '12345'
+        }
+      ])
 
       const controller = new AbortController()
       jest
@@ -693,16 +685,14 @@ describe('buildDepotPlan', () => {
       // Descriptor enumerated from a DLC/sub-app (ownerAppId 54321) — as
       // Cyberpunk 2077's macOS depots (1460472/2224089) were, per the field
       // failure log — while the base game is APP_ID (12345).
-      jest
-        .mocked(selectAllDepots)
-        .mockReturnValue([
-          {
-            id: '1460472',
-            manifest: '9007199254740993',
-            size: 0,
-            ownerAppId: '54321'
-          }
-        ])
+      jest.mocked(selectAllDepots).mockReturnValue([
+        {
+          id: '1460472',
+          manifest: '9007199254740993',
+          size: 0,
+          ownerAppId: '54321'
+        }
+      ])
 
       jest
         .mocked(fakeClient.getDepotDecryptionKey)
@@ -764,16 +754,14 @@ describe('buildDepotPlan', () => {
       const fakeClient = makeFakeClient()
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
-      jest
-        .mocked(selectAllDepots)
-        .mockReturnValue([
-          {
-            id: '111',
-            manifest: '9007199254740993',
-            size: 0,
-            ownerAppId: APP_ID
-          }
-        ])
+      jest.mocked(selectAllDepots).mockReturnValue([
+        {
+          id: '111',
+          manifest: '9007199254740993',
+          size: 0,
+          ownerAppId: APP_ID
+        }
+      ])
 
       jest
         .mocked(fakeClient.getDepotDecryptionKey)
@@ -840,16 +828,14 @@ describe('buildDepotPlan', () => {
       const fakeClient = makeFakeClient()
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
-      jest
-        .mocked(selectAllDepots)
-        .mockReturnValue([
-          {
-            id: '1460472',
-            manifest: '9007199254740993',
-            size: 0,
-            ownerAppId: APP_ID
-          }
-        ])
+      jest.mocked(selectAllDepots).mockReturnValue([
+        {
+          id: '1460472',
+          manifest: '9007199254740993',
+          size: 0,
+          ownerAppId: APP_ID
+        }
+      ])
 
       jest
         .mocked(fakeClient.getDepotDecryptionKey)
@@ -883,16 +869,14 @@ describe('buildDepotPlan', () => {
       const fakeClient = makeFakeClient()
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
-      jest
-        .mocked(selectAllDepots)
-        .mockReturnValue([
-          {
-            id: '1771304',
-            manifest: '9007199254740993',
-            size: 0,
-            ownerAppId: '1771300'
-          }
-        ])
+      jest.mocked(selectAllDepots).mockReturnValue([
+        {
+          id: '1771304',
+          manifest: '9007199254740993',
+          size: 0,
+          ownerAppId: '1771300'
+        }
+      ])
 
       jest
         .mocked(fakeClient.getDepotDecryptionKey)
@@ -934,16 +918,14 @@ describe('buildDepotPlan', () => {
       const fakeClient = makeFakeClient()
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
-      jest
-        .mocked(selectAllDepots)
-        .mockReturnValue([
-          {
-            id: '111',
-            manifest: '9007199254740993',
-            size: 0,
-            ownerAppId: APP_ID
-          }
-        ])
+      jest.mocked(selectAllDepots).mockReturnValue([
+        {
+          id: '111',
+          manifest: '9007199254740993',
+          size: 0,
+          ownerAppId: APP_ID
+        }
+      ])
 
       let calls = 0
       jest
@@ -997,16 +979,14 @@ describe('buildDepotPlan', () => {
         const fakeClient = makeFakeClient()
         jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
         jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
-        jest
-          .mocked(selectAllDepots)
-          .mockReturnValue([
-            {
-              id: '1460472',
-              manifest: '9007199254740993',
-              size: 0,
-              ownerAppId: '54321'
-            }
-          ])
+        jest.mocked(selectAllDepots).mockReturnValue([
+          {
+            id: '1460472',
+            manifest: '9007199254740993',
+            size: 0,
+            ownerAppId: '54321'
+          }
+        ])
 
         jest
           .mocked(fakeClient.getDepotDecryptionKey)
@@ -1109,22 +1089,18 @@ describe('buildDepotPlan', () => {
       // only fetchDepotPlanEntry's getDepotDecryptionKey hangs, simulating
       // the socket going stale mid-buildDepotPlan (after the earlier PICS
       // calls already succeeded).
-      jest
-        .mocked(selectAllDepots)
-        .mockReturnValue([
-          {
-            id: '111',
-            manifest: '9007199254740993',
-            size: 0,
-            ownerAppId: '12345'
-          }
-        ])
-      jest
-        .mocked(fakeClient.getDepotDecryptionKey)
-        .mockImplementation(() => {
-          // Bare callback-Promise CM call that never calls its callback —
-          // simulates the exact hang class this gap closure bounds.
-        })
+      jest.mocked(selectAllDepots).mockReturnValue([
+        {
+          id: '111',
+          manifest: '9007199254740993',
+          size: 0,
+          ownerAppId: '12345'
+        }
+      ])
+      jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(() => {
+        // Bare callback-Promise CM call that never calls its callback —
+        // simulates the exact hang class this gap closure bounds.
+      })
 
       const rejection = expect(
         buildDepotPlan(APP_ID, BASE_OPTS)
@@ -1163,9 +1139,7 @@ describe('23.2-03 (G-23-01): skip-and-warn EResult 40 Blocked depots', () => {
     /** Every depot's manifest reports a single 100-byte file, keyed off the
      *  `raw-${depotId}` buffer getRawManifest returns for it — matches the
      *  existing "manifest + total" describe block's per-depot-parse idiom. */
-    function mockFourDepotManifestParse(contentManifest: {
-      parse: jest.Mock
-    }) {
+    function mockFourDepotManifestParse(contentManifest: { parse: jest.Mock }) {
       jest.mocked(contentManifest.parse).mockImplementation((raw: Buffer) => {
         const depotId = raw.toString().replace('raw-', '')
         return {
@@ -1454,8 +1428,18 @@ describe('23.2-03 (G-23-01): skip-and-warn EResult 40 Blocked depots', () => {
     it('23.2-03 (T-23.2-16): an install where EVERY selected depot is Blocked (eresult=40) resolves status error, never done, and never calls fetchChunk — an install that downloaded nothing must never be reported a success', async () => {
       const fakeClient = makeFakeClient()
       const depots = [
-        { id: '111', manifest: '9007199254740993', size: 0, ownerAppId: '12345' },
-        { id: '222', manifest: '9007199254740994', size: 0, ownerAppId: '12345' }
+        {
+          id: '111',
+          manifest: '9007199254740993',
+          size: 0,
+          ownerAppId: '12345'
+        },
+        {
+          id: '222',
+          manifest: '9007199254740994',
+          size: 0,
+          ownerAppId: '12345'
+        }
       ]
       setupMultiDepotPlanPlumbing(fakeClient, depots)
       jest
@@ -1490,8 +1474,18 @@ describe('23.2-03 (G-23-01): skip-and-warn EResult 40 Blocked depots', () => {
     it('23.2-03: a cancel issued mid-plan-build DEPOT LOOP (between two depot fetches, after the first succeeds) still resolves cancelled — never swallowed as a skip by the new eresult===40 catch branch', async () => {
       const fakeClient = makeFakeClient()
       const depots = [
-        { id: '111', manifest: '9007199254740993', size: 0, ownerAppId: '12345' },
-        { id: '222', manifest: '9007199254740994', size: 0, ownerAppId: '12345' }
+        {
+          id: '111',
+          manifest: '9007199254740993',
+          size: 0,
+          ownerAppId: '12345'
+        },
+        {
+          id: '222',
+          manifest: '9007199254740994',
+          size: 0,
+          ownerAppId: '12345'
+        }
       ]
       setupMultiDepotPlanPlumbing(fakeClient, depots)
 
@@ -1623,9 +1617,9 @@ describe('23.2-03 (G-23-01): skip-and-warn EResult 40 Blocked depots', () => {
       const skipLines = specimen
         .split('\n')
         .filter((l) => l.includes('skippedDepots'))
-      expect(
-        skipLines.some((l) => /retry|repair|re-?check/i.test(l))
-      ).toBe(true)
+      expect(skipLines.some((l) => /retry|repair|re-?check/i.test(l))).toBe(
+        true
+      )
     })
   })
 })
@@ -1903,16 +1897,14 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
   function setupPlanPlumbing(fakeClient: ReturnType<typeof makeFakeClient>) {
     jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
     jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
-    jest
-      .mocked(selectAllDepots)
-      .mockReturnValue([
-        {
-          id: '111',
-          manifest: '11111111111111111',
-          size: 0,
-          ownerAppId: '12345'
-        }
-      ])
+    jest.mocked(selectAllDepots).mockReturnValue([
+      {
+        id: '111',
+        manifest: '11111111111111111',
+        size: 0,
+        ownerAppId: '12345'
+      }
+    ])
     jest
       .mocked(fakeClient.getDepotDecryptionKey)
       .mockImplementation(
@@ -2173,9 +2165,7 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     // bare key-name/InstalledDepots substring match — the latter would be
     // vacuous since buildAppManifestText emits "InstalledDepots" unconditionally
     // even when empty (23.2-01 finding).
-    expect(acfText).toMatch(
-      /"111"\s*\{\s*"manifest"\s+"11111111111111111"/
-    )
+    expect(acfText).toMatch(/"111"\s*\{\s*"manifest"\s+"11111111111111111"/)
   })
 
   it('D-UAT-05: a cancel issued WHILE the plan is still being built (e.g. during the CM connect wait) resolves with status cancelled — never error — and never reaches downloadDepotFiles/fetchChunk', async () => {
@@ -3008,7 +2998,9 @@ describe('classifyDepotError', () => {
     const result = classifyDepotError(err)
     expect(result.key).toBe('steam.download.error.depotBlocked')
     expect(result.message).toMatch(/1771304/)
-    expect(result.message).toMatch(/installable directly through the steam client/i)
+    expect(result.message).toMatch(
+      /installable directly through the steam client/i
+    )
   })
 
   it('G-23-01: other terminal EResults (8, 9, 15, 17, 42, 43) are unaffected by the new Blocked branch — only 40 gets depotBlocked', () => {
@@ -3955,9 +3947,13 @@ describe('downloadDepotFiles', () => {
 
     // Guard against the rate/ETA regression the seeding could otherwise
     // introduce.
-    expect(['', /^\d{2}:\d{2}:\d{2}$/].some((m) =>
-      typeof m === 'string' ? progress.eta === m : m.test(progress.eta as string)
-    )).toBe(true)
+    expect(
+      ['', /^\d{2}:\d{2}:\d{2}$/].some((m) =>
+        typeof m === 'string'
+          ? progress.eta === m
+          : m.test(progress.eta as string)
+      )
+    ).toBe(true)
     expect(Number.isFinite(progress.downSpeed as number)).toBe(true)
     expect(Number.isFinite(progress.diskSpeed as number)).toBe(true)
   })
@@ -4302,7 +4298,11 @@ describe('downloadDepotFiles', () => {
         size: content.length,
         sha_content: sha1Hex(content),
         chunks: [
-          { sha: `sha-noflags-${appId}`, cb_original: content.length, offset: 0 }
+          {
+            sha: `sha-noflags-${appId}`,
+            cb_original: content.length,
+            offset: 0
+          }
         ]
         // flags: undefined — H1's signature.
       }
@@ -4310,7 +4310,12 @@ describe('downloadDepotFiles', () => {
         appId,
         name: 'NoFlagsGame',
         depots: [
-          { depotId: `d-noflags-${appId}`, gid: `g-noflags-${appId}`, key: Buffer.from('key'), files: [file] }
+          {
+            depotId: `d-noflags-${appId}`,
+            gid: `g-noflags-${appId}`,
+            key: Buffer.from('key'),
+            files: [file]
+          }
         ],
         totalBytes: content.length,
         skippedDepots: []
@@ -4331,7 +4336,12 @@ describe('downloadDepotFiles', () => {
         appId,
         name: 'ExecGame',
         depots: [
-          { depotId: `d-exec-${appId}`, gid: `g-exec-${appId}`, key: Buffer.from('key'), files: [file] }
+          {
+            depotId: `d-exec-${appId}`,
+            gid: `g-exec-${appId}`,
+            key: Buffer.from('key'),
+            files: [file]
+          }
         ],
         totalBytes: content.length,
         skippedDepots: []
@@ -4355,9 +4365,9 @@ describe('downloadDepotFiles', () => {
         installdir: 'CensusNoFlagsGame',
         hosts: HOSTS
       })
-      expect(
-        findCensusLine('census-no-flags', 'download-complete')
-      ).toMatch(/chmodAttempts=0/)
+      expect(findCensusLine('census-no-flags', 'download-complete')).toMatch(
+        /chmodAttempts=0/
+      )
 
       const execPlan = buildExecPlan('census-exec', contentExec)
       await downloadDepotFiles(execPlan, {
@@ -4365,22 +4375,24 @@ describe('downloadDepotFiles', () => {
         installdir: 'CensusExecGame',
         hosts: HOSTS
       })
-      expect(
-        findCensusLine('census-exec', 'download-complete')
-      ).toMatch(/chmodAttempts=1/)
+      expect(findCensusLine('census-exec', 'download-complete')).toMatch(
+        /chmodAttempts=1/
+      )
     })
 
     it('CONCURRENCY: two downloadDepotFiles runs for DIFFERENT appIds executing concurrently each report their own uncorrupted chmodAttempts, in either start order — the test that would fail against module-level counters', async () => {
       const contentNoFlags = Buffer.from('no-flags-concurrency-payload')
       const contentExec = Buffer.from('exec-concurrency-payload')
 
-      jest.mocked(fetchChunk).mockImplementation(async (_hosts, _depotId, chunk) => {
-        // Small, asymmetric delays so both runs' chunk fetches genuinely
-        // overlap in time rather than resolving one-after-the-other.
-        const isNoFlags = String(chunk.sha).startsWith('sha-noflags')
-        await new Promise((r) => setTimeout(r, isNoFlags ? 15 : 5))
-        return isNoFlags ? contentNoFlags : contentExec
-      })
+      jest
+        .mocked(fetchChunk)
+        .mockImplementation(async (_hosts, _depotId, chunk) => {
+          // Small, asymmetric delays so both runs' chunk fetches genuinely
+          // overlap in time rather than resolving one-after-the-other.
+          const isNoFlags = String(chunk.sha).startsWith('sha-noflags')
+          await new Promise((r) => setTimeout(r, isNoFlags ? 15 : 5))
+          return isNoFlags ? contentNoFlags : contentExec
+        })
 
       async function runBothOrders(
         startNoFlagsFirst: boolean,
@@ -4416,12 +4428,12 @@ describe('downloadDepotFiles', () => {
           await Promise.all([p1, p2])
         }
 
-        expect(
-          findCensusLine(noFlagsAppId, 'download-complete')
-        ).toMatch(/chmodAttempts=0/)
-        expect(
-          findCensusLine(execAppId, 'download-complete')
-        ).toMatch(/chmodAttempts=1/)
+        expect(findCensusLine(noFlagsAppId, 'download-complete')).toMatch(
+          /chmodAttempts=0/
+        )
+        expect(findCensusLine(execAppId, 'download-complete')).toMatch(
+          /chmodAttempts=1/
+        )
       }
 
       // Both start orders — proves neither direction leaks a chmod count
@@ -4593,7 +4605,11 @@ describe('downloadDepotFiles', () => {
           size: content.length,
           sha_content: sha1Hex(content),
           chunks: [
-            { sha: `sha-gate-real-${appId}`, cb_original: content.length, offset: 0 }
+            {
+              sha: `sha-gate-real-${appId}`,
+              cb_original: content.length,
+              offset: 0
+            }
           ],
           flags: EXECUTABLE_FLAG
         }
@@ -4687,10 +4703,7 @@ describe('downloadDepotFiles', () => {
      *  filetype/ncmds/sizeofcmds/flags/reserved) in the given byte order —
      *  only `magic` and `filetype` matter to the fallback under test; every
      *  other field is a zero/placeholder value. */
-    function buildThinMachOHeader(
-      filetype: number,
-      bigEndian = false
-    ): Buffer {
+    function buildThinMachOHeader(filetype: number, bigEndian = false): Buffer {
       const buf = Buffer.alloc(32)
       const write32 = (value: number, offset: number) =>
         bigEndian
@@ -5103,7 +5116,11 @@ describe('downloadDepotFiles', () => {
         size: content.length,
         sha_content: sha1Hex(content),
         chunks: [
-          { sha: 'sha-plain-text-asset', cb_original: content.length, offset: 0 }
+          {
+            sha: 'sha-plain-text-asset',
+            cb_original: content.length,
+            offset: 0
+          }
         ]
       }
       const plan = makePlan(
@@ -5252,9 +5269,7 @@ describe('downloadDepotFiles', () => {
           filename: 'reconciled-flagless-exe',
           size: content.length,
           sha_content: sha1Hex(content),
-          chunks: [
-            { sha: 'sha-902-a', cb_original: content.length, offset: 0 }
-          ]
+          chunks: [{ sha: 'sha-902-a', cb_original: content.length, offset: 0 }]
           // flags: omitted entirely — the HUMANKIND shape.
         }
         const plan = makePlan(
@@ -5309,9 +5324,7 @@ describe('downloadDepotFiles', () => {
           filename: 'reconciled-flagless-fat-exe-beyond-probe',
           size: content.length,
           sha_content: sha1Hex(content),
-          chunks: [
-            { sha: 'sha-902-d', cb_original: content.length, offset: 0 }
-          ]
+          chunks: [{ sha: 'sha-902-d', cb_original: content.length, offset: 0 }]
           // flags: omitted entirely — the HUMANKIND shape.
         }
         const plan = makePlan(
@@ -5366,9 +5379,7 @@ describe('downloadDepotFiles', () => {
           filename: 'reconciled-flagless-text',
           size: content.length,
           sha_content: sha1Hex(content),
-          chunks: [
-            { sha: 'sha-902-b', cb_original: content.length, offset: 0 }
-          ]
+          chunks: [{ sha: 'sha-902-b', cb_original: content.length, offset: 0 }]
         }
         const plan = makePlan(
           [
@@ -5419,9 +5430,7 @@ describe('downloadDepotFiles', () => {
           filename: 'reconciled-flagless-bundle',
           size: content.length,
           sha_content: sha1Hex(content),
-          chunks: [
-            { sha: 'sha-902-c', cb_original: content.length, offset: 0 }
-          ]
+          chunks: [{ sha: 'sha-902-c', cb_original: content.length, offset: 0 }]
         }
         const plan = makePlan(
           [

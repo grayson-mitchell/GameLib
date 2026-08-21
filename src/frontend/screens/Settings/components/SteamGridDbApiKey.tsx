@@ -54,19 +54,16 @@ export default function SteamGridDbApiKey() {
   }
 
   const placeholder = unavailable
-    ? t(
-        'settings.steamgriddb.apikey.unavailable',
-        'Unavailable on this build'
-      )
+    ? t('settings.steamgriddb.apikey.unavailable', 'Unavailable on this build')
     : hasKey
-    ? t(
-        'settings.steamgriddb.apikey.placeholder_saved',
-        'Key saved — type to replace, clear to remove'
-      )
-    : t(
-        'settings.steamgriddb.apikey.placeholder',
-        'Enter your SteamGridDB API Key here'
-      )
+      ? t(
+          'settings.steamgriddb.apikey.placeholder_saved',
+          'Key saved — type to replace, clear to remove'
+        )
+      : t(
+          'settings.steamgriddb.apikey.placeholder',
+          'Enter your SteamGridDB API Key here'
+        )
 
   return (
     <TextInputField

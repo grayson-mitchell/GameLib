@@ -14,13 +14,11 @@ export const quit = makeListenerCaller('quit')
 // same D-02 reasoning the ten window-chrome channels use.
 const showAboutWindowIpc = makeListenerCaller('showAboutWindow')
 const createNewWindowIpc = makeListenerCaller('createNewWindow')
-export const showAboutWindow = () =>
-  isTauri() ? tauriShowAboutWindow() : showAboutWindowIpc()
+export const showAboutWindow = () => (isTauri() ? tauriShowAboutWindow() : showAboutWindowIpc())
 export const openDiscordLink = makeListenerCaller('openDiscordLink')
 export const openWinePrefixFAQ = makeListenerCaller('openWinePrefixFAQ')
 export const openCustomThemesWiki = makeListenerCaller('openCustomThemesWiki')
-export const createNewWindow = (url: string) =>
-  isTauri() ? tauriCreateNewWindow(url) : createNewWindowIpc(url)
+export const createNewWindow = (url: string) => (isTauri() ? tauriCreateNewWindow(url) : createNewWindowIpc(url))
 export const readConfig = makeHandlerInvoker('readConfig')
 export const isLoggedIn = makeHandlerInvoker('isLoggedIn')
 export const writeConfig = makeHandlerInvoker('writeConfig')

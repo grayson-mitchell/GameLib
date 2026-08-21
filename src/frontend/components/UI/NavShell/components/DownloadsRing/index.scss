@@ -30,7 +30,9 @@
   padding: var(--space-3xs);
   border-radius: var(--space-2xs);
   text-decoration: none;
-  transition: background-color 0.16s ease, opacity 0.16s ease;
+  transition:
+    background-color 0.16s ease,
+    opacity 0.16s ease;
 
   &:hover {
     background-color: var(--navbar-active-background);
@@ -69,8 +71,16 @@
   // farthest-side with a 16px box gives an 8px radius: transparent from the
   // centre out to 5px, opaque from 5px to 8px -- a real 3px ring band, with
   // nothing painted behind it to mismatch any backdrop or theme.
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3px),
+    #000 calc(100% - 3px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3px),
+    #000 calc(100% - 3px)
+  );
 }
 
 @supports not (mask: radial-gradient(farthest-side, transparent 0, #000 0)) {

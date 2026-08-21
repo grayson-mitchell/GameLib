@@ -496,9 +496,7 @@ describe('34.14: the depot pair travels through the widened round trip', () => {
           ? resolvedState.hasWindowsDepot
           : false,
       hasMacDepot:
-        resolvedState.phase === 'resolved'
-          ? resolvedState.hasMacDepot
-          : false,
+        resolvedState.phase === 'resolved' ? resolvedState.hasMacDepot : false,
       depotSignalCaptured:
         resolvedState.phase === 'resolved'
           ? resolvedState.depotSignalCaptured

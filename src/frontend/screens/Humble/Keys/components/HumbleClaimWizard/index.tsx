@@ -238,7 +238,7 @@ export default function HumbleClaimWizard({
           <p className="humbleClaimWizardBody">
             {t(
               'humbleKeys.c2Body',
-              "This key is safe in Giftable spares — revealing it here would throw away the ability to gift it. Take it to Giftable spares instead."
+              'This key is safe in Giftable spares — revealing it here would throw away the ability to gift it. Take it to Giftable spares instead.'
             )}
           </p>
         </div>

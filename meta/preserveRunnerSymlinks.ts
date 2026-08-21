@@ -235,9 +235,7 @@ export function preserveRunnerSymlinksPlugin(options?: {
       )
 
       if (skipped.length > 0 || rejected.length > 0) {
-        const skippedLines = skipped.map(
-          (record) => `  - ${record.relPath}`
-        )
+        const skippedLines = skipped.map((record) => `  - ${record.relPath}`)
         const rejectedLines = rejected.map(
           (record) => `  - ${record.relPath} -> ${record.target}`
         )

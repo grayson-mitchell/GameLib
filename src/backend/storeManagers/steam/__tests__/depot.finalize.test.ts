@@ -37,11 +37,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, relative, sep } from 'node:path'
-import {
-  downloadSteamDepots,
-  DIRECTORY_FLAG,
-  EXECUTABLE_FLAG
-} from '../depot'
+import { downloadSteamDepots, DIRECTORY_FLAG, EXECUTABLE_FLAG } from '../depot'
 import { SteamUser } from '../user'
 import { selectAllDepots } from '../depot/select'
 import { decryptFilename } from '../depot/crypto'
@@ -97,7 +93,11 @@ jest.mock('electron', () => ({
 // ── ../electronStores mock — avoids real TypeCheckedStoreBackend/CacheStore
 //    instantiation at module load (bottle.ts imports steamBottleConfigStore). ─
 jest.mock('../electronStores', () => ({
-  steamBottleConfigStore: { get: jest.fn(), get_nodefault: jest.fn(), set: jest.fn() }
+  steamBottleConfigStore: {
+    get: jest.fn(),
+    get_nodefault: jest.fn(),
+    set: jest.fn()
+  }
 }))
 
 // ── backend/config mock — bottle.ts imports GlobalConfig; not called by
@@ -430,9 +430,21 @@ describe('D-08: catch-path finalize must not clobber a complete install (bottle-
       stateFlags: '4',
       bytes: '96422090071',
       installedDepots: [
-        { depotId: '1771302', manifest: '1111111111111111111', size: 32000000000 },
-        { depotId: '1771303', manifest: '2222222222222222222', size: 4000000000 },
-        { depotId: '1771306', manifest: '3333333333333333333', size: 60422090071 }
+        {
+          depotId: '1771302',
+          manifest: '1111111111111111111',
+          size: 32000000000
+        },
+        {
+          depotId: '1771303',
+          manifest: '2222222222222222222',
+          size: 4000000000
+        },
+        {
+          depotId: '1771306',
+          manifest: '3333333333333333333',
+          size: 60422090071
+        }
       ]
     })
     manifestPath = join(targetSteamappsDir, `appmanifest_${KCD2_APP_ID}.acf`)
@@ -501,17 +513,19 @@ describe('D-08: catch-path finalize must not clobber a complete install (bottle-
       })
     })
     setupPlanPlumbing(fakeClient)
-    jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
-      (
-        _appId: number,
-        _depotId: number,
-        cb: (err: Error | null, key?: Buffer) => void
-      ) => {
-        const err = new Error('Blocked') as Error & { eresult?: number }
-        err.eresult = 40
-        cb(err, undefined)
-      }
-    )
+    jest
+      .mocked(fakeClient.getDepotDecryptionKey)
+      .mockImplementation(
+        (
+          _appId: number,
+          _depotId: number,
+          cb: (err: Error | null, key?: Buffer) => void
+        ) => {
+          const err = new Error('Blocked') as Error & { eresult?: number }
+          err.eresult = 40
+          cb(err, undefined)
+        }
+      )
 
     const result = await downloadSteamDepots(KCD2_APP_ID, {
       targetSteamappsDir,
@@ -560,15 +574,47 @@ describe('Task 3 (23.2-03, G-23-01): a skipped depot still earns StateFlags=4, a
   const KCD2_BUILDID = '23914554'
   const BLOCKED_ID = '1771304'
   const KEPT_DEPOTS = [
-    { id: '1771302', manifest: '1111111111111111111', content: Buffer.from('A'.repeat(1000)) },
-    { id: '1771303', manifest: '2222222222222222222', content: Buffer.from('B'.repeat(500)) },
-    { id: '1771306', manifest: '4444444444444444444', content: Buffer.from('C'.repeat(250)) }
+    {
+      id: '1771302',
+      manifest: '1111111111111111111',
+      content: Buffer.from('A'.repeat(1000))
+    },
+    {
+      id: '1771303',
+      manifest: '2222222222222222222',
+      content: Buffer.from('B'.repeat(500))
+    },
+    {
+      id: '1771306',
+      manifest: '4444444444444444444',
+      content: Buffer.from('C'.repeat(250))
+    }
   ]
   const ALL_DEPOT_DESCRIPTORS = [
-    { id: '1771302', manifest: '1111111111111111111', size: 0, ownerAppId: KCD2_APP_ID },
-    { id: '1771303', manifest: '2222222222222222222', size: 0, ownerAppId: KCD2_APP_ID },
-    { id: BLOCKED_ID, manifest: '3333333333333333333', size: 0, ownerAppId: KCD2_APP_ID },
-    { id: '1771306', manifest: '4444444444444444444', size: 0, ownerAppId: KCD2_APP_ID }
+    {
+      id: '1771302',
+      manifest: '1111111111111111111',
+      size: 0,
+      ownerAppId: KCD2_APP_ID
+    },
+    {
+      id: '1771303',
+      manifest: '2222222222222222222',
+      size: 0,
+      ownerAppId: KCD2_APP_ID
+    },
+    {
+      id: BLOCKED_ID,
+      manifest: '3333333333333333333',
+      size: 0,
+      ownerAppId: KCD2_APP_ID
+    },
+    {
+      id: '1771306',
+      manifest: '4444444444444444444',
+      size: 0,
+      ownerAppId: KCD2_APP_ID
+    }
   ]
 
   let dir: string
@@ -660,16 +706,20 @@ describe('Task 3 (23.2-03, G-23-01): a skipped depot still earns StateFlags=4, a
     })
     jest
       .mocked(decryptFilename)
-      .mockImplementation((encName: string) => encName.replace('enc-', 'game-') + '.bin')
-    jest.mocked(fetchChunk).mockImplementation(async (_hosts, depotId: string) => {
-      const kept = KEPT_DEPOTS.find((d) => d.id === depotId)
-      if (!kept) {
-        throw new Error(
-          `test setup error: fetchChunk called for unexpected depot ${depotId}`
-        )
-      }
-      return kept.content
-    })
+      .mockImplementation(
+        (encName: string) => encName.replace('enc-', 'game-') + '.bin'
+      )
+    jest
+      .mocked(fetchChunk)
+      .mockImplementation(async (_hosts, depotId: string) => {
+        const kept = KEPT_DEPOTS.find((d) => d.id === depotId)
+        if (!kept) {
+          throw new Error(
+            `test setup error: fetchChunk called for unexpected depot ${depotId}`
+          )
+        }
+        return kept.content
+      })
   }
 
   it('all three kept depots download, 1771304 is dropped, and the manifest earns StateFlags=4 with 1771304 absent as an InstalledDepots block key', async () => {
@@ -699,13 +749,14 @@ describe('Task 3 (23.2-03, G-23-01): a skipped depot still earns StateFlags=4, a
     expect(result.status).toBe('done')
     expect(result.skippedDepots).toEqual([BLOCKED_ID])
 
-    const acfText = readFileSync(join(dir, `appmanifest_${KCD2_APP_ID}.acf`), 'utf8')
+    const acfText = readFileSync(
+      join(dir, `appmanifest_${KCD2_APP_ID}.acf`),
+      'utf8'
+    )
 
     expect(acfText).toMatch(/"StateFlags"\s+"4"/)
     for (const kept of KEPT_DEPOTS) {
-      expect(acfText).toMatch(
-        new RegExp(`\\t\\t"${kept.id}"\\r?\\n\\t\\t\\{`)
-      )
+      expect(acfText).toMatch(new RegExp(`\\t\\t"${kept.id}"\\r?\\n\\t\\t\\{`))
     }
     // Absence targets 1771304 as an InstalledDepots BLOCK KEY, never a bare
     // substring — the id must not appear as `\t\t"1771304"\n\t\t{`.
@@ -757,7 +808,10 @@ describe('Task 3 (23.2-03, G-23-01): a skipped depot still earns StateFlags=4, a
     expect(result.status).toBe('error')
     expect(result.skippedDepots).toEqual([BLOCKED_ID])
 
-    const acfText = readFileSync(join(dir, `appmanifest_${KCD2_APP_ID}.acf`), 'utf8')
+    const acfText = readFileSync(
+      join(dir, `appmanifest_${KCD2_APP_ID}.acf`),
+      'utf8'
+    )
     expect(acfText).toMatch(/"StateFlags"\s+"1026"/)
     expect(acfText).not.toMatch(/"StateFlags"\s+"4"/)
   })

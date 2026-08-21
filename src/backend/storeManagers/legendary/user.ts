@@ -227,7 +227,10 @@ export class LegendaryUser {
         await step()
       } catch (err) {
         logWarning(
-          [`Legendary logout cookie-clear step ${name} failed (continuing):`, err],
+          [
+            `Legendary logout cookie-clear step ${name} failed (continuing):`,
+            err
+          ],
           LogPrefix.Legendary
         )
       }

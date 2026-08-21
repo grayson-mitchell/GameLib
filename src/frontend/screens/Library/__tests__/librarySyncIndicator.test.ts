@@ -21,62 +21,110 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
   }[] = [
     {
       name: 'logged out, idle, empty library -> hidden (no Steam account, nothing to show)',
-      input: { steamLoggedIn: false, steamSyncStatus: 'idle', steamLibraryCount: 0 },
+      input: {
+        steamLoggedIn: false,
+        steamSyncStatus: 'idle',
+        steamLibraryCount: 0
+      },
       mode: 'hidden'
     },
     {
       name: 'logged out, idle, populated library -> hidden',
-      input: { steamLoggedIn: false, steamSyncStatus: 'idle', steamLibraryCount: 12 },
+      input: {
+        steamLoggedIn: false,
+        steamSyncStatus: 'idle',
+        steamLibraryCount: 12
+      },
       mode: 'hidden'
     },
     {
       name: 'logged out, syncing, empty library -> hidden (never leak the indicator to a logged-out user)',
-      input: { steamLoggedIn: false, steamSyncStatus: 'syncing', steamLibraryCount: 0 },
+      input: {
+        steamLoggedIn: false,
+        steamSyncStatus: 'syncing',
+        steamLibraryCount: 0
+      },
       mode: 'hidden'
     },
     {
       name: 'logged out, syncing, populated library -> hidden',
-      input: { steamLoggedIn: false, steamSyncStatus: 'syncing', steamLibraryCount: 12 },
+      input: {
+        steamLoggedIn: false,
+        steamSyncStatus: 'syncing',
+        steamLibraryCount: 12
+      },
       mode: 'hidden'
     },
     {
       name: 'logged out, sync failed, empty library -> hidden',
-      input: { steamLoggedIn: false, steamSyncStatus: 'failed', steamLibraryCount: 0 },
+      input: {
+        steamLoggedIn: false,
+        steamSyncStatus: 'failed',
+        steamLibraryCount: 0
+      },
       mode: 'hidden'
     },
     {
       name: 'logged out, sync failed, populated library -> hidden',
-      input: { steamLoggedIn: false, steamSyncStatus: 'failed', steamLibraryCount: 12 },
+      input: {
+        steamLoggedIn: false,
+        steamSyncStatus: 'failed',
+        steamLibraryCount: 12
+      },
       mode: 'hidden'
     },
     {
       name: 'logged in, idle, empty library -> hidden (the DEFECT: the old guard spun forever here)',
-      input: { steamLoggedIn: true, steamSyncStatus: 'idle', steamLibraryCount: 0 },
+      input: {
+        steamLoggedIn: true,
+        steamSyncStatus: 'idle',
+        steamLibraryCount: 0
+      },
       mode: 'hidden'
     },
     {
       name: 'logged in, idle, populated library -> hidden (steady state, nothing to report)',
-      input: { steamLoggedIn: true, steamSyncStatus: 'idle', steamLibraryCount: 12 },
+      input: {
+        steamLoggedIn: true,
+        steamSyncStatus: 'idle',
+        steamLibraryCount: 12
+      },
       mode: 'hidden'
     },
     {
       name: 'logged in, syncing, empty library -> syncing (nothing else on screen to look at)',
-      input: { steamLoggedIn: true, steamSyncStatus: 'syncing', steamLibraryCount: 0 },
+      input: {
+        steamLoggedIn: true,
+        steamSyncStatus: 'syncing',
+        steamLibraryCount: 0
+      },
       mode: 'syncing'
     },
     {
-      name: 'logged in, syncing, populated library -> hidden (a refresh of a populated library is LibraryHeader\'s job, not a second surface)',
-      input: { steamLoggedIn: true, steamSyncStatus: 'syncing', steamLibraryCount: 12 },
+      name: "logged in, syncing, populated library -> hidden (a refresh of a populated library is LibraryHeader's job, not a second surface)",
+      input: {
+        steamLoggedIn: true,
+        steamSyncStatus: 'syncing',
+        steamLibraryCount: 12
+      },
       mode: 'hidden'
     },
     {
       name: 'logged in, sync failed, empty library -> failed (refresh ran and then FAILED -- the case existing coverage never reached)',
-      input: { steamLoggedIn: true, steamSyncStatus: 'failed', steamLibraryCount: 0 },
+      input: {
+        steamLoggedIn: true,
+        steamSyncStatus: 'failed',
+        steamLibraryCount: 0
+      },
       mode: 'failed'
     },
     {
       name: 'logged in, sync failed, cached games on screen -> failed (a stale library must not look successful)',
-      input: { steamLoggedIn: true, steamSyncStatus: 'failed', steamLibraryCount: 12 },
+      input: {
+        steamLoggedIn: true,
+        steamSyncStatus: 'failed',
+        steamLibraryCount: 12
+      },
       mode: 'failed'
     }
   ]
@@ -120,10 +168,16 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
         if (!input.steamLoggedIn) return 'hidden'
         // DEFECT: only surfaces failure when the library also happens to be
         // empty, hiding a failure behind a cached library.
-        if (input.steamSyncStatus === 'failed' && input.steamLibraryCount === 0) {
+        if (
+          input.steamSyncStatus === 'failed' &&
+          input.steamLibraryCount === 0
+        ) {
           return 'failed'
         }
-        if (input.steamSyncStatus === 'syncing' && input.steamLibraryCount === 0) {
+        if (
+          input.steamSyncStatus === 'syncing' &&
+          input.steamLibraryCount === 0
+        ) {
           return 'syncing'
         }
         return 'hidden'
@@ -148,7 +202,10 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
         // DEFECT: evaluates status/count without checking steamLoggedIn
         // first.
         if (input.steamSyncStatus === 'failed') return 'failed'
-        if (input.steamSyncStatus === 'syncing' && input.steamLibraryCount === 0) {
+        if (
+          input.steamSyncStatus === 'syncing' &&
+          input.steamLibraryCount === 0
+        ) {
           return 'syncing'
         }
         return 'hidden'

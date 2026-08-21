@@ -1,9 +1,5 @@
 import { logError } from 'backend/logger'
-import {
-  getInfoFromCodeweavers,
-  slugify,
-  naiveSlugify
-} from '../utils'
+import { getInfoFromCodeweavers, slugify, naiveSlugify } from '../utils'
 import { axiosClient } from 'backend/utils'
 
 jest.mock('backend/logger')
@@ -124,11 +120,11 @@ describe('getInfoFromCodeweavers', () => {
   })
 
   test('SOFT-404 MISS: returns the cacheable EMPTY marker, not null', async () => {
-    jest
-      .spyOn(axiosClient, 'get')
-      .mockResolvedValue({ data: SOFT_404_HTML })
+    jest.spyOn(axiosClient, 'get').mockResolvedValue({ data: SOFT_404_HTML })
 
-    const result = await getInfoFromCodeweavers('Definitely Not A Real Game 9000')
+    const result = await getInfoFromCodeweavers(
+      'Definitely Not A Real Game 9000'
+    )
 
     expect(result).not.toBeNull()
     expect(result).toStrictEqual({
@@ -145,7 +141,9 @@ describe('getInfoFromCodeweavers', () => {
 
     expect(result).toBeNull()
     expect(logError).toBeCalledWith(
-      expect.arrayContaining(['Was not able to get CodeWeavers data for Hades']),
+      expect.arrayContaining([
+        'Was not able to get CodeWeavers data for Hades'
+      ]),
       'ExtraGameInfo'
     )
   })

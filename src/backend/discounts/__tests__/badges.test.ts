@@ -54,9 +54,9 @@ describe('resolveDiscountBadge', () => {
     const product = makeProduct({ title: 'Celeste' })
     const titleToAppId = buildTitleToAppId([game])
     const ownedAppIds = new Set([game.app_name])
-    expect(
-      resolveDiscountBadge(product, titleToAppId, ownedAppIds, [])
-    ).toBe('owned')
+    expect(resolveDiscountBadge(product, titleToAppId, ownedAppIds, [])).toBe(
+      'owned'
+    )
   })
 
   test('D-84: exact AppID match against a waiting key, not owned, returns key-available', () => {
@@ -119,9 +119,9 @@ describe('resolveDiscountBadge', () => {
     const product = makeProduct({ title: '  CELESTE  ' })
     const titleToAppId = buildTitleToAppId([game])
     const ownedAppIds = new Set([game.app_name])
-    expect(
-      resolveDiscountBadge(product, titleToAppId, ownedAppIds, [])
-    ).toBe('owned')
+    expect(resolveDiscountBadge(product, titleToAppId, ownedAppIds, [])).toBe(
+      'owned'
+    )
   })
 })
 
@@ -143,10 +143,7 @@ describe('buildDiscountBadgeMaps + resolveDiscountBadge (integration)', () => {
     const game = makeSteamGame({ title: 'Celeste', app_name: '504230' })
     const key = makeKey({ title: 'Celeste', steamAppId: '504230' })
     const product = makeProduct({ title: 'Celeste' })
-    const { titleToAppId, ownedAppIds } = buildDiscountBadgeMaps(
-      [game],
-      [key]
-    )
+    const { titleToAppId, ownedAppIds } = buildDiscountBadgeMaps([game], [key])
     expect(ownedAppIds.has(game.app_name)).toBe(true)
     expect(
       resolveDiscountBadge(product, titleToAppId, ownedAppIds, [key])
@@ -157,10 +154,7 @@ describe('buildDiscountBadgeMaps + resolveDiscountBadge (integration)', () => {
     const game = makeSteamGame({ title: 'Celeste', app_name: '504230' })
     const key = makeKey({ title: 'Hollow Knight', steamAppId: '367520' })
     const product = makeProduct({ title: 'Some Unrelated Game' })
-    const { titleToAppId, ownedAppIds } = buildDiscountBadgeMaps(
-      [game],
-      [key]
-    )
+    const { titleToAppId, ownedAppIds } = buildDiscountBadgeMaps([game], [key])
     expect(
       resolveDiscountBadge(product, titleToAppId, ownedAppIds, [key])
     ).toBeNull()

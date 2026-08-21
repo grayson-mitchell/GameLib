@@ -24,9 +24,28 @@ import { join } from 'node:path'
 
 import { stripHashComments } from './helpers/workflowSteps'
 
-const ELECTRON_BUILDER_PATH = join(__dirname, '..', '..', '..', 'electron-builder.yml')
-const TAURI_CONF_PATH = join(__dirname, '..', '..', '..', 'src-tauri', 'tauri.conf.json')
-const ELECTRON_VITE_CONFIG_PATH = join(__dirname, '..', '..', '..', 'electron.vite.config.ts')
+const ELECTRON_BUILDER_PATH = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'electron-builder.yml'
+)
+const TAURI_CONF_PATH = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'src-tauri',
+  'tauri.conf.json'
+)
+const ELECTRON_VITE_CONFIG_PATH = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'electron.vite.config.ts'
+)
 const PACKAGING_LIMITATIONS_PATH = join(
   __dirname,
   '..',
@@ -92,7 +111,7 @@ describe('electron-builder.yml Windows stays flat (negative guard)', () => {
     expect(config.win.files.some((entry) => entry.includes('**'))).toBe(false)
   })
 
-  test('the win: block\'s stripped source contains no ** glob (raw-text cross-check)', () => {
+  test("the win: block's stripped source contains no ** glob (raw-text cross-check)", () => {
     const strippedLines = loadStrippedElectronBuilder().split('\n')
     const winIndex = strippedLines.findIndex((line) => line.trim() === 'win:')
     expect(winIndex).toBeGreaterThanOrEqual(0)
@@ -139,13 +158,19 @@ describe('src-tauri/tauri.conf.json runner-tree staging (Phase 34.9 Plan 07)', (
   test('bundle.resources is present and non-empty', () => {
     const config = parseTauriConfig()
     expect(config.bundle.resources).toBeDefined()
-    expect(Array.isArray(config.bundle.resources) ? config.bundle.resources.length : 1).toBeGreaterThan(0)
+    expect(
+      Array.isArray(config.bundle.resources)
+        ? config.bundle.resources.length
+        : 1
+    ).toBeGreaterThan(0)
   })
 
   test('bundle.resources references the bin tree', () => {
     const config = parseTauriConfig()
     const resources = config.bundle.resources
-    const asText = Array.isArray(resources) ? resources.join(',') : JSON.stringify(resources)
+    const asText = Array.isArray(resources)
+      ? resources.join(',')
+      : JSON.stringify(resources)
     expect(asText).toContain('bin')
   })
 
@@ -169,9 +194,7 @@ describe('34.9-PACKAGING-LIMITATIONS.md exists and names its owner', () => {
  * repo currently needs a JS-comment stripper.
  */
 function stripJsComments(src: string): string {
-  return src
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/\/\/.*$/gm, '')
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
 }
 
 describe('stripJsComments self-test (anti-vacuity guard for the assertions below)', () => {

@@ -219,9 +219,7 @@ describe('credential redaction through the production callRunner path (34.5-61, 
     expect(serialized).not.toContain('SENTINEL_CLIENT_22')
     // Positive shape: the redacted marker is present exactly once per flag, proving this
     // isn't merely a case of the whole line being dropped.
-    expect(
-      serialized.match(/<redacted>/g)?.length
-    ).toBe(4)
+    expect(serialized.match(/<redacted>/g)?.length).toBe(4)
   })
 
   it('GOG --password argv: raw private-branch password redacted (F-34.5-G6-24)', async () => {

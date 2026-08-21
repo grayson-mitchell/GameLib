@@ -42,7 +42,10 @@ function resolveLabel(spec: ChipLabelSpec, t: TFunc, tGamelib: TFunc): string {
 
   switch (spec.key) {
     case 'gamelib:library.filterPanel.chipHiddenOnly':
-      return tGamelib('gamelib:library.filterPanel.chipHiddenOnly', 'Hidden only')
+      return tGamelib(
+        'gamelib:library.filterPanel.chipHiddenOnly',
+        'Hidden only'
+      )
     case 'gamelib:library.filterPanel.chipHiddenIncluded':
       return tGamelib(
         'gamelib:library.filterPanel.chipHiddenIncluded',
@@ -112,7 +115,10 @@ export default function FilterZeroResult() {
         className="FilterZeroResult__action"
         onClick={clearAllFilters}
       >
-        {tGamelib('gamelib:library.filterPanel.emptyClearAll', 'Clear all filters')}
+        {tGamelib(
+          'gamelib:library.filterPanel.emptyClearAll',
+          'Clear all filters'
+        )}
       </button>
     </div>
   )

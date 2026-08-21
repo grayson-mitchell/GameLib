@@ -521,9 +521,7 @@ function archSpecificBinary(binaryName: string) {
   // (the folder PyInstaller's `--onedir` produces, containing the
   // executable plus its bundled Python/Mach-O dependencies). Flat runners
   // (Windows, Linux, and `comet` everywhere) keep the single-segment shape.
-  const segments = isMacOnedirRunner
-    ? [binaryName, binaryName]
-    : [binaryName]
+  const segments = isMacOnedirRunner ? [binaryName, binaryName] : [binaryName]
 
   // Try to use the arch-native binary first, if that doesn't exist fall back to
   // the x64 version (assume a compatibility layer like box64 is installed).

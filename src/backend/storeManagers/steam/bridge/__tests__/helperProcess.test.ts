@@ -85,9 +85,7 @@ class FakeSocket extends EventEmitter {
     // WHOAMI -- mirrors helperProcess.ts's own single-connection sequencing.
     const isFirstWrite = this.writeCount === 0
     this.writeCount += 1
-    const responseBuf = isFirstWrite
-      ? this.healthResponse
-      : this.whoamiResponse
+    const responseBuf = isFirstWrite ? this.healthResponse : this.whoamiResponse
     if (responseBuf) {
       process.nextTick(() => this.emit('data', responseBuf))
     }
@@ -147,22 +145,18 @@ describe('helperProcess.ts', () => {
     expect(options.cwd).toBe(dirname(steamBridgeHelperPath))
   })
 
-  test(
-    'D-03: two ready calls in a row spawn exactly ONE shared helper',
-    async () => {
-      MockedSocket.mockImplementation(
-        () => new FakeSocket(healthOkFrame, whoamiOkFrame)
-      )
+  test('D-03: two ready calls in a row spawn exactly ONE shared helper', async () => {
+    MockedSocket.mockImplementation(
+      () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+    )
 
-      const first = await ensureBridgeHelperReady('1234')
-      const second = await ensureBridgeHelperReady('1234')
+    const first = await ensureBridgeHelperReady('1234')
+    const second = await ensureBridgeHelperReady('1234')
 
-      expect(first).toEqual({ status: 'ready', ready: true })
-      expect(second).toEqual({ status: 'ready', ready: true })
-      expect(mockedSpawn).toHaveBeenCalledTimes(1)
-    },
-    10000
-  )
+    expect(first).toEqual({ status: 'ready', ready: true })
+    expect(second).toEqual({ status: 'ready', ready: true })
+    expect(mockedSpawn).toHaveBeenCalledTimes(1)
+  }, 10000)
 
   test('CONTROL HEALTH ok + CONTROL WHOAMI live -> ready:true', async () => {
     MockedSocket.mockImplementation(
@@ -191,38 +185,30 @@ describe('helperProcess.ts', () => {
     )
   })
 
-  test(
-    'HEALTH answers err on every attempt (process never becomes healthy) -> unreachable, ready:false, steamBridgeSetupRequired fired (D-06)',
-    async () => {
-      MockedSocket.mockImplementation(() => new FakeSocket(healthErrFrame))
+  test('HEALTH answers err on every attempt (process never becomes healthy) -> unreachable, ready:false, steamBridgeSetupRequired fired (D-06)', async () => {
+    MockedSocket.mockImplementation(() => new FakeSocket(healthErrFrame))
 
-      const result = await ensureBridgeHelperReady('1234')
+    const result = await ensureBridgeHelperReady('1234')
 
-      expect(result).toEqual({
-        status: 'unreachable',
-        ready: false,
-        error: 'Bridge helper unreachable within the poll budget'
-      })
-      expect(mockedSendFrontendMessage).toHaveBeenCalledWith(
-        'steamBridgeSetupRequired',
-        { appName: '1234', reason: 'unreachable' }
-      )
-    },
-    10000
-  )
+    expect(result).toEqual({
+      status: 'unreachable',
+      ready: false,
+      error: 'Bridge helper unreachable within the poll budget'
+    })
+    expect(mockedSendFrontendMessage).toHaveBeenCalledWith(
+      'steamBridgeSetupRequired',
+      { appName: '1234', reason: 'unreachable' }
+    )
+  }, 10000)
 
-  test(
-    'HEALTH never answers at all (probe timeout every attempt) -> unreachable, ready:false',
-    async () => {
-      MockedSocket.mockImplementation(() => new FakeSocket())
+  test('HEALTH never answers at all (probe timeout every attempt) -> unreachable, ready:false', async () => {
+    MockedSocket.mockImplementation(() => new FakeSocket())
 
-      const result = await ensureBridgeHelperReady('1234')
+    const result = await ensureBridgeHelperReady('1234')
 
-      expect(result.status).toBe('unreachable')
-      expect(result.ready).toBe(false)
-    },
-    10000
-  )
+    expect(result.status).toBe('unreachable')
+    expect(result.ready).toBe(false)
+  }, 10000)
 
   test('shutdownBridgeHelper() is a no-op when the helper was never spawned', () => {
     expect(() => shutdownBridgeHelper()).not.toThrow()

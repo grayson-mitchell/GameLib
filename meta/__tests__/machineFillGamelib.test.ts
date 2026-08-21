@@ -85,10 +85,7 @@ describe('mergeFill -- never overwrites', () => {
     const target = { zeta: 'Z', mid: 'M' }
     const filled = { alpha: 'A-new' } // 'alpha' does not exist in target at all
 
-    const { merged } = mergeFill(target, filled, null) as Record<
-      string,
-      string
-    >
+    const { merged } = mergeFill(target, filled, null) as Record<string, string>
 
     expect(Object.keys(merged)).toEqual(['zeta', 'mid', 'alpha'])
     expect(merged.alpha).toBe('A-new')
@@ -291,9 +288,9 @@ describe('buildTranslationMemory', () => {
   })
 
   it('returns an empty array when nothing matches', () => {
-    expect(
-      buildTranslationMemory(enUpstream, deUpstream, 'Uninstall')
-    ).toEqual([])
+    expect(buildTranslationMemory(enUpstream, deUpstream, 'Uninstall')).toEqual(
+      []
+    )
   })
 })
 

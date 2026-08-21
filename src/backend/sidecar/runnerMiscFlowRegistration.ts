@@ -125,73 +125,63 @@ export function registerRunnerMiscFlows(): void {
   // Plan 34.5-12. `callTool` reassigned here from Phase 34.1 by REQ-34.1-10 / 34.1 D-14 — it is
   // Wine tooling (winetricks/winecfg/runExe dispatch), not "misc" in domain, and only sat in
   // slice 4's original inventory because that inventory grouped channels by Electron file.
-  ipcMain.handle(
-    'callTool',
-    async (_event: unknown, ...args: unknown[]) => {
-      const { tool, exe, appName, runner } = args[0] as {
-        tool: 'winetricks' | 'winecfg' | 'runExe'
-        exe?: string
-        appName: string
-        runner: Runner
-      }
+  ipcMain.handle('callTool', async (_event: unknown, ...args: unknown[]) => {
+    const { tool, exe, appName, runner } = args[0] as {
+      tool: 'winetricks' | 'winecfg' | 'runExe'
+      exe?: string
+      appName: string
+      runner: Runner
+    }
 
-      const gameSettings = await libraryManagerMap[runner]
-        .getGame(appName)
-        .getSettings()
+    const gameSettings = await libraryManagerMap[runner]
+      .getGame(appName)
+      .getSettings()
 
-      switch (tool) {
-        case 'winetricks':
-          // Pitfall 4 (34.5-RESEARCH.md § Common Pitfalls): this branch calls
-          // `Winetricks.run()` on the shared `tools/index.ts` object — pure Node, no Electron
-          // dependency — and WORKS TODAY despite `winetricksAvailable`/`winetricksInstall`/
-          // `winetricksInstalled` being deferred to Phase 34.6 (D-03). This is intentionally NOT
-          // gated on that deferral, an early return, or a feature flag — flagged in
-          // `34.5-PORTED-CHANNELS.md` so a reader does not mistake it for broken/blocked.
-          await Winetricks.run(runner, appName)
-          break
-        case 'winecfg':
+    switch (tool) {
+      case 'winetricks':
+        // Pitfall 4 (34.5-RESEARCH.md § Common Pitfalls): this branch calls
+        // `Winetricks.run()` on the shared `tools/index.ts` object — pure Node, no Electron
+        // dependency — and WORKS TODAY despite `winetricksAvailable`/`winetricksInstall`/
+        // `winetricksInstalled` being deferred to Phase 34.6 (D-03). This is intentionally NOT
+        // gated on that deferral, an early return, or a feature flag — flagged in
+        // `34.5-PORTED-CHANNELS.md` so a reader does not mistake it for broken/blocked.
+        await Winetricks.run(runner, appName)
+        break
+      case 'winecfg':
+        await runWineCommandOnGame(runner, appName, {
+          gameSettings,
+          commandParts: ['winecfg'],
+          wait: false
+        })
+        break
+      case 'runExe':
+        if (exe) {
+          const workingDir = path.parse(exe).dir
           await runWineCommandOnGame(runner, appName, {
             gameSettings,
-            commandParts: ['winecfg'],
-            wait: false
+            commandParts: [exe],
+            wait: false,
+            startFolder: workingDir
           })
-          break
-        case 'runExe':
-          if (exe) {
-            const workingDir = path.parse(exe).dir
-            await runWineCommandOnGame(runner, appName, {
-              gameSettings,
-              commandParts: [exe],
-              wait: false,
-              startFolder: workingDir
-            })
-          }
-          break
-      }
-
-      if (runner === 'gog') {
-        // Check if game was modified by offline installer / wine uninstaller
-        await libraryManagerMap['gog'].checkForOfflineInstallerChanges(
-          appName
-        )
-        const maybeNewGameInfo = libraryManagerMap['gog'].getGameInfo(appName)
-        if (maybeNewGameInfo) {
-          sendFrontendMessage('pushGameToLibrary', maybeNewGameInfo)
         }
+        break
+    }
+
+    if (runner === 'gog') {
+      // Check if game was modified by offline installer / wine uninstaller
+      await libraryManagerMap['gog'].checkForOfflineInstallerChanges(appName)
+      const maybeNewGameInfo = libraryManagerMap['gog'].getGameInfo(appName)
+      if (maybeNewGameInfo) {
+        sendFrontendMessage('pushGameToLibrary', maybeNewGameInfo)
       }
-
-      sendGameStatusUpdate({ appName, runner, status: 'done' })
     }
-  )
 
-  ipcMain.handle(
-    'egsSync',
-    async (_event: unknown, ...args: unknown[]) => {
-      return libraryManagerMap['legendary'].toggleGamesSync(
-        args[0] as string
-      )
-    }
-  )
+    sendGameStatusUpdate({ appName, runner, status: 'done' })
+  })
+
+  ipcMain.handle('egsSync', async (_event: unknown, ...args: unknown[]) => {
+    return libraryManagerMap['legendary'].toggleGamesSync(args[0] as string)
+  })
 
   ipcMain.handle(
     'getGOGLinuxInstallersLangs',
@@ -225,47 +215,44 @@ export function registerRunnerMiscFlows(): void {
     }
   )
 
-  ipcMain.handle(
-    'syncSaves',
-    async (_event: unknown, ...args: unknown[]) => {
-      const {
-        arg = '',
-        path: savesPath,
-        appName,
-        runner
-      } = args[0] as {
-        arg?: string
-        path: string
-        appName: string
-        runner: Runner
-      }
-
-      // Scope boundary: saves-sync CONFLICT BEHAVIOUR is explicitly out of scope for this phase.
-      // Both runners' sync paths use non-interactive CLI flags — legendary's `sync-saves` always
-      // sets `-y` (storeManagers/legendary/games.ts:843-873) and gog's `save-sync` loop
-      // (storeManagers/gog/games.ts:850-910) never prompts either — so no dialog/prompt is
-      // reachable from either path; D-15's fire-and-forget-rejection landmine does not apply
-      // here. This is a byte-faithful port of inherited Electron behaviour, not a redesign.
-      if (runner === 'legendary') {
-        const epicOffline = await isEpicServiceOffline()
-        if (epicOffline) {
-          logWarning(
-            'Epic is offline right now, cannot sync saves!',
-            LogPrefix.Backend
-          )
-          return 'Epic is offline right now, cannot sync saves!'
-        }
-      }
-      if (!isOnline()) {
-        logWarning('App is offline, cannot sync saves!', LogPrefix.Backend)
-        return 'App is offline, cannot sync saves!'
-      }
-
-      const output = await libraryManagerMap[runner]
-        .getGame(appName)
-        .syncSaves(arg, savesPath)
-      logInfo(output, LogPrefix.Backend)
-      return output
+  ipcMain.handle('syncSaves', async (_event: unknown, ...args: unknown[]) => {
+    const {
+      arg = '',
+      path: savesPath,
+      appName,
+      runner
+    } = args[0] as {
+      arg?: string
+      path: string
+      appName: string
+      runner: Runner
     }
-  )
+
+    // Scope boundary: saves-sync CONFLICT BEHAVIOUR is explicitly out of scope for this phase.
+    // Both runners' sync paths use non-interactive CLI flags — legendary's `sync-saves` always
+    // sets `-y` (storeManagers/legendary/games.ts:843-873) and gog's `save-sync` loop
+    // (storeManagers/gog/games.ts:850-910) never prompts either — so no dialog/prompt is
+    // reachable from either path; D-15's fire-and-forget-rejection landmine does not apply
+    // here. This is a byte-faithful port of inherited Electron behaviour, not a redesign.
+    if (runner === 'legendary') {
+      const epicOffline = await isEpicServiceOffline()
+      if (epicOffline) {
+        logWarning(
+          'Epic is offline right now, cannot sync saves!',
+          LogPrefix.Backend
+        )
+        return 'Epic is offline right now, cannot sync saves!'
+      }
+    }
+    if (!isOnline()) {
+      logWarning('App is offline, cannot sync saves!', LogPrefix.Backend)
+      return 'App is offline, cannot sync saves!'
+    }
+
+    const output = await libraryManagerMap[runner]
+      .getGame(appName)
+      .syncSaves(arg, savesPath)
+    logInfo(output, LogPrefix.Backend)
+    return output
+  })
 }

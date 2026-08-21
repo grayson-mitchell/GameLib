@@ -43,7 +43,8 @@ const DownloadManagerItem = ({
   state,
   handleClearItem
 }: Props) => {
-  const { amazon, epic, gog, steam, showDialogModal } = useContext(ContextProvider)
+  const { amazon, epic, gog, steam, showDialogModal } =
+    useContext(ContextProvider)
   const { t } = useTranslation('gamepage')
   const { t: t2 } = useTranslation('translation')
   const isPaused = state && ['idle', 'paused'].includes(state)
@@ -58,7 +59,12 @@ const DownloadManagerItem = ({
     )
   }
 
-  const library = [...epic.library, ...gog.library, ...amazon.library, ...steam.library]
+  const library = [
+    ...epic.library,
+    ...gog.library,
+    ...amazon.library,
+    ...steam.library
+  ]
 
   const { params, addToQueueTime, endTime, type, startTime } = element
   const {
@@ -94,11 +100,8 @@ const DownloadManagerItem = ({
   // "isSteamError" gets its own honest label + working Retry affordance,
   // never lumped into "canceled". gog/epic/amazon are unaffected (see
   // classifyDMItemStatus).
-  const { finished, isSteamError, canceled, showRemoveAction } = classifyDMItemStatus(
-    status,
-    runner,
-    current
-  )
+  const { finished, isSteamError, canceled, showRemoveAction } =
+    classifyDMItemStatus(status, runner, current)
 
   const stopInstallation = async () => {
     if (!gameInfo) {

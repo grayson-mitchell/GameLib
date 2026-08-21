@@ -76,7 +76,7 @@
       }
 
       /* LIB-09: force visible + accent when filter is in Only state */
-      .only[aria-pressed="true"] {
+      .only[aria-pressed='true'] {
         display: block;
         color: var(--accent);
       }

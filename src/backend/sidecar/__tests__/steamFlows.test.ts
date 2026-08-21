@@ -32,10 +32,7 @@ jest.mock('os', () => {
   return {
     ...actual,
     homedir: () =>
-      path.join(
-        actual.tmpdir(),
-        `gamelib-steamflows-test-home-${process.pid}`
-      )
+      path.join(actual.tmpdir(), `gamelib-steamflows-test-home-${process.pid}`)
   }
 })
 

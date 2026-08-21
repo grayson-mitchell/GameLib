@@ -42,7 +42,8 @@ export function isLoginPathname(pathname: string): boolean {
  * exactly as `index.tsx`'s own `/loginweb/nile` effect already does. `humble` also has no entry
  * here — it is not an OAuth runner this plan wires; its login url stays local to `index.tsx`.
  */
-export const EPIC_LOGIN_URL = 'https://www.epicgames.com/id/login?responseType=code'
+export const EPIC_LOGIN_URL =
+  'https://www.epicgames.com/id/login?responseType=code'
 export const GOG_LOGIN_URL =
   'https://auth.gog.com/auth?client_id=46899977096215655&redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&response_type=code&layout=galaxy'
 export const ZOOM_LOGIN_URL =

@@ -15,7 +15,12 @@
 export type OAuthRunner = 'legendary' | 'gog' | 'nile' | 'zoom'
 
 export type OAuthCaptureOutcome =
-  | { status: 'captured'; runner: OAuthRunner; code: string | null; redirectUrl: string }
+  | {
+      status: 'captured'
+      runner: OAuthRunner
+      code: string | null
+      redirectUrl: string
+    }
   | { status: 'cancelled' }
   | { status: 'timeout' }
   | { status: 'unsupported' }

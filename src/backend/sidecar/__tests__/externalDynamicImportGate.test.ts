@@ -137,7 +137,9 @@ describe('externalDynamicImportGate (quick/260815-vvz, defect 1 RED-prover)', ()
   it('Gate 1: no file under src/backend or src/sidecar (excluding __tests__/__mocks__) contains a dynamic import() of electron or electron-store', () => {
     if (allHits.length > 0) {
       const description = allHits
-        .map((hit) => `${toRepoRelative(hit.file)}:${hit.line} (${hit.specifier})`)
+        .map(
+          (hit) => `${toRepoRelative(hit.file)}:${hit.line} (${hit.specifier})`
+        )
         .join(', ')
       throw new Error(
         `Found ${allHits.length} forbidden dynamic import() of an esbuild-external module -- ` +

@@ -131,9 +131,9 @@ describe('source-gate stripper integrity', () => {
 
   it('a tag appearing ONLY inside line and block comments does not satisfy the ordering predicate', () => {
     expect(gateSource(COMMENT_ONLY_SPECIMEN)).not.toContain(CHIP_ROW_TOKEN)
-    expect(chipRowPrecedesRecentlyPlayed(gateSource(COMMENT_ONLY_SPECIMEN))).toBe(
-      false
-    )
+    expect(
+      chipRowPrecedesRecentlyPlayed(gateSource(COMMENT_ONLY_SPECIMEN))
+    ).toBe(false)
   })
 
   it('real code on the same specimen survives -- the stripper is not simply deleting everything', () => {

@@ -209,7 +209,9 @@ describe('downloadOnedirAsset', () => {
         const [command, args, options] = call
         expect(command).toBe('tar')
         expect(Array.isArray(args)).toBe(true)
-        expect((options as Record<string, unknown> | undefined)?.shell).toBeUndefined()
+        expect(
+          (options as Record<string, unknown> | undefined)?.shell
+        ).toBeUndefined()
       }
       const [, listArgs] = mockedSpawn.mock.calls[0]
       expect(listArgs).toEqual(['-tzf', expect.any(String)])
@@ -265,7 +267,8 @@ describe('downloadOnedirAsset', () => {
       )
       // The temp archive itself is always cleaned up (finally block).
       const tempCleanupCalls = mockedRm.mock.calls.filter(
-        (call) => (call[1] as Record<string, unknown>)?.force === true &&
+        (call) =>
+          (call[1] as Record<string, unknown>)?.force === true &&
           !(call[1] as Record<string, unknown>)?.recursive
       )
       expect(tempCleanupCalls.length).toBeGreaterThanOrEqual(1)
@@ -392,7 +395,11 @@ describe('freshness: compareDownloadedTags + __darwin_layout', () => {
   it('leaves the pre-existing per-binary RELEASE_TAGS comparison unchanged when __darwin_layout matches', async () => {
     const marker = darwinLayoutMarker()
     mockedReadFile.mockResolvedValueOnce(
-      JSON.stringify({ ...RELEASE_TAGS, legendary: 'stale-tag', __darwin_layout: marker })
+      JSON.stringify({
+        ...RELEASE_TAGS,
+        legendary: 'stale-tag',
+        __darwin_layout: marker
+      })
     )
 
     const result = await compareDownloadedTags()

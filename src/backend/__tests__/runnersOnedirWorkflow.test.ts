@@ -93,7 +93,8 @@ function extractBuildJobBlock(): string {
   )
   expect(buildIndex).toBeGreaterThanOrEqual(0)
 
-  const buildIndent = lines[buildIndex].length - lines[buildIndex].trimStart().length
+  const buildIndent =
+    lines[buildIndex].length - lines[buildIndex].trimStart().length
   let endIndex = lines.length
   for (let index = buildIndex + 1; index < lines.length; index += 1) {
     const line = lines[index]
@@ -142,7 +143,10 @@ describe('build-runners-onedir-macos.yml permissions', () => {
 describe('build-runners-onedir-macos.yml jobs shape', () => {
   test('declares exactly two jobs: prepare-release and build', () => {
     const parsed = parseWorkflow()
-    expect(Object.keys(parsed.jobs).sort()).toEqual(['build', 'prepare-release'])
+    expect(Object.keys(parsed.jobs).sort()).toEqual([
+      'build',
+      'prepare-release'
+    ])
   })
 
   test('build declares needs: prepare-release (the race guard, T-34.9-17)', () => {
@@ -227,7 +231,8 @@ describe('build-runners-onedir-macos.yml prepare-release publish step', () => {
 })
 
 describe('build-runners-onedir-macos.yml upload step', () => {
-  const UPLOAD_STEP_NAME = 'Publish onedir archives and digests to the rolling release'
+  const UPLOAD_STEP_NAME =
+    'Publish onedir archives and digests to the rolling release'
 
   test('contains --clobber', () => {
     expect(extractRunBlock(UPLOAD_STEP_NAME)).toContain('--clobber')
@@ -270,9 +275,12 @@ describe('build-runners-onedir-macos.yml upload step', () => {
       const expectedArchiveName = archiveName(runner, arch)
       expect(block).toContain('*_onedir.tar.gz')
       expect(expectedArchiveName).toMatch(/_onedir\.tar\.gz$/)
-      expect('*_onedir.tar.gz'.replace('*', runner + '_macOS_' + (arch === 'x64' ? 'x86_64' : 'arm64'))).toBe(
-        expectedArchiveName
-      )
+      expect(
+        '*_onedir.tar.gz'.replace(
+          '*',
+          runner + '_macOS_' + (arch === 'x64' ? 'x86_64' : 'arm64')
+        )
+      ).toBe(expectedArchiveName)
 
       expect(block).toContain(`SHA256SUMS-${arch}`)
       expect(block).toContain(`BUILD-MANIFEST-${arch}.json`)
@@ -280,7 +288,9 @@ describe('build-runners-onedir-macos.yml upload step', () => {
   )
 
   test('the upload step runs in the same directory buildRunnersOnedir.ts writes its output to', () => {
-    expect(extractRunBlock(UPLOAD_STEP_NAME)).toContain('.build-tools/runners-onedir/out')
+    expect(extractRunBlock(UPLOAD_STEP_NAME)).toContain(
+      '.build-tools/runners-onedir/out'
+    )
   })
 })
 
@@ -308,7 +318,9 @@ describe('build-runners-onedir-macos.yml arch guard step', () => {
 describe('build-runners-onedir-macos.yml build invocation', () => {
   test('invokes pnpm build-runners-onedir with the matrix arch', () => {
     const stripped = loadStrippedWorkflow()
-    expect(stripped).toContain('run: pnpm build-runners-onedir --arch=${{ matrix.arch }}')
+    expect(stripped).toContain(
+      'run: pnpm build-runners-onedir --arch=${{ matrix.arch }}'
+    )
   })
 })
 

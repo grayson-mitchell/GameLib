@@ -142,11 +142,9 @@ describe('sidecar fileStore', () => {
 
     const dir = join(getPath('userData'), cwd)
     const fs = jest.requireActual('graceful-fs')
-    const renameSpy = jest
-      .spyOn(fs, 'renameSync')
-      .mockImplementation(() => {
-        throw new Error('EXDEV: cross-device link not permitted')
-      })
+    const renameSpy = jest.spyOn(fs, 'renameSync').mockImplementation(() => {
+      throw new Error('EXDEV: cross-device link not permitted')
+    })
     const stderrSpy = jest
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true)
@@ -163,14 +161,18 @@ describe('sidecar fileStore', () => {
     // Proves the mock actually fired — otherwise this test would pass vacuously
     // against the success path.
     expect(
-      stderrCalls.some((line) => line.includes('atomic persist (temp+rename) failed'))
+      stderrCalls.some((line) =>
+        line.includes('atomic persist (temp+rename) failed')
+      )
     ).toBe(true)
 
     // The direct-write fallback must still have persisted the value ...
-    expect(JSON.parse(readFileSync(join(dir, 'config.json'), 'utf-8'))).toEqual({
-      seed: 1,
-      afterFailure: 'value'
-    })
+    expect(JSON.parse(readFileSync(join(dir, 'config.json'), 'utf-8'))).toEqual(
+      {
+        seed: 1,
+        afterFailure: 'value'
+      }
+    )
     // ... and must not have left a pid-stable temp file behind, which would
     // accumulate one orphan per store file per process in the user's config dir.
     expect(readdirSync(dir).filter((f) => f.includes('.tmp-'))).toEqual([])
@@ -229,7 +231,11 @@ describe('sidecar fileStore', () => {
     })
 
     const url = 'https://dpaste.com/AB12'
-    const uploadData = { name: 'gamelib.log', token: 'tok', uploadedAt: 1_700_000 }
+    const uploadData = {
+      name: 'gamelib.log',
+      token: 'tok',
+      uploadedAt: 1_700_000
+    }
     store.set(url, uploadData)
 
     expect(store.get(url)).toEqual(uploadData)
@@ -270,9 +276,7 @@ describe('sidecar fileStore', () => {
     store.set('constructor.prototype.polluted', 'PWNED')
     store.set('prototype.polluted', 'PWNED')
 
-    expect(
-      ({} as Record<string, unknown>)['polluted']
-    ).toBeUndefined()
+    expect(({} as Record<string, unknown>)['polluted']).toBeUndefined()
     expect(Object.prototype).not.toHaveProperty('polluted')
     // The rejected write must also not land anywhere in the store's own data.
     expect(store.store).toEqual({})

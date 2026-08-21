@@ -187,6 +187,9 @@ export function classifyDepotError(err: unknown): ClassifiedDepotError {
 
   return {
     key: 'steam.download.error.generic',
-    message: i18next.t('steam.download.error.generic', 'The Steam download failed. Retry to continue.')
+    message: i18next.t(
+      'steam.download.error.generic',
+      'The Steam download failed. Retry to continue.'
+    )
   }
 }

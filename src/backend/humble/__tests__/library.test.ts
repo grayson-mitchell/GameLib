@@ -22,7 +22,12 @@
  * the Phase 12 ownership-recompute tests exercise the real two-tier matcher.
  */
 
-import type { HumbleKey, HumbleKeyState, HumbleOrderCacheEntry, HumbleSyncState } from 'common/types/humble'
+import type {
+  HumbleKey,
+  HumbleKeyState,
+  HumbleOrderCacheEntry,
+  HumbleSyncState
+} from 'common/types/humble'
 import type { HumbleKeyInternal } from '../electronStores'
 
 // ── electronStores mock (in-memory Map/Set-backed CacheStore doubles) ──────
@@ -179,7 +184,9 @@ jest.mock('../electronStores', () => ({
 
 const mockSteamLibraryStoreGet = jest.fn()
 jest.mock('backend/storeManagers/steam/electronStores', () => ({
-  steamLibraryStore: { get: (...args: unknown[]) => mockSteamLibraryStoreGet(...args) }
+  steamLibraryStore: {
+    get: (...args: unknown[]) => mockSteamLibraryStoreGet(...args)
+  }
 }))
 
 const mockSteamIsLoggedIn = jest.fn()
@@ -255,10 +262,7 @@ import {
   HUMBLE_CLASSIFIER_VERSION
 } from '../constants'
 import { selectKeysWaiting } from 'common/humble/viewFilters'
-import {
-  setLoginWindowSeam,
-  type LoginWindowSeam
-} from '../loginWindowSeam'
+import { setLoginWindowSeam, type LoginWindowSeam } from '../loginWindowSeam'
 
 const flushAsync = async () => new Promise((r) => setImmediate(r))
 
@@ -663,7 +667,7 @@ describe('HumbleLibrary', () => {
   // ── sync(): per-order isolation (Pattern 2) ─────────────────────────────
 
   describe('sync() — per-order isolation', () => {
-    test('one getOrderDetail REJECTING keeps that order\'s cached entry, the pool finishes the others, sync ends partial', async () => {
+    test("one getOrderDetail REJECTING keeps that order's cached entry, the pool finishes the others, sync ends partial", async () => {
       const priorEntry = makeNonTerminalEntry('flaky-gk')
       libraryData.set('flaky-gk', priorEntry)
       mockGetGamekeys.mockResolvedValue({
@@ -1545,7 +1549,10 @@ describe('HumbleLibrary', () => {
       await HumbleLibrary.sync()
 
       // The frozen order WAS re-fetched and its stale rows re-classified away.
-      expect(mockGetOrderDetail).toHaveBeenCalledWith('cookie-value', 'stale-gk')
+      expect(mockGetOrderDetail).toHaveBeenCalledWith(
+        'cookie-value',
+        'stale-gk'
+      )
       expect(libraryData.get('stale-gk')?.keys).toHaveLength(0)
       expect(HumbleLibrary.getKeys()).toHaveLength(0)
 
@@ -1569,7 +1576,10 @@ describe('HumbleLibrary', () => {
 
       await HumbleLibrary.sync()
 
-      expect(mockGetOrderDetail).toHaveBeenCalledWith('cookie-value', 'stale-gk')
+      expect(mockGetOrderDetail).toHaveBeenCalledWith(
+        'cookie-value',
+        'stale-gk'
+      )
       expect(libraryData.get('stale-gk')?.keys).toHaveLength(0)
     })
 
@@ -1812,7 +1822,10 @@ describe('HumbleLibrary', () => {
   // we could not date, so the true field is confirmable from the next run.
   describe('sync() — expiration-field discovery diagnostic (round 4)', () => {
     test('an active key with no extractable expiration logs its candidate field names (info, redacted)', async () => {
-      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['undatable-gk'] })
+      mockGetGamekeys.mockResolvedValue({
+        status: 'ok',
+        data: ['undatable-gk']
+      })
       mockGetOrderDetail.mockResolvedValue({
         status: 'ok',
         data: {
@@ -2094,9 +2107,7 @@ describe('HumbleLibrary', () => {
         const ownedKey = pushedKeys.find((k) => k.machineName === 'gk1_key')
         expect(ownedKey?.ownedElsewhere).toBe(true)
         const waiting = selectKeysWaiting(pushedKeys)
-        expect(
-          waiting.find((k) => k.machineName === 'gk1_key')
-        ).toBeUndefined()
+        expect(waiting.find((k) => k.machineName === 'gk1_key')).toBeUndefined()
       }
     })
 
@@ -2140,7 +2151,7 @@ describe('HumbleLibrary', () => {
     })
 
     describe('gated-off Steam carry-forward (D-48)', () => {
-      test('SteamUser.isLoggedIn() false: a previously-owned order re-committed mid-sync KEEPS ownedElsewhere:true / matchConfidence — never classify\'s hard-reset false', async () => {
+      test("SteamUser.isLoggedIn() false: a previously-owned order re-committed mid-sync KEEPS ownedElsewhere:true / matchConfidence — never classify's hard-reset false", async () => {
         libraryData.set('gk1', makeOwnedNonTerminalEntry('gk1', '440'))
         mockSteamIsLoggedIn.mockReturnValue(false)
         mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
@@ -2378,9 +2389,7 @@ describe('HumbleLibrary', () => {
 
       const outcome = await HumbleLibrary.revealKey('gk1', 'gk1_key')
 
-      expect(outcome).toEqual(
-        expect.objectContaining({ status: 'cooldown' })
-      )
+      expect(outcome).toEqual(expect.objectContaining({ status: 'cooldown' }))
       expect(mockAdapterRevealKey).not.toHaveBeenCalled()
     })
 
@@ -2569,7 +2578,10 @@ describe('HumbleLibrary', () => {
       libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
       libraryData.set(
         'gk2',
-        makeRevealableEntry('gk2', { machineName: 'gk2_key', keyindex: 'idx-2' })
+        makeRevealableEntry('gk2', {
+          machineName: 'gk2_key',
+          keyindex: 'idx-2'
+        })
       )
       const resolvers: Array<(v: unknown) => void> = []
       mockAdapterRevealKey.mockImplementation(
@@ -2645,7 +2657,9 @@ describe('HumbleLibrary', () => {
       await HumbleLibrary.revealKey('no-such-gk', 'no-such-key')
 
       const call = mockLogWarning.mock.calls.find((c) =>
-        String(c[0][0]).includes('Humble reveal: ineligible (target missing or not UNREVEALED)')
+        String(c[0][0]).includes(
+          'Humble reveal: ineligible (target missing or not UNREVEALED)'
+        )
       )
       expect(call).toBeDefined()
       expect(JSON.stringify(call)).toContain('no-such-gk')
@@ -2658,7 +2672,9 @@ describe('HumbleLibrary', () => {
       await HumbleLibrary.revealKey('gk1', 'gk1_key')
 
       const call = mockLogWarning.mock.calls.find((c) =>
-        String(c[0][0]).includes('Humble reveal: ineligible (target missing or not UNREVEALED)')
+        String(c[0][0]).includes(
+          'Humble reveal: ineligible (target missing or not UNREVEALED)'
+        )
       )
       expect(call).toBeDefined()
       expect(JSON.stringify(call)).toContain('state=REDEEMED')
@@ -2688,7 +2704,9 @@ describe('HumbleLibrary', () => {
       await HumbleLibrary.revealKey('gk1', 'gk1_key')
 
       const call = mockLogWarning.mock.calls.find((c) =>
-        String(c[0][0]).includes('Humble reveal: ineligible (keyindex unresolved)')
+        String(c[0][0]).includes(
+          'Humble reveal: ineligible (keyindex unresolved)'
+        )
       )
       expect(call).toBeDefined()
     })
@@ -2789,7 +2807,10 @@ describe('HumbleLibrary', () => {
       // not the real adapter.ts dispatch (covered by adapter.test.ts).
       setLoginWindowSeam({} as LoginWindowSeam)
       try {
-        libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+        libraryData.set(
+          'gk1',
+          makeRevealableEntry('gk1', { keyindex: 'idx-1' })
+        )
         mockAdapterRevealKey.mockResolvedValue({
           status: 'ok',
           data: { key: 'K' }
@@ -2830,19 +2851,26 @@ describe('HumbleLibrary', () => {
       await HumbleLibrary.revealKey('gk1', 'gk1_key')
 
       const call = mockLogWarning.mock.calls.find((c) =>
-        String(c[0][0]).includes('Humble reveal: definitive failure, status=access_denied')
+        String(c[0][0]).includes(
+          'Humble reveal: definitive failure, status=access_denied'
+        )
       )
       expect(call).toBeDefined()
     })
 
     test('definitive failure (schema_error) logs the exact adapter status', async () => {
       libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
-      mockAdapterRevealKey.mockResolvedValue({ status: 'schema_error', raw: {} })
+      mockAdapterRevealKey.mockResolvedValue({
+        status: 'schema_error',
+        raw: {}
+      })
 
       await HumbleLibrary.revealKey('gk1', 'gk1_key')
 
       const call = mockLogWarning.mock.calls.find((c) =>
-        String(c[0][0]).includes('Humble reveal: definitive failure, status=schema_error')
+        String(c[0][0]).includes(
+          'Humble reveal: definitive failure, status=schema_error'
+        )
       )
       expect(call).toBeDefined()
     })
@@ -2866,7 +2894,9 @@ describe('HumbleLibrary', () => {
       await HumbleLibrary.revealKey('gk1', 'gk1_key')
 
       const call = mockLogWarning.mock.calls.find((c) =>
-        String(c[0][0]).includes('Humble reveal: failed (no stored credentials)')
+        String(c[0][0]).includes(
+          'Humble reveal: failed (no stored credentials)'
+        )
       )
       expect(call).toBeDefined()
       expect(mockAdapterRevealKey).not.toHaveBeenCalled()
@@ -2890,7 +2920,10 @@ describe('HumbleLibrary', () => {
     })
 
     test('markRedeemed on a non-REVEALED key is ineligible, no store writes', async () => {
-      libraryData.set('gk1', makeRevealableEntry('gk1', { state: 'UNREVEALED' }))
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', { state: 'UNREVEALED' })
+      )
 
       const outcome = await HumbleLibrary.markRedeemed('gk1', 'gk1_key')
 

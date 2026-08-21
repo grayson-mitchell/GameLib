@@ -17,7 +17,11 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getFileSize } from 'backend/utils'
 import type LogWriter from 'backend/logger/log_writer'
 import { GameConfig } from 'backend/game_config'
-import { isMac, isLinux, isAppleSiliconMac } from 'backend/constants/environment'
+import {
+  isMac,
+  isLinux,
+  isAppleSiliconMac
+} from 'backend/constants/environment'
 import {
   createAbortController,
   callAbortController,

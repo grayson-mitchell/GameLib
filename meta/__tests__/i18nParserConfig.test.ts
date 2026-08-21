@@ -33,7 +33,7 @@ describe('i18next-parser config', () => {
     expect(config.locales).toEqual(['en'])
   })
 
-  it('recognises the tGamelib alias in both lexers (plan 34.8-09) -- without this, every gamelib: call site using the second-aliased-hook idiom (`const { t: tGamelib } = useTranslation(\'gamelib\')`) is invisible to the static lexer, whose default `functions` list is only [\'t\']', () => {
+  it("recognises the tGamelib alias in both lexers (plan 34.8-09) -- without this, every gamelib: call site using the second-aliased-hook idiom (`const { t: tGamelib } = useTranslation('gamelib')`) is invisible to the static lexer, whose default `functions` list is only ['t']", () => {
     const [tsLexerEntry] = config.lexers.ts
     const [tsxLexerEntry] = config.lexers.tsx
 

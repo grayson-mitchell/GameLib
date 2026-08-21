@@ -66,13 +66,7 @@ export default function Discounts() {
       if (key) set.add(key)
     }
     return set
-  }, [
-    epic.library,
-    gog.library,
-    amazon.library,
-    steam.library,
-    zoom.library
-  ])
+  }, [epic.library, gog.library, amazon.library, steam.library, zoom.library])
 
   // The Hide Owned toggle is available whenever the user owns games in any
   // store, independent of GOG login.

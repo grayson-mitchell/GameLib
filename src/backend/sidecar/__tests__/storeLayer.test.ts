@@ -96,12 +96,8 @@ import {
 // the same real, unmodified code path production runs.
 import '../handlers'
 
-import {
-  configStore as steamConfigStore
-} from '../../storeManagers/steam/electronStores'
-import {
-  configStore as humbleConfigStore
-} from '../../humble/electronStores'
+import { configStore as steamConfigStore } from '../../storeManagers/steam/electronStores'
+import { configStore as humbleConfigStore } from '../../humble/electronStores'
 
 /**
  * Narrow escape hatch for probing an arbitrary key on a `TypeCheckedStoreBackend`
@@ -472,7 +468,9 @@ describe('WR-08: duplicate store registration', () => {
       .mockImplementation(() => true)
     let lines: string[] = []
     try {
-      const second = new TypeCheckedStoreBackend('configStore', { cwd: 'store' })
+      const second = new TypeCheckedStoreBackend('configStore', {
+        cwd: 'store'
+      })
       lines = stderrSpy.mock.calls.map((call) => String(call[0]))
       expect(getRegisteredStore('configStore')).toBe(first)
       expect(getRegisteredStore('configStore')).not.toBe(second)
@@ -481,7 +479,9 @@ describe('WR-08: duplicate store registration', () => {
     }
 
     expect(
-      lines.some((line) => line.includes("duplicate registration for 'configStore'"))
+      lines.some((line) =>
+        line.includes("duplicate registration for 'configStore'")
+      )
     ).toBe(true)
   })
 })

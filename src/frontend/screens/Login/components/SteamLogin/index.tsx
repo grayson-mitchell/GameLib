@@ -41,7 +41,9 @@ export default function SteamLogin({ dismiss }: Props) {
   const [loading, setLoading] = useState(false)
 
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const credPollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const credPollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null
+  )
   const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const guardInputRef = useRef<HTMLInputElement>(null)
   const qrRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -123,7 +125,9 @@ export default function SteamLogin({ dismiss }: Props) {
     }
     setIsQRLoading(false)
     if (result.status === 'error' || !result.challengeUrl) {
-      showError('Could not generate QR code. Check your connection and try again.')
+      showError(
+        'Could not generate QR code. Check your connection and try again.'
+      )
       setStep('tab')
       return
     }
@@ -221,7 +225,10 @@ export default function SteamLogin({ dismiss }: Props) {
   async function handleCredentialSubmit() {
     setLoading(true)
     setError(null)
-    const result = await window.api.steamStartCredentials({ username, password })
+    const result = await window.api.steamStartCredentials({
+      username,
+      password
+    })
     setLoading(false)
 
     if (result.status === 'done') {
@@ -236,7 +243,9 @@ export default function SteamLogin({ dismiss }: Props) {
       startCredPoll()
       setStep('credentials-2')
     } else {
-      showError('Incorrect username or password. Check your credentials and try again.')
+      showError(
+        'Incorrect username or password. Check your credentials and try again.'
+      )
     }
   }
 
@@ -248,7 +257,9 @@ export default function SteamLogin({ dismiss }: Props) {
     clearCredPollInterval()
     setLoading(true)
     setError(null)
-    const result = await window.api.steamSubmitGuard(guardCode.trim().toUpperCase())
+    const result = await window.api.steamSubmitGuard(
+      guardCode.trim().toUpperCase()
+    )
     setLoading(false)
 
     if (result.status === 'done') {
@@ -256,12 +267,17 @@ export default function SteamLogin({ dismiss }: Props) {
       await steam.login({ status: 'done', username: userInfo?.username })
       closeWindow()
     } else {
-      showError('Incorrect code. Check your email or authenticator app and try again.')
+      showError(
+        'Incorrect code. Check your email or authenticator app and try again.'
+      )
     }
   }
 
   // --- Tab change ---
-  function handleTabChange(_e: React.SyntheticEvent, val: 'qr' | 'credentials') {
+  function handleTabChange(
+    _e: React.SyntheticEvent,
+    val: 'qr' | 'credentials'
+  ) {
     clearPollInterval()
     clearCredPollInterval()
     clearQrRefreshTimer()
@@ -326,7 +342,9 @@ export default function SteamLogin({ dismiss }: Props) {
               lineHeight: 1.4
             }}
           >
-            {showQr ? 'QR code refreshes automatically.' : 'Generating QR code...'}
+            {showQr
+              ? 'QR code refreshes automatically.'
+              : 'Generating QR code...'}
           </p>
         </div>
       )
@@ -337,9 +355,15 @@ export default function SteamLogin({ dismiss }: Props) {
         <div style={{ textAlign: 'center', padding: 'var(--space-lg) 0' }}>
           <FontAwesomeIcon
             icon={faCheckCircle}
-            style={{ fontSize: '2.5em', color: 'var(--status-success)', marginBottom: 'var(--space-sm)' }}
+            style={{
+              fontSize: '2.5em',
+              color: 'var(--status-success)',
+              marginBottom: 'var(--space-sm)'
+            }}
           />
-          <p style={{ fontSize: 'var(--text-md)', color: 'var(--text-default)' }}>
+          <p
+            style={{ fontSize: 'var(--text-md)', color: 'var(--text-default)' }}
+          >
             QR scanned. Completing sign-in...
           </p>
         </div>
@@ -349,7 +373,11 @@ export default function SteamLogin({ dismiss }: Props) {
     // Fallback while transitioning
     return (
       <div style={{ textAlign: 'center', padding: 'var(--space-lg) 0' }}>
-        <FontAwesomeIcon icon={faSyncAlt} spin style={{ fontSize: '2.5em', color: 'var(--text-default)' }} />
+        <FontAwesomeIcon
+          icon={faSyncAlt}
+          spin
+          style={{ fontSize: '2.5em', color: 'var(--text-default)' }}
+        />
       </div>
     )
   }
@@ -362,7 +390,11 @@ export default function SteamLogin({ dismiss }: Props) {
         <div>
           <p
             id="steamguard-instructions"
-            style={{ fontSize: 'var(--text-md)', color: 'var(--text-default)', marginBottom: 'var(--space-md)' }}
+            style={{
+              fontSize: 'var(--text-md)',
+              color: 'var(--text-default)',
+              marginBottom: 'var(--space-md)'
+            }}
           >
             Check your email or authenticator app for a Steam Guard code.
           </p>
@@ -401,12 +433,21 @@ export default function SteamLogin({ dismiss }: Props) {
 
           {error && (
             <p role="alert" className="steamError">
-              <FontAwesomeIcon icon={faCircleExclamation} style={{ marginRight: 'var(--space-3xs)' }} />
+              <FontAwesomeIcon
+                icon={faCircleExclamation}
+                style={{ marginRight: 'var(--space-3xs)' }}
+              />
               {error}
             </p>
           )}
 
-          <div style={{ display: 'flex', gap: 'var(--space-sm)', marginTop: 'var(--space-md)' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: 'var(--space-sm)',
+              marginTop: 'var(--space-md)'
+            }}
+          >
             <button
               className="button is-primary"
               disabled={guardCode.length < 5 || loading}
@@ -415,7 +456,11 @@ export default function SteamLogin({ dismiss }: Props) {
             >
               {loading ? (
                 <>
-                  <FontAwesomeIcon icon={faSyncAlt} spin style={{ marginRight: 'var(--space-3xs)' }} />
+                  <FontAwesomeIcon
+                    icon={faSyncAlt}
+                    spin
+                    style={{ marginRight: 'var(--space-3xs)' }}
+                  />
                   Verifying...
                 </>
               ) : (
@@ -497,7 +542,10 @@ export default function SteamLogin({ dismiss }: Props) {
 
         {error && (
           <p role="alert" className="steamError">
-            <FontAwesomeIcon icon={faCircleExclamation} style={{ marginRight: 'var(--space-3xs)' }} />
+            <FontAwesomeIcon
+              icon={faCircleExclamation}
+              style={{ marginRight: 'var(--space-3xs)' }}
+            />
             {error}
           </p>
         )}
@@ -510,7 +558,11 @@ export default function SteamLogin({ dismiss }: Props) {
         >
           {loading ? (
             <>
-              <FontAwesomeIcon icon={faSyncAlt} spin style={{ marginRight: 'var(--space-3xs)' }} />
+              <FontAwesomeIcon
+                icon={faSyncAlt}
+                spin
+                style={{ marginRight: 'var(--space-3xs)' }}
+              />
               Signing in...
             </>
           ) : (
@@ -533,7 +585,11 @@ export default function SteamLogin({ dismiss }: Props) {
         <div className="steamNotFound">
           <FontAwesomeIcon
             icon={faTriangleExclamation}
-            style={{ color: 'var(--status-warning)', fontSize: 'var(--text-lg)', marginBottom: 'var(--space-xs)' }}
+            style={{
+              color: 'var(--status-warning)',
+              fontSize: 'var(--text-lg)',
+              marginBottom: 'var(--space-xs)'
+            }}
           />
           <h2
             style={{
@@ -555,18 +611,25 @@ export default function SteamLogin({ dismiss }: Props) {
           >
             GameLib requires the Steam client to authenticate and launch games.
           </p>
-          <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: 'var(--space-sm)',
+              flexWrap: 'wrap'
+            }}
+          >
             <button
               className="button is-secondary"
               aria-label="Download Steam client from steampowered.com"
-              onClick={() => window.api.openExternalUrl('https://store.steampowered.com/about/')}
+              onClick={() =>
+                window.api.openExternalUrl(
+                  'https://store.steampowered.com/about/'
+                )
+              }
             >
               Download Steam
             </button>
-            <button
-              className="button is-tertiary"
-              onClick={closeWindow}
-            >
+            <button className="button is-tertiary" onClick={closeWindow}>
               Return to Login
             </button>
           </div>
@@ -575,16 +638,14 @@ export default function SteamLogin({ dismiss }: Props) {
     }
 
     if (step === 'checking') {
-      return <FontAwesomeIcon icon={faSyncAlt} spin style={{ fontSize: '2em' }} />
+      return (
+        <FontAwesomeIcon icon={faSyncAlt} spin style={{ fontSize: '2em' }} />
+      )
     }
 
     return (
       <>
-        <Tabs
-          value={activeTab}
-          onChange={handleTabChange}
-          variant="fullWidth"
-        >
+        <Tabs value={activeTab} onChange={handleTabChange} variant="fullWidth">
           <Tab
             value="qr"
             label="QR Code"
@@ -611,7 +672,11 @@ export default function SteamLogin({ dismiss }: Props) {
   }
 
   return (
-    <Dialog showCloseButton={true} onClose={closeWindow} className="steamLoginDialog">
+    <Dialog
+      showCloseButton={true}
+      onClose={closeWindow}
+      className="steamLoginDialog"
+    >
       <DialogHeader onClose={closeWindow}>Sign in to Steam</DialogHeader>
       <div className="steamLoginBody">{renderWindowBody()}</div>
     </Dialog>

@@ -31,7 +31,12 @@ function SoftwareInfo({ software }: Props) {
       </Typography>
       <Grid container>
         <Grid item xs={2}>
-          <img src={GameLibIcon} className="heroic-icon" alt="GameLib" style={{ width: 40, height: 40, objectFit: 'contain' }} />
+          <img
+            src={GameLibIcon}
+            className="heroic-icon"
+            alt="GameLib"
+            style={{ width: 40, height: 40, objectFit: 'contain' }}
+          />
         </Grid>
         <Grid item xs={10}>
           {t(

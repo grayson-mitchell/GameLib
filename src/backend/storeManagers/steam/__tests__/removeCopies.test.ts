@@ -165,7 +165,9 @@ jest.mock('../depot/reconcile', () => ({ reconcilePartialState: jest.fn() }))
 jest.mock('backend/launcher', () => ({ runWineCommand: jest.fn() }))
 
 // ── bridge/* mocks ─────────────────────────────────────────────────────────────
-jest.mock('../bridge/allowlist', () => ({ bridgeAllowlist: { has: jest.fn() } }))
+jest.mock('../bridge/allowlist', () => ({
+  bridgeAllowlist: { has: jest.fn() }
+}))
 jest.mock('../bridge/shimGenerate', () => ({ placeShimForGame: jest.fn() }))
 jest.mock('../bridge/launchTarget', () => ({
   resolveBridgeLaunchExe: jest.fn()
@@ -184,7 +186,9 @@ jest.mock('../nativeInstallSetting', () => ({
 
 // ── clientSetup / installLocation mocks (Plan 09/10 seams) ──────────────────
 jest.mock('../clientSetup', () => ({ ensureSteamClientReady: jest.fn() }))
-jest.mock('../installLocation', () => ({ resolveSteamInstallTarget: jest.fn() }))
+jest.mock('../installLocation', () => ({
+  resolveSteamInstallTarget: jest.fn()
+}))
 
 // ── aborthandler mock ─────────────────────────────────────────────────────────
 jest.mock('backend/utils/aborthandler/aborthandler', () => ({
@@ -318,9 +322,11 @@ describe('isAppleSiliconMac (host gate)', () => {
     // ordinary object-spread properties ARE configurable, so spying on
     // THAT object's `cpus` works, without redeclaring the module mock.
     const osMock = jest.requireMock<{ cpus: () => unknown }>('os')
-    const cpusSpy = jest.spyOn(osMock, 'cpus').mockReturnValue(
-      opts.cpuModel === null ? [] : [{ model: opts.cpuModel ?? '' }]
-    )
+    const cpusSpy = jest
+      .spyOn(osMock, 'cpus')
+      .mockReturnValue(
+        opts.cpuModel === null ? [] : [{ model: opts.cpuModel ?? '' }]
+      )
     jest.isolateModules(() => {
       const originalPlatform = process.platform
       const originalArch = process.arch
@@ -565,10 +571,7 @@ describe('removeSteamInstallCopy', () => {
   })
 
   it("state 'absent' -> absent, nothing deleted", async () => {
-    const result = await libraryModule.removeSteamInstallCopy(
-      '63000',
-      'native'
-    )
+    const result = await libraryModule.removeSteamInstallCopy('63000', 'native')
 
     expect(result).toEqual({ status: 'absent', source: 'native' })
     expect(rmSync).not.toHaveBeenCalled()
@@ -581,10 +584,7 @@ describe('removeSteamInstallCopy', () => {
       installdir: 'HOARD'
     })
 
-    const result = await libraryModule.removeSteamInstallCopy(
-      '63000',
-      'native'
-    )
+    const result = await libraryModule.removeSteamInstallCopy('63000', 'native')
 
     expect(result).toEqual({
       status: 'refused',
@@ -601,10 +601,7 @@ describe('removeSteamInstallCopy', () => {
       installdir: '../../etc/evil'
     })
 
-    const result = await libraryModule.removeSteamInstallCopy(
-      '63000',
-      'native'
-    )
+    const result = await libraryModule.removeSteamInstallCopy('63000', 'native')
 
     expect(result).toEqual({
       status: 'refused',
@@ -621,10 +618,7 @@ describe('removeSteamInstallCopy', () => {
       installdir: ''
     })
 
-    const result = await libraryModule.removeSteamInstallCopy(
-      '63000',
-      'native'
-    )
+    const result = await libraryModule.removeSteamInstallCopy('63000', 'native')
 
     expect(result).toEqual({
       status: 'refused',
@@ -642,10 +636,7 @@ describe('removeSteamInstallCopy', () => {
       SizeOnDisk: '999'
     })
 
-    const result = await libraryModule.removeSteamInstallCopy(
-      '63000',
-      'native'
-    )
+    const result = await libraryModule.removeSteamInstallCopy('63000', 'native')
 
     expect(result).toEqual({
       status: 'removed',
@@ -674,10 +665,7 @@ describe('removeSteamInstallCopy', () => {
       installdir: 'SharedGame'
     })
 
-    const result = await libraryModule.removeSteamInstallCopy(
-      '63000',
-      'native'
-    )
+    const result = await libraryModule.removeSteamInstallCopy('63000', 'native')
 
     expect(result).toEqual({
       status: 'removed',
@@ -863,7 +851,9 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
 describe('removeAllSteamInstallCopies (Task 3)', () => {
   const APP_ID = '63000'
 
-  function mockCopy(source: libraryModule.AcfSource): libraryModule.SteamInstallCopy {
+  function mockCopy(
+    source: libraryModule.AcfSource
+  ): libraryModule.SteamInstallCopy {
     return {
       source,
       installPath: `/${source}/steamapps/common/HOARD`,
@@ -872,7 +862,10 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
   }
 
   it('non-numeric-string appName -> {removed:0, refused:0, error} without enumerating or removing anything', async () => {
-    const enumerateSpy = jest.spyOn(libraryModule, 'enumerateSteamInstallCopies')
+    const enumerateSpy = jest.spyOn(
+      libraryModule,
+      'enumerateSteamInstallCopies'
+    )
     const removeSpy = jest.spyOn(libraryModule, 'removeSteamInstallCopy')
 
     const result = await removeAllSteamInstallCopies('../evil')
@@ -1011,7 +1004,7 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
     pollSpy.mockRestore()
   })
 
-  it('finishes with exactly one pollUninstallOnce(appId, \'native\') call AFTER the sweep, never per-root', async () => {
+  it("finishes with exactly one pollUninstallOnce(appId, 'native') call AFTER the sweep, never per-root", async () => {
     const enumerateSpy = jest
       .spyOn(libraryModule, 'enumerateSteamInstallCopies')
       .mockResolvedValue([mockCopy('native'), mockCopy('bottle')])

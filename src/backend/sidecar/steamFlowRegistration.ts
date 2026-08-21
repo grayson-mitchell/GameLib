@@ -293,8 +293,13 @@ async function handleLaunch(
   ...args: unknown[]
 ): Promise<Awaited<StatusPromise>> {
   const params = (args[0] ?? {}) as Partial<LaunchParams>
-  const { appName, runner: rawRunner, launchArguments, args: launchArgs, skipVersionCheck } =
-    params
+  const {
+    appName,
+    runner: rawRunner,
+    launchArguments,
+    args: launchArgs,
+    skipVersionCheck
+  } = params
 
   // Guard first, dispatch second (T-34.5-46-01 mitigation — own-property
   // form only, never `in` and never a bare index truth test; see the

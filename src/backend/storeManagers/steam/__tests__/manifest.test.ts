@@ -17,7 +17,13 @@
 // with a structural check that the implementation actually goes through a
 // same-directory `.tmp` + fsync + rename sequence (not an in-place write).
 
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -39,7 +45,9 @@ describe('depot/manifest', () => {
     installdir: 'WazHack',
     name: 'WazHack',
     sizeOnDisk: '123456789',
-    installedDepots: [{ depotId: '264161', manifest: '1234567890123456789', size: 1000 }]
+    installedDepots: [
+      { depotId: '264161', manifest: '1234567890123456789', size: 1000 }
+    ]
   }
 
   it('emits StateFlags exactly "1026"', async () => {
@@ -66,7 +74,10 @@ describe('depot/manifest', () => {
       { depotId: '264162', manifest: '222222222222222222', size: 2000 },
       { depotId: '264163', manifest: '333333333333333333', size: 3000 }
     ]
-    const path = await writeAppManifest(dir, { ...baseParams, installedDepots: depots })
+    const path = await writeAppManifest(dir, {
+      ...baseParams,
+      installedDepots: depots
+    })
     const text = readFileSync(path, 'utf8')
     for (const d of depots) {
       expect(text).toContain(`"${d.depotId}"`)
@@ -101,7 +112,9 @@ describe('depot/manifest', () => {
     await expect(
       writeAppManifest(dir, {
         ...baseParams,
-        installedDepots: [{ depotId: 'abc123', manifest: '1234567890123456789', size: 1 }]
+        installedDepots: [
+          { depotId: 'abc123', manifest: '1234567890123456789', size: 1 }
+        ]
       })
     ).rejects.toThrow()
   })
@@ -192,7 +205,9 @@ describe('depot/manifest', () => {
 
   it('WR-01: buildAppManifestText applies vdfEscape to both name and installdir interpolations', () => {
     const source = readFileSync(join(__dirname, '../depot/manifest.ts'), 'utf8')
-    expect((source.match(/vdfEscape\(/g) ?? []).length).toBeGreaterThanOrEqual(3)
+    expect((source.match(/vdfEscape\(/g) ?? []).length).toBeGreaterThanOrEqual(
+      3
+    )
     expect(source).toMatch(/"installdir"[^\n]*vdfEscape\(params\.installdir\)/)
     expect(source).toMatch(/"name"[^\n]*vdfEscape\(params\.name\)/)
   })
@@ -200,7 +215,10 @@ describe('depot/manifest', () => {
   // ── Phase 23 (23-02, T-23-05): buildid numeric-shape guard ─────────────────
   describe('buildid guard', () => {
     it('a real public-branch buildid is interpolated verbatim (D-02)', async () => {
-      const path = await writeAppManifest(dir, { ...baseParams, buildid: '9044149' })
+      const path = await writeAppManifest(dir, {
+        ...baseParams,
+        buildid: '9044149'
+      })
       const text = readFileSync(path, 'utf8')
       expect(text).toMatch(/"buildid"\s+"9044149"/)
     })

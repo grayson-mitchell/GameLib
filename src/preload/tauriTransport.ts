@@ -29,11 +29,7 @@ import {
   STORE_LAZY_MISS_MARKER,
   type StoreChangedPayload
 } from 'common/types/sidecarTransport'
-import {
-  isAllowedStoreField,
-  isSafeKeyPath,
-  isWritableStoreField
-} from 'common/types/storePolicy'
+import { isAllowedStoreField, isSafeKeyPath, isWritableStoreField } from 'common/types/storePolicy'
 
 /**
  * Robust Tauri-context detection (Phase 27 Plan 05 blank-screen fix).
@@ -89,10 +85,7 @@ export function imageCacheSchemeAvailable(): boolean {
  * Mirrors `makeHandlerInvoker`'s req/resp shape: `invoke(channel, args) -> Promise<Ret>`.
  * Relayed by the Rust shell's `sidecar_invoke` command to the sidecar's stdio JSON-RPC loop.
  */
-export async function invoke<Ret = unknown>(
-  channel: string,
-  args: unknown[]
-): Promise<Ret> {
+export async function invoke<Ret = unknown>(channel: string, args: unknown[]): Promise<Ret> {
   return tauriInvoke<Ret>(SIDECAR_INVOKE, { channel, args })
 }
 
@@ -110,21 +103,15 @@ export function send(channel: string, args: unknown[]): void {
  * single `FRONTEND_MESSAGE_EVENT` Tauri event carrying `{channel, args}`; filter by channel
  * here since the sidecar multiplexes every backend->frontend push over that one event name.
  */
-export function listen(
-  channel: string,
-  callback: (...args: unknown[]) => void
-): () => void {
+export function listen(channel: string, callback: (...args: unknown[]) => void): () => void {
   let unlisten: UnlistenFn | undefined
   let cancelled = false
 
-  void tauriListen<{ channel: string; args: unknown[] }>(
-    FRONTEND_MESSAGE_EVENT,
-    (event) => {
-      if (event.payload.channel === channel) {
-        callback(...event.payload.args)
-      }
+  void tauriListen<{ channel: string; args: unknown[] }>(FRONTEND_MESSAGE_EVENT, (event) => {
+    if (event.payload.channel === channel) {
+      callback(...event.payload.args)
     }
-  ).then((fn) => {
+  }).then((fn) => {
     if (cancelled) {
       fn()
     } else {
@@ -220,10 +207,7 @@ function ensureChangeListenerAttached(): void {
  * so would permanently defeat D-04's lazy-miss fallback for any lazy store, since
  * `hydrated` is the only gate that fallback checks.
  */
-export function registerStore(
-  storeName: string,
-  options?: Record<string, unknown>
-): void {
+export function registerStore(storeName: string, options?: Record<string, unknown>): void {
   ensureChangeListenerAttached()
   if (!snapshot[storeName]) {
     snapshot[storeName] = {}
@@ -264,9 +248,7 @@ export async function hydrateStore(storeName: string): Promise<void> {
 
   const task = (async () => {
     try {
-      const result = await invoke<Record<string, unknown>>(STORE_FETCH_CHANNEL, [
-        storeName
-      ])
+      const result = await invoke<Record<string, unknown>>(STORE_FETCH_CHANNEL, [storeName])
       // WR-07 (Phase 29 code review): REPLACE the store's snapshot wholesale rather
       // than merging into it. Merging meant a key removed on disk -- by the backend, a
       // migration, or `store.clear()` -- stayed in the renderer's copy for the life of
@@ -278,8 +260,7 @@ export async function hydrateStore(storeName: string): Promise<void> {
       hydrated.add(storeName)
     } catch (error) {
       console.error(
-        `hydrateStore: fetch of "${storeName}" failed; leaving the snapshot degraded ` +
-          'for this store',
+        `hydrateStore: fetch of "${storeName}" failed; leaving the snapshot degraded ` + 'for this store',
         error
       )
     }
@@ -293,10 +274,7 @@ export async function hydrateStore(storeName: string): Promise<void> {
   }
 }
 
-function getAtPath(
-  obj: Record<string, unknown> | undefined,
-  key: string
-): unknown {
+function getAtPath(obj: Record<string, unknown> | undefined, key: string): unknown {
   if (!obj) return undefined
   // CR-01: never traverse a prototype-chain segment, even on a read.
   if (!isSafeKeyPath(key)) return undefined
@@ -323,11 +301,7 @@ function getAtPath(
  * Carries CR-01's disallowed-segment guard (single-sourced from `storePolicy`) so the
  * renderer snapshot cannot be prototype-polluted either.
  */
-function setAtPath(
-  obj: Record<string, unknown>,
-  key: string,
-  value: unknown
-): void {
+function setAtPath(obj: Record<string, unknown>, key: string, value: unknown): void {
   if (!isSafeKeyPath(key)) return
   const segments = key.split('.')
   const last = segments.pop() as string
@@ -392,15 +366,10 @@ function reportLazyMiss(storeName: string, key: string, forCall: string): void {
  * marker is distinct and greppable -- modelled on `UNPORTED_CHANNEL_MARKER`, and
  * deliberately NOT folded into generic logging.
  */
-export function snapshotGet(
-  storeName: string,
-  key: string,
-  defaultValue?: unknown
-): unknown {
+export function snapshotGet(storeName: string, key: string, defaultValue?: unknown): unknown {
   if (!isAllowedStoreField(storeName, key)) {
     console.warn(
-      `snapshotGet: blocked read of "${key}" from "${storeName}" -- not in the Tauri ` +
-        'store-field allow-list'
+      `snapshotGet: blocked read of "${key}" from "${storeName}" -- not in the Tauri ` + 'store-field allow-list'
     )
     return undefined
   }
@@ -436,11 +405,7 @@ export function snapshotHas(storeName: string, key: string): boolean {
  * data loss for any future `StoreStructure` field added without a matching
  * `STORE_ALLOWLIST` entry. Rejection now warns in the RENDERER, where the caller is.
  */
-function rejectSnapshotWrite(
-  forCall: string,
-  storeName: string,
-  key: string
-): void {
+function rejectSnapshotWrite(forCall: string, storeName: string, key: string): void {
   console.warn(
     `${forCall}: blocked write of "${key}" to "${storeName}" -- not in the Tauri ` +
       'store-field allow-list; the sidecar would reject it, so the local snapshot is ' +

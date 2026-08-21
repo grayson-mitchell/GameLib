@@ -119,7 +119,8 @@ jest.mock('../../tools', () => ({
   Winetricks: {
     run: (...args: unknown[]) => mockWinetricksRun(...args)
   },
-  runWineCommandOnGame: (...args: unknown[]) => mockRunWineCommandOnGame(...args)
+  runWineCommandOnGame: (...args: unknown[]) =>
+    mockRunWineCommandOnGame(...args)
 }))
 
 // ── ../../storeManagers — `libraryManagerMap` is the curated import target for `callTool`/

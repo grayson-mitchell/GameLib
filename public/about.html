@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <!--
   About page for GameLib's Tauri child window (Phase 34.1 Plan 07, D-12).
 
@@ -26,7 +26,8 @@
         height: 100vh;
         background: #1a1a1a;
         color: #e6e6e6;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         text-align: center;
       }
       img {
@@ -52,7 +53,7 @@
     <p>License: GPL V3</p>
     <p>https://github.com/grayson-mitchell/GameLib</p>
     <script>
-      (function () {
+      ;(function () {
         var params = new URLSearchParams(location.search)
         var version = params.get('v') || 'unknown'
         document.getElementById('version').textContent = 'Version: ' + version

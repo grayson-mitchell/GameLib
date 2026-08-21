@@ -64,7 +64,12 @@ type PendingOp = ResizeOp | CropOp
 
 interface ShimNativeImage {
   resize(options: { width?: number; height?: number }): ShimNativeImage
-  crop(rect: { x: number; y: number; width: number; height: number }): ShimNativeImage
+  crop(rect: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }): ShimNativeImage
   toPNG(): Buffer
   toJPEG(quality?: number): Buffer
   isEmpty(): boolean
@@ -98,9 +103,15 @@ function opsToSipsArgs(ops: readonly PendingOp[]): string[] {
           String(validateDimension(op.width, 'resize width'))
         )
       } else if (op.width !== undefined) {
-        args.push('--resampleWidth', String(validateDimension(op.width, 'resize width')))
+        args.push(
+          '--resampleWidth',
+          String(validateDimension(op.width, 'resize width'))
+        )
       } else if (op.height !== undefined) {
-        args.push('--resampleHeight', String(validateDimension(op.height, 'resize height')))
+        args.push(
+          '--resampleHeight',
+          String(validateDimension(op.height, 'resize height'))
+        )
       }
     } else {
       // crop — sips crops CENTERED (see module header); --cropOffset is a measured no-op and is
@@ -150,7 +161,11 @@ function runSips(
       'format',
       outputFormat,
       ...(outputFormat === 'jpeg' && quality !== undefined
-        ? ['-s', 'formatOptions', String(Math.max(1, Math.min(100, Math.round(quality))))]
+        ? [
+            '-s',
+            'formatOptions',
+            String(Math.max(1, Math.min(100, Math.round(quality))))
+          ]
         : []),
       inputPath,
       '--out',

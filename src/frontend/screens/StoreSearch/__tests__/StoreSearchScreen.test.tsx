@@ -112,9 +112,7 @@ jest.mock('react', () => {
       const idx = stateCursor++
       if (idx >= stateSlots.length) {
         stateSlots[idx] =
-          typeof initial === 'function'
-            ? (initial as () => unknown)()
-            : initial
+          typeof initial === 'function' ? (initial as () => unknown)() : initial
       }
       const setState = (updater: unknown) => {
         stateSlots[idx] =
@@ -268,7 +266,9 @@ function findByType(
     | undefined
 }
 
-function makeResult(overrides: Partial<StoreSearchResult> = {}): StoreSearchResult {
+function makeResult(
+  overrides: Partial<StoreSearchResult> = {}
+): StoreSearchResult {
   return {
     gameId: 'game-1',
     title: 'Portal',
@@ -328,8 +328,12 @@ describe('StoreSearch screen container', () => {
     expect(
       findByClassNamePart(tree, 'storeSearchScreen__message--prompt')
     ).toBeDefined()
-    expect(findByClassNamePart(tree, 'storeSearchScreen__promptIcon')).toBeDefined()
-    expect(findByClassNamePart(tree, 'storeSearchScreen__errorBanner')).toBeUndefined()
+    expect(
+      findByClassNamePart(tree, 'storeSearchScreen__promptIcon')
+    ).toBeDefined()
+    expect(
+      findByClassNamePart(tree, 'storeSearchScreen__errorBanner')
+    ).toBeUndefined()
     expect(findSearchBar(tree)).toBeDefined()
     expect(findSearchBar(tree)?.props.loading).toBe(false)
   })
@@ -340,9 +344,15 @@ describe('StoreSearch screen container', () => {
 
     const tree = await search('portal')
 
-    expect(findByClassNamePart(tree, 'storeSearchScreen__message')).toBeDefined()
-    expect(findByClassNamePart(tree, 'storeSearchScreen__promptIcon')).toBeUndefined()
-    expect(findByClassNamePart(tree, 'storeSearchScreen__errorBanner')).toBeUndefined()
+    expect(
+      findByClassNamePart(tree, 'storeSearchScreen__message')
+    ).toBeDefined()
+    expect(
+      findByClassNamePart(tree, 'storeSearchScreen__promptIcon')
+    ).toBeUndefined()
+    expect(
+      findByClassNamePart(tree, 'storeSearchScreen__errorBanner')
+    ).toBeUndefined()
     expect(
       findByClassNamePart(tree, 'storeSearchScreen__message--prompt')
     ).toBeUndefined()
@@ -354,13 +364,19 @@ describe('StoreSearch screen container', () => {
 
     const tree = await search('portal')
 
-    const errorBanner = findByClassNamePart(tree, 'storeSearchScreen__errorBanner')
+    const errorBanner = findByClassNamePart(
+      tree,
+      'storeSearchScreen__errorBanner'
+    )
     expect(errorBanner).toBeDefined()
     expect(
       findByClassNamePart(tree, 'storeSearchScreen__message--prompt')
     ).toBeUndefined()
 
-    const retryButton = findByClassNamePart(tree, 'storeSearchScreen__retryButton')
+    const retryButton = findByClassNamePart(
+      tree,
+      'storeSearchScreen__retryButton'
+    )
     expect(retryButton).toBeDefined()
     expect(typeof retryButton?.props.onClick).toBe('function')
 
@@ -383,9 +399,7 @@ describe('StoreSearch screen container', () => {
       gog: { library: [] },
       amazon: { library: [] },
       steam: {
-        library: [
-          { app_name: '400', title: 'Portal' } as unknown as GameInfo
-        ]
+        library: [{ app_name: '400', title: 'Portal' } as unknown as GameInfo]
       },
       humble: { keys: [] }
     }

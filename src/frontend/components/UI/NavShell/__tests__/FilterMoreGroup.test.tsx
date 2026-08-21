@@ -126,7 +126,8 @@ function rowsOf(tree: unknown): AnyElement[] {
 
 function buttonsOf(tree: unknown): AnyElement[] {
   return collectElements(tree).filter(
-    (el) => el.type === 'button' && el.props.className === 'FilterMoreGroup__only'
+    (el) =>
+      el.type === 'button' && el.props.className === 'FilterMoreGroup__only'
   )
 }
 
@@ -273,7 +274,16 @@ describe('FilterMoreGroup -- Genre-drop source gate (D-13/D-14/D-15)', () => {
     join(__dirname, '..', 'components', 'FilterMoreGroup', 'index.tsx'),
     join(__dirname, '..', 'components', 'FilterViewList', 'index.tsx'),
     join(__dirname, '..', 'components', 'FilterCollectionList', 'index.tsx'),
-    join(__dirname, '..', '..', '..', '..', 'screens', 'Library', 'facetLabels.ts')
+    join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      '..',
+      'screens',
+      'Library',
+      'facetLabels.ts'
+    )
   ]
   const panelSources = PANEL_SOURCE_PATHS.map((p) => readFileSync(p, 'utf8'))
 

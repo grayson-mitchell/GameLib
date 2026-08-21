@@ -44,7 +44,8 @@ import {
 const WRONG_HIT_MAX = 0.02
 const HIT_RATE_MIN = 0.3
 
-const DUMP_URL = 'https://ftp.codeweavers.com/pub/crossover/tie/crossover.tie.gz'
+const DUMP_URL =
+  'https://ftp.codeweavers.com/pub/crossover/tie/crossover.tie.gz'
 /** T-19-02-04: bounds the fetch so a runaway/hostile payload cannot exhaust
  * memory. The real payload is ~3 MB gzipped; this ceiling is generous. */
 const MAX_DUMP_BYTES = 20 * 1024 * 1024
@@ -136,7 +137,10 @@ function classifyBaseGames(
 // sibling builder plan 19-01).
 // ---------------------------------------------------------------------------
 
-async function fetchDump(): Promise<{ buffer: Buffer; lastModified: string | null }> {
+async function fetchDump(): Promise<{
+  buffer: Buffer
+  lastModified: string | null
+}> {
   const response = await fetch(DUMP_URL, {
     headers: { 'User-Agent': 'GameLib-CrossOverMeasurement/1.0' }
   })
@@ -189,8 +193,7 @@ function canonicalName(app: Record<string, unknown>): string {
   )
   const en = names.find(
     (n) =>
-      typeof n === 'object' &&
-      (n as Record<string, unknown>)['@_lang'] === 'en'
+      typeof n === 'object' && (n as Record<string, unknown>)['@_lang'] === 'en'
   )
   return String(text(bare ?? en ?? names[0]) ?? '')
 }
@@ -248,15 +251,15 @@ function parseMacMedalRecords(xml: string): DumpRecord[] {
     }
 
     const categories = (
-      ((profile.category as unknown[]) ?? []).map(text).filter(Boolean) as string[]
+      ((profile.category as unknown[]) ?? [])
+        .map(text)
+        .filter(Boolean) as string[]
     ).map(String)
     if (!categories.some((c) => c.startsWith('Games'))) {
       continue
     }
 
-    const macMedals = (
-      (profile.medal as unknown[]) ?? []
-    ).filter(
+    const macMedals = ((profile.medal as unknown[]) ?? []).filter(
       (m) =>
         m &&
         typeof m === 'object' &&
@@ -278,7 +281,9 @@ function parseMacMedalRecords(xml: string): DumpRecord[] {
       cxversion: String(best['@_version']),
       num: Number(best['@_num'] ?? 0),
       steamid:
-        profile.steamid !== undefined ? String(text(profile.steamid)) : undefined
+        profile.steamid !== undefined
+          ? String(text(profile.steamid))
+          : undefined
     })
   }
 
@@ -378,7 +383,10 @@ function scoreGroundTruth(
     const matched = nameIndex.get(normalizeFn(title))
     if (!matched) {
       miss++
-    } else if (matched.ccxAppId === correct.ccxAppId || matched.rating === correct.rating) {
+    } else if (
+      matched.ccxAppId === correct.ccxAppId ||
+      matched.rating === correct.rating
+    ) {
       hit++
     } else {
       wrong++
@@ -489,7 +497,8 @@ const SYNTHETIC_CASES: SyntheticCase[] = [
     titleB: 'Some Game'
   },
   {
-    label: 'Duplicate-<app>-record base title (dedup is the builder\'s job, D-04)',
+    label:
+      "Duplicate-<app>-record base title (dedup is the builder's job, D-04)",
     titleA: 'EverQuest',
     titleB: 'EverQuest'
   }
@@ -536,12 +545,18 @@ async function main() {
 
   const candidateResults = CANDIDATES.map((candidate) => {
     const nameIndex = buildNameKeyIndex(macMedalRecords, candidate.fn)
-    const groundTruth = scoreGroundTruth(groundTruthPairs, candidate.fn, nameIndex)
+    const groundTruth = scoreGroundTruth(
+      groundTruthPairs,
+      candidate.fn,
+      nameIndex
+    )
     const collisions = selfCollisionTest(macMedalRecords, candidate.fn)
     return { ...candidate, nameIndex, groundTruth, collisions }
   })
 
-  const passingCandidates = candidateResults.filter((c) => passesGate(c.groundTruth))
+  const passingCandidates = candidateResults.filter((c) =>
+    passesGate(c.groundTruth)
+  )
   const winner =
     passingCandidates.length > 0
       ? passingCandidates.reduce((best, c) =>
@@ -551,7 +566,10 @@ async function main() {
   const verdict = winner !== null ? 'PASS' : 'FAIL'
 
   // Sample 2: real non-Steam library, qualitative only.
-  const legendaryLibrary = readLibraryEntries('legendary_library.json', 'library')
+  const legendaryLibrary = readLibraryEntries(
+    'legendary_library.json',
+    'library'
+  )
   const gogLibrary = readLibraryEntries('gog_library.json', 'games')
   const nileLibrary = readLibraryEntries('nile_library.json', 'games')
   const nonSteamEntries = [...legendaryLibrary, ...gogLibrary, ...nileLibrary]
@@ -604,14 +622,16 @@ async function main() {
   )
   lines.push('')
   lines.push(
-    '> Read this honestly: Steam titles are the EASIEST case for this matcher — CodeWeavers\' ' +
+    "> Read this honestly: Steam titles are the EASIEST case for this matcher — CodeWeavers' " +
       'canonical names were sourced with a Steam AppID attached for roughly a third of the dump, ' +
-      'so they track Steam\'s own titles closely. The true non-Steam (Epic/GOG/Amazon) hit rate is ' +
+      "so they track Steam's own titles closely. The true non-Steam (Epic/GOG/Amazon) hit rate is " +
       'expected to be LOWER than this number (19-RESEARCH.md Pitfall 9). This bias is stated ' +
       'explicitly so the ground-truth number is read honestly, not as a universal hit rate.'
   )
   lines.push('')
-  lines.push('| Candidate | HIT | WRONG | MISS | hitRate | wrongHitRate | Gate |')
+  lines.push(
+    '| Candidate | HIT | WRONG | MISS | hitRate | wrongHitRate | Gate |'
+  )
   lines.push('|---|---|---|---|---|---|---|')
   for (const c of candidateResults) {
     lines.push(
@@ -657,11 +677,11 @@ async function main() {
   )
   lines.push(`| **Total** | **${nonSteamRows.length}** | — |`)
   lines.push('')
-  lines.push('## Sample 3: synthetic adversarial set (pass/fail per failure mode, never pooled into a rate)')
-  lines.push('')
   lines.push(
-    `| Case | ${CANDIDATES.map((c) => c.label).join(' | ')} |`
+    '## Sample 3: synthetic adversarial set (pass/fail per failure mode, never pooled into a rate)'
   )
+  lines.push('')
+  lines.push(`| Case | ${CANDIDATES.map((c) => c.label).join(' | ')} |`)
   lines.push(`|---|${CANDIDATES.map(() => '---').join('|')}|`)
   for (const row of syntheticRows) {
     lines.push(
@@ -688,7 +708,7 @@ async function main() {
   lines.push('')
   lines.push(
     'This report carries aggregate counts and the synthetic test cases only. It does NOT ' +
-      'include the full list of the user\'s owned titles (RESEARCH.md line 824) — Sample 2\'s ' +
+      "include the full list of the user's owned titles (RESEARCH.md line 824) — Sample 2's " +
       'table is limited to the ~5 real non-Steam base games after DLC/add-on filtering, not the ' +
       'whole library.'
   )

@@ -60,7 +60,9 @@ describe('allow-list', () => {
   })
 
   it('excludes humbleConfigStore.sessionCookie by name', () => {
-    expect(isAllowedStoreField('humbleConfigStore', 'sessionCookie')).toBe(false)
+    expect(isAllowedStoreField('humbleConfigStore', 'sessionCookie')).toBe(
+      false
+    )
   })
 
   it('excludes humbleConfigStore.csrfToken by name', () => {
@@ -79,7 +81,9 @@ describe('allow-list', () => {
   })
 
   it('blocks dot-notation subpath reads of a secret', () => {
-    expect(isAllowedStoreField('steamConfigStore', 'refreshToken.x')).toBe(false)
+    expect(isAllowedStoreField('steamConfigStore', 'refreshToken.x')).toBe(
+      false
+    )
   })
 
   it('allows legitimate neighbour fields', () => {
@@ -106,10 +110,13 @@ describe('allow-list', () => {
     'isPrototypeOf',
     'propertyIsEnumerable',
     'toLocaleString'
-  ])('CR-02: fails closed (never throws) for prototype-chain store name %p', (name) => {
-    expect(() => isAllowedStoreField(name, 'x')).not.toThrow()
-    expect(isAllowedStoreField(name, 'x')).toBe(false)
-  })
+  ])(
+    'CR-02: fails closed (never throws) for prototype-chain store name %p',
+    (name) => {
+      expect(() => isAllowedStoreField(name, 'x')).not.toThrow()
+      expect(isAllowedStoreField(name, 'x')).toBe(false)
+    }
+  )
 
   it('CR-02: filterStoreSnapshot is likewise inert for a prototype-chain store name', () => {
     expect(() => filterStoreSnapshot('constructor', { a: 1 })).not.toThrow()
@@ -153,7 +160,9 @@ describe('tier partition', () => {
   it('their union equals STORE_UNIVERSE', () => {
     const union = new Set([...BOOT_SET_STORES, ...LAZY_STORES])
     expect(new Set(STORE_UNIVERSE)).toEqual(union)
-    expect(STORE_UNIVERSE.length).toBe(BOOT_SET_STORES.length + LAZY_STORES.length)
+    expect(STORE_UNIVERSE.length).toBe(
+      BOOT_SET_STORES.length + LAZY_STORES.length
+    )
   })
 
   it('every ValidStoreName appears in STORE_UNIVERSE (anti-drift guard)', () => {
@@ -226,7 +235,11 @@ describe('WR-04: write allow-list is strictly narrower than the read allow-list'
   it('CR-01/CR-02: hostile key paths and prototype-chain store names are not writable, and never throw', () => {
     expect(() => isWritableStoreField('constructor', 'x')).not.toThrow()
     expect(isWritableStoreField('constructor', 'x')).toBe(false)
-    expect(isWritableStoreField('timestampStore', '__proto__.polluted')).toBe(false)
-    expect(isWritableStoreField('configStore', 'games.constructor.x')).toBe(false)
+    expect(isWritableStoreField('timestampStore', '__proto__.polluted')).toBe(
+      false
+    )
+    expect(isWritableStoreField('configStore', 'games.constructor.x')).toBe(
+      false
+    )
   })
 })

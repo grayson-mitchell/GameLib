@@ -29,14 +29,11 @@ describe('redeemOutcomeCopy', () => {
     ['invalid', undefined],
     ['rate-limited', undefined],
     ['error', undefined]
-  ] as const)(
-    'returns a message for outcome %s',
-    (outcome, packageName) => {
-      const result = redeemOutcomeCopy(outcome, t, packageName)
-      expect(result.message).toEqual(expect.any(String))
-      expect(result.message.length).toBeGreaterThan(0)
-    }
-  )
+  ] as const)('returns a message for outcome %s', (outcome, packageName) => {
+    const result = redeemOutcomeCopy(outcome, t, packageName)
+    expect(result.message).toEqual(expect.any(String))
+    expect(result.message.length).toBeGreaterThan(0)
+  })
 
   it('interpolates the package name into the success message', () => {
     const { message } = redeemOutcomeCopy('success', t, 'Half-Life 3')
@@ -44,9 +41,13 @@ describe('redeemOutcomeCopy', () => {
   })
 
   it('produces mutually distinct messages across all four buckets + error', () => {
-    const outcomes: Array<
-      Parameters<typeof redeemOutcomeCopy>[0]
-    > = ['success', 'already-owned', 'invalid', 'rate-limited', 'error']
+    const outcomes: Array<Parameters<typeof redeemOutcomeCopy>[0]> = [
+      'success',
+      'already-owned',
+      'invalid',
+      'rate-limited',
+      'error'
+    ]
     const messages = outcomes.map(
       (outcome) => redeemOutcomeCopy(outcome, t, 'Some Game').message
     )
@@ -55,9 +56,12 @@ describe('redeemOutcomeCopy', () => {
   })
 
   it('never falls back to a generic "failed" message shared across buckets', () => {
-    const outcomes: Array<
-      Parameters<typeof redeemOutcomeCopy>[0]
-    > = ['already-owned', 'invalid', 'rate-limited', 'error']
+    const outcomes: Array<Parameters<typeof redeemOutcomeCopy>[0]> = [
+      'already-owned',
+      'invalid',
+      'rate-limited',
+      'error'
+    ]
     for (const outcome of outcomes) {
       const { message } = redeemOutcomeCopy(outcome, t)
       expect(message.toLowerCase()).not.toBe('failed')

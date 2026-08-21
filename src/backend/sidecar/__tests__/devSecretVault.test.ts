@@ -55,7 +55,8 @@ let mockLogError: jest.SpyInstance
 // `app.getPath('appData'|'userData')` at MODULE SCOPE — a full-replacement mock (Task 1's
 // original, pre-Task-2 shape) would throw on that call the instant anything in this file
 // imports the real `./handlers` graph (Task 2's bootstrap wiring block does, via `../bootstrap`). ─
-const realPathShim: typeof import('../pathShim') = jest.requireActual('../pathShim')
+const realPathShim: typeof import('../pathShim') =
+  jest.requireActual('../pathShim')
 const mockGetPath = jest.fn()
 jest.mock('../pathShim', () => ({
   getPath: (name: string) => mockGetPath(name)
@@ -133,9 +134,15 @@ describe('devSecretVault', () => {
     // the real write path (Task 1's tests never call `../bootstrap`'s `init()`, so
     // `heroicLogWriter` is never constructed) while still recording every call for the leak-scan
     // and receipt-line assertions below.
-    mockLogInfo = jest.spyOn(loggerModule, 'logInfo').mockImplementation(() => {})
-    mockLogWarning = jest.spyOn(loggerModule, 'logWarning').mockImplementation(() => {})
-    mockLogError = jest.spyOn(loggerModule, 'logError').mockImplementation(() => {})
+    mockLogInfo = jest
+      .spyOn(loggerModule, 'logInfo')
+      .mockImplementation(() => {})
+    mockLogWarning = jest
+      .spyOn(loggerModule, 'logWarning')
+      .mockImplementation(() => {})
+    mockLogError = jest
+      .spyOn(loggerModule, 'logError')
+      .mockImplementation(() => {})
   })
 
   afterEach(() => {
@@ -320,7 +327,8 @@ describe('devSecretVault', () => {
 
     expect(
       mockLogWarning.mock.calls.some(
-        ([message]) => message === '[dev-secret-vault] read key=steam-refresh-token'
+        ([message]) =>
+          message === '[dev-secret-vault] read key=steam-refresh-token'
       )
     ).toBe(true)
   })

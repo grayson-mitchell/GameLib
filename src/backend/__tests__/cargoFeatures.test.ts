@@ -112,7 +112,9 @@ describe('REQ-34.1-07 Cargo.toml tauri tray-icon feature (Phase 34.1 Plan 06, D-
 function extractObjc2AppKitFeatures(source: string): string[] {
   const lineMatch = source.match(/^objc2-app-kit\s*=\s*\{[^}]*\}/m)
   if (!lineMatch) {
-    throw new Error('No `objc2-app-kit = { ... }` dependency line found in Cargo.toml')
+    throw new Error(
+      'No `objc2-app-kit = { ... }` dependency line found in Cargo.toml'
+    )
   }
   const featuresMatch = lineMatch[0].match(/features\s*=\s*\[([^\]]*)\]/)
   if (!featuresMatch) {

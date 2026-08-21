@@ -50,15 +50,11 @@ export const isFullscreen = () => (isTauri() ? tauriIsFullscreen() : isFullscree
 export const isFrameless = () => (isTauri() ? tauriIsFrameless() : isFramelessIpc())
 export const isMinimized = () => (isTauri() ? tauriIsMinimized() : isMinimizedIpc())
 export const isMaximized = () => (isTauri() ? tauriIsMaximized() : isMaximizedIpc())
-export const minimizeWindow = () =>
-  isTauri() ? tauriMinimizeWindow() : minimizeWindowIpc()
-export const maximizeWindow = () =>
-  isTauri() ? tauriMaximizeWindow() : maximizeWindowIpc()
-export const unmaximizeWindow = () =>
-  isTauri() ? tauriUnmaximizeWindow() : unmaximizeWindowIpc()
+export const minimizeWindow = () => (isTauri() ? tauriMinimizeWindow() : minimizeWindowIpc())
+export const maximizeWindow = () => (isTauri() ? tauriMaximizeWindow() : maximizeWindowIpc())
+export const unmaximizeWindow = () => (isTauri() ? tauriUnmaximizeWindow() : unmaximizeWindowIpc())
 export const closeWindow = () => (isTauri() ? tauriCloseWindow() : closeWindowIpc())
-export const setFullscreen = (enabled: boolean) =>
-  isTauri() ? tauriSetFullscreen(enabled) : setFullscreenIpc(enabled)
+export const setFullscreen = (enabled: boolean) => (isTauri() ? tauriSetFullscreen(enabled) : setFullscreenIpc(enabled))
 // CR-03 (Phase 34.1 code review): under Tauri these three pushes had NO PRODUCER --
 // Electron emits them from real window events (`main.ts:240-246`), but nothing on the
 // Tauri path did, so `frontendListenerSlot` registered a listener that could never
@@ -77,27 +73,19 @@ const handleMaximizedIpc = frontendListenerSlot('maximized')
 const handleUnmaximizedIpc = frontendListenerSlot('unmaximized')
 const handleFullscreenIpc = frontendListenerSlot('fullscreen')
 
-export const handleMaximized = (
-  listener: (e: IpcRendererEvent) => void
-): (() => void) =>
+export const handleMaximized = (listener: (e: IpcRendererEvent) => void): (() => void) =>
   isTauri()
     ? tauriHandleMaximized(() => listener(undefined as unknown as IpcRendererEvent))
     : handleMaximizedIpc(listener)
 
-export const handleUnmaximized = (
-  listener: (e: IpcRendererEvent) => void
-): (() => void) =>
+export const handleUnmaximized = (listener: (e: IpcRendererEvent) => void): (() => void) =>
   isTauri()
     ? tauriHandleUnmaximized(() => listener(undefined as unknown as IpcRendererEvent))
     : handleUnmaximizedIpc(listener)
 
-export const handleFullscreen = (
-  listener: (e: IpcRendererEvent, isFullscreen: boolean) => void
-): (() => void) =>
+export const handleFullscreen = (listener: (e: IpcRendererEvent, isFullscreen: boolean) => void): (() => void) =>
   isTauri()
-    ? tauriHandleFullscreen((isFullscreen) =>
-        listener(undefined as unknown as IpcRendererEvent, isFullscreen)
-      )
+    ? tauriHandleFullscreen((isFullscreen) => listener(undefined as unknown as IpcRendererEvent, isFullscreen))
     : handleFullscreenIpc(listener)
 export const openWebviewPage = makeListenerCaller('openWebviewPage')
 export const setZoomFactor = (zoomFactor: string) =>
@@ -151,13 +139,7 @@ export const handleShowDialog = frontendListenerSlot('showDialog')
 // Type-only -- erased at compile time (see the lazy `require('electron-store')` comment
 // below for why this module must not statically import the real value).
 import type Store from 'electron-store'
-import {
-  registerStore,
-  snapshotGet,
-  snapshotHas,
-  snapshotSet,
-  snapshotDelete
-} from '../tauriTransport'
+import { registerStore, snapshotGet, snapshotHas, snapshotSet, snapshotDelete } from '../tauriTransport'
 // FUTURE WORK
 // here is how the store methods can be refactored
 // in order to set nodeIntegration: false
@@ -254,9 +236,7 @@ const isSecretStoreKey = (storeName: string, key: string) => {
   // (`constructor`, `toString`, …) resolves to a FUNCTION, and `.some(...)` on it
   // THROWS — from a preload function the renderer calls synchronously. An
   // own-property lookup keeps this predicate total.
-  const secrets = Object.prototype.hasOwnProperty.call(SECRET_STORE_KEYS, storeName)
-    ? SECRET_STORE_KEYS[storeName]
-    : []
+  const secrets = Object.prototype.hasOwnProperty.call(SECRET_STORE_KEYS, storeName) ? SECRET_STORE_KEYS[storeName] : []
   return secrets.some(
     // electron-store supports dot-notation paths — block subpath reads too.
     (secret) => key === secret || key.startsWith(`${secret}.`)
@@ -265,9 +245,7 @@ const isSecretStoreKey = (storeName: string, key: string) => {
 
 export const storeGet = (storeName: string, key: string, defaultValue?: unknown) => {
   if (isSecretStoreKey(storeName, key)) {
-    console.warn(
-      `storeGet: blocked read of credential key "${key}" from "${storeName}"`
-    )
+    console.warn(`storeGet: blocked read of credential key "${key}" from "${storeName}"`)
     return undefined
   }
   if (isTauri()) {

@@ -93,7 +93,9 @@ const OrderDetailSchema = z
         // `"tpkd_dict": null` / `"all_tpks": null` must degrade to "no
         // tpks" (diagnosed by library.ts's zero-key logging), never fail
         // the whole order parse into a schema_error.
-        all_tpks: z.array(z.union([OrderDetailTpkSchema, z.unknown()])).nullish()
+        all_tpks: z
+          .array(z.union([OrderDetailTpkSchema, z.unknown()]))
+          .nullish()
       })
       .passthrough()
       .nullish(),
@@ -182,7 +184,8 @@ async function humbleRequest(
   }
   return {
     data,
-    contentType: typeof contentTypeHeader === 'string' ? contentTypeHeader : null
+    contentType:
+      typeof contentTypeHeader === 'string' ? contentTypeHeader : null
   }
 }
 
@@ -302,7 +305,9 @@ async function humblePostRequestViaSeam(
   const timeoutPromise = new Promise<never>((_resolve, reject) => {
     timeoutHandle = setTimeout(() => {
       reject(
-        new Error(`Humble reveal request timed out after ${REQUEST_TIMEOUT_MS}ms`)
+        new Error(
+          `Humble reveal request timed out after ${REQUEST_TIMEOUT_MS}ms`
+        )
       )
     }, REQUEST_TIMEOUT_MS)
   })
@@ -371,7 +376,9 @@ function humblePostRequestViaElectronNet(
     const timeoutHandle = setTimeout(() => {
       request.abort()
       reject(
-        new Error(`Humble reveal request timed out after ${REQUEST_TIMEOUT_MS}ms`)
+        new Error(
+          `Humble reveal request timed out after ${REQUEST_TIMEOUT_MS}ms`
+        )
       )
     }, REQUEST_TIMEOUT_MS)
     const clearRequestTimeout = () => clearTimeout(timeoutHandle)
@@ -722,7 +729,11 @@ export async function revealKey(
       key: params.gamekey,
       keyindex: String(params.keyindex)
     }).toString()
-    const response = await humblePostRequest(HUMBLE_REDEEM_PATH, body, csrfToken)
+    const response = await humblePostRequest(
+      HUMBLE_REDEEM_PATH,
+      body,
+      csrfToken
+    )
     const parsed = RevealResponseSchema.safeParse(response.data)
     if (!parsed.success) {
       describeSchemaFailure(HUMBLE_REDEEM_PATH, response, parsed.error)

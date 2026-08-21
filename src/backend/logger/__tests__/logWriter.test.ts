@@ -11,7 +11,13 @@
 // touches -- and is entirely independent of -- the containment mechanism
 // `jest.setupContainment.ts` installs for the whole Backend project.
 
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
@@ -27,7 +33,9 @@ import { join } from 'path'
 // decompressPool.test.ts) -- unrelated to, and does not weaken, the
 // `skipInitialArchive` behavior under test.
 jest.mock('../index', () => ({
-  getLogFilePath: jest.fn(() => '/__gamelib-logwriter-test-never-matches__/gamelib.log'),
+  getLogFilePath: jest.fn(
+    () => '/__gamelib-logwriter-test-never-matches__/gamelib.log'
+  ),
   logDebug: jest.fn()
 }))
 
@@ -46,7 +54,7 @@ describe('LogWriter skipInitialArchive (Phase 23.1 plan 05)', () => {
     rmSync(dir, { recursive: true, force: true })
   })
 
-  test('default (skipInitialArchive unset/false): a pre-existing log file IS archived on the writer\'s first write', async () => {
+  test("default (skipInitialArchive unset/false): a pre-existing log file IS archived on the writer's first write", async () => {
     writeFileSync(logPath, 'pre-existing content from a prior session\n')
 
     const writer = new LogWriter(logPath, false, false)
@@ -61,7 +69,7 @@ describe('LogWriter skipInitialArchive (Phase 23.1 plan 05)', () => {
     expect(readFileSync(logPath, 'utf-8')).not.toContain('pre-existing content')
   })
 
-  test('skipInitialArchive=true: a pre-existing (live, actively-written) log file is NOT archived on this writer\'s first write -- it appends instead', async () => {
+  test("skipInitialArchive=true: a pre-existing (live, actively-written) log file is NOT archived on this writer's first write -- it appends instead", async () => {
     writeFileSync(
       logPath,
       'content written by another writer (e.g. the sidecar main thread) earlier in this same session\n'
@@ -88,6 +96,8 @@ describe('LogWriter skipInitialArchive (Phase 23.1 plan 05)', () => {
     await writer.logInfo('first-ever line, no prior file')
 
     expect(existsSync(logPath + '.old')).toBe(false)
-    expect(readFileSync(logPath, 'utf-8')).toContain('first-ever line, no prior file')
+    expect(readFileSync(logPath, 'utf-8')).toContain(
+      'first-ever line, no prior file'
+    )
   })
 })

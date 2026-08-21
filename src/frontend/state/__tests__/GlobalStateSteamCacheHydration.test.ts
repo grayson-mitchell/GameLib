@@ -58,7 +58,13 @@ import {
 } from 'common/types/storePolicy'
 
 const globalStatePath = join(__dirname, '..', 'GlobalState.tsx')
-const electronStoresPath = join(__dirname, '..', '..', 'helpers', 'electronStores.ts')
+const electronStoresPath = join(
+  __dirname,
+  '..',
+  '..',
+  'helpers',
+  'electronStores.ts'
+)
 const handlersPath = join(
   __dirname,
   '..',

@@ -97,9 +97,7 @@ describe('steamResumeCopyCensus (quick-260819-ch5): zero residual "Finish in Ste
     )
     expect(paths.some((p) => p.endsWith('GameStatus.tsx'))).toBe(true)
 
-    expect(mainButton?.stripped).toContain(
-      'gamelib:steam.status.resumeInstall'
-    )
+    expect(mainButton?.stripped).toContain('gamelib:steam.status.resumeInstall')
     expect(constants?.stripped).toContain('gamelib:steam.status.resumeInstall')
     expect(gameStatus?.stripped).toContain(
       'gamelib:steam.status.resumeInstallHint'
@@ -127,7 +125,7 @@ describe('steamResumeCopyCensus (quick-260819-ch5): zero residual "Finish in Ste
     )
   })
 
-  it('RED: injecting the real pre-fix line into MainButton.tsx trips the gate\'s own predicate', () => {
+  it("RED: injecting the real pre-fix line into MainButton.tsx trips the gate's own predicate", () => {
     const mainButtonPath = join(__dirname, '..', 'MainButton.tsx')
     const realSource = readFileSync(mainButtonPath, 'utf-8')
     const knownBad = realSource.replace(
@@ -167,8 +165,7 @@ describe('steamResumeCopyCensus (quick-260819-ch5): catalog pins hard constraint
 
   it('gamepage.json STILL holds the dead status.steamFinishInSteam key — proves the churn guard was respected, not dodged by deletion', () => {
     expect(
-      (gamepage as { status: Record<string, string> }).status
-        .steamFinishInSteam
+      (gamepage as { status: Record<string, string> }).status.steamFinishInSteam
     ).toBe('Finish in Steam')
   })
 })

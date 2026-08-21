@@ -86,7 +86,12 @@ function categoriesForLabels(labels: string[]): Set<string> {
 
 // ── Source-parsed branch extraction (real file, real brace matching — never a mock) ────────────
 
-function matchDelims(text: string, openIndex: number, openCh: string, closeCh: string): number {
+function matchDelims(
+  text: string,
+  openIndex: number,
+  openCh: string,
+  closeCh: string
+): number {
   let depth = 0
   for (let i = openIndex; i < text.length; i++) {
     if (text[i] === openCh) depth++
@@ -95,11 +100,15 @@ function matchDelims(text: string, openIndex: number, openCh: string, closeCh: s
       if (depth === 0) return i
     }
   }
-  throw new Error(`seamBranchParity: unbalanced ${openCh}${closeCh} starting at index ${openIndex}`)
+  throw new Error(
+    `seamBranchParity: unbalanced ${openCh}${closeCh} starting at index ${openIndex}`
+  )
 }
 
 function findFunctionBody(sourceText: string, functionName: string): string {
-  const headerRe = new RegExp(`\\b${functionName}\\s*\\([^)]*\\)\\s*(?::[^{]+)?\\{`)
+  const headerRe = new RegExp(
+    `\\b${functionName}\\s*\\([^)]*\\)\\s*(?::[^{]+)?\\{`
+  )
   const match = headerRe.exec(sourceText)
   if (!match) {
     throw new Error(
@@ -220,9 +229,11 @@ const KNOWN_GAP: KnownGapEntry[] = []
 
 function validateKnownGapEntry(entry: KnownGapEntry): string | null {
   if (!entry.site || !entry.site.trim()) return 'missing a site'
-  if (!entry.droppedCategory || !entry.droppedCategory.trim()) return 'missing a droppedCategory'
+  if (!entry.droppedCategory || !entry.droppedCategory.trim())
+    return 'missing a droppedCategory'
   if (!entry.findingId || !entry.findingId.trim()) return 'missing a findingId'
-  if (!entry.closingPlan || !entry.closingPlan.trim()) return 'missing a closingPlan'
+  if (!entry.closingPlan || !entry.closingPlan.trim())
+    return 'missing a closingPlan'
   return null
 }
 
@@ -290,7 +301,9 @@ function undeclaredDrops(
   declaredForSite: KnownGapEntry[]
 ): string[] {
   const declared = new Set(declaredForSite.map((g) => g.droppedCategory))
-  return [...electronCategories].filter((c) => !tauriCategories.has(c) && !declared.has(c))
+  return [...electronCategories].filter(
+    (c) => !tauriCategories.has(c) && !declared.has(c)
+  )
 }
 
 function staleKnownGapEntries(
@@ -298,7 +311,9 @@ function staleKnownGapEntries(
   tauriCategories: Set<string>,
   declaredForSite: KnownGapEntry[]
 ): KnownGapEntry[] {
-  const actuallyDropped = new Set([...electronCategories].filter((c) => !tauriCategories.has(c)))
+  const actuallyDropped = new Set(
+    [...electronCategories].filter((c) => !tauriCategories.has(c))
+  )
   return declaredForSite.filter((g) => !actuallyDropped.has(g.droppedCategory))
 }
 
@@ -381,7 +396,8 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
       beforeAll(() => {
         sourceText = readFileSync(site.file, 'utf-8')
         const functionBody = findFunctionBody(sourceText, site.functionName)
-        const { electronLabels, tauriLabels } = findWipeStepsIfElseBranches(functionBody)
+        const { electronLabels, tauriLabels } =
+          findWipeStepsIfElseBranches(functionBody)
         electronCategories = categoriesForLabels(electronLabels)
         tauriCategories = categoriesForLabels(tauriLabels)
       })
@@ -389,7 +405,9 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
       it('every Electron-only category is either present in Tauri, covered by a dated KNOWN_GAP entry, or a validated DECLARED entry', () => {
         const knownGapForSite = KNOWN_GAP.filter((g) => g.site === site.label)
         const declaredForSite = DECLARED.filter((d) => d.site === site.label)
-        const validDeclared = declaredForSite.filter((d) => isDeclaredInSource(sourceText, d))
+        const validDeclared = declaredForSite.filter((d) =>
+          isDeclaredInSource(sourceText, d)
+        )
         const softenedCategories: KnownGapEntry[] = [
           ...knownGapForSite,
           ...validDeclared.map((d) => ({
@@ -399,13 +417,21 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
             closingPlan: 'n/a (DECLARED, not a gap)'
           }))
         ]
-        const drops = undeclaredDrops(electronCategories, tauriCategories, softenedCategories)
+        const drops = undeclaredDrops(
+          electronCategories,
+          tauriCategories,
+          softenedCategories
+        )
         expect(drops).toEqual([])
       })
 
       it('no stale KNOWN_GAP entries (a declared drop that no longer exists in source must be removed)', () => {
         const declaredForSite = KNOWN_GAP.filter((g) => g.site === site.label)
-        const stale = staleKnownGapEntries(electronCategories, tauriCategories, declaredForSite)
+        const stale = staleKnownGapEntries(
+          electronCategories,
+          tauriCategories,
+          declaredForSite
+        )
         if (stale.length > 0) {
           throw new Error(
             `seamBranchParity: KNOWN_GAP contains ${stale.length} stale entry(ies) for ` +
@@ -422,7 +448,9 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
         const actuallyDropped = new Set(
           [...electronCategories].filter((c) => !tauriCategories.has(c))
         )
-        const stale = declaredForSite.filter((d) => !actuallyDropped.has(d.droppedCategory))
+        const stale = declaredForSite.filter(
+          (d) => !actuallyDropped.has(d.droppedCategory)
+        )
         if (stale.length > 0) {
           throw new Error(
             `seamBranchParity: DECLARED contains ${stale.length} stale entry(ies) for ` +
@@ -455,8 +483,18 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
       const electron = categoriesForLabels(['clearStorageData', 'clearCache'])
       const tauri = categoriesForLabels(['clearCache'])
       const declared: KnownGapEntry[] = [
-        { site: 'x', droppedCategory: 'storage', findingId: 'F-TEST', closingPlan: 'plan-x' },
-        { site: 'x', droppedCategory: 'cookies', findingId: 'F-TEST', closingPlan: 'plan-x' }
+        {
+          site: 'x',
+          droppedCategory: 'storage',
+          findingId: 'F-TEST',
+          closingPlan: 'plan-x'
+        },
+        {
+          site: 'x',
+          droppedCategory: 'cookies',
+          findingId: 'F-TEST',
+          closingPlan: 'plan-x'
+        }
       ]
       expect(undeclaredDrops(electron, tauri, declared)).toEqual([])
     })
@@ -465,23 +503,33 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
       // Simulates a future edit that adds a brand-new wipeSteps entry to the Electron branch only
       // — exactly the shape a silent future regression would take.
       const electronBefore = categoriesForLabels(['clearStorageData'])
-      const electronAfterGrowth = categoriesForLabels(['clearStorageData', 'clearHostResolverCache'])
+      const electronAfterGrowth = categoriesForLabels([
+        'clearStorageData',
+        'clearHostResolverCache'
+      ])
       const tauri = categoriesForLabels(['clearStorageData'])
       expect(undeclaredDrops(electronBefore, tauri, [])).toEqual([])
-      expect(undeclaredDrops(electronAfterGrowth, tauri, [])).toEqual(['hostResolver'])
+      expect(undeclaredDrops(electronAfterGrowth, tauri, [])).toEqual([
+        'hostResolver'
+      ])
     })
 
     it('an unrecognized wipeSteps label throws rather than silently contributing zero categories', () => {
-      expect(() => categoriesForLabels(['clearSomethingNeverSeenBefore'])).toThrow(
-        /unrecognized wipeSteps label/
-      )
+      expect(() =>
+        categoriesForLabels(['clearSomethingNeverSeenBefore'])
+      ).toThrow(/unrecognized wipeSteps label/)
     })
 
     it('staleKnownGapEntries correctly flags a KNOWN_GAP entry whose category is no longer dropped', () => {
       const electron = categoriesForLabels(['clearStorageData'])
       const tauri = categoriesForLabels(['clearStorageData']) // capability landed -- no longer dropped
       const declared: KnownGapEntry[] = [
-        { site: 'x', droppedCategory: 'storage', findingId: 'F-TEST', closingPlan: 'plan-x' }
+        {
+          site: 'x',
+          droppedCategory: 'storage',
+          findingId: 'F-TEST',
+          closingPlan: 'plan-x'
+        }
       ]
       const stale = staleKnownGapEntries(electron, tauri, declared)
       expect(stale).toHaveLength(1)
@@ -492,7 +540,12 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
       const electron = categoriesForLabels(['clearStorageData'])
       const tauri = categoriesForLabels([]) // still dropped
       const declared: KnownGapEntry[] = [
-        { site: 'x', droppedCategory: 'storage', findingId: 'F-TEST', closingPlan: 'plan-x' }
+        {
+          site: 'x',
+          droppedCategory: 'storage',
+          findingId: 'F-TEST',
+          closingPlan: 'plan-x'
+        }
       ]
       expect(staleKnownGapEntries(electron, tauri, declared)).toEqual([])
     })
@@ -522,7 +575,8 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
       }
       // Carries the threat id, but never names the category — exactly F-6's own original Tauri
       // branch comment shape (T-34.4.1-30 present, storage/cache/authCache/hostResolver absent).
-      const idOnlySource = '// T-34.4.1-73: some unrelated decision, nothing else named here'
+      const idOnlySource =
+        '// T-34.4.1-73: some unrelated decision, nothing else named here'
       expect(isDeclaredInSource(idOnlySource, entry)).toBe(false)
     })
 

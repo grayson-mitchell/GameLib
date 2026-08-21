@@ -72,7 +72,7 @@ describe('quick-260820-kq0: SteamLogin renders inside a single shared Dialog win
     expect(dialogElements.length).toBe(1)
   })
 
-  it('SOURCE GATE (PRESENCE) -- the dialog is dismissible via a single closeWindow handler wired to Dialog\'s own close control', () => {
+  it("SOURCE GATE (PRESENCE) -- the dialog is dismissible via a single closeWindow handler wired to Dialog's own close control", () => {
     const source = read(STEAM_LOGIN_TSX)
 
     // Breaks if: the close button is hidden (showCloseButton stops being
@@ -93,7 +93,9 @@ describe('quick-260820-kq0: SteamLogin renders inside a single shared Dialog win
     // Breaks if: the component signature stops destructuring `dismiss` from
     // its Props (e.g. reverts to a bare `SteamLogin()` with no dismissal
     // callback, or renames the prop).
-    expect(source).toMatch(/export default function SteamLogin\(\{\s*dismiss\s*\}: Props\)/)
+    expect(source).toMatch(
+      /export default function SteamLogin\(\{\s*dismiss\s*\}: Props\)/
+    )
   })
 
   it('SOURCE GATE (ABSENCE) -- 36-01: no react-router navigation remains anywhere in the overlay -- dismissal is entirely callback-driven', () => {
@@ -111,7 +113,9 @@ describe('quick-260820-kq0: SteamLogin renders inside a single shared Dialog win
     const source = read(STEAM_LOGIN_TSX)
 
     // Class A: the one definition itself.
-    expect((source.match(/const closeWindow = \(\) => dismiss\(\)/g) ?? []).length).toBe(1)
+    expect(
+      (source.match(/const closeWindow = \(\) => dismiss\(\)/g) ?? []).length
+    ).toBe(1)
 
     // Class C: sites that reference (rather than call) closeWindow -- the
     // "Return to Login" click handler, the Dialog's own onClose, and
@@ -257,7 +261,9 @@ describe('quick-260820-u29: SteamLogin tabs size to fit their labels, and the QR
     // challengeUrl)` condition is split back into two branches with
     // different DOM shapes -- the exact prior structure whose differing
     // shape caused the resize this fix removes.
-    expect(source).toMatch(/isQRLoading \|\| \(step === 'qr-active' && challengeUrl\)/)
+    expect(source).toMatch(
+      /isQRLoading \|\| \(step === 'qr-active' && challengeUrl\)/
+    )
     expect((source.match(/className="steamQrBox"/g) ?? []).length).toBe(1)
   })
 
@@ -270,7 +276,7 @@ describe('quick-260820-u29: SteamLogin tabs size to fit their labels, and the QR
     expect((source.match(/lineHeight: 1\.4/g) ?? []).length).toBe(2)
   })
 
-  it('SOURCE GATE (PRESENCE) -- all three existing QR-tab captions are reused verbatim, not replaced with new copy, keeping the i18n gate\'s expectedCount stable', () => {
+  it("SOURCE GATE (PRESENCE) -- all three existing QR-tab captions are reused verbatim, not replaced with new copy, keeping the i18n gate's expectedCount stable", () => {
     const source = read(STEAM_LOGIN_TSX)
 
     expect(source).toContain('Generating QR code...')
@@ -286,7 +292,9 @@ describe('quick-260820-u29: SteamLogin tabs size to fit their labels, and the QR
     // in light mode, which App.tsx's paletteless createTheme() falls back
     // to) -- the exact defect the operator reported across midnightMirage,
     // gruvbox_dark, and dracula.
-    expect(source).toMatch(/\.steamLoginBody \.MuiTab-root\s*\{[^}]*color:\s*var\(--text-secondary\)/)
+    expect(source).toMatch(
+      /\.steamLoginBody \.MuiTab-root\s*\{[^}]*color:\s*var\(--text-secondary\)/
+    )
   })
 
   it('SOURCE GATE (PRESENCE) -- the selected tab and its hover state use a REAL, defined theme token (--text-default), not the dead --text-primary token WineManager uses', () => {
@@ -296,18 +304,24 @@ describe('quick-260820-u29: SteamLogin tabs size to fit their labels, and the QR
     // `--text-primary` -- verified (grep -rn -- "--text-primary:"
     // src/frontend) to be defined NOWHERE in this codebase, so using it here
     // would silently fall back to inherited color rather than fixing anything.
-    expect(source).toMatch(/\.steamLoginBody \.MuiTab-root\.Mui-selected\s*\{[^}]*color:\s*var\(--text-default\)/)
-    expect(source).toMatch(/\.steamLoginBody \.MuiTab-root:hover:not\(\.Mui-selected\)\s*\{[^}]*color:\s*var\(--text-default\)/)
+    expect(source).toMatch(
+      /\.steamLoginBody \.MuiTab-root\.Mui-selected\s*\{[^}]*color:\s*var\(--text-default\)/
+    )
+    expect(source).toMatch(
+      /\.steamLoginBody \.MuiTab-root:hover:not\(\.Mui-selected\)\s*\{[^}]*color:\s*var\(--text-default\)/
+    )
   })
 
-  it('SOURCE GATE (PRESENCE) -- the selected-tab indicator uses the theme accent token instead of MUI\'s hardcoded default primary colour', () => {
+  it("SOURCE GATE (PRESENCE) -- the selected-tab indicator uses the theme accent token instead of MUI's hardcoded default primary colour", () => {
     const source = read(STEAM_LOGIN_SCSS)
 
     // Breaks if: this rule is removed, leaving the indicator to fall back to
     // MUI's own theme.palette.primary.main -- a hardcoded literal, not a
     // theme token, matching DownloadManager/index.css and
     // GamesSettings/index.scss's identical scoping of this same rule.
-    expect(source).toMatch(/\.steamLoginBody \.MuiTabs-indicator\s*\{[^}]*background-color:\s*var\(--accent\)/)
+    expect(source).toMatch(
+      /\.steamLoginBody \.MuiTabs-indicator\s*\{[^}]*background-color:\s*var\(--accent\)/
+    )
   })
 
   it('SOURCE GATE (ABSENCE) -- none of the new tab-colour rules reference the dead --text-primary token', () => {

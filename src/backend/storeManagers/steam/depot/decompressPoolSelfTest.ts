@@ -98,12 +98,7 @@ export async function runDecompressPoolSelfTest(): Promise<number> {
     let decodeOk = false
     let match = false
     try {
-      const out = await pool.decode(
-        encrypted,
-        key,
-        expectedSha,
-        filler.length
-      )
+      const out = await pool.decode(encrypted, key, expectedSha, filler.length)
       match = out.equals(filler)
       decodeOk = true
       console.log(`SELFTEST decode=ok bytes=${out.length} match=${match}`)

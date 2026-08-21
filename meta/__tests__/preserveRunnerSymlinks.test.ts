@@ -191,7 +191,13 @@ function buildAbsoluteTargetFixture(): {
   // should be, exactly as `cp -RL` would leave it.
   writeFileSync(join(destInternalDir, 'Python'), 'real-python-binary-bytes')
 
-  return { sourceRoot, destRoot, outsideRoot, relPath, absoluteTarget: outsideFile }
+  return {
+    sourceRoot,
+    destRoot,
+    outsideRoot,
+    relPath,
+    absoluteTarget: outsideFile
+  }
 }
 
 /**
@@ -211,7 +217,16 @@ function buildEscapingTargetFixture(): {
 
   // bin/arm64/darwin/gogdl/_internal/Python -> six levels up escapes any
   // destRoot that is itself the direct parent of `bin/`.
-  const escapingTarget = join('..', '..', '..', '..', '..', '..', 'etc', 'passwd')
+  const escapingTarget = join(
+    '..',
+    '..',
+    '..',
+    '..',
+    '..',
+    '..',
+    'etc',
+    'passwd'
+  )
   symlinkSync(escapingTarget, join(internalDir, 'Python'))
 
   const relPath = join(GOGDL_INTERNAL, 'Python').split(sep).join('/')
@@ -240,7 +255,10 @@ describe('preserveRunnerSymlinks', () => {
   it('restoreSymlinks replaces the dereferenced framework with symlinks matching the source targets', () => {
     const { sourceRoot, destRoot, relPaths } = buildKnownBadFixture()
 
-    const { restored, skipped, rejected } = restoreSymlinks(sourceRoot, destRoot)
+    const { restored, skipped, rejected } = restoreSymlinks(
+      sourceRoot,
+      destRoot
+    )
 
     expect(skipped).toEqual([])
     expect(rejected).toEqual([])
@@ -338,7 +356,9 @@ describe('preserveRunnerSymlinks', () => {
     expect(() => closeBundle()).toThrow(
       /refusing to emit a bundle with unrestored symlink\(s\)/
     )
-    expect(() => closeBundle()).toThrow(/skipped \(destination parent missing\)/)
+    expect(() => closeBundle()).toThrow(
+      /skipped \(destination parent missing\)/
+    )
   })
 
   it('closeBundle does NOT throw over a healthy (all-parents-present) destination', () => {
@@ -408,9 +428,9 @@ describe('preserveRunnerSymlinks', () => {
 
   it('isContainedSymlinkTarget rejects a ..-escaping relative target', () => {
     const { destRoot, relPath, escapingTarget } = buildEscapingTargetFixture()
-    expect(
-      isContainedSymlinkTarget(destRoot, relPath, escapingTarget)
-    ).toBe(false)
+    expect(isContainedSymlinkTarget(destRoot, relPath, escapingTarget)).toBe(
+      false
+    )
   })
 
   it('restoreSymlinks rejects a ..-escaping relative-target record', () => {
@@ -424,13 +444,18 @@ describe('preserveRunnerSymlinks', () => {
   it('isContainedSymlinkTarget accepts all four real vendored target strings -- zero false positives on the shipping shape', () => {
     const destRoot = mktemp('gamelib-symlink-dest-control-')
     const cases: Array<[string, string]> = [
-      [join(GOGDL_INTERNAL, 'Python').split(sep).join('/'), 'Python.framework/Versions/3.14/Python'],
+      [
+        join(GOGDL_INTERNAL, 'Python').split(sep).join('/'),
+        'Python.framework/Versions/3.14/Python'
+      ],
       [
         join(GOGDL_INTERNAL, 'Python.framework', 'Python').split(sep).join('/'),
         'Versions/Current/Python'
       ],
       [
-        join(GOGDL_INTERNAL, 'Python.framework', 'Resources').split(sep).join('/'),
+        join(GOGDL_INTERNAL, 'Python.framework', 'Resources')
+          .split(sep)
+          .join('/'),
         'Versions/Current/Resources'
       ],
       [

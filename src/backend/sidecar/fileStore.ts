@@ -424,7 +424,11 @@ function load(filePath: string): Record<string, unknown> {
     // primitive silently discarded every write. Only *unparseable* JSON was covered
     // before, so the documented "a corrupt file is never fatal" guarantee did not
     // actually hold.
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    if (
+      typeof parsed !== 'object' ||
+      parsed === null ||
+      Array.isArray(parsed)
+    ) {
       process.stderr.write(
         '[sidecar/fileStore] a store file parsed to a non-object — treating it as an empty store\n'
       )

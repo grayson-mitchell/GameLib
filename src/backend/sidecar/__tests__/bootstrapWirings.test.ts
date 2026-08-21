@@ -528,7 +528,7 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
       const synthetic = [
         'export function init(input, output) {',
         '  startRpcServer(input, output)',
-        "  output.write(`${READY_SENTINEL}\\n`)",
+        '  output.write(`${READY_SENTINEL}\\n`)',
         '}'
       ].join('\n')
       const initBody = extractInitBody(synthetic)
@@ -540,7 +540,7 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
       const synthetic = [
         'export function init(input, output) {',
         '  startRpcServer(input, output)',
-        "  output.write(`${READY_SENTINEL}\\n`)",
+        '  output.write(`${READY_SENTINEL}\\n`)',
         '  deliverStartupProtocolUrl()',
         '}'
       ].join('\n')
