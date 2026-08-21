@@ -1,9 +1,11 @@
 ---
 created: 2026-08-15T08:50:00.000Z
-title: "Switch the GOG user API off embed.gog.com/userData.json — it fails outright for large wishlists"
+title: 'Switch the GOG user API off embed.gog.com/userData.json — it fails outright for large wishlists'
 area: store/gog
 needs: code-fix-plus-test-rework
-status: OPEN
+status: CLOSED
+closed: 2026-08-21
+closed_by: 'b0776ab8d (quick-260821-o34, code) + 463426e9d (tests); verified and closed 2026-08-21'
 severity: major
 upstream:
   - b1a87c958 (Heroic v2.22.1 — Switch GOG user APIs, #5718)
@@ -43,3 +45,37 @@ line goes away.
   `gog/games.ts` and `gog/library.ts`.
 
 Related: [[port-heroic-gamepad-nintendo-layout-and-key-repeat]] (same upstream review batch).
+
+## Resolution (2026-08-21)
+
+Closed in two parts, both verified at HEAD rather than taken on trust.
+
+**Code — `b0776ab8d` (quick task `260821-o34`, 2026-08-21).** `getUserDetails()` now fetches
+`https://api.gog.com/users/${encodeURIComponent(userId)}` (`user.ts:162`). Zero `userData.json`
+references remain anywhere in `src/`; the surviving `embed.gog.com` hits are all the OAuth
+`on_login_success` redirect, a different and legitimate use of that host.
+
+**Tests — `463426e9d` (2026-08-21).** The 159-line test rework this todo predicted was sitting
+uncommitted in the working tree when this closure ran. It was **not** an abandoned leftover: quick
+task `260821-o34` was still in flight in a concurrent session and wrote its SUMMARY minutes later.
+This closure committed that session's test file from under it, along with a fix for a real defect
+it carried — the suite passed jest but broke `tsc --noEmit` (TS2345 at `user.test.ts:493`), the
+ts-jest transpile-only trap. Proven non-vacuous by reverting `user.ts` to `b0776ab8d^`, at which
+point all four new cases fail. Recorded plainly because the collision, not the code, is the part a
+future reader needs: `260821-o34`'s SUMMARY lists `user.test.ts` among its modified files, but the
+commit that carries it is this closure's, not the quick task's.
+
+### Two deviations from what this todo specified, recorded rather than silently absorbed
+
+1. **Host is `api.gog.com`, not the `users.gog.com` named above.** Both return the small,
+   fixed-size Galaxy user document independent of wishlist size, so the failure mode this todo
+   filed — a large wishlist making the account details unfetchable — is closed either way. Noted
+   because a future reader comparing against upstream `b1a87c958` will find a different hostname.
+
+2. **`games.ts` and `library.ts` needed no changes**, despite being listed in `files:` above, and
+   `library.test.ts` needed no rework (it is green unmodified, 5/5). The 2026-08-15 estimate that
+   they would was pessimistic: narrowing `UserData` to `{userId, username, galaxyUserId}` broke no
+   consumer, which repo-wide `tsc --noEmit` (exit 0) confirms.
+
+Also unlike upstream, `email` is not merely "no longer deleted" — the narrowed `UserData` has no
+such field, and the headline test asserts the persisted record carries no `email` property.
