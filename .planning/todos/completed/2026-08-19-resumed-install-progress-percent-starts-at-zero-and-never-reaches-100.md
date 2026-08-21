@@ -3,7 +3,9 @@ created: 2026-08-19T11:20:00.000Z
 title: "A resumed Steam depot install reports progress from 0% and can never reach 100%"
 area: steam/depot/progress
 needs: code-fix
-status: OPEN
+status: CLOSED
+closed: 2026-08-21
+closed_by: "Quick task 260821-nyh"
 severity: major
 surfaced_by: "Phase 23 plan 23-10 Task 2 (Gate 3 interrupt-resume), observed live by the operator 2026-08-19"
 ---
@@ -93,3 +95,63 @@ wrong property.
 Cosmetic/reporting only — it does not affect what lands on disk, the reconcile skip itself, mode
 application, or the `StateFlags` decision. Gate 3's contract is the resume's correctness, not its
 progress reporting, so this is filed rather than fixed inside 23-10.
+
+---
+
+## Resolution — 2026-08-21, quick task `260821-nyh`
+
+CLOSED. Fixed via **option 1** from the fix sketch above (seed the numerator); option 2
+(shrinking `totalBytes`) was rejected for the reason stated there.
+
+**Landed:**
+
+- `src/backend/storeManagers/steam/depot/reconcile.ts` — `ReconcileResult` gained
+  `skippedBytes`, accumulated at the `if (verified) continue` branch using the identical
+  `Number(file.size)` coercion `plan.totalBytes` is built with, so
+  `skippedBytes <= plan.totalBytes` holds by construction. Counting BYTES rather than
+  files is load-bearing: this todo's own measurement (82.6% of files, ~24% of bytes) is
+  exactly the confusion a file-count implementation would reproduce, so the new
+  `reconcile.test.ts` units assert an exact partial SUM, never `> 0`.
+- `src/backend/storeManagers/steam/depot.ts` — `downloadDepotFiles` seeds `doneBytes`
+  with `reconciledSkippedBytes`. The reconcile-failure `catch` fallback leaves it 0,
+  which is correct because that path rebuilds the full job list and re-downloads
+  everything.
+
+**Two hazards this todo did not name, found while planning, and handled:**
+
+1. `avgBytesPerSec = doneBytes / elapsedSec` would have consumed the seed and reported a
+   fabricated multi-GB/s rate with a near-zero ETA on a resume's first emit. A new
+   `runStartBytes` baseline keeps that numerator run-scoped.
+2. `lastEmitBytes` had to be seeded too, or the first emit window's `lastDiskSpeed` delta
+   reads as the entire seed.
+
+`remaining` and the `bytes:` field become *more* correct under the seed (both now mean
+"plan bytes"), and the WR-03 clamp stays — it guards written-byte overshoot, a different
+case from the one fixed here.
+
+**Anti-vacuity requirement discharged as specified.** The regression test was committed
+ALONE in `38e8fce01`, with the unfixed expression still in place, and observed red:
+
+```
+● downloadDepotFiles › a resumed install whose reconciler skipped a NON-EMPTY set of
+  files still reports a terminal percent of 100
+
+Expected: 100
+Received: 1
+```
+
+Its own anti-vacuity assertion (`fetchChunk` called exactly once, never with the skipped
+file's chunk sha) PASSED in that same run, proving the failure landed on the percent
+assertion and not on a broken fixture — had the fixture's size/sha not matched the bytes
+on disk, reconcile would not have skipped anything and the test would have degenerated
+into the fresh-install case this todo warned cannot distinguish the two implementations.
+Fix landed in `f6e87298e` and the same command went green.
+
+**Verification:** 174/174 across `depot.test.ts`, `reconcile.test.ts` and
+`depot.finalize.test.ts` (the last guards that the StateFlags=4 path is untouched — this
+change is reporting-only). `pnpm codecheck` (`tsc --noEmit`) clean, which is not optional
+here because ts-jest in this repo is transpile-only.
+
+**Not verified live.** The fix is proven by a byte-accurate unit test, not by an observed
+resumed install on hardware. The next real interrupt-resume run should confirm the
+terminal reading is 100% rather than short of it.
