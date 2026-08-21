@@ -547,13 +547,20 @@ export const initGamepad = () => {
   }
 
   function removegamepad(gamepad: Gamepad) {
-    const removedIndex = controllers.findIndex((idx) => idx === gamepad.index)
+    // `controllers` holds gamepad.index VALUES in connect order, not array
+    // positions -- an earlier version compared array POSITION
+    // (controllers.findIndex(...)) against currentController (a
+    // gamepad.index), which only coincided by accident. Compare
+    // gamepad.index directly instead, and require the pad to have been
+    // tracked at all so an ignored device (the Logitech G29 that
+    // connecthandler never adds) can never reach the reset.
+    const wasTracked = controllers.includes(gamepad.index)
 
     // remove disconnected controller
     controllers = controllers.filter((idx) => idx !== gamepad.index)
 
     // if controller was the current controller, reset and emit
-    if (removedIndex === currentController) {
+    if (wasTracked && gamepad.index === currentController) {
       emitControllerEvent(-1)
     }
   }
