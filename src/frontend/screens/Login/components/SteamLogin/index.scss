@@ -112,6 +112,41 @@
   background-color: var(--accent);
 }
 
+// Quick task 260822-elw: gated "create a Steam account" affordance (D-02).
+// Styled from the stylesheet rather than an inline style object -- an inline
+// style here would add a third `lineHeight: 1.4` occurrence in index.tsx and
+// disturb steamLoginWindowChrome.test.ts's `lineHeight: 1.4 === 2` count pin.
+.steamCreateAccount {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3xs);
+  font-size: var(--text-sm);
+  font-family: var(--primary-font-family);
+  color: var(--text-secondary);
+}
+
+.steamCreateAccountLink {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-size: inherit;
+  font-family: inherit;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.steamCreateAccountLink:hover {
+  color: var(--text-default);
+}
+
+.steamCreateAccountLink:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .sid-input {
   color: var(--text-secondary);
   font-size: var(--text-md);

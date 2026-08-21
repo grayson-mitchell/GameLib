@@ -1,8 +1,8 @@
 [
   {
     "file": "src/frontend/screens/Login/components/SteamLogin/index.tsx",
-    "expectedCount": 26,
-    "reason": "D-17 -- deferred; Phase 34.4.2 is mid-/gsd-debug on this exact Login screen (F-34.4.2-19 undiagnosed, live gate 0/5), and loginInFlightUiReachability.test.tsx pins this screen's markup with 5 mutation-proven gates, so editing its literals means editing pins under active diagnosis."
+    "expectedCount": 29,
+    "reason": "D-17 -- deferred; the file's 26 pre-existing literals plus 3 added by quick task 260822-elw (create-a-Steam-account link) remain deferred D-17 debt. The file is no longer deletion-pending: Phase 36 kept SteamLogin and re-homed it as a co-mounted overlay on /login."
   },
   {
     "file": "src/frontend/screens/WebView/useTauriOAuthLogin.ts",

@@ -13,7 +13,7 @@ import ContextProvider from 'frontend/state/ContextProvider'
 import { Dialog, DialogHeader } from 'frontend/components/UI/Dialog'
 import './index.scss'
 
-type Step =
+export type Step =
   | 'checking'
   | 'not-installed'
   | 'tab'
@@ -21,6 +21,46 @@ type Step =
   | 'qr-confirmed'
   | 'credentials-1'
   | 'credentials-2'
+
+// D-01 (quick task 260822-elw): no account-creation offer once authentication
+// is actually in flight -- 'qr-confirmed' (QR scanned, completing sign-in) and
+// 'credentials-2' (Steam Guard entry) are excluded so the link never appears
+// at the moment the user is closest to success. 'checking' is a bare spinner
+// and 'not-installed' already owns its own two-button row with a different
+// job, so neither gets the link either.
+const CREATE_ACCOUNT_STEPS: readonly Step[] = [
+  'tab',
+  'qr-active',
+  'credentials-1'
+]
+
+export function showsCreateAccountLink(step: Step): boolean {
+  return CREATE_ACCOUNT_STEPS.includes(step)
+}
+
+export function renderCreateAccountLink(step: Step) {
+  if (!showsCreateAccountLink(step)) {
+    return null
+  }
+
+  return (
+    <div className="steamCreateAccount">
+      <span className="steamCreateAccountPrompt">
+        Don&apos;t have a Steam account?
+      </span>
+      <button
+        type="button"
+        className="steamCreateAccountLink"
+        aria-label="Create a Steam account at steampowered.com"
+        onClick={() =>
+          window.api.openExternalUrl('https://store.steampowered.com/join/')
+        }
+      >
+        Create one
+      </button>
+    </div>
+  )
+}
 
 interface Props {
   dismiss: () => void
@@ -667,6 +707,8 @@ export default function SteamLogin({ dismiss }: Props) {
         <TabPanel value={activeTab} index="credentials">
           {renderCredentialsContent()}
         </TabPanel>
+
+        {renderCreateAccountLink(step)}
       </>
     )
   }
