@@ -3,6 +3,23 @@
   flex-direction: column;
   gap: var(--space-md);
   width: min(480px, 95%);
+  // Quick task 260820-u29 (followup 1): centre this fixed-width body inside
+  // MuiDialog's Paper. Without `fullWidth`, Paper shrink-wraps to content --
+  // .steamLoginBody is itself the widest child driving that shrink-to-fit
+  // width, so under a bare layout there should be no slack to be off-centre
+  // in. The most likely source of the slack actually observed (QR code
+  // reported "too far to the left") is Paper's own scroll="paper" behaviour:
+  // Paper gets `overflow-y: auto` directly (not DialogContent), and when its
+  // content is tall enough to need a vertical scrollbar, that scrollbar
+  // occupies width on one side of the content box, shifting a flush-left
+  // block like this one off-centre relative to Paper's outer edge. This
+  // repo's session had no live browser to confirm that scrollbar is actually
+  // present at the width/height this renders at -- rather than hard-code an
+  // offset that assumes it is, `margin-inline: auto` self-corrects to
+  // whatever free space actually exists on either side, regardless of its
+  // exact source, and does nothing (is a no-op) if there turns out to be no
+  // slack at all.
+  margin-inline: auto;
 }
 
 .steamNotFound {

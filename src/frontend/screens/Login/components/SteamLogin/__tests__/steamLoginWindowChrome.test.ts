@@ -318,4 +318,16 @@ describe('quick-260820-u29: SteamLogin tabs size to fit their labels, and the QR
     // so any reliance on it silently no-ops rather than fixing readability.
     expect((source.match(/--text-primary/g) ?? []).length).toBe(0)
   })
+
+  it('SOURCE GATE (PRESENCE) -- the fixed-width .steamLoginBody centres itself instead of relying on Paper to have zero slack', () => {
+    const source = read(STEAM_LOGIN_SCSS)
+
+    // Breaks if: margin-inline: auto is removed from .steamLoginBody -- this
+    // is what self-corrects the QR-code-off-centre report ("too far to the
+    // left") regardless of exactly what produces the slack space (leading
+    // hypothesis: Paper's own scroll="paper" overflow-y:auto scrollbar,
+    // unconfirmed by live measurement this session) -- a hardcoded offset
+    // would have assumed a specific cause and specific px amount instead.
+    expect(source).toMatch(/\.steamLoginBody\s*\{[^}]*margin-inline:\s*auto/)
+  })
 })
