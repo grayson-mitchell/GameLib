@@ -10,3 +10,14 @@ sign/
 signatures/version1/cla.json
 playwright-report
 pnpm-lock.yaml
+
+# Build output — generated, never hand-edited. `prettier --check .` was walking
+# src-tauri/target/.fingerprint/*.json (2791 files), which is what made the
+# pre-push hook take 11.4 minutes and report thousands of irrelevant diffs.
+src-tauri/target
+src-tauri/gen
+
+# Tooling/agent state and planning artifacts, not shipped source.
+.planning
+.claude
+graphify-out
