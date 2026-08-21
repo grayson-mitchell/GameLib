@@ -89,3 +89,44 @@ The install failed separately, ~15s later, on `HTTP error 503` fetching the mani
 102000 across all three plan-build attempts — a genuine server-side condition, unrelated to this.
 The installdir rejection happened first and would have mis-placed the game had the download
 succeeded.
+
+## CORRECTION 2026-08-22 — the "Steam cannot adopt it" claim above is WRONG
+
+Measured on this machine while staging the 37-08 gate. **Do not act on the adoption argument in
+"Why it matters" as written.** GameLib writes the *fallback* name into the manifest too, so the
+ACF and the directory AGREE:
+
+| appId | `installdir` in GameLib-written ACF | directory present | size |
+|---|---|---|---|
+| 8930 (Civ V) | `app_8930` | `common/app_8930` | 7.2 GB |
+| 25900 | `app_25900` | `common/app_25900` | 5.4 GB |
+| 257350 | `app_257350` | `common/app_257350` | 3.6 GB |
+| 228280 | **no ACF at all** | `common/app_228280` | 47 MB |
+
+3 of 3 fallback installs that have a manifest are self-consistent. Steam locates a game by the
+`installdir` recorded in the ACF, and that value points at the directory that actually exists —
+so the specific mechanism this todo blamed ("Steam expects `Sid Meier's Civilization V`") does not
+occur. Whether Steam then adopts them is UNVERIFIED and must not be assumed either way; see
+`steam-adopts-acf-only-at-startup`.
+
+### The real harm, as measured
+
+1. **A 4 KB empty stub is left at the correct name.** `common/Sid Meier's Civilization V` exists
+   and is 4.0K, while the 7.2 GB payload sits in `app_8930`. Something creates the correctly-named
+   directory before the rejection redirects the write. That stub is what a later Steam-side install
+   would land in — the duplication risk is real, but by this route, not the one described above.
+2. **Non-portable layout** — stands as originally written.
+3. **17 GB of `app_*` directories on this machine** (`app_228280` 47M, `app_257350` 3.6G,
+   `app_25900` 5.4G, `app_259130` 378M, `app_8930` 7.2G). `app_228280` has **no manifest at all**,
+   so it is a true orphan. This is direct evidence for **37-07** (filesystem orphan scan) — feed it
+   in as a real specimen set rather than a hypothetical.
+4. **Civ V DID install.** The "Not the cause of the Civ V install failure" section below records a
+   503 on depot 102000 across three attempts; a later attempt evidently succeeded, since
+   `app_8930` holds 7.2 GB. That section is stale about the outcome, not about the 503.
+
+### The fallback is not apostrophe-only
+
+`259130` (Wasteland 1) has installdir `Wasteland` — which PASSES `SAFE_INSTALLDIR` — yet
+`common/app_259130` exists with a full 378 MB copy alongside the correct `common/Wasteland`. So the
+fallback also fires when the installdir is **absent/unresolved**, not only when it is "hostile".
+Any fix must cover that path too, and must not silently redirect on a missing PICS value.
