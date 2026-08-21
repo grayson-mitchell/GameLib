@@ -696,6 +696,21 @@ export async function provisionBottle(opts?: {
     }
   }
 
+  // (1c) CrossOver-only, mirroring provisionBridgeBottle's D-08 guard: reject
+  // a non-CrossOver engine before any side effect — do not silently persist a
+  // broken GPTK/toolkit bottle (steam-bottle-gptk-engine-produces-broken-bottle.md).
+  // Placed BEFORE the step (2) store write below, same as the bridge sibling.
+  if (opts?.wineVersion && opts.wineVersion.type !== 'crossover') {
+    logError(
+      `provisionBottle: rejected non-CrossOver engine "${opts.wineVersion.type}" for bottle "${bottleName}" (steam-bottle-gptk-engine-produces-broken-bottle.md)`,
+      LogPrefix.Steam
+    )
+    return {
+      status: 'error',
+      error: `The Steam bottle requires a CrossOver engine, got "${opts.wineVersion.type}"`
+    }
+  }
+
   // (2) Persist the chosen wine/bottle identity before composing settings.
   steamBottleConfigStore.set('bottleName', bottleName)
   steamBottleConfigStore.set('wineCrossoverBottle', bottleName)
