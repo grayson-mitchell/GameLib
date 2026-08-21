@@ -167,3 +167,32 @@ original defect got in. Worth closing as a small standalone task; no longer urge
 works as a Steam runner) remains fully out of scope and untouched.
 
 Verified against source 2026-08-16 during quick task `260816-i8a`.
+
+## Update 2026-08-21 — CLOSED by quick task 260821-lge
+
+**The last open item is closed.** `provisionBottle` (`bottle.ts`) now carries a new
+step (1c) guard, placed immediately after the (1b) CR-01 shared-bottle guard and
+immediately before step (2)'s `steamBottleConfigStore.set('bottleName', ...)` write.
+It mirrors `provisionBridgeBottle`'s D-08 guard verbatim: any `opts.wineVersion` whose
+`type !== 'crossover'` is rejected with `{status: 'error', error: '...CrossOver...'}`
+before any store write, `cxbottle` spawn, `rmSync`, or `downloadFile` call. A
+CrossOver engine and an absent `wineVersion` both proceed exactly as before.
+
+**What landed:**
+- `bottle.ts` — the step (1c) guard clause (`fix(steam): add CrossOver-only guard to
+  provisionBottle`).
+- `__tests__/bottle.test.ts` — two new jest tests mirroring the bridge bottle's D-08
+  pair: a rejection test (toolkit/GPTK engine → error, no store/spawn/rmSync/download
+  calls) and a non-over-fire discriminator (CrossOver engine → still persisted via
+  `mockedSet`). The rejection test was demonstrated RED by temporarily commenting out
+  the guard's `return` in place, observing the test fail (`mockedSet` received 3 calls
+  instead of 0), then restoring the guard. Full suite: 91/91 green.
+- `steamBottleDefaults.ts` — the stale "KNOWN REMAINING GAP" doc comment above
+  `resolveSubmittedBottleEngine` is corrected to record the gap as closed
+  (comment-only change; no executable code touched).
+
+**Option (b)** (the prefix-based GPTK/`toolkit` Steam provisioning path) remains
+fully out of scope and untouched — closing this todo does NOT mean GPTK is now a
+supported Steam engine. CrossOver stays the only engine that can create or run a
+Steam bottle; a GPTK/plain-Wine `wineVersion` is now explicitly rejected rather than
+silently self-healed.

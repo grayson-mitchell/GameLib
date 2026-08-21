@@ -154,12 +154,17 @@ export function resolveSteamBottleSeedEngine(
  * SUBMIT keeps the wizard's displayed state honest with what it sends
  * without reopening either.
  *
- * KNOWN REMAINING GAP, recorded rather than silently left: `provisionBottle`
- * step 6 re-reads `getSteamBottleSettings().wineVersion`, which falls back
- * to the global engine when the store is empty — so a GPTK host can still
- * reach `cxbottle` from the BACKEND side. Closing that needs the
- * `provisionBottle` mirror of the `provisionBridgeBottle` guard, in
- * `bottle.ts`, which this pass could not edit.
+ * CLOSED 2026-08-21 (quick task 260821-lge): `provisionBottle` now carries
+ * its own step (1c) guard in `bottle.ts`, mirroring `provisionBridgeBottle`'s
+ * D-08 guard verbatim — any `opts.wineVersion.type !== 'crossover'` is
+ * rejected with `{status:'error'}` BEFORE step (2)'s
+ * `steamBottleConfigStore.set(...)` write, so a non-CrossOver engine can no
+ * longer reach `cxbottle` from the BACKEND side either. This closes the gap
+ * this comment used to record: the frontend SUBMIT filter above and the
+ * backend provisioner now agree on the same CrossOver-only rule. Step (6)'s
+ * re-read of `getSteamBottleSettings().wineVersion` is untouched — it is a
+ * separate, already self-healing path (see `steam-bottle-gptk-engine-produces-broken-bottle.md`,
+ * closed).
  */
 export function resolveSubmittedBottleEngine(
   armedWineVersion: WineInstallation | undefined
