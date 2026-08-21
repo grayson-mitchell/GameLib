@@ -2575,12 +2575,19 @@ export async function pollInstallOnce(
 
 /**
  * Starts an ACF polling loop for appId. Idempotent — calling twice has no
- * effect. The loop calls pollInstallOnce every intervalMs (default 3 000 ms).
+ * effect, EXCEPT that a call carrying `isNativeHandoff: true` against an
+ * ALREADY-registered poll upgrades that poll's isNativeHandoff (and adopts
+ * skippedDepots when the existing entry has none) instead of no-opping — see
+ * 260822-dkf below. The loop calls pollInstallOnce every intervalMs (default
+ * 3 000 ms).
  *
  * Stops automatically when:
  *   - state becomes 'installed' (via pollInstallOnce → stopInstallPolling)
- *   - state has been 'absent' for GRACE_TICKS without ever seeing 'downloading'
- *     (user likely cancelled Steam's install dialog — T-03-06 mitigation)
+ *   - state has been 'absent' for GRACE_TICKS WITHOUT ever seeing
+ *     'downloading' AND no GameLib-owned native depot download is in flight
+ *     for this appId (user likely cancelled Steam's install dialog —
+ *     T-03-06 mitigation; the in-flight exception is 260822-dkf, see the
+ *     grace branch below)
  *   - MAX_TICKS elapsed (D-01 focus backstop takes over — T-03-06 mitigation)
  *
  * The second parameter accepts EITHER a plain intervalMs number (existing
@@ -2597,7 +2604,41 @@ export function startInstallPolling(
   appId: string,
   intervalMsOrOptions: number | PollOptions = 3000
 ): void {
-  if (activePolls.has(appId)) return // idempotent
+  // 260822-dkf (D-02): before the grace-window fix below, the finalize-time
+  // handoff call at games.ts:1720/1726 only ever reached this function AFTER
+  // the grace window had already killed resumeInterruptedSteamInstall's bare
+  // download poll — so `activePolls` was always empty by then and this
+  // idempotent guard never mattered to it. Fixing the grace window lets that
+  // download poll survive, which means the SAME handoff call now arrives
+  // while an entry already exists. Without this upgrade branch it would
+  // silently no-op: isNativeHandoff/skippedDepots would never reach the
+  // entry, and library.ts:2351's 1026 handoff interpretation,
+  // library.ts:2547's "Restart Steam" notify, and the skippedDepots
+  // completion notice would all stop firing. A bare call (no
+  // isNativeHandoff:true) against an existing entry stays a pure no-op, as
+  // before — this never downgrades an already-true isNativeHandoff back to
+  // false.
+  const existingEntry = activePolls.get(appId)
+  if (existingEntry) {
+    if (
+      typeof intervalMsOrOptions !== 'number' &&
+      intervalMsOrOptions.isNativeHandoff === true
+    ) {
+      existingEntry.isNativeHandoff = true
+      // Never discard a non-empty skippedDepots list already on the entry.
+      if (
+        existingEntry.skippedDepots.length === 0 &&
+        intervalMsOrOptions.skippedDepots?.length
+      ) {
+        existingEntry.skippedDepots = intervalMsOrOptions.skippedDepots
+      }
+      logInfo(
+        `Steam: upgrading in-flight install poll for appId ${appId} to isNativeHandoff (260822-dkf D-02)`,
+        LogPrefix.Steam
+      )
+    }
+    return // idempotent — no second interval either way
+  }
 
   const {
     intervalMs,
@@ -2676,13 +2717,31 @@ export function startInstallPolling(
     // pollInstallOnce may have stopped the poll (state became 'installed')
     if (!activePolls.has(appId)) return
 
-    // Grace window: if no manifest ever appeared after GRACE_TICKS, the user
-    // probably cancelled Steam's install dialog — stop to avoid endless polling.
-    // Emit a terminal 'done' so the DM queue badge clears (removeFromQueue
-    // suppresses 'done' for steam and relies on this poller — symmetric to the
-    // uninstall grace path). Without this, a cancelled install leaves a stuck
-    // 'queued'/'installing' badge until restart (CR-01).
-    if (!entry.seenDownloading && entry.ticks >= GRACE_TICKS) {
+    // Grace window (260822-dkf): "no manifest ever appeared" only means "the
+    // user cancelled Steam's install dialog" when STEAM owns the download.
+    // On the native depot path GameLib owns the download and deliberately
+    // writes the ACF only at finalize (D-08), so `seenDownloading` can never
+    // become true mid-download — an absent manifest carries NO cancellation
+    // signal at all while GameLib's own depot run is still streaming chunks.
+    // isNativeInstallInFlight(appId) is read PER-TICK, never captured at
+    // poll-start: on the resumeInterruptedSteamInstall path the flag is
+    // still false when this poll is created and only becomes true a moment
+    // later once the native depot run registers itself. Do NOT gate this on
+    // isNativeHandoff — three of the four startInstallPolling call sites
+    // leave it false, and two of those are exactly the paths whose cancel
+    // detection this grace window exists to provide (D-01).
+    //
+    // No `entry.ticks` reset is needed when the download completes:
+    // pollInstallOnce above runs before this branch on every tick and either
+    // sets seenDownloading or stops the poll once GameLib's finalize has
+    // written the manifest — so the only way this branch fires after a
+    // completed native run is a run that produced no manifest at all, which
+    // is a correct stop.
+    if (
+      !entry.seenDownloading &&
+      entry.ticks >= GRACE_TICKS &&
+      !isNativeInstallInFlight(appId)
+    ) {
       logWarning(
         `Steam: install polling for appId ${appId} stopped after grace window (${GRACE_TICKS} ticks) — no manifest detected; user may have cancelled`,
         LogPrefix.Steam
@@ -2693,6 +2752,17 @@ export function startInstallPolling(
         status: 'done'
       })
       stopInstallPolling(appId)
+    } else if (
+      !entry.seenDownloading &&
+      entry.ticks === GRACE_TICKS &&
+      isNativeInstallInFlight(appId)
+    ) {
+      // Diagnosable suppression, logged ONCE at the exact tick the grace
+      // window would otherwise have fired, not on every subsequent tick.
+      logInfo(
+        `Steam: install polling for appId ${appId} — grace window suppressed, native depot download still in flight (260822-dkf)`,
+        LogPrefix.Steam
+      )
     }
   }, intervalMs)
 
