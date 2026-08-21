@@ -18,11 +18,9 @@ import { NileLoginData } from 'common/types/nile'
 import { isTauri } from '../../../preload/tauriTransport'
 import WebviewUnavailablePanel from './components/WebviewUnavailablePanel'
 import TauriLoginPanel from './components/TauriLoginPanel'
+import HumbleLoginSurface from './components/HumbleLoginSurface'
 import { useTauriOAuthLogin } from './useTauriOAuthLogin'
-import type {
-  OAuthLoginCompletionPayload,
-  TauriOAuthLoginState
-} from './useTauriOAuthLogin'
+import type { OAuthLoginCompletionPayload } from './useTauriOAuthLogin'
 import type { OAuthRunner } from 'common/types/oauthLogin'
 import {
   isLoginPathname,
@@ -57,7 +55,7 @@ export default function WebView() {
   const { i18n } = useTranslation()
   const { pathname, search } = useLocation()
   const { t } = useTranslation()
-  const { epic, gog, amazon, zoom, humble, connectivity, completeOAuthLogin } =
+  const { epic, gog, amazon, zoom, connectivity, completeOAuthLogin } =
     useContext(ContextProvider)
   const [loading, setLoading] = useState<{
     refresh: boolean
@@ -287,119 +285,22 @@ export default function WebView() {
     void fetchWebviewPreloadPath()
   }, [])
 
-  // D-05/D-07/UA note: the /loginweb/humble webview needs a standard-Chrome
-  // user agent (not the fake 'Chrome/200.0' applied to other login runners
-  // below) so Google SSO offers its normal password / "Try another way"
-  // flows. Fetched once per mount of the humble login route.
-  const [humbleLoginUserAgent, setHumbleLoginUserAgent] = useState('')
-  useEffect(() => {
-    if (runner !== 'humble') return
-
-    const fetchHumbleLoginUserAgent = async () => {
-      const userAgent = await window.api.humbleGetLoginUserAgent()
-      setHumbleLoginUserAgent(userAgent)
-    }
-
-    void fetchHumbleLoginUserAgent()
-  }, [runner])
-
-  // F-34.4.2-19 fix: `result.status === 'error'`/`'waiting'` used to be silently swallowed
-  // here — the promise settled, but nothing told `TauriLoginPanel` (still statically rendering
-  // "a sign-in window has opened" for `runner === 'humble'` regardless of any watch outcome),
-  // so the user was left staring at a lying in-progress message forever. This state is what
-  // lets the two of them agree: 'error'/'timeout' route through the SAME
-  // `TauriOAuthLoginState` shape the four OAuth runners already use, so `TauriLoginPanel`'s
-  // existing generic error/timeout branches (heading, body, Retry button) render for humble
-  // too, instead of a humble-specific copy/path having to be invented from scratch.
-  const [humbleLoginState, setHumbleLoginState] =
-    useState<TauriOAuthLoginState>({ phase: 'idle' })
-
-  // Drives the main-process login watch (D-05/D-06/D-16) from the humble
-  // route: starts it exactly once on mount (reconnect() instead of
-  // startLogin() when arriving with an expired session), applies the
-  // resulting login state on acceptance, and issues the D-06 silent-cancel
-  // signal on unmount / navigating away.
-  useEffect(() => {
-    if (runner !== 'humble') return
-
-    let mounted = true
-
-    async function runHumbleLoginWatch() {
-      const result = humble.expired
-        ? await window.api.humbleReconnect()
-        : await window.api.humbleStartLogin()
-      // A late resolution after the route unmounted must not navigate —
-      // the user already left the login surface (D-06 silent cancel).
-      if (!mounted) return
-      if (result.status === 'done') {
-        await humble.login(result)
-        navigate('/login')
-      } else if (result.status === 'cancelled') {
-        // Quick task 260808-gl6: the user closed the sign-in window. That is how you back
-        // out of signing in, not a failure — so this returns to Manage Accounts and leaves
-        // `humbleLoginState` at 'idle', deliberately rendering NO panel. Ordered before the
-        // 'error' branch below, which keeps its failure surface for the outcomes that
-        // genuinely are failures (the UNDECIDABLE / UNSUPPORTED_OR_ERROR cookie-read
-        // verdicts in `humble/user.ts`'s watch).
-        window.api.logInfo(
-          '[WebView] runner=humble phase=cancelled (sign-in window closed by the user)'
-        )
-        navigate('/login')
-      } else if (result.status === 'error') {
-        // F-34.4.2-19: the backend watch gave up (e.g. the login window became
-        // unreachable — see the humble-isloggedin-never-set debug session). Surface it
-        // rather than leaving the static "signing in" copy on screen forever.
-        window.api.logInfo(
-          '[WebView] runner=humble phase=error (login watch settled with status=error)'
-        )
-        setHumbleLoginState({
-          phase: 'error',
-          message: t(
-            'webview.login.humble.error.window_unreachable',
-            'the Humble sign-in window closed or could not be reached'
-          )
-        })
-      } else if (result.status === 'waiting') {
-        // Only reachable HERE (i.e. while still mounted) via WR-03's ten-minute watch
-        // deadline — `stopLogin()`'s own `{ status: 'waiting' }` settle always races an
-        // unmount that has already set `mounted = false` first, so that path never reaches
-        // this branch. Treated exactly like the OAuth runners' own 'timeout' phase.
-        window.api.logInfo(
-          '[WebView] runner=humble phase=timeout (login watch deadline elapsed)'
-        )
-        setHumbleLoginState({ phase: 'timeout' })
-      }
-    }
-
-    void runHumbleLoginWatch()
-
-    return () => {
-      mounted = false
-      window.api.humbleStopLogin()
-    }
-    // Only ever run once per mount of the humble login route — re-running on
-    // every `humble` context update would restart the login watch.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runner])
-
   useLayoutEffect(() => {
     const webview = webviewRef.current
     if (webview) {
       const loadstop = async () => {
         setLoading({ ...loading, refresh: false })
-        // The humble login surface keeps its fetched standard-Chrome UA
-        // (applied via the webview's `useragent` attribute) — the generic
-        // fake 'Chrome/200.0' UA used by the other login runners is itself
-        // an embedded-browser signal that would defeat the SSO fix (UA
-        // note).
-        if (runner !== 'humble') {
-          const userAgent =
-            startUrl === epicLoginUrl
-              ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) EpicGamesLauncher'
-              : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/200.0'
-          if (webview.getUserAgent() != userAgent) {
-            webview.setUserAgent(userAgent)
-          }
+        // Humble's login surface (its own fetched standard-Chrome UA, applied
+        // via the webview's `useragent` attribute) now lives in
+        // HumbleLoginSurface.tsx — this component no longer renders a humble
+        // route at all, so the generic fake 'Chrome/200.0' UA below applies
+        // unconditionally to the runners that remain here.
+        const userAgent =
+          startUrl === epicLoginUrl
+            ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) EpicGamesLauncher'
+            : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/200.0'
+        if (webview.getUserAgent() != userAgent) {
+          webview.setUserAgent(userAgent)
         }
         // Ignore the login handling if not on login page
         if (!runner) {
@@ -511,33 +412,16 @@ export default function WebView() {
         }
       }
 
-      // D-17: relays the webview's navigation events to the main-process
-      // login watch so a rejected candidate cookie is force-revalidated
-      // (bypassing the poll-path throttle) — e.g. the SSO redirect landing
-      // back on humblebundle.com.
-      const onHumbleLoginNavigate = () => {
-        if (runner === 'humble') {
-          window.api.humbleLoginNavigated()
-        }
-      }
-
       // this one is needed for gog/amazon
       webview.addEventListener('did-navigate', onNavigate)
       // this one is needed for epic
       webview.addEventListener('did-navigate-in-page', onNavigate)
       webview.addEventListener('did-navigate', onLoginNavigate)
-      webview.addEventListener('did-navigate', onHumbleLoginNavigate)
-      webview.addEventListener('did-navigate-in-page', onHumbleLoginNavigate)
 
       return () => {
         webview.removeEventListener('did-navigate', onNavigate)
         webview.removeEventListener('did-navigate-in-page', onNavigate)
         webview.removeEventListener('did-navigate', onLoginNavigate)
-        webview.removeEventListener('did-navigate', onHumbleLoginNavigate)
-        webview.removeEventListener(
-          'did-navigate-in-page',
-          onHumbleLoginNavigate
-        )
       }
     }
 
@@ -611,6 +495,22 @@ export default function WebView() {
     }
   }, [webviewRef.current])
 
+  // Quick task 260821-iri: Humble's login surface (state, watch, webview,
+  // navigation relay) now lives entirely in HumbleLoginSurface.tsx, hosted
+  // by the Login screen's own co-mounted `HumbleLogin` overlay. This route
+  // stays alive, unchanged in URL, for `HumbleExpiryToast` and
+  // `Humble/Keys`, which still navigate here directly. Placed AFTER every
+  // hook above (rules of hooks) and BEFORE the `!webviewPreloadPath` branch
+  // below, whose own Tauri/humble special-casing this early return replaces.
+  if (runner === 'humble') {
+    return (
+      <HumbleLoginSurface
+        onDone={() => navigate('/login')}
+        onCancelled={() => navigate('/login')}
+      />
+    )
+  }
+
   if (!webviewPreloadPath) {
     if (isTauri() && isLoginPathname(pathname)) {
       // D-06 (REQ-34.4.1-07/-08): Phase 34.4.1 shipped a real Rust
@@ -622,7 +522,7 @@ export default function WebView() {
       return (
         <TauriLoginPanel
           runner={runner}
-          state={runner === 'humble' ? humbleLoginState : oauthLoginState}
+          state={oauthLoginState}
         />
       )
     }
@@ -646,13 +546,6 @@ export default function WebView() {
     return <></>
   }
 
-  // The humble login surface must not render until its standard-Chrome UA
-  // has been fetched — applying it late (after the webview's first request)
-  // would defeat the SSO fix (UA note).
-  if (runner === 'humble' && !humbleLoginUserAgent) {
-    return <></>
-  }
-
   return (
     <div className="WebView">
       {webviewRef.current && (
@@ -668,16 +561,11 @@ export default function WebView() {
         ref={webviewRef}
         className="WebView__webview"
         partition={`persist:${
-          runner === 'humble'
-            ? 'humble'
-            : startUrl === epicLoginUrl
-              ? 'epicstore'
-              : store
+          startUrl === epicLoginUrl ? 'epicstore' : store
         }`}
         src={startUrl}
         allowpopups={trueAsStr}
         preload={webviewPreloadPath}
-        useragent={runner === 'humble' ? humbleLoginUserAgent : undefined}
       />
       {showLoginWarningFor && (
         <LoginWarning

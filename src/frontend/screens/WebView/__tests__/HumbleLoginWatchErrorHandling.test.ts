@@ -1,6 +1,7 @@
 /**
  * Source-text structural gate for the humble login watch's error/timeout handling
- * (`WebView/index.tsx`'s `runHumbleLoginWatch`).
+ * (`WebView/components/HumbleLoginSurface.tsx`'s `runHumbleLoginWatch`, extracted
+ * verbatim from `WebView/index.tsx` by quick task 260821-iri Task 1).
  *
  * THE BUG THIS PINS (F-34.4.2-19, `.planning/debug/humble-isloggedin-never-set.md`)
  *
@@ -34,7 +35,7 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
-const indexPath = join(__dirname, '..', 'index.tsx')
+const indexPath = join(__dirname, '..', 'components', 'HumbleLoginSurface.tsx')
 
 /** Extracts the balanced-brace block whose opening `{` follows `marker`. */
 function extractBlock(source: string, marker: string): string {
@@ -56,10 +57,10 @@ describe('WebView humble login watch error/timeout handling (F-34.4.2-19)', () =
   const source = stripSourceComments(readFileSync(indexPath, 'utf-8'))
   const watchFn = extractBlock(source, 'async function runHumbleLoginWatch()')
 
-  it('still handles the done arm unchanged: logs in and navigates away', () => {
+  it('still handles the done arm unchanged: logs in and calls onDone()', () => {
     expect(watchFn).toContain("result.status === 'done'")
     expect(watchFn).toContain('await humble.login(result)')
-    expect(watchFn).toContain("navigate('/login')")
+    expect(watchFn).toContain('onDone()')
   })
 
   // Quick task 260808-gl6. The F-34.4.2-19 fix above made the watch surface every
@@ -68,14 +69,14 @@ describe('WebView humble login watch error/timeout handling (F-34.4.2-19)', () =
   // "Something went wrong while signing in: the Humble sign-in window closed or could not
   // be reached". The backend now settles { status: 'cancelled' } for that case (see
   // humble/user.ts) and this arm must return to Manage Accounts showing nothing at all.
-  it('handles status === "cancelled" by navigating back to /login, never by setting an error state', () => {
+  it('handles status === "cancelled" by calling onCancelled(), never by setting an error state', () => {
     expect(watchFn).toContain("result.status === 'cancelled'")
-    // The branch body, up to the next `else if`, both navigates and stays panel-free.
+    // The branch body, up to the next `else if`, both calls onCancelled() and stays panel-free.
     const cancelledArm = watchFn.slice(
       watchFn.indexOf("result.status === 'cancelled'")
     )
     const armBody = cancelledArm.slice(0, cancelledArm.indexOf('} else if'))
-    expect(armBody).toContain("navigate('/login')")
+    expect(armBody).toContain('onCancelled()')
     expect(armBody).not.toMatch(/setHumbleLoginState/)
   })
 
@@ -100,9 +101,9 @@ describe('WebView humble login watch error/timeout handling (F-34.4.2-19)', () =
     expect(watchFn).toMatch(/logInfo[\s\S]{0,80}phase=timeout/)
   })
 
-  it('the humble watch state is threaded into TauriLoginPanel only for runner === "humble"', () => {
+  it('the humble watch state is threaded into TauriLoginPanel unconditionally -- this surface is Humble-only', () => {
     expect(source).toMatch(
-      /state=\{runner === 'humble' \? humbleLoginState : oauthLoginState\}/
+      /<TauriLoginPanel runner="humble" state=\{humbleLoginState\} \/>/
     )
   })
 
