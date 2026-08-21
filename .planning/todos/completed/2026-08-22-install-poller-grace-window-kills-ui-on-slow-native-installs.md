@@ -2,7 +2,7 @@
 created: 2026-08-22T09:30:00.000Z
 title: "The install poller's 60s grace window fires on ANY native install slower than 60s, sending a terminal 'done' to the UI while the download is still running"
 area: steam
-status: OPEN
+status: CLOSED
 severity: major
 resolves_phase: 37
 planned_as: 37-11
@@ -94,3 +94,36 @@ lesson about fixes that break a contract through the interaction of two requirem
 `uninstall polling` at `library.ts:3000` shares `GRACE_TICKS` and the same "user may have
 cancelled" inference. Check whether it has the equivalent defect on the native uninstall path
 before changing the shared constant — changing `GRACE_TICKS` alone would affect both.
+
+## CLOSED 2026-08-22 — LIVE GATE PASSED
+
+Fix landed in `175458920` (quick task `260822-dkf`, phase plan 37-11) and confirmed on real
+hardware by a Borderlands 2 (49520) install, 10:14:49 -> 10:23:37:
+
+| gate | result |
+|---|---|
+| install duration | **8m48s (528s)** — 8.8x the 60s grace window |
+| `stopped after grace window` messages | **0** (previously fired at exactly 60s, every time) |
+| progress past 60s | continuous — 77% @420s, 88% @465s, 100% @518s |
+| terminal state | `install polling complete for appId 49520 — badge flipped to installed` |
+
+The poller ended by COMPLETING rather than by timing out, and flipped the badge to `installed`
+rather than emitting the spurious terminal `'done'`.
+
+**The D-02 half is confirmed live too**, which matters because it is the regression a
+grace-window-only fix would have introduced:
+
+```
+(10:23:37) Steam: upgrading in-flight install poll for appId 49520 to isNativeHandoff (260822-dkf D-02)
+```
+
+Without it the finalize-time `startInstallPolling` call would have hit
+`if (activePolls.has(appId)) return` and silently no-opped, leaving `isNativeHandoff` /
+`skippedDepots` unset and three readers dark (`library.ts:2351`, `:2547`, `:2513`). The upgrade
+path fired instead, exactly as planned.
+
+Note the discriminator is `isNativeInstallInFlight(appId)` read PER-TICK, **not** `isNativeHandoff`
+— three of that flag's four call sites leave it `false`, two of which are the genuine handoff paths
+whose cancel detection the grace window exists to provide. Gating on it would have traded away the
+behaviour the window is for. `GRACE_TICKS` and the uninstall poller (`library.ts:3070`) are
+byte-identical; the uninstall path is a genuine handoff shape and was correctly left alone.
