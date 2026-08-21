@@ -5,7 +5,7 @@ reparked: 2026-08-19
 repark_reason: "UNREPRODUCED across 2 instrumented attempts. Not abandoned and not fixed — parked by user decision after the symptom declined to appear with logging in place. Root cause still OPEN."
 trigger: "bug, when you uninstall a game it now disappears from the library.  I have to resart app to see it again."
 created: 2026-07-21
-updated: 2026-08-19
+updated: 2026-08-22
 parked: 2026-07-22
 unparked: 2026-08-19
 parked_reason: "User parked pending planned daemon-based rearchitecture — intends to re-test this symptom once the app no longer carries Electron's renderer/state complexity."
@@ -13,6 +13,46 @@ unpark_reason: "Parking condition MET (app is now Tauri) and the symptom RECURRE
 also_tracked_as: "G-23.2-01 (.planning/phases/23.2-.../23.2-HUMAN-UAT.md) -- ROUTED OUT of that ledger 2026-08-19 (quick task 260819-r4k); the entry there is retained at status `routed` and that phase's open_gaps is now []"
 sole_owner: true  # since 2026-08-19 this file is the ONLY live record of the vanish defect. No phase ledger carries it as open, so /gsd-audit-uat will not resurface it. Do not archive or close this session until the bug recurs and is fixed.
 branch: fix/steam-native-install-stability
+---
+
+## 2026-08-22 — nonAvailableGames trap RULED OUT as this defect's cause (still parked)
+
+A second, unrelated render-time-exclusion defect was found, fixed and live-gated today
+(`.planning/todos/completed/2026-08-22-nonavailablegames-permanently-traps-uninstalled-games.md`,
+fix `086e1ed4f`, gate PASSED 11:00:08). Its filing speculated it was "almost certainly the parked
+vanish defect's root cause". **It is not.** Checked against this file's recorded symptoms:
+
+- **This defect heals on Refresh** ("Pressing Refresh — without changing view or filters — makes
+  it reappear", final user-verified). The trap does not: the user hit refresh pre-fix and the game
+  stayed gone.
+- **This defect heals on app restart** ("An app restart also works, but is not required"). The
+  trap cannot: its entry lives in `localStorage`, so it survives every restart — that permanence
+  IS the trap.
+- **Backend says `is_installed: true` with a full `install` object while this defect is visible**
+  (re-confirmed for KCD2). Under the trap, `is_installed` flips to `false` and the stale entry
+  outlives it.
+
+So a `nonAvailableGames` entry cannot be the mechanism here. **Do not close this session on that
+fix.**
+
+### What today DOES narrow
+
+Family (b) — render-time exclusion — now has one fewer candidate. `deps.nonAvailableAppNames` is
+eliminated as this defect's exclusion route, and eliminated by *mechanism* (persistence semantics),
+not by a clean run that might just be the bug declining to show. That is a stronger form of
+elimination than the two unreproduced attempts above.
+
+Note the exclusions listed under "ELIMINATIONS THAT ARE NO LONGER SAFE" still need re-testing; this
+adds to that list rather than replacing it.
+
+### The corrected probe this file asks for is now cheap to build
+
+The reconcile effect in `Library/index.tsx` (~L921) already computes exactly the per-appId signal
+this file specifies ("key on the ONE appId whose install state just changed"): it has the healed
+app_names and a `reconcileTick`. It just never logs them. Logging `healed` there gives a probe that
+is silent on ordinary search narrowing by construction — the false-positive shape that made the old
+`DIAG-vanish` instrumentation useless. Same note is recorded on the 37-08 todo.
+
 ---
 
 ## THIS FILE IS THE SOLE LIVE RECORD (2026-08-19)

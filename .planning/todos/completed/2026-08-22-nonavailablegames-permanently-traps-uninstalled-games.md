@@ -2,7 +2,7 @@
 created: 2026-08-22T07:52:00.000Z
 title: "A game that becomes UNINSTALLED is trapped on nonAvailableGames forever — isGameAvailable() returns false for a not-installed game, so reconciliation can never heal the entry, in ALL FOUR runners"
 area: frontend/library
-status: "FRONTEND FIX LANDED 2026-08-22 (quick task 260822-b05, commit 086e1ed4f) -- live re-verification, cross-runner (gog/nile/legendary) confirmation, and closing uninstall-game-vanishes.md are still OWED by 37-08. Do NOT close this todo."
+status: CLOSED
 severity: major
 resolves_phase: 37
 planned_as: 37-08
@@ -138,3 +138,92 @@ The **22-games** todo (fixed 2026-08-22, `51b175d74`) — that was a hydration r
 list's self-sealing nature, and it is a different mechanism from the not-installed trap here.
 The **nine false-delisted games** (37-03) are a third, unrelated mechanism. All three hide owned
 games from the grid; none of them is the same bug.
+
+## CLOSED 2026-08-22 — live gate PASSED
+
+Ran the two-`mv` repro at the top of this file against the shipped fix (`086e1ed4f`), on the dev
+server started 09:10 (i.e. after the fix commit). Steam client not running, so nothing rewrote the
+ACF underneath the run.
+
+### Setup, verified before the run
+
+`appmanifest_259130.acf` and `common/Wasteland` (378 MB) moved to
+`~/Library/Application Support/Steam/gamelib-37-08-backup/`, while
+`store_cache/steam_library.json` still held `259130` as `is_installed: true` with
+`install_path` → `common/Wasteland`. That is step 1 of the trap, confirmed present rather than
+assumed.
+
+### Evidence
+
+| time | event | reading |
+|---|---|---|
+| 10:58:11 | `[refreshLibrary] origin=nav-tabs-games-tab` | trap arms |
+| 10:58:11 | guard: `1 owned Steam game(s) silently excluded ... 259130` | entry pushed, card excluded |
+| 10:58:12 | `Steam library sync complete: 378 games` | backend flips `is_installed: false`, `install: {}` (verified in the cache file, mtime 10:58:12) |
+| 10:58:12 | guard fires ×2 | **expected** — see the noise note below |
+| 11:00:07 | `[refreshLibrary] origin=action-icons-refresh-button` | second, decisive refresh |
+| 11:00:08 | `Steam library sync complete: 378 games` | |
+| 11:00:08 | `refreshLibrary complete runner=all managers=6` | |
+| — | **ZERO guard firings after the second sync** | **PASS** |
+
+`buildEngineDeps` re-reads `nonAvailableGames` from localStorage on every `libraryUnion` change,
+so a silent guard on a fresh sync means the entry is gone from localStorage. The card could not
+re-add it: `handleNonAvailableGames`'s only call site is the GameCard status effect's *installed*
+branch, and the game is no longer installed.
+
+Non-vacuous against recorded RED: pre-fix, this exact appid on this exact machine gave "did a
+refresh, game did not appear" with the header at 380 and the guard firing ~10 times across two
+launches and a refresh.
+
+Card visibility was **inferred, not observed**: the guard proves `259130` left
+`nonAvailableAppNames`, and `filterEngine.isNonAvailableGame` is that list OR the delisted clause
+(`is_delisted: false` here), so nothing else excludes it.
+
+### ⚠ The guard is a noise generator on a NORMAL heal — do not read a firing as a failure
+
+`findSilentlyExcludedGames` runs in a synchronous effect on the render that receives the new
+`libraryUnion`; `reconcileNonAvailableGames` is `async`. So on a **successful** heal the order is
+necessarily: libraryUnion updates → guard fires → reconcile resolves → `reconcileTick` bumps →
+`engineDeps` rebuilds (tick IS in its dep array, `index.tsx:732`) → guard silent. Transient
+firings followed by silence is what success looks like. The heal itself is **never logged**, so
+the log alone cannot separate success from failure on a single refresh — the discriminator is a
+SECOND `libraryUnion` change with no firing.
+
+This is the ledgered "anomaly-only probe that also fires on normal use" shape, and this file's own
+sibling ledger (`uninstall-game-vanishes.md`) records the same trap for its `DIAG-vanish` probes.
+**Worth a follow-up: log the healed app_names in `Library/index.tsx`'s reconcile effect** when
+`healed.length > 0`, so the gate is decidable from the log without a second refresh.
+
+### Item 2 (cross-runner) — reasoned, NOT measured
+
+Recorded explicitly rather than left implied. The trap is present in gog/nile/legendary by source
+reading (table above), and the fix is runner-agnostic — it keys on `game.is_installed` from the
+union and never consults a runner-specific path. But it was OBSERVED healing only a **steam**
+game. No gog/nile/legendary game was uninstalled to confirm. Anyone relying on the cross-runner
+claim must measure it.
+
+### Item 3 (close the parked vanish session) — RULED OUT, see below
+
+Files restored after the run: `appmanifest_259130.acf` and `common/Wasteland` are back in place.
+
+## CORRECTION — this is NOT the parked vanish defect. Do not close that session.
+
+The "This is almost certainly the parked vanish defect's root cause" section above told the reader
+to verify against `uninstall-game-vanishes.md`'s recorded symptoms rather than assume. **Verified,
+and the match FAILS on two independent, user-confirmed properties:**
+
+| property | parked vanish defect (`uninstall-game-vanishes.md`) | this trap (37-08) |
+|---|---|---|
+| **Pressing Refresh** | **heals it** — "Pressing Refresh — without changing view or filters — makes it reappear" (final, user-verified) | **does NOT heal it** — user, 2026-08-22 pre-fix: "did a refresh, game did not appear" |
+| **App restart** | **heals it** — "An app restart also works, but is not required" | **does NOT heal it** — the entry is in localStorage, so it survives every restart; that permanence is the whole defect |
+| backend state while invisible | `is_installed: **true**` with a full `install` object (re-confirmed for KCD2) | `is_installed` flips to **false**; the stale entry outlives it |
+| trigger | an `is_installed` TRANSITION in **either** direction via a single `pushGameToLibrary` upsert (recurred on INSTALL as G-23.2-01) | `is_installed: true` while `install_path` no longer exists on disk |
+
+Both sit in family (b), render-time exclusion — that much is shared, and it is why the hypothesis
+was reasonable. But a localStorage-backed list cannot produce a symptom that a refresh clears, and
+it cannot produce one that a restart clears either. They are different mechanisms.
+
+**`uninstall-game-vanishes.md` stays `parked` and remains the SOLE live record** (`sole_owner:
+true` — no phase ledger carries it, so `/gsd-audit-uat` cannot resurface it). Do not archive it.
+
+The real narrowing this run does contribute is recorded in that file directly.
