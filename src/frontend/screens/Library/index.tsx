@@ -22,7 +22,10 @@ import GamesList from './components/GamesList'
 import { FavouriteGame, GameInfo, HiddenGame, Runner } from 'common/types'
 import ErrorComponent from 'frontend/components/UI/ErrorComponent'
 import LibraryHeader from './components/LibraryHeader'
-import { countUnfilteredGames } from './components/LibraryHeader/gameCount'
+import {
+  countUnfilteredGames,
+  findSilentlyExcludedGames
+} from './components/LibraryHeader/gameCount'
 import {
   amazonCategories,
   epicCategories,
@@ -48,6 +51,7 @@ import {
 } from 'frontend/types'
 import useGlobalState from 'frontend/state/GlobalStateV2'
 import { hasHelp } from 'frontend/hooks/hasHelp'
+import { reconcileNonAvailableGames } from 'frontend/hooks/constants'
 import EmptyLibraryMessage from './components/EmptyLibrary'
 import CategoriesManager from './components/CategoriesManager'
 import LibraryTour from './components/LibraryTour'
@@ -314,6 +318,14 @@ export default React.memo(function Library(): JSX.Element {
   const { crossoverRatings } = useGlobalState.keys('crossoverRatings')
 
   const [filterText, setFilterText] = useState('')
+
+  // Debug session steam-library-22-games-missing (2026-08-21): bumped by
+  // the `reconcileNonAvailableGames` effect below whenever it actually
+  // heals a stale `nonAvailableGames` entry, forcing one extra render so
+  // `engineDeps`/`libraryToShow` (which re-read localStorage but only on a
+  // `libraryUnion` change, not on a timer) pick up the correction without
+  // waiting on an unrelated future state change.
+  const [reconcileTick, setReconcileTick] = useState(0)
 
   // Migration helper: maps legacy 'true'/'false'/null to FilterMode
   const migrateFilterMode = (
@@ -710,7 +722,14 @@ export default React.memo(function Library(): JSX.Element {
       customCategories,
       gameUpdates,
       crossoverRatings,
-      platform
+      platform,
+      // Debug session steam-library-22-games-missing (2026-08-21): not read
+      // inside the factory above -- included purely to invalidate this memo
+      // after `reconcileNonAvailableGames` heals a stale `nonAvailableGames`
+      // localStorage entry, so `nonAvailableGamesRaw` above is re-read fresh
+      // instead of staying pinned to the pre-heal snapshot until some
+      // unrelated dependency happens to change.
+      reconcileTick
     ]
   )
 
@@ -869,6 +888,65 @@ export default React.memo(function Library(): JSX.Element {
     () => countUnfilteredGames(libraryUnion, engineDeps),
     [libraryUnion, engineDeps]
   )
+
+  // Debug session steam-library-22-games-missing (2026-08-21), fix for both
+  // compounding defects:
+  //
+  //   Defect #1 (backend): a Steam game's `isGameAvailable()` verdict can be
+  //   computed before the in-memory library Map is hydrated by
+  //   SteamLibraryManager.refresh()'s CM sync, resolving false for an owned,
+  //   previously-installed game. Fixed at the source in
+  //   `SteamGame.getGameInfo()` (steam/games.ts) via a persisted-cache
+  //   fallback -- this effect does not (and cannot, from the frontend) fix
+  //   defect #1 itself, but it is what makes the fix's correction actually
+  //   reach an already-excluded game.
+  //
+  //   Defect #2 (frontend, this effect): once a false-negative verdict is
+  //   persisted into the `nonAvailableGames` localStorage list, nothing
+  //   re-checks it -- the ONLY call site for the self-healing check
+  //   (`handleNonAvailableGames`) is inside the excluded game's own
+  //   GameCard, which the exclusion itself prevents from ever mounting
+  //   again. `reconcileNonAvailableGames` runs that same check from here
+  //   instead, keyed on the unfiltered `libraryUnion` -- a component that
+  //   renders regardless of any single game's exclusion state -- so a
+  //   stale/incorrect entry gets re-verified (and removed, if now correct)
+  //   without depending on the excluded card ever rendering.
+  //
+  // `bumpReconcileTick` forces exactly one extra render when something was
+  // actually healed: this render's `engineDeps`/`libraryToShow` were already
+  // built from the PRE-heal localStorage snapshot (buildEngineDeps re-reads
+  // localStorage on every `libraryUnion` change, not on a timer), so healing
+  // localStorage alone would not otherwise be picked up until some UNRELATED
+  // future state change happened to re-run this component.
+  useEffect(() => {
+    let cancelled = false
+    reconcileNonAvailableGames(libraryUnion).then((healed) => {
+      if (!cancelled && healed.length > 0) {
+        setReconcileTick((tick) => tick + 1)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [libraryUnion])
+
+  // Blind-spot guard (same debug session): logs an anomaly if a Steam,
+  // non-DLC, non-delisted game is STILL silently excluded after the
+  // reconciliation pass above -- see `findSilentlyExcludedGames`'s doc
+  // comment for why this specific defect class is otherwise invisible to
+  // every existing count/gate. `reconcileTick` is in the dependency array
+  // (unused directly) so this re-runs against the corrected `engineDeps`
+  // after a heal, not just against the pre-heal snapshot.
+  useEffect(() => {
+    const stillExcluded = findSilentlyExcludedGames(libraryUnion, engineDeps)
+    if (stillExcluded.length > 0) {
+      window.api.logError(
+        `Library: ${stillExcluded.length} owned Steam game(s) silently ` +
+          `excluded from the library grid by a stale nonAvailableGames ` +
+          `entry: ${stillExcluded.join(', ')}`
+      )
+    }
+  }, [libraryUnion, engineDeps, reconcileTick])
 
   // D-25: clears AND PERSISTS every filter to its default -- "whatever the
   // chip row shows is what comes back next launch". A non-persisting

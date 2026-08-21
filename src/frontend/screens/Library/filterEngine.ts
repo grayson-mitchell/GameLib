@@ -238,7 +238,10 @@ function isHiddenGame(game: GameInfo, deps: FilterEngineDeps): boolean {
 // the caller into `deps.nonAvailableAppNames`) OR a delisted Steam game.
 // The Steam-delisted clause is shipped behaviour (`Library/index.tsx:627-634`)
 // and must not be dropped.
-function isNonAvailableGame(game: GameInfo, deps: FilterEngineDeps): boolean {
+export function isNonAvailableGame(
+  game: GameInfo,
+  deps: FilterEngineDeps
+): boolean {
   return (
     deps.nonAvailableAppNames.includes(game.app_name) ||
     (game.runner === 'steam' && !!game.is_delisted)

@@ -6301,6 +6301,79 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
 
     expect(available).toBe(false)
   })
+
+  // ── Debug session steam-library-22-games-missing (2026-08-21): getGameInfo
+  // persisted-cache fallback ──────────────────────────────────────────────
+  //
+  // Before the fix, an empty in-memory `library` Map (renderer boot before
+  // SteamLibraryManager.refresh()'s CM sync populates it) made getGameInfo()
+  // return `{} as GameInfo`, which made isGameAvailable() resolve false for
+  // an owned, previously-installed game -- a false negative that got
+  // persisted into the frontend's `nonAvailableGames` localStorage exclusion
+  // list with nothing to ever re-check it (see reconcileNonAvailableGames,
+  // src/frontend/hooks/constants.ts).
+
+  it('getGameInfo() falls back to the persisted steamLibraryStore cache when the in-memory library Map is empty', () => {
+    // The describe-level beforeEach seeds `library` with a default makeEntry()
+    // for the OTHER tests in this block -- undo that here so this test's
+    // premise (in-memory Map genuinely empty) actually holds.
+    library.delete(APP_ID)
+    const fixture = makeEntry({
+      is_installed: true,
+      install: { install_path: '/games/dota2' }
+    })
+    ;(steamLibraryStore.get as jest.Mock).mockReturnValue([fixture])
+
+    const result = new SteamGame(APP_ID).getGameInfo()
+    expect(result.app_name).toBe(APP_ID)
+    expect(result.is_installed).toBe(true)
+  })
+
+  it('getGameInfo() persisted-cache fallback self-heals the in-memory library Map (only reads the store once)', () => {
+    library.delete(APP_ID)
+    ;(steamLibraryStore.get as jest.Mock).mockReturnValue([
+      makeEntry({
+        is_installed: true,
+        install: { install_path: '/games/dota2' }
+      })
+    ])
+
+    const game = new SteamGame(APP_ID)
+    game.getGameInfo()
+
+    expect(library.get(APP_ID)?.app_name).toBe(APP_ID)
+
+    // Second call must be served from the now-populated in-memory Map, not
+    // another steamLibraryStore.get() read.
+    ;(steamLibraryStore.get as jest.Mock).mockClear()
+    game.getGameInfo()
+    expect(steamLibraryStore.get).not.toHaveBeenCalled()
+  })
+
+  it('getGameInfo() returns {} when the appId is absent from BOTH the in-memory Map and the persisted cache', () => {
+    library.delete(APP_ID)
+    ;(steamLibraryStore.get as jest.Mock).mockReturnValue([])
+
+    const result = new SteamGame(APP_ID).getGameInfo()
+
+    expect(result).toEqual({})
+  })
+
+  it('isGameAvailable() resolves true via the persisted-cache fallback when the in-memory library Map has not been hydrated yet (the exact hydration-race false negative this session diagnosed)', async () => {
+    library.delete(APP_ID)
+    existsSyncMock.mockReturnValue(true)
+    ;(steamLibraryStore.get as jest.Mock).mockReturnValue([
+      makeEntry({
+        is_installed: true,
+        install: { install_path: '/games/dota2' }
+      })
+    ])
+
+    const game = new SteamGame(APP_ID)
+    const available = await game.isGameAvailable()
+
+    expect(available).toBe(true)
+  })
 })
 
 // ── CONSOLE-01 Gap B: is_delisted detection in fetchMetadataIfNeeded ──────────

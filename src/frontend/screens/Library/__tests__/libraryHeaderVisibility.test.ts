@@ -41,7 +41,8 @@ import {
 } from '../filterEngine'
 import {
   countGamesExcludingDlc,
-  countUnfilteredGames
+  countUnfilteredGames,
+  findSilentlyExcludedGames
 } from '../components/LibraryHeader/gameCount'
 
 function makeGame(overrides: Partial<GameInfo> = {}): GameInfo {
@@ -352,5 +353,134 @@ describe('Library/index.tsx source gate -- denominator wiring', () => {
   it('holds no engine call shape of its own -- the denominator goes through the testable helper', () => {
     expect(source).not.toContain('filterLibrary(')
     expect(source).not.toContain('DEFAULT_FILTER_ENGINE_STATE')
+  })
+})
+
+/**
+ * Gates for `findSilentlyExcludedGames` -- the blind-spot guard added by debug
+ * session `steam-library-22-games-missing` (2026-08-21).
+ *
+ * WHY THIS BLOCK EXISTS AT ALL: the guard shipped with the fix but with no
+ * test of its own, and its only observed evidence was that it stayed SILENT on
+ * a passing live run. Silence from an untested guard is worth nothing -- it is
+ * indistinguishable from a guard that cannot fire. That is the failure this
+ * project has hit repeatedly: a check that is non-vacuous and correctly
+ * computed and still guards nothing. So every spec below is paired: the guard
+ * must FIRE on the known-bad input that actually occurred, and stay SILENT on
+ * the known-good one.
+ *
+ * The known-bad input is not invented. On 2026-08-21 at 22:38:02 a clean boot
+ * pushed 25 owned, correctly-installed Steam appIds into the
+ * `nonAvailableGames` list via a hydration-race false negative, dropping the
+ * header from 381 to 356 with no filter chip rendered. 719040 (Wasteland 3)
+ * and 1335830 (Len's Island) were among them.
+ */
+describe('findSilentlyExcludedGames', () => {
+  it('FIRES for an owned, non-DLC, non-delisted Steam game stuck in nonAvailableAppNames', () => {
+    const library = [
+      makeGame({ runner: 'steam', app_name: '719040', title: 'Wasteland 3' })
+    ]
+
+    expect(
+      findSilentlyExcludedGames(
+        library,
+        makeDeps({ nonAvailableAppNames: ['719040'] })
+      )
+    ).toEqual(['719040'])
+  })
+
+  it('stays SILENT on the same library when nothing is excluded', () => {
+    const library = [
+      makeGame({ runner: 'steam', app_name: '719040', title: 'Wasteland 3' })
+    ]
+
+    expect(findSilentlyExcludedGames(library, makeDeps())).toEqual([])
+  })
+
+  it('reports EVERY silently excluded entry, not just the first', () => {
+    const library = [
+      makeGame({ runner: 'steam', app_name: '719040' }),
+      makeGame({ runner: 'steam', app_name: '1335830' }),
+      makeGame({ runner: 'steam', app_name: '1771300' })
+    ]
+
+    expect(
+      findSilentlyExcludedGames(
+        library,
+        makeDeps({
+          nonAvailableAppNames: ['719040', '1335830', '1771300']
+        })
+      )
+    ).toEqual(['719040', '1335830', '1771300'])
+  })
+
+  /**
+   * A delisted Steam game is excluded by `isNonAvailableGame`'s own delisted
+   * clause. That exclusion is CORRECT and expected, so surfacing it would
+   * make the guard cry wolf on every library holding a delisted title -- and a
+   * guard that fires on normal use cannot distinguish signal from noise. The
+   * store census taken during the session held 9 such entries.
+   */
+  it('does NOT fire for a delisted Steam game -- that exclusion is legitimate', () => {
+    const library = [
+      makeGame({ runner: 'steam', app_name: '206060', is_delisted: true })
+    ]
+
+    expect(
+      findSilentlyExcludedGames(
+        library,
+        makeDeps({ nonAvailableAppNames: ['206060'] })
+      )
+    ).toEqual([])
+  })
+
+  it('does NOT fire for DLC -- DLC is unconditionally excluded from the header count', () => {
+    const library = [
+      makeGame({
+        runner: 'steam',
+        app_name: '12345',
+        install: { is_dlc: true }
+      })
+    ]
+
+    expect(
+      findSilentlyExcludedGames(
+        library,
+        makeDeps({ nonAvailableAppNames: ['12345'] })
+      )
+    ).toEqual([])
+  })
+
+  /**
+   * Scope is Steam-only and deliberately so: the hydration race proven in
+   * `steam/games.ts` is the mechanism this guard watches. Widening it to every
+   * runner without evidence of the same defect there would trade a targeted
+   * gate for a noisy one.
+   */
+  it('does NOT fire for a non-Steam runner excluded by the same list', () => {
+    const library = [makeGame({ runner: 'gog', app_name: 'gog-game' })]
+
+    expect(
+      findSilentlyExcludedGames(
+        library,
+        makeDeps({ nonAvailableAppNames: ['gog-game'] })
+      )
+    ).toEqual([])
+  })
+
+  it('picks the excluded Steam game out of a mixed library, leaving the healthy ones alone', () => {
+    const library = [
+      makeGame({ runner: 'steam', app_name: '719040' }),
+      makeGame({ runner: 'steam', app_name: '8870' }),
+      makeGame({ runner: 'gog', app_name: 'gog-game' }),
+      makeGame({ runner: 'steam', app_name: '206060', is_delisted: true })
+    ]
+
+    expect(
+      findSilentlyExcludedGames(
+        library,
+        makeDeps({ nonAvailableAppNames: ['719040', 'gog-game', '206060'] })
+      )
+    ).toEqual(['719040'])
   })
 })

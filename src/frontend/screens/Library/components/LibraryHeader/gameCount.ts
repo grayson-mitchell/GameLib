@@ -79,3 +79,59 @@ export function countUnfilteredGames(
     filterLibrary(libraryUnion, DEFAULT_FILTER_ENGINE_STATE, deps)
   )
 }
+
+/**
+ * Blind-spot guard (debug session steam-library-22-games-missing, 2026-08-21).
+ *
+ * This is the specific defect class that session diagnosed: an owned,
+ * previously-installed Steam game gets pushed onto the `nonAvailableGames`
+ * localStorage list by a false-negative `isGameAvailable()` verdict, and
+ * `filterEngine.isNonAvailableGame` then excludes it from BOTH the rendered
+ * grid AND `countUnfilteredGames` above -- because
+ * `DEFAULT_FILTER_ENGINE_STATE.showNonAvailable` is `'off'`, the same
+ * default value `countUnfilteredGames`'s "unfiltered" pass uses. The header
+ * can consequently read `{{shown}} of {{total}}` with shown === total (no
+ * discrepancy) while games are missing, AND no filter chip renders for it
+ * (`describeActiveFilters` emits nothing for a default-value facet) -- the
+ * exclusion is structurally invisible to every signal a user or an existing
+ * gate would otherwise notice.
+ *
+ * Deliberately scoped to Steam, non-DLC, non-delisted games:
+ *   - Steam-only because this is the mechanism this session proved broken
+ *     (the backend hydration race is Steam CM sync specific); scoping wider
+ *     would flag other runners' legitimately-hidden games as false positives.
+ *   - non-DLC mirrors `countGamesExcludingDlc`'s own exclusion, so this
+ *     count is comparable to the header's numbers.
+ *   - non-delisted is EXCLUDED deliberately: a delisted Steam game is a
+ *     real, correct, permanent non-availability (LIB-07), not the
+ *     transient-hydration-race class this guard exists to catch. Folding it
+ *     in would make this guard fire on every normal library containing a
+ *     delisted title, defeating its purpose as an anomaly signal.
+ *
+ * Checks `deps.nonAvailableAppNames` directly rather than going through
+ * `filterEngine.isNonAvailableGame` (which also ORs in the delisted clause)
+ * for exactly that reason.
+ *
+ * Returns the app_names silently excluded. Callers should treat any
+ * non-empty result as an anomaly worth logging -- see
+ * `Library/index.tsx`'s reconciliation effect, which runs this after every
+ * `reconcileNonAvailableGames` pass so a persistent (not just transient)
+ * silent exclusion is never invisible again.
+ */
+export function findSilentlyExcludedGames(
+  libraryUnion: GameInfo[],
+  deps: FilterEngineDeps
+): string[] {
+  return libraryUnion
+    .filter(
+      (game) =>
+        // Steam-only, so `runner !== 'sideload'` (the DLC quirk's guard in
+        // countGamesExcludingDlc) is always true here -- a plain
+        // `install.is_dlc` check is exact for this scope.
+        game.runner === 'steam' &&
+        !game.install.is_dlc &&
+        !game.is_delisted &&
+        deps.nonAvailableAppNames.includes(game.app_name)
+    )
+    .map((game) => game.app_name)
+}

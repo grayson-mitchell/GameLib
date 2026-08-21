@@ -537,9 +537,31 @@ export default class SteamGame implements Game {
    * When artwork is missing (first access), fires a non-blocking metadata
    * fetch as a side effect — caller gets the current entry immediately
    * and the frontend receives an updated push once the fetch resolves.
+   *
+   * Debug session steam-library-22-games-missing (2026-08-21): falls back to
+   * the persisted `steamLibraryStore` cache when the in-memory `library` Map
+   * has not been populated yet (e.g. renderer boot before
+   * SteamLibraryManager.refresh()'s CM sync completes). Without this, every
+   * caller that hits this gap — most importantly isGameAvailable() below —
+   * sees an empty `{}`, which resolves as "not installed" for an owned,
+   * previously-installed game and gets persisted into the frontend's
+   * `nonAvailableGames` localStorage exclusion list. Mirrors the identical
+   * fallback SteamLibraryManager.getGameInfo() (library.ts) already
+   * implements for the same reason. Self-heals the in-memory Map on hit so
+   * subsequent calls (and the metadata self-heal below) don't repeat the
+   * disk read.
    */
   getGameInfo(): GameInfo {
-    const existing = library.get(this.appId)
+    let existing = library.get(this.appId)
+    if (!existing) {
+      const cached = steamLibraryStore
+        .get('games', [])
+        .find((g) => g.app_name === this.appId)
+      if (cached) {
+        library.set(this.appId, cached)
+        existing = cached
+      }
+    }
     if (!existing) return {} as GameInfo
 
     // Trigger lazy metadata fetch as fire-and-forget side effect (D-04).
