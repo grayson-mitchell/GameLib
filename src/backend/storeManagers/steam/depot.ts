@@ -136,8 +136,9 @@ export interface DepotPlanFile {
   sha_content: string | Buffer
   chunks: DepotPlanChunk[]
   flags?: number
-  /** Symlink target, from the manifest's `linktarget` (protobuf field 7,
-   *  content_manifest.proto) — only meaningful when `flags & Symlink` (512). */
+  /** Symlink target, DECRYPTED here (37-09) exactly like `filename` above —
+   *  from the manifest's `linktarget` (protobuf field 7, content_manifest.proto)
+   *  — only meaningful when `flags & Symlink` (512). */
   linktarget?: string
 }
 
@@ -155,7 +156,8 @@ export interface DepotPlanEntry {
 /**
  * The full enqueue-time contract the DownloadManager needs before a single
  * chunk is fetched: every owned depot, resolved + manifest-fetched + filename-
- * decrypted, plus the REAL total byte count summed across ALL depots (D-03).
+ * and linktarget-decrypted (37-09), plus the REAL total byte count summed
+ * across ALL depots (D-03).
  */
 export interface DepotPlan {
   appId: string
@@ -559,9 +561,10 @@ function wrapDepotKeyError(
 }
 
 /**
- * Fetch, parse, and filename-decrypt a single depot's manifest. Filenames are
- * decrypted OURSELVES (steam-user truncates them at block boundaries — spike
- * 002 finding); every file size is coerced through Number() for the D-03 sum.
+ * Fetch, parse, and decrypt a single depot's manifest. Both `filename` and
+ * `linktarget` (37-09) are decrypted OURSELVES (steam-user truncates them at
+ * block boundaries — spike 002 finding); every file size is coerced through
+ * Number() for the D-03 sum.
  *
  * D-UAT-08: getDepotDecryptionKey/getRawManifest are called with the depot's
  * OWNING appId (descriptor.ownerAppId — the base game for a base-app depot,
@@ -624,7 +627,14 @@ async function fetchDepotPlanEntry(
     size: Number(f.size),
     sha_content: f.sha_content,
     flags: f.flags,
-    linktarget: f.linktarget,
+    // 37-09: linktarget is encrypted with the depot key in EXACTLY the same
+    // format as filename (proto field 7, same message) and must be decrypted
+    // here, not passed through — the write site symlinks this value verbatim.
+    // Presence-conditional because decryptFilename('' | undefined) throws
+    // (ERR_CRYPTO_INVALID_IV / TypeError) and most files have no linktarget.
+    linktarget: f.linktarget
+      ? decryptFilename(f.linktarget, key)
+      : f.linktarget,
     chunks: f.chunks ?? []
   }))
 
@@ -1388,6 +1398,12 @@ async function downloadSingleFile(
     // not a real separator on POSIX so no actual escape is possible either
     // way — this keeps the containment check consistent with the one
     // function up).
+    // 37-09: `file.linktarget` is now the DECRYPTED target (decrypted
+    // upstream in fetchDepotPlanEntry). Before that fix this guard validated
+    // raw base64 AES ciphertext instead — vacuously, since base64's alphabet
+    // includes `/`, so a ciphertext blob reads as a nested relative path and
+    // passes containment BY LUCK, not by actually checking anything. Pinned
+    // by depotLinktarget.test.ts's T-37-09-04 (decrypted escape is rejected).
     const resolvedTarget = resolve(
       dirname(dest),
       file.linktarget.replace(/\\/g, '/')
