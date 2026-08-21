@@ -46,6 +46,12 @@ export interface ReconcileResult {
    *  files/Directory/Symlink entries, passed their own non-content
    *  existence/target check); false the moment a single job was pushed. */
   allFilesVerified: boolean
+  /** Summed `Number(file.size)` of every plan entry the reconciler verified as
+   *  already present and therefore EXCLUDED from `jobs`. Uses the identical
+   *  expression buildDepotPlan uses for `plan.totalBytes` (depot.ts:799), so
+   *  `skippedBytes <= plan.totalBytes` holds by construction. 0 on a fresh
+   *  install. */
+  skippedBytes: number
 }
 
 function expectedSha(file: DepotPlanFile): string {
@@ -129,6 +135,7 @@ export async function reconcilePartialState(
 ): Promise<ReconcileResult> {
   const jobs: ReconcileJob[] = []
   let allFilesVerified = true
+  let skippedBytes = 0
   let seed = 0
 
   for (const depot of plan.depots) {
@@ -147,12 +154,15 @@ export async function reconcilePartialState(
         verified = await regularFileVerified(dest, file)
       }
 
-      if (verified) continue
+      if (verified) {
+        skippedBytes += Number(file.size)
+        continue
+      }
 
       allFilesVerified = false
       jobs.push({ depotId: depot.depotId, key: depot.key, file, fileSeed })
     }
   }
 
-  return { jobs, allFilesVerified }
+  return { jobs, allFilesVerified, skippedBytes }
 }

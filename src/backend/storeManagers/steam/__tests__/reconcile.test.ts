@@ -186,6 +186,62 @@ describe('reconcilePartialState', () => {
     expect(result.allFilesVerified).toBe(false)
   })
 
+  // Quick 260821-nyh: skippedBytes surfaces the byte total of the reconciler's
+  // own skip set, for depot.ts to seed doneBytes with (resumed-install
+  // progress fix). Assert the exact SUM, not merely `> 0` — a `> 0` assertion
+  // would also pass against an implementation that counted FILES instead of
+  // BYTES, which is precisely the file-count-vs-bytes confusion the todo
+  // warns about (82.6% of files was only ~24% of bytes on HUMANKIND).
+  it('quick-260821-nyh: skippedBytes is 0 when nothing on disk is reconciled (fresh install)', async () => {
+    const file: DepotPlanFile = {
+      filename: 'missing.bin',
+      size: 10,
+      sha_content: 'irrelevant',
+      chunks: [{ sha: 's', cb_original: 10, offset: 0 }]
+    }
+    const plan = makePlan([{ depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }])
+
+    const result = await reconcilePartialState(plan, dir)
+
+    expect(result.skippedBytes).toBe(0)
+  })
+
+  it('quick-260821-nyh: skippedBytes sums exactly the verified entries\' sizes, excluding missing/mismatched ones', async () => {
+    const good = Buffer.from('good-content') // 12 bytes, verified/skipped
+    writeFileSync(join(dir, 'good.bin'), good)
+    const fileGood: DepotPlanFile = {
+      filename: 'good.bin',
+      size: good.length,
+      sha_content: sha1Hex(good),
+      chunks: [{ sha: 's1', cb_original: good.length, offset: 0 }]
+    }
+    const fileMissing: DepotPlanFile = {
+      filename: 'missing.bin',
+      size: 3, // NOT verified — must NOT contribute to skippedBytes
+      sha_content: 'irrelevant',
+      chunks: [{ sha: 's2', cb_original: 3, offset: 0 }]
+    }
+    const bad = Buffer.from('AAAA')
+    writeFileSync(join(dir, 'bad.bin'), Buffer.from('ZZZZ'))
+    const fileBad: DepotPlanFile = {
+      filename: 'bad.bin',
+      size: bad.length, // 4 bytes, size matches but content is corrupt — NOT verified
+      sha_content: sha1Hex(bad),
+      chunks: [{ sha: 's3', cb_original: bad.length, offset: 0 }]
+    }
+
+    const plan = makePlan([
+      { depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [fileGood] },
+      { depotId: '2', gid: 'g2', key: Buffer.from('key'), files: [fileMissing, fileBad] }
+    ])
+
+    const result = await reconcilePartialState(plan, dir)
+
+    // Only good.bin's 12 bytes are verified/skipped — missing.bin (3) and
+    // bad.bin (4) both hit the job list and must NOT be summed in.
+    expect(result.skippedBytes).toBe(good.length)
+  })
+
   it('a real, already-present Directory manifest entry is reconciled (excluded); a missing one is included as a job', async () => {
     mkdirSync(join(dir, 'existing-dir'))
     const presentDir: DepotPlanFile = {

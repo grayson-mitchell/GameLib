@@ -1989,8 +1989,16 @@ export async function downloadDepotFiles(
       file: DepotPlanFile
       fileSeed: number
     }>
+    // quick-260821-nyh: bytes the reconciler verified already present and
+    // therefore excluded from `jobs` — seeds `doneBytes` below so the
+    // numerator and the plan-scoped `totalBytes` denominator measure the
+    // SAME set. Stays 0 on the fallback path (full job list rebuilt),
+    // matching that path's existing full-re-download behaviour.
+    let reconciledSkippedBytes = 0
     try {
-      jobs = (await reconcilePartialState(plan, installRoot)).jobs
+      const reconciled = await reconcilePartialState(plan, installRoot)
+      jobs = reconciled.jobs
+      reconciledSkippedBytes = reconciled.skippedBytes
     } catch (err) {
       logWarning(
         [
@@ -2036,9 +2044,17 @@ export async function downloadDepotFiles(
     )
     failures.push(...healFailures)
 
-    let doneBytes = 0 // decompressed bytes written to disk — drives percent + disk rate
+    // quick-260821-nyh: `doneBytes` means "plan bytes present on disk", NOT "bytes this
+    // run wrote" — it is seeded with the reconciler's skip total so the numerator and the
+    // plan-scoped `totalBytes` denominator measure the SAME set. Without this a resumed
+    // install starts at 0% and terminates short of 100% (HUMANKIND 1124300 finished a
+    // fully successful resume reading 76%). `runStartBytes` keeps the ETA's rate
+    // numerator run-scoped; `lastEmitBytes` is seeded so the first emit window's delta is
+    // this window's writes, not the whole seed.
+    const runStartBytes = reconciledSkippedBytes
+    let doneBytes = reconciledSkippedBytes // decompressed bytes written to disk — drives percent + disk rate
     let netBytes = 0 // compressed bytes fetched over the wire — drives download rate
-    let lastEmitBytes = 0
+    let lastEmitBytes = reconciledSkippedBytes
     let lastEmitNetBytes = 0
     let lastEmitTime = Date.now()
     let lastDownSpeed = 0 // MiB/s — reused across sub-window forced emits
@@ -2268,7 +2284,8 @@ export async function downloadDepotFiles(
       // ETA stays a STABLE estimate from the cumulative average install rate
       // (disk bytes since start) — an instantaneous ETA would jitter every frame.
       const elapsedSec = (Date.now() - tStart) / 1000
-      const avgBytesPerSec = elapsedSec > 0 ? doneBytes / elapsedSec : 0
+      const avgBytesPerSec =
+        elapsedSec > 0 ? (doneBytes - runStartBytes) / elapsedSec : 0
       const remaining = Math.max(totalBytes - doneBytes, 0)
       const etaSec = avgBytesPerSec > 0 ? remaining / avgBytesPerSec : 0
 
