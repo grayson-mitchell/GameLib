@@ -47,7 +47,16 @@ const mockConfigStoreClear = jest.fn()
 // jest.config.js sets `resetMocks: true`, which wipes any implementation
 // configured at factory time before the FIRST test even runs. The
 // implementation is (re)installed in `beforeEach` below instead.
-const mockConfigStoreGetNodefault = jest.fn()
+//
+// Key-aware rather than a blanket `mockReturnValue(true)`: the D-3 drift
+// guard added in quick-260821-o34 also reads `get_nodefault('userData')`,
+// and a boolean `true` there would satisfy `previous?.galaxyUserId` type-wise
+// at the mock boundary but misrepresent every test's starting state as "a
+// previous userData record already exists". Tests that need to exercise the
+// drift guard override this per-test.
+const mockConfigStoreGetNodefault = jest.fn((key: string): unknown =>
+  key === 'isLoggedIn' ? true : undefined
+)
 jest.mock('backend/storeManagers/gog/electronStores', () => ({
   configStore: {
     set: mockConfigStoreSet,
@@ -65,9 +74,11 @@ jest.mock('backend/utils', () => ({
 }))
 
 import axios from 'axios'
+import { logWarning } from 'backend/logger'
 import { GOGUser } from '../user'
 
 const mockedAxiosGet = axios.get as jest.Mock
+const mockedLogWarning = logWarning as jest.Mock
 
 function stdoutFor(payload: Record<string, unknown>) {
   return { stdout: JSON.stringify(payload) }
@@ -75,9 +86,12 @@ function stdoutFor(payload: Record<string, unknown>) {
 
 describe('debug/manage-accounts-slow-update -- GOGUser.login redundant gogdl call', () => {
   beforeEach(() => {
-    // `isLoggedIn()` reads this -- always answer true, both call paths in
-    // these tests are past the "just authenticated" point.
-    mockConfigStoreGetNodefault.mockReturnValue(true)
+    // Key-aware: 'isLoggedIn' -> true (both call paths in these tests are past
+    // the "just authenticated" point); everything else (including the D-3 drift
+    // guard's 'userData' read) -> undefined, i.e. no previously stored record.
+    mockConfigStoreGetNodefault.mockImplementation((key: string) =>
+      key === 'isLoggedIn' ? true : undefined
+    )
     // `getCredentials()`'s TTL cache (debug/gog-spawn-reduction.md fix 1) is a
     // module-level singleton that outlives any individual test -- reset it so each
     // test's own scripted `mockRunRunnerCommand` result is actually exercised, never
@@ -112,10 +126,12 @@ describe('debug/manage-accounts-slow-update -- GOGUser.login redundant gogdl cal
       expect.anything()
     )
 
-    // The userData.json fetch must use the SAME token the --code exchange
-    // returned, proving it was reused rather than silently dropped.
+    // The api.gog.com/users/{user_id} fetch must use the SAME token the --code
+    // exchange returned, and be keyed by the SAME scripted user_id ('u1'),
+    // proving both were threaded through rather than silently dropped or
+    // re-derived via a redundant getCredentials() call.
     expect(mockedAxiosGet).toHaveBeenCalledWith(
-      'https://embed.gog.com/userData.json',
+      'https://api.gog.com/users/u1',
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: 'Bearer fresh-token-from-code-exchange'
@@ -153,7 +169,7 @@ describe('debug/manage-accounts-slow-update -- GOGUser.login redundant gogdl cal
       expect.anything()
     )
     expect(mockedAxiosGet).toHaveBeenCalledWith(
-      'https://embed.gog.com/userData.json',
+      'https://api.gog.com/users/u2',
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: 'Bearer refreshed-token-from-disk'
@@ -175,7 +191,12 @@ describe('debug/manage-accounts-slow-update -- GOGUser.login redundant gogdl cal
  */
 describe('debug/gog-spawn-reduction fix 5 -- login() seeds the getCredentials() TTL cache', () => {
   beforeEach(() => {
-    mockConfigStoreGetNodefault.mockReturnValue(true)
+    // Key-aware: 'isLoggedIn' -> true (both call paths in these tests are past
+    // the "just authenticated" point); everything else (including the D-3 drift
+    // guard's 'userData' read) -> undefined, i.e. no previously stored record.
+    mockConfigStoreGetNodefault.mockImplementation((key: string) =>
+      key === 'isLoggedIn' ? true : undefined
+    )
     GOGUser.__resetCredentialsCacheForTests()
   })
 
@@ -265,7 +286,12 @@ describe('debug/gog-spawn-reduction fix 5 -- login() seeds the getCredentials() 
  */
 describe('debug/gog-spawn-reduction fix 1 -- GOGUser.getCredentials() TTL cache', () => {
   beforeEach(() => {
-    mockConfigStoreGetNodefault.mockReturnValue(true)
+    // Key-aware: 'isLoggedIn' -> true (both call paths in these tests are past
+    // the "just authenticated" point); everything else (including the D-3 drift
+    // guard's 'userData' read) -> undefined, i.e. no previously stored record.
+    mockConfigStoreGetNodefault.mockImplementation((key: string) =>
+      key === 'isLoggedIn' ? true : undefined
+    )
     GOGUser.__resetCredentialsCacheForTests()
   })
 
@@ -368,5 +394,128 @@ describe('debug/gog-spawn-reduction fix 1 -- GOGUser.getCredentials() TTL cache'
 
     expect(afterLogout?.access_token).toBe('post-logout-token')
     expect(mockRunRunnerCommand).toHaveBeenCalledTimes(2)
+  })
+})
+
+/**
+ * Regression coverage for quick-260821-o34.
+ *
+ * `GOGUser.getUserDetails()` used to fetch a GOG "embed" endpoint that embeds
+ * the account's entire wishlist/friends/checksum payload. For accounts with a
+ * large wishlist, GOG returns an error instead of a truncated document, so
+ * `getUserDetails()` returned `undefined`, `configStore.userData`
+ * was never written, and the user appeared logged out even though auth actually
+ * succeeded. These tests pin the fix: `getUserDetails()` now fetches the small,
+ * fixed-size `https://api.gog.com/users/{user_id}` document instead, and the
+ * persisted record is an explicit `{userId, username, galaxyUserId}` projection
+ * rather than a passthrough of the response body.
+ */
+describe('quick-260821-o34 -- getUserDetails() repointed at api.gog.com/users/{user_id}', () => {
+  beforeEach(() => {
+    mockConfigStoreGetNodefault.mockImplementation((key: string) =>
+      key === 'isLoggedIn' ? true : undefined
+    )
+    GOGUser.__resetCredentialsCacheForTests()
+  })
+
+  it('persists username + galaxyUserId + userId from a wishlist-free response body (the headline regression)', async () => {
+    mockRunRunnerCommand.mockResolvedValueOnce(
+      stdoutFor({
+        access_token: 'tok',
+        refresh_token: 'r1',
+        user_id: 'galaxy-1',
+        expires_in: 3600,
+        loginTime: Date.now()
+      })
+    )
+    // The small, fixed-size api.gog.com/users/{id} document -- no wishlist,
+    // friends, checksum or updates payload, unlike the old embed.gog.com/
+    // userData.json endpoint this replaces.
+    mockedAxiosGet.mockResolvedValueOnce({
+      data: {
+        id: 'galaxy-1',
+        username: 'bigwishlist',
+        created_date: '2015-01-01',
+        avatar: { small: 'x' }
+      }
+    })
+
+    const result = await GOGUser.login('the-oauth-code')
+
+    expect(result.status).toBe('done')
+    expect(result.data?.username).toBe('bigwishlist')
+
+    expect(mockConfigStoreSet).toHaveBeenCalledWith(
+      'userData',
+      expect.objectContaining({
+        username: 'bigwishlist',
+        galaxyUserId: 'galaxy-1',
+        userId: 'galaxy-1'
+      })
+    )
+    const [, storedUserData] = mockConfigStoreSet.mock.calls.find(
+      ([key]) => key === 'userData'
+    ) as [string, Record<string, unknown>]
+    expect(storedUserData).not.toHaveProperty('email')
+  })
+
+  it('persists nothing when user_id is missing from credentials', async () => {
+    const data = await GOGUser.getUserDetails({
+      access_token: 'tok'
+    } as never)
+
+    expect(data).toBeUndefined()
+    expect(mockedAxiosGet).not.toHaveBeenCalled()
+    expect(mockConfigStoreSet).not.toHaveBeenCalledWith(
+      'userData',
+      expect.anything()
+    )
+  })
+
+  it('persists nothing when the response body carries no username', async () => {
+    mockedAxiosGet.mockResolvedValueOnce({
+      data: { id: 'galaxy-1' }
+    })
+
+    const data = await GOGUser.getUserDetails({
+      access_token: 'tok',
+      user_id: 'galaxy-1'
+    })
+
+    expect(data).toBeUndefined()
+    expect(mockConfigStoreSet).not.toHaveBeenCalledWith(
+      'userData',
+      expect.anything()
+    )
+  })
+
+  it('logs a warning naming both ids when the derived galaxyUserId drifts from a previously stored one, but still writes the new record', async () => {
+    mockConfigStoreGetNodefault.mockImplementation((key: string) => {
+      if (key === 'isLoggedIn') return true
+      if (key === 'userData') return { galaxyUserId: 'old-galaxy' }
+      return undefined
+    })
+    mockedAxiosGet.mockResolvedValueOnce({
+      data: { id: 'galaxy-1', username: 'testuser' }
+    })
+
+    const data = await GOGUser.getUserDetails({
+      access_token: 'tok',
+      user_id: 'galaxy-1'
+    })
+
+    expect(data?.galaxyUserId).toBe('galaxy-1')
+    expect(mockedLogWarning).toHaveBeenCalledWith(
+      expect.stringContaining('old-galaxy'),
+      expect.anything()
+    )
+    expect(mockedLogWarning).toHaveBeenCalledWith(
+      expect.stringContaining('galaxy-1'),
+      expect.anything()
+    )
+    expect(mockConfigStoreSet).toHaveBeenCalledWith(
+      'userData',
+      expect.objectContaining({ galaxyUserId: 'galaxy-1' })
+    )
   })
 })
