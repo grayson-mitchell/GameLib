@@ -3887,6 +3887,81 @@ describe('downloadDepotFiles', () => {
     }
   })
 
+  // Quick 260821-nyh: a resumed install whose reconciler skipped a NON-EMPTY
+  // set of files still reports a terminal percent of 100 (todo 2026-08-19:
+  // run-scoped numerator vs plan-scoped denominator).
+  it('a resumed install whose reconciler skipped a NON-EMPTY set of files still reports a terminal percent of 100 (todo 2026-08-19: run-scoped numerator vs plan-scoped denominator)', async () => {
+    const skippedBuf = Buffer.from('S'.repeat(99)) // 99 bytes, already on disk
+    const chunkBuf = Buffer.from('x') // 1 byte, must be fetched this run
+    jest.mocked(fetchChunk).mockResolvedValue(chunkBuf)
+
+    // Pre-write the reconciled-skip file to disk BEFORE calling
+    // downloadDepotFiles, so the reconciler finds it present + sha1-matching
+    // and excludes it from the job list.
+    mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
+    writeFileSync(join(dir, 'common', 'SomeGame', 'already.bin'), skippedBuf)
+
+    const fileSkipped: DepotPlanFile = {
+      filename: 'already.bin',
+      size: 99,
+      sha_content: sha1Hex(skippedBuf),
+      chunks: [{ sha: 's-skip', cb_original: 99, offset: 0 }]
+    }
+    const fileFetched: DepotPlanFile = {
+      filename: 'fetch.bin',
+      size: 1,
+      sha_content: sha1Hex(chunkBuf),
+      chunks: [{ sha: 's-fetch', cb_original: 1, offset: 0 }]
+    }
+
+    // Honest sum (99 + 1) — NOT artificially inflated, or 100% would be
+    // unreachable for an unrelated reason and the test would prove nothing.
+    const plan = makePlan(
+      [
+        {
+          depotId: '111',
+          gid: 'g1',
+          key: Buffer.from('key'),
+          files: [fileSkipped, fileFetched]
+        }
+      ],
+      100
+    )
+
+    await downloadDepotFiles(plan, {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      hosts: HOSTS
+    })
+
+    // ANTI-VACUITY: the skip set really is non-empty. If reconcile did not
+    // skip already.bin, this fails and the percent assertion below would be
+    // vacuously satisfiable by a fresh-install path.
+    expect(fetchChunk).toHaveBeenCalledTimes(1)
+    expect(jest.mocked(fetchChunk).mock.calls[0][2].sha).not.toBe('s-skip')
+
+    const mockedSend = sendFrontendMessage as jest.Mock
+    const calls = mockedSend.mock.calls.filter(
+      ([channel]) => channel === 'progressUpdate'
+    )
+    expect(calls.length).toBeGreaterThan(0)
+
+    const [, lastPayload] = calls[calls.length - 1] as [
+      string,
+      Record<string, unknown>
+    ]
+    const progress = lastPayload.progress as Record<string, unknown>
+    expect(progress.percent).toBe(100)
+
+    // Guard against the rate/ETA regression the seeding could otherwise
+    // introduce.
+    expect(['', /^\d{2}:\d{2}:\d{2}$/].some((m) =>
+      typeof m === 'string' ? progress.eta === m : m.test(progress.eta as string)
+    )).toBe(true)
+    expect(Number.isFinite(progress.downSpeed as number)).toBe(true)
+    expect(Number.isFinite(progress.diskSpeed as number)).toBe(true)
+  })
+
   // ── Phase 23 (23-03, D-04): reconciliation wiring ─────────────────────────
   describe('reconciliation wiring (D-04/D-05)', () => {
     it('a pre-existing sha1-matching file is skipped from re-download (fetchChunk never called for it) on a partial resume', async () => {
