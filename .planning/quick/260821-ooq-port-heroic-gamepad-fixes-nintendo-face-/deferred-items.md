@@ -4,12 +4,28 @@ Out-of-scope discoveries found while running the plan's lint/codecheck gates.
 Not fixed here per the executor's scope boundary (pre-existing, unrelated to
 this task's files).
 
-## `pnpm lint` pre-existing errors in `meta/hardcodedStringGate.ts`
+## `pnpm lint` pre-existing errors — RESOLVED 2026-08-21
 
 9 `@typescript-eslint/no-unnecessary-type-assertion` errors at lines 466, 520,
-535, 731, 734, 773, 784, 830, 983. Confirmed pre-existing (file untouched by
-this plan) via `npx eslint meta/hardcodedStringGate.ts` before any edits in
-this task. Not caused by, and not fixed by, quick task 260821-ooq.
+535, 731, 734, 773, 784, 830, 983. Confirmed pre-existing (files untouched by
+this plan) before any edits in this task. Not caused by quick task 260821-ooq.
+
+**File attribution corrected 2026-08-21.** This entry originally named
+`meta/hardcodedStringGate.ts`. That is wrong — that file has only warnings, zero
+errors. The line numbers were right but the path was not: all 9 errors were in
+`src/backend/storeManagers/steam/__tests__/removeCopies.test.ts`. The mistake is
+easy to make because `npx eslint <file>` and repo-wide `pnpm lint` print
+interleaved output, and `hardcodedStringGate.ts` emits a long run of
+`no-unsafe-*` **warnings** immediately above. Always confirm severity and path
+together — `eslint -f json` filtered on `severity === 2` is unambiguous.
+
+**RESOLVED 2026-08-21 (`acab0e0b4`), at the user's request.**
+`@types/jest` declares `requireMock<TModule extends {} = any>(name): TModule`,
+so TypeScript infers `TModule` from the assertion's own contextual type, making
+`jest.requireMock('x') as { ... }` a genuine no-op. All 9 sites moved to the
+explicit type-parameter form already used elsewhere in that same file at the
+`os` mock. Typing strength is unchanged — both forms return an unchecked
+`TModule`. Repo-wide eslint is now **0 errors** (3939 warnings, unchanged).
 
 ## Full Frontend jest project: one pre-existing unrelated failure — RESOLVED 2026-08-21
 
@@ -38,4 +54,29 @@ that specific button via its unique `onClick` handler; `D4b` keeps the
 under additions and removals; and a `D4 DISCRIMINATOR` spec carries the
 anti-vacuity proof inside the suite. Frontend project now 1858/1858.
 
-The `meta/hardcodedStringGate.ts` lint item above remains OPEN.
+## Still open: repo-wide `prettier --check` drift (NOT swept here)
+
+`removeCopies.test.ts` was already prettier-dirty at `HEAD~1` — **71 differing
+lines**, none of them at the 9 sites above (verified with `prettier
+--stdin-filepath` against the real path, so config resolution matches the
+in-repo run). The `acab0e0b4` fix was deliberately committed _without_ a
+`prettier --write` sweep: reformatting would have buried a 25-line behavioural
+diff in ~110 lines of unrelated churn. It added no new drift (0 prettier
+complaints land on any changed line) and incidentally reduced the pre-existing
+count from 71 to 57.
+
+This is not local to one file. `.github/workflows/lint.yml` runs `pnpm prettier`
+(`prettier --check .`) as a gate, and that gate is red repo-wide, independent of
+any change in this quick task. Re-baselining it is a standalone task — it should
+be one pure-formatting commit, kept clear of behavioural changes.
+
+Separately, two config landmines to resolve before any such sweep:
+
+- `src/preload/.prettierrc` sets `printWidth: 120`, overriding the root
+  `.prettierrc.json` (which sets no `printWidth`, so root defaults to 80).
+  Files under `src/preload/` are therefore formatted to a different width than
+  the rest of the repo.
+- `.editorconfig`'s `[{*.ts, *.tsx, *.js}]` section has a space after each
+  comma. EditorConfig treats brace alternatives literally, so ` *.tsx` and
+  ` *.js` (leading space) match nothing — that section only ever applies to
+  `*.ts`.
