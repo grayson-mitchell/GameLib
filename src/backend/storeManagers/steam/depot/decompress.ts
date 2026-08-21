@@ -248,11 +248,85 @@ export async function decompressChunk(
   }
 
   if (magic === 'PK') {
-    const zlib = await import('node:zlib')
-    // Local file header is 30 bytes + filename + extra; inflate the raw deflate body.
+    // Local file header is 30 bytes + filename + extra.
     const nameLen = buf.readUInt16LE(26)
     const extraLen = buf.readUInt16LE(28)
-    return zlib.inflateRawSync(buf.subarray(30 + nameLen + extraLen))
+    const body = buf.subarray(30 + nameLen + extraLen)
+
+    // Debug/steam-depot-decode-z-data: the local-file-header's compression-
+    // method field (offset 8, 2 bytes LE) was never read here -- every
+    // PK-magic chunk was force-fed through zlib.inflateRawSync() assuming
+    // method 8 (Deflated). Valve's depot chunks can ALSO use method 0
+    // (Stored/uncompressed) -- plausible, and observed, for small chunks
+    // where Deflate has no benefit. SteamKit2's own reference implementation
+    // (SteamKit2/SteamKit2/Util/ZipUtil.cs) uses .NET's ZipArchive, which
+    // transparently supports both methods, confirming this is a real, valid
+    // container shape and not a hypothetical. Feeding a genuinely-Stored
+    // body into inflateRawSync throws Z_DATA_ERROR deterministically --
+    // reproduced the exact symptom (depots 259132/259134, 128-byte chunk,
+    // byte-identical across all 6 CDN hosts, 100% deterministic) even though
+    // decrypt and CDN content were both correct.
+    const compressionMethod = buf.readUInt16LE(8)
+    if (compressionMethod === 0) {
+      // Debug/steam-depot-decode-z-data (cycle 2): the FIRST Stored fix
+      // (`return Buffer.from(body)`, `body` running to the buffer's end) was
+      // confirmed on real hardware to eliminate Z_DATA_ERROR entirely, but
+      // still lost ~8/747 chunks to a narrower `sha1_mismatch` -- one
+      // 128-byte chunk (depot 259134) across multiple hosts. A ZIP local
+      // file header is followed by the payload, but `buf` is the WHOLE
+      // container: a real ZIP also carries a central directory file header
+      // (46 bytes + name + extra + comment) and an end-of-central-directory
+      // record (22 bytes + comment) AFTER the payload. `body` above runs to
+      // the buffer's end, so it silently absorbed that trailing metadata as
+      // if it were data. Deflate never exposed this because
+      // `inflateRawSync` stops at the end of the deflate stream and ignores
+      // trailing bytes -- Stored has no decoder to stop at the right place,
+      // so it's the only method that surfaces the over-read. Truncate to
+      // the local header's OWN declared Stored length (compressedSize ==
+      // uncompressedSize at offset 18/22 for method 0) instead of trusting
+      // the buffer's end.
+      const generalPurposeFlags = buf.readUInt16LE(6)
+      const hasTrailingDataDescriptor = (generalPurposeFlags & 0x08) !== 0
+
+      let storedLength: number
+      if (hasTrailingDataDescriptor) {
+        // Bit 3 set: per the ZIP spec, the local header's size fields are
+        // zero and the true sizes live in a data descriptor written AFTER
+        // the payload -- there's no reliable in-header signal for where the
+        // payload ends in this case. Fall back to the trusted,
+        // manifest-derived cbOriginal (same trust boundary the zstd branch
+        // above already relies on for its own pre-decode size gate).
+        if (cbOriginal === undefined) {
+          throw new ChunkDecodeError(
+            'unknown_container',
+            'PK chunk: Stored entry uses a trailing data descriptor (general-purpose bit 3 set) and no cbOriginal was supplied to bound the payload length',
+            buf.subarray(0, RAW_BODY_PREVIEW_BYTES)
+          )
+        }
+        storedLength = Number(cbOriginal)
+      } else {
+        storedLength = buf.readUInt32LE(18) // compressedSize (== uncompressedSize for Stored)
+      }
+
+      if (storedLength > body.length) {
+        throw new ChunkDecodeError(
+          'size_mismatch',
+          `PK chunk: declared Stored payload length ${storedLength} exceeds available bytes ${body.length}`
+        )
+      }
+
+      return Buffer.from(body.subarray(0, storedLength))
+    }
+    if (compressionMethod === 8) {
+      const zlib = await import('node:zlib')
+      return zlib.inflateRawSync(body)
+    }
+
+    throw new ChunkDecodeError(
+      'unknown_container',
+      `PK chunk: unsupported compression method ${compressionMethod}`,
+      buf.subarray(0, RAW_BODY_PREVIEW_BYTES)
+    )
   }
 
   // Debug/steam-install-slow-start (cycle 17, post-decrypt diagnostic): `buf`
@@ -362,18 +436,29 @@ export async function decodeChunk(
     const decrypted = steamDecrypt(encrypted, key)
     const data = await decompressChunk(decrypted, lzma, cbOriginal)
 
+    // Debug/steam-depot-decode-z-data (cycle 2, secondary/low-risk):
+    // check length BEFORE hash. A wrong-length decode (e.g. a container
+    // over-read that grabbed trailing bytes it shouldn't have) previously
+    // surfaced as the less diagnostic `sha1_mismatch` -- almost any wrong
+    // length also fails the hash, so the more specific, more actionable
+    // `size_mismatch` classification was unreachable in practice. Checking
+    // size first costs nothing (both checks always ran before; only the
+    // ORDER and which one is reported first changes) and makes future
+    // wrong-length defects diagnosable straight from the reason code
+    // instead of requiring another debug session to re-derive.
+    if (data.length !== Number(cbOriginal)) {
+      throw new ChunkDecodeError(
+        'size_mismatch',
+        `chunk size mismatch: ${data.length} != ${cbOriginal}`
+      )
+    }
+
     // The chunk's SHA1 is the hash of its DECOMPRESSED bytes — free integrity check.
     const got = sha1(data)
     if (got !== expectedSha) {
       throw new ChunkDecodeError(
         'sha1_mismatch',
         `chunk sha1 mismatch: ${got} != ${expectedSha}`
-      )
-    }
-    if (data.length !== Number(cbOriginal)) {
-      throw new ChunkDecodeError(
-        'size_mismatch',
-        `chunk size mismatch: ${data.length} != ${cbOriginal}`
       )
     }
     return data

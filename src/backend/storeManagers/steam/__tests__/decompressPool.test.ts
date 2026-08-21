@@ -102,7 +102,11 @@ function buildVZChunk(data: Buffer, compressed: Buffer): Buffer {
   return Buffer.concat([header, payload, footer])
 }
 
-/** Build a PK/zlib-container chunk (local-file-header + raw deflate body). */
+/** Build a PK/zlib-container chunk (local-file-header + raw deflate body).
+ *  Debug/steam-depot-decode-z-data: explicitly stamps compression method 8
+ *  (Deflated) at offset 8 -- previously left at 0 (Stored) via Buffer.alloc's
+ *  zero-fill, which meant this fixture never actually exercised the method
+ *  field decompressChunk now reads. */
 function buildPKChunk(data: Buffer): Buffer {
   const deflated = deflateRawSync(data)
   const nameLen = 4
@@ -110,6 +114,7 @@ function buildPKChunk(data: Buffer): Buffer {
   const filename = Buffer.from('test')
   const buf = Buffer.alloc(30 + nameLen + extraLen + deflated.length)
   buf.write('PK', 0, 'latin1')
+  buf.writeUInt16LE(8, 8) // compression method = 8 (Deflated)
   buf.writeUInt16LE(nameLen, 26)
   buf.writeUInt16LE(extraLen, 28)
   filename.copy(buf, 30)

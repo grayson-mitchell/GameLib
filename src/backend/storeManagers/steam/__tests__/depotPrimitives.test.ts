@@ -93,7 +93,11 @@ function buildVZChunk(data: Buffer, compressed: Buffer): Buffer {
   return Buffer.concat([header, payload, footer])
 }
 
-/** Build a PK/zlib-container chunk (local-file-header + raw deflate body). */
+/** Build a PK/zlib-container chunk (local-file-header + raw deflate body).
+ *  Debug/steam-depot-decode-z-data: explicitly stamps compression method 8
+ *  (Deflated) at offset 8 -- previously left at 0 (Stored) via Buffer.alloc's
+ *  zero-fill, which meant this fixture never actually exercised the method
+ *  field decompressChunk now reads. */
 function buildPKChunk(data: Buffer): Buffer {
   const deflated = deflateRawSync(data)
   const nameLen = 4
@@ -101,11 +105,155 @@ function buildPKChunk(data: Buffer): Buffer {
   const filename = Buffer.from('test')
   const buf = Buffer.alloc(30 + nameLen + extraLen + deflated.length)
   buf.write('PK', 0, 'latin1')
+  buf.writeUInt16LE(8, 8) // compression method = 8 (Deflated)
   buf.writeUInt16LE(nameLen, 26)
   buf.writeUInt16LE(extraLen, 28)
   filename.copy(buf, 30)
   deflated.copy(buf, 30 + nameLen + extraLen)
   return buf
+}
+
+/** Debug/steam-depot-decode-z-data: build a PK/zip-container chunk stored
+ *  with compression method 0 (Stored/uncompressed) -- the ROOT CAUSE shape
+ *  for the Z_DATA_ERROR defect. Valve's depot chunks can legitimately use
+ *  Stored for small chunks where Deflate has no benefit (SteamKit2's own
+ *  ZipUtil.cs supports both methods via .NET's ZipArchive). Before the fix,
+ *  decompressChunk unconditionally called zlib.inflateRawSync() on this
+ *  body and threw Z_DATA_ERROR; after the fix it must return `data`
+ *  byte-for-byte unchanged. */
+function buildStoredPKChunk(data: Buffer): Buffer {
+  const nameLen = 4
+  const extraLen = 0
+  const filename = Buffer.from('test')
+  const buf = Buffer.alloc(30 + nameLen + extraLen + data.length)
+  buf.write('PK', 0, 'latin1')
+  buf.writeUInt16LE(0, 8) // compression method = 0 (Stored)
+  // Debug/steam-depot-decode-z-data (cycle 2): stamp compressedSize/
+  // uncompressedSize (offset 18/22) -- the truncation fix now reads these
+  // to bound the Stored payload instead of trusting the buffer's end.
+  // Previously left at Buffer.alloc's zero-fill, which was harmless while
+  // decompressChunk ignored them but became load-bearing (and wrongly
+  // zero) once it started reading them.
+  buf.writeUInt32LE(data.length, 18)
+  buf.writeUInt32LE(data.length, 22)
+  buf.writeUInt16LE(nameLen, 26)
+  buf.writeUInt16LE(extraLen, 28)
+  filename.copy(buf, 30)
+  data.copy(buf, 30 + nameLen + extraLen)
+  return buf
+}
+
+/** Debug/steam-depot-decode-z-data (cycle 2): build a REALISTIC Stored PK
+ *  chunk that includes what `buildStoredPKChunk` above never did -- a
+ *  trailing ZIP central directory file header (46 bytes + name + extra) and
+ *  an end-of-central-directory record (22 bytes) after the payload, the way
+ *  every real ZIP container (and every real Steam CDN chunk) is laid out.
+ *  `buildStoredPKChunk`'s payload-only container (exactly
+ *  `30 + nameLen + extraLen + data.length` bytes, nothing more) cannot exist
+ *  in the wild -- it is why a truncation-free Stored fix
+ *  (`buf.subarray(30 + nameLen + extraLen)`, running to the buffer's end)
+ *  passed against that fixture while still failing on real hardware (depot
+ *  259132/259134's 128-byte chunk): the buffer's real trailing bytes are ZIP
+ *  metadata, not payload, and trusting "everything after the local header"
+ *  silently swallows them into the returned data, breaking the SHA1 gate.
+ *  Also stamps compressedSize/uncompressedSize into the local header
+ *  (offset 18/22) -- the field the truncation fix reads -- which the
+ *  original `buildStoredPKChunk` left at `Buffer.alloc`'s zero-fill
+ *  (harmless before the fix, which never read them; load-bearing after). */
+function buildRealisticStoredPKChunk(data: Buffer): Buffer {
+  const nameLen = 4
+  const extraLen = 0
+  const filename = Buffer.from('test')
+
+  const localHeaderLen = 30 + nameLen + extraLen
+  const local = Buffer.alloc(localHeaderLen)
+  local.write('PK', 0, 'latin1')
+  local.writeUInt8(0x03, 2)
+  local.writeUInt8(0x04, 3)
+  local.writeUInt16LE(0, 8) // compression method = 0 (Stored)
+  local.writeUInt32LE(data.length, 18) // compressed size
+  local.writeUInt32LE(data.length, 22) // uncompressed size
+  local.writeUInt16LE(nameLen, 26)
+  local.writeUInt16LE(extraLen, 28)
+  filename.copy(local, 30)
+
+  const centralLen = 46 + nameLen + extraLen
+  const central = Buffer.alloc(centralLen)
+  central.write('PK', 0, 'latin1')
+  central.writeUInt8(0x01, 2)
+  central.writeUInt8(0x02, 3)
+  central.writeUInt16LE(0, 10) // compression method
+  central.writeUInt32LE(data.length, 20) // compressed size
+  central.writeUInt32LE(data.length, 24) // uncompressed size
+  central.writeUInt16LE(nameLen, 28)
+  central.writeUInt16LE(extraLen, 30)
+  filename.copy(central, 46)
+
+  const eocd = Buffer.alloc(22)
+  eocd.write('PK', 0, 'latin1')
+  eocd.writeUInt8(0x05, 2)
+  eocd.writeUInt8(0x06, 3)
+  eocd.writeUInt16LE(1, 8) // entries on this disk
+  eocd.writeUInt16LE(1, 10) // total entries
+  eocd.writeUInt32LE(centralLen, 12) // size of central directory
+  eocd.writeUInt32LE(localHeaderLen + data.length, 16) // central dir offset
+
+  return Buffer.concat([local, data, central, eocd])
+}
+
+/** Same realistic-container shape, but with general-purpose bit 3 set and
+ *  the local header's size fields left at zero -- the shape ZIP writers use
+ *  when an entry's size isn't known up front (true sizes then live in a
+ *  12-byte data descriptor written AFTER the payload). decompressChunk
+ *  cannot recover the payload length from the local header alone in this
+ *  case and must fall back to the trusted, manifest-derived cbOriginal. */
+function buildStoredPKChunkWithDataDescriptor(data: Buffer): Buffer {
+  const nameLen = 4
+  const extraLen = 0
+  const filename = Buffer.from('test')
+
+  const localHeaderLen = 30 + nameLen + extraLen
+  const local = Buffer.alloc(localHeaderLen)
+  local.write('PK', 0, 'latin1')
+  local.writeUInt8(0x03, 2)
+  local.writeUInt8(0x04, 3)
+  local.writeUInt16LE(0x08, 6) // general-purpose bit 3 set
+  local.writeUInt16LE(0, 8) // compression method = 0 (Stored)
+  // compressed/uncompressed size fields intentionally left at 0 -- per the
+  // ZIP spec, the real sizes live in the trailing data descriptor when bit
+  // 3 is set.
+  local.writeUInt16LE(nameLen, 26)
+  local.writeUInt16LE(extraLen, 28)
+  filename.copy(local, 30)
+
+  const dataDescriptor = Buffer.alloc(12)
+  dataDescriptor.writeUInt32LE(0, 0) // crc32 -- unused/unchecked
+  dataDescriptor.writeUInt32LE(data.length, 4) // compressed size
+  dataDescriptor.writeUInt32LE(data.length, 8) // uncompressed size
+
+  const centralLen = 46 + nameLen + extraLen
+  const central = Buffer.alloc(centralLen)
+  central.write('PK', 0, 'latin1')
+  central.writeUInt8(0x01, 2)
+  central.writeUInt8(0x02, 3)
+  central.writeUInt16LE(0x08, 8) // general-purpose bit flag
+  central.writeUInt16LE(0, 10) // compression method
+  central.writeUInt32LE(data.length, 20)
+  central.writeUInt32LE(data.length, 24)
+  central.writeUInt16LE(nameLen, 28)
+  central.writeUInt16LE(extraLen, 30)
+  filename.copy(central, 46)
+
+  const eocd = Buffer.alloc(22)
+  eocd.write('PK', 0, 'latin1')
+  eocd.writeUInt8(0x05, 2)
+  eocd.writeUInt8(0x06, 3)
+  eocd.writeUInt16LE(1, 8)
+  eocd.writeUInt16LE(1, 10)
+  eocd.writeUInt32LE(centralLen, 12)
+  eocd.writeUInt32LE(localHeaderLen + data.length + dataDescriptor.length, 16)
+
+  return Buffer.concat([local, data, dataDescriptor, central, eocd])
 }
 
 /** Debug/steam-install-slow-start (cycle 17): build a zstd/"VSZa"-container
@@ -192,6 +340,86 @@ describe('decompress', () => {
     const data = Buffer.from('pk deflate fixture data', 'utf8')
     const pkChunk = buildPKChunk(data)
     const out = await decompressChunk(pkChunk, lzma)
+    expect(out.equals(data)).toBe(true)
+  })
+
+  // Debug/steam-depot-decode-z-data: ROOT CAUSE fix for the deterministic
+  // Z_DATA_ERROR that hit depots 259132/259134 on every one of 6 CDN hosts.
+  // decompressChunk's PK branch never read the ZIP local-file-header's
+  // compression-method field and unconditionally ran inflateRawSync,
+  // assuming Deflate (method 8). Valve's depot chunks can ALSO be Stored
+  // (method 0, uncompressed) -- SteamKit2's own reference client supports
+  // both via .NET's ZipArchive. Before the fix, this exact fixture shape
+  // (a genuinely-Stored PK chunk) threw Z_DATA_ERROR; the fix must instead
+  // return the original bytes unchanged.
+  it('decompressChunk on a Stored (method 0) PK fixture returns the body unchanged, without inflating', async () => {
+    const data = Buffer.from('pk stored fixture data, not compressed', 'utf8')
+    const storedChunk = buildStoredPKChunk(data)
+    const out = await decompressChunk(storedChunk, lzma)
+    expect(out.equals(data)).toBe(true)
+  })
+
+  it('confirms the pre-fix failure mode: feeding a Stored PK body straight into inflateRawSync throws Z_DATA_ERROR', () => {
+    // Regression anchor, not a decompressChunk call: proves the fixture
+    // above genuinely reproduces the field defect's mechanism (Z_DATA_ERROR
+    // from zlib) rather than some other failure shape.
+    const data = Buffer.from('pk stored fixture data, not compressed', 'utf8')
+    const storedChunk = buildStoredPKChunk(data)
+    const nameLen = storedChunk.readUInt16LE(26)
+    const extraLen = storedChunk.readUInt16LE(28)
+    const body = storedChunk.subarray(30 + nameLen + extraLen)
+    expect(() => require('node:zlib').inflateRawSync(body)).toThrow(
+      expect.objectContaining({ code: 'Z_DATA_ERROR' })
+    )
+  })
+
+  // Debug/steam-depot-decode-z-data (cycle 2): SECOND, NARROWER root cause
+  // found on the live gate AFTER the cycle-1 Stored fix above eliminated
+  // every Z_DATA_ERROR: a single depot chunk (rawSha1
+  // 060a1f2e1610ecbd8cf158beb92e7f0198ad8e22, 128 bytes) still failed, now
+  // with `sha1_mismatch`. The cycle-1 fix's `body = buf.subarray(30 +
+  // nameLen + extraLen)` runs to the END of the buffer -- correct against
+  // `buildStoredPKChunk`'s payload-only fixture, but a real ZIP container
+  // (this fixture) has a central directory file header + EOCD record AFTER
+  // the payload, which the cycle-1 fix silently included as if it were
+  // data. decompressChunk must instead trust the local header's declared
+  // Stored length (compressedSize at offset 18) and truncate to it.
+  it('decompressChunk on a Stored PK chunk followed by a real ZIP central directory + EOCD trims the payload to its declared length', async () => {
+    const data = Buffer.from(
+      'pk stored realistic fixture data, not compressed',
+      'utf8'
+    )
+    const chunk = buildRealisticStoredPKChunk(data)
+    const out = await decompressChunk(chunk, lzma, data.length)
+    expect(out.equals(data)).toBe(true)
+  })
+
+  it('confirms this fixture reproduces the over-read: the bytes from the local header to the buffer end are LONGER than the declared payload and are not equal to it', () => {
+    // Regression anchor: proves buildRealisticStoredPKChunk's trailing
+    // central directory + EOCD genuinely extend past the declared payload
+    // length -- i.e. this fixture, unlike the payload-only
+    // buildStoredPKChunk, actually reproduces the shape the truncation fix
+    // guards against. (A fixture that can't demonstrate the over-read can't
+    // prove the fix addresses it.)
+    const data = Buffer.from(
+      'pk stored realistic fixture data, not compressed',
+      'utf8'
+    )
+    const chunk = buildRealisticStoredPKChunk(data)
+    const nameLen = chunk.readUInt16LE(26)
+    const extraLen = chunk.readUInt16LE(28)
+    const bodyRunningToBufferEnd = chunk.subarray(30 + nameLen + extraLen)
+    expect(bodyRunningToBufferEnd.length).toBeGreaterThan(data.length)
+    expect(bodyRunningToBufferEnd.equals(data)).toBe(false)
+  })
+
+  it('decompressChunk on a Stored PK chunk with a trailing data descriptor (bit 3 set, zeroed header size fields) falls back to cbOriginal to determine the payload length', async () => {
+    const data = Buffer.from(
+      'pk stored bit3/data-descriptor fixture data',
+      'utf8'
+    )
+    const chunk = buildStoredPKChunkWithDataDescriptor(data)
+    const out = await decompressChunk(chunk, lzma, data.length)
     expect(out.equals(data)).toBe(true)
   })
 
