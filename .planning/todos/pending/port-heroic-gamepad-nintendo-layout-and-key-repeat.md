@@ -1,61 +1,88 @@
 ---
 created: 2026-08-15T08:50:00.000Z
-title: "Port Heroic gamepad fixes: Nintendo face-button layout + key-repeat tuning"
+revised: 2026-08-21
+title: "Port Heroic gamepad key-repeat tuning (part b) — part (a) landed differently, carries an open convention decision"
 area: input
 needs: port-then-hand-merge
 status: OPEN
 severity: minor
 upstream:
-  - 0ee91ab2f (Heroic v2.22.1 — Correct reversed A/B and X/Y on Nintendo controllers, #5747)
-  - 8eb7fe7f9 (Heroic v2.22.1 — Improved gamepad key repeat, #5059)
+  - 8eb7fe7f9 (Heroic v2.22.1 — Improved gamepad key repeat, #5059) — STILL OPEN
+  - 0ee91ab2f (Heroic v2.22.1 — Correct reversed A/B and X/Y on Nintendo controllers, #5747) — SUPERSEDED, see below
 files:
   - src/frontend/helpers/gamepad.ts
-  - src/frontend/helpers/gamepad_layouts/nintendo.ts
-  - src/frontend/helpers/gamepad_layouts/standard.ts
-  - src/frontend/screens/ConsoleMode/controller.ts
-  - src/frontend/screens/ConsoleMode/InstallOverlay/index.tsx
-  - src/frontend/screens/ConsoleMode/components/ConfirmDialog/index.tsx
-  - src/frontend/screens/ConsoleMode/components/LaunchOverlay/index.tsx
   - src/frontend/components/UI/SliderField/index.tsx
+  - src/frontend/components/UI/SliderField/index.css
   - src/frontend/screens/Settings/components/GamePadDelayRepeat.tsx
+  - src/frontend/screens/Settings/components/index.ts
+  - src/backend/config.ts
+  - src/common/types.ts
+  - public/locales/en/translation.json
 ---
 
-## Problem
+## Status as of 2026-08-21
 
-Two upstream gamepad commits from Heroic v2.22.1, reviewed 2026-08-15 against GameLib's fork
-base (Heroic v2.22.0 @ `b5b5cad3`). Operator decided to take **both as one task**.
+Originally this todo bundled two upstream commits. **Part (a) is done — by a different
+route than upstream — and part (b) has not been started.** Quick task `260821-ooq`
+(commits `c60eb9776`, `a1eddb5c3`) landed part (a)'s user-visible symptom fix.
 
-**(a) Nintendo face buttons are reversed — a real user-visible bug.**
-Nintendo Switch Pro Controllers and Joy-Cons report the Chromium "standard" mapping **by
-physical position**, so the bottom button (labeled **B**) is `buttons[0]` and the right button
-(labeled **A**) is `buttons[1]`. GameLib's input handling treats `buttons[0]` as the main action
-and `buttons[1]` as back — so on a Switch controller, **pressing A triggers back and pressing B
-selects**, directly contradicting the on-screen glyphs. Upstream adds a dedicated Switch Pro
-layout that swaps the face buttons for main navigation, and makes Console Mode's confirm/back
-button indices layout-aware so the overlays agree.
+### Part (a) — Nintendo face buttons: RESOLVED, divergent from upstream
 
-**(b) Key repeat is sluggish.** Upstream reworks the repeat handling in `gamepad.ts` (+113),
-adds a new `SliderField` UI component, and exposes a `GamePadDelayRepeat` control under Advanced
-Settings so the user can tune delay/rate.
+The reported defect (on-screen glyph contradicts the button that acts) is gone in
+Console Mode. GameLib and Heroic fixed it in **opposite directions**, and both are
+internally consistent:
 
-## Solution
+| | index that confirms | glyph shown for confirm | resulting convention |
+|---|---|---|---|
+| Heroic `0ee91ab2f` | `buttons[1]` (physical right) | `A` | **A confirms** — matches the Switch OS |
+| GameLib `c60eb9776` | `buttons[0]` (physical bottom) | `B` | **bottom button confirms** — position-stable across brands |
 
-Port both. Merge characteristics verified 2026-08-15:
+GameLib swapped the *labels* (`getActionButtonLabel`/`getBackButtonLabel` gained a
+`'nintendo'` branch); upstream swapped the *indices* (added
+`getActionButtonIndex`/`getBackButtonIndex`, demoted `BTN_ACTION`/`BTN_BACK` to
+module-private, and added a `checkNintendo` layout dispatched on `057e.*(2006|2007|2009)`).
 
-- `src/frontend/helpers/gamepad.ts` and `src/frontend/helpers/gamepad_layouts/` are **untouched
-  by GameLib since fork base** — these merge clean.
-- The ConsoleMode overlay half must be **hand-merged**, not cherry-picked: GameLib's
-  `InstallOverlay/index.tsx` is +168 and `LaunchOverlay/index.tsx` +98 vs base.
+Verified consistent 2026-08-21: `ConsoleMode/index.tsx` and `BackHint` read the glyph
+from the label helpers, while `InstallOverlay`, `ConfirmDialog` and `LaunchOverlay` bind
+`BTN_ACTION`/`BTN_BACK` directly — so glyph and action agree on a Switch pad.
+Outside Console Mode no layout-derived glyph is rendered anywhere, and no `X`/`Y` glyph
+is rendered at all, so upstream's X/Y half has no contradiction to fix here either.
 
-**Trap:** (b) adds new i18n keys, so it **trips GameLib's blocking localisation gate**. Budget for
-that. (a) alone does not.
+**Open decision (operator, not an executor):** keep GameLib's *bottom-button-confirms*
+convention, or adopt upstream's *A-confirms*? Upstream's matches a Switch owner's muscle
+memory from the console itself; GameLib's keeps one physical position confirming on every
+controller brand. Switching later is cheap while only Console Mode renders glyphs — it
+means adding the two index helpers and routing the three overlays through them. **Do not
+let an executor "finish the port" by pulling `0ee91ab2f` in on top of `c60eb9776`** —
+applying both swaps cancels them out and reintroduces the original defect.
+
+The quick task also fixed an unrelated `removegamepad` bug found in passing
+(`gamepad.ts` compared an array position against a gamepad index), and added two
+regression suites. Neither was in this todo's scope.
+
+## Part (b) — Key repeat is sluggish: STILL FULLY OPEN
+
+Verified absent 2026-08-21: no `SliderField` component, no `GamePadDelayRepeat.tsx`, and
+`gamepad.ts` still carries the pre-fix repeat handling.
+
+Upstream `8eb7fe7f9` reworks repeat timing in `gamepad.ts` (+113), adds a `SliderField`
+UI component, adds a `GamePadDelayRepeat` control under Advanced Settings, and plumbs the
+delay/rate through `src/backend/config.ts` and `src/common/types.ts`.
+
+`src/frontend/helpers/gamepad.ts` has since been touched by `a1eddb5c3` (the
+`removegamepad` fix in the `initGamepad` body). Re-check merge cleanliness before
+cherry-picking — the 2026-08-15 "untouched since fork base" note in the original todo is
+now stale for this file.
+
+**Trap:** this half adds new i18n keys, so it **trips GameLib's blocking localisation
+gate**. Budget for that.
 
 **Opportunity:** GameLib has carried an *unmeasured gamepad focus-scroll* item across two
-consecutive phases. This is the natural place to finally measure it rather than carrying it a
-third time.
+consecutive phases. This is still the natural place to finally measure it rather than
+carrying it a third time.
 
-Reference commits are readable locally — the Heroic upstream is git remote `origin`:
-`git show 0ee91ab2f`, `git show 8eb7fe7f9`.
+Reference commit is readable locally — the Heroic upstream is git remote `origin`:
+`git show 8eb7fe7f9`.
 
-Related: [[port-heroic-small-polish-trio]] (same upstream review), and the store-page gamepad
-seed in `.planning/seeds/` for the console-mode-drives-store-browser feature.
+Related: [[port-heroic-small-polish-trio]] (same upstream review), and the store-page
+gamepad seed in `.planning/seeds/` for the console-mode-drives-store-browser feature.
