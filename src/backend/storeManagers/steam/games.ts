@@ -17,7 +17,7 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getFileSize } from 'backend/utils'
 import type LogWriter from 'backend/logger/log_writer'
 import { GameConfig } from 'backend/game_config'
-import { isMac, isLinux } from 'backend/constants/environment'
+import { isMac, isLinux, isAppleSiliconMac } from 'backend/constants/environment'
 import {
   createAbortController,
   callAbortController,
@@ -42,7 +42,8 @@ import {
   readAcfState,
   pollUninstallOnce,
   resolveInstallRoot,
-  findOtherManifestsWithInstalldir
+  findOtherManifestsWithInstalldir,
+  removeSteamInstallCopy
 } from './library'
 import {
   isBottleReady,
@@ -955,6 +956,12 @@ export default class SteamGame implements Game {
     const routeThroughBottle = forceWindowsViaBottle || this.isBottleEligible()
 
     if (routeThroughBottle) {
+      // quick-260821-le0: remove a leftover unrunnable native i386 install
+      // BEFORE anything else in this branch runs — HOARD proved a demoted
+      // title can be bridge-eligible AND hold a native orphan at the same
+      // time, so this must precede the isBridgeEligible() check below.
+      await this.removeDemotedNativeOrphan()
+
       // Phase 24 Plan 08 (R4/D-01): allowlisted-title bridge routing — the
       // FIRST check inside this block, BEFORE the Phase 17 isBottleReady()
       // gate below, because the bridge bottle has its own dedicated
@@ -1077,6 +1084,73 @@ export default class SteamGame implements Game {
     startInstallPolling(this.appId)
 
     return { status: 'done' }
+  }
+
+  /**
+   * quick-260821-le0: closes the 32-bit Mac Steam orphan defect at the
+   * "stop creating new ones" end. `install()`'s `routeThroughBottle` branch
+   * calls this as its FIRST statement, before the bridge/bottle-provisioning
+   * checks below — a demoted title can be bridge-eligible AND already hold
+   * a leftover native i386 install at the same time (the HOARD/63000 shape
+   * that made this defect visible).
+   *
+   * Triple-gated, ALL of:
+   *  1. `isAppleSiliconMac` — the load-bearing safety gate. i386 STILL RUNS
+   *     on an Intel Mac, so an Intel host must keep its native copy. Never
+   *     widen this to `isMac` or `!isIntelMac` (see environment.ts's own
+   *     comment on the positive-probe requirement).
+   *  2. `steamMetadataStore.get(appId)?.mac_arch === '32'` — the specific
+   *     demotion signal, read directly rather than via `isBottleEligible()`,
+   *     which is also true for a merely-not-mac-native title whose native
+   *     install is a DIFFERENT case and out of scope here.
+   *  3. `readAcfState(appId, 'native').state === 'installed'` — the guard
+   *     `install()` has never had.
+   *
+   * On a match: `removeSteamInstallCopy` deletes the native copy, then
+   * `pollUninstallOnce('native')` is the ONLY state update on this path —
+   * it is the existing honest reconciliation mechanism, re-probing bottle/
+   * bridge for a survivor and re-resolving `install_path`, or flipping to
+   * not-installed when nothing survives. No `library.set()` is hand-written
+   * here and no badge is force-flipped in either direction (the badge
+   * follows confirmed on-disk ACF state, per the locked constraint and
+   * `60e89349a`) — a transient "Game Uninstalled" toast immediately before
+   * the bottle install starts is ACCEPTED as honest, not papered over.
+   *
+   * A cleanup failure is never fatal to the install: the whole body is
+   * wrapped in try/catch and only `logWarning`s on failure, following the
+   * same shape as `resumeInterruptedSteamInstall`'s own call site above.
+   */
+  private async removeDemotedNativeOrphan(): Promise<void> {
+    try {
+      if (!isAppleSiliconMac) {
+        return
+      }
+
+      if (steamMetadataStore.get(this.appId)?.mac_arch !== '32') {
+        return
+      }
+
+      const nativeState = await readAcfState(this.appId, 'native')
+      if (nativeState.state !== 'installed') {
+        return
+      }
+
+      const result = await removeSteamInstallCopy(this.appId, 'native')
+      logInfo(
+        `SteamGame: removeDemotedNativeOrphan removed appId ${this.appId}'s native install (result: ${result.status})`,
+        LogPrefix.Steam
+      )
+
+      await pollUninstallOnce(this.appId, 'native')
+    } catch (error) {
+      logWarning(
+        [
+          `SteamGame: removeDemotedNativeOrphan failed for appId ${this.appId}, continuing with install:`,
+          error
+        ],
+        LogPrefix.Steam
+      )
+    }
   }
 
   /**
