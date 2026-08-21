@@ -13,10 +13,11 @@ export interface HumbleLoginChromeCssWebview {
 }
 
 /**
- * Wires `dom-ready` -> `insertCSS` on `webview` so Humble's marketing footer is hidden on the
- * Electron login surface, mirroring the Tauri side's `login_chrome_css_script` (D-1's
- * fail-safe rationale: CSS hiding over DOM surgery, because a page re-skin that stops matching
- * `footer.site-footer` renders unchanged instead of breaking).
+ * Wires `dom-ready` -> `insertCSS` on `webview` so Humble's marketing footer AND its
+ * `.simple-navbar` logo band (260822-eib) are hidden on the Electron login surface, mirroring
+ * the Tauri side's `login_chrome_css_script` (D-1's fail-safe rationale: CSS hiding over DOM
+ * surgery, because a page re-skin that stops matching either selector renders unchanged
+ * instead of breaking, and the two rules fail independently of each other).
  *
  * Re-applies on EVERY `dom-ready`, deliberately without an idempotence guard: Electron drops
  * inserted CSS on every navigation, so the Google SSO round trip back to humblebundle.com must

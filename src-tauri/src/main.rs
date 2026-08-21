@@ -1677,17 +1677,20 @@ fn login_origin_banner_update_script(origin: &str) -> String {
 /// quick task 260822-di1). `login_cancel_strip_script`/`login_origin_banner_script` substitute
 /// for macOS *sheet* chrome -- a sheet renders no title bar and no close button, so they exist
 /// only where that gap exists. This script substitutes for nothing platform-specific: Humble's
-/// marketing footer is visual noise on the login page on Windows and Linux too, so it is
-/// injected on every platform, unconditionally, inside the `if visible` block.
+/// marketing footer and navbar are visual noise on the login page on Windows and Linux too, so
+/// it is injected on every platform, unconditionally, inside the `if visible` block.
 ///
 /// Purpose: CSS hiding is chosen over DOM surgery because it is fail-safe -- if Humble re-skins
-/// and `footer.site-footer` stops matching, the page renders unchanged instead of breaking.
-/// Reversal is a one-line edit to a single shared constant
+/// and either selector stops matching, the page renders unchanged instead of breaking, and the
+/// two rules fail independently of each other (260822-eib D-1: two separate declaration
+/// blocks, not one comma-joined selector list, so a syntax error in one never drops the
+/// other). Reversal is a one-line edit to a single shared constant
 /// (`src/common/humble/loginChromeCss.ts`'s `HUMBLE_LOGIN_CHROME_CSS`, this function's
 /// drift-pinned counterpart). The optional wrapper-padding tighten from the originating task
 /// brief was declined (D-1, `loginChromeCss.ts`'s own doc comment) -- there is no measured
-/// baseline for that padding, so any override would be an unverifiable guess, and this stays
-/// scoped to exactly one selector.
+/// baseline for that padding, so any override would be an unverifiable guess. This now covers
+/// two full-width page-chrome selectors (`footer.site-footer`, `.simple-navbar`), not one
+/// (260822-eib).
 ///
 /// Takes no arguments and interpolates nothing -- unlike its two neighbours, there is no
 /// `serde_json::to_string` placeholder-token step here, because there is no untrusted or
@@ -1749,7 +1752,7 @@ fn login_chrome_css_script() -> String {
         "if (!buildRoot) { return; } ",
         "var style = document.createElement('style'); ",
         "style.id = ID; ",
-        "style.textContent = 'footer.site-footer { display: none !important; }'; ",
+        "style.textContent = 'footer.site-footer { display: none !important; } .simple-navbar { display: none !important; }'; ",
         "buildRoot.appendChild(style); ",
         "} ",
         "function ensure() { ",
