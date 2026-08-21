@@ -385,7 +385,34 @@ export interface InstalledInfo {
   // 1026) download on startup. Surfaces the game as resumable without
   // auto-driving any heavy depot work unattended — the user's own Install
   // click (SteamGame.install()) clears this and performs the resume.
+  // 260821-rb5: as of this task, this flag has a THIRD writer — the
+  // install-start breadcrumb below — in addition to the startup ACF scan
+  // and markSteamInstallIncomplete.
   steamResumePending?: boolean
+  // 260821-rb5: crash-surviving resume breadcrumb. Written at native depot
+  // install START (games.ts's runNativeDepotDownload, before the
+  // downloadSteamDepots await) and persisted immediately to
+  // steamLibraryStore so a kill -9 microseconds later still finds them on
+  // disk. Closes case C of the aborted-depot-residue todo
+  // (.planning/todos/pending/2026-08-16-aborted-depot-residue-has-no-acf.md):
+  // no JS runs at teardown, so no appmanifest_*.acf is ever written and
+  // scanDownloadingAppIds can never see the residue.
+  //
+  // The PRESENCE of steamResumeInstalldir is the breadcrumb discriminator.
+  // steamResumePending alone is ambiguous — it is also set by the
+  // ACF-derived startup scan and by markSteamInstallIncomplete. Only a
+  // breadcrumb-carrying entry participates in init()'s startup self-heal
+  // check.
+  //
+  // These hold the values ACTUALLY used by the run (including
+  // opts.targetSteamappsDirOverride, i.e. a bottle steamapps root), never a
+  // re-derived guess.
+  //
+  // They are cleared on the successful (status: 'done') route and by
+  // init()'s self-heal; they deliberately SURVIVE an errored or cancelled
+  // run, because those leave residue too.
+  steamResumeTargetSteamappsDir?: string
+  steamResumeInstalldir?: string
 }
 
 export interface Reqs {
