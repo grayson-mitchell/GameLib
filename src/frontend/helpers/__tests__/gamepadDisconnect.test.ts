@@ -120,9 +120,8 @@ function buildHarness() {
   }
 
   ;(globalThis as unknown as { window: typeof fakeWindow }).window = fakeWindow
-  ;(
-    globalThis as unknown as { navigator: typeof fakeNavigator }
-  ).navigator = fakeNavigator
+  ;(globalThis as unknown as { navigator: typeof fakeNavigator }).navigator =
+    fakeNavigator
   ;(globalThis as unknown as { document: typeof fakeDocument }).document =
     fakeDocument
   ;(
@@ -131,7 +130,10 @@ function buildHarness() {
     }
   ).requestAnimationFrame = requestAnimationFrame
 
-  function fire(type: 'gamepadconnected' | 'gamepaddisconnected', pad: Gamepad) {
+  function fire(
+    type: 'gamepadconnected' | 'gamepaddisconnected',
+    pad: Gamepad
+  ) {
     const handlers = listeners.get(type) ?? []
     handlers.forEach((handler) => handler({ gamepad: pad }))
   }
@@ -160,7 +162,7 @@ describe('helpers/gamepad: removegamepad index-vs-position', () => {
   it('CASE 1 -- disconnecting the ACTIVE pad emits a reset even when its gamepad.index differs from its array position', () => {
     jest.resetModules()
     const harness = buildHarness()
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { initGamepad } = require('../gamepad') as typeof import('../gamepad')
     initGamepad()
 
@@ -192,7 +194,7 @@ describe('helpers/gamepad: removegamepad index-vs-position', () => {
   it('CASE 2 -- disconnecting a NON-active pad whose array position equals currentController emits nothing further', () => {
     jest.resetModules()
     const harness = buildHarness()
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { initGamepad } = require('../gamepad') as typeof import('../gamepad')
     initGamepad()
 
