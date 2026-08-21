@@ -1,11 +1,15 @@
 # .graphifyignore
 #
-# Scopes the graphify knowledge graph to the codebase plus top-level project
-# docs (README.md, CHANGELOG.md, etc.). Uses gitignore syntax and is merged
-# after .gitignore, with these patterns winning on conflict (last-match-wins).
+# Scopes the graphify knowledge graph to the codebase, top-level project docs
+# (README.md, CHANGELOG.md, etc.) and the .planning/ GSD artifacts. Uses
+# gitignore syntax and is merged after .gitignore, with these patterns winning
+# on conflict (last-match-wins).
 
-# GSD planning artifacts (the dominant node source)
-.planning/
+# GSD planning artifacts are INDEXED (unignored 2026-08-22 on request).
+# Only their non-document noise is excluded below.
+.planning/**/*.json
+.planning/**/*.sig
+.planning/graphs/
 
 # throwaway working files
 scratchpad/
