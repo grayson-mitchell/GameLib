@@ -159,9 +159,9 @@ Run on the operator's own machine against Dead Island (appId 91310), confirmed i
 | 4 | Neutral default: no chip on a virgin library (D-11) | **PASS** | count 384, no chip |
 | 5 | "only" state — chip "No store page only", grid filtered | **PASS** | — |
 | 6 | "hide" state — Dead Island gone, count = baseline − delisted | **PASS** | **375 of 384** |
-| 7 | Chip dismiss returns to baseline | **PARTIAL → FIXED** | dismissing the chip directly worked; **"Clear all" did NOT clear it** |
+| 7 | Chip dismiss returns to baseline | **PASS** (after fix `6cada93a7`) | first run: direct dismiss worked, **"Clear all" did NOT** — defect; re-tested after fix: "clear all now works" |
 | 8 | Console Mode renders Dead Island at default filters (D-13) | **PASS** | operator: "dead island is listed in console mode" |
-| 9 | Card shows normal install/launch controls | **NOT YET RUN** | — |
+| 9 | Card shows normal install/launch controls | **PASS** | affordance only — the i386 binary cannot execute on arm64 |
 
 **Step 6 is the strongest evidence in this gate.** 384 − 375 = **exactly 9** — matching the nine
 known delisted titles precisely. The facet filters the right set, not merely *a* set.
@@ -183,17 +183,22 @@ off `MORE_FILTER_KINDS` itself, so adding a seventh kind without wiring Clear al
 automatically. **Proven RED before the fix:** exactly one failure, on `noStorePage`, with the five
 pre-existing kinds passing, so the gate discriminates rather than being trivially red.
 
-### Still outstanding before REQ-37-02 closes
+### Gate CLOSED — 9/9 PASS (2026-08-22)
 
-- Step 9 (card shows normal install/launch controls) was not reported.
-- **Step 7 needs a re-test** — the fix landed after the operator's run, so the passing state of
-  "Clear all" has not itself been observed live.
+All nine checks observed by the operator. Step 7 was re-tested against `6cada93a7` and confirmed
+("clear all now works"). **REQ-37-02 is CLOSED.**
+
+One caveat recorded honestly: step 9 verified the install/launch *affordance* only. Dead Island's
+Mac binary is `Mach-O executable i386` and the host is arm64 — macOS dropped 32-bit support in
+Catalina and Rosetta 2 translates x86_64 only — so actual launch is untestable with this fixture,
+and it is the only one of the nine delisted titles installed. This is a hardware fact, not a code
+defect, and must not be re-scored as a FAIL later.
 
 ## Original checkpoint framing (superseded by the run above)
 
 Task 4 is a `checkpoint:human-verify` task gated `blocking`. Per this session's explicit instructions, it was not attempted or self-certified. See the CHECKPOINT REACHED section in the executor's final response for the exact steps a human operator must run, and what to record.
 
-**REQ-37-02 remains OPEN.** 7 of 9 checks passed, one found a real defect now fixed but not re-observed, and two were not run.
+**REQ-37-02 is CLOSED** — 9/9 after the step-7 re-test.
 
 ## Issues Encountered
 
