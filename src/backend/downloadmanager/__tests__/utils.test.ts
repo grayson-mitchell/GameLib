@@ -113,10 +113,43 @@ import { libraryManagerMap } from 'backend/storeManagers'
 import { isOnline } from '../../online_monitor'
 import { existsSync } from 'graceful-fs'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
-import { logWarning } from 'backend/logger'
+import { logWarning, logError } from 'backend/logger'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { backendEvents } from 'backend/backend_events'
 import type { InstallParams, GameStatus } from 'common/types'
+import { readFileSync } from 'fs'
+import { join } from 'path'
+
+/**
+ * 37-05 (REQ-37-04, Wave 4 Task 1): the pre-existing `aborthandler` mock
+ * (above) was `{ callAbortController: jest.fn() }` with no implementation --
+ * fine for asserting "was callAbortController called with this id", but
+ * blind to what callAbortController itself LOGS on a lookup miss, which is
+ * the actual user-visible artifact this plan is about. This test-local
+ * registry mirrors the real module's has()/set()-on-abort semantics closely
+ * enough to reproduce its log behaviour, without importing the real,
+ * shared-Map module (aborthandler.test.ts already owns unit coverage of
+ * that). The `callAbortController` mock's implementation is (re)installed
+ * against this registry in the file-scope `beforeEach` below -- resetMocks:
+ * true wipes any implementation set here before every test, the same trap
+ * `mockT` above already documents.
+ */
+const abortControllerRegistry = new Map<string, boolean>()
+
+function registerFakeAbortController(id: string) {
+  abortControllerRegistry.set(id, false)
+}
+
+function loggedAbortControllerMiss(): boolean {
+  return (logError as jest.Mock).mock.calls.some(([arg]) => {
+    if (!Array.isArray(arg)) return false
+    return arg.some(
+      (part) =>
+        typeof part === 'string' &&
+        /could not find a matching abort controller/i.test(part)
+    )
+  })
+}
 
 function makeParams(overrides: Partial<InstallParams> = {}): InstallParams {
   return {
@@ -155,6 +188,26 @@ beforeEach(() => {
           )
         : fallback
   )
+
+  // 37-05 (REQ-37-04): same resetMocks:true trap as mockT above -- re-apply
+  // callAbortController's fake implementation and clear the registry so one
+  // test's registration never leaks into the next (mirrors
+  // aborthandler.test.ts's own afterEach discipline for the real module's
+  // shared Map).
+  abortControllerRegistry.clear()
+  ;(callAbortController as jest.Mock).mockImplementation((id: string) => {
+    if (abortControllerRegistry.has(id)) {
+      abortControllerRegistry.set(id, true)
+      return
+    }
+    logError(
+      [
+        'Aborting not possible. Could not find a matching abort controller for',
+        id
+      ],
+      'Backend'
+    )
+  })
 })
 
 describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clearing on abort', () => {
@@ -739,5 +792,79 @@ describe('installQueueElement — REQ-37-03: the install-failure dialog always n
 
     const [dialogArg] = (showDialogBoxModalAuto as jest.Mock).mock.calls[0]
     expect(dialogArg.message).toContain('Unknown error')
+  })
+})
+
+/**
+ * 37-05 (REQ-37-04): live evidence recorded in
+ * .planning/todos/pending/2026-08-21-abort-controller-missing-on-terminal-
+ * steam-install-failure.md — a terminal Steam install failure logs
+ * `[ERROR] [Backend]: Aborting not possible. Could not find a matching
+ * abort controller <appid>` on EVERY observed case, including a plan-build
+ * failure that aborted in ~1ms, before any depot download started. That
+ * ERROR describes a teardown race that is not happening — see this plan's
+ * SUMMARY for the measured mechanism (games.ts's runNativeDepotDownload
+ * deletes its own controller in its `finally`, before the InstallResult
+ * ever reaches installQueueElement's own finally below, which then asks
+ * unconditionally).
+ *
+ * Case 1 is the RED case: it fails against unmodified downloadmanager/
+ * utils.ts and must only start passing once Task 2 gates the call on
+ * hasAbortController(appName).
+ */
+describe('installQueueElement — REQ-37-04: no spurious abort-controller-miss ERROR', () => {
+  beforeEach(() => {
+    getGameInfoMock.mockReturnValue({ title: 'Test Game' })
+    stopMock.mockResolvedValue(undefined)
+    ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+      install: installMock,
+      getGameInfo: getGameInfoMock,
+      stop: stopMock
+    })
+    ;(isOnline as jest.Mock).mockReturnValue(true)
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+  })
+
+  it('case 1 (RED against unmodified utils.ts): a terminal Steam install failure with NO abort controller registered for the appName does not log the misleading "could not find a matching abort controller" ERROR', async () => {
+    installMock.mockResolvedValue({ status: 'error', error: 'boom' })
+
+    const result = await installQueueElement(makeParams())
+
+    expect(result.status).toBe('error')
+    expect(loggedAbortControllerMiss()).toBe(false)
+  })
+
+  it('case 2 (the user-cancel pin, CONTEXT.md\'s recorded first check being discharged): when a controller IS registered for the appName, callAbortController still aborts it and no miss is ever logged — true both before and after Task 2\'s fix', async () => {
+    registerFakeAbortController('1091500')
+    installMock.mockResolvedValue({ status: 'error', error: 'boom' })
+
+    const result = await installQueueElement(makeParams())
+
+    expect(result.status).toBe('error')
+    expect(callAbortController).toHaveBeenCalledWith('1091500')
+    expect(abortControllerRegistry.get('1091500')).toBe(true)
+    expect(loggedAbortControllerMiss()).toBe(false)
+  })
+
+  it('case 2b (ordering pin): downloadqueue.ts\'s stopCurrentDownload() calls callAbortController(appName) then .stop(false) synchronously, with no `await` between them — the reason a user Cancel already finds the controller registered and is unaffected by this plan', () => {
+    const source = readFileSync(
+      join(__dirname, '..', 'downloadqueue.ts'),
+      'utf-8'
+    )
+    const fnMatch = source.match(/function stopCurrentDownload\(\) {([\s\S]*?)\n}/)
+    expect(fnMatch).not.toBeNull()
+
+    const body = fnMatch![1]
+    expect(body).not.toMatch(/await/)
+    const abortIdx = body.indexOf('callAbortController(appName)')
+    const stopIdx = body.indexOf('.stop(false)')
+    expect(abortIdx).toBeGreaterThan(-1)
+    expect(stopIdx).toBeGreaterThan(abortIdx)
+  })
+
+  it('case 3 (blindness guard): callAbortController called directly for an id that was never registered — simulating any caller OTHER than the terminal-error branch (SteamGame.stop, stopCurrentDownload, callAllAbortControllers) — still reaches logError, unchanged by this plan', () => {
+    callAbortController('some-other-caller-genuinely-unregistered-id')
+
+    expect(loggedAbortControllerMiss()).toBe(true)
   })
 })
