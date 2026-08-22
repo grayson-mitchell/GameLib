@@ -128,12 +128,16 @@ export default function Winetricks({ onClose, runner }: Props) {
     }
   }, [])
 
+  const [guiOpen, setGuiOpen] = useState<boolean>(false)
   function launchWinetricks() {
-    window.api.callTool({
-      tool: 'winetricks',
-      appName,
-      runner
-    })
+    setGuiOpen(true)
+    window.api
+      .callTool({
+        tool: 'winetricks',
+        appName,
+        runner
+      })
+      .finally(() => setGuiOpen(false))
   }
 
   const dialogContent = (
@@ -224,6 +228,9 @@ export default function Winetricks({ onClose, runner }: Props) {
       showCloseButton={true}
       onClose={onClose}
       className="winetricksDialog"
+      hideProgress={
+        !guiOpen && !installing && !loadingInstalled && !loadingAvailable
+      }
     >
       {dialogContent}
     </ProgressDialog>
