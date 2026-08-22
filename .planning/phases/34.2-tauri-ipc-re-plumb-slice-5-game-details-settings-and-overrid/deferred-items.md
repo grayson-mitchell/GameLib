@@ -466,8 +466,58 @@ with this section.
   Test 8b carries that weight. Left alone as outside WR-05's scope, and flagged
   for whoever revisits that block.
 
-**Still open from gap cycle 4: 8 findings** (WR-02, IN-02 through IN-08). **All
-eight are in test/gate code — no production file among the original 17 remains
+- **IN-03, IN-04, IN-05, IN-06, IN-07 — CLOSED 2026-08-23**, the hygiene group.
+  Three were prose that had stopped being true; two were real defects.
+
+  **IN-06** (`9175d11e2`) — the one with teeth. `loggerCallSiteGuard.test.ts`
+  installed twelve `process.stderr`/`process.stdout` spies across six tests and
+  restored none. `resetMocks: true` is NOT a substitute: it clears calls and
+  implementations but leaves the spy INSTALLED, so `process.stderr.write` stayed
+  a mock returning `undefined` for every later test in the file — in a suite
+  whose entire subject is "a diagnostic must reach stderr". Added an `afterEach`
+  restore plus a guard test declared last; RED-proved, removing the hook fails
+  that test and only that test. It asserts on `jest.isMockFunction` rather than
+  observed output deliberately — a test detecting the leak by writing to stderr
+  would be the exact thing a swallowed writer makes unobservable.
+  `loggerFlows.test.ts`'s three `spy.mockRestore()` calls moved into `finally`;
+  recorded plainly that a passing suite cannot falsify that half, since the leak
+  only occurs when an assertion fails.
+
+  **IN-07** (`ab040b355`). The `userInfo` override handed buffer-encoding
+  callers the `containmentRoot` STRING on both paths, violating
+  `UserInfo<Buffer>`. Latent, not live — but a mock installed for all 175
+  backend suites should not change a value's type. Test 8c drives both paths and
+  pins the other direction: default encoding must NOT become a Buffer, or a fix
+  returning Buffers unconditionally would look correct while breaking every
+  existing caller. RED-proved.
+
+  **IN-05** (`ab040b355`) — **the review is wrong about half of it, and this is
+  the fourth review claim this session that did not survive checking.** It calls
+  `chmodSync(root, 0o700)` a redundant no-op "because mkdtempSync already creates
+  the directory with mode 0700". MEASURED FALSE: `mkdtemp`'s mode is subject to
+  umask — under `umask 0277` it yields **0500** and the chmod restores
+  owner-write. The call stays. The docstring's framing was wrong in the other
+  direction and now says so exactly: mkdtemp's 0700 is the SECURITY control,
+  because umask can only remove bits, so the directory can never carry
+  group/other bits for a chmod to strip; the chmod guarantees the OWNER can use
+  it. The separate "per-pid directory" wording was stale twice over — per-test
+  FILE, not per-pid, and since WR-01 nested inside a per-RUN root that
+  `globalSetup` actively reaps, so cleanup no longer waits on the OS.
+
+  **IN-04** (`ab040b355`). The `NODE_OS_GATE_EXEMPT_FILES` forward declaration
+  still said 34.2-29 "will match this gate the moment 34.2-29 lands". It landed
+  — verified against the live tree (`hasContainmentOsMock`,
+  `testContainment.test.ts:1041`), not restated from the plan. Its plea not to
+  delete the entry as seemingly unused is now ENFORCED rather than requested:
+  gap cycle 4's WR-04 fix asserts every entry trips the predicate.
+
+  **IN-03** (`b79c03a3f`). "all six pre-existing members survive" was wrong about
+  one of the six — `getCrossoverIndex` was added BY this phase, so only five
+  predate it. Renamed to what the list actually is: the six present before gap
+  cycle 1 added `repair` and `readConfig`. Loop left intact.
+
+**Still open from gap cycle 4: 3 findings** (WR-02, IN-02, IN-08). **All three
+are in test/gate code — no production file among the original 17 remains
 open.** Note also that CR-01, the round-4 blocker recorded as re-scoped, is in
 fact **closed** — `src/backend/testUtils/stripSourceComments.ts` exists, strips
 block comments before the line filter, and both originally-defective files
