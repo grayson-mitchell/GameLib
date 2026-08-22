@@ -22,6 +22,41 @@ import {
   INSTALL_NO_PROGRESS_TIMEOUT_MS
 } from 'backend/downloadmanager/installStallWatchdog'
 
+// Type-only reference to the lazily-imported module below -- erased at
+// compile time, so it does NOT reintroduce the downloadmanager/utils.ts <->
+// storeManagers/index.ts circular dependency the runtime `await import(...)`
+// calls in installQueueElement/updateQueueElement exist to break.
+type LibraryManagerMap = typeof import('backend/storeManagers').libraryManagerMap
+
+/**
+ * 2026-08-22 (D-09, REQ-37-03): `SteamGame`'s game-info getter
+ * (`storeManagers/steam/games.ts`) can return `{} as GameInfo` -- so
+ * `title` is `undefined` -- when BOTH the in-memory `library` Map and the
+ * persisted `steamLibraryStore` cache miss (an async-population race,
+ * unique to Steam: Legendary's equivalent getter loads its manifest
+ * SYNCHRONOUSLY when the library entry is missing, and both GOG's and
+ * Legendary's getters additionally carry an explicit `title: ''`
+ * fallback of their own; Steam has neither). Root cause tracked, not fixed,
+ * by
+ * `.planning/todos/pending/2026-08-22-steam-getgameinfo-returns-empty-on-async-cache-miss.md`.
+ *
+ * Falling back to `appName` (the raw Steam appid) is deliberately WORSE
+ * copy than a real title, but strictly more useful than the empty string
+ * this used to render as on the install-failure dialog -- "The
+ * installation of  failed" with a gap where the name belonged. Both
+ * `installQueueElement` and `updateQueueElement` funnel through this one
+ * resolver so it is impossible to fix the fallback on one queue element and
+ * leave the other with the raw, unguarded destructure.
+ */
+function resolveQueueElementTitle(
+  libraryManagerMap: LibraryManagerMap,
+  runner: Runner,
+  appName: string
+): string {
+  const { title } = libraryManagerMap[runner].getGame(appName).getGameInfo()
+  return title || appName
+}
+
 /**
  * 260817-dib: D-01b (33-01) was originally a belt-and-suspenders bound
  * around the WHOLE `.install()` await in `installQueueElement` -- a TOTAL
@@ -85,7 +120,7 @@ async function installQueueElement(params: InstallParams): Promise<{
   // <-> storeManagers/index.ts) — see the load-bearing comment in
   // storeManagers/gog/user.ts.
   const { libraryManagerMap } = await import('backend/storeManagers')
-  const { title } = libraryManagerMap[runner].getGame(appName).getGameInfo()
+  const title = resolveQueueElementTitle(libraryManagerMap, runner, appName)
 
   if (!isOnline()) {
     logWarning(
@@ -329,7 +364,7 @@ async function updateQueueElement(params: InstallParams): Promise<{
   const { appName, runner } = params
   // Lazy import — see the load-bearing comment in installQueueElement above.
   const { libraryManagerMap } = await import('backend/storeManagers')
-  const { title } = libraryManagerMap[runner].getGame(appName).getGameInfo()
+  const title = resolveQueueElementTitle(libraryManagerMap, runner, appName)
 
   if (!isOnline()) {
     logWarning(
