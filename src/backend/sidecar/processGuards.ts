@@ -31,15 +31,53 @@
  *      converted to a string, the fallback literal is logged instead of throwing — the guard
  *      still produces a signal, it does not merely survive silently.
  *   2. The logging call itself — wrapped in a second `try`/`catch` with a `process.stderr`
- *      fallback, because `heroicLogWriter` (backend/logger) is unset until `initLogger()` runs
- *      inside `bootstrap.init()` — a rejection during early boot (before `init()` runs) would
- *      otherwise make `logWarning()` itself throw, turning this guard into a brand-new crash
- *      path. `stdout` is never used for diagnostics: it carries the sidecar's
- *      newline-delimited JSON RPC frame stream, and any non-frame byte written there corrupts
- *      the transport.
+ *      fallback. Since WR-04 the log call goes through a late-bound sink that is null until
+ *      `bootstrap.init()` installs it, so a rejection during early boot (before `init()` runs)
+ *      takes the stderr branch by design rather than by rescue; the `catch` remains because a
+ *      sink installed later can still throw (`heroicLogWriter` mid-rotation, a closed stream),
+ *      and this guard must never become a brand-new crash path. `stdout` is never used for
+ *      diagnostics: it carries the sidecar's newline-delimited JSON RPC frame stream, and any
+ *      non-frame byte written there corrupts the transport.
  */
 
-import { logWarning, LogPrefix } from 'backend/logger'
+/**
+ * WR-04 (gap cycle 1, closed 2026-08-23) — THIS MODULE MUST HAVE ZERO STATIC
+ * IMPORTS, and `zeroImports` in `sidecarRejectionGuard.test.ts` enforces that.
+ *
+ * The guard has to be installed before `bootstrap.ts`'s module scope evaluates,
+ * and ES modules evaluate every static import before any statement in the
+ * importing body — so the ONLY way to be first is to be a side-effect import
+ * whose own graph is empty. Two earlier attempts kept the
+ * `import { logWarning } from 'backend/logger'` line that used to sit here and
+ * both failed for that one reason: importing this module early dragged the
+ * whole backend graph into evaluation ahead of `installElectronHook`, so
+ * `app.getPath()` returned `undefined` and the sidecar died on boot (`727be5dbb`),
+ * or the handler graph initialised in a different order and
+ * `installFlows.test.ts` Test 1b went red. See `src/sidecar/index.ts`.
+ *
+ * The logger is therefore LATE-BOUND: `bootstrap.init()` calls
+ * `setUnhandledRejectionLogSink()` once `initLogger()` has run. Before that call
+ * the sink is null and the guard writes to `process.stderr` directly, which is
+ * the correct behaviour for the early-boot window anyway — `heroicLogWriter` is
+ * unset until `initLogger()`, so a `logWarning()` there would have thrown and
+ * fallen back to stderr regardless. `stdout` is never used: it carries the
+ * newline-delimited JSON RPC frame stream and any non-frame byte corrupts it.
+ */
+type UnhandledRejectionLogSink = (message: string) => void
+
+let logSink: UnhandledRejectionLogSink | null = null
+
+/**
+ * Installs (or with `null`, clears) the late-bound log sink the guard routes its
+ * message through. Called by `bootstrap.init()` immediately after `initLogger()`.
+ * Kept a plain setter rather than an import so this module's static import graph
+ * stays empty — see the note above.
+ */
+function setUnhandledRejectionLogSink(
+  sink: UnhandledRejectionLogSink | null
+): void {
+  logSink = sink
+}
 
 let unhandledRejectionGuardInstalled = false
 
@@ -71,12 +109,18 @@ function installUnhandledRejectionGuard(
       // keep the fallback message
     }
     try {
-      logWarning(message, LogPrefix.Backend)
+      if (logSink === null) {
+        // Early boot: bootstrap.init() has not run initLogger() yet, so there is no
+        // logger to route through. stderr is the signal. Never stdout: that stream
+        // carries the RPC frame protocol.
+        process.stderr.write(`${message}\n`)
+      } else {
+        logSink(message)
+      }
     } catch {
-      // heroicLogWriter may be unset this early in boot (before bootstrap.init() runs),
-      // which would make logWarning() itself throw -- falling back to a direct stderr
-      // write keeps this guard from ever becoming a new crash path. Never stdout: that
-      // stream carries the RPC frame protocol.
+      // The sink itself threw (heroicLogWriter unset, a writer mid-rotation, ...).
+      // Falling back to a direct stderr write keeps this guard from ever becoming a
+      // new crash path.
       try {
         process.stderr.write(`${message}\n`)
       } catch {
@@ -86,4 +130,5 @@ function installUnhandledRejectionGuard(
   })
 }
 
-export { installUnhandledRejectionGuard }
+export { installUnhandledRejectionGuard, setUnhandledRejectionLogSink }
+export type { UnhandledRejectionLogSink }

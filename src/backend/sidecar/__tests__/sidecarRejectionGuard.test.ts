@@ -367,9 +367,24 @@ function loadFreshProcessGuards(): {
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const loggerModule = require('backend/logger')
-    const { installUnhandledRejectionGuard } = require('../processGuards')
+    const {
+      installUnhandledRejectionGuard,
+      setUnhandledRejectionLogSink
+    } = require('../processGuards')
     /* eslint-enable @typescript-eslint/no-require-imports */
     const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
+    // WR-04 (gap cycle 1): `processGuards.ts` no longer imports `logWarning` -- it
+    // cannot, because a single static import there drags the whole backend graph into
+    // evaluation ahead of `installElectronHook` and kills the sidecar on boot. The
+    // logger is late-bound, and `bootstrap.init()` binds it right after `initLogger()`.
+    // This helper reproduces exactly that binding, which is why every assertion in
+    // Group 2 below still reads `logWarningMock` unchanged: the observable contract
+    // ("a rejection reaches logWarning with LogPrefix.Backend") did not move, only the
+    // mechanism that delivers it. The UNBOUND path is covered separately by the
+    // early-boot stderr test.
+    setUnhandledRejectionLogSink((message: string) => {
+      loggerModule.logWarning(message, loggerModule.LogPrefix.Backend)
+    })
     harness = {
       installUnhandledRejectionGuard,
       logWarningMock: logWarningSpy
@@ -549,6 +564,69 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
     })
   })
 
+  describe('Group 1b: WR-04 late-bound sink -- bootstrap.init() is what connects the guard to the logger', () => {
+    // The zero-imports gate in Group 3 proves `processGuards.ts` CANNOT reach the
+    // logger by import. That makes `bootstrap.init()`'s
+    // `setUnhandledRejectionLogSink(...)` call the only thing that ever connects the
+    // two, so it is load-bearing in a way a source gate cannot express: delete that
+    // one statement and every sidecar rejection silently degrades to a bare stderr
+    // line for the life of the process, with all of Group 2 still green (its helper
+    // binds the sink itself). This test drives the REAL `init()` and observes the
+    // transition.
+    it('WR-04: a rejection routes to stderr before init() and to logWarning after it', () => {
+      let installGuard!: (target?: NodeJS.EventEmitter) => void
+      let init!: (input: PassThrough, output: PassThrough) => void
+      let logWarningSpy!: jest.SpyInstance
+
+      jest.isolateModules(() => {
+        /* eslint-disable @typescript-eslint/no-require-imports */
+        const { GlobalConfig } = require('backend/config')
+        ;(GlobalConfig.get as jest.Mock).mockReturnValue({
+          getSettings: () => ({ language: 'en' }),
+          setSetting: jest.fn(),
+          set: jest.fn(),
+          flush: jest.fn()
+        })
+        // Same registry for both, or the module-scope `logSink` singleton `init()`
+        // writes would not be the one the guard reads.
+        installGuard = require('../processGuards').installUnhandledRejectionGuard
+        init = require('../bootstrap').init
+        logWarningSpy = jest.spyOn(require('backend/logger'), 'logWarning')
+        /* eslint-enable @typescript-eslint/no-require-imports */
+      })
+
+      const stderrWriteSpy = jest
+        .spyOn(process.stderr, 'write')
+        .mockImplementation(() => true)
+
+      try {
+        const target = new EventEmitter()
+        installGuard(target)
+
+        // BEFORE init(): no sink bound.
+        target.emit('unhandledRejection', new Error('before init'))
+        expect(stderrWriteSpy).toHaveBeenCalledWith(
+          expect.stringContaining('before init')
+        )
+        expect(logWarningSpy).not.toHaveBeenCalledWith(
+          expect.stringContaining('before init'),
+          expect.anything()
+        )
+
+        init(new PassThrough(), new PassThrough())
+
+        // AFTER init(): the sink is bound, so the same emit reaches the logger.
+        target.emit('unhandledRejection', new Error('after init'))
+        expect(logWarningSpy).toHaveBeenCalledWith(
+          expect.stringContaining('after init'),
+          expect.anything()
+        )
+      } finally {
+        stderrWriteSpy.mockRestore()
+      }
+    })
+  })
+
   describe('Group 2: installUnhandledRejectionGuard contract', () => {
     it('registers exactly one unhandledRejection listener on the given target', () => {
       const { installUnhandledRejectionGuard } = loadFreshProcessGuards()
@@ -582,6 +660,44 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
         expect.stringContaining('[sidecar] unhandled promise rejection:'),
         expect.anything()
       )
+    })
+
+    it('WR-04 (gap cycle 1): with NO sink bound -- the real early-boot state before bootstrap.init() -- the message goes to stderr and never to stdout', () => {
+      // The window this guard exists to cover is the one BEFORE `bootstrap.init()`
+      // runs `initLogger()` and binds the sink. `loadFreshProcessGuards()` binds it
+      // (so Group 2's other tests can assert on logWarning), so this test loads the
+      // module raw and leaves the sink at its module-scope default of null.
+      let installGuard!: (target?: NodeJS.EventEmitter) => void
+      jest.isolateModules(() => {
+        /* eslint-disable-next-line @typescript-eslint/no-require-imports */
+        installGuard = require('../processGuards').installUnhandledRejectionGuard
+      })
+
+      const stderrWriteSpy = jest
+        .spyOn(process.stderr, 'write')
+        .mockImplementation(() => true)
+      const stdoutWriteSpy = jest
+        .spyOn(process.stdout, 'write')
+        .mockImplementation(() => true)
+
+      try {
+        const target = new EventEmitter()
+        installGuard(target)
+
+        expect(() =>
+          target.emit('unhandledRejection', new Error('early boot'))
+        ).not.toThrow()
+        expect(stderrWriteSpy).toHaveBeenCalledWith(
+          expect.stringContaining('[sidecar] unhandled promise rejection:')
+        )
+        // stdout carries the newline-delimited JSON RPC frame stream. A diagnostic
+        // byte written there corrupts the transport, which is a worse failure than
+        // the crash this guard prevents.
+        expect(stdoutWriteSpy).not.toHaveBeenCalled()
+      } finally {
+        stdoutWriteSpy.mockRestore()
+        stderrWriteSpy.mockRestore()
+      }
     })
 
     it('T-34.2-40 (sidecar-dialog-reject-crashes precedent): still never throws when logWarning itself throws -- falls back to process.stderr.write', () => {
@@ -672,21 +788,84 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
   })
 
   describe('Group 3: entry-ordering gate (by-construction, source text -- src/sidecar/ is not a jest project root)', () => {
-    it('src/sidecar/index.ts calls installUnhandledRejectionGuard() before init()', () => {
+    // WR-04 (gap cycle 1, closed 2026-08-23). This group used to compare
+    // `indexOf('installUnhandledRejectionGuard(')` against `indexOf('init()')` in
+    // `src/sidecar/index.ts` and call that proof the guard was live before
+    // `bootstrap.ts`'s module scope. It was not: ES modules evaluate every static
+    // import before any statement in the importing body, so the CALL order those two
+    // indices measured had nothing to do with the EVALUATION order the docstring
+    // claimed -- the gate would have passed unchanged even if the guard could not
+    // possibly cover module scope. The property is now IMPORT order, and the two
+    // gates below measure it directly.
+    //
+    // Reading `src/sidecar/index.ts` as text rather than importing it is unchanged
+    // and still load-bearing: importing it would execute the real `init()` at module
+    // scope against the jest worker's own stdio.
+    function importLines(source: string): string[] {
+      return stripComments(source)
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.startsWith('import '))
+    }
+
+    it('WR-04: the guard install is the FIRST import of src/sidecar/index.ts, so it evaluates before bootstrap.ts', () => {
       const source = readFileSync(
         join(__dirname, '../../../sidecar/index.ts'),
         'utf-8'
       )
-      const stripped = stripComments(source)
+      const imports = importLines(source)
 
-      const guardCallIndex = stripped.indexOf('installUnhandledRejectionGuard(')
-      const initCallIndex = stripped.indexOf('init()')
-
-      expect(guardCallIndex).toBeGreaterThan(-1)
-      expect(initCallIndex).toBeGreaterThan(-1)
-      expect(guardCallIndex).toBeLessThan(initCallIndex)
+      expect(imports.length).toBeGreaterThan(1)
+      expect(imports[0]).toBe("import './installRejectionGuard'")
+      // The property is ordering, not mere presence: bootstrap must come after.
+      const bootstrapIndex = imports.findIndex((line) =>
+        line.includes('backend/sidecar/bootstrap')
+      )
+      expect(bootstrapIndex).toBeGreaterThan(0)
     })
 
+    it('WR-04: installRejectionGuard.ts installs the guard at module scope', () => {
+      const source = readFileSync(
+        join(__dirname, '../../../sidecar/installRejectionGuard.ts'),
+        'utf-8'
+      )
+      const stripped = stripComments(source)
+
+      // A module-scope call -- column 0, not nested inside a function body. If this
+      // ever became a function that something has to remember to call, the import
+      // ordering above would stop meaning anything.
+      expect(stripped).toMatch(/^installUnhandledRejectionGuard\(\)$/m)
+    })
+
+    it('WR-04: processGuards.ts has ZERO static imports -- the invariant that makes the first-import position safe', () => {
+      // This is the gate that stands between the current, working arrangement and
+      // the two boot failures recorded in `src/sidecar/index.ts`. A single
+      // `import ... from 'backend/logger'` here drags the entire backend module graph
+      // into evaluation ahead of `installElectronHook`, so `app.getPath()` returns
+      // undefined and the sidecar dies before writing READY. Jest cannot observe that
+      // (all 176 backend suites stayed green through it) -- this source gate and
+      // `pnpm smoke:sidecar` are the two checks that can.
+      const source = readFileSync(join(__dirname, '../processGuards.ts'), 'utf-8')
+      const stripped = stripComments(source)
+
+      expect(stripped).not.toMatch(/^\s*import\s/m)
+      expect(stripped).not.toMatch(/\brequire\s*\(/)
+      // Positive control: the file really was read and really does contain the guard,
+      // so the two negatives above cannot pass against an empty or missing read.
+      expect(stripped).toContain('installUnhandledRejectionGuard')
+    })
+
+    it('WR-04: installRejectionGuard.ts imports nothing but processGuards, so its own graph stays empty too', () => {
+      const source = readFileSync(
+        join(__dirname, '../../../sidecar/installRejectionGuard.ts'),
+        'utf-8'
+      )
+      const imports = importLines(source)
+
+      expect(imports).toEqual([
+        "import { installUnhandledRejectionGuard } from 'backend/sidecar/processGuards'"
+      ])
+    })
   })
 
   describe('Group 4: gap-cycle-2 hygiene guards (IN-03, IN-06)', () => {

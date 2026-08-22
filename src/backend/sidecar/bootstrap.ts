@@ -111,6 +111,12 @@ import { isMac } from '../constants/environment'
 // and any future `Migration` added to `getAllMigrations()` would have shipped as a silent
 // no-op. Same family as the `initOnlineMonitor()` gap above.
 import MigrationSystem from '../migration'
+// WR-04 (gap cycle 1): a PURE import of a module with zero static imports of its
+// own -- it contributes nothing to this file's evaluation graph, which is the whole
+// reason the guard could be hoisted to `src/sidecar/index.ts`'s first import. Placed
+// last deliberately: attempt (b) at WR-04 added a SIDE-EFFECTING import here and
+// reordered the handler graph (`installFlows.test.ts` Test 1b went red).
+import { setUnhandledRejectionLogSink } from './processGuards'
 
 // ---- Step 3: start the RPC server, wire the transport, signal READY -------
 
@@ -258,6 +264,17 @@ export function init(
   if (!loggerInitialized) {
     initLogger()
     loggerInitialized = true
+    // WR-04 (gap cycle 1): `processGuards.ts` has ZERO static imports so that
+    // `src/sidecar/index.ts` can install the unhandledRejection guard as its FIRST
+    // import, ahead of this module's own graph (and therefore ahead of
+    // `installElectronHook`). The price of that is a logger it cannot import, so the
+    // sink is bound here instead -- the first moment `heroicLogWriter` exists. Before
+    // this line the guard writes to stderr, which is the only safe channel that early
+    // anyway. Adding an import of `logWarning` to `processGuards.ts` instead would
+    // reintroduce the boot failure recorded in `727be5dbb`.
+    setUnhandledRejectionLogSink((message) =>
+      logWarning(message, LogPrefix.Backend)
+    )
   }
 
   // ---- Data migrations (todo 2026-08-16, quick task 260822-s8y) -----------

@@ -17,42 +17,37 @@
  * process.stdin/stdout (bootstrap.test.ts calls `init()` itself with
  * injected streams).
  *
- * WR-04 (gap cycle 1) — THE ORDERING CLAIM BELOW IS NOT ACHIEVED, and two
- * attempts to achieve it both failed on 2026-08-23. Recorded here so nobody
- * spends a third afternoon on it without the constraint.
+ * ORDERING (Phase 34.2 Plan 09, T-34.2-39; corrected by gap cycle 1's WR-04 on
+ * 2026-08-23). The `unhandledRejection` guard must be live before ANY other
+ * module scope evaluates. ES modules evaluate every static import before any
+ * statement in this body, so a CALL here — which is what this file used to do —
+ * could never achieve that: `bootstrap.ts`'s whole graph was already evaluated
+ * by the time it ran. The install is therefore a side-effect IMPORT, and
+ * `'./installRejectionGuard'` MUST stay the first import line in this file.
+ * `sidecarRejectionGuard.test.ts` Group 3 gates exactly that.
  *
- * The claim is true of the CALL order and false of the EVALUATION order: ES
- * modules evaluate every static import before any statement in this body, so
- * `bootstrap.ts`'s whole graph is already evaluated by the time the guard call
- * runs. Both fixes fail for the same root reason — `processGuards` imports
- * `logWarning` from `backend/logger`, so importing the guard early drags the
- * backend graph into evaluation earlier than the existing init sequence
- * tolerates:
+ * Two earlier attempts to fix this broke the build, both because
+ * `processGuards.ts` still imported `logWarning` from `backend/logger` and so
+ * dragged the backend graph into evaluation ahead of `bootstrap.ts`'s
+ * `Module._load` electron hook:
  *
- *   (a) side-effect import first in THIS file — evaluates `backend/*` before
- *       `bootstrap.ts`'s `Module._load` electron hook, so `app.getPath()`
- *       returns undefined and the sidecar dies on boot (`727be5dbb`).
+ *   (a) side-effect import first in THIS file — `app.getPath()` returned
+ *       undefined and the sidecar died on boot, surfacing to the user as
+ *       `broken pipe (os error 32)` (`727be5dbb`).
  *   (b) side-effect import inside `bootstrap.ts` after the electron hook —
- *       sidecar starts, but `installFlows.test.ts` Test 1b fails
+ *       sidecar started, but `installFlows.test.ts` Test 1b failed
  *       deterministically with "Cannot read properties of undefined (reading
- *       'map')": the handler graph initialises in a different order.
+ *       'map')": the handler graph initialised in a different order.
  *
- * Any third attempt must make the guard LOGGER-FREE first, so its import graph
- * touches no `backend/*` module. That is a real change: the tests asserting
- * `logWarning` is called would need rewriting.
+ * What makes this third attempt work is that `processGuards.ts` now has ZERO
+ * static imports and late-binds its logger through
+ * `setUnhandledRejectionLogSink()`, which `bootstrap.init()` calls after
+ * `initLogger()`. Adding any import to `processGuards.ts` or to
+ * `installRejectionGuard.ts` reintroduces (a).
  *
- * The gap is currently not observable — `src/backend` and `src/sidecar` contain
- * zero module-scope floating promises, so nothing can reject in the uncovered
- * window. That invariant is pinned by `sidecarRejectionGuard.test.ts`, and it
- * going red is the signal that this stops being theoretical.
- *
- * Whatever is attempted, gate it on `pnpm smoke:sidecar`. Attempt (a) passed
- * 176 green jest suites, `build:sidecar`, `tsc`, and a bundle byte-offset check
- * before it was caught by a user's broken build.
- *
- * Ordering (Phase 34.2 Plan 09, T-34.2-39): `installUnhandledRejectionGuard()` must run
- * BEFORE `init()` — the guard must be live before `bootstrap.ts`'s module scope and `init()`
- * can produce any rejection.
+ * Gate any change to this file's import order on `pnpm smoke:sidecar`. Attempt
+ * (a) passed 176 green jest suites, `build:sidecar`, `tsc`, and a bundle
+ * byte-offset check before a user's broken build caught it.
  *
  * Quick task 260817-pkx (debug/humankind-depot-full-stall.md): a second,
  * non-RPC entry branch. `GAMELIB_SIDECAR_SELFTEST=decompress-pool` runs a
@@ -69,13 +64,12 @@
  * `SELFTEST ...` lines to it.
  */
 
+import './installRejectionGuard'
 import { init } from 'backend/sidecar/bootstrap'
-import { installUnhandledRejectionGuard } from 'backend/sidecar/processGuards'
 import { runDecompressPoolSelfTest } from 'backend/storeManagers/steam/depot/decompressPoolSelfTest'
 
 if (process.env.GAMELIB_SIDECAR_SELFTEST === 'decompress-pool') {
   void runDecompressPoolSelfTest().then((code) => process.exit(code))
 } else {
-  installUnhandledRejectionGuard()
   init()
 }
