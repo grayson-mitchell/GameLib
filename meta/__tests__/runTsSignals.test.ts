@@ -246,4 +246,77 @@ describe('meta/runTs.cjs signal forwarding (C4-01/C4-02/C4-04)', () => {
     expect(code).not.toBe(0)
     expect(stderr()).toContain('forced symlink failure')
   }, 30000)
+
+  test('T6 (C5-02): SIGHUP to the wrapper PID alone kills the child, removes the tmpdir, wrapper exits 129', async () => {
+    const { wrapperChild, ready, closed } = launch(FIXTURE)
+    const { pid, dir } = await ready
+
+    wrapperChild.kill('SIGHUP')
+    const { code, signal } = await closed
+
+    expect(code).toBe(129)
+    expect(signal).toBeNull()
+    expect(await waitForDeath(pid, 3000)).toBe(true)
+    expect(existsSync(dir)).toBe(false)
+  }, 30000)
+
+  test('T7 (C5-02 non-vacuity control): with SIGHUP removed from FORWARDED_SIGNALS, the wrapper is signal-terminated instead of forwarding, and the tmpdir survives', async () => {
+    const source = readFileSync(WRAPPER, 'utf8')
+    const MARKER = "['SIGTERM', 'SIGINT', 'SIGHUP']"
+
+    // If this marker is ever renamed or reordered, this assertion must go
+    // red, not silently pass -- same idiom as T5's "what happens when the
+    // check fails to load".
+    expect(source.split(MARKER).length - 1).toBe(1)
+
+    const probeSource = source.replace(MARKER, "['SIGTERM', 'SIGINT']")
+    writeFileSync(PROBE_PATH, probeSource)
+    // Must parse before we spawn it.
+    execFileSync(process.execPath, ['--check', PROBE_PATH], {
+      stdio: 'pipe'
+    })
+
+    const { wrapperChild, ready, closed } = launch(FIXTURE, PROBE_PATH)
+    const { pid: childPid, dir } = await ready
+    const wrapperPid = wrapperChild.pid as number
+
+    try {
+      // Signal the WRAPPER pid, mirroring T6 -- the probe no longer has a
+      // SIGHUP handler, so Node's default disposition terminates the
+      // wrapper directly instead of forwarding to the child: this is the
+      // pre-fix orphan+leak shape C5-02 exists to close, made permanent as
+      // a control rather than a one-off manual observation.
+      wrapperChild.kill('SIGHUP')
+      const { code, signal } = await closed
+
+      expect(code).toBeNull()
+      expect(signal).toBe('SIGHUP')
+      // Non-vacuity: the tmpdir SURVIVES because nothing forwarded the
+      // signal to the child before the wrapper itself died.
+      expect(existsSync(dir)).toBe(true)
+    } finally {
+      // T7 leaks BY DESIGN -- that leak is the observation under test. Clean
+      // up here so the suite's own leak-detecting afterEach stays green
+      // unmodified, per the plan's explicit instruction not to relax it
+      // rather than bend the gate.
+      if (existsSync(dir)) {
+        rmSync(dir, { recursive: true, force: true })
+      }
+      // The child (fixture) is orphaned -- kill it directly by its own pid.
+      if (isAlive(childPid)) {
+        try {
+          process.kill(childPid, 'SIGKILL')
+        } catch {
+          // already gone
+        }
+      }
+      if (isAlive(wrapperPid)) {
+        try {
+          process.kill(wrapperPid, 'SIGKILL')
+        } catch {
+          // already gone
+        }
+      }
+    }
+  }, 30000)
 })
