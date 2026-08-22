@@ -177,22 +177,28 @@ const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);
 /// rather than a wrong answer — the honest failure mode. The sidecar dying closes the channel,
 /// which wakes `rx.recv()` with a disconnect error, so a crashed sidecar still fails fast.
 ///
-/// Phase 34.2 Plan 06, D-10: `getCrossoverIndex` joins this list for the same library-wide
-/// reason as `checkGameUpdates`/`refreshLibrary` above — it fans out over every game in every
-/// library manager (`crossover_index/crossoverRatingMap.ts`'s `buildCrossoverRatingMap()`), AND
-/// calls `loadIndex`/`buildMaps` (`crossover_index/index.ts:99`) once PER GAME rather than once
-/// overall, a known inefficiency deliberately not fixed by this slice (recorded as a deferred
-/// optimization in `34.2-03-SUMMARY.md`). `getWikiGameInfo` was measured instead of exempted:
-/// three representative cold-cache calls (Hades, Stardew Valley, Portal 2 — cache-miss forced
-/// via this repo's own jest electron-store automock, real network, 2026-07-25) completed in
-/// 1190ms / 957ms / 702ms respectively, comfortably under the 60s bound, so it stays on the
-/// default 60s timeout (see `34.2-06-SUMMARY.md` for the full measurement record).
+/// Membership is not free and is not granted on reasoning: `getWikiGameInfo` was MEASURED and
+/// deliberately left on the 60s bound (three cold-cache calls at 1190/957/702ms — the full
+/// record is in `34.2-06-SUMMARY.md`). Per-channel rationale for the entries below lives
+/// inline on each entry, next to the channel it explains.
 const LONG_RUNNING_CHANNELS: &[&str] = &[
     "install",
     "updateGame",
     "uninstall",
     "checkGameUpdates",
     "refreshLibrary",
+    // Phase 34.2 Plan 06, D-10: fans out over every game in every library manager
+    // (`crossover_index/crossoverRatingMap.ts`'s `buildCrossoverRatingMap()`) — the same
+    // library-wide shape as checkGameUpdates/refreshLibrary above.
+    //
+    // IN-03 correction (2026-08-22, `34.2-REVIEW.md` round 1): this entry used to cite a SECOND
+    // reason — that the pass called `loadIndex`/`buildMaps` once PER GAME rather than once
+    // overall, "a known inefficiency deliberately not fixed by this slice". Round-1 WR-07 fixed
+    // it: the resolver is now built once per pass, gated by
+    // `crossover_index/__tests__/ratingMapIndexLoads.test.ts`. Only the fan-out reason remains.
+    // Left exempt rather than re-measured — dropping the exemption on reasoning alone would
+    // trade a never-settling promise for a spurious timeout, and this list's own precedent
+    // (getWikiGameInfo, above) is that the bound comes back on a MEASUREMENT, not an argument.
     "getCrossoverIndex",
     // A full re-verify/re-download of an installed game (legendary/gogdl repair) routinely exceeds 60s (CR-01).
     "repair",

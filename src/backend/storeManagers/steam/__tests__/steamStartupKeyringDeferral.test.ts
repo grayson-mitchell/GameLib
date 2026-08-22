@@ -531,27 +531,57 @@ describe('SteamUser.ensureConnected() unreadable outcome — constraint 5 regres
 })
 
 // ---------------------------------------------------------------------------
-// Constraint 1: src-tauri/src/main.rs is untouched by this plan. Run as a
-// jest test (not a fragile shell one-liner) so it runs with the suite.
-// KEYRING_READ_TIMEOUT must stay untouched — already 45s, 7 of 9 observed
+// Constraint 1: KEYRING_READ_TIMEOUT must stay at 45s — 7 of 9 observed
 // timeouts postdate that change, and this plan does not revisit it.
+//
+// This used to be enforced by `git diff --name-only HEAD` not listing
+// `src-tauri/src/main.rs`. That proxy was defective in two ways, and both are
+// worth naming because the shape recurs:
+//
+//   1. It measured the WORKING TREE, not this plan's diff. From the moment the
+//      plan committed it was unconditionally true on any clean checkout, so it
+//      protected nothing — the same failure mode recorded on
+//      `gameDetailsImportGate.test.ts`'s Gate 7, which replaced a
+//      `git show HEAD:<same path>` comparison for exactly this reason.
+//   2. It was over-broad in the other direction: it failed on ANY edit to
+//      main.rs by ANY later session, related or not. It first fired on a
+//      2026-08-22 doc-comment correction to `LONG_RUNNING_CHANNELS` (IN-03)
+//      that does not go near the keyring path.
+//
+// Replaced with a direct pin on the constant the constraint actually names.
+// Hermetic (no `git` subprocess, works in a source export) and it fails only
+// when the guarded value moves. The ORDERING invariant between this constant
+// and RUST_INVOKE_TIMEOUT_MS is separately gated Rust-side, in main.rs's own
+// `#[cfg(test)]` region.
 // ---------------------------------------------------------------------------
 
-describe('constraint 1 — src-tauri/src/main.rs is never touched by this plan', () => {
-  it('git diff --name-only HEAD does not list src-tauri/src/main.rs', () => {
-    // jest.requireActual bypasses this file's module registry entirely --
-    // child_process is not mocked in this file, but requireActual is used
-    // anyway so this check can never be silently affected by a future mock
-    // added above.
-    const { execSync } =
-      jest.requireActual<typeof import('child_process')>('child_process')
-    const repoRoot = join(__dirname, '..', '..', '..', '..', '..')
-    const output = execSync('git diff --name-only HEAD', {
-      cwd: repoRoot,
-      encoding: 'utf-8'
-    }).toString()
-    const changedFiles = output.split('\n').filter(Boolean)
+describe('constraint 1 — KEYRING_READ_TIMEOUT stays at 45s', () => {
+  const MAIN_RS = join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    '..',
+    '..',
+    'src-tauri',
+    'src',
+    'main.rs'
+  )
+  const PIN = 'const KEYRING_READ_TIMEOUT: Duration = Duration::from_secs(45);'
 
-    expect(changedFiles).not.toContain('src-tauri/src/main.rs')
+  it('src-tauri/src/main.rs still declares KEYRING_READ_TIMEOUT as 45 seconds', () => {
+    const { readFileSync } = jest.requireActual<typeof import('fs')>('fs')
+    expect(readFileSync(MAIN_RS, 'utf-8')).toContain(PIN)
+  })
+
+  // Anti-vacuity: a `toContain` on a file that failed to load, or a pin whose
+  // text no longer resembles the declaration, would pass silently forever.
+  it('self-test: main.rs is really being read, and the pin is specific to 45s', () => {
+    const { readFileSync } = jest.requireActual<typeof import('fs')>('fs')
+    const source = readFileSync(MAIN_RS, 'utf-8')
+
+    expect(source.length).toBeGreaterThan(100_000)
+    expect(source).toContain('const INVOKE_TIMEOUT: Duration')
+    expect(source).not.toContain(PIN.replace('45', '46'))
   })
 })
