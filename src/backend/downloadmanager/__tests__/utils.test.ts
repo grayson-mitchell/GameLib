@@ -661,3 +661,55 @@ describe('installQueueElement — orphaned-depot abort: a terminal install failu
     expect(stopMock).not.toHaveBeenCalled()
   })
 })
+
+describe('installQueueElement — REQ-37-03: the install-failure dialog always names a game', () => {
+  beforeEach(() => {
+    // jest.config.js sets `resetMocks: true` globally -- re-apply every
+    // implementation this suite depends on, same convention as the other
+    // describe blocks in this file.
+    stopMock.mockResolvedValue(undefined)
+    ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+      install: installMock,
+      getGameInfo: getGameInfoMock,
+      stop: stopMock
+    })
+    ;(isOnline as jest.Mock).mockReturnValue(true)
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+  })
+
+  it('D-09/RED: SteamGame.getGameInfo() returning {} (the exact shape on an async cache miss) still names the appid, never an empty gap', async () => {
+    getGameInfoMock.mockReturnValue({})
+    installMock.mockResolvedValue({ status: 'error', error: 'boom' })
+
+    await installQueueElement(makeParams())
+
+    const [dialogArg] = (showDialogBoxModalAuto as jest.Mock).mock.calls[0]
+    // Assert on the RENDERED message, not the i18next.t options object --
+    // an options-object assertion would pass on `{ title: undefined }` just
+    // as happily as on a fixed value, and the defect the user saw was in
+    // the rendered string.
+    expect(dialogArg.message).toContain('1091500')
+    expect(dialogArg.message).not.toMatch(/installation of\s+failed/i)
+  })
+
+  it('regression guard: a real title still renders the title, and never the appid, once the fallback exists', async () => {
+    getGameInfoMock.mockReturnValue({ title: 'Test Game' })
+    installMock.mockResolvedValue({ status: 'error', error: 'boom' })
+
+    await installQueueElement(makeParams())
+
+    const [dialogArg] = (showDialogBoxModalAuto as jest.Mock).mock.calls[0]
+    expect(dialogArg.message).toContain('Test Game')
+    expect(dialogArg.message).not.toContain('1091500')
+  })
+
+  it('scope pin: the existing `error` fallback (\'Unknown error\') is unchanged by this fix', async () => {
+    getGameInfoMock.mockReturnValue({ title: 'Test Game' })
+    installMock.mockResolvedValue({ status: 'error' })
+
+    await installQueueElement(makeParams())
+
+    const [dialogArg] = (showDialogBoxModalAuto as jest.Mock).mock.calls[0]
+    expect(dialogArg.message).toContain('Unknown error')
+  })
+})
