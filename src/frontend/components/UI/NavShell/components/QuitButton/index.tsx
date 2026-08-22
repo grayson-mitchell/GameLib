@@ -9,9 +9,8 @@ import ContextProvider from 'frontend/state/ContextProvider'
  * Relocated Quit action (34.10-05 Task 2), ported from the retired left
  * navigation's quit control. The confirmation flow (title/message/buttons,
  * the actual quit action) is unchanged -- only the row's CSS class names
- * move onto this tier's row primitive's classes, and the old onboarding-
- * tour anchor prop is dropped entirely (per D-13 the tour is disabled this
- * phase).
+ * move onto this tier's row primitive's classes. Phase 34.12 (D-05)
+ * re-anchors this button as the onboarding tour's `nav-quit` step.
  */
 export default function QuitButton() {
   const { t } = useTranslation()
@@ -35,7 +34,11 @@ export default function QuitButton() {
   }
 
   return (
-    <button className="NavItem" onClick={() => handleQuitButton()}>
+    <button
+      className="NavItem"
+      onClick={() => handleQuitButton()}
+      data-tour="nav-quit"
+    >
       <div className="NavItem__icon">
         <FontAwesomeIcon
           icon={faPowerOff}
