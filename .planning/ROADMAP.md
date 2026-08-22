@@ -3814,6 +3814,26 @@ the self-sealing `nonAvailableGames` list) and is left OPEN only pending a **ful
 paint. 37-01's root-cause repro needs a live `pnpm tauri:dev` session anyway; discharge both in the
 same run. Note that 37-03 explains **9** of those 22 games and closing it will NOT close that item.
 
+### Phase 38: Deferred hardware and environment UAT gates — Windows/Linux machine and game controller
+
+**Goal:** Discharge, in one deliberate sweep, every UAT item across the project that cannot be run on this machine because it needs hardware or an OS this project does not have — so that individual phases can close on their runnable items instead of each carrying a permanently-blocked row.
+
+**Requirements**: NONE, and none will be minted. This is a **collection phase, not an implementation phase** — it ships no code. Its deliverable is a set of live observations against existing behaviour. A planner running `/gsd-plan-phase 38` should produce gate steps, not tasks.
+
+**Depends on:** **Phase 34** for the Windows/Linux items — the W/L builds must exist before anything can be observed on them. The controller items have **no phase dependency** and are gated only on hardware access, so they can be discharged independently and earlier.
+
+**Plans:** 0 — see the item ledger in `38-VERIFICATION.md`, which is the phase's source of truth and the array `gsd-sdk query audit-uat` reads.
+
+**Why this phase exists.** Phase 34.9 routed 8 of 24 ledger items to "a follow-up phase" that was never in ROADMAP.md; six sat dangling 9-11 days while every gate read `24/24 mapped, unmapped 0`, because the sweep scored whether an item was *mapped to a row*, not whether the row's owner resolved to anything real. This phase exists **before** the items are moved into it, so that no relocation ever points at a phase that does not exist.
+
+**Two rules for anything relocated here.**
+
+1. **The destination must stay audit-visible.** `38-VERIFICATION.md` carries `status: human_needed` with every item in the `human_verification` array. `gsd-sdk query audit-uat` only emits items from that array and only when the status is exactly `human_needed` — so parking items in prose, or flipping the status to `gaps_found`, silently deletes this phase's entire backlog from the only tool that counts it.
+2. **Every item carries a source-level gate, not a prose blocker.** `blocked_by: "a Windows or Linux machine"` is unfalsifiable and rots without anyone noticing; `platform_gate: src/frontend/App.tsx:79` can be grepped and disproven. Phase 34.1's item 5b sat blocked for four sessions on a prose blocker that misdescribed its own predicate — it needed `window.screen.availWidth < 1200`, not the hardware the note named, and passed on the first attempt once someone read the code. **Before relocating anything here, read the predicate that supposedly blocks it.**
+
+Plans:
+- [ ] No plan files. Run the sweep directly from `38-VERIFICATION.md` when the hardware is available; record results there and in `38-HUMAN-UAT.md`.
+
 ---
 
 ## Parked / Superseded Phases
