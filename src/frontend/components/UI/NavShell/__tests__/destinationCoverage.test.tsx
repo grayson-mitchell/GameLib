@@ -152,6 +152,10 @@ jest.mock('../components/HeroicVersion', () => ({
   __esModule: true,
   default: () => ({ type: 'mock-heroicversion', props: {} })
 }))
+jest.mock('../components/NavShellTour', () => ({
+  __esModule: true,
+  default: () => ({ type: 'mock-navshelltour', props: {} })
+}))
 ;(globalThis as unknown as { sessionStorage: Storage }).sessionStorage = {
   getItem: jest.fn().mockReturnValue(null),
   setItem: jest.fn(),

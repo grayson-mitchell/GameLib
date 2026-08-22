@@ -10,6 +10,7 @@ import GamesPanel from './components/GamesPanel'
 import StoresPanel from './components/StoresPanel'
 import SettingsPanel from './components/SettingsPanel'
 import HeroicVersion from './components/HeroicVersion'
+import NavShellTour from './components/NavShellTour'
 import './index.scss'
 
 /**
@@ -95,6 +96,19 @@ export default function NavShell() {
           <HeroicVersion />
         </div>
       </aside>
+      {/*
+        34.12-04 Task 3. Mounted AFTER the closing </aside>, never between
+        the navbar and tier2 grid items -- `.NavShell__navbar` and
+        `.NavShell__tier2` must stay direct grid items of `.App` (see the
+        docstring above), and introducing an element between them would
+        break grid placement even though `intro.js-react`'s `Steps` itself
+        renders nothing into the tree. Mounted unconditionally, matching
+        `LibraryTour`'s mount idiom at `Library/index.tsx` -- the component
+        gates itself on `isTourActive(NAV_TOUR_ID)`, so it is never
+        auto-started (D-02) and reachable only via an explicit user click on
+        plan 34.12-05's launcher row.
+      */}
+      <NavShellTour />
     </>
   )
 }

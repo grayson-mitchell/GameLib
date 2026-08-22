@@ -66,6 +66,10 @@ jest.mock('../components/HeroicVersion', () => ({
   __esModule: true,
   default: () => ({ type: 'mock-heroicversion', props: {} })
 }))
+jest.mock('../components/NavShellTour', () => ({
+  __esModule: true,
+  default: () => ({ type: 'mock-navshelltour', props: {} })
+}))
 
 // Imported after the mocks above (textual order -- this project's ts-jest
 // setup does not hoist jest.mock like babel-jest). `element.type` from
@@ -79,6 +83,7 @@ import GamesPanel from '../components/GamesPanel'
 import StoresPanel from '../components/StoresPanel'
 import SettingsPanel from '../components/SettingsPanel'
 import HeroicVersion from '../components/HeroicVersion'
+import NavShellTour from '../components/NavShellTour'
 import NavShell from '../index'
 
 const handleGoToScreenMock = jest.fn()
@@ -119,12 +124,23 @@ function callNavShell(): AnyElement {
   return NavShell() as unknown as AnyElement
 }
 
+// Locates the navbar and tier2 fragment children BY className rather than
+// by array index. 34.12-04 Task 3 added a third fragment child
+// (`NavShellTour`, mounted after `</aside>`) -- an index-based helper would
+// need this same edit again for any future sibling addition, so this locates
+// by identity instead and survives that class of change.
 function shellChildren(): { navbar: AnyElement; tier2: AnyElement } {
   const tree = callNavShell()
   expect(tree.type).toBe(Fragment)
   const kids = tree.props.children as AnyElement[]
-  expect(kids).toHaveLength(2)
-  return { navbar: kids[0], tier2: kids[1] }
+  expect(kids).toHaveLength(3)
+  const navbar = kids.find((el) => el.props?.className === 'NavShell__navbar')
+  const tier2 = kids.find((el) =>
+    String(el.props?.className ?? '').includes('NavShell__tier2')
+  )
+  expect(navbar).toBeDefined()
+  expect(tier2).toBeDefined()
+  return { navbar: navbar as AnyElement, tier2: tier2 as AnyElement }
 }
 
 beforeEach(() => {
@@ -244,16 +260,29 @@ describe('NavShell', () => {
     )
   })
 
-  it('SidebarTour is not referenced anywhere in the returned tree', () => {
+  it('mounts exactly one NavShellTour as a direct child of the fragment, not nested inside the aside', () => {
     const tree = callNavShell()
-    const all = collectElements(tree.props.children)
-    expect(
-      all.some(
-        (el) =>
-          typeof el.type === 'function' &&
-          (el.type as { name?: string }).name === 'SidebarTour'
-      )
-    ).toBe(false)
+    const kids = tree.props.children as AnyElement[]
+
+    const directTourChildren = kids.filter((el) => el.type === NavShellTour)
+    expect(directTourChildren).toHaveLength(1)
+
+    const nestedInAside = collectElements(
+      kids.find((el) => String(el.props?.className ?? '').includes(
+        'NavShell__tier2'
+      ))?.props.children
+    ).filter((el) => el.type === NavShellTour)
+    expect(nestedInAside).toHaveLength(0)
+  })
+
+  it('the navbar and tier2 children stay at fragment indices 0 and 1, with no element between them', () => {
+    const tree = callNavShell()
+    const kids = tree.props.children as AnyElement[]
+
+    expect(kids[0]?.props?.className).toBe('NavShell__navbar')
+    expect(String(kids[1]?.props?.className ?? '')).toEqual(
+      expect.stringContaining('NavShell__tier2')
+    )
   })
 
   it('the navbar renders NavTabs and DownloadsRing inside NavShell__navRight', () => {
