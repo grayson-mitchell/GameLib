@@ -439,11 +439,16 @@ progress:
   # `Last activity:` line about quick task `260821-rb5` (~line 3925), and mangled the
   # `fast-parse22` prose row (~line 5576). Reverted from a pre-call snapshot; delta hand-applied.
   # progress numbers UNMOVED (27/21/366/350/95): starting a phase completes no plan and no phase.
+  # 2026-08-23 (34.12 waves 1-4 done): +6 completed plans (34.12-01..06, every SUMMARY landed).
+  # Hand-applied by the orchestrator; no gsd-sdk state.* verb invoked. 350 -> 356.
+  # total_plans/total_phases/completed_phases UNMOVED: 34.12-07 is planned but not executed, and
+  # the phase itself stays OPEN pending its blocking manual UAT gate.
+  # percent = floor(356/366*100) = floor(97.26) = 97 (floor, matching prior convention).
   total_phases: 27
   completed_phases: 21
   total_plans: 366
-  completed_plans: 350
-  percent: 95
+  completed_plans: 356
+  percent: 97
 ---
 
 # Project State
@@ -513,7 +518,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > tree** — there is no worktree isolation and no post-wave merge step in this phase.
 >
 > Phase: 34.12 (onboarding-tour-rework-re-anchor-the-disabled-sidebartour-ag) — EXECUTING
-> Plan: 0 of 7 complete
+> Plan: 6 of 7 complete — waves 1-4 done; only wave 5 (34.12-07, the blocking manual UAT gate) remains
 > Status: Executing Phase 34.12
 >
 > Historical position record (34.5 / 34.9 / 34.4.1) follows unchanged below.

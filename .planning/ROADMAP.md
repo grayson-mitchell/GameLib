@@ -3692,21 +3692,21 @@ Plans:
 
 **Wave 1** *(no dependencies — run in parallel)*
 
-- [ ] 34.12-01-PLAN.md — `NavItem` gains a `data-tour` passthrough; the tour-disabled gate is narrowed to a `sidebar-*` selector ban so it survives the phase
-- [ ] 34.12-02-PLAN.md — D-09: `LibraryTour`'s two dead steps re-anchored onto two new filter-panel wrappers, with the `.Header` flex gap preserved on each
+- [x] 34.12-01-PLAN.md — `NavItem` gains a `data-tour` passthrough; the tour-disabled gate is narrowed to a `sidebar-*` selector ban so it survives the phase
+- [x] 34.12-02-PLAN.md — D-09: `LibraryTour`'s two dead steps re-anchored onto two new filter-panel wrappers, with the `.Header` flex gap preserved on each
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 34.12-03-PLAN.md — the eight non-`SettingsPanel` anchors (`NavTabs` x5, `DownloadsRing`, `QuitButton`, `HeroicVersion`), plus the repo's first `QuitButton` and `HeroicVersion` unit suites
-- [ ] 34.12-04-PLAN.md — `SidebarTour` moved and rewritten into `NavShellTour`: twelve `nav-*` selectors, `disableInteraction: true`, three new `tour.nav.*` keys, mounted in the shell, fork-scope manifests repointed
+- [x] 34.12-03-PLAN.md — the eight non-`SettingsPanel` anchors (`NavTabs` x5, `DownloadsRing`, `QuitButton`, `HeroicVersion`), plus the repo's first `QuitButton` and `HeroicVersion` unit suites
+- [x] 34.12-04-PLAN.md — `SidebarTour` moved and rewritten into `NavShellTour`: twelve `nav-*` selectors, `disableInteraction: true`, three new `tour.nav.*` keys, mounted in the shell, fork-scope manifests repointed
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 34.12-05-PLAN.md — D-01: the four `SettingsPanel` anchors and the "App Tour" launcher row, plus a defensive read of the persisted tour state the launcher newly makes reachable
+- [x] 34.12-05-PLAN.md — D-01: the four `SettingsPanel` anchors and the "App Tour" launcher row, plus a defensive read of the persisted tour state the launcher newly makes reachable
 
 **Wave 4** *(blocked on Wave 3)*
 
-- [ ] 34.12-06-PLAN.md — IN-01 sweep (`library-header` x2, `humble-keys`), the `navTourAnchorCensus` uniqueness gate, deletion of `tourDisabled.test.ts`, and this ROADMAP's IN-01 correction
+- [x] 34.12-06-PLAN.md — IN-01 sweep (`library-header` x2, `humble-keys`), the `navTourAnchorCensus` uniqueness gate, deletion of `tourDisabled.test.ts`, and this ROADMAP's IN-01 correction
 
 **Wave 5** *(blocked on Wave 4)*
 
