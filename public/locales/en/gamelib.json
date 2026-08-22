@@ -20,6 +20,12 @@
     "gamepage": {
         "appleRatingUnrated": "Unrated",
         "etaPrefix": "ETA: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic and HowLongToBeat had nothing for this title.",
+        "extraInfoEmptyTitle": "No extra info found",
+        "extraInfoErrorBody": "The lookup failed, which is not the same as this game having no data. Try again.",
+        "extraInfoErrorTitle": "Couldn't load extra info",
+        "extraInfoRetry": "Retry",
+        "extraInfoStaleBody": "This result was cached before load outcomes were recorded, so it may be out of date. Refresh to check.",
         "tabsAriaLabel": "gameinfo tabs",
         "wineLabel": "Wine:"
     },

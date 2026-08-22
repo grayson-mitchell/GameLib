@@ -71,7 +71,8 @@ import {
   ReportIssue,
   Requirements,
   Scores,
-  SettingsButton
+  SettingsButton,
+  WikiInfoEmptyState
 } from './components'
 import { hasAnticheatInfo } from 'frontend/hooks/hasAnticheatInfo'
 import { hasHelp } from 'frontend/hooks/hasHelp'
@@ -305,10 +306,12 @@ export default React.memo(function GamePage(): JSX.Element | null {
 
   useEffect(() => {
     window.api.getWikiGameInfo(gameInfo.title, appName, runner).then((info) => {
-      if (
-        info &&
-        (info.applegamingwiki || info.howlongtobeat || info.pcgamingwiki)
-      ) {
+      // Accept ANY non-null result, matching `refreshWikiInfo` below. The previous gate
+      // (applegamingwiki || howlongtobeat || pcgamingwiki) discarded two useful shapes:
+      // a steamInfo-only result, which is what Linux gets and which `hasWikiInfo` would
+      // have accepted; and a result carrying only `fetchStatus`, which is how the Extra
+      // info tab now reports that a lookup FAILED rather than found nothing.
+      if (info) {
         setWikiInfo(info)
       }
     })
@@ -426,11 +429,17 @@ export default React.memo(function GamePage(): JSX.Element | null {
       refreshWikiInfo
     }
 
+    // NOTE: this no longer gates whether the Extra info TAB renders -- the tab is now
+    // always present. Hiding it on empty data made a failed lookup indistinguishable
+    // from a game with no scores, which is how a total PCGamingWiki outage stayed
+    // invisible for months. It now decides only whether the panel shows real rows or
+    // `WikiInfoEmptyState`.
     const hasWikiInfo =
       wikiInfo?.howlongtobeat ||
       wikiInfo?.pcgamingwiki?.metacritic.score ||
       wikiInfo?.pcgamingwiki?.opencritic.score ||
-      wikiInfo?.steamInfo
+      wikiInfo?.pcgamingwiki?.igdb.score ||
+      wikiInfo?.steamInfo?.compatibilityLevel
 
     const hasRequirements = extraInfo ? extraInfo.reqs.length > 0 : false
 
@@ -569,15 +578,13 @@ export default React.memo(function GamePage(): JSX.Element | null {
                               }
                             />
                           )}
-                          {hasWikiInfo && (
-                            <Tab
-                              className="tabButton"
-                              value={'extra'}
-                              label={t('game.extra_info', 'Extra info')}
-                              iconPosition="start"
-                              icon={<Star className="gameInfoTabsIcon" />}
-                            />
-                          )}
+                          <Tab
+                            className="tabButton"
+                            value={'extra'}
+                            label={t('game.extra_info', 'Extra info')}
+                            iconPosition="start"
+                            icon={<Star className="gameInfoTabsIcon" />}
+                          />
                           {hasRequirements && (
                             <Tab
                               className="tabButton"
@@ -616,9 +623,15 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           index="extra"
                           className="extraTab"
                         >
-                          <Scores gameInfo={gameInfo} />
-                          <HLTB />
-                          <CompatibilityInfo gameInfo={gameInfo} />
+                          {hasWikiInfo ? (
+                            <>
+                              <Scores gameInfo={gameInfo} />
+                              <HLTB />
+                              <CompatibilityInfo gameInfo={gameInfo} />
+                            </>
+                          ) : (
+                            <WikiInfoEmptyState />
+                          )}
                         </TabPanel>
 
                         <TabPanel
