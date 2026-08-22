@@ -327,10 +327,12 @@ this plan's ledger. It receives item 11 below.
 | WR-02 | Warning | FIXED | 34.9-19 (`summarise()`'s `!fw.topLevelStubExists` branch, `meta/verifyRunnerBundle.ts`) |
 | IN-01 | Info | FIXED | 34.9-19 (`meta/cleanDistMac.ts` doc-comment correction, pinned) |
 | IN-02 | Info | FIXED | 34.9-19 (`meta/cleanDistMac.ts` doc-comment downgraded to defense-in-depth, pinned) |
-| IN-03 | Info | DEFERRED | item 11 |
+| IN-03 | Info | FIXED | quick task 260822-hrf (commits `df7af9f4a` rename + `ab1ee0448` generalization), closing item 11 opened against 34.9-19's `meta/cleanDistMac.ts`; `meta/cleanDist.ts` now requires an explicit `--platform=` mac/win/linux argument with no silent default, wired into `dist:win`/`release:win`/`dist:linux`/`release:linux` alongside the existing mac wiring; proven on a synthetic three-platform `dist/` fixture where each platform's clean removes only its own entries and leaves the other two byte-identical (`meta/__tests__/cleanDist.test.ts`), macOS behaviour unchanged verbatim, IN-01/IN-02 doc-comment pins re-baselined against the new path |
 
 **Count:** 6 IDs in list A. 5 mapped to a landed fix. 1 mapped to a ledger item (item 11). Unmapped
-count: **0**.
+count: **0**. *(As originally recorded 2026-08-12. Superseded 2026-08-22 by quick task 260822-hrf:
+IN-03 now reads FIXED above; see item 11's own closure note below for the landed commits. Left in
+place rather than rewritten, per this ledger's amend-not-retick discipline.)*
 
 ### 11. IN-03 — the F-34.9-02 stale-artifact fix is macOS-only
 
@@ -351,6 +353,22 @@ decision to generalize `cleanDistMac.ts` into a platform-parameterized `cleanDis
 waiting for one.
 
 **OWNER:** follow-up packaging phase / developer action, dated 2026-08-12.
+
+**Closure note (2026-08-22, quick task 260822-hrf):** the named precondition's second branch
+landed — `meta/cleanDistMac.ts` was renamed to `meta/cleanDist.ts` (commit `df7af9f4a`) and
+generalized to a required `--platform=` mac/win/linux argument with no silent default (commit
+`ab1ee0448`), keyed off `electron-builder.yml`'s real per-platform artifact-name tokens.
+`dist:win`/`release:win`/`dist:linux`/`release:linux` now run their own `clean:dist-win` /
+`clean:dist-linux` prefix, mirroring the pre-existing `dist:mac` wiring this item originally
+found missing. This closes IN-03 — see the disposition table above. The Blocker paragraph's
+**UNCONFIRMED** caveat is carried forward unchanged and still applies exactly as written: this
+machine is macOS arm64 with no win/linux build to run live, so win/linux coverage is
+synthetic-fixture-only (`meta/__tests__/cleanDist.test.ts`'s three-platform fixture proves each
+platform's clean touches only its own entries and leaves the other two byte-identical, which is
+a fixture-level non-deletion proof, not a live win/linux build observation). No sentence in this
+closure note asserts win/linux is broken, and none asserts a live win/linux run has occurred —
+the generalization closes the code-parity gap this item named; it does not manufacture a live
+observation this machine cannot produce.
 
 ### 12. The wired guard covers arm64 only
 
@@ -783,10 +801,12 @@ tool unchanged. Receives item 21 below.
 | C4-02 | Warning | FIXED | quick task 260814-u2u (commit `fdc5b24e7`); confirmed live by 34.9-33's own execution | meta/runTs.cjs: the fs.symlinkSync junction call now sits inside the try block that owns cleanup, confirmed live at execution time |
 | C4-03 | Warning | FIXED | quick task 260814-u2u (commit `fdc5b24e7`, D7 consequence); confirmed live by 34.9-33's own execution | meta/runTs.cjs: runChild() reads compile.error/run.error and both call sites log via console.error before cleanupAndExit, confirmed live |
 | C4-04 | Warning | FIXED | quick task 260814-u2u (commit `fdc5b24e7`); confirmed live by 34.9-33's own execution | meta/runTs.cjs: exitCodeFor() propagates 128+signal for a signal-terminated child instead of a flat 1, confirmed live |
-| C4-05 | Warning | DEFERRED | item 21 below | `### 21. C4-05 — the sweep tool's FIXED-row self-citation ban is case-sensitive while its polarity deny-list is case-insensitive` |
+| C4-05 | Warning | FIXED | quick task 260822-hrf (commit `a850e9d66`), closing item 21 opened against 34.9-29's `34.9-REVIEW-SWEEP-CHECK.cjs`; the FIXED-row citation-acceptance check's substring match is now case-insensitive, matching the polarity deny-list's own convention two functions over in the same file; proven with a synthetic fixture where the pre-fix tool scored a mixed-case self-citing evidence cell clean (1/1 mapped, unmapped 0, exit 0) and the post-fix tool correctly rejects it (FIXED-NOT-CONFIRMED-OUTSIDE-PLANNING, exit 1); a control fixture with the citing word removed still scores clean; this real phase directory's own re-run at fix time: verdict PASS, 24/24 mapped, unmapped 0 | Header doc block in `34.9-REVIEW-SWEEP-CHECK.cjs` updated to state the new case-insensitive rule |
 
 **Count:** 5 IDs in list A. 4 mapped to a confirmed landed fix. 1 mapped to a ledger item (item 21).
-Unmapped count: **0**.
+Unmapped count: **0**. *(As originally recorded 2026-08-14. Superseded 2026-08-22 by quick task
+260822-hrf: C4-05 now reads FIXED above; see item 21's own closure note below for the landed
+commit. Left in place rather than rewritten, per this ledger's amend-not-retick discipline.)*
 
 ### 21. C4-05 — the sweep tool's FIXED-row self-citation ban is case-sensitive while its polarity deny-list is case-insensitive
 
@@ -818,6 +838,18 @@ This deferral is asymmetric with every other item in this file: it is deferred n
 is risky or unauthorized in principle, but because THIS plan's own acceptance criteria specifically
 forbid modifying the file that would need to change, and tightening a gate is the one direction this
 project's "never loosen the sweep to admit a row" rule does not prohibit.
+
+**Closure note (2026-08-22, quick task 260822-hrf):** the named precondition landed — this task
+(unlike the plan that opened this item) carries no constraint against modifying
+`34.9-REVIEW-SWEEP-CHECK.cjs`, so commit `a850e9d66` made the FIXED-row citation-acceptance check's
+substring match case-insensitive, matching the polarity deny-list's own convention two functions
+over in the same file. Direction proven both ways with a synthetic fixture: the pre-fix tool scored
+a mixed-case self-citing evidence cell clean (1/1 mapped, unmapped 0, exit 0); the post-fix tool
+correctly rejects the identical fixture (`FIXED-NOT-CONFIRMED-OUTSIDE-PLANNING`, exit 1); a control
+fixture with the citing word removed still scores clean under the post-fix tool, confirming the
+tightening does not admit a false rejection. Re-running the tool against this real phase directory
+at fix time reported `verdict PASS, 24/24 mapped, unmapped 0` — the same real rows this file's own
+FIXED claims depend on. This closes C4-05 — see the disposition table above.
 
 ### 22. C5-01 — the tmpdir leaks if a signal arrives before the forwarded-signal handlers are installed
 
@@ -861,6 +893,22 @@ file describe the same artifact again.
 **OWNER:** whichever plan next modifies `meta/runTs.cjs`, dated 2026-08-14. Opened from
 `34.9-REVIEW-CYCLE5.md` finding C5-01, execution-verified by the reviewer two independent ways.
 
+**Closure note (2026-08-22, quick task 260822-hrf):** the named precondition landed as a single
+task — commit `06d7f6555` moved the `FORWARDED_SIGNALS` handler-registration loop (and the
+`'exit'` handler) to the first statements of `main()`, ahead of `mkdtempSync`, and hoisted
+`tmpDir`/`cleaned`/`currentChild`/`escalationTimer`/`terminatingSignal` to mutable `let` bindings
+at the top of the function so `cleanup()` can be defined and registered before `tmpDir` is
+assigned, without the naive move's TDZ crash. `cleanup()` now returns early when `tmpDir === null`
+(nothing to remove yet is a correct outcome, not a swallowed failure). Also re-ran the directions
+this item's own Named precondition called out: `34.9-WRAPPER-PROOF.md` Direction B row 11 and the
+Direction A 15x2 matrix were both live re-run against this edited file in this same task (see that
+document's own 2026-08-22 addendum) — both PASS, so the proof and the shipped file describe the
+same artifact again. New test T8 in `meta/__tests__/runTsSignals.test.ts` reproduces the reviewer's
+own 800ms-busy-wait technique: a SIGTERM landing inside the widened window is now handled cleanly
+(exit 143, no tmpdir survivor); the RED half was observed manually against the pre-fix ordering
+(default disposition, no `'exit'` event, tmpdir survived on disk). This closes C5-01 — see the
+disposition table above.
+
 ### 23. C5-02 — `SIGHUP` forwarding has no regression-test coverage
 
 **What it is:** `FORWARDED_SIGNALS` at `meta/runTs.cjs:97` includes `SIGHUP` alongside `SIGTERM` and
@@ -886,6 +934,17 @@ built under.
 
 **OWNER:** whichever plan next extends `meta/__tests__/runTsSignals.test.ts`, dated 2026-08-14.
 Opened from `34.9-REVIEW-CYCLE5.md` finding C5-02.
+
+**Closure note (2026-08-22, quick task 260822-hrf):** the named precondition landed — commit
+`b938aaace` added T6 (mirroring T1/T2: `SIGHUP` to the wrapper PID alone kills the child, removes
+the tmpdir, wrapper exits `129`) and T7, the RED-proof-against-a-pre-fix-copy control this item's
+own Blocker paragraph required: against a generated probe copy with `SIGHUP` removed from
+`FORWARDED_SIGNALS`, the wrapper is instead terminated directly by Node's default signal
+disposition, the child is orphaned, and the tmpdir survives — proving T6 can actually fail, and
+carrying the same non-vacuity discipline the file's existing five tests were held to. T7's leak is
+intentional (the observation under test) and is cleaned up inside the test body so the suite's
+existing `afterEach` leak assertion stays green unmodified. 7/7 tests passing. This closes C5-02 —
+see the disposition table above.
 
 ### 24. E-02 — twelve `meta/*.ts` files still document the retired `node_modules/.cache/*.cjs` execution path
 
@@ -936,6 +995,41 @@ Opened from `34.9-SECURITY.md` escalation E-02 (threat `T-34.9C3-19`, plan 34.9-
 control failure and not a live build defect — an evidence-surface defect. Note for the next reader:
 the security audit's first pass sampled two files and reported two; a census over all of `meta/*.ts`
 found twelve. The defect's unit is the file, and an audit whose unit is coarser cannot find it.
+
+**Closure note (2026-08-22, quick task 260822-hrf, Task 5, commit `5af220b4b`):** the named
+precondition landed. Rewrote each of the affected files to describe the real invocation
+(`node meta/runTs.cjs`, `package.json`'s actual script name) instead of the retired
+`node_modules/.cache` tmpdir filename, preserving each comment's original point. Deleted the 10
+stale `node_modules/.cache/*.cjs` residue files (untracked, gitignored) whose mere presence had
+laundered the wrong comments into looking accurate. Added the durable fix this item's Blocker
+paragraph called for — not just a prose correction, but a pin: `meta/__tests__/runTs.test.ts` gained
+a negative pin (no `meta/*.ts` source mentions `node_modules/.cache`, tied to the fact that no
+`package.json` script writes there), a positive pin (every `package.json` script wrapping a
+`meta/<X>.ts` entry through `meta/runTs.cjs` has its runner path equal to `meta/runTs.cjs`, derived
+from `loadScripts()` rather than hand-copied), and a vacuity guard (pin 1's predicate fires against a
+known-bad synthetic input) — so this defect's third-recurrence pattern (IN-01/IN-02, then the
+pipe-conversion instance, then this one) cannot recur silently a fourth time; the next mechanism
+change will fail the pin instead of drifting invisibly under it, which is the exact miss the
+IN-01/IN-02 pins made because they asserted rationale prose rather than the path fact.
+
+This item's own **census count of twelve is left as originally recorded above, not silently
+corrected** — per this ledger's amend-in-place-don't-re-tick discipline, the number an item opened
+with stays put even when a later fix finds the ground has shifted. A live re-census at fix time
+(`grep -rln "node_modules/\.cache" meta/*.ts`) found **thirteen** distinct files had carried the
+stale pattern at some point across this item's lifetime, not twelve: `meta/buildDecompressWorkerDev.ts`
+was added to the repository after this item was written and carried the same stale-comment pattern,
+so it was never part of the original twelve this item named. One of the originally-named twelve —
+`meta/cleanDistMac.ts` — no longer needed touching by this closure's own commit: Task 4 of this same
+quick task (commit `ab1ee0448`) had already rewritten it end to end while generalizing it for IN-03
+(renamed to `meta/cleanDist.ts` first), and that rewrite incidentally removed its stale
+`node_modules/.cache` references before this item's fix ever ran. Commit `5af220b4b`'s own diffstat
+therefore touches 12 `meta/*.ts` files, not 13 — the original eleven still needing the fix plus the
+one new arrival (`buildDecompressWorkerDev.ts`) — and a post-fix census across all of `meta/*.ts`
+confirms zero remaining matches (verified: `grep -rl "node_modules/\.cache" meta/*.ts` returns
+nothing). This closes E-02 — its `E-02` ID shape is not one of the `C<n>-<nn>` / `CR-<nn>` /
+`WR-<nn>` / `IN-<nn>` shapes `34.9-REVIEW-SWEEP-CHECK.cjs` recognizes, so this closure is recorded
+here in prose rather than as a disposition-table row; there is no disposition table for this item to
+flip.
 
 ## Closure protocol — why every cycle's own review is unledgered by construction
 
@@ -1031,8 +1125,11 @@ Empty. Neither finding was fixed in this execution; both are mapped to ledger it
 
 | Finding | Severity | Disposition | Evidence | Independent confirmation (non-.planning) |
 |---|---|---|---|---|
-| C5-01 | Warning | DEFERRED | item 22 below | `### 22. C5-01 — the tmpdir leaks if a signal arrives before the forwarded-signal handlers are installed` |
-| C5-02 | Info | DEFERRED | item 23 below | `### 23. C5-02 — \`SIGHUP\` forwarding has no regression-test coverage` |
+| C5-01 | Warning | FIXED | quick task 260822-hrf (commit `06d7f6555`), closing item 22 opened against 34.9-32's `meta/runTs.cjs`; handler registration (the FORWARDED_SIGNALS loop) now runs before `mkdtempSync`, closing the startup-window race; proven live: T8 in `meta/__tests__/runTsSignals.test.ts` reproduces the reviewer's own 800ms-busy-wait technique and shows a SIGTERM landing inside the widened window is handled cleanly post-fix (exit 143, no tmpdir survivor), RED half observed manually against the pre-fix ordering (default disposition, no exit event, tmpdir survived); a real `pnpm clean:dist-mac` run completes with zero gamelib-runts-* survivors | 11/11 signal tests + runTs.test.ts passing, tsc --noEmit clean, handler-before-mkdtempSync order verified programmatically |
+| C5-02 | Info | FIXED | quick task 260822-hrf (commit `b938aaace`), closing item 23 opened against 34.9-32's `meta/runTs.cjs`; T6/T7 added to `meta/__tests__/runTsSignals.test.ts` pin SIGHUP forwarding with a non-vacuity control -- T7 removes SIGHUP from a generated probe copy's FORWARDED_SIGNALS and shows the wrapper is then killed by default disposition, child orphaned, tmpdir leaked, proving T6 can actually fail | 7/7 tests passing, tsc --noEmit clean |
 
 **Count:** 2 IDs in list A. 0 mapped to a confirmed landed fix. 2 mapped to ledger items (items 22
-and 23). Unmapped count: **0**.
+and 23). Unmapped count: **0**. *(As originally recorded 2026-08-14. Superseded 2026-08-22 by
+quick task 260822-hrf: both rows above now read FIXED; see items 22 and 23's own closure notes
+below for the landed commits. Left in place rather than rewritten, per this ledger's amend-not-retick
+discipline.)*
