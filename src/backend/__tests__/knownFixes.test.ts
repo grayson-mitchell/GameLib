@@ -93,6 +93,53 @@ describe('readKnownFixes', () => {
     expect(readKnownFixes('shared-app', 'legendary')).toEqual(legendaryFixture)
   })
 
+  // WR-06 (34.2-REVIEW.md round 1): `appName` reaches this function as a free
+  // string from the renderer via the `getKnownFixes` channel, and `join`
+  // NORMALISES `..` segments rather than rejecting them -- so a traversing
+  // appName escaped `fixesPath` and turned this into an arbitrary-file read
+  // primitive. These two cases go RED against the pre-fix code: the first
+  // returned the out-of-tree file's parsed contents instead of null, and the
+  // second read a sibling directory.
+  it('WR-06 returns null and does NOT read an out-of-tree file when appName traverses', () => {
+    const outside = join(fixesPath, '..', 'outside-the-fixes-dir-gog.json')
+    writeFileSync(outside, JSON.stringify({ winetricks: ['pwned'] }))
+
+    try {
+      expect(readKnownFixes('../outside-the-fixes-dir', 'gog')).toBeNull()
+      expect(mockedLogWarning).toHaveBeenCalledWith(
+        expect.stringContaining('outside the known-fixes directory')
+      )
+    } finally {
+      rmSync(outside, { force: true })
+    }
+  })
+
+  it('WR-06 returns null for a deeper traversal even though the target EXISTS', () => {
+    // Discriminating on purpose: create the escape target first. Without this
+    // the assertion would pass against the UNFIXED code for the wrong reason
+    // (file simply absent), which is a vacuous test, not a containment test.
+    const deep = join(fixesPath, '..', '..', 'deep-escape-gog.json')
+    writeFileSync(deep, JSON.stringify({ winetricks: ['pwned-deep'] }))
+
+    try {
+      expect(readKnownFixes('../../deep-escape', 'gog')).toBeNull()
+    } finally {
+      rmSync(deep, { force: true })
+    }
+  })
+
+  // Anti-vacuity: the containment guard must NOT reject the ordinary case the
+  // function exists to serve. Without this, deleting the whole function body
+  // and returning null unconditionally would satisfy the two tests above.
+  it('WR-06 guard does not reject a normal appName (anti-vacuity)', () => {
+    const fixture = { winetricks: ['corefonts'] }
+    writeFileSync(
+      join(fixesPath, 'ordinary-app-gog.json'),
+      JSON.stringify(fixture)
+    )
+    expect(readKnownFixes('ordinary-app', 'gog')).toEqual(fixture)
+  })
+
   it('REQ-34.2-05 resolves fixesPath under os.tmpdir(), never the real config directory', () => {
     expect(fixesPath.startsWith(tmpdir())).toBe(true)
     expect(existsSync(fixesPath)).toBe(true)
