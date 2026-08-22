@@ -59,26 +59,67 @@ function nextExternalWindowLabel(): string {
 }
 
 /**
+ * The window title for an external child window: the url's host, `www.` stripped.
+ *
+ * TOTAL, like everything else in this module -- its only caller runs off a user click.
+ * A url that will not parse, or that parses to no host (`file:///...`), yields
+ * `undefined`, which the caller turns into an OMITTED `title` key rather than
+ * `title: undefined`.
+ *
+ * The `www.`-stripping is conditional on the remainder still containing a dot, because
+ * `www.com` is a real registrable domain and blind stripping would title it `com`.
+ */
+function externalWindowTitle(url: string): string | undefined {
+  try {
+    const { hostname } = new URL(url)
+    if (!hostname) return undefined
+    const withoutWww = hostname.startsWith('www.') ? hostname.slice(4) : hostname
+    return withoutWww.includes('.') ? withoutWww : hostname
+  } catch {
+    return undefined
+  }
+}
+
+/**
  * Opens `url` in a new, unprivileged child window. Labels are generated, never derived
  * from the url -- a url-derived label could otherwise be crafted to collide with `main`
- * or `about` and inherit their capability grants (T-34.1-27).
+ * or `about` and inherit their capability grants (T-34.1-27). The TITLE below is derived
+ * from the url; that is cosmetic and must never become a label input.
  */
 export const tauriCreateNewWindow = (url: string): void => {
   try {
+    const title = externalWindowTitle(url)
     const win = new WebviewWindow(nextExternalWindowLabel(), {
       url,
       width: 1200,
       height: 700,
       resizable: true,
-      center: true
-      // WR-07 (Phase 34.1 code review): NO hard-coded `title` here, deliberately.
+      center: true,
+      // WR-07 (Phase 34.1 code review): the title is the remote HOST, never 'GameLib'.
       //
-      // This window loads renderer-SUPPLIED REMOTE content. Titling it 'GameLib'
-      // presented an attacker-controlled page under the app's own name -- a phishing
-      // affordance that Electron's equivalent (`new BrowserWindow(...).loadURL(url)`,
-      // main.ts:797-799) did not have, because there the remote page's own `<title>`
-      // showed. Omitting `title` restores that Electron behaviour: Tauri falls back to
-      // the loaded document's own title. Do not "fix" this by adding a title back.
+      // WR-07's concern stands and is honoured: this window loads renderer-SUPPLIED
+      // REMOTE content, so titling it 'GameLib' would present an attacker-controlled
+      // page under the app's own name.
+      //
+      // CORRECTION (todo 2026-08-22-external-child-windows-are-titled-tauri-app): the
+      // original fix for WR-07 omitted `title` entirely and claimed that "Tauri falls
+      // back to the loaded document's own title". THAT IS FALSE. Tauri falls back to its
+      // own built-in default and every one of these windows was titled "Tauri App" --
+      // observed live 2026-08-22, and `default_title()` returns exactly that string at
+      // tauri-utils `src/config.rs:2375`. Tauri v2 does not sync `document.title` at all:
+      // `on_document_title_changed` (tauri `src/webview/webview_window.rs:297`) is an
+      // opt-in RUST builder hook whose own doc example has to call `set_title` by hand,
+      // and it is unreachable from the JS `WebviewWindow` constructor used here.
+      //
+      // A host is a BETTER anti-phishing signal than the page's own title, not merely an
+      // acceptable substitute: an attacker controls `<title>` freely, but not the host
+      // they are served from.
+      //
+      // Electron parity (`new BrowserWindow(...).loadURL(url)` showed the page's title)
+      // is therefore knowingly NOT restored -- restoring it would mean injecting an init
+      // script into remote content, which cuts against the isolation posture that keeps
+      // these windows matching no capability.
+      ...(title ? { title } : {})
     })
     // WR-06: `once()` returns a promise; float it explicitly rather than leaving a
     // floating rejection for `bootErrorSurface` to downgrade.

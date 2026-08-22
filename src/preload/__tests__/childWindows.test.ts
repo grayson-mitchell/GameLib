@@ -180,13 +180,74 @@ describe('tauriChildWindows (REQ-34.1-08)', () => {
     expect(labelAfter).not.toBe('external-1')
   })
 
-  // ── WR-07: no first-party title on renderer-supplied REMOTE content ──
+  // ── WR-07: the title of renderer-supplied REMOTE content is its HOST ──
+  //
+  // These replace an assertion that read `expect(options.title).toBeUndefined()`. That
+  // one was true of the CODE and silent about the RESULT: it proved no title was passed
+  // at the call site, which is precisely the state in which Tauri applies its own
+  // "Tauri App" default. It stayed green for the entire life of the defect. Every case
+  // below names the string the window ends up displaying, which under Tauri is the
+  // `title` option verbatim.
 
-  it('REQ-34.1-08/WR-07: a createNewWindow child carries NO hard-coded title, so the remote page titles itself (Electron parity)', () => {
+  it('REQ-34.1-08/WR-07: a createNewWindow child is titled with the remote HOST', () => {
+    tauriCreateNewWindow('https://codeweavers.com/compatibility/browse/name/c/1')
+    const [, options] = webviewWindowCtor.mock.calls[0] as [string, Record<string, unknown>]
+
+    expect(options.title).toBe('codeweavers.com')
+  })
+
+  it('REQ-34.1-08/WR-07: a leading "www." is stripped from the title', () => {
+    tauriCreateNewWindow('https://www.protondb.com/app/1')
+    const [, options] = webviewWindowCtor.mock.calls[0] as [string, Record<string, unknown>]
+
+    expect(options.title).toBe('protondb.com')
+  })
+
+  it('REQ-34.1-08/WR-07: "www." is NOT stripped when doing so would leave a bare TLD (www.com is a real domain)', () => {
+    tauriCreateNewWindow('https://www.com/whatever')
+    const [, options] = webviewWindowCtor.mock.calls[0] as [string, Record<string, unknown>]
+
+    expect(options.title).toBe('www.com')
+  })
+
+  it('REQ-34.1-08/WR-07: a hostile page is titled with the host it is SERVED FROM -- never the app name, never the framework default', () => {
     tauriCreateNewWindow('https://evil.example/looks-official')
     const [, options] = webviewWindowCtor.mock.calls[0] as [string, Record<string, unknown>]
 
-    expect(options.title).toBeUndefined()
+    // An attacker controls `<title>` freely but not the host, which is why the host is
+    // the stronger signal here.
+    expect(options.title).toBe('evil.example')
+    // WR-07's actual requirement: remote content must NOT wear the app's own name.
+    expect(options.title).not.toBe('GameLib')
+    // And the regression this replaced a blind assertion for.
+    expect(options.title).not.toBe('Tauri App')
+  })
+
+  it('REQ-34.1-08/WR-07: an unparseable url omits `title` entirely and still opens the window (the helper is total)', () => {
+    tauriCreateNewWindow('not-a-url')
+    const [, options] = webviewWindowCtor.mock.calls[0] as [string, Record<string, unknown>]
+
+    expect(webviewWindowCtor).toHaveBeenCalledTimes(1)
+    // Omitted, not `title: undefined` -- so Tauri sees no title key at all.
+    expect('title' in options).toBe(false)
+  })
+
+  it('REQ-34.1-08/WR-07: a url with no host (file://) omits `title` rather than passing an empty one', () => {
+    tauriCreateNewWindow('file:///etc/passwd')
+    const [, options] = webviewWindowCtor.mock.calls[0] as [string, Record<string, unknown>]
+
+    expect('title' in options).toBe(false)
+  })
+
+  it('REQ-34.1-08/T-34.1-27: deriving the TITLE from the url does not leak the url into the LABEL', () => {
+    tauriCreateNewWindow('https://evil.example/main')
+    const [label, options] = webviewWindowCtor.mock.calls[0] as [string, Record<string, unknown>]
+
+    expect(options.title).toBe('evil.example')
+    expect(label.startsWith('external-')).toBe(true)
+    expect(label).not.toContain('evil')
+    expect(label).not.toBe('main')
+    expect(label).not.toBe('about')
   })
 
   it('REQ-34.1-08/WR-07: the About window DOES keep its title -- it loads first-party static about.html, not remote content', async () => {

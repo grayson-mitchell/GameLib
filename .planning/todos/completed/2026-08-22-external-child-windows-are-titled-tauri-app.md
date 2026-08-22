@@ -64,3 +64,36 @@ link opens a window labelled "Tauri App", which leaks the framework name and rea
 
 Whichever is chosen, **replace the callsite assertion with one that names the resulting title**,
 or the next reader inherits the same green-and-wrong gate.
+
+## Resolution — CLOSED (2026-08-22, quick task 260822-rz1)
+
+Summary: `.planning/quick/260822-rz1-child-window-hostname-title/SUMMARY.md`
+
+**Option 3 implemented.** `tauriCreateNewWindow` derives the title from the url's host (leading
+`www.` stripped) via a new total helper `externalWindowTitle`. External link windows are now titled
+`protondb.com` / `codeweavers.com` / `applegamingwiki.com` instead of "Tauri App".
+
+The WR-07 comment was rewritten in place, not deleted: it keeps WR-07's real requirement, states
+plainly that the old document-title-fallback claim was false, and records that Electron parity is
+knowingly not restored (restoring it needs an init script injected into remote content, against the
+isolation posture).
+
+**Both of this todo's factual claims re-verified at HEAD before any code was written**, one with a
+correction: `default_title()` → `"Tauri App"` is at tauri-utils `config.rs:2375`, but the lockfile
+pins **2.9.3**, not the 2.9.2 this todo cited — the crate was bumped and the fact survived. Extra
+evidence this todo did not have: `on_document_title_changed`
+(`tauri-2.11.5/src/webview/webview_window.rs:297-332`) is an opt-in hook whose own doc example body
+is `window.set_title(&title).unwrap()`, and it is a Rust builder API unreachable from the JS
+constructor used here.
+
+**The callsite assertion was replaced as this todo required.** Seven tests now name the resulting
+title (normal host, `www.` stripped, `www.com` NOT reduced to a TLD, unparseable url, `file://`
+with no host, hostile url titled with its host and explicitly not `GameLib`/`Tauri App`, and
+title-derivation not leaking into the label). RED-proven: 5 fail against the unfixed module, and
+the two "omits title" fallback tests pass in both states by design.
+
+**Still not a pixel-level gate, and deliberately so.** The new assertions read the constructor
+mock; a `node`-environment unit test cannot observe a real OS window. Under Tauri the `title`
+option is applied verbatim, so the asserted string is the displayed string — but the thing that
+actually closes the loop is re-observing one external link window live. Phase 34.1 UAT item 8a
+should be re-run rather than ticked from this suite.
