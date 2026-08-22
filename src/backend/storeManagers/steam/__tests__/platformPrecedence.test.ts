@@ -240,6 +240,120 @@ describe('resolvePlatformWrite', () => {
       expect(real.platforms).not.toEqual(sabotaged.platforms)
       expect(real.platformsCapturedAt).not.toBe(sabotaged.platformsCapturedAt)
     })
+
+    /** Saboteur: the pre-37-06 shipped behaviour — validates
+     *  `existingCapturedAt` for finiteness/type only, with NO upper bound,
+     *  and never validates the incoming `capturedAt` at all. Proves the
+     *  37-06 bound is doing observable work rather than being an untested
+     *  no-op: a suite that passes identically against this boundless
+     *  reimplementation has measured nothing about the bound. */
+    function boundlessResolve(
+      existing: ExistingPlatformEntry | null | undefined,
+      incoming: PlatformTriple,
+      source: PlatformSignalSource,
+      capturedAt: number
+    ): PlatformWriteResolution {
+      const existingCapturedAt = existing?.platformsCapturedAt
+      const hasValidExistingTimestamp =
+        typeof existingCapturedAt === 'number' &&
+        Number.isFinite(existingCapturedAt)
+      const existingIsStrictlyNewer =
+        hasValidExistingTimestamp && existingCapturedAt > capturedAt
+
+      if (
+        existingIsStrictlyNewer &&
+        existing &&
+        existing.is_windows_native !== undefined &&
+        existing.is_mac_native !== undefined &&
+        existing.is_linux_native !== undefined
+      ) {
+        return {
+          platforms: {
+            is_windows_native: existing.is_windows_native as boolean,
+            is_mac_native: existing.is_mac_native as boolean,
+            is_linux_native: existing.is_linux_native as boolean
+          },
+          platformsSource: existing.platformsSource ?? source,
+          platformsCapturedAt: existingCapturedAt as number,
+          accepted: false
+        }
+      }
+
+      return {
+        platforms: incoming,
+        platformsSource: source,
+        platformsCapturedAt: capturedAt,
+        accepted: true
+      }
+    }
+
+    it('WR-02(a) is where the 24h bound is observable: the real function disagrees with a boundless reimplementation', () => {
+      const capturedAt = Date.now()
+      const existing: ExistingPlatformEntry = {
+        ...APPDETAILS_TRIPLE,
+        platformsSource: 'appdetails',
+        platformsCapturedAt: Number.MAX_SAFE_INTEGER
+      }
+
+      const real = resolvePlatformWrite(
+        existing,
+        PICS_TRIPLE,
+        'pics',
+        capturedAt
+      )
+      const boundless = boundlessResolve(
+        existing,
+        PICS_TRIPLE,
+        'pics',
+        capturedAt
+      )
+
+      expect(real.accepted).toBe(true)
+      expect(boundless.accepted).toBe(false)
+      expect(real.platforms).not.toEqual(boundless.platforms)
+      expect(real.platformsCapturedAt).not.toBe(boundless.platformsCapturedAt)
+    })
+  })
+
+  describe('D-17: precedence is still freshest-write-wins — neither source is ranked', () => {
+    // Two PLAUSIBLE timestamps (both within MAX_CLOCK_SKEW_MS of now): the
+    // newer one wins regardless of which `source` produced it. This is the
+    // gate that fails if a future edit "simplifies" the module into a
+    // ranking (e.g. "appdetails always wins" or "PICS always wins").
+    it('a newer PICS capture beats an older, complete appdetails capture', () => {
+      const now = Date.now()
+      const existing: ExistingPlatformEntry = {
+        ...APPDETAILS_TRIPLE,
+        platformsSource: 'appdetails',
+        platformsCapturedAt: now - 60_000
+      }
+
+      const result = resolvePlatformWrite(existing, PICS_TRIPLE, 'pics', now)
+
+      expect(result.accepted).toBe(true)
+      expect(result.platforms).toEqual(PICS_TRIPLE)
+      expect(result.platformsSource).toBe('pics')
+    })
+
+    it('a newer appdetails capture beats an older, complete PICS capture (mirror)', () => {
+      const now = Date.now()
+      const existing: ExistingPlatformEntry = {
+        ...PICS_TRIPLE,
+        platformsSource: 'pics',
+        platformsCapturedAt: now - 60_000
+      }
+
+      const result = resolvePlatformWrite(
+        existing,
+        APPDETAILS_TRIPLE,
+        'appdetails',
+        now
+      )
+
+      expect(result.accepted).toBe(true)
+      expect(result.platforms).toEqual(APPDETAILS_TRIPLE)
+      expect(result.platformsSource).toBe('appdetails')
+    })
   })
 
   describe('resolvePlatformWrite — REQ-37-05: implausible timestamps are bounded from ABOVE on both sides', () => {
