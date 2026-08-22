@@ -2686,7 +2686,7 @@ softened.** Ledger: 33 rows, **RETIRED 15 → 18, OPEN 18 → 15**. Findings `F-
 opened and deliberately **not** diagnosed. **Still owed on this phase:** `/gsd-verify-phase 34.5`
 and `/gsd-secure-phase 34.5` — which is why the milestone's `completed_phases` counter stays at 20.
 
-### Phase 34.6: Tauri IPC re-plumb slice 9 — EOS overlay, SteamGridDB artwork and winetricks (INSERTED)
+### Phase 34.6: Tauri IPC re-plumb slice 9 — EOS overlay, SteamGridDB artwork, winetricks + the Epic/save-sync verification inherited from 34.7 (INSERTED)
 
 **Goal:** Port the **16 channels** deferred by Phase 34.5's **D-03** — EOS overlay (8):
 `disableEosOverlay`, `enableEosOverlay`, `getEosOverlayStatus`, `getLatestEosOverlayVersion`,
@@ -2705,7 +2705,36 @@ under the sidecar) rather than rediscovering it. `callTool`'s `winetricks` branc
 from Phase 34.5 via `Winetricks.run()` on the shared `tools/index.ts` object — this phase is about
 the three dedicated IPC channels above, not about making winetricks work at all.
 
+**INHERITED SCOPE — re-homed here 2026-08-22 when Phase 34.7 went ON HOLD (operator decision,
+quick task `260822-r3g`).** Phase 34.5's gap cycle 6 descoped three live-gate items to 34.7 as
+their OWNER (`D-CYCLE6-A`, `34.5/deferred-items.md` item 24). 34.7 is parked, so they land here —
+this phase is the last IPC-re-plumb slice and runs its own live gate, so it is the cheapest
+correct home for them:
+
+- **34.5 UAT test 11, Epic half** — Epic login completed from scratch, library populated.
+  (Amazon's half of test 11 never travelled; it stayed in 34.5 as its fourth gate's item 2.)
+- **34.5 UAT test 12 — `egsSync`.**
+- **34.5 UAT test 13 — legendary save sync.**
+
+**These are VERIFICATION items, not ports.** `egsSync` is already one of slice 8's 58 ported
+channels; what was never done is exercising it, Epic login and legendary save sync on a live
+Tauri build. Nothing about this inheritance adds channel-porting work to the phase.
+
+**D-CYCLE6-A's stated reason for the descope is now VOID, and that is why re-homing is coherent
+rather than a reversal.** It argued the item could never be gated in 34.5 because "a PASS would
+certify code that is scheduled for removal, and a FAIL would block on work the 2026-08-05 parking
+decision forbids". Neither horn survives: the embedded Epic login is **not** scheduled for removal
+any more (it is the primary path again), and passing this gate now certifies code that stays. The
+403 parking clause is also not re-opened by this — the 403 no longer needs investigating, it needs
+*exercising*.
+
+⚠ **This is a deliberate, narrow exception to the standing "scope Epic OUT of new phases by
+default" decision (2026-08-04).** It is a small one: this phase already carries 8 EOS overlay
+channels, which are Epic. The exception covers **live verification of paths that already work**,
+never new Epic feature work.
+
 *Inserted by Phase 34.5 plan 03, 2026-07-29, per 34.5 D-03/D-05.*
+*Scope extended 2026-08-22 by quick task `260822-r3g` — see INHERITED SCOPE above.*
 
 **Requirements:** TBD — mint at `/gsd-plan-phase 34.6`
 **Depends on:** Phase 34.5 — **SATISFIED 2026-08-20.** Phase 34.5 closed on a clean 4-of-4 fifth
@@ -2716,8 +2745,12 @@ PASS:** the 16 deferred channel ports (8 EOS, 5 SteamGridDB, 3 winetricks), `get
 and `U-34.5-32` — whether SteamGridDB and winetricks **visibly** decline under Tauri. Note the
 distinction 34.5 was careful about: plan 34.5-55 proved the honest decline **at source level** over
 a corrected census of **10** call sites (not 8), but **no live session has ever opened one of those
-surfaces**, so "declines honestly" is a source claim here, never an observed one.
-**Blocks:** Phase 35 (the IPC re-plumb must be COMPLETE before cutover)
+surfaces**, so "declines honestly" is a source claim here, never an observed one. **A FOURTH
+residual joined them 2026-08-22:** the three D-CYCLE6-A live-gate items (34.5 UAT 11-Epic-half,
+12 `egsSync`, 13 legendary save sync), re-homed here from the parked Phase 34.7 — see INHERITED
+SCOPE above.
+**Blocks:** Phase 35 (the IPC re-plumb must be COMPLETE before cutover, and this phase now also
+carries the Epic/save-sync verification leg of Phase 35's dependency that used to sit on 34.7)
 **Plans:** 0 plans
 
 Plans:
@@ -2794,18 +2827,24 @@ SIDLogin ("Alternative Login Method"). Nothing here is deleted; the phase is par
 cancelled, and can be revived if the 403 ever returns. See the
 `epic-login-tauri-connection-anomaly` record.
 
-> ⚠ **Two residuals this hold does NOT dispose of — they need re-homing before Phase 35.**
+> **Two residuals this hold did NOT dispose of — BOTH RE-HOMED TO PHASE 34.6 on 2026-08-22**
+> (operator decision, same quick task):
 >
-> 1. **Epic, `egsSync` and legendary save sync** are owned by *this* phase per **D-CYCLE6-A**
->    (Phase 34.5 gap cycle 6 descoped Epic to 34.7 rather than closing it). That IPC-port work
->    is real and unaffected by the login-path decision — it does not disappear with the
->    single-sign-in goal. It must move to another phase or become a phase of its own.
-> 2. **Phase 35's `Depends on: … Phases 34.1–34.7`** still names 34.7. That dependency line is
->    now partly vacuous: the "Epic device-auth single-path consolidation" leg is withdrawn, but
->    the save-sync/`egsSync` leg from residual 1 genuinely still gates the Electron cutover.
->    Do not read the hold as clearing Phase 35's Epic dependency.
+> 1. **Epic, `egsSync` and legendary save sync** were owned by *this* phase per **D-CYCLE6-A**
+>    (Phase 34.5 gap cycle 6 descoped Epic to 34.7 rather than closing it). Concretely: 34.5 UAT
+>    tests **11 (Epic half), 12 (`egsSync`) and 13 (legendary save sync)** — live-gate
+>    VERIFICATION items, not ports; `egsSync` is already a ported slice-8 channel. Unaffected by
+>    the login-path decision, so they moved to **Phase 34.6**, the last IPC-re-plumb slice, which
+>    runs its own live gate. D-CYCLE6-A's reason for descoping them ("a PASS would certify code
+>    scheduled for removal") is void now that nothing is scheduled for removal.
+> 2. **Phase 35's `Depends on: … Phases 34.1–34.7`** still names 34.7, and that line is now
+>    partly vacuous: the "Epic device-auth single-path consolidation" leg is **withdrawn**, while
+>    the verification leg from residual 1 moved to 34.6 and still gates the Electron cutover.
+>    Annotated in place at both sites. Do not read the hold as clearing Phase 35's Epic
+>    dependency — read it as 34.6's now.
 >
-> Both are flagged for the operator, not decided here.
+> **Nothing is owed to this phase any more.** With both re-homed, 34.7 can stay parked
+> indefinitely without holding anything up.
 
 **Goal (as originally scoped, NOT to be executed as written):** Make device-auth bootstrap the
 **single** Epic sign-in path. Delete the interactive
@@ -3644,7 +3683,7 @@ Plans:
 ### Phase 35: Electron cutover — remove the Electron build
 
 **Goal:** Retire the Electron build: delete `electron-vite`/`electron-builder` config, the preload contextBridge path, and the `isTauri()` branches, leaving Tauri as the only shell. This is the one phase that deliberately breaks the additive/reversible invariant every prior phase preserved — so it runs last, and only once the `session`/`powerSaveBlocker` parity gaps are resolved or explicitly accepted, and the parked Electron-renderer bugs (see `debug-uninstall-game-vanishes-parked`) have been re-tested against Tauri rather than fixed in Electron.
-**Depends on:** Phase 34 (all three platforms shipping on Tauri first) **and Phases 34.1–34.7** (the IPC re-plumb must be complete, plus the Epic device-auth single-path consolidation — see `.planning/IPC-PORT-INVENTORY.md`). ⚠ **The 34.7 leg changed 2026-08-22:** that phase is ON HOLD (its premise died — the embedded Epic login works again, see its Status block) and the "device-auth single-path consolidation" half of this dependency is **withdrawn**. What still gates the cutover from 34.7's scope is the **Epic / `egsSync` / legendary save-sync IPC ownership assigned by D-CYCLE6-A**, which is unaffected by the login-path decision and needs re-homing to another phase. Do not read the hold as clearing this line. As of 2026-07-25 only 27 of 210 IPC channels are on the sidecar; cutting over before the port finishes would strand ~183 channels. Also blocked on migrating the renderer off `electron-vite` onto plain Vite, since `tauri:dev` currently shells out to `electron-vite build` and `tauri.conf.json` serves its `build/` output as `frontendDist`.
+**Depends on:** Phase 34 (all three platforms shipping on Tauri first) **and Phases 34.1–34.7** (the IPC re-plumb must be complete, plus the Epic device-auth single-path consolidation — see `.planning/IPC-PORT-INVENTORY.md`). ⚠ **The 34.7 leg changed 2026-08-22 — read this line as `34.1–34.6`.** Phase 34.7 is ON HOLD (its premise died — the embedded Epic login works again, see its Status block) and the "device-auth single-path consolidation" half of this dependency is **withdrawn**. The half that survives — live verification of Epic login, `egsSync` and legendary save sync (D-CYCLE6-A) — was **re-homed to Phase 34.6** the same day and still gates this cutover. So this dependency is not weakened, only relocated: 34.7 owes Phase 35 nothing, 34.6 owes it one more gate item than before. As of 2026-07-25 only 27 of 210 IPC channels are on the sidecar; cutting over before the port finishes would strand ~183 channels. Also blocked on migrating the renderer off `electron-vite` onto plain Vite, since `tauri:dev` currently shells out to `electron-vite build` and `tauri.conf.json` serves its `build/` output as `frontendDist`.
 
 > **Phase 34.5's leg of this dependency is SATISFIED as of 2026-08-20.** Edited by plan 34.5-60
 > under the ONE condition that permits it: the fifth blocking live gate returned a clean **4 PASS /
@@ -3653,9 +3692,11 @@ Plans:
 > (`T-34.5-C7-37`). **The other legs are unchanged and still gate this phase** — 34.1–34.4 and
 > 34.6–34.7 in particular, with Epic, `egsSync` and legendary save sync owned by **34.7** per
 > D-CYCLE6-A, and the 16 deferred channels plus `getDefaultSavePath` owned by **34.6**.
-> ⚠ **2026-08-22: Phase 34.7 is ON HOLD, so that D-CYCLE6-A ownership is now HOMELESS.** The
-> work itself still gates this phase — only the phase that was going to carry it was parked.
-> Re-home it before planning Phase 35. Note also
+> ⚠ **2026-08-22: Phase 34.7 is ON HOLD, and that D-CYCLE6-A ownership MOVED TO PHASE 34.6** the
+> same day (operator decision, quick `260822-r3g`). The work still gates this phase — only its
+> carrier changed. Read "owned by 34.7" above as **owned by 34.6**: 34.5 UAT tests 11 (Epic half),
+> 12 (`egsSync`) and 13 (legendary save sync), all live-gate verification of already-ported
+> channels. Note also
 > that 34.5's PASS was measured on a **dev** build: `R-34.5-G1-PKG`, the packaged-build asset root,
 > is untouched by it.
 **Requirements:** TBD — mint at `/gsd-plan-phase 35`
