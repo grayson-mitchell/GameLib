@@ -91,3 +91,54 @@ export function stripTrailingLineComment(line: string): string {
   }
   return line
 }
+
+/**
+ * The TypeScript/JavaScript counterpart of `stripTrailingLineComment` above
+ * (IN-08, Phase 34.2 gap cycle 4). Drops a trailing `// ...` comment from a
+ * single line without truncating a `//`-bearing string literal, tracking
+ * SINGLE quotes, DOUBLE quotes and BACKTICKS.
+ *
+ * Why this cannot simply be the Rust one with `'` added, which is the obvious
+ * simplification and is wrong: Rust lifetimes (`&'a str`, `Vec<&'de [u8]>`)
+ * and char literals put UNPAIRED single quotes in ordinary code, so a scanner
+ * that treated `'` as a string delimiter would flip into a permanent
+ * in-string state on the first lifetime it met and stop finding comments at
+ * all — silently, in the direction that makes a gate pass. The two languages
+ * genuinely need two scanners; merging them would break one or the other.
+ *
+ * Why this cannot be a naive `/\/\/.*$/`: that is the WR-08 regression class
+ * documented on `stripSourceComments` above, and TypeScript sources are full
+ * of `'https://...'` literals for it to cut in half.
+ *
+ * Scope, stated rather than implied: this is a single-line scanner. It does
+ * not understand template-literal `${...}` interpolation containing a nested
+ * quote of a different kind, nor a multi-line template literal — a `//` inside
+ * one of those, on a continuation line, would be treated as a comment. Both
+ * shapes are pathological in the import-statement region the IN-08 caller
+ * cares about, and the failure direction is truncation (a lost match), never a
+ * fabricated one.
+ */
+export function stripTrailingLineCommentTs(line: string): string {
+  let quote: string | null = null
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]
+    if (quote !== null) {
+      if (char === '\\') {
+        i++
+        continue
+      }
+      if (char === quote) {
+        quote = null
+      }
+      continue
+    }
+    if (char === "'" || char === '"' || char === '`') {
+      quote = char
+      continue
+    }
+    if (char === '/' && line[i + 1] === '/') {
+      return line.slice(0, i)
+    }
+  }
+  return line
+}

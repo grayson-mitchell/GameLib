@@ -75,18 +75,44 @@
 import { existsSync, readdirSync, readFileSync } from 'fs'
 import { join, relative, resolve, isAbsolute } from 'path'
 import { tmpdir } from 'os'
-import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
+import {
+  stripSourceComments as stripComments,
+  stripTrailingLineCommentTs
+} from 'backend/testUtils/stripSourceComments'
 
-const TMP_ROOT_NAME = `gamelib-testcontainment-test-home-${process.pid}`
+// ── WR-02 (gap cycle 4): ONE root, minted atomically ───────────────────────
+// `mkdtempSync` — atomic (no TOCTOU), mode 0700, unpredictable suffix —
+// replacing `join(tmpdir(), 'gamelib-testcontainment-test-home-' +
+// process.pid)`, a predictable path created implicitly by `mkdir(recursive)`
+// with default permissions. On a shared, world-writable Linux CI `/tmp`
+// another uid could pre-create it as a symlink and receive an arbitrary-path
+// write as the CI user. Same remedy cycle 3's WR-07 applied to
+// `jest.setupContainment.ts`; this file and `loggerFlows.test.ts` were the two
+// that still carried the old pattern.
+//
+// `mock`-prefixed and declared before the factories that read it: ts-jest's
+// hoist transform only lets a `jest.mock()` factory reference an out-of-scope
+// identifier when that identifier is `mock`-prefixed (same convention as
+// `loggerCallSiteGuard.test.ts`'s `mockScratchDir`). All three factories below
+// now read ONE value; the path used to be re-derived as a literal in each.
+const mockTmpRoot = jest
+  .requireActual<typeof import('fs')>('fs')
+  .mkdtempSync(
+    jest
+      .requireActual<typeof import('path')>('path')
+      .join(
+        jest.requireActual<typeof import('os')>('os').tmpdir(),
+        'gamelib-testcontainment-'
+      )
+  )
 
-// ── os — redirect homedir() to a disposable per-process tmp directory
+// ── os — redirect homedir() to the disposable tmp root above
 // (mirrors the four in-scope suites' own kit) ───────────────────────────────
 jest.mock('os', () => {
   const actual = jest.requireActual('os')
-  const path = jest.requireActual('path')
   return {
     ...actual,
-    homedir: () => path.join(actual.tmpdir(), TMP_ROOT_NAME)
+    homedir: () => mockTmpRoot
   }
 })
 
@@ -97,10 +123,7 @@ jest.mock('os', () => {
 jest.mock('../pathShim', () => {
   const actualOs = jest.requireActual('os')
   const actualPath = jest.requireActual('path')
-  const tmpRoot = actualPath.join(
-    actualOs.tmpdir(),
-    `gamelib-testcontainment-test-home-${process.pid}`
-  )
+  const tmpRoot = mockTmpRoot
   return {
     getPath: (name: string) => {
       switch (name) {
@@ -127,12 +150,7 @@ jest.mock('../pathShim', () => {
 // .test.ts's own note on the logger/log_writer circular-require hazard. ─────
 jest.mock('backend/logger/paths', () => {
   const actualPath = jest.requireActual('path')
-  const actualOs = jest.requireActual('os')
-  const tmpRoot = actualPath.join(
-    actualOs.tmpdir(),
-    `gamelib-testcontainment-test-home-${process.pid}`
-  )
-  const logBaseDir = actualPath.join(tmpRoot, 'logs')
+  const logBaseDir = actualPath.join(mockTmpRoot, 'logs')
   return {
     getLogFilePath: (
       args: { appName?: string; runner?: string; type?: string } = {}
@@ -1153,12 +1171,35 @@ describe('Block D: structural containment gate -- gates BOTH the load-bearing os
 // frontend/common/preload/meta jest projects are deliberately untouched" --
 // true today, hand-maintained, and previously UNENFORCED: nothing failed if
 // a `meta` or `preload` suite started importing `backend/logger` tomorrow.
-// This block converts that assumption into an enforced invariant: if a
+// This block enforces that assumption AT DEPTH 1: if a
 // frontend/common/preload/meta test file ever imports one of the four
-// containment-relevant module specifiers below, it would run WITHOUT the
-// containment `setupFiles` entry (that entry is registered on the Backend
+// containment-relevant module specifiers below DIRECTLY, it would run WITHOUT
+// the containment `setupFiles` entry (that entry is registered on the Backend
 // jest project only), reopening the destruction path in a project nobody is
-// watching for it. `meta/__tests__/buildSidecarSea.test.ts` reads backend
+// watching for it.
+//
+// IN-08 (gap cycle 4, corrected 2026-08-23): this used to say the block
+// "converts that assumption into an enforced invariant", full stop, which
+// overstates what it does. `importsContainmentModule` reads the import
+// specifiers of the test file ITSELF and nothing further. A frontend test that
+// imports a frontend module which in turn imports `backend/logger` is
+// invisible to this gate.
+//
+// Deliberately NOT made transitive, and the reasoning is worth recording so
+// the decision is not re-litigated as an oversight. Going transitive here
+// means resolving the full import graph of every `*.test.ts(x)` file across
+// four whole project trees, on every run of this suite, with a hand-rolled
+// resolver that would have to understand this repo's path aliases, its `.tsx`
+// and `index.ts` resolution, and its `node_modules` boundary -- a resolver
+// whose own bugs fail SILENTLY in the passing direction, which is the defect
+// class this entire gap cycle exists to close. The narrow gate catches the
+// direct import, which is how every real instance of this has actually
+// appeared, and the structural `setupFiles` containment remains the mechanism
+// that makes a missed one non-destructive rather than merely undetected.
+// (`structuralContainment.test.ts`'s WR-05 block does walk an import graph
+// transitively, but over ONE file's imports, not four project trees -- and it
+// throws rather than skips on anything it cannot resolve, which is affordable
+// at that scale and would be a permanent maintenance tax at this one.) `meta/__tests__/buildSidecarSea.test.ts` reads backend
 // source as TEXT only (an esbuild `--alias:electron=./src/backend/...`
 // CLI-arg string) -- this gate matches only quoted import/require
 // specifiers, never an arbitrary string mention, so that file continues to
@@ -1186,7 +1227,28 @@ function importsContainmentModule(
   source: string,
   moduleSpecifier: string
 ): boolean {
+  // IN-08 (gap cycle 4, fixed 2026-08-23): `stripComments` alone left TRAILING
+  // comments in place, so `const x = 1 // import a from 'backend/logger'` was
+  // reported as a violation. Measured before the fix, and it is a FALSE
+  // POSITIVE -- the direction that makes someone weaken a gate to get a green
+  // run.
+  //
+  // The review prescribed "fix the shared stripper per CR-01". That remedy is
+  // wrong: CR-01's fix HAS landed (this gate already calls the shared util),
+  // and that util deliberately does NOT strip trailing comments, because a
+  // naive `/\/\/.*$/gm` pass is the WR-08 regression class that cut six
+  // `main.rs` lines containing `"https://"` literals in half. Its docstring
+  // says so, and directs callers needing trailing-comment stripping to layer
+  // one on top -- which is what happens here.
+  //
+  // `stripTrailingLineCommentTs`, not `stripTrailingLineComment`: the latter
+  // tracks double quotes only, because Rust lifetimes (`&'a str`) put unpaired
+  // single quotes in ordinary code. Applied to TypeScript it would truncate
+  // `const a = 'https://x'` at the `//`.
   const stripped = stripComments(source)
+    .split('\n')
+    .map(stripTrailingLineCommentTs)
+    .join('\n')
   const escaped = moduleSpecifier.replace(/\//g, '\\/')
   const pattern = new RegExp(
     `(?:from\\s+|require\\(\\s*)['"](?:\\.\\./)*${escaped}['"]`
@@ -1258,6 +1320,30 @@ describe('Block E: cross-project containment scope gate (plan 34.2-29, CR-02 sec
     for (const specifier of CONTAINMENT_MODULE_SPECIFIERS) {
       expect(importsContainmentModule(synthetic, specifier)).toBe(false)
     }
+  })
+
+  it('self-test (IN-08): a TRAILING comment naming a containment module is NOT a violation', () => {
+    // Measured as a false positive before the fix. The failure direction
+    // matters: a gate that reports work nobody did is the kind someone
+    // eventually weakens to get a green run.
+    const synthetic = "const x = 1 // import a from 'backend/logger'\n"
+    expect(importsContainmentModule(synthetic, 'backend/logger')).toBe(false)
+  })
+
+  it('self-test (IN-08): a real import on the SAME line as a //-bearing string literal is still detected', () => {
+    // The other direction, and the reason `stripTrailingLineCommentTs` exists
+    // rather than a naive `/\/\/.*$/`. A naive pass cuts at the `//` inside
+    // the single-quoted URL and loses the import that follows it.
+    const synthetic =
+      "const u = 'https://example.com'; import { logInfo } from 'backend/logger'\n"
+    expect(importsContainmentModule(synthetic, 'backend/logger')).toBe(true)
+  })
+
+  it('self-test (IN-08): a //-bearing literal does not by itself trip the gate', () => {
+    // Non-vacuity for the test above: it must pass because of the import, not
+    // because the URL happens to contain the specifier-ish text.
+    const synthetic = "const u = 'https://example.com/backend/logger'\n"
+    expect(importsContainmentModule(synthetic, 'backend/logger')).toBe(false)
   })
 
   it('self-test: a relative-form import (../../../backend/logger/paths) is detected the same as the bare form', () => {

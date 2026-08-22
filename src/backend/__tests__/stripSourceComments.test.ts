@@ -20,7 +20,11 @@
  * use a generic factory-argument name instead (the same substitution the
  * originating review used in its own reproduction).
  */
-import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import {
+  stripSourceComments,
+  stripTrailingLineComment,
+  stripTrailingLineCommentTs
+} from 'backend/testUtils/stripSourceComments'
 
 describe('stripSourceComments', () => {
   it("Test 1: a non-*-prefixed block comment naming jest.mock('os', ...) and jest.mock('node:os', ...) is fully removed", () => {
@@ -114,5 +118,66 @@ describe('stripSourceComments', () => {
     ].join('\n')
 
     expect(stripSourceComments(source)).toBe(source)
+  })
+})
+
+describe('stripTrailingLineCommentTs (IN-08, Phase 34.2 gap cycle 4)', () => {
+  it('drops a trailing comment', () => {
+    expect(stripTrailingLineCommentTs('const x = 1 // note')).toBe(
+      'const x = 1 '
+    )
+  })
+
+  it('does NOT cut inside a single-quoted literal — the whole reason it exists', () => {
+    // A naive `/\/\/.*$/` truncates this to `const a = 'https:`. TypeScript
+    // sources are full of such literals.
+    expect(stripTrailingLineCommentTs("const a = 'https://x'")).toBe(
+      "const a = 'https://x'"
+    )
+  })
+
+  it('handles double quotes and backticks too', () => {
+    expect(stripTrailingLineCommentTs('const a = "https://x"')).toBe(
+      'const a = "https://x"'
+    )
+    expect(stripTrailingLineCommentTs('const a = `https://x`')).toBe(
+      'const a = `https://x`'
+    )
+  })
+
+  it('still finds the comment AFTER a //-bearing literal closes', () => {
+    expect(stripTrailingLineCommentTs("const a = 'https://x' // note")).toBe(
+      "const a = 'https://x' "
+    )
+  })
+
+  it('honours backslash escapes inside a literal', () => {
+    expect(stripTrailingLineCommentTs("const a = 'it\\'s //x' // note")).toBe(
+      "const a = 'it\\'s //x' "
+    )
+  })
+
+  it('the Rust sibling is NOT a substitute: it mis-handles single quotes', () => {
+    // Non-vacuity for the existence of two functions. If this ever stops being
+    // true, they can be merged — until then, merging them silently breaks one
+    // language or the other, which is why the difference is asserted rather
+    // than only described in a docstring.
+    expect(stripTrailingLineComment("const a = 'https://x'")).toBe(
+      "const a = 'https:"
+    )
+    expect(stripTrailingLineCommentTs("const a = 'https://x'")).toBe(
+      "const a = 'https://x'"
+    )
+  })
+
+  it('and the TS one would mis-handle a Rust lifetime, which is why it is not used there', () => {
+    // `&'a str` puts an UNPAIRED single quote in ordinary Rust code. The TS
+    // scanner treats it as an opening delimiter and never finds the comment.
+    expect(stripTrailingLineCommentTs("fn f(s: &'a str) {} // note")).toBe(
+      "fn f(s: &'a str) {} // note"
+    )
+    expect(stripTrailingLineComment("fn f(s: &'a str) {} // note")).toBe(
+      "fn f(s: &'a str) {} "
+    )
   })
 })
