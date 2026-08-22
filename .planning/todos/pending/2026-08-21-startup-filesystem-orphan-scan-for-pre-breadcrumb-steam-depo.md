@@ -6,8 +6,21 @@ files:
   - src/backend/storeManagers/steam/library.ts
   - src/backend/storeManagers/steam/installLocation.ts
 resolves_phase: 37
-planned_as: 37-07
+planned_as: 37-07  # DROPPED by 37-CONTEXT.md D-01 — see note below
 ---
+
+> **DROPPED, NOT DELIVERED — 2026-08-22.** Phase 37 completed, and this todo carries
+> `resolves_phase: 37`, but plan 37-07 was **dropped** by `37-CONTEXT.md` D-01 — not deferred,
+> not descoped to a later phase, and no REQ ID was ever minted for it. **Do not let a
+> `resolves_phase` auto-close record this as done.**
+>
+> Decided on measurement, not preference: the signal ratio is **1.2%** — 425 MB of real GameLib
+> residue against 35.6 GB of directories any scan would have to flag. The external user population
+> is empty by construction, because the `260821-rb5` breadcrumb fix shipped 2026-08-21, so any
+> future user's first install postdates it. Cited as an explicit non-goal in `37-10-PLAN.md`.
+>
+> This stays filed as **won't-do-now**, not as pending work.
+
 
 ## Problem
 
