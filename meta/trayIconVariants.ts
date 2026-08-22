@@ -2,8 +2,9 @@
  * Phase 34.1 gap closure (G3 / D-11): dependency-free PNG decode/encode and a
  * macOS AppKit **template image** generator for the tray icon.
  *
- * `public/icon-dark.png` and `public/icon-light.png` (and their `@2x`/`@3x`
- * siblings) are byte-identical -- see
+ * `public/icon-tray-source.png` (the master artwork; it was named
+ * `icon-dark.png` until it was renamed) and `public/icon-light.png` are
+ * byte-identical -- see
  * `.planning/todos/pending/tray-dark-light-icons-are-identical.md`. The
  * `changeTrayColor` -> `tray_set_icon` chain runs correctly end to end; it
  * installs a pixel-identical image, so the setting was a visual no-op.
@@ -34,7 +35,7 @@
  * channel as a template silhouette produces an unreadable blob (measured:
  * see 34.1-13-SUMMARY.md's "flattened silhouette" comparison). The cat and
  * the starburst are, however, cleanly separable by HUE: a histogram of
- * `public/icon-dark@3x.png`'s opaque, saturated pixels shows the starburst
+ * `public/icon-tray-source@3x.png`'s opaque, saturated pixels shows the starburst
  * confined to 0-50deg (orange/gold) and the cat confined to 200-360deg
  * (magenta, plus its purple shadow gradient), with an EMPTY gap from
  * 50-200deg (only 1-3 stray anti-aliased pixels per 10deg bucket in that
@@ -44,10 +45,11 @@
  * algorithm -- if the source art changes, it must be re-derived from a fresh
  * hue histogram, not assumed to still apply.
  *
- * Only `icon-dark.png` (the 1x / 22x22 base raster) is used as the
+ * Only `icon-tray-source.png` (the 1x / 22x22 base raster) is used as the
  * generator's source and only a single `icon-tray-template.png` (1x) is
  * produced: `src-tauri/src/main.rs`'s Tauri tray embeds ONLY the 1x
- * `icon-dark.png`/`icon-light.png` rasters via `include_bytes!` today (no
+ * `icon-tray-source.png`/`icon-light.png` rasters via `include_bytes!`
+ * today (no
  * `@2x`/`@3x` `include_bytes!` calls exist there -- grep confirms it), so
  * generating unused `@2x`/`@3x` template variants would be dead committed
  * assets. Electron's `nativeImage.createFromPath` (the OTHER consumer of
@@ -55,7 +57,7 @@
  * `@3x` siblings for retina scaling, but Electron is NOT given the template
  * treatment by this plan (see the SUMMARY's "darkTrayIcon on macOS" section)
  * -- it keeps selecting between the unchanged, still byte-identical
- * `icon-dark.png`/`icon-light.png` pair, out of this redirect's scope.
+ * `icon-tray-source.png`/`icon-light.png` pair, out of this redirect's scope.
  *
  * TOOLING CONSTRAINT: no third-party PNG dependency exists in `package.json`
  * (`upng-js`/`pako` are transitive only and must not be imported by
@@ -418,7 +420,7 @@ export function encodeRgba(
 // `public/...` paths are correct here.
 // ---------------------------------------------------------------------------
 
-const SOURCE_PATH = join('public', 'icon-dark.png')
+const SOURCE_PATH = join('public', 'icon-tray-source.png')
 const TEMPLATE_PATH = join('public', 'icon-tray-template.png')
 
 // Sanity bounds on the fraction of opaque pixels in the produced template --

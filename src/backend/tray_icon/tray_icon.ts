@@ -12,7 +12,7 @@ import { join } from 'node:path'
 import { isMac } from 'backend/constants/environment'
 import { fixAsarPath, publicDir } from 'backend/constants/paths'
 
-const iconDark = fixAsarPath(join(publicDir, 'icon-dark.png'))
+const iconDark = fixAsarPath(join(publicDir, 'icon-tray-source.png'))
 const iconLight = fixAsarPath(join(publicDir, 'icon-light.png'))
 
 export const initTrayIcon = async (mainWindow: BrowserWindow) => {

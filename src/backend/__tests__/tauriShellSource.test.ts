@@ -158,7 +158,9 @@ describe('REQ-34.1-07 main.rs tray construction (Phase 34.1 Plan 06, D-11)', () 
 
   test('REQ-34.1-07 embeds both icon variants via include_bytes!', () => {
     const code = loadMainRsCode()
-    expect(code).toContain('include_bytes!("../../public/icon-dark.png")')
+    expect(code).toContain(
+      'include_bytes!("../../public/icon-tray-source.png")'
+    )
     expect(code).toContain('include_bytes!("../../public/icon-light.png")')
   })
 

@@ -274,7 +274,7 @@ describe('TrayIcon', () => {
       GlobalConfig.setConfigValue('darkTrayIcon', true)
 
       let icon = testingExportsTrayIcon.getIcon()
-      expect(icon).toMatch(/.*icon-dark.png/)
+      expect(icon).toMatch(/.*icon-tray-source.png/)
 
       GlobalConfig.setConfigValue('darkTrayIcon', false)
 

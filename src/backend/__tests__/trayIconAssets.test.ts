@@ -16,7 +16,7 @@
  * commit `49e891f58` (reverted) for the rejected code.
  *
  * CURRENT FIX: a macOS AppKit template image (`public/icon-tray-template.png`), hue-segmented
- * from `public/icon-dark.png` by `meta/trayIconVariants.ts`, embedded via
+ * from `public/icon-tray-source.png` by `meta/trayIconVariants.ts`, embedded via
  * `src-tauri/src/main.rs`'s `TRAY_ICON_TEMPLATE` and marked with `icon_as_template`/
  * `set_icon_with_as_template` (see `tauriShellSource.test.ts`'s
  * "REQ-34.1-07 macOS tray template wiring" block for the Rust-side coverage). The property that
@@ -28,8 +28,9 @@
  * comment) -- `getIcon()`'s dark/light selector still exists and still round-trips through the
  * sidecar, it simply has zero visible effect on macOS because the template ignores it.
  *
- * WINDOWS/LINUX ARE UNCHANGED AND STILL CARRY THE ORIGINAL DEFECT: `icon-dark.png` and
- * `icon-light.png` remain byte-identical (this redirect's scope was the macOS template path
+ * WINDOWS/LINUX ARE UNCHANGED AND STILL CARRY THE ORIGINAL DEFECT: `icon-tray-source.png`
+ * (the master artwork, named `icon-dark.png` before the rename) and `icon-light.png` remain
+ * byte-identical (this redirect's scope was the macOS template path
  * only -- see 34.1-13-SUMMARY.md's "Redirected scope" section). That gate is kept below as
  * `it.failing`, unchanged from before, so it still gates the day someone fixes the Windows/Linux
  * pair without silently going stale.
@@ -49,11 +50,11 @@ function loadAsset(filename: string): Buffer {
 }
 
 describe('macOS tray icon TEMPLATE asset (REQ-34.1-07, GAP-G3 redirect, 34.1-13)', () => {
-  test('icon-tray-template.png exists and is byte-distinct from its icon-dark.png source', () => {
+  test('icon-tray-template.png exists and is byte-distinct from its icon-tray-source.png source', () => {
     const templatePath = join(PUBLIC_DIR, 'icon-tray-template.png')
     expect(existsSync(templatePath)).toBe(true)
     const template = loadAsset('icon-tray-template.png')
-    const source = loadAsset('icon-dark.png')
+    const source = loadAsset('icon-tray-source.png')
     expect(template.equals(source)).toBe(false)
   })
 
@@ -65,9 +66,9 @@ describe('macOS tray icon TEMPLATE asset (REQ-34.1-07, GAP-G3 redirect, 34.1-13)
     expect(isMonochromeTemplate(pixels)).toBe(true)
   })
 
-  test('icon-tray-template.png dimensions match its icon-dark.png source (22x22)', () => {
+  test('icon-tray-template.png dimensions match its icon-tray-source.png source (22x22)', () => {
     const template = decodeRgba(join(PUBLIC_DIR, 'icon-tray-template.png'))
-    const source = decodeRgba(join(PUBLIC_DIR, 'icon-dark.png'))
+    const source = decodeRgba(join(PUBLIC_DIR, 'icon-tray-source.png'))
     expect(template.width).toBe(source.width)
     expect(template.height).toBe(source.height)
     expect(template.width).toBe(22)
@@ -95,16 +96,19 @@ describe('Windows/Linux tray icon dark/light asset distinctness (REQ-34.1-07, GA
   // did not touch these files; see the module docstring above and
   // .planning/todos/pending/tray-dark-light-icons-are-identical.md, which plan 34.1-15 owns.
   // Windows/Linux keep selecting between these two (still byte-identical) files unchanged.
-  it.failing('icon-dark.png and icon-light.png are NOT byte-identical', () => {
-    const dark = loadAsset('icon-dark.png')
-    const light = loadAsset('icon-light.png')
-    expect(dark.equals(light)).toBe(false)
-  })
+  it.failing(
+    'icon-tray-source.png and icon-light.png are NOT byte-identical',
+    () => {
+      const dark = loadAsset('icon-tray-source.png')
+      const light = loadAsset('icon-light.png')
+      expect(dark.equals(light)).toBe(false)
+    }
+  )
 
   it.failing(
-    'icon-dark@2x.png and icon-light@2x.png are NOT byte-identical',
+    'icon-tray-source@2x.png and icon-light@2x.png are NOT byte-identical',
     () => {
-      const darkPath = join(PUBLIC_DIR, 'icon-dark@2x.png')
+      const darkPath = join(PUBLIC_DIR, 'icon-tray-source@2x.png')
       const lightPath = join(PUBLIC_DIR, 'icon-light@2x.png')
       expect(existsSync(darkPath)).toBe(true)
       expect(existsSync(lightPath)).toBe(true)
@@ -115,9 +119,9 @@ describe('Windows/Linux tray icon dark/light asset distinctness (REQ-34.1-07, GA
   )
 
   it.failing(
-    'icon-dark@3x.png and icon-light@3x.png are NOT byte-identical',
+    'icon-tray-source@3x.png and icon-light@3x.png are NOT byte-identical',
     () => {
-      const darkPath = join(PUBLIC_DIR, 'icon-dark@3x.png')
+      const darkPath = join(PUBLIC_DIR, 'icon-tray-source@3x.png')
       const lightPath = join(PUBLIC_DIR, 'icon-light@3x.png')
       expect(existsSync(darkPath)).toBe(true)
       expect(existsSync(lightPath)).toBe(true)
