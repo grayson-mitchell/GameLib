@@ -346,7 +346,23 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
     )
   })
 
-  it('REQ-34.2-01 repair on a rejecting repair() calls notify TWICE (error then finished) and still ends with status:"done"', async () => {
+  // IN-02 (34.2-REVIEW.md round 1). This test USED to assert the opposite --
+  // "calls notify TWICE (error then finished) and still ends with
+  // status:'done'" -- pinning the upstream fall-through bug as the contract.
+  // The code is fixed (dispatch.ts:178-215); this now pins the fix.
+  //
+  // Body text CANNOT distinguish the two notifications here: this suite runs
+  // real, uninitialized i18next (`jest.unmock('i18next')` at the top of the
+  // file), whose `t()` returns `undefined` for BOTH keys -- with or without a
+  // defaultValue argument. That is why every notify assertion in this file
+  // matches on `title` alone. The success path is therefore identified by its
+  // OTHER side effect, `logInfo('Finished repairing')`, which is the only
+  // logInfo call `repair()` makes.
+  //
+  // RED-PROOF: against the pre-fix body this fails twice over -- notify is
+  // called 2x, and logInfo fires. Reverting either half of the fix (the
+  // `repairFailed` flag or the `if (!repairFailed)` guard) re-reds it.
+  it('REQ-34.2-01 repair on a rejecting repair() notifies ONCE (the error), does NOT log "Finished repairing", and still ends with status:"done"', async () => {
     isOnlineMock.mockReturnValue(true)
     const gameDouble = makeGameDouble({
       getGameInfo: jest.fn().mockReturnValue({ title: 'Portal 2' }),
@@ -356,15 +372,18 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
 
     await repair('440', 'steam')
 
-    expect(notifyMock).toHaveBeenCalledTimes(2)
-    expect(notifyMock).toHaveBeenNthCalledWith(
-      1,
+    expect(notifyMock).toHaveBeenCalledTimes(1)
+    expect(notifyMock).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Portal 2' })
     )
-    expect(notifyMock).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ title: 'Portal 2' })
+    expect(logErrorMock).toHaveBeenCalled()
+    expect(logInfoMock).not.toHaveBeenCalledWith(
+      'Finished repairing',
+      expect.anything()
     )
+
+    // Unconditional even on failure: this is what clears the renderer's
+    // `repairing` spinner. Dropping it would leave the card stuck.
     expect(sendGameStatusUpdateMock).toHaveBeenLastCalledWith({
       appName: '440',
       runner: 'steam',

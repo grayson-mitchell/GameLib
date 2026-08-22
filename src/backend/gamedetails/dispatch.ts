@@ -175,17 +175,45 @@ export async function repair(appName: string, runner: Runner): Promise<void> {
 
   const { title } = libraryManagerMap[runner].getGame(appName).getGameInfo()
 
+  // IN-02 (34.2-REVIEW.md round 1): the success notification and
+  // "Finished repairing" log used to sit AFTER the try/catch, unguarded, so a
+  // failed repair notified "Error Repairing" and then immediately notified
+  // "finished" and logged success. Two consequences, the second the reason
+  // this is not cosmetic:
+  //
+  //   1. The user is told the repair both failed and finished.
+  //   2. The `catch` swallows the error without rethrowing, so the invoke
+  //      RESOLVES. `GameSubMenu/index.tsx:150-155` wraps `repair()` in a
+  //      try/catch whose handler is `reportRepairFailure()` -- gap cycle 2's
+  //      CR-01 renderer half, with its three failure signals and the
+  //      T-34.2-52 disclosure guard. That handler could therefore never fire
+  //      for an actual runner-level repair failure, only for a transport one.
+  //
+  // Shape mirrors `moveInstall` (main.ts:1113-1156), the correct sibling in
+  // this codebase: the success notification is gated on the error path not
+  // having been taken, while `status: 'done'` stays UNCONDITIONAL -- it is
+  // what clears the renderer's `repairing` spinner, so a failed repair must
+  // still send it or the card stays stuck.
+  //
+  // The flag, rather than moving the success notify inside the `try`, keeps a
+  // throwing `notify()` from being mistaken for a repair failure.
+  let repairFailed = false
+
   try {
     await libraryManagerMap[runner].getGame(appName).repair()
   } catch (error) {
+    repairFailed = true
     notify({
       title,
       body: i18next.t('notify.error.reparing', 'Error Repairing')
     })
     logError(error, LogPrefix.Backend)
   }
-  notify({ title, body: i18next.t('notify.finished.reparing') })
-  logInfo('Finished repairing', LogPrefix.Backend)
+
+  if (!repairFailed) {
+    notify({ title, body: i18next.t('notify.finished.reparing') })
+    logInfo('Finished repairing', LogPrefix.Backend)
+  }
 
   sendGameStatusUpdate({
     appName,
