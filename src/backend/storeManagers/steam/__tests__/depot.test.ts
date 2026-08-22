@@ -61,7 +61,11 @@ import {
 import { SteamUser } from '../user'
 import { selectAllDepots } from '../depot/select'
 import { decryptFilename } from '../depot/crypto'
-import { fetchChunk, type LzmaModule } from '../depot/decompress'
+import {
+  fetchChunk,
+  isDecodeStageError,
+  type LzmaModule
+} from '../depot/decompress'
 import { CdnAuthTokenCache } from '../depot/cdnAuth'
 import { StallTracker } from '../depot/stallTracker'
 import { sendFrontendMessage } from '../../../ipc'
@@ -2920,6 +2924,23 @@ describe('downloadFileChunks (cycle 7): completion robustness via StallTracker',
 })
 
 describe('classifyDepotError', () => {
+  it('37-02 Task 1 (D-08): the ORIGINAL cause object survives to the classifier, unreachable through the pre-flattened error string', () => {
+    // Construct the exact shape downloadDepotFiles' per-file catch now
+    // produces: { file, error: err.message, cause: err }.
+    const err = new Error(
+      'chunk abc123 failed after 5 attempts: bad footer magic'
+    ) as Error & { code?: string }
+    err.code = 'unknown_container' // one of DECODE_STAGE_ERROR_CODES
+    const failure = { file: 'game.bin', error: err.message, cause: err }
+
+    // Non-vacuity, direction 1: the preserved cause carries the `.code`.
+    expect(isDecodeStageError(failure.cause)).toBe(true)
+    // Non-vacuity, direction 2 (the half that fails against pre-fix code,
+    // where classifyDepotError only ever received `failure.error`): the
+    // pre-flattened string has no `.code` to read at all.
+    expect(isDecodeStageError(failure.error)).toBe(false)
+  })
+
   it('maps an ENOSPC error to a disk-full message', () => {
     const result = classifyDepotError(
       new Error('ENOSPC: no space left on device, write')

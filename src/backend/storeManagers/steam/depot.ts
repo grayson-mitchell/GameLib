@@ -1045,6 +1045,17 @@ export interface DownloadDepotFilesOpts {
 export interface DepotDownloadFailure {
   file: string
   error: string
+  /** 37-02 (D-08 landmine fix): the ORIGINAL thrown value, retained so
+   *  classifyDepotError can read `.code`/`.eresult` off it directly instead
+   *  of the pre-flattened `error` string, which `errorText()` already
+   *  reduces an Error down to `.message` for — discarding those properties
+   *  before classification ever runs. `error` stays a plain `string` and is
+   *  untouched by this field: every existing consumer (canWriteFullOwnership,
+   *  finalizeToSteam, and this interface's other reader) keeps reading
+   *  `error` exactly as before. `cause` is optional because not every
+   *  producer of a DepotDownloadFailure (e.g. healReconciledFileModes' mode-
+   *  application failures) has an original thrown object to preserve. */
+  cause?: unknown
 }
 
 export interface DepotDownloadResult {
@@ -2423,7 +2434,10 @@ export async function downloadDepotFiles(
             } catch (err) {
               failures.push({
                 file: job.file.filename,
-                error: (err as Error).message
+                error: (err as Error).message,
+                // 37-02 (D-08): preserve the original thrown value so
+                // classifyDepotError can read `.code`/`.eresult` off it.
+                cause: err
               })
             }
           }
@@ -2988,7 +3002,12 @@ export async function downloadSteamDepots(
       // the connection", not a stack trace).
       return {
         status: 'error',
-        error: classifyDepotError(result.failures[0].error).message,
+        // 37-02 (D-08): pass the preserved cause object (falls back to the
+        // pre-flattened string only if no cause was captured), so
+        // classifyDepotError can read `.code`/`.eresult` off it directly.
+        error: classifyDepotError(
+          result.failures[0].cause ?? result.failures[0].error
+        ).message,
         skippedDepots
       }
     }
