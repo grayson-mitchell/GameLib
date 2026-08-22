@@ -81,6 +81,8 @@
     },
     "settings": {
         "framelessWindowDescription": "Use frameless window",
+        "gamepadInitialRepeatDelay": "Gamepad input initial repeat delay",
+        "gamepadRepeatFrequency": "Gamepad input repeat frequency",
         "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
         "gamescopeUpscaleMethod": "Upscale Method",
         "gamescopeWindowType": "Window Type",

@@ -128,6 +128,8 @@ export interface AppSettings extends GameSettings {
   egsLinkedPath: string
   enableUpdates: boolean
   exitToTray: boolean
+  gamepadRepeatDelay: number
+  gamepadInitialRepeatDelay: number
   noTrayIcon: boolean
   experimentalFeatures?: ExperimentalFeatures
   framelessWindow: boolean
@@ -632,8 +634,12 @@ export interface WineVersionInfo extends VersionInfo {
 export type GamepadActionStatus = Record<
   ValidGamepadAction,
   {
+    // handles basic repeat delay
     triggeredAt: { [key: number]: number }
     repeatDelay: false | number
+    // for initial post activation delay
+    activationDelay?: false | number
+    hasRepeated?: boolean
   }
 >
 

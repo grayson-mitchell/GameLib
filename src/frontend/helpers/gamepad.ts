@@ -12,9 +12,14 @@ import {
 } from './gamepad_layouts'
 import { VirtualKeyboardController } from './virtualKeyboard'
 
-const KEY_REPEAT_DELAY = 500
-const STICK_REPEAT_DELAY = 250
 const SCROLL_REPEAT_DELAY = 50
+
+// Mirror of the `gamepadRepeatDelay` / `gamepadInitialRepeatDelay` defaults in
+// `GlobalConfigV0.getFactoryDefaults` (src/backend/config.ts). They seed
+// `actions` synchronously so a frame that lands before the settings round-trip
+// resolves still has timings to read -- see the note on `actions` below.
+const DEFAULT_REPEAT_DELAY = 50
+const DEFAULT_INITIAL_REPEAT_DELAY = 300
 
 /*
  * For more documentation, check here https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/Gamepad-Navigation
@@ -23,31 +28,31 @@ const SCROLL_REPEAT_DELAY = 50
 let controllerIsDisabled = false
 let currentController = -1
 
-export const initGamepad = () => {
-  window.api.requestAppSettings().then(({ disableController }: AppSettings) => {
-    controllerIsDisabled = disableController || false
-  })
+// store the status and metadata for each action
+// triggeredAt is a hash with controllerIndex as keys and a timestamp or 0 (inactive)
+// this keeps track of the moment a button/trigger/stick is activated
+// we use this to know when to fire events
+function buildGamepadActions(
+  repeatDelay: number,
+  activationDelay: number
+): GamepadActionStatus {
+  // input should be cloned to prevent variables from being re-used
+  // across different controller indexes
+  const basicGamepadInputRepeat = {
+    triggeredAt: {},
+    repeatDelay,
+    activationDelay
+  }
 
-  // store the current controllers
-  let controllers: number[] = []
-
-  let isFocused = true
-  window.addEventListener('focus', () => (isFocused = true))
-  window.addEventListener('blur', () => (isFocused = false))
-
-  // store the status and metadata for each action
-  // triggeredAt is a hash with controllerIndex as keys and a timestamp or 0 (inactive)
-  // this keeps track of the moment a button/trigger/stick is activated
-  // we use this to know when to fire events
-  const actions: GamepadActionStatus = {
-    padUp: { triggeredAt: {}, repeatDelay: KEY_REPEAT_DELAY },
-    padDown: { triggeredAt: {}, repeatDelay: KEY_REPEAT_DELAY },
-    padLeft: { triggeredAt: {}, repeatDelay: KEY_REPEAT_DELAY },
-    padRight: { triggeredAt: {}, repeatDelay: KEY_REPEAT_DELAY },
-    leftStickUp: { triggeredAt: {}, repeatDelay: STICK_REPEAT_DELAY },
-    leftStickDown: { triggeredAt: {}, repeatDelay: STICK_REPEAT_DELAY },
-    leftStickLeft: { triggeredAt: {}, repeatDelay: STICK_REPEAT_DELAY },
-    leftStickRight: { triggeredAt: {}, repeatDelay: STICK_REPEAT_DELAY },
+  return {
+    padUp: structuredClone(basicGamepadInputRepeat),
+    padDown: structuredClone(basicGamepadInputRepeat),
+    padLeft: structuredClone(basicGamepadInputRepeat),
+    padRight: structuredClone(basicGamepadInputRepeat),
+    leftStickUp: structuredClone(basicGamepadInputRepeat),
+    leftStickDown: structuredClone(basicGamepadInputRepeat),
+    leftStickLeft: structuredClone(basicGamepadInputRepeat),
+    leftStickRight: structuredClone(basicGamepadInputRepeat),
     rightStickUp: { triggeredAt: {}, repeatDelay: SCROLL_REPEAT_DELAY },
     rightStickDown: { triggeredAt: {}, repeatDelay: SCROLL_REPEAT_DELAY },
     rightStickLeft: { triggeredAt: {}, repeatDelay: SCROLL_REPEAT_DELAY },
@@ -63,6 +68,41 @@ export const initGamepad = () => {
     keyboardClick: { triggeredAt: {}, repeatDelay: false },
     guide: { triggeredAt: {}, repeatDelay: false }
   }
+}
+
+// Seeded synchronously, then re-tuned by `updateGamepadActions()` once the
+// settings round-trip resolves. This must never be left unassigned: every read
+// happens in `checkAction`, whose only caller wraps it in a `try/catch` that
+// swallows the error, so an undefined `actions` would silently drop input
+// rather than fail loudly.
+let actions: GamepadActionStatus = buildGamepadActions(
+  DEFAULT_REPEAT_DELAY,
+  DEFAULT_INITIAL_REPEAT_DELAY
+)
+
+// called whenever we update the timings in the settings
+export const updateGamepadActions = async () => {
+  const settings = await window.api.requestAppSettings()
+
+  actions = buildGamepadActions(
+    settings.gamepadRepeatDelay ?? DEFAULT_REPEAT_DELAY,
+    settings.gamepadInitialRepeatDelay ?? DEFAULT_INITIAL_REPEAT_DELAY
+  )
+}
+
+export const initGamepad = () => {
+  window.api.requestAppSettings().then(({ disableController }: AppSettings) => {
+    controllerIsDisabled = disableController || false
+  })
+
+  // store the current controllers
+  let controllers: number[] = []
+
+  let isFocused = true
+  window.addEventListener('focus', () => (isFocused = true))
+  window.addEventListener('blur', () => (isFocused = false))
+
+  void updateGamepadActions()
 
   // check if an action should be triggered
   function checkAction(
@@ -86,29 +126,33 @@ export const initGamepad = () => {
     if (!pressed) {
       // set 0 if not pressed (means inactive button)
       data.triggeredAt[controllerIndex] = 0
+      data.hasRepeated = false
       return
     }
 
     const now = new Date().getTime()
-
-    // check if the action was already active or not
     const wasActive = triggeredAt !== 0
 
     let shouldRepeat = false
-    if (wasActive) {
+    if (wasActive && data.repeatDelay) {
+      // base delay is just the repeat
+      let totalDelay = data.repeatDelay
+      // if input hasn't repeated and we want to consider activation delay,
+      // add in that time to total delay if present
+      if (!data.hasRepeated) totalDelay += data.activationDelay || 0
+
       // it it was active, check if the action should be repeated
-      if (data.repeatDelay) {
-        const lastTriggered = triggeredAt
-        if (now - lastTriggered > data.repeatDelay) {
-          shouldRepeat = true
-        }
+      if (now - triggeredAt > totalDelay) {
+        shouldRepeat = true
+        // should no longer consider activation delay
+        data.hasRepeated = true
       }
     }
 
     if (!wasActive || shouldRepeat) {
       // console.log(`Action: ${action}`)
 
-      // set last triggeredAt timestamp, used for repeater
+      // update timestamps for repeaters
       data.triggeredAt[controllerIndex] = now
 
       emitControllerEvent(controllerIndex)
@@ -148,6 +192,9 @@ export const initGamepad = () => {
             // open virtual keyboard if focusing a text input
             VirtualKeyboardController.initOrFocus()
             return
+          } else if (isMuiSlider()) {
+            // clicking a slider toggles it's focus
+            action = 'tab'
           }
           break
         case 'back':
@@ -170,6 +217,8 @@ export const initGamepad = () => {
             action = 'tab'
           } else if (isContextMenu()) {
             action = 'rightClick'
+          } else if (insideMuiSlider()) {
+            action = 'shiftTab'
           }
           break
         case 'altAction':
@@ -211,11 +260,17 @@ export const initGamepad = () => {
                 if (isMuiDialogCloseButton()) {
                   action = 'tab'
                 }
+                if (insideMuiSlider()) {
+                  action = 'tab'
+                }
                 break
               case 'padUp':
               case 'leftStickUp':
                 // Same as above
                 if (isMuiSelect()) {
+                  action = 'shiftTab'
+                }
+                if (insideMuiSlider()) {
                   action = 'shiftTab'
                 }
                 break
@@ -302,6 +357,31 @@ export const initGamepad = () => {
     if (!el) return false
 
     return el.classList.contains('MuiSelect-select')
+  }
+
+  // this is for if we're hovering above a MUISlider
+  function isMuiSlider() {
+    const el = currentElement()
+
+    if (!el) return false
+
+    return el.classList.contains('MuiSlider-root')
+  }
+
+  // this function is if slider stole focus and user is now
+  // iterating through slider
+  function insideMuiSlider() {
+    const el = currentElement()
+
+    if (!el) return false
+    if (el.classList.contains('MuiSlider-thumb')) return true
+
+    const parent = el.parentElement
+    if (!parent) return false
+
+    if (parent.classList.contains('MuiSlider-thumb')) return true
+
+    return false
   }
 
   function isMuiDialogCloseButton() {
