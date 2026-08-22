@@ -20,6 +20,11 @@ export interface InstallResult {
   // requested instead. The DownloadManager uses this to clear the transient
   // 'installing' badge, since no ACF poller starts in this case.
   deferredToSetup?: boolean
+  // D-04 (37-10, second half): set when a native Steam install landed in a
+  // safe `app_<id>` fallback directory because PICS returned no usable
+  // `config.installdir` (absent/unresolved) — not an error, the install
+  // still succeeded, but the on-disk layout is non-portable/non-human-readable.
+  installdirFallbackUsed?: boolean
 }
 
 export type RemoveArgs = {

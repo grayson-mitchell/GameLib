@@ -2853,7 +2853,7 @@ describe('SteamLibraryManager', () => {
       jest.useRealTimers()
     })
 
-    it('WR-03 (23-code-review): a hostile installdir read off the on-disk ACF is sanitized to the safe appId-derived fallback before reaching buildDepotPlan/resolve()', async () => {
+    it('WR-03/D-02/D-04 (23-code-review): a hostile installdir read off the on-disk ACF degrades the resume to the honest-empty 1026 fallback — REWRITTEN from the old "sanitized to a safe fallback name, then still planned" assertion, which is wrong under D-04 (a containment/denylist violation is a security event, not a value to silently launder into buildDepotPlan); it never reaches buildDepotPlan/resolve() unsanitized, and buildResumeFinalizeOpts still never throws (its own NEVER-throws contract), degrading exactly like a planning failure does', async () => {
       jest.useFakeTimers()
       library.clear()
       // A hostile/malformed installdir the on-disk ACF could contain (an
@@ -2877,14 +2877,19 @@ describe('SteamLibraryManager', () => {
         resumeInterruptedSteamInstall('730')
       ).resolves.toBeUndefined()
 
-      // sanitizeInstalldir's fallback shape: `app_${safeFallbackId(appId)}`.
-      expect(buildDepotPlan).toHaveBeenCalledWith(
+      // sanitizeInstalldir throws UnsafeInstalldirError before buildDepotPlan
+      // is ever called with the hostile value — buildResumeFinalizeOpts's
+      // dedicated guard catches it and degrades to the SAME honest-empty
+      // `depots: []` shape a planning failure produces (never launders
+      // '../evil' into buildDepotPlan, never crashes resumeInterruptedSteamInstall).
+      expect(buildDepotPlan).not.toHaveBeenCalled()
+      expect(finalizeToSteam).toHaveBeenCalledWith(
         '730',
-        expect.objectContaining({ installdir: 'app_730' })
-      )
-      expect(buildDepotPlan).not.toHaveBeenCalledWith(
-        '730',
-        expect.objectContaining({ installdir: '../evil' })
+        expect.objectContaining({
+          targetSteamappsDir: join(tmp, 'steamapps'),
+          installdir: 'app_730',
+          depots: []
+        })
       )
 
       stopInstallPolling('730')

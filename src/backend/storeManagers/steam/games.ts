@@ -71,7 +71,10 @@ import { noteSteamAuthTrigger } from './authTrigger'
 import { SteamUser } from './user'
 import { downloadSteamDepots } from './depot'
 import { ensureSteamClientReady } from './clientSetup' // Plan 10 seam
-import { resolveSteamInstallTarget } from './installLocation' // Plan 09 seam
+import {
+  resolveSteamInstallTarget,
+  UnsafeInstalldirError
+} from './installLocation' // Plan 09 seam
 import { withTimeout, STEAM_PICS_TIMEOUT_MS } from './withTimeout'
 // Phase 24 Plan 08 (R4/R7): allowlist-based bridge-vs-fallback routing.
 import { bridgeAllowlist } from './bridge/allowlist'
@@ -1623,6 +1626,24 @@ export default class SteamGame implements Game {
           'resolveSteamInstallTarget'
         )
       } catch (err) {
+        // T-37-01/T-37-03: an UnsafeInstalldirError is a security abort, not
+        // a timeout/CM failure — checked FIRST so it never gets mislabeled
+        // "timed out". `err.message` already names the rejected candidate
+        // and already contains the word "traversal" (installLocation.ts's
+        // UnsafeInstalldirError JSDoc), so classifyDepotError's existing
+        // `/traversal/i` branch renders it as "The download contained an
+        // unsafe file path and was stopped." before it ever reaches a
+        // dialog — the raw candidate only ever surfaces in this log line.
+        if (err instanceof UnsafeInstalldirError) {
+          logWarning(
+            `SteamGame: rejected unsafe PICS installdir for appId ${this.appId}: ${err.message}`,
+            LogPrefix.Steam
+          )
+          return {
+            status: 'error',
+            error: err.message
+          }
+        }
         logWarning(
           `SteamGame: resolveSteamInstallTarget timed out/failed for appId ${this.appId}: ${String(err)}`,
           LogPrefix.Steam
@@ -1636,6 +1657,17 @@ export default class SteamGame implements Game {
         `[Timing] runNativeDepotDownload: resolveSteamInstallTarget took ${Date.now() - resolveTargetStart}ms for appId ${this.appId}`,
         LogPrefix.Steam
       )
+      // D-04 (second half): not an error — PICS returned no usable
+      // installdir, so resolveSteamInstallTarget already fell back to
+      // `app_<id>`. Logged once here (rather than left to silently
+      // disappear after this seam) and propagated onto the { status: 'done' }
+      // result below so a caller/UI can surface the non-portable layout.
+      if (resolved.installdirFallbackUsed) {
+        logWarning(
+          `SteamGame: appId ${this.appId} installed to fallback directory "${resolved.installdir}" (PICS installdir was absent/unresolved)`,
+          LogPrefix.Steam
+        )
+      }
       if (controller.signal.aborted) {
         return { status: 'abort' }
       }
@@ -1729,7 +1761,12 @@ export default class SteamGame implements Game {
         })
       }
 
-      return { status: 'done' }
+      return {
+        status: 'done',
+        ...(resolved.installdirFallbackUsed
+          ? { installdirFallbackUsed: true as const }
+          : {})
+      }
     } finally {
       // T-23-13: fail-safe cleanup on success, error, or cancel (including an
       // unhandled throw/rejection) — never leaves this appId permanently

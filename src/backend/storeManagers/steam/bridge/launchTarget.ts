@@ -123,13 +123,20 @@ export async function resolveBridgeLaunchExe(
       return undefined
     }
 
-    const installdir = sanitizeInstalldir(appinfo?.config?.installdir, appId)
     const bottleName = getBridgeBottleSettings().wineCrossoverBottle
-    const gameInstallDir = join(
-      getBottleSteamappsDir(bottleName),
-      'common',
-      installdir
+    const steamappsDir = getBottleSteamappsDir(bottleName)
+    // D-02/D-04 (37-10): sanitizeInstalldir now takes the steamapps dir as a
+    // third argument (containment check) and may THROW UnsafeInstalldirError
+    // on a denylist/containment violation — deliberately NOT caught here.
+    // This function's existing generic `catch (error)` below already
+    // satisfies its own "Never throws" contract for that case (logs a
+    // warning, returns undefined), same as any other guard failure.
+    const installdir = sanitizeInstalldir(
+      appinfo?.config?.installdir,
+      appId,
+      steamappsDir
     )
+    const gameInstallDir = join(steamappsDir, 'common', installdir)
 
     return join(gameInstallDir, windowsEntry.executable)
   } catch (error) {

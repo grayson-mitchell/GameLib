@@ -50,7 +50,10 @@ import type { GameInfo, InstallParams } from 'common/types'
 import { isSteamNativeInstallEnabled } from '../nativeInstallSetting'
 import { downloadSteamDepots } from '../depot'
 import { ensureSteamClientReady } from '../clientSetup'
-import { resolveSteamInstallTarget } from '../installLocation'
+import {
+  resolveSteamInstallTarget,
+  UnsafeInstalldirError
+} from '../installLocation'
 import { STEAM_PICS_TIMEOUT_MS } from '../withTimeout'
 import { bridgeAllowlist } from '../bridge/allowlist'
 import { placeShimForGame } from '../bridge/shimGenerate'
@@ -299,7 +302,13 @@ jest.mock('../clientSetup', () => ({
   ensureSteamClientReady: jest.fn()
 }))
 jest.mock('../installLocation', () => ({
-  resolveSteamInstallTarget: jest.fn()
+  resolveSteamInstallTarget: jest.fn(),
+  // T-37-01/T-37-03: real class (not a stub) so `err instanceof
+  // UnsafeInstalldirError` in games.ts's catch block works against an error
+  // a test constructs via `new UnsafeInstalldirError(...)` on the mocked
+  // resolveSteamInstallTarget's rejection.
+  UnsafeInstalldirError: jest.requireActual('../installLocation')
+    .UnsafeInstalldirError
 }))
 
 // ── aborthandler mock — controls the AbortController create/call/delete
@@ -2149,6 +2158,25 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       const result = await game.install({} as any)
 
       expect(result).toEqual({ status: 'done' })
+    })
+
+    it('T-37-01/T-37-03: a resolveSteamInstallTarget rejecting with UnsafeInstalldirError returns {status:"error", error: <candidate message>}, never mislabeled "timed out"', async () => {
+      ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+      ;(resolveSteamInstallTarget as jest.Mock).mockRejectedValue(
+        new UnsafeInstalldirError(
+          'SteamGame: rejected unsafe PICS installdir "../../etc/passwd" for appId 12345 (traversal — escapes the install root)'
+        )
+      )
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.install({} as any)
+
+      expect(result).toEqual({
+        status: 'error',
+        error: expect.stringContaining('../../etc/passwd')
+      })
+      expect(result.error).not.toEqual(expect.stringContaining('timed out'))
+      expect(downloadSteamDepots).not.toHaveBeenCalled()
     })
   })
 })

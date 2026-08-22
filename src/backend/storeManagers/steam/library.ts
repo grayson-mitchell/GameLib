@@ -54,7 +54,11 @@ import {
   type FinalizeToSteamOpts
 } from './depot'
 import { reconcilePartialState } from './depot/reconcile'
-import { sanitizeInstalldir } from './installLocation'
+import {
+  sanitizeInstalldir,
+  fallbackInstalldirFor,
+  UnsafeInstalldirError
+} from './installLocation'
 import { bridgeAllowlist } from './bridge/allowlist'
 import { depotSignalCaptured } from './metadataCapture'
 import {
@@ -336,14 +340,51 @@ async function buildResumeFinalizeOpts(
 ): Promise<FinalizeToSteamOpts> {
   // WR-03 (23-code-review): target.installdir is read directly off the
   // on-disk ACF's AppState.installdir (locateDownloadingTarget) with no
-  // sanitization of its own — route it through the same positive-whitelist
-  // guard the fresh-install path (installLocation.ts's
+  // sanitization of its own — route it through the same containment +
+  // denylist guard (D-02/D-04) the fresh-install path (installLocation.ts's
   // resolveSteamInstallTarget) already enforces before it ever reaches
   // buildDepotPlan/resolve() below. Defense-in-depth: an attacker would
   // already need local write access to steamapps/ to plant a hostile ACF,
   // but every filesystem-root-building value must be guarded the same way
   // regardless of caller.
-  const installdir = sanitizeInstalldir(target.installdir, appId)
+  //
+  // D-04: sanitizeInstalldir may THROW UnsafeInstalldirError on a
+  // containment/denylist violation. This function's own contract (above)
+  // promises it NEVER throws — resumeInterruptedSteamInstall runs during
+  // startup and a throw here would crash init(). A dedicated guard around
+  // ONLY this call (not the wider try block below, which must keep
+  // swallowing exactly the buildDepotPlan/reconcile failures it already
+  // does) catches the rejection, logs it at ERROR naming the appId and the
+  // rejected value, and degrades to the SAME honest-empty `depots: []`
+  // shape the existing catch below already produces for a planning
+  // failure — which fails CLOSED to the safe StateFlags=1026 verify-handoff.
+  // A hostile on-disk ACF aborts the RESUME for this appId, not the app.
+  let installdir: string
+  try {
+    installdir = sanitizeInstalldir(
+      target.installdir,
+      appId,
+      target.targetSteamappsDir
+    )
+  } catch (sanitizeErr) {
+    if (!(sanitizeErr instanceof UnsafeInstalldirError)) {
+      throw sanitizeErr
+    }
+    logError(
+      [
+        `Steam: startup resume rejected a hostile on-disk installdir for appId ${appId}, ` +
+          'falling back to the honest-empty 1026 finalize:',
+        sanitizeErr
+      ],
+      LogPrefix.Steam
+    )
+    return {
+      targetSteamappsDir: target.targetSteamappsDir,
+      installdir: fallbackInstalldirFor(appId),
+      name: target.name,
+      depots: []
+    }
+  }
 
   try {
     const plan = await buildDepotPlan(appId, {

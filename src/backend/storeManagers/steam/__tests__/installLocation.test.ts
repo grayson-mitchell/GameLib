@@ -211,6 +211,10 @@ describe('resolveSteamInstallTarget', () => {
     })
 
     expect(result.installdir).toBe(`app_${APP_ID}`)
+    // D-04 (second half): the fallback flag must be surfaced on the
+    // returned SteamInstallTarget so a caller can log/report the
+    // non-portable layout instead of it silently disappearing here.
+    expect(result.installdirFallbackUsed).toBe(true)
   })
 
   it('WR-01: a never-settling installdir getProductInfo does NOT hard-fail — fetchInstalldir bounds it, catches, and resolveSteamInstallTarget RESOLVES with a safe fallback dir (never rejects)', async () => {
@@ -325,6 +329,25 @@ describe('resolveSteamInstallTarget', () => {
     })
 
     expect(result.installdir).toBe('Half-Life 2')
+    // A PICS-supplied name was used as-is — the fallback flag must be
+    // omitted (not `true`), matching the well-formed happy path.
+    expect(result.installdirFallbackUsed).toBeUndefined()
+  })
+
+  it('D-02/D-04/T-37-03: resolveSteamInstallTarget REJECTS with UnsafeInstalldirError for a traversal installdir, rather than resolving to a safe fallback', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
+    jest.mocked(SteamUser.getClient).mockReturnValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(12345, '../../etc/passwd')
+      }) as never
+    )
+
+    await expect(
+      resolveSteamInstallTarget(APP_ID, {
+        path: '',
+        platformToInstall: 'Windows'
+      })
+    ).rejects.toBeInstanceOf(UnsafeInstalldirError)
   })
 
   it('throws when no Steam libraries are registered at all', async () => {

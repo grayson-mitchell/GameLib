@@ -33,6 +33,14 @@ const FALLBACK_INSTALLDIR_PREFIX = 'app_'
 export interface SteamInstallTarget {
   targetSteamappsDir: string
   installdir: string
+  /** D-04 (second half): true when PICS returned no usable `config.installdir`
+   *  (absent or blank) and sanitizeInstalldir's branch 1 fallback fired — the
+   *  install lands in `app_<id>` rather than a human-readable directory name.
+   *  Not an error (the install itself proceeds normally); surfaced so the
+   *  caller can log/report the non-portable layout once, rather than the
+   *  fact silently disappearing after this seam. Omitted (not `false`) when
+   *  the PICS-supplied name was used as-is. */
+  installdirFallbackUsed?: boolean
 }
 
 /** One registered Steam library, as surfaced to the frontend override picker
@@ -155,12 +163,26 @@ const INSTALLDIR_DENYLIST =
  * per-file `resolveContainedPath` remains the backstop for individual
  * filenames beneath the installdir this function approves.
  */
+/**
+ * The safe, deterministic `app_<id>` fallback directory name — the SAME
+ * shape sanitizeInstalldir returns for an absent/blank candidate. Exported
+ * so a caller that has ALREADY rejected a hostile candidate itself (e.g.
+ * library.ts's buildResumeFinalizeOpts, which needs this name for its own
+ * honest-empty degrade shape after catching an UnsafeInstalldirError) can
+ * reuse the exact same naming without re-deriving it or triggering another
+ * "absent or blank" log line that would misdescribe a security rejection as
+ * a missing value.
+ */
+export function fallbackInstalldirFor(appId: string): string {
+  return `${FALLBACK_INSTALLDIR_PREFIX}${safeFallbackId(appId)}`
+}
+
 export function sanitizeInstalldir(
   candidate: string | undefined,
   appId: string,
   steamappsDir: string
 ): string {
-  const fallback = `${FALLBACK_INSTALLDIR_PREFIX}${safeFallbackId(appId)}`
+  const fallback = fallbackInstalldirFor(appId)
 
   if (!candidate || !candidate.trim()) {
     logWarning(
@@ -301,13 +323,21 @@ export async function resolveSteamInstallTarget(
   }
 
   const target = resolveOverride(args?.path, libraries)
+  const picsInstalldir = await fetchInstalldir(appId)
+  // D-04 (second half): branch 1 of sanitizeInstalldir (absent/blank
+  // candidate) is the ONLY fallback trigger left — everything else either
+  // passes through unchanged or throws. Determined here, independently of
+  // sanitizeInstalldir's own return value, so its string-returning contract
+  // stays unchanged for its OTHER caller (library.ts's
+  // buildResumeFinalizeOpts, which has no use for this flag).
+  const installdirFallbackUsed = !picsInstalldir || !picsInstalldir.trim()
   // D-04: sanitizeInstalldir may THROW UnsafeInstalldirError on a
   // containment/denylist violation — deliberately NOT caught here. The
   // caller (games.ts's runNativeDepotDownload) is the one place that must
   // turn this into an honest security-abort {status:'error'} rather than a
   // silent fallback write.
   const installdir = sanitizeInstalldir(
-    await fetchInstalldir(appId),
+    picsInstalldir,
     appId,
     target.steamappsDir
   )
@@ -317,5 +347,9 @@ export async function resolveSteamInstallTarget(
     LogPrefix.Steam
   )
 
-  return { targetSteamappsDir: target.steamappsDir, installdir }
+  return {
+    targetSteamappsDir: target.steamappsDir,
+    installdir,
+    ...(installdirFallbackUsed ? { installdirFallbackUsed: true as const } : {})
+  }
 }
