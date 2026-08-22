@@ -155,13 +155,22 @@
  * D-08 — `deleteUploadedLogFile` is ported at parity but CANNOT ACTUALLY
  * DELETE ANYTHING IN EITHER BUILD. `logger/uploader.ts:74-77` hardcodes
  * `const token = '1'` with a comment stating dpaste.com does not support
- * deletion and that the option was meant to be hidden — it never was
- * (`UploadedLogFilesList/index.tsx:60` still wires a live button to this
- * channel). This differs from 34.2 D-07's dead-under-Tauri-only channel:
- * this one is equally dead in both builds, an inherited upstream Heroic
- * defect this port neither introduces nor worsens. Ported faithfully here;
- * the live-button UI bug is filed as a separate todo, not fixed in this
- * plan (T-34.3-16, accepted + declared, see `34.3-PORTED-CHANNELS.md`).
+ * deletion and that the option was meant to be hidden. This differs from
+ * 34.2 D-07's dead-under-Tauri-only channel: this one is equally dead in
+ * both builds, an inherited upstream Heroic defect this port neither
+ * introduces nor worsens. Ported faithfully here.
+ *
+ * CORRECTION (2026-08-22, closing todo `uploaded-log-delete-button-lies`):
+ * this note originally claimed the option "never was" hidden and that
+ * `UploadedLogFilesList/index.tsx:60` "still wires a live button to this
+ * channel". That was WRONG, and was wrong when written — upstream
+ * `6ec27795c` (2026-04-20, the very commit that introduced the hardcoded
+ * token) also commented the delete `SvgButton` out, three months before
+ * this note. Line 60 reads like a live call site but sits INSIDE a JSX
+ * comment block. There is no UI path to this channel in either build; it is
+ * dead code reachable only from the preload API surface. The invariant is
+ * now enforced rather than asserted, by a render-level reachability gate:
+ * `UploadedLogFilesList/__tests__/deleteButtonReachability.test.tsx`.
  *
  * D-09 — log redaction is OUT OF SCOPE for this module. `uploadLogFile`
  * sends up to 10 MiB of unredacted log content to a public dpaste with a
