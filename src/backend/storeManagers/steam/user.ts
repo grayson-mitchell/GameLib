@@ -112,6 +112,10 @@ export class SteamUser {
           '[Timing] SteamUser.ensureConnected: already connected (fast path, canary OK)',
           LogPrefix.Steam
         )
+        // A live, canary-verified CM connection disproves any latched
+        // credentialsMissing verdict — clear it so the tile recovers without
+        // waiting for the next login.
+        configStore.delete('credentialsMissing')
         return true
       } catch (canaryErr) {
         logWarning(
@@ -197,6 +201,14 @@ export class SteamUser {
         'Steam: logged in but no stored refresh token — cannot reconnect',
         LogPrefix.Steam
       )
+      // A successful read that came back EMPTY is proof the credential is gone,
+      // not a transient failure — deliberately NOT set in the `unreadable`
+      // branch above, whose whole point is that a denied/timed-out read must
+      // never be reported as signed-out. Latching it here costs no extra
+      // keyring traffic: this branch only runs on reads a deliberate user
+      // action already triggered, so the accounts tile learns about it from a
+      // routine library refresh rather than waiting for an install to fail.
+      configStore.set('credentialsMissing', true)
       return false
     }
 
@@ -300,6 +312,9 @@ export class SteamUser {
     await getTokenStore().clearToken()
     configStore.delete('isLoggedIn')
     configStore.delete('userData')
+    // A signed-out session has no credential to be missing — leaving a stale
+    // `true` here would mislabel the next login's tile before any read runs.
+    configStore.delete('credentialsMissing')
     logInfo('Logging user out from Steam', LogPrefix.Steam)
   }
 
@@ -332,6 +347,7 @@ export class SteamUser {
     // Store credentials immediately — don't block on the steam-user CM connection.
     await getTokenStore().setToken(refreshToken)
     configStore.set('isLoggedIn', true)
+    configStore.delete('credentialsMissing')
 
     // Connect steam-user to get the persona name. If this fails the user is still
     // logged in (credentials already stored above), so we fall back to a placeholder.
@@ -497,6 +513,7 @@ export class SteamUser {
         try {
           await getTokenStore().setToken(session.refreshToken)
           configStore.set('isLoggedIn', true)
+          configStore.delete('credentialsMissing')
 
           // Mark done synchronously so pollQRLogin() returns 'done' as soon as
           // the user approves on their phone — don't block the UI on the CM

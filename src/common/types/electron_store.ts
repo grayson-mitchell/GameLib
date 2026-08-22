@@ -86,6 +86,14 @@ export interface StoreStructure {
     isLoggedIn: boolean
     refreshToken?: string // safeStorage-encrypted base64 string with 'steam:v1:' prefix
     userData?: SteamUserData
+    // Set when a SUCCESSFUL credential read came back empty while the session
+    // still says isLoggedIn — i.e. the token the installer needs is provably
+    // gone. Cleared the moment a credential is proven present again. Mirrors
+    // humbleConfigStore.expired below: the Manage Accounts tile reads it so it
+    // stops claiming a clean signed-in state the installer cannot honour.
+    // NEVER set from a keyring read that FAILED (denied/timed out) — that is a
+    // different condition and reporting it as signed-out is a known false state.
+    credentialsMissing?: boolean
   }
   // Phase 17 (17-02): dedicated Steam CrossOver bottle settings — separate
   // from steamConfigStore (auth) and never reused as a phantom GameConfig
