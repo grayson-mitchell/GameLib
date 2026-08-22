@@ -2777,18 +2777,49 @@ Plans:
 - [x] 34.8-11-PLAN.md — wave 8: build the D-08/D-09/D-10/D-11 machine-fill script with hermetic tests and a bulk-run refusal
 - [ ] 34.8-12-PLAN.md — wave 9: prove machine-fill on `de`+`fr` with provenance sidecars, add a catalog-parity test, and verify `gamelib.json` loads on BOTH Electron and Tauri
 
-### Phase 34.7: Epic device-auth single sign-in path (INSERTED)
+### Phase 34.7: Epic device-auth single sign-in path (ON HOLD)
 
-**Goal:** Make device-auth bootstrap the **single** Epic sign-in path. Delete the interactive
+**Status:** ⛔ **ON HOLD 2026-08-22 — the premise is dead.** Operator decision: this phase is the
+wrong shape and is not to be planned. It was scheduled on 2026-08-05 on the finding that Epic's
+embedded WebKit login was *permanently* unusable under Tauri — Talon's anti-bot 403 was judged
+unfixable from JS — so device-auth (SIDLogin) would become the single path and the interactive
+legendary-login UI would be **deleted**. The pristine (zero-injection) WKWebView login window
+subsequently defeated that 403, and the embedded login now completes a fresh logged-out sign-in
+on macOS. Deleting a working sign-in path to consolidate onto the other one is no longer a
+trade worth making, so **the embedded login is the primary Epic path again** and SIDLogin is
+retained as the alternative. Quick task `260822-r3g` reverted the F-34.5-G6-01 tile pivot and
+removed the deletion-pending marker (commit `1431b4c03`): Epic is now wired identically under
+Electron and Tauri — primary tile = embedded login ("Epic Games Login"), alternative tile =
+SIDLogin ("Alternative Login Method"). Nothing here is deleted; the phase is parked, not
+cancelled, and can be revived if the 403 ever returns. See the
+`epic-login-tauri-connection-anomaly` record.
+
+> ⚠ **Two residuals this hold does NOT dispose of — they need re-homing before Phase 35.**
+>
+> 1. **Epic, `egsSync` and legendary save sync** are owned by *this* phase per **D-CYCLE6-A**
+>    (Phase 34.5 gap cycle 6 descoped Epic to 34.7 rather than closing it). That IPC-port work
+>    is real and unaffected by the login-path decision — it does not disappear with the
+>    single-sign-in goal. It must move to another phase or become a phase of its own.
+> 2. **Phase 35's `Depends on: … Phases 34.1–34.7`** still names 34.7. That dependency line is
+>    now partly vacuous: the "Epic device-auth single-path consolidation" leg is withdrawn, but
+>    the save-sync/`egsSync` leg from residual 1 genuinely still gates the Electron cutover.
+>    Do not read the hold as clearing Phase 35's Epic dependency.
+>
+> Both are flagged for the operator, not decided here.
+
+**Goal (as originally scoped, NOT to be executed as written):** Make device-auth bootstrap the
+**single** Epic sign-in path. Delete the interactive
 legendary-login UI (already marked red in the UI as deletion-pending); keep legendary purely as
 the download/library backend, seeded via exchange code from the device-auth session; the bootstrap
 doubles as the recovery flow. Deliberately **one** path — the interactive legendary login is NOT
 retained as a fallback ("one robust path beats one robust + one flaky", operator decision
 2026-08-05 after the alt-login 403 research concluded).
 
-**Permanently out of scope:** any further work on the alt-login 403 issue. It stays parked —
-no additional investigation time is to be spent on it (operator decision 2026-08-05; see the
-`epic-login-tauri-connection-anomaly` record).
+**Permanently out of scope (as scoped 2026-08-05; SUPERSEDED by the hold above):** any further
+work on the alt-login 403 issue. It stayed parked — no additional investigation time was to be
+spent on it (operator decision 2026-08-05). This is exactly the clause the 2026-08-22 hold
+reverses: the 403 *was* subsequently beaten, by the pristine login window rather than by more
+403 investigation, which is why the phase's premise no longer holds.
 
 **Verification note:** confirm cloud-save and EOS-overlay flows still work when the session is
 seeded via exchange code rather than minted by legendary itself — it is the same launcher-client
@@ -2796,15 +2827,17 @@ token either way, but any Heroic/legendary flow that assumes it minted the sessi
 checked, not assumed.
 
 *Inserted 2026-08-05 per operator decision: scheduled as the last thing before Phase 35.*
+*ON HOLD 2026-08-22 per operator decision — see the Status block above.*
 
-**Requirements:** TBD — mint at `/gsd-plan-phase 34.7`
-**Depends on:** Phases 34.5 and 34.6 (runs LAST before Phase 35 — operator-scheduled)
-**Blocks:** Phase 35
-**Plans:** 0 plans
+**Requirements:** none — never minted, and not to be minted while the hold stands
+**Depends on (as scoped):** Phases 34.5 and 34.6 (was to run LAST before Phase 35)
+**Blocks:** Phase 35, but ONLY via the residual save-sync/`egsSync` ownership flagged above —
+the single-sign-in consolidation leg of that dependency is withdrawn
+**Plans:** 0 plans, 0 executed — nothing was ever written for this phase
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 34.7 to break down)
+- [ ] None. Do NOT run `/gsd-plan-phase 34.7` while the hold stands.
 
 ### Phase 34.9: macOS runner onedir repackaging — eliminate the PyInstaller cold-start spawn tax (INSERTED)
 
@@ -3611,7 +3644,7 @@ Plans:
 ### Phase 35: Electron cutover — remove the Electron build
 
 **Goal:** Retire the Electron build: delete `electron-vite`/`electron-builder` config, the preload contextBridge path, and the `isTauri()` branches, leaving Tauri as the only shell. This is the one phase that deliberately breaks the additive/reversible invariant every prior phase preserved — so it runs last, and only once the `session`/`powerSaveBlocker` parity gaps are resolved or explicitly accepted, and the parked Electron-renderer bugs (see `debug-uninstall-game-vanishes-parked`) have been re-tested against Tauri rather than fixed in Electron.
-**Depends on:** Phase 34 (all three platforms shipping on Tauri first) **and Phases 34.1–34.7** (the IPC re-plumb must be complete, plus the Epic device-auth single-path consolidation — see `.planning/IPC-PORT-INVENTORY.md`). As of 2026-07-25 only 27 of 210 IPC channels are on the sidecar; cutting over before the port finishes would strand ~183 channels. Also blocked on migrating the renderer off `electron-vite` onto plain Vite, since `tauri:dev` currently shells out to `electron-vite build` and `tauri.conf.json` serves its `build/` output as `frontendDist`.
+**Depends on:** Phase 34 (all three platforms shipping on Tauri first) **and Phases 34.1–34.7** (the IPC re-plumb must be complete, plus the Epic device-auth single-path consolidation — see `.planning/IPC-PORT-INVENTORY.md`). ⚠ **The 34.7 leg changed 2026-08-22:** that phase is ON HOLD (its premise died — the embedded Epic login works again, see its Status block) and the "device-auth single-path consolidation" half of this dependency is **withdrawn**. What still gates the cutover from 34.7's scope is the **Epic / `egsSync` / legendary save-sync IPC ownership assigned by D-CYCLE6-A**, which is unaffected by the login-path decision and needs re-homing to another phase. Do not read the hold as clearing this line. As of 2026-07-25 only 27 of 210 IPC channels are on the sidecar; cutting over before the port finishes would strand ~183 channels. Also blocked on migrating the renderer off `electron-vite` onto plain Vite, since `tauri:dev` currently shells out to `electron-vite build` and `tauri.conf.json` serves its `build/` output as `frontendDist`.
 
 > **Phase 34.5's leg of this dependency is SATISFIED as of 2026-08-20.** Edited by plan 34.5-60
 > under the ONE condition that permits it: the fifth blocking live gate returned a clean **4 PASS /
@@ -3619,7 +3652,10 @@ Plans:
 > untouched, because moving it early would let a non-closing phase unblock the cutover
 > (`T-34.5-C7-37`). **The other legs are unchanged and still gate this phase** — 34.1–34.4 and
 > 34.6–34.7 in particular, with Epic, `egsSync` and legendary save sync owned by **34.7** per
-> D-CYCLE6-A, and the 16 deferred channels plus `getDefaultSavePath` owned by **34.6**. Note also
+> D-CYCLE6-A, and the 16 deferred channels plus `getDefaultSavePath` owned by **34.6**.
+> ⚠ **2026-08-22: Phase 34.7 is ON HOLD, so that D-CYCLE6-A ownership is now HOMELESS.** The
+> work itself still gates this phase — only the phase that was going to carry it was parked.
+> Re-home it before planning Phase 35. Note also
 > that 34.5's PASS was measured on a **dev** build: `R-34.5-G1-PKG`, the packaged-build asset root,
 > is untouched by it.
 **Requirements:** TBD — mint at `/gsd-plan-phase 35`
