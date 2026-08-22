@@ -3641,10 +3641,10 @@ sidebar tour under decision D-13 and deliberately did not rebuild it; this phase
 34.10 has owed since it closed. Each of `SidebarTour.tsx`'s twelve `data-tour="sidebar-*"` steps
 must be re-anchored to a surface that still exists in the new shell, or dropped with a reason.
 
-**Requirements**: TBD (run `/gsd-discuss-phase 34.12`)
+**Requirements**: No REQ-IDs are minted for this phase. Its requirement set is `34.12-CONTEXT.md`'s decision IDs **D-01 through D-09** plus **IN-01** (the dead-`data-tour` sweep inherited from 34.10). Every one of those ten appears in at least one plan's `requirements` frontmatter field.
 **Depends on:** Phase 34.10 (the two-tier shell the steps must anchor to) and Phase 34.11 (the
 filter panel — several retired steps pointed at library surfaces that 34.11 replaced)
-**Plans:** 0 plans
+**Plans:** 7 plans in 5 waves
 
 **Why this phase exists — captured 2026-08-13.** It was referenced in three places but had never
 been created: ROADMAP.md listed "the deferred onboarding-tour rework phase" in Phase 34.10's
@@ -3678,7 +3678,28 @@ insertion as urgent. This phase is NOT urgent — it is deferred UI polish with 
 breakage while the tour stays disabled and unreachable.
 
 Plans:
-- [ ] TBD (run `/gsd-discuss-phase 34.12`, then `/gsd-plan-phase 34.12`)
+
+**Wave 1** *(no dependencies — run in parallel)*
+
+- [ ] 34.12-01-PLAN.md — `NavItem` gains a `data-tour` passthrough; the tour-disabled gate is narrowed to a `sidebar-*` selector ban so it survives the phase
+- [ ] 34.12-02-PLAN.md — D-09: `LibraryTour`'s two dead steps re-anchored onto two new filter-panel wrappers, with the `.Header` flex gap preserved on each
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 34.12-03-PLAN.md — the eight non-`SettingsPanel` anchors (`NavTabs` x5, `DownloadsRing`, `QuitButton`, `HeroicVersion`), plus the repo's first `QuitButton` and `HeroicVersion` unit suites
+- [ ] 34.12-04-PLAN.md — `SidebarTour` moved and rewritten into `NavShellTour`: twelve `nav-*` selectors, `disableInteraction: true`, three new `tour.nav.*` keys, mounted in the shell, fork-scope manifests repointed
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 34.12-05-PLAN.md — D-01: the four `SettingsPanel` anchors and the "App Tour" launcher row, plus a defensive read of the persisted tour state the launcher newly makes reachable
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 34.12-06-PLAN.md — IN-01 sweep (`library-header` x2, `humble-keys`), the `navTourAnchorCensus` uniqueness gate, deletion of `tourDisabled.test.ts`, and this ROADMAP's IN-01 correction
+
+**Wave 5** *(blocked on Wave 4)*
+
+- [ ] 34.12-07-PLAN.md — blocking manual verification: twelve individually-recorded step outcomes, the D-04 interaction lock, the no-auto-start guarantee, three-theme spacing, and the German stale-copy check *(not autonomous)*
 
 ### Phase 35: Electron cutover — remove the Electron build
 
