@@ -62,18 +62,18 @@ const LibraryTour: React.FC = () => {
       position: 'bottom'
     },
     {
-      element: '[data-tour="library-categories"]',
+      element: '[data-tour="library-views-collections"]',
       intro: t(
-        'tour.library.categories',
-        'Organize your games into categories to keep things tidy.'
+        'tour.library.viewsCollections',
+        'Switch between Views like All games, Installed, Recently played and Favourites, or browse your custom Collections.'
       ),
       position: 'bottom'
     },
     {
-      element: '[data-tour="library-filters"]',
+      element: '[data-tour="library-facets"]',
       intro: t(
-        'tour.library.filters',
-        'Filter your games by store, platform, favorites and more using these options.'
+        'tour.library.facets',
+        'Narrow your games by store, runnability or open More filters for additional options.'
       ),
       position: 'bottom'
     },

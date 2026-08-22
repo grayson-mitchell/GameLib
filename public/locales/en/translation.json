@@ -41,11 +41,17 @@
         "status": "Status",
         "title": "This game includes anticheat software"
     },
+    "bottle": {
+        "setup": {
+            "done": "INLINE-DEFAULT-SENTINEL"
+        }
+    },
     "box": {
         "cache-cleared": {
             "message": "GameLib cache cleared.",
             "title": "Cache cleared"
         },
+        "cancel": "Cancel",
         "changelog": "Changelog",
         "choose": "Choose",
         "choose-egs-prefix": "Choose Prefix where EGS is installed",
@@ -88,6 +94,11 @@
                 "message": "generic error message",
                 "title": "Select EXE to Run"
             },
+            "install": {
+                "failed": "The installation of {{title}} failed: {{error}}",
+                "signInToSteam": "Sign in to Steam",
+                "stalled": "No download progress for {{minutes}} minutes — the install was stopped"
+            },
             "launchAborted": "Launch aborted",
             "legendary": {
                 "generic": "An error has occurred! Try to Logout and Login on your Epic account. {{newline}}  {{error}}"
@@ -129,6 +140,9 @@
             "message": "There are pending operations, are you sure?",
             "title": "Exit"
         },
+        "repair": {
+            "error": ""
+        },
         "reset-heroic": {
             "question": {
                 "message": "Are you sure you want to reset GameLib? This will remove all Settings and Caching but won't remove your Installed games or your Epic credentials. Portable versions (AppImage, WinPortable, ...) of GameLib needs to be restarted manually afterwards.",
@@ -149,6 +163,13 @@
             "message-remove": "Shortcuts were removed from Desktop and Start Menu",
             "message-remove-mac": "Shortcuts were removed from the Applications folder",
             "title": "Shortcuts"
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Reinstall via CrossOver",
+                "message": "This game's macOS build is 32-bit only and cannot run on this version of macOS. GameLib can reinstall it through CrossOver instead, which will redownload the Windows version.",
+                "title": "32-bit macOS build detected"
+            }
         },
         "sync": {
             "error": "Invalid Path",
@@ -196,6 +217,7 @@
     },
     "button": {
         "cancel": "Cancel",
+        "close": "Close",
         "continue": "Continue",
         "dismiss": "Dismiss",
         "go_to_library": "Go to Library",
@@ -554,6 +576,8 @@
     "humble": {
         "notification": {
             "expiringBodyPlural": "{{count}} Humble keys gained expiration dates",
+            "expiringBodyPlural_one": "{{count}} Humble keys gained expiration dates",
+            "expiringBodyPlural_other": "{{count}} Humble keys gained expiration dates",
             "expiringBodySingle": "{{title}}'s Humble key now expires on {{date}}",
             "expiringTitlePlural": "Humble keys expiring",
             "expiringTitleSingle": "Humble key expiring"
@@ -578,8 +602,8 @@
         "giftConfirmAction": "Open Humble",
         "giftConfirmBody": "Anyone with this link can claim the key — once redeemed, it's gone for good. You'll finish gifting it on Humble's own site.",
         "giftConfirmTitle": "Gift this key?",
-        "giftOnHumble": "Gift on Humble",
         "giftedAnnotation": "Opened Humble gift page {{date}}",
+        "giftOnHumble": "Gift on Humble",
         "group": {
             "other": "Other"
         },
@@ -597,8 +621,8 @@
         "ownedBlockTitle": "You already own this on Steam",
         "ownedOnSteam": "Owned on Steam",
         "ownedPassiveNote": "You already own this on Steam — activation will likely fail there.",
-        "redeemOnPlatform": "Redeem on {{platform}}",
         "redeemedAnnotation": "Redeemed {{date}}",
+        "redeemOnPlatform": "Redeem on {{platform}}",
         "refresh": "Refresh Humble Keys",
         "revealAmbiguousBody": "We couldn't confirm this finished — sync to check",
         "revealBody": "Revealing shows the actual key and removes it from Giftable spares for good. If you don't own this game yet, make sure that's really true before continuing — there's no undo.",
@@ -608,11 +632,11 @@
         "revealConfirmTitle": "Reveal this key?",
         "revealCooldownBody": "Temporarily unavailable — retry in {{N}}m",
         "revealDismiss": "Don't reveal yet",
+        "revealedAnnotation": "Revealed {{date}}",
         "revealFailed": "Couldn't reveal this key — nothing was used up. You can try again.",
         "revealFailedBody": "Couldn't reveal this key — nothing was used up. You can try again.",
         "revealRejectedBody": "Humble declined to reveal this key — it may already be redeemed or expired. Sync to check its current status.",
         "revealTitle": "Reveal this key?",
-        "revealedAnnotation": "Revealed {{date}}",
         "rowCaption": "{{platform}} · {{origin}}",
         "sparesBlurb": "You already own these games — keep the keys unrevealed and gift them instead.",
         "sparesEmptyBody": "Keys show up here once they're confirmed owned elsewhere and haven't been revealed yet.",
@@ -626,12 +650,16 @@
         },
         "syncError": "Couldn't refresh — showing data from {{time}}",
         "syncErrorPartial": "Couldn't finish refresh — showing the latest data available",
+        "syncing": "Syncing… {{done}}/{{total}} orders",
         "syncNow": "Sync now",
         "syncToEnableClaiming": "Sync to enable claiming",
-        "syncing": "Syncing… {{done}}/{{total}} orders",
         "tabAll": "All keys",
         "tabSpares": "Giftable spares ({{count}})",
+        "tabSpares_one": "Giftable spares ({{count}})",
+        "tabSpares_other": "Giftable spares ({{count}})",
         "tabWaiting": "Keys waiting ({{count}})",
+        "tabWaiting_one": "Keys waiting ({{count}})",
+        "tabWaiting_other": "Keys waiting ({{count}})",
         "title": "Humble Keys",
         "tryAgain": "Try again",
         "undo": "Undo",
@@ -711,6 +739,7 @@
         "gog": "GOG Login",
         "humble": "Humble Bundle Login",
         "humble_connected": "Connected",
+        "humble_dialog_title": "Sign in to Humble Bundle",
         "humble_disconnect_message": "This removes your Humble Bundle session from GameLib. You can reconnect at any time.",
         "humble_disconnect_title": "Disconnect Humble Bundle?",
         "humble_encryption_degraded": "Your system does not support secure credential storage. The Humble Bundle session is stored with reduced encryption.",
@@ -719,6 +748,8 @@
         "message": "Login with your platform. You can login to more than one platform at the same time.",
         "old-mac": "Your macOS version is {{version}}. macOS 12 or newer is required to log in.",
         "steam": "Steam Login",
+        "steam_logout_failed_message": "Steam sign-out didn't finish in time. Please try again.",
+        "steam_logout_failed_title": "Sign-out failed",
         "zoom": "Zoom Login"
     },
     "message": {
@@ -732,6 +763,13 @@
         }
     },
     "next": "Next",
+    "no": {
+        "such": {
+            "key": {
+                "anywhere": "fallback"
+            }
+        }
+    },
     "notify": {
         "error": {
             "move": "Error Moving the Game",
@@ -771,8 +809,8 @@
         "refresh": {
             "error": "Couldn't fetch releases from upstream, maybe because of Github API restrictions! Try again later."
         },
-        "uninstallNotConfirmed": "Uninstall not confirmed by Steam — please check Steam and try again",
         "uninstalled": "Uninstalled",
+        "uninstallNotConfirmed": "Uninstall not confirmed by Steam — please check Steam and try again",
         "update": {
             "canceled": "Update Canceled",
             "failed": "Update Failed",
@@ -874,6 +912,13 @@
         }
     },
     "Recent": "Played Recently",
+    "redeemSteamKey": {
+        "placeholder": "Enter your Steam key",
+        "redeem": "Redeem",
+        "redeeming": "Redeeming...",
+        "title": "Redeem a Steam key",
+        "viewInLibrary": "View in library"
+    },
     "search": "Search for Games",
     "setting": {
         "adddesktopshortcuts": "Add desktop shortcuts automatically",
@@ -941,6 +986,8 @@
             "remove": "Uninstall",
             "removeConfirm": "Are you sure you want to uninstall the EOS Overlay?",
             "removeConfirmTitle": "Confirm overlay removal",
+            "unavailable": "The EOS Overlay is unavailable in this build",
+            "unavailableDetail": "EOS Overlay support is deferred to a future release (D-03, Phase 34.6) and cannot be installed, updated, or removed from this build.",
             "updateNow": "Update",
             "updating": "Updating..."
         },
@@ -1170,10 +1217,12 @@
             "apikey": {
                 "placeholder": "Enter your SteamGridDB API Key here",
                 "placeholder_saved": "Key saved — type to replace, clear to remove",
-                "title": "SteamGridDB API Key"
+                "title": "SteamGridDB API Key",
+                "unavailable": "Unavailable on this build"
             },
             "help": {
-                "description": "Provide your own SteamGridDB API key to enable game cover search. The key is stored encrypted when your system supports it. You can get one at {{url}}"
+                "description": "Provide your own SteamGridDB API key to enable game cover search. The key is stored encrypted when your system supports it. You can get one at {{url}}",
+                "unavailableDetail": "SteamGridDB artwork support is deferred to a future release (D-03, Phase 34.6) and cannot be configured from this build."
             }
         },
         "systemInformation": {
@@ -1203,7 +1252,8 @@
     "Settings": "Settings",
     "sidebar": {
         "console": "Console Mode",
-        "humbleKeys": "Humble Keys"
+        "humbleKeys": "Humble Keys",
+        "redeemSteamKey": "Redeem a Steam key"
     },
     "status": {
         "installed": "Installed",
@@ -1216,10 +1266,14 @@
         "download": {
             "error": {
                 "connectionDropped": "Steam servers dropped the connection. Retry to continue.",
+                "connectionDroppedV2": "Steam servers dropped the connection.",
+                "decodeFailed": "Downloaded game data could not be unpacked. This is not a network problem.",
                 "depotBlocked": "This depot appears to be blocked for your account or region right now. The game may still be installable directly through the Steam client.",
                 "depotUnavailable": "This game's content isn't available to download right now.",
                 "diskFull": "Out of disk space.",
                 "generic": "The Steam download failed. Retry to continue.",
+                "genericV2": "The Steam download failed.",
+                "notSignedIn": "You are not signed in to Steam, so this download could not start.",
                 "unsafePath": "The download contained an unsafe file path and was stopped.",
                 "verifyFailed": "A downloaded file failed verification."
             },
@@ -1229,6 +1283,9 @@
         },
         "lastSynced": "Steam library last synced {{time}} ago",
         "refresh": "Refresh Steam Library",
+        "resumeAvailable": {
+            "notify": "An interrupted install for {{game}} is ready to resume — click Install to continue"
+        },
         "syncing": "Syncing your Steam library…",
         "waitingForSteam": {
             "notify": "Restart Steam to finish installing {{game}}"
@@ -1240,7 +1297,8 @@
             "grids": "Failed to fetch grids",
             "no-games": "No games found.",
             "no-grids": "No covers found for this game.",
-            "search": "Failed to search for games, please check your SteamGridDB API key and try again"
+            "search": "Failed to search for games, please check your SteamGridDB API key and try again",
+            "unavailable": "SteamGridDB artwork is unavailable on this build"
         },
         "picker": {
             "search": "Search Game",
@@ -1249,6 +1307,7 @@
         }
     },
     "store": "Epic Store",
+    "stores": "Stores",
     "storeSearch": {
         "aria": {
             "expand": "Show store breakdown for {{title}}",
@@ -1271,7 +1330,6 @@
         "sidebar": "Store Search",
         "title": "Store Search"
     },
-    "stores": "Stores",
     "title": {
         "allGames": "All Games"
     },
@@ -1294,12 +1352,14 @@
                 "intro": "That's it! Enjoy your games and have fun!",
                 "title": "Enjoy your games!"
             },
+            "facets": "Narrow your games by store, runnability or open More filters for additional options.",
             "filters": "Filter your games by store, platform, favorites and more using these options.",
             "gameCard": "Left-Click on the game card to navigate to the game page and to see details and adjust settings or Right-click to open the context menu.",
             "refresh": "Refresh your library to check for new games or updates.",
             "search": "Use the Search bar to search for your games.",
             "sortInstalled": "Sort games by installed status.",
             "sortOptions": "Click here to sort games alphabetically.",
+            "viewsCollections": "Switch between Views like All games, Installed, Recently played and Favourites, or browse your custom Collections.",
             "viewToggle": "Switch between grid and list view for your games.",
             "welcome": {
                 "intro": "Welcome to the GameLib Library! This is where you can see all your games across different stores.",
@@ -1355,6 +1415,54 @@
             "forward": "Go forward",
             "openInBrowser": "Open in browser",
             "reload": "Reload page"
+        },
+        "login": {
+            "blocked": {
+                "heading": ""
+            },
+            "humble": {
+                "body": "A sign-in window has opened. Complete sign-in there — this page updates automatically once it succeeds.",
+                "error": {
+                    "window_unreachable": "the Humble sign-in window closed or could not be reached"
+                },
+                "heading": "Signing in to Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "A sign-in window has opened. Complete sign-in there.",
+                    "heading": ""
+                },
+                "blocked": {
+                    "heading": ""
+                },
+                "cancelled": {
+                    "body": "The sign-in window was closed before completing. You can try again.",
+                    "heading": ""
+                },
+                "error": {
+                    "body": "",
+                    "heading": ""
+                },
+                "finalizing": {
+                    "body": "Sign-in captured. Completing the exchange with the store — this can take a few seconds.",
+                    "heading": ""
+                },
+                "preparing": {
+                    "body": "The store's sign-in window is being prepared and will open shortly.",
+                    "heading": ""
+                },
+                "retry": "Retry",
+                "timeout": {
+                    "body": "The sign-in window took too long to complete. You can try again.",
+                    "heading": ""
+                }
+            }
+        },
+        "unavailable": {
+            "body": "GameLib's Tauri build does not yet embed a browser view for the store and wiki pages.",
+            "heading": "In-app store and wiki browsing is not available on this build",
+            "next-step": "This is tracked as its own future work -- for now, use the button below to open it in your system browser instead.",
+            "open-in-browser": "Open in browser"
         }
     },
     "window": {
@@ -1398,7 +1506,9 @@
         "no-components": "No available components",
         "nothingYet": "Nothing was installed by Winetricks yet",
         "openGUI": "Open Winetricks GUI",
-        "search": "Search fonts or components"
+        "search": "Search fonts or components",
+        "unavailable": "Winetricks component management is unavailable on this build",
+        "unavailableDetail": "Winetricks support is deferred to a future release (D-03, Phase 34.6) and cannot be listed or installed from this build."
     },
     "zoom-store": "Zoom Store"
 }
