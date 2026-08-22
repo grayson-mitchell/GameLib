@@ -406,10 +406,69 @@ with this section.
   diagnostic; it now pins the diagnostic and T-34.2-52 directly. RED-proved:
   replacing the diagnostic with `void tErr` fails Test 3 and only Test 3.
 
-**Still open from gap cycle 4: 11 findings** (WR-02, WR-05, WR-07, WR-08,
-IN-02 through IN-08). **All eleven are in test/gate code — with WR-03 closed,
-no production file among the original 17 remains open.** All sit in test/gate code except WR-03 (`repairFailure.ts`'s
-bare `catch` blocks), which is the only production file among them. Note also
-that CR-01, the round-4 blocker recorded as re-scoped, is in fact **closed** —
-`src/backend/testUtils/stripSourceComments.ts` exists, strips block comments
-before the line filter, and both originally-defective files import it.
+- **WR-07, WR-08, WR-05 — CLOSED 2026-08-23**, the "gate measures the wrong
+  property" group. Each ran, passed, and did not measure the thing its own prose
+  claimed.
+
+  **WR-07** (`13b394ece`). `jest.setupContainment.ts`'s `REFUSING TO RUN`
+  precondition validated the two `jest.mock` registrations and nothing else,
+  while the module docstring describes the mechanism as TWO halves. Any one of
+  the eight `HOME`/`USERPROFILE`/`APPDATA`/`LOCALAPPDATA`/`XDG_*` assignments
+  could be deleted with every backend suite still green; the only other
+  enforcement was `testContainment.test.ts`'s Block D text gate, which CR-01
+  proved a block comment can satisfy. The block now checks all eight and names
+  the offending keys. Expected values are spelled out a second time rather than
+  captured into shared constants at assignment time, which would have made the
+  comparison tautological. RED-proved: commenting out `XDG_CACHE_HOME` fails the
+  suite at import time naming that key.
+
+  **WR-08** (`2fd9308c2`). `hasBehavioralRustTestModule` ANDed three region-wide
+  facts, none relating the assertion to the loop, so an empty
+  `for _c in LONG_RUNNING_CHANNELS {}` plus an unrelated `assert_eq!` elsewhere
+  satisfied all three. The loop body is now brace-matched and the assertion
+  required inside it.
+
+  **Two corrections to the review, both measured before writing the fix.** Its
+  prescribed regex is holed the same way — the lazy `[\s\S]*?` crosses the
+  loop's closing brace, so it ACCEPTS the reversed arrangement; applying it
+  verbatim would have closed the finding in appearance only. And its literal
+  counter-example carries ONE `timeout_for` reference, so it fails the old
+  predicate on the `>= 2` count rather than on the structural hole — pasted in
+  as-is it would have produced a self-test that passes against the OLD predicate
+  too, a RED proof proving nothing. The self-tests carry a second reference and
+  pin both orderings. RED-proved: with the predicate reverted, exactly the two
+  new negatives fail and nothing else; the positive control (real loop body,
+  multi-line `assert_eq!`, balanced `{channel}` format-string braces) stays green
+  in both directions, so this is a tightening rather than a blanket rejection.
+
+  **WR-05** (`9c8a29b48`). `structuralContainment.test.ts`'s central claim —
+  zero `jest.mock` calls, "its evidentiary value comes entirely from that fact"
+  — was FALSE for four weeks, and the correction was filed as prose thirty lines
+  beneath the claim it falsified. Took the review's preferred option (a): restore
+  the property, do not weaken the claim. The import is gone; both values arrive
+  through `process.env`, with the real home captured by `globalSetup` in the
+  PARENT process where no mock can exist. Test 1's
+  `expect(homedir()).toBe(containmentRoot)` becomes a genuine cross-check of the
+  mechanism's two independent halves, where both sides previously traced back to
+  the same import.
+
+  The prose claim is now **executable**: a new block walks the file's static
+  import graph transitively and fails if any file in it registers a mock. The
+  needle is assembled at runtime (or the gate matches itself), the search is
+  comment-stripped (without it the gate is unpassable, which pressures the next
+  person into bending the check), and an unresolvable specifier THROWS rather
+  than skipping. RED-proved: reintroducing the import fails exactly one test.
+
+  The suite's own RED proof was **re-measured by hand, not restated**: 11 of 22
+  fail with `setupFiles` disabled. One survivor is recorded honestly rather than
+  left — **Test 8 passes with the mechanism disabled**, since
+  `userInfo().homedir === homedir()` holds trivially when neither is redirected.
+  Test 8b carries that weight. Left alone as outside WR-05's scope, and flagged
+  for whoever revisits that block.
+
+**Still open from gap cycle 4: 8 findings** (WR-02, IN-02 through IN-08). **All
+eight are in test/gate code — no production file among the original 17 remains
+open.** Note also that CR-01, the round-4 blocker recorded as re-scoped, is in
+fact **closed** — `src/backend/testUtils/stripSourceComments.ts` exists, strips
+block comments before the line filter, and both originally-defective files
+import it.
