@@ -174,7 +174,11 @@ LATE_CLOSED_FINDING_TOKENS = [
 LATE_DEFERRED_FINDING_TOKENS: list[str] = []
 
 # Gap cycle 1's own late-closure section (appended 2026-08-23, after the cycle-2 one).
-CYCLE1_LATE_HEADING = "### Late closures — gap cycle 1"
+# Carries its date suffix deliberately. Without it this string is a PREFIX of
+# CYCLE1_FINAL_HEADING below, so every `startswith` and every occurrence count
+# written against it would match both sections -- the older section's pins would
+# have gone quietly inert the moment the sequel was appended.
+CYCLE1_LATE_HEADING = "### Late closures — gap cycle 1 (2026-08-23)"
 
 CYCLE1_LATE_CLOSED_FINDING_TOKENS = [
     "gap cycle 1 WR-06",
@@ -187,6 +191,35 @@ CYCLE1_LATE_DEFERRED_FINDING_TOKENS = [
     "gap cycle 1 IN-04",
     # Two fixes attempted 2026-08-23, both failed; see the section for the constraint.
     "gap cycle 1 WR-04",
+]
+
+# Gap cycle 1's FINAL late-closure section (appended 2026-08-23, after the one
+# above). Its heading deliberately EXTENDS the previous one, so every comparison
+# against it below must be exact rather than a `startswith` -- a `startswith`
+# check written against CYCLE1_LATE_HEADING silently matches this section too,
+# which would retire the older section's ordering pin without anyone noticing.
+CYCLE1_FINAL_HEADING = "### Late closures — gap cycle 1, the last two"
+
+# The two findings the section above deferred. They are pinned HERE as closed and
+# still pinned THERE as deferred-at-the-time: the two sections describe different
+# moments and both statements are true of their own moment. The cross-check below
+# is what forbids them from drifting apart.
+CYCLE1_FINAL_CLOSED_FINDING_TOKENS = [
+    "gap cycle 1 WR-04",
+    "gap cycle 1 IN-04",
+]
+
+CYCLE1_FINAL_DEFERRED_FINDING_TOKENS: list[str] = []
+
+# WR-04's fix is load-bearing and evaluation-order-dependent, which is exactly the
+# class of defect jest cannot see. Pin the three artefacts that carry it, so a
+# rewrite that drops any one of them cannot pass this gate quietly.
+CYCLE1_FINAL_REQUIRED_PHRASES = [
+    "processGuards.ts` now has ZERO static imports",
+    "setUnhandledRejectionLogSink()",
+    "src/sidecar/installRejectionGuard.ts",
+    "first import",
+    "pnpm smoke:sidecar",
 ]
 
 PLACEHOLDER_PATTERN = re.compile(r"\bTBD\b|\bTODO\b|\bFIXME\b|\bXXX\b")
@@ -384,6 +417,64 @@ def main() -> None:
             f"its closed-finding region: {', '.join(misplaced_c1)}"
         )
 
+    # 3b. Gap cycle 1's FINAL late-closure section -- the two findings 3a deferred.
+    cycle1_final_section = check_cycle_section(
+        text,
+        CYCLE1_FINAL_HEADING,
+        CYCLE1_FINAL_CLOSED_FINDING_TOKENS,
+        CYCLE1_FINAL_DEFERRED_FINDING_TOKENS,
+        "cycle-1-final-closures",
+    )
+    cycle1_final_closed_region = extract_closed_subsection(
+        cycle1_final_section, "cycle-1-final-closures"
+    )
+    misplaced_c1f = [
+        tok
+        for tok in CYCLE1_FINAL_CLOSED_FINDING_TOKENS
+        if tok not in cycle1_final_closed_region
+    ]
+    if misplaced_c1f:
+        fail(
+            "the gap-cycle-1 FINAL late-closures section names finding(s) somewhere, but "
+            f"NOT in its closed-finding region: {', '.join(misplaced_c1f)} — a finding "
+            "mentioned only in passing prose is not dispositioned."
+        )
+
+    # 3c. Cross-check the two cycle-1 sections against each other. Section 3a records
+    # WR-04 and IN-04 as deferred; 3b records them as closed. That is only coherent
+    # while EVERY token 3a defers is closed by 3b. If a future edit adds a deferral to
+    # 3a without closing it in 3b, or drops one from 3b's closed set, this fires --
+    # which is the drift the two-sections-two-moments arrangement is exposed to.
+    unclosed_carry = [
+        tok
+        for tok in CYCLE1_LATE_DEFERRED_FINDING_TOKENS
+        if tok not in CYCLE1_FINAL_CLOSED_FINDING_TOKENS
+    ]
+    if unclosed_carry:
+        fail(
+            "the gap-cycle-1 late-closures section defers finding(s) that the FINAL "
+            f"section never closes: {', '.join(unclosed_carry)} — either close them "
+            "there or state where they went."
+        )
+
+    # 3d. WR-04's fix is evaluation-order-dependent, the one defect class jest cannot
+    # observe (176 suites stayed green through the regression that broke a real build).
+    # Pin the artefacts that actually carry it, whitespace-normalised so a reflow of the
+    # prose cannot break the gate and a deleted mechanism cannot survive one.
+    cycle1_final_flat = " ".join(cycle1_final_section.split())
+    missing_phrases = [
+        phrase
+        for phrase in CYCLE1_FINAL_REQUIRED_PHRASES
+        if " ".join(phrase.split()) not in cycle1_final_flat
+    ]
+    if missing_phrases:
+        fail(
+            "the gap-cycle-1 FINAL late-closures section no longer names the mechanism "
+            f"that closes WR-04: missing {', '.join(missing_phrases)}. WR-04 was closed "
+            "on the third attempt; the first two shipped or started and failed, so the "
+            "constraint has to stay written down."
+        )
+
     # 4. Ordering: "newest last, history preserved in reading order". The gap-cycle-4 heading
     #    must be the LAST `###` subsection under `## 7. Reconciliation`, AND the gap-cycle-3
     #    heading must still be present and appear BEFORE the gap-cycle-4 heading. This is an
@@ -401,12 +492,38 @@ def main() -> None:
     if not subsection_headings:
         fail('"## 7. Reconciliation" has no "###" subsections at all')
     last_subsection = subsection_headings[-1]
-    if not last_subsection.startswith(CYCLE1_LATE_HEADING):
+    if not last_subsection.startswith(CYCLE1_FINAL_HEADING):
         fail(
-            f'the gap-cycle-1 late-closures section is not the LAST "###" subsection under '
+            f'the gap-cycle-1 FINAL late-closures section is not the LAST "###" subsection under '
             f'"## 7. Reconciliation" — found "{last_subsection}" after it. A later '
             "reconciliation subsection must be appended AFTER this one, not before it "
             "(subsection order is the reading order of the phase's gap-cycle history)."
+        )
+
+    # The ORIGINAL gap-cycle-1 late-closures section keeps its own relative-position
+    # pin. The "last subsection" check above used to target it and now targets its
+    # sequel; retargeting WITHOUT restoring this pin would have retired the older
+    # section's guarantee silently -- the "gate measures the wrong property" failure
+    # this phase keeps finding. CYCLE1_LATE_HEADING carries its date suffix so the two
+    # headings cannot be confused for one another (see its definition).
+    cycle1_late_index = next(
+        (
+            i
+            for i, h in enumerate(subsection_headings)
+            if h.startswith(CYCLE1_LATE_HEADING)
+        ),
+        None,
+    )
+    if cycle1_late_index is None:
+        fail(
+            f'the original "{CYCLE1_LATE_HEADING}" subsection is gone from '
+            '"## 7. Reconciliation" — it records how eleven carried findings were '
+            "dispositioned against the live tree and is not superseded by its sequel."
+        )
+    if cycle1_late_index >= len(subsection_headings) - 1:
+        fail(
+            f'"{CYCLE1_LATE_HEADING}" must come BEFORE "{CYCLE1_FINAL_HEADING}" — '
+            "subsection order is reading order for this phase's gap-cycle history."
         )
 
     # Cycle 5 keeps its own relative-position pin: it must still be present, and must sit BEFORE

@@ -2761,13 +2761,21 @@ below so each correction is auditable rather than silent):
 open**, `34.2-VALIDATION.md` `status: complete`, ROADMAP **30/30 plans with zero unchecked
 boxes**, and all five code reviews carrying a disposition across **80 findings**. **Not all 80
 are closed** — quick task `260823-d7j` (`34bdb4f12`) declared a per-file `disposition:` on each
-cycle review, and cycles 1 and 2 read `partial`: cycle 1's WR-01..07 / IN-01..04 were carried
-into later cycles but never dispositioned AS A SET, and cycle 2's **IN-04 is unaccounted**.
-Cycles 3 and 4 read `closed`. That residue sits in the gap cycles, not in 34.2's deliverable,
-but this paragraph previously claimed 0 open across all 80 and that was wrong.
-`34.2-HUMAN-UAT.md` is `status: diagnosed` (testing finished, its one failure root-caused and
-owned by Phase 35) and `34.2-REVIEW-FIX.md` stays `status: partial`, correctly — see the last
-three DISCHARGED bullets for why neither is an outstanding item.
+cycle review. ~~cycles 1 and 2 read `partial`: cycle 1's WR-01..07 / IN-01..04 were carried
+into later cycles but never dispositioned AS A SET, and cycle 2's **IN-04 is unaccounted**.~~
+**SUPERSEDED 2026-08-23 — all four cycle reviews now read `disposition: closed`, and all 80
+findings are closed or accepted with zero open.** Cycle 2 closed the same day (IN-04, IN-03,
+IN-06). Cycle 1 closed last, in two steps: nine of its eleven carried findings were
+dispositioned against the LIVE TREE (five already closed and merely unrecorded, one accepted
+by design at `main.rs:205`, three fixed), and the final two — **WR-04** and **IN-04** — closed
+in `a939901c7` and `6d13d9302`. WR-04 took three attempts: the first shipped and broke a real
+build (reverted in `727be5dbb`), the second reordered the handler graph and was backed out,
+and the third paid the constraint both had identified — `processGuards.ts` now has ZERO static
+imports and late-binds its logger, which is what makes the review's own prescribed fix safe.
+Cycles 3 and 4 were already `closed`.
+`34.2-HUMAN-UAT.md` is `status: parked` and `34.2-REVIEW.md` `status: parked` (nothing
+actionable remains in either), and `34.2-REVIEW-FIX.md` is `status: all_fixed` with
+`findings_open: 0`.
 
 DISCHARGED, do not redo:
 
