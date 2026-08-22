@@ -146,11 +146,54 @@ Followed the plan's D-09/D-11/D-16/D-27 decisions exactly as locked in `37-CONTE
 **Total deviations:** 2 auto-fixed test breakages (Rule 1/3, both files outside `files_modified`, both directly caused by this plan's own type/render changes) + 1 git-safety patch-split (no code change, procedural only).
 **Impact on plan:** Necessary for correctness (the two test fixes) and for concurrent-session safety (the patch split). No scope creep beyond files directly downstream of this plan's own type/render changes.
 
-## Task 4 — NOT EXECUTED (blocking human-verify checkpoint)
+## Task 4 — LIVE GATE RUN 2026-08-22 by the human operator: 7 PASS, 1 DEFECT FOUND (fixed), 2 outstanding
+
+Run on the operator's own machine against Dead Island (appId 91310), confirmed installed
+(`appmanifest_91310.acf` present).
+
+| # | Check | Result | Observed |
+|---|-------|--------|----------|
+| 1 | Card badge reads "No store page" | **PASS** | — |
+| 2 | Baseline header count, no filters | **PASS** | **384** |
+| 3 | "No store page" row present in More filters | **PASS** | — |
+| 4 | Neutral default: no chip on a virgin library (D-11) | **PASS** | count 384, no chip |
+| 5 | "only" state — chip "No store page only", grid filtered | **PASS** | — |
+| 6 | "hide" state — Dead Island gone, count = baseline − delisted | **PASS** | **375 of 384** |
+| 7 | Chip dismiss returns to baseline | **PARTIAL → FIXED** | dismissing the chip directly worked; **"Clear all" did NOT clear it** |
+| 8 | Console Mode renders Dead Island at default filters (D-13) | **NOT YET RUN** | — |
+| 9 | Card shows normal install/launch controls | **NOT YET RUN** | — |
+
+**Step 6 is the strongest evidence in this gate.** 384 − 375 = **exactly 9** — matching the nine
+known delisted titles precisely. The facet filters the right set, not merely *a* set.
+
+### Step 7 defect — found by the gate, fixed in `6cada93a7`
+
+"Clear all" left the "Hiding no store page" chip on screen. `clearAllFilters`
+(`Library/index.tsx:980`) is a **THIRD mirror** of the More-filters kind list, alongside
+`MORE_FILTER_KINDS` and `describeActiveFilters`. This plan updated the first two — which its own
+`<success_criteria>` named — and missed the third, which no artifact named.
+
+**Why no test caught it:** every existing `clearAllFilters` test mocks the function and asserts it
+was *called*. None exercises its body, which is defined inline in a ~1100-line component and is not
+independently importable. This is the callsite-vs-behaviour gap in its pure form.
+
+Fix adds `handleNoStorePage('off')` plus
+`src/frontend/screens/Library/__tests__/clearAllFiltersCoverage.test.ts` — a source-level gate keyed
+off `MORE_FILTER_KINDS` itself, so adding a seventh kind without wiring Clear all trips it
+automatically. **Proven RED before the fix:** exactly one failure, on `noStorePage`, with the five
+pre-existing kinds passing, so the gate discriminates rather than being trivially red.
+
+### Still outstanding before REQ-37-02 closes
+
+- Steps 8 and 9 were not reported.
+- **Step 7 needs a re-test** — the fix landed after the operator's run, so the passing state of
+  "Clear all" has not itself been observed live.
+
+## Original checkpoint framing (superseded by the run above)
 
 Task 4 is a `checkpoint:human-verify` task gated `blocking`. Per this session's explicit instructions, it was not attempted or self-certified. See the CHECKPOINT REACHED section in the executor's final response for the exact steps a human operator must run, and what to record.
 
-**Do not treat REQ-37-02 as closed.** The plan's own `<verification>` section states Task 4's live gate is the only thing that closes it.
+**REQ-37-02 remains OPEN.** 7 of 9 checks passed, one found a real defect now fixed but not re-observed, and two were not run.
 
 ## Issues Encountered
 
