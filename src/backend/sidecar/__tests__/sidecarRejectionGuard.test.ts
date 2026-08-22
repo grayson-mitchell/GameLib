@@ -378,6 +378,37 @@ function loadFreshProcessGuards(): {
   return harness
 }
 
+/**
+ * IN-06 (Phase 34.2 gap cycle 2): this suite emitted
+ * `MaxListenersExceededWarning: ... 11 exit listeners added to [process]`.
+ *
+ * THE REVIEW'S DIAGNOSIS IS WRONG, and both of its proposed fixes follow from it.
+ * It says "each `init()` attaches process-level listeners that are never removed"
+ * and offers a module-scope idempotency flag in `bootstrap.init()` as the
+ * principled option. `bootstrap.ts` registers NO process listeners at all
+ * (`grep "process.on(" src/backend/sidecar/bootstrap.ts` is empty), so that fix
+ * is not merely wrong, it is impossible.
+ *
+ * Traced with `--trace-warnings`, the real source is third-party and module-scope:
+ * `node_modules/tmp/lib/tmp.js:732` runs `process.addListener(EXIT,
+ * _garbageCollector)` unconditionally at load, and `backend/constants/paths.ts:11`
+ * imports `tmp`. This file calls `jest.isolateModules()` nine times; every fresh
+ * registry re-executes `paths.ts`, re-loads `tmp`, and adds one more listener to
+ * the one real `process` object. Nine plus the ambient loads is the eleven.
+ *
+ * An idempotency flag could not fix it even in our own code: such a flag would
+ * live in the module registry `isolateModules` has just replaced.
+ *
+ * So the count is a bounded, understood artifact of module isolation, not a leak.
+ * The review's other option, `process.setMaxListeners(0)`, disables leak detection
+ * outright and forever. A specific ceiling keeps the detector armed for a genuine
+ * runaway while accommodating the known bound -- and the test at the end of this
+ * file asserts the bound actually holds, so this is a measured limit rather than
+ * a silenced alarm.
+ */
+const EXIT_LISTENER_CEILING = 20
+process.setMaxListeners(EXIT_LISTENER_CEILING)
+
 describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2 / CR-02 / T-34.2-38..41)', () => {
   let originalCi: string | undefined
 
@@ -432,6 +463,22 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
 
   beforeEach(() => {
     mockTestHomeSuffix += 1
+  })
+
+  // IN-03 (Phase 34.2 gap cycle 2): `setupIsolatedBootstrapHarness()` and
+  // `loadFreshProcessGuards()` each create a `jest.spyOn(loggerModule, 'logWarning')`
+  // and neither restored it. Plan 34.2-18 had already narrowed
+  // `loadConstantsPaths()` specifically to avoid "leaving an unrestored
+  // `jest.spyOn`", so the stated rationale was only half-applied.
+  //
+  // The restore CANNOT go inside those helpers: both return the spy as
+  // `logWarningMock` and their callers assert on it, so restoring before the test
+  // body runs would break every caller. It belongs here, after assertions.
+  //
+  // `resetMocks: true` in `src/backend/jest.config.js` does not cover this -- it
+  // clears a spy's calls and implementation but leaves it INSTALLED.
+  afterEach(() => {
+    jest.restoreAllMocks()
   })
 
   describe('Group 1: survival proof -- a rejecting downloadAntiCheatData cannot kill the sidecar', () => {
@@ -638,6 +685,62 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       expect(guardCallIndex).toBeGreaterThan(-1)
       expect(initCallIndex).toBeGreaterThan(-1)
       expect(guardCallIndex).toBeLessThan(initCallIndex)
+    })
+  })
+
+  describe('Group 4: gap-cycle-2 hygiene guards (IN-03, IN-06)', () => {
+    // Declared LAST on purpose. The IN-03 proof spans two tests: the first
+    // installs a spy and stashes the module object it was installed on, the
+    // second asserts the `afterEach` above restored it. A single-test assertion
+    // could not observe a hook that runs between tests.
+    let stashedLoggerModule: { logWarning: unknown } | null = null
+
+    it('IN-03 (setup) a helper-created logWarning spy is installed during its own test', () => {
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const loggerModule = require('backend/logger')
+        jest.spyOn(loggerModule, 'logWarning')
+        stashedLoggerModule = loggerModule
+      })
+
+      // Non-vacuity: if this ever fails, the assertion below proves nothing,
+      // because it would be asserting "not a mock" about something that was
+      // never mocked.
+      expect(stashedLoggerModule).not.toBeNull()
+      expect(jest.isMockFunction(stashedLoggerModule!.logWarning)).toBe(true)
+    })
+
+    it('IN-03 the spy is restored by the time the next test runs', () => {
+      // The property the fix delivers. Goes RED if the describe-level
+      // `afterEach(jest.restoreAllMocks)` is removed -- verified by removing it.
+      //
+      // Note this asserts against the module object captured INSIDE
+      // `isolateModules`. Asserting on a top-level `require('backend/logger')`
+      // instead would pass vacuously: that is a different module instance, in a
+      // different registry, which was never spied on.
+      expect(stashedLoggerModule).not.toBeNull()
+      expect(jest.isMockFunction(stashedLoggerModule!.logWarning)).toBe(false)
+    })
+
+    it('IN-06 the process exit-listener count stays inside the declared ceiling', () => {
+      // Makes `setMaxListeners` a MEASURED bound rather than a silenced alarm:
+      // if a future change starts adding exit listeners in earnest, this fails
+      // instead of the warning simply being suppressed.
+      //
+      // Uses `<`, not `<=`: landing exactly on the ceiling means the next
+      // isolateModules call breaches it, which is a warning worth getting early.
+      // Measured 2026-08-23: 12 at the end of a full run of this file, against a
+      // ceiling of 20 -- eight further `isolateModules` calls of headroom.
+      //
+      // KNOWN LIMITATION, found while RED-proving this test rather than assumed:
+      // it is VACUOUS under `-t` filtering. The listeners are added by the nine
+      // `jest.isolateModules()` calls in the other tests, so `jest <file> -t
+      // "IN-06"` runs this assertion against a near-empty count and passes even
+      // with the ceiling set to 3. It only measures anything on a full run of
+      // this file, which is how CI runs it. Proven both ways: ceiling 3 with a
+      // filter passes (vacuous), ceiling 3 on the full file fails with
+      // "Expected: < 3, Received: 12".
+      expect(process.listenerCount('exit')).toBeLessThan(EXIT_LISTENER_CEILING)
     })
   })
 })

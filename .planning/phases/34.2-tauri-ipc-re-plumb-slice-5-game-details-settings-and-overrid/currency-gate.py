@@ -167,6 +167,8 @@ LATE_RECONCILIATION_HEADING = "### Late closures"
 
 LATE_CLOSED_FINDING_TOKENS = [
     "gap cycle 2 IN-04",
+    "gap cycle 2 IN-03",
+    "gap cycle 2 IN-06",
 ]
 
 LATE_DEFERRED_FINDING_TOKENS: list[str] = []
