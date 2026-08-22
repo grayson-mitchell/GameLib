@@ -117,6 +117,59 @@ function assertHttps<T>(desc: IndexDescriptor<T>): void {
 }
 
 /**
+ * WR-07 (34.2-REVIEW.md round 1): how long a failed refresh suppresses further
+ * network attempts for the SAME descriptor.
+ *
+ * `loadIndex` returns early only when the cache is present AND within TTL. A
+ * failure deliberately does NOT refresh `fetchedAt` — that field is the
+ * loader's honest record of the last SUCCESSFUL fetch, and faking it forward
+ * would make a stale payload look fresh for a full TTL. The consequence,
+ * before this back-off, was that a stale cache plus a failing network sent
+ * every single caller back to the network. `buildCrossoverRatingMap` calls
+ * this once per game and `getCrossoverIndex` is exempt from the 60s invoke
+ * bound (D-10), so that compounded into (axios 10s timeout × N games), served
+ * serially, with no cancellation path and no diagnostic.
+ *
+ * A DELAY, not a give-up: past the window the next call retries normally, so
+ * a transient outage still self-heals. Kept short for that reason — the point
+ * is to collapse a burst, not to ration retries.
+ */
+export const FAILURE_BACKOFF_MINUTES = 5
+
+/**
+ * Last failed refresh per `descriptor.name`. Keyed by descriptor rather than
+ * module-global because D-19's premise is that a second index (the deferred
+ * mac-arch-overrides one) shares this loader — one index being down must not
+ * silence another. Process-local by design: a restart SHOULD get a fresh
+ * attempt.
+ */
+const lastFailureAt = new Map<string, number>()
+
+/**
+ * Clears the WR-07 back-off. A TEST SEAM, and named as one: the back-off is
+ * deliberately process-wide, so a suite that drives `loadIndex` through a
+ * failure leaks the suppression into every later test sharing that
+ * `descriptor.name`. That is correct production behaviour and a hazard in a
+ * test file, so tests reset it explicitly rather than by guessing at unique
+ * names. Not called from production code.
+ */
+export function resetIndexFailureBackoff(): void {
+  lastFailureAt.clear()
+}
+
+function recordFailure(desc: IndexDescriptor<unknown>): void {
+  lastFailureAt.set(desc.name, Date.now())
+}
+
+function withinFailureBackoff(desc: IndexDescriptor<unknown>): boolean {
+  const failedAt = lastFailureAt.get(desc.name)
+  if (failedAt === undefined) {
+    return false
+  }
+  return (Date.now() - failedAt) / 1000 / 60 <= FAILURE_BACKOFF_MINUTES
+}
+
+/**
  * D-19 generic fetch → gunzip → validate → keep-last-good layer. On ANY
  * failure (schema rejection, network error, gunzip/JSON error, oversized
  * payload) it returns the last-good cached value, falling back to the
@@ -140,6 +193,13 @@ export async function loadIndex<T>(
     }
   }
 
+  // WR-07: the cache is stale (or absent) and a refresh failed recently — serve
+  // the degraded value without re-attempting. Identical return shape to both
+  // failure branches below, so the caller sees no behavioural difference.
+  if (withinFailureBackoff(desc)) {
+    return cached?.data ?? persistBundledFallback(desc)
+  }
+
   try {
     const { data } = await axiosClient.get<ArrayBuffer>(desc.url, {
       responseType: 'arraybuffer',
@@ -154,9 +214,11 @@ export async function loadIndex<T>(
         ['Rejected index payload', desc.name, parsed.error.issues],
         LogPrefix.Backend
       )
+      recordFailure(desc)
       return cached?.data ?? persistBundledFallback(desc)
     }
 
+    lastFailureAt.delete(desc.name)
     crossoverIndexStore.set(desc.name, {
       data: parsed.data,
       fetchedAt: Date.now()
@@ -167,6 +229,7 @@ export async function loadIndex<T>(
       ['Index refresh failed, keeping last good', desc.name, error],
       LogPrefix.Backend
     )
+    recordFailure(desc)
     return cached?.data ?? persistBundledFallback(desc)
   }
 }

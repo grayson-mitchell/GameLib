@@ -24,7 +24,7 @@ export const crossoverIndexDescriptor: IndexDescriptor<CrossoverIndex> = {
 
 /** The minimal shape this module needs from a `GameInfo` — narrowed so
  * callers (and tests) don't have to construct a full `GameInfo`. */
-type IndexLookupInput = Pick<GameInfo, 'runner' | 'app_name' | 'title'>
+export type IndexLookupInput = Pick<GameInfo, 'runner' | 'app_name' | 'title'>
 
 interface IndexMaps {
   bySteamId: Map<string, number>
@@ -125,6 +125,47 @@ export async function getCodeweaversFromIndex(
       LogPrefix.Backend
     )
     return null
+  }
+}
+
+/**
+ * WR-07 (34.2-REVIEW.md round 1): batch entry point for callers that resolve
+ * MANY games in one pass. Loads the index once and returns a resolver closed
+ * over the built maps.
+ *
+ * `getCodeweaversFromIndex` is the right shape for a single lookup and the
+ * wrong shape for a loop: it calls `loadIndex` per invocation, and `loadIndex`
+ * reads the whole payload back out of `crossoverIndexStore` every time
+ * (electron-store's `get` re-reads and re-parses the backing file on each
+ * access — measured at ~1.4ms per call against a 239KB / 2421-entry real
+ * store). Per game that is a linear cost for a value that cannot change
+ * mid-pass, and on a stale cache it was a network attempt per game.
+ * `buildMaps` was already memoized on `generatedAt`, so map construction was
+ * never the cost — the repeated LOAD was.
+ *
+ * Resolution is identical to `getCodeweaversFromIndex`'s: the same D-02-gated
+ * `resolveRating`. A total load failure yields a resolver returning null for
+ * everything, matching that function's null-on-any-miss contract, so callers
+ * cannot tell a failed load from a miss — deliberate, and the same
+ * degradation D-09 already specifies.
+ */
+export async function buildIndexResolver(): Promise<
+  (gameInfo: IndexLookupInput) => number | null
+> {
+  try {
+    const index = await loadIndex(crossoverIndexDescriptor)
+    if (!index) {
+      return () => null
+    }
+
+    const maps = buildMaps(index)
+    return (gameInfo: IndexLookupInput) => resolveRating(gameInfo, maps)
+  } catch (error) {
+    logError(
+      ['Was not able to load the CrossOver index for batch resolution', error],
+      LogPrefix.Backend
+    )
+    return () => null
   }
 }
 

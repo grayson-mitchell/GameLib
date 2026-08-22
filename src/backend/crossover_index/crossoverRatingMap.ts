@@ -18,7 +18,11 @@
 import { isMac } from 'backend/constants/environment'
 import { libraryManagerMap } from 'backend/storeManagers'
 
-import { isCrossoverIndexEligible, getCodeweaversFromIndex } from './index'
+import {
+  isCrossoverIndexEligible,
+  buildIndexResolver,
+  IndexLookupInput
+} from './index'
 
 /**
  * D-11/D-16: resolves every library title's CrossOver rating ONCE, into a
@@ -45,6 +49,19 @@ export async function buildCrossoverRatingMap(): Promise<
     return map
   }
 
+  // WR-07: the index is loaded ONCE for the whole pass, not once per game.
+  // It cannot change mid-pass, and the previous per-game
+  // `getCodeweaversFromIndex` call meant a full store read per title — and,
+  // on a stale cache, a network attempt per title on a channel exempt from
+  // the 60s invoke bound (D-10). Gated by `ratingMapIndexLoads.test.ts`.
+  //
+  // LAZY-once rather than eager-once: a library with nothing eligible (every
+  // title non-Steam while the D-02 gate is closed) must still not consult the
+  // index at all, which `ratingMap.test.ts` asserts explicitly. Hoisting the
+  // load above the loop unconditionally would have quietly broken that.
+  let resolveRatingFor: ((gameInfo: IndexLookupInput) => number | null) | null =
+    null
+
   for (const manager of Object.values(libraryManagerMap)) {
     for (const gameInfo of manager.getListOfGames()) {
       if (!isCrossoverIndexEligible(gameInfo)) {
@@ -52,8 +69,8 @@ export async function buildCrossoverRatingMap(): Promise<
         continue
       }
 
-      const result = await getCodeweaversFromIndex(gameInfo)
-      map[gameInfo.app_name] = result?.macRating ?? null
+      resolveRatingFor ??= await buildIndexResolver()
+      map[gameInfo.app_name] = resolveRatingFor(gameInfo)
     }
   }
 

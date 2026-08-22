@@ -42,13 +42,19 @@ jest.mock('backend/storeManagers', () => ({
 // each independently test-controlled here; this file only asserts the
 // RESOLVER's own three-state contract, not 19-05's lookup logic (already
 // covered by index.test.ts).
+// WR-07: the boundary moved. `buildCrossoverRatingMap` no longer calls
+// `getCodeweaversFromIndex` per game; it obtains a resolver ONCE (lazily, on
+// the first eligible game) and calls that. Two mocks so both halves stay
+// separately assertable: whether the index was consulted AT ALL
+// (`buildIndexResolverMock`) and what each game resolved to
+// (`resolveRatingForMock`).
 const isCrossoverIndexEligibleMock = jest.fn<boolean, [GameInfo]>()
-const getCodeweaversFromIndexMock = jest.fn()
+const resolveRatingForMock = jest.fn<number | null, [GameInfo]>()
+const buildIndexResolverMock = jest.fn()
 jest.mock('../index', () => ({
   isCrossoverIndexEligible: (...args: [GameInfo]) =>
     isCrossoverIndexEligibleMock(...args),
-  getCodeweaversFromIndex: (...args: [GameInfo]) =>
-    getCodeweaversFromIndexMock(...args)
+  buildIndexResolver: (...args: []) => buildIndexResolverMock(...args)
 }))
 
 import { buildCrossoverRatingMap } from '../crossoverRatingMap'
@@ -73,7 +79,9 @@ describe('buildCrossoverRatingMap', () => {
       mock.mockReturnValue([])
     )
     isCrossoverIndexEligibleMock.mockReset()
-    getCodeweaversFromIndexMock.mockReset()
+    resolveRatingForMock.mockReset()
+    buildIndexResolverMock.mockReset()
+    buildIndexResolverMock.mockResolvedValue(resolveRatingForMock)
     envMock.isMac = true
     envMock.isWindows = false
     envMock.isLinux = false
@@ -90,7 +98,10 @@ describe('buildCrossoverRatingMap', () => {
     // toEqual alone would not catch a resolver that emits `null` where it
     // must omit the key entirely — assert absence explicitly (D-16).
     expect(Object.prototype.hasOwnProperty.call(map, 'gog-1')).toBe(false)
-    expect(getCodeweaversFromIndexMock).not.toHaveBeenCalled()
+    expect(resolveRatingForMock).not.toHaveBeenCalled()
+    // Stronger than before: with nothing eligible the index is never even
+    // LOADED, which the WR-07 lazy-once hoist has to preserve.
+    expect(buildIndexResolverMock).not.toHaveBeenCalled()
   })
 
   it('marks an eligible Steam game with no index record as PRESENT null (looked up, absent)', async () => {
@@ -98,7 +109,7 @@ describe('buildCrossoverRatingMap', () => {
       makeGame({ app_name: '440', runner: 'steam', title: 'Team Fortress 2' })
     ])
     isCrossoverIndexEligibleMock.mockReturnValue(true)
-    getCodeweaversFromIndexMock.mockResolvedValue(null)
+    resolveRatingForMock.mockReturnValue(null)
 
     const map = await buildCrossoverRatingMap()
 
@@ -111,32 +122,37 @@ describe('buildCrossoverRatingMap', () => {
       makeGame({ app_name: '620', runner: 'steam', title: 'Portal 2' })
     ])
     isCrossoverIndexEligibleMock.mockReturnValue(true)
-    getCodeweaversFromIndexMock.mockResolvedValue({
-      macRating: 5,
-      linuxRating: null,
-      slug: 'portal-2'
-    })
+    resolveRatingForMock.mockReturnValue(5)
 
     const map = await buildCrossoverRatingMap()
 
     expect(map['620']).toBe(5)
   })
 
-  it('treats a matched record with a null macRating as PRESENT null too', async () => {
+  // WR-07 note: this test used to feed a record with `macRating: null` and
+  // assert the `?? null` coalescing. That distinction no longer exists at this
+  // boundary — `buildIndexResolver` hands back `number | null` directly, and
+  // the record-shape logic it exercised now lives in `resolveRating`, covered
+  // by `index.test.ts`. Rather than leave a duplicate of the test above, it
+  // now pins the property that replaced it: the resolver's value is used
+  // VERBATIM per game, mixed values in a single pass, resolver built once.
+  it('uses the resolver value verbatim per game, mixing numbers and nulls in one pass', async () => {
     getListOfGamesMocks.steam.mockReturnValue([
-      makeGame({ app_name: '999', runner: 'steam', title: 'Some Game' })
+      makeGame({ app_name: 'a', runner: 'steam', title: 'A' }),
+      makeGame({ app_name: 'b', runner: 'steam', title: 'B' }),
+      makeGame({ app_name: 'c', runner: 'steam', title: 'C' })
     ])
     isCrossoverIndexEligibleMock.mockReturnValue(true)
-    getCodeweaversFromIndexMock.mockResolvedValue({
-      macRating: null,
-      linuxRating: 5,
-      slug: 'some-game'
-    })
+    resolveRatingForMock
+      .mockReturnValueOnce(5)
+      .mockReturnValueOnce(null)
+      .mockReturnValueOnce(1)
 
     const map = await buildCrossoverRatingMap()
 
-    expect(Object.prototype.hasOwnProperty.call(map, '999')).toBe(true)
-    expect(map['999']).toBeNull()
+    expect(map).toEqual({ a: 5, b: null, c: 1 })
+    expect(resolveRatingForMock).toHaveBeenCalledTimes(3)
+    expect(buildIndexResolverMock).toHaveBeenCalledTimes(1)
   })
 
   it('is empty on non-macOS regardless of eligibility, and never even consults the index', async () => {
@@ -146,17 +162,14 @@ describe('buildCrossoverRatingMap', () => {
       makeGame({ app_name: '440', runner: 'steam' })
     ])
     isCrossoverIndexEligibleMock.mockReturnValue(true)
-    getCodeweaversFromIndexMock.mockResolvedValue({
-      macRating: 5,
-      linuxRating: null,
-      slug: 'x'
-    })
+    resolveRatingForMock.mockReturnValue(5)
 
     const map = await buildCrossoverRatingMap()
 
     expect(map).toEqual({})
     expect(isCrossoverIndexEligibleMock).not.toHaveBeenCalled()
-    expect(getCodeweaversFromIndexMock).not.toHaveBeenCalled()
+    expect(resolveRatingForMock).not.toHaveBeenCalled()
+    expect(buildIndexResolverMock).not.toHaveBeenCalled()
   })
 
   it('iterates every runner in libraryManagerMap, keyed by app_name', async () => {
@@ -171,7 +184,7 @@ describe('buildCrossoverRatingMap', () => {
       })
     ])
     isCrossoverIndexEligibleMock.mockReturnValue(true)
-    getCodeweaversFromIndexMock.mockResolvedValue(null)
+    resolveRatingForMock.mockReturnValue(null)
 
     const map = await buildCrossoverRatingMap()
 

@@ -3,7 +3,12 @@ import { readFileSync } from 'graceful-fs'
 
 import { axiosClient } from 'backend/utils'
 import { GameInfo } from 'common/types'
-import { loadIndex, IndexDescriptor } from '../fetcher'
+import {
+  loadIndex,
+  IndexDescriptor,
+  FAILURE_BACKOFF_MINUTES,
+  resetIndexFailureBackoff
+} from '../fetcher'
 import { crossoverIndexStore } from '../electronStore'
 import { crossoverIndexSchema, CrossoverIndex } from '../schema'
 import { crossoverIndexHas, crossoverIndexDescriptor } from '../index'
@@ -49,8 +54,11 @@ const descriptor: IndexDescriptor<CrossoverIndex> = {
 
 describe('loadIndex', () => {
   beforeEach(() => {
-    crossoverIndexStore.clear()
+    // restoreAllMocks FIRST: a leaked Date.now spy would otherwise poison the
+    // store writes that clear() performs.
     jest.restoreAllMocks()
+    crossoverIndexStore.clear()
+    resetIndexFailureBackoff()
     mockedReadFileSync.mockReset()
   })
 
@@ -149,6 +157,98 @@ describe('loadIndex', () => {
       fetchedAt: number
     }
     expect(stored.data).toEqual(bundledData)
+  })
+
+  // ── WR-07 (34.2-REVIEW.md round 1): failure back-off ──────────────────
+  //
+  // `loadIndex` short-circuits only when the cache is present AND within TTL.
+  // On a fetch failure it returns `cached.data` WITHOUT refreshing `fetchedAt`,
+  // so a stale cache plus a failing network made every caller re-attempt the
+  // network. `buildCrossoverRatingMap` calls this per game, and
+  // `getCrossoverIndex` is exempt from the 60s invoke bound (D-10), so that
+  // compounded into (axios 10s timeout x N games) with no cancel path.
+  //
+  // Each test below uses its OWN descriptor `name` so the module-level
+  // back-off map cannot leak between tests -- no reset seam is needed, and
+  // nothing here depends on test ordering.
+
+  test('WR-07: a stale cache plus a failing network makes exactly ONE network attempt, not one per call', async () => {
+    const staleDescriptor: IndexDescriptor<CrossoverIndex> = {
+      ...descriptor,
+      name: 'wr07-stale-repeat'
+    }
+    const lastGood = makeValidIndex()
+    crossoverIndexStore.set(staleDescriptor.name, {
+      data: lastGood,
+      fetchedAt: Date.now() - 1000 * 60 * 60 * 25 // stale, past TTL
+    })
+    const getSpy = jest
+      .spyOn(axiosClient, 'get')
+      .mockRejectedValue(new Error('network down'))
+
+    for (let i = 0; i < 5; i++) {
+      const result = await loadIndex(staleDescriptor)
+      // Degradation is unchanged: every call still serves last-good data.
+      expect(result).toEqual(lastGood)
+    }
+
+    expect(getSpy).toHaveBeenCalledTimes(1)
+  })
+
+  test('WR-07: the back-off is a DELAY, not a permanent give-up -- the network is retried once the window elapses', async () => {
+    const staleDescriptor: IndexDescriptor<CrossoverIndex> = {
+      ...descriptor,
+      name: 'wr07-window-elapses'
+    }
+    crossoverIndexStore.set(staleDescriptor.name, {
+      data: makeValidIndex(),
+      fetchedAt: Date.now() - 1000 * 60 * 60 * 25
+    })
+    const getSpy = jest
+      .spyOn(axiosClient, 'get')
+      .mockRejectedValue(new Error('network down'))
+
+    const realNow = Date.now()
+    await loadIndex(staleDescriptor)
+    expect(getSpy).toHaveBeenCalledTimes(1)
+
+    // Suppressed while inside the window...
+    await loadIndex(staleDescriptor)
+    expect(getSpy).toHaveBeenCalledTimes(1)
+
+    // ...and retried once past it. Anti-vacuity for the test above: without
+    // this, a back-off that NEVER retried would also pass.
+    jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(realNow + FAILURE_BACKOFF_MINUTES * 60 * 1000 + 1000)
+    await loadIndex(staleDescriptor)
+    expect(getSpy).toHaveBeenCalledTimes(2)
+  })
+
+  test('WR-07: the back-off is PER DESCRIPTOR -- a failure on one index does not suppress another (D-19)', async () => {
+    const failing: IndexDescriptor<CrossoverIndex> = {
+      ...descriptor,
+      name: 'wr07-per-descriptor-a'
+    }
+    const healthy: IndexDescriptor<CrossoverIndex> = {
+      ...descriptor,
+      name: 'wr07-per-descriptor-b'
+    }
+    crossoverIndexStore.set(failing.name, {
+      data: makeValidIndex(),
+      fetchedAt: Date.now() - 1000 * 60 * 60 * 25
+    })
+    const freshData = makeValidIndex()
+    const getSpy = jest
+      .spyOn(axiosClient, 'get')
+      .mockRejectedValueOnce(new Error('network down'))
+      .mockResolvedValueOnce({ data: gzippedJson(freshData) })
+
+    await loadIndex(failing)
+    const result = await loadIndex(healthy)
+
+    expect(result).toEqual(freshData)
+    expect(getSpy).toHaveBeenCalledTimes(2)
   })
 
   test('WR-04: an http:// (non-https) descriptor URL is refused before any network call is made', async () => {

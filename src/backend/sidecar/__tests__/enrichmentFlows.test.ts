@@ -45,6 +45,7 @@
  *     be flipped per test for the D-10/D-16 crossover-map states and the
  *     anticheat Windows rider.
  *   - `backend/crossover_index/index` (`isCrossoverIndexEligible`,
+ *     `buildIndexResolver` — WR-07 replaced the per-game
  *     `getCodeweaversFromIndex`) — the SAME boundary `ratingMap.test.ts`
  *     itself uses: this suite asserts `crossoverRatingMap.ts`'s own
  *     three-state RESOLVER contract, not `index.ts`'s internal name-matching
@@ -251,13 +252,17 @@ jest.mock('backend/storeManagers', () => {
 // ── backend/crossover_index/index mock — the SAME boundary ratingMap.test.ts
 // itself uses: this suite asserts crossoverRatingMap.ts's own three-state
 // resolver, not index.ts's internal name-matching algorithm ─────────────────
+// WR-07: the boundary moved from a per-game `getCodeweaversFromIndex` to a
+// once-per-pass `buildIndexResolver` returning a sync resolver. Two mocks so
+// "was the index consulted AT ALL" stays separately assertable from "what did
+// each game resolve to" -- the non-macOS test below depends on the former.
 const mockIsCrossoverIndexEligible = jest.fn()
-const mockGetCodeweaversFromIndex = jest.fn()
+const mockResolveRatingFor = jest.fn()
+const mockBuildIndexResolver = jest.fn()
 jest.mock('../../crossover_index/index', () => ({
   isCrossoverIndexEligible: (...args: unknown[]) =>
     mockIsCrossoverIndexEligible(...args),
-  getCodeweaversFromIndex: (...args: unknown[]) =>
-    mockGetCodeweaversFromIndex(...args)
+  buildIndexResolver: (...args: unknown[]) => mockBuildIndexResolver(...args)
 }))
 
 // ── backend/dialog/dialog / backend/utils / legendary/user / aborthandler —
@@ -479,7 +484,12 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     mockAppSettings({ language: 'en' })
     mockCheapsharkGet.mockReset()
     mockIsCrossoverIndexEligible.mockReset()
-    mockGetCodeweaversFromIndex.mockReset()
+    mockResolveRatingFor.mockReset()
+    // Re-armed after mockReset per the WR-08 gotcha documented below:
+    // `resetMocks: true` strips implementations, so a factory default would
+    // not survive to the test body.
+    mockBuildIndexResolver.mockReset()
+    mockBuildIndexResolver.mockResolvedValue(mockResolveRatingFor)
 
     // WR-08 GOTCHA (this project's shared jest.config.js sets
     // `resetMocks: true`, which strips even a jest.mock FACTORY's own
@@ -743,16 +753,9 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       mockIsCrossoverIndexEligible.mockImplementation(
         (gameInfo: GameInfo) => gameInfo.app_name !== 'ineligible-1'
       )
-      mockGetCodeweaversFromIndex.mockImplementation((gameInfo: GameInfo) => {
-        if (gameInfo.app_name === 'matched-1') {
-          return Promise.resolve({
-            macRating: 5,
-            linuxRating: null,
-            slug: 'matched-1'
-          })
-        }
-        return Promise.resolve(null)
-      })
+      mockResolveRatingFor.mockImplementation((gameInfo: GameInfo) =>
+        gameInfo.app_name === 'matched-1' ? 5 : null
+      )
 
       const { input, frames } = startSidecar()
       writeInvoke(input, 'gci-1', 'getCrossoverIndex', [])
@@ -782,11 +785,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         makeGameInfo({ app_name: 'would-be-eligible', runner: 'steam' })
       ])
       mockIsCrossoverIndexEligible.mockReturnValue(true)
-      mockGetCodeweaversFromIndex.mockResolvedValue({
-        macRating: 5,
-        linuxRating: null,
-        slug: 'x'
-      })
+      mockResolveRatingFor.mockReturnValue(5)
 
       const { input, frames } = startSidecar()
       writeInvoke(input, 'gci-2', 'getCrossoverIndex', [])
@@ -796,7 +795,10 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       expect(response?.ok).toBe(true)
       expect(response?.result).toEqual({})
       expect(mockIsCrossoverIndexEligible).not.toHaveBeenCalled()
-      expect(mockGetCodeweaversFromIndex).not.toHaveBeenCalled()
+      expect(mockResolveRatingFor).not.toHaveBeenCalled()
+      // WR-07: stronger than the old assertion -- the index is not merely
+      // unqueried per game, it is never LOADED.
+      expect(mockBuildIndexResolver).not.toHaveBeenCalled()
     })
   })
 
