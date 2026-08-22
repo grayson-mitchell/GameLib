@@ -1,10 +1,10 @@
 {
   "id": 1,
   "type": "stable",
-  "tag_name": "gamelib-v1.0.0",
-  "name": "GameLib 1.0.0",
-  "html_url": "https://github.com/grayson-mitchell/GameLib/releases/tag/gamelib-v1.0.0",
-  "published_at": "2026-06-30T00:00:00Z",
+  "tag_name": "gamelib-v0.7.0",
+  "name": "GameLib 0.7.0",
+  "html_url": "https://github.com/grayson-mitchell/GameLib/releases/tag/gamelib-v0.7.0",
+  "published_at": "2026-07-20T00:00:00Z",
   "prerelease": false,
-  "body": "## GameLib 1.0.0\n\n- **Steam platform support**: Browse, install, and launch your full Steam library from within GameLib — no need to switch to the Steam client\n- **CrossOver & Proton integration**: Steam games on macOS run via CrossOver; Linux users benefit from Steam's own Proton configuration per game\n- **Heroic → GameLib rebrand**: Unified launcher identity across the UI, tray, config paths, and logs\n- **Unified library**: Epic, GOG, Amazon, and Steam games appear together in one view with consistent install/launch/uninstall actions\n- **Steam account management**: Sign in via QR code (mobile Steam app) or username/password with SteamGuard support\n\nBuilt on Heroic 2.22.0 — [see upstream release notes](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/tag/v2.22.0)"
+  "body": "## GameLib 0.7.0\n\nGameLib is a Heroic Games Launcher fork that makes Steam a first-class platform alongside Epic, GOG, Amazon, and Humble Bundle — one launcher for your whole library.\n\n- **Steam native installs**: GameLib downloads Steam depots itself, with real progress, real error messages, and resumable recovery, instead of handing off to the Steam client and waiting. Downloads fan out across multiple content hosts for throughput.\n- **Unified library**: Epic, GOG, Amazon, Humble, and Steam games appear together in one view with consistent install, launch, and uninstall actions.\n- **Steam account management**: Sign in with a QR code from the mobile Steam app, or with username and password plus SteamGuard.\n- **macOS compatibility**: Windows-only Steam games run through a GameLib-managed CrossOver bottle, and every library game carries an offline-indexed CrossOver medal so you know what works before you install. 32-bit-only Mac builds are detected and routed to the same bottle rather than failing a native install.\n- **Linux Proton**: Steam games honour Steam's own per-game Proton configuration rather than going through GameLib's Wine layer.\n- **Humble Bundle integration**: Your Humble key inventory syncs in, deduplicated against what you already own, with a guided reveal-and-redeem flow, giftable-spares view, and expiration alerts.\n- **Aggregated store search**: Search a title once and compare its price across every store, with an “already owned” badge no price-comparison site can show.\n- **Steam key redemption**: Redeem Steam keys without leaving GameLib.\n\nBuilt on Heroic 2.22.0 — [see upstream release notes](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/tag/v2.22.0)"
 }

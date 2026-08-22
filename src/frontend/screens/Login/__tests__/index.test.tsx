@@ -175,46 +175,75 @@ describe('a failing route surfaces an error instead of an empty document', () =>
 })
 
 /**
- * Quick task 260808-f80 (supersedes 260805-d62, which marked the wrong tile):
- * colour the EMBEDDED WEB LOGIN red as deletion-pending (ROADMAP Phase 34.7).
- * SIDLogin is the surviving device-auth path and must never be red. Same
- * source-gate convention as above -- this jest project has no jsdom, so these
- * prove the wiring EXPRESSION is present and singular, not that a pixel actually
- * renders red. Pixel/behavior verification is the plan's checkpoint:human-verify
- * task.
+ * Quick task 260822-r3g (2026-08-22) — REVERTS the F-34.5-G6-01 Epic tile pivot and
+ * SUPERSEDES the 260805-d62 / 260808-f80 deletion-pending marker gates that used to live
+ * here.
+ *
+ * History in one paragraph, because these gates only make sense against it: the pivot made
+ * SIDLogin Epic's PRIMARY tile under Tauri (so "Epic Games Login" named the system-browser
+ * device-auth path) and demoted the embedded WebKit login to "Alternative Login Method",
+ * because the embedded login hit Talon's anti-bot 403. d62 then outlined one tile red as
+ * deletion-pending for ROADMAP Phase 34.7 -- and pointed at the wrong action, corrected by
+ * f80. The 403 was subsequently defeated by the pristine (zero-injection) WKWebView login
+ * window and the embedded login now completes a fresh logged-out sign-in on macOS, so the
+ * operator reverted the roles: the embedded login is the primary "Epic Games Login" tile in
+ * both shells again, SIDLogin is the alternative, Phase 34.7 is ON HOLD, and no tile is
+ * marked for deletion.
+ *
+ * These gates therefore assert the RESTORED shape plus the ABSENCE of every expression the
+ * pivot introduced, so a silent re-pivot fails loudly. Same source-gate convention as above
+ * -- this jest project has no jsdom, so they prove the wiring EXPRESSION, never a rendered
+ * pixel; which tile a user actually sees first is a live-verification question (that is
+ * exactly how f80's inversion was caught).
  */
-describe('deprecatedTile marker follows the embedded web-login tile, not a fixed position (quick task 260808-f80)', () => {
-  it('SOURCE GATE — the Epic Runner wires deprecatedTile to the isTauri() ternary that names the embedded web-login tile in both shells', () => {
+describe('Epic login tiles: embedded login is PRIMARY, SIDLogin is the alternative (quick task 260822-r3g)', () => {
+  // The Epic Runner's own props, sliced off at the next `<Runner` so no other
+  // store's tile can satisfy -- or violate -- an assertion below.
+  const epicRunnerBlock = () => {
     const source = read(LOGIN_TSX)
-    expect(source).toMatch(
-      /deprecatedTile=\{isTauri\(\) \? 'alternative' : 'primary'\}/
+    const start = source.indexOf('class="epic"')
+    expect(start).toBeGreaterThan(-1)
+    const end = source.indexOf('<Runner', start)
+    expect(end).toBeGreaterThan(start)
+    return source.slice(start, end)
+  }
+
+  it('SOURCE GATE — the Epic PRIMARY tile is the embedded web login: labelled login.epic and navigating to epicLoginPath, with NO primaryLoginAction to divert it', () => {
+    const block = epicRunnerBlock()
+    expect(block).toMatch(
+      /buttonText=\{t\('login\.epic', 'Epic Games Login'\)\}/
+    )
+    expect(block).toMatch(/loginUrl=\{epicLoginPath\}/)
+    // Breaks the moment anything is wired to hijack the primary tile away from
+    // `navigate(loginUrl)` -- which is precisely what the reverted pivot did.
+    expect(block).not.toMatch(/primaryLoginAction/)
+  })
+
+  it('SOURCE GATE — SIDLogin is the ALTERNATIVE tile, unconditionally, in both shells', () => {
+    const block = epicRunnerBlock()
+    expect(block).toMatch(
+      /alternativeLoginAction=\{\(\) => setShowSidLogin\(true\)\}/
     )
   })
 
-  it('SOURCE GATE — the superseded 260805-d62 expression (which marked the SIDLogin tile) is gone', () => {
+  it('SOURCE GATE — the Epic tile carries NO shell branch: isTauri() appears nowhere in Login/index.tsx, so both shells get identical tile roles', () => {
     const source = read(LOGIN_TSX)
+    expect(source).not.toMatch(/isTauri/)
+  })
+
+  it('SOURCE GATE — neither superseded deprecatedTile ternary can return, and no runner on this screen is marked deletion-pending while Phase 34.7 is on hold', () => {
+    const source = read(LOGIN_TSX)
+    expect(source).not.toMatch(
+      /deprecatedTile=\{isTauri\(\) \? 'alternative' : 'primary'\}/
+    )
     expect(source).not.toMatch(
       /deprecatedTile=\{isTauri\(\) \? 'primary' : 'alternative'\}/
     )
-  })
-
-  it('SOURCE GATE — deprecatedTile occurs exactly once in comment-stripped Login/index.tsx -- no other runner is marked', () => {
-    const source = read(LOGIN_TSX)
     const matches = source.match(/deprecatedTile/g) ?? []
-    expect(matches.length).toBe(1)
+    expect(matches.length).toBe(0)
   })
 
-  it('SOURCE GATE — the Epic primaryLoginAction/alternativeLoginAction expressions from the F-34.5-G6-01 pivot are unchanged', () => {
-    const source = read(LOGIN_TSX)
-    expect(source).toMatch(
-      /primaryLoginAction=\{\s*isTauri\(\) \? \(\) => setShowSidLogin\(true\) : undefined\s*\}/
-    )
-    expect(source).toMatch(
-      /alternativeLoginAction=\{\s*isTauri\(\)\s*\?\s*\(\) => navigate\(epicLoginPath\)\s*:\s*\(\) => setShowSidLogin\(true\)\s*\}/
-    )
-  })
-
-  it('login.deprecated_hint exists in the en translation bundle and matches the Runner t() default exactly', () => {
+  it('login.deprecated_hint exists in the en translation bundle and matches the Runner t() default exactly (the marker prop is unused but retained -- 34.7 is on hold, not cancelled)', () => {
     const translations = JSON.parse(
       readFileSync(
         join(REPO_ROOT, 'public/locales/en/translation.json'),

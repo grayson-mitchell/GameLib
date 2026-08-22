@@ -15,19 +15,23 @@ interface RunnerProps {
   alternativeLoginAction?: () => any
   buttonText: string
   disabled: boolean
-  // Epic-under-Tauri SIDLogin pivot (F-34.5-G6-01, 2026-08-03): when provided, the primary
-  // tile invokes this action instead of navigating to `loginUrl`. Epic under Tauri passes
-  // SIDLogin here (system-browser auth, the working path) so the primary tile is SIDLogin,
-  // while the embedded WebKit login stays reachable via the "Alternative Login Method" tile
-  // (for continued 403 experimentation). Optional and defaults to undefined for every runner
-  // that does not pass it, so existing behavior is unchanged for any runner that omits it.
+  // When provided, the primary tile invokes this action instead of navigating to `loginUrl`.
+  // Introduced for the Epic-under-Tauri SIDLogin pivot (F-34.5-G6-01, 2026-08-03); Epic
+  // stopped using it when quick task 260822-r3g reverted that pivot, but Steam and Humble
+  // both pass it to open their in-app login overlays, so this is the general "primary tile
+  // runs an action" seam. Optional and defaults to undefined for every runner that does not
+  // pass it, so existing behavior is unchanged for any runner that omits it.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   primaryLoginAction?: () => any
-  // Purely visual deletion-pending marker (quick task 260805-d62) for the interactive
-  // legendary/SID login ahead of ROADMAP Phase 34.7. Names WHICH tile is the SIDLogin
-  // action, never a fixed tile position, because Epic's two tiles swap roles by shell
-  // (F-34.5-G6-01 above): under Electron SIDLogin is the alternative tile, under Tauri
-  // it is the primary tile. Changes no behavior -- only a class name and a title string.
+  // Purely visual deletion-pending marker (quick task 260805-d62). Names WHICH tile carries
+  // the doomed action rather than a fixed tile position, since a store's two tiles can swap
+  // roles. Changes no behavior -- only a class name and a title string.
+  //
+  // CURRENTLY PASSED BY NO RUNNER. Its only consumer was Epic, marking the embedded web
+  // login ahead of ROADMAP Phase 34.7; quick task 260822-r3g put that phase ON HOLD (the
+  // embedded login works again under the pristine WKWebView) and removed the marker. Kept,
+  // with its unit tests, because "on hold" is not "cancelled" -- if a sign-in path is ever
+  // scheduled for deletion again, re-marking it is one prop.
   deprecatedTile?: 'primary' | 'alternative'
 }
 
@@ -61,8 +65,8 @@ export default function Runner(props: RunnerProps) {
     }
 
     if (props.primaryLoginAction) {
-      // F-34.5-G6-01: the primary tile runs a custom action instead of navigating to the
-      // embedded route (Epic under Tauri routes it to SIDLogin, the working path).
+      // The primary tile runs a custom action instead of navigating to the embedded route
+      // (Steam and Humble route it to their in-app login overlays).
       props.primaryLoginAction()
       return
     }

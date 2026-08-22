@@ -294,18 +294,35 @@ or a NEW unredacted account id in an unpublished file) is still in scope and sti
 
 ## Found during gap cycle 6 (plan 34.5-50) — the fourth blocking-gate contract's authoring
 
-### 24. D-CYCLE6-A — Epic login is DESCOPED from Phase 34.5's blocking gate; Phase 34.7 is the OWNER
+### 24. D-CYCLE6-A — Epic login is DESCOPED from Phase 34.5's blocking gate; ~~Phase 34.7~~ **Phase 34.6** is the OWNER
+
+> **OWNER CHANGED 2026-08-22 (operator decision, quick task `260822-r3g`).** Phase 34.7 went **ON
+> HOLD** — its founding premise died when the pristine WKWebView defeated Epic's Talon 403, so the
+> embedded login is Epic's primary path again and nothing is being deleted. The three descoped
+> items (**UAT 11 Epic half, 12 `egsSync`, 13 legendary save sync**) therefore moved to **Phase
+> 34.6**, the last IPC-re-plumb slice, which runs its own live gate.
+>
+> **The descope itself still stands — only its owner changed.** But note that the *reasoning*
+> below is now void, and should not be cited: "a PASS on that item would certify code that is
+> scheduled for removal" is false (the embedded Epic login stays), and "a FAIL would block on work
+> the 2026-08-05 parking decision forbids" no longer applies either — exercising a login that
+> works is not investigating the 403. Under 34.6 both horns disappear and the items are ordinarily
+> gateable. Everything else below — what travels, what does not, and that this descope **retires
+> nothing** — is unchanged and still governs.
 
 Recorded per `34.5-CYCLE6-ROUTING.md` § D-CYCLE6-A, at the authoring of the fourth blocking live
 gate (`34.5-LIVE-GATE-RERUN-3.md`), so the descope is on record in a place a future reader will
 find before citing the gate's own item count as an oversight.
 
 **What is descoped, and to whom.** Gate item 1 (Epic login completed from scratch, populated
-library) is **DESCOPED** from Phase 34.5's blocking live gate. **Phase 34.7 is the OWNER** — the
-phase that builds Epic's replacement login path. The blocker mechanism, named precisely: the
+library) is **DESCOPED** from Phase 34.5's blocking live gate. **Phase 34.6 is the OWNER** —
+**34.7 was, until 2026-08-22**, when that phase was parked and the items were re-homed to the last
+IPC-re-plumb slice, which runs its own live gate. The blocker mechanism, named precisely: the
 **operator decision of 2026-08-05**. No further time is ever spent on the Epic alt-login/403
 defect, ever, and Phase 34.7 **deletes the interactive Epic login outright**, making device-auth
-bootstrap the single Epic sign-in path.
+bootstrap the single Epic sign-in path. ⟵ **Both halves of that sentence are dead as of
+2026-08-22:** the 403 was beaten (by the pristine WKWebView, not by further investigation of it),
+nothing is deleted, and the interactive login is Epic's primary path again.
 
 **Why this cannot be gated in 34.5 at all, stated so it is not re-litigated.** Gating 34.5's
 closure on a login path that Phase 34.7 deletes can never be durably satisfied: a PASS on that item
@@ -315,7 +332,8 @@ coherent gate result, so the item is removed from the gate rather than carried a
 one.
 
 **What travels with the descope, and what does not.** UAT tests **11 (the Epic half), 12
-(`egsSync`) and 13 (legendary save sync)** travel with the descope to Phase 34.7. **Amazon's half
+(`egsSync`) and 13 (legendary save sync)** travel with the descope to Phase 34.6 (Phase 34.7 as
+authored). **Amazon's half
 of UAT test 11 stays in Phase 34.5**, as the fourth gate's item 2.
 
 **The descope retires nothing.** Two ledger rows already carry Epic's history, and neither is a
