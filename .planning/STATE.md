@@ -5775,6 +5775,49 @@ Recent decisions affecting current work:
 > rather than widen it. The prior `Stopped at: Completed 34.5-53-PLAN.md` entry is demoted below
 > into its own "prior session (34.5-53), preserved as history" block, unchanged in content.
 
+> NOTE (34.12 discuss, 2026-08-22): `gsd-sdk query state.record-session` corrupted this file
+> AGAIN -- the fourth instance recorded in this cluster, and the second TODAY. It deleted 417
+> lines of the `progress:` block's hand-written provenance comments, inserted stray blank lines
+> into unrelated prose at four separate points, and would have truncated the phase 37 entry
+> below MID-SENTENCE: its write replaced only that entry's first two lines, orphaning the ~30
+> lines of prose that continue it. Reverted from a pre-call snapshot (whole-file diff reviewed,
+> 8 hunks, file length 5779 -> 5370 lines); this entry hand-applied instead. Counters
+> deliberately unmoved -- a discussion creates no plans. Written from the `wt/Other` worktree
+> based on `main` (19cb4f39d); phase 34.12 is unrelated to the phase 37 work this file's
+> frontmatter tracks, so `status`/`stopped_at`/`last_activity` up top are left untouched and
+> the phase 37 entry is demoted below unchanged rather than overwritten.
+
+Last session: 2026-08-22T09:40:38.000Z
+Stopped at: Phase 34.12 context gathered -- 34.12-CONTEXT.md + 34.12-DISCUSSION-LOG.md written and
+committed as `e26257770`. All four offered gray areas discussed; nine decisions locked (D-01..D-09).
+THE LOAD-BEARING ONE IS D-01: putting the tour launcher in `SettingsPanel` means the Settings
+tier-2 panel is necessarily OPEN when the tour starts, which dissolves the difficulty the ROADMAP
+anticipated -- six of the twelve steps live in that panel, and with it already on screen all twelve
+re-anchor 1:1 with NO tab-driving (D-03) and NO steps dropped (D-05). D-04 sets
+`disableInteraction: true` for this tour only, via `Tour`'s existing `options` passthrough, so a
+user cannot click a highlighted tab and unmount the panel the remaining steps point at -- that is
+what makes D-03 structurally true rather than merely intended. TWO FINDINGS ABSENT FROM EVERY
+UPSTREAM ARTIFACT, both from scouting: (1) the shell tour has NO launcher at all -- 34.10-07
+deleted the help button `HeroicVersion` used to render, and the only surviving `TourButton` is in
+`ActionIcons` and starts the LIBRARY tour, so "re-enable" includes building an entry point, not
+just re-pointing selectors; (2) `LibraryTour` is LIVE (`Library/index.tsx:1084`) and ALREADY SHIPS
+TWO BROKEN STEPS -- `[data-tour="library-categories"]` and `[data-tour="library-filters"]` match no
+element since 34.11 replaced those controls (D-09 re-anchors them to the tier-2 filter panel).
+Also dead: `data-tour="library-header"` sits on two elements and is referenced by no step at all.
+D-07 records an i18n trap for the planner: `t(key, default)`'s second argument is INERT wherever
+the key exists in a catalog, so rewriting a step's English text without minting a new key keeps
+shipping the old translated string in every non-English locale, invisibly on an English machine --
+hence new `tour.nav.*` keys ONLY for steps whose copy changed. FOR THE PLANNER, in Claude's
+Discretion: the frontend jest project is `testEnvironment: 'node'` with NO jsdom, so the positive
+gate replacing `NavShell/__tests__/tourDisabled.test.ts` CANNOT render the shell to check
+selectors, and "all twelve `nav-*` strings appear somewhere in the tree" is the vacuous form that
+must not ship -- tie each selector to the component that carries it and prove the gate red against
+a deliberately broken anchor. Note `tourDisabled.test.ts` asserts `not.toMatch(/data-tour/)` across
+every NavShell source file, so it goes red the moment the first anchor lands: retire it in the same
+plan that adds anchors. Next: `/gsd-plan-phase 34.12`.
+
+--- prior session (phase 37 discuss), preserved as history ---
+
 Last session: 2026-08-22T00:26:27.000Z
 Stopped at: Phase 37 context gathered -- resumed 37-DISCUSS-CHECKPOINT.json (3 of 4 areas already
 decided) and closed the last area, "Delisted facet placement + label (37-03)". 37-CONTEXT.md +
