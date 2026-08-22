@@ -11,8 +11,8 @@ asarUnpack:
   - build/icon.icns
   - build/mac-icon.icns
   - build/win_icon.ico
-  - build/icon-tray-source.png
-  - build/icon-light.png
+  - build/icon-tray-dark.png
+  - build/icon-tray-light.png
   - build/bin/**/*
   - '!build/bin/legendary.LICENSE'
 

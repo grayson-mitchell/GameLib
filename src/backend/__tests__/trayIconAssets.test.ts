@@ -28,18 +28,20 @@
  * comment) -- `getIcon()`'s dark/light selector still exists and still round-trips through the
  * sidecar, it simply has zero visible effect on macOS because the template ignores it.
  *
- * WINDOWS/LINUX ARE UNCHANGED AND STILL CARRY THE ORIGINAL DEFECT: `icon-tray-source.png`
- * (the master artwork, named `icon-dark.png` before the rename) and `icon-light.png` remain
- * byte-identical (this redirect's scope was the macOS template path
- * only -- see 34.1-13-SUMMARY.md's "Redirected scope" section). That gate is kept below as
- * `it.failing`, unchanged from before, so it still gates the day someone fixes the Windows/Linux
- * pair without silently going stale.
+ * WINDOWS/LINUX ARE NOW FIXED TOO. `meta/trayIconVariants.ts` emits `icon-tray-dark*.png` and
+ * `icon-tray-light*.png` at all three scales from the same hue-segmented mask as the macOS
+ * template, differing only in fill (black for a light taskbar, white for a dark one). The three
+ * distinctness gates below were `it.failing` for the whole time the pair shipped identical; they
+ * are plain `it` as of that change, which is the ONLY reason a green run here now means
+ * something. Note `it.failing` also reports green when its body THROWS -- so while these were
+ * `it.failing`, a missing file and a live tripwire looked identical.
  */
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   decodeRgba,
   isMonochromeTemplate,
+  isUniformFill,
   opaqueFraction
 } from '../../../meta/trayIconVariants'
 
@@ -91,43 +93,46 @@ describe('macOS tray icon TEMPLATE asset (REQ-34.1-07, GAP-G3 redirect, 34.1-13)
   })
 })
 
-describe('Windows/Linux tray icon dark/light asset distinctness (REQ-34.1-07, GAP-G3, OUT OF SCOPE for the macOS template redirect)', () => {
-  // STILL KNOWN FAILING as of 2026-08-13 -- the macOS template redirect (34.1-13) deliberately
-  // did not touch these files; see the module docstring above and
-  // .planning/todos/pending/tray-dark-light-icons-are-identical.md, which plan 34.1-15 owns.
-  // Windows/Linux keep selecting between these two (still byte-identical) files unchanged.
-  it.failing(
-    'icon-tray-source.png and icon-light.png are NOT byte-identical',
-    () => {
-      const dark = loadAsset('icon-tray-source.png')
-      const light = loadAsset('icon-light.png')
-      expect(dark.equals(light)).toBe(false)
-    }
-  )
+describe('Windows/Linux tray icon dark/light asset distinctness (REQ-34.1-07, GAP-G3)', () => {
+  // FIXED 2026-08-22: these are the two files `getIcon()` and `TRAY_ICON_DARK`/`TRAY_ICON_LIGHT`
+  // actually select between, and they are now genuinely distinct at every scale Electron may
+  // load. `meta/trayIconVariants.ts` gates this on the generator side too, so regenerating
+  // cannot reintroduce an identical pair.
+  // Every scale is checked, not just 1x: Electron's `nativeImage.createFromPath`
+  // silently auto-adopts `@2x`/`@3x` siblings, so a pair that is distinct at 1x and
+  // identical at 2x would still leave `darkTrayIcon` a no-op on a retina display.
+  for (const scale of ['', '@2x', '@3x']) {
+    it(`icon-tray-dark${scale}.png and icon-tray-light${scale}.png are NOT byte-identical`, () => {
+      const darkPath = join(PUBLIC_DIR, `icon-tray-dark${scale}.png`)
+      const lightPath = join(PUBLIC_DIR, `icon-tray-light${scale}.png`)
 
-  it.failing(
-    'icon-tray-source@2x.png and icon-light@2x.png are NOT byte-identical',
-    () => {
-      const darkPath = join(PUBLIC_DIR, 'icon-tray-source@2x.png')
-      const lightPath = join(PUBLIC_DIR, 'icon-light@2x.png')
+      // Asserted explicitly because a MISSING file would otherwise make
+      // `readFileSync` throw, and a throwing body is not the same evidence as
+      // "these two files exist and differ".
       expect(existsSync(darkPath)).toBe(true)
       expect(existsSync(lightPath)).toBe(true)
+
       const dark = readFileSync(darkPath)
       const light = readFileSync(lightPath)
       expect(dark.equals(light)).toBe(false)
-    }
-  )
+    })
 
-  it.failing(
-    'icon-tray-source@3x.png and icon-light@3x.png are NOT byte-identical',
-    () => {
-      const darkPath = join(PUBLIC_DIR, 'icon-tray-source@3x.png')
-      const lightPath = join(PUBLIC_DIR, 'icon-light@3x.png')
-      expect(existsSync(darkPath)).toBe(true)
-      expect(existsSync(lightPath)).toBe(true)
-      const dark = readFileSync(darkPath)
-      const light = readFileSync(lightPath)
-      expect(dark.equals(light)).toBe(false)
-    }
-  )
+    it(`icon-tray-dark${scale}.png is a black glyph and icon-tray-light${scale}.png a white one`, () => {
+      // The property that makes the pair USEFUL, not merely different: two files
+      // could differ byte-wise and still be equally illegible. Windows and Linux
+      // have no template auto-invert, so the contrast has to be in the pixels.
+      expect(
+        isUniformFill(
+          decodeRgba(join(PUBLIC_DIR, `icon-tray-dark${scale}.png`)).pixels,
+          0
+        )
+      ).toBe(true)
+      expect(
+        isUniformFill(
+          decodeRgba(join(PUBLIC_DIR, `icon-tray-light${scale}.png`)).pixels,
+          255
+        )
+      ).toBe(true)
+    })
+  }
 })

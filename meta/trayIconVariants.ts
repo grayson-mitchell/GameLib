@@ -1,13 +1,16 @@
 /**
- * Phase 34.1 gap closure (G3 / D-11): dependency-free PNG decode/encode and a
- * macOS AppKit **template image** generator for the tray icon.
+ * Phase 34.1 gap closure (G3 / D-11): dependency-free PNG decode/encode, the
+ * macOS AppKit **template image**, and the Windows/Linux dark/light pair.
  *
- * `public/icon-tray-source.png` (the master artwork; it was named
- * `icon-dark.png` until it was renamed) and `public/icon-light.png` are
- * byte-identical -- see
+ * ORIGINAL DEFECT (now fixed on all three platforms): `public/icon-dark.png`
+ * and `public/icon-light.png` shipped byte-identical -- see
  * `.planning/todos/pending/tray-dark-light-icons-are-identical.md`. The
- * `changeTrayColor` -> `tray_set_icon` chain runs correctly end to end; it
- * installs a pixel-identical image, so the setting was a visual no-op.
+ * `changeTrayColor` -> `tray_set_icon` chain ran correctly end to end; it
+ * installed a pixel-identical image, so `darkTrayIcon` was a switch wired to
+ * nothing. All four rasters this module now emits are generated from the one
+ * master artwork (`icon-tray-source.png`), and `runCli` refuses to write a
+ * dark/light pair that is byte-identical at ANY scale, so that defect cannot
+ * silently return.
  *
  * REJECTED APPROACH, recorded so it is not re-attempted: this module
  * originally regenerated `icon-light*.png` as a straight RGB inversion of
@@ -45,19 +48,15 @@
  * algorithm -- if the source art changes, it must be re-derived from a fresh
  * hue histogram, not assumed to still apply.
  *
- * Only `icon-tray-source.png` (the 1x / 22x22 base raster) is used as the
- * generator's source and only a single `icon-tray-template.png` (1x) is
- * produced: `src-tauri/src/main.rs`'s Tauri tray embeds ONLY the 1x
- * `icon-tray-source.png`/`icon-light.png` rasters via `include_bytes!`
- * today (no
- * `@2x`/`@3x` `include_bytes!` calls exist there -- grep confirms it), so
- * generating unused `@2x`/`@3x` template variants would be dead committed
- * assets. Electron's `nativeImage.createFromPath` (the OTHER consumer of
- * these files, `src/backend/tray_icon/tray_icon.ts`) auto-picks-up `@2x`/
- * `@3x` siblings for retina scaling, but Electron is NOT given the template
- * treatment by this plan (see the SUMMARY's "darkTrayIcon on macOS" section)
- * -- it keeps selecting between the unchanged, still byte-identical
- * `icon-tray-source.png`/`icon-light.png` pair, out of this redirect's scope.
+ * SCALES, and why they differ per output. `icon-tray-template.png` is emitted
+ * at 1x ONLY, because `src-tauri/src/main.rs` embeds a single raster via
+ * `include_bytes!` and no `@2x`/`@3x` `include_bytes!` calls exist there --
+ * additional template scales would be dead committed assets. The Windows/Linux
+ * pair IS emitted at all three scales, because its other consumer is Electron's
+ * `nativeImage.createFromPath` (`src/backend/tray_icon/tray_icon.ts`), which
+ * silently auto-adopts `@2x`/`@3x` siblings for retina. Emitting only 1x there
+ * would leave a monochrome base paired with whatever retina rasters happened to
+ * be on disk.
  *
  * TOOLING CONSTRAINT: no third-party PNG dependency exists in `package.json`
  * (`upng-js`/`pako` are transitive only and must not be imported by
@@ -299,7 +298,8 @@ export function buildHueSegmentedTemplateAlpha(
   width: number,
   height: number,
   pixels: Buffer,
-  hueSplitDegrees: number = HUE_SPLIT_DEGREES
+  hueSplitDegrees: number = HUE_SPLIT_DEGREES,
+  fill: number = 0
 ): Buffer {
   const out = Buffer.alloc(width * height * 4)
   for (let i = 0; i < pixels.length; i += 4) {
@@ -308,12 +308,33 @@ export function buildHueSegmentedTemplateAlpha(
       a > 16 &&
       rgbToHueDegrees(pixels[i], pixels[i + 1], pixels[i + 2]) >=
         hueSplitDegrees
-    out[i] = 0
-    out[i + 1] = 0
-    out[i + 2] = 0
+    out[i] = fill
+    out[i + 1] = fill
+    out[i + 2] = fill
     out[i + 3] = isGlyph ? a : 0
   }
   return out
+}
+
+/**
+ * True iff every pixel with non-zero alpha has RGB exactly (`fill`,`fill`,`fill`).
+ *
+ * The generalisation of `isMonochromeTemplate` to the Windows/Linux pair, which
+ * needs the same structural guarantee at a WHITE fill. Kept separate from a
+ * brightness measure on purpose: the rejected mean-luminance-delta gate was
+ * non-vacuous and correctly computed and still guarded nothing (see the module
+ * docstring). This asserts the actual structural property instead.
+ */
+export function isUniformFill(pixels: Buffer, fill: number): boolean {
+  for (let i = 0; i < pixels.length; i += 4) {
+    if (
+      pixels[i + 3] > 0 &&
+      (pixels[i] !== fill || pixels[i + 1] !== fill || pixels[i + 2] !== fill)
+    ) {
+      return false
+    }
+  }
+  return true
 }
 
 /**
@@ -324,15 +345,7 @@ export function buildHueSegmentedTemplateAlpha(
  * the rejected mean-luminance-delta metric (see module docstring).
  */
 export function isMonochromeTemplate(pixels: Buffer): boolean {
-  for (let i = 0; i < pixels.length; i += 4) {
-    if (
-      pixels[i + 3] > 0 &&
-      (pixels[i] !== 0 || pixels[i + 1] !== 0 || pixels[i + 2] !== 0)
-    ) {
-      return false
-    }
-  }
-  return true
+  return isUniformFill(pixels, 0)
 }
 
 /** Fraction of pixels with alpha > 16 -- a sanity bound against degenerate output (empty or near-total), NOT a legibility measurement. See `isMonochromeTemplate`'s docstring for why legibility itself cannot be reduced to a single arithmetic gate. */
@@ -423,6 +436,42 @@ export function encodeRgba(
 const SOURCE_PATH = join('public', 'icon-tray-source.png')
 const TEMPLATE_PATH = join('public', 'icon-tray-template.png')
 
+/**
+ * The Windows/Linux pair, generated at every scale Electron may ask for.
+ *
+ * macOS does NOT use these -- it uses the AppKit template above and lets the OS
+ * do the tinting. Windows and Linux have no equivalent auto-invert, which is why
+ * they need two real files and a user setting (`darkTrayIcon`) to choose between
+ * them. That setting was a visual no-op for as long as the two files it selects
+ * between were byte-identical.
+ *
+ * Polarity, stated explicitly because it is trivial to ship inverted: "dark tray
+ * icon" means a DARK-COLOURED GLYPH, which is what you want on a LIGHT taskbar.
+ * So `dark` fills black and `light` fills white -- `getIcon()` picks `dark` when
+ * `settings.darkTrayIcon` is true.
+ *
+ * All three scales are emitted, unlike the single-scale template: Electron's
+ * `nativeImage.createFromPath` silently auto-adopts `@2x`/`@3x` siblings for
+ * retina, so generating only 1x would pair a monochrome base with the leftover
+ * full-colour retina rasters. Tauri `include_bytes!`s the 1x only.
+ */
+const VARIANT_SCALES = ['', '@2x', '@3x'] as const
+
+const DARK_FILL = 0
+const LIGHT_FILL = 255
+
+function variantPaths(scale: string): {
+  source: string
+  dark: string
+  light: string
+} {
+  return {
+    source: join('public', `icon-tray-source${scale}.png`),
+    dark: join('public', `icon-tray-dark${scale}.png`),
+    light: join('public', `icon-tray-light${scale}.png`)
+  }
+}
+
 // Sanity bounds on the fraction of opaque pixels in the produced template --
 // wide enough not to be flaky, narrow enough to catch the two degenerate
 // failure modes (near-empty: segmentation excluded almost everything;
@@ -477,8 +526,66 @@ function runCli(): void {
       `[gen-tray-icon-variants] ${SOURCE_PATH} -> ${TEMPLATE_PATH} (${source.width}x${source.height}) ` +
         `hue-split=${HUE_SPLIT_DEGREES}deg opaque-fraction=${(fraction * 100).toFixed(1)}%`
     )
+
+    // ---- Windows/Linux pair, every scale -----------------------------------
+    for (const scale of VARIANT_SCALES) {
+      const paths = variantPaths(scale)
+      const src = decodeRgba(paths.source)
+
+      const variants = [
+        { path: paths.dark, fill: DARK_FILL, label: 'dark' },
+        { path: paths.light, fill: LIGHT_FILL, label: 'light' }
+      ]
+
+      const written: Buffer[] = []
+
+      for (const { path, fill, label } of variants) {
+        const mask = buildHueSegmentedTemplateAlpha(
+          src.width,
+          src.height,
+          src.pixels,
+          HUE_SPLIT_DEGREES,
+          fill
+        )
+
+        const frac = opaqueFraction(src.width, src.height, mask)
+        if (frac < MIN_OPAQUE_FRACTION || frac > MAX_OPAQUE_FRACTION) {
+          throw new Error(
+            `${path} opaque-pixel fraction ${(frac * 100).toFixed(1)}% is outside the expected ` +
+              `[${MIN_OPAQUE_FRACTION * 100}%, ${MAX_OPAQUE_FRACTION * 100}%] band`
+          )
+        }
+
+        if (!isUniformFill(mask, fill)) {
+          throw new Error(
+            `${path} has an opaque pixel whose RGB is not the ${label} fill (${fill})`
+          )
+        }
+
+        const bytes = encodeRgba(src.width, src.height, mask)
+        writeFileSync(path, bytes)
+        written.push(bytes)
+
+        console.log(
+          `[gen-tray-icon-variants] ${paths.source} -> ${path} (${src.width}x${src.height}) ` +
+            `fill=${fill} opaque-fraction=${(frac * 100).toFixed(1)}%`
+        )
+      }
+
+      // THE GATE THIS WHOLE EXERCISE EXISTS FOR. `icon-dark.png`/`icon-light.png`
+      // shipped byte-identical for the project's entire history, which made
+      // `darkTrayIcon` a switch wired to nothing. Asserting it here means the
+      // generator itself can never reintroduce that, at any scale.
+      if (written[0].equals(written[1])) {
+        throw new Error(
+          `${paths.dark} and ${paths.light} are byte-identical -- the darkTrayIcon ` +
+            'setting would be a visual no-op again'
+        )
+      }
+    }
+
     console.log(
-      'gen-tray-icon-variants: macOS tray template regenerated and gated successfully.'
+      'gen-tray-icon-variants: macOS template and the Windows/Linux pair regenerated and gated successfully.'
     )
   } catch (error) {
     console.error(
