@@ -159,6 +159,15 @@ export default React.memo(function NewLogin() {
     steam?.username,
     humble?.isLoggedIn,
     humble?.expired,
+    // 260823-awo: a completed Steam sign-in does NOT change `steam?.username`
+    // -- `steamLogin` writes back the same persona name it already had -- so
+    // none of the deps above move and this effect never re-runs. The tile then
+    // kept reading "Sign-in expired" against a credential that had just been
+    // restored, until an unmount/remount re-ran the useState initialiser
+    // (navigating away and back "fixed" it). `openOverlay` flips 'steam' ->
+    // null the moment the login dialog dismisses, which is the one point where
+    // credentialsMissing can go true -> false while this screen stays mounted.
+    openOverlay,
     t
   ])
 
