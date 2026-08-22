@@ -2752,10 +2752,39 @@ residual risk is therefore retired, not merely deferred.** Note the util's one d
 limitation: a trailing `//` on a code line is NOT stripped, because the naive `/\/\/.*$/gm` pass that
 would strip it is the WR-08 string-literal truncation plan 34.2-28 removed.
 
-Still owed on 34.2: **`/gsd-secure-phase 34.2`** (`workflow.security_enforcement=true`, no
-`34.2-SECURITY.md` exists), the 11 warnings + 8 info of `34.2-REVIEW-GAP-CYCLE-4.md` (recorded
-under `deferred:`, genuinely open — NOT resolved), and 2 human-UAT items in `34.2-HUMAN-UAT.md`
-(D-02 live translated notification, D-07 live anticheat fetch).
+Still owed on 34.2 (**corrected 2026-08-23** — two of the three items this paragraph
+originally listed have since been discharged; the superseded text is quoted below so the
+correction is auditable rather than silent):
+
+- **The 11 warnings + 8 info of `34.2-REVIEW-GAP-CYCLE-4.md`** — recorded under `deferred:`,
+  genuinely open, NOT resolved. Unchanged.
+- **All four `34.2-REVIEW-GAP-CYCLE-{1,2,3,4}.md` reviews still read `status: issues_found`**
+  and are undispositioned. Cycles 1–3's findings were in fact closed by the FOLLOWING cycle's
+  plans (34.2-15..18, 34.2-19..24, 34.2-25..30) — only the documents were never flipped; cycle
+  4's 19 non-blocker findings are the genuinely open set named above. `34.2-REVIEW-FIX.md`
+  covers **round 1 only** (16 closed / 1 accepted / 0 open, 2026-08-22) and deliberately stays
+  `status: partial` for exactly this reason. Note these four files are INVISIBLE to the
+  gsd-phase-status explorer: `artifactKind()` matches `name === kind || name.endsWith('-' +
+  kind)`, and nothing ends in `-REVIEW-GAP-CYCLE-N.md`.
+
+DISCHARGED, do not redo:
+
+- ~~`/gsd-secure-phase 34.2` (`workflow.security_enforcement=true`, no `34.2-SECURITY.md`
+  exists)~~ — **DONE.** `34.2-SECURITY.md` exists, `status: verified`, audited 2026-08-22:
+  164 threats total, 164 closed, **0 open**, ASVS level 1.
+- ~~2 human-UAT items in `34.2-HUMAN-UAT.md` (D-02 live translated notification, D-07 live
+  anticheat fetch)~~ — **BOTH RUN 2026-08-22 on real hardware.** D-07 PASSED (full chain
+  proven live: `fetchLastestReleases()` → `releasesInfoReady` → the re-homed anticheat
+  listener → real GitHub fetch → `writeFile`). D-02 is `partial`: the **dev** half PASSED, the
+  **packaged** half FAILED — and that failure is attributed to `R-34.5-G1-PKG`, a Phase 34.5
+  residual 34.5 named and left open, not a 34.2 defect. Per D-11 neither item ever gated
+  phase closure. Two gaps were raised by the run and are recorded in `34.2-HUMAN-UAT.md`'s
+  own `## Gaps` section: G-34.2-UAT-01 (a UAT step that could not fail — **amended in place
+  2026-08-23**) and G-34.2-UAT-02 (the packaged-build failure above).
+
+Also settled by that UAT run, worth recording because it had been an open question:
+**macOS arm64 Tauri packaging works** — a valid `.app` plus a 514MB DMG, all three build
+stages exiting 0.
 
 34.2-26 done -- GAP CYCLE 4, wave 1, second plan executed, CR-01 CLOSED (the WR-02 call-site
 rejection guard added by gap cycle 3 was inert in production — `logError()` returned `undefined`
