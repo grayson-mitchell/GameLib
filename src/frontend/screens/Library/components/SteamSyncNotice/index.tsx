@@ -29,6 +29,7 @@
  */
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import {
   faExclamationTriangle,
   faSyncAlt
@@ -39,12 +40,13 @@ import ContextProvider from 'frontend/state/ContextProvider'
 import './index.scss'
 
 export interface SteamSyncNoticeProps {
-  mode: 'syncing' | 'failed'
+  mode: 'syncing' | 'failed' | 'signedOut'
 }
 
 export default function SteamSyncNotice({ mode }: SteamSyncNoticeProps) {
   const { t: tGamelib } = useTranslation('gamelib')
   const { refreshLibrary } = useContext(ContextProvider)
+  const navigate = useNavigate()
 
   if (mode === 'syncing') {
     return (
@@ -56,6 +58,44 @@ export default function SteamSyncNotice({ mode }: SteamSyncNoticeProps) {
             'Syncing your Steam library…'
           )}
         </span>
+      </div>
+    )
+  }
+
+  // Same outer div, same document flow, same class shape as the other two
+  // modes -- the structural contract in this file's header applies to every
+  // branch, not just the two it was written for.
+  if (mode === 'signedOut') {
+    return (
+      <div className="SteamSyncNotice SteamSyncNotice--failed">
+        <FontAwesomeIcon icon={faExclamationTriangle} />
+        <span className="SteamSyncNotice__text">
+          <strong>
+            {tGamelib(
+              'gamelib:library.steamSync.signedOutTitle',
+              'Your Steam sign-in expired'
+            )}
+          </strong>
+          <span>
+            {tGamelib(
+              'gamelib:library.steamSync.signedOutBody',
+              'Sign in again to sync your Steam library. Your other libraries are still available.'
+            )}
+          </span>
+        </span>
+        {/* Sign in, NOT retry: a refresh here re-enters the same path, hits
+            the same empty credential read, and fails identically. Matches the
+            install dialog's 'signIn' affordance (steam/depotErrors.ts). */}
+        <button
+          type="button"
+          className="button is-footer"
+          onClick={() => navigate('/login')}
+        >
+          {tGamelib(
+            'gamelib:library.steamSync.signedOutAction',
+            'Sign in to Steam'
+          )}
+        </button>
       </div>
     )
   }

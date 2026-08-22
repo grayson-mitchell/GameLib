@@ -61,7 +61,7 @@ import FilterChipRow from './components/FilterChipRow'
 import FilterZeroResult from './components/FilterZeroResult'
 import { openInstallGameModal } from 'frontend/state/InstallGameModal'
 import { Tier2PortalContext } from 'frontend/components/UI/NavShell/Tier2PortalContext'
-import { configStore } from 'frontend/helpers/electronStores'
+import { configStore, steamConfigStore } from 'frontend/helpers/electronStores'
 import SteamSyncNotice from './components/SteamSyncNotice'
 import { resolveSteamSyncIndicator } from './librarySyncIndicator'
 // Namespace import: filterEngine's helpers are referenced as
@@ -1004,7 +1004,15 @@ export default React.memo(function Library(): JSX.Element {
   const { mode: steamSyncMode } = resolveSteamSyncIndicator({
     steamLoggedIn: Boolean(steam?.username),
     steamSyncStatus,
-    steamLibraryCount: steam?.library?.length ?? 0
+    steamLibraryCount: steam?.library?.length ?? 0,
+    // Read straight from the store, exactly as the Manage Accounts tile does
+    // (`Login/index.tsx`): the backend latches this during the same refresh
+    // that just failed, so a value captured earlier in React state would be a
+    // frame behind. Already allow-listed at storePolicy.ts (260822-vov), so
+    // both this read and the STORE_CHANGED_CHANNEL push carry it.
+    steamCredentialsMissing: Boolean(
+      steamConfigStore.get_nodefault('credentialsMissing')
+    )
   })
 
   if (!epic && !gog && !amazon && !zoom) {

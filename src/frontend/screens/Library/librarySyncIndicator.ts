@@ -34,12 +34,28 @@ import type { SteamSyncStatus } from 'common/types/ipc'
 
 /** The render mode this resolver decides. `'hidden'` covers BOTH "nothing to
  * report" and "logged out" -- see branch 1 and branch 4 below. */
-export type SteamSyncIndicatorMode = 'hidden' | 'syncing' | 'failed'
+export type SteamSyncIndicatorMode =
+  | 'hidden'
+  | 'syncing'
+  | 'failed'
+  | 'signedOut'
 
 export interface SteamSyncIndicatorInput {
   steamLoggedIn: boolean
   steamSyncStatus: SteamSyncStatus
   steamLibraryCount: number
+  /**
+   * `steamConfigStore.credentialsMissing` -- the backend's latched verdict that
+   * a SUCCESSFUL credential read came back empty, so the stored token the sync
+   * needs is provably gone (quick task 260822-vov).
+   *
+   * REQUIRED, not optional, on purpose. There is exactly one production call
+   * site (`Library/index.tsx`) and the Frontend jest project has no jsdom, so
+   * no test can observe whether that call site passes this field -- a compile
+   * error is the only thing that can prove it. Optional would let a forgotten
+   * argument ship a banner that silently never appears.
+   */
+  steamCredentialsMissing: boolean
 }
 
 export interface SteamSyncIndicatorOutput {
@@ -55,6 +71,26 @@ export function resolveSteamSyncIndicator(
   // the indicator to a logged-out user.
   if (!input.steamLoggedIn) {
     return { mode: 'hidden' }
+  }
+
+  // Branch 1b: a failure whose CAUSE is a proven-missing credential gets its
+  // own surface, because the generic one is actively wrong here -- it says
+  // "check that Steam is reachable" (Steam is reachable; the session is
+  // unauthenticated) and offers a Retry that re-enters the same path, hits the
+  // same empty keyring read, and fails identically. Phase 37 already settled
+  // this reasoning for the INSTALL path in steam/depotErrors.ts: "Deliberately
+  // offers no 'Retry' wording: retrying without first signing in can only fail
+  // again in the identical way." This is that decision, applied to sync.
+  //
+  // BEFORE branch 2 so it wins over the generic failure, and AFTER branch 1 so
+  // it can never leak a Steam surface to a user with no Steam account.
+  //
+  // Deliberately gated on `'failed'` too, rather than firing on the flag
+  // alone: the Manage Accounts tile already reports the signed-out state, and
+  // an always-on banner here would be a second permanent surface competing
+  // with it. This one speaks only when a sync actually failed.
+  if (input.steamSyncStatus === 'failed' && input.steamCredentialsMissing) {
+    return { mode: 'signedOut' }
   }
 
   // Branch 2: a failure is surfaced REGARDLESS of `steamLibraryCount`. A

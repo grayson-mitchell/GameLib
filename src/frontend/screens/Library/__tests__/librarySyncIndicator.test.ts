@@ -24,7 +24,8 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
       input: {
         steamLoggedIn: false,
         steamSyncStatus: 'idle',
-        steamLibraryCount: 0
+        steamLibraryCount: 0,
+        steamCredentialsMissing: false
       },
       mode: 'hidden'
     },
@@ -33,7 +34,8 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
       input: {
         steamLoggedIn: false,
         steamSyncStatus: 'idle',
-        steamLibraryCount: 12
+        steamLibraryCount: 12,
+        steamCredentialsMissing: false
       },
       mode: 'hidden'
     },
@@ -42,7 +44,8 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
       input: {
         steamLoggedIn: false,
         steamSyncStatus: 'syncing',
-        steamLibraryCount: 0
+        steamLibraryCount: 0,
+        steamCredentialsMissing: false
       },
       mode: 'hidden'
     },
@@ -51,7 +54,8 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
       input: {
         steamLoggedIn: false,
         steamSyncStatus: 'syncing',
-        steamLibraryCount: 12
+        steamLibraryCount: 12,
+        steamCredentialsMissing: false
       },
       mode: 'hidden'
     },
@@ -60,7 +64,8 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
       input: {
         steamLoggedIn: false,
         steamSyncStatus: 'failed',
-        steamLibraryCount: 0
+        steamLibraryCount: 0,
+        steamCredentialsMissing: false
       },
       mode: 'hidden'
     },
@@ -69,7 +74,8 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
       input: {
         steamLoggedIn: false,
         steamSyncStatus: 'failed',
-        steamLibraryCount: 12
+        steamLibraryCount: 12,
+        steamCredentialsMissing: false
       },
       mode: 'hidden'
     },
@@ -78,7 +84,8 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
       input: {
         steamLoggedIn: true,
         steamSyncStatus: 'idle',
-        steamLibraryCount: 0
+        steamLibraryCount: 0,
+        steamCredentialsMissing: false
       },
       mode: 'hidden'
     },
@@ -87,7 +94,8 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
       input: {
         steamLoggedIn: true,
         steamSyncStatus: 'idle',
-        steamLibraryCount: 12
+        steamLibraryCount: 12,
+        steamCredentialsMissing: false
       },
       mode: 'hidden'
     },
@@ -96,7 +104,8 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
       input: {
         steamLoggedIn: true,
         steamSyncStatus: 'syncing',
-        steamLibraryCount: 0
+        steamLibraryCount: 0,
+        steamCredentialsMissing: false
       },
       mode: 'syncing'
     },
@@ -105,7 +114,8 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
       input: {
         steamLoggedIn: true,
         steamSyncStatus: 'syncing',
-        steamLibraryCount: 12
+        steamLibraryCount: 12,
+        steamCredentialsMissing: false
       },
       mode: 'hidden'
     },
@@ -114,7 +124,8 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
       input: {
         steamLoggedIn: true,
         steamSyncStatus: 'failed',
-        steamLibraryCount: 0
+        steamLibraryCount: 0,
+        steamCredentialsMissing: false
       },
       mode: 'failed'
     },
@@ -123,7 +134,8 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
       input: {
         steamLoggedIn: true,
         steamSyncStatus: 'failed',
-        steamLibraryCount: 12
+        steamLibraryCount: 12,
+        steamCredentialsMissing: false
       },
       mode: 'failed'
     }
@@ -152,7 +164,8 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
       const idleEmptyRow: SteamSyncIndicatorInput = {
         steamLoggedIn: true,
         steamSyncStatus: 'idle',
-        steamLibraryCount: 0
+        steamLibraryCount: 0,
+        steamCredentialsMissing: false
       }
 
       expect(reproducesShippedGuard(idleEmptyRow)).toBe(true)
@@ -186,7 +199,8 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
       const failedWithGamesRow: SteamSyncIndicatorInput = {
         steamLoggedIn: true,
         steamSyncStatus: 'failed',
-        steamLibraryCount: 12
+        steamLibraryCount: 12,
+        steamCredentialsMissing: false
       }
 
       expect(hidesFailureWhenGamesPresent(failedWithGamesRow)).toBe('hidden')
@@ -214,7 +228,8 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
       const loggedOutSyncingRow: SteamSyncIndicatorInput = {
         steamLoggedIn: false,
         steamSyncStatus: 'syncing',
-        steamLibraryCount: 0
+        steamLibraryCount: 0,
+        steamCredentialsMissing: false
       }
 
       expect(leaksIndicatorWhenLoggedOut(loggedOutSyncingRow)).toBe('syncing')
@@ -229,8 +244,93 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
     const result = resolveSteamSyncIndicator({
       steamLoggedIn: true,
       steamSyncStatus: status,
-      steamLibraryCount: 0
+      steamLibraryCount: 0,
+      steamCredentialsMissing: false
     })
     expect(result.mode).toBe('failed')
+  })
+
+  // ── 260823-ai6: signed-out sync failures get their own surface ───────────
+  //
+  // The generic 'failed' banner says "check that Steam is reachable" and
+  // offers "Retry Steam sync". When the cause is a proven-missing credential
+  // both are wrong: Steam IS reachable, and the retry re-enters the same
+  // path, hits the same empty credential read, and fails identically. Phase
+  // 37 settled that reasoning for the install path (steam/depotErrors.ts);
+  // these rows hold it for sync.
+  describe('signedOut mode (260823-ai6)', () => {
+    it('takes precedence over the generic failed banner', () => {
+      // THE regression. Placing this branch after the 'failed' branch -- or
+      // dropping it -- yields 'failed' here and ships an action that cannot
+      // succeed.
+      expect(
+        resolveSteamSyncIndicator({
+          steamLoggedIn: true,
+          steamSyncStatus: 'failed',
+          steamLibraryCount: 0,
+          steamCredentialsMissing: true
+        }).mode
+      ).toBe('signedOut')
+    })
+
+    it('still wins when a cached library rendered', () => {
+      // Mirrors branch 2's own rule: a failure is surfaced regardless of
+      // steamLibraryCount, so the credential-aware variant must be too.
+      expect(
+        resolveSteamSyncIndicator({
+          steamLoggedIn: true,
+          steamSyncStatus: 'failed',
+          steamLibraryCount: 42,
+          steamCredentialsMissing: true
+        }).mode
+      ).toBe('signedOut')
+    })
+
+    it('leaves a plain failure alone when the credential is intact', () => {
+      expect(
+        resolveSteamSyncIndicator({
+          steamLoggedIn: true,
+          steamSyncStatus: 'failed',
+          steamLibraryCount: 0,
+          steamCredentialsMissing: false
+        }).mode
+      ).toBe('failed')
+    })
+
+    it('does NOT fire on the flag alone -- only on an actual failure', () => {
+      // Scoping rule: the Manage Accounts tile already reports the signed-out
+      // state. An always-on banner here would be a second permanent surface
+      // competing with it, so idle and syncing must stay unaffected.
+      expect(
+        resolveSteamSyncIndicator({
+          steamLoggedIn: true,
+          steamSyncStatus: 'idle',
+          steamLibraryCount: 12,
+          steamCredentialsMissing: true
+        }).mode
+      ).toBe('hidden')
+      expect(
+        resolveSteamSyncIndicator({
+          steamLoggedIn: true,
+          steamSyncStatus: 'syncing',
+          steamLibraryCount: 0,
+          steamCredentialsMissing: true
+        }).mode
+      ).toBe('syncing')
+    })
+
+    it('never leaks to a user with no Steam account -- branch 1 still wins', () => {
+      // Branch 1's comment says it is evaluated FIRST so no later branch can
+      // leak a Steam surface to a logged-out user. The new branch must not be
+      // the exception that breaks that promise.
+      expect(
+        resolveSteamSyncIndicator({
+          steamLoggedIn: false,
+          steamSyncStatus: 'failed',
+          steamLibraryCount: 0,
+          steamCredentialsMissing: true
+        }).mode
+      ).toBe('hidden')
+    })
   })
 })
