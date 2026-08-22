@@ -60,6 +60,7 @@
             "filteredOfTotal": "{{shown}} of {{total}}"
         },
         "noStorePage": "No store page",
+        "no_no_store_page_games": "No games without a store page in your library",
         "steamSync": {
             "failedBody": "Your other libraries are still available. Try again, or check that Steam is reachable.",
             "failedTitle": "Couldn't sync your Steam library",
