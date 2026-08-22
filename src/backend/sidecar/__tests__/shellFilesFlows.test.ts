@@ -42,7 +42,6 @@
 // default (real) module resolution — it does not substitute a replacement. ─
 jest.unmock('i18next')
 
-import { PassThrough } from 'node:stream'
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { dirname, join } from 'path'
 import { tmpdir } from 'os'
@@ -213,7 +212,12 @@ jest.mock('../../dialog/dialog', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { init } from '../bootstrap'
+import {
+  Frame,
+  startSidecar,
+  writeInvoke,
+  writeSend
+} from './helpers/sidecarHarness'
 import { GlobalConfig } from 'backend/config'
 import { requestRustInvoke } from '../sidecarRpc'
 import { listenerRegistry, handlerRegistry } from '../electronStub'
@@ -253,31 +257,6 @@ function mockAppSettings(partial: Record<string, unknown>) {
   return { setSetting }
 }
 
-type Frame = Record<string, unknown>
-
-/** Buffers newline-delimited output from a PassThrough into parsed frames. */
-function collectFrames(stream: PassThrough): Frame[] {
-  const frames: Frame[] = []
-  let buffer = ''
-  stream.on('data', (chunk: Buffer | string) => {
-    buffer += chunk.toString()
-    let newlineIndex = buffer.indexOf('\n')
-    while (newlineIndex !== -1) {
-      const line = buffer.slice(0, newlineIndex)
-      buffer = buffer.slice(newlineIndex + 1)
-      if (line.trim().length > 0) {
-        try {
-          frames.push(JSON.parse(line))
-        } catch {
-          // Non-JSON diagnostic line (e.g. READY_SENTINEL) — ignore.
-        }
-      }
-      newlineIndex = buffer.indexOf('\n')
-    }
-  })
-  return frames
-}
-
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve))
@@ -307,35 +286,6 @@ async function waitForResponse(
     }
     await new Promise((resolve) => setTimeout(resolve, 20))
   }
-}
-
-/** Starts a fresh sidecar RPC loop bound to its own stream pair. */
-function startSidecar(): { input: PassThrough; frames: Frame[] } {
-  const input = new PassThrough()
-  const output = new PassThrough()
-  const frames = collectFrames(output)
-  init(input, output)
-  return { input, frames }
-}
-
-/** Writes a well-formed `invoke` request frame to the sidecar's stdin. */
-function writeInvoke(
-  input: PassThrough,
-  id: string,
-  channel: string,
-  args: unknown[]
-): void {
-  input.write(`${JSON.stringify({ id, kind: 'invoke', channel, args })}\n`)
-}
-
-/** Writes a well-formed `send` (fire-and-forget) request frame to the sidecar's stdin. */
-function writeSend(
-  input: PassThrough,
-  id: string,
-  channel: string,
-  args: unknown[]
-): void {
-  input.write(`${JSON.stringify({ id, kind: 'send', channel, args })}\n`)
 }
 
 let warnSpy: jest.SpyInstance

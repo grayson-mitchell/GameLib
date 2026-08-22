@@ -22,8 +22,6 @@
  * non-Steam launch succeeding end to end.
  */
 
-import { PassThrough } from 'node:stream'
-
 // ── os — same disposable-homedir redirect as skeletonFlows.test.ts. Without it this suite
 // would reach the developer's real `~/Library/Application Support/GameLib` store files. ──
 jest.mock('os', () => {
@@ -88,58 +86,14 @@ jest.mock('../../launcher', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────────────────
-import { init } from '../bootstrap'
+import { startSidecar, writeInvoke } from './helpers/sidecarHarness'
 import { getSteamLibraries } from 'backend/utils'
-
-type Frame = Record<string, unknown>
-
-/** Buffers newline-delimited output from a PassThrough into parsed frames. */
-function collectFrames(stream: PassThrough): Frame[] {
-  const frames: Frame[] = []
-  let buffer = ''
-  stream.on('data', (chunk: Buffer | string) => {
-    buffer += chunk.toString()
-    let newlineIndex = buffer.indexOf('\n')
-    while (newlineIndex !== -1) {
-      const line = buffer.slice(0, newlineIndex)
-      buffer = buffer.slice(newlineIndex + 1)
-      if (line.trim().length > 0) {
-        try {
-          frames.push(JSON.parse(line))
-        } catch {
-          // Non-JSON diagnostic line (e.g. READY_SENTINEL) — ignore.
-        }
-      }
-      newlineIndex = buffer.indexOf('\n')
-    }
-  })
-  return frames
-}
 
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve))
   await new Promise((resolve) => setImmediate(resolve))
   await new Promise((resolve) => setImmediate(resolve))
-}
-
-/** Starts a fresh sidecar RPC loop bound to its own stream pair. */
-function startSidecar(): { input: PassThrough; frames: Frame[] } {
-  const input = new PassThrough()
-  const output = new PassThrough()
-  const frames = collectFrames(output)
-  init(input, output)
-  return { input, frames }
-}
-
-/** Writes a well-formed `invoke` request frame to the sidecar's stdin. */
-function writeInvoke(
-  input: PassThrough,
-  id: string,
-  channel: string,
-  args: unknown[]
-): void {
-  input.write(`${JSON.stringify({ id, kind: 'invoke', channel, args })}\n`)
 }
 
 describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, plan 34.5-46)', () => {

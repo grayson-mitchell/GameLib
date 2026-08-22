@@ -78,11 +78,10 @@ jest.mock('../../humble/user')
 jest.mock('../../humble/library')
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { PassThrough } from 'node:stream'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-import { init } from '../bootstrap'
+import { startSidecar, writeInvoke, writeSend } from './helpers/sidecarHarness'
 import { getSteamLibraries } from 'backend/utils'
 import { HumbleUser } from '../../humble/user'
 import { HumbleLibrary } from '../../humble/library'
@@ -94,71 +93,12 @@ import {
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
-type Frame = Record<string, unknown>
-
-/** Buffers newline-delimited output from a PassThrough into parsed frames
- * (copied from steamAuthFlows.test.ts — this file has no prior copy). */
-function collectFrames(stream: PassThrough): Frame[] {
-  const frames: Frame[] = []
-  let buffer = ''
-  stream.on('data', (chunk: Buffer | string) => {
-    buffer += chunk.toString()
-    let newlineIndex = buffer.indexOf('\n')
-    while (newlineIndex !== -1) {
-      const line = buffer.slice(0, newlineIndex)
-      buffer = buffer.slice(newlineIndex + 1)
-      if (line.trim().length > 0) {
-        try {
-          frames.push(JSON.parse(line))
-        } catch {
-          // Non-JSON diagnostic line (e.g. READY_SENTINEL) — ignore.
-        }
-      }
-      newlineIndex = buffer.indexOf('\n')
-    }
-  })
-  return frames
-}
-
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to
  * resolve (copied from steamAuthFlows.test.ts). */
 async function flush(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve))
   await new Promise((resolve) => setImmediate(resolve))
   await new Promise((resolve) => setImmediate(resolve))
-}
-
-/** Starts a fresh sidecar RPC loop bound to its own stream pair (copied from
- * steamAuthFlows.test.ts). */
-function startSidecar(): { input: PassThrough; frames: Frame[] } {
-  const input = new PassThrough()
-  const output = new PassThrough()
-  const frames = collectFrames(output)
-  init(input, output)
-  return { input, frames }
-}
-
-/** Writes a well-formed `invoke` request frame to the sidecar's stdin
- * (copied from steamAuthFlows.test.ts). */
-function writeInvoke(
-  input: PassThrough,
-  id: string,
-  channel: string,
-  args: unknown[]
-): void {
-  input.write(`${JSON.stringify({ id, kind: 'invoke', channel, args })}\n`)
-}
-
-/** Writes a well-formed `send` request frame to the sidecar's stdin
- * (copied from steamAuthFlows.test.ts — this file has no prior `writeSend`,
- * needed now that `humbleDisconnect` (Plan 05) is a real send channel). */
-function writeSend(
-  input: PassThrough,
-  id: string,
-  channel: string,
-  args: unknown[]
-): void {
-  input.write(`${JSON.stringify({ id, kind: 'send', channel, args })}\n`)
 }
 
 /** Local test-only shape for `HumbleLibrary.getKeys()`'s fake return values

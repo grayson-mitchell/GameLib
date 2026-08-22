@@ -107,8 +107,6 @@
 // `appShellFlows.test.ts` (that WOULD be a second, different automock). ────
 jest.unmock('i18next')
 
-import { PassThrough } from 'node:stream'
-
 // ── os — GAP FIX precedent: redirect homedir() to a disposable per-process
 // tmp directory so this suite can never touch a developer's real config
 // directory ──────────────────────────────────────────────────────────────
@@ -326,7 +324,12 @@ jest.mock('../../utils/aborthandler/aborthandler', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { init } from '../bootstrap'
+import {
+  startSidecar,
+  writeInvoke,
+  writeSend,
+  findResponse
+} from './helpers/sidecarHarness'
 import { GlobalConfig } from 'backend/config'
 import { libraryManagerMap } from 'backend/storeManagers'
 import { isOnline } from '../../online_monitor'
@@ -428,79 +431,11 @@ function makeGameHandle(overrides: Record<string, jest.Mock> = {}) {
   }
 }
 
-type Frame = Record<string, unknown>
-
-/** Buffers newline-delimited output from a PassThrough into parsed frames. */
-function collectFrames(stream: PassThrough): Frame[] {
-  const frames: Frame[] = []
-  let buffer = ''
-  stream.on('data', (chunk: Buffer | string) => {
-    buffer += chunk.toString()
-    let newlineIndex = buffer.indexOf('\n')
-    while (newlineIndex !== -1) {
-      const line = buffer.slice(0, newlineIndex)
-      buffer = buffer.slice(newlineIndex + 1)
-      if (line.trim().length > 0) {
-        try {
-          frames.push(JSON.parse(line))
-        } catch {
-          // Non-JSON diagnostic line (e.g. READY_SENTINEL) — ignore.
-        }
-      }
-      newlineIndex = buffer.indexOf('\n')
-    }
-  })
-  return frames
-}
-
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve))
   await new Promise((resolve) => setImmediate(resolve))
   await new Promise((resolve) => setImmediate(resolve))
-}
-
-/** Starts a fresh sidecar RPC loop bound to its own stream pair. */
-function startSidecar(): { input: PassThrough; frames: Frame[] } {
-  const input = new PassThrough()
-  const output = new PassThrough()
-  const frames = collectFrames(output)
-  init(input, output)
-  return { input, frames }
-}
-
-/** Writes a well-formed `invoke` request frame to the sidecar's stdin. */
-function writeInvoke(
-  input: PassThrough,
-  id: string,
-  channel: string,
-  args: unknown[]
-): void {
-  input.write(`${JSON.stringify({ id, kind: 'invoke', channel, args })}\n`)
-}
-
-/**
- * Writes a well-formed `send` (fire-and-forget) request frame to the
- * sidecar's stdin (mirrors `appShellFlows.test.ts`'s own `writeSend` helper).
- * Unlike `writeInvoke`, no response frame is ever produced for this `id` —
- * see the send-kind describe block below for why that matters.
- */
-function writeSend(
-  input: PassThrough,
-  id: string,
-  channel: string,
-  args: unknown[]
-): void {
-  input.write(`${JSON.stringify({ id, kind: 'send', channel, args })}\n`)
-}
-
-function findResponse(
-  frames: Frame[],
-  id: string
-): { ok: boolean; result?: unknown; error?: string } | undefined {
-  return frames.find((f) => f.id === id) as
-    | { ok: boolean; result?: unknown; error?: string }
-    | undefined
 }
 
 const ALL_15_CHANNELS: [string, unknown[]][] = [

@@ -103,7 +103,12 @@ type Frame = Record<string, unknown>
 
 /** Buffers newline-delimited output from a PassThrough into parsed frames (copied from
  * rustInvokeChannel.test.ts's `collectLines` + JSON.parse, humbleFlows.test.ts's
- * `collectFrames`). */
+ * `collectFrames`).
+ *
+ * WR-10: deliberately NOT replaced by `./helpers/sidecarHarness`'s identical
+ * copy. That module imports `init` from `../../bootstrap`, so importing it
+ * would pull GlobalConfig/i18next in at module load -- exactly the
+ * full-bootstrap cost `startTransport` below exists to avoid. Keep local. */
 function collectFrames(stream: PassThrough): Frame[] {
   const frames: Frame[] = []
   let buffer = ''

@@ -283,7 +283,6 @@ jest.mock('../../utils/aborthandler/aborthandler', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { PassThrough } from 'node:stream'
 import {
   existsSync,
   mkdirSync,
@@ -296,7 +295,11 @@ import { join, relative, resolve, isAbsolute } from 'path'
 import { tmpdir } from 'os'
 import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
-import { init } from '../bootstrap'
+import {
+  startSidecar,
+  writeInvoke,
+  findResponse
+} from './helpers/sidecarHarness'
 import { GlobalConfig } from 'backend/config'
 import { libraryManagerMap } from 'backend/storeManagers'
 import { handlerRegistry } from '../electronStub'
@@ -376,31 +379,6 @@ function mockAppSettings(partial: Record<string, unknown>) {
   return { setSetting }
 }
 
-type Frame = Record<string, unknown>
-
-/** Buffers newline-delimited output from a PassThrough into parsed frames. */
-function collectFrames(stream: PassThrough): Frame[] {
-  const frames: Frame[] = []
-  let buffer = ''
-  stream.on('data', (chunk: Buffer | string) => {
-    buffer += chunk.toString()
-    let newlineIndex = buffer.indexOf('\n')
-    while (newlineIndex !== -1) {
-      const line = buffer.slice(0, newlineIndex)
-      buffer = buffer.slice(newlineIndex + 1)
-      if (line.trim().length > 0) {
-        try {
-          frames.push(JSON.parse(line))
-        } catch {
-          // Non-JSON diagnostic line (e.g. READY_SENTINEL) — ignore.
-        }
-      }
-      newlineIndex = buffer.indexOf('\n')
-    }
-  })
-  return frames
-}
-
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve))
@@ -418,34 +396,6 @@ async function flush(): Promise<void> {
 async function flushWithIo(): Promise<void> {
   await flush()
   await new Promise((resolve) => setTimeout(resolve, 20))
-}
-
-/** Starts a fresh sidecar RPC loop bound to its own stream pair. */
-function startSidecar(): { input: PassThrough; frames: Frame[] } {
-  const input = new PassThrough()
-  const output = new PassThrough()
-  const frames = collectFrames(output)
-  init(input, output)
-  return { input, frames }
-}
-
-/** Writes a well-formed `invoke` request frame to the sidecar's stdin. */
-function writeInvoke(
-  input: PassThrough,
-  id: string,
-  channel: string,
-  args: unknown[]
-): void {
-  input.write(`${JSON.stringify({ id, kind: 'invoke', channel, args })}\n`)
-}
-
-function findResponse(
-  frames: Frame[],
-  id: string
-): { ok: boolean; result?: unknown; error?: string } | undefined {
-  return frames.find((f) => f.id === id) as
-    | { ok: boolean; result?: unknown; error?: string }
-    | undefined
 }
 
 function makeGameInfo(overrides: Partial<GameInfo> = {}): GameInfo {

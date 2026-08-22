@@ -44,8 +44,6 @@
  * `rustInvoke` wire protocol, not merely that a function was called.
  */
 
-import { PassThrough } from 'node:stream'
-
 // ── os — GAP FIX precedent (see module docstring above): redirect homedir()
 // to a disposable per-process tmp directory so this suite can never touch a
 // developer's real config directory ──────────────────────────────────────────
@@ -125,7 +123,7 @@ jest.mock('../../storeManagers/steam/installFormIpc')
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
-import { init } from '../bootstrap'
+import { startSidecar, writeInvoke, writeSend } from './helpers/sidecarHarness'
 import { SteamUser } from '../../storeManagers/steam/user'
 import { getSteamLibraries } from 'backend/utils'
 import {
@@ -154,66 +152,11 @@ import {
 
 const MAIN_TS_PATH = join(__dirname, '../../main.ts')
 
-type Frame = Record<string, unknown>
-
-/** Buffers newline-delimited output from a PassThrough into parsed frames. */
-function collectFrames(stream: PassThrough): Frame[] {
-  const frames: Frame[] = []
-  let buffer = ''
-  stream.on('data', (chunk: Buffer | string) => {
-    buffer += chunk.toString()
-    let newlineIndex = buffer.indexOf('\n')
-    while (newlineIndex !== -1) {
-      const line = buffer.slice(0, newlineIndex)
-      buffer = buffer.slice(newlineIndex + 1)
-      if (line.trim().length > 0) {
-        try {
-          frames.push(JSON.parse(line))
-        } catch {
-          // Non-JSON diagnostic line (e.g. READY_SENTINEL) — ignore.
-        }
-      }
-      newlineIndex = buffer.indexOf('\n')
-    }
-  })
-  return frames
-}
-
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve))
   await new Promise((resolve) => setImmediate(resolve))
   await new Promise((resolve) => setImmediate(resolve))
-}
-
-/** Starts a fresh sidecar RPC loop bound to its own stream pair. */
-function startSidecar(): { input: PassThrough; frames: Frame[] } {
-  const input = new PassThrough()
-  const output = new PassThrough()
-  const frames = collectFrames(output)
-  init(input, output)
-  return { input, frames }
-}
-
-/** Writes a well-formed `invoke` request frame to the sidecar's stdin. */
-function writeInvoke(
-  input: PassThrough,
-  id: string,
-  channel: string,
-  args: unknown[]
-): void {
-  input.write(`${JSON.stringify({ id, kind: 'invoke', channel, args })}\n`)
-}
-
-/** Writes a well-formed `send` request frame to the sidecar's stdin (copied
- * from settingsFlows.test.ts:249-256 — this file has no prior `writeSend`). */
-function writeSend(
-  input: PassThrough,
-  id: string,
-  channel: string,
-  args: unknown[]
-): void {
-  input.write(`${JSON.stringify({ id, kind: 'send', channel, args })}\n`)
 }
 
 describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {

@@ -53,8 +53,6 @@
  * `storeManagers/steam/nativeInstallSetting.ts`) runs for real, unmodified.
  */
 
-import { PassThrough } from 'node:stream'
-
 // ── os — GAP FIX precedent: redirect homedir() to a disposable per-process
 // tmp directory so this suite can never touch a developer's real config
 // directory (GlobalConfig/fileStore both resolve their on-disk path from
@@ -154,7 +152,7 @@ jest.mock('../../storeManagers/steam/games', () => {
 })
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { init } from '../bootstrap'
+import { startSidecar, writeInvoke } from './helpers/sidecarHarness'
 import { getSteamLibraries } from 'backend/utils'
 import { GlobalConfig } from 'backend/config'
 import { libraryManagerMap } from 'backend/storeManagers'
@@ -182,55 +180,11 @@ type MockedSteamGame = {
 }
 const steamGameMocks = (SteamGame as unknown as MockedSteamGame).__mocks
 
-type Frame = Record<string, unknown>
-
-/** Buffers newline-delimited output from a PassThrough into parsed frames. */
-function collectFrames(stream: PassThrough): Frame[] {
-  const frames: Frame[] = []
-  let buffer = ''
-  stream.on('data', (chunk: Buffer | string) => {
-    buffer += chunk.toString()
-    let newlineIndex = buffer.indexOf('\n')
-    while (newlineIndex !== -1) {
-      const line = buffer.slice(0, newlineIndex)
-      buffer = buffer.slice(newlineIndex + 1)
-      if (line.trim().length > 0) {
-        try {
-          frames.push(JSON.parse(line))
-        } catch {
-          // Non-JSON diagnostic line (e.g. READY_SENTINEL) — ignore.
-        }
-      }
-      newlineIndex = buffer.indexOf('\n')
-    }
-  })
-  return frames
-}
-
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve))
   await new Promise((resolve) => setImmediate(resolve))
   await new Promise((resolve) => setImmediate(resolve))
-}
-
-/** Starts a fresh sidecar RPC loop bound to its own stream pair. */
-function startSidecar(): { input: PassThrough; frames: Frame[] } {
-  const input = new PassThrough()
-  const output = new PassThrough()
-  const frames = collectFrames(output)
-  init(input, output)
-  return { input, frames }
-}
-
-/** Writes a well-formed `invoke` request frame to the sidecar's stdin. */
-function writeInvoke(
-  input: PassThrough,
-  id: string,
-  channel: string,
-  args: unknown[]
-): void {
-  input.write(`${JSON.stringify({ id, kind: 'invoke', channel, args })}\n`)
 }
 
 describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
