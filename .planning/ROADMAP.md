@@ -3824,6 +3824,8 @@ same run. Note that 37-03 explains **9** of those 22 games and closing it will N
 
 **Plans:** 0 — see the item ledger in `38-VERIFICATION.md`, which is the phase's source of truth and the array `gsd-sdk query audit-uat` reads.
 
+**Items:** 7 as of 2026-08-22. Seeded with 6; 34.1's tray dark/light item (38-W02) joined once its ARTWORK blocker was fixed in code, which is the intended sequence — an item blocked on something other than hardware does not belong here, because parking it would disguise a real defect as a hardware excuse.
+
 **Why this phase exists.** Phase 34.9 routed 8 of 24 ledger items to "a follow-up phase" that was never in ROADMAP.md; six sat dangling 9-11 days while every gate read `24/24 mapped, unmapped 0`, because the sweep scored whether an item was *mapped to a row*, not whether the row's owner resolved to anything real. This phase exists **before** the items are moved into it, so that no relocation ever points at a phase that does not exist.
 
 **Two rules for anything relocated here.**

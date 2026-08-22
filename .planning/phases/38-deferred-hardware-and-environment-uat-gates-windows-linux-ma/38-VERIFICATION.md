@@ -30,6 +30,27 @@ relocation_rules: >
   single pass/fail and the un-run half disappears — Phase 34.1 proved this twice (items 5 and 6).
 
 human_verification:
+  - id: "38-W02"
+    test: "Tray — Windows/Linux dark/light tray icon swap. With GameLib running, toggle Settings > 'Use Dark Tray Icon' and watch the tray/notification-area image."
+    expected: "The visible tray image swaps within ~500ms: ON gives a BLACK glyph (for a light taskbar), OFF gives a WHITE one. Both must be a legible cat silhouette, not a smudge."
+    why_human: "Requires a Windows or Linux tray/notification area to render into. The asset-level property (the two files differ, and are a black and a white glyph respectively) is already gated without hardware by trayIconAssets.test.ts; what cannot be automated is whether the swap is VISIBLE and LEGIBLE at real tray size against a real taskbar."
+    blocked_by: "a Windows or Linux machine"
+    platform_gate: "src-tauri/src/main.rs — `tray_image` returns TRAY_ICON_TEMPLATE on macOS REGARDLESS of the `dark` argument (AppKit tints template images itself), so `darkTrayIcon` is vestigial on macOS BY DESIGN. The toggle is therefore unobservable on this project's hardware for a documented reason, not an accidental one."
+    origin_phase: "34.1"
+    origin_item: "6d / Gap G3"
+    prior_state: >
+      Blocked on ARTWORK, not hardware, until 2026-08-22 — which is why it correctly did NOT move
+      here with the first six items. `icon-dark.png` and `icon-light.png` were byte-identical for
+      the project's entire history (verified by md5 at all three scales), so `darkTrayIcon` was a
+      switch wired to nothing and the item would have FAILED on a Windows machine too. That is now
+      fixed: `meta/trayIconVariants.ts` generates `icon-tray-{dark,light}{,@2x,@3x}.png` from the
+      same hue-segmented mask as the macOS template, differing only in fill, and refuses to write
+      an identical pair at any scale. Both that gate and the asset tests are RED-proven against
+      known-bad input. So this item is now genuinely runnable the moment hardware exists — which
+      was NOT true of it before.
+    watch_out: >
+      macOS is NOT a valid substitute even to smoke-test the toggle: it will correctly show no
+      change at all. Do not record that as a FAIL.
   - id: "38-W01"
     test: "Window buttons — Windows/Linux. With framelessWindow ON, GameLib's own custom-titlebar buttons sit at the window's top edge and minimize/maximize/restore/close the real OS window."
     expected: "Each click causes the real OS window to minimize / maximize / restore / close, exactly as the equivalent native title-bar button would."

@@ -3,12 +3,13 @@ created: 2026-07-25T14:20:00.000Z
 title: "Tray dark/light icons are byte-identical (Windows/Linux) — icon swap is a visual no-op there"
 area: branding
 needs: artwork
-status: "RE-SCOPED 2026-08-14 -- CLOSED on macOS, OPEN on Windows/Linux. Do NOT close or move this todo: the Windows/Linux half is genuinely unfixed. See the dated resolution section below."
+status: "RESOLVED 2026-08-22 on ALL platforms. macOS closed 2026-08-14 via the AppKit template; Windows/Linux closed 2026-08-22 by generating a real dark/light pair. The remaining work is a live OBSERVATION on Windows/Linux hardware, which is not a todo — it is Phase 38 item 38-W02."
+resolves_phase: "34.1"
 files:
-  - public/icon-dark.png
-  - public/icon-dark@2x.png
-  - public/icon-dark@3x.png
-  - public/icon-light.png
+  - public/icon-tray-source.png
+  - public/icon-tray-dark.png
+  - public/icon-tray-light.png
+  - meta/trayIconVariants.ts
   - src-tauri/src/main.rs:70,74
   - src/backend/tray_icon/tray_icon.ts:15-16,91
   - src/backend/sidecar/__tests__/appShellFlows.test.ts:697,708
@@ -139,3 +140,37 @@ auto-invert branded artwork, per the RGB-inversion rejection above), then re-syn
 The live swap behaviour there is adjudicated separately by `34.1-HUMAN-UAT.md` UAT item 6d
 (Windows/Linux half), which this asset work alone will not close without also confirming on real
 Windows/Linux hardware.
+
+
+## RESOLVED 2026-08-22 (Windows/Linux half — the last one)
+
+`meta/trayIconVariants.ts` now emits `icon-tray-{dark,light}{,@2x,@3x}.png` from the SAME
+hue-segmented mask that already produced the macOS template, differing only in fill (black for a
+light taskbar, white for a dark one). The hard part — separating the cat glyph from its orange
+starburst — was already solved by the 2026-08-14 macOS work and was simply reused at a second
+fill colour.
+
+Measured before writing anything, rather than assumed: the segmentation holds at all three
+scales with the EXISTING `HUE_SPLIT_DEGREES` (opaque fraction 32.6% / 31.8% / 31.6%), so the
+constant did not need re-deriving from a fresh histogram.
+
+Two structural changes made the fix safe rather than just present:
+
+1. **`icon-dark.png` was renamed to `icon-tray-source.png`** (commit `e485b0acb`, pure R100
+   rename). It had been serving as BOTH the generator's full-colour input and the Windows/Linux
+   "dark" variant. Emitting a dark variant would have overwritten the generator's own source, and
+   the next run would have had no colour left to segment.
+2. **The generator refuses to write an identical pair at any scale**, and `trayIconAssets.test.ts`
+   asserts the same on the committed assets, with the three former `it.failing` tripwires flipped
+   to plain `it`. Both are RED-proven against known-bad input (copying dark over light fails 2 of
+   10 tests; forcing both fills equal makes the generator exit non-zero) — a distinctness gate
+   that cannot fail on an identical pair would guard nothing.
+
+Also deleted `icon-light*.png`, unreferenced once the consumers moved, and updated
+`electron-builder.yml`'s `asarUnpack` list — `nativeImage.createFromPath` reads from disk, so a
+missing entry there breaks the tray icon in PACKAGED builds only.
+
+**What is NOT done, and is deliberately not tracked here:** nobody has SEEN the swap. That needs
+a Windows or Linux tray to render into, and macOS cannot substitute — `tray_image` returns the
+AppKit template regardless of the `dark` argument, so the toggle is correctly invisible there.
+That observation is Phase 38 item **38-W02**.
