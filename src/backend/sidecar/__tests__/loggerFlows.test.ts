@@ -19,10 +19,14 @@
  * real log file — unlike some sibling suites, this file makes no claim that
  * it avoids touching disk. What this suite guarantees instead is
  * CONTAINMENT: every path `init()` can possibly touch is redirected, by
- * construction, under a disposable per-process tmp root
- * (`gamelib-loggerflows-test-home-${process.pid}`, under `os.tmpdir()`)
- * before the first destructive write can happen, enforced by the `beforeAll`
- * tripwire below.
+ * construction, under a disposable tmp root minted by `mkdtempSync` under
+ * `os.tmpdir()` before the first destructive write can happen, enforced by the
+ * `beforeAll` tripwire below. (WR-02, gap cycle 4: that root used to be
+ * `gamelib-loggerflows-test-home-${process.pid}` — a fully PREDICTABLE path,
+ * created implicitly by `mkdir(recursive)` with default permissions and no
+ * atomicity. Cycle 3's WR-07 closed exactly that symlink-capture vector in
+ * `jest.setupContainment.ts` and nowhere else; this suite kept it for another
+ * cycle while writing a real `gamelib.log` under it.)
  *
  * Containment kit (all four elements, per this suite's own acceptance
  * criteria — shipped from day one, not retrofitted in a later gap cycle):
@@ -80,16 +84,43 @@ import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'fs'
 import { relative, resolve, isAbsolute, dirname } from 'path'
 import { tmpdir } from 'os'
 
-const TMP_ROOT_NAME = `gamelib-loggerflows-test-home-${process.pid}`
+// ── WR-02 (gap cycle 4): ONE root, minted atomically ───────────────────────
+// `mkdtempSync` — atomic (no TOCTOU), mode 0700, unpredictable suffix —
+// replacing `join(tmpdir(), 'gamelib-loggerflows-test-home-' + process.pid)`,
+// which was a predictable path this suite then wrote a real `gamelib.log`
+// into. On a shared, world-writable Linux CI `/tmp`, another uid could
+// pre-create that directory as a symlink and receive an arbitrary-path write
+// as the CI user. Same remedy cycle 3's WR-07 applied to
+// `jest.setupContainment.ts`; this file and `testContainment.test.ts` were the
+// two that still carried the old pattern.
+//
+// `mock`-prefixed and declared at module scope, textually before the factories
+// that read it: ts-jest's hoist transform only lets a `jest.mock()` factory
+// reference an out-of-scope identifier when that identifier is `mock`-prefixed
+// (same convention as `loggerCallSiteGuard.test.ts`'s `mockScratchDir`).
+// `jest.requireActual` throughout, so this setup is unaffected by any mock —
+// including the global `jest.setupContainment` `os` redirect.
+//
+// Second benefit: all three factories below now read ONE value. The path used
+// to be re-derived as a literal in each of them, three copies to keep in sync.
+const mockTmpRoot = jest
+  .requireActual<typeof import('fs')>('fs')
+  .mkdtempSync(
+    jest
+      .requireActual<typeof import('path')>('path')
+      .join(
+        jest.requireActual<typeof import('os')>('os').tmpdir(),
+        'gamelib-loggerflows-'
+      )
+  )
 
-// ── os — redirect homedir() to a disposable per-process tmp directory
+// ── os — redirect homedir() to the disposable tmp root above
 // (GAP FIX precedent, gameDetailsFlows.test.ts) ─────────────────────────────
 jest.mock('os', () => {
   const actual = jest.requireActual('os')
-  const path = jest.requireActual('path')
   return {
     ...actual,
-    homedir: () => path.join(actual.tmpdir(), TMP_ROOT_NAME)
+    homedir: () => mockTmpRoot
   }
 })
 
@@ -99,10 +130,7 @@ jest.mock('os', () => {
 jest.mock('../pathShim', () => {
   const actualOs = jest.requireActual('os')
   const actualPath = jest.requireActual('path')
-  const tmpRoot = actualPath.join(
-    actualOs.tmpdir(),
-    `gamelib-loggerflows-test-home-${process.pid}`
-  )
+  const tmpRoot = mockTmpRoot
   return {
     getPath: (name: string) => {
       switch (name) {
@@ -132,12 +160,7 @@ jest.mock('../pathShim', () => {
 // LogWriter's constructor. ───────────────────────────────────────────────────
 jest.mock('backend/logger/paths', () => {
   const actualPath = jest.requireActual('path')
-  const actualOs = jest.requireActual('os')
-  const tmpRoot = actualPath.join(
-    actualOs.tmpdir(),
-    `gamelib-loggerflows-test-home-${process.pid}`
-  )
-  const logBaseDir = actualPath.join(tmpRoot, 'logs')
+  const logBaseDir = actualPath.join(mockTmpRoot, 'logs')
   return {
     getLogFilePath: (
       args: { appName?: string; runner?: string; type?: string } = {}
@@ -292,6 +315,87 @@ beforeAll(() => {
       )
     }
   }
+})
+
+// WR-02 proof. This change has no behavioural assertion of its own -- the
+// suite passes identically with a predictable root -- so the properties that
+// actually differ are asserted directly against the created directory.
+//
+// Deliberately NOT asserting "the name does not contain process.pid": that
+// would pass for a root named `gamelib-loggerflows-test-home-static`, which is
+// just as capturable. The properties that matter are that the directory was
+// created by us (0700, and it exists) and that its name carries the mkdtemp
+// suffix rather than anything an attacker could compute ahead of time.
+describe('WR-02: the containment root is minted, not derived from a predictable name', () => {
+  const realFs = jest.requireActual<typeof import('fs')>('fs')
+  const realPath = jest.requireActual<typeof import('path')>('path')
+  const realOs = jest.requireActual<typeof import('os')>('os')
+
+  it('exists, sits directly under the real os.tmpdir(), and is mode 0700', () => {
+    expect(realFs.existsSync(mockTmpRoot)).toBe(true)
+    expect(realFs.statSync(mockTmpRoot).isDirectory()).toBe(true)
+    expect(realPath.dirname(mockTmpRoot)).toBe(realOs.tmpdir())
+
+    // 0700 is what mkdtempSync requests; the explicit assertion is here
+    // because the request is masked by umask (measured under IN-05: `umask
+    // 0277` yields 0500), so a hostile umask would show up here rather than
+    // silently.
+    expect(realFs.statSync(mockTmpRoot).mode & 0o777).toBe(0o700)
+  })
+
+  it('carries an mkdtemp suffix rather than a name any other process can compute', () => {
+    const name = realPath.basename(mockTmpRoot)
+    expect(name.startsWith('gamelib-loggerflows-')).toBe(true)
+
+    // mkdtemp appends exactly six random characters to the prefix. A
+    // pid-derived or otherwise-computable name cannot satisfy both.
+    const suffix = name.slice('gamelib-loggerflows-'.length)
+    expect(suffix).toMatch(/^[A-Za-z0-9]{6}$/)
+    expect(suffix).not.toBe(String(process.pid))
+  })
+
+  it('is the SINGLE source of truth the two EFFECTIVE mock factories read', () => {
+    // Before WR-02 the path was re-derived as a literal in each factory --
+    // three copies to keep in sync. If they ever disagree again, the suite's
+    // containment kit is only partly in effect and this fails loudly.
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    const { getPath } = require('../pathShim') as typeof import('../pathShim')
+    /* eslint-enable @typescript-eslint/no-require-imports */
+    expect(getPath('appData')).toBe(mockTmpRoot)
+    expect(getLogFilePath({}).startsWith(mockTmpRoot)).toBe(true)
+  })
+
+  it("this file's own jest.mock('os') is INERT -- setupContainment's wins", () => {
+    // Discovered while writing the assertion above, and recorded rather than
+    // quietly worked around. MEASURED: a per-suite `jest.mock('os', ...)` in a
+    // backend suite never takes effect. `jest.setupContainment.ts` runs from
+    // `setupFiles` and requires 'os' during its own precondition block, so the
+    // mocked module is already instantiated in jest's registry by the time this
+    // file's hoisted `jest.mock('os', ...)` registers a new factory --
+    // `require('os')` returns the cached setupContainment instance, for the
+    // top-level import and for a test-body require alike.
+    //
+    // Containment is NOT weakened by this: homedir() still resolves inside a
+    // disposable tmp root, just setupContainment's rather than this file's, so
+    // nothing reaches the developer's real home. What IS false is this file's
+    // docstring calling its `os` mock "containment kit element 1" -- that
+    // element is carried by `setupFiles`, and the same is true of ~30 other
+    // backend suites that declare their own. Filed as a todo rather than
+    // chased here; WR-02 is about predictable paths, and the two mocks that DO
+    // take effect (pathShim, backend/logger/paths) are the ones that placed
+    // the real gamelib.log, which is the write the old predictable root
+    // exposed.
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    const { homedir } = require('os') as typeof import('os')
+    /* eslint-enable @typescript-eslint/no-require-imports */
+    expect(homedir()).not.toBe(mockTmpRoot)
+    expect(homedir()).toBe(process.env.HOME)
+
+    // Still contained, which is the property that actually matters.
+    const realOsForCheck = jest.requireActual<typeof import('os')>('os')
+    const rel = relative(resolve(realOsForCheck.tmpdir()), resolve(homedir()))
+    expect(rel.startsWith('..') || isAbsolute(rel)).toBe(false)
+  })
 })
 
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
