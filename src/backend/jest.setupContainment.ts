@@ -152,16 +152,23 @@
  * 3. Both `containmentRoot` and the pre-mock real home
  *    (`realHomeAtSetup`, WR-09) are memoized on `globalThis` under
  *    `__GAMELIB_JEST_CONTAINMENT_ROOT__` / `__GAMELIB_JEST_REAL_HOME__` so
- *    a second evaluation of this module (e.g. `structuralContainment
- *    .test.ts` importing `containmentRoot` directly) reuses the same
- *    values instead of minting a second, disagreeing root.
- * 4. (WR-09/WR-10) `realHomeAtSetup` is now exported alongside
- *    `containmentRoot`, and a precondition block runs after both
- *    `jest.mock` registrations and the env assignments: it re-resolves
- *    `require('os').homedir()` and `require('node:os').homedir()` and
- *    checks `containmentRoot` resolves inside `realTmpRoot`, throwing a
- *    loud `[jest.setupContainment] REFUSING TO RUN` `Error` if any of the
- *    three do not hold. Because `setupFiles` entries run once per test
+ *    a second evaluation of this module reuses the same values instead of
+ *    minting a second, disagreeing root.
+ * 4. (WR-09/WR-10, extended by WR-07 in gap cycle 4) `realHomeAtSetup` is
+ *    exported alongside `containmentRoot`, and a precondition block runs
+ *    after both `jest.mock` registrations and the env assignments: it
+ *    re-resolves `require('os').homedir()` and `require('node:os')
+ *    .homedir()`, checks `containmentRoot` resolves inside `realTmpRoot`,
+ *    and — since 2026-08-23 — checks that ALL EIGHT env variables from
+ *    step 2 hold their expected values, naming the offending keys in the
+ *    throw. That last part is what makes this block cover the mechanism
+ *    this docstring actually describes. Until it was added the block
+ *    validated only step 1: any single env assignment could be deleted and
+ *    every backend suite still ran green, with the sole remaining
+ *    enforcement being `testContainment.test.ts`'s Block D text gate,
+ *    which CR-01 proved a block comment can satisfy. It throws a loud
+ *    `[jest.setupContainment] REFUSING TO RUN` `Error` if any check fails.
+ *    Because `setupFiles` entries run once per test
  *    file strictly BEFORE that file's own imports, this precondition
  *    precedes `constants/paths.ts`'s module-scope `mkdirSync` and every
  *    other import-time filesystem touch -- which is exactly what the
@@ -235,8 +242,17 @@ globalThis.__GAMELIB_JEST_REAL_HOME__ = realHomeAtSetup
 // two that do not, both measured). `globalThis` is retained on top of it for
 // the reason it was added: re-execution safety within one file, so
 // `structuralContainment.test.ts` importing `containmentRoot` directly cannot
-// mint a second, disagreeing root.
+// mint a second, disagreeing root. (WR-05 has since removed that import, but
+// the re-execution guarantee is worth keeping on its own terms.)
 const RUN_ROOT_ENV_KEY = 'GAMELIB_JEST_RUN_ROOT'
+
+// WR-05: the pre-mock real home, published to the sandbox so a suite proving
+// mock-freedom can read it WITHOUT importing this module -- an import would
+// install two `jest.mock` registrations into that suite's own module graph,
+// which is exactly the defect WR-05 records. Written by `jest.globalSetup.js`
+// in the parent process; cross-checked, and filled in as a fallback, by the
+// precondition block at the foot of this file.
+const REAL_HOME_ENV_KEY = 'GAMELIB_JEST_REAL_HOME'
 
 /**
  * Accept the inherited root only if it still has every property `mkdtempSync`
@@ -426,10 +442,68 @@ process.env.XDG_CACHE_HOME = join(containmentRoot, '.cache')
   const rootIsInsideRealTmp =
     !rootRelativeToTmp.startsWith('..') && !isAbsolute(rootRelativeToTmp)
 
+  // ── WR-05: publish the real home WITHOUT requiring an import ─────────────
+  // `structuralContainment.test.ts` exists to prove `setupFiles` alone
+  // contains a mock-free suite, and the top-level import it previously used
+  // to read `realHomeAtSetup` dragged this module's two `jest.mock`
+  // registrations into its own module graph -- falsifying the very claim the
+  // file was written to demonstrate. Reading an env var costs nothing and
+  // pulls in nothing.
+  //
+  // `jest.globalSetup.js` captures the same value in the PARENT process,
+  // before any worker forks and before jest's mocking machinery exists at
+  // all, and exports it under this key. That is strictly better provenance
+  // than anything obtainable from inside a sandbox, so when it is present it
+  // wins -- and the two independently-captured values must AGREE, which is
+  // asserted below rather than assumed. When it is absent (someone running
+  // the backend project without `globalSetup`), this module publishes its own
+  // capture so the variable is never merely missing, which would silently
+  // hollow out the consuming suite's anti-vacuity check.
+  const inheritedRealHome = process.env[REAL_HOME_ENV_KEY]
+  if (inheritedRealHome === undefined) {
+    process.env[REAL_HOME_ENV_KEY] = realHomeAtSetup
+  }
+  const realHomeDisagrees =
+    inheritedRealHome !== undefined && inheritedRealHome !== realHomeAtSetup
+
+  // ── WR-07: the SECOND half of the mechanism, asserted ────────────────────
+  // Everything above this comment checks half of what this module's docstring
+  // describes: the `jest.mock('os'/'node:os')` registrations. The other half
+  // is the eight env assignments directly above -- and until 2026-08-23
+  // nothing here checked them at all. Deleting any single assignment left
+  // this block passing happily for all ~113 backend suites, with the only
+  // remaining enforcement being `testContainment.test.ts`'s Block D text
+  // gate, which CR-01 proved a block comment can satisfy. A gate that checks
+  // one of the two things its own docstring names is measuring the wrong
+  // property.
+  //
+  // These are recomputed from `containmentRoot`, deliberately NOT captured
+  // into shared constants at assignment time: a shared constant would make
+  // the check tautological (it would compare each variable against the same
+  // expression that set it, and would still pass if the assignment line were
+  // deleted entirely, since `process.env[k]` would then be `undefined` on
+  // both sides only if the constant were also removed). Spelling the
+  // expected values out a second time is what gives this teeth.
+  const envExpectations: ReadonlyArray<readonly [string, string]> = [
+    ['HOME', containmentRoot],
+    ['USERPROFILE', containmentRoot],
+    ['APPDATA', join(containmentRoot, 'AppData', 'Roaming')],
+    ['LOCALAPPDATA', join(containmentRoot, 'AppData', 'Local')],
+    ['XDG_CONFIG_HOME', join(containmentRoot, '.config')],
+    ['XDG_STATE_HOME', join(containmentRoot, '.local', 'state')],
+    ['XDG_DATA_HOME', join(containmentRoot, '.local', 'share')],
+    ['XDG_CACHE_HOME', join(containmentRoot, '.cache')]
+  ]
+  const badEnvKeys = envExpectations
+    .filter(([key, expected]) => process.env[key] !== expected)
+    .map(([key]) => key)
+
   if (
     bareHomeAtPrecondition !== containmentRoot ||
     prefixedHomeAtPrecondition !== containmentRoot ||
-    !rootIsInsideRealTmp
+    !rootIsInsideRealTmp ||
+    badEnvKeys.length > 0 ||
+    realHomeDisagrees
   ) {
     throw new Error(
       '[jest.setupContainment] REFUSING TO RUN: containment precondition ' +
@@ -437,10 +511,16 @@ process.env.XDG_CACHE_HOME = join(containmentRoot, '.cache')
         `require('os').homedir()=${bareHomeAtPrecondition}, ` +
         `require('node:os').homedir()=${prefixedHomeAtPrecondition}, ` +
         `expected both to equal containmentRoot=${containmentRoot}, and ` +
-        `containmentRoot must resolve inside realTmpRoot=${realTmpRoot}. ` +
+        `containmentRoot must resolve inside realTmpRoot=${realTmpRoot}, and ` +
+        'every home/config/state env variable must point inside the ' +
+        'containment root. Env redirection incomplete for: ' +
+        `${badEnvKeys.length > 0 ? badEnvKeys.join(', ') : '(none)'}. ` +
+        `${REAL_HOME_ENV_KEY} inherited from globalSetup=` +
+        `${inheritedRealHome ?? '(absent)'}, this sandbox captured ` +
+        `${realHomeAtSetup}; the two must agree. ` +
         'Refusing to let any backend test file import run against a ' +
         'broken containment boundary (see jest.setupContainment.ts ' +
-        'docstring, gap cycle 4 / CR-02 / WR-10).'
+        'docstring, gap cycle 4 / CR-02 / WR-10 / WR-07).'
     )
   }
 }

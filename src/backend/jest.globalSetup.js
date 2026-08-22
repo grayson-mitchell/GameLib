@@ -49,7 +49,7 @@
 
 const { chmodSync, lstatSync, mkdtempSync, readdirSync, rmSync } = require('fs')
 const { join } = require('path')
-const { tmpdir } = require('os')
+const { homedir, tmpdir } = require('os')
 
 // One RUN root per jest invocation. Each test file still mints its OWN
 // directory inside it (see jest.setupContainment.ts) -- that per-file
@@ -65,6 +65,22 @@ const RUN_ROOT_PREFIX = 'gamelib-jest-run-'
 const LEGACY_ROOT_PREFIX = 'gamelib-jest-home-'
 const REAPABLE_PREFIXES = [RUN_ROOT_PREFIX, LEGACY_ROOT_PREFIX]
 const CONTAINMENT_ROOT_ENV_KEY = 'GAMELIB_JEST_RUN_ROOT'
+
+// WR-05 (gap cycle 4). `structuralContainment.test.ts` must assert that the
+// resolved log path lands OUTSIDE the developer's real home, and to do that it
+// needs the real home -- but it also exists to prove that `setupFiles` alone
+// contains a suite carrying no `jest.mock` of its own, and the import it used
+// to obtain that value pulled `jest.setupContainment.ts`'s two `jest.mock`
+// registrations into its own module graph, falsifying the claim.
+//
+// This process is the right place to capture it: `globalSetup` runs in the
+// PARENT, before any worker forks and before jest's mocking machinery exists
+// at all, so `homedir()` here cannot be anything but the real one. That is
+// strictly better provenance than any in-sandbox capture, including
+// `jest.requireActual('os').homedir()`. `jest.setupContainment.ts` still takes
+// its own pre-mock capture and asserts the two AGREE, so a disagreement is
+// loud rather than silently preferring one.
+const REAL_HOME_ENV_KEY = 'GAMELIB_JEST_REAL_HOME'
 
 // Roots younger than this are left alone. A concurrently-running jest process
 // (a second terminal, an IDE test runner, a watch-mode session) owns a root
@@ -156,6 +172,10 @@ module.exports = async function globalSetup() {
   // contained, just less tidily.
   process.env[CONTAINMENT_ROOT_ENV_KEY] = root
 
+  // Same inheritance seam, same reason (WR-05). Captured here in the parent,
+  // where no mock of `os` can possibly exist yet.
+  process.env[REAL_HOME_ENV_KEY] = homedir()
+
   const { removed } = reapStaleRoots(realTmpRoot, root)
   if (removed > 0 && process.env.GAMELIB_JEST_QUIET_REAP === undefined) {
     console.log(
@@ -167,5 +187,6 @@ module.exports = async function globalSetup() {
 module.exports.RUN_ROOT_PREFIX = RUN_ROOT_PREFIX
 module.exports.LEGACY_ROOT_PREFIX = LEGACY_ROOT_PREFIX
 module.exports.CONTAINMENT_ROOT_ENV_KEY = CONTAINMENT_ROOT_ENV_KEY
+module.exports.REAL_HOME_ENV_KEY = REAL_HOME_ENV_KEY
 module.exports.REAP_AFTER_MS = REAP_AFTER_MS
 module.exports.reapStaleRoots = reapStaleRoots
