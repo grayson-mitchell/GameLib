@@ -473,11 +473,8 @@ describe('useTauriOAuthLogin — captured -> auth channel -> completion (Phase 3
     mockApi.authAmazon.mockResolvedValue({
       status: 'done',
       user: {
-        account_pool: 'pool-1',
         user_id: 'nile-user-1',
-        home_region: 'us',
-        name: 'Nile Grayson',
-        given_name: 'Grayson'
+        name: 'Nile Grayson'
       }
     })
     const onLoginSuccess = jest.fn()
@@ -678,11 +675,8 @@ describe('useTauriOAuthLogin — completion callback drives the real GlobalState
     mockApi.authAmazon.mockResolvedValue({
       status: 'done',
       user: {
-        account_pool: 'pool-1',
         user_id: 'nile-user-1',
-        home_region: 'us',
-        name: 'Nile Grayson',
-        given_name: 'Grayson'
+        name: 'Nile Grayson'
       }
     })
 
@@ -1077,11 +1071,8 @@ describe('useTauriOAuthLogin — cancellation-window instrumentation (Plan 34.5-
     mockApi.authAmazon.mockResolvedValue({
       status: 'done',
       user: {
-        account_pool: 'pool-1',
         user_id: 'nile-user-1',
-        home_region: 'us',
-        name: 'SecretUsername',
-        given_name: 'Grayson'
+        name: 'SecretUsername'
       }
     })
 

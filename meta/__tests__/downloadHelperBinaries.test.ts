@@ -330,9 +330,9 @@ describe('filename contract', () => {
 
 describe('regression: win32/linux sourcing unchanged for legendary/gogdl/nile', () => {
   it.each([
-    'legendary_linux_x86_64',
+    'legendary_linux_x64',
     'legendary_linux_arm64',
-    'legendary_windows_x86_64.exe',
+    'legendary_windows_x64.exe',
     'legendary_windows_arm64.exe',
     'gogdl_linux_x86_64',
     'gogdl_linux_arm64',

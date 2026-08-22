@@ -27,9 +27,9 @@ export type DownloadedBinary =
   | 'epic-integration'
 
 export const RELEASE_TAGS = {
-  legendary: '0.20.43',
-  gogdl: 'v1.2.1',
-  nile: 'v1.1.2',
+  legendary: '0.21.0',
+  gogdl: 'v1.3.0',
+  nile: 'v1.2.0',
   comet: 'v0.2.0',
   'epic-integration': 'v0.4'
 } as const satisfies Record<DownloadedBinary, string>

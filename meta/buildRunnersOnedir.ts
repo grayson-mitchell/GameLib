@@ -80,7 +80,7 @@ export interface OnedirRunnerSpec {
 
 export const ONEDIR_RUNNERS: Record<OnedirRunnerName, OnedirRunnerSpec> = {
   legendary: {
-    repo: 'Heroic-Games-Launcher/legendary',
+    repo: 'legendary-gl/legendary',
     tag: RELEASE_TAGS.legendary
   },
   gogdl: {
@@ -97,8 +97,12 @@ const isOnedirRunnerName = (value: string): value is OnedirRunnerName =>
   Object.prototype.hasOwnProperty.call(ONEDIR_RUNNERS, value)
 
 // ---------------------------------------------------------------------------
-// archiveName -- matches the existing upstream `_macOS_x86_64` / `_macOS_arm64`
-// naming already used by meta/downloadHelperBinaries.ts.
+// archiveName -- GameLib's OWN rolling-release archive naming. It was chosen to
+// echo the upstream `_macOS_x86_64` / `_macOS_arm64` flat-file names, but it is
+// NOT derived from them and must not be re-synced when upstream renames assets:
+// legendary 0.21.0 renamed its own assets to `_x64`, while these archive names
+// are the keys of meta/runnersOnedirDigests.json and of the already-published
+// rolling-release tag. Renaming them would invalidate every published digest.
 // ---------------------------------------------------------------------------
 
 export function archiveName(runner: string, arch: string): string {

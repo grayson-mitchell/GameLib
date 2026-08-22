@@ -289,12 +289,12 @@ async function downloadLegendary() {
   return Promise.all([
     downloadGithubAssets(
       'legendary',
-      'Heroic-Games-Launcher/legendary',
+      'legendary-gl/legendary',
       RELEASE_TAGS['legendary'],
       {
         x64: {
-          linux: 'legendary_linux_x86_64',
-          win32: 'legendary_windows_x86_64.exe'
+          linux: 'legendary_linux_x64',
+          win32: 'legendary_windows_x64.exe'
         },
         arm64: {
           linux: 'legendary_linux_arm64',

@@ -34,15 +34,13 @@ describe('buildRunnersOnedir', () => {
 
       // The no-drift guard, asserted against meta/releaseTags.ts's own
       // literal values rather than restated here.
-      expect(RELEASE_TAGS.legendary).toBe('0.20.43')
-      expect(RELEASE_TAGS.gogdl).toBe('v1.2.1')
-      expect(RELEASE_TAGS.nile).toBe('v1.1.2')
+      expect(RELEASE_TAGS.legendary).toBe('0.21.0')
+      expect(RELEASE_TAGS.gogdl).toBe('v1.3.0')
+      expect(RELEASE_TAGS.nile).toBe('v1.2.0')
     })
 
     it('points at the correct upstream repos', () => {
-      expect(ONEDIR_RUNNERS.legendary.repo).toBe(
-        'Heroic-Games-Launcher/legendary'
-      )
+      expect(ONEDIR_RUNNERS.legendary.repo).toBe('legendary-gl/legendary')
       expect(ONEDIR_RUNNERS.gogdl.repo).toBe(
         'Heroic-Games-Launcher/heroic-gogdl'
       )
@@ -214,9 +212,14 @@ describe('buildRunnersOnedir', () => {
     // regression coverage for the darwin-onedir-sourcing behaviour this
     // test file predates. win32/linux and comet/epic-integration are
     // untouched by that plan and stay pinned here.
+    //
+    // legendary's win32/linux literals moved `_x86_64` -> `_x64` with the
+    // legendary 0.21.0 bump (the repo also moved to legendary-gl/legendary).
+    // gogdl 1.3.0 and nile 1.2.0 kept their `_x86_64` asset names -- verified
+    // against the live release assets, not assumed from legendary's rename.
     it.each([
-      'legendary_linux_x86_64',
-      'legendary_windows_x86_64.exe',
+      'legendary_linux_x64',
+      'legendary_windows_x64.exe',
       'gogdl_linux_x86_64',
       'gogdl_windows_x86_64.exe',
       'nile_linux_x86_64',

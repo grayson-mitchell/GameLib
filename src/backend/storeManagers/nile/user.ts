@@ -186,24 +186,27 @@ export class NileUser {
 
   static async getUserData(): Promise<NileUserData | undefined> {
     if (!existsSync(nileUserData)) {
-      logError('user.json does not exist', LogPrefix.Nile)
+      logError('current_user.json does not exist', LogPrefix.Nile)
       configStore.delete('userData')
       return
     }
 
-    const user: { extensions: { customer_info: NileUserData } } = JSON.parse(
-      readFileSync(nileUserData, 'utf-8')
-    )
+    // nile 1.2.0 moved this file (user.json -> current_user.json) AND flattened
+    // its payload: the fields that used to sit under `extensions.customer_info`
+    // are now the top-level object. Reading the old shape against a 1.2.0 binary
+    // yields `undefined` and silently logs the user out, so the binary bump in
+    // meta/releaseTags.ts and this parse must always move together.
+    const user: NileUserData = JSON.parse(readFileSync(nileUserData, 'utf-8'))
     if (!Object.keys(user).length) {
-      logInfo('user.json is empty', LogPrefix.Nile)
+      logInfo('current_user.json is empty', LogPrefix.Nile)
       configStore.delete('userData')
       return
     }
 
-    configStore.set('userData', user.extensions.customer_info)
+    configStore.set('userData', user)
     logInfo('Saved user data to config file', LogPrefix.Nile)
 
-    return user.extensions.customer_info
+    return user
   }
 
   public static isLoggedIn() {
