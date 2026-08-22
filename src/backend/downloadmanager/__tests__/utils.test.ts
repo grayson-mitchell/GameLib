@@ -29,7 +29,8 @@ jest.mock('backend/logger', () => ({
 }))
 
 jest.mock('backend/utils/aborthandler/aborthandler', () => ({
-  callAbortController: jest.fn()
+  callAbortController: jest.fn(),
+  hasAbortController: jest.fn()
 }))
 
 const installMock = jest.fn()
@@ -113,8 +114,11 @@ import { libraryManagerMap } from 'backend/storeManagers'
 import { isOnline } from '../../online_monitor'
 import { existsSync } from 'graceful-fs'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
-import { logWarning, logError } from 'backend/logger'
-import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
+import { logWarning, logError, LogPrefix } from 'backend/logger'
+import {
+  callAbortController,
+  hasAbortController
+} from 'backend/utils/aborthandler/aborthandler'
 import { backendEvents } from 'backend/backend_events'
 import type { InstallParams, GameStatus } from 'common/types'
 import { readFileSync } from 'fs'
@@ -208,6 +212,9 @@ beforeEach(() => {
       'Backend'
     )
   })
+  ;(hasAbortController as jest.Mock).mockImplementation((id: string) =>
+    abortControllerRegistry.has(id)
+  )
 })
 
 describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clearing on abort', () => {
@@ -458,6 +465,10 @@ describe('installQueueElement — 260817-dib: no-progress (stall) install watchd
   })
 
   it('stall trip still aborts (locked decision 4): callAbortController + steam-gated stop(false) still fire on a stall trip', async () => {
+    // 37-05: a never-settling install() models a depot download that is
+    // genuinely STILL RUNNING when the stall watchdog trips, so its own
+    // controller has not been deleted yet — register one to model that.
+    registerFakeAbortController('1091500')
     jest.useFakeTimers()
     installMock.mockReturnValue(new Promise(() => {}))
 
@@ -643,12 +654,22 @@ describe('installQueueElement — WR-03/D-12: error-path regression coverage', (
  * build, same session, on Cyberpunk 2077 appId `1091500` at 21:50:44 logged
  * `SteamGame: aborting in-flight native depot download for appId 1091500`
  * and the chunk loop stopped the same second. This suite proves the
- * DownloadManager failure path now routes through the SAME two calls the
- * Cancel path (`downloadqueue.ts`'s `stopCurrentDownload`) already makes:
- * `callAbortController(appName)` for every runner, and
- * `libraryManagerMap.steam.getGame(appName).stop(false)` for the steam
- * runner only (non-steam runners must NOT get an automatic `.stop()` — see
- * spec 6, the legendary `killPattern` blast-radius guard).
+ * DownloadManager failure path routes through the SAME `.stop(false)` call
+ * (`libraryManagerMap.steam.getGame(appName).stop(false)`, steam runner
+ * only — non-steam runners must NOT get an automatic `.stop()`, see spec 6's
+ * `killPattern` blast-radius guard) the Cancel path
+ * (`downloadqueue.ts`'s `stopCurrentDownload`) already makes.
+ *
+ * REVISED by 37-05 (REQ-37-04): `callAbortController(appName)` does NOT fire
+ * "for every runner" as originally written here — that was the very
+ * misleading-ERROR defect this plan fixes. Measured at HEAD (37-05-SUMMARY.md):
+ * a native Steam depot download's own `finally` (games.ts's
+ * runNativeDepotDownload) always deletes its controller before a settled or
+ * rejected InstallResult ever reaches this function, and gogdl/legendary's
+ * install() never calls createAbortController at all — so in BOTH cases
+ * there was never anything for callAbortController to find once installQueueElement's
+ * finally runs. Only a depot download that is STILL actively running when the
+ * outer watchdog gives up (spec 1) has a live registration to abort.
  */
 describe('installQueueElement — orphaned-depot abort: a terminal install failure routes through the same abort as user Cancel', () => {
   beforeEach(() => {
@@ -673,6 +694,12 @@ describe('installQueueElement — orphaned-depot abort: a terminal install failu
   })
 
   it('spec 1 (the reported defect — watchdog trip): a never-settling install() aborts the in-flight steam depot download once the watchdog fires', async () => {
+    // 37-05: a never-settling install() models a depot download that is
+    // genuinely STILL RUNNING — games.ts's runNativeDepotDownload has not
+    // returned, so its own `finally` has not deleted the controller yet.
+    // Register one to model that real, still-live state; this is the ONE
+    // spec in this describe where hasAbortController(appName) is true.
+    registerFakeAbortController('1091500')
     jest.useFakeTimers()
     installMock.mockReturnValue(new Promise(() => {}))
 
@@ -687,23 +714,29 @@ describe('installQueueElement — orphaned-depot abort: a terminal install failu
     await assertion
   })
 
-  it('spec 2 (install resolves {status: "error"}): aborts the in-flight steam depot download', async () => {
+  it('spec 2 (install resolves {status: "error"}, REVISED by 37-05): the depot download has already settled, so games.ts has already deleted its own controller by construction — nothing left for callAbortController to abort, but .stop(false) still fires unconditionally', async () => {
     installMock.mockResolvedValue({ status: 'error', error: 'boom' })
 
     const result = await installQueueElement(makeParams())
 
     expect(result.status).toBe('error')
-    expect(callAbortController).toHaveBeenCalledWith('1091500')
+    expect(callAbortController).not.toHaveBeenCalled()
+    expect(logWarning).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'No in-flight download to abort for 1091500'
+      ),
+      LogPrefix.DownloadManager
+    )
     expect(stopMock).toHaveBeenCalledWith(false)
   })
 
-  it('spec 3 (install() throws/rejects): aborts the in-flight steam depot download — all three failure shapes converge on the same finally', async () => {
+  it('spec 3 (install() throws/rejects, REVISED by 37-05): a finally block runs on rejection exactly as it does on resolution, so this shape ALSO has no registered controller left by the time installQueueElement sees it — .stop(false) still fires unconditionally', async () => {
     installMock.mockRejectedValue(new Error('ECONNRESET'))
 
     const result = await installQueueElement(makeParams())
 
     expect(result.status).toBe('error')
-    expect(callAbortController).toHaveBeenCalledWith('1091500')
+    expect(callAbortController).not.toHaveBeenCalled()
     expect(stopMock).toHaveBeenCalledWith(false)
   })
 
@@ -727,7 +760,7 @@ describe('installQueueElement — orphaned-depot abort: a terminal install failu
     expect(stopMock).not.toHaveBeenCalled()
   })
 
-  it('spec 6 (blast-radius gate — non-steam runner): callAbortController fires for a failed gog install, but .stop() must NOT — legendary/gog stop() has a wider kill blast radius than a targeted abort', async () => {
+  it('spec 6 (blast-radius gate — non-steam runner, REVISED by 37-05): a failed gog install never had a registered controller in the first place — gogdl/legendary install() never calls createAbortController anywhere in this codebase — so callAbortController correctly does NOT fire, and .stop() must NOT either — legendary/gog stop() has a wider kill blast radius than a targeted abort', async () => {
     installMock.mockResolvedValue({ status: 'error', error: 'boom' })
 
     const result = await installQueueElement(
@@ -738,7 +771,7 @@ describe('installQueueElement — orphaned-depot abort: a terminal install failu
     )
 
     expect(result.status).toBe('error')
-    expect(callAbortController).toHaveBeenCalledWith('1091500')
+    expect(callAbortController).not.toHaveBeenCalled()
     expect(stopMock).not.toHaveBeenCalled()
   })
 })
@@ -825,13 +858,20 @@ describe('installQueueElement — REQ-37-04: no spurious abort-controller-miss E
     ;(existsSync as jest.Mock).mockReturnValue(true)
   })
 
-  it('case 1 (RED against unmodified utils.ts): a terminal Steam install failure with NO abort controller registered for the appName does not log the misleading "could not find a matching abort controller" ERROR', async () => {
+  it('case 1 (RED against unmodified utils.ts): a terminal Steam install failure with NO abort controller registered for the appName does not log the misleading "could not find a matching abort controller" ERROR, and logs an honest WARNING naming the appName instead — not silence, not ERROR', async () => {
     installMock.mockResolvedValue({ status: 'error', error: 'boom' })
 
     const result = await installQueueElement(makeParams())
 
     expect(result.status).toBe('error')
     expect(loggedAbortControllerMiss()).toBe(false)
+    // Task 3 mutation check 3: if the WARNING branch is ever deleted so the
+    // "nothing to abort" case logs nothing at all, THIS assertion fails —
+    // guards the trade of an observability defect for a blindness defect.
+    expect(logWarning).toHaveBeenCalledWith(
+      expect.stringContaining('1091500'),
+      LogPrefix.DownloadManager
+    )
   })
 
   it('case 2 (the user-cancel pin, CONTEXT.md\'s recorded first check being discharged): when a controller IS registered for the appName, callAbortController still aborts it and no miss is ever logged — true both before and after Task 2\'s fix', async () => {

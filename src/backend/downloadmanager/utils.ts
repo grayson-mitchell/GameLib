@@ -4,7 +4,10 @@ import {
   isEpicServiceOffline,
   sendGameStatusUpdate
 } from '../utils'
-import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
+import {
+  callAbortController,
+  hasAbortController
+} from 'backend/utils/aborthandler/aborthandler'
 import { ButtonOptions, DMStatus, InstallParams, Runner } from 'common/types'
 import { InstallResult, InstallErrorAction } from 'common/types/game_manager'
 import i18next from 'i18next'
@@ -320,11 +323,28 @@ async function installQueueElement(params: InstallParams): Promise<{
     // kill for non-steam (gogdl/legendary) child processes and stays
     // runner-agnostic.
     if (status === 'error') {
-      logInfo(
-        `Aborting in-flight download for ${appName} after terminal install failure`,
-        LogPrefix.DownloadManager
-      )
-      callAbortController(appName)
+      // 37-05 (REQ-37-04): MEASURED mechanism (37-05-SUMMARY.md) — for a
+      // native Steam depot install, games.ts's runNativeDepotDownload
+      // registers this appId's controller as its own first statement and
+      // deletes it in its OWN `finally`, which always finishes before the
+      // InstallResult reaches this function's `finally` below. By the time
+      // this branch runs on that path, there is nothing left to abort by
+      // construction — not a teardown race. hasAbortController asks before
+      // telling, so only a GENUINE miss anywhere else still reaches
+      // callAbortController's own ERROR log (see aborthandler.ts's doc
+      // comment on hasAbortController for the other-callers rationale).
+      if (hasAbortController(appName)) {
+        logInfo(
+          `Aborting in-flight download for ${appName} after terminal install failure`,
+          LogPrefix.DownloadManager
+        )
+        callAbortController(appName)
+      } else {
+        logWarning(
+          `No in-flight download to abort for ${appName} — the install failed outside its abort controller's lifetime`,
+          LogPrefix.DownloadManager
+        )
+      }
       if (runner === 'steam') {
         libraryManagerMap[runner]
           .getGame(appName)

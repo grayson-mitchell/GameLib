@@ -19,7 +19,8 @@ import {
   createAbortController,
   callAbortController,
   callAllAbortControllers,
-  deleteAbortController
+  deleteAbortController,
+  hasAbortController
 } from '../aborthandler'
 
 describe('aborthandler (debug/steam-cancel-abort-thread-a)', () => {
@@ -30,7 +31,7 @@ describe('aborthandler (debug/steam-cancel-abort-thread-a)', () => {
     deleteAbortController('id-2')
   })
 
-  it('a genuinely UNREGISTERED id still logs the "could not find" error (real lookup miss preserved)', () => {
+  it('a genuinely UNREGISTERED id still logs the "could not find" error (real lookup miss preserved) — 37-05 (REQ-37-04): this exact message text is left BYTE-IDENTICAL for callers other than downloadmanager/utils.ts\'s terminal-error branch, which now asks hasAbortController first instead of softening this log', () => {
     callAbortController('never-registered-id')
     expect(logError).toHaveBeenCalledWith(
       [
@@ -82,6 +83,38 @@ describe('aborthandler (debug/steam-cancel-abort-thread-a)', () => {
       ],
       'Backend'
     )
+  })
+
+  // 37-05 (REQ-37-04): hasAbortController is a READ-ONLY registration-state
+  // query added for downloadmanager/utils.ts's terminal-error branch to ask
+  // before it tells — see the export's own doc comment in aborthandler.ts.
+  describe('hasAbortController (37-05, REQ-37-04)', () => {
+    it('returns true for an id that was created and not yet deleted', () => {
+      createAbortController('id-1')
+
+      expect(hasAbortController('id-1')).toBe(true)
+    })
+
+    it('returns false after deleteAbortController for the same id', () => {
+      createAbortController('id-1')
+      deleteAbortController('id-1')
+
+      expect(hasAbortController('id-1')).toBe(false)
+    })
+
+    it('returns false for an id that was never created', () => {
+      expect(hasAbortController('never-registered-id')).toBe(false)
+    })
+
+    it('is read-only — calling it never mutates registration state or calls logError', () => {
+      createAbortController('id-1')
+
+      hasAbortController('id-1')
+      hasAbortController('id-1')
+
+      expect(hasAbortController('id-1')).toBe(true)
+      expect(logError).not.toHaveBeenCalled()
+    })
   })
 
   // debug/steam-install-slow-start (Thread D-2 investigation, FIXED this

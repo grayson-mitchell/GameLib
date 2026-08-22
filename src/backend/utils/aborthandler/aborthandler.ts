@@ -69,9 +69,22 @@ function deleteAbortController(id: string) {
   abortControllers.delete(id)
 }
 
+// 37-05 (REQ-37-04): a read-only registration-state query for a caller that
+// fires UNCONDITIONALLY on every failure (downloadmanager/utils.ts's
+// terminal-error branch) to distinguish "there is nothing registered here to
+// abort" from "something that should be registered is genuinely missing".
+// callAbortController's own ERROR log above is deliberately left untouched
+// for every caller that DOES expect a registration to exist (stopCurrentDownload,
+// SteamGame.stop, callAllAbortControllers) — this export exists so ONE
+// caller can ask before it tells, not to soften the log for everyone.
+function hasAbortController(id: string): boolean {
+  return abortControllers.has(id)
+}
+
 export {
   createAbortController,
   callAbortController,
   callAllAbortControllers,
-  deleteAbortController
+  deleteAbortController,
+  hasAbortController
 }
