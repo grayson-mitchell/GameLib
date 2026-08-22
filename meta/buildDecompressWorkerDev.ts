@@ -144,7 +144,7 @@ export async function main(): Promise<void> {
   )
 }
 
-// esbuild-bundled to node_modules/.cache and run as a CLI (via meta/runTs.cjs,
+// Run via `node meta/runTs.cjs` (package.json's build:decompress-worker-dev,
 // mirroring build:sidecar-sea's own invocation), but also imported directly
 // by its jest suite -- same JEST_WORKER_ID guard as buildSidecarSea.ts.
 if (!process.env.JEST_WORKER_ID) {

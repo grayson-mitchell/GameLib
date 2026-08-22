@@ -337,9 +337,7 @@ export async function main(): Promise<void> {
 // Guard main() so importing this module (e.g. from the Task 1 regression
 // test) never triggers a network fetch / filesystem write / process.exit.
 //
-// NOTE: this script is bundled by esbuild to
-// node_modules/.cache/build-crossover-index.cjs and run as
-// `node node_modules/.cache/build-crossover-index.cjs` (the meta/
+// NOTE: this script is run via `node meta/runTs.cjs` (the meta/
 // convention, package.json `build-crossover-index`), which DOES set
 // `require.main` -- but this module is also imported directly by its jest
 // suite, so the usual `require.main === module` idiom would run this at

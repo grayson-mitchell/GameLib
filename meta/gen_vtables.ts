@@ -550,9 +550,7 @@ export function main(): void {
   )
 }
 
-// NOTE: this script is bundled by esbuild to
-// node_modules/.cache/gen-vtables.cjs and run as
-// `node node_modules/.cache/gen-vtables.cjs` (the meta/ convention,
+// NOTE: this script is run via `node meta/runTs.cjs` (the meta/ convention,
 // package.json `gen-vtables`), which DOES set `require.main` -- but this
 // module is also imported directly by its jest suite, so the usual
 // `require.main === module` idiom would run this at import time under test

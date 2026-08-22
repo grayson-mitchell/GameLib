@@ -412,9 +412,7 @@ export function encodeRgba(
 // meta/i18nCatalogChurnGuard.ts's and meta/buildCrossoverIndex.ts's
 // identical guard.
 //
-// NOT __dirname -- this script is bundled by esbuild to
-// node_modules/.cache/gen-tray-icon-variants.cjs and run as
-// `node node_modules/.cache/gen-tray-icon-variants.cjs` (see
+// NOT __dirname -- this script is run via `node meta/runTs.cjs` (see
 // meta/cleanDist.ts for the same trap documented at length). `pnpm
 // gen-tray-icon-variants` always runs from the repo root, so cwd-relative
 // `public/...` paths are correct here.

@@ -132,9 +132,8 @@ export function machoArchFlag(arch: string): string {
 
 /**
  * Build-time equivalent of `publicDir` (src/backend/constants/paths.ts) --
- * `pnpm build-steam-bridge` (esbuild-bundled to
- * node_modules/.cache/build-steam-bridge.cjs, then run as
- * `node node_modules/.cache/build-steam-bridge.cjs`, the meta/ convention)
+ * `pnpm build-steam-bridge` (run via `node meta/runTs.cjs`, the meta/
+ * convention)
  * always runs from the repo root, so `join('public', 'bin', ...)` -- which
  * resolves relative to `process.cwd()`, not this file's compiled location --
  * resolves to the exact same location `publicDir` resolves to at dev-run
@@ -310,9 +309,8 @@ export async function main(): Promise<void> {
 }
 
 // See meta/gen_vtables.ts for why this can't use the usual
-// `require.main === module` idiom (esbuild-bundled to
-// node_modules/.cache/build-steam-bridge.cjs and run as
-// `node node_modules/.cache/build-steam-bridge.cjs`, which DOES set
+// `require.main === module` idiom (run via `node meta/runTs.cjs`, which
+// DOES set
 // `require.main` -- but this module is also imported directly by its jest
 // suite). `JEST_WORKER_ID` reliably distinguishes "imported under test" from
 // "run as a CLI" (same guard as meta/gen_vtables.ts / meta/buildCrossoverIndex.ts).

@@ -753,8 +753,8 @@ function writeBuildManifest(arch: string, results: RunnerBuildResult[]): void {
 // Entrypoint -- parses --arch=<x64|arm64> and an optional --runner=<name>.
 // Only invokes a real build when the module is executed directly (guard
 // idiom shared with meta/buildSteamBridgeShims.ts / meta/buildCrossoverIndex.ts:
-// this script is bundled by esbuild and run as
-// `node node_modules/.cache/build-runners-onedir.cjs`, which DOES set
+// this script is run via `node meta/runTs.cjs` (package.json
+// `build-runners-onedir`), which DOES set
 // `require.main` -- but this module is also imported directly by its jest
 // suite, so `JEST_WORKER_ID` still reliably distinguishes "imported under
 // test" from "run as a CLI").

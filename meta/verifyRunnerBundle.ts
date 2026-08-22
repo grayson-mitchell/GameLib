@@ -601,8 +601,8 @@ export function main(argv: string[] = process.argv.slice(2)): number {
 }
 
 // Guard idiom shared with meta/buildSteamBridgeShims.ts / meta/gen_vtables.ts:
-// this script is bundled by esbuild and run as
-// `node node_modules/.cache/verify-runner-bundle.cjs`, which DOES set
+// this script is run via `node meta/runTs.cjs` (package.json
+// `verify:runner-bundle`), which DOES set
 // `require.main` -- but this module is also imported directly by its jest
 // suite, so `JEST_WORKER_ID` still reliably distinguishes "imported under
 // test" from "run as a CLI".

@@ -754,9 +754,8 @@ async function main(): Promise<void> {
   }
 }
 
-// This script is bundled by esbuild to
-// node_modules/.cache/machine-fill-gamelib.cjs and run as
-// `node node_modules/.cache/machine-fill-gamelib.cjs`, which DOES set
+// This script is run via `node meta/runTs.cjs` (package.json
+// `machine-fill-gamelib`), which DOES set
 // `require.main` -- but this module is also imported directly by its jest
 // suite above, so the usual `require.main === module` idiom would run this
 // at import time under test too -- see buildCrossoverIndex.ts's own comment

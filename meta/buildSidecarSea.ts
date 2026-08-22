@@ -1071,8 +1071,8 @@ export async function main(): Promise<void> {
   console.log(`SEA sidecar compiled -> ${outputPath}`)
 }
 
-// esbuild-bundled to node_modules/.cache/build-sidecar-sea.cjs and run as
-// `node node_modules/.cache/build-sidecar-sea.cjs`, which DOES set
+// Run via `node meta/runTs.cjs` (package.json `build:sidecar-sea`), which
+// DOES set
 // `require.main` -- but this module is also imported directly by its jest
 // suite. `JEST_WORKER_ID` reliably distinguishes "imported under test" from
 // "run as a CLI" (same guard as meta/buildSteamBridgeShims.ts /

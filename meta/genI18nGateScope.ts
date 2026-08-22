@@ -528,9 +528,7 @@ export function main(): void {
   )
 }
 
-// NOTE: this script is bundled by esbuild to
-// node_modules/.cache/gen-i18n-gate-scope.cjs and run as
-// `node node_modules/.cache/gen-i18n-gate-scope.cjs` (package.json
+// NOTE: this script is run via `node meta/runTs.cjs` (package.json
 // `gen-i18n-gate-scope`), which DOES set `require.main` -- but this module is
 // also imported directly by its jest suite, so the usual
 // `require.main === module` idiom would run this at import time under test
