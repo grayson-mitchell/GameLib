@@ -309,3 +309,60 @@ edit cannot quietly drop the record that these were considered and not silently 
     WHICH suite the leaked timer lands on is non-deterministic and unrelated to whatever this
     project's plans touch. **Natural home:** unchanged — a standalone fix for `library.ts`'s
     poll-timer teardown.
+
+## Gap-cycle-4 findings CLOSED 2026-08-23 (quick task `260823-9ds`)
+
+Two of `34.2-REVIEW-GAP-CYCLE-4.md`'s 19 non-blocker findings are closed. They
+were selected because they are the only two with operational rather than
+cosmetic consequences. `34.2-VERIFICATION.md`'s `deferred:` block still lists
+all 19 as open and has NOT been rewritten — the frontmatter there is a record
+of what the round-4 verification found, not a live tracker; read it together
+with this section.
+
+- **WR-01 — CLOSED (`2a121ac90`).** Containment roots were minted per test
+  FILE, not per worker, and never removed. The review measured 1,968
+  directories; the live count on 2026-08-23 was **6,057 (~500 MB)**, 3,761 of
+  them from a single day. A 174-suite run added 174 top-level directories; it
+  now adds **1**. Fixed via `src/backend/jest.globalSetup.js` (a run root, with
+  each test file's own directory nested inside it) plus best-effort reaping of
+  roots older than 6h at SETUP — not in a teardown hook, since a force-exited
+  worker skips those (`92c29a5e`). 6,057 stale directories purged; TMPDIR
+  981M → 394M.
+
+  Two things worth carrying forward. First, the review's prescribed fix was
+  **not** applied: its marker file at the predictable path
+  `gamelib-jest-home-pid{pid}` reintroduces the symlink-capture vector
+  cycle-3's WR-07 closed with `mkdtemp`. Second, the obvious alternative
+  (`process.env` instead of `globalThis`) is **inert** — measured, jest
+  sandboxes `process.env` per test file too, so three files in one worker read
+  back three different values. Only `globalSetup` propagates.
+
+  And the first attempt was WRONG in a way worth recording: collapsing all
+  suites onto one shared root broke ISOLATION, not just tidiness —
+  `settingsFlows.test.ts` read a legendary user record written by an unrelated
+  suite and got the developer's real username where it asserts `undefined`.
+  The per-file root had been silently providing a pristine HOME per suite.
+
+- **WR-11 — CLOSED (`e33dc2744`, `22d7895c4`).** All six planning gates under
+  `.planning/` now run in CI via `meta/runPlanningGates.py`, wired into
+  `codecheck.yml` and exposed as `pnpm planning-gates`. Discovery is by
+  `*-gate.py` suffix rather than a hand-maintained list, and the runner fails
+  if it finds fewer than six, so a glob that stops matching cannot report
+  green.
+
+  Running them for the first time found **two gates silently red for weeks**,
+  both now fixed: `34.4/ported-channels-gate.py` pinned `(57 channels)` after
+  plan 34.5-43 legitimately moved it to 58, and
+  `34.5/preload-surface-gate.py` caught `steamRemoveAllCopies` exposed in
+  preload with no bucket line in `IPC-PORT-INVENTORY.md`. That second one has
+  a reusable lesson: the channel was added by a **quick task**
+  (`quick-260821-le0`), which does not run the phase-level inventory
+  discipline — the same escape route that let `oauthCaptureLogin` go
+  unbucketed. Quick tasks that add IPC channels need an inventory step.
+
+**Still open from gap cycle 4: 17 findings** (WR-02 through WR-10, IN-01
+through IN-08). All sit in test/gate code except WR-03 (`repairFailure.ts`'s
+bare `catch` blocks), which is the only production file among them. Note also
+that CR-01, the round-4 blocker recorded as re-scoped, is in fact **closed** —
+`src/backend/testUtils/stripSourceComments.ts` exists, strips block comments
+before the line filter, and both originally-defective files import it.
