@@ -1,6 +1,7 @@
 ---
 quick_id: 260823-ai6
 status: complete
+uat: passed (2026-08-23)
 date: 2026-08-23
 ---
 
@@ -94,13 +95,51 @@ isolated reconstruction makes that structurally verifiable.
   `STORE_ALLOWLIST.steamConfigStore` (`storePolicy.ts:119`, from `260822-vov`), so no policy
   change was needed for either the read or the `STORE_CHANGED_CHANNEL` push.
 
-## Not done
+## UAT — run 2026-08-23, PASSED as a true A/B
 
-- **Not UAT'd.** The resolver logic is unit-proved and red-proved, but nobody has seen the new
-  banner render. The fixture is cheap and now well understood: delete the Keychain item
-  (`security delete-generic-password -s com.gamelib.launcher -a steam-refresh-token`), **restart
-  the app** (a live CM connection takes the canary fast path and never reads the token), then
-  refresh the library.
+Run against a real build with a real empty Keychain slot. The *same* fixture had been exercised
+an hour earlier on the pre-fix build during `260822-vov`'s UAT, so this is a genuine before/after
+rather than a "does it render" check.
+
+| | Same fixture, pre-fix build | Post-fix build |
+|---|---|---|
+| Banner | "Couldn't sync your Steam library" + **Retry Steam sync** | **"Your Steam sign-in expired" + Sign in to Steam** |
+
+Backend precondition verified independently in the log before the user reported the banner:
+
+```
+07:46:54  keyring_get ok present=false len=0 trigger=user-refresh elapsed=7ms
+07:46:54  Steam: logged in but no stored refresh token — cannot reconnect
+07:46:54  Steam client not ready, skipping library refresh
+          -> credentialsMissing: True written to config.json
+```
+
+Checking the backend half separately was deliberate: it makes a rendering failure
+distinguishable from a latching failure instead of collapsing both into "banner looks wrong".
+
+**Render-ordering gap did not materialise.** The resolver reads the flag during Library's render
+while the backend writes it during the failing refresh, so a first-refresh render could in
+principle have beaten the write and shown the stale generic banner. It did not — the correct
+banner appeared on the **first** refresh. Noted rather than assumed away: the ordering is not
+enforced by anything in the code, so this is an observation about timing on one machine, not a
+guarantee.
+
+**Click-through confirmed (user, after the fact):** the banner's Sign in to Steam button is the
+route actually taken to the accounts screen. Cross-surface agreement is confirmed with it — the
+`260822-vov` tile read "Sign-in expired — Reconnect" on arrival, while the flag was still true,
+which is evidenced by the follow-up bug report quoting that exact text. Both surfaces read the
+same flag and agreed, which is the point of the pair.
+
+**A real defect surfaced immediately after, in the OTHER task's surface:** the tile kept saying
+"Sign-in expired" after the sign-in completed, until an unmount. Fixed under `260823-awo`; the
+sync banner is not affected (it is recomputed on Library's render, not held in local state).
+
+**Clear path re-verified end to end:** signing in produced
+`setToken(): keyring_set ok len=494` (07:48:27), `credentialsMissing` cleared from config, and
+the Keychain slot restored — so the fixture this UAT destroyed was repaired by the flow under
+test, leaving no residue.
+
+## Not done
 - **Inherited staleness caveat:** the flag is the last *proven* verdict, so a credential that
   vanishes while a connection is live produces no banner — the sync simply succeeds. Correct,
   not chased.
