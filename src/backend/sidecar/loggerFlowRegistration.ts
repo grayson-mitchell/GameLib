@@ -185,6 +185,7 @@
 
 import { ipcMain } from './electronStub'
 import { logErrorSettled, logInfoSettled, LogPrefix } from '../logger'
+import { sanitizeRendererLogMessage } from '../logger/sanitizeRendererLogMessage'
 import { getLogFilePath } from '../logger/paths'
 import { showItemInFolder } from '../utils'
 import {
@@ -216,7 +217,17 @@ export function registerLoggerFlows(): void {
     // .catch below as the async path.
     let settled: Promise<unknown>
     try {
-      settled = Promise.resolve(logErrorSettled(args[0], LogPrefix.Frontend))
+      settled = Promise.resolve(
+        logErrorSettled(
+          // IN-04: renderer-controlled text is escaped at THIS trust
+          // boundary, never in LogWriter -- see
+          // ../logger/sanitizeRendererLogMessage.ts for why the review's
+          // writeString/forceLog remedy would have flattened every stack
+          // trace in the app.
+          sanitizeRendererLogMessage(args[0]),
+          LogPrefix.Frontend
+        )
+      )
     } catch (error: unknown) {
       // The caught value is whatever was thrown during argument evaluation
       // (typically a TypeError, but not guaranteed to be an Error -- the
@@ -263,7 +274,17 @@ export function registerLoggerFlows(): void {
     // async path.
     let settled: Promise<unknown>
     try {
-      settled = Promise.resolve(logInfoSettled(args[0], LogPrefix.Frontend))
+      settled = Promise.resolve(
+        logInfoSettled(
+          // IN-04: renderer-controlled text is escaped at THIS trust
+          // boundary, never in LogWriter -- see
+          // ../logger/sanitizeRendererLogMessage.ts for why the review's
+          // writeString/forceLog remedy would have flattened every stack
+          // trace in the app.
+          sanitizeRendererLogMessage(args[0]),
+          LogPrefix.Frontend
+        )
+      )
     } catch (error: unknown) {
       // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
       settled = Promise.reject(error)

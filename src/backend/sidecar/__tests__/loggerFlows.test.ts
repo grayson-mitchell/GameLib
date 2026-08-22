@@ -537,6 +537,49 @@ describe('sidecar logger flow: logError (Phase 34.2 gap cycle 2, plan 34.2-16)',
     }
   })
 
+  // ── IN-04: renderer-controlled log injection ──
+
+  it('IN-04 a renderer cannot forge a standalone log line through logError', async () => {
+    const marker = `in04-${process.pid}-${Math.random().toString(36).slice(2)}`
+    // The payload a hostile/careless renderer would send: a benign-looking
+    // head, then a newline, then something shaped exactly like a real backend
+    // ERROR line. Un-escaped, the second half occupies a line of its own and
+    // is indistinguishable from a genuine entry to any reader or log scraper.
+    const forgedLine = `(12:34:56) [ERROR]:   [Backend]: ${marker} forged`
+    const payload = `${marker} head\n${forgedLine}`
+
+    const { input } = startSidecar()
+    writeSend(input, 'le-in04', 'logError', [payload])
+    await flush()
+
+    const logPath = getLogFilePath({})
+    const content = await pollForMarker(logPath, marker)
+
+    // Direction 1 — the message DID arrive. Without this the test would pass
+    // just as well against a channel that dropped the frame entirely, which
+    // is the vacuity this suite's own header warns about.
+    expect(content).toBeDefined()
+    expect(content).toContain(`${marker} head`)
+
+    // Direction 2 — the escape actually happened, and the text survives in
+    // legible form rather than being stripped.
+    expect(content).toContain('\\n')
+    expect(content).toContain(`${marker} forged`)
+
+    // Direction 3 — the property that matters. No LINE in the file may consist
+    // of the forged entry. Asserting on whole lines, not on substring
+    // presence: the forged text is legitimately present as escaped payload, so
+    // a `not.toContain(forgedLine)` would be measuring the wrong property and
+    // would fail even against a correct fix.
+    const lines = (content ?? '').split('\n')
+    const forgedLines = lines.filter((line) => line.trim() === forgedLine)
+    expect(forgedLines).toEqual([])
+
+    // And the payload must not have produced two log lines where one was sent.
+    const markerLines = lines.filter((line) => line.includes(marker))
+    expect(markerLines).toHaveLength(1)
+  })
+
   it('REQ-34.2-14 no response frame is produced for the send frame id, and no UNPORTED_CHANNEL_MARKER appears', async () => {
     const { input, frames } = startSidecar()
     writeSend(input, 'le-3', 'logError', ['no-response-expected'])

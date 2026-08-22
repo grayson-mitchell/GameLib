@@ -152,6 +152,25 @@ CYCLE5_CLOSED_FINDING_TOKENS = [
 # the NON-empty closed list carries this cycle's weight.
 CYCLE5_DEFERRED_FINDING_TOKENS: list[str] = []
 
+# ---------------------------------------------------------------------------
+# Late closures (added 2026-08-23). NOT a gap cycle: findings closed after their own cycle's
+# reconciliation section was already written. A cycle's section records what that cycle did and is
+# not amended afterwards, so late work needs a home of its own or it goes unpinned.
+#
+# Tokens here are ROUND-QUALIFIED PHRASES, not bare IDs. Every other list in this file can use a
+# bare `IN-04` because it is scoped to one round's section; this list is not, and this phase's own
+# ledger warns that each round restarts numbering at CR-01/WR-01. A bare "IN-04" here would be
+# satisfied by any round's IN-04 appearing anywhere in the section.
+# ---------------------------------------------------------------------------
+
+LATE_RECONCILIATION_HEADING = "### Late closures"
+
+LATE_CLOSED_FINDING_TOKENS = [
+    "gap cycle 2 IN-04",
+]
+
+LATE_DEFERRED_FINDING_TOKENS: list[str] = []
+
 PLACEHOLDER_PATTERN = re.compile(r"\bTBD\b|\bTODO\b|\bFIXME\b|\bXXX\b")
 
 
@@ -302,6 +321,29 @@ def main() -> None:
             "deferred/open bucket with a reason."
         )
 
+    # 1-3 (extended once more). The late-closures section: same three checks, its own tokens.
+    late_section = check_cycle_section(
+        text,
+        LATE_RECONCILIATION_HEADING,
+        LATE_CLOSED_FINDING_TOKENS,
+        LATE_DEFERRED_FINDING_TOKENS,
+        "late-closures",
+    )
+
+    # 3b (late closures too, same stricter rule as cycle 5): a finding named only in passing
+    # prose is not dispositioned. This section discusses findings it does NOT close (cycle 2's
+    # IN-01/IN-03/IN-06), so the distinction is load-bearing here rather than theoretical.
+    late_closed_region = extract_closed_subsection(late_section, "late-closures")
+    misplaced_late = [
+        tok for tok in LATE_CLOSED_FINDING_TOKENS if tok not in late_closed_region
+    ]
+    if misplaced_late:
+        fail(
+            "the late-closures section names these finding(s) somewhere, but NOT in its "
+            f"closed-finding region: {', '.join(misplaced_late)} — a finding mentioned only in "
+            "passing prose is not dispositioned."
+        )
+
     # 4. Ordering: "newest last, history preserved in reading order". The gap-cycle-4 heading
     #    must be the LAST `###` subsection under `## 7. Reconciliation`, AND the gap-cycle-3
     #    heading must still be present and appear BEFORE the gap-cycle-4 heading. This is an
@@ -319,12 +361,33 @@ def main() -> None:
     if not subsection_headings:
         fail('"## 7. Reconciliation" has no "###" subsections at all')
     last_subsection = subsection_headings[-1]
-    if not last_subsection.startswith(CYCLE5_RECONCILIATION_HEADING):
+    if not last_subsection.startswith(LATE_RECONCILIATION_HEADING):
         fail(
-            f'the gap-cycle-5 reconciliation section is not the LAST "###" subsection under '
+            f'the late-closures section is not the LAST "###" subsection under '
             f'"## 7. Reconciliation" — found "{last_subsection}" after it. A later '
             "reconciliation subsection must be appended AFTER this one, not before it "
             "(subsection order is the reading order of the phase's gap-cycle history)."
+        )
+
+    # Cycle 5 keeps its own relative-position pin: it must still be present, and must sit BEFORE
+    # the late-closures section. Retargeting the "last subsection" check above without this would
+    # have WEAKENED cycle 5 from two pins to one.
+    cycle5_index = next(
+        (i for i, h in enumerate(subsection_headings)
+         if h.startswith(CYCLE5_RECONCILIATION_HEADING)),
+        None,
+    )
+    if cycle5_index is None:
+        fail('the gap-cycle-5 reconciliation heading disappeared from "## 7. Reconciliation"')
+    late_index = next(
+        (i for i, h in enumerate(subsection_headings)
+         if h.startswith(LATE_RECONCILIATION_HEADING)),
+        None,
+    )
+    if late_index is None or cycle5_index > late_index:
+        fail(
+            "the gap-cycle-5 reconciliation section must appear BEFORE the late-closures "
+            "section (subsection order is reading order)."
         )
 
     # Every older cycle stays pinned for both PRESENCE and RELATIVE POSITION. Adding cycle 5 does
