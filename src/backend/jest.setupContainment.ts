@@ -112,9 +112,16 @@
  * already recorded (`tests-clobbering-real-steam-store`, commit `92c29a5e`)
  * — a force-exited jest worker (`--forceExit`, a killed `--runInBand`
  * process, a crashed suite) skips such hooks entirely, so a restore cannot
- * be relied on to run. Leaving the per-pid directory in place for the OS's
- * normal temp-directory cleanup is the safe choice; nothing in this module
- * ever mutates the developer's real environment back.
+ * be relied on to run. Leaving the directory in place is therefore the safe
+ * choice; nothing in this module ever mutates the developer's real environment
+ * back.
+ *
+ * (IN-05, corrected 2026-08-23: this said "the per-pid directory", which had
+ * been wrong twice over. The root became per-test-FILE, not per-pid, when
+ * `ensureContainmentRoot` moved to `mkdtempSync` — and since WR-01 it is nested
+ * inside a per-RUN root that `jest.globalSetup.js` actively reaps at the start
+ * of the next run, so cleanup no longer waits on the OS at all. Reaping is
+ * hygiene; mode 0700 is still the control.)
  *
  * Note on wording: writes still happen under this redirection — LogWriter
  * still creates/renames files, electron-store still persists JSON — they are
@@ -144,7 +151,21 @@
  *    atomic (no TOCTOU), mode 0700, and its suffix is unpredictable --
  *    closing the world-writable-`/tmp` symlink-capture vector on Linux
  *    CI, where this root receives real `electron-store` JSON
- *    (`fileStore.ts`) and the full contents of `gamelib.log`. The
+ *    (`fileStore.ts`) and the full contents of `gamelib.log`.
+ *
+ *    IN-05 (gap cycle 4) reported the `chmodSync` as a redundant no-op,
+ *    "because mkdtempSync already creates the directory with mode 0700".
+ *    MEASURED AND FALSE: `mkdtemp`'s mode is subject to the process umask.
+ *    Under `umask 0277` it produces mode **0500**, and the `chmodSync`
+ *    restores owner-write. The call stays.
+ *
+ *    But the framing was wrong in the other direction too, so state it
+ *    exactly: `mkdtemp`'s 0700 is the SECURITY control, because umask can
+ *    only ever REMOVE bits — a `mkdtemp` directory can never carry group or
+ *    other bits for a later `chmod` to strip. The `chmodSync` is not what
+ *    keeps other users out; it is what guarantees the OWNER can use the
+ *    directory it was just handed. Do not delete it as redundant a second
+ *    time. The
  *    deliberate no-teardown-hook decision from the original mechanism is
  *    UNCHANGED and for the same reason: a force-exited jest worker skips
  *    teardown hooks (`tests-clobbering-real-steam-store`, commit
@@ -306,6 +327,11 @@ function ensureContainmentRoot(): string {
       : realTmpRoot
 
   const root = mkdtempSync(join(parent, 'gamelib-jest-home-'))
+  // NOT redundant, despite `mkdtemp` requesting 0700 — that request is masked
+  // by the process umask, and `umask 0277` yields 0500 (measured). This
+  // restores owner-write. It is not the security control, though: umask can
+  // only remove bits, so the directory can never carry group/other bits for
+  // this call to strip. See the docstring's point 2 (IN-05).
   chmodSync(root, 0o700)
   globalThis.__GAMELIB_JEST_CONTAINMENT_ROOT__ = root
   return root
@@ -329,8 +355,29 @@ function mockOsFactory() {
     ...actual,
     homedir: () => containmentRoot,
     userInfo: (...args: Parameters<typeof actual.userInfo>) => {
+      // IN-07 (gap cycle 4, fixed 2026-08-23). `os.userInfo({ encoding:
+      // 'buffer' })` contractually returns `UserInfo<Buffer>` -- every string
+      // field is a Buffer. Both branches below used to hand back the
+      // `containmentRoot` STRING regardless, so a buffer-encoding caller got a
+      // shape that violates the type it was promised. Latent rather than live
+      // (the two real backend consumers named below read only `username`, and
+      // neither passes an encoding), but a containment mock that silently
+      // changes a value's TYPE is a bad thing to leave sitting in setupFiles
+      // for all ~175 backend suites.
+      //
+      // Read off `args[0]` rather than a typed parameter because
+      // `Parameters<>` collapses an overloaded signature to its last overload;
+      // the runtime check is the honest one.
+      const wantsBuffer =
+        (args[0] as { encoding?: string } | undefined)?.encoding === 'buffer'
+      const redirectedHome = wantsBuffer
+        ? Buffer.from(containmentRoot)
+        : containmentRoot
+
       try {
-        return { ...actual.userInfo(...args), homedir: containmentRoot }
+        // The real call already returns Buffer fields under buffer encoding;
+        // only `homedir` needs replacing, and now in the matching type.
+        return { ...actual.userInfo(...args), homedir: redirectedHome }
       } catch {
         // uv_os_get_passwd: userInfo() reads the OS passwd database
         // directly and throws when the running uid has no /etc/passwd
@@ -341,11 +388,13 @@ function mockOsFactory() {
         // synthetic fallback has no behavioral blast radius beyond
         // containment.
         return {
-          username: 'gamelib-jest',
+          username: wantsBuffer ? Buffer.from('gamelib-jest') : 'gamelib-jest',
           uid: -1,
           gid: -1,
+          // Real `userInfo` returns `null` for `shell` on platforms that have
+          // none (Windows) in BOTH encodings, so this needs no buffer variant.
           shell: null,
-          homedir: containmentRoot
+          homedir: redirectedHome
         }
       }
     }

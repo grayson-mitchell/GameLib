@@ -321,16 +321,25 @@ const NODE_OS_GATE_EXEMPT_FILES = [
   // `toEqual([])` can never pass -- the exclusion is not a convenience, it
   // is what makes the gate satisfiable.
   'structuralContainment.test.ts',
-  // FORWARD DECLARATION, deliberately added in this wave-1 plan (34.2-25).
-  // Plan 34.2-29 (wave 2) adds a `hasContainmentOsMock` predicate to
-  // testContainment.test.ts whose regexes necessarily name the 'node:os'
-  // specifier alongside the homedir/userInfo overrides, so it will match
-  // this gate the moment 34.2-29 lands. 34.2-29 cannot add the exclusion
-  // itself: this allowlist lives in structuralContainment.test.ts, which
-  // belongs to 34.2-25's files_modified, and editing it from 34.2-29 would
-  // violate the wave's file-ownership rule. Declaring it here is the only
-  // wave-legal placement -- do not delete this entry as seemingly unused;
-  // it becomes load-bearing in wave 2.
+  // Added as a FORWARD DECLARATION by wave-1 plan 34.2-25, ahead of the code
+  // that would need it: 34.2-29 (wave 2) could not add the exclusion itself,
+  // because this allowlist lives in structuralContainment.test.ts, which
+  // belonged to 34.2-25's files_modified, and editing it from 34.2-29 would
+  // have violated the wave's file-ownership rule.
+  //
+  // IN-04 (gap cycle 4, corrected 2026-08-23): 34.2-29 HAS landed. Verified
+  // against the live tree, not restated from the plan -- `hasContainmentOsMock`
+  // exists at `testContainment.test.ts:1041` and its regexes name the 'node:os'
+  // specifier alongside the homedir/userInfo overrides, which is what trips
+  // this gate. The entry is load-bearing NOW, in the present tense; the comment
+  // said "it becomes load-bearing in wave 2" for four weeks after that stopped
+  // being a future event.
+  //
+  // The old text also asked the reader not to delete this entry as seemingly
+  // unused. That plea is now ENFORCED rather than requested: gap cycle 4's
+  // WR-04 fix added a test below asserting that EVERY entry in this list trips
+  // the predicate, so a decorative entry fails the suite rather than relying on
+  // someone reading a comment.
   'testContainment.test.ts'
 ]
 
@@ -423,6 +432,43 @@ describe('CR-02 detection gates (gap cycle 4, plan 34.2-25, REQ-34.2-07/-14)', (
       // Containment must survive the throw, not just the happy path.
       expect(userInfo().homedir).toBe(containmentRoot)
       expect(userInfo().username).toBe('gamelib-jest')
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it('Test 8c (IN-07): the buffer-encoding overload gets a BUFFER homedir, not a string, on both paths', () => {
+    // `os.userInfo({ encoding: 'buffer' })` contractually returns
+    // `UserInfo<Buffer>`. The containment override used to substitute the
+    // `containmentRoot` STRING for `homedir` regardless of encoding, handing a
+    // buffer-encoding caller a shape that violates the type it was promised.
+    // Latent rather than live -- no backend consumer passes an encoding today
+    // -- but a mock installed for every backend suite should not change a
+    // value's TYPE.
+    const buffered = userInfo({ encoding: 'buffer' })
+    expect(Buffer.isBuffer(buffered.homedir)).toBe(true)
+    expect(buffered.homedir.toString()).toBe(containmentRoot)
+
+    // Non-vacuity in the other direction: the default (string) encoding must
+    // NOT have become a Buffer. A fix that returned Buffers unconditionally
+    // would pass the assertions above and break every existing caller.
+    const stringy = userInfo()
+    expect(Buffer.isBuffer(stringy.homedir)).toBe(false)
+    expect(stringy.homedir).toBe(containmentRoot)
+
+    // And the synthetic fallback -- the branch Test 8b covers -- must agree.
+    // Without this the fix would hold on the happy path only, which is the
+    // half of the override that was already correct-ish.
+    const realOs = jest.requireActual<typeof import('os')>('os')
+    const spy = jest.spyOn(realOs, 'userInfo').mockImplementation(() => {
+      throw new Error('uv_os_get_passwd')
+    })
+    try {
+      const fallback = userInfo({ encoding: 'buffer' })
+      expect(Buffer.isBuffer(fallback.homedir)).toBe(true)
+      expect(fallback.homedir.toString()).toBe(containmentRoot)
+      expect(Buffer.isBuffer(fallback.username)).toBe(true)
+      expect(fallback.username.toString()).toBe('gamelib-jest')
     } finally {
       spy.mockRestore()
     }
