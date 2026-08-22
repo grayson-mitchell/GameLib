@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: planned
+status: executing
 stopped_at: "PHASE 34.12 PLANNED — ✅ (2026-08-22). 7 plans in 5 waves, checker verdict 0 BLOCKERS / 4 warnings (all four documentation-consistency; 1–3 fixed in place, 4 is an executor note now written into plan 03). Research + pattern-mapping ran first; CONTEXT.md's D-01..D-09 were re-verified against HEAD with ZERO drift. FOUR FINDINGS CHANGED THE PLANS, none of which is in CONTEXT.md or the ROADMAP: (1) `NavItem`'s prop interface is CLOSED and its own docstring records that the tour-anchor prop was DELIBERATELY DROPPED during the 34.10 port — four of the twelve anchors (Wine/Accessibility/Docs/Ko-fi) are impossible until it is re-added, so that plumbing is Wave 1 and plans 03/05 depend on it; (2) ROADMAP's IN-01 description is FALSE — `CategoryFilter`/`LibraryFilters` do not exist at HEAD at all, 34.11 deleted the components outright rather than leaving dead props, so plan 06 corrects the ROADMAP wording and the real residue is `library-header` ×2 plus a NEWLY FOUND dead `data-tour=\"humble-keys\"`; (3) THREE existing tests break on the D-01 launcher row, not the two anticipated — `destinationCoverage.test.tsx:248`'s 22-entry toEqual union was named in NEITHER research NOR patterns, and `NavShell.test.tsx:126` hard-asserts toHaveLength(2) on the fragment and indexes positionally; (4) `meta/i18nForkTouchedFiles.json:41` carries the SidebarTour path too, not just `meta/i18nGateScope.json:36`. THE SEQUENCING TRAP THAT SHAPED EVERYTHING: `tourDisabled.test.ts` goes red on the first `data-tour` TOKEN, not the first anchor — adding `'data-tour'?: string` to NavItemProps already trips it — so plan 01 NARROWS the gate in the same plan (blanket `data-tour` ban → `data-tour=\"sidebar-` ban, which is RED-provable and pins D-06's rename), plan 04 strips the blocks that go vacuous on the move, and plan 06 deletes the file only after the census replacement is green. All 5 waves were walked: HEAD is never red at a plan boundary. Exactly THREE `tour.nav.*` keys are minted, not twelve — the planner read CATALOG values rather than component inline fallbacks, which is the whole point of D-07 (the second arg to t() is INERT when the key exists). 19 RED-proofs across plans 01–06, each naming both the assertion that must FAIL and the ones that must STAY GREEN. STATE.md NOTE: `gsd-sdk query state.planned-phase` corrupted this file AGAIN, for at least the sixth recorded time — it deleted 417 lines of the progress block's hand-written provenance, truncated this very field mid-sentence, invented `status: executing` when nothing is executing, wrote nonsense progress numbers (370/353/71%), AND string-replaced inside an UNRELATED historical table cell ~line 5563, turning phase 22's `**Status:** ⛔ PARKED — superseded by Phase 24` into `**Status:** Ready to execute`. That last one is new and is the nastiest yet: it silently rewrote a closed phase's recorded status inside prose. Reverted from a pre-call snapshot; only the frontmatter fields below were hand-applied. NEXT: `/gsd-execute-phase 34.12`. Wave 1 = 34.12-01 + 34.12-02 in parallel; Wave 5 (34.12-07) is `autonomous: false` and needs a human at the machine plus, for one check, a profile with ZERO connected stores."
-last_updated: "2026-08-22T22:40:00.000Z"
-last_activity: "2026-08-22 (NZST) -- PHASE 34.12 PLANNED. 7 plans / 5 waves, checker 0 BLOCKERS + 4 warnings (all documentation-consistency; 1-3 fixed in place, 4 written into plan 03 as an executor note). Research and pattern-mapping both ran; CONTEXT.md D-01..D-09 re-verified against HEAD with ZERO drift, which is itself notable ""given this project has burned on a code-read prediction outliving its own fix. Prior entry: PHASE 37 COMPLETE (2026-08-22) -- 7/7 plans, REQ-37-01..06 closed, verification 15/15, live gate 9/9 vs Dead Island 91310; its three outstanding non-blocking items (37-02 Task 4 advisory checkpoint not run, i18nForkTouchedFiles.json stale by 10 files, Dead Island mac binary is i386 on arm64 so LAUNCH is untestable) are unchanged and still owed."
+last_updated: "2026-08-22T23:20:00.000Z"
+last_activity: "2026-08-22 (NZST) -- PHASE 34.12 EXECUTION STARTED. 7 plans across 5 waves; wave 5 (plan 34.12-07) is a non-autonomous BLOCKING manual UAT gate. Worktrees are project-disabled (workflow.use_worktrees=false), so all executors run sequentially on the wt/Other working tree."
 progress:
   # Hand-corrected after `state.begin-phase` corrupted these (recurring gsd-sdk defect).
   # Tool wrote 24/15/324/298/63 and also mangled three prose blocks (orphaned continuation
@@ -432,6 +432,13 @@ progress:
   # total_phases/completed_phases UNMOVED: 34.12 already existed in the ROADMAP, and planning
   # completes no phase.
   # percent = floor(350/366*100) = floor(95.63) = 95 (floor, matching prior convention).
+  # 2026-08-22 (phase 34.12 EXECUTION start): `gsd-sdk query state.begin-phase` corrupted this
+  # file AGAIN, same signature as every entry above: wiped this entire ~430-line progress comment
+  # block down to 5 lines, wrote 31/22/370/353/71, overwrote the phase 34.9 completion banner and
+  # its Plan: line inside `## Current Position` with 34.12 text, destroyed an unrelated
+  # `Last activity:` line about quick task `260821-rb5` (~line 3925), and mangled the
+  # `fast-parse22` prose row (~line 5576). Reverted from a pre-call snapshot; delta hand-applied.
+  # progress numbers UNMOVED (27/21/366/350/95): starting a phase completes no plan and no phase.
   total_phases: 27
   completed_phases: 21
   total_plans: 366
@@ -495,6 +502,21 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 
 ## Current Position
+
+> **▶ PHASE 34.12 EXECUTING (started 2026-08-22).** onboarding-tour-rework — re-anchor the
+> disabled `SidebarTour` against the 34.10/34.11 nav shell. 7 plans across 5 waves; plans 01–06 are
+> autonomous, **plan 34.12-07 (wave 5) is `autonomous: false` — a BLOCKING manual UAT gate** that
+> the automated layers structurally cannot perform. Requirement set is `34.12-CONTEXT.md`'s
+> **D-01..D-09 plus IN-01**; no REQ-IDs are minted for this phase.
+>
+> `workflow.use_worktrees=false`, so every executor runs **sequentially on the `wt/Other` working
+> tree** — there is no worktree isolation and no post-wave merge step in this phase.
+>
+> Phase: 34.12 (onboarding-tour-rework-re-anchor-the-disabled-sidebartour-ag) — EXECUTING
+> Plan: 0 of 7 complete
+> Status: Executing Phase 34.12
+>
+> Historical position record (34.5 / 34.9 / 34.4.1) follows unchanged below.
 
 > **✅ PHASE 34.5 COMPLETE — the fifth blocking live gate PASSED 2026-08-19
 > (`34.5-LIVE-GATE-RERUN-4.md`, authored by plan 34.5-56, RUN by plan 34.5-59 on real macOS
