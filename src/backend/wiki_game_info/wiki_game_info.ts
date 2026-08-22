@@ -3,7 +3,12 @@ import { getInfoFromProtonDB } from 'backend/wiki_game_info/protondb/utils'
 import { getSteamDeckComp } from 'backend/wiki_game_info/steamdeck/utils'
 import { wikiGameInfoStore } from './electronStore'
 import { removeSpecialcharacters } from '../utils'
-import { SteamInfo, WikiInfo } from 'common/types'
+import {
+  HowLongToBeatOutcome,
+  SteamInfo,
+  WikiInfo,
+  WikiSourceOutcome
+} from 'common/types'
 import { logError, logInfo, LogPrefix } from 'backend/logger'
 import { getInfoFromAppleGamingWiki } from './applegamingwiki/utils'
 import { getInfoFromCodeweavers } from './codeweavers/utils'
@@ -69,7 +74,7 @@ export async function getWikiGameInfo(
 
     logInfo(`Getting ExtraGameInfo data for ${title}`, LogPrefix.ExtraGameInfo)
 
-    const [pcgamingwiki, gamesdb, applegamingwiki, umuId, codeweavers] =
+    const [pcgamingwikiResult, gamesdb, applegamingwiki, umuId, codeweavers] =
       await Promise.all([
         getInfoFromPCGamingWiki(title, runner === 'gog' ? appName : undefined),
         getInfoFromGamesDB(title, appName, runner),
@@ -83,11 +88,33 @@ export async function getWikiGameInfo(
             : null
       ])
 
+    // Defensive read. `getInfoFromPCGamingWiki` always returns an object, but a bare
+    // `.info` here means any future shape drift throws INSIDE this function's try/catch,
+    // whose only recovery is `return null` -- i.e. one sub-lookup misbehaving would wipe
+    // applegamingwiki, codeweavers, gamesdb and umuId along with it. Treat an unexpected
+    // shape as an error outcome, which is what it is.
+    const pcgamingwiki = pcgamingwikiResult?.info ?? null
+    const pcgamingwikiOutcome: WikiSourceOutcome =
+      pcgamingwikiResult?.outcome ?? 'error'
+
     // Get HowLongToBeat data, using gog.com site for GOG games, and HLTB ID from PCGamingWiki if available
     const howlongtobeat = await getHowLongToBeat(
       game,
       pcgamingwiki?.howLongToBeatID
     )
+
+    // HLTB's outcome is DERIVED, not reported by its own fetcher, because its failure is
+    // usually not its own: it takes its ID from the PCGamingWiki result above, so when
+    // that errors HLTB never issues a request at all. Calling that `notfound` would
+    // blame HLTB for PCGamingWiki's failure and send a future reader to the wrong
+    // module. GOG games resolve HLTB by their own path and so are never `skipped`.
+    const howlongtobeatOutcome: HowLongToBeatOutcome = howlongtobeat
+      ? 'ok'
+      : runner !== 'gog' &&
+          !pcgamingwiki?.howLongToBeatID &&
+          pcgamingwikiOutcome === 'error'
+        ? 'skipped'
+        : 'notfound'
 
     let steamInfo = null
     if (isLinux) {
@@ -117,7 +144,11 @@ export async function getWikiGameInfo(
       howlongtobeat,
       gamesdb,
       steamInfo,
-      umuId
+      umuId,
+      fetchStatus: {
+        pcgamingwiki: pcgamingwikiOutcome,
+        howlongtobeat: howlongtobeatOutcome
+      }
     }
 
     wikiGameInfoStore.set(title, wikiGameInfo)

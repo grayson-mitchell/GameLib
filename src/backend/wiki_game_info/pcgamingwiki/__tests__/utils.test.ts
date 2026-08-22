@@ -26,7 +26,7 @@ describe('getInfoFromPCGamingWiki', () => {
     })
 
     const result = await getInfoFromPCGamingWiki('The Witcher 3')
-    expect(result).toStrictEqual(testPCGamingWikiInfo)
+    expect(result).toStrictEqual({ info: testPCGamingWikiInfo, outcome: 'ok' })
   })
 
   test('fetches successfully via id', async () => {
@@ -50,7 +50,7 @@ describe('getInfoFromPCGamingWiki', () => {
     })
 
     const result = await getInfoFromPCGamingWiki('The Witcher 3', '1234')
-    expect(result).toStrictEqual(testPCGamingWikiInfo)
+    expect(result).toStrictEqual({ info: testPCGamingWikiInfo, outcome: 'ok' })
   })
 
   test('does not find page id', async () => {
@@ -59,7 +59,10 @@ describe('getInfoFromPCGamingWiki', () => {
     })
 
     const result = await getInfoFromPCGamingWiki('The Witcher 3')
-    expect(result).toBeNull()
+    // `notfound`, not `error` -- the request SUCCEEDED and the wiki had nothing. If this
+    // ever flips to `error` the UI will tell the user to retry a lookup that cannot
+    // succeed; if `error` ever flips to `notfound` a real outage becomes invisible again.
+    expect(result).toStrictEqual({ info: null, outcome: 'notfound' })
   })
 
   test('does not find wikitext', async () => {
@@ -75,7 +78,10 @@ describe('getInfoFromPCGamingWiki', () => {
     })
 
     const result = await getInfoFromPCGamingWiki('The Witcher 3')
-    expect(result).toBeNull()
+    // `notfound`, not `error` -- the request SUCCEEDED and the wiki had nothing. If this
+    // ever flips to `error` the UI will tell the user to retry a lookup that cannot
+    // succeed; if `error` ever flips to `notfound` a real outage becomes invisible again.
+    expect(result).toStrictEqual({ info: null, outcome: 'notfound' })
   })
 
   test('wikitext empty', async () => {
@@ -91,14 +97,20 @@ describe('getInfoFromPCGamingWiki', () => {
     })
 
     const result = await getInfoFromPCGamingWiki('The Witcher 3')
-    expect(result).toBeNull()
+    // `notfound`, not `error` -- the request SUCCEEDED and the wiki had nothing. If this
+    // ever flips to `error` the UI will tell the user to retry a lookup that cannot
+    // succeed; if `error` ever flips to `notfound` a real outage becomes invisible again.
+    expect(result).toStrictEqual({ info: null, outcome: 'notfound' })
   })
 
   test('catches axios throws', async () => {
     jest.spyOn(axiosClient, 'get').mockRejectedValueOnce(new Error('Failed'))
 
     const result = await getInfoFromPCGamingWiki('The Witcher 3')
-    expect(result).toBeNull()
+    // The whole point of the outcome field: a thrown request is `error`, distinct from
+    // the three `notfound` cases above. Conflating them is what let a PCGamingWiki 403
+    // present as "this game has no extra info" for every game in the library.
+    expect(result).toStrictEqual({ info: null, outcome: 'error' })
     expect(logError).toBeCalledWith(
       [
         'Was not able to get PCGamingWiki data for The Witcher 3',

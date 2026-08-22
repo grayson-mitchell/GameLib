@@ -23,7 +23,12 @@ jest.mock('../applegamingwiki/utils', () => ({
   getInfoFromAppleGamingWiki: jest.fn().mockResolvedValue(null)
 }))
 jest.mock('../pcgamingwiki/utils', () => ({
-  getInfoFromPCGamingWiki: jest.fn().mockResolvedValue(null)
+  // Must mirror the REAL contract: `{ info, outcome }`, never a bare null. A mock that
+  // returns the old shape passes nothing useful -- it only proves the orchestrator
+  // tolerates a shape production never produces.
+  getInfoFromPCGamingWiki: jest
+    .fn()
+    .mockResolvedValue({ info: null, outcome: 'notfound' })
 }))
 jest.mock('../howlongtobeat/utils', () => ({
   getHowLongToBeat: jest.fn().mockResolvedValue(null)

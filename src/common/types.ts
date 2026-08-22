@@ -836,6 +836,28 @@ export interface SteamInfo {
   steamDeckCatagory: number | null
 }
 
+/**
+ * Outcome of a single wiki sub-lookup.
+ *
+ * Exists because `null` used to mean three different things — the request FAILED, the
+ * game genuinely is not on that wiki, or it was found but carried nothing. Collapsing
+ * them made a PCGamingWiki outage indistinguishable from "this game has no extra info",
+ * and the game page's answer to both was to hide the Extra info tab entirely. A real
+ * 403 (see `backend/utils.ts`'s User-Agent note) therefore presented as a silent,
+ * unfalsifiable absence for every game in the library.
+ *
+ * `skipped` is distinct from `notfound` on purpose: HowLongToBeat takes its ID FROM the
+ * PCGamingWiki result, so when that lookup errors HLTB never issues a request at all.
+ * Reporting that as `notfound` would blame HLTB for PCGamingWiki's failure.
+ */
+export type WikiSourceOutcome = 'ok' | 'notfound' | 'error'
+export type HowLongToBeatOutcome = 'ok' | 'notfound' | 'skipped'
+
+export interface WikiFetchStatus {
+  pcgamingwiki: WikiSourceOutcome
+  howlongtobeat: HowLongToBeatOutcome
+}
+
 export interface WikiInfo {
   pcgamingwiki: PCGamingWikiInfo | null
   applegamingwiki: AppleGamingWikiInfo | null
@@ -844,6 +866,12 @@ export interface WikiInfo {
   gamesdb: GamesDBInfo | null
   steamInfo: SteamInfo | null
   umuId: string | null
+  /**
+   * OPTIONAL deliberately: `wikiGameInfoStore` is a 30-day cache, so entries written
+   * before this field existed are still live and must keep type-checking. Treat absent
+   * as "unknown outcome" rather than assuming success.
+   */
+  fetchStatus?: WikiFetchStatus
 }
 
 /**

@@ -9,13 +9,30 @@ import {
   steamIDRegEx
 } from './constants'
 import { logError, logInfo, LogPrefix } from 'backend/logger'
-import { GameScoreInfo, PCGamingWikiInfo } from 'common/types'
+import {
+  GameScoreInfo,
+  PCGamingWikiInfo,
+  WikiSourceOutcome
+} from 'common/types'
 import { axiosClient } from 'backend/utils'
+
+/**
+ * Result carries the OUTCOME alongside the data.
+ *
+ * Previously every failure path returned bare `null`, so a 403 was indistinguishable
+ * from "this game is not on PCGamingWiki". The caller could not tell the difference and
+ * neither could the UI, which hid the Extra info tab in both cases. See
+ * `WikiSourceOutcome` in `common/types`.
+ */
+export interface PCGamingWikiResult {
+  info: PCGamingWikiInfo | null
+  outcome: WikiSourceOutcome
+}
 
 export async function getInfoFromPCGamingWiki(
   title: string,
   gogID?: string
-): Promise<PCGamingWikiInfo | null> {
+): Promise<PCGamingWikiResult> {
   try {
     // pcgamingwiki does not like "-" and mostly replaces it with ":"
     title = title.replace(' -', ':')
@@ -25,13 +42,13 @@ export async function getInfoFromPCGamingWiki(
     const id = await getPageID(title, gogID)
 
     if (!id) {
-      return null
+      return { info: null, outcome: 'notfound' }
     }
 
     const wikitext = await getWikiText(id)
 
     if (!wikitext) {
-      return null
+      return { info: null, outcome: 'notfound' }
     }
     const metacritic = getGameScore(wikitext, metacriticRegEx)
     const opencritic = getGameScore(wikitext, opencriticRegEx)
@@ -44,21 +61,26 @@ export async function getInfoFromPCGamingWiki(
     const releaseDates = getReleaseDates(wikitext)
 
     return {
-      steamID,
-      howLongToBeatID,
-      metacritic,
-      opencritic,
-      igdb,
-      direct3DVersions: direct3DVersions.replaceAll(' ', '').split(','),
-      genres: genres.replaceAll(' ', '').split(','),
-      releaseDate: releaseDates
+      info: {
+        steamID,
+        howLongToBeatID,
+        metacritic,
+        opencritic,
+        igdb,
+        direct3DVersions: direct3DVersions.replaceAll(' ', '').split(','),
+        genres: genres.replaceAll(' ', '').split(','),
+        releaseDate: releaseDates
+      },
+      outcome: 'ok'
     }
   } catch (error) {
     logError(
       [`Was not able to get PCGamingWiki data for ${title}`, error],
       LogPrefix.ExtraGameInfo
     )
-    return null
+    // `error`, NOT `notfound` -- this is the branch a 403/timeout/DNS failure takes, and
+    // conflating it with a genuine miss is what hid the User-Agent 403 for months.
+    return { info: null, outcome: 'error' }
   }
 }
 
