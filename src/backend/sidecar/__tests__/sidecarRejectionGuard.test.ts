@@ -52,7 +52,7 @@
 
 import { PassThrough } from 'node:stream'
 import EventEmitter from 'node:events'
-import { readFileSync } from 'fs'
+import { readFileSync, readdirSync } from 'fs'
 import { join, resolve, relative, isAbsolute } from 'path'
 import { tmpdir } from 'os'
 import { getLogFilePath } from 'backend/logger/paths'
@@ -721,6 +721,41 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       // different registry, which was never spied on.
       expect(stashedLoggerModule).not.toBeNull()
       expect(jest.isMockFunction(stashedLoggerModule!.logWarning)).toBe(false)
+    })
+
+
+
+    it('WR-04 no module-scope floating promise exists in the sidecar graph (why the gap is not observable)', () => {
+      // The reason WR-04 was never observable: nothing can REJECT in the
+      // uncovered window, because nothing creates a promise at module scope.
+      // That is an unenforced invariant holding the finding harmless, so it is
+      // pinned here -- the day someone writes `void somethingAsync()` at module
+      // scope, the window goes live silently and this goes red instead.
+      const roots = [resolve(__dirname, '../..'), resolve(__dirname, '../../../sidecar')]
+      const offenders: string[] = []
+
+      const walk = (dir: string): void => {
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+          const full = join(dir, entry.name)
+          if (entry.isDirectory()) {
+            if (entry.name === '__tests__' || entry.name === 'node_modules') continue
+            walk(full)
+            continue
+          }
+          if (!entry.name.endsWith('.ts')) continue
+          const stripped = stripComments(readFileSync(full, 'utf-8'))
+          for (const line of stripped.split('\n')) {
+            // Column 0 only: a top-level statement. An indented `void x()` is
+            // inside a function and runs when called, not at import.
+            if (/^(void |Promise\.(all|resolve|reject)\(|[\w$.]+\.then\()/.test(line)) {
+              offenders.push(`${full}: ${line.trim().slice(0, 80)}`)
+            }
+          }
+        }
+      }
+      roots.forEach(walk)
+
+      expect(offenders).toEqual([])
     })
 
     it('IN-06 the process exit-listener count stays inside the declared ceiling', () => {

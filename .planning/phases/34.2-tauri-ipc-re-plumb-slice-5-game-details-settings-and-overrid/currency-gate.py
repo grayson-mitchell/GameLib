@@ -185,9 +185,7 @@ CYCLE1_LATE_CLOSED_FINDING_TOKENS = [
 # IN-04 is deliberately left deferred (documentation provenance), so it must stay NAMED.
 CYCLE1_LATE_DEFERRED_FINDING_TOKENS = [
     "gap cycle 1 IN-04",
-    # Attempted 2026-08-23 and REVERTED: the review's prescribed fix breaks sidecar startup by
-    # violating the older electron-hook-first ordering invariant. Named here so the revert cannot
-    # be quietly forgotten.
+    # Two fixes attempted 2026-08-23, both failed; see the section for the constraint.
     "gap cycle 1 WR-04",
 ]
 

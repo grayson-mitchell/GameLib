@@ -77,7 +77,8 @@
     "clean:dist-linux": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/cleanDist.ts --platform=linux",
     "verify:updater-key": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/verifyUpdaterSigningKey.ts",
     "gen-tray-icon-variants": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/trayIconVariants.ts",
-    "graph:viz": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/graphifyCodeViz.ts"
+    "graph:viz": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/graphifyCodeViz.ts",
+    "smoke:sidecar": "node meta/sidecarStartupSmoke.cjs"
   },
   "dependencies": {
     "@fontsource/cabin": "^4.5.10",
