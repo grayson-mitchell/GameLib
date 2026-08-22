@@ -205,4 +205,26 @@ describe('NavItem', () => {
       expect.stringContaining('FilterRow')
     )
   })
+
+  it('button branch forwards data-tour onto the rendered <button>', () => {
+    const element = NavItem({
+      label: 'Take the tour',
+      elementType: 'button',
+      'data-tour': 'nav-launcher'
+    }) as AnyElement
+
+    expect(element.type).toBe('button')
+    expect(element.props['data-tour']).toBe('nav-launcher')
+  })
+
+  it('NavLink branch forwards data-tour onto the rendered NavLink', () => {
+    const element = NavItem({
+      label: 'Wine Manager',
+      url: '/wine-manager',
+      'data-tour': 'nav-wine'
+    }) as AnyElement
+
+    expect(element.type).toBe(NavLink)
+    expect(element.props['data-tour']).toBe('nav-wine')
+  })
 })
