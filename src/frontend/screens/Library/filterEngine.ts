@@ -257,8 +257,9 @@ export function isNonAvailableGame(
 }
 
 // D-06/D-07: the "more" group — offline support, third-party-managed,
-// updates-only, plus the showHidden/showNonAvailable tri-state block ported
-// verbatim from `Library/index.tsx:570-580` and `L639-654`.
+// updates-only, plus the showHidden/showNonAvailable/noStorePage tri-state
+// block ported verbatim from `Library/index.tsx:570-580` and `L639-654`,
+// then extended by 37-03b (REQ-37-02, D-11).
 export function passesMore(
   game: GameInfo,
   state: FilterEngineState,
@@ -276,21 +277,46 @@ export function passesMore(
     return false
   }
 
-  const { showHidden, showNonAvailable } = state
+  const { showHidden, showNonAvailable, noStorePage } = state
 
-  if (showHidden === 'only' && showNonAvailable === 'only') {
-    // D-09 (Phase 08.1): both 'only' -> union, not intersection.
-    return isNonAvailableGame(game, deps) || isHiddenGame(game, deps)
+  // D-16: re-homed here as its OWN facet rather than routed back through
+  // `nonAvailableGames` -- that list means "an INSTALLED game whose
+  // install_path went missing", has exactly one writer, and a second writer
+  // would collide at every existing reader. This is the same expression
+  // 37-03a removed from `isNonAvailableGame`.
+  const isNoStorePageGame = game.runner === 'steam' && !!game.is_delisted
+
+  // Step 1: an explicit 'hide' beats an unrelated 'only' in another
+  // tri-state, because 'hide' is the user's direct instruction about THIS
+  // facet.
+  if (noStorePage === 'hide' && isNoStorePageGame) {
+    return false
   }
 
-  if (showHidden === 'only') {
-    return isHiddenGame(game, deps)
+  // Step 2: if ANY of the three tri-states is 'only', return the OR across
+  // just those that are 'only' (generalises the existing D-09 both-'only'-
+  // means-union rule from two tri-states to three).
+  if (
+    showHidden === 'only' ||
+    showNonAvailable === 'only' ||
+    noStorePage === 'only'
+  ) {
+    let matches = false
+    if (showHidden === 'only') {
+      matches = matches || isHiddenGame(game, deps)
+    }
+    if (showNonAvailable === 'only') {
+      matches = matches || isNonAvailableGame(game, deps)
+    }
+    if (noStorePage === 'only') {
+      matches = matches || isNoStorePageGame
+    }
+    return matches
   }
 
-  if (showNonAvailable === 'only') {
-    return isNonAvailableGame(game, deps)
-  }
-
+  // Step 3: the existing showNonAvailable === 'off' and showHidden === 'off'
+  // exclusions, unchanged. This is BEHAVIOURALLY IDENTICAL to the pre-37-03b
+  // shape for every combination in which noStorePage === 'off'.
   if (showNonAvailable === 'off' && isNonAvailableGame(game, deps)) {
     return false
   }
@@ -299,6 +325,7 @@ export function passesMore(
     return false
   }
 
+  // Step 4.
   return true
 }
 
@@ -405,6 +432,7 @@ export const DEFAULT_FILTER_ENGINE_STATE: FilterEngineState = {
   searchMatchedKeys: null,
   showHidden: 'off',
   showNonAvailable: 'off',
+  noStorePage: 'off',
   showSupportOfflineOnly: false,
   showThirdPartyManagedOnly: false,
   showUpdatesOnly: false
@@ -465,6 +493,14 @@ export function describeActiveFilters(
       id: `showNonAvailable:${state.showNonAvailable}`,
       kind: 'showNonAvailable',
       value: state.showNonAvailable
+    })
+  }
+
+  if (state.noStorePage !== 'off') {
+    descriptors.push({
+      id: `noStorePage:${state.noStorePage}`,
+      kind: 'noStorePage',
+      value: state.noStorePage
     })
   }
 

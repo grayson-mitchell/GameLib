@@ -15,6 +15,7 @@ import {
 } from 'frontend/types'
 import {
   countFor,
+  DEFAULT_FILTER_ENGINE_STATE,
   deriveRunnabilityTier,
   describeActiveFilters,
   filterLibrary,
@@ -63,6 +64,7 @@ function makeState(
     searchMatchedKeys: null,
     showHidden: 'off',
     showNonAvailable: 'off',
+    noStorePage: 'off',
     showSupportOfflineOnly: false,
     showThirdPartyManagedOnly: false,
     showUpdatesOnly: false,
@@ -192,6 +194,98 @@ describe('filter engine', () => {
     const result = filterLibrary([nonAvailable], state, deps)
 
     expect(result).toHaveLength(0)
+  })
+
+  it('noStorePage: off — a delisted game is returned (37-03b adding the facet does not silently re-hide it)', () => {
+    const delisted = makeGame({
+      app_name: 'delisted-app',
+      runner: 'steam',
+      is_delisted: true
+    })
+    const state = makeState({ noStorePage: 'off' })
+    const deps = makeDeps()
+
+    const result = filterLibrary([delisted], state, deps)
+
+    expect(result.map((g) => g.app_name)).toEqual(['delisted-app'])
+  })
+
+  it('noStorePage: hide — the delisted game is excluded and a non-delisted game is returned', () => {
+    const delisted = makeGame({
+      app_name: 'delisted-app',
+      runner: 'steam',
+      is_delisted: true
+    })
+    const normal = makeGame({ app_name: 'normal-app', runner: 'steam' })
+    const state = makeState({ noStorePage: 'hide' })
+    const deps = makeDeps()
+
+    const result = filterLibrary([delisted, normal], state, deps)
+
+    expect(result.map((g) => g.app_name)).toEqual(['normal-app'])
+  })
+
+  it("noStorePage: only — only the delisted game is returned", () => {
+    const delisted = makeGame({
+      app_name: 'delisted-app',
+      runner: 'steam',
+      is_delisted: true
+    })
+    const normal = makeGame({ app_name: 'normal-app', runner: 'steam' })
+    const state = makeState({ noStorePage: 'only' })
+    const deps = makeDeps()
+
+    const result = filterLibrary([delisted, normal], state, deps)
+
+    expect(result.map((g) => g.app_name)).toEqual(['delisted-app'])
+  })
+
+  it("noStorePage: only combined with showHidden: only — the UNION is returned (D-09 generalised to three tri-states)", () => {
+    const delisted = makeGame({
+      app_name: 'delisted-app',
+      runner: 'steam',
+      is_delisted: true
+    })
+    const hidden = makeGame({ app_name: 'hidden-app', runner: 'steam' })
+    const neither = makeGame({ app_name: 'neither-app', runner: 'steam' })
+    const state = makeState({ noStorePage: 'only', showHidden: 'only' })
+    const deps = makeDeps({ hiddenAppNames: ['hidden-app'] })
+
+    const result = filterLibrary([delisted, hidden, neither], state, deps)
+
+    expect(result.map((g) => g.app_name).sort()).toEqual([
+      'delisted-app',
+      'hidden-app'
+    ])
+  })
+
+  it('a NON-Steam game carrying a truthy is_delisted is unaffected by noStorePage: hide — the predicate is runner-scoped', () => {
+    const gogDelisted = makeGame({
+      app_name: 'gog-delisted-app',
+      runner: 'gog',
+      is_delisted: true
+    })
+    const state = makeState({ noStorePage: 'hide' })
+    const deps = makeDeps()
+
+    const result = filterLibrary([gogDelisted], state, deps)
+
+    expect(result.map((g) => g.app_name)).toEqual(['gog-delisted-app'])
+  })
+
+  it('describeActiveFilters(DEFAULT_FILTER_ENGINE_STATE, "") is still [] after adding noStorePage', () => {
+    expect(describeActiveFilters(DEFAULT_FILTER_ENGINE_STATE, '')).toEqual([])
+  })
+
+  it('describeActiveFilters emits exactly one noStorePage descriptor when hide is set', () => {
+    const result = describeActiveFilters(
+      { ...DEFAULT_FILTER_ENGINE_STATE, noStorePage: 'hide' },
+      ''
+    )
+
+    expect(result).toEqual([
+      { id: 'noStorePage:hide', kind: 'noStorePage', value: 'hide' }
+    ])
   })
 })
 

@@ -283,6 +283,16 @@ export interface CrossoverRatingFilters {
 
 export type FilterMode = 'off' | 'show' | 'only'
 
+// D-11: the "No store page" facet's own tri-state. Its neutral is 'off', but
+// unlike `FilterMode` the two non-off states are 'only' and 'hide' -- there
+// is no 'show' state. `describeActiveFilters` emits a descriptor whenever a
+// tri-state is `!== 'off'`, so a `'show'`-defaulting row would put a chip in
+// the chip row and "1 selected" on the More group badge for every user on a
+// virgin library with zero action taken. A per-row exception suppressing the
+// descriptor was rejected to keep `selectionCount.ts`'s "what counts as
+// active" rule uniform across all six More filters.
+export type NoStorePageMode = 'off' | 'only' | 'hide'
+
 export interface LibraryContextType {
   storesFilters: StoresFilters
   platformsFilters: PlatformsFilters
@@ -302,6 +312,10 @@ export interface LibraryContextType {
   setShowInstalledOnly: (value: boolean) => void
   showNonAvailable: FilterMode
   setShowNonAvailable: (value: FilterMode) => void
+  // D-11: "No store page" tri-state (off / only / hide). Opt-in replacement
+  // for the forced-hide REQ-37-02/D-15 removed from isNonAvailableGame.
+  noStorePage: NoStorePageMode
+  setNoStorePage: (value: NoStorePageMode) => void
   sortDescending: boolean
   setSortDescending: (value: boolean) => void
   sortInstalled: boolean
@@ -465,6 +479,9 @@ export interface FilterEngineState {
   searchMatchedKeys: Set<string> | null
   showHidden: FilterMode
   showNonAvailable: FilterMode
+  // D-11: "No store page" tri-state (off / only / hide). Read ONLY inside
+  // `passesMore` -- see filterEngine.ts's comment on why.
+  noStorePage: NoStorePageMode
   showSupportOfflineOnly: boolean
   showThirdPartyManagedOnly: boolean
   showUpdatesOnly: boolean
@@ -499,6 +516,7 @@ export interface ActiveFilterDescriptor {
     | 'search'
     | 'showHidden'
     | 'showNonAvailable'
+    | 'noStorePage'
     | 'showSupportOfflineOnly'
     | 'showThirdPartyManagedOnly'
     | 'showUpdatesOnly'

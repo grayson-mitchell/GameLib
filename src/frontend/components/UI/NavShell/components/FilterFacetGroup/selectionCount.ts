@@ -26,19 +26,20 @@ import type { ActiveFilterDescriptor } from 'frontend/types'
 type DescriptorKind = ActiveFilterDescriptor['kind']
 
 /**
- * The five descriptor kinds `FilterMoreGroup` owns rows for -- the two
+ * The six descriptor kinds `FilterMoreGroup` owns rows for -- the three
  * tri-states plus the three booleans.
  *
  * This is a MANUAL transcription of `filterEngine.describeActiveFilters`'s
- * five More-filters branches and can therefore drift from them: add a sixth
- * More filter there without adding it here and the More group's badge
- * silently under-counts while the chip row shows the extra chip.
+ * six More-filters branches and can therefore drift from them: add a
+ * seventh More filter there without adding it here and the More group's
+ * badge silently under-counts while the chip row shows the extra chip.
  * `facetSelectionCount.test.ts` pins the membership and the absence of
  * duplicates as the tripwire for that drift.
  */
 export const MORE_FILTER_KINDS = [
   'showHidden',
   'showNonAvailable',
+  'noStorePage',
   'showSupportOfflineOnly',
   'showThirdPartyManagedOnly',
   'showUpdatesOnly'

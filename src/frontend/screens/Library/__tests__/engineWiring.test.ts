@@ -64,6 +64,7 @@ function makeState(
     searchMatchedKeys: null,
     showHidden: 'off',
     showNonAvailable: 'off',
+    noStorePage: 'off',
     showSupportOfflineOnly: false,
     showThirdPartyManagedOnly: false,
     showUpdatesOnly: false,

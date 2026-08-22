@@ -83,6 +83,7 @@ describe('DEFAULT_FILTER_ENGINE_STATE', () => {
       searchMatchedKeys: null,
       showHidden: 'off',
       showNonAvailable: 'off',
+      noStorePage: 'off',
       showSupportOfflineOnly: false,
       showThirdPartyManagedOnly: false,
       showUpdatesOnly: false

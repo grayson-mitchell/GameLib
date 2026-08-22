@@ -72,14 +72,15 @@ describe('countDescriptorsOfKind', () => {
 
 /**
  * `MORE_FILTER_KINDS` is a MANUAL transcription of `describeActiveFilters`'s
- * five More-filters branches. It can drift when a sixth More filter is added
- * there and not here -- at which point the More group's badge would silently
- * under-count while the chip row showed the extra chip. These two guards are
- * the tripwire.
+ * six More-filters branches. It can drift when a seventh More filter is
+ * added there and not here -- at which point the More group's badge would
+ * silently under-count while the chip row showed the extra chip. These two
+ * guards are the tripwire.
  */
 describe('MORE_FILTER_KINDS', () => {
-  it('holds exactly the five More-filters descriptor kinds', () => {
+  it('holds exactly the six More-filters descriptor kinds', () => {
     expect([...MORE_FILTER_KINDS].sort()).toEqual([
+      'noStorePage',
       'showHidden',
       'showNonAvailable',
       'showSupportOfflineOnly',
