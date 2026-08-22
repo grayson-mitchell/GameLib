@@ -113,7 +113,10 @@ export const STORE_ALLOWLIST: Record<string, readonly string[] | '*'> = {
   // `credentials` (ZoomCredentials) omitted — see header comment.
   zoomConfigStore: ['isLoggedIn', 'username'],
   // `refreshToken` omitted — safeStorage-encrypted Steam session token, see header comment.
-  steamConfigStore: ['isLoggedIn', 'userData'],
+  // `credentialsMissing` is a non-secret boolean verdict (the stored credential
+  // was proven absent) — the Manage Accounts tile reads it to stop claiming a
+  // clean signed-in state, exactly as it reads humbleConfigStore.expired below.
+  steamConfigStore: ['isLoggedIn', 'userData', 'credentialsMissing'],
   // SteamBottleConfig (src/common/types/steam.ts:39) carries no secret fields — bottle
   // auth is opaque (D-04 / WR-02, 17-17), so there is nothing to redeem here.
   steamBottleConfigStore: [
