@@ -384,8 +384,31 @@ with this section.
   rather than one-off session checks, each proving the new form rejects what the
   old form accepted.
 
-**Still open from gap cycle 4: 12 findings** (WR-02, WR-03, WR-05, WR-07, WR-08,
-IN-02 through IN-08). All sit in test/gate code except WR-03 (`repairFailure.ts`'s
+- **WR-03 — CLOSED 2026-08-23 (`cade8d757`), the only PRODUCTION-code finding
+  of the 17.** `repairFailure.ts`'s `t()` guard was silent: a throwing `t` means
+  the translation catalogue is broken, and while the hardcoded English fallbacks
+  still produced a rendered dialog, WHY it was untranslated was recorded nowhere.
+  It now emits a named diagnostic in the shape the other two guards use — nested
+  `try`/`catch`, failure passed as a second ARGUMENT rather than interpolated, so
+  T-34.2-52 holds.
+
+  **Two of the review's three prescribed diagnostics were declined**, taking the
+  alternative the review itself offers (correct the docstring instead). The
+  signal-1 guard *is* `console.error` failing — reporting that via
+  `console.error` is self-defeating. The stringification guard's output *is* its
+  diagnostic, already reaching signal 2's log line as
+  `repair failed for X: <unstringifiable error>`. The docstring's "every signal"
+  is now scoped to the three SIGNALS, with both deliberate silences named and
+  justified inline; the old wording read as a claim about every `catch`, which is
+  what made this a finding rather than a design note.
+
+  Test 3 pinned only "title/message non-empty" while its sibling Test 4 pinned a
+  diagnostic; it now pins the diagnostic and T-34.2-52 directly. RED-proved:
+  replacing the diagnostic with `void tErr` fails Test 3 and only Test 3.
+
+**Still open from gap cycle 4: 11 findings** (WR-02, WR-05, WR-07, WR-08,
+IN-02 through IN-08). **All eleven are in test/gate code — with WR-03 closed,
+no production file among the original 17 remains open.** All sit in test/gate code except WR-03 (`repairFailure.ts`'s
 bare `catch` blocks), which is the only production file among them. Note also
 that CR-01, the round-4 blocker recorded as re-scoped, is in fact **closed** —
 `src/backend/testUtils/stripSourceComments.ts` exists, strips block comments
