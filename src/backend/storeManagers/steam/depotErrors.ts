@@ -14,6 +14,19 @@
 // information from the original throw site is not reliably available.
 
 import i18next from 'i18next'
+import { isDecodeStageError } from './depot/decompress'
+
+/** 37-02 (D-06): the structured affordance a classified failure carries,
+ *  separate from its translated message text. 'retry' means the existing
+ *  generic error+Retry UI is correct as-is; 'signIn' means the failure needs
+ *  a "Sign in to Steam" action instead (D-07 — retrying a not-signed-in
+ *  abort can only fail again); 'none' means neither affordance applies
+ *  (e.g. disk full, unsafe path — the user must act outside this dialog).
+ *  Aliased by InstallErrorAction (common/types/game_manager.ts) so the two
+ *  can never drift — common/ must not import from backend/, so the alias
+ *  runs the other direction: this type is declared here and re-exported
+ *  there as an alias of the same string-literal union. */
+export type DepotErrorAction = 'retry' | 'signIn' | 'none'
 
 export interface ClassifiedDepotError {
   /** Locale key the classified message was resolved from — useful for tests
@@ -22,6 +35,10 @@ export interface ClassifiedDepotError {
   /** Plain-language, actionable message safe to surface in the
    *  DownloadManager queue's existing generic error+Retry UI (D-06). */
   message: string
+  /** 37-02 (D-06): the structured affordance this failure carries. Every
+   *  branch below assigns one explicitly — no optional marker, so a new
+   *  branch can't be added without deciding its action. */
+  action: DepotErrorAction
 }
 
 function errorText(err: unknown): string {
@@ -117,7 +134,8 @@ export function classifyDepotError(err: unknown): ClassifiedDepotError {
       )
       return {
         key: 'steam.download.error.depotBlocked',
-        message: `${base} (${text})`
+        message: `${base} (${text})`,
+        action: 'none'
       }
     }
 
@@ -133,7 +151,26 @@ export function classifyDepotError(err: unknown): ClassifiedDepotError {
     )
     return {
       key: 'steam.download.error.depotUnavailable',
-      message: `${base} (${text})`
+      message: `${base} (${text})`,
+      action: 'none'
+    }
+  }
+
+  // 37-02 (D-07): a plan-build abort caused by no authenticated Steam CM
+  // connection is not a download failure at all — it never reached the
+  // network. Checked by the auth abort's OWN signature (depot.ts's
+  // buildDepotPlan throws this exact text), before ANY other branch, so it
+  // can never be misclassified as a generic/connection-dropped retry case.
+  // Deliberately offers no "Retry" wording: retrying without first signing
+  // in can only fail again in the identical way.
+  if (/no authenticated Steam CM connection/i.test(text)) {
+    return {
+      key: 'steam.download.error.notSignedIn',
+      message: i18next.t(
+        'steam.download.error.notSignedIn',
+        'You are not signed in to Steam, so this download could not start.'
+      ),
+      action: 'signIn'
     }
   }
 
@@ -142,7 +179,11 @@ export function classifyDepotError(err: unknown): ClassifiedDepotError {
   if (/ENOSPC/i.test(text)) {
     return {
       key: 'steam.download.error.diskFull',
-      message: i18next.t('steam.download.error.diskFull', 'Out of disk space.')
+      message: i18next.t(
+        'steam.download.error.diskFull',
+        'Out of disk space.'
+      ),
+      action: 'none'
     }
   }
 
@@ -153,7 +194,8 @@ export function classifyDepotError(err: unknown): ClassifiedDepotError {
       message: i18next.t(
         'steam.download.error.unsafePath',
         'The download contained an unsafe file path and was stopped.'
-      )
+      ),
+      action: 'none'
     }
   }
 
@@ -164,32 +206,78 @@ export function classifyDepotError(err: unknown): ClassifiedDepotError {
       message: i18next.t(
         'steam.download.error.verifyFailed',
         'A downloaded file failed verification.'
-      )
+      ),
+      action: 'retry'
     }
   }
 
-  // CDN/connection drop — fetchChunk's exhausted-retries message
-  // ("chunk <sha> failed after N attempts: ...") and common network error
-  // signatures (CDN <status>, ECONNRESET, ETIMEDOUT, ENOTFOUND, fetch failed).
+  // 37-02 (D-08): a fully-exhausted decode-stage failure (fetchChunk's
+  // requeue guard gave up after every host/attempt combination produced the
+  // SAME deterministic ChunkDecodeError code — see decompress.ts's own
+  // doc comment) is a data-decode problem, never a network one, even though
+  // its message text is fetchChunk's generic "failed after N attempts:
+  // ..." exhaustion wrapper. Checked via `isDecodeStageError(err)` — the
+  // PROPERTY carried on `.code`, not a text pattern — same discipline as
+  // `isNonRetryableDepotError` above, and must run BEFORE the network
+  // alternation below since the message text alone cannot distinguish the
+  // two causes.
+  if (isDecodeStageError(err)) {
+    return {
+      key: 'steam.download.error.decodeFailed',
+      message: i18next.t(
+        'steam.download.error.decodeFailed',
+        'Downloaded game data could not be unpacked. This is not a network problem.'
+      ),
+      action: 'retry'
+    }
+  }
+
+  // CDN/connection drop — common network error signatures (CDN <status>,
+  // ECONNRESET, ETIMEDOUT, ENOTFOUND, EAI_AGAIN, fetch failed, no content
+  // servers). 37-02 (D-08): this alternation NO LONGER includes fetchChunk's
+  // generic "failed after N attempts" exhaustion-wrapper text — that phrase
+  // describes the SHAPE of a failure (every attempt was exhausted), not its
+  // CAUSE, and a decode-stage exhaustion (deterministic, never fixed by
+  // another pass) now reaches the dedicated branch above via its `.code`
+  // before this alternation is ever tested. An exhaustion message with none
+  // of these genuine network signatures falls through to the generic case
+  // below instead of being misattributed to the network.
   if (
-    /failed after \d+ attempts|CDN \d|ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|fetch failed|no content servers/i.test(
+    /CDN \d|ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|fetch failed|no content servers/i.test(
       text
     )
   ) {
     return {
       key: 'steam.download.error.connectionDropped',
+      // 37-02 (D-06): the affordance ("Retry to continue.") is now carried
+      // by `action: 'retry'`, not baked into the message text. The i18next.t
+      // lookup key is deliberately the NEW `connectionDroppedV2` locale key
+      // (no catalog entry, so this string-literal default always renders) —
+      // the OLD `connectionDropped` catalog entry in
+      // public/locales/en/translation.json still has the pre-37-02 wording
+      // and i18next prefers a catalog hit over the call-site default, so
+      // reusing the old key here would silently keep shipping "Retry to
+      // continue." wherever that catalog is loaded. `.key` below stays the
+      // OLD semantic identifier — unchanged for every existing
+      // test/analytics consumer — this V2 split is purely a locale-lookup
+      // detail, invisible outside this function.
       message: i18next.t(
-        'steam.download.error.connectionDropped',
-        'Steam servers dropped the connection. Retry to continue.'
-      )
+        'steam.download.error.connectionDroppedV2',
+        'Steam servers dropped the connection.'
+      ),
+      action: 'retry'
     }
   }
 
   return {
     key: 'steam.download.error.generic',
+    // 37-02 (D-06/D-08): same NEW-key-for-lookup, OLD-key-for-identity split
+    // as connectionDropped above — public/locales/en/translation.json's
+    // existing `generic` entry still carries "Retry to continue."
     message: i18next.t(
-      'steam.download.error.generic',
-      'The Steam download failed. Retry to continue.'
-    )
+      'steam.download.error.genericV2',
+      'The Steam download failed.'
+    ),
+    action: 'retry'
   }
 }

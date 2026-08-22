@@ -3032,6 +3032,48 @@ describe('classifyDepotError', () => {
       expect(result.key).toBe('steam.download.error.depotUnavailable')
     }
   })
+
+  it('37-02 Task 2 (a): a ChunkDecodeError-shaped exhaustion (message text IS fetchChunk\'s generic wrapper) classifies as decodeFailed, NOT connectionDropped', () => {
+    const err = new Error(
+      'chunk abc123 failed after 5 attempts: bad footer magic'
+    ) as Error & { code?: string }
+    err.code = 'unknown_container'
+    const result = classifyDepotError(err)
+    expect(result.key).toBe('steam.download.error.decodeFailed')
+    expect(result.action).toBe('retry')
+
+    // Non-vacuity pair: the SAME message with its .code removed classifies
+    // as generic instead — proving the branch fires on the property, not on
+    // the "failed after N attempts" text both errors share.
+    delete err.code
+    const withoutCode = classifyDepotError(err)
+    expect(withoutCode.key).toBe('steam.download.error.generic')
+  })
+
+  it('37-02 Task 2 (b): a bare ECONNRESET still classifies as connectionDropped with action retry (genuine-network regression guard)', () => {
+    const result = classifyDepotError(new Error('ECONNRESET'))
+    expect(result.key).toBe('steam.download.error.connectionDropped')
+    expect(result.action).toBe('retry')
+  })
+
+  it('37-02 Task 2 (c): a no-authenticated-CM-connection plan-build abort classifies as notSignedIn with action signIn and never says "retry"', () => {
+    const result = classifyDepotError(
+      new Error(
+        'downloadSteamDepots: no authenticated Steam CM connection available for appId 259130'
+      )
+    )
+    expect(result.key).toBe('steam.download.error.notSignedIn')
+    expect(result.action).toBe('signIn')
+    expect(result.message).not.toMatch(/retry/i)
+  })
+
+  it('37-02 Task 2 (d): a bare exhaustion message with NO .code now classifies as generic — the direct behavioral consequence of removing the "failed after N attempts" network-alternation term (D-08)', () => {
+    const result = classifyDepotError(
+      new Error('chunk abc123 failed after 5 attempts: socket hang up')
+    )
+    expect(result.key).toBe('steam.download.error.generic')
+    expect(result.action).toBe('retry')
+  })
 })
 
 describe('isNonRetryableDepotError', () => {
