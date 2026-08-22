@@ -360,8 +360,32 @@ with this section.
   discipline — the same escape route that let `oauthCaptureLogin` go
   unbucketed. Quick tasks that add IPC channels need an inventory step.
 
-**Still open from gap cycle 4: 17 findings** (WR-02 through WR-10, IN-01
-through IN-08). All sit in test/gate code except WR-03 (`repairFailure.ts`'s
+- **WR-04, WR-06, WR-09, WR-10, IN-01 — CLOSED 2026-08-23 (`11b5212ed`), the
+  "gates that cannot fail" group.** Each was verified still open at the site the
+  review named before being touched. An ||-fold that claimed to prove three
+  entries load-bearing while requiring one; an unreachable `try`/`catch` whose
+  real hardening lived in the mock and had no test; an absence assertion with no
+  presence precondition; a loop annotated "load-bearing" over a string this suite
+  can never emit; and an "anti-vacuity" check comparing two paths that differ on
+  every platform by construction.
+
+  **WR-09 caught a live defect on its first run, and it was ours.** The fixture
+  phrase the stripper self-test depends on had been deleted from `main.rs` by
+  `a6223baf1` — the round-1 IN-03 doc-comment correction, made earlier the same
+  day — so the test had been passing for entirely the wrong reason with nothing
+  going red. This is the second time in this session a code-read outlived its own
+  fix (the first was the `dispatch.ts:NNN` citations in `34.2-HUMAN-UAT.md`).
+
+  RED-proofs were run against real code, not asserted: removing the `os` mock's
+  fallback fails the new Test 8b **only** — the old Test 8 stays green, which is
+  the direct evidence its deleted `catch` never covered that path; and removing
+  the production `logError` call-site `.catch` fails Tests A and B while their
+  `logInfo` counterparts stay green. WR-04 and IN-01 got permanent self-tests
+  rather than one-off session checks, each proving the new form rejects what the
+  old form accepted.
+
+**Still open from gap cycle 4: 12 findings** (WR-02, WR-03, WR-05, WR-07, WR-08,
+IN-02 through IN-08). All sit in test/gate code except WR-03 (`repairFailure.ts`'s
 bare `catch` blocks), which is the only production file among them. Note also
 that CR-01, the round-4 blocker recorded as re-scoped, is in fact **closed** —
 `src/backend/testUtils/stripSourceComments.ts` exists, strips block comments
