@@ -3748,7 +3748,8 @@ residual and becomes a **release blocker**. Nothing needs reopening: Requirement
 > **Consequence to carry:** `REQ-34.2-02` (a translated notification string actually renders) is
 > proven for **dev** and is **FALSE for a packaged build** — `t('notify.finished.reparing')`
 > carries no default, so it renders the raw key. Tracked as `G-34.2-UAT-02` in
-> `34.2-HUMAN-UAT.md`, whose `status: partial` and `blocked_on:` both point here.
+> `34.2-HUMAN-UAT.md`, which is `status: diagnosed` with a `blocked_on:` field pointing here and
+> its `UAT-34.2-01` result recorded as `blocked` on this item.
 >
 > Also settled by that run, worth recording because it had been an open question: **macOS arm64
 > Tauri packaging itself WORKS** — `electron-vite build` → `pnpm build:sidecar-sea` → `tauri build`,

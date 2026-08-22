@@ -175,7 +175,8 @@ gate document itself. Root causes are UNKNOWN; do not assume any of these share 
     > note, nor Phase 35's pre-existing dependency note describes that second half.
     >
     > One correction to carry: the `publicDir` ternary is **not** the bare
-    > `app.isPackaged ? 'build' : 'public'` that `34.2-HUMAN-UAT.md` quotes. Since `87c0ef823`
+    > `app.isPackaged ? 'build' : 'public'` that `34.2-HUMAN-UAT.md` carried until 2026-08-23,
+    > when it was corrected in place. Since `87c0ef823`
     > (2026-07-21) it reads `app.isPackaged || process.env.CI === 'e2e' ? 'build' : 'public'`
     > (`paths.ts:73-76`). The conclusion holds — a shipped `.app` sets no `CI=e2e` — but the
     > `'build'` branch IS reachable under one condition, which may give the fix a cheap harness.

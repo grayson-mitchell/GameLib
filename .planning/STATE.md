@@ -2759,9 +2759,10 @@ below so each correction is auditable rather than silent):
 **Nothing.** Phase 34.2's closeout artifacts are green across the board: `34.2-VERIFICATION.md`
 `status: passed` 14/14, `34.2-SECURITY.md` `status: verified` 164 threats / 164 closed / **0
 open**, `34.2-VALIDATION.md` `status: complete`, ROADMAP **30/30 plans with zero unchecked
-boxes**, and all five code reviews dispositioned across **80 findings, 0 open**. Two documents
-stay `status: partial` and both are correct as written — see the last three DISCHARGED bullets
-for why neither is an outstanding item.
+boxes**, and all five code reviews dispositioned across **80 findings, 0 open**.
+`34.2-HUMAN-UAT.md` is `status: diagnosed` (testing finished, its one failure root-caused and
+owned by Phase 35) and `34.2-REVIEW-FIX.md` stays `status: partial`, correctly — see the last
+three DISCHARGED bullets for why neither is an outstanding item.
 
 DISCHARGED, do not redo:
 
@@ -2780,8 +2781,12 @@ DISCHARGED, do not redo:
   **2026-08-23: `R-34.5-G1-PKG` now has a NAMED home — Phase 35**, recorded in that phase's
   ROADMAP block and back-referenced from `34.5-deferred-items.md` item 12. It had been parked
   to unnamed "packaging work" since 2026-08-07. `34.2-HUMAN-UAT.md` carries a matching
-  `blocked_on:` field, so its `partial` reads as owned-elsewhere rather than as unfinished
-  34.2 work.
+  `blocked_on:` field. **That file was also moved off `status: partial` on 2026-08-23**: in the
+  UAT template `partial` is a SESSION state meaning "testing paused, resume me", and
+  `gsd-tools` renders it as the warning "testing incomplete (partial)" — neither true, since
+  both items were RUN. It is now `diagnosed` (testing complete, gaps root-caused), with
+  `UAT-34.2-01` moved from an unscanned `partial` result to `blocked`, so its outstanding half
+  is visible to the phase scan instead of silent.
 - ~~**The 11 warnings + 8 info of `34.2-REVIEW-GAP-CYCLE-4.md`** — recorded under `deferred:`,
   genuinely open, NOT resolved. Unchanged.~~ — **ALL CLOSED 2026-08-23.** Discharged across
   five quick tasks (`260823-9ds`, `260823-amg`, `260823-bo0`, `260823-c2w`, `260823-cis`) plus
