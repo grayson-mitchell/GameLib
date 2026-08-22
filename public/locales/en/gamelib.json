@@ -1,4 +1,7 @@
 {
+    "about": {
+        "navLabel": "About"
+    },
     "app": {
         "routeError": "Something went wrong: {{detail}}"
     },

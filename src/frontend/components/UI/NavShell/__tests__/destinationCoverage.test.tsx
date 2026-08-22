@@ -267,6 +267,7 @@ describe('Destination coverage -- the settled tree', () => {
       'Log',
       'System Information',
       'Documentation',
+      'About',
       'Ko-fi'
     ])
   })

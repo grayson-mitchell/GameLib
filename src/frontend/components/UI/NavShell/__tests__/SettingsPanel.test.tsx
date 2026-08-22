@@ -71,9 +71,11 @@ jest.mock('../components/QuitButton', () => ({
   length: 0
 }
 ;(
-  globalThis as unknown as { window: { api: { openKofiPage: jest.Mock } } }
+  globalThis as unknown as {
+    window: { api: { openKofiPage: jest.Mock; showAboutWindow: jest.Mock } }
+  }
 ).window = {
-  api: { openKofiPage: jest.fn() }
+  api: { openKofiPage: jest.fn(), showAboutWindow: jest.fn() }
 }
 
 // Imported after the mocks above (textual order -- this project's ts-jest
@@ -146,7 +148,7 @@ describe('SettingsPanel', () => {
     )
   })
 
-  it('renders all eleven entries in the settled order for a non-Windows context', () => {
+  it('renders all twelve entries in the settled order for a non-Windows context', () => {
     contextValue = makeContextValue({ platform: 'linux' })
 
     const tree = SettingsPanel() as unknown as ReactElement
@@ -162,6 +164,7 @@ describe('SettingsPanel', () => {
       'Log',
       'System Information',
       'Documentation',
+      'About',
       'Ko-fi'
     ])
 
@@ -188,6 +191,22 @@ describe('SettingsPanel', () => {
     const labels = labelsOf(tree)
 
     expect(labels.indexOf('System Information')).toBe(labels.indexOf('Log') + 1)
+  })
+
+  it('About is a button whose onClick calls window.api.showAboutWindow', () => {
+    // The About row is the About window's ONLY entry point under Tauri
+    // (`tauriShowAboutWindow` had no caller outside the Electron tray menu).
+    // Asserting the handler REACHES `window.api.showAboutWindow` -- not merely
+    // that a row labelled "About" is rendered -- is the whole point: a row that
+    // renders and does nothing is exactly the state this test exists to prevent
+    // returning to.
+    const tree = SettingsPanel() as unknown as ReactElement
+    const aboutItem = findNavItem(tree, 'About')
+
+    expect(aboutItem?.props.elementType).toBe('button')
+    ;(aboutItem?.props.onClick as () => void)()
+
+    expect(window.api.showAboutWindow).toHaveBeenCalled()
   })
 
   it('Ko-fi is a button whose onClick calls handleExternalLinkDialog when the stored preference is absent', () => {

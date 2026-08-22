@@ -5,7 +5,8 @@ import {
   faCoffee,
   faUniversalAccess,
   faWineGlass,
-  faTv
+  faTv,
+  faCircleInfo
 } from '@fortawesome/free-solid-svg-icons'
 
 import ContextProvider from 'frontend/state/ContextProvider'
@@ -23,6 +24,20 @@ import QuitButton from '../QuitButton'
  * Settings item rather than members of its submenu -- each keeps the exact
  * guard (or lack of one) it carried at its old position.
  *
+ * The About row is the About window's ONLY entry point under Tauri. The
+ * window itself (`tauriShowAboutWindow`) has been fully implemented since
+ * 34.1 and had no caller anywhere outside `tray_icon.ts`'s Electron tray
+ * menu, which Tauri does not run -- Tauri's own tray is a deliberately
+ * bounded Show/Quit menu. `window.api.showAboutWindow()` is shell-agnostic
+ * by way of the `isTauri()` switch at `preload/api/helpers.ts`, so this one
+ * row reaches the real Tauri `WebviewWindow` under Tauri and the existing
+ * IPC listener under Electron.
+ *
+ * Its label is a fork-owned `gamelib:` key rather than the already-
+ * translated `tray.about`: several of that key's shipped translations
+ * still carry the pre-fork brand name (de is "Uber Heroic"), which has no
+ * business on a new surface.
+ *
  * The bare "Ko-fi" label is an exact do-not-translate glossary term (a
  * brand name), so it is deliberately not passed through the translation
  * function -- doing so would mint a fake translation key for a proper noun.
@@ -32,6 +47,7 @@ import QuitButton from '../QuitButton'
  */
 export default function SettingsPanel() {
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const { platform, handleExternalLinkDialog } = useContext(ContextProvider)
   const isWin = platform === 'win32'
 
@@ -95,6 +111,12 @@ export default function SettingsPanel() {
         url="/wiki"
         icon={faBookOpen}
         label={t('docs', 'Documentation')}
+      />
+      <NavItem
+        elementType="button"
+        onClick={() => window.api.showAboutWindow()}
+        icon={faCircleInfo}
+        label={tGamelib('gamelib:about.navLabel', 'About')}
       />
       <NavItem
         elementType="button"
