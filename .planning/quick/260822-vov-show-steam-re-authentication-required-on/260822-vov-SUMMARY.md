@@ -1,6 +1,7 @@
 ---
 quick_id: 260822-vov
 status: complete
+uat: passed 6/6 (2026-08-23)
 date: 2026-08-22
 ---
 
@@ -65,6 +66,8 @@ startup still issues no `keyring_get`.
 
 ## Verification
 
+**UAT: 6/6 PASS against a real build and a real Keychain — see the UAT section below.**
+
 - `pnpm exec jest src/frontend src/common` — 121 suites, 2008 tests, all pass.
 - `pnpm exec jest src/backend/storeManagers/steam src/backend/sidecar` — 87/88 suites pass;
   the one failure is pre-existing and unrelated (see below).
@@ -88,17 +91,65 @@ Both were verified red before this task's first commit:
    generator to clear a stale-artifact gate is a recorded way to break the pins that guard it.
    Needs its own task, and belongs to whoever owns the other 11.
 
+## UAT — run 2026-08-23 against a real build and a real Keychain
+
+Run on macOS with `pnpm tauri:dev`, observed by the user, evidence read from
+`~/Library/Logs/GameLib/gamelib.log` and the live Keychain.
+
+| # | Item | Result | Evidence |
+|---|---|---|---|
+| 1 | Tile renders the reconnect state | **PASS** | Flag hand-planted in config; tile read "Sign-in expired — Reconnect". Proves allowlist → store read → predicate → `gamelib.json` key. |
+| 2 | Backend latches on a real absent read | **PASS** | Keychain item deleted for real; `keyring_get ok present=false len=0 trigger=user-refresh` → `logged in but no stored refresh token` → `credentialsMissing: True` appeared in config.json. |
+| 3 | Tile reflects the latched (not planted) flag | **PASS** | Manage Accounts read "Sign-in expired — Reconnect", earned end to end. |
+| 4 | Startup issues no `keyring_get` | **PASS** | `library refresh deferred until a deliberate Steam action` at 07:08:10; no Keychain prompt at launch. |
+| 5 | An empty slot does not prompt | **PASS** | `elapsed=4ms` on the empty read vs `elapsed=8480ms` when the slot was populated and macOS prompted. |
+| 6 | Clear path on re-login | **PASS** | Reconnect → sign-in → `setToken(): keyring_set ok len=494` at 07:23:07; `credentialsMissing` gone from config.json; Keychain slot restored. Also restored the credential the test destroyed — no leftover state. |
+
+### Finding: the detection window is narrower than this summary first claimed
+
+The first attempt at item 2 produced **no** latch, and the reason is behavioural, not a test
+artifact. The Keychain item was deleted while the app already held an authenticated
+`steam-user` client, so `ensureConnected` took the canary fast path
+(`already connected (fast path, canary OK)`) and never read the stored token.
+
+That is **correct**: a live CM session is genuinely valid, and the stored token is only needed
+to *re-establish* one. But it means `credentialsMissing` answers *"can I reconnect?"*, not
+*"is my stored credential intact?"* — a credential that vanishes mid-session goes unnoticed
+until the connection drops or the app restarts. Reproducing the original report required
+restarting the app first. The body of this summary previously implied a routine refresh would
+always catch it; it will not while a connection is live.
+
+### Correction to a claim made about the tile
+
+An earlier note said the tile would flip "live" via `STORE_CHANGED_CHANNEL`. It does not. The
+effect that re-reads the flag is keyed on `[…usernames…, t]` (`Login/index.tsx:155-163`) —
+nothing in that list changes when the flag flips — so the value is picked up on **mount**, i.e.
+on navigating to Manage Accounts. Correct for the real use case, but not a live in-place
+update. The snapshot itself is kept current; only the re-render trigger is missing.
+
 ## Not done
 
-- **Not UAT'd.** The flag is proven by unit test and by reading the observed log, not by
-  watching the tile flip in the running app. The natural gate: delete the Keychain item
-  (`security delete-generic-password -s com.gamelib.launcher -a steam-refresh-token`), trigger a
-  library refresh, and confirm the tile reads "Sign-in expired — Reconnect".
 - **Accepted weakness:** the flag is stale by construction — it is the last *proven* verdict,
   not the present one. The four clear sites cover the realistic restore paths.
+- **Gap noticed during UAT planning, not fixed:** the flag is not cleared on a successful
+  *cold* connect (`status: 'present'` → `connectSteamUserClient` succeeds). It clears on the
+  next `ensureConnected` fast path. Re-login clears it via `setToken`, which is the realistic
+  restore path, so this is cosmetic — but it is a real asymmetry among the clear sites.
 
-## Out of scope (finding only)
+## Out of scope (finding only) — CORRECTED during UAT
 
-`refreshLibrary` logs `refreshLibrary complete runner=steam managers=1` immediately after
-`Steam client not ready, skipping library refresh` — it reports completion for a sync that did
-nothing. Same class of defect as the tile, one layer down. Not fixed.
+**As originally written this finding was wrong.** It said `refreshLibrary` "reports completion
+for a sync that did nothing" and characterised the failure as surfacing nothing to the user,
+by analogy with the tile. The UAT disproved the user-facing half: a failed Steam sync **does**
+raise a visible banner, "Couldn't sync your Steam library", with a Steam-scoped retry —
+`SteamSyncNotice` in `'failed'` mode (`Library/components/SteamSyncNotice/index.tsx`, mounted
+via `resolveSteamSyncIndicator`). It is pre-existing (`d9cea762b`, 2026-08-16, phase 34.15-08,
+ancestor of HEAD), so it was also present in the build that produced the original report.
+
+What survives is narrower and log-only: `refreshLibrary complete runner=steam managers=1` is
+logged immediately after `Steam client not ready, skipping library refresh`, so the log claims
+completion for a refresh that skipped. Misleading when reading logs; not a user-facing gap.
+
+This also sharpens the original diagnosis. The sync failure was never silent — the accounts
+tile *contradicting* it is what made the state confusing, which is exactly what this task
+fixed.
