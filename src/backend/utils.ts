@@ -10,6 +10,10 @@ import {
 } from 'common/types'
 import axios from 'axios'
 import https from 'node:https'
+// Static import, matching `utils/systeminfo/heroicVersion.ts` and
+// `sidecar/electronStub.ts`: `process.env.npm_package_version` is UNSET in the packaged
+// SEA sidecar binary, so it cannot be the source of the User-Agent version below.
+import pkg_json from 'backend/../../package.json'
 import { app, dialog, shell, Notification, BrowserWindow } from 'electron'
 import { exec, spawn, SpawnOptions, spawnSync } from 'child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'graceful-fs'
@@ -1666,9 +1670,35 @@ async function extractTarFile({
   return { status: 'done', installPath: destination }
 }
 
+/**
+ * Shared outbound HTTP client.
+ *
+ * The `User-Agent` is REQUIRED, not cosmetic. Axios' default agent string
+ * (`axios/<version>`) is rejected outright by at least one upstream we depend on:
+ * PCGamingWiki answers `403` to `axios/*` and to an empty agent, while accepting any
+ * descriptive one. That 403 emptied `pcgamingwiki` for every game, and because
+ * `getHowLongToBeat` takes its ID from the PCGamingWiki result
+ * (`wiki_game_info/wiki_game_info.ts`), it emptied `howlongtobeat` with it -- which is
+ * `hasWikiInfo`'s entire basis on macOS/Windows, so the game page's "Extra info" tab
+ * (Metacritic / OpenCritic / HowLongToBeat) never rendered at all. Verified live
+ * 2026-08-22 against axios 1.13.5 with this exact client config: default agent -> 403,
+ * descriptive agent -> 200.
+ *
+ * MediaWiki sites ask for an agent naming the tool and a contact URL, which is the shape
+ * used here. The contact is the FORK's repository, deliberately: `package.json`'s
+ * `repository.url` still points at upstream Heroic, and pointing a third party at Heroic
+ * for GameLib's traffic would misattribute it.
+ *
+ * Do not remove this header, and do not replace it with a browser agent string --
+ * impersonating a browser is what the policy exists to discourage, and a descriptive
+ * agent already works.
+ */
+const GAMELIB_USER_AGENT = `GameLib/${pkg_json.version} (+https://github.com/grayson-mitchell/GameLib)`
+
 const axiosClient = axios.create({
   timeout: 10 * 1000,
-  httpsAgent: new https.Agent({ keepAlive: true })
+  httpsAgent: new https.Agent({ keepAlive: true }),
+  headers: { 'User-Agent': GAMELIB_USER_AGENT }
 })
 
 export const writeConfig = (appName: string, config: Partial<AppSettings>) => {
