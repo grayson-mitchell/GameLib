@@ -375,7 +375,20 @@ describe('sidecar bootstrap wirings (Phase 34.2 Plan 01 -- REQ-34.2-02/04/07/14)
 
     const anticheatDataPath = join(appFolder, 'areweanticheatyet.json')
     await flush()
-    await waitFor(() => existsSync(anticheatDataPath))
+    // Waits on the CONTENT, not on mere existence. `downloadAntiCheatData` writes via
+    // `fs/promises.writeFile`, which opens the target with O_TRUNC|O_CREAT and only then
+    // writes -- so between those two steps the file EXISTS and is EMPTY. An
+    // `existsSync`-only wait could return inside that window, after which the
+    // `readFileSync` below saw `''` and this test failed with a diff against the full
+    // expected JSON. That was a latent race, not a new one: it needed nothing but
+    // unlucky scheduling, and it surfaced when quick task 260822-s8y added the migration
+    // runner's own filesystem work to `init()`. Waiting for a non-empty read is the
+    // condition this assertion actually depends on.
+    await waitFor(
+      () =>
+        existsSync(anticheatDataPath) &&
+        readFileSync(anticheatDataPath, 'utf-8').length > 0
+    )
 
     const contents = readFileSync(anticheatDataPath, 'utf-8')
     expect(contents).toBe(mockGamesJsonText)

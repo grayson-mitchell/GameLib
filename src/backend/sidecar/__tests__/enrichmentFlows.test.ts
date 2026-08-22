@@ -836,7 +836,17 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         howlongtobeat: null,
         gamesdb: null,
         steamInfo: null,
-        umuId: null
+        umuId: null,
+        // Load-bearing, and NOT incidental fixture noise. `getWikiGameInfo`'s
+        // `staleWikiFetch` guard (quick task 260822-rc8) treats a cached entry with NO
+        // `fetchStatus` as a 403-era entry and re-fetches it, which would make this
+        // suite's "the cache hit resolved everything" assertion below fail for a reason
+        // that has nothing to do with the cache KEY this test is actually about. A
+        // successful outcome keeps the entry a genuine cache hit.
+        fetchStatus: {
+          pcgamingwiki: 'ok' as const,
+          howlongtobeat: 'ok' as const
+        }
       }
       // Cache is keyed by the GAME's OWN title (from getGameInfo()), never
       // by the invoke's `title` argument — pre-populating it under the REAL

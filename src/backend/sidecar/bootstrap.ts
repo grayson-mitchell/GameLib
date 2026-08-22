@@ -103,6 +103,14 @@ import { backendEvents } from '../backend_events'
 import { fetchLastestReleases } from '../utils/releases'
 import { downloadAntiCheatData } from '../anticheat/utils'
 import { isMac } from '../constants/environment'
+// Todo 2026-08-16 (quick task 260822-s8y): `applyMigrations()` had exactly ONE call site in
+// the whole repo -- `main.ts:412`, inside Electron's `app.whenReady()` -- so under Tauri the
+// entire migration system was dead code that PRESENTED as live (`storeRegistration.ts`
+// registers `migrationsStore`, so grepping for "migration" made it look wired). Two
+// consequences: `LegendaryGlobalConfigFolderMigration` had never run on the shipping runtime,
+// and any future `Migration` added to `getAllMigrations()` would have shipped as a silent
+// no-op. Same family as the `initOnlineMonitor()` gap above.
+import MigrationSystem from '../migration'
 
 // ---- Step 3: start the RPC server, wire the transport, signal READY -------
 
@@ -137,6 +145,11 @@ let anticheatListenerRegistered = false
 // bootstrap.test.ts / *Flows.test.ts call init() many times per file, and a second fetch per
 // call is wasteful and would violate the "one fetch, one listener" idempotency contract.
 let releasesFetchInitialized = false
+// Guards applyMigrations() (todo 2026-08-16, quick task 260822-s8y). Same reason as
+// releasesFetchInitialized: bootstrap.test.ts / *Flows.test.ts call init() many times per file,
+// and re-running the migration set per call would re-issue its filesystem work. Production calls
+// init() once, exactly as the Electron main process calls applyMigrations() once.
+let migrationsInitialized = false
 // Guards registerProtocolUrlHandler()'s ipcMain.handle() registration below (Phase 34.5 gap
 // cycle 6 plan 44). Same reason as the guards above: bootstrap.test.ts / *Flows.test.ts call
 // init() many times per file, and electronStub's handlerRegistry is a plain module-scope Map
@@ -245,6 +258,50 @@ export function init(
   if (!loggerInitialized) {
     initLogger()
     loggerInitialized = true
+  }
+
+  // ---- Data migrations (todo 2026-08-16, quick task 260822-s8y) -----------
+  // Mirrors `main.ts:412`'s `await MigrationSystem.get().applyMigrations()`, which the headless
+  // sidecar never runs -- the same class of gap as `initOnlineMonitor()` below.
+  //
+  // Placement: FIRST after `initLogger()`, matching Electron's ordering (migrations are the
+  // very next statement after its own `initLogger()`), and required to be after it because
+  // `applyMigration` calls `logInfo`/`logError` unconditionally and `heroicLogWriter` is unset
+  // until `initLogger()` runs (the standing sidecar-logger finding).
+  //
+  // WHAT THIS DELIBERATELY DOES NOT REPRODUCE, and why. Electron AWAITS migrations before
+  // `initStoreManagers()`. The sidecar cannot: `./handlers` (Step 2, above) is imported at
+  // MODULE SCOPE, long before `init()` is ever called, so every store manager already exists by
+  // the time this line runs -- and `initStoreManagers()` is itself dead under Tauri. `init()` is
+  // also synchronous by contract (`src/sidecar/index.ts` and ~10 test suites call it as such),
+  // so the promise is floated the way `fetchLastestReleases()` below is.
+  //
+  // The real constraint is narrower than Electron's: migrations must finish before the FIRST
+  // read of `legendaryConfigPath`, which arrives as an RPC call after the READY_SENTINEL write
+  // below. READY is deliberately NOT delayed on this promise. That is a known, bounded
+  // limitation rather than a proof of safety: `LegendaryGlobalConfigFolderMigration` only does
+  // any work when `legendaryConfigPath` is ABSENT -- i.e. the user has never logged into Epic in
+  // GameLib -- so a read that loses the race finds nothing, which is precisely today's
+  // behaviour, and the copy is local filesystem I/O begun milliseconds into boot. A migration
+  // that ever needs a hard happens-before guarantee against a handler will need `init()` to
+  // become async; do not assume this placement covers that case.
+  if (!migrationsInitialized) {
+    migrationsInitialized = true
+    try {
+      MigrationSystem.get()
+        .applyMigrations()
+        .catch((error: unknown) => {
+          logWarning(
+            `[bootstrap] applyMigrations() failed: ${String(error)}`,
+            LogPrefix.Backend
+          )
+        })
+    } catch (error) {
+      logWarning(
+        `[bootstrap] applyMigrations() could not be started: ${error}`,
+        LogPrefix.Backend
+      )
+    }
   }
 
   // ---- Boot-time receipt logging (Phase 34.5 G-3, plan 34.5-18) -----------

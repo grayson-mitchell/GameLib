@@ -664,6 +664,21 @@ const IN_SCOPE_SUITES = [
  * per-suite opt-in required" floor `seamBranchParity.test.ts`/`invokeReturnValueSweep.test.ts`
  * already rely on. A `readdirSync` recount at this plan's execution time puts the directory at
  * 46 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 42 below.
+ *
+ * `migrationsWiring.test.ts` (todo 2026-08-16, quick task 260822-s8y) is classified as
+ * structurally contained, and is the clearest case yet for why the structural floor replaced the
+ * hand-maintained kit. It declares NO `jest.mock('os', ...)` of its own -- it mocks only
+ * `electron`/`electron-store` (routed at the real sidecar shims) plus `axios` and `fs/promises`'s
+ * `cp`. It does REAL filesystem work under `homedir()`: it drives the real
+ * `LegendaryGlobalConfigFolderMigration`, whose source is `homedir()/.config/legendary` and whose
+ * destination is `appFolder/legendaryConfig/legendary`. Both resolve under
+ * `jest.setupContainment.ts`'s disposable per-process root, so no real developer data is read or
+ * written -- which is exactly the "contained by construction, no per-suite opt-in required"
+ * guarantee this Block C exists to prove, exercised here by a suite that would otherwise have had
+ * every reason to be listed as accepted debt. It cannot be an `IN_SCOPE_SUITE`: it declares none
+ * of the four-element `pathShim`/`backend/logger/paths` kit Block B gates on. A `readdirSync`
+ * recount at this task's execution time puts the directory at 47 `*.test.ts` files:
+ * 4 `IN_SCOPE_SUITES` + 43 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -688,6 +703,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'keyringTokenStore.test.ts',
   'lifecycleStub.test.ts',
   'loggerCallSiteGuard.test.ts',
+  'migrationsWiring.test.ts',
   'nativeImageShim.test.ts',
   'netStub.test.ts',
   'oauthLoginCapture.test.ts',
