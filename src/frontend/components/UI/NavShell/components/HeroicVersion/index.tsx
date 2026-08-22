@@ -13,10 +13,10 @@ import './index.scss'
  * unconditionally (REQ-34.10-12) precisely so both effects keep firing on
  * every launch, not only the first time a user opens Settings.
  *
- * The onboarding tour is disabled this phase (D-13): the button that used
- * to sit next to the version string, and the tour-anchor attribute this
- * container used to carry, are both gone. Re-adding either would offer an
- * entry point into a tour whose anchors no longer resolve.
+ * Phase 34.12 (D-05) re-anchors this container as the onboarding tour's
+ * `nav-version` step. The tour's launcher is a `SettingsPanel` row (D-01)
+ * -- not a help icon restored here, which D-01 explicitly rejected as a
+ * second, easy-to-miss entry point.
  */
 
 type Release = {
@@ -74,7 +74,7 @@ export default React.memo(function HeroicVersion() {
   const version = heroicVersion
 
   return (
-    <div className="heroicVersionContainer">
+    <div className="heroicVersionContainer" data-tour="nav-version">
       {((showChangelogModal &&
         !hideChangelogsOnStartup &&
         heroicVersion !== lastChangelogShown) ||
