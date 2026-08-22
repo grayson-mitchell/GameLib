@@ -24,7 +24,6 @@ import HumbleLogin from './components/HumbleLogin'
 import ContextProvider from '../../state/ContextProvider'
 import { useAwaited } from '../../hooks/useAwaited'
 import { hasHelp } from 'frontend/hooks/hasHelp'
-import { isTauri } from '../../../preload/tauriTransport'
 
 export const epicLoginPath = '/loginweb/legendary'
 export const gogLoginPath = '/loginweb/gog'
@@ -240,29 +239,19 @@ export default React.memo(function NewLogin() {
               icon={() => <EpicLogo />}
               isLoggedIn={isEpicLoggedIn}
               logoutAction={epic.logout}
-              // F-34.5-G6-01 (2026-08-03): under Tauri, Epic's embedded WebKit login hits
-              // Epic's Talon anti-bot 403 (see debug file `descriptor_findings_2026_08_03T09_00_00`),
-              // so SIDLogin (real system browser) is the PRIMARY tile there, while the embedded
-              // login stays reachable as the "Alternative Login Method" tile for continued 403
-              // experimentation. Under Electron `isTauri()` is false: primaryLoginAction is
-              // undefined (primary tile navigates to the embedded route as before) and the
-              // alternative tile is SIDLogin -- identical to the original behavior.
-              primaryLoginAction={
-                isTauri() ? () => setShowSidLogin(true) : undefined
-              }
-              alternativeLoginAction={
-                isTauri()
-                  ? () => navigate(epicLoginPath)
-                  : () => setShowSidLogin(true)
-              }
-              // Quick task 260808-f80 (supersedes 260805-d62, which marked the wrong tile):
-              // the EMBEDDED WEB LOGIN is the deletion-pending path -- it is the one that hits
-              // Epic's Talon 403 (F-34.5-G6-01 above). SIDLogin (real system browser) is the
-              // path that survives and becomes the single Epic device-auth sign-in in ROADMAP
-              // Phase 34.7. Per the pivot documented above, under Tauri the embedded web login
-              // is the ALTERNATIVE tile and under Electron it is the PRIMARY tile, so this
-              // ternary names the embedded web login in both shells -- SIDLogin is never red.
-              deprecatedTile={isTauri() ? 'alternative' : 'primary'}
+              // Quick task 260822-r3g (2026-08-22) REVERTS the F-34.5-G6-01 Epic tile pivot
+              // and puts ROADMAP Phase 34.7 ON HOLD. The pivot existed because Epic's embedded
+              // WebKit login hit Talon's anti-bot 403 under Tauri, which made SIDLogin the
+              // primary tile there. The pristine (zero-injection) WKWebView login window
+              // defeated that 403 and the embedded login now completes a fresh logged-out
+              // sign-in on macOS, so the embedded login is the PRIMARY tile again -- meaning
+              // `login.epic` ("Epic Games Login") names it, and SIDLogin is once more the
+              // "Alternative Login Method" tile. No shell branch is left: Epic is wired
+              // identically under Electron and Tauri, exactly as before the pivot. The
+              // `deprecatedTile` marker went with it -- with 34.7 on hold, no sign-in path on
+              // this screen is scheduled for deletion. (`Runner` still SUPPORTS both props;
+              // only this call site stopped passing them.)
+              alternativeLoginAction={() => setShowSidLogin(true)}
               disabled={oldMac || loginInFlight}
             />
             <Runner
