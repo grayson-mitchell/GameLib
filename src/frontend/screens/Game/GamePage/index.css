@@ -420,6 +420,27 @@
 
       & div.infoTab,
       & div.extraTab {
+        /* The Extra info tab is now ALWAYS rendered, so this panel can legitimately
+           contain an empty state rather than a list of rows. Opt it out of the row
+           styling below -- that rule targets `& > div > *`, which would otherwise lay the
+           heading, body and Retry button out as one horizontal, end-aligned, bottom-
+           bordered row. Scoped to the same depth as the rule it overrides rather than
+           given extra specificity. */
+        & > div > .wikiInfoEmptyState {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          text-align: start;
+          gap: var(--space-xs-fixed);
+          padding: var(--space-md-fixed) var(--space-unit-fixed);
+          border-bottom: none;
+          color: var(--text-secondary);
+
+          & > b {
+            color: var(--text-default);
+          }
+        }
+
         & > div > * {
           display: flex;
           overflow: hidden;
@@ -814,6 +835,55 @@
 
       &.Mui-disabled {
         opacity: 0.2;
+      }
+    }
+
+    /* App.tsx's shared createTheme() sets no `palette` key, so MUI falls back
+       to LIGHT mode: an unselected tab resolves to a hardcoded
+       `rgba(0, 0, 0, 0.6)` and a selected one to `palette.primary.main`'s
+       literal blue. Neither is a theme token, so on every dark theme the strip
+       reads as black-on-dark next to blue. Every OTHER Tabs consumer in the app
+       already carries this same scoped fix (DownloadManager/index.css,
+       GamesSettings/index.scss, SteamLogin/index.scss); this one did not,
+       which only became obvious once the Extra info tab started rendering
+       unconditionally and put a second, unselected tab on screen for every
+       game. Uses `--text-default`, not WineManager's `--text-primary` -- that
+       token is defined nowhere and only looks right there because an invalid
+       `color` falls back to the inherited value. */
+    .MuiTab-root {
+      color: var(--text-secondary);
+      border-radius: var(--space-3xs);
+
+      &:hover:not(.Mui-selected) {
+        color: var(--text-default);
+      }
+
+      /* `.MuiTabs-indicator` is hidden above, so colour alone would carry the
+         selected state -- and it cannot: `nordLight` sets
+         `--text-secondary: #ffffff` against a `--text-default` of
+         `--brand-text-01`, close enough that selected and unselected would be
+         indistinguishable. This gives the strip a segmented-control chip
+         instead. Mixed from `--text-default` rather than `--accent` so it
+         tracks each theme's own foreground -- a light wash on dark themes, a
+         dark one on light themes -- without fighting accents that range from
+         near-white (`#a5dceb`) to saturated (`#ff9af7`). */
+      &.Mui-selected {
+        color: var(--text-default);
+
+        @supports (
+          background-color: color-mix(in srgb, var(--text-default), transparent)
+        ) {
+          background-color: color-mix(
+            in srgb,
+            var(--text-default) 14%,
+            transparent
+          );
+        }
+        @supports not (
+          background-color: color-mix(in srgb, var(--text-default), transparent)
+        ) {
+          background-color: var(--neutral-04);
+        }
       }
     }
   }
