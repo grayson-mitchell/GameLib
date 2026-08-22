@@ -3742,7 +3742,7 @@ followup (credentials/QR tab height-matching) to its own future task.
 rests on 36-03's operator gate), no code-review or secure-phase artifacts, and `36-VALIDATION.md`
 remains `status: draft` deliberately.
 
-### Phase 37: Steam defect cluster — depot decode failure, false-delisted games, and install-error reporting
+### Phase 37: Steam defect cluster — depot decode failure, false-delisted games, and install-error reporting — ✅ COMPLETE 2026-08-22
 
 **Goal:** Close the seven open Steam defects surfaced by the 34.13 UAT gate and the 2026-08-21 install attempts, so that (a) a native depot install of a mac-depot title either succeeds or fails with a message naming its actual cause, (b) no owned, non-delisted game is hidden from the library by a flag nothing can clear, and (c) every failure surface names the game it is talking about.
 
