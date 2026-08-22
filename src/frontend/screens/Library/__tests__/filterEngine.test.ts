@@ -167,7 +167,7 @@ describe('filter engine', () => {
     ])
   })
 
-  it('a delisted Steam game counts as non-available even when nonAvailableAppNames is empty', () => {
+  it('a delisted Steam game is VISIBLE at default filters — is_delisted no longer implies non-available (REQ-37-02, D-11)', () => {
     const delisted = makeGame({
       app_name: 'delisted-app',
       runner: 'steam',
@@ -177,6 +177,19 @@ describe('filter engine', () => {
     const deps = makeDeps({ nonAvailableAppNames: [] })
 
     const result = filterLibrary([delisted], state, deps)
+
+    expect(result.map((g) => g.app_name)).toEqual(['delisted-app'])
+  })
+
+  it('a Steam game whose app_name IS in nonAvailableAppNames is still excluded at showNonAvailable: off (over-removal guard)', () => {
+    const nonAvailable = makeGame({
+      app_name: 'stuck-app',
+      runner: 'steam'
+    })
+    const state = makeState() // showNonAvailable defaults to 'off'
+    const deps = makeDeps({ nonAvailableAppNames: ['stuck-app'] })
+
+    const result = filterLibrary([nonAvailable], state, deps)
 
     expect(result).toHaveLength(0)
   })

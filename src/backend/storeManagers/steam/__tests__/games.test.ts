@@ -6271,7 +6271,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
     expect(available).toBe(false)
   })
 
-  it('isGameAvailable() resolves false when game is delisted and installed (LIB-07)', async () => {
+  it('isGameAvailable() resolves TRUE when game is delisted and installed with an existing install_path (D-15, Dead Island/91310 specimen) — LIB-07 gate removed', async () => {
     existsSyncMock.mockReturnValue(true)
     library.set(
       APP_ID,
@@ -6285,10 +6285,10 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
     const game = new SteamGame(APP_ID)
     const available = await game.isGameAvailable()
 
-    expect(available).toBe(false)
+    expect(available).toBe(true)
   })
 
-  it('isGameAvailable() resolves false when game is delisted and not installed (LIB-07)', async () => {
+  it('isGameAvailable() still resolves false when game is delisted and NOT installed — removal did not turn the function into "always true"', async () => {
     library.set(
       APP_ID,
       makeEntry({ is_installed: false, is_delisted: true, install: {} })
