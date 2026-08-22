@@ -24,6 +24,8 @@ import HumbleLogin from './components/HumbleLogin'
 import ContextProvider from '../../state/ContextProvider'
 import { useAwaited } from '../../hooks/useAwaited'
 import { hasHelp } from 'frontend/hooks/hasHelp'
+import { steamConfigStore } from 'frontend/helpers/electronStores'
+import { isSteamConnected } from './steamTileState'
 
 export const epicLoginPath = '/loginweb/legendary'
 export const gogLoginPath = '/loginweb/gog'
@@ -48,6 +50,9 @@ export default React.memo(function NewLogin() {
   const { epic, gog, amazon, zoom, steam, humble, refreshLibrary } =
     useContext(ContextProvider)
   const { t } = useTranslation()
+  // Fork-owned strings live in gamelib.json — translation.json is upstream's
+  // and meta/i18nCatalogChurnGuard.ts fails the build on any fork edit to it.
+  const { t: tGamelib } = useTranslation('gamelib')
 
   hasHelp(
     'login',
@@ -88,8 +93,17 @@ export default React.memo(function NewLogin() {
     Boolean(amazon.user_id)
   )
   const [isZoomLoggedIn, setIsZoomLoggedIn] = useState(Boolean(zoom.username))
+  // Read straight from the store rather than from GlobalState: the backend
+  // latches this on a routine library refresh, long after GlobalState was
+  // constructed, and the renderer's snapshot is kept live by
+  // STORE_CHANGED_CHANNEL (backend/electron_store.ts announces on set/delete).
+  // Re-read in the effect below so navigating to this screen always shows the
+  // current verdict without needing a dedicated push channel.
+  const [steamCredentialsMissing, setSteamCredentialsMissing] = useState(() =>
+    Boolean(steamConfigStore.get_nodefault('credentialsMissing'))
+  )
   const [isSteamLoggedIn, setIsSteamLoggedIn] = useState(
-    Boolean(steam?.username)
+    isSteamConnected(steam?.username, steamCredentialsMissing)
   )
   // Runner only shows `buttonText` (the reconnect prompt) in its
   // not-logged-in branch, so when the session has expired we present the
@@ -131,7 +145,11 @@ export default React.memo(function NewLogin() {
     setIsGogLoggedIn(Boolean(gog.username))
     setIsAmazonLoggedIn(Boolean(amazon.user_id))
     setIsZoomLoggedIn(Boolean(zoom.username))
-    setIsSteamLoggedIn(Boolean(steam?.username))
+    const credentialsMissing = Boolean(
+      steamConfigStore.get_nodefault('credentialsMissing')
+    )
+    setSteamCredentialsMissing(credentialsMissing)
+    setIsSteamLoggedIn(isSteamConnected(steam?.username, credentialsMissing))
     setIsHumbleLoggedIn(Boolean(humble?.isLoggedIn) && !humble?.expired)
   }, [
     epic.username,
@@ -285,7 +303,14 @@ export default React.memo(function NewLogin() {
             )}
             <Runner
               class="steam"
-              buttonText={t('login.steam', 'Steam Login')}
+              buttonText={
+                steamCredentialsMissing
+                  ? tGamelib(
+                      'gamelib:login.steamReconnect',
+                      'Sign-in expired — Reconnect'
+                    )
+                  : t('login.steam', 'Steam Login')
+              }
               icon={() => <SteamLogo />}
               loginUrl={steamLoginPath}
               isLoggedIn={isSteamLoggedIn}

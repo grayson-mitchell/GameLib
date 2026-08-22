@@ -76,7 +76,8 @@
         "storeOther": "Other"
     },
     "login": {
-        "connected": "Connected"
+        "connected": "Connected",
+        "steamReconnect": "Sign-in expired — Reconnect"
     },
     "redeemKey": {
         "alreadyOwned": "",
