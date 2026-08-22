@@ -25,10 +25,9 @@
 // module resolution; it does not substitute a replacement. ────────────────
 jest.unmock('i18next')
 
-import { readFileSync as readSourceFile, readdirSync } from 'fs'
+import { readFileSync as readSourceFile } from 'fs'
 import { join } from 'path'
 import i18next from 'i18next'
-import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
 // ── backend/storeManagers mock -- six fully-mocked managers so no real
 // store manager (and none of their electron-store/network dependencies) is
@@ -597,53 +596,14 @@ describe('backend/gamedetails/overrides.ts (REQ-34.2-08)', () => {
   })
 })
 
-describe('backend/gamedetails source gate (REQ-34.2-03/REQ-34.2-14)', () => {
-  // Comment-stripping now delegates to the shared
-  // `backend/testUtils/stripSourceComments` util (strips block comments
-  // first, then the line-prefix filter), imported above as `stripComments`.
-
-  function listTsFiles(dir: string): string[] {
-    return readdirSync(dir, { withFileTypes: true })
-      .filter((entry) => entry.isFile() && entry.name.endsWith('.ts'))
-      .map((entry) => entry.name)
-  }
-
-  it('REQ-34.2-03/REQ-34.2-14 no .ts file under src/backend/gamedetails/ imports the real electron module', () => {
-    const gamedetailsDir = join(__dirname, '..')
-    const files = listTsFiles(gamedetailsDir)
-
-    expect(files.length).toBeGreaterThan(0)
-
-    for (const file of files) {
-      const stripped = stripComments(
-        readSourceFile(join(gamedetailsDir, file), 'utf-8')
-      )
-      expect(stripped).not.toMatch(/from\s+['"]electron['"]/)
-      expect(stripped).not.toMatch(/require\(\s*['"]electron['"]\s*\)/)
-    }
-  })
-
-  it('REQ-34.2-03/REQ-34.2-14 no .ts file under src/backend/gamedetails/ references backend/ipc, ../ipc, ../launcher, or main_window', () => {
-    const gamedetailsDir = join(__dirname, '..')
-    const files = listTsFiles(gamedetailsDir)
-
-    for (const file of files) {
-      const stripped = stripComments(
-        readSourceFile(join(gamedetailsDir, file), 'utf-8')
-      )
-      expect(stripped).not.toMatch(/backend\/ipc/)
-      expect(stripped).not.toMatch(/from\s+['"]\.\.\/ipc['"]/)
-      expect(stripped).not.toMatch(/\.\.\/launcher/)
-      expect(stripped).not.toMatch(/main_window/)
-    }
-  })
-
-  it('REQ-34.2-03/REQ-34.2-14 self-test: stripComments removes a comment-only "from \'electron\'" line before matching, so the gate is not vacuous', () => {
-    const source = [
-      "// this comment intentionally says: from 'electron'",
-      "import { libraryManagerMap } from '../storeManagers'"
-    ].join('\n')
-    const stripped = stripComments(source)
-    expect(stripped).not.toMatch(/from\s+['"]electron['"]/)
-  })
-})
+// WR-10 (34.2-REVIEW.md round 1): the `backend/gamedetails source gate`
+// describe block that used to live here was DELETED, not lost. It scanned the
+// same directory for the same six patterns (electron import, electron
+// require, backend/ipc, ../ipc, ../launcher, main_window) as
+// `sidecar/__tests__/gameDetailsImportGate.test.ts` Gate 3, which keeps it
+// alongside the rest of that file's gates and their sha256 pins. Two
+// byte-equivalent copies of one gate cost maintenance without adding cover:
+// a tightening applied to one silently skips the other.
+//
+// If you are here because you want to tighten the gamedetails import rules,
+// edit `gameDetailsImportGate.test.ts` Gate 3 -- it is now the only copy.
