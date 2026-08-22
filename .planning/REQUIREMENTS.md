@@ -278,10 +278,10 @@ Which phases cover which requirements. Populated during roadmap creation.
 | LIB-07 | Phase 08.1 | Complete (superseded by REQ-37-02) |
 | LIB-08 | Phase 08.1 | Complete (amended by REQ-37-02) |
 | LIB-09 | Phase 08.1 | Complete |
-| REQ-37-01 | Phase 37 | Pending |
+| REQ-37-01 | Phase 37 | Complete (2026-08-22; Task 4 advisory manual item outstanding) |
 | REQ-37-02 | Phase 37 | Complete (2026-08-22, live gate 9/9 vs Dead Island 91310) |
 | REQ-37-03 | Phase 37 | Complete (2026-08-22) |
-| REQ-37-04 | Phase 37 | Pending |
+| REQ-37-04 | Phase 37 | Complete (2026-08-22) |
 | REQ-37-05 | Phase 37 | Complete (2026-08-22) |
 | REQ-37-06 | Phase 37 | Complete (2026-08-22) |
 | QA-01 | Phase 9 | Pending |
