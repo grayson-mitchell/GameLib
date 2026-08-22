@@ -241,4 +241,120 @@ describe('resolvePlatformWrite', () => {
       expect(real.platformsCapturedAt).not.toBe(sabotaged.platformsCapturedAt)
     })
   })
+
+  describe('resolvePlatformWrite — REQ-37-05: implausible timestamps are bounded from ABOVE on both sides', () => {
+    // These cases exercise the real system clock (`Date.now()` inside the
+    // module under test), not the fixed NOW/OLDER/NEWER fixture constants
+    // above — the plausibility bound is defined relative to the reader's
+    // actual clock, so the existing fixed-epoch fixtures cannot express it.
+    const TEN_YEARS_MS = 10 * 365 * 24 * 60 * 60 * 1000
+
+    it('WR-02(a): an existingCapturedAt of Number.MAX_SAFE_INTEGER with a complete triple loses to a Date.now() write, and the repair stamp is the fresh write, not the poisoned one', () => {
+      const capturedAt = Date.now()
+      const existing: ExistingPlatformEntry = {
+        ...APPDETAILS_TRIPLE,
+        platformsSource: 'appdetails',
+        platformsCapturedAt: Number.MAX_SAFE_INTEGER
+      }
+
+      const result = resolvePlatformWrite(
+        existing,
+        PICS_TRIPLE,
+        'pics',
+        capturedAt
+      )
+
+      expect(result.accepted).toBe(true)
+      expect(result.platforms).toEqual(PICS_TRIPLE)
+      expect(result.platformsCapturedAt).toBe(capturedAt)
+      expect(result.platformsCapturedAt).not.toBe(Number.MAX_SAFE_INTEGER)
+    })
+
+    it('WR-02(b): a ten-years-future existingCapturedAt with a complete triple loses to a Date.now() write, and the repair stamp is the fresh write', () => {
+      const capturedAt = Date.now()
+      const existing: ExistingPlatformEntry = {
+        ...APPDETAILS_TRIPLE,
+        platformsSource: 'appdetails',
+        platformsCapturedAt: Date.now() + TEN_YEARS_MS
+      }
+
+      const result = resolvePlatformWrite(
+        existing,
+        PICS_TRIPLE,
+        'pics',
+        capturedAt
+      )
+
+      expect(result.accepted).toBe(true)
+      expect(result.platforms).toEqual(PICS_TRIPLE)
+      expect(result.platformsCapturedAt).toBe(capturedAt)
+      expect(result.platformsCapturedAt).not.toBe(existing.platformsCapturedAt)
+    })
+
+    it('WR-02(c) boundary regression guard: an existingCapturedAt one minute ahead (mundane clock skew) with a complete triple still WINS against a Date.now() write', () => {
+      const capturedAt = Date.now()
+      const existing: ExistingPlatformEntry = {
+        ...APPDETAILS_TRIPLE,
+        platformsSource: 'appdetails',
+        platformsCapturedAt: Date.now() + 60_000
+      }
+
+      const result = resolvePlatformWrite(
+        existing,
+        PICS_TRIPLE,
+        'pics',
+        capturedAt
+      )
+
+      expect(result.accepted).toBe(false)
+      expect(result.platforms).toEqual(APPDETAILS_TRIPLE)
+      expect(result.platformsCapturedAt).toBe(existing.platformsCapturedAt)
+    })
+
+    it('IN-01(d): an incoming capturedAt of Number.MAX_SAFE_INTEGER is never persisted, even though the write is accepted against an older existing entry', () => {
+      const existing: ExistingPlatformEntry = {
+        ...APPDETAILS_TRIPLE,
+        platformsSource: 'appdetails',
+        platformsCapturedAt: Date.now() - 60_000
+      }
+
+      const result = resolvePlatformWrite(
+        existing,
+        PICS_TRIPLE,
+        'pics',
+        Number.MAX_SAFE_INTEGER
+      )
+
+      expect(result.accepted).toBe(true)
+      expect(result.platformsCapturedAt).not.toBe(Number.MAX_SAFE_INTEGER)
+    })
+
+    it('IN-01(e): an incoming capturedAt of NaN or undefined never throws and is never persisted as-is', () => {
+      const existing: ExistingPlatformEntry = {
+        ...APPDETAILS_TRIPLE,
+        platformsSource: 'appdetails',
+        platformsCapturedAt: Date.now() - 60_000
+      }
+
+      let nanResult: PlatformWriteResolution | undefined
+      expect(() => {
+        nanResult = resolvePlatformWrite(existing, PICS_TRIPLE, 'pics', NaN)
+      }).not.toThrow()
+      expect(nanResult!.accepted).toBe(true)
+      expect(Number.isNaN(nanResult!.platformsCapturedAt)).toBe(false)
+
+      let undefinedResult: PlatformWriteResolution | undefined
+      expect(() => {
+        undefinedResult = resolvePlatformWrite(
+          existing,
+          PICS_TRIPLE,
+          'pics',
+          undefined as unknown as number
+        )
+      }).not.toThrow()
+      expect(undefinedResult!.accepted).toBe(true)
+      expect(undefinedResult!.platformsCapturedAt).not.toBe(undefined)
+      expect(Number.isNaN(undefinedResult!.platformsCapturedAt)).toBe(false)
+    })
+  })
 })
