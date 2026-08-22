@@ -32,12 +32,15 @@ jest.mock('@fortawesome/react-fontawesome', () => ({
 }))
 
 type FilterMode = 'off' | 'show' | 'only'
+type NoStorePageMode = 'off' | 'only' | 'hide'
 
 type MockContextValue = {
   showHidden: FilterMode
   setShowHidden: jest.Mock
   showNonAvailable: FilterMode
   setShowNonAvailable: jest.Mock
+  noStorePage: NoStorePageMode
+  setNoStorePage: jest.Mock
   showSupportOfflineOnly: boolean
   setShowSupportOfflineOnly: jest.Mock
   showThirdPartyManagedOnly: boolean
@@ -55,6 +58,8 @@ function makeContextValue(
     setShowHidden: jest.fn(),
     showNonAvailable: 'off',
     setShowNonAvailable: jest.fn(),
+    noStorePage: 'off',
+    setNoStorePage: jest.fn(),
     showSupportOfflineOnly: false,
     setShowSupportOfflineOnly: jest.fn(),
     showThirdPartyManagedOnly: false,
@@ -136,12 +141,68 @@ beforeEach(() => {
 })
 
 describe('FilterMoreGroup', () => {
-  it('renders exactly five filter controls: two tri-states plus three booleans', () => {
+  it('renders exactly six filter controls: three tri-states plus three booleans (37-03b, D-11)', () => {
     const tree = FilterMoreGroup() as unknown as ReactElement
 
-    expect(rowsOf(tree)).toHaveLength(5)
-    expect(buttonsOf(tree)).toHaveLength(2)
+    expect(rowsOf(tree)).toHaveLength(6)
+    expect(buttonsOf(tree)).toHaveLength(3)
   })
+
+  it.each<[NoStorePageMode, boolean, boolean]>([
+    ['off', false, false],
+    ['hide', true, false],
+    ['only', true, true]
+  ])(
+    'given noStorePage=%s, the row checked=%s and the only button aria-pressed=%s',
+    (value, expectedChecked, expectedPressed) => {
+      contextValue = makeContextValue({ noStorePage: value })
+
+      const tree = FilterMoreGroup() as unknown as ReactElement
+      const rows = rowsOf(tree)
+      const buttons = buttonsOf(tree)
+
+      // Third row / third button -- showHidden, showNonAvailable, then
+      // noStorePage, per the render order in FilterMoreGroup/index.tsx.
+      expect(rows[2]?.props.checked).toBe(expectedChecked)
+      expect(buttons[2]?.props['aria-pressed']).toBe(expectedPressed)
+    }
+  )
+
+  it.each<[NoStorePageMode, NoStorePageMode]>([
+    ['off', 'hide'],
+    ['hide', 'off'],
+    ['only', 'hide']
+  ])(
+    'clicking the noStorePage row when it is %s calls setNoStorePage(%s)',
+    (value, expectedNext) => {
+      contextValue = makeContextValue({ noStorePage: value })
+
+      const tree = FilterMoreGroup() as unknown as ReactElement
+      const rows = rowsOf(tree)
+
+      ;(rows[2]?.props.onToggle as () => void)()
+
+      expect(contextValue.setNoStorePage).toHaveBeenCalledWith(expectedNext)
+    }
+  )
+
+  it.each<[NoStorePageMode, NoStorePageMode]>([
+    ['off', 'only'],
+    ['hide', 'only'],
+    ['only', 'off']
+  ])(
+    'clicking the noStorePage only button when it is %s calls setNoStorePage(%s)',
+    (value, expectedNext) => {
+      contextValue = makeContextValue({ noStorePage: value })
+
+      const tree = FilterMoreGroup() as unknown as ReactElement
+      const buttons = buttonsOf(tree)
+
+      ;(buttons[2]?.props.onClick as () => void)()
+
+      expect(contextValue.setNoStorePage).toHaveBeenCalledWith(expectedNext)
+    }
+  )
 
   it('no row in this group carries a count (D-28)', () => {
     const tree = FilterMoreGroup() as unknown as ReactElement

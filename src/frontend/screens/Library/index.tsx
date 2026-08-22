@@ -44,6 +44,7 @@ import {
   FilterEngineState,
   FilterMode,
   LibraryView,
+  NoStorePageMode,
   PlatformsFilters,
   RunnabilityTier,
   StoreFacetValue,
@@ -368,6 +369,28 @@ export default React.memo(function Library(): JSX.Element {
   const handleShowNonAvailable = (value: FilterMode) => {
     storage.setItem('show_non_available', value)
     setShowNonAvailable(value)
+  }
+
+  // D-11: the "No store page" facet's own validator. Not a widened
+  // `migrateFilterMode` -- that union admits 'show', which is not a valid
+  // NoStorePageMode value, including a legacy 'show' written by some future
+  // edit.
+  const readNoStorePageMode = (
+    key: string,
+    defaultValue: NoStorePageMode
+  ): NoStorePageMode => {
+    const stored = storage.getItem(key)
+    if (stored === 'off' || stored === 'only' || stored === 'hide')
+      return stored
+    return defaultValue
+  }
+
+  const [noStorePage, setNoStorePage_] = useState<NoStorePageMode>(
+    readNoStorePageMode('no_store_page', 'off')
+  )
+  const handleNoStorePage = (value: NoStorePageMode) => {
+    storage.setItem('no_store_page', value)
+    setNoStorePage_(value)
   }
 
   const [showSupportOfflineOnly, setSupportOfflineOnly] = useState(
@@ -745,6 +768,7 @@ export default React.memo(function Library(): JSX.Element {
       searchMatchedKeys,
       showHidden,
       showNonAvailable,
+      noStorePage,
       showSupportOfflineOnly,
       showThirdPartyManagedOnly,
       showUpdatesOnly
@@ -757,6 +781,7 @@ export default React.memo(function Library(): JSX.Element {
       searchMatchedKeys,
       showHidden,
       showNonAvailable,
+      noStorePage,
       showSupportOfflineOnly,
       showThirdPartyManagedOnly,
       showUpdatesOnly
@@ -1000,6 +1025,7 @@ export default React.memo(function Library(): JSX.Element {
         showFavourites: showFavouritesLibrary,
         showInstalledOnly,
         showNonAvailable,
+        noStorePage,
         filterText,
         setStoresFilters,
         handleLayout: handleLayout,
@@ -1010,6 +1036,7 @@ export default React.memo(function Library(): JSX.Element {
         setShowFavourites: handleShowFavourites,
         setShowInstalledOnly: handleShowInstalledOnly,
         setShowNonAvailable: handleShowNonAvailable,
+        setNoStorePage: handleNoStorePage,
         setSortDescending: handleSortDescending,
         setSortInstalled: handleSortInstalled,
         showSupportOfflineOnly,

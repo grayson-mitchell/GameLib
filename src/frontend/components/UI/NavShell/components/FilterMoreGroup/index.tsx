@@ -9,7 +9,7 @@
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import LibraryContext from 'frontend/screens/Library/LibraryContext'
-import type { FilterMode } from 'frontend/types'
+import type { FilterMode, NoStorePageMode } from 'frontend/types'
 import FilterFacetGroup, { FilterFacetRow } from '../FilterFacetGroup'
 import {
   MORE_FILTER_KINDS,
@@ -25,6 +25,8 @@ export default function FilterMoreGroup() {
     setShowHidden,
     showNonAvailable,
     setShowNonAvailable,
+    noStorePage,
+    setNoStorePage,
     showSupportOfflineOnly,
     setShowSupportOfflineOnly,
     showThirdPartyManagedOnly,
@@ -67,8 +69,46 @@ export default function FilterMoreGroup() {
     else setShowNonAvailable('only')
   }
 
+  // D-11: off -> hide (row click), hide -> off, only -> hide. Mirrors the
+  // neighbours' structure with 'hide' substituted for 'show'.
+  const toggleNoStorePage = () => {
+    if (noStorePage === 'off') setNoStorePage('hide')
+    else if (noStorePage === 'hide') setNoStorePage('off')
+    else setNoStorePage('hide')
+  }
+  const setNoStorePageOnly = () => {
+    if (noStorePage === 'only') setNoStorePage('off')
+    else setNoStorePage('only')
+  }
+
   const triState = (
     value: FilterMode,
+    label: string,
+    onToggle: () => void,
+    onOnly: () => void
+  ) => (
+    <div className="FilterMoreGroup__triState">
+      <FilterFacetRow
+        label={label}
+        checked={value !== 'off'}
+        onToggle={onToggle}
+      />
+      <button
+        type="button"
+        className="FilterMoreGroup__only"
+        aria-pressed={value === 'only'}
+        onClick={onOnly}
+      >
+        {t('header.only', 'only')}
+      </button>
+    </div>
+  )
+
+  // D-11: a SECOND local helper, not a reuse of `triState` unmodified --
+  // `triState`'s `FilterMode` parameter type does not admit 'hide', and its
+  // sub-state semantics differ (there is no 'show' state here).
+  const hideOnlyTriState = (
+    value: NoStorePageMode,
     label: string,
     onToggle: () => void,
     onOnly: () => void
@@ -126,6 +166,12 @@ export default function FilterMoreGroup() {
         t('header.show_available_games', 'Show non-Available games'),
         toggleShowNonAvailable,
         setNonAvailableOnly
+      )}
+      {hideOnlyTriState(
+        noStorePage,
+        tGamelib('gamelib:library.filterPanel.noStorePage', 'No store page'),
+        toggleNoStorePage,
+        setNoStorePageOnly
       )}
       <FilterFacetRow
         label={t(

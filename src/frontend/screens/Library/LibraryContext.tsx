@@ -33,6 +33,8 @@ const initialContext: LibraryContextType = {
   setShowFavourites: () => null,
   showNonAvailable: 'off',
   setShowNonAvailable: () => null,
+  noStorePage: 'off',
+  setNoStorePage: () => null,
   showInstalledOnly: false,
   setShowInstalledOnly: () => null,
   sortDescending: true,
