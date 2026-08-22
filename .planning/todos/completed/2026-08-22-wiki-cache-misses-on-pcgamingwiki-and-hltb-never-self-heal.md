@@ -145,3 +145,47 @@ only in the force-refresh path.
   macOS never populates.
 - `refreshWikiInfo` itself works: the forced refresh did issue live fetches
   ("Getting PCGamingWiki data for Avowed", 17:07:03).
+
+## Resolution — item 2 CLOSED (2026-08-22, quick task 260822-rc8)
+
+Summary: `.planning/quick/260822-rc8-wiki-cache-miss-self-heal/SUMMARY.md`
+
+**This todo's prescribed fix for item 2 was wrong, and was NOT applied.** It asked for
+`invalidateCheck` on `wikiGameInfoStore`. `src/backend/cache.ts:80-83` ANDs that hook with
+`minutesSinceUpdate > this.lifespan`, so it is a retention veto on an *already-expired* entry, not
+an early-invalidation trigger:
+
+- It cannot fire inside the 30 days, so it could not have fixed the stated problem at all.
+- The default is `() => true`, so any check supplied can only make eviction **less** likely. The
+  per-field check this todo specified would have left complete entries cached **forever**.
+
+The todo's supporting claim — that `umuStore`'s `invalidateCheck: (data) => !data` makes falsy
+values "re-fetch automatically" — is a misreading of the same AND. It actually makes a *truthy* umu
+path cache forever past its 6h lifespan. Left untouched (plausibly intended for umu), recorded here
+so the next reader does not repeat the inference.
+
+**What was done instead:** a third staleness flag, `staleWikiFetch`, in `getWikiGameInfo`, joining
+the existing `staleAppleData` / `staleCrossoverData` — the established in-repo idiom for exactly
+this, and the mechanism this todo itself documented as covering two of the four sub-lookups. Keyed
+off the `fetchStatus` the cache already persists: stale on `pcgamingwiki === 'error'`, on
+`howlongtobeat === 'skipped'`, or on `fetchStatus` absent entirely (pre-field entries — the 403-era
+ones; `WikiInfo.fetchStatus`'s own docstring mandates "treat absent as unknown outcome").
+
+**Deliberately NOT keyed on `!cachedResponse.pcgamingwiki`**, which this todo suggested: a game
+genuinely absent from PCGamingWiki caches `outcome: 'notfound'` alongside a null info field, so that
+rule would re-scrape it on every details-page visit forever — against the very site whose UA policy
+produced the 403 this todo is about.
+
+Verification: wiki_game_info 54/54 across 7 suites, RED-proven against the unfixed guard,
+`tsc --noEmit` 0, eslint severity-2 0.
+
+**Item 1** (User-Agent) was already done and is re-confirmed present at `src/backend/utils.ts:1696`.
+
+**Item 3** (give HLTB a title-based fallback so it does not depend on PCGamingWiki's ID) is marked
+optional in this todo and was NOT done. It remains a real, un-actioned improvement — if it should
+survive this todo's closure, re-file it.
+
+**The secondary finding in this todo is also still open:** `GamePage/index.tsx:308` accepts a result
+into state only when `applegamingwiki || howlongtobeat || pcgamingwiki`, while `hasWikiInfo` (`:429`)
+treats `steamInfo` as sufficient — so a `steamInfo`-only result (reachable on Linux) is discarded by
+the setter despite satisfying the tab condition. Untouched here; out of scope for item 2.

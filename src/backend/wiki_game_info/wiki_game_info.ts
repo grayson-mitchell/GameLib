@@ -59,11 +59,39 @@ export async function getWikiGameInfo(
         (isMac &&
           cachedResponse.codeweavers.macRating === null &&
           crossoverIndexHas(gameInfo)))
+    // Self-heal stale caches: a FAILED pcgamingwiki lookup (and the HLTB lookup it
+    // starves of an ID) used to sit in this 30-day cache until it expired, so the
+    // PCGamingWiki 403 fixed in `utils.ts` (the missing descriptive User-Agent) kept
+    // presenting for a month per already-cached game even after the fix landed.
+    // Third sibling of staleAppleData/staleCrossoverData above, keyed off the
+    // `fetchStatus` this cache already persists (set below, typed in common/types.ts).
+    //
+    // Deliberately keyed on the OUTCOME, never on `!cachedResponse.pcgamingwiki`: a game
+    // genuinely absent from PCGamingWiki caches `notfound` alongside a null info field,
+    // and treating that null as stale would re-scrape every such game on EVERY
+    // details-page visit, forever -- exactly the traffic pattern PCGamingWiki's UA policy
+    // exists to discourage. `notfound` is a real answer and stays cached.
+    //
+    // `howlongtobeat === 'skipped'` is currently implied by `pcgamingwiki === 'error'`
+    // (see the outcome derivation below -- 'skipped' is only ever assigned when the
+    // pcgamingwiki outcome is 'error'), but is spelled out so a future change to that
+    // derivation cannot silently narrow this rule.
+    //
+    // A cache entry with NO `fetchStatus` at all predates the field -- i.e. it is exactly
+    // a 403-era entry. `WikiInfo.fetchStatus`'s own docstring requires this reading:
+    // "Treat absent as 'unknown outcome' rather than assuming success." Same shape as
+    // staleCrossoverData treating `macRating === undefined` as old-shape stale.
+    const staleWikiFetch =
+      !!cachedResponse &&
+      (!cachedResponse.fetchStatus ||
+        cachedResponse.fetchStatus.pcgamingwiki === 'error' ||
+        cachedResponse.fetchStatus.howlongtobeat === 'skipped')
     if (
       !forceRefresh &&
       cachedResponse &&
       !staleAppleData &&
-      !staleCrossoverData
+      !staleCrossoverData &&
+      !staleWikiFetch
     ) {
       logInfo(
         [`Using cached ExtraGameInfo data for ${title}`],
