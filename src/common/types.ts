@@ -35,6 +35,17 @@ export type DialogType = 'MESSAGE' | 'ERROR'
 export interface ButtonOptions {
   text: string
   onClick?: () => void
+  // 37-02 (D-07): a serializable discriminator for a backend-composed
+  // button. `onClick` is a function and does NOT survive the
+  // `sendFrontendMessage('showDialog', ...)` structured-clone/JSON hop
+  // (backend/dialog/dialog.ts) — a button built in the backend with only
+  // `onClick` renders its text and does nothing once it reaches the
+  // renderer. `action` is the serializable half: the renderer
+  // (DialogHandler) maps a recognized literal back to a real handler
+  // (e.g. `'steamSignIn'` -> `navigate('/login')`) before the button is
+  // ever rendered. Never a URL or arbitrary string — an enum, so no
+  // externally-influenced value can become a navigation target.
+  action?: 'steamSignIn'
 }
 
 export type LaunchParams = {

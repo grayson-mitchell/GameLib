@@ -12,6 +12,14 @@ import {
 import { GOGCloudSavesLocation } from './gog'
 import type LogWriter from 'backend/logger/log_writer'
 
+// 37-02 (D-06/D-07): the structured affordance an install failure carries,
+// declared here (common/) rather than imported from
+// backend/storeManagers/steam/depotErrors.ts's DepotErrorAction, since
+// common/ must not import from backend/. depotErrors.ts's own
+// `DepotErrorAction` is declared as an alias of this same union so the two
+// can never drift apart.
+export type InstallErrorAction = 'retry' | 'signIn' | 'none'
+
 export interface InstallResult {
   status: 'done' | 'error' | 'abort'
   error?: string
@@ -25,6 +33,11 @@ export interface InstallResult {
   // `config.installdir` (absent/unresolved) — not an error, the install
   // still succeeded, but the on-disk layout is non-portable/non-human-readable.
   installdirFallbackUsed?: boolean
+  // 37-02 (D-06/D-07): the classified affordance for an `error` status —
+  // undefined means "no specific affordance" (e.g. a pre-download failure
+  // that never reached classifyDepotError). Forwarded from
+  // DepotDownloadOutcome.errorAction untouched; never re-classified here.
+  errorAction?: InstallErrorAction
 }
 
 export type RemoveArgs = {

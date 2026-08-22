@@ -5,8 +5,8 @@ import {
   sendGameStatusUpdate
 } from '../utils'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
-import { DMStatus, InstallParams, Runner } from 'common/types'
-import { InstallResult } from 'common/types/game_manager'
+import { ButtonOptions, DMStatus, InstallParams, Runner } from 'common/types'
+import { InstallResult, InstallErrorAction } from 'common/types/game_manager'
 import i18next from 'i18next'
 import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
 import { isOnline } from '../online_monitor'
@@ -204,6 +204,12 @@ async function installQueueElement(params: InstallParams): Promise<{
   // terminal-error surface.
   let status: DMStatus | undefined
   let installErrorReason: string | undefined
+  // 37-02 (D-06/D-07): the classified affordance carried by the install
+  // result actually returned — never re-classified here. Stays undefined
+  // for the stall/watchdog/thrown-rejection catch-block paths below (none
+  // of those go through classifyDepotError), which is correct: "no specific
+  // affordance" for those cases, exactly as before this plan.
+  let installErrorAction: InstallErrorAction | undefined
   try {
     downloadFixesFor(appName, runner)
 
@@ -232,6 +238,7 @@ async function installQueueElement(params: InstallParams): Promise<{
     wasAborted = resultStatus === 'abort'
     status = resultStatus
     installErrorReason = error
+    installErrorAction = installResult.errorAction
 
     if (resultStatus === 'error') {
       errorMessage(error ?? '')
@@ -344,6 +351,25 @@ async function installQueueElement(params: InstallParams): Promise<{
       })
     }
     if (runner === 'steam' && status === 'error') {
+      // 37-02 (D-06/D-07): a 'signIn' affordance gets a single "Sign in to
+      // Steam" button; every other value (including undefined) passes no
+      // `buttons` at all — byte-identical to the dialog before this plan.
+      // The renderer (DialogHandler) maps `action: 'steamSignIn'` to an
+      // actual navigate('/login') call; onClick does not survive the
+      // structured-clone IPC hop this dialog crosses, so it is never relied
+      // on here.
+      const buttons: ButtonOptions[] | undefined =
+        installErrorAction === 'signIn'
+          ? [
+              {
+                text: i18next.t(
+                  'box.error.install.signInToSteam',
+                  'Sign in to Steam'
+                ),
+                action: 'steamSignIn'
+              }
+            ]
+          : undefined
       showDialogBoxModalAuto({
         title: i18next.t('box.error.title', 'Error'),
         message: i18next.t(
@@ -351,7 +377,8 @@ async function installQueueElement(params: InstallParams): Promise<{
           'The installation of {{title}} failed: {{error}}',
           { title, error: installErrorReason || 'Unknown error' }
         ),
-        type: 'ERROR'
+        type: 'ERROR',
+        ...(buttons ? { buttons } : {})
       })
     }
   }

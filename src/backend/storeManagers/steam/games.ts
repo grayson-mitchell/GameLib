@@ -1714,7 +1714,15 @@ export default class SteamGame implements Game {
           `SteamGame: depot install failed for appId ${this.appId}: ${outcome.error}`,
           LogPrefix.Steam
         )
-        return { status: 'error', error: outcome.error }
+        // 37-02 (D-06/D-07): forward the classifier's structured affordance
+        // untouched — never re-classify here. The pre-download error returns
+        // above (clientReady.error, the resolve-target catch) deliberately
+        // carry no errorAction: undefined means "no specific affordance".
+        return {
+          status: 'error',
+          error: outcome.error,
+          errorAction: outcome.errorAction
+        }
       }
 
       // 260821-rb5: downloadSteamDepots has finished and written its own

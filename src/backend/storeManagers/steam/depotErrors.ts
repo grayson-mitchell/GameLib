@@ -15,6 +15,7 @@
 
 import i18next from 'i18next'
 import { isDecodeStageError } from './depot/decompress'
+import type { InstallErrorAction } from 'common/types/game_manager'
 
 /** 37-02 (D-06): the structured affordance a classified failure carries,
  *  separate from its translated message text. 'retry' means the existing
@@ -22,11 +23,11 @@ import { isDecodeStageError } from './depot/decompress'
  *  a "Sign in to Steam" action instead (D-07 — retrying a not-signed-in
  *  abort can only fail again); 'none' means neither affordance applies
  *  (e.g. disk full, unsafe path — the user must act outside this dialog).
- *  Aliased by InstallErrorAction (common/types/game_manager.ts) so the two
- *  can never drift — common/ must not import from backend/, so the alias
- *  runs the other direction: this type is declared here and re-exported
- *  there as an alias of the same string-literal union. */
-export type DepotErrorAction = 'retry' | 'signIn' | 'none'
+ *  Declared as an ALIAS of InstallErrorAction (common/types/game_manager.ts)
+ *  — not a separately-declared identical union — so the two can never drift
+ *  apart. common/ cannot import from backend/, so the canonical union lives
+ *  there and this backend-local name is just a re-export. */
+export type DepotErrorAction = InstallErrorAction
 
 export interface ClassifiedDepotError {
   /** Locale key the classified message was resolved from — useful for tests

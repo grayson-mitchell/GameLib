@@ -54,7 +54,11 @@ import { DecompressPool } from './depot/decompressPool'
 import { writeAppManifest } from './depot/manifest'
 import { applyDepotFileFlags } from './depot/fileAttributes'
 import { reconcilePartialState } from './depot/reconcile'
-import { classifyDepotError, isNonRetryableDepotError } from './depotErrors'
+import {
+  classifyDepotError,
+  isNonRetryableDepotError,
+  type DepotErrorAction
+} from './depotErrors'
 import {
   summarizeDepotFlags,
   formatDepotFlagsCensus
@@ -2847,6 +2851,12 @@ export interface DepotDownloadOutcome {
    *  'cancelled' alike. Left undefined on a throw before the plan ever
    *  existed (nothing to report). */
   skippedDepots?: string[]
+  /** 37-02 (D-06/D-07): the structured affordance classifyDepotError
+   *  assigned to `error` — carried alongside it on both 'error' return
+   *  paths below so callers (games.ts) can render the right dialog
+   *  affordance without re-classifying anything themselves. Undefined on
+   *  every non-error status. */
+  errorAction?: DepotErrorAction
 }
 
 /**
@@ -3000,14 +3010,18 @@ export async function downloadSteamDepots(
       // failure string — so the DownloadManager queue's existing generic
       // error+Retry UI shows something actionable ("Steam servers dropped
       // the connection", not a stack trace).
+      // 37-02 (D-08): pass the preserved cause object (falls back to the
+      // pre-flattened string only if no cause was captured), so
+      // classifyDepotError can read `.code`/`.eresult` off it directly.
+      const classified = classifyDepotError(
+        result.failures[0].cause ?? result.failures[0].error
+      )
       return {
         status: 'error',
-        // 37-02 (D-08): pass the preserved cause object (falls back to the
-        // pre-flattened string only if no cause was captured), so
-        // classifyDepotError can read `.code`/`.eresult` off it directly.
-        error: classifyDepotError(
-          result.failures[0].cause ?? result.failures[0].error
-        ).message,
+        error: classified.message,
+        // 37-02 (D-06/D-07): thread the structured affordance out alongside
+        // the message so games.ts can forward it without re-classifying.
+        errorAction: classified.action,
         skippedDepots
       }
     }
@@ -3050,9 +3064,11 @@ export async function downloadSteamDepots(
     if (opts.signal?.aborted) {
       return { status: 'cancelled', skippedDepots }
     }
+    const classified = classifyDepotError(err)
     return {
       status: 'error',
-      error: classifyDepotError(err).message,
+      error: classified.message,
+      errorAction: classified.action,
       skippedDepots
     }
   }

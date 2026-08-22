@@ -240,6 +240,34 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
     )
   })
 
+  it('37-02 (D-07): an install error classified with errorAction "signIn" raises a dialog with exactly one "steamSignIn" button', async () => {
+    installMock.mockResolvedValue({
+      status: 'error',
+      error: 'You are not signed in to Steam',
+      errorAction: 'signIn'
+    })
+
+    await installQueueElement(makeParams())
+
+    const dialogCall = (showDialogBoxModalAuto as jest.Mock).mock.calls[0][0]
+    expect(dialogCall.buttons).toHaveLength(1)
+    // Assert on the serializable `action`, never on `text` — the text is
+    // translated prose and would make this assertion stale by wording.
+    expect(dialogCall.buttons[0].action).toBe('steamSignIn')
+  })
+
+  it('37-02 (D-07) regression guard: an install error with NO errorAction raises a dialog with no buttons — byte-identical to today', async () => {
+    installMock.mockResolvedValue({
+      status: 'error',
+      error: 'boom'
+    })
+
+    await installQueueElement(makeParams())
+
+    const dialogCall = (showDialogBoxModalAuto as jest.Mock).mock.calls[0][0]
+    expect(dialogCall.buttons).toBeUndefined()
+  })
+
   it('WR-02/D-11: a non-Steam install with installDlcs populated logs a guarded warning instead of silently dropping the DLCs', async () => {
     installMock.mockResolvedValue({ status: 'done' })
 
