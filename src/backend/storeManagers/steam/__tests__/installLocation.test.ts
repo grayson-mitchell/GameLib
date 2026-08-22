@@ -11,6 +11,7 @@
  *  - ../user is auto-mocked (jest.mock('../user')) — SteamUser.getClient()
  *    becomes a jest.fn(), matching depot.test.ts's established pattern
  */
+import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { logWarning } from 'backend/logger'
 import { getSteamLibraries } from 'backend/utils'
@@ -509,5 +510,69 @@ describe('classifyDepotError reachability — UnsafeInstalldirError (D-04, T-37-
     expect(classifyDepotError(thrown).key).toBe(
       'steam.download.error.unsafePath'
     )
+  })
+})
+
+/**
+ * 37-REVIEW C-01 regression gate.
+ *
+ * The test above proves `classifyDepotError` WOULD classify an
+ * `UnsafeInstalldirError` safely. It does NOT prove `games.ts` calls it — and
+ * for the shipped 37-10/37-02 code it did not. `resolveSteamInstallTarget`
+ * raises the abort BEFORE the depot download begins, so it never reaches
+ * depot.ts's `classifyDepotError` call sites (depot.ts:3016, :3067), and
+ * games.ts returned `err.message` verbatim. That message embeds the raw,
+ * untrusted PICS-sourced installdir candidate, which then rendered in the
+ * install-failure dialog.
+ *
+ * This gate is source-level on purpose: the behaviour lives inside
+ * `runNativeDepotDownload`, behind a live Steam CM connection that the unit
+ * suite cannot stand up. Asserting the call site EXISTS is weaker than
+ * asserting behaviour, so the non-vacuity check below pins that the gate
+ * actually fails against the exact shipped-defect shape.
+ */
+describe('37-REVIEW C-01: games.ts classifies UnsafeInstalldirError itself', () => {
+  const gamesSource = readFileSync(
+    join(__dirname, '..', 'games.ts'),
+    'utf8'
+  )
+
+  /** The `if (err instanceof UnsafeInstalldirError) { ... }` block. */
+  const handler = (() => {
+    const start = gamesSource.indexOf(
+      'if (err instanceof UnsafeInstalldirError)'
+    )
+    if (start === -1) {
+      throw new Error(
+        'UnsafeInstalldirError handler not found in games.ts — this gate has ' +
+          'rotted; find where the security abort moved to and re-point it.'
+      )
+    }
+    return gamesSource.slice(start, start + 600)
+  })()
+
+  it('imports classifyDepotError rather than only naming it in a comment', () => {
+    expect(gamesSource).toMatch(
+      /import\s*\{\s*classifyDepotError\s*\}\s*from\s*'\.\/depotErrors'/
+    )
+  })
+
+  it('returns the CLASSIFIED message, never the raw err.message', () => {
+    expect(handler).toContain('classifyDepotError(err).message')
+    expect(handler).not.toMatch(/error:\s*err\.message/)
+  })
+
+  it('still logs the raw candidate, so the diagnostic is not lost', () => {
+    expect(handler).toContain('rejected unsafe PICS installdir')
+    expect(handler).toContain('${err.message}')
+  })
+
+  it('is non-vacuous: the exact shipped-defect shape fails this gate', () => {
+    const shippedDefect = handler.replace(
+      'error: classifyDepotError(err).message',
+      'error: err.message'
+    )
+    expect(shippedDefect).toMatch(/error:\s*err\.message/)
+    expect(shippedDefect).not.toContain('classifyDepotError(err).message')
   })
 })

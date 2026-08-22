@@ -75,6 +75,7 @@ import {
   resolveSteamInstallTarget,
   UnsafeInstalldirError
 } from './installLocation' // Plan 09 seam
+import { classifyDepotError } from './depotErrors'
 import { withTimeout, STEAM_PICS_TIMEOUT_MS } from './withTimeout'
 // Phase 24 Plan 08 (R4/R7): allowlist-based bridge-vs-fallback routing.
 import { bridgeAllowlist } from './bridge/allowlist'
@@ -1628,12 +1629,14 @@ export default class SteamGame implements Game {
       } catch (err) {
         // T-37-01/T-37-03: an UnsafeInstalldirError is a security abort, not
         // a timeout/CM failure — checked FIRST so it never gets mislabeled
-        // "timed out". `err.message` already names the rejected candidate
-        // and already contains the word "traversal" (installLocation.ts's
-        // UnsafeInstalldirError JSDoc), so classifyDepotError's existing
-        // `/traversal/i` branch renders it as "The download contained an
-        // unsafe file path and was stopped." before it ever reaches a
-        // dialog — the raw candidate only ever surfaces in this log line.
+        // "timed out".
+        //
+        // 37-REVIEW C-01: this path must call `classifyDepotError` ITSELF.
+        // The abort is raised by `resolveSteamInstallTarget`, i.e. BEFORE the
+        // depot download starts, so it never reaches depot.ts's classifier
+        // call sites. Returning `err.message` directly leaked the raw,
+        // untrusted PICS-sourced installdir candidate into the install-failure
+        // dialog. The raw candidate must surface ONLY in the log line below.
         if (err instanceof UnsafeInstalldirError) {
           logWarning(
             `SteamGame: rejected unsafe PICS installdir for appId ${this.appId}: ${err.message}`,
@@ -1641,7 +1644,7 @@ export default class SteamGame implements Game {
           )
           return {
             status: 'error',
-            error: err.message
+            error: classifyDepotError(err).message
           }
         }
         logWarning(

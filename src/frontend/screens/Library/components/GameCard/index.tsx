@@ -320,7 +320,13 @@ const GameCard = ({
 
   const isSideloaded = runner === 'sideload'
   const isSteam = runner === 'steam'
-  const isDelisted = !!gameInfoFromProps.is_delisted
+  // 37-REVIEW W-01: mirrors filterEngine's canonical `isNoStorePageGame`
+  // (`game.runner === 'steam' && !!game.is_delisted`). The runner guard is NOT
+  // redundant: `is_delisted` lives on the shared `GameInfo` interface, not a
+  // Steam-only type, so any future runner setting it would badge here while
+  // the filter ignored it — the exact drift this phase guarded against in
+  // chipLabels.ts's PRESET_UNCATEGORIZED fix.
+  const isDelisted = isSteam && !!gameInfoFromProps.is_delisted
 
   const handleEdit = () => {
     if (isSideloaded) {

@@ -956,8 +956,11 @@ export default React.memo(function Library(): JSX.Element {
   }, [libraryUnion])
 
   // Blind-spot guard (same debug session): logs an anomaly if a Steam,
-  // non-DLC, non-delisted game is STILL silently excluded after the
-  // reconciliation pass above -- see `findSilentlyExcludedGames`'s doc
+  // non-DLC game is STILL silently excluded after the reconciliation pass
+  // above. 37-REVIEW I-01: this used to say "non-delisted" -- REQ-37-02
+  // deleted that carve-out, and `findSilentlyExcludedGames` now deliberately
+  // FOLDS delisted games back into the check, since being delisted is no
+  // longer a legitimate reason to be missing from the grid -- see `findSilentlyExcludedGames`'s doc
   // comment for why this specific defect class is otherwise invisible to
   // every existing count/gate. `reconcileTick` is in the dependency array
   // (unused directly) so this re-runs against the corrected `engineDeps`

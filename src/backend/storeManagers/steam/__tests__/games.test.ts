@@ -2160,7 +2160,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       expect(result).toEqual({ status: 'done' })
     })
 
-    it('T-37-01/T-37-03: a resolveSteamInstallTarget rejecting with UnsafeInstalldirError returns {status:"error", error: <candidate message>}, never mislabeled "timed out"', async () => {
+    it('T-37-01/T-37-03/C-01: a resolveSteamInstallTarget rejecting with UnsafeInstalldirError returns the CLASSIFIED message (never the raw candidate, never mislabeled "timed out"), while the raw candidate still reaches the log', async () => {
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
       ;(resolveSteamInstallTarget as jest.Mock).mockRejectedValue(
         new UnsafeInstalldirError(
@@ -2171,11 +2171,30 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       const game = new SteamGame(APP_ID)
       const result = await game.install({} as any)
 
-      expect(result).toEqual({
-        status: 'error',
-        error: expect.stringContaining('../../etc/passwd')
-      })
+      // 37-REVIEW C-01: this assertion previously REQUIRED the raw candidate
+      // ("../../etc/passwd") in `result.error`, which is exactly the leak --
+      // `InstallResult.error` is rendered verbatim in the install-failure
+      // dialog, so an attacker-controlled PICS installdir reached the user's
+      // screen. games.ts now classifies the abort itself (the abort is raised
+      // by resolveSteamInstallTarget, BEFORE the download starts, so it never
+      // reaches depot.ts's classifyDepotError call sites at :3016/:3067).
+      const { logWarning } = jest.requireMock('backend/logger')
+      expect(result.status).toBe('error')
+      // classifyDepotError's /traversal/i branch. Under jest, i18next is not
+      // initialised with the catalog, so `t()` returns the KEY; at runtime it
+      // renders "The download contained an unsafe file path and was stopped."
+      // Asserting the key is the stable contract either way.
+      expect(result.error).toBe('steam.download.error.unsafePath')
+      // The untrusted candidate must NOT survive into the dialog string.
+      expect(result.error).not.toEqual(
+        expect.stringContaining('../../etc/passwd')
+      )
       expect(result.error).not.toEqual(expect.stringContaining('timed out'))
+      // ...but it MUST still reach the log, or the diagnostic is lost.
+      expect(logWarning).toHaveBeenCalledWith(
+        expect.stringContaining('../../etc/passwd'),
+        expect.anything()
+      )
       expect(downloadSteamDepots).not.toHaveBeenCalled()
     })
   })
