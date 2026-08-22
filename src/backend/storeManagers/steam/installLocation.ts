@@ -14,7 +14,7 @@
 // picker (frontend, this plan's Task 2) populated from
 // listSteamLibraryTargets(), defaulting to the primary library.
 
-import { join, resolve } from 'path'
+import { isAbsolute, join, relative, resolve } from 'path'
 import type { InstallArgs } from 'common/types'
 import { getSteamLibraries } from 'backend/utils'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -80,53 +80,111 @@ function safeFallbackId(appId: string): string {
 }
 
 /**
- * Positive whitelist for an accepted installdir shape (WR-04, T-21-14-03):
- * letters, digits, spaces, dots, dashes, underscores only — no leading or
- * trailing dot (blocks both a bare `.`/`..` and a hidden-file-style name).
- * Quotes, colons (Windows drive-relative `C:foo`), path separators, and any
- * ASCII control character are all excluded by construction — a candidate
- * containing any of them simply fails this whitelist rather than needing a
- * separate denylist check.
+ * Thrown when a PICS/ACF-sourced installdir either matches the narrow
+ * denylist below or, once resolved against the install root, escapes it
+ * (D-02/D-04 — a security event, not a fallback trigger). The message
+ * always names the rejected candidate VERBATIM and always contains the word
+ * "traversal", so depotErrors.ts's existing `/traversal/i` classifier
+ * branch renders it as "The download contained an unsafe file path and was
+ * stopped." with no change to that module. The message deliberately never
+ * includes the RESOLVED absolute path (T-21-14 — never surface an internal
+ * path to the user), only the untrusted candidate string itself.
  */
-const SAFE_INSTALLDIR = /^[A-Za-z0-9 ._-]+$/
-const LEADING_OR_TRAILING_DOT = /^\.|\.$/
+export class UnsafeInstalldirError extends Error {}
 
 /**
- * Sanitizes a PICS-sourced installdir so it is a single safe directory name
- * (T-21-01, hardened WR-04/T-21-14-03) — rejects (not strips) any path
- * separator, `..` traversal segment, quote, colon (Windows drive-relative
- * name), ASCII control character, or any character outside the accepted
- * whitelist outright, since a partially-sanitized value is still an
- * attacker-influenced string about to touch the filesystem AND get
- * interpolated into the `.acf` VDF. depot.ts's own per-file containment
- * check (resolve+relative against steamapps/common/{installdir}) is the
- * backstop; this is the first line of defense on the value that becomes
- * that root segment.
+ * Narrow explicit denylist (D-02, defense in depth — the containment check
+ * below is the property actually wanted): path separators, a `..` segment,
+ * a leading or trailing dot, and any ASCII control character. Two entries
+ * are kept BEYOND D-02's literal four-item list, both zero-cost against
+ * real Steam installdirs and both closing a documented attack vector the
+ * deleted positive-whitelist predecessor of this function used to cover:
+ *   - `:` — a Windows drive-relative candidate (`C:foo`) contains no
+ *     separator and, on this dev/CI platform's POSIX path.resolve, would
+ *     pass the containment check cleanly (a bare "C:foo" segment is just a
+ *     literal child of the root here). On a REAL Windows deployment,
+ *     path.win32.resolve's drive-relative handling is exactly the escape
+ *     T-21-14-03 named. Steam itself never emits a colon in a real
+ *     installdir (this phase's own measurement), so rejecting it costs
+ *     nothing.
+ *   - `"` — a literal quote could otherwise reach depot/manifest.ts's ACF
+ *     writer; that writer already has its own `vdfEscape` (backslash+quote
+ *     escaping) as the authoritative defense, so this is redundant-by-design
+ *     defense in depth, kept because two independent tests (WR-04) already
+ *     pinned it and Steam never emits a quote in a real installdir either.
+ *
+ * The old positive character-class whitelist this replaces excluded both of
+ * these plus ordinary punctuation like the apostrophe — REQ-37-06's defect.
+ */
+const INSTALLDIR_DENYLIST =
+  /[/\\]|\.\.|^\.|\.$|[\x00-\x1F\x7F]|:|"/ // eslint-disable-line no-control-regex
+
+/**
+ * Sanitizes a PICS/ACF-sourced installdir (T-21-01, D-02/D-03/D-04).
+ * Acceptability is decided by CONTAINMENT against the resolved install
+ * root — resolve the candidate against `steamapps/common` and verify with
+ * `relative()` that the result neither escapes upward nor becomes absolute,
+ * exactly the property depot.ts's own `resolveContainedPath` already
+ * enforces and is already tested against traversal. The denylist above is
+ * defence in depth, not the primary control, so ordinary filename
+ * punctuation — apostrophes, ampersands, parentheses — reaches here and
+ * passes unchanged; only a real escape or denylisted shape is rejected.
+ *
+ * Two DIFFERENT events, deliberately NOT conflated (D-04):
+ *   - an ABSENT or blank candidate is an operational event — PICS legitimately
+ *     has nothing to say about this appId's installdir. This branch NEVER
+ *     throws (an install-location lookup must not hard-fail a whole install
+ *     over a cosmetic directory name) but DOES log at WARNING naming the
+ *     appId and the fallback, closing the gap that let `Wasteland`/259130
+ *     silently redirect into `app_259130` with no log at all.
+ *   - a denylisted or non-contained candidate is a SECURITY event — a
+ *     hostile PICS response (or a planted on-disk ACF) attempting to direct
+ *     writes outside the install root. This branch THROWS
+ *     UnsafeInstalldirError; the caller must abort the install rather than
+ *     silently substituting a fallback.
+ *
+ * No fs call happens in this function — `resolve`/`relative` are pure path
+ * arithmetic, so this check runs before anything touches disk.
  *
  * Exported for reuse by library.ts's startup-resume path
  * (buildResumeFinalizeOpts, 23-code-review WR-03 gap closure) — that path
  * reads installdir directly off the on-disk ACF (attacker-writable if they
  * can already write into steamapps/) with no equivalent guard of its own;
- * this is the single sanitizer both callers must funnel through so they can
- * never silently diverge on this discipline.
+ * this is the single sanitizer both callers must funnel through (D-03) so
+ * they can never silently diverge on this discipline. depot.ts's own
+ * per-file `resolveContainedPath` remains the backstop for individual
+ * filenames beneath the installdir this function approves.
  */
 export function sanitizeInstalldir(
   candidate: string | undefined,
-  appId: string
+  appId: string,
+  steamappsDir: string
 ): string {
   const fallback = `${FALLBACK_INSTALLDIR_PREFIX}${safeFallbackId(appId)}`
+
   if (!candidate || !candidate.trim()) {
-    return fallback
-  }
-  const isSafe =
-    SAFE_INSTALLDIR.test(candidate) && !LEADING_OR_TRAILING_DOT.test(candidate)
-  if (!isSafe) {
     logWarning(
-      `SteamGame: rejected hostile PICS installdir "${candidate}" for appId ${appId}, using fallback "${fallback}"`,
+      `SteamGame: PICS returned no usable installdir for appId ${appId} (absent or blank), using fallback "${fallback}"`,
       LogPrefix.Steam
     )
     return fallback
   }
+
+  if (INSTALLDIR_DENYLIST.test(candidate)) {
+    throw new UnsafeInstalldirError(
+      `SteamGame: rejected unsafe PICS installdir "${candidate}" for appId ${appId} (denylisted shape — traversal/separator/dot/control-char/colon/quote)`
+    )
+  }
+
+  const installRoot = resolve(steamappsDir, 'common')
+  const dest = resolve(installRoot, candidate)
+  const rel = relative(installRoot, dest)
+  if (rel.startsWith('..') || isAbsolute(rel)) {
+    throw new UnsafeInstalldirError(
+      `SteamGame: rejected unsafe PICS installdir "${candidate}" for appId ${appId} (traversal — escapes the install root)`
+    )
+  }
+
   return candidate
 }
 
@@ -243,7 +301,16 @@ export async function resolveSteamInstallTarget(
   }
 
   const target = resolveOverride(args?.path, libraries)
-  const installdir = sanitizeInstalldir(await fetchInstalldir(appId), appId)
+  // D-04: sanitizeInstalldir may THROW UnsafeInstalldirError on a
+  // containment/denylist violation — deliberately NOT caught here. The
+  // caller (games.ts's runNativeDepotDownload) is the one place that must
+  // turn this into an honest security-abort {status:'error'} rather than a
+  // silent fallback write.
+  const installdir = sanitizeInstalldir(
+    await fetchInstalldir(appId),
+    appId,
+    target.steamappsDir
+  )
 
   logInfo(
     `[Timing] resolveSteamInstallTarget: total ${Date.now() - start}ms for appId ${appId}`,

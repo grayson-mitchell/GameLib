@@ -263,7 +263,7 @@ describe('resolveSteamInstallTarget', () => {
     expect(result.installdir.includes('..')).toBe(false)
   })
 
-  it('WR-04: a quote-containing installdir falls back to a safe appId-derived name', async () => {
+  it('WR-04/D-02/D-04: a quote-containing installdir ABORTS resolveSteamInstallTarget — REWRITTEN from the old "sanitized to a safe fallback" assertion; quote stays denylisted as defense-in-depth against VDF injection even though downstream manifest.ts already escapes it', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
     jest.mocked(SteamUser.getClient).mockReturnValue(
       makeFakeClient({
@@ -271,16 +271,15 @@ describe('resolveSteamInstallTarget', () => {
       }) as never
     )
 
-    const result = await resolveSteamInstallTarget(APP_ID, {
-      path: '',
-      platformToInstall: 'Windows'
-    })
-
-    expect(result.installdir).toBe(`app_${APP_ID}`)
-    expect(jest.mocked(logWarning)).toHaveBeenCalled()
+    await expect(
+      resolveSteamInstallTarget(APP_ID, {
+        path: '',
+        platformToInstall: 'Windows'
+      })
+    ).rejects.toBeInstanceOf(UnsafeInstalldirError)
   })
 
-  it('WR-04: a control-char/newline-containing installdir falls back to a safe appId-derived name', async () => {
+  it('WR-04/D-02/D-04: a control-char/newline-containing installdir ABORTS resolveSteamInstallTarget — REWRITTEN from the old "sanitized to a safe fallback" assertion; control chars are part of D-02\'s literal denylist', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
     jest.mocked(SteamUser.getClient).mockReturnValue(
       makeFakeClient({
@@ -288,15 +287,15 @@ describe('resolveSteamInstallTarget', () => {
       }) as never
     )
 
-    const result = await resolveSteamInstallTarget(APP_ID, {
-      path: '',
-      platformToInstall: 'Windows'
-    })
-
-    expect(result.installdir).toBe(`app_${APP_ID}`)
+    await expect(
+      resolveSteamInstallTarget(APP_ID, {
+        path: '',
+        platformToInstall: 'Windows'
+      })
+    ).rejects.toBeInstanceOf(UnsafeInstalldirError)
   })
 
-  it('WR-04: a Windows drive-relative installdir (colon, no separator) falls back to a safe appId-derived name', async () => {
+  it('WR-04/D-02/D-04: a Windows drive-relative installdir (colon, no separator) ABORTS resolveSteamInstallTarget — REWRITTEN from the old "sanitized to a safe fallback" assertion; colon stays denylisted as defense-in-depth against the Windows drive-relative escape (path.win32.resolve semantics), which the POSIX containment check alone cannot catch in this environment', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
     jest.mocked(SteamUser.getClient).mockReturnValue(
       makeFakeClient({
@@ -304,12 +303,12 @@ describe('resolveSteamInstallTarget', () => {
       }) as never
     )
 
-    const result = await resolveSteamInstallTarget(APP_ID, {
-      path: '',
-      platformToInstall: 'Windows'
-    })
-
-    expect(result.installdir).toBe(`app_${APP_ID}`)
+    await expect(
+      resolveSteamInstallTarget(APP_ID, {
+        path: '',
+        platformToInstall: 'Windows'
+      })
+    ).rejects.toBeInstanceOf(UnsafeInstalldirError)
   })
 
   it('WR-04: a well-formed installdir with spaces/dots/dashes/underscores passes through unchanged', async () => {
