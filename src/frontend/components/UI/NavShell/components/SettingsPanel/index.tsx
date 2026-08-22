@@ -5,7 +5,8 @@ import {
   faCoffee,
   faUniversalAccess,
   faWineGlass,
-  faTv
+  faTv,
+  faCircleInfo
 } from '@fortawesome/free-solid-svg-icons'
 
 import ContextProvider from 'frontend/state/ContextProvider'
@@ -23,6 +24,25 @@ import QuitButton from '../QuitButton'
  * Settings item rather than members of its submenu -- each keeps the exact
  * guard (or lack of one) it carried at its old position.
  *
+ * The About row is the About window's ONLY entry point under Tauri. The
+ * window itself (`tauriShowAboutWindow`) has been fully implemented since
+ * 34.1 and had no caller anywhere outside `tray_icon.ts`'s Electron tray
+ * menu, which Tauri does not run -- Tauri's own tray is a deliberately
+ * bounded Show/Quit menu. `window.api.showAboutWindow()` resolves directly to
+ * `tauriShowAboutWindow()` (`preload/api/helpers.ts:14`), so this row opens the
+ * real Tauri `WebviewWindow`.
+ *
+ * The original 260822-tv4 comment said this was "shell-agnostic by way of the
+ * `isTauri()` switch". That was true when written on `main`; Phase 35 plan 17
+ * has since collapsed the Electron-branch fallback, the Tauri shell being the
+ * only shell, so there is no switch left to be agnostic across. Corrected when
+ * the commit was landed here (quick `260902-ucw`) rather than ported verbatim.
+ *
+ * Its label is a fork-owned `gamelib:` key rather than the already-
+ * translated `tray.about`: several of that key's shipped translations
+ * still carry the pre-fork brand name (de is "Uber Heroic"), which has no
+ * business on a new surface.
+ *
  * The bare "Ko-fi" label is an exact do-not-translate glossary term (a
  * brand name), so it is deliberately not passed through the translation
  * function -- doing so would mint a fake translation key for a proper noun.
@@ -32,6 +52,7 @@ import QuitButton from '../QuitButton'
  */
 export default function SettingsPanel() {
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const { platform, handleExternalLinkDialog } = useContext(ContextProvider)
   const isWin = platform === 'win32'
 
@@ -95,6 +116,12 @@ export default function SettingsPanel() {
         url="/wiki"
         icon={faBookOpen}
         label={t('docs', 'Documentation')}
+      />
+      <NavItem
+        elementType="button"
+        onClick={() => window.api.showAboutWindow()}
+        icon={faCircleInfo}
+        label={tGamelib('gamelib:about.navLabel', 'About')}
       />
       <NavItem
         elementType="button"

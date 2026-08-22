@@ -61,6 +61,62 @@ STRUCTURALLY UNREACHABLE rather than passed.
 
 ---
 
+> **Two independent resolutions.** This todo was closed twice, on branches that had already
+> diverged: quick `260822-tv4` added a Settings-panel row on `main` (2026-08-22), and Phase 35
+> plan 06 added a Tauri tray item on `fix/steam-native-install-stability` (2026-08-28). Neither
+> author could see the other. Both are recorded below in the order they happened, unedited.
+> Note the 08-22 entry argues the tray route was infeasible and out of scope; 35-06 then did it
+> anyway and it worked, so that reasoning is superseded on the facts — but it is left standing
+> because it is why the Settings row exists at all, and the two entry points are complementary,
+> not duplicates. Merged 2026-09-02 by quick `260902-ucw`.
+
+## Resolution (2026-08-22, quick task `260822-tv4`)
+
+**Entry point added — but NOT the one this todo proposed.** The About window is reached from an
+**About row in the Settings tier-2 nav panel** (between Documentation and Ko-fi), not from the
+Tauri tray menu.
+
+### Why not the tray
+
+1. **The Rust tray cannot call the code this todo wanted to make reachable.**
+   `tauriShowAboutWindow` is preload/renderer code. A Rust tray item would have to either
+   duplicate the `WebviewWindow` construction in `main.rs` — leaving `tauriShowAboutWindow` still
+   dead, so the defect would have survived its own fix — or add Rust→frontend event plumbing that
+   does not exist. Both are far past a `severity: low` todo.
+2. **Phase 34.1 declared the tray About item out of scope in writing** (`main.rs:18`, `:5856`).
+   The Tauri tray is a deliberately bounded two-item Show/Quit menu. Reopening that boundary is a
+   phase decision, not a quick task. (Checked and worth recording: the `REQ-34.1-07` scope-boundary
+   gate in `tauriShellSource.test.ts:350` bans `recent`/`dock`/`Reload`/`Debug`/`openDevTools` in
+   `main.rs` — it does **not** ban `About`. The gate was not the obstacle; reasons 1 and 2 were.)
+3. **The nav row is strictly more reachable** — all three platforms, primary window, both shells.
+   `helpers.ts:17` already routes `showAboutWindow()` to `tauriShowAboutWindow()` under Tauri and
+   to the IPC listener under Electron, so no new routing was added.
+
+### Label
+
+Minted a new fork-owned key `gamelib:about.navLabel` rather than reusing the already-translated
+`tray.about`. Several of that key's shipped translations still carry the pre-fork brand name
+(`de` = "Über Heroic", `ja` = "Heroicについて"), which has no business on a new GameLib surface.
+The Electron tray keeps `tray.about` untouched.
+
+### NOT closed by this change
+
+The **version-string** half of this todo stands. `pnpm tauri:dev` still cannot falsify the `0.0.0`
+mode — dev runs a plain bundled `sidecar.js` with `npm_package_version` set, so pre-fix and
+post-fix code both report the right version. Only a packaged build discriminates. That caveat was
+carried INTO the reopened UAT item's text (`34.1-VERIFICATION.md`, `human_verification`) rather
+than dropped, so the next operator cannot read a dev-run pass as proof of the version string.
+
+### Follow-on state
+
+`34.1-VERIFICATION.md` item 8b moved OUT of `human_verification_resolved` and back into
+`human_verification`; `status:` flipped `passed` → `human_needed` to match. Confirmed via
+`gsd-sdk query audit-uat` (not by reading the file): 34.1 reports exactly 1 open item, named.
+It is **open and runnable, not passed** — nobody has yet watched the window open under Tauri.
+
+
+---
+
 ## 2026-08-28 CLOSED (Phase 35 plan 06, D-06/REQ-35-04)
 
 Closed on a **static caller path plus a pending live check** — stated that way deliberately,
