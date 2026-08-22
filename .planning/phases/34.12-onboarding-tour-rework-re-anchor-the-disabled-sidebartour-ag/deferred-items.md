@@ -85,3 +85,28 @@ Whoever picks up the general `i18nForkTouchedFiles.json` staleness backlog shoul
 run `pnpm gen-i18n-gate-scope` (noting WR-17's caveat about `pnpm i18n` catalog
 drift dropping 8 panel files if run naively) or hand-triage each of the 13 files
 into either `meta/i18nGateScope.json` or the test's `DECLARED_UNSCANNED_DEBT` list.
+
+## 34.12-06 — `helperProcess.test.ts` timeout under full 5-project `pnpm test`, resource-contention flake, unrelated to this plan (out of scope)
+
+**Found during:** Task 2/3 verification, running the plan's `<verification>`-mandated
+full `pnpm test` (all five jest projects; this is the phase's last autonomous plan).
+
+**Issue:** `src/backend/storeManagers/steam/bridge/__tests__/helperProcess.test.ts`
+failed under the full run — `HEALTH answers err on every attempt ... (D-06)` exceeded
+its 10000ms timeout, with the whole file reported as taking 744.742s (vs. a normal
+few seconds). This file has nothing to do with onboarding tours, `data-tour`
+attributes, or `NavShell`/`Library` anchors — none of this plan's three tasks touch
+`src/backend/storeManagers/steam/` in any way.
+
+**Action taken:** Re-ran the file in isolation: `pnpm jest
+src/backend/storeManagers/steam/bridge/__tests__/helperProcess.test.ts` — 9/9 tests
+passed in 6.2s, including the exact test that failed under the full run. This
+confirms the full-run failure was CPU/resource contention from running all five
+projects together (the file's self-reported "Time: 744.742 s" for what takes 6.2s
+alone is the tell), not a defect the timeout is actually detecting. Not fixed because
+it is both (a) not caused by this plan's changes and (b) not reproducible in
+isolation — there is nothing in this file for this plan to fix.
+
+**Not fixed:** If this flake recurs on a future full-suite run, whoever picks it up
+should look at either raising `helperProcess.test.ts`'s per-test timeout or reducing
+`pnpm test`'s cross-project parallelism, not at `HEALTH`/`D-06` retry logic itself.
