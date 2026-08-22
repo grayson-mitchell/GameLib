@@ -150,12 +150,11 @@ export async function handleNonAvailableGames(appName: string, runner: Runner) {
  *    `handleNonAvailableGames`) never mounts to re-check it. This branch
  *    drops it via `dropFromNonAvailableGames` directly, skipping the
  *    `isGameAvailable` IPC round-trip entirely -- there is nothing for it to
- *    tell us here. Verified independent of the delisted exclusion clause
- *    (`filterEngine.isNonAvailableGame`, `filterEngine.ts:241-249`): that
- *    clause is `deps.nonAvailableAppNames.includes(...) || (runner ===
- *    'steam' && !!is_delisted)`, an OR, not routed through this list, so
- *    dropping a delisted game's entry here cannot make it visible -- the
- *    delisted clause keeps hiding it regardless.
+ *    tell us here. Post-REQ-37-02/D-15, `filterEngine.isNonAvailableGame`
+ *    (`filterEngine.ts:241-249`) is just `deps.nonAvailableAppNames.includes(
+ *    game.app_name)` -- the list membership test alone, no delisted OR
+ *    clause -- so dropping a delisted game's entry here DOES make it
+ *    visible again, which is the intended behaviour.
  * 2. Otherwise (still installed), it re-runs the exact same
  *    `handleNonAvailableGames` check GameCard would have run. If the game is
  *    available now, the self-heal branch inside `handleNonAvailableGames`

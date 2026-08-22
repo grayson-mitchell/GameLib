@@ -234,18 +234,26 @@ function isHiddenGame(game: GameInfo, deps: FilterEngineDeps): boolean {
   return deps.hiddenAppNames.includes(game.app_name)
 }
 
-// Non-available = in the `nonAvailableGames` localStorage list (parsed by
-// the caller into `deps.nonAvailableAppNames`) OR a delisted Steam game.
-// The Steam-delisted clause is shipped behaviour (`Library/index.tsx:627-634`)
-// and must not be dropped.
+// Non-available means "an INSTALLED game whose install_path went missing".
+// The list (`deps.nonAvailableAppNames`) has exactly one writer,
+// `handleNonAvailableGames` (frontend/hooks/constants.ts), which self-heals
+// an entry the moment isGameAvailable() returns true again.
+//
+// REQ-37-02 / D-15 removed the `game.runner === 'steam' && !!game.is_delisted`
+// OR clause that used to force-hide delisted Steam games here: a delisted
+// store page is not the same thing as "not available", and the forced hide
+// could not be un-done from this list even when isGameAvailable() itself was
+// fixed, because the clause bypassed the list entirely.
+//
+// D-16: the delisted facet added by plan 37-03b is deliberately NOT routed
+// back through this list -- a second writer would collide at every existing
+// reader (`findSilentlyExcludedGames`, `reconcileNonAvailableGames`, this
+// function's own callers).
 export function isNonAvailableGame(
   game: GameInfo,
   deps: FilterEngineDeps
 ): boolean {
-  return (
-    deps.nonAvailableAppNames.includes(game.app_name) ||
-    (game.runner === 'steam' && !!game.is_delisted)
-  )
+  return deps.nonAvailableAppNames.includes(game.app_name)
 }
 
 // D-06/D-07: the "more" group — offline support, third-party-managed,

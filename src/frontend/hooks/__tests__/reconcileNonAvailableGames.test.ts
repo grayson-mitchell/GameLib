@@ -171,12 +171,13 @@ describe('reconcileNonAvailableGames', () => {
   )
 })
 
-describe('isNonAvailableGame delisted-independence premise', () => {
+describe('isNonAvailableGame delisted-independence premise (REQ-37-02/D-15: premise retired)', () => {
   it(
-    'a delisted Steam game is non-available via the independent OR clause ' +
-      'even when nonAvailableAppNames is empty — this is what makes the ' +
-      "not-installed heal branch safe to drop a delisted game's list entry: " +
-      'the delisted clause keeps hiding it regardless of the list',
+    'a delisted Steam game is NOT non-available via any independent clause ' +
+      'when nonAvailableAppNames is empty — the old OR clause that made the ' +
+      "not-installed heal branch \"safe\" to drop a delisted game's list " +
+      'entry is gone; isNonAvailableGame is now the list membership test ' +
+      'alone, so dropping the entry now DOES make the game visible again',
     () => {
       const game = makeGame({
         app_name: 'delisted-app',
@@ -185,7 +186,7 @@ describe('isNonAvailableGame delisted-independence premise', () => {
       })
       const deps = makeDeps({ nonAvailableAppNames: [] })
 
-      expect(isNonAvailableGame(game, deps)).toBe(true)
+      expect(isNonAvailableGame(game, deps)).toBe(false)
     }
   )
 })

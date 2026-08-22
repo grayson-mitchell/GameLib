@@ -415,13 +415,14 @@ describe('findSilentlyExcludedGames', () => {
   })
 
   /**
-   * A delisted Steam game is excluded by `isNonAvailableGame`'s own delisted
-   * clause. That exclusion is CORRECT and expected, so surfacing it would
-   * make the guard cry wolf on every library holding a delisted title -- and a
-   * guard that fires on normal use cannot distinguish signal from noise. The
-   * store census taken during the session held 9 such entries.
+   * REQ-37-02 / D-15: a delisted Steam game used to be excluded here on the
+   * premise that its non-availability was CORRECT and permanent (LIB-07), so
+   * surfacing it would make the guard cry wolf. That premise is now FALSE --
+   * `isGameAvailable()` no longer returns false for a delisted game, so one
+   * legitimately reaching `nonAvailableAppNames` is exactly as anomalous as
+   * any other game reaching it, and the guard now fires on it too.
    */
-  it('does NOT fire for a delisted Steam game -- that exclusion is legitimate', () => {
+  it('FIRES for a delisted Steam game stuck in nonAvailableAppNames -- the legitimate-exclusion premise is gone', () => {
     const library = [
       makeGame({ runner: 'steam', app_name: '206060', is_delisted: true })
     ]
@@ -431,7 +432,7 @@ describe('findSilentlyExcludedGames', () => {
         library,
         makeDeps({ nonAvailableAppNames: ['206060'] })
       )
-    ).toEqual([])
+    ).toEqual(['206060'])
   })
 
   it('does NOT fire for DLC -- DLC is unconditionally excluded from the header count', () => {
@@ -468,7 +469,7 @@ describe('findSilentlyExcludedGames', () => {
     ).toEqual([])
   })
 
-  it('picks the excluded Steam game out of a mixed library, leaving the healthy ones alone', () => {
+  it('picks the excluded Steam games out of a mixed library, leaving the healthy ones alone -- including a delisted one (REQ-37-02/D-15)', () => {
     const library = [
       makeGame({ runner: 'steam', app_name: '719040' }),
       makeGame({ runner: 'steam', app_name: '8870' }),
@@ -481,6 +482,6 @@ describe('findSilentlyExcludedGames', () => {
         library,
         makeDeps({ nonAvailableAppNames: ['719040', 'gog-game', '206060'] })
       )
-    ).toEqual(['719040'])
+    ).toEqual(['719040', '206060'])
   })
 })

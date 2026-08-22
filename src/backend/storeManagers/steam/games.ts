@@ -2707,10 +2707,12 @@ export default class SteamGame implements Game {
   async isGameAvailable(): Promise<boolean> {
     return new Promise((resolve) => {
       const info = this.getGameInfo()
-      // LIB-07: delisted game is non-available regardless of install state
-      if (info?.is_delisted) {
-        return resolve(false)
-      }
+      // LIB-07's forced-hide reading is SUPERSEDED by REQ-37-02 / D-15: a
+      // delisted store page is no longer treated as non-availability here.
+      // is_delisted is now user-driven filterable state (filterEngine's
+      // delisted facet), not an availability verdict. This function answers
+      // only "is this game installed and is its install_path on disk" --
+      // the same question its gog/nile/legendary analogs answer.
       resolve(
         Boolean(
           info?.is_installed &&

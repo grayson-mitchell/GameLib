@@ -96,21 +96,27 @@ export function countUnfilteredGames(
  * exclusion is structurally invisible to every signal a user or an existing
  * gate would otherwise notice.
  *
- * Deliberately scoped to Steam, non-DLC, non-delisted games:
+ * Deliberately scoped to Steam, non-DLC games:
  *   - Steam-only because this is the mechanism this session proved broken
  *     (the backend hydration race is Steam CM sync specific); scoping wider
  *     would flag other runners' legitimately-hidden games as false positives.
  *   - non-DLC mirrors `countGamesExcludingDlc`'s own exclusion, so this
  *     count is comparable to the header's numbers.
- *   - non-delisted is EXCLUDED deliberately: a delisted Steam game is a
- *     real, correct, permanent non-availability (LIB-07), not the
- *     transient-hydration-race class this guard exists to catch. Folding it
- *     in would make this guard fire on every normal library containing a
- *     delisted title, defeating its purpose as an anomaly signal.
+ *
+ * REQ-37-02 / D-15: a delisted-game exclusion used to be folded in here
+ * deliberately, on the theory that a delisted Steam game is a real, correct,
+ * permanent non-availability (LIB-07) rather than the transient-hydration-race
+ * class this guard exists to catch. That theory is now FALSE -- delisted is
+ * no longer treated as non-availability anywhere, so `isGameAvailable()` no
+ * longer returns false for a delisted game and `nonAvailableAppNames` no
+ * longer legitimately contains one. A delisted game reaching this list is
+ * exactly as anomalous as any other game reaching it, so folding it back in
+ * strengthens the guard rather than generating noise.
  *
  * Checks `deps.nonAvailableAppNames` directly rather than going through
- * `filterEngine.isNonAvailableGame` (which also ORs in the delisted clause)
- * for exactly that reason.
+ * `filterEngine.isNonAvailableGame` because that function additionally
+ * checks membership for non-Steam runners; this guard is Steam-only by
+ * construction (see above).
  *
  * Returns the app_names silently excluded. Callers should treat any
  * non-empty result as an anomaly worth logging -- see
@@ -130,7 +136,6 @@ export function findSilentlyExcludedGames(
         // `install.is_dlc` check is exact for this scope.
         game.runner === 'steam' &&
         !game.install.is_dlc &&
-        !game.is_delisted &&
         deps.nonAvailableAppNames.includes(game.app_name)
     )
     .map((game) => game.app_name)
