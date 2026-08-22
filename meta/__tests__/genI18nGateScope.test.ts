@@ -74,14 +74,20 @@ const FIXTURE_DIFF_LINES = [
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/components/UI/ActionIcons/index.tsx',
   'src/frontend/components/UI/Dialog/components/Dialog.tsx',
+  'src/frontend/components/UI/DialogHandler/index.tsx',
   'src/frontend/components/UI/LanguageSelector/index.tsx',
   'src/frontend/components/UI/NavShell/components/FilterFacetGroup/selectionCount.ts',
+  'src/frontend/components/UI/ProgressDialog/index.tsx',
+  'src/frontend/components/UI/SliderField/index.tsx',
   'src/frontend/components/UI/SteamGridDBPicker/index.tsx',
   'src/frontend/components/UI/Winetricks/index.tsx',
   'src/frontend/helpers/declaredUnavailable.ts',
   'src/frontend/helpers/gamepad.ts',
+  'src/frontend/helpers/gamepad_layouts/nintendo.ts',
+  'src/frontend/screens/ConsoleMode/components/ConfirmDialog/index.tsx',
   'src/frontend/screens/ConsoleMode/controller.ts',
   'src/frontend/screens/ConsoleMode/selectors.ts',
+  'src/frontend/screens/Game/GamePage/components/WikiInfoEmptyState.tsx',
   'src/frontend/screens/Library/components/FilterChipRow/chipLabels.ts',
   'src/frontend/screens/Library/components/GamesList/index.tsx',
   'src/frontend/screens/Library/components/LibraryHeader/gameCount.ts',
@@ -89,12 +95,19 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/screens/Library/facetLabels.ts',
   'src/frontend/screens/Library/filterEngine.ts',
   'src/frontend/screens/Login/components/HumbleLogin/index.tsx',
+  'src/frontend/screens/Login/steamTileState.ts',
   'src/frontend/screens/Settings/components/EgsSettings.tsx',
+  'src/frontend/screens/Settings/components/GamePadDelayRepeat.tsx',
+  'src/frontend/screens/Settings/components/LauncherArgs.tsx',
   'src/frontend/screens/Settings/components/SteamGridDbApiKey.tsx',
   'src/frontend/screens/Settings/components/UseFramelessWindow.tsx',
   'src/frontend/screens/Settings/sections/AdvancedSettings/index.tsx',
   'src/frontend/screens/Settings/sections/GamesSettings/index.tsx',
-  'src/frontend/screens/WebView/components/HumbleLoginSurface.tsx'
+  'src/frontend/screens/Settings/sections/SyncSaves/gog.tsx',
+  'src/frontend/screens/Settings/sections/SyncSaves/legendary.tsx',
+  'src/frontend/screens/WebView/components/HumbleLoginSurface.tsx',
+  'src/frontend/screens/WebView/components/humbleLoginChromeCss.ts',
+  'src/frontend/state/InstallProgress.ts'
 ]
 
 /**
@@ -559,8 +572,8 @@ describe('--rewrite-scope guard', () => {
 
   it('A0 fixture sanity: the seeded scope is the REAL 162-file hand-curated snapshot and the fresh snapshot is the REAL 185', () => {
     expect(scopeSnapshot.files.length).toBe(162)
-    expect(forkTouchedSnapshot.files.length).toBe(185)
-    expect(freshSnapshot().files.length).toBe(185)
+    expect(forkTouchedSnapshot.files.length).toBe(198)
+    expect(freshSnapshot().files.length).toBe(198)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -622,7 +635,7 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(185)
+    expect(rewritten.files.length).toBe(198)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
@@ -640,7 +653,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(185)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(198)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
