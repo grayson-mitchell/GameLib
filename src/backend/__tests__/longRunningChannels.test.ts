@@ -438,9 +438,19 @@ describe('REQ-34.2-12 main.rs LONG_RUNNING_CHANNELS exemption list (D-10)', () =
     expect(extractLongRunningChannels()).toContain('getCrossoverIndex')
   })
 
-  test('REQ-34.2-12 all six pre-existing members survive', () => {
+  // IN-03 (gap cycle 4, renamed 2026-08-23): this was called "all six
+  // pre-existing members survive", which is wrong about one of the six.
+  // `getCrossoverIndex` was added BY this phase — the file's own header and
+  // `src-tauri/src/main.rs` both record it as a REQ-34.2-12 / D-10 addition, so
+  // only FIVE predate the phase. The new name states what the list actually is:
+  // the six that were present before gap cycle 1 added `repair` and
+  // `readConfig` (main.rs's own comment: "The two channels gap cycle 1 added").
+  // The loop is a correct membership assertion and stays intact; only the claim
+  // about when these arrived was wrong, and the set-equality test below carries
+  // the real invariant either way.
+  test('REQ-34.2-12 the six members that predate the gap-cycle-1 additions survive', () => {
     const channels = extractLongRunningChannels()
-    for (const preExisting of [
+    for (const member of [
       'install',
       'updateGame',
       'uninstall',
@@ -448,7 +458,7 @@ describe('REQ-34.2-12 main.rs LONG_RUNNING_CHANNELS exemption list (D-10)', () =
       'refreshLibrary',
       'getCrossoverIndex'
     ]) {
-      expect(channels).toContain(preExisting)
+      expect(channels).toContain(member)
     }
   })
 
