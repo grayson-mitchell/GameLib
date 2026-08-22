@@ -160,7 +160,7 @@ Run on the operator's own machine against Dead Island (appId 91310), confirmed i
 | 5 | "only" state — chip "No store page only", grid filtered | **PASS** | — |
 | 6 | "hide" state — Dead Island gone, count = baseline − delisted | **PASS** | **375 of 384** |
 | 7 | Chip dismiss returns to baseline | **PARTIAL → FIXED** | dismissing the chip directly worked; **"Clear all" did NOT clear it** |
-| 8 | Console Mode renders Dead Island at default filters (D-13) | **NOT YET RUN** | — |
+| 8 | Console Mode renders Dead Island at default filters (D-13) | **PASS** | operator: "dead island is listed in console mode" |
 | 9 | Card shows normal install/launch controls | **NOT YET RUN** | — |
 
 **Step 6 is the strongest evidence in this gate.** 384 − 375 = **exactly 9** — matching the nine
@@ -185,7 +185,7 @@ pre-existing kinds passing, so the gate discriminates rather than being triviall
 
 ### Still outstanding before REQ-37-02 closes
 
-- Steps 8 and 9 were not reported.
+- Step 9 (card shows normal install/launch controls) was not reported.
 - **Step 7 needs a re-test** — the fix landed after the operator's run, so the passing state of
   "Clear all" has not itself been observed live.
 
