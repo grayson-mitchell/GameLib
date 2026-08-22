@@ -94,8 +94,20 @@ export class GOGUser {
         return { status: 'error' }
       }
     } catch (err) {
+      // The stdout of `gogdl auth --code` IS the GOG token exchange response, which is why
+      // `authLogSanitizer` (above) is passed to the `runRunnerCommand` call that produced it --
+      // it rewrites access_token/refresh_token/session_id/user_id to <redacted> on the way into
+      // the *runner* log. Interpolating `stdout` here bypassed that sanitizer completely and
+      // wrote the unredacted payload into the *general* log (`logError` -> `heroicLogWriter` ->
+      // `gamelib.log`), which `uploadLogFile` will POST verbatim to a public dpaste with a
+      // 2-day expiry. Length + parse error only, matching the presence/length discipline
+      // `humble/adapter.ts`'s describeSchemaFailure already uses (`bodyLength=`, never a body).
+      //
+      // Applying `authLogSanitizer` here instead would NOT have worked: its body is
+      // `try { JSON.parse(line) ... } catch { return line }`, so it returns the line verbatim
+      // whenever the line is not JSON -- which is exactly this branch's precondition.
       logError(
-        `GOG login failed to parse std output from gogdl. stdout: ${stdout.trim()}, error ${err}`,
+        `GOG login failed to parse std output from gogdl. stdoutLength: ${stdout.trim().length}, error ${err}`,
         LogPrefix.Gog
       )
       return { status: 'error' }

@@ -74,11 +74,12 @@ jest.mock('backend/utils', () => ({
 }))
 
 import axios from 'axios'
-import { logWarning } from 'backend/logger'
+import { logError, logWarning } from 'backend/logger'
 import { GOGUser } from '../user'
 
 const mockedAxiosGet = axios.get as jest.Mock
 const mockedLogWarning = logWarning as jest.Mock
+const mockedLogError = logError as jest.Mock
 
 function stdoutFor(payload: Record<string, unknown>) {
   return { stdout: JSON.stringify(payload) }
@@ -516,6 +517,88 @@ describe('quick-260821-o34 -- getUserDetails() repointed at api.gog.com/users/{u
     expect(mockConfigStoreSet).toHaveBeenCalledWith(
       'userData',
       expect.objectContaining({ galaxyUserId: 'galaxy-1' })
+    )
+  })
+})
+
+/**
+ * Regression coverage for debug/log-upload-has-no-redaction.md, finding F-01.
+ *
+ * `GOGUser.login()`'s `JSON.parse` catch branch used to interpolate the raw stdout of
+ * `gogdl auth --code <code>` into a `logError` call. That stdout IS the GOG token exchange
+ * response -- the very payload `authLogSanitizer` (user.ts) rewrites access_token /
+ * refresh_token / session_id / user_id out of before it reaches the *runner* log. The
+ * `logError` bypassed that sanitizer and wrote the unredacted payload into the *general* log
+ * (`gamelib.log`), which `uploadLogFile` (backend/logger/uploader.ts) POSTs verbatim to a
+ * public dpaste paste with a 2-day expiry.
+ *
+ * The sanitizer could not have closed this even if it had been applied at the call site: its
+ * body is `try { JSON.parse(line) ... } catch { return line }`, so it returns the line VERBATIM
+ * for non-JSON input -- which is precisely the condition under which this branch runs.
+ *
+ * The fixture below is therefore the realistic shape of the leak, not a contrived one: a
+ * non-JSON preamble line followed by the real token JSON. `JSON.parse` rejects the whole
+ * string, so the catch branch fires while a live token IS present in `stdout`.
+ */
+describe('debug/log-upload-has-no-redaction F-01 -- gogdl auth stdout must never reach the general log', () => {
+  const TOKEN_BEARING_UNPARSEABLE_STDOUT = [
+    'WARNING: gogdl is deprecated, please upgrade',
+    JSON.stringify({
+      access_token: 'live-access-token-abc123',
+      refresh_token: 'live-refresh-token-def456',
+      session_id: 'live-session-id',
+      user_id: 'u1',
+      expires_in: 3600
+    })
+  ].join('\n')
+
+  beforeEach(() => {
+    mockConfigStoreGetNodefault.mockImplementation((key: string) =>
+      key === 'isLoggedIn' ? true : undefined
+    )
+    GOGUser.__resetCredentialsCacheForTests()
+  })
+
+  it('logs no part of the token payload when gogdl stdout fails to parse', async () => {
+    mockRunRunnerCommand.mockResolvedValueOnce({
+      stdout: TOKEN_BEARING_UNPARSEABLE_STDOUT
+    })
+
+    const result = await GOGUser.login('the-oauth-code')
+    expect(result.status).toBe('error')
+
+    // Pinned by VALUE, not by the shape of the log line: whatever wording the message carries,
+    // none of these four secrets may appear anywhere in anything handed to any logger.
+    const everythingLogged = JSON.stringify([
+      mockedLogError.mock.calls,
+      mockedLogWarning.mock.calls
+    ])
+    for (const secret of [
+      'live-access-token-abc123',
+      'live-refresh-token-def456',
+      'live-session-id'
+    ]) {
+      expect(everythingLogged).not.toContain(secret)
+    }
+
+    // ...and the whole stdout blob must not be passed through wholesale either.
+    expect(everythingLogged).not.toContain('gogdl is deprecated')
+  })
+
+  it('still reports the failure diagnostically -- length, not content', async () => {
+    mockRunRunnerCommand.mockResolvedValueOnce({
+      stdout: TOKEN_BEARING_UNPARSEABLE_STDOUT
+    })
+
+    await GOGUser.login('the-oauth-code')
+
+    // The branch must remain debuggable: it names the length so a truncated-write vs
+    // wrong-format failure is still distinguishable from the log alone.
+    expect(mockedLogError).toHaveBeenCalledWith(
+      expect.stringContaining(
+        `stdoutLength: ${TOKEN_BEARING_UNPARSEABLE_STDOUT.trim().length}`
+      ),
+      expect.anything()
     )
   })
 })

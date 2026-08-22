@@ -30,3 +30,29 @@ reachable from `uploadLogFile` — that bounded audit was explicitly declined fo
 performed. If the audit finds a real path, add redaction before upload (e.g. a scrub pass over
 known token/key patterns) and re-run the audit to confirm it closes the path. If the audit finds
 no reachable path, downgrade this todo to a documented non-issue rather than closing it silently.
+
+## Resolution (2026-08-22)
+
+Audit performed. Ledger: `.planning/debug/resolved/log-upload-has-no-redaction.md`.
+
+**The two credentials this todo named were both CLEAN. A third, unnamed one was not.**
+
+- Steam refresh token — NOT reachable. Eliminated with per-site verdicts.
+- Revealed Humble key value — NOT reachable. `revealKey` logs `keyPresent=`/`errorMsgLength=`
+  only; `revealedKeyValue` has zero log call sites; the `raw` field is never logged.
+- **GOG `access_token`/`refresh_token`/`session_id` — REACHABLE, now FIXED.**
+  `gog/user.ts` logged the raw stdout of `gogdl auth --code` into `gamelib.log`, bypassing the
+  `authLogSanitizer` that the same call already passes to `runRunnerCommand`. Now logs
+  `stdoutLength` only. RED-proven regression test added in `gog/__tests__/user.test.ts`.
+
+Also verified closed with no drift: the runner command-line vector
+(`getRunnerCallWithoutCredentials` still covers every secret-carrying flag at HEAD) and the
+cookie vector (zero value-carrying cookie log calls).
+
+Method note: a line-oriented grep MISSED the one real finding (`logError(` and its template
+literal are on different lines). The census was redone multi-line aware over all 77
+secret-adjacent log calls. Do not audit this class with `grep -n` alone.
+
+**Not closed by this todo:** whether to add defense-in-depth redaction at the upload boundary.
+That is a design call, deliberately left to the user, and filed separately as
+`.planning/todos/pending/log-upload-boundary-scrub-decision.md`.
