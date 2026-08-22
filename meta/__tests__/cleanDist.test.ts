@@ -1,9 +1,14 @@
 /**
- * Phase 34.9 gap cycle, plan 14: fixture coverage for meta/cleanDistMac.ts
- * (F-34.9-02). Every fixture is a synthetic temp tree built with
+ * Phase 34.9 gap cycle, plan 14: fixture coverage for meta/cleanDist.ts
+ * (F-34.9-02). Generalized to win/linux by quick task 260822-hrf, item 11
+ * (IN-03). Every fixture is a synthetic temp tree built with
  * `fs.mkdtempSync` under `os.tmpdir()` and torn down in `afterEach` --
- * nothing here touches the repo's real `dist/` directory (that happens once,
- * live, in Task 3, against the real stale artifacts).
+ * nothing here touches the repo's real `dist/` directory.
+ *
+ * Win/linux coverage in this file is synthetic-fixture-only: this suite
+ * runs on macOS arm64 (Darwin 25.5.0), so there is no live win/linux build
+ * to clean. Nothing here should be read as proof of live win/linux
+ * behaviour -- see meta/cleanDist.ts's header comment.
  *
  * `electron-builder.yml` is parsed structurally with `js-yaml` (the
  * precedent established by src/backend/__tests__/packagingConfig.test.ts,
@@ -27,10 +32,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import {
-  cleanDistMac,
-  macArtifactEntries,
-  MAC_ARTIFACT_TOKEN
-} from '../cleanDistMac'
+  cleanDist,
+  distArtifactEntries,
+  MAC_ARTIFACT_TOKEN,
+  type Platform
+} from '../cleanDist'
 
 const ELECTRON_BUILDER_PATH = join(
   __dirname,
@@ -39,11 +45,12 @@ const ELECTRON_BUILDER_PATH = join(
   'electron-builder.yml'
 )
 const PACKAGE_JSON_PATH = join(__dirname, '..', '..', 'package.json')
-const CLEAN_DIST_MAC_SOURCE_PATH = join(__dirname, '..', 'cleanDistMac.ts')
+const CLEAN_DIST_SOURCE_PATH = join(__dirname, '..', 'cleanDist.ts')
 
 interface ElectronBuilderConfig {
   mac: { artifactName: string }
   win: { artifactName: string }
+  portable: { artifactName: string }
   linux: { artifactName: string }
 }
 
@@ -65,18 +72,36 @@ const MAC_FILES = [
   'latest-mac.yml'
 ]
 
-const NON_MAC_FILES = [
-  'GameLib-0.7.0-linux-x64.AppImage',
+// Synthetic win artifacts, shaped from electron-builder.yml's win/portable
+// artifactName templates -- `dist:win` produces the `-Setup-` family from
+// win's default nsis target, `release:win` additionally produces the
+// `-Portable-` family from the separate `portable` target.
+const WIN_FILES = [
   'GameLib-0.7.0-Setup-x64.exe',
+  'GameLib-0.7.0-Setup-x64.exe.blockmap',
   'GameLib-0.7.0-Portable-x64.exe',
-  'latest-linux.yml',
-  'builder-debug.yml'
+  'latest.yml'
 ]
 
+// Synthetic linux artifacts, shaped from electron-builder.yml's linux
+// artifactName template plus the AppImage/deb targets release:linux builds.
+const LINUX_FILES = [
+  'GameLib-0.7.0-linux-x64.AppImage',
+  'GameLib-0.7.0-linux-x64.deb',
+  'latest-linux.yml'
+]
+
+// Present in every fixture; must survive every platform's clean.
+const COMMON_FILES = ['builder-debug.yml']
+
+const NON_MAC_FILES = [...WIN_FILES, ...LINUX_FILES, 'builder-debug.yml']
+
 /**
- * Builds the real-shaped fixture: the five macOS artifact files, a
- * `mac-arm64/GameLib.app/Contents/Info.plist` staging tree, and the five
- * non-macOS entries that must survive.
+ * Builds the real-shaped mac-only fixture: the five macOS artifact files, a
+ * `mac-arm64/GameLib.app/Contents/Info.plist` staging tree, and the win +
+ * linux entries that must survive a mac-only clean. Byte-equivalent to the
+ * pre-generalization fixture this test file inherited from
+ * meta/cleanDistMac.ts.
  */
 function buildFixture(distDir: string): void {
   mkdirSync(distDir, { recursive: true })
@@ -94,27 +119,67 @@ function buildFixture(distDir: string): void {
   }
 }
 
-describe('macArtifactEntries', () => {
+/**
+ * Builds a fixture holding all three platforms' artifacts simultaneously --
+ * the shape that proves cross-platform NON-deletion, not just deletion.
+ * Includes a per-platform staging directory for each of mac/win/linux plus
+ * one entry (`builder-debug.yml`) that belongs to none of them and must
+ * survive every platform's clean.
+ */
+function buildCrossPlatformFixture(distDir: string): void {
+  mkdirSync(distDir, { recursive: true })
+
+  for (const name of MAC_FILES) {
+    writeFileSync(join(distDir, name), `content of ${name}`)
+  }
+  const macContentsDir = join(distDir, 'mac-arm64', 'GameLib.app', 'Contents')
+  mkdirSync(macContentsDir, { recursive: true })
+  writeFileSync(join(macContentsDir, 'Info.plist'), '<plist>fixture</plist>')
+
+  for (const name of WIN_FILES) {
+    writeFileSync(join(distDir, name), `content of ${name}`)
+  }
+  mkdirSync(join(distDir, 'win-unpacked'), { recursive: true })
+  writeFileSync(
+    join(distDir, 'win-unpacked', 'GameLib.exe'),
+    'win staging fixture'
+  )
+
+  for (const name of LINUX_FILES) {
+    writeFileSync(join(distDir, name), `content of ${name}`)
+  }
+  mkdirSync(join(distDir, 'linux-unpacked'), { recursive: true })
+  writeFileSync(
+    join(distDir, 'linux-unpacked', 'gamelib'),
+    'linux staging fixture'
+  )
+
+  for (const name of COMMON_FILES) {
+    writeFileSync(join(distDir, name), `content of ${name}`)
+  }
+}
+
+describe('distArtifactEntries', () => {
   let distDir: string
 
   afterEach(() => {
     if (distDir) rmSync(distDir, { recursive: true, force: true })
   })
 
-  test('on the real-shaped fixture, returns exactly the five macOS files plus mac-arm64/', () => {
-    distDir = mkdtempSync(join(tmpdir(), 'clean-dist-mac-entries-'))
+  test('on the real-shaped mac fixture, returns exactly the five macOS files plus mac-arm64/', () => {
+    distDir = mkdtempSync(join(tmpdir(), 'clean-dist-entries-'))
     buildFixture(distDir)
 
-    const entries = macArtifactEntries(distDir)
+    const entries = distArtifactEntries(distDir, 'mac')
 
     expect(entries.sort()).toEqual([...MAC_FILES, 'mac-arm64'].sort())
   })
 
-  test('does not return any of the five non-macOS entries', () => {
-    distDir = mkdtempSync(join(tmpdir(), 'clean-dist-mac-entries-negative-'))
+  test('does not return any of the non-macOS entries', () => {
+    distDir = mkdtempSync(join(tmpdir(), 'clean-dist-entries-negative-'))
     buildFixture(distDir)
 
-    const entries = macArtifactEntries(distDir)
+    const entries = distArtifactEntries(distDir, 'mac')
 
     for (const name of NON_MAC_FILES) {
       expect(entries).not.toContain(name)
@@ -122,22 +187,23 @@ describe('macArtifactEntries', () => {
   })
 
   test('returns [] for a distDir that does not exist', () => {
-    const entries = macArtifactEntries(
-      join(tmpdir(), 'clean-dist-mac-does-not-exist-xyz')
+    const entries = distArtifactEntries(
+      join(tmpdir(), 'clean-dist-does-not-exist-xyz'),
+      'mac'
     )
     expect(entries).toEqual([])
   })
 })
 
-describe('cleanDistMac', () => {
+describe('cleanDist', () => {
   let distDir: string
 
   afterEach(() => {
     if (distDir) rmSync(distDir, { recursive: true, force: true })
   })
 
-  test('removes the five macOS files and mac-arm64/, leaves five non-macOS entries byte-identical', () => {
-    distDir = mkdtempSync(join(tmpdir(), 'clean-dist-mac-clean-'))
+  test('removes the five macOS files and mac-arm64/, leaves non-macOS entries byte-identical', () => {
+    distDir = mkdtempSync(join(tmpdir(), 'clean-dist-clean-'))
     buildFixture(distDir)
 
     const before: Record<string, string> = {}
@@ -145,7 +211,7 @@ describe('cleanDistMac', () => {
       before[name] = readFileSync(join(distDir, name), 'utf-8')
     }
 
-    const { removed, kept } = cleanDistMac(distDir)
+    const { removed, kept } = cleanDist(distDir, 'mac')
 
     expect(removed.sort()).toEqual([...MAC_FILES, 'mac-arm64'].sort())
     expect(kept.sort()).toEqual([...NON_MAC_FILES].sort())
@@ -162,24 +228,22 @@ describe('cleanDistMac', () => {
   })
 
   test('on a distDir that does not exist, returns empty arrays and does not throw', () => {
-    const target = join(tmpdir(), 'clean-dist-mac-nonexistent-xyz')
+    const target = join(tmpdir(), 'clean-dist-nonexistent-xyz')
     expect(existsSync(target)).toBe(false)
 
     let result: { removed: string[]; kept: string[] } | undefined
     expect(() => {
-      result = cleanDistMac(target)
+      result = cleanDist(target, 'mac')
     }).not.toThrow()
 
     expect(result).toEqual({ removed: [], kept: [] })
   })
 
   test('a macOS-named symlink pointing outside distDir is unlinked; its target survives', () => {
-    distDir = mkdtempSync(join(tmpdir(), 'clean-dist-mac-symlink-'))
+    distDir = mkdtempSync(join(tmpdir(), 'clean-dist-symlink-'))
     mkdirSync(distDir, { recursive: true })
 
-    const outsideDir = mkdtempSync(
-      join(tmpdir(), 'clean-dist-mac-symlink-target-')
-    )
+    const outsideDir = mkdtempSync(join(tmpdir(), 'clean-dist-symlink-target-'))
     const targetFile = join(outsideDir, 'real-target.dmg')
     writeFileSync(targetFile, 'the real bytes live outside distDir')
 
@@ -187,7 +251,7 @@ describe('cleanDistMac', () => {
     symlinkSync(targetFile, join(distDir, linkName))
 
     try {
-      const { removed } = cleanDistMac(distDir)
+      const { removed } = cleanDist(distDir, 'mac')
 
       expect(removed).toContain(linkName)
       expect(existsSync(join(distDir, linkName))).toBe(false)
@@ -200,6 +264,106 @@ describe('cleanDistMac', () => {
     } finally {
       rmSync(outsideDir, { recursive: true, force: true })
     }
+  })
+})
+
+describe('cleanDist — cross-platform fixture (non-deletion proof)', () => {
+  let distDir: string
+
+  afterEach(() => {
+    if (distDir) rmSync(distDir, { recursive: true, force: true })
+  })
+
+  const cases: Array<{
+    platform: Platform
+    removedExpected: string[]
+    keptExpected: string[]
+  }> = [
+    {
+      platform: 'mac',
+      removedExpected: [...MAC_FILES, 'mac-arm64'],
+      keptExpected: [
+        ...WIN_FILES,
+        'win-unpacked',
+        ...LINUX_FILES,
+        'linux-unpacked',
+        ...COMMON_FILES
+      ]
+    },
+    {
+      platform: 'win',
+      removedExpected: [...WIN_FILES, 'win-unpacked'],
+      keptExpected: [
+        ...MAC_FILES,
+        'mac-arm64',
+        ...LINUX_FILES,
+        'linux-unpacked',
+        ...COMMON_FILES
+      ]
+    },
+    {
+      platform: 'linux',
+      removedExpected: [...LINUX_FILES, 'linux-unpacked'],
+      keptExpected: [
+        ...MAC_FILES,
+        'mac-arm64',
+        ...WIN_FILES,
+        'win-unpacked',
+        ...COMMON_FILES
+      ]
+    }
+  ]
+
+  for (const { platform, removedExpected, keptExpected } of cases) {
+    test(`cleanDist(distDir, '${platform}') removes only ${platform} entries; the other two platforms' entries and the common file survive byte-identical`, () => {
+      distDir = mkdtempSync(join(tmpdir(), `clean-dist-cross-${platform}-`))
+      buildCrossPlatformFixture(distDir)
+
+      const stagingDirs = ['mac-arm64', 'win-unpacked', 'linux-unpacked']
+      const survivingFiles = keptExpected.filter(
+        (name) => !stagingDirs.includes(name)
+      )
+      const before: Record<string, string> = {}
+      for (const name of survivingFiles) {
+        before[name] = readFileSync(join(distDir, name), 'utf-8')
+      }
+
+      const { removed, kept } = cleanDist(distDir, platform)
+
+      expect(removed.sort()).toEqual([...removedExpected].sort())
+      expect(kept.sort()).toEqual([...keptExpected].sort())
+
+      for (const name of removedExpected) {
+        expect(existsSync(join(distDir, name))).toBe(false)
+      }
+      for (const name of survivingFiles) {
+        expect(existsSync(join(distDir, name))).toBe(true)
+        expect(readFileSync(join(distDir, name), 'utf-8')).toBe(before[name])
+      }
+      for (const dirName of ['win-unpacked', 'linux-unpacked', 'mac-arm64']) {
+        if (!removedExpected.includes(dirName)) {
+          expect(existsSync(join(distDir, dirName))).toBe(true)
+        }
+      }
+    })
+  }
+})
+
+describe('cleanDist CLI --platform contract', () => {
+  test('throws a clear error when --platform is absent (no silent default)', async () => {
+    const { main } = await import('../cleanDist')
+    expect(() => main([])).toThrow(/--platform is required/)
+  })
+
+  test('throws a clear error when --platform is unrecognised', async () => {
+    const { main } = await import('../cleanDist')
+    expect(() => main(['--platform=bsd'])).toThrow(/--platform is required/)
+  })
+
+  test('accepts a valid --platform and does not throw against a nonexistent distDir', async () => {
+    const { main } = await import('../cleanDist')
+    const target = join(tmpdir(), 'clean-dist-cli-nonexistent-xyz')
+    expect(() => main(['--platform=win', target])).not.toThrow()
   })
 })
 
@@ -218,6 +382,21 @@ describe('electron-builder.yml artifactName pin (T-34.9G-12)', () => {
     const config = parseElectronBuilder()
     expect(config.linux.artifactName).not.toContain('macOS')
   })
+
+  test('win.artifactName contains the literal Setup token', () => {
+    const config = parseElectronBuilder()
+    expect(config.win.artifactName).toContain('Setup')
+  })
+
+  test('portable.artifactName contains the literal Portable token', () => {
+    const config = parseElectronBuilder()
+    expect(config.portable.artifactName).toContain('Portable')
+  })
+
+  test('linux.artifactName contains the literal linux token', () => {
+    const config = parseElectronBuilder()
+    expect(config.linux.artifactName).toContain('linux')
+  })
 })
 
 describe('package.json wiring pin', () => {
@@ -231,22 +410,41 @@ describe('package.json wiring pin', () => {
     ).scripts
   }
 
-  test('dist:mac contains clean:dist-mac, positioned before electron-builder', () => {
+  test.each([
+    ['dist:mac', 'clean:dist-mac'],
+    ['release:mac', 'clean:dist-mac'],
+    ['dist:win', 'clean:dist-win'],
+    ['release:win', 'clean:dist-win'],
+    ['dist:linux', 'clean:dist-linux'],
+    ['release:linux', 'clean:dist-linux']
+  ])(
+    '%s contains %s, positioned before electron-builder',
+    (scriptName, cleanScriptName) => {
+      const scripts = loadScripts()
+      const value = scripts[scriptName]
+      expect(value).toContain(cleanScriptName)
+      expect(value.indexOf(cleanScriptName)).toBeLessThan(
+        value.indexOf('electron-builder')
+      )
+    }
+  )
+
+  test('clean:dist-mac invokes meta/cleanDist.ts with --platform=mac', () => {
     const scripts = loadScripts()
-    const distMac = scripts['dist:mac']
-    expect(distMac).toContain('clean:dist-mac')
-    expect(distMac.indexOf('clean:dist-mac')).toBeLessThan(
-      distMac.indexOf('electron-builder')
-    )
+    expect(scripts['clean:dist-mac']).toContain('meta/cleanDist.ts')
+    expect(scripts['clean:dist-mac']).toContain('--platform=mac')
   })
 
-  test('release:mac contains clean:dist-mac, positioned before electron-builder', () => {
+  test('clean:dist-win invokes meta/cleanDist.ts with --platform=win', () => {
     const scripts = loadScripts()
-    const releaseMac = scripts['release:mac']
-    expect(releaseMac).toContain('clean:dist-mac')
-    expect(releaseMac.indexOf('clean:dist-mac')).toBeLessThan(
-      releaseMac.indexOf('electron-builder')
-    )
+    expect(scripts['clean:dist-win']).toContain('meta/cleanDist.ts')
+    expect(scripts['clean:dist-win']).toContain('--platform=win')
+  })
+
+  test('clean:dist-linux invokes meta/cleanDist.ts with --platform=linux', () => {
+    const scripts = loadScripts()
+    expect(scripts['clean:dist-linux']).toContain('meta/cleanDist.ts')
+    expect(scripts['clean:dist-linux']).toContain('--platform=linux')
   })
 })
 
@@ -258,7 +456,7 @@ describe('doc-comment accuracy pins (IN-01/IN-02)', () => {
   // shell pipeline used at authoring time (34.9-19-PLAN.md) -- do NOT assert
   // on the raw, un-normalised source text.
   function normalisedSource(): string {
-    const raw = readFileSync(CLEAN_DIST_MAC_SOURCE_PATH, 'utf-8')
+    const raw = readFileSync(CLEAN_DIST_SOURCE_PATH, 'utf-8')
     return raw
       .split('\n')
       .map((line) => line.replace(/^\s*(\/\*\*|\*\/|\*|\/\/)\s?/, ''))
@@ -291,5 +489,26 @@ describe('doc-comment accuracy pins (IN-01/IN-02)', () => {
       'defense-in-depth against a currently-unreachable input'
     )
     expect(source).toContain('no test exercises it')
+  })
+})
+
+describe('honesty pin: no win/linux "broken" or "observed" claim (E-02 discipline)', () => {
+  test('the source never asserts dist:win/dist:linux is currently broken or that a live stale-artifact failure was observed on those platforms', () => {
+    const source = readFileSync(CLEAN_DIST_SOURCE_PATH, 'utf-8').toLowerCase()
+    for (const phrase of [
+      'win is broken',
+      'linux is broken',
+      'observed on win',
+      'observed on linux',
+      'confirmed on win',
+      'confirmed on linux'
+    ]) {
+      expect(source).not.toContain(phrase)
+    }
+  })
+
+  test('the source states the win/linux consequence is an unconfirmed generalization', () => {
+    const source = readFileSync(CLEAN_DIST_SOURCE_PATH, 'utf-8')
+    expect(source).toContain('UNCONFIRMED generalization')
   })
 })

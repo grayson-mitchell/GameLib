@@ -177,7 +177,7 @@ export function main(argv: string[] = process.argv.slice(2)): number {
 
   // NOT __dirname -- this file is bundled by meta/runTs.cjs into a private
   // tmpdir and run from there, so __dirname points nowhere near the repo.
-  // `pnpm graph:viz` always runs from the repo root (meta/cleanDistMac.ts
+  // `pnpm graph:viz` always runs from the repo root (meta/cleanDist.ts
   // documents the same trap), so cwd-relative is correct.
   const outDir = path.join('graphify-out')
   const sourceGraph = path.join(outDir, 'graph.json')
@@ -260,7 +260,7 @@ export function main(argv: string[] = process.argv.slice(2)): number {
   return 0
 }
 
-// Guard idiom shared with meta/cleanDistMac.ts: this file is bundled and run
+// Guard idiom shared with meta/cleanDist.ts: this file is bundled and run
 // as a CLI (which sets `require.main`), but is also imported directly by its
 // jest suite, so JEST_WORKER_ID is what reliably tells the two apart.
 if (!process.env.JEST_WORKER_ID) {

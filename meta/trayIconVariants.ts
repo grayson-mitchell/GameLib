@@ -415,7 +415,7 @@ export function encodeRgba(
 // NOT __dirname -- this script is bundled by esbuild to
 // node_modules/.cache/gen-tray-icon-variants.cjs and run as
 // `node node_modules/.cache/gen-tray-icon-variants.cjs` (see
-// meta/cleanDistMac.ts for the same trap documented at length). `pnpm
+// meta/cleanDist.ts for the same trap documented at length). `pnpm
 // gen-tray-icon-variants` always runs from the repo root, so cwd-relative
 // `public/...` paths are correct here.
 // ---------------------------------------------------------------------------
