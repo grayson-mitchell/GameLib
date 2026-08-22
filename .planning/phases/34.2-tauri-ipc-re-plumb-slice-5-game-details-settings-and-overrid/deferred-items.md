@@ -516,9 +516,81 @@ with this section.
   predate it. Renamed to what the list actually is: the six present before gap
   cycle 1 added `repair` and `readConfig`. Loop left intact.
 
-**Still open from gap cycle 4: 3 findings** (WR-02, IN-02, IN-08). **All three
-are in test/gate code — no production file among the original 17 remains
-open.** Note also that CR-01, the round-4 blocker recorded as re-scoped, is in
+- **WR-02, IN-02, IN-08 — CLOSED 2026-08-23**, the narrower-gate-correctness
+  group, and with them **GAP CYCLE 4 IS FULLY CLOSED: 0 of 17 open.**
+
+  **WR-02** (`1835726a3`, `ae265a0c7`). `loggerFlows.test.ts` and
+  `testContainment.test.ts` both derived their containment root as
+  `join(tmpdir(), 'gamelib-…-test-home-' + pid)` — predictable, created
+  implicitly by `mkdir(recursive)` with default permissions, no atomicity — and
+  `loggerFlows` wrote a real `gamelib.log` into it via the real
+  `bootstrap.init()`. On a shared world-writable Linux CI `/tmp` another uid can
+  pre-create it as a symlink and receive an arbitrary-path write as the CI user.
+  Cycle 3's WR-07 closed this vector in `jest.setupContainment.ts` and nowhere
+  else. Both files now mint one `mock`-prefixed `mkdtempSync` root read by all
+  three factories, collapsing three duplicated literals into one source of
+  truth. Proved on the properties that actually changed (exists, directly under
+  the real tmpdir, mode 0700, mkdtemp's six random characters) rather than on
+  "the name lacks the pid", which would pass for an equally-capturable static
+  name.
+
+  **IN-02** (`c576a77cd`). The `node:os` allowlist matched by BASENAME, so any
+  file anywhere under `src/backend` sharing one of three names was silently
+  outside the gate. Now backend-relative paths, matched exactly, with separators
+  normalised — the raw `relative()` output would have made this a POSIX-only
+  gate that reported its own three legitimate files as violations on Windows.
+  The self-test asserts the impostor is not exempt, the genuine file still is,
+  and that the OLD form accepted both.
+
+  **IN-08** (`ae265a0c7`), two parts. (a) Block E's comment claimed to convert
+  an assumption into "an enforced invariant"; it enforces it at DEPTH 1 only.
+  Corrected, with the reasoning for staying narrow recorded so it is not
+  re-litigated as an oversight: going transitive means a hand-rolled resolver
+  over four project trees whose own bugs fail SILENTLY in the passing direction.
+  (b) A trailing comment naming a containment module was reported as a
+  violation — a FALSE positive, the direction that gets a gate weakened for a
+  green run.
+
+  **The review's remedy for (b) is wrong — the fifth review claim this cycle
+  that did not survive checking.** It says to fix the shared stripper per CR-01.
+  CR-01's fix HAS landed, this gate already calls it, and that util deliberately
+  does NOT strip trailing comments because a naive `/\/\/.*$/gm` pass is the
+  WR-08 regression that cut six `main.rs` lines containing `"https://"` in half.
+  Its own docstring directs callers to layer one on top, which is what the fix
+  does. `stripTrailingLineComment` could not be reused either — it tracks double
+  quotes only, because Rust lifetimes (`&'a str`) put unpaired single quotes in
+  ordinary code — so `stripTrailingLineCommentTs` was added beside it, with the
+  two-scanner decision ASSERTED rather than only described: one test shows the
+  Rust one truncating `'https://x'`, the next shows the TS one failing on
+  `&'a str`.
+
+  **Found while proving WR-02, and filed rather than absorbed:** a per-suite
+  `jest.mock('os', ...)` in a backend suite is **INERT**. `setupContainment`
+  runs from `setupFiles` and requires `'os'` in its own precondition, so the
+  mocked module is already instantiated in jest's registry before a test file's
+  hoisted `jest.mock` registers a new factory. Measured with a scratch suite and
+  pinned by a test in `loggerFlows.test.ts`. Containment is NOT weakened —
+  `homedir()` still resolves inside a disposable root, just `setupContainment`'s
+  — but ~30 backend suites document an `os` mock that never takes effect, and
+  `testContainment.test.ts`'s Block A may be exercising a factory that is never
+  installed. Todo:
+  `.planning/todos/pending/2026-08-23-per-suite-jest-mock-os-is-inert-in-backend-suites.md`.
+
+## Gap cycle 4: closed
+
+All 17 findings are discharged (16 fixed, CR-01 found already closed). **No
+production file among them remains open** — the last one, WR-03, closed earlier
+the same day.
+
+**Still owed on Phase 34.2 overall, and NOT closed by this:**
+
+- All four `34.2-REVIEW-GAP-CYCLE-{1,2,3,4}.md` files remain `status:
+  issues_found` and undispositioned. The findings are fixed; the review
+  documents have never been flipped to reflect that.
+- `34.2-REVIEW-FIX.md` covers round 1 only and stays `partial`.
+
+Closing those is a documentation pass, not more engineering — but until it
+happens the phase's own artifacts still read as though the cycle is open. Note also that CR-01, the round-4 blocker recorded as re-scoped, is in
 fact **closed** — `src/backend/testUtils/stripSourceComments.ts` exists, strips
 block comments before the line filter, and both originally-defective files
 import it.
