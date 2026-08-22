@@ -59,7 +59,7 @@ describe('ConsoleMode/selectors: selectConsoleGames', () => {
     expect(result).toEqual([unrelated])
   })
 
-  it('still excludes DLC, third-party-managed, and delisted games when the hidden list is empty', () => {
+  it('still excludes DLC and third-party-managed games when the hidden list is empty', () => {
     const dlc = makeGameInfo({
       app_name: 'dlc',
       title: 'DLC',
@@ -70,16 +70,27 @@ describe('ConsoleMode/selectors: selectConsoleGames', () => {
       title: 'Third Party',
       thirdPartyManagedApp: 'origin'
     })
+    const kept = makeGameInfo({ app_name: 'kept', title: 'Kept' })
+
+    const result = selectConsoleGames([dlc, thirdParty, kept], [])
+
+    expect(result).toEqual([kept])
+  })
+
+  it('a delisted Steam game IS returned, and a hidden game is still excluded (REQ-37-02, D-13; over-removal guard)', () => {
     const delisted = makeGameInfo({
       app_name: 'delisted',
       title: 'Delisted',
       is_delisted: true
     })
-    const kept = makeGameInfo({ app_name: 'kept', title: 'Kept' })
+    const hidden = makeGameInfo({ app_name: 'hidden-2', title: 'Hidden' })
 
-    const result = selectConsoleGames([dlc, thirdParty, delisted, kept], [])
+    const result = selectConsoleGames(
+      [delisted, hidden],
+      [{ appName: 'hidden-2' }]
+    )
 
-    expect(result).toEqual([kept])
+    expect(result).toEqual([delisted])
   })
 
   it('excludes by app_name, not by title — games sharing a title but differing app_name are independent', () => {
