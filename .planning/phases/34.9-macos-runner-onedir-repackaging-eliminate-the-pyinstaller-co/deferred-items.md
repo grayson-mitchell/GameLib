@@ -37,6 +37,8 @@ detail.
 
 **OWNER:** follow-up phase / developer action (date recorded: 2026-08-11).
 
+**ROUTED 2026-08-22:** now owned by **Phase 34.16** (`macos-runner-onedir-x64-ci-leg-...`), created 2026-08-22 in commit `386b2f497`. The "follow-up phase" named above had no counterpart in ROADMAP.md when this item was written, so the routing was dangling for 9-11 days -- the same shape that left Phase 27 blocked across four phases after its cause was gone. OWNER text above is left as written; this line supersedes only its routing.
+
 ### 2. REQ-34.9-03 — downloader sources darwin archives
 
 **What it is:** `meta/downloadHelperBinaries.ts` sourcing darwin onedir archives from the rolling
@@ -54,6 +56,8 @@ release.
 
 **OWNER:** same as REQ-34.9-02 — follow-up phase / developer action (2026-08-11).
 
+**ROUTED 2026-08-22:** now owned by **Phase 34.16** (`macos-runner-onedir-x64-ci-leg-...`), created 2026-08-22 in commit `386b2f497`. The "follow-up phase" named above had no counterpart in ROADMAP.md when this item was written, so the routing was dangling for 9-11 days -- the same shape that left Phase 27 blocked across four phases after its cause was gone. OWNER text above is left as written; this line supersedes only its routing.
+
 ### 3. REQ-34.9-04 — sha256 digest verification
 
 **What it is:** darwin archives sha256-verified against in-repo digests before extraction.
@@ -67,6 +71,8 @@ ever been verified against a real archive.
 **Named precondition:** REQ-34.9-02's own precondition.
 
 **OWNER:** same as REQ-34.9-02 — follow-up phase / developer action (2026-08-11).
+
+**ROUTED 2026-08-22:** now owned by **Phase 34.16** (`macos-runner-onedir-x64-ci-leg-...`), created 2026-08-22 in commit `386b2f497`. The "follow-up phase" named above had no counterpart in ROADMAP.md when this item was written, so the routing was dangling for 9-11 days -- the same shape that left Phase 27 blocked across four phases after its cause was gone. OWNER text above is left as written; this line supersedes only its routing.
 
 ### 4. REQ-34.9-09 — cold spawn ratio, per-runner
 
@@ -389,6 +395,8 @@ precondition).
 
 **OWNER:** the same follow-up phase that owns item 1, dated 2026-08-12.
 
+**ROUTED 2026-08-22:** now owned by **Phase 34.16** (`macos-runner-onedir-x64-ci-leg-...`), created 2026-08-22 in commit `386b2f497`. The "follow-up phase" named above had no counterpart in ROADMAP.md when this item was written, so the routing was dangling for 9-11 days -- the same shape that left Phase 27 blocked across four phases after its cause was gone. OWNER text above is left as written; this line supersedes only its routing.
+
 ### 13. The guard has never been exercised in CI
 
 **What it is:** the `verify:runner-bundle` wiring is npm-script-level, so `build-base.yml`'s
@@ -404,6 +412,8 @@ it, so no CI run has ever executed the guard, in either direction.
 real digests), which unblocks `install-deps`.
 
 **OWNER:** the same follow-up phase that owns items 1-3, dated 2026-08-12.
+
+**ROUTED 2026-08-22:** now owned by **Phase 34.16** (`macos-runner-onedir-x64-ci-leg-...`), created 2026-08-22 in commit `386b2f497`. The "follow-up phase" named above had no counterpart in ROADMAP.md when this item was written, so the routing was dangling for 9-11 days -- the same shape that left Phase 27 blocked across four phases after its cause was gone. OWNER text above is left as written; this line supersedes only its routing.
 
 ## Finding opened by the 2026-08-13 pipe-conversion proof run (plan 34.9-26)
 
@@ -483,6 +493,8 @@ then dispatch, producing a real x64 onedir tree), plus a decision on whether `re
 `-p always` should be gated on a second `--arch=x64` guard invocation once that tree exists.
 
 **OWNER:** the same follow-up phase that owns items 1, 12 and 13 (2026-08-13).
+
+**ROUTED 2026-08-22:** now owned by **Phase 34.16** (`macos-runner-onedir-x64-ci-leg-...`), created 2026-08-22 in commit `386b2f497`. The "follow-up phase" named above had no counterpart in ROADMAP.md when this item was written, so the routing was dangling for 9-11 days -- the same shape that left Phase 27 blocked across four phases after its cause was gone. OWNER text above is left as written; this line supersedes only its routing.
 
 ### 19. C2-07 — the doc-comment accuracy pins couple CI to documentation wording, not just behaviour
 
