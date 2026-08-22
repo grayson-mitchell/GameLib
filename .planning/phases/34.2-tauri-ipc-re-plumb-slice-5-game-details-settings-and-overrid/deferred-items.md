@@ -385,7 +385,7 @@ with this section.
   old form accepted.
 
 - **WR-03 — CLOSED 2026-08-23 (`cade8d757`), the only PRODUCTION-code finding
-  of the 17.** `repairFailure.ts`'s `t()` guard was silent: a throwing `t` means
+  of the twenty.** `repairFailure.ts`'s `t()` guard was silent: a throwing `t` means
   the translation catalogue is broken, and while the hardcoded English fallbacks
   still produced a rendered dialog, WHY it was untranslated was recorded nowhere.
   It now emits a named diagnostic in the shape the other two guards use — nested
@@ -517,7 +517,7 @@ with this section.
   cycle 1 added `repair` and `readConfig`. Loop left intact.
 
 - **WR-02, IN-02, IN-08 — CLOSED 2026-08-23**, the narrower-gate-correctness
-  group, and with them **GAP CYCLE 4 IS FULLY CLOSED: 0 of 17 open.**
+  group, and with them **GAP CYCLE 4 IS FULLY CLOSED: 0 of 20 open.**
 
   **WR-02** (`1835726a3`, `ae265a0c7`). `loggerFlows.test.ts` and
   `testContainment.test.ts` both derived their containment root as
@@ -578,7 +578,15 @@ with this section.
 
 ## Gap cycle 4: closed
 
-All 17 findings are discharged (16 fixed, CR-01 found already closed). **No
+**Count correction, 2026-08-23.** Every "17" in the sections above was wrong and has been
+corrected to **20**. `34.2-REVIEW-GAP-CYCLE-4.md` contains CR-01, WR-01..WR-11 and IN-01..IN-08 —
+its frontmatter has always said `total: 20`, and the body agrees. The 17 was an early miscount
+that then propagated through this file and three STATE.md quick-task rows. It changed nothing
+about the work: every finding named in the review is discharged either way. The per-finding
+disposition now lives in `34.2-PORTED-CHANNELS.md`'s "Gap cycle 5 reconciliation" section, gated
+token-by-token by `currency-gate.py`.
+
+All 20 findings are discharged (19 fixed, CR-01 found already closed). **No
 production file among them remains open** — the last one, WR-03, closed earlier
 the same day.
 

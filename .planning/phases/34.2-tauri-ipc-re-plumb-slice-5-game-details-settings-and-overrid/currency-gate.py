@@ -21,7 +21,8 @@ mechanically for a fifth cycle, do not re-derive it):
      in reading order". Do not remove an older cycle's presence/ordering pin when adding a new one.
   5. Update the final success `print(...)` to report every cycle's token counts.
 
-When a FIFTH gap cycle runs against this phase, the correct maintenance action is to EXTEND the
+A FIFTH cycle has since been added (2026-08-23) following exactly these steps. When a SIXTH
+runs against this phase, the correct maintenance action is to EXTEND the
 token lists and heading constants above — never to delete or weaken an existing assertion.
 Deleting an assertion to make the gate pass defeats the reason this file exists (T-34.2-92: denial
 of service via un-maintainability). If a finding genuinely no longer needs tracking, remove its
@@ -106,6 +107,51 @@ CYCLE4_DEFERRED_FINDING_TOKENS = [
     "D4-DEF-02",
 ]
 
+# ---------------------------------------------------------------------------
+# Gap cycle 5 (added 2026-08-23). Extends the pattern above; touches nothing prior.
+#
+# Unlike cycles 1-4 these closures were made by five /gsd-quick tasks rather than
+# by a numbered gap-cycle plan, so the reconciliation section is keyed by
+# quick-task id and commit. The gate does not care which produced them -- it
+# pins only that every finding is named in the section.
+# ---------------------------------------------------------------------------
+
+CYCLE5_RECONCILIATION_HEADING = "### Gap cycle 5 reconciliation"
+
+# All 20 findings from 34.2-REVIEW-GAP-CYCLE-4.md (1 critical + 11 warning + 8 info). Unlike
+# cycle 3's review, this one's frontmatter and body AGREE on the total, so there is no
+# body-over-frontmatter judgement to record here. An earlier record put this cycle's scope at 17;
+# that figure was a miscount and is corrected in the reconciliation section itself.
+CYCLE5_CLOSED_FINDING_TOKENS = [
+    "CR-01",
+    "WR-01",
+    "WR-02",
+    "WR-03",
+    "WR-04",
+    "WR-05",
+    "WR-06",
+    "WR-07",
+    "WR-08",
+    "WR-09",
+    "WR-10",
+    "WR-11",
+    "IN-01",
+    "IN-02",
+    "IN-03",
+    "IN-04",
+    "IN-05",
+    "IN-06",
+    "IN-07",
+    "IN-08",
+]
+
+# Gap cycle 5 carried NOTHING of its own forward. The list is deliberately empty rather than
+# absent: an empty list makes "this cycle deferred nothing" an explicit, checkable claim, and
+# keeps the per-cycle shape uniform so a sixth cycle is copied rather than re-derived. The
+# assertion below treats an empty list as vacuously satisfied, which is correct here and is why
+# the NON-empty closed list carries this cycle's weight.
+CYCLE5_DEFERRED_FINDING_TOKENS: list[str] = []
+
 PLACEHOLDER_PATTERN = re.compile(r"\bTBD\b|\bTODO\b|\bFIXME\b|\bXXX\b")
 
 
@@ -170,6 +216,43 @@ def check_cycle_section(
     return section
 
 
+def extract_closed_subsection(section: str, cycle_label: str) -> str:
+    """The CLOSED region of a reconciliation section, not the whole thing.
+
+    Found by RED proof while adding cycle 5, and worth stating plainly because it is the same
+    defect class gap cycle 4 was largely about: `check_cycle_section` asserts only that a token
+    appears SOMEWHERE in the section, so a finding REMOVED from the closure list still satisfies
+    the gate if its ID is mentioned anywhere else -- in a "what the review got wrong" aside, in a
+    cross-reference, in a sentence explaining why it was hard. Measured: deleting `IN-08` from
+    cycle 5's closure list left the gate GREEN, because that ID also appears in the section's
+    prose about the review's own mistakes.
+
+    Scoping the search to the closed region makes the assertion measure the property it claims --
+    the finding is dispositioned as closed, not merely named somewhere nearby. Applied to cycle 5
+    ONLY: the existing cycle-3 and cycle-4 checks are untouched, per this file's own rule that
+    assertions are extended and never weakened, and their sections do not carry the delimiters
+    this relies on.
+    """
+    start_marker = "**Closed ("
+    end_marker = "**Deferred"
+    start = section.find(start_marker)
+    if start == -1:
+        fail(
+            f"the {cycle_label} reconciliation section has no closed-finding heading "
+            f"(expected a line beginning {start_marker!r}) -- the closed region cannot be "
+            "located, so its tokens cannot be checked against anything narrower than the "
+            "whole section"
+        )
+    end = section.find(end_marker, start)
+    if end == -1:
+        fail(
+            f"the {cycle_label} reconciliation section has no {end_marker!r} marker after its "
+            "closed region -- the region has no terminator and would swallow the rest of the "
+            "section, defeating the point of scoping the search"
+        )
+    return section[start:end]
+
+
 def main() -> None:
     if not PORTED_CHANNELS_PATH.exists():
         fail(f"{PORTED_CHANNELS_PATH} does not exist")
@@ -195,6 +278,30 @@ def main() -> None:
         "gap-cycle-4",
     )
 
+    # 1-3 (extended again). Cycle 5's own section: same three checks, cycle 5's own tokens.
+    cycle5_section = check_cycle_section(
+        text,
+        CYCLE5_RECONCILIATION_HEADING,
+        CYCLE5_CLOSED_FINDING_TOKENS,
+        CYCLE5_DEFERRED_FINDING_TOKENS,
+        "gap-cycle-5",
+    )
+
+    # 3b (cycle 5 only, STRICTER than the shared check above rather than a replacement for it).
+    # Every closed token must appear inside the section's CLOSED region specifically. See
+    # extract_closed_subsection's docstring for the measurement that motivated this.
+    cycle5_closed_region = extract_closed_subsection(cycle5_section, "gap-cycle-5")
+    misplaced = [
+        tok for tok in CYCLE5_CLOSED_FINDING_TOKENS if tok not in cycle5_closed_region
+    ]
+    if misplaced:
+        fail(
+            "the gap-cycle-5 reconciliation section names these finding(s) somewhere, but NOT "
+            f"in its closed-finding region: {', '.join(misplaced)} — a finding mentioned only in "
+            "passing prose is not dispositioned. Add it to the closed list, or move it to a "
+            "deferred/open bucket with a reason."
+        )
+
     # 4. Ordering: "newest last, history preserved in reading order". The gap-cycle-4 heading
     #    must be the LAST `###` subsection under `## 7. Reconciliation`, AND the gap-cycle-3
     #    heading must still be present and appear BEFORE the gap-cycle-4 heading. This is an
@@ -212,26 +319,40 @@ def main() -> None:
     if not subsection_headings:
         fail('"## 7. Reconciliation" has no "###" subsections at all')
     last_subsection = subsection_headings[-1]
-    if not last_subsection.startswith(CYCLE4_RECONCILIATION_HEADING):
+    if not last_subsection.startswith(CYCLE5_RECONCILIATION_HEADING):
         fail(
-            f'the gap-cycle-4 reconciliation section is not the LAST "###" subsection under '
+            f'the gap-cycle-5 reconciliation section is not the LAST "###" subsection under '
             f'"## 7. Reconciliation" — found "{last_subsection}" after it. A later '
             "reconciliation subsection must be appended AFTER this one, not before it "
             "(subsection order is the reading order of the phase's gap-cycle history)."
         )
 
+    # Every older cycle stays pinned for both PRESENCE and RELATIVE POSITION. Adding cycle 5 does
+    # not retire cycle 4's ordering pin -- it inherits it, so the chain 3 < 4 < 5 is checked in
+    # full rather than only at its newest link.
     cycle3_idx = text.find(CYCLE3_RECONCILIATION_HEADING)
     cycle4_idx = text.find(CYCLE4_RECONCILIATION_HEADING)
-    if cycle3_idx == -1:
-        fail(
-            f'"{CYCLE3_RECONCILIATION_HEADING}" is missing entirely — the gap-cycle-4 section '
-            "must be appended AFTER cycle 3's, not replace it"
-        )
+    cycle5_idx = text.find(CYCLE5_RECONCILIATION_HEADING)
+    for label, idx, newer_label in (
+        (CYCLE3_RECONCILIATION_HEADING, cycle3_idx, "gap-cycle-4"),
+        (CYCLE4_RECONCILIATION_HEADING, cycle4_idx, "gap-cycle-5"),
+    ):
+        if idx == -1:
+            fail(
+                f'"{label}" is missing entirely — the {newer_label} section must be appended '
+                "AFTER it, not replace it"
+            )
     if cycle3_idx >= cycle4_idx:
         fail(
             f'"{CYCLE3_RECONCILIATION_HEADING}" appears AFTER (or at the same position as) '
             f'"{CYCLE4_RECONCILIATION_HEADING}" — history must read oldest-to-newest; the '
             "gap-cycle-3 section must come first"
+        )
+    if cycle4_idx >= cycle5_idx:
+        fail(
+            f'"{CYCLE4_RECONCILIATION_HEADING}" appears AFTER (or at the same position as) '
+            f'"{CYCLE5_RECONCILIATION_HEADING}" — history must read oldest-to-newest; the '
+            "gap-cycle-4 section must come first"
         )
 
     # 5. No placeholder token anywhere in the document.
@@ -249,7 +370,10 @@ def main() -> None:
         f"{len(CYCLE3_DEFERRED_FINDING_TOKENS)} deferred-finding token(s) all present; "
         "gap-cycle-4 reconciliation present, exactly once, last under §7, "
         f"{len(CYCLE4_CLOSED_FINDING_TOKENS)} closed-finding token(s) and "
-        f"{len(CYCLE4_DEFERRED_FINDING_TOKENS)} deferred-finding token(s) all present, "
+        f"{len(CYCLE4_DEFERRED_FINDING_TOKENS)} deferred-finding token(s) all present; "
+        "gap-cycle-5 reconciliation present, exactly once, last under §7, after gap-cycle-4, "
+        f"{len(CYCLE5_CLOSED_FINDING_TOKENS)} closed-finding token(s) and "
+        f"{len(CYCLE5_DEFERRED_FINDING_TOKENS)} deferred-finding token(s) all present, "
         "no placeholders."
     )
     sys.exit(0)
