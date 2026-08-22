@@ -74,12 +74,14 @@ export default function SettingsPanel() {
           url="/wine-manager"
           icon={faWineGlass}
           label={t('wine.manager.link', 'Wine Manager')}
+          data-tour="nav-wine"
         />
       )}
       <NavItem
         url="/accessibility"
         icon={faUniversalAccess}
         label={t('accessibility.title', 'Accessibility')}
+        data-tour="nav-accessibility"
       />
       <NavItem
         url="/console"
@@ -95,12 +97,14 @@ export default function SettingsPanel() {
         url="/wiki"
         icon={faBookOpen}
         label={t('docs', 'Documentation')}
+        data-tour="nav-docs"
       />
       <NavItem
         elementType="button"
         onClick={handleKofiClick}
         icon={faCoffee}
         label="Ko-fi"
+        data-tour="nav-community"
       />
       <QuitButton />
     </div>

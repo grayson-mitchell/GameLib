@@ -243,4 +243,53 @@ describe('SettingsPanel', () => {
 
     expect(children[children.length - 1].type).toBe(QuitButton)
   })
+
+  describe('D-05 tour anchors', () => {
+    it('the Wine Manager row carries data-tour="nav-wine" on a non-Windows platform', () => {
+      contextValue = makeContextValue({ platform: 'linux' })
+
+      const tree = SettingsPanel() as unknown as ReactElement
+      const row = findNavItem(tree, 'Wine Manager')
+
+      expect(row?.props['data-tour']).toBe('nav-wine')
+    })
+
+    it('the Accessibility row carries data-tour="nav-accessibility"', () => {
+      contextValue = makeContextValue()
+
+      const tree = SettingsPanel() as unknown as ReactElement
+      const row = findNavItem(tree, 'Accessibility')
+
+      expect(row?.props['data-tour']).toBe('nav-accessibility')
+    })
+
+    it('the Documentation row carries data-tour="nav-docs"', () => {
+      contextValue = makeContextValue()
+
+      const tree = SettingsPanel() as unknown as ReactElement
+      const row = findNavItem(tree, 'Documentation')
+
+      expect(row?.props['data-tour']).toBe('nav-docs')
+    })
+
+    it('the Ko-fi row carries data-tour="nav-community"', () => {
+      contextValue = makeContextValue()
+
+      const tree = SettingsPanel() as unknown as ReactElement
+      const row = findNavItem(tree, 'Ko-fi')
+
+      expect(row?.props['data-tour']).toBe('nav-community')
+    })
+
+    it('on win32, no element carries data-tour="nav-wine" -- the row guard and the tour step guard agree', () => {
+      contextValue = makeContextValue({ platform: 'win32' })
+
+      const tree = SettingsPanel() as unknown as ReactElement
+      const elements = collectElements(tree)
+
+      expect(
+        elements.some((el) => el.props?.['data-tour'] === 'nav-wine')
+      ).toBe(false)
+    })
+  })
 })
