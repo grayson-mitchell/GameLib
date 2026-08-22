@@ -36,6 +36,7 @@
     "build:sidecar-sea": "pnpm build:sidecar && node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildSidecarSea.ts",
     "debug:react": "pnpm start & react-devtools",
     "codecheck": "tsc --noEmit",
+    "planning-gates": "python3 meta/runPlanningGates.py",
     "find-deadcode": "ts-prune --error",
     "test": "jest",
     "test-watch": "jest --watch --maxWorkers=25%",
