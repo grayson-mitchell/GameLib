@@ -16,6 +16,18 @@
   width: 100%;
 }
 
+.Header__categoriesGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.Header__filtersGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
 /* TODO move following styles to the components which use them */
 
 .iconsWrapper {
