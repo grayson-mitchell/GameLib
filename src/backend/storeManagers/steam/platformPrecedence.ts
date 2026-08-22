@@ -65,6 +65,54 @@ export interface ExistingPlatformEntry {
   platformsCapturedAt?: number
 }
 
+/**
+ * Quick task 37-06 (REQ-37-05, closes todo
+ * `2026-08-16-platform-precedence-timestamp-has-no-upper-bound.md`, phase-34.15
+ * review findings WR-02 and IN-01). `hasValidExistingTimestamp` above (see the
+ * function's own header) only ever guarded against a non-finite or wrong-type
+ * `existingCapturedAt` — it had NO upper bound. A correctly-typed, finite
+ * but absurdly-large value (clock skew, an NTP correction, a hand-edited
+ * cache file) passed that check and therefore outranked every subsequent
+ * write for that appId PERMANENTLY, because `MigrationSystem` is dead code
+ * under Tauri (`applyMigrations()` only runs in Electron's `app.whenReady()`)
+ * — nothing would ever normalise the stamp back (WR-02). Separately, the
+ * INCOMING `capturedAt` parameter was never validated at all — safe only
+ * because both current call sites (`games.ts`, `platformCapture.ts`) happen
+ * to pass the current wall-clock time directly, an asymmetry waiting for a
+ * future third writer to trip on (IN-01).
+ *
+ * `isPlausibleCapturedAt` is the ONE definition of "a timestamp I believe" in
+ * this module, applied symmetrically to both sides of the comparison in
+ * `resolvePlatformWrite`. It SUBSUMES the prior finite/type check — adding an
+ * upper bound rather than replacing the lower one — and degrades an
+ * implausible value to "indefinitely old / writable" exactly as this module
+ * already degrades `NaN` and wrong-type values (`T-qcn-01`), rather than
+ * rejecting the write outright.
+ *
+ * `MAX_CLOCK_SKEW_MS` (24h) is deliberately generous rather than tight,
+ * because the two failure costs are asymmetric: a bound set too small would
+ * falsely decline a legitimate write during ordinary clock skew and lose
+ * ONE write, while the bug being fixed loses EVERY future write for that
+ * appId forever (`37-RESEARCH.md` assumption A3 — the bound's exact value is
+ * implementer discretion; D-17 requires only that a bound exist). A
+ * locally-observed wall-clock read more than a day ahead of the reader's own
+ * clock is corruption, not skew.
+ *
+ * This does NOT change which source wins a believable comparison — D-17 is
+ * explicit that freshest-write-wins stands, and neither "appdetails always
+ * wins" nor "PICS always wins" is introduced here. It only changes which
+ * timestamps are BELIEVED.
+ */
+const MAX_CLOCK_SKEW_MS = 24 * 60 * 60 * 1000
+
+function isPlausibleCapturedAt(value: unknown, now: number): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isFinite(value) &&
+    value <= now + MAX_CLOCK_SKEW_MS
+  )
+}
+
 /** Hard constraint 2 (three-valued platform contract): an existing entry can
  *  only WIN a precedence decision if it can supply a COMPLETE triple. A
  *  strictly-newer entry with one or more platform booleans still `undefined`
@@ -87,14 +135,23 @@ function hasCompleteTriple(entry: ExistingPlatformEntry): boolean {
  * limit — this function implements D-A/D-D exactly, symmetrically, for
  * both `'pics'` and `'appdetails'` callers.
  *
- * The `existing?.platformsCapturedAt` read is guarded with
- * `typeof === 'number' && Number.isFinite(...)` rather than a bare
- * comparison: the on-disk store is untyped JSON, so a corrupted or
- * unexpectedly-typed value (`NaN`, a string, etc.) is a legitimate runtime
- * shape here, not a programming error. Such a value degrades to
- * "indefinitely old / writable by either source" rather than to a `NaN`
- * comparison, which would silently decline every future write forever (see
- * T-qcn-01 in this task's threat register).
+ * The `existing?.platformsCapturedAt` read is guarded by `isPlausibleCapturedAt`
+ * rather than a bare comparison: the on-disk store is untyped JSON, so a
+ * corrupted, wrong-type, or implausibly-large/future value (`NaN`, a string,
+ * clock skew, a hand-edited cache file) is a legitimate runtime shape here,
+ * not a programming error. Such a value degrades to "indefinitely old /
+ * writable by either source" rather than to a `NaN` comparison or an
+ * unbounded-future value, either of which would silently decline every
+ * future write forever (see T-qcn-01 in this task's threat register, and
+ * WR-02 in `isPlausibleCapturedAt`'s own header).
+ *
+ * The INCOMING `capturedAt` parameter is validated with the SAME predicate
+ * (IN-01) — an implausible incoming stamp is clamped to `now` rather than
+ * persisted, so a future caller cannot recreate WR-02 by passing a poisoned
+ * value. Both sides are checked against one `now` read captured once, so the
+ * two sides can never see two different clocks. The repair self-heals at the
+ * READ boundary: the next write simply overwrites a poisoned stored value,
+ * with no `Migration` involved (`MigrationSystem` is dead code under Tauri).
  */
 export function resolvePlatformWrite(
   existing: ExistingPlatformEntry | null | undefined,
@@ -102,13 +159,23 @@ export function resolvePlatformWrite(
   source: PlatformSignalSource,
   capturedAt: number
 ): PlatformWriteResolution {
+  const now = Date.now()
   const existingCapturedAt = existing?.platformsCapturedAt
-  const hasValidExistingTimestamp =
-    typeof existingCapturedAt === 'number' &&
-    Number.isFinite(existingCapturedAt)
+  const hasValidExistingTimestamp = isPlausibleCapturedAt(
+    existingCapturedAt,
+    now
+  )
+
+  // IN-01: the incoming stamp is validated with the SAME predicate. An
+  // implausible value is clamped to `now` rather than persisted, so it can
+  // never be believed by a future comparison (see `isPlausibleCapturedAt`'s
+  // header for WR-02/IN-01/D-17).
+  const effectiveCapturedAt = isPlausibleCapturedAt(capturedAt, now)
+    ? capturedAt
+    : now
 
   const existingIsStrictlyNewer =
-    hasValidExistingTimestamp && existingCapturedAt > capturedAt
+    hasValidExistingTimestamp && existingCapturedAt > effectiveCapturedAt
 
   if (existingIsStrictlyNewer && existing && hasCompleteTriple(existing)) {
     // DECLINE: the existing capture is strictly newer and complete. On
@@ -136,7 +203,7 @@ export function resolvePlatformWrite(
   return {
     platforms: incoming,
     platformsSource: source,
-    platformsCapturedAt: capturedAt,
+    platformsCapturedAt: effectiveCapturedAt,
     accepted: true
   }
 }
