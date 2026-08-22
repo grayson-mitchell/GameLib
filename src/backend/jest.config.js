@@ -22,6 +22,14 @@ module.exports = {
   // Do not remove this entry.
   setupFiles: ['<rootDir>/src/backend/jest.setupContainment.ts'],
 
+  // LOAD-BEARING FOR CONTAINMENT HYGIENE (Phase 34.2 gap cycle 4, WR-01).
+  // Mints ONE containment root for the whole run and exports it via
+  // process.env, which workers inherit because they are forked after this
+  // runs. Without it, setupContainment.ts falls back to one root per test
+  // FILE -- still contained, but it accumulated 6,057 directories (~500 MB)
+  // before this was added. Also reaps stale roots from earlier runs.
+  globalSetup: '<rootDir>/src/backend/jest.globalSetup.js',
+
   rootDir: '../..',
 
   // The root of your source code, typically /src

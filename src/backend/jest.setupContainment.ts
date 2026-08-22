@@ -179,7 +179,7 @@
  *    claimed.
  */
 
-import { chmodSync, mkdtempSync } from 'fs'
+import { chmodSync, lstatSync, mkdtempSync } from 'fs'
 import { isAbsolute, join, relative, resolve } from 'path'
 
 declare global {
@@ -224,11 +224,72 @@ globalThis.__GAMELIB_JEST_REAL_HOME__ = realHomeAtSetup
 // module reuses the existing root instead of minting a second one that
 // would disagree with the first, which is what makes it safe for
 // `structuralContainment.test.ts` to import `containmentRoot` directly.
+//
+// WR-01 (gap cycle 4, fixed 2026-08-23): the `globalThis` memo below is
+// necessary but NOT sufficient. Jest gives every test FILE a fresh sandbox
+// global, so the memo only ever hit within a single file and a fresh root was
+// minted per file -- 6,057 of them had accumulated on the author's machine,
+// one per suite per run, none ever removed. The run-wide root now comes from
+// `jest.globalSetup.js` via `process.env`, which is the only one of the three
+// candidate seams that actually propagates (that file's docstring records the
+// two that do not, both measured). `globalThis` is retained on top of it for
+// the reason it was added: re-execution safety within one file, so
+// `structuralContainment.test.ts` importing `containmentRoot` directly cannot
+// mint a second, disagreeing root.
+const RUN_ROOT_ENV_KEY = 'GAMELIB_JEST_RUN_ROOT'
+
+/**
+ * Accept the inherited root only if it still has every property `mkdtempSync`
+ * + `chmodSync(0o700)` gave it. This value arrives through the environment,
+ * so it is validated rather than trusted: a run whose env was tampered with
+ * (or simply a stale value inherited from an unrelated parent process) must
+ * fall back to minting a fresh root, never silently redirect every test
+ * write to an attacker-chosen directory. Failing CLOSED here would be wrong
+ * -- the fallback is the pre-WR-01 behaviour, which is contained, just
+ * untidy.
+ */
+function inheritedRootIsUsable(candidate: string): boolean {
+  if (candidate.length === 0 || !isAbsolute(candidate)) return false
+
+  // Must live directly under the real temp root, by path arithmetic rather
+  // than string prefix -- `relative` + `isAbsolute` is the same containment
+  // idiom the precondition block below uses.
+  const rel = relative(realTmpRoot, resolve(candidate))
+  if (rel.length === 0 || rel.startsWith('..') || isAbsolute(rel)) return false
+  if (rel.includes('/') || rel.includes('\\')) return false
+  if (!rel.startsWith('gamelib-jest-run-')) return false
+
+  try {
+    // `lstat`, not `stat`: a symlink planted at this path must be rejected,
+    // not followed. That is the WR-07 vector, and it is the whole reason the
+    // predictable-marker-file design the review prescribed was not used.
+    const stat = lstatSync(candidate)
+    if (!stat.isDirectory() || stat.isSymbolicLink()) return false
+    // Mode 0700 is the security control WR-07 established; if something
+    // widened it, do not adopt this root.
+    if ((stat.mode & 0o077) !== 0) return false
+    return true
+  } catch {
+    return false
+  }
+}
+
 function ensureContainmentRoot(): string {
   if (globalThis.__GAMELIB_JEST_CONTAINMENT_ROOT__ !== undefined) {
     return globalThis.__GAMELIB_JEST_CONTAINMENT_ROOT__
   }
-  const root = mkdtempSync(join(realTmpRoot, 'gamelib-jest-home-'))
+
+  // Nest this file's root inside the run root when one was inherited, so the
+  // whole run can be reaped as a unit. Each test FILE still gets its own
+  // freshly-minted directory either way -- collapsing that was measured to
+  // break suite isolation, not just tidiness.
+  const inherited = process.env[RUN_ROOT_ENV_KEY]
+  const parent =
+    inherited !== undefined && inheritedRootIsUsable(inherited)
+      ? inherited
+      : realTmpRoot
+
+  const root = mkdtempSync(join(parent, 'gamelib-jest-home-'))
   chmodSync(root, 0o700)
   globalThis.__GAMELIB_JEST_CONTAINMENT_ROOT__ = root
   return root
