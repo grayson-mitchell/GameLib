@@ -1342,6 +1342,47 @@ Plans:
 
 ---
 
+### Phase 34.16: macOS runner onedir x64 CI leg — publish the workflow to the default branch, source and digest-verify darwin archives, and extend the runner-bundle guard beyond arm64 (INSERTED)
+
+**Goal:** Close the six phase-34.9 deferred items that were routed to "a follow-up phase" which
+did not exist until now (2026-08-22). All six share **one blocking precondition**: the
+`build-runners-onedir-macos.yml` workflow must exist on the **default branch**, because
+`workflow_dispatch` refuses any workflow absent from it (`HTTP 404: workflow not found on the
+default branch`) — so nothing here can start from `fix/steam-native-install-stability`.
+
+**Inherited items** (from `.planning/phases/34.9-.../deferred-items.md`, dated 2026-08-11..13):
+
+- **Item 1 / REQ-34.9-02 — the x64 CI leg.** The x64 onedir build **exists nowhere**: not in CI,
+  not on any machine, not in the repo. Six `PENDING-CI-PUBLISH` sentinels in
+  `meta/runnersOnedirDigests.json` throw by design until it does.
+- **Item 2 / REQ-34.9-03** — the downloader must source darwin archives from the published run.
+- **Item 3 / REQ-34.9-04** — sha256 digest verification against those published artifacts.
+- **Item 12** — the wired `verify:runner-bundle` guard covers **arm64 only**.
+- **Item 13** — that guard has never been exercised in CI at all.
+- **Item 18 / C2-05 — the one with user impact.** `release:mac` chains `-p always`
+  (`package.json:44`), auto-publishing to the GitHub releases feed `electron-updater` consumes,
+  while `.github/workflows/build-base.yml:48` builds `--x64 --arm64` and the guard hardcodes
+  `--arch=arm64`. **An unverified x64 macOS build can reach real users' auto-update channel with
+  the guard green throughout.** This is live in currently-active CI, not hypothetical.
+
+**Read before planning:** `34.9-GUARD-PROOF.md` carries three known contract defects — items 14
+(a vacuous `find -newer` dist/-emptiness check), 15 (an exit-capture idiom that no-ops under zsh;
+`cat -A` is BSD-incompatible) and 16 (the CLI-argument-passthrough sub-claim was never exercised).
+Fix those **before** re-running that contract, not after, or this phase will trust a proof that
+cannot fail.
+
+**Scope fence:** REQ-34.9-09 (per-runner cold-spawn ratio, items 4 and 10) is **explicitly out** —
+the ledger records "do NOT plan a third attempt" as a gap-planning decision. Real-certificate
+signing and notarization (item 6) is developer action, not this phase.
+
+**Requirements**: REQ-34.9-02, REQ-34.9-03, REQ-34.9-04 (inherited, re-scoped to this phase; mint
+new REQ-34.16-* IDs at plan time for items 12, 13 and 18, which have no REQ of their own)
+**Depends on:** Phase 34 · **BLOCKED ON HUMAN ACTION:** a push of the workflow to the default branch
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 34.16 to break down — do not plan before the default-branch push)
+
 ### Phase 34.13: Steam install-time wine/bottle form (GOG parity) (INSERTED)
 
 **Goal:** A Steam install offers a one-click quick install by default, targeting Steam's primary library, with an explicit "Install with options…" path — reachable via a caret or context-menu item — that opens GameLib's install modal for platform selection and wine/bottle choice. This gives Steam more control than GOG's always-modal default, not parity with it, while a bottle install still degrades safely into the options path when quick install's local checks fail.
