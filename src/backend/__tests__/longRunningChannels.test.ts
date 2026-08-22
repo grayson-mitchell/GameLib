@@ -178,9 +178,57 @@ function stripRustLineComments(source: string): string {
 }
 
 /**
+ * Returns the BODY of the first `for <ident> in LONG_RUNNING_CHANNELS { ... }` loop in `source`,
+ * or `null` if there is no such loop. The body is delimited by brace matching from the `{` that
+ * opens it to its matching `}`, so the result is genuinely the loop's interior and not "some text
+ * that happens to follow the loop header".
+ *
+ * Why brace matching and not a regex (WR-08, gap cycle 4). The obvious regex —
+ * `/for\s+\w+\s+in\s+LONG_RUNNING_CHANNELS\s*\{[\s\S]*?assert_eq!\(\s*timeout_for\(/`, which is
+ * what the review itself prescribed — is holed: the lazy `[\s\S]*?` happily crosses the loop's
+ * CLOSING brace, so it matches a module whose loop is empty and whose only `assert_eq!` sits in a
+ * later, unrelated test function. That is the same "loop that proves nothing" shape WR-08 was
+ * raised about, merely reordered, so applying the prescribed fix verbatim would have left the
+ * finding open while looking closed. The reordered case is pinned by a self-test below.
+ *
+ * Known limitation, stated rather than papered over: this counts braces without a Rust lexer, so
+ * an UNBALANCED brace inside a string literal or a char literal (`"{"`, `'}'`) would mis-delimit
+ * the body. Balanced ones are fine and are the common case — the real module's loop body contains
+ * the format string `"expected {channel} (a LONG_RUNNING_CHANNELS member) ..."`, which nets out
+ * correctly and is pinned by its own self-test. A Rust lexer is not worth building for a text
+ * tripwire; if an unbalanced literal ever appears here the gate fails loudly rather than passing
+ * wrongly, because a truncated body will not contain the assertion.
+ */
+function extractLongRunningChannelsLoopBody(source: string): string | null {
+  const header = /for\s+\w+\s+in\s+LONG_RUNNING_CHANNELS\s*\{/.exec(source)
+  if (header === null) {
+    return null
+  }
+
+  // Index of the character just past the opening brace the header matched.
+  const bodyStart = header.index + header[0].length
+  let depth = 1
+  for (let i = bodyStart; i < source.length; i++) {
+    if (source[i] === '{') {
+      depth++
+    } else if (source[i] === '}') {
+      depth--
+      if (depth === 0) {
+        return source.slice(bodyStart, i)
+      }
+    }
+  }
+
+  // Unterminated loop body — malformed source. Treated as "no body", which fails the gate.
+  return null
+}
+
+/**
  * True if `source` contains a `#[cfg(test)]` module that genuinely exercises `timeout_for` via a
  * real `assert_eq!` call (not merely the identifier appearing somewhere in the region) and
- * iterates `LONG_RUNNING_CHANNELS` (rather than hardcoding a second duplicate list).
+ * asserts against `timeout_for` INSIDE a loop over `LONG_RUNNING_CHANNELS` (rather than
+ * hardcoding a second duplicate list, and rather than pairing an empty loop with an unrelated
+ * assertion elsewhere in the module).
  *
  * Two-step reasoning (WR-04): the `#[cfg(test)]` region is LOCATED in raw source
  * (`locateCfgTestRegionRaw`, attribute-adjacent doc comments make stripping-before-locating
@@ -189,6 +237,15 @@ function stripRustLineComments(source: string): string {
  * consisting only of `// timeout_for ... timeout_for ...` comment lines plus a zero-assertion
  * loop satisfies a raw-text count — exactly the WR-04 counter-example this file's self-test
  * carries verbatim from the code review.
+ *
+ * The third condition was REPLACED in gap cycle 4 (WR-08). It used to be a region-wide
+ * `/for\s+\w+\s+in\s+LONG_RUNNING_CHANNELS/` test, ANDed with the other two but INDEPENDENT of
+ * them: nothing required the assertion to be inside the loop, or to concern a
+ * `LONG_RUNNING_CHANNELS` member at all, so a module pairing an empty iteration with an unrelated
+ * `assert_eq!(timeout_for("getGameInfo"), ...)` satisfied all three. Three conditions that each
+ * hold somewhere in a region do not compose into a statement about the region's structure. The
+ * loop body is now extracted (`extractLongRunningChannelsLoopBody`) and the assertion required
+ * inside it, and both rearrangement orders are pinned by self-tests.
  *
  * Shared by both the real-file assertions below and this block's own self-tests, so the
  * self-tests prove the SAME logic that gates the real file can fail.
@@ -204,13 +261,10 @@ function hasBehavioralRustTestModule(source: string): boolean {
   // `assert_eq!(\n    timeout_for(channel),\n    None,\n    ...\n);` form.
   const hasRealAssertion = /assert_eq!\(\s*timeout_for\(/.test(strippedRegion)
   const timeoutForRefs = strippedRegion.match(/timeout_for/g) ?? []
-  const iteratesLongRunningChannels =
-    /for\s+\w+\s+in\s+LONG_RUNNING_CHANNELS/.test(strippedRegion)
-  return (
-    hasRealAssertion &&
-    timeoutForRefs.length >= 2 &&
-    iteratesLongRunningChannels
-  )
+  const loopBody = extractLongRunningChannelsLoopBody(strippedRegion)
+  const assertsInsideTheLoop =
+    loopBody !== null && /assert_eq!\(\s*timeout_for\(/.test(loopBody)
+  return hasRealAssertion && timeoutForRefs.length >= 2 && assertsInsideTheLoop
 }
 
 /**
@@ -235,11 +289,16 @@ describe('REQ-34.2-14 main.rs #[cfg(test)] behavioral test module is present (pi
     expect(timeoutForRefs.length).toBeGreaterThanOrEqual(2)
   })
 
-  test('the #[cfg(test)] region iterates LONG_RUNNING_CHANNELS rather than hardcoding a second duplicate list', () => {
+  test('the #[cfg(test)] region asserts against timeout_for INSIDE a loop over LONG_RUNNING_CHANNELS, not merely somewhere in the same module', () => {
     const region = locateCfgTestRegionRaw(loadMainRsRaw())
     expect(region).not.toBeNull()
     const strippedRegion = stripRustLineComments(region as string)
-    expect(strippedRegion).toMatch(/for\s+\w+\s+in\s+LONG_RUNNING_CHANNELS/)
+
+    // WR-08: this used to assert only that the loop header appeared somewhere in the region,
+    // which says nothing about what the loop does. Extract the body and assert on its contents.
+    const loopBody = extractLongRunningChannelsLoopBody(strippedRegion)
+    expect(loopBody).not.toBeNull()
+    expect(loopBody as string).toMatch(/assert_eq!\(\s*timeout_for\(/)
   })
 
   test('the full gate (all three conditions together) matches the real main.rs', () => {
@@ -292,6 +351,85 @@ describe('REQ-34.2-14 main.rs #[cfg(test)] behavioral test module is present (pi
       '}'
     ].join('\n')
     expect(hasBehavioralRustTestModule(vacuousModule)).toBe(false)
+  })
+
+  // Fourth self-test (WR-08 counter-example, gap cycle 4). An assertion in one test function plus
+  // an EMPTY loop in another satisfied all three of the old predicate's conditions, because none
+  // of them related the assertion to the loop.
+  //
+  // NOT carried verbatim from 34.2-REVIEW-GAP-CYCLE-4.md, and the reason matters. The review's
+  // literal example carries ONE `timeout_for` reference, so it fails the old predicate on the
+  // `>= 2` count — not on the structural hole the finding is about. Pasting it in would have
+  // produced a self-test that passes against the OLD predicate too: a "RED proof" proving
+  // nothing, which is the same defect class as the finding it claims to close. A second
+  // reference, which any real test module would have, exposes the actual hole. Measured: the old
+  // predicate returns TRUE for this input.
+  test('self-test: WR-08 counter-example — an assertion OUTSIDE the loop plus an empty loop does NOT match the gate', () => {
+    const rearranged = [
+      '#[cfg(test)]',
+      'mod tests {',
+      '    #[test] fn a() { assert_eq!(timeout_for("getGameInfo"), Some(INVOKE_TIMEOUT)); }',
+      '    #[test] fn c() { assert_eq!(timeout_for("install"), None); }',
+      '    #[test] fn b() { for _c in LONG_RUNNING_CHANNELS {} }',
+      '}'
+    ].join('\n')
+    expect(hasBehavioralRustTestModule(rearranged)).toBe(false)
+  })
+
+  // Fifth self-test: the SAME counter-example with the loop moved FIRST. This is the case the
+  // review's own prescribed regex
+  // (`...LONG_RUNNING_CHANNELS\s*\{[\s\S]*?assert_eq!\(\s*timeout_for\(`) ACCEPTS — measured —
+  // because the lazy quantifier walks straight past the loop's closing brace to the assertion in
+  // a later function. Applying that regex verbatim would have closed WR-08 in appearance only, so
+  // the ordering is pinned in both directions rather than in the one the review happened to
+  // write. The old predicate returns TRUE for this input as well.
+  test('self-test: WR-08 counter-example REVERSED — an empty loop FIRST and the unrelated assertions after does NOT match the gate either', () => {
+    const rearrangedReversed = [
+      '#[cfg(test)]',
+      'mod tests {',
+      '    #[test] fn b() { for _c in LONG_RUNNING_CHANNELS {} }',
+      '    #[test] fn a() { assert_eq!(timeout_for("getGameInfo"), Some(INVOKE_TIMEOUT)); }',
+      '    #[test] fn c() { assert_eq!(timeout_for("install"), None); }',
+      '}'
+    ].join('\n')
+    expect(hasBehavioralRustTestModule(rearrangedReversed)).toBe(false)
+  })
+
+  // Sixth self-test, the POSITIVE control for the two above. Without it, a brace matcher that
+  // returned `null` unconditionally would pass every negative case and look like a tightening.
+  // The body here carries the same multi-line assert_eq! and the same BALANCED `{channel}`
+  // format-string braces as the real module, which is the case the brace matcher must survive —
+  // a naive matcher stopping at the first `}` would truncate the body before the assertion.
+  test('self-test (positive control): a loop whose body DOES assert, with balanced format-string braces, matches the gate', () => {
+    const genuine = [
+      '#[cfg(test)]',
+      'mod tests {',
+      '    #[test]',
+      '    fn every_member_is_exempt() {',
+      '        for channel in LONG_RUNNING_CHANNELS {',
+      '            assert_eq!(',
+      '                timeout_for(channel),',
+      '                None,',
+      '                "expected {channel} (a LONG_RUNNING_CHANNELS member) to wait indefinitely"',
+      '            );',
+      '        }',
+      '        // Mirrors the real module: a non-member assertion after the loop, which is also',
+      '        // what supplies the SECOND `timeout_for` reference the count condition requires.',
+      '        assert_eq!(timeout_for("getGameSettings"), Some(INVOKE_TIMEOUT));',
+      '    }',
+      '}'
+    ].join('\n')
+    expect(hasBehavioralRustTestModule(genuine)).toBe(true)
+
+    // And the body really was delimited at the loop's own closing brace, not at the end of the
+    // module: the enclosing `fn`'s closing brace must NOT be inside it.
+    const body = extractLongRunningChannelsLoopBody(genuine) as string
+    expect(body).toContain('assert_eq!')
+    expect(body).toContain('{channel}')
+    // A correctly delimited body is brace-BALANCED (here: the one pair from `{channel}`). A
+    // matcher that stopped at the first `}` would leave an unmatched `{`; one that ran to the end
+    // of the module would carry the enclosing fn's and mod's unmatched `}`s.
+    expect(body.split('{').length - 1).toBe(body.split('}').length - 1)
   })
 })
 
