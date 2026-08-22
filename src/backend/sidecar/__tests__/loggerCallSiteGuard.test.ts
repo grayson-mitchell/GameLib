@@ -164,6 +164,23 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
     expect(listenerRegistry.get('logError')?.length).toBe(1)
   })
 
+  // IN-06 (gap cycle 4, fixed 2026-08-23). Six tests below spy on
+  // `process.stderr.write`/`process.stdout.write` and, until this hook existed,
+  // NONE of them restored. `resetMocks: true` in `src/backend/jest.config.js`
+  // is not a substitute: it clears calls and implementations but leaves the
+  // spy INSTALLED, so `process.stderr.write` stayed a mock returning
+  // `undefined` for every later test in this file -- silently swallowing any
+  // real diagnostic they emitted. A suite whose entire subject is "a
+  // diagnostic must reach stderr" is a poor place to leave stderr replaced.
+  //
+  // `restoreAllMocks` restores `jest.spyOn` spies only; the three
+  // `jest.mock(...)` factory registrations at the top of this file are
+  // untouched by it, and the `beforeAll` above installs no spy of its own
+  // (checked, not assumed).
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
   it('Test A (async rejection, real module): a real ENOTDIR log-write rejection produces a call-site-attributed stderr diagnostic', async () => {
     const stderrSpy = jest
       .spyOn(process.stderr, 'write')
@@ -414,5 +431,19 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
     expect(diagnostic).toBeDefined()
     expect(diagnostic).toContain('logInfo')
     expect(stdoutSpy).not.toHaveBeenCalled()
+  })
+
+  // IN-06 non-vacuity, and the RED proof for the `afterEach` above. Declared
+  // LAST so every spy-installing test in this file has already run. Without
+  // the restore hook this fails: `resetMocks: true` clears a spy's calls and
+  // implementation but leaves it INSTALLED, so `process.stderr.write` is still
+  // a mock function here. Measured -- both assertions flip.
+  //
+  // Asserting on `isMockFunction` rather than on observed output on purpose: a
+  // test that tried to detect the leak by writing to stderr and checking the
+  // console would be the very thing a swallowed writer makes unobservable.
+  it('IN-06: the real process.stderr/stdout writers are back in place by the last test', () => {
+    expect(jest.isMockFunction(process.stderr.write)).toBe(false)
+    expect(jest.isMockFunction(process.stdout.write)).toBe(false)
   })
 })

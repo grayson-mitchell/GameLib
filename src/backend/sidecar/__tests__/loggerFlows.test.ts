@@ -407,12 +407,30 @@ describe('sidecar logger flow: logError (Phase 34.2 gap cycle 2, plan 34.2-16)',
     const spy = jest.spyOn(logger, 'logErrorSettled')
     const message = `[loggerFlows.test.ts] spy-check-${process.pid}`
 
-    const { input } = startSidecar()
-    writeSend(input, 'le-2', 'logError', [message])
-    await flush()
+    // IN-06 (gap cycle 4): `mockRestore()` used to sit AFTER the assertion it
+    // guards, so a failing expectation leaked a live spy on the REAL
+    // `backend/logger` module into every later test in this file. `finally`
+    // restores on both paths.
+    //
+    // `resetMocks: true` in `src/backend/jest.config.js` does NOT cover this:
+    // it clears a spy's calls and implementation but leaves it INSTALLED, so
+    // the leaked `logErrorSettled` would be a mock returning `undefined` for
+    // the rest of the file rather than the real export. Measured in
+    // `loggerCallSiteGuard.test.ts`, whose IN-06 guard test asserts exactly
+    // that and goes red when its restore hook is removed.
+    //
+    // Stated plainly: a passing suite cannot falsify this change, because the
+    // leak only occurs when an assertion fails. The `finally` is correct on
+    // the mechanism, not on a green run.
+    try {
+      const { input } = startSidecar()
+      writeSend(input, 'le-2', 'logError', [message])
+      await flush()
 
-    expect(spy).toHaveBeenCalledWith(message, LogPrefix.Frontend)
-    spy.mockRestore()
+      expect(spy).toHaveBeenCalledWith(message, LogPrefix.Frontend)
+    } finally {
+      spy.mockRestore()
+    }
   })
 
   it('REQ-34.2-14 no response frame is produced for the send frame id, and no UNPORTED_CHANNEL_MARKER appears', async () => {
@@ -488,12 +506,17 @@ describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
     const spy = jest.spyOn(logger, 'logInfoSettled')
     const message = `[loggerFlows.test.ts] logInfo-check-${process.pid}`
 
-    const { input } = startSidecar()
-    writeSend(input, 'li-1', 'logInfo', [message])
-    await flush()
+    // IN-06 (gap cycle 4): see the logError sibling above -- restore on both
+    // paths, not only the passing one.
+    try {
+      const { input } = startSidecar()
+      writeSend(input, 'li-1', 'logInfo', [message])
+      await flush()
 
-    expect(spy).toHaveBeenCalledWith(message, LogPrefix.Frontend)
-    spy.mockRestore()
+      expect(spy).toHaveBeenCalledWith(message, LogPrefix.Frontend)
+    } finally {
+      spy.mockRestore()
+    }
   })
 
   it('REQ-34.3-01 showLogFileInFolder (send) reveals the real log file at the path getLogFilePath returns', async () => {
@@ -609,21 +632,29 @@ describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
       })
 
       const spy = jest.spyOn(uploaderModule, 'deleteUploadedLogFile')
-      global.fetch = jest.fn(() =>
-        Promise.resolve({
-          ok: false,
-          status: 400,
-          statusText: 'Bad Request',
-          text: () => Promise.resolve('')
-        })
-      ) as unknown as typeof fetch
 
-      const { input, frames } = startSidecar()
-      writeInvoke(input, 'dul-1', 'deleteUploadedLogFile', [url])
-      await waitForResponse(frames, 'dul-1')
+      // IN-06 (gap cycle 4): third of three `mockRestore()` calls that sat
+      // after the assertion they guard. This one spies on the real
+      // `logger/uploader` module, so a leak would silently neuter deletion for
+      // every later test in this block.
+      try {
+        global.fetch = jest.fn(() =>
+          Promise.resolve({
+            ok: false,
+            status: 400,
+            statusText: 'Bad Request',
+            text: () => Promise.resolve('')
+          })
+        ) as unknown as typeof fetch
 
-      expect(spy).toHaveBeenCalledWith(url)
-      spy.mockRestore()
+        const { input, frames } = startSidecar()
+        writeInvoke(input, 'dul-1', 'deleteUploadedLogFile', [url])
+        await waitForResponse(frames, 'dul-1')
+
+        expect(spy).toHaveBeenCalledWith(url)
+      } finally {
+        spy.mockRestore()
+      }
     })
 
     it('REQ-34.3-01 getUploadedLogFiles (invoke) returns only the still-valid entry and prunes the expired one from the store', async () => {
