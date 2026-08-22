@@ -88,6 +88,7 @@ export default function FilterChipRow() {
     handleSearch,
     setShowHidden,
     setShowNonAvailable,
+    setNoStorePage,
     setShowSupportOfflineOnly,
     setShowThirdPartyManagedOnly,
     setShowUpdatesOnly,
@@ -145,6 +146,9 @@ export default function FilterChipRow() {
         break
       case 'showNonAvailable':
         setShowNonAvailable('off')
+        break
+      case 'noStorePage':
+        setNoStorePage('off')
         break
       case 'showSupportOfflineOnly':
         setShowSupportOfflineOnly(false)

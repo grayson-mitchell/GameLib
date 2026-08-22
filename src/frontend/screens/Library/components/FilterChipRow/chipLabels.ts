@@ -156,6 +156,24 @@ export function chipLabelSpec(
           return null
       }
 
+    case 'noStorePage':
+      switch (descriptor.value) {
+        case 'only':
+          return {
+            ns: 'gamelib',
+            key: 'gamelib:library.filterPanel.chipNoStorePageOnly',
+            defaultText: 'No store page only'
+          }
+        case 'hide':
+          return {
+            ns: 'gamelib',
+            key: 'gamelib:library.filterPanel.chipNoStorePageHidden',
+            defaultText: 'Hiding no store page'
+          }
+        default:
+          return null
+      }
+
     case 'showSupportOfflineOnly':
       return {
         ns: 'default',

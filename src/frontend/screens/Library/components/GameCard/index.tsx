@@ -535,11 +535,14 @@ const GameCard = ({
           {isDelisted && (
             <span
               className="gameCardDelistedBadge"
-              aria-label={t2('library.delisted', 'Game no longer available')}
+              aria-label={tGamelib(
+                'gamelib:library.noStorePage',
+                'No store page'
+              )}
               aria-hidden={false}
               style={{ pointerEvents: 'none' }}
             >
-              {t2('library.delisted', 'Game no longer available')}
+              {tGamelib('gamelib:library.noStorePage', 'No store page')}
             </span>
           )}
           <CrossoverBadge rating={crossoverRating} />

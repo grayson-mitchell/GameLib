@@ -32,6 +32,8 @@
             "chipHiddenOnly": "Hidden only",
             "chipNonAvailableIncluded": "Including non-available",
             "chipNonAvailableOnly": "Non-available only",
+            "chipNoStorePageHidden": "Hiding no store page",
+            "chipNoStorePageOnly": "No store page only",
             "clearAll": "Clear all",
             "collections": "Collections",
             "emptyBody": "No games match {{filters}}.",
@@ -41,6 +43,7 @@
             "manageCollections": "Manage collections",
             "moreFilters": "More filters",
             "newCollection": "+ New collection",
+            "noStorePage": "No store page",
             "notYetChecked": "Not yet checked",
             "removeFilter": "Remove {{filterLabel}} filter",
             "runnabilityGroup": "Runnability",
@@ -56,6 +59,7 @@
         "header": {
             "filteredOfTotal": "{{shown}} of {{total}}"
         },
+        "noStorePage": "No store page",
         "steamSync": {
             "failedBody": "Your other libraries are still available. Try again, or check that Steam is reachable.",
             "failedTitle": "Couldn't sync your Steam library",
