@@ -128,12 +128,30 @@ still retires nothing — only its owner changed.
 | `ROADMAP.md` § 35 | dependency line now reads "read this line as 34.1–34.6"; the 34.5-leg block quote redirects "owned by 34.7" → 34.6 |
 | `STATE.md` | the 34.5 residuals block redirects the same way, with the item list spelled out |
 | `34.5/deferred-items.md` item 24 | heading struck through to **Phase 34.6**; owner-change block; marks the descope's *rationale* void while its *effect* stands |
-| `34.5-CYCLE6-ROUTING.md` | `status: binding`, so amended at the top: read every "34.7" below as 34.6 |
-| `34.5-UAT.md` | banner: every "TRAVELLED TO PHASE 34.7" row now means 34.6 |
+| `34.5-CYCLE6-ROUTING.md` | `status: binding` — banner **plus** § D-CYCLE6-A and the routing-table row rewritten in place |
+| `34.5-UAT.md` | banner **plus** all 11 body references rewritten in place |
 
-**The individual `34.5-UAT.md` rows still read "34.7" ON PURPOSE.** They record where those items
-went *at the time*; rewriting a closed phase's ledger rows would destroy that record, so the
-banner is the redirect. This is the one place a reader could still be misled if they skip the
-header — worth knowing about.
+### Second pass: rows rewritten in place, banners downgraded to context
+
+The first pass left the ledger rows reading "34.7" and relied on top-of-file banners to redirect.
+Operator called that the wrong trade — a reader who skips the header is misled, and this repo has
+a standing lesson about status docs lagging undetected. So every row was rewritten:
+
+- **`34.5-UAT.md`** — 11 references: the travellers-table heading and its four rows, the
+  reconciliation prose, the runnable-rows table, the not-runnable-here list, test 11's body, and
+  the three `TRAVELLED TO PHASE …` stamps. Each now names **34.6** and carries its original 34.7
+  routing as a dated parenthetical, so **no provenance is lost** — which was the only real
+  argument for the banner-only approach.
+- **`34.5-CYCLE6-ROUTING.md`** (`status: binding`) — § D-CYCLE6-A's handoff sentence, its four
+  binding consequences, and the routing-table row. Its **rationale paragraph is marked VOID in
+  place** ("do not cite it") with the reason spelled out, rather than deleted: the descope was
+  correct for 34.5's gate at the time and still binds.
+- **`deferred-items.md` item 24** — the owner sentence and the travellers sentence. The
+  "34.7 deletes the interactive Epic login" claim is left standing with an inline ⟵ marker saying
+  both halves are dead, because it is the record of the decision that was made.
+
+Both banners were then corrected — they now describe what the rows say instead of contradicting
+them. The one remaining "34.7" without a 34.6 nearby is a historical narrative about a 2026-08-20
+reconciliation, rendered as "Phase 34.7 (now Phase 34.6)".
 
 No code changed in this addendum. Docs only.
