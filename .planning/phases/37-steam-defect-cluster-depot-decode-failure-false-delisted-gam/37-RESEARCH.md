@@ -652,9 +652,16 @@ or web sources (this phase has no external-library research surface). No `[CITED
 since no official third-party documentation was consulted (nothing external is being installed or
 configured).
 
-## Open Questions
+## Open Questions (RESOLVED at plan time, 2026-08-22)
 
-1. **What is the correct upper bound for `platformsCapturedAt` (37-06)?**
+> Both questions below were closed during `/gsd-plan-phase 37` and are retained for their
+> reasoning, not as live unknowns. Resolutions are recorded inline.
+
+1. **RESOLVED — `MAX_CLOCK_SKEW_MS = 24h`, in plan `37-06` Task 2.** The generous-bound
+   recommendation below was taken: the bound catches genuine corruption and clock skew
+   without any risk of declining a legitimate write.
+
+   Original question: **What is the correct upper bound for `platformsCapturedAt` (37-06)?**
    - What we know: the lower-bound pattern (`Number.isFinite`) is established; D-17 requires
      symmetry with an upper bound but does not specify a value.
    - What's unclear: whether a fixed offset (e.g., "reject anything > 24h in the future") or a
@@ -665,8 +672,11 @@ configured).
      than normal operation is safest, since false-rejection risk (declining a legitimate write)
      is asymmetric with the current bug's risk (a corrupted value winning forever).
 
-2. **Does 37-04's root cause (async `getGameInfo()` population gap) warrant its own follow-up
-   todo, or is the `appName` fallback sufficient long-term?**
+2. **RESOLVED — a follow-up todo is filed by plan `37-04` Task 2**, exactly per D-09's own
+   instruction. The `appName` fallback ships; the root cause is recorded, not gated.
+
+   Original question: **Does 37-04's root cause (async `getGameInfo()` population gap)
+   warrant its own follow-up todo, or is the `appName` fallback sufficient long-term?**
    - What we know: GOG/Legendary have a synchronous-load pattern Steam lacks; D-09 explicitly
      defers this decision, gating only the fallback.
    - What's unclear: whether the async gap causes other, non-title symptoms elsewhere that would

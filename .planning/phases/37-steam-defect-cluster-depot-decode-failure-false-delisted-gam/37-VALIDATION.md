@@ -1,8 +1,8 @@
 ---
 phase: 37
 slug: steam-defect-cluster-depot-decode-failure-false-delisted-gam
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-08-22
 ---
@@ -10,7 +10,11 @@ created: 2026-08-22
 # Phase 37 — Validation Strategy
 
 > Per-phase validation contract for feedback sampling during execution.
-> Derived from `37-RESEARCH.md` § Validation Architecture (lines 683–751).
+> Derived from `37-RESEARCH.md` § Validation Architecture.
+>
+> **Plan-column note:** 37-03 was split into `37-03a` (the D-15 forced backend+frontend pair) and
+> `37-03b` (the additive facet row, chip, badge and the blocking live gate) during planning. Rows
+> below are attributed to the resulting plan.
 
 ---
 
@@ -48,11 +52,11 @@ per-task `<automated>` blocks must satisfy.
 |------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | 37-02 | REQ-37-01 | — | N/A | unit | `npx jest src/backend/storeManagers/steam/__tests__/depot.test.ts -t classifyDepotError` | ✅ extend existing `describe` | ⬜ pending |
 | 37-02 | REQ-37-01 (typing gap) | — | N/A | unit | new case asserting `DepotDownloadFailure.error` reaches the classifier with `.eresult`/`.code` intact (not pre-stringified at `depot.ts:2426`) | ❌ W0 | ⬜ pending |
-| 37-03 | REQ-37-02 (frontend) | — | N/A | unit | `npx jest src/frontend/screens/Library/__tests__/filterEngine.test.ts` | ✅ file exists — flip `:169-183` | ⬜ pending |
-| 37-03 | REQ-37-02 (backend, D-15) | — | N/A | unit | `npx jest src/backend/storeManagers/steam/__tests__/games.test.ts -t isGameAvailable` | ❌ W0 — no delisted+installed case | ⬜ pending |
-| 37-03 | REQ-37-02 (facet count) | — | N/A | unit | `npx jest src/frontend/components/UI/NavShell/components/FilterFacetGroup/__tests__/facetSelectionCount.test.ts` | ✅ existing tripwire — sixth kind must be added in BOTH places | ⬜ pending |
-| 37-03 | REQ-37-02 (live) | — | N/A | **live gate** | Dead Island (91310) visible + launchable at default filters after a clean app restart | n/a — human | ⬜ pending |
-| 37-04 | REQ-37-03 | — | N/A | unit | `npx jest src/backend/downloadmanager/__tests__/utils.test.ts` (planner confirms exact path) | ❌ W0 | ⬜ pending |
+| 37-03a | REQ-37-02 (frontend) | — | N/A | unit | `npx jest src/frontend/screens/Library/__tests__/filterEngine.test.ts` | ✅ file exists — flip `:169-183` | ⬜ pending |
+| 37-03a | REQ-37-02 (backend, D-15) | — | N/A | unit | `npx jest src/backend/storeManagers/steam/__tests__/games.test.ts -t isGameAvailable` | ❌ W0 — no delisted+installed case | ⬜ pending |
+| 37-03b | REQ-37-02 (facet count) | — | N/A | unit | `npx jest src/frontend/components/UI/NavShell/components/FilterFacetGroup/__tests__/facetSelectionCount.test.ts` | ✅ existing tripwire — sixth kind must be added in BOTH places | ⬜ pending |
+| 37-03b | REQ-37-02 (live) | — | N/A | **live gate** | Dead Island (91310) visible + launchable at default filters after a clean app restart | n/a — human | ⬜ pending |
+| 37-04 | REQ-37-03 | — | N/A | unit | `npx jest src/backend/downloadmanager/__tests__/utils.test.ts` | ✅ file CONFIRMED to exist at plan time — extend, do not create | ⬜ pending |
 | 37-05 | REQ-37-04 | — | N/A | unit | `npx jest src/backend/utils/aborthandler/__tests__/aborthandler.test.ts` | ✅ groundwork exists | ⬜ pending |
 | 37-05 | REQ-37-04 (seam) | — | N/A | integration | new test at the `games.ts` install-flow / `utils.ts` terminal-error seam: pre-download throw produces no miss-ERROR; user-cancel unaffected | ❌ W0 | ⬜ pending |
 | 37-06 | REQ-37-05 | — | N/A | unit | `npx jest src/backend/storeManagers/steam/__tests__/platformPrecedence.test.ts` | ✅ 9 tests — upper-bound case missing | ⬜ pending |
@@ -76,7 +80,8 @@ per-task `<automated>` blocks must satisfy.
       passes through unchanged; a RED traversal case that proves the containment check fires; and
       a case proving the `!candidate` branch now logs at WARNING (Correction §3's "no log at all").
 - [ ] `src/backend/downloadmanager/__tests__/utils.test.ts` — `title` falls back to `appName` when
-      `getGameInfo()` returns `{}`. Confirm the exact path during planning.
+      `getGameInfo()` returns `{}`. Path CONFIRMED at plan time: the file exists, so 37-04 extends
+      it rather than creating it.
 - [ ] Integration test at the `games.ts` / `utils.ts` seam — no `callAbortController`-miss ERROR
       when a pre-download step throws before `runNativeDepotDownload` is reached, plus a separate
       assertion that user-cancel (`stopCurrentDownload`) is unaffected.
@@ -102,12 +107,24 @@ vacuously, and both have shipped in this repo.
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] Every new assertion has a recorded mutation-proven RED observation
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 20s at task granularity
-- [ ] `nyquist_compliant: true` set in frontmatter
+Checked items were confirmed by `gsd-plan-checker` against the seven committed plans on
+2026-08-22 (verdict: 0 blockers). Unchecked items **cannot** be discharged at plan time — they
+are claims about code that does not exist yet, and ticking them now would be ticking a box on
+intention, which this project's ledger records as a repeat failure mode.
 
-**Approval:** pending
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references — all seven items map 1:1 to a concrete Wave-0 task
+      inside the plan that owns the defect
+- [x] All four Manual-Only rows are carried as `autonomous: false` gate tasks (rows 1–3 in
+      `37-03b` Task 4, `gate="blocking"`, one clean-restart session; row 4 in `37-02` Task 4,
+      `gate="advisory"`)
+- [ ] Every new assertion has a recorded mutation-proven RED observation — **discharged during
+      execution, not planning.** Every plan REQUIRES the RED observation; none can have made it.
+- [x] No watch-mode flags
+- [x] Feedback latency < 20s at task granularity
+- [x] `nyquist_compliant: true` set in frontmatter
+
+`wave_0_complete` stays **false**: the seven Wave 0 tests are assigned, not written.
+
+**Approval:** approved at plan level 2026-08-22 (`/gsd-plan-phase 37`).

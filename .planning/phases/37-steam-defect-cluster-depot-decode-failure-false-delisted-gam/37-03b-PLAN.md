@@ -22,8 +22,8 @@ requirements: [REQ-37-02]
 
 must_haves:
   truths:
-    - "A tri-state 'No store page' row exists inside the existing More filters group, with states off / only / hide"
-    - "The neutral state is 'off' and means NOT FILTERING — delisted games are visible, no descriptor is emitted, no chip appears, and the group badge reads nothing on a virgin library"
+    - "D-10: A tri-state 'No store page' row exists inside the existing More filters group (FilterMoreGroup), beside 'Show Hidden' and 'Show non-Available games' — NOT a new facet group. It inherits the chip row, the group badge and zero-result handling, and costs exactly one new descriptor kind in MORE_FILTER_KINDS."
+    - "D-11: The three states are off / only / hide — NOT the neighbours' off/show/only. Neutral 'off' means NOT FILTERING: delisted games are visible, no descriptor is emitted, no chip appears, and the group badge reads nothing on a virgin library."
     - "Clicking the row cycles to 'hide', which reproduces the OLD forced-hide behaviour as an opt-in"
     - "The row label and the card badge both read 'No store page', rendered from a NEW i18n key present in public/locales/en/gamelib.json"
     - "MORE_FILTER_KINDS and describeActiveFilters both carry the sixth kind — the manual transcription did not drift"
