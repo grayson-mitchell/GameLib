@@ -92,10 +92,19 @@ const ENTRY_POINTS = [
 ]
 
 // Regenerated at plan-execution time (2026-07-26, Phase 34.3 Plan 07), not
-// pasted from planning-time prose. Sorted, repo-relative. See SUMMARY for the
-// (accepted, explained) 192-vs-194 total-file-count discrepancy against the
-// planning-time note -- the electron-importing set itself is IDENTICAL, which
-// is the property this file enforces.
+// pasted from planning-time prose. Sorted, repo-relative.
+//
+// IN-04(a) (gap cycle 1, closed 2026-08-23): this note used to cite an
+// "(accepted, explained) 192-vs-194 total-file-count discrepancy" with no date
+// attached, which read as a live figure. It never was one -- both numbers were
+// one-off 2026-07-26 readings of `visitedFiles.size`, and the walk had already
+// moved off BOTH of them (to 193) by the time the review that raised this
+// finding ran. Every count in this header now carries the date and phase that
+// measured it; none of them is current by construction. Latest reading:
+// `visitedFiles.size` 239 / `electronImportingFiles.size` 35, measured
+// 2026-08-23. The property this file enforces has never been a total-file
+// count -- it is that the electron-importing SET does not grow, which is why
+// the size-drift the old note described was accepted rather than chased.
 //
 // Phase 34.3 Plan 07 (REQ-34.3-10, D-10) extended ENTRY_POINTS with this
 // slice's three registration modules and re-ran computeElectronReach() (via a

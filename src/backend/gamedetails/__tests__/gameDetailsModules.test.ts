@@ -181,6 +181,21 @@ const OTHER_RUNNERS_FOR_SIDELOAD = [
   'zoom'
 ] as const
 
+// IN-04(b) (gap cycle 1, closed 2026-08-23): `gamepage.json` used to be read
+// and `JSON.parse`d TWICE for the same value -- once in the `beforeAll` that
+// seeds the real i18next singleton, once inside the `getLaunchOptions` test
+// that recovers the expected string. Two independent readers of one file can
+// drift (a path typo in one of them would make the test compare i18next's
+// output against a DIFFERENT file's contents and still look green); one
+// module-scope constant cannot. Read at module scope, before any mock can
+// intercept `fs`, which is also where the `readSourceFile` alias is real.
+const GAMEPAGE_RESOURCES = JSON.parse(
+  readSourceFile(
+    join(__dirname, '../../../../public/locales/en/gamepage.json'),
+    'utf-8'
+  )
+)
+
 describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
   // WR-04 (Phase 34.2 Plan 12): initialize the REAL i18next singleton once
   // for this suite, reading resources straight off disk rather than a
@@ -192,18 +207,12 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
   // `bootstrapWirings.test.ts`'s own real-i18next precedent).
   beforeAll(async () => {
     if (!i18next.isInitialized) {
-      const gamepageResources = JSON.parse(
-        readSourceFile(
-          join(__dirname, '../../../../public/locales/en/gamepage.json'),
-          'utf-8'
-        )
-      )
       await i18next.init({
         lng: 'en',
         fallbackLng: 'en',
         ns: ['gamepage'],
         defaultNS: 'gamepage',
-        resources: { en: { gamepage: gamepageResources } },
+        resources: { en: { gamepage: GAMEPAGE_RESOURCES } },
         returnEmptyString: false,
         returnNull: false
       })
@@ -426,13 +435,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
     managerMocks.steam.getLaunchOptions.mockResolvedValue([
       { name: 'Custom', parameters: '-x', type: 'basic' }
     ])
-    const gamepageResources = JSON.parse(
-      readSourceFile(
-        join(__dirname, '../../../../public/locales/en/gamepage.json'),
-        'utf-8'
-      )
-    )
-    const realTranslatedDefault = gamepageResources.launch.default
+    const realTranslatedDefault = GAMEPAGE_RESOURCES.launch.default
 
     // WR-06 (Phase 34.2 gap cycle 1): comparing against `realTranslatedDefault`
     // alone STILL cannot distinguish "i18next loaded its resources" from "the
