@@ -3664,14 +3664,25 @@ created the state.
   wrapper and the "Downloads" row inside the retired `SidebarLinks`. A selector matching two
   elements is ambiguous; whichever the tour library picked first was never guaranteed to be the
   intended one.
-- **34.10 IN-01** — dead `data-tour` props in `CategoryFilter`/`LibraryFilters` that `Dropdown`
-  never reads. Fold in here rather than leaving them as permanent noise.
+- **34.10 IN-01** — originally described as dead `data-tour` props in `CategoryFilter`/
+  `LibraryFilters` that `Dropdown` never reads. Re-verified at 34.12-06 execution time: neither
+  component exists at HEAD — phase 34.11 deleted both outright rather than leaving dead props on
+  them, so the literal item named here had nothing left to clean. The surviving IN-01-shaped
+  cleanup was a duplicated dead `data-tour="library-header"` (two occurrences,
+  `LibraryHeader/index.tsx` and `Library/index.tsx`) plus a previously uncatalogued dead
+  `data-tour="humble-keys"` (`Humble/Keys/index.tsx`). All three were removed by plan 34.12-06.
 
 **Gate that must be retired as part of this phase:** `NavShell/__tests__/tourDisabled.test.ts`
 asserts the tour CANNOT start (no NavShell file references `SidebarTour`/`SIDEBAR_TOUR_ID`/
 `TourButton`/`data-tour`, and nothing imports `SidebarTour`). Re-enabling the tour necessarily
 falsifies it. Replace it with a positive gate — do not simply delete it, and do not let it become
-vacuously true, which is what deleting `SidebarTour.tsx` alone would have done.
+vacuously true, which is what deleting `SidebarTour.tsx` alone would have done. **Replacement
+landed by plan 34.12-06:** `NavShell/__tests__/navTourAnchorCensus.test.ts`. The replacement is
+two-layer, not one file carrying the whole gate — per-component correctness assertions
+distributed across the anchor sites (`NavItem.test.tsx`, `SettingsPanel.test.tsx`,
+`NavTabsComponent.test.tsx`, `DownloadsRing.test.tsx`, `libraryTourAnchors.test.tsx` and similar,
+landed across plans 02–05) plus this repo-wide uniqueness census (Layer B, landed 34.12-06). A
+future reader should not go looking for a single file that carries both halves.
 
 **Note on the `(INSERTED)` marker:** carried from the `phase.insert` tooling, which stamps every
 insertion as urgent. This phase is NOT urgent — it is deferred UI polish with no user-facing
