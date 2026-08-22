@@ -3699,6 +3699,62 @@ Plans:
 > channels. Note also
 > that 34.5's PASS was measured on a **dev** build: `R-34.5-G1-PKG`, the packaged-build asset root,
 > is untouched by it.
+
+**Scope item added 2026-08-23 — `R-34.5-G1-PKG`, the packaged Tauri asset root, is now HOMED HERE.**
+This phase inherits it; mint a requirement for it at `/gsd-plan-phase 35`. It had been parked to
+unnamed "packaging work" since 2026-08-07 and drifted across three phases without an owner —
+Phase 34.6 declined it (not an IPC channel port), Phase 34.9 **DESCOPED** it (see that phase's
+scope note above: "it pre-dates this phase"), and Phase 34.5 closed 2026-08-20 having deliberately
+routed it OUT of itself. Its own routing criterion in `34.5-deferred-items.md` item 12 is
+"whichever plan first exercises a packaged (non-dev) build", and that is this phase: **Phase 35
+deletes `electronStub.ts`, where the `isPackaged: false` constant that defeats half (b) lives**,
+and after the cutover Tauri-packaged becomes the shipping artifact — so this stops being a
+residual and becomes a **release blocker**. Nothing needs reopening: Requirements here are TBD and
+0 plans exist.
+
+> **It has TWO independent halves. Both are required; either alone is inert.**
+>
+> **(a) The locale files are not in the bundle at all.** `tauri.conf.json`'s
+> `bundle.resources` lists only `["../build/bin/"]` — `../build/locales/` is absent, so nothing
+> ships. Proven at the artifact level 2026-08-22 during `UAT-34.2-01`: the mounted DMG's
+> `GameLib.app/Contents/Resources/` holds only `_up_` and `icon.icns` (no `locales/`, no
+> `translation.json`, no `public/`), and the locale data is not compiled into the SEA sidecar
+> either — a **both-directions** `strings` probe on `Contents/MacOS/gamelib-sidecar` found the KEY
+> `notify.finished.reparing` PRESENT (so the code path shipped and the probe demonstrably works on
+> that binary) while the VALUE `Finished Repairing` was ABSENT.
+>
+> **(b) The packaged resolution branch is effectively unreachable.** `paths.ts:73-76` defines
+> `publicDir` as `resolve(app.getAppPath(), app.isPackaged || process.env.CI === 'e2e' ? 'build' :
+> 'public')`, and `electronStub.ts:207` hardcodes `isPackaged: false`, so a packaged run appends
+> `'public'` and never `'build'` — as `main.rs:5281-5285` states in its own words.
+>
+> **Re-read against the live tree 2026-08-23, and the widely-quoted form of this line is WRONG.**
+> `34.2-HUMAN-UAT.md`'s evidence block and `## Gaps` section both quote it as a bare
+> `app.isPackaged ? 'build' : 'public'`, dropping the `|| process.env.CI === 'e2e'` clause — which
+> has been present since `87c0ef823` (**2026-07-21**), a month before that evidence was written.
+> The conclusion is unaffected (a shipped `.app` does not set `CI=e2e`), but the detail matters to
+> whoever fixes this: **the `'build'` branch is already reachable under one condition**, so an
+> existing e2e path may serve as a ready-made harness for proving the fix rather than needing a
+> full packaging run per iteration. Re-grep `publicDir` before trusting any line number here. Phase 34.5 fixed the adjacent half (the shell
+> hands down `GAMELIB_APP_ROOT` from `resource_dir()` on both spawn paths, so `getAppPath()` no
+> longer returns `src-tauri/`) but explicitly did not close the asset-root half.
+>
+> **Half (a) is NEW as of 2026-08-22 and is described by NONE of the three prior routing notes** —
+> 34.5's deferred item 12, 34.9's descope note, and this phase's own dependency note above all
+> describe only half (b). Fixing (b) alone would resolve correctly to an empty directory. The
+> 2026-08-22 run was also the first time anyone exercised a packaged Tauri build, which upgrades
+> the whole item from predicted to artifact-proven.
+>
+> **Consequence to carry:** `REQ-34.2-02` (a translated notification string actually renders) is
+> proven for **dev** and is **FALSE for a packaged build** — `t('notify.finished.reparing')`
+> carries no default, so it renders the raw key. Tracked as `G-34.2-UAT-02` in
+> `34.2-HUMAN-UAT.md`, whose `status: partial` and `blocked_on:` both point here.
+>
+> Also settled by that run, worth recording because it had been an open question: **macOS arm64
+> Tauri packaging itself WORKS** — `electron-vite build` → `pnpm build:sidecar-sea` → `tauri build`,
+> all three stages exit 0, producing a valid `.app` and a 514,459,661-byte DMG. That disposes of
+> the competing hypothesis that packaging is simply broken on this platform.
+
 **Requirements:** TBD — mint at `/gsd-plan-phase 35`
 **Plans:** 0 plans
 

@@ -2752,20 +2752,16 @@ residual risk is therefore retired, not merely deferred.** Note the util's one d
 limitation: a trailing `//` on a code line is NOT stripped, because the naive `/\/\/.*$/gm` pass that
 would strip it is the WR-08 string-literal truncation plan 34.2-28 removed.
 
-Still owed on 34.2 (**corrected 2026-08-23** — two of the three items this paragraph
-originally listed have since been discharged; the superseded text is quoted below so the
-correction is auditable rather than silent):
+Still owed on 34.2 (**corrected again 2026-08-23** — **NOTHING remains owed.** All five items
+this paragraph has listed over its life are now discharged; every superseded claim is quoted
+below so each correction is auditable rather than silent):
 
-- **The 11 warnings + 8 info of `34.2-REVIEW-GAP-CYCLE-4.md`** — recorded under `deferred:`,
-  genuinely open, NOT resolved. Unchanged.
-- **All four `34.2-REVIEW-GAP-CYCLE-{1,2,3,4}.md` reviews still read `status: issues_found`**
-  and are undispositioned. Cycles 1–3's findings were in fact closed by the FOLLOWING cycle's
-  plans (34.2-15..18, 34.2-19..24, 34.2-25..30) — only the documents were never flipped; cycle
-  4's 19 non-blocker findings are the genuinely open set named above. `34.2-REVIEW-FIX.md`
-  covers **round 1 only** (16 closed / 1 accepted / 0 open, 2026-08-22) and deliberately stays
-  `status: partial` for exactly this reason. Note these four files are INVISIBLE to the
-  gsd-phase-status explorer: `artifactKind()` matches `name === kind || name.endsWith('-' +
-  kind)`, and nothing ends in `-REVIEW-GAP-CYCLE-N.md`.
+**Nothing.** Phase 34.2's closeout artifacts are green across the board: `34.2-VERIFICATION.md`
+`status: passed` 14/14, `34.2-SECURITY.md` `status: verified` 164 threats / 164 closed / **0
+open**, `34.2-VALIDATION.md` `status: complete`, ROADMAP **30/30 plans with zero unchecked
+boxes**, and all five code reviews dispositioned across **80 findings, 0 open**. Two documents
+stay `status: partial` and both are correct as written — see the last three DISCHARGED bullets
+for why neither is an outstanding item.
 
 DISCHARGED, do not redo:
 
@@ -2776,11 +2772,38 @@ DISCHARGED, do not redo:
   anticheat fetch)~~ — **BOTH RUN 2026-08-22 on real hardware.** D-07 PASSED (full chain
   proven live: `fetchLastestReleases()` → `releasesInfoReady` → the re-homed anticheat
   listener → real GitHub fetch → `writeFile`). D-02 is `partial`: the **dev** half PASSED, the
-  **packaged** half FAILED — and that failure is attributed to `R-34.5-G1-PKG`, a Phase 34.5
-  residual 34.5 named and left open, not a 34.2 defect. Per D-11 neither item ever gated
-  phase closure. Two gaps were raised by the run and are recorded in `34.2-HUMAN-UAT.md`'s
-  own `## Gaps` section: G-34.2-UAT-01 (a UAT step that could not fail — **amended in place
-  2026-08-23**) and G-34.2-UAT-02 (the packaged-build failure above).
+  **packaged** half FAILED — and that failure is attributed to `R-34.5-G1-PKG`, a residual
+  Phase 34.5 named and deliberately routed OUT of itself, not a 34.2 defect. Per D-11 neither
+  item ever gated phase closure. Two gaps were raised by the run and are recorded in
+  `34.2-HUMAN-UAT.md`'s own `## Gaps` section: G-34.2-UAT-01 (a UAT step that could not fail —
+  **amended in place 2026-08-23**) and G-34.2-UAT-02 (the packaged-build failure above).
+  **2026-08-23: `R-34.5-G1-PKG` now has a NAMED home — Phase 35**, recorded in that phase's
+  ROADMAP block and back-referenced from `34.5-deferred-items.md` item 12. It had been parked
+  to unnamed "packaging work" since 2026-08-07. `34.2-HUMAN-UAT.md` carries a matching
+  `blocked_on:` field, so its `partial` reads as owned-elsewhere rather than as unfinished
+  34.2 work.
+- ~~**The 11 warnings + 8 info of `34.2-REVIEW-GAP-CYCLE-4.md`** — recorded under `deferred:`,
+  genuinely open, NOT resolved. Unchanged.~~ — **ALL CLOSED 2026-08-23.** Discharged across
+  five quick tasks (`260823-9ds`, `260823-amg`, `260823-bo0`, `260823-c2w`, `260823-cis`) plus
+  the fix commits recorded in `34.5-deferred-items.md`. **The count in the struck text is also
+  wrong twice over:** 11 + 8 = 19, but gap cycle 4 carries **20** findings — CR-01, WR-01..11
+  and IN-01..08, exactly as its own frontmatter always said (`total: 20`). The figure "17" that
+  three quick-task rows in this file reported was a third, separate miscount, corrected in the
+  same pass. Final tally: **20/20 discharged, 0 open.**
+- ~~**All four `34.2-REVIEW-GAP-CYCLE-{1,2,3,4}.md` reviews still read `status: issues_found`**
+  and are undispositioned.~~ — **THE PREMISE WAS FALSE, and had been repeated three times.**
+  The reviews do still read `status: issues_found`, and correctly so — `34.2-REVIEW-FIX.md`
+  establishes that review files are immutable historical records that are never flipped when
+  fixes land. But "undispositioned" was wrong: `34.2-PORTED-CHANNELS.md` §7 already carried a
+  per-round reconciliation section for cycles 1–3, each disposing the previous round's findings
+  individually and pinned token-by-token by `currency-gate.py`. Only cycle 4's section was
+  missing; it was written 2026-08-23 (commit `10f4d200e`) and the gate extended per its own
+  documented steps. All five reviews are now dispositioned: **80 findings, 0 open.**
+  `34.2-REVIEW-FIX.md` stays `status: partial` on a corrected basis — its own scope genuinely
+  is round 1 only (`findings_in_scope: 17`), so `all_fixed` would assert completeness for a
+  document holding a fifth of the evidence. Still true and worth keeping: these four files are
+  INVISIBLE to the gsd-phase-status explorer, because `artifactKind()` matches
+  `name === kind || name.endsWith('-' + kind)` and nothing ends in `-REVIEW-GAP-CYCLE-N.md`.
 
 Also settled by that UAT run, worth recording because it had been an open question:
 **macOS arm64 Tauri packaging works** — a valid `.app` plus a 514MB DMG, all three build

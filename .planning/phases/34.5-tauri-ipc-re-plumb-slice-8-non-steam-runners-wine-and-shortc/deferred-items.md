@@ -153,6 +153,33 @@ gate document itself. Root causes are UNKNOWN; do not assume any of these share 
     resolve and self-check. Whichever plan first exercises a packaged (non-dev) build is the correct
     place to close this residual.
 
+    > **UPDATE 2026-08-23 — `R-34.5-G1-PKG`'s home is now NAMED: Phase 35 (Electron cutover).** The entry above
+    > is left unedited as the accurate record of what was known on 2026-08-07. What it could not
+    > do was name a phase, and "the packaging work" turned out to be a park-to-UNNAMED-work that
+    > drifted **16 days across three phases** with no owner: Phase 34.6 declined it (not an IPC
+    > channel port), Phase 34.9 **DESCOPED** it 2026-08-07 (`ROADMAP.md` § Phase 34.9 scope note —
+    > "it pre-dates this phase"), and Phase 34.5 itself closed 2026-08-20 having deliberately
+    > routed it out. Recorded now in Phase 35's own ROADMAP block as an inherited scope item, to be
+    > minted as a requirement at `/gsd-plan-phase 35`. That phase satisfies this entry's own stated
+    > criterion — it is where a packaged build is first exercised — and it is also where
+    > `electronStub.ts` is deleted, taking the `isPackaged: false` constant with it.
+    >
+    > **This entry describes only HALF the defect.** It names the resolution half (`publicDir`
+    > appending `'public'` to a root with no such child). A second, independent half was found
+    > 2026-08-22 by `UAT-34.2-01`, the first run ever to exercise a packaged Tauri build:
+    > **`tauri.conf.json`'s `bundle.resources` lists only `["../build/bin/"]`, so the locale files
+    > are not in the bundle at all** — confirmed by inspecting the mounted DMG and by a
+    > both-directions `strings` probe on the SEA sidecar (KEY `notify.finished.reparing` present,
+    > VALUE `Finished Repairing` absent). Both halves are required; **fixing the resolution half
+    > alone would resolve correctly to an empty directory.** Neither this entry, nor 34.9's descope
+    > note, nor Phase 35's pre-existing dependency note describes that second half.
+    >
+    > One correction to carry: the `publicDir` ternary is **not** the bare
+    > `app.isPackaged ? 'build' : 'public'` that `34.2-HUMAN-UAT.md` quotes. Since `87c0ef823`
+    > (2026-07-21) it reads `app.isPackaged || process.env.CI === 'e2e' ? 'build' : 'public'`
+    > (`paths.ts:73-76`). The conclusion holds — a shipped `.app` sets no `CI=e2e` — but the
+    > `'build'` branch IS reachable under one condition, which may give the fix a cheap harness.
+
 ## Found during the 34.5-40/34.5-41 blocking live-gate RE-RUN 2 (2026-08-02) — gap cycle 5
 
 Verdict `FAIL`: `items_passed: 0`, `items_failed: 2` (items 2, 4), `items_blocked: 1` (item 1),
