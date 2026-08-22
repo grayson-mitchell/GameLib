@@ -24,7 +24,7 @@ stop. If a rider genuinely no longer needs tracking, remove its token from
 token list and the prose can never quietly drift apart.
 
 **This phase adds a second concern 34.3's gate did not have (REQ-34.4-16): verifying, not
-editing, `.planning/IPC-PORT-INVENTORY.md`'s 31/6/57 scope-surgery split.** Those assertions read
+editing, `.planning/IPC-PORT-INVENTORY.md`'s 31/6/58 scope-surgery split.** Those assertions read
 the inventory directly and must FAIL if a future edit silently reverts the split back to 38/56 —
 that is the entire point of REQ-34.4-16 being a gate rather than an editing task. This script
 makes NO edit to `IPC-PORT-INVENTORY.md` or `ROADMAP.md`; it only reads them.
@@ -253,7 +253,7 @@ INVENTORY_SLICE7_HEADING = re.compile(
 )
 INVENTORY_34_4_1_HEADING = re.compile(r"## Phase 34\.4\.1 — the embedded-browser login seam \(6 channels\)")
 INVENTORY_SLICE8_HEADING = re.compile(
-    r"## Phase 34\.5 — Slice 8 — non-Steam runners, Wine and shortcuts \(57 channels\)"
+    r"## Phase 34\.5 — Slice 8 — non-Steam runners, Wine and shortcuts \(58 channels\)"
 )
 
 
@@ -339,8 +339,8 @@ def check_inventory_slice8_intact(text: str) -> None:
     if not INVENTORY_SLICE8_HEADING.search(text):
         fail(
             "IPC-PORT-INVENTORY.md is missing the '## Phase 34.5 — Slice 8 — non-Steam runners, "
-            "Wine and shortcuts (57 channels)' heading — D-03's isLoggedIn reassignment (56->57) "
-            "appears to have been reverted"
+            "Wine and shortcuts (58 channels)' heading — D-03's isLoggedIn reassignment (56->57), "
+            "then plan 34.5-43's getInstallInfo discovery (57->58), appears to have been reverted"
         )
     section = _extract_section(text, INVENTORY_SLICE8_HEADING)
     names = _channel_names_in_backtick_list(section)
@@ -367,7 +367,7 @@ ASSERTIONS = [
     ("every row's proof level is a permitted value (PORTED-CHANNELS)", check_proof_levels),
     ("IPC-PORT-INVENTORY.md's slice-7 31-channel list is intact", check_inventory_slice7_intact),
     ("IPC-PORT-INVENTORY.md's Phase 34.4.1 6-channel list is intact", check_inventory_34_4_1_intact),
-    ("IPC-PORT-INVENTORY.md's slice-8 57-channel list still contains isLoggedIn", check_inventory_slice8_intact),
+    ("IPC-PORT-INVENTORY.md's slice-8 58-channel list still contains isLoggedIn", check_inventory_slice8_intact),
 ]
 
 assert len({label for label, _ in ASSERTIONS}) == len(ASSERTIONS), "duplicate assertion label"
@@ -631,7 +631,7 @@ def main() -> None:
     print(
         f"OK: all {len(CHANNELS)} channels declared exactly once with correct send/invoke kind, "
         f"{len(REQUIRED_RIDER_TOKENS)} rider token(s) present, every proof level permitted, and "
-        "IPC-PORT-INVENTORY.md's 31/6/57 scope-surgery split is intact (REQ-34.4-16, verified not "
+        "IPC-PORT-INVENTORY.md's 31/6/58 scope-surgery split is intact (REQ-34.4-16, verified not "
         "edited)."
     )
     sys.exit(0)

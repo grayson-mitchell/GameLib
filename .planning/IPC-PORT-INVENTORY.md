@@ -32,7 +32,7 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 224 |
+| Unique channels | 225 |
 | Ported to sidecar | 28 |
 | **Unported** | **183** |
 
@@ -76,9 +76,9 @@ per-phase Electron-only backlog this document's other sections enumerate. The `P
 that split is a frozen Phase 34.1-era snapshot, not re-tallied per phase; recording that explicitly
 here rather than leaving an apparent, unexplained arithmetic gap.
 
-## Already ported (33)
+## Already ported (34)
 
-`cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `getDMQueueInformation`, `get-connectivity-status`, `getLogContent`, `getMaxCpus`, `getSystemInfo`, `hasExecutable`, `health`, `install`, `isNative`, `isSteamBottleEligible`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `persistBottleWineVersion`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamPollQR`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
+`cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `getDMQueueInformation`, `get-connectivity-status`, `getLogContent`, `getMaxCpus`, `getSystemInfo`, `hasExecutable`, `health`, `install`, `isNative`, `isSteamBottleEligible`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `persistBottleWineVersion`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamPollQR`, `steamRemoveAllCopies`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
 
 `logError` was ported early by Phase 34.2 gap cycle 2 (plan 34.2-16) — see the Phase 34.3 list
 below, which now excludes it, and `34.2-PORTED-CHANNELS.md`'s gap-cycle-2 subsection for the full
@@ -101,6 +101,17 @@ preload-surface audit — 28 → 31:**
   and was simply never written into a bucket line. It carries an OAuth `code=`/redirect URL — see
   the audit's finding note; recorded here as ported, the credential-handling concern is a
   **separate** flag, not a reason to withhold bucketing.
+
+**One more added 2026-08-23 — 33 → 34, unique channels 224 → 225:**
+- `steamRemoveAllCopies` (sidecar invoke) is registered by
+  `src/backend/sidecar/steamAuthFlowRegistration.ts:317` and mirrored on the Electron runtime
+  at `src/backend/main.ts:946`, so it is genuinely ported on both builds. It was exposed in
+  preload (`src/preload/api/steam.ts:27`, typed at `src/common/types/ipc.ts:307`) and appeared
+  in NO bucket line. Root cause worth recording: it was added by a QUICK TASK
+  (`quick-260821-le0`), which does not run this document's phase-level inventory discipline —
+  the same escape route that let `oauthCaptureLogin` above go unbucketed. Found by
+  `34.5/preload-surface-gate.py`, which had never been wired into CI and so had never run
+  outside the session that wrote it.
 
 ## Phase 34.1 — Slice 4 — app shell and window chrome (33 channels)
 
