@@ -2812,7 +2812,7 @@ Plans:
 
 ### Phase 34.7: Epic device-auth single sign-in path (ON HOLD)
 
-**Status:** ⛔ **ON HOLD 2026-08-22 — the premise is dead.** Operator decision: this phase is the
+**Status:** ⛔ PARKED 2026-08-22 (on hold) — **the premise is dead.** Operator decision: this phase is the
 wrong shape and is not to be planned. It was scheduled on 2026-08-05 on the finding that Epic's
 embedded WebKit login was *permanently* unusable under Tauri — Talon's anti-bot 403 was judged
 unfixable from JS — so device-auth (SIDLogin) would become the single path and the interactive
