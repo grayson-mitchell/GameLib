@@ -4,7 +4,7 @@ title: "Port Heroic small-polish trio: ProgressDialog hideProgress, typos, Game 
 area: ui/polish
 needs: port
 status: CLOSED
-resolved_by: "Direct port, 2026-08-22 — three commits: 966b3944a (a), 30e4ac652 (b, see note), 8b886e178 (c)"
+resolved_by: "Direct port, 2026-08-22 — 966b3944a (a), 30e4ac652 (b, see note), b00e41337 (c, see note)"
 severity: trivial
 upstream:
   - 1f1ef64e0 (Heroic v2.22.1 — Hide ProgressDialog's indeterminate bar when it makes no sense, #5743)
@@ -65,7 +65,9 @@ staged-and-committed the whole tree between this session's `git add` and its `gi
 these four files rode along inside that session's `test(37-04)` commit. Not rewritten — another
 session was live in the repo. This is the known `gsd-sdk-commit-stages-entire-tree` hazard.
 
-**(c) `8b886e178`** — clean.
+**(c) `b00e41337`** — landed with this closure commit. It was first committed cleanly on its
+own as `8b886e178`, but a concurrent session unwound that commit (leaving its changes staged),
+so the very next commit in this session re-captured them. Same hazard as (b), other direction.
 
 **Locale finding (governs (b) and (c)).** Both upstream commits also touch
 `public/locales/en/translation.json`, and that half is **not optional**: the `t(key, default)`
