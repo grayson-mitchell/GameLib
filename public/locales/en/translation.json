@@ -1368,6 +1368,13 @@
                 "title2": "Managing the library!"
             }
         },
+        "nav": {
+            "version": "Check your current GameLib version -- click it to see the latest changelog. You can restart this tour anytime from the Settings panel.",
+            "welcome": {
+                "intro": "Welcome to GameLib! This nav bar contains all the navigation options to explore the app.",
+                "title": "Nav Bar"
+            }
+        },
         "next": "Next",
         "sidebar": {
             "accessibility": "Access accessibility features to customize your experience.",
