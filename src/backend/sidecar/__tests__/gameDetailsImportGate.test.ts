@@ -281,8 +281,17 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // "Steam". The D-09 bottle-launch fix these gates protect
   // (`steamLibrary.has(appName)` in `requestGameSettings`) is untouched;
   // see the semantic-pin test below for that direct proof.
+  // Recomputed 2026-08-22 (IN-01, `34.2-REVIEW.md` round 1): COMMENT-ONLY
+  // change. The `register*Flows()` docstring said "the two settings-read invoke
+  // handlers" -- accurate at Phase 30 plan 06, stale by 10 channels once the
+  // write side and the slice-6 diagnostics channels landed. Verified
+  // comment-only before recomputing: HEAD and the working tree are byte-identical
+  // after stripping block and line comments, so no registration, no argument and
+  // no guard moved. The D-09 bottle-launch gate this digest exists to protect
+  // (`steamLibrary.has(appName)` in `requestGameSettings`) is proven directly and
+  // independently by the semantic-pin test below, which stayed green throughout.
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    '5cc3245e06290db1f7754a7579db862dee5956a893315c21dbf934381ce99ee1'
+    '43afa3fb9f2352ee25a13811958c017c4474445bc0ea468ce67ed29674087351'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')

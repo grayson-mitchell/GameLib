@@ -20,22 +20,20 @@
  * (`registerEnrichmentFlows()`, `enrichmentFlowRegistration.ts` — Phase 34.2
  * Plan 06, D-04/D-07/D-10), the curated shell/files/diagnostics channels
  * (`registerShellFilesFlows()`, `shellFilesFlowRegistration.ts` — Phase 34.3
- * Plan 01, REQ-34.3-01/-02/-13 — the 14 link/reveal openers plus
- * checkDiskSpace/getShellPath/pathExists/removeFolder), the curated clipboard
+ * Plans 01+02, REQ-34.3-01/-02/-13 — the link/reveal openers plus the
+ * filesystem/diagnostics handlers), the curated clipboard
  * channels (`registerClipboardFlows()`, `clipboardFlowRegistration.ts` — Phase
  * 34.3 Plan 06, REQ-34.3-03/-04/-13 — clipboardWriteText/clipboardReadText/
- * copySystemInfoToClipboard, the ONLY three consumers of this slice's two new
- * Rust arms), the curated logger
- * channel (registered by `loggerFlowRegistration.ts` — Phase 34.2 gap cycle 2
- * plan 34.2-16, REQ-34.2-12 — `logError` only, an early port of a Phase
- * 34.3/slice-6 channel; Phase 34.3 must NOT register it again), the curated
+ * copySystemInfoToClipboard, the ONLY consumers of this slice's two new
+ * Rust arms), the curated logger channels (`registerLoggerFlows()`,
+ * `loggerFlowRegistration.ts` — opened by Phase 34.2 gap cycle 2 plan 34.2-16,
+ * REQ-34.2-12, with `logError` alone as an early port of a Phase 34.3/slice-6
+ * channel, then extended by Phase 34.3 plan 04; `logError` itself must never be
+ * registered a second time), the curated
  * Humble library/sync + key-state channels (`registerHumbleFlows()`,
- * `humbleFlowRegistration.ts` — Phase 34.4 Plan 04, REQ-34.4-07 —
- * humbleGetUserInfo/humbleCheckHealth/humbleSync/humbleGetKeys/
- * humbleGetSyncState/humbleGetGiftedAt/humbleMarkRedeemed/
- * humbleUndoRedeemed/humbleGetRevealedKeyValue/humbleGetClaimAnnotations;
+ * `humbleFlowRegistration.ts` — Phase 34.4 Plans 04+05, REQ-34.4-07;
  * curated-imports `humble/user.ts`/`humble/library.ts` directly, never
- * `humble/ipc_handler.ts`, which also registers six channels Phase 34.4.1
+ * `humble/ipc_handler.ts`, which also registers the channels Phase 34.4.1
  * owns), and the two store-layer read handlers (D-03): the eager
  * `sidecar:store-snapshot` (serves the declared `BOOT_SET_STORES`, filtered
  * through the single D-08 allow-list) and the lazy `sidecar:store-fetch`
@@ -47,16 +45,23 @@
  * be asked about already exists (REQ-29-01, 29-RESEARCH Pitfall 6) before
  * any RPC frame can reach a handler body.
  *
- * Phase 34.5 Plan 04 (REQ-34.5-13) stakes this slice's four registration seams as declared,
- * wired, EMPTY contracts — each registers 0 channels today so plans 05-12 each touch exactly
- * one module file instead of contending for this file's import/call blocks. Every seam's full
+ * Phase 34.5 Plan 04 (REQ-34.5-13) staked this slice's four registration seams as declared,
+ * wired, EMPTY contracts, so plans 05-12 could each touch exactly one module file instead of
+ * contending for this file's import/call blocks. All four are populated now. Every seam's
  * channel list, source line, and registration kind is pinned in its own module's header
- * docstring (`runnerAuthFlowRegistration.ts` 11 channels/plans 34.5-06/34.5-10/REQ-34.5-04;
- * `wineToolsFlowRegistration.ts` 9 channels/plans 34.5-05/34.5-09/REQ-34.5-03;
- * `shortcutsFlowRegistration.ts` 7 channels/plans 34.5-08/34.5-11/REQ-34.5-05;
- * `runnerMiscFlowRegistration.ts` 11 channels/plans 34.5-07/34.5-12/REQ-34.5-06/-07/-08/-09),
+ * docstring (`runnerAuthFlowRegistration.ts`, plans 34.5-06/34.5-10/REQ-34.5-04;
+ * `wineToolsFlowRegistration.ts`, plans 34.5-05/34.5-09/REQ-34.5-03;
+ * `shortcutsFlowRegistration.ts`, plans 34.5-08/34.5-11/REQ-34.5-05;
+ * `runnerMiscFlowRegistration.ts`, plans 34.5-07/34.5-12/REQ-34.5-06/-07/-08/-09),
  * and cross-checked (import called exactly once, curated-import guard, containment pin) by
  * `__tests__/runnerSliceRegistration.test.ts`.
+ *
+ * IN-01 (34.2-REVIEW.md round 1): channel COUNTS deliberately do not appear in this file,
+ * neither here nor in the call-site comments below. Five of the ten counts this file used to
+ * carry had gone stale — the review found one of them. Each count now lives in exactly one
+ * place, its own module's `register*Flows()` docstring, and
+ * `__tests__/flowRegistrationCensus.test.ts` gates every one of them against the actual
+ * `ipcMain.handle`/`ipcMain.on` registrations in that module.
  *
  * Uses electronStub's own `ipcMain` directly (not `backend/ipc`'s typed
  * `addHandler`) because none of this file's channels are entries in the
@@ -116,15 +121,13 @@ registerSettingsFlows()
 // is the only backend channel that reaches `dialog.showOpenDialog`, and its sole other
 // caller (`main.ts`) is not in the sidecar's import graph.
 registerDialogFlows()
-// Phase 32 Plan 01: the five queue-management channels (pause/resume/cancel/
-// remove/inspect) — no ordering constraint relative to the other four calls
-// above (each module owns its own channel names, no cross-module runtime
+// Phase 32 Plan 01: the queue-management channels — no ordering constraint
+// relative to the other four calls above (each module owns its own channel
+// names, no cross-module runtime
 // dependency at registration time); placed alongside them, before
 // `ensureStoresRegistered()` (32-PATTERNS.md).
 registerDownloadQueueFlows()
-// Phase 34.1 Plan 04: the 18 app-shell channels (themes, version/changelog,
-// isIntelMac, changeLanguage, notify/quit/open*, abort, lock/unlock,
-// setTitleBarOverlay, getWebviewPreloadPath) — no ordering constraint
+// Phase 34.1 Plan 04: the app-shell channels — no ordering constraint
 // relative to the other calls above (own channel names, no cross-module
 // runtime dependency at registration time), placed alongside them, before
 // `ensureStoresRegistered()`.
@@ -140,40 +143,36 @@ registerDownloadQueueFlows()
 registerAppShellFlows({
   skipInitialTraySync: process.env.JEST_WORKER_ID !== undefined
 })
-// Phase 34.2 Plan 04: the 15 invoke-kind game-details/settings/override
-// channels — no ordering constraint relative to the other calls above (own
+// Phase 34.2 Plans 04+05: the game-details/settings/override channels — no
+// ordering constraint relative to the other calls above (own
 // channel names, no cross-module runtime dependency at registration time),
 // placed alongside them, before `ensureStoresRegistered()`.
 registerGameDetailsFlows()
-// Phase 34.2 Plan 06: the 8 enrichment channels (getWikiGameInfo,
-// getAnticheatInfo, getKnownFixes, getCrossoverIndex, searchStores,
-// getStoreSearchDeals, getStoreSearchStoreMap, removeRecent) — no ordering
+// Phase 34.2 Plan 06: the enrichment channels — no ordering
 // constraint relative to the other calls above (own channel names, no
 // cross-module runtime dependency at registration time), placed alongside
 // them, before `ensureStoresRegistered()`. `wiki_game_info/electronStore`
 // is already registered by `storeRegistration.ts:104` (Phase 29), so this
 // module needs no new store plumbing.
 registerEnrichmentFlows()
-// Phase 34.3 Plan 01 (REQ-34.3-01/-02/-13): the 15 send-kind shell/link-opener
-// channels (12 URL openers, showConfigFileInFolder, showItemInFolder,
-// removeFolder) plus the 3 invoke-kind filesystem/diagnostics channels
-// (checkDiskSpace, getShellPath, pathExists) — no ordering constraint
+// Phase 34.3 Plans 01+02 (REQ-34.3-01/-02/-13): the shell/link-opener and
+// filesystem/diagnostics channels — no ordering constraint
 // relative to the other calls above (own channel names, no cross-module
 // runtime dependency at registration time), placed alongside them, before
 // `ensureStoresRegistered()`.
 registerShellFilesFlows()
-// Phase 34.3 Plan 06 (REQ-34.3-03/-04/-13): the 3 clipboard channels
-// (clipboardWriteText, clipboardReadText, copySystemInfoToClipboard) — the ONLY
-// three consumers of this slice's two new dispatch_rust_channel arms
+// Phase 34.3 Plan 06 (REQ-34.3-03/-04/-13): the clipboard channels — the ONLY
+// consumers of this slice's two new dispatch_rust_channel arms
 // (clipboard_write_text/clipboard_read_text, Plan 03). No ordering constraint
 // relative to the other calls above (own channel names, no cross-module runtime
 // dependency at registration time), placed alongside them, before
 // `ensureStoresRegistered()`.
 registerClipboardFlows()
-// Phase 34.2 gap cycle 2, plan 34.2-16 (REQ-34.2-12): the single `logError`
-// send channel, ported early from its Phase 34.3/slice-6 slot because gap
-// cycle 1's renderer repair-failure handler now routes through it — an
-// unregistered `send` channel is a total silent no-op under Tauri. Declared
+// Phase 34.2 gap cycle 2, plan 34.2-16 (REQ-34.2-12), extended by Phase 34.3
+// plan 04: the logger channels. `logError` was ported early from its Phase
+// 34.3/slice-6 slot because gap cycle 1's renderer repair-failure handler
+// routes through it — an unregistered `send` channel is a total silent no-op
+// under Tauri. Declared
 // in both `.planning/IPC-PORT-INVENTORY.md` and this slice's own
 // `34.2-PORTED-CHANNELS.md` (§7 gap-cycle-2 subsection, plan 34.2-16 Task 3)
 // so Phase 34.3 does not register `logError` a second time — a duplicate
@@ -182,37 +181,33 @@ registerClipboardFlows()
 // calls above (own channel name, no cross-module runtime dependency at
 // registration time), placed alongside them, before `ensureStoresRegistered()`.
 registerLoggerFlows()
-// Phase 34.4 Plan 04 (REQ-34.4-07): the 10 library/sync + key-state Humble
-// channels (humbleGetUserInfo, humbleCheckHealth, humbleSync, humbleGetKeys,
-// humbleGetSyncState, humbleGetGiftedAt, humbleMarkRedeemed,
-// humbleUndoRedeemed, humbleGetRevealedKeyValue, humbleGetClaimAnnotations)
-// — no ordering constraint relative to the other calls above (own channel
+// Phase 34.4 Plans 04+05 (REQ-34.4-07): the library/sync + key-state Humble
+// channels — no ordering constraint relative to the other calls above (own channel
 // names, no cross-module runtime dependency at registration time), placed
 // alongside them, before `ensureStoresRegistered()`. Every store this module
 // needs (all 9 Humble stores) is already registered by storeRegistration.ts
 // — zero new store plumbing.
 registerHumbleFlows()
-// Phase 34.4.1 Plan 02 (REQ-34.4.1-02/-03/-04/-05/-13): the 6 browser-auth channels
-// (humbleStartLogin, humbleReconnect, humbleGetLoginUserAgent, humbleRevealKey,
-// humbleStopLogin, humbleLoginNavigated) plus installing the rustInvoke-backed
-// login-window seam (setLoginWindowSeam) — no ordering constraint relative to the
+// Phase 34.4.1 Plan 02 (REQ-34.4.1-02/-03/-04/-05/-13): the browser-auth channels,
+// plus installing the rustInvoke-backed login-window seam (setLoginWindowSeam)
+// — no ordering constraint relative to the
 // other calls above (own channel names, no cross-module runtime dependency at
 // registration time), placed alongside them, before `ensureStoresRegistered()`.
 registerHumbleLoginFlows()
-// Phase 34.4.1 Plan 09 (REQ-34.4.1-08): the single `oauthCaptureLogin` handle channel that
+// Phase 34.4.1 Plan 09 (REQ-34.4.1-08): the `oauthCaptureLogin` handle channel, which
 // drives the four OAuth runners' (legendary/gog/nile/zoom) redirect capture through the SAME
 // login-window seam Humble already installed above -- a completely separate concern from
-// Humble's own six browser-auth channels (this captures a redirect code, it does not
+// Humble's own browser-auth channels (this captures a redirect code, it does not
 // authenticate). No ordering constraint relative to the other calls above (own channel name,
 // no cross-module runtime dependency at registration time), placed alongside them, before
 // `ensureStoresRegistered()`.
 registerOAuthLoginFlows()
-// Phase 34.5 Plan 04 (REQ-34.5-13): the four declared-but-EMPTY registration seams for this
-// slice's 38 channels (runner auth/sign-out, Wine tools, shortcuts, runner misc). Each call
-// registers 0 channels today — the cluster plans (34.5-05 through 34.5-12) fill these in one
-// module at a time. No ordering constraint relative to the other calls above (own channel
-// names once populated, no cross-module runtime dependency at registration time), placed
-// alongside them, before `ensureStoresRegistered()`.
+// Phase 34.5 Plan 04 (REQ-34.5-13): the four slice-34.5 clusters — runner auth/sign-out,
+// Wine tools, shortcuts, runner misc. Declared here as EMPTY seams by plan 34.5-04 and
+// filled in one module at a time by the cluster plans (34.5-05 through 34.5-12); all four
+// are populated now. No ordering constraint relative to the other calls above (own channel
+// names, no cross-module runtime dependency at registration time), placed alongside them,
+// before `ensureStoresRegistered()`.
 registerRunnerAuthFlows()
 registerWineToolsFlows()
 registerShortcutsFlows()

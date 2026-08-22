@@ -112,7 +112,10 @@ function isContainedGameConfig(appName: string): boolean {
 }
 
 /**
- * Registers the two settings-read invoke handlers. Called once from
+ * Registers the 12 settings read/write channels (11 invoke + 1 send:
+ * `setSetting`). The name "the two settings-read invoke handlers" described
+ * this module at Phase 30 plan 06 and was never updated as the write side and
+ * the slice-6 diagnostics channels landed. Called once from
  * `handlers.ts` — this module owns no side effects at import time beyond the
  * imports above; the caller decides when registration onto the handler
  * registry happens.

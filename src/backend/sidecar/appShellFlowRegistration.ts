@@ -2,7 +2,7 @@
  * Curated app-shell channel registration (Phase 34.1 Plan 04,
  * D-03/D-08/D-09/D-13, REQ-34.1-05/REQ-34.1-09/REQ-34.1-12).
  *
- * Registers the 18 sidecar-routed app-shell channels onto electronStub's
+ * Registers the 19 sidecar-routed app-shell channels (8 invoke + 11 send) onto electronStub's
  * `ipcMain` recorder, importing the REAL `backend/appshell/*` functions
  * extracted by Plan 34.1-02 unchanged (mirrors `installFlowRegistration.ts`'s
  * / `settingsFlowRegistration.ts`'s own objective — prove the real logic runs
@@ -150,7 +150,8 @@ function syncTrayIcon(): void {
 }
 
 /**
- * Registers the 18 app-shell channels. Called once from `handlers.ts` — this
+ * Registers the 19 app-shell channels (8 invoke + 11 send). Called once from
+ * `handlers.ts` — this
  * module owns no side effects at import time beyond the imports above; the
  * caller decides when registration onto the handler registry happens.
  *

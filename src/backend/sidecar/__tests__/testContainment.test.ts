@@ -679,6 +679,16 @@ const IN_SCOPE_SUITES = [
  * of the four-element `pathShim`/`backend/logger/paths` kit Block B gates on. A `readdirSync`
  * recount at this task's execution time puts the directory at 47 `*.test.ts` files:
  * 4 `IN_SCOPE_SUITES` + 43 below.
+ *
+ * `flowRegistrationCensus.test.ts` (IN-01, `34.2-REVIEW.md` round 1) is classified
+ * structurally contained on the same floor as `externalDynamicImportGate.test.ts`: it declares
+ * NO `jest.mock(...)` of any kind and imports no backend module. It reads the sidecar's own
+ * `*FlowRegistration.ts` and `handlers.ts` sources off disk through plain
+ * `fs.readdirSync`/`fs.readFileSync` rooted at `__dirname`, counts `ipcMain.handle`/`ipcMain.on`
+ * call sites textually, and never requires or executes any of them -- so no
+ * `electron`/`electron-store`/`pathShim` import chain exists to contain in the first place, and
+ * nothing it touches resolves through `homedir()`. A `readdirSync` recount at this task's
+ * execution time puts the directory at 48 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 44 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -694,6 +704,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'electronUntouched.test.ts',
   'externalDynamicImportGate.test.ts',
   'fileStore.test.ts',
+  'flowRegistrationCensus.test.ts',
   'gameDetailsImportGate.test.ts',
   'humbleFlows.test.ts',
   'humbleLoginFlows.test.ts',

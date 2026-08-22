@@ -194,7 +194,12 @@ import {
 } from '../logger/uploader'
 
 /**
- * Registers the single `logError` channel. Called once from `handlers.ts` —
+ * Registers the 6 logger channels (3 invoke: uploadLogFile,
+ * deleteUploadedLogFile, getUploadedLogFiles; 3 send: logError, logInfo,
+ * showLogFileInFolder). The module began life at `logError` alone -- ported
+ * early from slice 6 by plan 34.2-16 -- and grew in Phase 34.3 plan 04; the
+ * docstring said "the single `logError` channel" for both of those plans
+ * afterwards. Called once from `handlers.ts` —
  * this module owns no side effects at import time beyond the imports above;
  * the caller decides when registration onto the handler registry happens.
  */
