@@ -182,10 +182,26 @@ Verification: wiki_game_info 54/54 across 7 suites, RED-proven against the unfix
 **Item 1** (User-Agent) was already done and is re-confirmed present at `src/backend/utils.ts:1696`.
 
 **Item 3** (give HLTB a title-based fallback so it does not depend on PCGamingWiki's ID) is marked
-optional in this todo and was NOT done. It remains a real, un-actioned improvement — if it should
-survive this todo's closure, re-file it.
+optional in this todo and was NOT done. It is a real, un-actioned improvement, so it has been
+**re-filed on its own** rather than closed along with this todo:
+`.planning/todos/pending/2026-08-22-hltb-has-no-title-fallback-without-a-pcgamingwiki-id.md`.
 
-**The secondary finding in this todo is also still open:** `GamePage/index.tsx:308` accepts a result
-into state only when `applegamingwiki || howlongtobeat || pcgamingwiki`, while `hasWikiInfo` (`:429`)
-treats `steamInfo` as sufficient — so a `steamInfo`-only result (reachable on Linux) is discarded by
-the setter despite satisfying the tab condition. Untouched here; out of scope for item 2.
+Note for anyone reading item 3 above: its premise is now only half true. The PCGamingWiki 403 is
+fixed, but the SECOND failure mode survives it — an article that responds fine yet carries no HLTB
+ID still yields no playtime, permanently, for every non-GOG game. That is what the new todo covers.
+
+**CORRECTION (same day).** An earlier draft of this section claimed the "Secondary finding" above
+was still open. **It is not — it is already fixed**, and that claim was made by trusting this
+todo's own prose instead of re-reading the file. Verified at HEAD:
+
+- `GamePage/index.tsx:309-313` now reads "Accept ANY non-null result, matching `refreshWikiInfo`
+  below. The previous gate (applegamingwiki || howlongtobeat || pcgamingwiki) discarded two useful
+  shapes: a steamInfo-only result, which is what Linux gets..." — i.e. the exact asymmetry the
+  Secondary finding describes was removed.
+- `GamePage/index.tsx:432-436` further records that `hasWikiInfo` "no longer gates whether the Extra
+  info TAB renders — the tab is now always present", so the downstream half of that finding is gone
+  too. It now only chooses between real rows and `WikiInfoEmptyState`.
+
+Do not action the Secondary finding. Leaving this correction in place rather than deleting the
+paragraph, because the stale claim was already committed once and a silent edit would not tell the
+next reader that the todo's own prose is what misled it.
