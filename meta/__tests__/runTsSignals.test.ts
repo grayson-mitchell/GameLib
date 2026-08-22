@@ -319,4 +319,61 @@ describe('meta/runTs.cjs signal forwarding (C4-01/C4-02/C4-04)', () => {
       }
     }
   }, 30000)
+
+  test('T8 (C5-01 regression pin): SIGTERM delivered inside a widened post-mkdtempSync window is still handled cleanly, no tmpdir survivor', async () => {
+    const source = readFileSync(WRAPPER, 'utf8')
+    const MARKER =
+      "tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gamelib-runts-'))"
+
+    // If this marker is ever renamed or the assignment shape changes, this
+    // assertion must go red, not silently pass -- same idiom as T5/T7.
+    expect(source.split(MARKER).length - 1).toBe(1)
+
+    // Splice an 800ms busy-wait immediately after mkdtempSync -- the
+    // reviewer's own reproduction technique for C5-01, widening a window
+    // that in normal execution is only a few statements wide into
+    // something a signal can reliably land inside. In the FIXED wrapper
+    // this busy-wait lands AFTER `process.on('exit', cleanup)` and the
+    // FORWARDED_SIGNALS loop are already registered (mkdtempSync now runs
+    // last), so this proves a signal arriving in that widened window is
+    // still handled cleanly -- not that no window exists at all.
+    //
+    // RED half (recorded manually during execution, not encoded as a
+    // permanent control here without committing a second copy of the
+    // wrapper into the tree): the identical busy-wait spliced into the
+    // PRE-fix ordering (mkdtempSync first, handler registration after)
+    // reproduced the original C5-01 leak against this exact technique --
+    // SIGTERM delivered at the same 150ms mark was answered by Node's
+    // default disposition (`{code: null, signal: 'SIGTERM'}`), no 'exit'
+    // event ran, and the tmpdir survived on disk. See the SUMMARY for the
+    // exact observed output.
+    const probeSource = source.replace(
+      MARKER,
+      MARKER +
+        "\n  { const _busyUntil = Date.now() + 800; while (Date.now() < _busyUntil) { /* T8 probe: widen post-mkdtempSync window */ } }"
+    )
+    writeFileSync(PROBE_PATH, probeSource)
+    // Must parse before we spawn it.
+    execFileSync(process.execPath, ['--check', PROBE_PATH], {
+      stdio: 'pipe'
+    })
+
+    const beforeDirs = listRunTsDirs()
+    const { wrapperChild, closed } = launch(FIXTURE, PROBE_PATH)
+
+    // Deliver SIGTERM well inside the 800ms busy-wait window -- deliberately
+    // before esbuild/the fixture would even have started, since landing
+    // inside the window (not after it) is the entire point.
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    wrapperChild.kill('SIGTERM')
+
+    const { code, signal } = await closed
+
+    expect(code).toBe(143)
+    expect(signal).toBeNull()
+
+    const afterDirs = listRunTsDirs()
+    const leaked = [...afterDirs].filter((dir) => !beforeDirs.has(dir))
+    expect(leaked).toEqual([])
+  }, 30000)
 })

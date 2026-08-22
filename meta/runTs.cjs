@@ -113,26 +113,49 @@ async function main() {
     process.argv.slice(2)
   )
 
-  // Private per-invocation directory -- never a constructed or predictable
-  // path. A predictable name under the shared os.tmpdir() would be
-  // pre-creatable as a symlink by another local user (T-34.9-C4-01).
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gamelib-runts-'))
+  // C5-01: every binding the signal handlers below can reach is declared
+  // and initialised HERE, before those handlers are registered, and before
+  // the tmpdir they protect is created. A signal delivered in the window
+  // between process start and `mkdtempSync` must find working handlers
+  // already installed -- if it instead finds Node's default disposition
+  // (no handler yet), the process is terminated immediately with NO 'exit'
+  // event and NO chance for any cleanup to run (measured empirically: see
+  // meta/__tests__/runTsSignals.test.ts T7). Before this fix, the handler
+  // registration loop ran AFTER `mkdtempSync`, leaving exactly that window
+  // open; a signal landing inside it leaked the tmpdir with nothing to show
+  // for it. `tmpDir` is therefore a mutable `let` initialised to `null`
+  // here and assigned its real value only once mkdtempSync actually runs,
+  // a few lines below -- do NOT "tidy" this back to a `const` initialised
+  // at its mkdtempSync call site; that silently reopens C5-01 by moving
+  // tmpDir's declaration (and therefore the handlers that close over it)
+  // back after the vulnerable window.
+  let tmpDir = null
+  let cleaned = false
+  let currentChild = null
+  let escalationTimer = null
+  let terminatingSignal = null
 
   // Idempotent cleanup (C4-02/C4-03): the async rewrite makes double-entry
   // reachable (a signal handler can clean up and exit, and separately the
   // child's own 'close' handler can run), so `cleaned` guards against a
-  // second `fs.rmSync`. Cleanup is also registered on Node's 'exit' event
-  // (D6) as a second, independent guarantee that covers process.exit() calls
-  // this file forgets to route through cleanupAndExit and the
-  // uncaughtException case (Node prints its own diagnostic, then emits
-  // 'exit', so a sync rmSync here never suppresses that diagnostic). The
-  // try/catch inside cleanup() matters specifically because this runs
-  // inside an 'exit' listener -- a throw there would mask the real failure
-  // that was already in flight.
-  let cleaned = false
+  // second `fs.rmSync`. `tmpDir === null` is a correct, non-error outcome
+  // here too (C5-01): a signal arriving before `mkdtempSync` has run means
+  // there is genuinely nothing on disk yet to remove, not a swallowed
+  // failure. Cleanup is also registered on Node's 'exit' event (D6) as a
+  // second, independent guarantee that covers process.exit() calls this
+  // file forgets to route through cleanupAndExit and the uncaughtException
+  // case (Node prints its own diagnostic, then emits 'exit', so a sync
+  // rmSync here never suppresses that diagnostic) -- but 'exit' is a
+  // backstop for THOSE paths only, not for default-disposition signal
+  // termination, which (per C5-01's own finding) emits no 'exit' event at
+  // all; the forwarded-signal handlers below are what actually close that
+  // gap. The try/catch inside cleanup() matters specifically because this
+  // runs inside an 'exit' listener -- a throw there would mask the real
+  // failure that was already in flight.
   function cleanup() {
     if (cleaned) return
     cleaned = true
+    if (tmpDir === null) return
     try {
       fs.rmSync(tmpDir, { recursive: true, force: true })
     } catch {
@@ -151,10 +174,6 @@ async function main() {
     cleanup()
     process.exit(code)
   }
-
-  let currentChild = null
-  let escalationTimer = null
-  let terminatingSignal = null
 
   for (const sig of FORWARDED_SIGNALS) {
     process.on(sig, () => {
@@ -191,6 +210,16 @@ async function main() {
       }
     })
   }
+
+  // Private per-invocation directory -- never a constructed or predictable
+  // path. A predictable name under the shared os.tmpdir() would be
+  // pre-creatable as a symlink by another local user (T-34.9-C4-01).
+  // Assigned only now, AFTER cleanup/cleanupAndExit are defined and the
+  // 'exit' + forwarded-signal handlers are registered (C5-01) -- every
+  // handler that could possibly run has already been installed by the time
+  // this directory exists, so there is no window left in which a signal
+  // finds no handler and bypasses cleanup entirely.
+  tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gamelib-runts-'))
 
   // Runs `cmd` asynchronously with inherited stdio, tracking it as
   // `currentChild` so the signal handlers above can reach it. Resolves once
