@@ -984,6 +984,7 @@ export default React.memo(function Library(): JSX.Element {
     setCurrentCollectionPersisted(null)
     handleShowHidden('off')
     handleShowNonAvailable('off')
+    handleNoStorePage('off')
     handleShowSupportOfflineOnly(false)
     handleShowThirdPartyOnly(false)
     handleShowUpdatesOnly(false)
