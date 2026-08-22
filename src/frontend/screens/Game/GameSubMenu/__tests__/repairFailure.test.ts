@@ -323,6 +323,24 @@ describe('reportRepairFailure (gap cycle 2, CR-01 renderer half)', () => {
       ]
       expect(options.title.length).toBeGreaterThan(0)
       expect(options.message.length).toBeGreaterThan(0)
+
+      // WR-03 (gap cycle 4, added 2026-08-23): this test used to stop at the
+      // two length checks above, so the `t()` guard's silence was unpinned --
+      // its sibling Test 4 asserted a diagnostic for the showDialogModal
+      // guard, and this one did not. A broken translation catalogue must be
+      // diagnosable, not merely survivable.
+      const diagnosticCall = consoleErrorSpy.mock.calls.find(
+        ([first]) =>
+          typeof first === 'string' &&
+          first.includes('repair-failure translation signal unavailable')
+      )
+      expect(diagnosticCall).toBeDefined()
+
+      // T-34.2-52: the diagnostic carries the failure as a SECOND ARGUMENT,
+      // never interpolated into the string, and never into the dialog.
+      expect(diagnosticCall?.[1]).toBeInstanceOf(Error)
+      expect(options.title).not.toContain('translation exploded')
+      expect(options.message).not.toContain('translation exploded')
     })
 
     // RED-PROOF (confirmed by hand): the throw from showDialogModal

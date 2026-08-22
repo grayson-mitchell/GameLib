@@ -52,11 +52,30 @@ interface ReportRepairFailureOptions {
  * only true for signals 1 and 2 (WR-06, gap cycle 4): signal 3's
  * `showDialogModal`/`t` calls were unguarded, so a throwing caller-supplied
  * dependency there still escaped this function into the un-awaited
- * dialog-button handler at `index.tsx:158`. Every signal now catches its own
- * failure and emits a named diagnostic to `console.error` rather than
- * disappearing -- under Tauri the likely cause of signal 2 failing is that
- * the preload factory did not attach `window.api.logError`, not that the log
- * write itself failed, and that distinction is itself useful information.
+ * dialog-button handler at `index.tsx:158`. Each of the three signals now
+ * catches its own failure and emits a named diagnostic to `console.error`
+ * rather than disappearing -- under Tauri the likely cause of signal 2
+ * failing is that the preload factory did not attach `window.api.logError`,
+ * not that the log write itself failed, and that distinction is itself
+ * useful information.
+ *
+ * Two catches in this function are DELIBERATELY silent, and the claim above
+ * is scoped to the three signals precisely so it does not cover them (WR-03,
+ * gap cycle 4 -- this docstring previously said "every signal", which read as
+ * a claim about every `catch` and was false):
+ *
+ *   - the stringification guard: its whole output IS the diagnostic. The
+ *     hardcoded `'<unstringifiable error>'` fallback flows into signal 2's log
+ *     line as `repair failed for X: <unstringifiable error>`, so the failure
+ *     is already recorded downstream. A console diagnostic would duplicate it.
+ *   - the signal-1 guard: signal 1 IS `console.error`. Reporting a
+ *     `console.error` failure by calling `console.error` is self-defeating, so
+ *     there is nowhere left to report it. Signals 2 and 3 still fire, which is
+ *     the actual mitigation.
+ *
+ * The `t()` guard was a third silent catch until 2026-08-23 and is NOT in that
+ * category -- nothing downstream recorded a broken translation catalogue, so
+ * it now emits its own diagnostic.
  *
  * T-34.2-52 (information disclosure): the dialog message is a FIXED
  * translated string only. Backend error text routinely carries absolute
@@ -65,9 +84,11 @@ interface ReportRepairFailureOptions {
  * that class of data), never into a rendered dialog a user might screenshot
  * or share. Unchanged by the WR-03 hardening -- the precomputed error text
  * is used only for `window.api.logError`, never for the dialog message. The
- * two WR-06 diagnostics below extend this guarantee: both go to
- * `console.error` only, carrying the caller-supplied failure object as an
- * argument, and never enter the dialog message.
+ * three guard diagnostics below (log signal, translation signal, dialog
+ * signal) extend this guarantee: each goes to `console.error` only, carrying
+ * the caller-supplied failure object as a second ARGUMENT rather than
+ * interpolating it, and none enters the dialog message. Counted deliberately
+ * -- this said "two" until the translation diagnostic was added 2026-08-23.
  *
  * T-34.2-53 (denial of service): this function performs three
  * individually-guarded, non-async calls with no await and no rethrow -- it
@@ -115,9 +136,18 @@ export function reportRepairFailure({
   try {
     title = t('box.error.title', title)
     message = t('box.repair.error', message)
-  } catch {
-    // keep the hardcoded English fallback -- a throwing `t` must still
-    // yield a rendered dialog
+  } catch (tErr) {
+    // WR-03 (gap cycle 4): never silent. A throwing `t` means the translation
+    // catalogue is broken -- the user still gets a rendered dialog thanks to
+    // the hardcoded English fallbacks above, but WHY it is untranslated was
+    // previously recorded nowhere at all. `tErr` is passed as a second
+    // ARGUMENT, never interpolated, so T-34.2-52 holds: this reaches the
+    // console only and never the dialog message.
+    try {
+      console.error('repair-failure translation signal unavailable:', tErr)
+    } catch {
+      // this diagnostic must never itself become a new throw path
+    }
   }
 
   try {
