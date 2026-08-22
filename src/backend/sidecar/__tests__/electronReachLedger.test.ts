@@ -392,9 +392,19 @@ function computeElectronReach(
   const electronImportingFiles = new Set<string>()
   const queue: string[] = entryPoints.map((entry) => resolve(entry))
 
-  while (queue.length > 0) {
-    const current = queue.shift()
-    if (current === undefined) break
+  // IN-02 (Phase 34.2 gap cycle 1): this was `while (queue.length > 0)` with a
+  // `const current = queue.shift(); if (current === undefined) break` inside --
+  // a branch that could never be taken, because the loop condition already
+  // guaranteed a non-empty queue. Unreachable code inside a file whose stated
+  // purpose is proving this walk does not silently short-circuit.
+  //
+  // Rewritten so the undefined check IS the loop condition: the same guarantee,
+  // with no dead branch and no non-null assertion.
+  for (
+    let current = queue.shift();
+    current !== undefined;
+    current = queue.shift()
+  ) {
     if (visited.has(current)) continue
     visited.add(current)
 

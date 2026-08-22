@@ -434,6 +434,26 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
     )
     const realTranslatedDefault = gamepageResources.launch.default
 
+    // WR-06 (Phase 34.2 gap cycle 1): comparing against `realTranslatedDefault`
+    // alone STILL cannot distinguish "i18next loaded its resources" from "the
+    // inline English default rescued us". Measured: `gamepage.json`'s
+    // `launch.default` is "Default", byte-identical to the inline default in
+    // `i18next.t('launch.default', 'Default', { ns: 'gamepage' })`, so both
+    // paths render the same string and the assertion below passes either way.
+    // This is the same shape as G-34.2-UAT-01 (a UAT step that could not fail
+    // because `notify.error.reparing`'s locale value equals its own hardcoded
+    // default) -- the third instance of it in this phase.
+    //
+    // The discriminating property, asserted directly: with a sentinel default
+    // that appears NOWHERE in the locale file, a live i18next returns the
+    // locale value and a dead one returns the sentinel. Nothing about this
+    // depends on the two strings happening to differ.
+    expect(
+      i18next.t('launch.default', 'WR-06-SENTINEL-NOT-A-TRANSLATION', {
+        ns: 'gamepage'
+      })
+    ).toBe(realTranslatedDefault)
+
     const result = await getLaunchOptions('440', 'steam')
 
     expect(result).toHaveLength(2)

@@ -686,6 +686,49 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       expect(initCallIndex).toBeGreaterThan(-1)
       expect(guardCallIndex).toBeLessThan(initCallIndex)
     })
+
+    it('WR-04 the guard side-effect import precedes the bootstrap import, which is what actually orders them', () => {
+      // The assertion above compares the two CALL sites and passes on textual
+      // order. It cannot see the real defect gap cycle 1's WR-04 reported: ES
+      // module evaluation runs every import before any statement in the body,
+      // so `import { init } from 'backend/sidecar/bootstrap'` evaluated
+      // bootstrap's entire transitive module scope BEFORE the guard call in the
+      // body ever ran. Call order was right; evaluation order was not.
+      //
+      // What orders them is import order, so that is what this pins.
+      const source = readFileSync(
+        resolve(__dirname, '../../../sidecar/index.ts'),
+        'utf-8'
+      )
+      const stripped = stripComments(source)
+
+      const guardImportIndex = stripped.indexOf(
+        "import './installRejectionGuardFirst'"
+      )
+      const bootstrapImportIndex = stripped.indexOf(
+        "from 'backend/sidecar/bootstrap'"
+      )
+
+      // Non-vacuity: both must actually be found. A renamed file would
+      // otherwise leave two -1s and a passing `<` comparison.
+      expect(guardImportIndex).toBeGreaterThan(-1)
+      expect(bootstrapImportIndex).toBeGreaterThan(-1)
+      expect(guardImportIndex).toBeLessThan(bootstrapImportIndex)
+    })
+
+    it('WR-04 the guard module installs at MODULE SCOPE, not behind a function', () => {
+      // The property that makes the import above load-bearing. If someone
+      // wrapped the call in an exported function, the import would evaluate and
+      // install nothing, and the order assertion above would still pass.
+      const source = readFileSync(
+        resolve(__dirname, '../../../sidecar/installRejectionGuardFirst.ts'),
+        'utf-8'
+      )
+      const stripped = stripComments(source)
+
+      expect(stripped).toContain('installUnhandledRejectionGuard()')
+      expect(stripped).not.toMatch(/export\s+(function|const|default)/)
+    })
   })
 
   describe('Group 4: gap-cycle-2 hygiene guards (IN-03, IN-06)', () => {

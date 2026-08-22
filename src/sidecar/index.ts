@@ -36,6 +36,12 @@
  * `SELFTEST ...` lines to it.
  */
 
+// WR-04: MUST stay the first import. Installing the unhandledRejection guard is
+// this module's only job, and importing it here — ahead of `bootstrap` — is what
+// makes the guard live before bootstrap's module scope is evaluated. Moving or
+// reordering this line silently reopens the gap; `sidecarRejectionGuard.test.ts`
+// Group 3 pins the order.
+import './installRejectionGuardFirst'
 import { init } from 'backend/sidecar/bootstrap'
 import { installUnhandledRejectionGuard } from 'backend/sidecar/processGuards'
 import { runDecompressPoolSelfTest } from 'backend/storeManagers/steam/depot/decompressPoolSelfTest'
@@ -43,6 +49,11 @@ import { runDecompressPoolSelfTest } from 'backend/storeManagers/steam/depot/dec
 if (process.env.GAMELIB_SIDECAR_SELFTEST === 'decompress-pool') {
   void runDecompressPoolSelfTest().then((code) => process.exit(code))
 } else {
+  // Retained deliberately after the WR-04 fix, and now a NO-OP: the guard is
+  // already installed by the side-effect import above, and
+  // `installUnhandledRejectionGuard` is idempotent (`processGuards.ts:56`).
+  // Kept as defence in depth for the case where the import above is dropped,
+  // and because the Group 3 call-order assertion still reads it.
   installUnhandledRejectionGuard()
   init()
 }

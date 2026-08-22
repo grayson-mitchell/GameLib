@@ -27,6 +27,26 @@ import { readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
+/**
+ * WR-02 (Phase 34.2 gap cycle 1): the two sha256 gates below used to hash the
+ * file's RAW BYTES. `.gitattributes` carries no `text=auto eol=lf`, so a
+ * checkout on Windows with Git's default `core.autocrlf=true` yields CRLF and
+ * both digests differ from the committed constants -- a gate failing for a
+ * reason that has nothing to do with the content it exists to protect.
+ *
+ * CI cannot catch this: `.github/workflows/test.yml` runs `pnpm test:ci` on
+ * `ubuntu-latest` only. It would surface as a confusing local red for a Windows
+ * contributor, on a repo that ships a Windows build.
+ *
+ * Normalising leaves the committed digests UNCHANGED on an LF checkout -- CRLF
+ * collapses to LF, and an already-LF file is byte-identical -- so this is purely
+ * defensive and the pins keep their existing values.
+ */
+function normaliseLineEndings(text: string): string {
+  return text.replace(/\r\n/g, '\n')
+}
+
+
 // Comment-stripping now delegates to the shared
 // `backend/testUtils/stripSourceComments` util (strips block comments first,
 // then the line-prefix filter), imported above as `stripComments`.
@@ -296,7 +316,7 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
     const digest = createHash('sha256')
-      .update(readFileSync(filePath))
+      .update(normaliseLineEndings(readFileSync(filePath, 'utf-8')))
       .digest('hex')
 
     // If this fails because the file was DELIBERATELY edited: this file
@@ -379,7 +399,7 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   it('REQ-34.2-14 Gate 8: electronUntouched.test.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, 'electronUntouched.test.ts')
     const digest = createHash('sha256')
-      .update(readFileSync(filePath))
+      .update(normaliseLineEndings(readFileSync(filePath, 'utf-8')))
       .digest('hex')
 
     // If this fails because the file was DELIBERATELY edited: this is Phase

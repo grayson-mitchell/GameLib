@@ -163,7 +163,7 @@ CYCLE5_DEFERRED_FINDING_TOKENS: list[str] = []
 # satisfied by any round's IN-04 appearing anywhere in the section.
 # ---------------------------------------------------------------------------
 
-LATE_RECONCILIATION_HEADING = "### Late closures"
+LATE_RECONCILIATION_HEADING = "### Late closures (2026-08-23)"
 
 LATE_CLOSED_FINDING_TOKENS = [
     "gap cycle 2 IN-04",
@@ -172,6 +172,21 @@ LATE_CLOSED_FINDING_TOKENS = [
 ]
 
 LATE_DEFERRED_FINDING_TOKENS: list[str] = []
+
+# Gap cycle 1's own late-closure section (appended 2026-08-23, after the cycle-2 one).
+CYCLE1_LATE_HEADING = "### Late closures — gap cycle 1"
+
+CYCLE1_LATE_CLOSED_FINDING_TOKENS = [
+    "gap cycle 1 WR-04",
+    "gap cycle 1 WR-06",
+    "gap cycle 1 WR-02",
+    "gap cycle 1 IN-02",
+]
+
+# IN-04 is deliberately left deferred (documentation provenance), so it must stay NAMED.
+CYCLE1_LATE_DEFERRED_FINDING_TOKENS = [
+    "gap cycle 1 IN-04",
+]
 
 PLACEHOLDER_PATTERN = re.compile(r"\bTBD\b|\bTODO\b|\bFIXME\b|\bXXX\b")
 
@@ -346,6 +361,28 @@ def main() -> None:
             "passing prose is not dispositioned."
         )
 
+    # 1-3 (extended). Gap cycle 1's late-closure section.
+    cycle1_late_section = check_cycle_section(
+        text,
+        CYCLE1_LATE_HEADING,
+        CYCLE1_LATE_CLOSED_FINDING_TOKENS,
+        CYCLE1_LATE_DEFERRED_FINDING_TOKENS,
+        "cycle-1-late-closures",
+    )
+    cycle1_late_closed_region = extract_closed_subsection(
+        cycle1_late_section, "cycle-1-late-closures"
+    )
+    misplaced_c1 = [
+        tok
+        for tok in CYCLE1_LATE_CLOSED_FINDING_TOKENS
+        if tok not in cycle1_late_closed_region
+    ]
+    if misplaced_c1:
+        fail(
+            "the gap-cycle-1 late-closures section names these finding(s) somewhere, but NOT in "
+            f"its closed-finding region: {', '.join(misplaced_c1)}"
+        )
+
     # 4. Ordering: "newest last, history preserved in reading order". The gap-cycle-4 heading
     #    must be the LAST `###` subsection under `## 7. Reconciliation`, AND the gap-cycle-3
     #    heading must still be present and appear BEFORE the gap-cycle-4 heading. This is an
@@ -363,9 +400,9 @@ def main() -> None:
     if not subsection_headings:
         fail('"## 7. Reconciliation" has no "###" subsections at all')
     last_subsection = subsection_headings[-1]
-    if not last_subsection.startswith(LATE_RECONCILIATION_HEADING):
+    if not last_subsection.startswith(CYCLE1_LATE_HEADING):
         fail(
-            f'the late-closures section is not the LAST "###" subsection under '
+            f'the gap-cycle-1 late-closures section is not the LAST "###" subsection under '
             f'"## 7. Reconciliation" — found "{last_subsection}" after it. A later '
             "reconciliation subsection must be appended AFTER this one, not before it "
             "(subsection order is the reading order of the phase's gap-cycle history)."
