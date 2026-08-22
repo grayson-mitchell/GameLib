@@ -86,7 +86,11 @@ export default function NavTabs() {
   }
 
   return (
-    <Tabs className="NavTabs" value={activeTab ?? false}>
+    <Tabs
+      className="NavTabs"
+      value={activeTab ?? false}
+      data-tour="nav-menu"
+    >
       <Tab
         component={NavLink}
         to="/login"
@@ -96,6 +100,7 @@ export default function NavTabs() {
         icon={<FontAwesomeIcon icon={faUserAlt} />}
         iconPosition="start"
         disableRipple
+        data-tour="nav-manage-accounts"
       />
       <Tab
         component={NavLink}
@@ -107,6 +112,7 @@ export default function NavTabs() {
         iconPosition="start"
         disableRipple
         onClick={async () => handleRefresh()}
+        data-tour="nav-library"
       />
       <Tab
         component={NavLink}
@@ -117,6 +123,7 @@ export default function NavTabs() {
         icon={<FontAwesomeIcon icon={faStore} />}
         iconPosition="start"
         disableRipple
+        data-tour="nav-stores"
       />
       <Tab
         component={NavLink}
@@ -127,6 +134,7 @@ export default function NavTabs() {
         icon={<FontAwesomeIcon icon={faSlidersH} />}
         iconPosition="start"
         disableRipple
+        data-tour="nav-settings"
       />
     </Tabs>
   )

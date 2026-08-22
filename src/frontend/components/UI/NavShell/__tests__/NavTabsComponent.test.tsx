@@ -393,3 +393,50 @@ describe('NavTabs stylesheet -- card/folder tab visuals (34.10-04 Task 2, D-04)'
     expect(knownBad).toMatch(TEXT_TRANSFORM_NONE_PATTERN)
   })
 })
+
+/**
+ * Onboarding-tour anchors (34.12-03, D-05). MUI `Tabs`/`Tab` forward
+ * unrecognised props to their rendered root -- these assertions prove the
+ * `data-tour` prop reaches `Tab`'s own props object, which is the half this
+ * jest project (no jsdom / react-test-renderer, see file header) can prove.
+ * The remaining half -- that MUI's `component={NavLink}` chain carries the
+ * attribute through to the rendered `<a>` in the real DOM -- is NOT proven
+ * here; it is covered by plan 07's live, step-by-step verification.
+ */
+describe('NavTabs onboarding-tour anchors', () => {
+  it('the Tabs strip carries data-tour="nav-menu"', () => {
+    const root = callNavTabs()
+    expect(root.type).toBe(Tabs)
+    expect(root.props['data-tour']).toBe('nav-menu')
+  })
+
+  it('the accounts tab carries data-tour="nav-manage-accounts"', () => {
+    const tab = tabsOf(callNavTabs()).find((t) => t.props.value === 'accounts')
+    expect(tab?.props['data-tour']).toBe('nav-manage-accounts')
+  })
+
+  it('the games tab carries data-tour="nav-library"', () => {
+    const tab = tabsOf(callNavTabs()).find((t) => t.props.value === 'games')
+    expect(tab?.props['data-tour']).toBe('nav-library')
+  })
+
+  it('the stores tab carries data-tour="nav-stores"', () => {
+    const tab = tabsOf(callNavTabs()).find((t) => t.props.value === 'stores')
+    expect(tab?.props['data-tour']).toBe('nav-stores')
+  })
+
+  it('the settings tab carries data-tour="nav-settings"', () => {
+    const tab = tabsOf(callNavTabs()).find((t) => t.props.value === 'settings')
+    expect(tab?.props['data-tour']).toBe('nav-settings')
+  })
+
+  it('no two tab-strip anchors share a value', () => {
+    const root = callNavTabs()
+    const tabs = tabsOf(root)
+    const values = [
+      root.props['data-tour'],
+      ...tabs.map((tab) => tab.props['data-tour'])
+    ]
+    expect(new Set(values).size).toBe(5)
+  })
+})
