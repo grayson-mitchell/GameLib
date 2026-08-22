@@ -5,7 +5,13 @@ import { AreaChart, Area, ResponsiveContainer } from 'recharts'
 import { Box, LinearProgress, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { DownloadManagerState, Runner } from 'common/types'
-import { nextSpeedSample, SpeedPoint as Point } from './speedSample'
+import { getInstallProgress } from 'frontend/state/InstallProgress'
+import {
+  appendSample,
+  emptySamples,
+  SAMPLE_INTERVAL_MS,
+  SpeedPoint as Point
+} from './speedSample'
 
 const roundToNearestHundredth = function (val: number | undefined) {
   if (!val) return 0
@@ -22,35 +28,45 @@ export default function ProgressHeader(props: {
   const { t: tGamelib } = useTranslation('gamelib')
   const [progress] = hasProgress(props.appName, props.runner)
   const [avgSpeed, setAvgDownloadSpeed] = useState<Point[]>(
-    Array<Point>(sampleSize).fill({ download: 0, disk: 0 })
+    emptySamples(sampleSize)
   )
 
-  useEffect(() => {
-    if (props.state === 'idle') {
-      setAvgDownloadSpeed(
-        Array<Point>(sampleSize).fill({ download: 0, disk: 0 })
-      )
-      return
-    }
+  const { appName, runner, state } = props
 
-    if (avgSpeed.length > sampleSize - 1) {
-      avgSpeed.shift()
+  // The chart samples on a fixed timer, NOT on changes to `progress`. Sampling
+  // off `progress` tied the cadence to the rate of change of `percent`, which
+  // Steam reports as an integer — so a large Steam install redrew once every
+  // 10s+ while GOG/Epic (fractional percent) redrew every emit. Each tick pulls
+  // the newest value straight from the store, bypassing hasProgress's
+  // percent-equality gate: that gate drops an emit's downSpeed/diskSpeed along
+  // with its unchanged percent, so reading `progress` here would hold the chart
+  // flat at a stale rate between percent ticks. hasProgress still drives the
+  // percent/ETA/bytes readouts below, where the gate is harmless.
+  useEffect(() => {
+    if (state === 'idle') {
+      setAvgDownloadSpeed(emptySamples(sampleSize))
+      return
     }
 
     // When the download is not actively running (e.g. paused), nextSpeedSample
     // reports 0 MB/s instead of carrying the last nonzero speed forward — so a
     // paused download stops looking like it is still transferring.
-    avgSpeed.push(
-      nextSpeedSample(
-        props.state,
-        progress.downSpeed,
-        progress.diskSpeed,
-        avgSpeed.at(-1)?.download ?? 0
+    const takeSample = () =>
+      setAvgDownloadSpeed((samples) =>
+        appendSample(
+          samples,
+          state,
+          getInstallProgress(appName, runner),
+          sampleSize
+        )
       )
-    )
 
-    setAvgDownloadSpeed([...avgSpeed])
-  }, [progress, props.state])
+    // Sample once up front so a state change (running -> paused) shows on the
+    // chart immediately rather than a full interval later.
+    takeSample()
+    const timer = setInterval(takeSample, SAMPLE_INTERVAL_MS)
+    return () => clearInterval(timer)
+  }, [state, appName, runner])
 
   return (
     <>
