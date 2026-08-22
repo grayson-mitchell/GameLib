@@ -96,7 +96,7 @@ export default React.memo(function LibraryHeader({ list, totalGames }: Props) {
     syncedAt !== null ? formatRelativeTime(Date.now() - syncedAt) : ''
 
   return (
-    <h5 className="libraryHeader" data-tour="library-header">
+    <h5 className="libraryHeader">
       <div className="libraryHeaderWrapper">
         <span className="libraryTitle">
           {showFavourites
