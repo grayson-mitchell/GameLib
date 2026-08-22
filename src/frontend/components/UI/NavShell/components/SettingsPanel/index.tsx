@@ -2,6 +2,7 @@ import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   faBookOpen,
+  faCircleQuestion,
   faCoffee,
   faUniversalAccess,
   faWineGlass,
@@ -10,8 +11,10 @@ import {
 
 import ContextProvider from 'frontend/state/ContextProvider'
 import { SHOW_EXTERNAL_LINK_DIALOG_STORAGE_KEY } from 'frontend/components/UI/ExternalLinkDialog'
+import { useTour } from 'frontend/state/TourContext'
 import NavItem from '../NavItem'
 import QuitButton from '../QuitButton'
+import { NAV_TOUR_ID } from '../NavShellTour'
 
 /**
  * Settings tier-2 nav list (34.10-05 Task 2). Carries every Settings-related
@@ -29,11 +32,28 @@ import QuitButton from '../QuitButton'
  * Its click handler ports the retired external-link confirmation gate
  * verbatim: read the stored dialog preference and either ask first or open
  * directly.
+ *
+ * The "App Tour" row (D-01, 34.12-05 Task 2) is the shell tour's only
+ * launcher -- without it the rebuilt tour is unreachable. It is a plain
+ * `NavItem` button row, not an icon-button affordance, so it does not stand
+ * out from its neighbours. Its `data-tour="nav-launcher"` value is
+ * deliberately a THIRTEENTH anchor with no corresponding tour step -- it
+ * exists so the row itself is addressable, not as a dead selector. Its
+ * click handler restarts the tour from scratch when it was already
+ * completed (reset-then-start), so a finished tour can be re-run.
  */
 export default function SettingsPanel() {
   const { t } = useTranslation()
   const { platform, handleExternalLinkDialog } = useContext(ContextProvider)
+  const { startTour, resetTour, hasTourCompleted } = useTour()
   const isWin = platform === 'win32'
+
+  function handleStartTour() {
+    if (hasTourCompleted(NAV_TOUR_ID)) {
+      resetTour(NAV_TOUR_ID)
+    }
+    startTour(NAV_TOUR_ID)
+  }
 
   function handleKofiClick() {
     const showDialogSetting = localStorage.getItem(
@@ -105,6 +125,13 @@ export default function SettingsPanel() {
         icon={faCoffee}
         label="Ko-fi"
         data-tour="nav-community"
+      />
+      <NavItem
+        elementType="button"
+        onClick={handleStartTour}
+        icon={faCircleQuestion}
+        label={t('tour.nav.launcher', 'App Tour')}
+        data-tour="nav-launcher"
       />
       <QuitButton />
     </div>
