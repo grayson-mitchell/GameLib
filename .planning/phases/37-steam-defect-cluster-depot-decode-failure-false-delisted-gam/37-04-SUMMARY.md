@@ -141,3 +141,7 @@ None — no external service configuration required.
 ---
 *Phase: 37-steam-defect-cluster-depot-decode-failure-false-delisted-gam*
 *Completed: 2026-08-22*
+
+## Self-Check: PASSED
+
+All created/modified files verified present on disk; all referenced commit hashes (`30e4ac652`, `d55633288`, `03b9ed22e`) verified present in `git log --oneline --all`.
