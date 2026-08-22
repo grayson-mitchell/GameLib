@@ -206,8 +206,8 @@ const CSS_CUSTOM_PROPERTY_RE = /^--[a-zA-Z0-9-]+$/
 const CSS_VAR_FUNCTION_RE = /^var\(--[a-zA-Z0-9-]+(,\s*.+)?\)$/
 const CSS_LENGTH_RE = /^-?\d+(\.\d+)?(px|em|rem|vh|vw|vmin|vmax|%|s|ms|deg)$/
 const CSS_FUNCTION_RE = /^[a-zA-Z-]+\([^()]*\)$/
-// Plan 06 (34.8-06): a bracketed CSS attribute selector (`[data-tour="sidebar-menu"]`,
-// `SidebarTour.tsx`/`LibraryTour.tsx`'s `intro.js` step targets) — content-shape,
+// Plan 06 (34.8-06): a bracketed CSS attribute selector (`[data-tour="nav-menu"]`,
+// `NavShellTour/index.tsx`'s/`LibraryTour.tsx`'s `intro.js` step targets) — content-shape,
 // like the checks above, not property-name-based, so it also covers any future
 // `querySelector`-style use of the same shape.
 const CSS_ATTR_SELECTOR_RE = /^\[[a-zA-Z0-9_-]+(=("[^"]*"|'[^']*'))?\]$/
