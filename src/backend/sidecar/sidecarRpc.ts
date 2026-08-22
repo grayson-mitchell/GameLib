@@ -86,10 +86,61 @@ const rustPending = new Map<
   }
 >()
 
-let outputStream: Writable = process.stdout
+/**
+ * IN-04 (`34.2-REVIEW.md` round 1): NOT defaulted to `process.stdout`.
+ *
+ * This used to be `let outputStream: Writable = process.stdout`, bound to the
+ * real stream only when `startRpcServer()` runs. Anything that pushed a frame
+ * BEFORE that bind therefore wrote straight to real stdout, ignoring whatever
+ * stream the caller was about to inject. Three producers routinely get in
+ * ahead of the bind:
+ *
+ *   - `bootstrap.ts:40`'s `import './handlers'` runs at MODULE scope and
+ *     constructs every store manager long before `init()` is called.
+ *   - `init()` floats `applyMigrations()` (bootstrap.ts, "Data migrations")
+ *     well above its own `startRpcServer()` call, and a migration writes
+ *     `migrationsStore.appliedMigrations` -- a real `storeChanged` push. This
+ *     one happens in PRODUCTION, not only under Jest.
+ *   - Test setup that touches a store before starting its sidecar.
+ *
+ * Under Jest that put 77 transport frames on the real terminal across the
+ * backend suite -- including store payloads -- and made every one of them
+ * unassertable, since they never reached the suite's injected `PassThrough`.
+ * IN-04 saw ONE of them: only the first leak per suite is visible, because
+ * after the first `startRpcServer()` the binding points at that test's
+ * now-dead stream and later writes are silently discarded instead.
+ *
+ * Frames are queued until a stream is bound and flushed in order on bind.
+ * Production behaviour is unchanged in substance: the bind at
+ * `startRpcServer()` happens far above the `READY_SENTINEL` write, so early
+ * frames still reach the same pipe ahead of READY, just after the transport
+ * exists rather than before it.
+ */
+let outputStream: Writable | null = null
+const pendingLines: string[] = []
 
 function writeLine(value: unknown): void {
-  outputStream.write(`${JSON.stringify(value)}\n`)
+  const line = `${JSON.stringify(value)}\n`
+  if (outputStream === null) {
+    pendingLines.push(line)
+    return
+  }
+  outputStream.write(line)
+}
+
+/**
+ * Binds the output stream and flushes anything `writeLine` buffered before it
+ * existed, in the order it was produced. Exported for `bootstrap`'s own
+ * re-entrant `init()` (idempotent by contract) and for suites that drive the
+ * transport directly.
+ */
+export function bindOutputStream(output: Writable): void {
+  outputStream = output
+  if (pendingLines.length === 0) return
+  const queued = pendingLines.splice(0, pendingLines.length)
+  for (const line of queued) {
+    output.write(line)
+  }
 }
 
 function isValidRequest(value: unknown): value is SidecarRpcRequest {
@@ -220,7 +271,7 @@ export function startRpcServer(
   input: Readable = process.stdin,
   output: Writable = process.stdout
 ): void {
-  outputStream = output
+  bindOutputStream(output)
   let buffer = ''
   input.setEncoding('utf-8')
   input.on('data', (chunk: string | Buffer) => {

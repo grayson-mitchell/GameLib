@@ -689,6 +689,16 @@ const IN_SCOPE_SUITES = [
  * `electron`/`electron-store`/`pathShim` import chain exists to contain in the first place, and
  * nothing it touches resolves through `homedir()`. A `readdirSync` recount at this task's
  * execution time puts the directory at 48 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 44 below.
+ *
+ * `outputStreamBinding.test.ts` (IN-04, `34.2-REVIEW.md` round 1) is classified structurally
+ * contained. It declares NO `jest.mock(...)` of any kind and requires exactly one real backend
+ * module, `../sidecarRpc`, whose entire import surface is `node:stream` (types only),
+ * `node:crypto`, `common/types/sidecarTransport` and `./electronStub` -- no path module, no
+ * `homedir()`, no filesystem read or write anywhere in the chain. Its only other disk access is
+ * a `readFileSync` of `sidecarRpc.ts`'s own source for the anti-vacuity pin. It cannot be an
+ * `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/`backend/logger/paths` kit
+ * Block B gates on. A `readdirSync` recount at this task's execution time puts the directory at
+ * 49 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 45 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -719,6 +729,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'netStub.test.ts',
   'oauthLoginCapture.test.ts',
   'onlineMonitorWiring.test.ts',
+  'outputStreamBinding.test.ts',
   'pathShim.test.ts',
   'runnerAuthFlows.test.ts',
   'runnerMiscFlows.test.ts',
