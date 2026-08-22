@@ -70,7 +70,8 @@ export async function probeSteamQuickInstallTarget(): Promise<ConsoleSteamVerdic
 
 /**
  * The defect this closes: `focused` defaults to `'install'` and both the
- * `BTN_ACTION` gamepad handler and the Enter/Space keydown branch called
+ * confirm-button gamepad handler (`getActionButtonIndex`) and the Enter/Space
+ * keydown branch called
  * `installGame()` with no runner test — so before this function, one A press
  * could fire the install a D-29 check had just refused (and, on the
  * transient "Opening Steam…" state, a second concurrent install). Both input

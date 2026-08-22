@@ -1,3 +1,5 @@
+import { isNintendoControllerId } from 'frontend/helpers/gamepad_layouts'
+
 export type ControllerLayout =
   | 'ps4'
   | 'ps5'
@@ -5,39 +7,45 @@ export type ControllerLayout =
   | 'nintendo'
   | 'steam-deck'
 
-// Standard gamepad button indices (Chromium "standard" mapping).
-export const BTN_ACTION = 0
-export const BTN_BACK = 1
+// Standard gamepad button indices (Chromium "standard" mapping). These are
+// PHYSICAL POSITIONS, not printed glyphs -- index 0 is always the bottom cap
+// and index 1 always the right cap. Module-private on purpose: everything
+// outside this file must go through the layout-aware helpers below, or a
+// Nintendo pad ends up confirming on the wrong cap.
+const BTN_ACTION = 0
+const BTN_BACK = 1
 export const BTN_L1 = 4
 export const BTN_R1 = 5
 export const BTN_R2 = 7
 
-// The Chromium "standard" gamepad mapping is POSITION-based: buttons[0]
-// (BTN_ACTION, drives mainAction) and buttons[1] (BTN_BACK, drives back) are
-// keyed by physical slot, not by printed glyph. On a Nintendo Switch Pro
-// Controller / Joy-Con the face buttons are mirrored relative to Xbox at the
-// same physical position, so buttons[0] sits under the physical **B** cap
-// and buttons[1] sits under the physical **A** cap -- the opposite of every
-// other layout this function handles. Only the LABEL differs; which index
-// drives which action is unchanged (see gamepad_layouts/standard.ts).
-export const getActionButtonLabel = (layout: ControllerLayout) => {
-  if (layout.startsWith('ps')) return '✕'
-  if (layout === 'nintendo') return 'B'
-  return 'A'
-}
+export const getActionButtonLabel = (layout: ControllerLayout) =>
+  layout.startsWith('ps') ? '✕' : 'A'
+
+export const getBackButtonLabel = (layout: ControllerLayout) =>
+  layout.startsWith('ps') ? '◯' : 'B'
+
+// GameLib's convention is A CONFIRMS (operator decision 2026-08-22): the
+// printed label is authoritative, so a Switch owner's muscle memory from the
+// console itself carries over. Nintendo pads mirror A/B relative to Xbox at the
+// same physical position, so confirm/back must swap indices to keep the glyph
+// and the acting button in agreement.
+//
+// The alternative -- keeping the bottom cap as confirm on every brand, and
+// swapping the LABELS instead -- was GameLib's shipped behaviour until this
+// change. Do not reintroduce it on top of this: applying both swaps cancels
+// them out and restores the original defect.
+export const getActionButtonIndex = (layout: ControllerLayout) =>
+  layout === 'nintendo' ? BTN_BACK : BTN_ACTION
+
+export const getBackButtonIndex = (layout: ControllerLayout) =>
+  layout === 'nintendo' ? BTN_ACTION : BTN_BACK
 
 export function detectControllerLayout(id: string): ControllerLayout {
   if (/054c|PS3|054c.*09cc|0268|'2563.*0523/i.test(id)) return 'ps4'
   if (/054c.*0ce6/i.test(id)) return 'ps5'
   if (/28de.*11ff/.test(id)) return 'steam-deck'
-  if (/microsoft|xbox/i.test(id)) return 'xbox'
-  if (/nintendo|057e|switch|joy.?con|pro.?controller/i.test(id))
-    return 'nintendo'
+  // Shares its predicate with `checkNintendo`'s dispatch in `gamepad.ts` so the
+  // glyph and the acting button can never disagree about a given pad.
+  if (isNintendoControllerId(id)) return 'nintendo'
   return 'xbox'
-}
-
-export const getBackButtonLabel = (layout: ControllerLayout) => {
-  if (layout.startsWith('ps')) return '◯'
-  if (layout === 'nintendo') return 'A'
-  return 'B'
 }

@@ -47,6 +47,79 @@ export function checkGameCube(
   checkAction('rightClick', X.pressed, controllerIndex)
 }
 
+// Vendor 057e is Nintendo. The id strings also cover Joy-Cons and the
+// third-party pads that report a Nintendo-style face layout, because the
+// on-screen glyphs are chosen from this same predicate -- see
+// `detectControllerLayout` in `screens/ConsoleMode/controller.ts`.
+//
+// KEEP THIS AS THE SINGLE SOURCE OF TRUTH. Console Mode's overlays read raw
+// button indices through `getActionButtonIndex`/`getBackButtonIndex`, while
+// global spatial navigation routes through `checkNintendo` below. If those two
+// disagreed about whether a pad is Nintendo, the glyph would contradict the
+// button that acts -- which is the original defect this whole layout exists to
+// fix. Upstream Heroic dispatches on a narrower `057e.*(2006|2007|2009)` and
+// has exactly that split for an id like "Nintendo Switch Pro Controller" that
+// carries no product code.
+const NINTENDO_ID = /nintendo|057e|switch|joy.?con|pro.?controller/i
+
+// Some Microsoft pads carry "Pro Controller" in their product string, so an
+// explicit Xbox match always wins over the Nintendo patterns.
+const XBOX_ID = /microsoft|xbox/i
+
+export function isNintendoControllerId(id: string): boolean {
+  return !XBOX_ID.test(id) && NINTENDO_ID.test(id)
+}
+
+// Nintendo Switch Pro Controller / Joy-Cons (Vendor: 057e)
+// Chromium reports these with the "standard" mapping by physical position, so
+// buttons[0] is the bottom button (labeled B on Switch) and buttons[1] is the
+// right button (labeled A). We bind the ACTIONS to the printed LABELS -- A
+// confirms, B goes back -- which is what a Switch owner's muscle memory
+// expects from the console itself. The same reasoning swaps X/Y: on a Switch
+// pad X is the top cap and Y is the left cap, mirrored from Xbox.
+export function checkNintendo(
+  buttons: readonly GamepadButton[],
+  axes: readonly number[],
+  controllerIndex: number,
+  checkAction: (
+    action: ValidGamepadAction,
+    pressed: boolean,
+    ctrlIdx: number
+  ) => void
+) {
+  const B = buttons[0], // bottom cap
+    A = buttons[1], // right cap
+    Y = buttons[2], // left cap
+    X = buttons[3], // top cap
+    up = buttons[12],
+    down = buttons[13],
+    left = buttons[14],
+    right = buttons[15],
+    guideButton = buttons[16],
+    leftAxisX = axes[0],
+    leftAxisY = axes[1],
+    rightAxisX = axes[2],
+    rightAxisY = axes[3]
+
+  checkAction('mainAction', A?.pressed, controllerIndex)
+  checkAction('back', B?.pressed, controllerIndex)
+  checkAction('altAction', Y?.pressed, controllerIndex)
+  checkAction('rightClick', X?.pressed, controllerIndex)
+  checkAction('leftStickLeft', leftAxisX < -0.5, controllerIndex)
+  checkAction('leftStickRight', leftAxisX > 0.5, controllerIndex)
+  checkAction('leftStickUp', leftAxisY < -0.5, controllerIndex)
+  checkAction('leftStickDown', leftAxisY > 0.5, controllerIndex)
+  checkAction('rightStickLeft', rightAxisX < -0.5, controllerIndex)
+  checkAction('rightStickRight', rightAxisX > 0.5, controllerIndex)
+  checkAction('rightStickUp', rightAxisY < -0.5, controllerIndex)
+  checkAction('rightStickDown', rightAxisY > 0.5, controllerIndex)
+  checkAction('padUp', up?.pressed, controllerIndex)
+  checkAction('padDown', down?.pressed, controllerIndex)
+  checkAction('padLeft', left?.pressed, controllerIndex)
+  checkAction('padRight', right?.pressed, controllerIndex)
+  checkAction('guide', guideButton?.pressed, controllerIndex)
+}
+
 // Generic USB Joystick (Vendor: 0079 Product: 0006)
 export function checkN64Clone1(
   buttons: readonly GamepadButton[],

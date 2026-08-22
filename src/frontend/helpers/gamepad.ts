@@ -8,7 +8,9 @@ import {
   checkPS3Clone1,
   checkStandard,
   checkN64Clone1,
-  checkGenius1
+  checkGenius1,
+  checkNintendo,
+  isNintendoControllerId
 } from './gamepad_layouts'
 import { VirtualKeyboardController } from './virtualKeyboard'
 
@@ -573,6 +575,10 @@ export const initGamepad = () => {
           checkN64Clone1(buttons, axes, index, checkAction)
         } else if (controller.id.match(/0583.*a009/i)) {
           checkGenius1(buttons, axes, index, checkAction)
+        } else if (isNintendoControllerId(controller.id)) {
+          // A confirms on Nintendo pads -- same predicate Console Mode uses to
+          // pick the glyph, so the two can't disagree. See nintendo.ts.
+          checkNintendo(buttons, axes, index, checkAction)
         } else {
           // if not specific, fallback to the standard layout, seems
           // to be the most common for now and if not exact it seems
