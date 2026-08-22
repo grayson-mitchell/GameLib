@@ -3701,6 +3701,25 @@ Plans:
 
 - [ ] 34.12-07-PLAN.md — blocking manual verification: twelve individually-recorded step outcomes, the D-04 interaction lock, the no-auto-start guarantee, three-theme spacing, and the German stale-copy check *(not autonomous)*
 
+**Cross-cutting constraints** *(hold across plans — no single plan owns them)*
+
+- **HEAD is never red at a plan boundary.** `tourDisabled.test.ts` trips on the first `data-tour`
+  *token*, not the first anchor, so plan 01 narrows it in the same plan that introduces the token,
+  plan 04 strips the blocks that go vacuous on the move, and plan 06 deletes it only once the
+  census replacement is green. Verified by walking all five waves.
+- **`NavItem`'s passthrough gates four anchors.** Wine Manager, Accessibility, Documentation and
+  Ko-fi cannot carry an anchor until plan 01 lands; enforced structurally by plan 05's `depends_on`.
+- **The vacuous gate form is banned.** "All twelve `nav-*` strings appear somewhere in the tree" is
+  named and excluded by an explicit acceptance criterion in plans 03 and 06. The gate is a composed
+  two-layer proof — per-component correctness (Layer A) *plus* uniqueness census (Layer B) *plus*
+  the `NavItem` forwarding bridge — because each layer alone misses a different failure mode.
+- **Every gate carries a RED-proof** naming both the assertion that must fail and the assertions
+  that must stay green; a proof that reddens everything would show the assertions were not
+  independent. 19 across plans 01–06.
+- **Wave-2 note for the dispatcher:** plans 03 and 04 share `tourDisabled.test.ts` — 03 reads it,
+  04 rewrites it. If wave-2 execution is literally concurrent against one working tree, re-run
+  plan 03's check on that file only after plan 04 has fully landed.
+
 ### Phase 35: Electron cutover — remove the Electron build
 
 **Goal:** Retire the Electron build: delete `electron-vite`/`electron-builder` config, the preload contextBridge path, and the `isTauri()` branches, leaving Tauri as the only shell. This is the one phase that deliberately breaks the additive/reversible invariant every prior phase preserved — so it runs last, and only once the `session`/`powerSaveBlocker` parity gaps are resolved or explicitly accepted, and the parked Electron-renderer bugs (see `debug-uninstall-game-vanishes-parked`) have been re-tested against Tauri rather than fixed in Electron.
