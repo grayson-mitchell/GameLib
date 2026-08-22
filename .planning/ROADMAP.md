@@ -3705,7 +3705,7 @@ remains `status: draft` deliberately.
 
 **Goal:** Close the seven open Steam defects surfaced by the 34.13 UAT gate and the 2026-08-21 install attempts, so that (a) a native depot install of a mac-depot title either succeeds or fails with a message naming its actual cause, (b) no owned, non-delisted game is hidden from the library by a flag nothing can clear, and (c) every failure surface names the game it is talking about.
 
-**Requirements**: REQ-37-01..07 to be minted during `/gsd-plan-phase 37`
+**Requirements**: REQ-37-01, REQ-37-02, REQ-37-03, REQ-37-04, REQ-37-05, REQ-37-06 (minted 2026-08-22 during `/gsd-plan-phase 37`). **Six, not seven** — 37-07 was dropped by `37-CONTEXT.md` D-01, not deferred. The ID-to-plan-slot mapping is offset by design (REQ-37-01→37-02, -02→37-03, -03→37-04, -04→37-05, -05→37-06, -06→37-10) because the four already-closed slots below keep their numbers; the mapping table is in REQUIREMENTS.md's Phase 37 block.
 **Depends on:** Phase 36
 **Plans:** 11 plans
 
