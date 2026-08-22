@@ -8,9 +8,11 @@
  * inside `os.tmpdir()` anyway, because `src/backend/jest.setupContainment.ts`
  * (registered on the backend project's `setupFiles`) redirects
  * `HOME`/`USERPROFILE`/`APPDATA`/`LOCALAPPDATA`/`XDG_CONFIG_HOME`/
- * `XDG_STATE_HOME` before this file's own imports ever run. A suite that
- * needed its own mocks to stay contained would prove only that suite is
- * safe; this one proves the mechanism itself is safe by construction.
+ * `XDG_STATE_HOME`/`XDG_DATA_HOME`/`XDG_CACHE_HOME` (all eight — the list
+ * here named six until 2026-08-23) before this file's own imports ever run.
+ * A suite that needed its own mocks to stay contained would prove only that
+ * suite is safe; this one proves the mechanism itself is safe by
+ * construction.
  *
  * RED PROOF, ORIGINAL (performed by hand 2026-07-26, recorded verbatim in
  * 34.2-19-SUMMARY.md): with the `setupFiles` entry in
@@ -26,45 +28,94 @@
  * `app.getPath` is independently `tmpdir()`-based already, unrelated to this
  * plan's fix.
  *
- * RE-DERIVED 2026-07-26 (34.2-25, Task 3, WR-09): this file now carries a
+ * BROKEN, THEN RESTORED (WR-05, gap cycle 4). Between 2026-07-26 and
+ * 2026-08-23 the claim in the first paragraph was FALSE. Plan 34.2-25 added a
  * top-level `import { containmentRoot, realHomeAtSetup } from
- * 'backend/jest.setupContainment'` (added directly above, to consume WR-09's
- * export). That import alone triggers `jest.setupContainment.ts`'s module
- * body — including its `jest.mock('os'/'node:os', ...)` registrations —
- * regardless of whether `setupFiles` also loads it, so with the `setupFiles`
- * entry commented out this file now largely re-establishes its own
- * containment by accident. Re-run by hand with `setupFiles` commented out:
- * only **1 of 12** tests FAILS — Test 1 (`expect(homedir()).toBe
- * (containmentRoot)`, received the developer's real home). Every other test
- * (2, 3, 4, 5, 6, 7, 8, 9 + both self-tests + the allowlist check) stays
- * GREEN, because each of them re-`require()`s `'os'`/`'node:os'`/
- * `backend/logger/paths`/`../pathShim`/`../../constants/paths` (via
- * `jest.isolateModules` or a fresh test-body-time `require()`) AFTER the
- * `jest.setupContainment` import has already run and registered both mocks
- * — only Test 1's top-of-file `homedir` binding (from `import { homedir,
- * tmpdir, userInfo } from 'os'` at the TOP of this file, evaluated BEFORE
- * the `jest.setupContainment` import below it) was captured from the real,
- * still-unmocked `os` module. This does NOT mean `setupFiles` is
- * unnecessary: it means THIS FILE, uniquely among the ~111 backend suites,
- * now carries a redundant containment path of its own (the WR-09 import) in
- * addition to `setupFiles` — every OTHER suite in the project has no such
- * import and depends on `setupFiles` entirely, which is what the module's
- * own docstring and WR-10's precondition continue to guarantee. Restored
- * immediately afterwards; `git diff --exit-code src/backend/jest.config.js`
- * confirmed clean (no residue).
+ * 'backend/jest.setupContainment'` to consume WR-09's export, and evaluating
+ * that module runs its `jest.mock('os'/'node:os', ...)` registrations inside
+ * THIS file's own module graph. The file therefore re-established its own
+ * containment by accident, and the RED proof collapsed from 5-of-6 to
+ * 1-of-12: with `setupFiles` commented out, only Test 1 failed, because every
+ * other test re-`require()`s its subject AFTER that import has already
+ * installed both mocks. The correction was recorded here at the time, thirty
+ * lines below the claim it falsified, and the claim was left standing.
+ *
+ * The import is gone. `realHomeAtSetup` and `containmentRoot` now arrive
+ * through `process.env` (see the constants below), which pulls in nothing at
+ * all, so the module graph is mock-free again — and that is no longer a
+ * matter of anyone reading this docstring: the "import graph" describe block
+ * at the foot of this file walks this file's own imports transitively and
+ * fails if any of them registers a mock. A prose claim that had already
+ * rotted once is now an executable one.
+ *
+ * RED PROOF, RE-MEASURED BY HAND 2026-08-23 — the actual observed numbers,
+ * not the historical 5-of-6 restated. With the `setupFiles` entry in
+ * `src/backend/jest.config.js` commented out and the whole suite run,
+ * **11 of 22 tests FAIL**: Tests 1, 2, 3, 4, 5, 6, the `assertNotContained`
+ * self-test, Test 7, Test 8b, and both env-redirection tests. The eleven that
+ * survive are the ones that SHOULD: Test 9's source gate and its two
+ * self-tests, the allowlist check and self-test C, and the five WR-05 gate
+ * tests — every one of them asserts on source TEXT or on pure logic, so no
+ * containment mechanism could affect them. Test 4 now fails where it stayed
+ * green in 2026-07-26's original run, because WR-12 later added `flatpakHome`
+ * to it, and that value falls back to `homedir()`.
+ *
+ * One survivor is NOT in that category and is recorded here rather than
+ * quietly left: **Test 8 passes with the mechanism disabled.** It asserts
+ * `userInfo().homedir === homedir()`, and with no mock installed both sides
+ * are the real home, so the identity holds trivially. It is not vacuous —
+ * it would catch a mock that redirected one and not the other, which is the
+ * CR-02 shape it was written for — but it cannot detect the mechanism being
+ * absent altogether. Test 8b does carry that weight. Noted for whoever
+ * revisits this block; not changed here, since it is outside WR-05's scope.
+ *
+ * Config restored immediately afterwards; `git diff --exit-code
+ * src/backend/jest.config.js` confirmed clean, no residue.
  */
 
 import { homedir, tmpdir, userInfo } from 'os'
 import { isAbsolute, join, relative, resolve } from 'path'
 
-// Named import, not `jest.isolateModules` + `require` -- Task 2's
-// globalThis memoization (`__GAMELIB_JEST_CONTAINMENT_ROOT__` /
-// `__GAMELIB_JEST_REAL_HOME__`) is what makes this safe: even if Jest
-// re-evaluates `jest.setupContainment` for this file's own module
-// registry, it reuses the SAME root/real-home rather than minting a
-// second, disagreeing pair.
-import { containmentRoot, realHomeAtSetup } from 'backend/jest.setupContainment'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+
+// ── WR-05: the two values this file needs, obtained WITHOUT an import ───────
+// Importing `backend/jest.setupContainment` to read these is what falsified
+// this file's central claim for four weeks. Reading them from the environment
+// costs nothing and drags nothing into the module graph.
+//
+// `GAMELIB_JEST_REAL_HOME` is written by `jest.globalSetup.js` in the PARENT
+// process, before any worker forks and before jest's mocking machinery exists
+// at all — better provenance than any in-sandbox capture. `HOME` is written by
+// `jest.setupContainment.ts` from `setupFiles`. They come from two different
+// processes by two different mechanisms, which is what makes Test 1's
+// `expect(homedir()).toBe(containmentRoot)` a real cross-check of the
+// mechanism's two independent halves rather than a comparison of a value with
+// itself: drop the `os` mock and `homedir()` returns the real home while
+// `HOME` still points at the root; drop the `HOME` assignment and the reverse.
+// Previously both sides of that assertion traced back to the same import.
+const REAL_HOME_ENV_KEY = 'GAMELIB_JEST_REAL_HOME'
+
+/**
+ * Fails LOUDLY rather than skipping. A missing value here would silently
+ * hollow out Test 6's anti-vacuity check (a comparison against `undefined`
+ * proves nothing), and a suite that quietly stops proving its subject is the
+ * failure mode this whole gap cycle is about.
+ */
+function requiredEnv(key: string): string {
+  const value = process.env[key]
+  if (value === undefined || value.length === 0) {
+    throw new Error(
+      `[structuralContainment] ${key} is not set. It is written by ` +
+        'jest.globalSetup.js (GAMELIB_JEST_REAL_HOME) and ' +
+        'jest.setupContainment.ts (HOME); if either is missing this suite ' +
+        'cannot prove anything and must not pretend otherwise.'
+    )
+  }
+  return value
+}
+
+const containmentRoot = requiredEnv('HOME')
+const realHomeAtSetup = requiredEnv(REAL_HOME_ENV_KEY)
 
 /** Tripwire idiom shared with `testContainment.test.ts`: a path is
  * "contained" inside `root` when its path relative to `root` neither starts
@@ -457,5 +508,232 @@ describe('CR-02 detection gates (gap cycle 4, plan 34.2-25, REQ-34.2-07/-14)', (
         [tripping, tripping].filter((src) => !usesForbiddenNodeOsBinding(src))
       ).toEqual([])
     })
+  })
+})
+
+// ── The env half of the mechanism, asserted at OUTCOME (WR-07 backstop) ─────
+//
+// `jest.setupContainment.ts`'s precondition block now refuses to run if any of
+// these eight is wrong, so on a healthy tree this block cannot fail: the whole
+// suite would have died at import time. Stating that plainly rather than
+// labelling it "defence in depth" and moving on — a gate that something else
+// always fires before is the WR-06 defect class, and it is only worth keeping
+// here because it fails under a real, plausible edit the precondition does not
+// survive: someone weakening or deleting the precondition's env check itself.
+// It is a backstop for the guard, not a second guard.
+describe('env redirection (the second half of the containment mechanism)', () => {
+  const expectedEnv: ReadonlyArray<readonly [string, string]> = [
+    ['HOME', containmentRoot],
+    ['USERPROFILE', containmentRoot],
+    ['APPDATA', join(containmentRoot, 'AppData', 'Roaming')],
+    ['LOCALAPPDATA', join(containmentRoot, 'AppData', 'Local')],
+    ['XDG_CONFIG_HOME', join(containmentRoot, '.config')],
+    ['XDG_STATE_HOME', join(containmentRoot, '.local', 'state')],
+    ['XDG_DATA_HOME', join(containmentRoot, '.local', 'share')],
+    ['XDG_CACHE_HOME', join(containmentRoot, '.cache')]
+  ]
+
+  it('all eight home/config/state variables hold their expected containment values', () => {
+    for (const [key, expected] of expectedEnv) {
+      expect([key, process.env[key]]).toEqual([key, expected])
+    }
+  })
+
+  it('all eight resolve INSIDE the containment root and OUTSIDE the real home', () => {
+    for (const [key, expected] of expectedEnv) {
+      expect(key).toBeTruthy()
+      assertContained(containmentRoot, expected)
+      assertNotContained(realHomeAtSetup, expected)
+    }
+  })
+})
+
+// ── WR-05: the mock-freedom claim, made executable ──────────────────────────
+//
+// This file's opening paragraph has always asserted that its module graph
+// contains no `jest.mock` call. From 2026-07-26 to 2026-08-23 that assertion
+// was false and nothing detected it — a single added import falsified the
+// file's entire evidentiary basis, and the correction was filed as prose
+// thirty lines beneath the claim rather than as a test.
+//
+// So: walk this file's own STATIC imports transitively and fail if any file in
+// that graph registers a mock. Static imports specifically, because that is
+// the property at issue — what gets evaluated before any test runs. The
+// test-body `require()`s under `jest.isolateModules` are the SUBJECTS of this
+// suite, not part of its containment kit, and gating them would flag the
+// file's whole reason for existing.
+describe('WR-05: this file registers no mocks, transitively', () => {
+  // Assembled at runtime so this gate does not match its own source text. A
+  // literal here would make the gate detect itself and fail on a clean tree.
+  const MOCK_CALL_NEEDLE = 'jest' + '.mock('
+
+  const SRC_ROOT = resolve(__dirname, '..', '..', '..') // tsconfig baseUrl: ./src
+  const CANDIDATE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx']
+
+  // Same convention as the require() block above Test 9: pulled in here rather
+  // than added to the top-level import block, so this addition stays purely
+  // additive. Both are node builtins and neither can carry a mock, so they are
+  // irrelevant to the graph this block walks either way.
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  const { existsSync, statSync } = require('fs') as typeof import('fs')
+  const { dirname } = require('path') as typeof import('path')
+  /* eslint-enable @typescript-eslint/no-require-imports */
+
+  /**
+   * Resolves an import specifier the way this project's jest config does
+   * (`moduleDirectories: ['node_modules', '<rootDir>']` +
+   * `modulePaths: [baseUrl]`), returning `null` for anything that cannot
+   * contain a `jest.mock` call: node builtins and third-party packages, which
+   * have no `jest` global in scope.
+   *
+   * Throws on anything it cannot classify. A silent skip is how a newly-added
+   * path alias would create a blind spot in exactly this gate — the same shape
+   * as the defect being closed.
+   */
+  function resolveFirstParty(
+    specifier: string,
+    fromFile: string
+  ): string | null {
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    const nodeModule = require('module') as typeof import('module')
+    /* eslint-enable @typescript-eslint/no-require-imports */
+    if (nodeModule.isBuiltin(specifier)) {
+      return null
+    }
+
+    const bases = specifier.startsWith('.')
+      ? [resolve(dirname(fromFile), specifier)]
+      : [resolve(SRC_ROOT, specifier)]
+
+    for (const base of bases) {
+      for (const ext of CANDIDATE_EXTENSIONS) {
+        if (existsSync(base + ext)) return base + ext
+        if (existsSync(join(base, 'index' + ext)))
+          return join(base, 'index' + ext)
+      }
+      if (existsSync(base) && statSync(base).isFile()) return base
+    }
+
+    // Not first-party. It must at least be a resolvable package, or the
+    // specifier is broken and this gate is walking a fiction.
+    try {
+      const resolved = require.resolve(specifier, {
+        paths: [dirname(fromFile)]
+      })
+      if (resolved.includes('node_modules')) return null
+      // Resolvable, not a builtin, not under node_modules, not found above:
+      // an unclassified shape. Refuse rather than skip.
+      return resolved
+    } catch {
+      throw new Error(
+        `[structuralContainment WR-05 gate] cannot resolve import '${specifier}' ` +
+          `from ${fromFile}. This gate must not silently skip a specifier it does ` +
+          'not understand -- that is precisely how a blind spot appears. Teach ' +
+          'resolveFirstParty about it instead.'
+      )
+    }
+  }
+
+  /** Static `import ... from '<spec>'` / `import '<spec>'` specifiers only. */
+  function staticImportSpecifiers(source: string): string[] {
+    const code = stripSourceComments(source)
+    return Array.from(
+      code.matchAll(/^\s*import\s+(?:[\s\S]*?\s+from\s+)?['"]([^'"]+)['"]/gm)
+    ).map((m) => m[1])
+  }
+
+  function collectGraph(entry: string): string[] {
+    const seen = new Set<string>()
+    const queue = [entry]
+    while (queue.length > 0) {
+      const file = queue.shift() as string
+      if (seen.has(file)) continue
+      seen.add(file)
+      for (const specifier of staticImportSpecifiers(
+        readFileSync(file, 'utf8')
+      )) {
+        const resolved = resolveFirstParty(specifier, file)
+        if (resolved !== null && !seen.has(resolved)) queue.push(resolved)
+      }
+    }
+    return Array.from(seen)
+  }
+
+  const thisFile = __filename.replace(/\.js$/, '.ts')
+  const graph = collectGraph(thisFile)
+
+  it('the walk reaches more than this file alone, and includes its known first-party import', () => {
+    // Without this the gate below could pass by walking nothing.
+    expect(graph.length).toBeGreaterThan(1)
+    expect(
+      graph.some((f) => f.endsWith(join('testUtils', 'stripSourceComments.ts')))
+    ).toBe(true)
+  })
+
+  /**
+   * Comment-stripped, because a `jest.mock(` mention in PROSE is not a
+   * registration — and both files in this graph discuss it at length, this one
+   * in its own opening docstring. Measured: without stripping, the gate below
+   * reports both of them and is unpassable, which would have pressured someone
+   * into bending the check rather than fixing the property.
+   */
+  function registersAMock(file: string): boolean {
+    return stripSourceComments(readFileSync(file, 'utf8')).includes(
+      MOCK_CALL_NEEDLE
+    )
+  }
+
+  it("no file in this suite's static import graph registers a mock", () => {
+    expect(graph.filter(registersAMock)).toEqual([])
+  })
+
+  it('self-test: the needle DOES match a file that genuinely registers mocks', () => {
+    // Positive control. `jest.setupContainment.ts` is the very module whose
+    // import caused WR-05; if the needle failed to match it, the gate above
+    // would be green for the wrong reason.
+    const setupContainment = join(
+      SRC_ROOT,
+      'backend',
+      'jest.setupContainment.ts'
+    )
+    expect(existsSync(setupContainment)).toBe(true)
+
+    // Through the SAME comment-stripping path the gate uses, so this also
+    // proves the stripper does not swallow a real registration on its way to
+    // discarding the prose ones.
+    expect(registersAMock(setupContainment)).toBe(true)
+
+    // And were it in the graph, the gate's own filter would return it — so
+    // the gate detects this file rather than merely tolerating it.
+    //
+    // Deliberately NOT `expect(graph).not.toContain(setupContainment)`. That
+    // assertion belongs to the gate above, and duplicating it here made this
+    // positive control fail alongside the gate during the RED proof, which
+    // muddies which test is measuring what. A control must stay green while
+    // the thing it controls for goes red.
+    expect([setupContainment].filter(registersAMock)).toEqual([
+      setupContainment
+    ])
+  })
+
+  it('self-test: prose alone does NOT trip the gate, but a real call does', () => {
+    // Non-vacuity in both directions for the stripping decision itself. The
+    // first shape is what both files in this graph legitimately contain.
+    const proseOnly = join(SRC_ROOT, 'backend', 'testUtils')
+    expect(existsSync(proseOnly)).toBe(true)
+    expect(
+      readFileSync(join(proseOnly, 'stripSourceComments.ts'), 'utf8').includes(
+        MOCK_CALL_NEEDLE
+      )
+    ).toBe(true)
+    expect(registersAMock(join(proseOnly, 'stripSourceComments.ts'))).toBe(
+      false
+    )
+  })
+
+  it('self-test: an unresolvable specifier makes the walk THROW rather than skip', () => {
+    expect(() =>
+      resolveFirstParty('definitely-not-a-real-package-xyzzy', thisFile)
+    ).toThrow(/cannot resolve import/)
   })
 })

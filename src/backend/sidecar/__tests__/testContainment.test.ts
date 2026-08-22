@@ -432,6 +432,15 @@ const IN_SCOPE_SUITES = [
  * other, and excluding it would leave the Block C tripwire below with a
  * permanent one-file blind spot.
  *
+ * `structuralContainment.test.ts`'s membership was INACCURATE from 2026-07-26
+ * to 2026-08-23 (WR-05, gap cycle 4): plan 34.2-25 gave it a top-level import
+ * of `backend/jest.setupContainment`, so it carried that module's two
+ * `jest.mock` registrations in its own graph and no longer relied on
+ * `setupFiles` alone. The import is gone and the classification is accurate
+ * again — and it no longer depends on anyone noticing: that file's own
+ * "WR-05" describe block walks its static import graph and fails if any file
+ * in it registers a mock, so this entry cannot rot the same way twice.
+ *
  * The directory holds 28 `*.test.ts` files as of Phase 34.3 Plan 06 (27
  * before this plan added `clipboardFlows.test.ts`; 26 before plan 34.3-01
  * added `shellFilesFlows.test.ts`; 25 before gap cycle 4 plan 34.2-26 added

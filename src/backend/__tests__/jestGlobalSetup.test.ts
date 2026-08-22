@@ -46,6 +46,7 @@ const {
   RUN_ROOT_PREFIX,
   LEGACY_ROOT_PREFIX,
   CONTAINMENT_ROOT_ENV_KEY,
+  REAL_HOME_ENV_KEY,
   REAP_AFTER_MS,
   reapStaleRoots
 } = globalSetupModule
@@ -183,12 +184,26 @@ describe('jest.globalSetup — reapStaleRoots safety conditions', () => {
 
 describe('jest.globalSetup — run root creation', () => {
   const savedEnv = process.env[CONTAINMENT_ROOT_ENV_KEY]
+  const savedRealHome = process.env[REAL_HOME_ENV_KEY]
+
+  // `os.homedir()` is mocked in this sandbox by jest.setupContainment, so the
+  // REAL home has to come through `requireActual` -- which is exactly the
+  // provenance problem that made WR-05 worth fixing in globalSetup rather than
+  // anywhere inside a test sandbox.
+  const realHomedirOutsideJest = jest
+    .requireActual<typeof import('os')>('os')
+    .homedir()
 
   afterEach(() => {
     if (savedEnv === undefined) {
       delete process.env[CONTAINMENT_ROOT_ENV_KEY]
     } else {
       process.env[CONTAINMENT_ROOT_ENV_KEY] = savedEnv
+    }
+    if (savedRealHome === undefined) {
+      delete process.env[REAL_HOME_ENV_KEY]
+    } else {
+      process.env[REAL_HOME_ENV_KEY] = savedRealHome
     }
   })
 
@@ -217,6 +232,63 @@ describe('jest.globalSetup — run root creation', () => {
         rmSync(root, { recursive: true, force: true })
       }
     }
+  })
+
+  it('the real home this run inherited from globalSetup IS the real home (WR-05)', () => {
+    // The value under test is the AMBIENT one: written by the genuine
+    // globalSetup in the parent process before this worker was forked. That is
+    // the production path, and it is the value `structuralContainment.test.ts`
+    // actually consumes.
+    //
+    // It is NOT verified by calling `globalSetupModule()` below, and the reason
+    // is worth stating: invoked from inside a sandbox, that function's
+    // `require('os')` resolves through jest's module registry, which already
+    // carries `jest.setupContainment`'s mock — so it would publish the
+    // CONTAINMENT ROOT under this key and the assertion would pass against the
+    // wrong value entirely. Measured while writing this test. The parent
+    // process has no such registry, which is the whole reason the capture lives
+    // there.
+    expect(savedRealHome).toBe(realHomedirOutsideJest)
+
+    // Non-vacuity in the direction that matters: the real home must NOT be the
+    // containment root, or every downstream assertion comparing the two is
+    // trivially satisfied.
+    expect(savedRealHome).not.toBe(process.env[CONTAINMENT_ROOT_ENV_KEY])
+    expect(savedRealHome).not.toBe(process.env.HOME)
+  })
+
+  it('globalSetup assigns the real-home key at all, not only the run-root key', async () => {
+    // Presence only. Per the note above, the VALUE produced by an in-sandbox
+    // invocation is the mocked homedir, so asserting on it would be asserting
+    // on an artefact of the test environment. What this does catch is the
+    // assignment being deleted or renamed.
+    delete process.env[REAL_HOME_ENV_KEY]
+    expect(process.env[REAL_HOME_ENV_KEY]).toBeUndefined()
+
+    let root: string | undefined
+    try {
+      await globalSetupModule()
+      expect(process.env[REAL_HOME_ENV_KEY]).toBeDefined()
+      expect((process.env[REAL_HOME_ENV_KEY] as string).length).toBeGreaterThan(
+        0
+      )
+      root = process.env[CONTAINMENT_ROOT_ENV_KEY]
+    } finally {
+      if (
+        root !== undefined &&
+        root.startsWith(join(tmpdir(), RUN_ROOT_PREFIX))
+      ) {
+        rmSync(root, { recursive: true, force: true })
+      }
+    }
+  })
+
+  it('self-test: the two env keys are distinct and neither is a prefix of the other', () => {
+    // A copy-paste that pointed both at one key would make the assertion
+    // above pass while publishing the wrong value under one of the names.
+    expect(REAL_HOME_ENV_KEY).not.toEqual(CONTAINMENT_ROOT_ENV_KEY)
+    expect(REAL_HOME_ENV_KEY.startsWith(CONTAINMENT_ROOT_ENV_KEY)).toBe(false)
+    expect(CONTAINMENT_ROOT_ENV_KEY.startsWith(REAL_HOME_ENV_KEY)).toBe(false)
   })
 
   it('self-test: the prefixes are distinct, so run roots and per-file roots cannot be confused', () => {
