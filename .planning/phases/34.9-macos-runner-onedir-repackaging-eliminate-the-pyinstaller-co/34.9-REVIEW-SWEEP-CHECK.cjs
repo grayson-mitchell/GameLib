@@ -26,8 +26,9 @@
 //      `does not exist`). A match on the citation text fails the row with reason
 //      FIXED-CONFIRMATION-DENIES-FIX, even if the same text also satisfies the acceptance rule
 //      below -- a row cannot claim a fix while its own evidence denies it.
-//   2. Acceptance: the citation text must NOT contain the literal string `SUMMARY` (a plan Summary
-//      is the phase's own narrative about its own effect, never independent proof), and must
+//   2. Acceptance: the citation text must NOT contain the word `summary` in any capitalisation
+//      (case-insensitive, matching the convention POLARITY_DENY_PATTERNS already uses -- a plan
+//      Summary is the phase's own narrative about its own effect, never independent proof), and must
 //      contain EITHER a `meta/`, `src/` or `package.json` path reference, OR a reproducible-result
 //      marker (`verdict` and `PASS` both present -- this project's own proof-document convention,
 //      e.g. `34.9-PIPE-PROOF.md`'s `verdict PASS`). The artifact does not have to live outside
@@ -154,7 +155,7 @@ function scoreFixedRow(row) {
   }
 
   const evidenceOk = /34\.9-\d+/.test(evidence)
-  const citesSummary = combined.includes('SUMMARY')
+  const citesSummary = /SUMMARY/i.test(combined)
   const citesArtifact = /meta\/|src\/|package\.json/.test(combined)
   const citesReproducibleResult = /\bverdict\b/i.test(combined) && /\bPASS\b/.test(combined)
   const citationOk = !citesSummary && (citesArtifact || citesReproducibleResult)
