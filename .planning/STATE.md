@@ -2759,7 +2759,12 @@ below so each correction is auditable rather than silent):
 **Nothing.** Phase 34.2's closeout artifacts are green across the board: `34.2-VERIFICATION.md`
 `status: passed` 14/14, `34.2-SECURITY.md` `status: verified` 164 threats / 164 closed / **0
 open**, `34.2-VALIDATION.md` `status: complete`, ROADMAP **30/30 plans with zero unchecked
-boxes**, and all five code reviews dispositioned across **80 findings, 0 open**.
+boxes**, and all five code reviews carrying a disposition across **80 findings**. **Not all 80
+are closed** — quick task `260823-d7j` (`34bdb4f12`) declared a per-file `disposition:` on each
+cycle review, and cycles 1 and 2 read `partial`: cycle 1's WR-01..07 / IN-01..04 were carried
+into later cycles but never dispositioned AS A SET, and cycle 2's **IN-04 is unaccounted**.
+Cycles 3 and 4 read `closed`. That residue sits in the gap cycles, not in 34.2's deliverable,
+but this paragraph previously claimed 0 open across all 80 and that was wrong.
 `34.2-HUMAN-UAT.md` is `status: diagnosed` (testing finished, its one failure root-caused and
 owned by Phase 35) and `34.2-REVIEW-FIX.md` stays `status: partial`, correctly — see the last
 three DISCHARGED bullets for why neither is an outstanding item.
@@ -2803,12 +2808,28 @@ DISCHARGED, do not redo:
   per-round reconciliation section for cycles 1–3, each disposing the previous round's findings
   individually and pinned token-by-token by `currency-gate.py`. Only cycle 4's section was
   missing; it was written 2026-08-23 (commit `10f4d200e`) and the gate extended per its own
-  documented steps. All five reviews are now dispositioned: **80 findings, 0 open.**
-  `34.2-REVIEW-FIX.md` stays `status: partial` on a corrected basis — its own scope genuinely
-  is round 1 only (`findings_in_scope: 17`), so `all_fixed` would assert completeness for a
-  document holding a fifth of the evidence. Still true and worth keeping: these four files are
-  INVISIBLE to the gsd-phase-status explorer, because `artifactKind()` matches
-  `name === kind || name.endsWith('-' + kind)` and nothing ends in `-REVIEW-GAP-CYCLE-N.md`.
+  documented steps. All five reviews now carry a disposition, covering **80 findings** — but
+  **not all 80 are closed**, and an earlier version of this bullet claimed they were. Per the
+  `disposition:` fields committed by `260823-d7j` (`34bdb4f12`): cycles 3 and 4 `closed`, cycles
+  1 and 2 `partial` — cycle 1's WR-01..07 / IN-01..04 were never dispositioned as a set, and
+  cycle 2's IN-04 is unaccounted (plus 5 deferred into D4-DEF-02, two since discharged). Round 1
+  is 16 closed / 1 accepted / 0 open.
+
+  `34.2-REVIEW-FIX.md` stays `status: partial`, and the mechanism is REAL, not merely a
+  convention: `gsd-phase-status`' `reviewStatus()` returns `artifactStatus(fixValue)` whenever a
+  fix sibling exists — *"it, not the review, states where this stands."* Measured against the
+  live files: `partial` -> `inprogress`, and `all_fixed` -> **`complete`**. So flipping this one
+  field turns BOTH `34.2-REVIEW.md` and the folder rollup green. `34.2-REVIEW.md`'s own
+  `status: issues_found` is not what colours it and never was.
+
+  **CORRECTION 2026-08-23 (second pass).** An earlier version of this bullet said these four
+  files are "INVISIBLE to the gsd-phase-status explorer" and called it "still true". It was
+  already false when written: `260823-d7j` landed at 09:38 that morning and shipped
+  gsd-phase-status **v0.8.0**, whose `artifactKind()` matches `-REVIEW-(GAP-)?CYCLE-?<n>.md` by
+  regex BEFORE the suffix scan. All four are badged. The extension lives at
+  `~/.vscode/extensions/gsd-phase-status/` — **outside this repo and not version-controlled**,
+  which is why searching the repo or `~/.claude` finds nothing and invites exactly this stale
+  re-assertion. Check that path before repeating any claim about explorer behaviour.
 
 Also settled by that UAT run, worth recording because it had been an open question:
 **macOS arm64 Tauri packaging works** — a valid `.app` plus a 514MB DMG, all three build
