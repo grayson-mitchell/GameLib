@@ -301,13 +301,21 @@ describe('structural containment proof — zero per-suite mocks (34.2 gap cycle 
 // task's diff is purely additive below the pre-existing Tests 1-6.
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { readdirSync, readFileSync } = require('fs') as typeof import('fs')
-const { basename } = require('path') as typeof import('path')
+const { basename, sep } = require('path') as typeof import('path')
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 // Declared exclusion allowlist for the Test 9 source gate below. Every entry
 // must name a file that legitimately references BOTH the 'node:os' specifier
 // AND one of the forbidden identifiers (homedir/userInfo) -- proven by the
 // anti-vacuity assertion inside Test 9's own describe block, not assumed.
+//
+// IN-02 (gap cycle 4, fixed 2026-08-23): these were BASENAMES, matched with
+// `NODE_OS_GATE_EXEMPT_FILES.includes(basename(filePath))`, which exempted any
+// file ANYWHERE under `src/backend` that happened to share one of the three
+// names -- a new `src/backend/anything/testContainment.test.ts` would have been
+// silently outside the gate. They are now paths relative to `backendRoot`,
+// matched exactly. Separators are normalised to '/' at the comparison site so
+// this does not become a gate that only works on POSIX.
 const NODE_OS_GATE_EXEMPT_FILES = [
   // Legitimately names both identifiers because it IS the redirection: it
   // registers the homedir/userInfo overrides for both specifiers (Task 2 of
@@ -320,7 +328,7 @@ const NODE_OS_GATE_EXEMPT_FILES = [
   // file. Without this entry the gate flags the file it lives in and
   // `toEqual([])` can never pass -- the exclusion is not a convenience, it
   // is what makes the gate satisfiable.
-  'structuralContainment.test.ts',
+  'sidecar/__tests__/structuralContainment.test.ts',
   // Added as a FORWARD DECLARATION by wave-1 plan 34.2-25, ahead of the code
   // that would need it: 34.2-29 (wave 2) could not add the exclusion itself,
   // because this allowlist lives in structuralContainment.test.ts, which
@@ -340,8 +348,22 @@ const NODE_OS_GATE_EXEMPT_FILES = [
   // WR-04 fix added a test below asserting that EVERY entry in this list trips
   // the predicate, so a decorative entry fails the suite rather than relying on
   // someone reading a comment.
-  'testContainment.test.ts'
+  'sidecar/__tests__/testContainment.test.ts'
 ]
+
+/** `src/backend`, the root every allowlist entry above is relative to. */
+const NODE_OS_GATE_BACKEND_ROOT = resolve(__dirname, '..', '..')
+
+/**
+ * A file's path relative to `src/backend`, with separators normalised to '/'
+ * (IN-02). Windows produces backslashes from `relative()`, which would make
+ * every allowlist comparison fail there and turn the exemption into a
+ * platform-dependent accident -- the gate would report its own three
+ * legitimate files as violations on Windows and pass everywhere else.
+ */
+function backendRelative(filePath: string): string {
+  return relative(NODE_OS_GATE_BACKEND_ROOT, filePath).split(sep).join('/')
+}
 
 // Why an allowlist rather than exempting `__tests__` wholesale: the defect
 // class CR-02 protects against is a *production* module reopening the hole,
@@ -480,7 +502,8 @@ describe('CR-02 detection gates (gap cycle 4, plan 34.2-25, REQ-34.2-07/-14)', (
     it('the source gate finds zero violations outside the declared allowlist', () => {
       const violations: string[] = []
       for (const filePath of collectBackendTsFiles(backendRoot)) {
-        if (NODE_OS_GATE_EXEMPT_FILES.includes(basename(filePath))) continue
+        if (NODE_OS_GATE_EXEMPT_FILES.includes(backendRelative(filePath)))
+          continue
         const source = readFileSync(filePath, 'utf8')
         if (usesForbiddenNodeOsBinding(source)) {
           violations.push(relative(backendRoot, filePath))
@@ -504,8 +527,8 @@ describe('CR-02 detection gates (gap cycle 4, plan 34.2-25, REQ-34.2-07/-14)', (
       expect(new Set(NODE_OS_GATE_EXEMPT_FILES)).toEqual(
         new Set([
           'jest.setupContainment.ts',
-          'structuralContainment.test.ts',
-          'testContainment.test.ts'
+          'sidecar/__tests__/structuralContainment.test.ts',
+          'sidecar/__tests__/testContainment.test.ts'
         ])
       )
 
@@ -520,14 +543,61 @@ describe('CR-02 detection gates (gap cycle 4, plan 34.2-25, REQ-34.2-07/-14)', (
       // file's regexes continuing to name 'node:os'. An entry that no longer
       // trips the predicate is an unjustified blanket exemption over a whole
       // file: delete the entry rather than leave the gate weakened.
-      const decorative = NODE_OS_GATE_EXEMPT_FILES.filter((exemptName) => {
-        const match = allFiles.find((f) => basename(f) === exemptName)
+      const decorative = NODE_OS_GATE_EXEMPT_FILES.filter((exemptPath) => {
+        // IN-02: matched on the backend-relative path, not the basename, for
+        // the same reason the gate itself is.
+        const match = allFiles.find((f) => backendRelative(f) === exemptPath)
         expect(match).toBeDefined()
         return !usesForbiddenNodeOsBinding(
           readFileSync(match as string, 'utf8')
         )
       })
       expect(decorative).toEqual([])
+    })
+
+    it('self-test D (IN-02): a same-BASENAME file at a DIFFERENT path is NOT exempt', () => {
+      // The whole finding. The allowlist used to be matched with
+      // `includes(basename(filePath))`, so a hypothetical
+      // `src/backend/anything/testContainment.test.ts` -- or any other file
+      // sharing one of the three names -- was silently outside the gate. No
+      // such file exists today, which is exactly why this needs asserting
+      // rather than observing: the hole is invisible until someone adds one.
+      const impostor = join(
+        NODE_OS_GATE_BACKEND_ROOT,
+        'anything',
+        'testContainment.test.ts'
+      )
+      expect(basename(impostor)).toBe('testContainment.test.ts')
+      expect(NODE_OS_GATE_EXEMPT_FILES).not.toContain(backendRelative(impostor))
+
+      // Non-vacuity: the REAL file at the declared path must still be exempt,
+      // or this would pass for a gate that exempts nothing at all.
+      const genuine = join(
+        NODE_OS_GATE_BACKEND_ROOT,
+        'sidecar',
+        '__tests__',
+        'testContainment.test.ts'
+      )
+      expect(NODE_OS_GATE_EXEMPT_FILES).toContain(backendRelative(genuine))
+
+      // And the old basename form accepted BOTH -- which is what made it
+      // wrong. Asserted rather than described, so the difference is visible at
+      // the failure site if anyone reverts the matcher.
+      expect(NODE_OS_GATE_EXEMPT_FILES.map((e) => basename(e))).toContain(
+        basename(impostor)
+      )
+    })
+
+    it('self-test E (IN-02): backendRelative normalises separators, so the gate is not POSIX-only', () => {
+      const genuine = join(
+        NODE_OS_GATE_BACKEND_ROOT,
+        'sidecar',
+        '__tests__',
+        'structuralContainment.test.ts'
+      )
+      const rel = backendRelative(genuine)
+      expect(rel).toBe('sidecar/__tests__/structuralContainment.test.ts')
+      expect(rel).not.toContain('\\')
     })
 
     it('self-test C: the decorative filter REJECTS a list where any single entry does not trip the predicate', () => {
