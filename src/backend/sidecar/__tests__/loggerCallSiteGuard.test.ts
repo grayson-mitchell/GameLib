@@ -193,13 +193,22 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
       expect(callSiteDiagnostic).toBeDefined()
       expect(callSiteDiagnostic).toContain('ENOTDIR')
 
-      // Load-bearing NEGATIVE assertion (mirrors the WR-02 suite this test
-      // replaces): a diagnostic-shaped stderr line alone is not evidence on
-      // its own — processGuards.ts's own generic absorption text must be
-      // ABSENT too, proving THIS call site is what caught the rejection.
-      for (const line of stderrLines) {
-        expect(line).not.toContain('unhandled promise rejection')
-      }
+      // WR-10 (gap cycle 4, fixed 2026-08-23): a loop asserting that no stderr
+      // line contains processGuards.ts's generic 'unhandled promise rejection'
+      // text used to sit here, annotated "Load-bearing NEGATIVE assertion". It
+      // could not fail. This suite calls only `initHeadless()` and
+      // `registerLoggerFlows()` -- it never calls `bootstrap.init()`, and
+      // `loggerFlowRegistration.ts` does not import `processGuards.ts`, so that
+      // string is unreachable here under any circumstance. Deleted rather than
+      // made real: installing the process-level guard to give it teeth would
+      // register an `unhandledRejection` listener that outlives this test.
+      //
+      // The discrimination that assertion CLAIMED to provide is genuinely
+      // provided by the two checks around it: `callSiteDiagnostic` above is
+      // undefined if the production `.catch` is removed, and the listener check
+      // below flips if the rejection escapes to the process instead of being
+      // caught at the call site. Both fail against the unfixed code; the loop
+      // never did.
       expect(unhandledRejectionListener).not.toHaveBeenCalled()
       expect(stdoutSpy).not.toHaveBeenCalled()
     } finally {

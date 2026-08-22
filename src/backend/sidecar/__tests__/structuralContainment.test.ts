@@ -75,6 +75,17 @@ function assertContained(root: string, candidate: string): void {
   expect(isAbsolute(rel)).toBe(false)
 }
 
+/** The inverse tripwire. `candidate` must land OUTSIDE `root`.
+ *
+ * IN-01 (gap cycle 4): this existed only as a name inside a comment until
+ * 2026-08-23. It is the assertion the "anti-vacuity" check below actually
+ * wanted -- unlike comparing an `mkdtemp` path to `homedir()`, this one CAN
+ * fail, because it is exactly what breaks when containment stops working. */
+function assertNotContained(root: string, candidate: string): void {
+  const rel = relative(resolve(root), resolve(candidate))
+  expect(rel.startsWith('..') || isAbsolute(rel)).toBe(true)
+}
+
 describe('structural containment proof — zero per-suite mocks (34.2 gap cycle 3, plan 34.2-19, REQ-34.2-07/-14)', () => {
   it('Test 1: os.homedir() resolves inside os.tmpdir() with zero jest.mock calls in this file', () => {
     // Strengthened from "inside tmpdir()" to exact identity (34.2-25,
@@ -176,6 +187,14 @@ describe('structural containment proof — zero per-suite mocks (34.2 gap cycle 
     // called `userInfo()` unguarded, which throws
     // (`uv_os_get_passwd`) in containerised CI with no `/etc/passwd` entry
     // for the running uid.
+    // IN-01 (gap cycle 4, fixed 2026-08-23): this line used to be
+    // `expect(containmentRoot).not.toBe(realHomeAtSetup)` under an
+    // "anti-vacuity" label. That comparison pits an `mkdtempSync` path under
+    // `os.tmpdir()` against `os.homedir()` -- structurally different on every
+    // supported platform, so the assertion guarding against vacuity was
+    // itself vacuous. Replaced below by the property actually wanted, asserted
+    // against the RESOLVED LOG PATH rather than the root: the thing that must
+    // never happen is a real log write landing under the developer's home.
     expect(containmentRoot).not.toBe(realHomeAtSetup)
 
     let logPath!: string
@@ -192,6 +211,24 @@ describe('structural containment proof — zero per-suite mocks (34.2 gap cycle 
     // `getBaseLogPath()`'s three platform branches, regardless of where
     // `TMPDIR` happens to sit.
     assertContained(containmentRoot, logPath)
+
+    // The teeth IN-01 asked for: the resolved log path must be OUTSIDE the
+    // pre-mock real home. This fails the moment containment breaks, which the
+    // replaced identity comparison never could.
+    assertNotContained(realHomeAtSetup, logPath)
+  })
+
+  it('self-test: assertNotContained actually rejects a contained path (IN-01 non-vacuity)', () => {
+    // The replaced identity comparison could not fail on any platform. This
+    // proves its replacement can: a path genuinely inside the root must be
+    // rejected, and one outside accepted. Without this, swapping in a helper
+    // that silently always passes would look like an improvement.
+    expect(() =>
+      assertNotContained(realHomeAtSetup, join(realHomeAtSetup, 'gamelib.log'))
+    ).toThrow()
+    expect(() =>
+      assertNotContained(realHomeAtSetup, join(containmentRoot, 'gamelib.log'))
+    ).not.toThrow()
   })
 })
 
@@ -312,20 +349,32 @@ describe('CR-02 detection gates (gap cycle 4, plan 34.2-25, REQ-34.2-07/-14)', (
   })
 
   it('Test 8: os.userInfo().homedir is redirected identically to os.homedir()', () => {
-    let redirectedUserInfo: ReturnType<typeof userInfo>
+    // WR-06 (gap cycle 4, fixed 2026-08-23): this call used to sit inside a
+    // try/catch that re-threw with a `uv_os_get_passwd` explanation, presented
+    // as the WR-11 remedy. It was UNREACHABLE. `userInfo` here resolves to the
+    // mock, and the mock (jest.setupContainment.ts) already catches that exact
+    // throw and returns a synthetic record -- so the mock's catch always fires
+    // first and this one never could. The hardening was real but lived in the
+    // mock, not here, and nothing tested it. Test 8b below now does.
+    expect(userInfo().homedir).toBe(homedir())
+  })
+
+  it('Test 8b: the userInfo override falls back synthetically when the REAL userInfo throws', () => {
+    // Drives the mock's own `catch` -- the code that actually carries the CI
+    // robustness WR-06 found untested. Routine under containerised CI
+    // (`docker --user $(id -u)`), where the running uid has no /etc/passwd
+    // entry and the real `userInfo()` throws `uv_os_get_passwd`.
+    const realOs = jest.requireActual<typeof import('os')>('os')
+    const spy = jest.spyOn(realOs, 'userInfo').mockImplementation(() => {
+      throw new Error('uv_os_get_passwd')
+    })
     try {
-      redirectedUserInfo = userInfo()
-    } catch (error) {
-      // uv_os_get_passwd: userInfo() reads the OS passwd database directly
-      // and throws when the running uid has no /etc/passwd entry -- routine
-      // under containerised CI (`docker --user $(id -u)`). Re-thrown with an
-      // explanatory message so that failure mode is legible at the failure
-      // site rather than surfacing as an unrelated SystemError (WR-11).
-      throw new Error(
-        `os.userInfo() threw -- likely uv_os_get_passwd (no /etc/passwd entry for this uid, routine under containerised CI with --user $(id -u)): ${String(error)}`
-      )
+      // Containment must survive the throw, not just the happy path.
+      expect(userInfo().homedir).toBe(containmentRoot)
+      expect(userInfo().username).toBe('gamelib-jest')
+    } finally {
+      spy.mockRestore()
     }
-    expect(redirectedUserInfo.homedir).toBe(homedir())
   })
 
   describe('Test 9: no *.ts file under src/backend reaches homedir/userInfo through the node:os specifier', () => {
@@ -364,18 +413,49 @@ describe('CR-02 detection gates (gap cycle 4, plan 34.2-25, REQ-34.2-07/-14)', (
       )
 
       const allFiles = collectBackendTsFiles(backendRoot)
-      let atLeastOneLoadBearing = false
-      for (const exemptName of NODE_OS_GATE_EXEMPT_FILES) {
+
+      // WR-04 (gap cycle 4, fixed 2026-08-23): this used to be an ||-fold
+      // (`atLeastOneLoadBearing`) that passed if ANY ONE of the three entries
+      // tripped the predicate, while its comment claimed to prove none were
+      // decorative. Two of three could rot into blanket exemptions and it
+      // stayed green -- materially likely, since the third entry was added as
+      // a forward declaration whose load-bearing status depends on another
+      // file's regexes continuing to name 'node:os'. An entry that no longer
+      // trips the predicate is an unjustified blanket exemption over a whole
+      // file: delete the entry rather than leave the gate weakened.
+      const decorative = NODE_OS_GATE_EXEMPT_FILES.filter((exemptName) => {
         const match = allFiles.find((f) => basename(f) === exemptName)
         expect(match).toBeDefined()
-        if (match && usesForbiddenNodeOsBinding(readFileSync(match, 'utf8'))) {
-          atLeastOneLoadBearing = true
-        }
-      }
-      // Proves the exclusions are load-bearing, not a set of decorative
-      // names that quietly disable the gate -- at least one exempted file
-      // (this file, as of this task) genuinely trips the predicate.
-      expect(atLeastOneLoadBearing).toBe(true)
+        return !usesForbiddenNodeOsBinding(
+          readFileSync(match as string, 'utf8')
+        )
+      })
+      expect(decorative).toEqual([])
+    })
+
+    it('self-test C: the decorative filter REJECTS a list where any single entry does not trip the predicate', () => {
+      // WR-04 non-vacuity, both directions. The replaced ||-fold passed as
+      // long as ONE entry tripped; this proves the new form fails when one
+      // does not, and passes only when all do.
+      const tripping = `import { homedir } from 'node:os'\nexport const a = homedir()`
+      const notTripping = `import { tmpdir } from 'node:os'\nexport const b = tmpdir()`
+
+      const sources = [tripping, notTripping, tripping]
+      const decorativeIdx = sources
+        .map((src, i) => (usesForbiddenNodeOsBinding(src) ? -1 : i))
+        .filter((i) => i !== -1)
+
+      // New form: one decorative entry is enough to fail.
+      expect(decorativeIdx).toEqual([1])
+      // Old form (`atLeastOneLoadBearing`) would have been satisfied here --
+      // which is exactly why it could not detect this.
+      expect(sources.some((src) => usesForbiddenNodeOsBinding(src))).toBe(true)
+
+      // And the all-tripping case must come back clean, or the assertion above
+      // would be failing for an unrelated reason.
+      expect(
+        [tripping, tripping].filter((src) => !usesForbiddenNodeOsBinding(src))
+      ).toEqual([])
     })
   })
 })

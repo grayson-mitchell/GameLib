@@ -103,13 +103,36 @@ function extractLongRunningChannels(): string[] {
 }
 
 describe('loadMainRsCode comment-stripping helper (self-test)', () => {
+  // The fixture this self-test depends on: a phrase that exists ONLY inside a
+  // `///` doc comment in main.rs, never in code.
+  //
+  // Re-anchored 2026-08-23. The previous fixture ('joins this list for the
+  // same library-wide') was DELETED from main.rs by commit a6223baf1 — the
+  // round-1 IN-03 doc-comment correction — and this self-test went on passing
+  // for entirely the wrong reason, because a phrase that no longer exists is
+  // trivially absent from the stripped output. Nothing went red. That is
+  // precisely the rot WR-09 predicted, caught by the presence precondition
+  // below on its first run.
+  const COMMENT_ONLY_PHRASE =
+    'Membership is not free and is not granted on reasoning'
+
   test('a comment-only phrase from the D-10 doc comment is NOT present in the stripped output', () => {
+    // WR-09 (gap cycle 4, fixed 2026-08-23): this test asserted ONLY the
+    // absence below. That passes for the right reason today -- and would go on
+    // passing for entirely the wrong reason the moment someone reworded or
+    // deleted the main.rs comment, because a phrase that no longer exists is
+    // trivially absent from the stripped output. A self-test whose whole job
+    // is to prove the stripper works must not become a no-op on an unrelated
+    // prose edit. So: pin the precondition in RAW source first.
+    //
+    // `loadMainRsRaw` is declared below this block but is a hoisted function
+    // declaration, so calling it here is fine -- no reordering needed.
+    expect(loadMainRsRaw()).toContain(COMMENT_ONLY_PHRASE)
+
     // Without correct stripping this phrase (from the D-10 doc-comment addition
     // this plan makes) would leak through and make the "array does not name an
     // unexpected channel via prose alone" property untestable.
-    expect(loadMainRsCode()).not.toContain(
-      'joins this list for the same library-wide'
-    )
+    expect(loadMainRsCode()).not.toContain(COMMENT_ONLY_PHRASE)
   })
 })
 
