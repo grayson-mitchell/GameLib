@@ -552,7 +552,14 @@ and their own ledger entries/proof documents) and are **deliberately not claimed
 | Finding | Severity | Disposition | Evidence |
 |---|---|---|---|
 | C2-05 | Warning | DEFERRED (ledger only, D-C3-05) | item 18 below, reconciled against items 12 and 13 |
-| C2-07 | Info | DEFERRED (ledger only, D-C3-05) | item 19 below |
+| C2-07 | Info | FIXED | quick task 260823-sok, closing item 19 opened by plan 34.9-27 against 34.9-19's doc-comment pins; the positive prose pins in `meta/__tests__/cleanDist.test.ts:451-493` were cut from six `toContain` assertions to three single anchors, each RED-proven independently, with all three `not.toContain` assertions retained |
+
+**Superseded 2026-08-23 by quick task `260823-sok`: C2-07 now reads FIXED above.** As originally
+recorded on 2026-08-13 it read `DEFERRED (ledger only, D-C3-05)`, which was accurate then. The row
+is flipped rather than annotated-in-place, following the IN-03 precedent earlier in this ledger
+(a disposition table states where a finding stands NOW; the prose note carries the history).
+**C2-05 remains DEFERRED** and is the sole outstanding cycle-2 finding — see item 18, blocked on
+the default-branch push and owned by Phase 34.16.
 
 ### 18. C2-05 — the arm64-only guard is live and active in real CI, and gates an auto-publishing release
 
@@ -848,11 +855,14 @@ by this section.
 | C2-04 | Warning | FIXED | 34.9-27 (package.json wiring pin) | meta/__tests__/verifyRunnerBundle.test.ts `package.json wiring pin (C2-04)` describe block asserts presence + ordering of verify:runner-bundle before electron-builder in dist:mac and release:mac; pnpm test:ci green |
 | C2-05 | Warning | DEFERRED | item 18 below | `### 18. C2-05 — the arm64-only guard is live and active in real CI, and gates an auto-publishing release` |
 | C2-06 | Warning | FIXED | 34.9-24 (`resolvedTopLevelTargetExists`) | meta/verifyRunnerBundle.ts:108,196-219,492 — resolvedTopLevelTargetExists computed in inspectFramework, consumed by a failure branch in summarise; pnpm test:ci green |
-| C2-07 | Info | DEFERRED | item 19 below | `### 19. C2-07 — the doc-comment accuracy pins couple CI to documentation wording, not just behaviour` |
+| C2-07 | Info | FIXED | quick task 260823-sok (item 19 closed; item opened by plan 34.9-27 against 34.9-19's pins) | meta/__tests__/cleanDist.test.ts:451-493 — the `doc-comment accuracy pins (IN-01/IN-02)` block now carries 3 positive `toContain` anchors, down from 6, plus the 3 unchanged `not.toContain` assertions; 33/33 green, each anchor RED-proven by removing its phrase from meta/cleanDist.ts and observing only its own test go red |
 | C2-08 | Info | FIXED | 34.9-24 (`result.rejected` assertion) | meta/__tests__/preserveRunnerSymlinks.test.ts:270 — expect(result.rejected).toEqual([]) added to the symlink-free-tree test; pnpm test:ci green |
 
 **Count:** 8 IDs in list A. 6 mapped to a confirmed landed fix. 2 mapped to an already-existing
-ledger item (items 18/19, opened by plan 34.9-27). Unmapped count: **0**.
+ledger item (items 18/19, opened by plan 34.9-27). Unmapped count: **0**. *(As recorded 2026-08-13.
+**Superseded 2026-08-23:** item 19 closed via quick task `260823-sok`, so C2-07 now reads FIXED
+above and the split is 7 fixed / 1 deferred. Only **C2-05 / item 18** remains, blocked on the
+default-branch push. Unmapped count is unchanged at 0.)*
 
 ### Truth 8 missing-list delivery state (2026-08-13)
 
