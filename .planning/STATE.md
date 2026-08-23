@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "PHASE 34.6 EXECUTING (2026-08-24) -- waves 1-4 + plan 34.6-11 (wave 7) + plan 34.6-09 COMPLETE, 10/14 plans (34.6-01/-02/-03/-04/-05/-06/-07/-08/-09/-11). Plan 34.6-09 ported the 5 SteamGridDB channels + getGogDiscounts into enrichmentFlowRegistration.ts per Amendment A-03 (non-byte-equivalent, seam-only key access via getSteamGridDbSecretStore()), deleted steamgrid/ipc_handler.ts's legacy-plaintext migration branch, and flipped SteamGridDB's 5 (the last of the 16 deferred channels) from absence to presence in runnerSliceRegistration.test.ts (new Describe 10; Describe 6 re-derived to 59/5/64). REQ-34.6-02 now FULLY COMPLETE. REQ-34.6-04 and REQ-34.6-08 remain PARTIALLY LANDED (cont'd) -- 3 of 8 late-discovered channels and the full 24-channel census are owned by plan 34.6-10. See 34.6-09-SUMMARY.md for RED-proof failure messages verbatim. Next: plan 34.6-10 (final Describe 6 re-derivation, full 24-channel census, remaining runnerMiscFlowRegistration.ts channels), still unexecuted."
-last_updated: "2026-08-24T13:15:00.000Z"
-last_activity: "2026-08-24 -- Plan 34.6-09 EXECUTED (3 task commits: 754371f21 feat Task 1 SteamGridDB + getGogDiscounts channel registration via getSteamGridDbSecretStore() seam, 77174035c feat/test Task 2 legacy-plaintext branch deletion + electronReachLedger growth, bbf04a8d3 test Task 3 Describe 10 presence assertion + Describe 6/7 re-derivation). See 34.6-09-SUMMARY.md for full detail, including all RED-proof failure messages verbatim, the measured ledger additions, the Describe 6 values, and the repo-wide isEncryptedValue grep output. STATE.md hand-edited; no gsd-sdk state.* verb invoked (known corruption defect)."
+stopped_at: "PHASE 34.6 EXECUTING (2026-08-24) -- waves 1-4 + plan 34.6-11 (wave 7) + plan 34.6-10 COMPLETE, 11/14 plans (34.6-01/-02/-03/-04/-05/-06/-07/-08/-09/-10/-11). Plan 34.6-10 ported the last 3 of 8 late-discovered channels (getAchievements, getDefaultSavePath, getPlaytimeFromRunner) byte-equivalently from main.ts into runnerMiscFlowRegistration.ts (now 14 invoke-kind channels), built the full 24-channel census (new Describe 11 in runnerSliceRegistration.test.ts, diffed clean against IPC-PORT-INVENTORY.md), re-derived Describe 6/7 to 62/5/67 (both directions RED-proven across six modules, exceeding the plan's stated five), and verified EosDeclineCallSiteGuard.test.ts stays green and byte-identical (20 callOrDeclare call sites across 6 files, independently re-measured, agrees with prior research). Unplanned finding: electronReachLedger.test.ts's BASELINE_ELECTRON_REACHING_MODULES gained a new entry (save_sync.ts) -- measured (not predicted) via an isolated git-show before/after swap, a clean +1/+1 (38/252 -> 39/253) attributable to the new getDefaultSavePath handler's own direct import; the plan's own <interfaces> note ('via syncGOGSaves') did not hold, but the file-level growth-tripwire finding is the same. REQ-34.6-04, REQ-34.6-08, and REQ-34.6-09 now FULLY COMPLETE. See 34.6-10-SUMMARY.md for all RED-proof failure messages verbatim. Next: /gsd-execute-phase 34.6 -- plans 34.6-12/-13/-14 (final wave) remain."
+last_updated: "2026-08-24T14:30:00.000Z"
+last_activity: "2026-08-24 -- Plan 34.6-10 EXECUTED (2 task commits: 5d3bf721d feat Task 1 -- port getAchievements/getDefaultSavePath/getPlaytimeFromRunner into runnerMiscFlowRegistration.ts, 21b55e303 test Task 2 -- 24-channel census + D-09 both-directions RED-proof (6 modules) + pin maintenance for flowRegistrationCensus/invokeReturnValueSweep/electronReachLedger). Task 3 was verify-only (EosDeclineCallSiteGuard.test.ts confirmed unmodified and green, callOrDeclare census re-measured at 20/6 files, sidecar bundle boot proven). See 34.6-10-SUMMARY.md for full detail, including all RED-proof failure messages verbatim, the measured electronReachLedger before/after, the Describe 6/7 values, and the callOrDeclare per-file table. STATE.md hand-edited; no gsd-sdk state.* verb invoked (known corruption defect)."
 progress:
   # Hand-corrected after `state.begin-phase` corrupted these (recurring gsd-sdk defect).
   # Tool wrote 24/15/324/298/63 and also mangled three prose blocks (orphaned continuation
@@ -507,10 +507,20 @@ progress:
   # unchanged from 96). No gsd-sdk state.*/roadmap.update-plan-progress verb invoked
   # (known corruption defect) -- hand-applied, whole-file diffed against a pre-edit
   # snapshot to confirm insertion-only changes.
+  # 2026-08-24 (plan 34.6-10 execution): ported the last 3 of 8 late-discovered channels
+  # (getAchievements, getDefaultSavePath, getPlaytimeFromRunner) into
+  # runnerMiscFlowRegistration.ts, built the full 24-channel census, re-derived Describe 6/7
+  # to 62/5/67. REQ-34.6-04, REQ-34.6-08, REQ-34.6-09 now FULLY COMPLETE. +1 completed plan
+  # (34.6-10, plan's own SUMMARY landed). total_plans unchanged (373, already counted -- one
+  # of the 14 pre-planned 34.6 plans). percent = floor(361/373*100) = floor(96.78) = 96
+  # (floor, matching prior convention; unchanged from 96). No gsd-sdk
+  # state.*/roadmap.update-plan-progress verb invoked (known corruption defect) --
+  # hand-applied, whole-file diffed against a pre-edit snapshot to confirm insertion-only
+  # changes.
   total_phases: 27
   completed_phases: 21
   total_plans: 373
-  completed_plans: 360
+  completed_plans: 361
   percent: 96
 ---
 
@@ -570,6 +580,45 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 
 ## Current Position
+
+> # ✅ PHASE 34.6 PLAN 10 EXECUTED — 2026-08-24. REQ-34.6-04, REQ-34.6-08, REQ-34.6-09 now FULLY COMPLETE.
+>
+> Ported the last 3 of 8 late-discovered channels — `getAchievements`, `getDefaultSavePath`,
+> `getPlaytimeFromRunner` — byte-equivalently from `main.ts` into `runnerMiscFlowRegistration.ts`
+> (invoke-kind; module now 14/14), preserving `getPlaytimeFromRunner`'s two bare `return` statements
+> (resolving `undefined`, never `null`/`0`) exactly, satisfying D-14's ordering constraint. Built the
+> full 24-channel census: new Describe 11 in `runnerSliceRegistration.test.ts` asserts all 24
+> in-scope channels by name/kind, diffed clean against `IPC-PORT-INVENTORY.md` at test runtime.
+> Describe 6/7 re-derived by MEASUREMENT (never predicted) to 62 handle-kind / 5 listen-kind,
+> per-module counts `[11, 13, 7, 14, 8, 14]` totalling 67 — both directions RED-proven across all
+> **six** modules (the plan's own `<interfaces>` section named five; the sixth, `runnerMisc` itself,
+> was added because this plan's own Task 1 changed its count). Three pin-maintenance files updated
+> and each individually RED-proven before folding into the Task 2 commit:
+> `flowRegistrationCensus.test.ts` (EXPECTED `runnerMiscFlowRegistration.ts` 11→14, plus a stale
+> `register*Flows()` docstring fix — Rule 1, found during the sweep), `invokeReturnValueSweep.test.ts`
+> (total 37→40, `runnerMisc` module spec 11→14, all 3 new channels independently confirmed to prove a
+> return value), and `electronReachLedger.test.ts` (unplanned finding: `BASELINE_ELECTRON_REACHING
+> _MODULES` gained a new entry, `save_sync.ts` — the plan's own `<interfaces>` note predicted this
+> would enter via a pre-existing `syncGOGSaves` edge, which did NOT hold; the edge that actually
+> fired is the new `getDefaultSavePath` handler's OWN direct import. Measured via an isolated
+> `git show`-based before/after swap of only `runnerMiscFlowRegistration.ts`'s pre-Task-1 content: a
+> clean +1/+1, `electronImportingFiles` 38→39, `visitedFiles` 252→253). Task 3 was verify-only, per
+> the plan's explicit instruction that `EosDeclineCallSiteGuard.test.ts` (D-08 tripwire) must stay
+> unmodified: confirmed `git diff HEAD` empty against it and 9/9 green; independently re-measured the
+> `callOrDeclare(` census (20 genuine call sites across 6 files, 2 raw grep matches excluded as
+> prose-comment false positives) — agrees exactly with the plan's own prior research. Proved the
+> sidecar bundle boots post-all-changes (`pnpm build:sidecar && node build/main/sidecar.js` prints
+> `__GAMELIB_SIDECAR_READY__`). Full Backend project: only the pre-existing, out-of-scope
+> `decompressPool.test.ts` red (Phase 23.1 lzmaLoader mismatch, unchanged, untouched). Full Frontend
+> project: 122/122 suites, 2023/2023 tests green. `tsc --noEmit` clean. 2 commits: `5d3bf721d`
+> (feat Task 1: channel port), `21b55e303` (test Task 2: 24-channel census + D-09 both-directions
+> RED-proof + pin maintenance). See `34.6-10-SUMMARY.md` for all RED-proof verbatim failure messages
+> and the full `callOrDeclare` per-file table. No `gsd-sdk query state.*`/`roadmap.*` verb invoked
+> (known corruption defect) — STATE.md/ROADMAP.md/REQUIREMENTS.md hand-edited instead, each diffed
+> against a pre-edit snapshot to confirm insertion-only changes.
+> NEXT: `/gsd-execute-phase 34.6` — plans 34.6-12/-13/-14 (final wave) remain.
+>
+> Prior entries retained below, unedited.
 
 > # ✅ PHASE 34.6 PLAN 09 EXECUTED — 2026-08-24. REQ-34.6-02 now FULLY COMPLETE (Amendment A-03).
 >
