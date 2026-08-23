@@ -61,18 +61,34 @@ function lineNumberAt(stripped: string, index: number): number {
 }
 
 /**
- * Finds every UNSCOPED (top-level, brace-depth-0) `MuiTab*`/`MuiTabs*`
- * selector in a stylesheet's source text.
+ * Conditional group at-rules: their contents are ordinary rules whose match
+ * set and specificity are unchanged by the wrapper, so they confer NO scope
+ * (WR-01). `@keyframes`/`@font-face` are deliberately absent -- their
+ * contents are not selectors, so they stay opaque.
+ */
+const TRANSPARENT_AT_RULE = /^@(media|supports|container|layer|document)\b/i
+
+/**
+ * Finds every UNSCOPED `MuiTab*`/`MuiTabs*` selector in a stylesheet's source
+ * text -- "unscoped" meaning no real rule ancestor, not merely "at brace
+ * depth 0".
  *
- * Rule: at brace depth 0, split the selector text preceding `{` on `,`; for
- * each comma-separated selector, take its FIRST compound (everything up to
- * the first whitespace, `>`, `+`, or `~`). Flag it only if THAT first
- * compound is itself a `MuiTab*`/`MuiTabs*` class -- an ancestor-scoped
- * selector like `.downloadManager > .MuiTabs-root > ...` is legal because
- * its first compound is `.downloadManager`, not a MUI class. A selector
- * nested inside another rule (brace depth >= 1 at its own `{`) is never
- * inspected here, because nesting under any ancestor is what "scoped" means.
+ * Rule: track a stack of block kinds rather than one brace counter. A block
+ * is `transparent` when its prelude is a conditional group at-rule and `rule`
+ * otherwise; SCOPE DEPTH is the number of `rule` frames. At scope depth 0,
+ * split the selector text preceding `{` on `,`; for each comma-separated
+ * selector, take its FIRST compound (everything up to the first whitespace,
+ * `>`, `+`, or `~`). Flag it only if THAT first compound is itself a
+ * `MuiTab*`/`MuiTabs*` class -- an ancestor-scoped selector like
+ * `.downloadManager > .MuiTabs-root > ...` is legal because its first
+ * compound is `.downloadManager`, not a MUI class. A selector nested inside
+ * another RULE is never inspected, because nesting under a real ancestor is
+ * what "scoped" means; nesting inside `@media` alone is not.
  *
+ * The prelude is taken as the text after the LAST `;` in the current segment,
+ * not the whole segment. Without that, a preceding declaration or SCSS
+ * variable (`$leak: 8px;` then `.MuiTabs-root {`) is swept into the selector
+ * text and its first compound reads `$leak:`, hiding a real offender.
  */
 export function findUnscopedMuiTabsSelectors(
   source: string,
@@ -80,8 +96,8 @@ export function findUnscopedMuiTabsSelectors(
 ): Offender[] {
   const stripped = stripPreservingLineNumbers(source)
   const offenders: Offender[] = []
-  let depth = 0
-  let selectorStart = 0
+  const blockKinds: ('rule' | 'transparent')[] = []
+  let segmentStart = 0
 
   const flagSelector = (selectorText: string, textStart: number) => {
     let cursor = textStart
@@ -109,15 +125,21 @@ export function findUnscopedMuiTabsSelectors(
   for (let i = 0; i < stripped.length; i++) {
     const ch = stripped[i]
     if (ch === '{') {
-      if (depth === 0) {
-        flagSelector(stripped.slice(selectorStart, i), selectorStart)
+      const lastSemicolon = stripped.slice(segmentStart, i).lastIndexOf(';')
+      const preludeStart =
+        lastSemicolon === -1 ? segmentStart : segmentStart + lastSemicolon + 1
+      const prelude = stripped.slice(preludeStart, i)
+      const isTransparent = TRANSPARENT_AT_RULE.test(prelude.trim())
+      const scopeDepth = blockKinds.filter((kind) => kind === 'rule').length
+
+      if (!isTransparent && scopeDepth === 0) {
+        flagSelector(prelude, preludeStart)
       }
-      depth++
+      blockKinds.push(isTransparent ? 'transparent' : 'rule')
+      segmentStart = i + 1
     } else if (ch === '}') {
-      depth = Math.max(0, depth - 1)
-      if (depth === 0) {
-        selectorStart = i + 1
-      }
+      blockKinds.pop()
+      segmentStart = i + 1
     }
   }
 
@@ -230,5 +252,93 @@ describe('muiTabsSelectorScoping', () => {
     )
     const offenders = findUnscopedMuiTabsSelectors(source, file)
     expect(offenders).toEqual([])
+  })
+})
+
+/**
+ * WR-01 (34.10 code review, `34.10-REVIEW.md`). The guard above tracked ONE
+ * brace-depth counter and inspected a selector only at depth 0, so wrapping
+ * an unscoped rule in a conditional group at-rule hid it: `@media (...)`
+ * consumed the depth-0 slot and `.MuiTabs-root` was first seen at depth 1,
+ * which the scanner treats as "nested under an ancestor, therefore scoped".
+ *
+ * `@media` is NOT an ancestor. A conditional group at-rule contributes
+ * nothing to specificity and nothing to the matched element set -- its child
+ * rule matches exactly what it would have matched at the top level, so the
+ * 8px leak behind F-34.10-03 / F-34.10-04 reproduces verbatim through one.
+ * The same holds for `@supports`, `@container`, `@layer` and `@document`.
+ *
+ * `@keyframes` and `@font-face` are deliberately NOT in this class: their
+ * contents are keyframe selectors and descriptors, not class selectors, so
+ * they stay opaque. Treating them as transparent could only manufacture
+ * false positives on `from`/`to`/percentage preludes.
+ *
+ * Every case below was observed RED against the pre-fix single-counter
+ * scanner before the fix was written -- a guard that has never been shown to
+ * fail is not a guard, which is the lesson WR-01 itself is an instance of.
+ */
+describe('muiTabsSelectorScoping: conditional group at-rules do not confer scope (WR-01)', () => {
+  it.each([
+    ['@media', '@media (min-width: 800px)'],
+    ['@supports', '@supports (display: grid)'],
+    ['@container', '@container (min-width: 400px)'],
+    ['@layer', '@layer overrides'],
+    ['@document', '@document url("https://example.com/")']
+  ])(
+    'an unscoped .MuiTabs-root wrapped in %s is still an offender',
+    (_label, prelude) => {
+      const fixture = `${prelude} {\n  .MuiTabs-root {\n    padding-bottom: var(--space-xs);\n  }\n}\n`
+      const offenders = findUnscopedMuiTabsSelectors(fixture, 'fixture.css')
+      expect(offenders).toHaveLength(1)
+      expect(offenders[0]).toMatchObject({ line: 2, selector: '.MuiTabs-root' })
+    }
+  )
+
+  it('nested conditional at-rules do not stack into scope: @supports inside @media still yields an offender', () => {
+    const fixture =
+      '@media screen {\n  @supports (display: grid) {\n    .MuiTab-root {\n      color: red;\n    }\n  }\n}\n'
+    const offenders = findUnscopedMuiTabsSelectors(fixture, 'fixture.css')
+    expect(offenders).toHaveLength(1)
+    expect(offenders[0]).toMatchObject({ line: 3, selector: '.MuiTab-root' })
+  })
+
+  it('a real ancestor still confers scope THROUGH an at-rule: .downloadManager { @media { .MuiTabs-root } } yields zero offenders', () => {
+    const fixture =
+      '.downloadManager {\n  @media (min-width: 800px) {\n    .MuiTabs-root {\n      color: red;\n    }\n  }\n}\n'
+    expect(findUnscopedMuiTabsSelectors(fixture, 'fixture.css')).toEqual([])
+  })
+
+  it('an ancestor-scoped selector INSIDE an at-rule is legal: @media { .downloadManager .MuiTabs-root } yields zero offenders', () => {
+    const fixture =
+      '@media (min-width: 800px) {\n  .downloadManager .MuiTabs-root {\n    color: red;\n  }\n}\n'
+    expect(findUnscopedMuiTabsSelectors(fixture, 'fixture.css')).toEqual([])
+  })
+
+  it('@keyframes stays opaque: its percentage/from/to preludes are not selectors and produce no offenders', () => {
+    const fixture =
+      '@keyframes pulse {\n  from {\n    opacity: 0;\n  }\n  to {\n    opacity: 1;\n  }\n}\n'
+    expect(findUnscopedMuiTabsSelectors(fixture, 'fixture.css')).toEqual([])
+  })
+
+  it('the at-rule prelude itself is never mistaken for a selector', () => {
+    const fixture =
+      '@media (min-width: 800px) {\n  .foo {\n    color: red;\n  }\n}\n'
+    expect(findUnscopedMuiTabsSelectors(fixture, 'fixture.css')).toEqual([])
+  })
+
+  /**
+   * Second, independent miss found while fixing WR-01: `selectorStart` was
+   * only reset when depth returned to 0, so any top-level declaration or SCSS
+   * variable preceding a rule was swept into the selector text. The first
+   * compound then read `$leak:` rather than `.MuiTabs-root`, and the offender
+   * went unreported. Not part of WR-01 as filed, but the same guard and the
+   * same bypass shape.
+   */
+  it('a preceding top-level declaration does not hide an unscoped selector', () => {
+    const fixture =
+      '$leak: 8px;\n.MuiTabs-root {\n  padding-bottom: $leak;\n}\n'
+    const offenders = findUnscopedMuiTabsSelectors(fixture, 'fixture.scss')
+    expect(offenders).toHaveLength(1)
+    expect(offenders[0]).toMatchObject({ line: 2, selector: '.MuiTabs-root' })
   })
 })
