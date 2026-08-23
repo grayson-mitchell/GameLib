@@ -642,7 +642,7 @@ Now tracked:
 
 **D-29-08 was genuinely ORPHANED, with dates.** It named Phase 34.5; 34.5's own `-26-SUMMARY.md:316`
 disclaims it; 34.6 inherited only the Epic **login** and `egsSync` legs from the parked 34.7; 34.7 is
-ON HOLD; and `clearEpicCookies` exists in no phase folder but this one's. **Proposed owner: 34.6**,
+ON HOLD; and `clearEpicCookies` exists in no phase folder but this one's. **Owner: 34.6 — CONFIRMED by the operator 2026-08-23** ("yes move to 34.6"); was proposed,
 as an explicit addition — the existing inheritance demonstrably did not cover logout.
 
 **D-29-06 keeps UNDETERMINED as UNDETERMINED.** Its transferable half is preserved verbatim: the
@@ -664,7 +664,7 @@ not a task* — nothing below is left without an owner **and** a declared file.
 | D-29-05 | OPEN | plan 33 | `src-tauri/src/main.rs` |
 | D-29-06 | OPEN, now tracked | plan 34 → todo | todo file above |
 | D-29-07 | OPEN — headline | plan 35 | `34.4.1-LIVE-GATE-RERUN-4.md` |
-| D-29-08 | ORPHANED, now tracked | plan 34 → todo, proposed 34.6 | todo file above |
+| D-29-08 | RE-HOMED to 34.6, CONFIRMED 2026-08-23 | plan 34 → todo; owner signed off by the operator, not just proposed | todo file above |
 | D-29-09 | CLOSED (one REQ) | plan 30 | `.planning/REQUIREMENTS.md` |
 | D-29-10 | CLOSED at filing | plan 30 | — (ledger only) |
 | NEW-01 | CLOSED | plan 31 | `seam-parity-sweep.py` |

@@ -3,8 +3,9 @@ created: 2026-08-23
 source: 34.4.1 gap cycle 3, plan 34 (from D-29-08, filed 2026-07-31)
 status: pending
 severity: medium
-resolves_phase: null
-blocked_by: "no authenticated Epic session has been available on any gate run to date"
+resolves_phase: "34.6"
+blocked_by: "nothing external — Phase 34.6 must OBTAIN an authenticated Epic session as part of its live gate. This is a prerequisite of the gate, not a blocker on it."
+owner_confirmed: 2026-08-23
 ---
 
 # Epic logout's cookie clear is UNOBSERVED — and, until now, unowned
@@ -56,8 +57,32 @@ of the jar — the same paired-census discipline that closed F-6 for Humble.
 A green unit suite does **not** discharge this. Every blocking defect in Phase 34.4.1 was found by a
 human driving the UI; none by automation.
 
-## Proposed owner
+## Owner — CONFIRMED 2026-08-23
 
 **Phase 34.6**, which already holds the live Epic surface (it inherited 34.5 UAT tests 11 and 12
 from the parked 34.7). Adding it there is an explicit act — the existing inheritance demonstrably did
 **not** cover logout.
+
+**Confirmed by the operator on 2026-08-23** ("yes move to 34.6"), converting plan 34's proposal into
+a decision. `resolves_phase` is now set accordingly.
+
+### But `resolves_phase: 34.6` does NOT mean 34.6 closing discharges this
+
+Setting `resolves_phase` is deliberate — an absent one makes todo auto-close miss everything, a
+lesson this repo has relearned three times. The counter-risk has to be stated in the same breath:
+**the discharge condition above is a LIVE OBSERVATION, and phase closure is not one.** If 34.6
+closes without an authenticated Epic session, a UI-driven logout, and the paired jar census, then
+auto-close will silently close an item nobody ever exercised — the exact "a pass can cover a surface
+that was never exercised" shape this phase family keeps producing.
+
+**Whoever plans 34.6: make this an explicit blocking gate item, not an inherited line.** The
+inheritance from 34.7 already demonstrably failed to cover logout once.
+
+### Why `blocked_by` was rewritten
+
+It previously read *"no authenticated Epic session has been available on any gate run to date"* —
+a statement about PAST gate runs that read as a present-tense blocker, which made this todo
+permanently un-actionable: nobody would go obtain a session while the item announced itself as
+blocked on having one. A blocker describing its own symptom. Embedded Epic login works (restored
+2026-08-22 — that is why 34.7 went ON HOLD), so a session is obtainable; obtaining one is 34.6's
+job, not a precondition it must wait on.
