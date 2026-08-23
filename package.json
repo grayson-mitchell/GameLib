@@ -57,7 +57,8 @@
     "prettier-fix": "prettier --write .",
     "download-helper-binaries": "esbuild --bundle --platform=node --target=node21 meta/downloadHelperBinaries.ts | node",
     "lint-translations": "esbuild --bundle --platform=node --target=node21 meta/lintTranslations.ts | node",
-    "build-crossover-index": "esbuild --bundle --platform=node --target=node21 meta/buildCrossoverIndex.ts | node"
+    "build-crossover-index": "esbuild --bundle --platform=node --target=node21 meta/buildCrossoverIndex.ts | node",
+    "build-runners-onedir": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/buildRunnersOnedir.ts"
   },
   "dependencies": {
     "@fontsource/cabin": "^4.5.10",

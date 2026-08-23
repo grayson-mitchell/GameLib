@@ -1,0 +1,127 @@
+name: Build macOS onedir runners
+
+# Phase 34.9 Plan 04: this workflow is the SOLE producer of the x64 onedir
+# artifacts, because PyInstaller cannot cross-compile -- macos-13 (Intel) and
+# macos-14 (Apple Silicon) each build the three runners (legendary/gogdl/nile)
+# on their own host, using meta/buildRunnersOnedir.ts (plan 34.9-01).
+#
+# comet, Windows and Linux are deliberately absent from this workflow: comet
+# is a Rust static binary that pays no onefile-startup tax, and the amfid
+# per-file Gatekeeper assessment this whole phase exists to eliminate is
+# macOS-specific -- Windows and Linux PyInstaller builds never pay it.
+#
+# This workflow deliberately does NOT use ./.github/actions/install-deps --
+# that composite action's last step is `pnpm download-helper-binaries`, which
+# (after plan 34.9-06 lands) will try to fetch the very darwin archives this
+# workflow has not published yet. Using it here would create a chicken-and-egg
+# failure on the very first run. Node/pnpm/Python setup is done inline
+# instead.
+#
+# Triggered manually only -- RELEASE_TAGS (meta/releaseTags.ts) changes
+# rarely, and coupling this to the release/tag cadence would rebuild all
+# three runners on every v* tag push for no reason.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write # required to create/update the rolling release and upload assets
+
+jobs:
+  # Release creation is isolated in its own job so the two build legs below
+  # cannot race each other into a duplicate `gh release create` (T-34.9-17).
+  prepare-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create or update the rolling release
+        env:
+          GH_TOKEN: ${{ github.token }} # default token suffices; no custom secret needed
+        run: |
+          # gh release upload requires the release to already exist.
+          # Tag is NOT v*. Published as a PRERELEASE so GitHub never badges it
+          # "Latest": --latest=false alone is insufficient because GitHub forces a
+          # repo's sole non-draft/non-prerelease release to "Latest" regardless
+          # (same lesson build-crossover-index.yml already carries, from Phase 19).
+          gh release view runners-onedir-macos >/dev/null 2>&1 || \
+            gh release create runners-onedir-macos \
+              --title "macOS onedir runner builds" \
+              --notes "Rolling build artifact, produced on demand by build-runners-onedir-macos.yml and consumed by meta/downloadHelperBinaries.ts. Not a GameLib release." \
+              --prerelease \
+              --latest=false
+
+          # Self-heal: enforce prerelease/not-latest every run, in case the release
+          # was created by an older revision of this workflow (or edited by hand).
+          gh release edit runners-onedir-macos --prerelease --latest=false
+
+  build:
+    needs: prepare-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-13
+            arch: x64
+          - os: macos-14
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+          cache: 'pnpm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # NOT ./.github/actions/install-deps -- see the file header. No
+      # `download-helper-binaries` step here on purpose.
+      - name: Install dependencies
+        run: pnpm install
+
+      # PyInstaller cannot cross-compile (34.9-CONTEXT.md constraint 1), so a
+      # GitHub image change that silently flips macos-13 to Apple Silicon (or
+      # vice versa) must break this leg loudly rather than publish an onedir
+      # archive under the wrong arch's filename.
+      - name: Verify runner architecture matches the matrix leg
+        run: |
+          EXPECTED="x86_64"
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            EXPECTED="arm64"
+          fi
+          ACTUAL="$(uname -m)"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::Runner architecture mismatch: matrix.arch=${{ matrix.arch }} expects uname -m=$EXPECTED but this runner reports $ACTUAL. PyInstaller cannot cross-compile -- refusing to publish a mislabelled onedir archive."
+            exit 1
+          fi
+          echo "Runner architecture confirmed: $ACTUAL matches matrix.arch=${{ matrix.arch }}"
+
+      - name: Build the three onedir runners
+        run: pnpm build-runners-onedir --arch=${{ matrix.arch }}
+
+      # Per-arch SHA256SUMS/BUILD-MANIFEST filenames so the two matrix legs'
+      # --clobber uploads can never destroy each other's digests (T-34.9-17).
+      - name: Publish onedir archives and digests to the rolling release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd .build-tools/runners-onedir/out
+          gh release upload runners-onedir-macos \
+            *_onedir.tar.gz \
+            SHA256SUMS-${{ matrix.arch }} \
+            BUILD-MANIFEST-${{ matrix.arch }}.json \
+            --clobber
+
+      # Surfaces the published digests in the run log so plan 34.9-09 can pin
+      # them for the fetch-side verification control.
+      - name: Print SHA256SUMS verification output
+        run: |
+          cd .build-tools/runners-onedir/out
+          shasum -a 256 -c SHA256SUMS-${{ matrix.arch }}
