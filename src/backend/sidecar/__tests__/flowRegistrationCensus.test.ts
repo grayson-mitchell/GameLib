@@ -70,7 +70,10 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   'shortcutsFlowRegistration.ts': { invoke: 4, send: 3 },
   'steamAuthFlowRegistration.ts': { invoke: 18, send: 1 },
   'steamFlowRegistration.ts': { invoke: 2, send: 0 },
-  'wineToolsFlowRegistration.ts': { invoke: 9, send: 0 }
+  // Phase 34.6 Plan 07 (2026-08-24): invoke 9 -> 12, send 0 -> 1 -- winetricksAvailable/
+  // winetricksInstalled/runWineCommandForGame (invoke) and winetricksInstall (send, D-11)
+  // ported byte-equivalently from tools/ipc_handler.ts (A-01/D-02).
+  'wineToolsFlowRegistration.ts': { invoke: 12, send: 1 }
 }
 
 /**
@@ -86,7 +89,12 @@ const NO_COUNT_CLAIM = new Set([
   'runnerAuthFlowRegistration.ts',
   'shortcutsFlowRegistration.ts',
   'steamAuthFlowRegistration.ts',
-  'steamFlowRegistration.ts'
+  'steamFlowRegistration.ts',
+  // Phase 34.6 Plan 07: this module's own `let registered = false` idempotence guard (added
+  // Task 1, mirroring runnerAuth/shortcuts above) now sits between the docstring and
+  // `export function registerWineToolsFlows`, breaking the docstring-adjacency
+  // `registerFnDocstring()` requires -- same structural cause as the two entries above.
+  'wineToolsFlowRegistration.ts'
 ])
 
 const NUMBER_WORDS: Record<string, number> = {
