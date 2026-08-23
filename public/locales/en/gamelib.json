@@ -32,6 +32,14 @@
     "humble": {
         "lessThanAMinute": "less than a minute"
     },
+    "humbleKeys": {
+        "activate": "Activate",
+        "activateWizardTitle": "Activate this key",
+        "activatedDone": "Done",
+        "activatedTitle": "Activated",
+        "activatingBody": "Revealing your key and redeeming it on Steam — this only takes a moment.",
+        "activatingTitle": "Activating on Steam…"
+    },
     "library": {
         "filterPanel": {
             "chipHiddenIncluded": "Including hidden",

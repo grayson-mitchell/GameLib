@@ -1,11 +1,14 @@
 import './index.css'
-import { useEffect, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { faCopy, faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
-import { HumbleKey } from 'common/types/humble'
+import { HumbleKey, RevealOutcome } from 'common/types/humble'
+import { RedeemKeyOutcome } from 'common/types/steam'
+import { redeemOutcomeCopy } from 'frontend/components/UI/RedeemSteamKeyDialog/copy'
+import ContextProvider from 'frontend/state/ContextProvider'
 
 // D-68/T-14-09: a single, static, generic redemption-help destination for
 // EVERY non-Steam platform. No authoritative Humble key_type -> URL table
@@ -15,7 +18,16 @@ import { HumbleKey } from 'common/types/humble'
 const NON_STEAM_REDEEM_HELP_URL = 'https://support.humblebundle.com/hc/en-us'
 
 type Step =
+  // 260823-op3: non-Steam claim entry ONLY. Steam keys skip straight to
+  // 'activating' — there is a working redemption API for them, so the
+  // reveal-then-hand-off choreography D-65 was protecting no longer applies.
   | 'warning'
+  // 260823-op3: the one-click Steam path in flight — reveal (or read the
+  // already-revealed value) then redeemSteamKey, with no intermediate clicks.
+  | 'activating'
+  // 260823-op3: terminal success — Steam accepted the key (or already owned
+  // it) and the Humble row has been marked redeemed.
+  | 'activated'
   | 'c2Block'
   | 'keyShown'
   | 'ambiguous'
@@ -48,20 +60,47 @@ export default function HumbleClaimWizard({
   onDone
 }: Props) {
   const { t } = useTranslation()
+  // 260823-op3: the redeem-outcome copy lives in the `gamelib` namespace, so
+  // it needs its own Suspense-resolved `t` — same two-hook-with-alias pattern
+  // RedeemSteamKeyDialog uses (Phase 34.8-07, REQ-34.8-12/-13).
+  const { t: tGamelib } = useTranslation('gamelib')
   const navigate = useNavigate()
+  const { refreshLibrary } = useContext(ContextProvider)
 
-  // D-66: 'finish' resumes directly at 'keyShown' — no warning replay.
+  const isSteam = humbleKey.platform === 'steam'
+
+  // 260823-op3: Steam keys — either entry mode — go straight into the
+  // one-click activate sequence. Non-Steam keeps the Phase 14 shape exactly:
+  // D-65 warning-first on 'claim', D-66 straight to 'keyShown' on 'finish'.
   const [step, setStep] = useState<Step>(
-    entryMode === 'finish' ? 'keyShown' : 'warning'
+    isSteam ? 'activating' : entryMode === 'finish' ? 'keyShown' : 'warning'
   )
   const [revealedKey, setRevealedKey] = useState<string | null>(null)
   const [cooldownRetryAt, setCooldownRetryAt] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
+  // 260823-op3: set ONLY when Steam itself answered. On success/already-owned
+  // it drives the 'activated' panel; on invalid/rate-limited/error it renders
+  // as a banner above the 'keyShown' manual fallback, so a spent reveal can
+  // never strand the user without their key.
+  const [redeemOutcome, setRedeemOutcome] = useState<RedeemKeyOutcome | null>(
+    null
+  )
+  const [redeemedPackage, setRedeemedPackage] = useState<string | undefined>(
+    undefined
+  )
+
+  // 260823-op3: amends T-14-08. humbleRevealKey now HAS a mount-effect call
+  // site, so the warning step is no longer what stops a stray second reveal.
+  // This latch is: the effect body runs at most once per mount, and the wizard
+  // only ever mounts from an explicit Activate click. A StrictMode double
+  // -invoke (or any remount-in-place) therefore cannot fire the irreversible
+  // reveal POST twice. Never remove this without restoring a click gate.
+  const activateStarted = useRef(false)
 
   // Mount-only (D-66: 'finish' entry must NEVER call humbleRevealKey, so this
   // effect only ever reads the already-revealed value, never triggers reveal).
   useEffect(() => {
-    if (entryMode !== 'finish') {
+    if (isSteam || entryMode !== 'finish') {
       return
     }
     let cancelled = false
@@ -99,10 +138,158 @@ export default function HumbleClaimWizard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // T-14-08: the ONLY call site of window.api.humbleRevealKey in this
-  // component — invoked exclusively from the danger-styled confirm button
-  // below (Step 1) or the 'failed' step's "Try again" retry. No effect ever
-  // invokes it on mount.
+  // 260823-op3: the one-click kickoff for Steam keys. Guarded by the
+  // activateStarted latch above — see that comment for why it is load-bearing
+  // now that the D-65 warning click no longer stands between mount and the
+  // irreversible reveal POST.
+  useEffect(() => {
+    if (!isSteam || activateStarted.current) {
+      return
+    }
+    activateStarted.current = true
+    void runActivate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // 260823-op3: maps every NON-'revealed' RevealOutcome onto its Phase 14
+  // step. Shared by the manual (non-Steam) reveal and the Steam one-click
+  // activate so the two paths can never drift in how a reveal failure reads.
+  function applyRevealFailure(
+    outcome: Exclude<RevealOutcome, { status: 'revealed' }>
+  ) {
+    switch (outcome.status) {
+      case 'owned_blocked':
+        // D-69/C2: backend re-validated ownership and hard-blocked reveal.
+        setStep('c2Block')
+        break
+      case 'ambiguous':
+        setStep('ambiguous')
+        break
+      case 'rejected_by_server':
+        // WR-06: Humble processed and DENIED the reveal — honest terminal
+        // copy, never the retryable "nothing was used up" failed step.
+        setStep('rejected')
+        break
+      case 'cooldown':
+        setCooldownRetryAt(outcome.retryAtMs)
+        setStep('cooldown')
+        break
+      case 'failed':
+      case 'ineligible':
+      default:
+        setStep('failed')
+        break
+    }
+  }
+
+  /**
+   * 260823-op3: the one-click Steam path — reveal (or read back the
+   * already-revealed value in 'finish' mode), then redeem on Steam, then mark
+   * the Humble row redeemed. No intermediate clicks.
+   *
+   * The two halves have deliberately DIFFERENT failure postures, because the
+   * reveal is the irreversible half:
+   *  - before the reveal lands, an unknown outcome is 'ambiguous' (WR-05) —
+   *    never a retry that could fire a second reveal;
+   *  - after it lands, every remaining failure must leave the user holding
+   *    their key, so it falls through to 'keyShown' (key + Copy + Open Steam +
+   *    Mark as redeemed) with the Steam outcome rendered as a banner. A spent
+   *    reveal must never land on a step that hides the key.
+   */
+  async function runActivate() {
+    if (busy) {
+      return
+    }
+    setBusy(true)
+    try {
+      let key = revealedKey
+      if (key === null) {
+        try {
+          if (entryMode === 'finish') {
+            // D-66: never re-reveal a key Humble already reports as REVEALED.
+            const value = await window.api.humbleGetRevealedKeyValue({
+              gamekey: humbleKey.gamekey,
+              machineName: humbleKey.machineName
+            })
+            if (value === null) {
+              // Pitfall B: REVEALED flag set, no confirmed local value.
+              setStep('ambiguous')
+              return
+            }
+            key = value
+          } else {
+            const outcome = await window.api.humbleRevealKey({
+              gamekey: humbleKey.gamekey,
+              machineName: humbleKey.machineName
+            })
+            if (outcome.status !== 'revealed') {
+              applyRevealFailure(outcome)
+              return
+            }
+            key = outcome.key
+          }
+        } catch {
+          // WR-05: a rejection leaves the outcome UNKNOWN — the reveal POST
+          // may already have gone out — so never the retryable 'failed' copy
+          // and never a second reveal attempt.
+          setStep('ambiguous')
+          return
+        }
+        // D-73: auto-copy survives the redesign. The reveal is irreversible;
+        // the clipboard is a free safety net for everything downstream.
+        window.api.clipboardWriteText(key)
+        setRevealedKey(key)
+      }
+
+      let outcome: RedeemKeyOutcome
+      let packageName: string | undefined
+      try {
+        const result = await window.api.redeemSteamKey({ store: 'steam', key })
+        outcome = result.outcome
+        packageName = result.packageList
+          ? Object.values(result.packageList)[0]
+          : undefined
+      } catch {
+        outcome = 'error'
+      }
+      setRedeemOutcome(outcome)
+      setRedeemedPackage(packageName)
+
+      if (outcome === 'success' || outcome === 'already-owned') {
+        try {
+          await window.api.humbleMarkRedeemed({
+            gamekey: humbleKey.gamekey,
+            machineName: humbleKey.machineName
+          })
+        } catch {
+          // Local, idempotent bookkeeping. Steam has already accepted the key
+          // — surfacing a failure here would misreport what actually happened.
+          // The next sync reconciles the row.
+        }
+        if (outcome === 'success') {
+          // Mirrors RedeemSteamKeyDialog: reuse the EXISTING refresh path so
+          // library, ownership and dependent UI stay consistent — never
+          // recomputeOwnership directly.
+          void refreshLibrary({
+            library: 'steam',
+            origin: 'redeem-steam-key'
+          })
+        }
+        setStep('activated')
+      } else {
+        setStep('keyShown')
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // T-14-08 (amended 260823-op3): the manual, NON-Steam reveal — invoked
+  // exclusively from the danger-styled confirm button below (Step 1) or the
+  // 'failed' step's "Try again" retry. The second call site of
+  // humbleRevealKey is runActivate above, which is Steam-only and latched to
+  // one fire per mount; there are exactly these two, and no other effect ever
+  // invokes reveal.
   async function handleReveal() {
     if (busy) {
       return
@@ -113,35 +300,14 @@ export default function HumbleClaimWizard({
         gamekey: humbleKey.gamekey,
         machineName: humbleKey.machineName
       })
-      switch (outcome.status) {
-        case 'revealed':
-          // D-73/HCLAIM-03: auto-copy on reveal, plus the re-copy button
-          // rendered on the 'keyShown' step below.
-          window.api.clipboardWriteText(outcome.key)
-          setRevealedKey(outcome.key)
-          setStep('keyShown')
-          break
-        case 'owned_blocked':
-          // D-69/C2: backend re-validated ownership and hard-blocked reveal.
-          setStep('c2Block')
-          break
-        case 'ambiguous':
-          setStep('ambiguous')
-          break
-        case 'rejected_by_server':
-          // WR-06: Humble processed and DENIED the reveal — honest terminal
-          // copy, never the retryable "nothing was used up" failed step.
-          setStep('rejected')
-          break
-        case 'cooldown':
-          setCooldownRetryAt(outcome.retryAtMs)
-          setStep('cooldown')
-          break
-        case 'failed':
-        case 'ineligible':
-        default:
-          setStep('failed')
-          break
+      if (outcome.status === 'revealed') {
+        // D-73/HCLAIM-03: auto-copy on reveal, plus the re-copy button
+        // rendered on the 'keyShown' step below.
+        window.api.clipboardWriteText(outcome.key)
+        setRevealedKey(outcome.key)
+        setStep('keyShown')
+      } else {
+        applyRevealFailure(outcome)
       }
     } catch {
       // WR-05 (14-REVIEW): an IPC-level rejection (as opposed to a typed
@@ -193,7 +359,55 @@ export default function HumbleClaimWizard({
     onDone()
   }
 
-  const isSteam = humbleKey.platform === 'steam'
+  // 260823-op3: the in-flight one-click panel. Deliberately actionless — the
+  // reveal half is irreversible, so there is nothing safe to offer here but
+  // the wizard's own close button.
+  if (step === 'activating') {
+    return (
+      <div className="humbleClaimWizard">
+        <h3 className="humbleClaimWizardTitle">
+          {tGamelib(
+            'gamelib:humbleKeys.activatingTitle',
+            'Activating on Steam…'
+          )}
+        </h3>
+        <p className="humbleClaimWizardBody">
+          {tGamelib(
+            'gamelib:humbleKeys.activatingBody',
+            'Revealing your key and redeeming it on Steam — this only takes a moment.'
+          )}
+        </p>
+      </div>
+    )
+  }
+
+  // 260823-op3: terminal success. Reuses redeemOutcomeCopy so the Humble path
+  // and the manual Redeem-a-key dialog say the SAME thing about the same
+  // EPurchaseResult, rather than growing a parallel copy set.
+  if (step === 'activated') {
+    const copy = redeemOutcomeCopy(
+      redeemOutcome ?? 'success',
+      tGamelib,
+      redeemedPackage
+    )
+    return (
+      <div className="humbleClaimWizard">
+        <h3 className="humbleClaimWizardTitle">
+          {tGamelib('gamelib:humbleKeys.activatedTitle', 'Activated')}
+        </h3>
+        <p className="humbleClaimWizardBody">{copy.message}</p>
+        <div className="humbleClaimWizardActions">
+          <button
+            type="button"
+            className="button is-secondary outline humbleClaimWizardDoneButton"
+            onClick={onDone}
+          >
+            {tGamelib('gamelib:humbleKeys.activatedDone', 'Done')}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (step === 'warning') {
     return (
@@ -317,7 +531,10 @@ export default function HumbleClaimWizard({
             type="button"
             className="button is-secondary outline humbleClaimWizardRetryButton"
             disabled={busy}
-            onClick={() => void handleReveal()}
+            // 260823-op3: a Steam retry must re-run the WHOLE one-click
+            // sequence, not just the reveal — otherwise a retry would strand
+            // the user on 'keyShown' doing the manual work by hand.
+            onClick={() => void (isSteam ? runActivate() : handleReveal())}
           >
             {t('humbleKeys.tryAgain', 'Try again')}
           </button>
@@ -350,6 +567,16 @@ export default function HumbleClaimWizard({
       <h3 className="humbleClaimWizardTitle">
         {t('humbleKeys.keyShownTitle', 'Your key')}
       </h3>
+      {/* 260823-op3: only ever set when the one-click activate reached Steam
+          and Steam said no (invalid / rate-limited / error). The reveal is
+          already spent, so this step keeps every manual affordance rather
+          than replacing them with an error panel — the banner explains WHY
+          the hand-off is back on the table. */}
+      {redeemOutcome !== null && (
+        <p className="humbleClaimWizardRedeemFailedNote">
+          {redeemOutcomeCopy(redeemOutcome, tGamelib, redeemedPackage).message}
+        </p>
+      )}
       {revealedKey === null ? (
         <p className="humbleClaimWizardLoading">
           {t('humbleKeys.keyLoading', 'Loading…')}

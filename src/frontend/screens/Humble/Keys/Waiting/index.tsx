@@ -24,6 +24,10 @@ import HumbleClaimWizard from '../components/HumbleClaimWizard'
 // collapse), unlike the All-keys tab's HumbleKeyGroup toggle button.
 export default function HumbleKeysWaiting() {
   const { t } = useTranslation()
+  // 260823-op3: fork-added strings live in the fork-owned `gamelib`
+  // namespace (D-06 split-brain) — `translation.json` is upstream-owned and
+  // the i18n churn guard fails CI on any write to it.
+  const { t: tGamelib } = useTranslation('gamelib')
   const { humble, showDialogModal } = useContext(ContextProvider)
   const [annotations, setAnnotations] = useState<
     Record<string, ClaimAnnotation>
@@ -171,7 +175,16 @@ export default function HumbleKeysWaiting() {
   function openWizard(key: HumbleKey, entryMode: 'claim' | 'finish') {
     showDialogModal({
       showDialog: true,
-      title: t('humbleKeys.claimWizardTitle', 'Claim this key'),
+      // 260823-op3: a Steam key is activated in one click, so the dialog
+      // chrome says so; every other platform still runs the reveal-and-claim
+      // choreography the original title describes.
+      title:
+        key.platform === 'steam'
+          ? tGamelib(
+              'gamelib:humbleKeys.activateWizardTitle',
+              'Activate this key'
+            )
+          : t('humbleKeys.claimWizardTitle', 'Claim this key'),
       message:
         entryMode === 'finish' ? (
           <HumbleClaimWizard

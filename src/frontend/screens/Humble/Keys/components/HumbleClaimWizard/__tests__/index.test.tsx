@@ -50,6 +50,9 @@ jest.mock('react-i18next', () => ({
   })
 }))
 
+const mockRefreshLibrary = jest.fn().mockResolvedValue(undefined)
+const mockContext = { refreshLibrary: mockRefreshLibrary }
+
 jest.mock('react', () => {
   const actualReact = jest.requireActual<typeof import('react')>('react')
   let slots: unknown[] = []
@@ -74,6 +77,22 @@ jest.mock('react', () => {
     useEffect: (effect: () => void | (() => void)) => {
       effect()
     },
+    // 260823-op3: the wizard's single-fire activate latch is a useRef, so the
+    // harness has to give it a slot that PERSISTS across rerenders — a plain
+    // `{ current }` per call would reset the latch on every re-render and let
+    // the irreversible reveal fire more than once, which is the exact defect
+    // the latch exists to prevent.
+    useRef: (initial: unknown) => {
+      const idx = cursor++
+      if (idx >= slots.length) {
+        slots[idx] = { current: initial }
+      }
+      return slots[idx]
+    },
+    // 260823-op3: the wizard reads `refreshLibrary` off ContextProvider. The
+    // real `useContext` needs a renderer dispatcher, which this DOM-less
+    // harness does not have.
+    useContext: () => mockContext,
     __beginRender: () => {
       cursor = 0
     },
@@ -90,7 +109,9 @@ const mockApi = {
   humbleGetRevealedKeyValue: jest.fn(),
   humbleSync: jest.fn(),
   clipboardWriteText: jest.fn(),
-  openExternalUrl: jest.fn()
+  openExternalUrl: jest.fn(),
+  // 260823-op3: the Steam one-click path.
+  redeemSteamKey: jest.fn()
 }
 
 ;(globalThis as unknown as { window: { api: typeof mockApi } }).window = {
@@ -198,10 +219,14 @@ function makeHumbleKey(overrides: Partial<HumbleKey> = {}): HumbleKey {
 }
 
 describe('HumbleClaimWizard', () => {
-  it('does not call humbleRevealKey on the initial claim-mode render (HCLAIM-01, T-14-08)', () => {
+  // 260823-op3: HCLAIM-01's T-14-08 guarantee now applies to the NON-Steam
+  // claim path only. Steam keys deliberately reveal on mount (one-click
+  // activate); their equivalent guarantee — reveal fires at most once — is
+  // the latch test below.
+  it('does not call humbleRevealKey on the initial non-Steam claim-mode render (HCLAIM-01, T-14-08)', () => {
     const onDone = jest.fn()
     const tree = mount({
-      humbleKey: makeHumbleKey(),
+      humbleKey: makeHumbleKey({ platform: 'gog' }),
       entryMode: 'claim',
       onDone
     })
@@ -216,41 +241,141 @@ describe('HumbleClaimWizard', () => {
     expect(revealButton?.props.className).toContain('is-danger')
   })
 
-  it('reveals a Steam key, shows it, and opens the registerkey page with the encoded key (HCLAIM-03)', async () => {
+  // 260823-op3: the headline change — an unrevealed Steam key needs ZERO
+  // clicks. Reveal, redeem on Steam, mark redeemed, done.
+  it('activates a Steam key end-to-end on mount with no further clicks (260823-op3)', async () => {
     const onDone = jest.fn()
     const humbleKey = makeHumbleKey({ platform: 'steam' })
     mockApi.humbleRevealKey.mockResolvedValue({
       status: 'revealed',
       key: 'ABCD-1234'
     } satisfies RevealOutcome)
+    mockApi.redeemSteamKey.mockResolvedValue({
+      store: 'steam',
+      outcome: 'success',
+      packageList: { '12345': 'Some Game' }
+    })
+    mockApi.humbleMarkRedeemed.mockResolvedValue({
+      status: 'ok'
+    } satisfies RedeemOutcome)
 
     const initial = mount({ humbleKey, entryMode: 'claim', onDone })
-    const revealButton = findByClassNamePart(
-      initial,
-      'humbleClaimWizardRevealButton'
-    )!
-    revealButton.props.onClick?.()
+    // No warning step, no reveal button — the sequence is already running.
+    expect(
+      findByClassNamePart(initial, 'humbleClaimWizardRevealButton')
+    ).toBeUndefined()
+    expect(textContent(initial)).toContain('Activating on Steam')
+
     await flushPromises()
 
     expect(mockApi.humbleRevealKey).toHaveBeenCalledWith({
       gamekey: humbleKey.gamekey,
       machineName: humbleKey.machineName
     })
+    expect(mockApi.redeemSteamKey).toHaveBeenCalledWith({
+      store: 'steam',
+      key: 'ABCD-1234'
+    })
+    expect(mockApi.humbleMarkRedeemed).toHaveBeenCalledWith({
+      gamekey: humbleKey.gamekey,
+      machineName: humbleKey.machineName
+    })
+    // D-73 survives: the irreversible reveal still lands on the clipboard.
     expect(mockApi.clipboardWriteText).toHaveBeenCalledWith('ABCD-1234')
+    // The manual hand-off is gone from the happy path entirely.
+    expect(mockApi.openExternalUrl).not.toHaveBeenCalled()
 
-    const revealed = rerender({ humbleKey, entryMode: 'claim', onDone })
-    expect(textContent(revealed)).toContain('ABCD-1234')
+    const done = rerender({ humbleKey, entryMode: 'claim', onDone })
+    const content = textContent(done)
+    expect(content).toContain('Activated')
+    expect(content).toContain('Some Game')
+  })
+
+  // 260823-op3: the latch that replaced the warning click as the guard
+  // against a double reveal. A remount-in-place must NOT re-fire the
+  // irreversible POST.
+  it('fires humbleRevealKey at most once per mount, even across re-renders (260823-op3)', async () => {
+    const onDone = jest.fn()
+    const humbleKey = makeHumbleKey({ platform: 'steam' })
+    mockApi.humbleRevealKey.mockResolvedValue({
+      status: 'revealed',
+      key: 'ONCE-ONLY'
+    } satisfies RevealOutcome)
+    mockApi.redeemSteamKey.mockResolvedValue({
+      store: 'steam',
+      outcome: 'success'
+    })
+
+    mount({ humbleKey, entryMode: 'claim', onDone })
+    await flushPromises()
+    rerender({ humbleKey, entryMode: 'claim', onDone })
+    rerender({ humbleKey, entryMode: 'claim', onDone })
+    await flushPromises()
+
+    expect(mockApi.humbleRevealKey).toHaveBeenCalledTimes(1)
+    expect(mockApi.redeemSteamKey).toHaveBeenCalledTimes(1)
+  })
+
+  // 260823-op3: the reveal is spent by the time Steam answers, so a refusal
+  // must NEVER hide the key — it falls back to the full manual affordances
+  // (key value + Copy + Open Steam + Mark as redeemed) with an explanation.
+  it('falls back to the manual key hand-off when Steam declines the redeem (260823-op3)', async () => {
+    const onDone = jest.fn()
+    const humbleKey = makeHumbleKey({ platform: 'steam' })
+    mockApi.humbleRevealKey.mockResolvedValue({
+      status: 'revealed',
+      key: 'ABCD-1234'
+    } satisfies RevealOutcome)
+    mockApi.redeemSteamKey.mockResolvedValue({
+      store: 'steam',
+      outcome: 'rate-limited'
+    })
+
+    mount({ humbleKey, entryMode: 'claim', onDone })
+    await flushPromises()
+
+    // Never marked redeemed — Steam did not take it.
+    expect(mockApi.humbleMarkRedeemed).not.toHaveBeenCalled()
+
+    const fallback = rerender({ humbleKey, entryMode: 'claim', onDone })
+    const content = textContent(fallback)
+    expect(content).toContain('Too many attempts')
+    // The key itself is still on screen — a spent reveal cannot strand.
+    expect(content).toContain('ABCD-1234')
 
     const openSteam = findByClassNamePart(
-      revealed,
+      fallback,
       'humbleClaimWizardActivationLink'
     )!
     expect(textContent(openSteam)).toContain('Open Steam')
-
     openSteam.props.onClick?.()
     expect(mockApi.openExternalUrl).toHaveBeenCalledWith(
       'https://store.steampowered.com/account/registerkey?key=ABCD-1234'
     )
+    expect(
+      findByClassNamePart(fallback, 'humbleClaimWizardMarkRedeemedButton')
+    ).toBeDefined()
+  })
+
+  // 260823-op3: a redeem-side IPC rejection is NOT the reveal-side unknown —
+  // the key is confirmed revealed, so it must land on the key hand-off, never
+  // on the key-hiding 'ambiguous' step.
+  it('lands on the key hand-off (not ambiguous) when redeemSteamKey itself rejects (260823-op3)', async () => {
+    const onDone = jest.fn()
+    const humbleKey = makeHumbleKey({ platform: 'steam' })
+    mockApi.humbleRevealKey.mockResolvedValue({
+      status: 'revealed',
+      key: 'ABCD-1234'
+    } satisfies RevealOutcome)
+    mockApi.redeemSteamKey.mockRejectedValue(new Error('ipc channel gone'))
+
+    mount({ humbleKey, entryMode: 'claim', onDone })
+    await flushPromises()
+
+    const tree = rerender({ humbleKey, entryMode: 'claim', onDone })
+    const content = textContent(tree)
+    expect(content).toContain('ABCD-1234')
+    expect(content).not.toContain("couldn't confirm")
   })
 
   it('shows "Redeem on {{platform}}" and no "Open Steam" control for a non-Steam key (HCLAIM-05)', async () => {
@@ -275,6 +400,9 @@ describe('HumbleClaimWizard', () => {
     expect(content).toContain('Redeem on gog')
   })
 
+  // 260823-op3: the C2 hard-block survives the one-click redesign unchanged —
+  // it now fires from the auto-activate reveal instead of a confirm click,
+  // and still never reaches redeemSteamKey.
   it('renders the C2 block and navigates to /humble-keys/spares on an owned_blocked outcome (D-69)', async () => {
     const onDone = jest.fn()
     const humbleKey = makeHumbleKey()
@@ -282,13 +410,10 @@ describe('HumbleClaimWizard', () => {
       status: 'owned_blocked'
     } satisfies RevealOutcome)
 
-    const initial = mount({ humbleKey, entryMode: 'claim', onDone })
-    const revealButton = findByClassNamePart(
-      initial,
-      'humbleClaimWizardRevealButton'
-    )!
-    revealButton.props.onClick?.()
+    mount({ humbleKey, entryMode: 'claim', onDone })
     await flushPromises()
+
+    expect(mockApi.redeemSteamKey).not.toHaveBeenCalled()
 
     const blocked = rerender({ humbleKey, entryMode: 'claim', onDone })
     expect(textContent(blocked)).toContain('You already own this on Steam')
@@ -324,11 +449,7 @@ describe('HumbleClaimWizard', () => {
       status: 'rejected_by_server'
     } satisfies RevealOutcome)
 
-    const initial = mount({ humbleKey, entryMode: 'claim', onDone })
-    findByClassNamePart(
-      initial,
-      'humbleClaimWizardRevealButton'
-    )!.props.onClick?.()
+    mount({ humbleKey, entryMode: 'claim', onDone })
     await flushPromises()
 
     const tree = rerender({ humbleKey, entryMode: 'claim', onDone })
@@ -372,13 +493,11 @@ describe('HumbleClaimWizard', () => {
     const humbleKey = makeHumbleKey()
     mockApi.humbleRevealKey.mockRejectedValue(new Error('ipc channel gone'))
 
-    const initial = mount({ humbleKey, entryMode: 'claim', onDone })
-    const revealButton = findByClassNamePart(
-      initial,
-      'humbleClaimWizardRevealButton'
-    )!
-    revealButton.props.onClick?.()
+    mount({ humbleKey, entryMode: 'claim', onDone })
     await flushPromises()
+
+    // 260823-op3: the reveal never landed, so the redeem half must not run.
+    expect(mockApi.redeemSteamKey).not.toHaveBeenCalled()
 
     const tree = rerender({ humbleKey, entryMode: 'claim', onDone })
     // The honest copy for an unknown outcome — the backend may have fired
@@ -391,9 +510,14 @@ describe('HumbleClaimWizard', () => {
     expect(syncButton).toBeDefined()
   })
 
+  // 260823-op3: the manual "Mark as redeemed" button is now a NON-Steam
+  // affordance on the happy path (Steam marks itself), so this exercises a
+  // gog key. Its Steam counterpart — a mark-redeemed failure after Steam has
+  // already accepted the key — is deliberately swallowed, since reporting a
+  // failure would misstate what happened; the next sync reconciles the row.
   it('WR-05: a rejected humbleMarkRedeemed stays on the key step (retryable) and never calls onDone', async () => {
     const onDone = jest.fn()
-    const humbleKey = makeHumbleKey({ platform: 'steam' })
+    const humbleKey = makeHumbleKey({ platform: 'gog' })
     mockApi.humbleRevealKey.mockResolvedValue({
       status: 'revealed',
       key: 'MARK-ME'
@@ -429,7 +553,8 @@ describe('HumbleClaimWizard', () => {
 
   it('marks a revealed key as redeemed and calls onDone (HCLAIM-04)', async () => {
     const onDone = jest.fn()
-    const humbleKey = makeHumbleKey({ platform: 'steam' })
+    // 260823-op3: non-Steam — the manual mark-redeemed path this covers.
+    const humbleKey = makeHumbleKey({ platform: 'gog' })
     mockApi.humbleRevealKey.mockResolvedValue({
       status: 'revealed',
       key: 'MARK-ME'

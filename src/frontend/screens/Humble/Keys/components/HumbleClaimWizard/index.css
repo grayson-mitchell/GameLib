@@ -132,6 +132,17 @@
   margin: 0;
 }
 
+/* 260823-op3: Steam declined the one-click redeem AFTER an irreversible
+   reveal. Danger tone like the other refusals, but it is a BANNER above the
+   still-intact key + Copy + Open Steam affordances, not a step of its own —
+   hence the bottom margin the terminal notes do not need. */
+.humbleClaimWizardRedeemFailedNote {
+  font-size: var(--text-md);
+  font-weight: var(--regular);
+  color: var(--status-danger);
+  margin: 0 0 var(--space-sm);
+}
+
 .humbleClaimWizardCooldownNote {
   font-size: var(--text-md);
   font-weight: var(--regular);
