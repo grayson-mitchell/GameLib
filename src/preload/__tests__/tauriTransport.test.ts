@@ -44,7 +44,8 @@ import {
   snapshotSet,
   snapshotDelete,
   hydrateStoreSnapshot,
-  registerStore
+  registerStore,
+  send
 } from '../tauriTransport'
 import { STORE_FETCH_CHANNEL, STORE_CHANGED_CHANNEL, STORE_LAZY_MISS_MARKER } from 'common/types/sidecarTransport'
 
@@ -479,5 +480,111 @@ describe('WR-07: hydration replaces a store snapshot rather than merging into it
     expect(snapshotGet('configStore', 'theme')).toBe('dark')
     expect(snapshotHas('configStore', 'language')).toBe(false)
     expect(snapshotGet('configStore', 'language', 'FALLBACK')).toBe('FALLBACK')
+  })
+})
+
+/**
+ * Debug session `open-external-frame-noop` (2026-08-23, closing Phase 34.3 live-gate item 1 /
+ * REQ-34.3-11 item 1). `send()` used to be `void tauriInvoke(SIDECAR_SEND, {...})`, unconditionally
+ * discarding the invoke's rejection for all ~57 `send()`-routed channels. A single caller
+ * (`openDiscordLink`, bound bare as a JSX handler) rejected on every click and produced NO signal
+ * anywhere. The fix routes rejections through `window.api.logError`, naming the channel, with a
+ * recursion guard for the `logError` channel itself (see `tauriTransport.ts`'s own docstring above
+ * `send()` for why an unguarded version would recurse forever).
+ *
+ * These tests pin the three invariants that docstring calls out. None of them existed before this
+ * gap-fill; before the fix, (a) would have observed nothing routed anywhere and (b)/(c) would not
+ * have been meaningfully assertable at all (there was nothing to route, and nothing to guard).
+ */
+describe('send() rejection routing (debug session open-external-frame-noop)', () => {
+  afterEach(() => {
+    delete (globalThis as unknown as { api?: unknown }).api
+  })
+
+  it('a rejecting tauriInvoke routes the error through window.api.logError, naming the channel', async () => {
+    mockedInvoke.mockImplementation((async () => {
+      throw new Error('sidecar unreachable')
+    }) as unknown as typeof mockedInvoke)
+    const logError = jest.fn()
+    ;(globalThis as unknown as { api: { logError: typeof logError } }).api = { logError }
+
+    const result = send('openExternal', ['https://discord.gg/rHJ2uqdquK'])
+    expect(result).toBeUndefined()
+
+    // Let the fired-and-forgotten invoke's rejection settle and the .catch() run.
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(logError).toHaveBeenCalledTimes(1)
+    const [message] = logError.mock.calls[0] as [string]
+    // The whole point of the fix: the channel must be NAMED, so a future silent no-op caused
+    // the same way is identifiable in gamelib.log on the first occurrence, not just "something
+    // failed somewhere".
+    expect(message).toContain('openExternal')
+    expect(message).toContain('sidecar unreachable')
+  })
+
+  it('RECURSION GUARD: channel="logError" falls back to console.error and NEVER calls window.api.logError', async () => {
+    mockedInvoke.mockImplementation((async () => {
+      throw new Error('logError channel itself unreachable')
+    }) as unknown as typeof mockedInvoke)
+    const logError = jest.fn()
+    ;(globalThis as unknown as { api: { logError: typeof logError } }).api = { logError }
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+
+    send('logError', ['some', 'args'])
+
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    // If this guard were ever removed, this assertion is what turns RED: an unguarded
+    // implementation calls window.api.logError here too (proven by the self-test below).
+    expect(logError).not.toHaveBeenCalled()
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+    expect(String(errorSpy.mock.calls[0][0])).toContain('logError')
+  })
+
+  it('send() still returns undefined synchronously, throws nothing, and blocks nothing (fire-and-forget contract preserved)', () => {
+    mockedInvoke.mockImplementation((async () => {
+      throw new Error('boom')
+    }) as unknown as typeof mockedInvoke)
+
+    let result: unknown = 'unset'
+    expect(() => {
+      result = send('openExternal', [])
+    }).not.toThrow()
+    // Synchronous return, before the rejected promise has any chance to settle.
+    expect(result).toBeUndefined()
+  })
+
+  describe('self-test (anti-vacuity, RED-proof precursor for the recursion guard)', () => {
+    it('an UNGUARDED reimplementation (the pre-fix shape) DOES call window.api.logError for channel=logError -- proving the parent assertion is sensitive to the guard, not vacuously true', async () => {
+      // This function lives ONLY in this test. It is not a copy of the real `send()`; it
+      // reproduces, for comparison, exactly the shape the docstring warns against: routing
+      // EVERY channel's rejection through `window.api.logError` unconditionally, including
+      // `logError` itself. Confirms the parent test's `expect(logError).not.toHaveBeenCalled()`
+      // would actually fail (go RED) against an implementation missing the guard.
+      function unguardedSend(channel: string, args: unknown[]): void {
+        rejectingInvokeStandIn(channel, args).catch((err: unknown) => {
+          const w = globalThis as unknown as { api?: { logError?: (msg: string) => void } }
+          w.api?.logError?.(`[tauriTransport.send] rejected for channel=${channel}: ${String(err)}`)
+        })
+      }
+      async function rejectingInvokeStandIn(_channel: string, _args: unknown[]): Promise<never> {
+        throw new Error('logError channel itself unreachable')
+      }
+
+      const logError = jest.fn()
+      ;(globalThis as unknown as { api: { logError: typeof logError } }).api = { logError }
+
+      unguardedSend('logError', ['x'])
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(logError).toHaveBeenCalledTimes(1)
+    })
   })
 })
