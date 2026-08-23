@@ -2979,7 +2979,7 @@ carries the Epic/save-sync verification leg of Phase 35's dependency that used t
 
 Plans:
 
-- [ ] 34.6-01-PLAN.md — wave 1: A-03 half 1 — the Rust `steamgrid-api-key` keyring arm, the slot constant, and the swappable `SteamGridDbSecretStore` seam with a behaviour-preserving Electron impl
+- [x] 34.6-01-PLAN.md — wave 1: A-03 half 1 — the Rust `steamgrid-api-key` keyring arm, the slot constant, and the swappable `SteamGridDbSecretStore` seam with a behaviour-preserving Electron impl — DONE 2026-08-23 (`d50583a29`, `0c1d7d2d7`, `d3c7420ed`; see `34.6-01-SUMMARY.md`)
 - [ ] 34.6-02-PLAN.md — wave 2: A-03 half 2 — `SidecarSteamGridDbSecretStore`, the one-time plaintext→keyring migration, and BOTH arms of bootstrap's exclusive secret-store branch (the dev-vault arm is not optional)
 - [ ] 34.6-03-PLAN.md — wave 1: author `34.6-LIVE-GATE.md` with EMPTY result slots before any live work — steps 0–8 plus the Humble rider, each with an explicit FAIL condition
 - [ ] 34.6-04-PLAN.md — wave 2: run live-gate STEP 0 ONLY — the pre-port `DECLARED_UNAVAILABLE_MARKER` capture (A-01/D-10), unrecoverable once the winetricks port lands
