@@ -58,7 +58,9 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   'gameDetailsFlowRegistration.ts': { invoke: 16, send: 3 },
   'humbleFlowRegistration.ts': { invoke: 15, send: 1 },
   'humbleLoginFlowRegistration.ts': { invoke: 4, send: 2 },
-  'installFlowRegistration.ts': { invoke: 5, send: 0 },
+  // Phase 34.6 Plan 06 (2026-08-24): invoke 5 -> 7 -- moveInstall/importGame
+  // ported byte-equivalently from main.ts (D-02); send count unchanged.
+  'installFlowRegistration.ts': { invoke: 7, send: 0 },
   'loggerFlowRegistration.ts': { invoke: 3, send: 3 },
   'oauthLoginFlowRegistration.ts': { invoke: 1, send: 0 },
   'runnerAuthFlowRegistration.ts': { invoke: 10, send: 1 },

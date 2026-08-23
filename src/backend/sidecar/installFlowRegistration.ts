@@ -140,7 +140,7 @@ import type {
 } from 'common/types'
 
 /**
- * Registers the five install-slice invoke handlers. Called once from
+ * Registers the seven install-slice invoke handlers. Called once from
  * `handlers.ts` — this module owns no side effects at import time beyond the
  * imports above; the caller decides when registration onto the handler
  * registry happens.
