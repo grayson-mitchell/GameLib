@@ -433,7 +433,7 @@ def _valid_synthetic_inventory_doc() -> str:
 
 {p344_1_list}
 
-## Phase 34.5 — Slice 8 — non-Steam runners, Wine and shortcuts (57 channels)
+## Phase 34.5 — Slice 8 — non-Steam runners, Wine and shortcuts (58 channels)
 
 `isLoggedIn`, `addShortcut`, `login`
 """
@@ -449,7 +449,7 @@ def _synthetic_38_channel_inventory_doc() -> str:
 
 {reverted_slice7}
 
-## Phase 34.5 — Slice 8 — non-Steam runners, Wine and shortcuts (57 channels)
+## Phase 34.5 — Slice 8 — non-Steam runners, Wine and shortcuts (58 channels)
 
 `addShortcut`, `login`
 """

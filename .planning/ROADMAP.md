@@ -1718,7 +1718,24 @@ Cross-cutting constraints:
 **Plans:** 10/10 plans complete (5 waves) — **PHASE COMPLETE 2026-07-27**. Blocking live gate
 PASSED 5/5 (`34.4-LIVE-GATE.md`) — item 2 (`logoutSteam`) FAILED on attempt 1 and was fixed
 in-phase. Verification passed 16/16; code review 0 critical / 3 warning / 2 info, WR-01 fixed
-(`1afef0345`). **`/gsd-secure-phase 34.4` is the ONLY item still open on this phase.**
+(`1afef0345`). **`/gsd-secure-phase 34.4` RAN 2026-08-23 — `34.4-SECURITY.md` written, State B, register rebuilt
+from all 10 plans' `<threat_model>` blocks: 62 `(plan, threat_id)` rows, 61 CLOSED, ZERO accepted
+risks, `threats_open: 1` so the phase is `blocked`.** The single open row is **`T-34.4-49`**, and
+it is small: plan 34.4-10 asked for a retrospective confirmation that neither `redeemSteamKey` nor
+`steamBottleProvision` was invoked during the 2026-07-27 gate. The `steamBottleProvision` half is
+now PROVEN not-run (item 5's own measurement recorded the `provisioned` flag unset, and only
+`provisionBottle()` writes it). The `redeemSteamKey` half has no artifact either way and needs one
+line from the operator, or an accepted-risk entry. Deliberately not closed by inference — a burned
+key is irreversible.
+
+Two mitigations were found DECLARED-BUT-ABSENT and were **built** rather than waved through:
+`ported-channels-gate.py --self-test` was exiting 1 before any of its 9 cases ran (commit
+`e33dc2744`, the same day, moved the slice-8 heading 57→58 in the live regex but left both
+synthetic fixtures at 57 — repairing one gate killed another's anti-vacuity control); and
+`T-34.4-51`'s "a blank login screen IS a failure" tester instruction had never been written into
+the gate document at all (`grep -n "blank"` returned zero across 515 lines). Both fixed, the
+self-test repair RED-proven non-vacuous. **Nothing in `pnpm planning-gates` runs `--self-test`**,
+which is why this sat dead — logged as `FOLLOW-UP-34.4-2`.
 
 **WR-02/WR-03 CLOSED 2026-08-23** (quick task `260823-qsm`, commits `cab8c1e69` + `df4de4691`) —
 and **not at the file the findings named**: 34.4.1 plan 05 had rewritten
@@ -2777,8 +2794,28 @@ after the contract was authored; and the login sheet tears down in the same seco
 transition, so the banner never re-texts) — each evidenced, each operator-ratified before scoring,
 both counted in the **contract-defect tally of 2** rather than reinterpreted. **No FAIL was
 softened.** Ledger: 33 rows, **RETIRED 15 → 18, OPEN 18 → 15**. Findings `F-34.5-G6-31`/`-32`/`-33`
-opened and deliberately **not** diagnosed. **Still owed on this phase:** `/gsd-verify-phase 34.5`
-and `/gsd-secure-phase 34.5` — which is why the milestone's `completed_phases` counter stays at 20.
+opened and deliberately **not** diagnosed.
+
+**`/gsd-secure-phase 34.5` is now DISCHARGED — `34.5-SECURITY.md` reads `status: verified`,
+`threats_open: 0` as of 2026-08-23.** It first ran 2026-08-20 (362 rows, 8 open) and sat `blocked`
+on a single row for three days. That row — `T-34.5-C6-06`, disposition `transfer` → ledger row
+`U-34.5-16` — was closed by **correcting the disposition to `mitigate`**: the `transfer` was a
+bookkeeping error, not a deferral, because plan 34.5-44 Task 4 had already *fixed it in code*.
+Re-verified first-hand rather than cited: `getInstallInfo` is a `LONG_RUNNING_CHANNELS` member
+(`main.rs:229`) and `timeout_for()` returns `None` for members (`main.rs:233-239`), with
+`cargo test every_long_running_channel_is_exempt_and_a_non_member_is_bounded` (1 passed) and
+`npx jest __tests__/longRunningChannels.test.ts` (43 passed) both run green on the day.
+
+Of the 8 first-pass open rows, only **4 were closed by a developer disposition**; the other 4 were
+closed by finding or building the missing control — worth stating, since `8 → 0` otherwise reads as
+eight risks waved through.
+
+**Still owed on this phase:** `/gsd-verify-phase 34.5` (never run) — which is why the milestone's
+`completed_phases` counter stays at 20. Also still open and NOT addressed by the security audit:
+`34.5-UNTESTED-ITEMS.md` still carries OPEN rows including `U-34.5-16` itself (its live
+details-page observation was deliberately NOT retired — a closed threat register is not a
+discharged UAT ledger), and `U-34.5-33` has a ledger row but no disposition anywhere, because plan
+34.5-61 is the phase's only plan with no `<threat_model>` block and contributed zero register rows.
 
 ### Phase 34.6: Tauri IPC re-plumb slice 9 — EOS overlay, SteamGridDB artwork, winetricks + the Epic/save-sync verification inherited from 34.7 (INSERTED)
 

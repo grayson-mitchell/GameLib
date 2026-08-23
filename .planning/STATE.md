@@ -589,6 +589,17 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > no `34.5-VERIFICATION.md`, `34.5-REVIEW.md` or `34.5-SECURITY.md` exists, which is why
 > `completed_phases` deliberately stays **20** rather than moving to 21.
 >
+> **[AMENDED 2026-08-23 by `/gsd-secure-phase 34.4, 34.3, 34.5`]** The paragraph above is stale in
+> one half. **`/gsd-secure-phase 34.5` is DONE** — `34.5-SECURITY.md` has existed since 2026-08-20
+> (362 rows) and now reads `status: verified`, `threats_open: 0`; its last open row
+> (`T-34.5-C6-06`) was closed 2026-08-23 by correcting a `transfer` that should always have been a
+> `mitigate`, on evidence re-verified in the tree. **`/gsd-verify-phase 34.5` is still genuinely
+> owed** and no `34.5-VERIFICATION.md` or `34.5-REVIEW.md` exists, so `completed_phases` correctly
+> stays **20** — the reason is now verification alone, not security.
+>
+> Not fixed by that audit, and still open: `34.5-UNTESTED-ITEMS.md` retains OPEN rows (`U-34.5-16`
+> among them, deliberately NOT retired), and `U-34.5-33` carries no disposition anywhere.
+>
 > **Next:** `/gsd-plan-phase 34.6`. Full evidence: `34.5-LIVE-GATE-RERUN-4.md`. Closing record:
 > `34.5-CYCLE7-ROUTING.md` (now `status: closed`) and `34.5-60-SUMMARY.md`.
 >
