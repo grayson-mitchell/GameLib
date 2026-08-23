@@ -92,6 +92,7 @@ import { registerRunnerAuthFlows } from './runnerAuthFlowRegistration'
 import { registerWineToolsFlows } from './wineToolsFlowRegistration'
 import { registerShortcutsFlows } from './shortcutsFlowRegistration'
 import { registerRunnerMiscFlows } from './runnerMiscFlowRegistration'
+import { registerEosOverlayFlows } from './eosOverlayFlowRegistration'
 import { ensureStoresRegistered } from './storeRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
 import { getRegisteredStore } from '../electron_store'
@@ -212,6 +213,9 @@ registerRunnerAuthFlows()
 registerWineToolsFlows()
 registerShortcutsFlows()
 registerRunnerMiscFlows()
+// Phase 34.6 Plan 08 (REQ-34.6-01): the EOS overlay channel cluster — no ordering constraint
+// relative to the other calls above.
+registerEosOverlayFlows()
 ensureStoresRegistered()
 // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
 // every store instance exists, or a legitimate write would be rejected as an unknown
