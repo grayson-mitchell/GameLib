@@ -1413,6 +1413,49 @@ new REQ-34.16-* IDs at plan time for items 12, 13 and 18, which have no REQ of t
 Plans:
 - [ ] TBD (run /gsd-plan-phase 34.16 to break down — do not plan before the default-branch push)
 
+---
+
+### Phase 34.17: `PathSelectionBox` input commit — Enter-to-commit and the unconfirmed paste failure (INSERTED)
+
+**Goal:** Close phase-34.9 deferred **item 8**, which sat `OWNER: UNASSIGNED` for 12 days because
+no UI-owning phase survives 34.11. A user who types a path into `PathSelectionBox` and presses
+Enter loses the input silently — there is no error, no affordance, and no indication the value was
+discarded.
+
+**Inherited item** (from `.planning/phases/34.9-.../deferred-items.md` item 8, dated 2026-08-11,
+observed during that phase's live gate run):
+
+- **The Enter half — deterministic, code-level, re-verified live 2026-08-23.**
+  `src/frontend/components/UI/PathSelectionBox/index.tsx:84` commits via
+  `onBlur={(e) => onPathChange(e.target.value)}` and there is no Enter handler anywhere in the
+  `PathSelectionBox` → `TextInputWithIconField` → `TextInputField` chain. Pressing Enter does
+  nothing and nothing tells the user that. Note that
+  `src/frontend/components/UI/TextInputWithIconField/index.tsx:17` **already declares an
+  `onKeyDown` prop** — `PathSelectionBox` simply never passes one, so the seam exists and the fix
+  does not require widening the primitive's interface.
+- **The paste half — SUSPECTED, never independently re-confirmed.** Pasting into the field during
+  the 2026-08-11 gate run produced a repeating unrenderable glyph instead of the clipboard text.
+  The ledger names `navigator.clipboard` silently no-opping under the Tauri/WKWebView host as the
+  *likely* root cause and explicitly records that this was not re-confirmed.
+
+**Read before planning:** the two halves are not one defect and must not be planned as one. The
+Enter half is provable from the source today. **The paste half must be reproduced on the real
+Tauri host before any fix is written** — a fix aimed at an unreproduced cause is how this project
+has repeatedly shipped gates that measure the wrong property. If the paste half does not
+reproduce, say so and close it as VERIFIED-ABSENT rather than fixing by assumption.
+
+**Scope fence:** this phase owns `PathSelectionBox` and the input-commit chain beneath it. It does
+**not** own a general clipboard shim for the app — if the paste half reproduces and the cause is
+host-level, mint that as its own item rather than absorbing it here.
+
+**Requirements**: NONE inherited — item 8 never had a REQ of its own. Mint `REQ-34.17-*` IDs at
+plan time.
+**Depends on:** nothing. Frontend-only, not blocked, runnable on this machine today.
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 34.17 to break down)
+
 ### Phase 34.13: Steam install-time wine/bottle form (GOG parity) (INSERTED)
 
 **Goal:** A Steam install offers a one-click quick install by default, targeting Steam's primary library, with an explicit "Install with options…" path — reachable via a caret or context-menu item — that opens GameLib's install modal for platform selection and wine/bottle choice. This gives Steam more control than GOG's always-modal default, not parity with it, while a bottle install still degrades safely into the options path when quick install's local checks fail.
@@ -4170,6 +4213,52 @@ same run. Note that 37-03 explains **9** of those 22 games and closing it will N
 
 Plans:
 - [ ] No plan files. Run the sweep directly from `38-VERIFICATION.md` when the hardware is available; record results there and in `38-HUMAN-UAT.md`.
+
+---
+
+### Phase 39: Repo-wide lint debt — drive `pnpm lint` to exit 0 after the Electron cutover
+
+**Goal:** Close phase-34.9 deferred **item 20**, the last of that phase's 24 ledger items with no
+owner at all. `pnpm lint` exits non-zero repo-wide, so no phase can honestly use it as a gate —
+every plan that names "`pnpm lint` exits 0" in its acceptance criteria is either lying or
+silently excusing itself, which is what happened to plan 34.9-29.
+
+**Inherited item** (from `.planning/phases/34.9-.../deferred-items.md` item 20, dated 2026-08-14):
+
+- **The measurement:** `3544 problems (53 errors, 3491 warnings)`, spread across dozens of
+  unrelated `src/` files — unsafe-`any` warnings, unused eslint-disable directives,
+  `require-await`, `no-duplicates`. **Treat this as a 2026-08-14 snapshot, not a target.
+  Re-measure at plan time.**
+- **Confirmed pre-existing, not merely assumed:** that exact figure was observed byte-identically
+  both before `meta/runTs.cjs` existed on disk and after all of plan 34.9-29's tasks were
+  committed. It is nobody's regression.
+
+**Why this phase runs AFTER Phase 35, not before:** Phase 35 removes the Electron build. That
+deletion takes an as-yet-unmeasured share of the 3544 problems with it. Fixing lint across files
+that Phase 35 is about to delete is work thrown away, and worse, it produces a diff that collides
+with the cutover. **Sequencing is the point of this phase's placement — do not pull it forward.**
+
+**Read before planning — four recorded ways this measurement misleads:**
+
+1. **`pnpm codecheck` says nothing about CI lint.** It is a `tsc` gate. A green codecheck is not
+   evidence about any of the 3544.
+2. **Count only `severity === 2` as an error.** The 53/3491 split is the whole plan-sizing input;
+   conflating warnings with errors mis-scopes the phase by two orders of magnitude.
+3. **A lint finding can name the wrong file with the right line numbers** — this project has hit
+   that. Verify the file before editing at the reported lines.
+4. **The `prettier --check` gate is separately red repo-wide.** It is a *different* gate from
+   `pnpm lint`. Never sweep formatting into a behavioural commit to make either one green.
+
+**Scope fence:** this phase owns lint debt only. It does **not** own the prettier gate — if that
+is to be fixed, it is its own phase with its own commit, for the reason in hazard 4 above.
+
+**Requirements**: NONE inherited — item 20 never had a REQ of its own. Mint `REQ-39-*` IDs at plan
+time, after the count is re-measured.
+**Depends on:** **Phase 35** (Electron cutover) — see the sequencing rationale above.
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 39 to break down — re-measure `pnpm lint` first; do not plan before Phase 35 lands)
 
 ---
 
