@@ -93,7 +93,12 @@ const ENTRY_POINTS = [
   // frontendReady/changeTrayColor registration module. Never previously an
   // entry point. See the BASELINE_ELECTRON_REACHING_MODULES header comment
   // below for the measured before/after.
-  join(REPO_ROOT, 'src/backend/sidecar/appShellFlowRegistration.ts')
+  join(REPO_ROOT, 'src/backend/sidecar/appShellFlowRegistration.ts'),
+  // Phase 34.6 Plan 06 (REQ-34.6-04/13, 2026-08-24): this plan's
+  // moveInstall/importGame port. installFlowRegistration.ts was never
+  // previously an entry point. See the BASELINE_ELECTRON_REACHING_MODULES
+  // header comment below for the measured before/after.
+  join(REPO_ROOT, 'src/backend/sidecar/installFlowRegistration.ts')
 ]
 
 // Regenerated at plan-execution time (2026-07-26, Phase 34.3 Plan 07), not
@@ -263,6 +268,34 @@ const ENTRY_POINTS = [
 // sendChannelObservable.ts. The `> 224` floor in the 'reachability sanity'
 // test is unchanged (244 is even more comfortably above it than the prior
 // 228 reading was) and is not raised, per that test's own
+// never-lower/only-raise-when-no-longer-meaningful instruction.
+//
+// Phase 34.6 Plan 06 (REQ-34.6-04/13, 2026-08-24) extended ENTRY_POINTS with
+// installFlowRegistration.ts (this plan's moveInstall/importGame port; never
+// previously an entry point) and re-ran computeElectronReach() via the
+// standing temporary-print-statement procedure -- MEASURED both directions,
+// not predicted:
+//   BEFORE (without installFlowRegistration.ts): electronImportingFiles.size
+//     35, visitedFiles.size 244
+//   AFTER  (with installFlowRegistration.ts):     electronImportingFiles.size
+//     35, visitedFiles.size 246
+// MEASURED, UNCHANGED -- the two electronImportingFiles sets are set-equal
+// (identical sorted 35-entry arrays, not just size comparison). No new module
+// entered the electron-reaching set: getGame/isEpicServiceOffline/
+// sendGameStatusUpdate/writeConfig (backend/utils.ts, already baselined),
+// notify/showDialogBoxModalAuto (dialog/dialog.ts, already baselined),
+// logError/logInfo/LogPrefix (backend/logger, electron-free), and i18next
+// (external library, not first-party) were all either already
+// electron-reaching via existing entry points or genuinely electron-free.
+// No new entry below. visitedFiles.size grew by +2 (244 -> 246) -- diffed the
+// two full visitedFiles sets (not just the size delta): the two newly-visited
+// first-party files are installFlowRegistration.ts itself (the new entry
+// point) and src/backend/utils/checkGameUpdates.ts (imported at
+// installFlowRegistration.ts's `checkGameUpdates` handler; not previously
+// reached by any of this file's other entry points, and itself electron-free
+// -- it does not appear in electronImportingFiles). The `> 224` floor in the
+// 'reachability sanity' test is unchanged (246 is even more comfortably above
+// it than the prior 244 reading was) and is not raised, per that test's own
 // never-lower/only-raise-when-no-longer-meaningful instruction.
 const BASELINE_ELECTRON_REACHING_MODULES: string[] = [
   'src/backend/constants/paths.ts',
@@ -606,6 +639,13 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
     // measurement): visitedFiles.size 228 both times -- UNCHANGED, and
     // measured, not transcribed. 228 is comfortably above the existing 224
     // floor, so the floor is NOT raised, per this test's own
+    // never-lower/only-raise-when-no-longer-meaningful instruction.
+    //
+    // Phase 34.6 Plan 06 (REQ-34.6-04/13): installFlowRegistration.ts added
+    // as a new entry point grew visitedFiles.size further, to a measured 246
+    // (see the BASELINE_ELECTRON_REACHING_MODULES header comment above for
+    // the full BEFORE/AFTER measurement). 246 is comfortably above the
+    // existing 224 floor, so the floor is NOT raised, per this test's own
     // never-lower/only-raise-when-no-longer-meaningful instruction.
     expect(reachResult.visitedFiles.size).toBeGreaterThan(224)
   }, 30000)
