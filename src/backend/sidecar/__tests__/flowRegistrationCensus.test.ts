@@ -67,7 +67,9 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   'loggerFlowRegistration.ts': { invoke: 3, send: 3 },
   'oauthLoginFlowRegistration.ts': { invoke: 1, send: 0 },
   'runnerAuthFlowRegistration.ts': { invoke: 10, send: 1 },
-  'runnerMiscFlowRegistration.ts': { invoke: 11, send: 0 },
+  // Phase 34.6 Plan 10 (2026-08-24): invoke 11 -> 14 -- getAchievements/getDefaultSavePath/
+  // getPlaytimeFromRunner ported byte-equivalently from main.ts (D-14); send count unchanged.
+  'runnerMiscFlowRegistration.ts': { invoke: 14, send: 0 },
   'settingsFlowRegistration.ts': { invoke: 11, send: 1 },
   'shellFilesFlowRegistration.ts': { invoke: 3, send: 17 },
   'shortcutsFlowRegistration.ts': { invoke: 4, send: 3 },

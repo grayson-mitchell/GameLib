@@ -55,11 +55,27 @@
  *      for the 3 winetricks-cluster names ported out of the deferred set.
  *   9. EOS overlay presence (Phase 34.6 Plan 08) — the inverse of item 7 for the 8 EOS overlay
  *      names ported out of the deferred set; all 8 are invoke-kind, none send-kind.
+ *  10. SteamGridDB presence (Phase 34.6 Plan 09) — the inverse of item 7 for the 5 SteamGridDB
+ *      names ported out of the deferred set.
+ *  11. 24-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30) — the phase's own completeness gate:
+ *      all 24 in-scope channels (EOS overlay 8 + SteamGridDB 5 + winetricks 3 + the 8
+ *      late-discovered channels this plan and plans 34.6-05/06 ported) asserted by NAME with the
+ *      correct kind, in ONE test, diffed against `.planning/IPC-PORT-INVENTORY.md`'s own two
+ *      Phase-34.6 bucket lines so the census cannot silently drift from the document that scoped
+ *      it. `registerAppShellFlows` (owns `frontendReady`) and `registerInstallFlows` (owns
+ *      `moveInstall`/`importGame`) are called in this describe's OWN isolated `beforeAll` — not
+ *      added to this file's `MODULES` table — because neither is one of this slice's own five
+ *      (now six) declared-but-originally-empty modules; widening `MODULES` to include their full
+ *      ~20/~7-channel declared sets would inflate Describe 6's own totals with channels outside
+ *      this plan's 3-channel scope. This isolation is why the census restores the canonical
+ *      six-module snapshot afterward rather than leaving appShell/install channels in the shared
+ *      registries for later describes.
  *
  * This suite is the phase's completeness gate: `34.5-PORTED-CHANNELS.md` (plan 34.5-14) declared
  * the 38 rows Phase 34.5 shipped; Phase 34.6 grows this suite's own totals beyond that document's
  * scope as each deferred cluster is ported, so agreement with that document is a Phase-34.5-era
- * property this suite no longer re-asserts past this plan.
+ * property this suite no longer re-asserts past this plan. The 24-channel census (item 11) is
+ * this phase's OWN completeness gate, diffed directly against `IPC-PORT-INVENTORY.md`.
  */
 
 import { readFileSync } from 'fs'
@@ -75,6 +91,12 @@ import { registerEosOverlayFlows } from '../eosOverlayFlowRegistration'
 // joins this file's module-scope snapshot solely so this file's SEAM Invariant B sweep (Describe
 // 7/10 below) can correctly move the 5 `steamgriddb.*` names from "deferred" to "present".
 import { registerEnrichmentFlows } from '../enrichmentFlowRegistration'
+// Phase 34.6 Plan 10 (D-01/T-34.6-30): the 24-channel census (Describe 11 below) needs these two
+// modules to prove `frontendReady`/`moveInstall`/`importGame` are registered — neither joins the
+// canonical six-module snapshot or the `MODULES` table (see Describe 11's own module-scope
+// comment); they are called only inside that describe's isolated `beforeAll`.
+import { registerAppShellFlows } from '../appShellFlowRegistration'
+import { registerInstallFlows } from '../installFlowRegistration'
 import {
   handlerRegistry,
   listenerRegistry,
@@ -203,7 +225,12 @@ const RUNNER_MISC_CHANNELS = [
   'syncSaves',
   'syncGOGSaves',
   'downloadRuntime',
-  'isRuntimeInstalled'
+  'isRuntimeInstalled',
+  // Phase 34.6 Plan 10 (REQ-34.6-04/08/09): the last three of the phase's 24 late-discovered
+  // channels, ported into this module's real registration. All 3 are invoke-kind.
+  'getAchievements',
+  'getDefaultSavePath',
+  'getPlaytimeFromRunner'
 ]
 
 // Phase 34.6 Plan 08 (REQ-34.6-01/08/13): the 8 EOS overlay channels, ported from the DEFERRED
@@ -524,7 +551,7 @@ const SEND_CHANNELS = [
   'winetricksInstall'
 ]
 
-describe('completeness — all 64 channels are registered with the right kind, across all six modules together (Phase 34.5 Plan 13, REQ-34.5-10; Phase 34.6 Plan 08 added the EOS overlay module; Phase 34.6 Plan 09 added enrichmentFlowRegistration.ts)', () => {
+describe('completeness — all 67 channels are registered with the right kind, across all six modules together (Phase 34.5 Plan 13, REQ-34.5-10; Phase 34.6 Plan 08 added the EOS overlay module; Phase 34.6 Plan 09 added enrichmentFlowRegistration.ts; Phase 34.6 Plan 10 added the last 3 late-discovered channels to registerRunnerMiscFlows)', () => {
   beforeAll(() => {
     // Restore from the canonical snapshot (see the module-scope comment near the top of this
     // file) rather than re-invoking the six `registerXFlows()` functions — some of them are
@@ -532,17 +559,16 @@ describe('completeness — all 64 channels are registered with the right kind, a
     restoreCanonicalRegistrations()
   })
 
-  it('exactly 59 channels are handle-kind and exactly 5 are listen-kind (Phase 34.6 Plan 09: 45/5 -> 59/5, +14 invoke +0 send)', () => {
+  it('exactly 62 channels are handle-kind and exactly 5 are listen-kind (Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send)', () => {
     const handleChannels = [...handlerRegistry.keys()]
     const listenChannels = [...listenerRegistry.entries()]
       .filter(([, listeners]) => listeners.length > 0)
       .map(([channel]) => channel)
 
     // Measured (jest failure ACTUAL, this plan's execution) and independently re-derived from
-    // arithmetic (45+14=59 invoke, 5+0=5 send — enrichmentFlowRegistration.ts is 14-of-14
-    // invoke, confirmed against flowRegistrationCensus.test.ts's own { invoke: 14, send: 0 }
-    // pin) — both agree.
-    expect(handleChannels.length).toBe(59)
+    // arithmetic (59+3=62 invoke, 5+0=5 send — getAchievements/getDefaultSavePath/
+    // getPlaytimeFromRunner are all invoke-kind, none send) — both agree.
+    expect(handleChannels.length).toBe(62)
     expect(listenChannels.length).toBe(5)
   })
 
@@ -573,11 +599,11 @@ describe('completeness — all 64 channels are registered with the right kind, a
     }
   )
 
-  it('per-module declared counts are exactly 11 / 13 / 7 / 11 / 8 / 14, totalling 64 (Phase 34.6 Plan 09: added registerEnrichmentFlows at 14)', () => {
+  it('per-module declared counts are exactly 11 / 13 / 7 / 14 / 8 / 14, totalling 67 (Phase 34.6 Plan 10: registerRunnerMiscFlows grew 11 -> 14)', () => {
     const counts = MODULES.map((m) => m.declaredChannels.length)
-    // Measured (jest failure ACTUAL) and independently re-derived (50 prior total + 14 new = 64) — agree.
-    expect(counts).toEqual([11, 13, 7, 11, 8, 14])
-    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(64)
+    // Measured (jest failure ACTUAL) and independently re-derived (64 prior total + 3 new = 67) — agree.
+    expect(counts).toEqual([11, 13, 7, 14, 8, 14])
+    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(67)
   })
 
   afterAll(() => {
@@ -742,5 +768,146 @@ describe('SteamGridDB presence, correct kind, across all six modules together (P
 
   afterAll(() => {
     restoreCanonicalRegistrations()
+  })
+})
+
+// ── Describe 11: 24-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30) ────────────────────────
+// The phase's scope is 24 channels total (D-01): EOS overlay 8 + SteamGridDB 5 + winetricks 3 +
+// the 8 "late-discovered" channels found by plan 34.5-49's preload-surface audit
+// (`.planning/IPC-PORT-INVENTORY.md` § "Late-discovered — owner Phase 34.6"). A sample proving
+// some of these is not a census — this describe asserts all 24 by NAME, with the correct kind,
+// diffed against the inventory document itself so the census cannot silently drift from the list
+// that scoped the phase.
+//
+// `frontendReady` is owned by `registerAppShellFlows` (send-kind) and `moveInstall`/`importGame`
+// are owned by `registerInstallFlows` (both invoke-kind) — neither module is one of this file's
+// own six declared-but-originally-empty modules, so neither joins `MODULES` (that would inflate
+// Describe 6's own totals with ~20 appShell + ~7 install channels entirely outside this plan's
+// 3-channel scope). Instead this describe's own `beforeAll` starts from the canonical six-module
+// snapshot and calls both extra modules directly, isolated to this describe's own scope; its own
+// `afterAll` restores the canonical snapshot so no later describe (or test file sharing this
+// worker) sees the extra appShell/install channels.
+const STEAMGRIDDB_CENSUS_CHANNELS = ENRICHMENT_CHANNELS.filter((channel) =>
+  channel.startsWith('steamgriddb.')
+)
+const WINETRICKS_CENSUS_CHANNELS = [
+  'winetricksAvailable',
+  'winetricksInstall',
+  'winetricksInstalled'
+]
+// Phase 34.6 Plan 05/06/10 (D-01): the 8 late-discovered channels — `getAchievements`,
+// `getDefaultSavePath` and `getPlaytimeFromRunner` land in THIS plan (Task 1 above); the other 5
+// were already ported by plans 34.6-05/06 (`frontendReady`, `moveInstall`, `importGame`,
+// `runWineCommandForGame`) and 34.6-09 (`getGogDiscounts`, already counted in
+// `ENRICHMENT_CHANNELS` above, listed again here only as a census member name, not re-declared).
+const LATE_DISCOVERED_CENSUS_CHANNELS = [
+  'frontendReady',
+  'getAchievements',
+  'getDefaultSavePath',
+  'getGogDiscounts',
+  'getPlaytimeFromRunner',
+  'importGame',
+  'moveInstall',
+  'runWineCommandForGame'
+]
+const TWENTY_FOUR_CHANNELS = [
+  ...EOS_OVERLAY_CHANNELS,
+  ...STEAMGRIDDB_CENSUS_CHANNELS,
+  ...WINETRICKS_CENSUS_CHANNELS,
+  ...LATE_DISCOVERED_CENSUS_CHANNELS
+]
+// The only 2 send-kind members of the 24: winetricksInstall (D-11) and frontendReady (D-11).
+const CENSUS_SEND_CHANNELS = ['winetricksInstall', 'frontendReady']
+
+/** Extracts every backtick-quoted name from a single line of markdown — used to parse
+ * `IPC-PORT-INVENTORY.md`'s own bucket lines without hand-retyping their contents (retyping is
+ * exactly how a census silently drifts from the document that scoped it). */
+function extractBacktickedNames(line: string): string[] {
+  return [...line.matchAll(/`([a-zA-Z0-9_.]+)`/g)].map((match) => match[1])
+}
+
+describe('24-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30) — every in-scope channel across the whole phase, registered with the correct kind', () => {
+  beforeAll(() => {
+    // Start from the canonical six-module snapshot, then add the two extra modules this census
+    // alone needs. Isolated to this describe: see the module-scope comment above for why these
+    // two calls do not belong in the shared canonical snapshot or in `MODULES`.
+    restoreCanonicalRegistrations()
+    registerAppShellFlows({ skipInitialTraySync: true })
+    registerInstallFlows()
+  })
+
+  afterAll(() => {
+    // Leave the registries in the canonical six-module state for any test file that runs after
+    // this one in the same worker — appShell/install channels must not leak into a later describe.
+    restoreCanonicalRegistrations()
+  })
+
+  it('lists exactly 24 names: EOS overlay 8 + SteamGridDB 5 + winetricks 3 + late-discovered 8', () => {
+    expect(EOS_OVERLAY_CHANNELS.length).toBe(8)
+    expect(STEAMGRIDDB_CENSUS_CHANNELS.length).toBe(5)
+    expect(WINETRICKS_CENSUS_CHANNELS.length).toBe(3)
+    expect(LATE_DISCOVERED_CENSUS_CHANNELS.length).toBe(8)
+    expect(TWENTY_FOUR_CHANNELS.length).toBe(24)
+  })
+
+  it("matches .planning/IPC-PORT-INVENTORY.md's two Phase-34.6 bucket lines exactly — set equality against the document itself, not a retyped copy", () => {
+    const inventorySource = readFileSync(
+      join(__dirname, '..', '..', '..', '..', '.planning', 'IPC-PORT-INVENTORY.md'),
+      'utf-8'
+    )
+    const inventoryLines = inventorySource.split('\n')
+
+    const eosLine = inventoryLines.find((line) =>
+      line.includes('(EOS overlay, 8)')
+    )
+    const steamgriddbLine = inventoryLines.find((line) =>
+      line.includes('(SteamGridDB artwork, 5)')
+    )
+    const winetricksLine = inventoryLines.find((line) =>
+      line.includes('(winetricks, 3)')
+    )
+    const lateDiscoveredLine = inventoryLines.find(
+      (line) =>
+        line.includes('`frontendReady`') &&
+        line.includes('`runWineCommandForGame`')
+    )
+
+    // Each anchor line must exist — a missing line means the document's own structure moved,
+    // which this test must fail loudly on rather than silently comparing against an empty array.
+    expect(eosLine).toBeDefined()
+    expect(steamgriddbLine).toBeDefined()
+    expect(winetricksLine).toBeDefined()
+    expect(lateDiscoveredLine).toBeDefined()
+
+    const inventoryTwentyFour = [
+      ...extractBacktickedNames(eosLine ?? ''),
+      ...extractBacktickedNames(steamgriddbLine ?? ''),
+      ...extractBacktickedNames(winetricksLine ?? ''),
+      ...extractBacktickedNames(lateDiscoveredLine ?? '')
+    ]
+
+    expect(inventoryTwentyFour.length).toBe(24)
+    expect(new Set(inventoryTwentyFour)).toEqual(new Set(TWENTY_FOUR_CHANNELS))
+  })
+
+  it.each(TWENTY_FOUR_CHANNELS)(
+    '%s is registered with the correct kind',
+    (channel) => {
+      if (CENSUS_SEND_CHANNELS.includes(channel)) {
+        expect((listenerRegistry.get(channel) ?? []).length).toBeGreaterThan(0)
+        expect(handlerRegistry.has(channel)).toBe(false)
+      } else {
+        expect(handlerRegistry.has(channel)).toBe(true)
+        expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
+      }
+    }
+  )
+
+  it('exactly 22 of the 24 are invoke-kind and exactly 2 (winetricksInstall, frontendReady) are send-kind', () => {
+    const sendCount = TWENTY_FOUR_CHANNELS.filter((channel) =>
+      CENSUS_SEND_CHANNELS.includes(channel)
+    ).length
+    expect(sendCount).toBe(2)
+    expect(TWENTY_FOUR_CHANNELS.length - sendCount).toBe(22)
   })
 })

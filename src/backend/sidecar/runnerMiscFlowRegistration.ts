@@ -99,13 +99,14 @@ import { getDefaultSavePath } from '../save_sync'
 import { GlobalConfig } from '../config'
 
 /**
- * Registers this cluster's 11 invoke-kind channels. Called once from `handlers.ts` — this module
+ * Registers this cluster's 14 invoke-kind channels. Called once from `handlers.ts` — this module
  * owns no side effects at import time; the caller decides when registration onto the handler
  * registry happens.
  *
- * The module is now complete at 11/11: the four runner-CLI-version probes and two runtime
- * channels (plan 34.5-07), plus the three "other" channels and two saves-sync channels
- * (plan 34.5-12).
+ * The module is now complete at 14/14: the four runner-CLI-version probes and two runtime
+ * channels (plan 34.5-07), the three "other" channels and two saves-sync channels
+ * (plan 34.5-12), plus the three late-discovered channels `getAchievements`,
+ * `getDefaultSavePath` and `getPlaytimeFromRunner` (Phase 34.6 Plan 10, D-14).
  */
 export function registerRunnerMiscFlows(): void {
   // ── Runner CLI version probes (main.ts / utils/ipc_handler.ts:18-21) ──────

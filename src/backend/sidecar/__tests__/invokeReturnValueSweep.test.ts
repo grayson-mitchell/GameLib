@@ -3,11 +3,11 @@
  * 6, plan 34.5-45, Task 3). Reads the four `*FlowRegistration.ts` modules this slice owns
  * (`runnerAuthFlowRegistration.ts`, `wineToolsFlowRegistration.ts`,
  * `shortcutsFlowRegistration.ts`, `runnerMiscFlowRegistration.ts`) OFF DISK, extracts every
- * `ipcMain.handle` channel with a pattern that tolerates the multi-line registration form (11 of
- * the 34 put the channel name on the following line — a single-line-only regex finds just 23),
+ * `ipcMain.handle` channel with a pattern that tolerates the multi-line registration form (14 of
+ * the 40 put the channel name on the following line — a single-line-only regex finds fewer),
  * and asserts:
  *
- *   1. The extracted channel count is exactly 34, with the exact per-module tally 10/9/4/11.
+ *   1. The extracted channel count is exactly 40, with the exact per-module tally 10/12/4/14.
  *   2. Every channel classified RETURNS (declared non-void in `AsyncIPCFunctions`, NOT on the
  *      explicit VOID-PARITY allow-list below) has a `return` statement inside its own handler
  *      body -- so a future edit that silently drops a `return` is caught here, not live.
@@ -52,8 +52,11 @@ const MODULES: ModuleSpec[] = [
   },
   {
     name: 'runnerMisc',
+    // Phase 34.6 Plan 10 (2026-08-24): 11 -> 14. Three INVOKE-kind late-discovered channels
+    // were ported byte-equivalently from main.ts (D-14) -- `getAchievements`,
+    // `getDefaultSavePath`, `getPlaytimeFromRunner`.
     path: join(__dirname, '../runnerMiscFlowRegistration.ts'),
-    expectedCount: 11
+    expectedCount: 14
   }
 ]
 
@@ -159,10 +162,13 @@ describe('invoke-return-value sweep anti-rot gate (F-34.5-G6-08 / U-34.5-15)', (
   // Phase 34.6 Plan 07 (2026-08-24): 34 -> 37, the same +3 recorded on the `wineTools` module
   // spec above (`winetricksAvailable`, `winetricksInstalled`, `runWineCommandForGame`; send-kind
   // `winetricksInstall` is correctly excluded because this sweep extracts `ipcMain.handle` only).
+  // Phase 34.6 Plan 10 (2026-08-24): 37 -> 40, the same +3 recorded on the `runnerMisc` module
+  // spec above (`getAchievements`, `getDefaultSavePath`, `getPlaytimeFromRunner`; all three are
+  // invoke-kind, D-14).
   // This total and the per-module counts must always move together -- if they ever disagree, the
   // extraction is wrong and neither number should be adjusted until that is understood.
-  it('extracts exactly 37 channels total', () => {
-    expect(allChannels).toHaveLength(37)
+  it('extracts exactly 40 channels total', () => {
+    expect(allChannels).toHaveLength(40)
   })
 
   it.each(MODULES)('$name has exactly $expectedCount channels', (spec) => {

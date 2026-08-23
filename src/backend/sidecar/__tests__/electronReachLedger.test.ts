@@ -85,6 +85,11 @@ const ENTRY_POINTS = [
   // slice's 38 and is not reachable from any of the four modules below. `save_sync.ts` is
   // imported ONLY by `main.ts` in this repo (grep-verified) -- an Electron-only file outside
   // this ledger's entry-point graph -- so it correctly does NOT appear in the measured set.
+  //
+  // UPDATE, Phase 34.6 Plan 10 (D-14): this stopped holding once `runnerMiscFlowRegistration.ts`
+  // gained its own direct `getDefaultSavePath` import from `../save_sync` (a different edge than
+  // the `syncGOGSaves` path this note ruled out). See `BASELINE_ELECTRON_REACHING_MODULES`'s
+  // `save_sync.ts` entry below for the measured before/after.
   join(REPO_ROOT, 'src/backend/sidecar/runnerAuthFlowRegistration.ts'),
   join(REPO_ROOT, 'src/backend/sidecar/wineToolsFlowRegistration.ts'),
   join(REPO_ROOT, 'src/backend/sidecar/shortcutsFlowRegistration.ts'),
@@ -434,7 +439,23 @@ const BASELINE_ELECTRON_REACHING_MODULES: string[] = [
   //     `import { app } from 'electron'` (User-Agent header for the GOG
   //     catalog request) -- unchanged behavior carried over verbatim from
   //     discounts/index.ts, not new surface introduced by the extraction.
-  'src/backend/discounts/fetchDiscounts.ts'
+  'src/backend/discounts/fetchDiscounts.ts',
+  // Phase 34.6 Plan 10 (REQ-34.6-04/08/09, D-14): runnerMiscFlowRegistration.ts's own
+  // `getDefaultSavePath` handler now imports `getDefaultSavePath` directly from
+  // `../save_sync` -- the plan's own <interfaces> note ("`save_sync.ts` would enter the
+  // measured baseline via `syncGOGSaves`") did NOT hold (that was Plan 34.5-12's
+  // deferred-item finding, reaffirmed above); the edge this plan actually adds is the
+  // new `getDefaultSavePath` handler's OWN direct import, not a pre-existing one.
+  // save_sync.ts:12 `import { app } from 'electron'` (used by `getDefaultGogSavePaths`'s
+  // `app.getPath('documents')` call, already covered at the pathShim layer per this
+  // handler's own registration comment). Measured (not predicted) via this file's own
+  // before/after procedure, isolating this one file: BEFORE (pre-Task-1
+  // runnerMiscFlowRegistration.ts swapped in via `git show`), electronImportingFiles.size
+  // 38, visitedFiles.size 252; AFTER (post-Task-1, current committed content),
+  // electronImportingFiles.size 39, visitedFiles.size 253 -- a clean +1/+1, exactly
+  // `save_sync.ts` itself (everything IT imports was already reached via other entry
+  // points in this same baseline, e.g. `storeManagers`/`utils`/`logger` edges above).
+  'src/backend/save_sync.ts'
 ]
 
 interface ElectronReachResult {
