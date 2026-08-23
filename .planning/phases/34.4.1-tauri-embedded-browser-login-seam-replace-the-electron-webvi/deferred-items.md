@@ -658,11 +658,11 @@ not a task* — nothing below is left without an owner **and** a declared file.
 | ID | Disposition | Owner | Declared file |
 |---|---|---|---|
 | D-29-01 | CLOSED (already fixed) | plan 30 | — (ledger only) |
-| D-29-02 | OPEN | plan 32 | `src/backend/humble/adapter.ts` |
+| D-29-02 | **PARKED 2026-08-23** (operator) — UNDETERMINED, non-blocking | plan 32 → todo `2026-08-23-humble-user-info-404-two-candidates-undiscriminated.md` | `src/backend/humble/adapter.ts` |
 | D-29-03 | OPEN | plan 32 | `src/backend/humble/adapter.ts` |
 | D-29-04 | OPEN | plan 33 | `src-tauri/src/main.rs` |
 | D-29-05 | OPEN | plan 33 | `src-tauri/src/main.rs` |
-| D-29-06 | OPEN, now tracked | plan 34 → todo | todo file above |
+| D-29-06 | **PARKED 2026-08-23** (operator) — co-occurrence UNDETERMINED | plan 34 → todo `2026-08-23-f9-generic-rpc-timeout-cooccurrence-undetermined.md` | todo file above |
 | D-29-07 | OPEN — headline | plan 35 | `34.4.1-LIVE-GATE-RERUN-4.md` |
 | D-29-08 | RE-HOMED to 34.6, CONFIRMED 2026-08-23 | plan 34 → todo; owner signed off by the operator, not just proposed | todo file above |
 | D-29-09 | CLOSED (one REQ) | plan 30 | `.planning/REQUIREMENTS.md` |

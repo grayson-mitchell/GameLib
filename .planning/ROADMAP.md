@@ -1778,7 +1778,9 @@ quick task `260823-oqo`, commit `205ac34e0`). The owner changed; the status did 
 same Rust arm Humble's disconnect proved fixed, but that is an inference from shared code, not a
 measurement, and no document may call it verified on that basis.
 
-**Still open — three items, all LIVE-ONLY. No code work remains on any of them.**
+**Three residuals — all LIVE-ONLY, no code work remaining, and all PARKED 2026-08-23 by
+operator decision ("park the three remaining items"). Parked is NOT assigned: no phase owns any of
+them, and each carries a concrete revisit trigger rather than an owner.**
 - `REQ-34.4.1-GAP-11` — bounded, classified `keyring_get` timeout. Its own body reads "This box
   stays UNCHECKED — live-only". The item with real teeth: an unbounded `keyring_get` can consume
   the sidecar's entire 60s RPC budget.
@@ -1788,8 +1790,20 @@ measurement, and no document may call it verified on that basis.
 - `D-29-06` / **F-9** — a generic RPC timeout fired live (`response for unknown/timed-out id=1575`).
   Co-occurrence with a cookie operation is **UNDETERMINED** and deliberately not rounded to "no".
 
-Discharging them requires a fifth live gate run; parking them is equally legitimate. **That decision
-is not yet made and is deliberately not recorded here.**
+Each is tracked as a todo so the park does not become invisibility — `.planning/todos/pending/`
+holds `2026-08-23-keyring-get-bounded-timeout-unverified-live.md`,
+`2026-08-23-humble-user-info-404-two-candidates-undiscriminated.md`, and
+`2026-08-23-f9-generic-rpc-timeout-cooccurrence-undetermined.md`. Revisit triggers, in order:
+the next live login gate anyone runs (34.6 runs one); a user-visible symptom appearing; and a
+recurrence of the timeout with a cookie operation in the same window.
+
+**`34.4.1-VERIFICATION.md` now reads `status: passed` with the three under a
+`human_verification_parked` key, so `audit-uat` reports ZERO for this phase.** That flip was
+mandatory, not cosmetic: leaving `status: human_needed` with an empty `human_verification` makes the
+tool fall through to a body scrape and report phantom items — or, finding none, drop the phase from
+every cross-phase sweep, which is the exact 23-day invisibility this VERIFICATION.md was created to
+end. Verified non-vacuously: after the park the other six phases still report all 19 of their items,
+so the zero means "excluded", not "query broken".
 
 **Two gates this phase has never run:** `/gsd-verify-work` (its `34.4.1-VERIFICATION.md` was
 hand-written by plan 35 as a gap-cycle deliverable, not produced by gsd-verifier) and

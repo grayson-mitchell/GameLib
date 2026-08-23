@@ -4,7 +4,10 @@ source: 34.4.1 gap cycle 3, plan 34 (from D-29-06 / F-9, open since gate run 2)
 status: pending
 severity: low
 resolves_phase: null
-blocked_by: "id=1575 carries no channel name; the originating request must be located in the same scrollback"
+blocked_by: "nothing external — it needs a RECURRENCE, which cannot be scheduled. Not blocked, UNSCHEDULED. Note id=1575 carries no channel name, so the originating request must be located in the same scrollback AT THE TIME; co-occurrence cannot be settled after the fact."
+parked: 2026-08-23
+parked_by: operator
+revisit_trigger: "the timeout recurs with a cookie operation in the same window"
 related_requirement: REQ-34.4.1-GAP-11
 ---
 
@@ -52,3 +55,9 @@ un-checked on 2026-08-23 (gap cycle 3, plan 30) because its own body says *"This
 
 **GAP-11 is explicitly NOT a root-cause fix for F-9** — it is observability, and F-9's underlying
 cause is not established. Do not close one by satisfying the other.
+
+## Park
+
+**Parked 2026-08-23 by operator decision** ("park the three remaining items"), alongside
+`REQ-34.4.1-GAP-11` and `D-29-02`. Parked is **not** assigned — no phase owns this. The answer stays
+**UNDETERMINED** and must be written as such; a park is not permission to round it to "no".
