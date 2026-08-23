@@ -25,6 +25,7 @@ import {
 
 import { install, launch, repair, updateGame } from './library'
 import * as fileSize from 'filesize'
+import { getStoreDisplayName } from './storeDisplayName'
 const readFile = window.api.readConfig
 
 const writeConfig = window.api.writeConfig
@@ -137,20 +138,12 @@ function removeSpecialcharacters(text: string): string {
   return text.replaceAll(regexp, '')
 }
 
-const getStoreName = (runner: Runner, other: string) => {
-  switch (runner) {
-    case 'legendary':
-      return 'Epic Games'
-    case 'gog':
-      return 'GOG'
-    case 'nile':
-      return 'Amazon Games'
-    case 'steam':
-      return 'Steam'
-    default:
-      return other
-  }
-}
+// Quick task 260823-qsm (34.4 WR-02): the mapping moved to `./storeDisplayName`, which has no
+// runtime imports at all, so dependency-light surfaces can use it without dragging this module's
+// side-effecting `preload/tauriAttach` import in with it. Delegating rather than duplicating keeps
+// one source of truth; this export's name and signature are unchanged for its four consumers.
+const getStoreName = (runner: Runner, other: string) =>
+  getStoreDisplayName(runner, other)
 
 function getPreferredInstallLanguage(
   availableLanguages: string[],

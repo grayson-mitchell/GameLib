@@ -17,9 +17,22 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
+// The mock INTERPOLATES, mirroring real i18next (quick task 260823-qsm / 34.4 WR-02+WR-03).
+// It used to be `t: (_key, defaultValue) => defaultValue`, dropping the options argument on the
+// floor -- which is precisely the blindness 34.4-REVIEW.md's WR-03 called out: a mock that ignores
+// options cannot tell a `{{placeholder}}` default from one with the value baked in, so it can
+// never catch the very defect WR-03 describes. Substituting here means every assertion below
+// exercises the real interpolation path.
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, defaultValue: string): string => defaultValue
+    t: (
+      _key: string,
+      defaultValue: string,
+      options?: Record<string, unknown>
+    ): string =>
+      defaultValue.replace(/\{\{(\w+)\}\}/g, (_match, name: string) =>
+        String(options?.[name] ?? '')
+      )
   })
 }))
 
@@ -212,15 +225,23 @@ describe('TauriLoginPanel — OAuth declared-blocked surface (D-04)', () => {
 })
 
 describe('TauriLoginPanel — finalizing surface [quick task 260803-eee]', () => {
-  it.each(['legendary', 'gog', 'nile', 'zoom'])(
-    'runner=%s renders "Finalizing" + the runner label, a spinner element, and never the blocked copy',
-    (runner) => {
+  // WR-02 (quick task 260823-qsm): the expected label is now DECLARED per runner rather than
+  // recomputed by capitalizing the id. Recomputing it made this table tautological — it asserted
+  // the component did whatever the test did, which is how "Legendary"/"Gog"/"Nile" survived a
+  // full phase of review. `zoom` has no mapping entry, so it keeps the capitalize fallback.
+  it.each([
+    ['legendary', 'Epic Games'],
+    ['gog', 'GOG'],
+    ['nile', 'Amazon Games'],
+    ['zoom', 'Zoom']
+  ])(
+    'runner=%s renders "Finalizing" + the user-facing store name (%s), a spinner element, and never the blocked copy',
+    (runner, runnerLabel) => {
       const element = TauriLoginPanel({
         runner,
         state: { phase: 'finalizing', runner: runner as never }
       }) as AnyReactElement
       const text = collectText(element)
-      const runnerLabel = runner.charAt(0).toUpperCase() + runner.slice(1)
 
       expect(text).toContain('Finalizing')
       expect(text).toContain(runnerLabel)
@@ -240,7 +261,7 @@ describe('TauriLoginPanel — finalizing surface [quick task 260803-eee]', () =>
     }) as AnyReactElement
     const text = collectText(element)
 
-    expect(text).toContain('Signing in to Gog')
+    expect(text).toContain('Signing in to GOG')
     expect(text).toContain('A sign-in window has opened.')
     expect(text).not.toContain('Finalizing')
     const classNames = collectClassNames(element)
@@ -279,7 +300,7 @@ describe('TauriLoginPanel — preparing surface (quick task 260806-teb)', () => 
     const text = collectText(element)
 
     expect(text).toContain('Preparing')
-    expect(text).toContain('Nile')
+    expect(text).toContain('Amazon Games')
     expect(text.toLowerCase()).not.toContain('a sign-in window has opened')
     expect(text).not.toContain('Phase 34.5')
     expect(text).not.toContain('not wired up')
@@ -317,7 +338,7 @@ describe('TauriLoginPanel — preparing surface (quick task 260806-teb)', () => 
       state: { phase: 'awaiting' }
     }) as AnyReactElement
     const awaitingText = collectText(awaiting)
-    expect(awaitingText).toContain('Signing in to Gog')
+    expect(awaitingText).toContain('Signing in to GOG')
     expect(awaitingText).not.toContain('Preparing')
 
     mockApi.logInfo.mockClear()
@@ -358,6 +379,52 @@ describe('TauriLoginPanel — no navigator.clipboard reference', () => {
     ].join('\n')
 
     expect(hasNavigatorClipboardReference(synthetic)).toBe(true)
+  })
+})
+
+describe('TauriLoginPanel — WR-03: no dynamic value baked into a t() default', () => {
+  const panelSource = join(__dirname, '..', 'TauriLoginPanel.tsx')
+
+  /**
+   * Finds `t('key', ...)` calls whose DEFAULT argument is a template literal carrying a `${}`
+   * substitution. That is the WR-03 defect shape: i18next looks a key up by key alone, so the
+   * moment any locale supplies one of these keys the translated string wins and the baked-in
+   * runtime value silently disappears — in every locale except untranslated English.
+   *
+   * Deliberately narrow: it matches only the argument position after a key literal, so template
+   * literals elsewhere in the file (the logInfo lines, channelLabel's backticks) are not flagged.
+   */
+  function bakedDefaults(source: string): string[] {
+    const clean = stripSourceComments(source)
+    const calls = clean.matchAll(/\bt\(\s*'[^']+'\s*,\s*(`(?:[^`\\]|\\.)*`)/g)
+    return [...calls].map((m) => m[1]).filter((arg) => arg.includes('${'))
+  }
+
+  it('the real component source bakes no dynamic value into any t() default', () => {
+    expect(bakedDefaults(readFileSync(panelSource, 'utf-8'))).toEqual([])
+  })
+
+  it('self-test: the gate DOES catch a baked-in default (proven against known-bad input)', () => {
+    const synthetic = [
+      'const heading = t(',
+      "  'webview.login.oauth.awaiting.heading',",
+      '  `Signing in to ${runnerLabel}`',
+      ')'
+    ].join('\n')
+
+    expect(bakedDefaults(synthetic)).toHaveLength(1)
+  })
+
+  it('self-test: the gate does NOT fire on a correct interpolated default', () => {
+    const synthetic = [
+      'const heading = t(',
+      "  'webview.login.oauth.awaiting.heading',",
+      "  'Signing in to {{runner}}',",
+      '  { runner: runnerLabel }',
+      ')'
+    ].join('\n')
+
+    expect(bakedDefaults(synthetic)).toEqual([])
   })
 })
 

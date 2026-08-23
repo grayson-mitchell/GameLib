@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next'
 
 import type { TauriOAuthLoginState } from '../useTauriOAuthLogin'
+import { getStoreDisplayName } from 'frontend/helpers/storeDisplayName'
+import type { Runner } from 'common/types'
 
 interface Props {
   runner?: string
@@ -23,6 +25,27 @@ const OAUTH_CHANNEL_BY_RUNNER: Record<string, string> = {
   gog: 'authGOG',
   nile: 'authAmazon',
   zoom: 'authZoom'
+}
+
+/**
+ * WR-02 (34.4-REVIEW.md), fixed by quick task 260823-qsm: this panel used to capitalize the raw
+ * runner id, so it showed users internal codenames -- "Legendary" for Epic Games, "Gog" for GOG,
+ * "Nile" for Amazon Games -- in a user-facing surface reachable from every OAuth login route.
+ *
+ * `humble` keeps its explicit 'Humble Bundle' label: `getStoreDisplayName` has no humble case
+ * (Humble is not a Runner -- v1.2 locked decision, no library), and this component's own
+ * in-progress copy below says "Humble Bundle", so the shared error/timeout branches must agree.
+ *
+ * Any runner the mapping does not know keeps the OLD capitalize-the-id behavior via the `other`
+ * fallback, so this fix changes exactly the four labels it means to and nothing else.
+ */
+const displayNameFor = (runner?: string): string | undefined => {
+  if (!runner) return undefined
+  if (runner === 'humble') return 'Humble Bundle'
+  return getStoreDisplayName(
+    runner as Runner,
+    runner.charAt(0).toUpperCase() + runner.slice(1)
+  )
 }
 
 /**
@@ -72,13 +95,10 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
   // 'Humble Bundle' (not the generic capitalized-runner-id 'Humble') matches this component's
   // own original humble in-progress copy below -- only used once humble reaches the shared
   // error/timeout branches, which name the runner via this same variable.
-  const runnerLabel =
-    runner === 'humble'
-      ? 'Humble Bundle'
-      : runner
-        ? runner.charAt(0).toUpperCase() + runner.slice(1)
-        : undefined
-  const channelLabel = channel ? `\`${channel}\`` : 'the sign-in channel'
+  const runnerLabel = displayNameFor(runner)
+  const channelLabel = channel
+    ? `\`${channel}\``
+    : t('webview.login.oauth.genericChannel', 'the sign-in channel')
 
   if (runner === 'humble' && phase !== 'error' && phase !== 'timeout') {
     const heading = t(
@@ -116,15 +136,16 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
     // because `awaiting`'s copy ("A sign-in window has opened...") would otherwise lie for the
     // whole of this wait. Prefer the runner carried on the state itself over the separately-
     // passed `runner` prop, mirroring the `finalizing`/`blocked` branches above.
-    const preparingRunnerLabel = state.runner
-      ? state.runner.charAt(0).toUpperCase() + state.runner.slice(1)
-      : runnerLabel
-    const heading = t(
-      'webview.login.oauth.preparing.heading',
-      preparingRunnerLabel
-        ? `Preparing ${preparingRunnerLabel} sign-in…`
-        : 'Preparing sign-in…'
-    )
+    const preparingRunnerLabel = displayNameFor(state.runner) ?? runnerLabel
+    const heading = preparingRunnerLabel
+      ? t(
+          'webview.login.oauth.preparing.heading',
+          'Preparing {{runner}} sign-in…',
+          {
+            runner: preparingRunnerLabel
+          }
+        )
+      : t('webview.login.oauth.preparing.headingGeneric', 'Preparing sign-in…')
     const body = t(
       'webview.login.oauth.preparing.body',
       "The store's sign-in window is being prepared and will open shortly."
@@ -146,10 +167,11 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
   }
 
   if (phase === 'awaiting') {
-    const heading = t(
-      'webview.login.oauth.awaiting.heading',
-      runnerLabel ? `Signing in to ${runnerLabel}` : 'Signing in'
-    )
+    const heading = runnerLabel
+      ? t('webview.login.oauth.awaiting.heading', 'Signing in to {{runner}}', {
+          runner: runnerLabel
+        })
+      : t('webview.login.oauth.awaiting.headingGeneric', 'Signing in')
     const body = t(
       'webview.login.oauth.awaiting.body',
       'A sign-in window has opened. Complete sign-in there.'
@@ -167,15 +189,17 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
     // 5-27 s). Prefer the runner carried on the state itself (set alongside `phase`) over the
     // separately-passed `runner` prop, mirroring the `blocked` branch below -- the state is the
     // single source of truth for which runner this transient phase belongs to.
-    const finalizingRunnerLabel = state.runner
-      ? state.runner.charAt(0).toUpperCase() + state.runner.slice(1)
-      : runnerLabel
-    const heading = t(
-      'webview.login.oauth.finalizing.heading',
-      finalizingRunnerLabel
-        ? `Finalizing sign-in with ${finalizingRunnerLabel}…`
-        : 'Finalizing sign-in…'
-    )
+    const finalizingRunnerLabel = displayNameFor(state.runner) ?? runnerLabel
+    const heading = finalizingRunnerLabel
+      ? t(
+          'webview.login.oauth.finalizing.heading',
+          'Finalizing sign-in with {{runner}}…',
+          { runner: finalizingRunnerLabel }
+        )
+      : t(
+          'webview.login.oauth.finalizing.headingGeneric',
+          'Finalizing sign-in…'
+        )
     const body = t(
       'webview.login.oauth.finalizing.body',
       'Sign-in captured. Completing the exchange with the store — this can take a few seconds.'
@@ -197,12 +221,16 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
   }
 
   if (phase === 'cancelled') {
-    const heading = t(
-      'webview.login.oauth.cancelled.heading',
-      runnerLabel
-        ? `Signing in to ${runnerLabel} was cancelled`
-        : 'Sign-in was cancelled'
-    )
+    const heading = runnerLabel
+      ? t(
+          'webview.login.oauth.cancelled.heading',
+          'Signing in to {{runner}} was cancelled',
+          { runner: runnerLabel }
+        )
+      : t(
+          'webview.login.oauth.cancelled.headingGeneric',
+          'Sign-in was cancelled'
+        )
     const body = t(
       'webview.login.oauth.cancelled.body',
       'The sign-in window was closed before completing. You can try again.'
@@ -220,12 +248,13 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
   }
 
   if (phase === 'timeout') {
-    const heading = t(
-      'webview.login.oauth.timeout.heading',
-      runnerLabel
-        ? `Signing in to ${runnerLabel} timed out`
-        : 'Sign-in timed out'
-    )
+    const heading = runnerLabel
+      ? t(
+          'webview.login.oauth.timeout.heading',
+          'Signing in to {{runner}} timed out',
+          { runner: runnerLabel }
+        )
+      : t('webview.login.oauth.timeout.headingGeneric', 'Sign-in timed out')
     const body = t(
       'webview.login.oauth.timeout.body',
       'The sign-in window took too long to complete. You can try again.'
@@ -243,13 +272,23 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
   }
 
   if (phase === 'error') {
-    const heading = t(
-      'webview.login.oauth.error.heading',
-      runnerLabel ? `Signing in to ${runnerLabel} failed` : 'Sign-in failed'
-    )
+    const heading = runnerLabel
+      ? t(
+          'webview.login.oauth.error.heading',
+          'Signing in to {{runner}} failed',
+          {
+            runner: runnerLabel
+          }
+        )
+      : t('webview.login.oauth.error.headingGeneric', 'Sign-in failed')
     const body = t(
       'webview.login.oauth.error.body',
-      `Something went wrong while signing in: ${state?.message ?? 'unknown error'}`
+      'Something went wrong while signing in: {{message}}',
+      {
+        message:
+          state?.message ??
+          t('webview.login.oauth.error.unknownMessage', 'unknown error')
+      }
     )
     window.api.logInfo(
       `[TauriLoginPanel] runner=${runner ?? 'unknown'} phase=error message=${state?.message ?? 'unknown'}`
@@ -267,16 +306,21 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
     // REWORDED (Task 3): plan 05's default copy below is written for a world where no capture
     // happened at all. Once a real capture has succeeded and the backend channel is what
     // rejected it, the copy must say so -- never implying nothing was attempted.
-    const heading = t(
-      'webview.login.oauth.blocked.heading',
-      runnerLabel
-        ? `Signing in to ${runnerLabel} was captured, but can't finish yet`
-        : "Sign-in was captured, but can't finish yet"
-    )
+    const heading = runnerLabel
+      ? t(
+          'webview.login.oauth.blocked.heading',
+          "Signing in to {{runner}} was captured, but can't finish yet",
+          { runner: runnerLabel }
+        )
+      : t(
+          'webview.login.oauth.blocked.headingGeneric',
+          "Sign-in was captured, but can't finish yet"
+        )
     const body = t(
       'webview.login.oauth.blocked.body',
-      `Your sign-in was captured successfully, but the ${channelLabel} backend channel is not ` +
-        'ported to this build yet. This lands in Phase 34.5.'
+      'Your sign-in was captured successfully, but the {{channel}} backend channel is not ' +
+        'ported to this build yet. This lands in Phase 34.5.',
+      { channel: channelLabel }
     )
     window.api.logInfo(
       `[TauriLoginPanel] captured-blocked: runner=${state.runner} channel=${state.channel} -- lands in Phase 34.5`
@@ -300,16 +344,21 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
     } channel=${channel ?? 'unknown'} -- lands in Phase 34.5`
   )
 
-  const heading = t(
-    'webview.login.blocked.heading',
-    runnerLabel
-      ? `Signing in to ${runnerLabel} is not wired up yet`
-      : 'Signing in is not wired up yet'
-  )
+  const heading = runnerLabel
+    ? t(
+        'webview.login.blocked.heading',
+        'Signing in to {{runner}} is not wired up yet',
+        { runner: runnerLabel }
+      )
+    : t(
+        'webview.login.blocked.headingGeneric',
+        'Signing in is not wired up yet'
+      )
   const body = t(
     'webview.login.blocked.body',
-    `Your sign-in cannot be completed yet: ${channelLabel} is not ported ` +
-      'to this build. This lands in Phase 34.5.'
+    'Your sign-in cannot be completed yet: {{channel}} is not ported ' +
+      'to this build. This lands in Phase 34.5.',
+    { channel: channelLabel }
   )
 
   return (
