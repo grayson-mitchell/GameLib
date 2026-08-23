@@ -35,8 +35,15 @@ const MODULES: ModuleSpec[] = [
   },
   {
     name: 'wineTools',
+    // Phase 34.6 Plan 07 (2026-08-24): 9 -> 12. Three INVOKE-kind channels were added to
+    // wineToolsFlowRegistration.ts -- `winetricksAvailable`, `winetricksInstalled` and
+    // `runWineCommandForGame`. The delta is 3 and NOT 4: the fourth channel that plan
+    // registered, `winetricksInstall`, is SEND-kind (`ipcMain.on`), and this sweep extracts
+    // `ipcMain.handle(...)` only. If `winetricksInstall` ever appears in this module's
+    // extracted array, that is a real defect -- a send channel registered as invoke -- and
+    // must NOT be absorbed by raising this number.
     path: join(__dirname, '../wineToolsFlowRegistration.ts'),
-    expectedCount: 9
+    expectedCount: 12
   },
   {
     name: 'shortcuts',
@@ -149,8 +156,13 @@ function handlerProvesItReturns(callText: string): boolean {
 describe('invoke-return-value sweep anti-rot gate (F-34.5-G6-08 / U-34.5-15)', () => {
   const allChannels = MODULES.flatMap((spec) => extractChannels(spec))
 
-  it('extracts exactly 34 channels total', () => {
-    expect(allChannels).toHaveLength(34)
+  // Phase 34.6 Plan 07 (2026-08-24): 34 -> 37, the same +3 recorded on the `wineTools` module
+  // spec above (`winetricksAvailable`, `winetricksInstalled`, `runWineCommandForGame`; send-kind
+  // `winetricksInstall` is correctly excluded because this sweep extracts `ipcMain.handle` only).
+  // This total and the per-module counts must always move together -- if they ever disagree, the
+  // extraction is wrong and neither number should be adjusted until that is understood.
+  it('extracts exactly 37 channels total', () => {
+    expect(allChannels).toHaveLength(37)
   })
 
   it.each(MODULES)('$name has exactly $expectedCount channels', (spec) => {
