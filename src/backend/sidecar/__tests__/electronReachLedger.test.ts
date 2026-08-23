@@ -88,7 +88,12 @@ const ENTRY_POINTS = [
   join(REPO_ROOT, 'src/backend/sidecar/runnerAuthFlowRegistration.ts'),
   join(REPO_ROOT, 'src/backend/sidecar/wineToolsFlowRegistration.ts'),
   join(REPO_ROOT, 'src/backend/sidecar/shortcutsFlowRegistration.ts'),
-  join(REPO_ROOT, 'src/backend/sidecar/runnerMiscFlowRegistration.ts')
+  join(REPO_ROOT, 'src/backend/sidecar/runnerMiscFlowRegistration.ts'),
+  // Phase 34.6 Plan 05 (REQ-34.6-04/07/13, 2026-08-23): this plan's
+  // frontendReady/changeTrayColor registration module. Never previously an
+  // entry point. See the BASELINE_ELECTRON_REACHING_MODULES header comment
+  // below for the measured before/after.
+  join(REPO_ROOT, 'src/backend/sidecar/appShellFlowRegistration.ts')
 ]
 
 // Regenerated at plan-execution time (2026-07-26, Phase 34.3 Plan 07), not
@@ -231,6 +236,34 @@ const ENTRY_POINTS = [
 // 'reachability sanity' test is unchanged (228 is still comfortably above
 // it) and is not raised, per that test's own never-lower/only-raise-when-
 // no-longer-meaningful instruction.
+//
+// Phase 34.6 Plan 05 (REQ-34.6-04/07/13, 2026-08-23) extended ENTRY_POINTS
+// with appShellFlowRegistration.ts (this plan's frontendReady/changeTrayColor
+// registration module; never previously an entry point) and re-ran
+// computeElectronReach() via the standing temporary-print-statement
+// procedure -- MEASURED both directions, not predicted:
+//   BEFORE (without appShellFlowRegistration.ts): electronImportingFiles.size
+//     35, visitedFiles.size 239
+//   AFTER  (with appShellFlowRegistration.ts):     electronImportingFiles.size
+//     35, visitedFiles.size 244
+// MEASURED, UNCHANGED -- the two electronImportingFiles sets are set-equal
+// (identical sorted 35-entry arrays, not just size comparison). No new module
+// entered the electron-reaching set: appShellFlowRegistration.ts's own new
+// imports (appshell/themes.ts, appshell/releases.ts, appshell/language.ts,
+// dialog/dialog.ts, utils.ts, utils/aborthandler/aborthandler.ts, config.ts,
+// constants/key_value_stores.ts, logger/index.ts,
+// common/types/sidecarTransport.ts, sendChannelObservable.ts, sidecarRpc.ts,
+// electronStub.ts) were either already electron-free or already visited via
+// other entry points in this same file's graph (`dialog/dialog.ts` was
+// already baselined above, reached via gamedetails/dispatch.ts). No new entry
+// below. visitedFiles.size grew by +5 (239 -> 244), reflecting exactly the
+// five newly-visited first-party files this module alone pulls in that no
+// prior entry point reached: appShellFlowRegistration.ts itself,
+// appshell/themes.ts, appshell/releases.ts, appshell/language.ts, and
+// sendChannelObservable.ts. The `> 224` floor in the 'reachability sanity'
+// test is unchanged (244 is even more comfortably above it than the prior
+// 228 reading was) and is not raised, per that test's own
+// never-lower/only-raise-when-no-longer-meaningful instruction.
 const BASELINE_ELECTRON_REACHING_MODULES: string[] = [
   'src/backend/constants/paths.ts',
   'src/backend/dialog/dialog.ts',
