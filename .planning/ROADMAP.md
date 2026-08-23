@@ -2975,7 +2975,7 @@ residual joined them 2026-08-22:** the three D-CYCLE6-A live-gate items (34.5 UA
 SCOPE above.
 **Blocks:** Phase 35 (the IPC re-plumb must be COMPLETE before cutover, and this phase now also
 carries the Epic/save-sync verification leg of Phase 35's dependency that used to sit on 34.7)
-**Plans:** 14 plans — 4/14 executed on disk (34.6-01, 34.6-02, 34.6-03, 34.6-05)
+**Plans:** 14 plans — 5/14 executed on disk (34.6-01, 34.6-02, 34.6-03, 34.6-05, 34.6-06)
 
 Plans:
 
@@ -2984,7 +2984,7 @@ Plans:
 - [x] 34.6-03-PLAN.md — wave 1: author `34.6-LIVE-GATE.md` with EMPTY result slots before any live work — steps 0–8 plus the Humble rider, each with an explicit FAIL condition — DONE 2026-08-23 (`6b6e043f9`, `cf0a5e328`, `20442cc35`; see `34.6-03-SUMMARY.md`)
 - [ ] 34.6-04-PLAN.md — wave 2: run live-gate STEP 0 ONLY — the pre-port `DECLARED_UNAVAILABLE_MARKER` capture (A-01/D-10), unrecoverable once the winetricks port lands
 - [x] 34.6-05-PLAN.md — wave 1: the D-11 send-handler observable + `frontendReady` ported send-kind, with its two body exclusions proven behaviourally; ledger entry for `appShellFlowRegistration.ts` — DONE 2026-08-23 (`799a96fb9`, `c7e4b8eba`, `76b0d37bd`; see `34.6-05-SUMMARY.md`)
-- [ ] 34.6-06-PLAN.md — wave 2: `importGame` + `moveInstall` ported BYTE-EQUIVALENTLY (D-02), pass-through RED-proven against a `..`-bearing path; ledger entry for `installFlowRegistration.ts`
+- [x] 34.6-06-PLAN.md — wave 2: `importGame` + `moveInstall` ported BYTE-EQUIVALENTLY (D-02), pass-through RED-proven against a `..`-bearing path; ledger entry for `installFlowRegistration.ts` — DONE 2026-08-24 (`f1d4523ff`, `efc369506`, `17952b517`; see `34.6-06-SUMMARY.md`). HALF LANDED: REQ-34.6-04/REQ-34.6-13 stay unchecked, `runWineCommandForGame` owed by 34.6-07.
 - [ ] 34.6-07-PLAN.md — wave 3: the 3 winetricks channels + `runWineCommandForGame`, plus the `wineToolsFlows.test.ts` absence flip, the `enrichmentFlows.test.ts` exemplar substitution to `authZoom`, and Describe 6/7's winetricks slice
 - [ ] 34.6-08-PLAN.md — wave 4: NEW `eosOverlayFlowRegistration.ts` (8 channels) + `handlers.ts` wiring + ledger + the EOS 8's Describe 7 flip, which needs a NEW module-scope import
 - [ ] 34.6-09-PLAN.md — wave 5: the 5 SteamGridDB channels + `getGogDiscounts`, the second migration codepath deleted (PATTERNS delta 5), ledger, and Describe 7 down to Zoom's 3
