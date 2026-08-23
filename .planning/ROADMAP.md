@@ -2740,6 +2740,7 @@ correct home for them:
 - **34.5 UAT test 11, Epic half** — Epic login completed from scratch, library populated.
   (Amazon's half of test 11 never travelled; it stayed in 34.5 as its fourth gate's item 2.)
 - **34.5 UAT test 12 — `egsSync`.**
+- **Epic LOGOUT's cookie clear (`clearEpicCookies`) — ADDED 2026-08-23** by Phase 34.4.1 gap cycle 3 plan 34, from `D-29-08`. **This was NOT already covered by the 34.7 inheritance** — that brought the Epic *login* and save-sync legs only, and logout was left owned by nobody: 34.5's own `34.5-26-SUMMARY.md:316` disclaims it, 34.7 is ON HOLD, and `clearEpicCookies` appears in no phase folder except 34.4.1's. Epic's logout calls the **same** Rust arm Humble's disconnect proved fixed, but that is **an inference from shared code, not a measurement** — the exact distinction that let gate run 2's failure hide behind a fully green suite. **No document may call it verified on that basis.** Discharge: an authenticated Epic session, a logout driven live through the UI, and a `clearEpicCookies` count cross-checked against an independent re-read of the jar. Tracked at `.planning/todos/pending/2026-08-23-epic-logout-cookie-clear-unobserved-and-unowned.md`.
 - **34.5 UAT test 13 — legendary save sync.**
 
 **These are VERIFICATION items, not ports.** `egsSync` is already one of slice 8's 58 ported

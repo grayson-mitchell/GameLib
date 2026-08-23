@@ -628,3 +628,43 @@ failure. Checked: `src/backend/sidecar/__tests__/seamBranchParity.test.ts` pins 
 > pre-existing `SILENTLY-DROPPED` entries (`S-07`, `S-10`, `S-12`) are acceptable at red or must be
 > dispositioned first — they are reported today but do not fail the run. Named rather than left as
 > another undeclared note, per this file's own rule.
+
+### D-29-08 / D-29-06 — owners assigned (plan 34, 2026-08-23)
+
+Both were **unassigned notes**, not tasks. `grep -rl "34\.4\.1" .planning/todos/` was empty in both
+`pending/` and `completed/` — all ten `D-29-*` findings lived only in this file, which carries no
+frontmatter and is therefore invisible to `gsd-sdk query audit-uat` **and** to the explorer rollup.
+
+Now tracked:
+
+- `D-29-08` → `.planning/todos/pending/2026-08-23-epic-logout-cookie-clear-unobserved-and-unowned.md`
+- `D-29-06` → `.planning/todos/pending/2026-08-23-f9-generic-rpc-timeout-cooccurrence-undetermined.md`
+
+**D-29-08 was genuinely ORPHANED, with dates.** It named Phase 34.5; 34.5's own `-26-SUMMARY.md:316`
+disclaims it; 34.6 inherited only the Epic **login** and `egsSync` legs from the parked 34.7; 34.7 is
+ON HOLD; and `clearEpicCookies` exists in no phase folder but this one's. **Proposed owner: 34.6**,
+as an explicit addition — the existing inheritance demonstrably did not cover logout.
+
+**D-29-06 keeps UNDETERMINED as UNDETERMINED.** Its transferable half is preserved verbatim: the
+finding was first recorded "F-9 watch CLEAN" on a `gamelib.log` grep that **could not have seen it**,
+because shell `eprintln!` never reaches the log file. *A clean grep of the wrong source is not
+evidence of absence.*
+
+## Gap cycle 3 — ownership map for every D-29 item
+
+Per this file's own rule — *a carry-forward without an owning plan that declares the file is a note,
+not a task* — nothing below is left without an owner **and** a declared file.
+
+| ID | Disposition | Owner | Declared file |
+|---|---|---|---|
+| D-29-01 | CLOSED (already fixed) | plan 30 | — (ledger only) |
+| D-29-02 | OPEN | plan 32 | `src/backend/humble/adapter.ts` |
+| D-29-03 | OPEN | plan 32 | `src/backend/humble/adapter.ts` |
+| D-29-04 | OPEN | plan 33 | `src-tauri/src/main.rs` |
+| D-29-05 | OPEN | plan 33 | `src-tauri/src/main.rs` |
+| D-29-06 | OPEN, now tracked | plan 34 → todo | todo file above |
+| D-29-07 | OPEN — headline | plan 35 | `34.4.1-LIVE-GATE-RERUN-4.md` |
+| D-29-08 | ORPHANED, now tracked | plan 34 → todo, proposed 34.6 | todo file above |
+| D-29-09 | CLOSED (one REQ) | plan 30 | `.planning/REQUIREMENTS.md` |
+| D-29-10 | CLOSED at filing | plan 30 | — (ledger only) |
+| NEW-01 | CLOSED | plan 31 | `seam-parity-sweep.py` |
