@@ -61,6 +61,34 @@ human_verification:
     origin_item: "1a"
     prior_state: "STATICALLY FIXED, NEVER LIVE-CONFIRMED. Root cause (WindowControls/index.scss:2 anchored to the stale sidebar-era `grid-area: content`) was fixed by plan 34.1-09 and is gated by windowControlsPlacement.test.ts, which recomputes the expected row from .App's own live grid-template-areas rather than a pinned literal. Strong static evidence; never observed on a real Windows or Linux window in five sessions."
 
+  - id: "38-W03"
+    test: "Login window provisional title — Windows/Linux. Open any store login (Manage Accounts → Humble/GOG/Epic/Amazon) and watch the window's TITLE BAR from the instant it appears."
+    expected: "The title bar NEVER reads the framework default 'Tauri app'. It shows the ORIGIN (e.g. https://www.humblebundle.com) from the moment the window is presented, and is then REPLACED by the loaded document's own title (e.g. 'Humble Bundle - Log In'). Both halves matter: an origin that never gives way to the document title is a WR-07 REGRESSION introduced by the fix itself, not a pass."
+    why_human: "A sub-second, one-way visual transition on a real OS title bar. Source can prove the title ARGUMENT is origin-derived — main.rs's own WR-07 CORRECTION records that a grep gate can establish the ABSENCE of a prohibited hard-coded title but structurally CANNOT establish the PRESENCE of the required one. Only a human watching the bar can."
+    blocked_by: "a Windows or Linux machine"
+    platform_gate: "src-tauri/src/main.rs — on macOS the login window is presented as an AppKit SHEET (`present_login_window_as_sheet`, live-confirmed `sheet_presented=true attached=true` on 2026-08-23), and main.rs:1551 states it outright: 'AppKit sheets structurally render NO title bar UI at all, so that string is never user-visible on macOS' (F-34.5-G6-16). The `.title(login_window_title(&origin, None))` call added by plan 34.4.1-33 therefore sets an NSWindow title this project's hardware never displays. FALSIFIABLE: if the login window ever stops being presented as a sheet on macOS, this item becomes observable here and must move back."
+    origin_phase: "34.4.1"
+    origin_item: "D-29-05 (gap cycle 3)"
+    prior_state: >
+      STATICALLY FIXED AND SOURCE-GATED, LIVE-UNOBSERVABLE ON THIS HARDWARE. Plan 34.4.1-33 built the
+      visible login window with `login_window_title(&origin, None)` — origin-derived, NEVER a static
+      string, which is what keeps WR-07 intact (WR-07 prohibits a hard-coded APPLICATION title, not an
+      origin-derived one). Two source gates in tauriShellSource.test.ts cover it: a PRESENCE gate
+      asserting the visible block builds that exact call, and an AMENDED WR-07 negative gate. The
+      negative gate previously banned `.title(` outright, which could not distinguish
+      `.title("GameLib")` from `.title(login_window_title(...))` because it rejected BOTH; it now
+      forbids a string literal in all three Rust forms plus `format!` AND requires every surviving
+      `.title(` argument to contain `login_window_title(`. Four red-proofs, including one confirming
+      `.title("GameLib")` still FAILS — so the amendment did not weaken WR-07's negative half.
+      Live gate run 4 (2026-08-23) attempted this item on macOS and found it UNSCOREABLE, which is how
+      it reached this phase.
+    watch_out: >
+      macOS is NOT a valid substitute and must not be recorded as a pass OR a fail. The operator will
+      see NO title bar at all — the sheet shows an in-page ORIGIN BANNER instead (Phase 34.5 Plan 52,
+      F-34.5-G6-16), which is the deliberate macOS replacement and satisfies the same anti-phishing
+      intent by a different mechanism. Observing the banner is NOT observing this item. The run-4
+      contract mis-specified exactly this and the error is recorded there against the contract.
+
   - id: "38-C01"
     test: "Gamepad — directional focus. With a controller connected, navigate the /console routes using the d-pad and the left stick, in all four directions."
     expected: "Focus moves in the expected direction with no wrap. Specifically includes Up/Left from a COLD START with nothing focused — broken as WR-02/WR-03 and fixed unit-only during code review, never observed live."
