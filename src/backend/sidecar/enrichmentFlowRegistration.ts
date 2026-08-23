@@ -2,7 +2,7 @@
  * Curated enrichment-channel registration (Phase 34.2 Plan 06, D-04/D-07/
  * D-10, REQ-34.2-04/REQ-34.2-11/REQ-34.2-12/REQ-34.2-14).
  *
- * Registers the eight enrichment channels the game-details page and store
+ * Registers the 14 enrichment channels the game-details page and store
  * search container depend on, onto electronStub's own `ipcMain` recorder,
  * importing the REAL underlying bodies plans 34.2-01/34.2-03 already
  * extracted or wired unchanged (mirrors `gameDetailsFlowRegistration.ts`'s
@@ -117,6 +117,41 @@
  * try/catch: an invoke rejection travels back to the renderer as a
  * rejected promise, which is the existing Electron contract for every one
  * of these five channels.
+ *
+ * `steamgriddb.*` (5) / `getGogDiscounts` (1) — Phase 34.6 Plan 09,
+ * REQ-34.6-02/REQ-34.6-04/REQ-34.6-08/REQ-34.6-13, Amendment A-03:
+ *
+ *   - `steamgriddb.hasApiKey` / `.setApiKey` / `.searchGame` / `.getGrids` /
+ *     `.getHeroes` -> bodies copied from `steamgrid/ipc_handler.ts`'s five
+ *     `addHandler` calls with ONE deliberate change required by A-03: every
+ *     API-key read and write goes through
+ *     `steamgrid/secretStore.ts`'s `getSteamGridDbSecretStore()`, never
+ *     through `GlobalConfig`/`steamgrid/secureKey.ts` directly. This is a
+ *     narrow, explicit exception to this file's own D-02 port-then-harden
+ *     rule (applied everywhere else in this file): under the sidecar,
+ *     `safeStorage` resolves to `electronStub.ts`'s dead stub, so a
+ *     byte-equivalent port would persist a real key to `config.json` in
+ *     the clear (T-34.6-01). `steamgrid/ipc_handler.ts` itself is NEVER
+ *     imported here (it calls `addHandler`, which imports the real
+ *     `electron`) — only `steamgrid/utils.ts` (the actual SteamGridDB API
+ *     client) and `steamgrid/secretStore.ts` (the seam) are imported,
+ *     mirroring this file's existing curated-import discipline (D-04).
+ *   - `getGogDiscounts` -> `discounts/fetchDiscounts.ts`'s
+ *     `getGogDiscounts(locale, hideOwned, wishlistOnly)` (Plan 34.6-09
+ *     extraction out of `discounts/index.ts`'s previously-inline
+ *     `addHandler` body — that file had no separate underlying module
+ *     before this plan, exactly like every other feature ported into this
+ *     registration module). NOTE this channel is NOT byte-equivalent in
+ *     one respect the plan's own draft got wrong: `fetchDiscounts.ts`
+ *     DOES reach `app.getVersion()` from `electron` (for the catalog
+ *     request's User-Agent header) — this is unchanged behavior, ported
+ *     verbatim, and is accounted for in `electronReachLedger.test.ts`.
+ *
+ * A `send` channel registered with `ipcMain.handle` (or the reverse) fails
+ * 100% SILENTLY at runtime (Phase 31 Pitfall 2) — all six registrations
+ * below were cross-checked against their current homes' own `addHandler`
+ * call for that exact channel before being written: every one of the six
+ * is INVOKE.
  */
 
 import { ipcMain } from './electronStub'
@@ -131,10 +166,15 @@ import {
   handleGetStoreSearchStoreMap
 } from '../storeSearch/handlers'
 import { removeRecentGame } from '../recent_games/recent_games'
+import { getSteamGridDbSecretStore } from '../steamgrid/secretStore'
+import * as SteamGridDB from '../steamgrid/utils'
+import { getGogDiscounts } from '../discounts/fetchDiscounts'
+import { logError, LogPrefix } from '../logger'
 import type { Runner } from 'common/types'
+import type { CatalogLocaleSettings } from 'common/types/discounts'
 
 /**
- * Registers the eight enrichment channels. Called once from `handlers.ts`
+ * Registers the 14 enrichment channels. Called once from `handlers.ts`
  * — this module owns no side effects at import time beyond the imports
  * above; the caller decides when registration onto the handler registry
  * happens.
@@ -197,5 +237,114 @@ export function registerEnrichmentFlows(): void {
   // discipline, D-04).
   ipcMain.handle('removeRecent', async (_event: unknown, ...args: unknown[]) =>
     removeRecentGame(args[0] as string)
+  )
+
+  ipcMain.handle('getGogDiscounts', async (_event: unknown, ...args: unknown[]) =>
+    getGogDiscounts(
+      args[0] as CatalogLocaleSettings,
+      args[1] as boolean | undefined,
+      args[2] as boolean | undefined
+    )
+  )
+
+  // ── steamgriddb.* (5) — Amendment A-03: every read/write below goes
+  // through getSteamGridDbSecretStore(), NEVER GlobalConfig or
+  // steamgrid/secureKey.ts directly. See module docstring.
+
+  ipcMain.handle('steamgriddb.hasApiKey', async () => {
+    const apiKey = await getSteamGridDbSecretStore().getApiKey()
+    return !!apiKey
+  })
+
+  ipcMain.handle(
+    'steamgriddb.setApiKey',
+    async (_event: unknown, ...args: unknown[]) => {
+      const key = args[0] as string
+      await getSteamGridDbSecretStore().setApiKey(key)
+    }
+  )
+
+  ipcMain.handle(
+    'steamgriddb.searchGame',
+    async (_event: unknown, ...args: unknown[]) => {
+      const query = args[0] as string
+      const apiKey = await getSteamGridDbSecretStore().getApiKey()
+      if (!apiKey) {
+        return []
+      }
+
+      try {
+        const results = await SteamGridDB.searchGame(apiKey, query)
+        return results.map((game) => ({
+          id: game.id,
+          name: game.name
+        }))
+      } catch (error) {
+        logError(['SteamGridDB search failed:', error], LogPrefix.Backend)
+        throw error
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'steamgriddb.getGrids',
+    async (_event: unknown, ...args: unknown[]) => {
+      const gridArgs = args[0] as {
+        gameId: number
+        styles?: string[]
+        dimensions?: string[]
+      }
+      const apiKey = await getSteamGridDbSecretStore().getApiKey()
+      if (!apiKey) {
+        return []
+      }
+
+      try {
+        const results = await SteamGridDB.getGrids(apiKey, {
+          gameId: gridArgs.gameId,
+          dimensions: gridArgs.dimensions,
+          styles: gridArgs.styles
+        })
+        return results.map((grid) => ({
+          id: grid.id,
+          url: grid.url,
+          thumb: grid.thumb
+        }))
+      } catch (error) {
+        logError([`SteamGridDB getGrids failed:`, error], LogPrefix.Backend)
+        throw error
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'steamgriddb.getHeroes',
+    async (_event: unknown, ...args: unknown[]) => {
+      const heroArgs = args[0] as {
+        gameId: number
+        styles?: string[]
+        dimensions?: string[]
+      }
+      const apiKey = await getSteamGridDbSecretStore().getApiKey()
+      if (!apiKey) {
+        return []
+      }
+
+      try {
+        const results = await SteamGridDB.getHeroes(apiKey, {
+          gameId: heroArgs.gameId,
+          dimensions: heroArgs.dimensions,
+          styles: heroArgs.styles
+        })
+        return results.map((grid) => ({
+          id: grid.id,
+          url: grid.url,
+          thumb: grid.thumb
+        }))
+      } catch (error) {
+        logError([`SteamGridDB getHeroes failed:`, error], LogPrefix.Backend)
+        throw error
+      }
+    }
   )
 }

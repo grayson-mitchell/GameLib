@@ -402,7 +402,39 @@ const BASELINE_ELECTRON_REACHING_MODULES: string[] = [
   'src/backend/utils/systeminfo/heroicVersion.ts',
   'src/backend/utils/uninstaller.ts',
   'src/common/types.ts',
-  'src/common/types/ipc.ts'
+  'src/common/types/ipc.ts',
+  // Phase 34.6 Plan 09 (Amendment A-03, REQ-34.6-02/04/08/13): three new
+  // electron-importing modules entered the reach graph via
+  // enrichmentFlowRegistration.ts's six new steamgriddb.*/getGogDiscounts
+  // registrations. Measured (not predicted) via this file's own
+  // BEFORE/AFTER visitedFiles.size procedure: BEFORE this plan's source
+  // changes landed, visitedFiles.size / electronImportingFiles.size were
+  // unchanged from the prior committed baseline; AFTER, three new paths
+  // appeared in electronImportingFiles and nowhere else in the baseline
+  // above:
+  //   - enrichmentFlowRegistration.ts -> steamgrid/utils.ts (direct)
+  //     -> utils.ts:3 `import { app } from 'electron'` (User-Agent header
+  //     for the SteamGridDB HTTP client).
+  'src/backend/steamgrid/utils.ts',
+  //   - enrichmentFlowRegistration.ts -> steamgrid/secretStore.ts (direct,
+  //     the Amendment A-03 seam) -> secretStore.ts's
+  //     `import { isEncryptedValue, encryptApiKey, decryptApiKey } from
+  //     './secureKey'` -> secureKey.ts:25 `import { safeStorage } from
+  //     'electron'`. safeStorage resolves to electronStub.ts's dead stub
+  //     under the sidecar (T-34.6-01) -- reached here only because
+  //     secretStore.ts's module-scope ElectronSteamGridDbSecretStore class
+  //     body references secureKey.ts's exports, not because any
+  //     steamgriddb.* handler here calls into it (Amendment A-03: every
+  //     handler in this file reaches the key exclusively via
+  //     getSteamGridDbSecretStore(), never secureKey.ts directly).
+  'src/backend/steamgrid/secureKey.ts',
+  //   - enrichmentFlowRegistration.ts -> discounts/fetchDiscounts.ts
+  //     (direct, Plan 34.6-09's extraction out of discounts/index.ts's
+  //     previously-inline addHandler body) -> fetchDiscounts.ts:2
+  //     `import { app } from 'electron'` (User-Agent header for the GOG
+  //     catalog request) -- unchanged behavior carried over verbatim from
+  //     discounts/index.ts, not new surface introduced by the extraction.
+  'src/backend/discounts/fetchDiscounts.ts'
 ]
 
 interface ElectronReachResult {
