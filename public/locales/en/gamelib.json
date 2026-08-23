@@ -34,6 +34,10 @@
     },
     "humbleKeys": {
         "activate": "Activate",
+        "activateConfirmBody": "This reveals the key — removing it from Giftable spares for good — and redeems it on your Steam account. There's no undo.",
+        "activateConfirmBodyRevealed": "This redeems your already-revealed key on your Steam account. There's no undo.",
+        "activateConfirmTitle": "Activate this key on Steam?",
+        "activateDismiss": "Cancel",
         "activateWizardTitle": "Activate this key",
         "activatedDone": "Done",
         "activatedTitle": "Activated",

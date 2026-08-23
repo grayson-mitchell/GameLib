@@ -69,11 +69,13 @@ export default function HumbleClaimWizard({
 
   const isSteam = humbleKey.platform === 'steam'
 
-  // 260823-op3: Steam keys — either entry mode — go straight into the
-  // one-click activate sequence. Non-Steam keeps the Phase 14 shape exactly:
-  // D-65 warning-first on 'claim', D-66 straight to 'keyShown' on 'finish'.
+  // 260823-ptz: confirm-first for Steam too. Steam's activate is irreversible
+  // in BOTH entry modes — 'claim' burns the reveal, 'finish' burns the Steam
+  // redemption — so both start at 'warning'. Non-Steam keeps the Phase 14
+  // shape exactly: D-65 warning-first on 'claim', D-66 straight to 'keyShown'
+  // on 'finish'.
   const [step, setStep] = useState<Step>(
-    isSteam ? 'activating' : entryMode === 'finish' ? 'keyShown' : 'warning'
+    isSteam || entryMode === 'claim' ? 'warning' : 'keyShown'
   )
   const [revealedKey, setRevealedKey] = useState<string | null>(null)
   const [cooldownRetryAt, setCooldownRetryAt] = useState<number | null>(null)
@@ -89,13 +91,13 @@ export default function HumbleClaimWizard({
     undefined
   )
 
-  // 260823-op3: amends T-14-08. humbleRevealKey now HAS a mount-effect call
-  // site, so the warning step is no longer what stops a stray second reveal.
-  // This latch is: the effect body runs at most once per mount, and the wizard
-  // only ever mounts from an explicit Activate click. A StrictMode double
-  // -invoke (or any remount-in-place) therefore cannot fire the irreversible
-  // reveal POST twice. Never remove this without restoring a click gate.
-  const activateStarted = useRef(false)
+  // 260823-ptz: re-entrancy guard for runActivate, NOT a mount latch —
+  // 260823-op3's mount effect is gone and T-14-08 is restored (see
+  // handleReveal). `busy` alone cannot close the double-click window: it is
+  // state, so both clicks in a same-frame double-click read the pre-render
+  // `false` and `disabled={busy}` has not applied yet. A ref flips
+  // synchronously. Cleared in `finally` so the 'failed' step's retry works.
+  const activateInFlight = useRef(false)
 
   // Mount-only (D-66: 'finish' entry must NEVER call humbleRevealKey, so this
   // effect only ever reads the already-revealed value, never triggers reveal).
@@ -138,19 +140,6 @@ export default function HumbleClaimWizard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 260823-op3: the one-click kickoff for Steam keys. Guarded by the
-  // activateStarted latch above — see that comment for why it is load-bearing
-  // now that the D-65 warning click no longer stands between mount and the
-  // irreversible reveal POST.
-  useEffect(() => {
-    if (!isSteam || activateStarted.current) {
-      return
-    }
-    activateStarted.current = true
-    void runActivate()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   // 260823-op3: maps every NON-'revealed' RevealOutcome onto its Phase 14
   // step. Shared by the manual (non-Steam) reveal and the Steam one-click
   // activate so the two paths can never drift in how a reveal failure reads.
@@ -183,9 +172,10 @@ export default function HumbleClaimWizard({
   }
 
   /**
-   * 260823-op3: the one-click Steam path — reveal (or read back the
+   * 260823-op3: the Steam activate path — reveal (or read back the
    * already-revealed value in 'finish' mode), then redeem on Steam, then mark
-   * the Humble row redeemed. No intermediate clicks.
+   * the Humble row redeemed. 260823-ptz: entered from the confirm click, and
+   * from there through to a terminal step with no further clicks.
    *
    * The two halves have deliberately DIFFERENT failure postures, because the
    * reveal is the irreversible half:
@@ -197,10 +187,12 @@ export default function HumbleClaimWizard({
    *    reveal must never land on a step that hides the key.
    */
   async function runActivate() {
-    if (busy) {
+    if (activateInFlight.current) {
       return
     }
+    activateInFlight.current = true
     setBusy(true)
+    setStep('activating')
     try {
       let key = revealedKey
       if (key === null) {
@@ -281,15 +273,15 @@ export default function HumbleClaimWizard({
       }
     } finally {
       setBusy(false)
+      activateInFlight.current = false
     }
   }
 
-  // T-14-08 (amended 260823-op3): the manual, NON-Steam reveal — invoked
+  // T-14-08 (RESTORED by 260823-ptz): the manual, NON-Steam reveal — invoked
   // exclusively from the danger-styled confirm button below (Step 1) or the
-  // 'failed' step's "Try again" retry. The second call site of
-  // humbleRevealKey is runActivate above, which is Steam-only and latched to
-  // one fire per mount; there are exactly these two, and no other effect ever
-  // invokes reveal.
+  // 'failed' step's "Try again" retry. humbleRevealKey's only other call site
+  // is runActivate above, which 260823-ptz put back behind its own confirm
+  // click. NO effect in this component invokes reveal on mount.
   async function handleReveal() {
     if (busy) {
       return
@@ -409,7 +401,57 @@ export default function HumbleClaimWizard({
     )
   }
 
+  // 260823-ptz: the confirm gate. Steam gets its own copy and its own confirm
+  // button (running the whole activate sequence); non-Steam keeps D-65's
+  // reveal-only wording and handler verbatim. The two are deliberately
+  // separate buttons rather than one with a swapped label — the class name is
+  // what the wizard suite keys the two paths off, and conflating them would
+  // let a Steam regression pass a non-Steam assertion.
   if (step === 'warning') {
+    if (isSteam) {
+      return (
+        <div className="humbleClaimWizard">
+          <h3 className="humbleClaimWizardTitle">
+            {tGamelib(
+              'gamelib:humbleKeys.activateConfirmTitle',
+              'Activate this key on Steam?'
+            )}
+          </h3>
+          <p className="humbleClaimWizardBody">
+            {entryMode === 'claim'
+              ? // The reveal has NOT happened yet: this click spends it AND
+                // redeems. Both halves are irreversible, so both are named.
+                tGamelib(
+                  'gamelib:humbleKeys.activateConfirmBody',
+                  "This reveals the key — removing it from Giftable spares for good — and redeems it on your Steam account. There's no undo."
+                )
+              : // D-66 resume: the key is already revealed, so only the Steam
+                // redemption is new. Promising a reveal here would be a lie.
+                tGamelib(
+                  'gamelib:humbleKeys.activateConfirmBodyRevealed',
+                  "This redeems your already-revealed key on your Steam account. There's no undo."
+                )}
+          </p>
+          <div className="humbleClaimWizardActions">
+            <button
+              type="button"
+              className="button is-secondary outline humbleClaimWizardDismissButton"
+              onClick={onDone}
+            >
+              {tGamelib('gamelib:humbleKeys.activateDismiss', 'Cancel')}
+            </button>
+            <button
+              type="button"
+              className="button is-danger humbleClaimWizardActivateButton"
+              disabled={busy}
+              onClick={() => void runActivate()}
+            >
+              {tGamelib('gamelib:humbleKeys.activate', 'Activate')}
+            </button>
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="humbleClaimWizard">
         <h3 className="humbleClaimWizardTitle">
