@@ -58,13 +58,16 @@
  *     leaving it unported would degrade every Tauri Steam install to the
  *     delegated path. The minimum-read-gate conclusion stands.
  *   - `moveInstall` -> ported byte-equivalently from `main.ts:1112-1158`
- *     (Phase 34.6 Plan 06, D-02). Carries `T-34.5-C6-49-03` (renderer-supplied
- *     `path`, no containment check) — deliberately NOT hardened here; see the
- *     inline comment at its registration below and plan 34.6-11 (separately
- *     committed, this same phase), which owns the hardening.
+ *     (Phase 34.6 Plan 06, D-02), now hardened by plan 34.6-11
+ *     (REQ-34.6-05): the renderer-supplied `path` must resolve inside
+ *     `GlobalConfig`'s own `defaultInstallPath` (never a renderer-supplied
+ *     root) via `rendererPathGuard.assertContainedPath`, discharging
+ *     `T-34.5-C6-49-03` for this channel. See the inline comment at its
+ *     registration below.
  *   - `importGame` -> ported byte-equivalently from `main.ts:1160-1245`
- *     (Phase 34.6 Plan 06, D-02). Same `T-34.5-C6-49-03` finding, same
- *     deferral to plan 34.6-11.
+ *     (Phase 34.6 Plan 06, D-02), same 34.6-11 hardening for its
+ *     renderer-supplied `path`. `winePrefix`/`wineVersion` are NOT contained
+ *     by this plan — see 34.6-11-SUMMARY.md's residuals.
  *
  * `uninstallGameCallback`/`checkGameUpdates`/`addToQueue` all "genuinely span
  * multiple store managers" (checklist step 2's own curated-import carve-out)
@@ -127,6 +130,14 @@ import {
   writeConfig
 } from '../utils'
 import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
+// Plan 34.6-11 (REQ-34.6-05, T-34.5-C6-49-03): the containment root for
+// `moveInstall`/`importGame` is derived from GlobalConfig's own
+// `defaultInstallPath` setting -- never a renderer-supplied root.
+import { GlobalConfig } from '../config'
+import {
+  assertContainedPath,
+  PathContainmentError
+} from './rendererPathGuard'
 import { logError, logInfo, LogPrefix } from '../logger'
 import i18next from 'i18next'
 import type {
@@ -233,15 +244,45 @@ export function registerInstallFlows(): void {
     isSteamNativeInstallEnabled() ? listSteamLibraryTargets() : []
   )
 
-  // T-34.5-C6-49-03 (Tampering, mitigate — DEFERRED WITHIN THIS PHASE, D-02): `path` is
-  // renderer-supplied and reaches a real filesystem move with NO containment check. Ported
-  // byte-equivalently from `main.ts:1112-1158` on purpose — hardening is plan 34.6-11's job,
-  // separately committed, so a live-gate FAIL here stays bisectable to "the port broke it" vs
-  // "validation rejected it" (D-02). Do NOT add a path guard/normalisation/rejection here.
+  // T-34.5-C6-49-03 (Tampering, mitigate — HARDENED, Phase 34.6 Plan 11, REQ-34.6-05): `path` is
+  // renderer-supplied and reaches a real filesystem move. It is contained via
+  // `rendererPathGuard.assertContainedPath` against `GlobalConfig`'s own `defaultInstallPath`
+  // setting (never a renderer-supplied root) as the FIRST statement of this handler, before any
+  // status update or filesystem call. `assertContainedPath` is used purely as a GATE here — a
+  // legitimate `path` is passed downstream UNCHANGED (never the guard's resolved return value), so
+  // byte-equivalence holds for every input that was already valid before this hardening landed. On
+  // rejection: the terminal `done` status is still emitted (so the renderer never wedges on
+  // `moving`, T-34.6-31) and the named `PathContainmentError` is then rethrown to the invoke
+  // caller — never silently substituted with a fallback path (REQ-37-06's split). The logged
+  // message deliberately never includes the rejected path itself (T-34.6-32 — this is a public
+  // fork whose users paste logs). Residual: the root is the user's OWN configured default install
+  // location, so reconfiguring that setting widens the containment boundary by design (see
+  // 34.6-11-SUMMARY.md).
   ipcMain.handle(
     'moveInstall',
     async (_event: unknown, ...args: unknown[]): Promise<void> => {
       const { appName, path, runner } = (args[0] ?? {}) as MoveGameArgs
+
+      try {
+        assertContainedPath(
+          GlobalConfig.get().getSettings().defaultInstallPath,
+          path,
+          'moveInstall'
+        )
+      } catch (error) {
+        if (error instanceof PathContainmentError) {
+          logError(
+            'moveInstall: rejected a renderer-supplied path that escapes the configured install root',
+            LogPrefix.Backend
+          )
+          sendGameStatusUpdate({
+            appName,
+            runner,
+            status: 'done'
+          })
+        }
+        throw error
+      }
 
       sendGameStatusUpdate({
         appName,
@@ -296,11 +337,11 @@ export function registerInstallFlows(): void {
     }
   )
 
-  // T-34.5-C6-49-03 (Tampering, mitigate — DEFERRED WITHIN THIS PHASE, D-02): `path` is
-  // renderer-supplied and reaches a real filesystem import with NO containment check. Ported
-  // byte-equivalently from `main.ts:1160-1245` on purpose — hardening is plan 34.6-11's job,
-  // separately committed, so a live-gate FAIL here stays bisectable to "the port broke it" vs
-  // "validation rejected it" (D-02). Do NOT add a path guard/normalisation/rejection here.
+  // T-34.5-C6-49-03 (Tampering, mitigate — HARDENED, Phase 34.6 Plan 11, REQ-34.6-05): `path` is
+  // renderer-supplied and reaches a real filesystem import. Same containment/no-wedge/no-fallback
+  // contract as `moveInstall` above — see that handler's comment for the full rationale. Note:
+  // `winePrefix`/`wineVersion` (below, used only for a config write, never a filesystem path) are
+  // NOT contained by this plan — declared residual, see 34.6-11-SUMMARY.md.
   ipcMain.handle(
     'importGame',
     async (_event: unknown, ...args: unknown[]): StatusPromise => {
@@ -313,6 +354,27 @@ export function registerInstallFlows(): void {
         wineVersion,
         wineCrossoverBottle
       } = (args[0] ?? {}) as ImportGameArgs
+
+      try {
+        assertContainedPath(
+          GlobalConfig.get().getSettings().defaultInstallPath,
+          path,
+          'importGame'
+        )
+      } catch (error) {
+        if (error instanceof PathContainmentError) {
+          logError(
+            'importGame: rejected a renderer-supplied path that escapes the configured install root',
+            LogPrefix.Backend
+          )
+          sendGameStatusUpdate({
+            appName,
+            runner,
+            status: 'done'
+          })
+        }
+        throw error
+      }
 
       if (runner === 'legendary') {
         const epicOffline = await isEpicServiceOffline()

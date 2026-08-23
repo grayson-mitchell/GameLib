@@ -18,11 +18,11 @@
  * macOS decline branch is ported here; an empty component list is an ACCEPTABLE RESULT of
  * `listInstalled()`/`listAvailable()`, not a platform decline. `winetricksInstall` stays
  * `ipcMain.on` (send-kind, D-11) — converting it to invoke would smuggle a behaviour change into
- * a port. `runWineCommandForGame` carries `T-34.5-C6-49-03` (a renderer-supplied `commandParts`
- * array reaching a Wine process, and a shell on the Windows branch) and is ported byte-
- * equivalently, WITHOUT any path guard or validation — that hardening is plan 34.6-11's dedicated,
- * separately-committed scope (D-02), landing alongside the same hardening for `importGame` and
- * `moveInstall` (34.6-06).
+ * a port. `runWineCommandForGame` carried `T-34.5-C6-49-03` (a renderer-supplied `commandParts`
+ * array reaching a Wine process, and a shell on the Windows branch); Plan 34.6-11 (REQ-34.6-05)
+ * hardens it — `rendererPathGuard.assertCommandParts` shape-checks `commandParts` and the Windows
+ * branch's shell is removed in favour of a non-shell `spawnAsync` argv call — landing alongside
+ * the same plan's hardening for `importGame` and `moveInstall` (34.6-06).
  *
  * Declared channel list (13 total, 12 invoke + 1 send — verified against `main.ts`,
  * `wine/manager/ipc_handler.ts` and `tools/ipc_handler.ts` source by 34.5-RESEARCH.md/this plan's
@@ -65,8 +65,9 @@ import {
   updateWineListsIfOutdated
 } from '../wine/manager/utils'
 import { DXVK, Winetricks, runWineCommandOnGame } from '../tools'
-import { getGame, execAsync } from '../utils'
+import { getGame, spawnAsync } from '../utils'
 import { isWindows } from '../constants/environment'
+import { assertCommandParts } from './rendererPathGuard'
 import { sendFrontendMessage } from '../ipc'
 import { notify } from '../dialog/dialog'
 import { logDebug, logError, LogPrefix } from '../logger'
@@ -345,12 +346,20 @@ export function registerWineToolsFlows(): void {
     })()
   })
 
-  // D-02 (BINDING scope boundary — do not cross): `runWineCommandForGame` carries
-  // `T-34.5-C6-49-03` (a renderer-supplied `commandParts` array reaching a Wine process, and a
-  // shell on the Windows branch) and is ported BYTE-EQUIVALENTLY here, WITHOUT any path guard,
-  // containment check, or `commandParts` sanitisation. That hardening is plan 34.6-11's dedicated,
-  // separately-committed scope, landing alongside the same hardening for `importGame` and
-  // `moveInstall` (34.6-06). Source: tools/ipc_handler.ts.
+  // T-34.5-C6-49-03 (Tampering, mitigate — HARDENED, Phase 34.6 Plan 11, REQ-34.6-05):
+  // `runWineCommandForGame` carries a renderer-supplied `commandParts` array reaching a Wine
+  // process. `assertCommandParts` is a SHAPE-ONLY guard (non-empty array of strings) — it never
+  // inspects argument content/characters, so a legitimate argument containing spaces or an
+  // apostrophe still passes; it exists to stop a malformed non-array/non-string value from
+  // reaching `spawnAsync`/`.join()` at all (T-34.6-31 crash-shaped DoS). The Windows branch's
+  // shell is REMOVED here: the old code handed a space-joined, renderer-supplied argv array to a
+  // shell (`execAsync` over a flattened string) — the flattening was the vulnerability, not the
+  // array itself.
+  // `spawnAsync` (`backend/utils.ts`, already used elsewhere in this codebase, non-shell
+  // `child_process.spawn`) is reused rather than introducing a new helper, passing `commandParts`
+  // through as an argv array exactly like the non-Windows `runWineCommandOnGame`/`launcher.ts`
+  // `runWineCommand` path already does. T-34.6-34 (accepted residual): this Windows branch is
+  // UNVERIFIED on real Windows hardware — every gate this project runs is macOS-only.
   ipcMain.handle(
     'runWineCommandForGame',
     async (_event: unknown, ...args: unknown[]) => {
@@ -359,8 +368,10 @@ export function registerWineToolsFlows(): void {
         commandParts: string[]
         runner: Runner
       }
+      assertCommandParts(commandParts)
       if (isWindows) {
-        return execAsync(commandParts.join(' '))
+        const [command, ...commandArgs] = commandParts
+        return spawnAsync(command, commandArgs)
       }
       return runWineCommandOnGame(runner, appName, {
         commandParts,

@@ -745,8 +745,9 @@ const IN_SCOPE_SUITES = [
  * anywhere in its chain (its one `readFileSync` call reads its own source file for an anti-vacuity
  * pin, mirroring `flowRegistrationCensus.test.ts`'s pattern above). It cannot be an
  * `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/`backend/logger/paths` mock
- * kit Block B gates on. A `readdirSync` recount at this plan's execution time puts the directory
- * at 51 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 47 below.
+ * kit Block B gates on. A `readdirSync` recount at this plan's execution time (Phase 34.6 Plan 11,
+ * after adding `rendererPathGuard.test.ts` for `T-34.5-C6-49-03`) puts the directory at 53
+ * `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 49 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -780,6 +781,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'onlineMonitorWiring.test.ts',
   'outputStreamBinding.test.ts',
   'pathShim.test.ts',
+  'rendererPathGuard.test.ts',
   'runnerAuthFlows.test.ts',
   'runnerMiscFlows.test.ts',
   'runnerSliceRegistration.test.ts',

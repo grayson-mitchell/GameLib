@@ -192,6 +192,7 @@ import { handlerRegistry, listenerRegistry } from '../electronStub'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import type { AppSettings } from 'common/types'
+import * as loggerModule from '../../logger'
 
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
 const mockedWriteConfig = writeConfig as jest.Mock
@@ -265,8 +266,15 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     }))
     // Opt-in setting defaults to false (D-13 safety valve) and autoUpdateGames
     // defaults to false (D-12's checkGameUpdates only calls autoUpdate() when
-    // this is truthy).
-    mockSettings({ enableSteamNativeInstall: false, autoUpdateGames: false })
+    // this is truthy). Plan 34.6-11 (REQ-34.6-05): defaultInstallPath is the
+    // containment root moveInstall/importGame now validate against —
+    // established here as the suite-wide default so every other test's
+    // already-legitimate paths keep resolving inside it unchanged.
+    mockSettings({
+      enableSteamNativeInstall: false,
+      autoUpdateGames: false,
+      defaultInstallPath: '/home/deck/Games'
+    })
   })
 
   // Test 1: listSteamLibraryTargets resolves an array (not the unported
@@ -470,9 +478,15 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
 
   // ── Plan 34.6-06 (REQ-34.6-04/REQ-34.6-13, D-02) ──────────────────────────
   // moveInstall/importGame ported byte-equivalently from main.ts:1112-1245.
-  // Carries T-34.5-C6-49-03 — renderer-supplied paths, no containment check,
-  // deliberately deferred to plan 34.6-11 (separately committed). These
-  // tests exist to prove the PORT, not to add or verify any validation.
+  // HARDENED by plan 34.6-11 (REQ-34.6-05, T-34.5-C6-49-03): both now contain
+  // their renderer-supplied `path` against GlobalConfig's own
+  // `defaultInstallPath` (mocked to '/home/deck/Games' in this suite's
+  // beforeEach) via `rendererPathGuard.assertContainedPath`. The two
+  // pass-through tests below were RETARGETED from a `..`-bearing tricky path
+  // to a legitimate, apostrophe-and-space-bearing path INSIDE that root --
+  // the byte-equivalence bargain those tests originally proved ended with
+  // this hardening; retargeting (not deleting) them is the visible record of
+  // that, per this plan's own action block.
 
   it('T-34.6 registration-kind: moveInstall and importGame are invoke-kind (handlerRegistry), never listener-kind (listenerRegistry)', () => {
     startSidecar()
@@ -482,34 +496,97 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     expect(listenerRegistry.has('importGame')).toBe(false)
   })
 
-  // D-02 / T-34.6-17 pass-through proof: a path containing '..' and a space
-  // must arrive at SteamGame.moveInstall() by STRICT EQUALITY, unchanged.
-  // RED-proven (see 34.6-06-SUMMARY.md): temporarily inserting
-  // `path.resolve(path)` or a `path.includes('..')` rejection into the
-  // moveInstall handler body made this exact assertion fail; reverted after
-  // confirming RED, then reconfirmed green — proving this test would catch
-  // exactly the "quick path check" D-02 forbids.
-  it('D-02: moveInstall forwards a ".."-containing, space-containing path to SteamGame.moveInstall() unchanged', async () => {
+  // RETARGETED (plan 34.6-11, REQ-34.6-05): was "D-02: moveInstall forwards a
+  // '..'-containing, space-containing path... unchanged" -- that input now
+  // correctly fails containment (proven by the REJECT test below), so it can
+  // no longer prove pass-through. This is now the ALLOW-direction proof: a
+  // legitimate path containing an apostrophe and a space, resolving INSIDE
+  // the configured root, must still arrive at SteamGame.moveInstall() by
+  // STRICT EQUALITY, unchanged -- containment is a gate, not a rewrite.
+  it('moveInstall forwards a legitimate apostrophe-and-space-containing path (inside the configured root) to SteamGame.moveInstall() unchanged', async () => {
     const { input, frames } = startSidecar()
-    const trickyPath = '../not a real destination/with spaces'
+    const legitimatePath = "/home/deck/Games/Sid Meier's Civilization V/save"
     writeInvoke(input, 'move-passthrough-1', 'moveInstall', [
-      { appName: '999001', path: trickyPath, runner: 'steam' }
+      { appName: '999001', path: legitimatePath, runner: 'steam' }
     ])
     await flush()
 
     expect(steamGameMocks.moveInstall).toHaveBeenCalledTimes(1)
     // Identity/strict-equality, not just deep-equality -- proves the handler
-    // forwards the SAME value rather than normalising/reshaping it first.
-    expect(steamGameMocks.moveInstall.mock.calls[0][0]).toBe(trickyPath)
+    // forwards the SAME value rather than normalising/reshaping it first
+    // (assertContainedPath is used purely as a gate; its resolved return
+    // value is never substituted downstream).
+    expect(steamGameMocks.moveInstall.mock.calls[0][0]).toBe(legitimatePath)
 
     const response = frames.find((f) => f.id === 'move-passthrough-1')
     expect(response).toMatchObject({ id: 'move-passthrough-1', ok: true })
   })
 
+  // NEW (plan 34.6-11, REQ-34.6-05, T-34.5-C6-49-03): the REJECT direction --
+  // a path escaping the configured root must never reach SteamGame at all.
+  // RED-proven per this plan's acceptance criteria: temporarily commenting
+  // out the `assertContainedPath` call in installFlowRegistration.ts (restore
+  // via `cp`, never `git checkout --`) made this exact assertion fail.
+  it('moveInstall rejects a path escaping the configured install root, and SteamGame.moveInstall is never reached (T-34.5-C6-49-03)', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'move-reject-1', 'moveInstall', [
+      { appName: '999001', path: '../../etc/passwd', runner: 'steam' }
+    ])
+    await flush()
+
+    expect(steamGameMocks.moveInstall).not.toHaveBeenCalled()
+
+    const response = frames.find((f) => f.id === 'move-reject-1') as
+      | { ok: boolean; error?: string }
+      | undefined
+    expect(response?.ok).toBe(false)
+  })
+
+  // NEW (plan 34.6-11, T-34.6-31): a rejected moveInstall must still emit the
+  // terminal "done" status so the renderer never wedges in "moving" -- and,
+  // since containment runs BEFORE the "moving" push, "moving" itself must
+  // never be emitted for a rejected request.
+  it('a rejected moveInstall still emits the terminal gameStatusUpdate "done" (never wedges in "moving")', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'move-reject-status-1', 'moveInstall', [
+      { appName: '999001', path: '../../etc/passwd', runner: 'steam' }
+    ])
+    await flush()
+
+    const statuses = frames
+      .filter(
+        (f) => f.kind === 'frontendMessage' && f.channel === 'gameStatusUpdate'
+      )
+      .map((f) => ((f.args as unknown[])?.[0] as { status?: string })?.status)
+    expect(statuses).toEqual(['done'])
+  })
+
+  // NEW (plan 34.6-11): the rejected path itself must never appear in a log
+  // message (this is a public fork whose users paste logs) -- proves the
+  // redacted logError call, not merely that SOME error was logged.
+  it('a rejected moveInstall never logs the rejected path itself', async () => {
+    const logErrorSpy = jest.spyOn(loggerModule, 'logError')
+    const escapingPath = '../../etc/shadow'
+
+    const { input } = startSidecar()
+    writeInvoke(input, 'move-reject-nolog-1', 'moveInstall', [
+      { appName: '999001', path: escapingPath, runner: 'steam' }
+    ])
+    await flush()
+
+    const loggedSomethingContainingPath = logErrorSpy.mock.calls.some((call) =>
+      call.some(
+        (arg) => typeof arg === 'string' && arg.includes(escapingPath)
+      )
+    )
+    expect(loggedSomethingContainingPath).toBe(false)
+    logErrorSpy.mockRestore()
+  })
+
   it('moveInstall emits gameStatusUpdate "moving" before the move and "done" after, on the success branch', async () => {
     const { input, frames } = startSidecar()
     writeInvoke(input, 'move-status-1', 'moveInstall', [
-      { appName: '999001', path: '/dest', runner: 'steam' }
+      { appName: '999001', path: '/home/deck/Games/dest', runner: 'steam' }
     ])
     await flush()
 
@@ -529,7 +606,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
 
     const { input, frames } = startSidecar()
     writeInvoke(input, 'move-error-1', 'moveInstall', [
-      { appName: '999001', path: '/dest', runner: 'steam' }
+      { appName: '999001', path: '/home/deck/Games/dest', runner: 'steam' }
     ])
     await flush()
 
@@ -543,15 +620,19 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     expect(statuses).toEqual(['moving', 'done'])
   })
 
+  // RETARGETED (plan 34.6-11, REQ-34.6-05): tricky path was `..`-bearing;
+  // now a legitimate apostrophe-and-space path inside the configured root
+  // (see the moveInstall retargeting comment above for the full rationale).
   it('importGame forwards every field of its argument object through unchanged (path/platform to SteamGame.importGame(), winePrefix/wineVersion/wineCrossoverBottle to writeConfig())', async () => {
-    const trickyPath = '../not a real source/with spaces'
+    const legitimatePath =
+      "/home/deck/Games/Sid Meier's Civilization V/save source"
     const wineVersionRef = { bin: '/wine', name: 'wine-ge', type: 'wine' }
 
     const { input } = startSidecar()
     writeInvoke(input, 'import-passthrough-1', 'importGame', [
       {
         appName: '999001',
-        path: trickyPath,
+        path: legitimatePath,
         runner: 'steam',
         platform: 'Windows',
         winePrefix: '/prefix',
@@ -562,7 +643,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     await flush()
 
     expect(steamGameMocks.importGame).toHaveBeenCalledTimes(1)
-    expect(steamGameMocks.importGame.mock.calls[0][0]).toBe(trickyPath)
+    expect(steamGameMocks.importGame.mock.calls[0][0]).toBe(legitimatePath)
     expect(steamGameMocks.importGame.mock.calls[0][1]).toBe('Windows')
 
     expect(mockedWriteConfig).toHaveBeenCalledTimes(1)
@@ -582,5 +663,38 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     expect(
       (writeConfigPayload as { wineVersion: unknown }).wineVersion
     ).toStrictEqual(wineVersionRef)
+  })
+
+  // NEW (plan 34.6-11, REQ-34.6-05, T-34.5-C6-49-03): the REJECT direction
+  // for importGame -- mirrors the moveInstall REJECT test above. RED-proven
+  // the same way: temporarily commenting out the `assertContainedPath` call
+  // in importGame's handler body made this exact assertion fail.
+  it('importGame rejects a path escaping the configured install root, and SteamGame.importGame is never reached (T-34.5-C6-49-03)', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'import-reject-1', 'importGame', [
+      {
+        appName: '999001',
+        path: '../../etc/passwd',
+        runner: 'steam',
+        platform: 'Windows'
+      }
+    ])
+    await flush()
+
+    expect(steamGameMocks.importGame).not.toHaveBeenCalled()
+
+    const response = frames.find((f) => f.id === 'import-reject-1') as
+      | { ok: boolean; error?: string }
+      | undefined
+    expect(response?.ok).toBe(false)
+
+    // No-wedge (T-34.6-31): importGame's own "importing" status is never
+    // emitted for a rejected request -- containment runs before it.
+    const statuses = frames
+      .filter(
+        (f) => f.kind === 'frontendMessage' && f.channel === 'gameStatusUpdate'
+      )
+      .map((f) => ((f.args as unknown[])?.[0] as { status?: string })?.status)
+    expect(statuses).toEqual(['done'])
   })
 })
