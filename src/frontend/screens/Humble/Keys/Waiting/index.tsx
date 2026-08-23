@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import ContextProvider from 'frontend/state/ContextProvider'
@@ -101,13 +101,61 @@ export default function HumbleKeysWaiting() {
       })
   }
 
+  // Quick task 260823-n5b: a stable identity for the KEY SET, not the array
+  // reference. `humble.keys` is replaced wholesale on every `humbleKeysUpdated`
+  // push, so depending on the reference would refetch on every unrelated push;
+  // depending on `.length` alone would miss a same-size swap. The composite is
+  // the SAME `${gamekey}:${machineName}` the annotations map is keyed by, so
+  // "the set changed" and "the map needs refetching" are the same question.
+  //
+  // Deliberately derived from `humble?.keys` ONLY. `refreshAnnotations` writes
+  // `annotations` AND `overrides`, so keying this off either would be an
+  // infinite refetch loop.
+  const keySetIdentity = useMemo(
+    () =>
+      (humble?.keys ?? [])
+        .map((k) => `${k.gamekey}:${k.machineName}`)
+        .sort()
+        .join('|'),
+    [humble?.keys]
+  )
+
+  // Lifecycle ONLY — this effect must keep its empty dependency array.
+  //
+  // `mountedRef` is a COMPONENT-LIFETIME flag (WR-02) that every
+  // `refreshAnnotations` call site checks before setState. Adding dependencies
+  // here would run this cleanup on every change, permanently latching
+  // `mountedRef.current = false` and silently killing all future annotation
+  // updates -- a worse and much less visible version of the very defect
+  // 260823-n5b fixes. The fetch therefore lives in its own effect below.
   useEffect(() => {
-    refreshAnnotations()
     return () => {
       mountedRef.current = false
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Quick task 260823-n5b: refetch whenever the key set changes, NOT only at
+  // mount. Runs on the first render too, so the previous mount-time fetch is
+  // preserved with no double-fetch.
+  //
+  // The defect: `refreshAnnotations` had exactly three call sites -- this
+  // effect (then `[]`-keyed), `closeWizard`, and the undo action -- and none
+  // fired on a library SYNC. A sync updates `humble.keys` via the
+  // `humbleKeysUpdated` push, so a newly-bought key's row rendered, while this
+  // map stayed at its mount-time snapshot with no entry for it;
+  // `keyindexResolved ?? false` then disabled Claim and rendered
+  // "Sync to enable claiming". Syncing again took the identical path.
+  // Navigating away and back remounted and appeared to "fix" it.
+  //
+  // Keying on the key set rather than adding a fourth manual call site is
+  // deliberate: sync is not the only non-claim writer of `humble.keys`, and the
+  // next one would reproduce this again. The comment above already records this
+  // map being fixed ONCE for claim-flow mutations only -- this is that same
+  // defect's other half.
+  useEffect(() => {
+    refreshAnnotations()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keySetIdentity])
 
   function closeWizard() {
     showDialogModal({ showDialog: false })

@@ -72,8 +72,69 @@ jest.mock('react', () => {
       }
       return [slots[idx], setState]
     },
-    useEffect: (effect: () => void | (() => void)) => {
-      effect()
+    // Quick task 260823-n5b: this mock previously ran EVERY effect on EVERY
+    // render, ignoring the dependency array outright. That made it structurally
+    // impossible to test the 260823-n5b defect: against the BROKEN code (a
+    // `[]`-keyed fetch effect) a rerender still refetched, so a "refetches when
+    // the key set changes" test would have passed against the very bug it
+    // exists to catch -- a vacuous gate.
+    //
+    // Now dep-aware, with the same slot discipline useState uses: re-run only
+    // when the dependency array is absent (every render, React's own semantics)
+    // or shallow-differs from the previous render.
+    //
+    // CLEANUP IS INVOKED BEFORE A RE-RUN, and that is load-bearing, not
+    // completeness for its own sake. An earlier version of this mock skipped
+    // cleanups, which made the "a key-set change does not latch mountedRef"
+    // test VACUOUS: the naive fix it exists to reject (adding deps to the
+    // mount effect while leaving its `mountedRef.current = false` cleanup in
+    // place) passed all 13 tests, because the latch can only fire from a
+    // cleanup the harness never called. Caught by red-proofing the naive fix
+    // rather than only the reverted one.
+    //
+    // Unmount cleanup is still not modelled -- nothing in this suite unmounts.
+    useEffect: (effect: () => void | (() => void), deps?: unknown[]) => {
+      const idx = cursor++
+      const prev = slots[idx] as
+        | { deps?: unknown[]; cleanup?: () => void }
+        | undefined
+      const changed =
+        deps === undefined ||
+        prev === undefined ||
+        prev.deps === undefined ||
+        prev.deps.length !== deps.length ||
+        deps.some((d, i) => !Object.is(d, (prev.deps as unknown[])[i]))
+      if (changed) {
+        if (prev?.cleanup) prev.cleanup()
+        const cleanup = effect()
+        slots[idx] = {
+          deps,
+          cleanup: typeof cleanup === 'function' ? cleanup : undefined
+        }
+      } else {
+        slots[idx] = { deps, cleanup: prev?.cleanup }
+      }
+    },
+    // Real useMemo semantics, for the same reason: 260823-n5b's key-set
+    // identity is a useMemo, and recomputing it unconditionally would mask a
+    // dependency mistake in the component.
+    useMemo: (factory: () => unknown, deps?: unknown[]) => {
+      const idx = cursor++
+      const prev = slots[idx] as
+        | { deps?: unknown[]; value: unknown }
+        | undefined
+      const changed =
+        deps === undefined ||
+        prev === undefined ||
+        prev.deps === undefined ||
+        prev.deps.length !== deps.length ||
+        deps.some((d, i) => !Object.is(d, (prev.deps as unknown[])[i]))
+      if (changed) {
+        const value = factory()
+        slots[idx] = { deps, value }
+        return value
+      }
+      return prev.value
     },
     useContext: () => contextValue,
     __beginRender: () => {
@@ -187,6 +248,22 @@ function findHumbleKeyRowProps(
     | ReactElement<{ claimAction: ClaimAction; undoOverride?: boolean }>
     | undefined
   return row?.props
+}
+
+// Quick task 260823-n5b: the plural form. The singular helper above returns
+// only the FIRST row, which cannot express "every row is claimable" -- the
+// assertion that distinguishes a refreshed annotations map from a stale one
+// when the key set has grown.
+function findAllHumbleKeyRowProps(
+  tree: ReactElement
+): { claimAction: ClaimAction; undoOverride?: boolean }[] {
+  return collectElements(tree)
+    .filter((el) => el.type === HumbleKeyRow)
+    .map(
+      (el) =>
+        (el as ReactElement<{ claimAction: ClaimAction; undoOverride?: boolean }>)
+          .props
+    )
 }
 
 describe('HumbleKeysWaiting', () => {
@@ -468,6 +545,145 @@ describe('HumbleKeysWaiting', () => {
       expect(showDialogModal).toHaveBeenCalledTimes(1)
       const dialogOptions = showDialogModal.mock.calls[0][0]
       expect(dialogOptions.message?.props.entryMode).toBe('finish')
+    })
+  })
+
+  // ── Quick task 260823-n5b ────────────────────────────────────────────────
+  // A newly-synced key could not be claimed until the user navigated away and
+  // back. `refreshAnnotations` had three call sites -- a `[]`-keyed mount
+  // effect, the claim-wizard close, and the undo action -- and NONE fired on a
+  // library sync. A sync updates `humble.keys` via the `humbleKeysUpdated`
+  // push, so the new row rendered while this map stayed at its mount-time
+  // snapshot; `keyindexResolved ?? false` then disabled Claim.
+  //
+  // Operator-observed live 2026-08-23 during Phase 34.4.1 gate run 4, with the
+  // backend measured CORRECT throughout (gamekeys 31 -> 32, keysCached 32).
+  describe('260823-n5b: annotations refresh when the key set changes', () => {
+    it('refetches annotations when a key is ADDED after mount, so the new row becomes claimable', async () => {
+      const first = makeHumbleKey({ gamekey: 'gk-1', machineName: 'mn-1' })
+      const second = makeHumbleKey({ gamekey: 'gk-2', machineName: 'mn-2' })
+
+      contextValue = { humble: { keys: [first] }, showDialogModal: jest.fn() }
+      // Mount-time fetch knows only about the first key.
+      mockApi.humbleGetClaimAnnotations.mockResolvedValue({
+        'gk-1:mn-1': { keyindexResolved: true }
+      })
+      mockApi.humbleGetOwnershipOverrides.mockResolvedValue({})
+
+      mount()
+      await flushPromises()
+      const callsAfterMount =
+        mockApi.humbleGetClaimAnnotations.mock.calls.length
+
+      // A sync lands: `humble.keys` gains a key, and the backend now has an
+      // annotation for it. This is the exact moment the defect occurred.
+      mockApi.humbleGetClaimAnnotations.mockResolvedValue({
+        'gk-1:mn-1': { keyindexResolved: true },
+        'gk-2:mn-2': { keyindexResolved: true }
+      })
+      contextValue = {
+        humble: { keys: [first, second] },
+        showDialogModal: jest.fn()
+      }
+
+      const tree = rerender()
+      await flushPromises()
+
+      // THE ASSERTION THAT FAILS AGAINST THE BROKEN CODE.
+      expect(
+        mockApi.humbleGetClaimAnnotations.mock.calls.length
+      ).toBeGreaterThan(callsAfterMount)
+
+      // And the observable consequence: the new row is claimable, rather than
+      // rendering "Sync to enable claiming".
+      const rows = findAllHumbleKeyRowProps(rerender())
+      expect(rows).toHaveLength(2)
+      expect(rows.every((r) => r.claimAction.keyindexResolved)).toBe(true)
+      void tree
+    })
+
+    it('does NOT refetch when the key set is unchanged (no refetch loop)', async () => {
+      const key = makeHumbleKey()
+      contextValue = { humble: { keys: [key] }, showDialogModal: jest.fn() }
+      mockApi.humbleGetClaimAnnotations.mockResolvedValue({
+        'gk-1:mn-1': { keyindexResolved: true }
+      })
+      mockApi.humbleGetOwnershipOverrides.mockResolvedValue({})
+
+      mount()
+      await flushPromises()
+      const callsAfterMount =
+        mockApi.humbleGetClaimAnnotations.mock.calls.length
+
+      // Several unrelated rerenders. `refreshAnnotations` writes `annotations`
+      // AND `overrides`, so a fetch effect keyed on either would spin forever.
+      rerender()
+      await flushPromises()
+      rerender()
+      await flushPromises()
+
+      expect(mockApi.humbleGetClaimAnnotations.mock.calls.length).toBe(
+        callsAfterMount
+      )
+    })
+
+    it('a same-SIZE key-set swap still refetches (identity is the key ids, not the count)', async () => {
+      contextValue = {
+        humble: { keys: [makeHumbleKey({ gamekey: 'gk-1' })] },
+        showDialogModal: jest.fn()
+      }
+      mockApi.humbleGetClaimAnnotations.mockResolvedValue({})
+      mockApi.humbleGetOwnershipOverrides.mockResolvedValue({})
+
+      mount()
+      await flushPromises()
+      const callsAfterMount =
+        mockApi.humbleGetClaimAnnotations.mock.calls.length
+
+      contextValue = {
+        humble: { keys: [makeHumbleKey({ gamekey: 'gk-9' })] },
+        showDialogModal: jest.fn()
+      }
+      rerender()
+      await flushPromises()
+
+      expect(
+        mockApi.humbleGetClaimAnnotations.mock.calls.length
+      ).toBeGreaterThan(callsAfterMount)
+    })
+
+    // THE HAZARD. The obvious fix -- adding dependencies to the existing mount
+    // effect -- also moves its cleanup, which latches the component-lifetime
+    // `mountedRef` (WR-02) to false on the FIRST key-set change and silently
+    // kills every later annotation write. That is a worse, less visible version
+    // of this same defect, so it gets its own test.
+    it('a key-set change does not latch mountedRef, so later fetches still apply', async () => {
+      const first = makeHumbleKey({ gamekey: 'gk-1', machineName: 'mn-1' })
+      const second = makeHumbleKey({ gamekey: 'gk-2', machineName: 'mn-2' })
+
+      contextValue = { humble: { keys: [first] }, showDialogModal: jest.fn() }
+      mockApi.humbleGetClaimAnnotations.mockResolvedValue({})
+      mockApi.humbleGetOwnershipOverrides.mockResolvedValue({})
+
+      mount()
+      await flushPromises()
+
+      // First key-set change -- this is where a moved cleanup would fire.
+      contextValue = {
+        humble: { keys: [first, second] },
+        showDialogModal: jest.fn()
+      }
+      mockApi.humbleGetClaimAnnotations.mockResolvedValue({
+        'gk-1:mn-1': { keyindexResolved: true },
+        'gk-2:mn-2': { keyindexResolved: true }
+      })
+      rerender()
+      await flushPromises()
+
+      // If mountedRef had been latched false, setAnnotations would have been
+      // skipped and both rows would still read `keyindexResolved: false`.
+      const rows = findAllHumbleKeyRowProps(rerender())
+      expect(rows.every((r) => r.claimAction.keyindexResolved)).toBe(true)
     })
   })
 })
