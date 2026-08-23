@@ -717,3 +717,55 @@ Guessing here would repeat the failure that cost F-10 nine live runs — correla
 **Non-blocking regardless:** `finishLogin` gates acceptance on `getGamekeys`, never on
 `getAccountIdentity`, whose throw is caught. The fetch stays best-effort; making the UI depend on it
 is explicitly out of scope.
+
+### D-29-04 and D-29-05 — **CLOSED (static half) 2026-08-23** (plan 33). Live half → plan 35.
+
+**D-29-04.** An empty document title is now a no-op. `login_window_title`'s own
+`Some(title) if !title.is_empty()` guard was already correct — the defect was that
+`on_document_title_changed` **called it with a value it should have discarded**, so
+`login_window_title(origin, Some(""))` fell through to the bare origin and the bar dropped its
+document title and got it back (the live `22 → 0 → 42` sequence). The guard now short-circuits
+**before** the lock and before `set_title`. The skip is still logged: *"fired and ignored"* and
+*"never fired"* are different diagnoses, and only a logged skip separates them.
+
+**D-29-05.** The visible login window is built with an **origin-derived** provisional title,
+`login_window_title(&origin, None)`, so it never presents as the framework default `Tauri app`.
+Scoped to the `if visible` block — the hidden reveal/clear windows have no title bar
+(`T-34.4.1-82`).
+
+**WR-07 is NOT re-opened.** It prohibits a hard-coded *application* title, not an origin-derived
+one; `origin` here is `url.origin().ascii_serialization()`, never page content, and the document's
+own title still replaces this via the callback.
+
+> ### An existing gate was AMENDED, and this is the part worth reading
+>
+> `tauriShellSource.test.ts` asserted `expect(chain).not.toContain('.title(')` — **a blanket ban on
+> the method.** D-29-05's fix made it fail, and that exposed the gate as **measuring the wrong
+> property**: it could not have distinguished `.title("GameLib")` (prohibited) from
+> `.title(login_window_title(&origin, None))` (correct), because it rejected both.
+>
+> **The gate was amended; the code was not bent to satisfy it.** Bending code to satisfy an
+> unpassable gate is a recorded failure here, and so is a gate that is non-vacuous, RED-proven and
+> still guards nothing. The amended version forbids a string literal (all three Rust forms, plus
+> `format!`) **and** requires every surviving `.title(` argument to be `login_window_title(` — so a
+> future `.title(some_other_var)` cannot slip past the literal check.
+
+**Four red-proofs, each against the defect it guards:**
+
+| # | mutation | expected | result |
+|---|---|---|---|
+| 1 | `.title("GameLib")` | amended WR-07 gate FAILS | **FAILS** ✓ |
+| 2 | `.title(some_other_var)` | amended WR-07 gate FAILS | **FAILS** ✓ |
+| 3 | remove the provisional title | D-29-05 presence gate FAILS | **FAILS** ✓ |
+| 4 | move the empty guard AFTER `set_title` | D-29-04 order gate FAILS | **FAILS** ✓ |
+
+Red-proof 1 is the load-bearing one: it shows the amendment did **not** weaken WR-07's negative
+half. A "fix" to a failing gate that also disarms it would be the worse outcome.
+
+**The PRESENCE half is now closed at SOURCE level only.** `main.rs`'s own WR-07 CORRECTION comment
+records that a grep gate structurally cannot establish presence — the new
+`.title(login_window_title(&origin, None))` assertion closes that at the source, but **whether an
+operator still SEES a `Tauri app` flash is visual and timing-dependent** and remains plan 35's.
+
+`cargo check` clean, `cargo test` **155/155**, `tauriShellSource` **114/114**, tsc 0, eslint 0
+errors, seam sweep exit 0.

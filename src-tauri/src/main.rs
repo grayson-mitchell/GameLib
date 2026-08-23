@@ -3847,6 +3847,33 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     .visible(initial_visible);
             if visible {
                 let title_origin = Arc::clone(&current_origin);
+                // D-29-05 (Phase 34.4.1 gap cycle 3, plan 33): a PROVISIONAL title, so the
+                // window never presents as the framework default "Tauri app". Root cause was
+                // established from ordering evidence: `presentation requested` precedes the
+                // first `title change applied len=22` in the same scrollback, and the interval
+                // between them is a titleless window showing the application default.
+                //
+                // WR-07 IS NOT RE-OPENED, and the distinction is the whole point. WR-07
+                // prohibits a hard-coded APPLICATION title -- "the loaded document's own title
+                // must show, never a hard-coded 'GameLib'". It does not prohibit an
+                // ORIGIN-DERIVED one. `origin` here is `url.origin().ascii_serialization()`
+                // (line ~3718), the trustworthy value WR-07 wants shown first, NEVER page
+                // content; `login_window_title(&origin, None)` is the same composer the OTHER
+                // arms in this file already build with. A static string here -- "GameLib",
+                // "Signing in..." -- would be the prohibited thing.
+                //
+                // This is deliberately the WEAKER of the two guarantees: it establishes only
+                // that the bar is never the framework default. The document title still
+                // arrives via `on_document_title_changed` below and replaces this, which is
+                // WR-07's actual requirement. The recorded asymmetry stands and is why this
+                // comment exists: a grep gate proving `.title(` is never hard-coded can only
+                // establish the ABSENCE of the prohibited value -- it structurally cannot
+                // establish the PRESENCE of the required one. Only the live gate can.
+                //
+                // Scoped to `if visible` on purpose: the same arm builds the hidden
+                // reveal/clear windows, which have no title bar for a title to matter on
+                // (T-34.4.1-82).
+                builder = builder.title(login_window_title(&origin, None));
                 builder = builder.inner_size(900.0, 700.0);
                 // CR-01 fix (continued): `.center()`/`.focused(true)` are AppKit-owned
                 // concerns once this window becomes a sheet -- `beginSheet:` positions the
@@ -3877,6 +3904,35 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                         // recomputed here, so this composed title always reflects the
                         // most recent MAIN-FRAME origin, never this callback's own
                         // page-content input.
+                        // D-29-04 (Phase 34.4.1 gap cycle 3, plan 33): an EMPTY document
+                        // title is now a no-op, not an applied change. WebKit reports a
+                        // transient empty title mid-navigation -- the live gate saw the
+                        // sequence 22 -> 0 -> 42 -- and applying it dropped the document
+                        // title from the bar and back again, because
+                        // `login_window_title(origin, Some(""))` falls through its
+                        // `!title.is_empty()` guard to the bare origin. The composer was
+                        // already correct; the defect was that this callback CALLED it
+                        // with a value it should have discarded.
+                        //
+                        // Explicitly NOT the cause of the `Tauri app` flash (D-29-05),
+                        // which is fixed separately below. That was proposed and REFUTED
+                        // by ordering: the flash is one-way and completes before the
+                        // FIRST title application (len=22), whereas len=0 fires only
+                        // after the bar already reads the document's own title. Filed on
+                        // its own merits as a latent smell, and fixed as one.
+                        //
+                        // The skip is still logged. "The hook fired and we ignored it"
+                        // and "the hook never fired" are different diagnoses, and the
+                        // length is the only machine evidence separating them -- the same
+                        // reason the applied branch logs a length and never the string
+                        // (T-34.4.1-106: remote page content must never reach an
+                        // uploadable log).
+                        if title.is_empty() {
+                            eprintln!(
+                                "[shell] humble_login_open: title change SKIPPED len=0 (empty document title; previous title retained)"
+                            );
+                            return;
+                        }
                         let origin_now = title_origin
                             .lock()
                             .map(|guard| guard.clone())

@@ -612,12 +612,55 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
     expect(code).toContain('on_document_title_changed')
   })
 
+  // D-29-04 (gap cycle 3, plan 33). WebKit reports a transient EMPTY document title
+  // mid-navigation -- the live gate saw 22 -> 0 -> 42 -- and applying it dropped the
+  // document title from the bar and back again, because `login_window_title(origin,
+  // Some(""))` falls through its own `!title.is_empty()` guard to the bare origin.
+  //
+  // The composer was already correct. The defect was that the CALLBACK called it with a
+  // value it should have discarded, so the guard belongs at the callback, and this test
+  // asserts it there -- ordered BEFORE any lock or set_title, since a guard that runs
+  // after the write it is meant to prevent guards nothing.
+  test('D-29-04: an EMPTY document title short-circuits before set_title, so the previous title survives', () => {
+    const code = loadMainRsCode()
+    const cbIdx = code.indexOf('.on_document_title_changed(')
+    expect(cbIdx).toBeGreaterThan(-1)
+    const cb = code.slice(cbIdx, cbIdx + 3000)
+
+    const guardIdx = cb.indexOf('if title.is_empty()')
+    const setTitleIdx = cb.indexOf('window.set_title(')
+    const lockIdx = cb.indexOf('title_origin')
+
+    expect(guardIdx).toBeGreaterThan(-1)
+    expect(setTitleIdx).toBeGreaterThan(-1)
+    // The ORDER is the property, not mere presence of both tokens.
+    expect(guardIdx).toBeLessThan(setTitleIdx)
+    expect(guardIdx).toBeLessThan(lockIdx)
+    // The skip stays observable: "fired and ignored" and "never fired" are different
+    // diagnoses, and only a logged skip separates them.
+    expect(cb.slice(guardIdx, setTitleIdx)).toContain('SKIPPED len=0')
+  })
+
   test('always_on_top never appears in non-comment source (F-4) -- proves the persistent-pin option was never wired, NOT that the one-shot raise plan 29 item 1 must observe actually happens', () => {
     const code = loadMainRsCode()
     expect(code).not.toContain('always_on_top')
   })
 
-  test("no WebviewWindowBuilder chain in this file hard-codes .title( -- WR-07's negative half, unchanged; proves absence only, never the presence plan 29 item 1 must observe", () => {
+  // AMENDED Phase 34.4.1 gap cycle 3, plan 33 (D-29-05). This test previously asserted
+  // `expect(chain).not.toContain('.title(')` -- a blanket ban on the method.
+  //
+  // That measured the WRONG PROPERTY, and D-29-05's fix is what exposed it. WR-07 prohibits a
+  // hard-coded APPLICATION title -- "the loaded document's own title must show, never a
+  // hard-coded 'GameLib'". It does NOT prohibit an ORIGIN-DERIVED provisional title, and the
+  // repo already builds exactly that elsewhere via `login_window_title(&origin, None)`. A
+  // blanket ban forbids the correct construct alongside the prohibited one.
+  //
+  // The gate was amended rather than the code bent to satisfy it. Bending code to satisfy an
+  // unpassable gate is a recorded failure on this project; so is a gate that is non-vacuous,
+  // RED-proven, and still guards nothing. This version is strictly stronger in the direction
+  // that matters: the old one could not have distinguished `.title("GameLib")` from
+  // `.title(login_window_title(...))`, because it rejected both.
+  test("no WebviewWindowBuilder chain passes a STRING LITERAL to .title( -- WR-07's negative half, amended: the prohibited thing is a hard-coded title, not the method", () => {
     const code = loadMainRsCode()
     // All three WebviewWindowBuilder call sites in this file (humble_login_open,
     // humble_reveal_post, humble_login_clear_storage) -- each chain runs from its
@@ -631,8 +674,41 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
       const end = code.indexOf('.build()', start)
       expect(end).toBeGreaterThan(start)
       const chain = code.slice(start, end + '.build()'.length)
-      expect(chain).not.toContain('.title(')
+
+      // The prohibited shape: a literal, in any of Rust's string forms.
+      expect(chain).not.toMatch(/\.title\(\s*"/)
+      expect(chain).not.toMatch(/\.title\(\s*r#*"/)
+      expect(chain).not.toMatch(/\.title\(\s*format!/)
+
+      // Whatever DOES reach .title( must be the origin-derived composer, so a future
+      // `.title(some_other_string_var)` cannot slip through the literal check above.
+      for (const t of chain.matchAll(/\.title\(([^)]*)/g)) {
+        expect(t[1]).toContain('login_window_title(')
+      }
     }
+  })
+
+  // D-29-05's POSITIVE half, and the reason it is a separate test: the amended negative test
+  // above still cannot establish PRESENCE. The recorded asymmetry (main.rs's own WR-07
+  // CORRECTION comment) is that a grep gate proving `.title(` is never hard-coded establishes
+  // only the ABSENCE of the prohibited value -- it structurally cannot establish that the
+  // required one is there. This test closes exactly that half at the source level.
+  //
+  // It does NOT close the live half. Whether the operator still SEES a "Tauri app" flash
+  // between presentation and first title application is a visual, timing-dependent
+  // observation owned by the gap-cycle-3 live gate (plan 35).
+  test("D-29-05: humble_login_open's visible block builds an ORIGIN-DERIVED provisional title, so the window never presents as the framework default", () => {
+    const code = loadMainRsCode()
+    const armStart = code.indexOf('"humble_login_open" => {')
+    expect(armStart).toBeGreaterThan(-1)
+    const arm = code.slice(armStart, armStart + 20000)
+    const visibleIdx = arm.indexOf('if visible {')
+    expect(visibleIdx).toBeGreaterThan(-1)
+
+    // The provisional title is set inside the visible block -- the hidden reveal/clear
+    // windows have no title bar for a title to matter on (T-34.4.1-82).
+    const visibleBlock = arm.slice(visibleIdx, visibleIdx + 4000)
+    expect(visibleBlock).toContain('.title(login_window_title(&origin, None))')
   })
 
   test(".inner_size(/.center()/.focused(true)/on_document_title_changed appear ONLY inside humble_login_open's if-visible block -- the adjacent-already-present gating Plan 18 introduced and nothing had ever tested; proves source placement only, never that the operator actually saw the window raised (plan 29 item 1)", () => {
