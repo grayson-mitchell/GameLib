@@ -1754,19 +1754,56 @@ Amazon, which is why this runs **before Phase 34.5** rather than after: 34.5's t
 depend on it. Additive and reversible — the Electron build keeps working unchanged.
 **Requirements**: REQ-34.4.1-01, REQ-34.4.1-02, REQ-34.4.1-03, REQ-34.4.1-04, REQ-34.4.1-05, REQ-34.4.1-06, REQ-34.4.1-07, REQ-34.4.1-08, REQ-34.4.1-09, REQ-34.4.1-10, REQ-34.4.1-11, REQ-34.4.1-12, REQ-34.4.1-13, REQ-34.4.1-GAP-01, REQ-34.4.1-GAP-02, REQ-34.4.1-GAP-03, REQ-34.4.1-GAP-04, REQ-34.4.1-GAP-05, REQ-34.4.1-GAP-06, REQ-34.4.1-GAP-07, REQ-34.4.1-GAP-08, REQ-34.4.1-GAP-09, REQ-34.4.1-GAP-10, REQ-34.4.1-GAP-11, REQ-34.4.1-GAP-12, REQ-34.4.1-GAP-13
 
-**Status:** ✅ **COMPLETE 2026-07-31** — 29 plans across 2 gap cycles, closed by a **4/4 PASS** on the
-third blocking live gate (`34.4.1-LIVE-GATE-RERUN-3.md`). The gate ran three times: FAIL 2/4
-(2026-07-30) → FAIL 3/4 (2026-07-31) → **PASS 4/4** (2026-07-31). **The test suite was fully green
-for all three runs** (3279/3279, then 3387/3387) while F-1 and both of F-6's defects were live —
-every blocking defect in this phase was found by a human driving the UI, none by automation.
-**Carried out, not closed:** the cookie clear's **domain-scoping is UNTESTED** (`REQ-34.4.1-GAP-05`'s
-rider — the gate contract's own precondition 6 struck the planted non-Humble cookie, making a
-required PASS condition unsatisfiable on a single-origin jar; the next cycle must unstrike it), Epic
-logout is **expected-fixed-by-construction but UNOBSERVED** (→ Phase 34.5), and **F-9 remains open
-and unassigned**. Ten findings filed in `deferred-items.md` as `D-29-01`..`D-29-10`.
+**Status:** ✅ **COMPLETE 2026-07-31**, with three live-only residuals — **35 plans across 3 gap
+cycles** and **four** blocking live gate runs. The phase closed on run 3's 4/4 PASS; gap cycle 3
+(plans 30–35, 2026-08-23) did **not** reopen it, and its run 4 scored **5 of 5 scoreable PASS**
+(`34.4.1-LIVE-GATE-RERUN-4.md`; item 2 UNSCOREABLE on macOS by a contract defect, re-scoped to
+Windows/Linux as Phase 38's `38-W03`). Gate history: **FAIL 2/4 → FAIL 3/4 → PASS 4/4 → 5-of-5
+scoreable PASS.** **The test suite was fully green for the first three runs** (3279/3279, then
+3387/3387) while F-1 and both of F-6's defects were live — every blocking defect in this phase was
+found by a human driving the UI, none by automation.
+
+**`REQ-34.4.1-GAP-05`'s domain-scoping rider is CLOSED** (was "carried out, not closed" until
+2026-08-23). Run 4 unstruck the gate contract's precondition 6 — the strike had made a required
+PASS condition unsatisfiable on a single-origin jar — and item 3(b) then passed **non-vacuously for
+the first time in four runs**: `before(total=76, matched=37)` → `after(total=39, matched=0)`,
+`deleted=37`, `survivingNonHumble=39`, and `76 - 37 = 39` reconciles. Run 3's `34 == 34` had
+arithmetically **forced** its zero; this run had 39 foreign cookies that genuinely existed to be
+spared. GOG stayed connected through the disconnect (`isLoggedIn:true`, `auth.json` 478 B),
+operator-confirmed visually.
+
+**Epic logout's cookie clear (`clearEpicCookies`) remains expected-fixed-by-construction but
+UNOBSERVED** — owner corrected 2026-08-23 from Phase 34.5 to **Phase 34.6** (operator-confirmed;
+quick task `260823-oqo`, commit `205ac34e0`). The owner changed; the status did not. It calls the
+same Rust arm Humble's disconnect proved fixed, but that is an inference from shared code, not a
+measurement, and no document may call it verified on that basis.
+
+**Still open — three items, all LIVE-ONLY. No code work remains on any of them.**
+- `REQ-34.4.1-GAP-11` — bounded, classified `keyring_get` timeout. Its own body reads "This box
+  stays UNCHECKED — live-only". The item with real teeth: an unbounded `keyring_get` can consume
+  the sidecar's entire 60s RPC budget.
+- `D-29-02` — post-login `/api/v1/user/info` returns a 232-byte HTML 404. Two candidates (path
+  moved / an interstitial answering) fit **every offline observation equally**, so this needs a
+  live discriminator, not more reading.
+- `D-29-06` / **F-9** — a generic RPC timeout fired live (`response for unknown/timed-out id=1575`).
+  Co-occurrence with a cookie operation is **UNDETERMINED** and deliberately not rounded to "no".
+
+Discharging them requires a fifth live gate run; parking them is equally legitimate. **That decision
+is not yet made and is deliberately not recorded here.**
+
+**Two gates this phase has never run:** `/gsd-verify-work` (its `34.4.1-VERIFICATION.md` was
+hand-written by plan 35 as a gap-cycle deliverable, not produced by gsd-verifier) and
+`/gsd-secure-phase` (no `SECURITY.md` in the phase folder) — worth noting because this phase *is*
+the login and cookie seam. Recorded, not scheduled.
+
+Ten findings filed in `deferred-items.md` as `D-29-01`..`D-29-10`; gap cycle 3 dispositioned all
+ten plus `NEW-01`.
 **Depends on:** Phase 34.4 (which defers these channels and seeds this phase's research)
 **Blocks:** Phase 34.5 (Epic/GOG/Amazon logins use the identical seam)
-**Plans:** 29/29 plans executed — corrected 2026-08-23 (gap cycle 3, plan 30) from a stale `28/29`, recounted directly from the phase directory: 29 `34.4.1-NN-PLAN.md` files numbered 01–29, each with a matching `-SUMMARY.md`. Gap cycle 3 adds plans 30–35, not yet executed.
+**Plans:** 35/35 plans executed across 3 gap cycles — recounted from the phase directory 2026-08-23:
+35 `34.4.1-NN-PLAN.md` files numbered 01–35, each with a matching `-SUMMARY.md`. (The `29/29` this
+line carried was itself a correction of a stale `28/29`; gap cycle 3's plans 30–35 have since been
+executed, so `29/29` went stale the same way.)
 
 **Seeded by `34.4-CONTEXT.md` D-07 — read it before researching.** Candidates: a dedicated
 Tauri `WebviewWindow` on the login origin with cookies read via Tauri's own webview cookie API;

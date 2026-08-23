@@ -483,6 +483,53 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
+> # ✅ PHASE 34.4.1 GAP CYCLE 3 COMPLETE — 2026-08-23. FOURTH LIVE GATE: **5 of 5 scoreable PASS**.
+>
+> **Plans 30–35 executed; 35 of 35 plans now complete across 3 gap cycles.** The phase itself closed
+> on 2026-07-31 (run 3, 4/4) and this cycle did **not** reopen it — it dispositioned the ten
+> `D-29-NN` findings, gave 34.4.1 the `VERIFICATION.md` it had never had, and re-ran the blocking
+> gate a fourth time. Verdict: `"5 of 5 scoreable PASS; item 2 UNSCOREABLE on macOS (contract
+> defect), re-scoped to Windows/Linux"` (`34.4.1-LIVE-GATE-RERUN-4.md`).
+>
+> | Item | Result |
+> |---|---|
+> | 1 — login from scratch | PASS — 75 B store, no plaintext `sessionCookie`; **Manage Accounts self-updated with no navigate-away** (D-29-01 live-confirmed); sync `gamekeys=31 keysCached=31` |
+> | 2 — origin in the title bar | **UNSCOREABLE**, not passed — macOS renders the login window as an AppKit *sheet*, which structurally has no title bar. Contract defect; re-scoped to Windows/Linux as Phase 38's `38-W03` |
+> | 2(d) — empty-title guard | PASS (machine-verified) — `applied len=22` → `SKIPPED len=0` → `applied len=42`; `applied len=0` count = **0** |
+> | 3(a) — Humble cookies gone | PASS — `before(76, 37)` → `after(39, 0)`, `deleted=37`; both keyring slots `keyring_delete ok` |
+> | 3(b) — foreign cookies survive | **PASS NON-VACUOUSLY, the first time in four runs** |
+> | 3(c) — fresh re-login | PASS — operator got Humble's **login form**, not a signed-in page |
+> | 4 — reveal + completion line | PASS — `reveal succeeded keyPresent=true durationMs=2409`; secret absent from `gamelib.log` **and** terminal, checked against a **positive control** first |
+>
+> **`REQ-34.4.1-GAP-05`'s domain-scoping rider is CLOSED, and the fix was to the CONTRACT.** Runs
+> 1–3 could not score it: precondition 6 had **struck** the planted non-Humble cookie as moot,
+> reasoning the census supplied the evidence — conflating the measuring apparatus with the thing
+> measured. Run 3's `survivingNonHumble=0` was therefore **vacuous, not passing**: `before total=34`
+> equalled `matched=34`, so no foreign cookie existed for the delete to spare and the zero was
+> arithmetically forced. Run 4 unstruck it: `total(76) != matched(37)`, `survivingNonHumble=39`,
+> `76 - 37 = 39` reconciles, and **GOG was still connected afterwards** (`auth.json` 478 B),
+> operator-confirmed visually.
+>
+> **Epic logout's `clearEpicCookies` re-homed 34.5 → 34.6**, operator-confirmed the same day (quick
+> task `260823-oqo`). Owner changed, status did not: still **OPEN and UNOBSERVED**.
+>
+> **Three items remain, all LIVE-ONLY, no code work left on any:** `REQ-34.4.1-GAP-11` (bounded
+> `keyring_get` timeout — its own body reads "live-only"; the one with real teeth, since an
+> unbounded call can eat the sidecar's whole 60s RPC budget), `D-29-02` (232-byte HTML 404 — two
+> candidates fit every *offline* observation equally, so it needs a live discriminator), and
+> `D-29-06`/F-9 (RPC timeout; co-occurrence with a cookie operation **UNDETERMINED**, deliberately
+> not rounded to "no"). Discharging them needs a fifth gate run; parking them is equally
+> legitimate. **That decision is not made.**
+>
+> **Never run for this phase:** `/gsd-verify-work` (`34.4.1-VERIFICATION.md` was hand-written by
+> plan 35, not produced by gsd-verifier) and `/gsd-secure-phase` (no `SECURITY.md`) — notable, since
+> this phase *is* the login and cookie seam.
+>
+> This entry exists because gap cycle 3 propagated to `VERIFICATION.md` and `deferred-items.md` and
+> reached **neither ROADMAP.md nor STATE.md** — the recorded "a propagation plan can MISS a status
+> doc undetected" shape. Both corrected 2026-08-23 by quick task `260823-p1h`. The 2026-07-31 entry
+> further down is **left intact**: it records what was true then.
+
 > **✅ PHASE 34.5 COMPLETE — the fifth blocking live gate PASSED 2026-08-19
 > (`34.5-LIVE-GATE-RERUN-4.md`, authored by plan 34.5-56, RUN by plan 34.5-59 on real macOS
 > hardware at HEAD `f279856e7`): verdict PASS, 4 PASS / 0 FAIL / 0 BLOCKED / 0 NOT ATTEMPTED
@@ -5724,6 +5771,7 @@ Recent decisions affecting current work:
 | 260823-n5b | **A newly-synced Humble key could not be CLAIMED until the user navigated away and back** — found by the operator during Phase 34.4.1 live gate run 4, with the **backend measured correct throughout** (`gamekeys 31 -> 32`, `keysCached 32`), so the view was the stale part. `refreshAnnotations()` had exactly three call sites (a `[]`-keyed mount effect, `closeWizard`, the undo action) and **none fired on a SYNC**, so `humble.keys` gained the key via the `humbleKeysUpdated` push while the annotations map stayed at its mount-time snapshot and `keyindexResolved ?? false` disabled Claim. **The other half of a defect already fixed once on this exact map** — `Waiting/index.tsx:60-73` records wiring it into "every claim-flow mutation"; sync is the other writer and was never covered. Fixed by keying the fetch on a stable identity of the KEY SET (sorted `${gamekey}:${machineName}`) rather than adding a fourth manual call site. **THE EFFECTS ARE SPLIT AND THAT IS LOAD-BEARING:** adding deps to the existing mount effect also moves its cleanup, latching the component-lifetime `mountedRef` (WR-02) false on the first key-set change and silently killing every later write — a worse, less visible version of the same defect. **THE TEST HARNESS WAS VACUOUS TWICE.** (1) The react mock ran every effect on every render ignoring dep arrays, so a "refetches on key-set change" test would have PASSED against the very bug it exists to catch; made dep-aware. (2) The mock never invoked cleanups, making the `mountedRef` hazard test vacuous — the naive fix passed all 13 tests. **(2) was caught ONLY by red-proofing the NAIVE fix, not just the reverted one** — reverting is the obvious red-proof and would have left a gate guarding nothing. Red-proofs: reverted -> 3 FAIL, naive -> 2 FAIL, correct -> 13 pass; the no-refetch-loop test correctly PASSES against the broken code because it guards the opposite property. Census recorded but NOT fixed: 28 frontend files carry `[]`-keyed `window.api` effects, mostly settings nothing pushes to; the one same-shape sibling is `Humble/Keys/Spares` (`giftedMap`), whose exposure is MILDER — `giftedAt` is a display annotation, not a gate, so it cannot disable an action. Same family as D-29-01. Humble suites 23/23, tsc 0, eslint 0 errors. Commit `b52a8eed0`. No `gsd-sdk state.*` verb invoked — row hand-applied. | 2026-08-23 | [260823-n5b-refresh-humble-key-annotations-when-the-](.planning/quick/260823-n5b-refresh-humble-key-annotations-when-the-/) |
 | 260823-ofm | Wire the 34.4.1 seam-parity sweep into CI as a discovered planning gate: rename to `*-gate.py`, make the no-arg path CHECK the committed report instead of rewriting it, run the self-test in CI, and pin the SILENTLY-DROPPED site set so a new silent drop at the seam fails | 2026-08-23 | [260823-ofm-wire-the-seam-parity-sweep-into-ci-as-a-](.planning/quick/260823-ofm-wire-the-seam-parity-sweep-into-ci-as-a-/) |
 | 260823-oqo | **D-29-08 (Epic logout's `clearEpicCookies`, UNOBSERVED) — operator confirmed Phase 34.6 as owner** ("yes move to 34.6"). `ROADMAP.md:2743` already read unconditionally; **five other documents lagged behind it** still saying "proposed" / "pending operator sign-off" — the roadmap was ahead of the status docs, which is the wrong way round. Live docs amended in place (todo, `deferred-items.md` x2, VERIFICATION); the two historical SUMMARIES keep their original sentences and gain a dated amendment. `resolves_phase: null -> "34.6"` **with the counter-risk named in the same breath**: 34.6 CLOSING DOES NOT DISCHARGE IT, because the discharge is a live observation (authenticated Epic session, UI-driven logout, `clearEpicCookies` count cross-checked against an independent jar re-read) — auto-close would otherwise silently close an item nobody exercised. Also **rewrote a self-sealing `blocked_by`**: it read "no authenticated Epic session has been available on any gate run to date", a statement about PAST runs that read as a present-tense blocker and made the todo permanently un-actionable — nobody obtains a session while the item announces itself blocked on having one. Embedded Epic login works (restored 2026-08-22), so obtaining one is 34.6's job. **Item stays OPEN and UNOBSERVED** — confirming an owner is not observing a logout. Grep proved BOTH directions: 6 hits/5 files before, 2 after (the preserved historical sentences); note the raw after-grep read 10 because **this task's own PLAN.md quotes its own search strings**. VERIFICATION.md checked via its real consumer `gsd-sdk query audit-uat` (pyyaml absent): parses, phase visible, 16 `human_verification` entries before and after. Commit `205ac34e0`; `git commit --only`, two unrelated staged renames confirmed intact. | 2026-08-23 | [260823-oqo-confirm-the-operator-sign-off-relocating-](.planning/quick/260823-oqo-confirm-the-operator-sign-off-relocating-/) |
+| 260823-op3 | **Humble Keys — one-click `Activate` for Steam keys, and the row reordered into action-first columns.** The wizard's Phase 14 choreography (warning -> reveal -> copy -> open `registerkey` -> mark redeemed) collapses to zero clicks for Steam now that `redeemSteamKey` is live: reveal -> `redeemSteamKey` -> `humbleMarkRedeemed` + library refresh. A spent reveal can never strand the user — every post-reveal failure falls through to the key hand-off with the Steam outcome as a banner, while pre-reveal unknowns stay `ambiguous` (WR-05). T-14-08 amended: reveal now has a mount-effect call site, guarded by a `useRef` latch instead of the warning click. Non-Steam keys unchanged. Row order is now Activate, Gift on Humble, Status, Title, Expiration. NOT live-UAT'd. | 2026-08-23 | [260823-op3-humble-keys-one-click-activate-for-steam](.planning/quick/260823-op3-humble-keys-one-click-activate-for-steam/) |
 
 ## Deferred Items
 
