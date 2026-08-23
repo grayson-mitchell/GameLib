@@ -2975,12 +2975,12 @@ residual joined them 2026-08-22:** the three D-CYCLE6-A live-gate items (34.5 UA
 SCOPE above.
 **Blocks:** Phase 35 (the IPC re-plumb must be COMPLETE before cutover, and this phase now also
 carries the Epic/save-sync verification leg of Phase 35's dependency that used to sit on 34.7)
-**Plans:** 14 plans — 3/14 executed on disk (34.6-01, 34.6-03, 34.6-05)
+**Plans:** 14 plans — 4/14 executed on disk (34.6-01, 34.6-02, 34.6-03, 34.6-05)
 
 Plans:
 
 - [x] 34.6-01-PLAN.md — wave 1: A-03 half 1 — the Rust `steamgrid-api-key` keyring arm, the slot constant, and the swappable `SteamGridDbSecretStore` seam with a behaviour-preserving Electron impl — DONE 2026-08-23 (`d50583a29`, `0c1d7d2d7`, `d3c7420ed`; see `34.6-01-SUMMARY.md`)
-- [ ] 34.6-02-PLAN.md — wave 2: A-03 half 2 — `SidecarSteamGridDbSecretStore`, the one-time plaintext→keyring migration, and BOTH arms of bootstrap's exclusive secret-store branch (the dev-vault arm is not optional)
+- [x] 34.6-02-PLAN.md — wave 2: A-03 half 2 — `SidecarSteamGridDbSecretStore`, the one-time plaintext→keyring migration, and BOTH arms of bootstrap's exclusive secret-store branch (the dev-vault arm is not optional) — DONE 2026-08-24 (`f40e665a1`, `a039c93dd`, `e9826dc43`; see `34.6-02-SUMMARY.md`). REQ-34.6-06 now fully complete.
 - [x] 34.6-03-PLAN.md — wave 1: author `34.6-LIVE-GATE.md` with EMPTY result slots before any live work — steps 0–8 plus the Humble rider, each with an explicit FAIL condition — DONE 2026-08-23 (`6b6e043f9`, `cf0a5e328`, `20442cc35`; see `34.6-03-SUMMARY.md`)
 - [ ] 34.6-04-PLAN.md — wave 2: run live-gate STEP 0 ONLY — the pre-port `DECLARED_UNAVAILABLE_MARKER` capture (A-01/D-10), unrecoverable once the winetricks port lands
 - [x] 34.6-05-PLAN.md — wave 1: the D-11 send-handler observable + `frontendReady` ported send-kind, with its two body exclusions proven behaviourally; ledger entry for `appShellFlowRegistration.ts` — DONE 2026-08-23 (`799a96fb9`, `c7e4b8eba`, `76b0d37bd`; see `34.6-05-SUMMARY.md`)
