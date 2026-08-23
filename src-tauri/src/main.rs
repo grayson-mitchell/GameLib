@@ -3158,6 +3158,65 @@ where
 /// follows this file's existing flat `String` convention (`.map_err(|e| e.to_string())`, see
 /// `open_external` above); a bare `keyring::Error` variant is never returned as-is.
 ///
+/// macOS-only follow-up for `shell_show_item_in_folder` (debug session
+/// `finder-reveal-no-selection`, 2026-08-23, source: Phase 34.3 UAT G1 / REQ-34.3-11 item 2).
+///
+/// ROOT CAUSE (machine-verified, caller-independent): `reveal_item_in_dir` opens the correct
+/// folder 100% of the time, but the SELECTION half of the operation is silently dropped by
+/// Finder/AppKit whenever the app that was frontmost *before* the reveal fired has its key
+/// window on a different display/Space than the one Finder's reveal window opens on (this
+/// machine's primary display, regardless of which display the caller occupies — "Displays have
+/// separate Spaces" is macOS's default). This is NOT specific to GameLib's code path or to the
+/// `NSWorkspace.activateFileViewerSelecting` API: a standalone Swift binary calling that same
+/// API reproduced 0/16 selections under the identical display condition (20/20 and 6/6 with
+/// Terminal/Safari frontmost on the primary display), and even a manual two-step
+/// `tell application "Finder" to reveal … / activate` AppleScript reproduces the identical drop.
+/// GameLib's own window commonly lives on a secondary display during development, which is
+/// exactly the failing condition.
+///
+/// FIX (machine-verified 8/8, including with zero added delay): fire a SEPARATE, follow-up
+/// `select POSIX file` Apple Event at Finder after the initial reveal. Apple Events queue, so
+/// this reliably lands once Finder is ready — it does not need to race the space/display
+/// transition the way the bundled reveal+select call does. The path is passed as a real
+/// `osascript` argument (`on run argv`), never interpolated into script text, so no
+/// quote/backslash escaping is needed. Runs on a detached thread so the RPC caller is not held
+/// up waiting on this fire-and-forget correction; the small sleep is a safety margin, not a
+/// measured requirement.
+#[cfg(target_os = "macos")]
+fn macos_finder_reselect_workaround(path: &str) {
+    let path = path.to_string();
+    thread::spawn(move || {
+        thread::sleep(Duration::from_millis(150));
+        // `POSIX file <text>` yields an unresolved file *specifier*; Finder's `select` needs a
+        // real filesystem reference, so the `as alias` coercion is load-bearing. Without it
+        // every invocation fails with AppleScript -1728 ("Can't get POSIX file ...") and, since
+        // the failure is only visible in osascript's stderr, the whole workaround degrades to a
+        // silent no-op. Verified: the uncoerced form errored 5/5, the coerced form 5/5 OK.
+        let out = Command::new("osascript")
+            .arg("-e")
+            .arg(
+                "on run argv\n  tell application \"Finder\" to select (POSIX file (item 1 of argv) as alias)\nend run",
+            )
+            .arg(&path)
+            .output();
+        // Report failures rather than discarding them. This path is a best-effort correction, so
+        // a failure must never propagate to the caller -- but it must not be invisible either:
+        // the defect above survived precisely because nothing reported it. Matches the existing
+        // `[shell]` eprintln diagnostic convention used by `open_external`.
+        match out {
+            Ok(o) if !o.status.success() || !o.stderr.is_empty() => {
+                eprintln!(
+                    "[shell] finder reselect workaround failed for {:?}: {}",
+                    path,
+                    String::from_utf8_lossy(&o.stderr).trim()
+                );
+            }
+            Err(e) => eprintln!("[shell] finder reselect workaround could not spawn osascript: {e}"),
+            _ => {}
+        }
+    });
+}
+
 /// Also dispatches `dialog_open` (Phase 30 Plan 03). `app` is threaded through for that arm:
 /// the folder picker is reached via the AppHandle, not via `args` — the picked path comes
 /// FROM the OS dialog, never INTO it from the renderer/sidecar (T-30-11/T-30-12).
@@ -3381,6 +3440,12 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         // Backs `electronStub.ts`'s `shell.showItemInFolder()`. The path originates from
         // in-app backend callers, not renderer free-text (T-33-11) -- forwarded to the vetted
         // opener plugin's own scoping, not a raw shell-out.
+        //
+        // macOS SELECTION FIX (debug session `finder-reveal-no-selection`, 2026-08-23,
+        // REQ-34.3-11 item 2 / G1): `reveal_item_in_dir` opens the correct folder 100% of the
+        // time, but its selection step is a SEPARATE, systemic macOS/AppKit defect -- see
+        // `macos_finder_reselect_workaround` below for the mechanism and evidence. The
+        // follow-up call is a no-op on other platforms.
         "shell_show_item_in_folder" => {
             let path = args
                 .first()
@@ -3389,6 +3454,8 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             app.opener()
                 .reveal_item_in_dir(path)
                 .map_err(|e| e.to_string())?;
+            #[cfg(target_os = "macos")]
+            macos_finder_reselect_workaround(path);
             Ok(Value::Null)
         }
         // Open a path with the default program (Phase 33 Plan 04, D-05) via
