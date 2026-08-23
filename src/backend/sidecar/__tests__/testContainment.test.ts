@@ -779,6 +779,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'skeletonFlows.test.ts',
   'steamAuthFlows.test.ts',
   'steamFlows.test.ts',
+  'steamgridSecretStore.test.ts',
   'storeLayer.test.ts',
   'structuralContainment.test.ts',
   'testContainment.test.ts',
