@@ -1661,3 +1661,148 @@ describe('Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09) deep-link/single-instanc
     }
   )
 })
+
+// Debug session `finder-reveal-no-selection` (2026-08-23), closing Phase 34.3 live-gate item 2 /
+// gap G1 (REQ-34.3-11 item 2). `showItemInFolder` opened the correct folder but never SELECTED
+// the target, because of a systemic macOS/Finder defect: the selection half of a reveal is
+// dropped whenever the previously-frontmost app's window is on a different display/Space than
+// the one Finder's reveal window opens on. The fix fires a follow-up Finder `select` Apple Event.
+//
+// WHY THIS GATE EXISTS AT ALL, stated plainly: the FIRST version of that fix was DEAD CODE and
+// still passed its own "verified 8/8" check. It used `select POSIX file (item 1 of argv)` with no
+// `as alias` coercion, which fails with AppleScript -1728 on EVERY invocation (measured 0/5), and
+// `let _ = ...output()` discarded the failure so nothing ever said so. The 8/8 had been measured
+// against a hand-typed osascript REPLICA rather than the shipped script. Two properties below --
+// the coercion, and the non-discarded failure path -- are therefore each load-bearing, and each
+// is invisible to every other kind of test in this repo: Rust unit tests cannot drive Finder, CI
+// compiles no Rust at all, and a TS mock cannot observe the contents of a Rust string literal.
+//
+// WHAT THIS GATE CANNOT DO, so a future reader of a green dot is not misled: it proves the SOURCE
+// SHAPE only. It cannot prove the Apple Event actually lands, that Finder selects anything, or
+// that the cross-display defect is still worked around on a future macOS. That half is
+// `34.3-HUMAN-UAT.md` item 2's live check (verified 3/3 through the real button on 2026-08-23).
+describe('REQ-34.3-11 item 2 (debug session finder-reveal-no-selection) macOS Finder re-select workaround', () => {
+  /**
+   * Slices the workaround fn's own body out of `code`. Takes the source as an argument rather
+   * than reading main.rs directly so the RED self-tests below drive this SAME extraction path
+   * with synthetic input, per this file's existing `loadMainRsCode(source?)` convention.
+   */
+  function extractWorkaroundBody(code: string): string {
+    const start = code.indexOf('fn macos_finder_reselect_workaround(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('\n}', start)
+    expect(end).toBeGreaterThan(start)
+    return code.slice(start, end)
+  }
+
+  /**
+   * The two properties whose absence made the first version of this fix a silent no-op. Returned
+   * as a pair (not asserted inline) so the self-tests can run the identical predicate against a
+   * synthetic regressed source and prove this gate goes RED, rather than merely asserting that
+   * today's source happens to be green.
+   */
+  function revealFixProperties(code: string): {
+    coercesToAlias: boolean
+    discardsFailure: boolean
+  } {
+    const body = extractWorkaroundBody(code)
+    return {
+      coercesToAlias: body.includes('as alias)'),
+      discardsFailure: /let\s+_\s*=\s*Command::new\("osascript"\)/.test(body)
+    }
+  }
+
+  test('the workaround fn exists and is macOS-gated', () => {
+    const code = loadMainRsCode()
+    const fnIdx = code.indexOf('fn macos_finder_reselect_workaround(')
+    expect(fnIdx).toBeGreaterThan(-1)
+    // The cfg attribute must gate the fn itself -- a non-macOS build must not compile a Finder
+    // AppleScript shell-out at all.
+    const precedingCfg = code.lastIndexOf('#[cfg(target_os = "macos")]', fnIdx)
+    expect(precedingCfg).toBeGreaterThan(-1)
+    // Nothing but the attribute between it and the fn it gates (same technique as the tray
+    // template test above).
+    expect(code.slice(precedingCfg, fnIdx)).not.toContain(';')
+  })
+
+  test('the shell_show_item_in_folder arm calls the workaround, macOS-gated, AFTER reveal_item_in_dir', () => {
+    const code = loadMainRsCode()
+    const armStart = code.indexOf('"shell_show_item_in_folder" => {')
+    expect(armStart).toBeGreaterThan(-1)
+    const armEnd = code.indexOf('"shell_open_path" =>', armStart)
+    expect(armEnd).toBeGreaterThan(armStart)
+    const armBody = code.slice(armStart, armEnd)
+
+    const revealIdx = armBody.indexOf('.reveal_item_in_dir(')
+    const callIdx = armBody.indexOf('macos_finder_reselect_workaround(')
+    expect(revealIdx).toBeGreaterThan(-1)
+    expect(callIdx).toBeGreaterThan(revealIdx)
+    // The call site is itself cfg-gated, not merely the fn definition.
+    const cfgIdx = armBody.lastIndexOf('#[cfg(target_os = "macos")]', callIdx)
+    expect(cfgIdx).toBeGreaterThan(revealIdx)
+    expect(armBody.slice(cfgIdx, callIdx)).not.toContain(';')
+  })
+
+  test('LOAD-BEARING: the AppleScript coerces the POSIX file specifier with `as alias`', () => {
+    // Without this, Finder's `select` gets an unresolved specifier and errors -1728 every time.
+    // Measured during the debug session: uncoerced 0/5 success, coerced 5/5.
+    expect(revealFixProperties(loadMainRsCode()).coercesToAlias).toBe(true)
+  })
+
+  test('LOAD-BEARING: the osascript result is NOT discarded into `let _ =`', () => {
+    // The dead-code version above survived precisely because its failure was thrown away. The
+    // failure path must remain observable.
+    const code = loadMainRsCode()
+    expect(revealFixProperties(code).discardsFailure).toBe(false)
+    expect(extractWorkaroundBody(code)).toContain('eprintln!')
+  })
+
+  test('the path is passed as an osascript argv ARGUMENT, never interpolated into script text', () => {
+    // Interpolating a path into AppleScript source would be an injection surface and would need
+    // quote/backslash escaping. `on run argv` + a separate .arg() avoids both.
+    const body = extractWorkaroundBody(loadMainRsCode())
+    expect(body).toContain('on run argv')
+    expect(body).toContain('item 1 of argv')
+    expect(body).not.toMatch(/format!\s*\(\s*"[^"]*tell application/)
+  })
+
+  test('SELF-TEST (RED direction): this gate rejects the exact dead-code form that shipped and passed an 8/8 replica check', () => {
+    // Verbatim shape of the original committed fix, which never once succeeded at runtime.
+    const regressed = [
+      '#[cfg(target_os = "macos")]',
+      'fn macos_finder_reselect_workaround(path: &str) {',
+      '    let path = path.to_string();',
+      '    thread::spawn(move || {',
+      '        let _ = Command::new("osascript")',
+      '            .arg("-e")',
+      '            .arg("on run argv\\n  tell application \\"Finder\\" to select POSIX file (item 1 of argv)\\nend run")',
+      '            .arg(&path)',
+      '            .output();',
+      '    });',
+      '}'
+    ].join('\n')
+    const props = revealFixProperties(regressed)
+    // Both load-bearing properties must read as VIOLATED against the known-bad source -- if
+    // either came back "fine" here, the corresponding test above would be incapable of ever
+    // failing and would be a green dot guarding nothing.
+    expect(props.coercesToAlias).toBe(false)
+    expect(props.discardsFailure).toBe(true)
+  })
+
+  test('SELF-TEST (RED direction): a comment merely NAMING `as alias` does not satisfy the coercion gate', () => {
+    // main.rs's own comments discuss `as alias` and `POSIX file` at length (that is why the
+    // coercion is explained in situ), so an unstripped gate could pass on prose alone even if the
+    // real script reverted. Proves the comment-stripping, not the file's current contents.
+    const commentOnly = [
+      '#[cfg(target_os = "macos")]',
+      'fn macos_finder_reselect_workaround(path: &str) {',
+      '    // the `as alias)` coercion is required here',
+      '    let out = Command::new("osascript").arg("-e").arg("select POSIX file x").output();',
+      '    eprintln!("{:?}", out);',
+      '}'
+    ].join('\n')
+    expect(
+      revealFixProperties(loadMainRsCode(commentOnly)).coercesToAlias
+    ).toBe(false)
+  })
+})
