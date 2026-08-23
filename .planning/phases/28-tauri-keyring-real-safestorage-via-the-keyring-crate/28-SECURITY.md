@@ -3,8 +3,13 @@ phase: 28
 slug: tauri-keyring-real-safestorage-via-the-keyring-crate
 status: verified
 threats_open: 0
+threats_total: 31
+threats_closed: 31
 asvs_level: 1
 created: 2026-07-22
+last_audit: 2026-08-23
+audit_unit: "(plan, threat_id) — 31 units across 17 distinct IDs; the 2026-07-22 run keyed on ID and covered 17"
+shards: [RECURRING (20 units), SINGLE (11 units)]
 ---
 
 # Phase 28 — Security
@@ -14,6 +19,57 @@ created: 2026-07-22
 Register origin: **plan-time** (all six plans carried a `<threat_model>` block). This
 audit verified that each claimed mitigation exists in shipped code — it did not
 retroactively scan for new threats.
+
+---
+
+## ⚠ RE-AUDITED 2026-08-23 — the 2026-07-22 run was keyed at the WRONG UNIT
+
+**This document said `Threats found: 17`. The register actually contains 31
+`(plan, threat_id)` audit units across 17 distinct IDs.** The July run wrote one row per
+distinct **ID**, so **14 of 31 units — 45% — were never independently verified.**
+
+Six IDs recur across plans, and **each recurrence names a genuinely different component with a
+different mitigation.** The starkest is `T-28-04`, which appears in **all six plans** as six
+different threats:
+
+| Plan | What `T-28-04` means there |
+|------|-----------------------------|
+| 28-01 | stderr diagnostics for unrecognized frames |
+| 28-02 | keyring error logging on stderr |
+| 28-03 | token value in logs |
+| 28-04 | token value leaking into sidecar logs |
+| 28-05 | a real refresh token echoed into Jest output |
+| 28-06 | the self-check printing a real token |
+
+One row was written for all six. The others: `T-28-02` ×4 (plaintext persistence on Keychain
+failure — the phase's highest-severity family), `T-28-01` ×3, `T-28-05` ×3, `T-28-03` ×2,
+`T-28-09` ×2.
+
+**This was not a lazy audit.** The July run ran `npx jest` across five suites (52/52), ran
+`cargo build`, grepped for surviving self-check references and read `logout()` directly rather
+than trusting the SUMMARY. It was rigorous *at the unit it chose*. That is the whole lesson:
+**rigour cannot compensate for the wrong audit unit** — the 14 missing units were not examined
+badly, they were never visible.
+
+**Outcome of the re-audit: all 31 units CLOSED.** Two shards, keyed by `(plan, threat_id)` —
+20 recurring-ID units (`28-SECURITY-EVIDENCE-RECURRING.md`) and 11 single-occurrence units
+re-verified against today's tree (`28-SECURITY-EVIDENCE-SINGLE.md`). The July conclusion was
+**right**; its evidence merely did not cover what it claimed to.
+
+### Why a drift re-verification was also owed
+
+The July audit is a month old and **the audited code has been substantially reworked since**:
+14 commits touched `keyringTokenStore.ts` / Steam `user.ts`, ~97 touched `main.rs`. Most
+pointedly, `f339137c6` (2026-08-20) **fixed a real security defect in Phase 28's own component
+that this register never contained** — an in-flight keyring read could resurrect a pre-sign-out
+token after `clearToken()`. It was found by *Phase 34.5's* gap cycle as `T-34.5-G6-14`, three
+weeks after this phase was declared threat-secure.
+
+**That is a register-completeness finding, and it is worth more than any single row here:**
+**zero of these 31 rows mention sign-out, cache invalidation, staleness, in-flight reads, or
+concurrency.** The phase that *introduced* the keyring token cache never threat-modelled
+invalidating it. A `verified` register is a statement about the rows it contains, never about
+the rows nobody thought to write.
 
 ---
 
@@ -31,6 +87,17 @@ retroactively scan for new threats.
 ---
 
 ## Threat Register
+
+> **Read this table as the ID-keyed SUMMARY, not the audit.** It has 17 rows — one per distinct
+> threat ID — and the register has **31 `(plan, threat_id)` units**. Six IDs mean different things
+> in different plans (see the re-audit note above), so a row below may describe only *one* plan's
+> instance of its ID. The rows are left as written in July rather than rewritten, so the shape of
+> the original error stays visible.
+>
+> **The per-unit audit lives in `28-SECURITY-EVIDENCE-RECURRING.md` (20 units) and
+> `28-SECURITY-EVIDENCE-SINGLE.md` (11 units).** For any recurring ID — `T-28-01`, `-02`, `-03`,
+> `-04`, `-05`, `-09` — go to the evidence files; this table cannot tell you which plan's instance
+> it is talking about.
 
 | Threat ID | Category | Component | Disposition | Mitigation | Status |
 |-----------|----------|-----------|-------------|------------|--------|
@@ -84,11 +151,59 @@ registered mitigation's disposition.
 
 ---
 
+## Findings from the 2026-08-23 re-audit (all CLOSED, all worth carrying)
+
+None of these changed a disposition. All three are cases where **the register's description of
+reality had quietly stopped matching reality** — the failure mode a `verified` badge hides best.
+
+### F-1 — `T-28-10`'s own acceptance grep is now silently stale
+
+Plan 28-04 Task 3's acceptance criterion was `grep -A 12 bindTransport` containing
+`SidecarKeyringTokenStore` (≥1 hit). **Measured today it returns `0`** — the 34.5 dev-vault branch
+pushed the install call ~29 lines past that 12-line window.
+
+The substantive ordering property still HOLDS (verified by hand-tracing `init()`'s synchronous
+control flow: no `await` between `startRpcServer()` and `installTokenStore()`, `bootstrap.ts:507-541`),
+so the unit is CLOSED. But the plan's literal proof mechanism now passes nothing — a textbook
+*gate literal stale by behaviour, not by line number*. If this region is touched again, widen the
+window or replace it with a durable test rather than re-running a grep that can no longer fail
+for the right reason.
+
+### F-2 — `T-28-11`'s mitigation had ALREADY been replaced when July described it
+
+July's register describes a "snapshot-and-restore" protection for the developer's real Steam
+session. That mechanism **actually failed in production and destroyed a real developer's Steam
+session** — recorded in the test file's own docstring — and was replaced by a strictly stronger
+purely read-only design in commit `92c29a5ea` (*"fix(28-05): make electronUntouched.test.ts
+strictly read-only"*).
+
+Today's code is **better** than what this register claimed. The register was simply describing a
+mitigation that no longer existed. CLOSED on the current, stronger mechanism.
+
+### F-3 — a dev-only plaintext vault can now SUBSTITUTE for the keyring store
+
+`src/backend/sidecar/devSecretVault.ts` (added later, by 34.5 gap cycle 4) calls `setTokenStore()`
+and can stand in for `SidecarKeyringTokenStore` at `bootstrap.ts:537-541`. Both shards flagged it
+independently. **It does not breach `T-28-02`** — that threat's shape is a plaintext write
+*triggered by Keychain failure*, whereas this activates only by deliberate opt-in.
+
+Guardrails verified by direct read, not taken on the auditors' word: opt-in requires
+`GAMELIB_DEV_SECRET_VAULT === '1'` as an **exact string**; `isPackagedSidecar()` must return
+`false`; and if that call *throws*, installation is **refused** rather than proceeding — it fails
+CLOSED in both directions.
+
+**What is stale is the register's language, not its verdict.** D-08's "no dev escape hatch"
+wording no longer describes this tree. A dev-only plaintext vault sitting beside the keyring seam
+is exactly the kind of thing a future reader of this document should be told exists.
+
+---
+
 ## Security Audit Trail
 
 | Audit Date | Threats Total | Closed | Open | Run By |
 |------------|---------------|--------|------|--------|
 | 2026-07-22 | 17 | 17 | 0 | gsd-security-auditor (verification mode, plan-time register) |
+| 2026-08-23 | **31** | **31** | 0 | `/gsd-secure-phase 28` re-audit — **unit corrected from `threat_id` to `(plan, threat_id)`, 17 → 31.** The 14 units the July run could not see were audited for the first time and all hold. Two shards: RECURRING 20/20, SINGLE 11/11 (the latter drift-checked against today's tree, not July's). Three descriptive-staleness findings F-1/F-2/F-3 filed, no disposition changed. |
 
 ### Security Audit 2026-07-22
 
@@ -114,4 +229,10 @@ Independent re-verification performed by the auditor rather than trusting SUMMAR
 - [x] `threats_open: 0` confirmed
 - [x] `status: verified` set in frontmatter
 
-**Approval:** verified 2026-07-22
+**Approval:** verified 2026-07-22 · **re-verified at the correct unit 2026-08-23** (31/31
+`(plan, threat_id)` units, `threats_open: 0`).
+
+**What this sign-off does NOT assert.** It covers the 31 rows the six plans wrote. It does not
+assert the register is complete — none of those rows contemplate sign-out, cache invalidation or
+concurrent reads, which is where this phase's one confirmed real defect (`T-34.5-G6-14`, fixed
+`f339137c6`) actually lived. Closing a register is not the same as bounding a component's risk.

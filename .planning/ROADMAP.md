@@ -1087,6 +1087,22 @@ Plans:
 **Ordering constraint (load-bearing, not a preference):** This phase MUST land before any channel that WRITES a token is wired. The sidecar and Electron share one store by design (`pathShim` resolves `userData` to the same folder), so under the current stub `encryptToken()` writes `TOKEN_PREFIX` + plaintext, Electron then fails to Keychain-decrypt it and silently signs the user out of the real app. See `27-.../SEAM.md` §2.
 **Plans:** 6/6 plans complete
 
+**Security RE-AUDITED 2026-08-23 — `28-SECURITY.md` stays `verified` / `threats_open: 0`, but its
+unit was wrong and is now corrected: 17 rows → **31 `(plan, threat_id)` units**.** The 2026-07-22
+run keyed on threat ID, and six IDs recur across plans meaning *different things each time*
+(`T-28-04` appears in all six plans as six unrelated threats), so **14 of 31 units — 45% — had
+never been verified**. All 14 were audited for the first time and all hold; two shard evidence
+files added. The July run was rigorous at the unit it chose — that is the lesson, not laziness.
+
+**Register-completeness finding, more important than any row:** zero of the 31 rows mention
+sign-out, cache invalidation, staleness or concurrency. The phase that introduced the keyring
+token cache never threat-modelled invalidating it — which is exactly where its one confirmed real
+defect lived (`T-34.5-G6-14`, an in-flight read resurrecting a pre-sign-out token, found by *Phase
+34.5's* gap cycle three weeks later and fixed in `f339137c6`). Three descriptive-staleness findings
+(F-1 a stale acceptance grep now returning 0, F-2 a mitigation replaced before July described it,
+F-3 the later `devSecretVault.ts` dev-only plaintext vault that can substitute for the keyring
+store — verified to fail closed) are filed in `28-SECURITY.md`; none changed a disposition.
+
 Plans:
 **Wave 1**
 
