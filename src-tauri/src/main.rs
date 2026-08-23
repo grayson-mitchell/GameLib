@@ -260,16 +260,20 @@ const KEYRING_ACCOUNT: &str = "steam-refresh-token";
 /// keys, per `34.4.1-SEAM-PARITY-SWEEP.md` S-10): packing both into one slot would make a partial
 /// write corrupt both.
 ///
-/// `steamgrid/secureKey.ts` (F-1b, `34.4.1-SEAM-PARITY-SWEEP.md` S-11) deliberately has NO slot
-/// here: the sweep found it unreachable from the sidecar's curated import graph today (reached
-/// only via `src/backend/main.ts`, Electron's own entry point, never the sidecar's
-/// `bootstrap.ts`/`handlers.ts` chain) -- it stays dormant, not live. A future plan adds its slot
-/// only once it is actually wired into a sidecar registration module.
+/// `steamgrid/secureKey.ts` (F-1b, `34.4.1-SEAM-PARITY-SWEEP.md` S-11) previously had NO slot
+/// here, deliberately: the sweep found it unreachable from the sidecar's curated import graph at
+/// the time (reached only via `src/backend/main.ts`, Electron's own entry point, never the
+/// sidecar's `bootstrap.ts`/`handlers.ts` chain), so it stayed dormant, not live. Phase 34.6 plan
+/// 01 (`34.6-CONTEXT.md` amendment A-03) is that future plan: the `steamgrid-api-key` arm below
+/// lands BEFORE the SteamGridDB channels are registered on the sidecar (plan 34.6-09), not after,
+/// because D-06's live gate would otherwise write a real operator API key to disk in plaintext at
+/// the moment `secureKey.ts`'s `safeStorage` import resolves to `electronStub.ts`'s dead stub.
 fn keyring_account(slot: &str) -> Result<&'static str, String> {
     match slot {
         "steam-refresh-token" => Ok(KEYRING_ACCOUNT),
         "humble-session" => Ok("humble-session"),
         "humble-csrf" => Ok("humble-csrf"),
+        "steamgrid-api-key" => Ok("steamgrid-api-key"),
         _ => Err("keyring:unknown-slot".to_string()),
     }
 }
@@ -7687,6 +7691,36 @@ mod tests {
         assert!(keyring_account("steam-refresh-tokens").is_err());
         assert!(keyring_account("Steam-Refresh-Token").is_err());
         assert!(keyring_account("humble_session").is_err());
+    }
+
+    #[test]
+    fn keyring_account_maps_steamgrid_api_key_to_its_own_distinct_account() {
+        assert_eq!(
+            keyring_account("steamgrid-api-key"),
+            Ok("steamgrid-api-key")
+        );
+    }
+
+    #[test]
+    fn keyring_account_steamgrid_api_key_never_collides_with_humble_or_steam_slots() {
+        // Guards against a copy-paste that maps the new slot onto an existing account string,
+        // which would let a SteamGridDB write clobber the Steam token or a Humble secret.
+        let steamgrid = keyring_account("steamgrid-api-key").unwrap();
+        assert_ne!(
+            steamgrid,
+            keyring_account("steam-refresh-token").unwrap()
+        );
+        assert_ne!(steamgrid, keyring_account("humble-session").unwrap());
+        assert_ne!(steamgrid, keyring_account("humble-csrf").unwrap());
+    }
+
+    #[test]
+    fn keyring_account_rejects_steamgrid_near_miss_slots() {
+        // Known-bad direction: near-misses of the new slot name must not silently resolve to
+        // the real slot -- without this, the allowlist arm is only proven in one direction.
+        assert!(keyring_account("steamgrid_api_key").is_err());
+        assert!(keyring_account("steamgrid-api-keys").is_err());
+        assert!(keyring_account("SteamGrid-Api-Key").is_err());
     }
 
     // ---- keyring_slot_arg (34.4.1 gap cycle plan 11, D-GAP-01) ----

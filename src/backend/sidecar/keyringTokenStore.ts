@@ -26,6 +26,7 @@ import {
 export const KEYRING_SLOT_STEAM_REFRESH_TOKEN = 'steam-refresh-token'
 export const KEYRING_SLOT_HUMBLE_SESSION = 'humble-session'
 export const KEYRING_SLOT_HUMBLE_CSRF = 'humble-csrf'
+export const KEYRING_SLOT_STEAMGRID_API_KEY = 'steamgrid-api-key'
 
 /**
  * Bounded negative-result memo window for `getToken()` (34.5 gap cycle 3 plan 25, closing
