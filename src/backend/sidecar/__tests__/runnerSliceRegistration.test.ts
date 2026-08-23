@@ -21,27 +21,33 @@
  *      an `ipc_handler.ts` file cannot trip the gate (mirrors `humbleLoginFlows.test.ts`'s own
  *      Describe 3 approach).
  *   5. Growth-tolerant containment pin (T-34.5-13) — each module's declared channel set (hard-
- *      coded here from this plan's own `<interfaces>` block, counts 11/9/7/11) is asserted as
- *      the ONLY set of channels that module may ever register: every channel it actually
- *      registers (via `listenerRegistry`/`handlerRegistry`) must be a member of its own set, and
- *      no channel belonging to another module's set (or outside the declared 38 entirely) may
- *      appear there.
+ *      coded here from this plan's own `<interfaces>` block, counts 11/13/7/11 as of Phase 34.6
+ *      Plan 07 — wineTools grew from 9 to 13, see item 6/7 below) is asserted as the ONLY set of
+ *      channels that module may ever register: every channel it actually registers (via
+ *      `listenerRegistry`/`handlerRegistry`) must be a member of its own set, and no channel
+ *      belonging to another module's set (or outside the declared total entirely) may appear
+ *      there.
  *   6. Completeness (Phase 34.5 Plan 13, REQ-34.5-10) — added once every cluster plan (34.5-05
- *      through 34.5-12) has landed. This is the FIRST point in the phase at which "all 38
- *      channels are registered" is a true statement: exactly 34 channels sit in `handlerRegistry`
- *      and exactly 4 in `listenerRegistry`, the send set is asserted by SET EQUALITY (not size —
- *      a size-only check would pass if two channels swapped kinds) against
- *      `['logoutGOG', 'addShortcut', 'processShortcut', 'removeShortcut']`, and per-module counts
- *      are pinned at 11/9/7/11.
+ *      through 34.5-12) had landed. As of Phase 34.6 Plan 07 (REQ-34.6-04/07/13), the 3 winetricks
+ *      channels plus `runWineCommandForGame` are ALSO registered (ported out of the DEFERRED set),
+ *      so the totals here grew: exactly 38 channels sit in `handlerRegistry` and exactly 5 in
+ *      `listenerRegistry`, the send set is asserted by SET EQUALITY (not size — a size-only check
+ *      would pass if two channels swapped kinds) against `['logoutGOG', 'addShortcut',
+ *      'processShortcut', 'removeShortcut', 'winetricksInstall']`, and per-module counts are
+ *      pinned at 11/13/7/11, totalling 42.
  *   7. SEAM Invariant B (Phase 34.5 Plan 13) — the 3 DROPPED Zoom channels (`authZoom`,
- *      `getZoomUserInfo`, `logoutZoom`) and the 16 DEFERRED channels (EOS overlay 8, SteamGridDB
- *      5, winetricks 3) are proven absent from both registries after all four modules are
- *      registered, so they still reject with `UNPORTED_CHANNEL_MARKER` (`sidecarRpc.ts`'s
- *      `handlerRegistry.get()` miss path) rather than silently gaining an implementation. All 19
- *      names are listed explicitly — the whole point is that no new code exists for them.
+ *      `getZoomUserInfo`, `logoutZoom`) and the DEFERRED channels (EOS overlay 8, SteamGridDB 5 —
+ *      13 total as of Phase 34.6 Plan 07, winetricks having moved OUT of this deferred set and
+ *      into item 6's real registration above) are proven absent from both registries after all
+ *      four modules are registered, so they still reject with `UNPORTED_CHANNEL_MARKER`
+ *      (`sidecarRpc.ts`'s `handlerRegistry.get()` miss path) rather than silently gaining an
+ *      implementation. All 16 names are listed explicitly — the whole point is that no new code
+ *      exists for them.
  *
- * This suite is the phase's completeness gate: `34.5-PORTED-CHANNELS.md` (plan 34.5-14) declares
- * the same 38 rows, and the two must agree — plan 34.5-14's gate script cross-checks them.
+ * This suite is the phase's completeness gate: `34.5-PORTED-CHANNELS.md` (plan 34.5-14) declared
+ * the 38 rows Phase 34.5 shipped; Phase 34.6 grows this suite's own totals beyond that document's
+ * scope as each deferred cluster is ported, so agreement with that document is a Phase-34.5-era
+ * property this suite no longer re-asserts past this plan.
  */
 
 import { readFileSync } from 'fs'
@@ -137,7 +143,13 @@ const WINE_TOOLS_CHANNELS = [
   'toggleVKD3D',
   'installWineVersion',
   'refreshWineVersionInfo',
-  'removeWineVersion'
+  'removeWineVersion',
+  // Phase 34.6 Plan 07 (REQ-34.6-04/07/13, A-01/D-02/D-11): the 3 winetricks channels plus
+  // runWineCommandForGame, ported from the DEFERRED set into this module's real registration.
+  'winetricksAvailable',
+  'winetricksInstalled',
+  'winetricksInstall',
+  'runWineCommandForGame'
 ]
 
 const SHORTCUTS_CHANNELS = [
@@ -164,7 +176,7 @@ const RUNNER_MISC_CHANNELS = [
   'isRuntimeInstalled'
 ]
 
-const ALL_38_CHANNELS = [
+const ALL_CHANNELS = [
   ...RUNNER_AUTH_CHANNELS,
   ...WINE_TOOLS_CHANNELS,
   ...SHORTCUTS_CHANNELS,
@@ -362,7 +374,7 @@ describe("containment pin — each module registers only its own declared channe
       register()
 
       const registered = allRegisteredChannelNames()
-      const foreignChannels = ALL_38_CHANNELS.filter(
+      const foreignChannels = ALL_CHANNELS.filter(
         (channel) => !declaredChannels.includes(channel)
       )
 
@@ -405,7 +417,9 @@ const SEND_CHANNELS = [
   'logoutGOG',
   'addShortcut',
   'processShortcut',
-  'removeShortcut'
+  'removeShortcut',
+  // Phase 34.6 Plan 07 (D-11): winetricksInstall stays send-kind.
+  'winetricksInstall'
 ]
 
 describe('completeness — all 38 channels are registered with the right kind, across all four modules together (Phase 34.5 Plan 13, REQ-34.5-10)', () => {
@@ -416,14 +430,16 @@ describe('completeness — all 38 channels are registered with the right kind, a
     restoreCanonicalRegistrations()
   })
 
-  it('exactly 34 channels are handle-kind and exactly 4 are listen-kind', () => {
+  it('exactly 37 channels are handle-kind and exactly 5 are listen-kind (Phase 34.6 Plan 07: 34/4 -> 37/5, +3 invoke +1 send)', () => {
     const handleChannels = [...handlerRegistry.keys()]
     const listenChannels = [...listenerRegistry.entries()]
       .filter(([, listeners]) => listeners.length > 0)
       .map(([channel]) => channel)
 
-    expect(handleChannels.length).toBe(34)
-    expect(listenChannels.length).toBe(4)
+    // Measured (jest failure ACTUAL, this plan's execution) and independently re-derived from
+    // arithmetic (34+3=37 invoke, 4+1=5 send) — both agree.
+    expect(handleChannels.length).toBe(37)
+    expect(listenChannels.length).toBe(5)
   })
 
   it('the send set is precisely the 4 named channels — set equality, not a size-only check (a size-only check would pass if two channels swapped kinds)', () => {
@@ -453,10 +469,11 @@ describe('completeness — all 38 channels are registered with the right kind, a
     }
   )
 
-  it('per-module declared counts are exactly 11 / 9 / 7 / 11, totalling 38', () => {
+  it('per-module declared counts are exactly 11 / 13 / 7 / 11, totalling 42 (Phase 34.6 Plan 07: wineTools 9 -> 13)', () => {
     const counts = MODULES.map((m) => m.declaredChannels.length)
-    expect(counts).toEqual([11, 9, 7, 11])
-    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(38)
+    // Measured (jest failure ACTUAL) and independently re-derived (9 original + 4 new = 13) — agree.
+    expect(counts).toEqual([11, 13, 7, 11])
+    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(42)
   })
 
   afterAll(() => {
@@ -467,14 +484,15 @@ describe('completeness — all 38 channels are registered with the right kind, a
 })
 
 // ── Describe 7: SEAM Invariant B — dropped/deferred channels still reject (Phase 34.5 Plan 13) ─
-// The 3 DROPPED Zoom channels (34.5-CONTEXT.md D-02) and the 16 DEFERRED channels (D-03/D-05 —
-// EOS overlay 8, SteamGridDB artwork 5, winetricks 3, all moved to the new Phase 34.6 per
-// `.planning/IPC-PORT-INVENTORY.md` § "Phase 34.6") must NOT be registered by any of this
-// slice's four modules. Absence from `handlerRegistry` is what makes `sidecarRpc.ts`'s dispatch
+// The 3 DROPPED Zoom channels (34.5-CONTEXT.md D-02) and the 13 DEFERRED channels (D-03/D-05 —
+// EOS overlay 8, SteamGridDB artwork 5 — as of Phase 34.6 Plan 07, which ported the former
+// winetricks-3 member of this set into real registration, see item 6 above and
+// `wineToolsFlowRegistration.ts`) must NOT be registered by any of this slice's four modules.
+// Absence from `handlerRegistry` is what makes `sidecarRpc.ts`'s dispatch
 // (`const handler = handlerRegistry.get(request.channel); if (!handler) { ... reject with
 // UNPORTED_CHANNEL_MARKER ... }`) reject these channels honestly rather than silently — "drop"
 // and "defer" mean let it reject and say so, not build a degradation path.
-describe('SEAM Invariant B — the 3 dropped and 16 deferred channels are NOT registered by any of the four modules (Phase 34.5 Plan 13)', () => {
+describe('SEAM Invariant B — the 3 dropped and 13 deferred channels are NOT registered by any of the four modules (Phase 34.5 Plan 13; Phase 34.6 Plan 07 moved winetricks out of this set)', () => {
   const DROPPED_ZOOM = ['authZoom', 'getZoomUserInfo', 'logoutZoom']
 
   const DEFERRED_EOS_OVERLAY = [
@@ -496,17 +514,14 @@ describe('SEAM Invariant B — the 3 dropped and 16 deferred channels are NOT re
     'steamgriddb.setApiKey'
   ]
 
-  const DEFERRED_WINETRICKS = [
-    'winetricksAvailable',
-    'winetricksInstall',
-    'winetricksInstalled'
-  ]
+  // The 3 winetricks names formerly listed here (Phase 34.5 Plan 13) moved to
+  // `WINE_TOOLS_CHANNELS` above and to the new presence describe below — Phase 34.6 Plan 07
+  // ported them out of the deferred set into real registration (A-01/D-02/D-11).
 
   const DROPPED_OR_DEFERRED = [
     ...DROPPED_ZOOM,
     ...DEFERRED_EOS_OVERLAY,
-    ...DEFERRED_STEAMGRIDDB,
-    ...DEFERRED_WINETRICKS
+    ...DEFERRED_STEAMGRIDDB
   ]
 
   beforeAll(() => {
@@ -515,13 +530,13 @@ describe('SEAM Invariant B — the 3 dropped and 16 deferred channels are NOT re
     restoreCanonicalRegistrations()
   })
 
-  it('lists exactly 19 dropped-or-deferred channel names (3 dropped + 16 deferred)', () => {
-    expect(DROPPED_OR_DEFERRED.length).toBe(19)
+  it('lists exactly 16 dropped-or-deferred channel names (3 dropped + 13 deferred)', () => {
+    expect(DROPPED_OR_DEFERRED.length).toBe(16)
   })
 
-  it('none of the 19 dropped-or-deferred names appears in the declared 38', () => {
+  it('none of the 16 dropped-or-deferred names appears in the declared channel set', () => {
     for (const channel of DROPPED_OR_DEFERRED) {
-      expect(ALL_38_CHANNELS).not.toContain(channel)
+      expect(ALL_CHANNELS).not.toContain(channel)
     }
   })
 
@@ -536,6 +551,34 @@ describe('SEAM Invariant B — the 3 dropped and 16 deferred channels are NOT re
   afterAll(() => {
     // Leave the shared registries in a known state for any test file that runs after this one
     // in the same worker.
+    restoreCanonicalRegistrations()
+  })
+})
+
+// ── Describe 8: winetricks presence, correct kind (Phase 34.6 Plan 07, REQ-34.6-04/07/13) ──────
+// The inverse of Describe 7's absence proof for the same 3 names — this cluster's D-09 pair.
+// `winetricksAvailable`/`winetricksInstalled` are invoke-kind; `runWineCommandForGame` is also
+// invoke-kind; `winetricksInstall` alone is send-kind (D-11) — present in `listenerRegistry`,
+// absent from `handlerRegistry`.
+describe('winetricks + runWineCommandForGame presence, correct kind, across all four modules together (Phase 34.6 Plan 07)', () => {
+  beforeAll(() => {
+    restoreCanonicalRegistrations()
+  })
+
+  it.each(['winetricksAvailable', 'winetricksInstalled', 'runWineCommandForGame'])(
+    '%s is registered as ipcMain.handle (invoke), and NOT as ipcMain.on',
+    (channel) => {
+      expect(handlerRegistry.has(channel)).toBe(true)
+      expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
+    }
+  )
+
+  it('winetricksInstall is registered as ipcMain.on (send), and NOT as ipcMain.handle', () => {
+    expect(handlerRegistry.has('winetricksInstall')).toBe(false)
+    expect((listenerRegistry.get('winetricksInstall') ?? []).length).toBeGreaterThan(0)
+  })
+
+  afterAll(() => {
     restoreCanonicalRegistrations()
   })
 })
