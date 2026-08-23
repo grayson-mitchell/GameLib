@@ -234,6 +234,19 @@ electron-builder run).
 
 **OWNER:** whichever plan next re-runs or re-authors this contract (2026-08-12).
 
+**CLOSED 2026-08-23 (quick task 260823-seg).** The named precondition landed as
+`34.9-GUARD-PROOF.md` §2.5 **AMENDMENT v2 §A1**, which replaces §3's PASS bar (d) in full with the
+validated substitute (assert `verify:runner-bundle` is the LAST pnpm lifecycle banner, record its
+line number; (c)'s two banner-absence greps stay where they already are). §3's original (d) is
+struck through **in place** and marked "do not run" rather than deleted, so the 2026-08-12 RUN
+RECORD stays interpretable against the contract it was actually scored under.
+
+**The fix carries an explicit scope fence, because the obvious generalization is wrong.** §5's PASS
+bar (d) has the same *shape* but is genuinely load-bearing — on the passing direction `dist/` gains
+artifacts only if the build completes, and that check doubles as the F-34.9-02 stale-artifact
+guard. It is annotated **NOT superseded — do not retire for symmetry**. This finding was always
+scoped to Direction A alone and the amendment keeps it that way.
+
 ### 15. `34.9-GUARD-PROOF.md`'s exit-capture idiom silently no-ops under zsh; `cat -A` is BSD-incompatible
 
 **What it is:** the contract's prescribed pattern `pnpm dist:mac 2>&1 | tee -a log; echo
@@ -253,6 +266,26 @@ zsh and bash) and its byte-dump instruction to `cat -e`/`xxd`.
 
 **OWNER:** whichever plan next re-runs or re-authors this contract (2026-08-12).
 
+**CLOSED 2026-08-23 (quick task 260823-seg), with one half recorded as VERIFIED-ABSENT rather than fixed.**
+
+The exit-capture half landed as `34.9-GUARD-PROOF.md` §2.5 **AMENDMENT v2 §A2**: the redirect form
+`pnpm dist:mac > <SESSION_DIR>/direction-a.log 2>&1; echo $? > <SESSION_DIR>/direction-a.exit`
+replaces the piped idiom at all four sites (§3 step 4, §3 PASS bar (a), §5 step 2, §5 PASS bar
+(a)), each carrying an inline SUPERSEDED marker. The amendment also requires reading the exit file
+back with `xxd` before scoring it, because a 1-byte file is this defect's actual signature.
+
+**A rule conflict this fix would otherwise have created is reconciled in the open.** Precondition 7
+mandates `tee -a`, "never bare `tee`, never `>`" — a rule that exists so a re-run cannot TRUNCATE
+an earlier block's evidence. The redirect form reintroduces exactly that risk, so v2 makes a
+**distinct filename per block** mandatory and says so at precondition 7 itself. Precondition 7's
+intent is preserved; only its mechanism changes. Two rules left in silent conflict is how the
+original defect survived authoring in the first place.
+
+**The `cat -A` half needed no edit and is NOT claimed as fixed.** Grepped live 2026-08-23: `cat -A`
+appears ONLY in the RUN RECORD's own `F-34.9-21-02` finding row, and NOWHERE in the contract's
+prescribed commands — the body already uses `xxd` at both byte-dump sites. There was nothing to
+repair. Recording this as "fixed" would have manufactured a change that never happened.
+
 ### 16. `34.9-GUARD-PROOF.md`'s CLI-argument-passthrough sub-claim (Direction B) was never exercised
 
 **What it is:** Section 5 of the contract, as authored by plan 34.9-20, specifies Direction B as
@@ -271,6 +304,32 @@ args-passthrough claim does not.
 resulting electron-builder invocation honored it (an arm64 `target=` line, no `Uploading` line).
 
 **OWNER:** whichever plan next exercises `dist:mac`/`release:mac` on real hardware (2026-08-12).
+
+**PARTIALLY ADDRESSED 2026-08-23 (quick task 260823-seg) — THIS ITEM REMAINS OPEN.**
+
+Only the contract-side half is done. The sub-claim itself is unproven and **cannot be closed by
+editing a document**; it needs a hardware run.
+
+**What the investigation corrected about this item's own framing:** this is not a
+missing-instruction defect. Section 5 step 2 ALREADY prescribes `pnpm dist:mac --arm64
+--publish=never`, ALREADY states the args-passthrough rationale, and PASS bar (c) ALREADY asserts
+an arm64 `target=` line plus `grep -c Uploading` = 0. **The contract was correct.** What failed is
+that plan 34.9-21's `how-to-verify` PARAPHRASED the step as "Run the identical `pnpm dist:mac`",
+dropping the args, and the run followed the paraphrase rather than the contract (Deviation 6). A
+lossy restatement outranked a correct record in practice, because the restatement is what the
+executor actually reads.
+
+**So the fix is a precedence rule, landed as AMENDMENT v2 §A3, not new procedure:** §5's invocation
+string is NORMATIVE; a plan may CITE it but must not PARAPHRASE it; where the two disagree the
+contract wins; any deliberate departure is recorded as a deviation BEFORE the run. §5 step 2 and §5
+PASS bar (a) both carry inline markers to that effect.
+
+**Still owed, and the only thing that can close this item:** the next hardware run must execute §5
+step 2 with its arguments as written and record, in its own run record, the arm64 `target=` line
+verbatim plus `grep -c Uploading` = 0, naming `F-34.9-21-03` as discharged. Phase 34.16 will re-run
+this contract and is the natural place for it.
+
+**OWNER (unchanged):** whichever plan next exercises `dist:mac`/`release:mac` on real hardware.
 
 ## Code-review finding disposition (2026-08-12)
 
