@@ -248,12 +248,6 @@ export default function HumbleKeysWaiting() {
 
   return (
     <div className="humbleKeysTabPanel">
-      <p className="humbleKeysBlurb">
-        {t(
-          'humbleKeys.waitingBlurb',
-          "Keys you don't own yet — claim them before they expire."
-        )}
-      </p>
       {/* D-89: the pinned block (heading + list) renders nothing at all when
           empty — not a zero-row heading, not a display:none container. */}
       {pinned.length > 0 && (

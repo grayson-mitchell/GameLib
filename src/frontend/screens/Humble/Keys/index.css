@@ -334,13 +334,6 @@
   color: var(--accent);
 }
 
-.humbleKeysBlurb {
-  font-size: var(--text-md);
-  font-weight: var(--regular);
-  color: var(--text-secondary);
-  margin: 0 0 var(--space-md);
-}
-
 /* D-56: Keys-waiting is one flat list — no section headers, unlike
    .humbleKeyGroupList's per-group sections on the All-keys tab. */
 .humbleKeysFlatList {

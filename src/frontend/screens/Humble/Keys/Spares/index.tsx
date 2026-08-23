@@ -69,12 +69,6 @@ export default function HumbleKeysSpares() {
 
   return (
     <div className="humbleKeysTabPanel">
-      <p className="humbleKeysBlurb">
-        {t(
-          'humbleKeys.sparesBlurb',
-          'You already own these games — keep the keys unrevealed and gift them instead.'
-        )}
-      </p>
       {keys.length > 0 ? (
         <ul className="humbleKeysFlatList">
           {keys.map((key) => (
