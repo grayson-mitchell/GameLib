@@ -3621,10 +3621,17 @@ this phase paid for four times over.
   than urgent** — Phase 35 deletes Electron entirely — but recorded so that decision is made
   knowingly rather than by omission.
 
-Also carried forward, lower severity: **WR-01** — `muiTabsSelectorScoping.test.ts`'s guard (the
-load-bearing one that prevents F-34.10-03/-04 recurring) is bypassable by wrapping an unscoped
-`.MuiTabs-root` in `@media`/`@supports`, verified empirically; dormant today but the guard's stated
-promise does not fully hold. **WR-02** — `LibraryFilters/index.tsx`'s `t(RunnerToStore[store])`
+Also carried forward, lower severity: **WR-01 — CLOSED 2026-08-23** (quick task `260823-tct`,
+commit `4f44ef280`). `muiTabsSelectorScoping.test.ts`'s guard (the load-bearing one that prevents
+F-34.10-03/-04 recurring) was bypassable by wrapping an unscoped `.MuiTabs-root` in
+`@media`/`@supports`, verified empirically; dormant, but the guard's stated promise did not hold.
+The single brace-depth counter is now a stack of block kinds — scope depth counts only `rule`
+frames, and `@media`/`@supports`/`@container`/`@layer`/`@document` push a `transparent` frame.
+All 11 new cases were observed RED against the unmodified scanner before the fix was written.
+A second, independent miss in the same guard was found and closed with it: a preceding
+`$leak: 8px;` was swept into the selector text, making the first compound read `$leak:` and hiding
+a real offender. **This does not reopen the phase** — 34.10 closed 2026-08-09 on run 4's 5/5 and
+stays closed; this is a carry-forward discharge. **WR-02** — `LibraryFilters/index.tsx`'s `t(RunnerToStore[store])`
 produces untranslatable labels for `steam`/`zoom` (never registered in `translation.json`, unlike
 the Epic/GOG/Amazon siblings); pre-existing, predates this phase. **IN-01** — dead `data-tour`
 props in `CategoryFilter`/`LibraryFilters` that `Dropdown` never reads.
