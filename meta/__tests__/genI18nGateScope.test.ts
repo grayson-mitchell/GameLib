@@ -570,10 +570,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 162-file hand-curated snapshot and the fresh snapshot is the REAL 185', () => {
-    expect(scopeSnapshot.files.length).toBe(162)
-    expect(forkTouchedSnapshot.files.length).toBe(198)
-    expect(freshSnapshot().files.length).toBe(198)
+  it('A0 fixture sanity: the seeded scope is the REAL 163-file hand-curated snapshot and the fresh snapshot is the REAL 199', () => {
+    expect(scopeSnapshot.files.length).toBe(163)
+    expect(forkTouchedSnapshot.files.length).toBe(199)
+    expect(freshSnapshot().files.length).toBe(199)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -599,7 +599,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 162 -> 185 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 163 -> 199 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -622,7 +622,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 185', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 199', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -635,12 +635,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(198)
+    expect(rewritten.files.length).toBe(199)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 185 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 199 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -653,7 +653,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(198)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(199)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {

@@ -1,7 +1,7 @@
 {
   "baseCommit": "b5b5cad3fa2e822602d320b70788d87240fc056e",
   "baseVersion": "2.22.0",
-  "generatedAt": "2026-08-22T20:05:18.784Z",
+  "generatedAt": "2026-08-23T07:26:57.401Z",
   "generatedBy": "pnpm gen-i18n-gate-scope",
   "purpose": "A-17: the CI-readable input to the i18n scope staleness ratchet — every fork-touched src/frontend source file eligible for the hardcoded-string gate (D-17 deferrals already removed, exactly the operand the ratchet compares against), INCLUDING those not yet listed in i18nGateScope.json. Regenerate with `pnpm gen-i18n-gate-scope`.",
   "files": [
@@ -56,6 +56,7 @@
     "src/frontend/helpers/library.ts",
     "src/frontend/helpers/steamInstallOptionsEntry.ts",
     "src/frontend/helpers/steamKeyValidation.ts",
+    "src/frontend/helpers/storeDisplayName.ts",
     "src/frontend/hooks/constants.ts",
     "src/frontend/hooks/hasStatus.ts",
     "src/frontend/hooks/useSettingsContext.ts",

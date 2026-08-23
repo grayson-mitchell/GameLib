@@ -43,6 +43,7 @@
     "src/frontend/helpers/library.ts",
     "src/frontend/helpers/steamInstallOptionsEntry.ts",
     "src/frontend/helpers/steamKeyValidation.ts",
+    "src/frontend/helpers/storeDisplayName.ts",
     "src/frontend/hooks/constants.ts",
     "src/frontend/hooks/hasStatus.ts",
     "src/frontend/hooks/useSettingsContext.ts",
