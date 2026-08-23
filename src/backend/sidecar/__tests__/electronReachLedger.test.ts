@@ -98,7 +98,19 @@ const ENTRY_POINTS = [
   // moveInstall/importGame port. installFlowRegistration.ts was never
   // previously an entry point. See the BASELINE_ELECTRON_REACHING_MODULES
   // header comment below for the measured before/after.
-  join(REPO_ROOT, 'src/backend/sidecar/installFlowRegistration.ts')
+  join(REPO_ROOT, 'src/backend/sidecar/installFlowRegistration.ts'),
+  // Phase 34.6 Plan 08 (REQ-34.6-13, 2026-08-24): the 8 EOS overlay channels'
+  // registration module. Never previously an entry point. `eos_overlay.ts`
+  // reaches `electron` directly at its own line 1 (`import { dialog } from
+  // 'electron'`) — this entry point is what makes the walk discover that
+  // edge. Measured (not predicted): visitedFiles.size 246 -> 247 (+1, the
+  // entry-point file itself); electronImportingFiles.size UNCHANGED at 35
+  // -- eos_overlay.ts (and everything it transitively pulls in) was already
+  // in the baseline below, reached via runnerAuthFlowRegistration.ts's own
+  // storeManagers/legendary/user.ts -> storeManagers/index.ts eager
+  // cross-runner construction. See 34.6-08-SUMMARY.md for the full
+  // before/after captured output.
+  join(REPO_ROOT, 'src/backend/sidecar/eosOverlayFlowRegistration.ts')
 ]
 
 // Regenerated at plan-execution time (2026-07-26, Phase 34.3 Plan 07), not
@@ -296,6 +308,32 @@ const ENTRY_POINTS = [
 // -- it does not appear in electronImportingFiles). The `> 224` floor in the
 // 'reachability sanity' test is unchanged (246 is even more comfortably above
 // it than the prior 244 reading was) and is not raised, per that test's own
+// never-lower/only-raise-when-no-longer-meaningful instruction.
+//
+// Phase 34.6 Plan 08 (REQ-34.6-13, 2026-08-24) extended ENTRY_POINTS with
+// eosOverlayFlowRegistration.ts (this plan's 8-channel EOS overlay port;
+// never previously an entry point) and re-ran computeElectronReach() via the
+// standing temporary-print-statement procedure -- MEASURED both directions,
+// not predicted:
+//   BEFORE (without eosOverlayFlowRegistration.ts): electronImportingFiles.size
+//     35, visitedFiles.size 246
+//   AFTER  (with eosOverlayFlowRegistration.ts):     electronImportingFiles.size
+//     35, visitedFiles.size 247
+// MEASURED, UNCHANGED -- the two electronImportingFiles sets are set-equal
+// (identical sorted 35-entry arrays, not just size comparison). No new module
+// entered the electron-reaching set: `eos_overlay.ts` (the module this entry
+// point's own docstring names as the new `dialog` edge) was ALREADY in the
+// baseline below -- it is transitively reached via
+// runnerAuthFlowRegistration.ts -> storeManagers/legendary/user.ts ->
+// storeManagers/index.ts's eager cross-runner construction, which was already
+// walked by Phase 34.5 Plan 13's own entry-point additions. No new entry
+// below. visitedFiles.size grew by +1 (246 -> 247), exactly the one
+// newly-visited first-party file this entry point alone contributes:
+// eosOverlayFlowRegistration.ts itself (every module it imports --
+// electronStub.ts and eos_overlay.ts -- was already visited via other entry
+// points in this same file's graph). The `> 224` floor in the 'reachability
+// sanity' test is unchanged (247 is even more comfortably above it than the
+// prior 246 reading was) and is not raised, per that test's own
 // never-lower/only-raise-when-no-longer-meaningful instruction.
 const BASELINE_ELECTRON_REACHING_MODULES: string[] = [
   'src/backend/constants/paths.ts',
@@ -645,6 +683,13 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
     // as a new entry point grew visitedFiles.size further, to a measured 246
     // (see the BASELINE_ELECTRON_REACHING_MODULES header comment above for
     // the full BEFORE/AFTER measurement). 246 is comfortably above the
+    // existing 224 floor, so the floor is NOT raised, per this test's own
+    // never-lower/only-raise-when-no-longer-meaningful instruction.
+    //
+    // Phase 34.6 Plan 08 (REQ-34.6-13): eosOverlayFlowRegistration.ts added
+    // as a new entry point grew visitedFiles.size further, to a measured 247
+    // (see the BASELINE_ELECTRON_REACHING_MODULES header comment above for
+    // the full BEFORE/AFTER measurement). 247 is comfortably above the
     // existing 224 floor, so the floor is NOT raised, per this test's own
     // never-lower/only-raise-when-no-longer-meaningful instruction.
     expect(reachResult.visitedFiles.size).toBeGreaterThan(224)
