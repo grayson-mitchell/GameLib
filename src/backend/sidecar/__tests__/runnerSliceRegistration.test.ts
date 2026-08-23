@@ -1,12 +1,17 @@
 /**
  * Wiring + curated-import guard for this slice's declared-but-originally-EMPTY registration
- * modules (Phase 34.5 Plan 04, REQ-34.5-13). As of Phase 34.6 Plan 08 there are FIVE modules
- * (`runnerAuth`, `wineTools`, `shortcuts`, `runnerMisc`, `eosOverlay`), not four — comments below
- * that still say "four modules" describe the pre-Plan-08 state of that specific describe block
- * and are corrected inline where the block's own assertions changed.
+ * modules (Phase 34.5 Plan 04, REQ-34.5-13). As of Phase 34.6 Plan 09 there are SIX modules
+ * (`runnerAuth`, `wineTools`, `shortcuts`, `runnerMisc`, `eosOverlay`, `enrichmentFlowRegistration`),
+ * not five — comments below that still say "five modules" or "four modules" describe an earlier
+ * plan's state of that specific describe block and are corrected inline where the block's own
+ * assertions changed. `enrichmentFlowRegistration.ts` joins this file's own module-scope snapshot
+ * (not because it is one of THIS slice's own registration modules — it is Phase 34.2 Plan 06's own
+ * module, tested primarily by `enrichmentFlows.test.ts`/`flowRegistrationCensus.test.ts`) solely so
+ * this file's SEAM Invariant B sweep can correctly move the 5 `steamgriddb.*` names from "deferred"
+ * to "present" once Plan 09 registers them there (see item 7/10 below).
  *
- * Nine describe blocks:
- *   1. Callable export — each of the five modules exports a callable `registerXFlows` function.
+ * Ten describe blocks:
+ *   1. Callable export — each of the six modules exports a callable `registerXFlows` function.
  *   2. "Imported but never called" guard (T-34.5-11) — asserts `handlers.ts` source text matches
  *      each `registerXFlows` name exactly TWICE (one import + one call). A module that is
  *      imported but never invoked would still type-check and would still pass a callable-export
@@ -65,6 +70,11 @@ import { registerWineToolsFlows } from '../wineToolsFlowRegistration'
 import { registerShortcutsFlows } from '../shortcutsFlowRegistration'
 import { registerRunnerMiscFlows } from '../runnerMiscFlowRegistration'
 import { registerEosOverlayFlows } from '../eosOverlayFlowRegistration'
+// Phase 34.6 Plan 09 (REQ-34.6-02/04/08/13): `enrichmentFlowRegistration.ts` is NOT one of this
+// slice's own declared-but-originally-empty modules (it is Phase 34.2 Plan 06's own module) — it
+// joins this file's module-scope snapshot solely so this file's SEAM Invariant B sweep (Describe
+// 7/10 below) can correctly move the 5 `steamgriddb.*` names from "deferred" to "present".
+import { registerEnrichmentFlows } from '../enrichmentFlowRegistration'
 import {
   handlerRegistry,
   listenerRegistry,
@@ -107,6 +117,13 @@ registerRunnerMiscFlows()
 // as EMPTY in this file — the mandatory part of D-09's flip-to-presence is this call, not
 // merely editing an array.
 registerEosOverlayFlows()
+// Phase 34.6 Plan 09 (REQ-34.6-02/04/08/13): `enrichmentFlowRegistration.ts` joins the snapshot
+// too, so the 5 `steamgriddb.*` names it now registers can flip from Describe 7's absence
+// assertion to Describe 10's presence assertion below. `registerEnrichmentFlows()` carries no
+// idempotence guard, but registers zero send-kind (listener) channels, so a second call here (or
+// from Describe 3's idempotence `it.each`) only overwrites existing `Map` entries in place —
+// harmless, and does not affect `listenerRegistry`'s counts.
+registerEnrichmentFlows()
 
 const CANONICAL_HANDLER_ENTRIES: ReadonlyArray<[string, IpcHandler]> = [
   ...handlerRegistry.entries()
@@ -202,12 +219,35 @@ const EOS_OVERLAY_CHANNELS = [
   'isEosOverlayEnabled'
 ]
 
+// Phase 34.6 Plan 09 (REQ-34.6-02/04/08/13): `enrichmentFlowRegistration.ts`'s full 14-channel
+// declared list — measured directly off that file's own `registerEnrichmentFlows()` body (9
+// pre-existing Phase 34.2 Plan 06 channels + `getGogDiscounts` + the 5 `steamgriddb.*` channels
+// this plan ports out of Describe 7's deferred set), not guessed. All 14 are invoke-kind
+// (`ipcMain.handle`) — `flowRegistrationCensus.test.ts`'s own pin agrees: `{ invoke: 14, send: 0 }`.
+const ENRICHMENT_CHANNELS = [
+  'getWikiGameInfo',
+  'getAnticheatInfo',
+  'getKnownFixes',
+  'getCrossoverIndex',
+  'searchStores',
+  'getStoreSearchDeals',
+  'getStoreSearchStoreMap',
+  'removeRecent',
+  'getGogDiscounts',
+  'steamgriddb.hasApiKey',
+  'steamgriddb.setApiKey',
+  'steamgriddb.searchGame',
+  'steamgriddb.getGrids',
+  'steamgriddb.getHeroes'
+]
+
 const ALL_CHANNELS = [
   ...RUNNER_AUTH_CHANNELS,
   ...WINE_TOOLS_CHANNELS,
   ...SHORTCUTS_CHANNELS,
   ...RUNNER_MISC_CHANNELS,
-  ...EOS_OVERLAY_CHANNELS
+  ...EOS_OVERLAY_CHANNELS,
+  ...ENRICHMENT_CHANNELS
 ]
 
 const MODULES: ReadonlyArray<{
@@ -250,11 +290,33 @@ const MODULES: ReadonlyArray<{
     register: registerEosOverlayFlows,
     file: 'eosOverlayFlowRegistration.ts',
     declaredChannels: EOS_OVERLAY_CHANNELS
+  },
+  {
+    // Phase 34.6 Plan 09 (REQ-34.6-02/04/08/13): this slice's sixth entry. Unlike the other five,
+    // `enrichmentFlowRegistration.ts` is not one of this slice's own declared-but-empty modules —
+    // see the module-scope comment above `registerEnrichmentFlows()`'s call for why it is included
+    // here anyway. Excluded from Describe 2's wiring guard below (a different, narrower list is
+    // used there) because handlers.ts mentions `registerEnrichmentFlows` a THIRD time in its own
+    // module docstring, which would fail that describe's "exactly twice" assertion for reasons
+    // unrelated to wiring correctness.
+    name: 'registerEnrichmentFlows',
+    register: registerEnrichmentFlows,
+    file: 'enrichmentFlowRegistration.ts',
+    declaredChannels: ENRICHMENT_CHANNELS
   }
 ]
 
+// Phase 34.6 Plan 09: Describe 2's own scope — "this slice's declared-but-originally-empty
+// registration modules" — never included `enrichmentFlowRegistration.ts` (Phase 34.2 Plan 06's
+// own module, already covered by its own wiring/census tests). `MODULES` above is deliberately
+// wider (it also drives Describes 1/3/4/5/6/8/9/10), so Describe 2 alone iterates this narrower
+// list instead of `MODULES` directly.
+const WIRING_GUARD_MODULES = MODULES.filter(
+  (m) => m.name !== 'registerEnrichmentFlows'
+)
+
 // ── Describe 1: Callable export ────────────────────────────────────────────────────────────────
-describe('callable export — each of the five modules exports a callable registerXFlows function', () => {
+describe('callable export — each of the six modules exports a callable registerXFlows function', () => {
   it.each(MODULES.map((m) => [m.name, m.register] as const))(
     'REQ-34.5-13 %s is a function',
     (_name, register) => {
@@ -264,13 +326,15 @@ describe('callable export — each of the five modules exports a callable regist
 })
 
 // ── Describe 2: "imported but never called" guard (T-34.5-11) ─────────────────────────────────
+// Phase 34.6 Plan 09: iterates `WIRING_GUARD_MODULES` (this slice's original five), not `MODULES`
+// — see that const's own comment above for why `enrichmentFlowRegistration.ts` is excluded here.
 describe('handlers.ts wiring — imported but never called guard', () => {
   const handlersSource = readFileSync(
     join(__dirname, '..', 'handlers.ts'),
     'utf-8'
   )
 
-  it.each(MODULES.map((m) => m.name))(
+  it.each(WIRING_GUARD_MODULES.map((m) => m.name))(
     'T-34.5-11 %s appears exactly twice in handlers.ts (one import + one call) — an import-only wiring must fail this test',
     (name) => {
       const occurrences = handlersSource.split(name).length - 1
@@ -278,7 +342,7 @@ describe('handlers.ts wiring — imported but never called guard', () => {
     }
   )
 
-  it.each(MODULES.map((m) => m.name))(
+  it.each(WIRING_GUARD_MODULES.map((m) => m.name))(
     'T-34.5-11 %s is both imported and called in handlers.ts',
     (name) => {
       const importPattern = new RegExp(`import\\s*{\\s*${name}\\s*}\\s*from`)
@@ -328,7 +392,7 @@ describe('idempotence — calling registerXFlows() twice does not throw or stack
 })
 
 // ── Describe 4: Curated-import guard (T-34.5-12) ───────────────────────────────────────────────
-describe('curated-import guard — none of the five modules imports ipc_handler or ../main', () => {
+describe('curated-import guard — none of the six modules imports ipc_handler or ../main', () => {
   /** True iff comment-stripped `source` contains an import/require referencing any
    * `ipc_handler` path or `../main` — mirrors `humbleLoginFlows.test.ts`'s own
    * `importsIpcHandler` gate, generalized to any `ipc_handler` path (not just `humble/`) plus
@@ -382,7 +446,7 @@ describe('curated-import guard — none of the five modules imports ipc_handler 
 })
 
 // ── Describe 5: Growth-tolerant containment pin (T-34.5-13) ───────────────────────────────────
-describe("containment pin — each module registers only its own declared channels (never another module's, never outside the 38)", () => {
+describe("containment pin — each module registers only its own declared channels (never another module's, never outside the 64)", () => {
   /** Every channel name across BOTH registries, regardless of kind — used only to inspect what
    * a single, ISOLATED `registerXFlows()` call actually touched. */
   function allRegisteredChannelNames(): string[] {
@@ -460,27 +524,29 @@ const SEND_CHANNELS = [
   'winetricksInstall'
 ]
 
-describe('completeness — all 46 channels are registered with the right kind, across all five modules together (Phase 34.5 Plan 13, REQ-34.5-10; Phase 34.6 Plan 08 added the EOS overlay module)', () => {
+describe('completeness — all 64 channels are registered with the right kind, across all six modules together (Phase 34.5 Plan 13, REQ-34.5-10; Phase 34.6 Plan 08 added the EOS overlay module; Phase 34.6 Plan 09 added enrichmentFlowRegistration.ts)', () => {
   beforeAll(() => {
     // Restore from the canonical snapshot (see the module-scope comment near the top of this
-    // file) rather than re-invoking the five `registerXFlows()` functions — some of them are
+    // file) rather than re-invoking the six `registerXFlows()` functions — some of them are
     // permanent no-ops past their first call.
     restoreCanonicalRegistrations()
   })
 
-  it('exactly 45 channels are handle-kind and exactly 5 are listen-kind (Phase 34.6 Plan 08: 37/5 -> 45/5, +8 invoke +0 send)', () => {
+  it('exactly 59 channels are handle-kind and exactly 5 are listen-kind (Phase 34.6 Plan 09: 45/5 -> 59/5, +14 invoke +0 send)', () => {
     const handleChannels = [...handlerRegistry.keys()]
     const listenChannels = [...listenerRegistry.entries()]
       .filter(([, listeners]) => listeners.length > 0)
       .map(([channel]) => channel)
 
     // Measured (jest failure ACTUAL, this plan's execution) and independently re-derived from
-    // arithmetic (37+8=45 invoke, 5+0=5 send — the EOS cluster is 8-of-8 invoke) — both agree.
-    expect(handleChannels.length).toBe(45)
+    // arithmetic (45+14=59 invoke, 5+0=5 send — enrichmentFlowRegistration.ts is 14-of-14
+    // invoke, confirmed against flowRegistrationCensus.test.ts's own { invoke: 14, send: 0 }
+    // pin) — both agree.
+    expect(handleChannels.length).toBe(59)
     expect(listenChannels.length).toBe(5)
   })
 
-  it('the send set is precisely the 4 named channels — set equality, not a size-only check (a size-only check would pass if two channels swapped kinds)', () => {
+  it('the send set is precisely the 5 named channels — set equality, not a size-only check (a size-only check would pass if two channels swapped kinds)', () => {
     const listenChannels = new Set(
       [...listenerRegistry.entries()]
         .filter(([, listeners]) => listeners.length > 0)
@@ -507,11 +573,11 @@ describe('completeness — all 46 channels are registered with the right kind, a
     }
   )
 
-  it('per-module declared counts are exactly 11 / 13 / 7 / 11 / 8, totalling 50 (Phase 34.6 Plan 08: added registerEosOverlayFlows at 8)', () => {
+  it('per-module declared counts are exactly 11 / 13 / 7 / 11 / 8 / 14, totalling 64 (Phase 34.6 Plan 09: added registerEnrichmentFlows at 14)', () => {
     const counts = MODULES.map((m) => m.declaredChannels.length)
-    // Measured (jest failure ACTUAL) and independently re-derived (42 prior total + 8 new = 50) — agree.
-    expect(counts).toEqual([11, 13, 7, 11, 8])
-    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(50)
+    // Measured (jest failure ACTUAL) and independently re-derived (50 prior total + 14 new = 64) — agree.
+    expect(counts).toEqual([11, 13, 7, 11, 8, 14])
+    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(64)
   })
 
   afterAll(() => {
@@ -522,35 +588,34 @@ describe('completeness — all 46 channels are registered with the right kind, a
 })
 
 // ── Describe 7: SEAM Invariant B — dropped/deferred channels still reject (Phase 34.5 Plan 13) ─
-// The 3 DROPPED Zoom channels (34.5-CONTEXT.md D-02) and the 5 DEFERRED SteamGridDB artwork
-// channels (D-03/D-05) must NOT be registered by any of this slice's five modules. The EOS
-// overlay 8 formerly listed here (Phase 34.6 Plan 07 state) moved OUT of this set in Phase 34.6
-// Plan 08 (D-09) — see the new presence describe below and `wineToolsFlowRegistration.ts` /
-// `eosOverlayFlowRegistration.ts` for the two clusters that have now been ported out of "deferred"
-// into real registration. Absence from `handlerRegistry` is what makes `sidecarRpc.ts`'s dispatch
-// (`const handler = handlerRegistry.get(request.channel); if (!handler) { ... reject with
-// UNPORTED_CHANNEL_MARKER ... }`) reject these channels honestly rather than silently — "drop"
-// and "defer" mean let it reject and say so, not build a degradation path.
-describe('SEAM Invariant B — the 3 dropped and 5 deferred channels are NOT registered by any of the five modules (Phase 34.5 Plan 13; Phase 34.6 Plan 07 moved winetricks out of this set; Phase 34.6 Plan 08 moved EOS overlay out of this set)', () => {
+// The 3 DROPPED Zoom channels (34.5-CONTEXT.md D-02) must NOT be registered by any of this
+// slice's six modules. The EOS overlay 8 (Phase 34.6 Plan 07 state) and the SteamGridDB 5 (Phase
+// 34.6 Plan 08 state) formerly listed here have BOTH moved OUT of this set — EOS overlay in Plan
+// 08 (D-09), SteamGridDB in Plan 09 (A-03) — see the new presence describes below and
+// `eosOverlayFlowRegistration.ts` / `enrichmentFlowRegistration.ts` for the two clusters that have
+// now been ported out of "deferred" into real registration. Only Zoom remains dropped outright —
+// there is no future plan that ports it back in (34.5-CONTEXT.md D-02). Absence from
+// `handlerRegistry` is what makes `sidecarRpc.ts`'s dispatch (`const handler =
+// handlerRegistry.get(request.channel); if (!handler) { ... reject with UNPORTED_CHANNEL_MARKER
+// ... }`) reject these channels honestly rather than silently — "drop" and "defer" mean let it
+// reject and say so, not build a degradation path.
+describe('SEAM Invariant B — the 3 dropped Zoom channels are NOT registered by any of the six modules (Phase 34.5 Plan 13; Phase 34.6 Plan 07 moved winetricks out of this set; Phase 34.6 Plan 08 moved EOS overlay out of this set; Phase 34.6 Plan 09 moved SteamGridDB out of this set)', () => {
   const DROPPED_ZOOM = ['authZoom', 'getZoomUserInfo', 'logoutZoom']
-
-  const DEFERRED_STEAMGRIDDB = [
-    'steamgriddb.getGrids',
-    'steamgriddb.getHeroes',
-    'steamgriddb.hasApiKey',
-    'steamgriddb.searchGame',
-    'steamgriddb.setApiKey'
-  ]
 
   // The 3 winetricks names formerly listed here (Phase 34.5 Plan 13) moved to
   // `WINE_TOOLS_CHANNELS` above and to Describe 8 below — Phase 34.6 Plan 07 ported them out of
   // the deferred set into real registration (A-01/D-02/D-11).
   //
   // The 8 EOS overlay names formerly listed here (Phase 34.6 Plan 07 state, `DEFERRED_EOS_OVERLAY`)
-  // moved to `EOS_OVERLAY_CHANNELS` above and to the new Describe 9 below — Phase 34.6 Plan 08
-  // (D-09) ported them out of the deferred set into real registration.
+  // moved to `EOS_OVERLAY_CHANNELS` above and to Describe 9 below — Phase 34.6 Plan 08 (D-09)
+  // ported them out of the deferred set into real registration.
+  //
+  // The 5 SteamGridDB names formerly listed here (Phase 34.6 Plan 08 state, `DEFERRED_STEAMGRIDDB`)
+  // moved to `ENRICHMENT_CHANNELS` above and to the new Describe 10 below — Phase 34.6 Plan 09
+  // (Amendment A-03) ported them out of the deferred set into real registration, routed
+  // exclusively through `getSteamGridDbSecretStore()`.
 
-  const DROPPED_OR_DEFERRED = [...DROPPED_ZOOM, ...DEFERRED_STEAMGRIDDB]
+  const DROPPED_OR_DEFERRED = [...DROPPED_ZOOM]
 
   beforeAll(() => {
     // Self-contained: does not rely on Describe 6's afterAll ordering. Restores from the
@@ -558,19 +623,21 @@ describe('SEAM Invariant B — the 3 dropped and 5 deferred channels are NOT reg
     restoreCanonicalRegistrations()
   })
 
-  it('lists exactly 8 dropped-or-deferred channel names (3 dropped + 5 deferred)', () => {
-    // Re-derived (not merely retyped): 16 (3 Zoom + 8 EOS + 5 SteamGridDB) - 8 EOS = 8.
-    expect(DROPPED_OR_DEFERRED.length).toBe(8)
+  it('lists exactly 3 dropped-or-deferred channel names (3 dropped Zoom + 0 deferred, now that winetricks/EOS overlay/SteamGridDB have all moved to their own presence describes)', () => {
+    // Re-derived (not merely retyped): 16 (3 Zoom + 3 winetricks + 8 EOS + 5 SteamGridDB, the
+    // Phase 34.5 Plan 13-era set before ANY cluster had ported out) - 3 winetricks - 8 EOS -
+    // 5 SteamGridDB = 3.
+    expect(DROPPED_OR_DEFERRED.length).toBe(3)
   })
 
-  it('none of the 8 dropped-or-deferred names appears in the declared channel set', () => {
+  it('none of the 3 dropped-or-deferred names appears in the declared channel set', () => {
     for (const channel of DROPPED_OR_DEFERRED) {
       expect(ALL_CHANNELS).not.toContain(channel)
     }
   })
 
   it.each(DROPPED_OR_DEFERRED)(
-    '%s is registered by none of the five modules — absent from handlerRegistry, and listenerRegistry has no active listener — so it still rejects with UNPORTED_CHANNEL_MARKER',
+    '%s is registered by none of the six modules — absent from handlerRegistry, and listenerRegistry has no active listener — so it still rejects with UNPORTED_CHANNEL_MARKER',
     (channel) => {
       expect(handlerRegistry.has(channel)).toBe(false)
       expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
@@ -589,7 +656,7 @@ describe('SEAM Invariant B — the 3 dropped and 5 deferred channels are NOT reg
 // `winetricksAvailable`/`winetricksInstalled` are invoke-kind; `runWineCommandForGame` is also
 // invoke-kind; `winetricksInstall` alone is send-kind (D-11) — present in `listenerRegistry`,
 // absent from `handlerRegistry`.
-describe('winetricks + runWineCommandForGame presence, correct kind, across all five modules together (Phase 34.6 Plan 07; Phase 34.6 Plan 08 added a fifth module alongside these four)', () => {
+describe('winetricks + runWineCommandForGame presence, correct kind, across all six modules together (Phase 34.6 Plan 07; Phase 34.6 Plan 08 added a fifth module; Phase 34.6 Plan 09 added a sixth)', () => {
   beforeAll(() => {
     restoreCanonicalRegistrations()
   })
@@ -616,12 +683,56 @@ describe('winetricks + runWineCommandForGame presence, correct kind, across all 
 // The inverse of Describe 7's (former) absence proof for these same 8 names — this cluster's
 // D-09 pair. All 8 EOS overlay channels are invoke-kind (`ipcMain.handle`); none is send-kind
 // (mirrors Describe 8's structure for the winetricks-3, minus a send-kind member).
-describe('EOS overlay presence, correct kind, across all five modules together (Phase 34.6 Plan 08)', () => {
+describe('EOS overlay presence, correct kind, across all six modules together (Phase 34.6 Plan 08; Phase 34.6 Plan 09 added a sixth module alongside these five)', () => {
   beforeAll(() => {
     restoreCanonicalRegistrations()
   })
 
   it.each(EOS_OVERLAY_CHANNELS)(
+    '%s is registered as ipcMain.handle (invoke), and NOT as ipcMain.on',
+    (channel) => {
+      expect(handlerRegistry.has(channel)).toBe(true)
+      expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
+    }
+  )
+
+  afterAll(() => {
+    restoreCanonicalRegistrations()
+  })
+})
+
+// ── Describe 10: SteamGridDB presence, correct kind (Phase 34.6 Plan 09, REQ-34.6-02/04/08/13) ─
+// The inverse of Describe 7's (former) absence proof for these same 5 names — this cluster's
+// Amendment A-03 pair. All 5 `steamgriddb.*` channels are invoke-kind (`ipcMain.handle`); none is
+// send-kind (mirrors Describe 8/9's structure for the winetricks-3/EOS-8, minus a send-kind
+// member). `getGogDiscounts` and the 8 pre-existing Phase 34.2 Plan 06 enrichment channels are
+// NOT re-asserted here individually — they were never dropped/deferred by this file and are
+// covered by `enrichmentFlows.test.ts`/`flowRegistrationCensus.test.ts` already; this describe's
+// job is narrowly the SEAM Invariant B flip for the 5 names Describe 7 used to list as deferred.
+describe('SteamGridDB presence, correct kind, across all six modules together (Phase 34.6 Plan 09, Amendment A-03)', () => {
+  const STEAMGRIDDB_CHANNELS = [
+    'steamgriddb.getGrids',
+    'steamgriddb.getHeroes',
+    'steamgriddb.hasApiKey',
+    'steamgriddb.searchGame',
+    'steamgriddb.setApiKey'
+  ]
+
+  beforeAll(() => {
+    restoreCanonicalRegistrations()
+  })
+
+  it('lists exactly the same 5 names Describe 7 used to carry as deferred (containment: no drift between the two lists)', () => {
+    expect(new Set(STEAMGRIDDB_CHANNELS)).toEqual(
+      new Set(
+        ENRICHMENT_CHANNELS.filter((channel) =>
+          channel.startsWith('steamgriddb.')
+        )
+      )
+    )
+  })
+
+  it.each(STEAMGRIDDB_CHANNELS)(
     '%s is registered as ipcMain.handle (invoke), and NOT as ipcMain.on',
     (channel) => {
       expect(handlerRegistry.has(channel)).toBe(true)
