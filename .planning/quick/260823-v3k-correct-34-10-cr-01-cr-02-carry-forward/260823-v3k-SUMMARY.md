@@ -85,12 +85,37 @@ in the half still open.
 3. **New todo** — `2026-08-23-navbar-active-undefined-in-7-of-11-themes.md`, owning the residual.
 4. **`STATE.md`** — one row appended to the Quick Tasks Completed table.
 
+## Follow-up in the same task — the `open_findings:` block
+
+Asked afterwards why `34.10-REVIEW.md` still reads red. Established that the red is driven **solely**
+by `status: issues_found`: the file is git-clean, prettier-clean and returns **zero editor
+diagnostics**, and no GSD tooling maps that status to a colour — it is the frontmatter itself.
+
+A survey of 20 `*-REVIEW.md` files settled the schema's semantics, which had been ambiguous:
+`findings:` is a **frozen original census** (`15-REVIEW.md` and `17-REVIEW.md` both sit at
+`status: resolved` while still carrying `critical: 1`), and `status:` is the field that moves
+(`clean` → `issues_found` → `resolved`).
+
+So the red is directionally correct but **overstates its own severity**: a reader glancing at
+`critical: 2` reads "two open Criticals" when the truth is **zero fully open and one partially
+open** — precisely the ambiguity that let CR-01 read as closed for 14 days. The schema has no field
+that can say "one and a half Criticals remaining."
+
+Added an `open_findings:` block carrying the live disposition of all five findings, with counts
+(`critical_fully_open: 0`, `critical_partially_open: 1`, `warning_open: 1`, `info_open: 1`), a
+`reassessed:` date, and a comment on `findings:` marking it frozen so the next reader does not have
+to re-derive the convention. Verified to parse via `js-yaml`; prettier clean; planning gates 7/7.
+
 ## Deliberate non-changes
 
-- **`34.10-REVIEW.md`'s `findings:` counts and `status: issues_found` left untouched.** Precedent
-  from this same file: WR-01's closure did not decrement them, so the counts record the review's
-  original census rather than open counts. And `issues_found` remains correct on its own terms —
-  WR-02, IN-01 and CR-01's residual are all open.
+- **`findings:` counts and `status: issues_found` still left untouched** — the follow-up **added** a
+  field rather than editing either. The counts stay a frozen census by convention, and
+  `issues_found` is retained on purpose because CR-01's 7-theme residual is a live code defect —
+  **not** because two Criticals are open. A comment above `status:` now says exactly that, so the
+  flag cannot be misread as it was.
+- **`STATE.md`'s "Pending Todos" prose list not appended to.** It has not been maintained since
+  2026-08-03; no todo filed on 2026-08-22 or 2026-08-23 appears in it. Adding one entry would imply
+  a completeness the list does not have. Flagged rather than silently followed.
 - **`STATE.md`'s "Pending Todos" prose list not appended to.** It has not been maintained since
   2026-08-03; no todo filed on 2026-08-22 or 2026-08-23 appears in it. Adding one entry would imply
   a completeness the list does not have. Flagged rather than silently followed.
