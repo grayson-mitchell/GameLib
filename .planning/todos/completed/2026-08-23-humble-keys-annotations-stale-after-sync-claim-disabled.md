@@ -1,7 +1,9 @@
 ---
 created: 2026-08-23
+completed: 2026-08-23
+fixed_by: "quick task 260823-n5b, commit b52a8eed0"
 source: 34.4.1 gap cycle 3, live gate run 4 (operator finding, not a D-29 item)
-status: pending
+status: complete
 severity: medium
 resolves_phase: null
 blocked_by: null
@@ -96,3 +98,48 @@ Buy or otherwise acquire a new Humble key, sync, and observe **Claim** available
 navigating away and back. A unit test pinning that `refreshAnnotations` re-runs on a key-set change
 is necessary but not sufficient — this defect was invisible to a fully green suite, as every
 blocking defect in Phase 34.4.1 was.
+
+
+---
+
+## FIXED 2026-08-23 — quick task `260823-n5b`, commit `b52a8eed0`
+
+The fetch is now keyed on a stable identity of the **key set** (a sorted join of
+`${gamekey}:${machineName}`, the same composite the annotations map is keyed by), rather than a
+fourth manual call site — sync is not the only non-claim writer of `humble.keys`.
+
+**The effects were SPLIT, and that is the load-bearing part.** The obvious fix — adding deps to the
+existing mount effect — also moves its cleanup, which latches the component-lifetime `mountedRef`
+(WR-02) to `false` on the first key-set change and silently kills every later annotation write. A
+worse, far less visible version of this same defect. Lifecycle keeps `[]`; the fetch gets its own
+keyed effect and still runs on first render, so there is no double-fetch.
+
+### The harness had to be fixed TWICE, both times because a gate was otherwise vacuous
+
+1. The react mock ran **every effect on every render, ignoring dependency arrays**. Against the
+   broken `[]`-keyed code a rerender still refetched, so a "refetches when the key set changes"
+   test would have passed against the very bug it exists to catch. Made dep-aware.
+2. The mock **never invoked cleanups**, which made the `mountedRef` hazard test **vacuous** — the
+   naive fix passed all 13 tests, because the latch can only fire from a cleanup the harness never
+   called. **Caught by red-proofing the NAIVE fix, not just the reverted one.** Cleanup now runs
+   before a re-run, per React's real semantics.
+
+| mutation | result |
+|---|---|
+| fix reverted to original | **3 tests FAIL** |
+| naive fix (deps added, cleanup not split) | **2 tests FAIL** |
+| correct fix | 13 pass |
+
+The no-refetch-loop test correctly **passes** against the broken code — it guards the opposite
+property.
+
+### Census recorded, deliberately NOT fixed (out of scope)
+
+28 frontend files carry a `[]`-keyed effect calling `window.api`. Most are settings nothing pushes
+to. The one sibling with the same shape is **`Humble/Keys/Spares/index.tsx`** — `giftedMap` is
+fetched at mount with `[]` deps and read as `giftedMap[key.machineName] ?? null`.
+
+**Its exposure is milder and it is NOT the same bug:** `giftedAt` feeds a display annotation, not a
+gate, so a stale map cannot disable an action the way `keyindexResolved ?? false` disabled Claim.
+Local gifting also updates it optimistically in-place. The residual gap is that a gift recorded
+outside this view may not show until remount. Worth a look if it ever surfaces; not fixed here.
