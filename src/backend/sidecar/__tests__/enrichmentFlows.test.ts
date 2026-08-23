@@ -990,12 +990,23 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     // UPDATED AGAIN (Phase 34.5 Plan 07, REQ-34.5-06): `getLegendaryVersion`
     // is ALSO no longer unported — it is now registered for real by
     // `runnerMiscFlowRegistration.ts` (`runnerMiscFlows.test.ts` covers its
-    // ported registration kind). `winetricksInstall` substitutes here as a
-    // channel D-03 permanently DEFERS to Phase 34.6, so this test will not
-    // need a further substitution once plan 34.5-12 lands.
-    it('REQ-34.2-14 an UNPORTED channel (winetricksInstall, deferred to Phase 34.6) still returns UNPORTED_CHANNEL_MARKER', async () => {
+    // ported registration kind). `winetricksInstall` substituted here as a
+    // channel D-03 permanently deferred to Phase 34.6.
+    //
+    // UPDATED AGAIN (Phase 34.6 Plan 07, REQ-34.6-04/07/13): `winetricksInstall`
+    // is ALSO no longer unported — it is now registered for real (send-kind,
+    // D-11) by `wineToolsFlowRegistration.ts` (`wineToolsFlows.test.ts` covers
+    // its ported registration kind). `authZoom` substitutes here — and this
+    // substitution is different in kind from the three before it: `authZoom`
+    // is not merely deferred, it is permanently DROPPED by 34.5 D-02 (Zoom
+    // support removed from scope entirely), so it cannot be ported by any
+    // future slice and this exemplar will not need substituting again.
+    // Verified invoke-kind (`src/preload/api/zoom.ts:4`, `makeHandlerInvoker`)
+    // before landing this substitution, so it can genuinely surface
+    // `UNPORTED_CHANNEL_MARKER` rather than going vacuously green.
+    it('REQ-34.2-14 an UNPORTED channel (authZoom, permanently dropped by 34.5 D-02) still returns UNPORTED_CHANNEL_MARKER', async () => {
       const { input, frames } = startSidecar()
-      writeInvoke(input, 'unported-1', 'winetricksInstall', [])
+      writeInvoke(input, 'unported-1', 'authZoom', [])
       await flush()
 
       const response = findResponse(frames, 'unported-1')
