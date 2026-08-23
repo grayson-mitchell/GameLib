@@ -72,3 +72,11 @@ scratchpad/
 # Steam Spacewar (480) test AppID dropped next to the binary by the Steam
 # bridge during local dev. Never part of a build.
 steam_appid.txt
+
+# Python bytecode. The `.planning/` tree carries stdlib-only planning gates
+# (`*-gate.py`, discovered and run by meta/runPlanningGates.py). Two of their
+# `__pycache__/*.pyc` files were tracked, which was always wrong and became
+# actively wrong in two ways at once: renaming seam-parity-sweep.py orphaned
+# its bytecode against a source file that no longer exists, and now that the
+# gates run in CI every run regenerates these. Bytecode is a build product.
+__pycache__/
