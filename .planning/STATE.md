@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "PHASE 34.6 EXECUTING (2026-08-24) -- waves 1-4 + plan 34.6-11 (wave 7) COMPLETE, 9/14 plans (34.6-01/-02/-03/-04/-05/-06/-07/-08/-11). Plan 34.6-11 EXECUTED OUT OF NUMERIC SEQUENCE (depends_on: [34.6-06, 34.6-07] only -- 34.6-09/34.6-10 remain unexecuted, no PLAN blocks them). Plan 34.6-11 discharged T-34.5-C6-49-03: new src/backend/sidecar/rendererPathGuard.ts (assertContainedPath/PathContainmentError, assertCommandParts/CommandShapeError -- containment logic, not a safe-character allowlist, grep-verified). moveInstall/importGame in installFlowRegistration.ts now call assertContainedPath(defaultInstallPath, path, channel) as their first statement, discarding the resolved return and forwarding the original renderer-supplied path unchanged; on rejection: one path-free error log, terminal sendGameStatusUpdate({status:'done'}), rethrow. runWineCommandForGame in wineToolsFlowRegistration.ts now calls assertCommandParts (shape-only) as its first statement and its Windows branch was changed from execAsync(commandParts.join(' ')) (shell) to spawnAsync(command, commandArgs) (non-shell argv). All four properties (2 containment REJECT + no-wedge + shell-removal) RED-proven at the channel level via temporary cp-based file breakage, restored via cp (never git checkout --, which fires the post-checkout download-helper-binaries hook). testContainment.test.ts's STRUCTURALLY_CONTAINED_SUITES gained rendererPathGuard.test.ts (52->53 suites). A real, honestly-scoped residual (importGame's winePrefix/wineVersion/wineCrossoverBottle -- Wine prefix/binary paths, not naturally rooted under the install dir) was filed as a todo (resolves_phase: 34.6, planned_as: 34.6-14) rather than silently left. REQ-34.6-05 now FULLY COMPLETE. Full sidecar __tests__ directory now 53 *.test.ts suite files (per-file: installFlows.test.ts 15 tests, wineToolsFlows.test.ts 26 tests, rendererPathGuard.test.ts 21 tests, testContainment.test.ts's own census suite 55/55 passing), tsc clean, bundle smoke test prints __GAMELIB_SIDECAR_READY__. Backend jest baseline still 1 suite / 3 tests failing, ALL pre-existing decompressPool lzmaLoader (Phase 23.1), not touched by this plan. Next: plan 34.6-09 (SteamGridDB channel port) or 34.6-10, both still unexecuted."
-last_updated: "2026-08-24T11:40:00.000Z"
-last_activity: "2026-08-24 -- Plan 34.6-11 EXECUTED (3 task commits: 402b48c50 feat Task 1 rendererPathGuard.ts + 21 tests, 6d30448e3 feat/test Task 2 hardened call sites + testContainment census fix, df03d47d8 docs Task 3 SUMMARY + residual todo). See 34.6-11-SUMMARY.md for full detail, including all four RED-proof failure messages and the three declared residuals (Windows branch unverified on real hardware; containment root is user-reconfigurable; importGame's winePrefix/wineVersion/wineCrossoverBottle uncontained -- filed as a todo). STATE.md hand-edited; no gsd-sdk state.* verb invoked (known corruption defect)."
+stopped_at: "PHASE 34.6 EXECUTING (2026-08-24) -- waves 1-4 + plan 34.6-11 (wave 7) + plan 34.6-09 COMPLETE, 10/14 plans (34.6-01/-02/-03/-04/-05/-06/-07/-08/-09/-11). Plan 34.6-09 ported the 5 SteamGridDB channels + getGogDiscounts into enrichmentFlowRegistration.ts per Amendment A-03 (non-byte-equivalent, seam-only key access via getSteamGridDbSecretStore()), deleted steamgrid/ipc_handler.ts's legacy-plaintext migration branch, and flipped SteamGridDB's 5 (the last of the 16 deferred channels) from absence to presence in runnerSliceRegistration.test.ts (new Describe 10; Describe 6 re-derived to 59/5/64). REQ-34.6-02 now FULLY COMPLETE. REQ-34.6-04 and REQ-34.6-08 remain PARTIALLY LANDED (cont'd) -- 3 of 8 late-discovered channels and the full 24-channel census are owned by plan 34.6-10. See 34.6-09-SUMMARY.md for RED-proof failure messages verbatim. Next: plan 34.6-10 (final Describe 6 re-derivation, full 24-channel census, remaining runnerMiscFlowRegistration.ts channels), still unexecuted."
+last_updated: "2026-08-24T13:15:00.000Z"
+last_activity: "2026-08-24 -- Plan 34.6-09 EXECUTED (3 task commits: 754371f21 feat Task 1 SteamGridDB + getGogDiscounts channel registration via getSteamGridDbSecretStore() seam, 77174035c feat/test Task 2 legacy-plaintext branch deletion + electronReachLedger growth, bbf04a8d3 test Task 3 Describe 10 presence assertion + Describe 6/7 re-derivation). See 34.6-09-SUMMARY.md for full detail, including all RED-proof failure messages verbatim, the measured ledger additions, the Describe 6 values, and the repo-wide isEncryptedValue grep output. STATE.md hand-edited; no gsd-sdk state.* verb invoked (known corruption defect)."
 progress:
   # Hand-corrected after `state.begin-phase` corrupted these (recurring gsd-sdk defect).
   # Tool wrote 24/15/324/298/63 and also mangled three prose blocks (orphaned continuation
@@ -495,10 +495,22 @@ progress:
   # convention; 95 -> 96). No gsd-sdk state.*/roadmap.update-plan-progress
   # verb invoked (known corruption defect) -- hand-applied, whole-file diffed
   # against a pre-edit snapshot to confirm insertion-only changes.
+  # 2026-08-24 (plan 34.6-09 execution): ported the 5 SteamGridDB channels + getGogDiscounts
+  # into enrichmentFlowRegistration.ts per Amendment A-03 (seam-only key access via
+  # getSteamGridDbSecretStore(), never GlobalConfig/secureKey.ts directly), deleted
+  # steamgrid/ipc_handler.ts's legacy-plaintext migration branch, and flipped SteamGridDB's
+  # 5 (the last of the 16 deferred channels) from absence to presence in
+  # runnerSliceRegistration.test.ts (Describe 6 re-derived to 59/5/64). REQ-34.6-02 now
+  # FULLY COMPLETE. +1 completed plan (34.6-09, plan's own SUMMARY landed). total_plans
+  # unchanged (373, already counted -- one of the 14 pre-planned 34.6 plans).
+  # percent = floor(360/373*100) = floor(96.51) = 96 (floor, matching prior convention;
+  # unchanged from 96). No gsd-sdk state.*/roadmap.update-plan-progress verb invoked
+  # (known corruption defect) -- hand-applied, whole-file diffed against a pre-edit
+  # snapshot to confirm insertion-only changes.
   total_phases: 27
   completed_phases: 21
   total_plans: 373
-  completed_plans: 359
+  completed_plans: 360
   percent: 96
 ---
 
@@ -558,6 +570,51 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 
 ## Current Position
+
+> # ✅ PHASE 34.6 PLAN 09 EXECUTED — 2026-08-24. REQ-34.6-02 now FULLY COMPLETE (Amendment A-03).
+>
+> Registered the 5 SteamGridDB channels (`steamgriddb.hasApiKey`, `steamgriddb.setApiKey`,
+> `steamgriddb.searchGame`, `steamgriddb.getGrids`, `steamgriddb.getHeroes`) plus the late-discovered
+> `getGogDiscounts` in `enrichmentFlowRegistration.ts` (now 14 invoke-kind channels total). Per A-03,
+> the SteamGridDB port is deliberately NOT byte-equivalent: every API-key read/write routes
+> exclusively through `getSteamGridDbSecretStore()`, never `GlobalConfig`/`secureKey.ts` directly —
+> a static-analysis import-gate test confirms zero references to `GlobalConfig`/`steamgrid/secureKey`
+> /`steamGridDbApiKey` in the registration module. `getGogDiscounts`'s logic was extracted to a new
+> `discounts/fetchDiscounts.ts` module (the planner's premise that this channel touched no Electron
+> API was false — it calls `app.getVersion()` — so extraction was required to keep the sidecar
+> registration curated-import-clean; Rule 3 deviation). `steamgrid/ipc_handler.ts`'s inline
+> `getDecryptedApiKey()`/`readStoredApiKey()` legacy-plaintext migration branch is deleted, its 5
+> handlers rewritten to the same seam, leaving exactly one surviving GlobalConfig-plaintext migration
+> codepath (`secretStore.ts`) — a repo-wide `isEncryptedValue` grep (recorded verbatim in
+> `34.6-09-SUMMARY.md`) shows 4 files total, the other 2 being the sidecar's own, already-landed,
+> DISTINCT plaintext-to-keyring migration (`sidecar/steamgridSecretStore.ts`, from plan 34.6-02) and
+> one test-mock file — never a duplicate of the branch this plan eliminated. `electronReachLedger
+> .test.ts` gained 3 new `BASELINE_ELECTRON_REACHING_MODULES` entries (`steamgrid/utils.ts`,
+> `steamgrid/secureKey.ts`, `discounts/fetchDiscounts.ts`). In `runnerSliceRegistration.test.ts`:
+> SteamGridDB's 5 (the last of the 16 deferred channels) flipped from absence to presence — new
+> Describe 10 asserts all 5 present with correct kind; `DEFERRED_STEAMGRIDDB` removed entirely,
+> Describe 7's absence set reduced to `DROPPED_ZOOM` alone (3 names); Describe 6 re-derived by
+> MEASUREMENT (never predicted) to 59 handle-kind / 5 listen-kind, per-module counts
+> `[11, 13, 7, 11, 8, 14]` totalling 64 — both directions RED-proven (failure messages recorded
+> verbatim in `34.6-09-SUMMARY.md`); a `WIRING_GUARD_MODULES` const (excluding
+> `registerEnrichmentFlows`) was introduced for Describe 2 alone, because `handlers.ts`'s own
+> docstring mentions `registerEnrichmentFlows` a 3rd time, which would otherwise break its
+> "exactly twice" wiring-count assertion. 3 commits: `754371f21` (feat Task 1: channel registration +
+> 7 named behaviors), `77174035c` (feat/test Task 2: legacy-branch deletion + ledger growth),
+> `bbf04a8d3` (test Task 3: Describe 10 + Describe 6/7 re-derivation). Full sidecar `__tests__`
+> directory green (decompressPool.test.ts pre-existing red, unchanged, untouched). `tsc --noEmit`
+> clean. Bundle smoke test passes (`pnpm build:sidecar && node build/main/sidecar.js` prints
+> `__GAMELIB_SIDECAR_READY__`). No API key value was ever logged, echoed, or written to a fixture —
+> assertions are presence/absence and keyring-slot only. See `34.6-09-SUMMARY.md` for all RED-proof
+> verbatim failure messages. No `gsd-sdk query state.*`/`roadmap.*` verb invoked (known corruption
+> defect) — STATE.md/ROADMAP.md/REQUIREMENTS.md hand-edited instead, each diffed against a pre-edit
+> snapshot to confirm insertion-only changes. REQ-34.6-04 and REQ-34.6-08 remain PARTIALLY LANDED
+> (cont'd) — the full 24-channel CENSUS and the last 3 of the 8 late-discovered channels
+> (`getAchievements`, `getDefaultSavePath`, `getPlaytimeFromRunner`) are owned by plan 34.6-10.
+> NEXT: `/gsd-execute-phase 34.6` — plan 34.6-10 (final Describe 6 re-derivation, full 24-channel
+> census, remaining `runnerMiscFlowRegistration.ts` channels).
+>
+> Prior entries retained below, unedited.
 
 > # ✅ PHASE 34.6 PLAN 08 EXECUTED — 2026-08-24. REQ-34.6-01 and REQ-34.6-13 now FULLY COMPLETE.
 >
