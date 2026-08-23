@@ -1718,11 +1718,23 @@ Cross-cutting constraints:
 **Plans:** 10/10 plans complete (5 waves) — **PHASE COMPLETE 2026-07-27**. Blocking live gate
 PASSED 5/5 (`34.4-LIVE-GATE.md`) — item 2 (`logoutSteam`) FAILED on attempt 1 and was fixed
 in-phase. Verification passed 16/16; code review 0 critical / 3 warning / 2 info, WR-01 fixed
-(`1afef0345`). **Secure-phase 34.4 not yet run.** Open: WR-02/WR-03 (runner-name display +
-i18n interpolation) — **note the file named in the original finding is stale**: 34.4.1 plan 05
-rewrote `WebviewUnavailablePanel.tsx` to drop every runner name, so the defect substance now
-lives in `TauriLoginPanel.tsx` (`:79`/`:120`/`:170` capitalize a runner id instead of using the
-display-name helper; `:151` bakes the runner into a `t()` default instead of `{{runner}}`).
+(`1afef0345`). **`/gsd-secure-phase 34.4` is the ONLY item still open on this phase.**
+
+**WR-02/WR-03 CLOSED 2026-08-23** (quick task `260823-qsm`, commits `cab8c1e69` + `df4de4691`) —
+and **not at the file the findings named**: 34.4.1 plan 05 had rewritten
+`WebviewUnavailablePanel.tsx` to drop every runner name, so the substance had moved to
+`TauriLoginPanel.tsx`. WR-02: users were shown internal codenames ("Legendary", "Gog", "Nile") —
+the review's PRESCRIBED `import { getStoreName } from 'frontend/helpers'` was measured and
+REJECTED (that module side-effect-imports `preload/tauriAttach`, which dereferences `window` and
+hard-fails the jsdom-less jest project), so the mapping was extracted to
+`helpers/storeDisplayName.ts` with `getStoreName` delegating to it. WR-03: eleven `t()` calls baked
+runtime values into their defaults; each now uses `{{placeholder}}` + options, with a separate
+generic key per branch because one key cannot carry both the with-runner and without-runner
+wording. **The old tests PINNED both defects** (`toContain('Signing in to Gog')`, and a finalizing
+table that recomputed the expected label by capitalizing the id — a tautology), and the i18n mock
+dropped its options argument, so it was structurally incapable of catching WR-03. Both fixed; a
+self-tested source gate now fails on any `t()` default carrying a `${}` substitution.
+
 The **two confirmatory Electron checks are CLOSED — both RUN 2026-08-23, both PASS** (quick task
 `260823-qmc`): bottle-pair parity reproduces Electron's identical contradictory pair (the recorded
 precondition had to be restored first — `provisioned` is `true` on disk today), and Electron
