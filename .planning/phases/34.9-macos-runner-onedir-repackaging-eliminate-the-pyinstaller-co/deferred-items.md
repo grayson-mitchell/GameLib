@@ -160,6 +160,8 @@ here.
 **OWNER: UNASSIGNED — no UI-owning phase remains after 34.11; developer decision owed** on where
 this lands (2026-08-11).
 
+**ROUTED 2026-08-23:** now owned by **Phase 34.17** (`pathselectionbox-input-commit-...`), created 2026-08-23 in commit `7a38cea28`. This item carried `OWNER: UNASSIGNED` for 12 days -- an owner line naming nobody rots exactly as fast as one naming a phase that does not exist, and this ledger's sweep cannot catch either, because it scores whether an item maps to a *row*, not whether the row's owner resolves to anything real. Re-verified live before routing: `src/frontend/components/UI/PathSelectionBox/index.tsx:84` still commits on blur only, and `src/frontend/components/UI/TextInputWithIconField/index.tsx:17` already declares the `onKeyDown` prop that `PathSelectionBox` never passes -- the item is live, not moot. The destination phase carries both halves as separate work and requires the paste half to be REPRODUCED before any fix, per this item's own "not independently re-confirmed" caveat. OWNER text above is left as written; this line supersedes only its routing.
+
 ## Pre-existing, recorded, not fixed
 
 ### 9. Plaintext PKCE logging at `src/backend/storeManagers/nile/user.ts:62`
@@ -902,6 +904,8 @@ reason unrelated to C3-01, and whichever future work addresses repo-wide lint de
 as its own item, not as unfinished work from 34.9-29.
 
 **OWNER:** unassigned (pre-existing repo-wide lint debt, not scoped to any phase-34.9 finding).
+
+**ROUTED 2026-08-23:** now owned by **Phase 39** (`repo-wide-lint-debt-drive-pnpm-lint-to-exit-0-...`), created 2026-08-23 in commit `7a38cea28`. Sequenced **after Phase 35** (Electron cutover) by deliberate decision: that deletion removes an as-yet-unmeasured share of the 3544 problems, so sweeping lint before it throws work away and collides with the cutover diff. The destination phase records the `3544 problems (53 errors, 3491 warnings)` figure as a **2026-08-14 snapshot to be re-measured at plan time**, not a target, and carries this project's four recorded ways the measurement misleads (`pnpm codecheck` is a tsc gate and says nothing about lint; only `severity === 2` counts as an error; a finding can name the wrong file with the right lines; the `prettier --check` gate is separately red and must not be swept into a behavioural commit). OWNER text above is left as written; this line supersedes only its routing.
 
 ## Code-review finding disposition — gap cycle 3 review (2026-08-13)
 
