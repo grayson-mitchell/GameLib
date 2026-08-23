@@ -134,7 +134,13 @@ jest.mock('backend/constants/environment', () => ({
   isLinux: true,
   isIntelMac: false,
   isSteamDeckGameMode: false,
-  isFlatpak: false
+  isFlatpak: false,
+  // Plan 05 (REQ-34.6-04/07/13): frontendReady's two byte-equivalent branches.
+  // Fixed false so this suite exercises the normal (non-Snap, non-CLI) boot
+  // path — the plan's own <behavior> spec targets the exclusion assertions
+  // (initQueue/handleProtocol never called), not these two branches.
+  isSnap: false,
+  isCLINoGui: false
 }))
 
 // ── backend/config mock — avoid a real on-disk config.json write while
@@ -176,6 +182,30 @@ jest.mock('../../utils/aborthandler/aborthandler', () => ({
   callAllAbortControllers: jest.fn()
 }))
 
+// ── downloadmanager/downloadqueue mock — Plan 05 (REQ-34.6-04/07/13): spreads the REAL
+// module (already transitively loaded today via `utils.ts`'s own `import { isRunning } from
+// './downloadmanager/downloadqueue'`, exercised by the CR-04 quit tests above — this mock
+// introduces no new import-graph risk) and overrides ONLY `initQueue` with a `jest.fn()` so
+// the frontendReady exclusion test below can assert it was never called. `isRunning` (and
+// every other real export `handleExit` depends on) stays real and unchanged.
+jest.mock('../../downloadmanager/downloadqueue', () => ({
+  ...jest.requireActual('../../downloadmanager/downloadqueue'),
+  initQueue: jest.fn()
+}))
+
+// ── protocol mock — Plan 05 (REQ-34.6-04/07/13): spreads the REAL module (already
+// transitively loaded today via `bootstrap.ts`'s own `import { handleProtocol } from
+// '../protocol'`, exercised by every `startSidecar()` call in this file — no new risk) and
+// overrides ONLY `handleProtocol` with a `jest.fn()` so the frontendReady exclusion test
+// below can assert it was never called from the ported listener body specifically (a
+// startup `deliverStartupProtocolUrl` call is a SEPARATE call site this mock does not
+// distinguish from — the exclusion test only cares whether frontendReady's OWN body reaches
+// it, so it clears the mock immediately before invoking frontendReady).
+jest.mock('../../protocol', () => ({
+  ...jest.requireActual('../../protocol'),
+  handleProtocol: jest.fn()
+}))
+
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { startSidecar, writeInvoke, writeSend } from './helpers/sidecarHarness'
 import { GlobalConfig } from 'backend/config'
@@ -187,7 +217,10 @@ import {
   callAllAbortControllers
 } from '../../utils/aborthandler/aborthandler'
 import { requestRustInvoke } from '../sidecarRpc'
-import { listenerRegistry } from '../electronStub'
+import { listenerRegistry, handlerRegistry } from '../electronStub'
+import * as loggerModule from '../../logger'
+import { initQueue } from '../../downloadmanager/downloadqueue'
+import { handleProtocol } from '../../protocol'
 import {
   RUST_APP_EXIT,
   RUST_DIALOG_MESSAGE,
@@ -204,6 +237,8 @@ const mockedGameInfoStoreClear = gameInfoStore.clear as jest.Mock
 const mockedCallAbortController = callAbortController as jest.Mock
 const mockedCallAllAbortControllers = callAllAbortControllers as jest.Mock
 const mockRequestRustInvoke = requestRustInvoke as jest.Mock
+const mockedInitQueue = initQueue as jest.Mock
+const mockedHandleProtocol = handleProtocol as jest.Mock
 
 /** Points the mocked GlobalConfig.get() at a fresh settings object. */
 function mockAppSettings(partial: Record<string, unknown>) {
@@ -562,6 +597,89 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           String(msg).includes('D-13')
       )
     ).toBe(true)
+  })
+
+  // ── frontendReady (send, D-11) — Phase 34.6 Plan 05 (REQ-34.6-04/07/13) ────
+
+  describe('REQ-34.6-04/07/13 frontendReady (send, D-11)', () => {
+    it('is registered send-kind (listenerRegistry), never handle-kind (handlerRegistry)', () => {
+      startSidecar()
+
+      expect(listenerRegistry.get('frontendReady')?.length).toBe(1)
+      expect(handlerRegistry.has('frontendReady')).toBe(false)
+    })
+
+    it('calls logSendHandlerReached(\'frontendReady\') as its FIRST observable effect, then the Frontend Ready log line', async () => {
+      const logInfoSpy = jest.spyOn(loggerModule, 'logInfo')
+
+      const { input } = startSidecar()
+      writeSend(input, 'frontend-ready-1', 'frontendReady', [])
+      await flush()
+
+      // logInfoSpy.mock.calls may already carry earlier boot-time lines (real, unmocked
+      // logger) -- find the observable marker line specifically and assert it precedes
+      // the plain 'Frontend Ready' line, rather than assuming index 0 of the whole spy.
+      const markerIndex = logInfoSpy.mock.calls.findIndex(
+        ([msg]) => msg === '[GAMELIB_SIDECAR_SEND_HANDLER] frontendReady'
+      )
+      const readyLineIndex = logInfoSpy.mock.calls.findIndex(
+        ([msg]) => msg === 'Frontend Ready'
+      )
+      expect(markerIndex).toBeGreaterThanOrEqual(0)
+      expect(readyLineIndex).toBeGreaterThan(markerIndex)
+
+      logInfoSpy.mockRestore()
+    })
+
+    it('does NOT call initQueue and does NOT call handleProtocol -- the two deliberate exclusions -- RED-proven by temporarily adding either call (see SUMMARY)', async () => {
+      mockedInitQueue.mockClear()
+      mockedHandleProtocol.mockClear()
+
+      const { input } = startSidecar()
+      writeSend(input, 'frontend-ready-2', 'frontendReady', [])
+      await flush()
+
+      expect(mockedInitQueue).not.toHaveBeenCalled()
+      expect(mockedHandleProtocol).not.toHaveBeenCalled()
+    })
+
+    it('never throws out of ipcMain.on -- a synchronous throw inside the body is caught and logged via console.warn, never propagated', async () => {
+      // Capture the ORIGINAL implementation before spying -- jest.spyOn replaces
+      // loggerModule.logInfo in place, so `jest.requireActual('../../logger').logInfo`
+      // would resolve to the very same (already-spied) property and recurse forever.
+      const originalLogInfo = loggerModule.logInfo
+      const logInfoSpy = jest
+        .spyOn(loggerModule, 'logInfo')
+        .mockImplementation((message: unknown, ...rest: unknown[]) => {
+          if (message === 'Frontend Ready') {
+            throw new Error('synchronous logger failure')
+          }
+          // Delegate every other call (the D-11 marker line, and any other boot-time
+          // logInfo call) to the real implementation so this suite's other behaviour
+          // is unaffected.
+          return (
+            originalLogInfo as (message: unknown, ...rest: unknown[]) => void
+          )(message, ...rest)
+        })
+
+      const { input } = startSidecar()
+      expect(() => {
+        writeSend(input, 'frontend-ready-3', 'frontendReady', [])
+      }).not.toThrow()
+      await flush()
+
+      // logSendFailure logs `console.warn('[...] frontendReady failed:', error)` --
+      // the channel name and the failure text live in SEPARATE args, not one string.
+      expect(
+        warnSpy.mock.calls.some(
+          ([msg, err]) =>
+            String(msg).includes('frontendReady') &&
+            String(err).includes('synchronous logger failure')
+        )
+      ).toBe(true)
+
+      logInfoSpy.mockRestore()
+    })
   })
 
   // ── set-connectivity-online: already live via bootstrap.ts (D-03/D-09) ────

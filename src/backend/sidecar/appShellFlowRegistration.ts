@@ -2,7 +2,7 @@
  * Curated app-shell channel registration (Phase 34.1 Plan 04,
  * D-03/D-08/D-09/D-13, REQ-34.1-05/REQ-34.1-09/REQ-34.1-12).
  *
- * Registers the 19 sidecar-routed app-shell channels (8 invoke + 11 send) onto electronStub's
+ * Registers the 20 sidecar-routed app-shell channels (8 invoke + 12 send) onto electronStub's
  * `ipcMain` recorder, importing the REAL `backend/appshell/*` functions
  * extracted by Plan 34.1-02 unchanged (mirrors `installFlowRegistration.ts`'s
  * / `settingsFlowRegistration.ts`'s own objective — prove the real logic runs
@@ -43,6 +43,13 @@
  *       forward unchanged (D-13)
  *     - `setTitleBarOverlay` -> a logged no-op (D-13): no native overlay
  *       survives D-06's own-buttons-everywhere choice under Tauri
+ *     - `frontendReady` (D-11, Plan 05, REQ-34.6-04/07/13) -> a deliberate
+ *       subset of `main.ts:560-601`: `logSendHandlerReached` (the send-kind
+ *       observable), the `logInfo('Frontend Ready', ...)` equivalent, and the
+ *       `isSnap`/`isCLINoGui` branches byte-equivalently. EXCLUDES
+ *       `handleProtocol(...)` and the 5s `initQueue(true)` auto-resume — see
+ *       the module docstring's dedicated D-11 paragraph above for why both
+ *       exclusions are correct, not a regression
  *
  * A `send` channel registered with `ipcMain.handle` (or the reverse) fails
  * 100% SILENTLY at runtime (Phase 31 Pitfall 2) — every registration below
@@ -81,6 +88,25 @@
  * from their own declaration modules instead, and only the two channels this
  * slice owns are re-registered here.
  *
+ * D-11 (Phase 34.6 Plan 05, REQ-34.6-04/07/13): `frontendReady` (send-kind,
+ * `preload/api/misc.ts:93`'s `makeListenerCaller` — NOT invoke-kind, contrary
+ * to `IPC-PORT-INVENTORY.md`'s prior claim) is registered here as
+ * `ipcMain.on`, calling `logSendHandlerReached('frontendReady')`
+ * (`./sendChannelObservable.ts`) as its FIRST statement — the only proof
+ * available that a send-kind handler ran at all, since a send channel fails
+ * silently with no reject and no timeout. The body is a DELIBERATE SUBSET of
+ * `main.ts:560-601`'s original: it excludes `handleProtocol(...)` (the
+ * sidecar already delivers cold-start deep links via
+ * `bootstrap.ts`'s `deliverStartupProtocolUrl` and serves warm ones via
+ * `registerProtocolUrlHandler` — re-running it here would double-handle a
+ * `gamelib://` link) and excludes the 5-second `initQueue(true)` boot-time
+ * auto-resume (Phase 33 D-04 explicitly deferred that to Phase 35; `initQueue`
+ * is called from no other sidecar code path today, so adding it here would
+ * ship deferred behaviour inside a port). Both exclusions preserve prior
+ * locked decisions and are proven behaviourally by `appShellFlows.test.ts`
+ * (mocked `initQueue`/`handleProtocol`, asserted not called) — not merely
+ * asserted in this comment.
+ *
  * Uses electronStub's own `ipcMain` directly (not `backend/ipc`'s typed
  * `addHandler`/`addListener`) — `backend/ipc.ts` itself imports the real
  * `electron` module.
@@ -93,8 +119,10 @@
  * discipline (see the `sidecar-dialog-reject-crashes` precedent).
  */
 
-import { ipcMain, app, powerSaveBlocker } from './electronStub'
-import { isIntelMac } from '../constants/environment'
+import i18next from 'i18next'
+
+import { ipcMain, app, powerSaveBlocker, dialog } from './electronStub'
+import { isIntelMac, isSnap, isCLINoGui } from '../constants/environment'
 import { heroicGithubURL, customThemesWikiLink } from '../constants/urls'
 import { getCustomThemes, getThemeCSS, getCustomCSS } from '../appshell/themes'
 import {
@@ -106,9 +134,11 @@ import { notify } from '../dialog/dialog'
 import { handleExit, openUrlOrFile } from '../utils'
 import { callAbortController } from '../utils/aborthandler/aborthandler'
 import { GlobalConfig } from '../config'
+import { configStore } from '../constants/key_value_stores'
 import { logInfo, LogPrefix } from '../logger'
 import { requestRustInvoke } from './sidecarRpc'
 import { RUST_TRAY_SET_ICON } from '../../common/types/sidecarTransport'
+import { logSendHandlerReached } from './sendChannelObservable'
 
 function logSendFailure(channel: string, error: unknown): void {
   console.warn(
@@ -150,7 +180,7 @@ function syncTrayIcon(): void {
 }
 
 /**
- * Registers the 19 app-shell channels (8 invoke + 11 send). Called once from
+ * Registers the 20 app-shell channels (8 invoke + 12 send). Called once from
  * `handlers.ts` — this
  * module owns no side effects at import time beyond the imports above; the
  * caller decides when registration onto the handler registry happens.
@@ -293,6 +323,64 @@ export function registerAppShellFlows(
     console.warn(
       "[appShellFlowRegistration] setTitleBarOverlay(): logged no-op (D-13) -- no native titlebar overlay survives under Tauri once D-06 puts GameLib's own buttons on every platform when frameless"
     )
+  })
+
+  // D-11 (Phase 34.6 Plan 05, REQ-34.6-04/07/13): frontendReady, send-kind.
+  // `logSendHandlerReached` is the FIRST statement -- the only proof this
+  // handler ran, since a send channel fails silently. Body is a deliberate
+  // SUBSET of main.ts:560-601 -- see this module's own docstring for the two
+  // exclusions (handleProtocol, initQueue) and why each is preserved, not a
+  // regression.
+  ipcMain.on('frontendReady', () => {
+    try {
+      logSendHandlerReached('frontendReady')
+      logInfo('Frontend Ready', LogPrefix.Backend)
+
+      if (isSnap) {
+        const showSnapWarning = configStore.get('showSnapWarning', true)
+        if (showSnapWarning) {
+          dialog
+            .showMessageBox({
+              title: i18next.t(
+                'box.warning.snap.title',
+                'GameLib is running as a Snap'
+              ),
+              message: i18next.t('box.warning.snap.message', {
+                defaultValue:
+                  'Some features are not available in the Snap version of the app for now and we are trying to fix it.{{newLine}}Current limitations are: {{newLine}}GameLib will not be able to find Proton from Steam or Wine from Lutris.{{newLine}}{{newLine}}Gamescope, GameMode and MangoHud will also not work since GameLib cannot have access to them.{{newLine}}{{newLine}}To have access to this feature please install GameLib as a Flatpak, DEB or from the AppImage.',
+                newLine: '\n'
+              }),
+              checkboxLabel: i18next.t('box.warning.snap.checkbox', {
+                defaultValue: 'Do not show this message again'
+              }),
+              checkboxChecked: false
+            })
+            .then((result) => {
+              if (result.checkboxChecked) {
+                configStore.set('showSnapWarning', false)
+              }
+            })
+            .catch((error) => logSendFailure('frontendReady', error))
+        }
+      }
+
+      if (isCLINoGui) {
+        return
+      }
+
+      // EXCLUDED (deliberate, see module docstring): handleProtocol([...]) --
+      // the sidecar already delivers cold-start deep links via
+      // bootstrap.ts's deliverStartupProtocolUrl(process.argv) and serves
+      // warm ones via registerProtocolUrlHandler(); re-running it here would
+      // double-handle a gamelib:// link.
+      //
+      // EXCLUDED (deliberate, see module docstring): the 5-second
+      // initQueue(true) boot-time auto-resume -- Phase 33 D-04 explicitly
+      // deferred this to Phase 35, and initQueue is called from no other
+      // sidecar code path today.
+    } catch (error) {
+      logSendFailure('frontendReady', error)
+    }
   })
 
   // D-11: swap the real Tauri tray's icon via the `tray_set_icon` rustInvoke arm.
