@@ -758,6 +758,46 @@ describe('revealKey', () => {
     expect(result).toEqual({ status: 'ok', data: { key: FAKE_KEY } })
   })
 
+  // ── D-29-03 (gap cycle 3, plan 32) ──────────────────────────────────────
+  // Before this, a SUCCESSFUL reveal logged nothing at all: the log read
+  // "Humble reveal: calling adapter (...)" and stopped. Failure paths were
+  // instrumented, success was silent — so live-gate item 4's central outcome
+  // (did the real network call work) was not verifiable from the log and
+  // rested entirely on the operator's screen.
+
+  test('D-29-03: a SUCCESSFUL reveal emits one INFO completion line with a duration', async () => {
+    queueNetResponse(200, { success: true, key: FAKE_KEY })
+    await revealKey(undefined, params())
+
+    const successLogs = mockLogInfo.mock.calls.filter((c) =>
+      JSON.stringify(c).includes('reveal succeeded')
+    )
+    // Exactly one — an observability line that fires twice is its own defect.
+    expect(successLogs).toHaveLength(1)
+    expect(JSON.stringify(successLogs[0])).toMatch(/durationMs=\d+/)
+    expect(JSON.stringify(successLogs[0])).toContain('keyPresent=true')
+  })
+
+  // The other direction, and the one that matters. Asserting the line EXISTS
+  // is half the job; this asserts the revealed value never reaches ANY log
+  // sink. Audited over all three sinks rather than the one caller under test —
+  // a redaction check driven through a single caller has found exactly one
+  // leak on this project four times, while a census found more.
+  test('D-29-03: the revealed key reaches NO log sink on the success path (C4)', async () => {
+    queueNetResponse(200, { success: true, key: FAKE_KEY })
+    await revealKey(undefined, params())
+
+    const everythingLogged = JSON.stringify([
+      mockLogInfo.mock.calls,
+      mockLogWarning.mock.calls,
+      mockLogError.mock.calls
+    ])
+    expect(everythingLogged).not.toContain(FAKE_KEY)
+    // Not a length either: a length is a side channel on a secret whose value
+    // is the entire point of the call.
+    expect(everythingLogged).not.toContain(`keyLength=${FAKE_KEY.length}`)
+  })
+
   // WR-06 (14-REVIEW): a well-formed {success:false} body is a definitive
   // SERVER verdict (e.g. "already redeemed"/"expired" denial), NOT schema
   // drift — previously misreported as schema_error, which downstream rolled

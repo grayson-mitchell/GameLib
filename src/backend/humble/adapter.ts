@@ -2,7 +2,7 @@ import axios from 'axios'
 import { net } from 'electron'
 import { z } from 'zod'
 
-import { logError, logWarning, LogPrefix } from 'backend/logger'
+import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { AdapterResult, HumbleUserData } from 'common/types/humble'
 import {
   HUMBLE_BASE_URL,
@@ -723,6 +723,7 @@ export async function revealKey(
   csrfToken: string | undefined,
   params: { gamekey: string; machineName: string; keyindex: string | number }
 ): Promise<AdapterResult<{ key: string }> | { status: 'rejected_by_server' }> {
+  const startedAt = Date.now()
   try {
     const body = new URLSearchParams({
       keytype: params.machineName,
@@ -767,6 +768,38 @@ export async function revealKey(
       )
       return { status: 'schema_error', raw: undefined }
     }
+    // D-29-03 (Phase 34.4.1 gap cycle 3, plan 32): the ONLY log line on a
+    // SUCCESSFUL reveal. Before this, the log recorded "Humble reveal: calling
+    // adapter (...)" and then nothing at all — failure paths were instrumented
+    // (schema drift, server denial, the 404 diagnostic), success was silent.
+    //
+    // Why that was filed rather than shrugged off: live-gate item 4's central
+    // outcome — DID THE REAL NETWORK CALL WORK — was not verifiable from the
+    // log at all, and rested entirely on the operator's screen. A future
+    // automated or semi-automated gate cannot confirm that item without a
+    // human present. This line is what makes item 4 machine-checkable.
+    //
+    // REDACTION (C4 / T-10-05, unchanged and load-bearing): NEVER the key,
+    // NEVER the response body, NEVER a cookie. `keyPresent` is a boolean, not
+    // a length — a length is a side channel on a secret whose value is the
+    // whole point. The proven discipline is that the revealed value appears in
+    // no log and no document, and this line must not be the first exception.
+    //
+    // NO HTTP STATUS, deliberately, and this is a scope decision not an
+    // oversight: `HumbleRawResponse` carries only `{ data, contentType }` —
+    // there is no status field to read. Adding one means widening the shared
+    // transport type across BOTH branches (`humblePostRequestViaSeam` and the
+    // electron-net path), which is precisely the seam-parity surface F-1 and
+    // F-6 hid in, for an observability nicety. Duration plus an explicit
+    // success marker satisfies what D-29-03 actually needs; the status code
+    // does not, on its own, tell a gate anything the marker does not.
+    logInfo(
+      [
+        `Humble adapter: ${HUMBLE_REDEEM_PATH} reveal succeeded`,
+        `keyPresent=true durationMs=${Date.now() - startedAt} contentType=${response.contentType ?? 'none'}`
+      ],
+      LogPrefix.Backend
+    )
     return { status: 'ok', data: { key: parsed.data.key } }
   } catch (err) {
     return mapAxiosError<{ key: string }>(err, 'reveal')

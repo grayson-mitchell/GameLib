@@ -668,3 +668,52 @@ not a task* — nothing below is left without an owner **and** a declared file.
 | D-29-09 | CLOSED (one REQ) | plan 30 | `.planning/REQUIREMENTS.md` |
 | D-29-10 | CLOSED at filing | plan 30 | — (ledger only) |
 | NEW-01 | CLOSED | plan 31 | `seam-parity-sweep.py` |
+
+### D-29-03 — **CLOSED 2026-08-23** (plan 32). D-29-02 — remains open, handed to plan 35.
+
+**D-29-03 closed.** `revealKey()` (`adapter.ts`) now emits exactly one INFO line on the success
+path: `Humble adapter: /... reveal succeeded  keyPresent=true durationMs=<n> contentType=<t>`.
+Live-gate item 4's central outcome — *did the real network call work* — is now machine-checkable
+instead of resting entirely on the operator's screen.
+
+**Two tests, each RED-proven against the defect it guards** (not merely against the old code):
+
+| test | red-proof | result |
+|---|---|---|
+| completion line exists, exactly once, with `durationMs` | delete the `logInfo` call | **FAILS** ✓ |
+| revealed key reaches NO log sink | interpolate `key=${parsed.data.key}` into the line | **FAILS** ✓ |
+
+The redaction test audits **all three sinks** (`logInfo`/`logWarning`/`logError`), not just the one
+the call under test uses — a redaction check driven through a single caller has found exactly one
+leak on this project four times, where a census found more. It also asserts no `keyLength=`, because
+a length is a side channel on a secret whose value is the entire point of the call.
+
+**No HTTP status in the line, and that is a scope DECISION, not an oversight.** D-29-03's suggested
+shape asked for "HTTP status and duration". `HumbleRawResponse` carries only `{ data, contentType }`
+— there is no status field. Adding one means widening the shared transport type across **both**
+branches (`humblePostRequestViaSeam` and the electron-net path), which is exactly the seam-parity
+surface F-1 and F-6 hid in, for an observability nicety. Duration plus an explicit success marker
+satisfies what the finding actually needs; the status code adds nothing a gate can use that the
+marker does not. Recorded here so a future reader sees a decision rather than a missing half.
+
+---
+
+**D-29-02 NOT closed — deliberately, and this is the planned outcome.** Plan 32 instructed: *"If it
+cannot be determined without a live authenticated session, say so and stop — record it as a
+live-gate observation for plan 35 rather than guessing."*
+
+It cannot. The two candidate explanations — the endpoint path has moved, or an interstitial is
+answering in its place — are **both** consistent with everything observable offline:
+
+- `adapter.ts:673` records the path as *"confirmed empirically in Plan 05 (10-VALIDATION.md)"*, so
+  it demonstrably worked once. That rules out "never existed", not either live candidate.
+- `looksLikeHtml=true` on a 404 fits both equally.
+- An unauthenticated probe cannot discriminate: an interstitial and a moved path would both answer
+  an anonymous request with HTML.
+
+Guessing here would repeat the failure that cost F-10 nine live runs — correlation shipped as cause.
+
+**Handed to plan 35** as a named live-gate observation, against a live authenticated session.
+**Non-blocking regardless:** `finishLogin` gates acceptance on `getGamekeys`, never on
+`getAccountIdentity`, whose throw is caught. The fetch stays best-effort; making the UI depend on it
+is explicitly out of scope.
