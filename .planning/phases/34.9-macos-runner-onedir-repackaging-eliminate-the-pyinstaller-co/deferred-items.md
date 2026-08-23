@@ -331,6 +331,42 @@ this contract and is the natural place for it.
 
 **OWNER (unchanged):** whichever plan next exercises `dist:mac`/`release:mac` on real hardware.
 
+**CLOSED 2026-08-23 (quick task 260823-suw) — discharged by a real hardware run, not by an edit.**
+
+`pnpm dist:mac --arm64 --publish=never` was run on macOS arm64 exactly as §5 step 2 writes it,
+under AMENDMENT v2's capture form. **Verdict PASS 4/4; `F-34.9-21-03` DISCHARGED.** Full record:
+`34.9-GUARD-PROOF.md` § "RUN RECORD -- 2026-08-23 (Direction B only)".
+
+**The decisive evidence is the resolved script string (log line 3), not the `target=` lines** — it
+shows the passthrough mechanism directly rather than by inference:
+
+```
+> export CSC_IDENTITY_AUTO_DISCOVERY=false && pnpm clean:dist-mac && pnpm build-steam-bridge && electron-vite build && pnpm verify:runner-bundle build --arch=arm64 && electron-builder --mac --arm64 --publish=never
+```
+
+pnpm appended both args to the END of the resolved chain with no `--` separator, so they landed on
+`electron-builder` while `verify:runner-bundle` kept its own hardcoded `--arch=arm64`. Confirming
+effects: 2 arm64 `target=` lines, **0** x64 `target=` lines (so `--arm64` NARROWED the build rather
+than merely being accepted), **0** `Uploading` lines. The bare word `publish` was deliberately not
+grepped — the invocation line echoes `--publish=never` and self-matches.
+
+Also scored: exit `0` read as bytes `300a` via `xxd`; guard PASS line 465 before electron-builder's
+first line 466; dmg and zip both with mtime strictly after `BUILD_START` (2m49s wall time).
+Vendored trees verified unchanged after the build — 109/67/108 files, symlink manifest sha256
+identical to the pre-run snapshot.
+
+**Scope, stated plainly: Direction B ONLY.** Direction A was deliberately not re-run — item 16 is
+about args passthrough, and Direction A would require re-injecting a dereferenced
+`Python.framework` into the vendored tree for no benefit to this discharge. The failing direction's
+evidence remains solely the 2026-08-12 record.
+
+**Unplanned corroboration for item 18, worth reading before Phase 34.16 plans:** log line 3
+directly confirms item 18 detail 1's mechanism — the guard's `--arch=arm64` is fixed in the script
+body while the builder's arches come from the caller. **That is corroboration of the MECHANISM, not
+an observation of the exposure.** This run passed `--arm64`, so guard arch and build arch agreed and
+no gap opened; the x64 case where they diverge remains unexercised, exactly as items 1/12/13/18 all
+say.
+
 ## Code-review finding disposition (2026-08-12)
 
 `34.9-REVIEW.md` (2026-08-11T03:22:49Z) opened six findings against gap cycle 1's own fixes. Gap
