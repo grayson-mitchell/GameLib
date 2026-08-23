@@ -470,10 +470,14 @@ describe('doc-comment accuracy pins (IN-01/IN-02)', () => {
     )
   })
 
-  test('IN-01: the corrected comment names the unreachable shape and states it is left in place', () => {
-    const source = normalisedSource()
-    expect(source).toContain('symlink literally named')
-    expect(source).toContain('matches no branch and is left in place')
+  // Single-anchor pin (C2-07 / ledger item 19, decided 2026-08-23). The
+  // `not.toContain` test above proves the RETIRED framing is gone; it passes
+  // trivially against a deleted comment, so this positive pin is the only thing
+  // asserting a corrected claim still EXISTS. It is deliberately one short
+  // distinctive phrase rather than a sentence: a reword that preserves the
+  // technical claim should not break CI, but a deletion must.
+  test('IN-01: the corrected comment still names the unreachable symlink shape', () => {
+    expect(normalisedSource()).toContain('symlink literally named')
   })
 
   test('IN-02: the retired "Every removal path is containment-checked" framing is gone', () => {
@@ -482,13 +486,13 @@ describe('doc-comment accuracy pins (IN-01/IN-02)', () => {
     )
   })
 
-  test('IN-02: the corrected comment states the throw is untested defense-in-depth', () => {
-    const source = normalisedSource()
-    expect(source).toContain('never contain a path separator')
-    expect(source).toContain(
+  // Single-anchor pin, same rationale as IN-01 above. Of the three phrases this
+  // test used to assert, only this one carries the corrected CLAIM itself (the
+  // throw is untested defense-in-depth); the other two were connective prose.
+  test('IN-02: the corrected comment still states the throw is untested defense-in-depth', () => {
+    expect(normalisedSource()).toContain(
       'defense-in-depth against a currently-unreachable input'
     )
-    expect(source).toContain('no test exercises it')
   })
 })
 

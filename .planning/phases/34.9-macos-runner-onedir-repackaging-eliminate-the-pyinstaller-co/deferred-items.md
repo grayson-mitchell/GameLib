@@ -648,6 +648,58 @@ the first.
 **OWNER (unchanged in kind, restated with a live path):** whichever plan next edits
 `meta/cleanDist.ts`'s header comments. No phase owns this.
 
+**CLOSED 2026-08-23 (quick task 260823-sok) — DECIDED, not merely re-pointed.** The developer chose
+**option 3: keep the positive pins but reduce them to one distinctive anchor phrase per claim.**
+Six positive `toContain` assertions became three. All three `not.toContain` assertions are
+untouched.
+
+**Why C2-07's own proposal (drop the positives entirely) was NOT taken.** C2-07 reasoned that the
+`not.toContain` assertions "carry the real protection". They do — against *regression to the
+retired framing*. But **`not.toContain` passes trivially against a deleted comment**, so the
+negatives cannot detect that the corrected claim was removed altogether. The positives are the only
+assertion that a correct replacement still EXISTS. The real trade was never coupling-vs-nothing:
+
+- negatives alone → protected against regression-to-wrong, **unprotected against deletion-to-nothing**
+- both → protected against both, at the cost of a tripwire on prose
+
+Three short anchors keep the deletion protection while halving the reword-breakage surface, and
+each surviving anchor is a technical term rather than a sentence, so a reword preserving the claim
+is far likelier to preserve the anchor.
+
+What was kept and what went (deliberately a list, not a table -- a markdown row beginning with a
+bare finding ID is parsed by `34.9-REVIEW-SWEEP-CHECK.cjs` as a disposition row and collides with
+the real one; caught by that tool on this very edit):
+
+- **IN-01's claim** -- anchor KEPT: `'symlink literally named'`. Dropped:
+  `'matches no branch and is left in place'`.
+- **IN-02's claim** -- anchor KEPT: `'defense-in-depth against a currently-unreachable input'`.
+  Dropped: `'never contain a path separator'`, `'no test exercises it'`.
+- **the E-02 honesty claim** -- anchor KEPT: `'UNCONFIRMED generalization'`. Nothing dropped; it was
+  already a single anchor.
+
+Test names were corrected in the same edit: `'IN-01: the corrected comment names the unreachable
+shape **and states it is left in place**'` described two assertions and now describes one. A test
+name that overstates what it checks is the same defect class this phase spent four gap cycles on.
+
+**RED-proven, each anchor independently** (`RED-PROOF-OK 3/3`): for each of the three, the phrase
+was removed from `meta/cleanDist.ts`, its own test went red (1/1) **and the other two stayed green**
+— proving the anchors are independent checks, not one assertion wearing three hats — then the
+source was restored and confirmed by `shasum -a 256` against a pre-mutation snapshot, with `git
+diff --quiet` agreeing. Green control: 33/33. Full `Meta` project: 22 suites, 521 passed / 1
+pre-existing skip. `tsc --noEmit` clean, `eslint` exit 0.
+
+**Method note worth carrying forward:** the first RED-proof attempt restored via `git checkout --
+meta/cleanDist.ts`, which fired this repo's **post-checkout hook** → `pnpm install` →
+`download-helper-binaries`, which threw on the six `PENDING-CI-PUBLISH` sentinels after
+re-downloading the linux/win runner binaries. No damage resulted (all three darwin onedir trees
+verified intact afterwards at 109/67/108 files with `Versions/Current` still a symlink in each),
+but **a restore mechanism must not have side effects on the tree it restores into.** The proof was
+re-run with `cp`-from-snapshot restore. This is the same hazard `deferred-items.md`'s standing note
+about not running `download-helper-binaries` describes, reached by an unexpected route.
+
+**This discharges the precondition that fired unanswered on 2026-08-22** (see the AMENDED note
+above). Item 19 is closed.
+
 ## Code-review finding disposition — gap cycle 2 review (2026-08-13)
 
 `34.9-REVIEW-CYCLE2.md`'s eight findings (C2-01 through C2-08) appeared in **none** of
