@@ -32,9 +32,15 @@ GATE_SUFFIX = "-gate.py"
 # Anti-vacuity floor. If discovery returns fewer than this, something has gone
 # wrong with the glob (a directory rename, a moved .planning tree) and the
 # runner would otherwise report a cheerful green while checking nothing. This
-# is deliberately a floor, not an exact count: adding a seventh gate must not
+# is deliberately a floor, not an exact count: adding an eighth gate must not
 # require editing this file, but silently dropping to zero must fail loudly.
-MINIMUM_EXPECTED_GATES = 6
+#
+# 6 -> 7 (quick task 260823-ofm): the seventh gate is the 34.4.1 seam-parity
+# sweep, renamed from `seam-parity-sweep.py` so this runner's suffix discovery
+# finds it. Raising the floor is the only edit that rename required -- and it
+# IS required, because a floor left at 6 would keep reporting green if the new
+# gate were later deleted or renamed back out of discovery.
+MINIMUM_EXPECTED_GATES = 7
 
 
 def discover_gates():

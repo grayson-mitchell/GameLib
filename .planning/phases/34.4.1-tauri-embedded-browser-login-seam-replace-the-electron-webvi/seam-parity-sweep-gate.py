@@ -42,14 +42,26 @@ axes:
   scope for a stdlib-only instrument, and the sites that need it are exactly the ones this file's
   SITE_PROFILES table names, once each.
 
-Run `python3 seam-parity-sweep.py` to regenerate `34.4.1-SEAM-PARITY-SWEEP.md` from the live tree.
-Run `python3 seam-parity-sweep.py --self-test` to prove every check function actually rejects the
-bad input it exists to reject (Phase 34.2 gap cycle 4's round-4 lesson: 14 comment strippers that
-all passed vacuously). Self-test cases run through the SAME functions used against the real tree.
+GATE MODE -- the default, added by quick task 260823-ofm. Run with NO ARGUMENTS and this file
+behaves as a planning gate: it self-tests, walks the live tree, and then CHECKS that the committed
+`34.4.1-SEAM-PARITY-SWEEP.md` still matches what the walk produces. It WRITES NOTHING.
+`meta/runPlanningGates.py` discovers this file by its `-gate.py` suffix and invokes it exactly that
+way -- `[sys.executable, gate.name]`, no arguments -- so the no-argument path IS the CI path.
+Regeneration therefore has to be the flag rather than the default: a gate that rewrites the artifact
+it guards can never report drift, only cause it, and this repo has already lost a set of pins that
+way (one failure became five).
+
+Run `python3 seam-parity-sweep-gate.py --write` to deliberately regenerate the report after a real
+change. Run `python3 seam-parity-sweep-gate.py --self-test` to prove every check function actually
+rejects the bad input it exists to reject (Phase 34.2 gap cycle 4's round-4 lesson: 14 comment
+strippers that all passed vacuously). Self-test cases run through the SAME functions used against
+the real tree, and gate mode runs the self-test FIRST -- D-29-10 recorded this script's own
+anti-vacuity guard silently failing for weeks, and a self-test nobody runs is not a self-test.
 """
 
 from __future__ import annotations
 
+import difflib
 import re
 import sys
 from pathlib import Path
@@ -110,6 +122,30 @@ EXPECTED_AXIS_B_SAFESTORAGE_IMPORTERS = [
     "src/backend/humble/secretStore.ts",
     "src/backend/steamgrid/secureKey.ts",
     "src/backend/storeManagers/steam/tokenStore.ts",
+]
+
+# The set of sites the sweep is ALLOWED to classify SILENTLY-DROPPED, pinned by quick task
+# 260823-ofm so that wiring this script into CI actually guards something. Before the pin the
+# sweep exited 0 no matter how many findings were silently dropped -- it hard-failed only on
+# UNDER-ENUMERATION (the two EXPECTED_* checks above), so a regression that dropped a NEW
+# capability at the seam would have sailed through green. Non-vacuous, and measuring the wrong
+# property.
+#
+# These three are KNOWN, PRE-EXISTING, and deliberately unresolved -- they predate the pin and
+# closing them is not this task's job. S-07/S-10 are F-6 and its verbatim Epic twin (authCache +
+# hostResolver dropped by the Tauri wipe path); S-12 is F-1's steamgrid leg.
+#
+# PINNED BY PATH, deliberately, and NOT by `S-NN` and NOT by `path:line`:
+#   - `S-NN` is POSITIONAL (`f"S-{i:02d}"` enumerated over the concatenated findings list), so
+#     inserting any finding earlier renumbers everything after it. An ID is a display artifact,
+#     not an identity. ID renumbering is caught independently by the report-content check.
+#   - `path:line` would be a SECOND place needing a line-number refresh on every unrelated edit,
+#     on top of EXPECTED_AXIS_A_SITES. One such treadmill is enough.
+# The path set is the property that actually matters: WHICH FILES silently drop a capability.
+EXPECTED_SILENT_DROP_SITES = [
+    "src/backend/humble/user.ts",  # S-07 — F-6: authCache + hostResolver dropped
+    "src/backend/storeManagers/legendary/user.ts",  # S-10 — F-6's verbatim Epic twin
+    "src/backend/steamgrid/secureKey.ts",  # S-12 — F-1/F-1b: safeStorage throws under Tauri
 ]
 
 
@@ -1358,12 +1394,63 @@ def self_test() -> None:
         "term present (the tokenStore.ts shape)"
     )
 
+    # 12. silent_drop_violations: the pin must reject BOTH directions, not just a new drop.
+    # Added by quick task 260823-ofm alongside wiring this file into CI. Before the pin the sweep
+    # exited 0 no matter how many findings were SILENTLY-DROPPED -- non-vacuous (it still failed
+    # on under-enumeration) but measuring the wrong property.
+    def drop_finding(site: str) -> Finding:
+        return Finding("A", site, "electron", "tauri", "SILENTLY-DROPPED", "synthetic self-test")
+
+    pinned = [drop_finding(site) for site in EXPECTED_SILENT_DROP_SITES]
+    if silent_drop_violations(pinned) is not None:
+        fail("self-test FAILED: silent_drop_violations rejected the exact pinned set")
+    # A line suffix must NOT defeat the pin -- sites are compared by path, IDs and lines are not
+    # identities. If this stopped holding, the pin would fail on every unrelated line shift.
+    lined = [drop_finding(site + ":999") for site in EXPECTED_SILENT_DROP_SITES]
+    if silent_drop_violations(lined) is not None:
+        fail("self-test FAILED: silent_drop_violations was defeated by a line-number suffix")
+    appeared = silent_drop_violations(pinned + [drop_finding("src/backend/brand/new/leak.ts")])
+    if appeared is None or "NEW silent drop" not in appeared:
+        fail("self-test FAILED: silent_drop_violations did not flag a NEW silently-dropped site")
+    vanished = silent_drop_violations(pinned[:-1])
+    if vanished is None or "NO LONGER present" not in vanished:
+        fail("self-test FAILED: silent_drop_violations did not flag a site that stopped dropping")
+    # A DECLARED finding at an unpinned site must not trip the pin -- only SILENTLY-DROPPED ones.
+    declared_elsewhere = Finding("A", "src/backend/other.ts", "e", "t", "DECLARED", "declared")
+    if silent_drop_violations(pinned + [declared_elsewhere]) is not None:
+        fail("self-test FAILED: silent_drop_violations tripped on a DECLARED (not dropped) finding")
+    case(
+        "silent_drop_violations accepts exactly the pinned set (with or without line suffixes), "
+        "rejects a NEW silent drop, rejects a pinned drop that VANISHED, and ignores DECLARED "
+        "findings"
+    )
+
+    # 13. report_drift: a stale committed report must be rejected, an identical one accepted, and
+    # an absent one reported rather than silently treated as current. This is the check that stops
+    # the gate from doing what the script used to do unconditionally -- rewrite its own artifact.
+    if report_drift("same\n", "same\n") is not None:
+        fail("self-test FAILED: report_drift flagged an identical report as drifted")
+    stale = report_drift("committed line\n", "regenerated line\n")
+    if stale is None or "STALE" not in stale or "regenerated line" not in stale:
+        fail("self-test FAILED: report_drift did not reject a differing report, or omitted the diff")
+    absent = report_drift(None, "anything\n")
+    if absent is None or "does not exist" not in absent:
+        fail("self-test FAILED: report_drift treated a MISSING report as current")
+    case(
+        "report_drift accepts an identical report, rejects a differing one with a diff, and "
+        "rejects a missing one instead of passing vacuously"
+    )
+
     # 2026-07-31 (plan 29 Task 3): 11 -> 13. Plan 28 added two check functions and their
     # self-test cases (WIPE_STEP_CATEGORIES for clearHumbleStorage/clearEpicStorage, and the
     # is_axis_b_declared strict-bar case closing S-11) but did not bump this constant, so the
     # anti-vacuity guard itself has been failing ever since -- the guard that exists to prove
     # every check can reject was the one check nobody was running.
-    expected_case_count = 13
+    # 260823-ofm: 13 -> 15. Two gate checks were added when this script was wired into CI as a
+    # discovered planning gate (report_drift, silent_drop_violations); per the invariant below,
+    # each gets exactly one case. Bumping this constant is not bookkeeping -- the 2026-07-31
+    # incident above happened precisely because someone added checks and did not bump it.
+    expected_case_count = 15
     if case_count != expected_case_count:
         fail(
             f"self-test FAILED: ran {case_count} case(s) but expected exactly {expected_case_count} — "
@@ -1373,11 +1460,85 @@ def self_test() -> None:
     print(f"\nAll {expected_case_count} check(s) proved capable of rejecting the input they exist to reject.")
 
 
+def report_drift(on_disk: str | None, report: str) -> str | None:
+    """Gate check: is the committed report still what the live tree produces?
+
+    Takes the on-disk TEXT (None when the file is absent) rather than reading the file itself, so
+    self_test() can drive all three branches without touching the real, tracked report. Returns a
+    failure message, or None when the report is current. Deliberately does NOT call fail() itself
+    -- returning the message is what keeps this callable from the anti-vacuity self-test at all.
+    """
+    if on_disk is None:
+        return (
+            f"{OUTPUT_PATH.name} does not exist. The gate compares the committed report against a "
+            "fresh walk; with no report there is nothing to compare. Run this script with --write."
+        )
+    if on_disk == report:
+        return None
+    diff = "\n".join(
+        difflib.unified_diff(
+            on_disk.splitlines(),
+            report.splitlines(),
+            fromfile=f"{OUTPUT_PATH.name} (committed)",
+            tofile="freshly generated from the live tree",
+            lineterm="",
+        )
+    )
+    return (
+        f"{OUTPUT_PATH.name} is STALE -- the committed report no longer matches the live tree.\n"
+        "Decide which one is wrong before regenerating: sometimes the code drifted, sometimes a "
+        "pin in this script did. Regenerate with `python3 seam-parity-sweep-gate.py --write` only "
+        "once you know which.\n\n" + diff
+    )
+
+
+def silent_drop_violations(all_findings: list[Finding]) -> str | None:
+    """Gate check: is the set of SILENTLY-DROPPED sites exactly EXPECTED_SILENT_DROP_SITES?
+
+    Fails in BOTH directions on purpose. A new dropped site is a regression at the seam. A dropped
+    site DISAPPEARING is also a failure -- it means a known gap was closed and the pin above is now
+    lying about the state of the world, which is how a pin rots into decoration.
+
+    Returns a failure message, or None when the set matches.
+    """
+    actual = sorted({f.site.split(":")[0] for f in all_findings if f.classification == "SILENTLY-DROPPED"})
+    expected = sorted(EXPECTED_SILENT_DROP_SITES)
+    if actual == expected:
+        return None
+    appeared = [site for site in actual if site not in expected]
+    closed = [site for site in expected if site not in actual]
+    parts = []
+    if appeared:
+        parts.append(
+            f"NEW silent drop(s) at the seam: {appeared}. A capability present on the Electron "
+            "branch is absent on the Tauri branch with nothing declaring the gap. Either restore "
+            "the capability or declare the drop, then add the site to EXPECTED_SILENT_DROP_SITES "
+            "with an ID and a reason."
+        )
+    if closed:
+        parts.append(
+            f"silent drop(s) NO LONGER present: {closed}. Good news, but the pin now overstates "
+            "the gap -- remove the site from EXPECTED_SILENT_DROP_SITES so the next regression is "
+            "still detectable."
+        )
+    return "the SILENTLY-DROPPED site set changed. " + " ".join(parts)
+
+
 def main() -> None:
     if "--self-test" in sys.argv:
         self_test()
         print("\nSELF-TEST OK: every check rejects its corresponding bad input.")
         sys.exit(0)
+
+    # Gate mode is the DEFAULT because meta/runPlanningGates.py runs every discovered `*-gate.py`
+    # as `[sys.executable, gate.name]` with NO arguments. Writing therefore has to be opt-in.
+    write_mode = "--write" in sys.argv
+
+    if not write_mode:
+        # D-29-10: this script's own anti-vacuity guard was failing silently, undetected, because
+        # nothing ran it. Running it FIRST in gate mode means a broken self-test fails CI instead
+        # of quietly licensing every check below it.
+        self_test()
 
     axis_a_findings, site_paths_seen = run_axis_a()
     supplementary_findings = find_unguarded_session_calls()
@@ -1400,20 +1561,35 @@ def main() -> None:
             "expectation"
         )
 
+    all_findings = axis_a_findings + supplementary_findings + axis_b_findings
     report = build_report(axis_a_findings, supplementary_findings, axis_b_findings, len(site_paths_seen))
-    OUTPUT_PATH.write_text(report, encoding="utf-8")
+
+    drop_failure = silent_drop_violations(all_findings)
+    if drop_failure:
+        fail(drop_failure)
 
     dropped_ids = [
         f"S-{i:02d}"
-        for i, f in enumerate(axis_a_findings + supplementary_findings + axis_b_findings, start=1)
+        for i, f in enumerate(all_findings, start=1)
         if f.classification == "SILENTLY-DROPPED"
     ]
-    print(
-        f"OK: wrote {OUTPUT_PATH} — {len(axis_a_findings)} Axis A site(s) + "
-        f"{len(supplementary_findings)} supplementary finding(s) + {len(axis_b_findings)} Axis B "
-        f"importer(s) = {len(axis_a_findings) + len(supplementary_findings) + len(axis_b_findings)} "
-        f"total finding(s), {len(dropped_ids)} SILENTLY-DROPPED: {dropped_ids}"
+    tally = (
+        f"{len(axis_a_findings)} Axis A site(s) + {len(supplementary_findings)} supplementary "
+        f"finding(s) + {len(axis_b_findings)} Axis B importer(s) = {len(all_findings)} total "
+        f"finding(s), {len(dropped_ids)} SILENTLY-DROPPED: {dropped_ids}"
     )
+
+    if write_mode:
+        OUTPUT_PATH.write_text(report, encoding="utf-8")
+        print(f"OK: wrote {OUTPUT_PATH} — {tally}")
+        sys.exit(0)
+
+    on_disk = OUTPUT_PATH.read_text(encoding="utf-8") if OUTPUT_PATH.exists() else None
+    drift_failure = report_drift(on_disk, report)
+    if drift_failure:
+        fail(drift_failure)
+
+    print(f"OK: {OUTPUT_PATH.name} is current and the silent-drop set is unchanged — {tally}")
     sys.exit(0)
 
 
