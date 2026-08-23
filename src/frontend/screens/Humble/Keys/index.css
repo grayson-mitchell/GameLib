@@ -181,6 +181,31 @@
   border-bottom: none;
 }
 
+/* 260823-op3: the row's two leading action columns (Activate, then Gift on
+   Humble). A FIXED basis, not `auto` — each <li> is its own flex container,
+   so content-sized action cells would leave every row a slightly different
+   width and the "columns" would visibly stagger down the list. Within a tab
+   the action props are uniform, so one fixed basis aligns them all. Sized to
+   hold the widest content the cell carries: "Opened Humble gift page
+   8/23/2026" wraps to two caption lines rather than widening the column. */
+.humbleKeyRowAction {
+  flex: 0 0 9.5rem;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+/* Buttons stretch to the cell so the two columns read as aligned edges
+   rather than ragged content. */
+.humbleKeyRowAction > .humbleKeyGiftButton,
+.humbleKeyRowAction > .humbleKeyClaimGroup {
+  width: 100%;
+}
+
+.humbleKeyRowAction .humbleKeyGiftButton {
+  justify-content: center;
+}
+
 .humbleKeyRowInfo {
   display: flex;
   flex-direction: column;
@@ -361,16 +386,25 @@
   font-size: var(--text-xs);
   font-weight: var(--regular);
   color: var(--text-secondary);
-  white-space: nowrap;
+  /* 260823-op3: wraps rather than nowrap — inside the fixed-width
+     .humbleKeyRowAction column, "Opened Humble gift page 8/23/2026" on one
+     line would overflow the cell it is meant to fit. */
+  white-space: normal;
 }
 
 /* D-67/D-77 (Phase 14): the claim-flow's revealed/redeemed annotation pair,
    rendered on Keys-waiting rows via the `claimAction` prop. Groups the
-   caption with its adjoining Finish-activation/Undo button. */
+   caption with its adjoining Finish-activation/Undo button.
+
+   260823-op3: stacks vertically now that it lives inside the fixed-width
+   .humbleKeyRowAction column — side-by-side, "Redeemed 8/23/2026" plus its
+   Undo link cannot fit the column and would blow the alignment it exists to
+   provide. */
 .humbleKeyClaimGroup {
   display: flex;
-  align-items: center;
-  gap: var(--space-xs);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3xs);
   white-space: nowrap;
 }
 

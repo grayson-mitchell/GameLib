@@ -261,8 +261,12 @@ function findAllHumbleKeyRowProps(
     .filter((el) => el.type === HumbleKeyRow)
     .map(
       (el) =>
-        (el as ReactElement<{ claimAction: ClaimAction; undoOverride?: boolean }>)
-          .props
+        (
+          el as ReactElement<{
+            claimAction: ClaimAction
+            undoOverride?: boolean
+          }>
+        ).props
     )
 }
 
@@ -515,7 +519,14 @@ describe('HumbleKeysWaiting', () => {
         (b) => b.props.onClick === props!.claimAction.onFinish
       )
       expect(finishButton).toBeDefined()
-      expect(textContent(finishButton)).toContain('Finish activation')
+      // 260823-op3: CR-01's subject is the WIRING (onFinish, never the
+      // dead-end onClaim), asserted above and below. Only the label moved:
+      // this fixture is a Steam key, and a REVEALED Steam key activates in
+      // one click just like a fresh one — the wizard reads the stored value
+      // instead of re-revealing — so it carries the same "Activate" verb
+      // rather than the "Finish activation" copy that described the old
+      // multi-step hand-off.
+      expect(textContent(finishButton)).toContain('Activate')
 
       // No button is wired to onClaim — the dead-end Claim path is gone.
       expect(
