@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "PHASE 34.6 EXECUTING (2026-08-24) -- waves 1 and 2 COMPLETE, 6/14 plans (34.6-01/-02/-03/-04/-05/-06). The blocking one-shot human checkpoint 34.6-04 is DISCHARGED: live-gate STEP 0 PASSED, so plan 34.6-07 (wave 3) is unblocked and may now port winetricks. Backend jest baseline is 1 suite / 3 tests failing, ALL pre-existing decompressPool lzmaLoader (Phase 23.1); tsc clean. Next: wave 3 = 34.6-07."
-last_updated: "2026-08-24T07:30:00.000Z"
-last_activity: "2026-08-24 (NZST) -- Plan 34.6-04 EXECUTED: live-gate STEP 0 PASSED. First live observation of DECLARED_UNAVAILABLE_MARKER in this project history (5 marker lines, 2 naming winetricks channels, 0 carrying user data), on commit 9245195b6, archived at ~/Library/Logs/GameLib/gamelib.log.step0-capture-20260823T191024Z. Addendum ALSO captured the same pre-port marker for the EOS overlay and SteamGridDB families -- which NO gate step was scoped to collect, and which plans 34.6-08/34.6-09 will destroy by porting. THREE FINDINGS: (F1) the Winetricks surface is UNREACHABLE on a CrossOver wine version -- GamesSettings/index.tsx:184 suppresses the entire <Tools /> block when isCrossover, with no indication anything is missing, so the marker could never be emitted for such users; (F2) game 206020 config on disk read type:\"wine\" while the running app behaved as crossover -- observation only, not chased; (F3) the plan grep acceptance criterion (grep -c winetricks in wineToolsFlowRegistration.ts == 0) is STALE -- it returns 3, all COMMENTS; the behavioural T-34.5-15 absence assertion is authoritative and passes. PROVENANCE: the executor REFUSED to finalise after a context compaction, judging that a relayed human-verify result could not be treated as consent -- a structurally unsatisfiable bar for a subagent, whose only input channel IS a relay. It correctly left the gate at status:pending/verdict:null and declined destructive rollback. The operator authorised the override explicitly; the ORCHESTRATOR performed finalisation and owns the certification. A fresh compliant executor was deliberately NOT spawned. REQ-34.6-11 stays UNCHECKED -- steps 1-8 owed by 34.6-12. STATE.md hand-edited; no gsd-sdk state.* verb invoked (known corruption defect -- it deleted 417 lines at this phase start and was reverted from a cp snapshot)."
+stopped_at: "PHASE 34.6 EXECUTING (2026-08-24) -- waves 1-3 COMPLETE, 7/14 plans (34.6-01/-02/-03/-04/-05/-06/-07). Plan 34.6-07 (wave 3) EXECUTED: ported the winetricks trio (winetricksAvailable, winetricksInstalled invoke-kind; winetricksInstall send-kind, D-11 observable) plus runWineCommandForGame (invoke-kind, D-02 byte-equivalent, T-34.5-C6-49-03 hardening deferred to 34.6-11) into wineToolsFlowRegistration.ts. A-01 confirmed binding: no macOS decline branch ported (Winetricks has genuine macEnvs support, no !isLinux guard). Three previously-green absence/exemplar gates flipped to presence, all RED-proven both directions (wineToolsFlows.test.ts T-34.5-15, enrichmentFlows.test.ts REQ-34.2-14 exemplar swapped winetricksInstall->authZoom, runnerSliceRegistration.test.ts Describe 6/7/8). flowRegistrationCensus.test.ts pin updated as an out-of-declared-files Rule 1 fix (EXPECTED 9/0->12/1, wineToolsFlowRegistration.ts added to NO_COUNT_CLAIM mirroring runnerAuth/shortcuts precedent). 176/176 targeted tests pass, tsc clean, bundle smoke test (pnpm build:sidecar && node build/main/sidecar.js) prints __GAMELIB_SIDECAR_READY__. Backend jest baseline still 1 suite / 3 tests failing, ALL pre-existing decompressPool lzmaLoader (Phase 23.1), not touched by this plan. Next: wave 4 plans, including 34.6-11 (owns T-34.5-C6-49-03 hardening)."
+last_updated: "2026-08-24T08:15:00.000Z"
+last_activity: "2026-08-24 (NZST) -- Plan 34.6-07 EXECUTED (4 commits: 04f62f3c6 feat Task 1, 04072114a test Task 2, c52f4df22 test Task 3, a0ec35d2d test Rule-1 pin fix). See 34.6-07-SUMMARY.md for full detail, including the two Task 3 RED-proof failure messages and the measured/re-derived runnerSliceRegistration.test.ts Describe 6 counts (37 handle / 5 listen, [11,13,7,11] totalling 42). STATE.md hand-edited; no gsd-sdk state.* verb invoked (known corruption defect)."
 progress:
   # Hand-corrected after `state.begin-phase` corrupted these (recurring gsd-sdk defect).
   # Tool wrote 24/15/324/298/63 and also mangled three prose blocks (orphaned continuation
@@ -468,10 +468,14 @@ progress:
   # No gsd-sdk state.*/roadmap.update-plan-progress verb invoked (known
   # corruption defect) -- hand-applied, whole-file diffed against a
   # pre-edit snapshot to confirm insertion-only changes.
+  # 2026-08-24 (plan 34.6-07 execution): +1 completed plan (34.6-07, plan's own
+  # SUMMARY landed, wave 3 of Phase 34.6). total_plans unchanged (373, already
+  # counted -- one of the 14 pre-planned 34.6 plans). percent = floor(357/373*100)
+  # = floor(95.71) = 95 (floor, matching prior convention; unchanged from 95).
   total_phases: 27
   completed_phases: 21
   total_plans: 373
-  completed_plans: 356
+  completed_plans: 357
   percent: 95
 ---
 
