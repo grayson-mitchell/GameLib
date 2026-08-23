@@ -1,19 +1,34 @@
 /**
- * Curated Wine execution + DXVK/VKD3D toggle + Wine-version-management channel registration for
- * the Tauri sidecar (Phase 34.5 Plans 34.5-05/34.5-09, REQ-34.5-03).
+ * Curated Wine execution + DXVK/VKD3D toggle + Wine-version-management + winetricks channel
+ * registration for the Tauri sidecar (Phase 34.5 Plans 34.5-05/34.5-09, REQ-34.5-03; Phase 34.6
+ * Plan 34.6-07, REQ-34.6-03/04/07/08/13).
  *
- * As of plan 34.5-09, this module registers all 9 declared channels: the `runWineCommand` seam
+ * As of plan 34.5-09, this module registered 9 declared channels: the `runWineCommand` seam
  * (D-14), the two Wine probe channels (`getAlternativeWine`, `wine.isValidVersion`), the
  * Wine-version-management trio (`installWineVersion`/`refreshWineVersionInfo`/`removeWineVersion`)
  * plus their co-located wine-releases-ready event subscription (see the comment above that
  * subscription below for the exact event name), and the DXVK/VKD3D toggle trio
  * (`toggleDXVK`/`toggleDXVKNVAPI`/`toggleVKD3D`) added by plan 34.5-09.
  *
- * Declared channel list (9 total, all invoke — verified against `main.ts` and the
- * `wine/manager/ipc_handler.ts` source by 34.5-RESEARCH.md and this plan's own `<interfaces>`
- * block; no send-kind channels in this cluster):
+ * Plan 34.6-07 adds the 3 winetricks channels plus `runWineCommandForGame` (`tools/ipc_handler.ts`
+ * — the SOURCE for this port, never an import target). **A-01 governs this addition and overrides
+ * this module's own earlier D-04 framing where the two conflict**: `tools/index.ts:528`'s
+ * `Winetricks` object has NO `!isLinux` guard anywhere — it has genuine macOS support via a
+ * dedicated `macEnvs` branch (`:628`, selected by `isMac ? macEnvs : linuxEnvs` at `:642`). No
+ * macOS decline branch is ported here; an empty component list is an ACCEPTABLE RESULT of
+ * `listInstalled()`/`listAvailable()`, not a platform decline. `winetricksInstall` stays
+ * `ipcMain.on` (send-kind, D-11) — converting it to invoke would smuggle a behaviour change into
+ * a port. `runWineCommandForGame` carries `T-34.5-C6-49-03` (a renderer-supplied `commandParts`
+ * array reaching a Wine process, and a shell on the Windows branch) and is ported byte-
+ * equivalently, WITHOUT any path guard or validation — that hardening is plan 34.6-11's dedicated,
+ * separately-committed scope (D-02), landing alongside the same hardening for `importGame` and
+ * `moveInstall` (34.6-06).
  *
- *   invoke (ipcMain.handle, 9):
+ * Declared channel list (13 total, 12 invoke + 1 send — verified against `main.ts`,
+ * `wine/manager/ipc_handler.ts` and `tools/ipc_handler.ts` source by 34.5-RESEARCH.md/this plan's
+ * own `<interfaces>` block):
+ *
+ *   invoke (ipcMain.handle, 12):
  *     - `runWineCommand`         -> main.ts:766
  *     - `getAlternativeWine`     -> main.ts:973
  *     - `wine.isValidVersion`    -> main.ts:1532
@@ -23,6 +38,12 @@
  *     - `installWineVersion`     -> wine/manager/ipc_handler.ts:14
  *     - `refreshWineVersionInfo` -> wine/manager/ipc_handler.ts:46
  *     - `removeWineVersion`      -> wine/manager/ipc_handler.ts:56
+ *     - `winetricksAvailable`    -> tools/ipc_handler.ts (Phase 34.6 Plan 07)
+ *     - `winetricksInstalled`    -> tools/ipc_handler.ts (Phase 34.6 Plan 07)
+ *     - `runWineCommandForGame`  -> tools/ipc_handler.ts (Phase 34.6 Plan 07, T-34.5-C6-49-03)
+ *
+ *   send (ipcMain.on, 1):
+ *     - `winetricksInstall`      -> tools/ipc_handler.ts (Phase 34.6 Plan 07, D-11 observable)
  *
  * Curated-import rule (inherited from every prior slice's D-08 -> D-09 -> D-04 -> D-14 -> D-02
  * lineage): the cluster plan that fills this module in imports the underlying logic modules
@@ -30,9 +51,7 @@
  * NEVER `main.ts`, `tools/ipc_handler.ts`, or `wine/manager/ipc_handler.ts` — those double-
  * register these same channels onto Electron's real `ipcMain` via `backend/ipc`'s
  * `addHandler`/`addListener`, an Electron-only path this sidecar's curated import graph must
- * never reach. `tools/ipc_handler.ts` in particular also registers `runWineCommandForGame` and
- * the three DEFERRED winetricks channels (`winetricksInstall`/`winetricksAvailable`/
- * `winetricksInstalled`) that belong to Phase 34.6, not this slice.
+ * never reach.
  */
 
 import { ipcMain } from './electronStub'
@@ -45,25 +64,55 @@ import {
   updateWineVersionInfos,
   updateWineListsIfOutdated
 } from '../wine/manager/utils'
-import { DXVK } from '../tools'
+import { DXVK, Winetricks, runWineCommandOnGame } from '../tools'
+import { getGame, execAsync } from '../utils'
+import { isWindows } from '../constants/environment'
 import { sendFrontendMessage } from '../ipc'
 import { notify } from '../dialog/dialog'
 import { logDebug, logError, LogPrefix } from '../logger'
 import { backendEvents } from '../backend_events'
+import { logSendHandlerReached } from './sendChannelObservable'
 import { t } from 'i18next'
 import type {
+  Runner,
   WineCommandArgs,
   WineInstallation,
   WineManagerStatus,
   WineVersionInfo
 } from 'common/types'
 
+// D-11 (Phase 34.6 Plan 07, REQ-34.6-04/07/13): `winetricksInstall` is this cluster's one
+// send-kind channel. Mirrors `appShellFlowRegistration.ts`'s own `logSendFailure` shape exactly
+// (that module registers this phase's sibling send channel, `frontendReady`) — a caught
+// rejection/throw is the ONLY observability a send-kind failure gets, since `ipcMain.on` has no
+// return value the renderer can inspect.
+function logSendFailure(channel: string, error: unknown): void {
+  console.warn(
+    `[wineToolsFlowRegistration] ${channel} failed:`,
+    error instanceof Error ? error.message : String(error)
+  )
+}
+
 /**
- * Registers this cluster's 9 invoke-kind channels (all 9, as of plan 34.5-09). Called once from
- * `handlers.ts` — this module owns no side effects at import time; the caller decides when
- * registration onto the handler registry happens.
+ * Registers this cluster's 13 channels (12 invoke, 1 send — `winetricksInstall`, D-11 — as of
+ * Phase 34.6 Plan 07). Called once from `handlers.ts` — this module owns no side effects at
+ * import time; the caller decides when registration onto the handler registry happens.
+ *
+ * Idempotence guard (Rule 1 fix, mirroring `runnerAuthFlowRegistration.ts`'s/
+ * `shortcutsFlowRegistration.ts`'s own `let registered = false` guard): before plan 34.6-07 this
+ * function had no such guard because `ipcMain.handle` is naturally idempotent (`Map.set` replaces
+ * the existing entry). Now that this cluster registers one `ipcMain.on` listener
+ * (`winetricksInstall`), an unguarded second call would stack a duplicate listener — mirrors the
+ * exact bug class `runnerSliceRegistration.test.ts`'s own Describe 3 docstring records being
+ * fixed for `registerRunnerAuthFlows` in plan 34.5-06.
  */
+let registered = false
 export function registerWineToolsFlows(): void {
+  if (registered) {
+    return
+  }
+  registered = true
+
   // ── D-14 seam 3: `runWineCommand` (main.ts:766) ─────────────────────────────────────────────
   //
   // This is D-14's seam, not a new construction: `runWineCommand` is pure Node `child_process`
@@ -240,4 +289,84 @@ export function registerWineToolsFlows(): void {
   // (:807/:843) — are trusted and UNCHANGED here: the sidecar is a real Node process on the same
   // OS, so `process.platform` behaves identically. They are not re-decided by this port, and no
   // `macEnvs`/`linuxEnvs` construction is duplicated into this module.
+
+  // ── Winetricks trio + `runWineCommandForGame` (tools/ipc_handler.ts) — Phase 34.6 Plan 07 ─────
+  //
+  // A-01 (binding, overrides this module's own earlier D-04 framing — see module docstring above):
+  // `Winetricks` (`tools/index.ts:528`) has NO `!isLinux` guard anywhere; it has genuine macOS
+  // support via a dedicated `macEnvs` branch. No platform-decline branch is ported here. An empty
+  // component list returned by `listAvailable`/`listInstalled` is an ACCEPTABLE RESULT (data-
+  // dependent — e.g. no winetricks cache yet), never a platform decline this registration decides.
+  ipcMain.handle(
+    'winetricksAvailable',
+    async (_event: unknown, ...args: unknown[]) => {
+      const runner = args[0] as Runner
+      const appName = args[1] as string
+      try {
+        return await Winetricks.listAvailable(runner, appName)
+      } catch {
+        // Source: tools/ipc_handler.ts — swallow-and-return-empty-array shape is inherited
+        // behaviour, kept as-is (not this port's decision to make).
+        return []
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'winetricksInstalled',
+    async (_event: unknown, ...args: unknown[]) => {
+      const runner = args[0] as Runner
+      const appName = args[1] as string
+      const game = getGame(appName, runner)
+      return Winetricks.listInstalled(game)
+    }
+  )
+
+  // D-11: `winetricksInstall` is this cluster's one send-kind channel — `ipcMain.on`, never
+  // `ipcMain.handle`. Converting it to invoke would smuggle a behaviour change into a byte-
+  // equivalent port. `logSendHandlerReached` is the FIRST statement inside the try, per this
+  // phase's D-11 observable contract (proves the handler body was reached even though a send
+  // channel has no return value the renderer can inspect). Idiom modeled on
+  // `shortcutsFlowRegistration.ts`'s own async-body send-kind channels (`addShortcut`): the
+  // underlying `Winetricks.install` call is itself async, so the body is wrapped in
+  // `void (async () => { ... })()` to let a rejection be caught by `logSendFailure` rather than
+  // becoming an unhandled promise rejection.
+  ipcMain.on('winetricksInstall', (_event: unknown, ...args: unknown[]) => {
+    void (async () => {
+      try {
+        logSendHandlerReached('winetricksInstall')
+        const runner = args[0] as Runner
+        const appName = args[1] as string
+        const component = args[2] as string
+        await Winetricks.install(runner, appName, component)
+      } catch (error) {
+        logSendFailure('winetricksInstall', error)
+      }
+    })()
+  })
+
+  // D-02 (BINDING scope boundary — do not cross): `runWineCommandForGame` carries
+  // `T-34.5-C6-49-03` (a renderer-supplied `commandParts` array reaching a Wine process, and a
+  // shell on the Windows branch) and is ported BYTE-EQUIVALENTLY here, WITHOUT any path guard,
+  // containment check, or `commandParts` sanitisation. That hardening is plan 34.6-11's dedicated,
+  // separately-committed scope, landing alongside the same hardening for `importGame` and
+  // `moveInstall` (34.6-06). Source: tools/ipc_handler.ts.
+  ipcMain.handle(
+    'runWineCommandForGame',
+    async (_event: unknown, ...args: unknown[]) => {
+      const { appName, commandParts, runner } = args[0] as {
+        appName: string
+        commandParts: string[]
+        runner: Runner
+      }
+      if (isWindows) {
+        return execAsync(commandParts.join(' '))
+      }
+      return runWineCommandOnGame(runner, appName, {
+        commandParts,
+        wait: false,
+        protonVerb: 'runinprefix'
+      })
+    }
+  )
 }
