@@ -71,15 +71,34 @@ ELECTRON_STUB_PATH = SRC_DIR / "backend" / "sidecar" / "electronStub.ts"
 # (checkHealthAndFlagExpiry's S-09 guard, user.ts:776) is deliberately NOT added here — this list
 # is a FLOOR against 34.4.1-10-PLAN.md's original <interfaces>, not an exhaustive site list; the
 # new site still surfaces in the real findings table below without needing a floor entry.
+# Line numbers refreshed AGAIN 2026-08-23 (gap cycle 3, plan 31 — NEW-01). LINE NUMBERS ONLY: every
+# entry below was re-located by its ENCLOSING FUNCTION, not by position, and each resolves to the
+# SAME call site in the SAME function as before. No site was added to, removed from, or moved
+# within this floor. Verified against the live walk's own `site_paths_seen` rather than by hand:
+#
+#   :272 -> :275   adapter.ts            humblePostRequest()
+#   :168 -> :178   humble/user.ts        getLiveCsrfToken()
+#   :264 -> :274   humble/user.ts        watchForLogin() (seam install)
+#   :646 -> :740   humble/user.ts        finishLogin()'s csrf capture
+#   :943 -> :1034  humble/user.ts        disconnect()'s wipeSteps
+#   :157 -> :195   oauthLoginCapture.ts  captureOAuthLogin()
+#   :436 -> :457   humbleLoginFlowRegistration.ts  smokeHook
+#   :137 -> :137   legendary/user.ts     UNCHANGED (this one never drifted)
+#
+# The walk now finds a FIFTH humble/user.ts site at :873 that is not in this floor. That is
+# correct and deliberate: it is checkHealthAndFlagExpiry's S-09 guard, recorded by Plan 18 at
+# :776 as "deliberately NOT added here — this list is a FLOOR ... not an exhaustive site list".
+# It still surfaces in the findings table without a floor entry. Adding it here would quietly
+# convert a floor into an inventory and make the next drift harder to reason about.
 EXPECTED_AXIS_A_SITES = [
-    "src/backend/humble/adapter.ts:272",
-    "src/backend/humble/user.ts:168",  # was :185 (getLiveCsrfToken)
-    "src/backend/humble/user.ts:264",  # was :281 (watchForLogin)
-    "src/backend/humble/user.ts:646",  # was :614 (finishLogin's csrf capture)
-    "src/backend/humble/user.ts:943",  # was :794 (disconnect's wipeSteps)
-    "src/backend/sidecar/oauthLoginCapture.ts:157",
-    "src/backend/storeManagers/legendary/user.ts:137",  # was :107
-    "src/backend/sidecar/humbleLoginFlowRegistration.ts:436",  # was :407, was :358
+    "src/backend/humble/adapter.ts:275",  # was :272 (humblePostRequest)
+    "src/backend/humble/user.ts:178",  # was :168, :185 (getLiveCsrfToken)
+    "src/backend/humble/user.ts:274",  # was :264, :281 (watchForLogin)
+    "src/backend/humble/user.ts:740",  # was :646, :614 (finishLogin's csrf capture)
+    "src/backend/humble/user.ts:1034",  # was :943, :794 (disconnect's wipeSteps)
+    "src/backend/sidecar/oauthLoginCapture.ts:195",  # was :157
+    "src/backend/storeManagers/legendary/user.ts:137",  # was :107 — unchanged this cycle
+    "src/backend/sidecar/humbleLoginFlowRegistration.ts:457",  # was :436, :407, :358
 ]
 # Updated Phase 34.4.1 Plan 18 (first regeneration since Plan 10): Plan 12 (already committed,
 # F-1/S-10 closure) moved the safeStorage import OUT of humble/user.ts entirely, into a new
@@ -515,7 +534,8 @@ SITE_PROFILES = {
         # LOGIN_WATCH_LIVENESS_LOG_INTERVAL_MS constant + doc comment) -- the +/-5 line-window
         # match in run_axis_a() needs the hint kept current, exactly the kind of drift this
         # profile's own anchor-count check exists to catch loudly rather than silently.
-        "line_hint": 264,
+        # Refreshed AGAIN 2026-08-23 (gap cycle 3, plan 31): 264 -> 274.
+        "line_hint": 274,
         "anchors": [
             "standardBrowserUserAgent()",  # must appear on BOTH the Electron ses.setUserAgent
             # call and the Tauri seam.open({userAgent: ...}) call -- 2+ occurrences is the
@@ -535,7 +555,9 @@ SITE_PROFILES = {
         # to this file. The +/-5 window in run_axis_a() means a 29-line drift is a hard stop, not
         # a silent mismatch -- which is the design working, and the reason a regeneration always
         # costs one hint sweep per cycle that moved code.
-        "line_hint": 436,
+        # Refreshed AGAIN 2026-08-23 (gap cycle 3, plan 31): 436 -> 457. Third and last of the
+        # three profiles that drifted on `fbbfa852e style: apply prettier repo-wide`.
+        "line_hint": 457,
         "anchors": [
             "GAMELIB_LOGIN_SEAM_SMOKE",
             "this is a FAIL, not a skip",
@@ -556,7 +578,29 @@ SITE_PROFILES = {
     # hand-editing the generated .md) to classify a genuinely new site is exactly what this file's
     # own docstring instructs.
     "src/backend/humble/library.ts::revealTransportLabel": {
-        "line_hint": 1202,
+        # Line hint refreshed 2026-08-23 (gap cycle 3, plan 31): 1202 -> 1211. NEW-01.
+        #
+        # The site, its anchors and its classification are ALL unchanged -- pure line drift. ALL
+        # THREE profiles in this dict drifted at once (264->274, 436->457, 1202->1211), together
+        # with all seven EXPECTED_AXIS_A_SITES entries.
+        #
+        # ATTRIBUTION, stated carefully: ~8 commits touched these files between the Plan 18
+        # refresh and today -- 34.4.2 and 34.5 behavioural work (63ae6c818, f3b9e6da5, e1cef86e4,
+        # dea15578f, 688a216de, ff298d657, 08ae387ff, af42d10ac) plus a repo-wide prettier sweep
+        # (fbbfa852e). The drift is attributable to that set COLLECTIVELY. An earlier draft of
+        # this comment blamed the prettier commit alone, on the strength of `git diff -w` showing
+        # changes; that test is invalid, because -w ignores whitespace WITHIN a line and does not
+        # ignore reflowing, so it cannot distinguish a formatting sweep from real work either way.
+        #
+        # Nobody noticed for 23 days because THIS SCRIPT IS NOT WIRED INTO CI -- `pnpm
+        # planning-gates` runs 6 gates and this is not one of them. The failure surfaced only
+        # because gap cycle 3 ran it by hand.
+        #
+        # WARNING for plan 32 (D-29-03): that plan adds a success-path INFO line to this same
+        # function. If it lands ABOVE line 1211 this hint drifts AGAIN and the gate goes red a
+        # third time. Add the success line AFTER the adapter call (it is a completion log, so
+        # that is also where it belongs semantically), and re-run this script before committing.
+        "line_hint": 1211,
         "anchors": [
             "revealTransportLabel",
             "login-window seam transport",

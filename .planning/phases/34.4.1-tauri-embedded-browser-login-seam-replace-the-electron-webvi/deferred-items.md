@@ -580,3 +580,51 @@ box stays UNCHECKED — live-only."* Un-checked by this plan.
 naive scan because the block-splitter absorbed the **gap-cycle section preamble** — which itself
 contains the phrase "box stays `[ ]`" — into the preceding requirement's block. Stripping the
 preamble removed both. **A sweep whose unit is the block must prove where the block ends.**
+
+### NEW-01 — `seam-parity-sweep.py` was RED on `main` for 23 days (plan 31, **CLOSED 2026-08-23**)
+
+Not a D-29 finding — it post-dates the list. Found only because gap cycle 3 ran the script by hand.
+
+**It was line drift, not an unclassified site.** The hard stop named
+`src/backend/humble/library.ts:1211` as having "no `SITE_PROFILES` entry", but the entry existed —
+keyed to `line_hint: 1202`, and `run_axis_a()`'s ±5 window cannot absorb a 9-line shift. Fixing one
+hint surfaced the next; **all three `SITE_PROFILES` hints and seven of the eight
+`EXPECTED_AXIS_A_SITES` entries had drifted at once.**
+
+Renumbered by **enclosing function**, never by position, because the walk now finds a fifth
+`humble/user.ts` site that the floor does not list — positional matching would have mis-assigned
+every entry after it. That fifth site (`:873`, `checkHealthAndFlagExpiry`'s S-09 guard) was
+deliberately kept out of the floor, per Plan 18's own note that this list is *"a FLOOR … not an
+exhaustive site list"*. Adding it would quietly convert a floor into an inventory.
+
+`legendary/user.ts:137` never drifted, which is the useful control: the renumbering was not a
+blanket rewrite.
+
+**An attribution error is recorded here on purpose.** A first draft blamed
+`fbbfa852e style: apply prettier repo-wide` alone, on the strength of `git diff -w` showing
+changes. **That test is invalid** — `-w` ignores whitespace *within* a line and does not ignore
+reflowing, so it cannot distinguish a formatting sweep from real work in either direction. The
+honest attribution is the **~8 commits** that touched these files since the Plan 18 refresh
+(34.4.2 and 34.5 behavioural work plus the prettier sweep), collectively.
+
+**Verification, three states, real exit codes** (`cmd | tail` reports `tail`'s status — a mistake
+made while first diagnosing this gate):
+
+| state | expected | measured |
+|---|---|---|
+| after the fix | exit 0 | **exit 0**, 13 findings written |
+| one hint reverted `1211`→`1202` | exit 1 | **exit 1**, same hard stop |
+| restored | exit 0 | **exit 0** |
+| `--self-test` | exit 0 | **exit 0** — "every check rejects its corresponding bad input" |
+
+Regenerating `34.4.1-SEAM-PARITY-SWEEP.md` risked the recorded *regenerating-an-artifact-breaks-its-pins*
+failure. Checked: `src/backend/sidecar/__tests__/seamBranchParity.test.ts` pins this surface and
+**passes 28/28** after the regeneration. `pnpm planning-gates` 6/6.
+
+> **The gate is still not wired into CI.** `pnpm planning-gates` runs six gates and this is not one
+> of them, which is the whole reason a red gate survived 23 days unnoticed. **Wiring it in is NOT
+> done here and is not in this plan's scope.** What it would take: add
+> `seam-parity-sweep.py` to `meta/runPlanningGates.py`'s discovery, and decide whether the three
+> pre-existing `SILENTLY-DROPPED` entries (`S-07`, `S-10`, `S-12`) are acceptable at red or must be
+> dispositioned first — they are reported today but do not fail the run. Named rather than left as
+> another undeclared note, per this file's own rule.
