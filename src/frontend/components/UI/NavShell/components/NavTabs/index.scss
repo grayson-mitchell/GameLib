@@ -243,7 +243,53 @@
     // `midnightMirage` and wrong everywhere else.
     &.Mui-selected {
       background: var(--body-background);
-      color: var(--navbar-active);
+      // CR-01 (34.10-REVIEW.md), residual half closed by quick task
+      // `260823-w2f`. This read `var(--navbar-active)` bare. That token is
+      // declared in only 4 of themes.scss's 11 theme blocks, and an undefined
+      // custom property with no fallback is invalid at computed-value time --
+      // for an inherited property like `color` the browser does NOT fall back
+      // to `.MuiTab-root`'s own rule, it takes the INHERITED value, so in the
+      // other 7 themes this label rendered in an unstyled colour against the
+      // `--body-background` fill painted directly above. The fallback chain is
+      // the one `NavItem/index.scss:20-23` established for this exact token and
+      // that `themeTokens.test.ts` requires of every guarded consumer; it
+      // resolves to `--accent-overlay` in those 7 (measured 7.42:1-13.92:1).
+      color: var(--navbar-active, var(--accent-overlay, var(--accent)));
+
+      // CR-01 residual, SECOND defect -- found by measurement, not by the
+      // finding (quick task `260823-w2f`). `nord-light` is NOT one of CR-01's
+      // 8 themes: it DOES declare `--navbar-active`, so the fallback chain
+      // above and WR-13's census both pass on it. It still painted this label
+      // at **1.18:1** -- `#d0ddff` on `--body-background: #eceff4`, near-white
+      // on near-white -- and it is live in the picker (`themeLabels.ts:43`).
+      //
+      // Root cause is structural, and is why no earlier gate could see it:
+      // `nord-light` is the ONLY light theme in themes.scss. Everywhere else
+      // the navbar and the body are both dark, so one navbar-surface token
+      // coincidentally serves this body-surface element too. `#d0ddff` is
+      // CORRECT where it was chosen -- `NavItem` paints it on
+      // `--navbar-active-background` (#2e3440) at 9.20:1 -- so the token must
+      // NOT change globally; only this body-surface consumer needs another
+      // value. `--accent` (#30444a) measures 8.88:1 here. `--text-secondary`
+      // scored higher (9.71:1) and was rejected: it reads as body text and
+      // loses the active-accent semantics the tab carries in every other theme.
+      //
+      // Theme-scoped override rather than a new token, following 34.11-09's
+      // `dracula`-only tier-2 divider override -- same shape, same reason (a
+      // measured per-theme collision, not a general rule). Written as
+      // `body.nord-light &` so it stays NESTED inside `.NavTabs`: a top-level
+      // rule here was tried first and correctly REJECTED by
+      // `appShellLayout.test.ts`'s "F-34.10-04 MUI scoping" guard, which
+      // exists to stop a `MuiTab*` selector in this file leaking onto the
+      // app's other `<Tabs>` (WineManager, DownloadManager, GamesSettings).
+      //
+      // NOT LIVE-VERIFIED -- this is contrast arithmetic. 34.11-09 needed a
+      // pixel-level Chromium reproduction four times in one investigation
+      // because source gates and contrast math both said "correct" while a
+      // live WKWebView sweep did not. A live look at `nord-light` is owed.
+      body.nord-light & {
+        color: var(--accent);
+      }
       // HANDOFF FROM 34.10-18 (34.10-18-SUMMARY.md "Findings"): this line
       // originally read `border-color: var(--divider)`. `--divider` has no
       // CSS fallback and is declared in only 2 of themes.scss's 11 real

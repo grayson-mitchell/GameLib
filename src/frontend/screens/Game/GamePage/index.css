@@ -639,7 +639,7 @@
     }
 
     &:hover {
-      color: var(--navbar-active);
+      color: var(--navbar-active, var(--accent-overlay, var(--accent)));
     }
   }
 
@@ -668,7 +668,7 @@
     &:focus-within .toggle,
     &:hover .toggle,
     .toggle:hover {
-      color: var(--navbar-active);
+      color: var(--navbar-active, var(--accent-overlay, var(--accent)));
     }
 
     .gameTools {
@@ -695,7 +695,7 @@
       color: var(--navbar-inactive);
 
       &:hover {
-        color: var(--navbar-active);
+        color: var(--navbar-active, var(--accent-overlay, var(--accent)));
       }
 
       &:first-child {

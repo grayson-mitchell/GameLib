@@ -3,6 +3,9 @@ created: 2026-08-23T10:05:00.000Z
 title: "`--navbar-active` is still undefined in 7 of 11 themes and `NavTabs` still has no fallback — 34.11's D-31 closed only the one SCORED theme"
 area: ui
 severity: medium
+status: completed
+completed: 2026-08-23
+completed_by: "quick task 260823-w2f"
 found_by: "Quick task 260823-v3k, correcting ROADMAP.md's stale 34.10 carry-forward record, 2026-08-23"
 source: ".planning/phases/34.10-navigation-shell-horizontal-card-tabs-replace-the-sidebar/34.10-REVIEW.md CR-01 (residual half)"
 files:
@@ -77,3 +80,25 @@ WKWebView sweep disagreed — that discriminator is available if a theme is cont
 **Extend the guard:** `themeTokens.test.ts:127`'s `describe('gruvbox_dark theme tokens (CR-01, D-31)')`
 pins one theme by name. It should become a census assertion over all 11 blocks, or it will keep
 passing while 7 themes stay broken — which is precisely what happened for the last 14 days.
+
+---
+
+## CLOSED 2026-08-23 — quick task `260823-w2f`
+
+**Closed, but NOT by this file's own prescription, which was wrong.** "Declare `--navbar-active` in
+the 7 blocks" contradicts a 34.11 code-review decision (WR-13/CR-03) already encoded in
+`themeTokens.test.ts` as `expect(declaringCount).toBeLessThan(themeSelectors.length)`: the codebase
+chose *fallback chains at consumers*, not declarations in every theme. `themes.scss` was not touched.
+
+What closed it: the fallback chain at `NavTabs/index.scss` (CR-01's own original site, which had
+escaped `NAVBAR_ACTIVE_CONSUMERS`) and at `GamePage/index.css` ×3 (untracked anywhere) — resolving
+via `--accent-overlay` at a measured 7.42:1–13.92:1 across the 7 themes.
+
+Both suggestions in the Fix section above were otherwise sound: the fallback chain was the right
+half, and the guard *was* rebuilt as a census — but as a **contrast-floor** census, not the
+declaration census suggested here. That distinction mattered: measurement found `body.nord-light`
+painting the label at **1.18:1**, invisible to any declaration check because it *has* the token.
+Fixed with a theme-scoped override (8.88:1). See `260823-w2f-SUMMARY.md`.
+
+**Still owed:** a live per-theme visual sweep. Contrast math is not a rendering proof.
+

@@ -3640,9 +3640,10 @@ measurements it got wrong, so neither contradicts run 4's 5/5. They were deferre
 patching CSS after the gate would mean HEAD no longer matched the bundle that passed, and *a
 shipped fix is not evidence* is the lesson this phase paid for four times over. **D-31's own text
 records that this reason expired** once 34.11 had to theme-test `gruvbox_dark` regardless.
-**CR-02 is CLOSED; CR-01 is closed for the scored theme only and its residual is still open**
-— see each bullet. **Neither discharge reopens this phase** — 34.10 closed 2026-08-09 on run 4's
-5/5 and stays closed.
+**Both are now CLOSED** — CR-02 by 34.11 D-32, CR-01 in two halves (34.11 D-31 for the scored
+theme, quick task `260823-w2f` for the residual 7), and a third defect found by measuring rather
+than reading was closed alongside them. **No Critical from this review is open.** See each bullet.
+**No discharge reopens this phase** — 34.10 closed 2026-08-09 on run 4's 5/5 and stays closed.
 
 - **CR-01 — `NavTabs/index.scss:229` uses an undefined theme token with no fallback.**
   **PARTIALLY CLOSED 2026-08-23** (assessed by quick task `260823-v3k`; fix commit `126b9c458`,
@@ -3663,14 +3664,30 @@ records that this reason expired** once 34.11 had to theme-test `gruvbox_dark` r
   *there* was a **WRONG colour** — `--accent-overlay`, a mustard `#d79921` — not a dropped
   declaration. The review's "illegible / falls through to inherited" analysis holds for `NavTabs`,
   which has no fallback. Two elements, two failure modes, one shared root token.
-  **RESIDUAL — STILL OPEN, and the majority of the original finding.** The review's heading scoped
-  this to **8 of 11 themes**; 34.11 fixed exactly one, the scored one. A census at HEAD finds
-  **7 theme blocks still without `--navbar-active`**: `classic`/`cyberSpaceOasis`/
-  `cyberSpaceOasisAlt`, `high-contrast`, `nord-dark`, `marine`/`marine-classic`,
-  `zombie`/`zombie-classic`, `old-school`, `sweet`/`sweet-dark`. And the consuming site
-  (`NavTabs/index.scss:246` — the line moved from 229, the declaration did not) **still has no
-  fallback chain**, so those 7 themes retain the illegible-label mode. Tracked as a todo; whoever
-  fixes it owes the same live sweep `gruvbox_dark` got, per theme, not a hex-arithmetic argument.
+  **RESIDUAL — CLOSED 2026-08-23** (quick task `260823-w2f`). The review's heading scoped this to
+  **8 of 11 themes**; 34.11 fixed exactly one, the scored one. The other 7 are now closed — but
+  **not** by the route the tracking todo prescribed. "Declare `--navbar-active` in the 7 blocks"
+  contradicts a 34.11 code-review decision (WR-13/CR-03) already encoded in `themeTokens.test.ts`
+  as `expect(declaringCount).toBeLessThan(themeSelectors.length)`: this codebase deliberately chose
+  **fallback chains at consumers**, not declarations in every theme. `themes.scss` was not touched.
+  What closed it: the established chain at the two consumers that had escaped
+  `NAVBAR_ACTIVE_CONSUMERS` — **`NavTabs/index.scss`, CR-01's own original site**, and
+  `GamePage/index.css` ×3 (tracked nowhere). Measured **7.42:1 – 13.92:1** via `--accent-overlay`,
+  against `dracula`'s human-approved 5.91:1 as calibration. **A live per-theme visual sweep is
+  still owed** — this is contrast arithmetic, not a rendering proof.
+
+- **CR-01-ADJACENT — `nord-light`'s selected tab label was illegible at 1.18:1. Found by
+  MEASUREMENT, present in no finding. CLOSED 2026-08-23** (same task). `#d0ddff` on
+  `--body-background: #eceff4`, in a theme live in the picker (`themeLabels.ts:43`). It is not one
+  of CR-01's 8 because it **does** declare `--navbar-active`, so the fallback chain and every
+  declaration-based gate pass on it. **The cause is structural and worth carrying forward:**
+  `nord-light` is the **only light theme** — everywhere else the navbar and body surfaces are both
+  dark, so a navbar-surface token coincidentally serves the body-surface element too. `#d0ddff` is
+  correct where it was chosen (`NavItem` paints it at 9.20:1 on the dark navbar), so the token was
+  **not** changed globally; only this one consumer is overridden, to `--accent` (**8.88:1**),
+  theme-scoped and nested per `appShellLayout.test.ts`'s MUI-scoping guard. **This is why the
+  rebuilt gate asserts a contrast floor rather than declaration presence** — the declaration census
+  the todo asked for would have shipped green over it.
 
 - **CR-02 — the window drag region was never ported from the retired sidebar. CLOSED 2026-08-23**
   (fix commit `75e3785da`, Phase 34.11 plan `34.11-03`, decision D-32). `.Sidebar/index.scss`

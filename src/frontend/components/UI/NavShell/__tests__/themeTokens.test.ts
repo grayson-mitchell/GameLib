@@ -69,20 +69,30 @@ const themeSelectors = [
  * `--navbar-active`.
  *
  * Deliberately enumerated rather than globbed, and deliberately scoped to
- * this phase's own files. Three PRE-EXISTING consumers use the bare
- * `var(--navbar-active)` form and are knowingly left unguarded here, because
- * fixing them was not in this review's scope and a gate that fails on
+ * this phase's own files. Three PRE-EXISTING consumers used the bare
+ * `var(--navbar-active)` form and were knowingly left unguarded, because
+ * fixing them was not in that review's scope and a gate that fails on
  * untouched code is a gate someone deletes:
  *   src/frontend/components/UI/NavShell/components/NavTabs/index.scss:229
  *   src/frontend/screens/Game/GamePage/index.css:590, 619, 646
  * (themes.scss's own four uses are inside theme blocks that declare the
- * token, so they resolve by construction.) If those are ever fixed, add them
- * to this list -- the scope of this gate is exactly the list below and
- * nothing more, which is the honesty the finding it replaces lacked.
+ * token, so they resolve by construction.) The comment then instructed:
+ * "If those are ever fixed, add them to this list."
+ *
+ * They are now fixed -- quick task `260823-w2f`, closing CR-01's residual --
+ * so both are added below and the list is once again exactly the set of
+ * guarded consumers, nothing more. `NavTabs` was CR-01's ORIGINAL site: the
+ * finding's own consuming line escaped the guard built in its aftermath,
+ * which is why the residual survived a green suite for 14 days. The line
+ * numbers above are the 34.11-era ones and have since drifted (NavTabs:229 ->
+ * :246, GamePage:590/619/646 -> :642/671/698); they are left as written so
+ * this comment stays a faithful record of what that review saw.
  */
 const NAVBAR_ACTIVE_CONSUMERS = [
   'src/frontend/components/UI/NavShell/components/FilterFacetGroup/index.scss',
   'src/frontend/components/UI/NavShell/components/FilterMoreGroup/index.scss',
+  'src/frontend/components/UI/NavShell/components/NavTabs/index.scss',
+  'src/frontend/screens/Game/GamePage/index.css',
   'src/frontend/screens/Library/components/FilterChipRow/index.scss',
   'src/frontend/screens/Library/components/FilterZeroResult/index.scss'
 ]
@@ -383,4 +393,225 @@ describe('Header background is overridden inside the tier-2 portal (34.11-09 liv
       />\s*\.Header\s*{[^}]*background:\s*transparent/
     )
   })
+})
+
+/**
+ * CR-01 RESIDUAL (quick task `260823-w2f`). The WR-13 census above asserts the
+ * token is DECLARED in some themes and that consumers carry a fallback. Neither
+ * property is legibility. `body.nord-light` satisfied both and still rendered
+ * the selected tab label at **1.18:1** -- `--navbar-active: #d0ddff` on
+ * `--body-background: #eceff4` -- because it is the only LIGHT theme in the
+ * set. Everywhere else the navbar and body surfaces are both dark, so a single
+ * navbar-surface token coincidentally serves the body-surface element too.
+ *
+ * A gate that names a landmark (a token, a theme) cannot see that. This one
+ * asserts the PROPERTY: resolve the colour NavTabs actually paints, per theme,
+ * through the same `var()` chain the browser would, and measure it against the
+ * surface the same rule paints beneath it.
+ *
+ * The chain is READ FROM THE STYLESHEET, never hardcoded here -- if someone
+ * edits the declaration, this test follows it rather than silently testing a
+ * copy that no longer ships.
+ */
+const COLORS_SCSS = 'src/frontend/styles/_colors.scss'
+const NAV_TABS_SCSS =
+  'src/frontend/components/UI/NavShell/components/NavTabs/index.scss'
+
+/** Top-level `--x: value;` pairs of a block body, ignoring nested rules. */
+const customProps = (blockBody: string): Map<string, string> => {
+  const out = new Map<string, string>()
+  let depth = 0
+  let buf = ''
+  for (const ch of blockBody) {
+    if (ch === '{') {
+      depth++
+      buf = ''
+    } else if (ch === '}') {
+      depth--
+      buf = ''
+    } else if (ch === ';' && depth === 0) {
+      const m = /^\s*(--[\w-]+)\s*:\s*([\s\S]+)$/.exec(buf)
+      if (m) out.set(m[1], m[2].trim().replace(/\s+/g, ' '))
+      buf = ''
+    } else {
+      buf += ch
+    }
+  }
+  return out
+}
+
+/**
+ * Global tokens (`--neutral-*`, `--brand-*`) live in `styles/_colors.scss`, NOT
+ * in themes.scss. Omitting them makes every midnightMirage chain resolve to
+ * nothing, which reads as "no data" rather than as an error -- a silent way for
+ * this whole census to go vacuous. Asserted non-empty below.
+ */
+const globalTokens = (): Map<string, string> => {
+  const src = read(COLORS_SCSS)
+  const out = new Map<string, string>()
+  for (const m of src.matchAll(/(--[\w-]+)\s*:\s*([^;{}]+);/g)) {
+    if (!out.has(m[1])) out.set(m[1], m[2].trim())
+  }
+  return out
+}
+
+/**
+ * Every block matching `selector`, merged last-wins. `body.zombie-classic` is
+ * declared TWICE in themes.scss (the second block re-points `--navbar-accent`),
+ * so taking only the first block would resolve a stale value.
+ */
+const allBlocksFor = (source: string, selector: string): string[] => {
+  // Matching the literal `selector {` is what excludes descendant rules such as
+  // `body.old-school .sid-input {`, and what makes the LAST selector of a comma
+  // group the one to search for -- the same reason `themeSelectors` above lists
+  // `body.cyberSpaceOasisAlt` rather than `body.classic`.
+  const needle = `${selector} {`
+  const out: string[] = []
+  let from = 0
+  for (;;) {
+    const start = source.indexOf(needle, from)
+    if (start === -1) break
+    let depth = 0
+    let i = source.indexOf('{', start)
+    const open = i
+    for (; i < source.length; i++) {
+      if (source[i] === '{') depth++
+      else if (source[i] === '}' && --depth === 0) break
+    }
+    if (depth !== 0) throw new Error(`unterminated block for ${selector}`)
+    out.push(source.slice(open + 1, i))
+    from = i
+  }
+  if (out.length === 0) throw new Error(`selector ${selector} not found`)
+  return out
+}
+
+const themeTokens = (
+  themesScss: string,
+  selector: string
+): Map<string, string> => {
+  const merged = new Map(customProps(cssBlock(themesScss, 'body')))
+  for (const body of allBlocksFor(themesScss, selector))
+    for (const [k, v] of customProps(body)) merged.set(k, v)
+  return merged
+}
+
+/** Resolve a `var()` chain to a literal, following fallbacks exactly as CSS does. */
+const resolveValue = (
+  value: string,
+  scope: Map<string, string>,
+  globals: Map<string, string>,
+  seen = new Set<string>()
+): string | null => {
+  const v = value.trim()
+  const m = /^var\(\s*(--[\w-]+)\s*(?:,\s*([\s\S]+))?\)$/.exec(v)
+  if (!m) return v
+  const [, name, fallback] = m
+  if (!seen.has(name)) {
+    const next = scope.get(name) ?? globals.get(name)
+    if (next !== undefined) {
+      const r = resolveValue(next, scope, globals, new Set(seen).add(name))
+      if (r !== null) return r
+    }
+  }
+  return fallback ? resolveValue(fallback, scope, globals, seen) : null
+}
+
+const NAMED_COLOURS: Record<string, string> = {
+  white: '#ffffff',
+  black: '#000000'
+}
+
+const toRgb = (colour: string): [number, number, number] | null => {
+  const c = (NAMED_COLOURS[colour.toLowerCase()] ?? colour).trim()
+  const m = /^#([0-9a-f]{3,8})$/i.exec(c)
+  if (!m) return null
+  let hex = m[1]
+  if (hex.length === 3)
+    hex = hex
+      .split('')
+      .map((ch) => ch + ch)
+      .join('')
+  if (hex.length === 8) hex = hex.slice(0, 6) // opaque alpha
+  if (hex.length !== 6) return null
+  return [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [
+    number,
+    number,
+    number
+  ]
+}
+
+const relativeLuminance = ([r, g, b]: [number, number, number]): number => {
+  const lin = (v: number) => {
+    const s = v / 255
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+  }
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+}
+
+const contrastRatio = (fg: string, bg: string): number => {
+  const a = toRgb(fg)
+  const b = toRgb(bg)
+  if (!a || !b) throw new Error(`uncomparable colours: ${fg} / ${bg}`)
+  const [hi, lo] = [relativeLuminance(a), relativeLuminance(b)].sort(
+    (x, y) => y - x
+  )
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+/**
+ * The `color:` NavTabs paints on the selected tab, as authored. Prefers a
+ * theme-scoped override (`body.nord-light ... &.Mui-selected`) over the base
+ * rule, mirroring the cascade.
+ */
+const selectedTabColourDecl = (
+  navTabsScss: string,
+  themeClass: string
+): string => {
+  // No `s` flag: every quantifier below is a negated character class, which
+  // already spans newlines. The flag would need `target: es2018` (TS1501).
+  const scoped = new RegExp(
+    `body\\.${themeClass}[^{]*\\{[^}]*?color:\\s*([^;]+);`
+  ).exec(navTabsScss)
+  if (scoped) return scoped[1].trim()
+  const base = /&\.Mui-selected\s*\{[^}]*?color:\s*([^;]+);/.exec(navTabsScss)
+  if (!base) throw new Error('no .Mui-selected color declaration in NavTabs')
+  return base[1].trim()
+}
+
+describe('selected NavTab label contrast in every theme (CR-01 residual)', () => {
+  const themesScss = read(THEMES_SCSS)
+  const navTabsScss = read(NAV_TABS_SCSS)
+  const globals = globalTokens()
+
+  it('non-vacuity: global token table and the base declaration both resolved', () => {
+    expect(globals.size).toBeGreaterThan(0)
+    expect(globals.has('--neutral-01')).toBe(true)
+    expect(selectedTabColourDecl(navTabsScss, '__no_such_theme__')).toMatch(
+      /var\(\s*--navbar-active/
+    )
+  })
+
+  it.each(themeSelectors)(
+    '%s paints the selected tab label at >= 4.5:1 against its own --body-background',
+    (selector) => {
+      const themeClass = selector.replace(/^body\./, '')
+      const scope = themeTokens(themesScss, selector)
+      const decl = selectedTabColourDecl(navTabsScss, themeClass)
+      const fg = resolveValue(decl, scope, globals)
+      const bg = resolveValue(
+        scope.get('--body-background') ?? '',
+        scope,
+        globals
+      )
+      // A dropped declaration (null) is the CR-01 failure mode itself: an
+      // undefined custom property with no fallback invalidates `color` at
+      // computed-value time and the label inherits. Fail loudly, do not skip.
+      expect(fg).not.toBeNull()
+      expect(bg).not.toBeNull()
+      expect(contrastRatio(fg as string, bg as string)).toBeGreaterThanOrEqual(
+        4.5
+      )
+    }
+  )
 })
