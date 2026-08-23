@@ -726,6 +726,15 @@ const IN_SCOPE_SUITES = [
  * `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/`backend/logger/paths` kit
  * Block B gates on. A `readdirSync` recount at this task's execution time puts the directory at
  * 49 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 45 below.
+ *
+ * `sendChannelObservable.test.ts` (Phase 34.6 Plan 05, REQ-34.6-04/07/13, 2026-08-23) is
+ * classified structurally contained on the same basis as `outputStreamBinding.test.ts` above.
+ * It declares exactly ONE `jest.mock(...)`, `jest.mock('../../logger', ...)`, and the module
+ * under test (`../sendChannelObservable`) imports only `../logger` -- no `pathShim`, no
+ * `electron`/`electron-store`, no `homedir()`, no filesystem access anywhere in its chain. It
+ * cannot be an `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/
+ * `backend/logger/paths` mock kit Block B gates on. A `readdirSync` recount at this plan's
+ * execution time puts the directory at 50 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 46 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -763,6 +772,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'runnerSliceRegistration.test.ts',
   'rustInvokeChannel.test.ts',
   'seamBranchParity.test.ts',
+  'sendChannelObservable.test.ts',
   'settingsFlows.test.ts',
   'shellFilesFlows.test.ts',
   'shortcutsFlows.test.ts',

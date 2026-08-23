@@ -48,7 +48,9 @@ const HANDLERS = join(SIDECAR_DIR, 'handlers.ts')
  * `register*Flows()` docstring while you are here, which Gate 2 enforces.
  */
 const EXPECTED: Record<string, { invoke: number; send: number }> = {
-  'appShellFlowRegistration.ts': { invoke: 8, send: 11 },
+  // Phase 34.6 Plan 05 (2026-08-23): send 11 -> 12 -- frontendReady legitimately
+  // registered as a new send-kind channel (D-11), invoke count unchanged.
+  'appShellFlowRegistration.ts': { invoke: 8, send: 12 },
   'clipboardFlowRegistration.ts': { invoke: 1, send: 2 },
   'dialogFlowRegistration.ts': { invoke: 1, send: 0 },
   'downloadQueueFlowRegistration.ts': { invoke: 1, send: 4 },
