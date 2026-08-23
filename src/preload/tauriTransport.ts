@@ -92,9 +92,39 @@ export async function invoke<Ret = unknown>(channel: string, args: unknown[]): P
 /**
  * Mirrors `makeListenerCaller`'s fire-and-forget shape: `send(channel, args)`.
  * Relayed by the Rust shell's `sidecar_send` command; no response is awaited.
+ *
+ * Debug session `open-external-frame-noop` (2026-08-23): this used to be
+ * `void tauriInvoke(SIDECAR_SEND, { channel, args })` -- the leading `void` unconditionally
+ * discarded the invoke's rejection for all ~57 channels that call `send()`. A single caller
+ * (`openDiscordLink`, bound bare as a JSX `onClick` handler) passed a React SyntheticEvent as
+ * an arg; Tauri's `invoke()` JSON-serializes its payload internally, and the SyntheticEvent's
+ * cyclic references (e.g. `nativeEvent`/DOM back-references) made that serialization throw,
+ * rejecting the invoke promise. With the rejection discarded, the click produced NO signal
+ * anywhere -- no browser navigation, no error, no log line -- and took four instrumentation
+ * rounds and roughly a dozen human clicks to localise. `send()` now stays fire-and-forget
+ * (still returns `void`, still throws nothing at the call site, still blocks nothing) but
+ * surfaces any rejection through `window.api.logError`, naming the channel, so a future
+ * "silent no-op" caused the same way is visible in `gamelib.log` on the FIRST occurrence.
+ *
+ * RECURSION GUARD: `window.api.logError` is ITSELF a `send()`-routed channel (`logError` is
+ * just another entry in the same 57-channel set). If we unconditionally routed every
+ * rejection through `logError`, a rejection on the `logError` channel's own invoke would
+ * recurse into this exact `.catch()` forever (`logError` fails -> log via `logError` -> fails
+ * -> log via `logError` -> ...). DO NOT remove this guard to "simplify" the code -- fall back
+ * to `console.error` for that one channel only. Renderer `console.error` does not reach
+ * `gamelib.log`, but `logError` failing to send is an extremely rare, secondary case compared
+ * to silently losing every other channel's rejections, which is the actual bug this fixes.
  */
 export function send(channel: string, args: unknown[]): void {
-  void tauriInvoke(SIDECAR_SEND, { channel, args })
+  tauriInvoke(SIDECAR_SEND, { channel, args }).catch((err: unknown) => {
+    if (channel === 'logError') {
+      // see recursion guard comment above for why this falls back to console.error
+      console.error(`[tauriTransport.send] rejected for channel=logError:`, err)
+      return
+    }
+    const w = globalThis as unknown as { api?: { logError?: (msg: string) => void } }
+    w.api?.logError?.(`[tauriTransport.send] rejected for channel=${channel}: ${String(err)}`)
+  })
 }
 
 /**

@@ -127,6 +127,17 @@ export default function LogSettings() {
     window.api.showLogFileInFolder(showLogOf)
   }
 
+  // Debug session `open-external-frame-noop`: `openDiscordLink` is a `send()`-routed
+  // IPC caller (`makeListenerCaller`-produced), so any args passed through become
+  // part of the frame sent to the sidecar. Bound as a local zero-arg wrapper (same
+  // pattern as `showLogFileInFolder` above) so React's click SyntheticEvent is never
+  // forwarded into the IPC call -- forwarding it made Tauri's internal JSON
+  // serialization of the invoke payload throw on the event's cyclic references,
+  // silently rejecting the send with no signal anywhere.
+  function openDiscord() {
+    openDiscordLink()
+  }
+
   const descriptiveLogFileName = useMemo(() => {
     if (!showLogOf.runner)
       return t('setting.log.descriptiveNames.heroic', 'General GameLib log')
@@ -256,7 +267,7 @@ export default function LogSettings() {
               </div>
             </a>
             <a
-              onClick={openDiscordLink}
+              onClick={openDiscord}
               title={t('setting.log.join-heroic-discord', 'Join our Discord')}
               className="button is-footer"
             >
