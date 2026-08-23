@@ -1732,15 +1732,19 @@ Cross-cutting constraints:
 **Plans:** 10/10 plans complete (5 waves) — **PHASE COMPLETE 2026-07-27**. Blocking live gate
 PASSED 5/5 (`34.4-LIVE-GATE.md`) — item 2 (`logoutSteam`) FAILED on attempt 1 and was fixed
 in-phase. Verification passed 16/16; code review 0 critical / 3 warning / 2 info, WR-01 fixed
-(`1afef0345`). **`/gsd-secure-phase 34.4` RAN 2026-08-23 — `34.4-SECURITY.md` written, State B, register rebuilt
-from all 10 plans' `<threat_model>` blocks: 62 `(plan, threat_id)` rows, 61 CLOSED, ZERO accepted
-risks, `threats_open: 1` so the phase is `blocked`.** The single open row is **`T-34.4-49`**, and
-it is small: plan 34.4-10 asked for a retrospective confirmation that neither `redeemSteamKey` nor
-`steamBottleProvision` was invoked during the 2026-07-27 gate. The `steamBottleProvision` half is
-now PROVEN not-run (item 5's own measurement recorded the `provisioned` flag unset, and only
-`provisionBottle()` writes it). The `redeemSteamKey` half has no artifact either way and needs one
-line from the operator, or an accepted-risk entry. Deliberately not closed by inference — a burned
-key is irreversible.
+(`1afef0345`). **`/gsd-secure-phase 34.4` COMPLETE 2026-08-23 — `34.4-SECURITY.md` reads `status: verified`,
+`threats_open: 0`, 62/62 closed, ZERO accepted risks.** State B; register rebuilt from all 10 plans'
+`<threat_model>` blocks. The last row, **`T-34.4-49`**, asked for a retrospective confirmation that
+neither irreversible channel ran during the 2026-07-27 gate: `steamBottleProvision` is PROVEN
+not-run (item 5's own measurement caught the `provisioned` flag unset, and only `provisionBottle()`
+writes it), and `redeemSteamKey` closed on **operator attestation** — the instrument the criterion
+named, recorded as weaker than its machine-evidence sibling rather than presented as equal. It was
+deliberately not closed by inference beforehand; a burned key is irreversible, and asking cost one
+question.
+
+**With this, Phase 34.4 has no open gate:** 10/10 plans, live gate 5/5 PASS, `VERIFICATION.md`
+`passed`, `VALIDATION.md` `approved`, code review 0 critical with all three warnings fixed
+(`1afef0345`, `cab8c1e69`), security verified.
 
 Two mitigations were found DECLARED-BUT-ABSENT and were **built** rather than waved through:
 `ported-channels-gate.py --self-test` was exiting 1 before any of its 9 cases ran (commit
@@ -2833,16 +2837,31 @@ discharged UAT ledger), and `U-34.5-33` has a ledger row but no disposition anyw
 
 ### Phase 34.6: Tauri IPC re-plumb slice 9 — EOS overlay, SteamGridDB artwork, winetricks + the Epic/save-sync verification inherited from 34.7 (INSERTED)
 
-**Goal:** Port the **16 channels** deferred by Phase 34.5's **D-03** — EOS overlay (8):
+**Goal:** Port **24 channels** — the **16** deferred by Phase 34.5's **D-03** plus the **8**
+late-discovered ones `IPC-PORT-INVENTORY.md` § "Late-discovered — owner Phase 34.6" already assigns
+here. The 16: EOS overlay (8):
 `disableEosOverlay`, `enableEosOverlay`, `getEosOverlayStatus`, `getLatestEosOverlayVersion`,
 `installEosOverlay`, `isEosOverlayEnabled`, `removeEosOverlay`, `updateEosOverlayInfo`; SteamGridDB
 artwork (5): `steamgriddb.getGrids`, `steamgriddb.getHeroes`, `steamgriddb.hasApiKey`,
 `steamgriddb.searchGame`, `steamgriddb.setApiKey`; winetricks (3): `winetricksAvailable`,
-`winetricksInstall`, `winetricksInstalled`. Additive and reversible still applies — the Electron
+`winetricksInstall`, `winetricksInstalled`. The 8 late-discovered: `frontendReady`,
+`getAchievements`, `getDefaultSavePath`, `getGogDiscounts`, `getPlaytimeFromRunner`, `importGame`,
+`moveInstall`, `runWineCommandForGame`. Additive and reversible still applies — the Electron
 build keeps working unchanged. EOS is Epic (core value) and is not needed to install or launch,
 only for overlay features; SteamGridDB is a pure enhancement behind a user-supplied API key;
-winetricks is Linux-centric power-user tooling — all three deferred rather than dropped because
+winetricks is power-user tooling — all three deferred rather than dropped because
 Phase 35's cutover requires the IPC re-plumb to be COMPLETE.
+
+⚠ **AMENDED 2026-08-23 at `/gsd-plan-phase 34.6`.** The count moved 16 → 24 per `34.6-CONTEXT.md`
+**D-01**: leaving the 8 unported would make Phase 35 either absorb them or ship them broken. Two
+further corrections from `34.6-RESEARCH.md`, both re-verified against source and recorded as
+`34.6-CONTEXT.md` **A-01**/**A-03**: (a) the description of winetricks as "Linux-centric" is
+**wrong** — `tools/index.ts:528`'s `Winetricks` object has a real `macEnvs` macOS branch (`:628`,
+selected at `:642`) and **no** `!isLinux` guard, so the ported channels resolve with real data on
+macOS rather than declining; (b) porting SteamGridDB makes `secureKey.ts`'s `safeStorage` import
+resolve to a dead stub, persisting the user's API key in **plaintext** — so a keyring-slot
+hardening (`"steamgrid-api-key"` in `keyring_account()`, `src-tauri/src/main.rs`) is a
+**co-requisite that lands before** that port, per `secureKey.ts:17-24`'s own trigger condition.
 
 `winetricksInstall` is `addListener`/send-kind (`tools/ipc_handler.ts`), same class as this
 slice's own send channels — the next slice inherits the send-channel warning (silent failure
@@ -2859,7 +2878,7 @@ correct home for them:
 - **34.5 UAT test 11, Epic half** — Epic login completed from scratch, library populated.
   (Amazon's half of test 11 never travelled; it stayed in 34.5 as its fourth gate's item 2.)
 - **34.5 UAT test 12 — `egsSync`.**
-- **Epic LOGOUT's cookie clear (`clearEpicCookies`) — ADDED 2026-08-23** by Phase 34.4.1 gap cycle 3 plan 34, from `D-29-08`. **This was NOT already covered by the 34.7 inheritance** — that brought the Epic *login* and save-sync legs only, and logout was left owned by nobody: 34.5's own `34.5-26-SUMMARY.md:316` disclaims it, 34.7 is ON HOLD, and `clearEpicCookies` appears in no phase folder except 34.4.1's. Epic's logout calls the **same** Rust arm Humble's disconnect proved fixed, but that is **an inference from shared code, not a measurement** — the exact distinction that let gate run 2's failure hide behind a fully green suite. **No document may call it verified on that basis.** Discharge: an authenticated Epic session, a logout driven live through the UI, and a `clearEpicCookies` count cross-checked against an independent re-read of the jar. Tracked at `.planning/todos/pending/2026-08-23-epic-logout-cookie-clear-unobserved-and-unowned.md`.
+- **Epic LOGOUT's cookie clear (`clearEpicCookies`) — ADDED 2026-08-23** by Phase 34.4.1 gap cycle 3 plan 34, from `D-29-08`. **This was NOT already covered by the 34.7 inheritance** — that brought the Epic *login* and save-sync legs only, and logout was left owned by nobody: 34.5's own `34.5-26-SUMMARY.md:316` disclaims it, 34.7 is ON HOLD, and `clearEpicCookies` appears in no phase folder except 34.4.1's. Epic's logout calls the **same** Rust arm Humble's disconnect proved fixed, but that is **an inference from shared code, not a measurement** — the exact distinction that let gate run 2's failure hide behind a fully green suite. **No document may call it verified on that basis.** Discharge: an authenticated Epic session, a logout driven live through the UI, and a `clearEpicCookies` count cross-checked against an independent re-read of the jar. ⚠ **AMENDED by `34.6-CONTEXT.md` D-13 — a count is NOT sufficient.** 34.4.1's precondition 6 is UNSTRUCK precisely because a count was arithmetically forced (`survivingNonHumble=0` when `before total=34` equalled `matched=34`). The binding bar is: plant a **named non-Epic cookie** in the jar first, then assert **that exact cookie survives by name** after the clear. Tracked at `.planning/todos/pending/2026-08-23-epic-logout-cookie-clear-unobserved-and-unowned.md`.
 - **34.5 UAT test 13 — legendary save sync.**
 
 **These are VERIFICATION items, not ports.** `egsSync` is already one of slice 8's 58 ported
