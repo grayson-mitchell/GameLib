@@ -735,6 +735,18 @@ const IN_SCOPE_SUITES = [
  * cannot be an `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/
  * `backend/logger/paths` mock kit Block B gates on. A `readdirSync` recount at this plan's
  * execution time puts the directory at 50 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 46 below.
+ *
+ * `eosOverlayFlows.test.ts` (Phase 34.6 Plan 08, REQ-34.6-01/08/13, 2026-08-24) is classified
+ * structurally contained. It declares exactly ONE `jest.mock(...)`, a full factory mock of
+ * `../../storeManagers/legendary/eos_overlay/eos_overlay` -- so the real `eos_overlay.ts` (whose
+ * own line 1 is `import { dialog } from 'electron'`) is NEVER required by this suite; the module
+ * under test, `../eosOverlayFlowRegistration`, imports only the mocked module and `./electronStub`
+ * -- no `pathShim`, no real `electron`/`electron-store`, no `homedir()`, no filesystem access
+ * anywhere in its chain (its one `readFileSync` call reads its own source file for an anti-vacuity
+ * pin, mirroring `flowRegistrationCensus.test.ts`'s pattern above). It cannot be an
+ * `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/`backend/logger/paths` mock
+ * kit Block B gates on. A `readdirSync` recount at this plan's execution time puts the directory
+ * at 51 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 47 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -748,6 +760,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'downloadQueueFlows.test.ts',
   'electronReachLedger.test.ts',
   'electronUntouched.test.ts',
+  'eosOverlayFlows.test.ts',
   'externalDynamicImportGate.test.ts',
   'fileStore.test.ts',
   'flowRegistrationCensus.test.ts',
