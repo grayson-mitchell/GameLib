@@ -101,10 +101,17 @@ jest.mock('axios', () => {
 
 // ── backend/utils — preserve every real export (notably sendGameStatusUpdate,
 // the D-06 push this suite asserts on) except getSteamLibraries, which would
-// otherwise scan a real on-disk Steam install in CI ─────────────────────────
+// otherwise scan a real on-disk Steam install in CI. Plan 34.6-06 additionally
+// stubs writeConfig (moveInstall/importGame pass-through tests assert on its
+// call arguments rather than letting it write a real config.json to disk) —
+// isEpicServiceOffline/getGame stay real: getGame(id, runner) just delegates
+// to the already-mocked SteamGame instance below (libraryManagerMap[runner]
+// .getGame(id)), and isEpicServiceOffline is never reached by these tests
+// (gated on runner === 'legendary', which none of the new tests use) ────────
 jest.mock('backend/utils', () => ({
   ...jest.requireActual('backend/utils'),
-  getSteamLibraries: jest.fn()
+  getSteamLibraries: jest.fn(),
+  writeConfig: jest.fn()
 }))
 
 // ── backend/constants/environment mock — pins a deterministic branch
@@ -131,36 +138,64 @@ jest.mock('backend/config', () => ({
 // depot-download orchestrator, PICS, or the filesystem. Mock fns are exposed
 // on the mocked constructor's own `__mocks` property rather than referenced
 // via outer `const`s, to avoid the babel-jest-hoist "mock"-prefix TDZ hazard. ─
+// Plan 34.6-06 (REQ-34.6-04): moveInstall/importGame/getSettings added to the
+// same __mocks factory shape — the deepest boundary these two new channels
+// touch, mirroring install/update/uninstall/getGameInfo exactly.
 jest.mock('../../storeManagers/steam/games', () => {
   const install = jest.fn()
   const update = jest.fn()
   const uninstall = jest.fn()
   const getGameInfo = jest.fn()
+  const moveInstall = jest.fn()
+  const importGame = jest.fn()
+  const getSettings = jest.fn()
   const ctor = jest.fn().mockImplementation(() => ({
     install,
     update,
     uninstall,
-    getGameInfo
+    getGameInfo,
+    moveInstall,
+    importGame,
+    getSettings
   }))
   ;(ctor as unknown as { __mocks: Record<string, jest.Mock> }).__mocks = {
     install,
     update,
     uninstall,
-    getGameInfo
+    getGameInfo,
+    moveInstall,
+    importGame,
+    getSettings
   }
   return { __esModule: true, default: ctor }
 })
 
+// ── backend/dialog/dialog mock narrow override, real module (mirrors
+// shellFilesFlows.test.ts's own boundary choice) — `showDialogBoxModalAuto`
+// bare `jest.fn()` here (Plan 34.6-06's error-branch/D-15-adjacent assertion
+// needs to observe the call, not exercise the real sendFrontendMessage/
+// electronStub fallback chain, which shellFilesFlows.test.ts/wineToolsFlows
+// .test.ts already cover). `notify` stays real via the requireActual spread —
+// unchanged from every other test in this file. ─────────────────────────────
+jest.mock('../../dialog/dialog', () => ({
+  ...jest.requireActual('../../dialog/dialog'),
+  showDialogBoxModalAuto: jest.fn()
+}))
+
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { startSidecar, writeInvoke } from './helpers/sidecarHarness'
-import { getSteamLibraries } from 'backend/utils'
+import { getSteamLibraries, writeConfig } from 'backend/utils'
 import { GlobalConfig } from 'backend/config'
 import { libraryManagerMap } from 'backend/storeManagers'
 import SteamGame from '../../storeManagers/steam/games'
+import { handlerRegistry, listenerRegistry } from '../electronStub'
+import { showDialogBoxModalAuto } from '../../dialog/dialog'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import type { AppSettings } from 'common/types'
 
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+const mockedWriteConfig = writeConfig as jest.Mock
+const mockedShowDialogBoxModalAuto = showDialogBoxModalAuto as jest.Mock
 
 /** Points the mocked GlobalConfig.get() at a fresh settings object (mirrors
  *  nativeInstallSetting.test.ts's own helper). */
@@ -176,6 +211,9 @@ type MockedSteamGame = {
     update: jest.Mock
     uninstall: jest.Mock
     getGameInfo: jest.Mock
+    moveInstall: jest.Mock
+    importGame: jest.Mock
+    getSettings: jest.Mock
   }
 }
 const steamGameMocks = (SteamGame as unknown as MockedSteamGame).__mocks
@@ -202,6 +240,16 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     steamGameMocks.getGameInfo
       .mockReset()
       .mockReturnValue({ title: 'Install Flows Test Game' })
+    // Plan 34.6-06 defaults: moveInstall succeeds, importGame succeeds (no
+    // abort/error), getSettings returns an empty settings object so
+    // writeConfig's spread has something to merge onto.
+    steamGameMocks.moveInstall.mockReset().mockResolvedValue({ status: 'done' })
+    steamGameMocks.importGame
+      .mockReset()
+      .mockResolvedValue({ abort: false, error: undefined })
+    steamGameMocks.getSettings.mockReset().mockResolvedValue({})
+    mockedWriteConfig.mockReset()
+    mockedShowDialogBoxModalAuto.mockReset()
     // resetMocks:true wipes the mocked constructor's own mockImplementation
     // too (not just steamGameMocks.*'s), so it must be re-established here —
     // otherwise `new SteamGame(appName)` returns a bare `{}` with none of the
@@ -210,7 +258,10 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
       install: steamGameMocks.install,
       update: steamGameMocks.update,
       uninstall: steamGameMocks.uninstall,
-      getGameInfo: steamGameMocks.getGameInfo
+      getGameInfo: steamGameMocks.getGameInfo,
+      moveInstall: steamGameMocks.moveInstall,
+      importGame: steamGameMocks.importGame,
+      getSettings: steamGameMocks.getSettings
     }))
     // Opt-in setting defaults to false (D-13 safety valve) and autoUpdateGames
     // defaults to false (D-12's checkGameUpdates only calls autoUpdate() when
@@ -415,5 +466,121 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
       ok: true,
       result: 'ok'
     })
+  })
+
+  // ── Plan 34.6-06 (REQ-34.6-04/REQ-34.6-13, D-02) ──────────────────────────
+  // moveInstall/importGame ported byte-equivalently from main.ts:1112-1245.
+  // Carries T-34.5-C6-49-03 — renderer-supplied paths, no containment check,
+  // deliberately deferred to plan 34.6-11 (separately committed). These
+  // tests exist to prove the PORT, not to add or verify any validation.
+
+  it('T-34.6 registration-kind: moveInstall and importGame are invoke-kind (handlerRegistry), never listener-kind (listenerRegistry)', () => {
+    startSidecar()
+    expect(handlerRegistry.has('moveInstall')).toBe(true)
+    expect(handlerRegistry.has('importGame')).toBe(true)
+    expect(listenerRegistry.has('moveInstall')).toBe(false)
+    expect(listenerRegistry.has('importGame')).toBe(false)
+  })
+
+  // D-02 / T-34.6-17 pass-through proof: a path containing '..' and a space
+  // must arrive at SteamGame.moveInstall() by STRICT EQUALITY, unchanged.
+  // RED-proven (see 34.6-06-SUMMARY.md): temporarily inserting
+  // `path.resolve(path)` or a `path.includes('..')` rejection into the
+  // moveInstall handler body made this exact assertion fail; reverted after
+  // confirming RED, then reconfirmed green — proving this test would catch
+  // exactly the "quick path check" D-02 forbids.
+  it('D-02: moveInstall forwards a ".."-containing, space-containing path to SteamGame.moveInstall() unchanged', async () => {
+    const { input, frames } = startSidecar()
+    const trickyPath = '../not a real destination/with spaces'
+    writeInvoke(input, 'move-passthrough-1', 'moveInstall', [
+      { appName: '999001', path: trickyPath, runner: 'steam' }
+    ])
+    await flush()
+
+    expect(steamGameMocks.moveInstall).toHaveBeenCalledTimes(1)
+    // Identity/strict-equality, not just deep-equality -- proves the handler
+    // forwards the SAME value rather than normalising/reshaping it first.
+    expect(steamGameMocks.moveInstall.mock.calls[0][0]).toBe(trickyPath)
+
+    const response = frames.find((f) => f.id === 'move-passthrough-1')
+    expect(response).toMatchObject({ id: 'move-passthrough-1', ok: true })
+  })
+
+  it('moveInstall emits gameStatusUpdate "moving" before the move and "done" after, on the success branch', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'move-status-1', 'moveInstall', [
+      { appName: '999001', path: '/dest', runner: 'steam' }
+    ])
+    await flush()
+
+    const statuses = frames
+      .filter(
+        (f) => f.kind === 'frontendMessage' && f.channel === 'gameStatusUpdate'
+      )
+      .map((f) => ((f.args as unknown[])?.[0] as { status?: string })?.status)
+    expect(statuses).toEqual(['moving', 'done'])
+  })
+
+  it('moveInstall calls showDialogBoxModalAuto on the error branch, and STILL emits the trailing "done" status', async () => {
+    steamGameMocks.moveInstall.mockResolvedValue({
+      status: 'error',
+      error: 'disk full'
+    })
+
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'move-error-1', 'moveInstall', [
+      { appName: '999001', path: '/dest', runner: 'steam' }
+    ])
+    await flush()
+
+    expect(mockedShowDialogBoxModalAuto).toHaveBeenCalledTimes(1)
+
+    const statuses = frames
+      .filter(
+        (f) => f.kind === 'frontendMessage' && f.channel === 'gameStatusUpdate'
+      )
+      .map((f) => ((f.args as unknown[])?.[0] as { status?: string })?.status)
+    expect(statuses).toEqual(['moving', 'done'])
+  })
+
+  it('importGame forwards every field of its argument object through unchanged (path/platform to SteamGame.importGame(), winePrefix/wineVersion/wineCrossoverBottle to writeConfig())', async () => {
+    const trickyPath = '../not a real source/with spaces'
+    const wineVersionRef = { bin: '/wine', name: 'wine-ge', type: 'wine' }
+
+    const { input } = startSidecar()
+    writeInvoke(input, 'import-passthrough-1', 'importGame', [
+      {
+        appName: '999001',
+        path: trickyPath,
+        runner: 'steam',
+        platform: 'Windows',
+        winePrefix: '/prefix',
+        wineVersion: wineVersionRef,
+        wineCrossoverBottle: 'MyBottle'
+      }
+    ])
+    await flush()
+
+    expect(steamGameMocks.importGame).toHaveBeenCalledTimes(1)
+    expect(steamGameMocks.importGame.mock.calls[0][0]).toBe(trickyPath)
+    expect(steamGameMocks.importGame.mock.calls[0][1]).toBe('Windows')
+
+    expect(mockedWriteConfig).toHaveBeenCalledTimes(1)
+    const [writeConfigAppName, writeConfigPayload] =
+      mockedWriteConfig.mock.calls[0]
+    expect(writeConfigAppName).toBe('999001')
+    expect(writeConfigPayload).toMatchObject({
+      winePrefix: '/prefix',
+      wineCrossoverBottle: 'MyBottle'
+    })
+    // The harness round-trips args through the real JSON-lines RPC transport
+    // (`writeInvoke` -> `dispatchInvoke`), so object *identity* cannot survive
+    // the wire -- a fresh, structurally-identical object is unavoidable and
+    // is NOT a sign of reshaping by the handler. Deep-equality is the correct
+    // "unchanged" proof here; strict `.toBe` above (trickyPath/platform) is
+    // reserved for primitives, which DO survive the round-trip by value.
+    expect(
+      (writeConfigPayload as { wineVersion: unknown }).wineVersion
+    ).toStrictEqual(wineVersionRef)
   })
 })

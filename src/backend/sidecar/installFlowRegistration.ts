@@ -1,9 +1,10 @@
 /**
- * Curated install/uninstall/update-check channel registration (originally
- * Phase 30 Plan 02, D-05a/D-05b/D-07/D-08/D-12; `install`/`updateGame`
- * re-routed onto the real download queue in Phase 32 Plan 02, D-01).
+ * Curated install/uninstall/update-check/move/import channel registration
+ * (originally Phase 30 Plan 02, D-05a/D-05b/D-07/D-08/D-12; `install`/`updateGame`
+ * re-routed onto the real download queue in Phase 32 Plan 02, D-01; `moveInstall`/
+ * `importGame` added Phase 34.6 Plan 06, REQ-34.6-04/REQ-34.6-13, D-02).
  *
- * Registers exactly five invoke handlers the Tauri build's install-slice
+ * Registers exactly seven invoke handlers the Tauri build's install-slice
  * needs onto electronStub's `ipcMain` recorder, importing the REAL backend
  * code paths unchanged (mirrors `steamFlowRegistration.ts`'s own objective —
  * prove the real logic runs behind the new transport, not a
@@ -56,6 +57,14 @@
  *     decides whether GameLib has a local install target at all, so
  *     leaving it unported would degrade every Tauri Steam install to the
  *     delegated path. The minimum-read-gate conclusion stands.
+ *   - `moveInstall` -> ported byte-equivalently from `main.ts:1112-1158`
+ *     (Phase 34.6 Plan 06, D-02). Carries `T-34.5-C6-49-03` (renderer-supplied
+ *     `path`, no containment check) — deliberately NOT hardened here; see the
+ *     inline comment at its registration below and plan 34.6-11 (separately
+ *     committed, this same phase), which owns the hardening.
+ *   - `importGame` -> ported byte-equivalently from `main.ts:1160-1245`
+ *     (Phase 34.6 Plan 06, D-02). Same `T-34.5-C6-49-03` finding, same
+ *     deferral to plan 34.6-11.
  *
  * `uninstallGameCallback`/`checkGameUpdates`/`addToQueue` all "genuinely span
  * multiple store managers" (checklist step 2's own curated-import carve-out)
@@ -102,16 +111,31 @@ import { ipcMain } from './electronStub'
 // init order differs) — this fix is per-file, not "once is enough", because
 // each curated registration module is its own independent entry point into
 // the bundle's module graph.
-import '../storeManagers'
+import { libraryManagerMap } from '../storeManagers'
 import { uninstallGameCallback } from '../utils/uninstaller'
 import { checkGameUpdates } from '../utils/checkGameUpdates'
 import { listSteamLibraryTargets } from '../storeManagers/steam/installLocation'
 import { isSteamNativeInstallEnabled } from '../storeManagers/steam/nativeInstallSetting'
 import { addToQueue } from '../downloadmanager/downloadqueue'
+// Plan 34.6-06 (REQ-34.6-04): byte-equivalent port of moveInstall/importGame
+// (main.ts:1112-1245, D-02). getGame/isEpicServiceOffline/sendGameStatusUpdate/writeConfig are
+// the same `backend/utils.ts` exports main.ts itself imports for these two handlers.
+import {
+  getGame,
+  isEpicServiceOffline,
+  sendGameStatusUpdate,
+  writeConfig
+} from '../utils'
+import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
+import { logError, logInfo, LogPrefix } from '../logger'
+import i18next from 'i18next'
 import type {
   DMQueueElement,
+  ImportGameArgs,
   InstallParams,
+  MoveGameArgs,
   Runner,
+  StatusPromise,
   UpdateParams
 } from 'common/types'
 
@@ -207,5 +231,159 @@ export function registerInstallFlows(): void {
 
   ipcMain.handle('listSteamLibraryTargets', async () =>
     isSteamNativeInstallEnabled() ? listSteamLibraryTargets() : []
+  )
+
+  // T-34.5-C6-49-03 (Tampering, mitigate — DEFERRED WITHIN THIS PHASE, D-02): `path` is
+  // renderer-supplied and reaches a real filesystem move with NO containment check. Ported
+  // byte-equivalently from `main.ts:1112-1158` on purpose — hardening is plan 34.6-11's job,
+  // separately committed, so a live-gate FAIL here stays bisectable to "the port broke it" vs
+  // "validation rejected it" (D-02). Do NOT add a path guard/normalisation/rejection here.
+  ipcMain.handle(
+    'moveInstall',
+    async (_event: unknown, ...args: unknown[]): Promise<void> => {
+      const { appName, path, runner } = (args[0] ?? {}) as MoveGameArgs
+
+      sendGameStatusUpdate({
+        appName,
+        runner,
+        status: 'moving'
+      })
+
+      const { title } = libraryManagerMap[runner].getGame(appName).getGameInfo()
+      notify({ title, body: i18next.t('notify.moving', 'Moving Game') })
+
+      const moveRes = await libraryManagerMap[runner]
+        .getGame(appName)
+        .moveInstall(path)
+      if (moveRes.status === 'error') {
+        notify({
+          title,
+          body: i18next.t('notify.error.move', 'Error Moving Game')
+        })
+        logError(
+          `Error while moving ${appName} to ${path}: ${moveRes.error} `,
+          LogPrefix.Backend
+        )
+
+        // No `event` property (sidecar invoke handlers never have a real one — this handler's
+        // own `_event` is always `undefined` at runtime, per sidecarRpc.ts's dispatchInvoke,
+        // exactly like the `uninstall` handler's cast above): takes
+        // `showDialogBoxModalAuto`'s `sendFrontendMessage('showDialog', ...)` branch
+        // (`dialog.ts:23-31`), which never throws. `main.ts`'s own `event` argument was always
+        // the real invoke event; omitting it here is the same mechanical, non-semantic
+        // adaptation `clearCache` already uses in `shellFilesFlowRegistration.ts`.
+        showDialogBoxModalAuto({
+          title: i18next.t('box.error.title', 'Error'),
+          message: i18next.t(
+            'box.error.moving',
+            'Error Moving Game {{error}}',
+            { error: moveRes.error }
+          ),
+          type: 'ERROR'
+        })
+      }
+
+      if (moveRes.status === 'done') {
+        notify({ title, body: i18next.t('notify.moved') })
+        logInfo(`Finished moving ${appName} to ${path}.`, LogPrefix.Backend)
+      }
+
+      sendGameStatusUpdate({
+        appName,
+        runner,
+        status: 'done'
+      })
+    }
+  )
+
+  // T-34.5-C6-49-03 (Tampering, mitigate — DEFERRED WITHIN THIS PHASE, D-02): `path` is
+  // renderer-supplied and reaches a real filesystem import with NO containment check. Ported
+  // byte-equivalently from `main.ts:1160-1245` on purpose — hardening is plan 34.6-11's job,
+  // separately committed, so a live-gate FAIL here stays bisectable to "the port broke it" vs
+  // "validation rejected it" (D-02). Do NOT add a path guard/normalisation/rejection here.
+  ipcMain.handle(
+    'importGame',
+    async (_event: unknown, ...args: unknown[]): StatusPromise => {
+      const {
+        appName,
+        path,
+        runner,
+        platform,
+        winePrefix,
+        wineVersion,
+        wineCrossoverBottle
+      } = (args[0] ?? {}) as ImportGameArgs
+
+      if (runner === 'legendary') {
+        const epicOffline = await isEpicServiceOffline()
+        if (epicOffline) {
+          // No `event` property — see the identical rationale on `moveInstall` above.
+          showDialogBoxModalAuto({
+            title: i18next.t('box.warning.title', 'Warning'),
+            message: i18next.t(
+              'box.warning.epic.import',
+              'Epic Servers are having major outage right now, the game cannot be imported!'
+            ),
+            type: 'ERROR'
+          })
+          return { status: 'error' }
+        }
+      }
+
+      const { title } = libraryManagerMap[runner].getGame(appName).getGameInfo()
+      sendGameStatusUpdate({
+        appName,
+        runner,
+        status: 'importing'
+      })
+
+      const abortMessage = () => {
+        notify({
+          title,
+          body: i18next.t('notify.import.failed', 'Importing Failed')
+        })
+        sendGameStatusUpdate({
+          appName,
+          runner,
+          status: 'done'
+        })
+      }
+
+      try {
+        const { abort, error } = await libraryManagerMap[runner]
+          .getGame(appName)
+          .importGame(path, platform)
+        if (abort || error) {
+          abortMessage()
+          return { status: 'done' }
+        }
+      } catch (error) {
+        abortMessage()
+        logError(error, LogPrefix.Backend)
+        return { status: 'error' }
+      }
+
+      if (winePrefix && wineVersion) {
+        const gameSettings = await getGame(appName, runner).getSettings()
+        writeConfig(appName, {
+          ...gameSettings,
+          winePrefix,
+          wineVersion,
+          wineCrossoverBottle
+        })
+      }
+
+      notify({
+        title,
+        body: i18next.t('notify.install.imported', 'Game Imported')
+      })
+      sendGameStatusUpdate({
+        appName,
+        runner,
+        status: 'done'
+      })
+      logInfo(`imported ${title}`, LogPrefix.Backend)
+      return { status: 'done' }
+    }
   )
 }
