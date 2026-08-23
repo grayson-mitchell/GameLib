@@ -1359,11 +1359,25 @@ default branch`) — so nothing here can start from `fix/steam-native-install-st
 - **Item 3 / REQ-34.9-04** — sha256 digest verification against those published artifacts.
 - **Item 12** — the wired `verify:runner-bundle` guard covers **arm64 only**.
 - **Item 13** — that guard has never been exercised in CI at all.
-- **Item 18 / C2-05 — the one with user impact.** `release:mac` chains `-p always`
-  (`package.json:44`), auto-publishing to the GitHub releases feed `electron-updater` consumes,
-  while `.github/workflows/build-base.yml:48` builds `--x64 --arm64` and the guard hardcodes
-  `--arch=arm64`. **An unverified x64 macOS build can reach real users' auto-update channel with
-  the guard green throughout.** This is live in currently-active CI, not hypothetical.
+- **Item 18 / C2-05 — the one with user impact.** Two *separate* mechanisms, which an earlier
+  version of this bullet fused into one (corrected 2026-08-23, quick task `260823-rtm`):
+  - **The CI coverage gap — real, but it publishes nothing.**
+    `.github/workflows/build-base.yml:48` runs `pnpm dist:mac --x64 --arm64 **--publish=never**`
+    while the guard hardcodes `--arch=arm64`, so both arches are built and only one is verified.
+    Nothing from this job reaches a user.
+  - **The auto-publish path — a human-run release script, not CI.** `release:mac`
+    (`package.json:46`, was `:44`) chains `-p always` into the GitHub releases feed
+    `electron-updater` consumes, and builds `--x64 --arm64` behind the same arm64-only guard.
+  - **Together: an unverified x64 macOS build can reach real users' auto-update channel with the
+    guard green throughout.** The wiring is live and structural today — but it takes a human
+    running `release:mac` to publish, which is the disclosure this bullet previously lost by
+    ending "live in currently-active CI".
+
+  **Authoritative statement: ledger item 18 itself**, which has always drawn this distinction and
+  additionally resolves the apparent tension with item 13 (the guard is wired into the live CI
+  definition; it has never actually executed there, because `install-deps` throws on the six
+  `PENDING-CI-PUBLISH` sentinels upstream of the build step). Plan from the ledger, not from this
+  summary.
 
 **Read before planning:** `34.9-GUARD-PROOF.md` carries three known contract defects — items 14
 (a vacuous `find -newer` dist/-emptiness check), 15 (an exit-capture idiom that no-ops under zsh;

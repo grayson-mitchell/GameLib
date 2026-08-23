@@ -496,6 +496,29 @@ then dispatch, producing a real x64 onedir tree), plus a decision on whether `re
 
 **ROUTED 2026-08-22:** now owned by **Phase 34.16** (`macos-runner-onedir-x64-ci-leg-...`), created 2026-08-22 in commit `386b2f497`. The "follow-up phase" named above had no counterpart in ROADMAP.md when this item was written, so the routing was dangling for 9-11 days -- the same shape that left Phase 27 blocked across four phases after its cause was gone. OWNER text above is left as written; this line supersedes only its routing.
 
+**LANDMARKS RE-VERIFIED 2026-08-23 (quick task 260823-rtm).** Every claim in this item was
+re-checked against the live tree before it is planned from. **All hold**, with one stale line
+reference corrected:
+
+- `.github/workflows/build-base.yml:48` — **exact, unchanged**: `pnpm dist:mac --x64 --arm64
+  --publish=never`, on `macos-15`. Detail 1 stands verbatim, including `--publish=never`.
+- `package.json:44` → **now `package.json:46`**. `release:mac` reads `pnpm clean:dist-mac && pnpm
+  build-steam-bridge && electron-vite build && pnpm verify:runner-bundle build --arch=arm64 &&
+  electron-builder -p always --mac --x64 --arm64`. The `-p always` and the arm64-only guard over a
+  both-arch build are both unchanged; only the line moved (`release:linux`/`release:mac`/
+  `release:win` now sit at 45/46/47). Detail 2's substance stands.
+- Six `PENDING-CI-PUBLISH` sentinels in `meta/runnersOnedirDigests.json` — **still six** (a seventh
+  string match is the file's own `_comment` describing them, not a sentinel).
+
+**This item's own distinction is correct and must survive restatement.** Detail 1 (CI) and detail 2
+(`release:mac`) are two different mechanisms and this entry has always separated them —
+`build-base.yml` builds both arches under an arm64-only guard but publishes **nothing**
+(`--publish=never`); the auto-publish arm is `release:mac`, a script a human runs to cut a release.
+`ROADMAP.md`'s Phase 34.16 restatement had collapsed the two into "This is live in currently-active
+CI, not hypothetical", which reads as though CI publishes; it was corrected on 2026-08-23 by this
+same quick task to quote `--publish=never` and to name the two mechanisms separately. **This entry,
+not the ROADMAP paragraph, is the authoritative statement of C2-05.**
+
 ### 19. C2-07 — the doc-comment accuracy pins couple CI to documentation wording, not just behaviour
 
 **What it is:** the four tests in `meta/__tests__/cleanDistMac.test.ts:234-276`
@@ -516,6 +539,55 @@ on whether to drop the positive `toContain` assertions and retain only the negat
 (`not.toContain`) ones.
 
 **OWNER:** whichever plan next edits those doc comments (2026-08-13).
+
+**AMENDED 2026-08-23 (quick task 260823-rtm) — the precondition FIRED on 2026-08-22 and no decision
+was recorded. The item's own citations are dead.** Both are corrected below; the text above is left
+as written, per this ledger's amend-not-rewrite discipline, because the dead citations are the
+evidence of how the record rotted.
+
+**1. Dead paths.** `meta/cleanDistMac.ts` and `meta/__tests__/cleanDistMac.test.ts` no longer
+exist — quick task `260822-hrf` renamed both (`df7af9f4a`) while closing item 11. A reader
+following this item's `:234-276` reference today finds nothing. Live locations, read 2026-08-23:
+
+| What | Was cited as | Is now |
+|---|---|---|
+| source under pin | `meta/cleanDistMac.ts` | `meta/cleanDist.ts` (via the test's `CLEAN_DIST_SOURCE_PATH`) |
+| the pins block | `meta/__tests__/cleanDistMac.test.ts:234-276` | `meta/__tests__/cleanDist.test.ts:451-493` |
+| IN-01 negative (protective) | — | `:467-471` |
+| IN-01 positive, 2× `toContain` | — | `:473-477` |
+| IN-02 negative (protective) | — | `:479-483` |
+| IN-02 positive, 3× `toContain` | — | `:485-492` |
+
+**2. The precondition fired.** It named "a decision by whoever next edits [the] header comments".
+`260822-hrf` **is** that editor — its own closure note on item 11 records "IN-01/IN-02 doc-comment
+pins re-baselined against the new path". The pins were re-baselined against `meta/cleanDist.ts`;
+the question this item exists to put was never put. The failure shape is a deferred check whose
+precondition decays silently — here by a **rename** rather than by data drift. Nothing announced
+it: the item still parses, still reads as current, and its line numbers still look resolvable
+right up until someone opens the path and finds no file.
+
+**3. Net coupling grew by exactly one assertion — not two.** The re-baseline added a second
+describe block, `honesty pin: no win/linux "broken" or "observed" claim (E-02 discipline)`
+(`meta/__tests__/cleanDist.test.ts:495-514`). Scored against C2-07's own criterion:
+
+- `:496-508` — one test looping **6 phrases** through `not.toContain` ("win is broken", "observed
+  on linux", …). This is the **protective** kind this item explicitly exempts above ("The other two
+  assertions (`not.toContain`) ... carry the real protection — they are not affected by this
+  concern"). **Not new coupling.**
+- `:510-513` — `expect(source).toContain('UNCONFIRMED generalization')`. This **is** a new positive
+  prose pin, and the only one added.
+
+Positive prose assertions: **5 before, 6 now.** Any restatement claiming two were added is wrong.
+
+**4. The decision remains OPEN and is unchanged in substance.** Whether to drop the positive
+`toContain` assertions and keep only the negative ones is still a developer call, and the concern
+is still a coupling concern rather than a correctness defect — the pins are non-vacuous and will
+genuinely fail on a reword. What changed is only that the trigger has now passed once without
+being answered, so the next editor of `meta/cleanDist.ts`'s header is the second such trigger, not
+the first.
+
+**OWNER (unchanged in kind, restated with a live path):** whichever plan next edits
+`meta/cleanDist.ts`'s header comments. No phase owns this.
 
 ## Code-review finding disposition — gap cycle 2 review (2026-08-13)
 
