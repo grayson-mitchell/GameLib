@@ -2,7 +2,7 @@
 phase: 38-deferred-hardware-and-environment-uat-gates-windows-linux-ma
 verified: null
 status: human_needed
-score: N/A — collection phase, no must-haves. 6 relocated items, 0 discharged.
+score: N/A — collection phase, no must-haves. 8 relocated items, 0 discharged.
 audit_tool_note: >
   `status` MUST stay `human_needed`. `gsd-sdk query audit-uat` admits a VERIFICATION.md when
   status is `human_needed` OR `gaps_found`, but `parseVerificationItems` only emits items when
@@ -13,6 +13,19 @@ audit_tool_note: >
   `human_verification_discharged` rather than annotated in place. Both failure modes are silent.
   This matters more here than anywhere else: this phase's ENTIRE content is that array. Break it
   and the project's whole deferred-hardware backlog vanishes with nothing turning red.
+
+  THE `id:` FIELD DOES NOT SURVIVE INTO THE AUDIT OUTPUT. `audit-uat` emits each item with a
+  POSITIONAL integer as `test:` and the `test:` prose as `name`; the `id:` is dropped entirely, so
+  there is no key to join the audit back to this file except the prose. Worse, positions do not
+  track ids, because this array is in ARRIVAL order, not id order. Measured 2026-08-23: audit
+  position 1 is `38-W02` (the tray item) and position 2 is `38-W01` (window buttons) — off by one
+  in a way that silently reverses. Positions 3..8 happen to line up with W03 and C01..C05 today,
+  which is exactly what makes the hazard easy to miss: a spot-check anywhere but the first two rows
+  confirms a mapping that is false. CROSS-REFERENCE BY THE `test:` PROSE, NEVER BY POSITION, and
+  never quote an audit position as if it were an ID. This bites hardest on relocation receipts:
+  rule (3) below has each origin phase name an item ID in its `human_verification_relocated`
+  receipt, so a reader who follows that ID by counting rows in the audit output lands on the wrong
+  item. Adding an item to this array renumbers every position after it; the IDs never move.
 purpose: >
   A collection phase. Every item below was relocated from a phase that could otherwise not close,
   because the item needs hardware or an OS this project does not have. Nothing here ships code.
