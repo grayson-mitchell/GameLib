@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "PHASE 34.6 EXECUTING (2026-08-24) -- waves 1-3 COMPLETE, 7/14 plans (34.6-01/-02/-03/-04/-05/-06/-07). Plan 34.6-07 (wave 3) EXECUTED: ported the winetricks trio (winetricksAvailable, winetricksInstalled invoke-kind; winetricksInstall send-kind, D-11 observable) plus runWineCommandForGame (invoke-kind, D-02 byte-equivalent, T-34.5-C6-49-03 hardening deferred to 34.6-11) into wineToolsFlowRegistration.ts. A-01 confirmed binding: no macOS decline branch ported (Winetricks has genuine macEnvs support, no !isLinux guard). Three previously-green absence/exemplar gates flipped to presence, all RED-proven both directions (wineToolsFlows.test.ts T-34.5-15, enrichmentFlows.test.ts REQ-34.2-14 exemplar swapped winetricksInstall->authZoom, runnerSliceRegistration.test.ts Describe 6/7/8). flowRegistrationCensus.test.ts pin updated as an out-of-declared-files Rule 1 fix (EXPECTED 9/0->12/1, wineToolsFlowRegistration.ts added to NO_COUNT_CLAIM mirroring runnerAuth/shortcuts precedent). 176/176 targeted tests pass, tsc clean, bundle smoke test (pnpm build:sidecar && node build/main/sidecar.js) prints __GAMELIB_SIDECAR_READY__. Backend jest baseline still 1 suite / 3 tests failing, ALL pre-existing decompressPool lzmaLoader (Phase 23.1), not touched by this plan. Next: wave 4 plans, including 34.6-11 (owns T-34.5-C6-49-03 hardening)."
-last_updated: "2026-08-24T08:15:00.000Z"
-last_activity: "2026-08-24 (NZST) -- Plan 34.6-07 EXECUTED (4 commits: 04f62f3c6 feat Task 1, 04072114a test Task 2, c52f4df22 test Task 3, a0ec35d2d test Rule-1 pin fix). See 34.6-07-SUMMARY.md for full detail, including the two Task 3 RED-proof failure messages and the measured/re-derived runnerSliceRegistration.test.ts Describe 6 counts (37 handle / 5 listen, [11,13,7,11] totalling 42). STATE.md hand-edited; no gsd-sdk state.* verb invoked (known corruption defect)."
+stopped_at: "PHASE 34.6 EXECUTING (2026-08-24) -- waves 1-4 COMPLETE, 8/14 plans (34.6-01/-02/-03/-04/-05/-06/-07/-08). Plan 34.6-08 (wave 4) EXECUTED: ported all 8 EOS overlay channels (getEosOverlayStatus, getLatestEosOverlayVersion, updateEosOverlayInfo, installEosOverlay, removeEosOverlay, enableEosOverlay, disableEosOverlay, isEosOverlayEnabled), all invoke-kind, into a new eosOverlayFlowRegistration.ts wired into handlers.ts. A-02's dialog citation (remove() at :162 unconditional, not enable() at :197 gated) recorded verbatim in the module docstring. electronReachLedger.test.ts gained its third and final new ENTRY_POINTS member (eosOverlayFlowRegistration.ts), completing REQ-34.6-13's three-module set; electronImportingFiles unchanged at 35 (set-equal), visitedFiles 246->247. runnerSliceRegistration.test.ts D-09 flip completed for this cluster: Describe 7's absence set reduced 16->8 (3 Zoom + 5 SteamGridDB remain), new Describe 9 presence assertion added, Describe 6 re-measured to 45 handle-kind/5 listen-kind, per-module counts [11,13,7,11,8] totalling 50, all 'four modules' references widened to 'five modules'. Two out-of-declared-files pin-maintenance fixes (flowRegistrationCensus.test.ts EXPECTED table entry, testContainment.test.ts STRUCTURALLY_CONTAINED_SUITES entry), both Rule-2, both RED-proven. REQ-34.6-01 and REQ-34.6-13 now FULLY COMPLETE; REQ-34.6-08 PARTIALLY LANDED (11/16 deferred channels now flipped, SteamGridDB's 5 remain). Full sidecar __tests__ directory 52 suites/1182 tests green, tsc clean, bundle smoke test (pnpm build:sidecar && node build/main/sidecar.js) prints __GAMELIB_SIDECAR_READY__. Backend jest baseline still 1 suite / 3 tests failing, ALL pre-existing decompressPool lzmaLoader (Phase 23.1), not touched by this plan. Next: plan 34.6-09 (SteamGridDB channel port)."
+last_updated: "2026-08-24T09:05:00.000Z"
+last_activity: "2026-08-24 (NZST) -- Plan 34.6-08 EXECUTED (4 commits: 559881772 feat Task 1, ce070653c test Task 2, 2f3589351 test Task 3, 9f07db0ce test Rule-2 pin-maintenance fix). See 34.6-08-SUMMARY.md for full detail, including all RED-proof failure messages and the measured/re-derived runnerSliceRegistration.test.ts Describe 6 counts (45 handle / 5 listen, [11,13,7,11,8] totalling 50). STATE.md hand-edited; no gsd-sdk state.* verb invoked (known corruption defect)."
 progress:
   # Hand-corrected after `state.begin-phase` corrupted these (recurring gsd-sdk defect).
   # Tool wrote 24/15/324/298/63 and also mangled three prose blocks (orphaned continuation
@@ -472,10 +472,17 @@ progress:
   # SUMMARY landed, wave 3 of Phase 34.6). total_plans unchanged (373, already
   # counted -- one of the 14 pre-planned 34.6 plans). percent = floor(357/373*100)
   # = floor(95.71) = 95 (floor, matching prior convention; unchanged from 95).
+  # 2026-08-24 (plan 34.6-08 execution): +1 completed plan (34.6-08, plan's own
+  # SUMMARY landed, wave 4 of Phase 34.6). total_plans unchanged (373, already
+  # counted -- one of the 14 pre-planned 34.6 plans). percent = floor(358/373*100)
+  # = floor(95.98) = 95 (floor, matching prior convention; unchanged from 95).
+  # No gsd-sdk state.*/roadmap.update-plan-progress verb invoked (known
+  # corruption defect) -- hand-applied, whole-file diffed against a pre-edit
+  # snapshot to confirm insertion-only changes.
   total_phases: 27
   completed_phases: 21
   total_plans: 373
-  completed_plans: 357
+  completed_plans: 358
   percent: 95
 ---
 
@@ -535,6 +542,42 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 
 ## Current Position
+
+> # ✅ PHASE 34.6 PLAN 08 EXECUTED — 2026-08-24. REQ-34.6-01 and REQ-34.6-13 now FULLY COMPLETE.
+>
+> Created `eosOverlayFlowRegistration.ts`: all 8 EOS overlay channels (`getEosOverlayStatus`,
+> `getLatestEosOverlayVersion`, `updateEosOverlayInfo`, `installEosOverlay`, `removeEosOverlay`,
+> `enableEosOverlay`, `disableEosOverlay`, `isEosOverlayEnabled`) registered invoke-kind, delegating
+> directly to `eos_overlay.ts` (curated-import rule, never `ipc_handler.ts`). A-02's dialog-citation
+> correction recorded verbatim in the module's own docstring: the D-05 round-trip's dialog fires at
+> `remove()` (`eos_overlay.ts:162`, unconditional), not `enable()` (`:197`, gated `if
+> (!isInstalled())`, unreachable once install has run) — a live-gate report of "no dialog at enable"
+> is the CORRECT outcome, not a defect. Wired into `handlers.ts` before `ensureStoresRegistered()`,
+> call-site comment deliberately states no channel count (a pre-existing `flowRegistrationCensus
+> .test.ts` Gate 3 invariant this plan's own suggested wording would otherwise have violated).
+> `electronReachLedger.test.ts` gained its third and final new `ENTRY_POINTS` member —
+> `eosOverlayFlowRegistration.ts` — completing REQ-34.6-13's three-module set (after
+> `appShellFlowRegistration.ts` in 34.6-05 and `installFlowRegistration.ts` in 34.6-06); MEASURED
+> (never predicted): `electronImportingFiles` unchanged at 35 (set-equal — `eos_overlay.ts` was
+> already transitively reachable via an earlier entry point), `visitedFiles` 246 → 247. D-09's flip
+> completed for this cluster in `runnerSliceRegistration.test.ts`: `DEFERRED_EOS_OVERLAY` removed
+> from Describe 7's absence set (16 → 8: 3 Zoom + 5 SteamGridDB remain), new Describe 9 asserts all
+> 8 EOS channels present and invoke-kind, Describe 6 re-measured to 45 handle-kind / 5 listen-kind,
+> per-module counts `[11, 13, 7, 11, 8]` totalling 50 (independently re-derived and confirmed to
+> agree), all "four modules" titles/docstrings widened to "five modules". 4 commits: `559881772`
+> (feat), `ce070653c` (test), `2f3589351` (test), `9f07db0ce` (test, pin-maintenance for
+> `flowRegistrationCensus.test.ts` + `testContainment.test.ts`, both Rule-2 fixes, RED-proven).
+> Full sidecar `__tests__` directory: 52 suites / 1182 tests green. Full Backend project: only the
+> pre-existing `decompressPool.test.ts` red (unchanged). `tsc --noEmit` clean. `EosDeclineCallSite
+> Guard.test.ts` (D-08 tripwire) confirmed green and byte-identical. Bundle smoke test passes
+> (`pnpm build:sidecar && node build/main/sidecar.js` prints `__GAMELIB_SIDECAR_READY__`). See
+> `34.6-08-SUMMARY.md` for all RED-proof verbatim failure messages. No `gsd-sdk query state.*`/
+> `roadmap.*` verb invoked (known corruption defect) — STATE.md/ROADMAP.md/REQUIREMENTS.md
+> hand-edited instead, each diffed against a pre-edit snapshot to confirm insertion-only changes.
+> NEXT: `/gsd-execute-phase 34.6` — plan 34.6-09 (SteamGridDB channel port, the last of the 16
+> deferred channels) is now unblocked.
+>
+> Prior entries retained below, unedited.
 
 > # ✅ PHASE 34.6 PLAN 02 EXECUTED — 2026-08-24. A-03 (REQ-34.6-06) is now FULLY COMPLETE: both halves landed.
 >

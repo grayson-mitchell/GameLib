@@ -2975,7 +2975,7 @@ residual joined them 2026-08-22:** the three D-CYCLE6-A live-gate items (34.5 UA
 SCOPE above.
 **Blocks:** Phase 35 (the IPC re-plumb must be COMPLETE before cutover, and this phase now also
 carries the Epic/save-sync verification leg of Phase 35's dependency that used to sit on 34.7)
-**Plans:** 14 plans — 7/14 executed on disk (34.6-01, 34.6-02, 34.6-03, 34.6-04, 34.6-05, 34.6-06, 34.6-07)
+**Plans:** 14 plans — 8/14 executed on disk (34.6-01, 34.6-02, 34.6-03, 34.6-04, 34.6-05, 34.6-06, 34.6-07, 34.6-08)
 
 Plans:
 
@@ -2986,7 +2986,7 @@ Plans:
 - [x] 34.6-05-PLAN.md — wave 1: the D-11 send-handler observable + `frontendReady` ported send-kind, with its two body exclusions proven behaviourally; ledger entry for `appShellFlowRegistration.ts` — DONE 2026-08-23 (`799a96fb9`, `c7e4b8eba`, `76b0d37bd`; see `34.6-05-SUMMARY.md`)
 - [x] 34.6-06-PLAN.md — wave 2: `importGame` + `moveInstall` ported BYTE-EQUIVALENTLY (D-02), pass-through RED-proven against a `..`-bearing path; ledger entry for `installFlowRegistration.ts` — DONE 2026-08-24 (`f1d4523ff`, `efc369506`, `17952b517`; see `34.6-06-SUMMARY.md`). HALF LANDED: REQ-34.6-04/REQ-34.6-13 stay unchecked, `runWineCommandForGame` owed by 34.6-07.
 - [x] 34.6-07-PLAN.md — wave 3: the 3 winetricks channels + `runWineCommandForGame` ported (A-01 confirmed binding, no macOS decline branch; D-02 byte-equivalent, `T-34.5-C6-49-03` hardening deferred to 34.6-11), plus the `wineToolsFlows.test.ts` absence flip, the `enrichmentFlows.test.ts` exemplar substitution to `authZoom`, and Describe 6/7/8's winetricks slice, all RED-proven both directions — DONE 2026-08-24 (`04f62f3c6`, `04072114a`, `c52f4df22`, `a0ec35d2d`; see `34.6-07-SUMMARY.md`). Out-of-declared-files Rule 1 fix: `flowRegistrationCensus.test.ts` pin updated (EXPECTED 9/0→12/1, `wineToolsFlowRegistration.ts` added to `NO_COUNT_CLAIM`).
-- [ ] 34.6-08-PLAN.md — wave 4: NEW `eosOverlayFlowRegistration.ts` (8 channels) + `handlers.ts` wiring + ledger + the EOS 8's Describe 7 flip, which needs a NEW module-scope import
+- [x] 34.6-08-PLAN.md — wave 4: NEW `eosOverlayFlowRegistration.ts` (8 channels, all invoke-kind, A-02's dialog citation recorded in-code) + `handlers.ts` wiring + `electronReachLedger.test.ts`'s third and final new `ENTRY_POINTS` member + the EOS 8's Describe 7→9 flip in `runnerSliceRegistration.test.ts` (Describe 6 re-measured to 45/5, per-module `[11,13,7,11,8]`=50) — DONE 2026-08-24 (`559881772`, `ce070653c`, `2f3589351`, `9f07db0ce`; see `34.6-08-SUMMARY.md`). REQ-34.6-01/REQ-34.6-13 now fully complete. Out-of-declared-files Rule 2 fix: `flowRegistrationCensus.test.ts` EXPECTED table entry + `testContainment.test.ts` STRUCTURALLY_CONTAINED_SUITES entry, both RED-proven.
 - [ ] 34.6-09-PLAN.md — wave 5: the 5 SteamGridDB channels + `getGogDiscounts`, the second migration codepath deleted (PATTERNS delta 5), ledger, and Describe 7 down to Zoom's 3
 - [ ] 34.6-10-PLAN.md — wave 6: `getAchievements`/`getDefaultSavePath`/`getPlaytimeFromRunner` (D-14's ordering constraint), the 24-channel CENSUS, D-09's both-directions RED proof, D-08's guard verified unmodified, and the bundle smoke
 - [ ] 34.6-11-PLAN.md — wave 7: D-02's dedicated, separately-committed `T-34.5-C6-49-03` hardening — containment validation mirroring `resolveContainedPath`, and the shell removed from the Windows branch
