@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "PHASE 34.6 EXECUTING (2026-08-24) -- waves 1-4 COMPLETE, 8/14 plans (34.6-01/-02/-03/-04/-05/-06/-07/-08). Plan 34.6-08 (wave 4) EXECUTED: ported all 8 EOS overlay channels (getEosOverlayStatus, getLatestEosOverlayVersion, updateEosOverlayInfo, installEosOverlay, removeEosOverlay, enableEosOverlay, disableEosOverlay, isEosOverlayEnabled), all invoke-kind, into a new eosOverlayFlowRegistration.ts wired into handlers.ts. A-02's dialog citation (remove() at :162 unconditional, not enable() at :197 gated) recorded verbatim in the module docstring. electronReachLedger.test.ts gained its third and final new ENTRY_POINTS member (eosOverlayFlowRegistration.ts), completing REQ-34.6-13's three-module set; electronImportingFiles unchanged at 35 (set-equal), visitedFiles 246->247. runnerSliceRegistration.test.ts D-09 flip completed for this cluster: Describe 7's absence set reduced 16->8 (3 Zoom + 5 SteamGridDB remain), new Describe 9 presence assertion added, Describe 6 re-measured to 45 handle-kind/5 listen-kind, per-module counts [11,13,7,11,8] totalling 50, all 'four modules' references widened to 'five modules'. Two out-of-declared-files pin-maintenance fixes (flowRegistrationCensus.test.ts EXPECTED table entry, testContainment.test.ts STRUCTURALLY_CONTAINED_SUITES entry), both Rule-2, both RED-proven. REQ-34.6-01 and REQ-34.6-13 now FULLY COMPLETE; REQ-34.6-08 PARTIALLY LANDED (11/16 deferred channels now flipped, SteamGridDB's 5 remain). Full sidecar __tests__ directory 52 suites/1182 tests green, tsc clean, bundle smoke test (pnpm build:sidecar && node build/main/sidecar.js) prints __GAMELIB_SIDECAR_READY__. Backend jest baseline still 1 suite / 3 tests failing, ALL pre-existing decompressPool lzmaLoader (Phase 23.1), not touched by this plan. Next: plan 34.6-09 (SteamGridDB channel port)."
-last_updated: "2026-08-24T09:05:00.000Z"
-last_activity: "2026-08-24 (NZST) -- Plan 34.6-08 EXECUTED (4 commits: 559881772 feat Task 1, ce070653c test Task 2, 2f3589351 test Task 3, 9f07db0ce test Rule-2 pin-maintenance fix). See 34.6-08-SUMMARY.md for full detail, including all RED-proof failure messages and the measured/re-derived runnerSliceRegistration.test.ts Describe 6 counts (45 handle / 5 listen, [11,13,7,11,8] totalling 50). STATE.md hand-edited; no gsd-sdk state.* verb invoked (known corruption defect)."
+stopped_at: "PHASE 34.6 EXECUTING (2026-08-24) -- waves 1-4 + plan 34.6-11 (wave 7) COMPLETE, 9/14 plans (34.6-01/-02/-03/-04/-05/-06/-07/-08/-11). Plan 34.6-11 EXECUTED OUT OF NUMERIC SEQUENCE (depends_on: [34.6-06, 34.6-07] only -- 34.6-09/34.6-10 remain unexecuted, no PLAN blocks them). Plan 34.6-11 discharged T-34.5-C6-49-03: new src/backend/sidecar/rendererPathGuard.ts (assertContainedPath/PathContainmentError, assertCommandParts/CommandShapeError -- containment logic, not a safe-character allowlist, grep-verified). moveInstall/importGame in installFlowRegistration.ts now call assertContainedPath(defaultInstallPath, path, channel) as their first statement, discarding the resolved return and forwarding the original renderer-supplied path unchanged; on rejection: one path-free error log, terminal sendGameStatusUpdate({status:'done'}), rethrow. runWineCommandForGame in wineToolsFlowRegistration.ts now calls assertCommandParts (shape-only) as its first statement and its Windows branch was changed from execAsync(commandParts.join(' ')) (shell) to spawnAsync(command, commandArgs) (non-shell argv). All four properties (2 containment REJECT + no-wedge + shell-removal) RED-proven at the channel level via temporary cp-based file breakage, restored via cp (never git checkout --, which fires the post-checkout download-helper-binaries hook). testContainment.test.ts's STRUCTURALLY_CONTAINED_SUITES gained rendererPathGuard.test.ts (52->53 suites). A real, honestly-scoped residual (importGame's winePrefix/wineVersion/wineCrossoverBottle -- Wine prefix/binary paths, not naturally rooted under the install dir) was filed as a todo (resolves_phase: 34.6, planned_as: 34.6-14) rather than silently left. REQ-34.6-05 now FULLY COMPLETE. Full sidecar __tests__ directory now 53 *.test.ts suite files (per-file: installFlows.test.ts 15 tests, wineToolsFlows.test.ts 26 tests, rendererPathGuard.test.ts 21 tests, testContainment.test.ts's own census suite 55/55 passing), tsc clean, bundle smoke test prints __GAMELIB_SIDECAR_READY__. Backend jest baseline still 1 suite / 3 tests failing, ALL pre-existing decompressPool lzmaLoader (Phase 23.1), not touched by this plan. Next: plan 34.6-09 (SteamGridDB channel port) or 34.6-10, both still unexecuted."
+last_updated: "2026-08-24T11:40:00.000Z"
+last_activity: "2026-08-24 -- Plan 34.6-11 EXECUTED (3 task commits: 402b48c50 feat Task 1 rendererPathGuard.ts + 21 tests, 6d30448e3 feat/test Task 2 hardened call sites + testContainment census fix, df03d47d8 docs Task 3 SUMMARY + residual todo). See 34.6-11-SUMMARY.md for full detail, including all four RED-proof failure messages and the three declared residuals (Windows branch unverified on real hardware; containment root is user-reconfigurable; importGame's winePrefix/wineVersion/wineCrossoverBottle uncontained -- filed as a todo). STATE.md hand-edited; no gsd-sdk state.* verb invoked (known corruption defect)."
 progress:
   # Hand-corrected after `state.begin-phase` corrupted these (recurring gsd-sdk defect).
   # Tool wrote 24/15/324/298/63 and also mangled three prose blocks (orphaned continuation
@@ -479,11 +479,27 @@ progress:
   # No gsd-sdk state.*/roadmap.update-plan-progress verb invoked (known
   # corruption defect) -- hand-applied, whole-file diffed against a pre-edit
   # snapshot to confirm insertion-only changes.
+  # 2026-08-24 (plan 34.6-11 execution, wave 7, run ahead of 34.6-09/-10 which
+  # remain not-yet-executed -- 34.6-11 only depends on 34.6-06/34.6-07):
+  # discharged T-34.5-C6-49-03 for importGame/moveInstall/runWineCommandForGame
+  # via new src/backend/sidecar/rendererPathGuard.ts (assertContainedPath/
+  # assertCommandParts), all four RED-proven at the channel level (cp-restored,
+  # never git checkout --). Commits: 402b48c50 (Task 1: guard module + 21
+  # tests), 6d30448e3 (Task 2: 3 call sites hardened + testContainment.test.ts
+  # census updated 52->53 suites), df03d47d8 (Task 3: SUMMARY + a real-gap todo
+  # for importGame's uncontained winePrefix/wineVersion/wineCrossoverBottle,
+  # resolves_phase: 34.6/planned_as: 34.6-14). REQ-34.6-05 now COMPLETE.
+  # +1 completed plan (34.6-11, plan's own SUMMARY landed). total_plans
+  # unchanged (373, already counted -- one of the 14 pre-planned 34.6 plans).
+  # percent = floor(359/373*100) = floor(96.24) = 96 (floor, matching prior
+  # convention; 95 -> 96). No gsd-sdk state.*/roadmap.update-plan-progress
+  # verb invoked (known corruption defect) -- hand-applied, whole-file diffed
+  # against a pre-edit snapshot to confirm insertion-only changes.
   total_phases: 27
   completed_phases: 21
   total_plans: 373
-  completed_plans: 358
-  percent: 95
+  completed_plans: 359
+  percent: 96
 ---
 
 # Project State
