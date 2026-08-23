@@ -3633,36 +3633,61 @@ Gap cycle 3 plans, closing the run-3 gaps recorded in `34.10-VERIFICATION.md`:
 - [x] 34.10-27-PLAN.md — RUN the run-4 gate; reconcile REQUIREMENTS/ROADMAP/STATE (wave 4, blocking checkpoint) — **VERDICT PASS 5/5**
 
 **Carried forward from the phase-34.10 code review (`34.10-REVIEW.md`, 2026-08-09) — two
-CONFIRMED Critical findings, deliberately NOT fixed in this phase.** Both were independently
-verified rather than taken on the reviewer's word, and both are coverage gaps the live-gate
-contract never covered — not measurements it got wrong, so neither contradicts run 4's 5/5. They
-are deferred on the operator's explicit decision, because patching CSS after the gate would mean
-HEAD no longer matches the bundle that passed, and *a shipped fix is not evidence* is the lesson
-this phase paid for four times over.
+CONFIRMED Critical findings, deferred at 34.10 close and since taken up by PHASE 34.11 as
+decisions D-31 (CR-01) and D-32 (CR-02).** Both were independently verified rather than taken on
+the reviewer's word, and both are coverage gaps the live-gate contract never covered — not
+measurements it got wrong, so neither contradicts run 4's 5/5. They were deferred at close because
+patching CSS after the gate would mean HEAD no longer matched the bundle that passed, and *a
+shipped fix is not evidence* is the lesson this phase paid for four times over. **D-31's own text
+records that this reason expired** once 34.11 had to theme-test `gruvbox_dark` regardless.
+**CR-02 is CLOSED; CR-01 is closed for the scored theme only and its residual is still open**
+— see each bullet. **Neither discharge reopens this phase** — 34.10 closed 2026-08-09 on run 4's
+5/5 and stays closed.
 
 - **CR-01 — `NavTabs/index.scss:229` uses an undefined theme token with no fallback.**
-  `.Mui-selected { color: var(--navbar-active) }`. `--navbar-active` is declared in only 3 places
-  in `themes.scss` while `--navbar-active-background` exists in all 11 theme blocks; **`gruvbox_dark`,
-  one of the three SCORED gate themes, has the background variant and not this one**, so the active
-  tab's label falls through to an inherited colour. `NavItem/index.scss:22` already uses the correct
-  fallback chain (`var(--navbar-active, var(--accent-overlay, var(--accent)))`), and the comment
-  block directly below the offending line documents this exact defect class for `--divider` — it was
-  fixed there for `border-color` and missed on `color`. **Not observed as visibly broken during run
-  4's gruvbox_dark sweep**, which judged the seam and the idle ring rather than label legibility;
-  stated in both directions rather than inflated. Whichever phase fixes it must re-measure the
-  active-tab label in `gruvbox_dark`, not fix-and-assume.
+  **PARTIALLY CLOSED 2026-08-23** (assessed by quick task `260823-v3k`; fix commit `126b9c458`,
+  Phase 34.11 plan `34.11-03`, decision D-31). `.Mui-selected { color: var(--navbar-active) }`.
+  `--navbar-active` was declared in only 3 places in `themes.scss` while `--navbar-active-background`
+  exists in all 11 theme blocks; **`gruvbox_dark`, one of the three SCORED gate themes, had the
+  background variant and not this one**, so the active tab's label fell through to an inherited
+  colour. **The scored-theme half is CLOSED and was LIVE-ADJUDICATED, not merely shipped:**
+  `themes.scss:210` now declares `--navbar-active: var(--navbar-accent)` inside `body.gruvbox_dark`,
+  sourced from the theme's own accent rather than a literal hex so a future palette change
+  propagates; and `34.11-09`'s live three-theme sweep returned **APPROVED 6/6** for `gruvbox_dark`
+  with the operator answering the contrast question *deliberately, on purpose* rather than letting
+  it pass as a side effect of a general "selected is distinguishable" check — which supersedes plan
+  03's own "recommendation, not a measured result" hedge. This satisfies the original bullet's
+  demand to re-measure in `gruvbox_dark` rather than fix-and-assume.
+  **Corrected diagnosis, recorded by the fix itself:** at `NavItem/index.scss:20-23` the fallback
+  chain (`var(--navbar-active, var(--accent-overlay, var(--accent)))`) never breaks, so the symptom
+  *there* was a **WRONG colour** — `--accent-overlay`, a mustard `#d79921` — not a dropped
+  declaration. The review's "illegible / falls through to inherited" analysis holds for `NavTabs`,
+  which has no fallback. Two elements, two failure modes, one shared root token.
+  **RESIDUAL — STILL OPEN, and the majority of the original finding.** The review's heading scoped
+  this to **8 of 11 themes**; 34.11 fixed exactly one, the scored one. A census at HEAD finds
+  **7 theme blocks still without `--navbar-active`**: `classic`/`cyberSpaceOasis`/
+  `cyberSpaceOasisAlt`, `high-contrast`, `nord-dark`, `marine`/`marine-classic`,
+  `zombie`/`zombie-classic`, `old-school`, `sweet`/`sweet-dark`. And the consuming site
+  (`NavTabs/index.scss:246` — the line moved from 229, the declaration did not) **still has no
+  fallback chain**, so those 7 themes retain the illegible-label mode. Tracked as a todo; whoever
+  fixes it owes the same live sweep `gruvbox_dark` got, per theme, not a hex-arithmetic argument.
 
-- **CR-02 — the window drag region was never ported from the retired sidebar.**
-  `.Sidebar/index.scss` carried `-webkit-app-region: drag` (confirmed at `0559bc0d0~1:21`).
-  `.NavShell__navbar` has no equivalent. The `no-drag` CHILDREN *were* ported
-  (`HeroicVersion/index.scss:35`, `WindowControls/index.scss:6`), so those exclusions now exclude
-  from a drag region that does not exist — a partial port, not a design choice. Under **Electron**
-  frameless (`main_window.ts:48-49`, driven by the same `settings.framelessWindow` the gate toggled
-  under Tauri) navbar dragging is therefore broken; `tauriWindowChrome.ts`'s JS drag handler is
-  Tauri-only and does not cover that path. The gate could not have caught this by construction:
-  item 2 was Tauri-only and item 5's Electron check never exercised dragging. **Likely moot rather
-  than urgent** — Phase 35 deletes Electron entirely — but recorded so that decision is made
-  knowingly rather than by omission.
+- **CR-02 — the window drag region was never ported from the retired sidebar. CLOSED 2026-08-23**
+  (fix commit `75e3785da`, Phase 34.11 plan `34.11-03`, decision D-32). `.Sidebar/index.scss`
+  carried `-webkit-app-region: drag` (confirmed at `0559bc0d0~1:21`); `.NavShell__navbar` had no
+  equivalent while the `no-drag` CHILDREN *were* ported (`HeroicVersion/index.scss:35`,
+  `WindowControls/index.scss:6`), so those exclusions excluded from a drag region that did not
+  exist — a partial port, not a design choice. `NavShell/index.scss:85` now declares
+  `-webkit-app-region: drag`, with `no-drag` added to `.NavTabs` and to
+  `.NavShell__navRight .DownloadsRing` so the restored drag region cannot swallow tab or
+  Downloads clicks. **This closure is SOURCE-VERIFIED-ONLY, permanently, and must never be
+  restated as live-confirmed:** `-webkit-app-region` is inert under WKWebView and this project's
+  live-gate host is macOS/Tauri, so no live drag test on this host can ever exercise the CSS — the
+  drag that *does* work there is `tauriWindowChrome.ts`'s untouched `closest('.NavShell__navbar')`
+  path. `34.11-09-SUMMARY.md` records this as a **permanent accepted limitation, not a gap awaiting
+  future closure.** The source-text gate is its only evidence, by construction. The 34.10 gate could
+  not have caught the original defect either: item 2 was Tauri-only and item 5's Electron check
+  never exercised dragging.
 
 Also carried forward, lower severity: **WR-01 — CLOSED 2026-08-23** (quick task `260823-tct`,
 commit `4f44ef280`). `muiTabsSelectorScoping.test.ts`'s guard (the load-bearing one that prevents
