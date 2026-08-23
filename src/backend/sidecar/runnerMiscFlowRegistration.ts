@@ -1,12 +1,22 @@
 /**
- * Curated runner-CLI-version + misc-tool + saves-sync + runtime-download channel registration for
- * the Tauri sidecar (Phase 34.5 Plans 34.5-07/34.5-12, REQ-34.5-06/REQ-34.5-07/REQ-34.5-08/
- * REQ-34.5-09).
+ * Curated runner-CLI-version + misc-tool + saves-sync + runtime-download + late-discovered channel
+ * registration for the Tauri sidecar (Phase 34.5 Plans 34.5-07/34.5-12, REQ-34.5-06/REQ-34.5-07/
+ * REQ-34.5-08/REQ-34.5-09; Phase 34.6 Plan 10, REQ-34.6-04/REQ-34.6-08/REQ-34.6-09).
  *
  * Plan 34.5-07 filled in 6 of this module's 11 declared channels: the four runner-CLI version
  * probes and the two Wine-runtime channels. Plan 34.5-12 Task 1 added the three "other" channels
- * (`callTool`, `egsSync`, `getGOGLinuxInstallersLangs`), bringing this module to 9/11; Task 2 adds
- * the two saves-sync channels (`syncSaves`, `syncGOGSaves`) to complete it at 11/11.
+ * (`callTool`, `egsSync`, `getGOGLinuxInstallersLangs`), bringing this module to 9/11; Task 2 added
+ * the two saves-sync channels (`syncSaves`, `syncGOGSaves`) to complete it at 11/11. Phase 34.6
+ * Plan 10 adds the last three of the phase's 24 late-discovered/deferred channels
+ * (`getAchievements`, `getDefaultSavePath`, `getPlaytimeFromRunner`), bringing this module to
+ * 14/14 — the phase's final port.
+ *
+ * D-14 ordering constraint (Phase 34.6 CONTEXT.md): `getDefaultSavePath` MUST be ported before the
+ * inherited legendary save-sync live-verification leg runs (live-gate step 7), or path resolution
+ * fails. This plan is where that constraint is satisfied — it lands before the phase's gate-run
+ * plan. `save_sync.ts:146`'s `getDefaultGogSavePaths`'s `app.getPath('documents')` call (reached
+ * only when `game.isNative()`, inside the GOG branch) is already covered by `pathShim.ts`'s
+ * `documents` case (plan 34.5-01, REQ-34.5-01), so no new shim work is required here.
  *
  * D-04 correction, recorded here because this is where a future reader will actually find it:
  * `getCometVersion` is GOG's channel, not Zoom's. `comet` is the GOG Galaxy Communication
@@ -15,12 +25,12 @@
  * (`authZoom`, `getZoomUserInfo`, `logoutZoom`), all DROPPED permanently by D-02 — `getCometVersion`
  * was never part of that drop.
  *
- * Declared channel list (11 total, all invoke — verified against `main.ts`,
+ * Declared channel list (14 total, all invoke — verified against `main.ts`,
  * `utils/ipc_handler.ts`, `tools/ipc_handler.ts`, and `wine/runtimes/ipc_handler.ts` by
  * 34.5-RESEARCH.md and this plan's own `<interfaces>` block; no send-kind channels in this
  * cluster):
  *
- *   invoke (ipcMain.handle, 11):
+ *   invoke (ipcMain.handle, 14):
  *     - `getLegendaryVersion`         -> utils/ipc_handler.ts:18 (DONE — plan 34.5-07)
  *     - `getGogdlVersion`             -> utils/ipc_handler.ts:19 (DONE — plan 34.5-07)
  *     - `getCometVersion`             -> utils/ipc_handler.ts:20 (DONE — plan 34.5-07; D-04's channel)
@@ -32,6 +42,9 @@
  *     - `syncGOGSaves`                -> main.ts:1255 (DONE — plan 34.5-12 Task 2)
  *     - `downloadRuntime`             -> wine/runtimes/ipc_handler.ts:4 (DONE — plan 34.5-07)
  *     - `isRuntimeInstalled`          -> wine/runtimes/ipc_handler.ts:6 (DONE — plan 34.5-07)
+ *     - `getAchievements`             -> main.ts:822-827 (DONE — Phase 34.6 Plan 10)
+ *     - `getDefaultSavePath`          -> main.ts:1286-1290, delegates to save_sync.ts (DONE — Phase 34.6 Plan 10; D-14)
+ *     - `getPlaytimeFromRunner`       -> main.ts:1495-1503 (DONE — Phase 34.6 Plan 10)
  *
  * Curated-import rule (inherited from every prior slice's D-08 -> D-09 -> D-04 -> D-14 -> D-02
  * lineage): the cluster plan that fills this module in imports the underlying logic modules
@@ -78,10 +91,12 @@ import type { GOGCloudSavesLocation } from 'common/types/gog'
 import path from 'path'
 import { libraryManagerMap } from '../storeManagers'
 import { Winetricks, runWineCommandOnGame } from '../tools'
-import { isEpicServiceOffline, sendGameStatusUpdate } from '../utils'
+import { isEpicServiceOffline, sendGameStatusUpdate, getGame } from '../utils'
 import { isOnline } from '../online_monitor'
 import { logInfo, logWarning, LogPrefix } from '../logger'
 import { sendFrontendMessage } from '../ipc'
+import { getDefaultSavePath } from '../save_sync'
+import { GlobalConfig } from '../config'
 
 /**
  * Registers this cluster's 11 invoke-kind channels. Called once from `handlers.ts` — this module
@@ -255,4 +270,55 @@ export function registerRunnerMiscFlows(): void {
     logInfo(output, LogPrefix.Backend)
     return output
   })
+
+  // ── Late-discovered channels (main.ts:822-827,1286-1290,1495-1503) ────────
+  // Phase 34.6 Plan 10 (REQ-34.6-04/08/09). Byte-equivalent ports of the three remaining
+  // 34.5-49-preload-surface-audit "Late-discovered — owner Phase 34.6" channels.
+  ipcMain.handle(
+    'getAchievements',
+    async (_event: unknown, ...args: unknown[]) => {
+      const appName = args[0] as string
+      const runner = args[1] as Runner
+      const lang = (args[2] as string | undefined) ?? 'en-US'
+      return getGame(appName, runner).getAchievements?.(lang) ?? []
+    }
+  )
+
+  // D-14: this port MUST land before the inherited legendary save-sync live-verification leg
+  // runs (live-gate step 7), or that leg's path resolution fails. `save_sync.ts`'s pure
+  // `getDefaultSavePath` function is imported directly (never `main.ts`) per this module's own
+  // curated-import rule. `save_sync.ts:146`'s `getDefaultGogSavePaths`'s `app.getPath('documents')`
+  // call (reached only inside the GOG branch, when `game.isNative()`) is already covered by
+  // `pathShim.ts`'s `documents` case (plan 34.5-01, REQ-34.5-01) — no new shim work required.
+  ipcMain.handle(
+    'getDefaultSavePath',
+    async (_event: unknown, ...args: unknown[]) => {
+      const appName = args[0] as string
+      const runner = args[1] as Runner
+      const alreadyDefinedGogSaves = args[2] as GOGCloudSavesLocation[]
+      return getDefaultSavePath(appName, runner, alreadyDefinedGogSaves)
+    }
+  )
+
+  // Preserve the two bare `return` statements (resolving `undefined`, never `null`/`0`) exactly —
+  // a caller distinguishing "sync disabled" from "zero playtime" would break silently otherwise.
+  ipcMain.handle(
+    'getPlaytimeFromRunner',
+    async (
+      _event: unknown,
+      ...args: unknown[]
+    ): Promise<number | undefined> => {
+      const runner = args[0] as Runner
+      const appName = args[1] as string
+      const { disablePlaytimeSync } = GlobalConfig.get().getSettings()
+      if (disablePlaytimeSync) {
+        return
+      }
+      if (runner === 'gog') {
+        return libraryManagerMap[runner].getGame(appName).getGOGPlaytime()
+      }
+
+      return
+    }
+  )
 }

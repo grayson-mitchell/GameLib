@@ -1,13 +1,14 @@
 /**
  * Bidirectional registration-kind proof for the sidecar's runner-CLI-version-probe + Wine-runtime
- * + "other" + saves-sync channel cluster (Phase 34.5 Plans 07/12, REQ-34.5-06/REQ-34.5-07/
- * REQ-34.5-08/REQ-34.5-09).
+ * + "other" + saves-sync + late-discovered channel cluster (Phase 34.5 Plans 07/12,
+ * REQ-34.5-06/REQ-34.5-07/REQ-34.5-08/REQ-34.5-09; Phase 34.6 Plan 10, REQ-34.6-04/08/09).
  *
- * Four describe blocks:
- *   1. Registration kind — all 11 channels (`getLegendaryVersion`, `getGogdlVersion`,
+ * Five describe blocks:
+ *   1. Registration kind — all 14 channels (`getLegendaryVersion`, `getGogdlVersion`,
  *      `getCometVersion`, `getNileVersion`, `downloadRuntime`, `isRuntimeInstalled` from plan
  *      34.5-07; `callTool`, `egsSync`, `getGOGLinuxInstallersLangs`, `syncSaves`, `syncGOGSaves`
- *      from plan 34.5-12) are `ipcMain.handle`, never `ipcMain.on`, asserted in both directions
+ *      from plan 34.5-12; `getAchievements`, `getDefaultSavePath`, `getPlaytimeFromRunner` from
+ *      Phase 34.6 Plan 10) are `ipcMain.handle`, never `ipcMain.on`, asserted in both directions
  *      (mirrors `humbleLoginFlows.test.ts`'s Describe 1 template). Also proves the four channels
  *      `utils/ipc_handler.ts` ALSO registers (`abort`, `getSystemInfo`,
  *      `copySystemInfoToClipboard`, `hasExecutable`) and the three DEFERRED winetricks channel
@@ -15,7 +16,7 @@
  *      D-03) are absent from both registries, so a curated-import mistake that pulled in
  *      `tools/ipc_handler.ts`/`utils/ipc_handler.ts` wholesale, or `callTool` reaching
  *      `Winetricks.run` being confused with registering the winetricks IPC channels themselves
- *      (Pitfall 4), would be caught here. Module completeness (11 handle, 0 send,
+ *      (Pitfall 4), would be caught here. Module completeness (14 handle, 0 send,
  *      `listenerRegistry` untouched) is asserted explicitly.
  *   2. Curated-import guard — `runnerMiscFlowRegistration.ts` never imports `utils/ipc_handler.ts`
  *      or `wine/runtimes/ipc_handler.ts` (comment-stripped via the shared `stripSourceComments`
@@ -56,6 +57,16 @@
  * true` (project jest config) clears every mock's implementation before each test, so every mock
  * used below is (re)configured inside a `beforeEach` or the test itself, never relied upon via its
  * declaration-time factory alone.
+ *
+ * Phase 34.6 Plan 10 additionally factory-mocks `getGame` (added to the existing `backend/utils`
+ * mock), `../../save_sync` and `../../config` — the curated import targets for the three
+ * late-discovered channels this plan ports.
+ *   5. Late-discovered channel dispatch (Phase 34.6 Plan 10, REQ-34.6-04/08/09) —
+ *      `getAchievements` defaults `lang` to `'en-US'` when absent and resolves `[]` when the
+ *      game has no `getAchievements` method; `getDefaultSavePath` forwards its three arguments
+ *      unchanged to `save_sync.ts`'s pure function; `getPlaytimeFromRunner` resolves `undefined`
+ *      (not `null`, not `0`) both when `disablePlaytimeSync` is set (without touching
+ *      `libraryManagerMap`) and for a non-`gog` runner.
  */
 
 // ── os — disposable per-process homedir (mirrors steamAuthFlows.test.ts / runnerAuthFlows.test.ts) ─
@@ -76,11 +87,36 @@ jest.mock('os', () => {
 // `callTool` (plan 34.5-12). Neither `getCometBin` nor `axiosClient` is invoked by this suite
 // (only registration kind + this plan's own dispatch logic is proven, no runner CLI is
 // invoked), so an empty-bodied stand-in is sufficient for those two. ──────────────────────────
+// Phase 34.6 Plan 10 additionally supplies `getGame` — the curated import target for
+// `getAchievements` (main.ts:822-827). A bare `jest.fn()` (reconfigured per-test via
+// `.mockReturnValue()`), never an inline object literal, so each test controls whether the
+// returned "game" exposes a `getAchievements` method at all.
+const mockGetGame = jest.fn()
 jest.mock('backend/utils', () => ({
   getCometBin: jest.fn(),
   axiosClient: { get: jest.fn() },
   isEpicServiceOffline: jest.fn(async () => false),
-  sendGameStatusUpdate: jest.fn()
+  sendGameStatusUpdate: jest.fn(),
+  getGame: (...args: unknown[]) => mockGetGame(...args)
+}))
+
+// ── ../../save_sync — `getDefaultSavePath` is the curated import target for the sidecar's own
+// `getDefaultSavePath` channel (D-14). Factory-mocked so this suite proves only forwarding, not
+// `save_sync.ts`'s own legendary/gog path-resolution logic (covered by its own suite). ─────────
+const mockGetDefaultSavePath = jest.fn()
+jest.mock('../../save_sync', () => ({
+  getDefaultSavePath: (...args: unknown[]) => mockGetDefaultSavePath(...args)
+}))
+
+// ── ../../config — `GlobalConfig.get().getSettings()` is the curated import target for
+// `getPlaytimeFromRunner`'s `disablePlaytimeSync` read (mirrors steamgridSecretStore.test.ts's
+// own `../../config` mock shape). Both bare `jest.fn()` (no inline implementation), reconfigured
+// per-test via `.mockReturnValue()` -- `resetMocks: true` (project jest config) would otherwise
+// wipe a declaration-time implementation before the first test runs. ───────────────────────────
+const mockGlobalConfigGetSettings = jest.fn()
+const mockGlobalConfigGet = jest.fn()
+jest.mock('../../config', () => ({
+  GlobalConfig: { get: (...args: unknown[]) => mockGlobalConfigGet(...args) }
 }))
 
 // ── backend/logger — short-circuits the heavy GameConfig/GlobalConfig/backendEvents import graph
@@ -185,6 +221,13 @@ describe('registration kind — all 11 channels are registered with the correct 
   const RUNTIME_CHANNELS = ['downloadRuntime', 'isRuntimeInstalled']
   const OTHER_CHANNELS = ['callTool', 'egsSync', 'getGOGLinuxInstallersLangs']
   const SAVES_SYNC_CHANNELS = ['syncGOGSaves', 'syncSaves']
+  // Phase 34.6 Plan 10 (REQ-34.6-04/08/09): the last 3 of the phase's 24 late-discovered/deferred
+  // channels.
+  const LATE_DISCOVERED_CHANNELS = [
+    'getAchievements',
+    'getDefaultSavePath',
+    'getPlaytimeFromRunner'
+  ]
 
   it.each(VERSION_CHANNELS)(
     'REQ-34.5-06 %s is registered as ipcMain.handle, and NOT as ipcMain.on',
@@ -218,15 +261,24 @@ describe('registration kind — all 11 channels are registered with the correct 
     }
   )
 
-  it('the module is complete: exactly these 11 channels are handle-kind, and no channel from this module is send-kind', () => {
-    const allEleven = [
+  it.each(LATE_DISCOVERED_CHANNELS)(
+    'REQ-34.6-04/08/09 %s is registered as ipcMain.handle, and NOT as ipcMain.on',
+    (channel) => {
+      expect(handlerRegistry.has(channel)).toBe(true)
+      expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
+    }
+  )
+
+  it('the module is complete: exactly these 14 channels are handle-kind, and no channel from this module is send-kind', () => {
+    const allFourteen = [
       ...VERSION_CHANNELS,
       ...RUNTIME_CHANNELS,
       ...OTHER_CHANNELS,
-      ...SAVES_SYNC_CHANNELS
+      ...SAVES_SYNC_CHANNELS,
+      ...LATE_DISCOVERED_CHANNELS
     ]
-    expect(allEleven).toHaveLength(11)
-    for (const channel of allEleven) {
+    expect(allFourteen).toHaveLength(14)
+    for (const channel of allFourteen) {
       expect(handlerRegistry.has(channel)).toBe(true)
       expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
     }
@@ -434,5 +486,128 @@ describe('callTool branch dispatch — winetricks/winecfg/runExe, the gog post-s
 
     expect(mockCheckForOfflineInstallerChanges).not.toHaveBeenCalled()
     expect(mockSendFrontendMessage).not.toHaveBeenCalled()
+  })
+})
+
+// ── Describe 5: Late-discovered channel dispatch (Phase 34.6 Plan 10, REQ-34.6-04/08/09) ───────
+describe('late-discovered channel dispatch — getAchievements, getDefaultSavePath, getPlaytimeFromRunner', () => {
+  const getAchievementsHandler = () => handlerRegistry.get('getAchievements')!
+  const getDefaultSavePathHandler = () =>
+    handlerRegistry.get('getDefaultSavePath')!
+  const getPlaytimeFromRunnerHandler = () =>
+    handlerRegistry.get('getPlaytimeFromRunner')!
+
+  describe('getAchievements', () => {
+    it('REQ-34.6-04/08/09 defaults lang to "en-US" when the third argument is absent', async () => {
+      const mockGetAchievements = jest.fn().mockResolvedValue([{ id: 'a1' }])
+      mockGetGame.mockReturnValue({ getAchievements: mockGetAchievements })
+
+      const result = await getAchievementsHandler()(
+        undefined,
+        'fake-app',
+        'legendary'
+      )
+
+      expect(mockGetGame).toHaveBeenCalledWith('fake-app', 'legendary')
+      expect(mockGetAchievements).toHaveBeenCalledWith('en-US')
+      expect(result).toEqual([{ id: 'a1' }])
+    })
+
+    it('REQ-34.6-04/08/09 forwards an explicit lang argument unchanged', async () => {
+      const mockGetAchievements = jest.fn().mockResolvedValue([])
+      mockGetGame.mockReturnValue({ getAchievements: mockGetAchievements })
+
+      await getAchievementsHandler()(undefined, 'fake-app', 'gog', 'fr-FR')
+
+      expect(mockGetAchievements).toHaveBeenCalledWith('fr-FR')
+    })
+
+    it('REQ-34.6-04/08/09 resolves [] when the game has no getAchievements method', async () => {
+      mockGetGame.mockReturnValue({})
+
+      const result = await getAchievementsHandler()(
+        undefined,
+        'fake-app',
+        'sideload'
+      )
+
+      expect(result).toEqual([])
+    })
+  })
+
+  describe('getDefaultSavePath', () => {
+    it('REQ-34.6-04/08/09 (D-14) forwards appName, runner and alreadyDefinedGogSaves unchanged to save_sync.ts', async () => {
+      mockGetDefaultSavePath.mockResolvedValue('/fake/save/path')
+      const alreadyDefinedGogSaves = [{ name: 'saves', location: '/x' }]
+
+      const result = await getDefaultSavePathHandler()(
+        undefined,
+        'fake-app',
+        'gog',
+        alreadyDefinedGogSaves
+      )
+
+      expect(mockGetDefaultSavePath).toHaveBeenCalledWith(
+        'fake-app',
+        'gog',
+        alreadyDefinedGogSaves
+      )
+      expect(result).toBe('/fake/save/path')
+    })
+  })
+
+  describe('getPlaytimeFromRunner', () => {
+    beforeEach(() => {
+      mockGlobalConfigGet.mockReturnValue({
+        getSettings: mockGlobalConfigGetSettings
+      })
+    })
+
+    it('REQ-34.6-04/08/09 resolves undefined (not null, not 0) when disablePlaytimeSync is set, without touching libraryManagerMap', async () => {
+      mockGlobalConfigGetSettings.mockReturnValue({
+        disablePlaytimeSync: true
+      })
+
+      const result = await getPlaytimeFromRunnerHandler()(
+        undefined,
+        'gog',
+        'fake-app'
+      )
+
+      expect(result).toBeUndefined()
+      expect(mockGogGetGame).not.toHaveBeenCalled()
+    })
+
+    it('REQ-34.6-04/08/09 resolves undefined for a non-gog runner', async () => {
+      mockGlobalConfigGetSettings.mockReturnValue({
+        disablePlaytimeSync: false
+      })
+
+      const result = await getPlaytimeFromRunnerHandler()(
+        undefined,
+        'legendary',
+        'fake-app'
+      )
+
+      expect(result).toBeUndefined()
+    })
+
+    it('REQ-34.6-04/08/09 returns the GOG playtime for a gog runner when sync is not disabled', async () => {
+      mockGlobalConfigGetSettings.mockReturnValue({
+        disablePlaytimeSync: false
+      })
+      const mockGetGOGPlaytime = jest.fn().mockResolvedValue(42)
+      mockGogGetGame.mockReturnValue({ getGOGPlaytime: mockGetGOGPlaytime })
+
+      const result = await getPlaytimeFromRunnerHandler()(
+        undefined,
+        'gog',
+        'fake-app'
+      )
+
+      expect(mockGogGetGame).toHaveBeenCalledWith('fake-app')
+      expect(mockGetGOGPlaytime).toHaveBeenCalled()
+      expect(result).toBe(42)
+    })
   })
 })
