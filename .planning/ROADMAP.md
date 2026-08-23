@@ -2917,7 +2917,7 @@ never new Epic feature work.
 *Inserted by Phase 34.5 plan 03, 2026-07-29, per 34.5 D-03/D-05.*
 *Scope extended 2026-08-22 by quick task `260822-r3g` — see INHERITED SCOPE above.*
 
-**Requirements:** TBD — mint at `/gsd-plan-phase 34.6`
+**Requirements:** REQ-34.6-01..14 (minted 2026-08-23 during `/gsd-plan-phase 34.6` from `34.6-CONTEXT.md` D-01..D-15 + its binding post-research amendments **A-01..A-04**, plus `34.6-RESEARCH.md`/`34.6-PATTERNS.md`/`34.6-VALIDATION.md`. **The scope is 24 channels, not the 16 this goal text originally named** — D-01 absorbs the 8 in `IPC-PORT-INVENTORY.md` § "Late-discovered — owner Phase 34.6", because leaving them unported would make Phase 35 either absorb them or ship them broken. **RE-CLUSTERED from `34.6-RESEARCH.md`'s 12-ID recommendation to 14** — its own assumption A2 declared that clustering a recommendation, not a constraint — because `34.6-PATTERNS.md` found THREE red-by-construction gates neither CONTEXT.md nor RESEARCH.md named (`wineToolsFlows.test.ts:133`'s absence assertion, `enrichmentFlows.test.ts`'s moving unported exemplar, `electronReachLedger.test.ts`'s missing entry points), which REQ-34.6-13 now owns, and because the closing artefacts (`34.6-PORTED-CHANNELS.md`, the inventory reconciliation, `U-34.5-32`'s two-part disposition) were owned by no other requirement, which REQ-34.6-14 now owns. `34.6-VALIDATION.md`'s Per-Task Verification Map is updated to match. **Two locked premises above are FALSIFIED by measurement, each re-confirmed by direct read before amending:** A-01 — this phase's winetricks bar is NOT "prove the guard fired", because the `Winetricks` object (`tools/index.ts:528`) has no `!isLinux` guard and the cited `:807`/`:843` belong to `getDxvkUrl()`/`getVkd3dUrl()`; the corrected bar is that the channels RESOLVE WITH REAL DATA, an empty list being an acceptable result rather than a decline, and the `DECLARED_UNAVAILABLE_MARKER` capture is owed only BEFORE the port lands, as the gate's step 0. A-02 — the EOS dialog the D-05 round-trip hits is `remove()`'s at `eos_overlay.ts:162` (unconditional), not `enable()`'s at `:197` (gated `if (!isInstalled())`), so "no dialog at enable" is the CORRECT outcome. **A-03 is a NEW decision D-02 did not anticipate:** porting `steamgriddb.setApiKey`/`hasApiKey` makes `secureKey.ts:25`'s `safeStorage` import resolve to a dead stub and persists the key in cleartext, and D-06's gate enters a REAL key — so the `"steamgrid-api-key"` keyring hardening is a CO-REQUISITE landing BEFORE that port, a narrow explicit exception to D-02's port-then-harden rule for this channel only; D-02 is unchanged for `importGame`, `moveInstall` and `runWineCommandForGame`. A-04 corrects this document's own inventory citation (`GlobalState.tsx:1586` → `:1609`). Planning additionally confirmed that `resolveContainedPath` — which RESEARCH.md flagged as unverified — DOES exist at `src/backend/storeManagers/steam/depot.ts:990`, and reconciled D-08's stale "10 call sites" to a measured **20 across 6 files**, of which the EOS-specific 11 exactly match `EXPECTED_EOS_CALL_SITES`.)
 **Depends on:** Phase 34.5 — **SATISFIED 2026-08-20.** Phase 34.5 closed on a clean 4-of-4 fifth
 blocking live gate (`34.5-LIVE-GATE-RERUN-4.md`, verdict PASS, 4/0/0/0). Edited by plan 34.5-60
 under the only condition that permits it; the four prior FAILs each left this line untouched
@@ -2932,11 +2932,24 @@ residual joined them 2026-08-22:** the three D-CYCLE6-A live-gate items (34.5 UA
 SCOPE above.
 **Blocks:** Phase 35 (the IPC re-plumb must be COMPLETE before cutover, and this phase now also
 carries the Epic/save-sync verification leg of Phase 35's dependency that used to sit on 34.7)
-**Plans:** 0 plans
+**Plans:** 14 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 34.6 to break down)
+- [ ] 34.6-01-PLAN.md — wave 1: A-03 half 1 — the Rust `steamgrid-api-key` keyring arm, the slot constant, and the swappable `SteamGridDbSecretStore` seam with a behaviour-preserving Electron impl
+- [ ] 34.6-02-PLAN.md — wave 2: A-03 half 2 — `SidecarSteamGridDbSecretStore`, the one-time plaintext→keyring migration, and BOTH arms of bootstrap's exclusive secret-store branch (the dev-vault arm is not optional)
+- [ ] 34.6-03-PLAN.md — wave 1: author `34.6-LIVE-GATE.md` with EMPTY result slots before any live work — steps 0–8 plus the Humble rider, each with an explicit FAIL condition
+- [ ] 34.6-04-PLAN.md — wave 2: run live-gate STEP 0 ONLY — the pre-port `DECLARED_UNAVAILABLE_MARKER` capture (A-01/D-10), unrecoverable once the winetricks port lands
+- [ ] 34.6-05-PLAN.md — wave 1: the D-11 send-handler observable + `frontendReady` ported send-kind, with its two body exclusions proven behaviourally; ledger entry for `appShellFlowRegistration.ts`
+- [ ] 34.6-06-PLAN.md — wave 2: `importGame` + `moveInstall` ported BYTE-EQUIVALENTLY (D-02), pass-through RED-proven against a `..`-bearing path; ledger entry for `installFlowRegistration.ts`
+- [ ] 34.6-07-PLAN.md — wave 3: the 3 winetricks channels + `runWineCommandForGame`, plus the `wineToolsFlows.test.ts` absence flip, the `enrichmentFlows.test.ts` exemplar substitution to `authZoom`, and Describe 6/7's winetricks slice
+- [ ] 34.6-08-PLAN.md — wave 4: NEW `eosOverlayFlowRegistration.ts` (8 channels) + `handlers.ts` wiring + ledger + the EOS 8's Describe 7 flip, which needs a NEW module-scope import
+- [ ] 34.6-09-PLAN.md — wave 5: the 5 SteamGridDB channels + `getGogDiscounts`, the second migration codepath deleted (PATTERNS delta 5), ledger, and Describe 7 down to Zoom's 3
+- [ ] 34.6-10-PLAN.md — wave 6: `getAchievements`/`getDefaultSavePath`/`getPlaytimeFromRunner` (D-14's ordering constraint), the 24-channel CENSUS, D-09's both-directions RED proof, D-08's guard verified unmodified, and the bundle smoke
+- [ ] 34.6-11-PLAN.md — wave 7: D-02's dedicated, separately-committed `T-34.5-C6-49-03` hardening — containment validation mirroring `resolveContainedPath`, and the shell removed from the Windows branch
+- [ ] 34.6-12-PLAN.md — wave 8: RUN the blocking live gate, steps 1–8 plus riders, and adjudicate one verdict with no partial pass
+- [ ] 34.6-13-PLAN.md — wave 9: D-03's `preload-surface-gate.py` re-derive (self-test FIRST), the operator's absorb-or-halt decision, and the `IPC-PORT-INVENTORY.md` reconciliation incl. A-04's citation fix
+- [ ] 34.6-14-PLAN.md — wave 9: `34.6-PORTED-CHANNELS.md` with honest per-channel proof levels, `U-34.5-32`'s two-part disposition (D-10), and four folded-todo dispositions incl. the ones that do NOT close
 
 ### Phase 34.8: Frontend i18n compliance for fork-added code (INSERTED)
 
