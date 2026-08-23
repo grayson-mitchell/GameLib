@@ -1766,7 +1766,7 @@ logout is **expected-fixed-by-construction but UNOBSERVED** (→ Phase 34.5), an
 and unassigned**. Ten findings filed in `deferred-items.md` as `D-29-01`..`D-29-10`.
 **Depends on:** Phase 34.4 (which defers these channels and seeds this phase's research)
 **Blocks:** Phase 34.5 (Epic/GOG/Amazon logins use the identical seam)
-**Plans:** 28/29 plans executed
+**Plans:** 29/29 plans executed — corrected 2026-08-23 (gap cycle 3, plan 30) from a stale `28/29`, recounted directly from the phase directory: 29 `34.4.1-NN-PLAN.md` files numbered 01–29, each with a matching `-SUMMARY.md`. Gap cycle 3 adds plans 30–35, not yet executed.
 
 **Seeded by `34.4-CONTEXT.md` D-07 — read it before researching.** Candidates: a dedicated
 Tauri `WebviewWindow` on the login origin with cookies read via Tauri's own webview cookie API;

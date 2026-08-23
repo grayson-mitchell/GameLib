@@ -519,3 +519,64 @@ exists to prove every check can reject was the one check nobody was running.**
 
 Fixed as a recorded deviation (the file is not in plan 29's `files_modified`). Filed so the pattern
 is visible: **a self-test's own bookkeeping needs a test too, or it silently stops running.**
+
+---
+
+## Gap cycle 3 — dispositions from the 2026-08-23 re-score (plan 30)
+
+Every `D-29-*` finding was re-scored against current code before gap cycle 3 was planned. The list
+was **23 days old**, and re-scoring changed the scope materially. Full working:
+`34.4.1-GAP-CYCLE-3-ANALYSIS.md`.
+
+### D-29-01 — **CLOSED 2026-08-23.** Fixed after filing; evidence is in the source.
+
+`src/frontend/screens/WebView/components/HumbleLoginSurface.tsx:58-67` describes this finding's
+exact symptom **in the past tense, as the rationale for the design that replaced it**:
+
+> "…the promise settled, but nothing told `TauriLoginPanel` (still statically rendering 'a sign-in
+> window has opened' for `runner === 'humble'` regardless of any watch outcome), so the user was
+> left staring at a lying in-progress message forever."
+
+The success branch now runs `await humble.login(result); onDone()`, and `error` / `timeout` /
+`cancelled` route through the same `TauriOAuthLoginState` shape the four OAuth runners already use,
+so `TauriLoginPanel`'s existing generic branches render for humble too.
+
+**Attribution:** Phase 34.4.2 (`F-34.4.2-19`) and quick task `260808-gl6`.
+
+**`.planning/debug/resolved/manage-accounts-slow-update.md` is NOT this defect's closure.** That
+session is `status: fixed` (2026-08-03, phase 34.5) for the **GOG / OAuth-capture** path, whose root
+cause was a redundant second `gogdl auth` subprocess in `GOGUser.login()`. It is corroborating
+context for the defect *class* only. Recording it as D-29-01's closure would be exactly the
+conflation D-29-02's discriminator was written to prevent — same symptom, same screen, different
+runner, different mechanism.
+
+### D-29-10 — **CLOSED AT FILING.** Never an open task.
+
+Its own body says so: *"Fixed as a recorded deviation (the file is not in plan 29's
+`files_modified`). Filed so the pattern is visible."* Recorded here so no future cycle re-plans it.
+
+**The transferable lesson, which is the reason it was filed at all:** a self-test's own bookkeeping
+needs a test too, or it silently stops running. Plan 28 added two check functions but left
+`expected_case_count = 11`, so `--self-test` exited non-zero from plan 28 until plan 29 Task 3
+bumped it to 13 — **the guard that exists to prove every check can reject was the one check nobody
+was running.**
+
+> **Note for gap cycle 3:** `seam-parity-sweep.py` is RED again today (2026-08-23, exit 1), but for
+> an unrelated reason — an unclassified Axis A site at `src/backend/humble/library.ts:1211`. That is
+> tracked as **NEW-01** and owned by plan 31, which declares the script in its `files_modified`.
+> **It is not a regression of D-29-10.**
+
+### D-29-09 — **ONE requirement, not "checkboxes".**
+
+Hand-swept all 26 `REQ-34.4.1-*` blocks. The tooling could not have found this: *plan-phase
+gap-analysis is not phase-scoped and is blind to every decimal-phase REQ ID*, and this phase is
+**doubly** decimal (`N.M.P`), so every ✓/✗ it prints here is unreliable.
+
+**Exactly one** requirement carried `[x]` against its own "stays UNCHECKED" rider with no `CLOSED`
+record: **`REQ-34.4.1-GAP-11`** (`keyring_get` bounded-timeout observability), whose body ends *"This
+box stays UNCHECKED — live-only."* Un-checked by this plan.
+
+**Two false positives were caught and discarded.** `REQ-34.4.1-13` and `REQ-34.4.1-GAP-06` tripped a
+naive scan because the block-splitter absorbed the **gap-cycle section preamble** — which itself
+contains the phrase "box stays `[ ]`" — into the preceding requirement's block. Stripping the
+preamble removed both. **A sweep whose unit is the block must prove where the block ends.**
