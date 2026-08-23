@@ -55,6 +55,7 @@ import {
 import { setTokenStore as installTokenStore } from '../storeManagers/steam/tokenStore'
 import { SidecarKeyringTokenStore } from './keyringTokenStore'
 import { installSidecarHumbleSecretStore } from './humbleSecretStore'
+import { installSidecarSteamGridDbSecretStore } from './steamgridSecretStore'
 // 34.5 gap cycle 4 plan 36 (developer-scoped Routing addition): the dev-only plaintext vault
 // that this branch installs INSTEAD OF the two keyring stores below, when opted into. Import
 // only — no module-scope call. See installDevSecretVault()'s own header for the full guardrail
@@ -533,7 +534,10 @@ export function init(
   // result underneath the vault. Exactly one arm below ever runs. The `[bootstrap] secret
   // stores: ` line is the receipt: `34.5-UNTESTED-ITEMS.md`'s `U-34.5-01` row keys its
   // retirement condition directly off this exact string, so a live `gamelib.log` can prove which
-  // arm a given gate run actually used.
+  // arm a given gate run actually used. Phase 34.6 plan 02 (`34.6-CONTEXT.md` amendment A-03)
+  // extends this same keyring arm with an additional SteamGridDB secret-store install below:
+  // without it, the SteamGridDB port landing in plan 34.6-09 would persist the operator's API
+  // key in `config.json` in the clear via the sidecar's dead `safeStorage` stub.
   const devSecretVaultInstalled = installDevSecretVault()
   if (devSecretVaultInstalled) {
     logInfo('[bootstrap] secret stores: dev-vault', LogPrefix.Backend)
@@ -547,6 +551,10 @@ export function init(
     // reassigns a registry variable (no accumulating listener, unlike
     // onlineMonitorInitialized's guard above).
     installSidecarHumbleSecretStore()
+    // Phase 34.6 plan 02 (A-03): same placement reasoning as installSidecarHumbleSecretStore()
+    // just above -- its migration also calls requestRustInvoke, so it must run AFTER
+    // startRpcServer() and inside this same keyring arm.
+    installSidecarSteamGridDbSecretStore()
     logInfo('[bootstrap] secret stores: keyring', LogPrefix.Backend)
   }
   // Placement is load-bearing (fix/steam-native-install-stability, 33-05 live-gate gap): must

@@ -62,6 +62,10 @@ import {
   type HumbleSecretStore,
   type HumbleSecretKey
 } from 'backend/humble/secretStore'
+import {
+  setSteamGridDbSecretStore,
+  type SteamGridDbSecretStore
+} from 'backend/steamgrid/secretStore'
 
 /** The exact-match env var this vault gates on. Read ONLY inside `installDevSecretVault()` —
  * grepped at plan-verify time (`grep -rn "GAMELIB_DEV_SECRET_VAULT" src/`) to confirm this is
@@ -75,12 +79,19 @@ const DEV_SECRET_VAULT_ENV_VAR = 'GAMELIB_DEV_SECRET_VAULT'
  * gate-run scratch, never part of the persisted app profile. */
 const VAULT_FILE_NAME = 'gamelib-dev-secret-vault.json'
 
-/** The three slot/key identifiers this vault ever logs or stores under. A closed set, not a
- * free string, mirroring `HumbleSecretKey`'s own closed-union reasoning one layer up — nothing
- * else may ever appear in a `[dev-secret-vault]` log line. */
-type VaultSlot = 'steam-refresh-token' | 'sessionCookie' | 'csrfToken'
+/** The slot/key identifiers this vault ever logs or stores under. A closed set, not a free
+ * string, mirroring `HumbleSecretKey`'s own closed-union reasoning one layer up — nothing else
+ * may ever appear in a `[dev-secret-vault]` log line. Extended by Phase 34.6 plan 02 (A-03) with
+ * `steamGridDbApiKey` for `DevVaultSteamGridDbSecretStore` below — same closed-set discipline,
+ * one more literal. */
+type VaultSlot =
+  | 'steam-refresh-token'
+  | 'sessionCookie'
+  | 'csrfToken'
+  | 'steamGridDbApiKey'
 
 const STEAM_SLOT: VaultSlot = 'steam-refresh-token'
+const STEAMGRID_SLOT: VaultSlot = 'steamGridDbApiKey'
 
 type VaultFileShape = Partial<Record<VaultSlot, string>>
 
@@ -210,9 +221,42 @@ class DevVaultHumbleSecretStore implements HumbleSecretStore {
   }
 }
 
+/** The SteamGridDB `SteamGridDbSecretStore` half of the vault (Phase 34.6 plan 02, A-03), bound
+ * to the fixed `steamGridDbApiKey` slot. Total-method contract, same as the real
+ * `SidecarSteamGridDbSecretStore` this stands in for — `isAvailable()` is declared SYNCHRONOUS by
+ * the seam's own interface (`steamgrid/secretStore.ts`, plan 34.6-01), so this always reports
+ * `true`, mirroring that implementation's identical choice; a real unavailability has no meaning
+ * for a local plaintext file. This arm is NOT optional (see `installDevSecretVault()`'s own doc
+ * comment below): the branch this function's return value gates is exclusive, so a
+ * `GAMELIB_DEV_SECRET_VAULT=1` boot that omitted this class would fall through to
+ * `ElectronSteamGridDbSecretStore` — whose `safeStorage` resolves to the sidecar's dead stub —
+ * and re-open the exact plaintext hazard A-03 exists to close, on the development machines most
+ * likely to hold a real key. */
+class DevVaultSteamGridDbSecretStore implements SteamGridDbSecretStore {
+  constructor(private readonly path: string) {}
+
+  isAvailable(): boolean {
+    return true
+  }
+
+  async getApiKey(): Promise<string | undefined> {
+    const value = readSlot(this.path, STEAMGRID_SLOT)
+    return value ? value : undefined
+  }
+
+  async setApiKey(value: string): Promise<void> {
+    writeSlot(this.path, STEAMGRID_SLOT, value)
+  }
+
+  async clearApiKey(): Promise<void> {
+    clearSlot(this.path, STEAMGRID_SLOT)
+  }
+}
+
 /**
- * Installs the dev-only plaintext secret vault as BOTH the Steam `TokenStore` and the Humble
- * `HumbleSecretStore`, if and only if every guardrail passes:
+ * Installs the dev-only plaintext secret vault as the Steam `TokenStore`, the Humble
+ * `HumbleSecretStore`, AND the SteamGridDB `SteamGridDbSecretStore` (Phase 34.6 plan 02, A-03),
+ * if and only if every guardrail passes:
  *
  *   1. `process.env.GAMELIB_DEV_SECRET_VAULT === '1'` (exact match — guardrail (a)). Anything
  *      else, including unset/`'0'`/`'false'`, returns `false` and calls neither setter.
@@ -224,7 +268,7 @@ class DevVaultHumbleSecretStore implements HumbleSecretStore {
  *   3. The vault file must be creatable (or already present) with owner-only `0o600`
  *      permissions. A failure here (guardrail, T-34.5-C4-41) also refuses installation.
  *
- * Returns `true` only when all three guardrails passed AND both setters were called — the
+ * Returns `true` only when all three guardrails passed AND all three setters were called — the
  * `[bootstrap] secret stores: <keyring|dev-vault>` receipt line (`bootstrap.ts`, Task 2) is
  * keyed directly off this return value, so a caller can always tell which arm actually ran.
  */
@@ -269,6 +313,7 @@ export function installDevSecretVault(): boolean {
 
   setTokenStore(new DevVaultTokenStore(path))
   setHumbleSecretStore(new DevVaultHumbleSecretStore(path))
+  setSteamGridDbSecretStore(new DevVaultSteamGridDbSecretStore(path))
 
   logWarning(
     `[dev-secret-vault] INSTALLED — secrets are stored in PLAINTEXT at ${path} — NEVER use in production`,
