@@ -93,6 +93,15 @@ import {
   storeDownloadedTags
 } from '../downloadHelperBinaries'
 
+// The SAME object reference downloadHelperBinaries.ts imports (ES module
+// singleton, intercepted by jest.mock above) -- mutated in place by the
+// digest-mismatch null-runId test below to drive that branch without
+// restructuring the file's static jest.mock factory.
+import runnersOnedirDigestsMockedRaw from '../runnersOnedirDigests.json'
+const runnersOnedirDigestsMocked = runnersOnedirDigestsMockedRaw as {
+  runId?: string | null
+}
+
 const mockedSpawn = spawn as unknown as jest.Mock
 const mockedChmod = chmod as jest.Mock
 const mockedMkdir = mkdir as jest.Mock
@@ -170,6 +179,59 @@ describe('downloadOnedirAsset', () => {
       expect(thrown?.message).toContain(actualMismatchedDigest) // actual
       expect(mockedWriteFile).not.toHaveBeenCalled()
       expect(mockedSpawn).not.toHaveBeenCalled()
+    })
+
+    // D-11: the mismatch throw names the pinned source run (or explains its
+    // absence) without weakening the gate -- both new tests re-assert the
+    // write/spawn refusal, not just the message text.
+    it('D-11: with a pinned runId, the mismatch message also names the run and instructs to re-pin from it', async () => {
+      mockFetchOnce(200, MISMATCHED_BUFFER)
+
+      let thrown: Error | undefined
+      try {
+        await downloadOnedirAsset('nile', 'arm64')
+      } catch (error) {
+        thrown = error as Error
+      }
+
+      expect(thrown).toBeDefined()
+      // Prefix stays byte-identical -- other tests and the live gate's
+      // D-12(b) corruption proof read this exact substring.
+      expect(thrown?.message).toContain(
+        'refusing to write anything under public/bin'
+      )
+      expect(thrown?.message).toContain('MOCK-RUN-ID')
+      expect(thrown?.message).toContain('re-pin from run')
+      expect(mockedWriteFile).not.toHaveBeenCalled()
+      expect(mockedSpawn).not.toHaveBeenCalled()
+    })
+
+    it('D-11: with runId null, the mismatch message explains no source run is pinned and names pnpm pin:runner-digests, without printing the literal "null" or "undefined" as a run id', async () => {
+      const previousRunId = runnersOnedirDigestsMocked.runId
+      runnersOnedirDigestsMocked.runId = null
+      try {
+        mockFetchOnce(200, MISMATCHED_BUFFER)
+
+        let thrown: Error | undefined
+        try {
+          await downloadOnedirAsset('nile', 'arm64')
+        } catch (error) {
+          thrown = error as Error
+        }
+
+        expect(thrown).toBeDefined()
+        expect(thrown?.message).toContain(
+          'refusing to write anything under public/bin'
+        )
+        expect(thrown?.message).toContain('no source run is pinned')
+        expect(thrown?.message).toContain('pnpm pin:runner-digests')
+        expect(thrown?.message).not.toMatch(/re-pin from run null\b/)
+        expect(thrown?.message).not.toMatch(/re-pin from run undefined\b/)
+        expect(mockedWriteFile).not.toHaveBeenCalled()
+        expect(mockedSpawn).not.toHaveBeenCalled()
+      } finally {
+        runnersOnedirDigestsMocked.runId = previousRunId
+      }
     })
   })
 

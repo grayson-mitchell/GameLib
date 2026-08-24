@@ -184,9 +184,23 @@ export async function downloadOnedirAsset(
 
   const actualDigest = createHash('sha256').update(buffer).digest('hex')
   if (actualDigest !== expectedDigest) {
+    // D-11: name the pinned source run so the operator can tell a
+    // rolling-release re-dispatch (gh release upload --clobber invalidates
+    // all six pins at once) from a real tampering event, instead of being
+    // left to guess. The literal `null`/`undefined` must never appear as
+    // the run id -- an unpinned runId gets its own explanatory clause.
+    const pinnedRunId = runnersOnedirDigests.runId
+    const provenanceClause =
+      pinnedRunId != null
+        ? ` -- re-pin from run ${pinnedRunId} if this is a rolling-release ` +
+          `update (gh release upload --clobber invalidates all six pins at ` +
+          `once)`
+        : ` -- no source run is pinned in meta/runnersOnedirDigests.json; ` +
+          `run pnpm pin:runner-digests to fill it in`
     throw new Error(
       `sha256 mismatch for "${filename}": expected ${expectedDigest}, got ` +
-        `${actualDigest} -- refusing to write anything under public/bin`
+        `${actualDigest} -- refusing to write anything under public/bin` +
+        provenanceClause
     )
   }
 
