@@ -718,19 +718,30 @@ export async function buildRunner(
 
 // ---------------------------------------------------------------------------
 // SHA256SUMS-${arch} + BUILD-MANIFEST-${arch}.json -- per-run audit trail.
+//
+// formatSha256Sums / buildManifestObject are pure formatters (no I/O) so
+// plan 34.16-03's unit tests can pin their exact output shape -- the format
+// contract meta/pinRunnerDigests.ts (plan 05) is written against. The
+// writers below are thin wrappers that perform the actual writeFileSync.
 // ---------------------------------------------------------------------------
 
-function writeSha256Sums(arch: string, results: RunnerBuildResult[]): void {
+export function formatSha256Sums(
+  arch: string,
+  results: RunnerBuildResult[]
+): string {
   const lines = results.map(
     (r) => `${r.archiveSha256}  ${archiveName(r.runner, arch)}`
   )
-  writeFileSync(
-    join(RUNNERS_OUT_DIR, `SHA256SUMS-${arch}`),
-    lines.join('\n') + '\n'
-  )
+  return lines.join('\n') + '\n'
 }
 
-function writeBuildManifest(arch: string, results: RunnerBuildResult[]): void {
+// `runId` is a TOP-LEVEL SIBLING of the three runner keys (legendary/gogdl/
+// nile), not nested inside any of them -- any future code iterating this
+// object's keys as "one entry per runner" must exclude `runId` explicitly.
+export function buildManifestObject(
+  arch: string,
+  results: RunnerBuildResult[]
+): Record<string, unknown> {
   const manifest: Record<string, unknown> = {}
   for (const r of results) {
     manifest[r.runner] = {
@@ -747,9 +758,25 @@ function writeBuildManifest(arch: string, results: RunnerBuildResult[]): void {
       machoCount: r.machoCount
     }
   }
+  // GitHub Actions sets GITHUB_RUN_ID on every job, so a CI-produced manifest
+  // self-describes its provenance. Explicit null (never absent) when built
+  // locally, so a consumer can distinguish "built locally" from "field
+  // missing because the writer predates this change" (T-34.16-11).
+  manifest.runId = process.env.GITHUB_RUN_ID ?? null
+  return manifest
+}
+
+function writeSha256Sums(arch: string, results: RunnerBuildResult[]): void {
+  writeFileSync(
+    join(RUNNERS_OUT_DIR, `SHA256SUMS-${arch}`),
+    formatSha256Sums(arch, results)
+  )
+}
+
+function writeBuildManifest(arch: string, results: RunnerBuildResult[]): void {
   writeFileSync(
     join(RUNNERS_OUT_DIR, `BUILD-MANIFEST-${arch}.json`),
-    JSON.stringify(manifest, null, 2)
+    JSON.stringify(buildManifestObject(arch, results), null, 2)
   )
 }
 
