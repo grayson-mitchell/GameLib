@@ -3,10 +3,16 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "PHASE 34.16 EXECUTING (2026-08-25) -- 6 plans across 3 waves. Wave 1 = 34.16-01/-02/-03/-04 (autonomous), wave 2 = 34.16-05 (pnpm pin:runner-digests), wave 3 = 34.16-06 (34.16-LIVE-GATE.md, autonomous: false -- human gate). No plan has executed yet. Next: /gsd-execute-phase 34.16."
+stopped_at: "PHASE 34.16 EXECUTING (2026-08-25) -- 6 plans across 3 waves; wave 2 complete, 5/6 plans, 34.16-06 (34.16-LIVE-GATE.md, autonomous: false) is the remaining human gate. SEPARATELY: PHASE 34.17 PLANNED (2026-08-25) -- 3 plans across 2 waves, 0 executed. 34.17 does not block and is not blocked by 34.16. Next: /gsd-execute-phase 34.16 (finish the open gate) or /gsd-execute-phase 34.17."
 last_updated: "2026-08-25T00:00:00.000Z"
-last_activity: "2026-08-25 -- Phase 34.16 execution started (6 plans, 3 waves). NOTE: `gsd-sdk query state.begin-phase` corrupted this file AGAIN (rewrote stopped_at to an unrelated Phase 37 discuss banner, replaced the progress block with 33/22/392/372/67, and DELETED all 510 lines of the hand-correction audit log). Reverted from a pre-call snapshot; this delta hand-applied instead."
+last_activity: "2026-08-25 -- Phase 34.17 planned (3 plans, 2 waves; REQ-34.17-01..04 minted). NOTE: `gsd-sdk query state.planned-phase` corrupted this file AGAIN -- rewrote stopped_at to an unrelated Phase 37 discuss banner, rolled last_updated BACKWARDS to 2026-08-24T22:33, and DELETED 521 lines including the whole hand-correction audit log. Reverted from a pre-call snapshot; this delta hand-applied instead. Prior 34.16 execution state preserved in stopped_at above."
 progress:
+  # 2026-08-25 (phase 34.17 planning): same known gsd-sdk state.* corruption defect --
+  # `state.planned-phase` rewrote stopped_at to an unrelated Phase 37 banner, rolled
+  # last_updated backwards to 2026-08-24, and deleted 521 lines (the entire audit log
+  # below). Reverted from a pre-call snapshot and this delta hand-applied instead:
+  # +3 total_plans (34.17-01/-02/-03 planned, none executed). completed_plans unchanged.
+  # percent = 366/382 = 95 (floor, matching prior convention).
   # Hand-corrected after `state.begin-phase` corrupted these (recurring gsd-sdk defect).
   # Tool wrote 24/15/324/298/63 and also mangled three prose blocks (orphaned continuation
   # text after "Plan: 1 of 60" and "Status: Executing Phase 34.5"); whole-file diff reviewed
@@ -536,9 +542,9 @@ progress:
   # percent = floor(366/379*100) = floor(96.57) = 96 (floor, matching prior convention;
   # unchanged from 96). No gsd-sdk state.*/roadmap.update-plan-progress verb invoked.
   completed_phases: 21
-  total_plans: 379
+  total_plans: 382
   completed_plans: 366
-  percent: 96
+  percent: 95
 ---
 
 # Project State
