@@ -36,8 +36,17 @@
 //      evidence wherever the artifact lives; a document merely asserting its own correctness is
 //      not, and that document-asserting-itself case is exactly what the SUMMARY ban and the
 //      polarity check exist to catch instead.
-// A FIXED row's Evidence cell must additionally cite a plan in this phase (`34\.9-\d+`, not a
-// hard-coded range of plan numbers from any one gap cycle).
+// A FIXED row's Evidence cell must additionally cite a PLAN ID (`<phase>-<nn>`, any phase, not a
+// hard-coded range of plan numbers from any one gap cycle) or a COMMIT SHA.
+//
+// Widened 2026-08-25 (quick task 260825-alv). The rule previously demanded a plan in THIS phase
+// (`34\.9-\d+`), which silently assumed every finding raised here is fixed here. C2-05 broke that
+// assumption: it was routed to Phase 34.16 and closed by plan 34.16-01 (commit `adc648eb6`), so the
+// row's only representable options were a FALSE `DEFERRED` or an unscored row -- the gate would have
+// pushed the ledger into lying. A plan id must contain a dot (`34.16-01`), which is what keeps an
+// ISO date (`2026-08-25`) from satisfying it. The three rules that actually make a FIXED row's
+// evidence INDEPENDENT are unchanged: the SUMMARY ban, the polarity-denial check, and the
+// artifact-citation requirement. The phase number was never the load-bearing part.
 //
 // DEFERRED-row structural rule (unchanged from the prior cycle-2-scoped tool): the Evidence cell
 // must reference `item <N>`, and `deferred-items.md` must contain a `### <N>.` section that names
@@ -154,7 +163,11 @@ function scoreFixedRow(row) {
     return 'FIXED-CONFIRMATION-DENIES-FIX'
   }
 
-  const evidenceOk = /34\.9-\d+/.test(evidence)
+  // Cross-phase fixes are legitimate -- see the header note. A plan id must carry a dot so that
+  // an ISO date cannot pass as one; a SHA must contain at least one digit.
+  const citesPlanId = /\b\d+\.\d+(?:\.\d+)*-\d{2}\b/.test(evidence)
+  const citesCommit = /\b(?=[0-9a-f]*\d)[0-9a-f]{7,40}\b/.test(evidence)
+  const evidenceOk = citesPlanId || citesCommit
   const citesSummary = /SUMMARY/i.test(combined)
   const citesArtifact = /meta\/|src\/|package\.json/.test(combined)
   const citesReproducibleResult = /\bverdict\b/i.test(combined) && /\bPASS\b/.test(combined)
