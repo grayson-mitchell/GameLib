@@ -38,6 +38,27 @@ const FIXTURE_BUFFER = Buffer.from(FIXTURE_CONTENT)
 // used to drive the digest-mismatch case.
 const MISMATCHED_BUFFER = Buffer.from('MISMATCHED-BYTES')
 
+// Named `mock*` so babel-plugin-jest-hoist allows it inside the
+// jest.mock('../runnersOnedirDigests.json', ...) factory below (same
+// constraint as FIXTURE_DIGEST's comment above). Reused directly by the
+// darwinLayoutMarker()-blind-to-runId test in the
+// 'computeLayoutMarker (darwinLayoutMarker sensitivity, mutation-proof)'
+// block so that test computes its expectation from the SAME object the
+// mocked module exposes, rather than a hand-retyped copy that could drift.
+const mockOnedirDigests = {
+  'legendary_macOS_x86_64_onedir.tar.gz': 'PENDING-CI-PUBLISH',
+  'legendary_macOS_arm64_onedir.tar.gz':
+    'c47280f410b8d718a49814cca588a0b52ee2aabc44e759a985cfdbda1ebd1fa0',
+  'gogdl_macOS_x86_64_onedir.tar.gz':
+    'c47280f410b8d718a49814cca588a0b52ee2aabc44e759a985cfdbda1ebd1fa0',
+  'gogdl_macOS_arm64_onedir.tar.gz':
+    'c47280f410b8d718a49814cca588a0b52ee2aabc44e759a985cfdbda1ebd1fa0',
+  'nile_macOS_x86_64_onedir.tar.gz':
+    'c47280f410b8d718a49814cca588a0b52ee2aabc44e759a985cfdbda1ebd1fa0',
+  'nile_macOS_arm64_onedir.tar.gz':
+    'c47280f410b8d718a49814cca588a0b52ee2aabc44e759a985cfdbda1ebd1fa0'
+}
+
 jest.mock('child_process', () => ({
   spawn: jest.fn()
 }))
@@ -57,19 +78,8 @@ jest.mock('fs/promises', () => ({
 // argv-form/chmod/traversal tests below.
 jest.mock('../runnersOnedirDigests.json', () => ({
   layout: 'onedir-v1',
-  digests: {
-    'legendary_macOS_x86_64_onedir.tar.gz': 'PENDING-CI-PUBLISH',
-    'legendary_macOS_arm64_onedir.tar.gz':
-      'c47280f410b8d718a49814cca588a0b52ee2aabc44e759a985cfdbda1ebd1fa0',
-    'gogdl_macOS_x86_64_onedir.tar.gz':
-      'c47280f410b8d718a49814cca588a0b52ee2aabc44e759a985cfdbda1ebd1fa0',
-    'gogdl_macOS_arm64_onedir.tar.gz':
-      'c47280f410b8d718a49814cca588a0b52ee2aabc44e759a985cfdbda1ebd1fa0',
-    'nile_macOS_x86_64_onedir.tar.gz':
-      'c47280f410b8d718a49814cca588a0b52ee2aabc44e759a985cfdbda1ebd1fa0',
-    'nile_macOS_arm64_onedir.tar.gz':
-      'c47280f410b8d718a49814cca588a0b52ee2aabc44e759a985cfdbda1ebd1fa0'
-  }
+  runId: 'MOCK-RUN-ID',
+  digests: mockOnedirDigests
 }))
 
 import { spawn } from 'child_process'
@@ -104,7 +114,7 @@ const DOWNLOAD_HELPER_BINARIES_SOURCE = readFileSync(
 )
 const RUNNERS_ONEDIR_DIGESTS_SOURCE = JSON.parse(
   readFileSync(join(__dirname, '..', 'runnersOnedirDigests.json'), 'utf-8')
-) as { layout: string; digests: Record<string, string> }
+) as { layout: string; runId?: string | null; digests: Record<string, string> }
 
 class FakeChildProcess extends EventEmitter {
   stdout = new EventEmitter()
@@ -453,5 +463,32 @@ describe('computeLayoutMarker (darwinLayoutMarker sensitivity, mutation-proof)',
     const result = await compareDownloadedTags()
     expect(result).not.toContain('comet')
     expect(result).not.toContain('epic-integration')
+  })
+
+  // Phase 34.16 Plan 04 (D-10/D-11): runId is a NEW top-level sibling on
+  // meta/runnersOnedirDigests.json, sibling to layout and digests. This
+  // block proves darwinLayoutMarker() cannot see it -- load-bearing,
+  // because every existing checkout's __darwin_layout marker must stay
+  // stable across the runId field being written by pnpm pin:runner-digests.
+
+  it('the real committed meta/runnersOnedirDigests.json has a top-level runId key (precondition guard -- without this, the load-bearing assertion below is vacuous)', () => {
+    expect(RUNNERS_ONEDIR_DIGESTS_SOURCE).toHaveProperty('runId')
+  })
+
+  it('darwinLayoutMarker() is blind to the runId sibling: it equals computeLayoutMarker() over ONLY layout+digests, even though the mocked digests module also carries a runId key (load-bearing -- if darwinLayoutMarker() were ever rewritten to hash the parent object, this goes red)', () => {
+    // The mocked module (see jest.mock('../runnersOnedirDigests.json', ...)
+    // above) carries runId: 'MOCK-RUN-ID' as a sibling of layout/digests,
+    // built from this SAME mockOnedirDigests object. darwinLayoutMarker()
+    // reads that mocked module internally.
+    const expected = computeLayoutMarker('onedir-v1', mockOnedirDigests)
+    expect(darwinLayoutMarker()).toBe(expected)
+  })
+
+  it('vacuity guard: computeLayoutMarker() over a digests object WITH an extra key does NOT equal darwinLayoutMarker() -- proves the assertion above reads the data rather than comparing a constant to itself', () => {
+    const withExtraKey = computeLayoutMarker('onedir-v1', {
+      ...mockOnedirDigests,
+      extra: 'x'
+    })
+    expect(withExtraKey).not.toBe(darwinLayoutMarker())
   })
 })

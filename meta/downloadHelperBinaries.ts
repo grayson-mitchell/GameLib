@@ -21,6 +21,7 @@ import runnersOnedirDigestsRaw from './runnersOnedirDigests.json'
 // (runtime-computed filename) lookup below doesn't need its own assertion.
 const runnersOnedirDigests = runnersOnedirDigestsRaw as {
   layout: string
+  runId?: string | null
   digests: Record<string, string>
 }
 
