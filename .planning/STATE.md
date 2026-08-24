@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "PHASE 34.16 EXECUTING (2026-08-25) -- 6 plans across 3 waves; wave 2 complete, 5/6 plans, 34.16-06 (34.16-LIVE-GATE.md, autonomous: false) is the remaining human gate. SEPARATELY: PHASE 34.17 PLANNED (2026-08-25) -- 3 plans across 2 waves, 0 executed. 34.17 does not block and is not blocked by 34.16. Next: /gsd-execute-phase 34.16 (finish the open gate) or /gsd-execute-phase 34.17."
-last_updated: "2026-08-25T00:00:00.000Z"
-last_activity: "2026-08-25 -- Phase 34.17 planned (3 plans, 2 waves; REQ-34.17-01..04 minted). NOTE: `gsd-sdk query state.planned-phase` corrupted this file AGAIN -- rewrote stopped_at to an unrelated Phase 37 discuss banner, rolled last_updated BACKWARDS to 2026-08-24T22:33, and DELETED 521 lines including the whole hand-correction audit log. Reverted from a pre-call snapshot; this delta hand-applied instead. Prior 34.16 execution state preserved in stopped_at above."
+stopped_at: "PHASE 34.17 EXECUTING (2026-08-25) -- 3 plans across 2 waves, 1/3 complete (34.17-01 DONE); wave 1 = 34.17-01 (autonomous, DONE) + 34.17-03 (autonomous: false, Half B paste gate, still open), wave 2 = 34.17-02 (autonomous: false, still open). Worktrees DISABLED project-wide (workflow.use_worktrees=false) so all 3 plans run SEQUENTIALLY on the main tree. STILL OPEN SEPARATELY: PHASE 34.16 EXECUTING -- 6 plans across 3 waves; wave 2 complete, 5/6 plans, 34.16-06 (34.16-LIVE-GATE.md, autonomous: false) is the remaining human gate. 34.17 does not block and is not blocked by 34.16."
+last_updated: "2026-08-25T10:56:00.000Z"
+last_activity: "2026-08-25 -- Plan 34.17-01 (PathSelectionBox Enter-to-commit + two-part double-commit guard) EXECUTED: RED 6 failed/2 passed -> GREEN 8/8, full Frontend jest project (124 suites, 2051 tests) and tsc --noEmit both clean; commits 67ba702a0 (test)/4463c44b6 (feat)/1bd5b6261 (docs, this plan's SUMMARY). Found G1 alone (34.17-RESEARCH.md's recommended single-guard shape) insufficient for EgsSettings.tsx's stale `path` prop -- shipped G1+G2 instead, recorded in-file and in the SUMMARY. NOTE: `gsd-sdk query state.advance-plan` corrupted this file AGAIN (5th+ recorded instance, same known defect) -- silently exited non-zero with `{\"error\":\"Cannot parse Current Plan or Total Plans in Phase from STATE.md\"}` yet still rewrote stopped_at/last_updated/last_activity to an unrelated Phase 37 discuss-checkpoint banner. Reverted from a pre-call snapshot (`/tmp/STATE.before.md`); this delta hand-applied instead, no gsd-sdk state.* verb left standing. +1 completed plan (34.17-01, this plan's own SUMMARY landed)."
 progress:
   # 2026-08-25 (phase 34.17 planning): same known gsd-sdk state.* corruption defect --
   # `state.planned-phase` rewrote stopped_at to an unrelated Phase 37 banner, rolled
@@ -542,9 +542,15 @@ progress:
   # percent = floor(366/379*100) = floor(96.57) = 96 (floor, matching prior convention;
   # unchanged from 96). No gsd-sdk state.*/roadmap.update-plan-progress verb invoked.
   completed_phases: 21
+  # 2026-08-25 (plan 34.17-01 execution): +1 completed (34.17-01, this plan's own SUMMARY
+  # landed). total_plans unchanged (382, all 3 34.17 plans already counted when the phase
+  # was planned -- see the "phase 34.17 planning" comment above). percent =
+  # floor(367/382*100) = floor(96.07) = 96. No gsd-sdk state.*/roadmap.update-plan-progress
+  # verb left standing -- state.advance-plan was tried, corrupted the file (known recurring
+  # defect, see last_activity above), reverted from a pre-call snapshot, hand-applied instead.
   total_plans: 382
-  completed_plans: 366
-  percent: 95
+  completed_plans: 367
+  percent: 96
 ---
 
 # Project State

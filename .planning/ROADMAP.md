@@ -1495,7 +1495,7 @@ existing primitive, not new visual design. No UI-SPEC exists and none is require
 Plans:
 
 **Wave 1** *(no dependencies; `34.17-01` and `34.17-03` are independent and may run in parallel)*
-- [ ] 34.17-01-PLAN.md — Half A: Enter-to-commit through the pre-existing `onKeyDown` seam, plus the two-part double-commit guard, plus a no-DOM jest suite that invokes both handlers [REQ-34.17-01, REQ-34.17-02]
+- [x] 34.17-01-PLAN.md — Half A: Enter-to-commit through the pre-existing `onKeyDown` seam, plus the two-part double-commit guard, plus a no-DOM jest suite that invokes both handlers [REQ-34.17-01, REQ-34.17-02] — DONE 2026-08-25, see `34.17-01-SUMMARY.md` (RED 6 failed/2 passed -> GREEN 8/8; shipped a two-guard funnel, not RESEARCH.md's single-guard recommendation, because G1 alone is insufficient at EgsSettings.tsx's stale `path` prop)
 - [ ] 34.17-03-PLAN.md — Half B: author, run and route the paste reproduction gate on a real macOS Tauri host. **Writes no fix.** `autonomous: false` [REQ-34.17-04]
 
 **Wave 2** *(blocked on 34.17-01 — same files)*
