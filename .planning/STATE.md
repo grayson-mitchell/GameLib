@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "PHASE 34.6 EXECUTING (2026-08-24) -- waves 1-4 + plan 34.6-11 (wave 7) + plan 34.6-10 COMPLETE, 11/14 plans (34.6-01/-02/-03/-04/-05/-06/-07/-08/-09/-10/-11). Plan 34.6-10 ported the last 3 of 8 late-discovered channels (getAchievements, getDefaultSavePath, getPlaytimeFromRunner) byte-equivalently from main.ts into runnerMiscFlowRegistration.ts (now 14 invoke-kind channels), built the full 24-channel census (new Describe 11 in runnerSliceRegistration.test.ts, diffed clean against IPC-PORT-INVENTORY.md), re-derived Describe 6/7 to 62/5/67 (both directions RED-proven across six modules, exceeding the plan's stated five), and verified EosDeclineCallSiteGuard.test.ts stays green and byte-identical (20 callOrDeclare call sites across 6 files, independently re-measured, agrees with prior research). Unplanned finding: electronReachLedger.test.ts's BASELINE_ELECTRON_REACHING_MODULES gained a new entry (save_sync.ts) -- measured (not predicted) via an isolated git-show before/after swap, a clean +1/+1 (38/252 -> 39/253) attributable to the new getDefaultSavePath handler's own direct import; the plan's own <interfaces> note ('via syncGOGSaves') did not hold, but the file-level growth-tripwire finding is the same. REQ-34.6-04, REQ-34.6-08, and REQ-34.6-09 now FULLY COMPLETE. See 34.6-10-SUMMARY.md for all RED-proof failure messages verbatim. Next: /gsd-execute-phase 34.6 -- plans 34.6-12/-13/-14 (final wave) remain."
-last_updated: "2026-08-24T14:30:00.000Z"
-last_activity: "2026-08-24 -- Plan 34.6-10 EXECUTED (2 task commits: 5d3bf721d feat Task 1 -- port getAchievements/getDefaultSavePath/getPlaytimeFromRunner into runnerMiscFlowRegistration.ts, 21b55e303 test Task 2 -- 24-channel census + D-09 both-directions RED-proof (6 modules) + pin maintenance for flowRegistrationCensus/invokeReturnValueSweep/electronReachLedger). Task 3 was verify-only (EosDeclineCallSiteGuard.test.ts confirmed unmodified and green, callOrDeclare census re-measured at 20/6 files, sidecar bundle boot proven). See 34.6-10-SUMMARY.md for full detail, including all RED-proof failure messages verbatim, the measured electronReachLedger before/after, the Describe 6/7 values, and the callOrDeclare per-file table. STATE.md hand-edited; no gsd-sdk state.* verb invoked (known corruption defect)."
+stopped_at: "PHASE 34.16 EXECUTING (2026-08-25) -- 6 plans across 3 waves. Wave 1 = 34.16-01/-02/-03/-04 (autonomous), wave 2 = 34.16-05 (pnpm pin:runner-digests), wave 3 = 34.16-06 (34.16-LIVE-GATE.md, autonomous: false -- human gate). No plan has executed yet. Next: /gsd-execute-phase 34.16."
+last_updated: "2026-08-25T00:00:00.000Z"
+last_activity: "2026-08-25 -- Phase 34.16 execution started (6 plans, 3 waves). NOTE: `gsd-sdk query state.begin-phase` corrupted this file AGAIN (rewrote stopped_at to an unrelated Phase 37 discuss banner, replaced the progress block with 33/22/392/372/67, and DELETED all 510 lines of the hand-correction audit log). Reverted from a pre-call snapshot; this delta hand-applied instead."
 progress:
   # Hand-corrected after `state.begin-phase` corrupted these (recurring gsd-sdk defect).
   # Tool wrote 24/15/324/298/63 and also mangled three prose blocks (orphaned continuation
@@ -517,6 +517,14 @@ progress:
   # state.*/roadmap.update-plan-progress verb invoked (known corruption defect) --
   # hand-applied, whole-file diffed against a pre-edit snapshot to confirm insertion-only
   # changes.
+  # 2026-08-25 (Phase 34.16 execution start): `gsd-sdk query state.begin-phase` corrupted
+  # this file AGAIN -- it rewrote stopped_at to an unrelated Phase 37 discuss-checkpoint
+  # banner, replaced this whole progress block with 33/22/392/372/67, and DELETED all 510
+  # lines of this audit log. Reverted from a pre-call snapshot and the begin-phase delta
+  # hand-applied instead (position/status/last-activity fields only). Numbers below are
+  # UNCHANGED: no 34.16 plan has completed yet. total_plans (373) does NOT yet include
+  # 34.16's 6 plan files, which landed in 230693a8a after the last hand-edit -- add them
+  # as they complete, per prior convention.
   total_phases: 27
   completed_phases: 21
   total_plans: 373
@@ -1333,7 +1341,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.9 (macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co) — ✅ **COMPLETE
+Phase: 34.16 (macos-runner-onedir-x64-ci-leg) — EXECUTING
 2026-08-15.** Gap cycle 4 (34.9-29..33) closed the last gap; `34.9-VERIFICATION.md` re-verified
 2026-08-15 `status: passed`, 8/8 truths, 0 gaps, 33/33 plans, no human verification outstanding.
 Every review finding across all five cycles is dispositioned — `34.9-REVIEW-SWEEP-CHECK.cjs` reports
@@ -1344,7 +1352,7 @@ gap-cycle-3 state follows.
 
 Phase: 34.9 — **gap cycle 3
 COMPLETE, phase remained OPEN pending re-verification** (superseded 2026-08-15 by the block above)
-Plan: 34.9-28 of 34.9-23..28 complete (2026-08-13) — all 6 gap-cycle-3 plans done. Gap cycle 3 was planned 2026-08-13 (6 plans,
+Plan: 1 of 6 (34.16-01..06 — wave 1: 01/02/03/04, wave 2: 05, wave 3: 06 live gate)
 5 waves, plan-checker PASSED) to close the sole remaining verification gap from gap cycle 2's
 re-verification: truth 8 / C2-01 (the `esbuild ... | node`/`| node -` pipe-swallow idiom — a
 compile failure in a wired guard script is invisible because `sh -c` has no `pipefail` and a
@@ -1485,7 +1493,7 @@ set-difference (CR-01, WR-01, WR-02, IN-01, IN-02 landed via 34.9-18..21; IN-03 
 UNPROVEN), corrected the overclaiming "automated tripwire ... cannot go silent again" prose in
 `34.9-LIVE-GATE-RERUN.md`, ROADMAP.md and REQUIREMENTS.md to carry that same scope in every passage,
 and reconciled ROADMAP.md's duplicate `34.9-17` row. See `34.9-22-SUMMARY.md`.
-Status: Ready to execute
+Status: Executing Phase 34.16
 the ledger this plan's own truth-8 gap named as missing, but this plan does not itself re-score that
 verification report. **Next step: `/gsd-verify-work 34.9`**, to re-score truth 8 against this
 landed evidence. The phase does not close until that re-verification runs.
@@ -4307,7 +4315,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-23 -- quick task `260823-ptz` applied operator feedback to `260823-op3`: a confirmation step before Activate on Steam keys, and the `humbleKeysBlurb` helper paragraphs removed from Keys-waiting and Giftable Spares. The confirm **RESTORED T-14-08** instead of working around op3's amendment of it -- with a click gate back in front of the reveal there is no mount-effect call site to guard, so the effect and its latch were deleted; the ref survives as a `runActivate` re-entrancy guard, because `busy` is state and both clicks of a same-frame double-click read the pre-render `false`. Frontend project 122/122 suites green (1991 tests), all four i18n gates green, `tsc` clean -- but NEITHER op3 NOR ptz has been live-UAT'd against a real Humble key.
+Last activity: 2026-08-25 -- Phase 34.16 (macOS runner-onedir x64 CI leg) execution started: 6 plans across 3 waves, none executed yet.
 defects**. (1) Console Mode's `getActionButtonLabel`/`getBackButtonLabel`
 (`ConsoleMode/controller.ts`) branched only on `layout.startsWith('ps')`, so the `'nintendo'` layout
 that `detectControllerLayout()` already returns fell through to the Xbox default. Chromium's standard
