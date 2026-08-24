@@ -531,9 +531,13 @@ progress:
   # unchanged from 96). No gsd-sdk state.*/roadmap.update-plan-progress verb invoked (known
   # corruption defect) -- hand-applied, whole-file diffed against a pre-edit snapshot.
   total_phases: 27
+  # 2026-08-25 (Phase 34.16 wave 2): +1 completed (34.16-05, plan's own SUMMARY landed).
+  # total_plans unchanged (379, all 6 34.16 plans already counted at wave 1).
+  # percent = floor(366/379*100) = floor(96.57) = 96 (floor, matching prior convention;
+  # unchanged from 96). No gsd-sdk state.*/roadmap.update-plan-progress verb invoked.
   completed_phases: 21
   total_plans: 379
-  completed_plans: 365
+  completed_plans: 366
   percent: 96
 ---
 
@@ -1357,7 +1361,7 @@ gap-cycle-3 state follows.
 
 Phase: 34.9 — **gap cycle 3
 COMPLETE, phase remained OPEN pending re-verification** (superseded 2026-08-15 by the block above)
-Plan: 4 of 6 (34.16-01..04 COMPLETE — wave 1 done; wave 2: 05, wave 3: 06 live gate)
+Plan: 5 of 6 (34.16-01..05 COMPLETE — waves 1-2 done; wave 3: 34.16-06 LIVE GATE, autonomous: false)
 5 waves, plan-checker PASSED) to close the sole remaining verification gap from gap cycle 2's
 re-verification: truth 8 / C2-01 (the `esbuild ... | node`/`| node -` pipe-swallow idiom — a
 compile failure in a wired guard script is invisible because `sh -c` has no `pipefail` and a
@@ -4320,7 +4324,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-25 -- Phase 34.16 wave 1 COMPLETE (34.16-01/-02/-03/-04). x64 guard widened in dist:mac/release:mac, default-branch ref guard added to build-runners-onedir-macos.yml (RED-proven x5), runId provenance added to BUILD-MANIFEST-{arch}.json and to runnersOnedirDigests.json, D-11 mismatch error now names the pinned run, darwinLayoutMarker invariance RED-proven. Post-merge gate: tsc clean; Meta+Backend 2 STANDING failures only (genI18nGateScope.test.ts baseline; decompressPool.test.ts native-lzma-unavailable on this machine) -- neither is reachable from any 34.16 file.
+Last activity: 2026-08-25 -- Phase 34.16 wave 2 COMPLETE (34.16-05). `pnpm pin:runner-digests` built: fetches SHA256SUMS-{x64,arm64} + BUILD-MANIFEST-{x64,arm64}.json from the runners-onedir-macos rolling release, validates every line, refuses to write on any failure, and rewrites the six digests + runId in a single writeFile. 17/17 tests (success path + every refuse-to-write path), vacuity guard manually RED-proven. Post-merge gate: tsc clean; Meta 547/549 with only the standing genI18nGateScope.test.ts baseline failing. NOTE: `gsd-sdk query verify.key-links` reported both of plan 05's links UNVERIFIED -- that is a CHECKER BUG (it mis-escapes `${...}` and `(` in its own patterns); both links were confirmed present by reading meta/pinRunnerDigests.ts directly (BASE_URL at line 41, writeFile at line 266). Next: 34.16-06 live gate needs a real push + workflow dispatch -- D-03 puts that outside any plan's authorization.
 defects**. (1) Console Mode's `getActionButtonLabel`/`getBackButtonLabel`
 (`ConsoleMode/controller.ts`) branched only on `layout.startsWith('ps')`, so the `'nintendo'` layout
 that `detectControllerLayout()` already returns fell through to the Xbox default. Chromium's standard
