@@ -73,6 +73,12 @@ interface ParsedWorkflow {
       strategy?: {
         matrix?: { include?: WorkflowMatrixLeg[] }
       }
+      steps?: Array<{
+        name?: string
+        uses?: string
+        env?: Record<string, string>
+        run?: string
+      }>
     }
   >
 }
@@ -311,6 +317,62 @@ describe('build-runners-onedir-macos.yml arch guard step', () => {
     const stripped = loadStrippedWorkflow()
     expect(stripped).toMatch(
       /Verify runner architecture matches the matrix leg[\s\S]*?Build the three onedir runners/
+    )
+  })
+})
+
+describe('build-runners-onedir-macos.yml ref guard step (D-02)', () => {
+  const GUARD_STEP_NAME = 'Refuse to run from the default branch'
+  const REQUIRED_REF = 'fix/steam-native-install-stability'
+
+  test("prepare-release's FIRST step is the ref guard (position, not mere presence -- a guard placed after gh release create would create the rolling release before refusing)", () => {
+    const parsed = parseWorkflow()
+    const steps = parsed.jobs['prepare-release'].steps
+    expect(steps).toBeDefined()
+    expect((steps as NonNullable<typeof steps>).length).toBeGreaterThan(0)
+    expect((steps as NonNullable<typeof steps>)[0].name).toBe(GUARD_STEP_NAME)
+  })
+
+  test('fails loudly (::error:: + exit 1) on a default-branch dispatch', () => {
+    const block = extractRunBlock(GUARD_STEP_NAME)
+    expect(block).toContain('::error::')
+    // Anchored to the wrong-branch comparison specifically (not just any
+    // ::error::/exit 1 pair in the block) -- the block also has an
+    // empty-DEFAULT_BRANCH ::error::/exit 1 pair (covered by the fail-closed
+    // test below), so a non-anchored match would stay green even if THIS
+    // path's exit 1 were deleted.
+    expect(block).toMatch(
+      /"\$REF_NAME" = "\$DEFAULT_BRANCH"[\s\S]*?::error::[\s\S]*?exit 1/
+    )
+  })
+
+  test('names the required ref literal fix/steam-native-install-stability', () => {
+    const block = extractRunBlock(GUARD_STEP_NAME)
+    expect(block).toContain(REQUIRED_REF)
+  })
+
+  test('reads github.ref_name and github.event.repository.default_branch through env:, not by direct interpolation into the shell body', () => {
+    const parsed = parseWorkflow()
+    const steps = parsed.jobs['prepare-release'].steps as NonNullable<
+      ParsedWorkflow['jobs'][string]['steps']
+    >
+    const guardStep = steps.find((step) => step.name === GUARD_STEP_NAME)
+    expect(guardStep).toBeDefined()
+    const env = (guardStep as NonNullable<typeof guardStep>).env
+    expect(env).toBeDefined()
+    const envValues = Object.values(env as Record<string, string>)
+    expect(envValues).toContain('${{ github.ref_name }}')
+    expect(envValues).toContain('${{ github.event.repository.default_branch }}')
+
+    const block = extractRunBlock(GUARD_STEP_NAME)
+    expect(block).not.toContain('${{ github.ref_name }}')
+    expect(block).not.toContain('${{ github.event.repository.default_branch }}')
+  })
+
+  test('fails closed (::error:: + exit 1) when the default branch resolves empty, rather than silently permitting the run', () => {
+    const block = extractRunBlock(GUARD_STEP_NAME)
+    expect(block).toMatch(
+      /-z "\$DEFAULT_BRANCH"[\s\S]*?::error::[\s\S]*?exit 1/
     )
   })
 })
