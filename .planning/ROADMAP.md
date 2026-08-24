@@ -1467,13 +1467,39 @@ reproduce, say so and close it as VERIFIED-ABSENT rather than fixing by assumpti
 **not** own a general clipboard shim for the app — if the paste half reproduces and the cause is
 host-level, mint that as its own item rather than absorbing it here.
 
-**Requirements**: NONE inherited — item 8 never had a REQ of its own. Mint `REQ-34.17-*` IDs at
-plan time.
+**Requirements**: REQ-34.17-01, REQ-34.17-02, REQ-34.17-03 (Half A — fix obligations),
+REQ-34.17-04 (Half B — **reproduction-or-falsification obligation, not a fix obligation**; a run
+that fails to reproduce closes it VERIFIED-ABSENT and that is a passing outcome). Minted
+2026-08-25 during `/gsd-plan-phase 34.17`; full text in `.planning/REQUIREMENTS.md`.
 **Depends on:** nothing. Frontend-only, not blocked, runnable on this machine today.
-**Plans:** 0 plans
+**Plans:** 3 plans, 2 waves
+
+**Planning notes (2026-08-25) — two findings recorded here because they change what gets built:**
+1. `34.17-RESEARCH.md`'s recommended double-commit guard (compare the incoming value against the
+   already-committed `path` prop) is **insufficient at the only call site it exists for**:
+   `EgsSettings.tsx`'s `egsPath` is only updated after `window.api.egsSync` resolves, so `path` is
+   stale for the whole duration of a commit and the comparison never fires. REQ-34.17-02 therefore
+   ships a two-part guard — the prop comparison **plus** a one-shot, value-scoped suppression of
+   the blur that immediately follows an Enter commit of the same string.
+2. The ledger's suspected paste cause (`navigator.clipboard` no-opping under Tauri) is
+   **mechanically implausible** — Phase 34.3 removed every `navigator.clipboard` call site and no
+   code path connects that API to a native Cmd+V into a plain `<input>`. The precedented candidate
+   (the tao/wry key-equivalent gap fixed once at `src-tauri/src/main.rs:2363-2454`, for the Epic
+   login child window only) predicts Cmd+V does **nothing**, whereas the ledger reports a repeating
+   glyph — a different symptom, and therefore itself a discriminator. `34.17-03` encodes neither as
+   the cause.
+
+The UI safety gate was skipped by developer decision (`--skip-ui`): this is a behavioural fix to an
+existing primitive, not new visual design. No UI-SPEC exists and none is required.
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 34.17 to break down)
+
+**Wave 1** *(no dependencies; `34.17-01` and `34.17-03` are independent and may run in parallel)*
+- [ ] 34.17-01-PLAN.md — Half A: Enter-to-commit through the pre-existing `onKeyDown` seam, plus the two-part double-commit guard, plus a no-DOM jest suite that invokes both handlers [REQ-34.17-01, REQ-34.17-02]
+- [ ] 34.17-03-PLAN.md — Half B: author, run and route the paste reproduction gate on a real macOS Tauri host. **Writes no fix.** `autonomous: false` [REQ-34.17-04]
+
+**Wave 2** *(blocked on 34.17-01 — same files)*
+- [ ] 34.17-02-PLAN.md — Half A: the commit affordance (reserved hint row, `gamelib` i18n strings, colocated stylesheet) plus a blocking human-verify checkpoint with screenshot evidence. `autonomous: false` [REQ-34.17-03]
 
 ### Phase 34.13: Steam install-time wine/bottle form (GOG parity) (INSERTED)
 
