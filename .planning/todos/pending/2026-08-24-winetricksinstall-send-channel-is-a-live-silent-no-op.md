@@ -102,7 +102,43 @@ Consequently the defect is **specific to this one channel**, and lives in one of
   aborts somewhere between the `ipcMain.handle` at `:316` and that line; or
   **(B)** the registration exists but the frame never reaches `dispatchSend` for this channel.
 
-### The cheap diagnostic that separates (A) from (B)
+### RESOLVED 2026-08-24: it is (B). (A) is eliminated by construction.
+
+`electronStub.ts:130`'s `ipcMain.on` is an unconditional three-line `Map` insert:
+
+```ts
+on(channel: string, listener: IpcListener): void {
+  const listeners = listenerRegistry.get(channel) ?? []
+  listeners.push(listener)
+  listenerRegistry.set(channel, listeners)
+}
+```
+
+It has no failure mode — no I/O, no validation, no throw. And `registerWineToolsFlows()`
+demonstrably executed through `:316` (both `ipcMain.handle` registrations before the send one
+resolve live with real data). A statement that cannot throw, on a path already proven to execute,
+**must** have run. Therefore `listenerRegistry` DOES contain `winetricksInstall`, and `dispatchSend`
+would find it if a frame ever arrived.
+
+**The frame does not arrive.** The defect is strictly between the renderer's
+`window.api.winetricksInstall(...)` call and the sidecar's `handleFrame`.
+
+The renderer-side guard is also excluded — now confirmed against the render tree rather than
+inferred: the search rows the operator clicked live inside `{!declined && !loadingInstalled && ...}`
+(`Winetricks/index.tsx:155`), so `declined` was necessarily false and the early return in `install()`
+did not fire. The parent's `install` IS what the row's button invokes (`onInstallClicked={install}`),
+and the three args are all plain strings — so the SyntheticEvent JSON-serialization failure mode
+from the `open-external-frame-noop` session does not apply either.
+
+What remains, and needs runtime instrumentation rather than code reading:
+- `tauriInvoke(SIDECAR_SEND, ...)` rejects AND the `.catch`'s `window.api.logError` ALSO fails,
+  leaving only renderer `console.error` (invisible in `gamelib.log`); or
+- the Rust `sidecar_send` accepts the call but the frame is never written to the sidecar's stdin.
+
+Next instrumentation step: instrument `tauriTransport.ts:118`'s `send()` and observe whether it is
+entered at all for this channel.
+
+### (superseded) The cheap diagnostic that separated (A) from (B)
 
 `runWineCommandForGame` is registered at `wineToolsFlowRegistration.ts:363` — **AFTER** the send
 registration at `:335`, in the same function. It is invoke-kind, so its failure mode is loud.
@@ -113,8 +149,10 @@ registration at `:335`, in the same function. It is invoke-kind, so its failure 
   `:363`, and the defect is **(A)** — which would silently un-register everything after the abort
   point, a materially larger problem than one button.
 
-Step 5 of `34.6-LIVE-GATE.md` drives `runWineCommandForGame` for its own reasons, so this
-diagnostic costs nothing extra — but the two readings must be recorded distinctly, not merged.
+Step 5 of `34.6-LIVE-GATE.md` was expected to drive `runWineCommandForGame`, making this
+diagnostic free. It turns out that channel has **no renderer call site at all** (see the separate
+finding recorded against live-gate step 5), so the diagnostic was never available — and is now
+unnecessary, the stub-level argument above having settled it.
 
 ## Not yet determined
 
