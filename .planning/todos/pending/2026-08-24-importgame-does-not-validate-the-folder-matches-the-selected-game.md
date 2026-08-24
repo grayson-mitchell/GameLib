@@ -87,9 +87,29 @@ The same import threw and continued:
 ```
 
 `getIcon` received `undefined` for `path`. Shortcut generation failed, the failure was swallowed,
-and the success notification fired anyway. Worth checking whether this reproduces on a CORRECT
-import — if so it is an independent bug in macOS shortcut generation, not a consequence of the
-mismatch.
+and the success notification fired anyway.
+
+**CONFIRMED INDEPENDENT (2026-08-24, 22:26:55).** A clean, correct, successful Mac install of
+Phoenix Point (`Iris`, platform Mac, 37.34 GiB, registered fine in `installed.json`) threw the SAME
+pair on the same call path:
+
+```
+[Backend]: Error converting icon to icns: Error: ENOENT: no such file or directory,
+           open '/Users/…/Application Support/GameLib/icons/Iris.jpg'
+[Backend]: Error generating MacOS App
+```
+
+So macOS shortcut generation is broken for BOTH a mismatched import and a correct install — it is
+NOT a consequence of the identity mismatch and must be triaged on its own. Note the two failures
+have DIFFERENT proximate causes on the same path, so a fix targeting one will not close the other:
+
+| Run | Failure |
+|---|---|
+| Balrum mismatched import (21:03:41) | `TypeError [ERR_INVALID_ARG_TYPE]` — `path` was `undefined` |
+| Phoenix Point clean install (22:26:55) | `ENOENT` — `icons/Iris.jpg` does not exist |
+
+Both were swallowed, and both runs reported success to the user. The install case is the more
+common one: every macOS install whose cached icon has not been fetched yet will hit it.
 
 ## Suggested fix
 
