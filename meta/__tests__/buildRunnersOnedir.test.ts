@@ -5,8 +5,11 @@ import { join } from 'path'
 import {
   ONEDIR_RUNNERS,
   archiveName,
+  buildManifestObject,
   extractUpstreamPyinstallerCommand,
-  toOnedirCommand
+  formatSha256Sums,
+  toOnedirCommand,
+  type RunnerBuildResult
 } from '../buildRunnersOnedir'
 import { RELEASE_TAGS } from '../releaseTags'
 
@@ -234,6 +237,146 @@ describe('buildRunnersOnedir', () => {
 
     it('still imports RELEASE_TAGS from the new shared module', () => {
       expect(DOWNLOAD_HELPER_BINARIES_SOURCE).toMatch(/from '\.\/releaseTags'/)
+    })
+  })
+
+  // Plan 34.16-03: these tests pin the exact SHA256SUMS-{arch} line format and
+  // the exact BUILD-MANIFEST-{arch}.json top-level key set. Both are the
+  // contract meta/pinRunnerDigests.ts (plan 05) is written against -- a
+  // change to either shape here is a change to what that parser must handle.
+  describe('published audit artifact formats (the pin:runner-digests contract)', () => {
+    const FIXTURE_RESULTS: RunnerBuildResult[] = [
+      {
+        runner: 'legendary',
+        repo: 'legendary-gl/legendary',
+        tag: RELEASE_TAGS.legendary,
+        upstreamLine: 'pyinstaller --onedir --name legendary legendary/cli.py',
+        upstreamWorkingDirectory: undefined,
+        onedirCommand: 'pyinstaller --onedir --name legendary legendary/cli.py',
+        droppedExpressions: [],
+        python3Version: 'Python 3.11.0',
+        pyinstallerVersion: '6.3.0',
+        archiveSha256:
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        archivePath: '.build-tools/runners-onedir/out/legendary_macOS_x86_64_onedir.tar.gz',
+        fileCount: 120,
+        machoCount: 3
+      },
+      {
+        runner: 'gogdl',
+        repo: 'Heroic-Games-Launcher/heroic-gogdl',
+        tag: RELEASE_TAGS.gogdl,
+        upstreamLine: 'pyinstaller --onedir --name gogdl gogdl/cli.py',
+        upstreamWorkingDirectory: 'gogdl',
+        onedirCommand: 'pyinstaller --onedir --name gogdl gogdl/cli.py',
+        droppedExpressions: ['--onefile'],
+        python3Version: 'Python 3.11.0',
+        pyinstallerVersion: '6.3.0',
+        archiveSha256:
+          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        archivePath: '.build-tools/runners-onedir/out/gogdl_macOS_x86_64_onedir.tar.gz',
+        fileCount: 95,
+        machoCount: 2
+      },
+      {
+        runner: 'nile',
+        repo: 'imLinguin/nile',
+        tag: RELEASE_TAGS.nile,
+        upstreamLine: 'pyinstaller --onedir --name nile nile/cli.py',
+        upstreamWorkingDirectory: undefined,
+        onedirCommand: 'pyinstaller --onedir --name nile nile/cli.py',
+        droppedExpressions: [],
+        python3Version: 'Python 3.11.0',
+        pyinstallerVersion: '6.3.0',
+        archiveSha256:
+          'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+        archivePath: '.build-tools/runners-onedir/out/nile_macOS_x86_64_onedir.tar.gz',
+        fileCount: 80,
+        machoCount: 1
+      }
+    ]
+
+    const ORIGINAL_GITHUB_RUN_ID = process.env.GITHUB_RUN_ID
+
+    afterEach(() => {
+      if (ORIGINAL_GITHUB_RUN_ID === undefined) {
+        delete process.env.GITHUB_RUN_ID
+      } else {
+        process.env.GITHUB_RUN_ID = ORIGINAL_GITHUB_RUN_ID
+      }
+    })
+
+    describe('formatSha256Sums', () => {
+      it('returns one line per result, each "<64 lowercase hex>  <archiveName>"', () => {
+        const output = formatSha256Sums('x64', FIXTURE_RESULTS)
+        const lines = output.split('\n').filter((line) => line.length > 0)
+        expect(lines).toHaveLength(3)
+        lines.forEach((line, index) => {
+          expect(line).toMatch(/^[0-9a-f]{64}  \S+$/)
+          const result = FIXTURE_RESULTS[index]
+          expect(line).toBe(
+            `${result.archiveSha256}  ${archiveName(result.runner, 'x64')}`
+          )
+        })
+      })
+
+      it('ends with exactly one trailing newline and no blank interior line', () => {
+        const output = formatSha256Sums('x64', FIXTURE_RESULTS)
+        expect(output.endsWith('\n')).toBe(true)
+        expect(output.endsWith('\n\n')).toBe(false)
+        const withoutTrailingNewline = output.slice(0, -1)
+        expect(withoutTrailingNewline.split('\n')).toHaveLength(3)
+        expect(withoutTrailingNewline).not.toContain('\n\n')
+      })
+
+      it('vacuity guard: a different archiveSha256 produces different output', () => {
+        const mutated = FIXTURE_RESULTS.map((r, index) =>
+          index === 0 ? { ...r, archiveSha256: FIXTURE_RESULTS[1].archiveSha256 } : r
+        )
+        const original = formatSha256Sums('x64', FIXTURE_RESULTS)
+        const withDuplicateDigest = formatSha256Sums('x64', mutated)
+        expect(withDuplicateDigest).not.toBe(original)
+      })
+    })
+
+    describe('buildManifestObject', () => {
+      it('has exactly the three runner keys plus runId at the top level, with every per-runner field preserved (undefined workingDirectory collapsed to null)', () => {
+        const manifest = buildManifestObject('arm64', FIXTURE_RESULTS) as Record<
+          string,
+          unknown
+        >
+        expect(Object.keys(manifest).sort()).toEqual(
+          ['gogdl', 'legendary', 'nile', 'runId'].sort()
+        )
+        expect(manifest.legendary).toEqual({
+          repo: FIXTURE_RESULTS[0].repo,
+          tag: FIXTURE_RESULTS[0].tag,
+          upstreamPyinstallerLine: FIXTURE_RESULTS[0].upstreamLine,
+          upstreamWorkingDirectory: null,
+          onedirCommand: FIXTURE_RESULTS[0].onedirCommand,
+          droppedExpressions: FIXTURE_RESULTS[0].droppedExpressions,
+          python3Version: FIXTURE_RESULTS[0].python3Version,
+          pyinstallerVersion: FIXTURE_RESULTS[0].pyinstallerVersion,
+          archiveSha256: FIXTURE_RESULTS[0].archiveSha256,
+          fileCount: FIXTURE_RESULTS[0].fileCount,
+          machoCount: FIXTURE_RESULTS[0].machoCount
+        })
+        expect(
+          (manifest.gogdl as { upstreamWorkingDirectory: unknown })
+            .upstreamWorkingDirectory
+        ).toBe('gogdl')
+      })
+
+      it('sets runId to the GITHUB_RUN_ID value when set, and explicit null (never absent) when unset', () => {
+        process.env.GITHUB_RUN_ID = '123456789'
+        const withRunId = buildManifestObject('x64', FIXTURE_RESULTS)
+        expect(withRunId.runId).toBe('123456789')
+
+        delete process.env.GITHUB_RUN_ID
+        const withoutRunId = buildManifestObject('x64', FIXTURE_RESULTS)
+        expect(withoutRunId.runId).toBeNull()
+        expect('runId' in withoutRunId).toBe(true)
+      })
     })
   })
 })
