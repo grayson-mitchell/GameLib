@@ -43,6 +43,7 @@ import {
   selectSteamPlatformOptions,
   readonlyPlatformValue
 } from './steamPlatformRow'
+import { resolveMacNativeOffered } from './defaultPlatform'
 import type { SteamDialogLibraryOption } from './SteamDialog/installTarget'
 import {
   useSteamBottleEligibility,
@@ -293,11 +294,38 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   // the bulk PICS capture ships (fail-soft sync, absent `oslist`,
   // cached-library early returns, cold start) -- this branch is not a rare
   // corner case and must not be treated as one.
+  //
+  // Quick 260824-u8b (2026-08-24) -- SCOPE of everything above: the reasoning
+  // in this whole block is STEAM-SPECIFIC and stays in force for `runner ===
+  // 'steam'`. It does NOT transfer to the other runners, and reading it as a
+  // blanket "always default to Windows" rule was the defect:
+  //
+  //   - Steam answers "does this game ship a Mac build?" with a PROBE
+  //     (`macDepotOffered`) that is legitimately unresolved at open -- hence
+  //     the unknown-case answer, and hence the re-derivation below.
+  //   - legendary/gog/nile/humble answer it with `gameInfo.is_mac_native`,
+  //     which is the store library's own already-resolved statement. There is
+  //     no probe and no unknown case, so an unknown-case default is simply
+  //     wrong there -- and worse, it disagreed with the `platforms[]`
+  //     availability seed, which reads `isMacNative`. The macOS option was in
+  //     the selector while Windows sat preselected next to it.
+  //
+  // Measured: the Epic title Phoenix Point (`Iris`) is `is_mac_native: true`
+  // with a real Mac manifest, yet the modal launched `--platform Windows`.
+  // `resolveMacNativeOffered` picks the right signal PER RUNNER; the identity
+  // that the initializer and the effect below can never disagree is preserved
+  // because both read that one resolved value.
+  const macNativeOffered = resolveMacNativeOffered({
+    runner,
+    macDepotOffered,
+    isMacNative
+  })
+
   const getDefaultplatform = (macOffered: boolean): InstallPlatform =>
     isMac && macOffered ? 'Mac' : 'Windows'
 
   const [platformToInstall, setPlatformToInstall] = useState<InstallPlatform>(
-    getDefaultplatform(macDepotOffered)
+    getDefaultplatform(macNativeOffered)
   )
 
   // 34.15 D-14: set `true` in the single place the user changes the value
@@ -310,9 +338,9 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
     if (!depotSignalResolved || userChosePlatformRef.current) {
       return
     }
-    setPlatformToInstall(getDefaultplatform(macDepotOffered))
+    setPlatformToInstall(getDefaultplatform(macNativeOffered))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [depotSignalResolved, macDepotOffered, isMac])
+  }, [depotSignalResolved, macNativeOffered, isMac])
 
   const hasWine = platformToInstall === 'Windows' && !isWin
 

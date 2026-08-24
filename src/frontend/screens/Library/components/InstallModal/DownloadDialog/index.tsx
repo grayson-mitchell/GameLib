@@ -599,6 +599,15 @@ export default function DownloadDialog({
       </DialogHeader>
       <Anticheat anticheatInfo={anticheatInfo} />
       <DialogContent>
+        {children}
+        {/* Quick 260824-u8b: the platform selector is `children`, passed in by
+            InstallModal, and it renders FIRST by contract -- it CHANGES the fields
+            below it. `hasWine` (Windows on a non-Windows host) gates the entire Wine
+            row, and ImportDialog's `pickFile` decides whether the path picker opens in
+            file or directory mode -- a macOS .app bundle is INVISIBLE in directory
+            mode, which is what made an import fixture unreachable during the 34.6 live
+            gate. A choice that reshapes the form must sit above the form. Gated by
+            `InstallModal/__tests__/defaultPlatform.test.ts`. */}
         <div className="InstallModal__sizes">
           <div className="InstallModal__size">
             <FontAwesomeIcon
@@ -780,7 +789,6 @@ export default function DownloadDialog({
             setDlcsToInstall={setDlcsToInstall}
           />
         )}
-        {children}
       </DialogContent>
       <DialogFooter>
         <button onClick={handleSwitchToImport} className="button is-secondary">
