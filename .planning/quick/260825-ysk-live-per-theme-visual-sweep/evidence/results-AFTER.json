@@ -1,0 +1,291 @@
+[
+  {
+    "theme": "midnightMirage",
+    "color": "rgb(165, 237, 253)",
+    "ownBackground": "rgb(7, 10, 11)",
+    "effectiveBackground": "rgb(7, 10, 11)",
+    "bodyNavbarActive": "#a5edfd",
+    "bodyBodyBackground": "#070a0b",
+    "inheritedColor": "rgb(202, 243, 253)",
+    "label": "Library",
+    "rect": {
+      "x": 134,
+      "y": 4,
+      "w": 120,
+      "h": 38
+    },
+    "screenshot": "/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/a3d47887-29f2-460d-a8aa-6d63d7360956/scratchpad/sweep/midnightMirage.png"
+  },
+  {
+    "theme": "classic",
+    "color": "rgb(255, 187, 51)",
+    "ownBackground": "rgb(19, 23, 42)",
+    "effectiveBackground": "rgb(19, 23, 42)",
+    "bodyNavbarActive": "",
+    "bodyBodyBackground": "#13172a",
+    "inheritedColor": "rgb(234, 232, 229)",
+    "label": "Library",
+    "rect": {
+      "x": 134,
+      "y": 4,
+      "w": 120,
+      "h": 38
+    },
+    "screenshot": "/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/a3d47887-29f2-460d-a8aa-6d63d7360956/scratchpad/sweep/classic.png"
+  },
+  {
+    "theme": "cyberSpaceOasis",
+    "color": "rgb(255, 187, 51)",
+    "ownBackground": "rgb(19, 23, 42)",
+    "effectiveBackground": "rgb(19, 23, 42)",
+    "bodyNavbarActive": "",
+    "bodyBodyBackground": "#13172a",
+    "inheritedColor": "rgb(234, 232, 229)",
+    "label": "Library",
+    "rect": {
+      "x": 134,
+      "y": 4,
+      "w": 120,
+      "h": 38
+    },
+    "screenshot": "/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/a3d47887-29f2-460d-a8aa-6d63d7360956/scratchpad/sweep/cyberSpaceOasis.png"
+  },
+  {
+    "theme": "cyberSpaceOasisAlt",
+    "color": "rgb(255, 187, 51)",
+    "ownBackground": "rgb(19, 23, 42)",
+    "effectiveBackground": "rgb(19, 23, 42)",
+    "bodyNavbarActive": "",
+    "bodyBodyBackground": "#13172a",
+    "inheritedColor": "rgb(234, 232, 229)",
+    "label": "Library",
+    "rect": {
+      "x": 134,
+      "y": 4,
+      "w": 120,
+      "h": 38
+    },
+    "screenshot": "/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/a3d47887-29f2-460d-a8aa-6d63d7360956/scratchpad/sweep/cyberSpaceOasisAlt.png"
+  },
+  {
+    "theme": "gruvbox_dark",
+    "color": "rgb(249, 245, 215)",
+    "ownBackground": "rgb(40, 40, 40)",
+    "effectiveBackground": "rgb(40, 40, 40)",
+    "bodyNavbarActive": "#f9f5d7",
+    "bodyBodyBackground": "#282828",
+    "inheritedColor": "rgb(234, 232, 229)",
+    "label": "Library",
+    "rect": {
+      "x": 134,
+      "y": 4,
+      "w": 120,
+      "h": 38
+    },
+    "screenshot": "/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/a3d47887-29f2-460d-a8aa-6d63d7360956/scratchpad/sweep/gruvbox_dark.png"
+  },
+  {
+    "theme": "high-contrast",
+    "color": "rgb(54, 221, 255)",
+    "ownBackground": "rgb(32, 32, 32)",
+    "effectiveBackground": "rgb(32, 32, 32)",
+    "bodyNavbarActive": "",
+    "bodyBodyBackground": "#202020ff",
+    "inheritedColor": "rgb(234, 232, 229)",
+    "label": "Library",
+    "rect": {
+      "x": 134,
+      "y": 4,
+      "w": 120,
+      "h": 38
+    },
+    "screenshot": "/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/a3d47887-29f2-460d-a8aa-6d63d7360956/scratchpad/sweep/high-contrast.png"
+  },
+  {
+    "theme": "dracula",
+    "color": "rgb(189, 147, 249)",
+    "ownBackground": "rgb(40, 42, 53)",
+    "effectiveBackground": "rgb(40, 42, 53)",
+    "bodyNavbarActive": "#bd93f9",
+    "bodyBodyBackground": "#282a35",
+    "inheritedColor": "rgb(255, 255, 255)",
+    "label": "Library",
+    "rect": {
+      "x": 134,
+      "y": 4,
+      "w": 120,
+      "h": 38
+    },
+    "screenshot": "/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/a3d47887-29f2-460d-a8aa-6d63d7360956/scratchpad/sweep/dracula.png"
+  },
+  {
+    "theme": "dracula-classic",
+    "color": "rgb(189, 147, 249)",
+    "ownBackground": "rgb(40, 42, 53)",
+    "effectiveBackground": "rgb(40, 42, 53)",
+    "bodyNavbarActive": "#bd93f9",
+    "bodyBodyBackground": "#282a35",
+    "inheritedColor": "rgb(255, 255, 255)",
+    "label": "Library",
+    "rect": {
+      "x": 134,
+      "y": 4,
+      "w": 120,
+      "h": 38
+    },
+    "screenshot": "/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/a3d47887-29f2-460d-a8aa-6d63d7360956/scratchpad/sweep/dracula-classic.png"
+  },
+  {
+    "theme": "nord-light",
+    "color": "rgb(48, 68, 74)",
+    "ownBackground": "rgb(236, 239, 244)",
+    "effectiveBackground": "rgb(236, 239, 244)",
+    "bodyNavbarActive": "#d0ddff",
+    "bodyBodyBackground": "#eceff4",
+    "inheritedColor": "rgb(32, 36, 44)",
+    "label": "Library",
+    "rect": {
+      "x": 134,
+      "y": 4,
+      "w": 120,
+      "h": 38
+    },
+    "screenshot": "/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/a3d47887-29f2-460d-a8aa-6d63d7360956/scratchpad/sweep/nord-light.png"
+  },
+  {
+    "theme": "nord-dark",
+    "color": "rgb(203, 238, 248)",
+    "ownBackground": "rgb(25, 28, 34)",
+    "effectiveBackground": "rgb(25, 28, 34)",
+    "bodyNavbarActive": "",
+    "bodyBodyBackground": "#191c22",
+    "inheritedColor": "rgb(202, 243, 253)",
+    "label": "Library",
+    "rect": {
+      "x": 134,
+      "y": 4,
+      "w": 120,
+      "h": 38
+    },
+    "screenshot": "/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/a3d47887-29f2-460d-a8aa-6d63d7360956/scratchpad/sweep/nord-dark.png"
+  },
+  {
+    "theme": "marine",
+    "color": "rgb(211, 159, 55)",
+    "ownBackground": "rgb(3, 27, 34)",
+    "effectiveBackground": "rgb(3, 27, 34)",
+    "bodyNavbarActive": "",
+    "bodyBodyBackground": "#031b22",
+    "inheritedColor": "rgb(234, 232, 229)",
+    "label": "Library",
+    "rect": {
+      "x": 134,
+      "y": 4,
+      "w": 120,
+      "h": 38
+    },
+    "screenshot": "/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/a3d47887-29f2-460d-a8aa-6d63d7360956/scratchpad/sweep/marine.png"
+  },
+  {
+    "theme": "marine-classic",
+    "color": "rgb(211, 159, 55)",
+    "ownBackground": "rgb(3, 27, 34)",
+    "effectiveBackground": "rgb(3, 27, 34)",
+    "bodyNavbarActive": "",
+    "bodyBodyBackground": "#031b22",
+    "inheritedColor": "rgb(234, 232, 229)",
+    "label": "Library",
+    "rect": {
+      "x": 134,
+      "y": 4,
+      "w": 120,
+      "h": 38
+    },
+    "screenshot": "/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/a3d47887-29f2-460d-a8aa-6d63d7360956/scratchpad/sweep/marine-classic.png"
+  },
+  {
+    "theme": "zombie",
+    "color": "rgb(131, 218, 91)",
+    "ownBackground": "rgb(29, 31, 31)",
+    "effectiveBackground": "rgb(29, 31, 31)",
+    "bodyNavbarActive": "",
+    "bodyBodyBackground": "#1d1f1f",
+    "inheritedColor": "rgb(234, 232, 229)",
+    "label": "Library",
+    "rect": {
+      "x": 134,
+      "y": 4,
+      "w": 120,
+      "h": 38
+    },
+    "screenshot": "/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/a3d47887-29f2-460d-a8aa-6d63d7360956/scratchpad/sweep/zombie.png"
+  },
+  {
+    "theme": "zombie-classic",
+    "color": "rgb(131, 218, 91)",
+    "ownBackground": "rgb(29, 31, 31)",
+    "effectiveBackground": "rgb(29, 31, 31)",
+    "bodyNavbarActive": "",
+    "bodyBodyBackground": "#1d1f1f",
+    "inheritedColor": "rgb(234, 232, 229)",
+    "label": "Library",
+    "rect": {
+      "x": 134,
+      "y": 4,
+      "w": 120,
+      "h": 38
+    },
+    "screenshot": "/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/a3d47887-29f2-460d-a8aa-6d63d7360956/scratchpad/sweep/zombie-classic.png"
+  },
+  {
+    "theme": "old-school",
+    "color": "rgb(255, 196, 79)",
+    "ownBackground": "rgb(29, 31, 31)",
+    "effectiveBackground": "rgb(29, 31, 31)",
+    "bodyNavbarActive": "",
+    "bodyBodyBackground": "#1d1f1f",
+    "inheritedColor": "rgb(234, 232, 229)",
+    "label": "Library",
+    "rect": {
+      "x": 134,
+      "y": 4,
+      "w": 120,
+      "h": 38
+    },
+    "screenshot": "/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/a3d47887-29f2-460d-a8aa-6d63d7360956/scratchpad/sweep/old-school.png"
+  },
+  {
+    "theme": "sweet",
+    "color": "rgb(238, 166, 232)",
+    "ownBackground": "rgb(17, 1, 17)",
+    "effectiveBackground": "rgb(17, 1, 17)",
+    "bodyNavbarActive": "",
+    "bodyBodyBackground": "#110111",
+    "inheritedColor": "rgb(233, 234, 235)",
+    "label": "Library",
+    "rect": {
+      "x": 134,
+      "y": 4,
+      "w": 120,
+      "h": 38
+    },
+    "screenshot": "/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/a3d47887-29f2-460d-a8aa-6d63d7360956/scratchpad/sweep/sweet.png"
+  },
+  {
+    "theme": "sweet-dark",
+    "color": "rgb(238, 166, 232)",
+    "ownBackground": "rgb(17, 1, 17)",
+    "effectiveBackground": "rgb(17, 1, 17)",
+    "bodyNavbarActive": "",
+    "bodyBodyBackground": "#110111",
+    "inheritedColor": "rgb(233, 234, 235)",
+    "label": "Library",
+    "rect": {
+      "x": 134,
+      "y": 4,
+      "w": 120,
+      "h": 38
+    },
+    "screenshot": "/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/a3d47887-29f2-460d-a8aa-6d63d7360956/scratchpad/sweep/sweet-dark.png"
+  }
+]

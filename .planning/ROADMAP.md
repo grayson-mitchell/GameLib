@@ -3692,8 +3692,13 @@ than reading was closed alongside them. **No Critical from this review is open.*
   What closed it: the established chain at the two consumers that had escaped
   `NAVBAR_ACTIVE_CONSUMERS` — **`NavTabs/index.scss`, CR-01's own original site**, and
   `GamePage/index.css` ×3 (tracked nowhere). Measured **7.42:1 – 13.92:1** via `--accent-overlay`,
-  against `dracula`'s human-approved 5.91:1 as calibration. **A live per-theme visual sweep is
-  still owed** — this is contrast arithmetic, not a rendering proof.
+  against `dracula`'s human-approved 5.91:1 as calibration. **The live per-theme visual sweep has
+  since RUN — quick task `260825-ysk`, 2026-08-25, verdict PASS** across all 17 theme classes in the
+  real app, measured BEFORE and AFTER. It also **FALSIFIED this finding's own "illegible in 8 of 11
+  themes" claim**: measured live, the 7 inherited `#eae8e5` and rendered at **13.32:1-16.82:1 —
+  legible**. Their defect was COSMETIC (a neutral instead of the theme accent). Exactly one theme
+  was genuinely illegible — `nord-light` at 1.18:1 — and CR-01 never covered it. Do not restate the
+  "illegible in 8" framing.
 
 - **CR-01-ADJACENT — `nord-light`'s selected tab label was illegible at 1.18:1. Found by
   MEASUREMENT, present in no finding. CLOSED 2026-08-23** (same task). `#d0ddff` on
