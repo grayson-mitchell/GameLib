@@ -525,10 +525,15 @@ progress:
   # UNCHANGED: no 34.16 plan has completed yet. total_plans (373) does NOT yet include
   # 34.16's 6 plan files, which landed in 230693a8a after the last hand-edit -- add them
   # as they complete, per prior convention.
+  # 2026-08-25 (Phase 34.16 wave 1): +6 total_plans (34.16's 6 plan files, now counted for the
+  # first time) and +4 completed (34.16-01/-02/-03/-04, each plan's own SUMMARY landed).
+  # percent = floor(365/379*100) = floor(96.30) = 96 (floor, matching prior convention;
+  # unchanged from 96). No gsd-sdk state.*/roadmap.update-plan-progress verb invoked (known
+  # corruption defect) -- hand-applied, whole-file diffed against a pre-edit snapshot.
   total_phases: 27
   completed_phases: 21
-  total_plans: 373
-  completed_plans: 361
+  total_plans: 379
+  completed_plans: 365
   percent: 96
 ---
 
@@ -1352,7 +1357,7 @@ gap-cycle-3 state follows.
 
 Phase: 34.9 — **gap cycle 3
 COMPLETE, phase remained OPEN pending re-verification** (superseded 2026-08-15 by the block above)
-Plan: 1 of 6 (34.16-01..06 — wave 1: 01/02/03/04, wave 2: 05, wave 3: 06 live gate)
+Plan: 4 of 6 (34.16-01..04 COMPLETE — wave 1 done; wave 2: 05, wave 3: 06 live gate)
 5 waves, plan-checker PASSED) to close the sole remaining verification gap from gap cycle 2's
 re-verification: truth 8 / C2-01 (the `esbuild ... | node`/`| node -` pipe-swallow idiom — a
 compile failure in a wired guard script is invisible because `sh -c` has no `pipefail` and a
@@ -4315,7 +4320,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-25 -- Phase 34.16 (macOS runner-onedir x64 CI leg) execution started: 6 plans across 3 waves, none executed yet.
+Last activity: 2026-08-25 -- Phase 34.16 wave 1 COMPLETE (34.16-01/-02/-03/-04). x64 guard widened in dist:mac/release:mac, default-branch ref guard added to build-runners-onedir-macos.yml (RED-proven x5), runId provenance added to BUILD-MANIFEST-{arch}.json and to runnersOnedirDigests.json, D-11 mismatch error now names the pinned run, darwinLayoutMarker invariance RED-proven. Post-merge gate: tsc clean; Meta+Backend 2 STANDING failures only (genI18nGateScope.test.ts baseline; decompressPool.test.ts native-lzma-unavailable on this machine) -- neither is reachable from any 34.16 file.
 defects**. (1) Console Mode's `getActionButtonLabel`/`getBackButtonLabel`
 (`ConsoleMode/controller.ts`) branched only on `layout.startsWith('ps')`, so the `'nintendo'` layout
 that `detectControllerLayout()` already returns fell through to the Xbox default. Chromium's standard
