@@ -1395,23 +1395,42 @@ default branch`) — so nothing here can start from `fix/steam-native-install-st
   `PENDING-CI-PUBLISH` sentinels upstream of the build step). Plan from the ledger, not from this
   summary.
 
-**Read before planning:** `34.9-GUARD-PROOF.md` carries three known contract defects — items 14
-(a vacuous `find -newer` dist/-emptiness check), 15 (an exit-capture idiom that no-ops under zsh;
-`cat -A` is BSD-incompatible) and 16 (the CLI-argument-passthrough sub-claim was never exercised).
-Fix those **before** re-running that contract, not after, or this phase will trust a proof that
-cannot fail.
+**Read before planning — CORRECTED 2026-08-24 at plan time.** The paragraph that stood here was
+STALE: it instructed the planner to fix `34.9-GUARD-PROOF.md` items 14, 15 and 16 before re-running
+that contract. **All three closed on 2026-08-23.** The correct instruction is
+**§2.5 CONTRACT AMENDMENT v2** (`34.9-GUARD-PROOF.md:244`), which is NORMATIVE and wins wherever it
+disagrees with §3–5 — and §3–5 are deliberately left unrewritten so the 2026-08-12 PASS transcript
+stays interpretable. Note two traps inside that amendment: §A1 retires §3's vacuous PASS bar (d) for
+**Direction A only** (§5's identical-looking (d) is load-bearing and marked do-NOT-retire), and §A3
+makes §5's invocation string normative — a plan may cite it, never paraphrase it.
 
 **Scope fence:** REQ-34.9-09 (per-runner cold-spawn ratio, items 4 and 10) is **explicitly out** —
 the ledger records "do NOT plan a third attempt" as a gap-planning decision. Real-certificate
 signing and notarization (item 6) is developer action, not this phase.
 
-**Requirements**: REQ-34.9-02, REQ-34.9-03, REQ-34.9-04 (inherited, re-scoped to this phase; mint
-new REQ-34.16-* IDs at plan time for items 12, 13 and 18, which have no REQ of their own)
-**Depends on:** Phase 34 · **BLOCKED ON HUMAN ACTION:** a push of the workflow to the default branch
-**Plans:** 0 plans
+**Requirements**: REQ-34.9-02, REQ-34.9-03, REQ-34.9-04 (inherited, re-scoped to this phase — they
+keep their IDs and their `deferred-items.md` items 1/2/3 lineage) + REQ-34.16-01, REQ-34.16-02,
+REQ-34.16-03, REQ-34.16-04 (minted 2026-08-24 during `/gsd-plan-phase 34.16` for ledger items 12, 13
+and 18/C2-05, which had no REQ of their own, plus the `pin:runner-digests` tooling D-10/D-11 require;
+see `.planning/REQUIREMENTS.md` § Phase 34.16)
+**Depends on:** Phase 34 · **HUMAN GATE inside plan 34.16-06:** the push of the workflow to the
+default branch, and every gesture in `34.16-LIVE-GATE.md`
+**Plans:** 6 plans, 3 waves
+
+**Planning authorization — the "do not plan before the default-branch push" instruction is RETIRED
+by D-04 (2026-08-24).** The code-side work is authorable and testable on
+`fix/steam-native-install-stability` today; everything requiring a real `workflow_dispatch` is
+isolated into `34.16-LIVE-GATE.md`, the pattern Phase 34.9 used and passed on rerun. The blanket
+instruction predated knowing how small the required push is: one commit adding one file (D-01), with
+the dispatch still targeting the feature ref.
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 34.16 to break down — do not plan before the default-branch push)
+- [ ] 34.16-01-PLAN.md — wave 1 — guard arch coverage (D-05/D-08) and the `electron-builder.yml` coverage prose it makes stale
+- [ ] 34.16-02-PLAN.md — wave 1 — the workflow ref guard (D-02) and five RED-proven pins for it
+- [ ] 34.16-03-PLAN.md — wave 1 — `runId` provenance in `writeBuildManifest()` plus format-contract tests for both published audit artifacts
+- [ ] 34.16-04-PLAN.md — wave 1 — the `runId` slot, D-11's mismatch-error extension, and a behavioural proof that the marker is blind to it
+- [ ] 34.16-05-PLAN.md — wave 2 — `pnpm pin:runner-digests` and every refuse-to-write path
+- [ ] 34.16-06-PLAN.md — wave 3 — **HUMAN GATE**: run `34.16-LIVE-GATE.md` (6 scored items; Scored Item 5 BRANCHES on the unobserved x64 guard outcome)
 
 ---
 
