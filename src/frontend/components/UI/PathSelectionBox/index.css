@@ -1,0 +1,30 @@
+/*
+ * Reserved commit-hint row (REQ-34.17-03). Rendered unconditionally so the
+ * row's height is always claimed -- swapping the text content, rather than
+ * mounting/unmounting the element, is what keeps the rest of the Settings
+ * layout from shifting when the hint appears or disappears. See
+ * PathSelectionBox/index.tsx for the state machine that drives the two
+ * modifier classes below.
+ *
+ * No literal hex colours: every colour is a var(--token, fallback), and the
+ * fallback is itself a token present in every theme block in themes.scss --
+ * `--success` is NOT declared in every theme block, so `--saved` falls back
+ * to `--text-secondary`, which is.
+ */
+.pathSelectionBoxCommitHint {
+  display: block;
+  min-height: calc(var(--text-sm) * 1.4);
+  padding-block-start: var(--space-3xs);
+  font-size: var(--text-sm);
+  text-align: start;
+  color: transparent;
+  transition: color 150ms ease-in-out;
+}
+
+.pathSelectionBoxCommitHint--unsaved {
+  color: var(--text-secondary, #b1b1b1);
+}
+
+.pathSelectionBoxCommitHint--saved {
+  color: var(--success, var(--text-secondary));
+}

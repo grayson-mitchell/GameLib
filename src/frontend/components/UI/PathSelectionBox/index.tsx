@@ -4,6 +4,7 @@ import Folder from '@mui/icons-material/Folder'
 import { ReactNode, useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { FileFilter } from 'electron'
+import './index.css'
 
 interface Props {
   htmlId: string
@@ -46,11 +47,35 @@ const PathSelectionBox = ({
   disabled = false
 }: Props) => {
   const { t } = useTranslation()
+  // REQ-34.17-03: the commit-hint row's two fixed strings live only in the
+  // fork-owned gamelib namespace, never translation.json. Explicit
+  // `gamelib:` prefix kept even though the hook is already namespace-scoped
+  // -- belt-and-suspenders convention from RedeemSteamKeyDialog/copy.ts.
+  const { t: tGamelib } = useTranslation('gamelib')
   // We only send `onPathChange` updates when the user is done editing, so we
   // have to store the partially-edited path *somewhere*
   const [tmpPath, setTmpPath] = useState(path)
 
   useEffect(() => setTmpPath(path), [path])
+
+  // REQ-34.17-03: true for ~2000ms immediately after a commit that actually
+  // fired onPathChange (never after a commit suppressed by guard G1 --
+  // nothing was saved, so nothing should flash a confirmation).
+  const [justSaved, setJustSaved] = useState(false)
+
+  // Self-clearing pulse. The early return when `justSaved` is false is
+  // load-bearing, not defensive style: this test harness's useEffect mock
+  // runs effects eagerly on every render, so an unconditional setTimeout
+  // here would arm a fresh, never-cleared timer on every single render of
+  // every mounted PathSelectionBox in the suite.
+  useEffect(() => {
+    if (!justSaved) return
+    const timer = setTimeout(() => setJustSaved(false), 2000)
+    return () => clearTimeout(timer)
+  }, [justSaved])
+
+  // Derived, not stored: the edit buffer diverges from the committed path.
+  const isUnsaved = tmpPath !== path
 
   // Holds the exact string the most recent Enter keystroke committed, and is
   // armed for exactly one subsequent blur. See commitFromEnter/commitFromBlur.
@@ -82,6 +107,9 @@ const PathSelectionBox = ({
       return
     }
     onPathChange(next)
+    // REQ-34.17-03: only this branch actually saved anything, so only this
+    // branch may start the "Saved" pulse.
+    setJustSaved(true)
   }
 
   function commitFromEnter(next: string) {
@@ -130,6 +158,24 @@ const PathSelectionBox = ({
       })
   }
 
+  // REQ-34.17-03: `justSaved` wins over `isUnsaved` for the one render
+  // between a commit firing and the parent's `path` prop actually arriving
+  // -- during that window tmpPath still differs from the (stale) `path`
+  // prop, which would otherwise flash "unsaved" for a value that just saved.
+  const hintClassName = justSaved
+    ? 'pathSelectionBoxCommitHint pathSelectionBoxCommitHint--saved'
+    : isUnsaved
+      ? 'pathSelectionBoxCommitHint pathSelectionBoxCommitHint--unsaved'
+      : 'pathSelectionBoxCommitHint'
+  const hintText = justSaved
+    ? tGamelib('gamelib:pathSelectionBox.saved', 'Saved')
+    : isUnsaved
+      ? tGamelib(
+          'gamelib:pathSelectionBox.unsaved',
+          'Not saved yet — press Enter'
+        )
+      : ''
+
   return (
     <TextInputWithIconField
       value={tmpPath}
@@ -155,7 +201,14 @@ const PathSelectionBox = ({
       disabled={!canEditPath || disabled}
       htmlId={htmlId}
       label={label}
-      afterInput={afterInput}
+      afterInput={
+        <>
+          <span className={hintClassName} role="status">
+            {hintText}
+          </span>
+          {afterInput}
+        </>
+      }
     />
   )
 }

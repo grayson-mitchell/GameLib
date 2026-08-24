@@ -30,6 +30,9 @@ import type {
 // configured for this jest project, so both must be stubbed.
 jest.mock('../../TextInputField/index.css', () => ({}))
 jest.mock('../../SvgButton/index.css', () => ({}))
+// PathSelectionBox's own colocated stylesheet (34.17-02, REQ-34.17-03),
+// same CSS-stub pattern as StoreSearchRow.test.tsx:32.
+jest.mock('../index.css', () => ({}))
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({

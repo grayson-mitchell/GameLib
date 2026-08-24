@@ -94,6 +94,10 @@
         "connected": "Connected",
         "steamReconnect": "Sign-in expired — Reconnect"
     },
+    "pathSelectionBox": {
+        "saved": "Saved",
+        "unsaved": "Not saved yet — press Enter"
+    },
     "redeemKey": {
         "alreadyOwned": "",
         "error": "",
