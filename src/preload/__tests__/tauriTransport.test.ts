@@ -52,6 +52,33 @@ import { STORE_FETCH_CHANNEL, STORE_CHANGED_CHANNEL, STORE_LAZY_MISS_MARKER } fr
 const mockedInvoke = coreInvoke as jest.MockedFunction<typeof coreInvoke>
 const mockedListen = eventListen as jest.MockedFunction<typeof eventListen>
 
+/**
+ * R-01 (REQ-34.3-13, opened 2026-08-23 by commit `d15f4bb1e`, closed here by plan 34.6-16).
+ *
+ * `send()` used to be `void tauriInvoke(...)`, for which an `undefined` mock return was
+ * harmless. It is now `tauriInvoke(...).catch(...)` -- the REQ-34.3-11 item-1 live-gate fix
+ * that stopped every send-channel rejection being silently discarded. Under
+ * `resetMocks: true`, plus the explicit `mockedInvoke.mockReset()` in `change events`'
+ * `beforeAll` below, the mock returns `undefined` rather than a Promise, so `.catch` throws
+ * synchronously and eight tests across `change events`, `CR-03` and `WR-03` fail with
+ * `TypeError: Cannot read properties of undefined (reading 'catch')`.
+ *
+ * This is a TEST-HARNESS defect, not a production one: the real `@tauri-apps/api` `invoke()`
+ * always returns a Promise. The fix is to give the mock the resolved default the real thing
+ * has. **Do NOT "harden" `send()` against a non-Promise return to paper over this** -- that
+ * would weaken production code to satisfy a mock, and would re-open the exact silent-rejection
+ * hole `d15f4bb1e` closed.
+ *
+ * A file-level `beforeEach` runs before any describe-level one, so the describes that install
+ * their own implementation (the first one) still override this freely; the describes that
+ * install none (`CR-03`, `WR-03`) inherit a Promise-returning mock instead of `undefined`.
+ * `beforeAll` hooks run earlier still, which is why `change events` needs its own explicit
+ * restore at its `mockReset()` site.
+ */
+beforeEach(() => {
+  mockedInvoke.mockResolvedValue(undefined as never)
+})
+
 describe('Tauri renderer bridge contract (spike 012 parity)', () => {
   // tauriTransport's own `isTauri()` (Phase 27 Plan 05) detects the Tauri context via
   // `globalThis.__TAURI_INTERNALS__` (the runtime's ground-truth injection), not a mockable
@@ -246,6 +273,11 @@ describe('change events', () => {
     // below calls `send()`, which fires-and-forgets a `tauriInvoke()` call; a leftover
     // rejecting implementation there would surface as an unhandled promise rejection.
     mockedInvoke.mockReset()
+    // R-01: `beforeAll` runs before the file-level `beforeEach` above, and `registerStore()`
+    // at the end of this hook reaches `send()` -- which now `.catch`es its invoke. Restore the
+    // Promise-returning default the real `invoke()` always has, or that call throws
+    // synchronously here, before any test has run.
+    mockedInvoke.mockResolvedValue(undefined as never)
 
     mockedListen.mockImplementation((async (_event: unknown, handler: unknown) => {
       storeChangedHandler = handler as typeof storeChangedHandler
