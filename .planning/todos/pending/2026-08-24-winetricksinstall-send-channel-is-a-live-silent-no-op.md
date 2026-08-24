@@ -71,6 +71,51 @@ existence on its first real outing.
 Shape precedent: [[sidecar-send-channels-fail-silently]] — the Phase 30 Steam logout button
 presented identically (button does nothing, zero console output) and cost a full debug session.
 
+## Narrowing measured 2026-08-24 (same app instance, PID 21682)
+
+Four further exclusions, all measured rather than reasoned:
+
+- **The send transport is NOT globally broken.** `frontendReady` — this phase's OTHER send-kind
+  channel, which uses the SAME `makeListenerCaller` (`src/preload/api/misc.ts:93`), the SAME
+  `tauriTransport.send()`, the SAME Rust `sidecar_send`, the SAME `ipcMain.on` stub and the SAME
+  `dispatchSend` — **DID fire its D-11 observable in this very instance**:
+  `(11:51:18) [INFO]: [Backend]: [GAMELIB_SIDECAR_SEND_HANDLER] frontendReady`.
+  This REFUTES the worst case of candidate 3 below (every send-channel rejection being discarded
+  app-wide) and substantially weakens candidates 2 and 4 as *general* failures.
+- **`dispatchSend` demonstrably delivers ARGS to listeners.** The `setSetting` listener throwing
+  `Cannot use 'in' operator to search for 'wineVersion' in undefined` proves the frame arrived,
+  the listener was found, and it was invoked with an argument list — a send channel WITH args
+  reaching its handler. So neither "send channels carry no args" nor "listeners are never matched"
+  holds generally.
+- **`window.api.winetricksInstall` EXISTS in the running preload bundle.** `build/preload/index.js`
+  (mtime 11:51, i.e. the running build) contains both the wire literal `"winetricksInstall"` and
+  the exposed api-object key `winetricksInstall:di`. So this is NOT an
+  `undefined is not a function` TypeError in the renderer — a hypothesis that would otherwise have
+  fit every symptom (renderer-console-only, zero bytes to `gamelib.log`, app survives).
+- **The renderer's own `declined` guard is not implicated** — `WINETRICKS_DECLINED_GUARD` is
+  `declined`, and `declined` false is what allows the search rows to render at all.
+
+Consequently the defect is **specific to this one channel**, and lives in one of exactly two places:
+
+  **(A)** `ipcMain.on('winetricksInstall', ...)` at `wineToolsFlowRegistration.ts:335` never
+  EXECUTES at runtime, despite being present in the bundle — i.e. `registerWineToolsFlows()`
+  aborts somewhere between the `ipcMain.handle` at `:316` and that line; or
+  **(B)** the registration exists but the frame never reaches `dispatchSend` for this channel.
+
+### The cheap diagnostic that separates (A) from (B)
+
+`runWineCommandForGame` is registered at `wineToolsFlowRegistration.ts:363` — **AFTER** the send
+registration at `:335`, in the same function. It is invoke-kind, so its failure mode is loud.
+
+- If `runWineCommandForGame` resolves live -> execution passed `:335`, the listener IS registered,
+  and the defect is **(B)**, in transport routing for this channel alone.
+- If `runWineCommandForGame` is ALSO dead -> `registerWineToolsFlows()` aborts between `:316` and
+  `:363`, and the defect is **(A)** — which would silently un-register everything after the abort
+  point, a materially larger problem than one button.
+
+Step 5 of `34.6-LIVE-GATE.md` drives `runWineCommandForGame` for its own reasons, so this
+diagnostic costs nothing extra — but the two readings must be recorded distinctly, not merged.
+
 ## Not yet determined
 
 Root cause lies somewhere between the React `onClick` and `dispatchSend`. Candidates, none
@@ -85,9 +130,11 @@ confirmed:
    comment flags this class of loss)
 4. `dispatchSend` fails to match the listener despite registration
 
-Candidate 3 is worth checking FIRST: if `logError` is also broken, every send-channel rejection in
-the app is being silently discarded, which would make this defect one instance of a much larger
-blind spot.
+Candidate 3's GLOBAL form is now refuted (see the narrowing above -- `frontendReady` proves send
+works end-to-end in this instance). Its NARROW form survives: a rejection on THIS channel's invoke
+would route to `window.api.logError`, and if that particular call also failed the rejection falls
+back to renderer `console.error`, which does not reach `gamelib.log`. Run the (A)/(B) diagnostic
+above FIRST -- it is cheaper and it partitions the space.
 
 ## Related live observation, same session, same class
 
