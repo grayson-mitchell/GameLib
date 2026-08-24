@@ -553,15 +553,26 @@ and their own ledger entries/proof documents) and are **deliberately not claimed
 
 | Finding | Severity | Disposition | Evidence |
 |---|---|---|---|
-| C2-05 | Warning | DEFERRED (ledger only, D-C3-05) | item 18 below, reconciled against items 12 and 13 |
+| C2-05 | Warning | FIXED | plan 34.16-01, commit `adc648eb6` (2026-08-25) -- CROSS-PHASE: no 34.9 plan fixed this. `package.json:51` (`dist:mac`) and `package.json:46` (`release:mac`) each now run `pnpm verify:runner-bundle build --arch=x64` as a hardcoded `&&` step before `electron-builder`, closing both mechanisms this finding named. See item 18's CLOSED block; the x64-leg residual it does NOT cover is re-homed to items 12 and 13 |
 | C2-07 | Info | FIXED | quick task 260823-sok, closing item 19 opened by plan 34.9-27 against 34.9-19's doc-comment pins; the positive prose pins in `meta/__tests__/cleanDist.test.ts:451-493` were cut from six `toContain` assertions to three single anchors, each RED-proven independently, with all three `not.toContain` assertions retained |
 
 **Superseded 2026-08-23 by quick task `260823-sok`: C2-07 now reads FIXED above.** As originally
 recorded on 2026-08-13 it read `DEFERRED (ledger only, D-C3-05)`, which was accurate then. The row
 is flipped rather than annotated-in-place, following the IN-03 precedent earlier in this ledger
 (a disposition table states where a finding stands NOW; the prose note carries the history).
-**C2-05 remains DEFERRED** and is the sole outstanding cycle-2 finding — see item 18, blocked on
-the default-branch push and owned by Phase 34.16.
+**Superseded 2026-08-25 by quick task `260825-alv`: C2-05 now reads CLOSED above.** As recorded on
+2026-08-13, and still accurate until 2026-08-24, it read `DEFERRED (ledger only, D-C3-05)` and this
+paragraph read "**C2-05 remains DEFERRED** and is the sole outstanding cycle-2 finding — see item 18,
+blocked on the default-branch push and owned by Phase 34.16." Both were true right up to the commit
+that fixed it. The row is flipped rather than annotated-in-place, following the C2-07 and IN-03
+precedents in this same ledger. **With this flip, gap cycle 2 has no outstanding finding**, which is
+what let `34.9-REVIEW-CYCLE2.md` move to `disposition: closed` the same day.
+
+**Read the scope carefully before citing this as "the x64 problem is solved" — it is not.** What
+closed is C2-05's own subject: guard COVERAGE was arm64-only while `electron-builder` packaged both
+arches, and `release:mac`'s `-p always` published the unguarded leg. What did NOT close is whether a
+real x64 onedir tree exists or passes the guard — that was never C2-05's finding, and it is **items
+12 and 13**, owned by Phase 34.16.
 
 ### 18. C2-05 — the arm64-only guard is live and active in real CI, and gates an auto-publishing release
 
@@ -622,6 +633,34 @@ reference corrected:
 CI, not hypothetical", which reads as though CI publishes; it was corrected on 2026-08-23 by this
 same quick task to quote `--publish=never` and to name the two mechanisms separately. **This entry,
 not the ROADMAP paragraph, is the authoritative statement of C2-05.**
+
+**CLOSED 2026-08-25 (quick task `260825-alv`), by commit `adc648eb6` — Phase 34.16 plan 01.** Both
+mechanisms this item separates are addressed by one change: `dist:mac` (`package.json:51`) and
+`release:mac` (`:46`) each now run `pnpm verify:runner-bundle build --arch=x64` as a hardcoded `&&`
+step after the existing `--arch=arm64` step and before `electron-builder`. Detail 1's CI-coverage gap
+is closed because `build-base.yml:48` invokes `dist:mac`, which carries the step; detail 2's
+auto-publish exposure is closed because `-p always` can no longer be reached with an unverified x64
+leg. This is the first of the two fixes this item's own "Named precondition" contemplated, taken
+without waiting for the second.
+
+**Three qualifications, all of which survive the closure:**
+
+1. **Closed ON LANDING and UNPROTECTED AGAINST REGRESSION** (34.16 decision D-09, recorded
+   deliberately, not an oversight). The C2-04 pin at
+   `meta/__tests__/verifyRunnerBundle.test.ts:605-622` is `indexOf`-based and stays green if the x64
+   invocation is deleted. Anyone re-opening this item should look for a pin before assuming drift.
+2. **The residual is NOT closed and is NOT dropped — it is re-homed to items 12 and 13.** Whether a
+   real x64 onedir tree exists, and whether the guard's framework-structure checks pass against one,
+   has still never been observed. That was never C2-05's subject (C2-05 was about coverage and
+   publish exposure), and items 12/13 already own it under Phase 34.16, whose plans 34.16-05
+   (`pin:runner-digests`) and 34.16-06 (live gate) discharge it. **Closing this item does not shrink
+   Phase 34.16's scope by one plan.**
+3. **Interim cost, recorded in `34.16-CONTEXT.md` constraint 8, not here:** the x64 guard FAILS
+   against today's onefile x64 tree, so `pnpm dist:mac` and `pnpm release:mac` abort on every machine
+   until real digests are pinned, and `pnpm dist:mac --arm64 --publish=never` — the recipe that
+   discharged item 16 and that `34.9-GUARD-PROOF.md` §2.5 AMENDMENT v2 §A3 makes normative — is
+   invalidated with them, because the guard steps are hardcoded per-arch. **Fail-closed by design.**
+   Do not "fix" it by dropping the x64 step; that reopens this item.
 
 ### 19. C2-07 — the doc-comment accuracy pins couple CI to documentation wording, not just behaviour
 
@@ -855,7 +894,7 @@ by this section.
 | C2-02 | Warning | FIXED | 34.9-25 (conversion) + 34.9-26 (proof) | package.json `build-steam-bridge`: `esbuild ... --outfile=node_modules/.cache/build-steam-bridge.cjs meta/buildSteamBridgeShims.ts && node node_modules/.cache/build-steam-bridge.cjs` |
 | C2-03 | Warning | FIXED | 34.9-25 (conversion) + 34.9-26 (proof) | package.json `build-runners-onedir`: `esbuild ... --outfile=node_modules/.cache/build-runners-onedir.cjs meta/buildRunnersOnedir.ts && node node_modules/.cache/build-runners-onedir.cjs` |
 | C2-04 | Warning | FIXED | 34.9-27 (package.json wiring pin) | meta/__tests__/verifyRunnerBundle.test.ts `package.json wiring pin (C2-04)` describe block asserts presence + ordering of verify:runner-bundle before electron-builder in dist:mac and release:mac; pnpm test:ci green |
-| C2-05 | Warning | DEFERRED | item 18 below | `### 18. C2-05 — the arm64-only guard is live and active in real CI, and gates an auto-publishing release` |
+| C2-05 | Warning | FIXED | plan 34.16-01, commit `adc648eb6` (2026-08-25), CROSS-PHASE | `package.json:51` (`dist:mac`) and `package.json:46` (`release:mac`) each run `pnpm verify:runner-bundle build --arch=x64` as a hardcoded `&&` step before `electron-builder`. Was DEFERRED to item 18 from 2026-08-13 until 2026-08-25; item 18's CLOSED block records the closure and re-homes the x64-leg residual to items 12/13 |
 | C2-06 | Warning | FIXED | 34.9-24 (`resolvedTopLevelTargetExists`) | meta/verifyRunnerBundle.ts:108,196-219,492 — resolvedTopLevelTargetExists computed in inspectFramework, consumed by a failure branch in summarise; pnpm test:ci green |
 | C2-07 | Info | FIXED | quick task 260823-sok (item 19 closed; item opened by plan 34.9-27 against 34.9-19's pins) | meta/__tests__/cleanDist.test.ts:451-493 — the `doc-comment accuracy pins (IN-01/IN-02)` block now carries 3 positive `toContain` anchors, down from 6, plus the 3 unchanged `not.toContain` assertions; 33/33 green, each anchor RED-proven by removing its phrase from meta/cleanDist.ts and observing only its own test go red |
 | C2-08 | Info | FIXED | 34.9-24 (`result.rejected` assertion) | meta/__tests__/preserveRunnerSymlinks.test.ts:270 — expect(result.rejected).toEqual([]) added to the symlink-free-tree test; pnpm test:ci green |
@@ -865,6 +904,11 @@ ledger item (items 18/19, opened by plan 34.9-27). Unmapped count: **0**. *(As r
 **Superseded 2026-08-23:** item 19 closed via quick task `260823-sok`, so C2-07 now reads FIXED
 above and the split is 7 fixed / 1 deferred. Only **C2-05 / item 18** remains, blocked on the
 default-branch push. Unmapped count is unchanged at 0.)*
+*(**Superseded again 2026-08-25** by quick task `260825-alv`: item 18 closed on commit `adc648eb6`,
+so C2-05 reads FIXED in both tables above and the split is **8 fixed / 0 deferred**. Unmapped count
+is still 0. The fix is **cross-phase** -- it landed in plan 34.16-01, not in any 34.9 plan, which is
+the first time this ledger has recorded that shape and which is why
+`34.9-REVIEW-SWEEP-CHECK.cjs`'s FIXED-row evidence rule had to be widened in the same commit.)*
 
 ### Truth 8 missing-list delivery state (2026-08-13)
 
