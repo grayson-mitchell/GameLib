@@ -30,7 +30,7 @@ use std::process::{Child, ChildStdin, Command, Stdio};
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{channel as mpsc_channel, Sender};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
 use std::time::Duration;
 
@@ -431,7 +431,53 @@ async fn sidecar_invoke(
         .map_err(|e| e.to_string())?
 }
 
+/// Whether the per-call send-path entry trace is armed (`GAMELIB_TRACE_SEND=1`).
+///
+/// Cached in a `OnceLock` rather than read per call like `GAMELIB_LOGIN_DIAG` above: that one
+/// sits on a once-per-login-window path, whereas `sidecar_send` is the hot path EVERY one of
+/// the 57 send channels crosses. The env read happens once per process; the steady-state cost
+/// of a disarmed trace is a relaxed atomic load.
+fn send_trace_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| std::env::var("GAMELIB_TRACE_SEND").as_deref() == Ok("1"))
+}
+
 /// ipcRenderer.send parity: fire-and-forget, no response awaited.
+///
+/// SEND-PATH TRACE (Phase 34.6 Plan 16, gap cycle for the live gate's Step 4 FAIL).
+///
+/// `winetricksInstall` is a live silent no-op: the listener IS registered (`electronStub.ts`'s
+/// `ipcMain.on` is an unconditional `Map` insert with no failure mode, on a path proven to
+/// execute), so the frame never arrives. Ten hypotheses are already excluded by code reading;
+/// what remains needs runtime observation.
+///
+/// The trace lives HERE, in Rust, and not in the preload, for one reason: the preload's
+/// `send()` surfaces its rejections through `window.api.logError`, which is ITSELF a send-kind
+/// channel. A send-kind diagnostic for a send-kind defect is unfalsifiable — a rejection on
+/// this channel would route to `logError`, and if that also failed it falls back to renderer
+/// `console.error`, which does not reach `gamelib.log`. That chain reproduces the observed
+/// symptom (zero bytes written) exactly. `eprintln!` here goes to the shell's stderr, which is
+/// one of the two sinks the live gate captures, and is reachable by neither failure mode.
+///
+/// Two lines, deliberately gated differently:
+///
+///   - **entry** — armed by `GAMELIB_TRACE_SEND=1`. Fires per call, so it is opt-in.
+///   - **`write_frame` failure** — ALWAYS on, and it is the higher-value half. This error is
+///     currently invisible: it returns to the renderer as an invoke rejection, which lands in
+///     the very `.catch` -> `logError` chain described above and is lost. It is also rare
+///     (serialization failure, a poisoned stdin mutex, or a stdin write/flush IO error), so
+///     always-on costs nothing in the normal case.
+///
+/// Together they partition the space in ONE drive:
+///
+///   - entry line + no failure line -> the frame reached the sidecar's stdin; the defect is
+///     sidecar-side, between `write_frame` and `handleFrame`
+///   - entry line + failure line -> the error string names the cause directly
+///   - no entry line -> the renderer's `send()` was never entered, or its invoke rejected
+///     before reaching this command; the defect is renderer-side
+///
+/// T-34.6-16-02: the channel NAME only, never `args` — token material travels in those fields
+/// (the same constraint `sidecarRpc.ts`'s unrecognized-frame branch carries as T-28-04).
 #[tauri::command]
 fn sidecar_send(
     channel: String,
@@ -444,7 +490,23 @@ fn sidecar_send(
         channel,
         args,
     };
-    state.write_frame(&req)
+    // Read the name off the frame rather than cloning `channel` before the move: `write_frame`
+    // only borrows `req`, so the name is still available for the failure line below at zero
+    // allocation cost on this hot path.
+    if send_trace_enabled() {
+        eprintln!(
+            "[shell] send-trace: sidecar_send entered for '{}'",
+            req.channel
+        );
+    }
+    let result = state.write_frame(&req);
+    if let Err(ref e) = result {
+        eprintln!(
+            "[shell] send-trace: write_frame FAILED for '{}': {e}",
+            req.channel
+        );
+    }
+    result
 }
 
 /// shell.openExternal parity — opens the URL (e.g. steam://rungameid/<appId>) via
