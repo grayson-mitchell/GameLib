@@ -2,9 +2,12 @@
 created: 2026-08-24T00:00:00.000Z
 title: "`winetricksInstall` is a LIVE SILENT NO-OP under Tauri — the send channel is registered, bundled and declared, yet clicking Install produces nothing in either log sink"
 area: sidecar-ipc
-status: OPEN
+status: RESOLVED
 severity: major
+resolved: 2026-08-25
+resolved_by: "34.6-16 (gap cycle) — NOT an IPC defect; a focus race in the shared SearchBar primitive"
 files:
+  - src/frontend/components/UI/SearchBar/index.tsx
   - src/backend/sidecar/wineToolsFlowRegistration.ts
   - src/frontend/components/UI/Winetricks/index.tsx
   - src/frontend/components/UI/Winetricks/WinetricksSearch/index.tsx
@@ -194,3 +197,73 @@ Phase 34.6 correctly *registered* the channel; the failure is in reaching that r
 runtime. Step 4 of `34.6-LIVE-GATE.md` is recorded FAIL on this evidence.
 
 Related: [[sidecar-send-channels-fail-silently]] · [[preload-send-catch-regression-r01]]
+
+
+---
+
+## RESOLVED 2026-08-25 (plan 34.6-16) — and the diagnosis above was aimed at the wrong layer
+
+**Root cause: a focus race in `SearchBar`, the shared search primitive. Not an IPC defect.
+Phase 34.6's port of `winetricksInstall` was CORRECT the whole time.**
+
+`SearchBar/index.scss` mounts the suggestions list only under focus —
+`.autoComplete { display: none }` plus `&:focus-within ul.autoComplete { display: block }` —
+and there was no mousedown guard anywhere. So a mouse click on an item inside the list
+destroyed the item mid-click:
+
+1. mousedown inside the list blurs the `<input>` above it
+2. nothing takes focus in its place — an `<li>` is not focusable in any engine, and
+   macOS/WebKit does not focus a `<button>` on click either
+3. `:focus-within` goes false, so the `<ul>` flips to `display: none`
+4. mouseup lands elsewhere, and `click` only fires when mousedown and mouseup share a target
+
+`install()` therefore never ran, `window.api.winetricksInstall` was never called, and the
+preload's `send()` was never entered. **Nothing was ever sending a frame.**
+
+### Proven by measurement, in both directions
+
+- **Instrumented `sidecar_send` in Rust** (`GAMELIB_TRACE_SEND`), deliberately NOT in the
+  preload: `send()`'s own `.catch` routes through `window.api.logError`, which is ITSELF
+  send-kind, so a send-kind diagnostic for a send-kind defect is unfalsifiable.
+- **427 traced sends in one boot; `winetricksInstall` absent from all of them.** The probe was
+  proven live by the other channels before its silence was trusted.
+- **Mouse: input text SURVIVES the click** — so the `SearchBar` handler never ran.
+- **Keyboard (Tab, then Enter): WORKS end to end** — the trace fired
+  (`send-trace: sidecar_send entered for 'winetricksInstall'`) and winetricks genuinely ran
+  (`Executing w_do_call corefonts`, downloaded `andale32.exe`, `Done`). Keyboard activation
+  never blurs the input, so the list never collapses.
+
+### What this overturns in the analysis above
+
+**The "(A)/(B) split" was answering the wrong question.** It correctly proved the listener is
+registered and would be found — but it framed the remaining space as "the frame never arrives",
+when the truth is that **no frame was ever sent**. Every candidate in "Not yet determined"
+(makeListenerCaller dropping the call, `tauriInvoke` rejecting, `dispatchSend` failing to match)
+is refuted.
+
+**The claim "the search clearing proves the SearchBar handler ran" is FALSE**, and is the single
+observation that sent the investigation down the transport path. What the operator saw was the
+suggestions list COLLAPSING — visually similar, and requiring no handler to run at all.
+Re-measured 2026-08-25: the input text survives the click.
+
+### Blast radius — this was never one button
+
+`LibrarySearchBar` passes clickable `<li onClick={() => handleClick(game)}>` suggestions to the
+same primitive, so clicking a library search result to open its game page carried the identical
+defect. Fixed at the primitive, so both call sites are covered by one change.
+
+### Fix
+
+`onMouseDown={(e) => e.preventDefault()}` on the `<ul className="autoComplete">` — suppresses
+only the focus change, so the input keeps focus, `:focus-within` holds, the list stays mounted
+and the click completes. Cost: text inside the list is no longer drag-selectable, which is
+correct for a suggestions list. RED-proven by
+`SearchBar/__tests__/suggestionFocusRace.test.tsx`, which fails with
+`Expected: "function" Received: "undefined"` when the handler is removed, while its non-vacuity
+anchor keeps passing — so the failure isolates to the handler, not to the list vanishing.
+
+**No `resolves_phase:` — still correct, and now for a better reason.** Phase 34.6 registered the
+channel correctly; the defect was never on its surface. 34.6's gap cycle merely found and fixed
+it. Live-gate Step 4's re-score belongs to plan `34.6-17`, on the D-11 observable.
+
+Related: [[a-pass-can-cover-an-unreachable-surface]] · [[sidecar-send-channels-fail-silently]]

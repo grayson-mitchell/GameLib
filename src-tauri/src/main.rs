@@ -431,31 +431,34 @@ async fn sidecar_invoke(
         .map_err(|e| e.to_string())?
 }
 
-/// Whether the per-call send-path entry trace is armed. **Default ON**; opt OUT with
-/// `GAMELIB_TRACE_SEND=0`.
+/// Whether the per-call send-path entry trace is armed (`GAMELIB_TRACE_SEND=1`). **Opt-in.**
 ///
-/// It shipped opt-IN (`GAMELIB_TRACE_SEND=1`) and that cost a whole live drive: the run
-/// produced no entry line at all, on a binary PROVEN fresh (mtime 07:56:16 against commit
-/// `cc99cbe93` at 07:52:13), with the sink PROVEN working (the shell's other `eprintln!`s
-/// reached the operator's terminal in that same run). Whether the flag failed to propagate
-/// through `pnpm tauri:dev` or the observation was simply truncated could not be separated —
-/// and separating it would have cost yet another rebuild-and-relaunch cycle.
+/// Settled by plan 34.6-16 Task 3, after this flag's default was flipped twice:
 ///
-/// **The default is therefore inverted while this gap cycle runs.** A diagnostic whose silence
-/// cannot be distinguished from its absence is worse than no diagnostic: it invites reading
-/// "no line" as "the channel was never entered", which is exactly the wrong conclusion to hand
-/// an operator mid-gate. Defaulting ON makes silence mean something.
+/// It shipped opt-in. The first live drive produced no entry line, on a binary PROVEN fresh
+/// (mtime 07:56:16 against commit `cc99cbe93` at 07:52:13) with the sink PROVEN working (the
+/// shell's other `eprintln!`s reached the operator's terminal in that same run). Two
+/// explanations survived — the flag not propagating through `pnpm tauri:dev`, or a truncated
+/// observation — and separating them would have cost another rebuild cycle, so the default was
+/// inverted to ON instead. That run then found the root cause immediately (427 traced sends,
+/// `winetricksInstall` absent from all of them).
 ///
-/// The opt-out is deliberately an env var and not a rebuild, because a rebuild is precisely what
-/// cost the last run.
+/// **Returned to opt-in now that the trace is no longer load-bearing for any gate.**
+/// `sidecar_send` is the hot path all 57 send channels cross — boot alone produced 427 lines —
+/// and Step 4's re-drive is scored by the D-11 observable in `gamelib.log`, not by this trace.
+/// So an unarmed trace can no longer invalidate a gate item, which is what made ON the right
+/// default while the cause was unknown and the wrong one now.
 ///
-/// **Plan 34.6-16 Task 3 MUST revisit this before the phase closes** and decide the permanent
-/// form — most likely back to opt-in, or narrowed to a channel allow-set — since `sidecar_send`
-/// is the hot path all 57 send channels cross. Cached in a `OnceLock` so the env read happens
-/// once per process rather than per call.
+/// **STILL UNVERIFIED: whether `GAMELIB_TRACE_SEND` propagates through `pnpm tauri:dev` at all.**
+/// The second run never tested it — the trace fired because the default was ON, not because the
+/// flag was read. Cheap check, folded into plan 34.6-17's Step 4 drive at zero extra cost:
+/// launch once with `GAMELIB_TRACE_SEND=1` and confirm the lines appear. If they do not, this
+/// gate is unusable in dev and the entry line should become unconditional.
+///
+/// Cached in a `OnceLock` so the env read happens once per process rather than per call.
 fn send_trace_enabled() -> bool {
     static ENABLED: OnceLock<bool> = OnceLock::new();
-    *ENABLED.get_or_init(|| std::env::var("GAMELIB_TRACE_SEND").as_deref() != Ok("0"))
+    *ENABLED.get_or_init(|| std::env::var("GAMELIB_TRACE_SEND").as_deref() == Ok("1"))
 }
 
 /// ipcRenderer.send parity: fire-and-forget, no response awaited.

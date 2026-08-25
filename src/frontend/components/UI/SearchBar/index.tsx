@@ -86,7 +86,39 @@ export default function SearchBar({
       />
       {value.length > 0 && (
         <>
-          <ul className="autoComplete">
+          {/* FOCUS RACE (Phase 34.6 Plan 16 — the cause of live-gate Step 4's FAIL).
+              DO NOT REMOVE THIS HANDLER.
+
+              `index.scss` renders this list ONLY while the search bar has focus:
+              `.autoComplete { display: none }` plus `&:focus-within ul.autoComplete
+              { display: block }`. Without the guard below, clicking anything inside
+              the list destroys the thing being clicked, mid-click:
+
+                1. mousedown inside the list blurs the `<input>` above
+                2. the mousedown target does not take focus in its place -- an `<li>`
+                   is not focusable in any engine, and macOS/WebKit does not focus a
+                   `<button>` on click either
+                3. `:focus-within` goes false, so this `<ul>` flips to `display: none`
+                4. mouseup therefore lands somewhere else, and a `click` event only
+                   fires when mousedown and mouseup share a target -- so the item's
+                   own `onClick` NEVER RUNS
+
+              The failure is completely silent and reads as a dead button. It cost a
+              live gate item and most of a debug session: `winetricksInstall` was
+              recorded as a broken IPC channel (the frame "never arrives") when in
+              fact nothing was ever sending one. Proven by measurement, both
+              directions -- driving the same button by KEYBOARD (Tab, then Enter),
+              which never blurs and so never collapses the list, fired the send and
+              ran winetricks end to end.
+
+              `preventDefault()` on mousedown suppresses only the focus change, so the
+              input keeps focus, `:focus-within` holds, the list stays mounted and the
+              click completes normally. The cost is that text inside the list is no
+              longer selectable by dragging -- correct for a suggestions list.
+
+              This is the shared primitive: `LibrarySearchBar` also passes clickable
+              `<li onClick=...>` suggestions, so it carried the identical defect. */}
+          <ul className="autoComplete" onMouseDown={(e) => e.preventDefault()}>
             {suggestionsListItems &&
               suggestionsListItems.length > 0 &&
               suggestionsListItems.map((li, idx) => (
