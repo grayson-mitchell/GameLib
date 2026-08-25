@@ -62,6 +62,7 @@
     "prettier-fix": "prettier --write .",
     "download-helper-binaries": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/downloadHelperBinaries.ts",
     "pin:runner-digests": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/pinRunnerDigests.ts",
+    "check:runner-invocations": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/checkRunnerInvocations.ts",
     "lint-translations": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/lintTranslations.ts",
     "lint-translations:gamelib": "export LINT_TRANSLATIONS_NAMESPACES=gamelib && node meta/runTs.cjs --bundle --platform=node --target=node21 meta/lintTranslations.ts",
     "i18n-churn-guard": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/i18nCatalogChurnGuard.ts",
