@@ -258,7 +258,8 @@ describe('buildRunnersOnedir', () => {
         pyinstallerVersion: '6.3.0',
         archiveSha256:
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-        archivePath: '.build-tools/runners-onedir/out/legendary_macOS_x86_64_onedir.tar.gz',
+        archivePath:
+          '.build-tools/runners-onedir/out/legendary_macOS_x86_64_onedir.tar.gz',
         fileCount: 120,
         machoCount: 3
       },
@@ -274,7 +275,8 @@ describe('buildRunnersOnedir', () => {
         pyinstallerVersion: '6.3.0',
         archiveSha256:
           'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-        archivePath: '.build-tools/runners-onedir/out/gogdl_macOS_x86_64_onedir.tar.gz',
+        archivePath:
+          '.build-tools/runners-onedir/out/gogdl_macOS_x86_64_onedir.tar.gz',
         fileCount: 95,
         machoCount: 2
       },
@@ -290,7 +292,8 @@ describe('buildRunnersOnedir', () => {
         pyinstallerVersion: '6.3.0',
         archiveSha256:
           'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
-        archivePath: '.build-tools/runners-onedir/out/nile_macOS_x86_64_onedir.tar.gz',
+        archivePath:
+          '.build-tools/runners-onedir/out/nile_macOS_x86_64_onedir.tar.gz',
         fileCount: 80,
         machoCount: 1
       }
@@ -312,7 +315,7 @@ describe('buildRunnersOnedir', () => {
         const lines = output.split('\n').filter((line) => line.length > 0)
         expect(lines).toHaveLength(3)
         lines.forEach((line, index) => {
-          expect(line).toMatch(/^[0-9a-f]{64}  \S+$/)
+          expect(line).toMatch(/^[0-9a-f]{64} {2}\S+$/)
           const result = FIXTURE_RESULTS[index]
           expect(line).toBe(
             `${result.archiveSha256}  ${archiveName(result.runner, 'x64')}`
@@ -331,7 +334,9 @@ describe('buildRunnersOnedir', () => {
 
       it('vacuity guard: a different archiveSha256 produces different output', () => {
         const mutated = FIXTURE_RESULTS.map((r, index) =>
-          index === 0 ? { ...r, archiveSha256: FIXTURE_RESULTS[1].archiveSha256 } : r
+          index === 0
+            ? { ...r, archiveSha256: FIXTURE_RESULTS[1].archiveSha256 }
+            : r
         )
         const original = formatSha256Sums('x64', FIXTURE_RESULTS)
         const withDuplicateDigest = formatSha256Sums('x64', mutated)
@@ -341,10 +346,7 @@ describe('buildRunnersOnedir', () => {
 
     describe('buildManifestObject', () => {
       it('has exactly the three runner keys plus runId at the top level, with every per-runner field preserved (undefined workingDirectory collapsed to null)', () => {
-        const manifest = buildManifestObject('arm64', FIXTURE_RESULTS) as Record<
-          string,
-          unknown
-        >
+        const manifest = buildManifestObject('arm64', FIXTURE_RESULTS)
         expect(Object.keys(manifest).sort()).toEqual(
           ['gogdl', 'legendary', 'nile', 'runId'].sort()
         )
