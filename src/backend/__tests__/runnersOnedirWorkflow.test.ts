@@ -234,6 +234,30 @@ describe('build-runners-onedir-macos.yml prepare-release publish step', () => {
       'gh release edit runners-onedir-macos --prerelease --latest=false'
     )
   })
+
+  // Regression pin for 34.16-LIVE-GATE.md run 32815489719, this workflow's
+  // first-ever dispatch: prepare-release has no `actions/checkout`, so `gh`
+  // fell back to resolving the repo from git remotes and died with
+  // "failed to run git: fatal: not a git repository" before its first API
+  // call. Both halves are asserted, because either one alone would let the
+  // defect back in -- GH_REPO without the no-checkout premise is unmotivated,
+  // and the no-checkout premise without GH_REPO is the bug itself.
+  test('the publish step passes GH_REPO, because prepare-release deliberately has no checkout for gh to infer the repo from', () => {
+    const parsed = parseWorkflow()
+    const steps = parsed.jobs['prepare-release'].steps as NonNullable<
+      (typeof parsed.jobs)['prepare-release']['steps']
+    >
+
+    expect(
+      steps.some((step) =>
+        String(step.uses ?? '').startsWith('actions/checkout')
+      )
+    ).toBe(false)
+
+    const publishStep = steps.find((step) => step.name === PUBLISH_STEP_NAME)
+    expect(publishStep).toBeDefined()
+    expect(publishStep?.env?.GH_REPO).toBe('${{ github.repository }}')
+  })
 })
 
 describe('build-runners-onedir-macos.yml upload step', () => {
