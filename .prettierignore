@@ -9,6 +9,10 @@ sign/
 .github/workflows/build-base.yml
 signatures/version1/cla.json
 playwright-report
+# Playwright run output, same family as playwright-report above.
+# Prettier 3.x does NOT read .gitignore, so gitignoring this is not enough --
+# the entry has to be here to keep `prettier --check .` off it.
+test-results
 pnpm-lock.yaml
 
 # Build output — generated, never hand-edited. `prettier --check .` was walking

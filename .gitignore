@@ -38,6 +38,7 @@ flatpak-build
 .env
 
 playwright-report
+test-results/
 
 # macOS native Steam bridge (Phase 24, D-07) -- the shim SOURCE
 # (native/steam-bridge/generated/*.c/*.def) is generated but COMMITTED
