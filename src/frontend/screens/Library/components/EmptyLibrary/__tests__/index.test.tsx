@@ -80,7 +80,16 @@ jest.mock('react', () => {
   }
 })
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// Deliberately a lazy `require`, NOT a static import: it has to evaluate
+// AFTER the `jest.mock('react', ...)` factory above, and a static import
+// would be hoisted above it, so the component would close over the real
+// `useContext` and the mocked contexts would never apply.
+//
+// The rule named below is `no-require-imports`. This line previously said
+// `no-var-requires`, a rule that no longer exists -- and ESLint does not
+// error on an unknown rule name in a disable comment, so the suppression
+// looked effective while suppressing nothing.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const EmptyLibraryMessage = require('../index').default
 
 /** Flattens the rendered element graph to its visible text. */

@@ -268,13 +268,17 @@ describe('resolvePlatformWrite', () => {
         existing.is_linux_native !== undefined
       ) {
         return {
+          // No `as boolean` / `as number` here: the `if` above narrows each
+          // field with `!== undefined`, so the assertions were unnecessary
+          // and eslint (via the type checker) flagged them. Removing a clause
+          // from that condition would make them necessary again.
           platforms: {
-            is_windows_native: existing.is_windows_native as boolean,
-            is_mac_native: existing.is_mac_native as boolean,
-            is_linux_native: existing.is_linux_native as boolean
+            is_windows_native: existing.is_windows_native,
+            is_mac_native: existing.is_mac_native,
+            is_linux_native: existing.is_linux_native
           },
           platformsSource: existing.platformsSource ?? source,
-          platformsCapturedAt: existingCapturedAt as number,
+          platformsCapturedAt: existingCapturedAt,
           accepted: false
         }
       }

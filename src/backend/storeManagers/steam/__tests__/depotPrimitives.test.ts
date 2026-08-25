@@ -368,7 +368,7 @@ describe('decompress', () => {
     const nameLen = storedChunk.readUInt16LE(26)
     const extraLen = storedChunk.readUInt16LE(28)
     const body = storedChunk.subarray(30 + nameLen + extraLen)
-    expect(() => require('node:zlib').inflateRawSync(body)).toThrow(
+    expect(() => zlibNs.inflateRawSync(body)).toThrow(
       expect.objectContaining({ code: 'Z_DATA_ERROR' })
     )
   })

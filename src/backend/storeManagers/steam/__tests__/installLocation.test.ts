@@ -12,7 +12,7 @@
  *    becomes a jest.fn(), matching depot.test.ts's established pattern
  */
 import { readFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { join } from 'node:path'
 import { logWarning } from 'backend/logger'
 import { getSteamLibraries } from 'backend/utils'
 import {
