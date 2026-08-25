@@ -61,3 +61,26 @@ cause is not established. Do not close one by satisfying the other.
 **Parked 2026-08-23 by operator decision** ("park the three remaining items"), alongside
 `REQ-34.4.1-GAP-11` and `D-29-02`. Parked is **not** assigned — no phase owns this. The answer stays
 **UNDETERMINED** and must be written as such; a park is not permission to round it to "no".
+
+## Disposition (2026-08-25, plan 34.6-14) — does NOT close
+
+34.6's live gate independently reproduced the **same class** of event this todo tracks — a
+different id, a different session, but the same shell-layer shape:
+`[shell] response for unknown/timed-out id=10023 (dropped)`, recorded during Step 6 (`egsSync`)'s
+`openDialog` finding.
+
+This is a **recurrence of the pattern, not a discharge of this specific case.** The new
+occurrence's root cause was diagnosed and is different from what this todo (id=`1575`) needs
+answered: it traces to `openDialog` missing from the shell's `LONG_RUNNING_CHANNELS`
+(`main.rs:184`), a >60s dialog-picker interaction — tracked in its own committed todo (`99e8300f1`)
+— not a cookie operation. So the new occurrence answers "was id=10023's timeout a dialog-picker
+issue" (yes); it says nothing about whether id=`1575` (this todo's own case) co-occurred with a
+cookie operation. That original question still requires the full shell scrollback across id=1575's
+specific window, which was never captured — this todo's own established correction stands
+unchanged: "a clean grep of the wrong source is not evidence of absence" (`gamelib.log` cannot see
+shell `eprintln!` output).
+
+**Stays pending, UNDETERMINED**, exactly as before. Recorded so a future reader does not mistake
+the new id=10023/`openDialog` finding for a resolution of this todo's still-open id=1575 question —
+same failure **class**, not the same **case** — rounding one to answer the other would repeat the
+exact F-10 correlation-as-cause mistake this todo's own text already warns against.

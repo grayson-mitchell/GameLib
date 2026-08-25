@@ -52,3 +52,18 @@ such.
 
 **Parked 2026-08-23 by operator decision** ("park the three remaining items"). Parked is not
 assigned: no phase owns this. Revisit if a user-visible symptom appears — not on a schedule.
+
+## Disposition (2026-08-25, plan 34.6-14) — does NOT close
+
+34.6's live gate carried this as its "Optional rider — Humble login" (folded todo 4). Its own text
+states plainly: "Not required by this phase's own leg. This phase's live gate logs into Epic; the
+404 this rider investigates is a Humble surface." The gate's FINAL ADJUDICATION closing statement
+confirms: "The optional Humble rider was **not exercised** and is explicitly **not required** by
+this phase's own leg (this gate logs into Epic, not Humble) — it remains `NOT DISCHARGED` and
+returns to pending, per its own stated rule that folding a todo into a phase's scope is not the
+same as that phase discharging it."
+
+No authenticated probe to `/api/v1/user/info` was ever made during 34.6. The two candidates (moved
+endpoint vs. interstitial) remain undiscriminated. **Stays pending, UNDETERMINED**, exactly as
+before — parked, non-blocking by construction (no user-visible symptom exists to chase), no phase
+currently owns it.

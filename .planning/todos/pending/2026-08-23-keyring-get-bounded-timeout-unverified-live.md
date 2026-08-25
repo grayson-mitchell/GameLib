@@ -56,3 +56,27 @@ normally proves only that the happy path works, which was never in doubt.
 **Parked 2026-08-23 by operator decision** ("park the three remaining items"). Parked is not
 assigned: no phase owns this. It is cheap to fold into any live login gate, and Phase 34.6 runs one —
 that is the natural revisit point, not a commitment.
+
+## Disposition (2026-08-25, plan 34.6-14) — does NOT close
+
+34.6's live gate ran the rider this todo folded into (`34.6-LIVE-GATE.md` Step 1, "Rider (folded
+todo 1...)"). Two distinct `keyring_get` observations exist in that document, and neither is the
+one this todo's discharge condition asks for:
+
+1. **Step 1 itself:** at gate-recording time the rider's status was recorded explicitly as
+   **"unreported"** — "neither confirmed firing nor confirmed non-firing." The gate's own text is
+   explicit that a non-firing rider is NOT a discharge and must be left open, never assumed
+   non-firing.
+2. **Step 3** (SteamGridDB key resolution), recorded separately:
+   `[shell] keyring keyring_get failed: keyring:unavailable: Platform secure storage failure: In
+   dark wake, no UI possible` — a real keyring failure, but the **wrong failure mode**:
+   `keyring:unavailable` is an immediate rejection, not the bounded, classified **timeout** this
+   todo's discharge condition specifically requires, with elapsed time measured. The gate itself
+   records this as "harmless in this run ... recorded as an observation, not scored against any
+   step" — explicitly not a discharge of this rider.
+
+Neither observation satisfies "`keyring_get` actually times out ... producing a classified error
+inside the bound ... elapsed time measured, not inferred." **Stays pending, UNSCHEDULED**, per its
+own park note. Phase 34.6's live login gate was the natural revisit point the park named, and it
+ran — but the specific timeout event never fired (or was not reported if it did). No phase
+currently owns forcing this observation.

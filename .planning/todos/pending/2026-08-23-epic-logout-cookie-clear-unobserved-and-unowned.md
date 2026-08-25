@@ -86,3 +86,30 @@ permanently un-actionable: nobody would go obtain a session while the item annou
 blocked on having one. A blocker describing its own symptom. Embedded Epic login works (restored
 2026-08-22 — that is why 34.7 went ON HOLD), so a session is obtainable; obtaining one is 34.6's
 job, not a precondition it must wait on.
+
+## Disposition (2026-08-25, plan 34.6-14) — does NOT close
+
+The discharge condition's LETTER was satisfied: `34.6-LIVE-GATE.md` Step 8 (FINAL ADJUDICATION)
+drove an authenticated Epic session, logged out live through the UI, and produced a
+`clearEpicCookies` count line cross-checked against an independent re-read of the jar (D-13's
+identity-check discipline) — exactly the paired-census shape this todo's discharge condition asks
+for.
+
+But applied against this todo's own **stricter** bar rather than its weaker wording: the
+count-only cross-check **PASSED** (app reported clearing 8, matching the 8 expected), while D-13's
+stricter, named-planted-cookie identity re-read caught the real defect underneath — **0 of the 7
+in-scope `epicgames.com` cookies were genuinely removed.** Read literally against "a count line
+cross-checked," this could misread as discharged; read against the project's established stricter
+bar (a count match is not evidence, per D-13), it is a confirmed **FAIL**, not a discharge.
+
+This todo is no longer "unobserved" — it is observed, live, and broken. The confirmed defect is
+now owned by a separate, newer todo filed the following day from the same gate run:
+`.planning/todos/pending/2026-08-24-epic-logout-reports-clearing-cookies-it-does-not-clear.md`.
+Closing this todo would misrepresent an unresolved defect as a resolved concern, so it **stays
+pending** — superseded in effect, kept as the historical record of the ownership question this
+todo existed to settle and of the observation that finally settled it.
+
+**`resolves_phase: "34.6"` must not be read as "34.6 closing discharges this."** 34.6 closes with
+this exact item scored FAIL, not silently — the phase discharged its own obligation (drive the
+observation); the observation's *result* is what stays open, under the 2026-08-24 todo, which
+currently has no owning phase.
