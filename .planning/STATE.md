@@ -5270,6 +5270,7 @@ Closed/parked native-install phases:
 | Phase 34.8 P06 | ~50min | 3 tasks | 4 files |
 | Phase 34.8 P08b | 50min | 3 tasks | 17 files |
 | Phase 34.8 P08c | 30min | 2 tasks | 4 files |
+| Phase 34.8 P12 | ~75min | 3 tasks (Task 3 blocking human checkpoint) | 8 files |
 | Phase 34.10 P01 | 20min | 2 tasks | 5 files |
 | Phase 34.10 P02 | 35min | 2 tasks | 5 files |
 | Phase 34.10 P03 | 40min | 2 tasks | 3 files |
