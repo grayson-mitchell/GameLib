@@ -313,3 +313,80 @@ the same layer boundary — the first blamed IPC transport, the second blamed fo
 internally consistent and both survived review. The keyboard/mouse asymmetry is the only hard
 datum, and it has been over-explained twice. See
 [[focus-within-popover-unmounts-what-you-click]], whose claim must be corrected.
+
+
+---
+
+## PARKED 2026-08-25 — localised to one component, cause not yet named
+
+Five live drives. Stopping deliberately, not from exhaustion of the evidence: the phase cannot
+reach `PASS n/n` regardless (Step 8 fails independently and is out of scope), so the marginal
+value of another round is low. Everything below is measured, not inferred.
+
+### SETTLED — do not re-investigate these
+
+1. **The IPC port is CORRECT.** Phase 34.6 registered `winetricksInstall` properly. Driving the
+   same button by **keyboard** (Tab, then Enter) sends the frame and runs winetricks end to end
+   — `Executing w_do_call corefonts`, downloads `andale32.exe`, `Done`.
+2. **Nothing was ever sending a frame** on the mouse path. 427 traced sends in one boot;
+   `winetricksInstall` absent from all of them, with the probe proven live by other channels
+   BEFORE its silence was trusted.
+3. **The break point is exact.** On a mouse click the button receives `pointerdown` and
+   `mousedown`, then **no `mouseup` and no `click`**. The element goes away during the press.
+4. **It is a REACT UNMOUNT, not CSS.** A per-row MOUNT/UNMOUNT probe logs `row UNMOUNT` for
+   EVERY row immediately after `mousedown`. `display:none` cannot unmount a React component, so
+   a state change is doing this.
+5. **Not a blur/`:focus-within` race.** The `onMouseDown={(e) => e.preventDefault()}` guard is
+   in the running bundle (verified: `index.html` → `index-C6RqjgK2.js` → `App-5ME1FEKO.js`,
+   mtimes newer than the fix commit, guard literally present in the chunk) and changed nothing.
+   `preventDefault` on mousedown is exactly what suppresses the focus change.
+6. **Not an overlay.** Right-click → Inspect Element resolves to the `<button>`, so pointer
+   hit-testing reaches it. (The row not visibly highlighting on hover is unexplained but may
+   simply be `var(--accent)` being low-contrast in this theme — it was NOT treated as evidence.)
+7. **Not a stale bundle**, at any point. Checked every drive.
+
+### WHERE IT LIVES
+
+The unmount is a React state change that removes the suggestion rows. Two candidate owners, and
+the next probe must distinguish them:
+
+- **`Winetricks/index.tsx`** — the whole search bar sits behind
+  `{!declined && !loadingInstalled && (...)}`, so `loadingInstalled` flipping true unmounts
+  everything at once. `listInstalled()`'s first statement is `setLoadingInstalled(true)`, and
+  `onInstallingChange` calls `listInstalled()` when `component === ''`. This would ALSO explain
+  the "search text survives" symptom, since `WinetricksSearchBar` owns `search` in local state
+  and an unmount/remount resets it.
+- **`WinetricksSearchBar`** — `search` going empty (`value.length > 0` gates the whole `<ul>` in
+  `SearchBar`), or `searchResults` being emptied.
+
+**UNRESOLVED ANOMALY, and the reason this is parked rather than closed.** A `useEffect` probe
+added to `Winetricks/index.tsx` logging all six gating values **never fired once** — zero lines —
+despite being inside the component, having no early return before it, carrying a dep array (so it
+must run on mount), and living in the SAME bundle chunk (`App-DENVkc7C.js`) as the row probe that
+demonstrably did fire. That is a contradiction, and it was not resolved. **Anyone resuming should
+start by explaining it**, because until it is explained, "the gating state did not change" is not
+a safe conclusion — the probe may simply never have run.
+
+### HOW TO RESUME
+
+The probes were removed to keep diagnostics out of the tree. Cherry-pick them back:
+- `fcec00e9b` — pointer-sequence probes (pointerdown/mousedown/mouseup/click)
+- `df770f3e9` — per-row MOUNT/UNMOUNT probe + the parent gate probe
+
+Then re-measure with **`search` and `searchResults.length` logged on every render of
+`WinetricksSearchBar`** — the one probe never taken, and the one that names the state directly.
+
+### KEPT IN THE TREE
+
+- the `SearchBar` mousedown `preventDefault` guard (`af94c7ebe`) — standard for the pattern,
+  harmless, removes one confound. **Not a fix and not claimed as one.**
+- the Rust `sidecar_send` trace (`cc99cbe93`, opt-in via `GAMELIB_TRACE_SEND=1`) — the only
+  instrument that can see a silent send at the Rust boundary.
+
+### PROCESS NOTE
+
+**Three hypotheses, all formed by code reading, all wrong**: IPC transport, then a
+`:focus-within` blur-unmount, then `loadingInstalled`. Each was internally consistent, survived
+review, and two produced confident fixes with green tests. Every real advance came from a
+MEASUREMENT — the 427-send trace, the mouse/keyboard asymmetry, the pointer-sequence probe, the
+unmount probe. See [[focus-within-popover-unmounts-what-you-click]].

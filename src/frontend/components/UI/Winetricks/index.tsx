@@ -140,26 +140,6 @@ export default function Winetricks({ onClose, runner }: Props) {
       .finally(() => setGuiOpen(false))
   }
 
-  // TEMPORARY DIAGNOSTIC (Phase 34.6 Plan 16) — REMOVE with the rest of the probe.
-  // Every value that gates whether the search bar renders at all. If the row unmounts
-  // mid-click, one of these flipped; this names which, instead of guessing.
-  useEffect(() => {
-    window.api.logError(
-      `[winetricks-probe] gate declined=${String(declined)} loadingInstalled=${String(
-        loadingInstalled
-      )} loadingAvailable=${String(loadingAvailable)} installing=${String(
-        installing
-      )} allComponents=${allComponents.length} installed=${installed.length}`
-    )
-  }, [
-    declined,
-    loadingInstalled,
-    loadingAvailable,
-    installing,
-    allComponents.length,
-    installed.length
-  ])
-
   const dialogContent = (
     <>
       {declined && (
