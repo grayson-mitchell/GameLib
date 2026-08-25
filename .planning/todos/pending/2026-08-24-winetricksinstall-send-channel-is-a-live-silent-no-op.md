@@ -2,10 +2,8 @@
 created: 2026-08-24T00:00:00.000Z
 title: "`winetricksInstall` is a LIVE SILENT NO-OP under Tauri — the send channel is registered, bundled and declared, yet clicking Install produces nothing in either log sink"
 area: sidecar-ipc
-status: RESOLVED
+status: OPEN
 severity: major
-resolved: 2026-08-25
-resolved_by: "34.6-16 (gap cycle) — NOT an IPC defect; a focus race in the shared SearchBar primitive"
 files:
   - src/frontend/components/UI/SearchBar/index.tsx
   - src/backend/sidecar/wineToolsFlowRegistration.ts
@@ -267,3 +265,51 @@ channel correctly; the defect was never on its surface. 34.6's gap cycle merely 
 it. Live-gate Step 4's re-score belongs to plan `34.6-17`, on the D-11 observable.
 
 Related: [[a-pass-can-cover-an-unreachable-surface]] · [[sidecar-send-channels-fail-silently]]
+
+
+---
+
+## REOPENED 2026-08-25, same day — the focus-race fix did NOT work
+
+**The `preventDefault` fix landed, is loaded, and the button is still dead to the mouse.**
+The "RESOLVED" section above is retained as the record of a disproven hypothesis; do not read
+it as the cause.
+
+**The fix is genuinely in the running build — verified, not assumed:**
+- `build/index.html` → `assets/index-C6RqjgK2.js` → `App-5ME1FEKO.js`, all mtime `14:16:46`
+- fix commit `af94c7ebe` at `13:56:17`, i.e. the bundle is NEWER
+- the guard is present in the served chunk:
+  `autoComplete",onMouseDown:c=>c.preventDefault(),...`
+- `pnpm tauri:dev` runs `electron-vite build` first, so the bundle regenerates on launch
+
+**What that eliminates.** `preventDefault()` on mousedown is precisely what suppresses the
+focus change, so a blur-driven `:focus-within` unmount CANNOT be the mechanism. The
+`display:none`-on-blur story is refuted.
+
+**What still stands, and still needs explaining:**
+- **keyboard works, mouse does not** — Tab + Enter drives the full chain end to end
+- **the input text survives a mouse click**, so `WinetricksSearchBar`'s `install()` — whose
+  FIRST statement is `setSearch('')` — never runs
+- the operator reports the cursor is sometimes an **I-beam over the button**
+
+So the click still never reaches the handler; the reason is not focus loss. Live candidates,
+none confirmed:
+1. **something overlays the row** and takes the hit — the I-beam suggests an `<input>` or a
+   text-bearing element on top
+2. **pointer-events / stacking** — `.autoComplete` is `position:absolute; top:75%; z-index:1`
+   inside a MUI `Dialog` (`scroll="paper"`, nested `DialogContent`, `styled(Paper)`), which
+   introduces scroll containers and stacking contexts the bare component never had
+3. **MUI Dialog focus/modal machinery** intercepting the pointer sequence — `Dialog.tsx` also
+   fires two synthetic `gamepadAction: 'tab'` presses on mount
+
+**Next observation to take, cheapest first — DO NOT write another fix before this:**
+does the row **highlight on hover**? `SearchBar/index.scss` has
+`.autoComplete li:hover { background-color: var(--accent) }`. If hover styling fires, pointer
+events reach the row and candidate 1 is dead. If it does not, something is over the top and
+candidate 1 is the answer. That single observation partitions the space and costs nothing.
+
+**Process note.** Two hypotheses have now been formed by code reading and both were wrong at
+the same layer boundary — the first blamed IPC transport, the second blamed focus. Both were
+internally consistent and both survived review. The keyboard/mouse asymmetry is the only hard
+datum, and it has been over-explained twice. See
+[[focus-within-popover-unmounts-what-you-click]], whose claim must be corrected.
