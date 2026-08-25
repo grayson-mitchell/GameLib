@@ -292,18 +292,27 @@ export default React.memo(function Library(): JSX.Element {
   // D-04: the store facet values whose account is connected, reusing the
   // same gating expressions makeLibrary() already uses below -- the Store
   // group renders a row only for a connected account, never a permanent 0.
+  //
+  // That parity is the security control, not a tidiness preference: threat
+  // T-34.11-12 (Spoofing) is closed BY the two sites agreeing. Amazon read
+  // `amazon.username` here while makeLibrary read `amazon.user_id`, so a
+  // username-without-user_id account rendered an Amazon row over a grid with
+  // no Amazon games -- the permanent-0 row this comment promises cannot
+  // happen (review WR-03; operator chose user_id, 2026-08-25). Every gate
+  // below is now pinned against makeLibrary by connectedStoresParity.test.ts;
+  // change one site and CI fails until the other follows.
   const connectedStores: StoreFacetValue[] = useMemo(() => {
     const stores: StoreFacetValue[] = ['sideload']
     if (gog.username) stores.push('gog')
     if (epic.username) stores.push('legendary')
-    if (amazon.username) stores.push('nile')
+    if (amazon.user_id) stores.push('nile')
     if (zoom.enabled && zoom.username) stores.push('zoom')
     if (steam?.username) stores.push('steam')
     return stores
   }, [
     gog.username,
     epic.username,
-    amazon.username,
+    amazon.user_id,
     zoom.enabled,
     zoom.username,
     steam?.username
