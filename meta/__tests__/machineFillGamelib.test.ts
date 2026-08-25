@@ -4,6 +4,8 @@ import {
   validateTranslation,
   mergeFill,
   fillLocale,
+  chunkBatch,
+  extractJsonArray,
   BulkRunRefusedError,
   type TranslateFn,
   type MtManifest
@@ -349,6 +351,134 @@ describe('provenance manifest', () => {
     expect(result.manifest.model).toBe('claude-sonnet-5')
     expect(result.manifest.filledAt).toBe('2026-08-07T12:34:56.000Z')
     expect(result.manifest.keys).toEqual(['app.title'])
+  })
+})
+
+describe('filledAt provenance -- a no-op run must not re-stamp', () => {
+  const translate: TranslateFn = async (batch) =>
+    batch.map((b) => ({ keyPath: b.keyPath, target: `[${b.keyPath}]` }))
+
+  const PRIOR: MtManifest = {
+    locale: 'de',
+    model: 'claude-sonnet-5',
+    filledAt: '2026-08-07T12:34:56.000Z',
+    keys: ['app.title']
+  }
+
+  it('carries the prior filledAt forward when nothing was filled', async () => {
+    const result = await fillLocale({
+      en: { app: { title: 'GameLib' } },
+      target: { app: { title: 'GameLib' } }, // already complete -- nothing missing
+      locale: 'de',
+      translate,
+      glossary: [],
+      buildMemory: () => [],
+      priorManifest: PRIOR,
+      model: 'claude-sonnet-5',
+      now: new Date('2026-09-01T00:00:00.000Z')
+    })
+
+    expect(result.plan.missing).toEqual([])
+    expect(result.manifest.filledAt).toBe('2026-08-07T12:34:56.000Z')
+  })
+
+  it('stamps `now` when the run actually fills a key', async () => {
+    const result = await fillLocale({
+      en: { app: { title: 'GameLib' }, redeemKey: { rateLimited: 'Too many' } },
+      target: { app: { title: 'GameLib' } }, // redeemKey.rateLimited is missing
+      locale: 'de',
+      translate,
+      glossary: [],
+      buildMemory: () => [],
+      priorManifest: PRIOR,
+      model: 'claude-sonnet-5',
+      now: new Date('2026-09-01T00:00:00.000Z')
+    })
+
+    expect(result.manifest.filledAt).toBe('2026-09-01T00:00:00.000Z')
+  })
+
+  it('stamps `now` on a first run that has no prior manifest', async () => {
+    const result = await fillLocale({
+      en: { app: { title: 'GameLib' } },
+      target: { app: { title: 'GameLib' } },
+      locale: 'de',
+      translate,
+      glossary: [],
+      buildMemory: () => [],
+      priorManifest: null,
+      model: 'claude-sonnet-5',
+      now: new Date('2026-09-01T00:00:00.000Z')
+    })
+
+    expect(result.manifest.filledAt).toBe('2026-09-01T00:00:00.000Z')
+  })
+})
+
+describe('extractJsonArray -- tolerating a chatty response', () => {
+  const PAYLOAD = '[{"keyPath":"app.title","target":"GameLib"}]'
+
+  it('passes a bare array through unchanged', () => {
+    expect(extractJsonArray(PAYLOAD)).toBe(PAYLOAD)
+  })
+
+  it('strips a ```json code fence -- the shape that aborted a live run', () => {
+    const fenced = '```json\n' + PAYLOAD + '\n```'
+    expect(JSON.parse(extractJsonArray(fenced))).toEqual([
+      { keyPath: 'app.title', target: 'GameLib' }
+    ])
+  })
+
+  it('strips a bare ``` fence', () => {
+    expect(
+      JSON.parse(extractJsonArray('```\n' + PAYLOAD + '\n```'))
+    ).toHaveLength(1)
+  })
+
+  it('discards leading and trailing prose around the array', () => {
+    const chatty = 'Here are the translations:\n' + PAYLOAD + '\nLet me know!'
+    expect(JSON.parse(extractJsonArray(chatty))).toEqual([
+      { keyPath: 'app.title', target: 'GameLib' }
+    ])
+  })
+
+  it('keeps a square bracket that appears INSIDE a translated value', () => {
+    const withBrackets =
+      '[{"keyPath":"a","target":"Fertig [1]"},{"keyPath":"b","target":"OK"}]'
+    expect(JSON.parse(extractJsonArray(withBrackets))).toEqual([
+      { keyPath: 'a', target: 'Fertig [1]' },
+      { keyPath: 'b', target: 'OK' }
+    ])
+  })
+
+  it('leaves text containing no array alone so the caller still throws', () => {
+    expect(() => JSON.parse(extractJsonArray('I cannot do that'))).toThrow()
+  })
+})
+
+describe('chunkBatch -- request slicing', () => {
+  it('splits an over-size batch into slices of the requested size', () => {
+    const chunks = chunkBatch([1, 2, 3, 4, 5, 6, 7], 3)
+    expect(chunks).toEqual([[1, 2, 3], [4, 5, 6], [7]])
+  })
+
+  it('loses and duplicates nothing -- the concatenated slices equal the input', () => {
+    const batch = Array.from({ length: 124 }, (_, i) => `key.${i}`)
+    const flattened = chunkBatch(batch, 40).flat()
+    expect(flattened).toEqual(batch)
+    expect(new Set(flattened).size).toBe(124)
+  })
+
+  it('returns a single slice when the batch is smaller than the size', () => {
+    expect(chunkBatch(['a', 'b'], 40)).toEqual([['a', 'b']])
+  })
+
+  it('returns no slices for an empty batch rather than one empty slice', () => {
+    expect(chunkBatch([], 40)).toEqual([])
+  })
+
+  it('refuses a size of zero instead of looping forever', () => {
+    expect(() => chunkBatch([1, 2], 0)).toThrow('at least 1')
   })
 })
 

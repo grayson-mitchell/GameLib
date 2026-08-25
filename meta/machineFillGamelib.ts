@@ -355,6 +355,24 @@ export interface FillLocaleResult {
   skipped: Array<{ keyPath: string; problems: string[] }>
 }
 
+/**
+ * `filledAt` records when these keys were FILLED, not when the script last
+ * ran. A re-run that fills nothing must therefore carry the prior timestamp
+ * forward: re-stamping it rewrites the sidecar on every no-op run, which
+ * both breaks the "a repeat run changes no file" guarantee and silently
+ * ages the provenance a later Weblate import would read.
+ */
+function stampFilledAt(
+  filled: Record<string, string>,
+  priorManifest: MtManifest | undefined,
+  now: Date
+): string {
+  if (Object.keys(filled).length === 0 && priorManifest?.filledAt) {
+    return priorManifest.filledAt
+  }
+  return now.toISOString()
+}
+
 export async function fillLocale(
   params: FillLocaleParams
 ): Promise<FillLocaleResult> {
@@ -378,7 +396,12 @@ export async function fillLocale(
     return {
       plan,
       merged,
-      manifest: { ...manifest, locale, model, filledAt: now.toISOString() },
+      manifest: {
+        ...manifest,
+        locale,
+        model,
+        filledAt: stampFilledAt({}, priorManifest, now)
+      },
       skipped
     }
   }
@@ -445,11 +468,55 @@ export async function fillLocale(
   const manifest: MtManifest = {
     locale,
     model,
-    filledAt: now.toISOString(),
+    filledAt: stampFilledAt(filled, priorManifest, now),
     keys: rawManifest.keys
   }
 
   return { plan, merged, manifest, skipped }
+}
+
+/**
+ * Recovers the JSON array from a model response.
+ *
+ * The system prompt asks for a bare array with no code fences and no
+ * commentary, and usually gets one -- but not every time: a live run
+ * aborted mid-fill because a single chunk came back fenced. Failing the
+ * whole locale on one chatty response would make the eventual 46-locale
+ * bulk fill a coin flip, so strip the two shapes actually observed
+ * (markdown fences, leading/trailing prose) before parsing. Anything with
+ * no array in it at all still throws at the `JSON.parse` call site.
+ */
+export function extractJsonArray(text: string): string {
+  const withoutFences = text
+    .replace(/^\s*```(?:json)?\s*/i, '')
+    .replace(/\s*```\s*$/, '')
+    .trim()
+
+  const start = withoutFences.indexOf('[')
+  const end = withoutFences.lastIndexOf(']')
+  if (start === -1 || end === -1 || end < start) return withoutFences
+
+  return withoutFences.slice(start, end + 1)
+}
+
+/**
+ * Splits a translation batch into request-sized slices.
+ *
+ * The whole-locale-in-one-request design this replaced could not fit its own
+ * output: 124 keys of translated JSON needs roughly 4,600 output tokens, more
+ * than the per-request ceiling, so every run past ~110 keys was truncated.
+ * Slicing keeps each response comfortably inside the ceiling and keeps the
+ * script working as `en/gamelib.json` grows and as the remaining 46 locales
+ * land.
+ */
+export function chunkBatch<T>(batch: T[], size: number): T[][] {
+  if (size < 1) throw new Error('chunkBatch size must be at least 1')
+
+  const chunks: T[][] = []
+  for (let i = 0; i < batch.length; i += size) {
+    chunks.push(batch.slice(i, i + size))
+  }
+  return chunks
 }
 
 // ---------------------------------------------------------------------------
@@ -480,11 +547,18 @@ interface AnthropicTranslatorOptions {
   glossary: string[]
 }
 
+// Keys per API request, and the output ceiling each request is given.
+// A translated key costs roughly 35 output tokens, so 40 keys lands near
+// 1,400 -- an order of magnitude inside the ceiling, leaving room for
+// longer locales without another truncation.
+const KEYS_PER_REQUEST = 40
+const RESPONSE_MAX_TOKENS = 8192
+
 /**
  * The real `TranslateFn` implementation. Kept as a separate factory so the
- * pure logic above stays untouched and the backend is swappable. Batches
- * all keys for a locale into a single request rather than one request per
- * key.
+ * pure logic above stays untouched and the backend is swappable. Issues one
+ * request per `KEYS_PER_REQUEST`-key slice and concatenates the results;
+ * the caller matches them back by `keyPath`, so slice order is irrelevant.
  */
 export function createAnthropicTranslator(
   opts: AnthropicTranslatorOptions
@@ -515,63 +589,97 @@ export function createAnthropicTranslator(
       `  these are UI labels and dialog copy, not prose.`
     ].join('\n')
 
-    const userPayload = batch.map((item) => ({
-      keyPath: item.keyPath,
-      source: item.source,
-      memory: item.memory
-    }))
+    const results: Array<{ keyPath: string; target: string }> = []
 
-    // Deliberately no console.log of `system`/`userPayload`/the response
-    // body -- never log the API key (T-34.8-34) and never log full request
-    // bodies, only a key-count summary.
-    console.log(
-      `Requesting translation for ${batch.length} key(s) into locale "${locale}"...`
-    )
+    for (const chunk of chunkBatch(batch, KEYS_PER_REQUEST)) {
+      const userPayload = chunk.map((item) => ({
+        keyPath: item.keyPath,
+        source: item.source,
+        memory: item.memory
+      }))
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': opts.apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: opts.model,
-        max_tokens: 4096,
-        system,
-        messages: [{ role: 'user', content: JSON.stringify(userPayload) }]
+      // Deliberately no console.log of `system`/`userPayload`/the response
+      // body -- never log the API key (T-34.8-34) and never log full request
+      // bodies, only a key-count summary.
+      console.log(
+        `Requesting translation for ${chunk.length} key(s) into locale "${locale}"...`
+      )
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': opts.apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: opts.model,
+          max_tokens: RESPONSE_MAX_TOKENS,
+          // This is mechanical transliteration against an explicit rule
+          // list, not a reasoning task. Current models run adaptive
+          // thinking by DEFAULT, and thinking is billed against the same
+          // max_tokens ceiling as the answer -- a whole-locale batch spent
+          // the entire budget reasoning and returned a thinking block with
+          // no text block at all. Disabling it keeps the ceiling for output.
+          thinking: { type: 'disabled' },
+          system,
+          messages: [{ role: 'user', content: JSON.stringify(userPayload) }]
+        })
       })
-    })
 
-    if (!response.ok) {
-      // Do not include the response body in the thrown error -- it may
-      // echo request content back, and this message can end up in CI logs.
-      throw new Error(
-        `Anthropic API request failed for locale "${locale}": HTTP ${response.status}`
-      )
+      if (!response.ok) {
+        // Do not include the response body in the thrown error -- it may
+        // echo request content back, and this message can end up in CI logs.
+        throw new Error(
+          `Anthropic API request failed for locale "${locale}": HTTP ${response.status}`
+        )
+      }
+
+      const data = (await response.json()) as {
+        stop_reason?: string
+        content?: Array<{ type: string; text?: string }>
+      }
+
+      // Fail LOUDLY on a truncated or text-less response. The previous
+      // `?? '[]'` fallback turned both into an empty translation array,
+      // which the caller could only report as "translator returned no
+      // result for this key" -- indistinguishable from a model quirk, and
+      // it exited 0 having written nothing.
+      if (data.stop_reason === 'max_tokens') {
+        throw new Error(
+          `Anthropic API response for locale "${locale}" hit max_tokens ` +
+            `(${RESPONSE_MAX_TOKENS}) and was truncated -- lower ` +
+            `KEYS_PER_REQUEST (currently ${KEYS_PER_REQUEST}) or raise the ceiling.`
+        )
+      }
+
+      const textBlock = data.content?.find((c) => c.type === 'text')?.text
+      if (textBlock === undefined) {
+        throw new Error(
+          `Anthropic API response for locale "${locale}" contained no text ` +
+            `block (blocks: ${(data.content ?? []).map((c) => c.type).join(', ') || 'none'}).`
+        )
+      }
+
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(extractJsonArray(textBlock))
+      } catch {
+        throw new Error(
+          `Anthropic API response for locale "${locale}" was not valid JSON`
+        )
+      }
+
+      if (!Array.isArray(parsed)) {
+        throw new Error(
+          `Anthropic API response for locale "${locale}" was not a JSON array`
+        )
+      }
+
+      results.push(...(parsed as Array<{ keyPath: string; target: string }>))
     }
 
-    const data = (await response.json()) as {
-      content?: Array<{ type: string; text?: string }>
-    }
-    const textBlock = data.content?.find((c) => c.type === 'text')?.text ?? '[]'
-
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(textBlock)
-    } catch {
-      throw new Error(
-        `Anthropic API response for locale "${locale}" was not valid JSON`
-      )
-    }
-
-    if (!Array.isArray(parsed)) {
-      throw new Error(
-        `Anthropic API response for locale "${locale}" was not a JSON array`
-      )
-    }
-
-    return parsed as Array<{ keyPath: string; target: string }>
+    return results
   }
 }
 
