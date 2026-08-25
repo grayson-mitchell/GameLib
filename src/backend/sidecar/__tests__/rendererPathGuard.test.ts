@@ -1,10 +1,13 @@
 /**
  * TDD RED-then-GREEN tests for `rendererPathGuard.ts` (Phase 34.6 Plan 11,
- * T-34.5-C6-49-03 discharge). This module is the shared containment/shape
- * primitive `installFlowRegistration.ts` (`moveInstall`/`importGame`) and
- * `wineToolsFlowRegistration.ts` (`runWineCommandForGame`) call to validate
- * renderer-supplied input before it reaches a real filesystem move/import or
- * a real Wine process spawn.
+ * T-34.5-C6-49-03 discharge; re-dispositioned by gap plan 34.6-18). Each
+ * caller now uses a different primitive from this module:
+ * `installFlowRegistration.ts` (`moveInstall`/`importGame`) calls
+ * `assertPlausibleAbsolutePath` (shape only, no containment root — gap plan
+ * 34.6-18, `34.6-VERIFICATION.md` CR-01);
+ * `wineToolsFlowRegistration.ts` (`runWineCommandForGame`) calls
+ * `assertCommandParts`; and `assertContainedPath` has ZERO production call
+ * sites — exercised in this file only, as a retained primitive.
  *
  * Every case below names, in its own title, the PROPERTY it measures (not
  * just "throws" / "does not throw") and is proven in BOTH directions per
@@ -30,7 +33,9 @@ import {
   assertContainedPath,
   PathContainmentError,
   assertCommandParts,
-  CommandShapeError
+  CommandShapeError,
+  assertPlausibleAbsolutePath,
+  PathShapeError
 } from '../rendererPathGuard'
 
 describe('assertContainedPath (T-34.5-C6-49-03 containment primitive)', () => {
@@ -171,6 +176,131 @@ describe('assertCommandParts (runWineCommandForGame shape guard)', () => {
           'notepad.exe',
           "C:\\Program Files\\Sid Meier's Civilization V\\save.txt"
         ])
+      ).not.toThrow()
+    })
+  })
+})
+
+describe('assertPlausibleAbsolutePath (moveInstall/importGame shape guard)', () => {
+  describe('REJECT: shapes that must never reach a real filesystem move/import', () => {
+    it('rejects a non-string candidate (e.g. undefined)', () => {
+      expect(() => assertPlausibleAbsolutePath(undefined, 'test')).toThrow(
+        PathShapeError
+      )
+    })
+
+    it('rejects a non-string candidate (e.g. a number)', () => {
+      expect(() => assertPlausibleAbsolutePath(42, 'test')).toThrow(
+        PathShapeError
+      )
+    })
+
+    it('rejects the empty string', () => {
+      expect(() => assertPlausibleAbsolutePath('', 'test')).toThrow(
+        PathShapeError
+      )
+    })
+
+    it('rejects a whitespace-only string', () => {
+      expect(() => assertPlausibleAbsolutePath('   ', 'test')).toThrow(
+        PathShapeError
+      )
+    })
+
+    it('rejects a candidate containing a NUL byte (built via String.fromCharCode(0), never a literal control character)', () => {
+      const nulBearing = '/Volumes/Ext/Games' + String.fromCharCode(0) + 'evil'
+      expect(() => assertPlausibleAbsolutePath(nulBearing, 'test')).toThrow(
+        PathShapeError
+      )
+    })
+
+    it('rejects a relative path', () => {
+      expect(() => assertPlausibleAbsolutePath('foo/bar', 'test')).toThrow(
+        PathShapeError
+      )
+    })
+
+    it('rejects a relative, `..`-bearing traversal', () => {
+      expect(() =>
+        assertPlausibleAbsolutePath('../../etc/passwd', 'test')
+      ).toThrow(PathShapeError)
+    })
+
+    it('rejects the backslash form of a relative traversal', () => {
+      expect(() =>
+        assertPlausibleAbsolutePath('..\\..\\etc\\passwd', 'test')
+      ).toThrow(PathShapeError)
+    })
+
+    it('rejects an absolute path containing a `..` segment', () => {
+      expect(() =>
+        assertPlausibleAbsolutePath('/Volumes/Ext/../../etc/passwd', 'test')
+      ).toThrow(PathShapeError)
+    })
+
+    it('rejects an absolute path containing a `..` segment (trailing form)', () => {
+      expect(() =>
+        assertPlausibleAbsolutePath('/home/deck/Games/../..', 'test')
+      ).toThrow(PathShapeError)
+    })
+
+    it('error message names the context label and NEVER contains the rejected candidate (T-34.6-32 -- this is a public fork whose users paste logs)', () => {
+      // Relative (not NUL-bearing) so the specimen itself is a plausible
+      // "secret-looking" candidate rather than an unprintable one.
+      const secretLookingCandidate = 'do-not-log-this-path/../escape'
+      expect(() =>
+        assertPlausibleAbsolutePath(secretLookingCandidate, 'moveInstall')
+      ).toThrow(PathShapeError)
+
+      let caught: unknown
+      try {
+        assertPlausibleAbsolutePath(secretLookingCandidate, 'moveInstall')
+      } catch (error) {
+        caught = error
+      }
+      const message = (caught as Error).message
+      expect(message).toContain('moveInstall')
+      expect(message).not.toContain(secretLookingCandidate)
+    })
+  })
+
+  describe('ACCEPT: legitimate cross-root and out-of-tree specimens (the primary real-world use case)', () => {
+    it('accepts an absolute path outside any configured root, containing a space', () => {
+      expect(() =>
+        assertPlausibleAbsolutePath('/Volumes/External SSD/Games', 'test')
+      ).not.toThrow()
+    })
+
+    it('accepts an absolute path containing an apostrophe (REQ-37-06 -- must never be rejected by a character check)', () => {
+      expect(() =>
+        assertPlausibleAbsolutePath(
+          "/Volumes/External SSD/Sid Meier's Civilization V",
+          'test'
+        )
+      ).not.toThrow()
+    })
+
+    it('accepts a Linux mount-point-style absolute path with a space in a directory name', () => {
+      expect(() =>
+        assertPlausibleAbsolutePath('/mnt/disk2/games/My Game', 'test')
+      ).not.toThrow()
+    })
+
+    it('accepts a path that HAPPENS to sit inside the old defaultInstallPath root -- the fix widens, it does not invert', () => {
+      expect(() =>
+        assertPlausibleAbsolutePath('/home/deck/Games/dest', 'test')
+      ).not.toThrow()
+    })
+
+    it('accepts an absolute path with a trailing separator (a normal native-picker output)', () => {
+      expect(() =>
+        assertPlausibleAbsolutePath('/Volumes/Ext/Games/', 'test')
+      ).not.toThrow()
+    })
+
+    it('accepts a leading-double-dot DIRECTORY NAME, proving segment-wise inspection rather than substring matching (T-34.6-47)', () => {
+      expect(() =>
+        assertPlausibleAbsolutePath('/Volumes/Ext/Games/..hidden', 'test')
       ).not.toThrow()
     })
   })
