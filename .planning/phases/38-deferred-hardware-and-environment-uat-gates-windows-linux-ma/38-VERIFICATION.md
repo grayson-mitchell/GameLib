@@ -2,7 +2,7 @@
 phase: 38-deferred-hardware-and-environment-uat-gates-windows-linux-ma
 verified: null
 status: human_needed
-score: N/A — collection phase, no must-haves. 8 relocated items, 0 discharged.
+score: N/A — collection phase, no must-haves. 9 relocated items, 0 discharged.
 audit_tool_note: >
   `status` MUST stay `human_needed`. `gsd-sdk query audit-uat` admits a VERIFICATION.md when
   status is `human_needed` OR `gaps_found`, but `parseVerificationItems` only emits items when
@@ -164,6 +164,41 @@ human_verification:
       34.1's item 7 note already identified this as THE SAME unmeasured surface as 38-C01..C04,
       not a coincidence — no phase since has had a controller available. Run C05 in the same
       sitting as the other four.
+
+  - id: "38-C06"
+    test: "Gamepad — focus traversal INTO and WITHIN the tier-2 filter panel, and whether a focused row below the fold is scrolled into view."
+    expected: "Controller-driven focus reaches the panel's rows (views, collections, the three collapsed facet groups and their checkboxes), moves within an expanded group, and a row that sits below the panel's visible area is scrolled into view rather than left clipped."
+    why_human: "Requires a physical controller."
+    blocked_by: "a game controller"
+    platform_gate: >
+      `.NavShell__tier2Portal` (src/frontend/components/UI/NavShell/index.scss:499-505) is the
+      panel's OWN scroll container -- `overflow-y: auto`, nested inside `.NavShell__tier2`'s
+      `overflow: hidden` (:401), and outside `main.content` entirely. No focus-scroll handler is
+      bound to it: `grep -rn "scrollIntoView|addEventListener('focus'|onFocus"` over `NavShell/`
+      and `Header/` returns ZERO hits. Focus dispatch itself is the same gate as 38-C01..C05 --
+      `gamepadAction` is dispatched only from the `navigator.getGamepads()` polling loop
+      (src/frontend/helpers/gamepad.ts:559,678), so nothing here is reachable from a keyboard.
+    origin_phase: "34.11"
+    origin_item: "34.11-VERIFICATION.md 'Carried-forward risk, not a phase blocker' — gamepad focus-scroll in the tier-2 panel"
+    not_covered_by_c05: >
+      READ THIS BEFORE MARKING IT A DUPLICATE. 38-C05 covers `scrollCardIntoView`
+      (GamesList/index.tsx:46), which is attached to the GAMES LIST at :139 and hardcodes
+      `document.querySelector('main.content')` as its container. The tier-2 panel is a different
+      element in a different scroll container with no handler of its own, so C05 passing says
+      nothing about this surface -- and `scrollCardIntoView` would scroll the wrong element even
+      if it did fire here. Two items, not one, per relocation rule (4): a compound item resolves
+      to a single pass/fail and the un-run half disappears.
+    prior_state: >
+      Deferred TWICE without ever being scheduled -- no controller in 34.10 or 34.11.
+      `34.11-VERIFICATION.md` flags it as "the one item worth escalating... risks becoming an
+      invisible standing gap if deferred a third time", yet that file has NO `human_verification`
+      key at all, so `gsd-sdk query audit-uat` could not see it. Same invisibility 38-C05's own
+      `prior_state` records for 34.10's version. This relocation gives it an owner for the first
+      time.
+    scope_note: >
+      Run in the same sitting as 38-C01..C05 -- one controller discharges all six, and C05 and
+      C06 are best run back to back so the two scroll containers are compared under identical
+      input.
 
 sweep_notes:
   re_derive_before_running: >
