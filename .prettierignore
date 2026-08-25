@@ -7,6 +7,12 @@ flatpak
 flatpak-build
 sign/
 .github/workflows/build-base.yml
+
+# Verbatim third-party captures of legendary's upstream .github/workflows/*.yml
+# at the pinned tag (34.16-07) -- a permanent regression fixture whose
+# near-miss lines ARE the point. Must not be reformatted, re-indented, or
+# otherwise diverge from the byte-identical upstream content.
+meta/__tests__/fixtures/upstream-workflows
 signatures/version1/cla.json
 playwright-report
 # Playwright run output, same family as playwright-report above.

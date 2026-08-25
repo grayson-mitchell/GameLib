@@ -1,4 +1,12 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync
+} from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
@@ -20,6 +28,16 @@ import { RELEASE_TAGS } from '../releaseTags'
 const DOWNLOAD_HELPER_BINARIES_SOURCE = readFileSync(
   join(__dirname, '..', 'downloadHelperBinaries.ts'),
   'utf-8'
+)
+
+// F-34.16-D: the real legendary-0.21.0 .github/workflows/*.yml set, captured
+// verbatim (34.16-07 Task 1). Read only, copied into a fresh tmpdir per test
+// -- never mutated in place.
+const REAL_LEGENDARY_WORKFLOWS_FIXTURE_DIR = join(
+  __dirname,
+  'fixtures',
+  'upstream-workflows',
+  'legendary-0.21.0'
 )
 
 describe('buildRunnersOnedir', () => {
@@ -204,6 +222,326 @@ describe('buildRunnersOnedir', () => {
       expect(thrown).toBeDefined()
       expect(thrown?.message).toContain('foo/cli.py')
       expect(thrown?.message).toContain('bar/cli.py')
+    })
+
+    // -------------------------------------------------------------------
+    // F-34.16-D gap closure (34.16-07 Task 1): twelve cases proving the
+    // widening (Task 2) is necessary and that it does not weaken either
+    // pre-existing refusal or the mention-rejection. Run against the
+    // UN-widened extractor first and the RED transcript recorded in
+    // 34.16-07-SUMMARY.md before Task 2 touches meta/buildRunnersOnedir.ts.
+    // -------------------------------------------------------------------
+
+    it('Shape A (bare console script, the control): first token "pyinstaller" extracts to the exact folded value', () => {
+      fixtureDir = mkdtempSync(join(tmpdir(), 'onedir-fixture-shape-a-'))
+      const workflowsDir = join(fixtureDir, '.github', 'workflows')
+      mkdirSync(workflowsDir, { recursive: true })
+      writeFileSync(
+        join(workflowsDir, 'build.yml'),
+        [
+          'name: build',
+          'on: push',
+          'jobs:',
+          '  build:',
+          '    steps:',
+          '      - run: pyinstaller',
+          '          --onefile',
+          '          --name legendary',
+          '          cli.py'
+        ].join('\n')
+      )
+
+      const result = extractUpstreamPyinstallerCommand(fixtureDir)
+      expect(result.command).toBe(
+        'pyinstaller --onefile --name legendary cli.py'
+      )
+      expect(result.workingDirectory).toBeUndefined()
+    })
+
+    it('Shape B ("uv run --module PyInstaller") extracts as a recognised invocation', () => {
+      fixtureDir = mkdtempSync(join(tmpdir(), 'onedir-fixture-shape-b-'))
+      const workflowsDir = join(fixtureDir, '.github', 'workflows')
+      mkdirSync(workflowsDir, { recursive: true })
+      writeFileSync(
+        join(workflowsDir, 'build-base.yml'),
+        [
+          'name: build',
+          'on: push',
+          'jobs:',
+          '  build:',
+          '    steps:',
+          '      - run: uv run --module PyInstaller',
+          '          --onefile',
+          '          --name legendary',
+          '          cli.py'
+        ].join('\n')
+      )
+
+      const result = extractUpstreamPyinstallerCommand(fixtureDir)
+      expect(result.command).toBe(
+        'uv run --module PyInstaller --onefile --name legendary cli.py'
+      )
+      expect(result.workingDirectory).toBeUndefined()
+    })
+
+    it('Shape B\' ("uv run -m PyInstaller", short module flag) extracts as a recognised invocation', () => {
+      fixtureDir = mkdtempSync(join(tmpdir(), 'onedir-fixture-shape-bprime-'))
+      const workflowsDir = join(fixtureDir, '.github', 'workflows')
+      mkdirSync(workflowsDir, { recursive: true })
+      writeFileSync(
+        join(workflowsDir, 'build-base.yml'),
+        [
+          'name: build',
+          'on: push',
+          'jobs:',
+          '  build:',
+          '    steps:',
+          '      - run: uv run -m PyInstaller --onefile --name legendary cli.py'
+        ].join('\n')
+      )
+
+      const result = extractUpstreamPyinstallerCommand(fixtureDir)
+      expect(result.command).toBe(
+        'uv run -m PyInstaller --onefile --name legendary cli.py'
+      )
+      expect(result.workingDirectory).toBeUndefined()
+    })
+
+    it('Shape C ("python -m PyInstaller") extracts as a recognised invocation', () => {
+      fixtureDir = mkdtempSync(join(tmpdir(), 'onedir-fixture-shape-c-'))
+      const workflowsDir = join(fixtureDir, '.github', 'workflows')
+      mkdirSync(workflowsDir, { recursive: true })
+      writeFileSync(
+        join(workflowsDir, 'build-base.yml'),
+        [
+          'name: build',
+          'on: push',
+          'jobs:',
+          '  build:',
+          '    steps:',
+          '      - run: python -m PyInstaller --onefile --name legendary cli.py'
+        ].join('\n')
+      )
+
+      const result = extractUpstreamPyinstallerCommand(fixtureDir)
+      expect(result.command).toBe(
+        'python -m PyInstaller --onefile --name legendary cli.py'
+      )
+      expect(result.workingDirectory).toBeUndefined()
+    })
+
+    it('Shape C\' ("python3 -m PyInstaller", versioned interpreter) extracts as a recognised invocation', () => {
+      fixtureDir = mkdtempSync(join(tmpdir(), 'onedir-fixture-shape-cprime-'))
+      const workflowsDir = join(fixtureDir, '.github', 'workflows')
+      mkdirSync(workflowsDir, { recursive: true })
+      writeFileSync(
+        join(workflowsDir, 'build-base.yml'),
+        [
+          'name: build',
+          'on: push',
+          'jobs:',
+          '  build:',
+          '    steps:',
+          '      - run: python3 -m PyInstaller --onefile --name legendary cli.py'
+        ].join('\n')
+      )
+
+      const result = extractUpstreamPyinstallerCommand(fixtureDir)
+      expect(result.command).toBe(
+        'python3 -m PyInstaller --onefile --name legendary cli.py'
+      )
+      expect(result.workingDirectory).toBeUndefined()
+    })
+
+    it('Shape B with a working-directory: sibling still resolves the sibling for a module form', () => {
+      fixtureDir = mkdtempSync(
+        join(tmpdir(), 'onedir-fixture-shape-b-workdir-')
+      )
+      const workflowsDir = join(fixtureDir, '.github', 'workflows')
+      mkdirSync(workflowsDir, { recursive: true })
+      writeFileSync(
+        join(workflowsDir, 'build-base.yml'),
+        [
+          'name: build',
+          'on: push',
+          'jobs:',
+          '  build:',
+          '    steps:',
+          '      - name: Build',
+          '        working-directory: legendary',
+          '        run: uv run --module PyInstaller',
+          '          --onefile',
+          '          --name legendary',
+          '          cli.py'
+        ].join('\n')
+      )
+
+      const result = extractUpstreamPyinstallerCommand(fixtureDir)
+      expect(result.command).toBe(
+        'uv run --module PyInstaller --onefile --name legendary cli.py'
+      )
+      expect(result.workingDirectory).toBe('legendary')
+    })
+
+    it('the REAL captured legendary-0.21.0 fixture set extracts exactly one result -- the "uv run --module PyInstaller" Build step', () => {
+      fixtureDir = mkdtempSync(join(tmpdir(), 'onedir-fixture-real-legendary-'))
+      const workflowsDir = join(fixtureDir, '.github', 'workflows')
+      mkdirSync(workflowsDir, { recursive: true })
+      for (const file of readdirSync(REAL_LEGENDARY_WORKFLOWS_FIXTURE_DIR)) {
+        copyFileSync(
+          join(REAL_LEGENDARY_WORKFLOWS_FIXTURE_DIR, file),
+          join(workflowsDir, file)
+        )
+      }
+
+      // Read the expected values from the captured file itself rather than
+      // transcribing them by hand -- the file IS the source of truth.
+      const rawBuildBase = readFileSync(
+        join(REAL_LEGENDARY_WORKFLOWS_FIXTURE_DIR, 'build-base.yml'),
+        'utf-8'
+      )
+      expect(rawBuildBase).toContain('uv run --module PyInstaller')
+
+      const result = extractUpstreamPyinstallerCommand(fixtureDir)
+      expect(result.command).toContain('uv run --module PyInstaller')
+      expect(result.command).toContain('--onefile')
+      expect(result.command).toContain('cli.py')
+      expect(result.workingDirectory).toBe('legendary')
+    })
+
+    it('module-name discrimination: "python -m zipapp" (wrong module) is not an invocation, throws the zero-match error', () => {
+      fixtureDir = mkdtempSync(join(tmpdir(), 'onedir-fixture-wrong-module-'))
+      const workflowsDir = join(fixtureDir, '.github', 'workflows')
+      mkdirSync(workflowsDir, { recursive: true })
+      writeFileSync(
+        join(workflowsDir, 'build-base.yml'),
+        [
+          'name: build',
+          'on: push',
+          'jobs:',
+          '  build:',
+          '    steps:',
+          '      - name: Build',
+          '        run: python -m zipapp --output dist/x build'
+        ].join('\n')
+      )
+
+      let thrown: Error | undefined
+      try {
+        extractUpstreamPyinstallerCommand(fixtureDir)
+      } catch (error) {
+        thrown = error as Error
+      }
+      expect(thrown).toBeDefined()
+      expect(thrown?.message).toContain(workflowsDir)
+    })
+
+    it('launcher discrimination: "uv build" / "uv publish" ("uv" alone) is not a PyInstaller invocation, throws the zero-match error', () => {
+      fixtureDir = mkdtempSync(join(tmpdir(), 'onedir-fixture-uv-alone-'))
+      const workflowsDir = join(fixtureDir, '.github', 'workflows')
+      mkdirSync(workflowsDir, { recursive: true })
+      writeFileSync(
+        join(workflowsDir, 'release.yml'),
+        [
+          'name: release',
+          'on: push',
+          'jobs:',
+          '  release:',
+          '    steps:',
+          '      - run: uv build',
+          '      - run: uv publish'
+        ].join('\n')
+      )
+
+      let thrown: Error | undefined
+      try {
+        extractUpstreamPyinstallerCommand(fixtureDir)
+      } catch (error) {
+        thrown = error as Error
+      }
+      expect(thrown).toBeDefined()
+      expect(thrown?.message).toContain(workflowsDir)
+    })
+
+    it('zero matches across all three recognised forms still throws naming the workflows dir (F-34.16-D regression)', () => {
+      fixtureDir = mkdtempSync(join(tmpdir(), 'onedir-fixture-zero-match-'))
+      const workflowsDir = join(fixtureDir, '.github', 'workflows')
+      mkdirSync(workflowsDir, { recursive: true })
+      writeFileSync(
+        join(workflowsDir, 'build.yml'),
+        'name: build\non: push\njobs:\n  build:\n    steps:\n      - run: echo hi\n'
+      )
+
+      let thrown: Error | undefined
+      try {
+        extractUpstreamPyinstallerCommand(fixtureDir)
+      } catch (error) {
+        thrown = error as Error
+      }
+      expect(thrown).toBeDefined()
+      expect(thrown?.message).toContain(workflowsDir)
+    })
+
+    it('two DISTINCT invocations -- one bare shape and one MODULE shape -- still throw naming both (multi-match refusal sees the new forms too)', () => {
+      fixtureDir = mkdtempSync(
+        join(tmpdir(), 'onedir-fixture-dupe-mixed-shapes-')
+      )
+      const workflowsDir = join(fixtureDir, '.github', 'workflows')
+      mkdirSync(workflowsDir, { recursive: true })
+      writeFileSync(
+        join(workflowsDir, 'build.yml'),
+        [
+          'name: build',
+          'on: push',
+          'jobs:',
+          '  build:',
+          '    steps:',
+          '      - run: pyinstaller --onefile --name foo foo/cli.py',
+          '  build-other:',
+          '    steps:',
+          '      - run: uv run --module PyInstaller --onefile --name bar bar/cli.py'
+        ].join('\n')
+      )
+
+      let thrown: Error | undefined
+      try {
+        extractUpstreamPyinstallerCommand(fixtureDir)
+      } catch (error) {
+        thrown = error as Error
+      }
+      expect(thrown).toBeDefined()
+      expect(thrown?.message).toContain('foo/cli.py')
+      expect(thrown?.message).toContain('bar/cli.py')
+    })
+
+    it('mentions of pyinstaller (name:, pip/uv-pip install args, an extras name containing the substring) are never extracted', () => {
+      fixtureDir = mkdtempSync(join(tmpdir(), 'onedir-fixture-mentions-'))
+      const workflowsDir = join(fixtureDir, '.github', 'workflows')
+      mkdirSync(workflowsDir, { recursive: true })
+      writeFileSync(
+        join(workflowsDir, 'build-base.yml'),
+        [
+          'name: build',
+          'on: push',
+          'jobs:',
+          '  build:',
+          '    steps:',
+          '      - run: pip3 install --upgrade setuptools pyinstaller',
+          '      - run: uv pip install pyinstaller',
+          '      - run: uv sync --extra pyinstaller_build --no-install-local',
+          '      - name: install pyinstaller build tools',
+          '        run: echo hi'
+        ].join('\n')
+      )
+
+      let thrown: Error | undefined
+      try {
+        extractUpstreamPyinstallerCommand(fixtureDir)
+      } catch (error) {
+        thrown = error as Error
+      }
+      expect(thrown).toBeDefined()
+      expect(thrown?.message).toContain(workflowsDir)
     })
   })
 
