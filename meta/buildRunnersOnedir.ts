@@ -140,8 +140,19 @@ export function archiveName(runner: string, arch: string): string {
 // "pyinstaller" in prose (a step name) or as a `pip install` argument (not
 // the invocation itself). This extractor instead (a) recognises `run:`
 // keys and folds their continuation lines the same way GitHub Actions does,
-// then (b) keeps only run values whose FIRST token is literally
-// "pyinstaller" -- the actual invocation, not merely a mention of the name.
+// then (b) keeps only run values that INVOKE pyinstaller as one of three
+// enumerated, fixed-prefix forms -- see matchInvocationForm below -- never
+// merely a mention of the name.
+//
+// F-34.16-D widening: legendary 0.21.0 migrated its Build step off the bare
+// `pyinstaller` console script onto `uv run --module PyInstaller` (with a
+// `-m` short-flag variant seen elsewhere), and `python -m PyInstaller` /
+// `python3 -m PyInstaller` are recognised alongside it for the same reason.
+// The match is deliberately an enumerated form table, not a loosened regex:
+// each form anchors a FIXED launcher-prefix token count at the start of the
+// folded value, with zero tolerance for intervening tokens, so a future
+// upstream flag insertion trips the zero-match refusal below instead of
+// being silently absorbed.
 // ---------------------------------------------------------------------------
 
 function indentOf(line: string): number {
@@ -233,11 +244,68 @@ function extractRunValues(text: string): RunValueMatch[] {
   return values
 }
 
+// Deliberate narrowness, enumerated -- not a loosened regex. Exactly three
+// recognised invocation shapes, each anchored at the start of the folded
+// `run:` value with a FIXED launcher-prefix token count. NO intervening
+// tokens are tolerated between the launcher tokens: `uv run --with <x>
+// --module PyInstaller` does NOT match, and that is intended -- a new
+// upstream flag must trip the zero-match tripwire and be widened by a
+// human decision, never absorbed silently (F-34.16-D, T-34.16G-03).
+export type InvocationForm = 'bare' | 'uv-run-module' | 'python-m'
+
+interface InvocationFormMatch {
+  form: InvocationForm
+  prefixLength: number
+}
+
+function matchInvocationForm(command: string): InvocationFormMatch | undefined {
+  // bare -- kept BYTE-FOR-BYTE as the pre-widening matcher. The first token
+  // is literally "pyinstaller".
+  if (/^pyinstaller(\s|$)/.test(command)) {
+    return { form: 'bare', prefixLength: 1 }
+  }
+
+  const tokens = command.split(/\s+/).filter(Boolean)
+
+  // uv-run-module -- `uv run --module PyInstaller` / `uv run -m PyInstaller`
+  // (legendary 0.21.0's real shape). The module-name token is compared
+  // case-insensitively so `PyInstaller`/`pyinstaller` both match, but ONLY
+  // against that one name -- legendary's own `python -m zipapp` step in the
+  // same file must never become a second match.
+  if (
+    tokens[0] === 'uv' &&
+    tokens[1] === 'run' &&
+    (tokens[2] === '--module' || tokens[2] === '-m') &&
+    tokens[3]?.toLowerCase() === 'pyinstaller'
+  ) {
+    return { form: 'uv-run-module', prefixLength: 4 }
+  }
+
+  // python-m -- `python -m PyInstaller` / `python3 -m PyInstaller`.
+  if (
+    (tokens[0] === 'python' || tokens[0] === 'python3') &&
+    (tokens[1] === '-m' || tokens[1] === '--module') &&
+    tokens[2]?.toLowerCase() === 'pyinstaller'
+  ) {
+    return { form: 'python-m', prefixLength: 3 }
+  }
+
+  return undefined
+}
+
 export interface UpstreamPyinstallerCommand {
   command: string
   // Absolute path the command must run FROM, if the step declared its own
   // `working-directory:` (undefined means repo root).
   workingDirectory?: string
+  // Which of the three enumerated shapes matched.
+  form: InvocationForm
+  // The tokens following the recognised launcher prefix (e.g. for
+  // `uv run --module PyInstaller --onefile --name x cli.py`, this is
+  // `['--onefile', '--name', 'x', 'cli.py']`) -- never includes a launcher
+  // token, so nothing derived from it can choose the spawned executable
+  // (T-34.16G-01).
+  pyinstallerArgs: string[]
 }
 
 export function extractUpstreamPyinstallerCommand(
@@ -258,17 +326,24 @@ export function extractUpstreamPyinstallerCommand(
     file: string
     command: string
     workingDirectory?: string
+    form: InvocationForm
+    pyinstallerArgs: string[]
   }[] = []
   for (const file of entries) {
     const text = readFileSync(join(workflowsDir, file), 'utf-8')
     for (const value of extractRunValues(text)) {
-      // Only a run: value that INVOKES pyinstaller (first token), not one
-      // that merely mentions it (e.g. "pip3 install --upgrade pyinstaller").
-      if (/^pyinstaller(\s|$)/.test(value.command)) {
+      // Only a run: value that INVOKES pyinstaller (one of the three
+      // recognised forms), not one that merely mentions it (e.g.
+      // "pip3 install --upgrade pyinstaller").
+      const formMatch = matchInvocationForm(value.command)
+      if (formMatch) {
+        const tokens = value.command.split(/\s+/).filter(Boolean)
         matches.push({
           file,
           command: value.command,
-          workingDirectory: value.workingDirectory
+          workingDirectory: value.workingDirectory,
+          form: formMatch.form,
+          pyinstallerArgs: tokens.slice(formMatch.prefixLength)
         })
       }
     }
@@ -276,8 +351,11 @@ export function extractUpstreamPyinstallerCommand(
 
   if (matches.length === 0) {
     throw new Error(
-      `No "run:" step invoking pyinstaller directly (as its first token) ` +
-        `found in any *.yml/*.yaml workflow under ${workflowsDir}`
+      `No "run:" step invoking pyinstaller (recognised forms: bare ` +
+        `"pyinstaller ...", "uv run --module PyInstaller ..." / ` +
+        `"uv run -m PyInstaller ...", or "python -m PyInstaller ..." / ` +
+        `"python3 -m PyInstaller ...") found in any *.yml/*.yaml workflow ` +
+        `under ${workflowsDir}`
     )
   }
 
@@ -302,15 +380,20 @@ export function extractUpstreamPyinstallerCommand(
 
   return {
     command: matches[0].command,
-    workingDirectory: matches[0].workingDirectory
+    workingDirectory: matches[0].workingDirectory,
+    form: matches[0].form,
+    pyinstallerArgs: matches[0].pyinstallerArgs
   }
 }
 
 // ---------------------------------------------------------------------------
-// toOnedirCommand -- swaps the ONE `--onefile` token for `--onedir` and
-// removes every `${{ ... }}` GitHub-expression token, returning each removed
-// token so the deviation from upstream's literal command is auditable rather
-// than silent (must_haves truth #4).
+// deriveOnedirInvocation / toOnedirCommand -- swap the ONE `--onefile` token
+// for `--onedir` and remove every `${{ ... }}` GitHub-expression token,
+// returning each removed token so the deviation from upstream's literal
+// command is auditable rather than silent (must_haves truth #4). Operates on
+// `pyinstallerArgs` ONLY -- the launcher tokens (`uv run --module`, `python
+// -m`, ...) never round-trip through here, so the derived `args` list can
+// never contain one (T-34.16G-01).
 // ---------------------------------------------------------------------------
 
 export interface OnedirCommandResult {
@@ -318,36 +401,63 @@ export interface OnedirCommandResult {
   droppedExpressions: string[]
 }
 
-export function toOnedirCommand(upstreamLine: string): OnedirCommandResult {
-  const onefileOccurrences = upstreamLine.match(/--onefile/g) ?? []
+export interface OnedirInvocationResult extends OnedirCommandResult {
+  args: string[]
+}
+
+export function deriveOnedirInvocation(
+  upstream: Pick<UpstreamPyinstallerCommand, 'pyinstallerArgs'>
+): OnedirInvocationResult {
+  const argsLine = upstream.pyinstallerArgs.join(' ')
+  const displayContext = `pyinstaller ${argsLine}`.trim()
+
+  const onefileOccurrences = argsLine.match(/--onefile/g) ?? []
   if (onefileOccurrences.length === 0) {
     throw new Error(
       `Upstream pyinstaller command does not contain "--onefile", refusing ` +
-        `to guess how to derive an onedir build: "${upstreamLine}"`
+        `to guess how to derive an onedir build: "${displayContext}"`
     )
   }
   if (onefileOccurrences.length > 1) {
     throw new Error(
       `Upstream pyinstaller command contains "--onefile" more than once ` +
-        `(ambiguous which to swap): "${upstreamLine}"`
+        `(ambiguous which to swap): "${displayContext}"`
     )
   }
 
-  let command = upstreamLine.replace('--onefile', '--onedir')
+  let derivedLine = argsLine.replace('--onefile', '--onedir')
 
   const droppedExpressions: string[] = []
-  command = command.replace(/\$\{\{[^}]*\}\}/g, (match) => {
+  derivedLine = derivedLine.replace(/\$\{\{[^}]*\}\}/g, (match) => {
     droppedExpressions.push(match)
     return ''
   })
-  command = command.replace(/\s{2,}/g, ' ').trim()
+  derivedLine = derivedLine.replace(/\s{2,}/g, ' ').trim()
 
-  if (!command.startsWith('pyinstaller')) {
-    throw new Error(
-      `Derived onedir command no longer starts with "pyinstaller": "${command}"`
-    )
-  }
+  const args = derivedLine.split(/\s+/).filter(Boolean)
+  const command = ['pyinstaller', ...args].join(' ')
 
+  return { command, args, droppedExpressions }
+}
+
+const INVOCATION_FORM_PREFIX_LENGTH: Record<InvocationForm, number> = {
+  bare: 1,
+  'uv-run-module': 4,
+  'python-m': 3
+}
+
+// Implemented on top of deriveOnedirInvocation's same logic so the three
+// existing call sites (this file's own tests at L70-L94, and any other
+// bare-form caller) keep working unmodified: `form` defaults to `bare`.
+export function toOnedirCommand(
+  upstreamLine: string,
+  form: InvocationForm = 'bare'
+): OnedirCommandResult {
+  const tokens = upstreamLine.split(/\s+/).filter(Boolean)
+  const pyinstallerArgs = tokens.slice(INVOCATION_FORM_PREFIX_LENGTH[form])
+  const { command, droppedExpressions } = deriveOnedirInvocation({
+    pyinstallerArgs
+  })
   return { command, droppedExpressions }
 }
 
@@ -522,9 +632,8 @@ async function installPyinstaller(repoDir: string): Promise<void> {
 async function runOnedirBuild(
   repoDir: string,
   buildCwd: string,
-  onedirCommand: string
+  onedirArgs: string[]
 ): Promise<void> {
-  const argv = onedirCommand.split(/\s+/).filter(Boolean)
   // pyinstaller itself always resolves from the venv at repoDir/.venv
   // (working-directory never moves the venv), but it must be SPAWNED with
   // buildCwd as its cwd -- upstream's own `working-directory:` step key
@@ -533,11 +642,14 @@ async function runOnedirBuild(
   // (`<cwd>/dist`), are resolved relative to that subdirectory, not the repo
   // root. Found live during this plan's real legendary build ("Script file
   // 'cli.py' does not exist" when spawned from repoDir instead).
-  argv[0] = pyinstallerPath(repoDir)
+  //
+  // `onedirArgs` is a derived argument LIST containing no launcher token
+  // (T-34.16G-01) -- the executable is always the venv's own pyinstaller
+  // binary, never chosen by upstream text.
   await runOrThrow(
     'pyinstaller --onedir build',
-    argv[0],
-    argv.slice(1),
+    pyinstallerPath(repoDir),
+    onedirArgs,
     buildCwd
   )
 }
@@ -668,11 +780,12 @@ export async function buildRunner(
   await installDependencies(repoDir)
   await installPyinstaller(repoDir)
 
-  const { command: upstreamLine, workingDirectory } =
-    extractUpstreamPyinstallerCommand(repoDir)
-  const { command, droppedExpressions } = toOnedirCommand(upstreamLine)
-  const buildCwd = workingDirectory ? join(repoDir, workingDirectory) : repoDir
-  await runOnedirBuild(repoDir, buildCwd, command)
+  const upstream = extractUpstreamPyinstallerCommand(repoDir)
+  const { command, args, droppedExpressions } = deriveOnedirInvocation(upstream)
+  const buildCwd = upstream.workingDirectory
+    ? join(repoDir, upstream.workingDirectory)
+    : repoDir
+  await runOnedirBuild(repoDir, buildCwd, args)
 
   // PyInstaller's own default --distpath is "<cwd>/dist" -- i.e. relative to
   // wherever it was SPAWNED from, not the repo root. buildCwd (which folds in
@@ -703,8 +816,8 @@ export async function buildRunner(
     runner,
     repo,
     tag,
-    upstreamLine,
-    upstreamWorkingDirectory: workingDirectory,
+    upstreamLine: upstream.command,
+    upstreamWorkingDirectory: upstream.workingDirectory,
     onedirCommand: command,
     droppedExpressions,
     python3Version,

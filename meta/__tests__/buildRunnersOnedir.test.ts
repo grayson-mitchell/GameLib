@@ -14,6 +14,7 @@ import {
   ONEDIR_RUNNERS,
   archiveName,
   buildManifestObject,
+  deriveOnedirInvocation,
   extractUpstreamPyinstallerCommand,
   formatSha256Sums,
   toOnedirCommand,
@@ -108,6 +109,97 @@ describe('buildRunnersOnedir', () => {
       expect(() =>
         toOnedirCommand('pyinstaller --onefile --onefile x.py')
       ).toThrow()
+    })
+  })
+
+  // -------------------------------------------------------------------
+  // F-34.16-D gap closure (34.16-07 Task 2): deriveOnedirInvocation is the
+  // form-aware replacement for toOnedirCommand's string-splitting -- these
+  // cases prove the module forms (uv-run-module / python-m) derive the same
+  // --onefile->--onedir swap and expression-drop as the bare form, that the
+  // --onefile refusals fire for a module form too (not just bare), and that
+  // the derived args list can NEVER contain a launcher token (T-34.16G-01).
+  // -------------------------------------------------------------------
+  describe('deriveOnedirInvocation (form-aware, launcher-token-free by construction)', () => {
+    it('uv-run-module form: swaps --onefile for --onedir, drops the GitHub expression, and the args list contains no launcher token', () => {
+      const result = deriveOnedirInvocation({
+        pyinstallerArgs: [
+          '--onefile',
+          '--name',
+          'legendary',
+          '${{',
+          'steps.strip.outputs.option',
+          '}}',
+          'cli.py'
+        ]
+      })
+      expect(result.command).toContain('--onedir')
+      expect(result.command).not.toContain('--onefile')
+      expect(result.command).not.toContain('${{')
+      expect(result.droppedExpressions).toEqual([
+        '${{ steps.strip.outputs.option }}'
+      ])
+      for (const launcherToken of [
+        'uv',
+        'run',
+        '--module',
+        '-m',
+        'PyInstaller',
+        'pyinstaller'
+      ]) {
+        expect(result.args).not.toContain(launcherToken)
+      }
+      expect(result.args[0]).toBe('--onedir')
+    })
+
+    it('python-m form: swaps --onefile for --onedir and the args list contains no launcher token', () => {
+      const result = deriveOnedirInvocation({
+        pyinstallerArgs: ['--onefile', '--name', 'legendary', 'cli.py']
+      })
+      expect(result.command).toContain('--onedir')
+      expect(result.command).not.toContain('--onefile')
+      for (const launcherToken of ['python', 'python3', '-m', 'PyInstaller']) {
+        expect(result.args).not.toContain(launcherToken)
+      }
+      expect(result.args[0]).toBe('--onedir')
+    })
+
+    it('module form: throws naming --onefile when the upstream args lack it (refusal proven beyond the bare form)', () => {
+      expect(() =>
+        deriveOnedirInvocation({
+          pyinstallerArgs: ['--name', 'legendary', 'cli.py']
+        })
+      ).toThrow(/--onefile/)
+    })
+
+    it('module form: throws when --onefile appears more than once (ambiguous, refusal proven beyond the bare form)', () => {
+      expect(() =>
+        deriveOnedirInvocation({
+          pyinstallerArgs: ['--onefile', '--onefile', 'x.py']
+        })
+      ).toThrow()
+    })
+
+    it('toOnedirCommand with form="uv-run-module" derives identically to calling deriveOnedirInvocation directly on the sliced args', () => {
+      const result = toOnedirCommand(
+        'uv run --module PyInstaller --onefile --name legendary cli.py',
+        'uv-run-module'
+      )
+      expect(result.command).toContain('--onedir')
+      expect(result.command).not.toContain('--onefile')
+      expect(result.command).not.toContain('uv')
+      expect(result.command).not.toContain('PyInstaller')
+    })
+
+    it('toOnedirCommand with form="python-m" derives identically to calling deriveOnedirInvocation directly on the sliced args', () => {
+      const result = toOnedirCommand(
+        'python -m PyInstaller --onefile --name legendary cli.py',
+        'python-m'
+      )
+      expect(result.command).toContain('--onedir')
+      expect(result.command).not.toContain('--onefile')
+      expect(result.command).not.toContain('python')
+      expect(result.command).not.toContain('PyInstaller')
     })
   })
 
