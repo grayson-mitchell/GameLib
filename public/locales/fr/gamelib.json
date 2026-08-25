@@ -1,0 +1,172 @@
+{
+    "app": {
+        "routeError": "Une erreur s'est produite : {{detail}}"
+    },
+    "consoleMode": {
+        "installNext": "Suivant",
+        "installPrevious": "Précédent",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "Impossible de démarrer cette installation",
+        "steamInstallLibraryFull": "Il n'y a pas assez d'espace libre dans votre dossier de bibliothèque Steam. Libérez de l'espace et réessayez.",
+        "steamInstallLibraryMissing": "Votre dossier de bibliothèque Steam n'est pas disponible pour le moment. Reconnectez le lecteur et réessayez."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "En pause"
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Non noté",
+        "etaPrefix": "Temps restant : {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic et HowLongToBeat n'avaient rien pour ce titre.",
+        "extraInfoEmptyTitle": "Aucune info supplémentaire trouvée",
+        "extraInfoErrorBody": "La recherche a échoué, ce qui ne signifie pas que ce jeu n'a pas de données. Réessayez.",
+        "extraInfoErrorTitle": "Impossible de charger les infos supplémentaires",
+        "extraInfoRetry": "Réessayer",
+        "extraInfoStaleBody": "Ce résultat a été mis en cache avant l'enregistrement des résultats de chargement, il peut donc être obsolète. Actualisez pour vérifier.",
+        "tabsAriaLabel": "onglets d'infos sur le jeu",
+        "wineLabel": "Wine :"
+    },
+    "humble": {
+        "lessThanAMinute": "moins d'une minute"
+    },
+    "humbleKeys": {
+        "activate": "Activer",
+        "activateConfirmBody": "Cela révèle la clé — la retirant définitivement des clés offrables — et l'active sur votre compte Steam. Il n'y a pas d'annulation possible.",
+        "activateConfirmBodyRevealed": "Cela active votre clé déjà révélée sur votre compte Steam. Il n'y a pas d'annulation possible.",
+        "activateConfirmTitle": "Activer cette clé sur Steam ?",
+        "activateDismiss": "Annuler",
+        "activateWizardTitle": "Activer cette clé",
+        "activatedDone": "Compris",
+        "activatedTitle": "Activée",
+        "activatingBody": "Révélation de votre clé et activation sur Steam — cela ne prend qu'un instant.",
+        "activatingTitle": "Activation sur Steam…"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Masqués inclus",
+            "chipHiddenOnly": "Masqués uniquement",
+            "chipNonAvailableIncluded": "Non disponibles inclus",
+            "chipNonAvailableOnly": "Non disponibles uniquement",
+            "chipNoStorePageHidden": "Masquage sans page boutique",
+            "chipNoStorePageOnly": "Sans page boutique uniquement",
+            "clearAll": "Tout effacer",
+            "collections": "Collections",
+            "emptyBody": "Aucun jeu ne correspond à {{filters}}.",
+            "emptyClearAll": "Effacer tous les filtres",
+            "emptyHeading": "Aucun jeu ne correspond à vos filtres",
+            "groupSelectedCount": "{{selected}} sélectionné(s)",
+            "manageCollections": "Gérer les collections",
+            "moreFilters": "Plus de filtres",
+            "newCollection": "+ Nouvelle collection",
+            "noStorePage": "Aucune page boutique",
+            "notYetChecked": "Pas encore vérifié",
+            "removeFilter": "Supprimer le filtre {{filterLabel}}",
+            "runnabilityGroup": "Exécutabilité",
+            "runsNatively": "S'exécute nativement",
+            "runsViaBottle": "S'exécute via une bouteille",
+            "storeGroup": "Boutique",
+            "viewAll": "Tous les jeux",
+            "viewFavourites": "Favoris",
+            "viewInstalled": "Installé",
+            "viewRecentlyPlayed": "Joués récemment",
+            "wontRun": "Ne s'exécute pas"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} sur {{total}}"
+        },
+        "noStorePage": "Aucune page boutique",
+        "no_no_store_page_games": "Aucun jeu sans page boutique dans votre bibliothèque",
+        "steamSync": {
+            "failedBody": "Vos autres bibliothèques sont toujours disponibles. Réessayez, ou vérifiez que Steam est accessible.",
+            "failedTitle": "Impossible de synchroniser votre bibliothèque Steam",
+            "retry": "Réessayer la synchronisation Steam",
+            "signedOutAction": "Se connecter à Steam",
+            "signedOutBody": "Reconnectez-vous pour synchroniser votre bibliothèque Steam. Vos autres bibliothèques sont toujours disponibles.",
+            "signedOutTitle": "Votre connexion Steam a expiré",
+            "syncing": "Synchronisation de votre bibliothèque Steam…"
+        },
+        "storeOther": "Autre"
+    },
+    "login": {
+        "connected": "Connecté",
+        "steamReconnect": "Connexion expirée — Reconnecter"
+    },
+    "pathSelectionBox": {
+        "saved": "Enregistré",
+        "unsaved": "Pas encore enregistré — appuyez sur Entrée"
+    },
+    "settings": {
+        "framelessWindowDescription": "Utiliser une fenêtre sans bordure",
+        "gamepadInitialRepeatDelay": "Délai initial de répétition de la manette",
+        "gamepadRepeatFrequency": "Fréquence de répétition de la manette",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Méthode de mise à l'échelle",
+        "gamescopeWindowType": "Type de fenêtre",
+        "wineDefaultLabel": "Wine par défaut",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Tout",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImages",
+            "apps": "Applications",
+            "executables": "Exécutables",
+            "images": "Images",
+            "otherBinaries": "Autres binaires",
+            "scripts": "Scripts"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Vérification des options d'installation…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib n'a plus reçu de réponse concernant la configuration de la bouteille Steam. Elle est peut-être encore en cours d'exécution — vérifiez la présence d'une fenêtre d'installation Steam, puis réessayez."
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib gère une seule bouteille CrossOver partagée pour Steam. Nommer une bouteille distincte par jeu n'est pas encore pris en charge.",
+            "contentLightNotice": "Ceci s'installe via le client Steam lui-même, il n'y a donc rien à choisir ici. Activez les installations Steam natives dans les Paramètres pour gérer l'emplacement d'installation et la compatibilité Windows depuis GameLib.",
+            "contentLightSingleLibraryNotice": "Il n'y a qu'une seule bibliothèque Steam sur ce système, il n'y a donc rien à choisir ici — GameLib y installera ce jeu.",
+            "forceWindowsHelp": "Ce jeu dispose d'une version native macOS, mais vous pouvez installer la version Windows à la place via une bouteille Wine — utile si la version native manque de fonctionnalités ou est moins performante.",
+            "libraryFullNotice": "Espace insuffisant dans votre bibliothèque Steam — choisissez-en une autre ci-dessous ou libérez de l'espace.",
+            "libraryFullOnlyNotice": "Espace insuffisant dans votre bibliothèque Steam. Libérez de l'espace, puis réessayez.",
+            "libraryMissingNotice": "Votre bibliothèque Steam est inaccessible — choisissez-en une autre ci-dessous.",
+            "libraryMissingOnlyNotice": "Votre bibliothèque Steam est inaccessible. Reconnectez le disque, puis réessayez.",
+            "libraryPickerLabel": "Choisir la bibliothèque Steam",
+            "libraryPrimarySuffix": "par défaut",
+            "noCrossoverEngine": "Aucune installation CrossOver trouvée. GameLib en configurera une au démarrage de l'installation.",
+            "sharedBottleNotice": "La version de wine choisie ici est utilisée pour chaque jeu Steam nécessitant une bouteille — pas seulement celui-ci. La modifier plus tard affectera aussi le fonctionnement de ces autres jeux.",
+            "withOptionsLabel": "Installer avec des options…"
+        },
+        "status": {
+            "resumeInstall": "Reprendre l'installation",
+            "resumeInstallHint": "Installation incomplète — reprenez le téléchargement dans GameLib"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Ceci supprime toutes les copies installées de ce jeu, quel que soit l'emplacement d'installation. Cette action est irréversible.",
+            "removeAllCopiesConfirmTitle": "Supprimer toutes les copies ?",
+            "removeAllCopiesLabel": "Supprimer toutes les copies…"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Cyberspace Oasis",
+        "cyberSpaceOasisAlt": "Cyberspace Oasis Classic",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Dark",
+        "highContrast": "Contraste élevé",
+        "marine": "Marine",
+        "marineClassic": "Marine Classic",
+        "midnightMirage": "Midnight Mirage",
+        "nordDark": "Nord Dark",
+        "nordLight": "Nord Light",
+        "oldSchool": "Old School GameLib",
+        "sweet": "Sucré",
+        "zombie": "Zombie",
+        "zombieClassic": "Zombie Classique"
+    }
+}
