@@ -35,12 +35,22 @@ const RUNNER_NAMES = Object.keys(
 function writeFixtureWorkflow(fixtureDir: string, record: RecordedInvocation) {
   const workflowsDir = join(fixtureDir, '.github', 'workflows')
   mkdirSync(workflowsDir, { recursive: true })
-  const lines = ['name: fixture', 'on: push', 'jobs:', '  build:', '    steps:', '      - name: Build']
+  const lines = [
+    'name: fixture',
+    'on: push',
+    'jobs:',
+    '  build:',
+    '    steps:',
+    '      - name: Build'
+  ]
   if (record.workingDirectory !== null) {
     lines.push(`        working-directory: ${record.workingDirectory}`)
   }
   lines.push(`        run: ${record.runValue}`)
-  writeFileSync(join(workflowsDir, record.workflowFile), lines.join('\n') + '\n')
+  writeFileSync(
+    join(workflowsDir, record.workflowFile),
+    lines.join('\n') + '\n'
+  )
 }
 
 describe('RECORDED_RUNNER_INVOCATIONS', () => {
