@@ -46,7 +46,8 @@ const build = spawnSync('pnpm', ['build:sidecar'], {
 if (build.status !== 0) {
   fail('pnpm build:sidecar did not exit 0', build.stderr || build.stdout)
 }
-if (!existsSync(BUNDLE)) fail(`bundle missing at ${BUNDLE} despite a successful build`)
+if (!existsSync(BUNDLE))
+  fail(`bundle missing at ${BUNDLE} despite a successful build`)
 
 // No stdin: the RPC loop sees EOF immediately and shuts down. A healthy sidecar
 // exits 0; one that dies during module evaluation exits non-zero with the

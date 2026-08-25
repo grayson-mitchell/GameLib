@@ -609,7 +609,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       expect(handlerRegistry.has('frontendReady')).toBe(false)
     })
 
-    it('calls logSendHandlerReached(\'frontendReady\') as its FIRST observable effect, then the Frontend Ready log line', async () => {
+    it("calls logSendHandlerReached('frontendReady') as its FIRST observable effect, then the Frontend Ready log line", async () => {
       const logInfoSpy = jest.spyOn(loggerModule, 'logInfo')
 
       const { input } = startSidecar()

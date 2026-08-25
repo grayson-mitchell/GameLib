@@ -687,7 +687,11 @@ describe('winetricks + runWineCommandForGame presence, correct kind, across all 
     restoreCanonicalRegistrations()
   })
 
-  it.each(['winetricksAvailable', 'winetricksInstalled', 'runWineCommandForGame'])(
+  it.each([
+    'winetricksAvailable',
+    'winetricksInstalled',
+    'runWineCommandForGame'
+  ])(
     '%s is registered as ipcMain.handle (invoke), and NOT as ipcMain.on',
     (channel) => {
       expect(handlerRegistry.has(channel)).toBe(true)
@@ -697,7 +701,9 @@ describe('winetricks + runWineCommandForGame presence, correct kind, across all 
 
   it('winetricksInstall is registered as ipcMain.on (send), and NOT as ipcMain.handle', () => {
     expect(handlerRegistry.has('winetricksInstall')).toBe(false)
-    expect((listenerRegistry.get('winetricksInstall') ?? []).length).toBeGreaterThan(0)
+    expect(
+      (listenerRegistry.get('winetricksInstall') ?? []).length
+    ).toBeGreaterThan(0)
   })
 
   afterAll(() => {
@@ -852,7 +858,15 @@ describe('24-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30) — every in-sc
 
   it("matches .planning/IPC-PORT-INVENTORY.md's two Phase-34.6 bucket lines exactly — set equality against the document itself, not a retyped copy", () => {
     const inventorySource = readFileSync(
-      join(__dirname, '..', '..', '..', '..', '.planning', 'IPC-PORT-INVENTORY.md'),
+      join(
+        __dirname,
+        '..',
+        '..',
+        '..',
+        '..',
+        '.planning',
+        'IPC-PORT-INVENTORY.md'
+      ),
       'utf-8'
     )
     const inventoryLines = inventorySource.split('\n')

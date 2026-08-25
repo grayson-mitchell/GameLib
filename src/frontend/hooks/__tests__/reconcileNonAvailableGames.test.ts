@@ -175,7 +175,7 @@ describe('isNonAvailableGame delisted-independence premise (REQ-37-02/D-15: prem
   it(
     'a delisted Steam game is NOT non-available via any independent clause ' +
       'when nonAvailableAppNames is empty — the old OR clause that made the ' +
-      "not-installed heal branch \"safe\" to drop a delisted game's list " +
+      'not-installed heal branch "safe" to drop a delisted game\'s list ' +
       'entry is gone; isNonAvailableGame is now the list membership test ' +
       'alone, so dropping the entry now DOES make the game visible again',
     () => {

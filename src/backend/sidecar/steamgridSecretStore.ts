@@ -43,7 +43,10 @@
 
 import { logInfo, logWarning, LogPrefix } from '../logger'
 import { requestRustInvoke } from './sidecarRpc'
-import { RUST_KEYRING_GET, RUST_KEYRING_SET } from 'common/types/sidecarTransport'
+import {
+  RUST_KEYRING_GET,
+  RUST_KEYRING_SET
+} from 'common/types/sidecarTransport'
 import {
   SidecarKeyringSlotStore,
   KEYRING_SLOT_STEAMGRID_API_KEY

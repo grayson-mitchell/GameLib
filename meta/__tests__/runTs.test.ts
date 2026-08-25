@@ -163,7 +163,8 @@ function extractRunnerCjsPaths(source: string): string[] {
   )
 }
 
-const WRAPPER_SCRIPT_PATTERN = /node meta\/runTs\.cjs\s+(?:\S+\s+)*meta\/(\w+)\.ts/
+const WRAPPER_SCRIPT_PATTERN =
+  /node meta\/runTs\.cjs\s+(?:\S+\s+)*meta\/(\w+)\.ts/
 
 function loadWrapperEntryFiles(): string[] {
   const scripts = loadScripts()

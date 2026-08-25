@@ -124,8 +124,7 @@ export class UnsafeInstalldirError extends Error {}
  * The old positive character-class whitelist this replaces excluded both of
  * these plus ordinary punctuation like the apostrophe — REQ-37-06's defect.
  */
-const INSTALLDIR_DENYLIST =
-  /[/\\]|\.\.|^\.|\.$|[\x00-\x1F\x7F]|:|"/ // eslint-disable-line no-control-regex
+const INSTALLDIR_DENYLIST = /[/\\]|\.\.|^\.|\.$|[\x00-\x1F\x7F]|:|"/ // eslint-disable-line no-control-regex
 
 /**
  * Sanitizes a PICS/ACF-sourced installdir (T-21-01, D-02/D-03/D-04).

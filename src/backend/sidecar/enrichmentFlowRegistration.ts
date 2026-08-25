@@ -239,12 +239,14 @@ export function registerEnrichmentFlows(): void {
     removeRecentGame(args[0] as string)
   )
 
-  ipcMain.handle('getGogDiscounts', async (_event: unknown, ...args: unknown[]) =>
-    getGogDiscounts(
-      args[0] as CatalogLocaleSettings,
-      args[1] as boolean | undefined,
-      args[2] as boolean | undefined
-    )
+  ipcMain.handle(
+    'getGogDiscounts',
+    async (_event: unknown, ...args: unknown[]) =>
+      getGogDiscounts(
+        args[0] as CatalogLocaleSettings,
+        args[1] as boolean | undefined,
+        args[2] as boolean | undefined
+      )
   )
 
   // ── steamgriddb.* (5) — Amendment A-03: every read/write below goes

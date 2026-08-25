@@ -3033,7 +3033,7 @@ describe('classifyDepotError', () => {
     }
   })
 
-  it('37-02 Task 2 (a): a ChunkDecodeError-shaped exhaustion (message text IS fetchChunk\'s generic wrapper) classifies as decodeFailed, NOT connectionDropped', () => {
+  it("37-02 Task 2 (a): a ChunkDecodeError-shaped exhaustion (message text IS fetchChunk's generic wrapper) classifies as decodeFailed, NOT connectionDropped", () => {
     const err = new Error(
       'chunk abc123 failed after 5 attempts: bad footer magic'
     ) as Error & { code?: string }

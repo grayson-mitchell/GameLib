@@ -350,7 +350,7 @@ describe('meta/runTs.cjs signal forwarding (C4-01/C4-02/C4-04)', () => {
     const probeSource = source.replace(
       MARKER,
       MARKER +
-        "\n  { const _busyUntil = Date.now() + 800; while (Date.now() < _busyUntil) { /* T8 probe: widen post-mkdtempSync window */ } }"
+        '\n  { const _busyUntil = Date.now() + 800; while (Date.now() < _busyUntil) { /* T8 probe: widen post-mkdtempSync window */ } }'
     )
     writeFileSync(PROBE_PATH, probeSource)
     // Must parse before we spawn it.

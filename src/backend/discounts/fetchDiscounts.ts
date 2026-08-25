@@ -181,7 +181,12 @@ export async function getGogDiscounts(
       `No discounts for ${locale.countryCode}/${locale.currencyCode}, retrying with US/USD`,
       LogPrefix.Backend
     )
-    return await fetchAllDiscounts(FALLBACK_LOCALE, hideOwned, wishlistOnly, token)
+    return await fetchAllDiscounts(
+      FALLBACK_LOCALE,
+      hideOwned,
+      wishlistOnly,
+      token
+    )
   } catch (err) {
     logError(`Failed to fetch GOG discounts: ${String(err)}`, LogPrefix.Backend)
     throw err

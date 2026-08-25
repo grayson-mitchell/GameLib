@@ -589,7 +589,8 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
         })
         // Same registry for both, or the module-scope `logSink` singleton `init()`
         // writes would not be the one the guard reads.
-        installGuard = require('../processGuards').installUnhandledRejectionGuard
+        installGuard =
+          require('../processGuards').installUnhandledRejectionGuard
         init = require('../bootstrap').init
         logWarningSpy = jest.spyOn(require('backend/logger'), 'logWarning')
         /* eslint-enable @typescript-eslint/no-require-imports */
@@ -669,8 +670,15 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       // module raw and leaves the sink at its module-scope default of null.
       let installGuard!: (target?: NodeJS.EventEmitter) => void
       jest.isolateModules(() => {
-        /* eslint-disable-next-line @typescript-eslint/no-require-imports */
-        installGuard = require('../processGuards').installUnhandledRejectionGuard
+        /* A BLOCK disable, not disable-next-line: prettier reflowed this
+         * assignment across two lines, which moved the `require` off the line
+         * the old `disable-next-line` covered and silently un-suppressed it.
+         * A line-scoped suppression is only as stable as the formatter's line
+         * breaks; the block form survives reflow. */
+        /* eslint-disable @typescript-eslint/no-require-imports */
+        installGuard =
+          require('../processGuards').installUnhandledRejectionGuard
+        /* eslint-enable @typescript-eslint/no-require-imports */
       })
 
       const stderrWriteSpy = jest
@@ -845,7 +853,10 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       // undefined and the sidecar dies before writing READY. Jest cannot observe that
       // (all 176 backend suites stayed green through it) -- this source gate and
       // `pnpm smoke:sidecar` are the two checks that can.
-      const source = readFileSync(join(__dirname, '../processGuards.ts'), 'utf-8')
+      const source = readFileSync(
+        join(__dirname, '../processGuards.ts'),
+        'utf-8'
+      )
       const stripped = stripComments(source)
 
       expect(stripped).not.toMatch(/^\s*import\s/m)
@@ -902,22 +913,24 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       expect(jest.isMockFunction(stashedLoggerModule!.logWarning)).toBe(false)
     })
 
-
-
     it('WR-04 no module-scope floating promise exists in the sidecar graph (why the gap is not observable)', () => {
       // The reason WR-04 was never observable: nothing can REJECT in the
       // uncovered window, because nothing creates a promise at module scope.
       // That is an unenforced invariant holding the finding harmless, so it is
       // pinned here -- the day someone writes `void somethingAsync()` at module
       // scope, the window goes live silently and this goes red instead.
-      const roots = [resolve(__dirname, '../..'), resolve(__dirname, '../../../sidecar')]
+      const roots = [
+        resolve(__dirname, '../..'),
+        resolve(__dirname, '../../../sidecar')
+      ]
       const offenders: string[] = []
 
       const walk = (dir: string): void => {
         for (const entry of readdirSync(dir, { withFileTypes: true })) {
           const full = join(dir, entry.name)
           if (entry.isDirectory()) {
-            if (entry.name === '__tests__' || entry.name === 'node_modules') continue
+            if (entry.name === '__tests__' || entry.name === 'node_modules')
+              continue
             walk(full)
             continue
           }
@@ -926,7 +939,11 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
           for (const line of stripped.split('\n')) {
             // Column 0 only: a top-level statement. An indented `void x()` is
             // inside a function and runs when called, not at import.
-            if (/^(void |Promise\.(all|resolve|reject)\(|[\w$.]+\.then\()/.test(line)) {
+            if (
+              /^(void |Promise\.(all|resolve|reject)\(|[\w$.]+\.then\()/.test(
+                line
+              )
+            ) {
               offenders.push(`${full}: ${line.trim().slice(0, 80)}`)
             }
           }

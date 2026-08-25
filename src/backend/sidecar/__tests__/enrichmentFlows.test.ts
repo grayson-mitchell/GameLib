@@ -1106,10 +1106,18 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     it('REQ-34.6-04 steamgriddb.getGrids and steamgriddb.getHeroes each return their own mapped results when a key is stored', async () => {
       mockSecretStoreGetApiKey.mockResolvedValue('a-seeded-test-value')
       mockSteamGridGetGrids.mockResolvedValueOnce([
-        { id: 10, url: 'https://example/grid.png', thumb: 'https://example/grid-thumb.png' }
+        {
+          id: 10,
+          url: 'https://example/grid.png',
+          thumb: 'https://example/grid-thumb.png'
+        }
       ])
       mockSteamGridGetHeroes.mockResolvedValueOnce([
-        { id: 20, url: 'https://example/hero.png', thumb: 'https://example/hero-thumb.png' }
+        {
+          id: 20,
+          url: 'https://example/hero.png',
+          thumb: 'https://example/hero-thumb.png'
+        }
       ])
 
       const { input, frames } = startSidecar()
@@ -1126,14 +1134,22 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         { gameId: 123, dimensions: ['600x900'], styles: ['alternate'] }
       )
       expect(findResponse(frames, 'sgdb-grids-1')?.result).toEqual([
-        { id: 10, url: 'https://example/grid.png', thumb: 'https://example/grid-thumb.png' }
+        {
+          id: 10,
+          url: 'https://example/grid.png',
+          thumb: 'https://example/grid-thumb.png'
+        }
       ])
       expect(mockSteamGridGetHeroes).toHaveBeenCalledWith(
         'a-seeded-test-value',
         { gameId: 123, dimensions: undefined, styles: undefined }
       )
       expect(findResponse(frames, 'sgdb-heroes-1')?.result).toEqual([
-        { id: 20, url: 'https://example/hero.png', thumb: 'https://example/hero-thumb.png' }
+        {
+          id: 20,
+          url: 'https://example/hero.png',
+          thumb: 'https://example/hero-thumb.png'
+        }
       ])
     })
 
@@ -1170,9 +1186,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       )
 
       const { input, frames } = startSidecar()
-      writeInvoke(input, 'sgdb-search-err', 'steamgriddb.searchGame', [
-        'query'
-      ])
+      writeInvoke(input, 'sgdb-search-err', 'steamgriddb.searchGame', ['query'])
       await flush()
 
       expect(findResponse(frames, 'sgdb-search-err')?.ok).toBe(false)

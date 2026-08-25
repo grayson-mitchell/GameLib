@@ -369,13 +369,13 @@ describe('sanitizeInstalldir — REQ-37-06: containment, not character class', (
   // ── ACCEPT — apostrophes and ordinary filename punctuation pass unchanged
   //    (D-02: the defect this plan fixes). ──────────────────────────────────
 
-  it("D-02: accepts \"Sid Meier's Civilization V\" unchanged — the live specimen, appId 8930", () => {
+  it('D-02: accepts "Sid Meier\'s Civilization V" unchanged — the live specimen, appId 8930', () => {
     expect(
       sanitizeInstalldir("Sid Meier's Civilization V", '8930', STEAMAPPS_DIR)
     ).toBe("Sid Meier's Civilization V")
   })
 
-  it("D-02: accepts \"Len's Island\" unchanged — the ACF-measured specimen, currently installed via Steam", () => {
+  it('D-02: accepts "Len\'s Island" unchanged — the ACF-measured specimen, currently installed via Steam', () => {
     expect(sanitizeInstalldir("Len's Island", '12345', STEAMAPPS_DIR)).toBe(
       "Len's Island"
     )
@@ -410,12 +410,12 @@ describe('sanitizeInstalldir — REQ-37-06: containment, not character class', (
   })
 
   it('throws for a forward-slash separator candidate ("foo/bar")', () => {
-    expect(() =>
-      sanitizeInstalldir('foo/bar', '12345', STEAMAPPS_DIR)
-    ).toThrow(UnsafeInstalldirError)
-    expect(() =>
-      sanitizeInstalldir('foo/bar', '12345', STEAMAPPS_DIR)
-    ).toThrow(/foo\/bar/)
+    expect(() => sanitizeInstalldir('foo/bar', '12345', STEAMAPPS_DIR)).toThrow(
+      UnsafeInstalldirError
+    )
+    expect(() => sanitizeInstalldir('foo/bar', '12345', STEAMAPPS_DIR)).toThrow(
+      /foo\/bar/
+    )
   })
 
   it('throws for a backslash separator candidate ("foo\\\\bar")', () => {
@@ -431,9 +431,9 @@ describe('sanitizeInstalldir — REQ-37-06: containment, not character class', (
   })
 
   it('throws for a leading-dot candidate (".hidden")', () => {
-    expect(() =>
-      sanitizeInstalldir('.hidden', '12345', STEAMAPPS_DIR)
-    ).toThrow(UnsafeInstalldirError)
+    expect(() => sanitizeInstalldir('.hidden', '12345', STEAMAPPS_DIR)).toThrow(
+      UnsafeInstalldirError
+    )
   })
 
   it('throws for a trailing-dot candidate ("trailing.")', () => {
@@ -532,10 +532,7 @@ describe('classifyDepotError reachability — UnsafeInstalldirError (D-04, T-37-
  * actually fails against the exact shipped-defect shape.
  */
 describe('37-REVIEW C-01: games.ts classifies UnsafeInstalldirError itself', () => {
-  const gamesSource = readFileSync(
-    join(__dirname, '..', 'games.ts'),
-    'utf8'
-  )
+  const gamesSource = readFileSync(join(__dirname, '..', 'games.ts'), 'utf8')
 
   /** The `if (err instanceof UnsafeInstalldirError) { ... }` block. */
   const handler = (() => {

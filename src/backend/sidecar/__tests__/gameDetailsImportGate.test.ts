@@ -46,7 +46,6 @@ function normaliseLineEndings(text: string): string {
   return text.replace(/\r\n/g, '\n')
 }
 
-
 // Comment-stripping now delegates to the shared
 // `backend/testUtils/stripSourceComments` util (strips block comments first,
 // then the line-prefix filter), imported above as `stripComments`.

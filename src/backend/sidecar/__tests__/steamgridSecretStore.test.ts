@@ -178,7 +178,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
 
   // ── setApiKey() ──────────────────────────────────────────────────────────
   describe('setApiKey()', () => {
-    it("sends keyring_set with the value and the steamgrid-api-key slot", async () => {
+    it('sends keyring_set with the value and the steamgrid-api-key slot', async () => {
       programChannel('keyring_set', { type: 'resolve', value: true })
       const store = new SidecarSteamGridDbSecretStore()
 
@@ -215,9 +215,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
         SidecarSteamGridDbSecretStore
       )
       const receiptCalls = mockLogInfo.mock.calls.filter((call) =>
-        String(call[0]).includes(
-          '[bootstrap] steamgrid secret store: keyring'
-        )
+        String(call[0]).includes('[bootstrap] steamgrid secret store: keyring')
       )
       expect(receiptCalls).toHaveLength(1)
     })
@@ -330,7 +328,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
 
   // ── A-03 hazard assertions (this plan's own correctness requirements, not generic coverage) ──
   describe('A-03 hazard assertions', () => {
-    it('[never-writes-config] setApiKey never writes GlobalConfig\'s steamGridDbApiKey setting', async () => {
+    it("[never-writes-config] setApiKey never writes GlobalConfig's steamGridDbApiKey setting", async () => {
       programChannel('keyring_set', { type: 'resolve', value: true })
       const store = new SidecarSteamGridDbSecretStore()
 
@@ -368,10 +366,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
       expect(callLog).toEqual([
         {
           channel: 'keyring_set',
-          args: [
-            'the-real-decrypted-plaintext',
-            KEYRING_SLOT_STEAMGRID_API_KEY
-          ]
+          args: ['the-real-decrypted-plaintext', KEYRING_SLOT_STEAMGRID_API_KEY]
         },
         { channel: 'keyring_get', args: [KEYRING_SLOT_STEAMGRID_API_KEY] }
       ])

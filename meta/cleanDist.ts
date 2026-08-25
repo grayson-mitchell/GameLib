@@ -123,7 +123,9 @@ export function distArtifactEntries(
   platform: Platform
 ): string[] {
   return readDistEntries(distDir)
-    .filter((entry) => isPlatformArtifact(entry.name, entry.isDirectory(), platform))
+    .filter((entry) =>
+      isPlatformArtifact(entry.name, entry.isDirectory(), platform)
+    )
     .map((entry) => entry.name)
     .sort()
 }

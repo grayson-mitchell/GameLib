@@ -29,7 +29,8 @@ import {
 // compile time, so it does NOT reintroduce the downloadmanager/utils.ts <->
 // storeManagers/index.ts circular dependency the runtime `await import(...)`
 // calls in installQueueElement/updateQueueElement exist to break.
-type LibraryManagerMap = typeof import('backend/storeManagers').libraryManagerMap
+type LibraryManagerMap =
+  typeof import('backend/storeManagers').libraryManagerMap
 
 /**
  * 2026-08-22 (D-09, REQ-37-03): `SteamGame`'s game-info getter

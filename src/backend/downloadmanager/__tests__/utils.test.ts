@@ -722,9 +722,7 @@ describe('installQueueElement — orphaned-depot abort: a terminal install failu
     expect(result.status).toBe('error')
     expect(callAbortController).not.toHaveBeenCalled()
     expect(logWarning).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'No in-flight download to abort for 1091500'
-      ),
+      expect.stringContaining('No in-flight download to abort for 1091500'),
       LogPrefix.DownloadManager
     )
     expect(stopMock).toHaveBeenCalledWith(false)
@@ -817,7 +815,7 @@ describe('installQueueElement — REQ-37-03: the install-failure dialog always n
     expect(dialogArg.message).not.toContain('1091500')
   })
 
-  it('scope pin: the existing `error` fallback (\'Unknown error\') is unchanged by this fix', async () => {
+  it("scope pin: the existing `error` fallback ('Unknown error') is unchanged by this fix", async () => {
     getGameInfoMock.mockReturnValue({ title: 'Test Game' })
     installMock.mockResolvedValue({ status: 'error' })
 
@@ -874,7 +872,7 @@ describe('installQueueElement — REQ-37-04: no spurious abort-controller-miss E
     )
   })
 
-  it('case 2 (the user-cancel pin, CONTEXT.md\'s recorded first check being discharged): when a controller IS registered for the appName, callAbortController still aborts it and no miss is ever logged — true both before and after Task 2\'s fix', async () => {
+  it("case 2 (the user-cancel pin, CONTEXT.md's recorded first check being discharged): when a controller IS registered for the appName, callAbortController still aborts it and no miss is ever logged — true both before and after Task 2's fix", async () => {
     registerFakeAbortController('1091500')
     installMock.mockResolvedValue({ status: 'error', error: 'boom' })
 
@@ -886,12 +884,14 @@ describe('installQueueElement — REQ-37-04: no spurious abort-controller-miss E
     expect(loggedAbortControllerMiss()).toBe(false)
   })
 
-  it('case 2b (ordering pin): downloadqueue.ts\'s stopCurrentDownload() calls callAbortController(appName) then .stop(false) synchronously, with no `await` between them — the reason a user Cancel already finds the controller registered and is unaffected by this plan', () => {
+  it("case 2b (ordering pin): downloadqueue.ts's stopCurrentDownload() calls callAbortController(appName) then .stop(false) synchronously, with no `await` between them — the reason a user Cancel already finds the controller registered and is unaffected by this plan", () => {
     const source = readFileSync(
       join(__dirname, '..', 'downloadqueue.ts'),
       'utf-8'
     )
-    const fnMatch = source.match(/function stopCurrentDownload\(\) {([\s\S]*?)\n}/)
+    const fnMatch = source.match(
+      /function stopCurrentDownload\(\) {([\s\S]*?)\n}/
+    )
     expect(fnMatch).not.toBeNull()
 
     const body = fnMatch![1]

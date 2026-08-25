@@ -94,7 +94,9 @@ describe('connectedStores and makeLibrary gate every store identically (T-34.11-
     // Without this, deleting `connectedStores` outright would turn the parity
     // assertion below green: `[].filter(...)` is `[]`. Non-vacuity first.
     expect(
-      Object.keys(panel).filter((store) => !UNGATED_STORES.has(store)).sort()
+      Object.keys(panel)
+        .filter((store) => !UNGATED_STORES.has(store))
+        .sort()
     ).toEqual(['gog', 'legendary', 'nile', 'steam', 'zoom'])
     expect(Object.keys(library).sort()).toEqual([
       'gog',

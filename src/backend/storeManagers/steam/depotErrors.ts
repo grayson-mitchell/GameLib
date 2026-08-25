@@ -180,10 +180,7 @@ export function classifyDepotError(err: unknown): ClassifiedDepotError {
   if (/ENOSPC/i.test(text)) {
     return {
       key: 'steam.download.error.diskFull',
-      message: i18next.t(
-        'steam.download.error.diskFull',
-        'Out of disk space.'
-      ),
+      message: i18next.t('steam.download.error.diskFull', 'Out of disk space.'),
       action: 'none'
     }
   }

@@ -134,10 +134,7 @@ import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
 // `moveInstall`/`importGame` is derived from GlobalConfig's own
 // `defaultInstallPath` setting -- never a renderer-supplied root.
 import { GlobalConfig } from '../config'
-import {
-  assertContainedPath,
-  PathContainmentError
-} from './rendererPathGuard'
+import { assertContainedPath, PathContainmentError } from './rendererPathGuard'
 import { logError, logInfo, LogPrefix } from '../logger'
 import i18next from 'i18next'
 import type {

@@ -121,7 +121,8 @@ export class ElectronSteamGridDbSecretStore implements SteamGridDbSecretStore {
 
 // ── Registry — swappable per build, no env-var escape hatch ─────────────────
 
-let activeSecretStore: SteamGridDbSecretStore = new ElectronSteamGridDbSecretStore()
+let activeSecretStore: SteamGridDbSecretStore =
+  new ElectronSteamGridDbSecretStore()
 
 /**
  * Installs a different SteamGridDbSecretStore implementation. Only ever called explicitly by a

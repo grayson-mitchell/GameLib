@@ -54,9 +54,9 @@ describe('assertContainedPath (T-34.5-C6-49-03 containment primitive)', () => {
     })
 
     it('rejects an absolute path pointing entirely outside the root', () => {
-      expect(() =>
-        assertContainedPath(root, '/etc/passwd', 'test')
-      ).toThrow(PathContainmentError)
+      expect(() => assertContainedPath(root, '/etc/passwd', 'test')).toThrow(
+        PathContainmentError
+      )
     })
 
     it('rejects a sibling directory that shares a STRING PREFIX with the root but is not actually contained (proves containment uses relative(), not a bare startsWith(root) string check)', () => {
@@ -71,9 +71,9 @@ describe('assertContainedPath (T-34.5-C6-49-03 containment primitive)', () => {
 
     it('rejects when the escaping candidate is itself absolute, proving path.resolve()\'s "absolute-argument-discards-root" behavior does not bypass containment', () => {
       const outsideAbsolute = resolve('/home/user/Games-evil/save.dat')
-      expect(() =>
-        assertContainedPath(root, outsideAbsolute, 'test')
-      ).toThrow(PathContainmentError)
+      expect(() => assertContainedPath(root, outsideAbsolute, 'test')).toThrow(
+        PathContainmentError
+      )
     })
 
     it('error message names the context label passed by the caller, so moveInstall/importGame/runWineCommandForGame rejections are distinguishable in logs', () => {
@@ -96,11 +96,7 @@ describe('assertContainedPath (T-34.5-C6-49-03 containment primitive)', () => {
 
     it('allows a path containing an apostrophe -- "Sid Meier\'s Civilization V" must never be rejected by a character check (REQ-37-06)', () => {
       expect(() =>
-        assertContainedPath(
-          root,
-          "Sid Meier's Civilization V/save.dat",
-          'test'
-        )
+        assertContainedPath(root, "Sid Meier's Civilization V/save.dat", 'test')
       ).not.toThrow()
     })
 
@@ -150,9 +146,9 @@ describe('assertCommandParts (runWineCommandForGame shape guard)', () => {
     })
 
     it('rejects an array containing a non-string element (e.g. an object), which would otherwise reach spawn() as "[object Object]"', () => {
-      expect(() =>
-        assertCommandParts(['notepad.exe', { evil: true }])
-      ).toThrow(CommandShapeError)
+      expect(() => assertCommandParts(['notepad.exe', { evil: true }])).toThrow(
+        CommandShapeError
+      )
     })
 
     it('rejects null', () => {

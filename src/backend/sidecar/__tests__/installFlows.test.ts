@@ -575,9 +575,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     await flush()
 
     const loggedSomethingContainingPath = logErrorSpy.mock.calls.some((call) =>
-      call.some(
-        (arg) => typeof arg === 'string' && arg.includes(escapingPath)
-      )
+      call.some((arg) => typeof arg === 'string' && arg.includes(escapingPath))
     )
     expect(loggedSomethingContainingPath).toBe(false)
     logErrorSpy.mockRestore()

@@ -159,7 +159,9 @@ describe('curated-import guard — no ipc_handler import, and no deferred/foreig
     // D-11: `winetricksInstall` stays send-kind — present in listenerRegistry, ABSENT from
     // handlerRegistry. Converting it to invoke would smuggle a behaviour change into a port.
     expect(handlerRegistry.has('winetricksInstall')).toBe(false)
-    expect((listenerRegistry.get('winetricksInstall') ?? []).length).toBeGreaterThan(0)
+    expect(
+      (listenerRegistry.get('winetricksInstall') ?? []).length
+    ).toBeGreaterThan(0)
   })
 })
 
@@ -458,9 +460,9 @@ describe('runWineCommandForGame hardening — shape guard + pass-through (T-34.5
     expect(forwardedAppName).toBe('test-app')
     // Identity, not just deep-equality -- proves the handler forwards the SAME array rather
     // than reshaping it before delegating.
-    expect(
-      (forwardedOptions as { commandParts: string[] }).commandParts
-    ).toBe(legitimateCommandParts)
+    expect((forwardedOptions as { commandParts: string[] }).commandParts).toBe(
+      legitimateCommandParts
+    )
   })
 })
 

@@ -96,7 +96,8 @@ describe('steamgrid/secretStore', () => {
 
   describe('mock wiring sanity', () => {
     it('a value seeded directly into backingSettings is read back through the mocked GlobalConfig', async () => {
-      backingSettings.steamGridDbApiKey = 'sgdb:v1:' + Buffer.from('seeded').toString('base64')
+      backingSettings.steamGridDbApiKey =
+        'sgdb:v1:' + Buffer.from('seeded').toString('base64')
       const store = new ElectronSteamGridDbSecretStore()
 
       const value = await store.getApiKey()
