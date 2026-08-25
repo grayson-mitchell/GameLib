@@ -127,6 +127,19 @@ export function archiveName(runner: string, arch: string): string {
 // non-block-scalar) YAML scalar folded across several MORE-INDENTED physical
 // lines, e.g.:
 //
+// PROVENANCE (settled by 34.16-PIN-ARCHAEOLOGY.md, PIN RESOLVED): "this
+// plan" above is 34.9's plan 03 (2026-08-07), and its legendary clone was
+// against `Heroic-Games-Launcher/legendary@0.20.43` -- the repo/tag then
+// pinned. Commit `0034ad265` (2026-08-22) changed legendary's pinned
+// REPOSITORY, not merely its version -- its own message: "legendary moved
+// to legendary-gl/legendary" -- so the run-value-folding validation below
+// remains true of what it actually tested, but does NOT carry over to the
+// currently pinned `legendary-gl/legendary@0.21.0`, which is a different
+// project, not just a newer tag. That gap between "validated once" and "the
+// pin can move under it" is exactly what produced F-34.16-D. Live provenance
+// for the CURRENT pin's build behaviour is carried by
+// meta/runnerBuildInvocations.ts, not by this historical note.
+//
 //   - name: Build
 //     run: pyinstaller
 //       --onefile
@@ -367,6 +380,17 @@ export function extractUpstreamPyinstallerCommand(
   // command, just declared twice. Only throw when the DISTINCT (command,
   // workingDirectory) pairs number more than one; the error message still
   // names every matching file for auditability.
+  //
+  // PROVENANCE (34.16-PIN-ARCHAEOLOGY.md): this duplicate-file shape was
+  // observed against `Heroic-Games-Launcher/legendary@0.20.43`'s python.yml
+  // + release.yml, the repo/tag pinned at the time. The CURRENTLY pinned
+  // `legendary-gl/legendary@0.21.0` does NOT currently exercise this path --
+  // its captured build-base.yml/python.yml/lint-ruff.yml/release.yml fixture
+  // set (meta/__tests__/fixtures/upstream-workflows/legendary-0.21.0/) has
+  // exactly one pyinstaller invocation, in build-base.yml only. The
+  // defensive de-duplication below remains correct and is kept for the next
+  // upstream shape that reintroduces it, but it is not proof this project's
+  // current pin needs it.
   const distinctPairs = new Set(
     matches.map((m) => JSON.stringify([m.command, m.workingDirectory ?? null]))
   )
@@ -641,7 +665,13 @@ async function runOnedirBuild(
   // `../assets/...` arguments, and PyInstaller's own default --distpath
   // (`<cwd>/dist`), are resolved relative to that subdirectory, not the repo
   // root. Found live during this plan's real legendary build ("Script file
-  // 'cli.py' does not exist" when spawned from repoDir instead).
+  // 'cli.py' does not exist" when spawned from repoDir instead), against
+  // `Heroic-Games-Launcher/legendary@0.20.43` (34.16-PIN-ARCHAEOLOGY.md).
+  // The `working-directory: legendary` sibling key this fix depends on is
+  // still present in the CURRENTLY pinned `legendary-gl/legendary@0.21.0`'s
+  // build-base.yml (line 44 of the captured fixture), so this fix's
+  // applicability is re-confirmed for the current pin, not merely inherited
+  // from the repo it was found against.
   //
   // `onedirArgs` is a derived argument LIST containing no launcher token
   // (T-34.16G-01) -- the executable is always the venv's own pyinstaller
