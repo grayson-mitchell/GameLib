@@ -58,16 +58,22 @@
  *     leaving it unported would degrade every Tauri Steam install to the
  *     delegated path. The minimum-read-gate conclusion stands.
  *   - `moveInstall` -> ported byte-equivalently from `main.ts:1112-1158`
- *     (Phase 34.6 Plan 06, D-02), now hardened by plan 34.6-11
- *     (REQ-34.6-05): the renderer-supplied `path` must resolve inside
- *     `GlobalConfig`'s own `defaultInstallPath` (never a renderer-supplied
- *     root) via `rendererPathGuard.assertContainedPath`, discharging
- *     `T-34.5-C6-49-03` for this channel. See the inline comment at its
- *     registration below.
+ *     (Phase 34.6 Plan 06, D-02). Plan 34.6-11 (REQ-34.6-05) originally
+ *     hardened it by containing the renderer-supplied `path` against
+ *     `GlobalConfig`'s own `defaultInstallPath` — gap plan 34.6-18 REMOVED
+ *     that containment after `34.6-VERIFICATION.md` CR-01 found it rejected
+ *     the cross-drive move the feature exists to perform. `T-34.5-C6-49-03`
+ *     is now RE-DISPOSITIONED — bounded by the OS-native directory picker
+ *     plus a shape check, not discharged — and the live control is
+ *     `rendererPathGuard.assertPlausibleAbsolutePath`. See the inline
+ *     comment at its registration below.
  *   - `importGame` -> ported byte-equivalently from `main.ts:1160-1245`
- *     (Phase 34.6 Plan 06, D-02), same 34.6-11 hardening for its
- *     renderer-supplied `path`. `winePrefix`/`wineVersion` are NOT contained
- *     by this plan — see 34.6-11-SUMMARY.md's residuals.
+ *     (Phase 34.6 Plan 06, D-02), same re-dispositioning as `moveInstall`
+ *     above for its renderer-supplied `path`: `defaultInstallPath`
+ *     containment REMOVED by gap plan 34.6-18, replaced by
+ *     `rendererPathGuard.assertPlausibleAbsolutePath`.
+ *     `winePrefix`/`wineVersion` are NOT contained by this plan — see
+ *     34.6-11-SUMMARY.md's residuals.
  *
  * `uninstallGameCallback`/`checkGameUpdates`/`addToQueue` all "genuinely span
  * multiple store managers" (checklist step 2's own curated-import carve-out)
@@ -130,11 +136,17 @@ import {
   writeConfig
 } from '../utils'
 import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
-// Plan 34.6-11 (REQ-34.6-05, T-34.5-C6-49-03): the containment root for
-// `moveInstall`/`importGame` is derived from GlobalConfig's own
-// `defaultInstallPath` setting -- never a renderer-supplied root.
-import { GlobalConfig } from '../config'
-import { assertContainedPath, PathContainmentError } from './rendererPathGuard'
+// Gap plan 34.6-18 (REQ-34.6-05, T-34.5-C6-49-03, 34.6-VERIFICATION.md
+// CR-01): `moveInstall`/`importGame` validate their renderer-supplied `path`
+// with `assertPlausibleAbsolutePath` -- shape/plausibility only, no
+// containment root. Plan 34.6-11's `defaultInstallPath` containment is
+// REMOVED: it was circular against the T-34.5-C6-49-03 adversary (the root
+// is renderer-writable via `setSetting`) and it rejected the cross-drive
+// move / out-of-tree import each feature exists to perform.
+import {
+  assertPlausibleAbsolutePath,
+  PathShapeError
+} from './rendererPathGuard'
 import { logError, logInfo, LogPrefix } from '../logger'
 import i18next from 'i18next'
 import type {
@@ -241,35 +253,47 @@ export function registerInstallFlows(): void {
     isSteamNativeInstallEnabled() ? listSteamLibraryTargets() : []
   )
 
-  // T-34.5-C6-49-03 (Tampering, mitigate — HARDENED, Phase 34.6 Plan 11, REQ-34.6-05): `path` is
-  // renderer-supplied and reaches a real filesystem move. It is contained via
-  // `rendererPathGuard.assertContainedPath` against `GlobalConfig`'s own `defaultInstallPath`
-  // setting (never a renderer-supplied root) as the FIRST statement of this handler, before any
-  // status update or filesystem call. `assertContainedPath` is used purely as a GATE here — a
-  // legitimate `path` is passed downstream UNCHANGED (never the guard's resolved return value), so
-  // byte-equivalence holds for every input that was already valid before this hardening landed. On
-  // rejection: the terminal `done` status is still emitted (so the renderer never wedges on
-  // `moving`, T-34.6-31) and the named `PathContainmentError` is then rethrown to the invoke
-  // caller — never silently substituted with a fallback path (REQ-37-06's split). The logged
-  // message deliberately never includes the rejected path itself (T-34.6-32 — this is a public
-  // fork whose users paste logs). Residual: the root is the user's OWN configured default install
-  // location, so reconfiguring that setting widens the containment boundary by design (see
-  // 34.6-11-SUMMARY.md).
+  // T-34.5-C6-49-03 (Tampering, mitigate — RE-DISPOSITIONED, gap plan 34.6-18,
+  // REQ-34.6-05, 34.6-VERIFICATION.md CR-01): `path` is renderer-supplied and
+  // reaches a real filesystem move. Mitigation is now picker-bounded +
+  // shape-validated: in normal operation `path` originates from an OS-native
+  // directory picker (`window.api.openDialog({ properties: ['openDirectory'] })`
+  // in `GameSubMenu/index.tsx`'s `onMoveInstallYesClick`) -- the user's own
+  // selection is the grant -- and at this boundary
+  // `rendererPathGuard.assertPlausibleAbsolutePath` rejects a non-string,
+  // empty/whitespace, NUL-bearing, relative, or `..`-segment-bearing value
+  // as the FIRST statement of this handler, before any status update or
+  // filesystem call. Plan 34.6-11's PRIOR mitigation -- containment against
+  // `GlobalConfig`'s `defaultInstallPath` -- was REMOVED because it was
+  // circular against the adversary this threat names (`defaultInstallPath`
+  // is renderer-writable via `setSetting`, `settingsFlowRegistration.ts:160`
+  // -- a renderer that can call `moveInstall` could first widen its own root
+  // via `setSetting` and then move anywhere) AND because it rejected the
+  // cross-drive move this feature exists to perform (`34.6-VERIFICATION.md`
+  // CR-01). Surviving sub-contracts, UNCHANGED: the validator is a GATE -- a
+  // legitimate `path` is passed downstream UNCHANGED (never a resolved/
+  // rewritten variant), so byte-equivalence holds; on rejection the terminal
+  // `done` status is still emitted (so the renderer never wedges on `moving`,
+  // T-34.6-31) and the named `PathShapeError` is then rethrown to the invoke
+  // caller -- never silently substituted with a fallback path (REQ-37-06's
+  // split); the logged message deliberately never includes the rejected path
+  // itself (T-34.6-32 -- this is a public fork whose users paste logs).
+  // ACCEPTED RESIDUAL (T-34.5-C6-49-03-R, declared): a compromised renderer
+  // can still call this channel directly with any absolute, non-traversing
+  // path, bypassing the picker entirely -- the same exposure every other
+  // filesystem-touching sidecar channel carries. Accepted at ASVS L1 for a
+  // local desktop launcher.
   ipcMain.handle(
     'moveInstall',
     async (_event: unknown, ...args: unknown[]): Promise<void> => {
       const { appName, path, runner } = (args[0] ?? {}) as MoveGameArgs
 
       try {
-        assertContainedPath(
-          GlobalConfig.get().getSettings().defaultInstallPath,
-          path,
-          'moveInstall'
-        )
+        assertPlausibleAbsolutePath(path, 'moveInstall')
       } catch (error) {
-        if (error instanceof PathContainmentError) {
+        if (error instanceof PathShapeError) {
           logError(
-            'moveInstall: rejected a renderer-supplied path that escapes the configured install root',
+            'moveInstall: rejected a renderer-supplied path that is not a plausible absolute filesystem path',
             LogPrefix.Backend
           )
           sendGameStatusUpdate({
@@ -334,11 +358,34 @@ export function registerInstallFlows(): void {
     }
   )
 
-  // T-34.5-C6-49-03 (Tampering, mitigate — HARDENED, Phase 34.6 Plan 11, REQ-34.6-05): `path` is
-  // renderer-supplied and reaches a real filesystem import. Same containment/no-wedge/no-fallback
-  // contract as `moveInstall` above — see that handler's comment for the full rationale. Note:
-  // `winePrefix`/`wineVersion` (below, used only for a config write, never a filesystem path) are
-  // NOT contained by this plan — declared residual, see 34.6-11-SUMMARY.md.
+  // T-34.5-C6-49-03 (Tampering, mitigate — RE-DISPOSITIONED, gap plan 34.6-18,
+  // REQ-34.6-05, 34.6-VERIFICATION.md CR-01): `path` is renderer-supplied and
+  // reaches a real filesystem import. Mitigation is now picker-bounded +
+  // shape-validated: in normal operation `path` originates from
+  // `PathSelectionBox` in `InstallModal/ImportDialog/index.tsx` -- the
+  // user's own selection is the grant -- and at this boundary
+  // `rendererPathGuard.assertPlausibleAbsolutePath` rejects a non-string,
+  // empty/whitespace, NUL-bearing, relative, or `..`-segment-bearing value
+  // as the FIRST statement of this handler. Plan 34.6-11's PRIOR mitigation
+  // -- containment against `GlobalConfig`'s `defaultInstallPath` -- was
+  // REMOVED because it was circular against the adversary this threat names
+  // (`defaultInstallPath` is renderer-writable via `setSetting`,
+  // `settingsFlowRegistration.ts:160`) AND because it rejected the
+  // out-of-tree import this feature exists to perform (`34.6-VERIFICATION.md`
+  // CR-01). Surviving sub-contracts, UNCHANGED: the validator is a GATE -- a
+  // legitimate `path` is passed downstream UNCHANGED; on rejection the
+  // terminal `done` status is still emitted (T-34.6-31) and the named
+  // `PathShapeError` is then rethrown (REQ-37-06's split); the logged
+  // message deliberately never includes the rejected path itself
+  // (T-34.6-32). ACCEPTED RESIDUAL (T-34.5-C6-49-03-R, declared): a
+  // compromised renderer can still call this channel directly with any
+  // absolute, non-traversing path, bypassing the picker entirely -- the same
+  // exposure every other filesystem-touching sidecar channel carries.
+  // Accepted at ASVS L1 for a local desktop launcher. Note:
+  // `winePrefix`/`wineVersion`/`wineCrossoverBottle` (below, used only for a
+  // config write, never a filesystem path) are NOT validated by this plan --
+  // declared residual, see
+  // `.planning/todos/pending/2026-08-24-importgame-wineprefix-wineversion-not-contained-by-34-6-11.md`.
   ipcMain.handle(
     'importGame',
     async (_event: unknown, ...args: unknown[]): StatusPromise => {
@@ -353,15 +400,11 @@ export function registerInstallFlows(): void {
       } = (args[0] ?? {}) as ImportGameArgs
 
       try {
-        assertContainedPath(
-          GlobalConfig.get().getSettings().defaultInstallPath,
-          path,
-          'importGame'
-        )
+        assertPlausibleAbsolutePath(path, 'importGame')
       } catch (error) {
-        if (error instanceof PathContainmentError) {
+        if (error instanceof PathShapeError) {
           logError(
-            'importGame: rejected a renderer-supplied path that escapes the configured install root',
+            'importGame: rejected a renderer-supplied path that is not a plausible absolute filesystem path',
             LogPrefix.Backend
           )
           sendGameStatusUpdate({

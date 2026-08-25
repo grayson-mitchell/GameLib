@@ -266,10 +266,10 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     }))
     // Opt-in setting defaults to false (D-13 safety valve) and autoUpdateGames
     // defaults to false (D-12's checkGameUpdates only calls autoUpdate() when
-    // this is truthy). Plan 34.6-11 (REQ-34.6-05): defaultInstallPath is the
-    // containment root moveInstall/importGame now validate against —
-    // established here as the suite-wide default so every other test's
-    // already-legitimate paths keep resolving inside it unchanged.
+    // this is truthy). defaultInstallPath is set here purely as a realistic
+    // suite-wide settings default -- gap plan 34.6-18 (34.6-VERIFICATION.md
+    // CR-01) removed it as a containment root for moveInstall/importGame;
+    // these two handlers no longer validate any path against it.
     mockSettings({
       enableSteamNativeInstall: false,
       autoUpdateGames: false,
@@ -478,15 +478,19 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
 
   // ── Plan 34.6-06 (REQ-34.6-04/REQ-34.6-13, D-02) ──────────────────────────
   // moveInstall/importGame ported byte-equivalently from main.ts:1112-1245.
-  // HARDENED by plan 34.6-11 (REQ-34.6-05, T-34.5-C6-49-03): both now contain
-  // their renderer-supplied `path` against GlobalConfig's own
-  // `defaultInstallPath` (mocked to '/home/deck/Games' in this suite's
-  // beforeEach) via `rendererPathGuard.assertContainedPath`. The two
-  // pass-through tests below were RETARGETED from a `..`-bearing tricky path
-  // to a legitimate, apostrophe-and-space-bearing path INSIDE that root --
-  // the byte-equivalence bargain those tests originally proved ended with
-  // this hardening; retargeting (not deleting) them is the visible record of
-  // that, per this plan's own action block.
+  // HARDENED by plan 34.6-11 (REQ-34.6-05, T-34.5-C6-49-03): both validated
+  // their renderer-supplied `path` via `rendererPathGuard.assertContainedPath`
+  // against GlobalConfig's own `defaultInstallPath`. Gap plan 34.6-18
+  // (`34.6-VERIFICATION.md` CR-01) REMOVED that containment root -- it was
+  // circular (renderer-writable via `setSetting`) and rejected the
+  // cross-drive move / out-of-tree import each feature exists to perform --
+  // and replaced it with `rendererPathGuard.assertPlausibleAbsolutePath`, a
+  // shape/plausibility-only check with no root. The two pass-through tests
+  // below were RETARGETED (plan 34.6-11) from a `..`-bearing tricky path to a
+  // legitimate, apostrophe-and-space-bearing path (originally chosen to sit
+  // inside the now-removed `defaultInstallPath` root; now just a realistic
+  // fixture path) -- retargeting (not deleting) them is the visible record
+  // of that.
 
   it('T-34.6 registration-kind: moveInstall and importGame are invoke-kind (handlerRegistry), never listener-kind (listenerRegistry)', () => {
     startSidecar()
@@ -497,13 +501,14 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   })
 
   // RETARGETED (plan 34.6-11, REQ-34.6-05): was "D-02: moveInstall forwards a
-  // '..'-containing, space-containing path... unchanged" -- that input now
-  // correctly fails containment (proven by the REJECT test below), so it can
-  // no longer prove pass-through. This is now the ALLOW-direction proof: a
-  // legitimate path containing an apostrophe and a space, resolving INSIDE
-  // the configured root, must still arrive at SteamGame.moveInstall() by
-  // STRICT EQUALITY, unchanged -- containment is a gate, not a rewrite.
-  it('moveInstall forwards a legitimate apostrophe-and-space-containing path (inside the configured root) to SteamGame.moveInstall() unchanged', async () => {
+  // '..'-containing, space-containing path... unchanged" -- that input would
+  // have correctly failed `assertPlausibleAbsolutePath`'s `..`-segment check
+  // (proven by the REJECT test below) had it kept the `..`, so it can no
+  // longer prove pass-through. This is now the ALLOW-direction proof: a
+  // legitimate, plausible absolute path containing an apostrophe and a
+  // space must still arrive at SteamGame.moveInstall() by STRICT EQUALITY,
+  // unchanged -- the shape guard is a gate, not a rewrite.
+  it('moveInstall forwards a legitimate apostrophe-and-space-containing absolute path to SteamGame.moveInstall() unchanged', async () => {
     const { input, frames } = startSidecar()
     const legitimatePath = "/home/deck/Games/Sid Meier's Civilization V/save"
     writeInvoke(input, 'move-passthrough-1', 'moveInstall', [
@@ -514,20 +519,70 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     expect(steamGameMocks.moveInstall).toHaveBeenCalledTimes(1)
     // Identity/strict-equality, not just deep-equality -- proves the handler
     // forwards the SAME value rather than normalising/reshaping it first
-    // (assertContainedPath is used purely as a gate; its resolved return
-    // value is never substituted downstream).
+    // (assertPlausibleAbsolutePath is used purely as a gate and returns
+    // void; the handler forwards the ORIGINAL renderer-supplied string,
+    // never a resolved/rewritten substitute).
     expect(steamGameMocks.moveInstall.mock.calls[0][0]).toBe(legitimatePath)
 
     const response = frames.find((f) => f.id === 'move-passthrough-1')
     expect(response).toMatchObject({ id: 'move-passthrough-1', ok: true })
   })
 
-  // NEW (plan 34.6-11, REQ-34.6-05, T-34.5-C6-49-03): the REJECT direction --
-  // a path escaping the configured root must never reach SteamGame at all.
-  // RED-proven per this plan's acceptance criteria: temporarily commenting
-  // out the `assertContainedPath` call in installFlowRegistration.ts (restore
-  // via `cp`, never `git checkout --`) made this exact assertion fail.
-  it('moveInstall rejects a path escaping the configured install root, and SteamGame.moveInstall is never reached (T-34.5-C6-49-03)', async () => {
+  // NEW (gap plan 34.6-18, REQ-34.6-05, 34.6-VERIFICATION.md CR-01): the
+  // PRIMARY real-world use case -- a cross-drive move to a destination
+  // OUTSIDE the mocked defaultInstallPath ('/home/deck/Games'). Before this
+  // plan's source change, this specimen was rejected by
+  // assertContainedPath's containment against defaultInstallPath -- RED-proven
+  // in evidence/34.6-18-RED-crossroot.txt.
+  it('moveInstall forwards an absolute destination OUTSIDE the configured defaultInstallPath to SteamGame.moveInstall() unchanged (cross-drive move, CR-01)', async () => {
+    const { input, frames } = startSidecar()
+    const crossRootPath = '/Volumes/External SSD/GameLib Games/Civ V'
+    writeInvoke(input, 'move-crossroot-1', 'moveInstall', [
+      { appName: '999001', path: crossRootPath, runner: 'steam' }
+    ])
+    await flush()
+
+    expect(steamGameMocks.moveInstall).toHaveBeenCalledTimes(1)
+    expect(steamGameMocks.moveInstall.mock.calls[0][0]).toBe(crossRootPath)
+
+    const response = frames.find((f) => f.id === 'move-crossroot-1')
+    expect(response).toMatchObject({ id: 'move-crossroot-1', ok: true })
+  })
+
+  // NEW (gap plan 34.6-18, T-34.6-47): a channel-level REJECT for an
+  // absolute path that DOES carry a `..` segment -- proves the new shape
+  // guard still rejects traversal even though containment against
+  // defaultInstallPath is gone.
+  it('moveInstall rejects an absolute path containing a ".." segment, and SteamGame.moveInstall is never reached', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'move-reject-traversal-1', 'moveInstall', [
+      {
+        appName: '999001',
+        path: '/Volumes/Ext/../../etc/passwd',
+        runner: 'steam'
+      }
+    ])
+    await flush()
+
+    expect(steamGameMocks.moveInstall).not.toHaveBeenCalled()
+
+    const response = frames.find((f) => f.id === 'move-reject-traversal-1') as
+      | { ok: boolean; error?: string }
+      | undefined
+    expect(response?.ok).toBe(false)
+  })
+
+  // NEW (plan 34.6-11, REQ-34.6-05, T-34.5-C6-49-03; retained by gap plan
+  // 34.6-18): the REJECT direction -- a RELATIVE path must never reach
+  // SteamGame at all. Originally this specimen was rejected by
+  // `assertContainedPath`'s containment check; it is now rejected earlier,
+  // by `assertPlausibleAbsolutePath`'s "not absolute" check (it would also
+  // fail the `..`-segment check if it ever got that far). RED-proven
+  // originally by temporarily commenting out the containment call
+  // (restore via `cp`, never `git checkout --`); the shape guard's own
+  // REJECT coverage is RED-proven separately in
+  // evidence/34.6-18-RED-crossroot.txt's sibling ACCEPT-direction proof.
+  it('moveInstall rejects a relative (non-absolute) path, and SteamGame.moveInstall is never reached (T-34.5-C6-49-03)', async () => {
     const { input, frames } = startSidecar()
     writeInvoke(input, 'move-reject-1', 'moveInstall', [
       { appName: '999001', path: '../../etc/passwd', runner: 'steam' }
@@ -544,8 +599,8 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
 
   // NEW (plan 34.6-11, T-34.6-31): a rejected moveInstall must still emit the
   // terminal "done" status so the renderer never wedges in "moving" -- and,
-  // since containment runs BEFORE the "moving" push, "moving" itself must
-  // never be emitted for a rejected request.
+  // since `assertPlausibleAbsolutePath` runs BEFORE the "moving" push,
+  // "moving" itself must never be emitted for a rejected request.
   it('a rejected moveInstall still emits the terminal gameStatusUpdate "done" (never wedges in "moving")', async () => {
     const { input, frames } = startSidecar()
     writeInvoke(input, 'move-reject-status-1', 'moveInstall', [
@@ -619,8 +674,8 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   })
 
   // RETARGETED (plan 34.6-11, REQ-34.6-05): tricky path was `..`-bearing;
-  // now a legitimate apostrophe-and-space path inside the configured root
-  // (see the moveInstall retargeting comment above for the full rationale).
+  // now a legitimate, plausible absolute apostrophe-and-space path (see the
+  // moveInstall retargeting comment above for the full rationale).
   it('importGame forwards every field of its argument object through unchanged (path/platform to SteamGame.importGame(), winePrefix/wineVersion/wineCrossoverBottle to writeConfig())', async () => {
     const legitimatePath =
       "/home/deck/Games/Sid Meier's Civilization V/save source"
@@ -663,11 +718,42 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     ).toStrictEqual(wineVersionRef)
   })
 
-  // NEW (plan 34.6-11, REQ-34.6-05, T-34.5-C6-49-03): the REJECT direction
-  // for importGame -- mirrors the moveInstall REJECT test above. RED-proven
-  // the same way: temporarily commenting out the `assertContainedPath` call
-  // in importGame's handler body made this exact assertion fail.
-  it('importGame rejects a path escaping the configured install root, and SteamGame.importGame is never reached (T-34.5-C6-49-03)', async () => {
+  // NEW (gap plan 34.6-18, REQ-34.6-05, 34.6-VERIFICATION.md CR-01): the
+  // PRIMARY real-world use case -- an already-installed game located
+  // OUTSIDE the mocked defaultInstallPath. Before this plan's source
+  // change, this specimen was rejected by assertContainedPath's containment
+  // against defaultInstallPath -- RED-proven in
+  // evidence/34.6-18-RED-crossroot.txt.
+  it('importGame forwards an absolute source OUTSIDE the configured defaultInstallPath to SteamGame.importGame() unchanged (out-of-tree import, CR-01)', async () => {
+    const crossRootPath = '/Volumes/External SSD/Existing Installs/Civ V'
+
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'import-crossroot-1', 'importGame', [
+      {
+        appName: '999001',
+        path: crossRootPath,
+        runner: 'steam',
+        platform: 'Windows'
+      }
+    ])
+    await flush()
+
+    expect(steamGameMocks.importGame).toHaveBeenCalledTimes(1)
+    expect(steamGameMocks.importGame.mock.calls[0][0]).toBe(crossRootPath)
+    expect(steamGameMocks.importGame.mock.calls[0][1]).toBe('Windows')
+
+    const response = frames.find((f) => f.id === 'import-crossroot-1')
+    expect(response).toMatchObject({ id: 'import-crossroot-1', ok: true })
+  })
+
+  // NEW (plan 34.6-11, REQ-34.6-05, T-34.5-C6-49-03; retained by gap plan
+  // 34.6-18): the REJECT direction for importGame -- mirrors the moveInstall
+  // REJECT test above. This RELATIVE path is now rejected by
+  // `assertPlausibleAbsolutePath`'s "not absolute" check rather than by
+  // `assertContainedPath`'s containment check (which it originally
+  // RED-proved by temporarily commenting out the containment call in
+  // importGame's handler body).
+  it('importGame rejects a relative (non-absolute) path, and SteamGame.importGame is never reached (T-34.5-C6-49-03)', async () => {
     const { input, frames } = startSidecar()
     writeInvoke(input, 'import-reject-1', 'importGame', [
       {
@@ -687,7 +773,8 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     expect(response?.ok).toBe(false)
 
     // No-wedge (T-34.6-31): importGame's own "importing" status is never
-    // emitted for a rejected request -- containment runs before it.
+    // emitted for a rejected request -- `assertPlausibleAbsolutePath` runs
+    // before it.
     const statuses = frames
       .filter(
         (f) => f.kind === 'frontendMessage' && f.channel === 'gameStatusUpdate'
