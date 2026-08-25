@@ -1425,11 +1425,11 @@ instruction predated knowing how small the required push is: one commit adding o
 the dispatch still targeting the feature ref.
 
 Plans:
-- [ ] 34.16-01-PLAN.md — wave 1 — guard arch coverage (D-05/D-08) and the `electron-builder.yml` coverage prose it makes stale
-- [ ] 34.16-02-PLAN.md — wave 1 — the workflow ref guard (D-02) and five RED-proven pins for it
-- [ ] 34.16-03-PLAN.md — wave 1 — `runId` provenance in `writeBuildManifest()` plus format-contract tests for both published audit artifacts
-- [ ] 34.16-04-PLAN.md — wave 1 — the `runId` slot, D-11's mismatch-error extension, and a behavioural proof that the marker is blind to it
-- [ ] 34.16-05-PLAN.md — wave 2 — `pnpm pin:runner-digests` and every refuse-to-write path
+- [x] 34.16-01-PLAN.md — wave 1 — guard arch coverage (D-05/D-08) and the `electron-builder.yml` coverage prose it makes stale
+- [x] 34.16-02-PLAN.md — wave 1 — the workflow ref guard (D-02) and five RED-proven pins for it
+- [x] 34.16-03-PLAN.md — wave 1 — `runId` provenance in `writeBuildManifest()` plus format-contract tests for both published audit artifacts
+- [x] 34.16-04-PLAN.md — wave 1 — the `runId` slot, D-11's mismatch-error extension, and a behavioural proof that the marker is blind to it
+- [x] 34.16-05-PLAN.md — wave 2 — `pnpm pin:runner-digests` and every refuse-to-write path
 - [ ] 34.16-06-PLAN.md — wave 3 — **HUMAN GATE**: run `34.16-LIVE-GATE.md` (6 scored items; Scored Item 5 BRANCHES on the unobserved x64 guard outcome)
 
 **Gap cycle, 2026-08-25 — RUN ATTEMPT 2 scored FAIL (1 pass / 1 fail / 4 not attempted).** Plans 07-11 close the
@@ -1437,11 +1437,13 @@ three open findings from `34.16-LIVE-GATE.md`'s `### Required before RUN ATTEMPT
 (push, re-push the blob if the workflow changed, re-dispatch) stays HUMAN-owned and is NOT planned here; plan
 34.16-06 is re-run by the developer after these land.
 
-- [ ] 34.16-07-PLAN.md — wave 4 — F-34.16-D: widen `extractUpstreamPyinstallerCommand` for the `uv run --module PyInstaller` / `python -m PyInstaller` shapes, per-shape RED-proven against the real captured upstream fixture
-- [ ] 34.16-08-PLAN.md — wave 5 — F-34.16-D: the version-drift tripwire, two layers (offline `RELEASE_TAGS`-coupled record; networked `pnpm check:runner-invocations`), each proven firing and silent
-- [ ] 34.16-09-PLAN.md — wave 5 — F-34.16-D: local end-to-end onedir build of the pinned legendary on arm64 — **BRANCHES** (CLEAN BUILD / EXTRACTION STILL BROKEN / POST-EXTRACTION FAILURE)
-- [ ] 34.16-10-PLAN.md — wave 6 — F-34.16-D sub-question: settle whether the replaced legendary pin ever resolved, then make every provenance sentence under `meta/` true
-- [ ] 34.16-11-PLAN.md — wave 7 — F-34.16-E + F-34.16-F: amend `34.16-LIVE-GATE.md` §6/§7/§8/§13 (attempt ledger, ninth precondition, three-case criterion 4, `--repo`), update finding statuses — AUTHOR only, writes no result
+**Gap cycle EXECUTED 2026-08-25 — 5/5 plans (07-11) complete, all gates green** (`tsc` exit 0, eslint 0 errors, prettier clean on every touched file; Meta 23/24 and Backend 180/181 suites pass with failure sets exactly matching the gate's own Preconditions 2 and 3). **Phase remains INCOMPLETE: 34.16-06 is the sole outstanding plan** — `RUN ATTEMPT 3` of `34.16-LIVE-GATE.md`, human-owned per D-03/D-04. No phase verification and no phase completion were run, by design.
+
+- [x] 34.16-07-PLAN.md — wave 4 — F-34.16-D: widen `extractUpstreamPyinstallerCommand` for the `uv run --module PyInstaller` / `python -m PyInstaller` shapes, per-shape RED-proven against the real captured upstream fixture — **DONE** (3 forms via `matchInvocationForm()`; both refusals unweakened)
+- [x] 34.16-08-PLAN.md — wave 5 — F-34.16-D: the version-drift tripwire, two layers (offline `RELEASE_TAGS`-coupled record; networked `pnpm check:runner-invocations`), each proven firing and silent — **DONE** (Layer 1 RED on 5 mutations; Layer 2 RED on a mutated gogdl value, green against live upstream)
+- [x] 34.16-09-PLAN.md — wave 5 — F-34.16-D: local end-to-end onedir build of the pinned legendary on arm64 — **BRANCHES** (CLEAN BUILD / EXTRACTION STILL BROKEN / POST-EXTRACTION FAILURE) — **BRANCH VERDICT: CLEAN BUILD**; new fact: `Python.framework` nests under `_internal/`, not the tree root
+- [x] 34.16-10-PLAN.md — wave 6 — F-34.16-D sub-question: settle whether the replaced legendary pin ever resolved, then make every provenance sentence under `meta/` true — **SETTLED VERDICT: PIN RESOLVED** (`0034ad265` changed the repo SLUG alongside the bump; the finding's own deleted-tag conclusion was unsupported, recorded plainly)
+- [x] 34.16-11-PLAN.md — wave 7 — F-34.16-E + F-34.16-F: amend `34.16-LIVE-GATE.md` §6/§7/§8/§13 (attempt ledger, ninth precondition, three-case criterion 4, `--repo`), update finding statuses — AUTHOR only, writes no result — **DONE** (12-slot ledger, every cell `TBD`; `F-34.16-D` stays `blocking: true`)
 
 ---
 

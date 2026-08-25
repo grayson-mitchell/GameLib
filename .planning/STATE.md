@@ -3,10 +3,17 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "PHASE 34.17 EXECUTING (2026-08-25) -- 3 plans across 2 waves, 1/3 complete (34.17-01 DONE); wave 1 = 34.17-01 (autonomous, DONE) + 34.17-03 (autonomous: false, Half B paste gate, still open), wave 2 = 34.17-02 (autonomous: false, still open). Worktrees DISABLED project-wide (workflow.use_worktrees=false) so all 3 plans run SEQUENTIALLY on the main tree. STILL OPEN SEPARATELY: PHASE 34.16 EXECUTING -- 6 plans across 3 waves; wave 2 complete, 5/6 plans, 34.16-06 (34.16-LIVE-GATE.md, autonomous: false) is the remaining human gate. 34.17 does not block and is not blocked by 34.16."
-last_updated: "2026-08-25T10:56:00.000Z"
-last_activity: "2026-08-25 -- Plan 34.17-01 (PathSelectionBox Enter-to-commit + two-part double-commit guard) EXECUTED: RED 6 failed/2 passed -> GREEN 8/8, full Frontend jest project (124 suites, 2051 tests) and tsc --noEmit both clean; commits 67ba702a0 (test)/4463c44b6 (feat)/1bd5b6261 (docs, this plan's SUMMARY). Found G1 alone (34.17-RESEARCH.md's recommended single-guard shape) insufficient for EgsSettings.tsx's stale `path` prop -- shipped G1+G2 instead, recorded in-file and in the SUMMARY. NOTE: `gsd-sdk query state.advance-plan` corrupted this file AGAIN (5th+ recorded instance, same known defect) -- silently exited non-zero with `{\"error\":\"Cannot parse Current Plan or Total Plans in Phase from STATE.md\"}` yet still rewrote stopped_at/last_updated/last_activity to an unrelated Phase 37 discuss-checkpoint banner. Reverted from a pre-call snapshot (`/tmp/STATE.before.md`); this delta hand-applied instead, no gsd-sdk state.* verb left standing. +1 completed plan (34.17-01, this plan's own SUMMARY landed)."
+stopped_at: "PHASE 34.16 GAP CYCLE EXECUTED (2026-08-25) -- plans 07-11 all complete, 10/11 plans done. PHASE REMAINS INCOMPLETE: 34.16-06 is the sole outstanding plan, the human-owned RUN ATTEMPT 3 of 34.16-LIVE-GATE.md (autonomous: false, D-03/D-04 reserve every push/dispatch/pin/download/dist/verify gesture for the developer). Phase verification and phase completion were deliberately NOT run -- incomplete plans remain. F-34.16-D stays blocking: true; only Scored Item 2 of a live attempt can supply the x64 CI evidence, since PyInstaller cannot cross-compile. STILL OPEN SEPARATELY: PHASE 34.17 EXECUTING -- 1/3 complete (34.17-01 DONE); 34.17-03 and 34.17-02 are both autonomous: false and still open. Worktrees DISABLED project-wide (workflow.use_worktrees=false) so all plans run SEQUENTIALLY on the main tree. 34.16 and 34.17 do not block each other."
+last_updated: "2026-08-25T20:55:00.000Z"
+last_activity: "2026-08-25 -- Phase 34.16 gap cycle (plans 07-11) EXECUTED across waves 4-7, all sequential on the main tree. 07: extractUpstreamPyinstallerCommand widened to 3 enumerated invocation forms (bare / uv-run-module / python-m), each RED-proven per shape, both pre-existing refusals unweakened, and runOnedirBuild no longer takes its spawned executable from upstream text. 08: two-layer drift tripwire -- offline RELEASE_TAGS-coupled record went RED on 5 distinct mutations and is silent on the real record; networked pnpm check:runner-invocations went RED on a mutated gogdl value and green against live upstream. 09: BRANCH VERDICT CLEAN BUILD -- a freshly cloned legendary-gl/legendary@0.21.0 built end to end on arm64 through the widened path to a running binary; NEW FACT, Python.framework nests under _internal/ rather than the tree root, which verify:runner-bundle must tolerate. 10: SETTLED VERDICT PIN RESOLVED -- commit 0034ad265 changed legendary's repository SLUG in the same commit as the version bump, so the finding probed the post-bump repo for a pre-bump tag; F-34.16-D's own deleted-tag/digit-transposition conclusion is UNSUPPORTED and that is recorded plainly rather than dropped. 11: LIVE-GATE contract repaired -- a 12-slot attempt-scoped precondition ledger with every cell literally TBD, a section 13 VOID rule making a skipped re-capture structurally unscoreable rather than merely discouraged, a three-case criterion 4 deriving its expected diff-tree status from P6.MAIN-HAS-FILE (including the empty/zero-line case that a re-push now makes likely), and F-34.16-C's never-applied --repo amendment finally carried over. Gates: tsc exit 0, eslint 0 errors, prettier clean on every touched file, Meta 23/24 and Backend 180/181 suites passing with failure sets exactly matching the gate's own Preconditions 2 and 3. NOTE: no gsd-sdk state.* or roadmap.* verb was invoked (known recurring corruption defect); STATE.md and ROADMAP.md were hand-applied from a pre-run snapshot, and STATE.md was verified byte-unchanged beforehand so a concurrent 34.17 session was not clobbered. +5 completed plans (34.16-07..11)."
 progress:
+  # 2026-08-25 (phase 34.16 gap cycle, plans 07-11 EXECUTED): same known gsd-sdk state.*/
+  # roadmap.update-plan-progress corruption defect -- NO verb invoked; this delta hand-applied
+  # directly from a pre-run snapshot. Plans 34.16-07..11 were planned in commit 9e55e8728, which
+  # touched ONLY ROADMAP.md and the 5 plan files and did NOT increment total_plans -- so both
+  # counters move by 5 here: total_plans 382->387, completed_plans 367->372 (all five SUMMARYs
+  # landed). 34.16-06 is NOT counted -- it is the still-open human gate. percent = 372/387 = 96.1,
+  # floor 96 (matching prior convention).
   # 2026-08-25 (phase 34.17 planning): same known gsd-sdk state.* corruption defect --
   # `state.planned-phase` rewrote stopped_at to an unrelated Phase 37 banner, rolled
   # last_updated backwards to 2026-08-24, and deleted 521 lines (the entire audit log
@@ -548,8 +555,8 @@ progress:
   # floor(367/382*100) = floor(96.07) = 96. No gsd-sdk state.*/roadmap.update-plan-progress
   # verb left standing -- state.advance-plan was tried, corrupted the file (known recurring
   # defect, see last_activity above), reverted from a pre-call snapshot, hand-applied instead.
-  total_plans: 382
-  completed_plans: 367
+  total_plans: 387
+  completed_plans: 372
   percent: 96
 ---
 
