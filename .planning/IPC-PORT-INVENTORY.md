@@ -18,6 +18,15 @@ Phase 35 (Electron cutover). Phase 35 must not run while any channel below is un
 
 ## Preload-surface coverage
 
+**Last verified: 2026-08-25, commit `3b44e05da`, findings: 0** (plan 34.6-13, D-03
+close-out re-derive — full record in
+`.planning/phases/34.6-.../34.6-PRELOAD-SURFACE-REDERIVE.md`). Re-derived union: **220** distinct
+channels (invoke 160 / send 60), plus 30 push channels out of tally; **0** unbucketed. The gate's
+`--self-test` was run first and all six checks correctly rejected their bad-input fixtures, so
+the zero is a measurement and not a vacuous pass. **Blocker and invariant records rot silently in
+this repo — three recorded instances — so this line carries a date, a commit and a count, and any
+re-verification must replace all three together.**
+
 Every channel exposed via `makeHandlerInvoker`/`makeListenerCaller` under `src/preload/` appears
 in exactly one bucket line of this document. Enforcement: `preload-surface-gate.py`
 (`.planning/phases/34.5-.../preload-surface-gate.py`), which re-derives the surface from source
@@ -33,8 +42,8 @@ now provably the real one, not merely the originally-transcribed one.
 | | Count |
 |---|---:|
 | Unique channels | 225 |
-| Ported to sidecar | 28 |
-| **Unported** | **183** |
+| Ported to sidecar | 52 |
+| **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
 "28 wired/re-routed total" tally — that count was approximate and pre-dates this edit; the
@@ -272,7 +281,23 @@ Per D-08's no-partial-pass rule, Phase 34.5 does NOT close on any of these three
 `34.5-LIVE-GATE-RERUN-2.md` for the third run's full evidence and `34.5-42-SUMMARY.md` for this
 propagation pass.
 
-## Phase 34.6 — Slice 9 — EOS overlay, SteamGridDB and winetricks (16 channels)
+**Ported raised 28 → 52, Unported lowered 183 → 159 (plan 34.6-13, D-01, 2026-08-25):** Phase
+34.6 ported **24** channels — the 16 in its own slice-9 section plus the 8 in "Late-discovered",
+both marked PORTED below. Arithmetic, checkable by hand: **28 + 24 + 0 absorbed = 52** ported, and
+**183 − 24 = 159** unported. The "+ 0 absorbed" term is D-03's close-out re-derive finding zero
+unbucketed channels (`34.6-PRELOAD-SURFACE-REDERIVE.md`); it is written explicitly rather than
+omitted so a later reader can see the term existed and was zero, not that it was forgotten.
+
+**PRE-EXISTING discrepancy, NOT introduced or silently absorbed here.** `Ported + Unported`
+= 52 + 159 = **211**, against `Unique channels` = **225** — a gap of 14. That gap predates this
+plan: the ported/unported rows are a Phase-34.1-era snapshot (see the L44-51 note above) which was
+never re-tallied when `Unique channels` was raised 211 → 222 → 224 → 225 by later audits. This
+plan moved both rows by exactly 24 and left the baseline discrepancy untouched, because silently
+folding a 14-channel accounting gap into a 24-channel port note would destroy the evidence that
+the gap exists at all. **It is flagged here for whoever re-tallies the baseline** — a task this
+plan does not own and did not attempt.
+
+## Phase 34.6 — Slice 9 — EOS overlay, SteamGridDB and winetricks (16 channels) — **PORTED**
 
 Split out of Phase 34.5's 57 on 2026-07-29 (D-03/D-05) — deferred, not dropped, because Phase
 35's cutover requires the IPC re-plumb to be **COMPLETE**. This phase runs BEFORE Phase 35.
@@ -283,12 +308,26 @@ Split out of Phase 34.5's 57 on 2026-07-29 (D-03/D-05) — deferred, not dropped
 
 `winetricksAvailable`, `winetricksInstall`, `winetricksInstalled` (winetricks, 3)
 
+**PORTED by Phase 34.6 (2026-08-25).** Per cluster: EOS overlay 8 → plan 34.6-08
+(`eosOverlayFlowRegistration.ts`); SteamGridDB 5 → plan 34.6-09 (`enrichmentFlowRegistration.ts`,
+after the A-03 keyring hardening in plans 34.6-01/02); winetricks 3 → plan 34.6-07
+(`wineToolsFlowRegistration.ts`).
+
+**Caveat, recorded rather than glossed:** porting is registration. This phase's live gate closed
+`FAIL 7/9`, and `winetricksInstall` is one of the two failing items — though the gap cycle proved
+the FAILURE IS NOT IN THE PORT (driven by keyboard the channel sends and winetricks runs end to
+end; the mouse path never sends because the renderer unmounts the suggestion rows mid-click, a
+pre-existing renderer defect parked with its break point measured). Also unverified on macOS by
+any means: `enableEosOverlay`/`disableEosOverlay` have **no reachable UI surface on this platform**
+(`AdvancedSettings/index.tsx:401` is `isWindows`-gated, `GameSubMenu/index.tsx:461` is
+`isLinux`-gated).
+
 `winetricksInstall` is `addListener`/send-kind (`tools/ipc_handler.ts`) — inherits the send-channel
 silent-failure warning already documented for this project's other send channels. `callTool`'s
 `winetricks` branch already works from Phase 34.5 via `Winetricks.run()` on the shared
 `tools/index.ts` object; this phase is only about the three dedicated IPC channels above.
 
-## Late-discovered — owner Phase 34.6 (8 channels)
+## Late-discovered — owner Phase 34.6 (8 channels) — **PORTED**
 
 Found 2026-08-12 by plan 34.5-49's full preload-surface audit (D-CYCLE6-C,
 `34.5-PRELOAD-SURFACE-AUDIT.md`) — unported, and absent from every bucket line until this plan.
@@ -306,10 +345,30 @@ non-Steam-runner/Wine/shortcut-adjacent unported channels before Phase 35's cuto
 - `importGame`, `moveInstall` and `runWineCommandForGame` are flagged findings
   (T-34.5-C6-49-03, see the audit): renderer-supplied filesystem paths / a command string
   reaching a Wine process, with no sidecar handler. Flagging is a record, not a fix.
-- `frontendReady` has a real, unguarded frontend caller (`GlobalState.tsx:1586`) that will hit
-  `UNPORTED_CHANNEL_MARKER` under Tauri today.
+- `frontendReady` has a real, unguarded frontend caller (`GlobalState.tsx:1609`). **A-04
+  correction (plan 34.6-13, 2026-08-25):** this bullet previously cited `:1586` and claimed the
+  channel "will hit `UNPORTED_CHANNEL_MARKER` under Tauri today". BOTH were wrong, and the second
+  understated the risk. The line number is `:1609`, re-verified by direct read before this edit.
+  And `frontendReady` is **send-kind** (`src/preload/api/misc.ts:93`, `makeListenerCaller`), so it
+  could never surface that marker at all: `dispatchSend` finds no listener and simply returns, and
+  the Rust `sidecar_send` has no pending/timeout machinery. It failed **SILENTLY** — the marker was
+  true only inside the transport and never reached the renderer. That is strictly WORSE than this
+  bullet implied, and it is why D-11's `logSendHandlerReached` observable exists.
 - `getAchievements`, `getGogDiscounts`, `getPlaytimeFromRunner` are plain unported reads with no
   sidecar registration found by grep.
+
+**PORTED by Phase 34.6 (2026-08-25).** `frontendReady` → plan 34.6-05 (`appShellFlowRegistration.ts`,
+with the D-11 send observable); `importGame`/`moveInstall` → plan 34.6-06
+(`installFlowRegistration.ts`), hardened for `T-34.5-C6-49-03` by plan 34.6-11;
+`runWineCommandForGame` → plan 34.6-07 (`wineToolsFlowRegistration.ts`), likewise hardened;
+`getAchievements`/`getDefaultSavePath`/`getPlaytimeFromRunner` → plan 34.6-10
+(`runnerMiscFlowRegistration.ts`).
+
+**Coverage caveat:** `runWineCommandForGame` is registered and bucketed but has **ZERO renderer
+call sites** — a full-source census measured 0 across `src/frontend/`. It ships exercised by no
+gate at all, which the live gate records as UNREACHABLE-BY-CONSTRUCTION rather than as a pass.
+This section stays SEPARATE from the slice-9 section above so that section's historical
+"(16 channels)" heading count is not silently inflated.
 
 ## Not an IPC channel, but blocks Phase 35
 
