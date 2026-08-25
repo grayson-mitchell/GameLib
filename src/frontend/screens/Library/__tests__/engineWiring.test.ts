@@ -360,3 +360,47 @@ describe('buildEngineDeps: the remaining fields (WR-15)', () => {
     expect(buildEngineDeps(makeDepsInputs()).nonAvailableAppNames).toEqual([])
   })
 })
+
+/**
+ * 08.1 review WR-04. `buildEngineDeps` is called from the `engineDeps` useMemo
+ * in `Library/index.tsx`, OUTSIDE the try/catch that wraps the Fuse search, so
+ * a throw here does not degrade one filter -- it unmounts the whole Library
+ * screen. The input is a localStorage string the app itself rewrites, which is
+ * exactly the kind of value a partial write or an older format can corrupt.
+ *
+ * Red-proof, measured against the previous `JSON.parse(raw || '[]') as
+ * string[]` implementation rather than assumed: SIX of the seven cases throw
+ * or return a non-array there. The wrong-shape cases matter as much as the
+ * malformed ones -- `'"5"'` and `'{}'` PARSE fine and reached `filterEngine`
+ * as something with no `.includes`, moving the failure one layer downstream
+ * instead of throwing.
+ *
+ * The EXCEPTION is `''`, which is green on both sides: `'' || '[]'`
+ * short-circuits to `'[]'`, so the old expression already yielded `[]` for it.
+ * It is kept as a behavioural pin, NOT counted as a red-proof -- calling it
+ * one would overstate this block's power, which is the failure mode
+ * `T-34.11-26` and `F-34.10-08` both exist to prevent.
+ */
+describe('buildEngineDeps: a corrupt nonAvailableGames value cannot take down the Library (WR-04)', () => {
+  const degradesToEmpty: Array<[string, string]> = [
+    ['truncated JSON from a partial write', '["na1"'],
+    ['not JSON at all (an older plain-text format)', 'na1,na2'],
+    ['the empty string', ''],
+    ['a JSON string rather than an array', '"5"'],
+    ['a JSON object rather than an array', '{}'],
+    ['a JSON number rather than an array', '42'],
+    ['JSON null', 'null']
+  ]
+
+  it.each(degradesToEmpty)('%s yields an empty list, no throw', (_why, raw) => {
+    const deps = buildEngineDeps(makeDepsInputs({ nonAvailableGamesRaw: raw }))
+    expect(deps.nonAvailableAppNames).toEqual([])
+  })
+
+  it('keeps the string entries of a mixed array and drops the rest', () => {
+    const deps = buildEngineDeps(
+      makeDepsInputs({ nonAvailableGamesRaw: '["na1",7,null,"na2",{}]' })
+    )
+    expect(deps.nonAvailableAppNames).toEqual(['na1', 'na2'])
+  })
+})

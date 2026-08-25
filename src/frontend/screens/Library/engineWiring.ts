@@ -132,6 +132,28 @@ export function buildFavouriteKeys(
 }
 
 /**
+ * Parse `localStorage['nonAvailableGames']` into a string list, degrading to
+ * an empty list on absent / malformed / wrong-shaped input rather than
+ * throwing. 08.1 review WR-04.
+ *
+ * Same defect, raised twice under two IDs: it is also Phase 34.11's review
+ * WR-02, and it is the unimplemented half of threat `T-34.11-02`, whose
+ * mitigation claims a malformed value is "handled once at the boundary" --
+ * this function is that boundary. `34.11-SECURITY.md` records the threat as
+ * OPEN pending this commit; re-run `/gsd-secure-phase 34.11` to close it.
+ */
+function parseNonAvailableAppNames(raw: string | null): string[] {
+  if (!raw) return []
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((entry): entry is string => typeof entry === 'string')
+  } catch {
+    return []
+  }
+}
+
+/**
  * CR-02: builds `FilterEngineDeps` from `Library/index.tsx`'s raw inputs.
  *
  * `favouriteKeys` comes from `favouriteGames` DIRECTLY. It must not be
@@ -152,12 +174,18 @@ export function buildFavouriteKeys(
 export function buildEngineDeps(inputs: EngineDepsInputs): FilterEngineDeps {
   return {
     hiddenAppNames: inputs.hiddenGames.map((hidden) => hidden.appName),
-    // Behaviour preserved verbatim from the pre-fix inline expression,
-    // including its lack of a try/catch -- that is a separate, still-open
-    // review finding (WR-02) and is deliberately not changed here.
-    nonAvailableAppNames: JSON.parse(
-      inputs.nonAvailableGamesRaw || '[]'
-    ) as string[],
+    // 08.1 review WR-04 = 34.11 review WR-02 = threat T-34.11-02's boundary
+    // half (the still-open finding this comment used to defer):
+    // a malformed value here threw out of `buildEngineDeps`, out of the
+    // `engineDeps` useMemo, and took the WHOLE Library screen down with it --
+    // an unrecoverable blank grid for a localStorage string the app rewrites
+    // on its own. An empty list is the correct degraded answer: it means "no
+    // game is known-unavailable", which shows MORE games rather than hiding
+    // any. A non-array JSON value (`"5"`, `{}`) is rejected too -- it parses
+    // fine and would reach `filterEngine` as something without `.includes`.
+    nonAvailableAppNames: parseNonAvailableAppNames(
+      inputs.nonAvailableGamesRaw
+    ),
     favouriteKeys: buildFavouriteKeys(
       inputs.favouriteGames,
       inputs.libraryUnion
