@@ -1548,13 +1548,32 @@ can ever run now).
 touches a remote and D-03 reserves remote gestures to the developer. It will time out on GitHub's
 own schedule.
 
-**Requirements**: TBD — to be minted at `/gsd-plan-phase 34.18`, including at least one requirement
-covering the user-facing disclosure above, which no inherited REQ covers.
+**Requirements**: REQ-34.18-01..10 — minted 2026-08-27 at `/gsd-plan-phase 34.18` from
+`34.18-CONTEXT.md` D-01..D-14 + `34.18-RESEARCH.md` Sections A–H. **REQ-34.18-01 is the user-facing
+disclosure this entry named as a non-negotiable**, which no inherited REQ covered. REQ-34.9-02/-03/
+-04 and REQ-34.16-01/-02/-04 are *disposed of* by REQ-34.18-09, not re-scoped into this phase.
+**Three planning-time corrections to this entry, each measured against HEAD rather than inferred:**
+(1) the ledger-18/C2-05 paragraph above says the guard is "hardcoded to `--arch=arm64`" — **STALE**;
+`package.json:46,51` have run the guard for BOTH arches since Phase 34.16. The exposure is real, its
+mechanism is not what this entry describes, and REQ-34.18-04 states the corrected one.
+(2) the disposition list above treats `deferred-items.md` item 18/C2-05 as open — **STALE**; it is
+already `CLOSED 2026-08-25` with its residual re-homed to items 12/13, so 34.18 cross-references it
+rather than closing it twice. (3) a **seventh** scope consumer exists that this entry's list of six
+does not name: `meta/pinRunnerDigests.ts` + its test (D-04), which is **un-runnable at HEAD** because
+it fetches a `SHA256SUMS-x64` that was never published.
 **Depends on:** Phase 34.16 (CLOSED PARTIAL — this phase consumes its verdict and its findings)
-**Plans:** 0 plans — not yet planned
+**Plans:** 7 plans in 5 waves — plan 34.18-07 is a BLOCKING human gate (`autonomous: false`).
+**The phase does not close on sentinels (D-05):** it closes with three real arm64 digests and a
+`pnpm download-helper-binaries` that exits 0 on darwin. Code-ready is explicitly not done.
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 34.18 to break down)
+- [ ] 34.18-01-PLAN.md — wave 1 — README Intel-drop disclosure (verbatim, RED-proven) + the D-08 non-goal survivor gate that bounds every later sweep from the over-reach direction
+- [ ] 34.18-05-PLAN.md — wave 1 — remove `isIntelMac` from all 28 files ATOMICALLY, collapse all EIGHT branches (D-11's prose names 2), rewrite D-14's RED-proof so it outlives the constant
+- [ ] 34.18-02-PLAN.md — wave 2 — one arm64 workflow leg, six→three digest slots, arm64-only downloader, D-06 sentinel-message rewrite, `archiveName()` rejects x64
+- [ ] 34.18-03-PLAN.md — wave 3 — `pin:runner-digests` reduced to one arch with every fail-closed case preserved and the vacuous runId-equality check REPLACED, not dropped
+- [ ] 34.18-04-PLAN.md — wave 3 — arm64-only macOS packaging + `mac:` prose; one-arch guard RED-proven strict; D-09 globs, non-macOS half in its OWN commit
+- [ ] 34.18-06-PLAN.md — wave 4 — dated dispositions for 2 findings, 6 requirements, 6 ledger items; D-13's 19→18 amendment; item 18 cross-referenced, item 13 carried forward
+- [ ] 34.18-07-PLAN.md — wave 5 — **HUMAN GATE (blocking)**: dispatch the arm64 workflow, pin three real digests, prove `download-helper-binaries` on darwin, close ledger item 13
 
 ---
 
