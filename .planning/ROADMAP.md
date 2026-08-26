@@ -1358,7 +1358,7 @@ Plans:
 
 ---
 
-### Phase 34.16: macOS runner onedir x64 CI leg — publish the workflow to the default branch, source and digest-verify darwin archives, and extend the runner-bundle guard beyond arm64 (INSERTED) — ⚠️ CLOSED PARTIAL 2026-08-27 (arm64 ACHIEVED · x64 UNACHIEVABLE, F-34.16-G · superseded by Phase 34.18)
+### Phase 34.16: macOS runner onedir x64 CI leg — publish the workflow to the default branch, source and digest-verify darwin archives, and extend the runner-bundle guard beyond arm64 (INSERTED) — ⏸ CLOSED PARTIAL 2026-08-27 — superseded by Phase 34.18 (arm64 ACHIEVED; x64 UNACHIEVABLE per F-34.16-G)
 
 **Goal:** Close the six phase-34.9 deferred items that were routed to "a follow-up phase" which
 did not exist until now (2026-08-22). All six share **one blocking precondition**: the
