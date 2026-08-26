@@ -159,6 +159,18 @@ import type {
   UpdateParams
 } from 'common/types'
 
+// Plan 34.6-19 (REQ-34.6-05): moveInstall's and importGame's rejection
+// dialogs share the same title. Resolving it through one call site keeps
+// `gamelib:installFlows.pathRejectedTitle` (and its inline default)
+// declared exactly once in source, rather than duplicated verbatim across
+// both handlers below.
+function rejectedPathDialogTitle(): string {
+  return i18next.t(
+    'gamelib:installFlows.pathRejectedTitle',
+    "Can't use that location"
+  )
+}
+
 /**
  * Registers the seven install-slice invoke handlers. Called once from
  * `handlers.ts` — this module owns no side effects at import time beyond the
@@ -296,6 +308,22 @@ export function registerInstallFlows(): void {
             'moveInstall: rejected a renderer-supplied path that is not a plausible absolute filesystem path',
             LogPrefix.Backend
           )
+          // Plan 34.6-19 (REQ-34.6-05, 34.6-VERIFICATION.md gap): the
+          // rejection was previously silent to the user -- only the
+          // logError above plus the terminal 'done' status below, which
+          // reads as the app doing nothing. Surface it. No `event`
+          // property, same rationale as the existing error-branch dialog
+          // below: every sidecar invoke handler's `_event` is always
+          // `undefined` at runtime. Neither string interpolates `path`
+          // (T-34.6-32).
+          showDialogBoxModalAuto({
+            title: rejectedPathDialogTitle(),
+            message: i18next.t(
+              'gamelib:installFlows.pathRejectedBodyMove',
+              `GameLib couldn't move this game there. The destination has to be a full folder path with no ".." steps in it. Pick the destination folder again.`
+            ),
+            type: 'ERROR'
+          })
           sendGameStatusUpdate({
             appName,
             runner,
@@ -407,6 +435,18 @@ export function registerInstallFlows(): void {
             'importGame: rejected a renderer-supplied path that is not a plausible absolute filesystem path',
             LogPrefix.Backend
           )
+          // Plan 34.6-19 (REQ-34.6-05, 34.6-VERIFICATION.md gap): same
+          // rationale as the identical block in moveInstall above -- the
+          // rejection was previously silent to the user. Neither string
+          // interpolates `path` (T-34.6-32).
+          showDialogBoxModalAuto({
+            title: rejectedPathDialogTitle(),
+            message: i18next.t(
+              'gamelib:installFlows.pathRejectedBodyImport',
+              `GameLib couldn't import from that location. The source has to be a full folder path with no ".." steps in it. Pick the game's folder again.`
+            ),
+            type: 'ERROR'
+          })
           sendGameStatusUpdate({
             appName,
             runner,

@@ -183,7 +183,10 @@ jest.mock('../../dialog/dialog', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { startSidecar, writeInvoke } from './helpers/sidecarHarness'
+import i18next from 'i18next'
 import { getSteamLibraries, writeConfig } from 'backend/utils'
 import { GlobalConfig } from 'backend/config'
 import { libraryManagerMap } from 'backend/storeManagers'
@@ -193,6 +196,19 @@ import { showDialogBoxModalAuto } from '../../dialog/dialog'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import type { AppSettings } from 'common/types'
 import * as loggerModule from '../../logger'
+
+// Plan 34.6-19 (REQ-34.6-05): the fork's own installFlows catalog strings,
+// read from the REAL public/locales/en/gamelib.json (four levels up from
+// this __tests__ directory to the repo root, mirroring
+// gamelibNamespaceLoad.test.ts's own REPO_ROOT computation) rather than
+// hardcoded here, so the assertions below cannot drift from the catalog.
+const REPO_ROOT = join(__dirname, '..', '..', '..', '..')
+const GAMELIB_CATALOG = JSON.parse(
+  readFileSync(
+    join(REPO_ROOT, 'public', 'locales', 'en', 'gamelib.json'),
+    'utf-8'
+  )
+) as { installFlows: Record<string, string> }
 
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
 const mockedWriteConfig = writeConfig as jest.Mock
@@ -781,5 +797,134 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
       )
       .map((f) => ((f.args as unknown[])?.[0] as { status?: string })?.status)
     expect(statuses).toEqual(['done'])
+  })
+
+  // NEW (Plan 34.6-19, REQ-34.6-05, gap on 34.6-VERIFICATION.md): the
+  // rejection was previously silent to the user -- a terminal "done" status
+  // with no path-specific message, so the UI just does nothing. This test
+  // proves a user-visible, localisable dialog now fires, and that it does
+  // not regress T-34.6-32 (rejected path absent from the message) or
+  // T-34.6-31 (terminal status still exactly ['done']).
+  it('a rejected moveInstall shows a localisable dialog naming the rejection, without leaking the rejected path (Plan 34.6-19 DIALOG-MOVE-01)', async () => {
+    const escapingPath = '../../etc/passwd'
+    // This suite's project-wide i18next manual mock (`src/backend/__mocks__/i18next.ts`,
+    // `t: (key) => key`) echoes the KEY back and ignores the inline default -- so the
+    // resolved `title`/`message` values BELOW are the raw namespaced keys, not the catalog
+    // text. Spying on `t` additionally captures the inline-default ARGUMENT passed at each
+    // call site, which is where the catalog<->default agreement (T-34.6-52) is actually
+    // provable under this mock. Real namespace RESOLUTION against the live catalog is
+    // proven separately by gamelibNamespaceLoad.test.ts's default-free assertion against a
+    // real, unmocked i18next instance -- this test proves the WIRING (right keys, right
+    // defaults, right call shape), not resolution.
+    const tSpy = jest.spyOn(i18next, 't')
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'move-reject-dialog-1', 'moveInstall', [
+      { appName: '999001', path: escapingPath, runner: 'steam' }
+    ])
+    await flush()
+
+    expect(mockedShowDialogBoxModalAuto).toHaveBeenCalledTimes(1)
+    const call = mockedShowDialogBoxModalAuto.mock.calls[0][0] as {
+      type: string
+      title: string
+      message: string
+    }
+    expect(call.type).toBe('ERROR')
+    expect(call.title).toBe('gamelib:installFlows.pathRejectedTitle')
+    expect(call.message).toBe('gamelib:installFlows.pathRejectedBodyMove')
+    expect(call.title).not.toContain(escapingPath)
+    expect(call.message).not.toContain(escapingPath)
+
+    const titleCall = tSpy.mock.calls.find(
+      (c) => c[0] === 'gamelib:installFlows.pathRejectedTitle'
+    )
+    const messageCall = tSpy.mock.calls.find(
+      (c) => c[0] === 'gamelib:installFlows.pathRejectedBodyMove'
+    )
+    expect(titleCall?.[1]).toBe(GAMELIB_CATALOG.installFlows.pathRejectedTitle)
+    expect(messageCall?.[1]).toBe(
+      GAMELIB_CATALOG.installFlows.pathRejectedBodyMove
+    )
+
+    // T-34.6-31: the added dialog must not perturb the terminal-status
+    // contract -- still exactly ['done'], never wedged in 'moving'.
+    const statuses = frames
+      .filter(
+        (f) => f.kind === 'frontendMessage' && f.channel === 'gameStatusUpdate'
+      )
+      .map((f) => ((f.args as unknown[])?.[0] as { status?: string })?.status)
+    expect(statuses).toEqual(['done'])
+
+    // Restore -- this suite's `resetMocks: true` resets a spy's
+    // IMPLEMENTATION (not just its call history) between tests, which would
+    // otherwise leave `i18next.t` returning `undefined` for every later
+    // test in this file (mirrors the `logErrorSpy.mockRestore()` pattern
+    // already used above in this file).
+    tSpy.mockRestore()
+  })
+
+  it('a rejected importGame shows a localisable dialog naming the rejection, without leaking the rejected path (Plan 34.6-19 DIALOG-IMPORT-01)', async () => {
+    const escapingPath = '../../etc/shadow'
+    const tSpy = jest.spyOn(i18next, 't')
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'import-reject-dialog-1', 'importGame', [
+      {
+        appName: '999001',
+        path: escapingPath,
+        runner: 'steam',
+        platform: 'Windows'
+      }
+    ])
+    await flush()
+
+    expect(mockedShowDialogBoxModalAuto).toHaveBeenCalledTimes(1)
+    const call = mockedShowDialogBoxModalAuto.mock.calls[0][0] as {
+      type: string
+      title: string
+      message: string
+    }
+    expect(call.type).toBe('ERROR')
+    expect(call.title).toBe('gamelib:installFlows.pathRejectedTitle')
+    expect(call.message).toBe('gamelib:installFlows.pathRejectedBodyImport')
+    expect(call.title).not.toContain(escapingPath)
+    expect(call.message).not.toContain(escapingPath)
+
+    const titleCall = tSpy.mock.calls.find(
+      (c) => c[0] === 'gamelib:installFlows.pathRejectedTitle'
+    )
+    const messageCall = tSpy.mock.calls.find(
+      (c) => c[0] === 'gamelib:installFlows.pathRejectedBodyImport'
+    )
+    expect(titleCall?.[1]).toBe(GAMELIB_CATALOG.installFlows.pathRejectedTitle)
+    expect(messageCall?.[1]).toBe(
+      GAMELIB_CATALOG.installFlows.pathRejectedBodyImport
+    )
+
+    const statuses = frames
+      .filter(
+        (f) => f.kind === 'frontendMessage' && f.channel === 'gameStatusUpdate'
+      )
+      .map((f) => ((f.args as unknown[])?.[0] as { status?: string })?.status)
+    expect(statuses).toEqual(['done'])
+
+    tSpy.mockRestore()
+  })
+
+  // T-34.6-52: catalog value and t() inline default must agree, in both
+  // directions -- a matching default is exactly what makes a future rename
+  // a silent no-op when the key already exists, so this check must run
+  // against the live source, not an assumption.
+  it('the rejection-dialog catalog values agree verbatim with their inline t() defaults in installFlowRegistration.ts (Plan 34.6-19, T-34.6-52)', () => {
+    const source = readFileSync(
+      join(__dirname, '..', 'installFlowRegistration.ts'),
+      'utf-8'
+    )
+    expect(source).toContain(GAMELIB_CATALOG.installFlows.pathRejectedTitle)
+    expect(source).toContain(
+      GAMELIB_CATALOG.installFlows.pathRejectedBodyMove
+    )
+    expect(source).toContain(
+      GAMELIB_CATALOG.installFlows.pathRejectedBodyImport
+    )
   })
 })
