@@ -490,7 +490,14 @@ export function init(
           returnNull: false,
           fallbackLng: 'en',
           lng: settings.language,
-          supportedLngs: supportedLanguages
+          supportedLngs: supportedLanguages,
+          // Plan 34.6-19 (REQ-34.6-05, T-34.6-51): fork strings live in their
+          // own `gamelib` namespace (public/locales/{{lng}}/gamelib.json),
+          // upstream Heroic strings stay in `translation`. Both i18next init
+          // sites (this one and main.ts's Electron leg) must change together
+          // -- a one-sided change is a build divergence.
+          ns: ['translation', 'gamelib'],
+          defaultNS: 'translation'
         })
         .catch((error) => {
           logWarning(

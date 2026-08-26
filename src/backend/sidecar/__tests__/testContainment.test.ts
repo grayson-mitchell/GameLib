@@ -766,6 +766,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'fileStore.test.ts',
   'flowRegistrationCensus.test.ts',
   'gameDetailsImportGate.test.ts',
+  'gamelibNamespaceLoad.test.ts',
   'humbleFlows.test.ts',
   'humbleLoginFlows.test.ts',
   'humbleSecretStore.test.ts',

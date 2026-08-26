@@ -44,6 +44,11 @@
         "activatingBody": "Revealing your key and redeeming it on Steam — this only takes a moment.",
         "activatingTitle": "Activating on Steam…"
     },
+    "installFlows": {
+        "pathRejectedTitle": "Can't use that location",
+        "pathRejectedBodyMove": "GameLib couldn't move this game there. The destination has to be a full folder path with no \"..\" steps in it. Pick the destination folder again.",
+        "pathRejectedBodyImport": "GameLib couldn't import from that location. The source has to be a full folder path with no \"..\" steps in it. Pick the game's folder again."
+    },
     "library": {
         "filterPanel": {
             "chipHiddenIncluded": "Including hidden",
