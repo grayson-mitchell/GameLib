@@ -1477,6 +1477,87 @@ back-fitted into this phase.
 
 ---
 
+### Phase 34.18: Retire the macOS x64 (Intel) CI leg — arm64-only macOS runners and app builds (INSERTED)
+
+**Goal:** Make GameLib's macOS support **arm64-only**, in every place that currently assumes two
+architectures, and dispose of the requirements and findings that assumption left open. Phase 34.16
+closed PARTIAL on 2026-08-27 with its x64 half proven unachievable; this phase acts on that result
+rather than retrying it.
+
+**USER-FACING CONSEQUENCE, to be stated explicitly wherever users can see it: GameLib will not
+support Intel Macs on macOS.** This is a product decision taken by the operator on 2026-08-27, not
+a temporary workaround, and the phase is not complete until that sentence exists somewhere a user
+or contributor will actually encounter it.
+
+**Why — the measurement, not the impression.** `F-34.16-G`: the x64 matrix leg targets `macos-13`,
+an image GitHub retired **2025-12-04**. Across three dispatch attempts it was never assigned a
+runner. Both legs of the last attempt were created in the same second; only one was ever served:
+
+```
+build (macos-14, arm64)  created=17:54:23  started=17:54:26  runner="GitHub Actions 1000000201"
+build (macos-13, x64)    created=17:54:23  started=17:54:23  runner=""   group=""
+```
+
+An empty `runner` **and** an empty `group` after 25+ minutes is a label nothing serves — congestion
+would show a group. GitHub's designated successor is `macos-15-intel`.
+
+**Why retire rather than migrate to `macos-15-intel`.** Three reasons, and the third is the one that
+decides it: GitHub ends x86_64 macOS support in **Fall 2027**, so migrating buys roughly a year; the
+leg has **never once succeeded** across three attempts, so there is no working thing being given up;
+and keeping it preserves a **six-digest contract that cannot be satisfied** — three of the six
+`PENDING-CI-PUBLISH` sentinels in `meta/runnersOnedirDigests.json` would stay permanent — plus two
+permanently-open blocking findings. D-01's original rationale for the x64 leg **predates GitHub's
+Intel end-of-life announcement** and should be re-read in that light rather than treated as settled.
+
+**This closes a real user-facing exposure, and that should be said plainly.** Ledger item
+18/C2-05 is the one item in this cluster with genuine user impact: `release:mac` (`package.json`)
+chains `-p always` into the GitHub releases feed that `electron-updater` consumes and builds
+`--x64 --arm64` behind a guard hardcoded to `--arch=arm64` — so **an unverified x64 macOS build can
+reach real users' auto-update channel with the guard green throughout**. Removing the x64 artifact
+entirely closes that path by construction. This is a security improvement, not merely a cleanup.
+
+**Scope — the consumers, which must change together.** A partial retirement is worse than none,
+because a half-retired arch leaves the guard and the digest manifest disagreeing about how many
+assets exist:
+
+1. `.github/workflows/build-runners-onedir-macos.yml` — drop the x64 matrix leg.
+2. `meta/runnersOnedirDigests.json` — six digest slots become three.
+3. `meta/downloadHelperBinaries.ts` — arch-keyed darwin download.
+4. `electron-builder.yml` coverage prose, plus the `--x64 --arm64` invocations in
+   `.github/workflows/build-base.yml:48` and the `release:mac` script in `package.json`.
+5. The arch-parameterised `verify:runner-bundle` guard (34.16-01) and the extractor/tripwire work
+   (34.16-07/-08) — all must stay correct with only one arch, which is a real risk: an
+   arch-parameterised guard given one arch can go vacuous rather than strict.
+6. Any Meta jest suites pinning six assets.
+
+**Also in scope — disposition, so nothing is left open by omission.** These are superseded by the
+retirement and must each get a dated disposition rather than being silently abandoned:
+
+- **Findings:** `F-34.16-D` (its x64 half only — the arm64 half is FIXED and proven live) and
+  `F-34.16-G`.
+- **Requirements:** REQ-34.9-02, REQ-34.9-03, REQ-34.9-04, REQ-34.16-01, REQ-34.16-02, REQ-34.16-04
+  — each becomes wholly or partly a non-goal, and *which* part matters: REQ-34.16-01/-02 have arm64
+  halves that were achieved.
+- **Ledger:** `34.9/deferred-items.md` items **1, 2, 3, 12, 13 and 18/C2-05**.
+
+**Decisions to revisit:** **D-01** (the x64 leg's rationale) and **D-07** (guard behaviour against a
+real x64 onedir tree — Scored Items 5 and 6 of `34.16-LIVE-GATE.md` both concern it, and neither
+can ever run now).
+
+**Housekeeping:** CI run `32996690927` was left **queued rather than cancelled**, because cancelling
+touches a remote and D-03 reserves remote gestures to the developer. It will time out on GitHub's
+own schedule.
+
+**Requirements**: TBD — to be minted at `/gsd-plan-phase 34.18`, including at least one requirement
+covering the user-facing disclosure above, which no inherited REQ covers.
+**Depends on:** Phase 34.16 (CLOSED PARTIAL — this phase consumes its verdict and its findings)
+**Plans:** 0 plans — not yet planned
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 34.18 to break down)
+
+---
+
 ### Phase 34.17: `PathSelectionBox` input commit — Enter-to-commit and the unconfirmed paste failure (INSERTED)
 
 **Goal:** Close phase-34.9 deferred **item 8**, which sat `OWNER: UNASSIGNED` for 12 days because
