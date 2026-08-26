@@ -84,7 +84,18 @@ export class SidecarSteamGridDbSecretStore implements SteamGridDbSecretStore {
   }
 
   async setApiKey(value: string): Promise<void> {
-    await SLOT_STORE.setToken(value)
+    // WR-02 (34.6-REVIEW.md): mirror `ElectronSteamGridDbSecretStore.setApiKey()`
+    // (`steamgrid/secretStore.ts`) exactly. Without this the two builds diverged on
+    // byte-identical user input: Electron trimmed and treated a whitespace-only value as an
+    // explicit CLEAR, while the sidecar stored the untrimmed string -- so a pasted key with a
+    // trailing newline persisted differently per build, and the "submit an empty value to clear
+    // the key" gesture silently did nothing under Tauri.
+    const trimmed = value.trim()
+    if (!trimmed) {
+      await SLOT_STORE.clearToken()
+      return
+    }
+    await SLOT_STORE.setToken(trimmed)
   }
 
   async clearApiKey(): Promise<void> {

@@ -1070,6 +1070,45 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       expect(mockedGlobalConfigGet).not.toHaveBeenCalled()
     })
 
+    // WR-01 (34.6-REVIEW.md): the handler used `args[0] as string` -- a CAST, not
+    // a check. A non-string reaching SidecarKeyringSlotStore.setToken() gets
+    // requestRustInvoke awaited FIRST (so the keyring write may actually be issued,
+    // e.g. as a serialized null) and only then does `token.length` throw, landing in
+    // a catch that logs the write as "failed" when it may have succeeded with a
+    // corrupted value. setToken is a total method, so no rejection reaches the caller
+    // either. These pin rejection at the boundary, before any keyring round trip.
+
+    it.each([
+      ['undefined', undefined],
+      ['a number', 42],
+      ['null', null],
+      ['an object', { key: 'not-a-string' }]
+    ])(
+      'WR-01 steamgriddb.setApiKey IGNORES %s and never reaches the secret store',
+      async (_label, badKey) => {
+        const { input, frames } = startSidecar()
+        writeInvoke(input, 'sgdb-bad-1', 'steamgriddb.setApiKey', [badKey])
+        await flush()
+
+        // The handler still resolves -- it is a no-op, not a crash.
+        expect(findResponse(frames, 'sgdb-bad-1')?.ok).toBe(true)
+        // The load-bearing half: the store is never touched, so no keyring
+        // round trip is attempted with a non-string.
+        expect(mockSecretStoreSetApiKey).not.toHaveBeenCalled()
+      }
+    )
+
+    it('WR-01 steamgriddb.setApiKey still accepts an EMPTY STRING (a valid clear gesture, not a malformed key)', async () => {
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'sgdb-empty-1', 'steamgriddb.setApiKey', [''])
+      await flush()
+
+      expect(findResponse(frames, 'sgdb-empty-1')?.ok).toBe(true)
+      // Proves the guard tests the TYPE, not truthiness -- a falsy-check here
+      // would have silently broken "submit an empty value to clear the key".
+      expect(mockSecretStoreSetApiKey).toHaveBeenCalledWith('')
+    })
+
     it('REQ-34.6-04 steamgriddb.searchGame returns [] and never calls SteamGridDB.searchGame when no key is stored', async () => {
       mockSecretStoreGetApiKey.mockResolvedValueOnce(undefined)
       const { input, frames } = startSidecar()

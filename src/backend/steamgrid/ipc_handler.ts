@@ -1,5 +1,5 @@
 import { addHandler } from 'backend/ipc'
-import { logError, LogPrefix } from 'backend/logger'
+import { logError, logWarning, LogPrefix } from 'backend/logger'
 import * as SteamGridDB from './utils'
 import { getSteamGridDbSecretStore } from './secretStore'
 
@@ -18,6 +18,18 @@ addHandler('steamgriddb.hasApiKey', async () => {
 })
 
 addHandler('steamgriddb.setApiKey', async (event, key) => {
+  // WR-01 (34.6-REVIEW.md): same guard as the sidecar handler in
+  // `sidecar/enrichmentFlowRegistration.ts`. Kept on BOTH paths deliberately -- the review found
+  // this defect on the sidecar path, but the Electron handler forwards its parameter with no
+  // runtime check either, and a one-sided fix would leave the two builds divergent again, which
+  // is exactly what WR-02 was about.
+  if (typeof key !== 'string') {
+    logWarning(
+      'steamgriddb.setApiKey: ignored a non-string key',
+      LogPrefix.Backend
+    )
+    return
+  }
   await getSteamGridDbSecretStore().setApiKey(key)
 })
 

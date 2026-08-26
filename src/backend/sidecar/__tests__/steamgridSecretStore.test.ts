@@ -191,6 +191,54 @@ describe('SidecarSteamGridDbSecretStore', () => {
         }
       ])
     })
+
+    // WR-02 (34.6-REVIEW.md): the sidecar path diverged from
+    // `ElectronSteamGridDbSecretStore.setApiKey()`, which trims and treats a
+    // whitespace-only value as an explicit clear. These pin the parity.
+
+    it('WR-02: TRIMS surrounding whitespace before storing, matching the Electron path', async () => {
+      programChannel('keyring_set', { type: 'resolve', value: true })
+      const store = new SidecarSteamGridDbSecretStore()
+
+      await store.setApiKey('  a-real-key\n')
+
+      expect(callLog).toStrictEqual([
+        {
+          channel: 'keyring_set',
+          args: ['a-real-key', KEYRING_SLOT_STEAMGRID_API_KEY]
+        }
+      ])
+    })
+
+    it('WR-02: treats a WHITESPACE-ONLY value as an explicit clear, not as a stored key', async () => {
+      programChannel('keyring_delete', { type: 'resolve', value: true })
+      const store = new SidecarSteamGridDbSecretStore()
+
+      await store.setApiKey('   ')
+
+      // keyring_delete, never keyring_set -- storing '   ' would make the
+      // "submit an empty value to clear the key" gesture silently do nothing.
+      expect(callLog).toStrictEqual([
+        {
+          channel: 'keyring_delete',
+          args: [KEYRING_SLOT_STEAMGRID_API_KEY]
+        }
+      ])
+    })
+
+    it('WR-02: treats an EMPTY STRING as an explicit clear', async () => {
+      programChannel('keyring_delete', { type: 'resolve', value: true })
+      const store = new SidecarSteamGridDbSecretStore()
+
+      await store.setApiKey('')
+
+      expect(callLog).toStrictEqual([
+        {
+          channel: 'keyring_delete',
+          args: [KEYRING_SLOT_STEAMGRID_API_KEY]
+        }
+      ])
+    })
   })
 
   // ── clearApiKey() ────────────────────────────────────────────────────────

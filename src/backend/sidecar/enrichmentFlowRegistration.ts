@@ -169,7 +169,7 @@ import { removeRecentGame } from '../recent_games/recent_games'
 import { getSteamGridDbSecretStore } from '../steamgrid/secretStore'
 import * as SteamGridDB from '../steamgrid/utils'
 import { getGogDiscounts } from '../discounts/fetchDiscounts'
-import { logError, LogPrefix } from '../logger'
+import { logError, logWarning, LogPrefix } from '../logger'
 import type { Runner } from 'common/types'
 import type { CatalogLocaleSettings } from 'common/types/discounts'
 
@@ -261,7 +261,20 @@ export function registerEnrichmentFlows(): void {
   ipcMain.handle(
     'steamgriddb.setApiKey',
     async (_event: unknown, ...args: unknown[]) => {
-      const key = args[0] as string
+      // WR-01 (34.6-REVIEW.md): `args[0] as string` is a CAST, not a check. A non-string
+      // reaching `SidecarKeyringSlotStore.setToken()` is awaited through `requestRustInvoke`
+      // FIRST -- so the keyring write may actually be issued (e.g. as a serialized `null`) --
+      // and only afterwards does `token.length` throw, landing in a catch that logs the write
+      // as "failed" when it may have succeeded with a corrupted value. `setToken` is a total
+      // method, so the caller never sees a rejection either. Reject at the boundary instead.
+      const key = args[0]
+      if (typeof key !== 'string') {
+        logWarning(
+          'steamgriddb.setApiKey: ignored a non-string key',
+          LogPrefix.Backend
+        )
+        return
+      }
       await getSteamGridDbSecretStore().setApiKey(key)
     }
   )

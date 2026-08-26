@@ -86,8 +86,8 @@ export default function SearchBar({
       />
       {value.length > 0 && (
         <>
-          {/* FOCUS RACE (Phase 34.6 Plan 16 — the cause of live-gate Step 4's FAIL).
-              DO NOT REMOVE THIS HANDLER.
+          {/* FOCUS RACE mitigation (Phase 34.6 Plan 16). Keep this handler: the
+              mechanism below is real, independently of what caused any particular bug.
 
               `index.scss` renders this list ONLY while the search bar has focus:
               `.autoComplete { display: none }` plus `&:focus-within ul.autoComplete
@@ -103,13 +103,20 @@ export default function SearchBar({
                    fires when mousedown and mouseup share a target -- so the item's
                    own `onClick` NEVER RUNS
 
-              The failure is completely silent and reads as a dead button. It cost a
-              live gate item and most of a debug session: `winetricksInstall` was
-              recorded as a broken IPC channel (the frame "never arrives") when in
-              fact nothing was ever sending one. Proven by measurement, both
-              directions -- driving the same button by KEYBOARD (Tab, then Enter),
-              which never blurs and so never collapses the list, fired the send and
-              ran winetricks end to end.
+              The failure is completely silent and reads as a dead button.
+
+              ⚠ CAUSAL CLAIM RETRACTED (34.6-REVIEW.md WR-03, corrected 2026-08-26).
+              This comment previously stated that the above was "the cause of live-gate
+              Step 4's FAIL" and that this was "proven by measurement". **It is not
+              established, and two separate live runs contradict it.** Plan 34.6-17's
+              re-drive shipped this guard, verified it in the running bundle, and the
+              winetricksInstall button was STILL dead to the mouse -- so the theory was
+              withdrawn as DISPROVEN. The 2026-08-26 Step 4 re-drive then passed via a
+              different route entirely: repeated searching, hovering, and a selection the
+              panel is slow to commit (see `34.6-LIVE-GATE.md` § SUPERSEDES and
+              the winetricks selection-UI todo dated 2026-08-26). Treat the four steps above as a real
+              mechanism worth guarding, NOT as a closed root-cause explanation for any
+              dead-button report.
 
               `preventDefault()` on mousedown suppresses only the focus change, so the
               input keeps focus, `:focus-within` holds, the list stays mounted and the
