@@ -1,6 +1,6 @@
 ---
 created: 2026-08-26T18:10:00.000Z
-title: "Winetricks package selection is temperamental — a row must be hovered/searched repeatedly before the panel commits a selection, and an Install click before that silently does nothing"
+title: "UX FIX: the Winetricks search + package-selection interaction is temperamental — searching repeatedly and hovering is required before the panel commits a selection, and an Install click before that silently does nothing"
 area: ui
 status: OPEN
 severity: major
@@ -49,6 +49,26 @@ simultaneously — which is what makes this hypothesis the strongest one yet.
 **It is NOT proven.** No instrumented run has captured the failing and succeeding interactions side
 by side. This project has already had TWO explanations for this defect fail, the `:focus-within`
 theory having been withdrawn as DISPROVEN by live re-drive. Do not treat this todo as a diagnosis.
+
+## Scope: this is a FIX request, not only an investigation
+
+Operator instruction, 2026-08-26: fix the search UX on the Winetricks panel. The two halves are one
+job and should be done together, because the search box is what produces the rows the selection
+state machine then fails to commit:
+
+**Half A — search.** Typing in the search box should filter to a usable result set on the first
+attempt. Today it takes several attempts before rows appear/behave, and the operator had to type
+repeatedly. Look at `WinetricksSearch.tsx` and the shared `SearchBar/index.tsx` for debounce,
+re-render and controlled/uncontrolled-value handling; note the search box is shared, so any change
+must not regress other consumers.
+
+**Half B — selection.** A row that renders must be selectable on first hover/click, the highlight
+must track the mouse without the panel needing to "react" first, and **Install must never be
+clickable with no committed selection** — either disable it or fail loudly. A silent dead button is
+the failure shape this whole gap cycle was spent chasing.
+
+Acceptance: open the panel cold, type one query, click one row, click Install — and have it work,
+once, without repetition.
 
 ## Suggested approach
 
