@@ -1358,7 +1358,7 @@ Plans:
 
 ---
 
-### Phase 34.16: macOS runner onedir x64 CI leg — publish the workflow to the default branch, source and digest-verify darwin archives, and extend the runner-bundle guard beyond arm64 (INSERTED)
+### Phase 34.16: macOS runner onedir x64 CI leg — publish the workflow to the default branch, source and digest-verify darwin archives, and extend the runner-bundle guard beyond arm64 (INSERTED) — ⚠️ CLOSED PARTIAL 2026-08-27 (arm64 ACHIEVED · x64 UNACHIEVABLE, F-34.16-G · superseded by Phase 34.18)
 
 **Goal:** Close the six phase-34.9 deferred items that were routed to "a follow-up phase" which
 did not exist until now (2026-08-22). All six share **one blocking precondition**: the
@@ -1415,7 +1415,7 @@ and 18/C2-05, which had no REQ of their own, plus the `pin:runner-digests` tooli
 see `.planning/REQUIREMENTS.md` § Phase 34.16)
 **Depends on:** Phase 34 · **HUMAN GATE inside plan 34.16-06:** the push of the workflow to the
 default branch, and every gesture in `34.16-LIVE-GATE.md`
-**Plans:** 11 plans, 7 waves (01-06 executed/human-gated; 07-11 are the 2026-08-25 gap cycle)
+**Plans:** 11 plans, 7 waves — **11/11 executed on disk** (01-06 the original set, 06 being the human live gate; 07-11 the 2026-08-25 gap cycle)
 
 **Planning authorization — the "do not plan before the default-branch push" instruction is RETIRED
 by D-04 (2026-08-24).** The code-side work is authorable and testable on
@@ -1430,7 +1430,7 @@ Plans:
 - [x] 34.16-03-PLAN.md — wave 1 — `runId` provenance in `writeBuildManifest()` plus format-contract tests for both published audit artifacts
 - [x] 34.16-04-PLAN.md — wave 1 — the `runId` slot, D-11's mismatch-error extension, and a behavioural proof that the marker is blind to it
 - [x] 34.16-05-PLAN.md — wave 2 — `pnpm pin:runner-digests` and every refuse-to-write path
-- [ ] 34.16-06-PLAN.md — wave 3 — **HUMAN GATE**: run `34.16-LIVE-GATE.md` (6 scored items; Scored Item 5 BRANCHES on the unobserved x64 guard outcome)
+- [x] 34.16-06-PLAN.md — wave 3 — **HUMAN GATE**: run `34.16-LIVE-GATE.md` (6 scored items; Scored Item 5 BRANCHES on the unobserved x64 guard outcome) — **RAN 2026-08-27, RUN ATTEMPT 3, VERDICT `FAIL`** (1 pass / 1 fail / 4 not attempted), see `34.16-06-SUMMARY.md`. Item 1 PASS (`present-identical` no-op, byte-identity measured); Item 2 FAIL at §8 criterion 3; Items 3–6 NOT ATTEMPTED per §13 ordering. **The arm64 leg PASSED `Build the three onedir runners`** — live proof that 34.16-07's extractor widening fixed F-34.16-D's arm64 half against real upstream sources. **The x64 leg was never assigned a runner** — new finding **`F-34.16-G`**, measured: both legs created 17:54:23, arm64 got `runner="GitHub Actions 1000000201"` at 17:54:26, x64 held `runner=""` **and** `group=""` for 25+ minutes, because `macos-13` was retired by GitHub on 2025-12-04. It also **corrected a wrong cause already in the record**: attempt 2 attributed this same queue to the arm64 `legendary` failure, a prediction that cannot have applied since the job never reached any step — correlation read as cause, which hid the finding for two attempts
 
 **Gap cycle, 2026-08-25 — RUN ATTEMPT 2 scored FAIL (1 pass / 1 fail / 4 not attempted).** Plans 07-11 close the
 three open findings from `34.16-LIVE-GATE.md`'s `### Required before RUN ATTEMPT 3` list. Item 5 of that list
@@ -1444,6 +1444,36 @@ three open findings from `34.16-LIVE-GATE.md`'s `### Required before RUN ATTEMPT
 - [x] 34.16-09-PLAN.md — wave 5 — F-34.16-D: local end-to-end onedir build of the pinned legendary on arm64 — **BRANCHES** (CLEAN BUILD / EXTRACTION STILL BROKEN / POST-EXTRACTION FAILURE) — **BRANCH VERDICT: CLEAN BUILD**; new fact: `Python.framework` nests under `_internal/`, not the tree root
 - [x] 34.16-10-PLAN.md — wave 6 — F-34.16-D sub-question: settle whether the replaced legendary pin ever resolved, then make every provenance sentence under `meta/` true — **SETTLED VERDICT: PIN RESOLVED** (`0034ad265` changed the repo SLUG alongside the bump; the finding's own deleted-tag conclusion was unsupported, recorded plainly)
 - [x] 34.16-11-PLAN.md — wave 7 — F-34.16-E + F-34.16-F: amend `34.16-LIVE-GATE.md` §6/§7/§8/§13 (attempt ledger, ninth precondition, three-case criterion 4, `--repo`), update finding statuses — AUTHOR only, writes no result — **DONE** (12-slot ledger, every cell `TBD`; `F-34.16-D` stays `blocking: true`)
+
+**PHASE CLOSED 2026-08-27 — OUTCOME SPLIT: arm64 half ACHIEVED, x64 half PROVEN UNACHIEVABLE.**
+11/11 plans executed. This phase is closed on the result it measured, not on the result it set out
+to get, and the goal statement above is deliberately left unrewritten so the eleven executed plans
+keep describing the goal they were actually executed against.
+
+- **Achieved.** Every code-side deliverable landed and is proven: the arch-parameterised
+  `verify:runner-bundle` guard (34.16-01), the workflow-ref guard (34.16-02), `runId` provenance
+  (34.16-03/-04), `pnpm pin:runner-digests` with every refuse-to-write path (34.16-05), the
+  three-form PyInstaller extractor (34.16-07), the two-layer version-drift tripwire (34.16-08), a
+  clean local arm64 onedir build (34.16-09), and settled `meta/` provenance (34.16-10). The **arm64
+  leg passed live in CI**, closing F-34.16-D's arm64 half on evidence.
+- **Not achieved, and not achievable as specified.** REQ-34.9-02, REQ-34.9-03, REQ-34.9-04,
+  REQ-34.16-01, REQ-34.16-02 and REQ-34.16-04 all depend on x64 CI artifacts that cannot exist:
+  `F-34.16-G` establishes that `macos-13` was retired 2025-12-04, so the x64 leg was never scheduled
+  on any of the three attempts. The six `PENDING-CI-PUBLISH` sentinels in
+  `meta/runnersOnedirDigests.json` therefore stand, three of them permanently.
+- **F-34.16-D and F-34.16-G both remain `open`/`blocking` against this phase, by design.** They are
+  not closed by fiat at phase close; they are superseded by the retirement below, which removes the
+  x64 leg those findings are about.
+- **No phase verification was run**, and none should be: a verifier scoring this phase against its
+  stated goal would correctly return FAIL. The honest record is this block, not a green check.
+
+**Superseded by the retirement decision (operator, 2026-08-27).** The gate's own F-34.16-G fix path
+offered a migration to `macos-15-intel` and explicitly deferred *"whether an x64 leg is still worth
+building at all"* to the developer. **Answered: it is not.** GitHub ends x86_64 macOS support in
+Fall 2027, the leg has never once succeeded, and keeping it preserves a six-digest contract that
+cannot be satisfied plus two permanently-open blocking findings. **GameLib will not support Intel
+Macs on macOS.** The consumer changes that decision requires are scoped to **Phase 34.18**, not
+back-fitted into this phase.
 
 ---
 
