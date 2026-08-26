@@ -1512,7 +1512,7 @@ Plans:
 - [ ] 34.17-03-PLAN.md — Half B: author, run and route the paste reproduction gate on a real macOS Tauri host. **Writes no fix.** `autonomous: false` [REQ-34.17-04]
 
 **Wave 2** *(blocked on 34.17-01 — same files)*
-- [ ] 34.17-02-PLAN.md — Half A: the commit affordance (reserved hint row, `gamelib` i18n strings, colocated stylesheet) plus a blocking human-verify checkpoint with screenshot evidence. `autonomous: false` [REQ-34.17-03]
+- [x] 34.17-02-PLAN.md — Half A: the commit affordance (reserved hint row, `gamelib` i18n strings, colocated stylesheet) plus a blocking human-verify checkpoint with screenshot evidence. `autonomous: false` [REQ-34.17-03] — DONE 2026-08-26, see `34.17-02-SUMMARY.md`. The checkpoint FOUND A DEFECT the automated checks could not see: the operator's eye caught a 1px layout shift under the reserved row, which measurement confirmed (empty y=129 vs filled y=130) and which falsified must_haves truth 3. Fixed in-plan (commit `d312e93b9`) after a FIRST ATTEMPT MADE IT WORSE (1px -> 3px): `box-sizing: border-box` is app-wide, so `min-height` must be sized to include its own padding — pinning `line-height` alone grows the line box to consume the whole padding allowance. All five states now measure y=132. Known gap: nord-light legibility verified against the PRE-FIX build only, at the operator's instruction; Midnight Mirage re-confirmed post-fix.
 
 ### Phase 34.13: Steam install-time wine/bottle form (GOG parity) (INSERTED)
 
