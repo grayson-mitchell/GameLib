@@ -604,7 +604,7 @@ progress:
   # No gsd-sdk state.* verb invoked.
   total_plans: 394
   completed_plans: 383
-  percent: 96
+  percent: 97
 ---
 
 # Project State
