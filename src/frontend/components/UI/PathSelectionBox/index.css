@@ -13,7 +13,20 @@
  */
 .pathSelectionBoxCommitHint {
   display: block;
-  min-height: calc(var(--text-sm) * 1.4);
+  /* The reserved row must measure the same EMPTY as it does FILLED, or
+   * everything below it moves. Three declarations do that together, and
+   * removing any one reintroduces the shift:
+   *   - box-sizing is border-box app-wide (App.css), so min-height INCLUDES
+   *     the padding. An empty row has no line box, so its height is exactly
+   *     min-height; a filled row is line-box + padding, which overflows
+   *     min-height unless min-height was sized to hold both.
+   *   - line-height is pinned so the filled line box is a known quantity
+   *     rather than the font's `normal`.
+   * Measured on a live Tauri host during 34.17-02's human-verify gate: with
+   * line-height alone the shift went 1px -> 3px, because pinning it grew the
+   * line box to consume the whole padding allowance. */
+  min-height: calc(var(--text-sm) * 1.4 + var(--space-3xs));
+  line-height: calc(var(--text-sm) * 1.4);
   padding-block-start: var(--space-3xs);
   font-size: var(--text-sm);
   text-align: start;
