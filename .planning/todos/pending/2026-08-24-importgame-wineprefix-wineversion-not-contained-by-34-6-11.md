@@ -51,6 +51,8 @@ narrower validation than full containment (e.g. asserting the path exists and is
 executable, rather than a root-relative containment check) — the design work is the open part,
 not just wiring in the existing `assertContainedPath` primitive.
 
+Gap plan 34.6-18 resolved the sibling question for `importGame`'s `path` argument by dropping `defaultInstallPath` containment in favour of a shape-only validator (`assertPlausibleAbsolutePath`), on the grounds that the root was renderer-writable and that the feature's own input is out-of-root — so "containment against `defaultInstallPath`" is no longer available as a default answer for `winePrefix`/`wineVersion`/`wineCrossoverBottle` either, and the open design question is now narrower (existence/type validation versus a different root entirely); note also that this todo's `planned_as: 34.6-14` field is now stale, since plan 34.6-14 closed without disposing of it.
+
 ## Disposition
 
 Recorded here per Plan 34.6-11's Task 3 acceptance criteria ("if residual (c) is a real gap, file
