@@ -918,7 +918,14 @@ describe('FilterZeroResult', () => {
     expect(chipRowContextValue.setLibraryView).not.toHaveBeenCalled()
   })
 
-  it('a hostile collection name containing i18next nesting syntax ($t(...)) renders literally, including the $t( run', () => {
+  // WR-16: this mocked `t` returns its default unconditionally, so it cannot
+  // prove i18next itself treats $t(...) as inert -- that engine-level claim
+  // now lives in `chipLabels.realI18next.test.ts`, against a real
+  // `i18next.createInstance()`. What this test still proves, and is worth
+  // keeping: a hostile collection name reaches `FilterZeroResult`'s body
+  // node byte-for-byte unmodified by this component -- a structural
+  // pass-through check, not an injection-safety one.
+  it('a hostile collection name containing i18next nesting syntax ($t(...)) passes through FilterZeroResult unmodified (structural, not an injection-safety proof -- see chipLabels.realI18next.test.ts for WR-16)', () => {
     const hostileName = 'Backlog $t(header.uncategorized)'
     const descriptors: ActiveFilterDescriptor[] = [
       {
@@ -940,7 +947,11 @@ describe('FilterZeroResult', () => {
     expect(body?.props.children).toBe(`No games match ${hostileName}.`)
   })
 
-  it('a hostile collection name containing a literal {{filters}} token renders literally, not re-interpolated', () => {
+  // WR-16: same reasoning as the $t(...) test above -- the mocked `t` can't
+  // prove real-i18next injection safety for a literal {{token}} either;
+  // that claim also lives in `chipLabels.realI18next.test.ts`. This stays as
+  // a structural pass-through proof.
+  it('a hostile collection name containing a literal {{filters}} token passes through FilterZeroResult unmodified (structural, not an injection-safety proof -- see chipLabels.realI18next.test.ts for WR-16)', () => {
     const hostileName = 'Backlog {{filters}}'
     const descriptors: ActiveFilterDescriptor[] = [
       {
