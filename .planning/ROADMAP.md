@@ -4290,12 +4290,37 @@ residual and becomes a **release blocker**. Nothing needs reopening: Requirement
 > all three stages exit 0, producing a valid `.app` and a 514,459,661-byte DMG. That disposes of
 > the competing hypothesis that packaging is simply broken on this platform.
 
-**Requirements:** TBD — mint at `/gsd-plan-phase 35`
-**Plans:** 0 plans
+**Requirements:** REQ-35-01, REQ-35-02, REQ-35-03, REQ-35-04, REQ-35-05, REQ-35-06, REQ-35-07, REQ-35-08, REQ-35-09, REQ-35-10, REQ-35-11, REQ-35-12, REQ-35-13, REQ-35-14, REQ-35-15, REQ-35-16, REQ-35-17, REQ-35-18, REQ-35-19, REQ-35-20, REQ-35-21 — minted 2026-08-28 at `/gsd-plan-phase 35`. **`R-34.5-G1-PKG` is REQ-35-10 (half a: assets absent from the bundle) and REQ-35-11 (half b: the packaged resolution branch unreachable), deliberately kept as two IDs** because D-19 states either alone is inert — fixing (b) alone resolves correctly to a directory that does not exist. Closing both discharges `G-34.2-UAT-02`'s `blocked_on:` in `34.2-HUMAN-UAT.md`.
+**Plans:** 19 plans across 13 waves
+
+> **Ordering, per D-17 — the point of no return is plan `35-14` and it is named.** Waves 1–7 are
+> additive and BOTH shells still build. Wave 8 (`35-14`) tags `pre-electron-cutover`, then deletes
+> the Electron entry points — this is the irreversible step, deliberately kept small enough to read
+> in full. Waves 9–12 carry the 67-file rewrite and the `isTauri()` collapse, which by then are
+> behaviourally inert. Wave 13 is the blocking packaged live gate. The D-18 A/B re-test (`35-02`)
+> runs in wave 1 because its signal is destroyed permanently the moment Electron is deleted.
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 35 to break down)
+- [ ] 35-01-PLAN.md — Pre-flight probes and censuses: the five research open questions + two pattern-mapper decisions (wave 1)
+- [ ] 35-02-PLAN.md — D-18 A/B re-test of 7 parked bugs and folded todos under both shells (wave 1)
+- [ ] 35-03-PLAN.md — Vite migration off electron-vite + HMR dev loop with a packaged-evidence path (wave 2)
+- [ ] 35-04-PLAN.md — `R-34.5-G1-PKG` both halves + `isPackaged` collapsed to one derivation (wave 3)
+- [ ] 35-05-PLAN.md — `electron-store` → `conf` at nine sites, with an explicit `cwd` (wave 3)
+- [ ] 35-06-PLAN.md — Tray extension, reachable About window, `TraySettings` affordance audit (wave 2)
+- [ ] 35-07-PLAN.md — `gamelib://` OS registration + `openDialog` long-running channel (wave 4)
+- [ ] 35-08-PLAN.md — Real wake-lock assertions replacing the `powerSaveBlocker` no-op (wave 5)
+- [ ] 35-09-PLAN.md — Logout clears the webview browsing data; closes the 34.6 Step 8 FAIL (wave 6)
+- [ ] 35-10-PLAN.md — `installed.json` watcher port + `winetricksInstall` silent no-op (wave 7)
+- [ ] 35-11-PLAN.md — Dialog restyles + SEAM Phase 31 D-02 / Phase 33 D-04 convergence (wave 3)
+- [ ] 35-12-PLAN.md — Flatpak/Flathub deletion + AppImage-only target pin (wave 4)
+- [ ] 35-13-PLAN.md — `backend/platform` created and unconsumed, with first-party electron types (wave 7)
+- [ ] 35-14-PLAN.md — **POINT OF NO RETURN**: tag, then delete the Electron entry points (wave 8)
+- [ ] 35-15-PLAN.md — The 67-file mechanical import rewrite + reach-ledger baseline (wave 9)
+- [ ] 35-16-PLAN.md — Preload collapse: secret-policy unification + the two grep-invisible import forms (wave 10)
+- [ ] 35-17-PLAN.md — `isTauri()` collapse across 28 files / 140 references (wave 11)
+- [ ] 35-18-PLAN.md — `electron` out of `package.json`, alias removed, D-03 gate, release notes (wave 12)
+- [ ] 35-19-PLAN.md — D-16 blocking packaged macOS arm64 live gate (wave 13)
 
 ## Progress
 
