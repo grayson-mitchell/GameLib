@@ -22,3 +22,13 @@
   font-size: var(--text-xl);
   padding-inline-end: 2px;
 }
+
+/* 34.11 WR-19: relocated from Header/index.css -- refreshIcon's only
+   consumer is this component's own retry button (line 35). The keyframes
+   this animation references are NOT redefined here -- UpdateComponent/
+   index.css already declares them globally, and this rule has always
+   resolved against that copy, not Header's now-deleted duplicate. */
+.refreshIcon:hover,
+.svg-button:focus-visible .refreshIcon {
+  animation: refreshing 2s infinite;
+}

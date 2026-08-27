@@ -32,6 +32,7 @@ const read = (relPath: string) =>
 
 const THEMES_SCSS = 'src/frontend/themes.scss'
 const NAV_SHELL_SCSS = 'src/frontend/components/UI/NavShell/index.scss'
+const HEADER_CSS = 'src/frontend/components/UI/Header/index.css'
 
 /**
  * The 11 real theme root selectors in themes.scss, one representative
@@ -374,24 +375,22 @@ describe('collapse state hides the pseudo-element divider explicitly (34.11-09 F
   })
 })
 
-describe('Header background is overridden inside the tier-2 portal (34.11-09 live-sweep fix, checks 1 and 5)', () => {
+describe('Header background override was removed alongside the background it neutralised (34.11 WR-19)', () => {
   const navShellScss = read(NAV_SHELL_SCSS)
+  const headerCss = read(HEADER_CSS)
   const portalBlock = cssBlock(navShellScss, '.NavShell__tier2Portal')
 
   it('sanity: the extracted block is really .NavShell__tier2Portal, not some other block', () => {
     expect(portalBlock).toMatch(/overflow-y:\s*auto/)
   })
 
-  it('overrides .Header background to transparent at higher specificity than Header/index.css alone', () => {
-    // Header/index.css's own `.Header { background: var(--gradient-body-
-    // background, var(--body-background)); }` predates this portal and is
-    // NOT edited here -- this asserts the higher-specificity override that
-    // neutralises it from the portal side instead. `> .Header` (two
-    // classes) beats `.Header` (one class) regardless of stylesheet import
-    // order.
-    expect(portalBlock).toMatch(
-      />\s*\.Header\s*{[^}]*background:\s*transparent/
-    )
+  it('Header/index.css no longer declares a background on .Header -- 34.11-09\'s `> .Header { background: transparent }` neutraliser existed only to cancel that declaration, so both were removed together rather than leaving the neutraliser orphaned', () => {
+    const headerBlock = cssBlock(headerCss, '.Header')
+    expect(headerBlock).not.toMatch(/background:/)
+  })
+
+  it('.NavShell__tier2Portal no longer overrides .Header background to transparent -- there is nothing left to neutralise', () => {
+    expect(portalBlock).not.toMatch(/>\s*\.Header\s*{[^}]*background:/)
   })
 })
 

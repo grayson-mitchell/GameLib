@@ -218,6 +218,14 @@ a {
   margin: 0;
 }
 
+/* 34.11 WR-19: relocated from Header/index.css -- iconsWrapper's only
+   consumer is CustomWineProton.tsx's addRemoveSvgButtons row. */
+.iconsWrapper {
+  display: flex;
+  align-content: center;
+  justify-content: center;
+}
+
 .advancedSetting {
   text-align: start;
 }

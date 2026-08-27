@@ -32,6 +32,8 @@ const LIBRARY_TSX = 'src/frontend/screens/Library/index.tsx'
 const LIBRARY_CSS = 'src/frontend/screens/Library/index.css'
 const HEADER_TSX = 'src/frontend/components/UI/Header/index.tsx'
 const HEADER_CSS = 'src/frontend/components/UI/Header/index.css'
+const SETTINGS_CSS = 'src/frontend/screens/Settings/index.css'
+const ERROR_COMPONENT_CSS = 'src/frontend/components/UI/ErrorComponent/index.css'
 
 /**
  * Returns the declaration body of the FIRST top-level rule whose selector
@@ -102,8 +104,20 @@ describe('Header vertical stack (Task 1, REQ-34.10-07)', () => {
     expect(block).toMatch(/flex-direction:\s*column/)
   })
 
-  it('retains the unrelated iconsWrapper/refreshIcon styling that lives in this file', () => {
-    expect(headerCss).toMatch(/@keyframes refreshing/)
+  it('34.11 WR-19: no longer carries the unrelated iconsWrapper/refreshIcon/@keyframes refreshing that used to live in this file', () => {
+    // Absence half: Header/index.css must not have regained any of the
+    // three relocated rules. An absence-only gate would pass if the rules
+    // were simply lost rather than moved, so the non-vacuity half below
+    // asserts they landed at their new homes.
+    expect(headerCss).not.toMatch(/@keyframes refreshing/)
+    expect(headerCss).not.toMatch(/\.iconsWrapper/)
+    expect(headerCss).not.toMatch(/\.refreshIcon/)
+
+    // Non-vacuity half: the two moved rules exist at their new homes.
+    const settingsCss = read(SETTINGS_CSS)
+    const errorComponentCss = read(ERROR_COMPONENT_CSS)
+    expect(settingsCss).toMatch(/\.iconsWrapper/)
+    expect(errorComponentCss).toMatch(/\.refreshIcon:hover/)
   })
 
   it('still renders LibrarySearchBar first, imported unchanged (D-34)', () => {
