@@ -18,59 +18,8 @@ import type {
   RunnabilityTier,
   StoreFacetValue
 } from 'frontend/types'
-import { chipLabelSpec, ChipLabelSpec } from './chipLabels'
+import { chipLabelSpec, resolveLabel } from './chipLabels'
 import './index.scss'
-
-type TFunc = (
-  key: string,
-  defaultValue: string,
-  options?: Record<string, unknown>
-) => string
-
-// i18next-parser's JavascriptLexer only resolves string-literal arguments
-// to tGamelib()/t() calls (confirmed twice already this phase -- 34.11-06
-// and 34.11-07's FilterRunnabilityFacet -- a call driven by a variable key
-// is invisible to the static extractor, or worse, extracts an EMPTY default
-// text). The four tri-state chip keys below are NEW this plan and must be
-// reachable by `pnpm i18n`, so they get their own literal call sites here.
-// Every other key `chipLabelSpec` can return (view/store/runnability labels,
-// the three reused `header.*` keys) was already extracted by its own
-// literal call site in an earlier plan -- dynamic resolution for those is
-// safe because the catalog already has them.
-function resolveLabel(spec: ChipLabelSpec, t: TFunc, tGamelib: TFunc): string {
-  if ('literal' in spec) {
-    return spec.literal
-  }
-
-  if (spec.ns === 'default') {
-    return t(spec.key, spec.defaultText)
-  }
-
-  switch (spec.key) {
-    case 'gamelib:library.filterPanel.chipHiddenOnly':
-      return tGamelib(
-        'gamelib:library.filterPanel.chipHiddenOnly',
-        'Hidden only'
-      )
-    case 'gamelib:library.filterPanel.chipHiddenIncluded':
-      return tGamelib(
-        'gamelib:library.filterPanel.chipHiddenIncluded',
-        'Including hidden'
-      )
-    case 'gamelib:library.filterPanel.chipNonAvailableOnly':
-      return tGamelib(
-        'gamelib:library.filterPanel.chipNonAvailableOnly',
-        'Non-available only'
-      )
-    case 'gamelib:library.filterPanel.chipNonAvailableIncluded':
-      return tGamelib(
-        'gamelib:library.filterPanel.chipNonAvailableIncluded',
-        'Including non-available'
-      )
-    default:
-      return tGamelib(spec.key, spec.defaultText)
-  }
-}
 
 export default function FilterChipRow() {
   const { t } = useTranslation()

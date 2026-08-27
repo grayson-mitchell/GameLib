@@ -15,56 +15,10 @@ import LibraryContext from '../../LibraryContext'
 import {
   chipLabelSpec,
   joinChipLabels,
+  resolveLabel,
   ChipLabelSpec
 } from '../FilterChipRow/chipLabels'
 import './index.scss'
-
-type TFunc = (
-  key: string,
-  defaultValue: string,
-  options?: Record<string, unknown>
-) => string
-
-// Same resolution shape as FilterChipRow's own resolveLabel (duplicated
-// here rather than imported, since chipLabels.ts must stay React-free and
-// this project has no third shared render-glue module for the two grid
-// surfaces). The four tri-state keys get literal call sites for the same
-// reason FilterChipRow's copy does -- i18next-parser's static extractor
-// cannot see a call driven by a variable key/defaultValue pair.
-function resolveLabel(spec: ChipLabelSpec, t: TFunc, tGamelib: TFunc): string {
-  if ('literal' in spec) {
-    return spec.literal
-  }
-
-  if (spec.ns === 'default') {
-    return t(spec.key, spec.defaultText)
-  }
-
-  switch (spec.key) {
-    case 'gamelib:library.filterPanel.chipHiddenOnly':
-      return tGamelib(
-        'gamelib:library.filterPanel.chipHiddenOnly',
-        'Hidden only'
-      )
-    case 'gamelib:library.filterPanel.chipHiddenIncluded':
-      return tGamelib(
-        'gamelib:library.filterPanel.chipHiddenIncluded',
-        'Including hidden'
-      )
-    case 'gamelib:library.filterPanel.chipNonAvailableOnly':
-      return tGamelib(
-        'gamelib:library.filterPanel.chipNonAvailableOnly',
-        'Non-available only'
-      )
-    case 'gamelib:library.filterPanel.chipNonAvailableIncluded':
-      return tGamelib(
-        'gamelib:library.filterPanel.chipNonAvailableIncluded',
-        'Including non-available'
-      )
-    default:
-      return tGamelib(spec.key, spec.defaultText)
-  }
-}
 
 export default function FilterZeroResult() {
   const { t } = useTranslation()
