@@ -1,9 +1,12 @@
 name: Build macOS onedir runners
 
-# Phase 34.9 Plan 04: this workflow is the SOLE producer of the x64 onedir
-# artifacts, because PyInstaller cannot cross-compile -- macos-13 (Intel) and
-# macos-14 (Apple Silicon) each build the three runners (legendary/gogdl/nile)
-# on their own host, using meta/buildRunnersOnedir.ts (plan 34.9-01).
+# Phase 34.9 Plan 04 (Intel x64 leg retired by Phase 34.18): this workflow
+# is the SOLE producer of the arm64 onedir artifacts, because PyInstaller
+# cannot cross-compile -- macos-14 (Apple Silicon) builds the three runners
+# (legendary/gogdl/nile) on its own host, using meta/buildRunnersOnedir.ts
+# (plan 34.9-01). The Intel (x64) leg was retired in Phase 34.18: GitHub
+# retired that Intel macOS image in December 2025 and the leg was never
+# assigned a runner across three dispatch attempts (F-34.16-G).
 #
 # comet, Windows and Linux are deliberately absent from this workflow: comet
 # is a Rust static binary that pays no onefile-startup tax, and the amfid
@@ -27,8 +30,11 @@ permissions:
   contents: write # required to create/update the rolling release and upload assets
 
 jobs:
-  # Release creation is isolated in its own job so the two build legs below
-  # cannot race each other into a duplicate `gh release create` (T-34.9-17).
+  # Release creation is isolated in its own job so a re-dispatched build leg
+  # cannot race a duplicate `gh release create` (T-34.9-17). Historically this
+  # guarded two concurrent matrix legs; Phase 34.18 retired the Intel leg,
+  # leaving one, but the isolation still guards against overlapping dispatches
+  # of the same workflow.
   prepare-release:
     runs-on: ubuntu-latest
     steps:
@@ -90,8 +96,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-13
-            arch: x64
           - os: macos-14
             arch: arm64
     runs-on: ${{ matrix.os }}
@@ -119,15 +123,15 @@ jobs:
         run: pnpm install
 
       # PyInstaller cannot cross-compile (34.9-CONTEXT.md constraint 1), so a
-      # GitHub image change that silently flips macos-13 to Apple Silicon (or
-      # vice versa) must break this leg loudly rather than publish an onedir
-      # archive under the wrong arch's filename.
-      - name: Verify runner architecture matches the matrix leg
+      # GitHub image change that silently flips macos-14 away from Apple
+      # Silicon must break this leg loudly rather than publish an onedir
+      # archive under the wrong arch's filename. Phase 34.18 retired the
+      # Intel (x64) leg, leaving arm64 as the sole leg -- one fewer leg
+      # means this check matters more, not less, since there is no second
+      # leg left to notice a silent image change.
+      - name: Verify runner architecture matches the matrix leg (matrix.arch=${{ matrix.arch }})
         run: |
-          EXPECTED="x86_64"
-          if [ "${{ matrix.arch }}" = "arm64" ]; then
-            EXPECTED="arm64"
-          fi
+          EXPECTED="arm64"
           ACTUAL="$(uname -m)"
           if [ "$ACTUAL" != "$EXPECTED" ]; then
             echo "::error::Runner architecture mismatch: matrix.arch=${{ matrix.arch }} expects uname -m=$EXPECTED but this runner reports $ACTUAL. PyInstaller cannot cross-compile -- refusing to publish a mislabelled onedir archive."
@@ -138,8 +142,10 @@ jobs:
       - name: Build the three onedir runners
         run: pnpm build-runners-onedir --arch=${{ matrix.arch }}
 
-      # Per-arch SHA256SUMS/BUILD-MANIFEST filenames so the two matrix legs'
-      # --clobber uploads can never destroy each other's digests (T-34.9-17).
+      # Per-arch SHA256SUMS/BUILD-MANIFEST filenames, kept even with a single
+      # remaining leg, for forward compatibility and pin-tool filename
+      # stability -- meta/pinRunnerDigests.ts (plan 34.18-03) fetches these
+      # exact remote filenames by arch.
       - name: Publish onedir archives and digests to the rolling release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -151,8 +157,9 @@ jobs:
             BUILD-MANIFEST-${{ matrix.arch }}.json \
             --clobber
 
-      # Surfaces the published digests in the run log so plan 34.9-09 can pin
-      # them for the fetch-side verification control.
+      # Surfaces the published digests in the run log so plan 34.18-07's
+      # developer gate (`pnpm pin:runner-digests`) can pin them for the
+      # fetch-side verification control.
       - name: Print SHA256SUMS verification output
         run: |
           cd .build-tools/runners-onedir/out
