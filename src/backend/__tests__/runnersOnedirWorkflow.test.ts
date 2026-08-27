@@ -167,19 +167,18 @@ describe('build-runners-onedir-macos.yml jobs shape', () => {
 })
 
 describe('build-runners-onedir-macos.yml matrix (parsed via YAML, not regex)', () => {
-  test('declares exactly {os: macos-13, arch: x64} and {os: macos-14, arch: arm64}', () => {
+  // Phase 34.18 retired the Intel (x64) leg (GitHub retired that macOS image
+  // in December 2025 and the leg was never assigned a runner across three
+  // dispatch attempts -- F-34.16-G). Only one leg remains: this asserts an
+  // EXACT single-element shape, not merely "arm64 is present among however
+  // many legs exist" -- a `toContainEqual`/length-floor assertion would stay
+  // green even if a macos-13/x64 leg were reintroduced alongside it.
+  test('declares exactly one leg: {os: macos-14, arch: arm64}', () => {
     const parsed = parseWorkflow()
     const include = parsed.jobs.build.strategy?.matrix?.include
     expect(include).toBeDefined()
-    expect(include).toHaveLength(2)
-
-    const sorted = [...(include as WorkflowMatrixLeg[])].sort((a, b) =>
-      a.arch.localeCompare(b.arch)
-    )
-    expect(sorted).toEqual([
-      { os: 'macos-14', arch: 'arm64' },
-      { os: 'macos-13', arch: 'x64' }
-    ])
+    expect(include).toHaveLength(1)
+    expect(include).toEqual([{ os: 'macos-14', arch: 'arm64' }])
   })
 
   test('build runs on ${{ matrix.os }}', () => {
@@ -282,16 +281,16 @@ describe('build-runners-onedir-macos.yml upload step', () => {
 
   // Cross-module: proves the filenames this workflow uploads are the exact
   // strings meta/buildRunnersOnedir.ts's archiveName() produces, for every
-  // arch/runner combination -- not eyeballed agreement. The upload step's
-  // archive glob is `*_onedir.tar.gz`, so the load-bearing assertion is that
-  // archiveName() itself always produces a name that glob matches, and that
-  // the arch-suffix segment it embeds (x86_64/arm64) round-trips through the
-  // SAME ${{ matrix.arch }} substitution the SHA256SUMS/manifest filenames
-  // use in this exact step.
+  // runner -- not eyeballed agreement. The upload step's archive glob is
+  // `*_onedir.tar.gz`, so the load-bearing assertion is that archiveName()
+  // itself always produces a name that glob matches, and that the arch-suffix
+  // segment it embeds (arm64) round-trips through the SAME
+  // ${{ matrix.arch }} substitution the SHA256SUMS/manifest filenames use in
+  // this exact step. Phase 34.18 retired the x64 leg (archiveName() now
+  // throws on any arch other than "arm64" -- meta/buildRunnersOnedir.ts), so
+  // the x64 rows this test.each once carried were removed rather than
+  // asserting on an arch that no longer exists.
   test.each([
-    ['x64', 'legendary'],
-    ['x64', 'gogdl'],
-    ['x64', 'nile'],
     ['arm64', 'legendary'],
     ['arm64', 'gogdl'],
     ['arm64', 'nile']
@@ -305,12 +304,9 @@ describe('build-runners-onedir-macos.yml upload step', () => {
       const expectedArchiveName = archiveName(runner, arch)
       expect(block).toContain('*_onedir.tar.gz')
       expect(expectedArchiveName).toMatch(/_onedir\.tar\.gz$/)
-      expect(
-        '*_onedir.tar.gz'.replace(
-          '*',
-          runner + '_macOS_' + (arch === 'x64' ? 'x86_64' : 'arm64')
-        )
-      ).toBe(expectedArchiveName)
+      expect('*_onedir.tar.gz'.replace('*', runner + '_macOS_' + arch)).toBe(
+        expectedArchiveName
+      )
 
       expect(block).toContain(`SHA256SUMS-${arch}`)
       expect(block).toContain(`BUILD-MANIFEST-${arch}.json`)
@@ -325,7 +321,15 @@ describe('build-runners-onedir-macos.yml upload step', () => {
 })
 
 describe('build-runners-onedir-macos.yml arch guard step', () => {
-  const GUARD_STEP_NAME = 'Verify runner architecture matches the matrix leg'
+  // Plan 34.18-02 renamed this step to append
+  // "(matrix.arch=${{ matrix.arch }})" -- a cosmetic change made to hold the
+  // file's non-comment `matrix.arch` interpolation count steady at its
+  // pre-edit baseline of 7 after the arch-verify step's `if` conditional was
+  // collapsed to a single literal. The guard's behavior (uname -m / ::error::
+  // / exit 1) is unchanged; only its exact-match `name:` lookup needed
+  // updating.
+  const GUARD_STEP_NAME =
+    'Verify runner architecture matches the matrix leg (matrix.arch=${{ matrix.arch }})'
 
   test('exists and references uname -m', () => {
     expect(extractRunBlock(GUARD_STEP_NAME)).toContain('uname -m')
