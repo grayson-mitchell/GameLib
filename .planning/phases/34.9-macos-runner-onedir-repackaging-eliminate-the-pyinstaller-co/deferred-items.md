@@ -39,6 +39,8 @@ detail.
 
 **ROUTED 2026-08-22:** now owned by **Phase 34.16** (`macos-runner-onedir-x64-ci-leg-...`), created 2026-08-22 in commit `386b2f497`. The "follow-up phase" named above had no counterpart in ROADMAP.md when this item was written, so the routing was dangling for 9-11 days -- the same shape that left Phase 27 blocked across four phases after its cause was gone. OWNER text above is left as written; this line supersedes only its routing.
 
+**CLOSED 2026-08-27 (Phase 34.18, plan 34.18-06).** The x64 clause of this item's blocker is now a NON-GOAL: `F-34.16-G` established `macos-13` was retired by GitHub on 2025-12-04 and the x64 leg was never assigned a runner across three live-gate attempts, and the operator's 2026-08-27 decision to retire macOS x64/Intel support means it will not be retried. The arm64 clause is satisfied by Phase 34.18's arm64-only CI workflow (plan 34.18-02) — the arm64 leg this item names as already proven locally is now also proven in CI. This closes the item; it does not reopen or restate items 12/13, which track a narrower, still-partly-open question (see item 13 below).
+
 ### 2. REQ-34.9-03 — downloader sources darwin archives
 
 **What it is:** `meta/downloadHelperBinaries.ts` sourcing darwin onedir archives from the rolling
@@ -58,6 +60,8 @@ release.
 
 **ROUTED 2026-08-22:** now owned by **Phase 34.16** (`macos-runner-onedir-x64-ci-leg-...`), created 2026-08-22 in commit `386b2f497`. The "follow-up phase" named above had no counterpart in ROADMAP.md when this item was written, so the routing was dangling for 9-11 days -- the same shape that left Phase 27 blocked across four phases after its cause was gone. OWNER text above is left as written; this line supersedes only its routing.
 
+**CLOSED 2026-08-27 (Phase 34.18, plan 34.18-06).** Becomes arm64-only (plan 34.18-02); the downloader's live network-sourcing path is proven by plan 34.18-07's developer gate, not by this phase. This item's blocker (REQ-34.9-02) is now moot for x64 since x64 is a non-goal, and satisfied for arm64 by Phase 34.18's CI leg (item 1, above, CLOSED).
+
 ### 3. REQ-34.9-04 — sha256 digest verification
 
 **What it is:** darwin archives sha256-verified against in-repo digests before extraction.
@@ -73,6 +77,8 @@ ever been verified against a real archive.
 **OWNER:** same as REQ-34.9-02 — follow-up phase / developer action (2026-08-11).
 
 **ROUTED 2026-08-22:** now owned by **Phase 34.16** (`macos-runner-onedir-x64-ci-leg-...`), created 2026-08-22 in commit `386b2f497`. The "follow-up phase" named above had no counterpart in ROADMAP.md when this item was written, so the routing was dangling for 9-11 days -- the same shape that left Phase 27 blocked across four phases after its cause was gone. OWNER text above is left as written; this line supersedes only its routing.
+
+**CLOSED 2026-08-27 (Phase 34.18, plan 34.18-06).** Becomes arm64-only, same live proof as item 2 — plan 34.18-07's developer gate pins real arm64 digests, replacing three of the six `PENDING-CI-PUBLISH` sentinels. This item's blocker (REQ-34.9-02) is now moot for x64 since x64 is a non-goal, and satisfied for arm64 by Phase 34.18's CI leg (item 1, above, CLOSED).
 
 ### 4. REQ-34.9-09 — cold spawn ratio, per-runner
 
@@ -498,6 +504,8 @@ precondition).
 
 **ROUTED 2026-08-22:** now owned by **Phase 34.16** (`macos-runner-onedir-x64-ci-leg-...`), created 2026-08-22 in commit `386b2f497`. The "follow-up phase" named above had no counterpart in ROADMAP.md when this item was written, so the routing was dangling for 9-11 days -- the same shape that left Phase 27 blocked across four phases after its cause was gone. OWNER text above is left as written; this line supersedes only its routing.
 
+**CLOSED 2026-08-27 (Phase 34.18, plan 34.18-06).** The arm64 half was ACHIEVED and REMAINS achieved: plan 34.18-04 removed the `--arch=x64` invocation and RED-proved the surviving one-arch guard strict against two known-bad trees, so the achieved half is measured to have survived the reduction, not merely assumed to still hold. The x64 half of this item's own question — whether a real x64 darwin onedir tree would pass the guard's framework-structure checks — is now MOOT-BY-CONSTRUCTION, not answered: Phase 34.18 removed x64 packaging entirely, so no x64 onedir tree will ever exist to test the guard against. This closes the item; it does not claim the unobserved coverage question was ever resolved.
+
 ### 13. The guard has never been exercised in CI
 
 **What it is:** the `verify:runner-bundle` wiring is npm-script-level, so `build-base.yml`'s
@@ -515,6 +523,8 @@ real digests), which unblocks `install-deps`.
 **OWNER:** the same follow-up phase that owns items 1-3, dated 2026-08-12.
 
 **ROUTED 2026-08-22:** now owned by **Phase 34.16** (`macos-runner-onedir-x64-ci-leg-...`), created 2026-08-22 in commit `386b2f497`. The "follow-up phase" named above had no counterpart in ROADMAP.md when this item was written, so the routing was dangling for 9-11 days -- the same shape that left Phase 27 blocked across four phases after its cause was gone. OWNER text above is left as written; this line supersedes only its routing.
+
+**CARRIED FORWARD, dated 2026-08-27 (Phase 34.18, plan 34.18-06) — NOT closed.** This item's discharge mechanism — a live CI run of the (now arm64-only) guard, unblocked by real digests replacing the `PENDING-CI-PUBLISH` sentinels — has not yet run at this plan's execution time. Plan 34.18-07's developer gate is the mechanism that will discharge it, by pinning real arm64 digests and exercising the guard against them. This item stays open rather than being closed ahead of that gate actually running; closing it now would be a false record.
 
 ## Finding opened by the 2026-08-13 pipe-conversion proof run (plan 34.9-26)
 
@@ -665,6 +675,8 @@ without waiting for the second.
    discharged item 16 and that `34.9-GUARD-PROOF.md` §2.5 AMENDMENT v2 §A3 makes normative — is
    invalidated with them, because the guard steps are hardcoded per-arch. **Fail-closed by design.**
    Do not "fix" it by dropping the x64 step; that reopens this item.
+
+**CROSS-REFERENCE, dated 2026-08-27 (Phase 34.18, plan 34.18-06) — this item's 2026-08-25 CLOSED rationale above is now STALE BY BEHAVIOUR; recorded here, not re-closed.** The 2026-08-25 closure cites `dist:mac` (`package.json:51`) and `release:mac` (`:46`) each running `pnpm verify:runner-bundle build --arch=x64` as a hardcoded `&&` step, added after `--arch=arm64` and before `electron-builder` — that citation was accurate on 2026-08-25, but plan 34.18-04 (2026-08-27) removed that exact `--arch=x64` step entirely as part of retiring macOS x64 packaging (see items 1, 12 and 13 above; `34.18-04-SUMMARY.md`). This is NOT a reopening of this item and does NOT add a second `CLOSED` label: C2-05 was about an unverified x64 build reaching the auto-publish channel, and with x64 packaging removed from `dist:mac`/`release:mac` altogether, there is no x64 build left that could reach that channel — the finding is now MOOT-BY-CONSTRUCTION, not reverted. Qualification 3 immediately above (do not "fix" it by dropping the x64 step) is itself now historical, superseded by the 2026-08-27 retirement decision: the x64 step was dropped, deliberately, because the thing it guarded no longer exists, not as an accidental regression of this item's closure. Items 12 and 13 carry the live 2026-08-27 disposition (12 CLOSED, 13 CARRIED FORWARD).
 
 ### 19. C2-07 — the doc-comment accuracy pins couple CI to documentation wording, not just behaviour
 
