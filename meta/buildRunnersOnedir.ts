@@ -15,9 +15,10 @@
  * runs this exact code path.
  *
  * PyInstaller cannot cross-compile (34.9-CONTEXT.md constraint 1) -- macOS
- * x64 and arm64 must each build on their own host. `buildRunner()` refuses to
- * run unless `process.platform === 'darwin'` AND `process.arch` matches the
- * requested target; there is no cross-arch fallback.
+ * arm64 must build on its own host. `buildRunner()` refuses to run unless
+ * `process.platform === 'darwin'` AND `process.arch` matches the requested
+ * target; there is no cross-arch fallback. Phase 34.18 retired the macOS x64
+ * leg -- arm64 is the only accepted arch now (F-34.16-G).
  *
  * Pinned tags are read from meta/releaseTags.ts -- the SAME module
  * meta/downloadHelperBinaries.ts imports -- so this script cannot restate (and
@@ -37,7 +38,7 @@
  * `public/bin/**` -- that convention is reserved for BUNDLED runtime binaries
  * (meta/downloadHelperBinaries.ts is the only writer there; T-34.9-11).
  *
- * Run with `pnpm build-runners-onedir --arch=<x64|arm64> [--runner=<name>]`.
+ * Run with `pnpm build-runners-onedir --arch=arm64 [--runner=<name>]`.
  */
 
 import { spawn } from 'node:child_process'
@@ -103,16 +104,24 @@ const isOnedirRunnerName = (value: string): value is OnedirRunnerName =>
 // legendary 0.21.0 renamed its own assets to `_x64`, while these archive names
 // are the keys of meta/runnersOnedirDigests.json and of the already-published
 // rolling-release tag. Renaming them would invalidate every published digest.
+// The upstream-echoing half of that naming above is now HISTORICAL: Phase
+// 34.18 retired the macOS x64 leg, so `archiveName` accepts only `arm64` and
+// rejects everything else loudly. A rejected arch would have no digest slot
+// in meta/runnersOnedirDigests.json and could never be verified by
+// downloadOnedirAsset() -- rejecting the name here makes that half-retired
+// state impossible to produce, rather than merely undocumented.
 // ---------------------------------------------------------------------------
 
 export function archiveName(runner: string, arch: string): string {
-  if (arch !== 'x64' && arch !== 'arm64') {
+  if (arch !== 'arm64') {
     throw new Error(
-      `archiveName: unsupported arch "${arch}" (expected "x64" or "arm64")`
+      `archiveName: unsupported arch "${arch}" -- Phase 34.18 retired the ` +
+        `macOS x64 leg, so only "arm64" is accepted. An "${arch}" archive ` +
+        `would have no digest slot in meta/runnersOnedirDigests.json and ` +
+        `could never be verified by downloadOnedirAsset().`
     )
   }
-  const archSegment = arch === 'x64' ? 'x86_64' : 'arm64'
-  return `${runner}_macOS_${archSegment}_onedir.tar.gz`
+  return `${runner}_macOS_arm64_onedir.tar.gz`
 }
 
 // ---------------------------------------------------------------------------
@@ -924,7 +933,7 @@ function writeBuildManifest(arch: string, results: RunnerBuildResult[]): void {
 }
 
 // ---------------------------------------------------------------------------
-// Entrypoint -- parses --arch=<x64|arm64> and an optional --runner=<name>.
+// Entrypoint -- parses --arch=arm64 and an optional --runner=<name>.
 // Only invokes a real build when the module is executed directly (guard
 // idiom shared with meta/buildSteamBridgeShims.ts / meta/buildCrossoverIndex.ts:
 // this script is run via `node meta/runTs.cjs` (package.json
@@ -940,11 +949,14 @@ function parseArgs(argv: string[]): {
 } {
   const archArg = argv.find((a) => a.startsWith('--arch='))
   if (!archArg) {
-    throw new Error('Missing required --arch=<x64|arm64> argument')
+    throw new Error('Missing required --arch=arm64 argument')
   }
   const arch = archArg.slice('--arch='.length)
-  if (arch !== 'x64' && arch !== 'arm64') {
-    throw new Error(`--arch must be "x64" or "arm64", got "${arch}"`)
+  if (arch !== 'arm64') {
+    throw new Error(
+      `--arch must be "arm64" ` +
+        `(Phase 34.18 retired the macOS x64 leg), got "${arch}"`
+    )
   }
 
   const runnerArg = argv.find((a) => a.startsWith('--runner='))
@@ -989,7 +1001,7 @@ export async function main(): Promise<void> {
 // from "a dependency of the entrypoint" once bundled together. Requiring
 // `--arch=` to be present in argv (which `parseArgs` already mandates before
 // building anything) is a no-op for every legitimate direct invocation
-// (`pnpm build-runners-onedir --arch=<x64|arm64>` always supplies it) and
+// (`pnpm build-runners-onedir --arch=arm64` always supplies it) and
 // prevents this file's main() from running -- and crashing the whole bundle
 // with a "Missing required --arch" exit before the importing script's own
 // logic ever gets a chance to run -- when it is merely imported for its

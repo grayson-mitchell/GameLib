@@ -77,11 +77,19 @@ describe('buildRunnersOnedir', () => {
       )
     })
 
-    it('matches the existing upstream _macOS_x86_64 naming for x64', () => {
-      expect(archiveName('nile', 'x64')).toBe('nile_macOS_x86_64_onedir.tar.gz')
+    it('34.18: throws for x64 -- the macOS x64 leg is retired, naming x64 and 34.18', () => {
+      let thrown: Error | undefined
+      try {
+        archiveName('nile', 'x64')
+      } catch (error) {
+        thrown = error as Error
+      }
+      expect(thrown).toBeDefined()
+      expect(thrown?.message).toContain('x64')
+      expect(thrown?.message).toContain('34.18')
     })
 
-    it('throws for any arch other than x64 or arm64', () => {
+    it('throws for any arch other than arm64', () => {
       expect(() => archiveName('nile', 'armv7')).toThrow()
     })
   })
@@ -689,7 +697,7 @@ describe('buildRunnersOnedir', () => {
         archiveSha256:
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
         archivePath:
-          '.build-tools/runners-onedir/out/legendary_macOS_x86_64_onedir.tar.gz',
+          '.build-tools/runners-onedir/out/legendary_macOS_arm64_onedir.tar.gz',
         fileCount: 120,
         machoCount: 3
       },
@@ -706,7 +714,7 @@ describe('buildRunnersOnedir', () => {
         archiveSha256:
           'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
         archivePath:
-          '.build-tools/runners-onedir/out/gogdl_macOS_x86_64_onedir.tar.gz',
+          '.build-tools/runners-onedir/out/gogdl_macOS_arm64_onedir.tar.gz',
         fileCount: 95,
         machoCount: 2
       },
@@ -723,7 +731,7 @@ describe('buildRunnersOnedir', () => {
         archiveSha256:
           'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
         archivePath:
-          '.build-tools/runners-onedir/out/nile_macOS_x86_64_onedir.tar.gz',
+          '.build-tools/runners-onedir/out/nile_macOS_arm64_onedir.tar.gz',
         fileCount: 80,
         machoCount: 1
       }
@@ -741,20 +749,20 @@ describe('buildRunnersOnedir', () => {
 
     describe('formatSha256Sums', () => {
       it('returns one line per result, each "<64 lowercase hex>  <archiveName>"', () => {
-        const output = formatSha256Sums('x64', FIXTURE_RESULTS)
+        const output = formatSha256Sums('arm64', FIXTURE_RESULTS)
         const lines = output.split('\n').filter((line) => line.length > 0)
         expect(lines).toHaveLength(3)
         lines.forEach((line, index) => {
           expect(line).toMatch(/^[0-9a-f]{64} {2}\S+$/)
           const result = FIXTURE_RESULTS[index]
           expect(line).toBe(
-            `${result.archiveSha256}  ${archiveName(result.runner, 'x64')}`
+            `${result.archiveSha256}  ${archiveName(result.runner, 'arm64')}`
           )
         })
       })
 
       it('ends with exactly one trailing newline and no blank interior line', () => {
-        const output = formatSha256Sums('x64', FIXTURE_RESULTS)
+        const output = formatSha256Sums('arm64', FIXTURE_RESULTS)
         expect(output.endsWith('\n')).toBe(true)
         expect(output.endsWith('\n\n')).toBe(false)
         const withoutTrailingNewline = output.slice(0, -1)
@@ -768,8 +776,8 @@ describe('buildRunnersOnedir', () => {
             ? { ...r, archiveSha256: FIXTURE_RESULTS[1].archiveSha256 }
             : r
         )
-        const original = formatSha256Sums('x64', FIXTURE_RESULTS)
-        const withDuplicateDigest = formatSha256Sums('x64', mutated)
+        const original = formatSha256Sums('arm64', FIXTURE_RESULTS)
+        const withDuplicateDigest = formatSha256Sums('arm64', mutated)
         expect(withDuplicateDigest).not.toBe(original)
       })
     })
