@@ -6,8 +6,18 @@
  * for that separate case.
  *
  * Builds its sentence from the exact same `chipLabelSpec`/`joinChipLabels`
- * pair the chip row uses, so the sentence can never name a filter the chip
- * row does not also show as a chip.
+ * pair the chip row uses -- PLUS one deliberate exception (WR-10 / D-08
+ * amended 2026-08-27, quick task 260827-vpl): the alphabet letter. DECISION 1
+ * of that task's plan reclassified the letter as a genuine filter (it
+ * removes games from `libraryToShow` via `library.filter(...)`, it does not
+ * scroll/seek), so a letter-only zero result must say why -- but the letter
+ * still does NOT become an `ActiveFilterDescriptor` and therefore gets no
+ * chip in `FilterChipRow` (that would breach the UI-SPEC source gate at
+ * `FilterChipRow/__tests__/index.test.tsx:777-782` and is a design
+ * decision, not this finding's fix). This file is therefore the ONLY
+ * surface that names the letter outside the strip itself -- which is why
+ * D-08a (same task) clears the letter when the strip is hidden: the strip
+ * is the letter's sole always-visible indicator everywhere else.
  */
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -26,12 +36,15 @@ export default function FilterZeroResult() {
   const {
     activeFilterDescriptors,
     activeFilterCount,
+    alphabetFilterLetter,
     clearAllFilters,
     __isDefaultLibraryContext: isDefaultLibraryContext
   } = useContext(LibraryContext)
 
   // Same guard order as FilterChipRow: the sentinel first (a dead surface
   // must say so at the console), the zero-count early return only after.
+  // The sentinel check MUST stay first -- a selected letter must never
+  // smuggle a render past a dead context (WR-10/D-08a non-regression, B5).
   if (isDefaultLibraryContext) {
     console.error(
       'FilterZeroResult rendered outside LibraryContext.Provider -- its Clear all action would be inert. Mount it only inside the provider.'
@@ -39,7 +52,10 @@ export default function FilterZeroResult() {
     return null
   }
 
-  if (activeFilterCount === 0) {
+  // WR-10: widened to admit a letter-only zero result. Without this, a user
+  // who picks only a letter and gets zero matches sees `EmptyLibraryMessage`
+  // ("Your library is empty") instead of anything naming the letter.
+  if (activeFilterCount === 0 && !alphabetFilterLetter) {
     return null
   }
 
@@ -47,6 +63,27 @@ export default function FilterZeroResult() {
     .map((descriptor) => chipLabelSpec(descriptor))
     .filter((spec): spec is ChipLabelSpec => spec !== null)
     .map((spec) => resolveLabel(spec, t, tGamelib))
+
+  // The one deliberate exception to "every label here is also a chip"
+  // (see the header comment): the letter is a real filter but not a
+  // descriptor, so it is appended here rather than flowing through
+  // chipLabelSpec/activeFilterDescriptors like everything above. `'#'` is
+  // not a literal to display -- it is spelled out as "a number", matching
+  // AlphabetFilter's own on-screen label for that button.
+  if (alphabetFilterLetter) {
+    labels.push(
+      alphabetFilterLetter === '#'
+        ? tGamelib(
+            'gamelib:library.filterPanel.emptyAlphabetNumber',
+            'Starting with a number'
+          )
+        : tGamelib(
+            'gamelib:library.filterPanel.emptyAlphabetLetter',
+            'Starting with "{{letter}}"',
+            { letter: alphabetFilterLetter }
+          )
+    )
+  }
 
   // WR-12, defence in depth: `activeFilterCount` is now derived upstream
   // from `renderableActiveFilters` (`Library/index.tsx`), so it should never

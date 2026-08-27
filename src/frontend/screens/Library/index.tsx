@@ -403,6 +403,13 @@ export default React.memo(function Library(): JSX.Element {
     const newValue = !showAlphabetFilter
     storage.setItem('showAlphabetFilter', JSON.stringify(newValue))
     setShowAlphabetFilter(newValue)
+    if (!newValue) {
+      // D-08a (2026-08-27, quick 260827-vpl): the strip is the letter's only
+      // always-visible indicator (DECISION 1's rationale for withholding a
+      // chip). Hiding it while a letter stays selected would leave a live
+      // filter with nothing on screen representing it -- clear it here.
+      setAlphabetFilterLetter(null)
+    }
   }
   const [alphabetFilterLetter, setAlphabetFilterLetter] = useState<
     string | null
@@ -997,10 +1004,18 @@ export default React.memo(function Library(): JSX.Element {
     handleShowSupportOfflineOnly(false)
     handleShowThirdPartyOnly(false)
     handleShowUpdatesOnly(false)
-    // filterText is session-only (D-22) and has no localStorage key -- the
-    // sole exception to "every one of those goes through its persisted
-    // wrapper".
+    // filterText and alphabetFilterLetter are session-only (D-22 /
+    // WR-11 fix, 2026-08-27 quick 260827-vpl) and have no localStorage key --
+    // the exception to "every one of those goes through its persisted
+    // wrapper". The letter is a filter (DECISION 1) and clearing it here
+    // closes the reachable dead end where a user presses this exact button
+    // and is left worse informed than before: with a letter and a facet
+    // both applied and zero matches, clicking this used to clear only the
+    // facet, leaving the letter alone to still match nothing, and
+    // `EmptyLibraryMessage` ("your library is empty") replaced the very
+    // panel that offered the escape hatch.
     setFilterText('')
+    setAlphabetFilterLetter(null)
   }
 
   // 34.15 D-06/D-08/D-09/D-10: the render decision is delegated wholesale to
@@ -1149,7 +1164,12 @@ export default React.memo(function Library(): JSX.Element {
         {steamSyncMode !== 'hidden' && <SteamSyncNotice mode={steamSyncMode} />}
 
         {libraryToShow.length === 0 &&
-          (activeFilterCount > 0 ? (
+          // WR-10 (2026-08-27, quick 260827-vpl): the alphabet letter is a
+          // filter (DECISION 1) that emits no ActiveFilterDescriptor, so a
+          // letter-only zero result must be admitted here explicitly or it
+          // falls through to the generic EmptyLibraryMessage instead of
+          // FilterZeroResult, which is the only surface that names it.
+          (activeFilterCount > 0 || alphabetFilterLetter ? (
             <FilterZeroResult />
           ) : (
             <EmptyLibraryMessage />

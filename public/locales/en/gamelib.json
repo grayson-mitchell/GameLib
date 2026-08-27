@@ -59,6 +59,8 @@
             "chipNoStorePageOnly": "No store page only",
             "clearAll": "Clear all",
             "collections": "Collections",
+            "emptyAlphabetLetter": "Starting with \"{{letter}}\"",
+            "emptyAlphabetNumber": "Starting with a number",
             "emptyBody": "No games match {{filters}}.",
             "emptyClearAll": "Clear all filters",
             "emptyHeading": "No games match your filters",
