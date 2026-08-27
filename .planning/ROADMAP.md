@@ -1658,14 +1658,42 @@ Plans:
 **Wave 2** *(blocked on 34.17-01 — same files)*
 - [x] 34.17-02-PLAN.md — Half A: the commit affordance (reserved hint row, `gamelib` i18n strings, colocated stylesheet) plus a blocking human-verify checkpoint with screenshot evidence. `autonomous: false` [REQ-34.17-03] — DONE 2026-08-26, see `34.17-02-SUMMARY.md`. The checkpoint FOUND A DEFECT the automated checks could not see: the operator's eye caught a 1px layout shift under the reserved row, which measurement confirmed (empty y=129 vs filled y=130) and which falsified must_haves truth 3. Fixed in-plan (commit `d312e93b9`) after a FIRST ATTEMPT MADE IT WORSE (1px -> 3px): `box-sizing: border-box` is app-wide, so `min-height` must be sized to include its own padding — pinning `line-height` alone grows the line box to consume the whole padding allowance. All five states now measure y=132. Known gap: nord-light legibility verified against the PRE-FIX build only, at the operator's instruction; Midnight Mirage re-confirmed post-fix.
 
-### Phase 34.13: Steam install-time wine/bottle form (GOG parity) (INSERTED)
+### Phase 34.13: Steam install-time wine/bottle form (GOG parity) (INSERTED) — ✅ COMPLETE 2026-08-28 — 14/14 plans; `34.13-VERIFICATION.md` status `human_needed` 27/27 code truths, 0 gaps; manual gate CLOSED 72/72 (44 PASS / 0 FAIL), 7 items ACCEPTED OPEN by operator
 
 **Goal:** A Steam install offers a one-click quick install by default, targeting Steam's primary library, with an explicit "Install with options…" path — reachable via a caret or context-menu item — that opens GameLib's install modal for platform selection and wine/bottle choice. This gives Steam more control than GOG's always-modal default, not parity with it, while a bottle install still degrades safely into the options path when quick install's local checks fail.
 
 **Requirements**: none minted — coverage is tracked against the `D-NN` decisions in `34.13-CONTEXT.md` (D-01…D-28, with **D-13 RETIRED** by D-26; verified by the blocking decision-coverage gate)
 **Depends on:** Phase 34
 **Must run BEFORE:** Phase 35 (Electron cutover) — 35 intentionally runs last
-**Plans:** 14 plans (01-03, 05-15; 04 is a permanent gap), 8 waves
+**Plans:** 14/14 plans executed (01-03, 05-15; 04 is a permanent gap), 8 waves — **PHASE COMPLETE 2026-08-28.**
+
+**⚠ CLOSED WITH 7 ACCEPTED-OPEN ITEMS — this is not a clean pass, and must not be summarised as one.**
+`34.13-VERIFICATION.md` is `status: human_needed` with `gaps: []`: all 27 code-level D-NN truths verified
+against SOURCE (D-12 superseded by D-25 and D-13 retired by D-26, both confirmed ABSENT from source), ESLint
+clean across the 57 phase-touched files, but 8 UAT rows are formally `NOT ATTEMPTED` and 2 are OBSERVE-only.
+The verifier declined to treat the operator's 2026-08-28 gate-close override as a discharged gate; the
+operator then **accepted the 7 items as-is on 2026-08-28**. They remain OPEN and visible in
+`gsd-sdk query audit-uat` — accepted is not discharged.
+
+The 7: `G-QUICK-MAC-MULTILIB`/tauri (no 64-bit mac-native fixture); `G-ROW-2/3-noWin` both (no owned title
+without a Windows depot); `G-HANDOFF-D15` both (needs a 2nd CrossOver.app bundle — only one on host);
+`G-HANDOFF-LAUNCH`/`UNINSTALL`/`REINSTALL` electron (operator skip — tauri halves PASS on the shared backend,
+so only Electron-vs-Tauri TRANSPORT divergence is untested); `G-D24-ONLYLIB` both (**undecided product
+question** — Install stays ENABLED and fabricates the missing `steamapps/` while the notice says the library
+is unreachable).
+
+Manual gate `34.13-UAT.md` CLOSED 2026-08-28: **72/72 resolved — 44 PASS / 0 FAIL / 2 OBSERVE-only /
+8 NOT ATTEMPTED / 18 RELOCATED** to Phase 38, the relocations carrying verified TWO-WAY receipts
+(`38-VERIFICATION.md` holds matching `origin_phase: "34.13"` for all 18, incl. 38-C07/38-C08).
+
+`34.13-13` was closed out by hand at `037a2c360` — its three tasks had landed 2026-08-15 and its gate closed
+at `9caf9485d`, but it never got a SUMMARY, which tripped the safe-resume gate. No executor was dispatched
+and no code was re-touched; the SUMMARY carries a provenance banner saying it was reconstructed.
+**Its `must_haves` says "six" catalog keys — stale pre-amendment text. ELEVEN shipped and eleven is correct.**
+
+**NO `34.13-HUMAN-UAT.md` exists, deliberately** — a second ledger over the same 7 items would double-count
+them in `audit-uat`. The `human_verification:` frontmatter already carries them; creating that file is the
+regression, not the fix.
 
 **⚠ Title is superseded (D-28).** The "(GOG parity)" framing in the heading above no longer describes the phase — D-28 states the phase *overshoots* GOG parity rather than reaching it. The heading is left unchanged deliberately: the phase directory slug (`34.13-steam-install-time-wine-bottle-form-gog-parity`) is derived from it, and renaming one without the other desyncs phase lookup. Rename both together or neither.
 
