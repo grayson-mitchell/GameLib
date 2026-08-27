@@ -434,6 +434,10 @@ type MockLibraryContextValue = {
   setShowSupportOfflineOnly: jest.Mock
   setShowThirdPartyManagedOnly: jest.Mock
   setShowUpdatesOnly: jest.Mock
+  // WR-10 / WR-11 / D-08a (quick 260827-vpl): added to the factory defaults
+  // so every PRE-EXISTING case above keeps its current meaning EXPLICITLY
+  // (no letter selected) rather than implicitly relying on `undefined`.
+  alphabetFilterLetter: string | null
   __isDefaultLibraryContext?: true
 }
 
@@ -456,6 +460,7 @@ function makeChipRowContextValue(
     setShowSupportOfflineOnly: jest.fn(),
     setShowThirdPartyManagedOnly: jest.fn(),
     setShowUpdatesOnly: jest.fn(),
+    alphabetFilterLetter: null,
     ...overrides
   }
 }
@@ -971,6 +976,98 @@ describe('FilterZeroResult', () => {
     )
 
     expect(body?.props.children).toBe(`No games match ${hostileName}.`)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// WR-10 / WR-11 / D-08a (quick 260827-vpl), DECISION 1: the alphabet letter
+// removes games from `libraryToShow` (`library.filter(...)`) -- it is a
+// filter, not an index/jump. It does NOT become an `ActiveFilterDescriptor`
+// (no chip, `activeFilterCount` unchanged -- that would breach the
+// UI-SPEC source gate at this file's own `:777-782` and regress WR-12), but
+// the zero-state sentence must name it, since the reviewer's own first
+// prescribed fix for WR-10 is exactly that branch condition.
+// ---------------------------------------------------------------------------
+describe('FilterZeroResult admits the alphabet letter (WR-10 / WR-11 / D-08a)', () => {
+  it('B1: activeFilterCount 0, no descriptors, a letter selected -> renders a non-null tree naming the letter', () => {
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterCount: 0,
+      activeFilterDescriptors: [],
+      alphabetFilterLetter: 'A'
+    })
+
+    const tree = FilterZeroResultImport()
+    expect(tree).not.toBeNull()
+
+    const body = collectElements(tree).find(
+      (el) => el.props.className === 'FilterZeroResult__body'
+    )
+    expect(body?.props.children).toContain('Starting with "A"')
+  })
+
+  it('B2: alphabetFilterLetter "#" -> body says "Starting with a number", never a literal "#" token', () => {
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterCount: 0,
+      activeFilterDescriptors: [],
+      alphabetFilterLetter: '#'
+    })
+
+    const tree = FilterZeroResultImport()
+    const body = collectElements(tree).find(
+      (el) => el.props.className === 'FilterZeroResult__body'
+    )
+
+    expect(body?.props.children).toContain('Starting with a number')
+    expect(body?.props.children).not.toEqual(
+      expect.stringContaining('Starting with "#"')
+    )
+  })
+
+  it('B3: one real descriptor AND a letter -> body joins both, letter label LAST (D-30 separator)', () => {
+    const descriptors: ActiveFilterDescriptor[] = [
+      { id: 'showUpdatesOnly', kind: 'showUpdatesOnly', value: 'true' }
+    ]
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterDescriptors: descriptors,
+      activeFilterCount: descriptors.length,
+      alphabetFilterLetter: 'A'
+    })
+
+    const tree = FilterZeroResultImport()
+    const body = collectElements(tree).find(
+      (el) => el.props.className === 'FilterZeroResult__body'
+    )
+
+    expect(body?.props.children).toBe(
+      'No games match Show games with updates only + Starting with "A".'
+    )
+  })
+
+  it('B4 (regression guard): activeFilterCount 0, no descriptors, NO letter -> still returns null', () => {
+    chipRowContextValue = makeChipRowContextValue({
+      activeFilterCount: 0,
+      activeFilterDescriptors: [],
+      alphabetFilterLetter: null
+    })
+
+    expect(FilterZeroResultImport()).toBeNull()
+  })
+
+  it('B5 (guard order preserved): __isDefaultLibraryContext AND a letter selected -> still null, console.error fires exactly once naming FilterZeroResult -- the sentinel guard stays first and the letter cannot smuggle a render past a dead context', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => undefined)
+    chipRowContextValue = makeChipRowContextValue({
+      __isDefaultLibraryContext: true,
+      alphabetFilterLetter: 'A'
+    })
+
+    const result = FilterZeroResultImport()
+
+    expect(result).toBeNull()
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(spy.mock.calls[0]?.[0] as string).toEqual(
+      expect.stringContaining('FilterZeroResult')
+    )
+    spy.mockRestore()
   })
 })
 
