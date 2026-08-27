@@ -1491,7 +1491,7 @@ back-fitted into this phase.
 
 ---
 
-### Phase 34.18: Retire the macOS x64 (Intel) CI leg — arm64-only macOS runners and app builds (INSERTED)
+### Phase 34.18: Retire the macOS x64 (Intel) CI leg — arm64-only macOS runners and app builds (INSERTED) — ✅ COMPLETE 2026-08-27 — 7/7 plans; `34.18-VERIFICATION.md` status `passed` 10/10 must-haves; `34.18-LIVE-GATE.md` verdict PASS 21/21 (run `33047720816`, three real arm64 digests pinned)
 
 **Goal:** Make GameLib's macOS support **arm64-only**, in every place that currently assumes two
 architectures, and dispose of the requirements and findings that assumption left open. Phase 34.16
