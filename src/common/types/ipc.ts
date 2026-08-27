@@ -565,7 +565,6 @@ interface AsyncIPCFunctions {
   deleteUploadedLogFile: (url: string) => Promise<boolean>
   getUploadedLogFiles: () => Promise<Record<string, UploadedLogData>>
   getCustomCSS: () => Promise<string>
-  isIntelMac: () => boolean
   getGogDiscounts: (
     locale: CatalogLocaleSettings,
     hideOwned?: boolean,

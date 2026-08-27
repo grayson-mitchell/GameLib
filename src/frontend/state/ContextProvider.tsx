@@ -52,7 +52,6 @@ const initialContext: ContextType = {
   libraryTopSection: 'disabled',
   handleLibraryTopSection: () => null,
   platform: 'unknown',
-  isIntelMac: false,
   refresh: async () => Promise.resolve(),
   refreshLibrary: async () => Promise.resolve(),
   completeOAuthLogin: () => null,

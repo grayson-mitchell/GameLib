@@ -118,7 +118,6 @@ interface StateProps {
   libraryStatus: GameStatus[]
   libraryTopSection: string
   platform: NodeJS.Platform
-  isIntelMac: boolean
   refreshing: boolean
   refreshingInTheBackground: boolean
   // debug/login-logout-wipes-library: per-runner scoped refresh tracking, kept
@@ -311,7 +310,6 @@ class GlobalState extends PureComponent<Props> {
     libraryStatus: [],
     libraryTopSection: globalSettings?.libraryTopSection || 'disabled',
     platform: window.platform,
-    isIntelMac: false,
     refreshing: false,
     refreshingInTheBackground: true,
     refreshingByRunner: {},
@@ -1518,10 +1516,6 @@ class GlobalState extends PureComponent<Props> {
         })
       }
     })
-
-    if (platform === 'darwin') {
-      this.setState({ isIntelMac: await window.api.isIntelMac() })
-    }
 
     this.setState({
       isFullscreen: await window.api.isFullscreen(),

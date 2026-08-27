@@ -34,7 +34,7 @@ export default function WineManager(): JSX.Element | null {
     </p>
   )
 
-  const { platform, isIntelMac } = useContext(ContextProvider)
+  const { platform } = useContext(ContextProvider)
   const isLinux = platform === 'linux'
   const { refreshingWineVersions, refreshWineVersions } = useGlobalState.keys(
     'refreshingWineVersions',
@@ -58,8 +58,6 @@ export default function WineManager(): JSX.Element | null {
   const getDefaultRepository = (): WineManagerUISettings => {
     if (isLinux) {
       return repositories[0]
-    } else if (isIntelMac) {
-      return repositories[1]
     } else {
       return repositories[0]
     }

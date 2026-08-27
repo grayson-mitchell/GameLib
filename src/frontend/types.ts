@@ -42,7 +42,6 @@ export interface ContextType {
   libraryTopSection: string
   handleLibraryTopSection: (value: LibraryTopSectionOptions) => void
   platform: NodeJS.Platform | 'unknown'
-  isIntelMac: boolean
   refresh: (library: Runner, checkUpdates?: boolean) => Promise<void>
   refreshLibrary: (options: RefreshOptions) => Promise<void>
   // Phase 34.5 Plan 26 (F-34.5-G6-02 layer 2, F-34.5-G6-03): completes a Tauri OAuth login whose
