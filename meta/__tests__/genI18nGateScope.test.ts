@@ -70,6 +70,22 @@ const FIXTURE_DIFF_LINES = [
  *   register (`expectedCount` + a blocking reason), and a false positive
  *   recorded there would read as real deferred debt forever. The right fix is
  *   in the gate: stop flagging CSS-selector-shaped literals.
+ *
+ *   Library/components/FilterChipRow/chipLabels.ts and Library/facetLabels.ts
+ *   -- unlike every entry above, these two are no longer UNMEASURED debt as
+ *   of quick task 260827-vpl (WR-18, DECISION 3): 35 and 8 violations
+ *   respectively (43 total, all i18n key literals or paired English
+ *   defaultText -- no genuine untranslated string among them), pinned by a
+ *   dedicated ratchet at
+ *   meta/__tests__/hardcodedStringGate.test.ts's "measured ratchet over
+ *   facetLabels.ts / chipLabels.ts" describe block (`scanScope({
+ *   extraFiles })`, audit mode, committed scope and allowlist both
+ *   untouched -- same idiom as the three ConsoleMode/HumbleLogin files
+ *   above). They stay in this array rather than moving into
+ *   meta/i18nGateScope.json because folding them in would still be the
+ *   deliberate, hand-curated widening this comment warns against elsewhere;
+ *   the ratchet exists so that widening decision can be made later without
+ *   losing count/regression coverage in the meantime.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/components/UI/ActionIcons/index.tsx',
