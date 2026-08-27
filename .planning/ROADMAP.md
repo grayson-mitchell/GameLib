@@ -1581,12 +1581,12 @@ it fetches a `SHA256SUMS-x64` that was never published.
 `pnpm download-helper-binaries` that exits 0 on darwin. Code-ready is explicitly not done.
 
 Plans:
-- [ ] 34.18-01-PLAN.md — wave 1 — README Intel-drop disclosure (verbatim, RED-proven) + the D-08 non-goal survivor gate that bounds every later sweep from the over-reach direction
-- [ ] 34.18-05-PLAN.md — wave 1 — remove `isIntelMac` from all 28 files ATOMICALLY, collapse all EIGHT branches (D-11's prose names 2), rewrite D-14's RED-proof so it outlives the constant
-- [ ] 34.18-02-PLAN.md — wave 2 — one arm64 workflow leg, six→three digest slots, arm64-only downloader, D-06 sentinel-message rewrite, `archiveName()` rejects x64
-- [ ] 34.18-03-PLAN.md — wave 3 — `pin:runner-digests` reduced to one arch with every fail-closed case preserved and the vacuous runId-equality check REPLACED, not dropped
-- [ ] 34.18-04-PLAN.md — wave 3 — arm64-only macOS packaging + `mac:` prose; one-arch guard RED-proven strict; D-09 globs, non-macOS half in its OWN commit
-- [ ] 34.18-06-PLAN.md — wave 4 — dated dispositions for 2 findings, 6 requirements, 6 ledger items; D-13's 19→18 amendment; item 18 cross-referenced, item 13 carried forward
+- [x] 34.18-01-PLAN.md — wave 1 — README Intel-drop disclosure (verbatim, RED-proven) + the D-08 non-goal survivor gate that bounds every later sweep from the over-reach direction
+- [x] 34.18-05-PLAN.md — wave 1 — remove `isIntelMac` from all 28 files ATOMICALLY, collapse all EIGHT branches (D-11's prose names 2), rewrite D-14's RED-proof so it outlives the constant
+- [x] 34.18-02-PLAN.md — wave 2 — one arm64 workflow leg, six→three digest slots, arm64-only downloader, D-06 sentinel-message rewrite, `archiveName()` rejects x64
+- [x] 34.18-03-PLAN.md — wave 3 — `pin:runner-digests` reduced to one arch with every fail-closed case preserved and the vacuous runId-equality check REPLACED, not dropped
+- [x] 34.18-04-PLAN.md — wave 3 — arm64-only macOS packaging + `mac:` prose; one-arch guard RED-proven strict; D-09 globs, non-macOS half in its OWN commit
+- [x] 34.18-06-PLAN.md — wave 4 — dated dispositions for 2 findings, 6 requirements, 6 ledger items; D-13's 19→18 amendment; item 18 cross-referenced, item 13 carried forward
 - [ ] 34.18-07-PLAN.md — wave 5 — **HUMAN GATE (blocking)**: dispatch the arm64 workflow, pin three real digests, prove `download-helper-binaries` on darwin, close ledger item 13
 
 ---
