@@ -22,6 +22,7 @@ import {
   buildEngineDeps,
   buildFavouriteKeys,
   buildGridPipeline,
+  collectionIsStale,
   EngineDepsInputs
 } from '../engineWiring'
 
@@ -402,5 +403,47 @@ describe('buildEngineDeps: a corrupt nonAvailableGames value cannot take down th
       makeDepsInputs({ nonAvailableGamesRaw: '["na1",7,null,"na2",{}]' })
     )
     expect(deps.nonAvailableAppNames).toEqual(['na1', 'na2'])
+  })
+})
+
+/**
+ * WR-09 (quick 260827-t9c). A renamed or deleted category left behind in a
+ * persisted `currentCollection` selection used to filter the whole grid to
+ * nothing, with no row left in the Collections list to click to recover --
+ * `collectionIsStale` is the predicate `Library/index.tsx` now runs on every
+ * `currentCollection`/`customCategories.list` change to detect and clear
+ * exactly that state. Five rows: the two non-collection sentinels that must
+ * never be convicted, a live category, a renamed-away category, and a
+ * deleted-entirely category.
+ */
+describe('collectionIsStale (WR-09)', () => {
+  it.each<[string, string | null, Record<string, string[]>, boolean]>([
+    ['null (no collection constraint) is never stale', null, {}, false],
+    [
+      "the Uncategorized sentinel is never stale even with an empty customCategories map",
+      'preset_uncategorized',
+      {},
+      false
+    ],
+    [
+      'a category that still exists is not stale',
+      'Shooters',
+      { Shooters: [] },
+      false
+    ],
+    [
+      'a category renamed out from under the selection is stale',
+      'Shooters',
+      { Shooters2: [] },
+      true
+    ],
+    [
+      'a category deleted entirely is stale against an empty map',
+      'Shooters',
+      {},
+      true
+    ]
+  ])('%s', (_why, collection, customCategories, expected) => {
+    expect(collectionIsStale(collection, customCategories)).toBe(expected)
   })
 })

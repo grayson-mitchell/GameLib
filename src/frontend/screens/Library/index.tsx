@@ -1,6 +1,7 @@
 import './index.css'
 
 import React, {
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -63,7 +64,11 @@ import * as filterEngine from './filterEngine'
 // CR-01: the grid/count call shape lives in this React-free module, not
 // inline here, so a unit test can exercise the REAL production wiring
 // instead of a hand-written replica of it.
-import { buildEngineDeps, buildGridPipeline } from './engineWiring'
+import {
+  buildEngineDeps,
+  buildGridPipeline,
+  collectionIsStale
+} from './engineWiring'
 
 const storage = window.localStorage
 
@@ -171,6 +176,24 @@ export default React.memo(function Library(): JSX.Element {
     setCurrentCollection_(value)
   }
 
+  // WR-09 (quick 260827-t9c): a renamed or deleted category leaves
+  // `currentCollection` naming a key `customCategories` no longer has --
+  // `passesCollection` then rejects every game, the grid goes empty, the
+  // zero-result sentence names a collection that no longer exists, and the
+  // Collections list has no row left to click to clear it. That is an
+  // unrecoverable state reachable by ordinary use of `CategoriesManager`
+  // (renaming or deleting the category currently selected). This effect
+  // clears the persisted selection instead. `setCurrentCollectionPersisted`
+  // is a plain function redefined every render -- deliberately NOT in the
+  // dependency array below (that would loop); it is stable enough for this
+  // purpose because it closes over nothing that changes independently of
+  // `currentCollection` itself.
+  useEffect(() => {
+    if (collectionIsStale(currentCollection, customCategories.list)) {
+      setCurrentCollectionPersisted(null)
+    }
+  }, [currentCollection, customCategories.list])
+
   // RESEARCH assumption A1, resolved in favour of active removal (D-02):
   // the legacy opt-out filter keys are discarded once, guarded by this
   // sentinel so the effect never races LibraryFilters (still mounted and
@@ -188,11 +211,38 @@ export default React.memo(function Library(): JSX.Element {
     storage.setItem('facetOptInMigrated', '1')
   }, [])
 
-  // Recent-games source mirrors RecentlyPlayed/index.tsx's own read.
-  const recentAppNames = useMemo(
-    () => configStore.get('games.recent', []).map((entry) => entry.appName),
-    []
+  // Recent-games source mirrors RecentlyPlayed/index.tsx's own read -- and,
+  // WR-05 (quick 260827-t9c), its own refresh too. This used to be a
+  // `useMemo(..., [])`, captured once at mount and never updated: launching
+  // or stopping a game during the session left `recentAppNames` (and every
+  // downstream consumer via `engineDeps`) frozen at whatever `games.recent`
+  // held when Library first mounted. Now state, refreshed on the same
+  // `handleRecentGamesChanged` push `RecentlyPlayed/index.tsx` already
+  // subscribes to.
+  //
+  // REJECTED the review's fallback of adding `libraryStatus` to a dependency
+  // array instead: `libraryStatus` is the install/download status array,
+  // which changes on every progress tick, so depending on it would
+  // recompute this (and, through `engineDeps`, invalidate every downstream
+  // memo) continuously during any download -- a re-render storm bought for
+  // a value that only actually changes when a game is launched or stopped.
+  // `handleRecentGamesChanged` fires exactly on that real event and is the
+  // review's own primary recommendation.
+  const [recentAppNames, setRecentAppNames] = useState<string[]>(() =>
+    configStore.get('games.recent', []).map((entry) => entry.appName)
   )
+  useEffect(() => {
+    const loadRecentAppNames = () => {
+      setRecentAppNames(
+        configStore.get('games.recent', []).map((entry) => entry.appName)
+      )
+    }
+    const removeRecentGamesChangedListener =
+      window.api.handleRecentGamesChanged(loadRecentAppNames)
+    return () => {
+      removeRecentGamesChangedListener()
+    }
+  }, [])
 
   // D-04: the store facet values whose account is connected, reusing the
   // same gating expressions makeLibrary() already uses below -- the Store
@@ -541,7 +591,23 @@ export default React.memo(function Library(): JSX.Element {
   // store filter here -- leaving the store gate in makeLibrary would make
   // every unselected store's count 0, the "counts that lie" failure the
   // sketch's library-filtering findings warn against.
-  const makeLibrary = () => {
+  // WR-01 (quick 260827-t9c): extracted into a `useCallback` with the
+  // complete dependency list, the review's FIRST recommended option -- not
+  // its second (add all six login-gate values to `libraryUnion`'s memo
+  // array below AND keep `makeLibrary` a plain closure). A plain closure
+  // captures whichever `epic.username`/`gog.username`/`amazon.user_id`/
+  // `zoom.enabled`/`zoom.username`/`steam?.username` were in scope on the
+  // render that created it; `libraryUnion`'s memo only re-invoked it when
+  // its OWN array changed, which listed the four `*.library` arrays plus
+  // `sideloadedLibrary` but none of the six login-gate reads above -- so a
+  // login/logout that changed a `show*` gate without also changing that
+  // store's `.library` reference left `libraryUnion` (and everything
+  // downstream of it: the grid, both facet counts, `engineDeps`) stale
+  // until some unrelated render happened to also change a `.library`
+  // reference. `useCallback`'s own dependency array is exhaustive-deps
+  // checked the same as any other hook, so the six gate reads are now
+  // itemised as real dependencies rather than free variables closed over.
+  const makeLibrary = useCallback(() => {
     const showEpic = !!epic.username
     const showGog = !!gog.username
     const showAmazon = !!amazon.user_id
@@ -563,28 +629,29 @@ export default React.memo(function Library(): JSX.Element {
       ...zoomLibrary,
       ...steamLibrary
     ]
-  }
+  }, [
+    epic.username,
+    epic.library,
+    gog.username,
+    gog.library,
+    amazon.user_id,
+    amazon.library,
+    zoom.enabled,
+    zoom.username,
+    zoom.library,
+    steam?.username,
+    steam?.library,
+    sideloadedLibrary
+  ])
 
   // The UNFILTERED union. This exact array -- never a filtered derivative of
   // it -- is what buildGridPipeline hands to both filterLibrary and countFor.
-  // Dependency list carried over VERBATIM from the pre-fix grid memo,
-  // including its known incompleteness: `makeLibrary` also reads
-  // epic/gog/amazon/zoom/steam login state, which is not listed here. That
-  // is a separate, still-open review finding (WR-01) and is deliberately
-  // NOT fixed or suppressed here -- the `react-hooks/exhaustive-deps`
-  // warning this list produces is the finding's own tripwire and must stay
-  // visible.
-  const libraryUnion = useMemo(
-    () => makeLibrary(),
-    [
-      epic.library,
-      gog.library,
-      amazon.library,
-      zoom.library,
-      steam?.library,
-      sideloadedLibrary
-    ]
-  )
+  // WR-01 (quick 260827-t9c): depends on `makeLibrary` alone now that
+  // `makeLibrary` is itself a `useCallback` carrying the complete
+  // dependency list (all six login-gate reads plus all `.library` arrays
+  // and `sideloadedLibrary`) -- so this memo is exhaustive by construction
+  // rather than by a hand-copied list that silently omitted the gate reads.
+  const libraryUnion = useMemo(() => makeLibrary(), [makeLibrary])
 
   // Search-key precompute, built over the FULL (unconstrained) union so
   // search stays order-independent -- what lets filterLibrary's `skip` rule

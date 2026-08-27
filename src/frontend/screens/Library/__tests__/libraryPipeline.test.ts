@@ -113,7 +113,14 @@ describe('Library pipeline has exactly one implementation', () => {
   })
 
   it("makeLibrary's own region contains no storesFilters reference -- the store facet is applied exclusively downstream in filterLibrary", () => {
-    const region = functionRegion(libraryTsx, 'const makeLibrary = () => {')
+    // Needle updated for WR-01 (quick 260827-t9c): makeLibrary is now a
+    // useCallback, not a plain arrow-function const -- the declaration
+    // syntax changed but the function's own body (and this gate's target)
+    // did not.
+    const region = functionRegion(
+      libraryTsx,
+      'const makeLibrary = useCallback(() => {'
+    )
     expect(region).not.toMatch(/storesFilters/)
   })
 })

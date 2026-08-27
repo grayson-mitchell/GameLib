@@ -31,6 +31,7 @@ import {
   StoreFacetValue
 } from 'frontend/types'
 import * as filterEngine from './filterEngine'
+import { PRESET_UNCATEGORIZED } from './filterEngine'
 
 /**
  * The grid list plus both facet-count accessors, all three derived from the
@@ -171,6 +172,35 @@ function parseNonAvailableAppNames(raw: string | null): string[] {
  * rule twice, and would make `deps` depend on filter STATE, which it must
  * not -- `deps` is data, `state` is the selection.
  */
+/**
+ * WR-09 (quick 260827-t9c): true when `collection` no longer names anything
+ * `passesCollection` can match -- a renamed or deleted category left behind
+ * in the persisted `currentCollection` selection. Unvalidated, this filters
+ * every game out of the grid, prints a zero-result sentence naming a
+ * collection that no longer exists, and leaves no row in the Collections
+ * list to click to clear it -- an unrecoverable state reachable by ordinary
+ * use of `CategoriesManager` (rename or delete the category currently
+ * selected).
+ *
+ * `null` (no constraint) and `PRESET_UNCATEGORIZED` (filterEngine's own
+ * pseudo-category sentinel, CR-04) are never stale -- neither is a key that
+ * could appear in `customCategories`, so `!(x in customCategories)` would
+ * wrongly convict both. `PRESET_UNCATEGORIZED` is imported by identifier
+ * from `./filterEngine`, never re-declared here.
+ */
+export function collectionIsStale(
+  collection: string | null,
+  customCategories: Record<string, string[]>
+): boolean {
+  if (collection === null) {
+    return false
+  }
+  if (collection === PRESET_UNCATEGORIZED) {
+    return false
+  }
+  return !(collection in customCategories)
+}
+
 export function buildEngineDeps(inputs: EngineDepsInputs): FilterEngineDeps {
   return {
     hiddenAppNames: inputs.hiddenGames.map((hidden) => hidden.appName),
