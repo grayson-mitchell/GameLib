@@ -1463,9 +1463,23 @@ keep describing the goal they were actually executed against.
   `meta/runnersOnedirDigests.json` therefore stand, three of them permanently.
 - **F-34.16-D and F-34.16-G both remain `open`/`blocking` against this phase, by design.** They are
   not closed by fiat at phase close; they are superseded by the retirement below, which removes the
-  x64 leg those findings are about.
+  x64 leg those findings are about. **Dated 2026-08-27 follow-on:** see the two dispositions
+  immediately below — `F-34.16-D` is dispositioned on its x64 half only, and `F-34.16-G` is closed
+  resolved-by-retirement — so a reader who stops at this bullet is not left with a superseded
+  statement.
 - **No phase verification was run**, and none should be: a verifier scoring this phase against its
   stated goal would correctly return FAIL. The honest record is this block, not a green check.
+- **`F-34.16-D` — disposition dated 2026-08-27 (Phase 34.18), x64 half ONLY.** The **arm64 half was
+  already FIXED and proven live** in CI by plans 34.16-07/-08/-09 (the three-form PyInstaller
+  extractor, the two-layer version-drift tripwire, and a clean local arm64 onedir build) and is NOT
+  what this disposition closes — restating that would erase real evidence. The x64 half (whether the
+  same extractor/tripwire fix would have covered an x64 onedir tree) is moot-by-retirement: Phase
+  34.18 removed the x64 macOS build entirely, so there is no x64 tree left for that half to apply to.
+- **`F-34.16-G` — closed resolved-by-retirement, dated 2026-08-27 (Phase 34.18).** This finding's own
+  content (`macos-13` was retired by GitHub on 2025-12-04; the x64 leg was never assigned a runner —
+  an empty `runner` AND an empty `group` after 25+ minutes — across all three live-gate attempts) is
+  the EVIDENCE that drove the retirement decision below, not a mistaken finding. The disposition is
+  "the leg this finding is about no longer exists," not "the finding was wrong."
 
 **Superseded by the retirement decision (operator, 2026-08-27).** The gate's own F-34.16-G fix path
 offered a migration to `macos-15-intel` and explicitly deferred *"whether an x64 leg is still worth
