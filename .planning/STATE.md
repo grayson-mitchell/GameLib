@@ -631,8 +631,14 @@ progress:
   #       A FAIL verdict still counts as completed -- the plan executed and produced its result.
   #   (b) Phase 34.18 was inserted with 0 plans, so it moves neither counter.
   #   percent = floor(384/395*100) = floor(97.21) = 97 (unchanged; floor, matching convention).
+  # 2026-08-28 (/gsd-execute-phase 34.13, safe-resume close-out): completed_plans +1 (384 -> 385)
+  #   for 34.13-13, whose three tasks all landed and committed on 2026-08-15 (95c1d2321,
+  #   560bc7871, 63b83ca4f) and whose blocking manual gate closed 2026-08-28 (9caf9485d) --
+  #   only the SUMMARY was missing, which is what tripped the safe-resume gate. total_plans
+  #   unchanged (402). percent = floor(385/402*100) = floor(95.77) = 95 (unchanged).
+  #   STATE.md edited BY HAND after a cp snapshot; NO gsd-sdk state.* verb was invoked.
   total_plans: 402
-  completed_plans: 384
+  completed_plans: 385
   percent: 95
 ---
 
