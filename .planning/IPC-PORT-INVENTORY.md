@@ -122,14 +122,21 @@ preload-surface audit — 28 → 31:**
   `34.5/preload-surface-gate.py`, which had never been wired into CI and so had never run
   outside the session that wrote it.
 
-## Phase 34.1 — Slice 4 — app shell and window chrome (33 channels)
+## Phase 34.1 — Slice 4 — app shell and window chrome (32 channels)
+
+**Retired 2026-08-27 (Phase 34.18):** `isIntelMac` was dropped from this slice's channel list —
+an arm64-only macOS build cannot run on an Intel Mac, so the channel exposed a capability the app
+no longer ships (plan 34.18-05, REQ-34.18-07/-09). This slice's total moves from 33 to 32, one
+channel fewer. Do not conflate this count with `.planning/REQUIREMENTS.md` REQ-34.1-05's narrower
+sidecar-routed-registration count (19 -> 18, same date, same removal, same reason) — both drop by
+exactly one for the same cause, but they are two different counts over two different scopes.
 
 Note: the callTool channel (`src/backend/tools/ipc_handler.ts:25`, Winetricks/winecfg/runExe)
 was reassigned to Phase 34.5 by Phase 34.1 CONTEXT decision D-14 on 2026-07-25, because it is
 Wine tooling and was in this slice only because the inventory grouped channels by file; see
 the Phase 34.5 list below for its new home.
 
-`abort`, `changeLanguage`, `changeTrayColor`, `closeWindow`, `createNewWindow`, `gamepadAction`, `getCurrentChangelog`, `getCustomCSS`, `getCustomThemes`, `getHeroicVersion`, `getLatestReleases`, `getThemeCSS`, `getWebviewPreloadPath`, `isFrameless`, `isFullscreen`, `isIntelMac`, `isMaximized`, `isMinimized`, `lock`, `maximizeWindow`, `minimizeWindow`, `notify`, `openCustomThemesWiki`, `openReleases`, `openWebviewPage`, `quit`, `set-connectivity-online`, `setFullscreen`, `setTitleBarOverlay`, `setZoomFactor`, `showAboutWindow`, `unlock`, `unmaximizeWindow`
+`abort`, `changeLanguage`, `changeTrayColor`, `closeWindow`, `createNewWindow`, `gamepadAction`, `getCurrentChangelog`, `getCustomCSS`, `getCustomThemes`, `getHeroicVersion`, `getLatestReleases`, `getThemeCSS`, `getWebviewPreloadPath`, `isFrameless`, `isFullscreen`, `isMaximized`, `isMinimized`, `lock`, `maximizeWindow`, `minimizeWindow`, `notify`, `openCustomThemesWiki`, `openReleases`, `openWebviewPage`, `quit`, `set-connectivity-online`, `setFullscreen`, `setTitleBarOverlay`, `setZoomFactor`, `showAboutWindow`, `unlock`, `unmaximizeWindow`
 
 ## Phase 34.2 — Slice 5 — game details, settings and overrides (26 channels)
 
