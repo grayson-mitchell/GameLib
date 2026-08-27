@@ -75,3 +75,30 @@ self-inflicted and cleared on its own, but it means the run was not against a qu
 34.13 covers the install-time wine/bottle FORM. `G-QUICK-NOPROBE`/tauri PASSED on its own
 criterion (stall timing at click) in the same run — the install pipeline was entered within the
 first second and did real network work. This failure is downstream of everything 34.13 owns.
+
+## DISCRIMINATOR RUN 2026-08-27 — depot install is NOT generally broken
+
+Same session, same runtime, ~11 minutes later: **`All Will Fall` (2706020) installed successfully
+end to end** — a genuine ~4.2 GB first install, nothing to resume from.
+`appmanifest_2706020.acf` written 18:25 with `StateFlags "4"` and
+`BytesDownloaded` == `BytesToDownload` == `SizeOnDisk` == 4222299944, a complete manifest.
+
+That title was **unmodified and fully captured**; Fallout 2's fixture had its metadata entry
+deleted and `steamPlatformsCaptured` forced false.
+
+**So this is NOT a general depot-download regression.** The remaining candidates, in the order
+worth testing:
+
+1. **The degraded fixture** — deleting the metadata entry and/or clearing `steamPlatformsCaptured`
+   puts the install down a path a normal title never takes. Cheapest to test: restore 38410 fully
+   (it is now back to `steamPlatformsCaptured: true`), delete nothing, and retry the install.
+2. **Title-specific depot content** — 38410 is a 1998 title with 2 depots (38414, 38415) and only
+   65 files. `All Will Fall` is a modern title. Old depots are exactly where the retired
+   `Z_DATA_ERROR` cluster lived, and `NATIVE_LZMA_DECODE_ENABLED=false` means the pure-JS decoder
+   is handling them.
+3. **Steam's 403 rate limiting** during that window (self-inflicted by the gate's cache wipe).
+
+**The diagnostic gap stands regardless of cause and is arguably the more valuable finding:** the
+failure reached the generic bucket with NO `fetchChunk`/`reason=` line logged, and
+`steam-flags-census stage=download-complete` fired on all 65 files immediately before the error.
+Whatever the root cause, an operator gets "The Steam download failed." and nothing to work from.
