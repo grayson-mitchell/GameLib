@@ -23,10 +23,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-const README = readFileSync(
-  join(__dirname, '..', '..', 'README.md'),
-  'utf-8'
-)
+const README = readFileSync(join(__dirname, '..', '..', 'README.md'), 'utf-8')
 
 describe('D-02: README Intel-Mac disclosure', () => {
   it('contains the verbatim disclosure sentence in the OS-support list', () => {
