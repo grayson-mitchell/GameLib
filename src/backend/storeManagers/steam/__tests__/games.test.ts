@@ -307,8 +307,8 @@ jest.mock('../installLocation', () => ({
   // UnsafeInstalldirError` in games.ts's catch block works against an error
   // a test constructs via `new UnsafeInstalldirError(...)` on the mocked
   // resolveSteamInstallTarget's rejection.
-  UnsafeInstalldirError: jest.requireActual('../installLocation')
-    .UnsafeInstalldirError
+  UnsafeInstalldirError:
+    jest.requireActual('../installLocation').UnsafeInstalldirError
 }))
 
 // ── aborthandler mock — controls the AbortController create/call/delete

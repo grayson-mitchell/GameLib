@@ -227,7 +227,7 @@ describe('filter engine', () => {
     expect(result.map((g) => g.app_name)).toEqual(['normal-app'])
   })
 
-  it("noStorePage: only — only the delisted game is returned", () => {
+  it('noStorePage: only — only the delisted game is returned', () => {
     const delisted = makeGame({
       app_name: 'delisted-app',
       runner: 'steam',
@@ -242,7 +242,7 @@ describe('filter engine', () => {
     expect(result.map((g) => g.app_name)).toEqual(['delisted-app'])
   })
 
-  it("noStorePage: only combined with showHidden: only — the UNION is returned (D-09 generalised to three tri-states)", () => {
+  it('noStorePage: only combined with showHidden: only — the UNION is returned (D-09 generalised to three tri-states)', () => {
     const delisted = makeGame({
       app_name: 'delisted-app',
       runner: 'steam',
