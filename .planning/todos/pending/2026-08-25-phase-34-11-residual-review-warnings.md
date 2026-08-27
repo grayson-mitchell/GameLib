@@ -1,6 +1,6 @@
 ---
 created: 2026-08-25T11:00:10.000Z
-title: "Phase 34.11 carries 14 open Warning-level review findings — swept and confirmed present at HEAD, no Criticals among them"
+title: "Phase 34.11 carries 10 open Warning-level review findings — swept and confirmed present at HEAD, no Criticals among them"
 area: frontend
 severity: low
 status: pending
@@ -14,36 +14,37 @@ files:
   - src/frontend/screens/Library/components/FilterChipRow/__tests__/index.test.tsx
   - src/frontend/components/UI/NavShell/components/FilterRunnabilityFacet/index.tsx
   - src/frontend/components/UI/NavShell/components/FilterCollectionList/index.tsx
-  - src/frontend/components/UI/Header/index.css
-  - src/frontend/types.ts
   - meta/i18nGateScope.json
 ---
 
+**2026-08-27 update (quick `260827-s8z`):** this list was re-swept against the current
+`HEAD` (after that task's own three commits landed). WR-04, WR-07 and WR-19 are now
+**FIXED** and are removed from the groups below; WR-17 is reclassified **INVALID** (see
+`34.11-REVIEW-FIX.md` for the generator-contract evidence) and is also removed. The
+remaining ten bullets below were re-confirmed still present, unchanged in substance.
+
 `34.11-REVIEW.md` found 4 Critical and 19 Warning findings. All 4 Criticals plus WR-02,
-WR-03, WR-13, WR-14 and WR-15 are discharged — swept against `HEAD` and ledgered per
-finding in `34.11-REVIEW-FIX.md`. **Fourteen Warnings were confirmed still present** and
-are collected here so they are not carried unowned.
+WR-03, WR-04, WR-07, WR-13, WR-14, WR-15 and WR-19 are discharged, and WR-17 is
+reclassified invalid — swept against `HEAD` and ledgered per finding in
+`34.11-REVIEW-FIX.md`. **Ten Warnings were confirmed still present** and are collected
+here so they are not carried unowned.
 
 `criticals_open: 0`. None of these contradicts a declared REQ-34.11-01..17 truth, which is
 why `34.11-VERIFICATION.md` stands at `passed` 17/17 alongside them.
 
 Grouped by the shape of the fix, cheapest first:
 
-**Provenance / dead code — mechanical**
-- **WR-17 / WR-18** — `meta/i18nGateScope.json` `baseCommit` is `b5b5cad3f` (2026-06-23),
-  predating every file it lists; `generatedBy` says outright it is hand-edited. `facetLabels`
-  and `chipLabels` are absent from `files` entirely. One `pnpm gen-i18n-gate-scope` run
-  closes both — but see the staleness guard in `meta/__tests__/genI18nGateScope.test.ts`
-  first, and check what else a regeneration moves.
-- **WR-04** — the three legacy filter-state blocks (`storesFilters`, `platformsFilters`,
-  `crossoverRatingFilters`) survive at `Library/index.tsx:131-207` with their setters and
-  `localStorage` reads, plus the stale forward-reference at `types.ts:337-339`. Their only
-  consumers (`LibraryFilters`, `CategoryFilter`) are already deleted from disk.
-- **WR-19** — `Header/index.css:7` dead background, `:21-39` unscoped global selectors
-  (`.iconsWrapper`, `.refreshIcon`, `.svg-button`).
-- **WR-07** — `resolveLabel` duplicated verbatim between `FilterChipRow/index.tsx:40` and
-  `FilterZeroResult/index.tsx:34`; the latter's comment acknowledges the duplication.
-  Moving it into `chipLabels.ts` keeps it React-free.
+**i18n gate scope — design decision needed**
+- **WR-18** — (WR-17, formerly paired with this finding, is now closed **INVALID**; see
+  `34.11-REVIEW-FIX.md`.) `facetLabels.ts` and `chipLabels.ts` are absent from
+  `meta/i18nGateScope.json`'s `files` list. Measured (quick `260827-s8z`): the committed
+  scope is 163 files / **0** violations; adding these two files is 165 files / **35**
+  violations (8 + 27), all `object-property`/`argument` literals from English-default
+  **data tables** whose `t()` call sites are already in scope — a false-positive count
+  against a currently-green blocking gate, not a real gap. Closing this needs either a
+  spec-table-aware gate heuristic or `meta/i18nGateAllowlist.json` entries with `expected`
+  counts. Do **not** run `pnpm gen-i18n-gate-scope` to close it — that would also disarm
+  the `isHandCuratedProvenance()` default-deny veto WR-17's re-sweep found load-bearing.
 
 **Correctness — small but real**
 - **WR-06** — a module-scope `throw` at `FilterRunnabilityFacet/index.tsx:68-77` crashes the
