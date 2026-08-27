@@ -2,7 +2,7 @@
 phase: 38-deferred-hardware-and-environment-uat-gates-windows-linux-ma
 verified: null
 status: human_needed
-score: N/A — collection phase, no must-haves. 9 relocated items, 0 discharged.
+score: N/A — collection phase, no must-haves. 11 relocated items, 0 discharged.
 audit_tool_note: >
   `status` MUST stay `human_needed`. `gsd-sdk query audit-uat` admits a VERIFICATION.md when
   status is `human_needed` OR `gaps_found`, but `parseVerificationItems` only emits items when
@@ -200,6 +200,59 @@ human_verification:
       C06 are best run back to back so the two scroll containers are compared under identical
       input.
 
+  - id: "38-C07"
+    test: "Gamepad — the D-21 Steam install-options caret is controller-reachable, on ELECTRON. Two surfaces, both required: (a) the split-button caret beside the primary Install half on the game page's MainButton, and (b) the 'Install with options…' entry in the GameCard context menu."
+    expected: "The caret is reachable by controller-driven focus; reaching it does NOT make the primary install half unreachable (the split button's two halves are both focusable, in a stable order); and the focus order around the caret is stable across repeated traversals in both directions."
+    why_human: "Requires a physical controller. Focus dispatch has no keyboard entry point."
+    blocked_by: "a game controller"
+    surface_note: >
+      READ THIS BEFORE RECORDING A FAIL. The two surfaces do NOT look alike. On MainButton the
+      affordance IS a caret — `className="SteamInstallCaret"`
+      (src/frontend/screens/Game/GamePage/components/MainButton.tsx:356), a real split-button half.
+      On the GameCard there is NO caret: the entry is a CONTEXT-MENU item labelled
+      `gamelib:steam.install.withOptionsLabel` ("Install with options…") at
+      src/frontend/screens/Library/components/GameCard/index.tsx:386-397. An operator who goes
+      looking for a caret on the card will find none and would record a false FAIL against a
+      surface that was never specified to have one.
+    unmount_note: >
+      The caret is taken out of the tab order by UNMOUNTING, not by `disabled`
+      (MainButton.tsx:334-339 says so in comment form). So on a non-Steam or non-installable game
+      the correct observation is that no caret element exists at all — not that a present caret
+      refuses focus. Same shape as the recorded lesson that a tile can be unreachable by unmount
+      rather than by disable.
+    platform_gate: "src/frontend/helpers/gamepad.ts:559,678 — `window.api.gamepadAction` is dispatched ONLY from the `navigator.getGamepads()` polling loop; there is no keyboard entry point. Same gate as 38-C01..C06."
+    origin_phase: "34.13"
+    origin_item: "G-GAMEPAD-CARET / electron (34.13-UAT.md, PART C)"
+    electron_cutover_risk: >
+      Phase 35 removes the Electron build. If 35 lands before a controller is available, this item
+      becomes unobservable BY CONSTRUCTION — the same shape as 38-W03, which is a correct fix on a
+      surface this hardware cannot render. It would then be retired as unscoreable, NOT recorded as
+      a pass and NOT silently dropped. 38-C08 (the tauri half) is unaffected and remains the
+      load-bearing observation. Recorded here so the decision is deliberate when it arrives.
+
+  - id: "38-C08"
+    test: "Gamepad — the D-21 Steam install-options caret is controller-reachable, on TAURI (`pnpm tauri:dev`, never bare `tauri dev`). Same two surfaces as 38-C07."
+    expected: "Same as 38-C07: caret reachable, the primary install half is not lost, focus order stable across repeated traversals."
+    why_human: "Requires a physical controller."
+    blocked_by: "a game controller"
+    not_covered_by_c07: >
+      READ THIS BEFORE MARKING IT DUPLICATE. An Electron PASS is NOT evidence for this cell, and
+      34.13's ledger says so explicitly on the row itself. Tauri does not use the webview's native
+      focus traversal: `getFocusableElements()` (src/preload/api/tauriGamepadInput.ts:50-62) builds
+      its own list and DROPS any element failing `hasZeroArea(el.getBoundingClientRect())` (:57,
+      defined :46-48 as `rect.width <= 0 || rect.height <= 0`), plus `disabled` and
+      `aria-hidden="true"`. Electron's native traversal applies no such filter. The caret is a
+      small icon-only half of a split button inside a `flex-wrap: wrap` container
+      (MainButton.tsx:356-374) — precisely the shape whose measured box can collapse to zero on one
+      runtime and not the other. Two items, not one, per relocation rule (4).
+    platform_gate: "src/preload/api/tauriGamepadInput.ts:57 (`hasZeroArea` filter in `getFocusableElements`) — the Tauri-only predicate that makes this an independent observation. Dispatch gate is shared: src/frontend/helpers/gamepad.ts:559,678."
+    origin_phase: "34.13"
+    origin_item: "G-GAMEPAD-CARET / tauri (34.13-UAT.md, PART C)"
+    scope_note: >
+      Run in the same sitting as 38-C01..C06 — one controller discharges all eight. Run C07 and C08
+      back to back on the same game so the two runtimes' focus orders are compared under identical
+      library state.
+
 sweep_notes:
   re_derive_before_running: >
     Do NOT run these items against the action list as written. `src/frontend/helpers/gamepad.ts`
@@ -216,7 +269,7 @@ sweep_notes:
     hand-written geometric nearest-in-direction focus algorithm were re-derived from scratch
     against DOM semantics. This is the largest untested surface left in Phase 34.1.
   windows_linux_dependency: >
-    38-W01 needs Phase 34's Windows/Linux builds to exist. The five controller items do not —
+    38-W01 needs Phase 34's Windows/Linux builds to exist. The eight controller items do not —
     they are gated only on hardware access and can be discharged earlier, independently.
 
 human_verification_discharged: []
