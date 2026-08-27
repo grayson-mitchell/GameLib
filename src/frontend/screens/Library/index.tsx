@@ -46,6 +46,7 @@ import CategoriesManager from './components/CategoriesManager'
 import LibraryTour from './components/LibraryTour'
 import AlphabetFilter from './components/AlphabetFilter'
 import FilterChipRow from './components/FilterChipRow'
+import { renderableActiveFilters } from './components/FilterChipRow/chipLabels'
 import FilterZeroResult from './components/FilterZeroResult'
 import { openInstallGameModal } from 'frontend/state/InstallGameModal'
 import { Tier2PortalContext } from 'frontend/components/UI/NavShell/Tier2PortalContext'
@@ -791,8 +792,17 @@ export default React.memo(function Library(): JSX.Element {
   // D-26: the descriptor list and its count come from ONE call -- the count
   // is that list's `.length`, never a second independent computation, so
   // the chip row can never disagree with what the panel claims is active.
+  // WR-12 (quick 260827-t9c): the raw `describeActiveFilters` output is run
+  // through `renderableActiveFilters` before anything else sees it, so the
+  // published list only ever contains descriptors `chipLabelSpec` can name
+  // -- a count greater than zero now always implies at least one renderable
+  // label, which is what makes D-26's "one call, the count IS that list's
+  // length" property true of a list every consumer can actually render.
   const activeFilterDescriptors = useMemo(
-    () => filterEngine.describeActiveFilters(engineState, filterText),
+    () =>
+      renderableActiveFilters(
+        filterEngine.describeActiveFilters(engineState, filterText)
+      ),
     [engineState, filterText]
   )
   const activeFilterCount = activeFilterDescriptors.length

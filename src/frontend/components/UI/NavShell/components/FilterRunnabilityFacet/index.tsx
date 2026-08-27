@@ -14,7 +14,6 @@
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import LibraryContext from 'frontend/screens/Library/LibraryContext'
-import { RUNNABILITY_LABELS } from 'frontend/screens/Library/facetLabels'
 import type { RunnabilityTier } from 'frontend/types'
 import FilterFacetGroup, { FilterFacetRow } from '../FilterFacetGroup'
 import { countDescriptorsOfKind } from '../FilterFacetGroup/selectionCount'
@@ -28,11 +27,15 @@ import { countDescriptorsOfKind } from '../FilterFacetGroup/selectionCount'
 // text for it -- and once a key exists in the resource bundle, i18next
 // renders that catalog value instead of falling back to the call site's
 // defaultValue argument, so the row would render blank text, not the
-// intended copy. Both arguments are therefore literal below. The
-// development-only check beneath the switch throws if this literal copy
-// ever drifts from facetLabels.ts's tuples, which stays the canonical
-// source for the English text.
-function runnabilityLabel(
+// intended copy. Both arguments are therefore literal below. WR-06 (quick
+// 260827-t9c): this switch's literal copy used to be checked against
+// facetLabels.ts's tuples by a module-scope exception raised at import
+// time, outside any error boundary, that could crash the whole app on a
+// drift it had no way to recover from. Both this function and
+// `echoDefaultValue` below are exported instead, and the drift alarm now
+// lives entirely in `FilterRunnabilityFacet.test.tsx`'s `it.each` over
+// `RUNNABILITY_LABELS` -- a drift produces a named, non-fatal test failure.
+export function runnabilityLabel(
   tier: RunnabilityTier,
   tGamelib: (key: string, defaultValue: string) => string
 ): string {
@@ -57,24 +60,14 @@ function runnabilityLabel(
   }
 }
 
-// Echoes the defaultValue argument straight back, so the dev-only check
-// below can read out what runnabilityLabel's own literal switch passed at
-// each call site without a second copy of the English text living
-// anywhere in this file (a second copy is exactly what the hardcoded-
-// string gate -- meta/hardcodedStringGate.ts -- exists to catch, since
-// this file is now inside its scan scope).
-const echoDefaultValue = (_key: string, defaultValue: string) => defaultValue
-
-if (process.env.NODE_ENV !== 'production') {
-  ;(Object.keys(RUNNABILITY_LABELS) as RunnabilityTier[]).forEach((tier) => {
-    const literalDefault = runnabilityLabel(tier, echoDefaultValue)
-    if (literalDefault !== RUNNABILITY_LABELS[tier][1]) {
-      throw new Error(
-        `FilterRunnabilityFacet's literal default text for "${tier}" has drifted from facetLabels.ts's RUNNABILITY_LABELS -- update both together`
-      )
-    }
-  })
-}
+// Echoes the defaultValue argument straight back, so the test suite's drift
+// check (WR-06, `FilterRunnabilityFacet.test.tsx`) can read out what
+// runnabilityLabel's own literal switch passed at each call site without a
+// second copy of the English text living anywhere in this file (a second
+// copy is exactly what the hardcoded-string gate -- meta/hardcodedStringGate.ts
+// -- exists to catch, since this file is now inside its scan scope).
+export const echoDefaultValue = (_key: string, defaultValue: string) =>
+  defaultValue
 
 export default function FilterRunnabilityFacet() {
   const { t: tGamelib } = useTranslation('gamelib')

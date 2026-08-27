@@ -218,6 +218,27 @@ export function joinChipLabels(labels: string[]): string {
   return labels.join(' + ')
 }
 
+/**
+ * WR-12: the survivor filter shared by every consumer of
+ * `describeActiveFilters`'s output, applied ONCE in `Library/index.tsx`
+ * before `activeFilterCount` is derived from the result's `.length`.
+ *
+ * The invariant this buys: `activeFilterCount` can only count descriptors
+ * `chipLabelSpec` can actually name, so a count greater than zero always
+ * implies at least one renderable label exists. Before this filter existed,
+ * a forged/retired value reaching `describeActiveFilters` (e.g. a
+ * `libraryView` localStorage entry naming a view outside
+ * `installed|recentlyPlayed|favourites`) produced a descriptor `chipLabelSpec`
+ * returns `null` for, which inflated the count with nothing to show for it --
+ * the chip row rendered no chip for it and the zero-result sentence printed
+ * `"No games match ."`, an empty filter list.
+ */
+export function renderableActiveFilters(
+  descriptors: ActiveFilterDescriptor[]
+): ActiveFilterDescriptor[] {
+  return descriptors.filter((descriptor) => chipLabelSpec(descriptor) !== null)
+}
+
 export type TFunc = (
   key: string,
   defaultValue: string,

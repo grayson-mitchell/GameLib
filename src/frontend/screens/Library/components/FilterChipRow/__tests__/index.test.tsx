@@ -10,11 +10,24 @@
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { chipLabelSpec, joinChipLabels, ChipLabelSpec } from '../chipLabels'
-import { PRESET_UNCATEGORIZED } from '../../../filterEngine'
+import {
+  chipLabelSpec,
+  joinChipLabels,
+  renderableActiveFilters,
+  ChipLabelSpec
+} from '../chipLabels'
+import {
+  PRESET_UNCATEGORIZED,
+  DEFAULT_FILTER_ENGINE_STATE,
+  describeActiveFilters
+} from '../../../filterEngine'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { RunnerToStore, RUNNABILITY_LABELS } from '../../../facetLabels'
-import type { ActiveFilterDescriptor, RunnabilityTier } from 'frontend/types'
+import type {
+  ActiveFilterDescriptor,
+  LibraryView,
+  RunnabilityTier
+} from 'frontend/types'
 
 // The panel component chipLabels must agree with about the Uncategorized
 // sentinel (CR-04). Resolved relative to __dirname, matching this file's
@@ -315,6 +328,56 @@ describe('chipLabels', () => {
 
   it('joinChipLabels([]) is an empty string', () => {
     expect(joinChipLabels([])).toBe('')
+  })
+})
+
+describe('renderableActiveFilters (WR-12)', () => {
+  // Test D: a retired/forged `view` value survives `describeActiveFilters`
+  // as one descriptor (it is outside `installed|recentlyPlayed|favourites`,
+  // so `chipLabelSpec` returns null for it, but `describeActiveFilters`
+  // itself has no opinion on renderability) -- and today NOTHING filters
+  // that descriptor back out before `activeFilterCount` is derived from it.
+  // Failing assertion against current code: `activeFilterCount` would read
+  // 1 with zero renderable labels, producing the empty
+  // "No games match ." sentence.
+  it('drops a descriptor chipLabelSpec cannot name, e.g. a forged/retired libraryView', () => {
+    const rawDescriptors = describeActiveFilters(
+      { ...DEFAULT_FILTER_ENGINE_STATE, view: 'retiredView' as LibraryView },
+      ''
+    )
+
+    // Non-vacuity: the raw descriptor list really does contain one entry --
+    // otherwise `renderableActiveFilters` returning [] below would prove
+    // nothing about the filter actually running.
+    expect(rawDescriptors).toHaveLength(1)
+
+    expect(renderableActiveFilters(rawDescriptors)).toHaveLength(0)
+  })
+
+  // Test E: a control proving the helper is not a blanket `[]` -- a REAL
+  // filter survives unchanged.
+  it('is not a blanket empty list -- a real filter (view: installed) survives unchanged', () => {
+    const rawDescriptors = describeActiveFilters(
+      { ...DEFAULT_FILTER_ENGINE_STATE, view: 'installed' },
+      ''
+    )
+
+    expect(rawDescriptors).toHaveLength(1)
+    expect(renderableActiveFilters(rawDescriptors)).toEqual(rawDescriptors)
+  })
+
+  // Test F: `renderableActiveFilters` is referentially the SAME filter every
+  // consumer applies -- not a parallel reimplementation that could drift
+  // from `chipLabelSpec`.
+  it('is exactly `descriptors.filter(d => chipLabelSpec(d) !== null)` for a mixed list', () => {
+    const mixed: ActiveFilterDescriptor[] = [
+      { id: 'view:installed', kind: 'view', value: 'installed' },
+      { id: 'view:retiredView', kind: 'view', value: 'retiredView' }
+    ]
+
+    expect(renderableActiveFilters(mixed)).toEqual(
+      mixed.filter((d) => chipLabelSpec(d) !== null)
+    )
   })
 })
 

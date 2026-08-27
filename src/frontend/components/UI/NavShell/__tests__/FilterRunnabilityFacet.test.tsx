@@ -79,8 +79,13 @@ jest.mock('react-i18next', () => ({
 
 // Imported after the mocks above (textual order -- this project's ts-jest
 // setup does not hoist jest.mock like babel-jest).
-import FilterRunnabilityFacet from '../components/FilterRunnabilityFacet'
+import FilterRunnabilityFacet, {
+  runnabilityLabel,
+  echoDefaultValue
+} from '../components/FilterRunnabilityFacet'
 import { FilterFacetRow } from '../components/FilterFacetGroup'
+import { RUNNABILITY_LABELS } from 'frontend/screens/Library/facetLabels'
+import type { RunnabilityTier } from 'frontend/types'
 
 type AnyProps = Record<string, unknown> & { children?: unknown }
 type AnyElement = ReactElement<AnyProps> & { props: AnyProps }
@@ -238,6 +243,31 @@ describe('FilterRunnabilityFacet', () => {
   })
 })
 
+describe('literal default text matches facetLabels.ts (WR-06)', () => {
+  const tiers = Object.keys(RUNNABILITY_LABELS) as RunnabilityTier[]
+
+  // Test B (non-vacuity): if a future edit deleted members off
+  // RUNNABILITY_LABELS, Test A's `it.each` table would silently shrink and
+  // could pass vacuously with zero real assertions run. Pinning the table
+  // length to the four known tiers keeps that possibility a named failure.
+  it('the drift table covers exactly the four known tiers -- not a table that has silently emptied', () => {
+    expect(tiers).toHaveLength(4)
+  })
+
+  // Test A: the module-scope `throw` this used to be is now this `it.each`.
+  // A drift between the switch's literal copy and facetLabels.ts's tuples
+  // fails exactly one named row here instead of crashing the whole app at
+  // import time.
+  it.each(tiers)(
+    "runnabilityLabel's literal default for tier %s matches RUNNABILITY_LABELS",
+    (tier) => {
+      expect(runnabilityLabel(tier, echoDefaultValue)).toBe(
+        RUNNABILITY_LABELS[tier][1]
+      )
+    }
+  )
+})
+
 describe('FilterRunnabilityFacet -- medal/derivation source gate (D-09/D-10/D-11)', () => {
   const SOURCE_PATH = join(
     __dirname,
@@ -260,5 +290,21 @@ describe('FilterRunnabilityFacet -- medal/derivation source gate (D-09/D-10/D-11
     expect(knownBad).toMatch(
       /gold|silver|bronze|crossoverRating|is_mac_native|mac_arch|is_linux_native/
     )
+  })
+
+  // Test C (WR-06): the module-scope `throw` that used to run this same
+  // check at import time is gone -- the drift alarm now lives entirely in
+  // the `it.each` above. Matched on `\bthrow\b`, not `^throw`: the original
+  // throw was indented inside an `if` block, and an earlier pass on this
+  // finding wrongly reported it closed because a column-0-anchored grep
+  // missed exactly that indentation.
+  it('contains no throw statement of any kind', () => {
+    expect(source).not.toMatch(/\bthrow\b/)
+  })
+
+  it('the no-throw gate is non-vacuous -- proven to fail against a known-bad literal', () => {
+    const knownBad = `${source}\nthrow`
+
+    expect(knownBad).toMatch(/\bthrow\b/)
   })
 })

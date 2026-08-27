@@ -47,6 +47,18 @@ export default function FilterZeroResult() {
     .map((descriptor) => chipLabelSpec(descriptor))
     .filter((spec): spec is ChipLabelSpec => spec !== null)
     .map((spec) => resolveLabel(spec, t, tGamelib))
+
+  // WR-12, defence in depth: `activeFilterCount` is now derived upstream
+  // from `renderableActiveFilters` (`Library/index.tsx`), so it should never
+  // be positive with an empty `labels` here -- but this guard makes
+  // "No games match ." unrepresentable at the render site regardless of
+  // what a caller supplies (e.g. a hand-built context in a test). The
+  // `chipLabelSpec` null-filter above predates the review (`726b96f93`) and
+  // is now redundant with the upstream filter, but harmless to keep.
+  if (labels.length === 0) {
+    return null
+  }
+
   const filters = joinChipLabels(labels)
 
   return (
