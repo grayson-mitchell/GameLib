@@ -2,7 +2,7 @@
 phase: 38-deferred-hardware-and-environment-uat-gates-windows-linux-ma
 verified: null
 status: human_needed
-score: N/A — collection phase, no must-haves. 11 relocated items, 0 discharged.
+score: N/A — collection phase, no must-haves. 27 relocated items, 0 discharged.
 audit_tool_note: >
   `status` MUST stay `human_needed`. `gsd-sdk query audit-uat` admits a VERIFICATION.md when
   status is `human_needed` OR `gaps_found`, but `parseVerificationItems` only emits items when
@@ -252,6 +252,224 @@ human_verification:
       Run in the same sitting as 38-C01..C06 — one controller discharges all eight. Run C07 and C08
       back to back on the same game so the two runtimes' focus orders are compared under identical
       library state.
+
+  - id: "38-S01"
+    test: "Steam quick install on a WINDOWS host, electron runtime — native install ON and >1 registered Steam library. Click the PRIMARY half of Install (the button face, not the caret)."
+    expected: "NOTHING opens — no dialog, modal, overlay or picker, and no flash-and-close — and the install lands in the PRIMARY Steam library. Verify the landing ON DISK (content plus appmanifest_<appId>.acf in the primary), not from the badge."
+    why_human: "Requires a Windows host. The equivalent macOS row (G-QUICK-DEFAULT) is PASS on both runtimes, but the Windows path takes a different platformRow branch."
+    blocked_by: "a Windows machine"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-QUICK-WIN / electron (34.13-UAT.md)"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's only
+      host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once
+      every macOS-runnable row was resolved (44 PASS / 0 FAIL).
+
+  - id: "38-S02"
+    test: "Steam quick install on a WINDOWS host, tauri runtime — native install ON and >1 registered Steam library. Click the PRIMARY half of Install (the button face, not the caret)."
+    expected: "NOTHING opens — no dialog, modal, overlay or picker, and no flash-and-close — and the install lands in the PRIMARY Steam library. Verify the landing ON DISK (content plus appmanifest_<appId>.acf in the primary), not from the badge."
+    why_human: "Requires a Windows host. The equivalent macOS row (G-QUICK-DEFAULT) is PASS on both runtimes, but the Windows path takes a different platformRow branch."
+    blocked_by: "a Windows machine"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-QUICK-WIN / tauri (34.13-UAT.md)"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's only
+      host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once
+      every macOS-runnable row was resolved (44 PASS / 0 FAIL).
+
+  - id: "38-S03"
+    test: "Steam quick install on a LINUX host, electron runtime — native installs OFF, or ON with <=1 library. Click the PRIMARY half of Install."
+    expected: "NOTHING opens — no dialog, modal, overlay or picker, no flash-and-close."
+    why_human: "Requires a Linux host. On Linux the platform row does not render at all (D-18), a branch unreachable on macOS."
+    blocked_by: "a Linux machine"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-QUICK-LINUX / electron (34.13-UAT.md)"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's only
+      host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once
+      every macOS-runnable row was resolved (44 PASS / 0 FAIL).
+
+  - id: "38-S04"
+    test: "Steam quick install on a LINUX host, tauri runtime — native installs OFF, or ON with <=1 library. Click the PRIMARY half of Install."
+    expected: "NOTHING opens — no dialog, modal, overlay or picker, no flash-and-close."
+    why_human: "Requires a Linux host. On Linux the platform row does not render at all (D-18), a branch unreachable on macOS."
+    blocked_by: "a Linux machine"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-QUICK-LINUX / tauri (34.13-UAT.md)"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's only
+      host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once
+      every macOS-runnable row was resolved (44 PASS / 0 FAIL).
+
+  - id: "38-S05"
+    test: "Section-gating matrix row 5 on a WINDOWS host, electron runtime — native installs OFF, or ON with <=1 library."
+    expected: "A read-only 'Windows' platform row (D-19); library dropdown, wine section and free-space line ALL ABSENT; content-light notice PRESENT (D-20/Q6). Check each of the four independently — an absent section inferred from another is exactly what this matrix exists to prevent."
+    why_human: "Requires a Windows host for the readonly-windows branch."
+    blocked_by: "a Windows machine"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-ROW-5 / electron (34.13-UAT.md)"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's only
+      host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once
+      every macOS-runnable row was resolved (44 PASS / 0 FAIL).
+
+  - id: "38-S06"
+    test: "Section-gating matrix row 5 on a WINDOWS host, tauri runtime — native installs OFF, or ON with <=1 library."
+    expected: "A read-only 'Windows' platform row (D-19); library dropdown, wine section and free-space line ALL ABSENT; content-light notice PRESENT (D-20/Q6). Check each of the four independently — an absent section inferred from another is exactly what this matrix exists to prevent."
+    why_human: "Requires a Windows host for the readonly-windows branch."
+    blocked_by: "a Windows machine"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-ROW-5 / tauri (34.13-UAT.md)"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's only
+      host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once
+      every macOS-runnable row was resolved (44 PASS / 0 FAIL).
+
+  - id: "38-S07"
+    test: "Section-gating matrix row 6 on a WINDOWS host, electron runtime — hasChoice (native installs ON and >1 library)."
+    expected: "A read-only 'Windows' platform row (D-19); library dropdown PRESENT; wine section ABSENT; free-space line PRESENT. All four checked independently."
+    why_human: "Requires a Windows host AND two registered libraries. `hasChoice` = native Steam installs ON **and** >1 registered library. `getSteamLibraries()` (src/backend/utils.ts:671) filters candidates through `existsSync`, so library COUNT is what the gate reads."
+    blocked_by: "a Windows machine with TWO registered Steam libraries"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-ROW-6 / electron (34.13-UAT.md)"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's only
+      host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once
+      every macOS-runnable row was resolved (44 PASS / 0 FAIL).
+
+  - id: "38-S08"
+    test: "Section-gating matrix row 6 on a WINDOWS host, tauri runtime — hasChoice (native installs ON and >1 library)."
+    expected: "A read-only 'Windows' platform row (D-19); library dropdown PRESENT; wine section ABSENT; free-space line PRESENT. All four checked independently."
+    why_human: "Requires a Windows host AND two registered libraries. `hasChoice` = native Steam installs ON **and** >1 registered library. `getSteamLibraries()` (src/backend/utils.ts:671) filters candidates through `existsSync`, so library COUNT is what the gate reads."
+    blocked_by: "a Windows machine with TWO registered Steam libraries"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-ROW-6 / tauri (34.13-UAT.md)"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's only
+      host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once
+      every macOS-runnable row was resolved (44 PASS / 0 FAIL).
+
+  - id: "38-S09"
+    test: "Section-gating matrix row 7 on a LINUX host, electron runtime — native installs OFF, or ON with <=1 library."
+    expected: "The platform row does NOT render at all (D-18); library dropdown, wine section and free-space line ALL ABSENT; content-light notice PRESENT (D-20/Q6). All four checked independently."
+    why_human: "Requires a Linux host. 'Platform row absent' is a distinct state from 'platform row present but read-only' and cannot be produced on macOS or Windows."
+    blocked_by: "a Linux machine"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-ROW-7 / electron (34.13-UAT.md)"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's only
+      host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once
+      every macOS-runnable row was resolved (44 PASS / 0 FAIL).
+
+  - id: "38-S10"
+    test: "Section-gating matrix row 7 on a LINUX host, tauri runtime — native installs OFF, or ON with <=1 library."
+    expected: "The platform row does NOT render at all (D-18); library dropdown, wine section and free-space line ALL ABSENT; content-light notice PRESENT (D-20/Q6). All four checked independently."
+    why_human: "Requires a Linux host. 'Platform row absent' is a distinct state from 'platform row present but read-only' and cannot be produced on macOS or Windows."
+    blocked_by: "a Linux machine"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-ROW-7 / tauri (34.13-UAT.md)"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's only
+      host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once
+      every macOS-runnable row was resolved (44 PASS / 0 FAIL).
+
+  - id: "38-S11"
+    test: "Section-gating matrix row 8 on a LINUX host, electron runtime — hasChoice (native installs ON and >1 library)."
+    expected: "The platform row does NOT render (D-18); library dropdown PRESENT; wine section ABSENT; free-space line PRESENT. All four checked independently."
+    why_human: "Requires a Linux host AND two registered libraries. `hasChoice` = native Steam installs ON **and** >1 registered library. `getSteamLibraries()` (src/backend/utils.ts:671) filters candidates through `existsSync`, so library COUNT is what the gate reads."
+    blocked_by: "a Linux machine with TWO registered Steam libraries"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-ROW-8 / electron (34.13-UAT.md)"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's only
+      host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once
+      every macOS-runnable row was resolved (44 PASS / 0 FAIL).
+
+  - id: "38-S12"
+    test: "Section-gating matrix row 8 on a LINUX host, tauri runtime — hasChoice (native installs ON and >1 library)."
+    expected: "The platform row does NOT render (D-18); library dropdown PRESENT; wine section ABSENT; free-space line PRESENT. All four checked independently."
+    why_human: "Requires a Linux host AND two registered libraries. `hasChoice` = native Steam installs ON **and** >1 registered library. `getSteamLibraries()` (src/backend/utils.ts:671) filters candidates through `existsSync`, so library COUNT is what the gate reads."
+    blocked_by: "a Linux machine with TWO registered Steam libraries"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-ROW-8 / tauri (34.13-UAT.md)"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's only
+      host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once
+      every macOS-runnable row was resolved (44 PASS / 0 FAIL).
+
+  - id: "38-S13"
+    test: "Content-light dialog on a WINDOWS host with no library choice, electron runtime — matrix row 5. Run BOTH sub-cases: (a) native installs OFF at any library count, (b) native installs ON with <=1 library."
+    expected: "One read-only 'Windows' row, the content-light notice, Cancel + Install, and NOTHING else — no empty-state illustration or heading. Install completes normally. The two sub-cases must render DIFFERENT COPY: (a) gamelib:steam.install.contentLightNotice, (b) gamelib:steam.install.contentLightSingleLibraryNotice. Identical rendering is a FAIL."
+    why_human: "Requires a Windows host."
+    blocked_by: "a Windows machine"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-D20-CONTENTLIGHT / electron (34.13-UAT.md)"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's only
+      host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once
+      every macOS-runnable row was resolved (44 PASS / 0 FAIL).
+      Corrected by 34.13 review A-08: an earlier wording said the two sub-cases render
+      IDENTICALLY. Review WR-04 deliberately made them differ, so identical rendering is now the
+      FAIL condition. Do not run this against the pre-A-08 wording.
+
+  - id: "38-S14"
+    test: "Content-light dialog on a WINDOWS host with no library choice, tauri runtime — matrix row 5. Run BOTH sub-cases: (a) native installs OFF at any library count, (b) native installs ON with <=1 library."
+    expected: "One read-only 'Windows' row, the content-light notice, Cancel + Install, and NOTHING else — no empty-state illustration or heading. Install completes normally. The two sub-cases must render DIFFERENT COPY: (a) gamelib:steam.install.contentLightNotice, (b) gamelib:steam.install.contentLightSingleLibraryNotice. Identical rendering is a FAIL."
+    why_human: "Requires a Windows host."
+    blocked_by: "a Windows machine"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-D20-CONTENTLIGHT / tauri (34.13-UAT.md)"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's only
+      host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once
+      every macOS-runnable row was resolved (44 PASS / 0 FAIL).
+      Corrected by 34.13 review A-08: an earlier wording said the two sub-cases render
+      IDENTICALLY. Review WR-04 deliberately made them differ, so identical rendering is now the
+      FAIL condition. Do not run this against the pre-A-08 wording.
+
+  - id: "38-S15"
+    test: "Content-light notice COPY and container, electron runtime — scored per branch, on BOTH matrix row 5 (Windows) and row 7 (Linux)."
+    expected: "The notice renders in an `.infoBox`, NOT in ThirdPartyDialog's `.noticeIcon`/`.noticeInfo`. Copy must match the catalogue EXACTLY, per branch: native installs OFF -> gamelib:steam.install.contentLightNotice; native installs ON with <=1 library -> gamelib:steam.install.contentLightSingleLibraryNotice. Verify against public/locales/en/gamelib.json, never by eye."
+    why_human: "Requires BOTH a Windows and a Linux host, since the row is scored on matrix rows 5 and 7."
+    blocked_by: "BOTH a Windows and a Linux machine (scored on matrix rows 5 and 7)"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-D20-Q6-COPY / electron (34.13-UAT.md)"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's only
+      host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once
+      every macOS-runnable row was resolved (44 PASS / 0 FAIL).
+      Corrected by 34.13 review A-08 into a TWO-BRANCH split (review WR-04). A single-branch run
+      does not discharge this item.
+
+  - id: "38-S16"
+    test: "Content-light notice COPY and container, tauri runtime — scored per branch, on BOTH matrix row 5 (Windows) and row 7 (Linux)."
+    expected: "The notice renders in an `.infoBox`, NOT in ThirdPartyDialog's `.noticeIcon`/`.noticeInfo`. Copy must match the catalogue EXACTLY, per branch: native installs OFF -> gamelib:steam.install.contentLightNotice; native installs ON with <=1 library -> gamelib:steam.install.contentLightSingleLibraryNotice. Verify against public/locales/en/gamelib.json, never by eye."
+    why_human: "Requires BOTH a Windows and a Linux host, since the row is scored on matrix rows 5 and 7."
+    blocked_by: "BOTH a Windows and a Linux machine (scored on matrix rows 5 and 7)"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-D20-Q6-COPY / tauri (34.13-UAT.md)"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's only
+      host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once
+      every macOS-runnable row was resolved (44 PASS / 0 FAIL).
+      Corrected by 34.13 review A-08 into a TWO-BRANCH split (review WR-04). A single-branch run
+      does not discharge this item.
 
 sweep_notes:
   re_derive_before_running: >
