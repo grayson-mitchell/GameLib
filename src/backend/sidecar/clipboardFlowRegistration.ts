@@ -35,8 +35,8 @@
  * import the UNDERLYING module, never a feature module's `ipc_handler.ts`. This module
  * deliberately does NOT import `utils/ipc_handler.ts`, even though `copySystemInfoToClipboard`'s
  * real body lives there (`utils/ipc_handler.ts:23-27`) — that file ALSO registers
- * `abort`/`getSystemInfo`/`hasExecutable`/`isIntelMac` (all already ported elsewhere) at
- * import time, and a side-effect import would double-register all four (`dispatchSend`/
+ * `abort`/`getSystemInfo`/`hasExecutable` (all already ported elsewhere) at
+ * import time, and a side-effect import would double-register all three (`dispatchSend`/
  * `dispatchInvoke` iterate/hold every registered listener/handler for a channel, so a
  * duplicate registration duplicates every frontend call or breaks the single-registration
  * assumption other code relies on). `getSystemInfo`/`formatSystemInfo` are imported directly

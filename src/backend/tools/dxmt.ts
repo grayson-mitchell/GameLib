@@ -1,5 +1,5 @@
 import { backendEvents } from 'backend/backend_events'
-import { isIntelMac, isMac } from 'backend/constants/environment'
+import { isMac } from 'backend/constants/environment'
 import { logDebug, logError, LogPrefix, logWarning } from 'backend/logger'
 import { isOnline } from 'backend/online_monitor'
 import { installOrUpdateTool } from '.'
@@ -132,21 +132,21 @@ const DXMT = {
 }
 
 backendEvents.on('wineVersionInstalled', async (versionInfo, installDir) => {
-  if (isMac && !isIntelMac && versionInfo.type === 'Wine-Staging-macOS') {
+  if (isMac && versionInfo.type === 'Wine-Staging-macOS') {
     await DXMT.getLatest()
     await DXMT.copyWineAndConfigure(versionInfo, installDir)
   }
 })
 
 backendEvents.on('wineVersionUninstalled', async (versionInfo) => {
-  if (isMac && !isIntelMac && versionInfo.type === 'Wine-Staging-macOS') {
+  if (isMac && versionInfo.type === 'Wine-Staging-macOS') {
     await DXMT.deleteWineCopy(versionInfo)
   }
 })
 
 // Update DXMT version in `*-DXMT` wines if new version available
 backendEvents.on('releasesInfoReady', async (releasesInfo) => {
-  if (!isMac || isIntelMac) return
+  if (!isMac) return
 
   // TODO: should we store just the version instead of the file name?
   const currentDXMTVersion = DXMT.getCurrentDXMTVersion()

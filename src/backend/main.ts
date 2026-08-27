@@ -168,7 +168,6 @@ import {
   isCLIFullscreen,
   isCLINoGui,
   isFlatpak,
-  isIntelMac,
   isLinux,
   isMac,
   isSnap,
@@ -230,7 +229,7 @@ async function initializeWindow(): Promise<BrowserWindow> {
     const availableWine = await GlobalConfig.get().getAlternativeWine()
     let shouldDownloadWine = !availableWine.length
 
-    if (isMac && !isIntelMac) {
+    if (isMac) {
       const toolkitDownloaded = availableWine.some(
         (wine) => wine.type === 'toolkit'
       )

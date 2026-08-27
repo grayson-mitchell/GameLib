@@ -72,7 +72,7 @@ import type { AppSettings, WineManagerStatus } from 'common/types'
 import { isUmuSupported } from './utils/compatibility_layers'
 import { getSystemInfo } from './utils/systeminfo'
 import { configStore } from './constants/key_value_stores'
-import { isLinux, isMac, isIntelMac, isWindows } from './constants/environment'
+import { isLinux, isMac, isWindows } from './constants/environment'
 import {
   configPath,
   fixAsarPath,
@@ -996,7 +996,7 @@ export async function downloadDefaultWine() {
     if (isLinux) {
       return version.type === 'Proton-CachyOS'
     } else if (isMac) {
-      if (isIntelMac || !isMacOSUpToDate) {
+      if (!isMacOSUpToDate) {
         return version.type === 'Wine-Crossover'
       } else {
         return version.type === 'Game-Porting-Toolkit'
@@ -1366,10 +1366,6 @@ async function getPathDiskSize(path: string): Promise<number> {
 }
 
 export async function checkRosettaInstall() {
-  if (isIntelMac) {
-    return
-  }
-
   // the spawn itself fails when Rosetta is not installed
   const result = await execAsync(
     'arch -x86_64 /usr/sbin/sysctl sysctl.proc_translated'

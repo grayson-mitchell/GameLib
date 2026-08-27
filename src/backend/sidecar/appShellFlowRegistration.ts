@@ -2,13 +2,13 @@
  * Curated app-shell channel registration (Phase 34.1 Plan 04,
  * D-03/D-08/D-09/D-13, REQ-34.1-05/REQ-34.1-09/REQ-34.1-12).
  *
- * Registers the 20 sidecar-routed app-shell channels (8 invoke + 12 send) onto electronStub's
+ * Registers the 19 sidecar-routed app-shell channels (7 invoke + 12 send) onto electronStub's
  * `ipcMain` recorder, importing the REAL `backend/appshell/*` functions
  * extracted by Plan 34.1-02 unchanged (mirrors `installFlowRegistration.ts`'s
  * / `settingsFlowRegistration.ts`'s own objective — prove the real logic runs
  * behind the new transport, not a reimplementation):
  *
- *   invoke (8, `ipcMain.handle`):
+ *   invoke (7, `ipcMain.handle`):
  *     - `getCustomThemes`/`getThemeCSS`/`getCustomCSS` -> `appshell/themes.ts`
  *       (`main.ts:1512-1516`)
  *     - `getHeroicVersion` -> `electronStub`'s `app.getVersion()` — Electron
@@ -17,8 +17,6 @@
  *       it
  *     - `getLatestReleases`/`getCurrentChangelog` -> `appshell/releases.ts`
  *       (`main.ts:765/767`)
- *     - `isIntelMac` -> the `isIntelMac` const, `backend/constants/environment`
- *       (`utils/ipc_handler.ts:32`) — re-registered HERE ONLY, see D-09 below
  *     - `getWebviewPreloadPath` -> a declared-empty `''` (D-12: Tauri has no
  *       `<webview>` tag, the login-webview story is Phase 34.4's, Phase 33
  *       D-09 already recorded `session` as an accepted gap)
@@ -80,13 +78,13 @@
  *
  * D-09 (curated-import discipline, carried forward from Phase 30 D-08): no
  * file under `src/backend/sidecar/` may import the real `electron` module.
- * `abort`/`isIntelMac` currently live in `utils/ipc_handler.ts`, which ALSO
- * registers slice-6/8 channels (`getLegendaryVersion`, `getSystemInfo`,
+ * `abort` currently lives in `utils/ipc_handler.ts`, which ALSO registers
+ * slice-6/8 channels (`getLegendaryVersion`, `getSystemInfo`,
  * `hasExecutable`, …) at import time — side-effect-importing that whole file
  * would prematurely drag those import graphs into this slice's sidecar
- * bundle. `callAbortController`/`isIntelMac` are therefore imported directly
- * from their own declaration modules instead, and only the two channels this
- * slice owns are re-registered here.
+ * bundle. `callAbortController` is therefore imported directly from its own
+ * declaration module instead, and only the one channel this slice owns is
+ * re-registered here.
  *
  * D-11 (Phase 34.6 Plan 05, REQ-34.6-04/07/13): `frontendReady` (send-kind,
  * `preload/api/misc.ts:93`'s `makeListenerCaller` — NOT invoke-kind, contrary
@@ -122,7 +120,7 @@
 import i18next from 'i18next'
 
 import { ipcMain, app, powerSaveBlocker, dialog } from './electronStub'
-import { isIntelMac, isSnap, isCLINoGui } from '../constants/environment'
+import { isSnap, isCLINoGui } from '../constants/environment'
 import { heroicGithubURL, customThemesWikiLink } from '../constants/urls'
 import { getCustomThemes, getThemeCSS, getCustomCSS } from '../appshell/themes'
 import {
@@ -180,7 +178,7 @@ function syncTrayIcon(): void {
 }
 
 /**
- * Registers the 20 app-shell channels (8 invoke + 12 send). Called once from
+ * Registers the 19 app-shell channels (7 invoke + 12 send). Called once from
  * `handlers.ts` — this
  * module owns no side effects at import time beyond the imports above; the
  * caller decides when registration onto the handler registry happens.
@@ -193,7 +191,7 @@ function syncTrayIcon(): void {
 export function registerAppShellFlows(
   options: { skipInitialTraySync?: boolean } = {}
 ): void {
-  // ── invoke (8) ────────────────────────────────────────────────────────
+  // ── invoke (7) ────────────────────────────────────────────────────────
 
   ipcMain.handle('getCustomThemes', async () => getCustomThemes())
 
@@ -210,8 +208,6 @@ export function registerAppShellFlows(
   ipcMain.handle('getLatestReleases', async () => getLatestReleasesForStartup())
 
   ipcMain.handle('getCurrentChangelog', async () => getCurrentChangelogEntry())
-
-  ipcMain.handle('isIntelMac', async () => isIntelMac)
 
   ipcMain.handle('getWebviewPreloadPath', async () => {
     if (!webviewPreloadPathWarned) {

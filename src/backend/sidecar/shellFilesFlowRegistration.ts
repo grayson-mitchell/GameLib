@@ -63,7 +63,7 @@
  * ALSO registers the already-ported `getLogContent` and `logError` (ported early
  * via 34.2-16) alongside three of this slice's channels, and
  * `utils/ipc_handler.ts` ALSO registers the already-ported `abort`/
- * `getSystemInfo`/`hasExecutable`/`isIntelMac` PLUS four unported Phase 34.5
+ * `getSystemInfo`/`hasExecutable` PLUS four unported Phase 34.5
  * channels (`getLegendaryVersion`, `getGogdlVersion`, `getCometVersion`,
  * `getNileVersion`) — a side-effect import of either would double-register
  * channels this slice does not own (`dispatchSend` iterates ALL listeners for

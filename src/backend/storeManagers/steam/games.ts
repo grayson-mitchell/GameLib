@@ -1168,8 +1168,8 @@ export default class SteamGame implements Game {
    * Triple-gated, ALL of:
    *  1. `isAppleSiliconMac` — the load-bearing safety gate. i386 STILL RUNS
    *     on an Intel Mac, so an Intel host must keep its native copy. Never
-   *     widen this to `isMac` or `!isIntelMac` (see environment.ts's own
-   *     comment on the positive-probe requirement).
+   *     widen this to a bare `isMac` or to a negated-Intel-probe equivalent
+   *     (see environment.ts's own comment on the positive-probe requirement).
    *  2. `steamMetadataStore.get(appId)?.mac_arch === '32'` — the specific
    *     demotion signal, read directly rather than via `isBottleEligible()`,
    *     which is also true for a merely-not-mac-native title whose native

@@ -93,7 +93,6 @@ import {
   isMac,
   isSteamDeckGameMode,
   isWindows,
-  isIntelMac,
   isSteamDeck,
   isFlatpak,
   flatpakRuntimeVersion
@@ -1367,7 +1366,7 @@ export async function validWine(
 
   if (isMac && type === 'toolkit') {
     const isMacOSUpToDate = await isMacSonomaOrHigher()
-    const isGPTKCompatible: boolean = isMacOSUpToDate && !isIntelMac
+    const isGPTKCompatible: boolean = isMacOSUpToDate
     if (!isGPTKCompatible) {
       return false
     }
