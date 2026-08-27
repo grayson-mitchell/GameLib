@@ -1012,7 +1012,12 @@ listing gathered for git log context; not independently re-opened in this sessio
 exact structure beyond the memory-file summary already available — **the planner should open it
 directly** when drafting D-16's gate document, per the task's own instruction).
 
-## Open Questions
+## Open Questions (RESOLVED — all five discharged at planning, 2026-08-28)
+
+> Each question below was converted into an owning, *gating* task during `/gsd-plan-phase 35`
+> rather than resolved by assertion. Resolution pointers are inline per question; the plan
+> documents are authoritative.
+
 
 1. **Does `require('node:sea').isSea()` behave identically in a `worker_threads.Worker` spawned
    inside a packaged SEA binary vs. the sidecar's main thread?**
@@ -1025,6 +1030,7 @@ directly** when drafting D-16's gate document, per the task's own instruction).
      worker thread in a packaged build) as a D-14 plan task before trusting the unification for the
      security-critical `devSecretVault.ts` path.
 
+   - **RESOLVED — see `35-01` (dedicated empirical worker-thread probe task). Gates `35-04` Task 1: an `UNMEASURED` result blocks the D-14 unification rather than defaulting through.**
 2. **What does `backend/platform`'s planned `app.getPath('userData')`-equivalent resolve to on
    each OS, and does it match what the current Electron build already uses?**
    - What we know: `electronStub.ts` already has a `getPath` implementation (referenced but not
@@ -1036,6 +1042,7 @@ directly** when drafting D-16's gate document, per the task's own instruction).
      this session's excerpts) as an early D-04 plan task, before writing the `conf` constructor
      call.
 
+   - **RESOLVED — see `35-05` (its `read_first`/`action` reconcile `pathShim.getPath('userData')` against Electron's resolution algorithm before the `conf` constructor is written).**
 3. **Where is the second real `session.fromPartition`-equivalent caller D-09 names as
    `legendary/user.ts`?**
    - What we know: `src/backend/humble/user.ts` is confirmed as one real caller (14 occurrences).
@@ -1048,6 +1055,7 @@ directly** when drafting D-16's gate document, per the task's own instruction).
    - Recommendation: `grep -rln "session.fromPartition" src/backend/` as the first task of any
      D-09 plan, before finalizing the file list to touch.
 
+   - **RESOLVED — the caller EXISTS at `src/backend/storeManagers/legendary/user.ts`; CONTEXT.md's path was an abbreviation, not a stale reference. Census performed in `35-01`, re-confirmed in `35-09`.**
 4. **Is Windows/Linux CI-artifact production alone (no runtime smoke test) sufficient for D-16, or
    does "plus a smoke launch" require a new CI step / a scheduled human action?**
    - What we know: D-00c confirms the 3-OS matrix is code-complete and produces artifacts; it has
@@ -1057,6 +1065,7 @@ directly** when drafting D-16's gate document, per the task's own instruction).
      in this research pass) and make an explicit choice — new automated smoke step, vs. scheduled
      manual smoke test, vs. falling back to closing `34-07` first — rather than leaving "plus a
      smoke launch" ambiguous in the plan.
+   - **RESOLVED — see `35-01` (CI workflow census) and `35-19` Task 2, which carries this as an explicit blocking decision rather than an ambiguous phrase. NOTE: D-16 sufficiency was this research pass's LOWEST-confidence area; the decision is deferred to the gate, not settled here.**
 
 5. **Does `electron.vite.config.ts:75-101`'s `renderer:` block match CONTEXT.md's characterization
    byte-for-byte?**
@@ -1065,6 +1074,7 @@ directly** when drafting D-16's gate document, per the task's own instruction).
    - What's unclear: this research relied on that characterization without independently
      re-opening the file (time-scoped decision).
    - Recommendation: open the file directly as the first task of any D-12 plan.
+   - **RESOLVED — see `35-03` Task 1, whose first action reads `electron.vite.config.ts` directly. `preserveRunnerSymlinksPlugin` is carried forward by a name-based (not array-position) equivalence test per F-34.9-01.**
 
 ## Environment Availability
 

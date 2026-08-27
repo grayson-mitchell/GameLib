@@ -62,7 +62,7 @@ of blocker records rotting silently.
 
 ### Cut depth
 
-- **D-01 — Full de-Electron. `electronStub.ts` is DELETED, all 67 files rewritten.**
+- **D-01:** Full de-Electron. `electronStub.ts` is DELETED, all 67 files rewritten.
   `electronStub.ts` is not a small stub — it is a **build-time alias for `electron` across the
   entire sidecar** (`--alias:electron=./src/backend/sidecar/electronStub.ts`), and **67 files
   under `src/backend/` import from `'electron'`**. The alias is load-bearing in **three** build
@@ -71,7 +71,7 @@ of blocker records rotting silently.
   *Rejected: keeping it as a permanent first-party shim (smaller, but leaves `from 'electron'`
   lying about provenance); keeping everything as-is (leaves the phase goal unmet).*
 
-- **D-02 — One module, same 22 exports.** `electronStub.ts` becomes a single module (e.g.
+- **D-02:** One module, same 22 exports. `electronStub.ts` becomes a single module (e.g.
   `src/backend/platform/index.ts`) exporting the same names: `app`, `dialog`, `shell`,
   `Notification`, `safeStorage`, `clipboard`, `Tray`, `BrowserWindow`, `session`, `screen`,
   `net`, `Menu`, `protocol`, `powerSaveBlocker`, `nativeImage`, `ipcMain`, `handlerRegistry`,
@@ -83,7 +83,7 @@ of blocker records rotting silently.
   *Rejected: splitting by concern (diff stops being mechanical); no aggregate at all (moves
   LOGIC, not just imports, in the phase that cannot be cleanly rolled back).*
 
-- **D-03 — `electron` leaves `package.json` completely, including devDependencies.** The type
+- **D-03:** `electron` leaves `package.json` completely, including devDependencies. The type
   surface moves first-party too: the **12 `import type ... from 'electron'` sites** and **32
   `Electron.` namespace references** get declarations in the platform module, and
   `src/backend/__mocks__/electron.ts` becomes the platform mock.
@@ -94,36 +94,36 @@ of blocker records rotting silently.
   *Rejected: keeping `electron` as a types-only devDep (nothing structural then stops a future
   edit importing a VALUE and resurrecting the dependency).*
 
-- **D-04 — `electron-store` disposition is Claude's discretion.** See Claude's Discretion below.
+- **D-04:** `electron-store` disposition is Claude's discretion. See Claude's Discretion below.
 
 ### Dead Electron APIs
 
-- **D-05 — Build three, accept and strip the rest.** Tray icon + tray settings, `gamelib://`
+- **D-05:** Build three, accept and strip the rest. Tray icon + tray settings, `gamelib://`
   deep links, and wake lock get **real Tauri implementations**. Everything still inert after
   that — `session.fromPartition`, `screen.getPrimaryDisplay`, `net.request`, `Menu`, the
   `imagecache` protocol, `BrowserWindow.getAllWindows`, `clipboard.readText` — is accepted as a
   documented permanent gap, **and any UI affordance that lies about it is deleted.**
   **The phase rule this establishes: nothing ships an affordance it cannot honor.**
 
-- **D-06 — Tray.** `src/backend/tray_icon/tray_icon.ts` is a whole subsystem (tray menu,
+- **D-06:** Tray. `src/backend/tray_icon/tray_icon.ts` is a whole subsystem (tray menu,
   quick-launch entries, show/hide) that is entirely dead under Tauri, and
   `src/frontend/screens/Settings/components/TraySettings.tsx` is a **live settings panel the
   user can toggle that changes nothing**. Tauri v2 has a first-party tray-icon API. Implement it.
   Note the tray context menu is built with `Menu.buildFromTemplate` (`tray_icon.ts:113`) and
   calls `handleProtocol` (`tray_icon.ts:107`) — so D-06 and D-07 are coupled.
 
-- **D-07 — Deep links.** `protocol.handle('gamelib')` + `app.setAsDefaultProtocolClient('gamelib')`
+- **D-07:** Deep links. `protocol.handle('gamelib')` + `app.setAsDefaultProtocolClient('gamelib')`
   at `main.ts:502-507`, backing `gamelib://launch/...`. `src/backend/protocol.ts` has a full
   parser and `src/backend/__tests__/protocol.test.ts` an existing suite — both survive; only
   registration changes. `tauri-plugin-deep-link` is the analog.
 
-- **D-08 — Wake lock.** `powerSaveBlocker` is D-08-accepted-gap today, and **its own source
+- **D-08:** Wake lock. `powerSaveBlocker` is D-08-accepted-gap today, and **its own source
   comment says "revisit at the Phase 35 cutover"** — that is now. Real effect of leaving it: the
   machine can sleep mid-depot-download, and `launcher.ts:190` holds `prevent-display-sleep` while
   a game runs. `33-RESEARCH` rejected both existing Tauri wake-lock plugins on maintenance
   grounds, so this likely means a small first-party Rust binding rather than a plugin.
 
-- **D-09 — Logout clears the embedded browser by DELETING THE WEBVIEW DATA DIRECTORY**, not by
+- **D-09:** Logout clears the embedded browser by DELETING THE WEBVIEW DATA DIRECTORY, not by
   clearing cookies. `session.fromPartition` (the D-09 accepted no-op) has exactly two real
   callers — `humble/user.ts` and `legendary/user.ts` — and that is the same surface as the
   folded Epic-logout todo and the standing 34.6 live-gate Step 8 FAIL. Wholesale directory
@@ -137,7 +137,7 @@ of blocker records rotting silently.
   (would ship the 34.6 Step 8 failure as permanent, and it is security-relevant on a shared
   machine).*
 
-- **D-10 — Artwork disk cache is ACCEPTED as lost.** `CachedImage` is already gated on
+- **D-10:** Artwork disk cache is ACCEPTED as lost. `CachedImage` is already gated on
   `imageCacheSchemeAvailable()` (34.4.1 gap cycle 2, plan 27) and never emits `imagecache://`
   when the scheme is not served, so nothing is broken — artwork loads live over http(s).
   **State plainly in the release notes:** every library render re-fetches from the CDN, and
@@ -149,7 +149,7 @@ of blocker records rotting silently.
 
 ### Build + release
 
-- **D-11 — Linux ships AppImage only; the Flatpak path is DELETED.** Match what
+- **D-11:** Linux ships AppImage only; the Flatpak path is DELETED. Match what
   `tauri.conf.json` already targets (`["nsis","appimage","dmg"]`). Drop deb/rpm/pacman/tar.xz,
   and delete `flatpak/`, `dist:flatpak` and `flatpak:prepare` outright — that path is built
   around `com.heroicgameslauncher.hgl.yml` and Heroic's Flathub identity, which GameLib cannot
@@ -158,7 +158,7 @@ of blocker records rotting silently.
   phase); full parity incl. Flatpak (Flatpak packaging of a Tauri app with a bundled sidecar and
   helper binaries is its own project, for a channel GameLib has never used).*
 
-- **D-12 — The release pipeline is smaller than the roadmap implies.** `.github/workflows/release-tauri.yml`
+- **D-12:** The release pipeline is smaller than the roadmap implies. `.github/workflows/release-tauri.yml`
   **already exists and already uses `tauri-action@v1`**, `verify:updater-key`, Apple/Windows
   signing gates, and the CrossOver index fetch. Its only Electron coupling is one step —
   line 165, `pnpm exec electron-vite build`. The `renderer:` block of `electron.vite.config.ts`
@@ -168,18 +168,18 @@ of blocker records rotting silently.
   of that block. **`preserveRunnerSymlinksPlugin` must survive the move** — it exists because
   vite's `copyDir` dereferences symlinks and codesign then rejects the bundle (F-34.9-01).
 
-- **D-13 — Updater handover is a clean break.** Tauri's updater plugin is already configured in
+- **D-13:** Updater handover is a clean break. Tauri's updater plugin is already configured in
   `tauri.conf.json` (pubkey, GitHub endpoint, `installMode: passive`) and `tauri-plugin-updater = "2"`
   is in `Cargo.toml`. Delete `src/backend/updater.ts` and the `electron-updater` dependency. Per
   D-00e there are no existing users, so no migration shim is needed.
 
-- **D-14 — `isPackaged` source is Claude's discretion.** See Claude's Discretion below.
+- **D-14:** `isPackaged` source is Claude's discretion. See Claude's Discretion below.
 
-- **D-15 — Dev loop shape is Claude's discretion.** See Claude's Discretion below.
+- **D-15:** Dev loop shape is Claude's discretion. See Claude's Discretion below.
 
 ### Cutover gate + rollback
 
-- **D-16 — The gate is a PACKAGED macOS arm64 live run, plus CI artifacts for Windows/Linux.**
+- **D-16:** The gate is a PACKAGED macOS arm64 live run, plus CI artifacts for Windows/Linux.
   A blocking human gate driven against a packaged `.app` — **not a dev build** — covering
   install, launch, library, login, and the newly-built tray/deep-link/wake-lock work. Windows
   and Linux prove out by the CI matrix producing installable artifacts plus a smoke launch.
@@ -189,14 +189,14 @@ of blocker records rotting silently.
   hardware access); closing 34-07 first as separate work (considered, and still available to the
   planner as a sequencing option if research finds the CI-artifact path insufficient).*
 
-- **D-17 — Ordering and point-of-no-return are Claude's discretion.** See Claude's Discretion.
+- **D-17:** Ordering and point-of-no-return are Claude's discretion. See Claude's Discretion.
   **The structural constraint the planner must respect:** the 67-file rewrite **cannot be
   additive**. Once `from 'electron'` becomes `from 'backend/platform'`, the Electron main process
   would run against the sidecar shim instead of real Electron. "Keep `pnpm start` working until
   the last plan" is therefore **not available** the way it was in every prior phase — the plan
   must state where the irreversible step is rather than pretending there isn't one.
 
-- **D-18 — Parked bugs and folded todos are RE-TESTED BEFORE the delete, FIXED after.** While
+- **D-18:** Parked bugs and folded todos are RE-TESTED BEFORE the delete, FIXED after. While
   both shells still build, run them against **both** and record which reproduce where. This is
   observation, not fixing, so it is cheap — and it captures an A/B signal that is **destroyed
   permanently the moment Electron is deleted** ("does this reproduce under Electron?" becomes
@@ -205,8 +205,8 @@ of blocker records rotting silently.
   Named parked bug: `debug-uninstall-game-vanishes-parked` — still open, seven hypotheses
   eliminated, root cause not found.
 
-- **D-19 — `R-34.5-G1-PKG` has two independent halves and both are required; either alone is
-  inert.** (a) Locale files are absent from the bundle entirely — `tauri.conf.json`'s
+- **D-19:** `R-34.5-G1-PKG` has two independent halves and both are required; either alone is
+  inert. (a) Locale files are absent from the bundle entirely — `tauri.conf.json`'s
   `bundle.resources` lists only `["../build/bin/"]`, artifact-proven 2026-08-22 against a mounted
   DMG. (b) The packaged resolution branch is unreachable — `paths.ts:73-76` resolves `publicDir`
   as `resolve(app.getAppPath(), app.isPackaged || process.env.CI === 'e2e' ? 'build' : 'public')`
@@ -222,7 +222,7 @@ of blocker records rotting silently.
 Four decisions were explicitly delegated. Each carries a stated default — a planner or
 researcher may depart from it, but must say why.
 
-- **D-04 — `electron-store`.** It is the **last thing in the tree that requires `electron`**:
+- **D-04:** `electron-store`. It is the **last thing in the tree that requires `electron`**:
   `electron-store@8.2.0`'s `index.js` line 3 is
   `const {app, ipcMain, ipcRenderer, shell} = require('electron')`, and it is a thin wrapper over
   `conf@^10.2.0`. Only two real backend files import it: `src/backend/cache.ts` and
@@ -237,7 +237,7 @@ researcher may depart from it, but must say why.
   electron-store and keep the alias — zero risk to the store layer, which touches every persisted
   setting in the app.
 
-- **D-14 — Where `isPackaged` comes from.** **A correct resolver already exists**:
+- **D-14:** Where `isPackaged` comes from. **A correct resolver already exists**:
   `isPackagedSidecar()` at `src/backend/sidecar/humbleFlowRegistration.ts:159` resolves via
   `node:sea` and fails closed, and `src/backend/sidecar/devSecretVault.ts` deliberately reuses it
   rather than re-deriving (its own "guardrail (c)"). So `electronStub.ts:207`'s `isPackaged: false`
@@ -251,7 +251,7 @@ researcher may depart from it, but must say why.
   Research should confirm `isPackagedSidecar()`'s `node:sea` check holds for every spawn path
   before making it the single source.
 
-- **D-15 — Dev loop.** Today `pnpm tauri:dev` runs `electron-vite build` (a full production
+- **D-15:** Dev loop. Today `pnpm tauri:dev` runs `electron-vite build` (a full production
   renderer build) before `tauri dev` — **no HMR at all**. That is the direct cause of two
   recorded gotchas: `tauri dev` serving a stale static bundle, and `tauri:dev` exiting 0 without
   replacing a running instance. `main.ts:321/329` already know `localhost:5173` from the Electron
@@ -264,7 +264,7 @@ researcher may depart from it, but must say why.
   build-then-serve script alongside preserves that evidence path. Research should check whether
   `devUrl` interacts with `frontendDist`/resource resolution in a way that would mask the bug.
 
-- **D-17 — Plan ordering and the point of no return.**
+- **D-17:** Plan ordering and the point of no return.
   **Default ordering:** (1) additive work while both shells still run — plain Vite, tray, deep
   links, wake lock, `backend/platform` created but not yet consumed, and the D-18 A/B re-test;
   (2) tag `pre-electron-cutover`; (3) delete the Electron entry points — `src/backend/main.ts`,
