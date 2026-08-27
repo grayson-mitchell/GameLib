@@ -101,10 +101,13 @@ describe('Library pipeline has exactly one implementation', () => {
     // Asserted on the derivation/indexing forms, not on the bare
     // `crossoverRatingFilters` identifier: the STATE declaration
     // (`useState<CrossoverRatingFilters>`, `setCrossoverRatingFilters`) is
-    // still read by `LibraryFilters` and stays declared until plan 09
-    // retires that component. A gate on the bare identifier would go red
-    // for the wrong reason -- it must fail only when the FILTER actually
-    // runs again, not when the dead state merely still exists.
+    // gone -- 34.11 WR-04 deleted it. The remaining `crossoverRatingFilters`
+    // hits in the file are the live `localStorage` string key read by the
+    // one-time `facetOptInMigrated` reset effect, plus comments -- neither
+    // is the derivation/indexing form this gate guards against. The
+    // assertions stay scoped to those two forms so the gate keeps failing
+    // only when the FILTER actually runs again, not on the surviving
+    // storage-key string or prose.
     expect(libraryTsx).not.toMatch(/crossoverRatingTier/)
     expect(libraryTsx).not.toMatch(/crossoverRatingFilters\[/)
   })

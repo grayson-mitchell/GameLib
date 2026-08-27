@@ -293,13 +293,7 @@ export type FilterMode = 'off' | 'show' | 'only'
 export type NoStorePageMode = 'off' | 'only' | 'hide'
 
 export interface LibraryContextType {
-  storesFilters: StoresFilters
-  platformsFilters: PlatformsFilters
-  crossoverRatingFilters: CrossoverRatingFilters
   filterText: string
-  setStoresFilters: (filters: StoresFilters) => void
-  setPlatformsFilters: (filters: PlatformsFilters) => void
-  setCrossoverRatingFilters: (filters: CrossoverRatingFilters) => void
   handleLayout: (value: string) => void
   handleSearch: (input: string) => void
   layout: string
@@ -332,10 +326,6 @@ export interface LibraryContextType {
   alphabetFilterLetter: string | null
   setAlphabetFilterLetter: (letter: string | null) => void
   gamesForAlphabetFilter: GameInfo[]
-
-  // --- 34.11 Plan 04: opt-in facet surface, additive to the legacy fields
-  // above. `storesFilters`/`platformsFilters`/`crossoverRatingFilters` and
-  // their setters stay until plan 09 retires `LibraryFilters`/`CategoryFilter`. ---
 
   // D-05: single-select view. Default 'all'.
   libraryView: LibraryView

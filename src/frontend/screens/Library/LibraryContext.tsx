@@ -4,27 +4,8 @@ import { GameInfo } from 'common/types'
 import { LibraryContextType } from 'frontend/types'
 
 const initialContext: LibraryContextType = {
-  storesFilters: {
-    legendary: true,
-    gog: true,
-    nile: true,
-    sideload: true,
-    zoom: true,
-    steam: true
-  },
-  platformsFilters: { win: true, linux: true, mac: true, browser: true },
-  crossoverRatingFilters: {
-    gold: true,
-    silver: true,
-    bronze: true,
-    wontRun: true,
-    unrated: true
-  },
   filterText: '',
-  setStoresFilters: () => null,
   handleLayout: () => null,
-  setPlatformsFilters: () => null,
-  setCrossoverRatingFilters: () => null,
   handleSearch: () => null,
   layout: 'grid',
   showHidden: 'off',

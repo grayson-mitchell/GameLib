@@ -26,29 +26,17 @@ import {
   countUnfilteredGames,
   findSilentlyExcludedGames
 } from './components/LibraryHeader/gameCount'
-import {
-  amazonCategories,
-  epicCategories,
-  gogCategories,
-  sideloadedCategories,
-  steamCategories,
-  zoomCategories,
-  normalizeTitle
-} from 'frontend/helpers/library'
+import { normalizeTitle } from 'frontend/helpers/library'
 import RecentlyPlayed from './components/RecentlyPlayed'
 import LibraryContext from './LibraryContext'
 import {
-  Category,
-  CrossoverRatingFilters,
   FilterEngineDeps,
   FilterEngineState,
   FilterMode,
   LibraryView,
   NoStorePageMode,
-  PlatformsFilters,
   RunnabilityTier,
-  StoreFacetValue,
-  StoresFilters
+  StoreFacetValue
 } from 'frontend/types'
 import useGlobalState from 'frontend/state/GlobalStateV2'
 import { hasHelp } from 'frontend/hooks/hasHelp'
@@ -126,90 +114,6 @@ export default React.memo(function Library(): JSX.Element {
     storage.setItem('layout', layout)
     setLayout(layout)
   }
-
-  let initialStoresfilters
-  const storesFiltersString = storage.getItem('storesFilters')
-  if (storesFiltersString) {
-    // If we have something stored, use that
-    initialStoresfilters = JSON.parse(storesFiltersString) as StoresFilters
-  } else {
-    // Else, use the old `category` filter
-    // TODO: we can remove this eventually after a few releases and just use the code of the if
-    const storedCategory = (storage.getItem('category') as Category) || 'all'
-    initialStoresfilters = {
-      legendary: epicCategories.includes(storedCategory),
-      gog: gogCategories.includes(storedCategory),
-      nile: amazonCategories.includes(storedCategory),
-      sideload: sideloadedCategories.includes(storedCategory),
-      zoom: zoom.enabled && zoomCategories.includes(storedCategory),
-      steam: steamCategories.includes(storedCategory)
-    }
-  }
-
-  const [storesFilters, setStoresFilters_] =
-    useState<StoresFilters>(initialStoresfilters)
-
-  const setStoresFilters = (newFilters: StoresFilters) => {
-    storage.setItem('storesFilters', JSON.stringify(newFilters))
-    setStoresFilters_(newFilters)
-  }
-
-  let initialPlatformsfilters
-  const plaformsFiltersString = storage.getItem('platformsFilters')
-  if (plaformsFiltersString) {
-    // If we have something stored, use that
-    initialPlatformsfilters = JSON.parse(
-      plaformsFiltersString
-    ) as PlatformsFilters
-  } else {
-    // Else, use the old `category` filter
-    // TODO: we can remove this eventually after a few releases and just use the code of the if
-    const storedCategory = storage.getItem('filterPlatform') || 'all'
-    initialPlatformsfilters = {
-      win: ['all', 'win'].includes(storedCategory),
-      linux: ['all', 'linux'].includes(storedCategory),
-      mac: ['all', 'mac'].includes(storedCategory),
-      browser: ['all', 'browser'].includes(storedCategory)
-    }
-  }
-
-  const [platformsFilters, setPlatformsFilters_] = useState<PlatformsFilters>(
-    initialPlatformsfilters
-  )
-
-  const setPlatformsFilters = (newFilters: PlatformsFilters) => {
-    storage.setItem('platformsFilters', JSON.stringify(newFilters))
-    setPlatformsFilters_(newFilters)
-  }
-
-  // D-17: macOS-only CrossOver-rating filter, same persisted-object shape as
-  // platformsFilters (default all true — opt-out, not tri-state).
-  let initialCrossoverRatingFilters: CrossoverRatingFilters
-  const crossoverRatingFiltersString = storage.getItem('crossoverRatingFilters')
-  if (crossoverRatingFiltersString) {
-    initialCrossoverRatingFilters = JSON.parse(
-      crossoverRatingFiltersString
-    ) as CrossoverRatingFilters
-  } else {
-    initialCrossoverRatingFilters = {
-      gold: true,
-      silver: true,
-      bronze: true,
-      wontRun: true,
-      unrated: true
-    }
-  }
-
-  const [crossoverRatingFilters, setCrossoverRatingFilters_] =
-    useState<CrossoverRatingFilters>(initialCrossoverRatingFilters)
-
-  const setCrossoverRatingFilters = (newFilters: CrossoverRatingFilters) => {
-    storage.setItem('crossoverRatingFilters', JSON.stringify(newFilters))
-    setCrossoverRatingFilters_(newFilters)
-  }
-
-  // --- 34.11 Plan 04: opt-in facet state, additive alongside the legacy
-  // storesFilters/platformsFilters/crossoverRatingFilters state above. ---
 
   // D-05: single-select view. A format guard in the shape of
   // migrateFilterMode below -- an unrecognised or absent value falls back
@@ -1036,9 +940,6 @@ export default React.memo(function Library(): JSX.Element {
   return (
     <LibraryContext.Provider
       value={{
-        storesFilters,
-        platformsFilters,
-        crossoverRatingFilters,
         layout,
         showHidden,
         showFavourites: showFavouritesLibrary,
@@ -1046,10 +947,7 @@ export default React.memo(function Library(): JSX.Element {
         showNonAvailable,
         noStorePage,
         filterText,
-        setStoresFilters,
         handleLayout: handleLayout,
-        setPlatformsFilters,
-        setCrossoverRatingFilters,
         handleSearch: setFilterText,
         setShowHidden: handleShowHidden,
         setShowFavourites: handleShowFavourites,
