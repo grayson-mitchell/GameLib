@@ -196,7 +196,6 @@ const envMock = {
   isWindows: false,
   isMac: false,
   isLinux: true,
-  isIntelMac: false,
   isSteamDeckGameMode: false,
   isFlatpak: false
 }

@@ -302,6 +302,21 @@ beforeEach(() => {
 // ── Task 1: isAppleSiliconMac host gate ──────────────────────────────────────
 describe('isAppleSiliconMac (host gate)', () => {
   /**
+   * D-14 (Phase 34.18 Plan 05): the Intel-detection constant this RED-proof
+   * originally pinned was removed from backend/constants/environment.ts, so
+   * the RED-proof below can no longer read a real Intel-detection export off
+   * the module. The unsafe negation it pins is computed LOCALLY, directly
+   * from the same mocked `cpus()` model
+   * string `loadWithHost` supplies to the real module — expressing the exact
+   * shape `isAppleSiliconMac` must never be rewritten as (D-12): a bare
+   * negation of an Intel substring match, which does not fail closed on an
+   * empty/unknown CPU model.
+   */
+  function negatedIntelProbe(cpuModel: string | null | undefined): boolean {
+    return !(cpuModel ?? '').includes('Intel')
+  }
+
+  /**
    * Re-requires backend/constants/environment in isolation with `os.cpus()`
    * / `process.platform` / `process.arch` mocked for exactly this call —
    * the module computes its exports once at load time, so each scenario
@@ -311,8 +326,8 @@ describe('isAppleSiliconMac (host gate)', () => {
     platform: string
     arch: string
     cpuModel?: string | null
-  }): { isAppleSiliconMac: boolean; isIntelMac: boolean } {
-    let result!: { isAppleSiliconMac: boolean; isIntelMac: boolean }
+  }): { isAppleSiliconMac: boolean } {
+    let result!: { isAppleSiliconMac: boolean }
     // Node core modules' real namespace exports are non-configurable in
     // this jest environment — `jest.spyOn` directly on `require('os')`
     // throws "Cannot redefine property: cpus" (see jest.setupContainment.ts's
@@ -382,24 +397,27 @@ describe('isAppleSiliconMac (host gate)', () => {
   })
 
   it('darwin + x64 Intel model -> false (RED-proof target case 1)', () => {
-    const loaded = loadWithHost({
-      platform: 'darwin',
-      arch: 'x64',
-      cpuModel: 'Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz'
-    })
+    const cpuModel = 'Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz'
+    const loaded = loadWithHost({ platform: 'darwin', arch: 'x64', cpuModel })
     expect(loaded.isAppleSiliconMac).toBe(false)
-    // isIntelMac must be true for this host — this is the case a `!isIntelMac`
-    // implementation would get right by accident, so it alone cannot prove
-    // the positive-probe requirement; the empty-model case below is the one
-    // that actually distinguishes the two implementations.
-    expect(loaded.isIntelMac).toBe(true)
+    // The unsafe negation gets this host right BY ACCIDENT — this is the
+    // case a negated-Intel-probe implementation would get right, so it
+    // alone cannot prove the positive-probe requirement; the empty-model
+    // case below is the one that actually distinguishes the two
+    // implementations.
+    expect(negatedIntelProbe(cpuModel)).toBe(false)
   })
 
   it('darwin + x64 empty model string -> false, fails closed (RED-proof target case 2)', () => {
+    const cpuModel = ''
     expect(
-      loadWithHost({ platform: 'darwin', arch: 'x64', cpuModel: '' })
+      loadWithHost({ platform: 'darwin', arch: 'x64', cpuModel })
         .isAppleSiliconMac
     ).toBe(false)
+    // The unsafe negation gets this host WRONG: 'Intel'.includes('') is
+    // false, so the negation is TRUE — the exact false-positive D-14 exists
+    // to prevent (it would wrongly fire the destructive auto-removal).
+    expect(negatedIntelProbe(cpuModel)).toBe(true)
   })
 
   it('darwin + x64 cpus() returning [] -> false, fails closed', () => {
@@ -424,26 +442,30 @@ describe('isAppleSiliconMac (host gate)', () => {
   })
 
   /**
-   * Mandatory RED-proof (plan Task 1 hard requirement + verification step 5):
-   * a `!isIntelMac` implementation must FAIL the Intel and empty-model
-   * cases above. Proven here directly by evaluating the negated expression
-   * against the same host fixtures, so this test is self-verifying without
-   * requiring a real source edit+revert — if this assertion itself were
-   * ever wrong, the case above (asserting isAppleSiliconMac===false) would
-   * also be wrong, and would already be failing.
+   * Mandatory RED-proof (D-14, plan Task 1 hard requirement + verification
+   * step 5), rewritten (Phase 34.18 Plan 05) to OUTLIVE the now-removed
+   * Intel-detection constant: a negated-Intel-substring-match implementation
+   * must FAIL the Intel and empty-model cases above. Proven here directly
+   * by evaluating the negated expression against the same host fixtures
+   * `loadWithHost` supplies to the real `isAppleSiliconMac`, so this test is
+   * self-verifying without requiring a real source edit+revert — if this
+   * assertion itself were ever wrong, the case above (asserting
+   * isAppleSiliconMac===false) would also be wrong, and would already be
+   * failing.
    */
-  it('RED-proof: !isIntelMac gets the Intel and empty-model cases WRONG', () => {
+  it('RED-proof: a negated-Intel-probe implementation gets the Intel and empty-model cases WRONG', () => {
+    const intelCpuModel = 'Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz'
     const intelHost = loadWithHost({
       platform: 'darwin',
       arch: 'x64',
-      cpuModel: 'Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz'
+      cpuModel: intelCpuModel
     })
-    expect(!intelHost.isIntelMac).toBe(false) // correct (matches real impl)
+    expect(negatedIntelProbe(intelCpuModel)).toBe(false) // correct (matches real impl)
+    expect(intelHost.isAppleSiliconMac).toBe(false)
 
-    // isIntelMac's own implementation (`cpus()[0].model.includes('Intel')`)
-    // throws on an empty cpus() array rather than failing closed — proving
-    // `!isIntelMac` is not just wrong but UNSAFE for the empty-model host
-    // this gate must protect against.
+    // The real isAppleSiliconMac fails closed on an empty cpus() model —
+    // proving a negated-Intel-probe implementation is not just wrong but
+    // UNSAFE for the empty-model host this gate must protect against.
     expect(() =>
       loadWithHost({ platform: 'darwin', arch: 'x64', cpuModel: '' })
     ).not.toThrow()
@@ -452,10 +474,10 @@ describe('isAppleSiliconMac (host gate)', () => {
       arch: 'x64',
       cpuModel: ''
     })
-    // `!isIntelMac` for an empty model: 'Intel'.includes match on '' is
-    // false, so isIntelMac is false, so `!isIntelMac` is TRUE — the WRONG
-    // answer (real isAppleSiliconMac is false here, fails closed).
-    expect(!emptyModelHost.isIntelMac).toBe(true)
+    // A negated-Intel-probe for an empty model: 'Intel'.includes match on
+    // '' is false, so the negation is TRUE — the WRONG answer (real
+    // isAppleSiliconMac is false here, fails closed).
+    expect(negatedIntelProbe('')).toBe(true)
     expect(emptyModelHost.isAppleSiliconMac).toBe(false)
   })
 })

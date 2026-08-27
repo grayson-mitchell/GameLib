@@ -94,7 +94,7 @@ function invokeHandler(channel: string, ...args: unknown[]): Promise<unknown> {
   return Promise.resolve(handler?.(undefined, ...args))
 }
 
-// The 8 already-ported channels `utils/ipc_handler.ts`/`logger/ipc_handler.ts` also register —
+// The 7 already-ported channels `utils/ipc_handler.ts`/`logger/ipc_handler.ts` also register —
 // a side-effect import of either would double-register these. Snapshotted BEFORE
 // `registerClipboardFlows()` runs (below) so the guard test at the bottom of this file proves
 // the CALL adds nothing for them, not merely that nothing else in this isolated module graph
@@ -103,7 +103,6 @@ const FOREIGN_CHANNELS = [
   'abort',
   'getSystemInfo',
   'hasExecutable',
-  'isIntelMac',
   'getLegendaryVersion',
   'getGogdlVersion',
   'getCometVersion',

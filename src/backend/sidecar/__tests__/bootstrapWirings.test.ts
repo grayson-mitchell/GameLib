@@ -150,7 +150,6 @@ jest.mock('backend/constants/environment', () => ({
   isWindows: false,
   isMac: false,
   isLinux: true,
-  isIntelMac: false,
   isSteamDeckGameMode: false,
   isFlatpak: false
 }))

@@ -11,8 +11,7 @@ jest.mock('child_process', () => ({
   exec: jest.fn()
 }))
 jest.mock('../constants/environment', () => ({
-  ...jest.requireActual('../constants/environment'),
-  isIntelMac: false
+  ...jest.requireActual('../constants/environment')
 }))
 
 const mockedExec = exec as unknown as jest.Mock

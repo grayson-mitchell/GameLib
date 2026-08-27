@@ -124,15 +124,14 @@ jest.mock('axios', () => {
 
 // ── backend/constants/environment mock — pins a deterministic branch
 // regardless of the host OS running this test (mirrors installFlows.test.ts /
-// settingsFlows.test.ts), plus the two additional flags THIS plan's own
-// channels newly reach (`isIntelMac` — appShellFlowRegistration.ts,
-// `isSteamDeckGameMode` — dialog/dialog.ts's notify(), now sidecar-reachable
-// for the first time via the `notify` channel) ──────────────────────────────
+// settingsFlows.test.ts), plus the one additional flag THIS plan's own
+// channels newly reach (`isSteamDeckGameMode` — dialog/dialog.ts's
+// notify(), now sidecar-reachable for the first time via the `notify`
+// channel) ──────────────────────────────────────────────────────────────────
 jest.mock('backend/constants/environment', () => ({
   isWindows: false,
   isMac: false,
   isLinux: true,
-  isIntelMac: false,
   isSteamDeckGameMode: false,
   isFlatpak: false,
   // Plan 05 (REQ-34.6-04/07/13): frontendReady's two byte-equivalent branches.
@@ -368,18 +367,6 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       | undefined
     expect(response?.ok).toBe(true)
     expect(response?.error).toBeUndefined()
-  })
-
-  it('REQ-34.1-05 isIntelMac (invoke) resolves the real boolean constant, not the unported marker', async () => {
-    const { input, frames } = startSidecar()
-    writeInvoke(input, 'intel-mac-1', 'isIntelMac', [])
-    await flush()
-
-    const response = frames.find((f) => f.id === 'intel-mac-1') as
-      | { ok: boolean; result?: unknown }
-      | undefined
-    expect(response?.ok).toBe(true)
-    expect(response?.result).toBe(false)
   })
 
   it('REQ-34.1-05/D-12 getWebviewPreloadPath (invoke) resolves a declared-empty string', async () => {

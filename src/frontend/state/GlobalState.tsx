@@ -1271,8 +1271,7 @@ class GlobalState extends PureComponent<Props> {
       amazon,
       zoom,
       gameUpdates = [],
-      libraryStatus,
-      platform
+      libraryStatus
     } = this.state
 
     window.api.handleInstallGame(async (e, appName, runner) => {
