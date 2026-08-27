@@ -5,12 +5,12 @@ status: human_needed
 score: 12/12 must-haves verified
 overrides_applied: 0
 human_verification:
-  - test: "REQ-32-08 dual-build smoke: run `npm start` (Electron) and `npm run tauri:dev` (Tauri), confirm both boot unchanged and no previously-non-fatal channel becomes a crash."
-    expected: "Both builds boot; window.api.* surface unchanged; unported queue-adjacent channels (DownloadDialog channels) still reject non-fatally with UNPORTED_CHANNEL_MARKER."
+  - test: "REQ-32-08 dual-build smoke: run `npm start` (Electron) and `pnpm tauri:dev` (Tauri), confirm both boot unchanged and no previously-non-fatal channel becomes a crash."
+    expected: "Both builds boot; window.api.* surface unchanged; any channel still unported stays non-fatal (Invariant B) — it rejects with UNPORTED_CHANNEL_MARKER rather than crashing the shell. CORRECTED 2026-08-22: the original expectation named the DownloadDialog channels as the ones that must still marker-reject; `getInstallInfo` has since been PORTED (plan 34.5-43, gameDetailsFlowRegistration.ts:191), so asserting a marker rejection for it would now fail against a correct build. Assert Invariant B itself, not a named channel."
     why_human: "No display / long-running dev server available in this verification environment — cannot launch either Electron or Tauri shell to observe boot behavior."
-  - test: "Live queue E2E: sign into a Steam library under `npm run tauri:dev`, enqueue an install, observe the Download Manager screen / Sidebar badge update via progressUpdate/changedDMQueueInformation, then pause/resume/cancel from the UI."
+  - test: "Live queue E2E: with a signed-in Steam library under `pnpm tauri:dev`, enqueue an install, observe the Download Manager screen and the NavShell DownloadsRing update via progressUpdate/changedDMQueueInformation, then pause/resume/cancel from the UI."
     expected: "Queue populates, progress bar updates, pause aborts + resume restarts via reconcilePartialState, cancel removes the item — matching 32-PORTED-CHANNELS.md's documented behavior."
-    why_human: "Doubly-gated per D-06: blocked on G-30-01 (Tauri QR login unresponsive — no path to a signed-in library) AND G-30-02 (install-hang, parked to Phase 33 — no running install to act on). Both are pre-existing, out-of-scope blockers tracked in STATE.md/30-HUMAN-UAT.md, not introduced by this phase. Correctly logged as deferred in 32-HUMAN-UAT.md rather than claimed as passed."
+    why_human: "Requires a real running download under a live shell; no automated harness can observe it. UNBLOCKED 2026-08-22 — the original 'doubly-gated' why_human is superseded: G-30-01 was CLOSED 2026-07-23 as a misdiagnosis (30-HUMAN-UAT.md:10,68,103 — the tester clicked Logout on an already-authenticated session; the QR tab is unreachable by design while signed in), a day BEFORE 32-HUMAN-UAT.md's own updated: stamp cited it as live; and G-30-02 was closed and hardware-proven by Phase 33's 33-05 D-13 live gate (REQ-33-01/02/10). Neither gates this item any longer. See the CORRECTION section in 32-HUMAN-UAT.md."
 ---
 
 # Phase 32: Tauri IPC re-plumb slice 3 — downloads and queue Verification Report
@@ -102,15 +102,47 @@ None of these are debt markers (no TBD/FIXME/XXX/TODO found in phase-modified fi
 
 ### 1. REQ-32-08 dual-build smoke
 
-**Test:** Run `npm start` (Electron) and `npm run tauri:dev` (Tauri); confirm both boot unchanged, `window.api.*` call sites are untouched, and previously-non-fatal unported channels (DownloadDialog channels) still reject non-fatally.
+**Test:** Run `npm start` (Electron) and `pnpm tauri:dev` (Tauri); confirm both boot unchanged, `window.api.*` call sites are untouched, and any channel still unported rejects non-fatally rather than crashing the shell.
 **Expected:** Both builds boot normally with no new crashes.
 **Why human:** No display / long-running dev server available in this verification environment.
 
-### 2. Live queue E2E (doubly-gated, deferred)
+> **CORRECTED 2026-08-22 — stale by behaviour.** This test originally named "DownloadDialog
+> channels" as the ones that must *still* marker-reject. That channel, `getInstallInfo`, has since
+> been **ported** (plan 34.5-43, registered at
+> `src/backend/sidecar/gameDetailsFlowRegistration.ts:191`). Running the check as originally
+> worded would FAIL against a correct build, and "fixing" that failure would mean un-porting a
+> working channel. The surviving assertion is **Invariant B** itself — no previously-non-fatal
+> channel has become a crash — not any named channel. Run the Tauri leg as `pnpm tauri:dev`;
+> `tauri dev` serves a stale static bundle.
 
-**Test:** Sign into a Steam library under `npm run tauri:dev`, enqueue an install, observe progress via the Download Manager screen / Sidebar badge, then pause/resume/cancel.
+### 2. Live queue E2E (UNBLOCKED 2026-08-22, pending)
+
+**Test:** With a signed-in Steam library under `pnpm tauri:dev`, enqueue an install, observe progress via the Download Manager screen and the NavShell DownloadsRing, then pause/resume/cancel.
 **Expected:** Queue populates and updates live; pause aborts + resume restarts via `reconcilePartialState`; cancel removes the item.
-**Why human:** Blocked on two pre-existing, out-of-scope defects — G-30-01 (Tauri QR login unresponsive) and G-30-02 (install-hang, parked to Phase 33) — neither introduced by this phase. Correctly logged as deferred, not claimed as passed, in `32-HUMAN-UAT.md`.
+**Why human:** Requires a real running download under a live shell — no automated harness can observe it.
+
+> **CORRECTED 2026-08-22 — both gates are dead, and one was already dead when the deferral was
+> written.** The original "doubly-gated" framing is superseded:
+>
+> - **G-30-01 — CLOSED 2026-07-23 as a misdiagnosis.** `30-HUMAN-UAT.md:10` retitles it
+>   *"CORRECTED 2026-07-23, was a misdiagnosis"*, `:68` states *"G-30-01 is closed"*, and `:103`
+>   states a future retest *"does not need to 'fix G-30-01' as a precondition."* There was no
+>   QR-login defect: the Tauri build read a real already-authenticated session from the shared
+>   on-disk `steamConfigStore.userData` (377 owned games), so the Steam tile correctly rendered
+>   Logout and the tester clicked it; the QR tab is unreachable **by design** while signed in.
+>   Record: `.planning/debug/resolved/steam-logon-button-tauri.md`. This is dated **one day
+>   before** `32-HUMAN-UAT.md`'s own `updated:` stamp — the deferral cited an already-closed gate.
+> - **G-30-02 — CLOSED and hardware-proven** by Phase 33 (`33-01`, `33-02`, and the `33-05` D-13
+>   live gate, 2026-07-24 — REQ-33-01/02/10), re-confirmed since by real native installs under
+>   `tauri:dev`.
+>
+> **Surface note (34.10 nav redesign):** the queue badge is no longer in a sidebar. Watch
+> `NavShell/components/DownloadsRing/index.tsx:66` and `screens/DownloadManager/index.tsx:39`,
+> both subscribing via the preload method `handleDMQueueInformation`
+> (`src/preload/api/downloadmanager.ts:7`).
+>
+> **Cost note:** no fresh multi-GB download is needed — move the title's `.acf` aside and resume
+> over content already on disk (a prior live gate closed KCD2 in 71.5s, zero bytes moved).
 
 ### Gaps Summary
 
@@ -119,6 +151,13 @@ No must-have truths, artifacts, or key links failed. All 12 derived must-haves (
 Status is `human_needed` rather than `passed` for two reasons, neither of which is a phase-goal failure: (1) the REQ-32-08 dual-build smoke check could not be run in this environment (no display), and (2) the live queue E2E is honestly and correctly logged as doubly-gated-deferred rather than claimed complete.
 
 One finding is flagged for developer attention even though it does not block this verification: WR-01 (Steam install genuine-error badge-stuck regression) is a real, independently-confirmed functional regression introduced by retiring the Phase 30 D-05a bypass, currently invisible to the test suite (WR-03) and currently unreachable in practice because G-30-02 already blocks any Tauri install from running far enough to hit it. It does not block Phase 32's goal (porting the queue cluster onto the sidecar) but should be fixed before or alongside the Phase 33 G-30-02 install-hang fix, since fixing G-30-02 will make WR-01 immediately reachable by real users. Recommend either: (a) opening a small gap/fix plan now referencing `32-REVIEW.md` WR-01/WR-02/WR-03, or (b) explicitly carrying it forward as tracked debt into Phase 33's G-30-02 work (mirroring how G-30-01/G-30-02 are already carried forward). This is a recommendation, not a verification-blocking gap, since no phase must-have specified error-path behavioral parity.
+
+> **UPDATE 2026-08-22 — WR-01 was discharged via option (b) and is no longer outstanding.** Phase
+> 33 took it up as **REQ-33-02**: `installQueueElement`'s finally-guard (`downloadmanager/utils.ts`)
+> was extended to push a terminal `sendGameStatusUpdate({status:'done'})` on Steam
+> `status === 'error'`, with a failure dialog on the same path. Do not re-file WR-01 off this
+> document. **WR-02 (Legendary DLC fan-out) and WR-03 (the test-coverage gap that hid WR-01) are
+> NOT covered by that fix** and remain open as recorded in `32-REVIEW.md` / `deferred-items.md`.
 
 ---
 

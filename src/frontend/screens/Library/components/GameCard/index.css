@@ -194,8 +194,11 @@
   opacity: 0.2;
 }
 
+/* `.gameLogo`, not `.gameLog` — the latter is not a class this app renders, so
+   the installed-but-not-available LOGO never got the sepia its sibling cover
+   image did (upstream typo, 2022; 08.1 review IN-01). */
 .gameCard.notAvailable .gameImg.installed,
-.gameCard.notAvailable .gameLog.installed {
+.gameCard.notAvailable .gameLogo.installed {
   filter: sepia(100%);
   opacity: 0.7;
 }
@@ -219,6 +222,21 @@
   padding: var(--space-3xs) var(--space-2xs);
   border-radius: var(--space-3xs);
   pointer-events: none;
+}
+
+/* 08.1 review IN-03: gameCardStatus (z-index 5) and gameCardUpdateBadge both
+   claim top-left too, and the delisted badge sits BEHIND both at z-index 3 —
+   an installed delisted game with a status label rendered it fully occluded.
+   Stack instead of overlap, mirroring the update badge's own offset rule
+   above: one badge above it -> 35px, both -> 65px. */
+.gameCard:has(.gameCardStatus) .gameCardDelistedBadge,
+.gameCard:has(.gameCardUpdateBadge) .gameCardDelistedBadge {
+  top: 35px;
+}
+
+.gameCard:has(.gameCardStatus):has(.gameCardUpdateBadge)
+  .gameCardDelistedBadge {
+  top: 65px;
 }
 
 /* CXIDX-10: CrossOver compatibility medal dot — bottom-right corner overlay

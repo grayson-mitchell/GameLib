@@ -586,7 +586,15 @@ export default class SteamGame implements Game {
     // acquireMetadataSlot already bounding the burst across a library render.
     const platformsNeverCaptured =
       !existing.is_delisted && !depotSignalCaptured(cached)
-    if (!existing.art_cover || platformsNeverCaptured) {
+    // 08.1 review WR-02: the art-based trigger needs the SAME delisted gate as
+    // the platform one. The delisted branch below writes `art_cover: ''` for an
+    // appId that was never enriched and returns before populating it, so a game
+    // whose FIRST-EVER fetch came back `success:false` leaves this predicate
+    // permanently true — one store request plus one `pushGameToLibrary` per
+    // getGameInfo, forever. pendingFetches only dedups CONCURRENT calls, so it
+    // never breaks that sequential loop.
+    const artNeverFetched = !existing.is_delisted && !existing.art_cover
+    if (artNeverFetched || platformsNeverCaptured) {
       // steam-startup-resume-crash (2026-07-18) hardening: fetchMetadataIfNeeded
       // already catches its own axios call internally, but this is the ONE
       // true fire-and-forget invocation of it in this module (a `void` call
@@ -622,6 +630,22 @@ export default class SteamGame implements Game {
     // Guard: if a fetch is already in-flight for this appId, return immediately
     // (pendingFetches.add MUST come before the await — prevents T-2-03 race)
     if (pendingFetches.has(this.appId)) return
+
+    // Guard: non-numeric appId rejected before any URL is constructed (T-06-01),
+    // matching the sibling chokepoints getSteamInstallSize and
+    // buildSteamProtocolUrl. 08.1 review WR-03: this method interpolates
+    // `this.appId` into a store.steampowered.com query string AND into two
+    // cdn.cloudflare.steamstatic.com image URLs that are pushed to the renderer
+    // as <img src>, so it is exactly the shape those two already validate.
+    // Placed AFTER the dedup check and BEFORE the syncing-indicator flip so a
+    // rejected appId cannot leave the indicator stuck on.
+    if (!NUMERIC_APP_ID.test(this.appId)) {
+      logWarning(
+        `SteamGame: fetchMetadataIfNeeded rejected a non-numeric appId (T-06-01)`,
+        LogPrefix.Steam
+      )
+      return
+    }
     // Notify the frontend a background metadata/art sync is starting (the first
     // pending fetch flips the indicator on; the last one flips it off below).
     if (pendingFetches.size === 0) {

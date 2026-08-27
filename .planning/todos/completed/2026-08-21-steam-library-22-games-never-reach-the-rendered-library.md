@@ -2,7 +2,7 @@
 created: 2026-08-21
 title: "22 owned Steam games are in the store but never reach the rendered library"
 area: steam
-status: OPEN
+status: CLOSED
 severity: major
 files:
   - src/frontend/state/GlobalState.tsx
@@ -104,3 +104,23 @@ real environment (not just at first paint) — see
 `.planning/debug/steam-library-22-games-missing.md` if not yet archived) for the exact ask. This
 todo is left OPEN (not closed) until that confirmation lands; the debug session tracks the
 checkpoint.
+
+## Operator confirmation (2026-08-22) — CLOSED
+
+The outstanding live check landed. Operator, after a **full quit and relaunch** (not a reload, so
+any stale `nonAvailableGames` localStorage entry would have survived and re-reproduced the defect):
+the library header shows the full unfiltered count with **Wasteland 3** (719040) and **Len's
+Island** (1335830) visible in the grid, and it **stays** correct while browsing — not just at first
+paint, which was the specific way this could still have failed.
+
+Corroborating state at close: persisted `steam_library.json` holds **378** Steam games with all
+three probe appIds (719040, 1335830, 1771300) present and `is_installed: true`; the fix commits
+`51b175d74` (hydration race) and `086e1ed4f` (not-installed heal branch) are on the branch with
+`getGameInfo()`'s persisted-cache fallback, `reconcileNonAvailableGames` and
+`findSilentlyExcludedGames` all live in source.
+
+Debug session moved to `.planning/debug/resolved/steam-library-22-games-missing.md`.
+
+**Note for future readers:** the sibling parked defect `.planning/debug/uninstall-game-vanishes.md`
+is a DIFFERENT mechanism and stays parked — see the correction table in
+`.planning/todos/completed/2026-08-22-nonavailablegames-permanently-traps-uninstalled-games.md`.

@@ -20,7 +20,9 @@ import {
   describeActiveFilters,
   filterLibrary,
   gameKey,
+  migrateFilterMode,
   migrateRunnabilityFacetSelection,
+  passesHiddenLaneFilter,
   migrateStoreFacetSelection,
   runnabilityRowsForHost
 } from '../filterEngine'
@@ -460,6 +462,34 @@ describe('migration', () => {
 
     expect(result).toEqual<StoreFacetValue[]>(['gog', 'steam'])
   })
+
+  /**
+   * 08.1 review WR-01. Unlike the D-02 discard rule above, this IS a format
+   * migration: legacy `true` and current `'show'` denote the same selection,
+   * so dropping it loses a real user preference rather than declining to
+   * invent one. The pre-fix implementation returned `defaultValue` for every
+   * non-tri-state input, which silently turned an enabled filter off.
+   */
+  it("a legacy boolean 'true' migrates to 'show', not to the default (WR-01)", () => {
+    expect(migrateFilterMode('true', 'off')).toBe('show')
+  })
+
+  it("a legacy boolean 'false' migrates to 'off'", () => {
+    expect(migrateFilterMode('false', 'off')).toBe('off')
+  })
+
+  it('the three current tri-state values round-trip unchanged', () => {
+    expect(migrateFilterMode('show', 'off')).toBe('show')
+    expect(migrateFilterMode('only', 'off')).toBe('only')
+    expect(migrateFilterMode('off', 'show')).toBe('off')
+  })
+
+  it('an absent key or an unrecognised value takes the caller default', () => {
+    expect(migrateFilterMode(null, 'off')).toBe('off')
+    expect(migrateFilterMode('', 'off')).toBe('off')
+    expect(migrateFilterMode('TRUE', 'off')).toBe('off')
+    expect(migrateFilterMode('yes', 'show')).toBe('show')
+  })
 })
 
 describe('empty', () => {
@@ -486,6 +516,51 @@ describe('empty', () => {
 
     expect(only.find((d) => d.kind === 'showHidden')?.value).toBe('only')
     expect(show.find((d) => d.kind === 'showHidden')?.value).toBe('show')
+  })
+})
+
+/**
+ * 08.1 review IN-02. The top-section lanes (RecentlyPlayed, Favourites) each
+ * open-coded a TWO-way branch on the THREE-arm showHidden tri-state, folding
+ * 'only' in with 'show'. The visible defect: with the main grid showing only
+ * hidden games, the lane above it showed the full unfiltered list. Red-proof
+ * for the fix is the 'only' row -- the pre-fix lanes returned every game there.
+ */
+describe('passesHiddenLaneFilter (IN-02)', () => {
+  it("'show' keeps both hidden and non-hidden games", () => {
+    expect(passesHiddenLaneFilter(true, 'show')).toBe(true)
+    expect(passesHiddenLaneFilter(false, 'show')).toBe(true)
+  })
+
+  it("'off' drops hidden games only", () => {
+    expect(passesHiddenLaneFilter(true, 'off')).toBe(false)
+    expect(passesHiddenLaneFilter(false, 'off')).toBe(true)
+  })
+
+  it("'only' keeps hidden games and drops the rest, matching the main grid", () => {
+    expect(passesHiddenLaneFilter(true, 'only')).toBe(true)
+    expect(passesHiddenLaneFilter(false, 'only')).toBe(false)
+  })
+
+  it("agrees with the main grid's own showHidden handling for every arm", () => {
+    const hidden = makeGame({ app_name: 'h1', runner: 'gog' })
+    const plain = makeGame({ app_name: 'g1', runner: 'gog' })
+    const deps = makeDeps({ hiddenAppNames: ['h1'] })
+
+    for (const mode of ['off', 'show', 'only'] as const) {
+      const grid = filterLibrary(
+        [hidden, plain],
+        makeState({ showHidden: mode }),
+        deps
+      )
+      const lane = [hidden, plain].filter((game) =>
+        passesHiddenLaneFilter(game.app_name === 'h1', mode)
+      )
+
+      expect(lane.map((game) => game.app_name)).toEqual(
+        grid.map((game) => game.app_name)
+      )
+    }
   })
 })
 

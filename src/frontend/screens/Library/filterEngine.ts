@@ -32,6 +32,7 @@ import {
   FacetKind,
   FilterEngineDeps,
   FilterEngineState,
+  FilterMode,
   LibraryView,
   RunnabilityTier,
   StoreFacetValue
@@ -536,7 +537,7 @@ export function describeActiveFilters(
  * equivalent opt-in selection. A legacy all-boolean opt-out mask (e.g. every
  * `StoresFilters` key `true`) must not be inverted into "all six selected" —
  * that is a semantics migration, not the format migration `migrateFilterMode`
- * (`Library/index.tsx:185-189`) performs. Every non-valid-array input,
+ * (below) performs. Every non-valid-array input,
  * including malformed JSON, yields `[]` and never throws.
  */
 export function migrateStoreFacetSelection(
@@ -562,6 +563,53 @@ export function migrateStoreFacetSelection(
   } catch {
     return []
   }
+}
+
+/**
+ * Read one legacy-or-current tri-state filter value out of its raw
+ * `localStorage` string.
+ *
+ * 08.1 review WR-01: the pre-tri-state UI persisted these keys as booleans via
+ * `JSON.stringify`, so an ENABLED filter is on disk as the literal `'true'`.
+ * Letting that fall through to `defaultValue` ('off') silently disabled a
+ * filter the user had turned on — preference data loss across an upgrade, and
+ * the one legacy case that is not equivalent to the default. `'false'` → 'off'
+ * needs no special case but is stated for symmetry. Anything else (null, a
+ * hand-edited string, a partial write) is genuinely unknown and takes the
+ * default.
+ *
+ * Unlike `migrateStoreFacetSelection`'s D-02 discard rule, translating here is
+ * a FORMAT migration, not a semantics one: legacy `true` and current `'show'`
+ * denote the same selection, so no meaning is invented by carrying it across.
+ */
+export function migrateFilterMode(
+  stored: string | null,
+  defaultValue: FilterMode
+): FilterMode {
+  if (stored === 'show' || stored === 'only' || stored === 'off') return stored
+  if (stored === 'true') return 'show'
+  if (stored === 'false') return 'off'
+  return defaultValue
+}
+
+/**
+ * The showHidden tri-state, applied to ONE game in the top-section lanes
+ * (RecentlyPlayed, Favourites). `true` keeps the game.
+ *
+ * 08.1 review IN-02: both lanes had open-coded this as a two-way branch on
+ * `'off'` / `!== 'off'`, which folds 'only' in with 'show' and returns the
+ * unfiltered list -- so while the main grid showed ONLY hidden games, the lane
+ * directly above it went on showing everything. The main grid's own rule lives
+ * in `passesMore` and has always had three arms; this is the same rule for the
+ * lanes, in one place, per this module's single-implementation constraint.
+ */
+export function passesHiddenLaneFilter(
+  isHidden: boolean,
+  mode: FilterMode
+): boolean {
+  if (mode === 'show') return true
+  if (mode === 'only') return isHidden
+  return !isHidden
 }
 
 export function migrateRunnabilityFacetSelection(

@@ -1,11 +1,11 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: "Operator, 2026-08-21, live `pnpm tauri:dev` during phase 34.13's UAT gate: library header reads `356 of 356` with NO filters active, while the backend logs `Steam library sync complete: 378 games` on every sync. 22 owned games never appear on screen. Wasteland 3 (719040) and Len's Island (1335830) confirmed missing by name; both are INSTALLED and neither is delisted."
 created: 2026-08-21
-updated: 2026-08-21
+updated: 2026-08-22
 goal: find_and_fix
 area: steam
-source_todo: .planning/todos/pending/2026-08-21-steam-library-22-games-never-reach-the-rendered-library.md
+source_todo: .planning/todos/completed/2026-08-21-steam-library-22-games-never-reach-the-rendered-library.md
 ---
 
 ## Symptoms
@@ -560,3 +560,21 @@ files_changed:
   - src/frontend/screens/Library/components/LibraryHeader/gameCount.ts (findSilentlyExcludedGames blind-spot guard)
   - src/frontend/screens/Library/index.tsx (reconciliation effect + blind-spot guard wiring)
   - src/backend/storeManagers/steam/__tests__/games.test.ts (4 new tests + test-isolation fix + DIAG cleanup)
+
+## Operator verification — 2026-08-22 — RESOLVED
+
+The `awaiting_human_verify` checkpoint is discharged. Operator ran a **full quit and relaunch**
+(the distinction that mattered: a reload preserves the pre-existing `nonAvailableGames`
+localStorage entry, so only a cold start proves the reconciliation heal actually persists).
+Result: full unfiltered header count with 719040 (Wasteland 3) and 1335830 (Len's Island) present
+in the grid, and stable while browsing — not merely correct at first paint, which was the residual
+failure mode this check existed to rule out.
+
+Corroborated at close: persisted `steam_library.json` = 378 Steam games, all three probe appIds
+(719040, 1335830, 1771300) present with `is_installed: true`; fixes on branch as `51b175d74`
+(hydration race) + `086e1ed4f` (not-installed heal branch), with `getGameInfo()`'s persisted-cache
+fallback, `reconcileNonAvailableGames` and `findSilentlyExcludedGames` all confirmed present in
+source at close (re-grepped, not assumed from this ledger).
+
+Source todo closed: `.planning/todos/completed/2026-08-21-steam-library-22-games-never-reach-the-rendered-library.md`.
+`.planning/debug/uninstall-game-vanishes.md` remains PARKED — different mechanism, do not close it.

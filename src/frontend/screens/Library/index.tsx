@@ -337,16 +337,11 @@ export default React.memo(function Library(): JSX.Element {
   // waiting on an unrelated future state change.
   const [reconcileTick, setReconcileTick] = useState(0)
 
-  // Migration helper: maps legacy 'true'/'false'/null to FilterMode
-  const migrateFilterMode = (
-    key: string,
-    defaultValue: FilterMode
-  ): FilterMode => {
-    const stored = storage.getItem(key)
-    if (stored === 'show' || stored === 'only' || stored === 'off')
-      return stored
-    return defaultValue // handles 'true', 'false', null, undefined
-  }
+  // Migration helper: maps legacy 'true'/'false'/null to FilterMode. The rule
+  // itself lives in filterEngine alongside the other migrations (and is unit
+  // tested there); this closure only supplies the storage read.
+  const migrateFilterMode = (key: string, defaultValue: FilterMode) =>
+    filterEngine.migrateFilterMode(storage.getItem(key), defaultValue)
 
   const [showHidden, setShowHidden] = useState<FilterMode>(
     migrateFilterMode('show_hidden', 'off')
@@ -542,16 +537,19 @@ export default React.memo(function Library(): JSX.Element {
   const showRecentGames = libraryTopSection.startsWith('recently_played')
 
   const favouriteGamesList = useMemo(() => {
-    if (showHidden !== 'off') {
-      return favouriteGames.list
-    }
-
+    // 08.1 review IN-02: `!== 'off'` folded 'only' in with 'show' and returned
+    // the unfiltered list, so this lane contradicted the main grid's "only
+    // hidden games" selection sitting directly below it. Same shared rule as
+    // the RecentlyPlayed lane.
     const hiddenAppNames = hiddenGames.list.map(
       (hidden: HiddenGame) => hidden.appName
     )
 
-    return favouriteGames.list.filter(
-      (game) => !hiddenAppNames.includes(game.appName)
+    return favouriteGames.list.filter((game) =>
+      filterEngine.passesHiddenLaneFilter(
+        hiddenAppNames.includes(game.appName),
+        showHidden
+      )
     )
   }, [favouriteGames, showHidden, hiddenGames])
 

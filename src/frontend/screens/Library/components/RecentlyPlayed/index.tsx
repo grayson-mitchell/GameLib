@@ -5,6 +5,7 @@ import { GameInfo, Runner } from 'common/types'
 import GamesList from '../GamesList'
 import { configStore } from 'frontend/helpers/electronStores'
 import { FilterMode } from 'frontend/types'
+import { passesHiddenLaneFilter } from '../../filterEngine'
 
 interface Props {
   handleModal: (appName: string, runner: Runner, gameInfo: GameInfo) => void
@@ -60,11 +61,14 @@ export default React.memo(function RecentlyPlayed({
       maxRecentGames,
       onlyInstalled
     )
-    if (showHidden === 'off') {
-      newRecentGames = newRecentGames.filter(
-        (game: GameInfo) => !hiddenAppNames.includes(game.app_name)
-      )
-    }
+    // 08.1 review IN-02: the tri-state has three arms, not two. Branching only
+    // on 'off' collapsed 'only' into 'show', so while the main grid showed
+    // ONLY hidden games this lane went on showing the full recent list beside
+    // it. The rule is shared with the Favourites lane rather than open-coded
+    // a third time.
+    newRecentGames = newRecentGames.filter((game: GameInfo) =>
+      passesHiddenLaneFilter(hiddenAppNames.includes(game.app_name), showHidden)
+    )
     setRecentGames(newRecentGames)
   }
 

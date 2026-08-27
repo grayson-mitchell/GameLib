@@ -474,6 +474,82 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     expect(axios.get).not.toHaveBeenCalled()
   })
 
+  // 08.1 review WR-02. The case above only covers a delisted game that ALREADY
+  // HAS art — the one shape the pre-fix art-based trigger happened to skip. The
+  // shape that actually loops is a game whose FIRST-EVER fetch came back
+  // `success:false`: the delisted branch writes `art_cover: ''` and returns
+  // before populating it, so `!existing.art_cover` stays true forever and
+  // getGameInfo fires a store request plus a pushGameToLibrary on every single
+  // access. pendingFetches only dedups CONCURRENT calls, so it cannot bound a
+  // sequential loop. Red-proofed: both assertions below fail against the
+  // pre-fix guard (`!existing.art_cover || platformsNeverCaptured`).
+  it('WR-02: getGameInfo does NOT re-fetch a delisted game that has NO art_cover (the loop shape)', async () => {
+    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: undefined
+    })
+    library.set(APP_ID, makeEntry({ art_cover: '', is_delisted: true }))
+
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    expect(axios.get).not.toHaveBeenCalled()
+  })
+
+  it('WR-02: repeated getGameInfo calls on an art-less delisted game stay at zero requests', async () => {
+    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: undefined
+    })
+    library.set(APP_ID, makeEntry({ art_cover: '', is_delisted: true }))
+
+    const game = new SteamGame(APP_ID)
+    game.getGameInfo()
+    await flushAsync()
+    game.getGameInfo()
+    await flushAsync()
+    game.getGameInfo()
+    await flushAsync()
+
+    expect(axios.get).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.anything()
+    )
+  })
+
+  // 08.1 review WR-03. This method interpolates `this.appId` into a
+  // store.steampowered.com query string and into two CDN image URLs that are
+  // pushed to the renderer as <img src>. Its sibling chokepoints
+  // (getSteamInstallSize, buildSteamProtocolUrl) both reject a non-numeric
+  // appId before building any URL, citing T-06-01/T-03-01; this one did not.
+  it('WR-03: a non-numeric appId is rejected before any URL is built', async () => {
+    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: undefined
+    })
+    const badAppId = '../../etc/passwd'
+    library.set(badAppId, makeEntry({ art_cover: '' }))
+
+    new SteamGame(badAppId).getGameInfo()
+    await flushAsync()
+
+    expect(axios.get).not.toHaveBeenCalled()
+  })
+
+  it('WR-03: a numeric appId is still fetched (the guard is not over-broad)', async () => {
+    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: undefined
+    })
+    library.set(APP_ID, makeEntry({ art_cover: '' }))
+
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    expect(axios.get).toHaveBeenCalledTimes(1)
+  })
+
   // ── LIB-04: lazy metadata fetch via Steam store API ──────────────────────
 
   it('LIB-04: when art_cover is empty, fetchMetadataIfNeeded calls the Steam store appdetails API', async () => {
