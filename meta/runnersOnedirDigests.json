@@ -1,10 +1,10 @@
 {
   "_comment": "Phase 34.9 Plan 06; macOS x64 leg retired by Phase 34.18. `pnpm pin:runner-digests` replaces each of the three PENDING-CI-PUBLISH sentinels below with the real sha256 digest published by .github/workflows/build-runners-onedir-macos.yml's SHA256SUMS-arm64 output. Changing ANY digest value here, or the layout string, intentionally forces every checkout to re-download the darwin runners -- see darwinLayoutMarker()/computeLayoutMarker() in meta/downloadHelperBinaries.ts. Phase 34.16 Plan 04 (D-10/D-11): runId is written by `pnpm pin:runner-digests` and names the workflow run whose SHA256SUMS-arm64 the digests below were taken from -- it is deliberately invisible to computeLayoutMarker(), which receives layout and digests positionally and therefore cannot see any sibling key.",
   "layout": "onedir-v1",
-  "runId": null,
+  "runId": "33047720816",
   "digests": {
-    "legendary_macOS_arm64_onedir.tar.gz": "PENDING-CI-PUBLISH",
-    "gogdl_macOS_arm64_onedir.tar.gz": "PENDING-CI-PUBLISH",
-    "nile_macOS_arm64_onedir.tar.gz": "PENDING-CI-PUBLISH"
+    "legendary_macOS_arm64_onedir.tar.gz": "ac9fc18d68570fbf23543eed0925851469854c7e28e38a576fed4dd4ea5d07f5",
+    "gogdl_macOS_arm64_onedir.tar.gz": "151bfaacff75ba248a8c4c21d41f510627e66b0ac54128e6ae77161523fa1db7",
+    "nile_macOS_arm64_onedir.tar.gz": "f4c141d0eaedb0c541123acf605621df710a17a78fb252b585e1b05a6cbc26d8"
   }
 }

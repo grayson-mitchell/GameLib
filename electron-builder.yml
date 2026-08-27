@@ -75,10 +75,12 @@ mac:
   # the guard runs before packaging, `dist:mac` and `release:mac` fail fast
   # on a macOS checkout that has no staged `build/bin/arm64/darwin` tree --
   # `verifyRunnerBundle` throws naming the root and arch. This is intended:
-  # an app packaged without its runners is broken either way, and
-  # `pnpm download-helper-binaries` cannot currently supply them (three
-  # PENDING-CI-PUBLISH sentinels)
-  # [REMOVE WHEN DIGESTS ARE PINNED -- Phase 34.18 plan 34.18-07's developer gate].
+  # an app packaged without its runners is broken either way. Recovery is
+  # `pnpm download-helper-binaries`, which as of 2026-08-27 DOES supply them:
+  # the three arm64 onedir slots in meta/runnersOnedirDigests.json hold real
+  # sha256 digests pinned from run 33047720816 (Phase 34.18 plan 34.18-07's
+  # developer gate), so the fetch exits 0 on darwin instead of throwing on a
+  # PENDING-CI-PUBLISH sentinel.
   files:
     - build/bin/${arch}/darwin/*
     - build/bin/${arch}/darwin/**/*
