@@ -793,3 +793,48 @@ stuck-spinner bug it fixed. Establish which of (a)/(b) is true with evidence fir
     from the OLDER, already-reverted per-push receipt log this file's PARKED section
     describes — this one is anomaly-gated, not unconditional, so it will NOT emit ~378
     lines per refresh.)
+
+---
+
+## LIVE INSTRUMENTED REPRODUCTION 2026-08-27 — the repark condition is MET
+
+Reproduced during the 34.13 UAT gate (`G-HANDOFF-UNINSTALL`/tauri), unplanned. This is the
+"live, logged reproduction" the CHECKPOINT was awaiting; the 2026-08-19 repark reason
+("UNREPRODUCED across 2 instrumented attempts") no longer holds.
+
+**The log line, verbatim:**
+
+```
+(18:49:04) [INFO]:  [Steam]: Steam: uninstall polling complete appId 40700 — badge flipped not-installed
+(18:49:54) [ERROR]: [Frontend]: Library: 1 owned Steam game(s) silently excluded from library grid
+                                by stale nonAvailableGames entry: 40700
+```
+
+**Why this one is worth more than a bare sighting:** the emitting probe is this session's own
+blind-spot guard (`src/frontend/screens/Library/index.tsx:975-984`), and it fires **only when a
+game is STILL excluded after the reconciliation pass** — `reconcileTick` is in its dependency
+array specifically so it re-runs against the corrected `engineDeps` after a heal, not against
+the pre-heal snapshot. So this is a **post-heal** exclusion: `reconcileNonAvailableGames` ran
+and did not clear the entry.
+
+**Timing is a clue, not noise.** The badge flip and the exclusion are **50 seconds apart**. The
+game was correctly present and not-installed immediately after uninstall; the vanish came later.
+That is consistent with the parked session's load-bearing fact — the entry is present and
+correct in the library data while invisible in the grid — and it narrows the window to whatever
+runs in that gap rather than to the uninstall itself.
+
+**Conditions, so the fixture can be rebuilt exactly:**
+
+- Runtime: `GAMELIB_DEV_SECRET_VAULT=1 pnpm tauri:dev` from an isolated worktree at `1ff9cfaff`.
+- Game: `Machinarium` (40700), a **forced** Windows-via-bottle install (`forcedWindowsViaBottle:
+  true`, written by the D-17 platform-switch flow, and cleared correctly on uninstall).
+- The uninstall itself was fully correct — content directory and `appmanifest_40700.acf` both
+  removed, delegated via the bottled client, badge flipped without a restart. **The vanish is
+  downstream of a clean uninstall**, which rules out partial-removal explanations.
+- `libraryCount = 2` (primary + `/Volumes/blank/SteamLibrary`).
+- Steam was rate-limiting metadata fetches (403) earlier in the session, self-inflicted by the
+  gate clearing the metadata cache. Probably irrelevant here but recorded rather than omitted.
+
+**Not investigated in this session** — the UAT gate was mid-flight and diagnosing here would
+have derailed it. Nothing was fixed and nothing else was changed. Status left `parked` for the
+user to decide, since unparking is their call, but the stated repark condition is now satisfied.
