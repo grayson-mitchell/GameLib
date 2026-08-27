@@ -3,7 +3,9 @@ created: 2026-08-25T11:00:10.000Z
 title: "Phase 34.11 carries three open Warning-level review findings — swept and confirmed present at HEAD, no Criticals among them"
 area: frontend
 severity: low
-status: pending
+status: completed
+completed: 2026-08-27
+completed_by: "quick task 260827-vpl"
 resolves_phase: "34.11"
 found_by: "Quick task 260825-vy5, while writing 34.11-REVIEW-FIX.md to move the phase off blocked"
 source: ".planning/phases/34.11-library-filtering-search-views-collections-and-cross-store-f/34.11-REVIEW-FIX.md"
@@ -59,3 +61,27 @@ Grouped by the shape of the fix, cheapest first:
   `clearAllFilters` by decision **D-08**, deliberately. `Library/index.tsx:917` documents
   the exclusion. These close only if D-08 is revisited; do not "fix" them as bugs without
   reopening that decision first.
+
+---
+
+**2026-08-27 CLOSED (quick task `260827-vpl`):** all three remaining Warnings are now
+**FIXED**. D-08 was revisited and amended (dated extension in `34.11-CONTEXT.md`, not a
+rewrite): the alphabet letter is a genuine filter (`library.filter(...)` in
+`libraryToShow`), while D-08's placement conclusion stands unchanged. **WR-10** closed by
+widening `FilterZeroResult`'s zero-state condition to
+`activeFilterCount > 0 || alphabetFilterLetter` and naming the letter via two new
+`gamelib.json` keys (`7bf5c2f89` test / `b04601b8a` feat). **WR-11** closed by adding
+`setAlphabetFilterLetter(null)` to `clearAllFilters`, with a new **D-08a** (hiding the strip
+also clears the letter) shipped alongside (`b04601b8a`). **WR-18** closed by an alternative
+mechanism to the one this note originally described (`meta/i18nGateAllowlist.json` entries
+— ruled invalid, that file is a DEFERRAL register per `genI18nGateScope.test.ts:66-72` and
+is pinned at exactly 2 entries by `T-34.8-30`): a measured, blocking ratchet in
+`meta/__tests__/hardcodedStringGate.test.ts` (commit `4e975f3b9`) pins `facetLabels.ts` (8)
+and `chipLabels.ts` (35) violation counts and texts in audit mode, with neither
+`meta/i18nGateScope.json` nor `meta/i18nGateAllowlist.json` touched. The residual
+spec-table-aware gate heuristic this file described as one closure route for WR-18 remains
+open, routed to a new, phase-detached todo:
+`.planning/todos/pending/2026-08-27-i18n-gate-flags-declaration-site-literals-as-violations.md`
+(empty `resolves_phase:` — it does not hold 34.11 open). Full evidence chains for all three
+dispositions: `34.11-REVIEW-FIX.md`'s WR-10/WR-11/WR-18 rows, re-derived dispositions
+`fixed: 22 / open: 0 / invalid: 1 / total: 23`, `status: all_fixed`.
