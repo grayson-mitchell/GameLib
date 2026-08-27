@@ -61,23 +61,24 @@ mac:
   # -- electron-builder issue #3940 documents nested binaries silently
   # skipped by signing.
   #
-  # `pnpm verify:runner-bundle build --arch=arm64` and
-  # `pnpm verify:runner-bundle build --arch=x64` now both run automatically,
-  # arm64 then x64, as sequential `&&` steps of both `dist:mac` and
-  # `release:mac`, immediately before `electron-builder` -- a malformed
-  # framework (F-34.9-01) in either arch's staged tree aborts the build
-  # before packaging. What it inspects is the STAGED `build/` tree, not the
-  # packaged `.app`: electron-builder's own copy into `app.asar.unpacked` is
-  # verified by the blocking live gate (`34.9-LIVE-GATE-RERUN.md` scored
-  # item 2) and by manual invocation against a built app, not automatically.
-  # Both arches are covered by this guard. A deliberate consequence: because
-  # the guard runs before packaging, `dist:mac` and `release:mac` now fail
-  # fast on a macOS checkout that has no staged `build/bin/{arch}/darwin`
-  # tree -- `verifyRunnerBundle` throws naming the root and arch. This is
-  # intended: an app packaged without its runners is broken either way, and
-  # `pnpm download-helper-binaries` cannot currently supply them (six
+  # Phase 34.18 retired the macOS x64 (Intel) CI leg: `macos-13` was retired
+  # by GitHub 2025-12-04 and never got a replacement runner across three
+  # attempts (F-34.16-G). macOS is now arm64-only, so a single
+  # `pnpm verify:runner-bundle build --arch=arm64` step runs automatically
+  # as a `&&` step of both `dist:mac` and `release:mac`, immediately before
+  # `electron-builder` -- a malformed framework (F-34.9-01) in the staged
+  # tree aborts the build before packaging. What it inspects is the STAGED
+  # `build/` tree, not the packaged `.app`: electron-builder's own copy into
+  # `app.asar.unpacked` is verified by the blocking live gate
+  # (`34.9-LIVE-GATE-RERUN.md` scored item 2) and by manual invocation
+  # against a built app, not automatically. A deliberate consequence: because
+  # the guard runs before packaging, `dist:mac` and `release:mac` fail fast
+  # on a macOS checkout that has no staged `build/bin/arm64/darwin` tree --
+  # `verifyRunnerBundle` throws naming the root and arch. This is intended:
+  # an app packaged without its runners is broken either way, and
+  # `pnpm download-helper-binaries` cannot currently supply them (three
   # PENDING-CI-PUBLISH sentinels)
-  # [REMOVE WHEN DIGESTS ARE PINNED -- 34.16-LIVE-GATE.md Scored Item 3].
+  # [REMOVE WHEN DIGESTS ARE PINNED -- Phase 34.18 plan 34.18-07's developer gate].
   files:
     - build/bin/${arch}/darwin/*
     - build/bin/${arch}/darwin/**/*
