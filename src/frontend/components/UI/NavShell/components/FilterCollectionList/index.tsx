@@ -41,7 +41,10 @@ import './index.scss'
  * condition or expression to populate a row; every row comes from what the
  * user already assigned in `CategoriesManager`. D-20: `+ New collection`
  * and `Manage collections` only launch the dialog via its show-setter --
- * neither adds, renames nor deletes a category itself.
+ * neither adds, renames nor deletes a category itself. WR-08: the two rows
+ * now open the dialog with different intents ('create' / 'manage') so they
+ * are no longer the same action twice, while D-20 still holds verbatim --
+ * neither row mutates a category itself.
  */
 export default function FilterCollectionList() {
   const { customCategories } = useContext(ContextProvider)
@@ -98,7 +101,7 @@ export default function FilterCollectionList() {
           'gamelib:library.filterPanel.newCollection',
           '+ New collection'
         )}
-        onClick={() => setShowCategories(true)}
+        onClick={() => setShowCategories(true, 'create')}
       />
       <NavItem
         elementType="button"
@@ -107,7 +110,7 @@ export default function FilterCollectionList() {
           'gamelib:library.filterPanel.manageCollections',
           'Manage collections'
         )}
-        onClick={() => setShowCategories(true)}
+        onClick={() => setShowCategories(true, 'manage')}
       />
     </FilterFacetGroup>
   )

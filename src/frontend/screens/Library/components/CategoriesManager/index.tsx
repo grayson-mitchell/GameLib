@@ -156,7 +156,8 @@ function CategoriesManager() {
   const { t } = useTranslation()
   const { customCategories } = useContext(ContextProvider)
 
-  const { setShowCategories } = useContext(LibraryContext)
+  const { setShowCategories, categoriesManagerIntent } =
+    useContext(LibraryContext)
 
   const [newCategoryName, setNewCategoryName] = useState('')
 
@@ -198,8 +199,11 @@ function CategoriesManager() {
         {categories.length === 0 &&
           t('categories-manager.no-categories', 'No categories yet.')}
         <hr />
+        {/* WR-08: autoFocus only when opened via '+ New collection' -- the
+            'manage' intent (Manage collections row) leaves focus alone. */}
         <TextInputField
           htmlId="new-category-name"
+          autoFocus={categoriesManagerIntent === 'create'}
           value={newCategoryName}
           onChange={(newValue) => setNewCategoryName(newValue)}
           placeholder={t(

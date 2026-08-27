@@ -30,6 +30,7 @@ const initialContext: LibraryContextType = {
   setShowUpdatesOnly: () => null,
   handleAddGameButtonClick: () => null,
   setShowCategories: () => null,
+  categoriesManagerIntent: 'manage',
   showAlphabetFilter: false,
   onToggleAlphabetFilter: () => null,
   alphabetFilterLetter: null,

@@ -280,7 +280,7 @@ describe('FilterCollectionList', () => {
     ])
   })
 
-  it('clicking + New collection calls setShowCategories(true) and does not touch setCurrentCollection', () => {
+  it('clicking + New collection calls setShowCategories(true, "create") and does not touch setCurrentCollection', () => {
     const tree = FilterCollectionList() as unknown as ReactElement
     const newCollectionRow = navItemsOf(tree).find(
       (el) => el.props.label === '+ New collection'
@@ -289,11 +289,11 @@ describe('FilterCollectionList', () => {
     expect(newCollectionRow).toBeDefined()
     ;(newCollectionRow?.props.onClick as () => void)()
 
-    expect(contextValue.setShowCategories).toHaveBeenCalledWith(true)
+    expect(contextValue.setShowCategories).toHaveBeenCalledWith(true, 'create')
     expect(contextValue.setCurrentCollection).not.toHaveBeenCalled()
   })
 
-  it('clicking Manage collections calls setShowCategories(true) and does not touch setCurrentCollection', () => {
+  it('clicking Manage collections calls setShowCategories(true, "manage") and does not touch setCurrentCollection', () => {
     const tree = FilterCollectionList() as unknown as ReactElement
     const manageRow = navItemsOf(tree).find(
       (el) => el.props.label === 'Manage collections'
@@ -302,8 +302,32 @@ describe('FilterCollectionList', () => {
     expect(manageRow).toBeDefined()
     ;(manageRow?.props.onClick as () => void)()
 
-    expect(contextValue.setShowCategories).toHaveBeenCalledWith(true)
+    expect(contextValue.setShowCategories).toHaveBeenCalledWith(true, 'manage')
     expect(contextValue.setCurrentCollection).not.toHaveBeenCalled()
+  })
+
+  // WR-08: the two rows used to be the same action (both `setShowCategories
+  // (true)`). This is the assertion that fails if that regresses -- it
+  // compares the two recorded call arrays directly rather than checking
+  // each in isolation, so a future edit that makes them agree again (even
+  // on some THIRD value) is caught.
+  it('WR-08: the two action rows do not record identical calls', () => {
+    const tree = FilterCollectionList() as unknown as ReactElement
+    const newCollectionRow = navItemsOf(tree).find(
+      (el) => el.props.label === '+ New collection'
+    )
+    const manageRow = navItemsOf(tree).find(
+      (el) => el.props.label === 'Manage collections'
+    )
+
+    expect(newCollectionRow).toBeDefined()
+    expect(manageRow).toBeDefined()
+    ;(newCollectionRow?.props.onClick as () => void)()
+    ;(manageRow?.props.onClick as () => void)()
+
+    expect(contextValue.setShowCategories.mock.calls[0]).not.toEqual(
+      contextValue.setShowCategories.mock.calls[1]
+    )
   })
 })
 

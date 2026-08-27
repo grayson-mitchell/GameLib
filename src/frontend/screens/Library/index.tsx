@@ -376,7 +376,25 @@ export default React.memo(function Library(): JSX.Element {
     setShowUpdatesOnly(value)
   }
 
-  const [showCategories, setShowCategories] = useState(false)
+  // WR-08: the two panel rows that open this dialog ('+ New collection' /
+  // 'Manage collections') used to call the same `setShowCategories(true)`
+  // and were therefore indistinguishable once open. `categoriesManagerIntent`
+  // is set only when opening (never on close) and threaded through
+  // LibraryContext so `CategoriesManager` can autoFocus the create input
+  // for one intent and not the other, with no new user-facing string.
+  const [showCategories, setShowCategoriesRaw] = useState(false)
+  const [categoriesManagerIntent, setCategoriesManagerIntent] = useState<
+    'manage' | 'create'
+  >('manage')
+  const setShowCategories = useCallback(
+    (value: boolean, intent?: 'manage' | 'create') => {
+      if (value) {
+        setCategoriesManagerIntent(intent ?? 'manage')
+      }
+      setShowCategoriesRaw(value)
+    },
+    [setCategoriesManagerIntent, setShowCategoriesRaw]
+  )
 
   const [showAlphabetFilter, setShowAlphabetFilter] = useState(
     JSON.parse(storage.getItem('showAlphabetFilter') || 'true')
@@ -1043,6 +1061,7 @@ export default React.memo(function Library(): JSX.Element {
         sortInstalled,
         handleAddGameButtonClick: () => handleModal('', 'sideload', null),
         setShowCategories,
+        categoriesManagerIntent,
         showAlphabetFilter: showAlphabetFilter,
         onToggleAlphabetFilter: handleToggleAlphabetFilter,
         gamesForAlphabetFilter,

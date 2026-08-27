@@ -320,7 +320,13 @@ export interface LibraryContextType {
   showUpdatesOnly: boolean
   setShowUpdatesOnly: (value: boolean) => void
   handleAddGameButtonClick: () => void
-  setShowCategories: (value: boolean) => void
+  // WR-08: `intent` distinguishes `+ New collection` ('create') from
+  // `Manage collections` ('manage') so the two panel rows record
+  // observably different calls instead of being the same action twice.
+  // Optional so the dialog's own `setShowCategories(false)` close calls
+  // (CategoriesManager) keep compiling unchanged.
+  setShowCategories: (value: boolean, intent?: 'manage' | 'create') => void
+  categoriesManagerIntent: 'manage' | 'create'
   showAlphabetFilter: boolean
   onToggleAlphabetFilter: () => void
   alphabetFilterLetter: string | null
