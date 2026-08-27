@@ -45,15 +45,15 @@ const MISMATCHED_BUFFER = Buffer.from('MISMATCHED-BYTES')
 // 'computeLayoutMarker (darwinLayoutMarker sensitivity, mutation-proof)'
 // block so that test computes its expectation from the SAME object the
 // mocked module exposes, rather than a hand-retyped copy that could drift.
+//
+// Phase 34.18 retired the macOS x64 leg -- three arm64-only keys remain.
+// legendary/arm64 is now the dedicated SENTINEL fixture (its digest entry
+// is left as the real PENDING-CI-PUBLISH sentinel); gogdl/nile arm64 get
+// the FIXTURE_DIGEST so a full digest-verified extraction can still be
+// driven for the argv-form/chmod/traversal tests below.
 const mockOnedirDigests = {
-  'legendary_macOS_x86_64_onedir.tar.gz': 'PENDING-CI-PUBLISH',
-  'legendary_macOS_arm64_onedir.tar.gz':
-    'c47280f410b8d718a49814cca588a0b52ee2aabc44e759a985cfdbda1ebd1fa0',
-  'gogdl_macOS_x86_64_onedir.tar.gz':
-    'c47280f410b8d718a49814cca588a0b52ee2aabc44e759a985cfdbda1ebd1fa0',
+  'legendary_macOS_arm64_onedir.tar.gz': 'PENDING-CI-PUBLISH',
   'gogdl_macOS_arm64_onedir.tar.gz':
-    'c47280f410b8d718a49814cca588a0b52ee2aabc44e759a985cfdbda1ebd1fa0',
-  'nile_macOS_x86_64_onedir.tar.gz':
     'c47280f410b8d718a49814cca588a0b52ee2aabc44e759a985cfdbda1ebd1fa0',
   'nile_macOS_arm64_onedir.tar.gz':
     'c47280f410b8d718a49814cca588a0b52ee2aabc44e759a985cfdbda1ebd1fa0'
@@ -72,8 +72,8 @@ jest.mock('fs/promises', () => ({
   writeFile: jest.fn().mockResolvedValue(undefined)
 }))
 
-// legendary/x64 is the dedicated SENTINEL fixture (its digest entry is left
-// as the real PENDING-CI-PUBLISH sentinel); every other combo gets the
+// legendary/arm64 is the dedicated SENTINEL fixture (its digest entry is
+// left as the real PENDING-CI-PUBLISH sentinel); every other combo gets the
 // FIXTURE_DIGEST so a full digest-verified extraction can be driven for the
 // argv-form/chmod/traversal tests below.
 jest.mock('../runnersOnedirDigests.json', () => ({
@@ -236,18 +236,19 @@ describe('downloadOnedirAsset', () => {
   })
 
   describe('sentinel gate', () => {
-    it('throws naming the file and the fill-in plan for a PENDING-CI-PUBLISH digest, without ever fetching', async () => {
+    it('throws naming the file and the fill-in procedure for a PENDING-CI-PUBLISH digest, without ever fetching', async () => {
       let thrown: Error | undefined
       try {
-        await downloadOnedirAsset('legendary', 'x64')
+        await downloadOnedirAsset('legendary', 'arm64')
       } catch (error) {
         thrown = error as Error
       }
 
       expect(thrown).toBeDefined()
-      expect(thrown?.message).toContain('legendary_macOS_x86_64_onedir.tar.gz')
+      expect(thrown?.message).toContain('legendary_macOS_arm64_onedir.tar.gz')
       expect(thrown?.message).toContain('PENDING-CI-PUBLISH')
-      expect(thrown?.message).toContain('34.9-09')
+      expect(thrown?.message).toContain('pin:runner-digests')
+      expect(thrown?.message).toContain('34.18')
       expect(mockedFetch).not.toHaveBeenCalled()
       expect(mockedSpawn).not.toHaveBeenCalled()
     })
@@ -349,9 +350,9 @@ describe('downloadOnedirAsset', () => {
 })
 
 describe('filename contract', () => {
-  it('meta/runnersOnedirDigests.json has exactly the archiveName() set for all 3 runners x 2 arches', () => {
+  it('meta/runnersOnedirDigests.json has exactly the archiveName() set for all 3 runners x 1 arch (arm64 -- Phase 34.18 retired macOS x64)', () => {
     const runners = ['legendary', 'gogdl', 'nile'] as const
-    const arches = ['x64', 'arm64'] as const
+    const arches = ['arm64'] as const
     const expectedKeys = runners
       .flatMap((runner) => arches.map((arch) => archiveName(runner, arch)))
       .sort()
@@ -361,12 +362,12 @@ describe('filename contract', () => {
   })
 
   it.each([
-    ['legendary', 'arm64'],
-    ['gogdl', 'x64'],
     ['gogdl', 'arm64'],
-    ['nile', 'x64'],
     ['nile', 'arm64']
   ] as const)(
+    // legendary/arm64 is excluded here -- it is the dedicated sentinel
+    // fixture (see mockOnedirDigests above) and is covered by the
+    // sentinel-gate test instead of a full download flow.
     'downloadOnedirAsset(%s, %s) requests the archiveName() filename from the GameLib rolling release',
     async (runner, arch) => {
       mockFetchOnce(200, FIXTURE_BUFFER)
@@ -389,14 +390,45 @@ describe('filename contract', () => {
     }
   )
 
-  it("legendary/x64's sentinel-gate error also names its archiveName() filename (proves it too was derived via archiveName)", async () => {
+  it("legendary/arm64's sentinel-gate error also names its archiveName() filename (proves it too was derived via archiveName)", async () => {
     let thrown: Error | undefined
     try {
-      await downloadOnedirAsset('legendary', 'x64')
+      await downloadOnedirAsset('legendary', 'arm64')
     } catch (error) {
       thrown = error as Error
     }
-    expect(thrown?.message).toContain(archiveName('legendary', 'x64'))
+    expect(thrown?.message).toContain(archiveName('legendary', 'arm64'))
+  })
+})
+
+describe('34.18-02: six-to-three digest key reduction is non-vacuous', () => {
+  // Reads the REAL meta/runnersOnedirDigests.json from disk via
+  // RUNNERS_ONEDIR_DIGESTS_SOURCE (readFileSync + JSON.parse, defined at the
+  // top of this file), deliberately bypassing the jest.mock('../
+  // runnersOnedirDigests.json', ...) module mock above -- the mock always
+  // reflects mockOnedirDigests, never the on-disk file, so it cannot prove
+  // anything about the real reduction. This block was run against HEAD's
+  // six-key manifest BEFORE the reduction landed and observed FAILING
+  // (quoted verbatim in 34.18-02-SUMMARY.md); an assertion that cannot
+  // distinguish the six-key manifest from the three-key one proves nothing.
+  it('digests has exactly 3 keys, all ending _macOS_arm64_onedir.tar.gz, none containing x86_64', () => {
+    const keys = Object.keys(RUNNERS_ONEDIR_DIGESTS_SOURCE.digests)
+    expect(keys).toHaveLength(3)
+    for (const key of keys) {
+      expect(key.endsWith('_macOS_arm64_onedir.tar.gz')).toBe(true)
+      expect(key).not.toContain('x86_64')
+    }
+  })
+
+  it('the key set equals exactly the three expected arm64 literals', () => {
+    const keys = Object.keys(RUNNERS_ONEDIR_DIGESTS_SOURCE.digests).sort()
+    expect(keys).toEqual(
+      [
+        'legendary_macOS_arm64_onedir.tar.gz',
+        'gogdl_macOS_arm64_onedir.tar.gz',
+        'nile_macOS_arm64_onedir.tar.gz'
+      ].sort()
+    )
   })
 })
 

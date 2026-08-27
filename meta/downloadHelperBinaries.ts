@@ -173,9 +173,11 @@ export async function downloadOnedirAsset(
   if (expectedDigest === DIGEST_SENTINEL) {
     throw new Error(
       `Digest for "${filename}" is still the placeholder sentinel ` +
-        `"${DIGEST_SENTINEL}" -- plan 34.9-09 must fill it in with the real ` +
-        `sha256 published by build-runners-onedir-macos.yml before this ` +
-        `archive can be verified and extracted.`
+        `"${DIGEST_SENTINEL}" -- Phase 34.18 retired the macOS x64 leg, so ` +
+        `only three arm64 digests exist now. Dispatch ` +
+        `.github/workflows/build-runners-onedir-macos.yml on the default ` +
+        `branch, then run pnpm pin:runner-digests to fill this in with the ` +
+        `real sha256 before this archive can be verified and extracted.`
     )
   }
 
@@ -186,15 +188,15 @@ export async function downloadOnedirAsset(
   if (actualDigest !== expectedDigest) {
     // D-11: name the pinned source run so the operator can tell a
     // rolling-release re-dispatch (gh release upload --clobber invalidates
-    // all six pins at once) from a real tampering event, instead of being
+    // all three pins at once) from a real tampering event, instead of being
     // left to guess. The literal `null`/`undefined` must never appear as
     // the run id -- an unpinned runId gets its own explanatory clause.
     const pinnedRunId = runnersOnedirDigests.runId
     const provenanceClause =
       pinnedRunId != null
         ? ` -- re-pin from run ${pinnedRunId} if this is a rolling-release ` +
-          `update (gh release upload --clobber invalidates all six pins at ` +
-          `once)`
+          `update (gh release upload --clobber invalidates all three pins ` +
+          `at once)`
         : ` -- no source run is pinned in meta/runnersOnedirDigests.json; ` +
           `run pnpm pin:runner-digests to fill it in`
     throw new Error(
@@ -319,8 +321,8 @@ async function downloadLegendary() {
     ),
     // macOS: onedir archive from the GameLib rolling release, not upstream
     // (34.9-RESEARCH.md Pitfall 5 -- the single-repo-per-runner assumption
-    // above cannot express a platform-conditional source).
-    downloadOnedirAsset('legendary', 'x64'),
+    // above cannot express a platform-conditional source). Phase 34.18
+    // retired the macOS x64 leg -- arm64 only, below.
     downloadOnedirAsset('legendary', 'arm64')
   ])
 }
@@ -342,7 +344,6 @@ async function downloadGogdl() {
         }
       }
     ),
-    downloadOnedirAsset('gogdl', 'x64'),
     downloadOnedirAsset('gogdl', 'arm64')
   ])
 }
@@ -358,7 +359,6 @@ async function downloadNile() {
         linux: 'nile_linux_arm64'
       }
     }),
-    downloadOnedirAsset('nile', 'x64'),
     downloadOnedirAsset('nile', 'arm64')
   ])
 }
