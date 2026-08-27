@@ -1,21 +1,22 @@
 /**
- * `pnpm pin:runner-digests` (D-10, 34.16-05). Fetches `SHA256SUMS-x64`,
- * `SHA256SUMS-arm64`, `BUILD-MANIFEST-x64.json` and `BUILD-MANIFEST-arm64.json`
- * from the `runners-onedir-macos` rolling release, validates every line and
- * every claim, and rewrites `meta/runnersOnedirDigests.json`'s six digests
- * and `runId` in one write.
+ * `pnpm pin:runner-digests` (D-10, 34.16-05; reduced to arm64-only by Phase
+ * 34.18, which retired the macOS x64 (Intel) CI leg). Fetches
+ * `SHA256SUMS-arm64` and `BUILD-MANIFEST-arm64.json` from the
+ * `runners-onedir-macos` rolling release, validates every line and every
+ * claim, and rewrites `meta/runnersOnedirDigests.json`'s three digests and
+ * `runId` in one write.
  *
- * Purpose: hand-transcribing six 64-character hex strings out of a run log
+ * Purpose: hand-transcribing three 64-character hex strings out of a run log
  * is a transcription-risk ritual that has to be repeated after every
- * re-dispatch, because `gh release upload --clobber` invalidates all six
+ * re-dispatch, because `gh release upload --clobber` invalidates all three
  * pins at once. This script makes it repeatable and captures provenance
  * rather than relying on it being remembered. A bot PR was considered and
  * rejected (34.16-CONTEXT.md D-10) — this is a developer-initiated action,
  * not a scheduled one.
  *
- * Never writes on a partial or failed read (T-34.16-19): all four remote
- * files are fetched and fully validated before any write; the write is a
- * single `writeFile` at the end, or none at all.
+ * Never writes on a partial or failed read (T-34.16-19): both remote files
+ * are fetched and fully validated before any write; the write is a single
+ * `writeFile` at the end, or none at all.
  */
 
 import { readFile, writeFile } from 'fs/promises'
@@ -47,7 +48,7 @@ const BASE_URL = `https://github.com/${GAMELIB_RUNNERS_REPO}/releases/download/$
 // __dirname at runtime would point there, not at meta/.
 const DIGESTS_PATH = join('meta', 'runnersOnedirDigests.json')
 
-type Arch = 'x64' | 'arm64'
+type Arch = 'arm64'
 
 interface DigestsFile {
   _comment: string
@@ -124,9 +125,9 @@ function assertKnownFilenames(
 }
 
 /**
- * After both SHA256SUMS files are parsed, every existing digest key must be
- * covered by exactly one parsed line across both arches. A missing or
- * duplicated key throws, listing which.
+ * After the SHA256SUMS file is parsed, every existing digest key must be
+ * covered by exactly one parsed line. A missing or duplicated key throws,
+ * listing which.
  */
 export function assertCoversAllKeys(
   parsed: ParsedSumLine[],
@@ -145,42 +146,36 @@ export function assertCoversAllKeys(
     if (duplicated.length > 0)
       parts.push(`duplicated: ${duplicated.join(', ')}`)
     throw new Error(
-      `The fetched SHA256SUMS files do not cover the six tracked digest ` +
+      `The fetched SHA256SUMS files do not cover the three tracked digest ` +
         `keys exactly once (${parts.join('; ')})`
     )
   }
 }
 
 /**
- * Both manifests' `runId` values must be non-null and equal. Both null
- * throws (nothing to record -- likely a local build). Unequal throws,
- * naming both values, because six digests spanning two runs cannot honestly
- * be attributed to one (T-34.16-18).
+ * The manifest's `runId` must be non-null. Null throws (nothing to record --
+ * likely a local build, not a CI run).
+ *
+ * This replaces the two-manifest run-id-equality check (T-34.16-18) that
+ * existed when this script tracked both x64 and arm64 manifests: with a
+ * single manifest that cross-manifest comparison is vacuous, so Phase 34.18
+ * (which retired the macOS x64 CI leg) retired the equality check and
+ * replaced it with this non-null assertion, carrying forward the same
+ * actionable message rather than simply deleting the check. A removed
+ * integrity check with no successor is how a fail-closed tool goes
+ * fail-open.
  */
-function assertAgreedRunId(
-  manifestX64: BuildManifest,
-  manifestArm64: BuildManifest
-): string {
-  const x64RunId = manifestX64.runId
-  const arm64RunId = manifestArm64.runId
-  if (x64RunId === null && arm64RunId === null) {
+function assertNonNullRunId(manifest: BuildManifest): string {
+  const runId = manifest.runId
+  if (runId === null) {
     throw new Error(
-      `Both BUILD-MANIFEST-x64.json and BUILD-MANIFEST-arm64.json report a ` +
-        `null runId -- nothing to record. This usually means the fetched ` +
-        `manifests came from a local build, not a CI run; dispatch ` +
-        `build-runners-onedir-macos.yml before running pin:runner-digests.`
+      `BUILD-MANIFEST-arm64.json reports a null runId -- nothing to ` +
+        `record. This usually means the fetched manifest came from a ` +
+        `local build, not a CI run; dispatch build-runners-onedir-macos.yml ` +
+        `before running pin:runner-digests.`
     )
   }
-  if (x64RunId !== arm64RunId) {
-    throw new Error(
-      `BUILD-MANIFEST-x64.json and BUILD-MANIFEST-arm64.json disagree on ` +
-        `runId (x64: ${x64RunId}, arm64: ${arm64RunId}) -- six digests ` +
-        `spanning two runs cannot be attributed to one pin`
-    )
-  }
-  // x64RunId === arm64RunId and the both-null case is handled above, so
-  // this is a non-null string.
-  return x64RunId as string
+  return runId
 }
 
 /**
@@ -235,26 +230,20 @@ export async function main(): Promise<void> {
   const current = JSON.parse(currentText) as DigestsFile
   const existingKeys = Object.keys(current.digests)
 
-  const sumsX64Text = await fetchText(`${BASE_URL}/SHA256SUMS-x64`)
   const sumsArm64Text = await fetchText(`${BASE_URL}/SHA256SUMS-arm64`)
-  const manifestX64Text = await fetchText(`${BASE_URL}/BUILD-MANIFEST-x64.json`)
   const manifestArm64Text = await fetchText(
     `${BASE_URL}/BUILD-MANIFEST-arm64.json`
   )
 
-  const sumsX64 = parseSha256Sums(sumsX64Text, 'x64')
   const sumsArm64 = parseSha256Sums(sumsArm64Text, 'arm64')
-  assertKnownFilenames(sumsX64, existingKeys, 'x64')
   assertKnownFilenames(sumsArm64, existingKeys, 'arm64')
 
-  const allParsed = [...sumsX64, ...sumsArm64]
+  const allParsed = sumsArm64
   assertCoversAllKeys(allParsed, existingKeys)
 
-  const manifestX64 = JSON.parse(manifestX64Text) as BuildManifest
   const manifestArm64 = JSON.parse(manifestArm64Text) as BuildManifest
-  const runId = assertAgreedRunId(manifestX64, manifestArm64)
+  const runId = assertNonNullRunId(manifestArm64)
 
-  warnOnTagDrift('x64', manifestX64, runId)
   warnOnTagDrift('arm64', manifestArm64, runId)
 
   const digests: Record<string, string> = {}
