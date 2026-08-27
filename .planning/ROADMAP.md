@@ -1587,7 +1587,7 @@ Plans:
 - [x] 34.18-03-PLAN.md — wave 3 — `pin:runner-digests` reduced to one arch with every fail-closed case preserved and the vacuous runId-equality check REPLACED, not dropped
 - [x] 34.18-04-PLAN.md — wave 3 — arm64-only macOS packaging + `mac:` prose; one-arch guard RED-proven strict; D-09 globs, non-macOS half in its OWN commit
 - [x] 34.18-06-PLAN.md — wave 4 — dated dispositions for 2 findings, 6 requirements, 6 ledger items; D-13's 19→18 amendment; item 18 cross-referenced, item 13 carried forward
-- [ ] 34.18-07-PLAN.md — wave 5 — **HUMAN GATE (blocking)**: dispatch the arm64 workflow, pin three real digests, prove `download-helper-binaries` on darwin, close ledger item 13
+- [x] 34.18-07-PLAN.md — wave 5 — **HUMAN GATE (blocking)**: dispatch the arm64 workflow, pin three real digests, prove `download-helper-binaries` on darwin, close ledger item 13
 
 ---
 
