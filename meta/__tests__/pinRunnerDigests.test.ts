@@ -1,16 +1,18 @@
 /**
- * First-ever test coverage for meta/pinRunnerDigests.ts (34.16-05). Global
- * `fetch` and `fs/promises` (`readFile`/`writeFile` only -- this script
- * never touches binaries) are mocked at the module boundary, mirroring
+ * First-ever test coverage for meta/pinRunnerDigests.ts (34.16-05). Reduced
+ * to arm64-only by Phase 34.18, which retired the macOS x64 (Intel) CI leg
+ * -- see the file's own header docstring. Global `fetch` and `fs/promises`
+ * (`readFile`/`writeFile` only -- this script never touches binaries) are
+ * mocked at the module boundary, mirroring
  * meta/__tests__/downloadHelperBinaries.test.ts's idiom. Every fixture is
  * inlined as a `const` at the top of this file, per that suite family's
  * convention -- no shared meta/__tests__/fixtures/ directory is used here.
  *
  * No `RELEASE_TAGS` version literal is baked into any fixture: the
- * agreeing-tag fixtures are built FROM the live `RELEASE_TAGS` import, and
- * the disagreeing fixture is built by appending a suffix to a live value,
- * so this suite cannot rot the moment a runner version is legitimately
- * bumped (34.16-CONTEXT.md constraint 6).
+ * agreeing-tag fixture is built FROM the live `RELEASE_TAGS` import, and the
+ * disagreeing fixture is built by appending a suffix to a live value, so
+ * this suite cannot rot the moment a runner version is legitimately bumped
+ * (34.16-CONTEXT.md constraint 6).
  */
 
 import { RELEASE_TAGS } from '../releaseTags'
@@ -41,47 +43,34 @@ const mockedFetch = jest.fn()
 // ---------------------------------------------------------------------------
 
 // The currently-tracked file's shape (meta/runnersOnedirDigests.json, post
-// 34.16-04) -- deliberately distinct _comment/layout prose from the real
-// file so a success-path assertion that accidentally compared against the
-// real committed file would be caught, not silently pass.
+// 34.18-02's six-to-three reduction) -- deliberately distinct _comment/layout
+// prose from the real file so a success-path assertion that accidentally
+// compared against the real committed file would be caught, not silently
+// pass.
 const CURRENT_DIGESTS_FILE = {
   _comment: 'FIXTURE _comment -- must round-trip byte-identical.',
   layout: 'onedir-v1',
   runId: null as string | null,
   digests: {
-    'legendary_macOS_x86_64_onedir.tar.gz': 'PENDING-CI-PUBLISH',
     'legendary_macOS_arm64_onedir.tar.gz': 'PENDING-CI-PUBLISH',
-    'gogdl_macOS_x86_64_onedir.tar.gz': 'PENDING-CI-PUBLISH',
     'gogdl_macOS_arm64_onedir.tar.gz': 'PENDING-CI-PUBLISH',
-    'nile_macOS_x86_64_onedir.tar.gz': 'PENDING-CI-PUBLISH',
     'nile_macOS_arm64_onedir.tar.gz': 'PENDING-CI-PUBLISH'
   }
 }
 
-// Six distinct, obviously-synthetic 64-hex digests, one per tracked key.
-const DIGEST_LEGENDARY_X64 = 'a'.repeat(64)
+// Three distinct, obviously-synthetic 64-hex digests, one per tracked key.
 const DIGEST_LEGENDARY_ARM64 = 'b'.repeat(64)
-const DIGEST_GOGDL_X64 = 'c'.repeat(64)
 const DIGEST_GOGDL_ARM64 = 'd'.repeat(64)
-const DIGEST_NILE_X64 = 'e'.repeat(64)
 const DIGEST_NILE_ARM64 = 'f'.repeat(64)
 
-// The success test's expected digests are read from these SAME six
-// constants, never re-typed as separate literals -- see the "vacuity guard"
-// note in the SUMMARY for how this was proven non-vacuous.
+// The success test's expected digests are read from these SAME three
+// constants, never re-typed as separate literals -- see the vacuity control
+// below and the SUMMARY for how this was proven non-vacuous.
 const EXPECTED_DIGESTS: Record<string, string> = {
-  'legendary_macOS_x86_64_onedir.tar.gz': DIGEST_LEGENDARY_X64,
   'legendary_macOS_arm64_onedir.tar.gz': DIGEST_LEGENDARY_ARM64,
-  'gogdl_macOS_x86_64_onedir.tar.gz': DIGEST_GOGDL_X64,
   'gogdl_macOS_arm64_onedir.tar.gz': DIGEST_GOGDL_ARM64,
-  'nile_macOS_x86_64_onedir.tar.gz': DIGEST_NILE_X64,
   'nile_macOS_arm64_onedir.tar.gz': DIGEST_NILE_ARM64
 }
-
-const SHA256SUMS_X64_TEXT =
-  `${DIGEST_LEGENDARY_X64}  legendary_macOS_x86_64_onedir.tar.gz\n` +
-  `${DIGEST_GOGDL_X64}  gogdl_macOS_x86_64_onedir.tar.gz\n` +
-  `${DIGEST_NILE_X64}  nile_macOS_x86_64_onedir.tar.gz\n`
 
 const SHA256SUMS_ARM64_TEXT =
   `${DIGEST_LEGENDARY_ARM64}  legendary_macOS_arm64_onedir.tar.gz\n` +
@@ -89,17 +78,10 @@ const SHA256SUMS_ARM64_TEXT =
   `${DIGEST_NILE_ARM64}  nile_macOS_arm64_onedir.tar.gz\n`
 
 const RUN_ID = 'FIXTURE-RUN-ID-42'
-const OTHER_RUN_ID = 'FIXTURE-RUN-ID-99'
 
 // Built FROM the live RELEASE_TAGS import -- never a hardcoded version
 // literal (34.16-CONTEXT.md constraint 6). Minimal per-runner shape: this
 // script only ever reads `.tag`.
-const AGREEING_MANIFEST_X64 = {
-  legendary: { tag: RELEASE_TAGS.legendary },
-  gogdl: { tag: RELEASE_TAGS.gogdl },
-  nile: { tag: RELEASE_TAGS.nile },
-  runId: RUN_ID
-}
 const AGREEING_MANIFEST_ARM64 = {
   legendary: { tag: RELEASE_TAGS.legendary },
   gogdl: { tag: RELEASE_TAGS.gogdl },
@@ -128,25 +110,17 @@ interface FetchSequenceOverride {
 }
 
 interface FetchSequenceOverrides {
-  sumsX64?: FetchSequenceOverride
   sumsArm64?: FetchSequenceOverride
-  manifestX64?: FetchSequenceOverride
   manifestArm64?: FetchSequenceOverride
 }
 
-/** Queues all four fetch() calls, in the exact order main() awaits them. */
+/** Queues both fetch() calls, in the exact order main() awaits them. */
 function queueFetchSequence(overrides: FetchSequenceOverrides = {}) {
   const seq = {
-    sumsX64: { status: 200, text: SHA256SUMS_X64_TEXT, ...overrides.sumsX64 },
     sumsArm64: {
       status: 200,
       text: SHA256SUMS_ARM64_TEXT,
       ...overrides.sumsArm64
-    },
-    manifestX64: {
-      status: 200,
-      text: JSON.stringify(AGREEING_MANIFEST_X64),
-      ...overrides.manifestX64
     },
     manifestArm64: {
       status: 200,
@@ -154,9 +128,7 @@ function queueFetchSequence(overrides: FetchSequenceOverrides = {}) {
       ...overrides.manifestArm64
     }
   }
-  mockFetchTextOnce(seq.sumsX64.status, seq.sumsX64.text)
   mockFetchTextOnce(seq.sumsArm64.status, seq.sumsArm64.text)
-  mockFetchTextOnce(seq.manifestX64.status, seq.manifestX64.text)
   mockFetchTextOnce(seq.manifestArm64.status, seq.manifestArm64.text)
 }
 
@@ -188,7 +160,7 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('main() success path', () => {
-  it('writes runnersOnedirDigests.json exactly once, preserving _comment/layout and setting runId + all six digests', async () => {
+  it('writes runnersOnedirDigests.json exactly once, preserving _comment/layout and setting runId + all three digests', async () => {
     queueFetchSequence()
 
     await main()
@@ -212,6 +184,17 @@ describe('main() success path', () => {
     expect(parsed.runId).toBe(RUN_ID)
     expect(parsed.digests).toEqual(EXPECTED_DIGESTS)
 
+    // Vacuity control (34.18-03): the happy path must produce EXACTLY three
+    // written digests, and none of the negative-case matchers below fire
+    // against it. Without this, a negative case could be "passing" for an
+    // unrelated reason -- e.g. if main() silently swallowed an error instead
+    // of throwing it, every it.each negative case below would still see
+    // `thrown` be `undefined` and fail at `expect(thrown).toBeDefined()`,
+    // but this control additionally proves the happy path itself produces
+    // the expected shape rather than merely "not throwing".
+    expect(Object.keys(parsed.digests)).toHaveLength(3)
+    expect(mockedWarn).not.toHaveBeenCalled()
+
     // Exactly one trailing newline.
     expect(writtenText.endsWith('\n')).toBe(true)
     expect(writtenText.endsWith('\n\n')).toBe(false)
@@ -224,17 +207,10 @@ describe('main() success path', () => {
 
 describe('fetch failure gate', () => {
   it.each([
-    ['SHA256SUMS-x64', { sumsX64: { status: 404 } }, 'SHA256SUMS-x64', '404'],
     [
       'SHA256SUMS-arm64',
-      { sumsArm64: { status: 500 } },
+      { sumsArm64: { status: 404 } },
       'SHA256SUMS-arm64',
-      '500'
-    ],
-    [
-      'BUILD-MANIFEST-x64.json',
-      { manifestX64: { status: 404 } },
-      'BUILD-MANIFEST-x64.json',
       '404'
     ],
     [
@@ -264,26 +240,26 @@ describe('fetch failure gate', () => {
 describe('SHA256SUMS line-shape gate', () => {
   it.each([
     [
-      'wrong hex length',
-      `${DIGEST_LEGENDARY_X64.slice(0, 63)}  legendary_macOS_x86_64_onedir.tar.gz\n`
+      'wrong hex length (truncated)',
+      `${DIGEST_LEGENDARY_ARM64.slice(0, 63)}  legendary_macOS_arm64_onedir.tar.gz\n`
     ],
     [
       'uppercase hex',
-      `${DIGEST_LEGENDARY_X64.toUpperCase()}  legendary_macOS_x86_64_onedir.tar.gz\n`
+      `${DIGEST_LEGENDARY_ARM64.toUpperCase()}  legendary_macOS_arm64_onedir.tar.gz\n`
     ],
     [
       'single space',
-      `${DIGEST_LEGENDARY_X64} legendary_macOS_x86_64_onedir.tar.gz\n`
+      `${DIGEST_LEGENDARY_ARM64} legendary_macOS_arm64_onedir.tar.gz\n`
     ],
-    ['missing filename', `${DIGEST_LEGENDARY_X64}  \n`]
+    ['missing filename', `${DIGEST_LEGENDARY_ARM64}  \n`]
   ])(
     '%s throws quoting the offending line, writes nothing',
     async (_label, malformedText) => {
-      queueFetchSequence({ sumsX64: { text: malformedText } })
+      queueFetchSequence({ sumsArm64: { text: malformedText } })
 
       const thrown = await expectMainToThrow()
 
-      expect(thrown.message).toContain('SHA256SUMS-x64')
+      expect(thrown.message).toContain('SHA256SUMS-arm64')
       expect(mockedWriteFile).not.toHaveBeenCalled()
     }
   )
@@ -295,47 +271,51 @@ describe('SHA256SUMS line-shape gate', () => {
 
 describe('known-filename gate', () => {
   it('a filename absent from the tracked digests keys throws naming it and the arch, writes nothing', async () => {
-    const unknownLine = `${DIGEST_LEGENDARY_X64}  legendary_macOS_x86_64_onedir_UNKNOWN.tar.gz\n`
-    queueFetchSequence({ sumsX64: { text: unknownLine } })
+    const unknownLine = `${DIGEST_LEGENDARY_ARM64}  legendary_macOS_arm64_onedir_UNKNOWN.tar.gz\n`
+    queueFetchSequence({ sumsArm64: { text: unknownLine } })
 
     const thrown = await expectMainToThrow()
 
     expect(thrown.message).toContain(
-      'legendary_macOS_x86_64_onedir_UNKNOWN.tar.gz'
+      'legendary_macOS_arm64_onedir_UNKNOWN.tar.gz'
     )
-    expect(thrown.message).toContain('x64')
+    expect(thrown.message).toContain('arm64')
     expect(mockedWriteFile).not.toHaveBeenCalled()
   })
 })
 
 // ---------------------------------------------------------------------------
-// Coverage gate -- only two of three runners listed for an arch
+// Coverage gate -- only two of three runners listed
 // ---------------------------------------------------------------------------
 
 describe('coverage gate', () => {
-  it('an arch missing one of its three runner lines throws naming the uncovered key, writes nothing', async () => {
+  it('missing one of the three runner lines throws naming the uncovered key, writes nothing', async () => {
     const twoOfThreeText =
-      `${DIGEST_LEGENDARY_X64}  legendary_macOS_x86_64_onedir.tar.gz\n` +
-      `${DIGEST_GOGDL_X64}  gogdl_macOS_x86_64_onedir.tar.gz\n`
-    queueFetchSequence({ sumsX64: { text: twoOfThreeText } })
+      `${DIGEST_LEGENDARY_ARM64}  legendary_macOS_arm64_onedir.tar.gz\n` +
+      `${DIGEST_GOGDL_ARM64}  gogdl_macOS_arm64_onedir.tar.gz\n`
+    queueFetchSequence({ sumsArm64: { text: twoOfThreeText } })
 
     const thrown = await expectMainToThrow()
 
-    expect(thrown.message).toContain('nile_macOS_x86_64_onedir.tar.gz')
+    expect(thrown.message).toContain('nile_macOS_arm64_onedir.tar.gz')
     expect(mockedWriteFile).not.toHaveBeenCalled()
   })
 })
 
 // ---------------------------------------------------------------------------
-// runId agreement gate
+// runId gate
 // ---------------------------------------------------------------------------
 
-describe('runId agreement gate', () => {
-  it('both manifests reporting a null runId throws, writes nothing', async () => {
+describe('runId gate', () => {
+  it('a null runId throws naming build-runners-onedir-macos.yml and pin:runner-digests, writes nothing', async () => {
+    // 34.18-03: this replaces the pre-34.18 two-manifest
+    // assertAgreedRunId disagreement case. With a single (arm64) manifest,
+    // cross-manifest disagreement is structurally unreachable -- there is
+    // only one manifest to disagree with itself. The disagreement case is
+    // retired, not relaxed: the null-runId case below is its surviving
+    // successor, asserting the same reachable "nothing to record" failure
+    // that a local (non-CI) build would trigger.
     queueFetchSequence({
-      manifestX64: {
-        text: JSON.stringify({ ...AGREEING_MANIFEST_X64, runId: null })
-      },
       manifestArm64: {
         text: JSON.stringify({ ...AGREEING_MANIFEST_ARM64, runId: null })
       }
@@ -344,26 +324,8 @@ describe('runId agreement gate', () => {
     const thrown = await expectMainToThrow()
 
     expect(thrown.message).toContain('null')
-    expect(mockedWriteFile).not.toHaveBeenCalled()
-  })
-
-  it('disagreeing runId values throw naming both, writes nothing', async () => {
-    queueFetchSequence({
-      manifestX64: {
-        text: JSON.stringify({ ...AGREEING_MANIFEST_X64, runId: RUN_ID })
-      },
-      manifestArm64: {
-        text: JSON.stringify({
-          ...AGREEING_MANIFEST_ARM64,
-          runId: OTHER_RUN_ID
-        })
-      }
-    })
-
-    const thrown = await expectMainToThrow()
-
-    expect(thrown.message).toContain(RUN_ID)
-    expect(thrown.message).toContain(OTHER_RUN_ID)
+    expect(thrown.message).toContain('build-runners-onedir-macos.yml')
+    expect(thrown.message).toContain('pin:runner-digests')
     expect(mockedWriteFile).not.toHaveBeenCalled()
   })
 })
@@ -375,9 +337,9 @@ describe('runId agreement gate', () => {
 describe('RELEASE_TAGS drift (non-fatal)', () => {
   it('a manifest tag disagreeing with the live RELEASE_TAGS value warns naming the runner/values/run id, and still writes once', async () => {
     queueFetchSequence({
-      manifestX64: {
+      manifestArm64: {
         text: JSON.stringify({
-          ...AGREEING_MANIFEST_X64,
+          ...AGREEING_MANIFEST_ARM64,
           legendary: { tag: DRIFTED_TAG }
         })
       }
@@ -404,27 +366,24 @@ describe('RELEASE_TAGS drift (non-fatal)', () => {
 
 describe('parseSha256Sums (unit)', () => {
   it('parses three well-formed lines into digest/filename pairs', () => {
-    const parsed = parseSha256Sums(SHA256SUMS_X64_TEXT, 'x64')
+    const parsed = parseSha256Sums(SHA256SUMS_ARM64_TEXT, 'arm64')
     expect(parsed).toEqual([
       {
-        digest: DIGEST_LEGENDARY_X64,
-        filename: 'legendary_macOS_x86_64_onedir.tar.gz'
+        digest: DIGEST_LEGENDARY_ARM64,
+        filename: 'legendary_macOS_arm64_onedir.tar.gz'
       },
       {
-        digest: DIGEST_GOGDL_X64,
-        filename: 'gogdl_macOS_x86_64_onedir.tar.gz'
+        digest: DIGEST_GOGDL_ARM64,
+        filename: 'gogdl_macOS_arm64_onedir.tar.gz'
       },
-      { digest: DIGEST_NILE_X64, filename: 'nile_macOS_x86_64_onedir.tar.gz' }
+      { digest: DIGEST_NILE_ARM64, filename: 'nile_macOS_arm64_onedir.tar.gz' }
     ])
   })
 })
 
 describe('assertCoversAllKeys (unit)', () => {
   it('does not throw when every existing key is covered exactly once', () => {
-    const parsed = [
-      ...parseSha256Sums(SHA256SUMS_X64_TEXT, 'x64'),
-      ...parseSha256Sums(SHA256SUMS_ARM64_TEXT, 'arm64')
-    ]
+    const parsed = parseSha256Sums(SHA256SUMS_ARM64_TEXT, 'arm64')
     expect(() =>
       assertCoversAllKeys(parsed, Object.keys(CURRENT_DIGESTS_FILE.digests))
     ).not.toThrow()
