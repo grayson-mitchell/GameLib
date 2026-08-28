@@ -3,11 +3,12 @@ phase: 35-electron-cutover-remove-the-electron-build
 plan: 05
 subsystem: persistence
 tags: [electron-store, conf, store-backend, pathShim, containment, D-04, D-03]
+status: COMPLETE — scope corrected mid-plan from 9 to ~48 sites, operator-approved 2026-08-29
 
 # Dependency graph
 requires: [35-01]
 provides:
-  - "`electron-store` is gone from package.json, pnpm-lock.yaml and every import site in src/ — the last third-party runtime `require('electron')` in the tree"
+  - "`electron-store` is gone from every import site in src/ and from package.json DEPENDENCIES — the last third-party runtime `require('electron')` in the tree. CORRECTED AFTER THIS SUMMARY WAS WRITTEN: it was re-added as a DEVDEPENDENCY in commit 805a35e84, because src/preload/api/misc.ts:182 still holds one deliberately-deferred lazy require and frontend/helpers/electronStores.ts calls window.api.storeNew synchronously at module import — the next clean install would have broken `pnpm start` at boot. See D-35-05-05; plan 35-16 owns the final removal. The original wording claiming it is gone from package.json and pnpm-lock.yaml is FALSE as of 805a35e84 and is corrected here rather than deleted."
   - "`src/backend/store_backend.ts`: first-party shim over conf@10.2.0 owning electron-store's option translation (name->configName, relative cwd -> join(userData, cwd)) with cwd sourced from pathShim.getPath('userData')"
   - "CORRECTION to plan 35-05's own Task 2: its prescribed method ('add cwd, leave name exactly as it is') was measured to cause total silent data loss and must not be followed"
   - "Store path parity gate (cache.test.ts): 24 cache stores resolve to distinct files under <userData>/store_cache/, proven non-vacuous against the naive passthrough"
@@ -44,6 +45,7 @@ key-decisions:
   - "Package Legitimacy Gate PASSED (human, 2026-08-29): conf@^10.2.0, NOT latest — 11+ are ESM-only, 15 needs Node>=20. 10.2.0 was already lockfile-pinned as electron-store's own dependency, so supply-chain delta is zero. Accepted deferral: sitting on a 2022-era major while upstream is at 15."
   - "Option (B) per operator ruling: sidecar test suites keep redirecting to fileStore.ts; production runs conf. Preserves every existing assertion."
   - "Containment split into two anchors rather than fileStore's single userData anchor — required, not stylistic (measured failure)."
+completed: 2026-08-29
 requirements-completed: [REQ-35-03]
 date: 2026-08-29
 ---
