@@ -192,11 +192,25 @@ const TRAY_RECENT_TITLE_MAX_CHARS: usize = 60;
 /// sidecar registration, and no chance of a send-channel with no registered listener.
 const RECENT_GAMES_CHANGED_CHANNEL: &str = "recentGamesChanged";
 
-/// A single recent-game tray entry: the appName that will be launched and the label shown.
+/// The `Runner` union from `src/common/types.ts:23`, mirrored here as an allow-list.
+///
+/// Kept in lockstep with that union deliberately. `zoom` is a DROPPED platform in this project
+/// and gets no new handling anywhere — but it is still a member of the TypeScript union, so
+/// omitting it here would make this list a silently-diverging copy rather than a mirror.
+const TRAY_RUNNERS: &[&str] = &["legendary", "gog", "sideload", "nile", "zoom", "steam"];
+
+/// A single recent-game tray entry: the appName that will be launched, the label shown, and --
+/// when the entry was written by a build that persists it -- the runner that owns the game.
+///
+/// `runner` is `Option` because it is genuinely absent for real users, not as a hedge: every
+/// entry written before Phase 35 plan 06 carries no runner, and the operator's own live
+/// `games.recent` was 18 such entries at the time this was written. The `None` arm is the one
+/// every existing install runs on, so it is the arm that must not regress.
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct TrayRecentGame {
     app_name: String,
     title: String,
+    runner: Option<String>,
 }
 
 /// The three tray settings `TraySettings.tsx` exposes, plus the recent-games limit, read once
@@ -236,6 +250,35 @@ fn tray_recent_games() -> &'static Mutex<Vec<TrayRecentGame>> {
 
 fn tray_settings() -> TraySettingsSnapshot {
     *TRAY_SETTINGS.get_or_init(TraySettingsSnapshot::default)
+}
+
+/// The cached runner for a recent-game entry, if the entry carries one.
+///
+/// `Some` means the entry was written by a build that persists `runner` and the tray can call
+/// `launch` directly. `None` means either a legacy entry (written before Phase 35 plan 06) or
+/// one whose stored runner failed the `TRAY_RUNNERS` check — both fall back to the
+/// `trayResolveRunner` probe. A poisoned mutex degrades to `None`, i.e. to the probe, which is
+/// the slower-but-correct path rather than a failed launch.
+fn tray_recent_runner_for(app_name: &str) -> Option<String> {
+    let guard = match tray_recent_games().lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => {
+            eprintln!("[shell] WARN: tray recent-games cache mutex poisoned -- recovering");
+            poisoned.into_inner()
+        }
+    };
+    recent_runner_in(&guard, app_name)
+}
+
+/// The pure half of `tray_recent_runner_for`: find `app_name` in a recent-games slice and return
+/// its runner, if it has one. Split out so the launch-path BRANCH (persisted runner vs legacy
+/// fallback) is unit-testable without mutating the process-wide cache — the same
+/// pure-logic-gets-a-test discipline the rest of this module follows.
+fn recent_runner_in(games: &[TrayRecentGame], app_name: &str) -> Option<String> {
+    games
+        .iter()
+        .find(|g| g.app_name == app_name)
+        .and_then(|g| g.runner.clone())
 }
 
 /// Whether `s` is a "plain appName" in the sense T-35-20 requires: non-empty, bounded, and
@@ -345,9 +388,21 @@ fn tray_recent_games_from_value(value: &Value, limit: usize) -> Vec<TrayRecentGa
             .and_then(|v| v.as_str())
             .unwrap_or_default()
             .to_string();
+        // Validated against the mirrored `Runner` union rather than trusted: this value comes
+        // off disk, and a bad one would be handed to the `launch` channel. `handleLaunch` has
+        // its own `hasOwnProperty(libraryManagerMap, rawRunner)` guard (T-34.5-46-01), so this
+        // is defence in depth -- but an unrecognised runner degrading to `None` also does
+        // something strictly better than rejecting the entry: it falls through to the
+        // `trayResolveRunner` probe, exactly as a legacy entry does.
+        let runner = item
+            .get("runner")
+            .and_then(|v| v.as_str())
+            .filter(|r| TRAY_RUNNERS.contains(r))
+            .map(|r| r.to_string());
         out.push(TrayRecentGame {
             app_name: app_name.to_string(),
             title,
+            runner,
         });
     }
     out
@@ -613,35 +668,59 @@ fn open_about_window_from_tray(app: &AppHandle) {
 
 /// Dispatch a recent-game launch to the sidecar, in-process.
 ///
-/// Two hops, both on a spawned worker thread so a menu click never blocks the UI thread:
-///   1. `trayResolveRunner` -> the runner for this appName (the tray entry has none).
+/// One hop when the cached entry carries a runner, two when it does not — both on a spawned
+/// worker thread so a menu click never blocks the UI thread:
+///   1. (ONLY when `known_runner` is `None`) `trayResolveRunner` -> the runner for this appName.
 ///   2. `launch` -> the SAME invoke handler the renderer's own launch button uses.
+///
+/// **Why the probe still exists.** `RecentGame` now persists `runner` (`common/types.ts`), so a
+/// freshly-written entry needs no lookup at all — the value was always available at the write
+/// site and used to be discarded there. But the field is optional and genuinely absent for every
+/// entry written before that change, which is to say for every existing install's entire history.
+/// `trayResolveRunner` is therefore demoted from "the mechanism" to "the LEGACY FALLBACK", and is
+/// deliberately not deleted: a migration that stranded those entries would trade a slow-but-
+/// correct path for a dead menu item.
 ///
 /// `launch` is not on `LONG_RUNNING_CHANNELS`, so for the runners whose handler awaits the whole
 /// game session this call reports `sidecar invoke timed out` after `INVOKE_TIMEOUT` while the
 /// game keeps running. That is expected here and is why the outcome is logged rather than
 /// surfaced -- the tray has nothing to show the user either way.
-fn dispatch_tray_launch(app: &AppHandle, app_name: String) {
+fn dispatch_tray_launch(app: &AppHandle, app_name: String, known_runner: Option<String>) {
     let Some(state) = app.try_state::<Arc<SidecarState>>() else {
         eprintln!("[shell] WARN: tray recent-game launch: no sidecar state -- skipping");
         return;
     };
     let state = state.inner().clone();
     thread::spawn(move || {
-        let runner = match state.invoke(
-            TRAY_RESOLVE_RUNNER_CHANNEL.to_string(),
-            vec![Value::String(app_name.clone())],
-        ) {
-            Ok(Value::String(runner)) => runner,
-            Ok(_) => {
+        let runner = match known_runner {
+            Some(runner) => {
                 eprintln!(
-                    "[shell] tray recent-game launch: sidecar could not resolve a runner for the selected entry -- not launching"
+                    "[shell] tray recent-game launch: using the runner persisted on the entry (no lookup needed)"
                 );
-                return;
+                runner
             }
-            Err(e) => {
-                eprintln!("[shell] WARN: tray recent-game launch: runner lookup failed ({e})");
-                return;
+            None => {
+                eprintln!(
+                    "[shell] tray recent-game launch: entry carries no runner (pre-Phase-35 entry) -- falling back to the trayResolveRunner probe"
+                );
+                match state.invoke(
+                    TRAY_RESOLVE_RUNNER_CHANNEL.to_string(),
+                    vec![Value::String(app_name.clone())],
+                ) {
+                    Ok(Value::String(runner)) => runner,
+                    Ok(_) => {
+                        eprintln!(
+                            "[shell] tray recent-game launch: sidecar could not resolve a runner for the selected entry -- not launching"
+                        );
+                        return;
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "[shell] WARN: tray recent-game launch: runner lookup failed ({e})"
+                        );
+                        return;
+                    }
+                }
             }
         };
         let mut payload = serde_json::Map::new();
@@ -6737,6 +6816,7 @@ fn main() {
                                         Some(app_name) => dispatch_tray_launch(
                                             app_handle,
                                             app_name.to_string(),
+                                            tray_recent_runner_for(app_name),
                                         ),
                                         None => {
                                             if id.starts_with(TRAY_RECENT_ID_PREFIX) {
@@ -7090,7 +7170,7 @@ mod tests {
     fn recent_games_parse_drops_unusable_entries_and_respects_the_limit() {
         let payload = json!([
             { "appName": "Iris", "title": "Phoenix Point" },
-            { "appName": "620", "title": "Portal 2" },
+            { "appName": "620", "title": "Portal 2", "runner": "steam" },
             { "appName": "../escape", "title": "rejected" },
             { "appName": "Iris", "title": "duplicate" },
             { "title": "no appName at all" },
@@ -7100,14 +7180,116 @@ mod tests {
         assert_eq!(
             games,
             vec![
-                TrayRecentGame { app_name: "Iris".into(), title: "Phoenix Point".into() },
-                TrayRecentGame { app_name: "620".into(), title: "Portal 2".into() },
-                TrayRecentGame { app_name: "1124300".into(), title: "HUMANKIND".into() },
+                TrayRecentGame {
+                    app_name: "Iris".into(),
+                    title: "Phoenix Point".into(),
+                    runner: None
+                },
+                TrayRecentGame {
+                    app_name: "620".into(),
+                    title: "Portal 2".into(),
+                    runner: Some("steam".into())
+                },
+                TrayRecentGame {
+                    app_name: "1124300".into(),
+                    title: "HUMANKIND".into(),
+                    runner: None
+                },
             ]
         );
         // The limit truncates rather than erroring.
         assert_eq!(tray_recent_games_from_value(&payload, 1).len(), 1);
         assert_eq!(tray_recent_games_from_value(&payload, 0).len(), 0);
+    }
+
+    // ---- Persisted runner vs the legacy probe fallback (Phase 35 plan 06, operator-initiated) ----
+    //
+    // `RecentGame` used to be `{ appName, title }`, so the tray had to reconstruct the runner by
+    // probing up to six store managers via `trayResolveRunner` — for a value `addRecentGame`
+    // already held and discarded. The type now persists it. These tests cover BOTH arms of the
+    // resulting branch, because the fallback arm is what every pre-existing install runs on.
+
+    #[test]
+    fn a_persisted_runner_is_parsed_and_validated() {
+        let payload = json!([
+            { "appName": "620", "title": "Portal 2", "runner": "steam" },
+            { "appName": "Iris", "title": "Phoenix Point", "runner": "legendary" },
+            { "appName": "1207658777", "title": "Empire Earth", "runner": "gog" }
+        ]);
+        let games = tray_recent_games_from_value(&payload, 5);
+        assert_eq!(games[0].runner.as_deref(), Some("steam"));
+        assert_eq!(games[1].runner.as_deref(), Some("legendary"));
+        assert_eq!(games[2].runner.as_deref(), Some("gog"));
+    }
+
+    #[test]
+    fn every_member_of_the_typescript_runner_union_survives_the_parse() {
+        // Pins TRAY_RUNNERS against `common/types.ts:23`. `zoom` is a DROPPED platform and gets
+        // no new handling anywhere — but it IS in that union, so it must survive the parse or
+        // this allow-list is a silently-diverging copy rather than a mirror.
+        for runner in TRAY_RUNNERS {
+            let payload = json!([{ "appName": "x1", "title": "T", "runner": runner }]);
+            let games = tray_recent_games_from_value(&payload, 5);
+            assert_eq!(
+                games.first().and_then(|g| g.runner.as_deref()),
+                Some(*runner),
+                "runner {runner:?} should survive the parse"
+            );
+        }
+    }
+
+    #[test]
+    fn a_legacy_entry_and_a_bogus_runner_both_degrade_to_none() {
+        // THE ARM EVERY EXISTING INSTALL IS ON. A pre-Phase-35 entry has no `runner` key at all;
+        // it must parse cleanly with `runner: None` so the launch path falls back to the probe.
+        // A recognised-shape-but-unknown runner degrades the SAME way rather than being dropped
+        // or forwarded — falling back is strictly better than rejecting a launchable entry.
+        let payload = json!([
+            { "appName": "legacy1", "title": "No runner key at all" },
+            { "appName": "bogus1", "title": "Unknown runner", "runner": "not-a-runner" },
+            { "appName": "bogus2", "title": "Wrong type", "runner": 7 },
+            { "appName": "bogus3", "title": "Null runner", "runner": null }
+        ]);
+        let games = tray_recent_games_from_value(&payload, 5);
+        assert_eq!(games.len(), 4, "no entry may be DROPPED for a bad runner");
+        for game in &games {
+            assert_eq!(game.runner, None, "{} should degrade to None", game.app_name);
+        }
+    }
+
+    #[test]
+    fn the_launch_branch_uses_a_persisted_runner_and_falls_back_without_one() {
+        let games = vec![
+            TrayRecentGame {
+                app_name: "620".into(),
+                title: "Portal 2".into(),
+                runner: Some("steam".into()),
+            },
+            TrayRecentGame {
+                app_name: "legacy1".into(),
+                title: "Written before this change".into(),
+                runner: None,
+            },
+        ];
+
+        // Persisted -> `dispatch_tray_launch` receives Some(..) and SKIPS the resolve invoke.
+        assert_eq!(
+            recent_runner_in(&games, "620"),
+            Some("steam".to_string()),
+            "a persisted runner must reach the launch call without a lookup"
+        );
+
+        // Legacy -> None, so the probe fallback runs. This must not regress.
+        assert_eq!(
+            recent_runner_in(&games, "legacy1"),
+            None,
+            "a legacy entry must fall back to the trayResolveRunner probe"
+        );
+
+        // An appName not in the cache at all also falls back rather than mis-resolving to a
+        // neighbouring entry's runner.
+        assert_eq!(recent_runner_in(&games, "not-in-cache"), None);
+        assert_eq!(recent_runner_in(&[], "620"), None);
     }
 
     #[test]
@@ -7122,10 +7304,18 @@ mod tests {
 
     #[test]
     fn recent_title_falls_back_to_app_name_and_is_bounded() {
-        let untitled = TrayRecentGame { app_name: "620".into(), title: "   ".into() };
+        let untitled = TrayRecentGame {
+            app_name: "620".into(),
+            title: "   ".into(),
+            runner: None,
+        };
         assert_eq!(tray_recent_title(&untitled), "620");
 
-        let controls = TrayRecentGame { app_name: "620".into(), title: "a\nb\tc".into() };
+        let controls = TrayRecentGame {
+            app_name: "620".into(),
+            title: "a\nb\tc".into(),
+            runner: None,
+        };
         assert_eq!(tray_recent_title(&controls), "a b c");
 
         // Multi-byte title over the cap: truncation is on a CHARACTER boundary, so this can
@@ -7133,6 +7323,7 @@ mod tests {
         let long = TrayRecentGame {
             app_name: "620".into(),
             title: "\u{e9}".repeat(200),
+            runner: None,
         };
         let rendered = tray_recent_title(&long);
         assert_eq!(rendered.chars().count(), TRAY_RECENT_TITLE_MAX_CHARS + 1);

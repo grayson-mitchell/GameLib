@@ -623,6 +623,27 @@ export type RuntimeName = 'eac_runtime' | 'battleye_runtime' | 'umu'
 export type RecentGame = {
   appName: string
   title: string
+  /**
+   * The runner that owns this game. OPTIONAL, and optional for a specific
+   * reason rather than out of caution: entries written before Phase 35 plan 06
+   * do not carry it, and every existing user's `games.recent` is full of them.
+   * A consumer that needs a runner must therefore handle its absence — see
+   * `main.rs`'s `dispatch_tray_launch`, which falls back to the
+   * `trayResolveRunner` probe rather than dropping a legacy entry on the floor.
+   *
+   * `addRecentGame` (`backend/recent_games/recent_games.ts`) is the ONLY writer
+   * that populates this. It always had the value: its argument is a `GameInfo`,
+   * which carries `runner` as a required field, and the write used to discard it.
+   *
+   * DELIBERATELY inherited by `HiddenGame`/`FavouriteGame` below, and
+   * deliberately never populated by either. Their only writers
+   * (`GlobalState.tsx`'s `hideGame`/`addGameToFavourites`) build a literal from
+   * two scalar string arguments with no `GameInfo` in scope, so there is no
+   * value they could put here even by accident. Verified by census before this
+   * field was added, rather than assumed: the aliases were kept intact instead
+   * of being split into three separate types.
+   */
+  runner?: Runner
 }
 
 export type HiddenGame = RecentGame

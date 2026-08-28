@@ -94,9 +94,17 @@ export interface EngineDepsInputs {
   favouriteGames: FavouriteGame[]
   /**
    * The same unfiltered union `buildGridPipeline` receives. Needed because
-   * `FavouriteGame` (= `RecentGame` = `{ appName, title }`) carries no
-   * `runner`, while `filterEngine.gameKey` is `${app_name}_${runner}` --
-   * the runner can only come from the library entry itself.
+   * `FavouriteGame` (= `HiddenGame` = `RecentGame`) carries no `runner` HERE,
+   * while `filterEngine.gameKey` is `${app_name}_${runner}` -- the runner can
+   * only come from the library entry itself.
+   *
+   * Phase 35 plan 06 added an OPTIONAL `runner?` to `RecentGame`, which the
+   * aliases inherit. This input is still required and must not be removed on
+   * the strength of that field: the only writer that populates it is
+   * `addRecentGame`, and the favourites/hidden writers
+   * (`GlobalState.tsx`'s `addGameToFavourites`/`hideGame`) construct their
+   * literals from two scalar strings and never set it. A `FavouriteGame` here
+   * therefore has `runner === undefined` in every case, not merely usually.
    */
   libraryUnion: GameInfo[]
   /** Raw `localStorage['nonAvailableGames']`, parsed here. */
