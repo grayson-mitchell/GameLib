@@ -544,9 +544,57 @@ read **v0.7**, not the `0.0.0` placeholder. This discharges the T-34.1-17 regres
 Electron side (the only side on which it was ever observable, since no Tauri route to this window
 has ever existed).
 
-**Tauri leg — Observed:**
+**Tauri leg — Observed:** `NOT ATTEMPTED` — STRUCTURALLY UNREACHABLE, confirmed by census rather
+than by failing to find it in the UI.
 
-**Verdict:**
+A Tauri tray DOES exist (it shipped in Phase 34.1 Plan 06), so "no tray" is not the reason. Its
+menu, re-read at this commit rather than trusted from the source's line numbers, has exactly two
+items:
+
+```rust
+MenuItemBuilder::with_id("show", "Show GameLib").build(app),
+MenuItemBuilder::with_id("quit", "Quit").build(app),
+// Deliberately excludes the recent-games submenu, About/Reload/Debug,
+// the macOS dock menu, and ...
+```
+
+The exclusion is explicit and deliberate in the source comment. Corroborated from the other
+direction: `showAboutWindow`'s ONLY callers in the entire tree are `src/backend/tray_icon/
+tray_icon.ts:124` (Electron's tray) and `src/backend/main.ts:744`'s `addListener`. There are ZERO
+frontend callers, so no settings panel or menu can reach it either.
+
+**A near-miss worth recording, because it would have produced a false PASS.** The operator first
+found a surface reading **v0.70** which, when clicked, showed **0.70 release notes** — and that is
+NOT the About window. It is the separate version/changelog feature (`GameChangeLog`,
+`HideChangelogOnStartup`). `public/about.html` is four lines long and contains no release notes at
+all:
+
+```
+GameLib
+Version: unknown
+License: GPL V3
+https://github.com/grayson-mitchell/GameLib
+```
+
+Scoring the changelog as the About window would have recorded this item as reachable-and-working on
+a surface `tauriShowAboutWindow` never renders. Distinguished by reading `about.html`, not by
+argument.
+
+**Verdict:** `NOT ATTEMPTED`
+
+Correct per this document's own rule and per the item's own Tauri-leg branch (b): confirm
+structurally unreachable, i.e. `NOT ATTEMPTED` because there is genuinely nothing to click, not
+because nobody looked. This is the KNOWN, ACCEPTED gap the source predicted — not a fresh finding,
+and explicitly not a fresh Tauri-only bug.
+
+**Input for plan 35-06 (wave 2, which builds the real Tauri tray under D-06):** D-05's rule is that
+nothing ships an affordance it cannot honour. The Electron tray HAS an About entry that opens a
+working window with a real version string (measured v0.7 on this run, not the `0.0.0` regression).
+When 35-06 builds out the Tauri tray it must make a deliberate, recorded choice: wire About in, or
+state why the Electron entry is being dropped rather than mirrored. Silently shipping a tray that
+omits a sibling affordance is the shape D-05 exists to prevent. Note also that `about.html` ships
+the literal string `Version: unknown`, so whatever renders it must inject the real version — the
+Electron path does; any new path must be checked, not assumed.
 
 **Severity if TAURI-ONLY:** BLOCKS D-16 GATE **conditionally** — D-16's scope explicitly names
 "the newly-built tray/deep-link/wake-lock work" as covered. If D-06's Tauri tray has landed and
