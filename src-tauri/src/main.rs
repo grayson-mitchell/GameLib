@@ -156,6 +156,504 @@ fn tray_image(dark: bool) -> Image<'static> {
     Image::new(&TRAY_ICON_FALLBACK_PIXEL, 1, 1)
 }
 
+// ---- Tray recent-games / settings surface (Phase 35 Plan 06, D-05/D-06, REQ-35-04) ----
+//
+// Phase 34.1 Plan 06 shipped a DELIBERATELY bounded tray (tooltip, left-click show/focus, a
+// two-item Show/Quit menu) and re-deferred the rest to Phase 35. This block is that deferral
+// coming due: the recent-games section, the About item, and the three tray SETTINGS the
+// Electron tray (`src/backend/tray_icon/tray_icon.ts`) honoured. Everything here keeps
+// T-34.1-22's discipline -- no `unwrap()`, no `panic!`, every failure logs
+// `[shell] WARN: ... -- continuing without tray` and continues.
+
+/// Menu-id prefix for a recent-game entry. The id is CONSTRUCTED here and PARSED back in the
+/// tray's `on_menu_event`, so the round-trip is a genuine parsing choke point on a string that
+/// reaches a game launch (T-35-20) -- hence `tray_recent_menu_id`/`tray_recent_app_name` below
+/// share one predicate and carry their own `#[cfg(test)]` coverage.
+const TRAY_RECENT_ID_PREFIX: &str = "recent:";
+
+/// Fallback for `settings.maxRecentGames` when it is absent or unusable. Mirrors
+/// `src/backend/recent_games/recent_games.ts`'s own `maxRecentGames || 5` -- READ from that
+/// file, not chosen here.
+const TRAY_RECENT_DEFAULT_LIMIT: usize = 5;
+
+/// Hard ceiling on rendered recent-game entries regardless of what `maxRecentGames` says. The
+/// setting is user-editable JSON on disk; a pathological value (or a corrupted file) must not
+/// be able to ask the shell to build an unbounded native menu at startup.
+const TRAY_RECENT_MAX_LIMIT: usize = 20;
+
+/// Longest tray menu label we will render for a recent game. Titles come from library data
+/// (T-35-20's "not wholly trusted" note); a very long one would produce an unusable menu.
+const TRAY_RECENT_TITLE_MAX_CHARS: usize = 60;
+
+/// The frontend-message channel the sidecar pushes on every recent-games mutation
+/// (`recent_games.ts`'s `setRecentGames` -> `sendFrontendMessage('recentGamesChanged', ...)`).
+/// The shell's reader thread already sees every such frame on its way to the webview, so the
+/// tray gets its live rebuild signal by OBSERVING that existing push -- no new channel, no new
+/// sidecar registration, and no chance of a send-channel with no registered listener.
+const RECENT_GAMES_CHANGED_CHANNEL: &str = "recentGamesChanged";
+
+/// A single recent-game tray entry: the appName that will be launched and the label shown.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct TrayRecentGame {
+    app_name: String,
+    title: String,
+}
+
+/// The three tray settings `TraySettings.tsx` exposes, plus the recent-games limit, read once
+/// at startup from GlobalConfig's on-disk `config.json`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct TraySettingsSnapshot {
+    no_tray_icon: bool,
+    exit_to_tray: bool,
+    start_in_tray: bool,
+    max_recent_games: usize,
+}
+
+impl Default for TraySettingsSnapshot {
+    fn default() -> Self {
+        Self {
+            no_tray_icon: false,
+            exit_to_tray: false,
+            start_in_tray: false,
+            max_recent_games: TRAY_RECENT_DEFAULT_LIMIT,
+        }
+    }
+}
+
+/// Shell-side cache of the recent-games list backing the tray menu. Seeded at startup from
+/// `configStore`'s on-disk JSON and refreshed whenever a `recentGamesChanged` frontend-message
+/// frame passes through the reader thread.
+static TRAY_RECENT_GAMES: OnceLock<Mutex<Vec<TrayRecentGame>>> = OnceLock::new();
+
+/// Startup snapshot of the tray settings. `OnceLock` because these are read exactly once, in
+/// `.setup()`, before the tray is built -- reading them later would not help: `noTrayIcon` and
+/// `startInTray` are both decisions that can only be made at startup.
+static TRAY_SETTINGS: OnceLock<TraySettingsSnapshot> = OnceLock::new();
+
+fn tray_recent_games() -> &'static Mutex<Vec<TrayRecentGame>> {
+    TRAY_RECENT_GAMES.get_or_init(|| Mutex::new(Vec::new()))
+}
+
+fn tray_settings() -> TraySettingsSnapshot {
+    *TRAY_SETTINGS.get_or_init(TraySettingsSnapshot::default)
+}
+
+/// Whether `s` is a "plain appName" in the sense T-35-20 requires: non-empty, bounded, and
+/// composed only of characters every runner's appName actually uses (legendary's alphanumeric
+/// ids, GOG/Steam numeric ids, sideload UUIDs). Deliberately an ALLOW-list, not a deny-list --
+/// the same fail-closed discipline `protocol_url_arg` established for the deep-link surface.
+///
+/// Load-bearing in BOTH directions: the same predicate gates id CONSTRUCTION and id PARSING, so
+/// an entry whose appName could not survive the round-trip is never rendered in the first
+/// place, rather than rendering a menu item whose click silently does nothing.
+fn is_plain_app_name(s: &str) -> bool {
+    !s.is_empty()
+        && s.len() <= 128
+        && s != "."
+        && s != ".."
+        && s
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-')
+}
+
+/// Build the tray menu id for a recent-game entry, or `None` when `app_name` is not a plain
+/// appName (see `is_plain_app_name`).
+fn tray_recent_menu_id(app_name: &str) -> Option<String> {
+    if is_plain_app_name(app_name) {
+        Some(format!("{TRAY_RECENT_ID_PREFIX}{app_name}"))
+    } else {
+        None
+    }
+}
+
+/// Parse a recent-game appName back out of a tray menu id. Returns `None` for any id that is
+/// not `recent:<plain appName>` -- a missing prefix, an empty remainder, or a remainder
+/// carrying anything outside the allow-list (path separators, `..`, whitespace, control
+/// characters, `;`, quotes, ...).
+fn tray_recent_app_name(menu_id: &str) -> Option<&str> {
+    let rest = menu_id.strip_prefix(TRAY_RECENT_ID_PREFIX)?;
+    if is_plain_app_name(rest) {
+        Some(rest)
+    } else {
+        None
+    }
+}
+
+/// The label rendered for a recent game. Falls back to the appName when the title is blank,
+/// collapses newlines/tabs (a native menu renders them as stray glyphs), and truncates on a
+/// CHARACTER boundary so a multi-byte title can never panic a slice.
+fn tray_recent_title(game: &TrayRecentGame) -> String {
+    let raw = game.title.trim();
+    let source = if raw.is_empty() {
+        game.app_name.as_str()
+    } else {
+        raw
+    };
+    let cleaned: String = source
+        .chars()
+        .map(|c| if c.is_control() { ' ' } else { c })
+        .collect();
+    if cleaned.chars().count() <= TRAY_RECENT_TITLE_MAX_CHARS {
+        cleaned
+    } else {
+        let mut out: String = cleaned.chars().take(TRAY_RECENT_TITLE_MAX_CHARS).collect();
+        out.push('…');
+        out
+    }
+}
+
+/// Clamp `settings.maxRecentGames` into a sane menu size. Mirrors `recent_games.ts`'s
+/// `maxRecentGames || 5` for the absent/zero case, then applies this file's own hard cap.
+fn tray_recent_limit(raw: Option<u64>) -> usize {
+    match raw {
+        Some(n) if n > 0 => (n as usize).min(TRAY_RECENT_MAX_LIMIT),
+        _ => TRAY_RECENT_DEFAULT_LIMIT,
+    }
+}
+
+/// Parse a `RecentGame[]` JSON array (`[{ "appName": ..., "title": ... }]`) into tray entries,
+/// dropping anything that is not a usable, launchable entry and truncating to `limit`.
+///
+/// Total by construction: every shape that is not an array of objects carrying a plain-appName
+/// `appName` yields an empty/short list rather than an error -- a malformed recent-games file
+/// must degrade to "no recent games in the tray", never to a failed tray build.
+fn tray_recent_games_from_value(value: &Value, limit: usize) -> Vec<TrayRecentGame> {
+    let Some(items) = value.as_array() else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for item in items {
+        if out.len() >= limit {
+            break;
+        }
+        let Some(app_name) = item.get("appName").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        if !is_plain_app_name(app_name) {
+            continue;
+        }
+        // Duplicate appNames would produce two menu items with the SAME id; tauri resolves a
+        // click to one of them, so the second is dead weight at best.
+        if out
+            .iter()
+            .any(|g: &TrayRecentGame| g.app_name == app_name)
+        {
+            continue;
+        }
+        let title = item
+            .get("title")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_string();
+        out.push(TrayRecentGame {
+            app_name: app_name.to_string(),
+            title,
+        });
+    }
+    out
+}
+
+/// Read the four tray-relevant fields out of GlobalConfig's on-disk shape
+/// (`{ "defaultSettings": AppSettings, "version": ... }`, `backend/config.ts:408`). Absent or
+/// wrong-typed fields fall back to the defaults -- a config the shell cannot read must produce
+/// a WORKING tray, not no tray.
+fn tray_settings_from_config(config: &Value) -> TraySettingsSnapshot {
+    let settings = config.get("defaultSettings");
+    let flag = |key: &str| -> bool {
+        settings
+            .and_then(|s| s.get(key))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+    };
+    TraySettingsSnapshot {
+        no_tray_icon: flag("noTrayIcon"),
+        exit_to_tray: flag("exitToTray"),
+        start_in_tray: flag("startInTray"),
+        max_recent_games: tray_recent_limit(
+            settings
+                .and_then(|s| s.get("maxRecentGames"))
+                .and_then(|v| v.as_u64()),
+        ),
+    }
+}
+
+/// `<appData>/GameLib` -- the same folder `src/backend/sidecar/pathShim.ts`'s
+/// `getPath('userData')` resolves to, and therefore the same folder `constants/paths.ts`'s
+/// `appFolder` resolves to inside the sidecar.
+///
+/// This is a DELIBERATE, read-only duplication of that path logic, and it is worth naming why
+/// rather than routing through the sidecar: `noTrayIcon` and `startInTray` are decisions that
+/// must be made INSIDE `.setup()`, before the tray is built and before the main window is ever
+/// displayed. A `sidecar_invoke` round-trip there would either block startup on the sidecar's
+/// boot or land late enough to show a tray icon / a window the user asked not to see -- the
+/// visible flash being exactly the "affordance that does not do what it says" this phase's D-05
+/// exists to eliminate. Every read below is fail-open: an unreadable or unparseable file yields
+/// `TraySettingsSnapshot::default()`, i.e. today's behaviour.
+fn gamelib_app_folder() -> Option<std::path::PathBuf> {
+    #[cfg(target_os = "macos")]
+    let base = std::env::var_os("HOME")
+        .map(std::path::PathBuf::from)
+        .map(|h| h.join("Library").join("Application Support"));
+    #[cfg(target_os = "windows")]
+    let base = std::env::var_os("APPDATA")
+        .map(std::path::PathBuf::from)
+        .or_else(|| {
+            std::env::var_os("USERPROFILE")
+                .map(std::path::PathBuf::from)
+                .map(|h| h.join("AppData").join("Roaming"))
+        });
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let base = std::env::var_os("XDG_CONFIG_HOME")
+        .map(std::path::PathBuf::from)
+        .or_else(|| {
+            std::env::var_os("HOME")
+                .map(std::path::PathBuf::from)
+                .map(|h| h.join(".config"))
+        });
+    base.map(|b| b.join("GameLib"))
+}
+
+/// Best-effort JSON read. Returns `None` (never an error, never a panic) for a missing,
+/// unreadable, or unparseable file.
+fn read_json_file(path: &std::path::Path) -> Option<Value> {
+    let bytes = std::fs::read(path).ok()?;
+    serde_json::from_slice(&bytes).ok()
+}
+
+/// Read the tray settings from `<appFolder>/config.json`, degrading to defaults.
+fn load_tray_settings() -> TraySettingsSnapshot {
+    let Some(folder) = gamelib_app_folder() else {
+        eprintln!(
+            "[shell] WARN: could not resolve the GameLib config folder -- using default tray settings"
+        );
+        return TraySettingsSnapshot::default();
+    };
+    match read_json_file(&folder.join("config.json")) {
+        Some(config) => tray_settings_from_config(&config),
+        None => TraySettingsSnapshot::default(),
+    }
+}
+
+/// Seed the recent-games cache from `configStore`'s on-disk JSON
+/// (`<appFolder>/store/config.json`, key `games.recent` -- `constants/key_value_stores.ts`'s
+/// `new TypeCheckedStoreBackend('configStore', { cwd: 'store' })`).
+///
+/// Startup seeding is a READ of the same file the sidecar owns, not a second writer: the shell
+/// never writes it. Live updates arrive over the existing `recentGamesChanged` frontend-message
+/// push instead, so this read exists only to make the tray useful BEFORE the first launch of a
+/// session -- without it, the recent-games section would be empty on every cold start, which is
+/// a worse reduction than the one this avoids.
+fn load_recent_games_from_disk(limit: usize) -> Vec<TrayRecentGame> {
+    let Some(folder) = gamelib_app_folder() else {
+        return Vec::new();
+    };
+    let path = folder.join("store").join("config.json");
+    let Some(store) = read_json_file(&path) else {
+        return Vec::new();
+    };
+    match store.get("games").and_then(|g| g.get("recent")) {
+        Some(recent) => tray_recent_games_from_value(recent, limit),
+        None => Vec::new(),
+    }
+}
+
+/// Sidecar invoke channel that resolves a bare appName to its `Runner`
+/// (`appShellFlowRegistration.ts`). The tray's recent-games entries carry only
+/// `{ appName, title }` (`common/types.ts`'s `RecentGame`), but the `launch` channel requires a
+/// runner and -- correctly -- refuses to guess one (T-34.5-46-03's confused-deputy guard). The
+/// Electron tray sidestepped this by handing a deep-link URL to `handleProtocol`, which
+/// resolved the runner itself; routing an INTERNAL click out through a URL scheme is exactly
+/// what this plan's constraints forbid (T-35-21), so the resolution step is exposed as a plain
+/// sidecar channel instead and the launch itself goes through the SAME, already-hardened
+/// `launch` handler the UI uses. No URL is constructed anywhere on this path.
+const TRAY_RESOLVE_RUNNER_CHANNEL: &str = "trayResolveRunner";
+
+/// Rebuild the tray's context menu from the current recent-games cache.
+///
+/// Order mirrors `tray_icon.ts`'s own template: recent games first, a separator, then
+/// Show / About / Quit. Returns `None` on any builder failure -- callers log and keep the
+/// PREVIOUS menu rather than clearing it (T-34.1-22: a stale menu beats no menu).
+fn build_tray_menu(app: &AppHandle) -> Option<tauri::menu::Menu<tauri::Wry>> {
+    let recents: Vec<TrayRecentGame> = match tray_recent_games().lock() {
+        Ok(guard) => guard.clone(),
+        Err(poisoned) => {
+            eprintln!("[shell] WARN: tray recent-games cache mutex poisoned -- recovering");
+            poisoned.into_inner().clone()
+        }
+    };
+
+    let mut recent_items = Vec::new();
+    for game in &recents {
+        // `tray_recent_menu_id` returns None for an appName that could not survive the
+        // id round-trip; skipping it here is what keeps "every rendered entry is clickable"
+        // true by construction rather than by hope.
+        let Some(id) = tray_recent_menu_id(&game.app_name) else {
+            eprintln!(
+                "[shell] WARN: tray recent-games entry skipped -- appName failed the plain-appName check (len={})",
+                game.app_name.len()
+            );
+            continue;
+        };
+        match MenuItemBuilder::with_id(id, tray_recent_title(game)).build(app) {
+            Ok(item) => recent_items.push(item),
+            Err(e) => eprintln!(
+                "[shell] WARN: tray recent-game menu item failed to build ({e}) -- skipping that entry"
+            ),
+        }
+    }
+
+    let show_item = match MenuItemBuilder::with_id("show", "Show GameLib").build(app) {
+        Ok(item) => item,
+        Err(e) => {
+            eprintln!(
+                "[shell] WARN: tray menu items failed to build ({e}) -- continuing without a tray"
+            );
+            return None;
+        }
+    };
+    let about_item = match MenuItemBuilder::with_id("about", "About GameLib").build(app) {
+        Ok(item) => item,
+        Err(e) => {
+            eprintln!(
+                "[shell] WARN: tray menu items failed to build ({e}) -- continuing without a tray"
+            );
+            return None;
+        }
+    };
+    let quit_item = match MenuItemBuilder::with_id("quit", "Quit").build(app) {
+        Ok(item) => item,
+        Err(e) => {
+            eprintln!(
+                "[shell] WARN: tray menu items failed to build ({e}) -- continuing without a tray"
+            );
+            return None;
+        }
+    };
+
+    let mut builder = MenuBuilder::new(app);
+    if !recent_items.is_empty() {
+        for item in &recent_items {
+            builder = builder.item(item);
+        }
+        builder = builder.separator();
+    }
+    builder = builder.items(&[&show_item, &about_item, &quit_item]);
+
+    match builder.build() {
+        Ok(menu) => Some(menu),
+        Err(e) => {
+            eprintln!(
+                "[shell] WARN: tray menu failed to build ({e}) -- continuing without a tray"
+            );
+            None
+        }
+    }
+}
+
+/// Replace the live tray's menu with a freshly built one. A no-op (with a log line) when no
+/// tray exists -- it may legitimately have been suppressed by `noTrayIcon` or failed to build
+/// at startup, and neither is an error condition here.
+fn refresh_tray_menu(app: &AppHandle) {
+    let Some(tray) = app.tray_by_id(TRAY_ICON_ID) else {
+        eprintln!("[shell] tray menu refresh: no tray with id {TRAY_ICON_ID:?}, skipping");
+        return;
+    };
+    let Some(menu) = build_tray_menu(app) else {
+        eprintln!("[shell] WARN: tray menu refresh failed to build a menu -- keeping the previous menu");
+        return;
+    };
+    if let Err(e) = tray.set_menu(Some(menu)) {
+        eprintln!("[shell] WARN: tray menu refresh failed to apply ({e}) -- keeping the previous menu");
+    }
+}
+
+/// Replace the recent-games cache and rebuild the tray menu. Called from the reader thread on
+/// every `recentGamesChanged` push, so the tray tracks the list the same way `tray_icon.ts`'s
+/// own `backendEvents.on('recentGamesChanged')` listener did.
+fn update_tray_recent_games(app: &AppHandle, games: Vec<TrayRecentGame>) {
+    match tray_recent_games().lock() {
+        Ok(mut guard) => *guard = games,
+        Err(poisoned) => {
+            eprintln!("[shell] WARN: tray recent-games cache mutex poisoned -- recovering");
+            *poisoned.into_inner() = games;
+        }
+    }
+    refresh_tray_menu(app);
+}
+
+/// Open the About window from the tray.
+///
+/// Reaches `tauriShowAboutWindow` (`src/preload/api/tauriChildWindows.ts:139`) through the
+/// preload surface the renderer already exposes -- `window.api.showAboutWindow`
+/// (`src/preload/api/helpers.ts:17`, barrelled into `window.api` by
+/// `src/preload/api/index.ts`). Deliberately NOT re-implemented in Rust: the About window's
+/// version resolution, its single-window reuse, and its `about.html` load all live in that
+/// preload function, and a second implementation here would be a second thing to keep correct.
+///
+/// Deliberately NOT routed as a new frontend-message channel either: nothing in the renderer
+/// listens for an inbound `showAboutWindow` push (it has only ever been an OUTBOUND call), so
+/// emitting one would be a send with no registered listener -- a live silent no-op, a shape this
+/// repo has already shipped once.
+///
+/// The evaluated script is a FIXED literal with no interpolation -- there is no caller-supplied
+/// value anywhere in it, so it carries no injection surface -- and it is fully optional-chained
+/// so a webview that has not finished attaching `window.api` yet does nothing instead of
+/// throwing into the renderer's console.
+fn open_about_window_from_tray(app: &AppHandle) {
+    let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) else {
+        eprintln!(
+            "[shell] WARN: tray About: no '{MAIN_WINDOW_LABEL}' window to reach window.api.showAboutWindow -- skipping"
+        );
+        return;
+    };
+    if let Err(e) = window.eval("window.api?.showAboutWindow?.()") {
+        eprintln!("[shell] WARN: tray About: eval failed ({e}) -- About window not opened");
+    }
+}
+
+/// Dispatch a recent-game launch to the sidecar, in-process.
+///
+/// Two hops, both on a spawned worker thread so a menu click never blocks the UI thread:
+///   1. `trayResolveRunner` -> the runner for this appName (the tray entry has none).
+///   2. `launch` -> the SAME invoke handler the renderer's own launch button uses.
+///
+/// `launch` is not on `LONG_RUNNING_CHANNELS`, so for the runners whose handler awaits the whole
+/// game session this call reports `sidecar invoke timed out` after `INVOKE_TIMEOUT` while the
+/// game keeps running. That is expected here and is why the outcome is logged rather than
+/// surfaced -- the tray has nothing to show the user either way.
+fn dispatch_tray_launch(app: &AppHandle, app_name: String) {
+    let Some(state) = app.try_state::<Arc<SidecarState>>() else {
+        eprintln!("[shell] WARN: tray recent-game launch: no sidecar state -- skipping");
+        return;
+    };
+    let state = state.inner().clone();
+    thread::spawn(move || {
+        let runner = match state.invoke(
+            TRAY_RESOLVE_RUNNER_CHANNEL.to_string(),
+            vec![Value::String(app_name.clone())],
+        ) {
+            Ok(Value::String(runner)) => runner,
+            Ok(_) => {
+                eprintln!(
+                    "[shell] tray recent-game launch: sidecar could not resolve a runner for the selected entry -- not launching"
+                );
+                return;
+            }
+            Err(e) => {
+                eprintln!("[shell] WARN: tray recent-game launch: runner lookup failed ({e})");
+                return;
+            }
+        };
+        let mut payload = serde_json::Map::new();
+        payload.insert("appName".to_string(), Value::String(app_name));
+        payload.insert("runner".to_string(), Value::String(runner));
+        match state.invoke("launch".to_string(), vec![Value::Object(payload)]) {
+            Ok(_) => eprintln!("[shell] tray recent-game launch: dispatched to the sidecar: ok"),
+            Err(e) => eprintln!("[shell] tray recent-game launch: dispatched to the sidecar: err={e}"),
+        }
+    });
+}
+
 /// Invoke response timeout — a skeleton guardrail so a hung sidecar cannot wedge a command.
 const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);
 
@@ -5788,6 +6286,38 @@ fn start_reader(
                     .and_then(|v| v.as_array())
                     .cloned()
                     .unwrap_or_default();
+
+                // Tray recent-games rebuild (Phase 35 Plan 06, D-06). `tray_icon.ts` rebuilt
+                // its whole context menu from `backendEvents.on('recentGamesChanged')`; the
+                // sidecar-side emitter (`recent_games.ts`'s `setRecentGames`) ALSO pushes the
+                // same list to the frontend over this exact frontend-message channel, and every
+                // one of those frames already passes through this reader thread on its way to
+                // the webview. Observing it here gives the tray its live rebuild with NO new
+                // channel and NO new sidecar registration -- and therefore no possibility of a
+                // send channel whose listener was never registered.
+                //
+                // Non-consuming: the frame is still emitted to the webview below, unchanged.
+                if channel == RECENT_GAMES_CHANGED_CHANNEL {
+                    let limit = tray_settings().max_recent_games;
+                    let games = match args.first() {
+                        Some(list) => tray_recent_games_from_value(list, limit),
+                        None => Vec::new(),
+                    };
+                    let tray_app = app.clone();
+                    // Menu construction wants the main thread on macOS; `set_menu` itself
+                    // hops there internally, but the `MenuItemBuilder`/`MenuBuilder` calls in
+                    // `build_tray_menu` do not, so the whole rebuild is hopped as one unit.
+                    // Failure to schedule is logged, never fatal -- the reader thread must keep
+                    // servicing every other frame.
+                    if let Err(e) =
+                        app.run_on_main_thread(move || update_tray_recent_games(&tray_app, games))
+                    {
+                        eprintln!(
+                            "[shell] WARN: tray recent-games rebuild could not be scheduled ({e}) -- tray menu left as-is"
+                        );
+                    }
+                }
+
                 let _ = app.emit(
                     FRONTEND_MESSAGE_EVENT,
                     FrontendMessagePayload { channel, args },
@@ -6066,32 +6596,119 @@ fn main() {
 
             app.manage(state);
 
-            // Real Tauri tray (Phase 34.1 Plan 06, D-11) -- bounded scope: tooltip, left-click
-            // show/focus, and a two-item Show GameLib / Quit menu. Deliberately excludes the
-            // recent-games submenu, About/Reload/Debug, the macOS dock menu, and
-            // language-driven rebuilds (34.1-06-PLAN.md's declared out-of-scope list).
+            // Real Tauri tray (Phase 34.1 Plan 06, D-11; EXTENDED by Phase 35 Plan 06,
+            // D-05/D-06, REQ-35-04). 34.1's version was deliberately bounded -- tooltip,
+            // left-click show/focus, a two-item Show GameLib / Quit menu -- and named its own
+            // exclusions: the recent-games submenu, About, the macOS dock menu,
+            // language-driven rebuilds, and honouring `noTrayIcon`/`exitToTray`. This block
+            // closes that delta against `src/backend/tray_icon/tray_icon.ts` except where a
+            // reduction is recorded EXPLICITLY, immediately below.
+            //
+            // STILL NOT DONE, stated rather than silently dropped:
+            //   - macOS dock menu (`app.dock?.setMenu`, tray_icon.ts:32). Tauri 2.11.5 exposes
+            //     no dock-menu API; it would need an AppKit `NSApp.dockTile` bridge, which is
+            //     a separate piece of work from a menu extension.
+            //   - Reload / Debug items (tray_icon.ts:126-138). Both are developer affordances
+            //     reached by the webview's own keyboard shortcuts under Tauri; shipping a menu
+            //     item that opens devtools in a release build is a different decision from
+            //     this plan's.
+            //   - `languageChanged` menu rebuild (tray_icon.ts:47). The menu's own labels
+            //     ("Show GameLib", "About GameLib", "Quit") are Rust string literals here, not
+            //     i18next keys -- there is no translated source for the shell to rebuild
+            //     FROM, so a rebuild on `languageChanged` would re-render the identical
+            //     English text. Making these translatable means giving the shell a string
+            //     channel, which is its own plan. The recent-games ENTRIES are game titles and
+            //     are not translated in the Electron build either.
             //
             // Every step below is non-fatal: a menu-item, menu, or tray build failure is
             // logged and the app continues without a tray, never `unwrap()`/`panic!` out of
             // `.setup()` (T-34.1-22) -- a tray that fails to build is strictly better than a
             // shell that fails to start.
-            match (
-                MenuItemBuilder::with_id("show", "Show GameLib").build(app),
-                MenuItemBuilder::with_id("quit", "Quit").build(app),
-            ) {
-                (Ok(show_item), Ok(quit_item)) => {
-                    match MenuBuilder::new(app)
-                        .items(&[&show_item, &quit_item])
-                        .build()
-                    {
-                        Ok(menu) => {
-                            let tray = TrayIconBuilder::with_id(TRAY_ICON_ID)
-                                .icon(tray_image(false))
-                                .icon_as_template(tray_is_template())
-                                .tooltip("GameLib")
-                                .menu(&menu)
-                                .show_menu_on_left_click(false)
-                                .on_menu_event(|app_handle, event| match event.id().as_ref() {
+            //
+            // Settings are read HERE, synchronously, from GlobalConfig's on-disk config.json
+            // rather than over a sidecar invoke -- see `gamelib_app_folder`'s doc comment for
+            // why a round-trip is the wrong shape for two decisions that must be made before
+            // the tray exists and before the window is displayed.
+            let tray_settings = *TRAY_SETTINGS.get_or_init(load_tray_settings);
+
+            // `startInTray` (tray_icon.ts has no equivalent -- Electron honoured this in
+            // main_window.ts). Hidden inside `.setup()`, before the event loop runs, so the
+            // window is never displayed rather than being shown and yanked away.
+            if tray_settings.start_in_tray {
+                match app.get_webview_window(MAIN_WINDOW_LABEL) {
+                    Some(window) => {
+                        if let Err(e) = window.hide() {
+                            eprintln!(
+                                "[shell] WARN: startInTray: could not hide the main window ({e}) -- starting visible"
+                            );
+                        } else {
+                            eprintln!("[shell] startInTray: main window starts hidden");
+                        }
+                    }
+                    None => eprintln!(
+                        "[shell] WARN: startInTray: no '{MAIN_WINDOW_LABEL}' window to hide -- starting visible"
+                    ),
+                }
+            }
+
+            // `exitToTray` (tray_icon.ts:38-46's click handler is the SHOW half of this; the
+            // HIDE-instead-of-quit half lived in Electron's own close handler). Registered
+            // unconditionally-but-inert when the setting is off, so the closure holds a plain
+            // copied bool and there is no later re-read to get wrong.
+            if tray_settings.exit_to_tray {
+                match app.get_webview_window(MAIN_WINDOW_LABEL) {
+                    Some(window) => {
+                        let close_window = window.clone();
+                        window.on_window_event(move |event| {
+                            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                                api.prevent_close();
+                                if let Err(e) = close_window.hide() {
+                                    eprintln!(
+                                        "[shell] WARN: exitToTray: hide on close failed ({e})"
+                                    );
+                                }
+                            }
+                        });
+                        eprintln!("[shell] exitToTray: window close will hide instead of exiting");
+                    }
+                    None => eprintln!(
+                        "[shell] WARN: exitToTray: no '{MAIN_WINDOW_LABEL}' window to attach a close handler to"
+                    ),
+                }
+            }
+
+            // Seed the recent-games cache before the menu is built, so the section is
+            // populated on a COLD start rather than only after the first launch of a session.
+            let seeded = load_recent_games_from_disk(tray_settings.max_recent_games);
+            eprintln!(
+                "[shell] tray recent games: seeded {} entr{} from disk (limit {})",
+                seeded.len(),
+                if seeded.len() == 1 { "y" } else { "ies" },
+                tray_settings.max_recent_games
+            );
+            match tray_recent_games().lock() {
+                Ok(mut guard) => *guard = seeded,
+                Err(poisoned) => *poisoned.into_inner() = seeded,
+            }
+
+            // `noTrayIcon` (tray_icon.ts:20's `if (noTrayIcon) return null`). Decided BEFORE
+            // the tray is built, so the user never sees an icon they asked not to have.
+            if tray_settings.no_tray_icon {
+                eprintln!(
+                    "[shell] tray suppressed by the noTrayIcon setting -- not building a tray"
+                );
+            } else {
+                match build_tray_menu(app.handle()) {
+                    Some(menu) => {
+                        let tray = TrayIconBuilder::with_id(TRAY_ICON_ID)
+                            .icon(tray_image(false))
+                            .icon_as_template(tray_is_template())
+                            .tooltip("GameLib")
+                            .menu(&menu)
+                            .show_menu_on_left_click(false)
+                            .on_menu_event(|app_handle, event| {
+                                let id = event.id().as_ref();
+                                match id {
                                     "show" => {
                                         if let Some(window) =
                                             app_handle.get_webview_window(MAIN_WINDOW_LABEL)
@@ -6100,40 +6717,55 @@ fn main() {
                                             let _ = window.set_focus();
                                         }
                                     }
+                                    "about" => open_about_window_from_tray(app_handle),
                                     "quit" => app_handle.exit(0),
-                                    _ => {}
-                                })
-                                .on_tray_icon_event(|tray, event| {
-                                    if let TrayIconEvent::Click {
-                                        button: MouseButton::Left,
-                                        button_state: MouseButtonState::Up,
-                                        ..
-                                    } = event
-                                    {
-                                        let app_handle = tray.app_handle();
-                                        if let Some(window) =
-                                            app_handle.get_webview_window(MAIN_WINDOW_LABEL)
-                                        {
-                                            let _ = window.show();
-                                            let _ = window.set_focus();
+                                    // T-35-20: the appName reaching a launch is PARSED back out
+                                    // of the menu id through the same allow-list that built it,
+                                    // never taken from the id verbatim. A malformed id is
+                                    // dropped, not launched.
+                                    _ => match tray_recent_app_name(id) {
+                                        Some(app_name) => dispatch_tray_launch(
+                                            app_handle,
+                                            app_name.to_string(),
+                                        ),
+                                        None => {
+                                            if id.starts_with(TRAY_RECENT_ID_PREFIX) {
+                                                eprintln!(
+                                                    "[shell] WARN: tray menu event rejected a malformed recent-game id (bytes={}) -- not launching",
+                                                    id.len()
+                                                );
+                                            }
                                         }
+                                    },
+                                }
+                            })
+                            .on_tray_icon_event(|tray, event| {
+                                if let TrayIconEvent::Click {
+                                    button: MouseButton::Left,
+                                    button_state: MouseButtonState::Up,
+                                    ..
+                                } = event
+                                {
+                                    let app_handle = tray.app_handle();
+                                    if let Some(window) =
+                                        app_handle.get_webview_window(MAIN_WINDOW_LABEL)
+                                    {
+                                        let _ = window.show();
+                                        let _ = window.set_focus();
                                     }
-                                })
-                                .build(app);
-                            if let Err(e) = tray {
-                                eprintln!(
-                                    "[shell] WARN: tray icon failed to build ({e}) -- continuing without a tray"
-                                );
-                            }
+                                }
+                            })
+                            .build(app);
+                        if let Err(e) = tray {
+                            eprintln!(
+                                "[shell] WARN: tray icon failed to build ({e}) -- continuing without a tray"
+                            );
                         }
-                        Err(e) => eprintln!(
-                            "[shell] WARN: tray menu failed to build ({e}) -- continuing without a tray"
-                        ),
                     }
+                    None => eprintln!(
+                        "[shell] WARN: tray menu failed to build -- continuing without a tray"
+                    ),
                 }
-                _ => eprintln!(
-                    "[shell] WARN: tray menu items failed to build -- continuing without a tray"
-                ),
             }
 
             // DELIBERATELY RETIRED (Phase 34.4.2 Plan 07, 2026-08-04): a deminiaturize
@@ -6390,6 +7022,155 @@ fn main() {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    // ---- Tray recent-games id parsing (Phase 35 Plan 06, T-35-20) ----
+    //
+    // The `recent:<appName>` menu id is the one string in the tray path that crosses from a
+    // menu event into a game launch. These tests cover BOTH directions of the round-trip and,
+    // per the threat register, an explicit malformed-id rejection set -- a parser that only
+    // ever saw well-formed input is not evidence of anything.
+
+    #[test]
+    fn recent_menu_id_round_trips_a_plain_app_name() {
+        for app_name in ["Iris", "1207658777", "620", "a-b_c.d", "0"] {
+            let id = tray_recent_menu_id(app_name);
+            assert_eq!(id.as_deref(), Some(format!("recent:{app_name}").as_str()));
+            let id = id.unwrap_or_default();
+            assert_eq!(tray_recent_app_name(&id), Some(app_name));
+        }
+    }
+
+    #[test]
+    fn recent_menu_id_rejects_a_malformed_id() {
+        // Missing prefix -- the non-recent menu ids the same handler also sees.
+        assert_eq!(tray_recent_app_name("show"), None);
+        assert_eq!(tray_recent_app_name("about"), None);
+        assert_eq!(tray_recent_app_name("quit"), None);
+        assert_eq!(tray_recent_app_name(""), None);
+        assert_eq!(tray_recent_app_name("recent"), None);
+        // Prefix present, remainder not a plain appName.
+        assert_eq!(tray_recent_app_name("recent:"), None);
+        assert_eq!(tray_recent_app_name("recent:../../etc/passwd"), None);
+        assert_eq!(tray_recent_app_name("recent:.."), None);
+        assert_eq!(tray_recent_app_name("recent:."), None);
+        assert_eq!(tray_recent_app_name("recent:a/b"), None);
+        assert_eq!(tray_recent_app_name("recent:a\\b"), None);
+        assert_eq!(tray_recent_app_name("recent:a b"), None);
+        assert_eq!(tray_recent_app_name("recent:a;rm -rf /"), None);
+        assert_eq!(tray_recent_app_name("recent:a\nb"), None);
+        assert_eq!(tray_recent_app_name("recent:a\0b"), None);
+        assert_eq!(tray_recent_app_name("recent:$(id)"), None);
+        assert_eq!(tray_recent_app_name("recent:\u{e9}quipe"), None);
+        // Over the length bound.
+        let long = "a".repeat(129);
+        assert_eq!(tray_recent_app_name(&format!("recent:{long}")), None);
+        assert_eq!(tray_recent_menu_id(&long), None);
+    }
+
+    #[test]
+    fn a_rejected_app_name_never_becomes_a_menu_id() {
+        // The construction side uses the SAME predicate as the parse side, so an entry that
+        // could not survive the round-trip is never rendered at all.
+        for bad in ["", "..", "a/b", "a b", "a;b", "wine prefix"] {
+            assert_eq!(tray_recent_menu_id(bad), None, "expected {bad:?} rejected");
+        }
+    }
+
+    #[test]
+    fn recent_games_parse_drops_unusable_entries_and_respects_the_limit() {
+        let payload = json!([
+            { "appName": "Iris", "title": "Phoenix Point" },
+            { "appName": "620", "title": "Portal 2" },
+            { "appName": "../escape", "title": "rejected" },
+            { "appName": "Iris", "title": "duplicate" },
+            { "title": "no appName at all" },
+            { "appName": "1124300", "title": "HUMANKIND" }
+        ]);
+        let games = tray_recent_games_from_value(&payload, 5);
+        assert_eq!(
+            games,
+            vec![
+                TrayRecentGame { app_name: "Iris".into(), title: "Phoenix Point".into() },
+                TrayRecentGame { app_name: "620".into(), title: "Portal 2".into() },
+                TrayRecentGame { app_name: "1124300".into(), title: "HUMANKIND".into() },
+            ]
+        );
+        // The limit truncates rather than erroring.
+        assert_eq!(tray_recent_games_from_value(&payload, 1).len(), 1);
+        assert_eq!(tray_recent_games_from_value(&payload, 0).len(), 0);
+    }
+
+    #[test]
+    fn recent_games_parse_is_total_over_junk() {
+        // A malformed or absent recent-games file must degrade to "no recent games", never to
+        // a failed tray build.
+        assert!(tray_recent_games_from_value(&json!(null), 5).is_empty());
+        assert!(tray_recent_games_from_value(&json!({}), 5).is_empty());
+        assert!(tray_recent_games_from_value(&json!("nope"), 5).is_empty());
+        assert!(tray_recent_games_from_value(&json!([1, 2, 3]), 5).is_empty());
+    }
+
+    #[test]
+    fn recent_title_falls_back_to_app_name_and_is_bounded() {
+        let untitled = TrayRecentGame { app_name: "620".into(), title: "   ".into() };
+        assert_eq!(tray_recent_title(&untitled), "620");
+
+        let controls = TrayRecentGame { app_name: "620".into(), title: "a\nb\tc".into() };
+        assert_eq!(tray_recent_title(&controls), "a b c");
+
+        // Multi-byte title over the cap: truncation is on a CHARACTER boundary, so this can
+        // never panic the way a byte slice would.
+        let long = TrayRecentGame {
+            app_name: "620".into(),
+            title: "\u{e9}".repeat(200),
+        };
+        let rendered = tray_recent_title(&long);
+        assert_eq!(rendered.chars().count(), TRAY_RECENT_TITLE_MAX_CHARS + 1);
+        assert!(rendered.ends_with('\u{2026}'));
+    }
+
+    #[test]
+    fn recent_limit_mirrors_the_typescript_default_and_caps_pathological_values() {
+        // `recent_games.ts`: `maxRecentGames || 5`.
+        assert_eq!(tray_recent_limit(None), TRAY_RECENT_DEFAULT_LIMIT);
+        assert_eq!(tray_recent_limit(Some(0)), TRAY_RECENT_DEFAULT_LIMIT);
+        assert_eq!(tray_recent_limit(Some(3)), 3);
+        assert_eq!(tray_recent_limit(Some(1_000_000)), TRAY_RECENT_MAX_LIMIT);
+    }
+
+    #[test]
+    fn tray_settings_read_the_global_config_shape() {
+        let config = json!({
+            "defaultSettings": {
+                "noTrayIcon": true,
+                "exitToTray": true,
+                "startInTray": false,
+                "maxRecentGames": 8
+            },
+            "version": "v0"
+        });
+        assert_eq!(
+            tray_settings_from_config(&config),
+            TraySettingsSnapshot {
+                no_tray_icon: true,
+                exit_to_tray: true,
+                start_in_tray: false,
+                max_recent_games: 8,
+            }
+        );
+    }
+
+    #[test]
+    fn tray_settings_fail_open_to_a_working_tray() {
+        // An absent, empty, or wrong-typed config must yield a tray that EXISTS -- an
+        // unreadable config turning the tray off would be the worst possible failure mode.
+        for junk in [json!({}), json!(null), json!({ "defaultSettings": 3 }), json!([])] {
+            let s = tray_settings_from_config(&junk);
+            assert_eq!(s, TraySettingsSnapshot::default());
+            assert!(!s.no_tray_icon);
+            assert_eq!(s.max_recent_games, TRAY_RECENT_DEFAULT_LIMIT);
+        }
+    }
 
     #[test]
     fn exempt_channel_waits_indefinitely() {

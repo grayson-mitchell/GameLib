@@ -132,6 +132,7 @@ import { notify } from '../dialog/dialog'
 import { handleExit, openUrlOrFile } from '../utils'
 import { callAbortController } from '../utils/aborthandler/aborthandler'
 import { GlobalConfig } from '../config'
+import { libraryManagerMap } from '../storeManagers'
 import { configStore } from '../constants/key_value_stores'
 import { logInfo, LogPrefix } from '../logger'
 import { requestRustInvoke } from './sidecarRpc'
@@ -377,6 +378,72 @@ export function registerAppShellFlows(
     } catch (error) {
       logSendFailure('frontendReady', error)
     }
+  })
+
+  // ── Phase 35 Plan 06 (D-06, REQ-35-04): tray recent-game runner resolution ──
+  //
+  // `trayResolveRunner` is INVOKE-kind and is called by the RUST SHELL, not by the renderer --
+  // the same direction and the same `handlerRegistry` path `bootstrap.ts`'s `handleProtocolUrl`
+  // already uses for the single-instance deep-link delivery. It is therefore NOT a
+  // `RUST_INVOKE_CHANNELS` member (that list is the opposite, sidecar->Rust, direction).
+  //
+  // Why it exists at all: a tray recent-games entry is a `RecentGame`, which carries only
+  // `{ appName, title }` (`common/types.ts:623`). The `launch` channel requires a `runner` and
+  // deliberately refuses to guess one -- `steamFlowRegistration.ts`'s `handleLaunch` returns
+  // `{ status: 'error' }` for an absent/unrecognised runner rather than falling through to
+  // Steam (T-34.5-46-03's confused-deputy guard). Under Electron the tray dodged this by
+  // handing a deep-link URL to `handleProtocol`, whose `findGame` did the resolution; Phase 35
+  // forbids routing an internal tray click out through a URL scheme (T-35-21), so the
+  // resolution is exposed here as a plain in-process lookup and the shell then calls the
+  // ordinary, already-hardened `launch` handler with the resolved runner.
+  //
+  // MUST be registered with `ipcMain.handle`, never `ipcMain.on` -- this channel has a return
+  // value the shell blocks on, and a send-kind registration would fail 100% silently
+  // (Phase 31 Pitfall 2).
+  //
+  // Resolution order mirrors `protocol.ts`'s own `RUNNERS` enum exactly
+  // (legendary, gog, nile, sideload) so a cross-store appName collision resolves the SAME way
+  // the Electron tray resolved it, with `steam` and `zoom` appended -- both are absent from
+  // that enum, which is why the Electron tray could never launch a Steam recent game at all.
+  // Appending rather than prepending keeps the existing order authoritative and makes this
+  // strictly more capable than what it replaces.
+  ipcMain.handle('trayResolveRunner', (_event: unknown, ...args: unknown[]) => {
+    const appName = args[0]
+    if (typeof appName !== 'string' || appName.length === 0) {
+      // Never echoes the rejected value, mirroring `handleProtocolUrl`'s own T-34.5-G6-25
+      // discipline -- the shell logs a reason, never a payload.
+      throw new Error('trayResolveRunner: rejected a non-string appName')
+    }
+
+    const searchOrder = [
+      'legendary',
+      'gog',
+      'nile',
+      'sideload',
+      'steam',
+      'zoom'
+    ] as const
+
+    for (const runner of searchOrder) {
+      try {
+        // Own-property form, never a bare index: `libraryManagerMap` is a plain object
+        // literal, so a bare lookup resolves through `Object.prototype` (the same
+        // T-34.5-46-01 reasoning `handleLaunch`'s own guard carries).
+        if (!Object.prototype.hasOwnProperty.call(libraryManagerMap, runner))
+          continue
+        const info = libraryManagerMap[runner].getGame(appName).getGameInfo()
+        if (info?.app_name) return runner
+      } catch (error) {
+        // A manager that throws for an unknown appName must not abort the search -- the next
+        // runner may still own this game.
+        logSendFailure(`trayResolveRunner:${runner}`, error)
+      }
+    }
+
+    // A `null` return is a normal outcome, not an error: the game may have been uninstalled
+    // and removed from its library since it entered the recent list. The shell logs and does
+    // NOT launch anything.
+    return null
   })
 
   // D-11: swap the real Tauri tray's icon via the `tray_set_icon` rustInvoke arm.
