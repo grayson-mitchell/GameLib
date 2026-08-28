@@ -20,7 +20,7 @@
  * `~/Library/Application Support/GameLib/`, an active data-loss hazard documented in
  * `electronUntouched.test.ts`'s header.
  *
- * `jest.mock('electron', ...)` / `jest.mock('electron-store', ...)` route Jest's own module
+ * `jest.mock('electron', ...)` / `jest.mock('backend/store_backend', ...)` route Jest's own module
  * resolution at the real `electronStub.ts`/`fileStore.ts` (the same singleton instances
  * `bootstrap.ts`/`online_monitor.ts` bind onto), rather than the generic backend-wide manual
  * mock Jest auto-applies to `require('electron')` -- see `skeletonFlows.test.ts`'s header for
@@ -48,7 +48,7 @@ jest.mock('os', () => {
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shims ──
 jest.mock('electron', () => jest.requireActual('../electronStub'))
-jest.mock('electron-store', () => ({
+jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
 }))

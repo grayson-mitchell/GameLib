@@ -1,4 +1,4 @@
-import Store from 'electron-store'
+import Store from './store_backend'
 
 import {
   notifyStoreChanged,

@@ -11,7 +11,7 @@
  * semantics, not a test double's own bookkeeping.
  */
 
-jest.mock('electron-store')
+jest.mock('backend/store_backend')
 
 import {
   configStore,

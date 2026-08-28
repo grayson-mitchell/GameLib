@@ -5,7 +5,7 @@ import { crossoverIndexStore } from '../electronStore'
 import { CrossoverIndex } from '../schema'
 
 jest.mock('backend/logger')
-jest.mock('electron-store')
+jest.mock('backend/store_backend')
 
 // ── backend/crossover_index/normalize mock — mutable double so
 // NAME_MATCHING_SHIPS can be flipped per test (mirrors the

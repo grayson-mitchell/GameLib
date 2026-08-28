@@ -20,7 +20,7 @@
  * every other file under this directory.
  */
 
-import Store from 'electron-store'
+import Store from '../store_backend'
 
 import { ipcMain } from './electronStub'
 // Namespace import (not a named import) so this module's frontend-push call site is

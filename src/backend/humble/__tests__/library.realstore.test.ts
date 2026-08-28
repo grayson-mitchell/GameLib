@@ -15,7 +15,7 @@
  * humbleGetKeys IPC call (keys never rendered, logout/login recreated it).
  */
 
-jest.mock('electron-store')
+jest.mock('backend/store_backend')
 
 // ── adapter mock ─────────────────────────────────────────────────────────
 

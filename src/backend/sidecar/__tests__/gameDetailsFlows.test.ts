@@ -38,7 +38,7 @@
  * `appFolder`/`userDataPath`/`fixesPath` all resolve inside `os.tmpdir()`
  * before the first destructive write can run.
  *
- * `jest.mock('electron', ...)` / `jest.mock('electron-store', ...)` below
+ * `jest.mock('electron', ...)` / `jest.mock('backend/store_backend', ...)` below
  * point Jest's OWN module resolution at electronStub.ts/fileStore.ts
  * directly — see skeletonFlows.test.ts's header for why this is necessary.
  * Because `electron-store` resolves to the REAL `fileStore.ts` (not a mock
@@ -203,7 +203,7 @@ jest.mock('backend/logger/paths', () => {
 // ── electron / electron-store — route Jest's own module resolution at the
 // REAL sidecar shims (see module docstring above) ───────────────────────────
 jest.mock('electron', () => jest.requireActual('../electronStub'))
-jest.mock('electron-store', () => ({
+jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
 }))

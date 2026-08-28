@@ -1,6 +1,7 @@
-import Store from 'electron-store'
+import Store from './store_backend'
 
 import {
+  StoreOptions,
   StoreStructure,
   TypeCheckedStore,
   UnknownGuard,
@@ -21,7 +22,7 @@ import {
 // reconstruct a path/instance from the name string itself.
 export interface RegisteredStore {
   instance: TypeCheckedStoreBackend<ValidStoreName>
-  options: Store.Options<StoreStructure[ValidStoreName]>
+  options: StoreOptions<StoreStructure[ValidStoreName]>
 }
 
 const storeRegistry = new Map<string, RegisteredStore>()
@@ -34,7 +35,7 @@ export function getRegisteredStore(
 
 export function getRegisteredStoreOptions(
   name: string
-): Store.Options<StoreStructure[ValidStoreName]> | undefined {
+): StoreOptions<StoreStructure[ValidStoreName]> | undefined {
   return storeRegistry.get(name)?.options
 }
 
@@ -57,9 +58,11 @@ export class TypeCheckedStoreBackend<
    */
   private readonly storeName: Name
 
-  constructor(name: Name, options: Store.Options<StoreStructure[Name]>) {
+  constructor(name: Name, options: StoreOptions<StoreStructure[Name]>) {
     this.storeName = name
-    // @ts-expect-error This looks like a bug in electron-store's type definitions
+    // @ts-expect-error Pre-existing generic variance between the per-store
+    // `StoreStructure[Name]` shape and the store's own `Record<string, unknown>`
+    // default. Carried over verbatim from the electron-store-backed version.
     this.store = new Store(options)
     // WR-08 (Phase 29 code review): FIRST registration wins. This used to be an
     // unconditional `set`, so a second construction under the same `ValidStoreName`
@@ -75,7 +78,7 @@ export class TypeCheckedStoreBackend<
     } else {
       storeRegistry.set(name, {
         instance: this as unknown as TypeCheckedStoreBackend<ValidStoreName>,
-        options: options as Store.Options<StoreStructure[ValidStoreName]>
+        options: options as StoreOptions<StoreStructure[ValidStoreName]>
       })
     }
   }

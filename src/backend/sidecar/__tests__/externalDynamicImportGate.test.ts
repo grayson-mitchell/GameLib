@@ -1,9 +1,9 @@
 /**
- * AST gate: forbid native dynamic `import('electron')` / `import('electron-store')` under
- * `src/backend` and `src/sidecar` (quick/260815-vvz, defect 1).
+ * AST gate: forbid native dynamic `import('electron')` under `src/backend` and
+ * `src/sidecar` (quick/260815-vvz, defect 1).
  *
- * **Why this exists.** `package.json`'s `build:sidecar` script marks `electron` and
- * `electron-store` `--external` for esbuild, so a STATIC `import { app } from 'electron'`
+ * **Why this exists.** `package.json`'s `build:sidecar` script marks `electron` `--external`
+ * for esbuild, so a STATIC `import { app } from 'electron'`
  * compiles to a plain CJS `require('electron')` — which the sidecar's `Module._load` hook
  * (`installElectronHook.ts`) intercepts and rewrites to `electronStub.ts` before any backend
  * module is imported. A DYNAMIC `import('electron')`, by contrast, esbuild leaves untouched as
@@ -30,11 +30,19 @@ import { join, relative, resolve } from 'path'
 
 const REPO_ROOT = resolve(join(__dirname, '../../../..'))
 
-/** The two modules `package.json`'s `build:sidecar` marks `--external` for esbuild -- precisely
- * the two whose dynamic `import()` esbuild leaves as a native ESM import that `Module._load`
- * cannot intercept. Shared by Gate 1 and Gate 3 so the known-bad self-test cannot drift from the
- * real check. */
-export const FORBIDDEN_DYNAMIC_IMPORT_MODULES = ['electron', 'electron-store']
+/** The modules whose dynamic `import()` esbuild leaves as a native ESM import that
+ * `Module._load` cannot intercept. Shared by Gate 1 and Gate 3 so the known-bad self-test
+ * cannot drift from the real check.
+ *
+ * Phase 35 Plan 05 (D-04): `'electron-store'` was removed from this list because the package
+ * itself was removed from `package.json`. A gate entry naming a package that no longer exists
+ * is a trap -- it reads as coverage while asserting nothing. `electron` is now the ONLY
+ * specifier `installElectronHook.ts` intercepts, and therefore the only one where a dynamic
+ * `import()` silently gets different semantics from the static form. Its replacement,
+ * `conf` (via the first-party `backend/store_backend.ts`), is not intercepted by anything, so
+ * a dynamic import of it would resolve the same module as the static form -- no hazard, and
+ * nothing to gate. */
+export const FORBIDDEN_DYNAMIC_IMPORT_MODULES = ['electron']
 
 export interface DynamicImportHit {
   file: string

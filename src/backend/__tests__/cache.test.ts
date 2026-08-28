@@ -1,7 +1,7 @@
-import Store from 'electron-store'
+import Store from 'backend/store_backend'
 import CacheStore from '../cache'
 
-jest.mock('electron-store')
+jest.mock('backend/store_backend')
 
 describe('backend/cache.ts', () => {
   const testStore = new CacheStore<string>('test_store')

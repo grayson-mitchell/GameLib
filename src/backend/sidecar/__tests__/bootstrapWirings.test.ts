@@ -81,7 +81,7 @@ jest.mock('os', () => {
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar
 // shims (mirrors appShellFlows.test.ts / steamAuthFlows.test.ts) ────────────────────────────
 jest.mock('electron', () => jest.requireActual('../electronStub'))
-jest.mock('electron-store', () => ({
+jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
 }))

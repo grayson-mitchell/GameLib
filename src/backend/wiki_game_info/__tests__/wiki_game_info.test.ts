@@ -2,7 +2,7 @@ import type { Game } from 'common/types/game_manager'
 import type { GameInfo } from 'common/types'
 
 jest.mock('backend/logger')
-jest.mock('electron-store')
+jest.mock('backend/store_backend')
 
 // ── backend/constants/environment mock — mutable double, defaults to
 // non-mac/non-linux (Windows). Mirrors the envMock pattern in
@@ -235,7 +235,7 @@ describe('getWikiGameInfo — D-10/D-11/D-13 index-first CrossOver wiring', () =
  * days at all. The self-heal lives in `getWikiGameInfo`'s cache-hit guard instead, as a
  * third sibling of the existing `staleAppleData` / `staleCrossoverData` flags.
  *
- * `use_in_memory()` matters here: under the bare `jest.mock('electron-store')` automock,
+ * `use_in_memory()` matters here: under the bare `jest.mock('backend/store_backend')` automock,
  * `store.has()` returns undefined, so a cache HIT is impossible and every "it re-fetched"
  * assertion below would pass vacuously against a store that never stored anything.
  */

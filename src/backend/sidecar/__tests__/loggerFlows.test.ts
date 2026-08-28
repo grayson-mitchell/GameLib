@@ -186,7 +186,7 @@ jest.mock('backend/logger/paths', () => {
 // ── electron / electron-store — route Jest's own module resolution at the
 // REAL sidecar shims (mirrors gameDetailsFlows.test.ts) ─────────────────────
 jest.mock('electron', () => jest.requireActual('../electronStub'))
-jest.mock('electron-store', () => ({
+jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
 }))

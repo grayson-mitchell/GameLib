@@ -117,7 +117,7 @@ jest.mock('backend/shortcuts/utils', () => ({
 // — proving the real `sips`-backed `nativeImageShim.ts` chain (and, for `app.getPath('exe')`,
 // GAMELIB_SHELL_EXE -> getPath('exe') -> shortcuts.ts:227) is this suite's whole point.
 jest.mock('electron', () => jest.requireActual('../electronStub'))
-jest.mock('electron-store', () => ({
+jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
 }))

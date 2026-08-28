@@ -49,7 +49,7 @@ import { stripSourceComments as stripComments } from 'backend/testUtils/stripSou
 // resolves the SAME singleton module instance `configStore`/`tokenStore.ts`
 // bind onto in production. ────────────────────────────────────────────────
 jest.mock('electron', () => jest.requireActual('../electronStub'))
-jest.mock('electron-store', () => ({
+jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
 }))

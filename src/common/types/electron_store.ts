@@ -1,4 +1,4 @@
-import Store from 'electron-store'
+import type { Options as ConfOptions } from 'conf'
 import { Get } from 'type-fest'
 
 import {
@@ -161,7 +161,24 @@ export interface StoreStructure {
   }
 }
 
-export type StoreOptions<T extends Record<string, unknown>> = Store.Options<T>
+// Phase 35 Plan 05 (D-04): declared first-party rather than re-exported from
+// the storage library, because `conf`'s own option shape is NOT the one this
+// codebase passes. `conf` has no `name` option — it reads `configName`
+// (conf/dist/source/index.js:130). `electron-store` translated `name` ->
+// `configName` for us; `backend/store_backend.ts` now owns that translation.
+// This alias therefore mirrors `electron-store`'s OWN type definition
+// (electron-store/index.d.ts:7) exactly, so every existing call site keeps
+// type-checking against the option names it actually passes.
+//
+// Deliberately a TYPE-ONLY import of `conf` — erased at compile time, so
+// `src/frontend/helpers/electronStores.ts` (which imports from this module)
+// never pulls a Node-only, fs-backed package into the renderer bundle.
+export type StoreOptions<T extends Record<string, unknown>> = Omit<
+  ConfOptions<T>,
+  'configName' | 'projectName' | 'projectVersion' | 'projectSuffix'
+> & {
+  readonly name?: string
+}
 export type ValidStoreName = keyof StoreStructure
 
 // This is `T`, *except* for when `T` is `unknown`; it then is `never`

@@ -16,7 +16,7 @@ import type { GameInfo } from 'common/types'
 import type { CrossoverIndex } from '../schema'
 
 jest.mock('backend/logger')
-jest.mock('electron-store')
+jest.mock('backend/store_backend')
 
 const envMock = { isWindows: false, isMac: true, isLinux: false }
 jest.mock('backend/constants/environment', () => envMock)

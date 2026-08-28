@@ -77,7 +77,7 @@ jest.mock('electron', () => {
     }
   }
 })
-jest.mock('electron-store', () => ({
+jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
 }))

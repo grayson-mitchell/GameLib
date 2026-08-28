@@ -15,7 +15,7 @@
  * `src/preload/__tests__/tauriTransport.test.ts`.
  */
 
-import Store from 'electron-store'
+import Store from 'backend/store_backend'
 
 import CacheStore from '../cache'
 import { TypeCheckedStoreBackend } from '../electron_store'
@@ -30,7 +30,7 @@ import { installedGamesStore } from '../storeManagers/gog/electronStores'
 import { isAllowedStoreField } from 'common/types/storePolicy'
 import type { StoreChangedPayload } from 'common/types/sidecarTransport'
 
-jest.mock('electron-store')
+jest.mock('backend/store_backend')
 
 describe('backend/storeChangeNotifier.ts', () => {
   let pushed: StoreChangedPayload[]

@@ -4,7 +4,7 @@ import { axiosClient } from 'backend/utils'
 import { AppleGamingWikiInfo } from 'common/types'
 
 jest.mock('backend/logger')
-jest.mock('electron-store')
+jest.mock('backend/store_backend')
 
 describe('getInfoFromAppleGamingWiki', () => {
   test('fetches successfully', async () => {

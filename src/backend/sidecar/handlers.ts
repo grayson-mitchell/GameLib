@@ -70,7 +70,7 @@
  * which `backend/ipc.ts` itself does.
  */
 
-import Store from 'electron-store'
+import Store from '../store_backend'
 
 import { ipcMain } from './electronStub'
 import { registerSteamFlows } from './steamFlowRegistration'

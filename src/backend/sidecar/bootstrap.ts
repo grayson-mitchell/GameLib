@@ -7,18 +7,22 @@
  * calls it unconditionally.
  *
  * This module's ordering is load-bearing (spike 009's sharp edge): the
- * `Module._load` hook that redirects `require('electron')` -> electronStub
- * AND `require('electron-store')` -> fileStore MUST be installed BEFORE
- * `./handlers` is imported, because `backend/constants/paths.ts` calls
- * `app.getPath()` at MODULE SCOPE and `backend/electron_store.ts` /
- * `backend/cache.ts` construct `new Store()` at MODULE SCOPE (20+ files route
- * through them) — intercepting only 'electron' leaves that second wall standing.
+ * `Module._load` hook that redirects `require('electron')` -> electronStub MUST
+ * be installed BEFORE `./handlers` is imported, because
+ * `backend/constants/paths.ts` calls `app.getPath()` at MODULE SCOPE.
+ *
+ * Phase 35 Plan 05 (D-04): this paragraph used to describe a SECOND redirect,
+ * `require('electron-store')` -> fileStore, for the module-scope `new Store()`
+ * calls in `backend/electron_store.ts` / `backend/cache.ts`. That wall no
+ * longer exists — `electron-store` was replaced by `backend/store_backend.ts`,
+ * a first-party shim over `conf` that needs no Electron runtime — so the
+ * interception and this half of its documentation were deleted together.
  *
  * The hook lives in `./installElectronHook` (imported FIRST below), NOT inline
  * here: ES modules evaluate every static import before a module's own
  * executable statements, so an inline hook-install statement would run AFTER
- * `import './handlers'` had already constructed store managers against the real
- * electron-store — crashing the sidecar on boot (Phase 27 Plan 05 blank-screen
+ * `import './handlers'` had already reached `app.getPath()` against the real
+ * `electron` — crashing the sidecar on boot (Phase 27 Plan 05 blank-screen
  * fix; see installElectronHook.ts for the full rationale).
  */
 

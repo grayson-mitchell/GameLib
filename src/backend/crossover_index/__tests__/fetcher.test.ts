@@ -14,7 +14,7 @@ import { crossoverIndexSchema, CrossoverIndex } from '../schema'
 import { crossoverIndexHas, crossoverIndexDescriptor } from '../index'
 
 jest.mock('backend/logger')
-jest.mock('electron-store')
+jest.mock('backend/store_backend')
 jest.mock('graceful-fs', () => ({
   ...jest.requireActual('graceful-fs'),
   readFileSync: jest.fn()

@@ -3,7 +3,7 @@ import { getInfoFromCodeweavers, slugify, naiveSlugify } from '../utils'
 import { axiosClient } from 'backend/utils'
 
 jest.mock('backend/logger')
-jest.mock('electron-store')
+jest.mock('backend/store_backend')
 
 function htmlWithVideoGameJsonLd(
   macRating: number | null,

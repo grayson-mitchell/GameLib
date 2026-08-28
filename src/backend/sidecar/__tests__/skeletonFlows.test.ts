@@ -18,7 +18,7 @@
  * (preserving this suite's fidelity), while the location it reads/writes can
  * never be the developer's real config directory.
  *
- * `jest.mock('electron', ...)` / `jest.mock('electron-store', ...)` below
+ * `jest.mock('electron', ...)` / `jest.mock('backend/store_backend', ...)` below
  * point Jest's OWN module resolution at electronStub.ts/fileStore.ts
  * directly. This is necessary, not incidental: `src/backend/__mocks__/
  * electron.ts` and `.../electron-store.ts` are Jest manual mocks for
@@ -83,7 +83,7 @@ jest.mock('os', () => {
 // ── electron / electron-store — route Jest's own module resolution at the
 // REAL sidecar shims (see module docstring above) ───────────────────────────
 jest.mock('electron', () => jest.requireActual('../electronStub'))
-jest.mock('electron-store', () => ({
+jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
 }))

@@ -5,7 +5,7 @@ import { getInfoFromGamesDB } from '../utils'
 import { logError } from 'backend/logger'
 
 jest.mock('backend/logger')
-jest.mock('electron-store')
+jest.mock('backend/store_backend')
 
 describe('getInfoFromGamesDB', () => {
   test('fetches successfully', async () => {
