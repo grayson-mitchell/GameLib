@@ -320,14 +320,19 @@ inspector console (third surface) for the per-row MOUNT/UNMOUNT probe evidence, 
 **Electron leg — Observed:** Operator reported `pass` — i.e. the Winetricks Install action WORKED
 under Electron and the mouse-click no-op did NOT reproduce.
 
-**INCOMPLETE — one discriminator not yet captured.** This item's value is a within-shell
-mouse-vs-keyboard comparison, not a bare pass/fail. What is recorded here is that the action
-succeeded; what is NOT yet recorded is whether the operator activated the row **by mouse click**
-(which is the path with the known symptom) or by keyboard (Tab+Enter, the path already known to
-work under Tauri). If activation was by mouse, this is a genuine Electron-side non-reproduction of
-the parked symptom and materially narrows the search. If it was by keyboard, it tells us nothing
-the Tauri record did not already say. Marked open pending operator confirmation rather than
-resolved in the favourable direction.
+**DISCRIMINATOR CAPTURED — activation was BY MOUSE CLICK** (operator confirmed on follow-up). This
+is therefore a genuine Electron-side non-reproduction of the parked symptom on the exact input path
+that fails under Tauri, not the keyboard path already known to work on both. It materially narrows
+the search: the mouse route reaches the handler under Electron and does not under Tauri, on
+frontend code that is otherwise shared.
+
+Reading this correctly matters, because the obvious inference is the wrong one. The source's
+current leading theory is a `Winetricks/index.tsx` MUI `Dialog` focus/stacking-context fault in
+SHARED frontend code — a theory that predicts BOTH shells fail. This observation contradicts that
+prediction, so either the theory is wrong, or something shell-specific modulates it (WKWebView vs
+Chromium pointer-event/focus semantics being the obvious candidate, given this project's recorded
+`focus-within-popover-unmounts-what-you-click` finding). It does NOT on its own establish which.
+Recorded as a constraint on the hypothesis space, not as a diagnosis.
 
 **Tauri leg — Observed:**
 
@@ -447,8 +452,36 @@ Nothing was logged to either sink for this action; both were checked. That is ex
 acceptable for this sub-item specifically, because it is a purely visual check rather than a
 log-driven one.
 
-**Electron leg (sub-item b, path-rejection dialog) — Observed:**
-[fill in]
+**Electron leg (sub-item b, path-rejection dialog) — Observed:** NO DIALOG AT ALL — and this
+FALSIFIES THIS SECTION'S OWN PRE-WRITTEN PREDICTION. Operator typed the relative path `foo/bar`
+into `ImportDialog`'s `PathSelectionBox` and submitted. Result: **no error message, no dialog, the
+window simply closed and nothing happened.** Both sinks checked; nothing user-visible was raised.
+
+The oversized large-text dialog this sub-item was written to observe **does not exist under
+Electron**. Confirmed by census, not inference: `pathRejectedTitle` / `pathRejectedBodyMove` /
+`pathRejectedBodyImport` and their `showDialogBoxModalAuto` call sites appear in **exactly one
+source file across the whole tree** — `src/backend/sidecar/installFlowRegistration.ts` (:169, :322,
+:445). That is a SIDECAR file, i.e. the Tauri backend path. Electron does not route through the
+sidecar, so no Electron code path can raise it.
+
+What the operator saw under Electron is precisely the **pre-34.6-19 behaviour the source todo
+describes in its own Problem section**: "before it, a rejected path produced only a `logError` and
+a terminal `done` status, which read as the app doing nothing." Plan 34.6-19's fix for the silent
+rejection landed on the sidecar side only and was never mirrored into the Electron path.
+
+**Correction to this section's `Notes:` prediction, recorded rather than quietly overwritten.**
+The Notes below predict 6(b) will be BOTH "by construction", reasoning that it "uses the app's own
+in-app `showDialogBoxModalAuto` primitive, which exists identically under both shells". The
+primitive is indeed shared; the CALL SITE is not. Reasoning from a shared primitive to shared
+behaviour skipped the question of whether the caller is shared, and it produced the wrong answer.
+The correct expectation is that this sub-item is **TAURI-ONLY** — the dialog can only reproduce
+where it exists.
+
+**This is not a defect to fix.** Electron is deleted at plan 35-14; a missing dialog on a path
+that ceases to exist needs no remediation. Its value here is threefold: it retires a false
+"BOTH by construction" prediction, it means the Electron leg CANNOT serve as an appearance
+baseline for this dialog, and it is a concrete instance of the Item 2 generalisation — behaviour
+that lives in `main.ts`/sidecar asymmetrically is invisible to a channel-by-channel port audit.
 
 **Tauri leg (sub-item a, EOS dialog) — Observed:**
 [fill in]
