@@ -180,6 +180,119 @@ describe('src-tauri/tauri.conf.json runner-tree staging (Phase 34.9 Plan 07)', (
   })
 })
 
+/**
+ * R-34.5-G1-PKG half (a) (Phase 35 plan 04, D-19, REQ-35-11).
+ *
+ * The defect this guards is NOT "an asset was forgotten". It is that the OBVIOUS fix ships the
+ * files to a directory nothing reads, and looks green doing it.
+ *
+ * `bundle.resources` was `["../build/bin/"]` -- the ARRAY form. In the array form Tauri derives
+ * each target path with `tauri_utils::resources::resource_relpath`, which maps every
+ * `Component::ParentDir` to a literal `_up_` segment (tauri-utils-2.9.3 `src/resources.rs`:21-24,
+ * read at plan-execution time, not inferred from docs). So `../build/bin/` shipped to
+ * `Contents/Resources/_up_/build/bin/`. Meanwhile `constants/paths.ts` computes
+ * `publicDir = resolve(app.getAppPath(), 'build')` and `app.getAppPath()` is the Tauri shell's
+ * `resource_dir()`, i.e. `Contents/Resources` -- so the sidecar looked in
+ * `Contents/Resources/build/`. Two directories that never met. The 2026-08-22 DMG probe recorded
+ * in `34.2-HUMAN-UAT.md` (G-34.2-UAT-02) saw exactly this: `_up_` and `icon.icns`, nothing else.
+ *
+ * Appending more `../`-prefixed entries to the array would have reproduced the same mismatch one
+ * directory over. The MAP form is therefore load-bearing, not stylistic: it states the target
+ * subpath explicitly instead of deriving it, and `resource_relpath` is applied to the TARGET
+ * value (`resources.rs`:239) -- which is why a target may not itself contain `..`, or it would
+ * come straight back as `_up_`.
+ *
+ * These assertions are a CONFIG-level guard only. They cannot prove the files are in the
+ * artifact -- a glob that matches nothing, or a source path that moves, still passes everything
+ * here (T-35-15). The artifact-level proof is the blocking human checkpoint in plan 35-04
+ * Task 3: list `Contents/Resources/` in a real `.app`.
+ */
+describe('R-34.5-G1-PKG half (a): bundle.resources targets a path publicDir can actually reach', () => {
+  function resourceMap(): Record<string, string> {
+    const resources = parseTauriConfig().bundle.resources
+    if (Array.isArray(resources) || typeof resources !== 'object') {
+      throw new Error(
+        'bundle.resources is the ARRAY form. Targets are then derived, and every "../" becomes an ' +
+          '"_up_" segment -- the R-34.5-G1-PKG half (a) defect. Use the map form.'
+      )
+    }
+    return resources as unknown as Record<string, string>
+  }
+
+  test('anti-vacuity: the map is non-empty and every entry is a string->string pair', () => {
+    // Without this, every assertion below passes vacuously against `{}`.
+    const map = resourceMap()
+    expect(Object.keys(map).length).toBeGreaterThan(0)
+    for (const [key, value] of Object.entries(map)) {
+      expect(typeof key).toBe('string')
+      expect(typeof value).toBe('string')
+      expect(key.length).toBeGreaterThan(0)
+    }
+  })
+
+  test('it is the MAP form, not the array form (the array form derives "_up_" targets)', () => {
+    expect(Array.isArray(parseTauriConfig().bundle.resources)).toBe(false)
+  })
+
+  test('every target subpath begins with "build/" so it lands at Contents/Resources/build/...', () => {
+    for (const target of Object.values(resourceMap())) {
+      expect(target.startsWith('build/')).toBe(true)
+    }
+  })
+
+  test('no target contains ".." -- resource_relpath would turn it back into an "_up_" segment', () => {
+    for (const target of Object.values(resourceMap())) {
+      expect(target.split('/')).not.toContain('..')
+    }
+  })
+
+  test('every publicDir-resolved asset class is carried, not only bin/', () => {
+    // Derived from the measured publicDir consumer sweep in 35-04-PLAN.md: paths.ts (bin/,
+    // webviewPreload.js, icon.png), utils.ts (bin/, changelog.json), main.ts + the sidecar i18n
+    // path (locales/). Locales are named explicitly because they are what the DMG probe proved
+    // missing -- but the defect class is the whole publicDir tree, not the locales alone.
+    const keys = Object.keys(resourceMap()).join(' ')
+    for (const required of [
+      'bin',
+      'locales',
+      'changelog.json',
+      'webviewPreload.js',
+      'icon.png'
+    ]) {
+      expect(keys).toContain(required)
+    }
+  })
+
+  test('T-35-14: Electron main/preload output and build intermediates are NEVER bundled', () => {
+    // build/main/ and build/preload/ are Electron main-process code. Shipping them inside the
+    // Tauri artifact would be executable code with no live loader and no owner. sea-config.json
+    // and sidecar-prep.blob are build intermediates.
+    const keys = Object.keys(resourceMap()).join(' ')
+    for (const forbidden of [
+      '/main',
+      '/preload',
+      'sea-config',
+      'sidecar-prep'
+    ]) {
+      expect(keys).not.toContain(forbidden)
+    }
+  })
+
+  test('locales are carried as a DIRECTORY entry, never a glob (a glob flattens and collides)', () => {
+    // resources.rs:207 -- for a glob pattern the target is `dest.join(file_name)`, which DISCARDS
+    // the intermediate directories. "../build/locales/**/*.json" would therefore collapse ~50
+    // languages' gamelib.json into one path, each overwriting the last. The directory form takes
+    // the walkdir branch instead (resources.rs:196-201), which preserves structure via
+    // `strip_prefix`.
+    const localeKeys = Object.keys(resourceMap()).filter((k) =>
+      k.includes('locales')
+    )
+    expect(localeKeys.length).toBe(1)
+    expect(localeKeys[0]).not.toContain('*')
+    expect(localeKeys[0].endsWith('/')).toBe(true)
+  })
+})
+
 describe('34.9-PACKAGING-LIMITATIONS.md exists and names its owner', () => {
   test('the file exists and names R-34.5-G1-PKG', () => {
     const contents = readFileSync(PACKAGING_LIMITATIONS_PATH, 'utf-8')
