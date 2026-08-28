@@ -268,3 +268,110 @@ timing assertion, not a defect this plan introduced — none of 35-04's files is
 path. New instance of MEMORY's `full-suite-run-manufactures-failures-under-load`.
 
 **Status:** open, unowned. Recorded so a future run does not re-diagnose it from scratch.
+
+## D-35-05-01 — BLOCKING: plan 35-05's prescribed swap carries a silent total-data-loss defect
+
+**Found during:** plan 35-05, Task 2 pre-read. **Measured, not code-read** (probe script run
+against the installed `conf@10.2.0`, in a scratchpad temp dir — the real store was never written).
+
+Plan 35-05 Task 2 instructs: "add `cwd` to every options object … leave `name`,
+`clearInvalidConfig` and every other existing option value **exactly as it is**."
+
+`conf` has **no `name` option**. It reads `options.configName`. `electron-store@8.2.0`'s entire
+value-add over `conf` is four lines of option translation (`node_modules/electron-store/index.js`
+:51-69):
+
+```js
+options = {name: 'config', ...options}
+if (options.cwd) { options.cwd = path.isAbsolute(options.cwd) ? options.cwd : path.join(defaultCwd, options.cwd) }
+else { options.cwd = defaultCwd }          // defaultCwd = app.getPath('userData')
+options.configName = options.name          // <-- the rename the plan does not mention
+delete options.name
+```
+
+Measured consequences of following the plan literally:
+
+| Probe | Options passed | `conf`'s resolved `.path` | Reads pre-existing value? |
+|-------|----------------|---------------------------|---------------------------|
+| 1 | `{cwd: <abs>, name: 'gogLibrary'}` | `<abs>/config.json` | **NO — `undefined`** |
+| 2 | `{cwd: <abs>, configName: 'gogLibrary'}` | `<abs>/gogLibrary.json` | yes, incl. dot-notation |
+| 3 | `{cwd: 'store_cache', …}` (the literal value all 5 sites pass) | **`<process.cwd()>/store_cache/…`** — i.e. the repo | n/a |
+
+All five production construction sites pass `{cwd: 'store_cache', name: <filename>}`. So the
+prescribed change produces **two independent silent relocations**, either of which is strictly
+worse than the single one the plan was written to prevent:
+
+1. **`name` is ignored** → every cache store collapses onto ONE file, `store_cache/config.json`.
+   Measured blast radius on this machine's live profile: **24 distinct `store_cache/*.json`
+   files** (`gog_library`, `steam_library`, `steam_metadata`, `humble_library`,
+   `legendary_library`, `crossover_index`, …) all collapse to one, and every existing value
+   reads back `undefined`.
+2. **relative `cwd` resolves against `process.cwd()`**, not `userData` — `conf` does
+   `path.resolve(options.cwd, …)`. Adding `cwd` "explicitly" does not fix this unless the value
+   is made ABSOLUTE from `pathShim.getPath('userData')`.
+
+**Correct fix** (not applied — see D-35-05-02 for why this plan stopped): a first-party shim
+module over `conf` replicating electron-store's four translation lines, sourcing `defaultCwd`
+from `pathShim.getPath('userData')` instead of `app.getPath('userData')`, plus fileStore's
+WR-11 resolve+relative containment check carried forward as defence-in-depth.
+
+**Verified NOT a problem:** `conf@10.2.0` keeps `.get(k, default)`, `.set`, `.has`, `.delete`,
+`.clear`, `.store`, `Symbol.iterator`, dot-notation paths, `clearInvalidConfig`, `defaults` and
+`accessPropertiesByDotNotation`. Prototype-pollution guard holds — `set('__proto__.polluted', …)`
+left `({}).polluted === undefined` (dot-prop@6 `disallowedKeys`), so Phase 29 CR-01's concern is
+satisfied by the library itself.
+
+**Status:** open. This is an input correction for whoever re-runs 35-05, not a nicety.
+
+## D-35-05-02 — BLOCKING: plan 35-05's site count is ~9, the real count is ~48
+
+**Found during:** plan 35-05, scope enumeration.
+
+The plan's `must_haves` assert "the scope is TEN sites … Nine land here". The measured scope of
+removing `electron-store` from `package.json` is:
+
+| Category | Count | Detail |
+|---|---|---|
+| Production construction sites | **5**, not 4 | plan misses `storeWriteHandlers.ts:364` (`storeNew`); the others are `electron_store.ts:63`, `cache.ts:35`, `handlers.ts:297`, `storeWriteHandlers.ts:92` |
+| Production/type imports | 4 | `electron_store.ts:1`, `cache.ts:1`, `handlers.ts:73`, `common/types/electron_store.ts:1` |
+| Hook + its docs | 2 | `installElectronHook.ts` (intercepts `electron` **as well as** `electron-store` — so case B applies: keep the file, delete only the `electron-store` branch), `bootstrap.ts` comment |
+| **`jest.mock('electron-store', …)` test files** | **37** | not mentioned by the plan at all |
+| **Manual mock** | 1 | `src/backend/__mocks__/electron-store.ts` — does `jest.requireActual('electron-store')`; hard-breaks the moment the package leaves `node_modules` |
+| **Build config** | 1 | `package.json` `build:sidecar` carries `--external:electron-store` |
+| **AST gate** | 1 | `sidecar/__tests__/externalDynamicImportGate.test.ts`'s `FORBIDDEN_DYNAMIC_IMPORT_MODULES = ['electron', 'electron-store']` |
+| Doc comments naming it | ~30 | `storeChangeNotifier.ts`, `fileStore.ts`, `storePolicy.ts`, `humble/electronStores.ts`, … |
+
+Consequences the plan's acceptance criteria do not survive:
+
+- `grep -rln "electron-store" src/backend/ src/common/ | grep -v __tests__` **cannot** return
+  nothing — `__mocks__/electron-store.ts` is not under a `__tests__` directory, and ~30
+  non-test files reference the string in prose comments. The criterion was written from a grep
+  of *import* sites only.
+- The plan's verify step, `pnpm test --selectProjects Backend -- cache storeChangeNotifier`,
+  runs **2 of the 37** affected suites. It is structurally incapable of detecting breakage in
+  the other 35 — a fresh instance of MEMORY's `gate-failure-mechanisms` /
+  `jest-selectprojects-is-case-sensitive-and-exits-zero`.
+
+**The architectural fork the plan never contemplated:** those 37 suites currently do
+`jest.mock('electron-store', () => ({__esModule: true, default: jest.requireActual('../fileStore').default}))`,
+routing store construction at the sidecar's hand-rolled `fileStore.ts`. Once production stops
+importing `electron-store`, every one of those mocks goes **inert** (MEMORY:
+`per-suite-jest-mock-os-is-inert.md`, ~30 dead mocks last time). Whoever resumes must choose:
+
+- **(A) Retire `fileStore.ts`** — sidecar runs real `conf`; repoint all 37 suites + delete
+  `fileStore.test.ts`'s subject. Simplest end state, removes 450 lines of reimplementation, but
+  changes the storage engine of the process that holds Steam/Humble credentials, and Phase 27
+  T-27-03 / Phase 29 CR-01, WR-11, D-14, D-07 all attach to `fileStore.ts`.
+- **(B) Keep `fileStore.ts` as the sidecar engine** behind the new first-party module; repoint
+  the 37 mocks at the new specifier. Preserves every existing assertion, but leaves production
+  (conf) and tests (fileStore) on different engines — a test/production divergence.
+
+**Mitigating fact, measured:** `src/backend/jest.config.js` registers
+`jest.setupContainment.ts` in `setupFiles` for the **entire** Backend project, redirecting
+`os.homedir()` + `HOME`/`APPDATA`/`XDG_*` to a disposable per-run root. `pathShim`'s
+`resolveAppDataDir()` goes through `homedir()`, so even a fully inert mock would write into the
+containment root, **not** the developer's real profile. The `tests-clobbering-real-steam-store`
+failure mode is structurally closed here. This lowers the severity of getting the fork wrong;
+it does not remove the need to choose.
+
+**Status:** open — blocking input for whoever resumes 35-05.
