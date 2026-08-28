@@ -137,6 +137,8 @@ of blocker records rotting silently.
   (would ship the 34.6 Step 8 failure as permanent, and it is security-relevant on a shared
   machine).*
 
+
+  > **CORRECTION APPENDED 2026-08-29 (the decision itself is NOT rewritten — that is the operator's call).** This decision's prescribed mechanism, `clear_all_browsing_data()`, is **banned in `src-tauri/src/main.rs` at three sites** (`:2066` "MUST NOT appear anywhere in this file", `:5742`, `:6237`) and by **REQ-34.4.1-06, a CLOSED requirement**, which names the exact harm: it "would silently sign the user out of storefronts they never touched". The shared jar holds 62 live cookies across Humble/Amazon/GOG/Epic. D-09 also could not discharge the 34.6 Step 8 FAIL it was written to close — Step 8 requires a non-Epic cookie to SURVIVE. Its premise is additionally stale: `35-AB-RETEST.md` Item 7 records the lying-report symptom as NOT REPRODUCING; the real remaining defect is that the domain-scoped clear is INCOMPLETE. Full evidence in `deferred-items.md` -> `D-35-09-01`. Do not re-plan 35-09 against this decision as written.
 - **D-10:** Artwork disk cache is ACCEPTED as lost. `CachedImage` is already gated on
   `imageCacheSchemeAvailable()` (34.4.1 gap cycle 2, plan 27) and never emits `imagecache://`
   when the scheme is not served, so nothing is broken — artwork loads live over http(s).

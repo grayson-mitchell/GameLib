@@ -619,3 +619,94 @@ covered by `wakeLock.test.ts` plus the `dispatch_rust_channel` arms at `main.rs:
 
 Same shape as the 35-07 finding where an existing gate outlawed more than its decision did: a
 mechanically-checkable criterion encoding a wrong assumption about which surface a call arrives on.
+
+## D-35-09-01 — BLOCKING: plan 35-09's mechanism is BANNED IN SOURCE, and its premise is STALE
+
+**Found during:** plan 35-09 execution, 2026-08-29. The executor **stopped and built nothing** —
+tree clean, no commits, no SUMMARY (writing one would have been a false record). Every claim below
+was independently re-verified by the orchestrator before this entry was written.
+
+**Status: BLOCKING. 35-09 needs re-planning. 35-13 (wave 7) depends on 35-09 and is blocked with
+it.** 35-10 does not depend on either and proceeds.
+
+### 1. The prescribed mechanism is prohibited, in-source, three times
+
+Plan 35-09 requires `Webview::clear_all_browsing_data()`. `src-tauri/src/main.rs` forbids it:
+
+| Site | Text |
+|---|---|
+| `:2066` | ``clear_all_browsing_data()` MUST NOT appear anywhere in this file` |
+| `:5742` | `D-08 is non-negotiable on every platform: never clear_all_browsing_data()` |
+| `:6237` | `never-clear_all_browsing_data() discipline` |
+
+`REQUIREMENTS.md:691`, **REQ-34.4.1-06, a CLOSED `[x]` requirement**, states the rule and the harm:
+
+> **Domain-scoped, NEVER blanket wipe** — the same jar will hold Epic/GOG/Amazon cookies once 34.5
+> lands, and `clear_all_browsing_data()` would silently sign the user out of storefronts they never
+> touched. Research established **no one-shot "clear domain X" API**: shape `cookies()` + suffix
+> filter + loop per-cookie `delete_cookie()`.
+
+Seven prior plans (34.4.1-01/-06/-15/-21/-22/-23, 34.5-06) carried acceptance criteria pinning this
+to **0 occurrences**. It is mitigation text for T-34.4.1-03/-30/-66/-93/-99 and T-34.5-20.
+
+**Measured blast radius:** the shared jar holds **62 live cookies** — Humble 19+1+1, Amazon 8+2,
+GOG 3+2, Epic 6. A blanket wipe on Epic logout destroys every other authenticated storefront
+session, including Humble's `_simpleauth_sess`. Plan 35-09's `must_haves` frames this as "accepted
+coarseness"; REQ-34.4.1-06 had already rejected it *as the harm*.
+
+### 2. It could not have discharged the 34.6 Step 8 FAIL it exists to close
+
+`34.6-LIVE-GATE.md:1324` states Step 8's bar: `clearEpicCookies` removes Epic-domain cookies
+**without** removing other domains' — scored by identity. The fixture is a named non-Epic
+`.gog.com` cookie that must **SURVIVE**. A blanket wipe removes it. **The plan's success criterion
+is unreachable via the plan's own mechanism.**
+
+**And the gate would not have caught that.** Task 3's steps 1–7 never check the survivor clause —
+they only ask whether re-login requires credentials, which a blanket wipe passes trivially. Task 3's
+acceptance criteria are **strictly weaker than the D-13 bar they claim to re-run**. A gate written
+to close a failure, that scores the regression as PASS.
+
+### 3. The premise is stale — the described defect was already fixed
+
+`35-AB-RETEST.md` Item 7 — which the plan's own Task 2 `read_first` names — records the Tauri leg as
+**"THE RECORDED SYMPTOM DID NOT REPRODUCE."** The lying self-report is fixed: `cleared 9
+epicgames.com cookie(s) (measured post-removal delta)`, and an independent structured binarycookies
+parse confirms `EPIC_SESSION_AP` **ABSENT**. (That measurement discarded a `strings(1)` reading as
+unsound first — a binary jar retains tombstoned bytes, so a name appearing in the file is not
+evidence of a live cookie.) 34.4.1 plan 23 already built what Task 1 asks to invent:
+`legendary/user.ts:137-222` forks on `getLoginWindowSeam()` and runs domain-scoped
+`clearEpicCookies` + `clearEpicStorage` with the post-removal re-read.
+
+### 4. The REAL open defect, which is a different one
+
+The domain-scoped clear is **INCOMPLETE**, not absent. Live survivors after an Epic logout:
+
+- on `epicgames.com` suffixes: `EPIC_LOGIN_ID` (96), `_tald` (36), `_epicSID` (32), `EPIC_DEVICE`
+  (32), `__cf_bm` on `.www.` and on `.ecosec.on.` — **6 total**;
+- on **Epic-owned domains an `epicgames.com` suffix filter cannot match by construction**:
+  `EPIC_DEVICE` on `.fortnite.com`, `.twinmotion.com`, `.unrealengine.com`, `.metahuman.com`.
+  `EPIC_COOKIE_HOST = 'epicgames.com'` (`legendary/user.ts:24`).
+
+Separately and genuinely correct in plan 35-09: a `deleted === 0` outcome should FAIL the logout.
+Today `legendary/user.ts` swallows every wipe step into
+`logWarning('... failed (continuing)')`.
+
+### 5. Where the defect entered, so it is not re-derived
+
+Not the plan's invention. `35-CONTEXT.md:126` **D-09** prescribes "DELETING THE WEBVIEW DATA
+DIRECTORY, not by clearing cookies", and `35-RESEARCH.md:45` says "Use `clear_all_browsing_data()`
+as D-09's concrete implementation." **Neither cites the in-source ban or REQ-34.4.1-06.** Three
+documents deep, and the plan inherited it faithfully. Re-planning 35-09 without correcting D-09
+itself will reproduce this.
+
+### 6. Two secondary conflicts, both already-known shapes
+
+- Task 1's `generate_handler!` acceptance criterion is wrong for the same reason as
+  `D-35-08-01` — every comparable arm lives in `dispatch_rust_channel`.
+- The `capabilities/default.json` grant must **not** be added.
+  `webview:allow-clear-all-browsing-data` in a capability scoped `"windows": ["main"]`, where
+  untrusted remote content renders, would hand that content a one-call wipe of every storefront
+  session. Same refusal as `dialog:allow-open` and `deep-link:default`.
+
+**Open decision for the operator:** which Epic-owned domains belong in the clear's filter. That is a
+scope decision, not an implementation detail, which is why the executor did not improvise one.
