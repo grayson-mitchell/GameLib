@@ -346,6 +346,40 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
   })
 })
 
+describe('main.rs TRAY_SETTINGS has exactly one initialiser (Phase 35 Plan 06 task 3, live-gate defect 3)', () => {
+  // The defect: the lock sat at file scope with TWO `get_or_init` call sites --
+  // `get_or_init(TraySettingsSnapshot::default)` in the accessor and
+  // `get_or_init(load_tray_settings)` in `.setup()`. Whichever ran first won permanently. The
+  // accessor's caller is the sidecar reader thread, so a `recentGamesChanged` frame arriving
+  // before `.setup()` reached its initialiser would latch the lock to ALL-FALSE defaults, turn
+  // the real load into a silent no-op, and disable every tray setting for the whole run.
+  //
+  // THE PRIMARY GUARANTEE IS THE COMPILER, NOT THIS TEST. The lock is now private to an inline
+  // `mod tray_settings_lock`, so a second initialiser outside it does not compile -- verified by
+  // adding one, which failed with `error[E0425]: cannot find value TRAY_SETTINGS in this scope`.
+  //
+  // This test exists for the case the compiler cannot catch: someone adding a second
+  // `get_or_init` INSIDE the module, or reintroducing a `default()` initialiser there. The
+  // invariant is only expressible as "the file contains exactly one of these", so it is asserted
+  // at source level, deliberately and with that limitation stated.
+  const countOf = (haystack: string, needle: string) =>
+    haystack.split(needle).length - 1
+
+  test('exactly one get_or_init, and it is the real loader', () => {
+    const code = loadMainRsCode()
+    expect(countOf(code, 'TRAY_SETTINGS.get_or_init')).toBe(1)
+    expect(countOf(code, 'TRAY_SETTINGS.get_or_init(load_tray_settings)')).toBe(1)
+    expect(countOf(code, 'static TRAY_SETTINGS')).toBe(1)
+  })
+
+  test('RED direction: a default() initialiser is absent', () => {
+    // Non-vacuity proof for the assertions above. This exact string is what shipped and what
+    // made the race lossy: a second initialiser that latches all-false and never errors.
+    const code = loadMainRsCode()
+    expect(code).not.toContain('TRAY_SETTINGS.get_or_init(TraySettingsSnapshot::default)')
+  })
+})
+
 describe("main.rs main-window devtools is gated on visibility (Phase 35 Plan 06 task 3, live-gate defect 2)", () => {
   // The defect: `open_devtools()` FORCES a window visible. Gated only on
   // `#[cfg(debug_assertions)]`, it ran after `startInTray`'s hide and put the window straight

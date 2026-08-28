@@ -239,17 +239,70 @@ impl Default for TraySettingsSnapshot {
 /// frame passes through the reader thread.
 static TRAY_RECENT_GAMES: OnceLock<Mutex<Vec<TrayRecentGame>>> = OnceLock::new();
 
-/// Startup snapshot of the tray settings. `OnceLock` because these are read exactly once, in
-/// `.setup()`, before the tray is built -- reading them later would not help: `noTrayIcon` and
-/// `startInTray` are both decisions that can only be made at startup.
-static TRAY_SETTINGS: OnceLock<TraySettingsSnapshot> = OnceLock::new();
+/// Startup snapshot of the two tray settings that are legitimately startup-only: `noTrayIcon`
+/// and `startInTray`. Both govern a decision that can only be taken before the tray or the
+/// window exists, so a later read could not act on a changed value.
+///
+/// `exitToTray` is DELIBERATELY NOT served from here even though the snapshot still carries the
+/// field. It governs a decision taken when the user closes the window, and it is re-read fresh at
+/// that moment (`should_hide_on_close`'s call site). Reading it from this snapshot is exactly the
+/// defect plan 35-06 task 3's live gate found.
+///
+/// THE `OnceLock` IS PRIVATE TO THIS MODULE AND UNREACHABLE FROM ANYWHERE ELSE IN THE PROGRAM.
+/// That encapsulation is the point, and it is a compiler-enforced guarantee rather than a
+/// convention: `get()` below is the ONLY `get_or_init` call site that can exist for this lock,
+/// so a second initialiser with different semantics is not something a reviewer has to notice
+/// -- it will not compile.
+///
+/// It is written this way because the alternative already failed. The lock previously sat at
+/// file scope with TWO initialisers: `get_or_init(TraySettingsSnapshot::default)` in the
+/// accessor and `get_or_init(load_tray_settings)` in `.setup()`. Whichever ran first won
+/// permanently. `tray_settings()`'s caller is the sidecar reader thread's `recentGamesChanged`
+/// handler, so a frame arriving before `.setup()` reached its initialiser would have latched the
+/// lock to ALL-FALSE defaults, silently turned the real load into a no-op, and disabled every
+/// tray setting for the whole run with no error anywhere. Intermittent, and undiagnosable from
+/// the symptom.
+///
+/// The doc comment that made that arrangement look safe said the value was "read exactly once".
+/// A comment asserting an invariant is not the same thing as an invariant.
+mod tray_settings_lock {
+    use super::{load_tray_settings, TraySettingsSnapshot};
+    use std::sync::OnceLock;
+
+    static TRAY_SETTINGS: OnceLock<TraySettingsSnapshot> = OnceLock::new();
+
+    /// The one and only initialiser. Always `load_tray_settings` -- never a `default()` fallback,
+    /// which is what made the previous two-initialiser arrangement silently lossy. Whoever gets
+    /// here first (the reader thread or `.setup()`) performs the real read, and everyone
+    /// afterwards sees that same real value.
+    ///
+    /// `load_tray_settings` is itself fail-open: an unreadable config yields
+    /// `TraySettingsSnapshot::default()`. That is a DEGRADE INSIDE the real read, which every
+    /// caller then observes consistently -- categorically different from racing a `default()`
+    /// initialiser against a real one and latching whichever won.
+    ///
+    /// The deref is deliberately on its OWN line rather than written as
+    /// `*TRAY_SETTINGS.get_or_init(...)`. `stripSourceComments`
+    /// (`src/backend/testUtils/stripSourceComments.ts:42`) drops every line matching
+    /// `/^\s*(\/\/|\*|\/\*)/` -- intended for block-comment continuation lines, but a Rust
+    /// deref-expression at the start of a line is indistinguishable from one. Written the
+    /// compact way, this call site is INVISIBLE to every source-level gate that reads main.rs,
+    /// which is how the previous two-initialiser arrangement went unnoticed by them. Do not
+    /// "simplify" this back onto one line: it would silently blind the gate below.
+    pub(super) fn get() -> TraySettingsSnapshot {
+        let snapshot = TRAY_SETTINGS.get_or_init(load_tray_settings);
+        *snapshot
+    }
+}
 
 fn tray_recent_games() -> &'static Mutex<Vec<TrayRecentGame>> {
     TRAY_RECENT_GAMES.get_or_init(|| Mutex::new(Vec::new()))
 }
 
+/// The process-wide startup tray-settings snapshot. See `tray_settings_lock` for why the lock is
+/// encapsulated and why there is exactly one initialiser.
 fn tray_settings() -> TraySettingsSnapshot {
-    *TRAY_SETTINGS.get_or_init(TraySettingsSnapshot::default)
+    tray_settings_lock::get()
 }
 
 /// The cached runner for a recent-game entry, if the entry carries one.
@@ -6719,7 +6772,11 @@ fn main() {
             // rather than over a sidecar invoke -- see `gamelib_app_folder`'s doc comment for
             // why a round-trip is the wrong shape for two decisions that must be made before
             // the tray exists and before the window is displayed.
-            let tray_settings = *TRAY_SETTINGS.get_or_init(load_tray_settings);
+            // Goes through the SAME single accessor the reader thread uses -- see
+            // `tray_settings_lock`. `.setup()` no longer owns a private initialiser, which is
+            // what previously let a reader-thread frame latch the lock to all-false defaults
+            // before this line ever ran.
+            let tray_settings = tray_settings();
 
             // `startInTray`. Hidden inside `.setup()`, before the event loop runs, so the
             // window is never displayed rather than being shown and yanked away.
