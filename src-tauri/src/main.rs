@@ -3156,15 +3156,58 @@ fn open_pristine_epic_login_window(
     }
 }
 
-/// The domain-suffix target `humble_login_clear_cookies`'s pristine-window fallback (below)
-/// gates on -- MUST equal `legendary/user.ts`'s own `EPIC_COOKIE_HOST` constant, the only
-/// value that arm's `clearEpicCookies` step ever passes as `domain`. Kept as a literal
-/// (mirroring `EPIC_LOGIN_HOST`'s own "read only, never imported" convention above, since this
-/// file has no build-time access to frontend/backend TS source) rather than derived from
-/// `EPIC_LOGIN_HOST`, which is a full hostname (`www.epicgames.com`), not the cookie-domain
-/// suffix (`epicgames.com`) Epic's session cookies are actually set against.
+/// The domain-suffix targets `humble_login_clear_cookies`'s pristine-window fallback (below)
+/// gates on -- MUST stay paired, entry for entry, with `legendary/user.ts`'s own
+/// `EPIC_COOKIE_HOSTS` constant, whose `clearEpicCookies` step passes these values as `domain`
+/// ONE AT A TIME, one `humble_login_clear_cookies` call per entry. The two lists are
+/// hand-maintained mirrors of each other (this file has no build-time access to frontend or
+/// backend TS source, so nothing can derive one from the other); each names the other in its
+/// own comment so a reviewer editing one is told, in place, that the other exists.
+///
+/// APEX domains, deliberately, not hostnames: `cookie_domain_matches` (above) does the suffix
+/// work, so `epicgames.com` covers `www.epicgames.com`, `.ecosec.on.epicgames.com` and every
+/// other subdomain a session cookie may be scoped to. That is also why this is NOT derived from
+/// `EPIC_LOGIN_HOST`, which is a full hostname (`www.epicgames.com`) rather than the
+/// cookie-domain suffix Epic's session cookies are actually set against.
+///
+/// Why a LIST and not the single `epicgames.com` this used to be (Phase 35 plan 09, operator
+/// decision D-09-CORRECTED, 2026-08-29): `35-AB-RETEST.md` Item 7 measured `EPIC_DEVICE`
+/// surviving an Epic logout on `.fortnite.com`, `.twinmotion.com`, `.unrealengine.com` and
+/// `.metahuman.com`. An `epicgames.com` suffix filter cannot match any of those BY
+/// CONSTRUCTION, so the fix is to widen the filter -- NOT to change the mechanism. The blanket
+/// browsing-data wipe this file prohibits in three separate places stays banned (REQ-34.4.1-06);
+/// this doc comment deliberately does NOT spell that API's name, so a `grep -c` of it over this
+/// file keeps returning exactly those three prohibitions and nothing else. The jar is app-wide,
+/// and a blanket wipe would sign the user out of storefronts they never touched.
+///
+/// Accepted cost, chosen explicitly by the operator over a filter that cannot match: this list
+/// is maintained BY HAND and can go stale if Epic adds a domain. It is scoped to Epic-owned
+/// apexes only -- widening it to any non-Epic domain would recreate exactly the over-broad
+/// clear `REQ-34.4.1-06` closed, which is why `epic_cookie_domain_matches` below is tested in
+/// BOTH directions (every member matches; Humble/GOG/Amazon still do not).
 #[cfg(target_os = "macos")]
-const EPIC_COOKIE_DOMAIN: &str = "epicgames.com";
+const EPIC_COOKIE_DOMAINS: &[&str] = &[
+    "epicgames.com",
+    "fortnite.com",
+    "unrealengine.com",
+    "twinmotion.com",
+    "metahuman.com",
+];
+
+/// True when `domain` is (or is a subdomain of) ANY Epic-owned apex in `EPIC_COOKIE_DOMAINS`.
+///
+/// Delegates every comparison to `cookie_domain_matches` (above) -- the ONE domain comparator in
+/// this file, born from F-34.4.2-19 and weeks of silent Humble-login failure. A hand-rolled
+/// suffix test here would be a SECOND comparator, which is exactly how Plan 22's Defect A
+/// happened. Argument order matches the call site this replaces (`cookie_domain_matches(domain,
+/// Some(...))` -- the value being cleared first, the fixed target second), deliberately
+/// unchanged.
+#[cfg(target_os = "macos")]
+fn epic_cookie_domain_matches(domain: &str) -> bool {
+    EPIC_COOKIE_DOMAINS
+        .iter()
+        .any(|epic| cookie_domain_matches(domain, Some(epic)))
+}
 
 /// Resolves the `NSWindow` handle for a Tauri-managed login window (Humble/GOG/Amazon --
 /// REQ-34.4.2-10's locked scope; see this file's module-level scope note on
@@ -5761,14 +5804,23 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // Tauri-managed `WebviewWindow` under ITS label -- `existing_window` is
             // structurally always `None` for it, for every label, fresh or stale -- so this
             // branch is gated on BOTH "no such webview window" AND "the domain being cleared
-            // is Epic's own", the only combination `legendary/user.ts`'s `clearEpicCookies`
-            // step can ever produce. Every other caller (Humble/GOG/Amazon, all still routed
-            // through a live Tauri-managed window at this point) fails the domain check and
-            // falls straight through to the existing `no-window` error below, completely
-            // unchanged.
+            // is one of Epic's own", the only combination `legendary/user.ts`'s
+            // `clearEpicCookies` step can ever produce. Every other caller (Humble/GOG/Amazon,
+            // all still routed through a live Tauri-managed window at this point) fails the
+            // domain check and falls straight through to the existing `no-window` error below,
+            // completely unchanged.
+            //
+            // Phase 35 plan 09 (D-09-CORRECTED): the domain check now spans the whole
+            // `EPIC_COOKIE_DOMAINS` set, not the single `epicgames.com` literal it used to be,
+            // because `clearEpicCookies` now calls this arm once PER Epic-owned apex. Widening
+            // it is what makes the four sibling domains reachable at all -- passing
+            // `fortnite.com` to the old single-literal guard fell straight through to
+            // `humble_login:no-window:{label}`, an ERROR rather than a clear. The guard stays
+            // NARROW for every other storefront, and that property is asserted in both
+            // directions by `epic_cookie_domain_matches_*` in this file's own `mod tests`
+            // rather than merely claimed in this comment.
             #[cfg(target_os = "macos")]
-            if existing_window.is_none() && cookie_domain_matches(domain, Some(EPIC_COOKIE_DOMAIN))
-            {
+            if existing_window.is_none() && epic_cookie_domain_matches(domain) {
                 return clear_default_data_store_cookies_for_domain(app, domain);
             }
 
@@ -8611,6 +8663,125 @@ mod tests {
         // in this arm's own test group so a reviewer looking only at the new arm's tests can
         // see the poll's direction was checked, not merely assumed unaffected.
         assert!(cookie_domain_matches("www.humblebundle.com", Some("humblebundle.com")));
+    }
+
+    // ---- epic_cookie_domain_matches (Phase 35 plan 09, D-09-CORRECTED, T-35-37/T-35-38) ----
+    //
+    // The `humble_login_clear_cookies` macOS fallback guard, tested in BOTH directions. A
+    // positive-only test cannot detect an OVER-WIDE set, and an over-wide set is precisely the
+    // harm `REQ-34.4.1-06` closed (a clear that signs the user out of a storefront they never
+    // touched). Both halves are therefore load-bearing; neither may be deleted without the
+    // other.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn epic_cookie_domain_matches_accepts_every_epic_owned_apex() {
+        // Every apex the TS side (`legendary/user.ts`'s `EPIC_COOKIE_HOSTS`) actually passes.
+        // Before this plan, four of these five fell through the guard to
+        // `humble_login:no-window:{label}` -- an error, not a clear (`35-AB-RETEST.md` Item 7
+        // measured `EPIC_DEVICE` surviving on all four).
+        for domain in [
+            "epicgames.com",
+            "fortnite.com",
+            "unrealengine.com",
+            "twinmotion.com",
+            "metahuman.com",
+        ] {
+            assert!(
+                epic_cookie_domain_matches(domain),
+                "expected the Epic-owned apex `{domain}` to reach the macOS clear path"
+            );
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn epic_cookie_domain_matches_accepts_subdomains_of_each_apex() {
+        // The set is APEX domains and `cookie_domain_matches` does the suffix work -- the
+        // measured survivors were scoped to `.www.epicgames.com` and `.ecosec.on.epicgames.com`,
+        // never to the bare apex, so a guard that only matched apexes exactly would be blind to
+        // every cookie it exists to reach.
+        for domain in [
+            "www.epicgames.com",
+            "ecosec.on.epicgames.com",
+            "www.fortnite.com",
+            "www.unrealengine.com",
+            "www.twinmotion.com",
+            "www.metahuman.com",
+        ] {
+            assert!(
+                epic_cookie_domain_matches(domain),
+                "expected the Epic-owned subdomain `{domain}` to reach the macOS clear path"
+            );
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn epic_cookie_domain_matches_rejects_every_other_storefront() {
+        // The NEGATIVE direction, and the reason this test group exists at all. Humble, GOG and
+        // Amazon all fail this check today and fall straight through to the arm's existing
+        // `no-window` error, completely unchanged by the widening. A regression that widened the
+        // set (or replaced the comparator with a naive `contains`) would sign a user out of a
+        // storefront the logout never touched -- the exact harm `REQ-34.4.1-06` closed, and the
+        // reason this file's blanket browsing-data wipe prohibition exists at all (three sites;
+        // its API name is deliberately not spelled here, see `EPIC_COOKIE_DOMAINS`' own note).
+        for domain in [
+            "humblebundle.com",
+            "www.humblebundle.com",
+            "gog.com",
+            "www.gog.com",
+            "amazon.com",
+            "www.amazon.com",
+            "steampowered.com",
+        ] {
+            assert!(
+                !epic_cookie_domain_matches(domain),
+                "`{domain}` must NOT reach Epic's clear path -- an over-wide guard is the \
+                 REQ-34.4.1-06 harm, not a convenience"
+            );
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn epic_cookie_domain_matches_rejects_suffix_lookalikes() {
+        // `notepicgames.com` ends with `epicgames.com` as a raw substring but is a DIFFERENT
+        // registrable domain. This is `cookie_domain_matches`'s own discipline (it requires
+        // `host == d` or `host` ending with `.{d}`), re-asserted through the Epic wrapper so a
+        // future hand-rolled suffix test here -- the second-comparator mistake Plan 22's Defect
+        // A already paid for -- fails loudly instead of silently widening the clear.
+        for domain in [
+            "notepicgames.com",
+            "myfortnite.com",
+            "fakeunrealengine.com",
+            "epicgames.com.evil.example",
+        ] {
+            assert!(
+                !epic_cookie_domain_matches(domain),
+                "suffix lookalike `{domain}` must NOT reach Epic's clear path"
+            );
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn epic_cookie_domains_is_exactly_the_operator_approved_set() {
+        // Pins the SET itself, not just the comparator's behaviour on it. Which domains belong
+        // in the clear's filter was an explicit operator scope decision (D-09-CORRECTED,
+        // `deferred-items.md` D-35-09-01, 2026-08-29), not an implementation detail: a future
+        // edit that adds or drops an entry must be reviewed as a scope change, and must also
+        // update `legendary/user.ts`'s `EPIC_COOKIE_HOSTS` in the same commit or the two sides
+        // silently half-fix (T-35-41).
+        assert_eq!(
+            EPIC_COOKIE_DOMAINS,
+            &[
+                "epicgames.com",
+                "fortnite.com",
+                "unrealengine.com",
+                "twinmotion.com",
+                "metahuman.com",
+            ]
+        );
     }
 
     // ---- website_data_record_matches_domain / verified_delete_count (Phase 34.4.1 Plan 23,
