@@ -217,6 +217,35 @@ enumerated list in
   (`downloadqueue.ts:49`'s module-scope `currentElement` seed) is preserved regardless; only the
   5-second auto-resume timer is suppressed, and its suppression is logged, never silent.
 
+  - **RESOLVED 2026-08-29, Phase 35 plan 11 — BRANCH A, the auto-resume is PORTED, and this item
+    is CLOSED rather than re-homed.** Carried to
+    `sidecar/appShellFlowRegistration.ts`'s `frontendReady` handler (same 5s delay, same
+    `isStartup=true` argument, `main.ts:611-613`'s comment carried across). Forced now because
+    plan 35-14 deletes `main.ts`, the only other carrier — leaving it would have permanently
+    ended startup resume of interrupted downloads. Both blockers measured CLOSED today:
+    **G-30-02** (Steam install-hang) — `status: resolved`, fixed 2026-07-24, hardware-proven by
+    the Phase 33 plan 33-05 D-13 live gate
+    (`.planning/debug/steam-install-spinner-hangs-tauri-live-g3002.md`); the **CrossOver-bottle
+    startup-resume auto-launch** (cited in this bullet as "D-07") — fixed 2026-08-16 by quick
+    task `260816-i8a`, which removed the startup auto-resume outright
+    (`.planning/todos/completed/steam-startup-download-resume-autoopens-crossover.md`, verified
+    still in the live tree at `storeManagers/steam/library.ts:818`).
+  - **The contingency this item was written around was mis-framed, and that is worth recording.**
+    It assumed `initQueue(true)` would drive the app into the broken Steam resume path. The
+    opposite is true: `isStartup=true` IS the Steam suppression. `downloadqueue.ts:116`'s loop
+    breaks before `installQueueElement()` for a persisted `runner === 'steam'` head and surfaces
+    it as resumable instead — the flag only ever changes behaviour for Steam. Both blockers are
+    Steam-only, so they were **structurally unreachable** from this call whatever their status.
+    The port therefore re-enables boot auto-resume for **GOG/Epic/Amazon only**, which is exactly
+    what `main.ts` did. A live Steam-resume measurement would have measured a path this code
+    never executes. Enforced by `appShellFlows.test.ts` (initQueue called exactly once with
+    `true` after 5s, RED-proven by flipping the argument to `false`).
+  - One intentional difference from `main.ts:613`: the sidecar timer is `.unref()`'d. Electron's
+    process was kept alive by the app; the sidecar is plain `node`, where a ref'd 5s timer holds
+    the event loop open after all work is done (it surfaced immediately as "Jest did not exit").
+    `downloadQueueFlowRegistration.ts`'s D-05 log line, which announced the suppression, was
+    rewritten — a log line asserting a suppression that no longer exists is worse than none.
+
 **Claim level (D-06, Phase 32): "wired and unit-proven", NOT "hardware-proven" — doubly gated.**
 Every channel above is registered on the sidecar (or, for `install`/`updateGame`, re-routed onto
 the real queue) and proven by jest coverage (`downloadQueueFlows.test.ts`, the unmodified
@@ -775,6 +804,24 @@ no real Tauri-side behavior.
   for the Tauri UI's own correctness. Cross-referenced in `settingsFlowRegistration.ts`'s block
   comment above the write path. Converge at the Phase 35 Electron cutover, per the Phase 28 D-11
   precedent for the same class of deferred reunification.
+
+  - **CLOSED 2026-08-29, Phase 35 plan 11 — moot by construction, and the closure rests on a
+    grep, not on a research assertion.** Once Electron is deleted there is one build, so a
+    cross-build reflect notification has no second build to notify. The item was accepted as
+    document-only, but "document-only" still had to be confirmed to mean "no dead code to
+    remove". It does. The literal command and its result:
+
+    ```
+    $ grep -rn "settingsChanged" src/
+    (no output — zero matches, exit 1)
+    ```
+
+    There is no `settingsChanged` channel, emitter, listener or constant anywhere under `src/`,
+    so there is no dead cross-build reflect path to clean up. A companion
+    `grep -rni "reflect.*electron\|electron.*reflect\|cross-build" src/backend/` also returned
+    zero matches. Stated plainly because this document's own house rule is that a closure resting
+    on a prior phase's prose is not a closure: the 2026-08-28 A/B re-test falsified a
+    "BOTH by construction" prediction the same way.
 - **D-08/D-09 (Phase 33) — `session`/`powerSaveBlocker` accepted parity gaps (ACCEPTED, TEMPORARY).**
   Spike 011 flagged both as "soft spots" with no full Tauri v2 parity available. Phase 33 did not
   close either — it upgraded both from silent-or-absent to LOGGED no-ops so a future reachable call

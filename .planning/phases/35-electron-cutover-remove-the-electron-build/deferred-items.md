@@ -456,3 +456,62 @@ delete `"electron-store": "^8.2.0"` from `devDependencies` and refresh the lockf
 being added at a cutover point and one removed; both exist because a package's declaration and its
 last consumer are being separated across plans. A plan that only reads its own `files_modified`
 sees neither.
+
+---
+
+## `D-35-11-01` — the EOS remove confirmation cannot be app-styled without moving a destructive gate across the IPC boundary (plan 35-11, Task 1, NOT DONE — needs a human decision)
+
+**Status: DEFERRED, deliberately not attempted. This is the half of plan 35-11's Task 1 that was
+not executed, and it is recorded here rather than silently dropped.**
+
+Plan 35-11 asks for the EOS remove confirmation to "route through the app-styled dialog path". It
+cannot, as the path exists today, and the blocker is structural rather than cosmetic:
+
+- `eos_overlay.ts:161`'s `remove(): Promise<boolean>` **awaits** `dialog.showMessageBox` (imported
+  from `'electron'`) and gates the destructive `legendary eos-overlay remove` on
+  `response === 1`. The boolean is load-bearing twice: once inside the backend as the destructive
+  gate, and again in the renderer at `AdvancedSettings/index.tsx:210`
+  (`setEosOverlayInstalled(!result.value)`).
+- The app-styled path, `showDialogBoxModalAuto` (`dialog/dialog.ts:8`), **returns `void`**. It is
+  one-way: `sendFrontendMessage('showDialog', ...)`. A button's `onClick` does not survive the
+  structured-clone hop, and the serializable replacement (`ButtonOptions.action`,
+  `common/types.ts:48`) is a **closed enum with exactly one literal**, `'steamSignIn'`, resolved
+  renderer-side in `DialogHandler`. There is no mechanism to return a user's choice to the backend.
+
+So the migration requires one of two structural changes, both beyond a polish item:
+
+1. **Move the gate to the renderer.** `AdvancedSettings/index.tsx` shows the confirmation using the
+   existing house pattern (`showDialogModal` with real `onClick`s — see
+   `AllowInstallationBrokenAnticheat.tsx:19`, same settings-surface family) and only calls
+   `window.api.removeEosOverlay()` on confirm. Observable behaviour is identical, but the backend
+   would then remove **unconditionally** whenever the channel is invoked — a trust-boundary change
+   for a destructive filesystem operation, and it makes `remove()`'s documented `False` return
+   branch unreachable. Plan 35-11's own constraint says the return contract must not change, and
+   `T-35-45` names exactly this as a data-loss risk wearing a cosmetic diff.
+2. **Add a request/response dialog channel.** A new IPC surface; clearly its own plan.
+
+**Also relevant: the source todo's own prescription was not satisfied.**
+`.planning/todos/pending/2026-08-24-eos-remove-dialog-renders-as-a-native-system-dialog-not-app-styled.md`
+sets a three-step order — (1) decide which confirmations are legitimately OS-native across the ~14
+native `showMessageBox` sites, (2) fix the in-app `Dialog` primitive, (3) only then migrate
+callers. **Step 2 has since landed** (quick task `260820-kq0` round 3 added `StyledPaper` in
+`Dialog.tsx:49`, so the primitive is genuinely styled and the "dead stylesheet" trap no longer
+applies). **Step 1 has not.** The todo is explicit that fixing only the EOS site "narrows the
+inconsistency without resolving it".
+
+**Correction to plan 35-11's own framing, recorded so it is not re-derived wrongly.** The plan's
+`must_haves` says the two dialogs should become "consistent with the ~14 other dialogs that already
+use the app pattern". The ~14 census in the source todo is the count of **native** `showMessageBox`
+call sites — the ones that do NOT use the app pattern, of which EOS is one. The app-styled
+population is the ~25 `Dialog` consumers. The plan inverted the two.
+
+**What a future plan needs to decide:** whether a settings-surface destructive confirmation may be
+gated renderer-side. That is the single question blocking this item.
+
+## `D-35-11-02` — one `type: 'ERROR'` dialog carries a "Warning" title (plan 35-11, out of scope)
+
+`installFlowRegistration.ts:463` raises `box.warning.title` ("Warning") /
+`box.warning.epic.import` with `type: 'ERROR'`, so a warning renders under the red "Error:"
+content header. Pre-existing, untouched by plan 35-11, and not caused by its CSS change. Noted
+only because plan 35-11 read every `showDialogBoxModalAuto` call site in that file while
+identifying the two path-rejection ones (`:319` move, `:442` import).
