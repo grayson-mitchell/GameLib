@@ -767,3 +767,71 @@ is opened by `open_pristine_epic_login_window`, which **never registers a Tauri-
 
 **Sequencing:** this touches `src-tauri/src/main.rs`, so it cannot run concurrently with plan 35-10,
 which holds the same file.
+
+## D-35-10-01 — TIME-CRITICAL, DEADLINE WAVE 8: `uncaughtException` has no sidecar equivalent and dies at 35-14
+
+**Found during:** plan 35-10. The executor flagged, without checking, that nobody had swept
+`main.ts` for *other* module-scope side effects that never made the jump to the sidecar — it ported
+one (`installed.json`), and there might be siblings. The orchestrator ran that sweep. **There is
+exactly one, and it is load-bearing.**
+
+**Deadline: this must be resolved BEFORE plan 35-14 (wave 8), which deletes `src/backend/main.ts`
+permanently.** After that the handler is unrecoverable without rewriting it from scratch.
+
+### The sweep result, stated in both directions
+
+`setInterval` in `main.ts`: **0 occurrences.** The `.on(` hits are Electron `mainWindow`/`app`
+lifecycle events (`maximize`, `close`, `will-navigate`, `window-all-closed`, `before-quit`,
+`open-url`, `second-instance`) — all genuinely shell-level, all already owned by the Rust shell or
+by plan 35-07's deep-link work. Those are **not** gaps, and recording that is the point of a
+two-directional sweep.
+
+**The one real gap is `process.on('uncaughtException')` at `main.ts:618`.**
+
+```js
+// Maybe this can help with white screens
+process.on('uncaughtException', async (err) => {
+  logError(err, LogPrefix.Backend)
+  if (process.env.CI === 'e2e') return
+  showDialogBoxModalAuto({ title: ..., message: ..., type: 'ERROR' })
+})
+```
+
+### Why it is not already covered
+
+`src/backend/sidecar/processGuards.ts` installs a process-level **`unhandledRejection`** guard
+(Phase 34.4.1 plan 09) and is careful to describe itself as defence-in-depth. It does **not** install
+`uncaughtException`, and those catch different things: a rejected promise with no `.catch()` versus
+a thrown synchronous exception. `grep -rn uncaughtException src/` returns exactly two hits — the
+handler itself, and a comment.
+
+### The comment is the proof it is load-bearing
+
+`src/backend/logger/index.ts:151` exists *because* the handler does, and documents its behaviour:
+
+> Add a basic error handler to our stdout/stderr. If we don't do this, the main
+> `process.on('uncaughtException', ...)` handler catches them (**and presents an error message to
+> the user**, which is hardly necessary for "just" failing to write to the streams)
+
+So a piece of live code is written around a handler that is about to be deleted, and its comment
+will survive into a falsehood — the same shape as `D-35-04-01` and the `EPIC_COOKIE_DOMAIN` doc
+comment named in `D-35-09-01`.
+
+### Consequence if it ships as-is
+
+Under Electron an uncaught synchronous throw in backend code is logged with `LogPrefix.Backend` and
+raised to the user as an error dialog. Under Tauri, after 35-14, the same throw reaches a Node
+process with no handler: **the sidecar dies, and `console.*` in the sidecar is captured nowhere at
+all** (see the A/B document's own sink table). The observable is the app going dead with nothing in
+either log sink — which is precisely the "white screens" failure the handler's own comment says it
+was added to help with.
+
+### What a fix owes
+
+Not a verbatim port. `showDialogBoxModalAuto` still works from the sidecar, but the `CI === 'e2e'`
+guard is Electron-harness-specific (plan 35-01's census established that harness is Electron-only
+and does not survive this phase), so its intent needs carrying forward rather than its letter.
+Install alongside the existing `unhandledRejection` guard in `processGuards.ts`, which already has
+the idempotence flag, the log-only discipline and the tests.
+
+**Status:** open, unowned, **deadline wave 8**.
