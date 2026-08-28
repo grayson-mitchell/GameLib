@@ -160,6 +160,24 @@ objc2-foundation = "0.3.2"
 # narrower feature subset than what `tao`'s own request into this same crate already
 # resolves.
 dispatch2 = "0.3.1"
+# Phase 35 plan 08 (D-08, REQ-35-06): the wake-lock macOS arm calls IOKit's
+# `IOPMAssertionCreateWithName`, whose first and third parameters are `CFStringRef`. This crate
+# supplies the `CFString` those two arguments need. Promoted from an ALREADY-RESOLVED transitive
+# dependency (of `tao`, `objc2-core-graphics` and `rfd` -- see Cargo.lock, and the `dispatch2`
+# comment above, which was promoted the same way) to a direct, macOS-only dependency at its
+# identical pinned version, so NO new crate enters the tree: `cargoFeatures.test.ts`'s
+# `EXPECTED_LOCKFILE_CRATE_NAMES` pin already contains `objc2-core-foundation` and stays green.
+#
+# `default-features = false` follows the `objc2-web-kit` discipline established above: this
+# crate's `default` list is ~60 CF* types (CFBundle, CFURL, CFXMLParser, CFSocket, ...), none of
+# which this file's code names. Only `std` and `CFString` are requested. IOKit itself is reached
+# through a `#[link(name = "IOKit", kind = "framework")]` block in `mod macos_wake_lock` rather
+# than a bindings crate -- 33-RESEARCH's "no viable maintained Tauri v2 wake-lock plugin" verdict
+# was re-checked at this plan's Task 1 and held, so nothing was added for the syscalls themselves.
+objc2-core-foundation = { version = "0.3.2", default-features = false, features = [
+    "std",
+    "CFString",
+] }
 objc2-web-kit = { version = "0.3.2", default-features = false, features = [
     "WKWebsiteDataRecord",
     "WKWebView",

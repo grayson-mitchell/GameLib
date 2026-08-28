@@ -3969,6 +3969,443 @@ fn macos_finder_reselect_workaround(path: &str) {
     });
 }
 
+// ---- Wake lock (Phase 35 Plan 08, D-08, REQ-35-06) ----
+//
+// Replaces `electronStub.ts`'s `powerSaveBlocker` logged no-op, which returned `-1` and held
+// nothing. Its real cost, now paid off: the machine idle-slept mid depot download, and
+// `launcher.ts`'s `prevent-display-sleep` let the screen blank while a game was running.
+//
+// 33-RESEARCH's "no viable maintained Tauri v2 wake-lock plugin" verdict was RE-CHECKED at this
+// plan's Task 1 (see 35-08-SUMMARY.md for versions and dates) and HELD, so this is a first-party
+// binding rather than a plugin. It adds no new crate: the macOS arm calls IOKit through a
+// `#[link]` block and builds its CFStrings with `objc2-core-foundation`, already resolved in
+// Cargo.lock as a transitive dependency of `tao`/`objc2-core-graphics` and promoted to a direct
+// macOS dependency at its identical pinned version -- the same discipline the `objc2-web-kit`
+// and `dispatch2` comments in Cargo.toml already established.
+//
+// The two assertion KINDS stay distinct on every arm. Collapsing them is the T-35-32 threat:
+// one shared assertion would either blank the display during play or hold the display awake
+// through an eight-hour download.
+
+/// Electron's own `powerSaveBlocker.start()` vocabulary, kept verbatim so the JS side needs no
+/// translation table -- `launcher.ts` and `appShellFlowRegistration.ts` pass these strings
+/// through unchanged.
+const WAKE_LOCK_KIND_DISPLAY: &str = "prevent-display-sleep";
+const WAKE_LOCK_KIND_SYSTEM: &str = "prevent-app-suspension";
+
+/// Which OS power assertion a `wake_lock_start` request asked for.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum WakeLockKind {
+    /// Keep the DISPLAY awake (a game is running).
+    Display,
+    /// Keep the SYSTEM awake (a depot download is in progress). Deliberately does NOT keep the
+    /// display awake -- see the T-35-32 note above.
+    System,
+}
+
+/// Pure kind validation, extracted from the effectful acquire for the same reason
+/// `deep_link_decision` is extracted from `on_open_url`: the decision is testable without an
+/// OS, and the syscall arm is left with nothing to decide.
+///
+/// Rejects anything that is not one of the two literals. There is deliberately NO default arm:
+/// a silent fallback to one kind IS threat T-35-32, and it would be invisible in every test
+/// that exercised only the kind that happened to be hardcoded.
+///
+/// The error does NOT echo `candidate`. Same discipline as `DeepLinkDecision::Reject`, which
+/// carries only a byte count (T-34.5-G6-25 / T-35-26): a rejected value is by definition one
+/// this process did not expect, and rejected values do not belong in a log file users attach
+/// to bug reports.
+fn wake_lock_kind(candidate: &str) -> Result<WakeLockKind, String> {
+    match candidate {
+        WAKE_LOCK_KIND_DISPLAY => Ok(WakeLockKind::Display),
+        WAKE_LOCK_KIND_SYSTEM => Ok(WakeLockKind::System),
+        _ => Err("wake_lock_start:unknown-kind".to_string()),
+    }
+}
+
+/// Live wake locks, keyed by the id `wake_lock_start` handed back to the sidecar.
+///
+/// `held` is the PURE bookkeeping half (id -> kind) and is what the `#[cfg(test)]` module
+/// exercises. The platform-handle maps beside it are `#[cfg]`-selected and hold whatever the
+/// OS gave us for that same id, so `wake_lock_stop(id)` releases EXACTLY the assertion its id
+/// names -- the T-35-31 mitigation. Both halves live under one `Mutex` so they cannot diverge.
+///
+/// Windows has no per-assertion handle map on purpose: `SetThreadExecutionState` is a
+/// thread-global flag word, not a handle, so its arm recomputes the flags from `held`.
+#[derive(Default)]
+struct WakeLockRegistry {
+    next_id: u32,
+    held: HashMap<u32, WakeLockKind>,
+    /// macOS: the `IOPMAssertionID` returned by `IOPMAssertionCreateWithName`.
+    #[cfg(target_os = "macos")]
+    assertions: HashMap<u32, u32>,
+    /// Linux: the held `systemd-inhibit` child. The inhibitor lasts exactly as long as this
+    /// process does, which is why it is stored rather than spawned-and-forgotten.
+    #[cfg(target_os = "linux")]
+    inhibitors: HashMap<u32, Child>,
+}
+
+impl WakeLockRegistry {
+    /// PURE: allocate an unused id and record its kind. Performs no OS call.
+    ///
+    /// Never returns 0. `launcher.ts`'s re-entry guard is `if (!powerDisplayId)`, which treats
+    /// 0 as "no lock held" -- handing out 0 would make it start a second display assertion on
+    /// every launch and leak the first.
+    fn allocate(&mut self, kind: WakeLockKind) -> u32 {
+        loop {
+            self.next_id = self.next_id.wrapping_add(1);
+            if self.next_id != 0 && !self.held.contains_key(&self.next_id) {
+                break;
+            }
+        }
+        let id = self.next_id;
+        self.held.insert(id, kind);
+        id
+    }
+
+    /// PURE: forget `id`. Returns `Err` -- never panics -- for an id that was never held or
+    /// has already been released, so a double `stop` is a reported no-op rather than a crash.
+    fn forget(&mut self, id: u32) -> Result<WakeLockKind, String> {
+        self.held
+            .remove(&id)
+            .ok_or_else(|| "wake_lock_stop:unknown-id".to_string())
+    }
+
+    /// PURE: is at least one assertion of `kind` still live?
+    #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+    fn holds(&self, kind: WakeLockKind) -> bool {
+        self.held.values().any(|held| *held == kind)
+    }
+}
+
+static WAKE_LOCKS: OnceLock<Mutex<WakeLockRegistry>> = OnceLock::new();
+
+fn wake_locks() -> &'static Mutex<WakeLockRegistry> {
+    WAKE_LOCKS.get_or_init(|| Mutex::new(WakeLockRegistry::default()))
+}
+
+/// macOS power assertions via IOKit.
+///
+/// Constant names and their string VALUES were read out of this machine's own SDK header
+/// (`IOKit.framework/Headers/pwr_mgt/IOPMLib.h`) rather than taken from 35-RESEARCH.md, which
+/// marked its pairing `[ASSUMED]` and declined to vouch for it. From that header:
+///   `#define kIOPMAssertionTypePreventUserIdleDisplaySleep kIOPMAssertPreventUserIdleDisplaySleep`
+///   `#define kIOPMAssertPreventUserIdleDisplaySleep        CFSTR("PreventUserIdleDisplaySleep")`
+///   `#define kIOPMAssertionTypePreventUserIdleSystemSleep  kIOPMAssertPreventUserIdleSystemSleep`
+///   `#define kIOPMAssertPreventUserIdleSystemSleep         CFSTR("PreventUserIdleSystemSleep")`
+///   `kIOPMAssertionLevelOn = 255`, `typedef uint32_t IOPMAssertionID`
+/// They are `CFSTR` macros, not exported symbols, so the string values are built here rather
+/// than linked. These are also the exact names `pmset -g assertions` prints, which is what
+/// makes this plan's Task 3 able to tell the two kinds apart by eye.
+#[cfg(target_os = "macos")]
+mod macos_wake_lock {
+    use objc2_core_foundation::CFString;
+
+    const K_IOPM_ASSERTION_LEVEL_ON: u32 = 255;
+    const K_IORETURN_SUCCESS: i32 = 0;
+
+    const ASSERTION_TYPE_DISPLAY: &str = "PreventUserIdleDisplaySleep";
+    const ASSERTION_TYPE_SYSTEM: &str = "PreventUserIdleSystemSleep";
+
+    #[link(name = "IOKit", kind = "framework")]
+    extern "C" {
+        fn IOPMAssertionCreateWithName(
+            assertion_type: *const CFString,
+            assertion_level: u32,
+            assertion_name: *const CFString,
+            assertion_id: *mut u32,
+        ) -> i32;
+        fn IOPMAssertionRelease(assertion_id: u32) -> i32;
+    }
+
+    /// Take one assertion, returning its `IOPMAssertionID`. Never panics: an unavailable or
+    /// failing power API returns `Err` and the caller logs and carries on.
+    pub fn acquire(kind: super::WakeLockKind, name: &str) -> Result<u32, String> {
+        let assertion_type = CFString::from_str(match kind {
+            super::WakeLockKind::Display => ASSERTION_TYPE_DISPLAY,
+            super::WakeLockKind::System => ASSERTION_TYPE_SYSTEM,
+        });
+        let assertion_name = CFString::from_str(name);
+        let mut assertion_id: u32 = 0;
+        // SAFETY: both CFStrings outlive the call, and `assertion_id` is a valid out-pointer to
+        // a live local. IOKit copies the strings; it does not retain these borrows.
+        let result = unsafe {
+            IOPMAssertionCreateWithName(
+                &*assertion_type,
+                K_IOPM_ASSERTION_LEVEL_ON,
+                &*assertion_name,
+                &mut assertion_id,
+            )
+        };
+        if result == K_IORETURN_SUCCESS {
+            Ok(assertion_id)
+        } else {
+            Err(format!("IOPMAssertionCreateWithName failed: {result:#x}"))
+        }
+    }
+
+    /// Release exactly the assertion `assertion_id` names.
+    pub fn release(assertion_id: u32) -> Result<(), String> {
+        // SAFETY: `assertion_id` came from a successful `IOPMAssertionCreateWithName` above and
+        // is released at most once -- the registry removes it under the same lock.
+        let result = unsafe { IOPMAssertionRelease(assertion_id) };
+        if result == K_IORETURN_SUCCESS {
+            Ok(())
+        } else {
+            Err(format!("IOPMAssertionRelease failed: {result:#x}"))
+        }
+    }
+}
+
+/// Windows power assertions via `SetThreadExecutionState`.
+///
+/// THREAT T-35-33, and the reason this arm is a whole module rather than two calls:
+/// `SetThreadExecutionState` sets a flag word on the CALLING THREAD, and the assertion lives
+/// exactly as long as that thread does. `dispatch_rust_channel` runs on a short-lived spawned
+/// worker (see `start_reader`), so calling it there would set flags on a thread that exits
+/// moments later -- a silent no-op that no unit test can see and that `powercfg /requests`
+/// would show as simply absent.
+///
+/// So the flags are owned by ONE dedicated thread that is created on first use and then lives
+/// for the rest of the process. Every start/stop recomputes the whole flag word from the
+/// registry and posts it to that thread. The kinds stay distinct: `ES_DISPLAY_REQUIRED` is set
+/// only while a Display lock is held, so a download never keeps the screen lit.
+#[cfg(target_os = "windows")]
+mod windows_wake_lock {
+    use std::sync::mpsc::{channel as mpsc_channel, Sender};
+    use std::sync::OnceLock;
+    use std::thread;
+
+    pub const ES_CONTINUOUS: u32 = 0x8000_0000;
+    pub const ES_SYSTEM_REQUIRED: u32 = 0x0000_0001;
+    pub const ES_DISPLAY_REQUIRED: u32 = 0x0000_0002;
+
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn SetThreadExecutionState(es_flags: u32) -> u32;
+    }
+
+    static FLAG_THREAD: OnceLock<Sender<u32>> = OnceLock::new();
+
+    /// Post a recomputed flag word to the long-lived holder thread, starting it if needed.
+    pub fn apply(flags: u32) -> Result<(), String> {
+        let sender = FLAG_THREAD.get_or_init(|| {
+            let (tx, rx) = mpsc_channel::<u32>();
+            thread::spawn(move || {
+                // This thread must OUTLIVE every assertion it takes; it parks here for the
+                // life of the process and never returns while the sender is alive.
+                while let Ok(next) = rx.recv() {
+                    // SAFETY: a plain kernel32 call with no pointer arguments. A 0 return
+                    // means failure, which is reported by the next `apply` round-trip rather
+                    // than panicking on this thread.
+                    let previous = unsafe { SetThreadExecutionState(next) };
+                    if previous == 0 {
+                        eprintln!(
+                            "[shell] WARN: wake lock SetThreadExecutionState({next:#x}) failed -- continuing"
+                        );
+                    }
+                }
+            });
+            tx
+        });
+        sender
+            .send(flags)
+            .map_err(|_| "wake_lock:flag-thread-gone".to_string())
+    }
+}
+
+/// Linux power assertions via logind, held through `systemd-inhibit`.
+///
+/// The inhibitor lasts exactly as long as the command `systemd-inhibit` wraps, so the child is
+/// STORED in the registry rather than spawned and forgotten -- a `systemd-inhibit` that exits
+/// immediately takes its lock away with it. `cat` with a piped stdin we never write to is the
+/// block: dropping our stdin handle ends `cat`, which ends `systemd-inhibit`, which releases
+/// the lock without needing a signal (and logind releases it anyway if we are killed).
+///
+/// HONEST LIMITATION, not an oversight: logind has no display-specific inhibitor. `idle` is the
+/// closest true equivalent, and the display kind uses it alone while the system kind adds
+/// `sleep`. The two remain distinct -- a download does not take the display's lock and a game
+/// does not block suspend -- but a desktop whose blanking is driven by its screensaver rather
+/// than by logind's idle timeout may still blank during play. Task 3 marks Linux NOT ATTEMPTED.
+#[cfg(target_os = "linux")]
+mod linux_wake_lock {
+    use std::process::{Child, Command, Stdio};
+
+    pub fn acquire(kind: super::WakeLockKind, why: &str) -> Result<Child, String> {
+        let what = match kind {
+            super::WakeLockKind::Display => "idle",
+            super::WakeLockKind::System => "idle:sleep",
+        };
+        Command::new("systemd-inhibit")
+            .arg(format!("--what={what}"))
+            .arg("--who=GameLib")
+            .arg(format!("--why={why}"))
+            .arg("--mode=block")
+            .arg("cat")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .map_err(|e| format!("systemd-inhibit could not spawn: {e}"))
+    }
+
+    pub fn release(mut child: Child) -> Result<(), String> {
+        // Closing stdin is the graceful path: `cat` sees EOF and exits, `systemd-inhibit`
+        // follows, logind drops the lock. `kill` is the backstop if it does not.
+        drop(child.stdin.take());
+        let _ = child.kill();
+        child
+            .wait()
+            .map(|_| ())
+            .map_err(|e| format!("systemd-inhibit could not be reaped: {e}"))
+    }
+}
+
+/// A human-readable label for the assertion, shown by `pmset -g assertions` (macOS) and
+/// `systemd-inhibit --list` (Linux). Carries no user data -- just which of the two things
+/// GameLib does is holding the machine awake.
+fn wake_lock_reason(kind: WakeLockKind) -> &'static str {
+    match kind {
+        WakeLockKind::Display => "GameLib: a game is running",
+        WakeLockKind::System => "GameLib: a download is in progress",
+    }
+}
+
+/// Recompute and apply the Windows thread-global flag word from the whole registry.
+/// No-op everywhere else, where assertions are per-id handles instead of a shared flag word.
+#[cfg(target_os = "windows")]
+fn wake_lock_sync_platform(registry: &WakeLockRegistry) -> Result<(), String> {
+    let mut flags = windows_wake_lock::ES_CONTINUOUS;
+    if registry.holds(WakeLockKind::System) || registry.holds(WakeLockKind::Display) {
+        flags |= windows_wake_lock::ES_SYSTEM_REQUIRED;
+    }
+    if registry.holds(WakeLockKind::Display) {
+        flags |= windows_wake_lock::ES_DISPLAY_REQUIRED;
+    }
+    windows_wake_lock::apply(flags)
+}
+
+#[cfg(not(target_os = "windows"))]
+fn wake_lock_sync_platform(_registry: &WakeLockRegistry) -> Result<(), String> {
+    Ok(())
+}
+
+/// Take one OS power assertion of `kind_str` and return the id that releases it.
+///
+/// On any platform failure the id is NOT handed out and the bookkeeping entry is rolled back,
+/// so a failed acquire cannot leave a phantom id that a later `stop` would "release".
+fn wake_lock_start(kind_str: &str) -> Result<u32, String> {
+    let kind = wake_lock_kind(kind_str)?;
+    let mut registry = wake_locks()
+        .lock()
+        .map_err(|_| "wake_lock_start:registry-poisoned".to_string())?;
+    let id = registry.allocate(kind);
+
+    #[cfg(target_os = "macos")]
+    {
+        match macos_wake_lock::acquire(kind, wake_lock_reason(kind)) {
+            Ok(assertion_id) => {
+                registry.assertions.insert(id, assertion_id);
+            }
+            Err(e) => {
+                registry.held.remove(&id);
+                eprintln!("[shell] WARN: wake lock could not be taken ({e}) -- continuing");
+                return Err(e);
+            }
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        match linux_wake_lock::acquire(kind, wake_lock_reason(kind)) {
+            Ok(child) => {
+                registry.inhibitors.insert(id, child);
+            }
+            Err(e) => {
+                registry.held.remove(&id);
+                eprintln!("[shell] WARN: wake lock could not be taken ({e}) -- continuing");
+                return Err(e);
+            }
+        }
+    }
+
+    if let Err(e) = wake_lock_sync_platform(&registry) {
+        registry.held.remove(&id);
+        eprintln!("[shell] WARN: wake lock could not be taken ({e}) -- continuing");
+        return Err(e);
+    }
+
+    Ok(id)
+}
+
+/// Release exactly the assertion `id` names. An unknown or already-released id is reported,
+/// never panicked on.
+fn wake_lock_stop(id: u32) -> Result<(), String> {
+    let mut registry = wake_locks()
+        .lock()
+        .map_err(|_| "wake_lock_stop:registry-poisoned".to_string())?;
+    registry.forget(id)?;
+
+    #[cfg(target_os = "macos")]
+    if let Some(assertion_id) = registry.assertions.remove(&id) {
+        if let Err(e) = macos_wake_lock::release(assertion_id) {
+            eprintln!("[shell] WARN: wake lock could not be released ({e}) -- continuing");
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    if let Some(child) = registry.inhibitors.remove(&id) {
+        if let Err(e) = linux_wake_lock::release(child) {
+            eprintln!("[shell] WARN: wake lock could not be released ({e}) -- continuing");
+        }
+    }
+
+    if let Err(e) = wake_lock_sync_platform(&registry) {
+        eprintln!("[shell] WARN: wake lock could not be released ({e}) -- continuing");
+    }
+
+    Ok(())
+}
+
+/// Release every assertion still held, on the way out of the process.
+///
+/// THREAT T-35-31: an assertion that outlives the process keeps the machine awake with no UI
+/// left to release it -- a worse failure than the sleeping-mid-download one this plan fixes.
+/// macOS releases IOKit assertions when their owning process dies, but Linux's `systemd-inhibit`
+/// children would be orphaned and Windows' flag thread never re-run, so this is not redundant.
+/// Recovers a poisoned lock via `into_inner` rather than propagating: refusing to release on
+/// the exit path is the one outcome worse than releasing from a poisoned registry.
+fn wake_lock_release_all() {
+    let Some(lock) = WAKE_LOCKS.get() else {
+        return;
+    };
+    let mut registry = match lock.lock() {
+        Ok(registry) => registry,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    let ids: Vec<u32> = registry.held.keys().copied().collect();
+    for id in ids {
+        registry.held.remove(&id);
+
+        #[cfg(target_os = "macos")]
+        if let Some(assertion_id) = registry.assertions.remove(&id) {
+            if let Err(e) = macos_wake_lock::release(assertion_id) {
+                eprintln!("[shell] WARN: wake lock could not be released at exit ({e}) -- continuing");
+            }
+        }
+
+        #[cfg(target_os = "linux")]
+        if let Some(child) = registry.inhibitors.remove(&id) {
+            if let Err(e) = linux_wake_lock::release(child) {
+                eprintln!("[shell] WARN: wake lock could not be released at exit ({e}) -- continuing");
+            }
+        }
+    }
+    if let Err(e) = wake_lock_sync_platform(&registry) {
+        eprintln!("[shell] WARN: wake lock could not be released at exit ({e}) -- continuing");
+    }
+}
+
 /// Also dispatches `dialog_open` (Phase 30 Plan 03). `app` is threaded through for that arm:
 /// the folder picker is reached via the AppHandle, not via `args` — the picked path comes
 /// FROM the OS dialog, never INTO it from the renderer/sidecar (T-30-11/T-30-12).
@@ -5935,6 +6372,36 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 Ok(serde_json::json!({ "total": total, "matched": matched }))
             }
         }
+        // Take an OS power assertion (Phase 35 Plan 08, D-08, REQ-35-06). Backs
+        // `electronStub.ts`'s `powerSaveBlocker.start()`, which until this plan returned `-1`
+        // and held nothing. `args[0]` is one of exactly two Electron kind strings; anything
+        // else is REJECTED by `wake_lock_kind` rather than defaulted (threat T-35-32).
+        //
+        // Like the clipboard arms, this is a `dispatch_rust_channel` arm and NOT a
+        // `generate_handler!` command: the caller is the sidecar over `requestRustInvoke`, and
+        // `generate_handler!` is the renderer's surface. Registering it there would be dead
+        // code that also handed the webview a power-management capability it has no use for,
+        // against D-02's zero-renderer-capability-grant stance.
+        "wake_lock_start" => {
+            let kind = args
+                .first()
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| "wake_lock_start:bad-args".to_string())?;
+            let id = wake_lock_start(kind)?;
+            Ok(Value::from(id))
+        }
+        // Release exactly the assertion `args[0]` names (Phase 35 Plan 08, D-08, REQ-35-06).
+        // An id outside u32 range cannot name a live assertion, so it is rejected as bad args
+        // rather than truncated into one that could name somebody else's lock.
+        "wake_lock_stop" => {
+            let id = args
+                .first()
+                .and_then(|v| v.as_u64())
+                .filter(|id| *id <= u64::from(u32::MAX))
+                .ok_or_else(|| "wake_lock_stop:bad-args".to_string())?;
+            wake_lock_stop(id as u32)?;
+            Ok(Value::Null)
+        }
         _ => Err(format!("rustInvoke:unknown-channel:{channel}")),
     }
 }
@@ -7328,6 +7795,12 @@ fn main() {
                 if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
                     state.shutdown_child();
                 }
+                // Phase 35 Plan 08 (D-08, REQ-35-06, threat T-35-31): drop every OS power
+                // assertion still held. Same exit-path discipline as `shutdown_child()` above
+                // and the socket cleanup below -- a leaked assertion outlives the process and
+                // keeps the user's machine awake with no UI left to release it, which on a
+                // laptop means an unattended drain to zero.
+                wake_lock_release_all();
                 // Phase 34.5 gap cycle 6 plan 44 (D-44-A): best-effort socket cleanup on a
                 // clean quit, so a fresh start does not have to fall through
                 // `acquire_single_instance`'s stale-socket recovery path. Swallowed, like
@@ -9843,5 +10316,174 @@ mod tests {
         // Pins Task 2's design constraint: handleProtocolUrl must answer immediately and must
         // never await the game launch, so it deliberately stays OFF LONG_RUNNING_CHANNELS.
         assert_eq!(timeout_for("handleProtocolUrl"), Some(INVOKE_TIMEOUT));
+    }
+
+    // ---- Wake lock (Phase 35 Plan 08, D-08, REQ-35-06) ----
+    //
+    // These cover the platform-INDEPENDENT half only: kind validation and the id registry.
+    // The syscalls themselves are deliberately not unit-tested -- `IOPMAssertionCreateWithName`
+    // and `SetThreadExecutionState` need a real OS power API that a `#[test]` cannot stand up,
+    // and a mock of them would assert only that the mock was called. They are verified live at
+    // this plan's Task 3 against `pmset -g assertions`.
+    //
+    // Every test below builds its OWN `WakeLockRegistry` rather than touching the process-global
+    // `WAKE_LOCKS`: cargo runs tests in parallel threads within one process, so a shared global
+    // registry would make id assertions order-dependent and flaky.
+
+    #[test]
+    fn wake_lock_kind_accepts_both_electron_kind_strings() {
+        assert_eq!(
+            wake_lock_kind("prevent-display-sleep"),
+            Ok(WakeLockKind::Display)
+        );
+        assert_eq!(
+            wake_lock_kind("prevent-app-suspension"),
+            Ok(WakeLockKind::System)
+        );
+    }
+
+    #[test]
+    fn wake_lock_kind_maps_the_two_kinds_to_DIFFERENT_assertions() {
+        // THREAT T-35-32, and the reason this assertion exists separately from the one above:
+        // an implementation that returned `WakeLockKind::Display` for BOTH strings would pass
+        // `wake_lock_kind_accepts_both_electron_kind_strings`'s Ok-ness but fail here. Collapsing
+        // the kinds is the specific defect that would let the screen blank during play or hold
+        // the display awake through an eight-hour download.
+        assert_ne!(
+            wake_lock_kind(WAKE_LOCK_KIND_DISPLAY),
+            wake_lock_kind(WAKE_LOCK_KIND_SYSTEM)
+        );
+    }
+
+    #[test]
+    fn wake_lock_kind_rejects_anything_else_rather_than_defaulting() {
+        // RED direction: a `_ => Ok(WakeLockKind::System)` default arm -- the silent collapse
+        // T-35-32 describes -- would pass every other test in this module.
+        for candidate in [
+            "",
+            "prevent-display-sleep ",
+            "PREVENT-DISPLAY-SLEEP",
+            "prevent-app-suspension-really",
+            "prevent-sleep",
+            "true",
+        ] {
+            assert!(
+                wake_lock_kind(candidate).is_err(),
+                "expected {candidate:?} to be rejected, not defaulted"
+            );
+        }
+    }
+
+    #[test]
+    fn wake_lock_kind_error_does_not_echo_the_rejected_value() {
+        // Same discipline as `deep_link_decision_reject_carries_a_byte_count_and_nothing_else`
+        // (T-35-26): a rejected value is one this process did not expect, and it must not reach
+        // a log file through the error string.
+        let candidate = "would-be-logged-verbatim";
+        match wake_lock_kind(candidate) {
+            Err(e) => assert!(
+                !e.contains(candidate),
+                "error {e:?} echoed the rejected kind back"
+            ),
+            Ok(kind) => panic!("expected {candidate:?} to be rejected, got {kind:?}"),
+        }
+    }
+
+    #[test]
+    fn wake_lock_registry_allocates_unique_ids() {
+        // T-35-31: two locks sharing an id would make one `stop` release the other's assertion
+        // and strand the survivor forever.
+        let mut registry = WakeLockRegistry::default();
+        let first = registry.allocate(WakeLockKind::Display);
+        let second = registry.allocate(WakeLockKind::System);
+        let third = registry.allocate(WakeLockKind::Display);
+        assert_ne!(first, second);
+        assert_ne!(second, third);
+        assert_ne!(first, third);
+    }
+
+    #[test]
+    fn wake_lock_registry_never_allocates_zero() {
+        // `launcher.ts`'s re-entry guard is `if (!powerDisplayId)`, which treats 0 as "no lock
+        // held". Handing out 0 would make it take a SECOND display assertion on every launch
+        // and leak the first -- a real T-35-31 leak reachable from ordinary use.
+        let mut registry = WakeLockRegistry::default();
+        for _ in 0..8 {
+            assert_ne!(registry.allocate(WakeLockKind::Display), 0);
+        }
+    }
+
+    #[test]
+    fn wake_lock_registry_forget_returns_the_kind_its_id_names() {
+        // The pairing assertion: `stop(id)` must resolve to the SAME lock `start` created, not
+        // merely to some live lock.
+        let mut registry = WakeLockRegistry::default();
+        let display = registry.allocate(WakeLockKind::Display);
+        let system = registry.allocate(WakeLockKind::System);
+        assert_eq!(registry.forget(system), Ok(WakeLockKind::System));
+        assert_eq!(registry.forget(display), Ok(WakeLockKind::Display));
+    }
+
+    #[test]
+    fn wake_lock_registry_forget_on_an_unknown_id_errors_rather_than_panicking() {
+        let mut registry = WakeLockRegistry::default();
+        assert!(registry.forget(4242).is_err());
+        // A double stop is the common real case: `launcher.ts` never clears `powerDisplayId`
+        // after stopping it, so the same id can arrive twice. It must be a reported no-op.
+        let id = registry.allocate(WakeLockKind::Display);
+        assert!(registry.forget(id).is_ok());
+        assert!(registry.forget(id).is_err());
+    }
+
+    #[test]
+    fn wake_lock_registry_holds_tracks_each_kind_independently() {
+        // The Windows arm recomputes its thread-global flag word from `holds`, so a `holds`
+        // that answered for "any lock" rather than per-kind would set ES_DISPLAY_REQUIRED
+        // during a download -- exactly the collapse T-35-32 forbids.
+        let mut registry = WakeLockRegistry::default();
+        assert!(!registry.holds(WakeLockKind::Display));
+        assert!(!registry.holds(WakeLockKind::System));
+
+        let system = registry.allocate(WakeLockKind::System);
+        assert!(registry.holds(WakeLockKind::System));
+        assert!(
+            !registry.holds(WakeLockKind::Display),
+            "a system lock must not imply a display lock"
+        );
+
+        let display = registry.allocate(WakeLockKind::Display);
+        assert!(registry.holds(WakeLockKind::Display));
+
+        assert!(registry.forget(display).is_ok());
+        assert!(!registry.holds(WakeLockKind::Display));
+        assert!(
+            registry.holds(WakeLockKind::System),
+            "releasing the display lock must not release the system lock"
+        );
+
+        assert!(registry.forget(system).is_ok());
+        assert!(!registry.holds(WakeLockKind::System));
+    }
+
+    #[test]
+    fn wake_lock_start_rejects_an_unknown_kind_before_touching_the_os() {
+        // Drives the real `wake_lock_start` (not just the pure helper) to prove the rejection
+        // survives the wrapper. Safe against the process-global registry precisely because it
+        // must never allocate: a kind this invalid may not reach the platform arm at all.
+        assert!(wake_lock_start("prevent-everything").is_err());
+    }
+
+    #[test]
+    fn wake_lock_stop_on_an_unknown_id_errors_rather_than_panicking() {
+        // u32::MAX is never allocated first, so this exercises the global registry's
+        // unknown-id path without depending on what other tests have put in it.
+        assert!(wake_lock_stop(u32::MAX).is_err());
+    }
+
+    #[test]
+    fn wake_lock_release_all_is_safe_to_call_with_nothing_held() {
+        // The shutdown hook runs on every exit, including exits where no game ever ran and the
+        // `OnceLock` was never initialised. It must not panic there.
+        wake_lock_release_all();
     }
 }

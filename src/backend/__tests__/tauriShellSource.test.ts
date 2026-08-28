@@ -337,7 +337,22 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // (`externalDynamicImportGate.test.ts`), which pins the static-import shape the arm's
       // sidecar caller depends on -- that guards the CALLER, not this arm's behavior. The macOS
       // hide itself is unproven by any automated test.
-      'app_hide'
+      'app_hide',
+      // Phase 35 Plan 08 (D-08/D-05, REQ-35-06) legitimately added exactly these two wake-lock
+      // arms, replacing electronStub's `powerSaveBlocker` logged no-op; this gate only pins that
+      // no OTHER, undeclared arm has crept in since.
+      //
+      // PROOF STATUS -- split, and recorded as such. main.rs's own #[cfg(test)] mod IS the
+      // behavioral proof for these arms' pure logic: kind validation (`wake_lock_kind` rejects
+      // anything that is not one of the two Electron literals rather than defaulting -- threat
+      // T-35-32) and the id registry (unique non-zero ids, `forget` returning the kind its id
+      // names, unknown/double `stop` erroring rather than panicking -- threat T-35-31). The
+      // SYSCALLS behind them are NOT unit-tested and deliberately so: `IOPMAssertionCreateWithName`
+      // and `SetThreadExecutionState` need a real OS power API a #[test] cannot stand up, and a
+      // mock would assert only that the mock was called. macOS is verified live at this plan's
+      // Task 3 against `pmset -g assertions`; Windows and Linux are recorded NOT ATTEMPTED.
+      'wake_lock_start',
+      'wake_lock_stop'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)
