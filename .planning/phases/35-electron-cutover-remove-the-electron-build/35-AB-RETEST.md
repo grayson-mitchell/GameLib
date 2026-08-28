@@ -686,14 +686,61 @@ that ceases to exist needs no remediation. Its value here is threefold: it retir
 baseline for this dialog, and it is a concrete instance of the Item 2 generalisation — behaviour
 that lives in `main.ts`/sidecar asymmetrically is invisible to a channel-by-channel port audit.
 
-**Tauri leg (sub-item a, EOS dialog) — Observed:**
-[fill in]
+**Tauri leg (sub-item a, EOS dialog) — Observed:** REPRODUCES, IDENTICALLY TO ELECTRON. Operator
+drove the same route (Settings → Advanced → EOS Overlay → Uninstall) and reported the presentation
+as indistinguishable from the Electron leg: an OS-native macOS alert, not the app's styled
+`Dialog`. Consistent with the mechanism — `eos_overlay.ts:161` calls `dialog.showMessageBox`
+imported from `'electron'`, which under the sidecar resolves through `electronStub.ts` to a native
+dialog on both paths. This half's `Notes:` prediction of BOTH by construction HOLDS.
 
-**Tauri leg (sub-item b, path-rejection dialog) — Observed:**
-[fill in]
+**Tauri leg (sub-item b, path-rejection dialog) — Observed:** THE DIALOG APPEARS — the inverse of
+the Electron leg, and the inverse of this section's own prediction. A relative path submitted in
+the Import flow produced an app-raised error carrying `pathRejectedBodyImport` verbatim:
 
-**Verdict:** (one verdict covering both sub-items; if they diverge, say so in Notes and pick the
-verdict for the more severe sub-item)
+> GameLib couldn't import from that location. The source has to be a full folder path with no
+> ".." steps in it. Pick the game's folder again.
+
+That is the exact `gamelib.json` string at `installFlowRegistration.ts:445`, confirming the
+rejection path runs here and confirming by observation what the Electron leg established by census:
+this code is sidecar-only, so Tauri is the ONLY shell on which it can fire. **Tauri is BETTER than
+Electron on this surface, not worse** — the sole such case in this document. Under Electron the
+same input produced no dialog at all and the window simply closed, which is the pre-34.6-19 silent
+failure the source todo describes in its own Problem section.
+
+*Sub-question still open:* the todo's actual complaint is not that the dialog is absent but that it
+uses the OVERSIZED "large text window" model for what is a one-line correction. The dialog's
+size/shape was not scored on this run. This does not affect the verdict below — which turns on
+existence, measured on both shells — but plan 35-11, which owns the fix, needs the size
+observation before it can tell a real defect from a resolved one.
+
+**Verdict:** `BOTH` — for sub-item (a), which is the more severe half and therefore sets this
+section's verdict per the field's own instruction.
+
+**THE TWO SUB-ITEMS DIVERGE, and the divergence is the finding.** Stated here rather than buried,
+because a single verdict cannot carry it:
+
+| | Electron | Tauri | Sub-verdict |
+|---|---|---|---|
+| (a) EOS remove dialog | native macOS alert | native macOS alert | `BOTH` |
+| (b) path-rejection dialog | **no dialog at all** | dialog appears, correct copy | `TAURI-ONLY` |
+
+Sub-item (a) is `BOTH` and its by-construction prediction held: `dialog.showMessageBox` is imported
+from `'electron'` and resolves natively on both paths.
+
+Sub-item (b) is `TAURI-ONLY` **in the opposite direction to every other finding in this document** —
+the behaviour is PRESENT under Tauri and ABSENT under Electron. It is not a defect to fix on the
+Tauri side; it is 34.6-19's fix working exactly as designed on the only shell that loads the code,
+while Electron retains the silent failure that fix was written to eliminate. Nothing is owed here,
+because Electron is deleted at plan 35-14 and a missing dialog on a path that ceases to exist needs
+no remediation.
+
+**The prediction this section made before observing was WRONG for (b) and RIGHT for (a).** The
+`Notes:` below predicted BOTH for both halves "by construction", reasoning that (a) calls Electron's
+native dialog directly and (b) uses the shared `showDialogBoxModalAuto` primitive. The reasoning
+was sound for (a) and unsound for (b): the primitive is shared, but its CALL SITE is not — it lives
+only in `src/backend/sidecar/installFlowRegistration.ts`. Left in place with this correction
+alongside it rather than overwritten, so the failure mode stays visible: inferring shared behaviour
+from a shared primitive without checking whether the caller is shared.
 
 **Severity if TAURI-ONLY:** Does not block D-16 gate. Both sub-items are explicitly recorded by
 their own source documents as cosmetic, UI-polish follow-ups, not port defects — the EOS source
