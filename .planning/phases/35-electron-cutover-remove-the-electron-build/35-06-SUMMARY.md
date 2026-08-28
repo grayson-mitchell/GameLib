@@ -3,7 +3,7 @@ phase: 35-electron-cutover-remove-the-electron-build
 plan: 06
 subsystem: shell
 tags: [d-05, d-06, tray, tauri, about-window, recent-games, req-35-04, t-35-20, t-35-21, t-35-22, t-35-24]
-status: INCOMPLETE — task 3 (blocking human gate) has not run
+status: COMPLETE — task 3 driven live 2026-08-28; steps 1-5 verified, step 6 NOT EXECUTABLE
 
 # Dependency graph
 requires: [35-01]
@@ -45,20 +45,27 @@ key-decisions:
   - "`languageChanged` menu rebuild REDUCED, with the reason stated in code: the menu labels are Rust string literals, not i18next keys, so a rebuild would re-render identical English text. Making them translatable needs a string channel to the shell, which is its own plan."
   - "Rule 1 fix mid-task: `exitToTray` and `startInTray` are both gated on `!noTrayIcon`, mirroring src/backend/main.ts:288 and :523. Honouring them independently strands a running app with no window and no tray to restore it from."
 
-requirements-completed: []
-requirements-partial: [REQ-35-04]
+requirements-completed: [REQ-35-04]
 
 # Metrics
 duration: ~2h
-completed: null
+completed: 2026-08-28
 commits: [d2ec066ae, 3546dfdd8, 8978be102, 7af33f2fe, a600c333e, 6872afcb2, caa84b46b, 918d2afb3, c95a1efcb]
 ---
 
 # Plan 35-06 — a real Tauri tray, and the one affordance that had to be gated rather than kept or deleted
 
-> **THIS PLAN IS NOT COMPLETE.** Tasks 1 and 2 are done and committed. **Task 3 is a blocking
-> human-verify gate that has not run.** Nothing below has been observed running — every claim is
-> static, unit-level, or read from source. Do not treat this summary as verification.
+> **TASK 3 HAS NOW RUN.** Driven live by the operator on 2026-08-28 against a dev build
+> (`pnpm tauri:dev`, macOS arm64). Steps 1-5 verified; step 6 is NOT EXECUTABLE by the method the
+> plan proposes — see the Task 3 section at the end.
+>
+> **The gate found three defects that tasks 1 and 2 did not, and all three were in code this
+> summary had already described as correct.** The static reasoning was accurate; what was missing
+> was that nothing had been observed running. Two of the four rows in the HONOURED table below
+> were wrong at the time they were written. They are struck through in place rather than
+> overwritten, so the record shows what was claimed and on what basis.
+>
+> This remains a DEV-build result. The packaged tray is re-verified in plan 35-19.
 
 ## The deliverable: HONOURED / NOT HONOURED
 
@@ -515,3 +522,163 @@ Worth watching in the re-run: with defect 2 fixed, a dev run started with `start
 **not** open devtools, and will log
 `[shell] devtools NOT opened: 'main' webview is hidden (startInTray or --no-gui)`. That is the fix
 working, not a new fault.
+
+---
+
+# Task 3 — the live gate, driven 2026-08-28
+
+Operator-driven on macOS arm64 against `pnpm tauri:dev`. **Dev build.** Every result below is
+evidence about the dev shell and none of it is evidence about the packaged artifact; plan 35-19
+re-verifies the tray there.
+
+## Results
+
+| Step | What it checks | Result |
+|---|---|---|
+| 1 | Tray icon appears in the macOS menu bar | **PASS** |
+| 2 | Menu contents and order: 5 recent games -> separator -> Show -> About -> Quit | **PASS** |
+| 3 | About item opens the about window with a real version | **PASS** — showed `v0.70`, not the literal `Unknown` that ships in `about.html`; the version injection lands |
+| 4 | Recent-game click launches, in-process, no `gamelib://` | **PASS** — see the launch-path section |
+| 5a | `exitToTray` | **PASS after fix `caa84b46b`** — failed first as a mid-session toggle |
+| 5b | `startInTray` | **PASS after fix `918d2afb3`** — failed first, defeated by devtools |
+| 5c | `noTrayIcon` overriding `startInTray` | **PASS after fix `918d2afb3`** — was VACUOUS before it |
+| 5d | `noTrayIcon` alone | **COVERED BY 5c, not separately run** — 5c is the strictly harder case (suppress the tray *and* override `startInTray`); 5d could not have produced information 5c did not |
+| 5e | `UseDarkTrayIcon` absent on macOS | **PASS** — gate from task 2 confirmed live |
+| 6 | Tray build failure is non-fatal (T-34.1-22) | **NOT EXECUTABLE BY THE PROPOSED METHOD** — see below |
+
+## Step 6 is not executable, and this is a plan defect not an operator omission
+
+The plan says to "force a failure if you can (e.g. run with the tray icon file absent)". That
+cannot work. `main.rs:102`/`:106` are `include_bytes!("../../public/icon-tray-dark.png")` — the
+icons are compiled INTO the binary. Removing the PNGs affects the next `cargo build`, never a
+built shell, so no operator action can reach the failure arms at runtime.
+
+Exercising T-34.1-22's non-fatal discipline needs a deliberate fault-injection build. That is real
+work and was not in scope. **Recorded as NOT EXECUTABLE rather than skipped or passed**, so a
+future reader does not mistake a blank for a verification. The failure arms remain unexercised.
+
+## The three defects the gate found, all in code tasks 1 and 2 called correct
+
+This is the substance of the gate, and it is worth being precise about the failure mode: none of
+these was a case where the static reasoning was *wrong*. The code did what tasks 1 and 2 said it
+did. What was missing is that **doing that was not sufficient**, and only running it showed why.
+Task 1's own summary said "nothing has been observed running" — but its verdict TABLE did not
+carry that caveat into its rows, and the rows are what a reader acts on.
+
+### Defect 1 — `exitToTray` read from the startup snapshot (`caa84b46b`)
+
+**Symptom:** operator turned the setting on mid-session, clicked the red traffic-light, the app
+QUIT. Disk confirmed `exitToTray: true`, `noTrayIcon: false`. After a relaunch with no settings
+change, closing hid the window correctly.
+
+**Mechanism, and why it survived review.** `main.rs:244`'s doc comment justified the `OnceLock`:
+
+> reading them later would not help: `noTrayIcon` and `startInTray` are both decisions that can
+> only be made at startup.
+
+That sentence is **true**, and it names **exactly two** settings. `exitToTray` sat in the same
+struct and rode in behind them without qualifying — it is evaluated at window-close time, and
+Electron read it live there (`src/backend/main.ts:288`). This is the recorded
+`threat-mitigation-text-can-assert-false-parity` shape: a correct rationale covering a set of two,
+silently applied to a third member that does not share the property.
+
+**Fix:** the close handler attaches whenever a tray exists (`!noTrayIcon`, legitimately
+startup-only) and decides hide-vs-close from a fresh read inside the handler. Fail-safe direction
+is deliberate and tested: a read failure degrades to close PROCEEDING. A user who can always close
+their window is the safe failure; trapping them in one is not. No "(requires restart)" label was
+added — that would document a limitation we do not need to have.
+
+### Defect 2 — `open_devtools()` defeated `startInTray`, and made 5c vacuous (`918d2afb3`)
+
+**Symptom:** window started visible with `startInTray: true`. **The hide had run correctly** —
+the operator's terminal showed `[shell] startInTray: main window starts hidden`, immediately
+followed by `[shell] devtools opened for 'main' webview (debug build)`.
+
+`main.rs:7031`'s unconditional `window.open_devtools()` forces the window visible on macOS. Hide,
+then immediately un-hide. Dev builds only — `debug_assertions` is off in a packaged build.
+
+**The gate precedent was already in the file.** `main.rs:1202` documents the LOGIN window's
+devtools call as gated `#[cfg(debug_assertions)]` **AND** `if visible`. The main-window call site
+had the first gate and not the second.
+
+**Why this one is worse than it looks:** it made **step 5c vacuous**. 5c passes when a visible
+window appears — and a visible window appeared whether or not the `noTrayIcon`/`startInTray`
+override worked. Had the fix not landed first, 5c would have returned a green that proved
+nothing. Fixed by gating on `is_visible()`, which is the property that actually matters and also
+covers `--no-gui` and any future hide path.
+
+### Defect 3 — `TRAY_SETTINGS` had two `OnceLock` initialisers (`c95a1efcb`)
+
+```rust
+TRAY_SETTINGS.get_or_init(TraySettingsSnapshot::default)   // line 251, reader thread — ALL FALSE
+TRAY_SETTINGS.get_or_init(load_tray_settings)              // line 6711, .setup() — real values
+```
+
+Whichever ran first won permanently. A `recentGamesChanged` frame arriving before `.setup()`
+reached 6711 would initialise the lock to all-false defaults, make the real load a silent no-op,
+and disable all three tray settings for the whole run with no error anywhere. **Not observed
+firing** — it is a race, so "not observed" is worth very little; it would present as intermittent
+with no diagnostic.
+
+Fixed **structurally**: the lock is now private to an inline `mod tray_settings_lock`, and a
+second initialiser outside it does not compile (verified: `error[E0425]: cannot find value
+TRAY_SETTINGS in this scope`). The doc comment now says the compiler is the guarantee and why —
+the previous comment asserted "read exactly once", and a comment asserting an invariant is not an
+invariant.
+
+Each fix's gate was proven RED against the pre-fix shape before being accepted (restored by `cp`
+from a self-taken snapshot, sha256-verified): defect 1 -> 1 failed/115 passed, defect 2 -> 1
+failed/117 passed, defect 3 -> 2 failed/118 passed plus the compile error.
+
+## The launch path, and why step 4 took four attempts to score
+
+Step 4 initially looked like three failures. All three were correct refusals, and diagnosing them
+consumed most of the gate.
+
+- **HUMANKIND (`1124300`, Steam, installed):** launched via `steam://rungameid`. **PASS.**
+- **Pillars of Eternity (`291650`, Steam, native):** launched. **PASS.**
+- **All Will Fall (`2706020`):** dispatched correctly — the log shows
+  `Running Wine command: .../GameLibSteam/.../steam.exe -applaunch 2706020` — but no game
+  appeared. The game IS fully installed (`StateFlags 4`, 4.2 GB) in the **CrossOver bottle's own**
+  `steamapps`, not the macOS Steam library. The bottled Steam client is **logged out**
+  (`steamwebhelper.exe ... -steamid=0`), so `-applaunch` lands on a login prompt that
+  `crossover-renders-steam-dialogs-offscreen` makes invisible.
+- **Phoenix Point (`Iris`, Epic, installed):** Epic was signed out from plan 35-02's item 7 test.
+
+**The tray dispatched correctly in every case.** The operator's own reading — *"native games
+launch, bottles don't"* — was exactly right: the two paths share nothing downstream of the tray.
+
+Two wrong conclusions were drawn and retracted during this diagnosis, both by the orchestrator:
+an "All Will Fall is not installed" call measured against the **wrong Steam library**, and a "the
+running binary predates the change" call drawn from a `strings` pattern that **cannot match a Rust
+symbol** (`nm` finds it; `strings` does not) combined with a second pattern that never matched the
+literal it was aimed at. Both are recorded here because the cost of the silent failures in
+`D-35-06-01` is exactly this: three benign refusals investigated as suspected defects.
+
+## Findings filed rather than fixed
+
+- **`D-35-06-01`** (`deferred-items.md`) — the tray offers recent games from signed-out stores and
+  bottled installs, and every failure is silent. Not a 35-06 defect; the tray dispatched correctly
+  every time. Notes that `dispatch_tray_launch`'s own doc comment justifies the silence with "the
+  tray has nothing to show the user either way", which is true of the Rust tray in isolation and
+  false of the product — the About item proves the renderer is reachable.
+- **`D-35-03-03`** (`deferred-items.md`) — `tauri dev` does not reap its `beforeDevCommand` Vite
+  server; with `strictPort` that blocks the next run. Hit repeatedly during this gate.
+- **`stripSourceComments` is blind to a leading `*`** — found while writing defect 3's gate, which
+  first reported 0 matches against code plainly present. A Rust deref at line start is
+  indistinguishable from a block-comment continuation, so **both** original initialisers had
+  always been invisible to every source gate reading `main.rs`. The shared stripper was
+  deliberately NOT changed (it feeds ~20+ suites; altering it silently changes what they all
+  assert). Worked around locally by putting the deref on its own line. Flagged for separate
+  ownership.
+
+## Self-Check: PASSED
+
+- Tasks 1, 2 and 3 all done. Steps 1-5 of the gate verified live; step 6 recorded NOT EXECUTABLE
+  with its reason; step 5d recorded COVERED-BY-5c with its reason. No blank scored as a pass.
+- `cargo test` 174 passed; `cargo build` clean; `pnpm codecheck` exit 0; `pnpm test
+  --selectProjects Backend` 4272 passed / 181 of 182 suites. The 3 failures are
+  `decompressPool.test.ts`'s pre-existing LZMA trio, unreachable from this change set.
+- `src/backend/tray_icon/tray_icon.ts` unmodified (it dies in plan 35-15). `src-tauri/Cargo.toml`
+  unmodified. `unwrap()` count unchanged at 41. `gamelib://` count unchanged at 17.
+- STATE.md and ROADMAP.md untouched by this plan; no `gsd-sdk` state verb invoked.
