@@ -36,6 +36,7 @@ import { join } from 'node:path'
 import Backend from 'i18next-fs-backend'
 import i18next from 'i18next'
 import * as electronStub from './electronStub'
+import { startInstalledJsonWatcher } from './installedJsonWatcher'
 import { READY_SENTINEL } from 'common/types/sidecarTransport'
 import { supportedLanguages } from 'common/languages'
 
@@ -637,6 +638,38 @@ export function init(
     } catch (error) {
       logWarning(
         `[bootstrap] fetchLastestReleases() failed: ${error}`,
+        LogPrefix.Backend
+      )
+    }
+  }
+  // Block C — the `installed.json` watcher (Phase 35 plan 35-10, REQ-35-16). Ports
+  // `main.ts:1036-1048`, an Electron-only module-scope side effect that the sidecar never
+  // inherited: plan 35-01's D-17 census found ZERO import edges from the sidecar into
+  // `main.ts`, so under Tauri nothing refreshed the in-memory `installedGames` map and
+  // `legendary sync-saves` computed save paths against a stale view. See
+  // `installedJsonWatcher.ts` for the full mechanism, the debounce rationale and teardown.
+  //
+  // Placement: after Block B and immediately before READY_SENTINEL, so the existence check runs
+  // once the app-data path shim is fully resolved rather than at module load — a fresh profile
+  // has no `installed.json` until legendary first writes one, which is exactly what `main.ts`'s
+  // own `existsSync` guard is for. Idempotence is owned by the watcher module itself (a second
+  // start returns `false`), so this call site deliberately carries no extra flag of its own.
+  //
+  // JEST GUARD, and it is load-bearing rather than cosmetic. `legendaryInstalled` resolves to
+  // the developer's REAL `~/Library/Application Support/gamelib/legendaryConfig/installed.json`
+  // in any suite that calls `init()` without a homedir override — and most do not. Opening a
+  // real `fs.watch` there leaks a libuv handle into the Jest worker, which then parks in
+  // `uv__io_poll` and never exits: measured directly during this plan's mutation testing, where
+  // an orphaned watch handle hung the run outright instead of failing it. `JEST_WORKER_ID` is
+  // Jest's own zero-config signal (always set in a worker, never set for the real Tauri sidecar
+  // process), mirroring `handlers.ts:145`'s existing use of it for the same class of problem —
+  // under real Tauri this is unconditionally false and the watcher always arms.
+  if (process.env.JEST_WORKER_ID === undefined) {
+    try {
+      startInstalledJsonWatcher()
+    } catch (error) {
+      logWarning(
+        `[bootstrap] startInstalledJsonWatcher() failed: ${error}`,
         LogPrefix.Backend
       )
     }

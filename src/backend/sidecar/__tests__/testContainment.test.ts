@@ -773,6 +773,30 @@ const IN_SCOPE_SUITES = [
  * entries above use. It cannot be an `IN_SCOPE_SUITE`: it declares none of the four-element
  * `pathShim`/`backend/logger/paths` mock kit Block B gates on. Recount, run rather than carried
  * forward: 56 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 52 below.
+ *
+ * `installedJsonWatcher.test.ts` (Phase 35 plan 10, D-18/D-05 / REQ-35-16, 2026-08-29) is
+ * classified structurally contained on a READ of its import graph, not on assumption. It declares
+ * exactly TWO file-wide factory mocks -- `../../storeManagers` and `../../logger` -- and requires
+ * one production module, `../installedJsonWatcher`. That module's only unmocked import beyond
+ * `graceful-fs` is `../storeManagers/legendary/constants`, whose module scope is a `join()` of
+ * already-resolved path constants: it computes a string and performs no I/O at import time, and
+ * the `backend/constants` chain beneath it resolves `electron` through the project-wide,
+ * tmpdir-based `src/backend/__mocks__/electron.ts` auto-mock -- the same "contained by
+ * construction, no per-suite opt-in required" floor `runnerSliceRegistration.test.ts`'s entry
+ * above describes.
+ *
+ * It DOES touch the real filesystem, deliberately and unusually for this list, because the
+ * behaviour under test is a real `fs.watch`: a mocked watch would prove only that a callback was
+ * registered, which is precisely the vacuous shape the ported defect already survived. Every such
+ * write is confined to a per-test `mkdtempSync(os.tmpdir(), ...)` directory removed in `afterEach`;
+ * the suite never resolves the real app-data path, because the watcher takes its target path as a
+ * parameter and the fixture path is passed in explicitly. It therefore needs no `jest.mock('os')`
+ * -- which is the stronger position, given this repo's recorded finding that a per-suite `os` mock
+ * is inert here anyway.
+ *
+ * It cannot be an `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/
+ * `backend/logger/paths` mock kit Block B gates on. Recount, run rather than carried forward:
+ * 57 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 53 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -796,6 +820,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'humbleLoginFlows.test.ts',
   'humbleSecretStore.test.ts',
   'installFlows.test.ts',
+  'installedJsonWatcher.test.ts',
   'invokeReturnValueSweep.test.ts',
   'isPackagedSidecar.test.ts',
   'keyringTokenStore.test.ts',
