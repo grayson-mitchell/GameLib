@@ -702,7 +702,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > # ◆ PHASE 35 EXECUTING — started 2026-08-28. `/gsd-execute-phase 35`, no `--wave` filter.
 >
 > **Phase:** 35 (electron-cutover-remove-the-electron-build) — EXECUTING
-> **Plan:** 2 of 19 complete · **Wave:** 1 of 13 DONE, wave 2 next (35-03, 35-05, 35-06, 35-12)
+> **Plan:** 2 of 19 complete · **Wave:** 1 of 13 DONE, wave 2 next (35-03, 35-06)
+> **Wave membership is the PLANNER's, from each plan's `wave:` frontmatter and ROADMAP — NOT a dependency-derived grouping.** An earlier banner listed wave 2 as `35-03, 35-05, 35-06, 35-12`; that was derived from `depends_on` alone (all four depend only on 35-01) and is WRONG. The planner staggered 35-05 to wave 3 and 35-12 to wave 4 because all three of 35-03/35-05/35-12 declare `package.json` in `files_modified`. Corrected 2026-08-28.
 >
 > **Wave 1 closed 2026-08-28.** `35-01` preflight — OQ-1 `AGREES`, MEASURED on a real packaged SEA
 > binary (`main=true worker=true`) not reasoned from "a worker shares its parent's process", which
