@@ -62,3 +62,43 @@ register `T-35-SC` asserts `vite` is already a direct dependency. It is not. A f
 threat register is exactly the shape that survives review, because the plan that would catch it
 (35-03) correctly found nothing to install, and the plan that pays for it (35-14) has no reason to
 re-derive a fact its own research already states. Neither plan is wrong on its own.
+
+## D-35-03-03 — `tauri dev` does not reap its `beforeDevCommand` Vite server; `strictPort` turns that into a hard failure
+
+**Found during:** plan 35-06 Task 3 live gate, 2026-08-28. Caused by plan 35-03's changes.
+
+**Symptom:** after killing a `tauri:dev` session, the next `pnpm tauri:dev` dies before the
+window appears:
+
+```
+error when starting dev server:
+Error: Port 5173 is already in use
+   Error The "beforeDevCommand" terminated with a non-zero status code.
+```
+
+**Mechanism.** Plan 35-03 added `beforeDevCommand: pnpm exec vite` and `devUrl:
+http://localhost:5173` to `tauri.conf.json`, plus `server: { port: 5173, strictPort: true }` to
+`vite.config.ts`. Killing `tauri dev`, `gamelib-shell` and `sidecar.js` leaves the Vite server
+**orphaned and still holding 5173** — measured here as pids 27338/27339 (`pnpm exec vite` ->
+`./node_modules/.bin/vite`), survivors of a boot 30+ minutes earlier. `strictPort: true` then
+correctly refuses to fall through to 5174 and the run aborts.
+
+**`strictPort` is NOT the defect and must not be removed.** It was added deliberately so a
+collision fails loudly rather than silently serving the renderer on a port `devUrl` is not
+pointing at — a silent 5174 fallback would produce a blank window with no stated cause, which is
+strictly worse. The defect is the unreaped child.
+
+**Workaround, which anyone hitting this needs:**
+
+```
+lsof -nP -iTCP:5173 -sTCP:LISTEN     # find it
+kill <pid>
+```
+
+A `pkill -f "tauri dev"; pkill -f gamelib-shell; pkill -f sidecar.js` sequence does **not** cover
+it — `vite` matches none of those patterns. This is worth folding into whatever kill helper the
+project ends up with, and is a live papercut for anyone driving a live gate.
+
+**Related:** MEMORY's `tauri-dev-noops-against-a-running-instance` — the same family. That one is
+"a stale instance survives and you silently test it"; this one is "a stale child survives and
+blocks the new run". The second is far better behaviour, because it is visible.
