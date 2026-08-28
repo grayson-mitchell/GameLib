@@ -59,7 +59,16 @@ let mockLogError: jest.SpyInstance
 // imports the real `./handlers` graph (Task 2's bootstrap wiring block does, via `../bootstrap`). ─
 const realPathShim: typeof import('../pathShim') =
   jest.requireActual('../pathShim')
-const mockGetPath = jest.fn()
+// Phase 35 Plan 05 (D-04): a DEFAULT implementation is required at module scope, not just in
+// `beforeEach`. `backend/store_backend.ts` resolves its cwd from `pathShim.getPath('userData')`,
+// and `backend/cache.ts` constructs `new CacheStore()` at MODULE SCOPE — so this mock is called
+// during the import graph below, long before any `beforeEach` runs. Without a default it
+// returned `undefined` and `join(undefined, 'store_cache')` threw. Before the swap the same
+// construction went through `electron-store` -> `app.getPath()` -> the `electron` automock, so
+// it never reached this mock at import time. `resetMocks: true` clears this default before each
+// test, which is harmless: `beforeEach` below installs the same fall-through plus the 'temp'
+// redirect.
+const mockGetPath = jest.fn((name: string) => realPathShim.getPath(name))
 jest.mock('../pathShim', () => ({
   getPath: (name: string) => mockGetPath(name)
 }))

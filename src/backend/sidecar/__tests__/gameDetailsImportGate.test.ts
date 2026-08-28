@@ -384,16 +384,23 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // ── Gate 8 (REQ-34.2-14 do-not-touch, WR-01 replacement): electronUntouched
   // .test.ts is pinned to a committed sha256 digest of its own byte content --
   // same replacement reasoning as Gate 7 above. ──────────────────────────────
-  // Re-pinned 2026-08-14 by Phase 34.5 (F-34.5-G6-26), per this gate's own documented procedure.
-  // The ONLY change to the pinned file was adding `logDebug: jest.fn()` to its `backend/logger`
-  // mock (+3 lines, comment included): `SidecarKeyringSlotStore` gained DEBUG cache-hit lines, and
-  // this suite drives that class directly, so an incomplete mock made every cached read throw
-  // `logDebug is not a function`. No assertion, fixture or proof in the pinned file was altered,
-  // weakened or repurposed — the `safeStorage.isEncryptionAvailable` regression detector and the
-  // configStore byte-identity comparisons are untouched. Prior digest:
-  // 66645e8e33437a9da352619ce06b361450dcc78da294a6fc6161ef2cedc67f99
+  // Re-pinned 2026-08-29 by Phase 35 Plan 05 (D-04), per this gate's own documented procedure.
+  // The ONLY change to the pinned file is ONE line — the mock specifier
+  // `jest.mock('electron-store', ...)` became `jest.mock('backend/store_backend', ...)`, because
+  // that plan removed the `electron-store` package outright. The factory body is byte-identical
+  // and still redirects to `jest.requireActual('../fileStore').default`, so the suite exercises
+  // exactly the same store implementation it did before. No assertion, fixture or proof was
+  // altered, weakened or repurposed — the `safeStorage.isEncryptionAvailable` regression detector
+  // and the configStore byte-identity comparisons are untouched. Verified by
+  // `git diff -- src/backend/sidecar/__tests__/electronUntouched.test.ts`: 1 insertion,
+  // 1 deletion. Prior digest:
+  // a23b666f9c290364d1bab43df786ce5883ef3fcb95176506224f99d385561502
+  //
+  // Re-pinned 2026-08-14 by Phase 34.5 (F-34.5-G6-26). The ONLY change then was adding
+  // `logDebug: jest.fn()` to its `backend/logger` mock (+3 lines, comment included).
+  // Prior digest: 66645e8e33437a9da352619ce06b361450dcc78da294a6fc6161ef2cedc67f99
   const ELECTRON_UNTOUCHED_SHA256 =
-    'a23b666f9c290364d1bab43df786ce5883ef3fcb95176506224f99d385561502'
+    '2c0acfb5220a85702c0a7f33aafdae9eade1a2c4bec234d33980ab968e1f1105'
 
   it('REQ-34.2-14 Gate 8: electronUntouched.test.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, 'electronUntouched.test.ts')
