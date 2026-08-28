@@ -7058,13 +7058,47 @@ fn main() {
                 // Dev-only: force the webview devtools open (the dev webview exposes no
                 // right-click inspect on macOS) so renderer errors are inspectable, and
                 // confirm the webview window actually exists.
+                //
+                // GATED ON VISIBILITY, not just on `debug_assertions` (plan 35-06 task 3,
+                // live-gate defect 2). `open_devtools()` FORCES the window visible, so an
+                // ungated call here silently defeated `startInTray`: the setting's own hide ran
+                // first and logged success, then this line put the window straight back on
+                // screen. The operator's terminal showed both lines in sequence and scored
+                // `startInTray` a fail.
+                //
+                // This mirrors the gate the LOGIN window's devtools call already uses
+                // (`#[cfg(debug_assertions)]` AND `if visible`, documented at
+                // `MAIN_WINDOW_LABEL`'s doc comment above) -- the precedent was already in this
+                // file; this call site had the first half and not the second.
+                //
+                // Tested via `is_visible()` rather than by re-reading `startInTray`: visibility
+                // is the property that actually matters, and it also covers `--no-gui` and any
+                // future path that hides the window for a reason this code does not know about.
+                //
+                // It also makes the live gate's step 5c non-vacuous. 5c passes when "a visible
+                // window appears because noTrayIcon overrode startInTray" -- which, before this
+                // fix, was true whether or not the override worked. A test that cannot fail is
+                // not evidence.
                 #[cfg(debug_assertions)]
                 {
                     match app.get_webview_window(MAIN_WINDOW_LABEL) {
-                        Some(window) => {
-                            window.open_devtools();
-                            eprintln!("[shell] devtools opened for 'main' webview (debug build)");
-                        }
+                        Some(window) => match window.is_visible() {
+                            Ok(true) => {
+                                window.open_devtools();
+                                eprintln!(
+                                    "[shell] devtools opened for 'main' webview (debug build)"
+                                );
+                            }
+                            Ok(false) => eprintln!(
+                                "[shell] devtools NOT opened: 'main' webview is hidden (startInTray or --no-gui) -- opening it would force the window visible and defeat that setting"
+                            ),
+                            // Erring toward NOT opening: a devtools window the developer can
+                            // open by hand is a smaller loss than silently defeating a setting
+                            // the user asked for.
+                            Err(e) => eprintln!(
+                                "[shell] WARN: devtools NOT opened: could not read 'main' webview visibility ({e})"
+                            ),
+                        },
                         None => eprintln!(
                             "[shell] WARN: no 'main' webview window found — devtools not opened"
                         ),

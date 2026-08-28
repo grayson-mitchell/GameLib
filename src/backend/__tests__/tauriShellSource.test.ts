@@ -346,6 +346,40 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
   })
 })
 
+describe("main.rs main-window devtools is gated on visibility (Phase 35 Plan 06 task 3, live-gate defect 2)", () => {
+  // The defect: `open_devtools()` FORCES a window visible. Gated only on
+  // `#[cfg(debug_assertions)]`, it ran after `startInTray`'s hide and put the window straight
+  // back on screen. The operator's terminal showed both lines in sequence:
+  //   [shell] startInTray: main window starts hidden
+  //   [shell] devtools opened for 'main' webview (debug build)
+  // ...and the window appeared normally, so startInTray was scored a fail.
+  //
+  // The precedent was already in this file: the LOGIN window's devtools call is gated
+  // `#[cfg(debug_assertions)]` AND `if visible`. This call site had the first and not the second.
+  //
+  // Source-level because the behaviour needs a real webview; `is_visible()` is not reachable
+  // from a unit test.
+  const collapse = (s: string) => s.replace(/\s+/g, ' ')
+
+  test('the main-window open_devtools() call sits inside an is_visible() gate', () => {
+    const code = collapse(loadMainRsCode())
+    expect(code).toContain(
+      'match window.is_visible() { Ok(true) => { window.open_devtools();'
+    )
+  })
+
+  test('RED direction: the pre-fix ungated shape is absent', () => {
+    // Non-vacuity proof. The shipped-and-broken code matched the window and called
+    // open_devtools() directly, with nothing between them. If that shape returns, startInTray
+    // silently stops working in dev builds again -- and, worse, the live gate's step 5c becomes
+    // vacuous, because a visible window then appears whether or not the noTrayIcon override works.
+    const code = collapse(loadMainRsCode())
+    expect(code).not.toContain(
+      'Some(window) => { window.open_devtools();'
+    )
+  })
+})
+
 describe('main.rs exitToTray is decided at close time (Phase 35 Plan 06 task 3, live-gate defect 1)', () => {
   // The defect: `exitToTray` was read from the `.setup()` startup snapshot and the close
   // handler was attached only when it was ALREADY true, so turning the setting on mid-session
