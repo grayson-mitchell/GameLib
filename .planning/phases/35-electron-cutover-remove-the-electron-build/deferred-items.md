@@ -415,3 +415,44 @@ rewrite into that would muddy the audit trail the pin exists to protect.
 reasons.
 
 **Status:** open, unowned.
+
+## D-35-05-05 — REQUIRED ACTION FOR PLAN 35-16: remove the `electron-store` devDependency
+
+**Filed 2026-08-29, immediately after plan 35-05.** Not a defect — a deliberate, temporary
+retention with a named owner. It must not outlive 35-16.
+
+Plan 35-05 removed `electron-store` from `dependencies` (REQ-35-03, correctly: nothing in the
+backend imports it any more). But `src/preload/api/misc.ts:182` still holds the ONE remaining
+consumer, deliberately deferred to plan 35-16:
+
+```ts
+export const storeNew = function (storeName, options) {
+  if (isTauri()) { registerStore(storeName, options); return }
+  const ElectronStore = require('electron-store') as typeof Store   // <-- Electron path only
+```
+
+**Why leaving it unresolvable was not acceptable.** `src/frontend/helpers/electronStores.ts:28`
+calls `window.api.storeNew(...)`, and `src/frontend/index.tsx:14` records that this fires
+**synchronously the moment the module is first imported**. On the Electron path that is a
+`require` at app boot. The package resolved only because plan 35-05 ran
+`pnpm install --lockfile-only` and never pruned `node_modules` — **the next clean install would
+have broken `pnpm start` at startup**, silently, with no gate red anywhere.
+
+That would violate the ordering property D-17 rests on: waves 1-7 are additive and BOTH shells
+stay usable until `35-14`. It is why the D-18 A/B re-test ran in wave 1. Neither 35-05 nor 35-16 is
+wrong on its own — the defect lives in the interval between them, which is the shape that survives
+review.
+
+**Resolution applied:** `electron-store@^8.2.0` re-added as a **devDependency**. The runtime
+dependency is genuinely gone, which is REQ-35-03's substance; dev-only retention for a shell that
+is deleted at 35-14 is honest rather than a dodge. Lockfile delta measured: **17 insertions,
+additive only, identical integrity hash, `downloaded 0 / added 0`** — the exact bytes already
+present. 148 tests across the 6 suites that read `package.json` re-run green.
+
+**Plan 35-16 must, in the same commit that removes `misc.ts`'s lazy require:**
+delete `"electron-store": "^8.2.0"` from `devDependencies` and refresh the lockfile.
+
+**Note the asymmetry with `D-35-03-02`** (`vite` must be PROMOTED at 35-14). One dependency is
+being added at a cutover point and one removed; both exist because a package's declaration and its
+last consumer are being separated across plans. A plan that only reads its own `files_modified`
+sees neither.
