@@ -543,7 +543,61 @@ epicgames.com cookie(s)` self-report line and the `cleared storage — localStor
 sessionStorage=N` line (the source notes localStorage clearing DOES appear to work even when
 cookie clearing does not — record both independently, do not assume one implies the other).
 
-**Electron leg — Observed:**
+**Electron leg — Observed:** THE CLEARING WORKS. THE SELF-REPORT DOES NOT EXIST. Those are two
+separate findings and the inversion between them is the point of this row.
+
+Precondition: real authenticated Epic session, established earlier in the same session.
+`legendaryConfig/legendary/user.json` present (6218 bytes) and the `epicstore` partition store
+actively written, both confirmed before the logout was driven.
+
+Independent jar measurement — Electron's store is
+`~/Library/Application Support/gamelib/Partitions/epicstore/Cookies` (Chromium SQLite), read out of
+band via a `cp` + `sqlite3` snapshot taken before and after, NOT from anything the app reported:
+
+| Measure | Before | After |
+|---|---|---|
+| Total cookies in partition | 13 | **0** |
+| `epicgames.com`-scoped | **8** | **0** |
+| `.epicgames.com` / `.www.epicgames.com` / `.ecosec.on.epicgames.com` | 5 / 2 / 1 | 0 / 0 / 0 |
+| `EPIC_SESSION_AP` value length | 1310 | absent |
+| `EPIC_LOGIN_ID` / `_tald` / `EPIC_DEVICE` / `_epicSID` lengths | 96 / 36 / 32 / 32 | all absent |
+
+`legendaryConfig/legendary/user.json` was deleted. The log shows the CLI side completing:
+`(15:44:23) [Legendary]: Logging out: ... legendary auth --delete` followed by
+`... legendary cleanup`. So Electron's logout genuinely wipes the jar — **8 of 8 Epic cookies
+removed, measured, not self-reported.**
+
+**But NO self-report line was emitted, and this is by construction, not by accident.** Neither
+`Legendary logout: cleared N epicgames.com cookie(s)` nor
+`cleared storage — localStorage=N, sessionStorage=N` appears anywhere in `gamelib.log`; the sink
+was live throughout (last write 15:44, the logout itself is in it). Cause confirmed by reading
+`src/backend/storeManagers/legendary/user.ts`: the `wipeSteps` array forks on
+`getLoginWindowSeam()`. The `seam === null` (Electron) branch is five bare
+`session.fromPartition('persist:epicstore')` clear calls — `clearStorageData`, `clearCache`,
+`clearAuthCache`, `clearHostResolverCache`, `clearData` — **none of which log anything about
+cookies**. The `logInfo('Legendary logout: cleared ...')` call the repro steps ask for lives
+exclusively inside the `seam !== null` (Tauri) branch's `clearEpicCookies` step.
+
+**The inversion, stated plainly:** under Electron the wipe SUCCEEDS and is UNREPORTED; under Tauri
+it is REPORTED and (per the source) FAILS. Neither shell has ever had both. The consequence for
+this row is that the Electron leg is a valid baseline for the *behaviour* but **cannot** be a
+baseline for the *log line*, because that line has no Electron code path.
+
+**Why the two implementations legitimately differ** (relevant to plan 35-09, which owns the fix):
+Electron gives Epic its own `persist:epicstore` partition, so a blanket partition wipe is safe and
+is what it does — the count going 13 -> 0 rather than 13 -> 5 reflects that it also cleared the
+partition's non-Epic entries (hcaptcha, unrealengine), which is correct behaviour for a
+partition-scoped store. Tauri has ONE shared cookie jar across Humble/GOG/Amazon/Epic
+(T-34.4.1-47), so a blanket wipe is forbidden there and the clear must be domain-scoped — which is
+precisely the harder path that is failing. D-09's decision to delete the webview data directory
+wholesale must therefore reckon with that sharing; a wholesale delete under Tauri is not the
+equivalent of Electron's partition wipe, it is broader.
+
+**Redaction applied (T-35-04):** counts and value LENGTHS only. No cookie value was read or
+recorded, no account identifier, no `user.json` contents. Separately noted as a distinct
+observation, not chased here: the Electron store held these values with `encrypted_value` empty and
+`value` populated — i.e. **in the clear on disk** — which is what makes a surviving 1310-byte
+`EPIC_SESSION_AP` a security question rather than a cosmetic one.
 
 **Tauri leg — Observed:**
 
