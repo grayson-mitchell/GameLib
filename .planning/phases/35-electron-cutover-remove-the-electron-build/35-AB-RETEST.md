@@ -339,9 +339,43 @@ explicitly unverified. This observation does not discharge that flag — the sou
 **packaged `.app`**, and this is an unbundled dev build, which is precisely the configuration the
 source said could not settle it. Recorded as a dev-build data point only.
 
-**Tauri leg — Observed:**
+**Tauri leg — Observed:** REPRODUCES. The picker opened, the operator left it untouched for 65+
+seconds, then selected. The Rust drop line fired in the terminal `[shell]` sink:
 
-**Verdict:**
+```
+[shell] response for unknown/timed-out id=4465 (dropped)
+```
+
+`gamelib.log` carries **ZERO** `openDialog` / `moveInstall` / `Moving` / `rsync` / `importGame`
+lines for this leg — the correct and expected corollary, not a second defect: the invoke was
+dropped at the 60s bound, so the renderer's `await` never resolved and the backend work was never
+requested. Contrast Electron, where the same 65s wait produced a full backend round-trip that got
+as far as spawning `rsync`.
+
+**One divergence from the source document, recorded rather than smoothed over:** the todo's framing
+is that these flows "die silently". This run was NOT silent — the operator received a user-visible
+**"failed to install"** message. So the observable is a *misleading* error, not an absent one. The
+wording is wrong for the action driven (a move/path-selection reported as an install failure), and
+the message gives no indication that a 60-second transport bound was the cause. That is arguably
+worse for diagnosis than silence, because it misdirects; but "silently dies" should not be repeated
+as the symptom description without this qualification.
+
+**Channel membership re-derived at this commit rather than assumed from the todo:**
+`src-tauri/src/main.rs:184`'s `LONG_RUNNING_CHANNELS` contains `install`, `updateGame`, `uninstall`,
+`checkGameUpdates`, `refreshLibrary`, `getCrossoverIndex`, `repair`, `readConfig`,
+`oauthCaptureLogin`, `humbleStartLogin`, `humbleReconnect`, `getInstallInfo` — **`openDialog` is
+absent**, so `timeout_for()` returns `Some(INVOKE_TIMEOUT)` = 60s for it. The todo is current, not
+stale. Routing also confirmed: `openDialog` is a genuine sidecar invoke channel registered in
+`src/backend/sidecar/dialogFlowRegistration.ts` against the shared `openDialogCallback`
+(`backend/utils/openDialog.ts`), so it is subject to that bound — it is not a Rust-native dialog
+command that would bypass it.
+
+**Verdict:** `TAURI-ONLY`
+
+**BLOCKS D-16 GATE** — carrying forward per this document's closing section. The pre-written
+severity call below stands unmodified and is met: `moveInstall` and `importGame` are core,
+D-16-scoped install-flow functionality, and this defect breaks them on nothing more exotic than a
+user who takes over a minute to choose a folder.
 
 **Severity if TAURI-ONLY:** BLOCKS D-16 GATE. This item is structurally certain to be TAURI-ONLY
 before observing — the 60-second bound (`INVOKE_TIMEOUT` in `src-tauri/src/main.rs`) is a
