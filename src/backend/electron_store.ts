@@ -1,3 +1,18 @@
+// Phase 35 Plan 05 (D-04): `Store` is no longer `electron-store` — it is
+// `./store_backend`, a first-party shim over `conf`. `electron-store` was a thin
+// wrapper over `conf` whose only real addition was `require('electron')`, which
+// made it the last third-party runtime dependency on Electron in the tree.
+//
+// THE LOAD-BEARING PART, repeated here because this is where the constructor
+// lives: the shim passes `cwd` to `conf` EXPLICITLY, derived from
+// `sidecar/pathShim.ts`'s `getPath('userData')`. `conf`'s own default derives
+// from `env-paths` plus the package name — a DIFFERENT algorithm from
+// `app.getPath('userData')` — and `conf` resolves a RELATIVE `cwd` against
+// `process.cwd()`. It also has no `name` option at all (it reads `configName`).
+// Omitting any of that translation silently relocates, or outright collapses,
+// every persisted setting, library cache and credential in the app. See
+// `store_backend.ts`'s header for the measurements, and
+// `__tests__/cache.test.ts`'s "store path parity" block for the gate.
 import Store from './store_backend'
 
 import {
