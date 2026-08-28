@@ -112,7 +112,13 @@ the `reconcileTick`-gated post-heal exclusion guard). Absence of this specific l
 absence of the underlying vanish — the file's own root-cause investigation found the vanish can
 occur via more than one candidate mechanism, and this probe only catches the one family it targets.
 
-**Electron leg — Observed:**
+**Electron leg — Observed:** DID NOT REPRODUCE, across three titles. Operator drove the uninstall
+recipe on **two native (non-bottled) Steam installs plus one `forcedWindowsViaBottle: true` install
+(Machinarium, appId 40700)** — the exact configuration of the 2026-08-27 sighting. All three titles
+**remained in the library grid**. The 50-60 second post-badge-flip observation window was held open
+in each case (operator confirmed), so this is a real negative rather than the vacuous
+checked-immediately negative the repro steps warn against. The app was not restarted between the
+badge-flip and the observation.
 
 **Tauri leg — Observed:**
 
@@ -128,6 +134,15 @@ become an eighth.
 summarize from memory when driving the repro — the ledger's 2026-08-27 section is authoritative
 over its own older, superseded sections (each explicitly marked superseded in the file itself).
 Static analysis is recorded as exhausted; only a live, logged reproduction advances this one.
+
+**Non-reproduction is NOT a fix, and must not be recorded as one.** The Electron leg's clean run
+across three titles does not close `.planning/debug/uninstall-game-vanishes.md`. A defect that was
+incidentally fixed and a defect that simply did not reproduce on this attempt are indistinguishable
+from a single negative run — the same distinction Phase 34.17's paste gate had to draw explicitly.
+Seven hypotheses were eliminated on this bug without finding a root cause, so the mechanism remains
+unknown and the parked ledger stays open regardless of this row's verdict. What this row DOES
+establish is a bound: whatever the mechanism is, it did not fire under Electron on three
+consecutive uninstalls including the bottled configuration of the original sighting.
 
 ---
 
@@ -161,7 +176,12 @@ absence is a meaningful negative, not a vacuous one). The terminal `[shell]` tra
 expected to carry anything for this item — it is a sidecar-side, not shell-side, defect — but note
 if anything unexpected appears there too.
 
-**Electron leg — Observed:**
+**Electron leg — Observed:** DID NOT REPRODUCE. The Cloud Saves Sync save-path field **populated**
+on the operator's attempt. No `[ERROR]: [Legendary]: Unable to compute default save path` line was
+produced. This is the expected-correct Electron behaviour and confirms the source document's
+mechanism claim from the working side: `main.ts`'s `watch(legendaryInstalled, ...)` keeps the
+in-memory `installedGames` map fresh under Electron, so the stale-map symptom has no opportunity to
+arise there.
 
 **Tauri leg — Observed:**
 
@@ -205,7 +225,38 @@ inspector console (a third surface, not either main sink) for the unhandled prom
 since the source notes `onMoveInstallYesClick` has no try/catch around the awaited call — this
 will NOT appear in `gamelib.log` and will NOT appear in the terminal transcript either.
 
-**Electron leg — Observed:**
+**Electron leg — Observed:** THE TIMEOUT SYMPTOM DID NOT REPRODUCE — and the run surfaced a
+DIFFERENT, PREVIOUSLY UNRECORDED DEFECT in its place. Operator drove `moveInstall` (Move Game),
+left the native picker open and untouched for **over 65 seconds**, then made a selection. The
+originating action **did not silently die**: it proceeded past the picker and reached the actual
+move, which then failed with an app-level error dialog reading:
+
+```
+Error Moving Game
+rsync: unrecognized option `--no-human-readable'
+```
+
+Two separate facts, both worth keeping distinct:
+
+(a) **The >60s picker timeout did NOT fire under Electron.** This is the expected-correct
+    behaviour and confirms the source's mechanism claim from the working side — the 60-second
+    bound is `INVOKE_TIMEOUT` in `src-tauri/src/main.rs`, a Tauri-transport construct with no
+    Electron analog (`ipcMain.handle` has no timeout at all). The action reaching rsync at all is
+    positive proof the invoke completed rather than being dropped.
+
+(b) **NEW FINDING — `moveInstall` is broken on this host independently of either shell.**
+    `rsync: unrecognized option '--no-human-readable'` is a flag-compatibility failure against the
+    system `rsync`, not a transport or timeout failure. It is shared-backend code and therefore
+    predicted to reproduce identically under Tauri. This is NOT the defect Item 3 was written to
+    observe, and it must not be conflated with it — recorded here because this run is where it was
+    seen, and dropping it would lose it. It needs its own todo; it is out of scope for the fix
+    plans (35-09/35-10/35-11) that own Item 3's actual symptom.
+
+**Deferred sub-question, answered:** the native picker rendered **dark-themed**, matching the
+macOS system appearance. The source flagged a suspected light-themed picker under dark mode as
+explicitly unverified. This observation does not discharge that flag — the source deferred it to a
+**packaged `.app`**, and this is an unbundled dev build, which is precisely the configuration the
+source said could not settle it. Recorded as a dev-build data point only.
 
 **Tauri leg — Observed:**
 
@@ -266,7 +317,17 @@ is the core symptom) and any `winetricks -q corefonts` invocation lines. Rendere
 inspector console (third surface) for the per-row MOUNT/UNMOUNT probe evidence, if re-instrumented
 — see Notes.
 
-**Electron leg — Observed:**
+**Electron leg — Observed:** Operator reported `pass` — i.e. the Winetricks Install action WORKED
+under Electron and the mouse-click no-op did NOT reproduce.
+
+**INCOMPLETE — one discriminator not yet captured.** This item's value is a within-shell
+mouse-vs-keyboard comparison, not a bare pass/fail. What is recorded here is that the action
+succeeded; what is NOT yet recorded is whether the operator activated the row **by mouse click**
+(which is the path with the known symptom) or by keyboard (Tab+Enter, the path already known to
+work under Tauri). If activation was by mouse, this is a genuine Electron-side non-reproduction of
+the parked symptom and materially narrows the search. If it was by keyboard, it tells us nothing
+the Tauri record did not already say. Marked open pending operator confirmation rather than
+resolved in the favourable direction.
 
 **Tauri leg — Observed:**
 
@@ -317,7 +378,11 @@ visual/UI-navigation check. If the Electron leg's About window opens, note wheth
 string reads a real value or `0.0.0` (the source flags this as the T-34.1-17 regression check,
 relevant only under Electron since it was never observable under Tauri at all).
 
-**Electron leg — Observed:**
+**Electron leg — Observed:** REACHABLE AND WORKING. The tray icon's context menu carries an About
+entry, clicking it opens the About window, and the version string renders a real value — operator
+read **v0.7**, not the `0.0.0` placeholder. This discharges the T-34.1-17 regression check on the
+Electron side (the only side on which it was ever observable, since no Tauri route to this window
+has ever existed).
 
 **Tauri leg — Observed:**
 
@@ -365,8 +430,22 @@ observations. If anything is logged around either action, note it, but a blank O
 citing "nothing logged, both sinks checked" is acceptable here specifically because these are
 visual checks, not log-driven ones — say so explicitly rather than leaving it ambiguous.
 
-**Electron leg (sub-item a, EOS dialog) — Observed:**
-[fill in]
+**Electron leg (sub-item a, EOS dialog) — Observed:** REPRODUCES. Precondition satisfied properly —
+the operator **installed the EOS Overlay first**, so the Uninstall control was genuinely present
+and this is a real observation rather than an unreachable-surface pass. Clicking Uninstall
+(Settings → Advanced → EOS Overlay) raised the confirmation from `eos_overlay.ts:161`'s
+`dialog.showMessageBox`.
+
+Rendered as an **OS-native macOS alert**, not the app's styled `Dialog`: a dark-background window
+(following the system dark appearance) with **no titlebar and no traffic-light buttons**, carrying
+No/Yes buttons in **native macOS button styling**. The absent titlebar/traffic lights and the
+system button styling are the identifying signature of an `NSAlert`-backed panel — Electron's
+`dialog.showMessageBox` maps to exactly that. Confirms the source document's complaint verbatim:
+this is visually inconsistent with the rest of the app.
+
+Nothing was logged to either sink for this action; both were checked. That is expected and
+acceptable for this sub-item specifically, because it is a purely visual check rather than a
+log-driven one.
 
 **Electron leg (sub-item b, path-rejection dialog) — Observed:**
 [fill in]
