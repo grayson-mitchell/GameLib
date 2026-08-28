@@ -14,13 +14,15 @@
  * black-box-over-mocking-fs precedent, `bootstrap.test.ts`'s own header) rather than the
  * developer's real `os.tmpdir()` shared across concurrent test runs.
  *
- * `../humbleFlowRegistration` is mocked with `jest.requireActual(...)` spread + a single
- * overridden `isPackagedSidecar` — NOT a full replacement — because the second describe block
- * below (Task 2) drives the REAL `../bootstrap` `init()`, whose `./handlers` import graph calls
- * the REAL `registerHumbleFlows()` from this same module at ITS OWN module scope
- * (`handlers.ts:194`); a full-replacement mock would leave that call undefined and throw the
- * instant `../bootstrap` — or anything importing it — is required. Only `isPackagedSidecar`
- * needs to be scriptable per test; everything else stays real.
+ * `../isPackagedSidecar` is mocked (Phase 35 plan 04 repointed this from
+ * `../humbleFlowRegistration`, which now merely re-exports the symbol). The mock is a full
+ * replacement, which is safe ONLY because that module has exactly one export. It was NOT safe
+ * against `../humbleFlowRegistration`, and the reason is worth keeping: the second describe
+ * block below (Task 2) drives the REAL `../bootstrap` `init()`, whose `./handlers` import graph
+ * calls the REAL `registerHumbleFlows()` at ITS OWN module scope (`handlers.ts:194`), so a
+ * full-replacement mock of that module would leave the call undefined and throw the instant
+ * `../bootstrap` — or anything importing it — is required. If this mock is ever pointed back at
+ * a multi-export module, restore the `jest.requireActual(...)` spread with it.
  */
 
 import { mkdtempSync, rmSync } from 'fs'
@@ -62,12 +64,19 @@ jest.mock('../pathShim', () => ({
   getPath: (name: string) => mockGetPath(name)
 }))
 
-// ── humbleFlowRegistration mock — see file header for why this preserves every REAL export
-// (Task 2's bootstrap wiring block needs the real registerHumbleFlows()) and overrides only
-// isPackagedSidecar, scriptable per test. ───────────────────────────────────────────────────
+// ── isPackagedSidecar mock — repointed by Phase 35 plan 04 from '../humbleFlowRegistration'
+// to '../isPackagedSidecar', because that plan MOVED the function so app.isPackaged could
+// become a third caller of one derivation rather than a second copy of it (T-35-11).
+//
+// A FULL replacement is correct here, unlike the requireActual-spread this previously needed:
+// the reason for that spread was that '../humbleFlowRegistration' also exports the REAL
+// registerHumbleFlows(), which the bootstrap-wiring describe block below drives through
+// handlers.ts's module scope. '../isPackagedSidecar' exports this one function and nothing
+// else, so replacing it wholesale strands nothing. humbleFlowRegistration re-exports the same
+// symbol; because it re-exports from the module mocked here, the real registrar sees the
+// scripted value too. ───────────────────────────────────────────────────────────────────────
 const mockIsPackagedSidecar = jest.fn()
-jest.mock('../humbleFlowRegistration', () => ({
-  ...jest.requireActual('../humbleFlowRegistration'),
+jest.mock('../isPackagedSidecar', () => ({
   isPackagedSidecar: () => mockIsPackagedSidecar()
 }))
 

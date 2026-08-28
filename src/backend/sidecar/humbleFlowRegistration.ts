@@ -77,10 +77,14 @@
  * (`main.ts:965-970`), kept out of `humble/ipc_handler.ts`'s always-on
  * registrar specifically so it can never be accidentally exposed in a
  * packaged build (`ipc_handler.ts:13-16`). `electronStub`'s `app` shim
- * hardcodes that same flag to `false` always, so reusing that guard
- * verbatim would register this dev-only trigger in EVERY Tauri build,
- * packaged or not. Resolved via `isPackagedSidecar()` below — see its own
- * docstring for the `node:sea` signal and safe-default rationale.
+ * HARDCODED that same flag to `false` always until Phase 35 plan 04, so
+ * reusing that guard verbatim would have registered this dev-only trigger in
+ * EVERY Tauri build, packaged or not. Resolved via `isPackagedSidecar()`
+ * (`./isPackagedSidecar`) — see its own docstring for the `node:sea` signal
+ * and safe-default rationale. As of Phase 35 plan 04 `app.isPackaged` is a
+ * getter delegating to that SAME function, so the two are no longer capable
+ * of disagreeing; this gate keeps calling it directly anyway, because the
+ * dependency it wants is on the derivation, not on the Electron shim.
  *
  * Deliberately does NOT register the six channels Phase 34.4.1 owns
  * (`humbleStartLogin` `ipc_handler.ts:21`, `humbleReconnect` `:23`,
@@ -119,59 +123,28 @@ import { HumbleLibrary } from '../humble/library'
 import { runHumbleValidation } from '../humble/validation'
 
 /**
- * Whether this sidecar process is a packaged Node Single Executable
- * Application (SEA), as opposed to the plain dev script run under `node`
- * (Phase 34.4 Plan 05, REQ-34.4-08).
+ * `isPackagedSidecar()` NO LONGER LIVES IN THIS FILE.
  *
- * Resolves the `humbleRunValidation` dev-vs-packaged divergence that reusing
- * Electron's negated `app` "already packaged" flag guard verbatim cannot:
- * `electronStub`'s `app` shim (see `./electronStub.ts`) hardcodes that same
- * flag to `false` always, so that guard would always pass and register this
- * dev-only trigger in every Tauri build. `main.rs` confirms there is no env
- * var or CLI flag distinguishing the two spawn paths (`use_dev_sidecar()`
- * L737-739 reduces to `cfg!(debug_assertions)`; neither `spawn_sidecar_dev()`
- * L745-767 nor `spawn_sidecar_packaged()` L775-800 calls `.env(...)`) — so
- * this cannot be resolved through the Electron `app` shim or a spawn-time
- * environment signal without a Rust change, which this slice forbids.
+ * Phase 35 plan 04 (D-14 / D-19 half (b)) MOVED the body — its guarded
+ * builtin `node:sea` require, its `{ isSea: () => boolean }` assertion and its
+ * fail-closed `catch` — verbatim into `./isPackagedSidecar`. Nothing about the
+ * derivation changed; only its address did.
  *
- * The genuine Node-only signal used instead: the packaged sidecar is built
- * by `package.json`'s `build:sidecar-sea` script as a Node SEA binary, while
- * the dev sidecar is `build:sidecar`'s plain `build/main/sidecar.js` run
- * under `node`. `require('node:sea').isSea()` distinguishes them with zero
- * Rust change and zero new dependency — `node:sea` is a Node builtin;
- * esbuild's `--packages=external` leaves it as a plain builtin require (this
- * is NOT the alias/relative `sync-require-alias-unresolved-in-build`
- * hazard). Empirically verified at plan/execution time on this machine's
- * Node (v26.2.0): `typeof require('node:sea').isSea === 'function'`, and it
- * returns `false` under the dev sidecar entry (`node build/main/sidecar.js`)
- * — see 34.4-05-SUMMARY.md for the recorded check.
+ * Why: `electronStub.ts`'s `app.isPackaged` needed the same answer, and the one
+ * thing that must never happen is a SECOND independent derivation of it. Two
+ * copies of a fail-closed detector can drift, and the first time they disagree
+ * one of them is unlocking something `devSecretVault.ts`'s guardrail (c)
+ * believes is locked (T-35-11). `app.isPackaged` is now a THIRD CALLER of the
+ * one function. Read `./isPackagedSidecar` for the `node:sea` signal, the
+ * safe-default rationale, and why a build-time constant was rejected as
+ * fail-OPEN.
  *
- * Guarded: an older or unavailable Node runtime must not throw at
- * registration time. On any failure to determine, choose the SAFE default —
- * treat the build as packaged (i.e. do NOT register the dev-only channel) —
- * and log the fallback once, mirroring `electronStub.ts`'s own "fails loudly
- * with a clear log line" house style (D-09/D-06).
- *
- * Exported (34.5 gap cycle 4 plan 36) so `devSecretVault.ts`'s production-refusal guardrail can
- * REUSE this exact fail-closed detector rather than re-deriving a second copy — see that
- * module's own header for why a second copy is the exact hazard this avoids.
+ * RE-EXPORTED, not merely relocated: this name has been part of this module's
+ * public surface since Phase 34.4 plan 05, so a caller the move's grep did not
+ * find still resolves.
  */
-export function isPackagedSidecar(): boolean {
-  try {
-    // node:sea is a Node builtin; a guarded runtime require (not a relative/alias
-    // path) is the deliberate mechanism here, not an oversight. See the
-    // docstring above.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const nodeSea = require('node:sea') as { isSea: () => boolean }
-    return nodeSea.isSea()
-  } catch (err) {
-    console.warn(
-      '[humbleFlowRegistration] node:sea unavailable -- defaulting humbleRunValidation to PACKAGED (dev-only channel NOT registered):',
-      err
-    )
-    return true
-  }
-}
+import { isPackagedSidecar } from './isPackagedSidecar'
+export { isPackagedSidecar }
 
 /**
  * Registers all 16 Humble channels this slice owns. Called once from
@@ -347,10 +320,12 @@ export function registerHumbleFlows(): void {
   // (main.ts:965-970), deliberately kept out of humble/ipc_handler.ts's
   // always-on registrar so it can never be accidentally exposed in a
   // packaged build (ipc_handler.ts:13-16). electronStub's `app` shim
-  // hardcodes that same flag to false, so reusing that guard verbatim would
-  // register this dev-only trigger in EVERY Tauri build. See
-  // isPackagedSidecar()'s own docstring above for the resolved node:sea
-  // signal.
+  // HARDCODED that same flag to false until Phase 35 plan 04, so reusing that
+  // guard verbatim would have registered this dev-only trigger in EVERY Tauri
+  // build. See isPackagedSidecar()'s own docstring (./isPackagedSidecar) for
+  // the resolved node:sea signal. app.isPackaged now delegates to this same
+  // function, so it would give the same answer -- this call stays direct
+  // because the dependency belongs on the derivation, not on the shim.
   if (!isPackagedSidecar()) {
     ipcMain.handle('humbleRunValidation', async () => runHumbleValidation())
   }

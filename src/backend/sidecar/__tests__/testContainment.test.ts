@@ -747,6 +747,19 @@ const IN_SCOPE_SUITES = [
  * kit Block B gates on. A `readdirSync` recount at this plan's execution time (Phase 34.6 Plan 11,
  * after adding `rendererPathGuard.test.ts` for `T-34.5-C6-49-03`) puts the directory at 53
  * `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 49 below.
+ *
+ * `isPackagedSidecar.test.ts` (Phase 35 plan 04, D-14 / D-19 half (b), 2026-08-28) is classified
+ * structurally contained on a READ of its import graph, not on assumption. It declares no
+ * file-wide `jest.mock` at all -- every mock is a `jest.doMock` inside a test body -- and the
+ * only production modules it requires are `../isPackagedSidecar` (whose sole dependency is the
+ * `node:sea` builtin) and `../electronStub`. `electronStub`'s graph does reach `./pathShim`, but
+ * `pathShim`'s `resolveAppDataDir()`/`homedir()` calls all live INSIDE `getPath()` and none runs
+ * at module scope, so nothing in that chain resolves a path at import time; `./sidecarRpc`'s
+ * module scope is likewise inert (constants and empty containers). Its `readFileSync` calls read
+ * source files in this very directory for the T-35-11 one-derivation source gate, mirroring
+ * `flowRegistrationCensus.test.ts`'s own self-reading pattern above. It cannot be an
+ * `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/`backend/logger/paths` mock
+ * kit Block B gates on. Recount: 54 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 50 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -771,6 +784,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'humbleSecretStore.test.ts',
   'installFlows.test.ts',
   'invokeReturnValueSweep.test.ts',
+  'isPackagedSidecar.test.ts',
   'keyringTokenStore.test.ts',
   'lifecycleStub.test.ts',
   'loggerCallSiteGuard.test.ts',

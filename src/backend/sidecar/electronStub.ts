@@ -37,6 +37,7 @@ import { release as osRelease } from 'os'
 // binary, so without this every shipped build's `getHeroicVersion` reported '0.0.0'.
 import pkgJson from '../../../package.json'
 import { getPath } from './pathShim'
+import { isPackagedSidecar } from './isPackagedSidecar'
 import { requestRustInvoke } from './sidecarRpc'
 import {
   RUST_APP_EXIT,
@@ -204,7 +205,30 @@ export const app = {
   getPath,
   getName: (): string => 'GameLib',
   setName: (): void => {},
-  isPackaged: false,
+  // R-34.5-G1-PKG half (b) / D-14 (Phase 35 plan 04). This key held a hardcoded
+  // `false` literal from Phase 27 until now -- and that literal was the root cause of the
+  // packaged-build asset failure. `constants/paths.ts:73-76` computes
+  //   publicDir = resolve(app.getAppPath(), app.isPackaged || CI === 'e2e' ? 'build' : 'public')
+  // so a constant `false` made every packaged run append 'public' to the Tauri resource
+  // dir -- a directory that does not exist inside the bundle -- and every asset resolved
+  // through `publicDir` (runner binaries, locales, changelog.json, webviewPreload.js,
+  // icon.png, the CrossOver index snapshot) ENOENT'd. `main.rs:5495-5496` documents the
+  // same defect independently from the Rust side.
+  //
+  // A GETTER, not a captured boolean, and that is load-bearing: this object literal is
+  // evaluated at MODULE SCOPE, and `paths.ts` reads `app.isPackaged` at module scope too.
+  // Freezing the value at construction time would bake in whatever the SEA context looked
+  // like at the earliest possible moment. A getter defers the probe to the read.
+  //
+  // Delegates to `./isPackagedSidecar` and never re-derives. That module is the SINGLE
+  // derivation in the tree; `devSecretVault.ts`'s fail-closed guardrail (c) and
+  // `humbleFlowRegistration.ts`'s `humbleRunValidation` gate are the other two callers.
+  // Do NOT reintroduce a local `node:sea` probe here or a build-time constant: a second
+  // derivation that disagrees with the first is a silent unlock of the dev secret vault
+  // in a shipped binary (T-35-11/T-35-12), not a tidiness problem.
+  get isPackaged(): boolean {
+    return isPackagedSidecar()
+  },
   // GAMELIB_APP_ROOT (Phase 34.5 Plan 16, Task 3, G-1): the root cause of live-gate items
   // 1/2/3/5 was this line returning `process.cwd()`, which under the sidecar is `src-tauri/`
   // -- so `paths.ts:73`'s `publicDir = resolve(app.getAppPath(), ...)` resolved to

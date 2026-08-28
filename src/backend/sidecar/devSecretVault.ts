@@ -24,7 +24,7 @@
  *   (b) a LOUD warning on install and on every read/write, naming only the slot/key identifier —
  *       never a secret value, never a substring of one, never a length.
  *   (c) REFUSED in a packaged build, and REFUSED whenever the build kind cannot be determined
- *       (fail CLOSED) — enforced by reusing `humbleFlowRegistration.ts`'s `isPackagedSidecar()`
+ *       (fail CLOSED) — enforced by reusing `isPackagedSidecar.ts`'s `isPackagedSidecar()`
  *       verbatim (never re-derived, so the two copies of a fail-closed detector cannot diverge
  *       and silently stop failing closed).
  *
@@ -52,7 +52,7 @@ import { join } from 'path'
 
 import { logError, logWarning, LogPrefix } from 'backend/logger'
 import { getPath } from './pathShim'
-import { isPackagedSidecar } from './humbleFlowRegistration'
+import { isPackagedSidecar } from './isPackagedSidecar'
 import {
   setTokenStore,
   type TokenStore
