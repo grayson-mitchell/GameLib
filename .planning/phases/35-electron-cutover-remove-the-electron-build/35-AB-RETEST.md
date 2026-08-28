@@ -952,6 +952,93 @@ before it is committed to this public repo.
 
 ---
 
+## Addendum — findings this run surfaced that are NOT among the seven
+
+These were observed while driving the protocol. None belongs to an item above; all are recorded
+here rather than dropped, because this run is where they were seen. Each says which leg it was seen
+on, per the same discipline as the items.
+
+### A-1. `moveInstall` is broken by an rsync flag incompatibility (Electron leg; shared code)
+
+Driving Item 3 under Electron, the move proceeded past the picker and failed with:
+
+```
+Error Moving Game
+rsync: unrecognized option `--no-human-readable'
+```
+
+This is a flag-compatibility failure against the host `rsync`, in **shared backend code** — not a
+transport or timeout fault, and not Tauri-specific. It therefore does **not** die with Electron at
+plan 35-14; it ships. It was NOT observed on the Tauri leg only because the invoke was dropped at
+the 60s bound before the move was ever requested (Item 3), so the Tauri leg carries no evidence
+either way about this defect. **Owed: its own todo.** It is out of scope for the 35-09/35-10/35-11
+fix cluster, which owns Item 3's actual symptom.
+
+### A-2. Steam auth reports three states that contradict the measured one (Tauri leg)
+
+A `keyring_get` for `steam-refresh-token` timed out at 45s (`elapsed=45004ms`), the failure was
+memoized for 120s, and every later read short-circuited on the memo. The resulting UX:
+
+| The app said | The measured truth |
+|---|---|
+| "You are not signed in to Steam, so this download could not start." | The token existed; it could not be READ |
+| Accounts panel: signed in | Correct, and deliberate — `refresh token read failed (timeout) — this is retryable, keeping the signed-in session and NOT clearing any credentials` |
+| "Sign-out failed" (`keyring_delete failed: rustInvoke timed out after 60000ms`) | Sign-out SUCCEEDED — `security find-generic-password -s com.gamelib.launcher -a steam-refresh-token` returns rc=44 (absent), while `humble-session` and `humble-csrf` remain present |
+
+The install-blocking message is the actionable finding: **"not signed in" and "credentials
+unreadable" are different states, and conflating them sends the user to log out and back in** —
+which is both the wrong remedy and, as observed here, an operation that itself reports failure while
+succeeding. The `keyring_delete`-reports-failure-on-success shape is already recorded as
+`F-34.5-G6-29`; this is a fresh live instance of it.
+
+Root cause is NOT re-litigated here: dev builds carry an ad-hoc code signature, so macOS will not
+persist the Keychain ACL grant. This is a dev-build artefact and is not evidence about a signed,
+notarized build.
+
+### A-3. `powerSaveBlocker` confirmed a live no-op (Tauri leg) — input for plan 35-08
+
+Fires repeatedly during ordinary operation, from the terminal `[shell]`/`[sidecar:err]` sink:
+
+```
+[sidecar:err] [electronStub] powerSaveBlocker.start(): logged no-op (D-08, accepted gap)
+              -- no maintained Tauri v2 wake-lock plugin; the system may sleep during a long download
+[sidecar:err] [appShellFlowRegistration] unlock(): logged no-op (D-08, accepted gap, Phase 33)
+              -- powerSaveBlocker.stop() has no real Tauri wake-lock effect
+```
+
+Plan 35-08's target, confirmed live rather than inferred from source. Also observed alongside it:
+`getWebviewPreloadPath(): declared-empty return (D-12)`.
+
+### A-4. The `GAMELIB_DEV_SECRET_VAULT=1` restart DID NOT TAKE — this run used the real Keychain path
+
+Recorded because it changes what the run can be cited for. A dev-vault restart was attempted
+between Items 1 and 2. It did not engage: `gamelib.log` continued from the original 15:48:56 boot,
+no `[dev-secret-vault]` banner was emitted, and `GAMELIB_DEV_SECRET_VAULT` was absent from the
+environment of all three live processes (`tauri dev`, `gamelib-shell`, `sidecar.js`) when checked
+with `ps eww`.
+
+**Consequence, and it cuts the useful way:** the entire Tauri leg ran on the REAL Keychain path, so
+`U-34.5-01`'s bar (a dev-vault run proves nothing about Keychain) does not apply to it. A-2's
+observations are therefore genuine Keychain-path evidence. Epic login was unaffected throughout —
+Epic does not use the keyring at all (legendary `user.json` + webview cookies), which is why Epic
+succeeded on the same boot where Steam failed.
+
+### A-5. Log-rotation hazard that nearly destroyed this document's own evidence
+
+`~/Library/Logs/GameLib/gamelib.log` is rotated to `gamelib.log.old` on every app launch, and
+`gamelib.log.old` is overwritten by the NEXT launch. The Electron leg's log — which turned out to
+carry the decisive evidence for Item 1 — survived only because it was still in `.old` when it was
+needed, one launch before destruction. Both legs are now preserved under stable names:
+
+```
+~/Library/Logs/GameLib/gamelib.log.35-02-ab-electron
+~/Library/Logs/GameLib/gamelib.log.35-02-ab-tauri-part1
+```
+
+**Generalisation for any future A/B or gate run in this project: copy the log to a stable name at
+the END OF EACH LEG, before the next launch.** Item 1's verdict would have been recorded as
+`NEITHER` — retiring a live shared-code defect — had that log been one restart further gone.
+
 ## After completion — carrying the record forward
 
 Any item whose `Verdict:` comes back `TAURI-ONLY` and whose pre-committed `Severity if TAURI-ONLY:`
