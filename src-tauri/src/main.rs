@@ -6631,10 +6631,15 @@ fn main() {
             // the tray exists and before the window is displayed.
             let tray_settings = *TRAY_SETTINGS.get_or_init(load_tray_settings);
 
-            // `startInTray` (tray_icon.ts has no equivalent -- Electron honoured this in
-            // main_window.ts). Hidden inside `.setup()`, before the event loop runs, so the
+            // `startInTray`. Hidden inside `.setup()`, before the event loop runs, so the
             // window is never displayed rather than being shown and yanked away.
-            if tray_settings.start_in_tray {
+            //
+            // Gated on `!noTrayIcon`, mirroring `src/backend/main.ts:523`'s own
+            // `settings.startInTray && !settings.noTrayIcon` EXACTLY. Without the gate the two
+            // settings combine into an unrecoverable state: an app that starts with no window
+            // and no tray icon to restore it from. That is not a hypothetical -- both are plain
+            // user-toggleable booleans with no cross-validation in the settings UI.
+            if tray_settings.start_in_tray && !tray_settings.no_tray_icon {
                 match app.get_webview_window(MAIN_WINDOW_LABEL) {
                     Some(window) => {
                         if let Err(e) = window.hide() {
@@ -6652,10 +6657,15 @@ fn main() {
             }
 
             // `exitToTray` (tray_icon.ts:38-46's click handler is the SHOW half of this; the
-            // HIDE-instead-of-quit half lived in Electron's own close handler). Registered
-            // unconditionally-but-inert when the setting is off, so the closure holds a plain
-            // copied bool and there is no later re-read to get wrong.
-            if tray_settings.exit_to_tray {
+            // HIDE-instead-of-quit half lived in `src/backend/main.ts:286-292`'s close handler).
+            // Attached only when the setting is on, so the closure holds nothing to re-read and
+            // there is no later read to get wrong.
+            //
+            // Gated on `!noTrayIcon` for the same reason `startInTray` above is, and mirroring
+            // the same upstream line: `main.ts:288` is literally `if (exitToTray &&
+            // !noTrayIcon)`. Hiding the last window with no tray to restore it from would strand
+            // a running app the user cannot reach.
+            if tray_settings.exit_to_tray && !tray_settings.no_tray_icon {
                 match app.get_webview_window(MAIN_WINDOW_LABEL) {
                     Some(window) => {
                         let close_window = window.clone();
