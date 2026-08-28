@@ -29,12 +29,18 @@
  *
  * D-05 (boot-time auto-resume): this module deliberately does NOT call the
  * main process's startup-flagged `initQueue` variant anywhere, and does not
- * schedule one via `setTimeout` — `main.ts:573-580`'s 5-second-after-launch
- * auto-resume call is Electron-main-process-only and is NOT replicated under
- * the sidecar. The
- * disablement is logged once at registration time (never silent, matching
- * the `shell.showItemInFolder`/`clipboard.writeText` "logged no-op" house
- * style — D-04). Pre-`initQueue` cancelability is unaffected: it comes from
+ * schedule one via `setTimeout`.
+ *
+ * UPDATED, Phase 35 plan 11 — the reason changed, the rule did not. Until
+ * plan 11 the boot-time auto-resume was SUPPRESSED sidecar-wide, and this
+ * module's log line said so. It is no longer suppressed: it was ported to
+ * `appShellFlowRegistration.ts`'s `frontendReady` handler, which is the
+ * sidecar's equivalent of the `main.ts` call site it came from. This module
+ * still does not schedule it, for the ordinary reason that boot-time work
+ * does not belong in a channel-registration module — NOT because the
+ * capability is disabled. The log line below was rewritten accordingly; a
+ * log line claiming a suppression that no longer exists is worse than none.
+ * Pre-`initQueue` cancelability is unaffected: it comes from
  * `downloadqueue.ts:49`'s own module-scope `currentElement` seed
  * (`getFirstQueueElement()` at import time), which this module does nothing
  * to suppress or delay.
@@ -92,11 +98,14 @@ import {
  * registration onto the handler registry happens.
  */
 export function registerDownloadQueueFlows(): void {
-  // D-05: logged, never silent — the boot-time auto-resume (the main
-  // process's startup-flagged `initQueue` call, `main.ts:579`) is deliberately
-  // NOT replicated under the sidecar. Pre-initQueue cancelability (the
+  // D-05: logged, never silent. Phase 35 plan 11 CHANGED WHAT THIS RECORDS.
+  // The boot-time auto-resume is no longer suppressed under the sidecar — it
+  // now runs from `appShellFlowRegistration.ts`'s `frontendReady` handler.
+  // This module still schedules nothing itself; the line below points a
+  // reader at the module that does, so the capability stays findable by grep
+  // from the queue code that implements it. Pre-initQueue cancelability (the
   // module-scope `currentElement` seed, `downloadqueue.ts:49`) is preserved
-  // regardless — this log line documents an intentional omission, not a gap.
+  // regardless, exactly as before.
   //
   // Deferred via `setImmediate` (blocking fix, Rule 3): `handlers.ts` (and
   // therefore this function) runs synchronously at `bootstrap.ts`'s own
@@ -126,12 +135,12 @@ export function registerDownloadQueueFlows(): void {
   setImmediate(() => {
     try {
       logInfo(
-        'sidecar: boot-time download-queue auto-resume (main.ts:579-only, startup-flagged initQueue call) is deliberately disabled (D-05) — a persisted queue head stays resumable via the Resume button, never auto-started on sidecar boot',
+        'sidecar: boot-time download-queue auto-resume (the startup-flagged initQueue call) is ENABLED as of Phase 35 plan 11 and runs from appShellFlowRegistration.ts frontendReady, not from this module — a persisted Steam queue head is still never auto-started, since the startup flag is itself the Steam suppression (downloadqueue.ts initQueue doc comment)',
         LogPrefix.DownloadManager
       )
     } catch {
       console.info(
-        '[downloadQueueFlowRegistration] boot-time download-queue auto-resume is deliberately disabled (D-05) — logger not yet initialized in this process, falling back to console'
+        '[downloadQueueFlowRegistration] boot-time download-queue auto-resume is ENABLED (Phase 35 plan 11) and runs from appShellFlowRegistration.ts, not from this module — logger not yet initialized in this process, falling back to console'
       )
     }
   })

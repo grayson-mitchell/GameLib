@@ -136,8 +136,9 @@ jest.mock('backend/constants/environment', () => ({
   isFlatpak: false,
   // Plan 05 (REQ-34.6-04/07/13): frontendReady's two byte-equivalent branches.
   // Fixed false so this suite exercises the normal (non-Snap, non-CLI) boot
-  // path — the plan's own <behavior> spec targets the exclusion assertions
-  // (initQueue/handleProtocol never called), not these two branches.
+  // path — the plan's own <behavior> spec targets the handleProtocol
+  // exclusion assertion and (Phase 35 plan 11) the initQueue auto-resume
+  // assertion, not these two branches.
   isSnap: false,
   isCLINoGui: false
 }))
@@ -184,9 +185,11 @@ jest.mock('../../utils/aborthandler/aborthandler', () => ({
 // ── downloadmanager/downloadqueue mock — Plan 05 (REQ-34.6-04/07/13): spreads the REAL
 // module (already transitively loaded today via `utils.ts`'s own `import { isRunning } from
 // './downloadmanager/downloadqueue'`, exercised by the CR-04 quit tests above — this mock
-// introduces no new import-graph risk) and overrides ONLY `initQueue` with a `jest.fn()` so
-// the frontendReady exclusion test below can assert it was never called. `isRunning` (and
-// every other real export `handleExit` depends on) stays real and unchanged.
+// introduces no new import-graph risk) and overrides ONLY `initQueue` with a `jest.fn()`.
+// Until Phase 35 plan 11 the frontendReady test asserted it was NEVER called; plan 11 ported
+// the boot-time auto-resume, so the test now asserts it IS called exactly once with `true`
+// after 5s. `isRunning` (and every other real export `handleExit` depends on) stays real
+// and unchanged.
 jest.mock('../../downloadmanager/downloadqueue', () => ({
   ...jest.requireActual('../../downloadmanager/downloadqueue'),
   initQueue: jest.fn()
@@ -618,16 +621,55 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       logInfoSpy.mockRestore()
     })
 
-    it('does NOT call initQueue and does NOT call handleProtocol -- the two deliberate exclusions -- RED-proven by temporarily adding either call (see SUMMARY)', async () => {
-      mockedInitQueue.mockClear()
+    it('does NOT call handleProtocol -- the one remaining deliberate exclusion -- RED-proven by temporarily adding the call (see SUMMARY)', async () => {
       mockedHandleProtocol.mockClear()
 
       const { input } = startSidecar()
       writeSend(input, 'frontend-ready-2', 'frontendReady', [])
       await flush()
 
-      expect(mockedInitQueue).not.toHaveBeenCalled()
       expect(mockedHandleProtocol).not.toHaveBeenCalled()
+    })
+
+    // ── Phase 35 plan 11: boot-time download-queue auto-resume (SEAM Phase 32
+    // D-05, referred to in the plan text as "Phase 33 D-04"). Ported from
+    // `main.ts:613` because `main.ts` is deleted at plan 35-14; without this
+    // the app would permanently stop resuming interrupted downloads at
+    // startup. Branch A was taken (port ENABLED) because both blockers named
+    // by the original suppression measured CLOSED — see the plan summary.
+    //
+    // `doNotFake: ['setImmediate']` because this suite's `flush()` helper is
+    // built on `setImmediate`; faking it would deadlock the await below while
+    // still leaving `setTimeout` faked, which is the only timer under test.
+    it('Phase 35 plan 11: DOES schedule the boot-time auto-resume -- initQueue is not called before 5s, then called exactly once with isStartup true', async () => {
+      mockedInitQueue.mockClear()
+
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      try {
+        const { input } = startSidecar()
+        writeSend(input, 'frontend-ready-autoresume', 'frontendReady', [])
+        await flush()
+
+        // The call must be DEFERRED, not synchronous -- a synchronous
+        // initQueue at frontendReady would race the sidecar's own boot.
+        expect(mockedInitQueue).not.toHaveBeenCalled()
+
+        jest.advanceTimersByTime(4999)
+        expect(mockedInitQueue).not.toHaveBeenCalled()
+
+        jest.advanceTimersByTime(1)
+        expect(mockedInitQueue).toHaveBeenCalledTimes(1)
+        // isStartup=true is load-bearing and is NOT merely "the same as
+        // main.ts": it is ITSELF the Steam suppression. downloadqueue.ts's
+        // initQueue breaks before installQueueElement() for a persisted
+        // `runner === 'steam'` queue head when this argument is true,
+        // surfacing it as resumable instead. A regression to
+        // initQueue()/false here would silently start auto-driving Steam
+        // installs on every boot.
+        expect(mockedInitQueue).toHaveBeenCalledWith(true)
+      } finally {
+        jest.useRealTimers()
+      }
     })
 
     it('never throws out of ipcMain.on -- a synchronous throw inside the body is caught and logged via console.warn, never propagated', async () => {

@@ -53,10 +53,10 @@
  *     - `frontendReady` (D-11, Plan 05, REQ-34.6-04/07/13) -> a deliberate
  *       subset of `main.ts:560-601`: `logSendHandlerReached` (the send-kind
  *       observable), the `logInfo('Frontend Ready', ...)` equivalent, and the
- *       `isSnap`/`isCLINoGui` branches byte-equivalently. EXCLUDES
- *       `handleProtocol(...)` and the 5s `initQueue(true)` auto-resume — see
- *       the module docstring's dedicated D-11 paragraph above for why both
- *       exclusions are correct, not a regression
+ *       `isSnap`/`isCLINoGui` branches byte-equivalently. Still EXCLUDES
+ *       `handleProtocol(...)`; the 5s `initQueue(true)` auto-resume is no
+ *       longer excluded — it was PORTED here in Phase 35 plan 11 — see the
+ *       module docstring's dedicated D-11 paragraph above
  *
  * A `send` channel registered with `ipcMain.handle` (or the reverse) fails
  * 100% SILENTLY at runtime (Phase 31 Pitfall 2) — every registration below
@@ -106,13 +106,19 @@
  * sidecar already delivers cold-start deep links via
  * `bootstrap.ts`'s `deliverStartupProtocolUrl` and serves warm ones via
  * `registerProtocolUrlHandler` — re-running it here would double-handle a
- * `gamelib://` link) and excludes the 5-second `initQueue(true)` boot-time
- * auto-resume (Phase 33 D-04 explicitly deferred that to Phase 35; `initQueue`
- * is called from no other sidecar code path today, so adding it here would
- * ship deferred behaviour inside a port). Both exclusions preserve prior
- * locked decisions and are proven behaviourally by `appShellFlows.test.ts`
- * (mocked `initQueue`/`handleProtocol`, asserted not called) — not merely
- * asserted in this comment.
+ * `gamelib://` link). That exclusion still stands and is proven
+ * behaviourally by `appShellFlows.test.ts` (mocked `handleProtocol`,
+ * asserted not called) — not merely asserted in this comment.
+ *
+ * The 5-second `initQueue(true)` boot-time auto-resume was ALSO excluded here
+ * until Phase 35 plan 11, deferred by SEAM's Phase 32 D-05 (referred to in
+ * the plan text as "Phase 33 D-04"). It is now PORTED, because `main.ts` —
+ * the only other carrier of that call — is deleted at plan 35-14, and the
+ * two blockers that justified the deferral were both measured CLOSED. The
+ * full reasoning, with the documents that establish each status, lives on the
+ * call itself in the `frontendReady` body below rather than being duplicated
+ * here. It is proven behaviourally by `appShellFlows.test.ts` (mocked
+ * `initQueue`, asserted called exactly once with `true` under fake timers).
  *
  * Uses electronStub's own `ipcMain` directly (not `backend/ipc`'s typed
  * `addHandler`/`addListener`) — `backend/ipc.ts` itself imports the real
@@ -144,6 +150,10 @@ import { GlobalConfig } from '../config'
 import { libraryManagerMap } from '../storeManagers'
 import { configStore } from '../constants/key_value_stores'
 import { logInfo, LogPrefix } from '../logger'
+// Phase 35 plan 11: boot-time download-queue auto-resume, ported from
+// `main.ts:613` before that file is deleted at plan 35-14. See the
+// `frontendReady` handler below for the full contingency analysis.
+import { initQueue } from '../downloadmanager/downloadqueue'
 import { requestRustInvoke } from './sidecarRpc'
 import { RUST_TRAY_SET_ICON } from '../../common/types/sidecarTransport'
 import { logSendHandlerReached } from './sendChannelObservable'
@@ -380,10 +390,50 @@ export function registerAppShellFlows(
       // warm ones via registerProtocolUrlHandler(); re-running it here would
       // double-handle a gamelib:// link.
       //
-      // EXCLUDED (deliberate, see module docstring): the 5-second
-      // initQueue(true) boot-time auto-resume -- Phase 33 D-04 explicitly
-      // deferred this to Phase 35, and initQueue is called from no other
-      // sidecar code path today.
+      // PORTED IN PHASE 35 PLAN 11 (SEAM Phase 32 D-05 / "Phase 33 D-04"):
+      // the 5-second boot-time download-queue auto-resume, carried across
+      // from `main.ts:603-614`. Previously EXCLUDED here and deferred to
+      // Phase 35; `main.ts` is deleted at plan 35-14, so this was the last
+      // point at which the capability could survive the cutover.
+      //
+      // `main.ts:611-613`'s own comment, carried across verbatim in intent:
+      //   debug/steam-install-slow-start (Thread B): isStartup=true -- the
+      //   only call site that must NOT auto-start a persisted Steam queue
+      //   head (see initQueue's doc comment in downloadqueue.ts).
+      //   GOG/Epic/Amazon keep auto-resuming here unchanged.
+      //
+      // Why `isStartup=true` is the SAFE argument rather than the risky one,
+      // and why the two blockers that justified the original suppression do
+      // not reach this call: `isStartup` is ITSELF the Steam suppression.
+      // `downloadqueue.ts:116`'s loop breaks before `installQueueElement()`
+      // for any `runner === 'steam'` head, surfacing it as resumable instead.
+      // Both blockers named by the suppression are Steam-only and therefore
+      // structurally unreachable from here:
+      //   - G-30-02 (Steam install-hang) -- CLOSED, resolved 2026-07-24,
+      //     hardware-proven by the Phase 33 plan 33-05 D-13 live gate
+      //     (.planning/debug/steam-install-spinner-hangs-tauri-live-g3002.md).
+      //   - The CrossOver-bottle startup-resume auto-launch -- CLOSED, fixed
+      //     2026-08-16 (quick task 260816-i8a); `library.ts:818` now surfaces
+      //     an interrupted install as resumable and never auto-drives it
+      //     (.planning/todos/completed/
+      //      steam-startup-download-resume-autoopens-crossover.md).
+      // Defence in depth for the non-Steam runners this DOES auto-resume:
+      // `installQueueElement`'s stall watchdog (downloadmanager/utils.ts)
+      // force-terminates a never-settling install rather than hanging.
+      //
+      // `.unref()` (the one intentional difference from `main.ts:613`): under
+      // Electron this timer lived in a process the app itself kept alive, so
+      // holding the event loop open was harmless. The sidecar is a plain
+      // `node` process, and a ref'd 5s timer here keeps the loop alive for 5
+      // seconds after all work is done — which showed up immediately as
+      // "Jest did not exit one second after the test run has completed" in
+      // `appShellFlows.test.ts`. The sidecar's own RPC stdin stream keeps the
+      // process alive in production, so the timer still fires normally there;
+      // `.unref()` only removes its claim on the loop, never its scheduling.
+      setTimeout(() => {
+        logInfo('Starting the Download Queue', LogPrefix.Backend)
+        void initQueue(true)
+      }, 5000).unref()
     } catch (error) {
       logSendFailure('frontendReady', error)
     }
