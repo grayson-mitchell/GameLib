@@ -135,9 +135,8 @@ Thanks to the community, GameLib has been translated to almost 40 different lang
 ## Installation
 
 GameLib does not publish prebuilt binaries yet, so you install it by **building
-from source**. (Upstream Heroic ships Flatpak/AUR/WinGet/Homebrew packages — but
-those install Heroic, not GameLib.) The steps below are a quickstart; see
-[Development environment](#development-environment) for full details.
+from source**. On Linux the build produces an **AppImage**. The steps below are a
+quickstart; see [Development environment](#development-environment) for full details.
 
 ### Prerequisites
 

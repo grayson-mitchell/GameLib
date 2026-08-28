@@ -33,8 +33,6 @@ downloads*.json
 vite-plugin-electron.log
 .tool-versions
 
-#flatpak
-flatpak-build
 .env
 
 playwright-report
