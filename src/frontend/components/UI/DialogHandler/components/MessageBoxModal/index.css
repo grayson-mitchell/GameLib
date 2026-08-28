@@ -11,12 +11,20 @@
   color: red;
 }
 
+/* Phase 35 plan 11: `height: 25em` was a FIXED, content-independent height, so
+   every `type: 'ERROR'` dialog rendered as a ~400px-tall scrollable console box
+   regardless of how short its message was. That is the "oversized large text
+   window" the path-rejection dialog was reported under -- its body
+   (`installFlows.pathRejectedBodyMove`/`pathRejectedBodyImport`) is a two-sentence
+   correction, not a log dump. `max-height` preserves the original behaviour
+   EXACTLY for long content (still caps at 25em, still scrolls via `overflow:
+   auto`) while letting a short message size down to its own content. */
 .errorDialog.error-box {
   background-color: #1e1e1e;
   border-radius: 10px;
   padding-block: 4px;
   padding-inline: 6px;
-  height: 25em;
+  max-height: 25em;
   overflow: auto;
   user-select: text;
 }
