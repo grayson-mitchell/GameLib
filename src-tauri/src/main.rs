@@ -868,6 +868,31 @@ const LONG_RUNNING_CHANNELS: &[&str] = &[
     // cache or a slow CDN, producing a spurious "sidecar invoke timed out" that looks like a
     // code failure rather than a slow network.
     "getInstallInfo",
+    // Phase 35 plan 07 (closes the folded todo
+    // `2026-08-24-opendialog-is-missing-from-long-running-channels-...`, threat T-35-30).
+    // Added on a MEASUREMENT, per this list's own precedent, not on the argument that a picker
+    // "feels slow": the Phase 35 A/B retest (`35-AB-RETEST.md` item 3) drove `moveInstall`,
+    // left the native folder picker untouched for 65+ seconds, then selected -- and the Tauri
+    // leg produced `[shell] response for unknown/timed-out id=4465 (dropped)` in the terminal
+    // sink while `gamelib.log` carried ZERO openDialog/moveInstall lines, i.e. the invoke was
+    // dropped at the 60s bound and the backend work was never requested. The same 65s wait
+    // under Electron reached rsync, so the bound is the whole difference.
+    //
+    // Shape: `openDialog` drives a HUMAN interaction -- the same reason oauthCaptureLogin and
+    // humbleStartLogin are exempt above -- and is the purest case of it, because unlike those
+    // two it carries NO internal deadline of its own to exceed: an OS-native file/folder picker
+    // stays open exactly as long as the person in front of it deliberates, and there is no
+    // wall-clock value that is correct for that. `dialogFlowRegistration.ts` registers it as a
+    // genuine sidecar invoke channel against the shared `openDialogCallback`
+    // (`backend/utils/openDialog.ts`), so it is subject to this bound rather than bypassing it
+    // as a Rust-native dialog would.
+    //
+    // Correction to the source todo, recorded rather than smoothed over: these flows do NOT die
+    // silently. The retest operator received a user-visible "failed to install" message -- wrong
+    // for the action driven (a move reported as an install failure) and giving no hint that a
+    // 60-second transport bound caused it. A misdirecting error is arguably worse for diagnosis
+    // than silence, so "dies silently" should not be repeated as the symptom.
+    "openDialog",
 ];
 
 /// `None` means "wait indefinitely" (see `LONG_RUNNING_CHANNELS`).

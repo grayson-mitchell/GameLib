@@ -65,7 +65,14 @@ const EXPECTED_LONG_RUNNING_CHANNELS = [
   // getInstallInfo (ported to the sidecar by plan 34.5-43) spawns gogdl over the network
   // (gog/library.ts:624) and can re-enter itself on a retry (legendary/library.ts:260) --
   // either can plausibly exceed the 60s INVOKE_TIMEOUT bound on a cold cache or slow CDN.
-  'getInstallInfo'
+  'getInstallInfo',
+  // Phase 35 plan 07 (folded todo `2026-08-24-opendialog-is-missing-from-long-running-channels`,
+  // threat T-35-30): an OS-native file/folder picker is open for exactly as long as the person
+  // in front of it deliberates and carries no internal deadline at all. Added on a MEASUREMENT
+  // per this list's own precedent (`35-AB-RETEST.md` item 3): a 65s picker session on the Tauri
+  // leg produced `response for unknown/timed-out id=4465 (dropped)` and no backend work, while
+  // the same wait under Electron reached rsync.
+  'openDialog'
 ]
 
 /**
