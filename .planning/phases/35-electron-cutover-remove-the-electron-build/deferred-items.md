@@ -2,6 +2,8 @@
 
 Out-of-scope discoveries made during plan execution. Logged, deliberately NOT fixed.
 
+**Heading convention (added 2026-08-29):** every entry heading is `## D-35-NN-NN — ...` with the id **unquoted**. This is not cosmetic. Three entries were originally written as ``## `D-35-NN-NN` — ...`` and a later census grepped only the bare form, concluded two items were missing, and **appended duplicates of entries that were already here**. The duplicates have since been merged back and their unique content folded into the originals. Grep for the bare id, and keep writing it that way.
+
 ## D-35-03-01 — `meta/i18nForkTouchedFiles.json` is stale against its live git derivation
 
 **Found during:** plan 35-03, regression sweep of the `Meta` jest project.
@@ -464,7 +466,7 @@ sees neither.
 
 ---
 
-## `D-35-11-01` — the EOS remove confirmation cannot be app-styled without moving a destructive gate across the IPC boundary (plan 35-11, Task 1, NOT DONE — needs a human decision)
+## D-35-11-01 — the EOS remove confirmation cannot be app-styled without moving a destructive gate across the IPC boundary (plan 35-11, Task 1, NOT DONE — needs a human decision)
 
 **Status: DEFERRED, deliberately not attempted. This is the half of plan 35-11's Task 1 that was
 not executed, and it is recorded here rather than silently dropped.**
@@ -513,7 +515,11 @@ population is the ~25 `Dialog` consumers. The plan inverted the two.
 **What a future plan needs to decide:** whether a settings-surface destructive confirmation may be
 gated renderer-side. That is the single question blocking this item.
 
-## `D-35-11-02` — one `type: 'ERROR'` dialog carries a "Warning" title (plan 35-11, out of scope)
+**Why this entry exists at all, and what it stops from going wrong.** `REQ-35-17` is satisfied on the path-rejection dialog and **NOT** on EOS. Without this item written down here, the requirement reads as discharged.
+
+**Status:** open, unowned. Does not block D-16.
+
+## D-35-11-02 — one `type: 'ERROR'` dialog carries a "Warning" title (plan 35-11, out of scope)
 
 `installFlowRegistration.ts:463` raises `box.warning.title` ("Warning") /
 `box.warning.epic.import` with `type: 'ERROR'`, so a warning renders under the red "Error:"
@@ -521,7 +527,7 @@ content header. Pre-existing, untouched by plan 35-11, and not caused by its CSS
 only because plan 35-11 read every `showDialogBoxModalAuto` call site in that file while
 identifying the two path-rejection ones (`:319` move, `:442` import).
 
-## `D-35-12-01` — the Heroic Flatpak application id survives D-11 in a Steam shortcut, not in a manifest
+## D-35-12-01 — the Heroic Flatpak application id survives D-11 in a Steam shortcut, not in a manifest
 
 **Found during:** plan 35-12, the post-deletion reference sweep.
 
@@ -562,46 +568,6 @@ dead once D-11 lands and should be deleted, or whether GameLib intends to suppor
 someone else's Flatpak runtime. Deleting them is the D-11-consistent reading; it was not this
 plan's call to make.
 
-## D-35-11-01 — the EOS remove confirmation cannot be app-styled without an IPC decision
-
-**Found during:** plan 35-11. **Recorded here on 2026-08-29 by the orchestrator** — it existed only
-inside `35-11-SUMMARY.md`, which is not where a later plan looks. `REQ-35-17` is satisfied on the
-path-rejection dialog and **NOT** on EOS; without this entry the requirement reads as discharged.
-
-`eos_overlay.ts`'s `remove(): Promise<boolean>` awaits the dialog and gates the destructive
-`legendary eos-overlay remove` on the answer; the renderer consumes the same boolean. The
-app-styled dialog path returns **`void`** — `onClick` does not survive the clone hop, and its
-serializable replacement `ButtonOptions.action` is a **closed enum with exactly one literal**
-(`'steamSignIn'`). There is no way to return a choice to the backend.
-
-**The decision someone must make:** either add a request/response IPC channel for dialog results, or
-move a destructive-action gate into the renderer — which changes the contract plan 35-11 and
-`T-35-45` explicitly protect. This is a design decision, not a polish task, which is why 35-11
-deliberately left the dialog native rather than restyling it badly.
-
-**Status:** open, unowned. Does not block D-16.
-
-## D-35-12-01 — the `com.heroicgameslauncher.hgl` identity survives D-11 in a Steam shortcut
-
-**Found during:** plan 35-12. **Recorded here on 2026-08-29 by the orchestrator** — it existed only
-inside `35-12-SUMMARY.md`.
-
-`T-35-52` states the `com.heroicgameslauncher.hgl` identity is *"deleted entirely"*. True of the
-manifests, **false** of `src/backend/shortcuts/nonesteamgame/nonesteamgame.ts:302`:
-
-```js
-if (isFlatpak) {
-  newEntry.LaunchOptions = `run com.heroicgameslauncher.hgl ${newEntry.LaunchOptions}`
-}
-```
-
-Under D-11 GameLib is never distributed under that Flathub id, so that branch writes a Steam
-shortcut asking Flatpak to launch **Heroic** with a GameLib deep link.
-
-**The decision:** are the `isFlatpak` branches in that file simply dead under D-11? ~119 further
-`flatpak` references survive across the tree, but they are a **different concern** — runtime
-detection of a Flatpak *host* (`isFlatpak`, `flatpakHome`, `flatpakRuntimeVersion`, and
-`flatpakSteamPath`, which detects the user's **Steam** installed as a Flatpak). Those are legitimate
-and were correctly left alone. Only the publishing-identity use is in question.
+**Scoping note, folded in from a duplicate entry (see the convention note at the top of this file).** ~119 further `flatpak` references survive across the tree, but they are a **different concern** — runtime detection of a Flatpak *host* (`isFlatpak`, `flatpakHome`, `flatpakRuntimeVersion`, and `flatpakSteamPath`, which detects the user's **Steam** installed as a Flatpak). Those are legitimate and were correctly left alone. Only the publishing-identity use is in question.
 
 **Status:** open, unowned. Behaviour change, outside 35-12's `files_modified`, so logged not fixed.
