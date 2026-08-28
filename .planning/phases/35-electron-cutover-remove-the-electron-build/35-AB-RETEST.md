@@ -449,9 +449,49 @@ Chromium pointer-event/focus semantics being the obvious candidate, given this p
 `focus-within-popover-unmounts-what-you-click` finding). It does NOT on its own establish which.
 Recorded as a constraint on the hypothesis space, not as a diagnosis.
 
-**Tauri leg — Observed:**
+**Tauri leg — Observed:** REPRODUCES on the pure-mouse path, and the operator's workaround supplies
+a mechanistic clue the source document does not have.
 
-**Verdict:**
+A bare mouse click on the row did NOT work. What DID work: **press Tab while the row is
+highlighted — at which point the mouse pointer visibly CHANGES — and only then does a click
+succeed.** The install then ran correctly end to end:
+
+```
+(18:48:25) [Backend]: [GAMELIB_SIDECAR_SEND_HANDLER] winetricksInstall
+(18:48:36-40) [Winetricks]: ... 100%  97.3M ...
+(18:48:40) [Winetricks]: Executing .../CrossOver/bin/wine msiexec /quiet /i PowerShell-7.4.11-win-x86.msi ...
+```
+
+**Two conclusions, and the second one is new.**
+
+1. **The IPC transport is NOT the fault, confirmed live.** The D-11 observable
+   (`[GAMELIB_SIDECAR_SEND_HANDLER] winetricksInstall`) fires and real work follows. This
+   independently re-confirms the source's already-RESOLVED first hypothesis from the working side,
+   on this build, rather than inheriting it.
+
+2. **THE CURSOR NOT CHANGING IS THE FINDING.** A pointer that produces no cursor change over a
+   control means the element is not being HIT-TESTED under that pointer — there is no hover state
+   to react to. That is a materially different mechanism from the source's current leading theory,
+   which is that the row's React component UNMOUNTS on `mousedown`. An unmount-on-mousedown still
+   requires the element to be hit-testable first (you must hit it to mousedown on it) and would
+   therefore still change the cursor on hover. So the two are distinguishable, and this run points
+   away from the recorded theory.
+
+   Recorded as an OBSERVATION, not a diagnosis. What it establishes is that focus state and
+   hit-testability are coupled here in a way they are not under Electron — moving keyboard focus
+   onto the row is what makes it pointer-reachable. Candidate mechanisms (all unverified, listed so
+   the next investigator does not have to re-derive them): an overlay/stacking layer intercepting
+   pointer events until focus shifts, a `pointer-events` value that is focus-conditional, or a
+   WKWebView-vs-Chromium divergence in hit-testing inside MUI's focus-modal machinery.
+
+**Verdict:** `TAURI-ONLY`
+
+**This kills the source's leading theory as a SOLE explanation.** That theory — a
+`Winetricks/index.tsx` MUI `Dialog` focus/stacking fault in SHARED frontend code — predicts BOTH
+shells fail. Electron passed on the mouse path (operator confirmed activation was by mouse) and
+Tauri fails on it. Shared code cannot explain a divergence between two renderers of that same code
+unless something renderer-specific modulates it. The theory is therefore either wrong or
+incomplete; this run cannot say which, and does not claim to.
 
 **Severity if TAURI-ONLY:** Does not block D-16 gate on its own — Winetricks is a secondary,
 non-core feature not named in D-16's explicit checklist (install, launch, library, login, tray,
