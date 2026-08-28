@@ -31,3 +31,34 @@ so — regenerating this file has broken its own pins before.
 
 **Status:** open, unowned. Consistent with MEMORY's standing note that the repo's i18n gate is
 red repo-wide (`prettier-gate-is-red-repo-wide.md`).
+
+## D-35-03-02 — BLOCKING INPUT FOR PLAN 35-14: `vite` is not a direct dependency
+
+**Found during:** plan 35-03. **This is not a deferred nicety — 35-14 breaks without it.**
+
+Measured at commit `369051ebf`:
+
+```
+dependencies:    (no vite package of any kind)
+devDependencies: @vitejs/plugin-react-swc, electron-vite, vite-plugin-svgr
+```
+
+`vite` itself (6.3.5) resolves only as a **hoisted peer of `electron-vite`**. Plan 35-03's hard
+stop therefore did not trigger and nothing was installed — correct behaviour, and the new
+`vite.config.ts` works today for exactly that reason.
+
+**Plan 35-14 removes `electron-vite` from `package.json`. That removes the only thing pulling
+`vite` in.** After the next `pnpm install`, `pnpm exec vite build` has nothing to resolve — and
+that command is 35-14's own `<automated>` verification step, so the plan's proof that "the Tauri
+path still works" is the thing that breaks first.
+
+**Required in 35-14:** promote `vite` to a direct `devDependency` in the same commit that removes
+`electron-vite`, through the Package Legitimacy Audit protocol in `35-RESEARCH.md`
+(`vite` is a new *direct* entry even though it is already installed transitively).
+`@vitejs/plugin-react-swc` and `vite-plugin-svgr` are ALREADY direct devDeps and need no action.
+
+**Why this is written down twice** (here and in `35-03-SUMMARY.md`): `35-RESEARCH.md`'s threat
+register `T-35-SC` asserts `vite` is already a direct dependency. It is not. A false premise in the
+threat register is exactly the shape that survives review, because the plan that would catch it
+(35-03) correctly found nothing to install, and the plan that pays for it (35-14) has no reason to
+re-derive a fact its own research already states. Neither plan is wrong on its own.
