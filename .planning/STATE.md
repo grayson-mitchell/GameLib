@@ -702,7 +702,31 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > # ◆ PHASE 35 EXECUTING — started 2026-08-28. `/gsd-execute-phase 35`, no `--wave` filter.
 >
 > **Phase:** 35 (electron-cutover-remove-the-electron-build) — EXECUTING
-> **Plan:** 0 of 19 complete · **Wave:** 1 of 13
+> **Plan:** 2 of 19 complete · **Wave:** 1 of 13 DONE, wave 2 next (35-03, 35-05, 35-06, 35-12)
+>
+> **Wave 1 closed 2026-08-28.** `35-01` preflight — OQ-1 `AGREES`, MEASURED on a real packaged SEA
+> binary (`main=true worker=true`) not reasoned from "a worker shares its parent's process", which
+> RESEARCH.md had explicitly refused. `35-02` D-18 A/B re-test — the blocking human gate was DRIVEN
+> across both shells and all 7 items scored. **Item 3 (`openDialog` 60s `INVOKE_TIMEOUT`) is the ONLY
+> item meeting its pre-written BLOCKS-D-16 call and is carried to plan 35-19's gate document.**
+>
+> **Three results that must not be summarised away:** (a) item 1's stale-`nonAvailableGames` probe
+> fired on ALL SIX uninstalls across BOTH shells — shared code, so it SURVIVES the cutover and ships;
+> (b) item 7's recorded symptom is FIXED — the logout report is an honest post-removal delta and
+> `EPIC_SESSION_AP` is measured ABSENT, falsifying that item's stated blocking mechanism, though six
+> live `epicgames.com` cookies survive an INCOMPLETE clear; (c) a new shared-code defect was filed as
+> its own todo — `moveInstall` fails with `rsync: unrecognized option '--no-human-readable'`, which
+> also survives 35-14.
+>
+> **Process, recorded because it nearly changed the record:** three of the first five items would
+> have been scored WRONGLY, all three the orchestrator's error — an accurate operator observation
+> promoted to a verdict without reading the evidence the item itself nominated. Items 1 and 2 were
+> too pessimistic (corrected to `BOTH` and `NOT ATTEMPTED`), item 5 nearly too optimistic (the
+> v0.70 release-notes surface is the CHANGELOG, not the About window). The Electron log carrying
+> item 1's decisive evidence survived by ONE app launch — `gamelib.log` rotates to `.old` on every
+> start and `.old` is overwritten by the next. Both legs are now preserved as
+> `~/Library/Logs/GameLib/gamelib.log.35-02-ab-{electron,tauri-part1}`. **Copy the log at the end of
+> each leg of any future A/B or gate run.**
 > **Status:** Executing Phase 35
 >
 > Worktree isolation is DISABLED project-wide (`workflow.use_worktrees=false`), so all 19 plans
