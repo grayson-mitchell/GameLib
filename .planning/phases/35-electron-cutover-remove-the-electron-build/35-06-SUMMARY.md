@@ -51,7 +51,7 @@ requirements-partial: [REQ-35-04]
 # Metrics
 duration: ~2h
 completed: null
-commits: [d2ec066ae, 3546dfdd8, 8978be102]
+commits: [d2ec066ae, 3546dfdd8, 8978be102, 7af33f2fe, a600c333e, 6872afcb2]
 ---
 
 # Plan 35-06 — a real Tauri tray, and the one affordance that had to be gated rather than kept or deleted
@@ -278,3 +278,128 @@ All file and commit claims verify. **The plan is NOT complete.** Task 3 is a blo
 `checkpoint:human-verify` gate driven by the human operator and has not run; `REQ-35-04` is
 therefore recorded as PARTIAL, not completed, and `completed:` is left null. No live behaviour
 described in this summary has been observed.
+
+
+---
+
+# Addendum — operator-initiated scope, added mid-gate (2026-08-28)
+
+Added **after** tasks 1 and 2 were accepted, while task 3 was in progress. Recorded here rather
+than folded into the sections above, so the record shows what was known when.
+
+## The defect: the type was lossy, and the probe was papering over it
+
+Task 1 shipped `trayResolveRunner` — a sidecar channel that resolves a bare appName to its
+`Runner` by probing up to six store managers. The reasoning given for it was that a tray
+recent-games entry is a `RecentGame`, which carries only `{ appName, title }`, while the `launch`
+channel requires a runner and correctly refuses to guess one.
+
+That reasoning was correct about the type and **wrong about the problem**. The operator spotted
+it: `addRecentGame(game: GameInfo)` had `game.runner` sitting in its argument — a **required**
+field on `GameInfo` — and threw it away:
+
+```ts
+updatedList.unshift({ appName: game.app_name, title: game.title })   // runner discarded
+```
+
+So the probe was not recovering unknowable information. It reconstructed, at the cost of up to six
+store-manager lookups, a value that was known and discarded one line earlier. The lookup was a
+correct solution to the problem *as the type presented it*; the type was the actual defect.
+
+## What changed
+
+| Layer | Change |
+|---|---|
+| `src/common/types.ts` | `RecentGame` gains `runner?: Runner`, reusing the existing exported union |
+| `src/backend/recent_games/recent_games.ts` | `addRecentGame` writes the runner through |
+| `src-tauri/src/main.rs` | cache carries the runner (validated against a mirror of the TS union); a click with a runner goes straight to `launch` and **skips the resolve invoke entirely** |
+
+**The probe is deliberately kept as a LEGACY FALLBACK, not deleted.** The field is optional because
+it is genuinely absent for real users, not out of caution: every entry written before this change
+carries no runner, and the operator's own live `games.recent` held 18 of them. A migration that
+stranded those would trade a slow-but-correct path for a dead menu item.
+`trayResolveRunner`'s sidecar registration is unchanged.
+
+## The alias fan-out was verified, not assumed
+
+`HiddenGame = RecentGame` and `FavouriteGame = HiddenGame` — all three are one type, so both
+aliases inherit the optional field. Census result: **safe, and the aliases were kept intact rather
+than split into three types.**
+
+- **Writers cannot populate it.** `GlobalState.tsx`'s `hideGame` and `addGameToFavourites` build
+  their literals from two scalar `string` arguments (`appNameToHide`/`appTitle`) with **no
+  `GameInfo` in scope**. There is no value they could put there even by accident.
+- **Readers only touch `.appName`/`.title`** (`Library/index.tsx:525,543`,
+  `GameCard/index.tsx:307,313`, `filterEngine.isHiddenGame` via a plain string array).
+- **`frontend/types.ts:186`'s `interface HiddenGame` is a SEPARATE, file-local type**, not the
+  aliased one. Untouched, and deliberately not "unified" as a drive-by.
+- **`recent_games.ts:37` is the only `RecentGame` constructor** — confirmed by grepping every
+  `{appName, title}` literal in the tree; the other two hits are the hidden/favourite writers.
+
+One consequence needed handling: `engineWiring.ts:97`'s comment used *"`FavouriteGame` … carries no
+`runner`"* as the stated premise for an input it still requires. That premise changes shape, so the
+comment was updated. Its conclusion still holds — a `FavouriteGame`'s runner is `undefined` in
+every case, since neither writer sets it — and leaving the old wording would have invited a future
+change to drop that input on false grounds.
+
+`zoom` remains a dropped platform with no new handling. It appears in the Rust allow-list only so
+that list *mirrors* the TypeScript union rather than silently diverging from it, and a test
+iterates the union to pin exactly that.
+
+## Two gate regressions from Task 1 that Task 1's own gates never ran
+
+Found while running the Backend jest project for this work — **a project tasks 1 and 2 never ran.**
+I ran `cargo`, `codecheck` and the Frontend project and reported them green, and both of these
+lived outside all three. They were caught by follow-up work, not by my own verification.
+
+1. **`tauriShellSource.test.ts`** — 34.1's D-11 negative bound asserted `main.rs` contains none of
+   `recents/dock/Reload/Debug/openDevTools`. Plan 35-06 *discharges two of those five by design*.
+   Those assertions are retired **with their requirement**, with the reason recorded inline; the
+   other three still hold and are still pinned. `Reload`/`Debug` are now pinned as **menu ids**
+   rather than bare substrings, because a bare `not.toContain('Debug')` false-positives on
+   `#[derive(Clone, Debug, …)]`.
+2. **`flowRegistrationCensus.test.ts`** — Task 1 added `trayResolveRunner` without updating the
+   `EXPECTED` table or the `register*Flows()` docstring (invoke 7→8, total 19→20). This gate is an
+   intentional tripwire and it worked exactly as its header describes. Fixed by ledgering the
+   channel and naming it in the module's invoke inventory alongside every sibling.
+
+Both are recorded because they are the same failure shape this project keeps hitting: **a green
+check that proves nothing, because the gate that would have caught it was never in the set I ran.**
+
+## Verification — addendum
+
+| Gate | Result |
+|---|---|
+| `cargo test` | **171 passed, 0 failed, 1 ignored** (was 167 — 4 new tests) |
+| `cargo build` | clean, no warnings |
+| `pnpm codecheck` | **exit 0** |
+| `pnpm test --selectProjects Backend` | **181/182 suites, 4266 passed, 3 failed** — down from 3 failed suites / 6 failed tests |
+| `pnpm test --selectProjects Frontend` | **130 suites, 2101 tests, all passed** |
+| `pnpm test --selectProjects Common Preload` | **9 suites, 181 tests, all passed** |
+
+**The 3 remaining Backend failures are pre-existing and environmental, flagged not hidden.** All
+three are `decompressPool.test.ts`'s LZMA native-decode kill-switch tests, which expect `native`
+and get `pure-js`. They fail in isolation as well as in the project run; neither `decompressPool.ts`
+nor `lzmaLoader` appears anywhere in this plan's change set; and native LZMA decode is a
+known-off state in this project. Nothing in this plan can reach them.
+
+## New tests — both arms
+
+- `a_persisted_runner_is_parsed_and_validated`
+- `every_member_of_the_typescript_runner_union_survives_the_parse` — pins the Rust allow-list
+  against `common/types.ts:23` so it cannot silently diverge
+- `a_legacy_entry_and_a_bogus_runner_both_degrade_to_none` — **the arm every existing install runs
+  on.** A missing `runner` key, an unknown runner, a wrong-typed runner and a null runner all
+  degrade to `None` and, critically, **no entry is dropped** — falling back to the probe is
+  strictly better than discarding a launchable entry
+- `the_launch_branch_uses_a_persisted_runner_and_falls_back_without_one` — covers the branch
+  directly via `recent_runner_in`, split out as a pure function so the branch is testable without
+  mutating the process-wide cache
+
+## Status unchanged
+
+This addendum does **not** move the plan forward. **Task 3 remains NOT DONE and blocking**, the
+plan is still `INCOMPLETE`, `REQ-35-04` is still PARTIAL, and no live behaviour has been observed.
+Task 3's step 4 (launch a recent game from the tray) now additionally exercises the persisted-runner
+arm on any game launched after this change, and the legacy-fallback arm on the 18 entries already
+in the operator's store — worth exercising both rather than only whichever is on top.
