@@ -346,6 +346,36 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
   })
 })
 
+describe('main.rs exitToTray is decided at close time (Phase 35 Plan 06 task 3, live-gate defect 1)', () => {
+  // The defect: `exitToTray` was read from the `.setup()` startup snapshot and the close
+  // handler was attached only when it was ALREADY true, so turning the setting on mid-session
+  // did nothing until relaunch. Measured live: the app quit on the red traffic-light with
+  // `exitToTray: true` on disk.
+  //
+  // This is a SOURCE-level gate because the behaviour needs a real window and a real
+  // CloseRequested event, which no unit test can construct. The decision function itself is
+  // covered by main.rs's own #[cfg(test)] mod (`close_hides_only_when_...`,
+  // `a_setting_changed_after_startup_changes_the_close_decision`).
+  test('the close handler decides from a FRESH config read, not the startup snapshot', () => {
+    const code = loadMainRsCode()
+    expect(code).toContain('should_hide_on_close(load_tray_settings())')
+  })
+
+  test('RED direction: the pre-fix shape (deciding from the startup snapshot) is absent', () => {
+    // Non-vacuity proof for the assertion above. The shipped-and-broken code read
+    // `tray_settings.exit_to_tray` -- the `.setup()`-local snapshot binding -- to decide
+    // whether to attach the handler at all. If that token ever comes back, the mid-session
+    // toggle silently stops working again with no other symptom.
+    //
+    // Deliberately asserts the SNAPSHOT-FIELD access, not the bare word `exit_to_tray`: the
+    // struct field, the decision function and several comments all legitimately contain
+    // `exit_to_tray`, and a gate that matches those would fail for reasons it was never
+    // written to catch.
+    const code = loadMainRsCode()
+    expect(code).not.toContain('tray_settings.exit_to_tray')
+  })
+})
+
 describe('main.rs tray scope boundary (Phase 34.1 Plan 06 D-11, NARROWED by Phase 35 Plan 06 D-06)', () => {
   // This gate pinned all five of 34.1's declared tray exclusions. Phase 35 Plan 06
   // (D-06/REQ-35-04) deliberately DISCHARGED two of them: the recent-games submenu and

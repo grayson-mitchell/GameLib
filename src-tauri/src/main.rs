@@ -489,6 +489,17 @@ fn load_tray_settings() -> TraySettingsSnapshot {
     }
 }
 
+/// Decide, at WINDOW-CLOSE time, whether the close should hide the window instead of exiting.
+///
+/// Split out as a pure function of a FRESHLY-READ snapshot, not of the startup snapshot, because
+/// that distinction is the whole defect this function exists to fix (found by plan 35-06 task 3's
+/// live gate). See `close_requested_should_hide`'s call site for why the read is fresh.
+///
+/// Mirrors `src/backend/main.ts:288` exactly: `if (exitToTray && !noTrayIcon)`.
+fn should_hide_on_close(settings: TraySettingsSnapshot) -> bool {
+    settings.exit_to_tray && !settings.no_tray_icon
+}
+
 /// Seed the recent-games cache from `configStore`'s on-disk JSON
 /// (`<appFolder>/store/config.json`, key `games.recent` -- `constants/key_value_stores.ts`'s
 /// `new TypeCheckedStoreBackend('configStore', { cwd: 'store' })`).
@@ -6737,19 +6748,43 @@ fn main() {
 
             // `exitToTray` (tray_icon.ts:38-46's click handler is the SHOW half of this; the
             // HIDE-instead-of-quit half lived in `src/backend/main.ts:286-292`'s close handler).
-            // Attached only when the setting is on, so the closure holds nothing to re-read and
-            // there is no later read to get wrong.
             //
-            // Gated on `!noTrayIcon` for the same reason `startInTray` above is, and mirroring
-            // the same upstream line: `main.ts:288` is literally `if (exitToTray &&
-            // !noTrayIcon)`. Hiding the last window with no tray to restore it from would strand
-            // a running app the user cannot reach.
-            if tray_settings.exit_to_tray && !tray_settings.no_tray_icon {
+            // THE SETTING IS RE-READ AT CLOSE TIME, NOT TAKEN FROM THE STARTUP SNAPSHOT.
+            // This is a corrected defect, not a style choice (plan 35-06 task 3, live gate):
+            // the first implementation read `exit_to_tray` from `TRAY_SETTINGS` and attached the
+            // handler only when it was already true, so turning the setting ON mid-session did
+            // nothing until the next relaunch -- measured, the app quit on the red traffic-light
+            // with `exitToTray: true` on disk.
+            //
+            // The startup-snapshot rationale that produced that bug named exactly TWO settings --
+            // `noTrayIcon` and `startInTray` -- and it is correct for both: each governs a
+            // decision that can only be taken before the tray or the window exists. `exitToTray`
+            // was swept in behind that same justification without qualifying for it. It governs a
+            // decision taken when the USER CLOSES THE WINDOW, and Electron read it live at that
+            // moment (`main.ts:288` reads `GlobalConfig.get().getSettings()` INSIDE the close
+            // handler). A window close is rare and user-initiated, so a small synchronous config
+            // read there costs nothing a user could perceive.
+            //
+            // The handler is therefore attached whenever a tray EXISTS -- `!noTrayIcon`, which is
+            // legitimately startup-only, since a tray cannot appear later in the run -- and the
+            // hide-vs-close decision is made inside it from a fresh read.
+            //
+            // FAIL-SAFE DIRECTION IS DELIBERATE: `load_tray_settings()` degrades to
+            // `TraySettingsSnapshot::default()` (all false) on any read failure, so
+            // `should_hide_on_close` returns false and the close PROCEEDS. A user who can always
+            // close their window is the safe failure; a user trapped in a window that refuses to
+            // close because a config read failed is not.
+            if !tray_settings.no_tray_icon {
                 match app.get_webview_window(MAIN_WINDOW_LABEL) {
                     Some(window) => {
                         let close_window = window.clone();
                         window.on_window_event(move |event| {
                             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                                if !should_hide_on_close(load_tray_settings()) {
+                                    // Not an error and not a no-op: this is the ordinary quit
+                                    // path. Fall through without calling `prevent_close()`.
+                                    return;
+                                }
                                 api.prevent_close();
                                 if let Err(e) = close_window.hide() {
                                     eprintln!(
@@ -6758,7 +6793,9 @@ fn main() {
                                 }
                             }
                         });
-                        eprintln!("[shell] exitToTray: window close will hide instead of exiting");
+                        eprintln!(
+                            "[shell] exitToTray: close handler attached; the setting is re-read on every close (no relaunch needed)"
+                        );
                     }
                     None => eprintln!(
                         "[shell] WARN: exitToTray: no '{MAIN_WINDOW_LABEL}' window to attach a close handler to"
@@ -7337,6 +7374,68 @@ mod tests {
         assert_eq!(tray_recent_limit(Some(0)), TRAY_RECENT_DEFAULT_LIMIT);
         assert_eq!(tray_recent_limit(Some(3)), 3);
         assert_eq!(tray_recent_limit(Some(1_000_000)), TRAY_RECENT_MAX_LIMIT);
+    }
+
+    // ---- exitToTray is decided at CLOSE time, not from the startup snapshot ----
+    //
+    // Plan 35-06 task 3's live gate: turning `Exit to System Tray` ON mid-session did nothing
+    // until relaunch, because the handler was attached only when the STARTUP snapshot already
+    // had it true. These tests cover the decision function; the source-level gate in
+    // `tauriShellSource.test.ts` pins that the close handler feeds it a FRESH read.
+
+    #[test]
+    fn close_hides_only_when_exit_to_tray_is_on_and_a_tray_exists() {
+        // Mirrors `src/backend/main.ts:288`'s `if (exitToTray && !noTrayIcon)` truth table.
+        let case = |exit_to_tray, no_tray_icon| {
+            should_hide_on_close(TraySettingsSnapshot {
+                exit_to_tray,
+                no_tray_icon,
+                start_in_tray: false,
+                max_recent_games: TRAY_RECENT_DEFAULT_LIMIT,
+            })
+        };
+        assert!(case(true, false), "exitToTray on with a tray -> hide");
+        assert!(!case(false, false), "exitToTray off -> close normally");
+        // No tray to restore the window from: hiding would strand a running app the user
+        // cannot reach, so the close must proceed even with exitToTray on.
+        assert!(!case(true, true), "noTrayIcon overrides exitToTray");
+        assert!(!case(false, true));
+    }
+
+    #[test]
+    fn a_setting_changed_after_startup_changes_the_close_decision() {
+        // THE DEFECT, expressed as a test. The startup snapshot on a fresh profile has
+        // exitToTray off, so the close decision is "quit". If the user then turns it on, the
+        // value the handler reads comes from the CONFIG, and the decision must flip. A handler
+        // bound to the startup snapshot cannot produce this transition at all.
+        let at_startup = TraySettingsSnapshot::default();
+        assert!(!should_hide_on_close(at_startup), "baseline: close quits");
+
+        let after_the_user_toggled_it = tray_settings_from_config(&json!({
+            "defaultSettings": { "exitToTray": true, "noTrayIcon": false }
+        }));
+        assert!(
+            should_hide_on_close(after_the_user_toggled_it),
+            "a mid-session toggle must change the close decision without a relaunch"
+        );
+        assert_ne!(
+            should_hide_on_close(at_startup),
+            should_hide_on_close(after_the_user_toggled_it)
+        );
+    }
+
+    #[test]
+    fn an_unreadable_config_lets_the_window_close_rather_than_trapping_the_user() {
+        // FAIL-SAFE DIRECTION. `load_tray_settings()` degrades to `default()` on any read
+        // failure; the decision that follows must be "close", never "hide". A user who can
+        // always close their window is the safe failure mode -- a user trapped in a window
+        // that refuses to close because a config read failed is not.
+        for unreadable in [json!({}), json!(null), json!({ "defaultSettings": 3 }), json!([])] {
+            assert!(
+                !should_hide_on_close(tray_settings_from_config(&unreadable)),
+                "an unreadable config must never trap the user in an unclosable window"
+            );
+        }
     }
 
     #[test]
