@@ -375,3 +375,43 @@ failure mode is structurally closed here. This lowers the severity of getting th
 it does not remove the need to choose.
 
 **Status:** open — blocking input for whoever resumes 35-05.
+
+## D-35-05-03 — four stale `electron-store` log strings in `wine/manager/utils.ts`
+
+**Found during:** plan 35-05, bundle verification.
+
+`src/backend/wine/manager/utils.ts` emits four user-visible log/error strings of the form
+`Can't find ${release.version} in electron-store -> wine-downloader-info.json!`. The package is
+gone; the storage layer is now `backend/store_backend.ts` over `conf`. Cosmetic only — no
+resolution or behaviour depends on the text — and out of plan 35-05's scope, so left alone.
+
+Confirmed as the ONLY remaining `electron-store` mentions in the built sidecar bundle, alongside
+one prose comment in `cache.ts`. Zero module references.
+
+**Status:** open, unowned, no functional impact.
+
+## D-35-05-04 — `electronUntouched.test.ts`'s docstring predates structural containment
+
+**Found during:** plan 35-05, while re-pinning that file's sha256 (Gate 8).
+
+Its module docstring states: *"`pathShim.ts` has no `HOME`/`XDG_CONFIG_HOME`/`APPDATA` override
+for darwin, so `configStore` reads/writes the developer's REAL `~/Library/Application
+Support/GameLib/steam_store/config.json`"*, and builds a "may run against real user data" safety
+argument on top of it.
+
+That premise is **no longer true**. Phase 34.2 gap cycle 3 (plan 34.2-19) added
+`src/backend/jest.setupContainment.ts` to `src/backend/jest.config.js`'s `setupFiles` for the
+ENTIRE Backend project, which redirects `os.homedir()` (and `node:os`'s, and `userInfo()`) plus
+`HOME`/`USERPROFILE`/`APPDATA`/`LOCALAPPDATA`/`XDG_*` into a disposable per-test-file root. The
+suite therefore does NOT reach real user data any more.
+
+The file's actual assertions are unaffected — it still proves what it claims — so this is stale
+narration, not a broken test. **Deliberately not fixed here:** the file is pinned by
+`gameDetailsImportGate.test.ts` Gate 8, so any edit forces another re-pin, and plan 35-05 had
+already consumed one re-pin for a one-line specifier change. Bundling an unrelated docstring
+rewrite into that would muddy the audit trail the pin exists to protect.
+
+**Fix when someone owns it:** correct the docstring and re-pin in the same commit, stating both
+reasons.
+
+**Status:** open, unowned.
