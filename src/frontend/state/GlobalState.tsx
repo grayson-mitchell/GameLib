@@ -670,16 +670,27 @@ class GlobalState extends PureComponent<Props> {
 
   epicLogout = async () => {
     this.setState({ refreshing: true })
-    await window.api.logoutLegendary().finally(() => {
-      this.setState({
-        epic: {
-          library: [],
-          username: null
-        }
+    // Phase 35 plan 09: `logoutLegendary` can now REJECT — a domain-scoped Epic
+    // cookie clear that removed nothing (or failed outright) fails the logout
+    // instead of silently reporting success (T-35-39). Without this `finally`
+    // the rejection would skip `refreshing: false` and latch the library's
+    // global loading state on forever, which is the same class of defect
+    // G-30-01 fixed in Login/components/Runner's own logout button. The
+    // rejection is deliberately NOT swallowed here: `finally` rethrows, and
+    // that Runner guard is what surfaces and logs it.
+    try {
+      await window.api.logoutLegendary().finally(() => {
+        this.setState({
+          epic: {
+            library: [],
+            username: null
+          }
+        })
       })
-    })
-    console.log('Logging out from epic')
-    this.setState({ refreshing: false })
+      console.log('Logging out from epic')
+    } finally {
+      this.setState({ refreshing: false })
+    }
   }
 
   gogLogin = async (token: string) => {

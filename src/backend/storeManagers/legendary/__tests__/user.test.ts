@@ -275,7 +275,14 @@ describe('LegendaryUser.logout()', () => {
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
+    // Phase 35 plan 09 (T-35-39): a FAILED cookie clear is now fatal to
+    // logout()'s reported outcome — it used to resolve, swallowing the
+    // failure. This test's original subject is unchanged and still asserted
+    // below: the window is closed and the credential-side cleanup still runs
+    // regardless.
+    await expect(LegendaryUser.logout()).rejects.toThrow(
+      'rust-side clear failed'
+    )
 
     expect(mockFromPartition).not.toHaveBeenCalled()
     expect(seam.open).toHaveBeenCalledWith(
@@ -342,11 +349,19 @@ describe('LegendaryUser.logout()', () => {
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
+    // Phase 35 plan 09: logout REJECTS now (the cookie step is fatal), but the
+    // credential-side cleanup — this test's actual subject, T-34.5-19's
+    // security boundary — still runs unconditionally before the rethrow.
+    await expect(LegendaryUser.logout()).rejects.toThrow(
+      'rust cookie clear failed'
+    )
 
     expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
     expect(clearCache).toHaveBeenCalledWith('legendary')
+    // The NON-fatal storage step keeps its warn-and-continue behaviour.
     expect(logWarning).toHaveBeenCalled()
+    // The fatal step is logged at ERROR, not merely warned about.
+    expect(logError).toHaveBeenCalled()
   })
 
   it('F-6 twin: a rejecting clearStorage step still leaves logout() resolving, and the cookie step ran anyway', async () => {
@@ -371,7 +386,12 @@ describe('LegendaryUser.logout()', () => {
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
+    // Phase 35 plan 09: the fatal cookie step is captured and rethrown AFTER
+    // the loop, so the remaining steps still run — that is this test's subject
+    // and it survives the change intact.
+    await expect(LegendaryUser.logout()).rejects.toThrow(
+      'rust cookie clear failed'
+    )
 
     expect(seam.clearStorage).toHaveBeenCalledWith(
       expect.stringContaining('epicgames.com'),
@@ -432,33 +452,37 @@ describe('LegendaryUser.logout()', () => {
     )
   })
 
-  it('REQ-34.4.1-06 (Plan 23, F-6 Defect B): a clearCookies count of 0 triggers a distinct removed-nothing warning', async () => {
+  it('REQ-34.4.1-06 (Plan 23, F-6 Defect B) / T-35-39: a clearCookies total of 0 FAILS the logout (it used to be a swallowed warning)', async () => {
     const seam = makeMockSeam({
       clearCookies: jest.fn().mockResolvedValue(0)
     })
     setLoginWindowSeam(seam)
 
-    await LegendaryUser.logout()
-
-    expect(logWarning).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'domain-scoped cookie clear removed nothing for epicgames.com'
-      ),
-      'Legendary'
+    // Phase 35 plan 09 (operator decision D-09-CORRECTED): this used to
+    // `logWarning('... removed nothing for epicgames.com')` and let the wipe
+    // loop swallow it, which is the defect class that produced the original
+    // lying self-report. It is now a rejection.
+    await expect(LegendaryUser.logout()).rejects.toThrow(
+      /removed nothing across all 5 Epic-owned domains/
     )
+
+    // The credential-side security boundary still ran (T-34.5-19).
+    expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
+    expect(clearCache).toHaveBeenCalledWith('legendary')
   })
 
-  it('REQ-34.4.1-06 (Plan 23, F-6 Defect B): a healthy non-zero clearCookies count does NOT trigger the removed-nothing warning', async () => {
+  it('REQ-34.4.1-06 (Plan 23, F-6 Defect B) / T-35-39: a healthy non-zero total resolves and warns about nothing', async () => {
     const seam = makeMockSeam({
       clearCookies: jest.fn().mockResolvedValue(2)
     })
     setLoginWindowSeam(seam)
 
-    await LegendaryUser.logout()
+    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
 
     const removedNothingCall = (logWarning as jest.Mock).mock.calls.find((c) =>
       String(c[0]).includes('removed nothing')
     )
     expect(removedNothingCall).toBeUndefined()
+    expect(logError).not.toHaveBeenCalled()
   })
 })

@@ -17,11 +17,41 @@ import { standardBrowserUserAgent } from '../../humble/userAgent'
 // no navigation/login flow ever runs against this url. Source:
 // frontend/screens/WebView/loginRoutes.ts:45 (`EPIC_LOGIN_URL`).
 const EPIC_LOGIN_ORIGIN = 'https://www.epicgames.com/id/login?responseType=code'
-// Apex domain: suffix-matches every Epic auth cookie regardless of which
-// epicgames.com subdomain actually sets it, mirroring humble/user.ts's
-// disconnect() (T-34.4.1-30), which passes the apex 'humblebundle.com'
-// rather than 'www.humblebundle.com'.
-const EPIC_COOKIE_HOST = 'epicgames.com'
+// Epic-owned APEX domains. Suffix-matching happens Rust-side in
+// `cookie_domain_matches`, so each apex covers every subdomain that may have
+// set a session cookie against it — mirroring humble/user.ts's disconnect()
+// (T-34.4.1-30), which passes the apex 'humblebundle.com' rather than
+// 'www.humblebundle.com'.
+//
+// PAIRED LIST — keep this in lockstep, entry for entry, with
+// `EPIC_COOKIE_DOMAINS` in src-tauri/src/main.rs (see that constant's own doc
+// comment, which names this one back). The Rust arm's macOS fallback only
+// admits a domain that is a member of ITS set; a domain added here and not
+// there returns `humble_login:no-window:{label}` — an ERROR, not a clear — and
+// a domain added there and not here is simply never attempted. Either way the
+// drift is a silent half-fix (T-35-41), which is why the two sides name each
+// other in place rather than relying on a reviewer noticing.
+//
+// Why more than 'epicgames.com' (Phase 35 plan 09, operator decision
+// D-09-CORRECTED, 2026-08-29): `35-AB-RETEST.md` Item 7 measured `EPIC_DEVICE`
+// surviving an Epic logout on .fortnite.com, .twinmotion.com, .unrealengine.com
+// and .metahuman.com. An 'epicgames.com' suffix filter cannot match any of them
+// BY CONSTRUCTION. The accepted cost of an explicit hand-maintained list is that
+// it can go stale if Epic adds a domain — chosen deliberately over a filter that
+// cannot match, and over a blanket wipe, which stays banned (REQ-34.4.1-06):
+// this jar is app-wide and holds Humble/GOG/Amazon sessions too.
+const EPIC_COOKIE_HOSTS = [
+  'epicgames.com',
+  'fortnite.com',
+  'unrealengine.com',
+  'twinmotion.com',
+  'metahuman.com'
+] as const
+
+// The ONE wipe step whose failure is fatal to logout(). See the wipeSteps loop
+// at the bottom of logout() for the full rationale, including why the other
+// steps deliberately stay warnings.
+const FATAL_WIPE_STEP = 'clearEpicCookies'
 
 export class LegendaryUser {
   public static async login(
@@ -165,22 +195,50 @@ export class LegendaryUser {
               userAgent: standardBrowserUserAgent()
             })
             try {
-              const deleted = await seam.clearCookies(label, EPIC_COOKIE_HOST)
-              // Only the COUNT is logged — never a cookie name, domain, or
-              // value (mirrors humble/user.ts's disconnect()). `deleted` is a
-              // measured post-removal delta (Plan 23), not an attempted count:
-              // it comes from a re-read of the jar taken AFTER the removal ran.
+              // ONE window for the whole sweep (Phase 35 plan 09): opened
+              // above, looped over here, closed once in the `finally` below.
+              // Deliberately NOT a window per domain — `seam.clearCookies`
+              // takes a single host, so looping is the right shape, but each
+              // extra hidden window is another chance to leak one.
+              let total = 0
+              const perDomain: string[] = []
+              for (const host of EPIC_COOKIE_HOSTS) {
+                const deleted = await seam.clearCookies(label, host)
+                total += deleted
+                perDomain.push(`${host}=${deleted}`)
+                // Only COUNTS and DOMAIN names are logged — never a cookie
+                // name, value, token or account identifier (mirrors
+                // humble/user.ts's disconnect(); this repo is public,
+                // T-35-04). `deleted` is a measured post-removal delta (Plan
+                // 23), not an attempted count: it comes from a re-read of the
+                // jar taken AFTER the removal ran.
+                logInfo(
+                  `Legendary logout: cleared ${deleted} ${host} cookie(s) (measured post-removal delta)`,
+                  LogPrefix.Legendary
+                )
+              }
+              // The per-domain breakdown is what makes an INCOMPLETE clear
+              // diagnosable next time. A bare total is what let the previous
+              // incompleteness hide for a whole phase: 'cleared 9' looked
+              // healthy while four Epic-owned domains were never attempted at
+              // all (35-AB-RETEST.md Item 7).
               logInfo(
-                `Legendary logout: cleared ${deleted} ${EPIC_COOKIE_HOST} cookie(s) (measured post-removal delta)`,
+                `Legendary logout: Epic cookie clear removed ${total} cookie(s) across ` +
+                  `${EPIC_COOKIE_HOSTS.length} Epic-owned domain(s) — ${perDomain.join(', ')}`,
                 LogPrefix.Legendary
               )
-              if (deleted === 0) {
-                // Same loudness discipline as humble/user.ts's census discrepancy
-                // warning: a domain-scoped clear that measured zero removed is a
-                // signal worth a WARNING, not silence, even without a full census.
-                logWarning(
-                  `Legendary logout: domain-scoped cookie clear removed nothing for ${EPIC_COOKIE_HOST}`,
-                  LogPrefix.Legendary
+              // ASYMMETRY, deliberate: an INDIVIDUAL domain returning 0 is
+              // legitimate and is NOT an error — a user may simply never have
+              // visited twinmotion.com, so that domain has no cookies to
+              // remove. Only a zero TOTAL means the clear achieved nothing,
+              // and that is the failure this throw exists to surface
+              // (T-35-39). Before Phase 35 plan 09 this was a logWarning the
+              // wipe loop then swallowed, which is precisely the defect class
+              // that produced the original lying self-report.
+              if (total === 0) {
+                throw new Error(
+                  `Legendary logout: domain-scoped cookie clear removed nothing across all ` +
+                    `${EPIC_COOKIE_HOSTS.length} Epic-owned domains (${perDomain.join(', ')})`
                 )
               }
             } finally {
@@ -222,10 +280,57 @@ export class LegendaryUser {
       ]
     }
 
+    // Phase 35 plan 09 (T-35-39, operator decision D-09-CORRECTED): exactly ONE
+    // step — `clearEpicCookies`, named by FATAL_WIPE_STEP above — is fatal to
+    // logout()'s reported outcome. Every other step keeps its original
+    // warn-and-continue behaviour, unchanged in either direction. The reasoning,
+    // stated here rather than left to be re-derived:
+    //
+    //   * `clearEpicCookies` is the step that establishes the security property
+    //     logout exists to establish (the next user of this OS profile must not
+    //     open the login window already authenticated). It is also the only step
+    //     with a MEASURED success signal — a post-removal delta — so "it did
+    //     nothing" is observable here and nowhere else. A failure that is
+    //     observable and load-bearing must not be swallowed; swallowing it is
+    //     the exact defect class that produced the original lying self-report.
+    //   * ANY failure of that step is fatal, not just the zero-total one. A step
+    //     that threw (a rejected Rust-side clear, a window that never opened)
+    //     removed nothing either — treating "removed nothing" as fatal while
+    //     treating "crashed, therefore also removed nothing" as a warning would
+    //     just move the fail-open one level over.
+    //   * The other steps stay WARNINGS on purpose. `clearEpicStorage` is
+    //     origin-scoped and reports counts that are legitimately zero (a user
+    //     with no localStorage), so it has no zero-delta contract to promote;
+    //     the Electron branch's five session.fromPartition steps are a legacy
+    //     path this phase is removing wholesale. Promoting either without a
+    //     measured defect would convert an unmeasured risk into a new failure
+    //     mode, and the plan explicitly forbids changing their behaviour
+    //     silently in either direction.
+    //
+    // The failure is CAPTURED and rethrown AFTER the credential-side cleanup,
+    // never instead of it: `configStore.delete('userInfo')` + `clearCache` are
+    // the security boundary and MUST run unconditionally (T-34.5-19, ASVS V3,
+    // see this function's own note above). The remaining wipe steps also still
+    // run — a fatal cookie step must not take the storage step down with it.
+    let fatalWipeFailure: Error | null = null
     for (const [name, step] of wipeSteps) {
       try {
         await step()
       } catch (err) {
+        if (name === FATAL_WIPE_STEP) {
+          logError(
+            [
+              `Legendary logout step ${name} FAILED (logout will report failure):`,
+              err
+            ],
+            LogPrefix.Legendary
+          )
+          fatalWipeFailure =
+            err instanceof Error
+              ? err
+              : new Error(`Legendary logout step ${name} failed`)
+          continue
+        }
         logWarning(
           [
             `Legendary logout cookie-clear step ${name} failed (continuing):`,
@@ -238,6 +343,10 @@ export class LegendaryUser {
 
     configStore.delete('userInfo')
     clearCache('legendary')
+
+    if (fatalWipeFailure !== null) {
+      throw fatalWipeFailure
+    }
   }
 
   public static isLoggedIn() {
