@@ -112,17 +112,63 @@ the `reconcileTick`-gated post-heal exclusion guard). Absence of this specific l
 absence of the underlying vanish — the file's own root-cause investigation found the vanish can
 occur via more than one candidate mechanism, and this probe only catches the one family it targets.
 
-**Electron leg — Observed:** DID NOT REPRODUCE, across three titles. Operator drove the uninstall
-recipe on **two native (non-bottled) Steam installs plus one `forcedWindowsViaBottle: true` install
-(Machinarium, appId 40700)** — the exact configuration of the 2026-08-27 sighting. All three titles
-**remained in the library grid**. The 50-60 second post-badge-flip observation window was held open
-in each case (operator confirmed), so this is a real negative rather than the vacuous
-checked-immediately negative the repro steps warn against. The app was not restarted between the
-badge-flip and the observation.
+**Electron leg — Observed:** VISIBLE SYMPTOM DID NOT REPRODUCE; THE INSTRUMENTED CONDITION FIRED
+ON ALL THREE UNINSTALLS.
 
-**Tauri leg — Observed:**
+*Visual:* operator drove the uninstall recipe on **two native (non-bottled) Steam installs plus one
+`forcedWindowsViaBottle: true` install (Machinarium, appId 40700)** — the configuration of the
+2026-08-27 sighting. All three titles **remained in the library grid**. The 50-60 second
+post-badge-flip window was held open each time (operator confirmed), so the visual negative is real
+rather than the vacuous checked-immediately negative the repro steps warn against. The app was not
+restarted between badge-flip and observation.
 
-**Verdict:**
+*Log (`gamelib.log`, preserved as `~/Library/Logs/GameLib/gamelib.log.35-02-ab-electron`):* the
+probe line this item names as its evidence **fired every time**, once per uninstall:
+
+```
+(15:07:14) Steam: uninstall polling complete for appId 8870  — badge flipped to not-installed
+(15:07:34) [ERROR] Library: 1 owned Steam game(s) silently excluded from the library grid
+                   by a stale nonAvailableGames entry: 8870                        (+20s)
+(15:08:42) Steam: uninstall polling complete for appId 40700 — badge flipped to not-installed
+(15:08:57) [ERROR] ... stale nonAvailableGames entry: 40700                        (+15s)
+(15:10:34) Steam: uninstall polling complete for appId 40700 — badge flipped to not-installed
+(15:10:40) [ERROR] ... stale nonAvailableGames entry: 40700                        (+6s)
+```
+
+**RECORD CORRECTION, stated rather than silently overwritten.** This field originally read
+"DID NOT REPRODUCE, across three titles" and was written from the operator's visual report ALONE,
+without reading the log sink this item's own `Sink to read:` field names. That is exactly the
+failure mode the repro steps warn against, committed by the orchestrator rather than the operator —
+the operator's observation was accurate; the record built on it was incomplete. The log was
+recovered from `gamelib.log.old` (rotated when the Tauri leg booted) one app restart before it
+would have been destroyed. The corrected reading changes this item's verdict from `NEITHER` to
+`BOTH`.
+
+**Tauri leg — Observed:** IDENTICAL SHAPE — visible symptom absent, instrumented condition fired on
+both uninstalls. Operator reported the uninstall working with an "almost instant flip to install
+option" and no vanish. Log:
+
+```
+(15:49:34) Steam: uninstall polling complete for appId 226840 — badge flipped to not-installed
+(15:49:39) [ERROR] ... stale nonAvailableGames entry: 226840                       (+5s)
+(15:57:04) Steam: uninstall polling complete for appId 40700  — badge flipped to not-installed
+(15:57:08) [ERROR] ... stale nonAvailableGames entry: 40700                        (+4s)
+```
+
+**Verdict:** `BOTH` — on the instrumented condition. Six uninstalls across two shells produced six
+probe lines, with no exceptions in either direction.
+
+Recorded precisely, because the two halves disagree and the disagreement is the finding: the
+**user-visible vanish** reproduced on NEITHER shell, while the **stale `nonAvailableGames` state
+the probe detects** reproduced on BOTH, every time, on demand. `BOTH` is the verdict because the
+probe is what this item nominated as its evidence; scoring the visual half alone would record
+`NEITHER` and retire a live, shared-code defect.
+
+**Why this matters for the cutover:** a defect that reproduces identically on both shells lives in
+SHARED code, so it does not die with Electron at plan 35-14 — it ships. The exclusion-to-flip delay
+also varies widely (+4s, +5s, +6s, +15s, +20s here; ~50s in the 2026-08-27 sighting), which is
+consistent with the visible vanish being a race that the log condition does not fully determine.
+That variance is itself evidence against any fix predicated on a fixed timing window.
 
 **Severity if TAURI-ONLY:** BLOCKS D-16 GATE. This is a core library-correctness defect directly
 inside D-16's explicit gate scope ("install, launch, library, login"). A title that disappears
