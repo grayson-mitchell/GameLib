@@ -102,3 +102,59 @@ project ends up with, and is a live papercut for anyone driving a live gate.
 **Related:** MEMORY's `tauri-dev-noops-against-a-running-instance` — the same family. That one is
 "a stale instance survives and you silently test it"; this one is "a stale child survives and
 blocks the new run". The second is far better behaviour, because it is visible.
+
+## D-35-06-01 — the tray offers recent games from signed-out stores and from bottled installs, and every failure is SILENT
+
+**Found during:** plan 35-06 Task 3 live gate, 2026-08-28. Operator-observed, then diagnosed
+from `~/Library/Logs/GameLib/gamelib.log` and live process state.
+
+**Not a plan 35-06 defect.** The tray resolved the runner and dispatched the launch correctly in
+every case measured. Both findings are about what the recent-games list CONTAINS and what the
+user is told when a dispatched launch goes nowhere. Recorded here rather than fixed inside a
+plan whose scope is the tray surface itself.
+
+### Finding 1 — no auth or availability filter on the recent list
+
+`Phoenix Point` (`appName: Iris`, legendary) renders in the tray while Epic is signed out — the
+operator signed out during plan 35-02's item 7 test and the entry survived. `getRecentGames`
+reads `games.recent` straight from `configStore` and filters on nothing but `appName` presence.
+A `RecentGame` records that a game was once launched, never that it can be launched now.
+
+The correct behaviour is a judgement call and deliberately not made here: filter unavailable
+entries out, or render them disabled, or render them and fail loudly. What is NOT defensible is
+the current combination of rendering them enabled and failing silently — see Finding 2.
+
+### Finding 2 — a dispatched-but-doomed launch produces NO user-visible signal
+
+Three distinct failure causes were hit in one session and **all three were indistinguishable
+from a dead menu item**:
+
+1. **Signed-out store** — Epic logged out (`Iris`).
+2. **Bottled Steam not signed in** — `All Will Fall` (`2706020`) IS fully installed
+   (`StateFlags 4`, 4.2 GB, in the CrossOver bottle's own `steamapps`, not the macOS Steam
+   library) and had run the day before. The launch dispatched correctly:
+   `Running Wine command: .../GameLibSteam/.../steam.exe -applaunch 2706020`. But the bottled
+   client is logged out — `steamwebhelper.exe ... -steamid=0` — so `-applaunch` lands on a login
+   prompt, and per `crossover-renders-steam-dialogs-offscreen` that prompt is INVISIBLE.
+   `raiseFrontmostBottledProcess` then waited ~18s for a game process four separate times.
+3. **Native vs bottled divergence** — `Pillars of Eternity` (`291650`) launched fine via
+   `steam://rungameid/291650`. The operator's own summary — *"native games launch, bottles
+   don't"* — was exactly right, and the two paths share nothing downstream of the tray.
+
+`dispatch_tray_launch` logs each outcome to stderr and surfaces nothing, which its own doc
+comment states as intentional: *"the tray has nothing to show the user either way."* That is
+true of the Rust tray in isolation and false of the product — the app has a toast/dialog surface
+and the tray can reach the renderer, as the About item proves.
+
+**Cost of leaving it:** this consumed a large part of the 35-06 live gate. Three benign,
+correctly-behaving refusals were investigated as suspected tray defects, and two wrong
+conclusions were drawn and retracted along the way (an "uninstalled" call made against the wrong
+Steam library, and a "stale binary" call made from a `strings` pattern that could not match a
+Rust symbol). A silent failure does not just cost the user — it costs whoever diagnoses it.
+
+**Fix when someone owns it:** surface the outcome. `dispatch_tray_launch`'s `err=` arm and the
+"could not resolve a runner" arm both have a caller-visible failure to report. The bottled-Steam
+logged-out case additionally deserves its own message, since the underlying prompt is
+unreachable by design on this platform.
+
+**Status:** open, unowned. Neither blocks D-16.
