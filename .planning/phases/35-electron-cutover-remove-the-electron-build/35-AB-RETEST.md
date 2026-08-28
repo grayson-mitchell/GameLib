@@ -377,6 +377,54 @@ severity call below stands unmodified and is met: `moveInstall` and `importGame`
 D-16-scoped install-flow functionality, and this defect breaks them on nothing more exotic than a
 user who takes over a minute to choose a folder.
 
+### POST-FIX ADDENDUM — DISCHARGED 2026-08-29 (does not amend the observation above)
+
+The observation above stands exactly as recorded; nothing in it is retracted. This block records
+what happened **after** the fix landed, and is dated and separated for that reason.
+
+**Fix:** `d980559b7` — `fix(35-07): add openDialog to LONG_RUNNING_CHANNELS (T-35-30)`.
+`LONG_RUNNING_CHANNELS` now carries 13 entries, `openDialog` last, so `timeout_for()` returns
+`None` for it and the 60s `INVOKE_TIMEOUT` no longer applies.
+
+**Re-driven live** by the human operator against the Tauri leg on a shell binary built 08:34 and
+started 08:42 (allowlist blob re-read out of the running binary before the run, so the process
+observed was provably the fixed one, not a stale build). The flow driven was `importGame` via
+`ImportDialog`'s `PathSelectionBox` — a different named call site from the `moveInstall` used for
+the original observation, which is fine: the bound is per-channel, not per-call-site.
+
+From `~/Library/Logs/GameLib/gamelib.log`:
+
+```
+(08:42:35) [INFO]:  [ExtraGameInfo]: HLTB ID undefined not found for Balrum
+   ...                     <- 4m20s gap: the native picker held open, untouched
+(08:46:55) [INFO]:  [Gog]: Importing 1769415595: ... gogdl ... import \
+                    /Volumes/blank/SteamLibrary/steamapps/common/Californium/californium.app
+(08:46:56) [ERROR]: [Gog]: Error running command "...": Process exited with code 1
+(08:46:56) [ERROR]: [Gog]: Failed to import 1769415595: Process exited with code 1
+```
+
+**The picker was held roughly four minutes and twenty seconds — over four times the old bound —
+and the invoke returned.** The flow proceeded all the way through to spawning `gogdl` with the
+selected path, which is the same positive proof used for the Electron leg above ("the action
+reaching rsync at all is positive proof the invoke completed rather than being dropped"). The
+terminal `[shell]` sink carried **no** `response for unknown/timed-out id=<n> (dropped)` line.
+
+**The exit-1 import failure is unrelated to this item and is not a defect.** The selected path is a
+**Steam** game directory (`SteamLibrary/steamapps/common/`) handed to a **GOG** import; `gogdl`
+correctly refused it. That failure occurred *after* the invoke resolved, which is itself part of
+why the invoke is proven to have resolved.
+
+**Verdict on the addendum:** Item 3 is **DISCHARGED**. It no longer blocks the D-16 gate, and plan
+35-19 does not inherit it. This is the only one of the seven items whose pre-written
+`Severity if TAURI-ONLY:` call was met, so with it discharged, **this document carries no blocking
+inheritance into 35-19.**
+
+**One thing observed during the discharge run and deliberately NOT folded in here:** the user-facing
+toast for the failed import read only "Importing Failed" and discarded `gogdl`'s actual reason
+(wrong store for that folder), which `gamelib.log` knew. That is a separate diagnosis-reporting
+gap in the same family as `D-35-06-01`, not part of Item 3, and it is not recorded as discharging
+or reopening anything here.
+
 **Severity if TAURI-ONLY:** BLOCKS D-16 GATE. This item is structurally certain to be TAURI-ONLY
 before observing — the 60-second bound (`INVOKE_TIMEOUT` in `src-tauri/src/main.rs`) is a
 Tauri-shell-specific transport mechanism with no Electron IPC analog; Electron's `ipcMain.handle`
@@ -1045,3 +1093,14 @@ Any item whose `Verdict:` comes back `TAURI-ONLY` and whose pre-committed `Sever
 says BLOCKS D-16 GATE must be named explicitly in the human operator's reply to the orchestrator, so
 plan 35-19's gate document can carry it forward. This document does not auto-propagate anything —
 the carrying-forward step is a human action at the end of Task 2, not a mechanism.
+
+### Carried-forward result (filled in 2026-08-29, after the run)
+
+Exactly one item came back `TAURI-ONLY` with a pre-committed `BLOCKS D-16 GATE` severity call:
+**Item 3** (`openDialog` missing from `LONG_RUNNING_CHANNELS`). It was fixed in `d980559b7` and
+**discharged by live re-observation** — see the POST-FIX ADDENDUM in that item's section for the
+evidence.
+
+**Plan 35-19's gate therefore inherits no blocking item from this document.** That is a statement
+about this document only; it says nothing about D-16's own packaged-artifact gate scope, which is
+independent and still owed.
