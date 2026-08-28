@@ -164,6 +164,12 @@ interface StoreMap {
 }
 const stores: StoreMap = {}
 
+// Phase 35 follow-up (plan 35-16): three concerns collide in this file and must land in ONE
+// task -- (1) D-01's isTauri() branch collapse across storeNew/storeGet/storeSet/storeHas/
+// storeDelete, (2) D-04's lazy require('electron-store') below (plan 35-05 swapped every
+// OTHER backend site off electron-store and deliberately left this one), (3) Phase 29 D-08's
+// SECRET_STORE_KEYS deny-list -> the fail-closed allow-list in common/types/storePolicy.ts.
+// Do not fix one alone -- see 35-PATTERNS.md Pitfall 2.
 export const storeNew = function (storeName: string, options: Store.Options<Record<string, unknown>>) {
   if (isTauri()) {
     registerStore(storeName, options)
