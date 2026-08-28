@@ -1,0 +1,437 @@
+# Release Tauri: builds Windows + Linux + macOS (arm64 & x64) installers via
+# tauri-action on a `v*` tag push (or manual workflow_dispatch), then opens a
+# DRAFT GitHub Release marked PRERELEASE for human review before publish (D-09).
+#
+# UNPROVEN LIVE: this pipeline has never completed a real tag-push run --
+# 34-07's live `v*` gate (REQ-34-09) is deliberately deferred pending this gap
+# cycle's fixes. Every behavioral claim in this header is an INTENDED
+# invariant the workflow is designed to uphold, not something observed on a
+# real runner. Treat it as unproven until that live gate actually executes.
+#
+# NOTE (Pitfall 7): `draft-release-mac.yml` and `draft-release-linux.yml` also
+# trigger on `v*` and will co-run alongside this workflow on every tag push.
+# This is intentional, not a bug -- both pipelines are additive per the
+# Phase 27+ Electron/Tauri parity invariant and are ASSUMED to publish to the
+# SAME GitHub Release without collision, pending the 34-07 live gate: Tauri's
+# default per-platform artifact names (NSIS/AppImage/dmg) are not expected to
+# collide with electron-builder's `-Setup-`/`-Portable-`/`-macOS-`/`-linux-`
+# artifactName segments, so both sets of assets are assumed able to land on
+# one release. This has not yet been confirmed on a real tag push.
+#
+# D-03/D-04: signing plumbing is wired to GitHub Actions secrets, but 0.x
+# ships UNsigned -- no cert secrets are enrolled yet. Every signing path
+# below is conditional on the relevant secret being non-empty; the default
+# (secrets absent) is "skip signing, log a clear warning, ship an unsigned
+# artifact, job stays green". The intended invariant is that CI never fails
+# on missing certs. GAP-A (34-16, live run 30084918812): the macOS half of
+# that claim was FALSE until this gap cycle -- a job-level `env:` map left
+# APPLE_CERTIFICATE defined-and-empty when the secret was absent, which the
+# Tauri bundler's macOS signing path treats as "signing enrolled" and
+# hard-failed `security import` on every secrets-less macOS leg. The macOS
+# gate is now a shell step ("Enable Apple signing only when a complete cert
+# secret set is enrolled") that writes $GITHUB_ENV only when a complete
+# secret set is present, and the invariant is proven by executed tests
+# (releaseWorkflow.test.ts's "Apple signing env gate, executed" block)
+# reading resolved $GITHUB_ENV content, not asserted by comment prose alone.
+name: Release Tauri
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+            sidecar_triple: 'aarch64-apple-darwin'
+          - platform: 'macos-latest'
+            args: '--target x86_64-apple-darwin'
+            sidecar_triple: 'x86_64-apple-darwin'
+          - platform: 'ubuntu-24.04'
+            args: ''
+            sidecar_triple: 'x86_64-unknown-linux-gnu'
+          - platform: 'windows-latest'
+            args: ''
+            sidecar_triple: 'x86_64-pc-windows-msvc'
+    runs-on: ${{ matrix.platform }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+      WINDOWS_CERT_THUMBPRINT: ${{ secrets.WINDOWS_CERT_THUMBPRINT }}
+    steps:
+      - uses: actions/checkout@v6
+
+      # WR-03 (gap cycle 2 review): TAURI_SIGNING_PRIVATE_KEY is the ONE
+      # secret with no graceful-skip path. D-03/D-04's "skip signing, warn,
+      # ship unsigned, job stays green" default covers the OS code-signing
+      # certs only -- it cannot cover the updater key, because
+      # tauri.conf.json sets `createUpdaterArtifacts: true` with a committed
+      # `plugins.updater.pubkey`, and `tauri build` then ERRORS OUT rather
+      # than skipping when the private key is absent. That failure hits all
+      # four matrix legs, produces no latest.json for
+      # promote-updater-feed.yml to promote, and surfaces as an opaque tauri
+      # error late in the run. Secret enrolment is not inspectable from the
+      # repo, so this preflight is the only way the asymmetry is visible:
+      # it turns that opaque late failure into a named one, before any
+      # expensive build work. Remedy is either enrolling the secret or
+      # setting createUpdaterArtifacts: false -- both are explicit choices.
+      - name: Fail fast with a clear message if the updater signing key is absent
+        if: env.TAURI_SIGNING_PRIVATE_KEY == ''
+        shell: bash
+        run: |
+          echo "::error::TAURI_SIGNING_PRIVATE_KEY is not enrolled, but src-tauri/tauri.conf.json sets createUpdaterArtifacts: true and commits an updater pubkey. tauri build will fail on every matrix leg. Enrol the secret (with TAURI_SIGNING_PRIVATE_KEY_PASSWORD), or set createUpdaterArtifacts: false."
+          exit 1
+
+      - name: Install Ubuntu system dependencies
+        if: matrix.platform == 'ubuntu-24.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+
+      - uses: ./.github/actions/install-deps
+
+      # GAP-B (34-17, live run 30084918812): both Linux and Windows bundled their
+      # installers successfully and THEN died at updater signing with `failed to
+      # decode secret key: incorrect updater private key password: Wrong password
+      # for that key` -- the Windows leg burned ~13 minutes of Rust build first.
+      # The "Fail fast..." step above only checks TAURI_SIGNING_PRIVATE_KEY is
+      # non-empty; a non-empty key with a mismatched password sails straight
+      # through it. This step actually signs a throwaway probe file with the real
+      # Tauri signer and compares the resulting signature's key id against the
+      # committed src-tauri/tauri.conf.json plugins.updater.pubkey key id -- the
+      # same check a developer can run locally via `pnpm verify:updater-key`
+      # before enrolling secrets. It also catches the quieter failure where the
+      # key decodes but does NOT match the committed pubkey (updates every
+      # installed client would reject). It cannot sit next to the "Fail fast"
+      # step above because it needs node_modules (the Tauri CLI), so it runs here
+      # instead -- still well before the renderer build, the SEA sidecar build,
+      # and tauri-action.
+      - name: Verify the updater signing key and password actually decode
+        shell: bash
+        run: pnpm verify:updater-key
+
+      # Mirrors draft-release-mac.yml's step verbatim: seeds public/ with the
+      # bundled CrossOver compatibility-index snapshot BEFORE the renderer
+      # build below, so the snapshot is bundled into the shipped webview.
+      # T-34-16: scoped to this repo via github.token, restricted to a single
+      # asset by --pattern, and non-fatal via `|| echo` -- a repo with no
+      # published crossover-index release ships without a snapshot instead of
+      # failing the job.
+      - name: Fetch bundled CrossOver index snapshot
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download crossover-index --pattern crossover-index.json.gz --dir public --clobber || echo "No published index yet; shipping without a bundled snapshot"
+
+      # Phase 24 macOS Steam bridge helper: the Electron release:mac script
+      # builds this inside its own chain, immediately before its renderer
+      # build. Without this step every macOS Tauri bundle ships without
+      # build/bin/... and the bridge is unusable. Precedes the renderer
+      # build below to match that ordering.
+      #
+      # CR-01 (gap cycle 2 review): meta/buildSteamBridgeShims.ts used to emit
+      # to `public/bin/${process.arch}/darwin/` -- the BUILD HOST's arch.
+      # macos-latest runners are Apple Silicon, so the
+      # `--target x86_64-apple-darwin` leg emitted bin/arm64/... while its own
+      # x86_64 sidecar resolves bin/x64/... at runtime, shipping a bundle
+      # whose Steam bridge could never be found. GAMELIB_BRIDGE_TARGET_ARCH
+      # makes the bridge build target-driven exactly like
+      # GAMELIB_SIDECAR_TARGET_TRIPLE does for the SEA sidecar below, and the
+      # script now passes a matching `clang -arch` so the emitted Mach-O
+      # really is the architecture its path claims.
+      - name: Build steam bridge shims (macOS only)
+        if: startsWith(matrix.platform, 'macos')
+        shell: bash
+        env:
+          GAMELIB_BRIDGE_TARGET_ARCH: ${{ matrix.sidecar_triple == 'x86_64-apple-darwin' && 'x64' || 'arm64' }}
+        run: pnpm build-steam-bridge
+
+      # GAP-1 (34-VERIFICATION.md failed truth #5 / 34-REVIEW.md CR-01):
+      # tauri.conf.json declares `frontendDist: "../build"` and
+      # `beforeBuildCommand: ""` -- this step is the ONLY thing that produces
+      # build/index.html. Without it, tauri-action either aborts with "Unable
+      # to find your web assets" or ships an installer whose webview loads
+      # nothing, on every matrix leg.
+      - name: Build renderer web assets (vite)
+        shell: bash
+        run: pnpm exec vite build
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ startsWith(matrix.platform, 'macos') && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      # Compiles build/main/sidecar.js (existing esbuild output) into a
+      # self-contained per-OS executable (Node SEA) BEFORE tauri-action
+      # bundles it as an externalBin -- no cross-job artifact hand-off
+      # window (T-34-07: sidecar substitution mitigation).
+      #
+      # CR-01: macos-latest runners are Apple-Silicon native, so without an
+      # explicit per-leg triple below the SEA build script (meta/
+      # buildSidecarSea.ts resolveTriple()) would resolve the HOST triple on
+      # both macOS legs -- the `--target x86_64-apple-darwin` leg would then
+      # emit an aarch64-named, aarch64-arch sidecar that tauri-action's
+      # externalBin resolution cannot find/use for the x86_64 bundle. Each
+      # matrix leg's `sidecar_triple` field makes the SEA build
+      # target-driven instead of host-driven via the env var set below.
+      - name: Build self-contained sidecar (Node SEA)
+        env:
+          GAMELIB_SIDECAR_TARGET_TRIPLE: ${{ matrix.sidecar_triple }}
+        run: pnpm build:sidecar-sea
+
+      # GAP-A (34-16, live run 30084918812): both macOS legs failed with `failed to
+      # bundle project: failed codesign application: failed to run command security
+      # import: failed to import keychain certificate` even though NO Apple cert
+      # secret was enrolled. Mechanism: the prior job-level `env:` block mapped
+      # `APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}` unconditionally, which
+      # resolves to a DEFINED, EMPTY variable when the secret is absent -- and the
+      # Tauri bundler's macOS signing path tests the variable's *presence*
+      # (`var_os`), not its truthiness, so it entered the keychain-import branch and
+      # ran `security import` on empty data. The old `Warn if macOS signing will be
+      # skipped` step only printed a line; it prevented nothing.
+      #
+      # GitHub's `secrets` context is NOT available in a step `if:` expression, so
+      # the fix cannot be a conditional `env:` map -- it has to be a shell body that
+      # conditionally writes $GITHUB_ENV. The six IN_APPLE_* step-level inputs below
+      # are themselves defined-and-empty when their secrets are absent, which is
+      # harmless here (this step runs no Tauri tooling) but would recreate the exact
+      # bug above if they carried the real APPLE_* names instead. Apple cert/secret
+      # material now reaches the runner's $GITHUB_ENV file ONLY on a fully-enrolled
+      # signing run (T-34-34); notarization credentials are only exported when
+      # signing is also fully enrolled (T-34-36 -- never notarize an unsigned
+      # bundle); a newline-bearing secret cannot inject a sibling env key because
+      # write_env uses a $RANDOM-delimited heredoc per value, same remedy as WR-03's
+      # $GITHUB_OUTPUT heredoc (T-34-35). No branch calls exit 1 -- D-04 says the job
+      # stays green on any secret combination, including a half-enrolled one.
+      #
+      # WR-02 (gap cycle 3 review): the inverse partial set -- cert ABSENT but a
+      # secondary Apple secret (password and/or signing identity) present -- used to
+      # fall straight through to the generic "no Apple cert secret set" default,
+      # misdiagnosing a genuine partial-enrolment mistake as "nothing enrolled". A
+      # dedicated elif now names that the APPLE_CERTIFICATE secret itself is the one
+      # missing. The truly-nothing-enrolled case still hits the final else, so Test A
+      # and 34-07's repro grep for the verbatim D-04 string are unaffected.
+      - name: Enable Apple signing only when a complete cert secret set is enrolled
+        if: startsWith(matrix.platform, 'macos')
+        shell: bash
+        env:
+          IN_APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          IN_APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          IN_APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          IN_APPLE_ID: ${{ secrets.APPLE_ID }}
+          IN_APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          IN_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          write_env() {
+            local NAME="$1"
+            local VALUE="$2"
+            local DELIM="APPLE_ENV_${RANDOM}${RANDOM}${RANDOM}"
+            {
+              echo "${NAME}<<${DELIM}"
+              echo "${VALUE}"
+              echo "${DELIM}"
+            } >> "$GITHUB_ENV"
+          }
+
+          SIGNING_ENABLED=0
+
+          if [ -n "$IN_APPLE_CERTIFICATE" ] && [ -n "$IN_APPLE_CERTIFICATE_PASSWORD" ] && [ -n "$IN_APPLE_SIGNING_IDENTITY" ]; then
+            write_env APPLE_CERTIFICATE "$IN_APPLE_CERTIFICATE"
+            write_env APPLE_CERTIFICATE_PASSWORD "$IN_APPLE_CERTIFICATE_PASSWORD"
+            write_env APPLE_SIGNING_IDENTITY "$IN_APPLE_SIGNING_IDENTITY"
+            SIGNING_ENABLED=1
+          elif [ -n "$IN_APPLE_CERTIFICATE" ]; then
+            MISSING=""
+            if [ -z "$IN_APPLE_CERTIFICATE_PASSWORD" ]; then
+              MISSING="${MISSING}APPLE_CERTIFICATE_PASSWORD "
+            fi
+            if [ -z "$IN_APPLE_SIGNING_IDENTITY" ]; then
+              MISSING="${MISSING}APPLE_SIGNING_IDENTITY "
+            fi
+            echo "::warning::APPLE_CERTIFICATE is set but ${MISSING}missing; shipping unsigned"
+          elif [ -n "$IN_APPLE_CERTIFICATE_PASSWORD" ] || [ -n "$IN_APPLE_SIGNING_IDENTITY" ]; then
+            echo "::warning::APPLE_CERTIFICATE is missing but APPLE_CERTIFICATE_PASSWORD/APPLE_SIGNING_IDENTITY is set; shipping unsigned (the Apple cert secret itself is not enrolled)"
+          else
+            echo "::warning::Signing skipped — no Apple cert secret set; shipping unsigned artifact"
+          fi
+
+          if [ "$SIGNING_ENABLED" = "1" ] && [ -n "$IN_APPLE_ID" ] && [ -n "$IN_APPLE_PASSWORD" ] && [ -n "$IN_APPLE_TEAM_ID" ]; then
+            write_env APPLE_ID "$IN_APPLE_ID"
+            write_env APPLE_PASSWORD "$IN_APPLE_PASSWORD"
+            write_env APPLE_TEAM_ID "$IN_APPLE_TEAM_ID"
+          elif [ -n "$IN_APPLE_ID" ] || [ -n "$IN_APPLE_PASSWORD" ] || [ -n "$IN_APPLE_TEAM_ID" ]; then
+            echo "::warning::Apple notarization credentials are set but signing is not fully configured; skipping notarization"
+          fi
+
+      # D-04 explicit skip-warning: Windows has NO native "skip if absent"
+      # behavior (Pitfall 4) -- this step is the only signal a secrets-less
+      # run is intentionally shipping unsigned, not silently misconfigured.
+      - name: Warn if Windows signing will be skipped
+        if: matrix.platform == 'windows-latest' && env.WINDOWS_CERTIFICATE == ''
+        run: echo "::warning::Signing skipped — no Windows cert secret set; shipping unsigned artifact"
+
+      # Windows signing config lives as a static tauri.conf.json field, not
+      # an env-var gate (Pattern 2). T-34-05: the cert is decoded from a
+      # GitHub secret and written to cert.pfx in the runner workspace --
+      # Import-PfxCertificate requires a file path, so there is no
+      # in-memory-only import. cert.pfx exists on disk only for the
+      # duration of the import; the finally block below removes it
+      # immediately afterward, including when the import itself throws, so
+      # no retried/continued job step can find it left behind.
+      #
+      # WR-01 (gap cycle 2 review): that guarantee used to be false. The
+      # `Set-Content` file write and the `ConvertTo-SecureString` call both
+      # sat OUTSIDE the try, and under GitHub's pwsh
+      # (`$ErrorActionPreference = 'Stop'`) `ConvertTo-SecureString -String ""`
+      # is a TERMINATING error -- so a half-configured secret set (cert
+      # enrolled, password missing) aborted the script after the PKCS#12
+      # private key had already been written to the workspace and before the
+      # finally block existed to remove it. Every statement that can throw
+      # after the key material exists on disk now lives inside the try, and
+      # the only fallible statement before it (`ConvertTo-SecureString`)
+      # runs while nothing has been written yet.
+      #
+      # GAP-4 (34-VERIFICATION.md truth #7 / 34-REVIEW.md WR-03): the if:
+      # condition additionally requires WINDOWS_CERT_THUMBPRINT != '' --
+      # without a usable thumbprint the imported cert can never be selected
+      # by signtool, so writing a .pfx to the runner filesystem would expose
+      # cert material for zero benefit. A cert-without-thumbprint secret set
+      # is treated as an absent-secret case (D-04) and never reaches here.
+      #
+      # WR-02 (gap cycle 2 review): GAP-4 restored D-04's invariant for the
+      # thumbprint secret only -- WINDOWS_CERTIFICATE_PASSWORD was checked
+      # nowhere, so enrolling cert + thumbprint but not the password (the
+      # exact half-configured secret set GAP-4 named) hard-failed the
+      # windows-latest leg with an opaque PowerShell binding error. All
+      # three Windows secrets are now required by BOTH gates; any subset
+      # routes through the warn-and-skip branch and ships unsigned.
+      - name: Import Windows signing certificate (if present)
+        if: matrix.platform == 'windows-latest' && env.WINDOWS_CERTIFICATE != '' && env.WINDOWS_CERT_THUMBPRINT != '' && env.WINDOWS_CERTIFICATE_PASSWORD != ''
+        shell: pwsh
+        run: |
+          $bytes = [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE)
+          $securePw = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          try {
+            Set-Content -Path cert.pfx -Value $bytes -AsByteStream
+            Import-PfxCertificate -FilePath cert.pfx -CertStoreLocation Cert:\CurrentUser\My -Password $securePw
+          } finally {
+            Remove-Item -Path cert.pfx -Force -ErrorAction SilentlyContinue
+          }
+
+      # tauri.conf.json never declares certificateThumbprint (D-04 anti-
+      # pattern guard -- a committed thumbprint would FAIL a secrets-less
+      # CI run). The Windows signing config is merged in ONLY here, ONLY
+      # when BOTH the cert secret and the thumbprint secret are present --
+      # every other leg (and a secrets-less or half-configured Windows run)
+      # passes only matrix.args -- the true default is "unsigned, warned,
+      # job green".
+      #
+      # GAP-4 (34-VERIFICATION.md truth #7 / 34-REVIEW.md WR-03): the prior
+      # gate tested only WINDOWS_CERTIFICATE, so enrolling the cert secret
+      # without the thumbprint secret rendered certificateThumbprint:"" into
+      # the --config override and hard-failed the Windows leg via signtool
+      # -- contradicting D-04's locked "CI must never fail on missing certs"
+      # invariant. The three-branch shell below restores it: (1) ALL THREE
+      # Windows secrets present -> sign, (2) the cert present but the
+      # thumbprint and/or password missing -> warn and ship unsigned, job
+      # stays green, (3) none present -> the existing default. No branch
+      # ever calls `exit 1`.
+      #
+      # WR-02 (gap cycle 2 review): branch (1) originally tested only the
+      # cert + thumbprint, leaving WINDOWS_CERTIFICATE_PASSWORD unchecked
+      # anywhere in the workflow -- so a cert+thumbprint-without-password
+      # secret set still reached the pwsh import step and hard-failed the
+      # leg. The password is now part of both gates.
+      #
+      # WR-02 (gap cycle 3 review): the inverse partial set -- cert ABSENT
+      # but the thumbprint and/or password present -- previously fell to the
+      # unconditioned default with no diagnostic here (only the generic
+      # "Warn if Windows signing will be skipped" step above fired, which
+      # reads as "nothing enrolled"). A dedicated elif now names that the
+      # WINDOWS_CERTIFICATE secret itself is the missing one. Additive only:
+      # it never merges a signing override and never calls exit 1, so the
+      # all-present and all-absent paths the live run proved are unchanged.
+      #
+      # WR-03 secondary defect: `args` is secret-derived (the thumbprint is
+      # interpolated into it via CONFIG_OVERRIDE), so the old single-line
+      # `echo "args=..." >> "$GITHUB_OUTPUT"` form let a secret containing a
+      # newline inject arbitrary step outputs. All three branches now emit
+      # via a heredoc whose delimiter is randomised per run from bash's
+      # $RANDOM (GitHub's documented remedy for non-literal output values;
+      # openssl/uuidgen are not reliably available under Git Bash on
+      # windows-latest, where this step runs).
+      - name: Compute tauri-action build args (Windows signing override merge)
+        id: build_args
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" = "windows-latest" ] && [ -n "$WINDOWS_CERTIFICATE" ] && [ -n "$WINDOWS_CERT_THUMBPRINT" ] && [ -n "$WINDOWS_CERTIFICATE_PASSWORD" ]; then
+            CONFIG_OVERRIDE=$(printf -- '--config {"bundle":{"windows":{"certificateThumbprint":"%s","digestAlgorithm":"sha256","timestampUrl":"http://timestamp.digicert.com"}}}' "$WINDOWS_CERT_THUMBPRINT")
+            VALUE="${{ matrix.args }} ${CONFIG_OVERRIDE}"
+          elif [ "${{ matrix.platform }}" = "windows-latest" ] && [ -n "$WINDOWS_CERTIFICATE" ]; then
+            echo "::warning::WINDOWS_CERTIFICATE is set but WINDOWS_CERT_THUMBPRINT and/or WINDOWS_CERTIFICATE_PASSWORD is missing; shipping unsigned"
+            VALUE="${{ matrix.args }}"
+          elif [ "${{ matrix.platform }}" = "windows-latest" ] && { [ -n "$WINDOWS_CERT_THUMBPRINT" ] || [ -n "$WINDOWS_CERTIFICATE_PASSWORD" ]; }; then
+            echo "::warning::WINDOWS_CERT_THUMBPRINT/WINDOWS_CERTIFICATE_PASSWORD is set but WINDOWS_CERTIFICATE is missing; shipping unsigned (the Windows cert secret itself is not enrolled)"
+            VALUE="${{ matrix.args }}"
+          else
+            VALUE="${{ matrix.args }}"
+          fi
+          DELIM="ARGS_${RANDOM}${RANDOM}${RANDOM}"
+          {
+            echo "args<<$DELIM"
+            echo "$VALUE"
+            echo "$DELIM"
+          } >> "$GITHUB_OUTPUT"
+
+      # CR-02 (gap cycle 2 review): `build/` is BOTH tauri.conf.json's
+      # `frontendDist` AND meta/buildSidecarSea.ts's scratch directory. Once
+      # GAP-1 made `build/` reachable by tauri-action, Tauri began embedding
+      # every SEA/Electron intermediate into the shipped binary via
+      # `generate_context!`/EmbeddedAssets and serving it over
+      # tauri://localhost: a ~58 MB downloaded Node dist tarball
+      # (build/node-dist), the 13 MB UNMINIFIED full-backend bundle
+      # (build/main/sidecar-sea-bundle.js -- Steam auth, token store and
+      # depot code, fetchable from the webview), the raw SEA blob, and the
+      # Electron main/preload output Tauri never loads. This step removes
+      # them AFTER the sidecar binary has already been produced into
+      # src-tauri/binaries/ and BEFORE tauri-action reads frontendDist.
+      #
+      # The two `test` lines are deliberate fail-loud guards, not decoration:
+      # if a future prune line over-reaches and eats the renderer output (or
+      # the macOS bridge assets vite copies from public/), this step fails
+      # here rather than silently shipping an empty webview.
+      - name: Prune non-frontend build intermediates before bundling
+        shell: bash
+        env:
+          IS_MACOS: ${{ startsWith(matrix.platform, 'macos') }}
+        run: |
+          rm -rf build/main build/preload build/node-dist
+          rm -f build/sea-config.json build/sidecar-prep.blob
+          test -f build/index.html
+          if [ "$IS_MACOS" = "true" ]; then
+            test -d build/bin
+          fi
+
+      - uses: tauri-apps/tauri-action@v1
+        with:
+          tagName: v__VERSION__
+          releaseName: 'GameLib v__VERSION__'
+          releaseBody: 'See the assets below to download and install.'
+          releaseDraft: true
+          prerelease: true
+          args: ${{ steps.build_args.outputs.args }}
