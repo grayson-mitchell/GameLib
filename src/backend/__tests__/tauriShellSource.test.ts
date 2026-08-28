@@ -1833,15 +1833,36 @@ describe('Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09) deep-link/single-instanc
     }
   )
 
+  // NARROWED by Phase 35 plan 07 (Task 1, operator decision `option-c`, 2026-08-29). This list
+  // used to carry FOUR tokens -- both spellings of `tauri-plugin-single-instance` AND both
+  // spellings of `tauri-plugin-deep-link` -- on the reading that D-44-A rejected "a plugin-based
+  // guard" wholesale. It did not. Re-read the record it pins (`src-tauri/src/main.rs`, the
+  // single-instance guard's own comment block): the mechanism is specifically that a PLUGIN
+  // GUARD cannot run before `tauri::Builder::default()`, so a secondary process reaches
+  // `.setup()` and spawns its own sidecar before the plugin could ever tell it "you are
+  // secondary". That argument bites `tauri-plugin-single-instance` and nothing else --
+  // `tauri-plugin-deep-link` is not a guard, registers no early-exit, and spawns no second
+  // anything; it only asks the OS to associate a scheme and hands back the URL.
+  //
+  // So the deep-link half of this gate was over-broad: it forbade the ONE crate that can
+  // perform the OS-level registration `src/backend/main.ts:501-507` performs today and which
+  // dies with the Electron build. Plan 35-07 Task 1 put that conflict in front of the operator
+  // as a blocking decision rather than letting an executor quietly widen the list, and
+  // `option-c` was selected: register `gamelib://` on macOS and Linux via
+  // `tauri-plugin-deep-link`, register NOTHING on Windows, and do NOT adopt
+  // `tauri-plugin-single-instance`.
+  //
+  // The single-instance half below is therefore UNCHANGED and still load-bearing. What the
+  // deep-link half used to assert is not simply dropped -- it is replaced, at greater strength,
+  // by the positive describe block that follows this one, which pins that the plugin is wired
+  // through `protocol_url_arg` and that Windows registration is structurally unreachable.
   const REJECTED_PLUGIN_TOKENS = [
     'tauri_plugin_single_instance',
-    'tauri-plugin-single-instance',
-    'tauri_plugin_deep_link',
-    'tauri-plugin-deep-link'
+    'tauri-plugin-single-instance'
   ]
 
   test.each(REJECTED_PLUGIN_TOKENS)(
-    'the real source does NOT contain %s (D-44-A: hand-rolled guard, no plugin)',
+    'the real source does NOT contain %s (D-44-A: hand-rolled guard, no single-instance plugin)',
     (token) => {
       expect(loadMainRsCode()).not.toContain(token)
     }
@@ -1854,6 +1875,138 @@ describe('Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09) deep-link/single-instanc
       expect(loadMainRsCode(syntheticSource)).toContain(token)
     }
   )
+})
+
+/**
+ * Phase 35 plan 07 (D-07 / D-05, REQ-35-05 / REQ-35-16): the OS deep-link registration that
+ * replaces `src/backend/main.ts:501-507`. Pins the three properties that make this addition
+ * safe, each of which would otherwise be a silent regression:
+ *
+ *   1. The plugin is actually registered on the builder (without it the callback never fires
+ *      and `gamelib://` silently stops working, with nothing failing anywhere).
+ *   2. The callback's dispatch is guarded by `protocol_url_arg`, this file's single
+ *      input-validation choke point (T-35-25 / T-34.5-G6-20) -- reached indirectly through
+ *      `deep_link_decision`, so BOTH links are asserted, not just the outer one.
+ *   3. Runtime `register()` is unreachable on Windows (T-35-28 / D-05 / `U-34.5-18`). This is
+ *      the assertion that carries the Task 1 decision: `acquire_single_instance()` is
+ *      `#[cfg(unix)]`, so a Windows registration would make every external `gamelib://` open
+ *      start a SECOND app with a SECOND sidecar over one set of store files and one download
+ *      queue. It is pinned STRUCTURALLY (the nearest enclosing `#[cfg(...)]` must be the Linux
+ *      one) rather than by a "does not contain windows" substring search, because a substring
+ *      gate cannot tell a cfg-gated call from an ungated one.
+ *
+ * This block is the replacement for the deep-link half of the D-44-A negative gate above,
+ * which plan 35-07 narrowed. Every assertion is paired with a RED self-test driving
+ * `loadMainRsCode(syntheticSource)`, per this file's own convention.
+ */
+describe('Phase 35 plan 07 main.rs OS deep-link registration (D-07/D-05)', () => {
+  const DEEP_LINK_POSITIVE_TOKENS = [
+    '.plugin(tauri_plugin_deep_link::init())',
+    'use tauri_plugin_deep_link::DeepLinkExt;',
+    'fn deep_link_decision(',
+    'on_open_url('
+  ]
+
+  test.each(DEEP_LINK_POSITIVE_TOKENS)(
+    'the real source contains %s',
+    (token) => {
+      expect(loadMainRsCode()).toContain(token)
+    }
+  )
+
+  test.each(DEEP_LINK_POSITIVE_TOKENS)(
+    'self-test (RED proof): a synthetic source lacking %s does NOT satisfy the gate',
+    (token) => {
+      expect(loadMainRsCode('fn main() {}\n')).not.toContain(token)
+    }
+  )
+
+  test('T-35-25: the deep-link callback routes its candidate through deep_link_decision', () => {
+    expect(loadMainRsCode()).toContain('deep_link_decision(&candidate)')
+  })
+
+  test('T-35-25: deep_link_decision itself calls protocol_url_arg -- the second half of the link', () => {
+    // Asserted as a REGION, not as two independent substrings anywhere in the file: a
+    // `deep_link_decision` that validated nothing, next to an unrelated `protocol_url_arg`
+    // call a thousand lines away, would satisfy a naive two-token gate.
+    const code = loadMainRsCode()
+    const start = code.indexOf('fn deep_link_decision(')
+    expect(start).toBeGreaterThan(-1)
+    const body = code.slice(start, start + 400)
+    expect(body).toContain('protocol_url_arg(')
+  })
+
+  test('self-test (RED proof): a deep_link_decision that validates nothing fails the region gate', () => {
+    const vacuous =
+      'fn deep_link_decision(candidate: &str) -> DeepLinkDecision {\n' +
+      '    DeepLinkDecision::Dispatch(candidate.to_string())\n' +
+      '}\n' +
+      'fn elsewhere() { let _ = protocol_url_arg(&[]); }\n'
+    const code = loadMainRsCode(vacuous)
+    const start = code.indexOf('fn deep_link_decision(')
+    expect(start).toBeGreaterThan(-1)
+    expect(code.slice(start, start + 120)).not.toContain('protocol_url_arg(')
+  })
+
+  test('T-35-26: DeepLinkDecision::Reject carries a byte count, with no field able to hold the payload', () => {
+    const code = loadMainRsCode()
+    expect(code).toContain('Reject { bytes: usize }')
+  })
+
+  /**
+   * Returns the nearest `#[cfg(...)]` attribute line ABOVE the (single) `register_all()` call
+   * site, or null if there is none. Walking upward is what makes this a real gate: it cannot
+   * be satisfied by a `#[cfg(target_os = "linux")]` sitting anywhere else in the file.
+   */
+  function cfgGuardAboveRegisterAll(source?: string): string | null {
+    const lines = loadMainRsCode(source).split('\n')
+    const callIdx = lines.findIndex((line) => line.includes('register_all()'))
+    if (callIdx === -1) return null
+    for (let i = callIdx; i >= 0; i--) {
+      const trimmed = lines[i].trim()
+      if (trimmed.startsWith('#[cfg(')) return trimmed
+    }
+    return null
+  }
+
+  test('T-35-28: register_all() has exactly one call site', () => {
+    const occurrences = loadMainRsCode().split('register_all()').length - 1
+    expect(occurrences).toBe(1)
+  })
+
+  test('T-35-28 / D-05: the only register_all() call site sits under #[cfg(target_os = "linux")]', () => {
+    expect(cfgGuardAboveRegisterAll()).toBe('#[cfg(target_os = "linux")]')
+  })
+
+  test('self-test (RED proof): an UNGATED register_all() does not satisfy the cfg gate', () => {
+    const ungated =
+      'fn setup() {\n    let _ = app.deep_link().register_all();\n}\n'
+    expect(cfgGuardAboveRegisterAll(ungated)).toBeNull()
+  })
+
+  test('self-test (RED proof): a register_all() gated on WINDOWS does not satisfy the cfg gate', () => {
+    const windowsGated =
+      'fn setup() {\n    #[cfg(windows)]\n    {\n        let _ = app.deep_link().register_all();\n    }\n}\n'
+    expect(cfgGuardAboveRegisterAll(windowsGated)).toBe('#[cfg(windows)]')
+    expect(cfgGuardAboveRegisterAll(windowsGated)).not.toBe(
+      '#[cfg(target_os = "linux")]'
+    )
+  })
+
+  test("main.ts:501's `process.env.CI !== 'e2e'` guard is carried forward, not dropped", () => {
+    // The Electron build refused to rewrite the host's OS protocol association during an
+    // automated test run. That intent survives the port or a CI machine silently becomes the
+    // default gamelib:// handler.
+    expect(loadMainRsCode()).toContain(
+      'std::env::var("CI").as_deref() == Ok("e2e")'
+    )
+  })
+
+  test('self-test (RED proof): a source without the CI guard does NOT satisfy that gate', () => {
+    expect(loadMainRsCode('fn main() {}\n')).not.toContain(
+      'std::env::var("CI").as_deref() == Ok("e2e")'
+    )
+  })
 })
 
 // Debug session `finder-reveal-no-selection` (2026-08-23), closing Phase 34.3 live-gate item 2 /

@@ -32,6 +32,20 @@ keyring = { version = "3", features = ["apple-native", "windows-native", "sync-s
 tauri-plugin-updater = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-clipboard-manager = "2"
+# Phase 35 plan 07 (D-07, REQ-35-05/REQ-35-16): registers `gamelib://` with the OS, replacing
+# `src/backend/main.ts:501-507`'s `protocol.handle('gamelib', ...)` +
+# `app.setAsDefaultProtocolClient('gamelib')`, which die with the Electron build. First-party
+# (`tauri-apps`, `github.com/tauri-apps/plugins-workspace`), versioned in lockstep with core
+# `tauri`, human-verified against crates.io at the plan's Task 2 gate before this line was added.
+# Pinned `"2"` like every other `tauri-plugin-*` above.
+#
+# The companion single-instance plugin its README recommends pairing with is deliberately NOT
+# added: decision D-44-A rejected that crate with a mechanism that still holds. The full record,
+# and the reason Windows is not registered at all, live at the single-instance guard in
+# `src/main.rs` -- deliberately named there and not here, because that file's source gate strips
+# comments before matching, whereas a plain grep over this file cannot tell a rationale comment
+# from a dependency line.
+tauri-plugin-deep-link = "2"
 
 # SPIKE 016 (34.4.1-21-PLAN.md Task 2) -- promoted from ALREADY-RESOLVED transitive
 # dependencies of `wry` (see Cargo.lock) to direct, macOS-only dependencies at their

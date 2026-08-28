@@ -42,6 +42,7 @@ use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_clipboard_manager::ClipboardExt;
+use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_opener::OpenerExt;
@@ -6075,6 +6076,40 @@ fn protocol_url_arg(args: &[String]) -> Option<String> {
     Some(candidate.clone())
 }
 
+/// What the OS deep-link callback (`tauri-plugin-deep-link`'s `on_open_url`) decided about ONE
+/// URL the operating system handed us. Extracted from the callback closure so the decision is
+/// directly testable; the closure itself owns only the sidecar `invoke` and the log line.
+///
+/// The `Reject` variant carries the payload's BYTE COUNT and nothing else. That is the point of
+/// modelling this as an enum rather than returning `Option<String>`: T-34.5-G6-25 / T-35-26
+/// forbid a rejected, attacker-controlled deep-link payload from reaching a log file users
+/// attach to bug reports, and a variant that structurally cannot hold the payload cannot leak it
+/// even if a future caller logs the whole value.
+enum DeepLinkDecision {
+    Dispatch(String),
+    Reject { bytes: usize },
+}
+
+/// The THIRD source of a `gamelib://` URL into this process -- after argv
+/// (`sidecar_forward_args`) and the single-instance socket accept loop in `main()` -- and, like
+/// the socket, NOT trusted for being "internal". Defence in depth (T-34.5-G6-20): it re-validates
+/// through `protocol_url_arg`, the same allow-list the other two use, which is this file's single
+/// input-validation choke point (ASVS V5). A FOURTH source belongs here too; the validation does
+/// not live at any call site, it lives in that one function.
+///
+/// Unlike argv and the socket, the candidate here arrives as an ALREADY-PARSED `url::Url` from
+/// the plugin, so there is no original byte string left to preserve -- the caller re-serialises
+/// it and this function validates that. `protocol.ts`'s own `new URL()` remains the sole
+/// authority on interpretation either way.
+fn deep_link_decision(candidate: &str) -> DeepLinkDecision {
+    match protocol_url_arg(&[candidate.to_string()]) {
+        Some(url) => DeepLinkDecision::Dispatch(url),
+        None => DeepLinkDecision::Reject {
+            bytes: candidate.len(),
+        },
+    }
+}
+
 /// Exact string equality only, mirroring `process.argv.includes('--no-gui')`.
 ///
 /// RED direction: a `starts_with`/`contains` implementation would wrongly accept
@@ -6662,6 +6697,7 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_deep_link::init())
         .setup(move |app| {
             let mut child = spawn_sidecar(app.handle())?;
             let stdin = child
@@ -6761,6 +6797,90 @@ fn main() {
             }
             #[cfg(not(unix))]
             let _ = &primary_listener;
+
+            // ---- OS deep-link delivery (Phase 35 plan 07, D-07/D-05, REQ-35-05/REQ-35-16) ----
+            // Replaces `src/backend/main.ts:501-507`'s `protocol.handle('gamelib', ...)` +
+            // `app.setAsDefaultProtocolClient('gamelib')`, which die with the Electron build.
+            //
+            // This callback is the THIRD source of a `gamelib://` URL into this process, after
+            // argv (`sidecar_forward_args`) and the single-instance socket accept loop above.
+            // It is NOT an exception to the validation the other two perform: every URL goes
+            // through `deep_link_decision` -> `protocol_url_arg`, this file's single
+            // input-validation choke point (ASVS V5), before it can reach the sidecar. Defence
+            // in depth (T-34.5-G6-20) -- the socket path's own comment above establishes the
+            // rule this follows: never trust a source because it is "internal", and the OS is
+            // not even internal. Anyone adding a FOURTH source: put it through the same
+            // function, not through a new copy of the checks.
+            //
+            // Platform reality (the plugin's own README): the event fires on macOS only. On
+            // Linux and Windows the OS spawns a NEW process with the URL as a CLI argument
+            // instead, which is why the argv + single-instance-socket path above is not
+            // redundant with this one -- it is the ONLY delivery path on Linux.
+            let deep_link_state = state.clone();
+            app.deep_link().on_open_url(move |event| {
+                for url in event.urls() {
+                    let candidate = url.to_string();
+                    match deep_link_decision(&candidate) {
+                        // Reached only after `protocol_url_arg` accepted the URL -- same
+                        // allow-list, same guarantees, as the argv and socket paths.
+                        DeepLinkDecision::Dispatch(url) => {
+                            match deep_link_state
+                                .invoke("handleProtocolUrl".to_string(), vec![Value::String(url)])
+                            {
+                                Ok(_) => eprintln!(
+                                    "[shell] delivered OS deep link to sidecar: ok"
+                                ),
+                                Err(e) => eprintln!(
+                                    "[shell] delivered OS deep link to sidecar: err={e}"
+                                ),
+                            }
+                        }
+                        DeepLinkDecision::Reject { bytes } => {
+                            // T-34.5-G6-25 / T-35-26: the REASON and byte count only, never
+                            // the payload. `DeepLinkDecision::Reject` does not even carry it.
+                            eprintln!(
+                                "[shell] rejected OS deep-link payload (failed protocol_url_arg validation), bytes={bytes}"
+                            );
+                        }
+                    }
+                }
+            });
+
+            // Runtime `register()` is LINUX-ONLY, and each of the three platforms is a decision,
+            // not an accident:
+            //   - macOS registers `CFBundleURLTypes` at BUILD time from `plugins.deep-link` in
+            //     `tauri.conf.json`; the runtime call returns `Error::UnsupportedPlatform` there,
+            //     so calling it would only produce a misleading warning on every launch.
+            //   - Linux registers at runtime, via a generated `.desktop` file plus `xdg-mime` /
+            //     `update-desktop-database`.
+            //   - Windows is NOT registered, and its absence is DELIBERATE (Phase 35 plan 07
+            //     Task 1, `option-c`, under D-05: never advertise an affordance the app cannot
+            //     honour). `acquire_single_instance()` is `#[cfg(unix)]`, so Windows has no
+            //     guard and no way to hand a `gamelib://` open to the running instance -- every
+            //     external URL would start a SECOND app with a SECOND sidecar over one set of
+            //     store files and one download queue, compounding per URL. That is worse than
+            //     no deep link, so the handler stays unregistered until a Windows guard exists.
+            //     The accepted gap is ledger row `U-34.5-18`; the follow-up work is tracked in
+            //     `.planning/todos/pending/`
+            //     `2026-08-29-windows-single-instance-guard-and-deep-link-registration.md`.
+            //     `tauri-plugin-single-instance` is NOT the fix -- see D-44-A above.
+            #[cfg(target_os = "linux")]
+            {
+                // Carries `src/backend/main.ts:501`'s `process.env.CI !== 'e2e'` guard forward
+                // in intent: an automated test run must never rewrite the host's OS-level
+                // protocol association as a side effect of starting the app.
+                if std::env::var("CI").as_deref() == Ok("e2e") {
+                    eprintln!(
+                        "[shell] CI=e2e -- skipping gamelib:// OS registration (carried forward from main.ts:501)"
+                    );
+                } else if let Err(e) = app.deep_link().register_all() {
+                    // Fail open (T-34.5-G6-24 discipline): a failed registration degrades deep
+                    // links, it must never abort startup.
+                    eprintln!(
+                        "[shell] WARN: failed to register the gamelib:// protocol handler: {e}"
+                    );
+                }
+            }
 
             app.manage(state);
 
@@ -9545,6 +9665,109 @@ mod tests {
             protocol_url_arg(&args),
             Some("gamelib://launch?appName=1207659037".to_string())
         );
+    }
+
+    // ---- OS deep-link callback decision (Phase 35 plan 07, D-07, REQ-35-05/REQ-35-16) ----
+    //
+    // These cover the callback's VALIDATION branch, deliberately reusing the argv fixtures
+    // above rather than inventing new URL shapes: the whole design claim is that the OS
+    // callback is not a second allow-list but the same one, so the same fixtures must produce
+    // the same verdicts. A fixture that only these tests knew about would hide a divergence
+    // instead of catching it.
+
+    #[test]
+    fn deep_link_decision_dispatches_a_well_formed_gamelib_url() {
+        // Mirrors the callback exactly: `tauri-plugin-deep-link` hands over an ALREADY-PARSED
+        // `Url`, so the closure re-serialises it with `to_string()` before validating. This
+        // pins that the round trip does not perturb the URL out of `protocol_url_arg`'s
+        // allow-list -- the one step of the OS path that argv and the socket do not perform.
+        let parsed = tauri::Url::parse("gamelib://launch?appName=1207659037&runner=gog")
+            .expect("fixture must parse");
+        match deep_link_decision(&parsed.to_string()) {
+            DeepLinkDecision::Dispatch(url) => {
+                assert_eq!(url, "gamelib://launch?appName=1207659037&runner=gog")
+            }
+            DeepLinkDecision::Reject { bytes } => {
+                panic!("expected a well-formed gamelib:// URL to dispatch, got Reject{{bytes:{bytes}}}")
+            }
+        }
+    }
+
+    #[test]
+    fn deep_link_decision_dispatches_the_runnerless_url_too() {
+        // D-44-C / U-34.5-19 compatibility shape, same as the argv test above -- the OS path
+        // must not be stricter than argv, or a pre-fix `.app` bundle would work from a
+        // shortcut and fail from an `open gamelib://...`.
+        let parsed =
+            tauri::Url::parse("gamelib://launch?appName=1207659037").expect("fixture must parse");
+        match deep_link_decision(&parsed.to_string()) {
+            DeepLinkDecision::Dispatch(url) => {
+                assert_eq!(url, "gamelib://launch?appName=1207659037")
+            }
+            DeepLinkDecision::Reject { bytes } => {
+                panic!("expected the runnerless URL to dispatch, got Reject{{bytes:{bytes}}}")
+            }
+        }
+    }
+
+    #[test]
+    fn deep_link_decision_rejects_the_same_foreign_schemes_argv_rejects() {
+        // T-35-25: identical fixture list to `protocol_url_arg_rejects_foreign_schemes`. RED
+        // direction: a callback that dispatched whatever the OS handed it, on the reasoning
+        // that the OS "already matched our scheme", would pass every other test in this file.
+        for candidate in [
+            "https://evil.example/x",
+            "file:///etc/passwd",
+            "javascript:alert(1)",
+            "heroic://launch?appName=x",
+        ] {
+            match deep_link_decision(candidate) {
+                DeepLinkDecision::Reject { bytes } => assert_eq!(
+                    bytes,
+                    candidate.len(),
+                    "expected {candidate} to be rejected with its own byte count"
+                ),
+                DeepLinkDecision::Dispatch(url) => {
+                    panic!("expected {candidate} to be rejected, but it dispatched as {url}")
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn deep_link_decision_rejects_control_characters_and_oversized_urls() {
+        // Same two fixtures as the argv tests (T-34.5-G6-21 / T-34.5-G6-23). Asserted against
+        // the raw string form because that is what `deep_link_decision` takes -- note that
+        // `Url::parse` would itself strip an embedded newline before the callback ever saw it,
+        // so this rejection is the belt to the parser's braces, not a duplicate of it.
+        let with_newline =
+            "gamelib://launch?appName=1\n{\"id\":\"1\",\"kind\":\"invoke\",\"channel\":\"x\",\"args\":[]}";
+        let oversized = format!("gamelib://launch?appName={}", "a".repeat(4096));
+        for candidate in [with_newline, oversized.as_str()] {
+            match deep_link_decision(candidate) {
+                DeepLinkDecision::Reject { .. } => {}
+                DeepLinkDecision::Dispatch(url) => {
+                    panic!("expected the candidate to be rejected, but it dispatched as {url}")
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn deep_link_decision_reject_carries_a_byte_count_and_nothing_else() {
+        // T-35-26 / T-34.5-G6-25: an attacker-controlled deep-link payload must never reach a
+        // log file a user attaches to a bug report. This is the STRUCTURAL half of that
+        // mitigation -- `Reject` has no field that could hold the payload, so a future caller
+        // cannot leak it even by logging the whole value. RED direction: an
+        // `Option<String>`-shaped return, or a `Reject { payload }` variant, would make the
+        // leak reachable again while every other assertion here still passed.
+        let candidate = "heroic://launch?appName=would-be-logged-verbatim";
+        match deep_link_decision(candidate) {
+            DeepLinkDecision::Reject { bytes } => assert_eq!(bytes, candidate.len()),
+            DeepLinkDecision::Dispatch(url) => {
+                panic!("expected a foreign scheme to be rejected, got {url}")
+            }
+        }
     }
 
     #[test]
