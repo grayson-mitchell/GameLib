@@ -346,14 +346,34 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
   })
 })
 
-describe('REQ-34.1-07 main.rs tray scope boundary (Phase 34.1 Plan 06, D-11 negative bound)', () => {
-  test('REQ-34.1-07 does NOT contain the declared out-of-scope menu depth (recents/dock/Reload/Debug/openDevTools)', () => {
+describe('main.rs tray scope boundary (Phase 34.1 Plan 06 D-11, NARROWED by Phase 35 Plan 06 D-06)', () => {
+  // This gate pinned all five of 34.1's declared tray exclusions. Phase 35 Plan 06
+  // (D-06/REQ-35-04) deliberately DISCHARGED two of them: the recent-games submenu and
+  // the About item are now in scope and shipped. Those two assertions are retired WITH
+  // their requirement — recorded here rather than deleted silently, so a reader can see
+  // that the bound moved by decision and not by someone deleting a failing line.
+  //
+  // The other three exclusions still hold and are still pinned. 35-06-SUMMARY.md records
+  // them as STILL NOT DONE, and main.rs carries the same list inline.
+  test('the tray still excludes the macOS dock menu and every devtools affordance', () => {
     const code = loadMainRsCode()
-    expect(code).not.toContain('recent')
     expect(code).not.toContain('dock')
-    expect(code).not.toContain('Reload')
-    expect(code).not.toContain('Debug')
+    // `openDevTools` (camelCase) is the ELECTRON API name from `tray_icon.ts:135`'s Debug
+    // item — the thing that must not be ported into the Tauri tray. Deliberately NOT
+    // `open_devtools` (snake_case): that is Tauri's own Rust API and main.rs legitimately
+    // calls it twice under `#[cfg(debug_assertions)]` to auto-open devtools in dev. Pinning
+    // the snake_case form would assert something that has never been true and has nothing to
+    // do with this bound.
     expect(code).not.toContain('openDevTools')
+
+    // Reload/Debug are asserted as MENU IDS, not as bare substrings. A bare
+    // `not.toContain('Debug')` false-positives on `#[derive(Clone, Debug, PartialEq)]`,
+    // which has nothing to do with a Debug menu item — a gate that fails for a reason it
+    // was never written to catch teaches people to edit the gate instead of the code.
+    expect(code).not.toContain('with_id("reload"')
+    expect(code).not.toContain('with_id("debug"')
+    expect(code).not.toContain('with_id("Reload"')
+    expect(code).not.toContain('with_id("Debug"')
   })
 })
 

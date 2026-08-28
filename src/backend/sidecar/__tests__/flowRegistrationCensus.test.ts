@@ -50,7 +50,13 @@ const HANDLERS = join(SIDECAR_DIR, 'handlers.ts')
 const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // Phase 34.6 Plan 05 (2026-08-23): send 11 -> 12 -- frontendReady legitimately
   // registered as a new send-kind channel (D-11), invoke count unchanged.
-  'appShellFlowRegistration.ts': { invoke: 7, send: 12 },
+  //
+  // Phase 35 Plan 06 (2026-08-28): invoke 7 -> 8 -- `trayResolveRunner` (D-06),
+  // called by the Rust shell rather than the renderer, resolving a bare appName
+  // to its Runner for the tray's recent-game launch. This gate did its job: it
+  // reddened the moment the channel landed unledgered, which is exactly the
+  // tripwire the header describes. Send count unchanged.
+  'appShellFlowRegistration.ts': { invoke: 8, send: 12 },
   'clipboardFlowRegistration.ts': { invoke: 1, send: 2 },
   'dialogFlowRegistration.ts': { invoke: 1, send: 0 },
   'downloadQueueFlowRegistration.ts': { invoke: 1, send: 4 },

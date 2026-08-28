@@ -2,13 +2,13 @@
  * Curated app-shell channel registration (Phase 34.1 Plan 04,
  * D-03/D-08/D-09/D-13, REQ-34.1-05/REQ-34.1-09/REQ-34.1-12).
  *
- * Registers the 19 sidecar-routed app-shell channels (7 invoke + 12 send) onto electronStub's
+ * Registers the 20 sidecar-routed app-shell channels (8 invoke + 12 send) onto electronStub's
  * `ipcMain` recorder, importing the REAL `backend/appshell/*` functions
  * extracted by Plan 34.1-02 unchanged (mirrors `installFlowRegistration.ts`'s
  * / `settingsFlowRegistration.ts`'s own objective — prove the real logic runs
  * behind the new transport, not a reimplementation):
  *
- *   invoke (7, `ipcMain.handle`):
+ *   invoke (8, `ipcMain.handle`):
  *     - `getCustomThemes`/`getThemeCSS`/`getCustomCSS` -> `appshell/themes.ts`
  *       (`main.ts:1512-1516`)
  *     - `getHeroicVersion` -> `electronStub`'s `app.getVersion()` — Electron
@@ -20,6 +20,15 @@
  *     - `getWebviewPreloadPath` -> a declared-empty `''` (D-12: Tauri has no
  *       `<webview>` tag, the login-webview story is Phase 34.4's, Phase 33
  *       D-09 already recorded `session` as an accepted gap)
+ *     - `trayResolveRunner` (Phase 35 Plan 06, D-06) -> resolves a bare
+ *       appName to its `Runner` for the Tauri tray's recent-game launch.
+ *       Called by the RUST SHELL, not the renderer — the same
+ *       `handlerRegistry` direction as `bootstrap.ts`'s `handleProtocolUrl`.
+ *       Since Phase 35 Plan 06 persisted `runner` onto `RecentGame`, this is
+ *       a LEGACY FALLBACK only: entries written after that change carry their
+ *       runner and skip this channel entirely. It is kept because every
+ *       pre-existing install's `games.recent` is full of entries that do not
+ *       carry one, and stranding those is worse than a probe
  *
  *   send (10, `ipcMain.on`):
  *     - `changeLanguage` -> `appshell/language.ts` (`main.ts:526-528`)
@@ -179,7 +188,7 @@ function syncTrayIcon(): void {
 }
 
 /**
- * Registers the 19 app-shell channels (7 invoke + 12 send). Called once from
+ * Registers the 20 app-shell channels (8 invoke + 12 send). Called once from
  * `handlers.ts` — this
  * module owns no side effects at import time beyond the imports above; the
  * caller decides when registration onto the handler registry happens.
@@ -192,7 +201,7 @@ function syncTrayIcon(): void {
 export function registerAppShellFlows(
   options: { skipInitialTraySync?: boolean } = {}
 ): void {
-  // ── invoke (7) ────────────────────────────────────────────────────────
+  // ── invoke (8) ────────────────────────────────────────────────────────
 
   ipcMain.handle('getCustomThemes', async () => getCustomThemes())
 
