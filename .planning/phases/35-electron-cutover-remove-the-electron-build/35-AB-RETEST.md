@@ -849,9 +849,88 @@ observation, not chased here: the Electron store held these values with `encrypt
 `value` populated — i.e. **in the clear on disk** — which is what makes a surviving 1310-byte
 `EPIC_SESSION_AP` a security question rather than a cosmetic one.
 
-**Tauri leg — Observed:**
+**Tauri leg — Observed:** THE RECORDED SYMPTOM DID NOT REPRODUCE. A DIFFERENT, ADJACENT DEFECT DID.
 
-**Verdict:**
+App self-report (`gamelib.log`), both lines, recorded independently as the source requires:
+
+```
+(19:02:52) Legendary logout: cleared 9 epicgames.com cookie(s) (measured post-removal delta)
+(19:02:52) Legendary logout: cleared storage — localStorage=3, sessionStorage=0,
+                             indexedDB=0, caches=0, serviceWorkers=0
+```
+
+`legendaryConfig/legendary/user.json` deleted. No `domain-scoped cookie clear removed nothing`
+warning fired (that warning is emitted when `deleted === 0`).
+
+Independent measurement of `~/Library/HTTPStorages/gamelib-shell.binarycookies`, parsed as
+binarycookies (page table -> per-cookie url/name/path/value offsets) so only LIVE records are
+counted. `strings(1)` was tried first and DISCARDED as unsound: a binary jar can retain tombstoned
+bytes after deletion, so a name appearing in the file is not evidence of a live cookie — it
+initially suggested `EPIC_SESSION_AP` might survive, and the structured parse showed it does not.
+
+| Named cookie | After logout |
+|---|---|
+| `EPIC_SESSION_AP` | **ABSENT** |
+| `EPIC_LOGIN_ID` | PRESENT, value length 96 |
+| `_tald` | PRESENT, value length 36 |
+| `_epicSID` | PRESENT, value length 32 |
+| `EPIC_DEVICE` | PRESENT, value length 32 |
+
+Live Epic-scoped survivors: `.epicgames.com` x4, `.www.epicgames.com` x1 (`__cf_bm`),
+`.ecosec.on.epicgames.com` x1 (`__cf_bm`) = **6 on `epicgames.com` suffixes**, plus `EPIC_DEVICE`
+on `.fortnite.com`, `.twinmotion.com`, `.unrealengine.com` and `.metahuman.com` — Epic-owned
+domains that a suffix filter on `epicgames.com` cannot match by construction. Jar total: 62 live
+cookies across all stores (Humble 19+1+1, Amazon 8+2, GOG 3+2, etc.), which is the shared-jar
+condition T-34.4.1-47 describes and the reason a blanket wipe is forbidden here.
+
+**What this changes:**
+
+1. **The lying report is FIXED and this run confirms it live.** The source's symptom — "self-reports
+   cleared 8, independent re-read shows 0 removed" — did NOT reproduce. `deleted` is now a genuine
+   post-removal delta (Plan 23), and 9 cookies really did go, including the session bearer.
+2. **`EPIC_SESSION_AP` IS GONE.** This is the specific artefact the pre-written severity call names
+   as the blocking harm ("a surviving 219-byte `EPIC_SESSION_AP` means a subsequent Epic login
+   webview can silently re-authenticate as the previous user"). Measured absent. **That stated
+   mechanism is closed.**
+3. **NEW DEFECT: the domain-scoped clear is INCOMPLETE, not inert.** Six live `epicgames.com`
+   cookies survive a logout that reported success, including `EPIC_LOGIN_ID` (96 bytes) and
+   `_epicSID`. This is a different failure from the one on file — partial rather than total — and it
+   is invisible to the current instrumentation, because a non-zero `deleted` count suppresses the
+   `removed nothing` warning. A count of what was removed cannot detect what was left.
+
+**MEASUREMENT LIMITATION, stated rather than glossed.** No BEFORE snapshot of the Tauri jar was
+taken (one was taken for Electron). So the "9 cleared" figure is corroborated only by the
+after-state being consistent with it, not independently verified as a delta. What IS independently
+established is the after-state: 6 Epic cookies live, `EPIC_SESSION_AP` absent. Any future re-drive
+should snapshot the jar before logging out.
+
+**Verdict:** `TAURI-ONLY` — for the incomplete clear.
+
+Precisely: the item AS WRITTEN (a false report) reproduces on NEITHER shell — Electron emits no
+report at all, and Tauri's report is now honest. The defect that IS present is Tauri-only and
+adjacent: an incomplete domain-scoped clear. Electron's partition wipe took everything (13 -> 0),
+because Epic owns its own `persist:epicstore` partition there; Tauri must filter by domain against
+a jar shared with Humble/GOG/Amazon, and the filter misses.
+
+**Severity — the pre-written call's STATED MECHANISM IS FALSIFIED, so it is not applied
+mechanically.** The call below says BLOCKS D-16 GATE on the grounds of a surviving
+`EPIC_SESSION_AP` enabling silent re-authentication. That cookie is measured absent, so that
+specific harm does not obtain. The residual is `EPIC_LOGIN_ID` / `_epicSID` / `_tald` /
+`EPIC_DEVICE` — identity and device-linkage values, not the session bearer — which is a materially
+lower severity than the call anticipated. **This is flagged for the operator's decision rather than
+silently downgraded or mechanically escalated**: neither applying a blocking call whose basis is
+disproven, nor dropping a pre-committed severity without saying so, would be honest.
+
+**For plan 35-09, which owns the fix (D-09).** Two concrete constraints this run establishes:
+(i) D-09's "delete the webview data directory wholesale" would clear all 62 cookies including
+Humble/GOG/Amazon — it is NOT the equivalent of Electron's partition wipe and would sign the user
+out of three other stores; (ii) any fix must cover Epic-owned domains that are not
+`epicgames.com` suffixes (`fortnite.com`, `unrealengine.com`, `twinmotion.com`, `metahuman.com` all
+carry a live `EPIC_DEVICE`), and must add an observable for what REMAINS, since a removed-count
+cannot detect a partial clear.
+
+**Redaction applied (T-35-04):** cookie names, domains and value LENGTHS only. No cookie value was
+read or recorded; no account identifier appears.
 
 **Severity if TAURI-ONLY:** BLOCKS D-16 GATE. This is explicitly security-relevant on a shared
 machine (a surviving 219-byte `EPIC_SESSION_AP` session token means a subsequent Epic login webview
