@@ -710,3 +710,60 @@ itself will reproduce this.
 
 **Open decision for the operator:** which Epic-owned domains belong in the clear's filter. That is a
 scope decision, not an implementation detail, which is why the executor did not improvise one.
+
+### OPERATOR DECISION 2026-08-29 — option (a), apex domain list
+
+**Decision:** extend the Epic cookie clear from the single `epicgames.com` suffix to an explicit
+list of Epic-owned apex domains — `epicgames.com`, `fortnite.com`, `unrealengine.com`,
+`twinmotion.com`, `metahuman.com` — keeping `cookie_domain_matches` and the existing post-removal
+re-read. `clear_all_browsing_data()` stays banned. Accepted cost: the list can go stale if Epic
+adds a domain, which is preferable to a filter that cannot match by construction.
+
+**Also decided, and endorsed by the executor as the one genuinely correct requirement in the
+original plan:** a `deleted === 0` outcome must FAIL the logout. Today
+`legendary/user.ts` swallows every wipe step into `logWarning('... failed (continuing)')`, which is
+the defect class that produced the original lying report.
+
+### Measured design constraints for the re-plan — a naive loop DOES NOT WORK
+
+Verified at source 2026-08-29, before any re-plan was written. **A plan that just loops
+`seam.clearCookies(label, host)` over five domains will FAIL on four of them, on macOS.**
+
+`seam.clearCookies(label, host)` takes ONE host, so looping is the right TS shape. But the Rust arm
+`humble_login_clear_cookies` (`main.rs:5747`) carries a **macOS-only Epic fallback** at `:5769`:
+
+```rust
+#[cfg(target_os = "macos")]
+if existing_window.is_none() && cookie_domain_matches(domain, Some(EPIC_COOKIE_DOMAIN)) {
+    return clear_default_data_store_cookies_for_domain(app, domain);
+}
+let window = existing_window.ok_or_else(|| format!("humble_login:no-window:{label}"))?;
+```
+
+`EPIC_COOKIE_DOMAIN` (`main.rs:3167`) is the single literal `"epicgames.com"`. Epic's login window
+is opened by `open_pristine_epic_login_window`, which **never registers a Tauri-managed
+`WebviewWindow`**, so `existing_window` is structurally always `None` on that path. Passing
+`fortnite.com` therefore fails the domain guard and falls straight through to the
+`humble_login:no-window:{label}` error. The four sibling domains would return errors, not clears.
+
+**So the re-plan needs, at minimum:**
+
+1. **Rust.** `EPIC_COOKIE_DOMAIN` becomes a SET, and the `:5770` guard matches any member. Note the
+   constant's doc comment at `:3161` currently asserts it is *"the only value that arm's
+   `clearEpicCookies` step ever passes as `domain`"* — that becomes FALSE on this change and must be
+   rewritten, not left. Same shape as `D-35-04-01`, a doc comment surviving into a falsehood.
+2. **The guard must stay narrow for every other caller.** Its comment records that Humble/GOG/Amazon
+   all fail the domain check and fall through unchanged. Widening the set must not widen it to them
+   — that property needs a test, not a reading.
+3. **`main.rs:9913`'s source gate** enumerates `humble_login_clear_cookies` call sites as an EXACT
+   structural (arm, guard) set, deliberately so a site can neither migrate nor lose its guard
+   silently. Any change here moves that gate; re-derive it rather than re-pinning it blind.
+4. **TS.** `EPIC_COOKIE_HOST` (`legendary/user.ts:24`) becomes the list; sum the per-domain deltas;
+   `deleted === 0` across ALL domains fails the logout.
+5. **Cookies only for the siblings.** The storage clear (`clearEpicStorage`) is origin-scoped by
+   construction — it runs JS inside the target page's own origin, which is exactly what keeps it
+   from touching another storefront. `EPIC_DEVICE` on the sibling domains is a COOKIE, so no
+   per-origin storage window is needed for them. Do not add one.
+
+**Sequencing:** this touches `src-tauri/src/main.rs`, so it cannot run concurrently with plan 35-10,
+which holds the same file.
