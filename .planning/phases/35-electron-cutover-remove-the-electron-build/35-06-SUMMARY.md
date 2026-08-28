@@ -51,7 +51,7 @@ requirements-partial: [REQ-35-04]
 # Metrics
 duration: ~2h
 completed: null
-commits: [d2ec066ae, 3546dfdd8, 8978be102, 7af33f2fe, a600c333e, 6872afcb2]
+commits: [d2ec066ae, 3546dfdd8, 8978be102, 7af33f2fe, a600c333e, 6872afcb2, caa84b46b, 918d2afb3, c95a1efcb]
 ---
 
 # Plan 35-06 — a real Tauri tray, and the one affordance that had to be gated rather than kept or deleted
@@ -64,11 +64,17 @@ commits: [d2ec066ae, 3546dfdd8, 8978be102, 7af33f2fe, a600c333e, 6872afcb2]
 
 D-05's rule is applied by MEASUREMENT, and the measurement came back clean on all four.
 
+> **CORRECTED 2026-08-28 after task 3's live gate.** Two of these four rows were wrong. The static
+> reasoning behind them was sound; what was missing is that **nothing had been observed running**.
+> Both are now fixed, and both must be RE-RUN in task 3. The original rows are struck through
+> rather than rewritten, so the record shows what was claimed and on what basis. Full analysis in
+> the second addendum.
+
 | Setting | Verdict | Evidence |
 |---|---|---|
 | **`noTrayIcon`** | **HONOURED** | Read synchronously in `.setup()` from `<appFolder>/config.json` *before* the `TrayIconBuilder` call; when set, the builder branch is skipped entirely and the shell logs `[shell] tray suppressed by the noTrayIcon setting -- not building a tray`. Mirrors `tray_icon.ts:20`'s `if (noTrayIcon) return null`. |
-| **`exitToTray`** | **HONOURED** | A `tauri::WindowEvent::CloseRequested` handler on the `main` window calls `api.prevent_close()` then `window.hide()`. Mirrors `src/backend/main.ts:288`, including its `&& !noTrayIcon` gate. |
-| **`startInTray`** | **HONOURED** | `window.hide()` inside `.setup()`, before the event loop runs, so the window is never displayed rather than shown-then-yanked. Mirrors `src/backend/main.ts:523`, including its `&& !noTrayIcon` gate. **See the first-paint risk below — this is the one Task 3 should watch hardest.** |
+| **`exitToTray`** | ~~HONOURED~~ → **HONOURED ONLY AFTER A RELAUNCH** (defect, now fixed) | **This row was wrong.** The handler existed and worked, but read the setting from the `.setup()` startup snapshot, so a mid-session toggle did nothing until relaunch. Measured live: the app QUIT on the red traffic-light with `exitToTray: true` on disk. Fixed in `caa84b46b` — the setting is now re-read at close time. **Must be re-verified: step 5b.** |
+| **`startInTray`** | ~~HONOURED~~ → **HONOURED, BUT DEFEATED IN DEV BUILDS** (defect, now fixed) | **This row was wrong for dev builds.** The `window.hide()` ran and logged success, then `open_devtools()` — gated only on `#[cfg(debug_assertions)]` — forced the window visible again. Fixed in `918d2afb3` by gating on `is_visible()`. **Must be re-verified: steps 5c and the `startInTray` half of 5a.** |
 | **`UseDarkTrayIcon`** (`darkTrayIcon`) | **HONOURED on Windows/Linux; deliberate no-op on macOS — now platform-gated** | `tray_image()` was read before deciding, not assumed. The chain is live end to end: `UseDarkTrayIcon.tsx` → `window.api.changeTrayColor()` → `appShellFlowRegistration.ts:387` → 500ms settle → `syncTrayIcon()` → `requestRustInvoke(RUST_TRAY_SET_ICON, [{dark}])` → `main.rs`'s `tray_set_icon` arm → `tray_image(dark)`. That function **does** consult `dark` — but only on Windows/Linux (`TRAY_ICON_DARK` vs `TRAY_ICON_LIGHT`). On macOS it returns the AppKit template silhouette regardless, as `main.rs:83-93` already states at length. |
 
 **Consequence for the plan's own Task 2 branching:** all four HONOURED means the plan's third
@@ -403,3 +409,109 @@ plan is still `INCOMPLETE`, `REQ-35-04` is still PARTIAL, and no live behaviour 
 Task 3's step 4 (launch a recent game from the tray) now additionally exercises the persisted-runner
 arm on any game launched after this change, and the legacy-fallback arm on the 18 entries already
 in the operator's store — worth exercising both rather than only whichever is on top.
+
+---
+
+# Second addendum — three defects found by task 3's live gate (2026-08-28)
+
+Task 3's operator run found **three defects, all in the tray settings code, all mine**. Fixed under
+operator authorisation; task 3 itself remains outstanding and now has re-runs to do.
+
+## The pattern worth naming
+
+Task 1's verdict table said all four settings were `HONOURED`, and I wrote that the evidence was
+static. It was. The defects are not places where the static reasoning was *wrong* — the code really
+did do what I said it did. They are places where **doing that was not sufficient**, and only
+running it could show that. The task 1 summary said "nothing has been observed running"; the
+verdict table did not carry that caveat into its own rows. It should have.
+
+Defect 1 is the sharpest instance, and it is a shape this project has recorded before — *a
+mitigation's rationale is the false part*. My own doc comment justified the startup snapshot:
+
+> reading them later would not help: `noTrayIcon` and `startInTray` are both decisions that can
+> only be made at startup.
+
+That is true, and it names **exactly two** settings. `exitToTray` was in the same struct and got
+swept along behind a justification it does not qualify for. The conclusion held for two members of
+a set; the third rode in unchecked. Nothing in the code review caught it because the sentence
+reads as if it covers everything nearby.
+
+## The three defects
+
+| # | Defect | Fix | Commit |
+|---|---|---|---|
+| 1 | `exitToTray` read from the startup snapshot, so a mid-session toggle did nothing until relaunch. Measured: app **quit** on the red traffic-light with `exitToTray: true` on disk | Handler attached whenever a tray exists (`!noTrayIcon`, legitimately startup-only); hide-vs-close decided inside it from a fresh `load_tray_settings()` read | `caa84b46b` |
+| 2 | `open_devtools()` forced the window visible after `startInTray`'s hide, defeating it in dev builds | Gated on `is_visible()`, matching the gate the LOGIN window's devtools call already used | `918d2afb3` |
+| 3 | `TRAY_SETTINGS` had two `OnceLock` initialisers (`default` vs `load_tray_settings`); whichever ran first won permanently. Not observed — it is a race | Lock made private to an inline `mod tray_settings_lock`; a second initialiser outside it **does not compile** | `c95a1efcb` |
+
+**Defect 2 mattered beyond its own bug: it made live-gate step 5c vacuous.** 5c passes when "a
+visible window appears because `noTrayIcon` overrode `startInTray`" — and before the fix a visible
+window appeared *whether or not the override worked*. A test that cannot fail is not evidence.
+
+**Defect 1's fail-safe direction is deliberate and tested.** `load_tray_settings()` degrades to
+all-false on a read failure, so `should_hide_on_close` returns false and the close **proceeds**. A
+user who can always close their window is the safe failure; a user trapped in a window that refuses
+to close because a config read failed is not. No `(requires restart)` label was added — that would
+have documented a limitation we do not need to have.
+
+**Defect 3 was fixed structurally, not by convention.** The previous arrangement's doc comment said
+the value was "read exactly once", which is precisely what made it look safe. A comment asserting an
+invariant is not an invariant. Proven: adding a second initialiser outside the module fails with
+`error[E0425]: cannot find value TRAY_SETTINGS in this scope`.
+
+## A source-gate blind spot found while writing defect 3's test
+
+`stripSourceComments` (`src/backend/testUtils/stripSourceComments.ts:42`) filters out every line
+matching `/^\s*(\/\/|\*|\/\*)/`. That is intended for block-comment continuation lines — but **a
+Rust deref-expression at the start of a line is indistinguishable from one**. Written the compact
+way, `*TRAY_SETTINGS.get_or_init(...)` was invisible to every source-level gate that reads
+`main.rs`: the first version of the new gate reported **0 matches against code that was plainly
+present**, and both of the original two initialisers had always been invisible for the same reason.
+
+The deref now sits on its own line with a comment saying not to re-inline it. **The shared stripper
+was deliberately NOT changed** — it feeds several gates, and altering it would silently change what
+they assert, which is the "fixing a fail-open gate recreates it one level over" shape. Flagged for a
+separate decision rather than fixed in passing.
+
+## Every new gate was RED-proven
+
+Each source-level assertion was checked against the pre-fix shape and confirmed to fail, then the
+file was restored by `cp` from a self-taken snapshot with a `sha256` equality check:
+
+| Gate | Against pre-fix shape | Against fixed shape |
+|---|---|---|
+| defect 1 — close decides from a fresh read | **1 failed** / 115 passed | 116 passed |
+| defect 2 — devtools gated on visibility | **1 failed** / 117 passed | 118 passed |
+| defect 3 — one initialiser (in-module) | **2 failed** / 118 passed | 120 passed |
+| defect 3 — one initialiser (out-of-module) | **compile error E0425** | builds clean |
+
+## Verification — second addendum
+
+| Gate | Result |
+|---|---|
+| `cargo test` | **174 passed, 0 failed, 1 ignored** (was 171 — 3 new) |
+| `cargo build` | clean, no warnings |
+| `pnpm codecheck` | **exit 0** |
+| `pnpm test --selectProjects Backend` | **181/182 suites, 4272 passed, 3 failed** |
+
+The 3 failures are `decompressPool.test.ts`'s LZMA native-decode trio — pre-existing and
+environmental, not chased. No frontend file was touched in this round, so the Frontend project was
+not re-run.
+
+## Status — task 3 outstanding, with RE-RUNS required
+
+Still `INCOMPLETE`. `REQ-35-04` still PARTIAL. **Task 3 is still NOT DONE.**
+
+These fixes change behaviour that task 3 already measured, so the following steps must be
+**re-run**, not carried forward from the earlier attempt:
+
+- **Step 5a** — the `startInTray` half. Previously invalid: defect 2 forced the window visible.
+- **Step 5b** — `exitToTray`. Previously failed. Now toggle it **mid-session, without relaunching**,
+  which is the case that was broken and the case the fix targets.
+- **Step 5c** — `noTrayIcon` overriding `startInTray`. Previously **vacuous**: a visible window
+  appeared regardless. Only now can this step distinguish pass from fail.
+
+Worth watching in the re-run: with defect 2 fixed, a dev run started with `startInTray` on will
+**not** open devtools, and will log
+`[shell] devtools NOT opened: 'main' webview is hidden (startInTray or --no-gui)`. That is the fix
+working, not a new fault.
