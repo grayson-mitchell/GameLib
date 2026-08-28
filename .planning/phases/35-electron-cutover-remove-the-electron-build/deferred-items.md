@@ -158,3 +158,113 @@ logged-out case additionally deserves its own message, since the underlying prom
 unreachable by design on this platform.
 
 **Status:** open, unowned. Neither blocks D-16.
+
+## D-35-04-01 — `main.rs`'s `resolve_packaged_app_root` doc comment now asserts a FALSEHOOD
+
+**Found during:** plan 35-04 Task 1, 2026-08-28.
+
+`src-tauri/src/main.rs:6141`'s doc comment on `resolve_packaged_app_root()` says:
+
+> `electronStub.app.isPackaged` stays `false` under the sidecar regardless of this value, so
+> `publicDir` still appends `'public'`, not `'build'`, even when this resolves correctly — the
+> packaged asset root itself is a named, deliberately unclosed residual (`R-34.5-G1-PKG`,
+> `34.5-APP-ROOT-SWEEP.md` § 3), not something this function claims to fix.
+
+**Every clause of that is now false.** Plan 35-04 made `app.isPackaged` a getter delegating to
+`isPackagedSidecar()`, and the packaged artifact was measured resolving
+`publicDir=<Resources>/build exists=true`. The residual is closed.
+
+**Why it was not fixed in 35-04:** the plan's `files_modified` does not include `main.rs`, and at
+the time Task 1 ran an operator `tauri dev` session was live — a Rust edit would have forced a
+rebuild/restart of their app, and the `cargo` gates a Rust change owes could not be run against a
+contended `src-tauri/target/` lock. Deliberately deferred rather than done half-gated.
+
+**This is the `summary-can-be-wrong-while-the-record-is-right` shape, inverted:** the CODE is now
+right and its own doc comment is the part that lies. A future reader of `main.rs` — which is
+exactly where 35-04's own objective says the defect is "independently documented from the Rust
+side" — will be told the defect is still open.
+
+**Fix when someone owns it:** rewrite that paragraph to record that half (b) was closed by plan
+35-04 and that `publicDir` now resolves to `<resource_dir()>/build`. Comment-only; owes a
+`cargo build` + the `Backend` suites that read `main.rs` off disk (`tauriShellSource.test.ts`,
+`appRootResolution.test.ts`). **Note `stripSourceComments` drops every line matching
+`/^\s*(\/\/|\*|\/\*)/`, so `///` doc lines are invisible to those gates — a source gate written
+over this comment would be vacuous.**
+
+**Status:** open. Small, and should not leave phase 35.
+
+## D-35-04-02 — the CrossOver index snapshot is deliberately NOT in `bundle.resources`
+
+**Found during:** plan 35-04 Task 2, 2026-08-28.
+
+`crossover_index/fetcher.ts` reads `join(publicDir, 'crossover-index.json.gz')`, so by the letter
+of D-19 half (a) it belongs in the bundle. It was omitted, on a read of the bundler:
+
+- `tauri-utils-2.9.3/src/resources.rs:186` — a literal path that does not exist yields
+  `Error::ResourcePathNotFound`, a HARD build failure.
+- `:257` — a glob that matches nothing yields `Error::GlobPathNotFound`, also hard.
+- **There is no optional-resource form in Tauri 2.9.3.**
+
+The file is gitignored and absent from a fresh clone, and `.github/workflows/release-tauri.yml:135`
+explicitly tolerates its absence (`|| echo "No published index yet; shipping without a bundled
+snapshot"`). A required entry would convert a documented-tolerable state into a build break —
+including breaking every local `tauri build`, as it would have broken 35-04's own.
+
+Harmless today: `loadBundledSnapshot()`'s own docstring states an absent snapshot is "a NORMAL
+cold-start, not an error" and it returns `null` at info level. And nothing regressed — the snapshot
+never shipped under the old `["../build/bin/"]` config either.
+
+**Fix when someone owns it:** either have the build step always produce the file (an empty/marker
+gzip when no published index exists, so the literal always resolves), or add a pre-bundle step that
+injects the entry into the config only when the file is present. Do NOT "fix" it by adding the
+literal — that breaks the contributor build.
+
+**Status:** open, low priority.
+
+## D-35-04-03 — six directory-symlinks in the PyInstaller `Python.framework` do not survive bundling
+
+**Found during:** plan 35-04's packaged-artifact probe, 2026-08-28. **Pre-existing, NOT caused by
+this plan — but load-bearing for the first time because of it.**
+
+`build/bin/` carries 12 symlinks. In the packaged `.app`, 0 symlinks survive:
+
+| source symlink | target | in bundle |
+|---|---|---|
+| `{legendary,gogdl,nile}/_internal/Python` | `Python.framework/Versions/3.12/Python` | dereferenced into a real 7,996,912-byte file (x3) |
+| `{legendary,gogdl,nile}/_internal/Python.framework/Python` | `Versions/Current/Python` | dereferenced into a real file (x3) |
+| `{legendary,gogdl,nile}/_internal/Python.framework/Resources` | `Versions/Current/Resources` | **MISSING** (x3) |
+| `{legendary,gogdl,nile}/_internal/Python.framework/Versions/Current` | `3.12` | **MISSING** (x3) |
+
+**Mechanism:** Tauri's resource walk skips directory entries (`resources.rs`:176-179 — "Skip
+directories"), and a symlink-to-DIRECTORY resolves to a directory, so it yields nothing. A
+symlink-to-FILE resolves to a file and is copied by value. Identical under the old array form; only
+the destination differed.
+
+**Why it matters now and did not before:** under `["../build/bin/"]` the tree shipped to
+`Contents/Resources/_up_/build/bin/`, which `publicDir` never read — the bundled runners were
+unreachable, so their internal layout was moot. As of this plan they are reachable and will be
+executed for the first time.
+
+**Measured impact: NONE.** All four bundled runners were executed directly from the read-only
+mounted DMG and all four succeeded — `legendary 0.21.0`, `gogdl 1.3.0`, `nile 1.2.0`,
+`comet 0.2.0`, every one exit 0. The PyInstaller loader uses `_internal/Python`, which is present
+as a real file; the missing links are the framework's cosmetic `Current`/`Resources` aliases.
+
+**Watch for:** any future runner that resolves through `Python.framework/Versions/Current/...`, or
+a `codesign`/notarisation step — a framework without its `Versions/Current` symlink is not a
+structurally valid macOS framework and **signing may reject it**. Phase 34.9's macOS packaging work
+is the natural owner.
+
+**Status:** open, no current functional impact, measured rather than assumed.
+
+## D-35-04-04 — `enrichmentFlows.test.ts` fails only under full-suite load
+
+**Found during:** plan 35-04 gate runs, 2026-08-28.
+
+`REQ-34.2-14 channel "getAnticheatInfo" ...` fails with `expect(response).toBeDefined()` receiving
+`undefined` when the whole `Backend` project runs, and passes 41/41 when the suite runs alone. It
+also passed in a full-project run that merely excluded `decompressPool.test.ts`. A frame-response
+timing assertion, not a defect this plan introduced — none of 35-04's files is in the enrichment
+path. New instance of MEMORY's `full-suite-run-manufactures-failures-under-load`.
+
+**Status:** open, unowned. Recorded so a future run does not re-diagnose it from scratch.
