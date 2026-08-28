@@ -269,7 +269,7 @@ path. New instance of MEMORY's `full-suite-run-manufactures-failures-under-load`
 
 **Status:** open, unowned. Recorded so a future run does not re-diagnose it from scratch.
 
-## D-35-05-01 — BLOCKING: plan 35-05's prescribed swap carries a silent total-data-loss defect
+## D-35-05-01 — RESOLVED 2026-08-29 (the prescribed method was corrected, not followed) — was BLOCKING: plan 35-05's prescribed swap carries a silent total-data-loss defect
 
 **Found during:** plan 35-05, Task 2 pre-read. **Measured, not code-read** (probe script run
 against the installed `conf@10.2.0`, in a scratchpad temp dir — the real store was never written).
@@ -323,7 +323,7 @@ satisfied by the library itself.
 
 **Status:** open. This is an input correction for whoever re-runs 35-05, not a nicety.
 
-## D-35-05-02 — BLOCKING: plan 35-05's site count is ~9, the real count is ~48
+## D-35-05-02 — RESOLVED 2026-08-29 (scope corrected to ~48 sites, operator-approved) — was BLOCKING: plan 35-05's site count is ~9, the real count is ~48
 
 **Found during:** plan 35-05, scope enumeration.
 
@@ -374,7 +374,12 @@ containment root, **not** the developer's real profile. The `tests-clobbering-re
 failure mode is structurally closed here. This lowers the severity of getting the fork wrong;
 it does not remove the need to choose.
 
-**Status:** open — blocking input for whoever resumes 35-05.
+**Status:** RESOLVED 2026-08-29. Both D-35-05-01 and D-35-05-02 were raised as blockers, put to the
+operator, and discharged: the prescribed method was corrected rather than followed, and the ~48-site
+scope was approved to stay in 35-05. Plan 35-05 is COMPLETE. **Left in the ledger deliberately** —
+the measurement (24 cache files collapsing onto one `config.json` inside the repo) is the reason
+`store_backend.ts` exists, and deleting the record would leave that shim looking like
+over-engineering to the next reader.
 
 ## D-35-05-03 — four stale `electron-store` log strings in `wine/manager/utils.ts`
 
@@ -556,3 +561,47 @@ hands the URL to a different application.
 dead once D-11 lands and should be deleted, or whether GameLib intends to support *running under*
 someone else's Flatpak runtime. Deleting them is the D-11-consistent reading; it was not this
 plan's call to make.
+
+## D-35-11-01 — the EOS remove confirmation cannot be app-styled without an IPC decision
+
+**Found during:** plan 35-11. **Recorded here on 2026-08-29 by the orchestrator** — it existed only
+inside `35-11-SUMMARY.md`, which is not where a later plan looks. `REQ-35-17` is satisfied on the
+path-rejection dialog and **NOT** on EOS; without this entry the requirement reads as discharged.
+
+`eos_overlay.ts`'s `remove(): Promise<boolean>` awaits the dialog and gates the destructive
+`legendary eos-overlay remove` on the answer; the renderer consumes the same boolean. The
+app-styled dialog path returns **`void`** — `onClick` does not survive the clone hop, and its
+serializable replacement `ButtonOptions.action` is a **closed enum with exactly one literal**
+(`'steamSignIn'`). There is no way to return a choice to the backend.
+
+**The decision someone must make:** either add a request/response IPC channel for dialog results, or
+move a destructive-action gate into the renderer — which changes the contract plan 35-11 and
+`T-35-45` explicitly protect. This is a design decision, not a polish task, which is why 35-11
+deliberately left the dialog native rather than restyling it badly.
+
+**Status:** open, unowned. Does not block D-16.
+
+## D-35-12-01 — the `com.heroicgameslauncher.hgl` identity survives D-11 in a Steam shortcut
+
+**Found during:** plan 35-12. **Recorded here on 2026-08-29 by the orchestrator** — it existed only
+inside `35-12-SUMMARY.md`.
+
+`T-35-52` states the `com.heroicgameslauncher.hgl` identity is *"deleted entirely"*. True of the
+manifests, **false** of `src/backend/shortcuts/nonesteamgame/nonesteamgame.ts:302`:
+
+```js
+if (isFlatpak) {
+  newEntry.LaunchOptions = `run com.heroicgameslauncher.hgl ${newEntry.LaunchOptions}`
+}
+```
+
+Under D-11 GameLib is never distributed under that Flathub id, so that branch writes a Steam
+shortcut asking Flatpak to launch **Heroic** with a GameLib deep link.
+
+**The decision:** are the `isFlatpak` branches in that file simply dead under D-11? ~119 further
+`flatpak` references survive across the tree, but they are a **different concern** — runtime
+detection of a Flatpak *host* (`isFlatpak`, `flatpakHome`, `flatpakRuntimeVersion`, and
+`flatpakSteamPath`, which detects the user's **Steam** installed as a Flatpak). Those are legitimate
+and were correctly left alone. Only the publishing-identity use is in question.
+
+**Status:** open, unowned. Behaviour change, outside 35-12's `files_modified`, so logged not fixed.
