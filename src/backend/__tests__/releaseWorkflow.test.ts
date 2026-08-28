@@ -276,20 +276,28 @@ describe('release-tauri.yml Windows cert material cleanup (WR-02 regression guar
   })
 })
 
-// 34-VERIFICATION.md failed truth #5 / 34-REVIEW.md CR-01: release-tauri.yml never runs
-// `electron-vite build`, yet tauri.conf.json has `beforeBuildCommand: ""` and
+// 34-VERIFICATION.md failed truth #5 / 34-REVIEW.md CR-01: release-tauri.yml never ran a
+// renderer build at all, yet tauri.conf.json has `beforeBuildCommand: ""` and
 // `frontendDist: "../build"` -- a directory only that command populates. These assertions
 // MUST fail against the pre-fix workflow (RED); GAP-1's fix (34-12 Task 2) makes them pass.
+//
+// Phase 35 plan 03 (D-12) retargeted the anchor from `pnpm exec electron-vite build` to
+// `pnpm exec vite build`. The guard is unchanged in substance -- it still asserts that a
+// renderer build exists and runs after the steam-bridge build and the CrossOver index
+// fetch, and before tauri-action. Only the command that performs it changed. The literal
+// string is deliberately exact: `electron-vite build` also contains the substring
+// `vite build`, so a loose anchor would have passed against the old workflow and made
+// this guard vacuous.
 describe('release-tauri.yml renderer + asset build steps (CR-01 / GAP-1 regression guard)', () => {
-  test('builds the renderer via electron-vite before bundling', () => {
+  test('builds the renderer via vite before bundling', () => {
     const source = loadReleaseWorkflow()
-    expect(source).toContain('run: pnpm exec electron-vite build')
+    expect(source).toContain('run: pnpm exec vite build')
   })
 
   test('the renderer build step precedes tauri-action', () => {
     const source = loadReleaseWorkflow()
     expect(source).toMatch(
-      /run: pnpm exec electron-vite build[\s\S]*?uses: tauri-apps\/tauri-action/
+      /run: pnpm exec vite build[\s\S]*?uses: tauri-apps\/tauri-action/
     )
   })
 
@@ -303,7 +311,7 @@ describe('release-tauri.yml renderer + asset build steps (CR-01 / GAP-1 regressi
   test('the steam-bridge build step precedes the renderer build', () => {
     const source = loadReleaseWorkflow()
     expect(source).toMatch(
-      /run: pnpm build-steam-bridge[\s\S]*?run: pnpm exec electron-vite build/
+      /run: pnpm build-steam-bridge[\s\S]*?run: pnpm exec vite build/
     )
   })
 
@@ -317,7 +325,7 @@ describe('release-tauri.yml renderer + asset build steps (CR-01 / GAP-1 regressi
   test('the crossover index fetch precedes the renderer build', () => {
     const source = loadReleaseWorkflow()
     expect(source).toMatch(
-      /gh release download crossover-index[\s\S]*?run: pnpm exec electron-vite build/
+      /gh release download crossover-index[\s\S]*?run: pnpm exec vite build/
     )
   })
 
@@ -700,7 +708,7 @@ describe('release-tauri.yml updater signing key preflight (WR-03 regression guar
     const guardIndex = stripped.indexOf("env.TAURI_SIGNING_PRIVATE_KEY == ''")
     expect(guardIndex).toBeGreaterThanOrEqual(0)
     for (const laterStep of [
-      'run: pnpm exec electron-vite build',
+      'run: pnpm exec vite build',
       'run: pnpm build:sidecar-sea',
       'uses: tauri-apps/tauri-action'
     ]) {
@@ -740,7 +748,7 @@ describe('release-tauri.yml updater signing key preflight (WR-03 regression guar
     expect(installDepsIndex).toBeGreaterThanOrEqual(0)
     expect(preflightIndex).toBeGreaterThan(installDepsIndex)
     for (const laterStep of [
-      'run: pnpm exec electron-vite build',
+      'run: pnpm exec vite build',
       'run: pnpm build:sidecar-sea',
       'uses: tauri-apps/tauri-action'
     ]) {

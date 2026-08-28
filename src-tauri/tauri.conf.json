@@ -5,7 +5,9 @@
   "identifier": "com.gamelib.shell",
   "build": {
     "frontendDist": "../build",
-    "beforeBuildCommand": ""
+    "beforeBuildCommand": "",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "pnpm exec vite"
   },
   "app": {
     "withGlobalTauri": true,

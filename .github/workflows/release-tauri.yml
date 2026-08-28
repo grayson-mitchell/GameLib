@@ -134,10 +134,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release download crossover-index --pattern crossover-index.json.gz --dir public --clobber || echo "No published index yet; shipping without a bundled snapshot"
 
-      # Phase 24 macOS Steam bridge helper: release:mac builds this via
-      # `build-steam-bridge && electron-vite build`. Without this step every
-      # macOS Tauri bundle ships without build/bin/... and the bridge is
-      # unusable. Precedes the renderer build to match release:mac's chain.
+      # Phase 24 macOS Steam bridge helper: the Electron release:mac script
+      # builds this inside its own chain, immediately before its renderer
+      # build. Without this step every macOS Tauri bundle ships without
+      # build/bin/... and the bridge is unusable. Precedes the renderer
+      # build below to match that ordering.
       #
       # CR-01 (gap cycle 2 review): meta/buildSteamBridgeShims.ts used to emit
       # to `public/bin/${process.arch}/darwin/` -- the BUILD HOST's arch.
@@ -162,9 +163,9 @@ jobs:
       # build/index.html. Without it, tauri-action either aborts with "Unable
       # to find your web assets" or ships an installer whose webview loads
       # nothing, on every matrix leg.
-      - name: Build renderer web assets (electron-vite)
+      - name: Build renderer web assets (vite)
         shell: bash
-        run: pnpm exec electron-vite build
+        run: pnpm exec vite build
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
