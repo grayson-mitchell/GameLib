@@ -835,3 +835,60 @@ Install alongside the existing `unhandledRejection` guard in `processGuards.ts`,
 the idempotence flag, the log-only discipline and the tests.
 
 **Status:** open, unowned, **deadline wave 8**.
+
+## D-35-09-02 — a FAILED Epic cookie clear is invisible to the user; T-35-39 is logged, not mitigated
+
+**Found during:** orchestrator verification of plan 35-09 Task 2, 2026-08-29. **The code is
+correct** — this is a gap in how far the fix reaches, not a defect in what it does. Raised before
+the Task 3 live gate so an operator does not discover it by burning a run.
+
+`T-35-39`'s mitigation text says a clear that removes nothing must reject "rather than
+warning-and-continuing, so the failure is unobservable" is closed. It is now observable **in
+`gamelib.log`**. It is not observable **to the person logging out.**
+
+**The full failure path, traced:**
+
+1. `legendary/user.ts` throws with a per-domain breakdown → `gamelib.log`. Good.
+2. `ipcMain.handle('logoutLegendary')` rejects → `window.api.logoutLegendary()` rejects.
+3. `GlobalState.epicLogout`'s `try/finally` does not swallow — correct — and rethrows.
+4. `Runner/index.tsx:44`'s `handleLogout` catches it and calls **`console.error`**.
+5. **Under Tauri, renderer `console.*` is visible only in the WKWebView inspector.** It reaches
+   neither `gamelib.log` nor the terminal `[shell]` sink (see `35-AB-RETEST.md`'s sink table).
+6. Meanwhile `epicLogout`'s inner `.finally` has already cleared the Epic library state, and
+   `handleLogout`'s `finally` recovers the button.
+
+`grep -n 'showDialogBoxModalAuto\|notify\|sendFrontendMessage' src/backend/storeManagers/legendary/user.ts`
+returns **nothing**.
+
+**So a failed, security-relevant clear looks exactly like a successful one:** library empties, button
+returns to normal, no message anywhere the user will ever look. The threat's stated harm — "the next
+user of a shared machine opens the login window already authenticated" — is not prevented by a log
+line nobody reads.
+
+**Why this was NOT fixed inline, deliberately.** The obvious fix is a dialog or notification from the
+backend, and that is not trivially safe here: this project has a recorded incident
+(`sidecar-dialog-reject-crashes`) where a rejecting dialog call crashed the sidecar, and
+`processGuards.ts`'s own governing rule is that "a fix that introduces a NEW throw/reject/exit path
+is worse than the bug it fixes". Adding a user-facing surface on a path that is *already* handling a
+failure needs its own care, not an opportunistic line.
+
+**Options for the operator:**
+
+- **(a) Toast/notification on logout failure.** Cheapest visible signal. Must not itself be able to
+  reject into the failing path.
+- **(b) Leave the user signed-IN on a failed clear** — i.e. do not clear `epic` library state when
+  the logout rejects, so the UI honestly reflects that logout did not complete. Arguably the most
+  correct, and the largest behaviour change.
+- **(c) Accept it and say so in the release notes** — the failure is recorded in `gamelib.log`,
+  which is what the diagnostics bundle collects.
+
+**Interaction with Task 3, and it matters:** the gate's step 4 says "note exactly what the UI told
+you". On a PASSING run the UI says nothing and that is fine. This entry exists so that if the run
+FAILS, the operator is not misled by a UI that looks identical either way — read the log, not the
+screen.
+
+**Also flagged by the executor and worth keeping beside this:** a logout against an already-empty
+jar now legitimately measures zero and therefore fails. That is the operator decision working as
+decided, but it is a real edge — a user who logs out twice in a row sees the second one fail.
+
+**Status:** open, unowned. Does not block Task 3.
