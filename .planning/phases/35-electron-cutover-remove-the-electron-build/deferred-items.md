@@ -571,3 +571,51 @@ plan's call to make.
 **Scoping note, folded in from a duplicate entry (see the convention note at the top of this file).** ~119 further `flatpak` references survive across the tree, but they are a **different concern** — runtime detection of a Flatpak *host* (`isFlatpak`, `flatpakHome`, `flatpakRuntimeVersion`, and `flatpakSteamPath`, which detects the user's **Steam** installed as a Flatpak). Those are legitimate and were correctly left alone. Only the publishing-identity use is in question.
 
 **Status:** open, unowned. Behaviour change, outside 35-12's `files_modified`, so logged not fixed.
+
+## D-35-08-01 — plan 35-08's Task 1 acceptance criteria contradict its own `key_links`; two are UNMET BY DESIGN
+
+**Found during:** plan 35-08 execution. **Status:** not a defect in the code. This entry exists so a
+later verifier scoring 35-08's acceptance criteria does not "close" it by adding dead code.
+
+Plan 35-08 names two mutually exclusive transports for the same commands.
+
+**Task 1's acceptance criteria** require `generate_handler!` registration, explicitly:
+
+```
+- `grep -c 'wake_lock_start\|wake_lock_stop' src-tauri/src/main.rs` is at least `4`
+  (two definitions + two `generate_handler!` entries).
+- `grep -A8 'generate_handler!' src-tauri/src/main.rs | grep -c 'wake_lock'` is at least `2`.
+```
+
+**The same plan's `must_haves.key_links`, and all of Task 2**, require the opposite:
+
+```yaml
+from: "src/backend/sidecar/electronStub.ts powerSaveBlocker"
+to:   "the Rust wake-lock command"
+via:  "requestRustInvoke, mirroring clipboard.writeText's RUST_CLIPBOARD_WRITE_TEXT forwarding"
+```
+
+These are different transports. `generate_handler!` is the **renderer's** surface — it holds exactly
+four relay commands (`sidecar_invoke`, `sidecar_send`, `open_external`, `sidecar_store_snapshot`).
+`requestRustInvoke` routes to **`dispatch_rust_channel`**, which is where every comparable arm
+already lives. Verified rather than assumed: the plan's own named exemplar, `clipboard.writeText` /
+`RUST_CLIPBOARD_WRITE_TEXT`, is a `dispatch_rust_channel` arm (`main.rs:1224`, `:1238`) and appears
+nowhere in `generate_handler!`.
+
+**Why satisfying the criteria literally would be worse than failing them.** Handler-only
+registration means the sidecar's calls never arrive at all — the seam would be dead. Registering in
+both places adds unreachable code AND hands the webview a power-management capability: app-defined
+`invoke_handler` commands require no capability permission (see the reasoning already written into
+`capabilities/default.json`), so a `generate_handler!` entry is directly reachable from renderer
+JavaScript, including the untrusted remote content that capability's scope warns about. That is
+against D-02's zero-renderer-grant stance and the same refusal `dialog:allow-open` and
+`deep-link:default` received.
+
+**Disposition:** the executor implemented the architecture and left both criteria unmet, reporting
+rather than improvising. Confirmed correct by the orchestrator. **A future verifier should score
+these two criteria as SUPERSEDED, not FAILED, and must not add `generate_handler!` entries.** The
+substance behind them — that both commands exist and are reachable from the JS side — is met and
+covered by `wakeLock.test.ts` plus the `dispatch_rust_channel` arms at `main.rs:6385` and `:6396`.
+
+Same shape as the 35-07 finding where an existing gate outlawed more than its decision did: a
+mechanically-checkable criterion encoding a wrong assumption about which surface a call arrives on.
