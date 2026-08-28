@@ -515,3 +515,44 @@ gated renderer-side. That is the single question blocking this item.
 content header. Pre-existing, untouched by plan 35-11, and not caused by its CSS change. Noted
 only because plan 35-11 read every `showDialogBoxModalAuto` call site in that file while
 identifying the two path-rejection ones (`:319` move, `:442` import).
+
+## `D-35-12-01` — the Heroic Flatpak application id survives D-11 in a Steam shortcut, not in a manifest
+
+**Found during:** plan 35-12, the post-deletion reference sweep.
+
+`src/backend/shortcuts/nonesteamgame/nonesteamgame.ts` still writes Heroic's Flatpak
+application id when adding a game to Steam as a non-Steam shortcut:
+
+```ts
+if (isFlatpak) {
+  newEntry.Exe = `"flatpak"`                                    // :262
+}
+// ...
+if (isFlatpak) {
+  newEntry.LaunchOptions = `run com.heroicgameslauncher.hgl ${newEntry.LaunchOptions}`  // :302
+}
+```
+
+**Why plan 35-12 did not fix it.** The plan's `files_modified` is `package.json`, `flatpak/`,
+`flathub/`, `.github/workflows/` and the new `meta/` test. This is a `src/backend/` runtime path,
+and removing the branch is a behaviour change rather than a deletion of dead packaging machinery.
+Scope boundary applied; logged rather than fixed.
+
+**Why it matters anyway.** Plan 35-12's own threat register entry `T-35-52` (Spoofing) says the
+`com.heroicgameslauncher.hgl` identity is handled because "the whole identity is deleted rather
+than renamed". That is true **for the distribution manifests**, which are gone. It is not true for
+this call site, which the mitigation text did not consider. The register's wording asserts a
+completeness it does not have — the same shape as MEMORY.md's
+`threat-mitigation-text-can-assert-false-parity`.
+
+**The concrete consequence.** D-11 means GameLib is never distributed as
+`com.heroicgameslauncher.hgl`. So if `isFlatpak` is ever true (it is derived from the presence of
+`/.flatpak-info`, not from the app id), this code writes a Steam shortcut that runs
+`flatpak run com.heroicgameslauncher.hgl "gamelib://launch?..."` — i.e. it asks Flatpak to launch
+**Heroic**, passing it a GameLib deep link. The shortcut either fails (Heroic not installed) or
+hands the URL to a different application.
+
+**What a future plan needs to decide:** whether the `isFlatpak` branches in this file are simply
+dead once D-11 lands and should be deleted, or whether GameLib intends to support *running under*
+someone else's Flatpak runtime. Deleting them is the D-11-consistent reading; it was not this
+plan's call to make.
