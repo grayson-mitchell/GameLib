@@ -49,7 +49,9 @@ import {
   RUST_DIALOG_SAVE,
   RUST_NOTIFICATION_SHOW,
   RUST_SHELL_OPEN_PATH,
-  RUST_SHELL_SHOW_ITEM_IN_FOLDER
+  RUST_SHELL_SHOW_ITEM_IN_FOLDER,
+  RUST_WAKE_LOCK_START,
+  RUST_WAKE_LOCK_STOP
 } from 'common/types/sidecarTransport'
 
 // ---- process.getSystemVersion polyfill (Phase 31 Plan 01, discovered while
@@ -789,20 +791,103 @@ export const protocol = {
   handle: (): void => {}
 }
 
-// D-08: accepted no-op (per 33-RESEARCH, no maintained Tauri v2 wake-lock plugin meets the
-// "cheap and maintained" bar -- tauri-plugin-nosleep/tauri-plugin-keepawake both rejected for
-// maintenance-recency reasons). Upgraded to LOG so the gap is never silent -- the system may
-// sleep during long depot downloads under Tauri, a documented minor UX regression vs Electron,
-// revisit at the Phase 35 cutover.
+// D-08 (Phase 35 Plan 08, REQ-35-06): REAL as of the Phase 35 cutover this comment's earlier
+// version scheduled. The history is kept because it records why the gap existed and what it cost.
+//
+// WAS (Phase 33): an accepted no-op. 33-RESEARCH found no maintained Tauri v2 wake-lock plugin
+// meeting the "cheap and maintained" bar -- tauri-plugin-nosleep and tauri-plugin-keepawake were
+// both rejected on maintenance recency -- so `start()` logged, returned `-1`, and held nothing.
+// The real cost of that: the system idle-slept during long depot downloads, and `launcher.ts`'s
+// `prevent-display-sleep` let the screen blank while a game was running. Both are user-visible
+// on any machine with default power settings.
+//
+// IS NOW: a real forward to the Rust shell's `wake_lock_start`/`wake_lock_stop` arms, which take
+// genuine per-platform OS power assertions (IOKit on macOS, SetThreadExecutionState on Windows,
+// systemd-inhibit on Linux). 33-RESEARCH's plugin verdict was re-checked before this was written
+// and HELD, so the binding is first-party -- see 35-08-SUMMARY.md for versions and dates.
+//
+// The two assertion KINDS stay distinct end to end. `'prevent-display-sleep'` (a game is running)
+// and `'prevent-app-suspension'` (a download is in progress) are different OS assertions on every
+// platform, and the Rust side rejects any other string rather than defaulting to one of them.
+//
+// SYNC/ASYNC BRIDGE -- why the id is allocated HERE and not taken from Rust:
+// real Electron's `powerSaveBlocker.start()` is SYNCHRONOUS and returns a number, and callers
+// store that number immediately (`launcher.ts`: `powerDisplayId = powerSaveBlocker.start(...)`).
+// The Tauri command behind it is a Promise. A synchronous function structurally cannot await one,
+// so this stub mints its own id, returns it in the same tick, and resolves the Rust id into
+// `heldIds` when the round-trip lands. That keeps every existing call site byte-identical --
+// nothing had to become async -- at the cost of a brief window where an id is held locally but
+// not yet mapped to a Rust assertion, which `stop()` handles explicitly below.
+//
+// Ids start at 1, never 0: `launcher.ts`'s re-entry guard is `if (!powerDisplayId)`, which would
+// read 0 as "no lock held" and take a second assertion on every launch, leaking the first.
+let nextWakeLockId = 1
+
+/**
+ * JS id -> the Rust assertion id `wake_lock_start` resolved for it. An entry exists only while
+ * the assertion is genuinely held: a rejected start deletes its entry, so a later `stop()` on
+ * that id is a no-op rather than an error against an assertion Rust never took.
+ *
+ * `null` marks "start is still in flight" -- the id is live from the caller's point of view but
+ * has no Rust id yet.
+ */
+const heldWakeLocks = new Map<number, number | null>()
+
 export const powerSaveBlocker = {
-  start: (): number => {
-    console.warn(
-      '[electronStub] powerSaveBlocker.start(): logged no-op (D-08, accepted gap) -- no maintained Tauri v2 wake-lock plugin; the system may sleep during a long download'
-    )
-    return -1
+  // `type` is REQUIRED, matching real Electron's own signature. Deliberately not defaulted: a
+  // default kind is the silent collapse threat T-35-32 describes, and making it required turns
+  // a caller that forgot to say which assertion it wants into a compile error instead.
+  start: (type: string): number => {
+    const id = nextWakeLockId++
+    heldWakeLocks.set(id, null)
+    requestRustInvoke(RUST_WAKE_LOCK_START, [type])
+      .then((rustId) => {
+        // A `stop()` may have already landed while this was in flight; if it did, the entry is
+        // gone and the assertion must be released rather than recorded as held.
+        if (!heldWakeLocks.has(id)) {
+          if (typeof rustId === 'number') {
+            requestRustInvoke(RUST_WAKE_LOCK_STOP, [rustId]).catch(() => {})
+          }
+          return
+        }
+        if (typeof rustId === 'number') {
+          heldWakeLocks.set(id, rustId)
+        } else {
+          heldWakeLocks.delete(id)
+        }
+      })
+      .catch((error) => {
+        // Failure is logged, never thrown: real Electron's start() cannot surface an error
+        // either, and an unhandled rejection here would take down a game launch. Dropping the
+        // entry is what makes a later stop() on this id a silent no-op instead of an error.
+        heldWakeLocks.delete(id)
+        console.warn(
+          `[electronStub] powerSaveBlocker.start(): ${RUST_WAKE_LOCK_START} failed:`,
+          error instanceof Error ? error.message : String(error)
+        )
+      })
+    return id
   },
-  stop: (): void => {},
-  isStarted: (): boolean => false
+  // `id` is REQUIRED, matching real Electron. The Phase 33 stub took none, which is why the
+  // `unlock` handler in appShellFlowRegistration.ts could not release a specific assertion.
+  stop: (id: number): void => {
+    if (!heldWakeLocks.has(id)) return
+    const rustId = heldWakeLocks.get(id)
+    heldWakeLocks.delete(id)
+    // `null` means start never landed. Deleting the entry above is enough: start's own `.then`
+    // sees the missing entry and releases the assertion if one did arrive.
+    if (rustId === null || rustId === undefined) return
+    requestRustInvoke(RUST_WAKE_LOCK_STOP, [rustId]).catch((error) => {
+      console.warn(
+        `[electronStub] powerSaveBlocker.stop(): ${RUST_WAKE_LOCK_STOP} failed:`,
+        error instanceof Error ? error.message : String(error)
+      )
+    })
+  },
+  // D-05: answers from real state, not a hardcoded `false`. A stale `false` here is exactly the
+  // lying accessor D-05 targets -- it would tell a caller nothing is holding the machine awake
+  // while an assertion was live.
+  isStarted: (): boolean => heldWakeLocks.size > 0
 }
 
 export const clipboard = {

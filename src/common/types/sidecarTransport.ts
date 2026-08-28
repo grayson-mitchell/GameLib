@@ -259,6 +259,33 @@ export const RUST_CLIPBOARD_READ_TEXT = 'clipboard_read_text' as const
 export const RUST_TRAY_SET_ICON = 'tray_set_icon' as const
 
 /**
+ * Rust-side channel name: take an OS power assertion (Phase 35 Plan 08, D-08, REQ-35-06).
+ * Backs `electronStub.ts`'s `powerSaveBlocker.start()`, which until Phase 35 was a logged no-op
+ * returning `-1` and holding nothing — so the machine idle-slept mid depot download and
+ * `launcher.ts`'s `prevent-display-sleep` did nothing while a game ran.
+ *
+ * Takes ONE string arg, which must be exactly one of Electron's own two kind strings:
+ * `'prevent-display-sleep'` (a game is running) or `'prevent-app-suspension'` (a download is in
+ * progress). The Rust side REJECTS any other value rather than defaulting to one of them — a
+ * silent default is how the two assertion kinds get collapsed, which would either let the screen
+ * blank during play or hold the display awake through an eight-hour download (threat T-35-32).
+ *
+ * Resolves a `number`: the id that releases exactly this assertion via {@link RUST_WAKE_LOCK_STOP}.
+ */
+export const RUST_WAKE_LOCK_START = 'wake_lock_start' as const
+
+/**
+ * Rust-side channel name: release the OS power assertion a {@link RUST_WAKE_LOCK_START} call
+ * created (Phase 35 Plan 08, D-08, REQ-35-06). Backs `electronStub.ts`'s `powerSaveBlocker.stop()`.
+ *
+ * Takes ONE numeric arg: the id `wake_lock_start` resolved. Rejects an unknown or
+ * already-released id rather than silently succeeding, so a mismatch is observable — an
+ * assertion that is never released outlives the app and keeps the machine awake with no UI left
+ * to stop it (threat T-35-31).
+ */
+export const RUST_WAKE_LOCK_STOP = 'wake_lock_stop' as const
+
+/**
  * Rust-side channel name: open a fail-closed child `WebviewWindow` on any https URL
  * (Phase 34.4.1 Plan 01, D-01/D-02, REQ-34.4.1-01/REQ-34.4.1-09). Runner-agnostic by
  * design -- nothing in Rust knows what Humble is; this is the mechanism Phase 34.5
@@ -395,7 +422,9 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_HUMBLE_LOGIN_CLOSE,
   RUST_HUMBLE_LOGIN_CLEAR_COOKIES,
   RUST_HUMBLE_REVEAL_POST,
-  RUST_HUMBLE_LOGIN_CLEAR_STORAGE
+  RUST_HUMBLE_LOGIN_CLEAR_STORAGE,
+  RUST_WAKE_LOCK_START,
+  RUST_WAKE_LOCK_STOP
 ] as const
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */

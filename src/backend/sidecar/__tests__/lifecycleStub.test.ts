@@ -68,7 +68,9 @@ import {
   RUST_INVOKE_CHANNELS,
   RUST_NOTIFICATION_SHOW,
   RUST_SHELL_OPEN_PATH,
-  RUST_SHELL_SHOW_ITEM_IN_FOLDER
+  RUST_SHELL_SHOW_ITEM_IN_FOLDER,
+  RUST_WAKE_LOCK_START,
+  RUST_WAKE_LOCK_STOP
 } from 'common/types/sidecarTransport'
 
 type ProgrammedOutcome =
@@ -435,7 +437,10 @@ describe('electronStub net.isOnline (fix/steam-native-install-stability, 33-05 l
   })
 })
 
-describe('electronStub session / powerSaveBlocker stay accepted no-ops but now LOG (D-08/D-09)', () => {
+// Retitled by Phase 35 Plan 08: `session` is still an accepted no-op that logs (D-09), but
+// `powerSaveBlocker` is NOT -- D-08's gap was closed at the Phase 35 cutover its own comment
+// scheduled, and the two cases below now pin real forwarding rather than the old `-1` sentinel.
+describe('electronStub session stays a logging no-op (D-09); powerSaveBlocker is now real (D-08)', () => {
   it('session.fromPartition logs a warning instead of silently returning undefined', () => {
     const result = session.fromPartition('persist:epicstore')
 
@@ -446,18 +451,47 @@ describe('electronStub session / powerSaveBlocker stay accepted no-ops but now L
     expect(result).toBeDefined()
   })
 
-  it('powerSaveBlocker.start logs a warning and returns the documented safe default (-1)', () => {
-    const result = powerSaveBlocker.start()
+  // UPDATED by Phase 35 Plan 08 (D-08, REQ-35-06) rather than deleted: these two cases used to
+  // assert the accepted no-op -- `start()` returning `-1` after a D-08-tagged warning, and
+  // `stop()`/`isStarted()` as silent, side-effect-free no-ops. That contract is gone: `start()`
+  // now takes a real OS power assertion. The assertions are inverted here so the file still
+  // pins powerSaveBlocker's behaviour at this seam; the full start/stop pairing proof lives in
+  // `wakeLock.test.ts`.
+  it('powerSaveBlocker.start no longer returns the -1 no-op sentinel and forwards the kind', async () => {
+    program = { type: 'resolve', value: 7 }
 
-    expect(result).toBe(-1)
-    expect(warnSpy).toHaveBeenCalledTimes(1)
-    const [warningArg] = warnSpy.mock.calls[0]
-    expect(String(warningArg)).toContain('powerSaveBlocker.start')
-    expect(String(warningArg)).toContain('D-08')
+    const result = powerSaveBlocker.start('prevent-display-sleep')
+
+    expect(result).not.toBe(-1)
+    expect(typeof result).toBe('number')
+    expect(warnSpy).not.toHaveBeenCalled()
+    expect(callLog).toEqual([
+      { channel: RUST_WAKE_LOCK_START, args: ['prevent-display-sleep'] }
+    ])
+
+    // Release before leaving: every describe block in this file shares ONE electronStub module
+    // instance (no jest.resetModules() anywhere -- see the isolation note further down), and
+    // `heldWakeLocks` is module-scoped. A lock left held here would make the NEXT test's
+    // `isStarted()` assertion pass or fail for a reason that has nothing to do with that test.
+    powerSaveBlocker.stop(result)
+    await flushMicrotasks()
   })
 
-  it('powerSaveBlocker.stop/isStarted stay silent, side-effect-free no-ops (unchanged)', () => {
-    expect(() => powerSaveBlocker.stop()).not.toThrow()
+  it('powerSaveBlocker.stop releases the assertion and isStarted reports real state, not a hardcoded false', async () => {
+    program = { type: 'resolve', value: 11 }
+
+    const id = powerSaveBlocker.start('prevent-app-suspension')
+    await flushMicrotasks()
+
+    // D-05: a hardcoded `false` here would be the lying accessor -- it claimed nothing held the
+    // machine awake while an assertion was live.
+    expect(powerSaveBlocker.isStarted()).toBe(true)
+
+    callLog = []
+    expect(() => powerSaveBlocker.stop(id)).not.toThrow()
+    await flushMicrotasks()
+
+    expect(callLog).toEqual([{ channel: RUST_WAKE_LOCK_STOP, args: [11] }])
     expect(powerSaveBlocker.isStarted()).toBe(false)
   })
 })

@@ -760,6 +760,19 @@ const IN_SCOPE_SUITES = [
  * `flowRegistrationCensus.test.ts`'s own self-reading pattern above. It cannot be an
  * `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/`backend/logger/paths` mock
  * kit Block B gates on. Recount: 54 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 50 below.
+ *
+ * `wakeLock.test.ts` (Phase 35 plan 08, D-08/D-05 / REQ-35-06, 2026-08-29) is classified
+ * structurally contained on a READ of its import graph, not on assumption. It declares exactly
+ * ONE file-wide `jest.mock`, a factory mock of `../sidecarRpc`, and requires only two production
+ * modules: `../electronStub` and `common/types/sidecarTransport` (the latter is pure `const`
+ * declarations and types, with no imports of its own). `electronStub`'s graph reaches
+ * `./pathShim`, but as `isPackagedSidecar.test.ts`'s entry above already establishes,
+ * `pathShim`'s `resolveAppDataDir()`/`homedir()` calls all live INSIDE `getPath()` and none runs
+ * at module scope, so nothing in that chain resolves a path at import time. It touches no
+ * filesystem at all -- not even the self-reading `readFileSync` source-gate pattern several
+ * entries above use. It cannot be an `IN_SCOPE_SUITE`: it declares none of the four-element
+ * `pathShim`/`backend/logger/paths` mock kit Block B gates on. Recount, run rather than carried
+ * forward: 56 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 52 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -812,6 +825,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'storeLayer.test.ts',
   'structuralContainment.test.ts',
   'testContainment.test.ts',
+  'wakeLock.test.ts',
   'wineToolsFlows.test.ts'
 ]
 

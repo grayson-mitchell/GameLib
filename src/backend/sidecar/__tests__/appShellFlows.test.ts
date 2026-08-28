@@ -228,7 +228,9 @@ import {
   RUST_DIALOG_MESSAGE,
   RUST_NOTIFICATION_SHOW,
   RUST_TRAY_SET_ICON,
-  RUST_INVOKE_CHANNELS
+  RUST_INVOKE_CHANNELS,
+  RUST_WAKE_LOCK_START,
+  RUST_WAKE_LOCK_STOP
 } from 'common/types/sidecarTransport'
 import { gamesConfigPath } from '../../constants/paths'
 import pkgJson from '../../../../package.json'
@@ -548,29 +550,50 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     expect(mockedCallAbortController).toHaveBeenCalledWith('download-999')
   })
 
-  it('REQ-34.1-09/D-13/D-08 lock then unlock: both reach electronStub.powerSaveBlocker, both log a D-08-tagged warning, neither throws', async () => {
+  // UPDATED by Phase 35 Plan 08 (D-08, REQ-35-06) rather than deleted. This case used to assert
+  // that lock/unlock each logged a D-08-tagged "accepted gap" warning -- the marker of a no-op
+  // that held nothing. Those warnings are gone with the no-op, so the assertions now pin the
+  // real behaviour instead: both handlers reach Rust, with the CORRECT and DISTINCT kind.
+  //
+  // These call sites were NOT in plan 35-08's file list and were found by grep. Under Tauri this
+  // is the live `lock`/`unlock` path (`main.ts`'s copy dies at the point of no return), and both
+  // calls previously passed no kind and no id at all, because the Phase 33 stub accepted neither.
+  it('REQ-34.1-09/D-13/D-08 lock then unlock take and release REAL assertions of the right kinds, neither throws', async () => {
+    mockRequestRustInvoke.mockReset().mockResolvedValue(4242)
     const { input } = startSidecar()
 
+    // playing=false is the DOWNLOAD case -> system suspension, NOT display.
     writeSend(input, 'lock-1', 'lock', [false])
     await flush()
-    // electronStub's powerSaveBlocker.start() logs its own D-08-tagged warning.
-    expect(
-      warnSpy.mock.calls.some(
-        ([msg]) =>
-          String(msg).includes('powerSaveBlocker.start') &&
-          String(msg).includes('D-08')
-      )
-    ).toBe(true)
+    expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_WAKE_LOCK_START, [
+      'prevent-app-suspension'
+    ])
+    expect(mockRequestRustInvoke).not.toHaveBeenCalledWith(
+      RUST_WAKE_LOCK_START,
+      ['prevent-display-sleep']
+    )
 
-    warnSpy.mockClear()
+    // playing=true is the GAME case -> display sleep. Asserting both directions is what stops a
+    // hardcoded single kind (threat T-35-32) from passing this test.
+    writeSend(input, 'lock-2', 'lock', [true])
+    await flush()
+    expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_WAKE_LOCK_START, [
+      'prevent-display-sleep'
+    ])
+
+    mockRequestRustInvoke.mockClear()
     writeSend(input, 'unlock-1', 'unlock', [])
     await flush()
-    expect(
-      warnSpy.mock.calls.some(
-        ([msg]) =>
-          String(msg).includes('unlock') && String(msg).includes('D-08')
-      )
-    ).toBe(true)
+
+    // Both assertions released -- a leaked one outlives the app (threat T-35-31).
+    const stopCalls = mockRequestRustInvoke.mock.calls.filter(
+      ([channel]) => channel === RUST_WAKE_LOCK_STOP
+    )
+    expect(stopCalls).toHaveLength(2)
+    expect(stopCalls).toEqual([
+      [RUST_WAKE_LOCK_STOP, [4242]],
+      [RUST_WAKE_LOCK_STOP, [4242]]
+    ])
   })
 
   it('REQ-34.1-09/D-13 setTitleBarOverlay (send) logs a D-13-tagged warning naming the channel, never throws', async () => {

@@ -285,9 +285,12 @@ export function registerAppShellFlows(
     }
   })
 
-  // D-13/D-08 (Phase 33 accepted gap, carried forward unchanged): mirrors
-  // main.ts:618-631 exactly. electronStub's powerSaveBlocker.start() already
-  // emits its own D-08-tagged console.warn on every call it makes.
+  // D-13/D-08: mirrors main.ts:618-631. Phase 35 Plan 08 (REQ-35-06) closed the D-08 gap here
+  // as well as in electronStub -- these two calls previously passed NO kind at all, because the
+  // Phase 33 stub took no argument and held nothing, so there was nothing for a kind to select.
+  // Now that the stub takes real, DISTINCT OS assertions, the kind is load-bearing and the two
+  // branches must pass the same strings main.ts:650/655 passes: a download blocks system sleep,
+  // a running game blocks display sleep. Passing one kind for both would be threat T-35-32.
   ipcMain.on('lock', (_event: unknown, ...args: unknown[]) => {
     try {
       const playing = args[0] as boolean
@@ -295,36 +298,33 @@ export function registerAppShellFlows(
       const isDisplaySleepBlocked = displaySleepId !== undefined
 
       if (!playing && !isSleepBlocked) {
-        powerId = powerSaveBlocker.start()
+        powerId = powerSaveBlocker.start('prevent-app-suspension')
       }
 
       if (playing && !isDisplaySleepBlocked) {
-        displaySleepId = powerSaveBlocker.start()
+        displaySleepId = powerSaveBlocker.start('prevent-display-sleep')
       }
     } catch (error) {
       logSendFailure('lock', error)
     }
   })
 
-  // D-13/D-08: mirrors main.ts:633-644. electronStub's powerSaveBlocker.stop()
-  // is itself silent (Phase 33), so this handler logs its own D-08-tagged
-  // warning whenever it actually stops a blocker -- never silent.
+  // D-13/D-08: mirrors main.ts:633-644. Phase 35 Plan 08 (REQ-35-06): each stop now passes the
+  // id its own start returned, which is the whole point of the id -- the Phase 33 stub took no
+  // id, so it could not have released a specific assertion even if it had held one. The
+  // D-08-tagged "logged no-op" warnings that used to sit here are gone with the no-op they
+  // described: releasing a real assertion is not something to warn about.
+  //
+  // Releasing the WRONG id, or never releasing at all, is threat T-35-31: an assertion that
+  // outlives the app keeps the machine awake with no UI left to stop it.
   ipcMain.on('unlock', () => {
     try {
       if (powerId !== undefined) {
-        // electronStub's powerSaveBlocker.stop() takes no id argument (unlike
-        // real Electron's) -- it never tracked per-id state to begin with.
-        powerSaveBlocker.stop()
-        console.warn(
-          '[appShellFlowRegistration] unlock(): logged no-op (D-08, accepted gap, Phase 33) -- powerSaveBlocker.stop() has no real Tauri wake-lock effect'
-        )
+        powerSaveBlocker.stop(powerId)
         powerId = undefined
       }
       if (displaySleepId !== undefined) {
-        powerSaveBlocker.stop()
-        console.warn(
-          '[appShellFlowRegistration] unlock(): logged no-op (D-08, accepted gap, Phase 33) -- powerSaveBlocker.stop() has no real Tauri wake-lock effect'
-        )
+        powerSaveBlocker.stop(displaySleepId)
         displaySleepId = undefined
       }
     } catch (error) {
