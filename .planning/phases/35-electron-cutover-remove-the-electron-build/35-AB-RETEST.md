@@ -222,16 +222,51 @@ absence is a meaningful negative, not a vacuous one). The terminal `[shell]` tra
 expected to carry anything for this item — it is a sidecar-side, not shell-side, defect — but note
 if anything unexpected appears there too.
 
-**Electron leg — Observed:** DID NOT REPRODUCE. The Cloud Saves Sync save-path field **populated**
-on the operator's attempt. No `[ERROR]: [Legendary]: Unable to compute default save path` line was
-produced. This is the expected-correct Electron behaviour and confirms the source document's
-mechanism claim from the working side: `main.ts`'s `watch(legendaryInstalled, ...)` keeps the
-in-memory `installedGames` map fresh under Electron, so the stale-map symptom has no opportunity to
-arise there.
+**Electron leg — Observed:** `NOT ATTEMPTED` — THE PRECONDITION WAS NEVER MET.
 
-**Tauri leg — Observed:**
+The Cloud Saves Sync save-path field populated and no
+`[ERROR]: [Legendary]: Unable to compute default save path` line was produced. **That is not
+evidence of anything.** The defect requires the in-memory `installedGames` map to have gone STALE,
+which requires a legendary subprocess to WRITE `installed.json` after the map was loaded.
+Measured: `~/Library/Application Support/gamelib/legendaryConfig/legendary/installed.json` has an
+mtime of **2026-08-24 22:51 — four days before this run.** It was not written on either leg. The
+map could not be stale, so the symptom had no opportunity to arise, so a populated field is the
+expected outcome under BOTH shells and discriminates nothing.
 
-**Verdict:**
+**RECORD CORRECTION, stated rather than silently overwritten.** This field originally read
+"DID NOT REPRODUCE ... confirms the source document's mechanism claim from the working side." That
+was wrong twice over: it scored a pass over a surface that was never reached, and it then cited
+that pass as positive confirmation of the Electron watcher's mechanism. Neither is supportable. The
+error is the orchestrator's, not the operator's, and it is the SECOND instance of the same mistake
+in this document (see Item 1) — recording an operator's accurate visual report as a verdict without
+first confirming the item's precondition held.
+
+**The absence of `installed.json updated, refreshing library` is likewise NON-EVIDENCE here.** That
+line is absent from BOTH legs' logs (0 occurrences each). The source names its absence as the
+defect signature — but that reading only holds if a write actually occurred and the watcher failed
+to notice. With no write, both shells are correctly silent. An absence is only meaningful against a
+stimulus.
+
+**Tauri leg — Observed:** `NOT ATTEMPTED`, same reason, same evidence. Save-path field populated;
+0 `Unable to compute default save path`; 0 `installed.json updated`; `installed.json` untouched
+since 2026-08-24. Five legendary subprocess invocations ran this boot (16 on the Electron leg), but
+none of them wrote the file.
+
+**Verdict:** `NOT ATTEMPTED`
+
+Explicitly NOT `NEITHER`. This document's own constraint states that an item which could not be
+reached is `NOT ATTEMPTED`, never "does not reproduce" — and this project has a recorded failure
+shape for a `pass` covering an unreachable surface. Scoring this `NEITHER` would retire, on both
+shells at once, a defect whose mechanism (`main.ts` hosts the `watch(legendaryInstalled, ...)`
+call; plan 35-01's D-17 census confirmed ZERO import edges from the sidecar into `main.ts`) remains
+entirely intact and unexamined.
+
+**How to reach it, for whoever drives this next:** the trigger is a legendary subprocess WRITE to
+`installed.json` after the in-memory map has loaded — i.e. complete a fresh Epic install, import or
+uninstall, then open that game's Cloud Saves Sync panel WITHOUT a full library refresh in between
+(a refresh reloads the map and masks the defect, which is what the source means by "masking it as
+intermittent"). Verify the precondition by checking `installed.json`'s mtime moved, BEFORE scoring
+the observation.
 
 **Severity if TAURI-ONLY:** This item is structurally certain to be TAURI-ONLY before observing —
 the source document itself states plainly that `main.ts` (which hosts the `watch(legendaryInstalled,
