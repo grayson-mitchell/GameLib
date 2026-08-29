@@ -8,10 +8,11 @@ import cx from 'classnames'
 import React, { SyntheticEvent, useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import SvgButton from '../SvgButton'
+import type { WebviewTag } from 'backend/platform'
 import './index.css'
 
 interface WebviewControlsProps {
-  webview: Electron.WebviewTag | null
+  webview: WebviewTag | null
   initURL: string
   openInBrowser: boolean
 }

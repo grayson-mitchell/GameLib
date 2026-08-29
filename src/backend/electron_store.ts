@@ -119,7 +119,8 @@ export class TypeCheckedStoreBackend<
 
   // The three write methods below each announce the change to the renderer AFTER the
   // write succeeds. See `../storeChangeNotifier` for why this is an injected function
-  // rather than a direct `pushFrontendMessage` call, and why it is a no-op under Electron.
+  // rather than a direct `pushFrontendMessage` call, and why it was a no-op back when this
+  // ran under the old Electron build.
   // A write that throws must NOT notify — the renderer would then cache a value that is
   // not on disk, which is the exact divergence this mechanism exists to prevent.
 

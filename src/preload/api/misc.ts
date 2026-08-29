@@ -14,7 +14,7 @@ import {
   tauriHandleUnmaximized,
   tauriHandleFullscreen
 } from './tauriWindowChrome'
-import type { IpcRendererEvent } from 'electron'
+import type { IpcRendererEvent } from 'backend/platform'
 import { tauriGamepadAction } from './tauriGamepadInput'
 import type { GamepadActionArgs } from 'common/types'
 

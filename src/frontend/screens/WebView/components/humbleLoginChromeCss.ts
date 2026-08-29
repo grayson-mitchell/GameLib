@@ -2,8 +2,9 @@ import { humbleLoginChromeCssForUrl } from 'common/humble/loginChromeCss'
 
 /**
  * Narrow structural type for the `<webview>` this helper attaches to (quick task 260822-di1,
- * Task 3) -- deliberately NOT `Electron.WebviewTag`, so a plain object built in a
- * node-environment jest project (no jsdom/Electron installed) can stand in for it here.
+ * Task 3) -- deliberately NOT the ambient webview-tag type this used to alias in the
+ * Electron build, so a plain object built in a node-environment jest project (no
+ * jsdom/Electron installed) can stand in for it here.
  */
 export interface HumbleLoginChromeCssWebview {
   getURL(): string

@@ -41,7 +41,7 @@ import {
   steamLibraryStore,
   humbleConfigStore
 } from '../helpers/electronStores'
-import { IpcRendererEvent } from 'electron'
+import type { IpcRendererEvent } from 'backend/platform'
 import { NileRegisterData } from 'common/types/nile'
 import { HumbleKey, HumbleSyncState } from 'common/types/humble'
 import { SteamSyncStatus } from 'common/types/ipc'

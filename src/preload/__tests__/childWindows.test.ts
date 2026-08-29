@@ -2,20 +2,26 @@
  * Tauri child-window contract test (Phase 34.1 Plan 07, D-12, REQ-34.1-08).
  *
  * Covers `tauriChildWindows.ts`'s two exports directly (mocking
- * `@tauri-apps/api/webviewWindow`'s `WebviewWindow` class) AND `helpers.ts`'s
- * `isTauri()` routing decision for `showAboutWindow`/`createNewWindow` -- unlike
- * `gamepadActionRouting.test.ts`, this does NOT need a separate file for the routing
- * case because `electron` is mocked here as a working stub (not a throw), letting both
- * the Tauri path and the Electron IPC fallback run in the same suite.
+ * `@tauri-apps/api/webviewWindow`'s `WebviewWindow` class) AND `helpers.ts`'s own
+ * `isTauri()` routing decision for `showAboutWindow`/`createNewWindow`. `helpers.ts`'s
+ * own branch is untouched by Phase 35 plan 16 (out of scope -- plan 35-17's job per the
+ * plan's own constraints), but its ELSE arm (`showAboutWindowIpc`/`createNewWindowIpc`,
+ * built from `../ipc.ts`'s `makeListenerCaller`) now reaches the Tauri transport
+ * unconditionally, same as every other `../ipc.ts` consumer, because plan 16 collapsed
+ * `../ipc.ts`'s own runtime-detection branch. So both arms of `helpers.ts`'s branch
+ * converge on the same transport today -- the electron mock below is now a THROW, not a
+ * working stub, matching `gamepadActionRouting.test.ts`'s and
+ * `steamInstallFormApi.test.ts`'s treatment of the same collapse.
  *
  * jest.config sets `resetMocks: true` -- every mock's implementation/return value is
  * (re)established in `beforeEach`.
  */
 
 const mockedIsTauri = jest.fn()
+const mockedTauriSend = jest.fn()
 jest.mock('../tauriTransport', () => ({
   isTauri: () => mockedIsTauri(),
-  send: jest.fn(),
+  send: (...args: unknown[]) => mockedTauriSend(...args),
   invoke: jest.fn(),
   listen: jest.fn(),
   snapshotGet: jest.fn(),
@@ -25,10 +31,9 @@ jest.mock('../tauriTransport', () => ({
   registerStore: jest.fn()
 }))
 
-const mockIpcRendererSend = jest.fn()
-jest.mock('electron', () => ({
-  ipcRenderer: { send: (...args: unknown[]) => mockIpcRendererSend(...args) }
-}))
+jest.mock('electron', () => {
+  throw new Error('electron must not be resolved on the Tauri path (T-27-07)')
+})
 
 const onceMock = jest.fn().mockResolvedValue(undefined)
 const setFocusMock = jest.fn().mockResolvedValue(undefined)
@@ -340,14 +345,14 @@ describe('tauriChildWindows (REQ-34.1-08)', () => {
     expect(label).not.toContain('store')
   })
 
-  it('REQ-34.1-08: with isTauri() false, helpers.ts exports call the IPC path and never touch WebviewWindow', () => {
+  it('REQ-34.1-08: with isTauri() false, helpers.ts exports still reach the Tauri transport (via ../ipc.ts, not electron) and never touch WebviewWindow', () => {
     mockedIsTauri.mockReturnValue(false)
 
     showAboutWindow()
     createNewWindow('https://www.protondb.com/app/1')
 
-    expect(mockIpcRendererSend).toHaveBeenCalledWith('showAboutWindow')
-    expect(mockIpcRendererSend).toHaveBeenCalledWith('createNewWindow', 'https://www.protondb.com/app/1')
+    expect(mockedTauriSend).toHaveBeenCalledWith('showAboutWindow', [])
+    expect(mockedTauriSend).toHaveBeenCalledWith('createNewWindow', ['https://www.protondb.com/app/1'])
     expect(webviewWindowCtor).not.toHaveBeenCalled()
     expect(getByLabelMock).not.toHaveBeenCalled()
   })

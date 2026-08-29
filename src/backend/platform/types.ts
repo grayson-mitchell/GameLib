@@ -4,12 +4,13 @@
 // REQ-35-02).
 //
 // WHAT THIS FILE IS. Every type declared here replaces a name the tree currently
-// reads out of the `electron` package -- either through the AMBIENT `Electron`
-// namespace that `node_modules/electron/electron.d.ts` installs globally
-// (`Electron.IpcRendererEvent`, `Electron.WebviewTag`, ...), or through an
-// explicit `import type { X } from 'electron'`. Neither shape survives the
-// phase: plan 35-15 rewrites the import sites to `backend/platform`, plan 35-16
-// rewrites the bare `Electron.` namespace references, and plan 35-18 removes
+// reads out of the `electron` package -- either through the AMBIENT namespace
+// that `node_modules/electron/electron.d.ts` installs globally (its own
+// `IpcRendererEvent`, `WebviewTag`, ... members, referenced with a dotted
+// namespace qualifier), or through an explicit `import type { X } from
+// 'electron'`. Neither shape survives the phase: plan 35-15 rewrites the
+// import sites to `backend/platform`, plan 35-16 rewrites the bare dotted
+// namespace references, and plan 35-18 removes
 // `electron` from `package.json` altogether. At that point the ambient
 // namespace stops existing. Anything still referencing a type NOT declared here
 // fails to compile then, loudly, rather than silently resolving to something
@@ -102,7 +103,8 @@ export interface Event {
 // ---------------------------------------------------------------------------
 
 // Consumed by:
-//   src/backend/dialog/dialog.ts:9 -- declared as `event?: Electron.IpcMainInvokeEvent`
+//   src/backend/dialog/dialog.ts:9 -- declared as `event?: IpcMainInvokeEvent` (imported
+//   from this module, since Phase 35 plan 16)
 //   src/backend/dialog/dialog.ts:16 -- READS `event.sender.send(channel, ...args)`
 // `sender` is electron's `WebContents`. Only `send` is reached from this tree, so
 // only `send` is declared. Its args are `...unknown[]` rather than electron's
@@ -247,7 +249,8 @@ export interface OpenDialogOptions {
 }
 
 // Consumed by:
-//   src/backend/main.ts:571 -- `const snapWarning: Electron.MessageBoxOptions = {...}`
+//   formerly src/backend/main.ts:571 (file removed with the Electron main process) --
+//   `const snapWarning: MessageBoxOptions = {...}`
 //   sets `title`, `message`, `checkboxLabel`, `checkboxChecked`, then spreads the
 //   whole bag into `dialog.showMessageBox({ ...snapWarning })`.
 // `icon` is electron's `NativeImage | string`; this tree never sets it, and
@@ -273,7 +276,8 @@ export interface MessageBoxOptions {
 
 // Consumed by:
 //   src/backend/shortcuts/shortcuts/shortcuts.ts:79 --
-//   `const shortcutOptions: Electron.ShortcutDetails = { target: launchWithProtocol }`
+//   `const shortcutOptions: ShortcutDetails = { target: launchWithProtocol }` (imported
+//   from this module, since Phase 35 plan 16)
 //   then `icon`/`iconIndex`/`args` are assigned onto it before
 //   `shell.writeShortcutLink`. `target` is REQUIRED in electron and stays so here.
 // Declared complete -- electron's own definition is eight fields.
@@ -290,7 +294,8 @@ export interface ShortcutDetails {
 
 // Consumed by:
 //   src/backend/tray_icon/__tests__/tray_icon.test.ts:59
-//     (`... as unknown as Electron.MenuItemConstructorOptions[]`, then reads
+//     (formerly `... as unknown as MenuItemConstructorOptions[]` against the ambient
+//      namespace; that test file no longer exists), then reads
 //      `menu[0]` expecting `{ click, label }` and `{ type: 'separator' }`)
 //   src/common/typedefs/extra-mock-function.ts:24 (`menu: MenuItemConstructorOptions[]`)
 //   src/backend/__mocks__/electron.ts:4, :78, :103, :112
@@ -328,7 +333,8 @@ export interface MenuItemConstructorOptions {
 }
 
 // Consumed by:
-//   src/common/typedefs/extra-mock-function.ts:14 (`options: Electron.BrowserWindowConstructorOptions`)
+//   src/common/typedefs/extra-mock-function.ts:24 (`options: BrowserWindowConstructorOptions`,
+//   unqualified since Phase 35 plan 16)
 //   src/backend/__mocks__/electron.ts:3, :58, :60
 //   src/backend/__tests__/main_window.test.ts reads `options.x/.y/.height/.width`
 //     off that mock (:171-:172, :184-:187)
@@ -374,7 +380,8 @@ export interface TitleBarOverlay {
 // ---------------------------------------------------------------------------
 
 // Consumed by:
-//   src/common/types.ts:956 -- `export interface WindowProps extends Electron.Rectangle`.
+//   src/common/types.ts:956 -- `export interface WindowProps extends Rectangle` (imported
+//   from this module, since Phase 35 plan 16).
 //   `WindowProps` is spread straight into `new BrowserWindow({...})` at
 //   src/backend/main_window.ts:54, and its x/y/width/height are read at
 //   src/backend/main_window.ts:34-:41.
@@ -533,11 +540,12 @@ export interface BrowserWindow {
 // SECTION 8 -- THE `CrossProcessExports` NAMESPACE
 //
 // This one is NOT an event or an option bag, and needs different treatment.
-// In `electron.d.ts`, `Electron.CrossProcessExports` is the namespace that
-// `declare module 'electron' { export = Electron.CrossProcessExports }` points at
-// -- i.e. it IS the electron module's own export namespace, re-exposed as a
-// qualified name. This tree reaches exactly ONE member of it, and only from a
-// test: `Electron.CrossProcessExports.Tray`, four times.
+// In `electron.d.ts`, the ambient namespace's own `CrossProcessExports` member is the
+// namespace that `declare module 'electron' { export = ... }` points at (a self-export
+// pointing back at a dotted member of the same ambient namespace) -- i.e. it IS the
+// electron module's own export namespace, re-exposed as a qualified name. This tree
+// reaches exactly ONE member of it, and only from a test: its `CrossProcessExports.Tray`
+// member, four times.
 //
 // It is therefore declared as a namespace containing only type members, which
 // TypeScript erases completely (no runtime object is emitted for a namespace that
@@ -549,7 +557,8 @@ export interface BrowserWindow {
 export namespace CrossProcessExports {
   // Consumed by:
   //   src/backend/tray_icon/__tests__/tray_icon.test.ts:91, :133, :188, :228 --
-  //   `(await initTrayIcon(mainWindow)) as Electron.CrossProcessExports.Tray`,
+  //   `(await initTrayIcon(mainWindow)) as CrossProcessExports.Tray` (against the ambient
+  //   namespace; that test file no longer exists),
   //   then reads `appIcon.menu[0]`.
   //
   // `menu` is NOT a real electron field. It is contributed by the ambient

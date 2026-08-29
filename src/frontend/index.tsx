@@ -45,8 +45,8 @@ window.addEventListener('error', (ev: ErrorEvent) => {
 // Must resolve before the first synchronous store read below (`configStore.get_nodefault`)
 // -- the Steam login-gate in GlobalState's constructor (later in this file, via
 // `root.render`) also depends on this being hydrated by the time React renders.
-// Top-level await is safe here: this is the entry module, nothing imports it. No-ops
-// (resolves immediately) under Electron.
+// Top-level await is safe here: this is the entry module, nothing imports it. Resolved
+// immediately when the sidecar is absent (the old Electron build never populated it).
 //
 // Guarded (Phase 27 Plan 05): NEVER let a sidecar/transport failure prevent React from
 // mounting. `root.render()` is later in this module body, AFTER this await -- an

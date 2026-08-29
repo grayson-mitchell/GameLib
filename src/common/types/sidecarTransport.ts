@@ -19,8 +19,8 @@
  *   - frontendListenerSlot(channel) → on(channel, listener) → unsubscribe    (backend→frontend push)
  *
  * This module is TYPES + CONSTANTS ONLY. It must contain no runtime logic and must not
- * import from 'electron' — it is imported by the renderer, the sidecar, and (as the naming
- * reference) the Rust shell.
+ * import the electron package — it is imported by the renderer, the sidecar, and (as the
+ * naming reference) the Rust shell.
  */
 
 /**

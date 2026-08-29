@@ -1032,7 +1032,7 @@ export const powerSaveBlocker = {
       })
     return id
   },
-  // `id` is REQUIRED, matching real Electron. The Phase 33 stub took none, which is why the
+  // `id` is REQUIRED, matching the real API this replaces. The Phase 33 stub took none, which is why the
   // `unlock` handler in appShellFlowRegistration.ts could not release a specific assertion.
   stop: (id: number): void => {
     if (!heldWakeLocks.has(id)) return

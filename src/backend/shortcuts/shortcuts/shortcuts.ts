@@ -1,4 +1,4 @@
-import { app, nativeImage, shell } from 'backend/platform'
+import { app, nativeImage, shell, type ShortcutDetails } from 'backend/platform'
 import {
   chmodSync,
   existsSync,
@@ -76,7 +76,7 @@ Categories=Game;
       break
     }
     case 'win32': {
-      const shortcutOptions: Electron.ShortcutDetails = {
+      const shortcutOptions: ShortcutDetails = {
         target: launchWithProtocol
       }
       let executable = gameInfo.install.executable

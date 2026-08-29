@@ -3,6 +3,7 @@ import './index.css'
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DMQueueElement, DownloadManagerState } from 'common/types'
+import type { IpcRendererEvent } from 'backend/platform'
 import { UpdateComponent } from 'frontend/components/UI'
 import ProgressHeader from './components/ProgressHeader'
 import DownloadManagerHeader from './DownloadManagerHeader'
@@ -38,7 +39,7 @@ export default React.memo(function DownloadManager(): JSX.Element | null {
 
     const removeHandleDMQueueInformation = window.api.handleDMQueueInformation(
       (
-        e: Electron.IpcRendererEvent,
+        e: IpcRendererEvent,
         elements: DMQueueElement[],
         state: DownloadManagerState
       ) => {

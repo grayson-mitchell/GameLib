@@ -19,7 +19,7 @@
  * bundle evaluates, and can therefore catch import-time throws (e.g. a `window.api`
  * that was never attached because Tauri detection failed).
  *
- * No-op in normal operation; harmless under Electron.
+ * No-op in normal operation; was equally harmless back when this ran in the Electron build.
  */
 
 /**

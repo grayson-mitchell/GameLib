@@ -5,6 +5,7 @@ import WinetricksSearchBar from './WinetricksSearch'
 import { useTranslation } from 'react-i18next'
 import SettingsContext from 'frontend/screens/Settings/SettingsContext'
 import { Runner } from 'common/types'
+import type { IpcRendererEvent } from 'backend/platform'
 import {
   callOrDeclare,
   WINETRICKS_FEATURE,
@@ -92,7 +93,7 @@ export default function Winetricks({ onClose, runner }: Props) {
 
   useEffect(() => {
     async function onInstallingChange(
-      e: Electron.IpcRendererEvent,
+      e: IpcRendererEvent,
       component: string
     ) {
       if (component === '') {
@@ -102,7 +103,7 @@ export default function Winetricks({ onClose, runner }: Props) {
     }
 
     async function onWinetricksProgress(
-      e: Electron.IpcRendererEvent,
+      e: IpcRendererEvent,
       payload: { messages: string[]; installingComponent: string }
     ) {
       // this conditionals help to show the correct state if the dialog

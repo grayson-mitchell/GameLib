@@ -10,7 +10,7 @@ import {
   useSteamBridgeSetup,
   handleSteamBridgeSetupRequiredSignal
 } from '../SteamBridgeSetup'
-import type { IpcRendererEvent } from 'electron'
+import type { IpcRendererEvent } from 'backend/platform'
 
 describe('useSteamBridgeSetup store', () => {
   afterEach(() => {

@@ -11,7 +11,8 @@
 //
 // An explicit import is the only ordering guarantee that survives chunking: evaluation
 // order between a module and its dependency is fixed by the spec, whatever Rollup does with
-// chunk boundaries. The attach module is idempotent and no-ops under Electron.
+// chunk boundaries. The attach module is idempotent and no-oped identically under the old
+// Electron build.
 import '../../preload/tauriAttach'
 
 import {

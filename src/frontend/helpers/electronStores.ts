@@ -3,7 +3,7 @@
 // whose constructors calls `window.api.storeNew(...)` synchronously. Same reasoning as
 // `frontend/helpers/index.ts`: the renderer entry's import order does not survive Rollup's
 // chunking, so the ordering requirement must be expressed as an actual import. Idempotent;
-// no-ops under Electron.
+// it no-oped identically back when this ran under the old Electron build.
 import '../../preload/tauriAttach'
 
 import { Get } from 'type-fest'

@@ -18,7 +18,7 @@
  * The Tauri window/webview accessors below are safe to import statically here -- both
  * read `__TAURI_INTERNALS__` at CALL time, not at import time, the same property
  * `tauriTransport.ts`'s own static imports of `@tauri-apps/api/core`/`/event` already
- * rely on to stay import-safe under Electron.
+ * rely on to have stayed import-safe back when this ran under the old Electron build.
  */
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { getCurrentWebview } from '@tauri-apps/api/webview'

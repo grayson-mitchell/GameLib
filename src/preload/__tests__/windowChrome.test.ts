@@ -238,8 +238,8 @@ describe('tauriWindowChrome (REQ-34.1-01)', () => {
  * `WindowControls`' `maximized` state stayed `false` for the life of the window and the
  * titlebar restore button was unreachable. These tests pin the producer end-to-end:
  * a Tauri window resize that CHANGES maximized-state notifies the matching subscribers,
- * one that does not change it notifies nobody, and the whole thing is a no-op under
- * Electron.
+ * one that does not change it notifies nobody, and the whole thing was a no-op back
+ * when this ran under the old Electron build.
  */
 describe('maximize-state producer (REQ-34.1-01/CR-03)', () => {
   const mockedIsTauri = isTauri as jest.MockedFunction<typeof isTauri>

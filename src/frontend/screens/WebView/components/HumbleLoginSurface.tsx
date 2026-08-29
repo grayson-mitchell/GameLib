@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import ContextProvider from 'frontend/state/ContextProvider'
 import TauriLoginPanel from './TauriLoginPanel'
 import type { TauriOAuthLoginState } from '../useTauriOAuthLogin'
+import type { WebviewTag } from 'backend/platform'
 import { attachHumbleLoginChromeCss } from './humbleLoginChromeCss'
 
 interface Props {
@@ -30,7 +31,7 @@ const trueAsStr = 'true' as unknown as boolean | undefined
 export default function HumbleLoginSurface({ onDone, onCancelled }: Props) {
   const { t } = useTranslation()
   const { humble } = useContext(ContextProvider)
-  const webviewRef = useRef<Electron.WebviewTag>(null)
+  const webviewRef = useRef<WebviewTag>(null)
 
   const [webviewPreloadPath, setWebviewPreloadPath] = useState('')
   useEffect(() => {

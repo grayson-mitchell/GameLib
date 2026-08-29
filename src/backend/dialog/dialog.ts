@@ -1,12 +1,12 @@
 import { LogPrefix, logInfo, logWarning } from 'backend/logger'
-import { dialog, Notification } from 'backend/platform'
+import { dialog, Notification, type IpcMainInvokeEvent } from 'backend/platform'
 import { ButtonOptions, DialogType } from 'common/types'
 import { getMainWindow } from '../main_window'
 import { sendFrontendMessage } from '../ipc'
 import { isSteamDeckGameMode } from 'backend/constants/environment'
 
 function showDialogBoxModalAuto(props: {
-  event?: Electron.IpcMainInvokeEvent
+  event?: IpcMainInvokeEvent
   title: string
   message: string
   type: DialogType

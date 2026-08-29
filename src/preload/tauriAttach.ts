@@ -25,7 +25,8 @@
  * script runs) -- importing THAT file from the renderer bundle would also pull in its
  * Node-only `backend/constants/environment` import (os.cpus(), graceful-fs) at module
  * scope. This module has zero Electron/Node imports, so it is safe to import
- * unconditionally from the renderer entry; it no-ops entirely under Electron.
+ * unconditionally from the renderer entry; it no-oped entirely back when this ran
+ * under the old Electron build.
  */
 import api from './api'
 import { isTauri } from './tauriTransport'

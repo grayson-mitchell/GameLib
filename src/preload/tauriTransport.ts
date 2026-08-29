@@ -11,10 +11,11 @@
  * the Tauri webview at injection time) so `ipc.ts`/`misc.ts`/`preload/index.ts` can guard
  * their re-pointed bodies without this module ever touching `ipcRenderer`/`electron-store`.
  *
- * This module has NO import from 'electron' (or any other Node-only package) -- it is safe
- * to be part of the Tauri renderer's own JS bundle (unlike `ipc.ts`/`misc.ts`, which keep
- * their Node/Electron access behind a lazily-invoked, guarded `require()` for the same
- * reason -- see those files' own comments).
+ * This module has NO import of the electron package (or any other Node-only package) --
+ * it is safe to be part of the Tauri renderer's own JS bundle. `ipc.ts`/`misc.ts` used to
+ * keep their Node/Electron access behind a lazily-invoked, guarded `require` for the same
+ * reason; Phase 35 plan 16 removed those requires entirely once nothing ran under
+ * Electron anymore -- see those files' own comments.
  */
 import { invoke as tauriInvoke } from '@tauri-apps/api/core'
 import { listen as tauriListen, type UnlistenFn } from '@tauri-apps/api/event'

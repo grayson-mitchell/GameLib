@@ -3,7 +3,7 @@ import Backspace from '@mui/icons-material/Backspace'
 import Folder from '@mui/icons-material/Folder'
 import { ReactNode, useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { FileFilter } from 'electron'
+import type { FileFilter } from 'backend/platform'
 import './index.css'
 
 interface Props {

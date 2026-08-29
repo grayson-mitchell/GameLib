@@ -1,4 +1,4 @@
-import type { IpcRendererEvent } from 'electron'
+import type { IpcRendererEvent } from 'backend/platform'
 import { create } from 'zustand'
 
 export type SteamClientSetupReason = 'install' | 'launch-once'

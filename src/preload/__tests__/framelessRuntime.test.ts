@@ -11,19 +11,22 @@
  * reads (`parentElement`, `closest()`, and a `getComputedStyle` global returning
  * `-webkit-app-region`).
  *
+ * `setSetting`'s own transport send (`../ipc.ts`'s `makeListenerCaller('setSetting')`)
+ * used to branch on `isTauri()` inside `../ipc.ts` itself; Phase 35 plan 16 collapsed
+ * that branch, so the send now reaches the Tauri transport unconditionally, regardless
+ * of what `settings.ts`'s OWN (untouched, out of scope) `isTauri()` check decides for
+ * `applyFramelessDecorations`. The electron mock below is now a THROW, not a working
+ * stub, matching `gamepadActionRouting.test.ts`'s treatment of the same collapse.
+ *
  * jest.config sets `resetMocks: true` -- every `jest.fn()` below loses its
  * implementation before each test, so every mock return value this file depends on is
  * (re)established in the top-level `beforeEach`, never assumed to survive from a
  * factory's own initializer.
  */
 
-jest.mock('electron', () => ({
-  ipcRenderer: {
-    send: (...args: unknown[]) => electronIpcSendMock(...args)
-  }
-}))
-
-const electronIpcSendMock = jest.fn()
+jest.mock('electron', () => {
+  throw new Error('electron must not be resolved on the Tauri path (T-27-07)')
+})
 
 const mockWindow = {
   setDecorations: jest.fn(),
@@ -66,11 +69,12 @@ jest.mock('../tauriTransport', () => ({
 }))
 
 import { applyFramelessDecorations, installDragRegionHandlers } from '../api/tauriWindowChrome'
-import { isTauri, snapshotGet } from '../tauriTransport'
+import { isTauri, snapshotGet, send } from '../tauriTransport'
 import { setSetting } from '../api/settings'
 
 const mockedIsTauri = isTauri as jest.MockedFunction<typeof isTauri>
 const mockedSnapshotGet = snapshotGet as jest.MockedFunction<typeof snapshotGet>
+const mockedTauriSend = send as jest.MockedFunction<typeof send>
 
 // ---- Minimal manual DOM stand-in (no jest-environment-jsdom -- see header comment) ----
 
@@ -424,16 +428,14 @@ describe('setSetting wrapper (REQ-34.1-03)', () => {
     expect(mockWindow.setTitleBarStyle).not.toHaveBeenCalled()
   })
 
-  it('REQ-34.1-03: never calls applyFramelessDecorations on the Electron path', () => {
+  it('REQ-34.1-03: never calls applyFramelessDecorations when settings.ts\'s own isTauri() check is false', () => {
     mockedIsTauri.mockReturnValue(false)
     setSetting({ appName: 'default', key: 'framelessWindow', value: true })
     expect(mockWindow.setDecorations).not.toHaveBeenCalled()
     expect(mockWindow.setTitleBarStyle).not.toHaveBeenCalled()
-    expect(electronIpcSendMock).toHaveBeenCalledWith('setSetting', {
-      appName: 'default',
-      key: 'framelessWindow',
-      value: true
-    })
+    expect(mockedTauriSend).toHaveBeenCalledWith('setSetting', [
+      { appName: 'default', key: 'framelessWindow', value: true }
+    ])
   })
 
   // Phase 34.1 gap cycle 1 (plan 34.1-10, G4): the setSetting wrapper is NOT
@@ -456,11 +458,11 @@ describe('setSetting wrapper (REQ-34.1-03)', () => {
   // value }] = args` ran on BOTH paths and broke that.
   const malformed = [undefined, null] as unknown as [Parameters<typeof setSetting>[0]]
 
-  it('REQ-34.1-03/WR-05: a malformed argument does not throw on the ELECTRON path, and is still forwarded over IPC', () => {
+  it('REQ-34.1-03/WR-05: a malformed argument does not throw when settings.ts\'s own isTauri() check is false, and is still forwarded over the transport', () => {
     mockedIsTauri.mockReturnValue(false)
     for (const bad of malformed) {
       expect(() => setSetting(bad)).not.toThrow()
-      expect(electronIpcSendMock).toHaveBeenCalledWith('setSetting', bad)
+      expect(mockedTauriSend).toHaveBeenCalledWith('setSetting', [bad])
     }
     expect(mockWindow.setDecorations).not.toHaveBeenCalled()
   })

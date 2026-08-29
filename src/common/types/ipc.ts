@@ -1,4 +1,4 @@
-import type { OpenDialogOptions, TitleBarOverlay } from 'electron'
+import type { OpenDialogOptions, TitleBarOverlay } from 'backend/platform'
 
 import type { SystemInformation } from 'backend/utils/systeminfo'
 

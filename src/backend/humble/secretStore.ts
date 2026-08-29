@@ -23,11 +23,11 @@
  * **This plan is a pure refactor.** The Electron implementation below is the
  * verbatim `encryptionAvailable`/`encryptCookie`/`decryptCookie` bodies moved
  * out of `user.ts`, reading/writing the SAME `configStore` keys under the
- * SAME prefix -- Electron's on-disk `humble_store/config.json` is unchanged
+ * SAME prefix -- the old Electron build's on-disk `humble_store/config.json` is unchanged
  * in every field. It is installed as this module's DEFAULT (unlike
- * `loginWindowSeam.ts`, whose holder starts `null` because Electron never
- * calls its setter) -- the Electron implementation is real code that must
- * run under Electron. Consequence worth stating: a sidecar that fails to
+ * `loginWindowSeam.ts`, whose holder starts `null` because the Electron build never
+ * called its setter) -- the Electron-era implementation is real code that had to
+ * run there. Consequence worth stating: a sidecar that fails to
  * install its own implementation via `setHumbleSecretStore()` degrades to
  * THIS module's default (plaintext under Tauri, since `safeStorage` here is
  * still the dead stub), not to no storage at all -- plan 13 must prove the

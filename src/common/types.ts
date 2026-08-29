@@ -14,7 +14,7 @@ import {
   ZoomInstalledInfo,
   ZoomInstallInfo
 } from './types/zoom'
-import { TitleBarOverlay } from 'electron'
+import type { TitleBarOverlay, Rectangle } from 'backend/platform'
 import { ChildProcess } from 'child_process'
 import type { HeroicHowLongToBeatEntry } from 'backend/wiki_game_info/howlongtobeat/utils'
 import type { Path } from 'backend/schemas'
@@ -953,7 +953,7 @@ export interface WineManagerUISettings {
 
 export type DownloadManagerState = 'idle' | 'running' | 'paused' | 'stopped'
 
-export interface WindowProps extends Electron.Rectangle {
+export interface WindowProps extends Rectangle {
   maximized: boolean
   frame?: boolean
   titleBarStyle?: 'default' | 'hidden' | 'hiddenInset'

@@ -1,4 +1,5 @@
 import { ButtonOptions, DialogType } from 'common/types'
+import type { IpcRendererEvent } from 'backend/platform'
 import ContextProvider from 'frontend/state/ContextProvider'
 import { useEffect, useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -35,7 +36,7 @@ export default function DialogHandler() {
 
   useEffect(() => {
     const onMessage = (
-      e: Electron.IpcRendererEvent,
+      e: IpcRendererEvent,
       title: string,
       message: string,
       type: DialogType,

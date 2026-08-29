@@ -15,6 +15,7 @@ import ContextProvider from 'frontend/state/ContextProvider'
 import './index.css'
 import LoginWarning from '../Login/components/LoginWarning'
 import { NileLoginData } from 'common/types/nile'
+import type { WebviewTag, DidFailLoadEvent } from 'backend/platform'
 import { isTauri } from '../../../preload/tauriTransport'
 import WebviewUnavailablePanel from './components/WebviewUnavailablePanel'
 import TauriLoginPanel from './components/TauriLoginPanel'
@@ -68,7 +69,7 @@ export default function WebView() {
     null
   )
   const navigate = useNavigate()
-  const webviewRef = useRef<Electron.WebviewTag>(null)
+  const webviewRef = useRef<WebviewTag>(null)
 
   // `store` is set to epic/gog/amazon depending on which storefront we're
   // supposed to show, `runner` is set to a runner if we're supposed to show its
@@ -343,7 +344,7 @@ export default function WebView() {
         }
       }
 
-      const onerror = ({ validatedURL }: Electron.DidFailLoadEvent) => {
+      const onerror = ({ validatedURL }: DidFailLoadEvent) => {
         if (validatedURL && validatedURL.match(/track\.adtraction\.com/)) {
           const parsedUrl = new URL(validatedURL)
           const redirectUrl = parsedUrl.searchParams.get('url')
