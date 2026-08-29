@@ -20,7 +20,7 @@ jest.mock('../sidecarRpc', () => ({
   requestRustInvoke: jest.fn()
 }))
 
-import { powerSaveBlocker } from '../electronStub'
+import { powerSaveBlocker } from '../../platform'
 import { requestRustInvoke } from '../sidecarRpc'
 import {
   RUST_INVOKE_CHANNELS,

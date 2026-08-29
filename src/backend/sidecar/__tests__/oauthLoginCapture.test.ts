@@ -53,7 +53,7 @@ import {
 } from '../../humble/loginWindowSeam'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { registerOAuthLoginFlows } from '../oauthLoginFlowRegistration'
-import { handlerRegistry, listenerRegistry } from '../electronStub'
+import { handlerRegistry, listenerRegistry } from '../../platform'
 
 const ALL_RUNNERS: OAuthRunner[] = ['legendary', 'gog', 'nile', 'zoom']
 

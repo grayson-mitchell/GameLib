@@ -287,7 +287,7 @@ export function seaEsbuildFlags(outfile: string, entry: string): string[] {
     '--platform=node',
     '--target=node22',
     '--format=cjs',
-    '--alias:electron=./src/backend/sidecar/electronStub.ts',
+    '--alias:electron=./src/backend/platform/index.ts',
     '--alias:i18next-fs-backend=i18next-fs-backend/cjs',
     '--alias:node-gyp-build=./src/backend/storeManagers/steam/depot/lzmaNativeBinding.ts',
     '--inject:./meta/sidecarSeaFsShim.ts',

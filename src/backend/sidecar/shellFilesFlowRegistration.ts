@@ -91,7 +91,7 @@
  *     plan 34.3-04 into `loggerFlowRegistration.ts`.
  */
 
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 import {
   openUrlOrFile,
   showItemInFolder as showItemInFolderImpl,

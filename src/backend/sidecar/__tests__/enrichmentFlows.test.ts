@@ -164,7 +164,7 @@ jest.mock('backend/logger/paths', () => {
 
 // ── electron / electron-store — route Jest's own module resolution at the
 // REAL sidecar shims (see module docstring above) ───────────────────────────
-jest.mock('electron', () => jest.requireActual('../electronStub'))
+jest.mock('electron', () => jest.requireActual('../../platform'))
 jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
@@ -351,7 +351,7 @@ import {
 } from './helpers/sidecarHarness'
 import { GlobalConfig } from 'backend/config'
 import { libraryManagerMap } from 'backend/storeManagers'
-import { handlerRegistry } from '../electronStub'
+import { handlerRegistry } from '../../platform'
 import { fixesPath, appFolder, userDataPath } from '../../constants/paths'
 import { getLogFilePath } from 'backend/logger/paths'
 import { wikiGameInfoStore } from '../../wiki_game_info/electronStore'

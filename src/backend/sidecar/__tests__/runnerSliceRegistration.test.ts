@@ -102,7 +102,7 @@ import {
   listenerRegistry,
   IpcHandler,
   IpcListener
-} from '../electronStub'
+} from '../../platform'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 // ── Canonical real-registration snapshot (Rule 1 fix, discovered building Phase 34.5 Plan

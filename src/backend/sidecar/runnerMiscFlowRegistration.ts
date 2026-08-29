@@ -78,7 +78,7 @@
  * the SUMMARY for this plan for the full trace.
  */
 
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 import {
   getCometVersion,
   getGogdlVersion,

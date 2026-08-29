@@ -45,7 +45,7 @@
  * real `ipcMain` via `backend/ipc`'s `addHandler`, an Electron-only path.
  */
 
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 import {
   getStatus,
   getLatestVersion,

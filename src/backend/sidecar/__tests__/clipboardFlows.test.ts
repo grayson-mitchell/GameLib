@@ -32,7 +32,7 @@ jest.mock('os', () => {
 })
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shims ──
-jest.mock('electron', () => jest.requireActual('../electronStub'))
+jest.mock('electron', () => jest.requireActual('../../platform'))
 jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
@@ -53,7 +53,7 @@ jest.mock('../../utils/systeminfo', () => ({
 
 // ── Imports (after mocks) ───────────────────────────────────────────────────────────────────
 import { registerClipboardFlows } from '../clipboardFlowRegistration'
-import { clipboard, listenerRegistry, handlerRegistry } from '../electronStub'
+import { clipboard, listenerRegistry, handlerRegistry } from '../../platform'
 import { requestRustInvoke } from '../sidecarRpc'
 import { getSystemInfo, formatSystemInfo } from '../../utils/systeminfo'
 import {

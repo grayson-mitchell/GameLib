@@ -36,9 +36,9 @@ import { release as osRelease } from 'os'
 // (the previous source of app.getVersion() below) is UNSET in the packaged SEA sidecar
 // binary, so without this every shipped build's `getHeroicVersion` reported '0.0.0'.
 import pkgJson from '../../../package.json'
-import { getPath } from './pathShim'
-import { isPackagedSidecar } from './isPackagedSidecar'
-import { requestRustInvoke } from './sidecarRpc'
+import { getPath } from '../sidecar/pathShim'
+import { isPackagedSidecar } from '../sidecar/isPackagedSidecar'
+import { requestRustInvoke } from '../sidecar/sidecarRpc'
 import {
   RUST_APP_EXIT,
   RUST_APP_HIDE,
@@ -710,7 +710,7 @@ export const session = {
 // Now a real, `sips`-backed implementation -- see `nativeImageShim.ts` for the full contract
 // (lazy resize/crop, real toPNG/toJPEG, a loud non-darwin decline instead of a silent empty
 // Buffer).
-export { nativeImage } from './nativeImageShim'
+export { nativeImage } from '../sidecar/nativeImageShim'
 
 export const screen = {
   getPrimaryDisplay: () => ({

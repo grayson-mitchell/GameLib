@@ -104,7 +104,7 @@
  * `electron` module.
  */
 
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 // Load-bearing FIRST import (mirrors steamFlowRegistration.ts's / plan
 // 30-01's steamAuthFlowRegistration.ts's Phase 27 Plan 05 circular-dep fix):
 // force `storeManagers/index.ts` to be the INITIALIZATION ENTRY before the

@@ -99,7 +99,7 @@ jest.mock('../pathShim', () => {
 
 // ── electron / electron-store — route Jest's own module resolution at the
 // REAL sidecar shims (see module docstring above) ───────────────────────────
-jest.mock('electron', () => jest.requireActual('../electronStub'))
+jest.mock('electron', () => jest.requireActual('../../platform'))
 jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
@@ -219,7 +219,7 @@ import {
 } from './helpers/sidecarHarness'
 import { GlobalConfig } from 'backend/config'
 import { requestRustInvoke } from '../sidecarRpc'
-import { listenerRegistry, handlerRegistry } from '../electronStub'
+import { listenerRegistry, handlerRegistry } from '../../platform'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
 import { achievementStore } from '../../storeManagers/gog/electronStores'
 import {

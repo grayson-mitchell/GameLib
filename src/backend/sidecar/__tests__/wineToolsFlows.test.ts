@@ -85,12 +85,12 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 
 import { registerWineToolsFlows } from '../wineToolsFlowRegistration'
-import { handlerRegistry, listenerRegistry } from '../electronStub'
+import { handlerRegistry, listenerRegistry } from '../../platform'
 import { runWineCommand } from '../../launcher'
 import { GameConfig } from '../../game_config'
 import { DXVK, runWineCommandOnGame } from '../../tools'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
-import type { IpcHandler } from '../electronStub'
+import type { IpcHandler } from '../../platform'
 
 // ── Registered ONCE for this whole file (not per-test) -- `listenerRegistry`/`handlerRegistry`
 // are module-scope maps; calling `registerWineToolsFlows()` more than once would stack a
@@ -215,7 +215,7 @@ describe('D-15/T-34.5-30 dialog safety pin — showDialogBoxModalAuto never prop
     }) => void
 
     jest.isolateModules(() => {
-      jest.doMock('electron', () => jest.requireActual('../electronStub'))
+      jest.doMock('electron', () => jest.requireActual('../../platform'))
       jest.doMock('../sidecarRpc', () => ({
         requestRustInvoke: jest.fn().mockResolvedValue(undefined)
       }))
@@ -552,7 +552,7 @@ describe('runWineCommandForGame Windows-branch shell removal (T-34.5-C6-49-03, P
       } = require('../wineToolsFlowRegistration')
       const {
         handlerRegistry: isolatedHandlerRegistry
-      } = require('../electronStub')
+      } = require('../../platform')
       isolatedRegister()
       isolatedHandler = isolatedHandlerRegistry.get('runWineCommandForGame')
       /* eslint-enable @typescript-eslint/no-require-imports */

@@ -60,7 +60,7 @@ import { existsSync, readFileSync } from 'graceful-fs'
 import { cpus } from 'os'
 import { isAbsolute, relative, resolve } from 'path'
 
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 // Load-bearing FIRST import (mirrors installFlowRegistration.ts's /
 // steamAuthFlowRegistration.ts's Phase 27 Plan 05 circular-dep fix): force
 // `storeManagers/index.ts` to be the INITIALIZATION ENTRY before the direct

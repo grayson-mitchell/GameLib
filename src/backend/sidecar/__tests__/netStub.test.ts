@@ -66,7 +66,7 @@ jest.mock('os', () => {
 // supplementing only `app.userAgentFallback` (see module docstring's Rule 3 note above) --
 // `net` here is the REAL, unmocked, hardened D-06 implementation, spread unchanged.
 jest.mock('electron', () => {
-  const real = jest.requireActual('../electronStub')
+  const real = jest.requireActual('../../platform')
   return {
     ...real,
     app: {
@@ -95,7 +95,7 @@ jest.mock('backend/logger', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { net } from '../electronStub'
+import { net } from '../../platform'
 import { revealKey } from '../../humble/adapter'
 
 /** Flushes real setImmediate turns so the stub's asynchronous 'error' emission can run. */

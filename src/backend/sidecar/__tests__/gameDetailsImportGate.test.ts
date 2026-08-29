@@ -309,8 +309,19 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // no guard moved. The D-09 bottle-launch gate this digest exists to protect
   // (`steamLibrary.has(appName)` in `requestGameSettings`) is proven directly and
   // independently by the semantic-pin test below, which stayed green throughout.
+  // Re-pinned 2026-08-29 by Phase 35 Plan 13 (D-02), per this gate's own documented
+  // procedure. The ONLY change to the pinned file is ONE import specifier --
+  // `from './electronStub'` became `from '../platform'` -- because that plan MOVED
+  // `electronStub.ts` to `src/backend/platform/index.ts`. The import resolves to the
+  // same module object it always did. No registration, no argument and no guard moved;
+  // the D-09 bottle-launch fix (`steamLibrary.has(appName)` in `requestGameSettings`)
+  // is untouched, and is proven directly and independently by the two semantic-pin tests
+  // below, which stayed green throughout. Verified by
+  // `git diff --stat -- src/backend/sidecar/settingsFlowRegistration.ts`:
+  // 1 insertion, 1 deletion. Prior digest:
+  // 43afa3fb9f2352ee25a13811958c017c4474445bc0ea468ce67ed29674087351
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    '43afa3fb9f2352ee25a13811958c017c4474445bc0ea468ce67ed29674087351'
+    'b408ff7c38a5238b5c1c88eba9f63382294428246a290c0ef7602f48f0414862'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
@@ -399,8 +410,21 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // Re-pinned 2026-08-14 by Phase 34.5 (F-34.5-G6-26). The ONLY change then was adding
   // `logDebug: jest.fn()` to its `backend/logger` mock (+3 lines, comment included).
   // Prior digest: 66645e8e33437a9da352619ce06b361450dcc78da294a6fc6161ef2cedc67f99
+  // Re-pinned 2026-08-29 by Phase 35 Plan 13 (D-02), per this gate's own documented
+  // procedure. The ONLY changes to the pinned file are TWO path repoints forced by the
+  // MOVE of `electronStub.ts` to `src/backend/platform/index.ts`: the
+  // `jest.mock('electron', ...)` factory specifier `'../electronStub'` -> `'../../platform'`,
+  // and the by-construction gate's `readFileSync` path `'../electronStub.ts'` ->
+  // `'../../platform/index.ts'`. Both still resolve to the SAME module and the SAME file
+  // content -- the move was byte-preserving apart from four relative-import lines. No
+  // assertion, fixture or proof was altered, weakened or repurposed: the
+  // `safeStorage.isEncryptionAvailable` "always true" regression detector and the
+  // configStore byte-identity comparisons are untouched. Verified by
+  // `git diff --stat -- src/backend/sidecar/__tests__/electronUntouched.test.ts`:
+  // 2 insertions, 2 deletions. Prior digest:
+  // 2c0acfb5220a85702c0a7f33aafdae9eade1a2c4bec234d33980ab968e1f1105
   const ELECTRON_UNTOUCHED_SHA256 =
-    '2c0acfb5220a85702c0a7f33aafdae9eade1a2c4bec234d33980ab968e1f1105'
+    '132822ebc76da7db0ea8974e93547fd27ef6e04d5b095c6911878f09806d0335'
 
   it('REQ-34.2-14 Gate 8: electronUntouched.test.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, 'electronUntouched.test.ts')

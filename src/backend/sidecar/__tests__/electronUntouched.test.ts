@@ -48,7 +48,7 @@ import { stripSourceComments as stripComments } from 'backend/testUtils/stripSou
 // via `pathShim.ts` -- the whole point of D-04's proof). `jest.requireActual`
 // resolves the SAME singleton module instance `configStore`/`tokenStore.ts`
 // bind onto in production. ────────────────────────────────────────────────
-jest.mock('electron', () => jest.requireActual('../electronStub'))
+jest.mock('electron', () => jest.requireActual('../../platform'))
 jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
@@ -309,7 +309,7 @@ describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)',
   })
 
   it('by-construction gate: electronStub.ts safeStorage.isEncryptionAvailable never regresses to the "always true" lie (comments stripped)', () => {
-    const src = readFileSync(join(__dirname, '../electronStub.ts'), 'utf-8')
+    const src = readFileSync(join(__dirname, '../../platform/index.ts'), 'utf-8')
     const stripped = stripComments(src)
     expect(stripped).not.toMatch(
       /isEncryptionAvailable:\s*\(\):\s*boolean\s*=>\s*true/

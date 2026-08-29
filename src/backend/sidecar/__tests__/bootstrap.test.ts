@@ -68,7 +68,7 @@ import { isAbsolute, join, relative, resolve } from 'path'
 import { mkdtempSync } from 'node:fs'
 import { PassThrough } from 'node:stream'
 import { init } from '../bootstrap'
-import { handlerRegistry } from '../electronStub'
+import { handlerRegistry } from '../../platform'
 import { getLogFilePath } from '../../logger/paths'
 import * as loggerModule from '../../logger'
 import {
@@ -325,7 +325,7 @@ describe('sidecar bootstrap (headless boot)', () => {
   // can use this file's already-imported `init`/`publicDir` -- both need a fresh module
   // instance resolved against the REAL `electronStub`, exactly the way
   // `appRootResolution.test.ts`'s "real-filesystem sidecar-conditions" block already does:
-  // `jest.isolateModules` + `jest.doMock('electron', () => jest.requireActual('../electronStub'))`
+  // `jest.isolateModules` + `jest.doMock('electron', () => jest.requireActual('../../platform'))`
   // swaps out the automock for the one real production code actually runs against, then
   // `require('../bootstrap')` fresh so `constants/paths.ts`'s `publicDir` is computed against
   // whatever `GAMELIB_APP_ROOT` each arm sets, never restated by hand.
@@ -344,7 +344,7 @@ describe('sidecar bootstrap (headless boot)', () => {
     } {
       let result!: { defectCalls: unknown[][]; lines: string[] }
       jest.isolateModules(() => {
-        jest.doMock('electron', () => jest.requireActual('../electronStub'))
+        jest.doMock('electron', () => jest.requireActual('../../platform'))
         /* eslint-disable @typescript-eslint/no-require-imports */
         const isolatedLogger = require('../../logger')
         const { init: isolatedInit } = require('../bootstrap')

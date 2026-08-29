@@ -29,7 +29,7 @@
 
 // ── electron / electron-store — route Jest's own module resolution at the
 // REAL sidecar shims (mirrors steamAuthFlows.test.ts) ───────────────────────
-jest.mock('electron', () => jest.requireActual('../electronStub'))
+jest.mock('electron', () => jest.requireActual('../../platform'))
 jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
@@ -89,7 +89,7 @@ import {
   ipcMain as isolationIpcMain,
   handlerRegistry as isolationHandlerRegistry,
   listenerRegistry as isolationListenerRegistry
-} from '../electronStub'
+} from '../../platform'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
@@ -957,7 +957,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         registerHumbleFlows: () => void
       }
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const freshStub = require('../electronStub') as {
+      const freshStub = require('../../platform') as {
         handlerRegistry: Map<string, unknown>
       }
 
@@ -974,7 +974,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         registerHumbleFlows: () => void
       }
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const freshStub = require('../electronStub') as {
+      const freshStub = require('../../platform') as {
         handlerRegistry: Map<string, unknown>
       }
 
@@ -996,7 +996,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         registerHumbleFlows: () => void
       }
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const freshStub = require('../electronStub') as {
+      const freshStub = require('../../platform') as {
         handlerRegistry: Map<string, unknown>
       }
 
@@ -1021,7 +1021,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
   // `jest.resetModules()` + a dynamic, unmocked `require`, mirroring
   // `user.test.ts`'s own sanctioned mock boundary (electron -> session, but here
   // routed at the REAL electronStub per this file's own top-level
-  // `jest.mock('electron', () => jest.requireActual('../electronStub'))` --
+  // `jest.mock('electron', () => jest.requireActual('../../platform'))` --
   // deliberately NOT overridden, so `session.fromPartition()` below is the REAL,
   // accepted Phase 29 D-09 no-op, never a fabricated one; backend/logger ->
   // log* per user.test.ts's own boundary; ../electronStores is left REAL and

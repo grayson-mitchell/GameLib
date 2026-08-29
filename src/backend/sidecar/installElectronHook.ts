@@ -34,7 +34,7 @@
  */
 
 import Module from 'node:module'
-import * as electronStub from './electronStub'
+import * as electronStub from '../platform'
 
 interface ModuleWithLoad {
   _load: (request: string, parent: unknown, isMain: boolean) => unknown

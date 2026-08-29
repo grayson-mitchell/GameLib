@@ -41,7 +41,7 @@ jest.mock('os', () => {
 })
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shims
-jest.mock('electron', () => jest.requireActual('../electronStub'))
+jest.mock('electron', () => jest.requireActual('../../platform'))
 jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
@@ -57,7 +57,7 @@ jest.mock('../sidecarRpc', () => ({
 // electronStub.ts's imports) -- its error paths use `console.warn` directly, spied on below.
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { clipboard, dialog } from '../electronStub'
+import { clipboard, dialog } from '../../platform'
 import { requestRustInvoke } from '../sidecarRpc'
 import {
   RUST_DIALOG_MESSAGE,

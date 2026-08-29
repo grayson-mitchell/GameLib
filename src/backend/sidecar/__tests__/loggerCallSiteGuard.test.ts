@@ -90,7 +90,7 @@ jest.mock('backend/logger/paths', () => {
 // (mirrors loggerFlows.test.ts / sidecarRejectionGuard.test.ts). Never
 // `bootstrap.init()`'d — this suite does not need the RPC loop, only the
 // listener registration function and the registry it writes into. ─────────
-jest.mock('electron', () => jest.requireActual('../electronStub'))
+jest.mock('electron', () => jest.requireActual('../../platform'))
 
 // ── backend/config — avoid constructing a real electron-store-backed
 // GlobalConfig. Never exercised by this suite: initHeadless() (used below)
@@ -109,7 +109,7 @@ import { initHeadless } from '../../logger'
 import { LogPrefix } from '../../logger/constants'
 import * as loggerModule from '../../logger'
 import { registerLoggerFlows } from '../loggerFlowRegistration'
-import { listenerRegistry } from '../electronStub'
+import { listenerRegistry } from '../../platform'
 
 /**
  * Waits, bounded, alternating a `setImmediate` tick and a short timer, until
@@ -244,7 +244,7 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
     jest.isolateModules(() => {
       /* eslint-disable @typescript-eslint/no-require-imports */
       const freshElectronStub =
-        require('../electronStub') as typeof import('../electronStub')
+        require('../../platform') as typeof import('../../platform')
       const freshRegistration =
         require('../loggerFlowRegistration') as typeof import('../loggerFlowRegistration')
       /* eslint-enable @typescript-eslint/no-require-imports */
@@ -398,7 +398,7 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
     jest.isolateModules(() => {
       /* eslint-disable @typescript-eslint/no-require-imports */
       const freshElectronStub =
-        require('../electronStub') as typeof import('../electronStub')
+        require('../../platform') as typeof import('../../platform')
       const freshRegistration =
         require('../loggerFlowRegistration') as typeof import('../loggerFlowRegistration')
       /* eslint-enable @typescript-eslint/no-require-imports */

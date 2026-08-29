@@ -106,7 +106,7 @@
  * reader must not take it for "repair works for Steam games".
  */
 
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 import { pushFrontendMessage } from './sidecarRpc'
 import {
   getGameInfo,

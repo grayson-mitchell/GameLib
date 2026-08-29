@@ -61,7 +61,7 @@
  * empirically correct, only that it is the control this channel depends on.
  */
 
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 // Load-bearing FIRST import — force `storeManagers/index.ts` to be the INITIALIZATION ENTRY
 // before a direct `storeManagers/<runner>/user` import resolves, avoiding the re-entrant "X is
 // not a constructor" mid-evaluation crash `steamAuthFlowRegistration.ts`'s own docstring

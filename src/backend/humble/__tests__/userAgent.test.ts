@@ -14,13 +14,13 @@
  * directly.
  *
  * Unlike `humbleFlows.test.ts`/`humbleLoginFlows.test.ts` (which `jest.mock('electron', () =>
- * jest.requireActual('../../sidecar/electronStub'))` to get a REAL ipcMain/app pair alongside a
+ * jest.requireActual('../../platform'))` to get a REAL ipcMain/app pair alongside a
  * lot of other sidecar wiring this file has no need for), this suite imports `electronStub.ts`
  * directly and mocks only the bare `'electron'` specifier to point at it -- `userAgent.ts`'s
  * only touchpoint is `app.userAgentFallback`.
  */
 
-jest.mock('electron', () => jest.requireActual('../../sidecar/electronStub'))
+jest.mock('electron', () => jest.requireActual('../../platform'))
 
 import { standardBrowserUserAgent } from '../userAgent'
 

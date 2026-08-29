@@ -70,7 +70,7 @@
 
 import { logInfo, LogPrefix } from 'backend/logger'
 
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 // Load-bearing FIRST import (mirrors installFlowRegistration.ts's /
 // settingsFlowRegistration.ts's Phase 27 Plan 05 circular-dep fix): force
 // `storeManagers/index.ts` to be the INITIALIZATION ENTRY before any other

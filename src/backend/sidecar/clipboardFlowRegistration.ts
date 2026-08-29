@@ -51,7 +51,7 @@
  * `void` and cannot surface failure either.
  */
 
-import { ipcMain, clipboard } from './electronStub'
+import { ipcMain, clipboard } from '../platform'
 import { requestRustInvoke } from './sidecarRpc'
 import { RUST_CLIPBOARD_READ_TEXT } from '../../common/types/sidecarTransport'
 import { getSystemInfo, formatSystemInfo } from '../utils/systeminfo'

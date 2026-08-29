@@ -45,7 +45,7 @@ import {
   type SidecarRpcResponse,
   type SidecarNotification
 } from 'common/types/sidecarTransport'
-import { handlerRegistry, listenerRegistry } from './electronStub'
+import { handlerRegistry, listenerRegistry } from '../platform'
 
 /** Guardrail against an unterminated line growing the input buffer unbounded. */
 const MAX_LINE_LENGTH = 10 * 1024 * 1024 // 10 MiB

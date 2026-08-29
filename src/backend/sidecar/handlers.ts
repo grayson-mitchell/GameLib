@@ -72,7 +72,7 @@
 
 import Store from '../store_backend'
 
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 import { registerSteamFlows } from './steamFlowRegistration'
 import { registerSteamAuthFlows } from './steamAuthFlowRegistration'
 import { registerInstallFlows } from './installFlowRegistration'

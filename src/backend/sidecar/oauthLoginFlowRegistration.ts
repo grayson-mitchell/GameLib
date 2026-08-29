@@ -34,7 +34,7 @@
  * touches those four channels' registrations or signatures.
  */
 
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 import { captureOAuthLogin } from './oauthLoginCapture'
 import type {
   OAuthRunner,

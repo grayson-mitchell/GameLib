@@ -37,7 +37,7 @@ import {
   stripSourceComments,
   stripTrailingLineComment
 } from '../../testUtils/stripSourceComments'
-import { app } from '../electronStub'
+import { app } from '../../platform'
 
 const MAIN_RS_PATH = join(
   __dirname,
@@ -220,7 +220,7 @@ describe('real-filesystem sidecar-conditions: publicDir resolution under cwd=src
   function requirePathsUnderSidecarConditions(): typeof import('../../constants/paths') {
     let isolatedPaths!: typeof import('../../constants/paths')
     jest.isolateModules(() => {
-      jest.doMock('electron', () => jest.requireActual('../electronStub'))
+      jest.doMock('electron', () => jest.requireActual('../../platform'))
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       isolatedPaths = require('../../constants/paths')
     })

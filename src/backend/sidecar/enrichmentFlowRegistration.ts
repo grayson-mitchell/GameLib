@@ -154,7 +154,7 @@
  * is INVOKE.
  */
 
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 import { getGame } from '../utils'
 import { getWikiGameInfo } from '../wiki_game_info/wiki_game_info'
 import { gameAnticheatInfo } from '../anticheat/utils'

@@ -37,7 +37,7 @@ jest.mock('os', () => {
 })
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shims ──
-jest.mock('electron', () => jest.requireActual('../electronStub'))
+jest.mock('electron', () => jest.requireActual('../../platform'))
 jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
@@ -130,7 +130,7 @@ jest.mock('../../storeManagers/nile/user', () => ({
 
 // ── Imports (after mocks) ───────────────────────────────────────────────────────────────────────
 import { registerRunnerAuthFlows } from '../runnerAuthFlowRegistration'
-import { handlerRegistry, listenerRegistry } from '../electronStub'
+import { handlerRegistry, listenerRegistry } from '../../platform'
 import { logWarning } from 'backend/logger'
 // REAL module — pure, no seam/logger side effects requiring a mock (T-34.5-34 integration proof).
 import { matchOAuthRedirect } from '../oauthLoginCapture'

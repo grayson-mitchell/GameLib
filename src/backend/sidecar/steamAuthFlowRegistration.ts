@@ -98,7 +98,7 @@
  * 34.5 lands.
  */
 
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 // Load-bearing FIRST import (mirrors steamFlowRegistration.ts's Phase 27 Plan
 // 05 circular-dep fix): force `storeManagers/index.ts` to be the
 // INITIALIZATION ENTRY before the direct `steam/user` import below resolves.

@@ -47,7 +47,7 @@ jest.mock('os', () => {
 })
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shims ──
-jest.mock('electron', () => jest.requireActual('../electronStub'))
+jest.mock('electron', () => jest.requireActual('../../platform'))
 jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
@@ -65,7 +65,7 @@ jest.mock('axios', () => ({
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { PassThrough } from 'node:stream'
 import { init } from '../bootstrap'
-import { handlerRegistry, listenerRegistry } from '../electronStub'
+import { handlerRegistry, listenerRegistry } from '../../platform'
 import axios from 'axios'
 
 const mockedAxiosHead = axios.head as jest.Mock

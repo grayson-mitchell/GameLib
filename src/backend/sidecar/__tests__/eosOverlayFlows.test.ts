@@ -36,14 +36,14 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 
 import { registerEosOverlayFlows } from '../eosOverlayFlowRegistration'
-import { handlerRegistry, listenerRegistry } from '../electronStub'
+import { handlerRegistry, listenerRegistry } from '../../platform'
 import {
   enable,
   disable,
   isEnabled
 } from '../../storeManagers/legendary/eos_overlay/eos_overlay'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
-import type { IpcHandler } from '../electronStub'
+import type { IpcHandler } from '../../platform'
 
 // ── Registered ONCE for this whole file (not per-test) — mirrors
 // `wineToolsFlows.test.ts`'s own file-scope-once convention. All 8 registrations here are

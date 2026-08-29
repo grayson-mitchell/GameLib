@@ -54,7 +54,7 @@
  * never reach.
  */
 
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 import { runWineCommand, validWine } from '../launcher'
 import { GlobalConfig } from '../config'
 import { GameConfig } from '../game_config'

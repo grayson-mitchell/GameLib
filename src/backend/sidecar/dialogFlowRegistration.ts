@@ -29,7 +29,7 @@
  * `installFlowRegistration.ts` reaches `backend/utils/uninstaller.ts`.
  */
 
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 import { openDialogCallback } from '../utils/openDialog'
 
 /**

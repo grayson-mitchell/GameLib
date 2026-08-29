@@ -134,7 +134,7 @@
 
 import i18next from 'i18next'
 
-import { ipcMain, app, powerSaveBlocker, dialog } from './electronStub'
+import { ipcMain, app, powerSaveBlocker, dialog } from '../platform'
 import { isSnap, isCLINoGui } from '../constants/environment'
 import { heroicGithubURL, customThemesWikiLink } from '../constants/urls'
 import { getCustomThemes, getThemeCSS, getCustomCSS } from '../appshell/themes'

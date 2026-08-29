@@ -27,7 +27,7 @@
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shims
 // (mirrors humbleFlows.test.ts / clipboardFlows.test.ts) ──────────────────────────────────────
-jest.mock('electron', () => jest.requireActual('../electronStub'))
+jest.mock('electron', () => jest.requireActual('../../platform'))
 jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
@@ -85,7 +85,7 @@ import {
   registerHumbleLoginFlows,
   createRustLoginWindowSeam
 } from '../humbleLoginFlowRegistration'
-import { handlerRegistry, listenerRegistry } from '../electronStub'
+import { handlerRegistry, listenerRegistry } from '../../platform'
 import { startRpcServer, requestRustInvoke } from '../sidecarRpc'
 import {
   RUST_HUMBLE_LOGIN_OPEN,

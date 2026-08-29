@@ -96,7 +96,7 @@ describe('electronStub app.isPackaged — a delegating getter, not a second deri
     }))
 
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { app } = require('../electronStub') as {
+    const { app } = require('../../platform') as {
       app: { isPackaged: boolean }
     }
 
@@ -121,7 +121,7 @@ describe('electronStub app.isPackaged — a delegating getter, not a second deri
       .mockImplementation(() => {})
 
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { app } = require('../electronStub') as {
+    const { app } = require('../../platform') as {
       app: { isPackaged: boolean }
     }
     expect(app.isPackaged).toBe(true)
@@ -134,18 +134,22 @@ describe('T-35-11 source gate: exactly ONE derivation exists in the sidecar tree
   const sidecarDir = join(__dirname, '..')
   const read = (f: string) =>
     stripSourceComments(readFileSync(join(sidecarDir, f), 'utf8'))
+  const readPlatform = (f: string) =>
+    stripSourceComments(
+      readFileSync(join(__dirname, '../../platform', f), 'utf8')
+    )
 
   it('non-vacuity: the gate can see real code in each file it inspects', () => {
     // Proves the stripper did not eat everything it is about to assert over. Without
     // this, all three assertions below pass against an empty string.
     expect(read('isPackagedSidecar.ts')).toContain("require('node:sea')")
-    expect(read('electronStub.ts')).toContain('isPackagedSidecar()')
+    expect(readPlatform('index.ts')).toContain('isPackagedSidecar()')
     expect(read('humbleFlowRegistration.ts')).toContain('isPackagedSidecar()')
     expect(read('devSecretVault.ts')).toContain('isPackagedSidecar()')
   })
 
   it('electronStub.ts delegates and never re-derives, and no longer hardcodes the flag', () => {
-    const src = read('electronStub.ts')
+    const src = readPlatform('index.ts')
     expect(src).not.toContain("require('node:sea')")
     expect(src).not.toContain('isPackaged: false')
     expect(src).toContain('get isPackaged()')

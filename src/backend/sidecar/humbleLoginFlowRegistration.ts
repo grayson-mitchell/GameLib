@@ -53,7 +53,7 @@
  * off the main thread at the earliest point in the phase this is possible.
  */
 
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 import { requestRustInvoke } from './sidecarRpc'
 import {
   RUST_HUMBLE_LOGIN_OPEN,

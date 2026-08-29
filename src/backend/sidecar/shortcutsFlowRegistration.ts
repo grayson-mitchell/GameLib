@@ -81,7 +81,7 @@
 
 import { existsSync } from 'graceful-fs'
 import i18next from 'i18next'
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 import { getGame, handleExit } from '../utils'
 import { shortcutFiles } from '../shortcuts/shortcuts/shortcuts'
 import {

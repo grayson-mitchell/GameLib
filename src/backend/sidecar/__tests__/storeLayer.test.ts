@@ -53,7 +53,7 @@ jest.mock('os', () => {
   }
 })
 
-jest.mock('electron', () => jest.requireActual('../electronStub'))
+jest.mock('electron', () => jest.requireActual('../../platform'))
 jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
@@ -81,7 +81,7 @@ import {
   TypeCheckedStoreBackend
 } from '../../electron_store'
 import { ensureStoresRegistered } from '../storeRegistration'
-import { handlerRegistry } from '../electronStub'
+import { handlerRegistry } from '../../platform'
 import CacheStore from '../../cache'
 import { BOOT_SET_STORES, STORE_ALLOWLIST } from 'common/types/storePolicy'
 import {

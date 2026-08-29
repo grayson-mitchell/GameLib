@@ -183,7 +183,7 @@
  * by this plan or this module.
  */
 
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 import { logErrorSettled, logInfoSettled, LogPrefix } from '../logger'
 import { sanitizeRendererLogMessage } from '../logger/sanitizeRendererLogMessage'
 import { getLogFilePath } from '../logger/paths'

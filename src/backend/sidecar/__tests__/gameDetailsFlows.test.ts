@@ -202,7 +202,7 @@ jest.mock('backend/logger/paths', () => {
 
 // ── electron / electron-store — route Jest's own module resolution at the
 // REAL sidecar shims (see module docstring above) ───────────────────────────
-jest.mock('electron', () => jest.requireActual('../electronStub'))
+jest.mock('electron', () => jest.requireActual('../../platform'))
 jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
@@ -336,7 +336,7 @@ import { notify } from '../../dialog/dialog'
 import { sendGameStatusUpdate } from '../../utils'
 import { LegendaryUser } from '../../storeManagers/legendary/user'
 import { callAbortController } from '../../utils/aborthandler/aborthandler'
-import { handlerRegistry, listenerRegistry } from '../electronStub'
+import { handlerRegistry, listenerRegistry } from '../../platform'
 // Namespace import (not a named import) so `jest.spyOn(sidecarRpc,
 // 'pushFrontendMessage')` (Test 7, crash containment) can override the
 // SAME shared module.exports property `gameDetailsFlowRegistration.ts`'s own

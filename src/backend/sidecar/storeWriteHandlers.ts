@@ -22,7 +22,7 @@
 
 import Store from '../store_backend'
 
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 // Namespace import (not a named import) so this module's frontend-push call site is
 // the ONLY line in the file naming that function — see the header comment and the D-06
 // single-choke-point note above `applyStoreWrite`.

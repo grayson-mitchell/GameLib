@@ -333,7 +333,7 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
         '--platform=node',
         '--target=node22',
         '--format=cjs',
-        '--alias:electron=./src/backend/sidecar/electronStub.ts',
+        '--alias:electron=./src/backend/platform/index.ts',
         '--alias:i18next-fs-backend=i18next-fs-backend/cjs',
         '--alias:node-gyp-build=./src/backend/storeManagers/steam/depot/lzmaNativeBinding.ts',
         '--inject:./meta/sidecarSeaFsShim.ts'

@@ -89,7 +89,7 @@ jest.mock('os', () => {
 
 // ── electron / electron-store — route Jest's own module resolution at the
 // REAL sidecar shims (see module docstring above) ───────────────────────────
-jest.mock('electron', () => jest.requireActual('../electronStub'))
+jest.mock('electron', () => jest.requireActual('../../platform'))
 jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
@@ -219,7 +219,7 @@ import {
   callAllAbortControllers
 } from '../../utils/aborthandler/aborthandler'
 import { requestRustInvoke } from '../sidecarRpc'
-import { listenerRegistry, handlerRegistry } from '../electronStub'
+import { listenerRegistry, handlerRegistry } from '../../platform'
 import * as loggerModule from '../../logger'
 import { initQueue } from '../../downloadmanager/downloadqueue'
 import { handleProtocol } from '../../protocol'

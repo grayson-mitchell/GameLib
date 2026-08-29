@@ -92,7 +92,7 @@
 import { libraryManagerMap } from '../storeManagers'
 import { noteRefreshTrigger } from '../storeManagers/steam/authTrigger'
 
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 // launchEventCallback: the real Wine/GameConfig/DownloadManager pipeline
 // every non-Steam runner's launch must go through (GAP CYCLE 6, 34.5-46).
 // Reasons this is safe to import here: (a) `launcher.ts` is ALREADY in this

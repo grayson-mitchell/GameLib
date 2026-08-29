@@ -203,7 +203,7 @@ jest.mock('backend/constants/environment', () => ({
 // ── electron / electron-store — constants/paths.ts imports `app` from
 // 'electron' at module scope; route Jest's own module resolution at the
 // REAL sidecar shims (mirrors the four in-scope suites' own kit) ───────────
-jest.mock('electron', () => jest.requireActual('../electronStub'))
+jest.mock('electron', () => jest.requireActual('../../platform'))
 jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default

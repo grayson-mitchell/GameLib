@@ -201,7 +201,7 @@ import { join } from 'path'
 import { homedir } from 'os'
 
 import { registerRunnerMiscFlows } from '../runnerMiscFlowRegistration'
-import { handlerRegistry, listenerRegistry } from '../electronStub'
+import { handlerRegistry, listenerRegistry } from '../../platform'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { getPath } from '../pathShim'
 

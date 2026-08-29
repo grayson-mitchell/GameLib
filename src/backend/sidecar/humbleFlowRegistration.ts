@@ -102,7 +102,7 @@
  * module graph.
  */
 
-import { ipcMain } from './electronStub'
+import { ipcMain } from '../platform'
 // Load-bearing FIRST import (mirrors steamAuthFlowRegistration.ts's Phase 27
 // Plan 05 circular-dep fix, copied verbatim per-file): `humble/library.ts`
 // (imported below, transitively via `HumbleLibrary`) statically imports

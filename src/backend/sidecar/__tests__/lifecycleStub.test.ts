@@ -36,7 +36,7 @@ jest.mock('os', () => {
 })
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shims
-jest.mock('electron', () => jest.requireActual('../electronStub'))
+jest.mock('electron', () => jest.requireActual('../../platform'))
 jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default
@@ -57,7 +57,7 @@ import {
   powerSaveBlocker,
   session,
   shell
-} from '../electronStub'
+} from '../../platform'
 import { requestRustInvoke } from '../sidecarRpc'
 import {
   RUST_APP_EXIT,
@@ -321,7 +321,7 @@ describe('electronStub app.hide (quick/260815-vvz, raiseFrontmostBottledProcess 
   // that run after it.
   it('still forwards after app.relaunch() has already been called (not suppressed by relaunchInFlight)', async () => {
     let result!: {
-      app: typeof import('../electronStub').app
+      app: typeof import('../../platform').app
       mockInvoke: jest.Mock
     }
     jest.isolateModules(() => {
@@ -330,7 +330,7 @@ describe('electronStub app.hide (quick/260815-vvz, raiseFrontmostBottledProcess 
         requestRustInvoke: jest.Mock
       }
       const freshElectronStub =
-        require('../electronStub') as typeof import('../electronStub')
+        require('../../platform') as typeof import('../../platform')
       /* eslint-enable @typescript-eslint/no-require-imports */
       sidecarRpc.requestRustInvoke.mockImplementation(() =>
         Promise.resolve(null)
@@ -512,11 +512,11 @@ describe('electronStub app.relaunch/quit race guard (Phase 34.3 Plan 05, D-06, R
    * `jest.isolateModules()`'s callback must run synchronously.
    */
   function loadFreshApp(): {
-    app: typeof import('../electronStub').app
+    app: typeof import('../../platform').app
     mockInvoke: jest.Mock
   } {
     let result!: {
-      app: typeof import('../electronStub').app
+      app: typeof import('../../platform').app
       mockInvoke: jest.Mock
     }
     jest.isolateModules(() => {
@@ -525,7 +525,7 @@ describe('electronStub app.relaunch/quit race guard (Phase 34.3 Plan 05, D-06, R
         requestRustInvoke: jest.Mock
       }
       const freshElectronStub =
-        require('../electronStub') as typeof import('../electronStub')
+        require('../../platform') as typeof import('../../platform')
       /* eslint-enable @typescript-eslint/no-require-imports */
       sidecarRpc.requestRustInvoke.mockImplementation(() =>
         Promise.resolve(null)
@@ -576,7 +576,7 @@ describe('electronStub app.relaunch/quit race guard (Phase 34.3 Plan 05, D-06, R
     // this process survives. If the guard stayed set, app.quit()/exit() would be permanent no-ops
     // and the app could only be closed by force-quit. resetHeroic() runs this on every reset.
     let result!: {
-      app: typeof import('../electronStub').app
+      app: typeof import('../../platform').app
       mockInvoke: jest.Mock
     }
     jest.isolateModules(() => {
@@ -585,7 +585,7 @@ describe('electronStub app.relaunch/quit race guard (Phase 34.3 Plan 05, D-06, R
         requestRustInvoke: jest.Mock
       }
       const freshElectronStub =
-        require('../electronStub') as typeof import('../electronStub')
+        require('../../platform') as typeof import('../../platform')
       /* eslint-enable @typescript-eslint/no-require-imports */
       // Only the relaunch dispatch fails; a subsequent exit dispatch must still go through.
       sidecarRpc.requestRustInvoke.mockImplementation((channel: string) =>
