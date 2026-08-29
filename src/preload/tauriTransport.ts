@@ -7,15 +7,21 @@
  * snapshot for `misc.ts`'s `storeGet`/`storeHas` (the Steam login-gate reads
  * `steamConfigStore` synchronously -- GlobalState.tsx:238).
  *
- * `isTauri()` re-exports `@tauri-apps/api/core`'s own check (`globalThis.isTauri`, set by
- * the Tauri webview at injection time) so `ipc.ts`/`misc.ts`/`preload/index.ts` can guard
- * their re-pointed bodies without this module ever touching `ipcRenderer`/`electron-store`.
- *
  * This module has NO import of the electron package (or any other Node-only package) --
  * it is safe to be part of the Tauri renderer's own JS bundle. `ipc.ts`/`misc.ts` used to
  * keep their Node/Electron access behind a lazily-invoked, guarded `require` for the same
  * reason; Phase 35 plan 16 removed those requires entirely once nothing ran under
  * Electron anymore -- see those files' own comments.
+ *
+ * Phase 35 plan 17: this module used to also export a robust Tauri-context detection
+ * predicate (a `globalThis` convenience flag the Tauri webview sets at injection time,
+ * OR `__TAURI_INTERNALS__` as ground truth) that `ipc.ts`/`misc.ts`/`preload/index.ts`/
+ * the frontend guarded their Electron-vs-Tauri branches with. Tauri is the only shell
+ * now, so every one of those branches always took the Tauri arm -- each call site was
+ * collapsed to its unconditional Tauri body across the whole tree, and this predicate
+ * was deleted last, once nothing called it. See the removal completeness gate under
+ * `meta/__tests__/` (named for the deleted predicate -- deliberately not spelled out
+ * here, so this comment cannot itself defeat that gate's own zero-match search).
  */
 import { invoke as tauriInvoke } from '@tauri-apps/api/core'
 import { listen as tauriListen, type UnlistenFn } from '@tauri-apps/api/event'
@@ -31,28 +37,6 @@ import {
   type StoreChangedPayload
 } from 'common/types/sidecarTransport'
 import { isAllowedStoreField, isSafeKeyPath, isWritableStoreField } from 'common/types/storePolicy'
-
-/**
- * Robust Tauri-context detection (Phase 27 Plan 05 blank-screen fix).
- *
- * `@tauri-apps/api/core`'s own `isTauri()` checks ONLY `window.isTauri` — a
- * convenience flag that is NOT reliably present in every Tauri v2 webview. When it
- * is absent, that helper returns `false`, so `tauriAttach` never attaches
- * `window.api`, `ipc.ts`/`misc.ts` fall through to their Electron-only `require()`
- * branch, and the renderer throws (or renders blank) inside a real Tauri window.
- *
- * `__TAURI_INTERNALS__` is the ground-truth object the Tauri runtime ALWAYS injects
- * (it is what `invoke`/`listen` themselves use), so we treat EITHER signal as
- * proof-of-Tauri. In Electron/plain-browser neither is present, so this correctly
- * returns `false` and the byte-identical Electron path is preserved.
- */
-export function isTauri(): boolean {
-  const w = globalThis as unknown as {
-    isTauri?: unknown
-    __TAURI_INTERNALS__?: unknown
-  }
-  return Boolean(w.isTauri) || typeof w.__TAURI_INTERNALS__ !== 'undefined'
-}
 
 /**
  * Whether the running shell registers the `imagecache://` custom URL scheme
