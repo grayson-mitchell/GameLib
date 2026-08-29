@@ -38,15 +38,17 @@ key-files:
     - src/preload/__tests__/framelessRuntime.test.ts
     - src/preload/__tests__/steamInstallFormApi.test.ts
     - src/preload/tauriTransport.ts
+    - src/backend/sidecar/__tests__/electronReachLedger.test.ts
 
 key-decisions:
   - "D-01/D-02/D-04/D-08 convergence landed in ONE commit (3f31b37fd) per 35-PATTERNS.md Pitfall 2: splitting the isTauri() collapse, the electron-store require removal, and the deny-list deletion across commits/waves would let the second or third silently revert or conflict with the first"
   - "Task 3's scope was widened past the plan's own files_modified list into backend/ and common/ files, because the plan's own grep-based acceptance criteria are unscoped over those directories and the machine-checked criteria are authoritative — same stance Task 2 took for isTauri()"
   - "backend/platform/types.ts required a genuinely NEW SECTION 9 (a declare global NodeJS.Process augmentation) that no prior plan anticipated, found and fixed inside this plan rather than deferred, because it was a regression this plan's own Task 3 caused"
+  - "Post-wave gate fix: this plan's own verification scope (--selectProjects Preload Frontend Common) could not see the Backend-project electronReachLedger.test.ts break its Task-3 fix commit caused by zeroing measured electron reach; fixed by inverting the test's stale non-empty/must-contain assertions to empty/must-not-contain, per the file's own established invert-don't-delete convention, after the coordinator's Backend/Meta gate caught it post-wave"
 
 requirements-completed: [REQ-35-18, REQ-35-02]
 
-duration: "~3 hours across two sessions"
+duration: "~3.5 hours across three sessions (session 3: post-wave gate fix)"
 completed: 2026-08-29
 ---
 
@@ -56,10 +58,10 @@ Unified the two divergent secret-field policies onto the fail-closed allow-list,
 
 ## Performance
 
-- Duration: ~3 hours across two sessions (session 1: Tasks 1-3 code-complete plus the initial verify pass; session 2: the systeminfo regression root-cause/fix, a second grep-gate false positive, and all closing documentation)
+- Duration: ~3 hours across three sessions (session 1: Tasks 1-3 code-complete plus the initial verify pass; session 2: the systeminfo regression root-cause/fix, a second grep-gate false positive, and all closing documentation; session 3: post-wave gate fix for `electronReachLedger.test.ts`, caught by the coordinator's `Backend`/`Meta` run that this plan's own `Preload Frontend Common` verification could not see)
 - Tasks: 3/3 complete
-- Files modified: 12 (2 test-infra, 4 preload runtime, 1 platform types, 1 preload comment, 1 declaration-merge shim, 3 preload test rewrites — see `key-files`)
-- Commits: 4 (1 test, 2 feat, 1 fix)
+- Files modified: 13 (2 test-infra, 4 preload runtime, 1 platform types, 1 preload comment, 1 declaration-merge shim, 3 preload test rewrites, 1 backend reach-ledger test — see `key-files`)
+- Commits: 5 (1 test, 2 feat, 2 fix)
 
 ## Accomplishments
 
@@ -75,8 +77,9 @@ Unified the two divergent secret-field policies onto the fail-closed allow-list,
 | 2 | Collapse `misc.ts` | feat | `3f31b37fd` | D-01/D-02/D-04/D-08 convergence in one commit |
 | 3 | Kill Form 2/3/4 in `ipc.ts` + repo-wide retyping | feat | `e975bb456` | 4 lazy requires removed, 32 `Electron.` sites retyped |
 | 3 (fix) | Restore `NodeJS.Process` typing | fix | `5dfd07e07` | Root-caused and fixed a regression Task 3 introduced |
+| 3 (post-wave fix) | Invert `electronReachLedger`'s anti-degradation gate | fix | `3d734a836` | Caught by the coordinator's `Backend`/`Meta` gate; see "Post-Wave Gate Fix" below |
 
-Final metadata commit (this document, STATE.md, ROADMAP.md, REQUIREMENTS.md): recorded below after this document lands.
+A closing metadata commit (this document, STATE.md, ROADMAP.md, REQUIREMENTS.md) follows after this document lands.
 
 ## Files Created/Modified
 
@@ -84,6 +87,7 @@ Final metadata commit (this document, STATE.md, ROADMAP.md, REQUIREMENTS.md): re
 - `src/preload/api/misc.ts` — one secret policy, zero `isTauri`, zero `electron-store`
 - `src/preload/ipc.ts` — zero `require('electron')`, zero `isTauri`
 - `src/backend/platform/types.ts` — new SECTION 9 (`declare global` `NodeJS.Process` augmentation); no other widening needed — every other type this plan required (`IpcRendererEvent`, `WebviewTag`, `DidFailLoadEvent`, `IpcMainInvokeEvent`, `ShortcutDetails`, `Rectangle`, `TitleBarOverlay`, `OpenDialogOptions`, `FileFilter`, `BrowserWindowConstructorOptions`, `MenuItemConstructorOptions`) was already declared by plan 35-13
+- `src/backend/sidecar/__tests__/electronReachLedger.test.ts` — post-wave gate fix (commit `3d734a836`): inverted its anti-degradation assertion and removed the `src/common/` scope exemption its `requiredModules` loop carried, both now stale once this plan's Task 3 zeroed measured electron reach — see "Post-Wave Gate Fix" below
 - `src/preload/api/tauriGamepadInput.ts` — comment reworded to eliminate a literal-grep-gate false positive
 - `src/common/typedefs/extra-mock-function.ts` — its two declaration-merged members now import `BrowserWindowConstructorOptions`/`MenuItemConstructorOptions` from `backend/platform` directly
 - `src/preload/tauriTransport.ts` — a D-08 comment updated, now stale re: an Electron path that no longer diverges
@@ -147,6 +151,32 @@ declare global {
 
 `.planning/ROADMAP.md`'s plan checklist for 35-13/35-14/35-15/35-16 and the phase's "Plans:" summary line were stale (`[ ]` unchecked / "12/19") despite those plans being complete — those closing commits deliberately left ROADMAP.md untouched (per `bcf257600`'s own commit message: "the orchestrator owns those"). Corrected in this plan's closing pass, following the established precedent (`e58efe8ea docs(35): wave 4 complete — 9/19 plans, and tick 8 boxes that had drifted`).
 
+## Post-Wave Gate Fix
+
+**This plan's own verification was too narrow to catch this.** Task 3's fix commit `5dfd07e07` landed in `src/backend/platform/types.ts`, putting the `Backend` and `Meta` Jest projects in scope — but every verification run in this plan (see the Task-3 gates and the closing self-check above) used `--selectProjects Preload Frontend Common` only, which cannot execute `src/backend/`. The coordinator ran `Backend`/`Meta` post-wave and found one real, attributable failure.
+
+**Failure:** `src/backend/sidecar/__tests__/electronReachLedger.test.ts`, test `anti-degradation: the measured set is non-empty and contains every known load-bearing electron-reaching edge` — `expect(measured.size).toBeGreaterThan(0)` received `0`.
+
+**Root cause, not a defect this plan introduced by accident:** plan 35-15 deliberately left `BASELINE_ELECTRON_REACHING_MODULES` at 2 entries (`src/common/types.ts`, `src/common/types/ipc.ts`), and its own SUMMARY recorded both as "35-16's to clear." This plan's Task 3 cleared them (Form 2 rewrite, commits `e975bb456`/`5dfd07e07`), so the reach walk from the four gated entry points now measures electron reach at exactly zero — the tripwire firing correctly against two assertions written for the porting era, when zero meant a broken measurement rather than a completed cutover.
+
+**Fix (commit `3d734a836`), inverted per the file's own established convention — same rule 35-14 used for `artifactTargets`' D-11 guard and 35-15 used earlier in this same file:**
+
+1. `expect(measured.size).toBeGreaterThan(0)` → `expect(measured.size).toBe(0)`.
+2. The `requiredModules` loop's `src/common/` scope exemption (`stillOwedToPlan3516`, 35-15's partition) removed — nothing remains owed, so every required module is now asserted ABSENT from the measured set with no exceptions.
+3. The file's top-of-file header comment and both touched test bodies' existing comment blocks were **extended, not replaced** — the porting-era reasoning stays on record, with the post-cutover update appended.
+
+**Measured, not transcribed, per the coordinator's explicit instruction:** re-ran the walk with temporary instrumentation and captured the real numbers directly from the same run: `electronImportingFiles.size = 0`, `visitedFiles.size = 256` (`reachability sanity`'s existing floor is `> 224`) — ruling out a vacuous traversal (one that visits nothing) as the reason electron reach measured zero. Both figures are recorded in the file's comments.
+
+**Verification after the fix:**
+- `pnpm test --selectProjects Backend -- electronReachLedger`: 4/4 tests passing (`growth tripwire`, the now-inverted `anti-degradation`, `reachability sanity`, the gap-#3 pin).
+- `pnpm codecheck`: 0 errors (unaffected by a test-file-only change; re-confirmed).
+- `pnpm test --selectProjects Backend Meta`: full re-run confirms `electronReachLedger` green. Two failures remain, both pre-existing and unowned by this plan, per the coordinator's diagnosis (both independently confirmed here):
+  - `decompressPool.test.ts` (3 tests) — `lzmaDecoderKind()` returns `pure-js`, expected `native`. 35-15's SUMMARY already names this the known-red native-LZMA baseline. None of this plan's five commits touch the lzma path.
+  - `meta/__tests__/genI18nGateScope.test.ts` (1 test, A-17 ANTI-ROT) — ledgered `D-35-03-01`, open and unowned since plan 35-03. Confirmed the committed `meta/i18nForkTouchedFiles.json` now has 6 top-level entries vs. 3 at 35-03 mint time (`python3 -c "import json; print(len(json.load(open('meta/i18nForkTouchedFiles.json'))))"` → `6`) — cumulative drift across this phase, not introduced by this plan. Left unfixed, noted here so the ledger entry stays accurate.
+  - `src/backend/sidecar/__tests__/bootstrapWirings.test.ts` and `src/backend/sidecar/__tests__/enrichmentFlows.test.ts` both failed in one combined `Backend Meta` run under load and passed cleanly in isolation and in a subsequent full re-run — confirmed load-dependent flakes (frame-response timing assertions), not genuine regressions; both are green in the current stable state. This matches the project's own documented pattern of a full-suite run manufacturing failures under load that a scoped or isolated run does not reproduce.
+
+**Process finding, not just the fix:** the 35-15 → 35-16 handoff for the reach-ledger's two remaining baseline entries existed **only** in 35-15's own SUMMARY.md — never in 35-16's PLAN.md, and neither 35-17's nor 35-18's plan file mentions the reach ledger at all. A reader who worked strictly from the plan file (as this plan's own verification did, by scoping to `Preload Frontend Common`, the projects its `files_modified` list implied) would never have discovered this dependency. The gap is the cross-plan handoff mechanism, not this one fix — worth surfacing for whoever plans 35-17/35-18's verification scope next, since `BASELINE_ELECTRON_REACHING_MODULES`'s own header comment states it is read by 35-18's D-03 grep gate.
+
 ## Surviving `electron` string matches (Task 3's grep acceptance criterion)
 
 `grep -rn "electron" src/frontend src/preload src/common` returns 104 matches across 41 files after this plan. None are Form 2/3/4 (real imports, ambient namespace references, or lazy requires). Every surviving match falls into one of five categories, given here with a one-word reason so plan 35-18's D-03 grep gate can distinguish these from real references:
@@ -196,12 +226,16 @@ Plan 35-17 (the broader `isTauri()` collapse across the remaining ~26 files / ~1
 - `src/preload/api/tauriGamepadInput.ts`: FOUND
 - `src/common/types/storePolicy.ts`: FOUND
 - `src/common/types/__tests__/storePolicy.test.ts`: FOUND
+- `src/backend/sidecar/__tests__/electronReachLedger.test.ts`: FOUND
 - Commit `8dafd8d91`: FOUND in git log
 - Commit `3f31b37fd`: FOUND in git log
 - Commit `e975bb456`: FOUND in git log
 - Commit `5dfd07e07`: FOUND in git log
+- Commit `3d734a836`: FOUND in git log
 - `pnpm codecheck`: 0 errors
 - `pnpm test --selectProjects Preload Frontend Common`: 140/140 suites, 2297/2297 tests passing
+- `pnpm test --selectProjects Backend -- electronReachLedger`: 4/4 tests passing
+- `pnpm test --selectProjects Backend Meta`: `electronReachLedger` green; 4 tests red across 2 suites, both pre-existing/unowned (`decompressPool.test.ts` x3, `genI18nGateScope.test.ts` x1) per the coordinator's diagnosis, confirmed here
 - `grep -rn "Electron\." src` (excluding electron_store/electronStore/electronStub identifiers): none
 - `grep -rln "from 'electron'" src/frontend src/preload src/common`: none
 - `grep -n "require('electron')" src/preload/ipc.ts`: none
