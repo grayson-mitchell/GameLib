@@ -892,3 +892,56 @@ jar now legitimately measures zero and therefore fails. That is the operator dec
 decided, but it is a real edge — a user who logs out twice in a row sees the second one fail.
 
 **Status:** open, unowned. Does not block Task 3.
+
+### D-35-10-01 CLOSED 2026-08-29 — plus a regression the closing work uncovered
+
+**Closed by `b26e3a61a`.** `installUncaughtExceptionGuard()` sits beside its `unhandledRejection`
+sibling in `processGuards.ts`, installed from the same first-import position, log-and-continue,
+both halves separately wrapped, stderr only, with its own late-bound sink bound to **`logError`**
+not `logWarning` — a shared sink would have silently demoted every uncaught exception to a warning.
+`logger/index.ts`'s comment now names what actually catches. 12 RED-proof mutations, all reverted.
+
+**Two things from the Electron original were deliberately NOT ported**, both argued rather than
+skipped:
+
+- **The dialog.** `showDialogBoxModalAuto` cannot be reached without breaking the WR-04
+  zero-static-imports invariant — `backend/dialog/dialog.ts` pulls in `logger`/`electron`/
+  `main_window`/`ipc` — so it would need a THIRD late-bound sink, `null` for the whole early-boot
+  window, i.e. absent exactly when a white screen happens. It also pushes a frame over the RPC
+  transport and fires an un-awaited `showErrorBox` promise on failure: a transport-dependent,
+  promise-producing, user-facing call inside a handler already processing a crash, which is the
+  literal `sidecar-dialog-reject-crashes` shape. Left out, and said so in the guard's doc comment.
+- **`CI === 'e2e'`.** It only ever skipped the error BOX; `logError` ran above it. With no dialog
+  there is no blocking surface to suppress, so the branch is dead rather than ported mechanically.
+
+**The `IN-06` exit-listener ceiling moved 20 -> 32, and it is legitimate.** It went RED first at
+`Expected: < 20, Received: 23` — the detector doing its job — and was re-measured, not raised on
+suspicion. 23 measured against a ceiling of 32 is nine `isolateModules` calls of headroom, the same
+margin the original 12-against-20 measurement chose. The RED-proof also established the test is
+**VACUOUS under `-t` filtering** (the listeners come from the other tests' nine `isolateModules`
+calls), proven both ways: ceiling 3 with a filter passes; ceiling 3 on the full file fails at 12.
+
+---
+
+## D-35-10-02 — RESOLVED SAME DAY: the `installed.json` watcher hung the sidecar, and its only gate ran nowhere
+
+**Found by acting on the closing recommendation to run `pnpm smoke:sidecar`.** It came back RED.
+Bisected rather than attributed: the gate FAILS on the tree with plan 35-10's watcher wired in and
+PASSES with it removed, everything else identical.
+
+`watch(target, ...)` (`installedJsonWatcher.ts:91`) had no `unref()`. An `FSWatcher` is a libuv
+handle and references the event loop, so the sidecar started, served, then **hung forever on stdin
+EOF instead of exiting 0**. The shell's `shutdown_child()` would then have to SIGKILL it, and any
+path that misses that kill leaves an orphan holding an authenticated session — the hazard
+`RunEvent::Exit`'s own comment describes.
+
+**Nothing in the toolchain could have caught it.** The call site is guarded by `JEST_WORKER_ID`, so
+jest never exercises the live path; `pnpm build:sidecar` exits 0 because the bundle builds fine, it
+just cannot exit; `tsc` has nothing to say. 9 watcher tests and 4362 backend tests were green
+throughout.
+
+**The more important half: `smoke:sidecar` ran in NO GATE** — not CI, not `.husky`. It existed only
+as a manual `package.json` script, which is why this survived a day undetected, and why the
+2026-08-23 boot-order regression class had no live guard at all. **A gate that is wired nowhere is
+worse than no gate, because its existence implies coverage it is not providing.** It is now a step
+in `test.yml`'s `ci` job. Fixed in `ef77e4a1e`.
