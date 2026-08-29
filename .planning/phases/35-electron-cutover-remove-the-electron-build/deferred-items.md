@@ -1310,7 +1310,7 @@ anything.
 (1) answer whether the `APPLE_*` release secrets are populated, and (2) decide whether the three
 keychain service naming schemes should be consolidated. Neither blocks this gate.
 
-## D-35-19-02 — the PACKAGED sidecar-spawn path logs via `eprintln!`, so its diagnostics vanish under a Finder launch — the exact failure `shell_diag()` was written to prevent
+## D-35-19-02 — RESOLVED-IN-PART: sink 2 is ALIVE when packaged; the defect is the 55 `eprintln!` sites, not the file write
 
 **Found during:** plan 35-19, the live gate, while scoring criterion 5 (tray About). Found by
 MEASURING the sink, not by reading the criterion.

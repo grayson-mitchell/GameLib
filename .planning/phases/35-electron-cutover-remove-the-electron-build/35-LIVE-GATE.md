@@ -275,6 +275,15 @@ Criteria 10-12 exercise the deep-link path, which the Header documents as a `she
 site, and are the positive control for that question. If sink 2 is still empty after those, it is
 dead for packaged builds and this criterion's log half must stay discounted. See
 `deferred-items.md` `D-35-19-02`.
+**CORRECTION, added 2026-08-30 after criterion 10 ran.** The positive control has now been run and
+it FALSIFIES the premise above. Criterion 10 produced real `shell_diag()` writes to sink 2 from a
+packaged build (`on_open_url fired with 1 url(s)`, `delivered OS deep link to sidecar: ok`, file
+2336 -> 2456 bytes at 10:26:15). `shell_diag()` therefore DOES reach the file when packaged; sink 2
+is NOT dead. The tray-About WARN lines this criterion checks for are `shell_diag()` call sites, so
+their ABSENCE IS MEANINGFUL after all, and this criterion's log half is genuine corroboration
+rather than a vacuous check. The verdict is unchanged (PASS) and was already correct on the
+directly observed half; what was wrong was the reasoning that discounted the log half. Recorded
+rather than silently edited, because the discounting was itself a stated finding.
 Verdict: PASS
 
 ### 6. Tray: a recent-game entry launches
@@ -465,7 +474,48 @@ the app finishes launching.
 Expected: GameLib launches (a fresh process), and the named title is invoked (either it launches
 directly or the main window opens focused on it, per the app's existing `gamelib://launch` handling).
 Observed:
-Verdict:
+Run in two stages because the first attempt was defeated by TEST-MACHINE STATE, not by the product.
+**Stage 1 -- scheme routing, environment fault (NOT scored against the product).** With the app
+fully quit, `open "gamelib://launch?appName=1124300"` returned exit 0 and did NOTHING: no process,
+no crash report, and neither sink moved. Cause: SIX bundles claimed the `gamelib:` scheme in
+LaunchServices, and FOUR pointed at paths that no longer exist -- three unmounted DMG volumes
+(`/Volumes/dmg.6zgNKA`, `dmg.KH3iXi`, `dmg.ze1mXG`) plus an OLD ELECTRON-ERA build at
+`dist/mac-arm64/GameLib.app`. The URL was being routed to a bundle that is not there. Repaired by
+unregistering the debug build and re-registering `/Applications/GameLib.app` via `lsregister`.
+This is dev-machine debris; a clean install would carry one claimant. Recorded, not scored.
+**Stage 2 -- forced to the app under test, and the product fault appears.**
+`open -a /Applications/GameLib.app "gamelib://launch?appName=1124300"` launched pid 30743. The
+shell handled the URL correctly, proven in sink 2:
+```
+1788042374 pid=30743 on_open_url fired with 1 url(s)
+1788042375 pid=30743 delivered OS deep link to sidecar: ok (983ms)
+```
+The OS event arrived, was recognised, and was delivered to the sidecar. Everything up to the
+handoff works.
+**THE TITLE WAS NEVER INVOKED.** `gamelib.log` for the same second:
+```
+[WARNING]: [Legendary]: Requested game 1124300 was not found in library
+[ERROR]:   [Nile]: Could not find game id 1124300 in user's library
+[ERROR]:   [Nile]: Could not get game info 1124300, returning empty object
+[ERROR]:   [ProtocolHandler]: Could not receive game data for 1124300!
+```
+`1124300` is HUMANKIND's Steam appid -- the criterion-4 title, present in this machine's library
+and installed locally. This criterion's Expected is "the named title is invoked (either it
+launches directly or the main window opens focused on it)". It was not invoked; the protocol
+handler gave up.
+**CAUSE NOT ESTABLISHED -- two live hypotheses, deliberately not collapsed into one:**
+1. A Steam lookup gap. `findGame` (`protocol.ts:181-198`) loops `RUNNERS.options` when no runner
+   is supplied. `libraryManagerMap` (`storeManagers/index.ts:14-21`) DOES include `steam`, so
+   Steam is presumably tried -- but only Legendary and Nile logged failures, so whether the Steam
+   manager was consulted and returned empty, or was skipped, is NOT proven by these logs.
+2. A hydration race. The deep link was delivered 983ms after launch. This project already carries
+   a deferred `steam-cache-hydration` concern; if the Steam library is not yet loaded at that
+   moment, `findGame` would correctly find nothing in a library that is merely not ready.
+The two demand different fixes and the record must not guess between them.
+**Related, and probably the same underlying shape as criterion 6:** Steam entries carry no
+`runner` (criterion 6), and a runner-less Steam deep link cannot be resolved here. Steam titles
+appear to be second-class on both the tray and deep-link paths.
+Verdict: FAIL
 
 ### 11. Deep link: warm reachability, single-instance guard holds
 
