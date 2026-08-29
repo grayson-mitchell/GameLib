@@ -49,7 +49,6 @@ jest.mock('@tauri-apps/api/webview', () => ({
 }))
 
 jest.mock('../tauriTransport', () => ({
-  isTauri: jest.fn(() => true),
   snapshotGet: jest.fn()
 }))
 
@@ -69,7 +68,7 @@ import {
   tauriHandleFullscreen,
   __resetMaximizeWatcherForTests
 } from '../api/tauriWindowChrome'
-import { snapshotGet, isTauri } from '../tauriTransport'
+import { snapshotGet } from '../tauriTransport'
 
 const mockedSnapshotGet = snapshotGet as jest.MockedFunction<typeof snapshotGet>
 
@@ -242,13 +241,11 @@ describe('tauriWindowChrome (REQ-34.1-01)', () => {
  * when this ran under the old Electron build.
  */
 describe('maximize-state producer (REQ-34.1-01/CR-03)', () => {
-  const mockedIsTauri = isTauri as jest.MockedFunction<typeof isTauri>
   let fireResize: (() => void) | undefined
 
   beforeEach(() => {
     __resetMaximizeWatcherForTests()
     fireResize = undefined
-    mockedIsTauri.mockReturnValue(true)
     getCurrentWindow.mockReturnValue(mockWindow)
     mockWindow.isMaximized.mockResolvedValue(false)
     mockWindow.onResized.mockImplementation((handler: () => void) => {
@@ -329,13 +326,6 @@ describe('maximize-state producer (REQ-34.1-01/CR-03)', () => {
     await settle()
 
     expect(onMax).not.toHaveBeenCalled()
-  })
-
-  it('REQ-34.1-01/CR-03: no watcher is installed when isTauri() is false', async () => {
-    mockedIsTauri.mockReturnValue(false)
-    tauriHandleMaximized(jest.fn())
-    await settle()
-    expect(mockWindow.onResized).not.toHaveBeenCalled()
   })
 
   it('REQ-34.1-01/CR-03: tauriHandleFullscreen is a declared no-op -- it must NOT query real window fullscreen state', async () => {

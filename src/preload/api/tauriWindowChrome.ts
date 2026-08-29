@@ -3,10 +3,9 @@
  *
  * Implements the ten D-01 window-chrome channels directly against Tauri's JS
  * window/webview API -- no sidecar hop, no new `dispatch_rust_channel` arm.
- * `src/preload/api/misc.ts`'s `isTauri()` branch (Task 2 of this plan) is the ONLY
- * caller path into this module; nothing on the Electron path reaches it, and the
- * sidecar registers nothing for these channels (D-02 -- the `UNPORTED_CHANNEL_MARKER`
- * path is simply never reached).
+ * `src/preload/api/misc.ts`'s Tauri-only body (Task 2 of this plan) is the ONLY
+ * caller path into this module; the sidecar registers nothing for these channels
+ * (D-02 -- the `UNPORTED_CHANNEL_MARKER` path is simply never reached).
  *
  * Also exports `applyFramelessDecorations`/`installDragRegionHandlers` (D-05/D-06,
  * Task 3), which `tauriAttach.ts` calls directly from its pre-paint `window.api`
@@ -22,7 +21,7 @@
  */
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
-import { isTauri, snapshotGet } from '../tauriTransport'
+import { snapshotGet } from '../tauriTransport'
 import { isMacWebview } from '../platformDetect'
 
 function warn(label: string, error: unknown): void {
@@ -194,7 +193,6 @@ function emitMaximizeChange(maximized: boolean): void {
  */
 function ensureMaximizeWatcher(): void {
   if (maximizeWatcherStarted) return
-  if (!isTauri()) return
   maximizeWatcherStarted = true
   try {
     const appWindow = getCurrentWindow()
@@ -355,12 +353,11 @@ function handleDragDoubleClick(event: MouseEvent): void {
 let dragHandlersInstalled = false
 
 /**
- * Installs the `mousedown`/`dblclick` drag-region listeners once, only under Tauri.
- * Idempotent -- safe to call from `tauriAttach.ts` on every attach.
+ * Installs the `mousedown`/`dblclick` drag-region listeners once. Idempotent -- safe to
+ * call from `tauriAttach.ts` on every attach.
  */
 export const installDragRegionHandlers = (): void => {
   if (dragHandlersInstalled) return
-  if (!isTauri()) return
   dragHandlersInstalled = true
   try {
     document.addEventListener('mousedown', handleDragMouseDown, true)

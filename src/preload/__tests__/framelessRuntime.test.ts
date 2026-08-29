@@ -12,11 +12,14 @@
  * `-webkit-app-region`).
  *
  * `setSetting`'s own transport send (`../ipc.ts`'s `makeListenerCaller('setSetting')`)
- * used to branch on `isTauri()` inside `../ipc.ts` itself; Phase 35 plan 16 collapsed
- * that branch, so the send now reaches the Tauri transport unconditionally, regardless
- * of what `settings.ts`'s OWN (untouched, out of scope) `isTauri()` check decides for
- * `applyFramelessDecorations`. The electron mock below is now a THROW, not a working
- * stub, matching `gamepadActionRouting.test.ts`'s treatment of the same collapse.
+ * used to branch on a Tauri-context check inside `../ipc.ts` itself; Phase 35 plan 16
+ * collapsed that branch, so the send reaches the Tauri transport unconditionally.
+ * `settings.ts`'s own Tauri-context guard around `applyFramelessDecorations` (the one
+ * this file was still exercising) is now collapsed too, by this same plan (35-17) --
+ * `setSetting` always applies frameless decorations for a matching key, there is no
+ * longer a second branch to prove takes the transport-only path. The electron mock
+ * below is now a THROW, not a working stub, matching `gamepadActionRouting.test.ts`'s
+ * treatment of the same collapse.
  *
  * jest.config sets `resetMocks: true` -- every `jest.fn()` below loses its
  * implementation before each test, so every mock return value this file depends on is
@@ -61,7 +64,6 @@ jest.mock('@tauri-apps/api/webview', () => ({
 }))
 
 jest.mock('../tauriTransport', () => ({
-  isTauri: jest.fn(() => true),
   snapshotGet: jest.fn(),
   send: jest.fn(),
   invoke: jest.fn(),
@@ -69,10 +71,9 @@ jest.mock('../tauriTransport', () => ({
 }))
 
 import { applyFramelessDecorations, installDragRegionHandlers } from '../api/tauriWindowChrome'
-import { isTauri, snapshotGet, send } from '../tauriTransport'
+import { snapshotGet, send } from '../tauriTransport'
 import { setSetting } from '../api/settings'
 
-const mockedIsTauri = isTauri as jest.MockedFunction<typeof isTauri>
 const mockedSnapshotGet = snapshotGet as jest.MockedFunction<typeof snapshotGet>
 const mockedTauriSend = send as jest.MockedFunction<typeof send>
 
@@ -143,7 +144,6 @@ beforeEach(() => {
   mockWindow.setTitleBarStyle.mockResolvedValue(undefined)
   mockWindow.startDragging.mockResolvedValue(undefined)
   mockWindow.toggleMaximize.mockResolvedValue(undefined)
-  mockedIsTauri.mockReturnValue(true)
   mockedSnapshotGet.mockReturnValue(undefined)
   // Phase 34.1 gap cycle 1 (plan 34.1-10, G4): default every test to a NON-macOS
   // platform so no test inherits macOS by accident -- this Jest environment's Node
@@ -322,7 +322,6 @@ describe('installDragRegionHandlers (REQ-34.1-03)', () => {
   let dblclickRegistrations = 0
 
   beforeAll(() => {
-    mockedIsTauri.mockReturnValue(true)
     installDragRegionHandlers()
     installDragRegionHandlers() // second call must be a no-op
 
@@ -407,32 +406,30 @@ describe('installDragRegionHandlers (REQ-34.1-03)', () => {
 // why that default exists. The macOS case is covered by its own new test at the end of
 // this describe block.
 describe('setSetting wrapper (REQ-34.1-03)', () => {
-  it('REQ-34.1-03: calls applyFramelessDecorations when the written key is framelessWindow under Tauri', () => {
-    mockedIsTauri.mockReturnValue(true)
+  it('REQ-34.1-03: calls applyFramelessDecorations when the written key is framelessWindow', () => {
     setSetting({ appName: 'default', key: 'framelessWindow', value: true })
     expect(mockWindow.setDecorations).toHaveBeenCalledWith(false)
     expect(mockWindow.setTitleBarStyle).not.toHaveBeenCalled()
   })
 
   it('REQ-34.1-03: does not call applyFramelessDecorations for a different key', () => {
-    mockedIsTauri.mockReturnValue(true)
     setSetting({ appName: 'default', key: 'language', value: 'en' })
     expect(mockWindow.setDecorations).not.toHaveBeenCalled()
     expect(mockWindow.setTitleBarStyle).not.toHaveBeenCalled()
   })
 
   it('REQ-34.1-03: does not call applyFramelessDecorations for a game-scoped write, even with a matching key', () => {
-    mockedIsTauri.mockReturnValue(true)
     setSetting({ appName: 'some-game', key: 'framelessWindow', value: true })
     expect(mockWindow.setDecorations).not.toHaveBeenCalled()
     expect(mockWindow.setTitleBarStyle).not.toHaveBeenCalled()
   })
 
-  it('REQ-34.1-03: never calls applyFramelessDecorations when settings.ts\'s own isTauri() check is false', () => {
-    mockedIsTauri.mockReturnValue(false)
+  // Phase 35 plan 17: `settings.ts`'s Tauri-context early return around this call is
+  // gone -- `setSetting` always sends over the transport AND (for a matching key)
+  // always applies frameless decorations now, so the prior "guard is false" test that
+  // asserted the opposite is gone with it. This assertion covers the send side.
+  it('REQ-34.1-03: a matching-key write is also forwarded over the transport', () => {
     setSetting({ appName: 'default', key: 'framelessWindow', value: true })
-    expect(mockWindow.setDecorations).not.toHaveBeenCalled()
-    expect(mockWindow.setTitleBarStyle).not.toHaveBeenCalled()
     expect(mockedTauriSend).toHaveBeenCalledWith('setSetting', [
       { appName: 'default', key: 'framelessWindow', value: true }
     ])
@@ -445,7 +442,6 @@ describe('setSetting wrapper (REQ-34.1-03)', () => {
   // was written, and setDecorations is never touched.
   it('REQ-34.1-09: on macOS, writing framelessWindow still routes through applyFramelessDecorations and results in setTitleBarStyle, never setDecorations', () => {
     setWebviewPlatform('MacIntel')
-    mockedIsTauri.mockReturnValue(true)
     setSetting({ appName: 'default', key: 'framelessWindow', value: true })
     expect(mockWindow.setTitleBarStyle).toHaveBeenCalledWith('overlay')
     expect(mockWindow.setDecorations).not.toHaveBeenCalled()
@@ -455,11 +451,11 @@ describe('setSetting wrapper (REQ-34.1-03)', () => {
   // this slice. It is reachable from untyped renderer code, so a malformed call must
   // still be forwarded harmlessly rather than throwing a TypeError back into the caller
   // AFTER the IPC send has already gone out. The unguarded `const [{ appName, key,
-  // value }] = args` ran on BOTH paths and broke that.
+  // value }] = args` ran on BOTH paths and broke that. Phase 35 plan 17 collapsed the
+  // two paths this used to cover (guard true/false) into one -- there is only one now.
   const malformed = [undefined, null] as unknown as [Parameters<typeof setSetting>[0]]
 
-  it('REQ-34.1-03/WR-05: a malformed argument does not throw when settings.ts\'s own isTauri() check is false, and is still forwarded over the transport', () => {
-    mockedIsTauri.mockReturnValue(false)
+  it('REQ-34.1-03/WR-05: a malformed argument does not throw, and is still forwarded over the transport', () => {
     for (const bad of malformed) {
       expect(() => setSetting(bad)).not.toThrow()
       expect(mockedTauriSend).toHaveBeenCalledWith('setSetting', [bad])
@@ -467,19 +463,8 @@ describe('setSetting wrapper (REQ-34.1-03)', () => {
     expect(mockWindow.setDecorations).not.toHaveBeenCalled()
   })
 
-  it('REQ-34.1-03/WR-05: a malformed argument does not throw on the TAURI path either', () => {
-    mockedIsTauri.mockReturnValue(true)
-    for (const bad of malformed) {
-      expect(() => setSetting(bad)).not.toThrow()
-    }
-    expect(mockWindow.setDecorations).not.toHaveBeenCalled()
-  })
-
-  it('REQ-34.1-03/WR-05: a zero-argument call does not throw on either path', () => {
+  it('REQ-34.1-03/WR-05: a zero-argument call does not throw', () => {
     const noArgs = setSetting as unknown as () => void
-    mockedIsTauri.mockReturnValue(false)
-    expect(() => noArgs()).not.toThrow()
-    mockedIsTauri.mockReturnValue(true)
     expect(() => noArgs()).not.toThrow()
   })
 })

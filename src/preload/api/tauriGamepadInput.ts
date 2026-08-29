@@ -10,10 +10,10 @@
  * renderer computes every focus move and synthetic event itself instead of round-tripping
  * a native input event through a window that, under Tauri, cannot interpret it.
  *
- * `src/preload/api/misc.ts`'s `isTauri()` branch (Task 3) is the ONLY caller path into
- * this module; nothing on the Electron path reaches it, and the sidecar registers
- * nothing for the `gamepadAction` channel -- the `UNPORTED_CHANNEL_MARKER` path is
- * simply never reached because this short-circuit is the only caller path.
+ * `src/preload/api/misc.ts`'s Tauri-only body (Task 3) is the ONLY caller path into
+ * this module; the sidecar registers nothing for the `gamepadAction` channel -- the
+ * `UNPORTED_CHANNEL_MARKER` path is simply never reached because this short-circuit is
+ * the only caller path.
  *
  * This module has no electron dependency and no `@tauri-apps/api` import -- it
  * is pure DOM. Every branch is TOTAL: the whole dispatch is wrapped in try/catch so a
