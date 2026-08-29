@@ -1309,3 +1309,56 @@ anything.
 **Status:** resolved, no action required for phase 35. Two things a future phase may want:
 (1) answer whether the `APPLE_*` release secrets are populated, and (2) decide whether the three
 keychain service naming schemes should be consolidated. Neither blocks this gate.
+
+## D-35-19-02 — the PACKAGED sidecar-spawn path logs via `eprintln!`, so its diagnostics vanish under a Finder launch — the exact failure `shell_diag()` was written to prevent
+
+**Found during:** plan 35-19, the live gate, while scoring criterion 5 (tray About). Found by
+MEASURING the sink, not by reading the criterion.
+
+**What was measured.** `~/Library/Logs/GameLib/gamelib-shell.log` (sink 2) was last written
+**2026-08-29 19:35:25**, by a DEBUG run — its own last lines carry
+`GAMELIB_SHELL_EXE=.../target/debug/gamelib-shell`. Across every packaged run of 2026-08-30
+(six launches), **not one byte was appended**, even though the packaged transcripts carry ten
+`[shell]`-prefixed lines each. Sink 1 (`gamelib.log`) was live throughout (09:06), so the
+directory is writable and the app is not sandboxed — no container exists and the bundle declares
+no entitlements.
+
+**Root cause, in `src-tauri/src/main.rs` — an emitter asymmetry selected by build mode:**
+
+| Path | Line | Emitter | Reaches sink 2? |
+| ---- | ---- | ------- | --------------- |
+| dev sidecar spawn | `:6919`, `:6935` | `shell_diag(...)` | YES — stderr AND file |
+| **packaged sidecar spawn** | `:6967`, `:6981` | `eprintln!("[shell] ...")` | **NO — stderr only** |
+
+The two paths emit the *same message text*. Repo-wide the imbalance is wide: **15**
+`shell_diag(` call sites against **55** `eprintln!("[shell]"` sites.
+
+**Why this is a product defect and not merely a gate artifact.** `shell_diag()`'s own doc comment
+states the rationale exactly: *"under LaunchServices a bundled app's stderr is discarded, so
+`eprintln!` alone makes the shell's own behaviour unobservable in exactly the configuration users
+run."* The packaged path — the only path a real user ever executes — uses `eprintln!`. Users
+launch from Finder, Finder discards stderr, and sink 3 does not exist for them. So for every real
+user, the packaged shell's startup diagnostics are **unobservable by construction**. A support
+request that begins "it didn't start" has no artifact to inspect. The code comment names this
+failure and the code then commits it.
+
+**Consequence for this gate, recorded so a later reader does not re-derive it.** Any criterion
+whose expected condition is the ABSENCE of a line in sink 2 is currently VACUOUS for packaged
+builds — absence is guaranteed regardless of behaviour. Criterion 5 is scored PASS on its
+directly-observed half only (menu opened, About window appeared) with the log half explicitly
+discounted. This is the defect class the contract's own Test 4 (absence-observability) exists to
+catch; it was not caught at review time because the test was applied to the criteria's logic
+rather than by exercising the sink.
+
+**UNRESOLVED — the positive control has not been run yet.** It is not yet proven that
+`shell_diag()` reaches the file AT ALL in a packaged build. Criteria 10-12 exercise the deep-link
+path, which the Header documents as a `shell_diag()` call site, and are the natural control:
+- sink 2 gains deep-link lines => `shell_diag()` works when packaged; the defect is scoped to the
+  55 `eprintln!` sites, and is a coverage gap rather than a dead sink.
+- sink 2 stays empty => sink 2 is DEAD for packaged builds entirely, and every sink-2-based
+  criterion in this document must be re-scored.
+
+**Status:** OPEN, unowned. Not blocking phase 35 — no criterion FAILs on it, because the criteria
+that would have depended on it are being scored on their observable halves. It wants a decision in
+a later phase: either route the packaged-path diagnostics through `shell_diag()`, or amend the
+sink-2 contract to state honestly which paths it covers.

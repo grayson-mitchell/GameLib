@@ -255,7 +255,27 @@ window actually appearing, is the positive evidence.
 Expected: Menu opens with the items listed; About window appears; no WARN line for `tray About`
 in `gamelib-shell.log`.
 Observed:
-Verdict:
+Operator restarted the app with the tray-icon setting changed to visible (app pid 25984,
+09:14:11, session `/tmp/gamelib-35-19-gate-cXKR3z`). Tray menu opened on RIGHT-click; "About
+GameLib" opened the About window. Both directly observed.
+**THE LOG HALF OF THIS CRITERION IS VACUOUS AND IS NOT COUNTED AS EVIDENCE.** The expected
+condition "no WARN line for `tray About` in `gamelib-shell.log`" can be neither satisfied nor
+falsified by this build: `gamelib-shell.log` was last written 2026-08-29 19:35:25 by a DEBUG run
+(`GAMELIB_SHELL_EXE=.../target/debug/gamelib-shell`) and NO packaged run has ever appended to it.
+Root cause measured in `src-tauri/src/main.rs`: the DEV sidecar-spawn path calls `shell_diag()`
+(:6919, :6935), which writes to stderr AND the file, while the PACKAGED path at :6967, :6981
+emits the same text via plain `eprintln!("[shell] ...")`, which reaches stderr only. Repo-wide:
+15 `shell_diag(` call sites against 55 `eprintln!("[shell]"` sites. The file's emptiness is
+therefore guaranteed independently of whether a `tray About` warning occurred — an absence-check
+with no positive control, which is the defect class this contract's own Test 4
+(absence-observability) exists to catch, found at run time rather than at review time.
+Scored PASS on the DIRECTLY OBSERVED half only: menu opened with the expected items, About window
+appeared. Whether `shell_diag()` reaches the file at all in a packaged build remains UNPROVEN.
+Criteria 10-12 exercise the deep-link path, which the Header documents as a `shell_diag()` call
+site, and are the positive control for that question. If sink 2 is still empty after those, it is
+dead for packaged builds and this criterion's log half must stay discounted. See
+`deferred-items.md` `D-35-19-02`.
+Verdict: PASS
 
 ### 6. Tray: a recent-game entry launches
 
