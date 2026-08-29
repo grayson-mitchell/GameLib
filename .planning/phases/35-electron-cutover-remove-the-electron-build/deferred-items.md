@@ -1169,3 +1169,63 @@ file rather than left in this ledger alone.
   `tauri.conf.json`'s current guard.
 - `verify:runner-bundle` has **no caller anywhere** — see the note in `verifyRunnerBundle.test.ts`
   and REQ-34.16-02, which remains PARTIAL and is now unsatisfiable by the Electron route.
+
+## D-35-15-01 — browser games are broken under Tauri, and have been since the sidecar existed
+
+**Found during:** plan 35-15 Task 2, surfaced by `tsc` rather than by a test or a bug report.
+**Status:** open, unowned. Pre-existing runtime break, NOT a regression from this plan.
+
+`src/backend/storeManagers/storeManagerCommon/games.ts`'s `openNewBrowserGameWindow` (reachable
+from `launchGame` for any game with a `browserUrl`) calls `new BrowserWindow({...})`.
+`backend/platform`'s `BrowserWindow` is an object literal carrying only `getAllWindows`, so the
+construction throws.
+
+**This did not start with the import rewrite.** Under the sidecar, `bootstrap.ts`'s `Module._load`
+hook already resolved `require('electron')` to that same stub, so the throw was already happening.
+Plan 35-15 repointed the import specifier, which moved the failure from runtime to compile time and
+made it visible. The rewrite is the messenger.
+
+Preserved exactly as-is via a documented cast rather than fixed, because this plan's constraint is
+not to change behaviour it merely notices inside a mechanical import diff. A real fix is a Tauri
+child window and belongs to its own plan — the same shape as the embedded store browser
+(spikes 016–018).
+
+## D-35-15-02 — the `setAllWindows` mock helper has no production type, and typing it is 35-16's
+
+**Found during:** plan 35-15, 9 `tsc` errors across `main_window.test.ts` and `progress_bar.test.ts`.
+**Owner:** plan 35-16. **Status:** worked around, not solved.
+
+`setAllWindows` is a static helper that exists only on the jest DOUBLE
+(`src/backend/__mocks__/electron.ts:68`), never on the real `backend/platform` stub. While the
+backend imported `electron`, the ambient Electron namespace augmentation in
+`src/common/typedefs/extra-mock-function.ts:19` supplied its type. Pointing the tests at
+`backend/platform` removed that.
+
+Typing it properly means reworking that augmentation — which is exactly **`D-35-13-02`**, already
+recorded as something 35-16 cannot do mechanically. A test-local alias
+(`const MockBrowserWindow = BrowserWindow as unknown as {...}`) was used instead, with a comment
+pointing here, so 35-15 does not do 35-16's job badly from the outside.
+
+**35-16 should replace both aliases** when it reworks `extra-mock-function.ts`, rather than leaving
+two casts that will read as arbitrary later.
+
+## D-35-15-03 — T-35-67's prescribed check is name-level and structurally blind to members
+
+**Found during:** plan 35-15 Task 2. **Status:** closed as a lesson; no code owed.
+
+The plan mitigates T-35-67 ("an imported name with no home in `backend/platform` silently resolving
+to `undefined`") by diffing the imported NAME set against the export surface before rewriting. That
+check was run and **passed cleanly: 21 of 21 names had a home.**
+
+It then produced **70 `tsc` errors**, because every one of them was a **member** of a name that
+exists. `app` is exported; `app.showAboutPanel` was not declared. `session` is exported; it returned
+`unknown`.
+
+The root cause is that `backend/platform`'s surface was censused in 35-13 from **what the sidecar
+calls**, not **what the whole backend compiles** — the same distinction 35-13 already recorded when
+it corrected `PLATFORM_EXPORT_COUNT` from 19 to 22 ("is this live production surface?" vs "can this
+be deleted without breaking the build").
+
+**For any future plan repointing a module at a narrower stub:** a name-set diff is necessary and not
+sufficient. The check that would actually have caught this is `tsc` itself, run against a single
+repointed file before doing the other 56.
