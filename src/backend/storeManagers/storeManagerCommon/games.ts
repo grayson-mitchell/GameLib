@@ -53,7 +53,36 @@ const openNewBrowserGameWindow = async ({
   const hostname = new URL(browserUrl).hostname
 
   return new Promise((res) => {
-    const browserGame = new BrowserWindow({
+    // DEGRADED UNDER TAURI, AND THIS CAST DOES NOT CHANGE THAT -- Phase 35 Plan 15,
+    // ledgered as D-35-15-01. `backend/platform`'s `BrowserWindow` is an object literal with
+    // only `getAllWindows`, so `new BrowserWindow(...)` throws at runtime. It ALREADY did
+    // before this plan: under the sidecar, bootstrap's `Module._load` hook resolved
+    // `require('electron')` to that same stub, so browser games have been broken under Tauri
+    // since the sidecar existed. The import rewrite only made it visible to `tsc`.
+    //
+    // The cast preserves the current behaviour EXACTLY rather than papering over it, because
+    // this plan's constraint is not to fix behaviour it merely notices inside a mechanical
+    // import diff. A real fix is a Tauri child window and belongs to its own plan.
+    const BrowserWindowCtor = BrowserWindow as unknown as new (
+      options?: unknown
+    ) => {
+      setMenu: (menu: unknown) => void
+      webContents: {
+        on: (event: string, cb: (event: { preventDefault: () => void }) => void) => void
+        setWindowOpenHandler: (handler: unknown) => void
+        userAgent: string
+      }
+      loadURL: (url: string) => Promise<void>
+      on: (event: string, cb: () => void) => void
+      setFullScreen: (flag: boolean) => void
+      menuBarVisible: boolean
+      show: () => void
+      hide: () => void
+      isDestroyed: () => boolean
+      close: () => void
+      destroy: () => void
+    }
+    const browserGame = new BrowserWindowCtor({
       icon: windowIcon,
       fullscreen: launchFullScreen ?? false,
       autoHideMenuBar: true,

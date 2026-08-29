@@ -49,6 +49,10 @@ import * as fileSize from 'filesize'
 import { Client as discordClient } from '@xhayper/discord-rpc'
 import { showDialogBoxModalAuto } from './dialog/dialog'
 import { getMainWindow } from './main_window'
+// D-35-13-03: the BrowserWindow TYPE cannot come from `backend/platform` -- index.ts already
+// exports a value of that name, so re-exporting the interface beside it is TS2323. Same split
+// as utils/openDialog.ts.
+import type { BrowserWindow as BrowserWindowType } from 'backend/platform/types'
 import { sendFrontendMessage } from './ipc'
 import { GlobalConfig } from './config'
 import { GameConfig } from './game_config'
@@ -775,7 +779,7 @@ function removeQuoteIfNecessary(stringToUnquote: string) {
  *
  * Only works on Windows of course
  */
-function detectVCRedist(mainWindow: BrowserWindow) {
+function detectVCRedist(mainWindow: BrowserWindowType) {
   if (!isWindows) {
     return
   }

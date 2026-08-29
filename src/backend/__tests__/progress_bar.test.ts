@@ -3,6 +3,16 @@ import { backendEvents } from '../backend_events'
 import { sendGameStatusUpdate, sendProgressUpdate } from '../utils'
 import '../progress_bar'
 
+// Phase 35 Plan 15: `setAllWindows` is a helper that exists only on the jest DOUBLE
+// (src/backend/__mocks__/electron.ts), never on the real `backend/platform` stub, so it is
+// unavailable in the production type. Typing it properly means augmenting the mock's own
+// declarations -- src/common/typedefs/extra-mock-function.ts -- which is D-35-13-02 and is
+// PLAN 35-16's to do. A test-local alias keeps that boundary rather than doing 35-16's job
+// badly from here. See D-35-15-01.
+const MockBrowserWindow = BrowserWindow as unknown as {
+  setAllWindows: (windows: unknown[]) => void
+}
+
 // Phase 35 Plan 15: `backend/platform`'s manual mock must be requested BY NAME. The
 // `electron` one it replaces was applied automatically because electron is a
 // node_modules package; a user-module mock is opt-in. See
@@ -22,12 +32,12 @@ describe('progress_bar', () => {
 
   // stub windows
   beforeAll(() => {
-    BrowserWindow['setAllWindows']([window])
+    MockBrowserWindow.setAllWindows([window])
   })
 
   // cleanup stubs
   afterAll(() => {
-    BrowserWindow['setAllWindows']([])
+    MockBrowserWindow.setAllWindows([])
   })
 
   // spy on `setProgressBar` method

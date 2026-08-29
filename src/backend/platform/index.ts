@@ -247,6 +247,12 @@ export const app = {
   getPath,
   getName: (): string => 'GameLib',
   setName: (): void => {},
+  // Phase 35 Plan 15: signature-only widening, all no-ops. The About panel is a Tauri window
+  // concern (see the `showAboutWindow` channel), and getGPUInfo has no sidecar equivalent --
+  // utils/systeminfo/gpu/linux.ts's caller already tolerates an empty result.
+  setAboutPanelOptions: (_options?: unknown): void => {},
+  showAboutPanel: (): void => {},
+  getGPUInfo: async (_infoType?: string): Promise<unknown> => ({}),
   // R-34.5-G1-PKG half (b) / D-14 (Phase 35 plan 04). This key held a hardcoded
   // `false` literal from Phase 27 until now -- and that literal was the root cause of the
   // packaged-build asset failure. `constants/paths.ts:73-76` computes
@@ -488,7 +494,7 @@ export const dialog = {
       return { response: safeIndex, checkboxChecked: false }
     }
   },
-  showMessageBoxSync: (): number => {
+  showMessageBoxSync: (_window?: unknown, _options?: unknown): number => {
     console.warn(
       '[electronStub] dialog.showMessageBoxSync(): logged no-op (D-03) -- synchronous dialogs cannot cross the async rustInvoke transport; returns the default response (0)'
     )
@@ -560,6 +566,11 @@ export const dialog = {
 interface NotificationOptions {
   title?: string
   body?: string
+  // Phase 35 Plan 15: type-only widening. utils.ts's offline notification passes these three;
+  // the stub ignores all of them, exactly as it ignored title/body before.
+  urgency?: 'normal' | 'critical' | 'low'
+  timeoutType?: 'default' | 'never'
+  silent?: boolean
 }
 
 export class Notification {
@@ -573,7 +584,7 @@ export class Notification {
     this.options = options ?? {}
   }
 
-  on(): this {
+  on(_event?: string, _listener?: () => void): this {
     return this
   }
 
@@ -597,12 +608,12 @@ export class Notification {
 
 export const safeStorage = {
   isEncryptionAvailable: (): boolean => false,
-  encryptString: (): Buffer => {
+  encryptString: (_plainText: string): Buffer => {
     throw new Error(
       'safeStorage is not available in the sidecar — use getTokenStore() (see steam/tokenStore.ts)'
     )
   },
-  decryptString: (): string => {
+  decryptString: (_encrypted: Buffer): string => {
     throw new Error(
       'safeStorage is not available in the sidecar — use getTokenStore() (see steam/tokenStore.ts)'
     )
@@ -612,7 +623,14 @@ export const safeStorage = {
 // ---- shell -------------------------------------------------------------------------
 
 export const shell = {
-  openExternal: async (url: string): Promise<void> => {
+  // Phase 35 Plan 15: signature-only widening. Windows-only in real Electron and never
+  // reachable on the platforms the sidecar runs; returns false rather than pretending.
+  writeShortcutLink: (
+    _shortcutPath: string,
+    _operation?: unknown,
+    _options?: unknown
+  ): boolean => false,
+  openExternal: async (url: string, _options?: unknown): Promise<void> => {
     transport?.openExternal(url)
   },
   // Phase 33 Plan 04 (D-05): upgraded from the D-04 logged no-op to a real forward, backed by
@@ -660,6 +678,8 @@ export const shell = {
 
 const fakeWebContents = {
   isDestroyed: (): boolean => false,
+  // Phase 35 Plan 15: signature-only widening, no-op body. steamhelper.ts calls this.
+  executeJavaScript: async (_code: string): Promise<string> => '',
   send: (channel: string, ...args: unknown[]): void => {
     transport?.pushFrontendMessage(channel, ...args)
   },
@@ -686,6 +706,15 @@ const fakeWebContents = {
 const fakeWindow = {
   isDestroyed: (): boolean => false,
   webContents: fakeWebContents,
+  // Phase 35 Plan 15: signature-only widening. These four are real-window concerns with no
+  // sidecar equivalent, and they stay no-ops -- but the backend now types against this stub
+  // instead of Electron, so a missing member is a compile error rather than a runtime one.
+  setProgressBar: (_progress: number, _options?: unknown): void => {},
+  show: (): void => {},
+  isVisible: (): boolean => false,
+  isMinimized: (): boolean => false,
+  restore: (): void => {},
+  focus: (): void => {},
   // Phase 34.1 Plan 04 (Rule 1 bug fix): `handleExit()` (backend/utils.ts) is now
   // sidecar-reachable via the `quit` channel and unconditionally calls
   // `mainWindow?.hide()` after its pending-operations dialog branch -- since
@@ -726,12 +755,80 @@ export const BrowserWindow = {
 // client). Exporting a logged stub -- rather than leaving the import silently `undefined` --
 // means a future reachable call fails loudly with a clear log line instead of an opaque
 // "Cannot read properties of undefined" TypeError (D-09, accept + document).
+/**
+ * The shape `session.fromPartition()` and `defaultSession` hand back. Phase 35 Plan 15 widened
+ * this from `unknown`: the D-09 stub returns `{}` and always will, but `unknown` made every
+ * caller a TS18046 the moment the backend stopped importing real Electron's types (14 errors
+ * across humble/user.ts and legendary/user.ts alone). The members are the ones those callers
+ * actually touch; the runtime behaviour is untouched and still a logged no-op.
+ */
+export interface SidecarCookie {
+  name: string
+  value: string
+  domain?: string
+  path?: string
+  expirationDate?: number
+  secure?: boolean
+  httpOnly?: boolean
+}
+
+export interface SidecarSession {
+  cookies: {
+    get: (filter?: unknown) => Promise<SidecarCookie[]>
+    set: (details?: unknown) => Promise<void>
+    remove: (url?: string, name?: string) => Promise<void>
+    flushStore: () => Promise<void>
+  }
+  clearStorageData: (options?: unknown) => Promise<void>
+  clearCache: () => Promise<void>
+  clearData: (options?: unknown) => Promise<void>
+  clearHostResolverCache: () => Promise<void>
+  clearAuthCache: () => Promise<void>
+  setPermissionRequestHandler: (handler: unknown) => void
+  setUserAgent: (userAgent: string) => void
+  webRequest: { onBeforeSendHeaders: (...args: unknown[]) => void }
+  protocol: { handle: (...args: unknown[]) => void }
+}
+
+// EVERY method REJECTS, and that is deliberate. The first draft of this object resolved
+// each call (`async () => {}`), which turned the D-09 accepted gap into a LYING one: a
+// cookie wipe that reports success while wiping nothing is exactly the affordance D-05
+// exists to forbid, and `humbleFlows.test.ts`'s D-05 ordering proof caught it -- that suite
+// asserts the Humble store clears happen INDEPENDENTLY of every session wipe step failing.
+// Rejecting keeps the documented behaviour (no session support in the sidecar) while giving
+// callers a named error instead of the opaque "Cannot read properties of undefined" the
+// previous `return {}` produced. That was the stated goal of this stub all along.
+const sessionUnavailable = (member: string) => async (): Promise<never> => {
+  throw new Error(
+    `[electronStub] session.${member}(): not available in the sidecar (D-09, accepted gap)`
+  )
+}
+
+const fakeSession: SidecarSession = {
+  cookies: {
+    get: sessionUnavailable('cookies.get'),
+    set: sessionUnavailable('cookies.set'),
+    remove: sessionUnavailable('cookies.remove'),
+    flushStore: sessionUnavailable('cookies.flushStore')
+  },
+  clearStorageData: sessionUnavailable('clearStorageData'),
+  clearCache: sessionUnavailable('clearCache'),
+  clearData: sessionUnavailable('clearData'),
+  clearHostResolverCache: sessionUnavailable('clearHostResolverCache'),
+  clearAuthCache: sessionUnavailable('clearAuthCache'),
+  setPermissionRequestHandler: () => {},
+  setUserAgent: () => {},
+  webRequest: { onBeforeSendHeaders: () => {} },
+  protocol: { handle: () => {} }
+}
+
 export const session = {
-  fromPartition: (_partition: string): unknown => {
+  defaultSession: fakeSession,
+  fromPartition: (_partition: string): SidecarSession => {
     console.warn(
       '[electronStub] session.fromPartition(): logged no-op (D-09, accepted gap) -- session partitions are not available in the sidecar'
     )
-    return {}
+    return fakeSession
   }
 }
 
@@ -798,8 +895,22 @@ export const screen = {
 //
 // Mirrors `session.fromPartition`'s own D-09 rationale immediately above ("fails loudly with a
 // clear log line instead of an opaque TypeError") applied to its neighbour.
+/** What `net.request`'s 'response' handler receives. Widened from `unknown` by plan 35-15. */
+export interface SidecarIncomingMessage {
+  statusCode: number
+  statusMessage: string
+  headers: Record<string, string | string[]>
+  on: {
+    (event: 'data', cb: (chunk: Buffer) => unknown): void
+    (event: 'end', cb: () => void): void
+    (event: 'error', cb: (err: Error) => void): void
+    (event: string, cb: (arg?: never) => void): void
+  }
+  setEncoding: (encoding: string) => void
+}
+
 export const net = {
-  request: () => {
+  request: (_options?: unknown, _callback?: (response: SidecarIncomingMessage) => void) => {
     const handlers: Record<string, (arg?: unknown) => void> = {}
     setImmediate(() => {
       handlers['error']?.(
@@ -809,19 +920,28 @@ export const net = {
       )
     })
     return {
-      on: (event: string, cb: (arg?: unknown) => void): void => {
-        handlers[event] = cb
+      // Phase 35 Plan 15: signature-only widening. Behaviour is unchanged -- the stub still
+      // fires 'error' on the next tick and implements nothing -- but the shapes are the ones
+      // humble/adapter.ts and images_cache.ts actually pass and read, so a compile error no
+      // longer stands in for the runtime no-op this deliberately is.
+      on: ((event: string, cb: (arg?: never) => void): void => {
+        handlers[event] = cb as (arg?: unknown) => void
+      }) as {
+        (event: 'response', cb: (response: SidecarIncomingMessage) => void): void
+        (event: 'error', cb: (error: Error) => void): void
+        (event: string, cb: (arg?: unknown) => void): void
       },
-      end: (): void => {},
-      write: (): void => {},
-      setHeader: (): void => {}
+      abort: (): void => {},
+      end: (_chunk?: unknown): void => {},
+      write: (_chunk?: unknown): void => {},
+      setHeader: (_name?: string, _value?: unknown): void => {}
     }
   },
   isOnline: (): boolean => true
 }
 
 export const Menu = {
-  buildFromTemplate: () => ({}),
+  buildFromTemplate: (_template?: unknown) => ({ popup: () => {} }),
   setApplicationMenu: (): void => {}
 }
 
@@ -832,7 +952,7 @@ export const Menu = {
 export const protocol = {
   registerFileProtocol: (): void => {},
   registerHttpProtocol: (): void => {},
-  handle: (): void => {}
+  handle: (_scheme?: string, _handler?: (request: { url: string }) => unknown): void => {}
 }
 
 // D-08 (Phase 35 Plan 08, REQ-35-06): REAL as of the Phase 35 cutover this comment's earlier

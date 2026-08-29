@@ -1,6 +1,16 @@
 import { sendFrontendMessage } from '../ipc'
 import { BrowserWindow } from 'backend/platform'
 
+// Phase 35 Plan 15: `setAllWindows` is a helper that exists only on the jest DOUBLE
+// (src/backend/__mocks__/electron.ts), never on the real `backend/platform` stub, so it is
+// unavailable in the production type. Typing it properly means augmenting the mock's own
+// declarations -- src/common/typedefs/extra-mock-function.ts -- which is D-35-13-02 and is
+// PLAN 35-16's to do. A test-local alias keeps that boundary rather than doing 35-16's job
+// badly from here. See D-35-15-01.
+const MockBrowserWindow = BrowserWindow as unknown as {
+  setAllWindows: (windows: unknown[]) => void
+}
+
 // Phase 35 Plan 15: `backend/platform`'s manual mock must be requested BY NAME. The
 // `electron` one it replaces was applied automatically because electron is a
 // node_modules package; a user-module mock is opt-in. See
@@ -12,7 +22,7 @@ describe('main_window', () => {
   describe('sendFrontendMessage', () => {
     describe('if no main window', () => {
       beforeAll(() => {
-        BrowserWindow.setAllWindows([])
+        MockBrowserWindow.setAllWindows([])
       })
 
       it('returns false', () => {
@@ -31,7 +41,7 @@ describe('main_window', () => {
 
       // stub windows
       beforeAll(() => {
-        BrowserWindow.setAllWindows([window])
+        MockBrowserWindow.setAllWindows([window])
       })
 
       // spy the `send` method
@@ -43,7 +53,7 @@ describe('main_window', () => {
 
       // cleanup stubs
       afterAll(() => {
-        BrowserWindow.setAllWindows([])
+        MockBrowserWindow.setAllWindows([])
       })
 
       it('sends a message to its webContents', () => {
@@ -75,7 +85,7 @@ describe('main_window', () => {
       }
 
       beforeAll(() => {
-        BrowserWindow.setAllWindows([destroyedWindow])
+        MockBrowserWindow.setAllWindows([destroyedWindow])
       })
 
       // `resetMocks: true` strips any `.mockReturnValue()` set at
@@ -91,7 +101,7 @@ describe('main_window', () => {
       })
 
       afterAll(() => {
-        BrowserWindow.setAllWindows([])
+        MockBrowserWindow.setAllWindows([])
       })
 
       it('returns false and never calls webContents.send', () => {
@@ -110,7 +120,7 @@ describe('main_window', () => {
       }
 
       beforeAll(() => {
-        BrowserWindow.setAllWindows([windowWithDestroyedWebContents])
+        MockBrowserWindow.setAllWindows([windowWithDestroyedWebContents])
       })
 
       // See the sibling describe block above re: `resetMocks: true`.
@@ -125,7 +135,7 @@ describe('main_window', () => {
       })
 
       afterAll(() => {
-        BrowserWindow.setAllWindows([])
+        MockBrowserWindow.setAllWindows([])
       })
 
       it('returns false and never calls webContents.send', () => {
