@@ -382,11 +382,11 @@ function reportLazyMiss(storeName: string, key: string, forCall: string): void {
  *
  * D-08: gates on `isAllowedStoreField` -- the TAURI path's fail-closed ALLOW-list
  * (src/common/types/storePolicy.ts), replacing the module's former local hardcoded
- * secret-key deny-list. `src/preload/api/misc.ts`'s Electron branch keeps its
- * own deny-list deliberately and divergently until the Electron cutover (Phase 35) --
- * see that file's own D-08 comment (the Phase 28 D-11 precedent for why a documented,
- * commented divergence between two paths is the correct interim state, not a bug to
- * "fix" by unifying them early).
+ * secret-key deny-list. Phase 35 plan 16 converged `src/preload/api/misc.ts`'s
+ * `storeGet` onto this same allow-list (it used to carry its own, deliberately
+ * divergent, Electron-only deny-list until the Electron cutover -- see that file's
+ * own D-08 comment for the convergence history and the Phase 28 D-11 precedent this
+ * followed).
  *
  * D-04: a synchronous read of a NOT-YET-HYDRATED store returns `defaultValue` rather
  * than throwing or blocking (SEAM Invariant B) -- logs one greppable
