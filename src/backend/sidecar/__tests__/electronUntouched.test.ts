@@ -48,7 +48,6 @@ import { stripSourceComments as stripComments } from 'backend/testUtils/stripSou
 // via `pathShim.ts` -- the whole point of D-04's proof). `jest.requireActual`
 // resolves the SAME singleton module instance `configStore`/`tokenStore.ts`
 // bind onto in production. ────────────────────────────────────────────────
-jest.mock('electron', () => jest.requireActual('../../platform'))
 jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default

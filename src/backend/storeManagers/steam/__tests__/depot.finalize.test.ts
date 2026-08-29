@@ -82,7 +82,7 @@ jest.mock('backend/utils', () => ({
 
 // ── electron mock — bottle.ts's transitive import chain (backend/constants/
 //    paths.ts) calls app.getPath() at module load. ──────────────────────────
-jest.mock('electron', () => ({
+jest.mock('backend/platform', () => ({
   app: {
     getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
     getAppPath: () => '/tmp/mock-path',

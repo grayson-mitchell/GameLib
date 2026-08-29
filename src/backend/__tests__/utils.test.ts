@@ -3,7 +3,7 @@ import { readFileSync, existsSync } from 'graceful-fs'
 import { join } from 'path'
 import { GlobalConfig } from '../config'
 
-jest.mock('electron')
+jest.mock('backend/platform')
 jest.mock('../logger')
 jest.mock('../dialog/dialog')
 jest.mock('../config')

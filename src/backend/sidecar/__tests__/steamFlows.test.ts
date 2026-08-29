@@ -36,7 +36,6 @@ jest.mock('os', () => {
 
 // ── electron / electron-store — route Jest's own module resolution at the real sidecar
 // shims, same as skeletonFlows.test.ts (see that file's header for the full reasoning). ──
-jest.mock('electron', () => jest.requireActual('../../platform'))
 jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default

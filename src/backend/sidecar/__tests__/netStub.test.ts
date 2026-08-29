@@ -65,7 +65,7 @@ jest.mock('os', () => {
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shim,
 // supplementing only `app.userAgentFallback` (see module docstring's Rule 3 note above) --
 // `net` here is the REAL, unmocked, hardened D-06 implementation, spread unchanged.
-jest.mock('electron', () => {
+jest.mock('backend/platform', () => {
   const real = jest.requireActual('../../platform')
   return {
     ...real,

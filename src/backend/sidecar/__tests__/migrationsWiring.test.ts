@@ -37,7 +37,6 @@
  */
 
 // ── electron / electron-store — route Jest's resolution at the REAL sidecar shims ──────────
-jest.mock('electron', () => jest.requireActual('../../platform'))
 jest.mock('backend/store_backend', () => ({
   __esModule: true,
   default: jest.requireActual('../fileStore').default

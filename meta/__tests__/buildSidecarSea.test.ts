@@ -333,7 +333,6 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
         '--platform=node',
         '--target=node22',
         '--format=cjs',
-        '--alias:electron=./src/backend/platform/index.ts',
         '--alias:i18next-fs-backend=i18next-fs-backend/cjs',
         '--alias:node-gyp-build=./src/backend/storeManagers/steam/depot/lzmaNativeBinding.ts',
         '--inject:./meta/sidecarSeaFsShim.ts'
@@ -342,12 +341,27 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
     expect(esbuildArgv.args.some((a) => a.startsWith('--outfile='))).toBe(true)
   })
 
+  // Phase 35 Plan 18: this used to assert the array CONTAINED
+  // `--alias:electron=./src/backend/platform/index.ts`. Plan 18 removed that
+  // alias from `seaEsbuildFlags()` outright (the `electron` devDependency it
+  // rewrote references to is gone from package.json) -- inverted here to
+  // assert absence rather than deleted outright, so a future accidental
+  // reintroduction of the alias (e.g. a bad merge, or someone re-adding
+  // `electron` and copying an old flag list) is caught by this same test
+  // file instead of silently passing.
+  test('buildEsbuildArgv(...).args no longer carries an --alias:electron flag (Phase 35 Plan 18)', () => {
+    const esbuildArgv = buildEsbuildArgv()
+    expect(
+      esbuildArgv.args.some((a) => a.startsWith('--alias:electron'))
+    ).toBe(false)
+  })
+
   // Phase 23.1 Plan 03: lzma-native resolves its native binding through
   // require('node-gyp-build')(__dirname), a runtime-computed
   // prebuilds/${platform}-${arch}/*.node path esbuild cannot statically
   // resolve or bundle. This alias statically rewrites that specifier at
   // BUILD TIME to this project's own SEA-aware shim -- same mechanism class
-  // as --alias:electron above.
+  // the former --alias:electron was.
   test('buildEsbuildArgv(...).args carries the node-gyp-build alias to lzmaNativeBinding.ts', () => {
     const esbuildArgv = buildEsbuildArgv()
     expect(esbuildArgv.args).toContain(

@@ -18,7 +18,7 @@
 
 const mockRunRunnerCommand = jest.fn()
 
-jest.mock('electron', () => ({
+jest.mock('backend/platform', () => ({
   app: { getVersion: () => '1.0.0' }
 }))
 

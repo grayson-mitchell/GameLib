@@ -99,7 +99,7 @@ jest.mock('child_process', () => ({
 }))
 
 // ── electron mock ──────────────────────────────────────────────────────────────
-jest.mock('electron', () => ({
+jest.mock('backend/platform', () => ({
   dialog: { showMessageBox: jest.fn() },
   shell: { openExternal: jest.fn() },
   app: {

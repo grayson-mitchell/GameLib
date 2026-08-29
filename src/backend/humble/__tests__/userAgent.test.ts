@@ -20,8 +20,6 @@
  * only touchpoint is `app.userAgentFallback`.
  */
 
-jest.mock('electron', () => jest.requireActual('../../platform'))
-
 import { standardBrowserUserAgent } from '../userAgent'
 
 describe('standardBrowserUserAgent() against the real sidecar electronStub', () => {

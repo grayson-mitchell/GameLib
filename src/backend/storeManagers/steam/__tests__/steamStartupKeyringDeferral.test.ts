@@ -83,7 +83,7 @@ jest.mock('../electronStores', () => ({
 // ElectronTokenStore — unused here since every test installs a spy store via
 // setTokenStore() before any read, but must exist so the module-level
 // `new ElectronTokenStore()` construction and the import itself never throw).
-jest.mock('electron', () => ({
+jest.mock('backend/platform', () => ({
   shell: { openExternal: jest.fn() },
   dialog: { showMessageBox: jest.fn() },
   app: {

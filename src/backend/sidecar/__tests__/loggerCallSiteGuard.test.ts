@@ -90,7 +90,6 @@ jest.mock('backend/logger/paths', () => {
 // (mirrors loggerFlows.test.ts / sidecarRejectionGuard.test.ts). Never
 // `bootstrap.init()`'d — this suite does not need the RPC loop, only the
 // listener registration function and the registry it writes into. ─────────
-jest.mock('electron', () => jest.requireActual('../../platform'))
 
 // ── backend/config — avoid constructing a real electron-store-backed
 // GlobalConfig. Never exercised by this suite: initHeadless() (used below)

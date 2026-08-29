@@ -2,10 +2,12 @@
  * Debug/dev-mode-decompress-worker-electron-hook: pure, side-effect-free
  * helpers shared between `meta/buildSidecarSea.ts` (the packaged SEA worker
  * bundle) and `meta/buildDecompressWorkerDev.ts` (the dev/Electron worker
- * bundle) -- both need the IDENTICAL `--alias:electron` esbuild fix
- * (quick-260817-pkx originally, this debug session extends it to dev mode),
- * so the flags/entry-path/spawn helper are single-sourced here instead of
- * duplicated, to prevent the two bundles from silently drifting apart.
+ * bundle) -- both need IDENTICAL esbuild flags (originally including a shared
+ * `--alias:electron` fix, quick-260817-pkx; that alias was removed by Phase
+ * 35 Plan 18 once the `electron` devDependency itself was retired -- see this
+ * module's `seaEsbuildFlags()` doc comment below), so the flags/entry-path/
+ * spawn helper are single-sourced here instead of duplicated, to prevent the
+ * two bundles from silently drifting apart.
  *
  * Deliberately factored OUT of `buildSidecarSea.ts` rather than imported
  * from it directly: that file has an unconditional `if
@@ -241,15 +243,18 @@ export function resolveEsbuildCli(): string {
 }
 
 /**
- * The ten esbuild flags proven correct for a fully self-contained,
- * electron-stub-aliased worker bundle (originally `buildSidecarSea.ts`'s
- * `seaEsbuildFlags()`, written for the SEA path, fixed by quick task
- * 260817-pkx; extended to ten by Phase 23.1 Plan 03). `--alias:electron`
- * statically replaces `require('electron')`/`import ... from 'electron'`
- * (first-party AND inside bundled third-party code) with this project's own
- * `backend/platform/index.ts` at BUILD TIME -- so there is no
- * unresolved runtime `require('electron')` left in the output for ANY
- * bundler's chunk-splitting/hoisting order to race against. The
+ * The nine esbuild flags proven correct for a fully self-contained worker
+ * bundle (originally `buildSidecarSea.ts`'s `seaEsbuildFlags()`, written for
+ * the SEA path, fixed by quick task 260817-pkx; extended to ten by Phase 23.1
+ * Plan 03). Until Phase 35 Plan 18, this list also carried
+ * `--alias:electron=./src/backend/platform/index.ts`, statically replacing
+ * `require('electron')`/`import ... from 'electron'` (first-party AND inside
+ * bundled third-party code) with this project's own `backend/platform/
+ * index.ts` at BUILD TIME. That alias is gone now: the `electron`
+ * devDependency was removed outright (Plan 18), and first-party code already
+ * imports `backend/platform` directly everywhere -- there is no remaining
+ * `'electron'` specifier anywhere in `src/` for esbuild to need to rewrite
+ * (proven by `meta/__tests__/electronAbsence.test.ts`). The
  * `i18next-fs-backend` alias and `sidecarSeaFsShim` inject exist for
  * unrelated esbuild/cjs-bundling pitfalls this worker's import chain can
  * also reach (see the original SEA fix's commit history) -- kept identical
@@ -257,7 +262,7 @@ export function resolveEsbuildCli(): string {
  * regress independently.
  *
  * Phase 23.1 Plan 03: `--alias:node-gyp-build` is the SAME mechanism class
- * as `--alias:electron` above -- a build-time specifier rewrite, NOT the
+ * the former `--alias:electron` was -- a build-time specifier rewrite, NOT the
  * `pnpm.patchedDependencies` computed-require rewrite RESEARCH.md Pitfall 4
  * rules out for a native addon. `lzma-native` resolves its native binding
  * through `require('node-gyp-build')(__dirname)`, a runtime-computed
@@ -287,7 +292,6 @@ export function seaEsbuildFlags(outfile: string, entry: string): string[] {
     '--platform=node',
     '--target=node22',
     '--format=cjs',
-    '--alias:electron=./src/backend/platform/index.ts',
     '--alias:i18next-fs-backend=i18next-fs-backend/cjs',
     '--alias:node-gyp-build=./src/backend/storeManagers/steam/depot/lzmaNativeBinding.ts',
     '--inject:./meta/sidecarSeaFsShim.ts',

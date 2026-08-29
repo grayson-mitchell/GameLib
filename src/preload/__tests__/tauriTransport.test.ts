@@ -19,12 +19,14 @@
  * appears anywhere below).
  */
 
-let mockElectronRequireCount = 0
-
-jest.mock('electron', () => {
-  mockElectronRequireCount += 1
-  throw new Error('electron must never be resolved on the Tauri renderer path (T-27-07)')
-})
+// Phase 35 Plan 18 (T-27-07): this suite used to count `require('electron')` calls via a
+// throw-on-require jest.mock('electron', ...) factory (mockElectronRequireCount), asserted
+// to stay at 0 by a 'touches zero electron symbols' test (now removed, along with the
+// counter and this mock). Plan 18 retired the 'electron' devDependency outright, so the
+// guard -- and the counter it fed -- is now structural: 'electron' cannot resolve on ANY
+// path, in ANY suite, because it no longer exists in node_modules at all. See
+// meta/__tests__/electronAbsence.test.ts for the project-wide mechanized version of this
+// same guarantee.
 
 jest.mock('@tauri-apps/api/core', () => ({
   invoke: jest.fn()
@@ -168,10 +170,6 @@ describe('Tauri renderer bridge contract (spike 012 parity)', () => {
 
     const deniedToken = snapshotGet('steamConfigStore', 'refreshToken')
     expect(deniedToken).toBeUndefined()
-  })
-
-  it('touches zero electron symbols on the Tauri path (contract_ok)', () => {
-    expect(mockElectronRequireCount).toBe(0)
   })
 })
 

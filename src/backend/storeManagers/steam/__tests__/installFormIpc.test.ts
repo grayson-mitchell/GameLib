@@ -32,7 +32,7 @@ jest.mock('backend/logger', () => ({
   }
 }))
 
-jest.mock('electron', () => ({
+jest.mock('backend/platform', () => ({
   app: {
     getPath: jest.fn().mockReturnValue('/tmp/mock-path')
   }

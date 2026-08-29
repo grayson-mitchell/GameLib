@@ -3,12 +3,14 @@ import { backendEvents } from '../backend_events'
 import { sendGameStatusUpdate, sendProgressUpdate } from '../utils'
 import '../progress_bar'
 
-// Phase 35 Plan 15: `setAllWindows` is a helper that exists only on the jest DOUBLE
-// (src/backend/__mocks__/electron.ts), never on the real `backend/platform` stub, so it is
-// unavailable in the production type. Typing it properly means augmenting the mock's own
-// declarations -- src/common/typedefs/extra-mock-function.ts -- which is D-35-13-02 and is
-// PLAN 35-16's to do. A test-local alias keeps that boundary rather than doing 35-16's job
-// badly from here. See D-35-15-01.
+// Phase 35 Plan 18 (D-35-13-02, D-35-15-02 investigated and closed): `setAllWindows` exists only
+// on the jest DOUBLE (formerly src/backend/__mocks__/electron.ts, now
+// src/backend/platform/__mocks__/index.ts), never on the real `backend/platform` stub's type.
+// Plan 18 investigated replacing this local cast with a project-wide module augmentation
+// (src/common/typedefs/extra-mock-function.ts) and found TypeScript's declaration-merging rules
+// do not support merging a namespace onto a plain `const` export (only class/function/enum) --
+// see that file's own comment for the full investigation. The local cast below is therefore the
+// correct, final shape of this workaround, not a remaining gap. See D-35-15-01.
 const MockBrowserWindow = BrowserWindow as unknown as {
   setAllWindows: (windows: unknown[]) => void
 }

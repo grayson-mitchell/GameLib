@@ -18,9 +18,14 @@
  * is `tauriTransport.test.ts`'s job).
  */
 
-jest.mock('electron', () => {
-  throw new Error('electron must not be resolved on the Tauri path (T-27-07)')
-})
+// Phase 35 Plan 18 (T-27-07): this suite used to guard against 'electron' being resolved on
+// the Tauri preload path via a throw-on-require jest.mock('electron', ...) factory. Plan 18
+// retired the 'electron' devDependency outright, so the guard is now structural: 'electron'
+// cannot resolve on ANY path, in ANY suite, because it no longer exists in node_modules at
+// all. A jest.mock('electron', ...) call here would itself throw "Cannot find module
+// 'electron'" at REGISTRATION time (before this factory could ever run), which is a strictly
+// stronger guarantee than the runtime throw it replaces. See meta/__tests__/electronAbsence.test.ts
+// for the project-wide mechanized version of this same guarantee.
 
 const mockedRegisterStore = jest.fn()
 const mockedSnapshotGet = jest.fn()

@@ -266,8 +266,22 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // `git diff --stat -- src/backend/sidecar/__tests__/electronUntouched.test.ts`:
   // 2 insertions, 2 deletions. Prior digest:
   // 2c0acfb5220a85702c0a7f33aafdae9eade1a2c4bec234d33980ab968e1f1105
+  //
+  // Re-pinned 2026-08-29 by Phase 35 Plan 18 (electron devDependency retirement), per this
+  // gate's own documented procedure. The ONLY change to the pinned file is ONE line —
+  // deletion of the vestigial `jest.mock('electron', () => jest.requireActual('../../platform'))`
+  // line. This mock was already dead by construction: `configStore`/`tokenStore.ts` (the module
+  // under test) import from `backend/platform` directly, not `electron`, ever since Plan 15's
+  // migration, so this mock intercepted a specifier nobody required. Plan 18 retires the
+  // `electron` devDependency outright, which would make this line throw "Cannot find module
+  // 'electron'" at jest registration time — so it was deleted rather than repointed. No
+  // assertion, fixture or proof was altered, weakened or repurposed: the
+  // `safeStorage.isEncryptionAvailable` "always true" regression detector and the configStore
+  // byte-identity comparisons are untouched. Verified by
+  // `git diff --stat -- src/backend/sidecar/__tests__/electronUntouched.test.ts`: 1 deletion.
+  // Prior digest: 132822ebc76da7db0ea8974e93547fd27ef6e04d5b095c6911878f09806d0335
   const ELECTRON_UNTOUCHED_SHA256 =
-    '132822ebc76da7db0ea8974e93547fd27ef6e04d5b095c6911878f09806d0335'
+    '39e68ed1845d05a1cbc74739b0e86b5289531914c384fbad6638efefb060ce91'
 
   it('REQ-34.2-14 Gate 8: electronUntouched.test.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, 'electronUntouched.test.ts')
