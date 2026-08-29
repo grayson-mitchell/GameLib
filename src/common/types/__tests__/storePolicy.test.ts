@@ -86,6 +86,88 @@ describe('allow-list', () => {
     )
   })
 
+  // Phase 35 plan 16 (D-08 convergence): the Electron path's `SECRET_STORE_KEYS`
+  // deny-list is about to be deleted in favour of this allow-list. Every one of its
+  // four store names / five field paths must be provably blocked here FIRST, or a gap
+  // found after the deletion is a live credential-exposure regression (T-35-72). The
+  // deny-list's `key === secret || key.startsWith(`${secret}.`)` semantics require a
+  // NESTED-PATH case per field too (T-35-73) — the sub-property most likely to be
+  // missed when comparing two policies by their field lists.
+  describe('D-08 convergence: every SECRET_STORE_KEYS field, blocked by name AND by nested path', () => {
+    it('blocks humbleConfigStore.sessionCookie by name', () => {
+      expect(
+        isAllowedStoreField('humbleConfigStore', 'sessionCookie')
+      ).toBe(false)
+    })
+
+    it('blocks a nested path under humbleConfigStore.sessionCookie', () => {
+      expect(
+        isAllowedStoreField('humbleConfigStore', 'sessionCookie.value')
+      ).toBe(false)
+    })
+
+    it('blocks humbleConfigStore.csrfToken by name', () => {
+      expect(isAllowedStoreField('humbleConfigStore', 'csrfToken')).toBe(
+        false
+      )
+    })
+
+    it('blocks a nested path under humbleConfigStore.csrfToken', () => {
+      expect(
+        isAllowedStoreField('humbleConfigStore', 'csrfToken.value')
+      ).toBe(false)
+    })
+
+    it('blocks steamConfigStore.refreshToken by name', () => {
+      expect(isAllowedStoreField('steamConfigStore', 'refreshToken')).toBe(
+        false
+      )
+    })
+
+    it('blocks a nested path under steamConfigStore.refreshToken', () => {
+      expect(
+        isAllowedStoreField('steamConfigStore', 'refreshToken.value')
+      ).toBe(false)
+    })
+
+    it('blocks gogConfigStore.credentials by name', () => {
+      expect(isAllowedStoreField('gogConfigStore', 'credentials')).toBe(
+        false
+      )
+    })
+
+    it('blocks a nested path under gogConfigStore.credentials', () => {
+      expect(
+        isAllowedStoreField('gogConfigStore', 'credentials.accessToken')
+      ).toBe(false)
+    })
+
+    it('blocks zoomConfigStore.credentials by name', () => {
+      expect(isAllowedStoreField('zoomConfigStore', 'credentials')).toBe(
+        false
+      )
+    })
+
+    it('blocks a nested path under zoomConfigStore.credentials', () => {
+      expect(
+        isAllowedStoreField('zoomConfigStore', 'credentials.accessToken')
+      ).toBe(false)
+    })
+  })
+
+  // T-35-74: the structural advantage of an allow-list over a deny-list is that a
+  // field in NEITHER list is blocked by DEFAULT, not exposed until someone remembers
+  // to deny-list it. Asserted explicitly (not merely implied by the existing
+  // unknown-field test above) so a future change to a default-permit shape goes red.
+  it('D-08 fail-closed control: a field name in NO list at all is blocked by default', () => {
+    expect(
+      isAllowedStoreField('humbleConfigStore', 'someFutureSecretNeverListed')
+    ).toBe(false)
+    expect(
+      isAllowedStoreField('steamConfigStore', 'anotherFutureSecretField')
+    ).toBe(false)
+  })
+
   it('allows legitimate neighbour fields', () => {
     expect(isAllowedStoreField('steamConfigStore', 'userData')).toBe(true)
     expect(isAllowedStoreField('humbleConfigStore', 'isLoggedIn')).toBe(true)
