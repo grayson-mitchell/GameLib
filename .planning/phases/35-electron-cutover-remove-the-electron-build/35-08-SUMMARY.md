@@ -17,7 +17,7 @@ tags:
     t-35-34,
     t-35-sc
   ]
-status: TASKS 1-2 COMPLETE — Task 3 (blocking human-verify, live `pmset` observation) OUTSTANDING
+status: COMPLETE 3/3 — Task 3 gate DRIVEN 2026-08-29, 5/5 of its own criteria PASS, but the plan's `success_criteria` FAILS on a newly-found defect (D-35-08-02). MUST NOT be summarised as a clean pass.
 
 # Dependency graph
 requires: [35-04, 35-07]
@@ -65,8 +65,8 @@ key-decisions:
   - '`appShellFlowRegistration.ts` was fixed although the plan did not list it — it is the live lock/unlock path under Tauri and it passed neither a kind nor an id.'
 
 # Metrics
-tasks-completed: 2
-tasks-outstanding: 1
+tasks-completed: 3
+tasks-outstanding: 0
 commits:
   - 387d90df5
   - 71a70b3ed
@@ -279,23 +279,50 @@ None. `isStarted()` was the last lying accessor in this seam and now answers fro
 
 ## Threat Flags
 
-None. This plan introduces no new network endpoint, auth path, or schema change. The one new trust
-boundary — a sidecar-supplied `kind` string selecting an OS assertion — is the one the plan's own
-threat register already covers as T-35-32, and it is mitigated by rejection rather than defaulting.
+None introduced. This plan adds no new network endpoint, auth path, or schema change. The one new
+trust boundary — a sidecar-supplied `kind` string selecting an OS assertion — is the one the plan's
+own threat register covers as T-35-32, and it is mitigated by rejection rather than defaulting.
 
-## Task 3 — OUTSTANDING (blocking human-verify)
+**Amended after the live gate.** T-35-32 is mitigated *at the boundary* — an unrecognised kind is
+rejected and no kind is defaulted, which the gate confirmed. But the gate found the same
+end-state reached from the other side: a **valid** kind requested by the wrong caller
+(`D-35-08-02`). Rejecting bad values cannot catch a well-formed request for the wrong assertion,
+so T-35-32's mitigation should not be read as covering it. T-35-33 (Windows per-thread flags)
+stays **unverified on every platform**.
 
-Not attempted and not self-certified. It needs a live `pnpm tauri:dev` run and `pmset -g assertions`
-observations across six steps: baseline, display assertion during play, its release, a **system**
-assertion during a depot download, its release, and a force-quit with an assertion held.
+## Task 3 — DRIVEN 2026-08-29. Full record: `35-08-LIVE-GATE.md`
 
-Two things worth knowing before running it:
+The gate was run live on macOS 15 arm64 against a dev build, developer-driven for the UI actions
+with `pmset -g assertions` sampled every 2s across the whole run. **All five of Task 3's own
+acceptance criteria PASS on real observations.** The syscalls hold and release genuine IOKit
+assertions; the two kinds are distinct at the OS level, not one assertion wearing two labels.
 
-- The assertion names `pmset` prints are `PreventUserIdleDisplaySleep` and
-  `PreventUserIdleSystemSleep` — taken from the SDK header, and chosen partly *because* they make
-  the two kinds distinguishable by eye in that output. The human-readable labels beside them will
-  read `GameLib: a game is running` and `GameLib: a download is in progress`.
-- **Windows and Linux must be recorded NOT ATTEMPTED**, not inferred. The Windows arm in
-  particular carries the untested T-35-33 risk: `SetThreadExecutionState` is per-thread, and while
-  the flags are deliberately held on a dedicated long-lived thread for exactly that reason, no
-  automated test on any platform can observe whether that thread actually holds them.
+Load-bearing results:
+
+- **Display during play, system during download, and they are DIFFERENT.** The download window
+  read `dispCount=0` with only `PreventUserIdleSystemSleep` held — the discriminating observation
+  for T-35-32, since a collapsed implementation would have shown the same kind twice.
+- **Nine distinct `IOPMAssertionID`s were taken across the run and all nine were released.** This
+  is the live counterpart to the T-35-31 pairing test, under real assertions rather than a mocked
+  `requestRustInvoke`.
+- **Both quit paths were exercised, because they prove different things.** Cmd-Q (18:48:42) is the
+  only one that can show `wake_lock_release_all()` on `RunEvent::Exit` actually runs; SIGKILL
+  (18:54:25) is the criterion as the plan wrote it, and under it a completely absent shutdown hook
+  would look identical. Recording only one would have left the other unproven.
+- **Windows and Linux are NOT ATTEMPTED**, not inferred — no hardware. T-35-33 therefore remains
+  untested on any platform: the flags are deliberately held on a dedicated long-lived thread, but
+  nothing here observed whether that thread holds them.
+
+**A DEFECT WAS FOUND AND THIS MUST NOT BE READ AS A CLEAN PASS.** Every game launch (3 of 3) also
+took a `PreventUserIdleSystemSleep` assertion labelled `"GameLib: a download is in progress"` and
+held it for the whole session with no download running. That falsifies the plan's own
+`success_criteria` — *"neither keeps the other awake"* — even though all five Task 3 criteria pass,
+because those five never operationalised that sentence.
+
+The cause is **not** in this plan's Rust or stub code, both of which took exactly the kind they
+were asked for. `GlobalState.tsx:1633` lists `'launching'` and `'playing'` in `allowedPendingOps`,
+so a launch fires `lock(false)` during the `'launching'` window and
+`appShellFlowRegistration.ts:301` takes `prevent-app-suspension`; nothing releases it until the
+game exits. That block mirrors Heroic's `main.ts:618-631`, so the bug is inherited — Phase 33's
+no-op stub simply made it unobservable, and making the assertions real is what surfaced it.
+Ledgered as **`D-35-08-02`**, open and unowned.

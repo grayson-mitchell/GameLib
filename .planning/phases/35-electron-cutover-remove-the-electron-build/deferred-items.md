@@ -1014,3 +1014,52 @@ from 'electron'` — must be split at 35-15: `OpenDialogOptions` from `backend/p
 
 `35-13-PLAN.md`'s success criterion says the rewrite "stays a one-string change per site." That
 holds for every site except this one. Plan 35-15 should not assume a uniform sed.
+
+## D-35-08-02 — a running game ALSO holds a system-sleep assertion, mislabelled as a download
+
+**Found during:** plan 35-08 Task 3, the live wake-lock gate (`35-08-LIVE-GATE.md`, F-35-08-A).
+**Status:** open, unowned. Real user-visible behaviour, reproduced 3 of 3 game launches.
+**Not a defect in 35-08's own code** — the Rust arms and the `powerSaveBlocker` stub each took
+exactly the kind they were asked for. The wrong kind was *requested* by an inherited caller.
+
+Observed on macOS with `pmset -g assertions`: every game launch takes a
+`PreventUserIdleSystemSleep` assertion named `"GameLib: a download is in progress"` alongside the
+correct `PreventUserIdleDisplaySleep`, and holds it for the entire play session. No download is
+running.
+
+**Mechanism** (traced in source, not inferred from the symptom):
+
+1. `src/frontend/state/GlobalState.tsx:1633` — `allowedPendingOps` contains BOTH `'launching'`
+   and `'playing'`.
+2. A launch passes through status `'launching'` first, so `pendingOps` is 1 while `playing` is
+   still `false` → `window.api.lock(false)`.
+3. `src/backend/sidecar/appShellFlowRegistration.ts:300-302` — the `!playing && !isSleepBlocked`
+   branch fires → `powerSaveBlocker.start('prevent-app-suspension')`.
+4. Status then becomes `'playing'` → `lock(true)` → the display assertion is taken, correctly.
+5. The system assertion is never released, because `unlock()` only fires once `pendingOps` hits
+   0 — which is when the game exits.
+
+**Why this was invisible until now.** The block at `appShellFlowRegistration.ts` mirrors Heroic's
+`main.ts:618-631`, so the same sequence exists upstream. Under Phase 33's D-08 no-op stub the call
+held nothing, so a wrong `kind` had no observable consequence. Plan 35-08 made the assertions real
+and thereby made a latent caller bug live. This is the `upstream-port-verbatim-ships-silent-defects`
+shape: the port was faithful and the defect came with it.
+
+**Why it matters rather than being cosmetic.** It defeats plan 35-08's own `success_criteria` —
+*"A game running keeps the display awake; a download running keeps the system awake; neither keeps
+the other awake."* It is also a real power regression: playing a game now blocks system idle sleep
+for the whole session, which is exactly the class of battery drain T-35-31 was written about, and
+the label a user sees in `pmset` / Activity Monitor names a download that does not exist.
+
+**What a fix has to decide (NOT this plan's call).** The narrow fix is to stop taking the
+app-suspension lock for the `'launching'`/`'playing'` statuses, since those are covered by the
+display lock. But `allowedPendingOps` is one list serving two different questions — "is an
+operation pending?" and "which sleep kind should that operation block?" — and those have come
+apart. Whoever fixes it should split the two rather than special-case one status, and should note
+that `launcher.ts:190` already takes its own display lock independently of this path.
+
+**Secondary note, unexplained and deliberately left so.** Two of the three launches took TWO
+display assertions with distinct ids; one took a single one. Two is the expected count — both
+`launcher.ts:190` and `appShellFlowRegistration.ts:305` take a display lock on a launch. All were
+released, so this is duplication and not a leak, but the single-display launch at 18:45:58 has no
+established cause and no cause is invented here.
