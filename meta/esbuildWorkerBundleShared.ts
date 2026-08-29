@@ -247,7 +247,7 @@ export function resolveEsbuildCli(): string {
  * 260817-pkx; extended to ten by Phase 23.1 Plan 03). `--alias:electron`
  * statically replaces `require('electron')`/`import ... from 'electron'`
  * (first-party AND inside bundled third-party code) with this project's own
- * `backend/sidecar/electronStub.ts` at BUILD TIME -- so there is no
+ * `backend/platform/index.ts` at BUILD TIME -- so there is no
  * unresolved runtime `require('electron')` left in the output for ANY
  * bundler's chunk-splitting/hoisting order to race against. The
  * `i18next-fs-backend` alias and `sidecarSeaFsShim` inject exist for

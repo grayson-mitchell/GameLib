@@ -3,7 +3,7 @@
  * bundle time (`--alias:node-gyp-build=./lzmaNativeBinding.ts`,
  * `meta/esbuildWorkerBundleShared.ts`'s `seaEsbuildFlags()`) -- the SAME
  * mechanism CLASS as this repo's existing
- * `--alias:electron=./src/backend/sidecar/electronStub.ts` fix, NOT the
+ * `--alias:electron=./src/backend/platform/index.ts` fix, NOT the
  * `pnpm.patchedDependencies` computed-require rewrite RESEARCH.md Pitfall 4
  * rules out for a native addon.
  *

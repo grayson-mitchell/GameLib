@@ -12,7 +12,7 @@
  * `electronStub.showOpenDialog`) was dead weight in production.
  *
  * `dialog` resolves to the REAL electron module under Electron and to
- * `backend/sidecar/electronStub.ts` under the sidecar (bootstrap's `Module._load` hook), which
+ * `backend/platform/index.ts` under the sidecar (bootstrap's `Module._load` hook), which
  * is what makes one body serve both builds.
  */
 

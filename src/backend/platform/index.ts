@@ -27,6 +27,46 @@
  * `safeStorage` is the one exception below (Phase 28): its Steam
  * refresh-token callers were graduated onto `getTokenStore()` instead, so
  * `safeStorage` itself is intentionally left dead here (throws on use).
+ *
+ * ---------------------------------------------------------------------------
+ * PHASE 35 PLAN 13 (D-02, REQ-35-01/REQ-35-02): MOVED HERE from
+ * `src/backend/sidecar/electronStub.ts`. The move was mechanical — the file's
+ * own content changed by exactly four lines out of 926 (the relative imports
+ * whose depth changed). Everything above this block is the original
+ * provenance comment, carried forward unaltered because it still documents
+ * which API surfaces are real and which are stand-ins.
+ *
+ * THIS MODULE IS THE SINGLE IMPORT TARGET REPLACING `'electron'` ACROSS THE
+ * BACKEND. Plan 35-15 rewrites the tree's ~67 `from 'electron'` sites to
+ * `from 'backend/platform'`; plan 35-18 then removes `electron` from
+ * `package.json` entirely. As of plan 13 this module has ZERO consumers of the
+ * bare `backend/platform` specifier — that is deliberate (D-17 step 1): the
+ * module is built and fully tested in isolation, while both shells still
+ * build, BEFORE anything irreversible happens.
+ *
+ * EXPORT COUNT: 22 — unchanged from the pre-move file, so D-02's "same 22
+ * exports" holds exactly and no delta needs stating.
+ *
+ * A note on the census, because the record disagrees with itself:
+ * `35-PREFLIGHT.md`'s PD-B section records `PLATFORM_EXPORT_COUNT: 19`,
+ * having marked `ElectronStubTransport`, `IpcHandler` and `IpcListener` DEAD.
+ * That census answered "is this live PRODUCTION surface?" — its stated rule
+ * excluded test files. It does NOT answer "can this export be deleted without
+ * breaking the build", which is the question the move actually poses.
+ * Re-measured across the whole tree, tests included:
+ *   - `IpcHandler`  — LIVE: `eosOverlayFlows.test.ts`, `wineToolsFlows.test.ts`,
+ *                     `runnerSliceRegistration.test.ts` (~10 cast sites)
+ *   - `IpcListener` — LIVE: `runnerSliceRegistration.test.ts`
+ *   - `ElectronStubTransport` — genuinely zero consumers anywhere; the only
+ *                     truly dead export. Kept for API-shape parity at zero
+ *                     runtime cost (it is an interface: nothing is emitted).
+ * Deleting the first two would break three test files, which this plan is
+ * separately forbidden from rewriting. So the corrected census is 21 live +
+ * 1 dead = 22 shipped, and PD-B itself authorises this ("keep them for
+ * API-shape parity at zero functional cost — either is valid").
+ * `PLATFORM_EXPORT_COUNT: 19` is SUPERSEDED, not contradicted: it was correct
+ * for the production-only question it asked.
+ * ---------------------------------------------------------------------------
  */
 
 import { release as osRelease } from 'os'
@@ -785,6 +825,10 @@ export const Menu = {
   setApplicationMenu: (): void => {}
 }
 
+// SURVIVES-AS-GAP (35-PREFLIGHT PD-B): the sole consumer is `backend/images_cache.ts`'s
+// `imagecache` scheme, an ACCEPTED D-05 gap — custom protocol registration has no Tauri
+// equivalent wired yet, so these stay no-ops. Do NOT delete this as unused: it has a real
+// caller, and that caller is knowingly degraded rather than absent.
 export const protocol = {
   registerFileProtocol: (): void => {},
   registerHttpProtocol: (): void => {},

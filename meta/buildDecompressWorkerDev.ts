@@ -29,7 +29,7 @@
  * against a real built-and-spawned `worker_threads.Worker` before writing
  * this file.
  *
- * THE FIX: statically alias `electron` -> `electronStub.ts` at BUILD TIME
+ * THE FIX: statically alias `electron` -> `backend/platform/index.ts` at BUILD TIME
  * (esbuild's `--alias`), exactly like the packaged SEA worker bundle already
  * does (`buildWorkerEsbuildArgv()`/`seaEsbuildFlags()` in
  * `buildSidecarSea.ts`, fixed by quick task 260817-pkx). With the alias in

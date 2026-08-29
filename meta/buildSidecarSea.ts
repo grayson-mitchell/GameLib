@@ -42,7 +42,7 @@
  *    another unresolvable SEA require. Fixed with esbuild's `--alias`,
  *    statically replacing every `electron` import/require (first-party AND
  *    inside bundled third-party code) with this project's own
- *    `backend/sidecar/electronStub.ts` at BUILD time -- the runtime
+ *    `backend/platform/index.ts` at BUILD time -- the runtime
  *    `Module._load` hook approach this repo otherwise relies on cannot
  *    reach a SEA binary (see point 1), so this is a deliberately different
  *    mechanism for the SEA bundle only.
@@ -697,7 +697,7 @@ async function writeSeaConfig(nativeLzmaPath?: string): Promise<void> {
  * (Pitfall 3), so any unresolved `require('somePackage')` left in the SEA
  * main script crashes at startup with `ERR_UNKNOWN_BUILTIN_MODULE`.
  * `electron` is aliased (not left external) to this project's own
- * `electronStub.ts` so `electron-store` can be safely bundled too (fix 2);
+ * `backend/platform/index.ts` so `electron-store` can be safely bundled too (fix 2);
  * `sidecarSeaFsShim.ts` is injected to patch the one dynamic asset read
  * fix 2 doesn't cover (fix 3). Deliberately independent of
  * `pnpm build:sidecar`'s dev/Electron bundle (`build/main/sidecar.js`,
