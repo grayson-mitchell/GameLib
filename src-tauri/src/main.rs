@@ -6472,6 +6472,102 @@ fn resolve_sidecar_entry() -> String {
     format!("{}/../build/main/sidecar.js", env!("CARGO_MANIFEST_DIR"))
 }
 
+/// Finds `program` by searching a PATH-shaped string. Pure: the PATH is a parameter, so the
+/// search order is testable without mutating process-global env.
+fn find_on_path_var(program: &str, path_var: Option<&str>) -> Option<String> {
+    let path_var = path_var?;
+    path_var
+        .split(':')
+        .filter(|dir| !dir.is_empty())
+        .map(|dir| std::path::Path::new(dir).join(program))
+        .find(|candidate| candidate.is_file())
+        .map(|p| p.display().to_string())
+}
+
+/// Orders nvm's `versions/node/*` directory names newest-first.
+///
+/// Sorted by NUMERIC component, not lexically: a plain string sort puts `v9.x` after `v26.x`
+/// and would pick a years-old runtime on any machine with both installed. Names that do not
+/// parse are kept, ordered last, rather than dropped — an unparseable name is still a real
+/// installed runtime and is better than nothing.
+fn nvm_versions_newest_first(mut names: Vec<String>) -> Vec<String> {
+    fn key(name: &str) -> (bool, Vec<u64>) {
+        let digits: Vec<u64> = name
+            .trim_start_matches('v')
+            .split('.')
+            .map(|part| part.parse::<u64>().unwrap_or(0))
+            .collect();
+        // `false` sorts before `true`, so parseable names come first.
+        (
+            digits.is_empty() || name.trim_start_matches('v').is_empty(),
+            digits,
+        )
+    }
+    names.sort_by(|a, b| {
+        let (a_bad, a_nums) = key(a);
+        let (b_bad, b_nums) = key(b);
+        a_bad.cmp(&b_bad).then_with(|| b_nums.cmp(&a_nums))
+    });
+    names
+}
+
+/// The `node` executable the DEV sidecar path should exec.
+///
+/// WHY THIS IS NOT JUST `"node"`. `Command::new("node")` searches the process's inherited
+/// `PATH`, and a macOS app bundle launched by LaunchServices (Finder, Dock, Spotlight, or a
+/// `gamelib://` open) inherits `PATH=/usr/bin:/bin:/usr/sbin:/sbin` — nothing else. A node
+/// installed by nvm (`~/.nvm/versions/node/<version>/bin`) or Homebrew is not on that PATH, so
+/// the spawn failed with a bare `ENOENT`, `.setup()` propagated it, and Tauri panicked. Because
+/// that panic unwinds out of `did_finish_launching`, an `extern "C"` ObjC callback, it became a
+/// `SIGABRT` and presented to the user as "GameLib quit unexpectedly" with no explanation.
+/// Measured 2026-08-29; 9 crash reports in one afternoon, all this. Debug builds only — a
+/// release build uses the bundled `gamelib-sidecar` externalBin and never runs `node`.
+///
+/// Deliberately does NOT shell out to `$SHELL -lc 'command -v node'`. That is the usual trick
+/// for recovering a login PATH, but it runs the user's full shell profile on the startup path,
+/// where a slow or interactive profile would hang launch with no way to report why.
+///
+/// Returns the bare `"node"` when nothing is found, so the resulting error names the program
+/// the user is missing rather than an invented path.
+fn resolve_node_program() -> String {
+    if let Ok(explicit) = std::env::var("GAMELIB_NODE") {
+        if !explicit.is_empty() && std::path::Path::new(&explicit).is_file() {
+            return explicit;
+        }
+    }
+
+    if let Some(found) = find_on_path_var("node", std::env::var("PATH").ok().as_deref()) {
+        return found;
+    }
+
+    if let Ok(home) = std::env::var("HOME") {
+        let versions_dir = std::path::Path::new(&home)
+            .join(".nvm")
+            .join("versions")
+            .join("node");
+        if let Ok(entries) = std::fs::read_dir(&versions_dir) {
+            let names: Vec<String> = entries
+                .flatten()
+                .map(|e| e.file_name().to_string_lossy().into_owned())
+                .collect();
+            for name in nvm_versions_newest_first(names) {
+                let candidate = versions_dir.join(name).join("bin").join("node");
+                if candidate.is_file() {
+                    return candidate.display().to_string();
+                }
+            }
+        }
+    }
+
+    for fallback in ["/opt/homebrew/bin/node", "/usr/local/bin/node"] {
+        if std::path::Path::new(fallback).is_file() {
+            return fallback.to_string();
+        }
+    }
+
+    "node".to_string()
+}
+
 /// Whether this run should use the DEV-mode `node <sidecar-entry.js>` spawn path instead of
 /// the packaged `externalBin` binary. Gated on build profile ALONE (`cfg!(debug_assertions)`):
 /// a release build can never take this path, regardless of the process environment (D-06,
@@ -6815,13 +6911,18 @@ fn spawn_sidecar_dev(shell_exe: &str, forward_args: &[String]) -> std::io::Resul
         .map(|p| p.display().to_string())
         .unwrap_or_else(|_| "<unknown>".into());
     let exists = std::path::Path::new(&entry).exists();
-    eprintln!("[shell] spawning sidecar (dev): node \"{entry}\"");
-    eprintln!("[shell]   cwd={cwd}");
-    eprintln!("[shell]   entry_exists={exists}");
-    eprintln!("[shell]   GAMELIB_SHELL_EXE={shell_exe}");
-    eprintln!("[shell]   GAMELIB_APP_ROOT={app_root}");
-    eprintln!("[shell]   forward_args={forward_args:?}");
-    let child = Command::new("node")
+    let node = resolve_node_program();
+    // `shell_diag`, not `eprintln!`: LaunchServices discards a bundled app's stderr, so these
+    // lines — including the FAILURE line below — were invisible in exactly the configuration
+    // that fails. That is why a missing `node` presented as an unexplained "quit unexpectedly"
+    // rather than as the one-line diagnosis it already contained.
+    shell_diag(&format!("spawning sidecar (dev): \"{node}\" \"{entry}\""));
+    shell_diag(&format!("  cwd={cwd}"));
+    shell_diag(&format!("  entry_exists={exists}"));
+    shell_diag(&format!("  GAMELIB_SHELL_EXE={shell_exe}"));
+    shell_diag(&format!("  GAMELIB_APP_ROOT={app_root}"));
+    shell_diag(&format!("  forward_args={forward_args:?}"));
+    let child = Command::new(&node)
         .arg(&entry)
         .args(forward_args)
         .env("GAMELIB_SHELL_EXE", shell_exe)
@@ -6831,10 +6932,10 @@ fn spawn_sidecar_dev(shell_exe: &str, forward_args: &[String]) -> std::io::Resul
         .stderr(Stdio::piped())
         .spawn();
     match &child {
-        Ok(_) => eprintln!("[shell] sidecar process spawned OK"),
-        Err(e) => eprintln!(
-            "[shell] FAILED to spawn sidecar (is `node` on PATH? does the entry exist?): {e}"
-        ),
+        Ok(_) => shell_diag("sidecar process spawned OK"),
+        Err(e) => shell_diag(&format!(
+            "FAILED to spawn sidecar: {e} (tried node={node:?}, entry_exists={exists})"
+        )),
     }
     child
 }
@@ -7109,7 +7210,172 @@ fn start_reader(
     });
 }
 
+/// Where a shell panic is recorded. Sits beside the sidecar's own `gamelib.log` on macOS so an
+/// operator collecting diagnostics finds both in one directory.
+///
+/// Mirrors `single_instance_dir`'s shape deliberately: `$HOME` is taken as a parameter rather
+/// than read inside, so the mapping is unit-testable without mutating process-global env vars.
+fn shell_panic_log_path(home: Option<&str>) -> Option<std::path::PathBuf> {
+    let home = home.filter(|h| !h.is_empty())?;
+    let base = std::path::Path::new(home);
+    if cfg!(target_os = "macos") {
+        Some(
+            base.join("Library")
+                .join("Logs")
+                .join("GameLib")
+                .join("gamelib-shell-panic.log"),
+        )
+    } else {
+        Some(
+            base.join(".config")
+                .join("gamelib")
+                .join("gamelib-shell-panic.log"),
+        )
+    }
+}
+
+/// Routes every shell panic to a FILE, not just stderr.
+///
+/// WHY THIS EXISTS. Until now this binary installed no panic hook and used no `catch_unwind`
+/// anywhere, so a panic reported itself only via stderr. That is adequate under `tauri:dev`,
+/// where stderr is the operator's terminal, and useless in the shipped `.app`: LaunchServices
+/// discards a bundled process's stderr, so a panic in production left NO message anywhere. The
+/// crash report does not fill the gap — Rust does not write panic text into CRASetInfo, so the
+/// `.ips` carries `abort() called` and nothing else.
+///
+/// That cost a real diagnosis on 2026-08-29: an abort inside `on_open_url` produced a crash
+/// report whose faulting-thread stack ends at `panic_cannot_unwind`, the abort GUARD for a
+/// panic crossing an `extern "C"` boundary. The frames between the guard and the panic's origin
+/// had ALREADY been popped by the unwind, so the report cannot name the origin, and the message
+/// that would have named it went to a discarded stderr. See
+/// `.planning/debug/deep-link-open-url-abort.md`.
+///
+/// The backtrace is `force_capture`d rather than left to `RUST_BACKTRACE`, because a
+/// LaunchServices-launched app inherits no environment the operator can set.
+///
+/// This hook REPLACES the default rather than chaining to it: it prints the same information to
+/// stderr itself, so chaining would only duplicate the report, and it supplies an unconditional
+/// backtrace where the default's is env-gated.
+///
+/// NOTHING IN HERE MAY PANIC. A panic inside the panic hook aborts immediately and destroys the
+/// very report we are trying to write, so every fallible step (`create_dir_all`, `open`,
+/// `write_all`) is `let _ =`-swallowed and there is no indexing, slicing or `unwrap`.
+/// Where the shell's own diagnostics land, beside the panic log and the sidecar's `gamelib.log`.
+fn shell_diag_log_path(home: Option<&str>) -> Option<std::path::PathBuf> {
+    shell_panic_log_path(home).map(|p| p.with_file_name("gamelib-shell.log"))
+}
+
+/// Appends one shell diagnostic line to a FILE as well as stderr.
+///
+/// Same rationale as `install_panic_hook`: under LaunchServices a bundled app's stderr is
+/// discarded, so `eprintln!` alone makes the shell's own behaviour unobservable in exactly the
+/// configuration users run. Used on the deep-link path, where "did the OS event reach us at
+/// all?" is otherwise indistinguishable from "it reached us and we dropped it".
+///
+/// Best-effort and infallible by construction — a diagnostic that can fail a real operation
+/// would be worse than no diagnostic.
+fn shell_diag(message: &str) {
+    eprintln!("[shell] {message}");
+    let Some(path) = shell_diag_log_path(std::env::var("HOME").ok().as_deref()) else {
+        return;
+    };
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let epoch_secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+    {
+        let _ = file
+            .write_all(format!("{epoch_secs} pid={} {message}\n", std::process::id()).as_bytes());
+        let _ = file.flush();
+    }
+}
+
+/// Renders one panic report. Split out from the hook itself so a test can assert the report
+/// actually CARRIES the four things a diagnosis needs — thread, location, payload, backtrace —
+/// without installing a process-global hook or writing to the operator's real log file.
+fn format_panic_record(
+    epoch_secs: u64,
+    pid: u32,
+    thread_name: &str,
+    location: &str,
+    payload: &str,
+    backtrace: &str,
+) -> String {
+    format!(
+        "\n==== [shell] PANIC ====\n\
+         epoch_secs: {epoch_secs}\n\
+         pid: {pid}\n\
+         thread: {thread_name}\n\
+         location: {location}\n\
+         payload: {payload}\n\
+         backtrace:\n{backtrace}\n\
+         ==== end panic ====\n"
+    )
+}
+
+fn install_panic_hook() {
+    std::panic::set_hook(Box::new(move |info| {
+        // `PanicHookInfo::payload_as_str` is newer than this crate's MSRV (1.77.2), so downcast.
+        let payload = info
+            .payload()
+            .downcast_ref::<&str>()
+            .map(|s| (*s).to_string())
+            .or_else(|| info.payload().downcast_ref::<String>().cloned())
+            .unwrap_or_else(|| "<non-string panic payload>".to_string());
+        let location = info
+            .location()
+            .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
+            .unwrap_or_else(|| "<unknown location>".to_string());
+        let thread = std::thread::current();
+        let thread_name = thread.name().unwrap_or("<unnamed>").to_string();
+        // Seconds since the Unix epoch. No `chrono`/`time` dependency exists in this crate and a
+        // panic report is not worth adding one for; the operator correlates against the `.ips`
+        // timestamp or the sidecar log.
+        let epoch_secs = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let backtrace = std::backtrace::Backtrace::force_capture().to_string();
+
+        let record = format_panic_record(
+            epoch_secs,
+            std::process::id(),
+            &thread_name,
+            &location,
+            &payload,
+            &backtrace,
+        );
+
+        eprintln!("{record}");
+
+        if let Some(path) = shell_panic_log_path(std::env::var("HOME").ok().as_deref()) {
+            if let Some(dir) = path.parent() {
+                let _ = std::fs::create_dir_all(dir);
+            }
+            if let Ok(mut file) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&path)
+            {
+                let _ = file.write_all(record.as_bytes());
+                let _ = file.flush();
+            }
+        }
+    }));
+}
+
 fn main() {
+    // Installed FIRST, before any other statement, so it covers the single-instance guard and
+    // every `.setup()` callback rather than only the code after `Builder::default()`.
+    install_panic_hook();
+
     // ---- Single-instance guard + deep-link argv (Phase 34.5 gap cycle 6 plan 44,
     // REQ-34.5-01/05/12, F-34.5-G6-09, D-44-A) -- runs BEFORE `tauri::Builder::default()` so a
     // secondary process's `std::process::exit(0)` below fires before `.setup()` can ever call
@@ -7218,7 +7484,39 @@ fn main() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_deep_link::init())
         .setup(move |app| {
-            let mut child = spawn_sidecar(app.handle())?;
+            // A spawn failure used to propagate through this `?`. Tauri turns a setup error into
+            // a panic (`app.rs:1425`), and that panic unwinds out of `did_finish_launching` — an
+            // `extern "C"` ObjC callback — so it became `panic_cannot_unwind` -> `SIGABRT`. The
+            // user saw "GameLib quit unexpectedly" with no cause, and the crash report could only
+            // ever show the abort guard, never the origin. Nine such reports in one afternoon
+            // (2026-08-29), every one of them a `node` that was not on the LaunchServices PATH.
+            //
+            // The app genuinely cannot run without a sidecar, so this still ends the process.
+            // What changes is that it ends DELIBERATELY and says why, instead of aborting.
+            //
+            // `blocking_show()` is safe here: `.setup()` runs on the main thread from INSIDE the
+            // running event loop (`did_finish_launching` -> `AppState::launched` ->
+            // `make_run_event_loop_callback`, per the captured backtrace), so the modal has a
+            // run loop to spin. It is also on a path where the app is already dead either way.
+            let mut child = match spawn_sidecar(app.handle()) {
+                Ok(child) => child,
+                Err(e) => {
+                    shell_diag(&format!("FATAL: sidecar spawn failed, exiting: {e}"));
+                    let where_to_look = shell_diag_log_path(std::env::var("HOME").ok().as_deref())
+                        .map(|p| p.display().to_string())
+                        .unwrap_or_else(|| "the GameLib log directory".to_string());
+                    app.dialog()
+                        .message(format!(
+                            "GameLib could not start its backend process, so it cannot continue.\n\n\
+                             {e}\n\n\
+                             Details were written to:\n{where_to_look}"
+                        ))
+                        .kind(MessageDialogKind::Error)
+                        .blocking_show();
+                    // Exit, do NOT `?`. Propagating produces the abort described above.
+                    std::process::exit(1);
+                }
+            };
             let stdin = child
                 .stdin
                 .take()
@@ -7335,31 +7633,92 @@ fn main() {
             // Linux and Windows the OS spawns a NEW process with the URL as a CLI argument
             // instead, which is why the argv + single-instance-socket path above is not
             // redundant with this one -- it is the ONLY delivery path on Linux.
+            // NOT `deep_link().get_current()`. That is the plugin's documented "was the app
+            // STARTED by a deep link" accessor, and it was measured here on 2026-08-29 and does
+            // NOT serve that purpose for this app: on three cold starts it reported `None` at
+            // setup time every time, because the plugin only populates `current` from its
+            // `RunEvent::Opened` handler, which fires AFTER setup. `on_open_url` below does
+            // receive the cold-start URL (measured: fires in the same second as setup). See
+            // `.planning/debug/deep-link-open-url-abort.md`.
+            // ---- The invoke runs OFF the main thread. ----
+            //
+            // `SidecarState::invoke` BLOCKS until the sidecar answers or `timeout_for` expires,
+            // and `handleProtocolUrl` is deliberately not on `LONG_RUNNING_CHANNELS`, so that
+            // bound is the full `INVOKE_TIMEOUT`. This callback runs on the macOS main thread
+            // inside AppKit's AppleEvent handler (`-[NSApplication _handleAEGetURLEvent:]` ->
+            // tao's `application_open_urls`), so calling `invoke` here directly froze the entire
+            // UI for as long as the sidecar took. Measured 2026-08-29: 671ms / 1010ms / 1191ms
+            // on a cold start, 1-2ms warm, worst case 60s.
+            //
+            // It was also the ONLY `invoke` call site that blocked the main thread — the
+            // renderer-facing `sidecar_invoke` command has always wrapped it in
+            // `tauri::async_runtime::spawn_blocking` for exactly this reason. Blocking here is
+            // additionally hazardous rather than merely slow: tao holds BOTH its
+            // `HANDLER.callback` `Mutex` (`app_state.rs:204`, a `.lock().unwrap()`) and the
+            // `RefCell` behind it (`app_state.rs:77`, `callback.borrow_mut()`) for the whole
+            // dispatch, and a panic on the main thread inside this `extern "C"` callback cannot
+            // unwind — it becomes an immediate `SIGABRT` via `panic_cannot_unwind`, taking the
+            // app down and orphaning the sidecar. One such abort was captured on 2026-08-29
+            // (`.planning/debug/deep-link-open-url-abort.md`); its cause was never proven
+            // because the panic message went to a stderr LaunchServices discards, which is what
+            // `install_panic_hook` now fixes. This change closes the window regardless.
+            //
+            // A SINGLE worker thread fed by a channel, not `thread::spawn` per URL:
+            //   - URLs stay FIFO, so two deep links cannot interleave their sidecar round-trips.
+            //   - Thread count is bounded at one. A page firing `gamelib://` in a loop is a
+            //     realistic input, and thread-per-URL would let it spawn without limit.
+            // Validation stays on the main thread: `deep_link_decision` is pure and fast, and
+            // keeping it here means an unvalidated URL is never enqueued at all.
             let deep_link_state = state.clone();
+            let (deep_link_tx, deep_link_rx) = mpsc_channel::<String>();
+            thread::spawn(move || {
+                // Ends only when the sender is dropped, i.e. at process exit.
+                for url in deep_link_rx {
+                    let started = std::time::Instant::now();
+                    let outcome = deep_link_state
+                        .invoke("handleProtocolUrl".to_string(), vec![Value::String(url)]);
+                    let elapsed_ms = started.elapsed().as_millis();
+                    match outcome {
+                        Ok(_) => shell_diag(&format!(
+                            "delivered OS deep link to sidecar: ok ({elapsed_ms}ms)"
+                        )),
+                        Err(e) => shell_diag(&format!(
+                            "delivered OS deep link to sidecar: err={e} ({elapsed_ms}ms)"
+                        )),
+                    }
+                }
+            });
+
+            // `mpsc::Sender<T>` is `Sync` as of Rust 1.72 and this crate's MSRV is 1.77.2, so a
+            // plain sender satisfies `on_open_url`'s `Fn(..) + Send + Sync + 'static` bound
+            // without a `Mutex` wrapper.
             app.deep_link().on_open_url(move |event| {
-                for url in event.urls() {
+                // `urls()` takes `self` by value, so bind once and reuse.
+                let urls = event.urls();
+                shell_diag(&format!("on_open_url fired with {} url(s)", urls.len()));
+                for url in urls {
                     let candidate = url.to_string();
                     match deep_link_decision(&candidate) {
                         // Reached only after `protocol_url_arg` accepted the URL -- same
                         // allow-list, same guarantees, as the argv and socket paths.
                         DeepLinkDecision::Dispatch(url) => {
-                            match deep_link_state
-                                .invoke("handleProtocolUrl".to_string(), vec![Value::String(url)])
-                            {
-                                Ok(_) => eprintln!(
-                                    "[shell] delivered OS deep link to sidecar: ok"
-                                ),
-                                Err(e) => eprintln!(
-                                    "[shell] delivered OS deep link to sidecar: err={e}"
-                                ),
+                            // Hand off and return immediately; the worker does the blocking
+                            // round-trip and logs its own outcome. `SendError`'s Display is a
+                            // fixed string ("sending on a closed channel") and does NOT carry
+                            // the payload, but it is not formatted here at all so that no future
+                            // edit can turn this into a URL leak (T-34.5-G6-25 / T-35-26).
+                            if deep_link_tx.send(url).is_err() {
+                                shell_diag(
+                                    "deep-link dispatch worker is gone; dropping a validated URL",
+                                );
                             }
                         }
                         DeepLinkDecision::Reject { bytes } => {
                             // T-34.5-G6-25 / T-35-26: the REASON and byte count only, never
                             // the payload. `DeepLinkDecision::Reject` does not even carry it.
-                            eprintln!(
-                                "[shell] rejected OS deep-link payload (failed protocol_url_arg validation), bytes={bytes}"
-                            );
+                            shell_diag(&format!(
+                                "rejected OS deep-link payload (failed protocol_url_arg validation), bytes={bytes}"
+                            ));
                         }
                     }
                 }
@@ -10480,6 +10839,139 @@ mod tests {
     fn single_instance_dir_returns_none_without_a_home() {
         assert_eq!(single_instance_dir(None), None);
         assert_eq!(single_instance_dir(Some("")), None);
+    }
+
+    // ---- Panic reporting (debug session `deep-link-open-url-abort`) ----
+
+    #[test]
+    fn shell_panic_log_path_returns_none_without_a_home() {
+        assert_eq!(shell_panic_log_path(None), None);
+        assert_eq!(shell_panic_log_path(Some("")), None);
+    }
+
+    // ---- `node` resolution for the DEV sidecar path (debug session
+    // `deep-link-open-url-abort`; 9 crash reports on 2026-08-29 were a missing `node`) ----
+
+    #[test]
+    fn find_on_path_var_returns_none_without_a_path() {
+        assert_eq!(find_on_path_var("node", None), None);
+        assert_eq!(find_on_path_var("node", Some("")), None);
+    }
+
+    #[test]
+    fn find_on_path_var_finds_a_real_executable_and_respects_order() {
+        // `/bin/sh` exists on every supported unix, so this asserts real behaviour rather than
+        // a mock. An empty segment and a nonexistent directory must both be skipped, not fatal.
+        let found = find_on_path_var("sh", Some("/nonexistent::/bin"));
+        assert_eq!(found.as_deref(), Some("/bin/sh"));
+        // A directory earlier in the list wins.
+        assert_eq!(
+            find_on_path_var("sh", Some("/bin:/usr/bin")).as_deref(),
+            Some("/bin/sh")
+        );
+        // Absent programs are `None`, never a fabricated path.
+        assert_eq!(
+            find_on_path_var("definitely-not-a-real-program-xyz", Some("/bin:/usr/bin")),
+            None
+        );
+    }
+
+    #[test]
+    fn find_on_path_var_does_not_find_node_on_the_launchservices_path() {
+        // The exact PATH a LaunchServices-launched bundle inherits, read from a live crashing
+        // instance on 2026-08-29. This is the condition the whole fix exists for. Asserting it
+        // stays free of a `node` guards against someone "simplifying" the resolver back to a
+        // bare `Command::new("node")`.
+        assert_eq!(
+            find_on_path_var("node", Some("/usr/bin:/bin:/usr/sbin:/sbin")),
+            None,
+            "if this fails the machine has a system node and this test proves nothing here; \
+             the resolver's other fallbacks still matter"
+        );
+    }
+
+    #[test]
+    fn nvm_versions_are_ordered_numerically_newest_first() {
+        // The bug this pins: a LEXICAL sort puts "v9.0.0" after "v26.2.0", so the resolver would
+        // pick a years-old runtime on a machine that has both.
+        let ordered = nvm_versions_newest_first(vec![
+            "v9.0.0".to_string(),
+            "v26.2.0".to_string(),
+            "v18.20.4".to_string(),
+            "v26.10.0".to_string(),
+        ]);
+        assert_eq!(ordered, vec!["v26.10.0", "v26.2.0", "v18.20.4", "v9.0.0"]);
+    }
+
+    #[test]
+    fn nvm_version_ordering_keeps_unparseable_names_last_rather_than_dropping_them() {
+        let ordered = nvm_versions_newest_first(vec!["v".to_string(), "v20.1.0".to_string()]);
+        assert_eq!(
+            ordered,
+            vec!["v20.1.0", "v"],
+            "an unparseable directory name is still a real installed runtime; it must be \
+             ordered last, never discarded"
+        );
+        assert_eq!(nvm_versions_newest_first(vec![]), Vec::<String>::new());
+    }
+
+    #[test]
+    fn shell_diag_log_path_sits_next_to_the_panic_log() {
+        assert_eq!(shell_diag_log_path(None), None);
+        assert_eq!(shell_diag_log_path(Some("")), None);
+        let diag = shell_diag_log_path(Some("/home/example")).expect("a path for a real HOME");
+        let panic = shell_panic_log_path(Some("/home/example")).expect("a path for a real HOME");
+        assert_eq!(diag.parent(), panic.parent());
+        assert!(diag.ends_with("gamelib-shell.log"), "{diag:?}");
+    }
+
+    #[test]
+    fn shell_panic_log_path_sits_beside_the_sidecar_log_on_macos() {
+        let path = shell_panic_log_path(Some("/home/example")).expect("a path for a real HOME");
+        assert!(
+            path.ends_with("gamelib-shell-panic.log"),
+            "unexpected filename: {path:?}"
+        );
+        if cfg!(target_os = "macos") {
+            // The whole point of the location: an operator collecting diagnostics finds this
+            // next to the sidecar's own `gamelib.log`, not in a second unrelated directory.
+            assert_eq!(
+                path,
+                std::path::Path::new("/home/example/Library/Logs/GameLib/gamelib-shell-panic.log")
+            );
+        } else {
+            assert_eq!(
+                path,
+                std::path::Path::new("/home/example/.config/gamelib/gamelib-shell-panic.log")
+            );
+        }
+    }
+
+    #[test]
+    fn panic_record_carries_everything_a_diagnosis_needs() {
+        // The 2026-08-29 `on_open_url` abort was undiagnosable because the crash report gave
+        // ONLY `abort() called` -- no location, no payload, no origin frames. Each assertion
+        // below pins one thing whose absence would reproduce exactly that dead end.
+        let record = format_panic_record(
+            1_756_000_000,
+            4242,
+            "main",
+            "src/main.rs:7360:17",
+            "called `Option::unwrap()` on a `None` value",
+            "   0: some::frame\n   1: another::frame",
+        );
+
+        assert!(record.contains("==== [shell] PANIC ===="), "{record}");
+        assert!(record.contains("epoch_secs: 1756000000"), "{record}");
+        assert!(record.contains("pid: 4242"), "{record}");
+        assert!(record.contains("thread: main"), "{record}");
+        assert!(record.contains("location: src/main.rs:7360:17"), "{record}");
+        assert!(
+            record.contains("payload: called `Option::unwrap()` on a `None` value"),
+            "{record}"
+        );
+        assert!(record.contains("   0: some::frame"), "{record}");
+        assert!(record.ends_with("==== end panic ====\n"), "{record}");
     }
 
     #[test]
