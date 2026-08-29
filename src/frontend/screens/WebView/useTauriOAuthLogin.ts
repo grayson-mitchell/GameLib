@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 
-import { isTauri } from '../../../preload/tauriTransport'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import type { OAuthCaptureOutcome, OAuthRunner } from 'common/types/oauthLogin'
 import type { NileLoginData } from 'common/types/nile'
@@ -28,7 +27,9 @@ import { EPIC_LOGIN_URL, GOG_LOGIN_URL, ZOOM_LOGIN_URL } from './loginRoutes'
  * routed through `GlobalState`'s own `handleSuccessfulLogin`, never a second, parallel refresh
  * path. `GlobalState.tsx` wires `completeOAuthLogin = createOAuthLoginCompletion({...})` and
  * exposes it on context; `index.tsx` passes it as this hook's second argument. Electron never
- * reaches any of this — the `isTauri()` guard below is still first and unconditional.
+ * reaches any of this — Tauri is the only shell now, so the guard below (which used to
+ * also check Tauri-context) reduces to the runner-recognition check alone, still first
+ * and unconditional.
  *
  * Plan 34.5-34: cancellation (effect teardown) suppresses React state updates ONLY — it must
  * never abandon an irreversible side effect (a credential already written to disk) or a
@@ -171,7 +172,7 @@ export function useTauriOAuthLogin(
   const [state, setState] = useState<TauriOAuthLoginState>({ phase: 'idle' })
 
   useEffect(() => {
-    if (!isTauri() || !isOAuthRunner(runner)) {
+    if (!isOAuthRunner(runner)) {
       setState({ phase: 'idle' })
       return
     }

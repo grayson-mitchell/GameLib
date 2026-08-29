@@ -16,7 +16,6 @@ import './index.css'
 import LoginWarning from '../Login/components/LoginWarning'
 import { NileLoginData } from 'common/types/nile'
 import type { WebviewTag, DidFailLoadEvent } from 'backend/platform'
-import { isTauri } from '../../../preload/tauriTransport'
 import WebviewUnavailablePanel from './components/WebviewUnavailablePanel'
 import TauriLoginPanel from './components/TauriLoginPanel'
 import HumbleLoginSurface from './components/HumbleLoginSurface'
@@ -225,29 +224,18 @@ export default function WebView() {
 
   useEffect(() => {
     if (pathname !== '/loginweb/nile') return
-    // Quick task 260806-teb Task 1: under Tauri this effect's only two consumers are
-    // BOTH unreachable -- `urls['/loginweb/nile']` feeds the `<webview>` `src`, which is
-    // never rendered under Tauri (the render returns `<TauriLoginPanel>` first), and
-    // `handleAmazonLogin` is only reached via the webview event-listener effect, whose
-    // `webviewRef.current` stays null. So this effect used to pay a ~12.8s `nile auth`
-    // spawn (pyinstaller-onefile-spawn-tax) purely to discard the result, racing
-    // useTauriOAuthLogin.ts:196's OWN getAmazonLoginData() call -- the one that actually
-    // feeds the sign-in window. Do NOT "restore" this as dead defensive code:
-    // useTauriOAuthLogin.ts is the single remaining owner of that fetch under Tauri.
-    if (isTauri()) return
-    console.log('Loading amazon login data')
-
-    setLoading({
-      refresh: true,
-      message: t('status.preparing_login', 'Preparing Login...')
-    })
-    amazon.getLoginData().then((data) => {
-      setAmazonLoginData(data)
-      setLoading({
-        ...loading,
-        refresh: false
-      })
-    })
+    // Quick task 260806-teb Task 1 / Phase 35 plan 17: this effect used to load Amazon
+    // login data for the Electron `<webview>` amazon flow (`urls['/loginweb/nile']` feeds
+    // the `<webview>` `src`; `handleAmazonLogin` is reached via the webview
+    // event-listener effect). That flow no longer exists -- Tauri is the only shell, the
+    // render always returns `<TauriLoginPanel>` first, and `useTauriOAuthLogin.ts`'s own
+    // `getAmazonLoginData()` call is the single remaining owner of that fetch.
+    //
+    // Do NOT "restore" the deleted body -- not even unconditionally. This effect's own
+    // `nile auth --login --non-interactive` spawn is the exact ~12.8s-per-call cost quick
+    // task 260806-teb measured and fixed by preventing a SECOND, redundant spawn racing
+    // `useTauriOAuthLogin.ts`'s own call (pyinstaller-onefile-spawn-tax). Re-adding a call
+    // here -- guarded or not -- reintroduces that double-spawn.
   }, [pathname])
 
   const handleAmazonLogin = (code: string) => {
@@ -513,33 +501,33 @@ export default function WebView() {
   }
 
   if (!webviewPreloadPath) {
-    if (isTauri() && isLoginPathname(pathname)) {
+    if (isLoginPathname(pathname)) {
       // D-06 (REQ-34.4.1-07/-08): Phase 34.4.1 shipped a real Rust
       // login-window seam, so the old blanket "not available on this
       // build" message here would now be a lie for login routes. They
       // drive TauriLoginPanel instead: Humble gets an honest in-progress
       // surface, and the four OAuth runners get a declared-blocked one
       // naming the exact backend channel and Phase 34.5.
+      //
+      // Phase 35 plan 17: this arm and the one below used to each be
+      // gated on a Tauri-context check as well as their own condition
+      // (`isLoginPathname`/nothing). Tauri is the only shell now, so that
+      // check always evaluated true; both are now unconditional past this
+      // `!webviewPreloadPath` guard. The Electron-only third arm this
+      // block used to fall through to (`return <></>`) is gone with it --
+      // `getWebviewPreloadPath` (`backend/sidecar/appShellFlowRegistration.ts`,
+      // D-12) is untouched by this plan and still returns a declared-empty
+      // string under Tauri, so this outer guard's own meaning is unchanged.
       return <TauriLoginPanel runner={runner} state={oauthLoginState} />
     }
-    if (isTauri()) {
-      // D-05: in-app store and wiki browsing was never this phase's job --
-      // log the gap so it is legible to a developer too ("logged, never
-      // silent"), and let the user escape to the system browser via
-      // WebviewUnavailablePanel's Open-in-browser button.
-      window.api.logInfo(
-        `[WebView] in-app store/wiki browsing unavailable under Tauri (pathname=${pathname}) -- tracked as its own deferral (D-05)`
-      )
-      return <WebviewUnavailablePanel url={startUrl} />
-    }
-    // Structurally unreachable on Electron: it always resolves a real
-    // preload path via getWebviewPreloadPath. Kept as a distinct branch
-    // (not merged with the Tauri cases above) so a test can assert
-    // Electron's shape never changes (D-04's rider). What landed instead
-    // of the old single stopgap: TauriLoginPanel for login routes and a
-    // reworded WebviewUnavailablePanel for store/wiki routes (Phase
-    // 34.4.1 D-06).
-    return <></>
+    // D-05: in-app store and wiki browsing was never this phase's job --
+    // log the gap so it is legible to a developer too ("logged, never
+    // silent"), and let the user escape to the system browser via
+    // WebviewUnavailablePanel's Open-in-browser button.
+    window.api.logInfo(
+      `[WebView] in-app store/wiki browsing unavailable under Tauri (pathname=${pathname}) -- tracked as its own deferral (D-05)`
+    )
+    return <WebviewUnavailablePanel url={startUrl} />
   }
 
   return (

@@ -9,9 +9,12 @@
  * every recorded effect cleanup WITHOUT re-running the hook afterward — the only way to prove
  * "no setState after unmount" against a hook that has no automatic React lifecycle here.
  *
- * `isTauri()` is mocked via `preload/tauriTransport` (baseUrl-resolved, same absolute module
- * `useTauriOAuthLogin.ts`'s own relative import resolves to — Jest's module registry is keyed
- * by resolved path, not import specifier text).
+ * Phase 35 plan 17 note: this file used to also mock a Tauri-context check
+ * (`preload/tauriTransport`) and carried two tests pinning the pre-cutover
+ * Electron behavior (the hook staying a no-op when that check was false).
+ * Tauri is the only shell now, so that mock and both tests are gone — the
+ * guard the remaining tests below exercise is the runner-recognition check
+ * alone (`isOAuthRunner`).
  */
 
 jest.mock('react', () => {
@@ -80,11 +83,6 @@ jest.mock('react', () => {
     }
   }
 })
-
-const mockIsTauri = jest.fn(() => true)
-jest.mock('preload/tauriTransport', () => ({
-  isTauri: mockIsTauri
-}))
 
 const mockApi = {
   oauthCaptureLogin: jest.fn(),
@@ -180,7 +178,6 @@ const AMAZON_LOGIN_DATA = {
 }
 
 beforeEach(() => {
-  mockIsTauri.mockReturnValue(true)
   mockApi.oauthCaptureLogin.mockReset()
   mockApi.login.mockReset()
   mockApi.authGOG.mockReset()
@@ -203,14 +200,6 @@ describe('useTauriOAuthLogin — guard (no-op outside the four OAuth runners)', 
     const hook = await settle('humble' as never)
     expect(hook).toEqual({ phase: 'idle' })
     expect(mockApi.oauthCaptureLogin).not.toHaveBeenCalled()
-  })
-
-  it('under Electron (isTauri() false) stays idle and calls nothing, even for a real OAuth runner', async () => {
-    mockIsTauri.mockReturnValue(false)
-    const hook = await settle('legendary')
-    expect(hook).toEqual({ phase: 'idle' })
-    expect(mockApi.oauthCaptureLogin).not.toHaveBeenCalled()
-    expect(mockApi.login).not.toHaveBeenCalled()
   })
 })
 
@@ -559,16 +548,6 @@ describe('useTauriOAuthLogin — captured -> auth channel -> completion (Phase 3
     expect(matching).toHaveLength(1)
   })
 
-  it('outside Tauri (isTauri() false), onLoginSuccess is never invoked even for a real OAuth runner', async () => {
-    mockIsTauri.mockReturnValue(false)
-    const onLoginSuccess = jest.fn()
-
-    const hook = await settle('gog', onLoginSuccess)
-
-    expect(hook).toEqual({ phase: 'idle' })
-    expect(onLoginSuccess).not.toHaveBeenCalled()
-    expect(mockApi.authGOG).not.toHaveBeenCalled()
-  })
 })
 
 describe('useTauriOAuthLogin — completion callback drives the real GlobalState-shaped wiring (Task 2)', () => {

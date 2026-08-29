@@ -1,6 +1,7 @@
 /**
- * Source-text structural gate for quick task 260806-teb Task 1: the Tauri path no longer
- * spawns `nile auth --login --non-interactive` a second time on the `/loginweb/nile` route.
+ * Source-text structural gate for quick task 260806-teb Task 1, extended by Phase 35 plan
+ * 17: the `/loginweb/nile` effect in `WebView/index.tsx` no longer spawns
+ * `nile auth --login --non-interactive` AT ALL.
  *
  * THE COST BEING DEFENDED
  *
@@ -12,11 +13,19 @@
  *
  * Under Tauri, routing to `/loginweb/nile` used to fire that spawn TWICE, from two
  * independent effects in the same component tree: this file's own `/loginweb/nile` effect
- * (whose `amazonLoginData` result feeds only Electron-only consumers -- the `<webview>` `src`
+ * (whose `amazonLoginData` result fed only Electron-only consumers -- the `<webview>` `src`
  * and `handleAmazonLogin`, both unreachable under Tauri) and `useTauriOAuthLogin.ts`'s own
  * `getAmazonLoginData()` call (the real path, whose `.url` actually opens the sign-in window).
- * Both fired on mount, concurrently, contending on the same amfid Gatekeeper scan storm, and
- * the sign-in window could not open until the second one resolved.
+ * Quick task 260806-teb fixed this by gating this effect's own fetch behind a Tauri-context
+ * early return, dropping the count from two calls to one.
+ *
+ * Phase 35 plan 17: Tauri is the only shell now, so that guard always evaluated true -- the
+ * body it gated (this effect's own login-data fetch AND its Electron-only consumers) was
+ * permanently dead code and has been deleted outright, not collapsed to unconditional.
+ * Collapsing it to unconditional would have REINTRODUCED the double-spawn this file's gate
+ * exists to prevent -- the guard's condition was always true, but ITS BODY, if kept
+ * unconditional, would have started running for real. This gate is rewritten to assert the
+ * resulting STRONGER invariant: zero calls in this effect, not one guarded call.
  *
  * WHAT THIS GATE DOES NOT PROVE
  *
@@ -37,12 +46,12 @@ import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 const indexPath = join(__dirname, '..', 'index.tsx')
+const useTauriOAuthLoginPath = join(__dirname, '..', 'useTauriOAuthLogin.ts')
 
 /** Extracts the effect body whose marker appears first, sliced up to the effect's closing
  * `}, [pathname])`. Mirrors WebViewOAuthNavigation.test.ts's own brace-balanced extraction
  * approach, but this effect's own closing dependency array is a simpler, more precise anchor
- * than a generic balanced-brace scan (this effect body itself contains a nested `.then(() =>
- * {...})` whose own braces would otherwise need to be walked through). */
+ * than a generic balanced-brace scan. */
 function extractNileEffectBody(source: string): string {
   const marker = "pathname !== '/loginweb/nile'"
   const markerIdx = source.indexOf(marker)
@@ -54,68 +63,58 @@ function extractNileEffectBody(source: string): string {
   return source.slice(markerIdx, closeIdx + closeMarker.length)
 }
 
-describe('WebView /loginweb/nile effect -- Tauri no longer spawns nile a second time (quick task 260806-teb)', () => {
+describe('WebView /loginweb/nile effect -- no login-data fetch of its own (quick task 260806-teb, Phase 35 plan 17)', () => {
   const rawSource = readFileSync(indexPath, 'utf-8')
   const source = stripSourceComments(rawSource)
   const effectBody = extractNileEffectBody(source)
 
-  it('contains an isTauri() early-return guard', () => {
-    expect(effectBody).toContain('isTauri()')
+  it('the effect body contains no amazon.getLoginData() call', () => {
+    expect(effectBody).not.toContain('amazon.getLoginData()')
   })
 
-  it('positions the isTauri() guard BEFORE the amazon.getLoginData() call', () => {
-    const guardIdx = effectBody.indexOf('isTauri()')
-    const fetchIdx = effectBody.indexOf('amazon.getLoginData()')
-    expect(guardIdx).toBeGreaterThan(-1)
-    expect(fetchIdx).toBeGreaterThan(-1)
-    expect(guardIdx).toBeLessThan(fetchIdx)
-  })
-
-  it('amazon.getLoginData() appears exactly once in the whole file -- no second call site was added elsewhere', () => {
+  it('amazon.getLoginData() appears zero times in the whole file -- the fetch was deleted, not merely re-guarded', () => {
     const matches = source.match(/amazon\.getLoginData\(\)/g) ?? []
+    expect(matches).toHaveLength(0)
+  })
+
+  it('useTauriOAuthLogin.ts still owns exactly one getAmazonLoginData() call -- the fetch has a single remaining source, not zero', () => {
+    const hookSource = stripSourceComments(
+      readFileSync(useTauriOAuthLoginPath, 'utf-8')
+    )
+    const matches =
+      hookSource.match(/window\.api\.getAmazonLoginData\(\)/g) ?? []
     expect(matches).toHaveLength(1)
   })
 
-  it('keeps the Electron loading-indicator setLoading call inside the SAME guarded effect body', () => {
-    expect(effectBody).toContain("t('status.preparing_login'")
-  })
-
-  it('the raw (non-stripped) source still names the guard rationale in a comment, for a future reader', () => {
+  it('the raw (non-stripped) source still names the spawn-tax rationale in a comment, for a future reader', () => {
     // Checked against the RAW source (not the comment-stripped copy) -- this assertion's whole
     // point is that the comment itself still exists, not its content structure.
     expect(rawSource).toMatch(/spawn[\s\S]*nile auth|nile auth[\s\S]*spawn/i)
   })
 
   describe('self-test (anti-vacuity)', () => {
-    it('the gate FAILS against a synthetic source with the isTauri() guard removed', () => {
+    it('the gate FAILS against a synthetic source where the fetch was reintroduced unconditionally', () => {
       const regressed = `
         pathname !== '/loginweb/nile') return
         console.log('Loading amazon login data')
         setLoading({ refresh: true, message: t('status.preparing_login', 'x') })
         amazon.getLoginData().then((data) => {
           setAmazonLoginData(data)
-        }, [pathname])
-      `
-      expect(regressed).not.toContain('isTauri()')
-    })
-
-    it('the gate FAILS against a synthetic source where the guard is placed AFTER getLoginData()', () => {
-      const regressed = `
-        pathname !== '/loginweb/nile') return
-        setLoading({ refresh: true, message: t('status.preparing_login', 'x') })
-        amazon.getLoginData().then((data) => {
-          setAmazonLoginData(data)
         })
-        if (isTauri()) return
       }, [pathname])
       `
-      const guardIdx = regressed.indexOf('isTauri()')
-      const fetchIdx = regressed.indexOf('amazon.getLoginData()')
-      expect(guardIdx).toBeGreaterThan(-1)
-      expect(fetchIdx).toBeGreaterThan(-1)
-      // In the regressed source the guard comes AFTER the fetch -- the ordering assertion
-      // above would fail against this, proving the real gate is non-vacuous.
-      expect(guardIdx).toBeGreaterThan(fetchIdx)
+      const matches = regressed.match(/amazon\.getLoginData\(\)/g) ?? []
+      expect(matches).not.toHaveLength(0)
+    })
+
+    it('the gate FAILS against a synthetic source where getAmazonLoginData() was duplicated into a second call site', () => {
+      const regressedHook = `
+        const amazonData1 = await window.api.getAmazonLoginData()
+        const amazonData2 = await window.api.getAmazonLoginData()
+      `
+      const matches =
+        regressedHook.match(/window\.api\.getAmazonLoginData\(\)/g) ?? []
+      expect(matches).not.toHaveLength(1)
     })
   })
 })

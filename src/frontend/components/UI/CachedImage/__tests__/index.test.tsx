@@ -293,13 +293,25 @@ describe('CachedImage — imagecache:// gated on imageCacheSchemeAvailable() (34
   })
 })
 
-describe('CachedImage source guard — no direct isTauri( sniff (mirrors GlobalStateSteamLogout.test.ts house pattern)', () => {
-  it('the real source of CachedImage/index.tsx contains no isTauri( reference — the decision must stay in imageCacheSchemeAvailable()', () => {
+describe('CachedImage source guard — no direct Tauri-context sniff (mirrors GlobalStateSteamLogout.test.ts house pattern)', () => {
+  it('the tauriTransport import brings in ONLY imageCacheSchemeAvailable — the decision must stay there, never duplicated as a second shell-detection import here', () => {
     const rawSource = readFileSync(join(__dirname, '..', 'index.tsx'), 'utf-8')
     const stripped = stripSourceComments(rawSource)
 
-    // Deliberately spelled out (not string concatenation) so this assertion
-    // reads exactly like what it guards against.
-    expect(stripped).not.toMatch(/isTauri\s*\(/)
+    // Phase 35 plan 17: generalized from a literal-named-predicate search (the same
+    // predicate this repo-wide-deletes) to an import-shape check. CachedImage
+    // legitimately imports `imageCacheSchemeAvailable` from tauriTransport, so a bare
+    // "no tauriTransport reference" gate would be wrong here — instead this asserts the
+    // import brings in EXACTLY that one name, so ANY second shell-detection import
+    // reintroduced alongside it (whatever it is named) still fails this gate.
+    const importMatch = stripped.match(
+      /import\s*\{([^}]*)\}\s*from\s*['"][^'"]*preload\/tauriTransport['"]/
+    )
+    expect(importMatch).not.toBeNull()
+    const specifiers = (importMatch?.[1] ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+    expect(specifiers).toEqual(['imageCacheSchemeAvailable'])
   })
 })

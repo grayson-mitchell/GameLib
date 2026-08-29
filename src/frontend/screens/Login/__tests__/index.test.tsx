@@ -226,18 +226,26 @@ describe('Epic login tiles: embedded login is PRIMARY, SIDLogin is the alternati
     )
   })
 
-  it('SOURCE GATE — the Epic tile carries NO shell branch: isTauri() appears nowhere in Login/index.tsx, so both shells get identical tile roles', () => {
+  it('SOURCE GATE — the Epic tile carries NO shell branch: Login/index.tsx neither imports nor calls a Tauri-context check, so both shells get identical tile roles', () => {
     const source = read(LOGIN_TSX)
-    expect(source).not.toMatch(/isTauri/)
+    // Phase 35 plan 17: generalized from a literal-named-predicate search (the same
+    // predicate this repo-wide-deleted) to an import-site check — this is what lets the
+    // gate keep catching ANY future shell-detection reference reintroduced here, not
+    // just one spelled the same way the deleted predicate was.
+    expect(source).not.toMatch(/tauriTransport/)
   })
 
   it('SOURCE GATE — neither superseded deprecatedTile ternary can return, and no runner on this screen is marked deletion-pending while Phase 34.7 is on hold', () => {
     const source = read(LOGIN_TSX)
+    // Structural, not name-specific (Phase 35 plan 17): matches a `deprecatedTile`
+    // ternary keyed off ANY condition, not only one literally named after the deleted
+    // predicate — a regression reintroducing this shape under a different condition name
+    // must still fail.
     expect(source).not.toMatch(
-      /deprecatedTile=\{isTauri\(\) \? 'alternative' : 'primary'\}/
+      /deprecatedTile=\{[^}]*\?\s*'alternative'\s*:\s*'primary'\}/
     )
     expect(source).not.toMatch(
-      /deprecatedTile=\{isTauri\(\) \? 'primary' : 'alternative'\}/
+      /deprecatedTile=\{[^}]*\?\s*'primary'\s*:\s*'alternative'\}/
     )
     const matches = source.match(/deprecatedTile/g) ?? []
     expect(matches.length).toBe(0)

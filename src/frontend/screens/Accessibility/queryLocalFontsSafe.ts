@@ -18,8 +18,8 @@
  * cannot be safely `require()`'d under a plain Node test environment, but
  * this module has zero such dependencies.
  *
- * The predicate is a capability check, never a platform sniff (`isTauri()` is
- * not referenced here) -- see the stale-guard regression precedent at
+ * The predicate is a capability check, never a platform sniff (no Tauri-context
+ * check is referenced here) -- see the stale-guard regression precedent at
  * `frontend/state/__tests__/GlobalStateSteamLogout.test.ts` for why that
  * distinction matters in this codebase specifically.
  */

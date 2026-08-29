@@ -1,7 +1,7 @@
 /**
  * Tests for WebviewUnavailablePanel (D-06, REQ-34.4.1-07) plus one
- * source-text gate: proving `WebView/index.tsx`'s three arms (login/
- * store-wiki/Electron) stay structurally distinct (D-06's rider).
+ * source-text gate: proving `WebView/index.tsx`'s two arms (login/
+ * store-wiki) stay structurally distinct (D-06's rider).
  *
  * No jsdom / react-test-renderer is installed in this project (see
  * src/frontend/jest.config.js's docstring) — the panel is invoked
@@ -13,15 +13,23 @@
  * button calls `window.api.openExternalUrl` — this project's
  * `testEnvironment: 'node'` jest config has no `window` global otherwise.
  *
- * Deviation note (34.4.1-05, Task 1+3 combined — see this plan's SUMMARY):
- * the Group 2 structural gate below (previously named "Group 2" in this
- * file, testing the two-arm shape) is REWRITTEN, not deleted, to assert the
- * NEW three-arm shape `index.tsx`'s branch split produces. The reason: the
- * old gate's `if (isTauri())` string search now happens to still match the
- * (unrelated) store arm after the split, which would have let it pass
- * vacuously without actually proving the login arm exists at all. Rewriting
- * it to check all three arms explicitly closes that gap rather than relying
- * on a coincidental string match.
+ * Deviation note (34.4.1-05, Task 1+3 combined — see that plan's SUMMARY):
+ * the Group 3 structural gate below was originally written asserting a
+ * three-arm shape (login / store-wiki / an Electron-only fallback arm),
+ * because a Tauri-context check gated the first two arms and the third was
+ * reachable only when that check was false.
+ *
+ * Phase 35 plan 17 note: that check is gone (the shell it distinguished no
+ * longer exists — Tauri is the only runtime now), so the third arm was
+ * unreachable dead code and has been deleted from `index.tsx`. The gate
+ * below is REWRITTEN again, not deleted, to assert the resulting two-arm
+ * shape: a login arm gated on `isLoginPathname(pathname)`, followed
+ * unconditionally by the store/wiki arm. Rewriting to check the structure
+ * explicitly (rather than searching for a specific guard's name) is
+ * deliberate — this is what lets the gate keep catching ANY future guard
+ * that re-appears in front of the store/wiki arm, not just one spelled a
+ * particular way (the exact regression this file's own history has already
+ * hit once, in the 34.4.1-05 rewrite referenced above).
  */
 import type { ReactElement } from 'react'
 import { readFileSync } from 'fs'
@@ -169,7 +177,7 @@ describe('WebviewUnavailablePanel — no navigator.clipboard reference (Group 2)
   })
 })
 
-describe('WebView/index.tsx — three distinct arms: login / store-wiki / Electron (D-06 rider, Group 3)', () => {
+describe('WebView/index.tsx — two distinct arms: login / store-wiki (D-06 rider, Group 3)', () => {
   const webViewIndexPath = join(__dirname, '..', '..', 'index.tsx')
 
   /** Extracts the balanced-brace block body starting at the first `{` after `marker`. */
@@ -194,13 +202,13 @@ describe('WebView/index.tsx — three distinct arms: login / store-wiki / Electr
   /**
    * The gate under test (D-06's rider, proven not asserted): the
    * `!webviewPreloadPath` block must contain, IN ORDER: a login arm gated
-   * on `isLoginPathname(pathname)` rendering `TauriLoginPanel`, a distinct
-   * store/wiki arm gated on bare `isTauri()` rendering
-   * `WebviewUnavailablePanel` (and NOT `TauriLoginPanel`), and a final
-   * `return <></>` Electron arm reachable only after both Tauri arms —
-   * not nested inside either of them, and not merged into one return.
+   * on `isLoginPathname(pathname)` rendering `TauriLoginPanel`, followed
+   * UNCONDITIONALLY (no guarding `if (` of any name/shape in front of it —
+   * this is what makes the check structural rather than name-specific) by
+   * a store/wiki arm rendering `WebviewUnavailablePanel` (and NOT
+   * `TauriLoginPanel`) that names the pathname via `window.api.logInfo`.
    */
-  function hasThreeDistinctArms(strippedSource: string): boolean {
+  function hasTwoDistinctArms(strippedSource: string): boolean {
     let outerBlock: string
     try {
       outerBlock = extractBlock(strippedSource, 'if (!webviewPreloadPath)')
@@ -225,64 +233,34 @@ describe('WebView/index.tsx — three distinct arms: login / store-wiki / Electr
       outerBlock.indexOf(loginBlock, loginArmStart) + loginBlock.length
     const afterLogin = outerBlock.slice(loginBlockEndInOuter)
 
-    const storeMarkerIdx = afterLogin.indexOf('if (isTauri())')
-    if (storeMarkerIdx === -1) return false
-
-    let storeBlock: string
-    try {
-      storeBlock = extractBlock(
-        afterLogin.slice(storeMarkerIdx),
-        'if (isTauri())'
-      )
-    } catch {
-      return false
-    }
+    // Structural, not name-specific: the store/wiki arm must not be
+    // guarded by ANY `if (` immediately following the login arm's close
+    // brace. A regression that re-adds a guard here -- named after the
+    // deleted predicate or anything else -- must fail this check.
+    const storeArmHasNoGuard = !/^\s*if\s*\(/.test(afterLogin)
     const storeArmRendersUnavailablePanel =
-      storeBlock.includes('WebviewUnavailablePanel') &&
-      !storeBlock.includes('TauriLoginPanel')
-
-    const storeBlockEndInAfterLogin =
-      afterLogin.indexOf(storeBlock, storeMarkerIdx) + storeBlock.length
-    const afterStore = afterLogin.slice(storeBlockEndInAfterLogin)
-    const electronArmReturnsEmptyFragment = /return\s*<>\s*<\/>/.test(
-      afterStore
-    )
+      afterLogin.includes('WebviewUnavailablePanel') &&
+      !afterLogin.includes('TauriLoginPanel')
+    const storeArmLogsPathname =
+      afterLogin.includes('window.api.logInfo') &&
+      afterLogin.includes('pathname')
 
     return (
       loginArmRendersLoginPanel &&
+      storeArmHasNoGuard &&
       storeArmRendersUnavailablePanel &&
-      electronArmReturnsEmptyFragment
+      storeArmLogsPathname
     )
   }
 
-  it('the real source has three distinct arms: login (TauriLoginPanel), store/wiki (WebviewUnavailablePanel), Electron (return <></>)', () => {
+  it('the real source has two distinct arms: login (TauriLoginPanel, gated), store/wiki (WebviewUnavailablePanel, unconditional)', () => {
     const rawSource = readFileSync(webViewIndexPath, 'utf-8')
     const stripped = stripSourceComments(rawSource)
 
-    expect(hasThreeDistinctArms(stripped)).toBe(true)
+    expect(hasTwoDistinctArms(stripped)).toBe(true)
   })
 
-  it('the real source calls window.api.logInfo naming the pathname inside the store/wiki arm', () => {
-    const rawSource = readFileSync(webViewIndexPath, 'utf-8')
-    const stripped = stripSourceComments(rawSource)
-    const outerBlock = extractBlock(stripped, 'if (!webviewPreloadPath)')
-    const loginConditionIdx = outerBlock.indexOf('isLoginPathname(pathname)')
-    const loginArmStart = outerBlock.lastIndexOf('if (', loginConditionIdx)
-    const loginBlock = extractBlock(outerBlock.slice(loginArmStart), 'if (')
-    const loginBlockEndInOuter =
-      outerBlock.indexOf(loginBlock, loginArmStart) + loginBlock.length
-    const afterLogin = outerBlock.slice(loginBlockEndInOuter)
-    const storeMarkerIdx = afterLogin.indexOf('if (isTauri())')
-    const storeBlock = extractBlock(
-      afterLogin.slice(storeMarkerIdx),
-      'if (isTauri())'
-    )
-
-    expect(storeBlock).toContain('window.api.logInfo')
-    expect(storeBlock).toContain('pathname')
-  })
-
-  it('self-test: the gate REJECTS a synthetic source where all arms were merged into one unconditional return', () => {
+  it('self-test: the gate REJECTS a synthetic source where both arms were merged into one unconditional return', () => {
     const merged = [
       'function WebView() {',
       '  if (!webviewPreloadPath) {',
@@ -291,17 +269,17 @@ describe('WebView/index.tsx — three distinct arms: login / store-wiki / Electr
       '}'
     ].join('\n')
 
-    expect(hasThreeDistinctArms(merged)).toBe(false)
+    expect(hasTwoDistinctArms(merged)).toBe(false)
   })
 
-  it('self-test: the gate REJECTS a synthetic source where the Electron fallback return was dropped (behavior-changing regression)', () => {
-    const droppedFallback = [
+  it('self-test: the gate REJECTS a synthetic source where the store/wiki arm was silently re-gated behind a guard (stale-guard regression)', () => {
+    const reGated = [
       'function WebView() {',
       '  if (!webviewPreloadPath) {',
-      '    if (isTauri() && isLoginPathname(pathname)) {',
+      '    if (isLoginPathname(pathname)) {',
       '      return <TauriLoginPanel runner={runner} />',
       '    }',
-      '    if (isTauri()) {',
+      '    if (guardCheck()) {',
       '      window.api.logInfo("gap")',
       '      return <WebviewUnavailablePanel url={startUrl} />',
       '    }',
@@ -309,44 +287,38 @@ describe('WebView/index.tsx — three distinct arms: login / store-wiki / Electr
       '}'
     ].join('\n')
 
-    expect(hasThreeDistinctArms(droppedFallback)).toBe(false)
+    expect(hasTwoDistinctArms(reGated)).toBe(false)
   })
 
   it('self-test: the gate REJECTS a synthetic source where the store/wiki arm was silently changed to also render TauriLoginPanel (wrong-panel regression)', () => {
     const wrongPanel = [
       'function WebView() {',
       '  if (!webviewPreloadPath) {',
-      '    if (isTauri() && isLoginPathname(pathname)) {',
+      '    if (isLoginPathname(pathname)) {',
       '      return <TauriLoginPanel runner={runner} />',
       '    }',
-      '    if (isTauri()) {',
-      '      window.api.logInfo("gap")',
-      '      return <TauriLoginPanel runner={runner} />',
-      '    }',
-      '    return <></>',
+      '    window.api.logInfo("gap")',
+      '    return <TauriLoginPanel runner={runner} />',
       '  }',
       '}'
     ].join('\n')
 
-    expect(hasThreeDistinctArms(wrongPanel)).toBe(false)
+    expect(hasTwoDistinctArms(wrongPanel)).toBe(false)
   })
 
   it('self-test: the gate ACCEPTS the exact shape the real source uses (positive control, proves the gate is not vacuously false either)', () => {
     const correctShape = [
       'function WebView() {',
       '  if (!webviewPreloadPath) {',
-      '    if (isTauri() && isLoginPathname(pathname)) {',
+      '    if (isLoginPathname(pathname)) {',
       '      return <TauriLoginPanel runner={runner} />',
       '    }',
-      '    if (isTauri()) {',
-      '      window.api.logInfo("gap")',
-      '      return <WebviewUnavailablePanel url={startUrl} />',
-      '    }',
-      '    return <></>',
+      '    window.api.logInfo("gap, pathname=x")',
+      '    return <WebviewUnavailablePanel url={startUrl} />',
       '  }',
       '}'
     ].join('\n')
 
-    expect(hasThreeDistinctArms(correctShape)).toBe(true)
+    expect(hasTwoDistinctArms(correctShape)).toBe(true)
   })
 })
