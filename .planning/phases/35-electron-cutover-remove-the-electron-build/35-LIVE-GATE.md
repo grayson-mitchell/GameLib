@@ -38,13 +38,13 @@ users actually receive.
   pnpm tauri:dev:packaged
   ```
   which runs `pnpm exec vite build && pnpm build:sidecar && pnpm build:decompress-worker-dev && tauri build --debug`.
-- **Artifact path (release):** `src-tauri/target/release/bundle/macos/GameLib.app`, DMG at `src-tauri/target/release/bundle/dmg/GameLib_0.7.0_aarch64.dmg` (exact filename depends on the version in `package.json` at build time — currently `0.7.0` — the runner records the real filename, not this value).
+- **Artifact path (release):** the DMG at `src-tauri/target/release/bundle/dmg/GameLib_0.7.0_aarch64.dmg` is the artifact (exact filename depends on the version in `package.json` at build time — currently `0.7.0` — the runner records the real filename, not this value). **`src-tauri/target/release/bundle/macos/` is NOT a source for the `.app`.** Measured 2026-08-30: that directory contained only a `GameLib.app.tar.gz` dated a week earlier that the release build did NOT regenerate, and no `.app` directory at all. Taking the `.app` from there silently measures a stale artifact — the exact `R-34.5-G1-PKG` class of error this gate exists to prevent. Mount the DMG.
 - **Artifact path (debug-packaged, criterion 17 only):** `src-tauri/target/debug/bundle/macos/GameLib.app`.
 - **Every criterion below is measured against the PACKAGED release `.app` unless its own `Build:` field states otherwise.** `pnpm tauri:dev` (the plain dev-server mode) is banned outright — after plan 35-03 it loads the renderer over HTTP via `devUrl` and never resolves `frontendDist`/`resource_dir()`, so it is structurally incapable of exercising the code path `R-34.5-G1-PKG` lived in.
 - **Launch method (required for sinks 2 and 3 below):** the runner launches the packaged `.app` by executing its embedded binary directly from a Terminal, redirected with `tee -a` to a session transcript file — never by double-clicking in Finder. Finder/LaunchServices launches discard the process's stdout/stderr entirely, which is the only channel carrying the two terminal-only log lines this gate depends on (criterion 13's `[shell] response for unknown/timed-out id=... (dropped)` negative check, and any other raw `eprintln!`/`println!` line not routed through `shell_diag()`). Example:
   ```sh
   SESSION_DIR="$(mktemp -d /tmp/gamelib-35-19-gate-XXXXXX)"; echo "$SESSION_DIR"
-  "/Applications/GameLib.app/Contents/MacOS/GameLib" 2>&1 | tee -a "$SESSION_DIR/transcript.log"
+  "/Applications/GameLib.app/Contents/MacOS/gamelib-shell" 2>&1 | tee -a "$SESSION_DIR/transcript.log"
   ```
   Record `$SESSION_DIR` in this document's `session_dir` frontmatter field.
 
@@ -122,7 +122,7 @@ prevent this criterion from being scored — this criterion is about the artifac
 about a clean-machine state.
 Gesture sequence: Build per the Header's release command. Mount the DMG (`hdiutil attach` or
 double-click), copy `GameLib.app` to `/Applications`, eject the DMG. Launch via the terminal method
-in the Header (`Contents/MacOS/GameLib`, `tee`'d). Wait 10 seconds.
+in the Header (`Contents/MacOS/gamelib-shell`, `tee`'d). Wait 10 seconds.
 Sink: terminal transcript (crash would show a Rust panic or a segfault signal; absence of
 either, plus a visible window, is the positive signal).
 Expected: The app launches, a window appears, and the process is still running after 10 seconds
@@ -307,10 +307,10 @@ Preconditions: App running (criterion 10's launched instance). Record its PID be
 gesture.
 Gesture sequence:
 ```sh
-ps aux | grep -i "GameLib.app/Contents/MacOS/GameLib" | grep -v grep
+ps aux | grep -i "GameLib.app/Contents/MacOS/gamelib-shell" | grep -v grep
 open "gamelib://launch?appName=<a different owned appName, or the same one>"
 sleep 3
-ps aux | grep -i "GameLib.app/Contents/MacOS/GameLib" | grep -v grep
+ps aux | grep -i "GameLib.app/Contents/MacOS/gamelib-shell" | grep -v grep
 ```
 Sink: `gamelib-shell.log` — a second `on_open_url fired with 1 url(s)` line, OR (if delivered via
 the Unix single-instance socket rather than a second `on_open_url` callback) the socket accept log.
