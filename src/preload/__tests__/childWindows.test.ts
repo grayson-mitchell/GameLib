@@ -3,7 +3,7 @@
  *
  * Covers `tauriChildWindows.ts`'s two exports directly (mocking
  * `@tauri-apps/api/webviewWindow`'s `WebviewWindow` class). `helpers.ts`'s
- * `showAboutWindow`/`createNewWindow` used to route on an `isTauri()` check; Phase 35
+ * `showAboutWindow`/`createNewWindow` used to route on a Tauri-context check; Phase 35
  * plan 17 collapsed that branch, deleting the Electron-branch fallback
  * (`makeListenerCaller('showAboutWindow')`/`makeListenerCaller('createNewWindow')`)
  * entirely -- there is no longer a runtime-detection decision to test, so the test that
