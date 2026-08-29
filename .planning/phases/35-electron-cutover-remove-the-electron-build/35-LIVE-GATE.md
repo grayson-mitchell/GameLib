@@ -225,7 +225,20 @@ after clicking Launch (the external game process starting, or an error) both cou
 Expected: The library shows more than zero tiles; the selected title launches (its own process
 starts, observable via `ps aux` or the title's own window appearing).
 Observed:
-Verdict:
+Precondition satisfied (Test 6): store = **Steam**, pre-existing authenticated session from a
+prior login, not created during this gate. Title launched = **Humankind**, already installed
+locally before the gate began.
+Library rendered approximately **40 tiles**. Operator report: "it launched fine, steam opened and
+ran the game" — the Steam client came up and started the title, i.e. an external process did
+start, which is this criterion's positive signal.
+CORROBORATION LIMIT, recorded rather than glossed: by the time the orchestrator checked, the
+operator had quit both the game and Steam, so no independent post-hoc confirmation was possible —
+`pgrep humankind` and `pgrep Steam` both returned nothing, and no launch line appears in any of
+the six session transcripts. This criterion therefore rests on the operator's direct observation
+of the Steam client opening and running the game, which is exactly what the `Sink:` line
+("UI observation ... a note of what happened after clicking Launch") admits as evidence. Scored
+PASS on that basis.
+Verdict: PASS
 
 ### 5. Tray: menu opens, About opens the About window
 
