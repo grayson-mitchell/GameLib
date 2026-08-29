@@ -289,7 +289,38 @@ criterion 4, click it.
 Sink: none — UI observation (the title's process starting).
 Expected: The title launches again, without requiring the main window to be shown first.
 Observed:
-Verdict:
+The tray's recent-games section did NOT list HUMANKIND (the criterion-4 title). Investigated
+rather than scored on the symptom.
+`~/Library/Application Support/gamelib/store/config.json` -> `games.recent` holds 19 entries.
+HUMANKIND is present but at **position 6 of 19**, and the tray renders only the first 5
+(`max_recent_games` = 5; the transcript's own line reads `tray recent games: seeded 5 entries from
+disk (limit 5)`). So it is excluded by one place. It should have been at position 1 -- it had been
+launched an hour earlier.
+**ROOT CAUSE, established by a controlled A/B on this machine in this session, not inferred:**
+| Launch | `store/config.json` written | Outcome |
+| ------ | --------------------------- | ------- |
+| Endless Sky (`runner: gog`), launched + quit | YES, 09:38:05 | tracking fires |
+| HUMANKIND (Steam), launched + quit TWICE | NO -- mtime still 09:38:05 at 09:45 | never recorded |
+Launching a Steam title never records it as a recent game; a GOG title does. The store's only
+write before the GOG test was 09:14:12, which is the app RESTART, not the 08:50-09:10 Humankind
+launch.
+**Mechanism:** `addRecentGame()` has exactly ONE call site, `src/backend/launcher.ts:320`, and it
+sits AFTER the play session ends -- inside the block computing `finishedPlayingDate` and session
+playtime. Steam titles launch by handing off to `steam://rungameid/`, so GameLib has no child
+process to await and that completion block is never reached. This is an architectural consequence
+of protocol-handoff launching, not obviously a regression introduced by this phase; the tray
+recent-games surface itself is plan 35-06's work, but the tracking gap sits in the backend launch
+path. WHERE IT WAS INTRODUCED IS NOT ESTABLISHED HERE and must not be assumed.
+**Second, separate problem noted while measuring** -- not scored, recorded so it is not lost:
+every GOG entry carries a `runner` field while every Steam entry has NO `runner` at all. The tray
+has a dedicated `trayResolveRunner` channel precisely because its entries carry only
+`{appName, title}` and the `launch` handler refuses to guess a runner (T-34.5-46-03's
+confused-deputy guard). So a runner-less Steam entry may not be launchable from the tray even when
+it IS displayed. Criterion 6 could not reach the click step to test this, so it remains untested.
+This is a FAIL, not a NOT ATTEMPTED: the contract reserves NOT ATTEMPTED for an unmet precondition
+that is a test-machine gap. Criterion 4 completed, so the stated precondition held; the
+expectation then failed for a PRODUCT reason.
+Verdict: FAIL
 
 ### 7. Tray: `exitToTray` re-verified at close time (not just a startup snapshot)
 
