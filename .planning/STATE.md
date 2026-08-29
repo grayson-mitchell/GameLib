@@ -662,8 +662,21 @@ progress:
   #   added as a mutation-proven static absence gate. completed_plans 389 -> 390;
   #   percent = floor(390/421*100) = 92 (unchanged; floor, matching convention).
   #   NO gsd-sdk state.*/roadmap.* verb invoked -- hand-applied.
+  # 2026-08-29/30 (/gsd-execute-phase 35, plan 35-18 EXECUTED -- FINAL PLAN OF PHASE 35): +1
+  #   completed plan (35-18, its SUMMARY landed, 3 task commits 7ed470b19/2e826a395/390c8bead).
+  #   Task 1 removed the SEA esbuild --alias:electron= flag and repointed 43 test files'
+  #   jest.mock('electron', ...) to backend/platform. Task 2 removed electron/electron-store/
+  #   react-devtools (transitive electron@23.3.13) from devDependencies, confirmed
+  #   node_modules/electron absent, and wrote meta/__tests__/electronAbsence.test.ts as a
+  #   mutation-proven D-03 gate (4 assertions, each mutation-red + tolerance-green proven).
+  #   Task 3 wrote 35-RELEASE-NOTES.md covering all 8 required user-facing areas plus a
+  #   maintainer decision-trace appendix, correcting the plan's own stale D-09 must_haves
+  #   text ("logging out of one runner logs out of all of them") against 35-09's actual
+  #   corrected, domain-scoped-Epic-only implementation. completed_plans 390 -> 391;
+  #   percent = floor(391/421*100) = 92 (unchanged; floor, matching convention).
+  #   NO gsd-sdk state.*/roadmap.* verb invoked -- hand-applied.
   total_plans: 421
-  completed_plans: 390
+  completed_plans: 391
   percent: 92
 ---
 
