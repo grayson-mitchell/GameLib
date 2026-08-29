@@ -1229,3 +1229,36 @@ be deleted without breaking the build").
 **For any future plan repointing a module at a narrower stub:** a name-set diff is necessary and not
 sufficient. The check that would actually have caught this is `tsc` itself, run against a single
 repointed file before doing the other 56.
+
+## D-35-18-01 — two pre-existing stale build-flag comments describe removed esbuild mechanisms
+
+**Found during:** plan 35-18's post-wave gate fix (Gap 1: `package.json:34` still carried a live
+`--external:electron` flag the key-based D-03 check couldn't see). **Owner:** unassigned — out of
+scope for this plan's fix, since neither comment is a real reference form and neither trips D-03's
+gate (comments are stripped before matching). **Status:** logged, not fixed.
+
+While tracing exactly which esbuild flags `build:sidecar`/`build:sidecar-sea` pass, two comments
+were found describing esbuild mechanisms that no longer exist, predating this plan's own changes:
+
+1. `meta/buildSidecarSea.ts:154-156` — "electron/electron-store stay external: the sidecar's
+   Electron-guarded code paths never reach them at runtime outside an Electron host, and neither
+   package is present for a SEA-packaged Tauri build to resolve." This describes a `--external:`
+   relationship that doesn't exist in `seaEsbuildFlags()` (no `--external:electron` there, by
+   design — that function deliberately omits `--packages=external` for a fully self-contained
+   bundle) and both named packages are now absent from the tree entirely, not merely "external."
+2. `meta/buildSidecarSea.ts:699-701` — "`electron` is aliased (not left external) to this
+   project's own `backend/platform/index.ts`..." — describes the `--alias:electron=` mechanism
+   Task 1 of THIS plan removed, because nothing under `src/` imports `electron` anymore
+   (migrated to `backend/platform` in plans 35-15/35-16). The alias is gone; this sentence
+   is not.
+3. `src/sidecar/index.ts:5-6` — "(esbuild `--bundle --external:electron --external:electron-store
+   ... --outfile=build/main/sidecar.js src/sidecar/index.ts`)" — already inaccurate BEFORE this
+   plan (`build:sidecar` never carried an explicit `--external:electron-store` flag; it relied on
+   `--packages=external` for that), so this predates plan 35-18's own changes and is a pre-existing
+   drift, not something this plan's diff created.
+
+None of these three affect D-03 (they are comments, filtered by `electronAbsence.test.ts`'s
+comment-stripping stage before matching) and none affect build behaviour (comments are inert).
+They are pure documentation staleness. Whoever next touches `buildSidecarSea.ts` or
+`src/sidecar/index.ts`'s header should correct all three in the same pass rather than letting a
+fourth accumulate.

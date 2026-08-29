@@ -8,6 +8,21 @@
  * package by import, require, or `Electron.` namespace, and `package.json` may not declare it
  * (or any `electron-*` package) as a dependency ever again.
  *
+ * POST-WAVE GATE FINDING (2026-08-30): this gate's `package.json` coverage was first written
+ * to inspect ONLY `pkg.dependencies`/`pkg.devDependencies` -- structurally blind to every other
+ * section, including `scripts`. `build:sidecar` carried a live `--external:electron` esbuild
+ * flag that the key-based check never saw, because a script VALUE is not a dependency-map KEY.
+ * D-03's own text says "electron appears nowhere in src/ or package.json" -- the whole file, not
+ * two named objects inside it, so a plain `grep electron package.json` at the time still
+ * returned a hit even after this gate reported green. Fixed two ways: the flag itself was
+ * removed (it was also fully redundant -- `--packages=external`, already on the same command,
+ * already externalizes every bare-specifier package import including `electron`, confirmed by a
+ * byte-identical esbuild output diff with and without the explicit flag), and this file gained a
+ * second, file-wide `package.json` check below with its own vacuity control, so a future
+ * `scripts`/`resolutions`/anything-else reintroduction is caught structurally rather than relying
+ * on a human noticing a stray flag in a shell command. The key-based check is kept alongside it
+ * (better error messages naming the exact offending dependency key), not replaced.
+ *
  * FOUR REFERENCE FORMS, NEVER THE BARE SUBSTRING:
  * A naive `grep -rc "electron" src` gate would false-fire on every file whose own FILENAME
  * contains the substring -- `src/backend/logger/electronStores.ts`,
@@ -197,6 +212,39 @@ describe('D-03: electron package absence -- mechanized, mutation-proven gate', (
       )
     }
     expect(offenders).toHaveLength(0)
+  })
+
+  it('has no `electron` substring anywhere in package.json, not just dependency map keys', () => {
+    // Post-wave gate finding (2026-08-30): the key-based check above reads only
+    // `pkg.dependencies`/`pkg.devDependencies` -- it is structurally blind to every OTHER
+    // section of the file, including `scripts`. `build:sidecar` carried a live
+    // `--external:electron` esbuild flag that the key-based check could never have seen,
+    // because a script VALUE is not a dependency-map KEY. D-03's own text says "electron
+    // appears nowhere in src/ or package.json" -- the whole file, not two named objects
+    // inside it. This is a plain, case-insensitive, whole-file substring scan (not a
+    // reference-form regex like the src/ checks above): package.json is a single small JSON
+    // manifest with no comments and no legitimate same-named-file substring collisions the
+    // way `src/` has `electronStores.ts`, so a bare substring match is the correct instrument
+    // here, not an under-approximation of one.
+    const raw = readFileSync(PACKAGE_JSON_PATH, 'utf8')
+    const idx = raw.toLowerCase().indexOf('electron')
+    if (idx !== -1) {
+      const line = raw.slice(0, idx).split('\n').length
+      throw new Error(
+        `package.json contains the substring 'electron' at line ${line}, outside the ` +
+          `dependencies/devDependencies keys the check above covers -- D-03 requires it ` +
+          `appear nowhere in the file at all:\n  ${raw.split('\n')[line - 1].trim()}`
+      )
+    }
+    expect(idx).toBe(-1)
+  })
+
+  it('vacuity control: a token that MUST survive in package.json is still found by the file-wide scan', () => {
+    // Without this control, a broken PACKAGE_JSON_PATH or a readFileSync that silently
+    // returned an empty string would make the file-wide check above pass vacuously. `"name":
+    // "gamelib"` is the package's own declared name and is guaranteed present.
+    const raw = readFileSync(PACKAGE_JSON_PATH, 'utf8')
+    expect(raw.toLowerCase().includes('gamelib')).toBe(true)
   })
 
   it('vacuity control: a token that MUST survive under src/ is still found by the same scan mechanism', () => {

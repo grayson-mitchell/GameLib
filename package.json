@@ -31,7 +31,7 @@
   "scripts": {
     "tauri:dev": "pnpm build:sidecar && pnpm build:decompress-worker-dev && tauri dev",
     "tauri:dev:packaged": "pnpm exec vite build && pnpm build:sidecar && pnpm build:decompress-worker-dev && tauri build --debug",
-    "build:sidecar": "esbuild --bundle --platform=node --target=node22 --format=cjs --packages=external --external:electron --outfile=build/main/sidecar.js src/sidecar/index.ts",
+    "build:sidecar": "esbuild --bundle --platform=node --target=node22 --format=cjs --packages=external --outfile=build/main/sidecar.js src/sidecar/index.ts",
     "build:decompress-worker-dev": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildDecompressWorkerDev.ts",
     "build:sidecar-sea": "pnpm build:sidecar && node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildSidecarSea.ts",
     "debug:react": "pnpm start & npx react-devtools",
