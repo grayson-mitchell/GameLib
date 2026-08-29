@@ -7,6 +7,11 @@ import { GlobalConfig } from 'backend/config'
 import { logInfo, logError, logWarning } from 'backend/logger'
 import type { Game } from 'common/types/game_manager'
 
+// Phase 35 Plan 15: `backend/platform`'s manual mock must be requested BY NAME. The
+// `electron` one it replaces was applied automatically because electron is a
+// node_modules package; a user-module mock is opt-in. See
+// src/backend/platform/__mocks__/index.ts.
+jest.mock('backend/platform')
 jest.mock('backend/logger')
 jest.mock('backend/dialog/dialog')
 jest.mock('backend/utils')

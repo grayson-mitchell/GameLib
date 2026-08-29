@@ -137,7 +137,7 @@ jest.mock('../electronStores', () => ({
 
 // ── electron mock — shell.openExternal + dialog.showMessageBox (MAC32-03 i386
 // recovery confirm, library.ts's promptI386Recovery) ─────────────────────────
-jest.mock('electron', () => ({
+jest.mock('backend/platform', () => ({
   shell: {
     openExternal: jest.fn()
   },
@@ -1160,7 +1160,7 @@ describe('SteamGame.launch() — GAME-01', () => {
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('electron')
+    const { shell } = jest.requireMock('backend/platform')
     shellOpenExternal = shell.openExternal as jest.Mock
     shellOpenExternal.mockResolvedValue(undefined)
     notifyMock = jest.requireMock('backend/dialog/dialog').notify as jest.Mock
@@ -1406,7 +1406,7 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('electron')
+    const { shell } = jest.requireMock('backend/platform')
     shellOpenExternal = shell.openExternal as jest.Mock
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
@@ -1836,7 +1836,7 @@ describe('SteamGame.install() — GAME-02', () => {
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('electron')
+    const { shell } = jest.requireMock('backend/platform')
     shellOpenExternal = shell.openExternal as jest.Mock
     shellOpenExternal.mockResolvedValue(undefined)
     notifyMock = jest.requireMock('backend/dialog/dialog').notify as jest.Mock
@@ -1941,7 +1941,7 @@ describe('SteamGame.install() — steam-startup-resume-crash resume-on-click (D-
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('electron')
+    const { shell } = jest.requireMock('backend/platform')
     shellOpenExternal = shell.openExternal as jest.Mock
     shellOpenExternal.mockResolvedValue(undefined)
     startInstallPollingSpy = jest
@@ -2028,7 +2028,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('electron')
+    const { shell } = jest.requireMock('backend/platform')
     shellOpenExternal = shell.openExternal as jest.Mock
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
@@ -2704,7 +2704,7 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('electron')
+    const { shell } = jest.requireMock('backend/platform')
     shellOpenExternal = shell.openExternal as jest.Mock
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
@@ -2888,7 +2888,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('electron')
+    const { shell } = jest.requireMock('backend/platform')
     shellOpenExternal = shell.openExternal as jest.Mock
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
@@ -3367,7 +3367,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('electron')
+    const { shell } = jest.requireMock('backend/platform')
     shellOpenExternal = shell.openExternal as jest.Mock
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
@@ -3777,7 +3777,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     envMock.isMac = true
     envMock.isWindows = false
     envMock.isLinux = false
-    const { shell } = jest.requireMock('electron')
+    const { shell } = jest.requireMock('backend/platform')
     shellOpenExternal = shell.openExternal as jest.Mock
     shellOpenExternal.mockResolvedValue(undefined)
     startUninstallPollingSpy = jest
@@ -4482,7 +4482,7 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('electron')
+    const { shell } = jest.requireMock('backend/platform')
     shellOpenExternal = shell.openExternal as jest.Mock
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(APP_ID, makeEntry({ title: 'Windows Only Game' }))
@@ -4684,7 +4684,7 @@ describe('SteamGame.uninstall() — GAME-03', () => {
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('electron')
+    const { shell } = jest.requireMock('backend/platform')
     shellOpenExternal = shell.openExternal as jest.Mock
     shellOpenExternal.mockResolvedValue(undefined)
     notifyMock = jest.requireMock('backend/dialog/dialog').notify as jest.Mock
@@ -4777,7 +4777,7 @@ describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => 
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('electron')
+    const { shell } = jest.requireMock('backend/platform')
     shellOpenExternal = shell.openExternal as jest.Mock
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(
@@ -4918,7 +4918,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('electron')
+    const { shell } = jest.requireMock('backend/platform')
     shellOpenExternal = shell.openExternal as jest.Mock
     shellOpenExternal.mockResolvedValue(undefined)
     // debug/steam-bottle-uninstall-reverts (routing fix): uninstall() now
@@ -5355,7 +5355,7 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('electron')
+    const { shell } = jest.requireMock('backend/platform')
     shellOpenExternal = shell.openExternal as jest.Mock
     shellOpenExternal.mockResolvedValue(undefined)
     startUninstallPollingSpy = jest
@@ -6108,7 +6108,7 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell, dialog } = jest.requireMock('electron')
+    const { shell, dialog } = jest.requireMock('backend/platform')
     shellOpenExternal = shell.openExternal as jest.Mock
     shellOpenExternal.mockResolvedValue(undefined)
     dialogShowMessageBox = dialog.showMessageBox as jest.Mock

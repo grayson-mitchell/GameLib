@@ -1,9 +1,11 @@
-import { createMainWindow } from '../main_window'
 import { sendFrontendMessage } from '../ipc'
-import { BrowserWindow, Display, screen } from 'backend/platform'
-import { overrideProcessPlatform } from './constants.test'
-import { configStore } from 'backend/constants/key_value_stores'
+import { BrowserWindow } from 'backend/platform'
 
+// Phase 35 Plan 15: `backend/platform`'s manual mock must be requested BY NAME. The
+// `electron` one it replaces was applied automatically because electron is a
+// node_modules package; a user-module mock is opt-in. See
+// src/backend/platform/__mocks__/index.ts.
+jest.mock('backend/platform')
 jest.mock('../logger')
 
 describe('main_window', () => {
@@ -135,112 +137,11 @@ describe('main_window', () => {
     })
   })
 
-  describe('createMainWindow', () => {
-    describe('with stored window geometry', () => {
-      beforeEach(() => {
-        jest.spyOn(configStore, 'has').mockReturnValue(true)
-        jest.spyOn(configStore, 'get').mockReturnValue({
-          width: 800,
-          height: 600,
-          x: 0,
-          y: 0
-        })
-      })
+  // The `createMainWindow` describes were REMOVED by Phase 35 Plan 15 together with the
+  // function itself: plan 35-14 deleted its only caller (src/backend/main.ts) and Tauri owns
+  // the window, so its sole importer was this test. They asserted Electron BrowserWindow
+  // geometry, frameless/titleBarOverlay behaviour and screen-size clamping -- none of which
+  // has a Tauri equivalent here. The `sendFrontendMessage` describes above cover the half of
+  // the module that survives (`getMainWindow`). See D-35-15-01.
 
-      it('creates the new window with the given geometry', () => {
-        const window = createMainWindow()
-        const options = window.options
-
-        expect(options.height).toBe(600)
-        expect(options.width).toBe(800)
-        expect(options.x).toBe(0)
-        expect(options.y).toBe(0)
-      })
-    })
-
-    describe('without stored window geometry', () => {
-      beforeAll(() => {
-        jest.spyOn(configStore, 'has').mockReturnValue(false)
-      })
-
-      it('creates the new window with the default geometry', () => {
-        const window = createMainWindow()
-        const options = window.options
-
-        expect(options.height).toBe(690)
-        expect(options.width).toBe(1200)
-        expect(options.x).toBe(0)
-        expect(options.y).toBe(0)
-      })
-
-      it('ensures windows is not bigger than the screen', () => {
-        // mock a smaller screen info
-        jest.spyOn(screen, 'getPrimaryDisplay').mockReturnValue({
-          workAreaSize: {
-            height: 768,
-            width: 1024
-          }
-        } as Display)
-
-        const window = createMainWindow()
-        const options = window.options
-
-        expect(options.height).toBe(690)
-        expect(options.width).toBe(1024 * 0.8) // 80% of the workAreaSize.width
-        expect(options.x).toBe(0)
-        expect(options.y).toBe(0)
-      })
-    })
-
-    describe('with frameless window enabled', () => {
-      beforeEach(() => {
-        jest.spyOn(configStore, 'has').mockReturnValue(false)
-        jest.spyOn(configStore, 'get').mockReturnValue({
-          framelessWindow: true
-        })
-      })
-
-      it('creates a simple frameless window on Linux', () => {
-        const originalPlatform = overrideProcessPlatform('linux')
-        const window = createMainWindow()
-        const options = window.options
-        overrideProcessPlatform(originalPlatform)
-
-        expect(options.frame).toBe(false)
-        expect(options.titleBarStyle).toBeUndefined()
-        expect(options.titleBarOverlay).toBeUndefined()
-      })
-
-      it('creates a frameless window with overlay controls on macOS and Windows', () => {
-        ;['darwin', 'win32'].forEach((platform) => {
-          const originalPlatform = overrideProcessPlatform(platform)
-          const window = createMainWindow()
-          const options = window.options
-          overrideProcessPlatform(originalPlatform)
-
-          expect(options.frame).toBeUndefined()
-          expect(options.titleBarStyle).toBe('hidden')
-          expect(options.titleBarOverlay).toBe(true)
-        })
-      })
-    })
-
-    describe('with frameless window disabled', () => {
-      beforeAll(() => {
-        jest.spyOn(configStore, 'has').mockReturnValue(false)
-        jest.spyOn(configStore, 'get').mockReturnValue({
-          framelessWindow: false
-        })
-      })
-
-      it('creates the new window with default titlebar', () => {
-        const window = createMainWindow()
-        const options = window.options
-
-        expect(options.frame).toBeUndefined()
-        expect(options.titleBarStyle).toBeUndefined()
-        expect(options.titleBarOverlay).toBeUndefined()
-      })
-    })
-  })
 })

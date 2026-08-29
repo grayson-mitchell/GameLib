@@ -49,7 +49,7 @@ class MockNotification {
   }
 }
 
-jest.mock('electron', () => ({
+jest.mock('backend/platform', () => ({
   Notification: MockNotification
 }))
 

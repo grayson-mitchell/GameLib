@@ -1,77 +1,22 @@
-import { AppSettings, WindowProps } from 'common/types'
-import { BrowserWindow, screen, app } from 'backend/platform'
-import path from 'path'
-import { configStore } from './constants/key_value_stores'
+import { BrowserWindow } from 'backend/platform'
 
-let mainWindow: BrowserWindow | null = null
+/**
+ * Phase 35 Plan 15: this module used to also export `createMainWindow` and `isFrameless`.
+ * Both are gone, because plan 35-14 deleted their only caller (`src/backend/main.ts`) and
+ * Tauri owns the window.
+ *
+ * `createMainWindow` constructed an Electron `BrowserWindow` from persisted `WindowProps`,
+ * sized against `screen.getPrimaryDisplay()` and wired to `build/preload/index.js`. Under
+ * Tauri none of that applies: the window is declared in `tauri.conf.json`, and the preload
+ * bundle it pointed at is never loaded by the Tauri webview (35-14 commit B). Its only
+ * importer was its own test.
+ *
+ * `isFrameless` read `windowProps`, which only `createMainWindow` ever assigned, so it could
+ * only ever have returned `false` once that function was gone. The `isFrameless` CHANNEL is
+ * unaffected and is served renderer-side by `tauriIsFrameless` (`preload/api/misc.ts:50`) --
+ * it was one of the 16 channels 35-14 confirmed as ported behind an `isTauri()` ternary.
+ *
+ * What survives is `getMainWindow`, which has twelve live importers including sidecar paths.
+ */
 
-export const getMainWindow = () => {
-  if (mainWindow) return mainWindow
-  return BrowserWindow.getAllWindows().at(0)
-}
-
-let windowProps: WindowProps | null = null
-
-export const isFrameless = () => {
-  return windowProps?.frame === false || windowProps?.titleBarStyle === 'hidden'
-}
-
-// creates the mainWindow based on the configuration
-export const createMainWindow = () => {
-  windowProps = {
-    height: 690,
-    width: 1200,
-    x: 0,
-    y: 0,
-    maximized: false
-  } as WindowProps
-
-  if (configStore.has('window-props')) {
-    windowProps = configStore.get('window-props', windowProps)
-  } else {
-    // make sure initial screen size is not bigger than the available screen space
-    const screenInfo = screen.getPrimaryDisplay()
-
-    if (screenInfo?.workAreaSize?.height < windowProps.height) {
-      windowProps.height = screenInfo.workAreaSize.height * 0.8
-    }
-
-    if (screenInfo?.workAreaSize?.width < windowProps.width) {
-      windowProps.width = screenInfo.workAreaSize.width * 0.8
-    }
-  }
-  // Set up frameless window if enabled in settings
-  const settings = configStore.get('settings', <AppSettings>{})
-  if (settings?.framelessWindow) {
-    // use native overlay controls where supported
-    if (['darwin', 'win32'].includes(process.platform)) {
-      windowProps.titleBarStyle = 'hidden'
-      windowProps.titleBarOverlay = true
-    } else {
-      windowProps.frame = false
-    }
-  }
-
-  // Create the browser window.
-  mainWindow = new BrowserWindow({
-    ...windowProps,
-    minHeight: 345,
-    minWidth: 600,
-    show: false,
-
-    webPreferences: {
-      webviewTag: true,
-      contextIsolation: true,
-      nodeIntegration: true,
-      // sandbox: false,
-      // Resolve the preload from the app root (stable) rather than __dirname:
-      // the main bundle can code-split into build/main/chunks/, which shifts
-      // __dirname and breaks a `../preload` relative lookup. app.getAppPath()
-      // is the project root in dev and the asar root when packaged; the preload
-      // is always emitted to build/preload/index.js (electron.vite.config.ts).
-      preload: path.join(app.getAppPath(), 'build/preload/index.js')
-    }
-  })
-
-  return mainWindow
-}
+export const getMainWindow = () => BrowserWindow.getAllWindows().at(0)

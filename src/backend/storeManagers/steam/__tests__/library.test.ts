@@ -156,7 +156,7 @@ jest.mock('child_process', () => ({
 // only reached via a CONFIRMED promptI386Recovery, and this file's tests
 // keep the dialog mocked to a cancel response unless a test explicitly opts
 // into the confirm path.
-jest.mock('electron', () => ({
+jest.mock('backend/platform', () => ({
   dialog: { showMessageBox: jest.fn() },
   app: {
     getPath: jest.fn().mockReturnValue('/tmp/mock-path'),

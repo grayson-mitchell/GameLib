@@ -47,7 +47,7 @@ const mockSessionInstance = {
 }
 const mockFromPartition = jest.fn(() => mockSessionInstance)
 
-jest.mock('electron', () => ({
+jest.mock('backend/platform', () => ({
   app: { userAgentFallback: mockUserAgentFallback },
   safeStorage: {
     isEncryptionAvailable: mockIsEncryptionAvailable,

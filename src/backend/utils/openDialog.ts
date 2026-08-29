@@ -16,8 +16,16 @@
  * is what makes one body serve both builds.
  */
 
-import { dialog } from 'electron'
-import type { BrowserWindow, OpenDialogOptions } from 'electron'
+import { dialog } from 'backend/platform'
+// D-35-13-03: this is the ONE site in the phase where the rewrite is not one string per
+// import. `BrowserWindow` cannot come from `backend/platform` -- `index.ts:715` already
+// exports it as a VALUE (`export const BrowserWindow = { getAllWindows }`), so adding
+// `export type { BrowserWindow }` beside it fails with TS2323, Cannot redeclare exported
+// variable. The interface lives at `backend/platform/types.ts:527` and is imported directly
+// from there. `OpenDialogOptions` has no such collision and comes from the barrel like
+// everything else.
+import type { OpenDialogOptions } from 'backend/platform'
+import type { BrowserWindow } from 'backend/platform/types'
 
 /**
  * Shows a native open dialog and returns the first picked path, or `false` on cancel.

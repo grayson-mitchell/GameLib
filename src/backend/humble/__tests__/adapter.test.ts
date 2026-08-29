@@ -111,7 +111,7 @@ const mockNetRequest = jest.fn()
 const MOCK_USER_AGENT_FALLBACK =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) GameLib/1.0.0 Chrome/142.0.7444.52 Electron/41.1.1 Safari/537.36'
 
-jest.mock('electron', () => ({
+jest.mock('backend/platform', () => ({
   app: { userAgentFallback: MOCK_USER_AGENT_FALLBACK },
   net: { request: (options: unknown) => mockNetRequest(options) }
 }))

@@ -31,7 +31,7 @@ const mockEncryptString = jest.fn((s: string) => Buffer.from(s))
 const mockDecryptString = jest.fn((b: Buffer) => b.toString())
 const mockIsEncryptionAvailable = jest.fn(() => true)
 
-jest.mock('electron', () => ({
+jest.mock('backend/platform', () => ({
   safeStorage: {
     isEncryptionAvailable: mockIsEncryptionAvailable,
     encryptString: mockEncryptString,

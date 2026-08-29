@@ -34,7 +34,7 @@ import { sendFrontendMessage } from '../ipc'
 import { logInfo } from '../logger'
 
 // Mock electron modules
-jest.mock('electron', () => ({
+jest.mock('backend/platform', () => ({
   app: {
     quit: jest.fn()
   },

@@ -45,7 +45,7 @@ let mockFromPartitionReturn: Record<string, unknown> = {
 
 const mockFromPartition = jest.fn()
 
-jest.mock('electron', () => ({
+jest.mock('backend/platform', () => ({
   session: {
     fromPartition: (...args: unknown[]) => mockFromPartition(...args)
   }

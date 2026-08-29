@@ -45,7 +45,7 @@ import {
 import { DEFAULT_STEAM_BOTTLE_NAME, STEAM_SETUP_EXE_URL } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
 
-jest.mock('electron', () => ({
+jest.mock('backend/platform', () => ({
   app: {
     getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
     // Plain method (survives resetMocks) -- publicDir resolves it at module load.
@@ -1302,7 +1302,7 @@ describe('bottle.ts', () => {
   // IMPORTANT: these two tests are GREEN against the code as it stood BEFORE this plan's fix
   // and therefore PROVE NOTHING about defect 1 (the dynamic-import bypass). Under ts-jest/CJS,
   // `await import('electron')` downlevels to a `require()` through jest's own module registry,
-  // which resolves to the `jest.mock('electron', ...)` factory above -- so `app` was never
+  // which resolves to the `jest.mock('backend/platform', ...)` factory above -- so `app` was never
   // `undefined` here even when bottle.ts's source still had the broken dynamic import. The
   // production failure lived only in the esbuild output (a native ESM dynamic import that
   // bypasses `Module._load`), which only `../../sidecar/__tests__/externalDynamicImportGate.test.ts`

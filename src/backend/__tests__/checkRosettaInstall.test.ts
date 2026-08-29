@@ -2,7 +2,7 @@ import { exec } from 'child_process'
 import { dialog } from 'backend/platform'
 import { checkRosettaInstall } from '../utils'
 
-jest.mock('electron')
+jest.mock('backend/platform')
 jest.mock('../logger')
 jest.mock('../dialog/dialog')
 jest.mock('../config')
