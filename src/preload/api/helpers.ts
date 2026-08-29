@@ -1,5 +1,4 @@
 import { frontendListenerSlot, makeHandlerInvoker, makeListenerCaller } from '../ipc'
-import { isTauri } from '../tauriTransport'
 import { tauriCreateNewWindow, tauriShowAboutWindow } from './tauriChildWindows'
 
 export const notify = makeListenerCaller('notify')
@@ -8,17 +7,15 @@ export const openSidInfoPage = makeListenerCaller('openSidInfoPage')
 export const openSupportPage = makeListenerCaller('openSupportPage')
 export const quit = makeListenerCaller('quit')
 // D-12 (Phase 34.1 Plan 07): showAboutWindow/createNewWindow open genuine Tauri
-// WebviewWindows under Tauri -- renderer-side, per tauriChildWindows.ts's module
-// comment. The sidecar registers nothing for these two channels; the preload
-// short-circuit below means the UNPORTED_CHANNEL_MARKER path is never reached, the
-// same D-02 reasoning the ten window-chrome channels use.
-const showAboutWindowIpc = makeListenerCaller('showAboutWindow')
-const createNewWindowIpc = makeListenerCaller('createNewWindow')
-export const showAboutWindow = () => (isTauri() ? tauriShowAboutWindow() : showAboutWindowIpc())
+// WebviewWindows -- renderer-side, per tauriChildWindows.ts's module comment. Phase 35
+// plan 17 collapsed the Electron-branch fallback (`makeListenerCaller('showAboutWindow')`
+// / `makeListenerCaller('createNewWindow')`), which is unreachable now that the Tauri
+// shell is the only shell.
+export const showAboutWindow = () => tauriShowAboutWindow()
 export const openDiscordLink = makeListenerCaller('openDiscordLink')
 export const openWinePrefixFAQ = makeListenerCaller('openWinePrefixFAQ')
 export const openCustomThemesWiki = makeListenerCaller('openCustomThemesWiki')
-export const createNewWindow = (url: string) => (isTauri() ? tauriCreateNewWindow(url) : createNewWindowIpc(url))
+export const createNewWindow = (url: string) => tauriCreateNewWindow(url)
 export const readConfig = makeHandlerInvoker('readConfig')
 export const isLoggedIn = makeHandlerInvoker('isLoggedIn')
 export const writeConfig = makeHandlerInvoker('writeConfig')

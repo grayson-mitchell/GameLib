@@ -14,7 +14,7 @@ import { BrowserWindow } from 'backend/platform'
  * `isFrameless` read `windowProps`, which only `createMainWindow` ever assigned, so it could
  * only ever have returned `false` once that function was gone. The `isFrameless` CHANNEL is
  * unaffected and is served renderer-side by `tauriIsFrameless` (`preload/api/misc.ts:50`) --
- * it was one of the 16 channels 35-14 confirmed as ported behind an `isTauri()` ternary.
+ * it was one of the 16 channels 35-14 confirmed as ported behind a Tauri-context ternary.
  *
  * What survives is `getMainWindow`, which has twelve live importers including sidecar paths.
  */

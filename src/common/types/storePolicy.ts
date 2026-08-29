@@ -13,12 +13,14 @@
  * a newly added secret field is excluded by DEFAULT unless someone deliberately adds
  * it to `STORE_ALLOWLIST`, rather than leaking until someone remembers to deny-list it.
  *
- * IMPORTANT: this allow-list governs the TAURI PATH ONLY. `src/preload/api/misc.ts`'s
- * Electron-branch deny-list (`SECRET_STORE_KEYS` there, gating `storeGet`/`storeHas`
- * under `!isTauri()`) stays BYTE-IDENTICAL and is deliberately left divergent from this
- * module until the Electron cutover (Phase 35) — see the Phase 28 D-11 precedent
- * (28-04/28-05 SUMMARY.md) for why a documented, commented divergence between the two
- * paths is the correct interim state rather than a bug to "fix" by unifying them early.
+ * HISTORICAL NOTE: this allow-list originally governed the Tauri path only, while
+ * `src/preload/api/misc.ts` kept a separate Electron-branch deny-list (`SECRET_STORE_KEYS`
+ * there, gating the pre-cutover Electron-only `storeGet`/`storeHas` bodies) deliberately
+ * left divergent from this module — see the Phase 28 D-11 precedent (28-04/28-05
+ * SUMMARY.md) for why a documented, commented divergence between the two paths was the
+ * correct interim state rather than a bug to "fix" by unifying them early. Phase 35 plan
+ * 16 deleted `misc.ts`'s Electron-branch deny-list entirely, so this module is now the
+ * SINGLE store-access policy for the one remaining (Tauri) code path.
  * `tauriTransport.ts`'s own `SECRET_STORE_KEYS` copy is superseded by this module in a
  * later plan (29-05) — it is not touched here.
  *

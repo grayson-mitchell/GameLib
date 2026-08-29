@@ -2,25 +2,21 @@
  * Tauri child-window contract test (Phase 34.1 Plan 07, D-12, REQ-34.1-08).
  *
  * Covers `tauriChildWindows.ts`'s two exports directly (mocking
- * `@tauri-apps/api/webviewWindow`'s `WebviewWindow` class) AND `helpers.ts`'s own
- * `isTauri()` routing decision for `showAboutWindow`/`createNewWindow`. `helpers.ts`'s
- * own branch is untouched by Phase 35 plan 16 (out of scope -- plan 35-17's job per the
- * plan's own constraints), but its ELSE arm (`showAboutWindowIpc`/`createNewWindowIpc`,
- * built from `../ipc.ts`'s `makeListenerCaller`) now reaches the Tauri transport
- * unconditionally, same as every other `../ipc.ts` consumer, because plan 16 collapsed
- * `../ipc.ts`'s own runtime-detection branch. So both arms of `helpers.ts`'s branch
- * converge on the same transport today -- the electron mock below is now a THROW, not a
- * working stub, matching `gamepadActionRouting.test.ts`'s and
- * `steamInstallFormApi.test.ts`'s treatment of the same collapse.
+ * `@tauri-apps/api/webviewWindow`'s `WebviewWindow` class). `helpers.ts`'s
+ * `showAboutWindow`/`createNewWindow` used to route on an `isTauri()` check; Phase 35
+ * plan 17 collapsed that branch, deleting the Electron-branch fallback
+ * (`makeListenerCaller('showAboutWindow')`/`makeListenerCaller('createNewWindow')`)
+ * entirely -- there is no longer a runtime-detection decision to test, so the test that
+ * exercised the deleted ELSE arm is gone with it (same treatment
+ * `gamepadActionRouting.test.ts` and `steamInstallFormApi.test.ts` gave their own
+ * now-unreachable branches).
  *
  * jest.config sets `resetMocks: true` -- every mock's implementation/return value is
  * (re)established in `beforeEach`.
  */
 
-const mockedIsTauri = jest.fn()
 const mockedTauriSend = jest.fn()
 jest.mock('../tauriTransport', () => ({
-  isTauri: () => mockedIsTauri(),
   send: (...args: unknown[]) => mockedTauriSend(...args),
   invoke: jest.fn(),
   listen: jest.fn(),
@@ -51,7 +47,6 @@ jest.mock('@tauri-apps/api/webviewWindow', () => ({
 }))
 
 import { tauriCreateNewWindow, tauriShowAboutWindow } from '../api/tauriChildWindows'
-import { showAboutWindow, createNewWindow } from '../api/helpers'
 
 const mockedGetHeroicVersion = jest.fn()
 
@@ -68,7 +63,6 @@ const flush = () => new Promise((resolve) => setImmediate(resolve))
 
 describe('tauriChildWindows (REQ-34.1-08)', () => {
   beforeEach(() => {
-    mockedIsTauri.mockReturnValue(true)
     getByLabelMock.mockResolvedValue(null)
     mockedGetHeroicVersion.mockResolvedValue('1.2.3')
   })
@@ -345,15 +339,4 @@ describe('tauriChildWindows (REQ-34.1-08)', () => {
     expect(label).not.toContain('store')
   })
 
-  it('REQ-34.1-08: with isTauri() false, helpers.ts exports still reach the Tauri transport (via ../ipc.ts, not electron) and never touch WebviewWindow', () => {
-    mockedIsTauri.mockReturnValue(false)
-
-    showAboutWindow()
-    createNewWindow('https://www.protondb.com/app/1')
-
-    expect(mockedTauriSend).toHaveBeenCalledWith('showAboutWindow', [])
-    expect(mockedTauriSend).toHaveBeenCalledWith('createNewWindow', ['https://www.protondb.com/app/1'])
-    expect(webviewWindowCtor).not.toHaveBeenCalled()
-    expect(getByLabelMock).not.toHaveBeenCalled()
-  })
 })

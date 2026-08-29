@@ -2,7 +2,7 @@
 // Phase 35 Plan 14 (D-17): the Electron context-bridge block is GONE with the shell.
 //
 // It exposed `api`, `platform`, `isE2ETesting`, `flatpakRuntimeVersion` and the Steam
-// Deck / Flatpak flags on `window`, behind an `if (!isTauri())` guard -- the Electron
+// Deck / Flatpak flags on `window`, behind an Electron-only guard -- the Electron
 // branch of a two-runtime file. That API does not exist under Tauri, and the
 // unconditional top-level `electron` import it required is precisely why
 // `src/frontend/index.tsx` imports `./tauriAttach` DIRECTLY rather than importing this
@@ -12,8 +12,8 @@
 //
 // What this file still does, and why it is not deleted outright:
 //   - the `./tauriAttach` side-effect import below, which runs tauriAttach's own
-//     isTauri() guard, so this bundle stays correct if a later plan ever wires it into
-//     the Tauri webview directly (e.g. via an init-script injection);
+//     Tauri-context detection, so this bundle stays correct if a later plan ever wires it
+//     into the Tauri webview directly (e.g. via an init-script injection);
 //   - the Windows `navigator.platform` / `navigator.userAgentData` shim below.
 //
 // `src/preload/api/*` is UNTOUCHED and must stay: `tauriAttach` consumes it. This bundle

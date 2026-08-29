@@ -22,7 +22,8 @@
  *
  * This channel is Tauri-only by construction: the Electron renderer never reaches it, because
  * `WebView/index.tsx` still renders its `<webview>` there and never calls
- * `window.api.oauthCaptureLogin` on that build (Task 3's hook guards on `isTauri()` first). Under
+ * `window.api.oauthCaptureLogin` on that build (Task 3's hook guards on Tauri-context detection
+ * first). Under
  * Electron, `captureOAuthLogin()`'s own `getLoginWindowSeam() === null` check resolves
  * `{ status: 'unsupported' }` immediately regardless — this handler would be harmless even if
  * somehow invoked there, but it is registered in the sidecar's curated module graph only, which
