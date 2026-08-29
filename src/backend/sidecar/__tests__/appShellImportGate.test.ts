@@ -58,7 +58,7 @@ describe('appShellImportGate (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-12)', 
   // stripper).
   it('REQ-34.1-12/D-09 Gate 1 self-test: stripComments removes a comment-only "from \'electron\'" line before matching', () => {
     const source = [
-      "// this comment intentionally says: from 'electron'",
+      "// this comment intentionally says: from 'backend/platform'",
       "import { ipcMain } from './electronStub'"
     ].join('\n')
     const stripped = stripComments(source)

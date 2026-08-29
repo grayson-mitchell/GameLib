@@ -80,7 +80,7 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // stripper). No gate in this file relies on a raw grep.
   it('REQ-34.2-14 Gate 2 (self-test): stripComments removes a comment-only "from \'electron\'" line before matching', () => {
     const source = [
-      "// this comment intentionally says: from 'electron'",
+      "// this comment intentionally says: from 'backend/platform'",
       "import { ipcMain } from './electronStub'"
     ].join('\n')
     const stripped = stripComments(source)

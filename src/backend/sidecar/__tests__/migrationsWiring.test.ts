@@ -63,7 +63,7 @@ jest.mock('fs/promises', () => {
 import { PassThrough } from 'node:stream'
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'graceful-fs'
 import { join } from 'node:path'
-import { app } from 'electron'
+import { app } from 'backend/platform'
 import { cp } from 'fs/promises'
 import { init } from '../bootstrap'
 import MigrationSystem from '../../migration'

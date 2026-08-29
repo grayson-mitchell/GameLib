@@ -1314,7 +1314,7 @@ describe('REQ-34.2-04 enrichmentFlowRegistration.ts import gates', () => {
 
   it('REQ-34.2-04 self-test: stripComments removes a comment-only forbidden-pattern line before matching', () => {
     const source = [
-      "// this comment intentionally says: from 'electron'",
+      "// this comment intentionally says: from 'backend/platform'",
       "import { ipcMain } from './electronStub'"
     ].join('\n')
     expect(stripComments(source)).not.toMatch(/from\s+['"]electron['"]/)
