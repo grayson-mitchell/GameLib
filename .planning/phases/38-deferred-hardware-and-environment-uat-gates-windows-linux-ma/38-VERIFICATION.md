@@ -2,7 +2,7 @@
 phase: 38-deferred-hardware-and-environment-uat-gates-windows-linux-ma
 verified: null
 status: human_needed
-score: N/A — collection phase, no must-haves. 27 relocated items, 0 discharged.
+score: N/A — collection phase, no must-haves. 29 relocated items, 0 discharged.
 audit_tool_note: >
   `status` MUST stay `human_needed`. `gsd-sdk query audit-uat` admits a VERIFICATION.md when
   status is `human_needed` OR `gaps_found`, but `parseVerificationItems` only emits items when
@@ -101,6 +101,45 @@ human_verification:
       F-34.5-G6-16), which is the deliberate macOS replacement and satisfies the same anti-phishing
       intent by a different mechanism. Observing the banner is NOT observing this item. The run-4
       contract mis-specified exactly this and the error is recorded there against the contract.
+
+  - id: "38-W04"
+    test: "Smoke-launch the CI-produced WINDOWS installer artifact. Download the NSIS installer from the `release-tauri.yml` workflow run for the commit under gate, install it, and launch the resulting GameLib.exe."
+    expected: "The installer completes without error. GameLib launches, a window appears, and the process survives at least 10 seconds without crashing — the same bar `35-LIVE-GATE.md` criterion 1 applies to the macOS artifact."
+    why_human: "Requires a Windows host. `.github/workflows/release-tauri.yml` builds and uploads the NSIS installer to a draft release (`tauri-apps/tauri-action@v1`, last step at :429) but performs no runtime check of its own — the artifact has never been executed by anything, human or CI, since the Tauri rearchitecture began."
+    blocked_by: "a Windows machine"
+    platform_gate: "src-tauri/tauri.conf.json `bundle.targets` includes `nsis` — an `.exe`/NSIS installer cannot execute on macOS at all; this is a binary-format boundary, not an unreached code branch."
+    origin_phase: "35"
+    origin_item: "35-19 Task 2, option-c"
+    reduction_note: >
+      THIS ITEM IS A RECORDED SCOPE REDUCTION AGAINST D-16, NOT A ROUTINE DEFERRAL. D-16's own
+      wording requires "the CI matrix producing installable artifacts PLUS A SMOKE LAUNCH" before
+      Windows counts as proven out. Phase 35's blocking gate (`35-LIVE-GATE.md`) closed on macOS
+      artifact measurement plus Windows/Linux artifact PRODUCTION only — the smoke-launch half of
+      D-16 was NOT satisfied before that phase closed. It is relocated here, to the phase that
+      already owns every UAT item this project's hardware cannot run, rather than left as a silent
+      gap in Phase 35's closing record. See `35-LIVE-GATE.md`'s Windows/Linux disposition section
+      and `REQUIREMENTS.md` REQ-35-20 for the matching acknowledgment on the origin side.
+    prior_state: >
+      Never attempted. `35-PREFLIGHT.md` OQ-4 measured that `release-tauri.yml` performs no runtime
+      check of its own; D-00c independently records the Windows and Linux Tauri builds as
+      code-complete and CI-wired but never live-verified, because plan `34-07` (the all-platform,
+      live tag-push gate) is user-deferred.
+
+  - id: "38-W05"
+    test: "Smoke-launch the CI-produced LINUX installer artifact. Download the AppImage from the `release-tauri.yml` workflow run for the commit under gate, mark it executable, and launch it."
+    expected: "The AppImage launches directly (no separate install step, per D-11/D-12's AppImage-only decision). A window appears, and the process survives at least 10 seconds without crashing — the same bar `35-LIVE-GATE.md` criterion 1 applies to the macOS artifact."
+    why_human: "Requires a Linux host. Same gap as 38-W04: `release-tauri.yml` builds and uploads the AppImage but never executes it."
+    blocked_by: "a Linux machine"
+    platform_gate: "src-tauri/tauri.conf.json `bundle.targets` includes `appimage` — an AppImage binary cannot execute on macOS at all; this is a binary-format boundary, not an unreached code branch."
+    origin_phase: "35"
+    origin_item: "35-19 Task 2, option-c"
+    reduction_note: >
+      THIS ITEM IS A RECORDED SCOPE REDUCTION AGAINST D-16, NOT A ROUTINE DEFERRAL. Same reduction
+      as 38-W04, for the Linux leg specifically — D-16 said "artifacts plus a smoke launch"; Phase
+      35 closed on artifact production alone for this leg. See `35-LIVE-GATE.md`'s Windows/Linux
+      disposition section and `REQUIREMENTS.md` REQ-35-20.
+    prior_state: >
+      Never attempted. Same `35-PREFLIGHT.md` OQ-4 / D-00c basis as 38-W04.
 
   - id: "38-C01"
     test: "Gamepad — directional focus. With a controller connected, navigate the /console routes using the d-pad and the left stick, in all four directions."
@@ -487,8 +526,10 @@ sweep_notes:
     hand-written geometric nearest-in-direction focus algorithm were re-derived from scratch
     against DOM semantics. This is the largest untested surface left in Phase 34.1.
   windows_linux_dependency: >
-    38-W01 needs Phase 34's Windows/Linux builds to exist. The eight controller items do not —
-    they are gated only on hardware access and can be discharged earlier, independently.
+    38-W01, 38-W04 and 38-W05 need Phase 34's Windows/Linux builds to exist; 38-W04/W05
+    additionally need a `release-tauri.yml` run against the Phase 35-gated commit to have produced
+    the installer/AppImage they launch. The eight controller items do not — they are gated only on
+    hardware access and can be discharged earlier, independently.
 
 human_verification_discharged: []
 ---
