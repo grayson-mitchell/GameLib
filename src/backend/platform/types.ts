@@ -582,3 +582,51 @@ export namespace CrossProcessExports {
     on(event?: string, listener?: () => void): unknown
   }
 }
+
+// ---------------------------------------------------------------------------
+// SECTION 9 -- THE `NodeJS.Process` AMBIENT AUGMENTATION
+//
+// FOUND DURING EXECUTION (Phase 35 plan 16, Task 3): this one is not a
+// consuming site naming a type out of this module -- it is a global
+// declaration-merge site, and it went missing as a SIDE EFFECT of this same
+// task's own Form 2 cleanup, not because any file here was edited.
+//
+// `node_modules/electron/electron.d.ts` is a global SCRIPT file (no top-level
+// `import`/`export`), so TypeScript only folds its declarations into the
+// program when some file under `src` still resolves the module specifier
+// `'electron'`. One of those global declarations augments `NodeJS.Process`
+// with two extra methods Electron's main process adds to the real Node
+// `process` object: `getSystemVersion(): string` and
+// `getSystemMemoryInfo(): { total; free; ... }`. Before this task, some other
+// file's `import type ... from 'electron'` kept that augmentation alive as a
+// side effect; this task rewrote the LAST such import anywhere in `src` to
+// `backend/platform`, and the augmentation vanished with it -- a genuine
+// regression this task caused (verified against a `git worktree` build of
+// the commit immediately before this task: `tsc --noEmit` was clean there),
+// not a pre-existing gap.
+//
+// Consumed by:
+//   src/backend/utils/systeminfo/index.ts:131 -- `process.getSystemVersion()`
+//   src/backend/utils/systeminfo/memory/windows.ts:6 -- `const { total, free }
+//   = process.getSystemMemoryInfo()`
+// Both call sites are real, live code (`getSystemInfo` is reached from the
+// frontend boot IPC call, per that module's own header comment) -- not dead
+// Electron-main-process-only code retired by this migration. Note
+// `src/backend/platform/index.ts`'s own `getSystemVersion` RUNTIME polyfill
+// (Phase 31 plan 01) works around the same gap locally with an intersection
+// cast at its one call site; it does not declare the method globally, so it
+// does not help these two sites. Only the two members actually read are
+// declared -- `SystemMemoryInfo` has several more fields
+// (`fileBacked`/`purgeable`/`swapped`, `darwin`-only) that nothing in this
+// tree reads.
+declare global {
+  namespace NodeJS {
+    interface Process {
+      getSystemVersion(): string
+      getSystemMemoryInfo(): {
+        total: number
+        free: number
+      }
+    }
+  }
+}

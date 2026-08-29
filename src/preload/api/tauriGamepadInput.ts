@@ -15,7 +15,7 @@
  * nothing for the `gamepadAction` channel -- the `UNPORTED_CHANNEL_MARKER` path is
  * simply never reached because this short-circuit is the only caller path.
  *
- * This module imports nothing from `electron` and nothing from `@tauri-apps/api` -- it
+ * This module has no electron dependency and no `@tauri-apps/api` import -- it
  * is pure DOM. Every branch is TOTAL: the whole dispatch is wrapped in try/catch so a
  * failure `console.warn`s and the returned promise still resolves rather than rejects --
  * an unhandled rejection from `window.api.gamepadAction` firing every frame from the
