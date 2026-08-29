@@ -29,7 +29,6 @@
  * under the old Electron build.
  */
 import api from './api'
-import { isTauri } from './tauriTransport'
 import { applyFramelessDecorations, installDragRegionHandlers } from './api/tauriWindowChrome'
 import { isMacWebview } from './platformDetect'
 
@@ -40,63 +39,57 @@ import { isMacWebview } from './platformDetect'
 // remaining `window.api` failure is a detection/attach-condition problem, not ordering.
 console.log('[GameLib] tauriAttach evaluating (pre-detect)')
 
-const tauriDetected = isTauri()
 const apiAlreadyPresent = typeof window.api !== 'undefined'
 
-// Attach when EITHER Tauri is detected OR `window.api` is not already present. The second
-// clause is the load-bearing robustness fix (Phase 27 Plan 05): under Electron the real
-// preload's `contextBridge.exposeInMainWorld('api', ...)` has ALREADY set `window.api`
-// before this renderer bundle runs, so `apiAlreadyPresent` is true and we correctly no-op
-// (Electron path byte-identical). Under Tauri there is NO preload, so `window.api` is
-// undefined here regardless of whether `isTauri()` detection succeeds — attaching on
-// `!apiAlreadyPresent` therefore eliminates the `isTauri()` false-negative that otherwise
-// leaves `window.api` unset and blanks the screen.
-const shouldAttach = tauriDetected || !apiAlreadyPresent
+// Phase 35 plan 17: this module used to attach conditionally -- when a runtime
+// Tauri-context detection succeeded OR `window.api` was not already present (a
+// robustness fallback for a detection false-negative, the Phase 27 Plan 05 fix).
+// The Electron branch that motivated the first condition -- an Electron preload
+// having already set `window.api` via `contextBridge` before this module ran, in
+// which case it correctly no-op'd -- no longer exists: Tauri is the only shell,
+// and there is no preload to have set `window.api` ahead of this module running.
+// The attach below is therefore unconditional. `apiAlreadyPresent` is retained
+// only as a startup diagnostic (logged below), not as a gate.
 
-// Startup environment diagnostic — a detection/attach false-negative is the exact cause of
-// the `window.api is undefined` blank screen, so log the signals up front (visible in the
-// Tauri dev webview devtools console).
+// Startup environment diagnostic — a detection/attach false-negative was the exact
+// cause of the historical `window.api is undefined` blank screen, so log the
+// signal up front (visible in the Tauri dev webview devtools console).
 console.log('[GameLib] renderer env detection:', {
-  isTauri: tauriDetected,
   hasTauriInternals: typeof (globalThis as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ !== 'undefined',
-  hasWindowIsTauri: Boolean((globalThis as { isTauri?: unknown }).isTauri),
-  apiAlreadyPresent,
-  willAttach: shouldAttach
+  apiAlreadyPresent
 })
 
-if (shouldAttach) {
-  window.api = api
-  console.log('[GameLib] window.api attached (readConfig present:', typeof window.api.readConfig, ')')
-  // Tauri-safe fallbacks for the 6 globals the Electron preload normally computes from
-  // `backend/constants/environment.ts` (Node-only: os.cpus(), graceful-fs,
-  // process.env/argv -- no browser equivalent inside a webview). Neither Steam Deck nor
-  // Flatpak detection is load-bearing for either of the skeleton's two E2E flows
-  // (27-CONTEXT: explicitly out of scope this phase) -- revisit if/when Tauri packaging
-  // targets those platforms for real.
-  window.isSteamDeckGameMode = false
-  window.isFlatpak = false
-  window.isSteamDeck = false
-  window.platform = (isMacWebview() ? 'darwin' : 'linux') as NodeJS.Platform
-  window.isE2ETesting = false
-  window.flatpakRuntimeVersion = undefined
+window.api = api
+console.log('[GameLib] window.api attached (readConfig present:', typeof window.api.readConfig, ')')
+// Tauri-safe fallbacks for the 6 globals the Electron preload normally computes from
+// `backend/constants/environment.ts` (Node-only: os.cpus(), graceful-fs,
+// process.env/argv -- no browser equivalent inside a webview). Neither Steam Deck nor
+// Flatpak detection is load-bearing for either of the skeleton's two E2E flows
+// (27-CONTEXT: explicitly out of scope this phase) -- revisit if/when Tauri packaging
+// targets those platforms for real.
+window.isSteamDeckGameMode = false
+window.isFlatpak = false
+window.isSteamDeck = false
+window.platform = (isMacWebview() ? 'darwin' : 'linux') as NodeJS.Platform
+window.isE2ETesting = false
+window.flatpakRuntimeVersion = undefined
 
-  // D-05/D-06 (Phase 34.1 Plan 03): apply the settings.framelessWindow decoration
-  // state before React renders, so the window never visibly flips on startup.
-  // applyFramelessDecorations()/installDragRegionHandlers() are already total (never
-  // throw -- see tauriWindowChrome.ts's own header comment); this try/catch is a
-  // second, deliberately redundant layer, because a throw anywhere in this attach
-  // path blanks the window (SEAM Invariant A) and no window-chrome failure is worth
-  // that risk.
-  try {
-    applyFramelessDecorations()
-  } catch (error) {
-    console.warn('[GameLib] applyFramelessDecorations failed:', error)
-  }
-  try {
-    installDragRegionHandlers()
-  } catch (error) {
-    console.warn('[GameLib] installDragRegionHandlers failed:', error)
-  }
+// D-05/D-06 (Phase 34.1 Plan 03): apply the settings.framelessWindow decoration
+// state before React renders, so the window never visibly flips on startup.
+// applyFramelessDecorations()/installDragRegionHandlers() are already total (never
+// throw -- see tauriWindowChrome.ts's own header comment); this try/catch is a
+// second, deliberately redundant layer, because a throw anywhere in this attach
+// path blanks the window (SEAM Invariant A) and no window-chrome failure is worth
+// that risk.
+try {
+  applyFramelessDecorations()
+} catch (error) {
+  console.warn('[GameLib] applyFramelessDecorations failed:', error)
+}
+try {
+  installDragRegionHandlers()
+} catch (error) {
+  console.warn('[GameLib] installDragRegionHandlers failed:', error)
 }
 
 export {}
