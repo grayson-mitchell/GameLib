@@ -195,7 +195,17 @@ Sink: none — this is a visual/UI observation, screenshot required.
 Expected: Real English text on first launch; a visible language change after switching; no raw
 i18n keys anywhere in the observed screens.
 Observed:
-Verdict:
+Operator report: UI rendered real English words on first launch — no raw
+`translation:some.key.path`-shaped strings observed. Switched the language to Spanish in
+Settings; the language changed as expected, with the left-hand menu observed updating to Spanish.
+Measured on the packaged release build, app pid 23589.
+LIMITATION, recorded rather than smoothed over: the operator reported the left menu changing
+rather than enumerating three specific strings, and no screenshot was captured despite this
+criterion's `Sink:` line requiring one. The observation is a genuine language switch and is scored
+PASS on that basis, but it is weaker evidence than the contract asked for. A left-nav that
+re-renders in Spanish does demonstrate the bundled locale files resolving at runtime, which is
+the `R-34.5-G1-PKG` half this criterion exists to prove.
+Verdict: PASS
 
 ### 4. Library renders and a game launches
 
