@@ -779,7 +779,66 @@ Expected: Within ~500ms-1s of the external write (the watcher's debounce), `game
 the line above, and the Library view visibly refreshes (a flicker/re-render, or an actual data
 change if the edit was substantive).
 Observed:
-Verdict:
+Precondition met: `installed.json` present and non-empty (1138 B, one installed Legendary title,
+`Iris` / Phoenix Point) at
+`~/Library/Application Support/gamelib/legendaryConfig/legendary/installed.json`.
+Run on the criterion-13 instance, pid 56564. File backed up before any write and byte-verified
+restored afterwards.
+
+**BACKEND HALF -- PASS, and proven further than the contract asked.**
+1. `touch` at 11:00:19.867 -> `(11:00:19) [INFO]: [Legendary]: installed.json updated, refreshing
+   library`. Sub-second, inside the contract's ~500ms-1s window.
+2. **Attributable, not ambient noise:** the count of that line in this log was **0** before the
+   gesture.
+3. **The DEBOUNCED refresh actually EXECUTES.** This needed its own probe: the log line is emitted
+   inside the `watch` callback BEFORE the 500ms `setTimeout`, so on its own it proves only that the
+   watcher fired -- a debounced call that never ran, or threw, would look identical. Wrote
+   deliberately malformed JSON; the log then produced
+   `Corrupted installed.json file, cannot load installed games SyntaxError: Expected property name
+   or '}' in JSON at position 2`. That string is emitted from INSIDE
+   `LegendaryLibrary.refreshInstalled()` (`storeManagers/legendary/library.ts:141`), so the
+   deferred call demonstrably ran and parsed the file. File restored and re-verified immediately.
+
+**Debounce COALESCING was measured but is INCONCLUSIVE -- recorded, not claimed either way.** Six
+rapid malformed writes yielded only 2 watcher events, not 6. macOS FSEvents coalesces upstream of
+`fs.watch`, so the app's own 500ms debounce cannot be isolated by this method. No claim is made
+about it.
+
+**UI HALF -- FAIL. This is the verdict.**
+First observation was CONFOUNDED and is discarded: `installed.json` was emptied, the tester saw
+nothing, then logged in to Epic (not previously logged in) and only then saw Phoenix Point listed
+as not-installed. A fresh post-login library load reads the same emptied file, so "not installed"
+had two possible causes and discriminates neither.
+Clean re-run with the confound removed -- tester logged in and viewing the Library, nothing else
+intervening: `Iris` restored to `installed.json` at 11:14:59, watcher line fired at 11:14:59,
+backend state updated. **The Library view did NOT update. The tester had to perform a manual
+refresh before Phoenix Point showed as installed again.**
+This also retro-explains the first observation: the post-login load, not the watcher, produced that
+screen.
+
+**Mechanism (read from source, not inferred):** the watcher's refresh is
+`() => libraryManagerMap['legendary'].refreshInstalled()`
+(`sidecar/installedJsonWatcher.ts:86`). `refreshInstalled()` rebuilds `installedGames` in memory
+and sends **no frontend message**. Every other library-mutating path in the backend explicitly
+notifies the renderer -- `sendFrontendMessage('refreshLibrary', 'legendary')` at
+`storeManagers/legendary/games.ts:767` and `:1067`, and the equivalent in `sideload/library.ts:77`
+and `nile/games.ts:512`. The watcher path is the one that does not. Backend truth and rendered
+truth therefore diverge until something else triggers a re-render.
+
+**NOT a Phase 35 regression -- the port was faithful.** The pre-cutover Electron implementation
+(`git show 5643c7583^:src/backend/main.ts`, lines 1037-1049) is behaviourally identical: same log
+line, same 500ms `setTimeout`, same bare `refreshInstalled()`, same absence of any frontend
+message. Origin is upstream Heroic `82ec176c7` (2022-11-22). `0da9898bf` (35-10) ported it to the
+sidecar verbatim and thereby carried the defect forward intact -- the known
+"verbatim upstream port ships silent defects" shape, and this criterion is what surfaced it.
+Logged as D-35-19-09.
+
+Scored FAIL because Expected requires BOTH clauses and names the visible refresh explicitly, and
+here the failing clause IS the criterion's subject -- the point of watching the file is that the
+user sees the change. (Contrast criterion 13, where the failing clause was unrelated to that
+criterion's subject and the verdict was PASS.) The app-restart wording is separately satisfied: no
+restart was needed, but a manual refresh was.
+Verdict: FAIL
 
 ### 15. Wake lock: display assertion during game play
 

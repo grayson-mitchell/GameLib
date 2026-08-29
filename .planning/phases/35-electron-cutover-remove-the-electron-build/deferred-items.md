@@ -1546,3 +1546,46 @@ The same inverted test appears again at `utils.ts:1301` for the `mv` fallback br
 Fix should be `if (code === 0)`. Whoever fixes D-35-19-07 will be editing this exact function and
 should take this with it — but note it is an independent bug and is NOT fixed by correcting the
 flags. Verify against a forced partial-transfer case, not just a happy path.
+
+## D-35-19-09 — the `installed.json` watcher updates backend state but never tells the renderer
+
+Found: criterion 14, 2026-08-30. Status: **CONFIRMED DEFECT, UNFIXED. Pre-existing upstream —
+NOT a Phase 35 regression, but the 35-10 port carried it forward verbatim.**
+
+An external write to Legendary's `installed.json` correctly fires the watcher and the debounced
+`refreshInstalled()` genuinely runs (both proven live — see criterion 14). But the Library view does
+not update. Confirmed by direct observation: removing the sole installed title made the UI go stale,
+and restoring it required a **manual refresh** before the change appeared.
+
+Mechanism. `sidecar/installedJsonWatcher.ts:86` passes:
+```ts
+() => libraryManagerMap['legendary'].refreshInstalled()
+```
+`refreshInstalled()` (`storeManagers/legendary/library.ts:131`) rebuilds `installedGames` from disk
+and returns. It sends nothing to the frontend. Every other library-mutating path does:
+
+| path | notifies renderer |
+| --- | --- |
+| `storeManagers/legendary/games.ts:767` | `sendFrontendMessage('refreshLibrary', 'legendary')` |
+| `storeManagers/legendary/games.ts:1067` | `sendFrontendMessage('refreshLibrary', 'legendary')` |
+| `storeManagers/sideload/library.ts:77` | `sendFrontendMessage('refreshLibrary', 'sideload')` |
+| `storeManagers/nile/games.ts:512` | `sendFrontendMessage('refreshLibrary', 'nile')` |
+| **`sidecar/installedJsonWatcher.ts:86`** | **nothing** |
+
+Backend truth and rendered truth diverge until some unrelated action forces a re-render. The user
+sees stale install state with no indication anything changed.
+
+Origin: upstream Heroic `82ec176c7` (2022-11-22). The pre-cutover Electron code
+(`5643c7583^:src/backend/main.ts:1037-1049`) is behaviourally identical — same log line, same 500ms
+`setTimeout`, same bare `refreshInstalled()`, no frontend message. `0da9898bf` (35-10) ported it to
+the sidecar faithfully and inherited the defect. This is the "verbatim upstream port ships silent
+defects" pattern: the port was *correct as a port* and still shipped a live defect, which is exactly
+why a behavioural gate caught what code review of the port could not.
+
+Likely fix is adding `sendFrontendMessage('refreshLibrary', 'legendary')` after the refresh, but
+verify against the debounce — the message should fire once per settled change, not once per raw
+FSEvent, or a burst of writes will spam the renderer.
+
+Note for whoever tests this: **macOS FSEvents coalesces upstream of `fs.watch`.** Six rapid writes
+produced only two watcher events on this machine, so the app's own 500ms debounce cannot be
+isolated by rapid-write counting. Design the regression test around observed state, not event counts.
