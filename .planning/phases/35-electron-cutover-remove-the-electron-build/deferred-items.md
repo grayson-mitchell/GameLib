@@ -1067,3 +1067,53 @@ display assertions with distinct ids; one took a single one. Two is the expected
 `launcher.ts:190` and `appShellFlowRegistration.ts:305` take a display lock on a launch. All were
 released, so this is duplication and not a leak, but the single-display launch at 18:45:58 has no
 established cause and no cause is invented here.
+
+## D-35-14-01 — the five Playwright e2e specs were DELETED with the Electron shell; their coverage is now unguarded
+
+**Found during:** plan 35-14 Task 2, a blocking decision checkpoint (not a discovered side effect).
+**Decision:** **option-c**, taken by the developer on 2026-08-29.
+**Status:** open, unowned. Real coverage loss with no successor in this phase.
+
+`e2e/helpers.ts` launched Electron via `_electron` from `@playwright/test` against
+`build/main/main.js`. All five specs routed through that helper, so deleting
+`src/backend/main.ts` and `electron-vite` made every one of them unrunnable. An unrunnable
+suite is exactly the affordance-that-lies D-05 targets, so it was deleted rather than left
+red — but the coverage is written down here so it is reclaimable rather than forgotten
+(T-35-64).
+
+### What each deleted spec covered
+
+| Spec | Test name | Coverage now unguarded |
+|---|---|---|
+| `api.spec.ts` (36 lines) | `renders the first page` | The app boots and the first render happens at all — the cheapest possible smoke test |
+| `api.spec.ts` | `gets heroic, legendary, and gog versions` | The version-reporting IPC path end to end, against stubbed runner binaries |
+| `settings.spec.ts` (67 lines) | `Settings` ×2 | The settings screen against stubbed `legendary --version`, `gogdl --version` and `nile --version` — i.e. runner-version display and the command-stub seam |
+| `categories.spec.ts` (74 lines) | `categories` | Category/collection management in the library |
+| `languages_selector.spec.ts` (30 lines) | (language selector) | Language switching through the real i18n path |
+| `webview_controls.spec.ts` (81 lines) | `webview` | The webview control surface — the store-browser chrome |
+
+Also deleted: `e2e/helpers.ts` (72 lines, the `electronTest` harness), `playwright.config.ts`,
+the `test:e2e` script, the `e2e` job in `.github/workflows/test.yml`, and the
+`@playwright/test` devDependency.
+
+### The `CI=e2e` clause, and why it stayed (this is the option-c half)
+
+`test:e2e` was the **only** thing in the repo that set `CI=e2e`, and
+`src/backend/constants/paths.ts:75`'s `|| process.env.CI === 'e2e'` clause is the harness that
+both `35-CONTEXT.md` D-19 and the ROADMAP point at as a cheap way to prove packaged asset
+resolution without a full packaging run.
+
+Per option-c the clause **stays**, with a comment recording that nothing currently sets it. The
+alternative (option-a) would have deleted it, and the cons are real either way: a live conditional
+nothing sets is dead logic in a path-resolution function, and a later reader may delete it without
+understanding. The comment exists to prevent exactly that.
+
+Nothing is currently blocked on it: plan 35-04 proved `R-34.5-G1-PKG` against a real packaged
+artifact instead.
+
+### What a successor has to do
+
+Port the five specs to `tauri-driver`/WebdriverIO — a different driver, runner and assertion API,
+plus new CI wiring. It was explicitly rejected as option-b for this plan on the grounds that it
+puts untested new infrastructure on the critical path at the point of no return. It is its own
+project and needs its own phase.

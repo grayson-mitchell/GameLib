@@ -41,7 +41,6 @@
     "test": "jest",
     "test-watch": "jest --watch --maxWorkers=25%",
     "test:ci": "jest --runInBand --silent",
-    "test:e2e": "electron-vite build && cross-env CI=e2e xvfb-maybe -- playwright test",
     "lint": "eslint --cache .",
     "lint-fix": "eslint --fix --ext .tsx,ts ./src",
     "i18n": "i18next --silent",
@@ -131,7 +130,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.29.0",
-    "@playwright/test": "^1.55.1",
     "@tauri-apps/cli": "^2.11.4",
     "@testing-library/dom": "^9.3.4",
     "@testing-library/jest-dom": "^5.17.0",
