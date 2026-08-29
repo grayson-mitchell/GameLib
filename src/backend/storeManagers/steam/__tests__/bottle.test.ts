@@ -16,7 +16,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync } from 'graceful-fs'
 // `graceful-fs` `readFileSync` import above (manifest.test.ts precedent).
 import { readFileSync as readRealFile } from 'node:fs'
 import { join as joinPath } from 'node:path'
-import { app } from 'electron'
+import { app } from 'backend/platform'
 import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
 import { logWarning } from 'backend/logger'

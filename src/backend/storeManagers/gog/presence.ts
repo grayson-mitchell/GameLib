@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app } from 'backend/platform'
 import { logError, logInfo, LogPrefix } from 'backend/logger'
 import { axiosClient } from 'backend/utils'
 import { GOGUser } from './user'

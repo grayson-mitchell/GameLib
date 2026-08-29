@@ -48,7 +48,7 @@ import {
 import { tmpdir } from 'node:os'
 import * as vdf from '@node-steam/vdf'
 import { spawnSync, execFileSync } from 'child_process'
-import { dialog, shell } from 'electron'
+import { dialog, shell } from 'backend/platform'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'

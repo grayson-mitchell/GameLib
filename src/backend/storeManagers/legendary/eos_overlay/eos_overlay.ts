@@ -1,4 +1,4 @@
-import { dialog } from 'electron'
+import { dialog } from 'backend/platform'
 import { existsSync, readFileSync } from 'graceful-fs'
 import { t } from 'i18next'
 import { join } from 'path'

@@ -22,7 +22,7 @@ import {
   createAbortController,
   deleteAbortController
 } from '../../utils/aborthandler/aborthandler'
-import { BrowserWindow, dialog, Menu } from 'electron'
+import { BrowserWindow, dialog, Menu } from 'backend/platform'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { isLinux, isMac } from 'backend/constants/environment'
 import { windowIcon } from 'backend/constants/paths'

@@ -1,6 +1,6 @@
 import { join } from 'path'
 import { homedir } from 'os'
-import { app } from 'electron'
+import { app } from 'backend/platform'
 
 export const steamSupportPath = join(app.getPath('userData'), 'steam_store')
 

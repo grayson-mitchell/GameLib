@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { shell } from 'electron'
+import { shell } from 'backend/platform'
 import { existsSync } from 'graceful-fs'
 import { rmSync } from 'node:fs'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'

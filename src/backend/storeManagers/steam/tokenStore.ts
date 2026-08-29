@@ -1,4 +1,4 @@
-import { safeStorage } from 'electron'
+import { safeStorage } from 'backend/platform'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { configStore } from './electronStores'
 import { TOKEN_PREFIX, TOKEN_STORE_KEY } from './constants'

@@ -15,7 +15,7 @@
  */
 import { dirname, join } from 'path'
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'graceful-fs'
-import { app } from 'electron'
+import { app } from 'backend/platform'
 import type { GameInfo, GameSettings, WineInstallation } from 'common/types'
 import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'

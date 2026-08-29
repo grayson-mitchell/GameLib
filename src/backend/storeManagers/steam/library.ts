@@ -10,7 +10,7 @@ import {
 import { LibraryManager } from 'common/types/game_manager'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { join, resolve, relative, isAbsolute, sep } from 'path'
-import { dialog } from 'electron'
+import { dialog } from 'backend/platform'
 import { spawnSync, execFileSync } from 'child_process'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { rmSync } from 'node:fs'

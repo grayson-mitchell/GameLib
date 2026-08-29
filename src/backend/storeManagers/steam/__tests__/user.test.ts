@@ -137,7 +137,7 @@ jest.mock('steam-user', () => MockSteamUserLib)
 
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 import { SteamUser } from '../user'
-import { safeStorage } from 'electron'
+import { safeStorage } from 'backend/platform'
 import { existsSync } from 'graceful-fs'
 import { logInfo, logWarning, logError } from 'backend/logger'
 import { setTokenStore, ElectronTokenStore, TokenStore } from '../tokenStore'

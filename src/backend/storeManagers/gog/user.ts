@@ -6,7 +6,7 @@ import { configStore } from './electronStores'
 import { isOnline } from '../../online_monitor'
 import { GOGCredentials, UserData } from 'common/types/gog'
 import { clearCache } from 'backend/utils'
-import { app } from 'electron'
+import { app } from 'backend/platform'
 import { gogdlAuthConfig } from './constants'
 
 function authLogSanitizer(line: string) {
