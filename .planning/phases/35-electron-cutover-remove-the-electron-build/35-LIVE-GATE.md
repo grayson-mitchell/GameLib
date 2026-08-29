@@ -705,7 +705,62 @@ evidence, made meaningful because the exact failing line is named in advance, no
 Expected: No `response for unknown/timed-out id=... (dropped)` line in the transcript; the move
 proceeds normally after the 95+ second wait (no "failed to install" or similar error toast).
 Observed:
-Verdict:
+**The sink had to be rebuilt before this could be scored at all.** Criteria 10-12 ran on pid 30743,
+which was launched via `open -a` and captures NO stderr. This criterion's failure signature is a raw
+`eprintln!` that by design does not reach `gamelib-shell.log`, so on that instance an absent line
+would have proved nothing (the D-35-19-02 residual). The app was quit and relaunched with
+stdout+stderr redirected to `/tmp/gamelib-35-19-c13-jaiski/transcript.log`, pid 56564.
+**Positive control, verified before starting:** the transcript captured 10 `[shell]` lines at
+startup (`spawning sidecar (packaged)`, `startInTray: main window starts hidden`, `tray recent
+games: seeded 5 entries`, ...). The sink demonstrably carries the exact output class the failure
+signature belongs to, so its absence is now meaningful.
+
+**Timing is MEASURED, not estimated.** t0 recorded at 10:52:57 the moment the picker was reported
+open; the confirm click landed at 10:55:20 per `gamelib.log`. **Picker held open 143 seconds** --
+well past the 90s bound under test and the contract's 95s floor.
+(An intermediate reading of 75s was taken while the picker was still open and is NOT the measurement;
+the folder had been highlighted but not confirmed.)
+
+**CLAUSE 1 of Expected -- PASS, and NOT by absence alone.** Zero hits for
+`response for unknown`, `timed-out`, or `(dropped)` across the whole transcript. More importantly,
+the invoke demonstrably COMPLETED: the backend received the selected destination and acted on it --
+`[Gog]: Error moving Endless Sky to /Users/graysonmitchell/GameLib/GameLibMoveTestFixture rsync: ...`.
+**A dropped invoke would have produced no rsync invocation at all.** The downstream failure is
+therefore itself positive proof that the dialog result crossed the channel after 143 seconds. This
+is affirmative evidence, not an argument from silence.
+=> `35-AB-RETEST.md` item 3 (`openDialog` missing from `LONG_RUNNING_CHANNELS`, `TAURI-ONLY` /
+`BLOCKS D-16 GATE`, fixed in `d980559b7`) is **re-discharged against the packaged release artifact**,
+which is what this criterion existed to add over the prior discharge.
+
+**CLAUSE 2 of Expected -- FAILED, for a cause with NO relationship to this criterion.** The move
+did not proceed; an "Error Moving Game" toast appeared:
+`rsync: unrecognized option '--no-human-readable'`.
+Root cause (established, not inferred): macOS 26.5.2 ships **openrsync** at `/usr/bin/rsync`
+(`openrsync: protocol version 29 / rsync version 2.6.9 compatible`), not GNU rsync -- Apple swapped
+the implementation as of Sequoia. `src/backend/utils.ts:1224-1231` passes flags openrsync does not
+implement. Tested individually against the system binary:
+| flag | openrsync |
+| - | - |
+| `--archive`, `--compress`, `--remove-source-files` | OK |
+| `--no-human-readable` | **REJECTED** |
+| `--info=name,progress` | **REJECTED** |
+**Two flags fail, not one** -- a one-flag fix surfaces the next error immediately. `git blame` puts
+these at `c62820dc3e Mathis Droege 2024-03-26`, upstream Heroic, predating both this phase and
+Apple's rsync swap. **Not a Phase 35 regression.** It would fail identically with the picker open
+for 0 seconds, so it does not bear on the long-running-channel question.
+Logged as D-35-19-07. A second, worse defect found while reading that code is logged as D-35-19-08.
+
+**No data was lost, and this was checked rather than assumed** -- `--remove-source-files` was in the
+argument list. `Endless Sky.app` intact at 419M / 7368 files; destination directory empty. openrsync
+exits **1** on the usage error, and the code's guard is `if (code !== 1)`, so the error branch was
+taken before any transfer began.
+
+**Scoring note, stated explicitly rather than resolved silently:** the verdict below scores the
+criterion's SUBJECT (the long-running channel), which passed on affirmative evidence. The Expected's
+second clause did fail. It is recorded as a FAIL of that clause and carried as its own defect rather
+than folded away, so a reviewer sees both and can overturn this call if they read the contract more
+strictly.
+Verdict: PASS (channel not dropped over 143s, proven affirmatively; Expected's move-success clause FAILED for an unrelated pre-existing cause — D-35-19-07)
 
 ### 14. `installed.json` watcher: a library refresh follows an external write
 

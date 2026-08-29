@@ -1475,3 +1475,74 @@ on runner-resolution paths that work for GOG:
 These are DISTINCT defects in different files with different causes — do not treat them as one
 bug. But they should be scoped and fixed together, and a fix for either should be regression-tested
 against the other.
+
+## D-35-19-07 — move-install is BROKEN on macOS 15+ : openrsync rejects two of the flags
+
+Found: criterion 13, 2026-08-30. Status: **LIVE USER-FACING DEFECT, UNFIXED. Pre-existing upstream
+— NOT a Phase 35 regression.** Reproduced end-to-end: moving Endless Sky (GOG, 419M) produced an
+"Error Moving Game" toast and moved nothing.
+
+`rsync: unrecognized option '--no-human-readable'`
+
+macOS 26.5.2 ships **openrsync** at `/usr/bin/rsync` (`openrsync: protocol version 29`, `rsync
+version 2.6.9 compatible`). Apple replaced GNU rsync with openrsync as of Sequoia. Every macOS user
+on 15 or later has this binary, so **move-install is broken for all of them**, not just this machine.
+
+`src/backend/utils.ts:1224-1231` builds the argument list. Tested individually against the system
+binary:
+
+| flag | openrsync |
+| --- | --- |
+| `--archive` | OK |
+| `--compress` | OK |
+| `--remove-source-files` | OK |
+| `--no-human-readable` | **REJECTED** |
+| `--info=name,progress` | **REJECTED** |
+
+**Two flags fail, not one.** Dropping only `--no-human-readable` surfaces the `--info=` error on the
+next attempt. Worse, `--info=name,progress` is load-bearing: the `spawnAsync` progress callback at
+`utils.ts:1232+` parses percent/ETA/bytes out of that specific output format to drive the
+`progressUpdate` frontend message. openrsync's `--progress` output is not the same format, so this
+is not a flag swap — the progress parser needs rework or the moving UI loses its progress bar.
+
+There is already a non-rsync fallback (`else` branch, `utils.ts:1298`) that shells out to
+`mv -f`. The `rsyncExists` probe is `which rsync`, which SUCCEEDS on macOS because openrsync is
+present — so the fallback never engages. A correct fix must detect the *implementation*, not merely
+the binary's existence.
+
+`git blame` → `c62820dc3e Mathis Dröge 2024-03-26`, upstream Heroic, predating both this phase and
+Apple's swap. Does not bear on criterion 13's verdict: it fails identically with the picker open for
+0 seconds and has nothing to do with the long-running channel.
+
+## D-35-19-08 — `code !== 1` treats most rsync failures as SUCCESS, then `rm -rf`s the source
+
+Found: reading the code for D-35-19-07, 2026-08-30. Status: **LATENT DATA-LOSS RISK, UNFIXED.
+Did NOT fire in this run.** Pre-existing upstream, same blame as D-35-19-07.
+
+`src/backend/utils.ts:1287`:
+```ts
+if (code !== 1) {
+  logInfo(`Finished Moving ${title}`, LogPrefix.Backend)
+  await spawnAsync('rm', ['-rf', install_path])   // <-- deletes the SOURCE
+} else {
+  return { status: 'error', error: stderr }
+}
+```
+
+Success is tested as "exit code is not 1". rsync documents many non-1 failure codes — 2 (protocol
+incompatibility), 10/11 (socket / file I/O error), 12 (data stream error), 23 (**partial
+transfer**), 24 (vanished source files), 30 (timeout). **Any of these is read as success and the
+source install is then `rm -rf`'d.** Combined with `--remove-source-files` already in the argument
+list, a code-23 partial transfer means an incomplete copy at the destination and an unconditional
+recursive delete of the original.
+
+Why it did not fire here: openrsync exits **1** on an unrecognised-option usage error (verified
+empirically), so the error branch was correctly taken and `Endless Sky.app` survived intact at 419M
+/ 7368 files with an empty destination. That is luck about which code this particular failure
+returns, not a working guard.
+
+The same inverted test appears again at `utils.ts:1301` for the `mv` fallback branch.
+
+Fix should be `if (code === 0)`. Whoever fixes D-35-19-07 will be editing this exact function and
+should take this with it — but note it is an independent bug and is NOT fixed by correcting the
+flags. Verify against a forced partial-transfer case, not just a happy path.
