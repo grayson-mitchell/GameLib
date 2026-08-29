@@ -968,3 +968,46 @@ export class Tray {
     return this
   }
 }
+
+// ---------------------------------------------------------------------------
+// TYPE RE-EXPORTS (Phase 35 plan 13, Task 2 -- D-03, REQ-35-02).
+//
+// `./types.ts` declares first-party replacements for every electron type this
+// tree references, so that `from 'backend/platform'` serves BOTH the value
+// imports above and the type imports, and plan 35-15's mechanical rewrite stays
+// a one-string change per site.
+//
+// `export type { ... }` (not a bare `export { ... }`) so nothing here is emitted
+// at runtime -- this module is the esbuild `--alias:electron=` target and must
+// not grow a runtime dependency on a declarations-only file.
+//
+// NOTE ON `BrowserWindow`: `./types.ts` also declares a `BrowserWindow` type (the
+// window INSTANCE type that `backend/utils/openDialog.ts` names). It is NOT
+// re-exported here, because this module already exports a `BrowserWindow` VALUE
+// above -- a plain object with `getAllWindows()`, standing in for electron's
+// class. The two are different things that happen to share a name in electron
+// only because a class supplies both meanings at once, which a `const` cannot.
+// Consumers that need the instance type import it from `backend/platform/types`
+// directly. Recorded here so plan 35-15 does not discover it as a surprise.
+// ---------------------------------------------------------------------------
+export type {
+  IpcRendererEvent,
+  IpcMainEvent,
+  IpcMainInvokeEvent,
+  Event,
+  DidFailLoadEvent,
+  WebviewTag,
+  FileFilter,
+  OpenDialogOptions,
+  MessageBoxOptions,
+  ShortcutDetails,
+  MenuItemConstructorOptions,
+  BrowserWindowConstructorOptions,
+  TitleBarOverlay,
+  Rectangle,
+  Display,
+  MouseInputEvent,
+  MouseWheelInputEvent,
+  KeyboardInputEvent,
+  CrossProcessExports
+} from './types'
