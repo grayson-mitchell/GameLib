@@ -124,6 +124,117 @@ Each task was committed atomically:
 - **Files affected:** `35-RELEASE-NOTES.md` only (no source code)
 - **Verification:** Cross-referenced `35-09-SUMMARY.md` and `35-CONTEXT.md`'s D-09 correction appendix directly before writing the release note; the plan's own acceptance-criteria script does not check the logout section's literal wording, only that it exists and that no decision ID leaks above the appendix heading, so the correction has no automated-test tension with the plan's stated verification.
 
+## Post-Wave Gate Fix (2026-08-30)
+
+A post-wave gate review found the plan's initial 3-task execution (above) substantively correct but
+incomplete on two points. Both are closed as of commit `272f9fe1a`.
+
+### Gap 1: `package.json:34` still carried `--external:electron`, invisible to the D-03 gate
+
+**Finding:** `build:sidecar`'s esbuild invocation (`"esbuild --bundle ... --packages=external
+--external:electron --outfile=build/main/sidecar.js src/sidecar/index.ts"`) still had a live
+`--external:electron` flag after all three tasks were committed. `electronAbsence.test.ts` as
+originally written reported green throughout, because its `package.json` coverage only inspected
+the `dependencies`/`devDependencies` object *keys* -- structurally blind to the `scripts` section
+(and every other section of the file). D-03's actual text ("`electron` appears nowhere in `src/`
+or `package.json`") is whole-file, literal scope; the original gate under-covered it.
+
+**Redundancy verified empirically, not assumed:** built a scratch probe file containing
+`require('electron')`, ran esbuild against it with only `--packages=external` (no
+`--external:electron`), and separately with both flags present, then diffed the two outputs --
+byte-identical. `--packages=external` already externalizes every bare-specifier package import,
+`electron` included; the explicit flag was fully redundant even before removal. Confirmed against
+esbuild's own `--help` text ("`--packages=...` Set to `external` to avoid bundling any package")
+as a second, independent source.
+
+**Fix:**
+- Removed `--external:electron` from `package.json:34`'s `build:sidecar` script.
+- Widened `meta/__tests__/electronAbsence.test.ts` with a new file-wide substring scan of the
+  entire `package.json` (not just the two dependency maps), with its own vacuity control
+  (`"gamelib"` must still be found by the same read). The original key-based check was kept
+  alongside it, unchanged, for its more specific per-key error message.
+- **Mutation-proven** using this project's established methodology: reintroduced the exact
+  `--external:electron` flag into `package.json`, re-ran the suite -- the new file-wide assertion
+  went RED while the original key-based assertion stayed GREEN, empirically confirming the old
+  check truly could never have caught this class of gap. Restored via `cp` + `shasum -a 256 -c`
+  byte-identity (never `git checkout -- <file>`, which fires a `post-checkout` hook that throws
+  per an established project lesson). Re-ran: all 7 `it()` blocks green again.
+- No `electron` literal needed to legitimately remain anywhere in `package.json`; no exemption was
+  required.
+
+**No other legitimate `electron` literal exists elsewhere in `package.json`** -- confirmed by the
+new file-wide scan itself (0 matches) plus a direct `grep -n electron package.json` (0 matches),
+both post-fix.
+
+**Deferred (out of scope for this fix, logged as `D-35-18-01`):** three pre-existing stale
+comments describing removed or already-inaccurate esbuild mechanisms (`meta/buildSidecarSea.ts:154-156`,
+`meta/buildSidecarSea.ts:699-701`, `src/sidecar/index.ts:5-6`). Comment-only, inert to both D-03's
+gate (comments are stripped before matching) and to build behaviour. One predates this plan
+entirely. Per the SCOPE BOUNDARY rule, logged rather than fixed.
+
+**Commit:** `272f9fe1a` -- `fix(35-18): close post-wave gate 1 -- package.json:34 was blind to the D-03 gate`
+
+### Gap 2: the real sidecar/SEA build was never actually run
+
+**Finding:** the original SUMMARY (this file, before this amendment) recorded task completion and
+gate-passing test suites, but no evidence the real build pipeline had been executed end-to-end.
+This project has a standing lesson that a bundle-only defect is invisible to jest ("all backend
+jest suites green, `tsc` clean... crashed on evaluation-order issues" -- see
+`jest-cannot-see-dynamic-import-defects` in project memory), and this plan specifically changed
+esbuild bundling behaviour (removed both the `--alias:electron=` flag in Task 1 and the
+`--external:electron` flag in the Gap 1 fix above), making build verification load-bearing, not
+optional.
+
+**Action taken:** the real build was run, not blocked. Sequence:
+1. `rm -rf build/main` -- confirmed safe; `build/main` is pure esbuild output. Did **not** touch
+   `build/bin` (helper binaries), per the standing warning that `download-helper-binaries` is
+   tag-idempotent, not presence-idempotent, and an `rm -rf` there is not auto-restored by a rebuild.
+2. `pnpm build:sidecar` -- real dev/Electron-target esbuild bundle, ran clean.
+3. `pnpm build:sidecar-sea` -- real SEA build, chaining `build:sidecar` then
+   `meta/buildSidecarSea.ts`'s fully self-contained bundle + Node SEA blob injection. Produced
+   `src-tauri/binaries/gamelib-sidecar-aarch64-apple-darwin`: 169,780,640 bytes, confirmed via
+   `file` as `Mach-O 64-bit executable arm64`.
+4. `pnpm smoke:sidecar` -- the existing project gate (rebuilds `build/main/sidecar.js`, spawns it
+   with no stdin, expects exit 0) -- **PASSED**: `[sidecar-smoke] PASS: built, started, exited 0
+   on stdin EOF.` This exercises the dev bundle only.
+5. Went beyond the existing smoke gate: directly spawned the freshly-built **SEA binary itself**
+   (not the dev bundle) via an ad-hoc `spawnSync` probe, no stdin, 30s timeout. Result: exit
+   status 0, no error, genuine RPC-loop output including the readiness marker
+   `__GAMELIB_SIDECAR_READY__` and real frames (`storeChanged`, `connectivity-changed`, a
+   `rustInvoke` `tray_set_icon` frame). This is direct evidence the actual packaged artifact --
+   not just the intermediate dev bundle -- builds and boots correctly after both esbuild-flag
+   removals in this plan.
+
+**Outcome: build succeeded, no blocker to ledger.** Plan 35-19's packaged macOS arm64 live gate
+(wave 13) remains the authoritative end-to-end verification (full Tauri package, not just the
+sidecar binary in isolation), but this plan's own build surface is now proven, not merely claimed.
+
+### Re-verified test suite (post-fix)
+
+Re-ran `pnpm test --selectProjects Backend Meta Preload Frontend Common` three times to
+distinguish deterministic failures from load-dependent flakes (a documented class in this
+project -- a full-suite run can manufacture a different failure set than isolated runs):
+
+- **Run 1:** 3 suites failed / 6 tests failed -- `decompressPool.test.ts` (3, known-red) +
+  `enrichmentFlows.test.ts` (2, two `getAnticheatInfo` assertions) + implicitly a third suite not
+  visible in the truncated tail.
+- **Run 2:** 3 suites failed / matched `genI18nGateScope.test.ts` (1, known-red) +
+  `decompressPool.test.ts` (3, known-red) + `isIntelMacRemoved.test.ts` (2).
+- **Run 3:** 2 suites failed / 4 tests failed -- `genI18nGateScope.test.ts` (1) +
+  `decompressPool.test.ts` (3). Nothing else.
+
+Isolated `npx jest --testPathPattern` runs of every suite that appeared in only one of the three
+full runs all passed cleanly: `enrichmentFlows.test.ts` (41/41), `bootstrapWirings.test.ts`
+(13/13), and `isIntelMacRemoved.test.ts` (2/2). `decompressPool.test.ts` and
+`genI18nGateScope.test.ts` fail identically in isolation and every full run -- these are the true
+deterministic baseline (LZMA native-decode environment gap; an i18n-scope-snapshot check with a
+documented pre-existing drift), unrelated to this plan's changes.
+
+**Real, verified counts: 2 suites / 4 tests genuinely red (`decompressPool.test.ts` x3,
+`genI18nGateScope.test.ts` x1), both pre-existing and unrelated to Gap 1/Gap 2. Nothing new
+introduced by this plan's fix work.** `enrichmentFlows.test.ts` and `isIntelMacRemoved.test.ts`
+are confirmed load-dependent flakes (documented class), not regressions.
+
 ## Known Stubs
 
 None -- this plan only removes a dependency (deletion, not stub creation) and writes documentation.
@@ -136,8 +247,16 @@ None -- no new network endpoints, auth paths, file-access patterns, or trust-bou
 
 - FOUND: `meta/__tests__/electronAbsence.test.ts`
 - FOUND: `.planning/phases/35-electron-cutover-remove-the-electron-build/35-RELEASE-NOTES.md`
-- FOUND: `package.json` (no `electron`/`electron-store`/`react-devtools` keys)
+- FOUND: `package.json` (no `electron`/`electron-store`/`react-devtools` keys, no `electron`
+  substring anywhere in the file -- file-wide scan, not just dependency keys)
 - FOUND: commit `7ed470b19` in `git log --oneline --all`
 - FOUND: commit `2e826a395` in `git log --oneline --all`
 - FOUND: commit `390c8bead` in `git log --oneline --all`
+- FOUND: commit `272f9fe1a` in `git log --oneline --all` (post-wave gate fix)
 - CONFIRMED: `node_modules/electron` absent
+- CONFIRMED: `src-tauri/binaries/gamelib-sidecar-aarch64-apple-darwin` exists, 169,780,640 bytes,
+  `file` reports Mach-O 64-bit executable arm64, directly spawned and reached
+  `__GAMELIB_SIDECAR_READY__`
+- CONFIRMED: `pnpm test --selectProjects Backend Meta Preload Frontend Common` run 3x; deterministic
+  baseline is 2 suites / 4 tests (`decompressPool.test.ts`, `genI18nGateScope.test.ts`), all other
+  observed failures reproduced as isolated-pass flakes
