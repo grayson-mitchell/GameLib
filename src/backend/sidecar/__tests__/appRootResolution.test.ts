@@ -210,17 +210,23 @@ describe('real-filesystem sidecar-conditions: publicDir resolution under cwd=src
   })
 
   /**
-   * Requires `backend/constants/paths` fresh inside a `jest.isolateModules` sandbox, with
-   * `electron` resolved to the REAL, unmocked `electronStub` module (not the project-wide
-   * `jest.mock('electron')` automock — this suite never calls that). This means `publicDir` is
-   * computed by `paths.ts:73` itself, against this test's mocked `process.cwd()` and whatever
-   * `GAMELIB_APP_ROOT` the calling test set, exactly the way the real sidecar computes it --
-   * never recomputed by this test file.
+   * Requires `backend/constants/paths` fresh inside a `jest.isolateModules` sandbox. This suite
+   * declares no `jest.mock('backend/platform', ...)`, so `paths.ts` resolves against the REAL,
+   * unmocked `electronStub` module both here and at this file's own top-level imports -- the
+   * isolation exists purely to get a FRESH module instance per arm, so `publicDir` (a
+   * module-scope constant computed once at import time) is recomputed by `paths.ts:73` itself,
+   * against this test's mocked `process.cwd()` and whatever `GAMELIB_APP_ROOT` the calling test
+   * set, exactly the way the real sidecar computes it -- never recomputed by this test file.
+   * (Phase 35 Plan 18 update: this used to ALSO swap away from a project-wide default
+   * `jest.mock('electron')` automock via `jest.doMock('electron', () =>
+   * jest.requireActual('../../platform'))`. That automock no longer exists -- Plan 18 retired
+   * the `electron` devDependency outright, and its manual-mock replacement is a first-party
+   * module mock Jest never auto-applies without an explicit per-suite call. The `doMock` line
+   * became a no-op and was deleted.)
    */
   function requirePathsUnderSidecarConditions(): typeof import('../../constants/paths') {
     let isolatedPaths!: typeof import('../../constants/paths')
     jest.isolateModules(() => {
-      jest.doMock('electron', () => jest.requireActual('../../platform'))
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       isolatedPaths = require('../../constants/paths')
     })

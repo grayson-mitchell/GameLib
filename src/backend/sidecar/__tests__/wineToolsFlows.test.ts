@@ -26,8 +26,11 @@
  *      `jest.isolateModules()` sandbox (mirrors `sidecarRejectionGuard.test.ts`'s own harness
  *      shape) so the real, non-mocked `electronStub.dialog` fallback (proven non-throwing in its
  *      own dedicated suite, `dialogStub.test.ts`) is what's actually exercised here, without
- *      disturbing this file's already-loaded `config.ts`/`game_config.ts` module instances (which
- *      rely on the project-wide `src/backend/__mocks__/electron.ts` auto-mock, not electronStub).
+ *      disturbing this file's already-loaded `config.ts`/`game_config.ts` module instances
+ *      (Phase 35 Plan 18: those instances now resolve against the REAL `backend/platform` by
+ *      default too, since the old project-wide `src/backend/__mocks__/electron.ts` auto-mock no
+ *      longer exists -- see the docstring above the isolated describe block below for the full
+ *      update).
  *   5. Tool-literal proof — `../../tools`'s `DXVK.installRemove` is mocked so the registered
  *      `toggleVKD3D` handler can be proven to forward the literal `'vkd3d'`, not `'dxvk'` (a
  *      copy-paste error in the three near-identical toggle bodies would otherwise be silent,
@@ -200,12 +203,21 @@ describe('pass-through proof — runWineCommand forwards args[0] unchanged, not 
 // never throws and never leaves an unhandled promise rejection behind.
 //
 // A dedicated `jest.isolateModules()` sandbox is used (mirrors `sidecarRejectionGuard.test.ts`'s
-// own harness shape) so this test can swap `'electron'` for the REAL, non-mocked `electronStub`
-// (proven non-throwing by its own dedicated suite, `dialogStub.test.ts`) and `'../sidecarRpc'`
-// for a fast, deterministic stub -- WITHOUT touching this file's top-level module registry, where
-// `config.ts`/`game_config.ts` are already loaded for real against the project-wide
-// `src/backend/__mocks__/electron.ts` auto-mock (swapping that mock file-wide risks the
-// `tests-clobbering-real-steam-store.md` failure mode this project has hit before).
+// own harness shape) so this test can mock `'../sidecarRpc'` and `'../../ipc'` for a fast,
+// deterministic stub -- WITHOUT touching this file's top-level module registry, where
+// `config.ts`/`game_config.ts` are already loaded for real (swapping their module instances
+// file-wide risks the `tests-clobbering-real-steam-store.md` failure mode this project has hit
+// before).
+//
+// (Phase 35 Plan 18 update: this sandbox used to ALSO `jest.doMock('electron', () =>
+// jest.requireActual('../../platform'))`, to swap `'electron'` away from the project-wide
+// `src/backend/__mocks__/electron.ts` auto-mock this file's top-level imports relied on. That
+// automock no longer exists -- Plan 18 retired the `electron` devDependency outright, and its
+// manual-mock replacement at `src/backend/platform/__mocks__/index.ts` is a first-party module
+// mock Jest never auto-applies without an explicit per-suite `jest.mock()` call, which this file
+// declares none of. `dialog.ts` (the module under test here) already imports from
+// `backend/platform` directly, both at this file's top level and inside this isolated sandbox,
+// so the `doMock` swap became a no-op and was deleted.)
 describe('D-15/T-34.5-30 dialog safety pin — showDialogBoxModalAuto never propagates a rejection', () => {
   it('does not throw synchronously and produces no unhandled rejection when the frontend push fails, using the real electronStub dialog fallback', async () => {
     let isolatedShowDialogBoxModalAuto!: (props: {
@@ -215,7 +227,6 @@ describe('D-15/T-34.5-30 dialog safety pin — showDialogBoxModalAuto never prop
     }) => void
 
     jest.isolateModules(() => {
-      jest.doMock('electron', () => jest.requireActual('../../platform'))
       jest.doMock('../sidecarRpc', () => ({
         requestRustInvoke: jest.fn().mockResolvedValue(undefined)
       }))

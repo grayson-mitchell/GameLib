@@ -38,14 +38,17 @@
  *
  * `backend/online_monitor` is mocked (fix/steam-native-install-stability, 33-05 live-gate gap):
  * `init()` now calls the REAL `initOnlineMonitor()`, which reads `net.isOnline()` from
- * `electron` -- under THIS file's default Jest automock (`src/backend/__mocks__/electron.ts`,
- * auto-applied to every backend test unless overridden, per the convention documented in
- * `skeletonFlows.test.ts`'s header), `net` does not exist at all, so the real function would
- * throw. This suite's whole point is proving the sidecar boots without an uncaught exception
- * under the generic/default mock -- it is not the place to validate online-monitor wiring
- * itself (see `onlineMonitorWiring.test.ts`, which routes 'electron' to the REAL electronStub
- * specifically to exercise that). A no-op stub here is sufficient and keeps this suite's
- * long-standing default-automock convention unperturbed.
+ * `backend/platform`. Phase 35 Plan 18 retired the `electron` devDependency outright and with
+ * it the old project-wide `src/backend/__mocks__/electron.ts` automock (Jest only auto-applies
+ * a `__mocks__` file for a real node_modules package -- `backend/platform` is first-party, so
+ * its mock at `src/backend/platform/__mocks__/index.ts` requires an explicit `jest.mock()` call
+ * per suite, per that file's own header comment). This suite declares none, so `net` now
+ * resolves to the REAL `backend/platform`'s `net.isOnline()`, which throws under this
+ * containment sandbox exactly as the old automock's absent `net` used to. This suite's whole
+ * point is proving the sidecar boots without an uncaught exception regardless -- it is not the
+ * place to validate online-monitor wiring itself (see `onlineMonitorWiring.test.ts`, which
+ * exercises that against the REAL `backend/platform` deliberately). A no-op stub here remains
+ * sufficient.
  *
  * The mock covers the module's FULL exported surface, not just `initOnlineMonitor`:
  * `./handlers`'s transitive import graph (steamFlowRegistration -> storeManagers/index.ts ->
@@ -319,24 +322,29 @@ describe('sidecar bootstrap (headless boot)', () => {
 
   // Phase 34.5 Plan 18, Task 2 (G-1/G-3, REQ-34.5-12). `publicDir` (`constants/paths.ts:73`) is
   // a MODULE-SCOPE constant computed once, at import time, from `electronStub.app.getAppPath()`
-  // -- and THIS test file (like every other backend suite that does not opt out) runs under
-  // Jest's automatic `electron` mock (`src/backend/__mocks__/electron.ts`), whose
-  // `getAppPath()` returns `os.tmpdir()` unconditionally, never the real repo. So neither arm
-  // can use this file's already-imported `init`/`publicDir` -- both need a fresh module
-  // instance resolved against the REAL `electronStub`, exactly the way
-  // `appRootResolution.test.ts`'s "real-filesystem sidecar-conditions" block already does:
-  // `jest.isolateModules` + `jest.doMock('electron', () => jest.requireActual('../../platform'))`
-  // swaps out the automock for the one real production code actually runs against, then
-  // `require('../bootstrap')` fresh so `constants/paths.ts`'s `publicDir` is computed against
-  // whatever `GAMELIB_APP_ROOT` each arm sets, never restated by hand.
+  // -- so neither arm below can use this file's already-imported `init`/`publicDir`; both need
+  // a fresh module instance so `publicDir` gets recomputed against whatever `GAMELIB_APP_ROOT`
+  // each arm sets. `jest.isolateModules` + a fresh `require('../bootstrap')` gets that fresh
+  // instance, exactly the way `appRootResolution.test.ts`'s "real-filesystem sidecar-conditions"
+  // block already does. (Phase 35 Plan 18 update: this used to ALSO need
+  // `jest.doMock('electron', () => jest.requireActual('../../platform'))` inside the
+  // `isolateModules` callback, to swap away from this file's then-ambient default `electron`
+  // automock. That automock (`src/backend/__mocks__/electron.ts`) no longer exists -- Plan 18
+  // retired the `electron` devDependency, and its manual-mock replacement at
+  // `src/backend/platform/__mocks__/index.ts` is a first-party module mock, which Jest never
+  // auto-applies without an explicit per-suite `jest.mock()` call. This suite declares none, so
+  // both this file's top-level `init`/`publicDir` AND the isolated re-require below already
+  // resolve against the REAL `electronStub` by default -- the `doMock` swap became a no-op and
+  // was deleted.)
   describe('boot-time asset-root self-check (Phase 34.5 G-1/G-3, plan 34.5-18)', () => {
     const REPO_ROOT = join(__dirname, '..', '..', '..', '..')
 
     /**
-     * Requires `../bootstrap` fresh inside an isolated module registry with `electron` resolved
-     * to the REAL, unmocked `electronStub` (never this file's default automock), calls its
-     * `init()`, and returns the isolated `logError` spy's calls plus the transport output lines
-     * -- so each arm below only supplies the env var and the assertions.
+     * Requires `../bootstrap` fresh inside an isolated module registry (so `publicDir` is
+     * recomputed against whatever `GAMELIB_APP_ROOT` the calling arm set, against the REAL,
+     * unmocked `electronStub`), calls its `init()`, and returns the isolated `logError` spy's
+     * calls plus the transport output lines -- so each arm below only supplies the env var and
+     * the assertions.
      */
     function runIsolatedInitAndCollectLogErrors(): {
       defectCalls: unknown[][]
@@ -344,7 +352,6 @@ describe('sidecar bootstrap (headless boot)', () => {
     } {
       let result!: { defectCalls: unknown[][]; lines: string[] }
       jest.isolateModules(() => {
-        jest.doMock('electron', () => jest.requireActual('../../platform'))
         /* eslint-disable @typescript-eslint/no-require-imports */
         const isolatedLogger = require('../../logger')
         const { init: isolatedInit } = require('../bootstrap')
