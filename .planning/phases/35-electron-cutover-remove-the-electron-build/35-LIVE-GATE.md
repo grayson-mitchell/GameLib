@@ -856,7 +856,67 @@ Expected: While the game runs, `pmset -g assertions` shows an assertion with the
 `GameLib: a game is running`. After the game exits, a subsequent `pmset -g assertions` no longer
 shows it.
 Observed:
-Verdict:
+Title substituted, recorded not silent: the contract says "reuse criterion 4's title", which was
+HUMANKIND (Steam). Steam launches hand off to `steam://rungameid/` and, per criterion 6, never reach
+`launcher.ts`'s post-session block -- which is exactly where the wake-lock RELEASE lives
+(`launcher.ts:292`). Scoring the wake lock against that path would conflate it with the known Steam
+lifecycle gap. Endless Sky (GOG) used instead; it satisfies Preconditions ("a title installed and
+launchable"). The Steam case is NOT covered here and remains untested.
+
+**FIRST RUN VOIDED -- test contamination created by this gate run, not a product fault.** The first
+attempt showed the game running with NO assertion and no acquire log line, which reads as a clean
+FAIL. It was not. `ps -o lstart` showed Endless Sky pid 43015 started **10:36:48** -- the criterion-11
+deep-link launch, owned by instance pid 30743, which this run KILLED at 10:48 to rebuild the
+transcript for criterion 13. The game was orphaned (reparented to `launchd`, PPID 1) and still
+running. The instance that would have held the assertion was dead, so its absence was fully
+explained. Orphan terminated, clean baseline re-established (no game processes,
+`PreventUserIdleDisplaySleep 0`, zero `Preventing display from sleep` lines in this instance's log),
+and the run repeated. **The re-run's launch was verified correctly parented: gogdl 34624 -> 56573,
+the sidecar under test.**
+
+**HELD STATE (verbatim, `pmset -g assertions`, 11:29:42; game pid 34629 confirmed running):**
+```
+pid 56568(gamelib-shell): [0x0003d4d2000193fe] 00:00:22 PreventUserIdleSystemSleep named: "GameLib: a download is in progress"
+pid 56568(gamelib-shell): [0x0003d4d3000593ff] 00:00:22 PreventUserIdleDisplaySleep named: "GameLib: a game is running"
+pid 56568(gamelib-shell): [0x0003d4d2000593fd] 00:00:22 PreventUserIdleDisplaySleep named: "GameLib: a game is running"
+```
+`PreventUserIdleDisplaySleep 1`. Backend logged `(11:29:19) [INFO]: [Backend]: Preventing display
+from sleep`, one second before the assertion appeared.
+
+**RELEASED STATE (verbatim, 11:52:03; Endless Sky and gogdl both confirmed EXITED):**
+```
+(no GameLib rows)
+```
+`PreventUserIdleDisplaySleep 0`. Exact-label counts fell 2 -> 0 and 1 -> 0. Backend logged
+`Stopping Display Power Saver Blocker` at 11:50:10 and 11:51:38.
+
+**Contract's Expected -- BOTH clauses MET.** The exact label `GameLib: a game is running` is present
+while the game runs and absent after it exits. That is this criterion's subject and it passes.
+D-08 / REQ-35-06 (Phase 35 Plan 08's claim that the wake lock stopped being a Phase-33 no-op that
+returned `-1` and held nothing) is **discharged live**: a real IOKit assertion was observed held and
+released.
+
+**TWO anomalies beyond the contract, both real, neither fatal to the verdict:**
+1. **The display assertion is taken TWICE for one game.** One logged acquire produced two distinct
+   IOKit handles, because two independent sites each take their own: `launcher.ts:190` and the
+   `lock` IPC handler at `sidecar/appShellFlowRegistration.ts:305`. Logged as D-35-19-10.
+2. **A SYSTEM assertion labelled `GameLib: a download is in progress` is held during gameplay with
+   nothing downloading.** That is `prevent-app-suspension`, taken by the `lock` handler's
+   `!playing` branch (`appShellFlowRegistration.ts:301`). The label is user-visible in `pmset` and
+   states something false. Logged as D-35-19-11. Bears on criterion 16, which measures that exact
+   assertion -- **criterion 16 must establish a clean baseline first or it will read this one as
+   its own result.**
+Both released cleanly, so the leak risk they create did not materialise in this run.
+
+**A code-read PREDICTION that this run did NOT test, recorded so it is not mistaken for a finding:**
+`launcher.ts` assigns `powerDisplayId` in exactly one place (`:190`) and never resets it to `null`
+after `powerSaveBlocker.stop()` (`:294`), while the acquire is guarded by `if (!powerDisplayId)`.
+That predicts the launcher's own display assertion is taken only ONCE per app session. The
+`lock`/`unlock` pair does NOT share the bug -- `unlock` correctly sets `powerId = undefined` and
+`displaySleepId = undefined` -- so a second launch would still get ONE assertion from the IPC path
+rather than none. Degraded, not broken. **Only one launch was performed this session, so this is
+untested and must not be reported as observed.** Logged as D-35-19-12.
+Verdict: PASS (exact label held during play and absent after exit; two non-fatal assertion anomalies logged separately)
 
 ### 16. Wake lock: system assertion during a download, and the F-35-08-A carry-forward check
 

@@ -1589,3 +1589,80 @@ FSEvent, or a burst of writes will spam the renderer.
 Note for whoever tests this: **macOS FSEvents coalesces upstream of `fs.watch`.** Six rapid writes
 produced only two watcher events on this machine, so the app's own 500ms debounce cannot be
 isolated by rapid-write counting. Design the regression test around observed state, not event counts.
+
+## D-35-19-10 — the display wake lock is acquired TWICE for one game
+
+Found: criterion 15, 2026-08-30. Status: **CONFIRMED, UNFIXED. Not user-breaking — both handles
+released cleanly in the observed run.**
+
+`pmset -g assertions` during one game launch showed two distinct IOKit handles with the same label:
+```
+pid 56568(gamelib-shell): [0x0003d4d3000593ff] PreventUserIdleDisplaySleep named: "GameLib: a game is running"
+pid 56568(gamelib-shell): [0x0003d4d2000593fd] PreventUserIdleDisplaySleep named: "GameLib: a game is running"
+```
+Only ONE acquire was logged (`Preventing display from sleep`).
+
+Two independent sites each take their own assertion for the same event:
+- `src/backend/launcher.ts:190` — `powerDisplayId = powerSaveBlocker.start('prevent-display-sleep')`
+- `src/backend/sidecar/appShellFlowRegistration.ts:305` — the `lock` IPC handler's `playing` branch
+
+Neither knows about the other; each guards only its own id. The risk is release asymmetry: two
+handles must both be released or the display stays locked with no UI left to unlock it (the shape of
+threat T-35-31). In this run both did release. Whoever fixes this should decide which site OWNS the
+display assertion rather than making both idempotent, since "both happen to release" is not a
+guarantee.
+
+## D-35-19-11 — a "download is in progress" system assertion is held while merely PLAYING a game
+
+Found: criterion 15, 2026-08-30. Status: **CONFIRMED, UNFIXED.**
+
+During a game launch with **no download active**, `pmset` showed:
+```
+pid 56568(gamelib-shell): [0x0003d4d2000193fe] PreventUserIdleSystemSleep named: "GameLib: a download is in progress"
+```
+This is `prevent-app-suspension`, taken by the `lock` IPC handler's `!playing` branch at
+`src/backend/sidecar/appShellFlowRegistration.ts:301`:
+```ts
+if (!playing && !isSleepBlocked)   { powerId = powerSaveBlocker.start('prevent-app-suspension') }
+if (playing && !isDisplaySleepBlocked) { displaySleepId = powerSaveBlocker.start('prevent-display-sleep') }
+```
+Both branches evidently ran across the launch sequence. Preventing system sleep during gameplay may
+well be *desirable*, but the assertion asserts something false, and the label is user-visible to
+anyone running `pmset -g assertions` to find out what is keeping their Mac awake.
+
+The surrounding comment explicitly frames kind-confusion as threat T-35-32 ("passing one kind for
+both"). This is not that — both kinds are distinct and correctly mapped — but it is the adjacent
+failure: the right kind fired for the wrong reason.
+
+**Blocks clean measurement of criterion 16**, which measures this exact assertion during a real
+download. Criterion 16 must establish a baseline with no game running or it will read this
+assertion as its own result.
+
+Not yet traced: which caller invokes `lock` with `playing=false` during a game launch. No frontend
+caller of the `lock` channel was found by grep in `src/frontend`; the handler is registered at
+`appShellFlowRegistration.ts:294`. Worth resolving before fixing, so the fix targets the caller
+rather than papering over it in the handler.
+
+## D-35-19-12 — PREDICTION (untested): `powerDisplayId` is never reset, so launcher.ts acquires once per session
+
+Found: criterion 15, 2026-08-30. Status: **CODE-READ PREDICTION, NOT OBSERVED. Do not cite as a
+finding until tested.**
+
+`src/backend/launcher.ts` assigns `powerDisplayId` in exactly one place (`:190`) and never resets it
+after `powerSaveBlocker.stop(powerDisplayId)` (`:294`). The acquire is guarded:
+```ts
+if (!powerDisplayId) { powerDisplayId = powerSaveBlocker.start('prevent-display-sleep') }
+```
+so once it holds a number, that branch never runs again for the life of the sidecar.
+
+Predicted effect: launcher.ts's display assertion is taken only on the FIRST game launch per app
+session. **Severity is limited** — the `lock`/`unlock` pair does not share the bug (`unlock`
+correctly sets `powerId = undefined` and `displaySleepId = undefined`), so a second launch should
+still receive ONE display assertion from the IPC path instead of two. Degraded, not absent.
+
+Contrast worth keeping: the sidecar's own handler resets its ids correctly; `launcher.ts` is the
+odd one out. That asymmetry is the likely fix (`powerDisplayId = null` after stop).
+
+**Criterion 15 performed only ONE launch, so this was never exercised.** To test: launch a game,
+quit it, launch a second game, and count `GameLib: a game is running` assertions — expect 1 rather
+than 2 if the prediction holds.
