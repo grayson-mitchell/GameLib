@@ -1262,3 +1262,50 @@ comment-stripping stage before matching) and none affect build behaviour (commen
 They are pure documentation staleness. Whoever next touches `buildSidecarSea.ts` or
 `src/sidecar/index.ts`'s header should correct all three in the same pass rather than letting a
 fourth accumulate.
+
+## D-35-19-01 — RESOLVED NOT-A-DEFECT: first-run Keychain prompts are the "Allow" vs "Always Allow" distinction, and no criterion covers them
+
+**Found during:** plan 35-19, the packaged macOS arm64 live gate, immediately after criterion 1.
+
+**Symptom as first reported:** launching the packaged `.app` produced FOUR macOS Keychain
+password prompts, subjectively identical to running in dev mode. Quitting and relaunching the
+same installed bundle (no rebuild) produced all four again.
+
+**RESOLVED — not a defect.** The operator had clicked plain **"Allow"**, which grants one-time
+access by design; the ACL only persists on **"Always Allow"**. Re-tested clicking "Always Allow":
+two prompts (the other two items already held ACLs from the earlier attempts), then a further
+restart produced **zero** prompts. Working as macOS intends.
+
+**Why it read as a defect, and why that matters for the next runner.** The near-miss was real:
+the first relaunch test was designed to discriminate "per-build ad-hoc-signature artifact" from
+"ACL never sticks", and it returned the defect-shaped answer for a third reason neither branch
+anticipated. The confound is invisible at the point of observation because **the macOS Keychain
+dialog names no item** — four visually identical prompts, no indication of which secret each
+belongs to, and no record afterwards of which button was clicked on which one. A runner who
+clicks through them cannot reconstruct what they did. Diagnostic that works: click "Always Allow"
+deliberately on every prompt, then quit and relaunch a THIRD time; prompts on the third launch
+would be the genuine defect.
+
+**Contributing context, recorded because it is true and was measured, not because it caused this.**
+The locally-built `.app` is ad-hoc signed (`Signature=adhoc`, `TeamIdentifier=not set`,
+`Sealed Resources=none`). Keychain ACLs bind to a signing identity, so a rebuild DOES invalidate
+them and will re-prompt — a real effect, just not the one seen here. CI is not affected in the
+same way: `.github/workflows/release-tauri.yml` carries full conditional signing and notarization
+that activates when the `APPLE_*` secrets are present and emits `::warning::shipping unsigned`
+when they are not. **Open question, not resolved here:** whether those repo secrets are actually
+populated. If releases ship unsigned, every user update changes the identity and re-prompts.
+
+**Four keychain services exist on the test machine**, matching the four prompts, under three
+different naming schemes that look accumulated across the Electron -> Tauri migration rather than
+deliberately chosen:
+`com.macgamelib.app` (x2), `gamelib Safe Storage`, `com.gamelib.launcher`.
+
+**THE GATE HAS NO KEYCHAIN COVERAGE AT ALL.** Measured: zero matches for keychain / keyring /
+secret / password across all 21 criteria. Criteria 19 and 21 touch credentials only via
+logout-then-log-back-in. This finding therefore had no home in the contract and would have
+evaporated when the run closed. It is recorded here for that reason, not because it blocks
+anything.
+
+**Status:** resolved, no action required for phase 35. Two things a future phase may want:
+(1) answer whether the `APPLE_*` release secrets are populated, and (2) decide whether the three
+keychain service naming schemes should be consolidated. Neither blocks this gate.

@@ -9,7 +9,7 @@ criteria_total: 21 # sum of criteria 1-21 below; grep -c "^Verdict:" must equal 
 verdict: NOT RUN
 run_date: 2026-08-30
 runner: # human operator — fill in before recording the verdict
-session_dir: /tmp/gamelib-35-19-gate-sFpgKb # app pid 21484 launched 08:34:31 from ttys004, stdout+stderr tee'd
+session_dir: /tmp/gamelib-35-19-gate-9XTqHx # app pid 23589 launched 08:50:00, stdout+stderr tee'd. Criterion 1 was observed on an EARLIER instance (pid 21484, 08:34:31, /tmp/gamelib-35-19-gate-sFpgKb) before four relaunches during the Keychain diagnosis in D-35-19-01; criteria 2-21 run on this instance.
 ---
 
 # Phase 35 Plan 19 — Blocking Live Gate (D-16, REQ-35-20)
