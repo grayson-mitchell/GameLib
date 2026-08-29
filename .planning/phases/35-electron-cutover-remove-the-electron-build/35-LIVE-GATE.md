@@ -339,7 +339,32 @@ Sink: none required beyond `ps aux` — this is a process-liveness check, not a 
 Expected: After closing the window, the process survives (tray-resident). After Quit from the
 tray, the process exits fully.
 Observed:
-Verdict:
+Toggled MID-SESSION as the criterion requires: app pid 25984 had been running since 09:14:11;
+"Exit to tray" was enabled in Settings WITHOUT restarting, then the main window was closed via its
+close control.
+After the close: pid 25984 STILL ALIVE (`ps` state `S+`, 38m12s elapsed) and its bundled sidecar
+still running; operator confirmed the tray icon still present in the menu bar. This is the half
+that would have caught the `caa84b46b` regression -- the mid-session value was honoured at close
+time rather than a startup snapshot being used.
+After tray -> Quit: pid 25984 EXITED, `pgrep MacOS/gamelib-shell` returned nothing, AND
+`pgrep MacOS/gamelib-sidecar` returned nothing -- no orphaned Node process left holding app state.
+The transcript's final line is `[shell] sidecar terminated on exit`, a clean teardown rather than
+an abandoned child.
+INCIDENTAL EVIDENCE captured in this session's transcript, recorded because it bears on criterion
+6 and would otherwise be lost:
+```
+[shell] tray recent-game launch: using the runner persisted on the entry (no lookup needed)
+[shell] tray recent-game launch: dispatched to the sidecar: ok
+```
+A tray recent-game entry WAS launched successfully during this session, taking the
+runner-persisted-on-the-entry path -- i.e. a GOG entry, which carries a `runner` field. This
+confirms the tray's launch path works for runner-bearing entries. It does NOT test the
+runner-LESS Steam entries flagged in criterion 6, which would instead need the
+`trayResolveRunner` lookup; that path remains untested.
+`gamelib-shell.log` (sink 2) STILL unwritten by any packaged run -- unchanged at 2026-08-29
+19:35:25 through this criterion. Consistent with `D-35-19-02`; sink 2's positive control is still
+pending at criteria 10-12.
+Verdict: PASS
 
 ### 8. Tray: `startInTray` re-verified
 
