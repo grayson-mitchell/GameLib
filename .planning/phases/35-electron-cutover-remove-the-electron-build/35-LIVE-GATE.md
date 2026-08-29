@@ -384,7 +384,27 @@ Sink: terminal transcript — the fix path logs `[shell] startInTray: main windo
 Expected: No main window visible after launch; the transcript contains
 `[shell] startInTray: main window starts hidden` and neither WARN variant.
 Observed:
-Verdict:
+Relaunched from a clean quit (criterion 7's tray Quit) into a fresh terminal session
+`/tmp/gamelib-35-19-gate-gGFHIa`, app pid 28828. `startInTray` confirmed `true` on disk before the
+run, alongside `exitToTray: true`, `noTrayIcon: false`, `darkTrayIcon: true`, and `maxRecentGames`
+ABSENT (so the limit defaults to 5 -- independently confirming criterion 6's arithmetic that
+HUMANKIND at position 6 was excluded by exactly one place).
+All three stated conditions hold: no main window appeared; the transcript carries
+`[shell] startInTray: main window starts hidden`; and NEITHER WARN variant is present (no
+`could not hide the main window (...) -- starting visible`, no `no 'main' window to hide`).
+**OBSERVATION NOT COVERED BY THIS CRITERION, recorded and ledgered rather than dropped:** the
+operator reported that although no GameLib window appeared, the macOS Space visibly switched away
+from the one they were working in. Their reasoning is correct as stated -- an app starting
+minimised should produce no screen change at all. Diagnosed to a mechanism rather than left as an
+impression: `src-tauri/tauri.conf.json`'s `main` window declares NO `visible` key, so it defaults
+to TRUE and Tauri creates the window SHOWN; the `startInTray` path then calls `window.hide()`
+after the fact (`main.rs:7815`). No `ActivationPolicy` is set anywhere in `main.rs`, so the app
+runs as a Regular (Dock-participating) app and macOS activates it, switching Spaces to wherever
+the window appeared, before it is hidden. "Starts hidden" is therefore true by observation time
+and false at creation time. See `deferred-items.md` `D-35-19-03`.
+Scored PASS because every condition this criterion states is satisfied, and the Space switch is
+outside what it asks. The gap is in the contract's coverage, not in the verdict.
+Verdict: PASS
 
 ### 9. `darkTrayIcon` is a platform-conditional display, not a NOT-HONOURED control
 

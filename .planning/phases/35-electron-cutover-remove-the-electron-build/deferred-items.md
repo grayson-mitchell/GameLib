@@ -1362,3 +1362,47 @@ path, which the Header documents as a `shell_diag()` call site, and are the natu
 that would have depended on it are being scored on their observable halves. It wants a decision in
 a later phase: either route the packaged-path diagnostics through `shell_diag()`, or amend the
 sink-2 contract to state honestly which paths it covers.
+
+## D-35-19-03 — `startInTray` hides the window AFTER creating it visible, so a "minimised" launch still steals the user's macOS Space
+
+**Found during:** plan 35-19, criterion 8. Reported by the operator as an anomaly the criterion
+does not ask about — "if starting minimised then there should be no screen change" — and confirmed
+to a mechanism rather than recorded as an impression.
+
+**Symptom:** launching with `startInTray: true` shows no GameLib window (the criterion passes),
+but the macOS Space visibly switches away from the one the user is working in, to the Space the
+window would have occupied.
+
+**Mechanism, measured:**
+1. `src-tauri/tauri.conf.json` -> the `main` window declares **no `visible` key**, so it defaults
+   to `true`. Tauri creates the window SHOWN.
+2. `src-tauri/src/main.rs:7815` -> the `startInTray` path then calls `window.hide()` AFTER the
+   fact, which is why the correct log line (`startInTray: main window starts hidden`) is emitted
+   and no WARN variant fires. The code is doing exactly what it says; it just says it too late.
+3. No `ActivationPolicy` appears anywhere in `main.rs`. The app therefore runs as a Regular,
+   Dock-participating app, so macOS activates it on launch and switches Spaces to follow the
+   window that briefly existed.
+
+So "starts hidden" is true by the time anyone looks, and false at the moment of creation. The
+visible consequence is a stolen Space, which for a tray-resident launcher is the whole point of
+the setting being defeated.
+
+**Why criterion 8 could not catch this.** Its stated conditions are (a) no main window visible
+after launch, (b) the fix-path log line present, (c) neither WARN variant. All three are
+satisfied by a create-then-hide implementation. The criterion tests the END STATE and the defect
+is in the TRANSIENT. A contract asking only about end state cannot see a flash, an activation, or
+a Space switch.
+
+**Candidate fixes, not prescribed here** -- either or both, and the interaction between them
+needs checking rather than assuming:
+- declare `"visible": false` on the `main` window in `tauri.conf.json` so it is never shown, and
+  make the existing `window.hide()` path defensive rather than load-bearing;
+- set `ActivationPolicy::Accessory` while tray-resident so the app does not activate or take a
+  Dock slot at all.
+A fix must be verified by WATCHING THE SCREEN on a machine with multiple Spaces, not by the log
+line or by an end-state check -- both of those already pass today.
+
+**Status:** OPEN, unowned. Not blocking phase 35 -- criterion 8 passes on its stated terms. Worth
+noting that this is a Tauri-shell behaviour with no established Electron comparison; whether the
+Electron build had the same flash is UNKNOWN and was not tested (the Electron build no longer
+exists to test it against, per plan 35-14).
