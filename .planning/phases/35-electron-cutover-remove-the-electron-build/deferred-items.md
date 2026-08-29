@@ -945,3 +945,72 @@ as a manual `package.json` script, which is why this survived a day undetected, 
 2026-08-23 boot-order regression class had no live guard at all. **A gate that is wired nowhere is
 worse than no gate, because its existence implies coverage it is not providing.** It is now a step
 in `test.yml`'s `ci` job. Fixed in `ef77e4a1e`.
+
+## D-35-13-01 — REQUIRED READING FOR PLAN 35-15: the `Tray` stub has no `setImage`, and `tray_icon.ts` calls it
+
+**Found during:** plan 35-13, Task 2, while reading consuming sites for the type declarations.
+**Owner:** plan 35-15 (the 67-file specifier rewrite). Not fixed here — plan 35-13's constraints
+forbid behaviour changes inside the move.
+
+`src/backend/platform/index.ts`'s `Tray` class exports exactly four members: the constructor,
+`setToolTip()`, `setContextMenu()` and `on()`. It has **no `setImage`**.
+`src/backend/tray_icon/tray_icon.ts:54` calls `appIcon.setImage(getIcon(process.platform))`.
+
+**Why this is inert today.** `tray_icon.ts:1` imports `Tray` from `'electron'`, so under `tsc` the
+name resolves to real electron's `Tray`, which does have `setImage` — it compiles. At runtime under
+Tauri the Rust tray at `src-tauri/src/main.rs` is what actually ships (D-06 is a delta over an
+existing tray, not a build), so this TypeScript path does not execute.
+
+**What happens at 35-15.** The moment that import is repointed to `backend/platform`, `Tray`
+becomes the stub class and line 54 becomes a **TS2339 compile error**. That is loud, not silent,
+which is the good case — but the failure mode to avoid is an executor "fixing" the mechanical sweep
+by DELETING the `setImage` call. That would silently drop tray icon updates if the TypeScript tray
+is ever revived, and it would look like a legitimate part of a 67-file rewrite.
+
+**Correct fix when 35-15 reaches it:** add `setImage(): void {}` to the stub class, matching how the
+other three no-op members are already declared. Do not delete the call site.
+
+## D-35-13-02 — REQUIRED READING FOR PLAN 35-16: `extra-mock-function.ts` AUGMENTS the ambient `Electron` namespace and cannot be rewritten mechanically
+
+**Found during:** plan 35-13, Task 2.
+**Owner:** plan 35-16.
+
+`src/common/typedefs/extra-mock-function.ts` contains:
+
+```ts
+declare global {
+  namespace Electron {
+    interface BrowserWindow { options: Electron.BrowserWindowConstructorOptions }
+    namespace BrowserWindow { function setAllWindows(...): void }
+    interface Tray { menu: Electron.MenuItemConstructorOptions[] }
+  }
+}
+```
+
+This file **does not consume** the ambient `Electron` namespace — it **declares into** it, adding
+test-only members to electron's own interfaces via declaration merging. D-03's mechanical
+`Electron.X` → `X` rewrite is therefore wrong here in both directions: there is no first-party
+namespace to merge into, and the members it adds exist to satisfy test code that reaches them
+through electron's types.
+
+Plan 35-16 must treat this file as its own decision, not as one of the 32 namespace-reference
+sites. It is the one file where the rewrite changes what the declaration MEANS rather than only
+where it points.
+
+## D-35-13-03 — CORRECTION TO PLAN 35-15's PREMISE: `BrowserWindow` cannot be re-exported from `backend/platform`, so the rewrite is not one string per site
+
+**Found during:** plan 35-13, Task 2 — measured, not predicted (`TS2323`).
+**Owner:** plan 35-15.
+
+`src/backend/platform/index.ts` already exports `BrowserWindow` as a **value** (a plain `const`
+object carrying `getAllWindows`). It is not a class, so it contributes no type meaning. Adding
+`export type { BrowserWindow } from './types'` alongside it fails with
+**`TS2323: Cannot redeclare exported variable`**.
+
+19 of the 20 declared types re-export from `backend/platform` normally. `BrowserWindow` does not.
+Its consumer — `src/backend/utils/openDialog.ts:20`, `import type { BrowserWindow, OpenDialogOptions }
+from 'electron'` — must be split at 35-15: `OpenDialogOptions` from `backend/platform`, and
+`BrowserWindow` from **`backend/platform/types`**.
+
+`35-13-PLAN.md`'s success criterion says the rewrite "stays a one-string change per site." That
+holds for every site except this one. Plan 35-15 should not assume a uniform sed.
