@@ -14,15 +14,22 @@
  *
  * What this proves, and why it's the right proof for item 1 ("Under Tauri,
  * steamLogout now actually calls window.api.logoutSteam()"): the stale
- * G-30-01 guard was an `if (isTauri()) { ...; return }` that short-circuited
- * BEFORE `window.api.logoutSteam()` (nee `performSteamLogout`) was ever
- * reached. This gate reads the real source, strips comments (so the guard's
- * own prose can't fool a naive match), and asserts the `steamLogout` method
- * body contains no `isTauri(` reference at all, and unconditionally reaches
- * `performSteamLogout(...)` with the real `window.api.logoutSteam` handed
- * through as the `logoutSteam` dependency — never nested inside a guard that
- * could return before it. `SteamSignOut.test.ts` then proves, behaviorally,
- * that `performSteamLogout` given that real dependency actually calls it.
+ * G-30-01 guard was a Tauri-context conditional (`if (<check>()) { ...;
+ * return }`) that short-circuited BEFORE `window.api.logoutSteam()` (nee
+ * `performSteamLogout`) was ever reached. This gate reads the real source,
+ * strips comments (so the guard's own prose can't fool a naive match), and
+ * asserts the `steamLogout` method body has no `if (...)` guard preceding
+ * the `performSteamLogout(...)` call, and unconditionally reaches that call
+ * with the real `window.api.logoutSteam` handed through as the
+ * `logoutSteam` dependency — never nested inside a guard that could return
+ * before it. `SteamSignOut.test.ts` then proves, behaviorally, that
+ * `performSteamLogout` given that real dependency actually calls it.
+ *
+ * Phase 35 plan 17 note: the detector below was generalized from matching
+ * the specific (now-deleted) Tauri-context-check function name to matching
+ * ANY `if (` guard preceding the call — a strictly stronger check (it also
+ * catches a differently-named reintroduced guard), and one that does not
+ * require this file to reference the deleted function's name at all.
  *
  * Self-tested against synthetic merged/regressed sources per this project's
  * own anti-vacuity requirement (the exact lesson Phase 34.2's four gap
@@ -55,8 +62,9 @@ function extractBlock(source: string, marker: string): string {
 }
 
 /**
- * The gate under test: `steamLogout`'s body must (a) never reference
- * `isTauri(` — the exact stale guard's trigger condition — and (b)
+ * The gate under test: `steamLogout`'s body must (a) have no `if (...)`
+ * guard preceding the `performSteamLogout(...)` call — the exact shape of
+ * the stale guard, regardless of what its condition is named — and (b)
  * unconditionally call `performSteamLogout(...)`, passing the REAL
  * `window.api.logoutSteam` through as its `logoutSteam` dependency (not a
  * stub, not a conditionally-assigned no-op).
@@ -71,7 +79,9 @@ function steamLogoutReachesRealLogoutUnconditionally(
     return false
   }
 
-  const hasStaleGuard = /isTauri\s*\(/.test(block)
+  const callIndex = block.indexOf('performSteamLogout(')
+  const preCallSegment = callIndex === -1 ? block : block.slice(0, callIndex)
+  const hasStaleGuard = /if\s*\(/.test(preCallSegment)
   const callsPerformSteamLogout = /performSteamLogout\(/.test(block)
   const wiresRealLogoutSteam = /logoutSteam:\s*window\.api\.logoutSteam/.test(
     block
@@ -81,7 +91,7 @@ function steamLogoutReachesRealLogoutUnconditionally(
 }
 
 describe('GlobalState.tsx steamLogout — reaches the real logoutSteam channel unconditionally (item 1)', () => {
-  it('the real source has no isTauri() guard and unconditionally wires window.api.logoutSteam through performSteamLogout', () => {
+  it('the real source has no Tauri-context guard and unconditionally wires window.api.logoutSteam through performSteamLogout', () => {
     const rawSource = readFileSync(globalStatePath, 'utf-8')
     const stripped = stripSourceComments(rawSource)
 
@@ -109,7 +119,7 @@ describe('GlobalState.tsx steamLogout — reaches the real logoutSteam channel u
     const staleGuardShape = [
       'class GlobalState {',
       '  steamLogout = async () => {',
-      '    if (isTauri()) {',
+      '    if (tauriContextGuard()) {',
       '      this.handleShowDialogModal({ title: "Sign out unavailable" })',
       '      return',
       '    }',

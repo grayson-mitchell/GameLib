@@ -62,24 +62,25 @@ export function isTauri(): boolean {
  * `protocol.handle('imagecache', ...)` registration, which runs from an
  * Electron-only `whenReady()` init. The sidecar does NOT run Electron
  * `whenReady()` inits (project memory `phase-33-complete`), so under Tauri
- * that registration never happens and any `imagecache://...` request
- * WKWebView issues fails with `unsupported URL` -- measured at ~150 failed
- * requests per library render (one per http-sourced game tile), each
- * recovered by `CachedImage`'s `onError` retry at the cost of a doubled
- * request and a visible load flash.
+ * -- the only shell that exists (Phase 35 electron cutover) -- that
+ * registration never happens, and any `imagecache://...` request WKWebView
+ * issues fails with `unsupported URL` -- measured at ~150 failed requests
+ * per library render (one per http-sourced game tile), each recovered by
+ * `CachedImage`'s `onError` retry at the cost of a doubled request and a
+ * visible load flash.
  *
- * Today that makes this predicate the negation of `isTauri()`. If a
+ * Phase 35 plan 17: this predicate used to compute the negation of a
+ * runtime Tauri-context check, back when Electron and Tauri could both be
+ * running. Now that Tauri is the only shell, that check is always true, so
+ * the negation is always false -- hardcoded here rather than computed. If a
  * Tauri-side `imagecache://` handler is ever added, THIS is the one line
  * that changes -- every consumer (starting with `CachedImage`) follows
  * without touching a single call site. Consumers must call this predicate
- * rather than checking `isTauri()` directly, so the scheme decision lives in
- * exactly one named place (the same discipline `isTauri()` above and the
- * stale-guard regression at
- * `frontend/state/__tests__/GlobalStateSteamLogout.test.ts` exist to
- * enforce).
+ * rather than inlining their own scheme-availability check, so the scheme
+ * decision lives in exactly one named place.
  */
 export function imageCacheSchemeAvailable(): boolean {
-  return !isTauri()
+  return false
 }
 
 /**
