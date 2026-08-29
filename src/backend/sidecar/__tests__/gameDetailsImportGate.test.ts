@@ -56,7 +56,6 @@ function listTsFiles(dir: string): string[] {
     .map((entry) => entry.name)
 }
 
-const MAIN_TS_PATH = join(__dirname, '../../main.ts')
 
 describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/REQ-34.2-10/REQ-34.2-14)', () => {
   // ── Gate 1: no file directly under src/backend/sidecar/ imports the real
@@ -121,170 +120,14 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
     expect(stripped).not.toMatch(/ipc_handler/)
   })
 
-  // ── Gate 5: D-03 delegation shape — main.ts imports the extracted
-  // gamedetails/* modules and every one of the slice's 19 registration
-  // lines delegates to an imported function, never an inline reimplemented
-  // body ───────────────────────────────────────────────────────────────────
-  it('REQ-34.2-03/D-03 Gate 5: main.ts imports ./gamedetails/dispatch and ./gamedetails/overrides', () => {
-    const stripped = stripComments(readFileSync(MAIN_TS_PATH, 'utf-8'))
-    expect(stripped).toMatch(/from\s+['"]\.\/gamedetails\/dispatch['"]/)
-    expect(stripped).toMatch(/from\s+['"]\.\/gamedetails\/overrides['"]/)
-  })
-
-  // Table-driven: every one of the slice's 19 main.ts registration lines,
-  // enumerated by channel, so a single missed conversion (an inline body
-  // left behind, or a delegation quietly reverted) names itself in the test
-  // output rather than hiding inside one large assertion.
-  const DELEGATION_SHAPE_TABLE: [name: string, pattern: RegExp][] = [
-    [
-      'getGameOverride',
-      /addHandler\(\s*['"]getGameOverride['"]\s*,\s*async\s*\(\)\s*=>\s*getGameOverride\(\)\s*\)/
-    ],
-    [
-      'getGameSdl',
-      /addHandler\(\s*['"]getGameSdl['"]\s*,\s*async\s*\([^)]*\)\s*=>\s*getGameSdl\(appName\)\s*\)/
-    ],
-    [
-      'isGameAvailable',
-      /addHandler\(\s*['"]isGameAvailable['"]\s*,\s*async\s*\([^)]*\)\s*=>\s*isGameAvailable\(args\)\s*\)/
-    ],
-    [
-      'getGameInfo',
-      /addHandler\(\s*['"]getGameInfo['"]\s*,\s*async\s*\([^)]*\)\s*=>\s*getGameInfo\(appName,\s*runner\)\s*\)/
-    ],
-    [
-      'getExtraInfo',
-      /addHandler\(\s*['"]getExtraInfo['"]\s*,\s*async\s*\([^)]*\)\s*=>\s*getExtraInfo\(appName,\s*runner\)\s*\)/
-    ],
-    [
-      'getGameSettings',
-      /addHandler\(\s*['"]getGameSettings['"]\s*,\s*async\s*\([^)]*\)\s*=>\s*getGameSettings\(appName,\s*runner\)\s*\)/
-    ],
-    [
-      'readConfig',
-      /addHandler\(\s*['"]readConfig['"]\s*,\s*async\s*\([^)]*\)\s*=>\s*readConfig\(configClass\)\s*\)/
-    ],
-    [
-      'repair',
-      /addHandler\(\s*['"]repair['"]\s*,\s*async\s*\([^)]*\)\s*=>\s*repair\(appName,\s*runner\)\s*\)/
-    ],
-    [
-      'kill',
-      /addHandler\(\s*['"]kill['"]\s*,\s*async\s*\([^)]*\)\s*=>\s*kill\(appName,\s*runner\)\s*\)/
-    ],
-    [
-      'changeInstallPath',
-      /addHandler\(\s*['"]changeInstallPath['"]\s*,\s*async\s*\([^)]*\)\s*=>\s*changeInstallPath\(args\)\s*\)/
-    ],
-    [
-      'getLaunchOptions',
-      /addHandler\(\s*['"]getLaunchOptions['"]\s*,\s*async\s*\([^)]*\)\s*=>\s*getLaunchOptions\(appName,\s*runner\)\s*\)/
-    ],
-    [
-      'addNewApp',
-      /addListener\(\s*['"]addNewApp['"]\s*,\s*\([^)]*\)\s*=>\s*addNewApp\(args\)\s*\)/
-    ],
-    [
-      'setGameMetadataOverride',
-      /addListener\(\s*['"]setGameMetadataOverride['"]\s*,\s*\([^)]*\)\s*=>\s*setGameMetadataOverride\(args\)\s*\)/
-    ],
-    [
-      'getGameMetadataOverride',
-      /addHandler\(\s*['"]getGameMetadataOverride['"]\s*,\s*async\s*\([^)]*\)\s*=>\s*\{\s*return\s+getGameOverrides\(appName\)\s*\}\s*\)/
-    ],
-    [
-      'getAllGameOverrides',
-      /addHandler\(\s*['"]getAllGameOverrides['"]\s*,\s*async\s*\(\)\s*=>\s*\{\s*return\s+getAllGameOverrides\(\)\s*\}\s*\)/
-    ],
-    [
-      'getAvailableCyberpunkMods',
-      /addHandler\(\s*['"]getAvailableCyberpunkMods['"]\s*,\s*async\s*\(\)\s*=>\s*getAvailableCyberpunkMods\(\)\s*\)/
-    ],
-    [
-      'setCyberpunkModConfig',
-      /addHandler\(\s*['"]setCyberpunkModConfig['"]\s*,\s*async\s*\([^)]*\)\s*=>\s*setCyberpunkModConfig\(props\)\s*\)/
-    ],
-    [
-      'changeGameVersionPinnedStatus',
-      /addListener\(\s*['"]changeGameVersionPinnedStatus['"]\s*,\s*\([^)]*\)\s*=>\s*changeGameVersionPinnedStatus\(appName,\s*runner,\s*status\)\s*\)/
-    ],
-    [
-      'getKnownFixes',
-      /addHandler\(\s*['"]getKnownFixes['"]\s*,\s*\([^)]*\)\s*=>\s*readKnownFixes\(appName,\s*runner\)\s*\)/
-    ]
-  ]
-
-  it('REQ-34.2-03/D-03 Gate 5 sanity: the delegation-shape table enumerates all 19 channels', () => {
-    expect(DELEGATION_SHAPE_TABLE).toHaveLength(19)
-  })
-
-  it.each(DELEGATION_SHAPE_TABLE)(
-    'REQ-34.2-03/D-03 Gate 5: main.ts delegates channel "%s" to its imported function (not an inline body)',
-    (_name, pattern) => {
-      const stripped = stripComments(readFileSync(MAIN_TS_PATH, 'utf-8'))
-      expect(stripped).toMatch(pattern)
-    }
-  )
-
-  // ── Gate 6: transport-kind gate — the 3 send-kind channels are
-  // addListener, the 16 invoke-kind channels are addHandler, in main.ts.
-  // A silent kind flip here would desynchronise Electron from the sidecar
-  // registrations with no runtime signal (Phase 31 Pitfall 2) ───────────────
-  const SEND_KIND_CHANNELS = [
-    'setGameMetadataOverride',
-    'changeGameVersionPinnedStatus',
-    'addNewApp'
-  ]
-  const INVOKE_KIND_CHANNELS = [
-    'getGameInfo',
-    'getExtraInfo',
-    'getGameSettings',
-    'isGameAvailable',
-    'getLaunchOptions',
-    'kill',
-    'repair',
-    'changeInstallPath',
-    'readConfig',
-    'getGameOverride',
-    'getGameSdl',
-    'getAvailableCyberpunkMods',
-    'setCyberpunkModConfig',
-    'getGameMetadataOverride',
-    'getAllGameOverrides',
-    'getKnownFixes'
-  ]
-
-  it('REQ-34.2-01 Gate 6 sanity: 3 send-kind + 16 invoke-kind channels account for all 19', () => {
-    expect(SEND_KIND_CHANNELS).toHaveLength(3)
-    expect(INVOKE_KIND_CHANNELS).toHaveLength(16)
-    expect(SEND_KIND_CHANNELS.length + INVOKE_KIND_CHANNELS.length).toBe(19)
-  })
-
-  it.each(SEND_KIND_CHANNELS)(
-    'REQ-34.2-01 Gate 6: main.ts registers send-kind channel "%s" with addListener, never addHandler',
-    (channel) => {
-      const stripped = stripComments(readFileSync(MAIN_TS_PATH, 'utf-8'))
-      expect(stripped).toMatch(
-        new RegExp(`addListener\\(\\s*['"]${channel}['"]`)
-      )
-      expect(stripped).not.toMatch(
-        new RegExp(`addHandler\\(\\s*['"]${channel}['"]`)
-      )
-    }
-  )
-
-  it.each(INVOKE_KIND_CHANNELS)(
-    'REQ-34.2-01 Gate 6: main.ts registers invoke-kind channel "%s" with addHandler, never addListener',
-    (channel) => {
-      const stripped = stripComments(readFileSync(MAIN_TS_PATH, 'utf-8'))
-      expect(stripped).toMatch(
-        new RegExp(`addHandler\\(\\s*['"]${channel}['"]`)
-      )
-      expect(stripped).not.toMatch(
-        new RegExp(`addListener\\(\\s*['"]${channel}['"]`)
-      )
-    }
-  )
+  // ── Gates 5, 5-sanity and 6 (D-03 delegation shape / 19-channel census) were
+  // REMOVED by Phase 35 Plan 14, the Electron cutover. Every one of them read
+  // `src/backend/main.ts` from disk and asserted its registration shape; that file is
+  // deleted in this same commit, so they would ENOENT rather than fail meaningfully.
+  // They are not replaced: they constrained how the ELECTRON main process delegated to
+  // `gamedetails/*`, and that process no longer exists. The sidecar's own equivalent
+  // constraint is Gate 4 above, which is untouched. Recorded in `35-14-SUMMARY.md`
+  // and as a deferred item so the lost assertions are reclaimable rather than forgotten.
 
   // ── Gate 7 (D-09 do-not-touch, WR-01 replacement): settingsFlowRegistration.ts
   // is pinned to a committed sha256 digest of its own byte content. This
