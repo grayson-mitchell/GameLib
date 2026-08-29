@@ -410,24 +410,12 @@ describe('package.json wiring pin', () => {
     ).scripts
   }
 
-  test.each([
-    ['dist:mac', 'clean:dist-mac'],
-    ['release:mac', 'clean:dist-mac'],
-    ['dist:win', 'clean:dist-win'],
-    ['release:win', 'clean:dist-win'],
-    ['dist:linux', 'clean:dist-linux'],
-    ['release:linux', 'clean:dist-linux']
-  ])(
-    '%s contains %s, positioned before electron-builder',
-    (scriptName, cleanScriptName) => {
-      const scripts = loadScripts()
-      const value = scripts[scriptName]
-      expect(value).toContain(cleanScriptName)
-      expect(value.indexOf(cleanScriptName)).toBeLessThan(
-        value.indexOf('electron-builder')
-      )
-    }
-  )
+  // The `dist:*`/`release:*` -> `clean:dist-*` pairing pin was REMOVED by Phase 35 Plan 14:
+  // those eight scripts invoked electron-vite/electron-builder and went with the Electron
+  // shell, so the pin asserted the ordering of scripts that no longer exist. `clean:dist-*`
+  // itself SURVIVES and its own three pins below are untouched -- but it is now ORPHANED,
+  // with no caller anywhere, alongside `meta/cleanDist.ts`. Deliberately not deleted here:
+  // this plan is the point of no return and its whole design is to keep that diff small.
 
   test('clean:dist-mac invokes meta/cleanDist.ts with --platform=mac', () => {
     const scripts = loadScripts()
