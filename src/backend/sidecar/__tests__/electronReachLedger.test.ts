@@ -341,121 +341,19 @@ const ENTRY_POINTS = [
 // prior 246 reading was) and is not raised, per that test's own
 // never-lower/only-raise-when-no-longer-meaningful instruction.
 const BASELINE_ELECTRON_REACHING_MODULES: string[] = [
-  'src/backend/constants/paths.ts',
-  'src/backend/dialog/dialog.ts',
-  // Phase 34.4.1 Plan 12 (D-10 standing rule): humbleFlowRegistration.ts ->
-  // humble/user.ts (direct) -> humble/user.ts's
-  // `import { getHumbleSecretStore, type HumbleSecretKey } from
-  // './secretStore'` -> secretStore.ts:1 `import { safeStorage } from
-  // 'electron'`. This is the Electron-implementation half of the Humble
-  // secret-store seam (F-1's fix prerequisite) -- it must run under Electron,
-  // so unlike loginWindowSeam.ts it is not exempt from a direct import.
-  'src/backend/humble/secretStore.ts',
-  // Phase 34.4 Plan 08 (D-10): humbleFlowRegistration.ts -> humble/library.ts
-  // (direct) -> humble/library.ts:12
-  // (`import { getGamekeys, getOrderDetail, revealKey as adapterRevealKey } from './adapter'`)
-  // -> adapter.ts:2 `import { net } from 'electron'`.
-  'src/backend/humble/adapter.ts',
-  // Phase 34.4 Plan 08 (D-10): two-hop --
-  // humbleFlowRegistration.ts -> humble/library.ts:22
-  // (`import { detectAndNotifyExpirationTransitions } from './expirationAlerts'`)
-  // -> expirationAlerts.ts:1 `import { Notification } from 'electron'`. A
-  // depth-1 regex over humbleFlowRegistration.ts's own text cannot see this
-  // edge -- it only appears one hop further, inside library.ts.
-  'src/backend/humble/expirationAlerts.ts',
-  // Phase 34.4 Plan 08 (D-10): humbleFlowRegistration.ts -> humble/user.ts
-  // (direct) -- humble/user.ts:1 `import { safeStorage, session } from
-  // 'electron'`.
-  'src/backend/humble/user.ts',
-  // Phase 34.4 Plan 08 (D-10): NOT predicted by the plan's <interfaces>
-  // section or RESEARCH.md -- discovered only by running the traversal.
-  // userAgent.ts:1 `import { app } from 'electron'`. Reached two-hop via
-  // humbleFlowRegistration.ts -> humble/user.ts:16
-  // (`import { standardBrowserUserAgent } from './userAgent'`), and
-  // independently three-hop via
-  // humbleFlowRegistration.ts -> humble/library.ts:12 -> ./adapter ->
-  // adapter.ts:13's identical import of './userAgent'.
-  'src/backend/humble/userAgent.ts',
-  'src/backend/ipc.ts',
-  'src/backend/launcher.ts',
-  // Phase 34.3 Plan 07 (D-10): new edge, pulled in via
-  // loggerFlowRegistration.ts -> logger/uploader.ts -> `import { app } from
-  // 'electron'` (uploader.ts:1). Entry point:
-  // src/backend/sidecar/loggerFlowRegistration.ts.
-  'src/backend/logger/uploader.ts',
-  'src/backend/main_window.ts',
-  'src/backend/online_monitor.ts',
-  'src/backend/shortcuts/nonesteamgame/nonesteamgame.ts',
-  'src/backend/shortcuts/nonesteamgame/steamhelper.ts',
-  'src/backend/shortcuts/shortcuts/shortcuts.ts',
-  'src/backend/storeManagers/gog/presence.ts',
-  'src/backend/storeManagers/gog/user.ts',
-  'src/backend/storeManagers/legendary/eos_overlay/eos_overlay.ts',
-  'src/backend/storeManagers/legendary/user.ts',
-  'src/backend/storeManagers/nile/library.ts',
-  'src/backend/storeManagers/steam/bottle.ts',
-  'src/backend/storeManagers/steam/constants.ts',
-  'src/backend/storeManagers/steam/games.ts',
-  'src/backend/storeManagers/steam/library.ts',
-  'src/backend/storeManagers/steam/tokenStore.ts',
-  'src/backend/storeManagers/storeManagerCommon/games.ts',
-  'src/backend/storeManagers/zoom/constants.ts',
-  'src/backend/storeSearch/cheapshark.ts',
-  'src/backend/utils.ts',
-  'src/backend/utils/inet/downloader/index.ts',
-  'src/backend/utils/systeminfo/gpu/linux.ts',
-  'src/backend/utils/systeminfo/heroicVersion.ts',
-  'src/backend/utils/uninstaller.ts',
-  'src/common/types.ts',
-  'src/common/types/ipc.ts',
-  // Phase 34.6 Plan 09 (Amendment A-03, REQ-34.6-02/04/08/13): three new
-  // electron-importing modules entered the reach graph via
-  // enrichmentFlowRegistration.ts's six new steamgriddb.*/getGogDiscounts
-  // registrations. Measured (not predicted) via this file's own
-  // BEFORE/AFTER visitedFiles.size procedure: BEFORE this plan's source
-  // changes landed, visitedFiles.size / electronImportingFiles.size were
-  // unchanged from the prior committed baseline; AFTER, three new paths
-  // appeared in electronImportingFiles and nowhere else in the baseline
-  // above:
-  //   - enrichmentFlowRegistration.ts -> steamgrid/utils.ts (direct)
-  //     -> utils.ts:3 `import { app } from 'electron'` (User-Agent header
-  //     for the SteamGridDB HTTP client).
-  'src/backend/steamgrid/utils.ts',
-  //   - enrichmentFlowRegistration.ts -> steamgrid/secretStore.ts (direct,
-  //     the Amendment A-03 seam) -> secretStore.ts's
-  //     `import { isEncryptedValue, encryptApiKey, decryptApiKey } from
-  //     './secureKey'` -> secureKey.ts:25 `import { safeStorage } from
-  //     'electron'`. safeStorage resolves to electronStub.ts's dead stub
-  //     under the sidecar (T-34.6-01) -- reached here only because
-  //     secretStore.ts's module-scope ElectronSteamGridDbSecretStore class
-  //     body references secureKey.ts's exports, not because any
-  //     steamgriddb.* handler here calls into it (Amendment A-03: every
-  //     handler in this file reaches the key exclusively via
-  //     getSteamGridDbSecretStore(), never secureKey.ts directly).
-  'src/backend/steamgrid/secureKey.ts',
-  //   - enrichmentFlowRegistration.ts -> discounts/fetchDiscounts.ts
-  //     (direct, Plan 34.6-09's extraction out of discounts/index.ts's
-  //     previously-inline addHandler body) -> fetchDiscounts.ts:2
-  //     `import { app } from 'electron'` (User-Agent header for the GOG
-  //     catalog request) -- unchanged behavior carried over verbatim from
-  //     discounts/index.ts, not new surface introduced by the extraction.
-  'src/backend/discounts/fetchDiscounts.ts',
-  // Phase 34.6 Plan 10 (REQ-34.6-04/08/09, D-14): runnerMiscFlowRegistration.ts's own
-  // `getDefaultSavePath` handler now imports `getDefaultSavePath` directly from
-  // `../save_sync` -- the plan's own <interfaces> note ("`save_sync.ts` would enter the
-  // measured baseline via `syncGOGSaves`") did NOT hold (that was Plan 34.5-12's
-  // deferred-item finding, reaffirmed above); the edge this plan actually adds is the
-  // new `getDefaultSavePath` handler's OWN direct import, not a pre-existing one.
-  // save_sync.ts:12 `import { app } from 'electron'` (used by `getDefaultGogSavePaths`'s
-  // `app.getPath('documents')` call, already covered at the pathShim layer per this
-  // handler's own registration comment). Measured (not predicted) via this file's own
-  // before/after procedure, isolating this one file: BEFORE (pre-Task-1
-  // runnerMiscFlowRegistration.ts swapped in via `git show`), electronImportingFiles.size
-  // 38, visitedFiles.size 252; AFTER (post-Task-1, current committed content),
-  // electronImportingFiles.size 39, visitedFiles.size 253 -- a clean +1/+1, exactly
-  // `save_sync.ts` itself (everything IT imports was already reached via other entry
-  // points in this same baseline, e.g. `storeManagers`/`utils`/`logger` edges above).
-  'src/backend/save_sync.ts'
+  // TWO ENTRIES, and both are OUT OF PLAN 35-15's SCOPE by design.
+  //
+  // This array held 39 entries at plan time; its header calls it the Phase 35 cutover
+  // work-list. Plan 35-15 rewrote every `from 'electron'` under src/backend/, so every
+  // BACKEND entry is cleared and its reach-chain comment deleted with it. What remains is
+  // reached THROUGH the backend but does not live in it:
+  'src/common/types.ts', // 35-16 owns this: a Form 2 electron type-import under src/common/
+  'src/common/types/ipc.ts' // 35-16: same, and the file D-35-13-02 flags as non-mechanical
+  //
+  // FOR PLAN 35-18's D-03 GREP GATE: the length is 2, NOT 0. D-03's success test therefore
+  // carries a documented asterisk rather than being a clean single grep, and 35-18 must
+  // expect these two until 35-16 clears them. Recorded here because 35-18 reads this number.
+
 ]
 
 interface ElectronReachResult {
@@ -694,8 +592,22 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
       'src/backend/storeManagers/legendary/user.ts', // direct: runnerAuthFlowRegistration.ts
       'src/backend/storeManagers/gog/user.ts' // direct: runnerAuthFlowRegistration.ts
     ]
+    // INVERTED by plan 35-15. This assertion required each known load-bearing module to still
+    // REACH electron -- an anti-degradation tripwire for the porting era, when a module dropping
+    // out of the set meant a broken measurement rather than progress. The cutover is the event
+    // that makes the premise false on purpose: reach is now zero BY DESIGN.
+    //
+    // Inverted rather than deleted, for the same reason 35-14 inverted artifactTargets' D-11
+    // guard: deleting it drops the tripwire entirely, while inverting keeps one pointing the
+    // other way. If any of these modules starts reaching electron again, something has undone
+    // the cutover and that needs to be deliberate.
+    // Partitioned by SCOPE, not blanket-inverted. Plan 35-15 owns src/backend/ only, so every
+    // backend module must have LEFT the set -- but `src/common/types.ts` is in this list too and
+    // legitimately still reaches electron; it is plan 35-16's. Asserting `false` for all of them
+    // would have been wrong in exactly the direction that hides remaining work.
     for (const requiredModule of requiredModules) {
-      expect(measured.has(requiredModule)).toBe(true)
+      const stillOwedToPlan3516 = requiredModule.startsWith('src/common/')
+      expect(measured.has(requiredModule)).toBe(stillOwedToPlan3516)
     }
   }, 30000)
 
@@ -759,8 +671,12 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
     // the real assertion is that the walk reached dialog.ts FROM it.
     expect(reachResult.visitedFiles.has(dispatchPath)).toBe(true)
     expect(reachResult.visitedFiles.has(dialogPath)).toBe(true)
+    // INVERTED by plan 35-15, same reasoning as the anti-degradation gate above. The gap-#3
+    // edge (dispatch.ts -> dialog.ts -> `import ... from 'electron'`) was pinned as a known,
+    // documented fact while it existed. dialog.ts now imports `backend/platform`, so the edge
+    // is gone -- pinning its ABSENCE keeps the fact recorded and still catches a regression.
     expect(
       reachResult.electronImportingFiles.has('src/backend/dialog/dialog.ts')
-    ).toBe(true)
+    ).toBe(false)
   }, 30000)
 })
