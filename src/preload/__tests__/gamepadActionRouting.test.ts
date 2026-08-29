@@ -8,10 +8,11 @@
  * replaced the real implementation those 18 tests depend on. This file mocks
  * `tauriGamepadAction` instead, to prove `misc.ts` delegates to it unconditionally.
  *
- * Until Phase 35 plan 16 this file proved an `isTauri()` ROUTING decision -- Electron
- * IPC invoker when false, `tauriGamepadAction` when true. That decision no longer
- * exists: nothing runs under Electron, so `gamepadAction` now calls
- * `tauriGamepadAction` unconditionally, with no fallback branch to route away from.
+ * Until Phase 35 plan 16 this file proved a Tauri-context ROUTING decision --
+ * Electron IPC invoker when the check was false, `tauriGamepadAction` when
+ * true. That decision no longer exists: nothing runs under Electron, so
+ * `gamepadAction` now calls `tauriGamepadAction` unconditionally, with no
+ * fallback branch to route away from.
  * Mirrors `windowChrome.test.ts`'s mocking style: `electron` is proven never resolved.
  */
 

@@ -2,7 +2,7 @@
  * misc.ts's collapsed store bridge (`storeNew`/`storeGet`/`storeSet`/`storeHas`/
  * `storeDelete`) -- Phase 35 plan 16, D-01/D-02/D-04/D-08 convergence.
  *
- * Before this plan these five functions each carried an `isTauri()` branch pair (a
+ * Before this plan these five functions each carried a Tauri-context branch pair (a
  * Tauri body plus an Electron-only fallback that constructed a real, file-system-backed
  * `electron-store` instance via a lazy `require`), and `storeGet` additionally guarded
  * reads with a locally duplicated `SECRET_STORE_KEYS` deny-list, independent of the

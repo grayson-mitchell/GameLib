@@ -27,7 +27,6 @@ jest.mock('electron', () => {
 })
 
 jest.mock('@tauri-apps/api/core', () => ({
-  isTauri: jest.fn(() => true),
   invoke: jest.fn()
 }))
 
@@ -80,7 +79,7 @@ beforeEach(() => {
 })
 
 describe('Tauri renderer bridge contract (spike 012 parity)', () => {
-  // tauriTransport's own `isTauri()` (Phase 27 Plan 05) detects the Tauri context via
+  // tauriTransport's own Tauri-context detection (Phase 27 Plan 05) keyed off
   // `globalThis.__TAURI_INTERNALS__` (the runtime's ground-truth injection), not a mockable
   // core flag. Simulate a real Tauri webview so ipc.ts's factories take the Tauri path
   // instead of falling through to their guarded Electron branch (require('electron'),

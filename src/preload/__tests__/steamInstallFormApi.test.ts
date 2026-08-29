@@ -4,7 +4,7 @@
  *
  * Phase 35 plan 16 collapsed `../ipc.ts`'s `makeHandlerInvoker` to an
  * unconditional Tauri call -- the old "Electron transport" describe block
- * asserted a routing decision (`isTauri() === false` -> `ipcRenderer.invoke`)
+ * asserted a routing decision (Tauri-context check false -> `ipcRenderer.invoke`)
  * that no longer exists, so it is removed rather than left to assert nothing
  * (see `gamepadActionRouting.test.ts` for the same treatment). The `electron`
  * mock below is now a THROW, not a working stub: this suite exercises the
