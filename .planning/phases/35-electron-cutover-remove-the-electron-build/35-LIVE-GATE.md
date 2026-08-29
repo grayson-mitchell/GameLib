@@ -128,7 +128,20 @@ either, plus a visible window, is the positive signal).
 Expected: The app launches, a window appears, and the process is still running after 10 seconds
 (`ps aux | grep GameLib` shows the process; no crash reporter dialog).
 Observed:
-Verdict:
+Built from source at HEAD via `pnpm exec vite build && pnpm build:sidecar-sea && pnpm exec tauri
+build`; DMG `GameLib_0.7.0_aarch64.dmg` (530 MB, 2026-08-30 08:09:37) mounted and `GameLib.app`
+copied to `/Applications` at 08:18. Install confirmed fresh: bundle mtime `Aug 30 08:18` (the
+prior resident was a Jul 27 build and was removed), `CFBundleExecutable=gamelib-shell`, both
+`gamelib-shell` (232 MB) and `gamelib-sidecar` (169 MB) present and dated 08:18.
+Launched from Terminal per the Header method: pid 21484 at 08:34:31 on ttys004, parent
+`/bin/zsh -il`, fd 1 and fd 2 both on a pipe to `tee -a`. Window opened normally. Process was
+still alive at 3m54s elapsed — far past the 10-second bar — with no Rust panic, no segfault
+signal and no crash reporter dialog. Its child sidecar was the BUNDLED
+`/Applications/GameLib.app/Contents/MacOS/gamelib-sidecar` (pid 21497), not a repo dev sidecar.
+NOTE: four macOS Keychain prompts appeared on this launch. Investigated and resolved as NOT a
+defect — see `deferred-items.md` `D-35-19-01`. It is the "Allow" vs "Always Allow" distinction;
+no criterion covers Keychain, so it is ledgered rather than scored here.
+Verdict: PASS
 
 ### 2. Locale artifact populated in the bundle
 
@@ -149,7 +162,22 @@ precedent recorded 4 files). The third command — checking for `Contents/Resour
 (pre-fix) asset root — returns "No such file or directory": the negative control proving the
 artifact does not carry the stale root alongside the new one.
 Observed:
-Verdict:
+```
+total 208
+drwxr-xr-x@  6 graysonmitchell  admin    192 Aug 30 08:18 .
+drwxr-xr-x@ 51 graysonmitchell  admin   1632 Aug 30 08:18 ..
+-rw-r--r--@  1 graysonmitchell  admin   9319 Aug 30 08:18 gamelib.json
+-rw-r--r--@  1 graysonmitchell  admin  19113 Aug 30 08:18 gamepage.json
+-rw-r--r--@  1 graysonmitchell  admin    700 Aug 30 08:18 login.json
+-rw-r--r--@  1 graysonmitchell  admin  69538 Aug 30 08:18 translation.json
+5
+ls: /Applications/GameLib.app/Contents/Resources/public: No such file or directory
+```
+All four locale files present with non-zero sizes, matching the 35-04 precedent of 4 files.
+`Resources/build/` holds 5 entries. The negative control returned `No such file or directory`,
+so the artifact does NOT carry the stale pre-fix `public` asset root. All three file mtimes are
+`Aug 30 08:18`, the DMG-install time of the artifact under gate.
+Verdict: PASS
 
 ### 3. Translated strings render and a language switch works
 
