@@ -515,6 +515,34 @@ The two demand different fixes and the record must not guess between them.
 **Related, and probably the same underlying shape as criterion 6:** Steam entries carry no
 `runner` (criterion 6), and a runner-less Steam deep link cannot be resolved here. Steam titles
 appear to be second-class on both the tray and deep-link paths.
+
+**RESOLUTION APPENDED WHILE RUNNING CRITERION 11 -- the two hypotheses recorded above are now
+settled. Verdict unchanged (FAIL); only the cause changes.**
+This criterion originally left the cause open between (a) a Steam lookup gap and (b) a hydration
+race, because the deep link arrived 983ms after a COLD start and this project carries a deferred
+`steam-cache-hydration` concern. Criterion 11 supplied the controlled test that was missing here:
+it varied ONE variable at a time against a WARM instance.
+| deep link (warm, same instance 30743) | result |
+| - | - |
+| `appName=1829678475` Endless Sky, `runner: gog` | `[Backend]: Launching Endless Sky` -- gogdl invoked, title RUNS |
+| `appName=1124300` HUMANKIND, Steam | `[ProtocolHandler]: Could not receive game data for 1124300!` -- identical to the cold failure |
+Warm+GOG succeeds; warm+Steam fails exactly as cold+Steam did. **Cold-vs-warm is not the variable
+and hydration is not the cause -- hypothesis (b) is DEAD.** The variable is the runner.
+**Mechanism, read from source, not inferred:** `src/backend/protocol.ts:15` declares
+`const RUNNERS = z.enum(['legendary', 'gog', 'nile', 'sideload'])`. `findGame()`'s fallback loop
+iterates `RUNNERS.options`, so it probes exactly those four -- while
+`src/backend/storeManagers/index.ts` registers SIX managers (`sideload, gog, legendary, nile,
+zoom, steam`). **`steam` is absent from the enum, so the Steam manager is never consulted.** This
+matches the logs exactly: the 10:37:21 block logs Legendary, Nile and Gog probes and NO `[Steam]`
+line at all. (`zoom` is also absent, but Zoom is a dropped platform and is not a finding.)
+**NOT a Phase 35 regression.** `git blame -L 15,15 src/backend/protocol.ts` -> `7ba121ec5f
+Mathis Droege 2025-01-10`, an upstream Heroic commit predating GameLib's Steam work entirely. The
+Electron cutover did not cause this. It remains a FAIL because this gate scores observed product
+behaviour, not blame. Logged as D-35-19-05.
+**Converges with criterion 6.** Two independent failures now share one shape: Steam titles are
+second-class on runner-resolution paths that work for GOG (criterion 6: Steam entries carry no
+`runner` and are never recorded as recent; this criterion: Steam is not in the runner enum at all).
+They are DISTINCT defects in different files -- not one bug -- but they should be fixed together.
 Verdict: FAIL
 
 ### 11. Deep link: warm reachability, single-instance guard holds
@@ -537,7 +565,47 @@ Expected: Exactly one `GameLib` process both before and after — the PID is unc
 F-34.4.2-15, a second instance would split the `[shell]` sink; this criterion's whole point is
 confirming that does not happen.
 Observed:
-Verdict:
+Run in two stages because stage 1 could not be scored.
+
+**Stage 1 -- the contract's literal gesture, bare `open "gamelib://..."`: NOT SCORABLE (vacuous).**
+Machine state first: at the start of this criterion FIVE bundles still claimed `gamelib:` --
+`/Volumes/dmg.6zgNKA`, `/Volumes/dmg.KH3iXi`, `/Volumes/dmg.ze1mXG`, `dist/mac-arm64/GameLib.app`
+(all four DEAD paths, `[ -e ]` false) and `/Applications/GameLib.app`. Criterion 10's `lsregister`
+rebuild had NOT purged them. Unregistered the four dead paths individually (`lsregister -u`),
+leaving exactly one claimant: the app under test.
+Fired `open "gamelib://launch?appName=1829678475"` (Endless Sky, `runner: gog` -- "a different
+owned appName" per the contract). PID before 30743, PID after 30743, exit 0.
+**That PID result is VACUOUS and is NOT recorded as the guard holding.** Both sinks were silent:
+`gamelib-shell.log` stayed at 2456 bytes (no second `on_open_url`, no socket-accept line) and
+`gamelib.log` mtime stayed at 10:26:20 with no `ProtocolHandler]: Received ...1829678475` line.
+The URL never reached the app. "No second process" is equally consistent with "the guard held" and
+"nothing arrived at all", so it discriminates nothing.
+
+**Stage 2 -- delivery path substituted to `open -a /Applications/GameLib.app "gamelib://..."`,
+the same substitution criterion 10 used. SCORED. Guard holds, non-vacuously.**
+| | before | after |
+| - | - | - |
+| PID | 30743 | 30743 (unchanged, exactly one process) |
+| `gamelib-shell.log` | 2456 B | 2574 B -- `on_open_url fired with 1 url(s)`, `delivered OS deep link to sidecar: ok (5ms)` |
+| `gamelib.log` | 6092 B | 9002 B -- `[ProtocolHandler]: Received gamelib://launch?appName=1829678475` |
+The URL demonstrably ARRIVED at the already-running instance AND no second process spawned. That
+is the criterion's expectation, and per F-34.4.2-15 the `[shell]` sink did not split. Warm delivery
+took **5ms** vs criterion 10's **983ms** cold. Endless Sky then actually launched (`[Backend]:
+Launching Endless Sky (1829678475)`, gogdl invoked) -- so the warm path is end-to-end live, not
+merely reachable.
+
+**Stage 1's non-delivery is NOT scored against the product, and is NOT resolved.** Discriminator
+run: re-registered the surviving bundle (`lsregister -f -R /Applications/GameLib.app`) and repeated
+the bare gesture with exactly ONE claimant. Both sinks stayed flat (2693 B / 9860 B) across a 9s
+wait. So it is not the stale-claimant contamination. The product's own half of the contract IS
+correct and was verified: `Contents/Info.plist` declares `CFBundleURLSchemes: [gamelib]` under
+`CFBundleIdentifier com.gamelib.shell`. Whether bare-scheme routing (what a real user gets clicking
+a `gamelib://` link in a browser) is broken in the product or is residue of this machine having
+carried six claimants cannot be settled here. Logged as D-35-19-04 for a clean-machine retest; it
+must not be folded into this PASS.
+
+**Bonus result -- this criterion COLLAPSED criterion 10's open hypothesis pair.** See criterion 10.
+Verdict: PASS (guard holds; delivery-path substitution recorded, bare-scheme routing unresolved)
 
 ### 12. Deep link: a foreign scheme is rejected, no payload logged
 

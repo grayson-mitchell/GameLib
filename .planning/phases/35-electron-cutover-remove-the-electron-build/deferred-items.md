@@ -1406,3 +1406,72 @@ line or by an end-state check -- both of those already pass today.
 noting that this is a Tauri-shell behaviour with no established Electron comparison; whether the
 Electron build had the same flash is UNKNOWN and was not tested (the Electron build no longer
 exists to test it against, per plan 35-14).
+
+## D-35-19-04 — bare `gamelib://` scheme routing does not deliver on the test machine (UNRESOLVED)
+
+Found: criterion 11, 2026-08-30. Status: **UNRESOLVED — needs a clean-machine retest.**
+
+`open "gamelib://launch?appName=..."` exits 0 but delivers nothing: `gamelib-shell.log` shows no
+`on_open_url`, `gamelib.log` shows no `ProtocolHandler]: Received`. The same URL handed to the same
+bundle explicitly — `open -a /Applications/GameLib.app "gamelib://..."` — delivers in 5–10ms.
+
+Ruled out:
+- **Stale claimants.** The machine carried SIX `gamelib:` claimants, four at dead paths (three
+  unmounted `/Volumes/dmg.*` DMG staging volumes, plus `dist/mac-arm64/GameLib.app`). All four were
+  unregistered, leaving exactly one. Bare `open` still delivered nothing.
+- **A missing/incorrect bundle declaration.** `/Applications/GameLib.app/Contents/Info.plist`
+  declares `CFBundleURLSchemes: [gamelib]`, `CFBundleURLName com.gamelib.shell gamelib`, under
+  `CFBundleIdentifier com.gamelib.shell`. Correct.
+- **Registration staleness.** `lsregister -f -R /Applications/GameLib.app` then re-fired the bare
+  gesture; both sinks flat across 9s.
+
+Why it matters: bare-scheme routing is exactly what a real user gets clicking a `gamelib://` link
+in a browser or another app. If it is broken in the product rather than in this machine's
+LaunchServices database, deep links are effectively dead for real users and criteria 10/11's
+`open -a` substitution masks it. **This cannot be settled on this machine** — it has been running
+six competing claimants across an unknown number of dev builds. Retest on a clean macOS user
+account or VM with a single installed GameLib.app.
+
+Does NOT affect criterion 11's PASS: that criterion scores the single-instance guard, and the guard
+was proven to hold against a URL that demonstrably arrived.
+
+## D-35-19-05 — `RUNNERS` enum omits `steam`; deep-link launch can never resolve a Steam title
+
+Found: criterion 11 (root-causing criterion 10), 2026-08-30. Status: **ROOT CAUSE ESTABLISHED,
+UNFIXED. Pre-existing, inherited from upstream — NOT a Phase 35 regression.**
+
+`src/backend/protocol.ts:15`:
+```ts
+const RUNNERS = z.enum(['legendary', 'gog', 'nile', 'sideload'])
+```
+`findGame()` iterates `RUNNERS.options` to resolve an `appName` with no explicit runner. That set
+has four entries; `src/backend/storeManagers/index.ts` registers six managers (`sideload, gog,
+legendary, nile, zoom, steam`). **`steam` is never iterated, so a Steam title can never be resolved
+by a deep link.** Confirmed live: warm deep links to a GOG appName launched the title, an identical
+warm deep link to Steam appid `1124300` produced `Could not receive game data`, and the logs show
+Legendary/Nile/Gog probes with no `[Steam]` probe at all.
+
+`git blame -L 15,15` → `7ba121ec5f Mathis Dröge 2025-01-10`, upstream Heroic, predating GameLib's
+Steam work. The Electron cutover did not introduce it.
+
+Fix is not merely adding `'steam'` to the enum — the enum is also the zod validator for an
+explicit `?runner=` URL parameter, so widening it widens the accepted input surface. Whoever fixes
+this must check it against the confused-deputy guard T-34.5-46-03 (the `launch` handler refuses to
+guess a runner) rather than assuming the enum is a private detail of `findGame`.
+
+Related: D-35-19-06 below. Both are Steam-second-class-on-runner-resolution.
+
+## D-35-19-06 — cross-reference: criterion 6 + criterion 10 share a shape
+
+Found: 2026-08-30. Status: **observation, not a separate defect.**
+
+Two independently-discovered Phase 35 gate failures both reduce to Steam titles being second-class
+on runner-resolution paths that work for GOG:
+- Criterion 6: Steam entries in `store/config.json` `games.recent` carry NO `runner` field (GOG
+  entries do), and launching a Steam title never records it as recent at all.
+- Criterion 10: `steam` is absent from the `RUNNERS` enum, so deep-link resolution never consults
+  the Steam manager (D-35-19-05).
+
+These are DISTINCT defects in different files with different causes — do not treat them as one
+bug. But they should be scoped and fixed together, and a fix for either should be regression-tested
+against the other.
