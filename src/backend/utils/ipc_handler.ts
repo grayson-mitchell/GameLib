@@ -1,4 +1,4 @@
-import { clipboard } from 'electron'
+import { clipboard } from 'backend/platform'
 import { addListener, addHandler } from 'backend/ipc'
 
 import { callAbortController } from './aborthandler/aborthandler'

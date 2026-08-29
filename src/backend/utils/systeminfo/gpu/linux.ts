@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app } from 'backend/platform'
 import { z } from 'zod'
 
 import { hasExecutable } from '../../os/path'

@@ -1,5 +1,5 @@
 // eslint-disable-next-line no-restricted-imports
-import { ipcMain, type IpcMainEvent } from 'electron'
+import { ipcMain, type IpcMainEvent } from 'backend/platform'
 import { getMainWindow } from 'backend/main_window'
 
 import type {

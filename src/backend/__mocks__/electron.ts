@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events'
 import {
   BrowserWindowConstructorOptions,
   MenuItemConstructorOptions
-} from 'electron'
+} from 'backend/platform'
 import { tmpdir } from 'os'
 import { join } from 'path'
 

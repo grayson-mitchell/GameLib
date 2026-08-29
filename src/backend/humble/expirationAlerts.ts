@@ -1,4 +1,4 @@
-import { Notification } from 'electron'
+import { Notification } from 'backend/platform'
 import i18next from 'i18next'
 import { GlobalConfig } from 'backend/config'
 import { isSteamDeckGameMode } from 'backend/constants/environment'

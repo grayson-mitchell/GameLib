@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { searchGame, getGrids } from '../utils'
-import { app } from 'electron'
+import { app } from 'backend/platform'
 
 jest.mock('axios')
 const mockedAxios = axios as jest.Mocked<typeof axios>

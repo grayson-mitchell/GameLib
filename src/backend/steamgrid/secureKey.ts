@@ -22,7 +22,7 @@
 // allowlist (`keyring_account()` in `src-tauri/src/main.rs`), installed by
 // `setSteamGridDbSecretStore()` in a future plan (34.6-02), mirroring the shipped
 // `HumbleSecretStore`/`SidecarKeyringSlotStore` precedent exactly.
-import { safeStorage } from 'electron'
+import { safeStorage } from 'backend/platform'
 import { logWarning, LogPrefix } from 'backend/logger'
 
 const CIPHERTEXT_PREFIX = 'sgdb:v1:'

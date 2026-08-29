@@ -1,5 +1,5 @@
 import { LogPrefix, logInfo, logWarning } from 'backend/logger'
-import { dialog, Notification } from 'electron'
+import { dialog, Notification } from 'backend/platform'
 import { ButtonOptions, DialogType } from 'common/types'
 import { getMainWindow } from '../main_window'
 import { sendFrontendMessage } from '../ipc'

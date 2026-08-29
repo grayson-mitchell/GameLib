@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app } from 'backend/platform'
 import { open } from 'fs/promises'
 import { z } from 'zod'
 

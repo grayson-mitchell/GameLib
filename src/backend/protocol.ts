@@ -1,4 +1,4 @@
-import { dialog, app } from 'electron'
+import { dialog, app } from 'backend/platform'
 import { logError, logInfo, LogPrefix } from './logger'
 import i18next from 'i18next'
 import { GameInfo, LaunchOption, Runner } from 'common/types'

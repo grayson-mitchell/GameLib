@@ -14,7 +14,7 @@ import https from 'node:https'
 // `sidecar/electronStub.ts`: `process.env.npm_package_version` is UNSET in the packaged
 // SEA sidecar binary, so it cannot be the source of the User-Agent version below.
 import pkg_json from 'backend/../../package.json'
-import { app, dialog, shell, Notification, BrowserWindow } from 'electron'
+import { app, dialog, shell, Notification, BrowserWindow } from 'backend/platform'
 import { exec, spawn, SpawnOptions, spawnSync } from 'child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'graceful-fs'
 import { promisify } from 'util'

@@ -1,4 +1,4 @@
-import { app, nativeImage, shell } from 'electron'
+import { app, nativeImage, shell } from 'backend/platform'
 import {
   chmodSync,
   existsSync,

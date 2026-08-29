@@ -1,5 +1,5 @@
 import { exec } from 'child_process'
-import { dialog } from 'electron'
+import { dialog } from 'backend/platform'
 import { checkRosettaInstall } from '../utils'
 
 jest.mock('electron')

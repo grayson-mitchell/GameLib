@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app } from 'backend/platform'
 import pkg_json from 'backend/../../package.json'
 
 function getHeroicVersion(): string {

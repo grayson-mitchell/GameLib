@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios'
 import { writeFile, stat, readFile } from 'fs/promises'
-import { app } from 'electron'
+import { app } from 'backend/platform'
 
 type JSONValue = string | number | unknown[] | { [key: string]: JSONValue }
 

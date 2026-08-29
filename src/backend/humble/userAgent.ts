@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app } from 'backend/platform'
 
 /**
  * Standard (non-Electron) browser user agent for Humble-facing requests.

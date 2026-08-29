@@ -1,4 +1,4 @@
-import { session } from 'electron'
+import { session } from 'backend/platform'
 
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'

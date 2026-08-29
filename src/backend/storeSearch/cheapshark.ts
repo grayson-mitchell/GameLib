@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { app } from 'electron'
+import { app } from 'backend/platform'
 import { logError, LogPrefix } from 'backend/logger'
 import { resolveRunner } from 'common/discounts/storeMapping'
 import type {

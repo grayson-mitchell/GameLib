@@ -12,7 +12,7 @@ import { LegendaryUser } from 'backend/storeManagers/legendary/user'
 import { NileUser } from 'backend/storeManagers/nile/user'
 import { libraryStore } from 'backend/storeManagers/sideload/electronStores'
 import { getOsInfo } from 'backend/utils/systeminfo/osInfo'
-import { app } from 'electron'
+import { app } from 'backend/platform'
 import https from 'https'
 
 const PLAUSIBLE_DOMAIN = 'heroic-games-client.com'

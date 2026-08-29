@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { net } from 'electron'
+import { net } from 'backend/platform'
 import { z } from 'zod'
 
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'

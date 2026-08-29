@@ -17,7 +17,7 @@ import {
   pictureExt,
   steamDBBaseURL
 } from './constants'
-import { nativeImage } from 'electron'
+import { nativeImage } from 'backend/platform'
 import { getMainWindow } from 'backend/main_window'
 
 const generateImage = async (

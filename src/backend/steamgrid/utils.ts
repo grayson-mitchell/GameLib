@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { SGDBGame, SGDBGrid } from 'common/types'
-import { app } from 'electron'
+import { app } from 'backend/platform'
 
 const SGDB_API_URL = 'https://www.steamgriddb.com/api/v2'
 

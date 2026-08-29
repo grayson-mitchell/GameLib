@@ -9,7 +9,7 @@ import {
   realpathSync,
   writeFileSync
 } from 'graceful-fs'
-import { app } from 'electron'
+import { app } from 'backend/platform'
 import { libraryManagerMap } from 'backend/storeManagers'
 import { LegendaryAppName } from './storeManagers/legendary/commands/base'
 import { legendaryInstalled } from './storeManagers/legendary/constants'

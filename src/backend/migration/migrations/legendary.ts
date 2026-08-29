@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app } from 'backend/platform'
 import { access, cp, rename, rm } from 'fs/promises'
 import { join } from 'path'
 

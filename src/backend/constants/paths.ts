@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app } from 'backend/platform'
 import { existsSync, mkdirSync, renameSync } from 'graceful-fs'
 import { homedir } from 'os'
 import { join, resolve } from 'path'

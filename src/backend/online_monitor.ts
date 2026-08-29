@@ -1,5 +1,5 @@
 import { ConnectivityStatus } from 'common/types'
-import { net } from 'electron'
+import { net } from 'backend/platform'
 import { addListener, addHandler, sendFrontendMessage } from 'backend/ipc'
 import { logInfo, LogPrefix } from './logger'
 import axios from 'axios'

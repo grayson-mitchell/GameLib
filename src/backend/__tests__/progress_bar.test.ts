@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron'
+import { BrowserWindow } from 'backend/platform'
 import { backendEvents } from '../backend_events'
 import { sendGameStatusUpdate, sendProgressUpdate } from '../utils'
 import '../progress_bar'

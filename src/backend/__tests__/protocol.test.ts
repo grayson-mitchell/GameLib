@@ -27,7 +27,7 @@ jest.mock('../config', () => ({
 }))
 
 import { handleProtocol, shouldHideWindowForProtocolArgs } from '../protocol'
-import { app, dialog } from 'electron'
+import { app, dialog } from 'backend/platform'
 import { libraryManagerMap } from '../storeManagers'
 import { getMainWindow } from '../main_window'
 import { sendFrontendMessage } from '../ipc'

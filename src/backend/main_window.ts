@@ -1,5 +1,5 @@
 import { AppSettings, WindowProps } from 'common/types'
-import { BrowserWindow, screen, app } from 'electron'
+import { BrowserWindow, screen, app } from 'backend/platform'
 import path from 'path'
 import { configStore } from './constants/key_value_stores'
 

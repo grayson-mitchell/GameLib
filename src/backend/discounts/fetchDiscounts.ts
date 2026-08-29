@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { app } from 'electron'
+import { app } from 'backend/platform'
 import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { GOGUser } from 'backend/storeManagers/gog/user'
 import type {

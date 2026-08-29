@@ -48,7 +48,7 @@
  * loop that does not exist in the Electron main process.
  */
 
-import { safeStorage } from 'electron'
+import { safeStorage } from 'backend/platform'
 
 import { logWarning, LogPrefix } from 'backend/logger'
 
