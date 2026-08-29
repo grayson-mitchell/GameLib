@@ -96,7 +96,29 @@ export function startInstalledJsonWatcher(
     // writes happen in a 500ms timespan.
     if (refreshTimeout) clearTimeout(refreshTimeout)
     refreshTimeout = setTimeout(refresh, INSTALLED_JSON_REFRESH_DEBOUNCE_MS)
+    // Same reason as the watcher's own `unref()` below: a pending debounce must not be the
+    // reason the process is still alive when the shell has closed stdin.
+    refreshTimeout.unref?.()
   })
+
+  // An `FSWatcher` is a libuv handle and, like any handle, it REFERENCES the event loop -- so
+  // while one is open the process cannot exit on its own. That is wrong for the sidecar: its
+  // lifetime is owned by stdin (the RPC frame stream), and it must exit when the shell closes
+  // it. Without this `unref()` the sidecar started, served, and then HUNG FOREVER on stdin EOF
+  // instead of exiting 0 -- the shell's `shutdown_child()` would then have to SIGKILL it on the
+  // way out, and anything that ever misses that kill leaves an orphan holding an authenticated
+  // session, which is the exact hazard `RunEvent::Exit`'s own comment describes.
+  //
+  // `unref()` does NOT stop the watcher working. It only says "do not keep the process alive
+  // FOR ME". Events still fire for as long as something else holds the loop open, which for the
+  // whole of the sidecar's real life is stdin.
+  //
+  // Found 2026-08-29 by `pnpm smoke:sidecar` and proven by bisection: that gate FAILED with the
+  // watcher wired in and PASSED with it removed, on an otherwise identical tree. No jest test
+  // could have caught it -- the call site is guarded by `JEST_WORKER_ID`, so the live path is
+  // never exercised under jest, and `pnpm build:sidecar` exits 0 because the bundle builds fine,
+  // it just cannot exit.
+  activeWatcher.unref()
 
   return true
 }

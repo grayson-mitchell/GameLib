@@ -16,6 +16,20 @@ jobs:
       - uses: ./.github/actions/install-deps
       - name: Test CI
         run: pnpm test:ci
+      # Phase 35 (D-35-10-01 follow-up, 2026-08-29). This gate existed but ran NOWHERE -- not in
+      # CI, not in .husky -- so it caught nothing for as long as it has existed. On the day it was
+      # first run it was already RED: plan 35-10's `installed.json` watcher held an un-unref'd
+      # FSWatcher, so the sidecar hung forever on stdin EOF instead of exiting 0.
+      #
+      # It is the ONLY check for that failure class. Its own header records why: the 2026-08-23
+      # boot-order regression left all 176 backend jest suites GREEN, `pnpm build:sidecar` exit 0,
+      # and `tsc --noEmit` exit 0, because the bundle builds fine -- it just cannot run. Anything
+      # evaluation-order or event-loop dependent is invisible to jest BY CONSTRUCTION, since jest
+      # supplies its own module registry and never runs the real bundle.
+      #
+      # Costs about a second. Runs after test:ci so a plain unit-test failure reports first.
+      - name: Sidecar startup smoke
+        run: pnpm smoke:sidecar
   e2e:
     runs-on: ubuntu-latest
     steps:
