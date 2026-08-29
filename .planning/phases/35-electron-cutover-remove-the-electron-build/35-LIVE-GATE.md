@@ -424,7 +424,29 @@ one negative/absence UI check in this document; there is no log-based positive c
 a UI element's absence, so this criterion is scored by direct visual inspection only — recorded here
 explicitly rather than silently treated as equivalent to the log-based absence criteria elsewhere.)
 Observed:
-Verdict:
+Operator inspected Settings on the packaged macOS build and found NO "dark tray icon" control.
+Sections checked, stated explicitly because an absence claim is only as good as the search behind
+it: **General** and **Appearance**.
+**POSITIVE CONTROL SUPPLIED, closing this criterion's own stated weakness.** This criterion warns
+that it is the document's only UI absence check with no log-based control available. A code-level
+control was therefore established, so the absence is not merely "nothing was found":
+- `UseDarkTrayIcon` IS MOUNTED in the settings tree at
+  `src/frontend/screens/Settings/sections/GeneralSettings/index.tsx:62` -- i.e. in **General**,
+  precisely the section the operator searched. The control is not hidden in some section that
+  went unchecked.
+- `src/frontend/screens/Settings/components/UseDarkTrayIcon.tsx` returns `<></>` under `if (isMac)`
+  and otherwise renders a real `ToggleSwitch`. The absence on macOS is therefore the PLATFORM GATE
+  firing, not the component being absent, unrendered, or broken.
+Together these distinguish the two outcomes the criterion needs to tell apart: a
+platform-conditional display (what is happening) versus a NOT-HONOURED control that simply is not
+there (what would be a defect). A bare "I did not see it" could not have separated them.
+Rationale confirmed in the component's own comment: on macOS `tray_image()` returns the AppKit
+TEMPLATE silhouette regardless of `dark` (`main.rs:83-93`), so the toggle would be a "lying
+affordance" -- the exact thing D-05 exists to remove. Hidden rather than deleted because it does
+real work on Windows and Linux, with the `darkTrayIcon` config key deliberately retained. That key
+is indeed still present and set to `true` in this machine's config, with no macOS UI exposing it,
+which is the documented intent rather than a leak.
+Verdict: PASS
 
 ### 10. Deep link: cold start
 
