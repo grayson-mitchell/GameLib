@@ -633,7 +633,55 @@ rejected, the exact log line is
 `SHOULD-NOT-APPEAR-IN-ANY-LOG` must not appear anywhere in `gamelib-shell.log` or the terminal
 transcript.
 Observed:
-Verdict:
+Run in two stages. Stage 1 is the contract's literal gesture and is the weak sub-case the
+Preconditions anticipated; stage 2 is the one that actually exercises the rejection path.
+
+**Stage 1 -- `open "https://example.invalid/not-a-gamelib-link?token=SHOULD-NOT-APPEAR-IN-ANY-LOG"`.**
+Exit 0. `gamelib-shell.log` flat at 2693 B and `gamelib.log` flat at 9918 B across a 7s wait.
+macOS routed the URL to the default browser and never handed it to GameLib -- exactly the sub-case
+the criterion text calls out. **This is real evidence at the OS-routing level and nothing more: it
+exercises ZERO product code.** Recorded, not leaned on.
+
+**Stage 2 -- the foreign URL forced INTO the bundle (`open -a /Applications/GameLib.app <url>`),
+so `on_open_url` -> `deep_link_decision` -> `protocol_url_arg` actually runs.** Three distinct
+foreign schemes, all against the same warm instance 30743:
+| # | URL handed in | shell-log result | logged `bytes=` | true URL len |
+| - | - | - | - | - |
+| 2a | `https://example.invalid/not-a-gamelib-link?token=<TOKEN>` | `on_open_url fired` then reject | **77** | **77** |
+| 2b | `notgamelib://launch?token=<TOKEN>` | `on_open_url fired` then reject | **54** | **54** |
+| 2c | `gamelibx://launch?token=<TOKEN>` (prefix-confusion probe) | `on_open_url fired` then reject | **52** | **52** |
+Every one produced the contract's exact literal string:
+`rejected OS deep-link payload (failed protocol_url_arg validation), bytes=<N>`.
+
+**The byte count is REAL, not a constant.** All three counts match the true length of the URL as
+handed in, exactly. A hard-coded or zeroed count would have been indistinguishable from a correct
+one on a single sample; three differing payloads discriminate it.
+
+**No payload leaked.** `SHOULD-NOT-APPEAR-IN-ANY-LOG`: 0 hits in `gamelib-shell.log`, 0 in
+`gamelib.log`, 0 across a recursive `grep -rl` of the whole `~/Library/Logs/GameLib/` tree, and 0
+in the session transcript dir. A separate search for the scheme fragments themselves
+(`example.invalid`, `notgamelib`, `gamelibx`) also returned nothing anywhere -- so it is not merely
+the query string being stripped; no part of the rejected URL is written.
+
+**The rejection holds at the SHELL boundary.** `gamelib.log` stayed byte-identical at 9918 B with
+mtime unmoved across all three rejections. The payload never crossed the JSON-RPC pipe into the
+sidecar -- consistent with `protocol_url_arg` failing at its first `starts_with` check, before
+`tauri::Url::parse` is ever reached (`src-tauri/src/main.rs:6670`). PID unchanged at 30743
+throughout; no foreign URL spawned an instance.
+
+**Positive control (Test 4) satisfied, and by a stronger route than the contract asked for.** The
+contract planned to lean on criteria 10-11 having proved `shell_diag` reaches the file. That still
+holds, but stage 2 did not need it: these rejections produced their OWN affirmative log lines, so
+this is not an argument from absence at all.
+
+**One half of the check is VACUOUS and is not counted.** The contract also requires the token be
+absent from "the terminal transcript". The transcript at `session_dir` was last written 09:14 and
+belongs to pid 23589; the instance under test (30743) was launched via `open -a` during criterion
+10, so its stderr is not captured anywhere. Its clean grep therefore proves nothing about this
+instance. This is the D-35-19-02 residual (the 55 `eprintln!` sites reach stderr only). It does not
+weaken the verdict: the reject emitter is `shell_diag`, which is file-backed, and the file shows
+the lines directly.
+Verdict: PASS
 
 ### 13. `openDialog` long-running channel: a picker open past 90 seconds still completes
 
