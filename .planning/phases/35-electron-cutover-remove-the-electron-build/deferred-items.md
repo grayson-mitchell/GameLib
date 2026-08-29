@@ -834,7 +834,11 @@ and does not survive this phase), so its intent needs carrying forward rather th
 Install alongside the existing `unhandledRejection` guard in `processGuards.ts`, which already has
 the idempotence flag, the log-only discipline and the tests.
 
-**Status:** open, unowned, **deadline wave 8**.
+**Status:** **CLOSED** at `b26e3a61a` (verified in SOURCE by plan 35-14 Task 1, not from the
+summary that claimed it: `installUncaughtExceptionGuard()` is live in `processGuards.ts`,
+installed at module scope from `installRejectionGuard.ts`, +13 tests). See
+`D-35-10-01-SUMMARY.md`. This line previously read "open, unowned, deadline wave 8" and was
+STALE — a verifier reading only this file would have wrongly blocked plan 35-14.
 
 ## D-35-09-02 — a FAILED Epic cookie clear is invisible to the user; T-35-39 is logged, not mitigated
 
