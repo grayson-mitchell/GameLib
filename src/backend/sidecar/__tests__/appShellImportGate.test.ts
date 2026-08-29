@@ -97,38 +97,13 @@ describe('appShellImportGate (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-12)', 
     }
   })
 
-  // ── Gate 4: D-08 shape gate — main.ts keeps one-line delegations to the
-  // extracted appshell/* bodies, never inline reimplementations ─────────────
-  it('REQ-34.1-05/D-08 Gate 4: main.ts imports the extracted appshell/* modules and delegates to them (not inline bodies)', () => {
-    const mainSource = readFileSync(join(__dirname, '../../main.ts'), 'utf-8')
-    const stripped = stripComments(mainSource)
+  // Gate 4 (D-08 shape gate: main.ts delegates to the extracted appshell/* bodies rather
+  // than reimplementing them inline) was REMOVED by Phase 35 Plan 14, which deleted
+  // src/backend/main.ts. It read that file from disk, so it would ENOENT rather than fail
+  // meaningfully. NOT replaced: it constrained the ELECTRON main process's delegation shape,
+  // and that process no longer exists. The appshell/* modules themselves and the
+  // Electron-free import gates above are untouched. See D-35-14-02.
 
-    // main.ts imports the extracted, Electron-free modules (D-07/D-08).
-    expect(stripped).toMatch(/from\s+['"]\.\/appshell\/themes['"]/)
-    expect(stripped).toMatch(/from\s+['"]\.\/appshell\/releases['"]/)
-    expect(stripped).toMatch(/from\s+['"]\.\/appshell\/language['"]/)
-
-    // Each registration site is a one-line delegation to the imported
-    // function — not a reimplemented inline body.
-    expect(stripped).toMatch(
-      /addHandler\(\s*['"]getCustomThemes['"]\s*,\s*async\s*\(\)\s*=>\s*getCustomThemes\(\)\s*\)/
-    )
-    expect(stripped).toMatch(
-      /addHandler\(\s*['"]getThemeCSS['"]\s*,\s*async\s*\([^)]*\)\s*=>\s*getThemeCSS\(theme\)\s*\)/
-    )
-    expect(stripped).toMatch(
-      /addHandler\(\s*['"]getCustomCSS['"]\s*,\s*async\s*\(\)\s*=>\s*getCustomCSS\(\)\s*\)/
-    )
-    expect(stripped).toMatch(
-      /addHandler\(\s*['"]getLatestReleases['"]\s*,\s*async\s*\(\)\s*=>\s*getLatestReleasesForStartup\(\)\s*\)/
-    )
-    expect(stripped).toMatch(
-      /addHandler\(\s*['"]getCurrentChangelog['"]\s*,\s*async\s*\(\)\s*=>\s*getCurrentChangelogEntry\(\)\s*\)/
-    )
-    expect(stripped).toMatch(
-      /addListener\(\s*['"]changeLanguage['"]\s*,\s*async\s*\([^)]*\)\s*=>\s*\n?\s*changeLanguage\(language\)\s*\)/
-    )
-  })
 
   // ── Gate 5: D-02 — appShellFlowRegistration.ts registers none of the ten
   // D-01 window-chrome channels (the preload short-circuit already owns them

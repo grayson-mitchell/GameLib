@@ -1117,3 +1117,55 @@ Port the five specs to `tauri-driver`/WebdriverIO — a different driver, runner
 plus new CI wiring. It was explicitly rejected as option-b for this plan on the grounds that it
 puts untested new infrastructure on the critical path at the point of no return. It is its own
 project and needs its own phase.
+
+## D-35-14-02 — ten source gates pinned Electron-era artifacts and were retired, re-pointed or narrowed by the cutover
+
+**Found during:** plan 35-14 Task 3 verification — `pnpm test` went from the known-red baseline of
+4 failures to **30 failures across 11 suites** the moment the deletions landed.
+**Status:** resolved in-plan. This entry exists so the retired assertions are reclaimable and so a
+later reader does not mistake the removals for an unexplained loosening of gates.
+
+The plan named none of this. Every failure had the same cause and **none was a runtime defect** —
+`codecheck`, `vite build`, `build:sidecar` and `smoke:sidecar` were all green throughout. These were
+source gates written to constrain files the cutover deleted.
+
+### Disposition, gate by gate
+
+Retiring an assertion was the LAST resort. Four were kept alive in some form:
+
+| Gate | Pinned | Disposition |
+|---|---|---|
+| `packagingConfig.test.ts` — symlink plugin (F-34.9-01) | `electron.vite.config.ts` registers `preserveRunnerSymlinksPlugin` | **RE-POINTED** to `vite.config.ts` — the plugin is still live under Tauri (`pnpm exec vite build` printed `[preserve-runner-symlinks] restored 12 symlink(s)`) |
+| `artifactTargets.test.ts` — D-11 anti-collateral | `release:{linux,mac,win}` still EXIST | **INVERTED** to assert they are gone. The old test's own comment named this exact event: *"Plan 35-14 owns these. If they vanish, it must be that plan doing it deliberately."* Deleting it would drop the D-11 tripwire; inverted, it now catches an accidental resurrection |
+| `artifactTargets.test.ts` — successor | (new) | **ADDED**: the Tauri release path (`release-tauri.yml`) is not collateral damage of a flatpak sweep — the thing a widened sweep could now wrongly remove |
+| `installFormIpc.test.ts` — D-02 fork gate | `main.ts` AND `steamAuthFlowRegistration.ts` reference-not-fork | **NARROWED** to the sidecar half, which is still live |
+| `removeCopies.test.ts` — seam census | channel present in "all FOUR seam files" | **RE-DERIVED to THREE**. The stated number was updated with the list — a census whose number outlives its list is how coverage is lost in the other direction |
+| `x64NonGoalSurvivor.test.ts` — category 1 | `electron-builder.yml` x64/win32 refs | **RETIRED** (see below) |
+| `packagingConfig.test.ts` — 4 describes | `electron-builder.yml` per-platform staging globs | **RETIRED** — Tauri stages runners via `tauri.conf.json`, whose guard is the adjacent describe and is untouched |
+| `cleanDist.test.ts` — artifactName pin + wiring pin | `electron-builder.yml` artifactName tokens; `dist:*`→`clean:dist-*` ordering | **RETIRED** |
+| `gameDetailsImportGate.test.ts` — Gates 5, 5-sanity, 6 | `main.ts` 19-channel delegation shape | **RETIRED** (handled in commit A) |
+| `appShellImportGate.test.ts` — Gate 4 | `main.ts` delegates to `appshell/*` | **RETIRED** |
+| `steamAuthFlows.test.ts` — 3 source gates | `main.ts` bottle-channel registration and ORDER | **RETIRED** — the sidecar side is already covered behaviourally by live round-trip tests above them; what is genuinely lost is the registration-ORDER pin, which had no behavioural equivalent |
+
+### The one that mattered most, and it was nearly invisible
+
+`x64NonGoalSurvivor.test.ts` read `electron-builder.yml` at **module scope**. Once that file was
+deleted the ENOENT took the WHOLE suite down — so categories 2 and 3 (the six
+`downloadHelperBinaries.ts` literals and the `x64Path` box64 affordance), which have nothing to do
+with Electron and are still load-bearing, **stopped running at all** rather than failing visibly.
+Removing the dead read is what put them back in service. A suite that fails to run reports as one
+red suite, not as N silently-unexecuted assertions.
+
+That file's header also says: *"If this file goes red, the correct response is to REVERT the
+over-reaching edit that caused it, never to relax an assertion here."* That instruction is correct
+and was deliberately not relaxed — it guards against a SWEEP over-reaching, and this was a planned
+wholesale deletion of the subject file, with no edit to revert. The reasoning is written into the
+file rather than left in this ledger alone.
+
+### What is genuinely unguarded now
+
+- `main.ts`'s registration ORDER for the Steam bottle channels (`steamAuthFlows.test.ts`).
+- The per-platform packaging staging contract, until a Tauri-side equivalent exists beyond
+  `tauri.conf.json`'s current guard.
+- `verify:runner-bundle` has **no caller anywhere** — see the note in `verifyRunnerBundle.test.ts`
+  and REQ-34.16-02, which remains PARTIAL and is now unsatisfiable by the Electron route.

@@ -602,25 +602,22 @@ describe('package.json wiring pin (C2-04)', () => {
   // scripts['dist:mac'] and scripts['release:mac'] makes that definition
   // unreachable from the assertion.
 
-  test('dist:mac invokes pnpm verify:runner-bundle before electron-builder', () => {
+  // The `dist:mac` / `release:mac` ordering pins were REMOVED by Phase 35 Plan 14: both
+  // scripts invoked electron-builder and were deleted with the Electron packaging path, so
+  // there is no longer a pipeline in which `verify:runner-bundle` can be ordered "before
+  // electron-builder".
+  //
+  // THIS LEAVES A REAL GAP, and it is the same one REQ-34.16-02 has been PARTIAL on since
+  // 34.18: `verify:runner-bundle` survives as a script but now has NO CALLER ANYWHERE, and
+  // deleting build-base.yml removed the last route by which it could ever have run in real
+  // CI. It has still never been exercised in a CI job.
+  //
+  // What replaces the pins is deliberately weaker and says so: assert only that the script
+  // still EXISTS, so it is not quietly dropped as dead weight before a Tauri-side successor
+  // wires it into the release path. An assertion that it is currently UNCALLED was
+  // considered and rejected -- it would go red the moment someone did the right thing.
+  test('verify:runner-bundle still exists as a script, pending a Tauri-side caller (REQ-34.16-02)', () => {
     const scripts = loadScripts()
-    const distMac = scripts['dist:mac']
-    // Presence: the `pnpm ` prefix pins this as an invoked pipeline step,
-    // not merely a comment-like fragment or a differently-invoked mention.
-    expect(distMac).toContain('pnpm verify:runner-bundle')
-    // Ordering (load-bearing half): presence alone would still pass with
-    // the step relocated after electron-builder, where it gates nothing.
-    expect(distMac.indexOf('pnpm verify:runner-bundle')).toBeLessThan(
-      distMac.indexOf('electron-builder')
-    )
-  })
-
-  test('release:mac invokes pnpm verify:runner-bundle before electron-builder', () => {
-    const scripts = loadScripts()
-    const releaseMac = scripts['release:mac']
-    expect(releaseMac).toContain('pnpm verify:runner-bundle')
-    expect(releaseMac.indexOf('pnpm verify:runner-bundle')).toBeLessThan(
-      releaseMac.indexOf('electron-builder')
-    )
+    expect(scripts).toHaveProperty('verify:runner-bundle')
   })
 })

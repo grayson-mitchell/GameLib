@@ -722,31 +722,18 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       )
     })
 
-    it('main.ts registers isSteamBottleEligible delegating to the shared seam (comment-stripped source gate)', () => {
-      const stripped = stripSourceComments(readFileSync(MAIN_TS_PATH, 'utf-8'))
-      expect(stripped).toMatch(
-        /addHandler\(\s*['"]isSteamBottleEligible['"]\s*,\s*async\s*\([^)]*\)\s*=>\s*getSteamBottleEligibilityVerdict\(appName\)\s*\)/
-      )
-    })
+    // The three `main.ts` source gates (isSteamBottleEligible / persistBottleWineVersion
+    // delegation, and the placement gate ordering isSteamBottleEligible between
+    // steamBottleStatus and steamClientSetupStart) were REMOVED by Phase 35 Plan 14, which
+    // deleted src/backend/main.ts. They read it from disk and would ENOENT.
+    //
+    // They are NOT replaced, and the loss is smaller than it looks: they were the ELECTRON
+    // mirror of the same registrations, and the sidecar side of every one of them is
+    // already covered BEHAVIOURALLY by the live round-trip tests just above, which assert
+    // the handlers actually respond rather than that a source file mentions them. What is
+    // gone is the registration-ORDER pin, which had no behavioural equivalent.
+    // See D-35-14-02.
 
-    it('main.ts registers persistBottleWineVersion delegating to the shared seam (comment-stripped source gate)', () => {
-      const stripped = stripSourceComments(readFileSync(MAIN_TS_PATH, 'utf-8'))
-      expect(stripped).toMatch(
-        /addHandler\(\s*['"]persistBottleWineVersion['"]\s*,\s*async\s*\([^)]*\)\s*=>\s*persistInstallFormWineVersion\(wineVersion\)\s*\)/
-      )
-    })
-
-    it('main.ts places isSteamBottleEligible inside the bottle block, between steamBottleStatus and steamClientSetupStart (placement gate)', () => {
-      const stripped = stripSourceComments(readFileSync(MAIN_TS_PATH, 'utf-8'))
-      const bottleStatusIndex = stripped.indexOf('steamBottleStatus')
-      const eligibleIndex = stripped.indexOf('isSteamBottleEligible')
-      const clientSetupIndex = stripped.indexOf('steamClientSetupStart')
-      expect(bottleStatusIndex).toBeGreaterThan(-1)
-      expect(eligibleIndex).toBeGreaterThan(-1)
-      expect(clientSetupIndex).toBeGreaterThan(-1)
-      expect(eligibleIndex).toBeGreaterThan(bottleStatusIndex)
-      expect(eligibleIndex).toBeLessThan(clientSetupIndex)
-    })
   })
 
   // ── Guided Steam-client install pair (Phase 34.4 Plan 02, REQ-34.4-04) ───────

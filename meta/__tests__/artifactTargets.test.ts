@@ -137,14 +137,28 @@ describe('D-11: the Flatpak/Flathub publishing path stays deleted', () => {
     }
   })
 
-  it('the electron-builder release scripts are NOT collateral damage of this deletion', () => {
+  it('the electron-builder release scripts are gone, and it was plan 35-14 that removed them', () => {
     const scripts = readScripts()
 
-    // Plan 35-14 owns these. If they vanish, it must be that plan doing it
-    // deliberately -- not a widened flatpak sweep.
+    // INVERTED by Phase 35 Plan 14, which is the exact event the previous version of this
+    // test named: "Plan 35-14 owns these. If they vanish, it must be that plan doing it
+    // deliberately -- not a widened flatpak sweep." They vanished, and 35-14 commit C is
+    // what did it, together with electron-builder itself.
+    //
+    // The assertion is INVERTED rather than DELETED on purpose. Deleting it would drop the
+    // D-11 protection entirely; inverting it keeps a live tripwire, now pointing the other
+    // way -- if these scripts ever come BACK, something has resurrected the Electron
+    // packaging path and that needs to be deliberate too.
     for (const name of ['release:linux', 'release:mac', 'release:win']) {
-      expect(scripts).toHaveProperty(name)
+      expect(scripts).not.toHaveProperty(name)
     }
+  })
+
+  it('the TAURI release path is not collateral damage of the flatpak deletion', () => {
+    // The successor to the guard above. With the electron-builder scripts gone, the thing a
+    // widened flatpak sweep could now wrongly take out is the Tauri release workflow, which
+    // is the only remaining publishing path.
+    expect(existsSync(join(WORKFLOWS_DIR, 'release-tauri.yml'))).toBe(true)
   })
 
   it('no CI workflow references the deleted publishing path', () => {

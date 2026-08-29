@@ -1075,20 +1075,25 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
 
 // ── Task 3: steamRemoveAllCopies IPC seam census ─────────────────────────────
 // A source-level assertion (not just a passing behavioral test) that the
-// channel string is wired into all FOUR seam files this repo requires for
+// channel string is wired into all THREE surviving seam files this repo requires for
 // any IPC handler (installFormIpc.ts's own persistBottleWineVersion is the
 // established precedent) — comment-only occurrences (e.g. a stray mention in
 // a docstring) do not count, so this cannot be satisfied by documenting the
 // feature without registering it.
 describe('steamRemoveAllCopies IPC seam census (Task 3)', () => {
+  // Phase 35 Plan 14 deleted `src/backend/main.ts`, so the seam census is THREE files, not
+  // four. The count is re-derived here rather than left stale: a census whose stated number
+  // no longer matches its list is exactly how this repo has previously lost coverage in the
+  // OTHER direction -- the list shrinks, the number does not, and nobody notices which seam
+  // stopped being checked. The three surviving seams are the type declaration, the sidecar
+  // registration and the preload invoker, which is the full path a channel now travels.
   const SEAM_FILES = [
     'src/common/types/ipc.ts',
-    'src/backend/main.ts',
     'src/backend/sidecar/steamAuthFlowRegistration.ts',
     'src/preload/api/steam.ts'
   ]
 
-  it('the steamRemoveAllCopies channel string appears in non-comment code in all four IPC seam files', () => {
+  it('the steamRemoveAllCopies channel string appears in non-comment code in all three surviving IPC seam files', () => {
     const repoRoot = join(__dirname, '..', '..', '..', '..', '..')
 
     for (const relPath of SEAM_FILES) {

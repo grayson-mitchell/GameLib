@@ -38,29 +38,9 @@ import {
   type Platform
 } from '../cleanDist'
 
-const ELECTRON_BUILDER_PATH = join(
-  __dirname,
-  '..',
-  '..',
-  'electron-builder.yml'
-)
 const PACKAGE_JSON_PATH = join(__dirname, '..', '..', 'package.json')
 const CLEAN_DIST_SOURCE_PATH = join(__dirname, '..', 'cleanDist.ts')
 
-interface ElectronBuilderConfig {
-  mac: { artifactName: string }
-  win: { artifactName: string }
-  portable: { artifactName: string }
-  linux: { artifactName: string }
-}
-
-function parseElectronBuilder(): ElectronBuilderConfig {
-  // readFileSync(ELECTRON_BUILDER_PATH) reads electron-builder.yml; loadYaml
-  // (js-yaml) parses it structurally rather than regexing the raw text.
-  return loadYaml(
-    readFileSync(ELECTRON_BUILDER_PATH, 'utf-8')
-  ) as ElectronBuilderConfig
-}
 
 // The five macOS artifact files a real dist:mac run leaves behind, per the
 // 2026-08-11 gate's real `dist/` listing (34.9-14-PLAN.md <interfaces>).
@@ -367,37 +347,12 @@ describe('cleanDist CLI --platform contract', () => {
   })
 })
 
-describe('electron-builder.yml artifactName pin (T-34.9G-12)', () => {
-  test('mac.artifactName contains the literal macOS token', () => {
-    const config = parseElectronBuilder()
-    expect(config.mac.artifactName).toContain('macOS')
-  })
-
-  test('win.artifactName does not contain macOS', () => {
-    const config = parseElectronBuilder()
-    expect(config.win.artifactName).not.toContain('macOS')
-  })
-
-  test('linux.artifactName does not contain macOS', () => {
-    const config = parseElectronBuilder()
-    expect(config.linux.artifactName).not.toContain('macOS')
-  })
-
-  test('win.artifactName contains the literal Setup token', () => {
-    const config = parseElectronBuilder()
-    expect(config.win.artifactName).toContain('Setup')
-  })
-
-  test('portable.artifactName contains the literal Portable token', () => {
-    const config = parseElectronBuilder()
-    expect(config.portable.artifactName).toContain('Portable')
-  })
-
-  test('linux.artifactName contains the literal linux token', () => {
-    const config = parseElectronBuilder()
-    expect(config.linux.artifactName).toContain('linux')
-  })
-})
+// The `electron-builder.yml` artifactName pin (T-34.9G-12) was REMOVED by Phase 35 Plan 14:
+// it parsed `electron-builder.yml`, which the Electron cutover deleted. It asserted that the
+// mac/win/portable/linux artifactName templates carried their platform tokens so `cleanDist`
+// could tell one platform's artifacts from another's. NOT replaced: Tauri's bundler names its
+// own artifacts and `release-tauri.yml` owns that contract now. `cleanDist` itself and its
+// other pins are untouched -- see D-35-14-02.
 
 describe('package.json wiring pin', () => {
   interface PackageJsonScripts {

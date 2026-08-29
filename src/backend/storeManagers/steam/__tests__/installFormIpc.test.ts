@@ -536,20 +536,16 @@ describe('D-02: the shared handler body is never forked', () => {
     )
   })
 
-  it('main.ts and steamAuthFlowRegistration.ts each contain the IDENTIFIER but NOT the export async function definition of it', () => {
-    const mainSource = readFileSync(
-      join(REPO_ROOT, 'src/backend/main.ts'),
-      'utf8'
-    )
+  // NARROWED by Phase 35 Plan 14: this gate used to check main.ts AND
+  // steamAuthFlowRegistration.ts. main.ts is deleted, so only the sidecar half remains --
+  // narrowed rather than removed, because the property it protects (the shared handler body
+  // is referenced, never forked into a second definition) is still live for the surviving
+  // seam and is the whole point of D-02.
+  it('steamAuthFlowRegistration.ts contains the IDENTIFIER but NOT the export async function definition of it', () => {
     const sidecarSource = readFileSync(
       join(REPO_ROOT, 'src/backend/sidecar/steamAuthFlowRegistration.ts'),
       'utf8'
     )
-
-    expect(stripSourceComments(mainSource)).toMatch(
-      /getSteamBottleEligibilityVerdict/
-    )
-    expect(countHandlerDefinitions(mainSource)).toBe(0)
 
     expect(stripSourceComments(sidecarSource)).toMatch(
       /getSteamBottleEligibilityVerdict/

@@ -37,11 +37,22 @@ import { join } from 'node:path'
 
 const ROOT = join(__dirname, '..', '..')
 
-const ELECTRON_BUILDER_YML = readFileSync(
-  join(ROOT, 'electron-builder.yml'),
-  'utf-8'
-)
-
+// CATEGORY 1 (win32 helper path keys in `electron-builder.yml`) WAS RETIRED by Phase 35
+// Plan 14, the Electron cutover, which DELETED `electron-builder.yml` itself.
+//
+// This file's header says that if it goes red the correct response is to REVERT the
+// over-reaching edit, never to relax an assertion here. That instruction is right and is
+// deliberately NOT being relaxed: it guards against a SWEEP over-reaching. This is the
+// documented exception -- the subject file was removed wholesale by a planned, decided
+// cutover (35-14 commit C), not clipped by a sweep that was aiming at something else.
+// There is no edit to revert, and no `x64` reference survives in a file that no longer
+// exists. Categories 2 and 3 are untouched and still assert exactly what they did.
+//
+// This mattered more than the one lost assertion: the module-scope readFileSync below
+// used to include `electron-builder.yml`, so once that file was deleted the ENOENT took
+// the WHOLE suite down with it -- categories 2 and 3 stopped running at all rather than
+// failing visibly. Removing the dead read is what puts those two live guards back in
+// service.
 const DOWNLOAD_HELPER_BINARIES_SOURCE = readFileSync(
   join(ROOT, 'meta', 'downloadHelperBinaries.ts'),
   'utf-8'
@@ -53,23 +64,6 @@ const BACKEND_UTILS_SOURCE = readFileSync(
 )
 
 describe('D-07/D-08: x64 non-goal survivor gate', () => {
-  it('category 1 -- win32 helper path key: electron-builder.yml keeps all 7 build/bin/x64/win32/ refs, including the two inside the mac: files block', () => {
-    const occurrences = ELECTRON_BUILDER_YML.match(/build\/bin\/x64\/win32\//g)
-    expect(occurrences).toHaveLength(7)
-
-    // The mac: block runs from the `mac:` key to the `dmg:` key that
-    // follows it -- slice on those literal keys rather than counting
-    // indentation, matching the interfaces doc's own description.
-    const macBlockStart = ELECTRON_BUILDER_YML.indexOf('\nmac:')
-    const macBlockEnd = ELECTRON_BUILDER_YML.indexOf('\ndmg:', macBlockStart)
-    expect(macBlockStart).toBeGreaterThan(-1)
-    expect(macBlockEnd).toBeGreaterThan(macBlockStart)
-    const macBlock = ELECTRON_BUILDER_YML.slice(macBlockStart, macBlockEnd)
-
-    expect(macBlock).toContain('build/bin/x64/win32/GalaxyCommunication.exe')
-    expect(macBlock).toContain('build/bin/x64/win32/EpicGamesLauncher.exe')
-  })
-
   it('category 2 -- linux/windows download keys: meta/downloadHelperBinaries.ts keeps all six literals individually (not a regex count, which would also match the darwin keys this phase removes and the unrelated comet-* keys)', () => {
     expect(DOWNLOAD_HELPER_BINARIES_SOURCE).toContain('legendary_linux_x64')
     expect(DOWNLOAD_HELPER_BINARIES_SOURCE).toContain(

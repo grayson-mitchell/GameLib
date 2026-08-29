@@ -39,13 +39,7 @@ const TAURI_CONF_PATH = join(
   'src-tauri',
   'tauri.conf.json'
 )
-const ELECTRON_VITE_CONFIG_PATH = join(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  'electron.vite.config.ts'
-)
+const VITE_CONFIG_PATH = join(__dirname, '..', '..', '..', 'vite.config.ts')
 const PACKAGING_LIMITATIONS_PATH = join(
   __dirname,
   '..',
@@ -88,71 +82,12 @@ function parseTauriConfig(): TauriConfig {
   return JSON.parse(readFileSync(TAURI_CONF_PATH, 'utf-8')) as TauriConfig
 }
 
-describe('electron-builder.yml macOS onedir glob (Phase 34.9 Plan 07)', () => {
-  test('mac.files contains a recursive glob reaching build/bin/${arch}/darwin/**/*', () => {
-    const config = parseElectronBuilder()
-    expect(config.mac.files).toContain('build/bin/${arch}/darwin/**/*')
-  })
-
-  test('mac.files still contains the one-level glob (comet/steam-bridge-helper stay reachable)', () => {
-    const config = parseElectronBuilder()
-    expect(config.mac.files).toContain('build/bin/${arch}/darwin/*')
-  })
-})
-
-describe('electron-builder.yml Windows stays flat (negative guard)', () => {
-  test('win.files contains build/bin/${arch}/win32/*', () => {
-    const config = parseElectronBuilder()
-    expect(config.win.files).toContain('build/bin/${arch}/win32/*')
-  })
-
-  test('win.files contains no ** glob', () => {
-    const config = parseElectronBuilder()
-    expect(config.win.files.some((entry) => entry.includes('**'))).toBe(false)
-  })
-
-  test("the win: block's stripped source contains no ** glob (raw-text cross-check)", () => {
-    const strippedLines = loadStrippedElectronBuilder().split('\n')
-    const winIndex = strippedLines.findIndex((line) => line.trim() === 'win:')
-    expect(winIndex).toBeGreaterThanOrEqual(0)
-    const nextTopLevelIndex = strippedLines.findIndex(
-      (line, index) => index > winIndex && /^\S/.test(line)
-    )
-    const winBlock = strippedLines
-      .slice(winIndex, nextTopLevelIndex < 0 ? undefined : nextTopLevelIndex)
-      .join('\n')
-    expect(winBlock).not.toContain('**')
-  })
-})
-
-describe('electron-builder.yml Linux stays flat (negative guard)', () => {
-  test('linux.files contains build/bin/${arch}/linux/*', () => {
-    const config = parseElectronBuilder()
-    expect(config.linux.files).toContain('build/bin/${arch}/linux/*')
-  })
-
-  test('linux.files contains no ** glob', () => {
-    const config = parseElectronBuilder()
-    expect(config.linux.files.some((entry) => entry.includes('**'))).toBe(false)
-  })
-})
-
-describe('electron-builder.yml unrelated blocks are unchanged', () => {
-  test('asarUnpack still contains the recursive build/bin/**/* entry', () => {
-    const config = parseElectronBuilder()
-    expect(config.asarUnpack).toContain('build/bin/**/*')
-  })
-
-  test('top-level files: list is unchanged', () => {
-    const config = parseElectronBuilder()
-    expect(config.files).toEqual([
-      'build/**/*',
-      'node_modules/**/*',
-      '!build/bin/*',
-      'build/bin/legendary.LICENSE'
-    ])
-  })
-})
+// The four `electron-builder.yml` describes (macOS onedir glob, Windows-stays-flat and
+// Linux-stays-flat negative guards, and the unrelated-blocks-unchanged pin) were REMOVED by
+// Phase 35 Plan 14: that file was deleted with the Electron packaging path. They asserted how
+// electron-builder staged the runner tree per platform. NOT replaced -- Tauri stages runners
+// through `src-tauri/tauri.conf.json`, whose own guard is the very next describe and is
+// untouched. See D-35-14-02.
 
 describe('src-tauri/tauri.conf.json runner-tree staging (Phase 34.9 Plan 07)', () => {
   test('bundle.resources is present and non-empty', () => {
@@ -318,9 +253,14 @@ describe('stripJsComments self-test (anti-vacuity guard for the assertions below
   })
 })
 
-describe('electron.vite.config.ts registers the runner-symlink preservation plugin (F-34.9-01)', () => {
+// RE-POINTED by Phase 35 Plan 14 from `electron.vite.config.ts` (deleted) to `vite.config.ts`.
+// F-34.9-01 is NOT retired: `preserveRunnerSymlinksPlugin` is still live in the Tauri build --
+// a `pnpm exec vite build` at the cutover commit printed `[preserve-runner-symlinks] restored
+// 12 symlink(s)`. Deleting this guard because its old subject file went away would have lost a
+// still-load-bearing assertion; only the path it points at changed.
+describe('vite.config.ts registers the runner-symlink preservation plugin (F-34.9-01)', () => {
   function loadStrippedElectronViteConfig(): string {
-    return stripJsComments(readFileSync(ELECTRON_VITE_CONFIG_PATH, 'utf-8'))
+    return stripJsComments(readFileSync(VITE_CONFIG_PATH, 'utf-8'))
   }
 
   test('imports preserveRunnerSymlinksPlugin from ./meta/preserveRunnerSymlinks', () => {
