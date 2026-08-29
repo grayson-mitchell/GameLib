@@ -33,6 +33,23 @@
  * tripwire pass VACUOUSLY against an empty set — the same failure mode
  * WR-01/WR-04 record elsewhere in this slice. The anti-degradation test and
  * the graph-size test below exist specifically to rule that out.
+ *
+ * **UPDATE, plan 35-16 (post-wave gate fix, 2026-08-29): the reach set is now measured
+ * zero, and that is the correct, expected end state, not a broken measurement.** Plan
+ * 35-15 cleared every src/backend/ entry from BASELINE_ELECTRON_REACHING_MODULES (39 -> 2)
+ * and left the remaining two (`src/common/types.ts`, `src/common/types/ipc.ts`) explicitly
+ * marked as plan 35-16's. Plan 35-16 cleared both. The 'non-empty reach set is EXPECTED'
+ * framing above described the porting era, when `electron` was still reachable and the
+ * hook-rescue mechanism was load-bearing; it no longer holds, on purpose, now that the
+ * Electron cutover (plan 35-14) has run and nothing under these four entry points imports
+ * `electron` anymore. The BELOW-ZERO-ELSE-REGRESSION direction is now the tripwire: the
+ * anti-degradation test asserts `measured.size === 0` and that none of the previously
+ * load-bearing paths re-enter the set, INVERTED from its original non-empty/must-contain
+ * shape, following the same invert-don't-delete rule 35-14 used for artifactTargets' D-11
+ * guard and 35-15 used for this same test's SCOPE partition. Measured directly (not
+ * transcribed) after the clearing commits: electronImportingFiles.size = 0,
+ * visitedFiles.size = 256 (same run) -- confirming the empty reach set is a completed
+ * traversal, not a vacuous one that visited nothing.
  */
 
 import * as ts from 'typescript'
@@ -547,9 +564,19 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
     expect(newModules).toEqual([])
   }, 30000)
 
-  it('anti-degradation: the measured set is non-empty and contains every known load-bearing electron-reaching edge', () => {
+  it('anti-degradation: the measured set is empty (post-cutover) and no former load-bearing electron-reaching edge remains reachable', () => {
     const measured = reachResult.electronImportingFiles
-    expect(measured.size).toBeGreaterThan(0)
+    // INVERTED by plan 35-16 (post-wave gate fix). This assertion required the measured
+    // set to be non-empty -- an anti-vacuity guard for the porting era, when an empty set
+    // meant a broken traversal rather than a completed cutover. Plan 35-16 cleared the last
+    // two entries the baseline still carried (`src/common/types.ts`, `src/common/types/ipc.ts`),
+    // so an empty set is now the correct, measured answer -- confirmed by re-running this
+    // exact walk after the clearing commits and instrumenting it directly (not transcribed
+    // from either test's own assertions): electronImportingFiles.size = 0 and, in the SAME
+    // run, `reachability sanity`'s visitedFiles.size = 256 (comfortably above the 224 floor
+    // below), ruling out a vacuous traversal (one that visits nothing) as the reason reach
+    // measured zero.
+    expect(measured.size).toBe(0)
 
     const requiredModules = [
       'src/backend/dialog/dialog.ts',
@@ -601,13 +628,17 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
     // guard: deleting it drops the tripwire entirely, while inverting keeps one pointing the
     // other way. If any of these modules starts reaching electron again, something has undone
     // the cutover and that needs to be deliberate.
-    // Partitioned by SCOPE, not blanket-inverted. Plan 35-15 owns src/backend/ only, so every
-    // backend module must have LEFT the set -- but `src/common/types.ts` is in this list too and
-    // legitimately still reaches electron; it is plan 35-16's. Asserting `false` for all of them
-    // would have been wrong in exactly the direction that hides remaining work.
+    //
+    // Plan 35-15 partitioned this loop by SCOPE (`src/common/` exempted, "still owed to
+    // plan 35-16") because it owned src/backend/ only and `src/common/types.ts` legitimately
+    // still reached electron at that point. Plan 35-16 cleared BOTH remaining baseline entries
+    // (`src/common/types.ts` and `src/common/types/ipc.ts`, confirmed by grep: neither imports
+    // `electron` after commits e975bb456/5dfd07e07) -- nothing is still owed, so the `src/common/`
+    // exemption is removed here and every required module below is now expected to be ABSENT
+    // from the measured set, with no exceptions. A future module re-adding an electron import at
+    // any of these paths (backend or common) fails this test instead of silently regressing.
     for (const requiredModule of requiredModules) {
-      const stillOwedToPlan3516 = requiredModule.startsWith('src/common/')
-      expect(measured.has(requiredModule)).toBe(stillOwedToPlan3516)
+      expect(measured.has(requiredModule)).toBe(false)
     }
   }, 30000)
 
