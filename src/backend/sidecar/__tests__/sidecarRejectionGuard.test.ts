@@ -15,6 +15,22 @@
  * throw even when its OWN `logWarning` call throws (the early-boot, `heroicLogWriter`-unset
  * window before `bootstrap.init()` runs).
  *
+ * Group 2b (Phase 35, D-35-10-01) unit-tests `installUncaughtExceptionGuard` -- the sidecar
+ * replacement for the `process.on('uncaughtException', ...)` handler at `src/backend/main.ts:618`,
+ * which plan 35-14 deletes with the rest of the Electron build. It is a SIBLING of the guard in
+ * Group 2, not a duplicate: `unhandledRejection` fires for a rejected promise with no handler,
+ * `uncaughtException` for a synchronous `throw` that unwound to the top of the stack, and
+ * neither catches the other's fault. Without it, after 35-14, an uncaught throw in backend
+ * code reaches a Node process with no handler at all: the sidecar dies and its `console.*`/
+ * stderr is captured nowhere -- the app goes dead with nothing in either log sink, which is the
+ * "white screens" failure the deleted handler's own comment named. The group covers the same
+ * contract as Group 2 (single install, idempotent, log-only, unstringifiable values, stderr
+ * before the sink is bound and never stdout) plus three properties specific to this guard:
+ * that it does not exit or change the exit code (registering the listener at all is what
+ * suppresses Node's default print-and-exit, so a guard that then exits would be worse than
+ * none), that it is genuinely a separate event from its sibling, and that its message reaches
+ * `logError` rather than `logWarning` -- preserving the severity of the handler it replaces.
+ *
  * Group 3 is a by-construction, source-text gate proving `installUnhandledRejectionGuard()`
  * precedes `init()` in `src/sidecar/index.ts`. That file is READ as text, never imported --
  * `src/sidecar/` is not a jest project root (see `jest.config.js`'s `projects` list), and
@@ -393,6 +409,72 @@ function loadFreshProcessGuards(): {
 }
 
 /**
+ * D-35-10-01 (Phase 35): the `uncaughtException` sibling of `loadFreshProcessGuards()`
+ * above, and identical in shape and reasoning -- a fresh `jest.isolateModules()` registry
+ * per call so `processGuards.ts`'s module-scope `uncaughtExceptionGuardInstalled` singleton
+ * starts `false` for every test in Group 2b (it is not keyed by target, so without this the
+ * first test to install would make every later test's install a silent no-op against its own
+ * fresh `EventEmitter`).
+ *
+ * The one deliberate difference from `loadFreshProcessGuards()`: the sink it binds routes to
+ * `logError`, NOT `logWarning`. That reproduces exactly what `bootstrap.init()` binds, and it
+ * is the point -- the Electron handler this replaces (`main.ts:618`) called
+ * `logError(err, LogPrefix.Backend)`, and a shared sink with the rejection guard would have
+ * silently demoted every uncaught exception to a warning.
+ */
+function loadFreshUncaughtExceptionGuard(): {
+  installUncaughtExceptionGuard: (target?: NodeJS.EventEmitter) => void
+  logErrorMock: jest.SpyInstance
+} {
+  let harness!: ReturnType<typeof loadFreshUncaughtExceptionGuard>
+  jest.isolateModules(() => {
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    const loggerModule = require('backend/logger')
+    const {
+      installUncaughtExceptionGuard,
+      setUncaughtExceptionLogSink
+    } = require('../processGuards')
+    /* eslint-enable @typescript-eslint/no-require-imports */
+    const logErrorSpy = jest.spyOn(loggerModule, 'logError')
+    setUncaughtExceptionLogSink((message: string) => {
+      loggerModule.logError(message, loggerModule.LogPrefix.Backend)
+    })
+    harness = {
+      installUncaughtExceptionGuard,
+      logErrorMock: logErrorSpy
+    }
+  })
+  return harness
+}
+
+/**
+ * Loads `processGuards.ts` RAW inside a fresh registry -- no logger, no sink bound, so the
+ * module-scope `uncaughtExceptionLogSink` stays at its `null` default. This is the real
+ * early-boot state, before `bootstrap.init()` runs `initLogger()`.
+ *
+ * Deliberately does NOT `require('backend/logger')`: `processGuards.ts` has zero static
+ * imports (the WR-04 invariant), so this registry loads exactly one module and pulls in
+ * neither `constants/paths.ts` nor its module-scope `tmp` exit listener -- which is why these
+ * raw loads cost nothing against the IN-06 ceiling below, while the logger-bound helpers do.
+ */
+function loadRawProcessGuards(): {
+  installUncaughtExceptionGuard: (target?: NodeJS.EventEmitter) => void
+  installUnhandledRejectionGuard: (target?: NodeJS.EventEmitter) => void
+} {
+  let harness!: ReturnType<typeof loadRawProcessGuards>
+  jest.isolateModules(() => {
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    const {
+      installUncaughtExceptionGuard,
+      installUnhandledRejectionGuard
+    } = require('../processGuards')
+    /* eslint-enable @typescript-eslint/no-require-imports */
+    harness = { installUncaughtExceptionGuard, installUnhandledRejectionGuard }
+  })
+  return harness
+}
+
+/**
  * IN-06 (Phase 34.2 gap cycle 2): this suite emitted
  * `MaxListenersExceededWarning: ... 11 exit listeners added to [process]`.
  *
@@ -406,9 +488,20 @@ function loadFreshProcessGuards(): {
  * Traced with `--trace-warnings`, the real source is third-party and module-scope:
  * `node_modules/tmp/lib/tmp.js:732` runs `process.addListener(EXIT,
  * _garbageCollector)` unconditionally at load, and `backend/constants/paths.ts:11`
- * imports `tmp`. This file calls `jest.isolateModules()` nine times; every fresh
+ * imports `tmp`. This file called `jest.isolateModules()` nine times; every fresh
  * registry re-executes `paths.ts`, re-loads `tmp`, and adds one more listener to
  * the one real `process` object. Nine plus the ambient loads is the eleven.
+ *
+ * D-35-10-01 (2026-08-29) RE-MEASURED, not merely raised. Group 2b added eleven
+ * further logger-bearing `isolateModules()` registries, taking the end-of-file
+ * count from 12 to 23 and breaching the old ceiling of 20 -- which is the detector
+ * working, since the cause is understood and bounded. Note that only registries
+ * that `require('backend/logger')` cost anything: the raw `processGuards.ts` loads
+ * in `loadRawProcessGuards()` pull in zero modules (the WR-04 invariant) and so
+ * never reach `paths.ts` or `tmp`. The ceiling is therefore restated at the new
+ * measurement plus the same headroom the original chose, and it remains a MEASURED
+ * limit rather than a silenced alarm -- the test at the end of this file still
+ * fails if the count runs away.
  *
  * An idempotency flag could not fix it even in our own code: such a flag would
  * live in the module registry `isolateModules` has just replaced.
@@ -420,7 +513,7 @@ function loadFreshProcessGuards(): {
  * file asserts the bound actually holds, so this is a measured limit rather than
  * a silenced alarm.
  */
-const EXIT_LISTENER_CEILING = 20
+const EXIT_LISTENER_CEILING = 32
 process.setMaxListeners(EXIT_LISTENER_CEILING)
 
 describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2 / CR-02 / T-34.2-38..41)', () => {
@@ -625,6 +718,79 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
         stderrWriteSpy.mockRestore()
       }
     })
+
+    // D-35-10-01. The exact analogue of the WR-04 test above, for the second guard, and
+    // load-bearing for the same reason: the zero-imports gate in Group 3 proves
+    // `processGuards.ts` CANNOT reach the logger by import, so `bootstrap.init()`'s
+    // `setUncaughtExceptionLogSink(...)` call is the only thing that ever connects them.
+    // Delete that one statement and every uncaught exception degrades to a bare stderr
+    // line for the life of the process -- invisible in `gamelib.log`, which is the file a
+    // user is asked to attach to a bug report -- with all of Group 2b still green (its
+    // helper binds the sink itself).
+    //
+    // It also pins the SEVERITY, which no other test can: the message must reach
+    // `logError`, not `logWarning`. That is the property that carries `main.ts:618`'s
+    // `logError(err, LogPrefix.Backend)` forward, and the one a shared sink would lose.
+    it('D-35-10-01: an uncaught exception routes to stderr before init() and to logError (never logWarning) after it', () => {
+      let installGuard!: (target?: NodeJS.EventEmitter) => void
+      let init!: (input: PassThrough, output: PassThrough) => void
+      let logErrorSpy!: jest.SpyInstance
+      let logWarningSpy!: jest.SpyInstance
+
+      jest.isolateModules(() => {
+        /* eslint-disable @typescript-eslint/no-require-imports */
+        const { GlobalConfig } = require('backend/config')
+        ;(GlobalConfig.get as jest.Mock).mockReturnValue({
+          getSettings: () => ({ language: 'en' }),
+          setSetting: jest.fn(),
+          set: jest.fn(),
+          flush: jest.fn()
+        })
+        // Same registry for both, or the module-scope `uncaughtExceptionLogSink`
+        // singleton `init()` writes would not be the one the guard reads.
+        installGuard = require('../processGuards').installUncaughtExceptionGuard
+        init = require('../bootstrap').init
+        const loggerModule = require('backend/logger')
+        logErrorSpy = jest.spyOn(loggerModule, 'logError')
+        logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
+        /* eslint-enable @typescript-eslint/no-require-imports */
+      })
+
+      const stderrWriteSpy = jest
+        .spyOn(process.stderr, 'write')
+        .mockImplementation(() => true)
+
+      try {
+        const target = new EventEmitter()
+        installGuard(target)
+
+        // BEFORE init(): no sink bound.
+        target.emit('uncaughtException', new Error('throw before init'))
+        expect(stderrWriteSpy).toHaveBeenCalledWith(
+          expect.stringContaining('throw before init')
+        )
+        expect(logErrorSpy).not.toHaveBeenCalledWith(
+          expect.stringContaining('throw before init'),
+          expect.anything()
+        )
+
+        init(new PassThrough(), new PassThrough())
+
+        // AFTER init(): the sink is bound, so the same emit reaches the logger --
+        // at ERROR severity.
+        target.emit('uncaughtException', new Error('throw after init'))
+        expect(logErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('throw after init'),
+          expect.anything()
+        )
+        expect(logWarningSpy).not.toHaveBeenCalledWith(
+          expect.stringContaining('throw after init'),
+          expect.anything()
+        )
+      } finally {
+        stderrWriteSpy.mockRestore()
+      }
+    })
   })
 
   describe('Group 2: installUnhandledRejectionGuard contract', () => {
@@ -794,6 +960,247 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
     })
   })
 
+  describe('Group 2b: installUncaughtExceptionGuard contract (D-35-10-01 -- replaces main.ts:618, deleted by plan 35-14)', () => {
+    it('registers exactly one uncaughtException listener on the given target', () => {
+      const { installUncaughtExceptionGuard } =
+        loadFreshUncaughtExceptionGuard()
+      const target = new EventEmitter()
+
+      installUncaughtExceptionGuard(target)
+
+      expect(target.listenerCount('uncaughtException')).toBe(1)
+    })
+
+    it('idempotency: a second call on the same target does not register a second listener', () => {
+      const { installUncaughtExceptionGuard } =
+        loadFreshUncaughtExceptionGuard()
+      const target = new EventEmitter()
+
+      installUncaughtExceptionGuard(target)
+      installUncaughtExceptionGuard(target)
+
+      expect(target.listenerCount('uncaughtException')).toBe(1)
+    })
+
+    // The gap D-35-10-01 records is precisely that these two are DIFFERENT events catching
+    // DIFFERENT faults, and that `processGuards.ts` covered only one of them. Without this
+    // test, a "fix" that merely renamed or aliased the existing guard would look green.
+    it('D-35-10-01: the two guards are independent -- each installs only its own event', () => {
+      const { installUncaughtExceptionGuard, installUnhandledRejectionGuard } =
+        loadRawProcessGuards()
+      const uncaughtTarget = new EventEmitter()
+      const rejectionTarget = new EventEmitter()
+
+      installUncaughtExceptionGuard(uncaughtTarget)
+      installUnhandledRejectionGuard(rejectionTarget)
+
+      expect(uncaughtTarget.listenerCount('uncaughtException')).toBe(1)
+      expect(uncaughtTarget.listenerCount('unhandledRejection')).toBe(0)
+      expect(rejectionTarget.listenerCount('unhandledRejection')).toBe(1)
+      expect(rejectionTarget.listenerCount('uncaughtException')).toBe(0)
+    })
+
+    it('logs "[sidecar] uncaught exception:" with the stack, and never throws out of emit()', () => {
+      const { installUncaughtExceptionGuard, logErrorMock } =
+        loadFreshUncaughtExceptionGuard()
+      const target = new EventEmitter()
+      installUncaughtExceptionGuard(target)
+
+      const error = new Error('cannot read properties of undefined')
+
+      expect(() => target.emit('uncaughtException', error)).not.toThrow()
+      expect(logErrorMock).toHaveBeenCalledWith(
+        expect.stringContaining('[sidecar] uncaught exception:'),
+        expect.anything()
+      )
+      // The stack, not just the message -- an uncaught throw is useless without it,
+      // and `main.ts:618` passed the whole Error object to `logError`.
+      expect(logErrorMock).toHaveBeenCalledWith(
+        expect.stringContaining('cannot read properties of undefined'),
+        expect.anything()
+      )
+    })
+
+    // The `sidecar-dialog-reject-crashes`-governed contract, stated as an assertion rather
+    // than only as a doc comment: LOG AND CONTINUE. Registering an `uncaughtException`
+    // listener at all is what suppresses Node's default print-and-exit, so a guard that
+    // then exits itself would be strictly worse than no guard -- it would take the process
+    // down AND swallow Node's own stderr trace.
+    it('D-35-10-01: log-and-continue -- never re-throws, never calls process.exit, never changes the exit code', () => {
+      const { installUncaughtExceptionGuard } =
+        loadFreshUncaughtExceptionGuard()
+      const target = new EventEmitter()
+      installUncaughtExceptionGuard(target)
+
+      const exitSpy = jest
+        .spyOn(process, 'exit')
+        .mockImplementation((() => undefined) as never)
+      const killSpy = jest
+        .spyOn(process, 'kill')
+        .mockImplementation((() => true) as never)
+      const originalExitCode = process.exitCode
+
+      try {
+        expect(() =>
+          target.emit('uncaughtException', new Error('fatal-looking'))
+        ).not.toThrow()
+
+        expect(exitSpy).not.toHaveBeenCalled()
+        expect(killSpy).not.toHaveBeenCalled()
+        expect(process.exitCode).toBe(originalExitCode)
+      } finally {
+        process.exitCode = originalExitCode
+        killSpy.mockRestore()
+        exitSpy.mockRestore()
+      }
+    })
+
+    it('D-35-10-01: with NO sink bound -- the real early-boot state before bootstrap.init() -- the message goes to stderr and never to stdout', () => {
+      // The white-screen window this guard exists to cover includes the one BEFORE
+      // `bootstrap.init()` runs `initLogger()` and binds the sink, so this test loads
+      // `processGuards.ts` raw and leaves the sink at its module-scope default of null.
+      const { installUncaughtExceptionGuard } = loadRawProcessGuards()
+
+      const stderrWriteSpy = jest
+        .spyOn(process.stderr, 'write')
+        .mockImplementation(() => true)
+      const stdoutWriteSpy = jest
+        .spyOn(process.stdout, 'write')
+        .mockImplementation(() => true)
+
+      try {
+        const target = new EventEmitter()
+        installUncaughtExceptionGuard(target)
+
+        expect(() =>
+          target.emit('uncaughtException', new Error('early boot throw'))
+        ).not.toThrow()
+        expect(stderrWriteSpy).toHaveBeenCalledWith(
+          expect.stringContaining('[sidecar] uncaught exception:')
+        )
+        // stdout carries the newline-delimited JSON RPC frame stream. A diagnostic byte
+        // written there corrupts the transport, which is a worse failure than the crash
+        // this guard prevents.
+        expect(stdoutWriteSpy).not.toHaveBeenCalled()
+      } finally {
+        stdoutWriteSpy.mockRestore()
+        stderrWriteSpy.mockRestore()
+      }
+    })
+
+    it('T-34.2-40 precedent: still never throws when the sink itself throws -- falls back to process.stderr.write', () => {
+      const { installUncaughtExceptionGuard, logErrorMock } =
+        loadFreshUncaughtExceptionGuard()
+      logErrorMock.mockImplementationOnce(() => {
+        // Simulates a sink that throws after binding: heroicLogWriter mid-rotation, a
+        // closed stream, or a writer torn down during shutdown.
+        throw new Error('heroicLogWriter is not initialized')
+      })
+      const stderrWriteSpy = jest
+        .spyOn(process.stderr, 'write')
+        .mockImplementation(() => true)
+
+      try {
+        const target = new EventEmitter()
+        installUncaughtExceptionGuard(target)
+
+        expect(() =>
+          target.emit('uncaughtException', new Error('EACCES'))
+        ).not.toThrow()
+        expect(stderrWriteSpy).toHaveBeenCalledWith(
+          expect.stringContaining('[sidecar] uncaught exception:')
+        )
+      } finally {
+        stderrWriteSpy.mockRestore()
+      }
+    })
+
+    // The CR-02 regression class, ported deliberately rather than assumed absent. Gap cycle
+    // 1 claimed the rejection guard's logging "is wrapped in a try/catch" and that claim was
+    // FALSE -- the `String(reason)` message-construction step sat OUTSIDE the try. Here the
+    // stakes are strictly higher: a throw inside an `uncaughtException` listener re-enters
+    // Node as a fresh uncaught exception, which Node terminates on unconditionally. So the
+    // guard throwing here is not "the crash it was meant to prevent" by analogy -- it IS
+    // that crash, with the original error lost.
+    it('CR-02 class: never throws out of emit() for a null-prototype error, and still emits the fallback signal', () => {
+      const { installUncaughtExceptionGuard, logErrorMock } =
+        loadFreshUncaughtExceptionGuard()
+      const target = new EventEmitter()
+      installUncaughtExceptionGuard(target)
+
+      const error = Object.create(null)
+
+      expect(() => target.emit('uncaughtException', error)).not.toThrow()
+      expect(logErrorMock).toHaveBeenCalledWith(
+        '[sidecar] uncaught exception: <unstringifiable error>',
+        expect.anything()
+      )
+    })
+
+    it('CR-02 class: never throws out of emit() when error.toString throws', () => {
+      const { installUncaughtExceptionGuard, logErrorMock } =
+        loadFreshUncaughtExceptionGuard()
+      const target = new EventEmitter()
+      installUncaughtExceptionGuard(target)
+
+      const error = {
+        toString() {
+          throw new Error('toString exploded')
+        }
+      }
+
+      expect(() => target.emit('uncaughtException', error)).not.toThrow()
+      expect(logErrorMock).toHaveBeenCalledWith(
+        '[sidecar] uncaught exception: <unstringifiable error>',
+        expect.anything()
+      )
+    })
+
+    it('CR-02 class: never throws out of emit() when error[Symbol.toPrimitive] throws', () => {
+      const { installUncaughtExceptionGuard, logErrorMock } =
+        loadFreshUncaughtExceptionGuard()
+      const target = new EventEmitter()
+      installUncaughtExceptionGuard(target)
+
+      const error = {
+        [Symbol.toPrimitive]() {
+          throw new Error('toPrimitive exploded')
+        }
+      }
+
+      expect(() => target.emit('uncaughtException', error)).not.toThrow()
+      expect(logErrorMock).toHaveBeenCalledWith(
+        '[sidecar] uncaught exception: <unstringifiable error>',
+        expect.anything()
+      )
+    })
+
+    // The `uncaughtException`-specific member of the CR-02 family, and the one the
+    // rejection guard has no equivalent test for: the value here is far more likely to be
+    // a real `Error`, so the `error instanceof Error` branch -- which reads `.stack` --
+    // gets taken. A subclass with a throwing `stack` getter therefore reaches a throw the
+    // `String(reason)` cases never touch.
+    it('CR-02 class: never throws out of emit() when a real Error has a throwing stack getter', () => {
+      const { installUncaughtExceptionGuard, logErrorMock } =
+        loadFreshUncaughtExceptionGuard()
+      const target = new EventEmitter()
+      installUncaughtExceptionGuard(target)
+
+      const error = new Error('booby-trapped')
+      Object.defineProperty(error, 'stack', {
+        get() {
+          throw new Error('stack getter exploded')
+        }
+      })
+
+      expect(() => target.emit('uncaughtException', error)).not.toThrow()
+      expect(logErrorMock).toHaveBeenCalledWith(
+        '[sidecar] uncaught exception: <unstringifiable error>',
+        expect.anything()
+      )
+    })
+  })
+
   describe('Group 3: entry-ordering gate (by-construction, source text -- src/sidecar/ is not a jest project root)', () => {
     // WR-04 (gap cycle 1, closed 2026-08-23). This group used to compare
     // `indexOf('installUnhandledRejectionGuard(')` against `indexOf('init()')` in
@@ -844,6 +1251,21 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       expect(stripped).toMatch(/^installUnhandledRejectionGuard\(\)$/m)
     })
 
+    it('D-35-10-01: installRejectionGuard.ts installs the uncaughtException guard at module scope too', () => {
+      // The `uncaughtException` guard needs the SAME first-import position as its
+      // sibling and for the same reason: a synchronous throw in any other module's
+      // scope must already be covered by the time it happens. A guard installed
+      // later -- or from `bootstrap.init()`, which runs after every module scope --
+      // would leave exactly the early-boot window D-35-10-01 is about uncovered.
+      const source = readFileSync(
+        join(__dirname, '../../../sidecar/installRejectionGuard.ts'),
+        'utf-8'
+      )
+      const stripped = stripComments(source)
+
+      expect(stripped).toMatch(/^installUncaughtExceptionGuard\(\)$/m)
+    })
+
     it('WR-04: processGuards.ts has ZERO static imports -- the invariant that makes the first-import position safe', () => {
       // This is the gate that stands between the current, working arrangement and
       // the two boot failures recorded in `src/sidecar/index.ts`. A single
@@ -870,11 +1292,21 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
         join(__dirname, '../../../sidecar/installRejectionGuard.ts'),
         'utf-8'
       )
-      const imports = importLines(source)
+      const stripped = stripComments(source)
 
-      expect(imports).toEqual([
-        "import { installUnhandledRejectionGuard } from 'backend/sidecar/processGuards'"
-      ])
+      // Measures module SPECIFIERS, not raw lines. D-35-10-01 added a second named
+      // import, which prettier reflows across four lines -- the `importLines()` filter
+      // this test used to share with the two above would then have seen only the
+      // fragment `import {` and quietly stopped measuring the property the gate exists
+      // for. That is the same formatter-reflow trap already recorded on the eslint
+      // block-disable in Group 2, so it is fixed here the same way: by pinning
+      // something reflow cannot move.
+      const specifiers = [
+        ...stripped.matchAll(/\bfrom\s+'([^']+)'/g),
+        ...stripped.matchAll(/^import\s+'([^']+)'/gm)
+      ].map((match) => match[1])
+
+      expect(specifiers).toEqual(['backend/sidecar/processGuards'])
     })
   })
 
@@ -962,6 +1394,11 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       // isolateModules call breaches it, which is a warning worth getting early.
       // Measured 2026-08-23: 12 at the end of a full run of this file, against a
       // ceiling of 20 -- eight further `isolateModules` calls of headroom.
+      // RE-MEASURED 2026-08-29 (D-35-10-01, Group 2b): 23 at the end of a full run,
+      // against a ceiling of 32 -- nine further logger-bearing `isolateModules`
+      // calls of headroom, the same margin the original measurement chose. The old
+      // ceiling of 20 was not raised on suspicion: this test went RED at
+      // "Expected: < 20, Received: 23" first, which is the detector doing its job.
       //
       // KNOWN LIMITATION, found while RED-proving this test rather than assumed:
       // it is VACUOUS under `-t` filtering. The listeners are added by the nine

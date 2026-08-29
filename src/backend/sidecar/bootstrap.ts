@@ -122,7 +122,10 @@ import MigrationSystem from '../migration'
 // reason the guard could be hoisted to `src/sidecar/index.ts`'s first import. Placed
 // last deliberately: attempt (b) at WR-04 added a SIDE-EFFECTING import here and
 // reordered the handler graph (`installFlows.test.ts` Test 1b went red).
-import { setUnhandledRejectionLogSink } from './processGuards'
+import {
+  setUncaughtExceptionLogSink,
+  setUnhandledRejectionLogSink
+} from './processGuards'
 
 // ---- Step 3: start the RPC server, wire the transport, signal READY -------
 
@@ -280,6 +283,14 @@ export function init(
     // reintroduce the boot failure recorded in `727be5dbb`.
     setUnhandledRejectionLogSink((message) =>
       logWarning(message, LogPrefix.Backend)
+    )
+    // D-35-10-01: the `uncaughtException` sibling guard, bound in the same window and
+    // for the same WR-04 reason. `logError`, NOT `logWarning` -- this preserves the
+    // severity of the Electron handler at `main.ts:618` that plan 35-14 deletes
+    // (`logError(err, LogPrefix.Backend)`). A shared sink would have demoted every
+    // uncaught exception to a warning. Before this line the guard writes to stderr.
+    setUncaughtExceptionLogSink((message) =>
+      logError(message, LogPrefix.Backend)
     )
   }
 

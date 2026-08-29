@@ -149,10 +149,23 @@ function initHeadless(skipInitialArchive: boolean = false): void {
 }
 
 function init() {
-  // Add a basic error handler to our stdout/stderr. If we don't do this,
-  // the main `process.on('uncaughtException', ...)` handler catches them (and
-  // presents an error message to the user, which is hardly necessary for
-  // "just" failing to write to the streams)
+  // Add a basic error handler to our stdout/stderr. If we don't do this, a
+  // write error on either stream surfaces as a process-level uncaught
+  // exception, which is far more noise than "just" failing to write to a
+  // stream warrants.
+  //
+  // D-35-10-01 (Phase 35): this comment used to name "the main
+  // `process.on('uncaughtException', ...)` handler ... (and presents an error
+  // message to the user)". That was `src/backend/main.ts:618`, which plan
+  // 35-14 deletes with the rest of the Electron build. The catcher of last
+  // resort is now `installUncaughtExceptionGuard()` in
+  // `backend/sidecar/processGuards.ts`, installed from
+  // `src/sidecar/installRejectionGuard.ts`. It is LOG-ONLY and shows the user
+  // nothing (see its doc comment for why the dialog was not carried over), so
+  // the "presents an error message to the user" half of the old rationale no
+  // longer applies -- but the handler below still earns its place: without it
+  // a stream write error becomes a top-level uncaught exception rather than
+  // one line in the log.
   for (const channel of ['stdout', 'stderr'] as const) {
     process[channel].once('error', (error: Error) => {
       heroicLogWriter.writeString(`Error writing to ${channel}: ${error.stack}`)
