@@ -1820,3 +1820,47 @@ broken". Epic's per-domain lines emit only the count, which is why this item had
 distinction from outside the product. Emitting the same census per Epic domain would make a future
 run of criterion 21 self-validating and close this gap without needing the seeding step described
 above — though seeding is still the stronger test.
+
+## D-35-19-16 — GOG macOS move records a DOUBLED install path, so the game will not launch
+
+Found: live verification of the D-35-19-07 fix, 2026-08-30. Status: **CONFIRMED DEFECT, UNFIXED.
+Pre-existing upstream (`6689ac086b`, CommandMC, 2026-06-06) — but UNREACHABLE until D-35-19-07 was
+fixed, because the move never succeeded on macOS 15+ to begin with.**
+
+A successful GOG move on macOS writes an `install_path` with the bundle name appended twice:
+
+```
+actual location : ~/GameLib/GameLibMoveTestFixture/Endless Sky.app          (7368 files, correct)
+recorded path   : ~/GameLib/GameLibMoveTestFixture/Endless Sky.app/Endless Sky.app   (does not exist)
+```
+
+The game is then "installed" at a path that does not exist and cannot launch.
+
+**The move itself is correct** — `moveOnUnix` logged its rsync destination as
+`.../GameLibMoveTestFixture/Endless Sky.app` and the bytes landed there intact (source removed,
+destination byte-identical by sha256). Only the RECORDED path is wrong.
+
+Mechanism — two independent appends of the same basename:
+1. `utils.ts` `moveOnUnix`: `const destination = join(newInstallPath, basename(install_path))`, and
+   it returns that as `installPath`.
+2. `gog/games.ts:794` `moveInstall` passes that already-complete path straight to
+   `changeGameInstallPath`.
+3. `gog/library.ts:891-893`:
+   ```ts
+   if (cachedGameData.install.platform === 'osx') {
+     newInstallPath = join(newInstallPath, cachedGameData.folder_name)
+   }
+   ```
+   appends `folder_name` (`Endless Sky.app`) a second time.
+
+**Do not "fix" this by deleting the join at `library.ts:891`.** `changeGameInstallPath` has a second
+caller, `gamedetails/dispatch.ts:230`, which passes a PARENT directory chosen by the user — the join
+is correct for that path. The fix must distinguish the two, e.g. have `moveInstall` pass
+`newInstallPath` (the parent) rather than `moveResult.installPath`, or give the library method an
+explicit contract about what it receives. Check `nile/games.ts:449` and `legendary/games.ts:372`,
+which call their own `changeGameInstallPath` implementations, for the same shape before fixing.
+
+Scope note: only the `osx` platform branch doubles, so this is macOS-specific for GOG.
+
+The tester's Endless Sky entry was repaired by hand during this session (backup at
+`/tmp/gog-installed.json.bak`); the CODE defect is untouched.
