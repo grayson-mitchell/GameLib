@@ -2,14 +2,14 @@
 phase: 35-electron-cutover-remove-the-electron-build
 plan: 19
 type: live-gate
-status: authored
+status: run
 blocking: true
 created: 2026-08-30
 criteria_total: 21 # sum of criteria 1-21 below; grep -c "^Verdict:" must equal this once run
-verdict: NOT RUN
+verdict: FAIL — 16 PASS / 4 FAIL / 1 NOT ATTEMPTED (20 of 21 measured). Criteria 6, 10, 14, 16 FAIL; criterion 17 unmeasured (debug-packaged build not produced). NOTE: all four FAILs trace to pre-existing or upstream-inherited code, NOT to the Electron cutover.
 run_date: 2026-08-30
-runner: # human operator — fill in before recording the verdict
-session_dir: /tmp/gamelib-35-19-gate-9XTqHx # app pid 23589 launched 08:50:00, stdout+stderr tee'd. Criterion 1 was observed on an EARLIER instance (pid 21484, 08:34:31, /tmp/gamelib-35-19-gate-sFpgKb) before four relaunches during the Keychain diagnosis in D-35-19-01; criteria 2-21 run on this instance.
+runner: Claude Opus 5 session (gesture execution by the human operator at the keyboard; contract authored by a different session per standing rule D-E)
+session_dir: MULTIPLE — see per-criterion notes. /tmp/gamelib-35-19-gate-9XTqHx (criteria 1-9); app relaunched via `open -a` for criteria 10-12 (no stderr capture — see D-35-19-02); /tmp/gamelib-35-19-c13-jaiski (criteria 13-17 window); /tmp/gamelib-35-19-c18-lo8xI8 (criterion 18 restart); /tmp/gamelib-35-19-c20-hXvo5l (criteria 20, 21, 19). ORIGINAL NOTE: app pid 23589 launched 08:50:00, stdout+stderr tee'd. Criterion 1 was observed on an EARLIER instance (pid 21484, 08:34:31, /tmp/gamelib-35-19-gate-sFpgKb) before four relaunches during the Keychain diagnosis in D-35-19-01; criteria 2-21 run on this instance.
 ---
 
 # Phase 35 Plan 19 — Blocking Live Gate (D-16, REQ-35-20)
@@ -1055,7 +1055,29 @@ outcome and should be recorded as such rather than conflated with a code defect;
 found: updater` / "unknown property" style error would indicate the capability grant or plugin
 registration itself is broken, which IS a code defect.
 Observed:
-Verdict:
+**NOT ATTEMPTED — deliberately, by operator decision at the close of the run. Nothing was measured;
+no part of this field is an observation.**
+
+Reason: this is the ONE criterion scoped to a different artifact. Every other criterion in this
+document ran against the packaged release `.app` at `/Applications/GameLib.app`. Criterion 17's only
+reachable invocation path is a manually-typed DevTools console command, and DevTools is absent from
+the release build (`devtools` Cargo feature not enabled), so it requires the debug-packaged variant
+(`pnpm tauri:dev:packaged`) — a separate build step producing a separate binary. The operator elected
+to close the run after criterion 19 rather than switch artifacts.
+
+This is a SCOPE decision, not a measurement. It must not be read as a PASS, a FAIL, or as evidence of
+anything about the updater. What is known about the updater from this run is **nothing**.
+
+What remains unverified as a result: that `@tauri-apps/plugin-updater` is registered and its
+capability granted such that `window.__TAURI__.updater.check()` resolves rather than throwing a
+`command not found` / "unknown property" style error. Per this criterion's own text that distinction
+is the point — a network error reaching `github.com` would be an environment outcome, whereas a
+missing-command error would be a genuine code defect. Neither was observed.
+
+Consequence, stated here so it is not lost: this leaves the plan's `success_criteria` requirement of
+"21/21, no blank fields" UNMET at 20/21. See `35-19-SUMMARY.md`, which records the plan as NOT
+COMPLETE for this reason rather than closing over it.
+Verdict: NOT ATTEMPTED (debug-packaged build not produced; operator closed the run at criterion 19)
 
 ### 18. Humble: session survives a restart (precondition for criterion 19)
 
