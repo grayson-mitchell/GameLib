@@ -1239,7 +1239,65 @@ Sink: none — UI observation.
 Expected: The login window requires credential entry again — no silent re-auth via a leftover
 cookie on any of the five Epic-owned domains.
 Observed:
-Verdict:
+**STATIC INVARIANT CHECKED FIRST (T-35-41 paired-list drift).** The fix's whole reach depends on
+`EPIC_COOKIE_HOSTS` (`storeManagers/legendary/user.ts:43`) matching `EPIC_COOKIE_DOMAINS`
+(`src-tauri/src/main.rs:3189`) entry for entry; the code comments warn that drift either way is a
+silent half-fix. Compared mechanically: both are
+`['epicgames.com','fortnite.com','unrealengine.com','twinmotion.com','metahuman.com']`, 5 vs 5,
+identical INCLUDING order. Invariant holds.
+(A first comparison reported a mismatch. That was a FAULT IN THE CHECK, not the code -- the regex
+expected `= [` while Rust declares `= &[`. Corrected and re-run before anything was concluded;
+recorded so the false reading is not mistaken for a finding.)
+
+**PRE-LOGOUT** (instance shell 73586, sidecar 73592): `user.json` present, 6218 B, sha256 prefix
+`26cf94497019fd98179e773b`, `displayName: soreluel`, access_token len 4290, refresh_token len 1127.
+UI: logged in, library populated.
+
+**LOGOUT RESULT.** `user.json` **REMOVED** outright. Per-domain output:
+```
+(12:45:46) Legendary logout: cleared 6 epicgames.com cookie(s) (measured post-removal delta)
+(12:45:46) Legendary logout: cleared 0 fortnite.com cookie(s) (measured post-removal delta)
+(12:45:46) Legendary logout: cleared 0 unrealengine.com cookie(s) (measured post-removal delta)
+(12:45:46) Legendary logout: cleared 0 twinmotion.com cookie(s) (measured post-removal delta)
+(12:45:46) Legendary logout: cleared 0 metahuman.com cookie(s) (measured post-removal delta)
+(12:45:46) Legendary logout: Epic cookie clear removed 6 cookie(s) across 5 Epic-owned domain(s)
+(12:45:46) Legendary logout: cleared storage — localStorage=3, sessionStorage=0, indexedDB=0, caches=0, serviceWorkers=0
+```
+All five domains were ACTUALLY ATTEMPTED, so the paired list is exercised at runtime, not merely
+declared. Note the counts are a **"measured post-removal delta"** rather than a trusted return value
+from the delete call -- the right construction given this project's finding that wry's cookie delete
+can report success without deleting (`wry-cookie-delete-lies-about-deleting`). The number is
+observed, not claimed.
+
+**AUTHORITATIVE RESULT: the login flow ASKED FOR CREDENTIALS.** Tester re-opened the Epic login
+after logout and was required to enter credentials. No silent re-auth from a leftover cookie on any
+Epic-owned domain. This is the criterion's stated Expected, and it is met.
+=> **The standing `34.6` Step 8 FAIL is DISCHARGED**, and with it 35-09's outstanding Task 3
+(`35-09-SUMMARY.md`: "Task 3 (blocking human-verify, live 34.6 Step 8 re-run) OUTSTANDING") and
+`35-VALIDATION.md` row `35-09-03` ("credentials required again after logout | pending"). This gate
+was the designated discharge route for that item; it is not a new requirement invented here.
+
+**LIMITATION -- the multi-domain reach of the fix is NOT proven by this run. Recorded because the
+headline result hides it.** The defect `35-AB-RETEST.md` Item 7 measured was `EPIC_DEVICE` and
+friends surviving on the NON-PRIMARY domains (`.fortnite.com`, `.twinmotion.com`,
+`.unrealengine.com`, `.metahuman.com`) -- which is the entire reason the list was widened beyond
+`epicgames.com`. In this run those four domains held **0 cookies each**, so nothing was there to
+survive and nothing was cleared from them. The four `=0` results mean "none present", NOT "would
+have been cleared if present". Only `epicgames.com` (6 cookies) exercised an actual removal.
+Why: the Epic session under test was created fresh during criterion 14 via the embedded webview and
+evidently never visited the ancillary Epic properties that seed those cookies. A stronger re-test
+would first browse an Epic-owned non-primary domain in the login webview to seed them, then log out.
+
+**PREMISE CAVEAT inherited from criterion 20, carried forward as promised there.** Criterion 20
+could prove Epic credential PERSISTENCE but never server ACCEPTANCE (D-35-19-13: the startup race
+means Epic was never contacted). So, strictly, "asked for credentials" is consistent with two
+stories: the logout worked, or the tokens were already dead and the logged-in UI was a local
+illusion. The first is much better supported -- `user.json` existed with an unexpired access token
+and a year-valid refresh token, the UI reported logged in with a populated library, and the logout
+produced a definitive local state change (file removed, 6 cookies measured away) -- but this
+criterion rests on a weaker foundation than criterion 19 does for Humble, where the server
+demonstrably accepted the restored session. Recorded rather than smoothed over.
+Verdict: PASS (credentials required after logout; discharges 34.6 Step 8 and 35-09 Task 3 — multi-domain reach unexercised, see limitation above)
 
 ---
 

@@ -1749,3 +1749,44 @@ Consequences for anyone running or re-running this gate: cross-session compariso
 per-session captures (`/tmp/gamelib-35-19-*/transcript.log`) rather than the single accumulated
 file, and an absence-based check against `gamelib.log` is only valid within one app session. This
 bit the criterion-15 first run, where an earlier instance's evidence was no longer present.
+
+## D-35-19-15 — criterion 21 did NOT exercise the multi-domain cookie clear it was written to prove
+
+Found: criterion 21, 2026-08-30. Status: **coverage gap, not a defect. The fix may well be correct;
+this run simply did not test the part that matters most.**
+
+Criterion 21 PASSED (logout → credentials required again), discharging 34.6 Step 8. But the specific
+behaviour the `EPIC_COOKIE_HOSTS` widening exists for was never exercised.
+
+`35-AB-RETEST.md` Item 7 measured `EPIC_LOGIN_ID`/`_epicSID`/`_tald`/`EPIC_DEVICE` surviving an Epic
+logout on `.fortnite.com`, `.twinmotion.com`, `.unrealengine.com` and `.metahuman.com` — the NON-primary
+domains. That is why the list was widened past `epicgames.com` (operator decision D-09-CORRECTED).
+
+Observed at logout:
+
+| domain | cleared |
+| --- | --- |
+| epicgames.com | **6** |
+| fortnite.com | 0 |
+| unrealengine.com | 0 |
+| twinmotion.com | 0 |
+| metahuman.com | 0 |
+
+The four zeros mean **"no cookies were present"**, not "the clear works on these domains". Only the
+primary domain exercised a real removal — i.e. exactly the case the OLD code already handled. The
+widening remains unproven live.
+
+Cause: the Epic session under test was created fresh during criterion 14 via the embedded webview
+and never visited the ancillary Epic properties that seed those cookies. The original AB-RETEST
+finding presumably came from a longer-lived session.
+
+What a valid re-test needs: before logging out, drive the login webview to at least one non-primary
+Epic domain (e.g. unrealengine.com) so those cookies exist, CONFIRM they are present, then log out
+and confirm a non-zero clear count for that domain. Without the confirm-present step the re-test
+reproduces this same vacuous zero.
+
+Positive notes worth keeping: all five domains WERE attempted at runtime, so the paired list is
+wired through rather than merely declared; the paired-list invariant (T-35-41) was verified to match
+entry-for-entry including order; and the counts are a "measured post-removal delta" rather than a
+trusted delete return, which is the correct construction given
+[[wry-cookie-delete-lies-about-deleting]].
