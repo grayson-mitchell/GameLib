@@ -2,7 +2,7 @@
  * Bidirectional registration-kind proof for the sidecar's EOS (Epic Online Services) overlay
  * channel cluster (Phase 34.6 Plan 08, REQ-34.6-01/08/13).
  *
- * Four describe blocks:
+ * Five describe blocks:
  *   1. Registration kind — all 8 channels are `ipcMain.handle`, never `ipcMain.on`, asserted in
  *      both directions (mirrors `wineToolsFlows.test.ts`'s Describe 1 template), plus an explicit
  *      assertion that `SEND_CHANNELS` is empty (8-of-8 invoke, zero send).
@@ -16,6 +16,12 @@
  *      double-register (mirrors `runnerSliceRegistration.test.ts`'s Describe 3 template; all 8
  *      channels here are invoke-kind, so `Map.set`'s natural idempotence is what's under test,
  *      not a manual guard).
+ *   5. Fail-closed gate proof (Phase 35 plan 26, REQ-35-17, T-35-122) — exercises the REAL
+ *      `remove()`/`enable()` from `eos_overlay.ts` (via `jest.requireActual`, bypassing this
+ *      file's top-level module mock for just this block) to prove the `confirmed !== true` gate
+ *      refuses on every non-`true` shape and proceeds ONLY on the literal `true`, and that
+ *      `enable()`'s not-installed branch now unconditionally reports `installNow: true` with no
+ *      dialog involved.
  */
 
 // `../../storeManagers/legendary/eos_overlay/eos_overlay` is the curated import target — factory-
@@ -30,6 +36,32 @@ jest.mock('../../storeManagers/legendary/eos_overlay/eos_overlay', () => ({
   enable: jest.fn(),
   disable: jest.fn(),
   isEnabled: jest.fn()
+}))
+
+// Describe 5 exercises the REAL `remove()`/`enable()` via `jest.requireActual`, bypassing the
+// module mock above for just that block. The real `remove()`/`enable()` reach
+// `libraryManagerMap['legendary'].runRunnerCommand` through a LAZY `await import('../..')`
+// (`eos_overlay.ts`'s own load-bearing circular-dependency-breaking pattern) — this is a
+// DIFFERENT module path from the one mocked above, so it coexists without conflict. Mocked at
+// top level (ts-jest does not hoist `jest.mock`, so this must precede Describe 5's usage
+// textually, same as the mock above).
+jest.mock('../../storeManagers/index', () => ({
+  libraryManagerMap: {
+    legendary: {
+      runRunnerCommand: jest.fn()
+    }
+  }
+}))
+
+// `backend/logger`'s real module requires an `initLogger()` call this suite never makes
+// (`heroicLogWriter` is otherwise undefined) — Describe 5's real `remove()` calls `logWarning`
+// on refusal, so this must be mocked for that path to run at all. Mirrors
+// `downloadmanager/__tests__/utils.test.ts`'s convention.
+jest.mock('backend/logger', () => ({
+  logError: jest.fn(),
+  logInfo: jest.fn(),
+  logWarning: jest.fn(),
+  LogPrefix: { Legendary: 'Legendary' }
 }))
 
 import { readFileSync } from 'fs'
@@ -184,5 +216,78 @@ describe('idempotence — calling registerEosOverlayFlows() twice does not throw
       expect(handlerRegistry.has(channel)).toBe(true)
       expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
     }
+  })
+})
+
+// ── Describe 5: Fail-closed gate proof (Phase 35 plan 26, REQ-35-17, T-35-122) ─────────────────
+describe('fail-closed gate — real remove()/enable() from eos_overlay.ts (bypasses this file\'s top-level mock)', () => {
+  const {
+    remove: realRemove,
+    enable: realEnable
+  } = jest.requireActual<
+    typeof import('../../storeManagers/legendary/eos_overlay/eos_overlay')
+  >('../../storeManagers/legendary/eos_overlay/eos_overlay')
+
+  const {
+    libraryManagerMap: mockLibraryManagerMap
+  } = jest.requireMock<{
+    libraryManagerMap: { legendary: { runRunnerCommand: jest.Mock } }
+  }>('../../storeManagers/index')
+  const mockRunRunnerCommand = mockLibraryManagerMap.legendary.runRunnerCommand
+
+  beforeEach(() => {
+    mockRunRunnerCommand.mockClear()
+    mockRunRunnerCommand.mockResolvedValue({ error: undefined })
+  })
+
+  describe('remove(confirmed)', () => {
+    it.each([
+      ['undefined', undefined],
+      ['false', false],
+      ["the string 'true'", 'true'],
+      ['the number 1', 1],
+      ['an object', { yes: true }],
+      ['null', null]
+    ])(
+      'REQ-35-17/T-35-122 refuses and calls NO runner command when confirmed is %s',
+      async (_label, value) => {
+        const result = await realRemove(value as never)
+
+        expect(mockRunRunnerCommand).not.toHaveBeenCalled()
+        expect(result).toBe(false)
+      }
+    )
+
+    it('REQ-35-17/T-35-122 proceeds ONLY when confirmed is the literal true, and forwards the exact remove command', async () => {
+      const result = await realRemove(true)
+
+      expect(mockRunRunnerCommand).toHaveBeenCalledTimes(1)
+      expect(mockRunRunnerCommand).toHaveBeenCalledWith(
+        { '-y': true, subcommand: 'eos-overlay', action: 'remove' },
+        { abortId: '98bc04bc842e4906993fd6d6644ffb8d' }
+      )
+      expect(result).toBe(true)
+    })
+  })
+
+  describe("enable(appName)'s not-installed branch", () => {
+    it('REQ-35-17 unconditionally reports installNow: true with no dialog involved, when the overlay is not installed', async () => {
+      // `isInstalled()` reads `existsSync(installedVersionPath())` — force it deterministically
+      // false rather than relying on real filesystem state, so this test is not a false-pass on
+      // a dev machine that happens to have the EOS overlay installed.
+      const gracefulFs =
+        jest.requireActual<typeof import('graceful-fs')>('graceful-fs')
+      const existsSyncSpy = jest
+        .spyOn(gracefulFs, 'existsSync')
+        .mockReturnValue(false)
+
+      try {
+        const result = await realEnable('some-app-name')
+        expect(result).toEqual({ wasEnabled: false, installNow: true })
+        expect(mockRunRunnerCommand).not.toHaveBeenCalled()
+      } finally {
+        existsSyncSpy.mockRestore()
+      }
+    })
   })
 })

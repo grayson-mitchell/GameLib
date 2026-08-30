@@ -11,7 +11,7 @@
  *   addHandler('getLatestEosOverlayVersion', getLatestVersion)
  *   addHandler('updateEosOverlayInfo', updateInfo)
  *   addHandler('installEosOverlay', install)
- *   addHandler('removeEosOverlay', remove)
+ *   addHandler('removeEosOverlay', async (e, confirmed) => remove(confirmed))
  *   addHandler('enableEosOverlay', async (e, appName) => enable(appName))
  *   addHandler('disableEosOverlay', async (e, appName) => disable(appName))
  *   addHandler('isEosOverlayEnabled', async (e, appName?) => isEnabled(appName))
@@ -20,14 +20,17 @@
  * from `eos_overlay.ts`'s eight named exports — no argument reshaping, no new guard, no new
  * behaviour.
  *
- * **A-02 (binding — corrects D-05's original citation):** the D-05 live-gate round-trip
- * (install -> enable -> disable -> remove) traverses the 34.5 D-15 crash hazard (a
- * `dialog.showMessageBox` REJECTION crashes the app under the sidecar), but the dialog it
- * actually hits is `remove()`'s at `eos_overlay.ts:162`, called UNCONDITIONALLY, at the
- * round-trip's LAST step — not `enable()`'s at `eos_overlay.ts:197`, which is gated
- * `if (!isInstalled())` and therefore CANNOT fire once the round-trip's preceding install step has
- * already made `isInstalled()` true. A live-gate report of "expected a dialog at enable, none
- * appeared" is the CORRECT, EXPECTED outcome — it must never be treated as a defect or "fixed".
+ * **A-02 (binding — corrects D-05's original citation; historical, pre-Phase-35-plan-26):** the
+ * D-05 live-gate round-trip (install -> enable -> disable -> remove) used to traverse the 34.5
+ * D-15 crash hazard (a `dialog.showMessageBox` REJECTION crashes the app under the sidecar) at
+ * `remove()`'s native confirmation dialog, called UNCONDITIONALLY, at the round-trip's LAST step
+ * — not `enable()`'s, which was gated `if (!isInstalled())` and therefore could never fire once
+ * the round-trip's preceding install step had already made `isInstalled()` true. Phase 35 plan
+ * 26 (REQ-35-17) removed BOTH native dialogs from this file's backend entirely: `remove()` now
+ * takes an explicit `confirmed: boolean` gate (the renderer raises `showDialogModal` first), and
+ * `enable()`'s not-installed branch unconditionally returns `installNow: true` for the renderer
+ * to act on. This note is kept for the historical crash-hazard record; there is no longer any
+ * `dialog.showMessageBox` call anywhere in this cluster's backend.
  *
  * `getWinePrefixFolder()` (`eos_overlay.ts:295`) returns `null` on `!isLinux || !appName`, so
  * `enable()`/`disable()`/`isEnabled()` all run prefix-less on macOS. This is genuine, pre-existing
@@ -85,11 +88,16 @@ export function registerEosOverlayFlows(): void {
     return install()
   })
 
-  // A-02: the dialog this round-trip's LAST step hits — `remove()`'s `dialog.showMessageBox` at
-  // `eos_overlay.ts:162`, called unconditionally. Ported byte-equivalently; no new guard.
-  ipcMain.handle('removeEosOverlay', async () => {
-    return remove()
-  })
+  // Phase 35 plan 26 (REQ-35-17): `remove()` now takes an explicit `confirmed` gate — the
+  // renderer's `showDialogModal` confirmation happens before this channel is ever invoked.
+  // See A-02 above for the historical native-dialog crash-hazard context this replaces.
+  ipcMain.handle(
+    'removeEosOverlay',
+    async (_event: unknown, ...args: unknown[]) => {
+      const confirmed = args[0] as boolean
+      return remove(confirmed)
+    }
+  )
 
   ipcMain.handle(
     'enableEosOverlay',

@@ -501,7 +501,7 @@ interface AsyncIPCFunctions {
   getLatestEosOverlayVersion: () => Promise<string>
   updateEosOverlayInfo: () => Promise<void>
   installEosOverlay: () => Promise<string | undefined>
-  removeEosOverlay: () => Promise<boolean>
+  removeEosOverlay: (confirmed: boolean) => Promise<boolean>
   enableEosOverlay: (
     appName: string
   ) => Promise<{ wasEnabled: boolean; installNow?: boolean }>

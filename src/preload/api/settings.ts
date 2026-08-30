@@ -27,6 +27,9 @@ export const getCometVersion = makeHandlerInvoker('getCometVersion')
 export const getNileVersion = makeHandlerInvoker('getNileVersion')
 export const getEosOverlayStatus = makeHandlerInvoker('getEosOverlayStatus')
 export const getLatestEosOverlayVersion = makeHandlerInvoker('getLatestEosOverlayVersion')
+// Phase 35 plan 26 (REQ-35-17): `removeEosOverlay` now takes a `confirmed: boolean` argument —
+// `makeHandlerInvoker` is a fully generic pass-through, so no code change is needed here beyond
+// the widened type flowing through from `common/types/ipc.ts`.
 export const removeEosOverlay = makeHandlerInvoker('removeEosOverlay')
 export const updateEosOverlayInfo = makeHandlerInvoker('updateEosOverlayInfo')
 export const changeTrayColor = makeListenerCaller('changeTrayColor')

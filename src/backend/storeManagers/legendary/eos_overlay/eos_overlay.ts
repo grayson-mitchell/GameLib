@@ -1,6 +1,4 @@
-import { dialog } from 'backend/platform'
 import { existsSync, readFileSync } from 'graceful-fs'
-import { t } from 'i18next'
 import { join } from 'path'
 
 import { logError, LogPrefix, logWarning } from 'backend/logger'
@@ -154,23 +152,30 @@ async function install() {
 }
 
 /**
- * Removes the EOS overlay
- * Asks the user to confirm the removal
- * @returns True if the overlay was removed, False if it wasn't
+ * Removes the EOS overlay.
+ *
+ * Phase 35 plan 26 (REQ-35-17, closes D-35-11-01): the confirmation dialog used to be raised
+ * HERE, via `dialog.showMessageBox` — a native system dialog under the Tauri sidecar, not the
+ * app-styled `showDialogModal` the rest of the app uses, and (per the D-35-11-01 structural
+ * analysis) an ASKING dialog can never be moved to the renderer through the one-way
+ * `showDialogBoxModalAuto` backend-dialog path. The confirmation now happens in the renderer
+ * (`AdvancedSettings/index.tsx`'s `showDialogModal`) BEFORE this function is ever called; this
+ * function only enforces the fail-closed gate on the answer it's given.
+ *
+ * `confirmed` MUST be checked with `=== true`, never a truthiness test: this is a destructive
+ * action gated over an IPC boundary, and a malformed or missing argument (`undefined`, `'true'`
+ * the string, `1`, an object) must refuse, not proceed (T-35-122).
+ *
+ * @param confirmed The renderer's confirmation answer. Anything other than the literal `true`
+ * refuses the removal.
+ * @returns True if the overlay was removed, False if it wasn't (refused or declined).
  */
-async function remove(): Promise<boolean> {
-  const { response } = await dialog.showMessageBox({
-    title: t(
-      'setting.eosOverlay.removeConfirmTitle',
-      'Confirm overlay removal'
-    ),
-    message: t(
-      'setting.eosOverlay.removeConfirm',
-      'Are you sure you want to uninstall the EOS Overlay?'
-    ),
-    buttons: [t('box.yes'), t('box.no')]
-  })
-  if (response === 1) {
+async function remove(confirmed: boolean): Promise<boolean> {
+  if (confirmed !== true) {
+    logWarning(
+      'EOS Overlay removal refused: confirmation was not the literal `true`',
+      LogPrefix.Legendary
+    )
     return false
   }
 
@@ -194,16 +199,13 @@ async function enable(
   appName: string
 ): Promise<{ wasEnabled: boolean; installNow?: boolean }> {
   if (!isInstalled()) {
-    const { response } = await dialog.showMessageBox({
-      title: t('setting.eosOverlay.notInstalledTitle', 'Overlay not installed'),
-      message: t(
-        'setting.eosOverlay.notInstalledMsg',
-        'The EOS Overlay is not installed. Do you want to install it now?'
-      ),
-      buttons: [t('box.yes'), t('box.no')]
-    })
-    // Installing the overlay requires some frontend work, so we can't just do it in the backend alone
-    return { wasEnabled: false, installNow: response === 0 }
+    // Phase 35 plan 26 (REQ-35-17): this used to ask "install now?" itself via
+    // `dialog.showMessageBox` and fold the user's answer into `installNow`. That native dialog
+    // is gone — `installNow: true` now unconditionally signals "the overlay isn't installed,
+    // ask the renderer" rather than "the user already said yes". Callers (`GameSubMenu`'s
+    // `handleEosOverlay`, `AdvancedSettings`'s `toggleEosOverlay`) must raise their own
+    // `showDialogModal` confirmation before calling `installEosOverlay()`.
+    return { wasEnabled: false, installNow: true }
   }
 
   const prefix = await getWinePrefixFolder(appName)
