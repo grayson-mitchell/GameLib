@@ -4,7 +4,7 @@ Out-of-scope discoveries made during plan execution. Logged, deliberately NOT fi
 
 **Heading convention (added 2026-08-29):** every entry heading is `## D-35-NN-NN — ...` with the id **unquoted**. This is not cosmetic. Three entries were originally written as ``## `D-35-NN-NN` — ...`` and a later census grepped only the bare form, concluded two items were missing, and **appended duplicates of entries that were already here**. The duplicates have since been merged back and their unique content folded into the originals. Grep for the bare id, and keep writing it that way.
 
-## D-35-03-01 — `meta/i18nForkTouchedFiles.json` is stale against its live git derivation
+## D-35-03-01 — RESOLVED 2026-08-30 (plan 35-24) — was: `meta/i18nForkTouchedFiles.json` is stale against its live git derivation
 
 **Found during:** plan 35-03, regression sweep of the `Meta` jest project.
 
@@ -33,6 +33,18 @@ so — regenerating this file has broken its own pins before.
 
 **Status:** open, unowned. Consistent with MEMORY's standing note that the repo's i18n gate is
 red repo-wide (`prettier-gate-is-red-repo-wide.md`).
+
+**RESOLVED 2026-08-30, plan 35-24.** The drift had grown from 3 to 6 files by execution time
+(three more Phase-35 files went fork-divergent between this entry being written and 35-24
+running: `WebviewControls/index.tsx` and `DownloadManager/index.tsx` from 35-16, and
+`UseDarkTrayIcon.tsx` from 35-06 — re-measured from scratch rather than trusting either this
+entry's 3-file list or the 35-24 plan's own illustrative numbers, both stale). Regenerated
+`meta/i18nForkTouchedFiles.json` via `pnpm gen-i18n-gate-scope` (199 -> 205 files) and, in the
+SAME commit, re-baselined the `--rewrite-scope guard` fixture counts/titles and added all six
+files to `DECLARED_UNSCANNED_DEBT` with named provenance — the fix this entry itself warned a
+bare regenerate-and-commit would not be (that would have cascaded 1 failure to 5, since the
+guard fixtures hard-code the count literally). `meta/i18nGateScope.json` (hand-curated)
+confirmed byte-identical. Commit `ee86b3442`. See `35-24-SUMMARY.md`.
 
 ## D-35-03-02 — BLOCKING INPUT FOR PLAN 35-14: `vite` is not a direct dependency
 
@@ -1972,3 +1984,17 @@ default on this dev machine, so `loadLzmaModule()` legitimately falls back to `p
 kill switch is force-re-enabled, and something about this machine's native binary availability
 makes even the force-enabled path fall back. Pre-existing, unrelated to Steam launch dispatch or
 the installed.json watcher — logged per the scope-boundary rule rather than fixed.
+
+**Item 4 — plan 35-24: `STATE.md`'s frontmatter `completed_plans` counter shows no bump for
+`35-21`/`35-22`/`35-23`.** Found while hand-updating the counter for 35-24 (392 -> 393). The
+`progress:` comment block's last dated entry documenting a `completed_plans` increment is
+`35-20` (391 -> 392); no entry exists for `35-21`, `35-22` or `35-23`, even though each has its
+own "COMPLETE" `## Current Position` bullet and its own commits. Not caused by plan 35-24 —
+those three plans' own executors either skipped this hand-apply step or it was lost to one of
+the `gsd-sdk state.*` corruption-and-restore incidents this same session's `STATE.md` prose
+documents. Not backfilled here: reconstructing three prior plans' correct counts is outside this
+plan's `files_modified` and SCOPE BOUNDARY. Whoever next touches `STATE.md`'s progress block
+should decide whether to bump `completed_plans` 393 -> 396 (recovering the three missed
+increments) or leave it as an accepted undercount, and should re-derive the true total plan
+count from disk (`ls .planning/phases/*/*-SUMMARY.md | wc -l`) rather than trust either number
+blind — this is exactly the `status-doc-can-lag-two-gate-runs-undetected` shape from MEMORY.md.
