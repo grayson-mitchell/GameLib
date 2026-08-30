@@ -30,7 +30,7 @@
  */
 import api from './api'
 import { applyFramelessDecorations, installDragRegionHandlers } from './api/tauriWindowChrome'
-import { isMacWebview } from './platformDetect'
+import { isMacWebview, isWindowsWebview } from './platformDetect'
 
 // Proof-of-execution marker (Phase 27 Plan 05): the literal first console line so we can
 // confirm this attach module evaluates BEFORE the renderer renders / lazy-loads App (whose
@@ -70,7 +70,11 @@ console.log('[GameLib] window.api attached (readConfig present:', typeof window.
 window.isSteamDeckGameMode = false
 window.isFlatpak = false
 window.isSteamDeck = false
-window.platform = (isMacWebview() ? 'darwin' : 'linux') as NodeJS.Platform
+// Phase 35 gap closure, plan 35-22 (CR-03): a three-arm derivation -- the previous
+// two-arm form had no 'win32' case, so the shipped NSIS build always fell through to
+// 'linux'. 'linux' remains the final fallback so an unrecognised engine still degrades
+// to the same surface it always has.
+window.platform = (isMacWebview() ? 'darwin' : isWindowsWebview() ? 'win32' : 'linux') as NodeJS.Platform
 window.isE2ETesting = false
 window.flatpakRuntimeVersion = undefined
 

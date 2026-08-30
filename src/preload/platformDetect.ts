@@ -22,3 +22,25 @@ export const isMacWebview = (): boolean => {
     return false
   }
 }
+
+/**
+ * Windows detection counterpart to `isMacWebview()` above (Phase 35 gap closure, plan
+ * 35-22, CR-03). `tauriAttach.ts`'s `window.platform` derivation had no `win32` arm, so
+ * the shipped NSIS build always fell through to `'linux'` -- every Windows-only frontend
+ * surface under `src/frontend` was hidden and every Linux-only one shown.
+ *
+ * Checks TWO independent signals, either sufficient alone: `navigator.platform` reports
+ * `Win32` under WebView2, but that property is deprecated and may be frozen/spoofed by a
+ * future engine, so `navigator.userAgent`'s `Windows NT` substring is also checked as a
+ * fallback that does not depend on the same API. Same never-throw contract as
+ * `isMacWebview()` -- called from `tauriAttach.ts`'s never-throw pre-paint attach path
+ * (SEAM Invariant A: a throw there blanks the window), so this returns `false` rather
+ * than propagating on any failure.
+ */
+export const isWindowsWebview = (): boolean => {
+  try {
+    return /win/i.test(navigator.platform) || navigator.userAgent.includes('Windows')
+  } catch {
+    return false
+  }
+}

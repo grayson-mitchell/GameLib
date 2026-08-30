@@ -52,10 +52,11 @@ jest.mock('@tauri-apps/api/webviewWindow', () => ({
 // import -- provide minimal stubs since this project's preload Jest environment is
 // 'node' (no real DOM; jsdom isn't installed, per the frontend project's own documented
 // constraint in src/frontend/jest.config.js).
-function installWindowStub() {
+function installWindowStub(navigatorOverrides?: { platform?: string; userAgent?: string }) {
   ;(globalThis as unknown as { window: Record<string, unknown> }).window = {}
-  ;(globalThis as unknown as { navigator: { platform: string } }).navigator = {
-    platform: 'MacIntel'
+  ;(globalThis as unknown as { navigator: { platform: string; userAgent: string } }).navigator = {
+    platform: navigatorOverrides?.platform ?? 'MacIntel',
+    userAgent: navigatorOverrides?.userAgent ?? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
   }
 }
 
@@ -118,5 +119,73 @@ describe('tauriAttach (BLOCKER-1 fix, 27-01)', () => {
     expect(win.api).not.toBe(staleApi)
     expect(typeof win.api).toBe('object')
     expect(win.isSteamDeckGameMode).toBe(false)
+  })
+
+  // Phase 35 gap closure, plan 35-22 (CR-03): window.platform's three-arm derivation.
+  // These pin all three reachable outcomes plus the never-throw contract, so the
+  // 'win32' arm cannot silently regress back to always-'linux'.
+  describe('window.platform derivation (CR-03)', () => {
+    it("resolves to 'darwin' for a mac navigator.platform", async () => {
+      installWindowStub({ platform: 'MacIntel', userAgent: 'Macintosh' })
+      jest.doMock('@tauri-apps/api/core', () => ({ invoke: jest.fn() }))
+
+      await import('../tauriAttach')
+
+      expect(readWindowStub().platform).toBe('darwin')
+    })
+
+    it("resolves to 'win32' when navigator.platform is 'Win32'", async () => {
+      installWindowStub({ platform: 'Win32', userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' })
+      jest.doMock('@tauri-apps/api/core', () => ({ invoke: jest.fn() }))
+
+      await import('../tauriAttach')
+
+      expect(readWindowStub().platform).toBe('win32')
+    })
+
+    it("resolves to 'win32' from the userAgent signal alone, proving the second signal is live and not decorative", async () => {
+      // navigator.platform deliberately does NOT match /win/i here -- only the UA carries
+      // the Windows signal, matching a frozen/deprecated navigator.platform on WebView2.
+      installWindowStub({ platform: 'unknown-engine', userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' })
+      jest.doMock('@tauri-apps/api/core', () => ({ invoke: jest.fn() }))
+
+      await import('../tauriAttach')
+
+      expect(readWindowStub().platform).toBe('win32')
+    })
+
+    it("resolves to 'linux' when neither signal matches", async () => {
+      installWindowStub({ platform: 'Linux x86_64', userAgent: 'Mozilla/5.0 (X11; Linux x86_64)' })
+      jest.doMock('@tauri-apps/api/core', () => ({ invoke: jest.fn() }))
+
+      await import('../tauriAttach')
+
+      expect(readWindowStub().platform).toBe('linux')
+    })
+
+    it("resolves to 'linux' when reading navigator throws, proving the never-throw contract", async () => {
+      ;(globalThis as unknown as { window: Record<string, unknown> }).window = {}
+      // A navigator whose property accessors throw simulates a hostile/broken embedder --
+      // isMacWebview()/isWindowsWebview() must swallow this and fall through to 'linux'
+      // rather than blanking the window (SEAM Invariant A).
+      Object.defineProperty(globalThis, 'navigator', {
+        configurable: true,
+        get() {
+          throw new Error('navigator access denied')
+        }
+      })
+      jest.doMock('@tauri-apps/api/core', () => ({ invoke: jest.fn() }))
+
+      await import('../tauriAttach')
+
+      expect(readWindowStub().platform).toBe('linux')
+
+      // Restore a normal navigator descriptor so subsequent tests in this file are unaffected.
+      Object.defineProperty(globalThis, 'navigator', {
+        configurable: true,
+        writable: true,
+        value: { platform: 'MacIntel', userAgent: 'Macintosh' }
+      })
+    })
   })
 })
