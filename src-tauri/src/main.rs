@@ -1195,12 +1195,46 @@ fn sidecar_send(
     result
 }
 
+/// The only schemes the renderer may ask the shell to hand to the OS (CR-01,
+/// `35-REVIEW.md`). `steam:` is the reason this command exists at all -- the `opener`
+/// plugin's own `allow-default-urls` scope (`capabilities/default.json`) excludes it, so a
+/// call through `plugin:opener|open_url` directly would never reach Steam. The other four
+/// mirror that same plugin scope exactly, so this app-defined arm is never WIDER than the
+/// plugin arm the capability file already restricts. `open_external` is an app-defined
+/// command, so `generate_handler!` reaches it without the capability system being consulted
+/// at all (Rust-side plugin calls bypass capabilities) -- this const is the only allow-list
+/// this command has.
+const OPEN_EXTERNAL_ALLOWED_SCHEMES: &[&str] = &["https", "http", "mailto", "tel", "steam"];
+
+/// Pure scheme-validation half of `open_external` (CR-01), extracted so it can be proven by
+/// `#[cfg(test)] mod tests` without constructing an `AppHandle`. Splits on the FIRST `:` only
+/// and lowercases ASCII-wise before comparing, so `STEAM://…` and `Steam://…` are accepted
+/// exactly like `steam://…`. Returns a scheme-only error string in both rejection branches --
+/// never the URL (T-28-04) -- because the URL is renderer-controlled and this string can reach
+/// a log a user attaches to a public bug report.
+fn open_external_scheme_check(url: &str) -> Result<(), String> {
+    let scheme = url
+        .split_once(':')
+        .map(|(s, _)| s.to_ascii_lowercase())
+        .ok_or_else(|| "open_external: rejected a URL with no scheme".to_string())?;
+    if !OPEN_EXTERNAL_ALLOWED_SCHEMES.contains(&scheme.as_str()) {
+        // Scheme name only, never the URL (T-28-04 convention).
+        eprintln!("[shell] open_external: rejected scheme '{scheme}'");
+        return Err("open_external: scheme not allowed".to_string());
+    }
+    Ok(())
+}
+
 /// shell.openExternal parity — opens the URL (e.g. steam://rungameid/<appId>) via
 /// tauri-plugin-opener (/usr/bin/open → Steam.app, the registered steam:// handler).
 /// The URL is built upstream by the backend's numeric-appId-guarded buildSteamProtocolUrl
-/// (threat T-27-02); this command does not construct URLs from renderer free-text.
+/// (threat T-27-02), but that upstream guarantee does not reach this command -- the renderer
+/// invokes it directly (`withGlobalTauri: true`, `security.csp` is `null`), so `url` here is
+/// renderer-controlled and validated against `OPEN_EXTERNAL_ALLOWED_SCHEMES` before anything
+/// is opened (CR-01, `35-REVIEW.md`).
 #[tauri::command]
 fn open_external(url: String, app: AppHandle) -> Result<(), String> {
+    open_external_scheme_check(&url)?;
     app.opener()
         .open_url(url, None::<&str>)
         .map_err(|e| e.to_string())
@@ -8269,6 +8303,116 @@ fn main() {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    // ---- open_external scheme allow-list (35-21, CR-01) ----
+    //
+    // `open_external` itself needs a live `AppHandle` (`app.opener()`), so these tests drive
+    // `open_external_scheme_check` -- the pure half `open_external` calls before touching the
+    // plugin. RED direction: an implementation that used a substring/`.contains()` match
+    // instead of an exact allow-list comparison, or one that skipped `to_ascii_lowercase()`,
+    // would flip one or more of the rejection/case-insensitivity cases below to `Ok`.
+
+    #[test]
+    fn open_external_allowed_schemes_are_exactly_the_five_member_set() {
+        // Pins the const's membership so a future silent widening (e.g. adding `file` to
+        // "fix" an unrelated bug) fails THIS test rather than passing review unnoticed.
+        assert_eq!(
+            OPEN_EXTERNAL_ALLOWED_SCHEMES,
+            &["https", "http", "mailto", "tel", "steam"]
+        );
+    }
+
+    #[test]
+    fn open_external_scheme_check_rejects_file_scheme() {
+        assert!(open_external_scheme_check("file:///Applications/Some.app").is_err());
+    }
+
+    #[test]
+    fn open_external_scheme_check_rejects_smb_scheme() {
+        assert!(open_external_scheme_check("smb://evil.example/share").is_err());
+    }
+
+    #[test]
+    fn open_external_scheme_check_rejects_javascript_scheme() {
+        assert!(open_external_scheme_check("javascript:alert(1)").is_err());
+    }
+
+    #[test]
+    fn open_external_scheme_check_rejects_a_url_with_no_scheme() {
+        assert!(open_external_scheme_check("not-a-url-at-all").is_err());
+    }
+
+    #[test]
+    fn open_external_scheme_check_accepts_steam_rungameid() {
+        assert_eq!(
+            open_external_scheme_check("steam://rungameid/440"),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn open_external_scheme_check_accepts_https() {
+        assert_eq!(open_external_scheme_check("https://example.com"), Ok(()));
+    }
+
+    #[test]
+    fn open_external_scheme_check_accepts_mailto() {
+        assert_eq!(open_external_scheme_check("mailto:a@b.c"), Ok(()));
+    }
+
+    #[test]
+    fn open_external_scheme_check_is_case_insensitive() {
+        assert_eq!(
+            open_external_scheme_check("STEAM://rungameid/440"),
+            Ok(()),
+            "uppercase scheme must be accepted exactly like lowercase"
+        );
+        assert!(
+            open_external_scheme_check("FILE:///etc/passwd").is_err(),
+            "uppercase rejected scheme must still be rejected"
+        );
+    }
+
+    #[test]
+    fn open_external_command_body_calls_the_scheme_check_before_opening() {
+        // `open_external` cannot be driven from a `#[test]` -- `app.opener()` needs a live
+        // `AppHandle` a unit test structurally cannot construct. The helper tests above only
+        // prove `open_external_scheme_check` in isolation; they say nothing about whether
+        // `open_external` actually calls it, or calls it AFTER `app.opener()` has already run.
+        // This test closes that gap by reading the command's own source at test time and
+        // asserting the call precedes `app.opener()` textually within the function body.
+        // RED-proof (recorded verbatim in the SUMMARY): deleting the
+        // `open_external_scheme_check(&url)?;` line from `open_external`'s body -- the exact
+        // mutation this test exists to catch, since every test above would still pass
+        // unchanged against that mutation -- makes this test fail with the "must call
+        // open_external_scheme_check" panic message below.
+        let source = include_str!("main.rs");
+        let body_start = source
+            .find("fn open_external(url: String, app: AppHandle) -> Result<(), String> {")
+            .expect("open_external definition not found in main.rs");
+        // Bound the slice to JUST this function's body, ending at the next `#[tauri::command]`
+        // (the following command, `sidecar_store_snapshot`). Without this bound, `.find()` on
+        // the unbounded remainder of the file could match a LATER, unrelated mention of either
+        // literal (e.g. this very test's own doc comment above, or a future test elsewhere in
+        // this module) and produce a false PASS or a false FAIL for the wrong reason instead of
+        // failing because the call is actually missing from `open_external`.
+        let body_after_start = &source[body_start..];
+        let body_end = body_after_start[1..]
+            .find("#[tauri::command]")
+            .map(|p| p + 1)
+            .expect("open_external is not the last #[tauri::command] in main.rs");
+        let body = &body_after_start[..body_end];
+        let check_pos = body
+            .find("open_external_scheme_check(&url)?;")
+            .expect("open_external must call open_external_scheme_check before opening the URL");
+        let open_pos = body
+            .find("app.opener()")
+            .expect("open_external must still call app.opener()");
+        assert!(
+            check_pos < open_pos,
+            "open_external_scheme_check must run BEFORE app.opener().open_url"
+        );
+    }
 
     // ---- Tray recent-games id parsing (Phase 35 Plan 06, T-35-20) ----
     //
