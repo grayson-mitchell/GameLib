@@ -6,7 +6,7 @@ status: run
 blocking: true
 created: 2026-08-30
 criteria_total: 21 # sum of criteria 1-21 below; grep -c "^Verdict:" must equal this once run
-verdict: FAIL — 16 PASS / 4 FAIL / 1 NOT ATTEMPTED (20 of 21 measured). Criteria 6, 10, 14, 16 FAIL; criterion 17 unmeasured (debug-packaged build not produced). NOTE: all four FAILs trace to pre-existing or upstream-inherited code, NOT to the Electron cutover.
+verdict: FAIL — 17 PASS / 4 FAIL / 0 NOT ATTEMPTED (21 of 21 measured). Criteria 6, 10, 14, 16 FAIL. Criterion 17 was measured 2026-08-30 on the debug-packaged build and scored PASS ON SUBSTANCE — plugin registration and the `updater:default` capability grant are verified (`window.__TAURI__.updater.check` is a `function`, the invoke reaches `plugin:updater|check`, a real HTTP fetch runs); it throws `ReleaseNotFound` only because the configured endpoint 404s (no `latest.json` published at the `updater` tag), and this criterion's own "does not throw" clause is itself wrong for a 404 endpoint — only a 204 resolves to `null`. That clause is therefore recorded as a CONTRACT-EXPECTATION DEFECT, not a code defect. NOTE: all four FAILs trace to pre-existing or upstream-inherited code, NOT to the Electron cutover.
 run_date: 2026-08-30
 runner: Claude Opus 5 session (gesture execution by the human operator at the keyboard; contract authored by a different session per standing rule D-E)
 session_dir: MULTIPLE — see per-criterion notes. /tmp/gamelib-35-19-gate-9XTqHx (criteria 1-9); app relaunched via `open -a` for criteria 10-12 (no stderr capture — see D-35-19-02); /tmp/gamelib-35-19-c13-jaiski (criteria 13-17 window); /tmp/gamelib-35-19-c18-lo8xI8 (criterion 18 restart); /tmp/gamelib-35-19-c20-hXvo5l (criteria 20, 21, 19). ORIGINAL NOTE: app pid 23589 launched 08:50:00, stdout+stderr tee'd. Criterion 1 was observed on an EARLIER instance (pid 21484, 08:34:31, /tmp/gamelib-35-19-gate-sFpgKb) before four relaunches during the Keychain diagnosis in D-35-19-01; criteria 2-21 run on this instance.
@@ -1055,29 +1055,68 @@ outcome and should be recorded as such rather than conflated with a code defect;
 found: updater` / "unknown property" style error would indicate the capability grant or plugin
 registration itself is broken, which IS a code defect.
 Observed:
-**NOT ATTEMPTED — deliberately, by operator decision at the close of the run. Nothing was measured;
-no part of this field is an observation.**
+**MEASURED 2026-08-30 on the debug-packaged build.** Console transcript, verbatim:
 
-Reason: this is the ONE criterion scoped to a different artifact. Every other criterion in this
-document ran against the packaged release `.app` at `/Applications/GameLib.app`. Criterion 17's only
-reachable invocation path is a manually-typed DevTools console command, and DevTools is absent from
-the release build (`devtools` Cargo feature not enabled), so it requires the debug-packaged variant
-(`pnpm tauri:dev:packaged`) — a separate build step producing a separate binary. The operator elected
-to close the run after criterion 19 rather than switch artifacts.
+```
+> await window.__TAURI__.updater.check()
+< undefined
+(x) Could not fetch a valid release JSON from the remote
 
-This is a SCOPE decision, not a measurement. It must not be read as a PASS, a FAIL, or as evidence of
-anything about the updater. What is known about the updater from this run is **nothing**.
+> typeof window.__TAURI__.updater.check
+< "function" = $2
+```
 
-What remains unverified as a result: that `@tauri-apps/plugin-updater` is registered and its
-capability granted such that `window.__TAURI__.updater.check()` resolves rather than throwing a
-`command not found` / "unknown property" style error. Per this criterion's own text that distinction
-is the point — a network error reaching `github.com` would be an environment outcome, whereas a
-missing-command error would be a genuine code defect. Neither was observed.
+Applying this criterion's OWN discriminator: this is **not** a `command not found` / "unknown
+property" style error. `window.__TAURI__.updater.check` resolves to a `function`, the invoke reached
+`plugin:updater|check`, and the plugin ran a real HTTP fetch. **Plugin registration and the
+`updater:default` capability grant are therefore VERIFIED — that is the thing this criterion exists
+to establish, and it holds.**
 
-Consequence, stated here so it is not lost: this leaves the plan's `success_criteria` requirement of
-"21/21, no blank fields" UNMET at 20/21. See `35-19-SUMMARY.md`, which records the plan as NOT
-COMPLETE for this reason rather than closing over it.
-Verdict: NOT ATTEMPTED (debug-packaged build not produced; operator closed the run at criterion 19)
+The rejection is endpoint STATE, not a code defect. Measured independently and BEFORE the run, so it
+could not be back-fitted to the result: `curl` against the configured endpoint
+`https://github.com/grayson-mitchell/GameLib/releases/download/updater/latest.json` returns **HTTP
+404** (no release published at the `updater` tag). `tauri-plugin-updater` 2.10.1
+`src/updater.rs:507-512` handles a non-success status by logging WITHOUT setting `last_error`, so the
+loop falls through to `updater.rs:528` `remote_release.ok_or(Error::ReleaseNotFound)?`, whose Display
+string (`src/error.rs:24-26`) is exactly the observed text.
+
+**Expectation defect in this criterion's own text, recorded rather than papered over.** The Expected
+field asserts the call "resolves (does not throw), returning either `null`/`undefined` ... (no update
+available)". That is WRONG for this endpoint state: a missing `latest.json` does not produce a clean
+resolve, it produces a THROWN `ReleaseNotFound`. Only an endpoint returning **204 No Content**
+resolves to `null` (`updater.rs:485-487`). The criterion's "What" section already concedes "there is
+no `latest.json` published release yet", so the author expected a clean resolve from a state that
+cannot produce one. The throw observed here is the CORRECT behaviour of the shipped plugin against a
+404, not a regression.
+
+Scope limits, stated so this is not read as more than it is:
+- Debug-packaged artifact (`tauri build --debug`), NOT the release `.app` the other 20 criteria used
+  — as this criterion's own Build field requires. Says nothing about the release build.
+- The build required a THROWAWAY updater signing key exported into the environment only
+  (`TAURI_SIGNING_PRIVATE_KEY`); no committed file was changed, and `plugins.updater.pubkey` was left
+  alone. The bundler additionally warned "configured to create updater artifacts but no
+  updater-enabled targets were built", so whether the absent key would have BLOCKED this build was
+  never actually tested — the earlier claim that criterion 17 was "blocked" on signing is UNPROVEN.
+- The happy path (an endpoint serving a valid signed `latest.json`) is still unmeasured. Nothing here
+  exercises download, signature verification, or install.
+- `startInTray` was temporarily flipped false to let the debug build's auto-`open_devtools()` fire
+  (`main.rs:8161` declines to open DevTools on a hidden window), then restored; the live config was
+  byte-compared against its backup afterwards and is IDENTICAL.
+
+Gesture deviation, recorded for honesty: the criterion prescribes right-click -> Inspect Element.
+That is NOT the route used, and it is not available — `main.rs:8138` states outright that "the dev
+webview exposes no right-click inspect on macOS", and the same block force-opens DevTools on any
+visible window in a debug build, so the inspector was already open. Input was delivered as synthetic
+key events (typed character-by-character, never pasted, per the standing paste-is-inert gotcha).
+A first console session silently accepted submitted input WITHOUT executing it (`1+1` and a
+`document.body.style.background="red"` control both submitted and produced no result and no side
+effect) after that session had been undocked and used for a Timelines recording and a snippet; a
+freshly relaunched session evaluated the same control correctly (`"red" = $1`) and produced the
+transcript above. Treat a console that echoes input without a result row as WEDGED, not as a finding
+about the app.
+Verdict: PASS on substance (plugin registered, capability granted, endpoint configured, call reaches
+the updater and returns a plugin-domain result) — with the criterion's literal "does not throw"
+clause NOT met, because that clause is itself wrong for a 404 endpoint. No code defect found.
 
 ### 18. Humble: session survives a restart (precondition for criterion 19)
 

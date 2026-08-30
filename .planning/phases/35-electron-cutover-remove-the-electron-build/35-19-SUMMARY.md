@@ -10,7 +10,8 @@ requires:
   phase: 35-electron-cutover-remove-the-electron-build
   provides: "35-18's package.json/esbuild electron removal — the packaged artifact this gate measures could not exist until the electron devDependency and the --external:electron alias were gone"
 provides:
-  - "35-LIVE-GATE.md RUN — 20 of 21 criteria measured against the PACKAGED macOS arm64 .app (16 PASS / 4 FAIL / 1 NOT ATTEMPTED)"
+  - "35-LIVE-GATE.md RUN — 21 of 21 criteria measured (17 PASS / 4 FAIL / 0 NOT ATTEMPTED); criteria 1-16 and 18-21 against the PACKAGED macOS arm64 release .app, criterion 17 against the debug-packaged build as its own Build field requires"
+  - "Criterion 17 measured 2026-08-30: updater plugin registration and the updater:default capability grant are VERIFIED; the ReleaseNotFound throw is a 404 endpoint state, and the criterion's own 'does not throw' clause is a contract-expectation defect (only a 204 resolves to null)"
   - "The standing 34.6 Step 8 FAIL is DISCHARGED (criterion 21), closing 35-09's outstanding Task 3 and 35-VALIDATION row 35-09-03"
   - "F-35-08-A / D-35-08-02 re-measured on a PACKAGED artifact for the first time — it REPRODUCES (criterion 16)"
   - "35-AB-RETEST.md item 3 (openDialog missing from LONG_RUNNING_CHANNELS, BLOCKS D-16 GATE) re-discharged against the packaged release build (criterion 13)"
@@ -19,28 +20,59 @@ provides:
 affects: [35-phase-verification, deferred-items, 35-VALIDATION]
 
 # Tech tracking
-status: NOT COMPLETE — success_criteria UNMET
+status: COMPLETE — success_criteria MET 2026-08-30 (21/21 measured, 0 blank fields). Gate verdict remains FAIL on 4 criteria; that is the gate's finding, not an incomplete plan.
 ---
 
 # Phase 35 Plan 19 — Blocking Live Gate: Run Summary
 
 ## Verdict
 
-**The plan is NOT COMPLETE.** Its `success_criteria` requires *"Every `Observed:` field filled with
-what was actually seen, following 34.18-LIVE-GATE.md precedent: 21/21, no blank fields."* The run
-reached **20/21**. Criterion 17 was never measured.
+**The plan is COMPLETE as of 2026-08-30.** Its `success_criteria` requires *"Every `Observed:` field
+filled with what was actually seen, following 34.18-LIVE-GATE.md precedent: 21/21, no blank
+fields."* That bar is now MET: `grep -c "^Verdict:" 35-LIVE-GATE.md` returns **21**.
 
-This is recorded as a failure rather than closed over, because this repo has the documented pattern
-where *a plan's task criteria all pass while its `success_criteria` fails*
+**Do not read that as a green gate.** The gate's own verdict is still **FAIL** — four criteria
+failed and none of them were repaired by this update. Plan completeness and gate verdict are
+different questions; this section answers only the first.
+
+**Original record, kept verbatim so the correction is auditable:** this summary previously read
+*"The plan is NOT COMPLETE … The run reached 20/21. Criterion 17 was never measured."* That was
+true when written. Criterion 17 was subsequently measured on the debug-packaged build (see
+`35-LIVE-GATE.md` criterion 17 and the correction note below), taking the run to 21/21. The
+NOT-COMPLETE record was deliberately kept rather than closed over at the time, because this repo has
+the documented pattern where *a plan's task criteria all pass while its `success_criteria` fails*
 (`task-criteria-can-all-pass-while-success-criteria-fails` — the 35-08 gate went 5/5 green over a
-live defect). Task-level work here did complete; the plan's own bar did not.
+live defect). The bar was met by measuring the missing criterion, not by lowering it.
 
 | | count |
 | --- | --- |
-| PASS | 16 |
+| PASS | 17 |
 | FAIL | 4 (criteria 6, 10, 14, 16) |
-| NOT ATTEMPTED | 1 (criterion 17) |
+| NOT ATTEMPTED | 0 |
 | blank fields | 0 |
+
+### Criterion 17 correction (2026-08-30)
+
+Measured on the debug-packaged build (`pnpm tauri:dev:packaged`), as criterion 17's own `Build:`
+field requires — **not** the release `.app` the other 20 criteria used.
+
+- **What is verified:** `window.__TAURI__.updater.check` resolves to a `function`, the invoke reaches
+  `plugin:updater|check`, and the plugin performs a real HTTP fetch. Plugin registration and the
+  `updater:default` capability grant — the thing this criterion exists to establish — **hold**.
+- **What the throw is:** `ReleaseNotFound`, because the configured endpoint
+  `…/releases/download/updater/latest.json` returns **HTTP 404** (measured by `curl` independently
+  and *before* the run, so it could not be back-fitted). `tauri-plugin-updater` 2.10.1
+  `updater.rs:507-512` logs a non-success status without setting `last_error`, falling through to
+  `updater.rs:528`'s `ok_or(Error::ReleaseNotFound)?`.
+- **Contract-expectation defect, recorded not papered over:** the criterion's Expected field asserts
+  the call "resolves (does not throw)". That is wrong for this endpoint state — only a **204 No
+  Content** resolves to `null` (`updater.rs:485-487`). The author expected a clean resolve from a
+  state that cannot produce one. Contract-defect tally for this gate: **1**.
+- **Scope limits:** says nothing about the release build; the happy path (a valid signed
+  `latest.json`, download, signature verification, install) remains **unmeasured**. The build used a
+  throwaway `TAURI_SIGNING_PRIVATE_KEY` exported to the environment only — no committed file changed
+  — and the bundler warned no updater-enabled targets were built, so the earlier claim that
+  criterion 17 was *"blocked on the updater signing key"* is **UNPROVEN**, not confirmed.
 
 ## The headline result
 
@@ -141,13 +173,22 @@ Two PASSes are weaker than they look and are flagged in place so they are not ci
 | Criteria 10-12 used `open -a <bundle>` instead of bare `open "gamelib://…"` | bare scheme routing never delivered on this machine; cause unresolved | criterion 11, D-35-19-04 |
 | Criterion 15 used a GOG title, not criterion 4's Steam title | the wake-lock release lives in the post-session block criterion 6 proved Steam never reaches; using Steam would conflate two defects | criterion 15 |
 | Criterion 19 run after 20 and 21 | its own text says "placed LAST among 18-19-20-21", contradicting its "criterion 18 immediately before" precondition | criterion 19 |
-| Criterion 17 not run | requires the debug-packaged build; operator closed the run | criterion 17 |
+| Criterion 17 deferred within the run, then measured separately | requires the debug-packaged build; the operator closed the main run at criterion 19 and returned to it afterwards on `pnpm tauri:dev:packaged` | criterion 17 |
+| Criterion 17's prescribed gesture (right-click → Inspect Element) not used | `main.rs:8138` — the dev webview exposes no right-click inspect on macOS, and a debug build force-opens DevTools on any visible window, so the inspector was already open. Input was typed as synthetic key events, never pasted. `startInTray` was temporarily flipped false so the auto-`open_devtools()` would fire on a visible window, then restored and byte-compared against its backup (IDENTICAL) | criterion 17 |
 
-The Steam wake-lock case and criterion 17's updater path are both **untested**, not passed.
+The Steam wake-lock case remains **untested**, not passed. Criterion 17's updater path is now
+**partially** tested: registration and capability grant are proven; the happy path (valid signed
+`latest.json` → download → signature verification → install) is still unmeasured.
 
-## Follow-up required before this plan can close
+## Follow-up required
 
-1. Run criterion 17 against `pnpm tauri:dev:packaged`.
+Item 1 below is **DONE**; items 2-4 remain open. None of them blocks this plan's completion — the
+plan's bar was 21/21 measured, which is met. They are gate findings owed to the phase.
+
+1. ~~Run criterion 17 against `pnpm tauri:dev:packaged`.~~ **DONE 2026-08-30** — PASS on substance;
+   see the Criterion 17 correction section above. Successor item: exercise the updater **happy path**
+   against an endpoint actually serving a valid signed `latest.json` (the configured `updater` tag
+   404s today), which no run has ever done.
 2. Re-test criterion 21 with non-primary Epic cookies seeded and *confirmed present* first
    (D-35-19-15) — without the confirm-present step the re-test reproduces the same vacuous zero.
 3. Re-test D-35-19-04 on a clean macOS account or VM with a single registered GameLib.app.
