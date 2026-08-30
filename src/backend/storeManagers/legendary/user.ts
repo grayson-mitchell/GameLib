@@ -10,7 +10,11 @@ import { LegendaryCommand } from './commands'
 import { NonEmptyString } from './commands/base'
 import { configStore } from 'backend/constants/key_value_stores'
 import { legendaryUserInfo } from './constants'
-import { getLoginWindowSeam } from '../../humble/loginWindowSeam'
+import {
+  getLoginWindowSeam,
+  classifyCookieRead,
+  type CookieReadVerdict
+} from '../../humble/loginWindowSeam'
 import { standardBrowserUserAgent } from '../../humble/userAgent'
 
 // Opened HIDDEN purely to obtain a window handle whose jar can be cleared —
@@ -200,20 +204,121 @@ export class LegendaryUser {
               // Deliberately NOT a window per domain — `seam.clearCookies`
               // takes a single host, so looping is the right shape, but each
               // extra hidden window is another chance to leak one.
+              //
+              // Phase 35 plan 23 (REQ-35-07, D-35-19-15, CR-04 part 2): a bare
+              // per-domain delta cannot tell "no cookies were present" from
+              // "the clear did not work" — D-35-19-15 measured exactly that
+              // ambiguity live (four of five domains returned 0, only the
+              // primary domain exercised a real removal). This ports
+              // humble/user.ts's disconnect() before/after jar CENSUS so every
+              // zero is self-interpreting. `everProvedLive` is SHARED across
+              // the whole sweep (every host, both sides) — mirroring Humble's
+              // single flag — because it exists to prove the cookiesForDomain
+              // RPC channel itself still works, a property of the channel, not
+              // of any one domain's content: once ANY read anywhere in this
+              // sweep has returned a non-zero unfiltered jar size, a LATER
+              // zero from any other host is trustworthy as "genuinely empty"
+              // rather than "the read API silently did nothing"
+              // (navigator-clipboard-noops-under-tauri, applied to cookies).
+              let everProvedLive = false
+
+              interface HostCookieCensus {
+                // The UNFILTERED jar size at this read, or `null` if the read
+                // itself rejected. Proves the read CHANNEL is alive,
+                // independent of which host was queried.
+                jarTotal: number | null
+                // Cookies whose own domain is `host` or a subdomain of it —
+                // the domain-scoped count for THIS host specifically.
+                matched: number
+                // classifyCookieRead over the JAR-WIDE `jarTotal` — the
+                // log-facing verdict, mirroring humble/user.ts's disconnect()
+                // census exactly.
+                verdict: CookieReadVerdict
+              }
+
+              const readHostCensus = async (
+                host: string
+              ): Promise<HostCookieCensus> => {
+                try {
+                  const read = await seam.cookiesForDomain(label, host, [])
+                  if (read.total > 0) everProvedLive = true
+                  return {
+                    jarTotal: read.total,
+                    matched: read.matched.length,
+                    verdict: classifyCookieRead({
+                      total: read.total,
+                      everProvedLive
+                    })
+                  }
+                } catch (err) {
+                  // A rejecting census read must NEVER block or fail the
+                  // clear — the clear is the user-visible operation, the
+                  // census is evidence about it (mirrors
+                  // humble/user.ts's disconnect()).
+                  logWarning(
+                    [
+                      `Legendary logout: ${host} cookie census read failed (non-fatal, evidence unavailable for this side):`,
+                      err
+                    ],
+                    LogPrefix.Legendary
+                  )
+                  return {
+                    jarTotal: null,
+                    matched: 0,
+                    verdict: classifyCookieRead({
+                      total: null,
+                      everProvedLive
+                    })
+                  }
+                }
+              }
+
+              const fmtSide = (c: HostCookieCensus): string =>
+                c.jarTotal === null
+                  ? `total=unavailable, matched=unavailable, verdict=${c.verdict}`
+                  : `total=${c.jarTotal}, matched=${c.matched}, verdict=${c.verdict}`
+
+              // Domain-scoped liveness classification, used ONLY for the
+              // fatality decision below (CR-04 part 2, D-35-19-15) — never
+              // logged directly, so gamelib.log never carries two
+              // differently-scoped verdicts side by side. Classifying on
+              // `matched` (not `jarTotal`) is what lets a genuinely Epic-empty
+              // jar (a legendary CLI-only auth, or a profile migrated from
+              // another launcher, with Humble/GOG/Steam cookies still present
+              // elsewhere in the same shared jar) read as SUPPORTED_BUT_EMPTY
+              // rather than SUPPORTED_NONEMPTY: `matched` reflects THIS host's
+              // own cookies, and the shared `everProvedLive` flag is what
+              // makes a matched-zero here trustworthy rather than
+              // indistinguishable from a dead read channel.
+              const domainVerdict = (c: HostCookieCensus): CookieReadVerdict =>
+                classifyCookieRead({ total: c.matched, everProvedLive })
+
               let total = 0
               const perDomain: string[] = []
+              const hostRecords: Array<{
+                host: string
+                before: HostCookieCensus
+                deleted: number
+              }> = []
               for (const host of EPIC_COOKIE_HOSTS) {
+                const before = await readHostCensus(host)
                 const deleted = await seam.clearCookies(label, host)
+                const after = await readHostCensus(host)
+                hostRecords.push({ host, before, deleted })
                 total += deleted
                 perDomain.push(`${host}=${deleted}`)
-                // Only COUNTS and DOMAIN names are logged — never a cookie
-                // name, value, token or account identifier (mirrors
-                // humble/user.ts's disconnect(); this repo is public,
-                // T-35-04). `deleted` is a measured post-removal delta (Plan
-                // 23), not an attempted count: it comes from a re-read of the
-                // jar taken AFTER the removal ran.
+                // Only COUNTS, VERDICT enum values and DOMAIN names are
+                // logged — never a cookie name, value, token or account
+                // identifier (mirrors humble/user.ts's disconnect(); this
+                // repo is public, T-35-04). `deleted` is a measured
+                // post-removal delta (Plan 23), not an attempted count: it
+                // comes from a re-read of the jar taken AFTER the removal
+                // ran. The census format below is recorded verbatim in
+                // 35-23-SUMMARY.md because plan 35-29 greps the live
+                // gamelib.log for it.
                 logInfo(
-                  `Legendary logout: cleared ${deleted} ${host} cookie(s) (measured post-removal delta)`,
+                  `Legendary logout: cleared ${deleted} ${host} cookie(s) (measured post-removal delta) ` +
+                    `— cookie census before(${fmtSide(before)}) after(${fmtSide(after)})`,
                   LogPrefix.Legendary
                 )
               }
@@ -227,14 +332,42 @@ export class LegendaryUser {
                   `${EPIC_COOKIE_HOSTS.length} Epic-owned domain(s) — ${perDomain.join(', ')}`,
                 LogPrefix.Legendary
               )
+              // Phase 35 plan 23 (CR-04 part 2, D-35-19-15): fatality is now
+              // decided from the per-host BEFORE census, not from the bare
+              // summed total alone. Three cases, in priority order:
+              //
+              //   1. A host whose domain-scoped BEFORE census proves it was
+              //      genuinely populated (`domainVerdict` SUPPORTED_NONEMPTY)
+              //      but whose measured post-removal delta is zero — the
+              //      clear is BROKEN for that specific host. Checked
+              //      REGARDLESS of the summed total, because a healthy
+              //      primary-domain clear can mask a broken secondary-domain
+              //      clear inside a nonzero sum — exactly the shape
+              //      D-35-19-15 measured live (four of five domains returned
+              //      0, and a bare sum could not tell "broken" from "never
+              //      visited").
+              //   2. Otherwise, a nonzero summed total is a clean success —
+              //      something real was removed and no host was proven
+              //      broken.
+              //   3. Otherwise (summed total is zero and no host was proven
+              //      broken): if EVERY host's domain census proves the jar
+              //      was genuinely empty for Epic specifically
+              //      (SUPPORTED_BUT_EMPTY, not merely unreadable), the logout
+              //      is NOT fatal — a user who authenticated through a path
+              //      that seeds no Epic cookies in this data store (a
+              //      legendary CLI `auth`, or a profile migrated from another
+              //      launcher) legitimately has nothing to clear. Otherwise
+              //      fail CLOSED, exactly as before this plan: an unreadable
+              //      jar must never be treated as an empty one — that is
+              //      precisely the substitution CR-04 part 2 is about.
               // ASYMMETRY, deliberate: an INDIVIDUAL domain returning 0 is
               // legitimate and is NOT an error — a user may simply never have
               // visited twinmotion.com, so that domain has no cookies to
               // remove. Only a zero TOTAL means the clear achieved nothing,
               // and that is the failure this throw exists to surface
-              // (T-35-39). Before Phase 35 plan 09 this was a logWarning the
-              // wipe loop then swallowed, which is precisely the defect class
-              // that produced the original lying self-report.
+              // (T-35-39). Plan 23 (CR-04 part 2) refines this rule further —
+              // see the follow-up commit for that change; `hostRecords`
+              // captured above already carries what that refinement needs.
               if (total === 0) {
                 throw new Error(
                   `Legendary logout: domain-scoped cookie clear removed nothing across all ` +
