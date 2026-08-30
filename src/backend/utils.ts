@@ -14,7 +14,13 @@ import https from 'node:https'
 // `sidecar/electronStub.ts`: `process.env.npm_package_version` is UNSET in the packaged
 // SEA sidecar binary, so it cannot be the source of the User-Agent version below.
 import pkg_json from 'backend/../../package.json'
-import { app, dialog, shell, Notification, BrowserWindow } from 'backend/platform'
+import {
+  app,
+  dialog,
+  shell,
+  Notification,
+  BrowserWindow
+} from 'backend/platform'
 import { exec, spawn, SpawnOptions, spawnSync } from 'child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'graceful-fs'
 import { promisify } from 'util'
@@ -1206,30 +1212,48 @@ export async function moveOnUnix(
 
   let currentFile = ''
 
-  let rsyncExists = false
+  // D-35-19-07: `which rsync` answers the wrong question. macOS 15+ (Sequoia)
+  // ships Apple's `openrsync` as /usr/bin/rsync, so the existence probe SUCCEEDS
+  // and the `mv` fallback below never engages -- while openrsync rejects two of
+  // the flags GNU rsync takes, aborting the move outright. What matters is the
+  // IMPLEMENTATION, so probe `rsync --version` (which also proves existence).
+  let rsyncFlavour: 'gnu' | 'openrsync' | null = null
   try {
-    await execAsync('which rsync')
-    rsyncExists = true
+    const { stdout } = await execAsync('rsync --version')
+    rsyncFlavour = /openrsync/i.test(stdout) ? 'openrsync' : 'gnu'
   } catch (error) {
     logError(error, LogPrefix.Gog)
   }
-  if (rsyncExists) {
+  if (rsyncFlavour) {
     const origin = install_path + '/'
+    // `--no-human-readable` is load-bearing on GNU, not decoration: without it
+    // GNU groups digits (`12,582,912`) and the `/^\s+(\d+)/` byte parse in the
+    // progress callback below reads "12". openrsync implements neither that flag
+    // nor `--info=`, but already prints plain digits, and its `--progress` output
+    // is byte-compatible with that same parser (verified against a real
+    // transfer), which is why the callback is untouched by this fix.
+    //
+    // The GNU list is kept byte-identical to what shipped before, so the path
+    // that already worked cannot regress.
+    const rsyncArgs =
+      rsyncFlavour === 'openrsync'
+        ? ['--archive', '--compress', '--remove-source-files', '--progress']
+        : [
+            '--archive',
+            '--compress',
+            '--no-human-readable',
+            '--remove-source-files',
+            '--info=name,progress'
+          ]
     logInfo(
-      `moving command: rsync --archive --compress --no-human-readable --remove-source-files --info=name,progress ${origin} ${destination} `,
+      `moving command (${rsyncFlavour}): rsync ${rsyncArgs.join(
+        ' '
+      )} ${origin} ${destination} `,
       LogPrefix.Backend
     )
     const { code, stderr } = await spawnAsync(
       'rsync',
-      [
-        '--archive',
-        '--compress',
-        '--no-human-readable',
-        '--remove-source-files',
-        '--info=name,progress',
-        origin,
-        destination
-      ],
+      [...rsyncArgs, origin, destination],
       { stdio: 'pipe' },
       (data) => {
         let percent = 0
@@ -1284,7 +1308,13 @@ export async function moveOnUnix(
         })
       }
     )
-    if (code !== 1) {
+    // D-35-19-08: this branch `rm -rf`s the SOURCE install, so it must only be
+    // reached on unambiguous success. The previous test was `code !== 1`, which
+    // read rsync's 2, 10, 11, 12, 23 (PARTIAL TRANSFER), 24 and 30 as success --
+    // a partial transfer would leave an incomplete copy at the destination and
+    // then delete the original. `spawnAsync` types `code` as `number | null`,
+    // and a null (killed by signal) must not delete either; `=== 0` covers both.
+    if (code === 0) {
       logInfo(`Finished Moving ${title}`, LogPrefix.Backend)
       // remove the old install path
       await spawnAsync('rm', ['-rf', install_path])
@@ -1298,7 +1328,9 @@ export async function moveOnUnix(
       install_path,
       destination
     ])
-    if (code !== 1) {
+    // D-35-19-08: same inverted test as above. `mv` reports any failure as a
+    // non-zero exit, not specifically 1.
+    if (code === 0) {
       return { status: 'done', installPath: destination }
     } else {
       logError(`Error: ${stderr}`, LogPrefix.Backend)
