@@ -1790,3 +1790,17 @@ wired through rather than merely declared; the paired-list invariant (T-35-41) w
 entry-for-entry including order; and the counts are a "measured post-removal delta" rather than a
 trusted delete return, which is the correct construction given
 [[wry-cookie-delete-lies-about-deleting]].
+
+**THE FIX FOR THIS ALREADY EXISTS IN THE HUMBLE PATH — port it.** Criterion 19, run after this item
+was written, showed Humble's disconnect logging a cookie CENSUS alongside its clear count:
+```
+Humble disconnect: cookie census before(total=9, matched=0, verdict=SUPPORTED_NONEMPTY)
+                                  after(total=9, matched=0, verdict=SUPPORTED_NONEMPTY)
+Humble disconnect: cleared 0 humblebundle.com cookie(s)
+```
+That `verdict=SUPPORTED_NONEMPTY` with `total=9` makes the zero self-interpreting: the cookie API
+worked and the jar was non-empty, so `matched=0` provably means "none present" rather than "probe
+broken". Epic's per-domain lines emit only the count, which is why this item had to argue the
+distinction from outside the product. Emitting the same census per Epic domain would make a future
+run of criterion 21 self-validating and close this gap without needing the seeding step described
+above — though seeding is still the stronger test.

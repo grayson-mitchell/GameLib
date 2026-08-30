@@ -1139,7 +1139,61 @@ re-authenticating from a leftover session).
 Expected: The login window/webview requires the operator to enter credentials again — no silent
 re-auth.
 Observed:
-Verdict:
+**RUN ORDER — deviation from the literal Preconditions, matching the criterion's own stated intent.**
+Preconditions say criterion 18 passed "immediately before this gesture", but this criterion's own
+What says it is "placed LAST among the store-account criteria (18-19-20-21) deliberately". Those two
+cannot both be satisfied. It was run LAST — after 20 and 21 — honouring the stated intent. The
+substance of the precondition held and in fact strengthened: criterion 20's restart (12:35)
+intervened, and Humble came back live through it.
+
+**THE DESTROYED STATE WAS PROVEN LIVE, not merely present.** Twenty minutes before the logout, at
+12:35:07 on the current instance:
+```
+SidecarKeyringSlotStore(humble-session).getToken(): keyring_get ok present=true len=208 elapsed=14ms
+SidecarKeyringSlotStore(humble-csrf).getToken():    keyring_get ok present=true len=29  elapsed=5ms
+Humble sync finished: gamekeys=32 fetched=7/7 frozen=25 ok=7 schema_error=0 denied=0 expired=0
+```
+`fetched=7/7 ok=7 denied=0 expired=0` is the HUMBLE SERVER accepting the restored session. Combined
+with criterion 18, the session survived TWO full quit/relaunch cycles and was server-validated after
+both. **This is what makes the logout meaningful (Test 6), and it is the part criterion 21 could not
+establish for Epic.**
+
+**LOGOUT RESULT** (12:55:24, instance shell 73586 / sidecar 73592):
+```
+SidecarKeyringSlotStore(humble-session).clearToken(): keyring_delete ok
+SidecarKeyringSlotStore(humble-csrf).clearToken():    keyring_delete ok
+Humble disconnect: cookie census before(total=9, matched=0, verdict=SUPPORTED_NONEMPTY)
+                                  after(total=9, matched=0, verdict=SUPPORTED_NONEMPTY)
+Humble disconnect: cleared 0 humblebundle.com cookie(s)
+Humble disconnect: cleared storage — localStorage=0, sessionStorage=0, indexedDB=0, caches=0, serviceWorkers=0
+```
+Both keyring slots — the ACTUAL credential store for Humble, which keeps its session cookie as a
+keyring token rather than in the webview jar — were deleted.
+
+**THE ZERO HERE IS NON-VACUOUS, AND THE PRODUCT PROVES IT ITSELF.** `cleared 0 humblebundle.com
+cookie(s)` would normally be uninterpretable — indistinguishable between "none present" and "the
+probe is broken". The census resolves it in place: `verdict=SUPPORTED_NONEMPTY` with `total=9` states
+that the cookie API worked AND the jar was non-empty, so `matched=0` genuinely means no Humble
+cookies existed. **This is exactly the anti-vacuity control criterion 21's four non-primary Epic
+domains LACKED** (see D-35-19-15, where the same bare zero had to be argued down to "none present"
+from outside the product). Worth carrying into the Epic path as a pattern.
+
+**AUTHORITATIVE RESULT: the login flow ASKED FOR CREDENTIALS.** The tester re-opened the Humble
+login after logout and was required to enter credentials. No silent re-auth from a surviving
+keyring token or cookie. That is this criterion's stated Expected, met.
+
+**STRENGTH RELATIVE TO CRITERION 21 — recorded so the two PASSes are not read as equivalent.** This
+result is the stronger of the pair on all three axes:
+| | criterion 19 (Humble) | criterion 21 (Epic) |
+| - | - | - |
+| precondition | genuine pre-existing external state, predates this gate run | gate-created during criterion 14 |
+| destroyed session proven server-accepted | **YES** (`denied=0 expired=0`) | NO (D-35-19-13: Epic never contacted) |
+| zero-clear counts disambiguated by the product | **YES** (census verdict) | NO (bare zeros, argued externally) |
+
+Cost incurred and flagged to the tester in advance: Humble has no login API, so re-authentication
+requires the embedded webview and a reCAPTCHA
+([[humble-has-no-login-api-webview-is-mandatory]]).
+Verdict: PASS
 
 ### 20. Epic: session survives a restart (precondition for criterion 21)
 
