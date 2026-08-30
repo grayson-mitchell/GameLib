@@ -759,9 +759,28 @@ progress:
   #   floor(396/431*100) = floor(91.88) = 91 (unchanged). NO gsd-sdk state.*/roadmap.* verb
   #   invoked -- hand-applied, per this phase's standing rule that the orchestrator owns
   #   STATE.md/ROADMAP.md by hand.
+  # 2026-08-31 (/gsd-execute-phase 35, plan 35-28 EXECUTED -- records-hygiene, gap-closure
+  #   wave 2): +3 completed plans, RECONCILING the pre-existing `35-21`/`35-22`/`35-23` counter
+  #   lag routed here by both 35-24 (Item 4, deferred-items.md) and 35-27 (re-confirmed, same
+  #   item). Re-derived from disk, not trusted from either the 393 or 396 figure blind:
+  #   `35-21-SUMMARY.md`, `35-22-SUMMARY.md`, `35-23-SUMMARY.md` all exist on disk, each with
+  #   `completed: 2026-08-30` and `## Self-Check: PASSED`, and none of the three has ever had a
+  #   `completed_plans` increment recorded in this progress block -- the last entry before the
+  #   gap is 35-20's 391 -> 392, and the next entry after it is 35-24's 392 -> 393 (35-24 itself,
+  #   not the three that landed between them). Arithmetic: 396 (current) + 3 (35-21, 35-22,
+  #   35-23, the three missing increments) = 399. percent = floor(399/431*100) =
+  #   floor(92.575...) = 92. `total_plans` (431) is unchanged -- this is a recovery of missed
+  #   increments against the existing denominator, not a recount of the denominator itself; a
+  #   global `ls .planning/phases/*/*-SUMMARY.md | wc -l` count (584) was considered and
+  #   rejected as the basis for `total_plans`/`completed_plans` because those fields are scoped
+  #   to the current v0.8 milestone (phases 27-35), not the project's full history of already-
+  #   closed older phases. This plan's own two-task execution (REQUIREMENTS.md status-table
+  #   correction) produces no new plan of its own and is not itself counted here -- the +3 is
+  #   exclusively the backfill for 35-21/35-22/35-23. NO gsd-sdk state.*/roadmap.* verb invoked
+  #   -- hand-applied from a `cp` snapshot, plain `diff` verified against it.
   total_plans: 431
-  completed_plans: 396
-  percent: 91
+  completed_plans: 399
+  percent: 92
 ---
 
 # Project State
