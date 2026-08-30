@@ -1823,7 +1823,12 @@ above — though seeding is still the stronger test.
 
 ## D-35-19-16 — GOG macOS move records a DOUBLED install path, so the game will not launch
 
-Found: live verification of the D-35-19-07 fix, 2026-08-30. Status: **CONFIRMED DEFECT, UNFIXED.
+Found: live verification of the D-35-19-07 fix, 2026-08-30. Status: **FIXED 2026-08-30 by quick task
+`260830-k4m` (`98c92c229`) — PENDING LIVE VERIFICATION.** Covered by 4 regression tests in
+`gog/__tests__/library.test.ts`, 2 of which reproduce the exact doubled path against pre-fix source.
+Not yet re-measured against a real move on a packaged build. Original report follows.
+
+Original status: **CONFIRMED DEFECT, UNFIXED.
 Pre-existing upstream (`6689ac086b`, CommandMC, 2026-06-06) — but UNREACHABLE until D-35-19-07 was
 fixed, because the move never succeeded on macOS 15+ to begin with.**
 
@@ -1863,4 +1868,24 @@ which call their own `changeGameInstallPath` implementations, for the same shape
 Scope note: only the `osx` platform branch doubles, so this is macOS-specific for GOG.
 
 The tester's Endless Sky entry was repaired by hand during this session (backup at
-`/tmp/gog-installed.json.bak`); the CODE defect is untouched.
+`/tmp/gog-installed.json.bak`).
+
+### How it was fixed (`260830-k4m`)
+
+Neither of the two routes suggested above was taken, and the reason matters for anyone reading this
+ledger later:
+
+- Having `moveInstall` pass `newInstallPath` (the parent) **would break non-`osx` GOG installs**,
+  where no append happens at all and `install_path` would be recorded as the parent directory.
+- Widening the signature with an explicit contract touches the shared `LibraryManager` interface,
+  six implementations (three of them no-op stubs) and four call sites, for a one-line defect.
+
+Instead: GOG installs are created as `install_path = join(path, folder_name)` (`gog/games.ts:433`),
+so the standing invariant is that `install_path` **ends with** `folder_name`. The append is now
+guarded on `basename(newInstallPath) !== folder_name`, which satisfies both callers without an
+interface change.
+
+The suggested check of the sibling runners was done: `legendary/library.ts:415` and
+`nile/library.ts:402` set the path **verbatim** with no append, so neither doubles;
+`zoom/library.ts:378` has the same store-update shape but **no `osx` branch at all**; `steam` and
+`sideload` are no-op stubs. **This defect is GOG-only.**
