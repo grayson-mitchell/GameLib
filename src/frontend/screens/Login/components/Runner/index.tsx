@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useContext, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import ContextProvider from 'frontend/state/ContextProvider'
 import './index.css'
 
 interface RunnerProps {
@@ -39,6 +40,7 @@ export default function Runner(props: RunnerProps) {
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
   const navigate = useNavigate()
+  const { showDialogModal } = useContext(ContextProvider)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   async function handleLogout() {
@@ -46,12 +48,30 @@ export default function Runner(props: RunnerProps) {
     try {
       await props.logoutAction()
     } catch (error) {
-      // G-30-01: a logout action must never latch the button in "Logging
-      // out..." forever. Most logoutAction implementations (see
-      // GlobalState.tsx's per-platform logout methods) do not currently
-      // throw, but this guard is the honest floor for any that do (now or
-      // in the future) -- surface it and let `finally` recover the button.
-      console.error('[GameLib] logoutAction failed:', error)
+      // G-30-01, now covering TWO responsibilities (Phase 35 gap closure,
+      // plan 35-22, CR-04 renderer half): (1) a logout action must never
+      // latch the button in "Logging out..." forever -- the `finally` below
+      // still guarantees that on every path, including this catch and a
+      // throwing showDialogModal call; (2) a failed logout is a SECURITY
+      // outcome (the session may not have actually cleared), and renderer
+      // console logging reaches neither `gamelib.log` nor `gamelib-shell.log`
+      // under Tauri, so it was an invisible failure. Route it through the
+      // sidecar logger (recoverable by a support request) and surface it to
+      // the user via a dialog -- the error text itself stays out of the
+      // dialog body since it may carry an internal path or domain list; only
+      // the log line gets that detail.
+      window.api.logError(
+        `[GameLib] logoutAction failed for ${props.class}: ${String(error)}`
+      )
+      showDialogModal({
+        showDialog: true,
+        type: 'ERROR',
+        title: tGamelib('gamelib:login.logoutFailedTitle', 'Sign-out incomplete'),
+        message: tGamelib(
+          'gamelib:login.logoutFailedMessage',
+          "Your account was signed out on this device, but the browser session could not be fully cleared. On a shared computer, sign out again or clear your browser data for this site to make sure your session doesn't stay accessible."
+        )
+      })
     } finally {
       // FIXME: only delete local storage relate to one store, or only delete if logged out from both
       //window.localStorage.clear()

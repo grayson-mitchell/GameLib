@@ -52,6 +52,13 @@ jest.mock('react', () => {
       }
       return [slots[idx], setState]
     },
+    // Phase 35 gap closure, plan 35-22 (CR-04 renderer half): Runner now also calls
+    // `useContext(ContextProvider)` for `showDialogModal`. This file's scope is the
+    // login/logout navigation surface, not the failure-dialog path (that is
+    // `logoutFailureSurface.test.tsx`), so a no-op stub is sufficient here -- it exists
+    // only so calling the real dispatcher-less `useContext` outside a real render does
+    // not throw.
+    useContext: () => ({ showDialogModal: jest.fn() }),
     __resetMount: () => {
       slots = []
       cursor = 0
