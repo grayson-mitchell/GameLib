@@ -138,7 +138,7 @@ describe('AdvancedSettings EOS decline call-site gate', () => {
     it('the non-vacuity anchor fires on a synthetic source with fewer EOS call sites', () => {
       const regressed = collapse(
         source.replace(
-          'call: () => window.api.removeEosOverlay()',
+          'call: () => window.api.removeEosOverlay(true)',
           'call: () => Promise.resolve(true)'
         )
       )

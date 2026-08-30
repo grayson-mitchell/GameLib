@@ -61,7 +61,8 @@ export default function AdvancedSetting() {
   const [eosOverlayUnavailable, setEosOverlayUnavailable] = useState(false)
   const eosOverlayAppName = '98bc04bc842e4906993fd6d6644ffb8d'
 
-  const { libraryStatus, platform } = useContext(ContextProvider)
+  const { libraryStatus, platform, showDialogModal } =
+    useContext(ContextProvider)
   const { t } = useTranslation()
   const isWindows = platform === 'win32'
   const isLinux = platform === 'linux'
@@ -201,13 +202,35 @@ export default function AdvancedSetting() {
       channel: 'removeEosOverlay',
       feature: EOS_FEATURE,
       deferral: EOS_DEFERRAL,
-      call: () => window.api.removeEosOverlay()
+      call: () => window.api.removeEosOverlay(true)
     })
     if (!result.ok) {
       setEosOverlayUnavailable(true)
       return
     }
     setEosOverlayInstalled(!result.value)
+  }
+
+  // Phase 35 plan 26 (REQ-35-17, closes D-35-11-01): the Remove button used to go straight to
+  // `removeEosOverlay()`, which itself raised a native `dialog.showMessageBox` confirmation in
+  // the backend. That native dialog is gone (see eos_overlay.ts's `remove()`) -- the
+  // confirmation now happens here, app-styled, via `showDialogModal`. Only the affirmative
+  // button's onClick calls `removeEosOverlay()` (which now passes the literal `true` the
+  // backend's fail-closed gate requires); the negative button has no onClick at all, matching
+  // this codebase's house pattern (see AllowInstallationBrokenAnticheat.tsx).
+  function confirmRemoveEosOverlay() {
+    showDialogModal({
+      title: t('setting.eosOverlay.removeConfirmTitle', 'Confirm overlay removal'),
+      message: t(
+        'setting.eosOverlay.removeConfirm',
+        'Are you sure you want to uninstall the EOS Overlay?'
+      ),
+      buttons: [
+        { text: t('box.yes'), onClick: () => removeEosOverlay() },
+        { text: t('box.no') }
+      ],
+      type: 'MESSAGE'
+    })
   }
 
   async function updateEosOverlay() {
@@ -423,7 +446,7 @@ export default function AdvancedSetting() {
                   {!eosOverlayInstallingOrUpdating && (
                     <button
                       className="button is-danger"
-                      onClick={removeEosOverlay}
+                      onClick={confirmRemoveEosOverlay}
                     >
                       <DeleteOutline />
                       <span>{t('setting.eosOverlay.remove', 'Uninstall')}</span>

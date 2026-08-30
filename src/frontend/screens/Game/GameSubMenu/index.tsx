@@ -92,6 +92,10 @@ export default function GamesSubmenu({
   )
   const { t } = useTranslation('gamepage')
   const { t: tGamelib } = useTranslation('gamelib')
+  // Phase 35 plan 26 (REQ-35-17): the `setting.eosOverlay.*` install-confirmation strings live
+  // in the DEFAULT ('translation') namespace, not 'gamepage'/'gamelib' -- neither of this file's
+  // other two `t`s resolves them.
+  const { t: tDefault } = useTranslation()
   const isSideloaded = runner === 'sideload'
   const isSteam = runner === 'steam'
   const isThirdPartyManaged = !!gameInfo.thirdPartyManagedApp
@@ -227,18 +231,51 @@ export default function GamesSubmenu({
     if (eosOverlayEnabled) {
       await window.api.disableEosOverlay(appName)
       setEosOverlayEnabled(false)
+      setEosOverlayRefresh(false)
     } else {
       const initialEnableResult = await window.api.enableEosOverlay(appName)
-      const { installNow } = initialEnableResult
-      let { wasEnabled } = initialEnableResult
+      const { installNow, wasEnabled } = initialEnableResult
 
+      // Phase 35 plan 26 (REQ-35-17): `enable()`'s not-installed branch used to ask
+      // "install now?" itself via a native `dialog.showMessageBox` and fold the answer into
+      // `installNow`. That native dialog is gone -- `installNow: true` now unconditionally
+      // means "not installed, ask the renderer". Only the affirmative button installs and
+      // re-enables; the negative button (no onClick, matching the house pattern) leaves
+      // eosOverlayEnabled false and just releases the "refreshing" state.
       if (installNow) {
-        await window.api.installEosOverlay()
-        wasEnabled = (await window.api.enableEosOverlay(appName)).wasEnabled
+        showDialogModal({
+          title: tDefault(
+            'setting.eosOverlay.notInstalledTitle',
+            'Overlay not installed'
+          ),
+          message: tDefault(
+            'setting.eosOverlay.notInstalledMsg',
+            'The EOS Overlay is not installed. Do you want to install it now?'
+          ),
+          buttons: [
+            {
+              text: tDefault('box.yes'),
+              onClick: async () => {
+                await window.api.installEosOverlay()
+                const { wasEnabled: enabledAfterInstall } =
+                  await window.api.enableEosOverlay(appName)
+                setEosOverlayEnabled(enabledAfterInstall)
+                setEosOverlayRefresh(false)
+              }
+            },
+            {
+              text: tDefault('box.no'),
+              onClick: () => setEosOverlayRefresh(false)
+            }
+          ],
+          type: 'MESSAGE'
+        })
+        return
       }
+
       setEosOverlayEnabled(wasEnabled)
+      setEosOverlayRefresh(false)
     }
-    setEosOverlayRefresh(false)
   }
 
   async function handleAddToSteam() {
