@@ -1478,8 +1478,16 @@ against the other.
 
 ## D-35-19-07 — move-install is BROKEN on macOS 15+ : openrsync rejects two of the flags
 
-Found: criterion 13, 2026-08-30. Status: **LIVE USER-FACING DEFECT, UNFIXED. Pre-existing upstream
-— NOT a Phase 35 regression.** Reproduced end-to-end: moving Endless Sky (GOG, 419M) produced an
+Found: criterion 13, 2026-08-30. Status: **FIXED PENDING LIVE VERIFICATION** (`2c9acffb1`, quick task
+`260830-ibr`). Pre-existing upstream — NOT a Phase 35 regression.
+
+> **Fix:** detection is now of the rsync IMPLEMENTATION via `rsync --version`, not the binary's
+> existence; openrsync gets `--archive --compress --remove-source-files --progress` while the GNU
+> list is kept entry-for-entry identical. The progress parser is UNCHANGED — openrsync's
+> `--progress` output was verified byte-compatible with it against a real 20 MB two-level transfer.
+> 12 unit tests, 8 of which fail against pre-fix code.
+> **NOT closed:** no end-to-end move of a real install was re-run. Criterion 13's Endless Sky move
+> (419M) is the natural live re-test and remains outstanding. Reproduced end-to-end: moving Endless Sky (GOG, 419M) produced an
 "Error Moving Game" toast and moved nothing.
 
 `rsync: unrecognized option '--no-human-readable'`
@@ -1516,8 +1524,16 @@ Apple's swap. Does not bear on criterion 13's verdict: it fails identically with
 
 ## D-35-19-08 — `code !== 1` treats most rsync failures as SUCCESS, then `rm -rf`s the source
 
-Found: reading the code for D-35-19-07, 2026-08-30. Status: **LATENT DATA-LOSS RISK, UNFIXED.
-Did NOT fire in this run.** Pre-existing upstream, same blame as D-35-19-07.
+Found: reading the code for D-35-19-07, 2026-08-30. Status: **FIXED PENDING LIVE VERIFICATION**
+(`2c9acffb1`, quick task `260830-ibr`). Did NOT fire during the gate run. Pre-existing upstream,
+same blame as D-35-19-07.
+
+> **Fix:** both success tests are now `code === 0` (rsync branch and the `mv` fallback). That also
+> covers `spawnAsync`'s `code: number | null` — a signal kill yields `null`, and `null === 0` is
+> false, so it correctly refuses to delete. Covered by 6 unit tests (exits 23, 2, 11, 24, 30 and
+> `null` must not delete; exit 0 must), all of which fail against pre-fix code.
+> **NOT closed:** not exercised against a real forced partial transfer, only against mocked exit
+> codes — which is what the item itself asked for.
 
 `src/backend/utils.ts:1287`:
 ```ts
