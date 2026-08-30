@@ -315,3 +315,119 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
     expect(logged).not.toContain('sentinel-cookie-')
   })
 })
+
+describe('Task 2: jar-liveness fatality rule (CR-04 part 2, D-35-19-15)', () => {
+  it('(1) a genuinely empty Epic jar (every host proven SUPPORTED_BUT_EMPTY) is NOT fatal', async () => {
+    // `everProvedLive` becomes true from the FIRST read (any host, any side)
+    // that reports a nonzero jar-wide total — here, an unrelated cookie
+    // (e.g. a GOG/Humble session in the same shared jar) proves the channel
+    // is alive, while every Epic-owned host's domain-scoped `matched` count
+    // stays genuinely zero throughout — a legendary CLI-only auth, or a
+    // profile migrated from another launcher, with no Epic cookies of its
+    // own.
+    const seam = makeMockSeam({
+      cookiesForDomain: jest.fn().mockResolvedValue(cookieRead(1, 0)),
+      clearCookies: jest.fn().mockResolvedValue(0)
+    })
+    setLoginWindowSeam(seam)
+
+    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
+
+    expect(logError).not.toHaveBeenCalled()
+    expect(logInfo).toHaveBeenCalledWith(
+      expect.stringContaining('Epic cookie jar was already empty'),
+      'Legendary'
+    )
+  })
+
+  it('(2) a host proven SUPPORTED_NONEMPTY with a zero delta is FATAL, naming the broken host, regardless of the overall summed total', async () => {
+    // epicgames.com clears healthily (delta=5, masking the sum), but
+    // fortnite.com's BEFORE census proves 2 cookies were present and its
+    // measured post-removal delta is 0 — the clear is broken for that host
+    // specifically. This is the exact shape D-35-19-15 measured live: a
+    // healthy primary domain hiding a broken secondary domain inside a
+    // nonzero sum.
+    const cookiesForDomain = jest
+      .fn()
+      .mockResolvedValueOnce(cookieRead(5, 5)) // epicgames.com before
+      .mockResolvedValueOnce(cookieRead(0, 0)) // epicgames.com after
+      .mockResolvedValueOnce(cookieRead(2, 2)) // fortnite.com before
+      .mockResolvedValueOnce(cookieRead(2, 2)) // fortnite.com after (unchanged — broken)
+      .mockResolvedValue(cookieRead(0, 0)) // remaining hosts
+    const clearCookies = jest
+      .fn()
+      .mockResolvedValueOnce(5) // epicgames.com: healthy
+      .mockResolvedValueOnce(0) // fortnite.com: broken
+      .mockResolvedValue(0)
+    const seam = makeMockSeam({ cookiesForDomain, clearCookies })
+    setLoginWindowSeam(seam)
+
+    await expect(LegendaryUser.logout()).rejects.toThrow(
+      /removed nothing for fortnite\.com despite the jar proving cookies were present beforehand/
+    )
+
+    // The credential-side security boundary still ran (T-34.5-19).
+    expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
+
+    // RED-PROOF (recorded verbatim in 35-23-SUMMARY.md): a naive
+    // `total === 0`-only implementation computes the SUMMED total as
+    // 5 + 0 + 0 + 0 + 0 = 5, which is NOT zero — the naive version would
+    // therefore RESOLVE this exact scenario instead of rejecting it,
+    // silently missing the broken fortnite.com clear. Mutating this test's
+    // production code back to `if (total === 0) throw ...` (deleting the
+    // `brokenHosts` branch) is the single mutation that flips this test from
+    // red to green-on-the-wrong-thing — i.e. makes it pass by NOT rejecting.
+  })
+
+  it('(3c) census UNSUPPORTED_OR_ERROR on every side falls back to legacy fail-closed behavior (a rejecting/erroring read)', async () => {
+    // cookiesForDomain unmocked-shaped: every read rejects, so every side's
+    // domain verdict is UNSUPPORTED_OR_ERROR, never SUPPORTED_BUT_EMPTY —
+    // the fallback must fail CLOSED, exactly as before this plan.
+    const seam = makeMockSeam({
+      cookiesForDomain: jest
+        .fn()
+        .mockRejectedValue(new Error('rust-side census read failed')),
+      clearCookies: jest.fn().mockResolvedValue(0)
+    })
+    setLoginWindowSeam(seam)
+
+    await expect(LegendaryUser.logout()).rejects.toThrow(
+      /removed nothing across all 5 Epic-owned domains/
+    )
+    expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
+  })
+
+  it('(3d) census UNDECIDABLE on every side (resolves, but never proves liveness) ALSO falls back to legacy fail-closed behavior', async () => {
+    // Every read RESOLVES (does not reject) but always reports a jar-wide
+    // total of 0 — `everProvedLive` never becomes true, so every side's
+    // domain verdict is UNDECIDABLE, distinct from (3c)'s
+    // UNSUPPORTED_OR_ERROR. Named as a SEPARATE test so a future collapse of
+    // the two fail-closed paths (e.g. one bucket accidentally treated as
+    // "proven empty") is caught by name, not silently merged.
+    const seam = makeMockSeam({
+      cookiesForDomain: jest.fn().mockResolvedValue(cookieRead(0, 0)),
+      clearCookies: jest.fn().mockResolvedValue(0)
+    })
+    setLoginWindowSeam(seam)
+
+    await expect(LegendaryUser.logout()).rejects.toThrow(
+      /removed nothing across all 5 Epic-owned domains/
+    )
+    expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
+  })
+
+  it('EPIC_COOKIE_HOSTS stays byte-identical to before this plan (T-35-41 paired-list invariant untouched)', () => {
+    // This plan's `files_modified` list is `user.ts` (the clearEpicCookies
+    // step body) and this test file only — `EPIC_COOKIE_HOSTS` itself must
+    // never move. `epicLogoutDomains.test.ts` already asserts the full
+    // main.rs/user.ts parity in detail; this is a narrower reminder living
+    // next to the code this plan actually touched.
+    expect(EPIC_HOSTS_UNDER_TEST).toEqual([
+      'epicgames.com',
+      'fortnite.com',
+      'unrealengine.com',
+      'twinmotion.com',
+      'metahuman.com'
+    ])
+  })
+})

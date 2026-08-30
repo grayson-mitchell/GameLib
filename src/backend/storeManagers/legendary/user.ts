@@ -360,19 +360,33 @@ export class LegendaryUser {
               //      fail CLOSED, exactly as before this plan: an unreadable
               //      jar must never be treated as an empty one — that is
               //      precisely the substitution CR-04 part 2 is about.
-              // ASYMMETRY, deliberate: an INDIVIDUAL domain returning 0 is
-              // legitimate and is NOT an error — a user may simply never have
-              // visited twinmotion.com, so that domain has no cookies to
-              // remove. Only a zero TOTAL means the clear achieved nothing,
-              // and that is the failure this throw exists to surface
-              // (T-35-39). Plan 23 (CR-04 part 2) refines this rule further —
-              // see the follow-up commit for that change; `hostRecords`
-              // captured above already carries what that refinement needs.
-              if (total === 0) {
+              const brokenHosts = hostRecords.filter(
+                (r) =>
+                  domainVerdict(r.before) === 'SUPPORTED_NONEMPTY' &&
+                  r.deleted === 0
+              )
+              if (brokenHosts.length > 0) {
                 throw new Error(
-                  `Legendary logout: domain-scoped cookie clear removed nothing across all ` +
-                    `${EPIC_COOKIE_HOSTS.length} Epic-owned domains (${perDomain.join(', ')})`
+                  `Legendary logout: domain-scoped cookie clear removed nothing for ` +
+                    `${brokenHosts.map((r) => r.host).join(', ')} despite the jar proving ` +
+                    `cookies were present beforehand (${perDomain.join(', ')})`
                 )
+              } else if (total === 0) {
+                const allProvenEmpty = hostRecords.every(
+                  (r) => domainVerdict(r.before) === 'SUPPORTED_BUT_EMPTY'
+                )
+                if (allProvenEmpty) {
+                  logInfo(
+                    `Legendary logout: Epic cookie jar was already empty across all ` +
+                      `${EPIC_COOKIE_HOSTS.length} Epic-owned domains — nothing to clear`,
+                    LogPrefix.Legendary
+                  )
+                } else {
+                  throw new Error(
+                    `Legendary logout: domain-scoped cookie clear removed nothing across all ` +
+                      `${EPIC_COOKIE_HOSTS.length} Epic-owned domains (${perDomain.join(', ')})`
+                  )
+                }
               }
             } finally {
               // Closed unconditionally — even when clearCookies rejects —
