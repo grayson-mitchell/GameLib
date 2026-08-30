@@ -2037,3 +2037,23 @@ received `'pure-js'` shape. File untouched by 35-27 (`git log --oneline -1` on i
 unrelated commit `f3f63fd72`, not this plan). Confirms Item 3's disposition still holds two
 gap-closure plans later — logged per the scope-boundary rule rather than fixed, and rather than
 re-litigated as a new item.
+
+**Item 6 — plan 35-28: `meta/__tests__/genI18nGateScope.test.ts`'s A-17 anti-rot assertion fails,
+stale `meta/i18nForkTouchedFiles.json` pin.** `pnpm test --selectProjects Meta` run at this
+plan's Task 2 verification step: 1 failure —
+`src/frontend/components/UI/Winetricks/WinetricksSearch/index.tsx` is present in the LIVE git
+derivation of fork-touched files but absent from the committed
+`meta/i18nForkTouchedFiles.json` snapshot. Root cause: gap-closure plan `35-25` modified this
+file (commit `366e719bb`, the mousedown-capture fix for the mouse-dead Winetricks Install
+button) after the pin was last regenerated (`D-35-03-01`, resolved by plan `35-24` via
+`pnpm gen-i18n-gate-scope`, 199 -> 205 files) — this is the same
+`i18n-fork-pin-regen-cascades` shape recorded in MEMORY.md ("regenerating an artifact breaks the
+pins that guard it"), recurring because a file touched by a LATER plan was never folded back into
+the snapshot. Not caused by this plan (35-28's `files_modified` is `.planning/REQUIREMENTS.md`
+only; `git status --short` at the time of this run showed only that one file modified, confirming
+the failure pre-dates and is independent of this plan's edit). Not fixed here — regenerating
+`meta/i18nForkTouchedFiles.json` is an i18n-gate-scope change, outside this plan's
+`files_modified` and SCOPE BOUNDARY. Whoever next touches the i18n fork-gate scope (or plan
+`35-29`, which already owns the live-gate re-run) should run `pnpm gen-i18n-gate-scope` and
+verify the resulting diff is limited to adding `WinetricksSearch/index.tsx` before re-running
+`pnpm test --selectProjects Meta`.
