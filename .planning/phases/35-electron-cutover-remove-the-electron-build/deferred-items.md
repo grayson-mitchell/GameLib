@@ -1960,3 +1960,15 @@ on any single token.
 
 `35-REVIEW.md` stays `status: issues_found` on `WR-01` until Phase 39 discharges it. That is a
 deliberate open record, not an oversight.
+
+**Item 3 — plan 35-20: `decompressPool.test.ts`'s native-LZMA-decode assertions fail on this
+machine, out of scope for this plan.** Full `pnpm test --selectProjects Backend` run at 35-20's
+verification step: 3 failures, all in
+`src/backend/storeManagers/steam/__tests__/decompressPool.test.ts` (`lzmaDecoderKind()` expected
+`'native'`, received `'pure-js'`). File is untouched by 35-20 (no edit, not in `git status`
+output for this plan). Matches the existing "LZMA off" record
+(`sea-decode-hang-unreproduced-closed-conservative.md`) — native LZMA decode is disabled by
+default on this dev machine, so `loadLzmaModule()` legitimately falls back to `pure-js` unless the
+kill switch is force-re-enabled, and something about this machine's native binary availability
+makes even the force-enabled path fall back. Pre-existing, unrelated to Steam launch dispatch or
+the installed.json watcher — logged per the scope-boundary rule rather than fixed.

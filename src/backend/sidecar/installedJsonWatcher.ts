@@ -41,6 +41,7 @@ import { existsSync, watch } from 'graceful-fs'
 import { libraryManagerMap } from '../storeManagers'
 import { legendaryInstalled } from '../storeManagers/legendary/constants'
 import { logInfo, LogPrefix } from '../logger'
+import { sendFrontendMessage } from '../ipc'
 
 /**
  * The debounce window, in milliseconds. Matches `main.ts:1047`'s `setTimeout(..., 500)` exactly.
@@ -81,8 +82,30 @@ export function startInstalledJsonWatcher(
   }
 
   const target = options.path ?? legendaryInstalled
+  // D-35-19-09 (live-gate criterion 14, UI half): the backend refresh alone left the renderer
+  // with no signal that anything changed, so the Library view never re-rendered without a
+  // manual refresh even though `refreshInstalled()` had already rebuilt the in-memory map. The
+  // send sits AFTER `refreshInstalled()` resolves, not alongside it — a renderer told to
+  // refresh before the backend rebuild lands re-reads the stale set and the user sees nothing
+  // change, which is the same defect one layer over. Matches the exact call shape the three
+  // peer paths already use (`legendary/games.ts:767,1067`, `sideload/library.ts:77`,
+  // `nile/games.ts:512`): `sendFrontendMessage('refreshLibrary', 'legendary')`.
+  //
+  // This inherits the existing debounce for free and fires once per settled change — the send
+  // lives inside the SAME `setTimeout(refresh, ...)` callback the debounce already coalesces,
+  // so no second debounce is added here.
+  //
+  // A rejecting `refreshInstalled()` must NOT send `refreshLibrary`: a failed rebuild has
+  // nothing new for the renderer to read, and criterion 14's own probe proved
+  // `refreshInstalled()` can throw on a malformed file. The rejection is left to propagate
+  // exactly as it did before this change — no catch is added here, which would convert an
+  // observable failure into silence.
   const refresh =
-    options.refresh ?? (() => libraryManagerMap['legendary'].refreshInstalled())
+    options.refresh ??
+    (async () => {
+      await libraryManagerMap['legendary'].refreshInstalled()
+      sendFrontendMessage('refreshLibrary', 'legendary')
+    })
 
   if (!existsSync(target)) {
     return false

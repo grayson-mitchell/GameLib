@@ -51,6 +51,14 @@ jest.mock('../../logger', () => ({
   LogPrefix: { Legendary: 'Legendary' }
 }))
 
+// ── ipc — D-35-19-09 (live-gate criterion 14, UI half): the renderer notification this plan
+// adds. Mocked so the tests below can observe WHETHER and WHEN it fires without a real
+// sidecar transport. ─────────────────────────────────────────────────────────────────────────
+const sendFrontendMessageMock = jest.fn()
+jest.mock('../../ipc', () => ({
+  sendFrontendMessage: (...args: unknown[]) => sendFrontendMessageMock(...args)
+}))
+
 // ── Imports (after mocks) ──────────────────────────────────────────────────────────────────
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -82,7 +90,9 @@ beforeEach(() => {
   installedJson = join(tempDir, 'installed.json')
   writeFileSync(installedJson, JSON.stringify({ Iris: { app_name: 'Iris' } }))
   refreshInstalledMock.mockClear()
+  refreshInstalledMock.mockResolvedValue(undefined)
   logInfoMock.mockClear()
+  sendFrontendMessageMock.mockClear()
 })
 
 afterEach(() => {
@@ -255,4 +265,131 @@ describe('installed.json watcher — the ported production wiring', () => {
     // change smuggled into a port.
     expect(INSTALLED_JSON_REFRESH_DEBOUNCE_MS).toBe(500)
   })
+})
+
+// D-35-19-09 (live-gate criterion 14, UI half): before this plan, `refreshInstalled()` rebuilt
+// the in-memory map but nothing told the renderer, so the Library view never re-rendered without
+// a manual refresh even though the backend state was already correct. These cases target the
+// DEFAULT refresh path exclusively — `sendFrontendMessage` lives inside the module's own default
+// arrow, not inside a caller-supplied `refresh` override, so every case here omits `refresh` and
+// asserts against `refreshInstalledMock`/`sendFrontendMessageMock` instead of an injected spy.
+//
+// RED-PROOF (case a): commenting out this module's `sendFrontendMessage('refreshLibrary',
+// 'legendary')` line and re-running case (a) alone failed with:
+//   expect(jest.fn()).toHaveBeenCalledTimes(1)
+//   Expected number of calls: 1
+//   Received number of calls: 0
+// Restoring the line returned it to green. See the SUMMARY for the full captured output.
+describe('installed.json watcher — the renderer refresh signal (D-35-19-09)', () => {
+  it('(a) sends refreshLibrary/legendary exactly once after refreshInstalled resolves', async () => {
+    expect(startInstalledJsonWatcher({ path: installedJson })).toBe(true)
+    await sleep(120)
+
+    touchInstalledJson()
+    await sleep(AFTER_WINDOW)
+
+    expect(refreshInstalledMock).toHaveBeenCalledTimes(1)
+    expect(sendFrontendMessageMock).toHaveBeenCalledTimes(1)
+    expect(sendFrontendMessageMock).toHaveBeenCalledWith(
+      'refreshLibrary',
+      'legendary'
+    )
+  }, 15000)
+
+  it('(b) sends refreshLibrary AFTER refreshInstalled resolves, not alongside it', async () => {
+    const order: string[] = []
+    refreshInstalledMock.mockImplementation(async () => {
+      // A delay here is the point: if the send were racing the refresh rather than awaiting
+      // it, this artificial delay would let the send's order-record land FIRST.
+      await sleep(50)
+      order.push('refreshInstalled')
+    })
+    sendFrontendMessageMock.mockImplementation(() => {
+      order.push('sendFrontendMessage')
+    })
+
+    expect(startInstalledJsonWatcher({ path: installedJson })).toBe(true)
+    await sleep(120)
+
+    touchInstalledJson()
+    await sleep(AFTER_WINDOW)
+
+    expect(order).toEqual(['refreshInstalled', 'sendFrontendMessage'])
+  }, 15000)
+
+  it('(c) sends refreshLibrary ZERO times when refreshInstalled rejects', async () => {
+    // A rejecting refresh propagates exactly as it did before this plan (no catch was added
+    // here — see this module's own comment on why one must not be). That is deliberate
+    // production behaviour, not a leak this test should fail on: the promise returned by the
+    // module's internal `refresh` arrow is never stored by anything (its caller is
+    // `setTimeout(refresh, ...)`, which discards a callback's return value), so it rejects
+    // unhandled by construction. Jest circus fails the currently-running test on any
+    // unhandled rejection observed during it, which would otherwise fail THIS case for the
+    // exact behaviour it exists to prove.
+    //
+    // Rather than fight jest's process-level listener (later found NOT to be a plain
+    // `process.on('unhandledRejection', ...)` registration jest itself removes/restores
+    // cleanly), this wraps the real `setTimeout` for the duration of the case only and
+    // attaches a `.catch()` directly to the SPECIFIC promise the debounce callback returns —
+    // the same promise that would otherwise go unhandled. This changes nothing about
+    // production behaviour (the module still receives no catch, and the rejection still
+    // happens); it only gives THIS TEST a handle to observe-and-swallow it, exactly once,
+    // scoped to calls made while this spy is installed.
+    const realSetTimeout = global.setTimeout
+    const setTimeoutSpy = jest
+      .spyOn(global, 'setTimeout')
+      .mockImplementation(((
+        fn: (...fnArgs: unknown[]) => unknown,
+        ms?: number,
+        ...schedArgs: unknown[]
+      ) => {
+        const wrapped = (...cbArgs: unknown[]) => {
+          const result = fn(...cbArgs)
+          if (
+            result &&
+            typeof (result as Promise<unknown>).catch === 'function'
+          ) {
+            ;(result as Promise<unknown>).catch(() => {
+              /* expected: refreshInstalledMock rejects below; production adds no catch here
+                 by design (see this module's own comment) — this exists only so the rejection
+                 is observed rather than left genuinely unhandled in the test process. */
+            })
+          }
+          return result
+        }
+        return realSetTimeout(wrapped as never, ms, ...schedArgs)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any)
+
+    try {
+      refreshInstalledMock.mockRejectedValueOnce(
+        new Error('malformed installed.json')
+      )
+
+      expect(startInstalledJsonWatcher({ path: installedJson })).toBe(true)
+      await sleep(120)
+
+      touchInstalledJson()
+      await sleep(AFTER_WINDOW)
+
+      expect(refreshInstalledMock).toHaveBeenCalledTimes(1)
+      expect(sendFrontendMessageMock).not.toHaveBeenCalled()
+    } finally {
+      setTimeoutSpy.mockRestore()
+    }
+  }, 15000)
+
+  it('(d) collapses two writes INSIDE the window into exactly ONE send, same as the refresh', async () => {
+    expect(startInstalledJsonWatcher({ path: installedJson })).toBe(true)
+    await sleep(120)
+
+    touchInstalledJson()
+    await sleep(INSIDE_WINDOW)
+    touchInstalledJson()
+
+    await sleep(AFTER_WINDOW)
+
+    expect(refreshInstalledMock).toHaveBeenCalledTimes(1)
+    expect(sendFrontendMessageMock).toHaveBeenCalledTimes(1)
+  }, 15000)
 })
