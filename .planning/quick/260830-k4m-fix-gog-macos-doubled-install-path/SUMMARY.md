@@ -103,3 +103,25 @@ to happen against a CI-produced artifact.
 
 The tester's own Endless Sky entry was repaired by hand earlier in the session (backup at
 `/tmp/gog-installed.json.bak`) — that repair is data, not code, and is not covered by this commit.
+
+## Live verification (added 2026-08-30, after the fact)
+
+A single round-trip move of Endless Sky on a **dev build** exercised this fix end to end:
+
+```
+14:11:10  [Backend]  moving command (openrsync): rsync --archive --compress
+                       --remove-source-files --progress
+                       .../GameLibMoveTestFixture/Endless Sky.app/
+                       /Users/graysonmitchell/GameLib/Endless Sky.app
+14:11:21  [Backend]  Finished Moving Endless Sky
+14:16:09  [Backend]  Launching Endless Sky (1829678475)
+```
+
+Destination 7368 files / 419M with exe sha256 `36084f67421de23fd881df63`, identical to baseline;
+source removed; recorded `install_path` `/Users/graysonmitchell/GameLib/Endless Sky.app`, not
+doubled; the game then **launched and ran** as pid 17796 from that exact path, with gogdl receiving
+`launch "/Users/graysonmitchell/GameLib/Endless Sky.app"`.
+
+**Still a DEV BUILD, so gate criterion 13 is NOT re-discharged** (`R-34.5-G1-PKG`) — a local release
+rebuild remains blocked by `createUpdaterArtifacts: true` with no signing key. Only the `osx` GOG
+path and only the exit-0 branch were exercised live.

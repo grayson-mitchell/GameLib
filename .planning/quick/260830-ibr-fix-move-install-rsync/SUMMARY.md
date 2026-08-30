@@ -91,3 +91,25 @@ move attempt (Endless Sky, 419M) is the natural live re-test and remains outstan
 D-35-19-07 and D-35-19-08 should be marked fixed-pending-live-verification in
 `.planning/phases/35-electron-cutover-remove-the-electron-build/deferred-items.md`, not closed
 outright.
+
+## Live verification (added 2026-08-30, after the fact)
+
+A single round-trip move of Endless Sky on a **dev build** exercised this fix end to end:
+
+```
+14:11:10  [Backend]  moving command (openrsync): rsync --archive --compress
+                       --remove-source-files --progress
+                       .../GameLibMoveTestFixture/Endless Sky.app/
+                       /Users/graysonmitchell/GameLib/Endless Sky.app
+14:11:21  [Backend]  Finished Moving Endless Sky
+14:16:09  [Backend]  Launching Endless Sky (1829678475)
+```
+
+Destination 7368 files / 419M with exe sha256 `36084f67421de23fd881df63`, identical to baseline;
+source removed; recorded `install_path` `/Users/graysonmitchell/GameLib/Endless Sky.app`, not
+doubled; the game then **launched and ran** as pid 17796 from that exact path, with gogdl receiving
+`launch "/Users/graysonmitchell/GameLib/Endless Sky.app"`.
+
+**Still a DEV BUILD, so gate criterion 13 is NOT re-discharged** (`R-34.5-G1-PKG`) — a local release
+rebuild remains blocked by `createUpdaterArtifacts: true` with no signing key. Only the `osx` GOG
+path and only the exit-0 branch were exercised live.

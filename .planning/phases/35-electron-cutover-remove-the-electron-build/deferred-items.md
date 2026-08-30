@@ -1478,8 +1478,9 @@ against the other.
 
 ## D-35-19-07 — move-install is BROKEN on macOS 15+ : openrsync rejects two of the flags
 
-Found: criterion 13, 2026-08-30. Status: **FIXED PENDING LIVE VERIFICATION** (`2c9acffb1`, quick task
-`260830-ibr`). Pre-existing upstream — NOT a Phase 35 regression.
+Found: criterion 13, 2026-08-30. Status: **FIXED AND LIVE-VERIFIED ON A DEV BUILD, 2026-08-30**
+(`2c9acffb1`, quick task `260830-ibr`). Pre-existing upstream — NOT a Phase 35 regression.
+See the shared verification record under D-35-19-16.
 
 > **Fix:** detection is now of the rsync IMPLEMENTATION via `rsync --version`, not the binary's
 > existence; openrsync gets `--archive --compress --remove-source-files --progress` while the GNU
@@ -1524,9 +1525,11 @@ Apple's swap. Does not bear on criterion 13's verdict: it fails identically with
 
 ## D-35-19-08 — `code !== 1` treats most rsync failures as SUCCESS, then `rm -rf`s the source
 
-Found: reading the code for D-35-19-07, 2026-08-30. Status: **FIXED PENDING LIVE VERIFICATION**
-(`2c9acffb1`, quick task `260830-ibr`). Did NOT fire during the gate run. Pre-existing upstream,
-same blame as D-35-19-07.
+Found: reading the code for D-35-19-07, 2026-08-30. Status: **FIXED 2026-08-30** (`2c9acffb1`, quick
+task `260830-ibr`); the guard was exercised live only on the **exit-0** path — the non-zero codes
+that motivated this item remain covered by UNIT TESTS ONLY, never by a live partial transfer. Did
+NOT fire during the gate run. Pre-existing upstream, same blame as D-35-19-07. See the shared
+verification record under D-35-19-16.
 
 > **Fix:** both success tests are now `code === 0` (rsync branch and the `mv` fallback). That also
 > covers `spawnAsync`'s `code: number | null` — a signal kill yields `null`, and `null === 0` is
@@ -1823,10 +1826,44 @@ above — though seeding is still the stronger test.
 
 ## D-35-19-16 — GOG macOS move records a DOUBLED install path, so the game will not launch
 
-Found: live verification of the D-35-19-07 fix, 2026-08-30. Status: **FIXED 2026-08-30 by quick task
-`260830-k4m` (`98c92c229`) — PENDING LIVE VERIFICATION.** Covered by 4 regression tests in
+Found: live verification of the D-35-19-07 fix, 2026-08-30. Status: **FIXED AND LIVE-VERIFIED ON A
+DEV BUILD, 2026-08-30** by quick task `260830-k4m` (`98c92c229`). Covered by 4 regression tests in
 `gog/__tests__/library.test.ts`, 2 of which reproduce the exact doubled path against pre-fix source.
-Not yet re-measured against a real move on a packaged build. Original report follows.
+
+**LIVE-VERIFIED 2026-08-30 on a DEV BUILD** (shell pid 16567, transcript
+`move2-transcript.log`). A single round-trip move of Endless Sky
+(`~/GameLib/GameLibMoveTestFixture/Endless Sky.app` -> parent `~/GameLib`) exercised all three of
+D-35-19-07, -08 and -16 at once:
+
+```
+14:11:09  [Gog]      Moving Endless Sky to /Users/graysonmitchell/GameLib
+14:11:10  [Backend]  moving command (openrsync): rsync --archive --compress
+                       --remove-source-files --progress
+                       .../GameLibMoveTestFixture/Endless Sky.app/
+                       /Users/graysonmitchell/GameLib/Endless Sky.app
+14:11:21  [Backend]  Finished Moving Endless Sky
+14:16:09  [Backend]  Launching Endless Sky (1829678475)
+```
+
+| measured | result |
+| --- | --- |
+| flavour detection | `openrsync`, neither rejected flag in the argv (**-07**) |
+| exit / `rm -rf` | exit 0, source removed, destination 7368 files / 419M, exe sha256 `36084f67421de23fd881df63` **identical to baseline** (**-08**) |
+| recorded `install_path` | `/Users/graysonmitchell/GameLib/Endless Sky.app` — not doubled, path exists (**-16**) |
+| game process | pid 17796, running from `.../GameLib/Endless Sky.app/Contents/MacOS/Endless Sky` |
+| gogdl argument | `launch "/Users/graysonmitchell/GameLib/Endless Sky.app"` |
+
+The last two rows are the load-bearing ones: they show the recorded path is the one actually
+EXECUTED, not merely the one stored.
+
+**Scope limits — do not over-read this.** (a) DEV BUILD, not the packaged artifact, so it does NOT
+re-discharge gate criterion 13 (`R-34.5-G1-PKG`); a local release rebuild is still blocked by
+`createUpdaterArtifacts: true` with no `TAURI_SIGNING_PRIVATE_KEY`. (b) Only the `osx` GOG path ran
+— the GNU-rsync branch, the `mv` fallback and non-`osx` platforms are covered by unit tests only,
+with no Linux machine in this session. (c) Only exit 0 was observed live; the non-zero exit codes
+that motivated D-35-19-08 are covered by unit tests, not by a live partial transfer.
+
+Original report follows.
 
 Original status: **CONFIRMED DEFECT, UNFIXED.
 Pre-existing upstream (`6689ac086b`, CommandMC, 2026-06-06) — but UNREACHABLE until D-35-19-07 was
