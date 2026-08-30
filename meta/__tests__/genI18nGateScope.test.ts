@@ -107,6 +107,21 @@ const FIXTURE_DIFF_LINES = [
  *
  *   Settings/components/UseDarkTrayIcon.tsx -- touched by 35-06
  *   (`fix(35-06): platform-gate UseDarkTrayIcon to Windows/Linux`).
+ *
+ * 2026-08-31 (gap-closure follow-up, reopening the SAME 35-VERIFICATION.md
+ * gap 4 the block above closed): one more entry added when
+ * `pnpm gen-i18n-gate-scope` was re-run against current HEAD, taking
+ * i18nForkTouchedFiles.json from 205 -> 206. This file is UNMEASURED (no
+ * `scanScope` audit run against it here):
+ *
+ *   Winetricks/WinetricksSearch/index.tsx -- touched by 35-25 (`366e719bb`,
+ *   the mousedown-capture fix for the mouse-dead Winetricks Install button).
+ *   35-25 landed in the SAME wave as, but AFTER, 35-24's re-baseline commit
+ *   (`ee86b3442`), so the artifact 35-24 regenerated was stale again before
+ *   the wave finished. This is the `i18n-fork-pin-regen-cascades` shape from
+ *   MEMORY.md recurring: a re-baseline performed early in a wave is
+ *   near-guaranteed to be stale by its end. 35-24 did nothing wrong -- the
+ *   ordering did. Not a redesign of the gate; noted for whoever owns it next.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/components/UI/ActionIcons/index.tsx',
@@ -119,6 +134,7 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/components/UI/SliderField/index.tsx',
   'src/frontend/components/UI/SteamGridDBPicker/index.tsx',
   'src/frontend/components/UI/WebviewControls/index.tsx',
+  'src/frontend/components/UI/Winetricks/WinetricksSearch/index.tsx',
   'src/frontend/components/UI/Winetricks/index.tsx',
   'src/frontend/helpers/declaredUnavailable.ts',
   'src/frontend/helpers/gamepad.ts',
@@ -584,13 +600,16 @@ describe('--rewrite-scope guard', () => {
   }
 
   /**
-   * The snapshot a real regeneration would produce TODAY: the 205 files of
-   * the committed fork-touched artifact (35-24: 199 -> 205, six files this
+   * The snapshot a real regeneration would produce TODAY: the 206 files of
+   * the committed fork-touched artifact (35-24: 199 -> 205, six files that
    * phase touched -- `PathSelectionBox/index.tsx`, `WebviewControls/index.tsx`,
    * `DownloadManager/index.tsx`, `CategoriesManager/index.tsx`,
-   * `InstallModal/defaultPlatform.ts` and `UseDarkTrayIcon.tsx`). Built from
-   * the committed artifacts rather than invented numbers, so the specs below
-   * assert the REAL 163 -> 205 delta this task exists to prevent.
+   * `InstallModal/defaultPlatform.ts` and `UseDarkTrayIcon.tsx`; then one more
+   * gap-closure follow-up: 205 -> 206, `Winetricks/WinetricksSearch/index.tsx`,
+   * touched by 35-25's `366e719bb` after 35-24's re-baseline had already
+   * landed). Built from the committed artifacts rather than invented numbers,
+   * so the specs below assert the REAL 163 -> 206 delta this task exists to
+   * prevent.
    */
   function freshSnapshot(): ScopeSnapshot {
     return {
@@ -615,10 +634,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 163-file hand-curated snapshot and the fresh snapshot is the REAL 205', () => {
+  it('A0 fixture sanity: the seeded scope is the REAL 163-file hand-curated snapshot and the fresh snapshot is the REAL 206', () => {
     expect(scopeSnapshot.files.length).toBe(163)
-    expect(forkTouchedSnapshot.files.length).toBe(205)
-    expect(freshSnapshot().files.length).toBe(205)
+    expect(forkTouchedSnapshot.files.length).toBe(206)
+    expect(freshSnapshot().files.length).toBe(206)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -644,7 +663,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 163 -> 205 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 163 -> 206 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -667,7 +686,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 205', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 206', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -680,12 +699,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(205)
+    expect(rewritten.files.length).toBe(206)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 205 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 206 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -698,7 +717,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(205)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(206)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
