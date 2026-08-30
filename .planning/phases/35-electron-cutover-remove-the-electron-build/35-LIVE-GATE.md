@@ -1072,7 +1072,54 @@ Humble logged-in indicator.
 Sink: none — UI observation.
 Expected: Humble still shows as logged in after the restart, with no re-authentication prompt.
 Observed:
-Verdict:
+**PRECONDITION HOLDS (Test 6 -- pre-existing external state, NOT created by this gate).** The Humble
+login predates this gate run: the very first instance of this session read both slots from the
+keyring at startup rather than establishing them. So criteria 18 and 19 are live, not
+`NOT ATTEMPTED`.
+
+**PRE-RESTART** (instance pid 56568, started 10:48:57):
+| slot / check | value |
+| - | - |
+| `humble-session` | `keyring_get ok present=true len=208` |
+| `humble-csrf` | `keyring_get ok present=true len=29` |
+| Humble sync | `gamekeys=32 fetched=7/7 frozen=25 ok=7 schema_error=0 denied=0 expired=0` |
+| UI, Accounts tab | tester confirmed **logged in** |
+`denied=0 expired=0` with `fetched=7/7 ok=7` is the load-bearing part: the Humble SERVER accepted
+these credentials. Token presence alone would not distinguish a valid session from a stale string
+sitting in the keyring.
+
+**FULL QUIT** via tray -> Quit. Verified genuinely full, not just window-closed: `pgrep` returned no
+`gamelib-shell` and no `gamelib-sidecar`, the supervising process reported **exit code 0**, and all
+GameLib power assertions dropped to 0.
+
+**POST-RESTART** (fresh instance -- shell pid 40548, sidecar 40555, launched 12:21):
+| slot / check | value |
+| - | - |
+| `humble-session` | `keyring_get ok present=true len=208` (12:21:49) |
+| `humble-csrf` | `keyring_get ok present=true len=29` (12:21:51) |
+| Humble sync | `gamekeys=32 fetched=7/7 frozen=25 ok=7 schema_error=0 denied=0 expired=0` (12:21:54) |
+| UI, Accounts tab | tester confirmed **logged in** |
+Byte-for-byte identical to pre-restart, from a process that did not exist when the pre-restart
+reading was taken -- so the tokens came from the keyring, not from surviving memory.
+
+**NO RE-AUTHENTICATION PROMPT, established objectively rather than from recall.** The two
+`keyring_get` calls completed in **21ms** and **4ms**. A macOS Keychain dialog requires human
+approval and cannot resolve on that timescale -- for contrast, a prompting read earlier in this
+session logged `elapsed=1373ms`. **The tester then independently confirmed "did not get a prompt during
+restart"** -- so this is corroborated two ways, by instrument timing and by direct observation,
+which agree. The distinction was drawn deliberately before asking: a Keychain dialog would be a
+keyring-ACL artefact and would NOT fail this criterion, whereas a Humble login form would. Neither
+appeared.
+
+**One recorded non-signal.** A grep for re-auth/denial keywords returned hits, but they are FALSE
+POSITIVES -- it matched the literal field names `is_expired` and the phrase "no extractable
+expiration" inside Humble's own order payloads, not any denial. The authoritative values are
+`denied=0 expired=0`. Recorded so a later reader does not mistake those lines for evidence of
+trouble.
+
+Criterion 19's premise is therefore established: the "logged in" state it will destroy is durable
+across a restart, so destroying it will mean something.
+Verdict: PASS
 
 ### 19. Humble: logout requires credentials to log back in
 
