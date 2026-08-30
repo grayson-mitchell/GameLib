@@ -743,8 +743,24 @@ progress:
   #   the Current Position bullets above, 392 unchanged since 35-20) -- a pre-existing lag this
   #   plan did not cause and is out of this plan's SCOPE BOUNDARY to backfill; logged to
   #   deferred-items.md rather than silently reconciling three prior plans' counts.
+  # 2026-08-31 (/gsd-execute-phase 35, plan 35-27 EXECUTED -- gap-closure wave 2): +1 completed
+  #   plan (35-27, its SUMMARY landed, task commit 0f5dfb352). Closed the code-level cause of
+  #   live-gate criterion 16 (D-35-08-02): `allowedPendingOps` conflated "is an operation
+  #   pending?" with "which sleep kind should it block?", so a running game kept the
+  #   download's `prevent-app-suspension` system assertion alive past the download's own end.
+  #   Split via `classifySleepAssertionKind`/`reconcileSleepAssertionCalls` in
+  #   `GlobalState.tsx`; `appShellFlowRegistration.ts` needed no production change. Does NOT
+  #   close REQ-35-20 itself (needs a live-gate re-run, deferred to plan `35-29`).
+  #   completed_plans arrives at this entry already at 395 (frontmatter value below), a value
+  #   this plan did not itself produce and is NOT backfilling the derivation for -- that
+  #   pre-existing undocumented gap (393 -> 395 across 35-25/35-26 with no comment entry) is
+  #   routed to plan `35-28` per this plan's own SCOPE BOUNDARY, same as 35-24 routed the
+  #   35-21/22/23 gap before it. completed_plans 395 -> 396; percent =
+  #   floor(396/431*100) = floor(91.88) = 91 (unchanged). NO gsd-sdk state.*/roadmap.* verb
+  #   invoked -- hand-applied, per this phase's standing rule that the orchestrator owns
+  #   STATE.md/ROADMAP.md by hand.
   total_plans: 431
-  completed_plans: 395
+  completed_plans: 396
   percent: 91
 ---
 
