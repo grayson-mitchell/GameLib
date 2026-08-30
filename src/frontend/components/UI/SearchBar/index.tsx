@@ -124,7 +124,25 @@ export default function SearchBar({
               longer selectable by dragging -- correct for a suggestions list.
 
               This is the shared primitive: `LibrarySearchBar` also passes clickable
-              `<li onClick=...>` suggestions, so it carried the identical defect. */}
+              `<li onClick=...>` suggestions, so it carried the identical defect.
+
+              ROOT CAUSE FOUND (Phase 35 Plan 25, 2026-08-30, closing REQ-35-16 /
+              35-VERIFICATION.md gap 2). Live-measured on the actual winetricks dead-
+              button symptom via an instrumented `pnpm tauri:dev` build: this focus-loss
+              mechanism was NOT what was happening. `document.activeElement` stayed on
+              the search `<input>` throughout the failing mousedown, so `:focus-within`
+              never dropped and this `<ul>` never left `display: block`. The real cause
+              was one level up, in `Winetricks/WinetricksSearch/index.tsx`: a parent
+              (`Winetricks/index.tsx`) state flip (`installing` / `loadingInstalled`)
+              unmounted-and-remounted the whole `WinetricksSearchBar` -- including this
+              `<ul>` -- as a single batch, ~4ms after mousedown and ~60ms before mouseup,
+              which is why mouseup landed on an unrelated element and `click` never
+              fired. See the fix and its own comment in
+              `Winetricks/WinetricksSearch/index.tsx`. This guard above is UNCHANGED and
+              still correct, independently, for the mechanism it documents -- it simply
+              was not the winetricks button's mechanism. Do not delete it on the
+              strength of this finding; `LibrarySearchBar`'s shared consumption of this
+              same `<ul>` still depends on it. */}
           <ul className="autoComplete" onMouseDown={(e) => e.preventDefault()}>
             {suggestionsListItems &&
               suggestionsListItems.length > 0 &&
