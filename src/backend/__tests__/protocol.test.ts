@@ -26,12 +26,18 @@ jest.mock('../config', () => ({
   }
 }))
 
-import { handleProtocol, shouldHideWindowForProtocolArgs } from '../protocol'
+import {
+  handleProtocol,
+  shouldHideWindowForProtocolArgs,
+  RUNNERS
+} from '../protocol'
 import { app, dialog } from 'backend/platform'
 import { libraryManagerMap } from '../storeManagers'
 import { getMainWindow } from '../main_window'
 import { sendFrontendMessage } from '../ipc'
 import { logInfo } from '../logger'
+import { launchEventCallback } from '../launcher'
+import { dispatchSteamLaunch } from '../storeManagers/steam/launchDispatch'
 
 // Mock electron modules
 jest.mock('backend/platform', () => ({
@@ -65,8 +71,19 @@ jest.mock('../storeManagers', () => ({
     },
     sideload: {
       getGame: jest.fn()
+    },
+    steam: {
+      getGame: jest.fn()
     }
   }
+}))
+
+// Phase 35 plan 20 (D-35-19-05/06): the Steam launch dispatch is now a separate module both
+// `protocol.ts` (lazily) and `steamFlowRegistration.ts` import — mocked here so these tests
+// assert DISPATCH (was the Steam path reached, not `launchEventCallback`) rather than a real
+// Steam launch.
+jest.mock('../storeManagers/steam/launchDispatch', () => ({
+  dispatchSteamLaunch: jest.fn()
 }))
 
 jest.mock('../logger', () => ({
@@ -144,6 +161,10 @@ describe('protocol.ts --no-gui behavior', () => {
     ;(libraryManagerMap.sideload.getGame as jest.Mock).mockReturnValue(
       emptyGameInfoMock
     )
+    ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue(
+      emptyGameInfoMock
+    )
+    ;(dispatchSteamLaunch as jest.Mock).mockResolvedValue(true)
   })
 
   describe('when game is not installed', () => {
@@ -451,6 +472,101 @@ describe('protocol.ts --no-gui behavior', () => {
       expect(libraryManagerMap.nile.getGame).not.toHaveBeenCalled()
       expect(libraryManagerMap.sideload.getGame).not.toHaveBeenCalled()
       expect(logInfo).not.toHaveBeenCalled()
+    })
+  })
+
+  // Phase 35 plan 20 (D-35-19-05, gap-closure cycle 1): closes live-gate criterion 10 — a
+  // `gamelib://launch?appName=<steam appId>` deep link used to log "Could not receive game
+  // data" because `RUNNERS` excluded `steam`, so neither the explicit `?runner=steam` path nor
+  // the runner-less fallback loop could ever resolve a Steam title.
+  describe('RUNNERS enum includes steam, excludes zoom (D-35-19-05)', () => {
+    // RED-proven: reverting RUNNERS to `z.enum(['legendary', 'gog', 'nile', 'sideload'])`
+    // fails this by name — `options` has length 4 and does not contain 'steam'.
+    test('RUNNERS.options has length 5 and contains steam', () => {
+      expect(RUNNERS.options).toHaveLength(5)
+      expect(RUNNERS.options).toContain('steam')
+    })
+
+    test('RUNNERS.options does not contain zoom', () => {
+      expect(RUNNERS.options).not.toContain('zoom')
+    })
+  })
+
+  describe('findGame resolves a Steam appId via the runner-less fallback loop (D-35-19-05)', () => {
+    const steamGameInfo = {
+      app_name: 'steam-appid-123',
+      title: 'Steam Game',
+      runner: 'steam' as const,
+      is_installed: true
+    }
+
+    test('resolves through libraryManagerMap.steam when every other manager is empty', async () => {
+      ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+        getGameInfo: () => steamGameInfo,
+        getSettings: () => mockGameSettings
+      })
+      // legendary is populated by the outer beforeEach (mockGameInfo) -- override it to empty
+      // so this case genuinely exercises "every other manager returns nothing".
+      ;(libraryManagerMap.legendary.getGame as jest.Mock).mockReturnValue(
+        emptyGameInfoMock
+      )
+
+      await handleProtocol(['gamelib://launch/steam-appid-123'])
+
+      expect(libraryManagerMap.steam.getGame).toHaveBeenCalledWith(
+        'steam-appid-123'
+      )
+      // Confirms findGame resolved the Steam title (not `undefined`) by observing the launch
+      // dispatch that only runs once gameInfo.is_installed is truthy for a resolved game.
+      expect(dispatchSteamLaunch).toHaveBeenCalledWith('steam-appid-123')
+    })
+  })
+
+  describe('Steam is_installed launch dispatches through dispatchSteamLaunch, not launchEventCallback (D-35-19-05/06)', () => {
+    const installedSteamGame = {
+      app_name: 'steam-appid-999',
+      title: 'Installed Steam Game',
+      runner: 'steam' as const,
+      is_installed: true
+    }
+    const installedGogGame = {
+      app_name: 'gog-appid-1',
+      title: 'Installed GOG Game',
+      runner: 'gog' as const,
+      is_installed: true
+    }
+
+    beforeEach(() => {
+      ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+        getGameInfo: () => installedSteamGame,
+        getSettings: () => mockGameSettings
+      })
+      ;(libraryManagerMap.gog.getGame as jest.Mock).mockReturnValue({
+        getGameInfo: () => installedGogGame,
+        getSettings: () => mockGameSettings
+      })
+    })
+
+    // RED-proven: with the `gameInfo.runner === 'steam'` branch removed from `protocol.ts`,
+    // this fails on the `dispatchSteamLaunch` assertion -- the launch instead reaches
+    // `launchEventCallback`, whose `existsSync`/`askForceUninstall` precheck is exactly the
+    // abort `steamFlowRegistration.ts` avoids for this same runner.
+    test('a Steam protocol launch calls dispatchSteamLaunch and never launchEventCallback', async () => {
+      await handleProtocol([
+        'gamelib://launch?appName=steam-appid-999&runner=steam'
+      ])
+
+      expect(dispatchSteamLaunch).toHaveBeenCalledWith('steam-appid-999')
+      expect(launchEventCallback).not.toHaveBeenCalled()
+    })
+
+    test('a GOG protocol launch calls launchEventCallback and never dispatchSteamLaunch (inverse case)', async () => {
+      await handleProtocol([
+        'gamelib://launch?appName=gog-appid-1&runner=gog'
+      ])
+
+      expect(launchEventCallback).toHaveBeenCalled()
+      expect(dispatchSteamLaunch).not.toHaveBeenCalled()
     })
   })
 })

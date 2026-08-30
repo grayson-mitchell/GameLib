@@ -12,7 +12,18 @@ import { Path } from './schemas'
 import { isCLINoGui } from './constants/environment'
 import { GlobalConfig } from './config'
 
-const RUNNERS = z.enum(['legendary', 'gog', 'nile', 'sideload'])
+// `steam` is a deliberate addition (D-35-19-05): widening this enum also widens the accepted
+// `?runner=` input surface for `handleLaunch`'s `RUNNERS.safeParse(runnerStr)` validator below,
+// so nothing is added here without a reason. `zoom` is deliberately EXCLUDED — it is a dropped
+// platform for this project (see `zoom-platform-drop-reaffirmed.md`), so adding it would widen
+// the accepted input surface for a store that ships no user-reachable launch path.
+//
+// The confused-deputy guard (T-34.5-46-03) does NOT live in this enum — it lives in
+// `steamFlowRegistration.ts`'s `handleLaunch`, in its own-property check on
+// `libraryManagerMap`. Restated here so a future reader does not re-derive it: `steam` IS an
+// own property of `libraryManagerMap` (`storeManagers/index.ts`), so widening this enum does
+// not reach a manager that does not exist.
+export const RUNNERS = z.enum(['legendary', 'gog', 'nile', 'sideload', 'steam'])
 
 function parseHeroicUrl(args: string[]): URL | undefined {
   const urlStr = args.find((arg) => arg.startsWith('gamelib://'))
@@ -134,6 +145,23 @@ async function handleLaunch(url: URL) {
         )
         mainWindow.hide()
       }
+    }
+
+    // Steam is dispatched through the same shared helper the sidecar `launch` handler uses
+    // (`dispatchSteamLaunch`), NOT `launchEventCallback`. `launchEventCallback`'s first action
+    // is an `existsSync(gameInfo.install.install_path)` precheck followed by
+    // `askForceUninstall` + `{ status: 'abort' }` — the exact abort
+    // `steamFlowRegistration.ts`'s `handleLaunch` avoids on purpose for a Steam title, whose
+    // "install path" is the Steam client's own concern, not a local binary this process can
+    // stat. Imported lazily (`await import(...)`) mirroring `launchEventCallback`'s own lazy
+    // `await import('backend/storeManagers')` at `launcher.ts`, so no new static edge is added
+    // to this module's import graph.
+    if (gameInfo.runner === 'steam') {
+      const { dispatchSteamLaunch } = await import(
+        'backend/storeManagers/steam/launchDispatch'
+      )
+      const launched = await dispatchSteamLaunch(appName)
+      return { status: launched ? 'done' : 'error' }
     }
 
     return launchEventCallback({
