@@ -2039,21 +2039,44 @@ gap-closure plans later — logged per the scope-boundary rule rather than fixed
 re-litigated as a new item.
 
 **Item 6 — plan 35-28: `meta/__tests__/genI18nGateScope.test.ts`'s A-17 anti-rot assertion fails,
-stale `meta/i18nForkTouchedFiles.json` pin.** `pnpm test --selectProjects Meta` run at this
-plan's Task 2 verification step: 1 failure —
-`src/frontend/components/UI/Winetricks/WinetricksSearch/index.tsx` is present in the LIVE git
+stale `meta/i18nForkTouchedFiles.json` pin. CORRECTED 2026-08-31, RESOLVED by an out-of-plan
+gap-closure fix — this item was originally logged as "pre-existing, out-of-scope"; both halves
+of that description were wrong.** `pnpm test --selectProjects Meta` run at plan 35-28's Task 2
+verification step: 1 failure —
+`src/frontend/components/UI/Winetricks/WinetricksSearch/index.tsx` was present in the LIVE git
 derivation of fork-touched files but absent from the committed
 `meta/i18nForkTouchedFiles.json` snapshot. Root cause: gap-closure plan `35-25` modified this
 file (commit `366e719bb`, the mousedown-capture fix for the mouse-dead Winetricks Install
-button) after the pin was last regenerated (`D-35-03-01`, resolved by plan `35-24` via
-`pnpm gen-i18n-gate-scope`, 199 -> 205 files) — this is the same
-`i18n-fork-pin-regen-cascades` shape recorded in MEMORY.md ("regenerating an artifact breaks the
-pins that guard it"), recurring because a file touched by a LATER plan was never folded back into
-the snapshot. Not caused by this plan (35-28's `files_modified` is `.planning/REQUIREMENTS.md`
-only; `git status --short` at the time of this run showed only that one file modified, confirming
-the failure pre-dates and is independent of this plan's edit). Not fixed here — regenerating
-`meta/i18nForkTouchedFiles.json` is an i18n-gate-scope change, outside this plan's
-`files_modified` and SCOPE BOUNDARY. Whoever next touches the i18n fork-gate scope (or plan
-`35-29`, which already owns the live-gate re-run) should run `pnpm gen-i18n-gate-scope` and
-verify the resulting diff is limited to adding `WinetricksSearch/index.tsx` before re-running
-`pnpm test --selectProjects Meta`.
+button) — and 35-25 executed AFTER plan `35-24`'s re-baseline commit (`ee86b3442`, which had
+just taken the pin from 199 -> 205 files to close `35-VERIFICATION.md` gap 4), both landing in
+the same wave. This is the `i18n-fork-pin-regen-cascades` shape recorded in MEMORY.md
+("regenerating an artifact breaks the pins that guard it") recurring within a single wave.
+
+**Correction — this was NOT pre-existing.** The orchestrator independently verified the
+`genI18nGateScope.test.ts` suite GREEN (26 passed, 0 failures) immediately after 35-24 landed.
+The regression was introduced by 35-25's edit landing after that verification, inside this same
+gap-closure cycle — a genuine regression, not a condition that predated the cycle.
+
+**Correction — this was NOT out of scope.** `35-VERIFICATION.md` gap 4 is one of the five gaps
+this gap-closure cycle exists to close. 35-24 closed it; 35-25 (in the same wave) reopened it.
+Reopening a gap this cycle owns is squarely in scope for the cycle, even though it fell outside
+plan 35-28's own `files_modified` boundary — the scope-boundary rule correctly kept 35-28 from
+fixing it inline, but it does not make the gap itself out of scope for the cycle as a whole.
+
+**Resolution:** fixed by an out-of-plan gap-closure commit (not a numbered plan) following
+35-24's exact recipe: regenerated `meta/i18nForkTouchedFiles.json` via
+`pnpm gen-i18n-gate-scope` (205 -> 206 files, the single `WinetricksSearch/index.tsx` entry),
+recorded it in `DECLARED_UNSCANNED_DEBT` with named 35-25/`366e719bb` provenance, and moved
+every dependent hard-coded count/title (`A0`/`A2`/`A3`/`A4`) from 205 to 206 in the same commit.
+`meta/i18nGateScope.json` (hand-curated) confirmed byte-identical via `git diff --stat`. Full
+suite: before 1 failed/25 passed/1 skipped, after 26 passed/1 skipped/0 failed — matching 35-24's
+own verified baseline exactly. `pnpm test --selectProjects Meta` also confirmed green (32 suites,
+634 passed, 1 skipped).
+
+**Structural observation for whoever owns the i18n fork-gate scope next:** this pin is
+invalidated by ANY subsequent edit to a fork-touched `src/frontend` file, so a re-baseline
+performed early in a wave is near-guaranteed to be stale by the time the wave finishes — 35-24
+did nothing wrong; the ORDERING did. This is not a one-off: expect it to recur every time a
+re-baseline plan is scheduled before other fork-touching plans in the same wave, and plan
+accordingly (e.g. sequence the re-baseline last in its wave, or accept it may need one more
+follow-up pass). Not a redesign of the gate itself — that remains out of scope here.
