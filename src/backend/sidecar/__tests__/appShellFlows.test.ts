@@ -155,7 +155,31 @@ jest.mock('backend/config', () => ({
 jest.mock('i18next', () => ({
   __esModule: true,
   default: {
-    changeLanguage: jest.fn().mockResolvedValue(undefined)
+    changeLanguage: jest.fn().mockResolvedValue(undefined),
+    // CR-02 (35-REVIEW.md, plan 35-21): the Snap-warning dialog (frontendReady, isSnap
+    // branch) calls `i18next.t(key, defaultValueOrOptions)` three times to build its
+    // title/message/checkboxLabel. No earlier test in this file ever reached that branch,
+    // so `t` was never added here -- without it, `i18next.t is not a function` throws
+    // synchronously (evaluating the dialog options object, before `dialog.showMessageBox`
+    // is even called), silently swallowed by the handler's own try/catch ->
+    // `logSendFailure` -> `console.warn`, itself muted by this file's `warnSpy`
+    // (`beforeEach` below) -- so the failure produced no visible signal at all. Mirrors
+    // real i18next's own fallback shape: a string second argument is the default value
+    // directly; an options object's `defaultValue` property is used instead; otherwise
+    // the bare key is returned.
+    t: jest.fn((key: string, defaultValueOrOptions?: unknown) => {
+      if (typeof defaultValueOrOptions === 'string') {
+        return defaultValueOrOptions
+      }
+      if (
+        defaultValueOrOptions &&
+        typeof defaultValueOrOptions === 'object' &&
+        'defaultValue' in defaultValueOrOptions
+      ) {
+        return (defaultValueOrOptions as { defaultValue: string }).defaultValue
+      }
+      return key
+    })
   }
 }))
 
@@ -220,7 +244,6 @@ import {
 import { requestRustInvoke } from '../sidecarRpc'
 import { listenerRegistry, handlerRegistry } from '../../platform'
 import * as loggerModule from '../../logger'
-import { initQueue } from '../../downloadmanager/downloadqueue'
 import { handleProtocol } from '../../protocol'
 import {
   RUST_APP_EXIT,
@@ -240,7 +263,6 @@ const mockedGameInfoStoreClear = gameInfoStore.clear as jest.Mock
 const mockedCallAbortController = callAbortController as jest.Mock
 const mockedCallAllAbortControllers = callAllAbortControllers as jest.Mock
 const mockRequestRustInvoke = requestRustInvoke as jest.Mock
-const mockedInitQueue = initQueue as jest.Mock
 const mockedHandleProtocol = handleProtocol as jest.Mock
 
 /** Points the mocked GlobalConfig.get() at a fresh settings object. */
@@ -660,27 +682,81 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     // startup. Branch A was taken (port ENABLED) because both blockers named
     // by the original suppression measured CLOSED — see the plan summary.
     //
+    // ISOLATED (jest.isolateModules, CR-02 follow-up, 35-21): `frontendReadyBootWorkDone`
+    // is a module-scoped flag in `appShellFlowRegistration.ts` that -- correctly, matching
+    // production, where the sidecar really is one process -- never resets between `it()`
+    // blocks in the SHARED module registry. Two earlier tests in this same `describe`
+    // ('calls logSendHandlerReached...' and 'does NOT call handleProtocol...') already
+    // deliver `frontendReady` against that SAME shared registration, which flips the
+    // shared flag `true` before this test ever runs, permanently suppressing
+    // `initQueue` for the rest of the file. A fresh module registry gives this test its
+    // own, never-yet-flipped `frontendReadyBootWorkDone` -- calling `registerAppShellFlows()`
+    // directly (mirroring the REQ-34.1-07 precedent below) and invoking the registered
+    // `frontendReady` listener directly, rather than round-tripping through
+    // `startSidecar()`/`writeSend()`, both of which are statically bound to the shared/
+    // outer module registry and cannot reach an isolated instance.
+    //
     // `doNotFake: ['setImmediate']` because this suite's `flush()` helper is
     // built on `setImmediate`; faking it would deadlock the await below while
     // still leaving `setTimeout` faked, which is the only timer under test.
     it('Phase 35 plan 11: DOES schedule the boot-time auto-resume -- initQueue is not called before 5s, then called exactly once with isStartup true', async () => {
-      mockedInitQueue.mockClear()
+      let isolatedInitQueue!: jest.Mock
+      let frontendReadyListener!: () => void
 
       jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedConfigGet = require('backend/config').GlobalConfig
+          .get as jest.Mock
+        isolatedConfigGet.mockReturnValue({
+          getSettings: () => ({ language: 'en' }),
+          setSetting: jest.fn(),
+          set: jest.fn(),
+          flush: jest.fn()
+        })
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedRequestRustInvoke = require('../sidecarRpc')
+          .requestRustInvoke as jest.Mock
+        isolatedRequestRustInvoke.mockResolvedValue(undefined)
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        isolatedInitQueue = require('../../downloadmanager/downloadqueue')
+          .initQueue as jest.Mock
+
+        // `frontendReady`'s handler calls `logInfo()` unconditionally near the top of its
+        // body (before the guard under test is ever reached). `logInfo` reads a
+        // module-scoped `heroicLogWriter` that is only assigned by `initHeadless()` --
+        // normally done once by `bootstrap.ts`'s `startSidecar()` path, which this
+        // isolated instance never runs. Without this call, `logInfo` throws synchronously
+        // ("Cannot read properties of undefined (reading 'logInfo')"), the handler's own
+        // try/catch swallows it via `logSendFailure` (a console.warn, easy to miss), and
+        // the `setTimeout` below is never reached -- this instance mirrors the (also
+        // isolated) `REQ-34.1-07 registerAppShellFlows() performs exactly one initial
+        // sync invoke` precedent's safety, except that precedent's `changeTrayColor` path
+        // never touches the logger, so it never needed this call.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('../../logger').initHeadless()
+
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedModule = require('../appShellFlowRegistration')
+        isolatedModule.registerAppShellFlows()
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedListenerRegistry = require('../../platform').listenerRegistry
+        ;[frontendReadyListener] = isolatedListenerRegistry.get('frontendReady')
+      })
+
       try {
-        const { input } = startSidecar()
-        writeSend(input, 'frontend-ready-autoresume', 'frontendReady', [])
+        frontendReadyListener()
         await flush()
 
         // The call must be DEFERRED, not synchronous -- a synchronous
         // initQueue at frontendReady would race the sidecar's own boot.
-        expect(mockedInitQueue).not.toHaveBeenCalled()
+        expect(isolatedInitQueue).not.toHaveBeenCalled()
 
         jest.advanceTimersByTime(4999)
-        expect(mockedInitQueue).not.toHaveBeenCalled()
+        expect(isolatedInitQueue).not.toHaveBeenCalled()
 
         jest.advanceTimersByTime(1)
-        expect(mockedInitQueue).toHaveBeenCalledTimes(1)
+        expect(isolatedInitQueue).toHaveBeenCalledTimes(1)
         // isStartup=true is load-bearing and is NOT merely "the same as
         // main.ts": it is ITSELF the Steam suppression. downloadqueue.ts's
         // initQueue breaks before installQueueElement() for a persisted
@@ -688,9 +764,180 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         // surfacing it as resumable instead. A regression to
         // initQueue()/false here would silently start auto-driving Steam
         // installs on every boot.
-        expect(mockedInitQueue).toHaveBeenCalledWith(true)
+        expect(isolatedInitQueue).toHaveBeenCalledWith(true)
       } finally {
         jest.useRealTimers()
+      }
+    })
+
+    // ── CR-02 (35-REVIEW.md, plan 35-21): once-semantics for the boot-time
+    // auto-resume, restored via `frontendReadyBootWorkDone`'s module-scoped guard. The
+    // sidecar OUTLIVES the renderer, so a renderer reload re-delivers `frontendReady` into
+    // this SAME registration -- `electronStub`'s `ipcMain.on` has no once-semantics of its
+    // own, unlike Electron's real `ipcMain` the original code reached via
+    // `addOneTimeListener`. `initQueue` has no re-entrancy guard, so an unguarded second
+    // delivery would start a second concurrent install of the same queue head.
+    //
+    // ISOLATED for the same reason as the test above: a fresh module registry gives this
+    // test its own, never-yet-flipped `frontendReadyBootWorkDone`, and calling the two
+    // deliveries against the SAME isolated instance (rather than two separate
+    // `isolateModules` calls) is exactly what proves the ONCE-per-process guarantee.
+    it('CR-02: TWO frontendReady deliveries into an ISOLATED registration start the download queue only ONCE', async () => {
+      let isolatedInitQueue!: jest.Mock
+      let frontendReadyListener!: () => void
+
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedConfigGet = require('backend/config').GlobalConfig
+          .get as jest.Mock
+        isolatedConfigGet.mockReturnValue({
+          getSettings: () => ({ language: 'en' }),
+          setSetting: jest.fn(),
+          set: jest.fn(),
+          flush: jest.fn()
+        })
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedRequestRustInvoke = require('../sidecarRpc')
+          .requestRustInvoke as jest.Mock
+        isolatedRequestRustInvoke.mockResolvedValue(undefined)
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        isolatedInitQueue = require('../../downloadmanager/downloadqueue')
+          .initQueue as jest.Mock
+
+        // See the "Phase 35 plan 11" test above for why this is required: `frontendReady`
+        // calls `logInfo()` unconditionally, which needs `heroicLogWriter` assigned.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('../../logger').initHeadless()
+
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { registerAppShellFlows } = require('../appShellFlowRegistration')
+        registerAppShellFlows()
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedListenerRegistry = require('../../platform').listenerRegistry
+        ;[frontendReadyListener] = isolatedListenerRegistry.get('frontendReady')
+      })
+
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      try {
+        frontendReadyListener()
+        await flush()
+        frontendReadyListener()
+        await flush()
+
+        jest.advanceTimersByTime(5000)
+
+        // RED-proof (recorded verbatim in the SUMMARY): reverting the fix -- calling
+        // `initQueue(true)` unconditionally on every delivery instead of behind
+        // `frontendReadyBootWorkDone` -- flips this to `toHaveBeenCalledTimes(2)` and
+        // this assertion fails.
+        expect(isolatedInitQueue).toHaveBeenCalledTimes(1)
+        expect(isolatedInitQueue).toHaveBeenCalledWith(true)
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    // T-35-107 (35-21 threat model): the Snap warning dialog is DELIBERATELY left outside
+    // `frontendReadyBootWorkDone`'s guard -- a repeated informational dialog is a nuisance,
+    // not the re-entrancy/data-corruption class of defect CR-02 exists to close. This test
+    // pins that disposition explicitly (2 deliveries -> 2 dialogs) rather than leaving it
+    // an unrecorded side effect of the fix above. ISOLATED for the same reason as the test
+    // above, plus this test also needs its own `isSnap: true` override, which must not leak
+    // into the (isSnap: false) assumption every other test in this file relies on.
+    it('CR-02: the Snap warning dialog is allowed to repeat across two ISOLATED deliveries (T-35-107: accept)', async () => {
+      let isolatedRequestRustInvoke!: jest.Mock
+      let frontendReadyListener!: () => void
+      // Captured so `isSnap` can be reset to `false` in `finally` below. `jest.mock`'s
+      // manual-mock factory return value for `backend/constants/environment` was observed
+      // (empirically, not by design) to survive ACROSS separate `jest.isolateModules()`
+      // calls in this file -- a later, unrelated isolate (`REQ-34.1-07 registerAppShellFlows()
+      // performs exactly one initial sync invoke`) crashed on `constants/paths.ts`'s
+      // `userHome` (which only reads `env.SNAP_REAL_HOME` when `isSnap` is true) after this
+      // test ran, even though that test's own mock factory literal always specifies
+      // `isSnap: false`. Resetting explicitly here removes the dependency on understanding
+      // (or relying on) that isolation boundary.
+      let isolatedEnvRef: { isSnap: boolean } | undefined
+
+      // `isSnap: true` (below) makes `backend/constants/paths.ts` -- a REAL, unmocked
+      // module transitively required by `appShellFlowRegistration.ts` regardless of
+      // which branch of `frontendReady` is under test -- take its `env.SNAP_REAL_HOME!`
+      // branch for `userHome` instead of `homedir()`. That env var is unset in this test
+      // environment, so without this, `join(undefined, 'Games', 'GameLib')` throws
+      // synchronously while `paths.ts` evaluates its top-level exports, which crashes
+      // this test's `isolateModules` callback before it ever gets to `frontendReady`.
+      // Saved/restored around the isolated require so it never leaks into the real
+      // process env for any other test in this file.
+      const originalSnapRealHome = process.env.SNAP_REAL_HOME
+      process.env.SNAP_REAL_HOME = tmpdir()
+      try {
+        jest.isolateModules(() => {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const isolatedEnv = require('backend/constants/environment')
+          isolatedEnv.isSnap = true
+          isolatedEnvRef = isolatedEnv
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedConfigGet = require('backend/config').GlobalConfig
+          .get as jest.Mock
+        isolatedConfigGet.mockReturnValue({
+          getSettings: () => ({ language: 'en' }),
+          setSetting: jest.fn(),
+          set: jest.fn(),
+          flush: jest.fn()
+        })
+        isolatedRequestRustInvoke = require('../sidecarRpc')
+          .requestRustInvoke as jest.Mock
+        isolatedRequestRustInvoke.mockResolvedValue(undefined)
+        // Forces the `showSnapWarning` branch open on BOTH deliveries regardless of
+        // whatever this fresh, tmp-dir-backed store instance already has on disk from an
+        // earlier test -- the property under test is the repeat COUNT, not the store's
+        // own persistence semantics.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedConfigStore = require('../../constants/key_value_stores')
+          .configStore
+        jest.spyOn(isolatedConfigStore, 'get').mockImplementation(((
+          key: string,
+          defaultValue?: unknown
+        ) => (key === 'showSnapWarning' ? true : defaultValue)) as never)
+
+        // See the "Phase 35 plan 11" test above for why this is required: `frontendReady`
+        // calls `logInfo()` unconditionally, which needs `heroicLogWriter` assigned.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('../../logger').initHeadless()
+
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { registerAppShellFlows } = require('../appShellFlowRegistration')
+        registerAppShellFlows()
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedListenerRegistry = require('../../platform').listenerRegistry
+        ;[frontendReadyListener] = isolatedListenerRegistry.get('frontendReady')
+        })
+
+        // `isolatedEnv.isSnap = true` above was set on the module instance obtained
+        // INSIDE `jest.isolateModules` -- a fresh, throwaway copy -- so it never touches
+        // the shared/outer `backend/constants/environment` mock every other test in this
+        // file relies on being `isSnap: false`; no cleanup of that flag is needed here.
+        frontendReadyListener()
+        await flush()
+        frontendReadyListener()
+        await flush()
+
+        const snapDialogCalls = isolatedRequestRustInvoke.mock.calls.filter(
+          ([channel]) => channel === RUST_DIALOG_MESSAGE
+        )
+        expect(snapDialogCalls).toHaveLength(2)
+      } finally {
+        // `process.env.X = undefined` stringifies to `"undefined"` (Node coerces every
+        // assignment to `process.env` to a string) rather than clearing the var, so an
+        // unset original value must be restored via `delete`, not a plain assignment.
+        if (originalSnapRealHome === undefined) {
+          delete process.env.SNAP_REAL_HOME
+        } else {
+          process.env.SNAP_REAL_HOME = originalSnapRealHome
+        }
+        // See this test's own `isolatedEnvRef` doc comment above.
+        if (isolatedEnvRef) {
+          isolatedEnvRef.isSnap = false
+        }
       }
     })
 

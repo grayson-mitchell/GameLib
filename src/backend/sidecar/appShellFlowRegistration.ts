@@ -53,10 +53,16 @@
  *     - `frontendReady` (D-11, Plan 05, REQ-34.6-04/07/13) -> a deliberate
  *       subset of `main.ts:560-601`: `logSendHandlerReached` (the send-kind
  *       observable), the `logInfo('Frontend Ready', ...)` equivalent, and the
- *       `isSnap`/`isCLINoGui` branches byte-equivalently. Still EXCLUDES
- *       `handleProtocol(...)`; the 5s `initQueue(true)` auto-resume is no
- *       longer excluded — it was PORTED here in Phase 35 plan 11 — see the
- *       module docstring's dedicated D-11 paragraph above
+ *       `isSnap`/`isCLINoGui` branches. Still EXCLUDES `handleProtocol(...)`;
+ *       the 5s `initQueue(true)` auto-resume is no longer excluded — it was
+ *       PORTED here in Phase 35 plan 11 — see the module docstring's
+ *       dedicated D-11 paragraph above. NOT byte-equivalent to `main.ts`'s
+ *       registration shape: `main.ts:560` used `addOneTimeListener` (once-
+ *       semantics) for the WHOLE handler; this port used a repeating
+ *       `ipcMain.on` and, once plan 35-11 moved boot work inside it, that
+ *       divergence became reachable (CR-02, `35-REVIEW.md`, closed by plan
+ *       35-21 — see `frontendReadyBootWorkDone`'s doc comment below for the
+ *       restored one-shot guarantee, scoped to the boot half only)
  *
  * A `send` channel registered with `ipcMain.handle` (or the reverse) fails
  * 100% SILENTLY at runtime (Phase 31 Pitfall 2) — every registration below
@@ -118,7 +124,10 @@
  * full reasoning, with the documents that establish each status, lives on the
  * call itself in the `frontendReady` body below rather than being duplicated
  * here. It is proven behaviourally by `appShellFlows.test.ts` (mocked
- * `initQueue`, asserted called exactly once with `true` under fake timers).
+ * `initQueue`, asserted called exactly once with `true` under fake timers --
+ * including across TWO `frontendReady` deliveries into the same registration,
+ * `frontendReadyBootWorkDone`'s one-shot guard being exactly what makes that
+ * true; see CR-02, `35-REVIEW.md`, closed by plan 35-21).
  *
  * Uses electronStub's own `ipcMain` directly (not `backend/ipc`'s typed
  * `addHandler`/`addListener`) — `backend/ipc.ts` itself imports the real
@@ -179,6 +188,18 @@ let displaySleepId: number | undefined
 // Module-level so repeated sends within the window clear-and-reschedule instead of
 // stacking unbounded timers (T-34.1-23).
 let trayColorTimer: NodeJS.Timeout | undefined
+
+// CR-02 (35-REVIEW.md, plan 35-21): `frontendReady`'s boot-time download-queue auto-resume
+// must run at most once per sidecar process. The registration stays `ipcMain.on` (not
+// `ipcMain.once`) because the send-kind observability (`logSendHandlerReached`, the
+// `logInfo('Frontend Ready', ...)` line) and the Snap warning dialog are allowed to repeat --
+// T-35-107 dispositions a repeated informational dialog as "accept", not a defect -- while
+// `initQueue(true)` is NOT: it has no re-entrancy guard, so a second concurrent call against
+// the same queue head would run two downloaders against one install directory. Guarding only
+// the boot half is the narrower fix of the review's two candidates. Set to `true` BEFORE the
+// `setTimeout` below is scheduled, not inside its callback, so two synchronous deliveries in
+// the same tick (no timers involved yet) cannot both observe `false`.
+let frontendReadyBootWorkDone = false
 
 /**
  * Read `darkTrayIcon` from `GlobalConfig` and forward it to the real Tauri tray via the
@@ -421,19 +442,32 @@ export function registerAppShellFlows(
       // `installQueueElement`'s stall watchdog (downloadmanager/utils.ts)
       // force-terminates a never-settling install rather than hanging.
       //
-      // `.unref()` (the one intentional difference from `main.ts:613`): under
-      // Electron this timer lived in a process the app itself kept alive, so
-      // holding the event loop open was harmless. The sidecar is a plain
-      // `node` process, and a ref'd 5s timer here keeps the loop alive for 5
-      // seconds after all work is done — which showed up immediately as
-      // "Jest did not exit one second after the test run has completed" in
-      // `appShellFlows.test.ts`. The sidecar's own RPC stdin stream keeps the
-      // process alive in production, so the timer still fires normally there;
-      // `.unref()` only removes its claim on the loop, never its scheduling.
-      setTimeout(() => {
-        logInfo('Starting the Download Queue', LogPrefix.Backend)
-        void initQueue(true)
-      }, 5000).unref()
+      // CR-02 (35-REVIEW.md, plan 35-21): the sidecar OUTLIVES the renderer, so a renderer
+      // reload (devtools reload, webview crash-recovery, a future in-app reload path)
+      // re-delivers `frontendReady` into this SAME process. `electronStub`'s `ipcMain.on`
+      // has no once-semantics of its own (unlike Electron's real `ipcMain`, which the
+      // original `main.ts:560` reached via `addOneTimeListener` -> `ipcMain.once`), so a
+      // second delivery would schedule a SECOND `initQueue(true)` against the same queue
+      // head with no re-entrancy guard on `initQueue` itself. `frontendReadyBootWorkDone`
+      // (module-scoped, declared above) restores that one-shot guarantee for just this
+      // block, without also silencing the observability/dialog logic above, which is
+      // allowed to repeat (see that flag's own doc comment).
+      if (!frontendReadyBootWorkDone) {
+        frontendReadyBootWorkDone = true
+        // `.unref()` (the one intentional difference from `main.ts:613`): under
+        // Electron this timer lived in a process the app itself kept alive, so
+        // holding the event loop open was harmless. The sidecar is a plain
+        // `node` process, and a ref'd 5s timer here keeps the loop alive for 5
+        // seconds after all work is done — which showed up immediately as
+        // "Jest did not exit one second after the test run has completed" in
+        // `appShellFlows.test.ts`. The sidecar's own RPC stdin stream keeps the
+        // process alive in production, so the timer still fires normally there;
+        // `.unref()` only removes its claim on the loop, never its scheduling.
+        setTimeout(() => {
+          logInfo('Starting the Download Queue', LogPrefix.Backend)
+          void initQueue(true)
+        }, 5000).unref()
+      }
     } catch (error) {
       logSendFailure('frontendReady', error)
     }
