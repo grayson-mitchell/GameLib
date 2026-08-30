@@ -531,6 +531,37 @@ gated renderer-side. That is the single question blocking this item.
 
 **Status:** open, unowned. Does not block D-16.
 
+---
+
+**RESOLVED 2026-08-30, plan `35-26`.** The blocking question above -- "may a settings-surface
+destructive confirmation be gated renderer-side?" -- is answered **YES**, conditioned on the
+fail-closed design this entry itself named as the risk to guard against: option 1 was adopted
+(`AdvancedSettings/index.tsx` now raises the confirmation via `showDialogModal`, same house
+pattern as `AllowInstallationBrokenAnticheat.tsx`), but the backend does **not** remove
+unconditionally. `remove()` gained an explicit `confirmed: boolean` parameter gated on a strict
+`=== true` identity check -- never a truthiness test -- so an absent, malformed, or merely truthy
+confirmation (`undefined`, `false`, the string `'true'`, the number `1`, an object) refuses and
+removes nothing, RED-proven by substituting a truthiness test and watching the string/number
+cases go red by name (five separately-named refusal cases, commit `81794b7bd`).
+`enable()`'s not-installed branch likewise no longer asks via a native dialog -- it returns the
+condition to the renderer, which raises its own confirmation (commit `a5333be60`).
+
+**A live gate attempt 1 FAILED and found a real defect this plan's own tests could not see.**
+The Settings -> Advanced Install and Update buttons (a different pair of call sites from the ones
+Task 1/2 fixed) had **zero** confirmation of any kind, wired bare to
+`onClick={installEosOverlay}`/`onClick={updateEosOverlay}`. `EosDeclineCallSiteGuard.test.ts`
+passed 5/5 throughout, because it censuses whether an *already-wrapped* call stays wrapped -- it
+is structurally blind to a call site that was never wrapped in anything to begin with. Fixed in a
+remediation commit (`ad07e8ff6`) that added `confirmInstallEosOverlay`/`confirmUpdateEosOverlay`
+on the same house pattern plus a new, complementary guard
+(`EosActionConfirmationGuard.test.ts`, RED-proven against pre-fix HEAD). Attempt 2 PASSED all
+steps live, corroborated against `gamelib.log`; see `35-26-SUMMARY.md` for the full timeline and
+its recorded caveats (no screenshots captured; theme legibility judged by eye, not measured).
+
+**Scope note, carried forward accurately:** this resolves the EOS confirmations only. The source
+todo's ~14-site native-`showMessageBox` census had roughly 13 sites outside EOS; those remain
+open and unowned by this resolution.
+
 ## D-35-11-02 — one `type: 'ERROR'` dialog carries a "Warning" title (plan 35-11, out of scope)
 
 `installFlowRegistration.ts:463` raises `box.warning.title` ("Warning") /
