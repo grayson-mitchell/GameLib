@@ -951,7 +951,74 @@ afterward — no cross-labelled assertion.
 constraint) — do not silently treat this as expected just because it was already known from the dev
 build.
 Observed:
-Verdict:
+Title used, per the contract's "record which": **Child of Light (Steam, appId 256290)**,
+uninstalled and re-downloaded (native depot download, 68 files). Baseline verified CLEAN before
+starting -- both label counts 0, no game running -- which criterion 15 established as mandatory,
+since a running game alone produces a download-labelled assertion.
+
+**TIMELINE (measured, from `pmset` polling and `gamelib.log`):**
+| time | event | `a game is running` | `a download is in progress` |
+| - | - | - | - |
+| 12:06:44 | Child of Light queued | 0 | 0 |
+| 12:06:45 | download starts | 0 | **1** |
+| 12:08:04 | Endless Sky launched | **1** | 1 |
+| 12:09:33 | `Finished Installation of 256290`, badge flipped installed | 1 | **1** |
+| 12:10:49 | (76s after download ended, game still up) | 1 | **1** |
+| 12:11:20 | game quit -> `Stopping Display Power Saver Blocker` | 0 | 0 |
+
+**DOWNLOAD HALF -- PASS.** With a download running and no game, exactly ONE correctly-labelled
+system assertion and ZERO display assertions:
+```
+pid 56568(gamelib-shell): [0x0003dd9800019591] 00:00:13 PreventUserIdleSystemSleep named: "GameLib: a download is in progress"
+```
+`PreventUserIdleSystemSleep 1`, `PreventUserIdleDisplaySleep 0`. Download confirmed genuinely live
+(`downloadDepotFiles: first bytes written after 151ms`, chunk-stream stats at 45% / 56%).
+
+**F-35-08-A REPRODUCES ON THE PACKAGED ARTIFACT. This is the verdict.** The download finished at
+12:09:33. At 12:10:49 -- **76 seconds later, with nothing downloading** -- the assertion was still
+held:
+```
+pid 56568(gamelib-shell): [0x0003dd9800019591] 00:04:05 PreventUserIdleSystemSleep named: "GameLib: a download is in progress"
+pid 56568(gamelib-shell): [0x0003dde6000595bb] 00:02:46 PreventUserIdleDisplaySleep named: "GameLib: a game is running"
+```
+It cleared only when the GAME exited, at 12:11:21 -- outliving the download it names by ~108
+seconds. Per the contract's explicit instruction not to soften this because it was already known
+from the dev build: recorded as observed, FAIL.
+
+**A DIAGNOSTIC REFINEMENT the dev-build gate did not have.** The handle (`0x0003dd9800019591`) and
+elapsed time (`00:04:05` at 12:10:49, i.e. since 12:06:44) are IDENTICAL to the assertion taken when
+the DOWNLOAD started. So this is not the game taking a second, spurious assertion on top -- it is the
+DOWNLOAD's own assertion never being released, because `unlock()` fires only when `pendingOps`
+reaches 0 and the running game holds it above 0. `powerId` is shared state whose lifetime is governed
+by `pendingOps`, not by the download. In criterion 15 (game alone, no download) the game itself took
+it; here the download took it and the game extended it. Same mechanism, two surfaces.
+**NOT threat T-35-31:** both assertions cleared on game exit; nothing outlived the app.
+
+**THE CONTRACT'S OWN GESTURE CANNOT DETECT F-35-08-A. Recorded because it would mislead a re-runner.**
+With both game and download active the counts were 1 and 1 -- which reads as the stated "best case".
+That is an ARTEFACT: the `lock` handler's guard is `!playing && !isSleepBlocked`, and the download
+had already set `isSleepBlocked`, so the game's spurious acquire was suppressed. The
+cross-contamination is INVISIBLE in precisely the simultaneous configuration this criterion
+prescribes for finding it. The two configurations that DO expose it are (a) a game running with no
+download -- criterion 15 -- and (b) letting the download finish while the game keeps running, which
+is what was done here. A future re-run must not conclude "no cross-labelled assertion" from a
+simultaneous capture alone.
+
+**D-35-19-12 CONFIRMED LIVE -- promoted from prediction to observation.** Criterion 15 recorded, as
+an explicitly UNTESTED code-read prediction, that `launcher.ts` never resets `powerDisplayId` and so
+acquires only once per app session. This criterion's game launch was the SECOND of the session and
+produced:
+- `"Preventing display from sleep"` lines in this instance's log: **1 total** (11:29:19, criterion
+  15's launch). The 12:08:04 launch did NOT log it.
+- display assertions while playing: **1**, versus criterion 15's **2**.
+Exactly the predicted behaviour, including the predicted severity -- degraded, not absent, because
+the `lock`/`unlock` pair resets its own ids correctly and still supplied one assertion. Display sleep
+was still prevented.
+
+Also confirmed: the duplicate display assertion (D-35-19-10) is visible in the ORIGINAL dev-build
+capture at `35-08-LIVE-GATE.md:84-86` (two `PreventUserIdleDisplaySleep` lines, `dispCount=1`), so it
+is not new to the packaged build -- that gate simply did not call it out.
+Verdict: FAIL (download half PASSES; the "no cross-contamination" half FAILS — F-35-08-A reproduces on the packaged artifact)
 
 ### 17. Updater: endpoint configured, plugin registered, a check reaches "up to date" without erroring
 

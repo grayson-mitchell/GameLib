@@ -1638,15 +1638,41 @@ failure: the right kind fired for the wrong reason.
 download. Criterion 16 must establish a baseline with no game running or it will read this
 assertion as its own result.
 
-Not yet traced: which caller invokes `lock` with `playing=false` during a game launch. No frontend
-caller of the `lock` channel was found by grep in `src/frontend`; the handler is registered at
-`appShellFlowRegistration.ts:294`. Worth resolving before fixing, so the fix targets the caller
-rather than papering over it in the handler.
+**TRACED — supersedes the "not yet traced" note this item originally carried.** `35-08-LIVE-GATE.md`
+had already established the caller chain, and criterion 16 confirmed it on the packaged build:
+`GlobalState.tsx:1633` puts BOTH `'launching'` and `'playing'` in `allowedPendingOps`. On launch the
+status is `'launching'` first, so `pendingOps` is 1 while `playing` is still `false` →
+`window.api.lock(false)` → the `!playing` branch. `unlock()` then fires only when `pendingOps`
+returns to 0, i.e. at game exit.
 
-## D-35-19-12 — PREDICTION (untested): `powerDisplayId` is never reset, so launcher.ts acquires once per session
+**REFINEMENT from criterion 16 that the dev-build gate could not make.** `powerId` is SHARED state
+whose lifetime is governed by `pendingOps`, not by whatever took it. Two surfaces of one mechanism:
+- game alone, no download (criterion 15): the GAME takes the download-labelled assertion.
+- download then game (criterion 16): the DOWNLOAD takes it, finishes, and the assertion is not
+  released because the running game holds `pendingOps` above 0. Handle `0x0003dd9800019591` and its
+  elapsed time were identical before and after download completion — proving it is the same
+  assertion persisting, not a second one acquired by the game.
+It outlived the download it names by ~108 seconds and cleared only at game exit. **Not threat
+T-35-31** — nothing outlived the app.
 
-Found: criterion 15, 2026-08-30. Status: **CODE-READ PREDICTION, NOT OBSERVED. Do not cite as a
-finding until tested.**
+**MEASUREMENT TRAP — a simultaneous capture CANNOT detect this.** With game and download both
+active, the counts are 1 and 1, which looks like the clean expected state. The `lock` guard is
+`!playing && !isSleepBlocked`, and the download had already set `isSleepBlocked`, so the game's
+spurious acquire is suppressed. Any regression test must use (a) a game running with no download, or
+(b) a download finishing while a game keeps running. A simultaneous snapshot will report a false
+PASS.
+
+## D-35-19-12 — CONFIRMED: `powerDisplayId` is never reset, so launcher.ts acquires once per session
+
+Found: criterion 15 (as a prediction), 2026-08-30. **CONFIRMED LIVE by criterion 16 the same day.**
+Status: **OBSERVED DEFECT, UNFIXED.**
+
+**Confirmation evidence (criterion 16, second game launch of the same app session):**
+- `"Preventing display from sleep"` lines in that instance's log: **1 total**, from criterion 15's
+  launch at 11:29:19. The second launch at 12:08:04 did NOT log it.
+- display assertions while playing: **1**, versus criterion 15's **2**.
+Both the behaviour AND the predicted severity held: degraded, not absent — the `lock`/`unlock` path
+still supplied one assertion, so display sleep was still prevented.
 
 `src/backend/launcher.ts` assigns `powerDisplayId` in exactly one place (`:190`) and never resets it
 after `powerSaveBlocker.stop(powerDisplayId)` (`:294`). The acquire is guarded:
