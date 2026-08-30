@@ -248,3 +248,7 @@ None - no external service configuration required.
 ---
 *Phase: 35-electron-cutover-remove-the-electron-build*
 *Completed: 2026-08-30*
+
+## Self-Check: PASSED
+
+All 8 modified/created files and the deletion of `src/preload/index.ts` verified present/absent on disk as claimed. All 4 commit hashes (`f20b90af6`, `bbbdb92fd`, `635151971`, `72a09a21f`) verified present in `git log --oneline --all`.
