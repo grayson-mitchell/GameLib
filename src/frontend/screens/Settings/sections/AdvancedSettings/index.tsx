@@ -64,6 +64,10 @@ export default function AdvancedSetting() {
   const { libraryStatus, platform, showDialogModal } =
     useContext(ContextProvider)
   const { t } = useTranslation()
+  // Phase 35 plan 26 remediation: the Install/Update confirmation strings below are fork-
+  // owned and go in `gamelib.json`, never `translation.json` -- explicit `gamelib:` prefix
+  // kept per the house convention (see PathSelectionBox/index.tsx).
+  const { t: tGamelib } = useTranslation('gamelib')
   const isWindows = platform === 'win32'
   const isLinux = platform === 'linux'
 
@@ -197,6 +201,31 @@ export default function AdvancedSetting() {
     await checkForEosOverlayUpdates()
   }
 
+  // Phase 35 plan 26 remediation (Task 3 live gate FAILED): the Install button used to go
+  // straight to `installEosOverlay()` with zero confirmation -- clicking it ran
+  // `legendary eos-overlay install -y` immediately, reproduced twice against a build proven
+  // to contain both prior commits. The confirmation now happens here, app-styled, via
+  // `showDialogModal`, matching `confirmRemoveEosOverlay`'s house pattern below. Only the
+  // affirmative button's onClick calls `installEosOverlay()`; the negative button has no
+  // onClick at all.
+  function confirmInstallEosOverlay() {
+    showDialogModal({
+      title: tGamelib(
+        'gamelib:settings.eosOverlayInstallConfirmTitle',
+        'Confirm overlay install'
+      ),
+      message: tGamelib(
+        'gamelib:settings.eosOverlayInstallConfirmBody',
+        'Install the EOS Overlay now?'
+      ),
+      buttons: [
+        { text: t('box.yes'), onClick: () => installEosOverlay() },
+        { text: t('box.no') }
+      ],
+      type: 'MESSAGE'
+    })
+  }
+
   async function removeEosOverlay() {
     const result = await callOrDeclare({
       channel: 'removeEosOverlay',
@@ -258,6 +287,28 @@ export default function AdvancedSetting() {
       return
     }
     setEosOverlayVersion(statusResult.value.version ?? '')
+  }
+
+  // Phase 35 plan 26 remediation (Task 3 live gate FAILED, "minimal + update" operator
+  // decision): the Update button had the same unguarded shape as Install. Same house
+  // pattern as confirmInstallEosOverlay/confirmRemoveEosOverlay above -- worded for an
+  // update, not a destructive removal.
+  function confirmUpdateEosOverlay() {
+    showDialogModal({
+      title: tGamelib(
+        'gamelib:settings.eosOverlayUpdateConfirmTitle',
+        'Confirm overlay update'
+      ),
+      message: tGamelib(
+        'gamelib:settings.eosOverlayUpdateConfirmBody',
+        'Update the EOS Overlay to the latest version?'
+      ),
+      buttons: [
+        { text: t('box.yes'), onClick: () => updateEosOverlay() },
+        { text: t('box.no') }
+      ],
+      type: 'MESSAGE'
+    })
   }
 
   async function cancelEosOverlayInstallOrUpdate() {
@@ -410,7 +461,7 @@ export default function AdvancedSetting() {
                     !eosOverlayCheckingForUpdates && (
                       <button
                         className="button is-primary"
-                        onClick={updateEosOverlay}
+                        onClick={confirmUpdateEosOverlay}
                       >
                         <UploadOutlined />
                         <span>
@@ -458,7 +509,7 @@ export default function AdvancedSetting() {
               {!eosOverlayInstalled && !eosOverlayInstallingOrUpdating && (
                 <button
                   className="button is-primary"
-                  onClick={installEosOverlay}
+                  onClick={confirmInstallEosOverlay}
                 >
                   <DownloadOutlined />
                   <span>{t('setting.eosOverlay.install', 'Install')}</span>

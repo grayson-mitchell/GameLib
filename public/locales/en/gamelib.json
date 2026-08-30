@@ -116,6 +116,10 @@
         "successWithPackage": ""
     },
     "settings": {
+        "eosOverlayInstallConfirmBody": "Install the EOS Overlay now?",
+        "eosOverlayInstallConfirmTitle": "Confirm overlay install",
+        "eosOverlayUpdateConfirmBody": "Update the EOS Overlay to the latest version?",
+        "eosOverlayUpdateConfirmTitle": "Confirm overlay update",
         "framelessWindowDescription": "Use frameless window",
         "gamepadInitialRepeatDelay": "Gamepad input initial repeat delay",
         "gamepadRepeatFrequency": "Gamepad input repeat frequency",
