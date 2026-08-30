@@ -4322,7 +4322,7 @@ Plans:
 - [x] 35-18-PLAN.md — `electron` out of `package.json`, alias removed, D-03 gate, release notes (wave 12) — complete 2026-08-30, 3 task commits (`7ed470b19`, `2e826a395`, `390c8bead`); `meta/__tests__/electronAbsence.test.ts` mutation-proven, `35-RELEASE-NOTES.md` written correcting the plan's own stale D-09 must_haves text against 35-09's actual domain-scoped-Epic-only implementation
 - [ ] 35-19-PLAN.md — D-16 blocking packaged macOS arm64 live gate (wave 13)
 
-**Gap-closure cycle 1** (planned 2026-08-30 from `35-VERIFICATION.md` `gaps_found` 11/17 + `35-REVIEW.md` 4 criticals; 10 plans in 3 waves, numbered from `35-20`). Scope fence: the 5 verification gaps and the 4 REVIEW criticals only. `pnpm lint` -> Phase 39; Windows/Linux smoke launches -> Phase 38 (`38-W04`/`38-W05`); the remaining `D-35-19-*` items and `WR-01` stay deferred.
+**Gap-closure cycle 1** (planned 2026-08-30 from `35-VERIFICATION.md` `gaps_found` 11/17 + `35-REVIEW.md` 4 criticals; 10 plans in 3 waves, numbered from `35-20`). Scope fence: the 5 verification gaps and the 4 REVIEW criticals only. `pnpm lint` -> Phase 39; Windows/Linux smoke launches -> Phase 38 (`38-W04`/`38-W05`); the remaining `D-35-19-*` items stay deferred. **`WR-01` and the two red `runPlanningGates.py` gates were routed to Phase 39 on 2026-08-30** — see that phase's "Routed in from Phase 35" block; they are NOT deferred and NOT owned by Phase 35.
 
 - [ ] 35-20-PLAN.md — criteria 6/10/14 root causes: `steam` in the `RUNNERS` enum, one shared Steam launch dispatch that records a recent game, `installed.json` watcher notifies the renderer (wave 1)
 - [ ] 35-21-PLAN.md — CR-01 `open_external` scheme allow-list (Rust) + CR-02 `frontendReady` once-semantics (wave 1)
@@ -4544,7 +4544,7 @@ Plans:
 
 ---
 
-### Phase 39: Repo-wide lint debt — drive `pnpm lint` to exit 0 after the Electron cutover
+### Phase 39: Post-cutover CI honesty — lint debt, the two red planning gates, and the dead `getLoginWindowSeam` branches
 
 **Goal:** Close phase-34.9 deferred **item 20**, the last of that phase's 24 ledger items with no
 owner at all. `pnpm lint` exits non-zero repo-wide, so no phase can honestly use it as a gate —
@@ -4577,16 +4577,44 @@ with the cutover. **Sequencing is the point of this phase's placement — do not
 4. **The `prettier --check` gate is separately red repo-wide.** It is a *different* gate from
    `pnpm lint`. Never sweep formatting into a behavioural commit to make either one green.
 
-**Scope fence:** this phase owns lint debt only. It does **not** own the prettier gate — if that
-is to be fixed, it is its own phase with its own commit, for the reason in hazard 4 above.
+**Routed in from Phase 35, 2026-08-30** (operator decision at the Phase 35 gap-closure planning
+cycle; both items were found by that cycle, are cutover fallout, and were owned by no phase):
 
-**Requirements**: NONE inherited — item 20 never had a REQ of its own. Mint `REQ-39-*` IDs at plan
-time, after the count is re-measured.
-**Depends on:** **Phase 35** (Electron cutover) — see the sequencing rationale above.
+- **`meta/runPlanningGates.py` is 5/7 and hard-red.** Two gates fail, each with a concrete cutover
+  cause: `34.4.1/seam-parity-sweep-gate.py` throws `FileNotFoundError` on
+  `src/backend/sidecar/electronStub.ts`, which the `git mv` in plans 35-13/35-15 moved to
+  `backend/platform`; and `34.5/preload-surface-gate.py` extracts only **206** distinct channels
+  against an audited floor of **217**. These are the pair previously recorded as "planning gates run
+  in CI, 2 silently red" — they are no longer silent. **Each needs a disposition, not necessarily a
+  fix:** repair, re-point at the moved artifact, or retire alongside the ten gates `D-35-14-02`
+  already re-pointed. Re-measure both at plan time; the 206/217 figure is a 2026-08-30 snapshot.
+- **`35-REVIEW.md` WR-01 — 7 dead Electron branches survive behind `getLoginWindowSeam() === null`.**
+  Phase 35's `isTauri` sweep was genuinely complete, but it keyed on **one** token. This is the
+  *other* dual-build discriminator and it was never swept. Expect these to be a source of lint
+  findings, which is the synergy that puts them in this phase: dead branches generate exactly the
+  unsafe-`any` and unused-directive noise being counted. **Do not assume 7 — re-derive the census at
+  plan time,** and key it on the seam predicate, not on any single token. This project has been
+  bitten four times by a census taken over the wrong namespace.
+
+**Scope fence:** this phase owns three workstreams — lint debt, the two red planning gates, and the
+dead-seam branches — and nothing else. It does **not** own the prettier gate; if that is to be
+fixed, it is its own phase with its own commit, for the reason in hazard 4 above. **Hazard 4's rule
+binds the two routed-in items too:** each of the three workstreams gets its own requirement and its
+own commits. Do not sweep a planning-gate repair or a dead-branch deletion into a lint commit to
+make either number look better — a mixed commit makes it impossible to say afterwards which change
+moved which gate.
+
+**Requirements**: NONE inherited — item 20 never had a REQ of its own, and the two routed-in items
+arrived as a `runPlanningGates.py` result and a review warning rather than as requirements. Mint
+`REQ-39-*` IDs at plan time for all three workstreams, after the lint count, the gate failures and
+the dead-seam census are each re-measured.
+**Depends on:** **Phase 35** (Electron cutover) — see the sequencing rationale above. Phase 35's
+gap-closure plans `35-20`..`35-29` should land first: `35-24` touches the i18n gate scope and
+`35-22` touches `tauriAttach.ts`, both of which move the numbers this phase measures.
 **Plans:** 0 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 39 to break down — re-measure `pnpm lint` first; do not plan before Phase 35 lands)
+- [ ] TBD (run /gsd-plan-phase 39 to break down — re-measure `pnpm lint`, `python3 meta/runPlanningGates.py`, and the `getLoginWindowSeam() === null` census first; do not plan before Phase 35's gap-closure cycle lands)
 
 ---
 

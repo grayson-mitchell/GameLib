@@ -404,6 +404,8 @@ launcher) legitimately has nothing to clear. Their logout will always report fai
 
 ### WR-01: seven dead Electron branches survive the cutover, keyed on a discriminator the completeness gate does not measure
 
+> **ROUTED TO PHASE 39 on 2026-08-30** (operator decision at the Phase 35 gap-closure planning cycle). Not deferred and not Phase 35's — see `deferred-items.md` `D-35-ROUTE-01` and ROADMAP Phase 39's "Routed in from Phase 35" block. The count of seven is unverified; re-derive the census at Phase 39 plan time, keyed on the seam predicate rather than on any single token.
+
 **Files:** `src/backend/humble/user.ts:274-284, 445, 740, 873-874, 1034-1036`,
 `src/backend/storeManagers/legendary/user.ts:167-177`,
 `src/backend/humble/loginWindowSeam.ts:17-20`

@@ -1926,3 +1926,37 @@ The suggested check of the sibling runners was done: `legendary/library.ts:415` 
 `nile/library.ts:402` set the path **verbatim** with no append, so neither doubles;
 `zoom/library.ts:378` has the same store-update shape but **no `osx` branch at all**; `steam` and
 `sideload` are no-op stubs. **This defect is GOG-only.**
+
+---
+
+## D-35-ROUTE-01 — ROUTED TO PHASE 39, 2026-08-30: the two red planning gates and `WR-01`
+
+**Status: not deferred, not Phase 35's. Owned by Phase 39.** Recorded here so the disposition is
+visible from the phase that found these, not only from the phase that inherited them — a route
+recorded at one end only is invisible from the other.
+
+Both items surfaced during the Phase 35 gap-closure planning cycle (2026-08-30). Both are cutover
+fallout. Neither was in the operator's chosen gap-closure scope (the 5 `35-VERIFICATION.md` gaps +
+the 4 `35-REVIEW.md` criticals), and neither was owned by any phase, so leaving them would have left
+CI red with no owner. The operator routed both to **Phase 39** on 2026-08-30.
+
+**Item 1 — `python3 meta/runPlanningGates.py` is 5/7.** Two gates fail, each with a concrete cause:
+
+- `34.4.1/seam-parity-sweep-gate.py` — `FileNotFoundError: src/backend/sidecar/electronStub.ts`.
+  Plans 35-13/35-15 `git mv`'d that file to `backend/platform`; the gate still points at the old path.
+- `34.5/preload-surface-gate.py` — the extracted union has only **206** distinct channels, below the
+  audited floor of **217**.
+
+These are the pair long recorded as "planning gates run in CI, 2 silently red". They are no longer
+silent: both are now hard-red with a named cutover cause. A disposition is owed — repair, re-point,
+or retire alongside the ten gates `D-35-14-02` already re-pointed. The 206/217 figure is a
+2026-08-30 snapshot; re-measure at Phase 39 plan time.
+
+**Item 2 — `35-REVIEW.md` `WR-01` (that file's line 405): seven dead Electron branches survive**,
+keyed on `getLoginWindowSeam() === null`. Phase 35's `isTauri` sweep was complete but keyed on
+**one** token; this is the other dual-build discriminator and was never swept. Treat the count of 7
+as unverified — re-derive the census at Phase 39 plan time, keyed on the seam predicate rather than
+on any single token.
+
+`35-REVIEW.md` stays `status: issues_found` on `WR-01` until Phase 39 discharges it. That is a
+deliberate open record, not an oversight.
