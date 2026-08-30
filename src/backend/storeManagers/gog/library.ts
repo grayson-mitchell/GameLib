@@ -27,7 +27,7 @@ import {
   UserData,
   GOGSessionSyncQueueItem
 } from 'common/types/gog'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { existsSync, readFileSync } from 'graceful-fs'
 
 import {
@@ -888,7 +888,24 @@ export default class GOGLibraryManager implements LibraryManager {
       (value) => value.appName === appName
     )
 
-    if (cachedGameData.install.platform === 'osx') {
+    // D-35-19-16: this append exists for the `changeInstallPath` caller
+    // (`gamedetails/dispatch.ts:230`), which hands over the raw directory the user
+    // picked in the dialog -- on macOS necessarily the PARENT, because a directory
+    // picker cannot select a `.app` bundle. But `moveInstall` (`games.ts:794`)
+    // reaches the same function with `moveResult.installPath`, which `moveOnUnix`
+    // has ALREADY completed to `join(newInstallPath, basename(install_path))`.
+    // Appending unconditionally doubled the bundle name for that second caller and
+    // recorded `.../Endless Sky.app/Endless Sky.app`, a path that does not exist, so
+    // the moved game could not launch.
+    //
+    // GOG installs are created as `join(path, folder_name)` (`games.ts:433`), so the
+    // standing invariant is that `install_path` ENDS WITH `folder_name`. Appending
+    // only when it does not already satisfies both callers without changing the
+    // shared `LibraryManager` signature.
+    if (
+      cachedGameData.install.platform === 'osx' &&
+      basename(newInstallPath) !== cachedGameData.folder_name
+    ) {
       newInstallPath = join(newInstallPath, cachedGameData.folder_name)
     }
 

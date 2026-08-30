@@ -304,3 +304,99 @@ describe('debug/gog-spawn-reduction fix 4 -- getInstallInfo() login gate is isLo
     )
   })
 })
+
+/**
+ * D-35-19-16 regression coverage.
+ *
+ * `changeGameInstallPath` is reached by two callers with DIFFERENT path contracts:
+ * `moveInstall` (`gog/games.ts:794`) passes `moveResult.installPath`, which `moveOnUnix`
+ * has already completed to `join(newInstallPath, basename(install_path))`; whereas
+ * `changeInstallPath` (`gamedetails/dispatch.ts:230`) passes the raw directory the user
+ * picked, which on macOS can only ever be the PARENT because a directory picker cannot
+ * select a `.app` bundle. The `osx` branch appended `folder_name` unconditionally, which
+ * is right for the second caller and doubled the bundle name for the first -- recording
+ * `.../Endless Sky.app/Endless Sky.app`, a path that does not exist, so the moved game
+ * could not launch.
+ *
+ * Tests 1 and 4 fail against the pre-fix source; 2 and 3 pin the behaviour the guard must
+ * NOT disturb, so a guard that simply never appends would fail them.
+ */
+describe('D-35-19-16 -- changeGameInstallPath does not double the macOS bundle name', () => {
+  const APP_NAME = '1829678475'
+  const FOLDER_NAME = 'Endless Sky.app'
+
+  let manager: GOGLibraryManager
+  let installedArray: Array<Record<string, unknown>>
+
+  /** Seed both stores and load the in-memory library the way the app does. */
+  async function seedInstalledGame(install_path: string, platform: string) {
+    manager = new GOGLibraryManager()
+    // Offline so loadLocalLibrary skips checkForOfflineInstallerChanges.
+    mockIsOnline.mockReturnValue(false)
+
+    installedArray = [{ appName: APP_NAME, install_path, platform }]
+    mockInstalledGamesStoreGet.mockReturnValue(installedArray)
+    mockLibraryStoreGet.mockReturnValue([
+      {
+        app_name: APP_NAME,
+        title: 'Endless Sky',
+        folder_name: FOLDER_NAME,
+        runner: 'gog',
+        is_installed: false,
+        install: {}
+      }
+    ])
+
+    manager.refreshInstalled()
+    await (
+      manager as unknown as { loadLocalLibrary: () => Promise<void> }
+    ).loadLocalLibrary()
+  }
+
+  const recordedPath = () => manager.getGameInfo(APP_NAME)?.install.install_path
+
+  it('the move caller (already-complete path) records it unchanged', async () => {
+    await seedInstalledGame('/Users/u/GameLib/Endless Sky.app', 'osx')
+
+    // What moveOnUnix returns as `installPath`: the destination it actually
+    // rsynced to, basename already appended.
+    await manager.changeGameInstallPath(
+      APP_NAME,
+      '/Users/u/Dest/Endless Sky.app'
+    )
+
+    expect(recordedPath()).toBe('/Users/u/Dest/Endless Sky.app')
+    expect(installedArray[0].install_path).toBe('/Users/u/Dest/Endless Sky.app')
+  })
+
+  it('the change-install-path caller (parent directory) still gets folder_name appended', async () => {
+    await seedInstalledGame('/Users/u/GameLib/Endless Sky.app', 'osx')
+
+    // What the directory picker yields on macOS: the parent, because a `.app`
+    // bundle is not selectable as a directory.
+    await manager.changeGameInstallPath(APP_NAME, '/Users/u/Dest')
+
+    expect(recordedPath()).toBe('/Users/u/Dest/Endless Sky.app')
+    expect(installedArray[0].install_path).toBe('/Users/u/Dest/Endless Sky.app')
+  })
+
+  it('non-osx installs are recorded verbatim, with no append at all', async () => {
+    await seedInstalledGame('/games/Endless Sky', 'windows')
+
+    await manager.changeGameInstallPath(APP_NAME, '/games2/Endless Sky')
+
+    expect(recordedPath()).toBe('/games2/Endless Sky')
+  })
+
+  it('no recorded path ever contains the bundle name twice', async () => {
+    await seedInstalledGame('/Users/u/GameLib/Endless Sky.app', 'osx')
+
+    for (const candidate of [
+      '/Users/u/Dest/Endless Sky.app',
+      '/Users/u/Dest'
+    ]) {
+      await manager.changeGameInstallPath(APP_NAME, candidate)
+      expect(recordedPath()).not.toContain(`${FOLDER_NAME}/${FOLDER_NAME}`)
+    }
+  })
+})
