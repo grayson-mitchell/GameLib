@@ -99,6 +99,8 @@
     },
     "login": {
         "connected": "Connected",
+        "logoutFailedMessage": "Your account was signed out on this device, but the browser session could not be fully cleared. On a shared computer, sign out again or clear your browser data for this site to make sure your session doesn't stay accessible.",
+        "logoutFailedTitle": "Sign-out incomplete",
         "steamReconnect": "Sign-in expired — Reconnect"
     },
     "pathSelectionBox": {
