@@ -1157,7 +1157,70 @@ same indicator.
 Sink: none — UI observation.
 Expected: Epic still shows as logged in after the restart.
 Observed:
-Verdict:
+**PRECONDITION DEVIATION -- stated plainly, not glossed.** This criterion requires Epic to be logged
+in "from a prior session (external state)". It was NOT. `user.json` mtime is **11:13:45 today**,
+i.e. the tester logged into Epic DURING criterion 14 of this same gate run, to make that criterion's
+library observable. So the Test 6 guarantee this precondition exists to provide is not satisfied by
+its letter.
+**Why the criterion is still run rather than marked NOT ATTEMPTED:** the durability it asks about has
+since been demonstrated empirically. The session has now survived TWO full quit/relaunch cycles --
+criterion 18's restart (12:21) and this criterion's own (12:35) -- with the credential file
+byte-identical each time. Witnessing the creation AND the survival is arguably stronger than
+inheriting opaque prior state. A reviewer who disagrees should downgrade this to NOT ATTEMPTED; the
+facts to make that call are recorded here.
+
+**RESTART EVIDENCE.** Pre-quit instance shell 40548; post-restart instance shell 73586, sidecar
+73592 (12:35:04). Full quit verified: no `gamelib-shell`, no `gamelib-sidecar`.
+| check | pre-quit | post-restart |
+| - | - | - |
+| `user.json` mtime | Aug 30 11:13:45 | Aug 30 11:13:45 |
+| `user.json` size | 6218 | 6218 |
+| `sha256` (first 24) | `26cf94497019fd98179e773b` | `26cf94497019fd98179e773b` |
+| access token | present, len 4290, `expires_at` in the future | unchanged |
+| refresh token | present, len 1127, `refresh_expires_at` 2027-08-30 | unchanged |
+| UI, Accounts tab | tester: **logged in** | tester: **logged in**, library populated |
+The credential file was not rewritten, so nothing was silently re-authenticated behind the restart.
+
+**LIVE-SESSION VALIDITY IS NOT PROVEN -- this is materially weaker than criterion 18's Humble
+result, and must not be read as equivalent.** Criterion 18 could point at
+`fetched=7/7 ok=7 denied=0 expired=0`, i.e. the Humble SERVER accepting the restored credentials.
+There is no counterpart here: on BOTH restarts the app logged
+`Epic is Offline right now, cannot update game list!` and served the library from cache
+(`Game list updated, got 15 games & DLCs` sourced from `assets.json`). Epic's servers were never
+contacted with these tokens. What is proven is that the credentials PERSIST and the UI reports
+logged-in; what is NOT proven is that Epic would accept them.
+**A populated library is not evidence either way** -- those 15 entries are cached, and would render
+identically with dead tokens.
+
+**ROOT CAUSE of the offline warning -- it is NOT an Epic outage, and NOT an auth failure.** Traced
+rather than assumed:
+- Epic's own status API, queried live during this criterion, reports `Epic Games Store
+  status=operational` (as do Fortnite and Rocket League).
+- `isEpicServiceOffline()` (`src/backend/utils.ts:203`) is a SERVICE-STATUS check, not an auth check.
+  Its first line is `if (!isOnline()) return true`, and its `catch` returns `false` -- so a network
+  error could not produce this warning.
+- `isOnline()` is `status === 'online'` (`src/backend/online_monitor.ts:144`).
+- Startup ordering in this session's log is decisive:
+  ```
+  line 12  (12:35:04) [Connection]: Connectivity: check-online
+  line 20  (12:35:04) [Legendary]:  Refreshing Epic Games...
+  line 24  (12:35:04) [Backend]:    Epic is Offline right now, cannot update game list!
+  line 28  (12:35:04) [Connection]: Connectivity: online
+  ```
+The Epic refresh runs while connectivity is still `'check-online'`, so `isOnline()` is false and the
+function returns "offline" WITHOUT EVER QUERYING Epic. A startup race. Reproduced on both restarts
+(12:21:49 and 12:35:04), and no later refresh retries -- there is exactly one `Refreshing Epic Games`
+per session. Logged as D-35-19-13. `git blame` puts `online_monitor.ts` at upstream Heroic
+`79f40b79b3` (2022-10-04): **pre-existing, not a cutover regression.**
+
+**Consequence for criterion 21, flagged in advance:** its premise ("the session being destroyed is
+live") rests on token persistence only, not on server acceptance. That is a weaker footing than
+criterion 19 has for Humble, and criterion 21's write-up must say so.
+
+Incidental finding recorded while measuring: **`gamelib.log` is TRUNCATED on every app start**, not
+appended. Any cross-session log comparison in this gate must be taken from the per-session capture,
+not from a single accumulated file.
+Verdict: PASS (credentials persist byte-identical across a full restart and the UI reports logged in; live-session validity UNPROVEN — see D-35-19-13 — and the precondition deviation is recorded above)
 
 ### 21. Epic: logout requires credentials to log back in (discharges the standing `34.6` Step 8 FAIL)
 

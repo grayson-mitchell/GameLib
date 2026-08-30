@@ -1692,3 +1692,60 @@ odd one out. That asymmetry is the likely fix (`powerDisplayId = null` after sto
 **Criterion 15 performed only ONE launch, so this was never exercised.** To test: launch a game,
 quit it, launch a second game, and count `GameLib: a game is running` assertions — expect 1 rather
 than 2 if the prediction holds.
+
+## D-35-19-13 — startup race: the Epic library refresh always sees "offline" and serves cache
+
+Found: criterion 20, 2026-08-30. Status: **CONFIRMED DEFECT, UNFIXED. Pre-existing upstream —
+NOT a Phase 35 regression.** Reproduced on two consecutive app starts.
+
+Every app start logs `Epic is Offline right now, cannot update game list!` and falls back to the
+cached `assets.json`. **Epic is not offline.** Queried live during this criterion, Epic's own status
+API reports `Epic Games Store status=operational` (Fortnite and Rocket League likewise).
+
+Mechanism, traced end to end:
+1. `storeManagers/legendary/library.ts:105` warns and returns early when `isEpicServiceOffline()` is
+   true.
+2. `isEpicServiceOffline()` (`utils.ts:203`) is a SERVICE-STATUS check, not an auth check. First line
+   is `if (!isOnline()) return true`. Its `catch` returns `false`, so a network error cannot produce
+   this warning — the only path to `true` before the HTTP call is the `isOnline()` guard.
+3. `isOnline()` is `status === 'online'` (`online_monitor.ts:144`). The monitor's initial status is
+   `'check-online'` (`online_monitor.ts:47`).
+4. Startup ordering, from one session's log:
+   ```
+   line 12  (12:35:04) [Connection]: Connectivity: check-online
+   line 20  (12:35:04) [Legendary]:  Refreshing Epic Games...
+   line 24  (12:35:04) [Backend]:    Epic is Offline right now, cannot update game list!
+   line 28  (12:35:04) [Connection]: Connectivity: online
+   ```
+The refresh runs inside the window where connectivity is still resolving, so `isOnline()` is false
+and the function returns "offline" **without ever querying Epic**.
+
+Impact: the Epic library is never refreshed from Epic's servers at startup. There is exactly ONE
+`Refreshing Epic Games` per session — nothing retries once connectivity settles. A newly purchased
+Epic title would not appear until the user forces a refresh. The `'check-online'` tri-state means
+`isOnline()` is false both when genuinely offline AND while merely undetermined, and this caller
+cannot tell those apart.
+
+`git blame` → `online_monitor.ts` at upstream Heroic `79f40b79b3` (2022-10-04). Pre-existing.
+
+Fix should either await the connectivity probe before the first library refresh, or have
+`isEpicServiceOffline()` treat `'check-online'` as "not yet known" rather than "offline" and retry.
+Note the same `isOnline()` guard is used by `downloadmanager/utils.ts:138` and `:426` and
+`launcher.ts:522`, so a change in its semantics has other callers.
+
+Blocks a strong result for criteria 20/21: with Epic never contacted, session validity can only be
+shown as token persistence, never as server acceptance — unlike Humble, where
+`fetched=7/7 ok=7 denied=0 expired=0` proves the server accepted the restored credentials.
+
+## D-35-19-14 — `gamelib.log` is truncated on every app start
+
+Found: criterion 20, 2026-08-30. Status: **observation, not necessarily a defect.**
+
+`~/Library/Logs/GameLib/gamelib.log` is overwritten rather than appended on each launch. A grep for
+an event from an earlier instance returns nothing even though it demonstrably occurred, and a count
+like "1 occurrence" means "1 this session", not "1 ever".
+
+Consequences for anyone running or re-running this gate: cross-session comparisons must use the
+per-session captures (`/tmp/gamelib-35-19-*/transcript.log`) rather than the single accumulated
+file, and an absence-based check against `gamelib.log` is only valid within one app session. This
+bit the criterion-15 first run, where an earlier instance's evidence was no longer present.
