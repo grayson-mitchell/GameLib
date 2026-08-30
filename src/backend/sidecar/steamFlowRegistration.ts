@@ -107,10 +107,15 @@ import { ipcMain } from '../platform'
 // depends on. Steam does NOT go through this path — see the `runner ===
 // 'steam'` branch in `handleLaunch` below for why.
 import { launchEventCallback } from '../launcher'
+// dispatchSteamLaunch: the single Steam launch dispatch shared with
+// `protocol.ts`'s `gamelib://` deep-link branch (GAP CYCLE 35-20,
+// D-35-19-06). Added to this module's curated import graph because it now
+// owns the Steam `runner === 'steam'` branch's launch call AND its
+// recent-games side effect — see that branch's own comment below.
+import { dispatchSteamLaunch } from '../storeManagers/steam/launchDispatch'
 import { HumbleLibrary } from '../humble/library'
 import { logInfo, logWarning, LogPrefix, RunnerToLogPrefixMap } from '../logger'
 import type { LaunchParams, Runner, StatusPromise } from 'common/types'
-import type LogWriter from '../logger/log_writer'
 
 /**
  * The `refreshLibrary` handler body, extracted to a named function (rather
@@ -340,9 +345,17 @@ async function handleLaunch(
   // `askForceUninstall` branch would abort a perfectly valid Steam launch.
   // That branch is live-proven working and is preserved on purpose, not by
   // omission.
+  //
+  // GAP CYCLE 35-20 (D-35-19-06, live-gate criteria 6/10): this branch used
+  // to call `game.launch()` directly and return, which meant a Steam launch
+  // through this handler wrote NO `games.recent` entry — the recent-games
+  // side effect every other runner gets from `launchEventCallback`.
+  // `dispatchSteamLaunch` (`storeManagers/steam/launchDispatch.ts`) is the
+  // single module that now owns both the launch call and that side effect,
+  // shared with `protocol.ts`'s deep-link branch so the two paths cannot
+  // drift again.
   if (runner === 'steam') {
-    const game = libraryManagerMap.steam.getGame(appName)
-    const launched = await game.launch(undefined as unknown as LogWriter)
+    const launched = await dispatchSteamLaunch(appName)
     return { status: launched ? 'done' : 'error' }
   }
 

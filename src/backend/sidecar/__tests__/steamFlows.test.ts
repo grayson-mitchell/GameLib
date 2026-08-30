@@ -87,6 +87,12 @@ jest.mock('../../launcher', () => ({
 // ── Imports (after mocks) ────────────────────────────────────────────────────────────────
 import { startSidecar, writeInvoke } from './helpers/sidecarHarness'
 import { getSteamLibraries } from 'backend/utils'
+import {
+  getRecentGames,
+  testingExportsRecentGames
+} from 'backend/recent_games/recent_games'
+import { steamLibraryStore } from 'backend/storeManagers/steam/electronStores'
+import type { GameInfo } from 'common/types'
 
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {
@@ -100,6 +106,13 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
     jest.mocked(getSteamLibraries).mockResolvedValue([])
     launchEventCallbackMock.mockReset()
     launchEventCallbackMock.mockResolvedValue({ status: 'done' })
+    // D-35-19-06 / Test D below: `addRecentGame` is real and unmocked in this suite (it is
+    // NOT store-manager-adjacent), and its store is the same disposable per-PID homedir the
+    // `os` mock above redirects. Cleared here so Test D observes ONLY its own launch.
+    testingExportsRecentGames.setRecentGames([])
+    // Same reasoning for the library cache Test D seeds: cleared here so no other test in this
+    // file (run before or after it) can observe a leaked '999003' library entry.
+    steamLibraryStore.set('games', [])
   })
 
   // Test A (the defect, RED before Task 1's fix): a launch invoke for runner='gog'
@@ -202,6 +215,52 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
       id: 'launch-steam-1',
       ok: true,
       result: { status: 'done' }
+    })
+  })
+
+  // Test D (Phase 35 plan 20, D-35-19-06, live-gate criterion 6): the cross-regression this
+  // gap-closure plan exists to fix. Before `dispatchSteamLaunch`, `handleLaunch`'s Steam branch
+  // called `game.launch()` and returned directly, writing NO `games.recent` entry — the exact
+  // A/B gap the live gate recorded (`store/config.json` written for a GOG launch, not for two
+  // Steam launches). `addRecentGame` and its store are real and unmocked here, so this proves
+  // the effect end-to-end through the production sidecar wiring, not through a mock.
+  it("Test D: a launch invoke for runner='steam' records exactly one recent-games entry with runner='steam' (D-35-19-06)", async () => {
+    // `SteamGame.launch()` (games.ts) dispatches purely off the numeric appId — it never reads
+    // the library cache, which is why Test C above needs no seeding. `getGameInfo()` (called by
+    // `dispatchSteamLaunch` for the `addRecentGame` side effect under test HERE) is different: on
+    // a cache miss it returns `{} as GameInfo` (see that method's own comment on the
+    // steam-library-22-games-missing fallback), which is exactly what produced this test's
+    // original RED (`{ appName: undefined, runner: undefined }`). Seeding `steamLibraryStore` —
+    // the same persisted cache `getGameInfo()` falls back to — mirrors a real installed title
+    // already known to the library, which is the only realistic precondition for a user to have
+    // requested this launch in the first place.
+    steamLibraryStore.set('games', [
+      {
+        app_name: '999003',
+        title: 'Test D Steam Game',
+        runner: 'steam',
+        is_installed: true
+      } as GameInfo
+    ])
+
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'launch-steam-recent-1', 'launch', [
+      { appName: '999003', runner: 'steam' }
+    ])
+    await flush()
+
+    const response = frames.find((frame) => frame.id === 'launch-steam-recent-1')
+    expect(response).toMatchObject({
+      id: 'launch-steam-recent-1',
+      ok: true,
+      result: { status: 'done' }
+    })
+
+    const recentGames = await getRecentGames()
+    expect(recentGames).toHaveLength(1)
+    expect(recentGames[0]).toMatchObject({
+      appName: '999003',
+      runner: 'steam'
     })
   })
 })
