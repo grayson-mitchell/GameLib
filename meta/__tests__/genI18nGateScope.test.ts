@@ -86,6 +86,27 @@ const FIXTURE_DIFF_LINES = [
  *   deliberate, hand-curated widening this comment warns against elsewhere;
  *   the ratchet exists so that widening decision can be made later without
  *   losing count/regression coverage in the meantime.
+ *
+ * 2026-08-30 (35-24, gap-closure of 35-VERIFICATION.md gap 4): six entries
+ * added when `pnpm gen-i18n-gate-scope` was re-run against current HEAD,
+ * taking i18nForkTouchedFiles.json from 199 -> 205. All six are Phase 35
+ * fork-divergent and UNMEASURED (no `scanScope` audit run against any of
+ * them in this plan) -- they are recorded as debt only, not folded into
+ * meta/i18nGateScope.json, per the widening caution above:
+ *
+ *   PathSelectionBox/index.tsx, WebviewControls/index.tsx and
+ *   DownloadManager/index.tsx -- touched by 35-16 (`feat(35-16): kill lazy
+ *   require('electron') in ipc.ts, retype Electron. sites`).
+ *
+ *   Library/components/CategoriesManager/index.tsx -- touched by the
+ *   34.11-quick-ua7 fix (WR-08, distinct collection-dialog open intents),
+ *   landed inside the Phase 35 window.
+ *
+ *   Library/components/InstallModal/defaultPlatform.ts -- added by quick
+ *   task 260824-u8b (default to the native Mac build for non-Steam titles).
+ *
+ *   Settings/components/UseDarkTrayIcon.tsx -- touched by 35-06
+ *   (`fix(35-06): platform-gate UseDarkTrayIcon to Windows/Linux`).
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/components/UI/ActionIcons/index.tsx',
@@ -93,9 +114,11 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/components/UI/DialogHandler/index.tsx',
   'src/frontend/components/UI/LanguageSelector/index.tsx',
   'src/frontend/components/UI/NavShell/components/FilterFacetGroup/selectionCount.ts',
+  'src/frontend/components/UI/PathSelectionBox/index.tsx',
   'src/frontend/components/UI/ProgressDialog/index.tsx',
   'src/frontend/components/UI/SliderField/index.tsx',
   'src/frontend/components/UI/SteamGridDBPicker/index.tsx',
+  'src/frontend/components/UI/WebviewControls/index.tsx',
   'src/frontend/components/UI/Winetricks/index.tsx',
   'src/frontend/helpers/declaredUnavailable.ts',
   'src/frontend/helpers/gamepad.ts',
@@ -103,9 +126,12 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/screens/ConsoleMode/components/ConfirmDialog/index.tsx',
   'src/frontend/screens/ConsoleMode/controller.ts',
   'src/frontend/screens/ConsoleMode/selectors.ts',
+  'src/frontend/screens/DownloadManager/index.tsx',
   'src/frontend/screens/Game/GamePage/components/WikiInfoEmptyState.tsx',
+  'src/frontend/screens/Library/components/CategoriesManager/index.tsx',
   'src/frontend/screens/Library/components/FilterChipRow/chipLabels.ts',
   'src/frontend/screens/Library/components/GamesList/index.tsx',
+  'src/frontend/screens/Library/components/InstallModal/defaultPlatform.ts',
   'src/frontend/screens/Library/components/LibraryHeader/gameCount.ts',
   'src/frontend/screens/Library/engineWiring.ts',
   'src/frontend/screens/Library/facetLabels.ts',
@@ -116,6 +142,7 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/screens/Settings/components/GamePadDelayRepeat.tsx',
   'src/frontend/screens/Settings/components/LauncherArgs.tsx',
   'src/frontend/screens/Settings/components/SteamGridDbApiKey.tsx',
+  'src/frontend/screens/Settings/components/UseDarkTrayIcon.tsx',
   'src/frontend/screens/Settings/components/UseFramelessWindow.tsx',
   'src/frontend/screens/Settings/sections/AdvancedSettings/index.tsx',
   'src/frontend/screens/Settings/sections/GamesSettings/index.tsx',
@@ -557,11 +584,13 @@ describe('--rewrite-scope guard', () => {
   }
 
   /**
-   * The snapshot a real regeneration would produce TODAY: the 185 files of
-   * the committed fork-touched artifact (34.15-09: 178 -> 180, this phase's
-   * own `SteamSyncNotice/index.tsx` and `librarySyncIndicator.ts`). Built
-   * from the committed artifacts rather than invented numbers, so the specs
-   * below assert the REAL 162 -> 185 delta this task exists to prevent.
+   * The snapshot a real regeneration would produce TODAY: the 205 files of
+   * the committed fork-touched artifact (35-24: 199 -> 205, six files this
+   * phase touched -- `PathSelectionBox/index.tsx`, `WebviewControls/index.tsx`,
+   * `DownloadManager/index.tsx`, `CategoriesManager/index.tsx`,
+   * `InstallModal/defaultPlatform.ts` and `UseDarkTrayIcon.tsx`). Built from
+   * the committed artifacts rather than invented numbers, so the specs below
+   * assert the REAL 163 -> 205 delta this task exists to prevent.
    */
   function freshSnapshot(): ScopeSnapshot {
     return {
@@ -586,10 +615,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 163-file hand-curated snapshot and the fresh snapshot is the REAL 199', () => {
+  it('A0 fixture sanity: the seeded scope is the REAL 163-file hand-curated snapshot and the fresh snapshot is the REAL 205', () => {
     expect(scopeSnapshot.files.length).toBe(163)
-    expect(forkTouchedSnapshot.files.length).toBe(199)
-    expect(freshSnapshot().files.length).toBe(199)
+    expect(forkTouchedSnapshot.files.length).toBe(205)
+    expect(freshSnapshot().files.length).toBe(205)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -615,7 +644,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 163 -> 199 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 163 -> 205 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -638,7 +667,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 199', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 205', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -651,12 +680,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(199)
+    expect(rewritten.files.length).toBe(205)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 199 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 205 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -669,7 +698,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(199)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(205)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
