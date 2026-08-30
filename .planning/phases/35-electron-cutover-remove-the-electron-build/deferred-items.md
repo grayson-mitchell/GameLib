@@ -2029,3 +2029,11 @@ should decide whether to bump `completed_plans` 393 -> 396 (recovering the three
 increments) or leave it as an accepted undercount, and should re-derive the true total plan
 count from disk (`ls .planning/phases/*/*-SUMMARY.md | wc -l`) rather than trust either number
 blind — this is exactly the `status-doc-can-lag-two-gate-runs-undetected` shape from MEMORY.md.
+
+**Item 5 — plan 35-27: `decompressPool.test.ts`'s native-LZMA-decode assertions still fail on
+this machine, same as Item 3.** Full `pnpm test --selectProjects Backend Frontend` run at 35-27's
+verification step: identical 3 failures, same file, same `lzmaDecoderKind()` expected `'native'`
+received `'pure-js'` shape. File untouched by 35-27 (`git log --oneline -1` on it points to an
+unrelated commit `f3f63fd72`, not this plan). Confirms Item 3's disposition still holds two
+gap-closure plans later — logged per the scope-boundary rule rather than fixed, and rather than
+re-litigated as a new item.

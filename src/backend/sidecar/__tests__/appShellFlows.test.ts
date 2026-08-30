@@ -617,6 +617,198 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     ])
   })
 
+  // ── REQ-35-20/D-35-08-02 sleep-assertion kind split (Phase 35 gap-closure 35-27) ──────────
+  //
+  // These three tests drive the REAL, UNCHANGED `lock`/`unlock` handlers above through the
+  // exact IPC send sequences the RENDERER sends -- both the pre-27 sequence (verified against
+  // `git show HEAD:src/frontend/state/GlobalState.tsx`, i.e. this plan's own parent commit,
+  // rather than a hand-waved reconstruction) and the post-27 sequence
+  // (`reconcileSleepAssertionCalls` in `GlobalState.tsx`). The backend handlers themselves did
+  // NOT change -- they already tracked `powerId`/`displaySleepId` independently; the defect was
+  // entirely in WHEN and with WHAT argument the renderer called them, so proving it here means
+  // proving what each renderer SHAPE actually sends, not swapping backend code.
+  //
+  // `powerId`/`displaySleepId` are module-scope in `appShellFlowRegistration.ts` and persist
+  // across every test in this file (see this suite's own header). Each test below therefore
+  // ends by fully unlocking, the same discipline the pre-existing lock/unlock test above uses.
+  describe('REQ-35-20/D-35-08-02 sleep-assertion kind split', () => {
+    /** Gives each `wake_lock_start` a unique, ascending id so a later `stop` can be matched to
+     * the exact `start` it is meant to release -- a single shared id (as the pre-existing test
+     * above uses) cannot distinguish "released the system id" from "released the display id". */
+    function mockAscendingWakeLockIds(startAt: number) {
+      let nextId = startAt
+      mockRequestRustInvoke.mockReset().mockImplementation((channel: string) => {
+        if (channel === RUST_WAKE_LOCK_START) {
+          nextId += 1
+          return Promise.resolve(nextId)
+        }
+        return Promise.resolve(null)
+      })
+    }
+
+    it('case (a) RED->GREEN: a solo game LAUNCH with no download must not take a download-labelled system assertion', async () => {
+      const { input } = startSidecar()
+      mockAscendingWakeLockIds(9000)
+
+      // RED -- this is EXACTLY what the pre-27 `componentDidUpdate` sent for a solo 'launching'
+      // game with no download active: `allowedPendingOps` counted 'launching' into
+      // `pendingOps` (so the `if (pendingOps)` branch fired), but `playing` was computed ONLY
+      // from `status === 'playing'`, so it was still `false` -- and `window.api.lock(false)`,
+      // the DOWNLOAD branch, is what actually went out over the wire.
+      writeSend(input, 'case-a-red-1', 'lock', [false])
+      await flush()
+      expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_WAKE_LOCK_START, [
+        'prevent-app-suspension'
+      ]) // RED: a solo game launch just took a download-labelled system assertion.
+
+      writeSend(input, 'case-a-red-cleanup', 'unlock', [])
+      await flush()
+      mockRequestRustInvoke.mockClear()
+
+      // GREEN -- `classifySleepAssertionKind('launching') === 'display'`, so
+      // `reconcileSleepAssertionCalls` sends `lock(true)` for this same real-world state, never
+      // `lock(false)`.
+      writeSend(input, 'case-a-green-1', 'lock', [true])
+      await flush()
+      expect(mockRequestRustInvoke).not.toHaveBeenCalledWith(
+        RUST_WAKE_LOCK_START,
+        ['prevent-app-suspension']
+      )
+      expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_WAKE_LOCK_START, [
+        'prevent-display-sleep'
+      ])
+
+      writeSend(input, 'case-a-green-cleanup', 'unlock', [])
+      await flush()
+    })
+
+    it('case (b) RED->GREEN: the packaged 12:06/12:08/12:09 timeline -- download ends while the game keeps playing', async () => {
+      const { input } = startSidecar()
+      mockAscendingWakeLockIds(9100)
+
+      // RED half -- the pre-27 sequence for this exact real-world timeline:
+      //   12:06:45 download starts   -> pendingOps=1 (installing), playing=false -> lock(false)
+      //   12:08:04 game launches     -> pendingOps=2, playing STILL false ('launching' != status
+      //                                 === 'playing') -> lock(false) again (idempotent)
+      //   (game flips to 'playing')  -> pendingOps=2, playing=true -> lock(true)
+      //   12:09:33 download ENDS     -> pendingOps=1 (only 'playing' left), playing=true ->
+      //                                 lock(true) again -- `unlock()` is NEVER reached here,
+      //                                 because `pendingOps` never hit 0. This is the exact
+      //                                 mechanism `D-35-08-02` names.
+      writeSend(input, 'case-b-red-download-start', 'lock', [false])
+      await flush()
+      writeSend(input, 'case-b-red-launch', 'lock', [false])
+      await flush()
+      writeSend(input, 'case-b-red-playing', 'lock', [true])
+      await flush()
+      mockRequestRustInvoke.mockClear()
+
+      writeSend(input, 'case-b-red-download-end', 'lock', [true])
+      await flush()
+      // RED: the download ended, but nothing was released -- the system assertion outlives it.
+      expect(mockRequestRustInvoke).not.toHaveBeenCalledWith(
+        RUST_WAKE_LOCK_STOP,
+        expect.anything()
+      )
+
+      // Only the game quitting (pendingOps -> 0) finally releases anything, ~108s later on the
+      // packaged gate -- reproduced here as the RED sequence's own closing step.
+      writeSend(input, 'case-b-red-quit', 'unlock', [])
+      await flush()
+      const redStopCalls = mockRequestRustInvoke.mock.calls.filter(
+        ([channel]) => channel === RUST_WAKE_LOCK_STOP
+      )
+      expect(redStopCalls).toHaveLength(2) // both released, but only at QUIT, not at download-end
+
+      // GREEN half -- the post-27 sequence (`reconcileSleepAssertionCalls`) for the SAME
+      // real-world timeline. The mid-sequence 'launching'->'playing' flip is a no-op kind-wise
+      // (both classify as 'display'), so it is omitted here exactly as `reconcileSleepAssertionCalls`
+      // would omit any call for an unchanged kind-state.
+      mockRequestRustInvoke.mockClear()
+      writeSend(input, 'case-b-green-download-start', 'lock', [false])
+      await flush()
+      writeSend(input, 'case-b-green-launch-system', 'lock', [false]) // system: unchanged, re-asserted
+      await flush()
+      writeSend(input, 'case-b-green-launch-display', 'lock', [true]) // display: freshly turning on
+      await flush()
+      mockRequestRustInvoke.mockClear()
+
+      // download ends, game still playing: systemKindJustEnded -> unlock() then lock(true)
+      // (display is still wanted, system is not).
+      writeSend(input, 'case-b-green-download-end-unlock', 'unlock', [])
+      await flush()
+      writeSend(input, 'case-b-green-download-end-relock-display', 'lock', [
+        true
+      ])
+      await flush()
+
+      // GREEN: the system assertion is released AT the download's end -- not deferred to quit.
+      const greenStopCalls = mockRequestRustInvoke.mock.calls.filter(
+        ([channel]) => channel === RUST_WAKE_LOCK_STOP
+      )
+      expect(greenStopCalls.length).toBeGreaterThanOrEqual(1)
+      // And display continuity is maintained: a fresh 'prevent-display-sleep' start follows the
+      // stop, rather than the game being left unprotected.
+      const startCallsAfterDownloadEnd = mockRequestRustInvoke.mock.calls.filter(
+        ([channel, args]) =>
+          channel === RUST_WAKE_LOCK_START &&
+          (args as unknown[])[0] === 'prevent-display-sleep'
+      )
+      expect(startCallsAfterDownloadEnd.length).toBeGreaterThanOrEqual(1)
+
+      writeSend(input, 'case-b-green-quit', 'unlock', [])
+      await flush()
+    })
+
+    it('case (d) inverse over-correction: the game quitting must not permanently drop a concurrently-live download\'s assertion', async () => {
+      const { input } = startSidecar()
+      mockAscendingWakeLockIds(9200)
+
+      // Set up: download active (system) + game playing (display), both locked.
+      writeSend(input, 'case-d-download-start', 'lock', [false])
+      await flush()
+      writeSend(input, 'case-d-game-system-noop', 'lock', [false])
+      await flush()
+      writeSend(input, 'case-d-game-display', 'lock', [true])
+      await flush()
+      mockRequestRustInvoke.mockClear()
+
+      // Game quits, download still running: displayKindJustEnded -> unlock() then lock(false)
+      // (system is still wanted, display is not).
+      writeSend(input, 'case-d-game-quit-unlock', 'unlock', [])
+      await flush()
+      writeSend(input, 'case-d-game-quit-relock-system', 'lock', [false])
+      await flush()
+
+      // The download's protection must NOT be left absent: a fresh 'prevent-app-suspension'
+      // start follows the unlock's stop, so the assertion is re-acquired rather than dropped.
+      const systemStopCalls = mockRequestRustInvoke.mock.calls.filter(
+        ([channel]) => channel === RUST_WAKE_LOCK_STOP
+      )
+      expect(systemStopCalls.length).toBeGreaterThanOrEqual(1)
+      const systemRestartCalls = mockRequestRustInvoke.mock.calls.filter(
+        ([channel, args]) =>
+          channel === RUST_WAKE_LOCK_START &&
+          (args as unknown[])[0] === 'prevent-app-suspension'
+      )
+      expect(systemRestartCalls.length).toBeGreaterThanOrEqual(1)
+      // And the restart happened AFTER the stop, not before -- i.e. it is a genuine
+      // re-acquisition, not evidence the original assertion was simply left alone.
+      const stopIndex = mockRequestRustInvoke.mock.calls.findIndex(
+        ([channel]) => channel === RUST_WAKE_LOCK_STOP
+      )
+      const restartIndex = mockRequestRustInvoke.mock.calls.findIndex(
+        ([channel, args]) =>
+          channel === RUST_WAKE_LOCK_START &&
+          (args as unknown[])[0] === 'prevent-app-suspension'
+      )
+      expect(restartIndex).toBeGreaterThan(stopIndex)
+
+      writeSend(input, 'case-d-cleanup', 'unlock', [])
+      await flush()
+    })
+  })
+
   it('REQ-34.1-09/D-13 setTitleBarOverlay (send) logs a D-13-tagged warning naming the channel, never throws', async () => {
     const { input } = startSidecar()
     writeSend(input, 'title-bar-overlay-1', 'setTitleBarOverlay', [
