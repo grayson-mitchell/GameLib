@@ -95,7 +95,7 @@ findings:
   warning: 10
   info: 3
   total: 17
-status: issues_found
+status: issues_resolved
 ---
 
 # Phase 35: Code Review Report
@@ -146,6 +146,8 @@ re-reported here. All findings below are additional.
 ## Critical Issues
 
 ### CR-01: `open_external` accepts any renderer-supplied URL, bypassing the `opener` plugin scope
+
+> **RESOLVED — plan `35-21`.** `OPEN_EXTERNAL_ALLOWED_SCHEMES` at `src-tauri/src/main.rs:1207` now gates the command, checked at `:1220`. `steam` is in the list and is load-bearing for Steam launches; live-gate criterion 4 re-verified `steam://rungameid/` still works after the narrowing. Verified in source 2026-08-31.
 
 **File:** `src-tauri/src/main.rs:1198-1207`, registered at `src-tauri/src/main.rs:8190-8195`
 **Related:** `src-tauri/capabilities/default.json:6-8`, `src-tauri/tauri.conf.json:12-27`
@@ -217,6 +219,8 @@ Add a `#[cfg(test)] mod tests` case per rejected scheme (`file`, `smb`, `javascr
 
 ### CR-02: `frontendReady` is a repeating listener, so the ported `initQueue(true)` can run concurrently with itself
 
+> **RESOLVED — plan `35-21`.** Module-scoped once-guard `frontendReadyBootWorkDone` at `src/backend/sidecar/appShellFlowRegistration.ts:202`, set before the `setTimeout` is scheduled rather than inside its callback, so two synchronous deliveries in one tick cannot both observe `false`. Verified in source 2026-08-31.
+
 **File:** `src/backend/sidecar/appShellFlowRegistration.ts:350` (registration) and `:421-424`
 (the ported `setTimeout(... initQueue(true) ..., 5000)`)
 **Related:** `src/backend/downloadmanager/downloadqueue.ts:116-174`
@@ -280,6 +284,8 @@ assert `initQueue` is still called once.
 
 ### CR-03: `window.platform` can never be `'win32'`, so every Windows-only frontend branch is wrong on the shipped NSIS build
 
+> **RESOLVED — plan `35-22`.** Three-arm derivation at `src/preload/tauriAttach.ts:77`; the missing `win32` case is added and `linux` remains the final fallback. Verified in source 2026-08-31.
+
 **File:** `src/preload/tauriAttach.ts:73`
 **Related:** `src/preload/index.ts:25-38` (the Windows shim that no longer runs),
 `src/frontend/state/GlobalState.tsx:312`
@@ -336,6 +342,8 @@ state in its header that it is unreachable rather than describing it as somethin
 ---
 
 ### CR-04: a failed Epic cookie clear is reported only to `console.error`, which does not reach `gamelib.log`
+
+> **RESOLVED — plan `35-23`.** The failure now surfaces through the logger and the UI (`Login/components/Runner`, `legendary/user.ts` `FATAL_WIPE_STEP`). **CAVEAT, do not read as fully discharged:** the per-host cookie CENSUS added alongside it is INERT — every verdict is pinned at `UNSUPPORTED_OR_ERROR`, so both consuming branches are unreachable. See `D-35-29-01` in `deferred-items.md`. The reporting fix landed; the evidence capability did not.
 
 **File:** `src/backend/storeManagers/legendary/user.ts:238-243, 315-349`
 **Related:** `src/frontend/state/GlobalState.tsx:671-694`,

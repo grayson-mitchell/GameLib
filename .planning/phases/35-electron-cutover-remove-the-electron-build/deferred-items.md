@@ -2147,6 +2147,61 @@ pristine-window fallback the clear already has, so both sides resolve against th
 fix must be verified by a live logout showing a `verdict` other than `UNSUPPORTED_OR_ERROR`; a
 passing unit test must not be accepted as evidence.
 
+### CORRECTION 2026-08-31 — the cause above is UNDERSTATED, and the consequence is worse
+
+Raised by the phase re-verification, then confirmed in source. **Both corrections matter.**
+
+**1. The cause is not "logout has no login window". It is structural and permanent.** The census
+resolves `app.get_webview_window(label)` (`src-tauri/src/main.rs:6340`). That same file already
+documents, at **`main.rs:3748-3751`**, that Epic's login window is **ALWAYS the pristine,
+webview-less `WindowBuilder` window**, so `get_webview_window(label)` "structurally can never find
+it, **for ANY label**, fresh or stale." The census could therefore never have worked for Epic under
+any circumstances — not merely at logout. The CLEAR path was given a label-independent fallback
+(`clear_default_data_store_cookies_for_domain`) for exactly this documented reason; the census path
+was not. **The knowledge needed to avoid this defect was already written down in the same file.**
+
+**2. Both consuming branches are unreachable, so `35-23` added NO working evidence capability.** In
+`legendary/user.ts`, `brokenHosts` filters on `domainVerdict(r.before) === 'SUPPORTED_NONEMPTY'`
+(line 365) and the non-fatal branch requires `'SUPPORTED_BUT_EMPTY'` (line 376). Every verdict is
+pinned at `UNSUPPORTED_OR_ERROR`, so **neither branch can ever be entered**. The broken-per-host
+detector — which *is* the capability `D-35-19-15` asked for — is **dead code on the only path it
+serves**. The plan did not deliver a weakened version of the capability; it delivered none.
+
+**3. NOT DEFERRABLE to "when the embedded browser returns."** No later phase owns that work
+(34.4.1 is earlier). Nothing currently scheduled will make this code live.
+
+Fix direction is unchanged but its urgency is not: give the census read the same label-independent
+fallback the clear already has. **Verification must be a live logout showing a verdict other than
+`UNSUPPORTED_OR_ERROR`.** A passing unit test must not be accepted — the existing tests pass today
+against a census that has never once produced evidence.
+
+## D-35-29-04 — live-gate criterion 5's `Sink:` names a file its call sites cannot write to
+
+Found: criterion 5 re-run, 2026-08-31. Status: **OPEN — contract defect, not a code defect.**
+Ledgered here because it was originally recorded only in `35-LIVE-GATE.md`'s body, which the
+re-verification flagged as an unledgered item.
+
+Criterion 5's contract names `gamelib-shell.log` as its `Sink:` and makes the ABSENCE of a
+`tray About` WARN line its positive evidence. Both failure-path warnings are
+`eprintln!("[shell] WARN: tray About: ...")` at `src-tauri/src/main.rs:725` and `:730` — **stderr
+only**, never `shell_diag()` — so they can never reach that file. The absence-check was therefore
+unfalsifiable as written.
+
+This also resolves the ORIGINAL run's open question in the opposite direction from its suspicion:
+`shell_diag()` **does** reach the file in packaged builds (this session's deep-link runs appended to
+it). These two specific call sites simply do not use it.
+
+**Worked around, not fixed:** the re-run launched the packaged binary from a terminal with stderr
+captured, giving a real positive control (10 `[shell]` lines at boot, rising 10 -> 11 across the
+measurement window) against which zero `tray About` warnings is meaningful evidence. Criterion 5
+scored PASS on both halves.
+
+**Fix:** either route those two `eprintln!` calls through `shell_diag()`, or amend the contract's
+`Sink:` to say "stderr of a terminal-launched packaged build" and keep the positive-control step.
+Repo-wide the split is uneven — 15 `shell_diag(` call sites against 55 `eprintln!("[shell]"` sites —
+so any absence-based contract naming that log file is suspect until its specific call site is
+checked.
+
 ## D-35-29-02 — four Epic auth cookies survive logout on the PRIMARY domain (inert for re-auth)
 
 Found: criterion 21 re-run, 2026-08-31. Status: **OPEN — cause NOT established; two competing
