@@ -18,9 +18,17 @@
  *     the matched-delta sum alone, so a genuinely empty Epic jar is `ok` and
  *     a jar proven populated with a zero delta is `fatal`.
  *  3. `cookiesForDomain` (NEVER `cookies` — the wrong direction for a fixed
- *     apex, spike 016) is called exactly twice per host — once before the
- *     clear, once after — with an EMPTY name filter, mirroring
- *     `humble/user.ts`'s census exactly.
+ *     apex, spike 016) is called exactly THREE times per host — before the
+ *     clear, after the clear, and once more in a final verification sweep taken
+ *     after every mutation in the step is done — always with an EMPTY name
+ *     filter. The first two mirror `humble/user.ts`'s census exactly. The third
+ *     was added by the debug session `epic-cookie-clear-read-divergence`, which
+ *     measured the before/after pair reporting `matched=0` on all five hosts
+ *     while the jar three seconds later still held six live Epic records: a
+ *     mid-sweep read can be honestly zero and still say nothing about the state
+ *     the logout leaves behind. Only the third read can satisfy REQ-35-07's
+ *     literal wording, "does not report success unless a post-clear read
+ *     confirms it".
  *  4. A rejecting census read is non-fatal evidence, never a blocker: the
  *     clear is the user-visible operation; the census is evidence about it.
  *  5. Only counts, verdict enum values and domain names ever reach a log
@@ -110,6 +118,34 @@ jest.mock('../../../humble/userAgent', () => ({
     'Mozilla/5.0 (Test) Chrome/100.0 Safari/537.36'
 }))
 
+// `clearEpicCookies` takes a different route per platform (debug session
+// `epic-cookie-clear-read-divergence`): macOS opens NO window and passes a
+// deliberately unresolvable label, because that is the precondition the Rust
+// arms' `WKWebsiteDataStore::defaultDataStore()` fallback requires; every other
+// platform still needs a real window and gets one, pointed at a non-resolving
+// RFC 2606 host rather than Epic.
+//
+// Mocked rather than read from the real `process.platform` so BOTH branches are
+// exercised on every runner. A test that silently checks only the macOS branch
+// on a developer's Mac and only the non-macOS branch in Linux CI would leave
+// each branch unproven exactly where it matters.
+//
+// `Object.defineProperty` over a spread copy, NOT `{ ...actual, get isMac() }`.
+// The object-literal form silently does not work here: TypeScript downlevels
+// object spread through its `__assign` helper, which COPIES property VALUES —
+// it reads the getter once, at factory time, and installs the result as a plain
+// data property. `mockIsMac` then has no effect and every test quietly measures
+// the REAL `process.platform` instead. That shape was written first and was
+// caught only because the off-macOS test failed loudly on a Mac; the macOS test
+// beside it passed the whole time, for the wrong reason.
+let mockIsMac = true
+jest.mock('backend/constants/environment', () => {
+  const actual = jest.requireActual('backend/constants/environment')
+  return Object.defineProperty({ ...actual }, 'isMac', {
+    get: () => mockIsMac
+  })
+})
+
 import { LegendaryUser } from '../user'
 import { logError, logInfo, logWarning } from 'backend/logger'
 import {
@@ -144,7 +180,10 @@ const FORBIDDEN_LOG_SUBSTRINGS = [
   'synthetic-not-a-real-token'
 ]
 
-function cookieRead(total: number, matchedCount = total): LoginWindowCookieRead {
+function cookieRead(
+  total: number,
+  matchedCount = total
+): LoginWindowCookieRead {
   return {
     total,
     matched: Array.from({ length: matchedCount }, (_, i) => ({
@@ -206,6 +245,7 @@ beforeEach(() => {
   mockClearHostResolverCache.mockResolvedValue(undefined)
   mockClearData.mockResolvedValue(undefined)
   mockRunRunnerCommand.mockResolvedValue({ stdout: '', stderr: '' })
+  mockIsMac = true
   setLoginWindowSeam(null)
 })
 
@@ -214,7 +254,7 @@ afterEach(() => {
 })
 
 describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
-  it('(a) calls cookiesForDomain exactly 2 * EPIC_COOKIE_HOSTS.length times, with an EMPTY name filter', async () => {
+  it('(a) calls cookiesForDomain exactly 3 * EPIC_COOKIE_HOSTS.length times (before + after + final verification), with an EMPTY name filter', async () => {
     // A healthy nonzero clear on every host — this test's subject is the
     // CALL COUNT/SHAPE of the census reads, not the fatality decision
     // (covered separately under Task 2), so the fixture stays clear of it.
@@ -223,14 +263,30 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
 
     await LegendaryUser.logout()
 
+    // THREE per host, not two (debug session
+    // `epic-cookie-clear-read-divergence`). The before/after pair is taken
+    // mid-sweep, while later hosts are still uncleared and — before that
+    // session's fix — while the step's own hidden window was still loading
+    // Epic's live login page and re-seeding the jar behind it. Every one of
+    // those reads can be truthfully zero while the jar still ends up holding
+    // Epic cookies, which is exactly what was measured live: `matched=0` on
+    // all five hosts, and six live Epic records in the jar three seconds
+    // later. The third read is the sweep taken AFTER every mutation, and it
+    // is the only one whose zero means "the jar is clean" rather than "the jar
+    // was clean at one moment during a sequence that was still running".
+    //
     // Derived from the array's OWN length, never hardcoded — a future
     // addition/removal of an Epic-owned host must not require touching this
     // assertion.
     expect(seam.cookiesForDomain).toHaveBeenCalledTimes(
-      2 * EPIC_HOSTS_UNDER_TEST.length
+      3 * EPIC_HOSTS_UNDER_TEST.length
     )
+    // ONE label for the whole sweep, asserted as an invariant rather than as a
+    // literal: the literal differs per platform now, but "a second label would
+    // mean a second window" is the property this has always been protecting.
+    const labels = new Set(seam.cookiesForDomain.mock.calls.map((c) => c[0]))
+    expect(labels.size).toBe(1)
     for (const call of seam.cookiesForDomain.mock.calls) {
-      expect(call[0]).toBe('window-label-1')
       expect(call[2]).toEqual([])
     }
     // Every approved host was queried (membership, not just count).
@@ -296,8 +352,20 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
   })
 
   it('(d) no cookie name or value ever reaches a log sink (sentinel-cookie check)', async () => {
+    // The sweep's before/after reads return populated, matched cookies (that
+    // is what makes the sentinel meaningful); the final verification sweep —
+    // the last EPIC_HOSTS_UNDER_TEST.length calls — returns an empty jar, so
+    // this test exercises the CLEAN path and stays about log hygiene rather
+    // than about the fatality rule. Test (e) below owns the dirty path.
+    let readCall = 0
     const seam = makeMockSeam({
-      cookiesForDomain: jest.fn().mockResolvedValue(cookieRead(4, 2)),
+      cookiesForDomain: jest
+        .fn()
+        .mockImplementation(async () =>
+          ++readCall <= 2 * EPIC_HOSTS_UNDER_TEST.length
+            ? cookieRead(4, 2)
+            : cookieRead(0, 0)
+        ),
       clearCookies: jest.fn().mockResolvedValue(2)
     })
     setLoginWindowSeam(seam)
@@ -313,6 +381,114 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
     // sentinel: if the census ever logged raw cookie objects instead of
     // integers, this name would leak.
     expect(logged).not.toContain('sentinel-cookie-')
+  })
+
+  /**
+   * (e)–(h) are the regression guard for the debug session
+   * `epic-cookie-clear-read-divergence`.
+   *
+   * What was measured live, twice (a dev jar and a packaged jar): the product
+   * logged `after(total=54, matched=0)` on every one of the five Epic hosts and
+   * summarised "Epic cookie clear removed 7 cookie(s)", and an index-walking
+   * parse of the same jar three seconds later found six live Epic-owned
+   * records. Nothing lied about the moment it measured. The step's own hidden
+   * window — opened at Epic's LIVE login page purely to obtain a handle the
+   * macOS code path then never used — was re-seeding the jar while the loop
+   * ran and for a second after it finished, and the origin-scoped storage step
+   * re-seeded it again afterwards with nothing left to sweep.
+   *
+   * These four tests pin the three properties that fix rests on: the residual
+   * sweep exists and is fatal, a clean jar still resolves, and neither
+   * platform's branch opens a window at Epic.
+   */
+  it('(e) a jar that still holds Epic cookies AFTER every clear is FATAL, even when every per-host delta was healthy and every mid-sweep read said matched=0', async () => {
+    // The exact measured shape. Each host's mid-sweep `after` read is honestly
+    // zero, and each host's clear reports a healthy nonzero delta — this is a
+    // run that, before the fix, reported unqualified success. The jar is dirty
+    // by the time everything has finished, and only the final sweep can see it.
+    let readCall = 0
+    const seam = makeMockSeam({
+      cookiesForDomain: jest.fn().mockImplementation(async () => {
+        readCall += 1
+        const isMidSweep = readCall <= 2 * EPIC_HOSTS_UNDER_TEST.length
+        // Mid-sweep: jar alive (total=9) but nothing matched for this host.
+        // Final sweep: one Epic cookie per host has reappeared.
+        return isMidSweep ? cookieRead(9, 0) : cookieRead(9, 1)
+      }),
+      clearCookies: jest.fn().mockResolvedValue(3)
+    })
+    setLoginWindowSeam(seam)
+
+    await expect(LegendaryUser.logout()).rejects.toThrow(
+      /post-clear verification found 5 Epic-owned cookie\(s\) still present/
+    )
+  })
+
+  it('(f) the fatal residual is reported per host and names only domains and counts', async () => {
+    let readCall = 0
+    const seam = makeMockSeam({
+      cookiesForDomain: jest
+        .fn()
+        .mockImplementation(async () =>
+          ++readCall <= 2 * EPIC_HOSTS_UNDER_TEST.length
+            ? cookieRead(9, 0)
+            : cookieRead(9, 1)
+        ),
+      clearCookies: jest.fn().mockResolvedValue(3)
+    })
+    setLoginWindowSeam(seam)
+
+    await expect(LegendaryUser.logout()).rejects.toThrow()
+
+    const logged = allLoggedText()
+    expect(logged).toContain('post-clear verification')
+    for (const host of EPIC_HOSTS_UNDER_TEST) {
+      expect(logged).toContain(`${host}=1`)
+    }
+    // The new failure path is held to the same T-35-04 bar as every other line
+    // this file emits — a residual report must not become the leak.
+    for (const forbidden of FORBIDDEN_LOG_SUBSTRINGS) {
+      expect(logged).not.toContain(forbidden)
+    }
+    expect(logged).not.toContain('sentinel-cookie-')
+  })
+
+  it('(g) on macOS the cookie step opens NO window and passes a label that cannot resolve to one', async () => {
+    mockIsMac = true
+    const seam = makeMockSeam({ clearCookies: jest.fn().mockResolvedValue(1) })
+    setLoginWindowSeam(seam)
+
+    await LegendaryUser.logout()
+
+    // No window at all — not merely "not Epic's login page". The window was
+    // never consulted by the macOS Rust arms (they gate their default-data-store
+    // path on `existing_window.is_none()`), so opening one bought nothing and
+    // cost a live page load against the service being logged out of.
+    expect(seam.open).not.toHaveBeenCalled()
+    expect(seam.close).not.toHaveBeenCalled()
+    const labels = new Set(seam.clearCookies.mock.calls.map((c) => c[0]))
+    expect(labels.size).toBe(1)
+    expect([...labels][0]).toBe('epic-cookie-clear-no-window')
+  })
+
+  it('(h) off macOS the cookie step still opens exactly one window, and it is NOT pointed at Epic', async () => {
+    mockIsMac = false
+    const seam = makeMockSeam({ clearCookies: jest.fn().mockResolvedValue(1) })
+    setLoginWindowSeam(seam)
+
+    await LegendaryUser.logout()
+
+    expect(seam.open).toHaveBeenCalledTimes(1)
+    expect(seam.close).toHaveBeenCalledTimes(1)
+    // The load-bearing assertion, and the one that would have caught the
+    // original defect: whatever url this window gets, it must not reach Epic.
+    const openedUrl = seam.open.mock.calls[0][0] as string
+    expect(openedUrl).not.toContain('epicgames.com')
+    expect(openedUrl.startsWith('https://')).toBe(true)
+    expect(seam.open).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ visible: false })
+    )
   })
 })
 

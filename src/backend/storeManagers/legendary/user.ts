@@ -9,6 +9,7 @@ import { libraryManagerMap } from '..'
 import { LegendaryCommand } from './commands'
 import { NonEmptyString } from './commands/base'
 import { configStore } from 'backend/constants/key_value_stores'
+import { isMac } from 'backend/constants/environment'
 import { legendaryUserInfo } from './constants'
 import {
   getLoginWindowSeam,
@@ -17,10 +18,59 @@ import {
 } from '../../humble/loginWindowSeam'
 import { standardBrowserUserAgent } from '../../humble/userAgent'
 
-// Opened HIDDEN purely to obtain a window handle whose jar can be cleared —
-// no navigation/login flow ever runs against this url. Source:
+// The real Epic login page. `clearEpicStorage` MUST load it: localStorage,
+// sessionStorage, IndexedDB and Cache Storage are ORIGIN-scoped and are only
+// reachable from a document actually served by that origin. Source:
 // frontend/screens/WebView/loginRoutes.ts:45 (`EPIC_LOGIN_URL`).
+//
+// NOTE — this constant previously carried the comment "opened HIDDEN purely to
+// obtain a window handle whose jar can be cleared — no navigation/login flow
+// ever runs against this url", and `clearEpicCookies` opened a window here on
+// that basis. That premise was FALSE and was the root cause of
+// `.planning/debug/resolved/epic-cookie-clear-read-divergence.md`: building a
+// WKWebView on an https url IS a navigation. It performs real requests, and
+// Epic + Cloudflare answer them by setting `__cf_bm`, `EPIC_DEVICE`,
+// `EPIC_LOGIN_ID`, `_epicSID` and `_tald` — measured live, with `created`
+// timestamps landing on the exact SECOND of the clear that was supposedly
+// removing them, in both a dev and a packaged jar. "No login flow runs" is not
+// the same claim as "no network traffic happens"; only the second one would
+// have made a hidden window here safe. Nothing may open a window at this url
+// unless it needs Epic's own DOM — which is the storage step, and only the
+// storage step, and only BEFORE the cookie sweep that cleans up after it.
 const EPIC_LOGIN_ORIGIN = 'https://www.epicgames.com/id/login?responseType=code'
+
+// A label that can never name a real window. `next_login_window_label()`
+// (src-tauri/src/main.rs) mints `loginwin-{n}-{...}`, so this string is
+// structurally outside its range and `app.get_webview_window()` resolves it to
+// `None` for the life of the process.
+//
+// That `None` is not a degradation to tolerate — it is the exact precondition
+// the macOS cookie arms REQUIRE. Both `humble_login_clear_cookies` and
+// `humble_login_cookies_for_domain` gate their default-data-store path on
+// `existing_window.is_none() && epic_cookie_domain_matches(domain)`, and
+// `clear_default_data_store_cookies_for_domain`'s own doc comment states the
+// reason: the pristine Epic webview is never registered with Tauri, so that
+// lookup was ALREADY failing for every label this call site has ever passed,
+// and "clearing that store directly needs no window handle at all". The window
+// the old code opened was never consulted. Passing this label reaches the same
+// Rust code as before, byte for byte, without paying for a live page load that
+// re-seeds the jar the sweep is trying to empty.
+const EPIC_COOKIE_CLEAR_NO_WINDOW_LABEL = 'epic-cookie-clear-no-window'
+
+// Non-macOS only. Windows and Linux have no default-data-store fallback (the
+// Rust arms' fallback is `#[cfg(target_os = "macos")]`), so on those platforms
+// the cookie arms still need a real, Tauri-registered window to hang the cookie
+// store off. They get one — but pointed at an RFC 2606 reserved host that
+// cannot resolve, so the window carries a cookie store without ever reaching
+// Epic. `gamelib.invalid` is the same reserved host `REVEAL_EXFIL_HOST` already
+// uses in src-tauri/src/main.rs, for the same reason. Must be `https`:
+// `login_window_url_arg` rejects every other scheme before a window is built.
+//
+// UNVERIFIED on Windows and Linux — the Tauri shell has no live leg on either
+// platform yet (Phase 38). What IS certain is the direction: this is strictly
+// less network and strictly fewer cookies than pointing the same window at
+// Epic's live login page, which is what it did before.
+const COOKIE_HANDLE_ORIGIN = 'https://gamelib.invalid/'
 // Epic-owned APEX domains. Suffix-matching happens Rust-side in
 // `cookie_domain_matches`, so each apex covers every subdomain that may have
 // set a session cookie against it — mirroring humble/user.ts's disconnect()
@@ -181,6 +231,45 @@ export class LegendaryUser {
       ]
     } else {
       wipeSteps = [
+        // ORDER IS LOAD-BEARING (debug session `epic-cookie-clear-read-divergence`).
+        // `clearEpicStorage` MUST run FIRST and `clearEpicCookies` MUST run LAST.
+        //
+        // localStorage/sessionStorage/IndexedDB/Cache Storage are origin-scoped, so
+        // the storage step has no choice but to load a real document from Epic's own
+        // origin — and Epic + Cloudflare answer that load by setting cookies. There
+        // is no way to clear Epic's storage without briefly re-seeding Epic's
+        // cookies; the only question is whether anything sweeps up afterwards.
+        //
+        // Until this session these two ran in the opposite order, so nothing did.
+        // The cookie sweep finished, reported `matched=0` on every host, and the
+        // storage step then re-seeded the jar behind it with no clear to follow —
+        // measured live in both a dev and a packaged jar, with the surviving
+        // records' `created` timestamps landing on the clear's own seconds.
+        //
+        // Reordering is also what makes the cookie step's closing verification
+        // sweep meaningful: it can only certify a clean jar if it is the last thing
+        // in this list that touches the jar.
+        [
+          'clearEpicStorage',
+          async () => {
+            // Plan 15's clearStorage() opens and closes its OWN hidden
+            // window inside the Rust arm (humble_login_clear_storage) — no
+            // label is needed or returned here, unlike the cookie step
+            // above.
+            const report = await seam.clearStorage(
+              EPIC_LOGIN_ORIGIN,
+              standardBrowserUserAgent()
+            )
+            // Only COUNTS are logged — never a storage key or value
+            // (mirrors humble/user.ts's disconnect()).
+            logInfo(
+              `Legendary logout: cleared storage — localStorage=${report.localStorage}, ` +
+                `sessionStorage=${report.sessionStorage}, indexedDB=${report.indexedDB}, ` +
+                `caches=${report.caches}, serviceWorkers=${report.serviceWorkers}`,
+              LogPrefix.Legendary
+            )
+          }
+        ],
         [
           'clearEpicCookies',
           async () => {
@@ -194,10 +283,24 @@ export class LegendaryUser {
             // shared arm was fixed. Plan 23 fixed the arm for BOTH callers; this step adds
             // the observability Humble already had, so the fix is provable here too,
             // rather than merely assumed.
-            const label = await seam.open(EPIC_LOGIN_ORIGIN, {
-              visible: false,
-              userAgent: standardBrowserUserAgent()
-            })
+            //
+            // Phase 35 (debug session `epic-cookie-clear-read-divergence`):
+            // this step no longer opens a window at Epic's live login page.
+            // That window was the defect — see `EPIC_LOGIN_ORIGIN`'s own note
+            // above for the measured evidence. On macOS it opens NO window at
+            // all: `EPIC_COOKIE_CLEAR_NO_WINDOW_LABEL` resolves to `None`
+            // Rust-side, which is precisely the precondition both cookie arms
+            // require to take their `WKWebsiteDataStore::defaultDataStore()`
+            // path — the same path every previous live run already took, since
+            // the pristine Epic webview was never Tauri-registered and its
+            // label never resolved either. Same Rust code, one fewer WKWebView,
+            // zero requests to the service being logged out of.
+            const label = isMac
+              ? EPIC_COOKIE_CLEAR_NO_WINDOW_LABEL
+              : await seam.open(COOKIE_HANDLE_ORIGIN, {
+                  visible: false,
+                  userAgent: standardBrowserUserAgent()
+                })
             try {
               // ONE window for the whole sweep (Phase 35 plan 09): opened
               // above, looped over here, closed once in the `finally` below.
@@ -388,40 +491,66 @@ export class LegendaryUser {
                   )
                 }
               }
+
+              // REQ-35-07's literal contract — "the app does not report success
+              // unless a POST-CLEAR READ confirms it" — and the check the debug
+              // session `epic-cookie-clear-read-divergence` exists because of.
+              //
+              // The per-host `after` reads above are each taken mid-sweep, before
+              // the remaining hosts have been cleared. Every one of them can be
+              // truthfully zero while the jar still ends up holding Epic cookies,
+              // and that is not hypothetical: it is exactly what was measured. The
+              // product reported `after(matched=0)` on all five hosts and
+              // "removed 7 cookie(s)", and an index-walking parse of the jar
+              // three seconds later found six live Epic records. Nothing lied
+              // about the instant it measured; the reported state simply stopped
+              // being true immediately afterwards, and nothing looked again.
+              //
+              // This sweep looks again, after every mutation in this step is
+              // done. It is the only read whose zero means "the jar is clean",
+              // rather than "the jar was clean at one moment during a sequence
+              // that was still running". A residual is FATAL: `clearEpicCookies`
+              // is `FATAL_WIPE_STEP`, so throwing here is what makes logout report
+              // the failure (and, via plan 35-22, raise the user-visible dialog)
+              // instead of certifying a removal that did not hold.
+              const residualPerHost: string[] = []
+              let residualTotal = 0
+              for (const host of EPIC_COOKIE_HOSTS) {
+                const verify = await readHostCensus(host)
+                residualTotal += verify.matched
+                residualPerHost.push(`${host}=${verify.matched}`)
+              }
+              logInfo(
+                `Legendary logout: post-clear verification — ${residualTotal} Epic-owned ` +
+                  `cookie(s) remain across ${EPIC_COOKIE_HOSTS.length} domain(s) — ` +
+                  residualPerHost.join(', '),
+                LogPrefix.Legendary
+              )
+              if (residualTotal > 0) {
+                throw new Error(
+                  `Legendary logout: post-clear verification found ${residualTotal} Epic-owned ` +
+                    `cookie(s) still present after the clear reported success ` +
+                    `(${residualPerHost.join(', ')}) — the clear did not hold`
+                )
+              }
             } finally {
               // Closed unconditionally — even when clearCookies rejects —
-              // so a failed clear never leaks the hidden window.
-              await seam.close(label).catch((err) => {
-                logWarning(
-                  [
-                    'Legendary logout: cookie-clear window close failed (non-fatal):',
-                    err
-                  ],
-                  LogPrefix.Legendary
-                )
-              })
+              // so a failed clear never leaks the hidden window. Skipped on
+              // macOS, where no window was opened to leak: `seam.close` on a
+              // label that names nothing would only produce a spurious warning
+              // on every single logout.
+              if (!isMac) {
+                await seam.close(label).catch((err) => {
+                  logWarning(
+                    [
+                      'Legendary logout: cookie-clear window close failed (non-fatal):',
+                      err
+                    ],
+                    LogPrefix.Legendary
+                  )
+                })
+              }
             }
-          }
-        ],
-        [
-          'clearEpicStorage',
-          async () => {
-            // Plan 15's clearStorage() opens and closes its OWN hidden
-            // window inside the Rust arm (humble_login_clear_storage) — no
-            // label is needed or returned here, unlike the cookie step
-            // above.
-            const report = await seam.clearStorage(
-              EPIC_LOGIN_ORIGIN,
-              standardBrowserUserAgent()
-            )
-            // Only COUNTS are logged — never a storage key or value
-            // (mirrors humble/user.ts's disconnect()).
-            logInfo(
-              `Legendary logout: cleared storage — localStorage=${report.localStorage}, ` +
-                `sessionStorage=${report.sessionStorage}, indexedDB=${report.indexedDB}, ` +
-                `caches=${report.caches}, serviceWorkers=${report.serviceWorkers}`,
-              LogPrefix.Legendary
-            )
           }
         ]
       ]

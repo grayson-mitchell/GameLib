@@ -98,6 +98,19 @@ jest.mock('../..', () => ({
   }
 }))
 
+// ── backend/constants/environment mock (isMac) ───────────────────────────────────────────
+// See `epicCookieCensus.test.ts`'s copy of this mock for why it is a
+// `defineProperty` and not an object-literal getter — the literal form is
+// silently inert under TypeScript's `__assign` spread helper and would make
+// every platform branch below measure the real `process.platform` instead.
+let mockIsMac = true
+jest.mock('backend/constants/environment', () => {
+  const actual = jest.requireActual('backend/constants/environment')
+  return Object.defineProperty({ ...actual }, 'isMac', {
+    get: () => mockIsMac
+  })
+})
+
 // ── ../../../humble/userAgent mock (standardBrowserUserAgent) ────────────────────────────
 jest.mock('../../../humble/userAgent', () => ({
   standardBrowserUserAgent: () =>
@@ -149,6 +162,7 @@ function makeMockSeam(
 
 describe('LegendaryUser.logout()', () => {
   beforeEach(() => {
+    mockIsMac = true
     // Re-arm default mock behavior. Jest's project-wide `resetMocks: true` (jest.config.js)
     // already stripped every mock's calls history AND implementation before this hook ran, so
     // everything the module-under-test needs a resolved value/return value for must be
@@ -267,7 +281,13 @@ describe('LegendaryUser.logout()', () => {
     ])
   })
 
-  it('REQ-34.5-04 (T-34.5-20): with a seam installed, clearCookies is called with the Epic host and the window is closed even when the clear rejects', async () => {
+  it('REQ-34.5-04 (T-34.5-20): with a seam installed, clearCookies is called with the Epic host, and off macOS the window is closed even when the clear rejects', async () => {
+    // Driven off macOS deliberately: this test's subject is the window
+    // lifecycle (`the window is closed even when the clear rejects`), and
+    // macOS no longer opens one. The macOS branch's own contract — that it
+    // opens nothing to leak — is asserted in `epicLogoutDomains.test.ts` and
+    // `epicCookieCensus.test.ts`.
+    mockIsMac = false
     const seam = makeMockSeam({
       clearCookies: jest
         .fn()
@@ -285,10 +305,16 @@ describe('LegendaryUser.logout()', () => {
     )
 
     expect(mockFromPartition).not.toHaveBeenCalled()
+    // The url must NOT be Epic's. Opening this hidden window at Epic's live
+    // login page is the root cause recorded in
+    // `.planning/debug/resolved/epic-cookie-clear-read-divergence.md`: the load
+    // re-seeded the cookies the sweep had just removed. This assertion
+    // previously required the opposite (`stringContaining('epicgames.com')`).
     expect(seam.open).toHaveBeenCalledWith(
-      expect.stringContaining('epicgames.com'),
+      expect.any(String),
       expect.objectContaining({ visible: false })
     )
+    expect(seam.open.mock.calls[0][0]).not.toContain('epicgames.com')
     expect(seam.clearCookies).toHaveBeenCalledWith(
       'window-label-1',
       'epicgames.com'

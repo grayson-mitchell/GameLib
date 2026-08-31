@@ -13,8 +13,15 @@
  *     asymmetry is deliberate and is asserted in both directions: an individual
  *     domain returning 0 is legitimate (a user may never have visited
  *     twinmotion.com), so only a zero total may reject.
- *  3. ONE hidden window for the whole sweep — opened once, closed once — never
- *     one window per domain.
+ *  3. At most ONE hidden window for the whole sweep — never one per domain —
+ *     and on macOS NO window at all. The window is what the debug session
+ *     `epic-cookie-clear-read-divergence` convicted: it used to be opened at
+ *     Epic's LIVE login page, whose load re-seeded the very cookies the sweep
+ *     was removing, while on macOS the handle was never consulted in the first
+ *     place (the Rust arms take their default-data-store path precisely BECAUSE
+ *     the label does not resolve). The assertion that this url CONTAINS
+ *     'epicgames.com' used to live in this file and pinned the defect as
+ *     intended behaviour; it is now inverted.
  *  4. Counts and domain names only ever reach a log sink. This repo is PUBLIC
  *     (T-35-04), so a cookie name, value, token or account identifier in a log
  *     line is a disclosure, not a debugging convenience.
@@ -94,6 +101,18 @@ jest.mock('../..', () => ({
     }
   }
 }))
+
+// See `epicCookieCensus.test.ts`'s copy of this mock for why it is a
+// `defineProperty` and not an object-literal getter — the literal form is
+// silently inert under TypeScript's `__assign` spread helper and would make
+// every platform branch below measure the real `process.platform` instead.
+let mockIsMac = true
+jest.mock('backend/constants/environment', () => {
+  const actual = jest.requireActual('backend/constants/environment')
+  return Object.defineProperty({ ...actual }, 'isMac', {
+    get: () => mockIsMac
+  })
+})
 
 jest.mock('../../../humble/userAgent', () => ({
   standardBrowserUserAgent: () =>
@@ -201,6 +220,7 @@ beforeEach(() => {
   mockClearData.mockResolvedValue(undefined)
   // A clean CLI logout: no early return, so the wipe steps actually run.
   mockRunRunnerCommand.mockResolvedValue({ stdout: '', stderr: '' })
+  mockIsMac = true
   setLoginWindowSeam(null)
 })
 
@@ -219,32 +239,71 @@ describe('Epic logout clears every Epic-owned domain (T-35-37)', () => {
     // keeps the pre-existing single-domain assertions in `user.test.ts`
     // meaningful, and a reordering is a review-worthy change either way.
     expect(clearedDomains(seam)).toEqual(EXPECTED_EPIC_DOMAINS)
-    // Every call used the one label `seam.open` returned — a per-domain window
-    // would show up here as a second label.
-    for (const call of seam.clearCookies.mock.calls) {
-      expect(call[0]).toBe('window-label-1')
-    }
+    // ONE label for the whole sweep — a per-domain window would show up here
+    // as a second label. Asserted as an invariant rather than as the literal
+    // `'window-label-1'`, because the label's VALUE is now platform-dependent
+    // (macOS passes a deliberately unresolvable sentinel and opens no window
+    // at all); the "exactly one" property is what this has always protected.
+    const labels = new Set(seam.clearCookies.mock.calls.map((c) => c[0]))
+    expect(labels.size).toBe(1)
   })
 
-  it('opens ONE hidden window for the whole sweep and closes it exactly once', async () => {
+  /**
+   * The window this step opens — and, on macOS, no longer opens — is the root
+   * cause recorded in `.planning/debug/resolved/epic-cookie-clear-read-divergence.md`.
+   *
+   * It used to be opened at `EPIC_LOGIN_ORIGIN`, Epic's LIVE login page, on the
+   * stated premise that "no navigation/login flow ever runs against this url".
+   * Building a WKWebView on an https url IS a navigation: Epic and Cloudflare
+   * answered it by setting `__cf_bm`, `EPIC_DEVICE`, `EPIC_LOGIN_ID`,
+   * `_epicSID` and `_tald` while the sweep was still running, with `created`
+   * timestamps landing on the exact second of the clear that was removing them.
+   *
+   * On macOS the handle was never even used: the pristine Epic webview is never
+   * registered with Tauri, so `app.get_webview_window(label)` was already `None`
+   * for every label this call site ever passed, and both Rust cookie arms take
+   * their `WKWebsiteDataStore::defaultDataStore()` path precisely BECAUSE of
+   * that `None`. The window was pure cost — and the cost was the defect.
+   */
+  it('on macOS opens NO window for the sweep, and closes none', async () => {
+    mockIsMac = true
+    const seam = makeMockSeam()
+    setLoginWindowSeam(seam)
+
+    await LegendaryUser.logout()
+
+    expect(seam.open).not.toHaveBeenCalled()
+    expect(seam.close).not.toHaveBeenCalled()
+    // The sweep still ran against every approved apex — dropping the window
+    // must not have dropped the work.
+    expect(clearedDomains(seam)).toEqual(EXPECTED_EPIC_DOMAINS)
+  })
+
+  it('off macOS opens ONE hidden window for the whole sweep, NOT pointed at Epic, and closes it exactly once', async () => {
+    mockIsMac = false
     const seam = makeMockSeam()
     setLoginWindowSeam(seam)
 
     await LegendaryUser.logout()
 
     expect(seam.open).toHaveBeenCalledTimes(1)
+    // Deliberately `not.toContain` — this assertion is the inverse of the one
+    // it replaces, which required the url to CONTAIN 'epicgames.com' and so
+    // pinned the defect in place as intended behaviour.
+    expect(seam.open.mock.calls[0][0]).not.toContain('epicgames.com')
     expect(seam.open).toHaveBeenCalledWith(
-      expect.stringContaining('epicgames.com'),
+      expect.any(String),
       expect.objectContaining({ visible: false })
     )
     expect(seam.close).toHaveBeenCalledTimes(1)
     expect(seam.close).toHaveBeenCalledWith('window-label-1')
   })
 
-  it('closes the single window exactly once even when a MIDDLE domain rejects', async () => {
+  it('off macOS closes the single window exactly once even when a MIDDLE domain rejects', async () => {
     // The `finally` must fire on the throwing path too, or a failed sweep leaks
     // a hidden window. Rejecting the third domain also proves the loop is not
     // silently swallowing per-domain rejections.
+    mockIsMac = false
     const seam = makeMockSeam({
       clearCookies: jest
         .fn()
@@ -260,6 +319,28 @@ describe('Epic logout clears every Epic-owned domain (T-35-37)', () => {
 
     expect(seam.open).toHaveBeenCalledTimes(1)
     expect(seam.close).toHaveBeenCalledTimes(1)
+  })
+
+  it('on macOS a MIDDLE domain rejecting is still fatal, and still closes nothing', async () => {
+    mockIsMac = true
+    const seam = makeMockSeam({
+      clearCookies: jest
+        .fn()
+        .mockResolvedValueOnce(2)
+        .mockResolvedValueOnce(1)
+        .mockRejectedValueOnce(new Error('rust-side clear failed'))
+    })
+    setLoginWindowSeam(seam)
+
+    await expect(LegendaryUser.logout()).rejects.toThrow(
+      'rust-side clear failed'
+    )
+
+    // `seam.close` on a label that names nothing would produce a spurious
+    // warning on every logout, so the `finally` skips it on macOS — but only
+    // because nothing was opened to leak.
+    expect(seam.open).not.toHaveBeenCalled()
+    expect(seam.close).not.toHaveBeenCalled()
   })
 })
 
@@ -456,5 +537,79 @@ describe('the TS list and main.rs EPIC_COOKIE_DOMAINS are the SAME list (T-35-41
     expect(() =>
       extractQuotedList('const SOMETHING_ELSE = []', 'const EPIC_COOKIE_HOSTS')
     ).toThrow(/could not find/)
+  })
+})
+
+/**
+ * The wipe-step ORDER gate (debug session `epic-cookie-clear-read-divergence`).
+ *
+ * This is a SOURCE gate, deliberately, because the property it protects is
+ * structurally invisible to every behavioural test in this repo. The unit
+ * suites mock `seam.clearStorage`, and a mock sets no cookies — so a mocked
+ * storage step cannot re-seed the jar, and swapping the two steps back into
+ * their original order produces an identically green run. The defect lived in
+ * exactly that blind spot for a whole phase.
+ *
+ * What actually happens live: `clearEpicStorage` MUST load a real document from
+ * Epic's own origin, because localStorage/sessionStorage/IndexedDB/Cache
+ * Storage are origin-scoped and unreachable any other way. Epic and Cloudflare
+ * answer that load by setting cookies. Whichever step runs LAST decides what
+ * the jar contains when the logout finishes.
+ */
+describe('wipe-step ORDER: the storage step runs BEFORE the cookie sweep (epic-cookie-clear-read-divergence)', () => {
+  /** `logout()`'s source with comments stripped, so prose cannot satisfy this gate. */
+  function strippedLogoutSource(): string {
+    return stripSourceComments(readFileSync(LEGENDARY_USER_TS, 'utf-8'))
+  }
+
+  it("registers 'clearEpicStorage' BEFORE 'clearEpicCookies' in the seam-branch wipeSteps array", () => {
+    const src = strippedLogoutSource()
+    const storageAt = src.indexOf("'clearEpicStorage'")
+    const cookiesAt = src.indexOf("'clearEpicCookies',")
+
+    // Both must be found — an indexOf of -1 silently satisfies `<` and would
+    // turn this gate into a fail-open one (this repo has that exact scar).
+    expect(storageAt).toBeGreaterThan(-1)
+    expect(cookiesAt).toBeGreaterThan(-1)
+    expect(storageAt).toBeLessThan(cookiesAt)
+  })
+
+  it('names the ordering as load-bearing in the source, so a future reorder is a deliberate act', () => {
+    // Deliberately reads the RAW source, not the stripped copy: this one
+    // assertion is ABOUT the comment. Without it, a reorder looks like tidying.
+    const raw = readFileSync(LEGENDARY_USER_TS, 'utf-8')
+    expect(raw).toContain('ORDER IS LOAD-BEARING')
+  })
+
+  it('anti-vacuity: the same comparison FAILS against a source with the steps the other way round', () => {
+    // Proves the gate above is measuring order and not merely presence — the
+    // shape it would have had to catch, had it existed before the defect.
+    const inverted = `
+      wipeSteps = [
+        [
+          'clearEpicCookies',
+          async () => {}
+        ],
+        [
+          'clearEpicStorage',
+          async () => {}
+        ]
+      ]
+    `
+    const storageAt = inverted.indexOf("'clearEpicStorage'")
+    const cookiesAt = inverted.indexOf("'clearEpicCookies',")
+    expect(storageAt).toBeGreaterThan(-1)
+    expect(cookiesAt).toBeGreaterThan(-1)
+    expect(storageAt).not.toBeLessThan(cookiesAt)
+  })
+
+  it('anti-vacuity: stripSourceComments has not eaten the two step names it is asked about', () => {
+    // The stripper is not neutral — it has removed load-bearing lines in this
+    // repo before (a leading `*` deref in Rust made both initialisers invisible
+    // to a source gate). If it ever ate these, the gate above would compare two
+    // -1s and pass on nothing.
+    const src = strippedLogoutSource()
+    expect(src).toContain("'clearEpicStorage'")
+    expect(src).toContain("'clearEpicCookies',")
   })
 })
