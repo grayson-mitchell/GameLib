@@ -264,7 +264,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
     // fixture used `makeMockSeam`'s total=0 default while `clearCookies`
     // reported nonzero deltas — internally inconsistent (you cannot clear N
     // cookies out of a jar containing zero records), and it only passed because
-    // the residual sweep used to accept an unproven read. See (e2)-(e4).
+    // the residual sweep used to accept an unproven read. See (e2)-(e5).
     const seam = makeMockSeam({
       cookiesForDomain: jest.fn().mockResolvedValue(cookieRead(9, 0)),
       clearCookies: jest.fn().mockResolvedValue(1)
@@ -469,7 +469,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
   })
 
   /**
-   * (e2)-(e4): the residual sweep must not be FAIL-OPEN.
+   * (e2)-(e5): the residual sweep must not be FAIL-OPEN.
    *
    * Found by independent adjudication AFTER the first version of this sweep
    * shipped, and it is the recorded `fixing-a-fail-open-gate-can-create-its-
@@ -483,6 +483,12 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
    * Not an exotic branch: all-reads-reject was 100% of production behaviour on
    * every Epic logout from plan 35-23's landing until commit 9106ccbea
    * (D-35-29-01), and it is the most likely off-macOS shape.
+   *
+   * (e5) pins the boundary the first three could not see: SOME hosts
+   * unconfirmed versus ALL of them. (e2)-(e4) make the final sweep uniformly
+   * healthy or uniformly unreadable, so narrowing the gate from
+   * `unconfirmedHosts.length > 0` to `=== EPIC_COOKIE_HOSTS.length` failed
+   * nothing (35-VERIFICATION.md F-5-02) — the fail-open sibling one level over.
    */
   it('(e2) five REJECTING verification reads are FATAL — a jar nothing could read is never reported as clean', async () => {
     // The sweep's own before/after pair resolves normally so the clear itself
@@ -549,6 +555,103 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
       /post-clear verification could not read the cookie jar/
     )
     expect(allLoggedText()).not.toContain('Epic-owned cookie(s) remain')
+  })
+
+  it('(e5) FOUR healthy verification reads and ONE rejecting is STILL fatal, and names only the unconfirmed host — the SOME-vs-ALL boundary', async () => {
+    // The boundary mutation D proved unpinned (35-VERIFICATION.md finding
+    // F-5-02). Every other test in this file makes the final sweep either ALL
+    // healthy or ALL rejecting, so narrowing `unconfirmedHosts.length > 0` to
+    // `unconfirmedHosts.length === EPIC_COOKIE_HOSTS.length` failed NOTHING —
+    // 53/53 PASS — while the product logged the affirmative "0 Epic-owned
+    // cookie(s) remain across 5 domain(s)" over a jar one host of which nothing
+    // read, and logout() resolved. This is the `fixing-a-fail-open-gate-can-
+    // create-its-sibling` shape a third time: SOME-unconfirmed is the fail-open
+    // sibling of ALL-unconfirmed, one level over.
+    //
+    // Fixture arithmetic, deliberately COHERENT — an incoherent one is how this
+    // defect family hid twice, a jar reporting N cookies cleared while reporting
+    // zero records held, which made every read UNSUPPORTED_OR_ERROR and put the
+    // fail-open branch under test almost everywhere while scoring green:
+    //   before : total=9, matched=3  → jar holds 9 records, 3 of them Epic's here
+    //   clear  : deleted=3           → those 3 Epic records are removed
+    //   after  : total=6, matched=0  → 9 - 3 = 6 records left, none Epic's
+    //   verify : total=6, matched=0  → same jar, re-read after every mutation
+    // So the very first read sets `everProvedLive`; `domainVerdict(before)` is
+    // SUPPORTED_NONEMPTY with a NONZERO delta, so the `brokenHosts` throw does
+    // not fire; and the summed total is 5 * 3 = 15, so the `total === 0` throw
+    // does not fire either. Control therefore reaches the final verification
+    // sweep, which is this test's subject.
+    //
+    // Target: the THIRD verification read, `unrealengine.com` — deliberately a
+    // MIDDLE host, so this cannot pass via a loop that merely short-circuits on
+    // the first or last element. `cookiesForDomain` runs 3x per host: calls
+    // 1..2N are the clear loop (odd = before, even = after) and calls 2N+1..3N
+    // are the verification sweep in host order, so the target is call 2N+3 = 13.
+    const N = EPIC_HOSTS_UNDER_TEST.length
+    let readCall = 0
+    // Captured from the mock's OWN arguments, never hardcoded — hardcoding the
+    // host here would make the targeting assertion below tautological.
+    let rejectedRead: { index: number; host: string } | null = null
+    const seam = makeMockSeam({
+      cookiesForDomain: jest
+        .fn()
+        .mockImplementation(async (_label: string, hostArg: string) => {
+          readCall += 1
+          if (readCall <= 2 * N) {
+            return readCall % 2 === 1 ? cookieRead(9, 3) : cookieRead(6, 0)
+          }
+          if (readCall === 2 * N + 3) {
+            rejectedRead = { index: readCall, host: hostArg }
+            throw new Error('rust-side census read failed')
+          }
+          return cookieRead(6, 0)
+        }),
+      clearCookies: jest.fn().mockResolvedValue(3)
+    })
+    setLoginWindowSeam(seam)
+
+    // 1. Fatal, naming the ONE unconfirmed host. The em-dash immediately after
+    //    the single host name is what distinguishes this from the all-five case,
+    //    whose list would continue with a comma.
+    await expect(LegendaryUser.logout()).rejects.toThrow(
+      /could not read the cookie jar for unrealengine\.com —/
+    )
+
+    const logged = allLoggedText()
+    // 2. No affirmative all-clear anywhere — (e3)'s mechanism, not a new one. A
+    //    thrown error is recoverable; a log line asserting a clean jar is a
+    //    durable false record, and this repo greps these lines to score live
+    //    gates.
+    expect(logged).not.toContain('Epic-owned cookie(s) remain')
+    expect(logged).toContain('COULD NOT CONFIRM')
+    // The partial-vs-total discriminator: ONE of five, not five of five.
+    expect(logged).toContain('1 of 5 domain(s)')
+
+    // 3. Per-host record shape. (e3)'s `not.toContain(`${host}=0,`)` is
+    //    deliberately NOT copied here: in THIS fixture four hosts legitimately
+    //    record a zero, so that assertion would be wrong.
+    expect(logged).toContain('unrealengine.com=unconfirmed')
+    for (const host of EPIC_HOSTS_UNDER_TEST.filter(
+      (h) => h !== 'unrealengine.com'
+    )) {
+      expect(logged).toContain(`${host}=0`)
+    }
+
+    // 4. Targeting proof — the reject landed in the FINAL VERIFICATION loop, not
+    //    the clear loop. All four of these together, or the test proves nothing.
+    expect(seam.clearCookies).toHaveBeenCalledTimes(N)
+    expect(seam.cookiesForDomain).toHaveBeenCalledTimes(3 * N)
+    expect(rejectedRead).toEqual({ index: 2 * N + 3, host: 'unrealengine.com' })
+    // `readHostCensus` emits its non-fatal warning once per rejecting read, so
+    // EXACTLY one proves no clear-loop read rejected. This is the assertion that
+    // catches the "passes for the wrong reason" failure mode directly.
+    expect(logged.match(/cookie census read failed/g)).toHaveLength(1)
+
+    // 5. T-35-04 log hygiene, same bar as every other test in this file.
+    for (const forbidden of FORBIDDEN_LOG_SUBSTRINGS) {
+      expect(logged).not.toContain(forbidden)
+    }
+    expect(logged).not.toContain('sentinel-cookie-')
   })
 
   it('(g) on macOS the cookie step opens NO window and passes a label that cannot resolve to one', async () => {
