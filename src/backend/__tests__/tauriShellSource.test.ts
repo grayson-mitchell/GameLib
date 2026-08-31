@@ -665,6 +665,167 @@ describe('REQ-34.4.1-GAP-07 both humble cookie-read arms keep their proven-corre
   })
 })
 
+// Quick 260831-q93 (D-35-29-01): a static pin, from the JS suite, on the census arm's
+// label-independent Epic fallback. This is the ONLY layer that can observe this defect.
+// No TS mock can reach it (every TS test drives a seam double, so the Rust arm is not in
+// the picture at all) and no Rust unit test can reach it either (the arm needs a live
+// AppHandle and a live WKWebView; `mod tests` in main.rs can drive neither). That gap is
+// exactly how the defect survived: `humble_login_cookies_for_domain` rejected
+// `no-window:{label}` on EVERY Epic call for the whole of phase 35 while both suites stayed
+// green, because "the read never returned anything" is not a property either suite asserts.
+//
+// Every assertion below is SOURCE-LEVEL only. None of them, individually or together, is
+// evidence that the probe reads a real cookie — that is a live logout's job alone
+// (this quick task's Task 3), and the identical gates were green throughout the entire
+// period the probe returned nothing.
+describe('D-35-29-01 (quick q93) the census arm falls back to the label-independent default-store read for Epic domains', () => {
+  const CENSUS_ARM_START = '"humble_login_cookies_for_domain" => {'
+  const CENSUS_ARM_END = '_ => Err(format!("rustInvoke:unknown-channel'
+
+  /**
+   * Same "slice the arm body out of comment-stripped source" extraction shape as
+   * `extractArmBody` in the REQ-34.4.1-GAP-07 block above; kept local because that one is
+   * describe-scoped, and hoisting it would edit a passing gate this task has no business
+   * touching. Throws a plain Error rather than calling `expect()` so it can be driven over
+   * a synthetic counterexample inside `censusFallbackViolations` below without the
+   * counterexample run polluting this test's own assertion count.
+   */
+  function extractCensusArmBody(code: string): string {
+    const start = code.indexOf(CENSUS_ARM_START)
+    if (start < 0) throw new Error('census arm start marker not found')
+    const end = code.indexOf(CENSUS_ARM_END, start)
+    if (end <= start)
+      throw new Error('census arm end marker not found after start')
+    return code.slice(start, end)
+  }
+
+  /**
+   * The gate itself, expressed as a violation LIST rather than a pile of `expect`s, so the
+   * negative self-test below can run the very same logic over a regressed arm and prove it
+   * comes back non-empty. A gate that cannot fail its own counterexample is not a gate.
+   *
+   * Whitespace is collapsed entirely before matching because rustfmt is free to re-wrap any
+   * of these expressions across lines (it already wraps the real `existing_window` binding
+   * differently from the source literal a reader would guess), and a gate that a reformat
+   * can silently satisfy or silently break is worse than no gate.
+   */
+  function censusFallbackViolations(code: string): string[] {
+    const noWs = extractCensusArmBody(code).replace(/\s+/g, '')
+    const violations: string[] = []
+    if (!noWs.includes('letexisting_window=app.get_webview_window(label);')) {
+      violations.push(
+        'the arm does not bind `existing_window` from app.get_webview_window(label)'
+      )
+    }
+    if (
+      !noWs.includes(
+        'existing_window.is_none()&&epic_cookie_domain_matches(domain)'
+      )
+    ) {
+      violations.push(
+        'the Epic fallback guard (existing_window.is_none() && epic_cookie_domain_matches(domain)) is missing'
+      )
+    }
+    if (
+      !noWs.includes('default_data_store_cookies_for_domain(app,domain,&names)')
+    ) {
+      violations.push(
+        'the arm never reaches default_data_store_cookies_for_domain'
+      )
+    }
+    // The regressed shape collapses to EXACTLY this string. The fixed shape cannot produce
+    // it: it binds `existing_window` first and resolves it separately, below the guard.
+    if (noWs.includes('app.get_webview_window(label).ok_or_else(')) {
+      violations.push(
+        'the arm still resolves the window straight into an unconditional no-window ok_or_else'
+      )
+    }
+    const guardIdx = noWs.indexOf('existing_window.is_none()')
+    const noWindowIdx = noWs.indexOf('no-window:')
+    if (guardIdx < 0 || noWindowIdx < 0 || guardIdx > noWindowIdx) {
+      violations.push(
+        'the Epic fallback guard does not precede the no-window error path'
+      )
+    }
+    return violations
+  }
+
+  test('POSITIVE: the real census arm satisfies every fallback requirement', () => {
+    expect(censusFallbackViolations(loadMainRsCode())).toEqual([])
+  })
+
+  test('the no-window error is still REACHABLE for non-Epic callers (the guard narrows, it does not delete)', () => {
+    // Humble/GOG/Amazon are all still routed through a live Tauri-managed window here, so
+    // they must keep falling through to the unchanged error. A fallback that swallowed the
+    // error path for everybody would also pass the POSITIVE test above.
+    const armBody = extractCensusArmBody(loadMainRsCode())
+    expect(armBody).toContain(
+      'humble_login_cookies_for_domain:no-window:{label}'
+    )
+  })
+
+  test('NEGATIVE self-test: this gate REJECTS the exact pre-fix arm shape it exists to catch', () => {
+    // The verbatim pre-fix shape — the one that rejected
+    // `humble_login_cookies_for_domain:no-window:{label}` on all five Epic hosts of every
+    // live logout while this suite stayed green.
+    const regressedArm = [
+      '        "humble_login_cookies_for_domain" => {',
+      '            let label = args',
+      '                .first()',
+      '                .and_then(|v| v.as_str())',
+      '                .ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?;',
+      '            let domain = args',
+      '                .get(1)',
+      '                .and_then(|v| v.as_str())',
+      '                .ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?;',
+      '            let window = app',
+      '                .get_webview_window(label)',
+      '                .ok_or_else(|| format!("humble_login_cookies_for_domain:no-window:{label}"))?;',
+      '            let all = window.cookies().map_err(|e| e.to_string())?;',
+      '            Ok(serde_json::json!({ "total": all.len(), "matched": [] }))',
+      '        }',
+      '        _ => Err(format!("rustInvoke:unknown-channel:{channel}")),'
+    ].join('\n')
+
+    const violations = censusFallbackViolations(loadMainRsCode(regressedArm))
+    expect(violations.length).toBeGreaterThan(0)
+    expect(violations).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('does not bind `existing_window`'),
+        expect.stringContaining('fallback guard'),
+        expect.stringContaining(
+          'never reaches default_data_store_cookies_for_domain'
+        ),
+        expect.stringContaining('unconditional no-window ok_or_else')
+      ])
+    )
+  })
+
+  test('the default-store census helper exists, is macOS-gated, and adds NO wry .cookies() round trip (F-34.4.2-12)', () => {
+    const code = loadMainRsCode()
+    const fnIdx = code.indexOf('fn default_data_store_cookies_for_domain(')
+    expect(fnIdx).toBeGreaterThan(-1)
+    // The cfg attribute sits immediately above the fn, as it does on the clear-side twin.
+    const preamble = code.slice(Math.max(0, fnIdx - 200), fnIdx)
+    expect(preamble).toContain('#[cfg(target_os = "macos")]')
+
+    const bodyEnd = code.indexOf('\n}', fnIdx)
+    expect(bodyEnd).toBeGreaterThan(fnIdx)
+    const body = code.slice(fnIdx, bodyEnd)
+    // Reads the process-wide default store — no window handle, so `with_webview`
+    // reentrancy (the other half of the reproduced deadlock) is not in play.
+    expect(body).toContain('WKWebsiteDataStore::defaultDataStore(mtm)')
+    expect(body).toContain('cookie_store.getAllCookies(&completion)')
+    expect(body).not.toContain('with_webview')
+    // The deadlock trigger itself: wry's own blocking getter, banned on this path.
+    expect(body).not.toContain('.cookies()')
+    // Census direction, same as the arm it backs: the cookie's OWN domain first.
+    expect(body).toContain(
+      'cookie_domain_matches(&c.domain().to_string(), Some(&filter_domain))'
+    )
+  })
+})
+
 // Phase 34.4.1 Plan 23 (F-6 Defect B): a static guard, from the JS suite, against a future
 // revert of humble_login_clear_cookies to the attempted-count shape this plan closes. Neither
 // a Rust unit test (which can't drive the real match arm end-to-end without a live WKWebView)

@@ -431,3 +431,118 @@ describe('Task 2: jar-liveness fatality rule (CR-04 part 2, D-35-19-15)', () => 
     ])
   })
 })
+
+/**
+ * Quick 260831-q93 (D-35-29-01) — EVIDENCE PRODUCTION, not absence-of-throw.
+ *
+ * Every test above this block passed, unchanged, throughout the entire period the
+ * Rust census probe produced NOTHING. It could, because none of them asserts the
+ * one property the defect violated: that a live logout emits a verdict OTHER than
+ * `UNSUPPORTED_OR_ERROR`. Live, all five hosts logged
+ * `before(total=unavailable, matched=unavailable, verdict=UNSUPPORTED_OR_ERROR)`
+ * on every logout, which made BOTH consuming branches structurally unreachable —
+ * `brokenHosts` needs a `SUPPORTED_NONEMPTY` domain verdict, the non-fatal
+ * already-empty branch needs `SUPPORTED_BUT_EMPTY`, and a rejecting read can
+ * produce neither. The broken-per-host detector was dead code on the only path it
+ * serves, and test (3c) above — "every read rejects, fail closed" — was not a
+ * hypothetical edge case but a verbatim description of production.
+ *
+ * WHAT THESE TESTS DO NOT PROVE, stated plainly because getting this wrong is how
+ * the defect survived a whole phase: they run against a SEAM DOUBLE. They prove
+ * branch REACHABILITY given reads that resolve — nothing more. They are NOT
+ * evidence that the Rust probe reads a real cookie out of a real jar. Only a live
+ * Epic logout emitting numeric `total=`/`matched=` for all five hosts is evidence
+ * of that (this quick task's Task 3), and no green run of this file may be
+ * substituted for it.
+ */
+describe('D-35-29-01 (quick q93) the census produces EVIDENCE, and both consuming branches are reachable', () => {
+  it('(e1) a populated primary host reaches the SUPPORTED_NONEMPTY consumer (brokenHosts) — unreachable while every read rejected', async () => {
+    // The post-fix live shape: epicgames.com populated, the other four Epic-owned
+    // hosts domain-empty inside the same (jar-wide nonzero) shared jar, so
+    // `everProvedLive` is true from the very first read.
+    const cookiesForDomain = jest
+      .fn()
+      .mockResolvedValueOnce(cookieRead(10, 6)) // epicgames.com before: jar=10, epic-matched=6
+      .mockResolvedValueOnce(cookieRead(10, 6)) // epicgames.com after: UNCHANGED — the clear did nothing
+      .mockResolvedValue(cookieRead(10, 0)) // every other host: jar alive, nothing of theirs
+    const seam = makeMockSeam({
+      cookiesForDomain,
+      clearCookies: jest.fn().mockResolvedValue(0)
+    })
+    setLoginWindowSeam(seam)
+
+    await expect(LegendaryUser.logout()).rejects.toThrow(
+      /removed nothing for epicgames\.com despite the jar proving cookies were present beforehand/
+    )
+
+    const logged = allLoggedText()
+    // THE property this defect violated on every single live run. Asserted as an
+    // ABSENCE because that is the shape of the failure: the probe did not return a
+    // wrong number, it returned no number at all.
+    expect(logged).not.toContain('UNSUPPORTED_OR_ERROR')
+    expect(logged).not.toContain('total=unavailable')
+    expect(logged).not.toContain('matched=unavailable')
+    // And the positive half: a real reading reached the log.
+    expect(logged).toContain('total=10, matched=6, verdict=SUPPORTED_NONEMPTY')
+
+    // DISCRIMINATING against the pre-fix behaviour, which is why this test is not
+    // a restatement of Task 2's (2): drive the SAME fixture with the reads the
+    // Rust arm actually produced pre-fix (all rejecting) and the domain verdict
+    // can never be SUPPORTED_NONEMPTY, so this exact rejection message is
+    // unreachable — logout takes the (3c) fail-closed path with a DIFFERENT
+    // message instead. That divergence is the whole defect.
+  })
+
+  it('(e2) the pre-fix read shape CANNOT produce (e1) outcome — same fixture, rejecting reads, different failure', async () => {
+    // Byte-for-byte (e1)'s clear-side fixture (delta 0 on every host); only the
+    // census reads differ, reproducing exactly what the Rust arm returned before
+    // this fix: `humble_login_cookies_for_domain:no-window:{label}` on all five.
+    const seam = makeMockSeam({
+      cookiesForDomain: jest
+        .fn()
+        .mockRejectedValue(
+          new Error(
+            'humble_login_cookies_for_domain:no-window:loginwin-0-18d0cf3d9b97abd0-7652f0f6'
+          )
+        ),
+      clearCookies: jest.fn().mockResolvedValue(0)
+    })
+    setLoginWindowSeam(seam)
+
+    // NOT the broken-host message — the generic fail-closed one. The detector
+    // never ran.
+    await expect(LegendaryUser.logout()).rejects.toThrow(
+      /removed nothing across all 5 Epic-owned domains/
+    )
+    const logged = allLoggedText()
+    expect(logged).toContain('verdict=UNSUPPORTED_OR_ERROR')
+    expect(logged).toContain('total=unavailable, matched=unavailable')
+    expect(logged).not.toContain('SUPPORTED_NONEMPTY')
+  })
+
+  it('(e3) a genuinely Epic-empty jar reaches the SUPPORTED_BUT_EMPTY non-fatal branch, with no UNSUPPORTED_OR_ERROR anywhere', async () => {
+    // Jar-wide alive (7 cookies belonging to other runners), zero matching any
+    // Epic-owned host, zero removed. Strengthens Task 2's (1) with the absence
+    // assertion that (1) does not make — (1) would pass on a jar full of
+    // `unavailable` reads if the classifier ever regressed to treating an
+    // unreadable jar as an empty one, which is the exact substitution CR-04
+    // part 2 exists to prevent.
+    const seam = makeMockSeam({
+      cookiesForDomain: jest.fn().mockResolvedValue(cookieRead(7, 0)),
+      clearCookies: jest.fn().mockResolvedValue(0)
+    })
+    setLoginWindowSeam(seam)
+
+    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
+
+    const logged = allLoggedText()
+    expect(logged).not.toContain('UNSUPPORTED_OR_ERROR')
+    expect(logged).not.toContain('total=unavailable')
+    expect(logged).toContain('total=7, matched=0, verdict=SUPPORTED_NONEMPTY')
+    expect(logInfo).toHaveBeenCalledWith(
+      expect.stringContaining('Epic cookie jar was already empty'),
+      'Legendary'
+    )
+    expect(logError).not.toHaveBeenCalled()
+  })
+})
