@@ -167,9 +167,70 @@ is requested — see `260901-8rm-MEASUREMENTS.md`):
   covered only by `packagingConfig.test.ts`'s merged-map config-level assertions.
   A real CI matrix run on those platforms has not happened yet.
 
-### Fix (2) — Repoint `frontendDist` at a renderer-only directory — ~212MB, NOT YET PLANNED
+### Fix (2) — Repoint `frontendDist` at a renderer-only directory — DONE, closed by quick-260901-b8z (2026-09-01)
 
-This is a phase, not a quick task — see below for why. It is deliberately NOT
+Implemented **D1** from the two candidate designs below: `outDir` stayed `build`, `publicDir`
+stayed default, `emptyOutDir` stayed `false`, `bundle.resources` was left completely untouched.
+A new `meta/assembleRendererDist.ts` vite plugin assembles a `build/renderer/` subtree from
+rollup's own emitted-file list (`generateBundle`'s `Object.keys(bundle)`) plus the three static
+consumers enumerated below, with six independently-tested fail-loud post-conditions so a
+silently empty/partial `build/renderer` cannot ship a white screen. `frontendDist` now points at
+`../build/renderer`. Full design rationale: `260901-b8z-RESEARCH.md`; full numbers and
+derivations: `260901-b8z-MEASUREMENTS.md`.
+
+**Proof, on a real packaged release DMG** (`src-tauri/target/release/bundle/dmg/GameLib_0.7.0_aarch64.dmg`,
+built 2026-09-01, mounted read-only):
+
+- `__TEXT,__const`: 223,766,872 B (PRE-a2w baseline) → **5,273,944 B**. Criterion met
+  (< 30,000,000 B).
+- `strings <gamelib-shell> | grep -c 'bin/x64/win32/gogdl.exe'`: 1 → **0**. Criterion met.
+- DMG size: 388,901,574 B (PRE-a2w) → 155,175,396 B.
+- `tauri-codegen-assets` staging dir: captured but unreliable as a before/after signal — cargo
+  reuses this OUT_DIR across builds by content hash and Tauri never prunes it; only 21 of 719
+  files in the newest-invoked directory postdate this build, the rest are stale carryover from
+  builds as old as 2026-08-30. Not part of the formal gate; the mounted binary's `__TEXT,__const`
+  above is the reliable signal.
+- **LIVE, human-verified on the real packaged artifact** (both consumers this fix's enumeration
+  named as break-silently-only-in-a-packaged-artifact risks):
+  - (a) `src/frontend/index.tsx:116` i18next `loadPath` — **PASS**. French locale verified live
+    via the app's in-app Settings UI (a stronger proof than the originally-scripted
+    pre-launch `config.json` edit: it exercises the runtime on-demand fetch of
+    `tauri://localhost/locales/fr/translation.json`, not just the initial load).
+  - (b) `src/preload/api/tauriChildWindows.ts:177` About window `url` — **PASS**. About window
+    opened with real content via the tray menu.
+  - (c) `public/about.html:50` `<img src="./icon.png">` — **PASS**. This is the THIRD
+    webview-relative consumer, found only by reading `about.html` itself; neither the original
+    todo write-up nor `260901-8rm`'s research enumerated it, and it appears in zero built JS
+    chunks so nothing else in this task's automated gates could have proven it. The icon
+    rendered correctly in the About window.
+
+**Non-regression finding, fully accounted for — read before trusting the ~233.8 MiB figure
+above (fix (1)'s section) against any FUTURE measurement:** this task's own real packaged build
+measured shipped `Resources/build/bin` at **195,358,418 B** (~186.3 MiB), not ~233.8 MiB. This is
+NOT a regression from fix (2)'s code (`bundle.resources` is untouched — confirmed by `git diff`;
+repo-tree `build/bin`/`public/bin` are byte-identical to quick-260901-a2w's own landed "after"
+figure). It is quick-260901-a2w's stale-helper-binary prune (366,874,673 B → 317,967,812 B,
+already landed 2026-09-01 in commits 681fa1344/90bb5a08d) being measured in a packaged release
+build for the **first time** — a2w's own MEASUREMENTS.md explicitly labelled its shipped-bin
+saving as an unmeasured *prediction*, since a2w never produced a release build. The arithmetic:
+`244,265,279 (PRE-a2w shipped bin) − 48,906,861 (a2w's measured dev-tree delta) = 195,358,418`,
+an exact byte match. **The fix (1) section above's "~233.8 MiB" figure is therefore now stale**
+— treat 195,358,418 B (~186.3 MiB) as the current correct shipped `Resources/build/bin` figure
+for both fix (1) and fix (2) going forward.
+
+Two things this fix deliberately did NOT touch, so they remain the open remainder of this todo
+(see below): Cause 3 (Tauri's resource copy dereferencing symlinks, ~45 MB) and the
+`steam_api.pdb`/`steam_api_shim.lib` item (~2.7 MB, a `buildSteamBridgeShims.ts` compile-flag
+change). Both were explicitly out of scope for quick-260901-b8z's `scoped_out` frontmatter block
+and neither is resolved by the work above.
+
+---
+
+**Original planning notes below, retained for the design record (D1 was selected and
+implemented as described above; D2 was not pursued).**
+
+This was a phase-sized concern before quick-260901-b8z scoped and closed it as a quick task —
+see below for why the risk enumeration mattered. It was deliberately NOT
 implemented by quick-260901-8rm; that plan's `scoped_out` frontmatter block
 records the reasoning this section restates in full.
 
