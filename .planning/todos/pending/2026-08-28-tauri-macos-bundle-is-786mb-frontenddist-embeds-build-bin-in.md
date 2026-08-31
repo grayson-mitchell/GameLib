@@ -80,6 +80,12 @@ directory is a different mechanism from narrowing WHAT that directory contains.
 Measured on the quick-260901-8rm packaged DMG, after fix (1) landed. Independent of both
 fixes above; worth ~45MB on every macOS bundle.
 
+**Scope note (corrected 2026-09-01 after a release build):** this is PRE-EXISTING overhead
+present in the old bundle too, NOT a shortfall in fix (1). An earlier revision of this file said
+it explained why fix (1) saved ~124.7MB instead of ~162MB; that was wrong — fix (1) saved
+161.2 MiB and met its estimate. See the corrected fix (1) numbers below. All four trees fix (1)
+removed carry 0 symlinks, so only the kept `arm64/darwin` and `x64/darwin` trees are affected.
+
 ```
 build/bin/arm64/darwin  (repo)      147,024 KB   12 symlinks   461 files
    .../arm64/darwin     (shipped)   193,860 KB    0 symlinks   467 files
@@ -125,11 +131,27 @@ platform guard (`legendary/games.ts:919-937`, `launcher.ts:927`).
 read-only since Tauri deletes the intermediate `.app` when only the `dmg` target
 is requested — see `260901-8rm-MEASUREMENTS.md`):
 
-- Shipped `Contents/Resources/build/bin`: 239,444 KB vs the repo's own unnarrowed
-  `build/bin` at 367,160 KB — **saved ~124.7MB** on this run, below the plan's ~162MB
-  estimate. **The reason is Cause 3 below, not a shortfall in fix (1)** — the executor's
-  first explanation (the freshly-built steam-bridge shim) was wrong and has been corrected
-  in `260901-8rm-MEASUREMENTS.md`.
+- **Measured on a real RELEASE build, 2026-09-01 — fix (1) MET its ~162MB estimate.**
+  DMG 530,984,320 B -> 388,901,574 B (**-142,082,746 B, -26.8%**). Installed `.app` ~786 MiB ->
+  639,424 KiB (624.4 MiB). Shipped `Resources/build/bin` 395 MiB -> 233.8 MiB = **-161.2 MiB**.
+
+  | tree | old (MiB) | new (MiB) | |
+  |---|---|---|---|
+  | `arm64/darwin` | 189 | 189.3 | kept |
+  | `x64/darwin` | 44 | 44.3 | kept |
+  | `x64/win32` | 52 | 0.2 | narrowed to the 2 Wine exes |
+  | `arm64/win32` | 38 | 0.0 | removed |
+  | `x64/linux` | 37 | 0.0 | removed |
+  | `arm64/linux` | 35 | 0.0 | removed |
+  | **total** | **395** | **233.8** | **-161.2** |
+
+  Two earlier explanations in this file were WRONG and are retracted: the executor's
+  "steam-bridge shim" (~3.6MB, and it cancels on both sides of the subtraction), and the
+  orchestrator's follow-up claim that Cause 3 explained a shortfall. **There was no shortfall.**
+  The `~124.7MB` figure both were reasoning about came from the plan gate's
+  `repo build/bin - shipped bin` subtraction, which is the WRONG PAIR — it compares against a
+  tree that was never shipped. Old-shipped vs new-shipped is the meaningful comparison and it
+  matches the estimate. Full derivation in `260901-8rm-MEASUREMENTS.md`.
 - `arm64/win32`, `x64/linux`, `arm64/linux` confirmed ABSENT from the shipped tree.
   `bin/x64/win32/` contains exactly the two Wine exes, nothing else.
 - **The Tauri platform-config merge is confirmed a DEEP merge, not a shallow

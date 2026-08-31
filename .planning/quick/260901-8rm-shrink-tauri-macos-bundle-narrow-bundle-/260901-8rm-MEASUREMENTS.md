@@ -133,3 +133,56 @@ Fix (2) is confirmed still entirely open, per the plan's scoped-out decision.
   coverage is `packagingConfig.test.ts`'s merged-map config-level assertions (Task 1). A real
   Windows/Linux CI build has not run against these overlays.
 - No runtime launch was attempted or is relevant to this gate (see the D-6 note above).
+
+
+---
+
+## RELEASE-BUILD MEASUREMENT, 2026-09-01 — and a RETRACTION
+
+A real RELEASE build was made after this task closed
+(`vite build` -> `build:sidecar-sea` -> `tauri build`, updater artifacts disabled via
+`--config '{"bundle":{"createUpdaterArtifacts":false}}'` because
+`~/.tauri/gamelib-updater-v2.key` is password-protected and the password was not available).
+
+| | before | after | delta |
+|---|---|---|---|
+| DMG | 530,984,320 B | 388,901,574 B | **-142,082,746 B (-26.8%)** |
+| installed `.app` | ~786 MiB (todo's figure) | 639,424 KiB (624.4 MiB) | ~-162 MiB |
+| `Resources/build/bin` | 395 MiB (todo's per-tree figures) | 239,444 KiB (233.8 MiB) | **-161.2 MiB** |
+
+### RETRACTION — the "saving fell short of the estimate" framing was WRONG
+
+The correction written into this file earlier today claimed the ~124.7MB saving undershot the
+plan's ~162MB estimate, and attributed the gap to symlink dereferencing. **The saving did not
+undershoot anything. It is 161.2 MiB, matching the estimate.**
+
+The `124.7MB` number is the plan gate's `repo build/bin - shipped bin` subtraction. That is the
+WRONG PAIR. It measures narrowing AND symlink inflation together against a tree that was never
+shipped. The meaningful comparison is OLD SHIPPED vs NEW SHIPPED:
+
+```
+tree            old(MiB)   new(MiB)
+  arm64/darwin      189      189.3     <- kept, IDENTICAL
+  x64/darwin         44       44.3     <- kept, IDENTICAL
+  x64/win32          52        0.2     <- narrowed to the 2 Wine exes
+  arm64/win32        38        0.0     <- removed
+  x64/linux          37        0.0     <- removed
+  arm64/linux        35        0.0     <- removed
+  TOTAL             395      233.8     = 161.2 MiB saved
+```
+
+The kept trees being byte-for-byte identical old-to-new is the proof: **the ~46,836 KiB of
+symlink dereferencing was present in the OLD bundle too** (the todo recorded old `arm64/darwin`
+as 189M against a 147,024 KiB repo tree — the same ~45MB inflation). It is pre-existing overhead
+that fix (1) neither caused nor was expected to remove.
+
+**Cause 3 (symlink dereferencing) remains TRUE and remains worth ~45MB.** All four removed trees
+carry 0 symlinks, so only the kept darwin trees are affected. What is retracted is solely the
+claim that it explained a shortfall — there was no shortfall. The error is the same class this
+repo keeps paying for: the RATIONALE was false while the underlying finding was sound.
+
+### Fix (2) is confirmed still outstanding, on release numbers
+
+`__text` 5,856,736 B / `__const` 223,766,872 B, and `strings | grep -c bin/x64/win32/gogdl.exe`
+returns 1. Essentially unchanged from the pre-fix release baseline (`__const` 222,423,384). The
+~212MB `frontendDist` embedding is untouched, exactly as designed.
