@@ -2,8 +2,9 @@
 phase: 35-electron-cutover-remove-the-electron-build
 verified: 2026-08-30T04:12:40Z
 reverified: 2026-08-31T19:40:00Z
-status: verified
-score: 17/17 must-haves verified
+readjudicated: 2026-08-31T20:15:00Z
+status: gaps_found
+score: 16/17 must-haves verified — REQ-35-07 REOPENED by independent adjudication 2026-08-31
 overrides_applied: 0
 re_verification:
   performed: 2026-08-31 — independent goal-backward re-adjudication after gap-closure cycle 1 (plans 35-20..35-29)
@@ -31,6 +32,30 @@ post_reverification_closure:
     - "Measured on a `pnpm tauri:dev` build, jar `gamelib-shell.binarycookies` (process-name keyed), NOT the packaged `com.gamelib.shell.binarycookies` jar the 21-criterion live gate used. Build identity was verified by `nm` (35 symbol hits for default_data_store_cookies_for_domain), not assumed — `strings` returns 0 for the same symbol and would have falsely indicated a stale build."
     - "D-35-29-02 remains OPEN and was UPGRADED by this run from a single-jar observation to a REPRODUCED one (the same four Epic auth cookie names survive logout on the second, differently-keyed jar). This run also created a NEW contradiction that did not exist at the 16/17 adjudication: the product's in-process post-clear census now reads matched=0 on all five hosts while an external `strings` read of the same jar still shows those four names. It is ledgered as an open deferred item, NOT scored as a must-have failure — that was already its standing at 16/17 and this executor did not re-adjudicate it. A fresh verifier pass is the proper vehicle for deciding whether it should become one."
     - "The two gates routed OUT of Phase 35 (`pnpm lint` -> Phase 39, Windows/Linux smoke -> Phase 38) and the red `pnpm test` (3 decompressPool native-LZMA failures, ledgered as an unowned pre-existing todo) are unchanged by this task and were already excluded from the 17 must-haves. They do not hold Phase 35 open and are not claimed as closed."
+independent_adjudication:
+  performed: 2026-08-31 — third pass, independent verifier, spawned BECAUSE the 16/17 -> 17/17 move was made by the quick-task executor closing its own work
+  reviewed: "post_reverification_closure (quick task 260831-q93)"
+  verdict: "REJECTED. 17/17 is NOT earned. Score returns to 16/17, status returns to gaps_found. REQ-35-07 FAILS on new evidence this pass measured directly."
+  method: "Both cookie jars were copied out and decoded with a real Apple binarycookies parser that walks the file's own page/offset index, rather than grepped with strings. Only records the file itself references as live are reported. This is the conclusive read D-35-29-02 asked for and could not take."
+  findings:
+    - "FALSIFIED the exculpatory hypothesis. D-35-29-02 named strings-surfacing-unreferenced-remnants as its leading candidate explanation, and post_reverification_closure leaned on it. It is wrong. In `gamelib-shell.binarycookies` (mtime 2026-08-31T19:27:18, i.e. AFTER the 19:27:14 clear) all four names — `_epicSID`, `_tald`, `EPIC_DEVICE`, `EPIC_LOGIN_ID` — are LIVE cookie records on `.epicgames.com`, each referenced by the page offset table. Each name occurs EXACTLY ONCE in the whole file, so live-record count equals byte-occurrence count: there are no remnants at all, only live cookies."
+    - "NEW AND WORSE, never recorded anywhere in this phase: the PACKAGED jar `com.gamelib.shell.binarycookies` (mtime 2026-08-31T18:17:28, after the 18:15:15 clear, process since exited so this is a FINAL flush) carries a FIFTH surviving `.epicgames.com` record that no report names — `EPIC_SESSION_AP`, path `/id`, value length 1310 bytes, created 06:17:18, expiry 2027-08-31. That is Epic's `/id` session credential, not an identifier crumb. Its creation stamp predates the logout by nine hours, so it survived rather than being re-created. D-35-29-02's severity bound (`inert for re-authentication`) was established against a four-name set that DOES NOT INCLUDE IT, because that read was a strings grep for four names known in advance. The inertness defence is therefore not established for the actual residue set. Packaged Epic-owned live records total SEVEN."
+    - "THE CONTRADICTION IS RESOLVED AGAINST THE PRODUCT. `legendary/user.ts:243` calls `seam.cookiesForDomain(label, host, [])` with an EMPTY names array, and the Rust census applies `filter_names.is_empty() || ...`, so `matched` is every cookie whose domain matches the host — not a name-scoped subset. `cookie_domain_matches` (main.rs:1836-1839) strips the leading dot and suffix-matches, so `.epicgames.com`, `.www.epicgames.com` and `.ecosec.on.epicgames.com` all match target `epicgames.com`. The product logged `epicgames.com ... after(total=54, matched=0)`. The jar written three seconds later holds SIX matching live records. matched=0 is FALSE."
+    - "Corroborating arithmetic, recorded so a future pass does not have to re-derive it: the census's own totals do not reconcile either. It reported 57 -> 51 (a drop of 6) while reporting 7 cookies cleared, and the fortnite.com step logged `cleared 1` with total UNCHANGED at 54. The decoded jar holds 56 live records against the census's closing total of 51. The census and the persisted jar are not views of the same set."
+    - "Two builds, two differently-keyed jars, two logouts, same outcome. This is reproduced, not incidental."
+  what_the_quick_task_did_earn:
+    - "D-35-29-01 is genuinely discharged AS TO ITS LETTER. `default_data_store_cookies_for_domain` exists in `src-tauri/src/main.rs`, the census arm binds `existing_window` first and falls back on `existing_window.is_none() && epic_cookie_domain_matches(domain)`, and the live log shows numeric total=/matched= with zero `cookie census read failed` lines against five-per-host in the preserved pre-fix baseline. The probe is no longer inert. Verified in source and in both preserved logs. What it does NOT earn is trust in the values it returns — see findings."
+    - "D-35-19-15 is closed on its own contract. Its text asked for a non-primary Epic domain confirmed present before logout and a non-zero clear on it; the 19:27 log shows all four non-primary apexes at before(matched=1) -> cleared 1 -> after(matched=0), and my decode confirms zero non-primary Epic records remain in either jar. The opportunistic framing the executor was told to state IS present and IS honest, in all three claimed places: deferred-items.md's CLOSED block (`evidence arrived OPPORTUNISTICALLY, not the seeding step this item specified` and `Do not read this as 260831-q93 fixing the widening`), this file's post_reverification_closure.honesty_qualifications, and quick SUMMARY.md lines 149/158/238."
+    - "The frontmatter is structurally sound and nothing was lost in the relocation the executor self-reported. Parsed with js-yaml: 11 top-level keys, and `regressions` and `residual_red_gate` both sit correctly under `re_verification`, not absorbed into `post_reverification_closure`. `git diff 876faf5fe..HEAD` on this file is purely additive plus the status/score line; every superseded passage is annotated in place rather than deleted."
+  why_it_still_fails:
+    - "REQ-35-07 has TWO clauses and BOTH fail. Clause 1 — `Logging out clears the embedded browser's persisted state — cookies, localStorage, IndexedDB and disk cache`. Cookies are named FIRST and unconditionally; the text does not say `cookies that still authenticate`. Five Epic cookies including a 1310-byte session credential survive in the persisted jar. Clause 2 — `the app does not report success unless a post-clear read confirms it`. The app DID report success on a post-clear read that returned matched=0 against a jar holding six matching live records. That is not a confirmation; it is a false confirmation."
+    - "Clause 2 is dispositive on its own and does NOT depend on the inertness argument. The requirement's own rationale names the exact failure mode being reproduced: `a genuine unaddressed failure where the app reports clearing cookies it does not clear; on a shared machine that is credential exposure, not cosmetics`. Whatever one concludes about whether inert cookies count as persisted state, an evidence mechanism that certifies removal of cookies that are still there is the defect REQ-35-07 exists to close — now shipped inside the closure mechanism itself."
+    - "The one clause that DOES pass is the discharge test — `Discharged by having to re-enter credentials`. Re-login demanded credentials. This is the strongest argument for the executor's position and it is recorded here rather than suppressed. It is not sufficient: it is a test OF clause 1, it says nothing about clause 2, and it was never run against `EPIC_SESSION_AP` because nobody knew that cookie had survived."
+    - "No override exists for this must-have (`overrides_applied: 0`, no `overrides:` key), so it resolves as FAILED rather than PASSED (override). If the user wishes to accept the deviation, the vehicle is an explicit override entry with a reason and an acceptor, not a score move."
+  routed_items_confirmed_out_of_scope:
+    - "`pnpm lint` — RE-MEASURED BY ME, exit code captured from the command and not from a pipe: exit 1, 4155 problems (9 errors, 4146 warnings). Correctly routed to Phase 39, which exists in ROADMAP.md with a repo-wide lint goal. Not among the 17 must-have truths. DRIFT NOTED, not scored: this file's deferred block says `the 6 current errors`; there are now NINE, across meta/__tests__/cleanDist.test.ts, src/backend/__tests__/packagingConfig.test.ts, src/backend/sidecar/__tests__/appShellFlows.test.ts, src/backend/sidecar/__tests__/steamAuthFlows.test.ts, src/backend/sidecar/installedJsonWatcher.ts, src/backend/utils.ts, src/frontend/screens/WebView/index.tsx, src/frontend/state/__tests__/GlobalStateSleepAssertionClassification.test.ts. Phase 39 should inherit the corrected count."
+    - "Windows/Linux parity — correctly routed. REQ-35-20's OWN text routes the smoke-launch half to Phase 38 as `38-W04`/`38-W05` and records the option-c scope reduction as user-acknowledged. Phase 38 exists in ROADMAP.md. Not among the 17 must-have truths."
+    - "`pnpm test` decompressPool — RE-MEASURED BY ME. Note the correct path is `src/backend/storeManagers/steam/__tests__/decompressPool.test.ts`; `npx jest` against the `src/backend/__tests__/` path implied elsewhere exits 1 with `0 matches`, a fail-open shape a future pass should not mistake for a failure. On the real path: exit 1, `Tests: 3 failed, 38 passed, 41 total`, all three lzmaLoader native-decode cases. Phase 35 attribution independently disproved: `git diff e42f9862..HEAD` touches exactly one lzma file, `src/backend/storeManagers/steam/depot/lzmaNativeBinding.ts`, and the change is a single line INSIDE A DOC COMMENT (an `--alias:` path in prose). Todo `.planning/todos/pending/2026-08-31-decompresspool-native-lzma-tests-fail-3-of-41.md` exists. Correctly excluded."
 gaps:
   - truth: "REQ-35-20 — the phase closes on a BLOCKING packaged macOS arm64 live gate; its own text says 'Any FAIL means the phase does not close'"
     status: resolved
@@ -81,8 +106,9 @@ gaps:
       - "A coordinated multi-file change: regenerate the scope AND update the `--rewrite-scope` guard fixture counts AND re-baseline the A-03 ratchet debt set, in one commit — DONE 2026-08-30/31"
 
   - truth: "REQ-35-07 — logging out clears the embedded browser's persisted state and the app does not report success unless a post-clear read confirms it"
-    status: resolved
-    resolved_by: "quick task 260831-q93 (9106ccbea), 2026-08-31, on LIVE evidence only. The blocker was D-35-29-01: the census read resolved `app.get_webview_window(label)`, which structurally cannot find Epic's pristine webview-less login window, so every verdict pinned at UNSUPPORTED_OR_ERROR and BOTH consuming branches in legendary/user.ts were dead code. The fix adds `default_data_store_cookies_for_domain` and an `existing_window`-first guard in the census arm, mirroring the fallback the CLEAR path already had — the fix direction this report itself identified below. Live Epic logout 2026-08-31 19:27: all five hosts SUPPORTED_NONEMPTY with numeric total=/matched=, 0 census read failures, and all four NON-PRIMARY apexes before(matched=1) -> cleared 1 -> after(matched=0), which is the multi-domain proof D-35-19-15 demanded. The post-clear read now genuinely gates the success report — the `brokenHosts` detector is reachable for the first time and stayed silent correctly (no host showed proven-populated-with-zero-delta). QUALIFIED, see post_reverification_closure.honesty_qualifications: the enabling cookies were legacy residue, not seeded; the measurement is on a dev-keyed jar; and D-35-29-02 remains open and is now REPRODUCED on a second jar, with a new in-process-vs-external contradiction this executor did not re-adjudicate."
+    status: failed
+    readjudicated_2026_08_31: "REOPENED by the independent third pass. A page-index binarycookies decode of BOTH jars shows Epic auth cookies surviving logout as LIVE records — four on the dev jar, and FIVE on the packaged jar including a 1310-byte EPIC_SESSION_AP session credential on path /id that no prior record names — while the product own post-clear census logged matched=0 for those same hosts. Both of REQ-35-07 clauses fail. See independent_adjudication above. The superseded_resolved_by text below is the quick-task executor claim, PRESERVED UNALTERED; it is accurate about D-35-29-01 and D-35-19-15 and wrong about REQ-35-07."
+    superseded_resolved_by: "quick task 260831-q93 (9106ccbea), 2026-08-31, on LIVE evidence only. The blocker was D-35-29-01: the census read resolved `app.get_webview_window(label)`, which structurally cannot find Epic's pristine webview-less login window, so every verdict pinned at UNSUPPORTED_OR_ERROR and BOTH consuming branches in legendary/user.ts were dead code. The fix adds `default_data_store_cookies_for_domain` and an `existing_window`-first guard in the census arm, mirroring the fallback the CLEAR path already had — the fix direction this report itself identified below. Live Epic logout 2026-08-31 19:27: all five hosts SUPPORTED_NONEMPTY with numeric total=/matched=, 0 census read failures, and all four NON-PRIMARY apexes before(matched=1) -> cleared 1 -> after(matched=0), which is the multi-domain proof D-35-19-15 demanded. The post-clear read now genuinely gates the success report — the `brokenHosts` detector is reachable for the first time and stayed silent correctly (no host showed proven-populated-with-zero-delta). QUALIFIED, see post_reverification_closure.honesty_qualifications: the enabling cookies were legacy residue, not seeded; the measurement is on a dev-keyed jar; and D-35-29-02 remains open and is now REPRODUCED on a second jar, with a new in-process-vs-external contradiction this executor did not re-adjudicate."
     reverified: "STILL OPEN after gap-closure cycle 1, and now understood to be WORSE than the original verification recorded, not better. This is the phase's remaining BLOCKER."
     reason: "The code is right and independently verified: `EPIC_COOKIE_DOMAINS` (main.rs:3189) and `EPIC_COOKIE_HOSTS` (legendary/user.ts:43) both carry all five Epic-owned apexes; `epic_cookie_domain_matches` delegates to the single `cookie_domain_matches` comparator rather than hand-rolling a second one; `user.ts:238`'s `if (total === 0)` makes a zero-total clear FATAL to logout. But the closure evidence does not exist: D-35-19-15 records that gate criterion 21 — the criterion that discharged the standing 34.6 Step 8 FAIL — did NOT actually exercise the multi-domain clear it was written to prove. So the widening is unit-proven and code-verified, never live-proven."
     reverified_reason: "The 2026-08-31 re-run found BOTH prescribed closure routes unavailable, and the verifier confirmed the second one structurally in Rust source rather than taking the gate's word. (1) SEEDING ROUTE DEAD: the Tauri build embeds no browser view (`WebviewUnavailablePanel.tsx:43`), so no user action on this build can create a non-primary Epic cookie — the widening is unreachable-by-construction, not merely untested. (2) CENSUS ROUTE DEAD: plan 35-23's per-host census, which D-35-19-15 itself sanctioned as the no-seeding closure path, returns `UNSUPPORTED_OR_ERROR` on all five hosts at every logout. Cause confirmed at source: the `humble_login_cookies_for_domain` arm at `src-tauri/src/main.rs:6341` resolves `app.get_webview_window(label)`, and this same file's own doc comment above `clear_default_data_store_cookies_for_domain` states that Epic's login window is ALWAYS the pristine webview-less `WindowBuilder` window, so that lookup 'structurally can never find it, for ANY label, fresh or stale'. The CLEAR path was given a label-independent data-store fallback for exactly this reason; the CENSUS path was not. DOWNSTREAM CONSEQUENCE THE DEFERRED ITEM DOES NOT SPELL OUT: in `legendary/user.ts`'s CR-04 fatality logic, the `brokenHosts` detector requires `domainVerdict(before) === 'SUPPORTED_NONEMPTY'` and the non-fatal branch requires `'SUPPORTED_BUT_EMPTY'` — with every verdict pinned at `UNSUPPORTED_OR_ERROR`, NEITHER is reachable. Case 1, the broken-per-host detector that is the entire capability D-35-19-15 asked for, is dead code on the only path it serves. What survives is only the pre-existing bare zero-sum fatality. Net: 35-23 shipped no working evidence capability to the Epic logout path. The fail-closed property is intact and correct; the new observability is not."
@@ -113,7 +139,7 @@ human_verification:
   - test: "STILL OPEN — gate criterion 14's UI half: with the Library view open, externally touch `installed.json` and WATCH the view"
     expected: "The Library view repaints within ~1s with NO manual refresh"
     why_human: "The backend and push halves are positively evidenced (`origin=push`, distinct from the boot-time `origin=mount`), but the operator was not watching the Library at the moment of the gesture. A message arriving is not proof a surface repainted. This is the one human item the re-run explicitly left UNOBSERVED rather than scored."
-  - test: "RESOLVED 2026-08-31 by quick task 260831-q93 — the blocking half (D-35-29-01) is fixed and the live logout produced the evidence; the SEEDING half was never performed and remains impossible. Original entry preserved: STILL OPEN, AND NOW BLOCKED — REQ-35-07 live: log in to Epic, seed a cookie on a non-epicgames.com Epic apex, then log out"
+  - test: "REOPENED 2026-08-31 by the independent third pass — a binarycookies page-index decode shows Epic auth cookies (incl. a 1310-byte EPIC_SESSION_AP on the packaged jar) SURVIVING the logout while the product census logged matched=0. What a human must now do: take a fresh Epic login on a PACKAGED build, log out, and decode ~/Library/HTTPStorages/com.gamelib.shell.binarycookies via its page/offset index (not strings) to confirm zero Epic-owned live records. Executor claim preserved: RESOLVED 2026-08-31 by quick task 260831-q93 — the blocking half (D-35-29-01) is fixed and the live logout produced the evidence; the SEEDING half was never performed and remains impossible. Original entry preserved: STILL OPEN, AND NOW BLOCKED — REQ-35-07 live: log in to Epic, seed a cookie on a non-epicgames.com Epic apex, then log out"
     expected: "`gamelib.log` shows a non-zero per-domain delta on at least one non-primary apex and a post-clear read that confirms removal"
     why_human: "Both closure routes are unavailable on this build. No embedded browser view exists to seed a non-primary apex, and plan 35-23's census fallback is inert at logout (D-35-29-01). This item cannot be discharged by a human gesture until D-35-29-01 is fixed or the embedded browser returns."
   - test: "RESOLVED 2026-08-30 — REQ-35-17 EOS: trigger the EOS confirmations in one light and one dark theme"
@@ -129,7 +155,8 @@ human_verification:
 **Phase Goal:** Retire the Electron build: delete `electron-vite`/`electron-builder` config, the preload contextBridge path, and the `isTauri()` branches, leaving Tauri as the only shell. Runs last, and only once the `session`/`powerSaveBlocker` parity gaps are resolved or explicitly accepted, and the parked Electron-renderer bugs have been re-tested against Tauri rather than fixed in Electron. Also in scope: `R-34.5-G1-PKG` (REQ-35-10 half a, REQ-35-11 half b).
 
 **Verified:** 2026-08-30T04:12:40Z (initial) · **Re-verified:** 2026-08-31 (independent, after gap-closure cycle 1)
-**Status:** verified — 17/17. All five gaps closed. **REQ-35-07's blocker (D-35-29-01) was discharged on 2026-08-31 by quick task `260831-q93` on live evidence** — see [## POST-RE-VERIFICATION CLOSURE — 2026-08-31](#post-re-verification-closure--2026-08-31) at the end of this file. The `gaps_found — 16/17` adjudication below is preserved unaltered as the record of the 19:40 re-verification; it was accurate when written.
+**Status:** gaps_found — **16/17**. *(Third pass, independent, 2026-08-31: the executor-recorded 17/17 is REJECTED. See [## INDEPENDENT ADJUDICATION OF THE 17/17 CLAIM — 2026-08-31](#independent-adjudication-of-the-1717-claim--2026-08-31) at the very end of this file.)* The intermediate header is preserved verbatim on the next line as the record of what quick task `260831-q93` claimed.
+**Status (SUPERSEDED — `260831-q93`'s own claim, preserved):** verified — 17/17. All five gaps closed. **REQ-35-07's blocker (D-35-29-01) was discharged on 2026-08-31 by quick task `260831-q93` on live evidence** — see [## POST-RE-VERIFICATION CLOSURE — 2026-08-31](#post-re-verification-closure--2026-08-31). The `gaps_found — 16/17` adjudication below is preserved unaltered as the record of the 19:40 re-verification; it was accurate when written.
 **Re-verification:** Yes. **Everything from here to the `RE-VERIFICATION` heading is the ORIGINAL 2026-08-30 record, preserved unaltered — its "Score: 11/17" and its ✗ marks are historical, not current.** The current adjudication is the [## RE-VERIFICATION (independent) — 2026-08-31](#re-verification-independent--2026-08-31) section at the end of this file, and the frontmatter above it.
 **Roadmap `success_criteria`:** empty. Must-haves were merged from the 19 PLAN frontmatter `must_haves` blocks, the goal's own literal claims, and REQ-35-01..21 in REQUIREMENTS.md.
 
@@ -281,7 +308,7 @@ The phase declares no `scripts/*/tests/probe-*.sh` probes; its mechanized closur
 | REQ-35-04 tray real, no unhonoured affordance | 35-06 | ✗ BLOCKED | Three settings honoured; recent-games submenu hollow for Steam (criterion 6 FAIL). |
 | REQ-35-05 `gamelib://` OS registration | 35-07 | ✗ BLOCKED | Shell half live-proven; parser cannot resolve Steam (criterion 10 FAIL). |
 | REQ-35-06 real `powerSaveBlocker` assertions | 35-08 | ✓ SATISFIED | Real IOKit/Win/Linux assertions, distinct kinds, unique ids, shutdown release. Live criterion 15 PASS. (D-35-19-10/-11/-12 record adjacent defects: double-acquire; a "download" system assertion held while merely playing.) |
-| REQ-35-07 logout clears persisted state, no false success | 35-09 | ✓ SATISFIED | Code verified correct; live evidence DELIVERED 2026-08-31 by quick task `260831-q93` — five hosts SUPPORTED_NONEMPTY with numeric counts, four non-primary apexes cleared 1 each (D-35-19-15 CLOSED, D-35-29-01 RESOLVED). Was ✗ BLOCKED at the 19:40 re-verification. |
+| REQ-35-07 logout clears persisted state, no false success | 35-09 | ✗ BLOCKED (readjudicated 2026-08-31) | Code verified correct; live evidence DELIVERED 2026-08-31 by quick task `260831-q93` — five hosts SUPPORTED_NONEMPTY with numeric counts, four non-primary apexes cleared 1 each (D-35-19-15 CLOSED, D-35-29-01 RESOLVED). Was ✗ BLOCKED at the 19:40 re-verification, briefly ✓ at 260831-q93, and is ✗ BLOCKED again after the independent decode of both cookie jars — see the INDEPENDENT ADJUDICATION section at the end of this file. |
 | REQ-35-08 renderer builds with plain `vite` | 35-03 | ✓ SATISFIED | `vite.config.ts` + gate; CI step "Build renderer web assets (vite)" → `pnpm exec vite build`. |
 | REQ-35-09 real HMR + preserved packaged-evidence path | 35-03 | ✓ SATISFIED | `devUrl: http://localhost:5173`, `beforeDevCommand: pnpm exec vite`, and a separate `tauri:dev:packaged` that runs `vite build` then `tauri build --debug`. |
 | REQ-35-10 `R-34.5-G1-PKG` half (a) | 35-04 | ✓ SATISFIED | **Artifact-proven by me**, not by summary. |
@@ -686,3 +713,166 @@ already ran twice per host, live, without deadlock. Logout did not hang.
 
 _Closure recorded: 2026-08-31_
 _Recorded by: executor of quick task `260831-q93` — NOT an independent verification pass_
+
+---
+
+## INDEPENDENT ADJUDICATION OF THE 17/17 CLAIM — 2026-08-31
+
+**Third pass. Independent verifier, spawned specifically because the `16/17 -> 17/17` move was
+made by the quick-task executor closing its own work.** The file disclosed that conflict twice
+and named the exact way it could be wrong. Everything above this section is preserved unaltered.
+
+### Verdict
+
+**REJECTED. 17/17 is not earned. Score returns to 16/17; status returns to `gaps_found`.**
+
+Not for the reason the executor anticipated. The executor asked whether `D-35-29-02`'s residual
+cookies "belong against REQ-35-07's *clears persisted state* half", and framed that as a judgement
+call about whether inert cookies count. **That framing is obsolete, because the premise it rests on
+is false.** This pass took the conclusive measurement `D-35-29-02` said it could not take, and the
+residue is neither remnant-noise nor fully inert.
+
+### The measurement
+
+Both jars were copied out and decoded with a real Apple `binarycookies` parser that walks the
+**file's own page/offset index**. Only records the file itself references as live are reported.
+`strings` was used only as a cross-check on occurrence counts.
+
+| Jar | mtime | Clear at | Epic-owned LIVE records after logout |
+| --- | --- | --- | --- |
+| `gamelib-shell.binarycookies` (dev, process-name keyed) | 2026-08-31 **19:27:18** | 19:27:14 | **6** |
+| `com.gamelib.shell.binarycookies` (packaged, bundle-id keyed) | 2026-08-31 **18:17:28** | 18:15:15 | **7** |
+
+Both mtimes **postdate** their clear. The packaged process has since exited, so its jar is a
+**final flush**, not a lagging snapshot.
+
+**Finding 1 — the exculpatory hypothesis is falsified.** `D-35-29-02` named
+"`strings` over a binary format could surface unreferenced remnants rather than live cookies" as
+its **leading candidate**, and `post_reverification_closure` leaned on it. It is wrong. All four
+names are live records referenced by the page index, on `.epicgames.com`:
+
+```
+.epicgames.com   EPIC_DEVICE     path=/  vlen=32   created=2026-08-31T07:27:15
+.epicgames.com   EPIC_LOGIN_ID   path=/  vlen=96   created=2026-08-31T07:27:15
+.epicgames.com   _epicSID        path=/  vlen=32   created=2026-08-31T07:27:15
+.epicgames.com   _tald           path=/  vlen=36   created=2026-08-31T07:27:16
+```
+
+Each of the four names occurs **exactly once** in the whole file. Live-record count equals byte
+occurrence count. There are no remnants at all — only live cookies.
+
+**Finding 2 — new, worse, and named nowhere in this phase.** The **packaged** jar carries a fifth
+surviving `.epicgames.com` record that no report mentions:
+
+```
+.epicgames.com   EPIC_SESSION_AP  path=/id  vlen=1310  created=2026-08-31T06:17:18  exp=2027-08-31
+```
+
+That is Epic's `/id` **session credential**, not an identifier crumb. Its creation stamp predates
+the 18:15:15 logout by nine hours, so it **survived** rather than being re-created in the gap
+`D-35-29-02`'s hypothesis 2 proposed. `D-35-29-02`'s severity bound — "authentication is NOT
+restored by these cookies" — was established against a four-name set that **does not include it**,
+because that read was a `strings` grep for four names known in advance. **The inertness defence is
+not established for the actual residue set.**
+
+**Finding 3 — the two-measurement contradiction resolves against the product.** `legendary/user.ts:243`
+calls `seam.cookiesForDomain(label, host, [])` with an **empty** names array, and the Rust census
+applies `filter_names.is_empty() || ...`, so `matched` is *every* cookie whose domain matches the
+host — not a name-scoped subset. `cookie_domain_matches` (`main.rs:1836-1839`) strips the leading
+dot and suffix-matches, so `.epicgames.com`, `.www.epicgames.com` and `.ecosec.on.epicgames.com`
+all match target `epicgames.com`. The product logged:
+
+```
+Legendary logout: cleared 3 epicgames.com cookie(s) (measured post-removal delta)
+  — cookie census before(total=57, matched=3, verdict=SUPPORTED_NONEMPTY)
+                   after(total=54, matched=0, verdict=SUPPORTED_NONEMPTY)
+```
+
+The jar written **three seconds later** holds **six** matching live records. `matched=0` is false.
+
+**Finding 4 — the census arithmetic does not self-reconcile either.** It reported `57 -> 51`
+(a drop of 6) while reporting 7 cleared, and the `fortnite.com` step logged `cleared 1` with total
+**unchanged** at 54. The decoded jar holds **56** live records against the census's closing total
+of **51**. The census and the persisted jar are not views of the same set.
+
+Two builds, two differently-keyed jars, two logouts, same outcome. Reproduced, not incidental.
+
+### Why REQ-35-07 fails, argued from the requirement's own text
+
+> **REQ-35-07**: Logging out clears the embedded browser's persisted state — cookies, localStorage,
+> IndexedDB and disk cache — and the app does not report success unless a **post-clear read
+> confirms it**. This closes the standing 34.6 live-gate Step 8 FAIL, a genuine unaddressed failure
+> where the app reports clearing cookies it does not clear; on a shared machine that is credential
+> exposure, not cosmetics. […] Discharged by having to re-enter credentials […]
+
+**Clause 1 fails.** Cookies are named **first and unconditionally**. The text does not say "cookies
+that still authenticate". Five Epic cookies including a 1310-byte session credential survive in the
+persisted jar.
+
+**Clause 2 fails, and is dispositive on its own.** The app reported success on a post-clear read
+that returned `matched=0` against a jar holding six matching live records. That is not a
+confirmation — it is a **false** confirmation. This does not depend on the inertness argument at
+all. The requirement's own rationale names the exact failure mode now being reproduced: *"the app
+reports clearing cookies it does not clear; on a shared machine that is credential exposure."*
+Phase 35's answer to that was a post-clear census; the census now certifies removal of cookies that
+are still there. **The defect REQ-35-07 exists to close has been reproduced inside REQ-35-07's own
+closure mechanism.**
+
+**The one clause that passes, recorded rather than suppressed.** The discharge test — *"Discharged
+by having to re-enter credentials"* — was met: re-login demanded credentials. This is the strongest
+argument for the executor's position. It is not sufficient: it is a test **of clause 1**, it says
+nothing about clause 2, and it was never run against `EPIC_SESSION_AP`, because nobody knew that
+cookie had survived.
+
+No override exists (`overrides_applied: 0`). REQ-35-07 therefore resolves **FAILED**, not
+`PASSED (override)`. If the user wishes to accept the deviation, the vehicle is an explicit
+`overrides:` entry with a reason and an acceptor — not a score move.
+
+### What quick task `260831-q93` did legitimately earn
+
+Rejecting the score is not rejecting the work. Three of the four claims put to this pass hold.
+
+| Claim | Verdict | Evidence |
+| --- | --- | --- |
+| `D-35-29-01` genuinely discharged | **YES, as to its letter** | `default_data_store_cookies_for_domain` exists in `src-tauri/src/main.rs`; the census arm binds `existing_window` first and falls back on `existing_window.is_none() && epic_cookie_domain_matches(domain)`; the preserved logs go from 5-per-host `cookie census read failed` to zero, with numeric `total=`/`matched=`. The probe is no longer inert. **What it does NOT earn is trust in the values it returns.** |
+| Dev-jar-only measurement — does it matter? | **YES, and more than the executor allowed** | The packaged jar was never read by the fixed census, and it is the jar with the **worse** residue — seven Epic records including the session credential. The dev/packaged distinction is not a footnote here; it is where the un-named defect was hiding. |
+| `D-35-19-15` genuinely closed, framing honest | **YES on both** | The 19:27 log shows all four non-primary apexes at `before(matched=1) -> cleared 1 -> after(matched=0)`, and my decode confirms zero non-primary Epic records remain in **either** jar. The opportunistic framing is present and honest in all three claimed places: `deferred-items.md`'s CLOSED block ("evidence arrived OPPORTUNISTICALLY, not the seeding step this item specified" / "Do not read this as `260831-q93` fixing the widening"), this file's `post_reverification_closure.honesty_qualifications`, and quick `SUMMARY.md` lines 149/158/238. |
+| Did the score change smuggle anything? | **NO** | Parsed with `js-yaml`: 13 top-level keys, and `regressions` + `residual_red_gate` both sit correctly under `re_verification` — the nesting error the executor self-reported was genuinely fixed. `git diff 876faf5fe..HEAD` on this file is purely additive plus the status/score line; every superseded passage is annotated in place, none deleted. |
+
+### Routed items — re-measured, routing confirmed
+
+| Item | My measurement | Routing |
+| --- | --- | --- |
+| `pnpm lint` | exit **1**, 4155 problems (**9 errors**, 4146 warnings). Exit code captured from the command, not a pipe | Correctly Phase 39. **Not** among the 17 truths. **Drift noted:** the `deferred` block says "the 6 current errors"; there are now **9**, across `meta/__tests__/cleanDist.test.ts`, `src/backend/__tests__/packagingConfig.test.ts`, `src/backend/sidecar/__tests__/appShellFlows.test.ts`, `src/backend/sidecar/__tests__/steamAuthFlows.test.ts`, `src/backend/sidecar/installedJsonWatcher.ts`, `src/backend/utils.ts`, `src/frontend/screens/WebView/index.tsx`, `src/frontend/state/__tests__/GlobalStateSleepAssertionClassification.test.ts`. Phase 39 should inherit the corrected count |
+| Windows/Linux parity | not measurable here | Correctly Phase 38. REQ-35-20's **own text** routes the smoke-launch half to `38-W04`/`38-W05` and records the option-c reduction as user-acknowledged. **Not** among the 17 truths |
+| `pnpm test` decompressPool | exit **1**, `Tests: 3 failed, 38 passed, 41 total` — all three lzmaLoader native-decode cases | Correctly excluded. Phase 35 attribution independently **disproved**: `git diff e42f9862..HEAD` touches exactly one lzma file, and the change is a single line **inside a doc comment**. Todo filed. **Measurement hazard for the next pass:** the real path is `src/backend/storeManagers/steam/__tests__/decompressPool.test.ts`; `npx jest` against the `src/backend/__tests__/` path exits 1 with `0 matches` — a fail-open shape that must not be read as a failure |
+
+### Bottom line
+
+The 19:40 re-verification's own summary — *"The cutover goal is achieved and the blocking gate is
+green. The phase does not close."* — is restored, and its reasoning is strengthened rather than
+weakened. Sixteen of seventeen must-haves hold. The Electron cutover itself is done.
+
+REQ-35-07 is the one that does not, and the gap is **larger** than any record in this phase has
+stated: a session credential survives logout on the packaged build, and the mechanism Phase 35
+built to detect exactly that reports clean.
+
+**Escalation — this needs a human decision, not another closure attempt.** Three options:
+
+1. **Fix it.** Establish why the clear reports removal of cookies the persisted jar still holds
+   (`wry-cookie-delete-lies-about-deleting` is the standing candidate in this stack), and make the
+   post-clear read see persisted state rather than a divergent in-process view.
+2. **Accept it.** Add an explicit `overrides:` entry to this file's frontmatter with a reason and
+   an acceptor. That is the sanctioned vehicle for a deliberate deviation.
+3. **Re-scope REQ-35-07.** Amend the requirement text so the confirmation clause states what the
+   census can actually guarantee.
+
+`D-35-29-02` should be upgraded to name `EPIC_SESSION_AP` and drop the "inert for re-authentication"
+severity bound, which is not established for the actual residue set.
+
+**Phase 35's ROADMAP checkbox remains deliberately unchecked. Closure is the user's call.**
+
+---
+
+_Independently readjudicated: 2026-08-31_
+_Verifier: Claude (gsd-verifier) — third pass, independent of both the gap-closure cycle and quick task `260831-q93`_

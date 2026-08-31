@@ -2362,6 +2362,58 @@ binarycookies parse, or a `cookies_for_url` read taken with a window present (bl
 
 Severity is bounded by the behavioural result: authentication is NOT restored by these cookies.
 
+### UPGRADED 2026-08-31 by the independent verification — severity bound DROPPED, residue set WRONG
+
+**A FIFTH survivor was never named, and the reason it was missed is methodological.** Every prior
+read of this jar -- including the orchestrating session's own -- was a `grep` for FOUR cookie names
+known in advance. **A census by known names cannot find an unknown member.** An index-walking
+binarycookies parse (the "proper parse" this item itself asked for and nobody had run) found:
+
+```
+.epicgames.com   EPIC_SESSION_AP  path=/id  vlen=1310
+                 created=2026-08-31T06:17:18  exp=2027-08-31
+```
+
+That is Epic's `/id` **session credential**, created NINE HOURS before the logout -- so it SURVIVED
+the clear rather than being re-created after it. That also settles this item's "two competing
+explanations": explanation (ii), re-creation in the ~3s gap, is falsified for this record.
+
+**The "inert for re-authentication" bound is WITHDRAWN.** It was established against a four-name set
+that excludes `EPIC_SESSION_AP`. The re-login credential test exercised the old set only. Nothing
+has tested whether this record alone can re-authenticate. **Do not cite the old severity bound.**
+
+**The remnant hypothesis is DEAD.** This item's leading candidate was that `strings` surfaces
+unreferenced remnants. All records are LIVE per the file's own page/offset index, and each name
+occurs exactly once -- live-record count equals byte-occurrence count. There are no remnants.
+
+Live Epic-owned records AFTER logout, both jars, both mtimes postdating their clear (the packaged
+process has since exited, so its jar is a FINAL FLUSH, not a lagging snapshot):
+
+| jar | clear at | mtime | live Epic records |
+| --- | --- | --- | --- |
+| `gamelib-shell.binarycookies` (dev) | 19:27:14 | 19:27:18 | **6** |
+| `com.gamelib.shell.binarycookies` (packaged) | 18:15:15 | 18:17:28 | **7** |
+
+### THE PRODUCT'S OWN POST-CLEAR READ IS FALSE -- and this is what blocks REQ-35-07
+
+`legendary/user.ts:243` calls `seam.cookiesForDomain(label, host, [])` with an **EMPTY** names
+array, and the Rust arm gates on `filter_names.is_empty() || ...` (`main.rs:4015`, `:6537`), so
+`matched` counts EVERY domain-matching cookie -- not a name-scoped subset. `cookie_domain_matches`
+strips the leading dot and suffix-matches, so all six Epic records match target `epicgames.com`.
+
+The product logged `after(total=54, matched=0)`. The jar written three seconds later holds six.
+**`matched=0` is false.** The census also fails to self-reconcile: `total` moves 57 -> 51, a drop of
+**6**, while the run reports **7** cleared, and the `fortnite.com` step logged `cleared 1` with
+`total` unchanged.
+
+This is not a reporting nit. **The defect REQ-35-07 exists to prevent has been reproduced inside
+REQ-35-07's own closure mechanism** -- the post-clear read that is supposed to stop the app
+reporting success on cookies it did not clear is itself certifying removal of cookies still present.
+Standing candidate cause: [[wry-cookie-delete-lies-about-deleting]].
+
+**Needs a decision, not another closure attempt:** fix the clear/read divergence, ACCEPT via an
+explicit `overrides:` entry, or RE-SCOPE REQ-35-07's confirmation clause.
+
 ## D-35-29-03 — the tray "About GameLib" window opens WITHOUT focus, on a secondary display
 
 Found: criterion 5 re-run, 2026-08-31, reported by the operator. Status: **OPEN, out of Phase 35's
