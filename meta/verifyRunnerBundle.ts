@@ -47,7 +47,15 @@ import {
   statSync,
   type Dirent
 } from 'node:fs'
-import { basename, join, resolve as resolvePath } from 'node:path'
+import {
+  basename,
+  dirname,
+  join,
+  relative,
+  resolve as resolvePath
+} from 'node:path'
+
+import { isContainedSymlinkTarget } from './preserveRunnerSymlinks'
 
 // ---------------------------------------------------------------------------
 // The three onedir runners -- never comet, never win32/linux, never the
@@ -102,10 +110,32 @@ export interface FrameworkInspection {
   versionsCurrentIsSymlink: boolean
   versionsCurrentTarget: string | null
   resolvedVersionDirExists: boolean
+  versionsCurrentTargetContained: boolean
   topLevelStubExists: boolean
   topLevelStubIsSymlink: boolean
   topLevelStubTarget: string | null
   resolvedTopLevelTargetExists: boolean
+  topLevelStubTargetContained: boolean
+  // Resources alias (`Python.framework/Resources` -> `Versions/Current/Resources`).
+  // Dropped ENTIRELY by the dereferencing `bundle.resources` copier -- absent from
+  // the shipped tree today, not merely wrong-kind (measured on the OLD release
+  // artifact, quick-260901-e7o).
+  resourcesAliasExists: boolean
+  resourcesAliasIsSymlink: boolean
+  resourcesAliasTarget: string | null
+  resolvedResourcesTargetExists: boolean
+  resourcesAliasTargetContained: boolean
+  // Sibling stub (`_internal/Python` -> `Python.framework/Versions/3.12/Python`).
+  // Lives OUTSIDE the framework directory (one level up, next to it) -- scoped to
+  // fire only when the framework's own parent is named `_internal`
+  // (siblingStubApplicable), the PyInstaller onedir shape, so a differently-laid-out
+  // future framework cannot false-fire this check.
+  siblingStubApplicable: boolean
+  siblingStubExists: boolean
+  siblingStubIsSymlink: boolean
+  siblingStubTarget: string | null
+  resolvedSiblingStubTargetExists: boolean
+  siblingStubTargetContained: boolean
   codesignDisplay: string
 }
 
@@ -138,16 +168,40 @@ function findFrameworks(runnerDir: string): string[] {
 }
 
 /**
- * Inspects a single `*.framework` directory's structural integrity. Every
- * symlink determination uses `lstatSync` (never `statSync`), so a
- * dereferenced (real-directory) `Versions/Current` is correctly reported as
- * NOT a symlink rather than silently resolved through. The top-level stub
- * (`Python.framework/Python`) receives the same three-part check as
- * `Versions/Current`: it exists, it is a symlink, and its target resolves
- * to a real path -- a stub that is a symlink to nowhere is caught here, not
- * silently passed through as healthy.
+ * Resolves `linkPath` (a symlink INSIDE `runnerTreeRoot`) and `target` (its
+ * raw, un-followed `readlinkSync` string) against `isContainedSymlinkTarget`
+ * (`./preserveRunnerSymlinks`), reusing the SAME proven, lexical (no
+ * `realpathSync`), absolute-and-`..`-escape-refusing containment check that
+ * module already applies when RE-CREATING these links (T-e7o-01/T-e7o-03).
+ * Deliberately not a second implementation: today's
+ * `resolvedTopLevelTargetExists` is a bare `existsSync(join(frameworkDir,
+ * target))`, which a target of `../../../../../evil` would satisfy.
  */
-function inspectFramework(frameworkDir: string): FrameworkInspection {
+function isLinkTargetContained(
+  runnerTreeRoot: string,
+  linkPath: string,
+  target: string
+): boolean {
+  const relPath = relative(runnerTreeRoot, linkPath)
+  return isContainedSymlinkTarget(runnerTreeRoot, relPath, target)
+}
+
+/**
+ * Inspects a single `*.framework` directory's structural integrity, plus the
+ * two links that live OUTSIDE the `.framework` directory proper (the
+ * `Resources` alias sits inside it but was dropped independently of
+ * `Versions/Current`; the sibling stub sits one level up in `_internal/`).
+ * Every symlink determination uses `lstatSync` (never `statSync`), so a
+ * dereferenced (real-directory) target is correctly reported as NOT a
+ * symlink rather than silently resolved through. `runnerDir` is the runner's
+ * own root (e.g. `.../darwin/gogdl`) -- containment is checked against it,
+ * not against `frameworkDir`, because the sibling stub's link lives outside
+ * `frameworkDir` entirely.
+ */
+function inspectFramework(
+  frameworkDir: string,
+  runnerDir: string
+): FrameworkInspection {
   const name = basename(frameworkDir)
   const stubName = name.endsWith('.framework')
     ? name.slice(0, -'.framework'.length)
@@ -169,9 +223,15 @@ function inspectFramework(frameworkDir: string): FrameworkInspection {
   }
 
   let resolvedVersionDirExists = false
+  let versionsCurrentTargetContained = false
   if (versionsCurrentIsSymlink && versionsCurrentTarget) {
     resolvedVersionDirExists = existsSync(
       join(frameworkDir, 'Versions', versionsCurrentTarget)
+    )
+    versionsCurrentTargetContained = isLinkTargetContained(
+      runnerDir,
+      versionsCurrentPath,
+      versionsCurrentTarget
     )
   }
 
@@ -194,9 +254,82 @@ function inspectFramework(frameworkDir: string): FrameworkInspection {
   // against Versions/ -- the top-level stub lives one level shallower than
   // Versions/Current, so it must not reuse that check's resolution base.
   let resolvedTopLevelTargetExists = false
+  let topLevelStubTargetContained = false
   if (topLevelStubIsSymlink && topLevelStubTarget) {
     resolvedTopLevelTargetExists = existsSync(
       join(frameworkDir, topLevelStubTarget)
+    )
+    topLevelStubTargetContained = isLinkTargetContained(
+      runnerDir,
+      topLevelStubPath,
+      topLevelStubTarget
+    )
+  }
+
+  // Resources alias (`Python.framework/Resources` -> `Versions/Current/Resources`).
+  // Resolved against frameworkDir, the same base as the top-level stub -- it lives
+  // at the same depth.
+  const resourcesAliasPath = join(frameworkDir, 'Resources')
+  let resourcesAliasExists = false
+  let resourcesAliasIsSymlink = false
+  let resourcesAliasTarget: string | null = null
+  try {
+    const st = lstatSync(resourcesAliasPath)
+    resourcesAliasExists = true
+    resourcesAliasIsSymlink = st.isSymbolicLink()
+    if (resourcesAliasIsSymlink) {
+      resourcesAliasTarget = readlinkSync(resourcesAliasPath)
+    }
+  } catch {
+    resourcesAliasExists = false
+  }
+
+  let resolvedResourcesTargetExists = false
+  let resourcesAliasTargetContained = false
+  if (resourcesAliasIsSymlink && resourcesAliasTarget) {
+    resolvedResourcesTargetExists = existsSync(
+      join(frameworkDir, resourcesAliasTarget)
+    )
+    resourcesAliasTargetContained = isLinkTargetContained(
+      runnerDir,
+      resourcesAliasPath,
+      resourcesAliasTarget
+    )
+  }
+
+  // Sibling stub (`_internal/Python` -> `Python.framework/Versions/3.12/Python`).
+  // Scoped to the PyInstaller onedir shape: only applicable when this framework's
+  // own parent directory is named `_internal` (findFrameworks can find a
+  // `*.framework` anywhere, not only under `_internal/`), so a differently-laid-out
+  // future framework cannot false-fire this check.
+  const siblingStubApplicable = basename(dirname(frameworkDir)) === '_internal'
+  const siblingStubPath = join(dirname(frameworkDir), stubName)
+  let siblingStubExists = false
+  let siblingStubIsSymlink = false
+  let siblingStubTarget: string | null = null
+  if (siblingStubApplicable) {
+    try {
+      const st = lstatSync(siblingStubPath)
+      siblingStubExists = true
+      siblingStubIsSymlink = st.isSymbolicLink()
+      if (siblingStubIsSymlink) {
+        siblingStubTarget = readlinkSync(siblingStubPath)
+      }
+    } catch {
+      siblingStubExists = false
+    }
+  }
+
+  let resolvedSiblingStubTargetExists = false
+  let siblingStubTargetContained = false
+  if (siblingStubIsSymlink && siblingStubTarget) {
+    resolvedSiblingStubTargetExists = existsSync(
+      join(dirname(frameworkDir), siblingStubTarget)
+    )
+    siblingStubTargetContained = isLinkTargetContained(
+      runnerDir,
+      siblingStubPath,
+      siblingStubTarget
     )
   }
 
@@ -213,10 +346,23 @@ function inspectFramework(frameworkDir: string): FrameworkInspection {
     versionsCurrentIsSymlink,
     versionsCurrentTarget,
     resolvedVersionDirExists,
+    versionsCurrentTargetContained,
     topLevelStubExists,
     topLevelStubIsSymlink,
     topLevelStubTarget,
     resolvedTopLevelTargetExists,
+    topLevelStubTargetContained,
+    resourcesAliasExists,
+    resourcesAliasIsSymlink,
+    resourcesAliasTarget,
+    resolvedResourcesTargetExists,
+    resourcesAliasTargetContained,
+    siblingStubApplicable,
+    siblingStubExists,
+    siblingStubIsSymlink,
+    siblingStubTarget,
+    resolvedSiblingStubTargetExists,
+    siblingStubTargetContained,
     codesignDisplay
   }
 }
@@ -232,7 +378,7 @@ export interface Summary {
 // `Contents/Resources/app.asar.unpacked/build/bin/${arch}/darwin`.
 // ---------------------------------------------------------------------------
 
-function findDarwinBinRoot(root: string, arch: string): string {
+export function findDarwinBinRoot(root: string, arch: string): string {
   const absoluteRoot = resolvePath(root)
   const suffix = join('build', 'bin', arch, 'darwin')
 
@@ -280,6 +426,57 @@ function walkFiles(dir: string): string[] {
     }
   }
   return out
+}
+
+// ---------------------------------------------------------------------------
+// Exact tree census (--expect-files/--expect-symlinks/--expect-bytes).
+// `readdirSync(dir, { withFileTypes: true })` Dirents are lstat-based, so a
+// symlinked directory is `isSymbolicLink()`, never `isDirectory()` -- it is
+// counted once as a symlink and never descended into, and a real file is
+// never miscounted as a symlink. Bytes are `lstatSync(p).size` summed over
+// regular files ONLY, matching this plan's `sum(stat -f %z)` discipline --
+// `du` (block-allocation based) is never used anywhere in this module.
+// ---------------------------------------------------------------------------
+
+export interface TreeCensus {
+  fileCount: number
+  symlinkCount: number
+  apparentBytes: number
+}
+
+export function censusTree(darwinRoot: string): TreeCensus {
+  let fileCount = 0
+  let symlinkCount = 0
+  let apparentBytes = 0
+
+  function walk(dir: string): void {
+    let entries: Dirent[]
+    try {
+      entries = readdirSync(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const entry of entries) {
+      const full = join(dir, entry.name)
+      if (entry.isSymbolicLink()) {
+        symlinkCount++
+      } else if (entry.isDirectory()) {
+        walk(full)
+      } else if (entry.isFile()) {
+        fileCount++
+        try {
+          apparentBytes += lstatSync(full).size
+        } catch {
+          // A file that vanished between readdir and lstat contributes 0
+          // bytes rather than throwing -- the exact-count comparison against
+          // --expect-files will still catch the discrepancy.
+        }
+      }
+    }
+  }
+
+  walk(darwinRoot)
+  return { fileCount, symlinkCount, apparentBytes }
 }
 
 // ---------------------------------------------------------------------------
@@ -389,7 +586,7 @@ function inspectRunner(
     .map((f) => ({ path: f, signature: getSignatureState(f) }))
 
   const frameworks = findFrameworks(runnerDir).map((dir) =>
-    inspectFramework(dir)
+    inspectFramework(dir, runnerDir)
   )
 
   return {
@@ -499,6 +696,80 @@ export function summarise(results: RunnerInspection[]): Summary {
             `"${fw.topLevelStubTarget}" does not resolve to an existing ` +
             `path (F-34.9-01)`
         )
+      } else if (!fw.topLevelStubTargetContained) {
+        failures.push(
+          `${r.runner}: framework ${fw.path} is UNSAFE -- top-level stub ` +
+            `"${fw.name.replace(/\.framework$/, '')}" symlink target ` +
+            `"${fw.topLevelStubTarget}" escapes the runner tree (T-e7o-01)`
+        )
+      }
+      if (fw.versionsCurrentIsSymlink && fw.resolvedVersionDirExists &&
+          !fw.versionsCurrentTargetContained) {
+        failures.push(
+          `${r.runner}: framework ${fw.path} is UNSAFE -- Versions/Current ` +
+            `symlink target "${fw.versionsCurrentTarget}" escapes the ` +
+            `runner tree (T-e7o-01)`
+        )
+      }
+
+      // Resources alias (`Python.framework/Resources`, F-34.9-01/e7o). DROPPED
+      // ENTIRELY by the dereferencing `bundle.resources` copier -- measured
+      // absent (not merely wrong-kind) on the OLD release artifact. Same
+      // both-direction discipline as the top-level stub above: absent,
+      // wrong-kind and dangling are separate `if`s, not collapsed.
+      if (!fw.resourcesAliasExists) {
+        failures.push(
+          `${r.runner}: framework ${fw.path} is malformed -- ` +
+            `Resources alias does not exist (F-34.9-01)`
+        )
+      } else if (!fw.resourcesAliasIsSymlink) {
+        failures.push(
+          `${r.runner}: framework ${fw.path} is malformed -- ` +
+            `Resources alias is a real directory, not a symlink into ` +
+            `Versions/Current (F-34.9-01)`
+        )
+      } else if (!fw.resolvedResourcesTargetExists) {
+        failures.push(
+          `${r.runner}: framework ${fw.path} is malformed -- ` +
+            `Resources alias symlink target "${fw.resourcesAliasTarget}" ` +
+            `does not resolve to an existing path (F-34.9-01)`
+        )
+      } else if (!fw.resourcesAliasTargetContained) {
+        failures.push(
+          `${r.runner}: framework ${fw.path} is UNSAFE -- Resources alias ` +
+            `symlink target "${fw.resourcesAliasTarget}" escapes the ` +
+            `runner tree (T-e7o-01)`
+        )
+      }
+
+      // Sibling stub (`_internal/Python`, F-34.9-01/e7o). Lives outside the
+      // framework directory -- only checked when the framework's own parent
+      // is `_internal` (siblingStubApplicable), so a framework laid out
+      // differently never false-fires this check.
+      if (fw.siblingStubApplicable) {
+        if (!fw.siblingStubExists) {
+          failures.push(
+            `${r.runner}: _internal sibling stub for ${fw.path} does not ` +
+              `exist (F-34.9-01)`
+          )
+        } else if (!fw.siblingStubIsSymlink) {
+          failures.push(
+            `${r.runner}: _internal sibling stub for ${fw.path} is a real ` +
+              `file, not a symlink (F-34.9-01)`
+          )
+        } else if (!fw.resolvedSiblingStubTargetExists) {
+          failures.push(
+            `${r.runner}: _internal sibling stub for ${fw.path} symlink ` +
+              `target "${fw.siblingStubTarget}" does not resolve to an ` +
+              `existing path (F-34.9-01)`
+          )
+        } else if (!fw.siblingStubTargetContained) {
+          failures.push(
+            `${r.runner}: _internal sibling stub for ${fw.path} is UNSAFE ` +
+              `-- symlink target "${fw.siblingStubTarget}" escapes the ` +
+              `runner tree (T-e7o-01)`
+          )
+        }
       }
     }
   }
@@ -514,20 +785,40 @@ function parseCliArgs(argv: string[]): {
   root: string
   arch: string
   json: boolean
+  expectFiles: number | undefined
+  expectSymlinks: number | undefined
+  expectBytes: number | undefined
 } {
   const positional = argv.find((a) => !a.startsWith('--'))
   if (!positional) {
     throw new Error(
-      'Usage: verify-runner-bundle <root> [--arch=<x64|arm64>] [--json]'
+      'Usage: verify-runner-bundle <root> [--arch=<x64|arm64>] [--json] ' +
+        '[--expect-files=N --expect-symlinks=N --expect-bytes=N]'
     )
   }
   const archArg = argv.find((a) => a.startsWith('--arch='))
   const arch = archArg ? archArg.slice('--arch='.length) : process.arch
   const json = argv.includes('--json')
-  return { root: positional, arch, json }
+
+  const parseExpect = (flag: string): number | undefined => {
+    const arg = argv.find((a) => a.startsWith(`${flag}=`))
+    if (!arg) return undefined
+    const raw = arg.slice(flag.length + 1)
+    const n = Number(raw)
+    if (!Number.isFinite(n)) {
+      throw new Error(`${flag}: "${raw}" is not a valid number`)
+    }
+    return n
+  }
+
+  const expectFiles = parseExpect('--expect-files')
+  const expectSymlinks = parseExpect('--expect-symlinks')
+  const expectBytes = parseExpect('--expect-bytes')
+
+  return { root: positional, arch, json, expectFiles, expectSymlinks, expectBytes }
 }
 
-function printTable(results: RunnerInspection[]): void {
+function printTable(results: RunnerInspection[], census?: TreeCensus): void {
   console.log('Runner       Exists  Exec   Mach-O  Files  Mach-O files')
   for (const r of results) {
     console.log(
@@ -552,9 +843,18 @@ function printTable(results: RunnerInspection[]): void {
       console.log(
         `  ${r.runner}: ${fw.name} Versions/Current symlink=` +
           `${fw.versionsCurrentIsSymlink} target=` +
-          `${fw.versionsCurrentTarget ?? 'n/a'} codesign=${fw.codesignDisplay}`
+          `${fw.versionsCurrentTarget ?? 'n/a'} Resources symlink=` +
+          `${fw.resourcesAliasIsSymlink} target=` +
+          `${fw.resourcesAliasTarget ?? 'n/a'} codesign=${fw.codesignDisplay}`
       )
     }
+  }
+  if (census) {
+    console.log('')
+    console.log(
+      `Census: ${census.fileCount} files, ${census.symlinkCount} symlinks, ` +
+        `${census.apparentBytes} apparent bytes (sum(stat -f %z), never du)`
+    )
   }
 }
 
@@ -562,10 +862,32 @@ export function main(argv: string[] = process.argv.slice(2)): number {
   let root: string
   let arch: string
   let json: boolean
+  let expectFiles: number | undefined
+  let expectSymlinks: number | undefined
+  let expectBytes: number | undefined
   try {
-    ;({ root, arch, json } = parseCliArgs(argv))
+    ;({ root, arch, json, expectFiles, expectSymlinks, expectBytes } =
+      parseCliArgs(argv))
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error))
+    return 1
+  }
+
+  // Partial --expect-* specification is an ERROR, not a silent skip -- a
+  // forgotten flag must never read as clean. All three or none.
+  const expectGiven = [expectFiles, expectSymlinks, expectBytes].filter(
+    (v) => v !== undefined
+  ).length
+  if (expectGiven > 0 && expectGiven < 3) {
+    const missing: string[] = []
+    if (expectFiles === undefined) missing.push('--expect-files')
+    if (expectSymlinks === undefined) missing.push('--expect-symlinks')
+    if (expectBytes === undefined) missing.push('--expect-bytes')
+    console.error(
+      'verify-runner-bundle: partial --expect-* specification is an error ' +
+        `-- all three of --expect-files/--expect-symlinks/--expect-bytes ` +
+        `must be given together, or none at all. Missing: ${missing.join(', ')}`
+    )
     return 1
   }
 
@@ -579,10 +901,29 @@ export function main(argv: string[] = process.argv.slice(2)): number {
 
   const summary = summarise(results)
 
+  let census: TreeCensus | undefined
+  if (expectGiven === 3) {
+    const darwinRoot = findDarwinBinRoot(root, arch)
+    census = censusTree(darwinRoot)
+    if (
+      census.fileCount !== expectFiles ||
+      census.symlinkCount !== expectSymlinks ||
+      census.apparentBytes !== expectBytes
+    ) {
+      summary.ok = false
+      summary.failures.push(
+        `census mismatch at ${darwinRoot}: expected ${expectFiles} files / ` +
+          `${expectSymlinks} symlinks / ${expectBytes} apparent bytes, got ` +
+          `${census.fileCount} files / ${census.symlinkCount} symlinks / ` +
+          `${census.apparentBytes} apparent bytes`
+      )
+    }
+  }
+
   if (json) {
-    console.log(JSON.stringify({ root, arch, results, summary }, null, 2))
+    console.log(JSON.stringify({ root, arch, results, summary, census }, null, 2))
   } else {
-    printTable(results)
+    printTable(results, census)
     console.log('')
     if (summary.ok) {
       console.log(

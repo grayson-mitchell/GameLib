@@ -24,7 +24,14 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { RUNNERS, inspectRunnerTree, summarise } from '../verifyRunnerBundle'
+import {
+  RUNNERS,
+  censusTree,
+  inspectRunnerTree,
+  main,
+  summarise,
+  type TreeCensus
+} from '../verifyRunnerBundle'
 
 const ARCH = 'arm64'
 
@@ -146,8 +153,15 @@ function buildGogdlFrameworkFixture(
   chmodSync(pythonBinPath, 0o755)
   writeFileSync(join(resourcesDir, 'dummy.txt'), 'resource')
 
-  // The four symlinks, exact relative targets per <interfaces>.
-  symlinkSync('Versions/3.14/Python', join(internalDir, 'Python'))
+  // The four symlinks, exact relative targets per <interfaces>. The sibling
+  // stub target is resolved from ITS OWN parent (internalDir), so it needs
+  // the "Python.framework/" prefix -- without it the target resolves to
+  // "_internal/Versions/3.14/Python", which does not exist (quick-260901-e7o,
+  // reproduced standalone with symlinkSync + existsSync, isolated from jest).
+  symlinkSync(
+    'Python.framework/Versions/3.14/Python',
+    join(internalDir, 'Python')
+  )
   symlinkSync('Versions/Current/Python', join(frameworkDir, 'Python'))
   symlinkSync('Versions/Current/Resources', join(frameworkDir, 'Resources'))
   symlinkSync('3.14', join(versionsDir, 'Current'))
@@ -570,6 +584,418 @@ describe('framework structural integrity (F-34.9-01)', () => {
 
     const summary = summarise(results)
     expect(summary.ok).toBe(true)
+  })
+})
+
+describe('Resources alias structural integrity (F-34.9-01/quick-260901-e7o)', () => {
+  let root: string
+
+  afterEach(() => {
+    if (root) {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('Resources alias absent: ok becomes false, message names the framework + "Resources alias does not exist"', () => {
+    root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-res-absent-'))
+    const { frameworkDir } = buildGogdlFrameworkFixture(root, 'well-formed')
+    const resourcesAliasPath = join(frameworkDir, 'Resources')
+
+    // Known-bad state proven BEFORE summarise runs (standing project rule).
+    rmSync(resourcesAliasPath)
+    expect(existsSync(resourcesAliasPath)).toBe(false)
+
+    const results = inspectRunnerTree(root, ARCH)
+    const gogdl = results.find((r) => r.runner === 'gogdl')
+    expect(gogdl?.frameworks[0]?.resourcesAliasExists).toBe(false)
+
+    const summary = summarise(results)
+    expect(summary.ok).toBe(false)
+    const failure = summary.failures.find((f) => f.includes(frameworkDir))
+    expect(failure).toBeDefined()
+    expect(failure).toContain('Resources alias does not exist')
+  })
+
+  it('Resources alias is a real directory, not a symlink: ok becomes false', () => {
+    root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-res-dir-'))
+    const { frameworkDir } = buildGogdlFrameworkFixture(root, 'well-formed')
+    const resourcesAliasPath = join(frameworkDir, 'Resources')
+
+    rmSync(resourcesAliasPath)
+    mkdirSync(resourcesAliasPath)
+    writeFileSync(join(resourcesAliasPath, 'dummy.txt'), 'not an alias')
+    expect(lstatSync(resourcesAliasPath).isSymbolicLink()).toBe(false)
+    expect(lstatSync(resourcesAliasPath).isDirectory()).toBe(true)
+
+    const results = inspectRunnerTree(root, ARCH)
+    const gogdl = results.find((r) => r.runner === 'gogdl')
+    expect(gogdl?.frameworks[0]?.resourcesAliasExists).toBe(true)
+    expect(gogdl?.frameworks[0]?.resourcesAliasIsSymlink).toBe(false)
+
+    const summary = summarise(results)
+    expect(summary.ok).toBe(false)
+    const failure = summary.failures.find((f) => f.includes(frameworkDir))
+    expect(failure).toBeDefined()
+    expect(failure).toContain('Resources alias is a real directory')
+  })
+
+  it('Resources alias symlink target does not resolve (dangling): ok becomes false', () => {
+    root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-res-dangling-'))
+    const { frameworkDir } = buildGogdlFrameworkFixture(root, 'well-formed')
+    const resourcesAliasPath = join(frameworkDir, 'Resources')
+
+    rmSync(resourcesAliasPath)
+    symlinkSync('Versions/Current/ResourcesMissing', resourcesAliasPath)
+    expect(lstatSync(resourcesAliasPath).isSymbolicLink()).toBe(true)
+    expect(
+      existsSync(join(frameworkDir, 'Versions/Current/ResourcesMissing'))
+    ).toBe(false)
+
+    const results = inspectRunnerTree(root, ARCH)
+    const gogdl = results.find((r) => r.runner === 'gogdl')
+    expect(gogdl?.frameworks[0]?.resourcesAliasIsSymlink).toBe(true)
+    expect(gogdl?.frameworks[0]?.resolvedResourcesTargetExists).toBe(false)
+
+    const summary = summarise(results)
+    expect(summary.ok).toBe(false)
+    const failure = summary.failures.find((f) => f.includes(frameworkDir))
+    expect(failure).toBeDefined()
+    expect(failure).toContain(
+      'Resources alias symlink target "Versions/Current/ResourcesMissing" ' +
+        'does not resolve to an existing path'
+    )
+  })
+
+  it('Resources alias symlink target escapes the runner tree (T-e7o-01): ok becomes false, message says UNSAFE', () => {
+    root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-res-escape-'))
+    const { frameworkDir } = buildGogdlFrameworkFixture(root, 'well-formed')
+    const resourcesAliasPath = join(frameworkDir, 'Resources')
+
+    // 60 "../" segments: deep enough from this fixture's nesting depth
+    // (tmp root / Contents/Resources/app.asar.unpacked/build/bin/arm64/
+    // darwin/gogdl/_internal/Python.framework/Resources) that the naive
+    // `join()`-based existence check clamps at the filesystem root "/"
+    // (which exists -- satisfying the "dangling" branch) while the
+    // `resolve()`-based containment check correctly reports it as escaping
+    // the runner tree. Proves containment is a genuine, load-bearing
+    // addition and not vacuous -- a target this naive check would wrongly
+    // accept as "resolved" must still be rejected as unsafe.
+    const escapeTarget = Array(60).fill('..').join('/')
+    rmSync(resourcesAliasPath)
+    symlinkSync(escapeTarget, resourcesAliasPath)
+
+    const results = inspectRunnerTree(root, ARCH)
+    const gogdl = results.find((r) => r.runner === 'gogdl')
+    const fw = gogdl?.frameworks[0]
+    expect(fw?.resourcesAliasIsSymlink).toBe(true)
+    // The naive existence check is satisfied (clamped to "/", which exists)
+    // -- the vacuity control that proves this test is not merely
+    // re-testing the dangling-target branch above.
+    expect(fw?.resolvedResourcesTargetExists).toBe(true)
+    expect(fw?.resourcesAliasTargetContained).toBe(false)
+
+    const summary = summarise(results)
+    expect(summary.ok).toBe(false)
+    const failure = summary.failures.find(
+      (f) => f.includes(frameworkDir) && f.includes('Resources alias')
+    )
+    expect(failure).toBeDefined()
+    expect(failure).toContain('UNSAFE')
+    expect(failure).toContain('escapes the runner tree')
+  })
+})
+
+describe('_internal sibling stub structural integrity (F-34.9-01/quick-260901-e7o)', () => {
+  let root: string
+
+  afterEach(() => {
+    if (root) {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('sibling stub absent: ok becomes false, message names "_internal sibling stub"', () => {
+    root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-sib-absent-'))
+    const { frameworkDir } = buildGogdlFrameworkFixture(root, 'well-formed')
+    const internalDir = join(frameworkDir, '..')
+    const siblingStubPath = join(internalDir, 'Python')
+
+    rmSync(siblingStubPath)
+    expect(existsSync(siblingStubPath)).toBe(false)
+
+    const results = inspectRunnerTree(root, ARCH)
+    const gogdl = results.find((r) => r.runner === 'gogdl')
+    expect(gogdl?.frameworks[0]?.siblingStubApplicable).toBe(true)
+    expect(gogdl?.frameworks[0]?.siblingStubExists).toBe(false)
+
+    const summary = summarise(results)
+    expect(summary.ok).toBe(false)
+    const failure = summary.failures.find((f) =>
+      f.includes('_internal sibling stub')
+    )
+    expect(failure).toBeDefined()
+    expect(failure).toContain('does not exist')
+  })
+
+  it('sibling stub is a real file, not a symlink: ok becomes false', () => {
+    root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-sib-file-'))
+    const { frameworkDir } = buildGogdlFrameworkFixture(root, 'well-formed')
+    const internalDir = join(frameworkDir, '..')
+    const siblingStubPath = join(internalDir, 'Python')
+
+    rmSync(siblingStubPath)
+    writeFileSync(siblingStubPath, machoBuffer())
+    chmodSync(siblingStubPath, 0o755)
+    expect(lstatSync(siblingStubPath).isSymbolicLink()).toBe(false)
+
+    const results = inspectRunnerTree(root, ARCH)
+    const gogdl = results.find((r) => r.runner === 'gogdl')
+    expect(gogdl?.frameworks[0]?.siblingStubExists).toBe(true)
+    expect(gogdl?.frameworks[0]?.siblingStubIsSymlink).toBe(false)
+
+    const summary = summarise(results)
+    expect(summary.ok).toBe(false)
+    const failure = summary.failures.find((f) =>
+      f.includes('_internal sibling stub')
+    )
+    expect(failure).toBeDefined()
+    expect(failure).toContain('is a real file, not a symlink')
+  })
+
+  it('sibling stub symlink target does not resolve (dangling): ok becomes false', () => {
+    root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-sib-dangling-'))
+    const { frameworkDir } = buildGogdlFrameworkFixture(root, 'well-formed')
+    const internalDir = join(frameworkDir, '..')
+    const siblingStubPath = join(internalDir, 'Python')
+
+    rmSync(siblingStubPath)
+    symlinkSync('Python.framework/Versions/3.14/PythonMissing', siblingStubPath)
+    expect(lstatSync(siblingStubPath).isSymbolicLink()).toBe(true)
+
+    const results = inspectRunnerTree(root, ARCH)
+    const gogdl = results.find((r) => r.runner === 'gogdl')
+    expect(gogdl?.frameworks[0]?.siblingStubIsSymlink).toBe(true)
+    expect(gogdl?.frameworks[0]?.resolvedSiblingStubTargetExists).toBe(false)
+
+    const summary = summarise(results)
+    expect(summary.ok).toBe(false)
+    const failure = summary.failures.find((f) =>
+      f.includes('_internal sibling stub')
+    )
+    expect(failure).toBeDefined()
+    expect(failure).toContain('does not resolve to an existing path')
+  })
+
+  it('sibling stub symlink target escapes the runner tree (T-e7o-01): ok becomes false, message says UNSAFE', () => {
+    root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-sib-escape-'))
+    const { frameworkDir } = buildGogdlFrameworkFixture(root, 'well-formed')
+    const internalDir = join(frameworkDir, '..')
+    const siblingStubPath = join(internalDir, 'Python')
+
+    const escapeTarget = Array(60).fill('..').join('/')
+    rmSync(siblingStubPath)
+    symlinkSync(escapeTarget, siblingStubPath)
+
+    const results = inspectRunnerTree(root, ARCH)
+    const gogdl = results.find((r) => r.runner === 'gogdl')
+    const fw = gogdl?.frameworks[0]
+    expect(fw?.siblingStubIsSymlink).toBe(true)
+    expect(fw?.resolvedSiblingStubTargetExists).toBe(true)
+    expect(fw?.siblingStubTargetContained).toBe(false)
+
+    const summary = summarise(results)
+    expect(summary.ok).toBe(false)
+    const failure = summary.failures.find(
+      (f) => f.includes('_internal sibling stub') && f.includes(frameworkDir)
+    )
+    expect(failure).toBeDefined()
+    expect(failure).toContain('UNSAFE')
+    expect(failure).toContain('escapes the runner tree')
+  })
+
+  it('scoping: a framework whose parent directory is NOT named "_internal" never fires the sibling-stub check', () => {
+    root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-sib-scope-'))
+    const { darwinDir } = buildPassCaseFixture(root, ARCH)
+    const gogdlDir = join(darwinDir, 'gogdl')
+    const notInternalDir = join(gogdlDir, 'NotInternal')
+    mkdirSync(notInternalDir, { recursive: true })
+
+    const frameworkDir = join(notInternalDir, 'Python.framework')
+    const versionsDir = join(frameworkDir, 'Versions')
+    const versionDir = join(versionsDir, '3.14')
+    const resourcesDir = join(versionDir, 'Resources')
+    mkdirSync(resourcesDir, { recursive: true })
+    writeFileSync(join(versionDir, 'Python'), machoBuffer())
+    chmodSync(join(versionDir, 'Python'), 0o755)
+    writeFileSync(join(resourcesDir, 'dummy.txt'), 'resource')
+    symlinkSync('Versions/Current/Python', join(frameworkDir, 'Python'))
+    symlinkSync(
+      'Versions/Current/Resources',
+      join(frameworkDir, 'Resources')
+    )
+    symlinkSync('3.14', join(versionsDir, 'Current'))
+    // Deliberately NO sibling stub planted at notInternalDir/Python -- since
+    // this framework's parent is not "_internal", siblingStubApplicable
+    // must be false and the check must never fire against its absence.
+
+    const results = inspectRunnerTree(root, ARCH)
+    const gogdl = results.find((r) => r.runner === 'gogdl')
+    expect(gogdl?.frameworks).toHaveLength(1)
+    const fw = gogdl?.frameworks[0]
+    expect(fw?.siblingStubApplicable).toBe(false)
+    expect(fw?.siblingStubExists).toBe(false)
+
+    const summary = summarise(results)
+    expect(summary.failures.join(' ')).not.toContain(
+      '_internal sibling stub'
+    )
+    expect(summary.ok).toBe(true)
+  })
+})
+
+describe('censusTree (--expect-files/--expect-symlinks/--expect-bytes, quick-260901-e7o)', () => {
+  let root: string
+
+  afterEach(() => {
+    if (root) {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('exact file/symlink counts over the well-formed framework fixture (vacuity guard: a symlinked-directory double-count bug would inflate fileCount)', () => {
+    root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-census-'))
+    const { darwinDir } = buildGogdlFrameworkFixture(root, 'well-formed')
+
+    // 3 runners x (1 binary + 25 filler) = 78, plus the framework's own real
+    // Python binary and Resources/dummy.txt = 80 files. 4 symlinks: the
+    // top-level stub, the Resources alias, Versions/Current, and the
+    // _internal sibling stub -- none of Resources/Versions/Current's own
+    // ALIASED directories may be walked into and double-counted, since
+    // `censusTree` only descends `isDirectory()` (lstat-based) entries.
+    const census = censusTree(darwinDir)
+    expect(census.fileCount).toBe(80)
+    expect(census.symlinkCount).toBe(4)
+    expect(census.apparentBytes).toBeGreaterThan(0)
+  })
+})
+
+describe('CLI --expect-* census flags (quick-260901-e7o)', () => {
+  let root: string
+  let logSpy: ReturnType<typeof jest.spyOn>
+  let errorSpy: ReturnType<typeof jest.spyOn>
+
+  beforeEach(() => {
+    logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined)
+    errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined)
+  })
+
+  afterEach(() => {
+    logSpy.mockRestore()
+    errorSpy.mockRestore()
+    if (root) {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('exact census match: exit 0', () => {
+    root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-cli-exact-'))
+    const { darwinDir } = buildPassCaseFixture(root, ARCH)
+    const census = censusTree(darwinDir)
+
+    const exitCode = main([
+      root,
+      `--arch=${ARCH}`,
+      `--expect-files=${census.fileCount}`,
+      `--expect-symlinks=${census.symlinkCount}`,
+      `--expect-bytes=${census.apparentBytes}`
+    ])
+
+    expect(exitCode).toBe(0)
+  })
+
+  it.each([
+    ['files', (c: TreeCensus): TreeCensus => ({ ...c, fileCount: c.fileCount + 1 })],
+    [
+      'symlinks',
+      (c: TreeCensus): TreeCensus => ({ ...c, symlinkCount: c.symlinkCount + 1 })
+    ],
+    [
+      'bytes',
+      (c: TreeCensus): TreeCensus => ({ ...c, apparentBytes: c.apparentBytes + 1 })
+    ]
+  ])(
+    'off-by-one on %s: exit 1, printed output contains "census mismatch"',
+    (_label, mutate) => {
+      root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-cli-offbyone-'))
+      const { darwinDir } = buildPassCaseFixture(root, ARCH)
+      const wrong = mutate(censusTree(darwinDir))
+
+      const exitCode = main([
+        root,
+        `--arch=${ARCH}`,
+        `--expect-files=${wrong.fileCount}`,
+        `--expect-symlinks=${wrong.symlinkCount}`,
+        `--expect-bytes=${wrong.apparentBytes}`
+      ])
+
+      expect(exitCode).toBe(1)
+      const printed = logSpy.mock.calls.flat().join(' ')
+      expect(printed).toContain('census mismatch')
+    }
+  )
+
+  it('partial spec (1 of 3 flags): exit 1, error names the two missing flags', () => {
+    root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-cli-partial1-'))
+    buildPassCaseFixture(root, ARCH)
+
+    const exitCode = main([root, `--arch=${ARCH}`, '--expect-files=1'])
+
+    expect(exitCode).toBe(1)
+    const printed = errorSpy.mock.calls.flat().join(' ')
+    expect(printed).toContain('--expect-symlinks')
+    expect(printed).toContain('--expect-bytes')
+  })
+
+  it('partial spec (2 of 3 flags): exit 1, error names the one missing flag', () => {
+    root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-cli-partial2-'))
+    buildPassCaseFixture(root, ARCH)
+
+    const exitCode = main([
+      root,
+      `--arch=${ARCH}`,
+      '--expect-files=1',
+      '--expect-symlinks=1'
+    ])
+
+    expect(exitCode).toBe(1)
+    const printed = errorSpy.mock.calls.flat().join(' ')
+    expect(printed).toContain('--expect-bytes')
+    expect(printed).not.toContain('--expect-files,')
+    expect(printed).not.toContain('--expect-symlinks,')
+  })
+
+  it('no --expect-* flags given: census logic is skipped, structural pass still exits 0', () => {
+    root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-cli-noflags-'))
+    buildPassCaseFixture(root, ARCH)
+
+    const exitCode = main([root, `--arch=${ARCH}`])
+
+    expect(exitCode).toBe(0)
+  })
+
+  it('darwin tree absent for the given --arch, all three flags given: exit 1 (throws before census logic runs)', () => {
+    root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-cli-absent-'))
+    buildPassCaseFixture(root, ARCH)
+
+    const exitCode = main([
+      root,
+      '--arch=x64',
+      '--expect-files=1',
+      '--expect-symlinks=1',
+      '--expect-bytes=1'
+    ])
+
+    expect(exitCode).toBe(1)
   })
 })
 
