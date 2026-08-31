@@ -3930,6 +3930,124 @@ fn clear_default_data_store_cookies_for_domain(
     ))
 }
 
+/// Label-independent per-domain cookie CENSUS read against the process-wide default data
+/// store (closes D-35-29-01, the sole remaining blocker on Phase 35's re-verification).
+///
+/// The census arm resolved its window with `app.get_webview_window(label)` and rejected with a
+/// `no-window:{label}` error whenever that returned `None`. For Epic that was EVERY call --
+/// see `clear_default_data_store_cookies_for_domain`'s own doc comment directly above for why
+/// the label was never a real lookup key for cookie data, and why the pristine login window's
+/// cookies live in the SAME `WKWebsiteDataStore::defaultDataStore()` this function reads. That
+/// is not restated here; it is the same defect, on the read side.
+///
+/// The consequence was measured live (packaged 0.7.0, 2026-08-31): all five Epic-owned hosts
+/// logged `before(total=unavailable, matched=unavailable, verdict=UNSUPPORTED_OR_ERROR)`, so
+/// the census had never once produced a reading -- and BOTH consuming branches in
+/// `legendary/user.ts` (`brokenHosts`, which needs `SUPPORTED_NONEMPTY`, and the non-fatal
+/// already-empty branch, which needs `SUPPORTED_BUT_EMPTY`) were structurally unreachable.
+/// The broken-per-host detector was dead code on the only path it serves. This function is
+/// the read-side mirror of the clear-side fallback above, deliberately identical in shape so
+/// the two label-independent paths sit together and diverge only in what they do with the
+/// cookies they find.
+///
+/// F-34.4.2-12 round-trip accounting, which this function is required to preserve, recorded
+/// here as numbers so a future edit has to argue with a measurement rather than a feeling:
+///
+/// | | wry `.cookies()` per host (macOS) | native `getAllCookies` per host |
+/// | --- | --- | --- |
+/// | before this fix | 0 | 2 (the clear path's before/after, default store) |
+/// | after this fix  | 0 -- UNCHANGED | 4 (adds this census's before/after, default store) |
+///
+/// The macOS wry `.cookies()` count stays at ZERO. The two added reads reuse the exact shape
+/// `clear_default_data_store_cookies_for_domain`'s `count_matching_cookies` closure already
+/// runs twice per host, live, without deadlock: `run_on_main_thread` a closure that only
+/// REGISTERS a `block2::RcBlock` completion on `getAllCookies` and returns immediately, with
+/// the `mpsc` wait done on the CALLING (worker) thread, never nested inside the main-thread
+/// closure. Nothing here is bound to a window, so `with_webview` reentrancy -- the other half
+/// of the reproduced deadlock -- is not in play either.
+#[cfg(target_os = "macos")]
+fn default_data_store_cookies_for_domain(
+    app: &AppHandle,
+    domain: &str,
+    names: &[&str],
+) -> Result<Value, String> {
+    let (tx, rx) = mpsc_channel::<Result<(usize, Vec<Value>), String>>();
+    let target_domain = domain.to_string();
+    let target_names: Vec<String> = names.iter().map(|n| n.to_string()).collect();
+    if let Err(e) = app.run_on_main_thread(move || {
+        let outcome: Result<(), String> = (|| {
+            let mtm = objc2::MainThreadMarker::new().ok_or_else(|| {
+                "humble_login_cookies_for_domain:default-store:no-main-thread-marker".to_string()
+            })?;
+            // SAFETY: `mtm` proves this closure is running on the main thread.
+            let data_store = unsafe { objc2_web_kit::WKWebsiteDataStore::defaultDataStore(mtm) };
+            let cookie_store = unsafe { data_store.httpCookieStore() };
+            let filter_domain = target_domain.clone();
+            let filter_names = target_names.clone();
+            let tx_fetch = tx.clone();
+            // SAFETY: `getAllCookies` hands the completion handler a valid, live array
+            // pointer for the duration of this call; `tx_fetch` outlives it.
+            let completion = block2::RcBlock::new(
+                move |cookies: std::ptr::NonNull<
+                    objc2_foundation::NSArray<objc2_foundation::NSHTTPCookie>,
+                >| {
+                    let cookies_ref = unsafe { cookies.as_ref() };
+                    let all_cookies = cookies_ref.to_vec();
+                    // The UNFILTERED jar size. This is `legendary/user.ts`'s liveness proof
+                    // (`everProvedLive`) -- the property that makes a later zero mean
+                    // "genuinely empty" rather than "the read channel silently did nothing".
+                    let total = all_cookies.len();
+                    // Never logs a cookie name, value or domain (T-34.4.1-02, T-34.4.1-94):
+                    // domains and names are read only to feed the pure filters below, values
+                    // go solely into the returned payload the caller already explicitly
+                    // requested over the already-allowlisted rustInvoke channel.
+                    //
+                    // Census direction, matching the arm this backs and
+                    // `humble_login_clear_cookies`'s own filter: the cookie's OWN domain
+                    // first, the caller's FIXED target second (spike 016 measured the other
+                    // direction undercounting 29/33 against a fixed apex).
+                    let matched: Vec<Value> = all_cookies
+                        .into_iter()
+                        .filter(|c| {
+                            cookie_domain_matches(&c.domain().to_string(), Some(&filter_domain))
+                        })
+                        .filter(|c| {
+                            filter_names.is_empty()
+                                || filter_names
+                                    .iter()
+                                    .any(|n| n.as_str() == c.name().to_string())
+                        })
+                        .map(|c| {
+                            serde_json::json!({
+                                "name": c.name().to_string(),
+                                "domain": c.domain().to_string(),
+                                "value": c.value().to_string()
+                            })
+                        })
+                        .collect();
+                    let _ = tx_fetch.send(Ok((total, matched)));
+                },
+            );
+            unsafe {
+                cookie_store.getAllCookies(&completion);
+            }
+            Ok(())
+        })();
+        if let Err(e) = outcome {
+            let _ = tx.send(Err(e));
+        }
+    }) {
+        return Err(format!(
+            "humble_login_cookies_for_domain:default-store:dispatch:{e}"
+        ));
+    }
+    match rx.recv_timeout(CLEAR_COOKIES_TIMEOUT) {
+        Ok(Ok((total, matched))) => Ok(serde_json::json!({ "total": total, "matched": matched })),
+        Ok(Err(e)) => Err(e),
+        Err(_) => Err("humble_login_cookies_for_domain:default-store:timeout".to_string()),
+    }
+}
+
 /// Classifies a raw `keyring` crate outcome (`Entry::new(...).and_then(|e| e.get_password())`)
 /// into the arm's `Value`/`String` contract (34.4.1 gap cycle 2 plan 26, F-9 observability
 /// half). Extracted as its own pure function so this classification is directly testable
@@ -6336,8 +6454,26 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 .and_then(|v| v.as_array())
                 .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect())
                 .unwrap_or_default();
-            let window = app
-                .get_webview_window(label)
+            let existing_window = app.get_webview_window(label);
+
+            // Epic pristine-window fallback (macOS only; D-35-29-01). Structurally identical
+            // to `humble_login_clear_cookies`'s own fallback above, deliberately so: the two
+            // arms had the SAME defect and only the clear half had been fixed, which is why
+            // the clear ran while the census that judges it returned nothing on every host of
+            // every live logout. See `default_data_store_cookies_for_domain`'s doc comment
+            // for the mechanism and the wry-round-trip accounting it preserves.
+            //
+            // Gated on BOTH "no such webview window" AND "the domain is one of Epic's own",
+            // the only combination `legendary/user.ts`'s census can ever produce. Every other
+            // caller (Humble/GOG/Amazon, all still routed through a live Tauri-managed window
+            // here) fails the domain check and falls straight through to the unchanged
+            // `no-window` error below.
+            #[cfg(target_os = "macos")]
+            if existing_window.is_none() && epic_cookie_domain_matches(domain) {
+                return default_data_store_cookies_for_domain(app, domain, &names);
+            }
+
+            let window = existing_window
                 .ok_or_else(|| format!("humble_login_cookies_for_domain:no-window:{label}"))?;
 
             // F-34.4.2-12 fix (see `humble_login_clear_cookies`'s `count_matching` closure,
