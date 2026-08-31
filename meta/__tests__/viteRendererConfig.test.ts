@@ -130,6 +130,12 @@ describe('vite.config.ts -- renderer config lifted off electron-vite', () => {
         )
       })
 
+      // Quick task 260901-b8z: assembles the renderer-only dir frontendDist
+      // now points at.
+      it('keeps assembleRendererDistPlugin in the plugin set', () => {
+        expect(pluginNames(config)).toContain('gamelib-assemble-renderer-dist')
+      })
+
       // 260901-a2w F4 safety argument: the prune plugin must run at
       // buildStart (before vite's publicDir copy) and must NOT be moved
       // onto closeBundle (where the symlink plugin lives) -- that would

@@ -59,6 +59,7 @@ import path from 'path'
 
 import type { Plugin } from 'vite'
 
+import { assembleRendererDistPlugin } from './meta/assembleRendererDist'
 import { preserveRunnerSymlinksPlugin } from './meta/preserveRunnerSymlinks'
 import { pruneStaleHelperBinariesPlugin } from './meta/pruneStaleHelperBinaries'
 
@@ -146,6 +147,17 @@ export default defineConfig(({ mode }) => ({
     // wherever the source tree has no symlinks (Linux/Windows checkouts).
     // Carried across from `electron.vite.config.ts` by Phase 35 plan 03; it
     // is not a formality and must not be dropped from this config.
-    preserveRunnerSymlinksPlugin()
+    preserveRunnerSymlinksPlugin(),
+    // Quick task 260901-b8z: assembles build/renderer -- the directory
+    // tauri.conf.json's frontendDist now points at -- from rollup's own
+    // emitted-file list plus the static publicDir passthrough
+    // (about.html/icon.png/locales/) that never appears in a bundle key.
+    // MUST stay LAST: it reads Object.keys(bundle) at generateBundle and
+    // assembles at closeBundle, after every other plugin (in particular
+    // preserveRunnerSymlinksPlugin, whose build/bin work this plugin never
+    // touches -- see meta/assembleRendererDist.ts's header for why the two
+    // cannot interact regardless of order). See meta/assembleRendererDist.ts
+    // for the full design rationale.
+    assembleRendererDistPlugin()
   ]
 }))
