@@ -1892,6 +1892,43 @@ exercised the widening no matter how it was driven.
 vehicle) or [[D-35-29-01]] is fixed (restoring the census).** Do not mark it closed on the strength
 of criterion 21 passing — the criterion tests credential re-entry, which is a different question.
 
+### CLOSED 2026-08-31 — the second of those two routes opened, and the evidence arrived on it
+
+**Status: CLOSED. The `EPIC_COOKIE_HOSTS` multi-domain widening is live-proven for the first
+time.** [[D-35-29-01]] was fixed by quick task `260831-q93` (`9106ccbea`), restoring the census —
+which is exactly the second of the two closure conditions this item names one paragraph above.
+
+On the live logout of 2026-08-31 19:27 (`pnpm tauri:dev`, jar `gamelib-shell.binarycookies`),
+each of the **four non-primary** Epic apexes read `before(matched=1)`, cleared **1**, and read
+`after(matched=0)`:
+
+| domain | before matched | cleared | after matched |
+| --- | --- | --- | --- |
+| epicgames.com | 3 | **3** | 0 |
+| fortnite.com | 1 | **1** | 0 |
+| unrealengine.com | 1 | **1** | 0 |
+| twinmotion.com | 1 | **1** | 0 |
+| metahuman.com | 1 | **1** | 0 |
+
+That is precisely what this item demanded and could never previously observe: a non-primary Epic
+domain **confirmed present before logout**, then a **non-zero clear** on it. Compare the run this
+item was written against, where all four non-primary domains cleared 0 and the zeros were
+vacuous. An independent `strings` read of the same jar corroborates all four non-primary domains
+at **0** post-clear (presence/absence only — see the arithmetic caveat in [[D-35-29-01]]).
+
+**Recorded honestly: the evidence arrived OPPORTUNISTICALLY, not by the seeding step this item
+specified.** No seeding was performed and none was possible — this item's own analysis stands,
+and is now doubly confirmed: no user action on the current Tauri build can create a non-primary
+Epic cookie, because the build embeds no browser view at all
+(`WebviewUnavailablePanel.tsx:43`). The four cookies that made this measurable were **legacy,
+pre-existing** residue carried in the dev-keyed jar (`gamelib-shell.binarycookies`, untouched
+since 00:37 that day) from an earlier, Electron-era session. The seeding vehicle is still absent;
+what changed is that the census can finally *see* a clear that was always working.
+
+**Do not read this as `260831-q93` having fixed the widening.** The widening always worked. It
+was unobservable, and the observability defect is what was fixed. This item was always recorded
+as a *coverage gap, not a defect* — that framing turned out to be exactly right.
+
 ## D-35-19-16 — GOG macOS move records a DOUBLED install path, so the game will not launch
 
 Found: live verification of the D-35-19-07 fix, 2026-08-30. Status: **FIXED AND LIVE-VERIFIED ON A
@@ -2108,8 +2145,64 @@ follow-up pass). Not a redesign of the gate itself — that remains out of scope
 
 ## D-35-29-01 — plan 35-23's Epic cookie census is INERT at logout: it needs a login window, and logout has none
 
-Found: criterion 21 re-run, 2026-08-31. Status: **OPEN — a defect in this gap-closure cycle's own
-delivered fix, found only by running it live.**
+Found: criterion 21 re-run, 2026-08-31. Status: **RESOLVED 2026-08-31 by quick task
+`260831-q93` (`9106ccbea`), LIVE-PROVEN on a dev build the same evening.** The fix was the one
+this item's own last paragraph prescribed: give the census read the same label-independent
+default-data-store fallback the clear already had.
+
+**Closed on LIVE evidence, explicitly not on tests.** This item's own closing sentence set that
+bar — "A passing unit test must not be accepted — the existing tests pass today against a census
+that has never once produced evidence" — and it is honoured here. `cargo test` (215/215) and the
+jest source gates were green throughout the entire period the probe returned nothing, and were
+green again after the fix; neither run is offered as closure evidence. What closes this is a
+live Epic logout, `pnpm tauri:dev`, 2026-08-31 19:27, all five hosts:
+
+```
+(19:27:14) Legendary logout: cleared 3 epicgames.com cookie(s) (measured post-removal delta) — cookie census before(total=57, matched=3, verdict=SUPPORTED_NONEMPTY) after(total=54, matched=0, verdict=SUPPORTED_NONEMPTY)
+(19:27:14) Legendary logout: cleared 1 fortnite.com cookie(s) (measured post-removal delta) — cookie census before(total=54, matched=1, verdict=SUPPORTED_NONEMPTY) after(total=54, matched=0, verdict=SUPPORTED_NONEMPTY)
+(19:27:14) Legendary logout: cleared 1 unrealengine.com cookie(s) (measured post-removal delta) — cookie census before(total=54, matched=1, verdict=SUPPORTED_NONEMPTY) after(total=53, matched=0, verdict=SUPPORTED_NONEMPTY)
+(19:27:15) Legendary logout: cleared 1 twinmotion.com cookie(s) (measured post-removal delta) — cookie census before(total=53, matched=1, verdict=SUPPORTED_NONEMPTY) after(total=52, matched=0, verdict=SUPPORTED_NONEMPTY)
+(19:27:15) Legendary logout: cleared 1 metahuman.com cookie(s) (measured post-removal delta) — cookie census before(total=52, matched=1, verdict=SUPPORTED_NONEMPTY) after(total=51, matched=0, verdict=SUPPORTED_NONEMPTY)
+(19:27:15) Legendary logout: Epic cookie clear removed 7 cookie(s) across 5 Epic-owned domain(s) — epicgames.com=3, fortnite.com=1, unrealengine.com=1, twinmotion.com=1, metahuman.com=1
+```
+
+`cookie census read failed` count in that run: **0**, against 5-per-host before the fix. Every
+verdict is `SUPPORTED_NONEMPTY`; no `total=unavailable` or `matched=unavailable` survives on any
+host. Attribution is clean — the log had been rotated and carried **0** prior
+`cookie census before` lines before the gesture.
+
+**Build identity was verified, not assumed.** `nm` on the running binary
+(`src-tauri/target/debug/gamelib-shell`, pid 72841, mtime 19:10:13, `lsof`-confirmed) returns 35
+symbol hits for `default_data_store_cookies_for_domain`. Recorded because `strings` on the same
+binary returns **0** for that symbol — Rust function names live in the symbol table, not as
+string literals — so `strings` would have falsely indicated a stale build.
+
+**The detector is now live and did not fire, correctly.** `brokenHosts` became reachable for the
+first time in its existence. It did not trigger, because every host's `matched` went to 0, so no
+host presented the proven-populated-with-zero-delta shape it exists to catch. Reachable and
+silent is the right outcome here; it is not the same as unreachable.
+
+Two anomalies recorded from the same run, neither a failure and neither chased:
+
+1. `fortnite.com` reads `before total=54` / `after total=54` despite clearing 1. The per-host
+   `matched` moved 1 -> 0 correctly; only the jar-wide `total` failed to decrement.
+2. An external `strings` proxy counted `epicgames.com` occurrences 4 -> 6 **after** the clear.
+   That proxy counts raw string occurrences in a rewritten binary file, not cookies. It is
+   unusable for arithmetic and must not be read as the clear adding cookies; it remains valid
+   for presence/absence at domain granularity only.
+
+The fix itself, for the record: `default_data_store_cookies_for_domain` (`src-tauri/src/main.rs`,
+macOS, placed immediately after `clear_default_data_store_cookies_for_domain` so the two
+label-independent paths sit together), plus an `existing_window`-first binding in the census arm
+guarded on `existing_window.is_none() && epic_cookie_domain_matches(domain)`. macOS wry
+`.cookies()` round trips per host stay at **zero** (F-34.4.2-12 preserved); native
+`getAllCookies` per host goes 2 -> 4, all against the default store, none bound to a window, so
+`with_webview` reentrancy is not in play. Logout did not hang.
+
+--- ORIGINAL RECORD, PRESERVED UNALTERED ---
+
+Found: criterion 21 re-run, 2026-08-31. Status at the time: **OPEN — a defect in this
+gap-closure cycle's own delivered fix, found only by running it live.**
 
 `D-35-19-15` prescribed porting Humble's cookie census to the Epic logout path so that a
 `cleared 0` line would become self-interpreting — distinguishing "the jar was live and this host
@@ -2204,8 +2297,42 @@ checked.
 
 ## D-35-29-02 — four Epic auth cookies survive logout on the PRIMARY domain (inert for re-auth)
 
-Found: criterion 21 re-run, 2026-08-31. Status: **OPEN — cause NOT established; two competing
-explanations, neither asserted.**
+Found: criterion 21 re-run, 2026-08-31. Status: **OPEN, and now REPRODUCED on a second,
+differently-keyed jar (2026-08-31 19:27, quick task `260831-q93` Task 3). Cause still NOT
+established; the two competing explanations below remain undistinguished and neither is
+asserted.**
+
+**Upgraded from a single-jar observation to a reproduced one.** The original record below rests
+on one read of `com.gamelib.shell.binarycookies` (the packaged bundle-id-keyed jar). The
+2026-08-31 19:27 dev-build logout was measured against `gamelib-shell.binarycookies` — a
+*different* jar, keyed by process name because the `tauri:dev` binary is unbundled — and the
+same four Epic auth cookie names (`_epicSID`, `_tald`, `EPIC_DEVICE`, `EPIC_LOGIN_ID`) are
+**still present post-logout** there too. Two jars, two builds, same residue.
+
+**A NEW contradiction this run created, which did not exist when the item was written.** For the
+first time there are now TWO measurements of the same gesture that disagree:
+
+- the product's own in-process post-clear census reads `matched=0` on **all five** Epic hosts
+  (see [[D-35-29-01]]'s verbatim log block) — i.e. the code under test says the Epic cookies are
+  gone; while
+- the external `strings` read of the same jar says those four names are still there.
+
+The item's original "caveat on the evidence" anticipated exactly this shape — `strings` over a
+binary format can surface unreferenced remnants rather than live cookies — and that caveat is now
+the leading candidate rather than a hypothetical, because the in-process reader is no longer
+blocked. It is **not** asserted as the cause. Note also that the conclusive read this item asked
+for ("a `cookies_for_url` read taken with a window present, blocked today by [[D-35-29-01]]") is
+**no longer blocked**: [[D-35-29-01]] is resolved and the census is a real per-cookie
+`getAllCookies` read. Whoever picks this up has an instrument now that this item's author did
+not.
+
+Severity is unchanged and still bounded by the behavioural result: authentication is NOT restored
+by these cookies.
+
+--- ORIGINAL RECORD, PRESERVED UNALTERED ---
+
+Found: criterion 21 re-run, 2026-08-31. Status at the time: **OPEN — cause NOT established; two
+competing explanations, neither asserted.**
 
 The product reported `cleared 5 epicgames.com cookie(s) (measured post-removal delta)` and the
 logout is genuinely effective — `user.json` was REMOVED and re-opening the Epic login flow

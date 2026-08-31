@@ -1,0 +1,154 @@
+(18:06:15) [INFO]:    [Backend]:         [bootstrap] appRoot resolved=/Applications/GameLib.app/Contents/Resources source=GAMELIB_APP_ROOT
+(18:06:15) [INFO]:    [Backend]:         [bootstrap] GAMELIB_SHELL_EXE received=/Applications/GameLib.app/Contents/MacOS/gamelib-shell
+(18:06:15) [INFO]:    [Backend]:         [bootstrap] publicDir resolved=/Applications/GameLib.app/Contents/Resources/build exists=true
+(18:06:15) [INFO]:    [Backend]:         [bootstrap] runner binary legendary path=/Applications/GameLib.app/Contents/Resources/build/bin/arm64/darwin/legendary exists=true
+(18:06:15) [INFO]:    [Backend]:         [bootstrap] runner binary gogdl path=/Applications/GameLib.app/Contents/Resources/build/bin/arm64/darwin/gogdl exists=true
+(18:06:15) [INFO]:    [Backend]:         [bootstrap] runner binary nile path=/Applications/GameLib.app/Contents/Resources/build/bin/arm64/darwin/nile exists=true
+(18:06:15) [INFO]:    [Backend]:         [bootstrap] runner binary comet path=/Applications/GameLib.app/Contents/Resources/build/bin/arm64/darwin/comet exists=true
+(18:06:15) [INFO]:    [Steam]:           Steam TokenStore implementation set to SidecarKeyringTokenStore
+(18:06:15) [INFO]:    [Backend]:         [bootstrap] Humble secret store installed: keyring-backed (humble-session/humble-csrf slots)
+(18:06:15) [INFO]:    [Backend]:         [bootstrap] steamgrid secret store: keyring
+(18:06:15) [INFO]:    [Backend]:         [bootstrap] secret stores: keyring
+(18:06:15) [INFO]:    [Connection]:      Pinging external endpoints
+(18:06:15) [INFO]:    [Connection]:      Connectivity: check-online
+(18:06:15) [INFO]:    [DownloadManager]: sidecar: boot-time download-queue auto-resume (the startup-flagged initQueue call) is ENABLED as of Phase 35 plan 11 and runs from appShellFlowRegistration.ts frontendReady, not from this module — a persisted Steam queue head is still never auto-started, since the startup flag is itself the Steam suppression (downloadqueue.ts initQueue doc comment)
+(18:06:15) [INFO]:    [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): issuing keyring_get (may prompt) trigger=unspecified
+(18:06:15) [INFO]:    [Frontend]:        [refreshLibrary] runner=all origin=mount
+(18:06:15) [WARNING]: refresh not implemented on Sideload Library Manager
+(18:06:15) [INFO]:    [Legendary]:       Refreshing library...
+(18:06:15) [INFO]:    [Legendary]:       Refreshing Epic Games...
+(18:06:15) [INFO]:    [Steam]:           Steam: library refresh deferred until a deliberate Steam action — no keyring_get issued (trigger=startup)
+(18:06:15) [INFO]:    [Backend]:         [GAMELIB_SIDECAR_SEND_HANDLER] frontendReady
+(18:06:15) [INFO]:    [Backend]:         Frontend Ready
+(18:06:15) [WARNING]: [Backend]:         Epic is Offline right now, cannot update game list!
+(18:06:15) [INFO]:    [Backend]:         refreshLibrary complete runner=all managers=6
+(18:06:15) [INFO]:    [Legendary]:       Game list updated, got 15 games & DLCs
+(18:06:15) [WARNING]: listUpdateableGames not implemented on Sideload Library Manager
+(18:06:15) [INFO]:    [Connection]:      Connectivity: online
+(18:06:16) [DEBUG]:   [Backend]:         Releases info ready, checking wine releases
+(18:06:16) [DEBUG]:   [Backend]:         Releases info ready, checking anticheat data
+(18:06:16) [DEBUG]:   [Backend]:         AreWeAnticheatYet data did not change. Skipping.
+(18:06:20) [INFO]:    [Backend]:         Starting the Download Queue
+(18:07:00) [WARNING]: [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): keyring_get failed: keyring:timeout trigger=unspecified elapsed=45008ms
+(18:07:00) [WARNING]: [Steam]:           keyring failure memoized slot=humble-session class=timeout ms=120000 trigger=unspecified
+(18:07:42) [DEBUG]:   [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): memo hit, answering unreadable/timeout without a second keyring_get trigger=unspecified
+(18:12:31) [INFO]:    [Frontend]:        [WebView] in-app store/wiki browsing unavailable under Tauri (pathname=/store/epic) -- tracked as its own deferral (D-05)
+(18:12:31) [INFO]:    [Frontend]:        [WebView] in-app store/wiki browsing unavailable under Tauri (pathname=/store/epic) -- tracked as its own deferral (D-05)
+(18:12:34) [INFO]:    [Frontend]:        [WebView] in-app store/wiki browsing unavailable under Tauri (pathname=/store/epic) -- tracked as its own deferral (D-05)
+(18:12:40) [INFO]:    [Frontend]:        [WebView] in-app store/wiki browsing unavailable under Tauri (pathname=/store/steam) -- tracked as its own deferral (D-05)
+(18:12:40) [INFO]:    [Frontend]:        [WebView] in-app store/wiki browsing unavailable under Tauri (pathname=/store/steam) -- tracked as its own deferral (D-05)
+(18:12:41) [INFO]:    [Frontend]:        [WebView] in-app store/wiki browsing unavailable under Tauri (pathname=/store/epic) -- tracked as its own deferral (D-05)
+(18:12:42) [INFO]:    [Frontend]:        [WebView] in-app store/wiki browsing unavailable under Tauri (pathname=/store/epic) -- tracked as its own deferral (D-05)
+(18:15:11) [INFO]:    [Frontend]:        [WebView] in-app store/wiki browsing unavailable under Tauri (pathname=/store/epic) -- tracked as its own deferral (D-05)
+(18:15:11) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/legendary.log
+(18:15:11) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/gog.log
+(18:15:11) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/nile.log
+(18:15:11) [INFO]:    [Legendary]:       Running command: LEGENDARY_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/legendaryConfig/legendary" /Applications/GameLib.app/Contents/Resources/build/bin/arm64/darwin/legendary/legendary --version
+(18:15:11) [INFO]:    [Gog]:             Running command: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Applications/GameLib.app/Contents/Resources/build/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" --version
+(18:15:11) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Applications/GameLib.app/Contents/Resources/build/bin/arm64/darwin/nile/nile --version
+(18:15:15) [INFO]:    [Legendary]:       Logging out: LEGENDARY_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/legendaryConfig/legendary" /Applications/GameLib.app/Contents/Resources/build/bin/arm64/darwin/legendary/legendary auth --delete
+(18:15:15) [WARNING]: [Legendary]:       Legendary logout: epicgames.com cookie census read failed (non-fatal, evidence unavailable for this side): Error: humble_login_cookies_for_domain:no-window:loginwin-0-18d0cf3d9b97abd0-7652f0f6
+    at handleFrame (build/main/sidecar-sea-bundle.js:486:22)
+    at Socket.<anonymous> (build/main/sidecar-sea-bundle.js:523:9)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+(18:15:15) [WARNING]: [Legendary]:       Legendary logout: epicgames.com cookie census read failed (non-fatal, evidence unavailable for this side): Error: humble_login_cookies_for_domain:no-window:loginwin-0-18d0cf3d9b97abd0-7652f0f6
+    at handleFrame (build/main/sidecar-sea-bundle.js:486:22)
+    at Socket.<anonymous> (build/main/sidecar-sea-bundle.js:523:9)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+(18:15:15) [INFO]:    [Legendary]:       Legendary logout: cleared 5 epicgames.com cookie(s) (measured post-removal delta) — cookie census before(total=unavailable, matched=unavailable, verdict=UNSUPPORTED_OR_ERROR) after(total=unavailable, matched=unavailable, verdict=UNSUPPORTED_OR_ERROR)
+(18:15:15) [WARNING]: [Legendary]:       Legendary logout: fortnite.com cookie census read failed (non-fatal, evidence unavailable for this side): Error: humble_login_cookies_for_domain:no-window:loginwin-0-18d0cf3d9b97abd0-7652f0f6
+    at handleFrame (build/main/sidecar-sea-bundle.js:486:22)
+    at Socket.<anonymous> (build/main/sidecar-sea-bundle.js:523:9)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+(18:15:15) [WARNING]: [Legendary]:       Legendary logout: fortnite.com cookie census read failed (non-fatal, evidence unavailable for this side): Error: humble_login_cookies_for_domain:no-window:loginwin-0-18d0cf3d9b97abd0-7652f0f6
+    at handleFrame (build/main/sidecar-sea-bundle.js:486:22)
+    at Socket.<anonymous> (build/main/sidecar-sea-bundle.js:523:9)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+(18:15:15) [INFO]:    [Legendary]:       Legendary logout: cleared 0 fortnite.com cookie(s) (measured post-removal delta) — cookie census before(total=unavailable, matched=unavailable, verdict=UNSUPPORTED_OR_ERROR) after(total=unavailable, matched=unavailable, verdict=UNSUPPORTED_OR_ERROR)
+(18:15:15) [WARNING]: [Legendary]:       Legendary logout: unrealengine.com cookie census read failed (non-fatal, evidence unavailable for this side): Error: humble_login_cookies_for_domain:no-window:loginwin-0-18d0cf3d9b97abd0-7652f0f6
+    at handleFrame (build/main/sidecar-sea-bundle.js:486:22)
+    at Socket.<anonymous> (build/main/sidecar-sea-bundle.js:523:9)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+(18:15:15) [WARNING]: [Legendary]:       Legendary logout: unrealengine.com cookie census read failed (non-fatal, evidence unavailable for this side): Error: humble_login_cookies_for_domain:no-window:loginwin-0-18d0cf3d9b97abd0-7652f0f6
+    at handleFrame (build/main/sidecar-sea-bundle.js:486:22)
+    at Socket.<anonymous> (build/main/sidecar-sea-bundle.js:523:9)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+(18:15:15) [INFO]:    [Legendary]:       Legendary logout: cleared 0 unrealengine.com cookie(s) (measured post-removal delta) — cookie census before(total=unavailable, matched=unavailable, verdict=UNSUPPORTED_OR_ERROR) after(total=unavailable, matched=unavailable, verdict=UNSUPPORTED_OR_ERROR)
+(18:15:15) [WARNING]: [Legendary]:       Legendary logout: twinmotion.com cookie census read failed (non-fatal, evidence unavailable for this side): Error: humble_login_cookies_for_domain:no-window:loginwin-0-18d0cf3d9b97abd0-7652f0f6
+    at handleFrame (build/main/sidecar-sea-bundle.js:486:22)
+    at Socket.<anonymous> (build/main/sidecar-sea-bundle.js:523:9)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+(18:15:15) [WARNING]: [Legendary]:       Legendary logout: twinmotion.com cookie census read failed (non-fatal, evidence unavailable for this side): Error: humble_login_cookies_for_domain:no-window:loginwin-0-18d0cf3d9b97abd0-7652f0f6
+    at handleFrame (build/main/sidecar-sea-bundle.js:486:22)
+    at Socket.<anonymous> (build/main/sidecar-sea-bundle.js:523:9)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+(18:15:15) [INFO]:    [Legendary]:       Legendary logout: cleared 0 twinmotion.com cookie(s) (measured post-removal delta) — cookie census before(total=unavailable, matched=unavailable, verdict=UNSUPPORTED_OR_ERROR) after(total=unavailable, matched=unavailable, verdict=UNSUPPORTED_OR_ERROR)
+(18:15:15) [WARNING]: [Legendary]:       Legendary logout: metahuman.com cookie census read failed (non-fatal, evidence unavailable for this side): Error: humble_login_cookies_for_domain:no-window:loginwin-0-18d0cf3d9b97abd0-7652f0f6
+    at handleFrame (build/main/sidecar-sea-bundle.js:486:22)
+    at Socket.<anonymous> (build/main/sidecar-sea-bundle.js:523:9)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+(18:15:15) [WARNING]: [Legendary]:       Legendary logout: metahuman.com cookie census read failed (non-fatal, evidence unavailable for this side): Error: humble_login_cookies_for_domain:no-window:loginwin-0-18d0cf3d9b97abd0-7652f0f6
+    at handleFrame (build/main/sidecar-sea-bundle.js:486:22)
+    at Socket.<anonymous> (build/main/sidecar-sea-bundle.js:523:9)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+(18:15:15) [INFO]:    [Legendary]:       Legendary logout: Epic cookie clear removed 5 cookie(s) across 5 Epic-owned domain(s) — epicgames.com=5, fortnite.com=0, unrealengine.com=0, twinmotion.com=0, metahuman.com=0
+(18:15:15) [INFO]:    [Legendary]:       Legendary logout: cleared 0 metahuman.com cookie(s) (measured post-removal delta) — cookie census before(total=unavailable, matched=unavailable, verdict=UNSUPPORTED_OR_ERROR) after(total=unavailable, matched=unavailable, verdict=UNSUPPORTED_OR_ERROR)
+(18:15:16) [INFO]:    [Legendary]:       Legendary logout: cleared storage — localStorage=4, sessionStorage=0, indexedDB=0, caches=0, serviceWorkers=0
+(18:15:16) [INFO]:    [Legendary]:       Running command: LEGENDARY_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/legendaryConfig/legendary" /Applications/GameLib.app/Contents/Resources/build/bin/arm64/darwin/legendary/legendary cleanup
+(18:16:34) [INFO]:    [Frontend]:        [TauriLoginPanel] declared-blocked: runner=legendary channel=login -- lands in Phase 34.5
+(18:16:34) [INFO]:    [Backend]:         [oauthLoginCapture] runner=legendary label=loginwin-2-18d0cf4ff8503920-4ef5bd09
+(18:16:35) [INFO]:    [Backend]:         [oauthLoginCapture] runner=legendary nav host=www.epicgames.com
+(18:17:19) [INFO]:    [Backend]:         [oauthLoginCapture] runner=legendary nav host=localhost
+(18:17:19) [INFO]:    [Backend]:         [oauthLoginCapture] runner=legendary status=captured
+(18:17:19) [INFO]:    [Frontend]:        [useTauriOAuthLogin] runner=legendary phase=finalizing (capture complete, exchanging with auth channel)
+(18:17:19) [INFO]:    [Legendary]:       Logging in: LEGENDARY_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/legendaryConfig/legendary" /Applications/GameLib.app/Contents/Resources/build/bin/arm64/darwin/legendary/legendary auth --code <redacted>
+(18:17:19) [INFO]:    [Frontend]:        [TauriLoginPanel] runner=legendary phase=finalizing
+(18:17:20) [INFO]:    [Frontend]:        [useTauriOAuthLogin] runner=legendary phase=idle (login completed, library refresh triggered)
+(18:17:20) [INFO]:    [Frontend]:        [refreshLibrary] runner=legendary origin=login-success
+(18:17:20) [INFO]:    [Legendary]:       Refreshing library...
+(18:17:20) [INFO]:    [Legendary]:       Refreshing Epic Games...
+(18:17:20) [INFO]:    [Frontend]:        [useTauriOAuthLogin] runner=legendary phase=teardown inflight=false
+(18:17:20) [INFO]:    [Legendary]:       Running command: LEGENDARY_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/legendaryConfig/legendary" /Applications/GameLib.app/Contents/Resources/build/bin/arm64/darwin/legendary/legendary list --third-party
+(18:17:25) [INFO]:    [Legendary]:       Game list updated, got 15 games & DLCs
+(18:17:25) [INFO]:    [Legendary]:       refreshLibrary complete runner=legendary managers=1
+(18:17:25) [INFO]:    [Frontend]:        Force Update

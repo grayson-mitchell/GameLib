@@ -1,0 +1,60 @@
+(19:10:16) [INFO]:    [Backend]:         [bootstrap] GAMELIB_SHELL_EXE received=/Users/graysonmitchell/Projects/GameLib/src-tauri/target/debug/gamelib-shell
+(19:10:16) [INFO]:    [Backend]:         [bootstrap] appRoot resolved=/Users/graysonmitchell/Projects/GameLib source=GAMELIB_APP_ROOT
+(19:10:16) [INFO]:    [Backend]:         [bootstrap] runner binary legendary path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/legendary exists=true
+(19:10:16) [INFO]:    [Backend]:         [bootstrap] runner binary gogdl path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl exists=true
+(19:10:16) [INFO]:    [Backend]:         [bootstrap] runner binary nile path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile exists=true
+(19:10:16) [INFO]:    [Backend]:         [bootstrap] runner binary comet path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/comet exists=true
+(19:10:16) [INFO]:    [Steam]:           Steam TokenStore implementation set to SidecarKeyringTokenStore
+(19:10:16) [INFO]:    [Backend]:         [bootstrap] publicDir resolved=/Users/graysonmitchell/Projects/GameLib/public exists=true
+(19:10:16) [INFO]:    [Backend]:         [bootstrap] steamgrid secret store: keyring
+(19:10:16) [INFO]:    [Backend]:         [bootstrap] secret stores: keyring
+(19:10:16) [INFO]:    [Backend]:         [bootstrap] Humble secret store installed: keyring-backed (humble-session/humble-csrf slots)
+(19:10:16) [INFO]:    [Connection]:      Pinging external endpoints
+(19:10:16) [INFO]:    [Connection]:      Connectivity: check-online
+(19:10:16) [INFO]:    [DownloadManager]: sidecar: boot-time download-queue auto-resume (the startup-flagged initQueue call) is ENABLED as of Phase 35 plan 11 and runs from appShellFlowRegistration.ts frontendReady, not from this module — a persisted Steam queue head is still never auto-started, since the startup flag is itself the Steam suppression (downloadqueue.ts initQueue doc comment)
+(19:10:16) [INFO]:    [Connection]:      Connectivity: online
+(19:10:17) [DEBUG]:   [Backend]:         Releases info ready, checking wine releases
+(19:10:17) [DEBUG]:   [Backend]:         Releases info ready, checking anticheat data
+(19:10:17) [DEBUG]:   [Backend]:         AreWeAnticheatYet data did not change. Skipping.
+(19:10:19) [INFO]:    [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): issuing keyring_get (may prompt) trigger=unspecified
+(19:10:19) [INFO]:    [Frontend]:        [refreshLibrary] runner=all origin=mount
+(19:10:19) [INFO]:    [Backend]:         [GAMELIB_SIDECAR_SEND_HANDLER] frontendReady
+(19:10:19) [WARNING]: refresh not implemented on Sideload Library Manager
+(19:10:19) [INFO]:    [Backend]:         Frontend Ready
+(19:10:19) [INFO]:    [Legendary]:       Refreshing library...
+(19:10:19) [INFO]:    [Legendary]:       Refreshing Epic Games...
+(19:10:19) [INFO]:    [Steam]:           Steam: library refresh deferred until a deliberate Steam action — no keyring_get issued (trigger=startup)
+(19:10:19) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/gog.log
+(19:10:19) [INFO]:    [Gog]:             Running command: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" auth
+(19:10:19) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/legendary.log
+(19:10:19) [INFO]:    [Legendary]:       Running command: LEGENDARY_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/legendaryConfig/legendary" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/legendary/legendary list --third-party
+(19:10:19) [INFO]:    [Gog]:             Getting GOG library
+(19:10:21) [INFO]:    [Gog]:             Saved games data
+(19:10:21) [INFO]:    [Legendary]:       Game list updated, got 15 games & DLCs
+(19:10:21) [INFO]:    [Backend]:         refreshLibrary complete runner=all managers=6
+(19:10:22) [WARNING]: listUpdateableGames not implemented on Sideload Library Manager
+(19:10:24) [INFO]:    [Backend]:         Starting the Download Queue
+(19:10:24) [INFO]:    [Gog]:             Found 1 game(s) to update
+(19:10:24) [INFO]:    [Legendary]:       Checking for game updates: LEGENDARY_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/legendaryConfig/legendary" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/legendary/legendary list --third-party
+(19:10:26) [INFO]:    [Legendary]:       Found 0 games to update
+(19:11:04) [WARNING]: [Steam]:           keyring failure memoized slot=humble-session class=timeout ms=120000 trigger=unspecified
+(19:11:04) [WARNING]: [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): keyring_get failed: keyring:timeout trigger=unspecified elapsed=45011ms
+(19:24:55) [INFO]:    [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): issuing keyring_get (may prompt) trigger=unspecified
+(19:25:13) [INFO]:    [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): keyring_get ok present=true len=208 trigger=unspecified elapsed=17588ms
+(19:25:14) [INFO]:    [Backend]:         Humble sync: order has keys with no extractable expiration: wKrVcDU4xqzVSNBt tpksMissingExpiration=1 candidateFields=[is_expired,key_type,human_name,machine_name,keyindex,gamekey,exclusive_countries,num_days_until_expired,disallowed_countries,show_custom_instructions_in_user_libraries,visible,sold_out,instructions_html,display_separately,direct_redeem,+6 more]
+(19:25:15) [INFO]:    [Backend]:         Humble sync: order has keys with no extractable expiration: kySCdN5SvVpwXK2v tpksMissingExpiration=1 candidateFields=[is_expired,key_type,human_name,machine_name,keyindex,gamekey,exclusive_countries,num_days_until_expired,disallowed_countries,show_custom_instructions_in_user_libraries,visible,sold_out,instructions_html,display_separately,direct_redeem,+6 more]
+(19:25:15) [INFO]:    [Backend]:         Humble sync: order has keys with no extractable expiration: UPcpetxeqmV2uPAF tpksMissingExpiration=1 candidateFields=[is_expired,key_type,human_name,machine_name,keyindex,exclusive_countries,gamekey,custom_instructions_html,disallowed_countries,show_custom_instructions_in_user_libraries,visible,sold_out,display_separately,direct_redeem,key_type_human_name,+3 more]
+(19:25:15) [INFO]:    [Backend]:         Humble sync finished: gamekeys=32 fetched=7/7 frozen=25 ok=7 schema_error=0 denied=0 expired=0 transient=0 zeroKeyOrders=0 keysCached=32
+(19:27:12) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/nile.log
+(19:27:12) [INFO]:    [Legendary]:       Running command: LEGENDARY_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/legendaryConfig/legendary" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/legendary/legendary --version
+(19:27:12) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile --version
+(19:27:12) [INFO]:    [Gog]:             Running command: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" --version
+(19:27:14) [INFO]:    [Legendary]:       Logging out: LEGENDARY_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/legendaryConfig/legendary" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/legendary/legendary auth --delete
+(19:27:14) [INFO]:    [Legendary]:       Legendary logout: cleared 3 epicgames.com cookie(s) (measured post-removal delta) — cookie census before(total=57, matched=3, verdict=SUPPORTED_NONEMPTY) after(total=54, matched=0, verdict=SUPPORTED_NONEMPTY)
+(19:27:14) [INFO]:    [Legendary]:       Legendary logout: cleared 1 fortnite.com cookie(s) (measured post-removal delta) — cookie census before(total=54, matched=1, verdict=SUPPORTED_NONEMPTY) after(total=54, matched=0, verdict=SUPPORTED_NONEMPTY)
+(19:27:14) [INFO]:    [Legendary]:       Legendary logout: cleared 1 unrealengine.com cookie(s) (measured post-removal delta) — cookie census before(total=54, matched=1, verdict=SUPPORTED_NONEMPTY) after(total=53, matched=0, verdict=SUPPORTED_NONEMPTY)
+(19:27:15) [INFO]:    [Legendary]:       Legendary logout: cleared 1 twinmotion.com cookie(s) (measured post-removal delta) — cookie census before(total=53, matched=1, verdict=SUPPORTED_NONEMPTY) after(total=52, matched=0, verdict=SUPPORTED_NONEMPTY)
+(19:27:15) [INFO]:    [Legendary]:       Legendary logout: Epic cookie clear removed 7 cookie(s) across 5 Epic-owned domain(s) — epicgames.com=3, fortnite.com=1, unrealengine.com=1, twinmotion.com=1, metahuman.com=1
+(19:27:15) [INFO]:    [Legendary]:       Legendary logout: cleared 1 metahuman.com cookie(s) (measured post-removal delta) — cookie census before(total=52, matched=1, verdict=SUPPORTED_NONEMPTY) after(total=51, matched=0, verdict=SUPPORTED_NONEMPTY)
+(19:27:15) [INFO]:    [Legendary]:       Legendary logout: cleared storage — localStorage=6, sessionStorage=0, indexedDB=0, caches=0, serviceWorkers=0
+(19:27:15) [INFO]:    [Legendary]:       Running command: LEGENDARY_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/legendaryConfig/legendary" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/legendary/legendary cleanup
